@@ -42,6 +42,9 @@
 #include "ui/songsettingsdialog.h"
 #include "ui/songview.h"
 #include "ui/viewsidecar.h"
+#if defined(PORYDAW_SIGNPOSTS)
+#include "profiling.h"
+#endif
 #include "ui/voicegroupbrowser.h"
 
 #include <QUndoCommand>
@@ -930,12 +933,35 @@ void MainWindow::onDocumentChanged(SongSession &session)
         session.appliedReverb = cfg.reverb;
     }
 
+#if defined(PORYDAW_SIGNPOSTS)
+    const os_log_t log = profiling::midiNoteDeleteLog();
+    const os_signpost_id_t buildTimelineId = os_signpost_id_generate(log);
+    os_signpost_interval_begin(log, buildTimelineId, "BuildTimeline");
+#endif
     auto timeline = session.doc.buildTimeline(m_audio.sampleRate());
-    if (active && m_audio.songLoaded())
+#if defined(PORYDAW_SIGNPOSTS)
+    os_signpost_interval_end(log, buildTimelineId, "BuildTimeline");
+#endif
+    if (active && m_audio.songLoaded()) {
+#if defined(PORYDAW_SIGNPOSTS)
+        const os_signpost_id_t updateAudioId = os_signpost_id_generate(log);
+        os_signpost_interval_begin(log, updateAudioId, "UpdateAudio");
+#endif
         m_audio.updateTimeline(timeline.get());
+#if defined(PORYDAW_SIGNPOSTS)
+        os_signpost_interval_end(log, updateAudioId, "UpdateAudio");
+#endif
+    }
     // The old timeline is freed here — after the engine let go of it.
     session.timeline = std::move(timeline);
+#if defined(PORYDAW_SIGNPOSTS)
+    const os_signpost_id_t updateViewId = os_signpost_id_generate(log);
+    os_signpost_interval_begin(log, updateViewId, "UpdateView");
+#endif
     session.view->updateSong(session.timeline.get());
+#if defined(PORYDAW_SIGNPOSTS)
+    os_signpost_interval_end(log, updateViewId, "UpdateView");
+#endif
     updateTabTitle(session);
     if (active)
         updateWindowTitle();

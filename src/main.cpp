@@ -1,6 +1,8 @@
 #include <QApplication>
 #include <QStyleHints>
 
+#include <cstdio>
+
 #include "mainwindow.h"
 
 // viewcheck.cpp; the optional song label + path save one song's rendered view.
@@ -46,6 +48,8 @@ int runPrimeCheck();
 int runEventViewCheck(const QString &projectRoot,
                       const QString &screenshotSong = QString(),
                       const QString &screenshotPath = QString());
+// deletebench.cpp; deterministic real-document MIDI deletion benchmark.
+int runDeleteBench(const QString &midiPath, int iterations = 20);
 
 int main(int argc, char *argv[])
 {
@@ -126,6 +130,24 @@ int main(int argc, char *argv[])
         const QString song = viewCheck + 2 < args.size() ? args[viewCheck + 2] : QString();
         const QString path = viewCheck + 3 < args.size() ? args[viewCheck + 3] : QString();
         return runViewCheck(args[viewCheck + 1], song, path);
+    }
+    const int deleteBench = args.indexOf(QStringLiteral("--deletebench"));
+    if (deleteBench >= 0) {
+        if (deleteBench + 1 >= args.size()) {
+            std::fprintf(stderr, "deletebench: MIDI path required\n");
+            return 2;
+        }
+        int iterations = 20;
+        if (deleteBench + 2 < args.size()) {
+            bool ok = false;
+            iterations = args[deleteBench + 2].toInt(&ok);
+            if (!ok || iterations <= 0) {
+                std::fprintf(
+                    stderr, "deletebench: iterations must be a positive integer\n");
+                return 2;
+            }
+        }
+        return runDeleteBench(args[deleteBench + 1], iterations);
     }
 
     MainWindow window;

@@ -37,6 +37,7 @@
 #include "core/mid2agbtables.h"
 #include "core/songdocument.h"
 #include "ui/eventlistview.h"
+#include "profiling.h"
 
 namespace songview {
 
@@ -1325,11 +1326,29 @@ protected:
             return;
         }
         if (doc && (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)) {
+#if defined(PORYDAW_SIGNPOSTS)
+            const os_log_t log = profiling::midiNoteDeleteLog();
+            const os_signpost_id_t totalId = os_signpost_id_generate(log);
+            os_signpost_interval_begin(
+                log, totalId, "Total", "selected=%{public}lu",
+                static_cast<unsigned long>(m_sv->selection().size()));
+
+            const os_signpost_id_t resolveId = os_signpost_id_generate(log);
+            os_signpost_interval_begin(log, resolveId, "ResolveSelection");
+#endif
             const std::vector<DocNote> notes = resolveSelection();
+#if defined(PORYDAW_SIGNPOSTS)
+            os_signpost_interval_end(
+                log, resolveId, "ResolveSelection", "resolved=%{public}lu",
+                static_cast<unsigned long>(notes.size()));
+#endif
             if (!notes.empty()) {
                 doc->deleteNotes(notes);
                 m_sv->clearSelection();
             }
+#if defined(PORYDAW_SIGNPOSTS)
+            os_signpost_interval_end(log, totalId, "Total");
+#endif
             event->accept();
             return;
         }

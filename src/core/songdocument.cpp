@@ -8,6 +8,7 @@
 
 #include "core/miditimeline.h"
 #include "project/songregistry.h"
+#include "profiling.h"
 
 // Declared in songdocument.h: the event list's summary column shares it.
 bool metaIsLoopMarker(const SmfEvent &ev, char marker)
@@ -669,6 +670,13 @@ void SongDocument::deleteNotes(const std::vector<DocNote> &notes)
 {
     if (notes.empty())
         return;
+#if defined(PORYDAW_SIGNPOSTS)
+    const os_log_t log = profiling::midiNoteDeleteLog();
+    const os_signpost_id_t prepareId = os_signpost_id_generate(log);
+    os_signpost_interval_begin(
+        log, prepareId, "PrepareOps", "notes=%{public}lu",
+        static_cast<unsigned long>(notes.size()));
+#endif
     // Group removal indices per SMF track so each track's removals apply in
     // descending order.
     std::vector<EditOp> ops;
@@ -683,6 +691,11 @@ void SongDocument::deleteNotes(const std::vector<DocNote> &notes)
         }
         appendRemoveOps(ops, int(t), std::move(indices));
     }
+#if defined(PORYDAW_SIGNPOSTS)
+    os_signpost_interval_end(
+        log, prepareId, "PrepareOps", "ops=%{public}lu",
+        static_cast<unsigned long>(ops.size()));
+#endif
     pushEdit(tr("delete %n note(s)", nullptr, int(notes.size())), std::move(ops));
 }
 
@@ -1717,6 +1730,13 @@ std::unique_ptr<MidiTimeline> SongDocument::buildTimeline(double sampleRate) con
 
 void SongDocument::applyOps(std::vector<EditOp> &ops)
 {
+#if defined(PORYDAW_SIGNPOSTS)
+    const os_log_t log = profiling::midiNoteDeleteLog();
+    const os_signpost_id_t applyId = os_signpost_id_generate(log);
+    os_signpost_interval_begin(
+        log, applyId, "ApplyOps", "ops=%{public}lu",
+        static_cast<unsigned long>(ops.size()));
+#endif
     for (EditOp &op : ops) {
         switch (op.type) {
         case EditOp::InsertEvent: {
@@ -1799,6 +1819,9 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
         }
     }
     rebuildTrackMap();
+#if defined(PORYDAW_SIGNPOSTS)
+    os_signpost_interval_end(log, applyId, "ApplyOps");
+#endif
 }
 
 void SongDocument::revertOps(std::vector<EditOp> &ops)

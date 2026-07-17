@@ -31,6 +31,7 @@ endif()
 # ---- porydaw application ----
 qt_add_executable(porydaw
     src/main.cpp
+    src/deletebench.cpp
     src/mainwindow.cpp
     src/mainwindow.h
     src/songsession.h
@@ -113,8 +114,12 @@ if(WIN32)
         target_link_options(porydaw PRIVATE -static)
     endif()
 endif()
+option(PORYDAW_SIGNPOSTS "Enable macOS profiling signposts" OFF)
 if(APPLE)
     set_target_properties(porydaw PROPERTIES MACOSX_BUNDLE TRUE)
+    if(PORYDAW_SIGNPOSTS)
+        target_compile_definitions(porydaw PRIVATE PORYDAW_SIGNPOSTS=1)
+    endif()
 endif()
 
 # ---- Offline render CLI (development/testing: parity vs poryaaaa_render) ----
