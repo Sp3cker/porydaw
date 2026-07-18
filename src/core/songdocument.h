@@ -102,7 +102,7 @@ public:
     uint8_t channelFor(int engineTrack) const;
 
     // Lookups. Results go stale on any mutation.
-    std::vector<DocNote> notesForTrack(int engineTrack) const;
+    const std::vector<DocNote> &notesForTrack(int engineTrack) const;
     bool findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const;
     std::vector<DocLanePoint> lanePoints(int engineTrack, uint8_t cc) const;
     bool findLanePoint(int engineTrack, uint8_t cc, uint64_t tick, DocLanePoint *out) const;
@@ -371,6 +371,12 @@ private:
     // (first matching text meta in track/event order). Returns false if absent.
     bool findLoopMarkerEvent(bool endMarker, int *smfTrack, size_t *index) const;
 
+    struct NoteCacheEntry {
+        std::vector<DocNote> notes;
+        bool valid = false;
+    };
+    void invalidateNoteCache();
+
     SmfFile m_smf;
     SongCfg m_cfg;
     SongCfg m_savedCfg; // as on disk, to detect midi.cfg write-back needs
@@ -382,4 +388,5 @@ private:
 
     std::vector<int> m_engineToSmf;      // engine track -> SMF track
     std::vector<uint8_t> m_engineChannel; // engine track -> MIDI channel
+    mutable std::vector<NoteCacheEntry> m_noteCache;
 };

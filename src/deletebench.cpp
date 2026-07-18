@@ -25,6 +25,7 @@ struct Workload {
 };
 
 struct Durations {
+    std::vector<qint64> notesForTrack;
     std::vector<qint64> resolve;
     std::vector<qint64> erase;
 };
@@ -103,12 +104,25 @@ std::vector<Workload> workloadsFor(const std::vector<DocNote> &notes, size_t cou
 }
 
 bool runIteration(SongDocument &doc, int track, const Workload &workload,
-                  const QByteArray &baseline, size_t baselineEvents, int iteration,
+                  size_t trackNotes, const QByteArray &baseline,
+                  size_t baselineEvents, int iteration, qint64 *notesForTrackNs,
                   qint64 *resolveNs, qint64 *eraseNs)
 {
     QElapsedTimer timer;
     std::vector<DocNote> resolved;
     resolved.reserve(workload.notes.size());
+
+    // The first warmup's undo invalidates the cache, so this is a cold build;
+    // the findNote loop immediately below then measures cache hits.
+    timer.start();
+    const auto &notes = doc.notesForTrack(track);
+    *notesForTrackNs = timer.nsecsElapsed();
+    if (notes.size() != trackNotes) {
+        std::fprintf(stderr,
+                     "deletebench: track %d note count changed before deletion\n",
+                     track);
+        return false;
+    }
 
 #if defined(PORYDAW_SIGNPOSTS)
     const os_log_t log = profiling::midiNoteDeleteLog();
@@ -122,7 +136,7 @@ bool runIteration(SongDocument &doc, int track, const Workload &workload,
             iteration);
     }
 #endif
-    timer.start();
+    timer.restart();
     for (const NoteId &id : workload.notes) {
         DocNote note;
         if (!doc.findNote(track, id.tick, id.key, &note)) {
@@ -239,6 +253,7 @@ int runDeleteBench(const QString &midiPath, int iterations)
 
     const QByteArray baseline = doc.smf().write();
     const size_t events = eventCount(doc);
+    const size_t trackNotes = doc.notesForTrack(track).size();
     std::vector<size_t> sizes = {1, 10, 100, 1000, notes.size()};
     sizes.erase(std::remove_if(sizes.begin(), sizes.end(),
                                [&](size_t size) { return size > notes.size(); }),
@@ -254,26 +269,33 @@ int runDeleteBench(const QString &midiPath, int iterations)
         for (const Workload &workload : workloadsFor(notes, size)) {
             qint64 ignoredResolve = 0;
             qint64 ignoredErase = 0;
+            qint64 ignoredNotesForTrack = 0;
             for (int warmup = 0; warmup < 2; warmup++) {
-                if (!runIteration(doc, track, workload, baseline, events, -1,
-                                  &ignoredResolve, &ignoredErase))
+                if (!runIteration(doc, track, workload, trackNotes, baseline, events,
+                                  -1, &ignoredNotesForTrack, &ignoredResolve,
+                                  &ignoredErase))
                     return 1;
             }
 
             Durations durations;
+            durations.notesForTrack.reserve(size_t(iterations));
             durations.resolve.reserve(size_t(iterations));
             durations.erase.reserve(size_t(iterations));
             for (int iteration = 0; iteration < iterations; iteration++) {
+                qint64 notesForTrackNs = 0;
                 qint64 resolveNs = 0;
                 qint64 eraseNs = 0;
-                if (!runIteration(doc, track, workload, baseline, events, iteration,
-                                  &resolveNs, &eraseNs))
+                if (!runIteration(doc, track, workload, trackNotes, baseline, events,
+                                  iteration, &notesForTrackNs, &resolveNs, &eraseNs))
                     return 1;
+                durations.notesForTrack.push_back(notesForTrackNs);
                 durations.resolve.push_back(resolveNs);
                 durations.erase.push_back(eraseNs);
             }
             printStats(trackEvents, notes.size(), track, size, workload.position,
-                       "resolve", durations.resolve);
+                       "notes_for_track_cold", durations.notesForTrack);
+            printStats(trackEvents, notes.size(), track, size, workload.position,
+                       "resolve_hot_cache", durations.resolve);
             printStats(trackEvents, notes.size(), track, size, workload.position,
                        "delete_storage", durations.erase);
         }

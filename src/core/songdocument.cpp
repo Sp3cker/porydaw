@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <algorithm>
+#include <array>
 #include <map>
 
 #include "core/miditimeline.h"
@@ -235,6 +236,7 @@ bool SongDocument::load(const SongInfo &song, QString *error)
     m_label = song.label;
     m_hadCfgLine = song.hasCfg;
     m_undoStack.clear();
+    m_noteCache.clear();
     rebuildTrackMap();
     return true;
 }
@@ -277,6 +279,14 @@ void SongDocument::rebuildTrackMap()
             }
         }
     }
+    m_noteCache.resize(m_engineToSmf.size());
+    invalidateNoteCache();
+}
+
+void SongDocument::invalidateNoteCache()
+{
+    for (NoteCacheEntry &entry : m_noteCache)
+        entry.valid = false;
 }
 
 int SongDocument::smfTrackFor(int engineTrack) const
@@ -302,42 +312,72 @@ int SongDocument::engineTrackForChunk(int chunk) const
     return -1;
 }
 
-std::vector<DocNote> SongDocument::notesForTrack(int engineTrack) const
+const std::vector<DocNote> &SongDocument::notesForTrack(int engineTrack) const
 {
-    std::vector<DocNote> notes;
+    static const std::vector<DocNote> empty;
     const int smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0)
-        return notes;
+        return empty;
+    NoteCacheEntry &entry = m_noteCache[size_t(engineTrack)];
+    if (entry.valid)
+        return entry.notes;
     const auto &evs = m_smf.tracks[smfTrack].events;
-
-    for (size_t i = 0; i < evs.size(); i++) {
-        const SmfEvent &on = evs[i];
-        if (!on.isNoteOn())
+    const size_t noteCount = size_t(std::count_if(
+        evs.begin(), evs.end(), [](const SmfEvent &event) { return event.isNoteOn(); }));
+    entry.notes.resize(noteCount);
+    constexpr size_t MIDI_KEY_COUNT = 128;
+    // An SMF MTrk body has a uint32 byte length, and every stored event
+    // consumes at least a delta byte plus an event/data byte. A serializable
+    // track therefore has fewer than UINT32_MAX events, leaving that value
+    // available as the lookup sentinel.
+    Q_ASSERT(evs.size() < UINT32_MAX);
+    std::array<uint32_t, 16 * MIDI_KEY_COUNT> nextEnds;
+    nextEnds.fill(UINT32_MAX);
+    size_t noteIndex = noteCount;
+    for (size_t i = evs.size(); i-- > 0;) {
+        const SmfEvent &event = evs[i];
+        if (event.isChannel() && event.isNoteEnd()) {
+            if (event.data0 < MIDI_KEY_COUNT)
+                nextEnds[size_t(event.channel()) * MIDI_KEY_COUNT + event.data0] =
+                    uint32_t(i);
             continue;
-
+        }
+        if (!event.isNoteOn())
+            continue;
         DocNote note;
         note.engineTrack = engineTrack;
         note.smfTrack = smfTrack;
         note.onIndex = i;
-        note.tick = on.tick;
-        note.key = on.data0;
-        note.velocity = on.data1;
-        note.channel = on.channel();
-
-        // Pair as mid2agb does: the first same-channel same-key note end at
-        // or after the note-on.
-        for (size_t j = i + 1; j < evs.size(); j++) {
-            const SmfEvent &end = evs[j];
-            if (end.isChannel() && end.isNoteEnd() && end.channel() == on.channel()
-                && end.data0 == on.data0) {
-                note.endIndex = j;
-                note.duration = uint32_t(end.tick - on.tick);
-                break;
+        note.tick = event.tick;
+        note.key = event.data0;
+        note.velocity = event.data1;
+        note.channel = event.channel();
+        if (note.key < MIDI_KEY_COUNT) {
+            const uint32_t endIndex =
+                nextEnds[size_t(note.channel) * MIDI_KEY_COUNT + note.key];
+            if (endIndex != UINT32_MAX)
+                note.endIndex = endIndex;
+        } else {
+            // Raw event editing admits malformed data bytes. Keep the old
+            // defensive behavior for those non-MIDI keys without enlarging
+            // the fast-path table every cold build uses.
+            for (size_t j = i + 1; j < evs.size(); j++) {
+                const SmfEvent &end = evs[j];
+                if (end.isChannel() && end.isNoteEnd()
+                    && end.channel() == note.channel && end.data0 == note.key) {
+                    note.endIndex = j;
+                    break;
+                }
             }
         }
-        notes.push_back(note);
+        if (!note.unterminated()) {
+            const SmfEvent &end = evs[note.endIndex];
+            note.duration = uint32_t(end.tick - event.tick);
+        }
+        entry.notes[--noteIndex] = note;
     }
-    return notes;
+    entry.valid = true;
+    return entry.notes;
 }
 
 bool SongDocument::findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const

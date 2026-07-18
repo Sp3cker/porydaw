@@ -1172,6 +1172,120 @@ int runEditCheck(const QString &projectRoot)
         }
     }
 
+    // notesForTrack is a cached public lookup, but its cold builder must
+    // preserve mid2agb's non-consuming first-end pairing exactly. Exercise
+    // the ambiguous cases and prove edits, undo/redo, and a second load do
+    // not expose stale cached notes.
+    {
+        auto failN = [&](const char *what) {
+            std::fprintf(stderr, "editcheck: FAIL notes-for-track-cache: %s\n", what);
+            failures++;
+        };
+        auto chEvent = [](uint8_t status, uint64_t tick, uint8_t d0, uint8_t d1) {
+            SmfEvent ev;
+            ev.tick = tick;
+            ev.status = status;
+            ev.data0 = d0;
+            ev.data1 = d1;
+            return ev;
+        };
+        SmfFile smf;
+        smf.format = 1;
+        smf.division = 24;
+        SmfTrack tr;
+        tr.events.push_back(chEvent(0x90, 0, 60, 100));
+        tr.events.push_back(chEvent(0x90, 4, 60, 90));
+        tr.events.push_back(chEvent(0x80, 8, 60, 0));
+        tr.events.push_back(chEvent(0x90, 10, 61, 80));
+        tr.events.push_back(chEvent(0x90, 15, 61, 0));
+        tr.events.push_back(chEvent(0x90, 20, 62, 70));
+        tr.events.push_back(chEvent(0x81, 22, 62, 0));
+        tr.events.push_back(chEvent(0x80, 25, 62, 0));
+        tr.events.push_back(chEvent(0x90, 30, 63, 60));
+        tr.endTick = 36;
+        smf.tracks.push_back(tr);
+
+        QTemporaryDir tmp;
+        const QString midPath = tmp.path() + QStringLiteral("/notes.mid");
+        QString werror;
+        SongInfo info;
+        info.label = QStringLiteral("notes");
+        info.midPath = midPath;
+        info.hasMid = true;
+        SongDocument doc;
+        bool ok = tmp.isValid() && smf.writeFile(midPath, &werror)
+            && doc.load(info, &werror);
+        if (!ok)
+            failN("could not write/load the synthetic file");
+        if (ok) {
+            const auto &notes = doc.notesForTrack(0);
+            const auto &hit = doc.notesForTrack(0);
+            if (&notes != &hit || notes.data() != hit.data()) {
+                failN("an unchanged lookup did not reuse the cached vector");
+                ok = false;
+            } else if (notes.size() != 5 || notes[0].onIndex != 0
+                       || notes[0].endIndex != 2 || notes[0].duration != 8
+                       || notes[1].onIndex != 1 || notes[1].endIndex != 2
+                       || notes[1].duration != 4 || notes[2].endIndex != 4
+                       || notes[2].duration != 5 || notes[3].endIndex != 7
+                       || notes[3].duration != 5 || !notes[4].unterminated()
+                       || notes[4].duration != 0) {
+                failN("shared-end, velocity-zero, cross-channel, or unterminated pairing changed");
+                ok = false;
+            }
+        }
+        if (ok) {
+            doc.addNote(0, 40, 64, 4, 110);
+            const auto &added = doc.notesForTrack(0);
+            if (added.size() != 6 || added.back().tick != 40
+                || added.back().key != 64 || added.back().duration != 4) {
+                failN("add did not invalidate the cache");
+                ok = false;
+            }
+        }
+        if (ok) {
+            doc.undoStack()->undo();
+            if (doc.notesForTrack(0).size() != 5) {
+                failN("undo did not invalidate the cache");
+                ok = false;
+            }
+        }
+        if (ok) {
+            doc.undoStack()->redo();
+            if (doc.notesForTrack(0).size() != 6) {
+                failN("redo did not invalidate the cache");
+                ok = false;
+            }
+        }
+        if (ok) {
+            SmfFile replacement;
+            replacement.format = 1;
+            replacement.division = 24;
+            SmfTrack replacementTrack;
+            replacementTrack.events.push_back(chEvent(0x92, 0, 72, 100));
+            replacementTrack.events.push_back(chEvent(0x82, 12, 72, 0));
+            replacementTrack.endTick = 12;
+            replacement.tracks.push_back(replacementTrack);
+            SongInfo replacementInfo;
+            replacementInfo.label = QStringLiteral("replacement");
+            replacementInfo.midPath = tmp.path() + QStringLiteral("/replacement.mid");
+            replacementInfo.hasMid = true;
+            if (!replacement.writeFile(replacementInfo.midPath, &werror)
+                || !doc.load(replacementInfo, &werror)) {
+                failN("could not load the replacement synthetic file");
+                ok = false;
+            } else {
+                const auto &replacementNotes = doc.notesForTrack(0);
+                if (replacementNotes.size() != 1 || replacementNotes[0].key != 72
+                    || replacementNotes[0].channel != 2
+                    || replacementNotes[0].duration != 12) {
+                    failN("load did not invalidate the cache");
+                    ok = false;
+                }
+            }
+        }
+    }
+
     // A PREFIXED 0x03 carrying marker text has no name position (a chunk's
     // name is its first unprefixed 0x03), so every classifier
     // (MidiTimeline::build, findLoopMarkerEvent, trackNameLoc) reads it as
