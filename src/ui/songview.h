@@ -213,6 +213,7 @@ public:
     void setGridFeel(GridFeel feel);
     int gridMinDenom() const { return m_gridMinDenom; }
     void setGridMinDenom(int denom); // 4/8/16/32; anything else means 0
+    const QColor &subGridColor(int level) const { return m_subGridColors[level - 1]; }
 
     // Time-signature segment governing a tick. The grid — beats, snap
     // positions, sub-beat lines — restarts at every signature change and
@@ -398,10 +399,12 @@ signals:
     void eventListVisibilityChanged(bool visible);
 
 protected:
+    void changeEvent(QEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
 private:
     uint64_t gridTicksIn(const GridSeg &seg) const;
+    void updateSubGridColors();
     // Document trackMoved handler: rotates the per-track view state with the
     // renumbered engine slots on apply, undo, and redo alike.
     void onTrackMoved(int fromChunk, int toChunk, const QVector<int> &map);
@@ -442,6 +445,7 @@ private:
     GridFeel m_gridFeel = GridFeel::Straight;
     int m_gridMinDenom = 0; // note denominator; 0 = clock-grid floor
     std::vector<std::pair<int, uint8_t>> m_emptyLanes; // (track, cc), unsorted
+    QColor m_subGridColors[3];
 
     songview::TimeRuler *m_ruler = nullptr;
     songview::TrackHeaderPanel *m_headers = nullptr;

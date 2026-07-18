@@ -5,6 +5,7 @@
 #include <QContextMenuEvent>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QEvent>
 #include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QInputDialog>
@@ -19,6 +20,7 @@
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QProxyStyle>
 #include <QResizeEvent>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -223,13 +225,17 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, int origin)
     QColor beatColor = barColor;
     beatColor.setAlpha(70);
 
-    QColor subColor = barColor;
+    QVector<QLine> subLines[3];
     forEachSubGridLine(sv, t0, t1, [&](uint64_t tick, int level) {
         const int x = origin + sv->contentX(double(tick));
-        subColor.setAlpha(level == 1 ? 48 : level == 2 ? 34 : 22);
-        p.setPen(subColor);
-        p.drawLine(x, rect.top(), x, rect.bottom());
+        subLines[level - 1].append(QLine(x, rect.top(), x, rect.bottom()));
     });
+    for (auto level = 0; level < 3; ++level) {
+        if (subLines[level].isEmpty())
+            continue;
+        p.setPen(sv->subGridColor(level + 1));
+        p.drawLines(subLines[level]);
+    }
 
     sv->forEachGridLine(uint64_t(t0), uint64_t(t1),
                         [&](uint64_t tick, bool isBar, int) {
@@ -240,6 +246,23 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, int origin)
                             p.drawLine(x, rect.top(), x, rect.bottom());
                         });
 }
+
+class NoteMenuStyle final : public QProxyStyle
+{
+public:
+    NoteMenuStyle()
+        : QProxyStyle(QApplication::style()->name())
+    {
+    }
+
+    int styleHint(StyleHint hint, const QStyleOption *option, const QWidget *widget,
+                  QStyleHintReturn *returnData) const override
+    {
+        if (hint == SH_Menu_FlashTriggeredItem)
+            return 0;
+        return QProxyStyle::styleHint(hint, option, widget, returnData);
+    }
+};
 
 } // namespace
 
@@ -821,6 +844,16 @@ public:
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         setMouseTracking(true);
         setFocusPolicy(Qt::ClickFocus);
+        m_noteMenu = new QMenu(this);
+        auto *noteMenuStyle = new NoteMenuStyle;
+        noteMenuStyle->setParent(m_noteMenu);
+        m_noteMenu->setStyle(noteMenuStyle);
+        m_velocityAction = m_noteMenu->addAction(QString());
+        m_copyAction = m_noteMenu->addAction(SongView::tr("Copy"));
+        m_copyAction->setShortcut(QKeySequence::Copy);
+        m_cutAction = m_noteMenu->addAction(SongView::tr("Cut"));
+        m_cutAction->setShortcut(QKeySequence::Cut);
+        m_deleteAction = m_noteMenu->addAction(SongView::tr("Delete"));
     }
 
     // A mouse gesture is live (pan, note move/resize/velocity/draw, band or
@@ -1474,14 +1507,14 @@ private:
     const ViewNote *hitNote(QPoint pos) const
     {
         const int selected = m_sv->selectedTrack();
-        const ViewNote *hit = nullptr;
-        for (const ViewNote &note : m_sv->model().notes) {
-            if (note.track != selected)
+        const auto &notes = m_sv->model().notes;
+        for (auto it = notes.crbegin(); it != notes.crend(); ++it) {
+            if (it->track != selected)
                 continue;
-            if (noteRect(note).adjusted(-2, 0, 2, 0).contains(pos))
-                hit = &note;
+            if (noteRect(*it).adjusted(-2, 0, 2, 0).contains(pos))
+                return &*it;
         }
-        return hit;
+        return nullptr;
     }
 
     bool nearRightEdge(const ViewNote &note, QPoint pos) const
@@ -1771,22 +1804,16 @@ private:
         const std::vector<DocNote> notes = resolveSelection();
         if (notes.empty())
             return;
-        QMenu menu(this);
-        QAction *velocity = menu.addAction(
+        m_velocityAction->setText(
             SongView::tr("Set velocity… (%1)").arg(notes.front().velocity));
-        QAction *copy = menu.addAction(SongView::tr("Copy"));
-        copy->setShortcut(QKeySequence::Copy);
-        QAction *cut = menu.addAction(SongView::tr("Cut"));
-        cut->setShortcut(QKeySequence::Cut);
-        QAction *del = menu.addAction(SongView::tr("Delete"));
-        QAction *chosen = menu.exec(mapToGlobal(pos));
-        if (chosen == copy) {
+        QAction *chosen = m_noteMenu->exec(mapToGlobal(pos));
+        if (chosen == m_copyAction) {
             copyNotes(notes);
-        } else if (chosen == cut) {
+        } else if (chosen == m_cutAction) {
             copyNotes(notes);
             doc->deleteNotes(notes);
             m_sv->clearSelection();
-        } else if (chosen == velocity) {
+        } else if (chosen == m_velocityAction) {
             bool ok = false;
             const int v = QInputDialog::getInt(
                 this, SongView::tr("Note velocity"),
@@ -1797,7 +1824,7 @@ private:
                 doc->setNotesVelocity(notes, uint8_t(v));
                 m_lastVelocity = uint8_t(v);
             }
-        } else if (chosen == del) {
+        } else if (chosen == m_deleteAction) {
             doc->deleteNotes(notes);
             m_sv->clearSelection();
         }
@@ -1887,6 +1914,11 @@ private:
                                   // clicked/velocity-edited note
     bool m_panning = false;    // middle-drag pan
     QPoint m_panPos;           // last pan sample, global coords
+    QMenu *m_noteMenu = nullptr;
+    QAction *m_velocityAction = nullptr;
+    QAction *m_copyAction = nullptr;
+    QAction *m_cutAction = nullptr;
+    QAction *m_deleteAction = nullptr;
 };
 
 // ----------------------------------------------------------- AutomationArea
@@ -3788,9 +3820,27 @@ void TrackHeaderRow::mouseReleaseEvent(QMouseEvent *event)
 
 using namespace songview;
 
+void SongView::updateSubGridColors()
+{
+    const QColor lineColor = palette().color(QPalette::Mid);
+    constexpr int alphas[] = {48, 34, 22};
+    for (auto level = 0; level < 3; ++level) {
+        m_subGridColors[level] = lineColor;
+        m_subGridColors[level].setAlpha(alphas[level]);
+    }
+}
+
+void SongView::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::PaletteChange)
+        updateSubGridColors();
+}
+
 SongView::SongView(QWidget *parent)
     : QWidget(parent)
 {
+    updateSubGridColors();
     auto *vbox = new QVBoxLayout(this);
     vbox->setContentsMargins(0, 0, 0, 0);
     vbox->setSpacing(0);
