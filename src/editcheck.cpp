@@ -1257,6 +1257,18 @@ int runEditCheck(const QString &projectRoot)
             }
         }
         if (ok) {
+            const auto &beforeShrink = doc.notesForTrack(0);
+            auto removed = std::vector<DocNote>(beforeShrink.begin() + 2,
+                                                beforeShrink.end());
+            doc.deleteNotes(removed);
+            const auto &afterShrink = doc.notesForTrack(0);
+            if (afterShrink.size() != 2
+                || afterShrink.capacity() != afterShrink.size()) {
+                failN("large note-count shrink retained excess cache capacity");
+                ok = false;
+            }
+        }
+        if (ok) {
             auto replacement = SmfFile{};
             replacement.format = 1;
             replacement.division = 24;
