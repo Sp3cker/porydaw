@@ -285,7 +285,7 @@ void SongDocument::rebuildTrackMap()
 
 void SongDocument::invalidateNoteCache()
 {
-    for (NoteCacheEntry &entry : m_noteCache)
+    for (auto &entry : m_noteCache)
         entry.valid = false;
 }
 
@@ -314,28 +314,34 @@ int SongDocument::engineTrackForChunk(int chunk) const
 
 const std::vector<DocNote> &SongDocument::notesForTrack(int engineTrack) const
 {
-    static const std::vector<DocNote> empty;
-    const int smfTrack = smfTrackFor(engineTrack);
+    static const auto empty = std::vector<DocNote>{};
+    const auto smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0)
         return empty;
-    NoteCacheEntry &entry = m_noteCache[size_t(engineTrack)];
+    auto &entry = m_noteCache[size_t(engineTrack)];
     if (entry.valid)
         return entry.notes;
     const auto &evs = m_smf.tracks[smfTrack].events;
-    const size_t noteCount = size_t(std::count_if(
+    const auto noteCount = size_t(std::count_if(
         evs.begin(), evs.end(), [](const SmfEvent &event) { return event.isNoteOn(); }));
-    entry.notes.resize(noteCount);
-    constexpr size_t MIDI_KEY_COUNT = 128;
+    const auto retainedCapacity = entry.notes.capacity();
+    if (noteCount > retainedCapacity
+        || (retainedCapacity > 0 && noteCount <= retainedCapacity / 2)) {
+        entry.notes = std::vector<DocNote>(noteCount);
+    } else {
+        entry.notes.resize(noteCount);
+    }
+    constexpr auto MIDI_KEY_COUNT = size_t{128};
     // An SMF MTrk body has a uint32 byte length, and every stored event
     // consumes at least a delta byte plus an event/data byte. A serializable
     // track therefore has fewer than UINT32_MAX events, leaving that value
     // available as the lookup sentinel.
     Q_ASSERT(evs.size() < UINT32_MAX);
-    std::array<uint32_t, 16 * MIDI_KEY_COUNT> nextEnds;
+    auto nextEnds = std::array<uint32_t, 16 * MIDI_KEY_COUNT>{};
     nextEnds.fill(UINT32_MAX);
-    size_t noteIndex = noteCount;
-    for (size_t i = evs.size(); i-- > 0;) {
-        const SmfEvent &event = evs[i];
+    auto noteIndex = noteCount;
+    for (auto i = evs.size(); i-- > 0;) {
+        const auto &event = evs[i];
         if (event.isChannel() && event.isNoteEnd()) {
             if (event.data0 < MIDI_KEY_COUNT)
                 nextEnds[size_t(event.channel()) * MIDI_KEY_COUNT + event.data0] =
@@ -344,7 +350,7 @@ const std::vector<DocNote> &SongDocument::notesForTrack(int engineTrack) const
         }
         if (!event.isNoteOn())
             continue;
-        DocNote note;
+        auto note = DocNote{};
         note.engineTrack = engineTrack;
         note.smfTrack = smfTrack;
         note.onIndex = i;
@@ -353,7 +359,7 @@ const std::vector<DocNote> &SongDocument::notesForTrack(int engineTrack) const
         note.velocity = event.data1;
         note.channel = event.channel();
         if (note.key < MIDI_KEY_COUNT) {
-            const uint32_t endIndex =
+            const auto endIndex =
                 nextEnds[size_t(note.channel) * MIDI_KEY_COUNT + note.key];
             if (endIndex != UINT32_MAX)
                 note.endIndex = endIndex;
@@ -361,8 +367,8 @@ const std::vector<DocNote> &SongDocument::notesForTrack(int engineTrack) const
             // Raw event editing admits malformed data bytes. Keep the old
             // defensive behavior for those non-MIDI keys without enlarging
             // the fast-path table every cold build uses.
-            for (size_t j = i + 1; j < evs.size(); j++) {
-                const SmfEvent &end = evs[j];
+            for (auto j = i + 1; j < evs.size(); j++) {
+                const auto &end = evs[j];
                 if (end.isChannel() && end.isNoteEnd()
                     && end.channel() == note.channel && end.data0 == note.key) {
                     note.endIndex = j;
@@ -371,7 +377,7 @@ const std::vector<DocNote> &SongDocument::notesForTrack(int engineTrack) const
             }
         }
         if (!note.unterminated()) {
-            const SmfEvent &end = evs[note.endIndex];
+            const auto &end = evs[note.endIndex];
             note.duration = uint32_t(end.tick - event.tick);
         }
         entry.notes[--noteIndex] = note;

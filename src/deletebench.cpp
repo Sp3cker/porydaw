@@ -25,7 +25,7 @@ struct Workload {
 };
 
 struct Durations {
-    std::vector<qint64> notesForTrack;
+    std::vector<qint64> rebuild;
     std::vector<qint64> resolve;
     std::vector<qint64> erase;
 };
@@ -105,25 +105,24 @@ std::vector<Workload> workloadsFor(const std::vector<DocNote> &notes, size_t cou
 
 bool runIteration(SongDocument &doc, int track, const Workload &workload,
                   size_t trackNotes, const QByteArray &baseline,
-                  size_t baselineEvents, int iteration, qint64 *notesForTrackNs,
+                  size_t baselineEvents, int iteration, qint64 *rebuildNs,
                   qint64 *resolveNs, qint64 *eraseNs)
 {
     QElapsedTimer timer;
     std::vector<DocNote> resolved;
     resolved.reserve(workload.notes.size());
-
-    // The first warmup's undo invalidates the cache, so this is a cold build;
-    // the findNote loop immediately below then measures cache hits.
+    // The first ignored warmup may hit the setup cache. Its undo invalidates
+    // that cache, so later calls measure a post-edit rebuild that can reuse
+    // retained capacity; the findNote loop immediately below measures hits.
     timer.start();
     const auto &notes = doc.notesForTrack(track);
-    *notesForTrackNs = timer.nsecsElapsed();
+    *rebuildNs = timer.nsecsElapsed();
     if (notes.size() != trackNotes) {
         std::fprintf(stderr,
                      "deletebench: track %d note count changed before deletion\n",
                      track);
         return false;
     }
-
 #if defined(PORYDAW_SIGNPOSTS)
     const os_log_t log = profiling::midiNoteDeleteLog();
     os_signpost_id_t resolveId = OS_SIGNPOST_ID_INVALID;
@@ -206,13 +205,17 @@ qint64 percentile(std::vector<qint64> values, size_t numerator)
     return values[index];
 }
 
-void printStats(size_t events, size_t eligible, int track, size_t deleted,
-                const char *position, const char *phase, const std::vector<qint64> &values)
+void printStats(size_t events, size_t eligible, size_t cachedNoteCapacity,
+                size_t cachedNotePayloadBytes, int track, size_t deleted,
+                const char *position, const char *phase,
+                const std::vector<qint64> &values)
 {
     const auto [minimum, maximum] = std::minmax_element(values.begin(), values.end());
-    std::printf("%lu,%lu,%d,%lu,%s,%s,%lu,%lld,%lld,%lld,%lld\n",
+    std::printf("%lu,%lu,%lu,%lu,%d,%lu,%s,%s,%lu,%lld,%lld,%lld,%lld\n",
                 static_cast<unsigned long>(events),
-                static_cast<unsigned long>(eligible), track,
+                static_cast<unsigned long>(eligible),
+                static_cast<unsigned long>(cachedNoteCapacity),
+                static_cast<unsigned long>(cachedNotePayloadBytes), track,
                 static_cast<unsigned long>(deleted), position, phase,
                 static_cast<unsigned long>(values.size()),
                 static_cast<long long>(*minimum),
@@ -253,7 +256,11 @@ int runDeleteBench(const QString &midiPath, int iterations)
 
     const QByteArray baseline = doc.smf().write();
     const size_t events = eventCount(doc);
-    const size_t trackNotes = doc.notesForTrack(track).size();
+    const auto trackNotes = doc.notesForTrack(track).size();
+    auto cachedNoteCapacity = size_t{0};
+    for (auto engineTrack = 0; engineTrack < doc.engineTrackCount(); engineTrack++)
+        cachedNoteCapacity += doc.notesForTrack(engineTrack).capacity();
+    const auto cachedNotePayloadBytes = cachedNoteCapacity * sizeof(DocNote);
     std::vector<size_t> sizes = {1, 10, 100, 1000, notes.size()};
     sizes.erase(std::remove_if(sizes.begin(), sizes.end(),
                                [&](size_t size) { return size > notes.size(); }),
@@ -261,7 +268,8 @@ int runDeleteBench(const QString &midiPath, int iterations)
     std::sort(sizes.begin(), sizes.end());
     sizes.erase(std::unique(sizes.begin(), sizes.end()), sizes.end());
 
-    std::printf("track_events,eligible_notes,engine_track,delete_count,position,phase,"
+    std::printf("track_events,eligible_notes,cached_note_capacity,"
+                "cached_note_payload_bytes,engine_track,delete_count,position,phase,"
                 "iterations,min_ns,median_ns,p95_ns,max_ns\n");
     const size_t trackEvents =
         doc.smf().tracks[size_t(doc.smfTrackFor(track))].events.size();
@@ -269,34 +277,37 @@ int runDeleteBench(const QString &midiPath, int iterations)
         for (const Workload &workload : workloadsFor(notes, size)) {
             qint64 ignoredResolve = 0;
             qint64 ignoredErase = 0;
-            qint64 ignoredNotesForTrack = 0;
+            auto ignoredRebuild = qint64{0};
             for (int warmup = 0; warmup < 2; warmup++) {
                 if (!runIteration(doc, track, workload, trackNotes, baseline, events,
-                                  -1, &ignoredNotesForTrack, &ignoredResolve,
+                                  -1, &ignoredRebuild, &ignoredResolve,
                                   &ignoredErase))
                     return 1;
             }
 
             Durations durations;
-            durations.notesForTrack.reserve(size_t(iterations));
+            durations.rebuild.reserve(size_t(iterations));
             durations.resolve.reserve(size_t(iterations));
             durations.erase.reserve(size_t(iterations));
             for (int iteration = 0; iteration < iterations; iteration++) {
-                qint64 notesForTrackNs = 0;
+                auto rebuildNs = qint64{0};
                 qint64 resolveNs = 0;
                 qint64 eraseNs = 0;
                 if (!runIteration(doc, track, workload, trackNotes, baseline, events,
-                                  iteration, &notesForTrackNs, &resolveNs, &eraseNs))
+                                  iteration, &rebuildNs, &resolveNs, &eraseNs))
                     return 1;
-                durations.notesForTrack.push_back(notesForTrackNs);
+                durations.rebuild.push_back(rebuildNs);
                 durations.resolve.push_back(resolveNs);
                 durations.erase.push_back(eraseNs);
             }
-            printStats(trackEvents, notes.size(), track, size, workload.position,
-                       "notes_for_track_cold", durations.notesForTrack);
-            printStats(trackEvents, notes.size(), track, size, workload.position,
+            printStats(trackEvents, notes.size(), cachedNoteCapacity,
+                       cachedNotePayloadBytes, track, size, workload.position,
+                       "notes_for_track_rebuild", durations.rebuild);
+            printStats(trackEvents, notes.size(), cachedNoteCapacity,
+                       cachedNotePayloadBytes, track, size, workload.position,
                        "resolve_hot_cache", durations.resolve);
-            printStats(trackEvents, notes.size(), track, size, workload.position,
+            printStats(trackEvents, notes.size(), cachedNoteCapacity,
+                       cachedNotePayloadBytes, track, size, workload.position,
                        "delete_storage", durations.erase);
         }
     }

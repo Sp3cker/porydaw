@@ -372,6 +372,8 @@ private:
     bool findLoopMarkerEvent(bool endMarker, int *smfTrack, size_t *index) const;
 
     struct NoteCacheEntry {
+        // Ordinary edits reuse storage; large growth or shrinkage reallocates
+        // exactly so a transient high-water count is not retained forever.
         std::vector<DocNote> notes;
         bool valid = false;
     };

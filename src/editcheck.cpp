@@ -1172,7 +1172,7 @@ int runEditCheck(const QString &projectRoot)
         }
     }
 
-    // notesForTrack is a cached public lookup, but its cold builder must
+    // notesForTrack is a cached public lookup, but every rebuild must
     // preserve mid2agb's non-consuming first-end pairing exactly. Exercise
     // the ambiguous cases and prove edits, undo/redo, and a second load do
     // not expose stale cached notes.
@@ -1182,17 +1182,17 @@ int runEditCheck(const QString &projectRoot)
             failures++;
         };
         auto chEvent = [](uint8_t status, uint64_t tick, uint8_t d0, uint8_t d1) {
-            SmfEvent ev;
+            auto ev = SmfEvent{};
             ev.tick = tick;
             ev.status = status;
             ev.data0 = d0;
             ev.data1 = d1;
             return ev;
         };
-        SmfFile smf;
+        auto smf = SmfFile{};
         smf.format = 1;
         smf.division = 24;
-        SmfTrack tr;
+        auto tr = SmfTrack{};
         tr.events.push_back(chEvent(0x90, 0, 60, 100));
         tr.events.push_back(chEvent(0x90, 4, 60, 90));
         tr.events.push_back(chEvent(0x80, 8, 60, 0));
@@ -1204,16 +1204,15 @@ int runEditCheck(const QString &projectRoot)
         tr.events.push_back(chEvent(0x90, 30, 63, 60));
         tr.endTick = 36;
         smf.tracks.push_back(tr);
-
-        QTemporaryDir tmp;
-        const QString midPath = tmp.path() + QStringLiteral("/notes.mid");
-        QString werror;
-        SongInfo info;
+        auto tmp = QTemporaryDir{};
+        const auto midPath = tmp.path() + QStringLiteral("/notes.mid");
+        auto werror = QString{};
+        auto info = SongInfo{};
         info.label = QStringLiteral("notes");
         info.midPath = midPath;
         info.hasMid = true;
-        SongDocument doc;
-        bool ok = tmp.isValid() && smf.writeFile(midPath, &werror)
+        auto doc = SongDocument{};
+        auto ok = tmp.isValid() && smf.writeFile(midPath, &werror)
             && doc.load(info, &werror);
         if (!ok)
             failN("could not write/load the synthetic file");
@@ -1258,15 +1257,15 @@ int runEditCheck(const QString &projectRoot)
             }
         }
         if (ok) {
-            SmfFile replacement;
+            auto replacement = SmfFile{};
             replacement.format = 1;
             replacement.division = 24;
-            SmfTrack replacementTrack;
+            auto replacementTrack = SmfTrack{};
             replacementTrack.events.push_back(chEvent(0x92, 0, 72, 100));
             replacementTrack.events.push_back(chEvent(0x82, 12, 72, 0));
             replacementTrack.endTick = 12;
             replacement.tracks.push_back(replacementTrack);
-            SongInfo replacementInfo;
+            auto replacementInfo = SongInfo{};
             replacementInfo.label = QStringLiteral("replacement");
             replacementInfo.midPath = tmp.path() + QStringLiteral("/replacement.mid");
             replacementInfo.hasMid = true;
@@ -1282,6 +1281,16 @@ int runEditCheck(const QString &projectRoot)
                     failN("load did not invalidate the cache");
                     ok = false;
                 }
+            }
+        }
+        if (ok) {
+            doc.insertRawEvent(0, chEvent(0x92, 20, 200, 90));
+            doc.insertRawEvent(0, chEvent(0x82, 24, 200, 0));
+            const auto &malformedNotes = doc.notesForTrack(0);
+            if (malformedNotes.size() != 2 || malformedNotes.back().key != 200
+                || malformedNotes.back().duration != 4) {
+                failN("raw invalid-key fallback pairing changed");
+                ok = false;
             }
         }
     }
