@@ -44,6 +44,8 @@ int runPrimeCheck();
 // transportcheck.cpp; playback-start halts ringing auditions (self-contained,
 // no project needed; SKIPs without an audio device).
 int runTransportCheck();
+// shortcutcheck.cpp; runtime audit of Ableton-aligned QAction bindings.
+int runShortcutCheck();
 // eventviewcheck.cpp; raw MIDI event list check (model API + offscreen UI);
 // the optional song label + path save that song's rendered event list.
 int runEventViewCheck(const QString &projectRoot,
@@ -66,6 +68,7 @@ int main(int argc, char *argv[])
     const int selfTest = args.indexOf(QStringLiteral("--selftest"));
     if (selfTest >= 0 && selfTest + 2 < args.size()) {
         MainWindow window;
+        window.show();
         return window.runSelfTest(args[selfTest + 1], args[selfTest + 2]) ? 0 : 1;
     }
     const int saveCheck = args.indexOf(QStringLiteral("--savecheck"));
@@ -104,6 +107,8 @@ int main(int argc, char *argv[])
         return runPrimeCheck();
     if (args.contains(QStringLiteral("--transportcheck")))
         return runTransportCheck();
+    if (args.contains(QStringLiteral("--shortcutcheck")))
+        return runShortcutCheck();
     const int editCheck = args.indexOf(QStringLiteral("--editcheck"));
     if (editCheck >= 0 && editCheck + 1 < args.size())
         return runEditCheck(args[editCheck + 1]);

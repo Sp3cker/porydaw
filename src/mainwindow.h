@@ -242,6 +242,7 @@ private:
     QAction *m_exportWavAction = nullptr;
     QAction *m_settingsAction = nullptr;
     QAction *m_eventListAction = nullptr;
+    QAction *m_followPlaybackAction = nullptr;
     QLabel *m_timeLabel = nullptr;
     QLabel *m_songLabel = nullptr;
     QLabel *m_polyLabel = nullptr;

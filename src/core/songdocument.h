@@ -155,11 +155,12 @@ public:
     void deleteLanePoints(int engineTrack, uint8_t cc,
                           const std::vector<DocLanePoint> &points);
 
-    // Multi-track range edit (time-selection delete/paste): removals and
-    // insertions across any mix of tracks and lanes, applied as one undoable
-    // command with a single documentChanged emission. Notes/points to remove
-    // must be freshly resolved (their indices are read at push time); an
-    // engineTrack of -1 targets the tempo lane (DOC_CC_TEMPO only).
+    // Multi-track range edit (time-selection delete/paste and note replacement):
+    // removals and insertions across any mix of tracks and lanes, applied as one
+    // undoable command with a single documentChanged emission. Notes/points to
+    // remove must be freshly resolved (their indices are read at push time); an
+    // engineTrack of -1 targets the tempo lane (DOC_CC_TEMPO only). An empty or
+    // effectively empty batch does not push an undo command or emit documentChanged.
     struct RangeEdit {
         std::vector<DocNote> removeNotes;
         std::vector<DocLanePoint> removePoints;

@@ -19,11 +19,11 @@ extern "C" {
 }
 
 class EventListView;
-class QKeyEvent;
 class QScrollArea;
 class QScrollBar;
 class QSplitter;
 class QPainter;
+class QPoint;
 class QRect;
 class QStackedWidget;
 class SongDocument;
@@ -153,6 +153,8 @@ public:
     // selection), Ctrl = toggle the track in the scope, Shift = contiguous
     // range from the selected track.
     void trackHeaderClicked(int track, Qt::KeyboardModifiers modifiers);
+    bool followPlayback() const { return m_followPlayback; }
+    void setFollowPlayback(bool enabled) { m_followPlayback = enabled; }
     bool trackMuted(int track) const { return m_muteMask & (1u << track); }
     bool trackSoloed(int track) const { return m_soloMask & (1u << track); }
     // Full masks, for re-applying to the audio engine on a tab switch.
@@ -230,6 +232,8 @@ public:
     void setGridFeel(GridFeel feel);
     int gridMinDenom() const { return m_gridMinDenom; }
     void setGridMinDenom(int denom); // 4/8/16/32; anything else means 0
+    bool snapToGrid() const { return m_snapToGrid; }
+    void setSnapToGrid(bool enabled);
 
     // Time-signature segment governing a tick. The grid — beats, snap
     // positions, sub-beat lines — restarts at every signature change and
@@ -316,21 +320,18 @@ public:
     // lanes so the rest of the song keeps its alignment.
     void removeTimeSelectionContents();
     void pasteRangeAtEditCursor();
-    // Ctrl+Up/Down on the selection: transpose every covered note (all
-    // scoped tracks at once). Same all-or-nothing rule as the roll's note
-    // selection — if any note would clamp at the key range, nothing moves.
+    // Up/Down on the selection transposes every covered note (all scoped
+    // tracks at once); Shift changes the step to an octave. Same all-or-
+    // nothing rule as the roll's note selection.
     void transposeTimeSelection(int dKey);
-    // Ctrl+Left/Right: the selection start moves to the previous/next
-    // ruler grid line and the covered contents (notes and automation
-    // points) move with it; the band follows.
+    // Left/Right moves the selection to the adjacent grid line and carries
+    // its notes and automation points with it.
     void nudgeTimeSelection(bool right);
-    // Shared shortcut handling for the roll and the lanes area: range
-    // copy/cut/delete while a time selection is active, paste of range
-    // clips, and Ctrl+arrow transpose/nudge of the selection. Returns true
-    // when consumed.
-    bool handleEditKey(QKeyEvent *event);
-    // Copy/Cut/Delete/Paste/Clear context menu on the active selection.
-    void showTimeSelectionMenu(const QPoint &globalPos);
+    // Shift+Left/Right changes covered note lengths by one grid step;
+    // Command+Up/Down changes their velocities by one.
+    void resizeTimeSelectionNotes(bool lengthen);
+    void nudgeTimeSelectionVelocity(int delta);
+    void fitTimeSelectionNotes();
 
     // App-internal clipboard. A plain note copy (roll selection) has span 0
     // and pastes additively; a range copy carries span > 0 plus lane
@@ -390,6 +391,10 @@ public:
 
     // Interaction from children.
     void zoomAroundContentX(double factor, int anchorContentX);
+    // Fit a tick range horizontally. Z frames the selection; X frames the
+    // complete song timeline.
+    void zoomToTickRange(uint64_t startTick, uint64_t endTick);
+    void zoomToFullSong();
     // Vertical roll zoom (key height) from Ctrl+wheel, pinning the key under
     // anchorY (roll-local y). wheelDelta is the raw angleDelta value.
     void zoomKeyHeight(int wheelDelta, int anchorY);
@@ -440,6 +445,8 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
+    friend class songview::PianoRoll;
+
     uint64_t gridTicksIn(const GridSeg &seg) const;
     // Document trackMoved handler: rotates the per-track view state with the
     // renumbered engine slots on apply, undo, and redo alike.
@@ -447,6 +454,7 @@ private:
     // A mouse gesture is live in the ruler, roll, or lanes (pan, drag,
     // sweep); playhead follow-scroll pauses while one runs.
     bool userGestureActive() const;
+    void showTimeSelectionContextMenu(const QPoint &globalPosition);
     int viewportWidth() const;
     void setHScroll(int px);
     void updateScrollbars();
@@ -472,6 +480,7 @@ private:
     double m_playheadTick = 0.0;
     uint64_t m_editCursorTick = 0;
     bool m_playing = false;
+    bool m_followPlayback = true;
     uint32_t m_muteMask = 0;
     uint32_t m_soloMask = 0;
     std::vector<NoteId> m_selection;
@@ -480,6 +489,7 @@ private:
     uint32_t m_trackSelMask = 0; // header multi-selection (see trackSelectionMask)
     GridFeel m_gridFeel = GridFeel::Straight;
     int m_gridMinDenom = 0; // note denominator; 0 = clock-grid floor
+    bool m_snapToGrid = true;
     std::vector<std::pair<int, uint8_t>> m_emptyLanes; // (track, cc), unsorted
     std::array<QColor, 3> m_subGridColors;
 

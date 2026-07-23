@@ -1,3 +1,5 @@
+#include <QApplication>
+#include <QCoreApplication>
 #include <QEventLoop>
 #include <QFile>
 #include <QSettings>
@@ -8,6 +10,7 @@
 #include <algorithm>
 #include <cstdio>
 
+#include "checkinput.hpp"
 #include "mainwindow.h"
 
 // --tabcheck <projectRoot> <songA> <songB>: multi-tab check. Two songs open
@@ -21,262 +24,328 @@
 // close — run against a scratch copy.
 
 bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA,
-                             const QString &songB)
-{
-    // m_persistSession stays true (the caller redirected QSettings) so the
-    // tab persistence written for restoreSession is exercised for real.
-    if (!m_audioOk) {
-        std::fprintf(stderr, "tabcheck: no audio device available\n");
-        return false;
-    }
-    if (!openProjectDir(projectRoot, /*interactive=*/false)) {
-        std::fprintf(stderr, "tabcheck: project failed to open\n");
-        return false;
-    }
+                             const QString &songB) {
+  // m_persistSession stays true (the caller redirected QSettings) so the
+  // tab persistence written for restoreSession is exercised for real.
+  if (!m_audioOk) {
+    std::fprintf(stderr, "tabcheck: no audio device available\n");
+    return false;
+  }
+  if (!openProjectDir(projectRoot, /*interactive=*/false)) {
+    std::fprintf(stderr, "tabcheck: project failed to open\n");
+    return false;
+  }
 
-    int failures = 0;
-    const auto check = [&failures](bool ok, const char *what) {
-        if (!ok) {
-            std::fprintf(stderr, "tabcheck: FAIL: %s\n", what);
-            failures++;
-        }
-        return ok;
-    };
-    QEventLoop loop;
-    const auto wait = [&loop](int ms) {
-        QTimer::singleShot(ms, &loop, &QEventLoop::quit);
-        loop.exec();
-    };
-
-    // 1. First song loads into the first tab; the engine borrows its data.
-    loadSongByLabel(songA);
-    SongSession *tabA = m_active;
-    if (!tabA || tabA->doc.label() != songA) {
-        std::fprintf(stderr, "tabcheck: song '%s' did not load\n",
-                     qUtf8Printable(songA));
-        return false;
+  int failures = 0;
+  const auto check = [&failures](bool ok, const char *what) {
+    if (!ok) {
+      std::fprintf(stderr, "tabcheck: FAIL: %s\n", what);
+      failures++;
     }
-    check(m_tabs->count() == 1, "first song did not open exactly one tab");
-    check(m_audio.timeline() == tabA->timeline.get()
-              && m_audio.voicegroup() == tabA->voicegroup,
-          "engine is not borrowing the first tab's data");
+    return ok;
+  };
+  QEventLoop loop;
+  const auto wait = [&loop](int ms) {
+    QTimer::singleShot(ms, &loop, &QEventLoop::quit);
+    loop.exec();
+  };
 
-    // 2. Second song in a new tab becomes the active one.
-    loadSongByLabel(songB, /*newTab=*/true);
-    SongSession *tabB = m_active;
-    if (!tabB || tabB == tabA || tabB->doc.label() != songB) {
-        std::fprintf(stderr, "tabcheck: song '%s' did not open in a new tab\n",
-                     qUtf8Printable(songB));
-        return false;
+  // 1. First song loads into the first tab; the engine borrows its data.
+  loadSongByLabel(songA);
+  SongSession *tabA = m_active;
+  if (!tabA || tabA->doc.label() != songA) {
+    std::fprintf(stderr, "tabcheck: song '%s' did not load\n",
+                 qUtf8Printable(songA));
+    return false;
+  }
+  check(m_tabs->count() == 1, "first song did not open exactly one tab");
+  check(m_audio.timeline() == tabA->timeline.get() &&
+            m_audio.voicegroup() == tabA->voicegroup,
+        "engine is not borrowing the first tab's data");
+  tabA->view->setEventListVisible(false);
+  QCoreApplication::processEvents();
+  QWidget *shortcutTarget =
+      tabA->view->findChild<QWidget *>(QStringLiteral("pianoRoll"));
+  if (!shortcutTarget) {
+    std::fprintf(stderr, "tabcheck: piano roll unavailable for shortcuts\n");
+    return false;
+  }
+  const bool loopEnabled = m_audio.loopEnabled();
+  check_input::sendKey(*shortcutTarget, Qt::Key_L, Qt::ControlModifier);
+  check(m_audio.loopEnabled() != loopEnabled,
+        "Command+L did not toggle loop playback");
+  check_input::sendKey(*shortcutTarget, Qt::Key_L, Qt::ControlModifier);
+  check(m_audio.loopEnabled() == loopEnabled,
+        "Command+L did not restore loop playback");
+  check_input::sendKey(*shortcutTarget, Qt::Key_E,
+                       Qt::ControlModifier | Qt::ShiftModifier);
+  check(tabA->view->eventListVisible(),
+        "Command+Shift+E did not show the MIDI event list");
+  QWidget *eventListShortcutTarget = QApplication::focusWidget();
+  const bool eventListShortcutReady =
+      check(eventListShortcutTarget && eventListShortcutTarget->isVisible(),
+            "MIDI event list did not receive focus for shortcuts");
+  if (eventListShortcutReady)
+    check_input::sendKey(*eventListShortcutTarget, Qt::Key_E,
+                         Qt::ControlModifier | Qt::ShiftModifier);
+  const bool pianoRollRestored =
+      check(!tabA->view->eventListVisible(),
+            "Command+Shift+E did not restore the piano roll");
+  const bool pianoRollShortcutReady =
+      pianoRollRestored &&
+      check(shortcutTarget->isVisible() &&
+                QApplication::focusWidget() == shortcutTarget,
+            "Piano roll did not regain focus for shortcuts");
+  const auto sendPianoRollKey = [shortcutTarget, pianoRollShortcutReady](
+                                    int key, Qt::KeyboardModifiers modifiers) {
+    if (pianoRollShortcutReady && shortcutTarget->isVisible())
+      check_input::sendKey(*shortcutTarget, key, modifiers);
+  };
+  sendPianoRollKey(Qt::Key_F, Qt::AltModifier | Qt::ShiftModifier);
+  check(!tabA->view->followPlayback(),
+        "Option+Shift+F did not disable follow playback");
+  sendPianoRollKey(Qt::Key_F, Qt::AltModifier | Qt::ShiftModifier);
+  check(tabA->view->followPlayback(),
+        "Option+Shift+F did not restore follow playback");
+  tabA->view->setEditCursorTick(uint64_t(tabA->timeline->ticksPerBeat));
+  sendPianoRollKey(Qt::Key_Home, Qt::NoModifier);
+  check(tabA->view->editCursorTick() == 0,
+        "Home did not move the edit cursor to the start");
+  sendPianoRollKey(Qt::Key_Space, Qt::NoModifier);
+  wait(50);
+  check(m_audio.transport() == Transport::Playing,
+        "Space did not start playback");
+  sendPianoRollKey(Qt::Key_Space, Qt::NoModifier);
+  check(m_audio.transport() == Transport::Paused,
+        "Space did not pause playback");
+  sendPianoRollKey(Qt::Key_Space, Qt::ShiftModifier);
+  wait(50);
+  check(m_audio.transport() == Transport::Playing,
+        "Shift+Space did not continue playback");
+  m_audio.stop();
+
+  // 2. Second song in a new tab becomes the active one.
+  loadSongByLabel(songB, /*newTab=*/true);
+  SongSession *tabB = m_active;
+  if (!tabB || tabB == tabA || tabB->doc.label() != songB) {
+    std::fprintf(stderr, "tabcheck: song '%s' did not open in a new tab\n",
+                 qUtf8Printable(songB));
+    return false;
+  }
+  check(m_tabs->count() == 2, "second song did not open a second tab");
+  check(m_audio.timeline() == tabB->timeline.get(),
+        "engine did not rebind to the new tab");
+  check(m_undoGroup->activeStack() == tabB->doc.undoStack(),
+        "undo group is not on the new tab's stack");
+  check(sessionForLabel(songA) == tabA && !tabA->doc.isDirty(),
+        "first tab did not survive the second one opening");
+
+  // 3. Separate documents and undo stacks: an edit in one tab dirties
+  // only that tab.
+  m_tabs->setCurrentWidget(tabA->view);
+  check(m_active == tabA && m_audio.timeline() == tabA->timeline.get(),
+        "switching tabs did not rebind the engine to the first tab");
+  check(m_undoGroup->activeStack() == tabA->doc.undoStack(),
+        "undo group did not follow the tab switch");
+  if (tabA->doc.engineTrackCount() == 0) {
+    std::fprintf(stderr, "tabcheck: song '%s' has no tracks\n",
+                 qUtf8Printable(songA));
+    return false;
+  }
+  uint64_t base = 0;
+  for (const SmfTrack &tr : tabA->doc.smf().tracks)
+    base = std::max(base, tr.endTick);
+  tabA->doc.addNote(0, base + 96, 72, 24, 93);
+  check(tabA->doc.isDirty() && !tabB->doc.isDirty(),
+        "edit in one tab did not stay in that tab");
+  check(m_tabs->tabText(m_tabs->indexOf(tabA->view)).endsWith(QLatin1Char('*')),
+        "dirty tab title has no asterisk");
+  check(
+      !m_tabs->tabText(m_tabs->indexOf(tabB->view)).endsWith(QLatin1Char('*')),
+      "clean tab title grew an asterisk");
+
+  // 4. Switching tabs stops playback in the tab being left.
+  m_audio.play();
+  wait(200);
+  check(m_audio.transport() == Transport::Playing, "playback did not start");
+  m_tabs->setCurrentWidget(tabB->view);
+  check(m_audio.transport() == Transport::Stopped,
+        "switching tabs did not stop playback");
+  check(m_audio.timeline() == tabB->timeline.get(),
+        "engine timeline is not the newly active tab's");
+
+  // 5. The dirty edit survives the round trip; each stack undoes its own.
+  m_tabs->setCurrentWidget(tabA->view);
+  check(tabA->doc.isDirty(), "first tab's edit vanished across the switch");
+  sendPianoRollKey(Qt::Key_Z, Qt::ControlModifier);
+  check(!tabA->doc.isDirty(), "Command+Z did not undo the active tab");
+  sendPianoRollKey(Qt::Key_Z, Qt::ControlModifier | Qt::ShiftModifier);
+  check(tabA->doc.isDirty(), "Command+Shift+Z did not redo the active tab");
+  sendPianoRollKey(Qt::Key_Z, Qt::ControlModifier);
+  check(!tabA->doc.isDirty() && !tabB->doc.isDirty(),
+        "undo through the group did not clean the active tab");
+
+  // 6. Re-opening an already open song focuses its tab, no duplicates.
+  loadSongByLabel(songB, /*newTab=*/true);
+  check(m_tabs->count() == 2 && m_active == tabB,
+        "re-opening an open song did not just focus its tab");
+
+  // 7. Closing a tab hands the engine to the survivor.
+  closeTab(m_tabs->indexOf(tabB->view));
+  check(m_tabs->count() == 1 && m_active == tabA &&
+            m_audio.timeline() == tabA->timeline.get(),
+        "closing the active tab did not fall back to the other tab");
+  check(sessionForLabel(songB) == nullptr, "closed tab's session lingered");
+
+  // 8. Plain activation replaces the current tab's song (tab count
+  // unchanged) — the pre-tabs behavior.
+  loadSongByLabel(songB);
+  tabB = m_active;
+  check(m_tabs->count() == 1 && tabB && tabB->doc.label() == songB &&
+            sessionForLabel(songA) == nullptr,
+        "activating a song did not replace the current tab's");
+  check(m_audio.timeline() == tabB->timeline.get(),
+        "engine did not rebind after the in-place replace");
+
+  // 8b. Re-activating the current tab's own song reloads it from disk —
+  // the only reload path for a .mid edited externally. The cleared undo
+  // stack is the observable difference (a plain focus keeps it).
+  uint64_t base2 = 0;
+  for (const SmfTrack &tr : tabB->doc.smf().tracks)
+    base2 = std::max(base2, tr.endTick);
+  tabB->doc.addNote(0, base2 + 96, 72, 24, 93);
+  m_undoGroup->activeStack()->undo();
+  check(!tabB->doc.isDirty() && tabB->doc.undoStack()->count() == 1,
+        "reload precondition: clean doc with undo history");
+  loadSongByLabel(songB);
+  check(m_tabs->count() == 1 && m_active == tabB &&
+            tabB->doc.undoStack()->count() == 0,
+        "re-activating the open song did not reload it in place");
+
+  // 9. The open-tab set is recorded for restoreSession.
+  loadSongByLabel(songA, /*newTab=*/true);
+  tabA = m_active;
+  {
+    QSettings settings;
+    const QStringList open =
+        settings.value(QStringLiteral("lastOpenSongs")).toStringList();
+    check(open == QStringList({songB, songA}),
+          "lastOpenSongs does not list the open tabs in order");
+    check(settings.value(QStringLiteral("lastSongLabel")).toString() == songA,
+          "lastSongLabel is not the active tab");
+  }
+
+  // 9b. Saving a voicegroup refreshes every other CLEAN tab on the same
+  // file immediately — waiting for activation would leave a stale parse
+  // whose next save reverts this one. Needs two songs sharing a -G.
+  if (tabA->vgSource && tabB->vgSource &&
+      tabA->vgSource->filePath() == tabB->vgSource->filePath()) {
+    int dsSlot = -1;
+    for (int i = 0; i < VOICEGROUP_SIZE && dsSlot < 0; i++) {
+      const VgVoice *v = tabA->vgSource->voiceAt(i);
+      if (v && (v->macro == VgMacro::DirectSound ||
+                v->macro == VgMacro::DirectSoundNoResample ||
+                v->macro == VgMacro::DirectSoundAlt))
+        dsSlot = i;
     }
-    check(m_tabs->count() == 2, "second song did not open a second tab");
-    check(m_audio.timeline() == tabB->timeline.get(),
-          "engine did not rebind to the new tab");
-    check(m_undoGroup->activeStack() == tabB->doc.undoStack(),
-          "undo group is not on the new tab's stack");
-    check(sessionForLabel(songA) == tabA && !tabA->doc.isDirty(),
-          "first tab did not survive the second one opening");
-
-    // 3. Separate documents and undo stacks: an edit in one tab dirties
-    // only that tab.
-    m_tabs->setCurrentWidget(tabA->view);
-    check(m_active == tabA && m_audio.timeline() == tabA->timeline.get(),
-          "switching tabs did not rebind the engine to the first tab");
-    check(m_undoGroup->activeStack() == tabA->doc.undoStack(),
-          "undo group did not follow the tab switch");
-    if (tabA->doc.engineTrackCount() == 0) {
-        std::fprintf(stderr, "tabcheck: song '%s' has no tracks\n",
-                     qUtf8Printable(songA));
-        return false;
+    if (dsSlot >= 0) {
+      VgVoice edited = *tabA->vgSource->voiceAt(dsSlot);
+      edited.release = edited.release == 25 ? 26 : 25;
+      onVoiceEditRequested(dsSlot, edited, false); // active tab = A
+      const LoadedVoiceGroup *bVgBefore = tabB->voicegroup;
+      check(saveSession(*tabA), "shared-voicegroup save failed");
+      check(tabB->voicegroup && tabB->voicegroup != bVgBefore,
+            "voicegroup save did not refresh the sibling tab's voicegroup");
+      check(tabB->vgSource && tabB->vgSource->voiceAt(dsSlot) &&
+                tabB->vgSource->voiceAt(dsSlot)->release == edited.release &&
+                !tabB->vgSource->dirty(),
+            "sibling tab's voicegroup source did not follow the save");
+    } else {
+      std::printf("tabcheck: note: shared voicegroup has no sample "
+                  "voices, save-refresh check skipped\n");
     }
-    uint64_t base = 0;
-    for (const SmfTrack &tr : tabA->doc.smf().tracks)
-        base = std::max(base, tr.endTick);
-    tabA->doc.addNote(0, base + 96, 72, 24, 93);
-    check(tabA->doc.isDirty() && !tabB->doc.isDirty(),
-          "edit in one tab did not stay in that tab");
-    check(m_tabs->tabText(m_tabs->indexOf(tabA->view)).endsWith(QLatin1Char('*')),
-          "dirty tab title has no asterisk");
-    check(!m_tabs->tabText(m_tabs->indexOf(tabB->view)).endsWith(QLatin1Char('*')),
-          "clean tab title grew an asterisk");
+  } else {
+    std::printf("tabcheck: note: songs don't share a voicegroup, "
+                "save-refresh check skipped (use e.g. mus_b_dome + "
+                "mus_b_dome_lobby)\n");
+  }
 
-    // 4. Switching tabs stops playback in the tab being left.
-    m_audio.play();
-    wait(200);
-    check(m_audio.transport() == Transport::Playing, "playback did not start");
+  // 10. A clean background tab follows its voicegroup file when the file
+  // changes on disk (as after a save from another tab).
+  if (tabB->vgSource) {
+    const QString vgPath = tabB->vgSource->filePath();
+    QFile f(vgPath);
+    if (f.open(QIODevice::ReadWrite)) {
+      // Same bytes, definitely-new mtime.
+      f.setFileTime(QDateTime::currentDateTime().addSecs(2),
+                    QFileDevice::FileModificationTime);
+      f.close();
+      const LoadedVoiceGroup *before = tabB->voicegroup;
+      m_tabs->setCurrentWidget(tabB->view);
+      check(tabB->voicegroup != nullptr && tabB->voicegroup != before,
+            "clean tab did not reload its changed voicegroup file");
+      check(tabB->vgSource && !tabB->vgSource->dirty(),
+            "voicegroup auto-refresh left the source dirty");
+    } else {
+      std::printf("tabcheck: note: voicegroup file not writable, "
+                  "auto-refresh check skipped\n");
+      m_tabs->setCurrentWidget(tabB->view);
+    }
+  } else {
+    std::printf("tabcheck: note: no editable voicegroup source, "
+                "auto-refresh check skipped\n");
     m_tabs->setCurrentWidget(tabB->view);
-    check(m_audio.transport() == Transport::Stopped,
-          "switching tabs did not stop playback");
-    check(m_audio.timeline() == tabB->timeline.get(),
-          "engine timeline is not the newly active tab's");
+  }
 
-    // 5. The dirty edit survives the round trip; each stack undoes its own.
-    m_tabs->setCurrentWidget(tabA->view);
-    check(tabA->doc.isDirty(), "first tab's edit vanished across the switch");
-    m_undoGroup->activeStack()->undo();
-    check(!tabA->doc.isDirty() && !tabB->doc.isDirty(),
-          "undo through the group did not clean the active tab");
-
-    // 6. Re-opening an already open song focuses its tab, no duplicates.
-    loadSongByLabel(songB, /*newTab=*/true);
-    check(m_tabs->count() == 2 && m_active == tabB,
-          "re-opening an open song did not just focus its tab");
-
-    // 7. Closing a tab hands the engine to the survivor.
-    closeTab(m_tabs->indexOf(tabB->view));
-    check(m_tabs->count() == 1 && m_active == tabA
-              && m_audio.timeline() == tabA->timeline.get(),
-          "closing the active tab did not fall back to the other tab");
-    check(sessionForLabel(songB) == nullptr, "closed tab's session lingered");
-
-    // 8. Plain activation replaces the current tab's song (tab count
-    // unchanged) — the pre-tabs behavior.
-    loadSongByLabel(songB);
-    tabB = m_active;
-    check(m_tabs->count() == 1 && tabB && tabB->doc.label() == songB
-              && sessionForLabel(songA) == nullptr,
-          "activating a song did not replace the current tab's");
-    check(m_audio.timeline() == tabB->timeline.get(),
-          "engine did not rebind after the in-place replace");
-
-    // 8b. Re-activating the current tab's own song reloads it from disk —
-    // the only reload path for a .mid edited externally. The cleared undo
-    // stack is the observable difference (a plain focus keeps it).
-    uint64_t base2 = 0;
-    for (const SmfTrack &tr : tabB->doc.smf().tracks)
-        base2 = std::max(base2, tr.endTick);
-    tabB->doc.addNote(0, base2 + 96, 72, 24, 93);
-    m_undoGroup->activeStack()->undo();
-    check(!tabB->doc.isDirty() && tabB->doc.undoStack()->count() == 1,
-          "reload precondition: clean doc with undo history");
-    loadSongByLabel(songB);
-    check(m_tabs->count() == 1 && m_active == tabB
-              && tabB->doc.undoStack()->count() == 0,
-          "re-activating the open song did not reload it in place");
-
-    // 9. The open-tab set is recorded for restoreSession.
-    loadSongByLabel(songA, /*newTab=*/true);
-    tabA = m_active;
-    {
-        QSettings settings;
-        const QStringList open =
-            settings.value(QStringLiteral("lastOpenSongs")).toStringList();
-        check(open == QStringList({songB, songA}),
-              "lastOpenSongs does not list the open tabs in order");
-        check(settings.value(QStringLiteral("lastSongLabel")).toString() == songA,
-              "lastSongLabel is not the active tab");
-    }
-
-    // 9b. Saving a voicegroup refreshes every other CLEAN tab on the same
-    // file immediately — waiting for activation would leave a stale parse
-    // whose next save reverts this one. Needs two songs sharing a -G.
-    if (tabA->vgSource && tabB->vgSource
-        && tabA->vgSource->filePath() == tabB->vgSource->filePath()) {
-        int dsSlot = -1;
-        for (int i = 0; i < VOICEGROUP_SIZE && dsSlot < 0; i++) {
-            const VgVoice *v = tabA->vgSource->voiceAt(i);
-            if (v
-                && (v->macro == VgMacro::DirectSound
-                    || v->macro == VgMacro::DirectSoundNoResample
-                    || v->macro == VgMacro::DirectSoundAlt))
-                dsSlot = i;
-        }
-        if (dsSlot >= 0) {
-            VgVoice edited = *tabA->vgSource->voiceAt(dsSlot);
-            edited.release = edited.release == 25 ? 26 : 25;
-            onVoiceEditRequested(dsSlot, edited, false); // active tab = A
-            const LoadedVoiceGroup *bVgBefore = tabB->voicegroup;
-            check(saveSession(*tabA), "shared-voicegroup save failed");
-            check(tabB->voicegroup && tabB->voicegroup != bVgBefore,
-                  "voicegroup save did not refresh the sibling tab's voicegroup");
-            check(tabB->vgSource
-                      && tabB->vgSource->voiceAt(dsSlot)
-                      && tabB->vgSource->voiceAt(dsSlot)->release == edited.release
-                      && !tabB->vgSource->dirty(),
-                  "sibling tab's voicegroup source did not follow the save");
-        } else {
-            std::printf("tabcheck: note: shared voicegroup has no sample "
-                        "voices, save-refresh check skipped\n");
-        }
-    } else {
-        std::printf("tabcheck: note: songs don't share a voicegroup, "
-                    "save-refresh check skipped (use e.g. mus_b_dome + "
-                    "mus_b_dome_lobby)\n");
-    }
-
-    // 10. A clean background tab follows its voicegroup file when the file
-    // changes on disk (as after a save from another tab).
-    if (tabB->vgSource) {
-        const QString vgPath = tabB->vgSource->filePath();
-        QFile f(vgPath);
-        if (f.open(QIODevice::ReadWrite)) {
-            // Same bytes, definitely-new mtime.
-            f.setFileTime(QDateTime::currentDateTime().addSecs(2),
-                          QFileDevice::FileModificationTime);
-            f.close();
-            const LoadedVoiceGroup *before = tabB->voicegroup;
-            m_tabs->setCurrentWidget(tabB->view);
-            check(tabB->voicegroup != nullptr && tabB->voicegroup != before,
-                  "clean tab did not reload its changed voicegroup file");
-            check(tabB->vgSource && !tabB->vgSource->dirty(),
-                  "voicegroup auto-refresh left the source dirty");
-        } else {
-            std::printf("tabcheck: note: voicegroup file not writable, "
-                        "auto-refresh check skipped\n");
-            m_tabs->setCurrentWidget(tabB->view);
-        }
-    } else {
-        std::printf("tabcheck: note: no editable voicegroup source, "
-                    "auto-refresh check skipped\n");
-        m_tabs->setCurrentWidget(tabB->view);
-    }
-
-    std::printf("tabcheck: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);
-    return failures == 0;
+  std::printf("tabcheck: %s (%d failures)\n", failures ? "FAIL" : "PASS",
+              failures);
+  return failures == 0;
 }
 
-int runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB)
-{
-    // Redirected settings: the user's real session is never touched.
-    QTemporaryDir settingsDir;
-    if (!settingsDir.isValid()) {
-        std::fprintf(stderr, "tabcheck: no temp dir for settings\n");
-        return 1;
-    }
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope,
-                       settingsDir.path());
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
-                       settingsDir.path());
+int runTabCheck(const QString &projectRoot, const QString &songA,
+                const QString &songB) {
+  // Redirected settings: the user's real session is never touched.
+  QTemporaryDir settingsDir;
+  if (!settingsDir.isValid()) {
+    std::fprintf(stderr, "tabcheck: no temp dir for settings\n");
+    return 1;
+  }
+  QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope,
+                     settingsDir.path());
+  QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
+                     settingsDir.path());
 
-    {
-        MainWindow window;
-        if (!window.runTabCheck(projectRoot, songA, songB))
-            return 1;
-    } // the first window's audio device is gone before the second opens
+  {
+    MainWindow window;
+    window.show();
+    QCoreApplication::processEvents();
+    if (!window.runTabCheck(projectRoot, songA, songB))
+      return 1;
+  } // the first window's audio device is gone before the second opens
 
-    // Relaunch: the whole tab set comes back, with the same active tab
-    // (songB was active at the end of runTabCheck).
-    int failures = 0;
-    const auto check = [&failures](bool ok, const char *what) {
-        if (!ok) {
-            std::fprintf(stderr, "tabcheck: FAIL: %s\n", what);
-            failures++;
-        }
-        return ok;
-    };
-    {
-        MainWindow window;
-        window.restoreSession();
-        auto *tabs = window.findChild<QTabWidget *>();
-        check(tabs && tabs->count() == 2, "relaunch did not restore both tabs");
-        if (tabs && tabs->count() == 2) {
-            check(tabs->tabText(0) == songB && tabs->tabText(1) == songA,
-                  "restored tabs are not in the saved order");
-        }
-        check(window.windowTitle().startsWith(songB),
-              "relaunch did not re-activate the last active tab");
+  // Relaunch: the whole tab set comes back, with the same active tab
+  // (songB was active at the end of runTabCheck).
+  int failures = 0;
+  const auto check = [&failures](bool ok, const char *what) {
+    if (!ok) {
+      std::fprintf(stderr, "tabcheck: FAIL: %s\n", what);
+      failures++;
     }
-    if (failures == 0)
-        std::printf("tabcheck: restore PASS\n");
-    return failures == 0 ? 0 : 1;
+    return ok;
+  };
+  {
+    MainWindow window;
+    window.restoreSession();
+    auto *tabs = window.findChild<QTabWidget *>();
+    check(tabs && tabs->count() == 2, "relaunch did not restore both tabs");
+    if (tabs && tabs->count() == 2) {
+      check(tabs->tabText(0) == songB && tabs->tabText(1) == songA,
+            "restored tabs are not in the saved order");
+    }
+    check(window.windowTitle().startsWith(songB),
+          "relaunch did not re-activate the last active tab");
+  }
+  if (failures == 0)
+    std::printf("tabcheck: restore PASS\n");
+  return failures == 0 ? 0 : 1;
 }

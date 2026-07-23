@@ -33,10 +33,15 @@ qt_add_executable(porydaw
     src/main.cpp
     src/mainwindow.cpp
     src/mainwindow.h
+    src/liveshortcuts.cpp
+    src/liveshortcuts.hpp
     src/songsession.h
     src/tabcheck.cpp
+    src/shortcutcheck.cpp
     src/eventviewcheck.cpp
     src/rollcheck.cpp
+    src/rollchecknotes.cpp
+    src/rollcheckview.cpp
     src/viewcheck.cpp
     src/roundtrip.cpp
     src/editcheck.cpp
@@ -91,6 +96,18 @@ qt_add_executable(porydaw
     src/ui/songviewmodel.h
     src/ui/songview.cpp
     src/ui/songview.h
+    src/ui/songviewpianoroll.cpp
+    src/ui/songviewpianoroll.hpp
+    src/ui/songviewpianorollinternal.hpp
+    src/ui/songviewpianorollcommands.cpp
+    src/ui/songviewpianorollrendering.cpp
+    src/ui/songviewautomationarea.cpp
+    src/ui/songviewautomationarea.hpp
+    src/ui/songviewautomationarea_p.hpp
+    src/ui/songviewautomationactions.cpp
+    src/ui/songviewautomationrendering.cpp
+    src/ui/songviewtimeruler.cpp
+    src/ui/songviewtimeruler.hpp
     src/ui/eventlistview.cpp
     src/ui/eventlistview.h
     src/ui/viewsidecar.cpp
