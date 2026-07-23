@@ -310,6 +310,8 @@ private:
     QLabel *m_polyLostLabel = nullptr;
     // Sole UI clock: ~60 Hz for playing and stopped-state refreshes.
     QTimer *m_playheadTimer = nullptr;
+    // poly every 3 ticks, time every 6 (see onPlayheadTimer).
+    unsigned m_statusLabelPhase = 0;
     // Skip setText when the formatted time string is unchanged (tenths).
     QString m_lastTimeText;
     // Skip poly status-bar setText when channel counts / lost total match.

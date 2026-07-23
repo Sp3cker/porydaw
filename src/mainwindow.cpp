@@ -808,6 +808,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
         m_songLabel->clear();
         m_timeLabel->setText(QStringLiteral("--:--.- / --:--.-"));
         m_lastTimeText.clear();
+        m_statusLabelPhase = 0;
         m_polyMeter->hide();
         m_pcmValueLabel->clear();
         m_cgbValueLabel->clear();
@@ -834,6 +835,9 @@ void MainWindow::activateSession(SongSession *session, bool force)
         maybeRefreshVoicegroup(*session);
     if (m_audioOk)
         attachEngine(*session);
+    // New playhead position — next timer tick refreshes status labels.
+    m_lastTimeText.clear();
+    m_statusLabelPhase = 5; // ++ wraps to 0 → poly + time
     synchronizePlayhead();
     updateVoicegroupBrowser();
     updatePolyPanelContext(session);
@@ -2634,8 +2638,14 @@ void MainWindow::onPlayheadTimer()
 {
     synchronizePlayhead();
     if (m_audioOk && m_active && m_audio.songLoaded()) {
-        updateTimeLabel();
-        updatePolyLabel();
+        // Poly on 0 and 3; time only on 0.
+        if (++m_statusLabelPhase >= 6u)
+            m_statusLabelPhase = 0;
+        if (m_statusLabelPhase == 0u || m_statusLabelPhase == 3u) {
+            updatePolyLabel();
+            if (m_statusLabelPhase == 0u)
+                updateTimeLabel();
+        }
         if (m_polyDock->isVisible()) {
             AudioEngine::PolySnapshot snap;
             m_audio.polySnapshot(&snap);
