@@ -1,20 +1,13 @@
 #include "playheadoverlay.h"
 
 #include <QEvent>
-#include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
-#include <QPen>
+#include <algorithm>
 
 namespace songview {
 
 namespace {
-
-// Paused = centered on the bar, dimmer. Playing = 1 unit less radius and
-// left-trailing only. Core is 1px in both states.
-constexpr qreal kLineWidth = 1.0;
-constexpr qreal kPeakPlaying = 0.13;
-constexpr qreal kPeakPaused = 0.06;
 
 const QPainterPath kPlayheadTriangle = [] {
     QPainterPath path;
@@ -24,32 +17,6 @@ const QPainterPath kPlayheadTriangle = [] {
     path.closeSubpath();
     return path;
 }();
-
-// Quadratic bloom: t=0 outer (α=0) → t=1 at the bar (α=peak).
-void setQuadStops(QLinearGradient &g, const QColor &color, qreal peakAlpha)
-{
-    QColor stopColor = color;
-    for (int i = 0; i <= 8; ++i) {
-        const qreal t = qreal(i) / 8.0;
-        stopColor.setAlphaF(peakAlpha * t * t);
-        g.setColorAt(t, stopColor);
-    }
-}
-
-void paintGlow(QPainter &painter, qreal x, int top, int height, qreal left,
-               qreal right, const QColor &color, qreal peakAlpha)
-{
-    if (left > 0.0) {
-        QLinearGradient gradient(x - left, 0, x, 0);
-        setQuadStops(gradient, color, peakAlpha);
-        painter.fillRect(QRectF(x - left, top, left, height), gradient);
-    }
-    if (right > 0.0) {
-        QLinearGradient gradient(x + right, 0, x, 0);
-        setQuadStops(gradient, color, peakAlpha);
-        painter.fillRect(QRectF(x, top, right, height), gradient);
-    }
-}
 
 } // namespace
 
@@ -62,52 +29,44 @@ PlayheadOverlay::PlayheadOverlay(QWidget *owner, const Surfaces &surfaces,
     Q_ASSERT(owner);
     Q_ASSERT(m_surfaces.ruler);
     Q_ASSERT(m_surfaces.roll);
-    Q_ASSERT(m_surfaces.lanes);
-    Q_ASSERT(m_surfaces.strip);
 
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setAttribute(Qt::WA_NoSystemBackground);
 
-    // The filter chain is captured once, here: each surface's ancestors up
-    // to the owner as they stand at construction. Reparenting a surface
-    // afterwards would leave the new ancestors unwatched and geometry sync
-    // silently stale — SongView must finish building its hierarchy before
-    // creating the overlay.
-    const auto observeSurfaceGeometry = [this, owner](QWidget *surface) {
+    // Capture geometry of the ruler (and roll for show/hide) once at build
+    // time. Reparenting afterwards leaves filters stale — SongView must
+    // finish its hierarchy before creating the overlay.
+    const auto observe = [this, owner](QWidget *surface) {
         for (QWidget *widget = surface; widget; widget = widget->parentWidget()) {
             widget->installEventFilter(this);
             if (widget == owner)
                 break;
         }
     };
-    observeSurfaceGeometry(m_surfaces.ruler);
-    observeSurfaceGeometry(m_surfaces.roll);
-    observeSurfaceGeometry(m_surfaces.lanes);
-    observeSurfaceGeometry(m_surfaces.strip);
+    observe(m_surfaces.ruler);
+    observe(m_surfaces.roll);
 
     synchronizeGeometry();
     show();
 }
 
-void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing)
+void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible)
 {
-    const qreal oldX = qreal(m_timelineOrigin) + m_timelineX;
+    const qreal oldLocalX = m_localOrigin + m_timelineX;
     const bool oldVisible = m_visible;
-    const bool oldPlaying = m_playing;
 
     m_timelineX = timelineX;
     m_visible = visible;
-    m_playing = playing;
-    const qreal newX = qreal(m_timelineOrigin) + m_timelineX;
+    const qreal newLocalX = m_localOrigin + m_timelineX;
 
-    if (oldX == newX && oldVisible == m_visible && oldPlaying == m_playing)
+    if (oldLocalX == newLocalX && oldVisible == m_visible)
         return;
 
     QRegion dirty;
     if (oldVisible)
-        dirty += playheadRegion(oldX);
+        dirty += playheadRegion(oldLocalX);
     if (m_visible)
-        dirty += playheadRegion(newX);
+        dirty += playheadRegion(newLocalX);
     if (!dirty.isEmpty())
         update(dirty);
 }
@@ -130,73 +89,61 @@ bool PlayheadOverlay::eventFilter(QObject *, QEvent *event)
 
 void PlayheadOverlay::paintEvent(QPaintEvent *)
 {
-    if (!m_visible || m_playheadGeometry.isEmpty()
-        || (m_visibleSurfaceRegion.isEmpty() && m_triangleClip.isEmpty()))
+    if (!m_visible || width() <= 0 || height() <= 0)
         return;
 
     QPainter painter(this);
-    painter.setClipRegion(m_visibleSurfaceRegion);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    const int playheadTop = m_playheadGeometry.top();
-    const int height = m_playheadGeometry.height();
-    const qreal playheadX = qreal(m_timelineOrigin) + m_timelineX;
-    const qreal leftExtent =
-        m_playing ? qreal(kPlayheadGlowRadius - 1) : qreal(kPlayheadGlowRadius);
-    const qreal rightExtent = m_playing ? 0.0 : qreal(kPlayheadGlowRadius);
-    const qreal peak = m_playing ? kPeakPlaying : kPeakPaused;
-    paintGlow(painter, playheadX, playheadTop, height, leftExtent, rightExtent,
-              m_color, peak);
-
-    QPen core(m_color, kLineWidth, Qt::SolidLine, Qt::FlatCap);
-    painter.setPen(core);
-    painter.drawLine(QPointF(playheadX, playheadTop),
-                     QPointF(playheadX, m_playheadGeometry.bottom()));
-
-    painter.setClipRect(m_triangleClip, Qt::ReplaceClip);
+    const qreal playheadX = m_localOrigin + m_timelineX;
     const bool trianglePointsUp = !m_surfaces.roll->isVisible();
-    painter.translate(
-        playheadX, playheadTop + (trianglePointsUp ? kPlayheadTriangleHeight : 0));
+    painter.translate(playheadX,
+                      trianglePointsUp ? kPlayheadTriangleHeight : 0);
     if (trianglePointsUp)
         painter.scale(1.0, -1.0);
     painter.fillPath(kPlayheadTriangle, m_color);
 }
 
-QRect PlayheadOverlay::visibleSurfaceRect(const QWidget *surface, QWidget *owner,
-                                          int origin) const
+QRect PlayheadOverlay::visibleTimelineBand(QWidget *owner) const
 {
-    if (origin >= surface->width())
+    const QWidget *ruler = m_surfaces.ruler;
+    if (!ruler->isVisible() || m_surfaces.rulerOrigin >= ruler->width())
         return {};
-    QPoint offset = surface->mapTo(owner, QPoint(0, 0));
-    QRect visible(offset + QPoint(origin, 0),
-                  QSize(surface->width() - origin, surface->height()));
-    for (const QWidget *widget = surface; widget; widget = widget->parentWidget()) {
+
+    // Horizontal span matches the ruler's timeline area; vertical sits just
+    // below the ruler (so do not intersect against the ruler's own rect).
+    const QPoint rulerOrigin =
+        ruler->mapTo(owner, QPoint(m_surfaces.rulerOrigin, 0));
+    const int top = ruler->mapTo(owner, QPoint(0, 0)).y() + ruler->height();
+    int left = rulerOrigin.x();
+    int right = ruler->mapTo(owner, QPoint(ruler->width(), 0)).x();
+
+    for (const QWidget *widget = ruler; widget; widget = widget->parentWidget()) {
         if (!widget->isVisible())
             return {};
-
-        visible &= QRect(widget->mapTo(owner, QPoint(0, 0)), widget->size());
+        const QRect r(widget->mapTo(owner, QPoint(0, 0)), widget->size());
+        left = std::max(left, r.left());
+        right = std::min(right, r.right() + 1);
         if (widget == owner)
             break;
     }
-    return visible;
+    if (right - left <= 0)
+        return {};
+    return QRect(left, top, right - left, kPlayheadTriangleHeight + 1);
 }
 
-QRegion PlayheadOverlay::playheadRegion(qreal x) const
+QRegion PlayheadOverlay::playheadRegion(qreal localX) const
 {
-    if (m_playheadGeometry.isEmpty())
+    if (width() <= 0 || height() <= 0)
         return {};
-
     constexpr qreal kAntialiasPadding = 1.0;
-    // Max extent is the paused centered bloom (radius each side).
     const QRect bounds =
-        QRectF(x - kPlayheadGlowRadius - kAntialiasPadding,
-               m_playheadGeometry.top(),
-               2.0 * kPlayheadGlowRadius + kPlayheadTriangleHalfWidth
-                   + kAntialiasPadding * 2.0,
-               m_playheadGeometry.height())
+        QRectF(localX - kPlayheadTriangleHalfWidth - kAntialiasPadding, 0,
+               2.0 * kPlayheadTriangleHalfWidth + kAntialiasPadding * 2.0,
+               height())
             .toAlignedRect()
-            .intersected(m_playheadGeometry);
-    return QRegion(bounds).intersected(m_visibleSurfaceRegion + m_triangleClip);
+            .intersected(rect());
+    return QRegion(bounds);
 }
 
 void PlayheadOverlay::synchronizeGeometry()
@@ -204,45 +151,42 @@ void PlayheadOverlay::synchronizeGeometry()
     QWidget *owner = parentWidget();
     Q_ASSERT(owner);
 
-    const QRect rulerGeometry(m_surfaces.ruler->mapTo(owner, QPoint(0, 0)),
-                              m_surfaces.ruler->size());
-    const int playheadTop = rulerGeometry.bottom() + 1;
-    const QRect playheadGeometry(0, playheadTop, owner->width(),
-                                 owner->height() - playheadTop);
-    const QRect rulerVisible =
-        visibleSurfaceRect(m_surfaces.ruler, owner, m_surfaces.rulerOrigin);
-    const QRect triangleClip(rulerVisible.left(), playheadTop,
-                             rulerVisible.width(), kPlayheadTriangleHeight + 1);
-    const QRegion visibleSurfaces =
-        QRegion(visibleSurfaceRect(m_surfaces.roll, owner, m_surfaces.rollOrigin))
-        + visibleSurfaceRect(m_surfaces.lanes, owner, m_surfaces.lanesOrigin)
-        + visibleSurfaceRect(m_surfaces.strip, owner, m_surfaces.stripOrigin);
-    const int timelineOrigin =
+    const QRect band = visibleTimelineBand(owner);
+    const qreal ownerOrigin =
         m_surfaces.ruler->mapTo(owner, QPoint(m_surfaces.rulerOrigin, 0)).x();
-    const bool overlayGeometryChanged = geometry() != owner->rect();
-    const bool surfaceGeometryChanged =
-        m_playheadGeometry != playheadGeometry
-        || m_visibleSurfaceRegion != visibleSurfaces
-        || m_triangleClip != triangleClip
-        || m_timelineOrigin != timelineOrigin;
-    if (!overlayGeometryChanged && !surfaceGeometryChanged)
+    const qreal localOrigin = band.isEmpty() ? 0.0 : ownerOrigin - band.left();
+
+    const qreal oldLocalX = m_localOrigin + m_timelineX;
+    const QRegion oldDirty = m_visible ? playheadRegion(oldLocalX) : QRegion();
+
+    if (band.isEmpty()) {
+        hide();
+        m_localOrigin = 0.0;
         return;
-    const qreal oldX = qreal(m_timelineOrigin) + m_timelineX;
-    const QRegion oldDirty = m_visible ? playheadRegion(oldX) : QRegion();
+    }
 
-    if (overlayGeometryChanged)
-        setGeometry(owner->rect());
+    if (!isVisible())
+        show();
 
-    m_visibleSurfaceRegion = visibleSurfaces;
-    m_playheadGeometry = playheadGeometry;
-    m_triangleClip = triangleClip;
-    m_timelineOrigin = timelineOrigin;
+    const bool geometryChanged = geometry() != band;
+    const bool originChanged = m_localOrigin != localOrigin;
+    if (!geometryChanged && !originChanged)
+        return;
 
-    const qreal newX = qreal(m_timelineOrigin) + m_timelineX;
-    const QRegion dirty =
-        (oldDirty | (m_visible ? playheadRegion(newX) : QRegion())) - rulerGeometry;
-    if (!dirty.isEmpty())
-        update(dirty);
+    if (geometryChanged)
+        setGeometry(band);
+    m_localOrigin = localOrigin;
+
+    // After a move/resize, old local coords are stale — repaint the band.
+    if (geometryChanged)
+        update();
+    else {
+        const qreal newLocalX = m_localOrigin + m_timelineX;
+        QRegion dirty =
+            oldDirty | (m_visible ? playheadRegion(newLocalX) : QRegion());
+        if (!dirty.isEmpty())
+            update(dirty);
+    }
     raise();
 }
 

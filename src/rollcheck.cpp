@@ -671,9 +671,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         view.scrollByPx(view.contentX(0.0) - home); // back where it started
     }
 
-    // A stopped playhead is a thin child overlay. Moving it must preserve the
-    // timeline parents' backing stores instead of repainting their contents.
-    for (const QString &error : playheadOverlayCheckFailures(view, *timeline))
+    // The playhead renders directly into its timeline surfaces. Moving it must
+    // repaint only narrow strips, without repainting their static content.
+    for (const QString &error : playheadRenderingCheckFailures(view, *timeline))
         fail(qUtf8Printable(error));
 
     // Inline track rename: renameTrack opens a line editor on the header

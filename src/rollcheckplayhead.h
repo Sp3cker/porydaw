@@ -5,4 +5,4 @@
 class MidiTimeline;
 class SongView;
 
-QStringList playheadOverlayCheckFailures(SongView &view, const MidiTimeline &timeline);
+QStringList playheadRenderingCheckFailures(SongView &view, const MidiTimeline &timeline);

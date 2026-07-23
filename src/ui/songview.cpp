@@ -32,6 +32,7 @@
 #include <QPixmap>
 #include <QProxyStyle>
 #include <QPushButton>
+#include <QRegion>
 #include <QResizeEvent>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -441,25 +442,177 @@ QFont timeRulerFont(const QFont &source) {
 
 } // namespace
 
+// The playhead used to make Qt repaint these surfaces through the transparent
+// SongView overlay on every playback tick. Keep their expensive static content
+// in a pixmap instead: normal update() calls rebuild it after edits or view
+// changes, while setPlayhead() restores only the old and new playhead strips
+// from the cache.
+class TimelineSurface : public QWidget
+{
+public:
+    TimelineSurface(int timelineOrigin, QWidget *parent);
+
+    void update();
+    void update(int x, int y, int width, int height);
+    void update(const QRect &rect);
+    void update(const QRegion &region);
+    void setPlayhead(qreal timelineX, bool visible, bool playing);
+
+protected:
+    void paintEvent(QPaintEvent *event) final;
+    void resizeEvent(QResizeEvent *event) override;
+    void changeEvent(QEvent *event) override;
+    virtual void paintContent(QPainter &painter) = 0;
+
+private:
+    QRegion playheadRegion(qreal timelineX) const;
+    void rebuildContent();
+
+    int m_timelineOrigin;
+    QPixmap m_content;
+    PlayheadLineCache m_playheadLine;
+    qreal m_timelineX = 0.0;
+    bool m_visible = false;
+    bool m_playing = false;
+    bool m_contentDirty = true;
+};
+
+TimelineSurface::TimelineSurface(int timelineOrigin, QWidget *parent)
+    : QWidget(parent), m_timelineOrigin(timelineOrigin)
+{
+    setAttribute(Qt::WA_OpaquePaintEvent);
+}
+
+void TimelineSurface::update()
+{
+    m_contentDirty = true;
+    QWidget::update();
+}
+
+void TimelineSurface::update(int x, int y, int width, int height)
+{
+    update(QRect(x, y, width, height));
+}
+
+void TimelineSurface::update(const QRect &rect)
+{
+    m_contentDirty = true;
+    QWidget::update(rect);
+}
+
+void TimelineSurface::update(const QRegion &region)
+{
+    m_contentDirty = true;
+    QWidget::update(region);
+}
+
+void TimelineSurface::setPlayhead(qreal timelineX, bool visible, bool playing)
+{
+    const auto oldTimelineX = m_timelineX;
+    const auto oldVisible = m_visible;
+    const auto oldPlaying = m_playing;
+    m_timelineX = timelineX;
+    m_visible = visible;
+    m_playing = playing;
+    if (oldTimelineX == m_timelineX && oldVisible == m_visible
+        && oldPlaying == m_playing)
+        return;
+    QRegion dirty;
+    if (oldVisible)
+        dirty += playheadRegion(oldTimelineX);
+    if (m_visible)
+        dirty += playheadRegion(m_timelineX);
+    // Bypass our update() overloads: moving the playhead must not mark the
+    // cached notes or automation content dirty.
+    if (!dirty.isEmpty())
+        QWidget::update(dirty);
+}
+
+void TimelineSurface::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    m_contentDirty = true;
+}
+
+void TimelineSurface::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    switch (event->type()) {
+    case QEvent::PaletteChange:
+    case QEvent::FontChange:
+    case QEvent::StyleChange:
+        m_contentDirty = true;
+        QWidget::update();
+        break;
+    default:
+        break;
+    }
+}
+
+QRegion TimelineSurface::playheadRegion(qreal timelineX) const
+{
+    if (width() <= m_timelineOrigin || height() <= 0)
+        return {};
+    constexpr qreal kAntialiasPadding = 1.0;
+    const qreal x = qreal(m_timelineOrigin) + timelineX;
+    const QRect bounds =
+        QRectF(x - kPlayheadGlowRadius - kAntialiasPadding, 0,
+               2.0 * kPlayheadGlowRadius + 2.0 * kAntialiasPadding,
+               height())
+            .toAlignedRect();
+    return QRegion(bounds).intersected(
+        QRect(m_timelineOrigin, 0, width() - m_timelineOrigin, height()));
+}
+
+void TimelineSurface::rebuildContent()
+{
+    const auto dpr = devicePixelRatioF();
+    QPixmap content(qCeil(width() * dpr), qCeil(height() * dpr));
+    content.setDevicePixelRatio(dpr);
+    QPainter painter(&content);
+    paintContent(painter);
+    m_content = std::move(content);
+    m_contentDirty = false;
+}
+
+void TimelineSurface::paintEvent(QPaintEvent *event)
+{
+    const auto dpr = devicePixelRatioF();
+    if (m_contentDirty || m_content.width() != qCeil(width() * dpr)
+        || m_content.height() != qCeil(height() * dpr))
+        rebuildContent();
+    QPainter painter(this);
+    painter.drawPixmap(0, 0, m_content);
+    if (!m_visible)
+        return;
+    painter.setClipRegion(event->region());
+    painter.setRenderHint(QPainter::Antialiasing);
+    m_playheadLine.paint(painter, qreal(m_timelineOrigin) + m_timelineX, 0,
+                          height(), m_playing, playheadColor());
+}
+
 // ---------------------------------------------------------------- TimeRuler
 
-class TimeRuler : public QWidget
+// Content cached via TimelineSurface. No playhead bar here — the triangle
+// sits in PlayheadOverlay just below the ruler.
+class TimeRuler : public TimelineSurface
 {
 public:
     explicit TimeRuler(SongView *sv)
-        : QWidget(sv), m_sv(sv)
+        : TimelineSurface(kGutterW, sv), m_sv(sv)
     {
-    // The ruler has a bold marker row and a regular bar-number/tick row.
-    // Each row reserves its face's occupied glyph height plus semantic
-    // padding, so a narrow ruler never clips text or relies on pixels.
-    const auto markerRowPadding = lyt::singlePixel();
-    const auto tickRowPadding = lyt::singlePixel();
-    const auto rulerFont = timeRulerFont(font());
-    const QFontMetrics markerMetrics(typography::bold(rulerFont));
-    const QFontMetrics tickMetrics(rulerFont);
-    m_markerHeight = markerMetrics.height() + markerRowPadding;
-    const auto rulerHeight =
-        m_markerHeight + tickMetrics.height() + tickRowPadding;
+        setObjectName(QStringLiteral("timeRuler"));
+        // The ruler has a bold marker row and a regular bar-number/tick row.
+        // Each row reserves its face's occupied glyph height plus semantic
+        // padding, so a narrow ruler never clips text or relies on pixels.
+        const auto markerRowPadding = lyt::singlePixel();
+        const auto tickRowPadding = lyt::singlePixel();
+        const auto rulerFont = timeRulerFont(font());
+        const QFontMetrics markerMetrics(typography::bold(rulerFont));
+        const QFontMetrics tickMetrics(rulerFont);
+        m_markerHeight = markerMetrics.height() + markerRowPadding;
+        const auto rulerHeight =
+            m_markerHeight + tickMetrics.height() + tickRowPadding;
         setFixedHeight(rulerHeight);
         setMouseTracking(true);
 
@@ -518,12 +671,13 @@ public:
     }
 
 protected:
-    void paintEvent(QPaintEvent *) override
+    void paintContent(QPainter &p) override
     {
-        QPainter p(this);
         p.setFont(timeRulerFont(p.font()));
-    p.fillRect(rect(), themes::color(themes::Role::song_view_timeline_chrome_background));
-        p.setPen(QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
+        p.fillRect(rect(),
+                   themes::color(themes::Role::song_view_timeline_chrome_background));
+        p.setPen(
+            QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
         p.drawLine(0, rect().bottom(), width(), rect().bottom());
 
         if (!m_sv->timeline()) {
@@ -669,7 +823,6 @@ protected:
             p.drawLine(sx0, markers.top(), sx0, markers.bottom());
             p.drawLine(sx1, markers.top(), sx1, markers.bottom());
         }
-
     }
 
     void wheelEvent(QWheelEvent *event) override
@@ -1125,11 +1278,11 @@ MidiCursors loadMidiCursors(qreal devicePixelRatio)
 
 // ---------------------------------------------------------------- PianoRoll
 
-class PianoRoll : public QWidget
+class PianoRoll : public TimelineSurface
 {
 public:
     explicit PianoRoll(SongView *sv)
-        : QWidget(sv)
+        : TimelineSurface(kKeyboardW, sv)
         , m_sv(sv)
         , m_cursors(loadMidiCursors(devicePixelRatioF()))
     {
@@ -1157,9 +1310,8 @@ public:
     }
 
 protected:
-    void paintEvent(QPaintEvent *) override
+    void paintContent(QPainter &p) override
     {
-        QPainter p(this);
         p.fillRect(rect(), themes::color(themes::Role::song_view_piano_roll_background));
         if (!m_sv->timeline()) {
             drawKeyboard(p);
@@ -2351,11 +2503,13 @@ private:
 
 // ----------------------------------------------------------- AutomationArea
 
-class AutomationArea : public QWidget
+class AutomationArea : public TimelineSurface
 {
 public:
     AutomationArea(SongView *sv, QScrollArea *scroll)
-        : QWidget(nullptr), m_sv(sv), m_scroll(scroll) // parented by the scroll area
+        : TimelineSurface(kGutterW, nullptr)
+        , m_sv(sv)
+        , m_scroll(scroll) // parented by the scroll area
     {
         setObjectName(QStringLiteral("automationArea")); // findChild for tests
         setMinimumHeight(kLaneH);
@@ -2441,10 +2595,9 @@ public:
         update();
     }
 
-protected:
-    void paintEvent(QPaintEvent *) override
+private:
+    void paintContent(QPainter &p) override
     {
-        QPainter p(this);
         p.fillRect(rect(), themes::color(themes::Role::song_view_piano_roll_background));
         if (!m_sv->timeline())
             return;
@@ -2859,7 +3012,6 @@ protected:
 
     void leaveEvent(QEvent *) override { clearHover(); }
 
-private:
     // Lane rows carry their identity BY VALUE, never a pointer into
     // model.lanes: rows outlive a model rebuild (setSong resets view
     // heights before rebuildRows repopulates them), so a cached pointer
@@ -3753,20 +3905,20 @@ private:
 
 // ---------------------------------------------------------------- OtherStrip
 
-class OtherStrip : public QWidget
+class OtherStrip : public TimelineSurface
 {
 public:
     explicit OtherStrip(SongView *sv)
-        : QWidget(sv), m_sv(sv)
+        : TimelineSurface(kGutterW, sv), m_sv(sv)
     {
+        setObjectName(QStringLiteral("otherStrip"));
         setFixedHeight(QFontMetrics(font()).height() + lyt::space(Space::Two));
         setMouseTracking(true);
     }
 
 protected:
-    void paintEvent(QPaintEvent *) override
+    void paintContent(QPainter &p) override
     {
-        QPainter p(this);
         p.fillRect(rect(), themes::color(themes::Role::song_view_timeline_chrome_background));
         p.setPen(themes::color(themes::Role::song_view_separator));
         p.drawLine(0, 0, width(), 0);
@@ -4512,11 +4664,6 @@ SongView::SongView(QWidget *parent)
     playheadSurfaces.ruler = m_ruler;
     playheadSurfaces.rulerOrigin = kGutterW;
     playheadSurfaces.roll = m_roll;
-    playheadSurfaces.rollOrigin = kKeyboardW;
-    playheadSurfaces.lanes = m_lanes;
-    playheadSurfaces.lanesOrigin = kGutterW;
-    playheadSurfaces.strip = m_strip;
-    playheadSurfaces.stripOrigin = kGutterW;
     m_playheadOverlay =
         new PlayheadOverlay(this, playheadSurfaces, playheadColor());
 
@@ -5456,12 +5603,17 @@ bool SongView::userGestureActive() const
 
 void SongView::syncPlayheadOverlay()
 {
-    if (m_playheadOverlay) {
-        const qreal timelineX =
-            m_playheadTick * m_pxPerTick - qreal(m_scrollPx);
-        m_playheadOverlay->setPlayhead(
-            timelineX, m_timeline != nullptr, m_playing);
-    }
+    const qreal timelineX =
+        m_playheadTick * m_pxPerTick - qreal(m_scrollPx);
+    const bool visible = m_timeline != nullptr;
+    if (m_playheadOverlay)
+        m_playheadOverlay->setPlayhead(timelineX, visible);
+    if (m_roll)
+        m_roll->setPlayhead(timelineX, visible, m_playing);
+    if (m_lanes)
+        m_lanes->setPlayhead(timelineX, visible, m_playing);
+    if (m_strip)
+        m_strip->setPlayhead(timelineX, visible, m_playing);
 }
 
 void SongView::setEditCursorTick(uint64_t tick)
