@@ -2,6 +2,7 @@
 
 #include <QMainWindow>
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -95,7 +96,6 @@ private slots:
     // it checks out, else from the committed 8-bit .wav.
     void editSampleForSlot(int slot);
     void registerLoadedSong();
-    void uiTick();
     void onVoiceEditRequested(int slot, const VgVoice &voice, bool structural);
     void tabChanged(int index);
     void closeTab(int index);
@@ -220,6 +220,10 @@ private:
     void refreshTransportIcons();
     void updateTransportActions();
     void synchronizePlayhead();
+    // Continuous UI clock: synchronizes the playhead and refreshes status.
+    void onPlayheadTimer();
+    void updateTimeLabel();
+    void updatePolyLabel();
     void updateWindowTitle();
     QString formatTime(uint64_t samples) const;
 
@@ -304,6 +308,13 @@ private:
     QLabel *m_polyLostSeparator = nullptr;
     QLabel *m_polyLostCaption = nullptr;
     QLabel *m_polyLostLabel = nullptr;
-    QTimer *m_uiTimer = nullptr;
+    // Sole UI clock: ~60 Hz for playing and stopped-state refreshes.
     QTimer *m_playheadTimer = nullptr;
+    // Skip setText when the formatted time string is unchanged (tenths).
+    QString m_lastTimeText;
+    // Skip poly status-bar setText when channel counts / lost total match.
+    int m_lastPolyPcm = -1;
+    int m_lastPolyMax = -1;
+    int m_lastPolyCgb = -1;
+    uint64_t m_lastPolyLost = UINT64_MAX;
 };

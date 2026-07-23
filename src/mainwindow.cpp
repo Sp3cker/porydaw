@@ -216,17 +216,14 @@ MainWindow::MainWindow(QWidget *parent)
                         .arg(int(m_audio.sampleRate()))
                   : tr("No audio device."));
 
-    m_uiTimer = new QTimer(this);
     m_playheadTimer = new QTimer(this);
-
-    m_uiTimer->setInterval(33);
-    connect(m_uiTimer, &QTimer::timeout, this, &MainWindow::uiTick);
-    m_uiTimer->start();
     m_playheadTimer->setTimerType(Qt::PreciseTimer);
     // 60hz is 16.6 ms; Qt can tick faster than this, making the playhead move
     // faster than 60hz and wasting time.
     m_playheadTimer->setInterval(17);
-    connect(m_playheadTimer, &QTimer::timeout, this, &MainWindow::synchronizePlayhead);
+    // Sole UI clock: continuous updates keep stopped-state UI self-healing.
+    connect(m_playheadTimer, &QTimer::timeout, this, &MainWindow::onPlayheadTimer);
+    m_playheadTimer->start();
 
     updateTransportActions();
 }
@@ -238,6 +235,10 @@ MainWindow::~MainWindow()
     // the half-destroyed session list.
     if (m_tabs)
         disconnect(m_tabs, nullptr, this, nullptr);
+    // Kill UI clocks before audio teardown so a queued timeout cannot touch
+    // half-destroyed state (especially under Instruments' slow sampling).
+    if (m_playheadTimer)
+        m_playheadTimer->stop();
     // Stop the audio thread before the sessions free the timeline and
     // voicegroup it borrows.
     m_audio.shutdown();
@@ -806,6 +807,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
         m_registerAction->setEnabled(false);
         m_songLabel->clear();
         m_timeLabel->setText(QStringLiteral("--:--.- / --:--.-"));
+        m_lastTimeText.clear();
         m_polyMeter->hide();
         m_pcmValueLabel->clear();
         m_cgbValueLabel->clear();
@@ -813,6 +815,10 @@ void MainWindow::activateSession(SongSession *session, bool force)
         m_polyLostSeparator->hide();
         m_polyLostLabel->hide();
         m_polyLostCaption->hide();
+        m_lastPolyPcm = -1;
+        m_lastPolyMax = -1;
+        m_lastPolyCgb = -1;
+        m_lastPolyLost = UINT64_MAX;
         m_songList->setCurrentSong(-1);
         updateWindowTitle();
         updateTransportActions();
@@ -2585,30 +2591,51 @@ void MainWindow::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
-void MainWindow::uiTick()
+void MainWindow::updateTimeLabel()
 {
-    if (!m_audioOk)
+    if (!m_audioOk || !m_active || !m_audio.songLoaded())
         return;
-    if (m_active && m_audio.songLoaded()) {
-        const uint64_t length = m_audio.timeline()->lengthSamples;
-        m_timeLabel->setText(QStringLiteral("%1 / %2")
-                                 .arg(formatTime(m_audio.playheadSamples()),
-                                      formatTime(length)));
+    // Tenths resolution — rewriting the same string is pure churn.
+    const QString text = QStringLiteral("%1 / %2")
+                             .arg(formatTime(m_audio.playheadSamples()),
+                                  formatTime(m_audio.timeline()->lengthSamples));
+    if (text == m_lastTimeText)
+        return;
+    m_lastTimeText = text;
+    m_timeLabel->setText(text);
+}
 
-        const uint64_t lost = m_audio.polyLostTotal();
-        m_pcmValueLabel->setText(
-            QStringLiteral("%1/%2")
-                .arg(m_audio.activePcmChannels())
-                .arg(m_audio.maxPcmChannels()));
-        m_cgbValueLabel->setText(
-            QStringLiteral("%1/4").arg(m_audio.activeCgbChannels()));
-        const bool hasLost = lost > 0;
-        m_polyLostLabel->setText(hasLost ? QString::number(lost) : QString());
-        m_polyLostSeparator->setVisible(hasLost);
-        m_polyLostLabel->setVisible(hasLost);
-        m_polyLostCaption->setVisible(hasLost);
-        m_polyMeter->show();
+void MainWindow::updatePolyLabel()
+{
+    if (!m_audioOk || !m_active || !m_audio.songLoaded())
+        return;
+    const int pcm = m_audio.activePcmChannels();
+    const int max = m_audio.maxPcmChannels();
+    const int cgb = m_audio.activeCgbChannels();
+    const uint64_t lost = m_audio.polyLostTotal();
+    if (pcm == m_lastPolyPcm && max == m_lastPolyMax && cgb == m_lastPolyCgb
+        && lost == m_lastPolyLost)
+        return;
+    m_lastPolyPcm = pcm;
+    m_lastPolyMax = max;
+    m_lastPolyCgb = cgb;
+    m_lastPolyLost = lost;
+    m_pcmValueLabel->setText(QStringLiteral("%1/%2").arg(pcm).arg(max));
+    m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(cgb));
+    const bool hasLost = lost > 0;
+    m_polyLostLabel->setText(hasLost ? QString::number(lost) : QString());
+    m_polyLostSeparator->setVisible(hasLost);
+    m_polyLostLabel->setVisible(hasLost);
+    m_polyLostCaption->setVisible(hasLost);
+    m_polyMeter->show();
+}
 
+void MainWindow::onPlayheadTimer()
+{
+    synchronizePlayhead();
+    if (m_audioOk && m_active && m_audio.songLoaded()) {
+        updateTimeLabel();
+        updatePolyLabel();
         if (m_polyDock->isVisible()) {
             AudioEngine::PolySnapshot snap;
             m_audio.polySnapshot(&snap);
@@ -2620,20 +2647,11 @@ void MainWindow::uiTick()
 
 void MainWindow::synchronizePlayhead()
 {
-    if (!m_audioOk || !m_active || !m_audio.songLoaded()) {
-        // This also runs synchronously from activateSession(nullptr).
-        m_playheadTimer->stop();
+    if (!m_audioOk || !m_active || !m_audio.songLoaded())
         return;
-    }
 
     const bool playing = m_audio.transport() == Transport::Playing;
     m_active->view->setPlayheadSample(m_audio.playheadSamples(), playing);
-    if (playing) {
-        if (!m_playheadTimer->isActive())
-            m_playheadTimer->start();
-    } else {
-        m_playheadTimer->stop();
-    }
 }
 
 void MainWindow::startPlayback(bool fromEditCursor)
@@ -2705,6 +2723,10 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     }
     qInfo("selftest: loaded %s (%zu events, %d tracks)", qUtf8Printable(target->label),
           m_audio.timeline()->events.size(), m_audio.timeline()->usedTrackCount);
+
+    // open/load ran without an event loop; paint the loaded song before the
+    // timed playback segments (needed when launched under Instruments).
+    QApplication::processEvents();
 
     startPlayback();
     QEventLoop loop;
