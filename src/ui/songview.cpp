@@ -48,6 +48,7 @@
 #include <cmath>
 #include <functional>
 #include <map>
+#include <numeric>
 #include <utility>
 
 
@@ -486,8 +487,9 @@ public:
         for (int denom : {4, 8, 16, 32})
             m_divCombo->addItem(QStringLiteral("1/%1").arg(denom), denom);
         m_divCombo->setToolTip(
-            SongView::tr("Finest snap subdivision. Auto follows the zoom down to "
-                         "the mid2agb clock grid; 1/4 never snaps finer than beats."));
+            SongView::tr("Finest drawn subdivision. Auto follows the zoom down to "
+                         "the mid2agb clock grid; edits snap one step finer than "
+                         "the drawn grid."));
         m_feelCombo = new QComboBox(gridBox);
         m_feelCombo->addItem(SongView::tr("Straight"));
         m_feelCombo->addItem(SongView::tr("Triplet"));
@@ -4926,11 +4928,17 @@ uint64_t SongView::gridTicksIn(const GridSeg &seg, bool snap) const
         }
     }
     // Snapping runs one ladder step finer than the drawn grid, so edits
-    // aren't limited to visible lines — but never past the user's minimum
-    // subdivision (1/4 still never snaps finer than beats).
-    if (snap && step > 0 && ladder[step - 1] <= maxDiv)
-        step--;
-    return std::max(std::max<uint64_t>(1, seg.beatTicks / ladder[step]), clock);
+    // aren't limited to visible lines. The minimum subdivision is a display
+    // floor only — snapping steps past it too. gcd keeps the snap grid a
+    // divisor of the drawn grid when a beat's ticks don't split evenly, so
+    // every drawn line stays snappable.
+    const uint64_t vis =
+        std::max(std::max<uint64_t>(1, seg.beatTicks / ladder[step]), clock);
+    if (!snap || step == 0)
+        return vis;
+    const uint64_t fine =
+        std::max<uint64_t>(1, seg.beatTicks / ladder[step - 1]);
+    return std::max(std::gcd(vis, fine), clock);
 }
 
 uint64_t SongView::fineGridTicks() const

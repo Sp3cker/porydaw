@@ -115,7 +115,7 @@ public:
                                          // keys); 0 = auto-fit to the data
         QList<int> splitterSizes; // roll pane, lanes pane
         std::vector<std::pair<int, uint8_t>> emptyLanes; // (track, cc)
-        int gridMinDenom = 0;     // snap-grid floor as a note denominator
+        int gridMinDenom = 0;     // drawn-grid floor as a note denominator
                                   // (4/8/16/32); 0 = down to the clock grid
         bool gridTriplet = false; // triplet vs straight beat subdivisions
         bool eventList = false;   // raw MIDI event list instead of the roll
@@ -252,11 +252,12 @@ public:
         const std::function<void(uint64_t, bool, int, int)> &fn) const;
 
     // --- editing support for the child widgets ---
-    // Snap-grid feel and floor (the ruler's grid controls): the zoom-adaptive
+    // Grid feel and floor (the ruler's grid controls): the zoom-adaptive
     // grid subdivides beats by powers of two (straight) or by threes
     // (triplet), and the minimum subdivision — a note denominator, quarter =
-    // one beat — stops it from refining past the note value the user cares
-    // about. 0 keeps the default clock-grid floor. Per-song view state.
+    // one beat — stops the DRAWN grid from refining past the note value the
+    // user cares about (display only; snapping still steps one rung finer).
+    // 0 keeps the default clock-grid floor. Per-song view state.
     enum class GridFeel { Straight, Triplet };
     GridFeel gridFeel() const { return m_gridFeel; }
     void setGridFeel(GridFeel feel);
@@ -282,8 +283,9 @@ public:
     uint64_t gridTicksAt(uint64_t tick) const;
     // Snap grid in ticks at a position: one feel-ladder step finer than the
     // visible grid, so edits can land halfway between drawn lines (thirds
-    // stepping from beats in triplet feel) — still floored at the minimum
-    // subdivision and the clock base.
+    // stepping from beats in triplet feel). The minimum subdivision is a
+    // display floor only — snapping steps past it — but the clock base
+    // still bounds it, and it always divides the visible grid.
     uint64_t snapTicksAt(uint64_t tick) const;
     // Fine placement (Alt-drag in the lanes): the mid2agb clock grid — the
     // document's real resolution — regardless of the zoom-dependent grid.

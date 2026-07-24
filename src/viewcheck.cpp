@@ -120,8 +120,9 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
                 }
             };
             // The snap grid runs one ladder step finer than the visible
-            // grid so edits can land between drawn lines — but never past
-            // the user's minimum subdivision.
+            // grid so edits can land between drawn lines. The minimum
+            // subdivision floors the DRAWN grid only; snapping steps past
+            // it too.
             const auto expectSnap = [&](const char *what, uint64_t expected) {
                 if (view.snapTicksAt(0) != expected) {
                     std::fprintf(stderr,
@@ -152,18 +153,19 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
             expectSnap("triplet auto", std::max<uint64_t>(1, tpb / 12));
             view.setGridMinDenom(8);
             expectGrid("triplet 1/8", std::max<uint64_t>(1, tpb / 3));
-            expectSnap("triplet 1/8 floor stops the snap step",
-                       std::max<uint64_t>(1, tpb / 3));
+            expectSnap("triplet 1/8 snaps past the display floor",
+                       std::max<uint64_t>(1, tpb / 6));
             zoom.pxPerBeat = 4.0 * cellPx;
             view.applyViewState(zoom);
             view.setGridFeel(SongView::GridFeel::Straight);
             view.setGridMinDenom(16);
             expectGrid("straight 1/16", std::max<uint64_t>(1, tpb / 4));
-            expectSnap("straight 1/16 floor stops the snap step",
-                       std::max<uint64_t>(1, tpb / 4));
+            expectSnap("straight 1/16 snaps past the display floor",
+                       std::max<uint64_t>(1, tpb / 8));
             view.setGridMinDenom(4);
             expectGrid("straight 1/4", tpb);
-            expectSnap("straight 1/4 never snaps finer than beats", tpb);
+            expectSnap("straight 1/4 snaps to half-beats",
+                       std::max<uint64_t>(1, tpb / 2));
             view.setGridMinDenom(0);
             std::printf("viewcheck: snap-grid semantics checked on %s\n",
                         qUtf8Printable(song.label));
@@ -172,8 +174,8 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
         // Every drawn beat/bar line must be reachable by snapping, whatever
         // the song's time-signature changes do (mid-measure signatures
         // restart the grid; a signature's denominator rescales the beat).
-        // With the 1/4 floor the snap grid IS the beat grid, so each line
-        // must be a snap fixed point.
+        // With the 1/4 floor the drawn grid is beats and the snap grid
+        // divides it evenly, so each line must be a snap fixed point.
         view.setGridMinDenom(4);
         int badSnaps = 0;
         uint64_t badTick = 0;

@@ -130,7 +130,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
     // The zoom-adaptive default grid is a 16th note — an 8px cell, too tight
     // for clean center/handle clicks. Floor the grid at quarter notes (the
-    // ruler's own control) so cells are a comfortable 32px.
+    // ruler's own control) so cells are a comfortable 32px. Snapping runs
+    // one ladder step finer than the drawn grid (the floor is display-only),
+    // so the snap grid here is half-beats — 16px snap cells.
     view.setGridMinDenom(4);
     (void)view.grab(); // force layout so child geometry is real
 
@@ -211,8 +213,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 const int x0 = songview::kKeyboardW + view.contentX(double(tick));
                 const int x1 =
                     songview::kKeyboardW + view.contentX(double(tick + dur));
-                // Wide enough that mid-cell clears the 3px resize edges.
-                if (x0 < songview::kKeyboardW || x1 - x0 < 12
+                const int xs = songview::kKeyboardW
+                    + view.contentX(double(tick + view.snapTicksAt(tick)));
+                // Wide enough that the click target clears the 3px resize
+                // edges once a note fills the cell.
+                if (x0 < songview::kKeyboardW || x1 - x0 < 12 || xs - x0 < 8
                     || x1 >= roll->width())
                     continue;
                 if (occupied(tick, dur, key))
@@ -220,7 +225,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 cell.tick = tick;
                 cell.dur = dur;
                 cell.key = key;
-                cell.center = QPoint((x0 + x1) / 2, y + keyH / 2 + 1);
+                // Mid snap-cell, not mid drawn-cell: snapping is finer than
+                // the drawn grid, so a draw at the cell's visual center
+                // would anchor at the snap line there, not at cell.tick.
+                cell.center = QPoint((x0 + xs) / 2, y + keyH / 2 + 1);
                 return cell;
             }
         }
@@ -497,14 +505,16 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
     // Edge resize snaps to the ruler's absolute grid, not to grid-sized
     // offsets from the note's own end: give a note an off-grid duration
-    // (1.25 cells) behind the view's back, drag its right edge to 1.75
+    // (1.25 cells) behind the view's back, drag its right edge to 1.9
     // cells, and the end must land on the 2-cell grid line — not at
-    // 1.25 + 1 cells, which is where delta-snapping would put it.
+    // 1.75 cells, the nearest snap-sized offset from the off-grid end.
     const Cell d = findFreeCell();
     if (d.key < 0) {
         fail("no free grid cell for the off-grid resize");
         return failures;
     }
+    // The absolute snap grid the edits land on: half a drawn cell.
+    const uint64_t snapCell = view.snapTicksAt(d.tick);
     const uint32_t offDur = uint32_t(d.dur + d.dur / 4);
     doc.addNote(track, d.tick, uint8_t(d.key), offDur, 100);
     const int rowY = (127 - d.key) * keyH - view.scrollY() + keyH / 2 + 1;
@@ -528,7 +538,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         || roll->cursor().pixmap().toImage() != expectedRightCursor.toImage())
         fail("right note edge did not show its DPI-matched custom cursor");
     const QPoint pull(
-        songview::kKeyboardW + view.contentX(double(d.tick) + 1.75 * double(d.dur)),
+        songview::kKeyboardW + view.contentX(double(d.tick) + 1.9 * double(d.dur)),
         rowY);
     sendMouse(roll, QEvent::MouseButtonPress, edge, Qt::LeftButton, Qt::LeftButton);
     sendMouse(roll, QEvent::MouseMove, pull, Qt::NoButton, Qt::LeftButton);
@@ -538,7 +548,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         || resized.duration != 2 * d.dur)
         fail("off-grid right-edge drag did not snap the end to the ruler grid");
 
-    // Overshooting the drag past the note's start must stop at one grid
+    // Overshooting the drag past the note's start must stop at one snap
     // cell, not collapse to the document's 1-tick floor.
     const QPoint edge2(
         songview::kKeyboardW + view.contentX(double(d.tick + 2 * d.dur)), rowY);
@@ -551,14 +561,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
               Qt::NoButton);
     DocNote collapsed;
     if (!doc.findNote(track, d.tick, uint8_t(d.key), &collapsed)
-        || collapsed.duration != d.dur)
-        fail("overshot right-edge drag did not stop at one grid cell");
+        || collapsed.duration != snapCell)
+        fail("overshot right-edge drag did not stop at one snap cell");
 
     // Keyboard transpose/nudge on note D (clicking it selects it):
     // Ctrl+Up is a semitone, Ctrl+Shift+Down an octave, and Ctrl+Right
-    // moves one grid cell from an on-grid start.
+    // moves one snap cell from an on-grid start.
     const QPoint dCenter(songview::kKeyboardW
-                             + view.contentX(double(d.tick) + 0.5 * double(d.dur)),
+                             + view.contentX(double(d.tick) + 0.5 * double(snapCell)),
                          rowY);
     click(roll, dCenter);
     sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
@@ -569,17 +579,17 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (!doc.findNote(track, d.tick, uint8_t(d.key - 11), &transposed))
         fail("Ctrl+Shift+Down did not transpose down an octave");
     sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
-    if (!doc.findNote(track, d.tick + d.dur, uint8_t(d.key - 11), &transposed))
-        fail("Ctrl+Right did not nudge one grid cell right");
+    if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
+        fail("Ctrl+Right did not nudge one snap cell right");
     // An off-grid selection nudges onto the grid line, not by a whole
-    // cell: push the note a quarter cell right behind the view's back
+    // cell: push the note half a snap cell right behind the view's back
     // (reselecting — the selection keys on the start tick, which moved),
     // and Ctrl+Left must bring it back to the line it left.
-    doc.moveNotes({transposed}, int64_t(d.dur / 4), 0);
+    doc.moveNotes({transposed}, int64_t(snapCell / 2), 0);
     view.setSelection(
-        {{uint32_t(d.tick + d.dur + d.dur / 4), uint8_t(d.key - 11)}});
+        {{uint32_t(d.tick + snapCell + snapCell / 2), uint8_t(d.key - 11)}});
     sendKey(roll, Qt::Key_Left, Qt::ControlModifier);
-    if (!doc.findNote(track, d.tick + d.dur, uint8_t(d.key - 11), &transposed))
+    if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
         fail("Ctrl+Left did not snap the off-grid note back to the grid");
 
     // Keyboard moves keep the notes in view, scrolling just enough rather
@@ -598,28 +608,28 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // bring its start flush to the left edge (minimal scroll, not the
     // paste jump). Then ride it right across the viewport: once the end
     // crosses the right edge, it must stay flush there.
-    uint64_t nStart = d.tick + d.dur;
-    view.scrollByPx(view.contentX(double(nStart + d.dur)) + 40);
-    if (view.contentX(double(nStart + d.dur)) >= 0)
+    uint64_t nStart = d.tick + snapCell;
+    view.scrollByPx(view.contentX(double(nStart + snapCell)) + 40);
+    if (view.contentX(double(nStart + snapCell)) >= 0)
         fail("could not park the note past the left edge");
     sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
-    nStart += d.dur;
+    nStart += snapCell;
     if (view.contentX(double(nStart)) != 0)
         fail("Ctrl+Right off-screen-left did not scroll the start flush to the left edge");
     const int vw = std::max(50, roll->width() - songview::kKeyboardW);
     const int cellPx =
-        view.contentX(double(nStart + d.dur)) - view.contentX(double(nStart));
-    const int rides = (vw - view.contentX(double(nStart + d.dur))) / cellPx + 2;
+        view.contentX(double(nStart + snapCell)) - view.contentX(double(nStart));
+    const int rides = (vw - view.contentX(double(nStart + snapCell))) / cellPx + 2;
     for (int i = 0; i < rides; i++)
         sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
-    nStart += uint64_t(rides) * d.dur;
-    if (view.contentX(double(nStart + d.dur)) != vw - 1)
+    nStart += uint64_t(rides) * snapCell;
+    if (view.contentX(double(nStart + snapCell)) != vw - 1)
         fail("riding the nudge right did not keep the note's end at the right edge");
     // Ride back home so the time-selection checks below find the note
     // where they expect it; every press so far merges into one command.
     for (int i = 0; i < rides + 1; i++)
         sendKey(roll, Qt::Key_Left, Qt::ControlModifier);
-    if (!doc.findNote(track, d.tick + d.dur, uint8_t(d.key - 11), &transposed))
+    if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
         fail("the ride right and back did not return the note home");
 
     // Consecutive keyboard presses on the same notes merge into one undo
@@ -631,16 +641,16 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // over the note's cell transposes every covered note of the scoped
     // tracks, and a nudge moves the contents with the band following.
     SongView::TimeSelection band;
-    band.startTick = d.tick + d.dur;
-    band.endTick = d.tick + 2 * d.dur;
+    band.startTick = d.tick + snapCell;
+    band.endTick = d.tick + 2 * snapCell;
     view.setTimeSelection(band);
     sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
-    if (!doc.findNote(track, d.tick + d.dur, uint8_t(d.key - 10), &transposed))
+    if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 10), &transposed))
         fail("time-selection Ctrl+Up did not transpose the covered note");
     sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
-    if (!doc.findNote(track, d.tick + 2 * d.dur, uint8_t(d.key - 10), &transposed))
+    if (!doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed))
         fail("time-selection Ctrl+Right did not nudge the covered note");
-    if (view.timeSelection().startTick != d.tick + 2 * d.dur)
+    if (view.timeSelection().startTick != d.tick + 2 * snapCell)
         fail("time-selection band did not follow the nudge");
 
     // Playhead follow-scroll pauses while a mouse gesture is live: with a
