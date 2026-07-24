@@ -350,7 +350,15 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, int origin)
 class NoteMenuStyle final : public QProxyStyle
 {
 public:
-    NoteMenuStyle() : QProxyStyle(QApplication::style()->name()) {}
+    // Base the proxy on Fusion explicitly, matching the application style set
+    // in main(). QApplication::style()->name() looks like it would mirror the
+    // app style, but once the theme installs a stylesheet the app style is a
+    // QStyleSheetStyle whose name() is empty — and QProxyStyle(QString())
+    // silently falls back to the NATIVE desktop style (QWindows11Style on
+    // Windows). Polishing this menu under that style calls setWindowFlags for
+    // the native rounded popup, which reentrantly crashes in Qt 6.9. Naming
+    // Fusion keeps the menu on the same style as the rest of the app.
+    NoteMenuStyle() : QProxyStyle(QStringLiteral("Fusion")) {}
 
     int styleHint(StyleHint hint, const QStyleOption *option,
                   const QWidget *widget,
