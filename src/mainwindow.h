@@ -220,6 +220,9 @@ private:
     void refreshTransportIcons();
     void updateTransportActions();
     void synchronizePlayhead();
+    void updateTimeLabel(bool force);
+    void updatePolyStatus(bool force);
+    void resetTimedUiCache();
     void updateWindowTitle();
     QString formatTime(uint64_t samples) const;
 
@@ -306,4 +309,14 @@ private:
     QLabel *m_polyLostLabel = nullptr;
     QTimer *m_uiTimer = nullptr;
     QTimer *m_playheadTimer = nullptr;
+    // The coarse status clock updates polyphony at 20 Hz and time at 10 Hz.
+    unsigned m_statusUiPhase = 0;
+    QString m_lastTimeText;
+    int m_lastActivePcmChannels = 0;
+    int m_lastMaxPcmChannels = 0;
+    int m_lastActiveCgbChannels = 0;
+    uint64_t m_lastPolyphonyLostTotal = 0;
+    bool m_timeCacheValid = false;
+    bool m_polyCacheValid = false;
+    bool m_lastPolyLoaded = false;
 };
