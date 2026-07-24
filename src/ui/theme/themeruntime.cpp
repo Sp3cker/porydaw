@@ -20,7 +20,7 @@ namespace {
 // Qt has one application palette, so runtime theme state is intentionally
 // process-wide and captured before the first application-level override.
 std::optional<QPalette> capturedStartupPalette;
-QHash<QWidget *, GridLineRepaint> gridLineRepaintTargets;
+QHash<QWidget *, GridLineRefresh> gridLineRefreshTargets;
 std::optional<Theme> currentTheme;
 
 // QPalette covers colors Qt paints natively; the component QSS fragments below
@@ -585,15 +585,15 @@ void initialize(QApplication &application) {
     capturedStartupPalette = application.palette();
 }
 
-void registerGridLineRepaintTarget(QWidget &widget, GridLineRepaint repaint) {
-  const auto alreadyRegistered = gridLineRepaintTargets.contains(&widget);
-  gridLineRepaintTargets.insert(&widget, repaint);
+void registerGridLineRefreshTarget(QWidget &widget, GridLineRefresh refresh) {
+  const auto alreadyRegistered = gridLineRefreshTargets.contains(&widget);
+  gridLineRefreshTargets.insert(&widget, refresh);
   if (alreadyRegistered)
     return;
 
   auto *const target = &widget;
   QObject::connect(&widget, &QObject::destroyed,
-                   [target] { gridLineRepaintTargets.remove(target); });
+                   [target] { gridLineRefreshTargets.remove(target); });
 }
 
 void apply(QApplication &application, const Theme &theme) {
@@ -603,10 +603,10 @@ void apply(QApplication &application, const Theme &theme) {
   // bars while the slider is dragged.
   if (currentTheme && onlyGridLineColorChanged(*currentTheme, theme)) {
     currentTheme = theme;
-    for (auto it = gridLineRepaintTargets.cbegin();
-         it != gridLineRepaintTargets.cend(); ++it) {
-      if (const auto repaint = it.value())
-        repaint(*it.key());
+    for (auto it = gridLineRefreshTargets.cbegin();
+         it != gridLineRefreshTargets.cend(); ++it) {
+      if (const auto refresh = it.value())
+        refresh(*it.key());
       else
         it.key()->update();
     }

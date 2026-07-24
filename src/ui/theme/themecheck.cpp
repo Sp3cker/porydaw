@@ -70,14 +70,14 @@ protected:
   void paintEvent(QPaintEvent *) override { ++count; }
 };
 
-class GridLineRepaintCounter final : public QWidget {
+class GridLineRefreshCounter final : public QWidget {
 public:
   static void original(QWidget &widget) {
-    ++static_cast<GridLineRepaintCounter &>(widget).originalCount;
+    ++static_cast<GridLineRefreshCounter &>(widget).originalCount;
   }
 
   static void replacement(QWidget &widget) {
-    auto &counter = static_cast<GridLineRepaintCounter &>(widget);
+    auto &counter = static_cast<GridLineRefreshCounter &>(widget);
     ++counter.replacementCount;
     counter.gridColorSeenByReplacement =
         themes::color(themes::Role::song_view_grid);
@@ -88,10 +88,10 @@ public:
   QColor gridColorSeenByReplacement;
 };
 
-int destroyedTargetRepaintCount = 0;
+int destroyedTargetRefreshCount = 0;
 
-void countDestroyedTargetRepaint(QWidget &) {
-  ++destroyedTargetRepaintCount;
+void countDestroyedTargetRefresh(QWidget &) {
+  ++destroyedTargetRefreshCount;
 }
 
 // Paint code has no fallback path: every public role must resolve to an
@@ -417,18 +417,18 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application) {
   gridPaintTarget.resize(10, 10);
   gridPaintTarget.show();
   application.processEvents();
-  themes::registerGridLineRepaintTarget(gridPaintTarget);
+  themes::registerGridLineRefreshTarget(gridPaintTarget);
   gridPaintTarget.count = 0;
-  GridLineRepaintCounter customGridPaintTarget;
-  themes::registerGridLineRepaintTarget(
-      customGridPaintTarget, &GridLineRepaintCounter::original);
-  themes::registerGridLineRepaintTarget(
-      customGridPaintTarget, &GridLineRepaintCounter::replacement);
-  destroyedTargetRepaintCount = 0;
+  GridLineRefreshCounter customGridRefreshTarget;
+  themes::registerGridLineRefreshTarget(
+      customGridRefreshTarget, &GridLineRefreshCounter::original);
+  themes::registerGridLineRefreshTarget(
+      customGridRefreshTarget, &GridLineRefreshCounter::replacement);
+  destroyedTargetRefreshCount = 0;
   {
-    QWidget destroyedGridPaintTarget;
-    themes::registerGridLineRepaintTarget(destroyedGridPaintTarget,
-                                          &countDestroyedTargetRepaint);
+    QWidget destroyedGridRefreshTarget;
+    themes::registerGridLineRefreshTarget(destroyedGridRefreshTarget,
+                                          &countDestroyedTargetRefresh);
   }
   StyleChangeCounter tabStyleChanges;
   tabBar.installEventFilter(&tabStyleChanges);
@@ -439,12 +439,12 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application) {
   gridLineContrast->setValue(100);
   const auto strengthenedGrid = themes::color(themes::Role::song_view_grid);
   reporter.check(
-      customGridPaintTarget.originalCount == 0 &&
-          customGridPaintTarget.replacementCount == 1,
-      "duplicate grid repaint registration did not replace its operation");
+      customGridRefreshTarget.originalCount == 0 &&
+          customGridRefreshTarget.replacementCount == 1,
+      "duplicate grid refresh registration did not replace its operation");
   reporter.check(
-      customGridPaintTarget.gridColorSeenByReplacement == strengthenedGrid,
-      "a grid repaint callback ran before the new theme became current");
+      customGridRefreshTarget.gridColorSeenByReplacement == strengthenedGrid,
+      "a grid refresh callback ran before the new theme became current");
   gridLineContrast->setValue(0);
   const auto softenedGrid = themes::color(themes::Role::song_view_grid);
   reporter.check(themes::contrastRatio(strengthenedGrid, gridBackground) >
@@ -462,8 +462,8 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application) {
   reporter.check(gridPaintTarget.count > 0,
                  "grid contrast did not repaint its registered paint target");
   reporter.check(
-      destroyedTargetRepaintCount == 0,
-      "a destroyed grid repaint target left a callable registry entry");
+      destroyedTargetRefreshCount == 0,
+      "a destroyed grid refresh target left a callable registry entry");
   darkNeutralHigh->click();
   checkGeometry();
   custom->click();

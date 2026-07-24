@@ -1167,19 +1167,19 @@ MidiCursors loadMidiCursors(qreal devicePixelRatio)
             centeredCursor(rightEdge.pixmap(cursorSize, devicePixelRatio))};
 }
 
-class CachedTimelineSurface : public QWidget
+class TimelineSurface : public QWidget
 {
 public:
-    explicit CachedTimelineSurface(QWidget *parent)
+    explicit TimelineSurface(QWidget *parent)
         : QWidget(parent)
     {
         setProperty("contentPaintCount", qulonglong(0));
-        setProperty("contentCacheBytes", qulonglong(0));
+        setProperty("estimatedContentCacheBytes", qulonglong(0));
     }
 
     void invalidateContent()
     {
-        m_dirty = rect();
+        m_dirtyContentRegion = rect();
         QWidget::update();
     }
 
@@ -1188,7 +1188,7 @@ public:
         const QRegion clipped = region.intersected(rect());
         if (clipped.isEmpty())
             return;
-        m_dirty |= clipped;
+        m_dirtyContentRegion |= clipped;
         QWidget::update(clipped);
     }
 
@@ -1200,81 +1200,98 @@ private:
     {
         const qreal dpr = devicePixelRatioF();
         const QSize pixelSize(qCeil(width() * dpr), qCeil(height() * dpr));
-        const qint64 cacheBytes =
+        const qint64 estimatedCacheBytes =
             qint64(pixelSize.width()) * qint64(pixelSize.height()) * 4;
-        constexpr qint64 maxCacheBytes = 256 * 1024 * 1024;
-        const bool usableSize = pixelSize.width() > 0 && pixelSize.height() > 0
-            && cacheBytes > 0 && cacheBytes <= maxCacheBytes;
+        constexpr qint64 maxEstimatedCacheBytes = 256 * 1024 * 1024;
+        const bool estimateFitsBudget = pixelSize.width() > 0
+            && pixelSize.height() > 0 && estimatedCacheBytes > 0
+            && estimatedCacheBytes <= maxEstimatedCacheBytes;
 
-        if (!usableSize) {
-            m_cache = {};
-            setProperty("contentCacheBytes", qulonglong(0));
+        if (!estimateFitsBudget) {
+            m_contentCache = {};
+            setProperty("estimatedContentCacheBytes", qulonglong(0));
             QPainter painter(this);
             countContentPaint();
             paintContent(painter);
             return;
         }
 
-        if (m_cache.size() != pixelSize
-            || !qFuzzyCompare(m_cache.devicePixelRatio(), dpr)) {
-            m_cache = QPixmap(pixelSize);
-            if (!m_cache.isNull()) {
-                m_cache.setDevicePixelRatio(dpr);
-                m_cache.fill(Qt::transparent);
-                m_dirty = rect();
-                setProperty("contentCacheBytes", qulonglong(cacheBytes));
+        if (m_contentCache.size() != pixelSize
+            || !qFuzzyCompare(m_contentCache.devicePixelRatio(), dpr)) {
+            m_contentCache = QPixmap(pixelSize);
+            if (!m_contentCache.isNull()) {
+                m_contentCache.setDevicePixelRatio(dpr);
+                m_dirtyContentRegion = rect();
+                setProperty("estimatedContentCacheBytes",
+                            qulonglong(estimatedCacheBytes));
             }
         }
 
-        if (m_cache.isNull()) {
-            setProperty("contentCacheBytes", qulonglong(0));
+        if (m_contentCache.isNull()) {
+            setProperty("estimatedContentCacheBytes", qulonglong(0));
             QPainter painter(this);
             countContentPaint();
             paintContent(painter);
             return;
         }
 
-        const QRegion pending = m_dirty.intersected(rect());
-        for (const QRect &logicalRect : pending) {
-            const int deviceLeft = qFloor(logicalRect.left() * dpr);
-            const int deviceTop = qFloor(logicalRect.top() * dpr);
-            const int deviceRight = qCeil((logicalRect.right() + 1) * dpr);
-            const int deviceBottom = qCeil((logicalRect.bottom() + 1) * dpr);
-            const QRect deviceRect =
-                QRect(QPoint(deviceLeft, deviceTop),
-                      QPoint(deviceRight - 1, deviceBottom - 1))
-                    .intersected(QRect(QPoint(), pixelSize));
-            if (deviceRect.isEmpty())
-                continue;
+        if (m_dirtyContentRegion.isEmpty()) {
+            QPainter painter(this);
+            painter.drawPixmap(QPointF(0, 0), m_contentCache);
+            return;
+        }
 
-            QPixmap patch(deviceRect.size());
-            if (patch.isNull()) {
-                QPainter painter(this);
-                countContentPaint();
-                paintContent(painter);
-                return;
-            }
-            patch.setDevicePixelRatio(dpr);
-            patch.fill(Qt::transparent);
+        const QRegion dirtyRegion = m_dirtyContentRegion.intersected(rect());
+        if (dirtyRegion == QRegion(rect())) {
+            m_contentCache.fill(Qt::transparent);
+            QPainter cachePainter(&m_contentCache);
+            countContentPaint();
+            paintContent(cachePainter);
+        } else {
+            for (const QRect &logicalRect : dirtyRegion) {
+                const int deviceLeft = qFloor(logicalRect.left() * dpr);
+                const int deviceTop = qFloor(logicalRect.top() * dpr);
+                const int deviceRight =
+                    qCeil((logicalRect.right() + 1) * dpr);
+                const int deviceBottom =
+                    qCeil((logicalRect.bottom() + 1) * dpr);
+                const QRect deviceRect =
+                    QRect(QPoint(deviceLeft, deviceTop),
+                          QPoint(deviceRight - 1, deviceBottom - 1))
+                        .intersected(QRect(QPoint(), pixelSize));
+                if (deviceRect.isEmpty())
+                    continue;
 
-            const QPointF patchOrigin(deviceRect.left() / dpr,
-                                      deviceRect.top() / dpr);
-            {
-                QPainter patchPainter(&patch);
-                patchPainter.translate(-patchOrigin);
-                countContentPaint();
-                paintContent(patchPainter);
-            }
-            {
-                QPainter cachePainter(&m_cache);
-                cachePainter.setCompositionMode(QPainter::CompositionMode_Source);
-                cachePainter.drawPixmap(patchOrigin, patch);
+                QPixmap dirtyPatch(deviceRect.size());
+                if (dirtyPatch.isNull()) {
+                    QPainter painter(this);
+                    countContentPaint();
+                    paintContent(painter);
+                    return;
+                }
+                dirtyPatch.setDevicePixelRatio(dpr);
+                dirtyPatch.fill(Qt::transparent);
+
+                const QPointF logicalPatchOrigin(deviceRect.left() / dpr,
+                                                 deviceRect.top() / dpr);
+                {
+                    QPainter patchPainter(&dirtyPatch);
+                    patchPainter.translate(-logicalPatchOrigin);
+                    countContentPaint();
+                    paintContent(patchPainter);
+                }
+                {
+                    QPainter cachePainter(&m_contentCache);
+                    cachePainter.setCompositionMode(
+                        QPainter::CompositionMode_Source);
+                    cachePainter.drawPixmap(logicalPatchOrigin, dirtyPatch);
+                }
             }
         }
-        m_dirty -= pending;
+        m_dirtyContentRegion -= dirtyRegion;
 
         QPainter painter(this);
-        painter.drawPixmap(QPointF(0, 0), m_cache);
+        painter.drawPixmap(QPointF(0, 0), m_contentCache);
     }
 
     void changeEvent(QEvent *event) final
@@ -1295,8 +1312,8 @@ private:
     void resizeEvent(QResizeEvent *event) final
     {
         QWidget::resizeEvent(event);
-        m_cache = {};
-        setProperty("contentCacheBytes", qulonglong(0));
+        m_contentCache = {};
+        setProperty("estimatedContentCacheBytes", qulonglong(0));
         invalidateContent();
     }
 
@@ -1306,24 +1323,24 @@ private:
         setProperty("contentPaintCount", count + 1);
     }
 
-    QPixmap m_cache;
-    QRegion m_dirty;
+    QPixmap m_contentCache;
+    QRegion m_dirtyContentRegion;
 };
 
-void invalidateCachedTimelineSurface(QWidget &widget)
+void invalidateTimelineSurfaceContent(QWidget &widget)
 {
-    static_cast<CachedTimelineSurface &>(widget).invalidateContent();
+    static_cast<TimelineSurface &>(widget).invalidateContent();
 }
 
 } // namespace
 
 // ---------------------------------------------------------------- PianoRoll
 
-class PianoRoll : public CachedTimelineSurface
+class PianoRoll : public TimelineSurface
 {
 public:
     explicit PianoRoll(SongView *sv)
-        : CachedTimelineSurface(sv)
+        : TimelineSurface(sv)
         , m_sv(sv)
         , m_cursors(loadMidiCursors(devicePixelRatioF()))
     {
@@ -2547,11 +2564,11 @@ private:
 
 // ----------------------------------------------------------- AutomationArea
 
-class AutomationArea : public CachedTimelineSurface
+class AutomationArea : public TimelineSurface
 {
 public:
     AutomationArea(SongView *sv, QScrollArea *scroll)
-        : CachedTimelineSurface(nullptr), m_sv(sv), m_scroll(scroll) // parented by the scroll area
+        : TimelineSurface(nullptr), m_sv(sv), m_scroll(scroll) // parented by the scroll area
     {
         setObjectName(QStringLiteral("automationArea")); // findChild for tests
         setMinimumHeight(kLaneH);
@@ -3948,11 +3965,11 @@ private:
 
 // ---------------------------------------------------------------- OtherStrip
 
-class OtherStrip : public CachedTimelineSurface
+class OtherStrip : public TimelineSurface
 {
 public:
     explicit OtherStrip(SongView *sv)
-        : CachedTimelineSurface(sv), m_sv(sv)
+        : TimelineSurface(sv), m_sv(sv)
     {
         setFixedHeight(QFontMetrics(font()).height() + lyt::space(Space::Two));
         setMouseTracking(true);
@@ -4692,9 +4709,11 @@ SongView::SongView(QWidget *parent)
     m_lanesScroll->setFocusPolicy(Qt::NoFocus);
     m_lanes = new AutomationArea(this, m_lanesScroll);
     m_lanesScroll->setWidget(m_lanes);
-    themes::registerGridLineRepaintTarget(*m_ruler);
-    themes::registerGridLineRepaintTarget(*m_roll, invalidateCachedTimelineSurface);
-    themes::registerGridLineRepaintTarget(*m_lanes, invalidateCachedTimelineSurface);
+    themes::registerGridLineRefreshTarget(*m_ruler);
+    themes::registerGridLineRefreshTarget(
+        *m_roll, invalidateTimelineSurfaceContent);
+    themes::registerGridLineRefreshTarget(
+        *m_lanes, invalidateTimelineSurfaceContent);
     m_splitter->addWidget(m_lanesScroll);
     m_splitter->setStretchFactor(0, 1);
     m_splitter->setStretchFactor(1, 0);

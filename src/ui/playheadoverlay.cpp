@@ -57,7 +57,7 @@ void paintGlow(QPainter &painter, qreal x, int top, int height, qreal left,
 }
 
 } // namespace
-class PlayheadOverlay::PlayheadLineCache
+class PlayheadOverlay::PlayheadGlowCache
 {
 public:
     // Measured: inlining this into the 60Hz paint call site is worth it.
@@ -108,7 +108,7 @@ private:
 PlayheadOverlay::PlayheadOverlay(QWidget *owner, const Surfaces &surfaces)
     : QWidget(owner)
     , m_surfaces(surfaces)
-    , m_lineCache(std::make_unique<PlayheadLineCache>())
+    , m_glowCache(std::make_unique<PlayheadGlowCache>())
 {
     Q_ASSERT(owner);
     Q_ASSERT(m_surfaces.ruler);
@@ -219,7 +219,7 @@ void PlayheadOverlay::paintEvent(QPaintEvent *)
     const int height = m_playheadGeometry.height();
     const qreal playheadX = qreal(m_timelineOrigin) + m_timelineX;
     const QColor color = themes::color(themes::Role::song_view_playhead);
-    m_lineCache->paint(painter, playheadX, playheadTop, height, m_playing, color);
+    m_glowCache->paint(painter, playheadX, playheadTop, height, m_playing, color);
 
     QPen core(color, kLineWidth, Qt::SolidLine, Qt::FlatCap);
     painter.setPen(core);

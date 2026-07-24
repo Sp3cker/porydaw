@@ -47,10 +47,10 @@ private:
     QRegion playheadRegion(qreal x) const;
     void synchronizeGeometry();
 
-    class PlayheadLineCache;
+    class PlayheadGlowCache;
 
     Surfaces m_surfaces;
-    std::unique_ptr<PlayheadLineCache> m_lineCache;
+    std::unique_ptr<PlayheadGlowCache> m_glowCache;
     QRegion m_visibleSurfaceRegion;
     QRect m_playheadGeometry;
     QRect m_triangleClip;
