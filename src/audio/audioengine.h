@@ -62,6 +62,12 @@ public:
     // the UI must surface it.
     QString backendName() const { return m_backendName; }
     bool usingNullBackend() const { return m_isNullBackend; }
+    // The device's resolved buffering (per-period frames × period count),
+    // for diagnostics: underruns on slow transports (WSLg's RDP audio)
+    // show up as crackling, and the first support question is "how big are
+    // the periods really?".
+    int periodSizeFrames() const { return m_periodFrames; }
+    int periodCount() const { return m_periodCount; }
 
     // Cold: swaps song data with the device stopped. Borrows both pointers —
     // the caller (the owning song tab) keeps ownership and must detach the
@@ -224,6 +230,8 @@ private:
     double m_sampleRate = 0.0;
     QString m_backendName;
     bool m_isNullBackend = false;
+    int m_periodFrames = 0;
+    int m_periodCount = 0;
     std::unique_ptr<M4AEngine> m_engine;
     const MidiTimeline *m_timeline = nullptr; // not owned (the active song tab's)
     LoadedVoiceGroup *m_voicegroup = nullptr; // not owned (the active song tab's)

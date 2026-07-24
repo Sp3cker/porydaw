@@ -1,5 +1,7 @@
 #include "audioengine.h"
 
+#include <QFile>
+
 #include <algorithm>
 
 #include "miniaudio.h"
@@ -27,6 +29,14 @@ void suppressAlsaErrors()
         setfn(alsaErrorNoop);
     // Leave the handle open so the handler stays installed when miniaudio
     // later opens libasound itself (same shared library instance).
+}
+
+bool runningUnderWsl()
+{
+    QFile osrelease(QStringLiteral("/proc/sys/kernel/osrelease"));
+    if (!osrelease.open(QIODevice::ReadOnly))
+        return false;
+    return osrelease.readAll().toLower().contains("microsoft");
 }
 
 } // namespace
@@ -66,6 +76,21 @@ bool AudioEngine::init(QString *error)
     cfg.sampleRate = 0; // use the device's native rate
     cfg.dataCallback = &AudioEngine::dataCallback;
     cfg.pUserData = this;
+    // Buffering: PORYDAW_AUDIO_PERIOD_MS overrides when set. Under WSL,
+    // default to 30 ms periods — WSLg's PulseAudio rides the RDP transport,
+    // which underruns at miniaudio's 10 ms low-latency default and is heard
+    // as constant crackling.
+    bool havePeriodMs = false;
+    int periodMs = qEnvironmentVariableIntValue("PORYDAW_AUDIO_PERIOD_MS",
+                                                &havePeriodMs);
+#ifdef __linux__
+    if ((!havePeriodMs || periodMs <= 0) && runningUnderWsl()) {
+        periodMs = 30;
+        havePeriodMs = true;
+    }
+#endif
+    if (havePeriodMs && periodMs > 0)
+        cfg.periodSizeInMilliseconds = uint32_t(std::clamp(periodMs, 1, 500));
 
     if (ma_device_init(m_hasContext ? m_context : nullptr, &cfg, m_device) != MA_SUCCESS) {
         if (error)
@@ -81,6 +106,8 @@ bool AudioEngine::init(QString *error)
     m_backendName = QString::fromUtf8(
         ma_get_backend_name(m_device->pContext->backend));
     m_isNullBackend = (m_device->pContext->backend == ma_backend_null);
+    m_periodFrames = int(m_device->playback.internalPeriodSizeInFrames);
+    m_periodCount = int(m_device->playback.internalPeriods);
 
     m_bufCapacity = 8192;
     m_bufL = std::make_unique<float[]>(m_bufCapacity);

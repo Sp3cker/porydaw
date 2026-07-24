@@ -20,8 +20,13 @@ int runAudioCheck()
     }
 
     const QString backend = engine.backendName();
-    std::printf("audiocheck: backend=%s rate=%d silent-null-fallback=%s\n",
+    const double periodMs = engine.sampleRate() > 0
+        ? 1000.0 * engine.periodSizeFrames() / engine.sampleRate()
+        : 0.0;
+    std::printf("audiocheck: backend=%s rate=%d period=%dx%d frames "
+                "(~%.0f ms) silent-null-fallback=%s\n",
                 qUtf8Printable(backend), int(engine.sampleRate()),
+                engine.periodCount(), engine.periodSizeFrames(), periodMs,
                 engine.usingNullBackend() ? "yes" : "no");
 
     int failures = 0;
