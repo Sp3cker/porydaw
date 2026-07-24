@@ -384,16 +384,15 @@ struct DeclaredSymbol {
     bool labelForm;
 };
 
-QVector<DeclaredSymbol> declaredVoicegroups(const QString &path)
+QVector<DeclaredSymbol> declaredVoicegroups(const QByteArray &content)
 {
     static const QRegularExpression macroRe(QStringLiteral(R"(^\s*voice_group\s+(\w+))"));
     static const QRegularExpression labelRe(QStringLiteral(R"(^\s*(voicegroup\w+)::)"));
     QVector<DeclaredSymbol> symbols;
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-        return symbols;
-    while (!file.atEnd()) {
-        const QString line = QString::fromUtf8(file.readLine());
+    for (QByteArray raw : content.split('\n')) {
+        if (raw.endsWith('\r'))
+            raw.chop(1);
+        const QString line = QString::fromUtf8(raw);
         QRegularExpressionMatch m = macroRe.match(line);
         if (m.hasMatch()) {
             symbols.append({QStringLiteral("voicegroup_") + m.captured(1), false});
@@ -404,6 +403,11 @@ QVector<DeclaredSymbol> declaredVoicegroups(const QString &path)
             symbols.append({m.captured(1), true});
     }
     return symbols;
+}
+
+QVector<DeclaredSymbol> declaredVoicegroups(const QString &path)
+{
+    return declaredVoicegroups(readAllBytes(path));
 }
 
 QStringList voicegroupFiles(const QString &projectRoot)
@@ -597,8 +601,13 @@ bool VoicegroupSource::open(const QString &projectRoot, const QString &voicegrou
     m_sectionLabel.clear();
     m_loadName.clear();
 
-    for (const QString &path : voicegroupFiles(projectRoot)) {
-        const QVector<DeclaredSymbol> declared = declaredVoicegroups(path);
+    // Applies the selection logic to one candidate file's declarations.
+    // Returns true when the search is over: either m_filePath was set or
+    // *fatal reports an uneditable layout (with *error filled in).
+    auto matchDeclaringFile = [&](const QString &path,
+                                  const QVector<DeclaredSymbol> &declared,
+                                  bool *fatal) -> bool {
+        *fatal = false;
         for (const DeclaredSymbol &decl : declared) {
             if (decl.symbol != symbol)
                 continue;
@@ -611,7 +620,8 @@ bool VoicegroupSource::open(const QString &projectRoot, const QString &voicegrou
                             "%1 declares %2 with the voice_group macro inside a "
                             "multi-voicegroup file — not an editable layout.")
                                      .arg(path, symbol);
-                    return false;
+                    *fatal = true;
+                    return true;
                 }
                 m_sectionLabel = decl.symbol;
                 m_loadName = decl.symbol;
@@ -619,10 +629,53 @@ bool VoicegroupSource::open(const QString &projectRoot, const QString &voicegrou
                 m_loadName = QFileInfo(path).completeBaseName();
             }
             m_filePath = path;
+            return true;
+        }
+        return false;
+    };
+
+    // Fast path: the declaring file is almost always named after the
+    // voicegroup. Probe the monolithic index files first — today's scan
+    // reads them first, so they must keep winning — then the
+    // filename-derived candidates. A probe file that exists but does not
+    // declare the symbol falls through to the scan: never trust the
+    // filename alone.
+    QString base = m_arg;
+    while (base.startsWith(QLatin1Char('_')))
+        base.remove(0, 1);
+    QStringList probes = {projectRoot + QStringLiteral("/sound/voice_groups.inc"),
+                          projectRoot + QStringLiteral("/sound/voicegroups.inc")};
+    if (!base.isEmpty()) {
+        probes.append(projectRoot + QStringLiteral("/sound/voicegroups/") + base
+                      + QStringLiteral(".inc"));
+        probes.append(projectRoot + QStringLiteral("/sound/voicegroups/vg_") + base
+                      + QStringLiteral(".inc"));
+    }
+    bool fatal = false;
+    for (const QString &probe : probes) {
+        if (!QFile::exists(probe))
+            continue;
+        if (matchDeclaringFile(probe, declaredVoicegroups(probe), &fatal))
+            return fatal ? false : reload(error);
+    }
+
+    // Fallback: the full scan, but each file is gated by a cheap substring
+    // check before the regex parse. Both declaration forms contain the base
+    // name (label "voicegroup_X::" and macro "voice_group X" ⊇ "X"), so the
+    // gate can only false-positive — the parse sorts those out.
+    const QByteArray needle = base.toUtf8();
+    for (const QString &path : voicegroupFiles(projectRoot)) {
+        bool ok = false;
+        const QByteArray content = readAllBytes(path, &ok);
+        if (!ok)
+            continue;
+        if (!needle.isEmpty() && !content.contains(needle))
+            continue;
+        if (matchDeclaringFile(path, declaredVoicegroups(content), &fatal)) {
+            if (fatal)
+                return false;
             break;
         }
-        if (!m_filePath.isEmpty())
-            break;
     }
     if (m_filePath.isEmpty()) {
         if (error)
