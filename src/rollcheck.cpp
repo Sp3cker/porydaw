@@ -36,7 +36,8 @@
 // covered notes on release. A plain left press on empty space auditions
 // its row at the latched velocity (glissing across rows while held,
 // released on mouse-up) and still parks the edit cursor on release; a
-// press that grows into a draw does not re-attack the sounding key. Ctrl+arrows transpose (Shift: octave)
+// press that grows into a draw does not re-attack the sounding key, and
+// any horizontal travel at all grows it (no drag threshold). Ctrl+arrows transpose (Shift: octave)
 // and nudge the selection along the same absolute grid — both the roll's
 // note selection and a multi-track time selection — and the view follows
 // notes moved out of sight with a minimal scroll (flush at the edge, not
@@ -501,6 +502,27 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         DocNote drawn;
         if (!doc.findNote(track, e.tick, uint8_t(e.key), &drawn))
             fail("the press-grown draw did not commit its note");
+    }
+
+    // Any horizontal travel starts the draw — no drag threshold — and the
+    // note first appears at its minimum length, one snap cell.
+    {
+        const Cell f = findFreeCell();
+        if (f.key < 0) {
+            fail("no free grid cell for the tiny-drag draw");
+            return failures;
+        }
+        sendMouse(roll, QEvent::MouseButtonPress, f.center, Qt::LeftButton,
+                  Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseMove, f.center + QPoint(2, 0),
+                  Qt::NoButton, Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseButtonRelease, f.center + QPoint(2, 0),
+                  Qt::LeftButton, Qt::NoButton);
+        DocNote tiny;
+        if (!doc.findNote(track, f.tick, uint8_t(f.key), &tiny))
+            fail("a tiny horizontal drag did not draw a note");
+        else if (tiny.duration != view.snapTicksAt(f.tick))
+            fail("the tiny-drag note is not one snap cell long");
     }
 
     // Edge resize snaps to the ruler's absolute grid, not to grid-sized
@@ -975,21 +997,21 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         }
     }
 
-    // Seventeen commands: draw, set, draw, nudge, draw, the double-click
-    // delete, the press-grown draw, add, two resizes, the three
-    // note-selection presses MERGED into one, the off-grid behind-the-back
-    // move, Ctrl+Left (all the scroll-follow presses merge into it), two
-    // time-selection moves (kept separate by the clean-index save point),
-    // the inline rename, and the mid-song voice change — plus, when the
-    // song has a second track, the header-drag track move and the editor
-    // commit the drop flushes. Undoing them all must restore the original
-    // bytes.
+    // Eighteen commands: draw, set, draw, nudge, draw, the double-click
+    // delete, the press-grown draw, the tiny-drag draw, add, two resizes,
+    // the three note-selection presses MERGED into one, the off-grid
+    // behind-the-back move, Ctrl+Left (all the scroll-follow presses merge
+    // into it), two time-selection moves (kept separate by the clean-index
+    // save point), the inline rename, and the mid-song voice change — plus,
+    // when the song has a second track, the header-drag track move and the
+    // editor commit the drop flushes. Undoing them all must restore the
+    // original bytes.
     int undos = 0;
     while (doc.undoStack()->canUndo() && undos < 100) {
         doc.undoStack()->undo();
         undos++;
     }
-    if (undos != 17 + (reordered ? (dragRenamed ? 2 : 1) : 0))
+    if (undos != 18 + (reordered ? (dragRenamed ? 2 : 1) : 0))
         fail("gesture pass pushed an unexpected number of undo commands");
     if (doc.smf().write() != baseline)
         fail("undoing every gesture did not restore the original bytes");

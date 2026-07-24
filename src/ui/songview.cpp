@@ -1457,9 +1457,12 @@ protected:
             }
         }
         if (m_leftPress && m_drag == Drag::None
-            && std::abs(event->pos().x() - m_pressPos.x())
-                   >= QApplication::startDragDistance()) {
+            && event->pos().x() != m_pressPos.x()) {
             // The deferred empty-space press turns out to be a draw gesture.
+            // ANY horizontal travel starts it — no drag threshold — so the
+            // pending note appears immediately; this same event falls
+            // through to the Draw branch, which sizes it from the cursor
+            // (one snap cell until the drag crosses the next snap line).
             beginDraw();
         }
         if (m_drag == Drag::None) {
