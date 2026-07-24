@@ -266,12 +266,13 @@ int subGridLevel(uint64_t relTick, uint64_t beatTicks, bool triplet)
     return 3;
 }
 
-// Calls fn(tick, level) for every sub-beat snap-grid position in [t0, t1)
-// that is not a beat line, at the current zoom's snap resolution
-// (SongView::gridTicksAt, which bottoms out at the mid2agb clock grid).
-// Walks time-signature segments so the positions match snapTick and the
-// beat lines. No callbacks in segments whose grid is at (or coarser than)
-// whole beats.
+// Calls fn(tick, level) for every sub-beat visible-grid position in [t0, t1)
+// that is not a beat line, at the current zoom's drawn resolution
+// (SongView::gridTicksAt, which bottoms out at the mid2agb clock grid; the
+// snap grid runs one ladder step finer between these lines).
+// Walks time-signature segments so the positions stay snappable and match
+// the beat lines. No callbacks in segments whose grid is at (or coarser
+// than) whole beats.
 void forEachSubGridLine(const SongView *sv, double t0, double t1,
                         const std::function<void(uint64_t, int)> &fn)
 {
@@ -1480,7 +1481,7 @@ protected:
 
         const double tick = m_sv->tickAtContentX(event->pos().x() - kKeyboardW);
         const int64_t grid =
-            int64_t(m_sv->gridTicksAt(uint64_t(std::max(0.0, m_pressTick))));
+            int64_t(m_sv->snapTicksAt(uint64_t(std::max(0.0, m_pressTick))));
         const int64_t rawD = int64_t(std::llround(tick - m_pressTick));
         const int64_t snappedD = (rawD >= 0 ? rawD + grid / 2 : rawD - grid / 2) / grid * grid;
 
@@ -1539,9 +1540,9 @@ protected:
             }
         } else if (m_drag == Drag::Draw) {
             // The edge under the cursor follows it: right of the anchor cell
-            // the end grows (rounded up to the next grid line, never shorter
-            // than one cell); left of it the start moves back (snapped down)
-            // with the end pinned to the anchor cell. The key follows the
+            // the end grows (rounded up to the next snap line, never shorter
+            // than one snap cell); left of it the start moves back (snapped
+            // down) with the end pinned to the anchor cell. The key follows the
             // cursor vertically — a slight misclick on mouse-down is fixable
             // mid-gesture, with the new pitch auditioned.
             const int64_t cur = int64_t(std::llround(tick));
@@ -4888,7 +4889,14 @@ uint64_t SongView::gridTicksAt(uint64_t tick) const
     return gridTicksIn(gridSegAt(tick));
 }
 
-uint64_t SongView::gridTicksIn(const GridSeg &seg) const
+uint64_t SongView::snapTicksAt(uint64_t tick) const
+{
+    if (!m_timeline)
+        return 24;
+    return gridTicksIn(gridSegAt(tick), /*snap=*/true);
+}
+
+uint64_t SongView::gridTicksIn(const GridSeg &seg, bool snap) const
 {
     const uint64_t clock = m_document ? m_document->ticksPerClock() : 1;
   // Finest visible subdivision at least kAutoGridMinCellPx wide from the
@@ -4905,13 +4913,24 @@ uint64_t SongView::gridTicksIn(const GridSeg &seg) const
         ? UINT64_MAX
         : std::max<uint64_t>(1, uint64_t(m_gridMinDenom) * (triplet ? 3 : 2) / 8);
     const double pxPerSegBeat = m_pxPerTick * double(seg.beatTicks);
-    for (uint64_t div : triplet ? kTriplet : kStraight) {
-        if (div > maxDiv)
+    const uint64_t *ladder = triplet ? kTriplet : kStraight;
+    constexpr int kSteps = 6;
+    int step = kSteps - 1; // whole beats when even one-per-beat cells are
+                           // too narrow (ladder[kSteps - 1] == 1)
+    for (int i = 0; i < kSteps; i++) {
+        if (ladder[i] > maxDiv)
             continue;
-        if (pxPerSegBeat / double(div) >= songview::kAutoGridMinCellPx)
-            return std::max(std::max<uint64_t>(1, seg.beatTicks / div), clock);
+        if (pxPerSegBeat / double(ladder[i]) >= songview::kAutoGridMinCellPx) {
+            step = i;
+            break;
+        }
     }
-    return std::max(seg.beatTicks, clock);
+    // Snapping runs one ladder step finer than the drawn grid, so edits
+    // aren't limited to visible lines — but never past the user's minimum
+    // subdivision (1/4 still never snaps finer than beats).
+    if (snap && step > 0 && ladder[step - 1] <= maxDiv)
+        step--;
+    return std::max(std::max<uint64_t>(1, seg.beatTicks / ladder[step]), clock);
 }
 
 uint64_t SongView::fineGridTicks() const
@@ -4930,7 +4949,7 @@ uint64_t SongView::snapTick(double tick, bool fine) const
         return uint64_t(std::round(tick / g) * g);
     }
     const GridSeg seg = gridSegAt(uint64_t(tick));
-    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg));
+    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, /*snap=*/true));
     const uint64_t k = uint64_t((tick - double(seg.start)) / double(g));
     const uint64_t lo = seg.start + k * g;
     // The next signature's tick is itself a grid position (the grid
@@ -4943,7 +4962,7 @@ uint64_t SongView::snapTickDown(double tick) const
 {
     tick = std::max(0.0, tick);
     const GridSeg seg = gridSegAt(uint64_t(tick));
-    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg));
+    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, /*snap=*/true));
     return seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
 }
 
@@ -4951,7 +4970,7 @@ uint64_t SongView::snapTickUp(double tick) const
 {
     tick = std::max(0.0, tick);
     const GridSeg seg = gridSegAt(uint64_t(tick));
-    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg));
+    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, /*snap=*/true));
     const uint64_t lo =
         seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
     if (double(lo) >= tick)

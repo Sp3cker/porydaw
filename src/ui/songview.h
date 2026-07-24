@@ -275,15 +275,20 @@ public:
     };
     GridSeg gridSegAt(uint64_t tick) const;
 
-    // Snap grid in ticks at a position: the visible subdivision of the
+    // Visible grid in ticks at a position: the drawn subdivision of the
     // governing segment's beat at the current feel, floored at the minimum
     // subdivision (1/4 = one beat of that signature) and never finer than
     // the song's mid2agb clock base.
     uint64_t gridTicksAt(uint64_t tick) const;
+    // Snap grid in ticks at a position: one feel-ladder step finer than the
+    // visible grid, so edits can land halfway between drawn lines (thirds
+    // stepping from beats in triplet feel) — still floored at the minimum
+    // subdivision and the clock base.
+    uint64_t snapTicksAt(uint64_t tick) const;
     // Fine placement (Alt-drag in the lanes): the mid2agb clock grid — the
     // document's real resolution — regardless of the zoom-dependent grid.
     uint64_t fineGridTicks() const;
-    // Nearest / previous grid position, anchored at the governing
+    // Nearest / previous snap-grid position, anchored at the governing
     // time-signature segment (fine snap stays on the absolute clock grid).
     uint64_t snapTick(double tick, bool fine = false) const;
     uint64_t snapTickDown(double tick) const;
@@ -472,7 +477,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
-    uint64_t gridTicksIn(const GridSeg &seg) const;
+    uint64_t gridTicksIn(const GridSeg &seg, bool snap = false) const;
     // Document trackMoved handler: rotates the per-track view state with the
     // renumbered engine slots on apply, undo, and redo alike.
     void onTrackMoved(int fromChunk, int toChunk, const QVector<int> &map);

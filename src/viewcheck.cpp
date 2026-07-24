@@ -119,27 +119,51 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
                     failures++;
                 }
             };
+            // The snap grid runs one ladder step finer than the visible
+            // grid so edits can land between drawn lines — but never past
+            // the user's minimum subdivision.
+            const auto expectSnap = [&](const char *what, uint64_t expected) {
+                if (view.snapTicksAt(0) != expected) {
+                    std::fprintf(stderr,
+                                 "viewcheck: FAIL %s: %s snap = %llu ticks, "
+                                 "expected %llu\n",
+                                 qUtf8Printable(song.label), what,
+                                 (unsigned long long)view.snapTicksAt(0),
+                                 (unsigned long long)expected);
+                    failures++;
+                }
+            };
             zoom.pxPerBeat = 4.0 * cellPx - 1.0; // 1/16 cells just too narrow
             view.applyViewState(zoom);
             expectGrid("straight auto below threshold",
                        std::max<uint64_t>(1, tpb / 2));
+            expectSnap("straight auto below threshold",
+                       std::max<uint64_t>(1, tpb / 4));
             zoom.pxPerBeat = 4.0 * cellPx; // 1/16 cells exactly at threshold
             view.applyViewState(zoom);
             expectGrid("straight auto at threshold",
                        std::max<uint64_t>(1, tpb / 4));
+            expectSnap("straight auto at threshold",
+                       std::max<uint64_t>(1, tpb / 8));
             zoom.pxPerBeat = 6.0 * cellPx; // sixth-beat triplet cells at threshold
             view.applyViewState(zoom);
             view.setGridFeel(SongView::GridFeel::Triplet);
             expectGrid("triplet auto", std::max<uint64_t>(1, tpb / 6));
+            expectSnap("triplet auto", std::max<uint64_t>(1, tpb / 12));
             view.setGridMinDenom(8);
             expectGrid("triplet 1/8", std::max<uint64_t>(1, tpb / 3));
+            expectSnap("triplet 1/8 floor stops the snap step",
+                       std::max<uint64_t>(1, tpb / 3));
             zoom.pxPerBeat = 4.0 * cellPx;
             view.applyViewState(zoom);
             view.setGridFeel(SongView::GridFeel::Straight);
             view.setGridMinDenom(16);
             expectGrid("straight 1/16", std::max<uint64_t>(1, tpb / 4));
+            expectSnap("straight 1/16 floor stops the snap step",
+                       std::max<uint64_t>(1, tpb / 4));
             view.setGridMinDenom(4);
             expectGrid("straight 1/4", tpb);
+            expectSnap("straight 1/4 never snaps finer than beats", tpb);
             view.setGridMinDenom(0);
             std::printf("viewcheck: snap-grid semantics checked on %s\n",
                         qUtf8Printable(song.label));
