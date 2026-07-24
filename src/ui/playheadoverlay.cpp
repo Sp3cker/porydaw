@@ -1,10 +1,15 @@
 #include "playheadoverlay.h"
+#include "theme/themeruntime.h"
 
 #include <QEvent>
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
+#include <QPixmap>
+#include <QtMath>
+
+#include <utility>
 
 namespace songview {
 
@@ -52,12 +57,58 @@ void paintGlow(QPainter &painter, qreal x, int top, int height, qreal left,
 }
 
 } // namespace
+class PlayheadOverlay::PlayheadLineCache
+{
+public:
+    // Measured: inlining this into the 60Hz paint call site is worth it.
+    Q_ALWAYS_INLINE void paint(QPainter &painter, qreal x, int top, int height,
+                               bool playing, const QColor &color)
+    {
+        const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
+        if (!m_valid || m_color != color || m_playing != playing
+            || m_height != height || m_devicePixelRatio != devicePixelRatio)
+            rebuild(height, playing, color, devicePixelRatio);
+        painter.drawPixmap(QPointF(x - m_leftExtent, top), m_glow);
+    }
 
-PlayheadOverlay::PlayheadOverlay(QWidget *owner, const Surfaces &surfaces,
-                                 const QColor &color)
+private:
+    void rebuild(int height, bool playing, const QColor &color,
+                 qreal devicePixelRatio)
+    {
+        m_leftExtent =
+            playing ? qreal(kPlayheadGlowRadius - 1) : qreal(kPlayheadGlowRadius);
+        const qreal rightExtent =
+            playing ? 0.0 : qreal(kPlayheadGlowRadius);
+        const qreal peak = playing ? kPeakPlaying : kPeakPaused;
+        QPixmap glow(qCeil((m_leftExtent + rightExtent) * devicePixelRatio),
+                     qCeil(height * devicePixelRatio));
+        glow.setDevicePixelRatio(devicePixelRatio);
+        glow.fill(Qt::transparent);
+        QPainter glowPainter(&glow);
+        paintGlow(glowPainter, m_leftExtent, 0, height, m_leftExtent, rightExtent,
+                  color, peak);
+        m_glow = std::move(glow);
+        m_color = color;
+        m_playing = playing;
+        m_height = height;
+        m_devicePixelRatio = devicePixelRatio;
+        m_valid = true;
+    }
+
+    QPixmap m_glow;
+    QColor m_color;
+    qreal m_leftExtent = 0.0;
+    qreal m_devicePixelRatio = 0.0;
+    int m_height = 0;
+    bool m_playing = false;
+    bool m_valid = false;
+};
+
+
+PlayheadOverlay::PlayheadOverlay(QWidget *owner, const Surfaces &surfaces)
     : QWidget(owner)
     , m_surfaces(surfaces)
-    , m_color(color)
+    , m_lineCache(std::make_unique<PlayheadLineCache>())
 {
     Q_ASSERT(owner);
     Q_ASSERT(m_surfaces.ruler);
@@ -89,6 +140,8 @@ PlayheadOverlay::PlayheadOverlay(QWidget *owner, const Surfaces &surfaces,
     show();
 }
 
+PlayheadOverlay::~PlayheadOverlay() = default;
+
 void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing)
 {
     const qreal oldX = qreal(m_timelineOrigin) + m_timelineX;
@@ -115,10 +168,16 @@ void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing)
 bool PlayheadOverlay::eventFilter(QObject *, QEvent *event)
 {
     switch (event->type()) {
-    case QEvent::Move:
-    case QEvent::Resize:
     case QEvent::Show:
     case QEvent::Hide:
+        synchronizeGeometry();
+        if (m_visible) {
+            const qreal x = qreal(m_timelineOrigin) + m_timelineX;
+            update(playheadRegion(x).intersected(m_triangleClip));
+        }
+        break;
+    case QEvent::Move:
+    case QEvent::Resize:
     case QEvent::LayoutRequest:
         synchronizeGeometry();
         break;
@@ -126,6 +185,24 @@ bool PlayheadOverlay::eventFilter(QObject *, QEvent *event)
         break;
     }
     return false;
+}
+
+void PlayheadOverlay::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    switch (event->type()) {
+    case QEvent::ApplicationPaletteChange:
+    case QEvent::PaletteChange:
+    case QEvent::StyleChange:
+    case QEvent::FontChange:
+        if (m_visible) {
+            const qreal x = qreal(m_timelineOrigin) + m_timelineX;
+            update(playheadRegion(x));
+        }
+        break;
+    default:
+        break;
+    }
 }
 
 void PlayheadOverlay::paintEvent(QPaintEvent *)
@@ -141,14 +218,10 @@ void PlayheadOverlay::paintEvent(QPaintEvent *)
     const int playheadTop = m_playheadGeometry.top();
     const int height = m_playheadGeometry.height();
     const qreal playheadX = qreal(m_timelineOrigin) + m_timelineX;
-    const qreal leftExtent =
-        m_playing ? qreal(kPlayheadGlowRadius - 1) : qreal(kPlayheadGlowRadius);
-    const qreal rightExtent = m_playing ? 0.0 : qreal(kPlayheadGlowRadius);
-    const qreal peak = m_playing ? kPeakPlaying : kPeakPaused;
-    paintGlow(painter, playheadX, playheadTop, height, leftExtent, rightExtent,
-              m_color, peak);
+    const QColor color = themes::color(themes::Role::song_view_playhead);
+    m_lineCache->paint(painter, playheadX, playheadTop, height, m_playing, color);
 
-    QPen core(m_color, kLineWidth, Qt::SolidLine, Qt::FlatCap);
+    QPen core(color, kLineWidth, Qt::SolidLine, Qt::FlatCap);
     painter.setPen(core);
     painter.drawLine(QPointF(playheadX, playheadTop),
                      QPointF(playheadX, m_playheadGeometry.bottom()));
@@ -159,7 +232,7 @@ void PlayheadOverlay::paintEvent(QPaintEvent *)
         playheadX, playheadTop + (trianglePointsUp ? kPlayheadTriangleHeight : 0));
     if (trianglePointsUp)
         painter.scale(1.0, -1.0);
-    painter.fillPath(kPlayheadTriangle, m_color);
+    painter.fillPath(kPlayheadTriangle, color);
 }
 
 QRect PlayheadOverlay::visibleSurfaceRect(const QWidget *surface, QWidget *owner,

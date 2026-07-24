@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QColor>
+#include <memory>
 #include <QRegion>
 #include <QWidget>
 
@@ -31,12 +31,14 @@ public:
         int stripOrigin;
     };
 
-    PlayheadOverlay(QWidget *owner, const Surfaces &surfaces, const QColor &color);
+    PlayheadOverlay(QWidget *owner, const Surfaces &surfaces);
+    ~PlayheadOverlay() override;
 
     void setPlayhead(qreal timelineX, bool visible, bool playing);
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
+    void changeEvent(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
 
 private:
@@ -45,8 +47,10 @@ private:
     QRegion playheadRegion(qreal x) const;
     void synchronizeGeometry();
 
+    class PlayheadLineCache;
+
     Surfaces m_surfaces;
-    QColor m_color;
+    std::unique_ptr<PlayheadLineCache> m_lineCache;
     QRegion m_visibleSurfaceRegion;
     QRect m_playheadGeometry;
     QRect m_triangleClip;
