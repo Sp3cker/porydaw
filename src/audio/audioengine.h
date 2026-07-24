@@ -56,6 +56,12 @@ public:
     bool init(QString *error);
     void shutdown();
     double sampleRate() const { return m_sampleRate; }
+    // Which miniaudio backend the device landed on ("PulseAudio", "ALSA",
+    // "Null", ...). The null device keeps the sequencer running with no
+    // sound — deliberate for headless harnesses, a trap for real users, so
+    // the UI must surface it.
+    QString backendName() const { return m_backendName; }
+    bool usingNullBackend() const { return m_isNullBackend; }
 
     // Cold: swaps song data with the device stopped. Borrows both pointers —
     // the caller (the owning song tab) keeps ownership and must detach the
@@ -216,6 +222,8 @@ private:
     ma_device *m_device = nullptr;
     bool m_deviceStarted = false;
     double m_sampleRate = 0.0;
+    QString m_backendName;
+    bool m_isNullBackend = false;
     std::unique_ptr<M4AEngine> m_engine;
     const MidiTimeline *m_timeline = nullptr; // not owned (the active song tab's)
     LoadedVoiceGroup *m_voicegroup = nullptr; // not owned (the active song tab's)

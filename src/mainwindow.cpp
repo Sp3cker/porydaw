@@ -210,11 +210,27 @@ MainWindow::MainWindow(QWidget *parent)
     if (!m_audioOk) {
         QMessageBox::warning(this, tr("Audio Error"),
                              tr("%1\n\nPlayback will be unavailable.").arg(audioError));
+    } else if (m_audio.usingNullBackend()) {
+        // Non-modal: harnesses construct MainWindow offscreen and must not
+        // block on a dialog (CI runs without a real audio server).
+        auto *box = new QMessageBox(
+            QMessageBox::Warning, tr("No Audio Output"),
+            tr("No working audio backend was found, so playback will be "
+               "silent.\n\nOn WSL this usually means the Linux distro is "
+               "missing the PulseAudio client library (sudo apt install "
+               "libpulse0) or WSLg is out of date (run \"wsl --update\" "
+               "from Windows, then restart WSL)."),
+            QMessageBox::Ok, this);
+        box->setAttribute(Qt::WA_DeleteOnClose);
+        box->show();
     }
     statusBar()->showMessage(
-        m_audioOk ? tr("Audio ready (%1 Hz). Open a decomp project to get started.")
-                        .arg(int(m_audio.sampleRate()))
-                  : tr("No audio device."));
+        !m_audioOk ? tr("No audio device.")
+        : m_audio.usingNullBackend()
+            ? tr("No audio output: silent null device.")
+            : tr("Audio ready (%1 Hz, %2). Open a decomp project to get started.")
+                  .arg(int(m_audio.sampleRate()))
+                  .arg(m_audio.backendName()));
 
     m_uiTimer = new QTimer(this);
     m_playheadTimer = new QTimer(this);

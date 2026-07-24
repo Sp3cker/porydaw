@@ -50,6 +50,9 @@ int runPrimeCheck();
 // transportcheck.cpp; playback-start halts ringing auditions (self-contained,
 // no project needed; SKIPs without an audio device).
 int runTransportCheck();
+// audiocheck.cpp; prints the resolved audio backend and whether the silent
+// null-device fallback is in effect (self-contained, no project needed).
+int runAudioCheck();
 // samplecheck.cpp; Sample Studio check (phases 1-6): registrar/import
 // refusals, the headless pipeline (decode, resample, quantize, normalize,
 // write, engine-loader parity), the phase-3 editor (pitch detection,
@@ -158,6 +161,8 @@ int main(int argc, char *argv[])
         return runIgnoreCheck(args[ignoreCheck + 1]);
     if (args.contains(QStringLiteral("--transportcheck")))
         return runTransportCheck();
+    if (args.contains(QStringLiteral("--audiocheck")))
+        return runAudioCheck();
     const int editCheck = args.indexOf(QStringLiteral("--editcheck"));
     if (editCheck >= 0 && editCheck + 1 < args.size())
         return runEditCheck(args[editCheck + 1]);

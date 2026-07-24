@@ -75,6 +75,12 @@ bool AudioEngine::init(QString *error)
         return false;
     }
     m_sampleRate = double(m_device->sampleRate);
+    // When every real backend fails (headless CI, WSL without libpulse),
+    // miniaudio's default context falls back to its null device: playback
+    // runs but is silent. Record which backend won so the UI can warn.
+    m_backendName = QString::fromUtf8(
+        ma_get_backend_name(m_device->pContext->backend));
+    m_isNullBackend = (m_device->pContext->backend == ma_backend_null);
 
     m_bufCapacity = 8192;
     m_bufL = std::make_unique<float[]>(m_bufCapacity);

@@ -176,6 +176,7 @@ qt_add_executable(porydaw
     src/polycheck.cpp
     src/primecheck.cpp
     src/transportcheck.cpp
+    src/audiocheck.cpp
     src/mkcheck.cpp
     src/ignorecheck.cpp
     src/samplecheck.cpp
