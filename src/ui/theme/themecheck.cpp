@@ -70,6 +70,30 @@ protected:
   void paintEvent(QPaintEvent *) override { ++count; }
 };
 
+class GridLineRepaintCounter final : public QWidget {
+public:
+  static void original(QWidget &widget) {
+    ++static_cast<GridLineRepaintCounter &>(widget).originalCount;
+  }
+
+  static void replacement(QWidget &widget) {
+    auto &counter = static_cast<GridLineRepaintCounter &>(widget);
+    ++counter.replacementCount;
+    counter.gridColorSeenByReplacement =
+        themes::color(themes::Role::song_view_grid);
+  }
+
+  int originalCount = 0;
+  int replacementCount = 0;
+  QColor gridColorSeenByReplacement;
+};
+
+int destroyedTargetRepaintCount = 0;
+
+void countDestroyedTargetRepaint(QWidget &) {
+  ++destroyedTargetRepaintCount;
+}
+
 // Paint code has no fallback path: every public role must resolve to an
 // opaque color.
 bool isComplete(const themes::Theme &theme) {
@@ -395,6 +419,17 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application) {
   application.processEvents();
   themes::registerGridLineRepaintTarget(gridPaintTarget);
   gridPaintTarget.count = 0;
+  GridLineRepaintCounter customGridPaintTarget;
+  themes::registerGridLineRepaintTarget(
+      customGridPaintTarget, &GridLineRepaintCounter::original);
+  themes::registerGridLineRepaintTarget(
+      customGridPaintTarget, &GridLineRepaintCounter::replacement);
+  destroyedTargetRepaintCount = 0;
+  {
+    QWidget destroyedGridPaintTarget;
+    themes::registerGridLineRepaintTarget(destroyedGridPaintTarget,
+                                          &countDestroyedTargetRepaint);
+  }
   StyleChangeCounter tabStyleChanges;
   tabBar.installEventFilter(&tabStyleChanges);
   const auto tabBeforeContrastChange = tabBar.grab().toImage();
@@ -403,6 +438,13 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application) {
       themes::color(themes::Role::song_view_piano_roll_background);
   gridLineContrast->setValue(100);
   const auto strengthenedGrid = themes::color(themes::Role::song_view_grid);
+  reporter.check(
+      customGridPaintTarget.originalCount == 0 &&
+          customGridPaintTarget.replacementCount == 1,
+      "duplicate grid repaint registration did not replace its operation");
+  reporter.check(
+      customGridPaintTarget.gridColorSeenByReplacement == strengthenedGrid,
+      "a grid repaint callback ran before the new theme became current");
   gridLineContrast->setValue(0);
   const auto softenedGrid = themes::color(themes::Role::song_view_grid);
   reporter.check(themes::contrastRatio(strengthenedGrid, gridBackground) >
@@ -419,6 +461,9 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application) {
       "changing grid line contrast changed the open-song tab bar pixels");
   reporter.check(gridPaintTarget.count > 0,
                  "grid contrast did not repaint its registered paint target");
+  reporter.check(
+      destroyedTargetRepaintCount == 0,
+      "a destroyed grid repaint target left a callable registry entry");
   darkNeutralHigh->click();
   checkGeometry();
   custom->click();
