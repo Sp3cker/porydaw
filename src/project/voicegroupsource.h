@@ -138,6 +138,23 @@ struct VgAdsrDefaults {
     QHash<int, VgAdsr> byFamily;     // vgAdsrFamily() key
 };
 
+// One pass over the voicegroup files: all four project-wide datasets
+// extracted from a single read of each file. Each member is value-identical
+// to its single-dataset accessor (named in the comments).
+struct VgCatalogScan {
+    QStringList groupArgs;                    // SongRegistry::voicegroupArgs
+    QList<QPair<QString, QString>> keysplits; // keysplitInstruments
+    QStringList drumkits;                     // drumkitInstruments
+    VgAdsrDefaults typicalAdsr;               // typicalAdsr
+};
+
+// One read of the sound data files: the sample symbol list and the synth
+// catalog together (both parse the same files).
+struct VgDirectSoundScan {
+    QStringList directSound; // directSoundSymbols
+    VgSynthCatalog synths;   // synthInstruments
+};
+
 // The envelope a voice should adopt when it switches into a new envelope
 // family, or picks a new instrument symbol while its envelope is untouched:
 // the project-typical envelope for its instrument symbol, then for its
@@ -229,6 +246,12 @@ public:
     // (DirectSound attack 0) — which also excludes the release-0 filler
     // squares that pad unused slots and would otherwise dominate the counts.
     static VgAdsrDefaults typicalAdsr(const QString &projectRoot);
+    // Everything the voicegroup files feed the browser catalog, in one read
+    // of each file (the single-dataset functions above re-run this scan).
+    static VgCatalogScan catalogScan(const QString &projectRoot);
+    // directSoundSymbols + synthInstruments from one read of the sound data
+    // files instead of one each.
+    static VgDirectSoundScan directSoundCatalog(const QString &projectRoot);
 
     // Writes sound/voicegroups/<name>.inc matching the siblings' header style
     // and line endings. copyFromFile/copySectionLabel name an existing

@@ -1,7 +1,6 @@
 #include "songregistry.h"
 
 #include <QDir>
-#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -13,6 +12,7 @@
 #include "core/smf.h"
 #include "project/sidecar.h"
 #include "project/songsmk.h"
+#include "project/voicegroupsource.h"
 
 namespace {
 
@@ -113,42 +113,9 @@ namespace SongRegistry {
 
 QStringList voicegroupArgs(const QString &projectRoot)
 {
-    // voice_group macro (expands to a voicegroup_<name> symbol) and raw labels.
-    static const QRegularExpression macroRe(
-        QStringLiteral(R"(^\s*voice_group\s+(\w+))"));
-    static const QRegularExpression labelRe(QStringLiteral(R"(^\s*(voicegroup\w+)::)"));
-
-    QStringList files;
-    for (const char *single : {"/sound/voice_groups.inc", "/sound/voicegroups.inc"}) {
-        const QString path = projectRoot + QLatin1String(single);
-        if (QFile::exists(path))
-            files.append(path);
-    }
-    QDirIterator it(projectRoot + QStringLiteral("/sound/voicegroups"),
-                    {QStringLiteral("*.inc")}, QDir::Files, QDirIterator::Subdirectories);
-    while (it.hasNext())
-        files.append(it.next());
-
-    QStringList args;
-    for (const QString &path : files) {
-        for (const QString &line : readLines(path)) {
-            QString symbol;
-            QRegularExpressionMatch m = macroRe.match(line);
-            if (m.hasMatch()) {
-                symbol = QStringLiteral("voicegroup_") + m.captured(1);
-            } else {
-                m = labelRe.match(line);
-                if (m.hasMatch())
-                    symbol = m.captured(1);
-            }
-            // mid2agb forms the symbol as "voicegroup" + <-G arg>.
-            if (!symbol.isEmpty())
-                args.append(symbol.mid(10));
-        }
-    }
-    args.removeDuplicates();
-    std::sort(args.begin(), args.end());
-    return args;
+    // The declaration regexes and file listing live with the voicegroup
+    // catalog scan, which extracts all its datasets in the same read.
+    return VoicegroupSource::catalogScan(projectRoot).groupArgs;
 }
 
 QString voicegroupDisplayName(const QString &arg)

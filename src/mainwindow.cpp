@@ -2128,13 +2128,17 @@ const MainWindow::VgCatalog &MainWindow::vgCatalog()
 {
     if (!m_vgCatalog.valid) {
         const QString root = m_project.root();
-        m_vgCatalog.groupArgs = SongRegistry::voicegroupArgs(root);
-        m_vgCatalog.directSound = VoicegroupSource::directSoundSymbols(root);
+        // One read of each voicegroup file and of the sound data files; the
+        // per-dataset accessors would redo the same full scan per call.
+        const VgCatalogScan scan = VoicegroupSource::catalogScan(root);
+        m_vgCatalog.groupArgs = scan.groupArgs;
+        m_vgCatalog.keysplits = scan.keysplits;
+        m_vgCatalog.drumkits = scan.drumkits;
+        m_vgCatalog.typicalAdsr = scan.typicalAdsr;
+        const VgDirectSoundScan sound = VoicegroupSource::directSoundCatalog(root);
+        m_vgCatalog.directSound = sound.directSound;
+        m_vgCatalog.synths = sound.synths;
         m_vgCatalog.progWave = VoicegroupSource::progWaveSymbols(root);
-        m_vgCatalog.keysplits = VoicegroupSource::keysplitInstruments(root);
-        m_vgCatalog.drumkits = VoicegroupSource::drumkitInstruments(root);
-        m_vgCatalog.synths = VoicegroupSource::synthInstruments(root);
-        m_vgCatalog.typicalAdsr = VoicegroupSource::typicalAdsr(root);
         m_vgCatalog.valid = true;
     }
     return m_vgCatalog;
