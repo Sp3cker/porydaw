@@ -106,7 +106,7 @@ public:
       configureLayer(layer, disabledActions.get());
     }
 
-    m_rootLayer.get().geometryFlipped = YES;
+    m_rootLayer.get().geometryFlipped = NO;
     m_rootLayer.get().hidden = YES;
 
     auto maskColor =
@@ -228,8 +228,7 @@ public:
       if (!m_hasSynced ||
           m_lastTriangleImageCacheKey != m_overlay.m_triangleImage.cacheKey()) {
         if (!m_overlay.m_triangleImage.isNull()) {
-          QImage vertFlipped = m_overlay.m_triangleImage.flipped(Qt::Vertical);
-          CGImageRef cgImg = vertFlipped.toCGImage();
+          CGImageRef cgImg = m_overlay.m_triangleImage.toCGImage();
           m_triangleLayer.get().contents = (id)cgImg;
           CGImageRelease(cgImg);
           const qreal dpr = m_overlay.m_triangleImage.devicePixelRatio() > 0.0
