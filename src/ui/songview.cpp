@@ -4721,16 +4721,11 @@ SongView::SongView(QWidget *parent)
 
     m_strip = new OtherStrip(this);
     vbox->addWidget(m_strip);
-    PlayheadOverlay::Surfaces playheadSurfaces;
-    playheadSurfaces.ruler = m_ruler;
-    playheadSurfaces.rulerOrigin = kGutterW;
-    playheadSurfaces.roll = m_roll;
-    playheadSurfaces.rollOrigin = kKeyboardW;
-    playheadSurfaces.lanes = m_lanes;
-    playheadSurfaces.lanesOrigin = kGutterW;
-    playheadSurfaces.strip = m_strip;
-    playheadSurfaces.stripOrigin = kGutterW;
-    m_playheadOverlay = new PlayheadOverlay(this, playheadSurfaces);
+    const PlayheadOverlay::Surfaces playheadSurfaces{
+        *m_ruler, kGutterW, *m_roll,  kKeyboardW,
+        *m_lanes, kGutterW, *m_strip, kGutterW,
+    };
+    m_playheadOverlay = new PlayheadOverlay(*this, playheadSurfaces);
 
     m_hbar = new QScrollBar(Qt::Horizontal, this);
     auto *hbarRow = new QHBoxLayout;
