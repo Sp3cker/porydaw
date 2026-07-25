@@ -41,7 +41,8 @@ inline constexpr qreal playheadGlowLeftExtent(bool playing) {
 }
 
 inline constexpr qreal playheadGlowRightExtent(bool playing) {
-  return playing ? 0.0 : static_cast<qreal>(kPlayheadGlowRadius);
+  return playing ? (kPlayheadLineWidth / 2.0)
+                 : static_cast<qreal>(kPlayheadGlowRadius);
 }
 
 inline constexpr qreal playheadPeakAlpha(bool playing) {
@@ -113,11 +114,16 @@ private:
   qreal m_bodyImageLeftExtent = 0.0;
   QImage m_triangleImage;
 
-  int m_cachedHeight = -1;
-  bool m_cachedPlaying = false;
+  int m_cachedBodyHeight = -1;
+  bool m_cachedBodyPlaying = false;
+  qreal m_cachedBodyDpr = 0.0;
+  QColor m_cachedBodyThemeColor;
+  bool m_cachedBodyValid = false;
+
   bool m_cachedTrianglePointsUp = false;
-  qreal m_cachedDevicePixelRatio = 0.0;
-  QColor m_cachedThemeColor;
+  qreal m_cachedTriangleDpr = 0.0;
+  QColor m_cachedTriangleThemeColor;
+  bool m_cachedTriangleValid = false;
 };
 
 } // namespace songview

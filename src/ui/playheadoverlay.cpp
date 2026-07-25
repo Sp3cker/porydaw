@@ -153,108 +153,126 @@ void PlayheadOverlay::updateArtwork() {
       themes::color(themes::Role::song_view_playhead);
   const int currentHeight = m_playheadGeometry.height();
   const qreal currentDpr = m_devicePixelRatio > 0.0 ? m_devicePixelRatio : 1.0;
+  const bool geometryValid = !m_playheadGeometry.isEmpty() && currentHeight > 0;
 
-  if (m_cachedHeight == currentHeight && m_cachedPlaying == m_playing &&
-      m_cachedTrianglePointsUp == m_trianglePointsUp &&
-      m_cachedDevicePixelRatio == currentDpr &&
-      m_cachedThemeColor == currentThemeColor) {
-    return;
-  }
-
-  m_cachedHeight = currentHeight;
-  m_cachedPlaying = m_playing;
-  m_cachedTrianglePointsUp = m_trianglePointsUp;
-  m_cachedDevicePixelRatio = currentDpr;
-  m_cachedThemeColor = currentThemeColor;
-  m_themeColor = currentThemeColor;
-
-  if (m_playheadGeometry.isEmpty() || currentHeight <= 0) {
+  if (!geometryValid) {
     m_bodyImage = QImage();
     m_triangleImage = QImage();
+    m_cachedBodyValid = false;
+    m_cachedTriangleValid = false;
     return;
   }
 
-  const qreal leftExtent = playheadGlowLeftExtent(m_playing);
-  const qreal rightExtent = playheadGlowRightExtent(m_playing);
-  const qreal peakAlpha = playheadPeakAlpha(m_playing);
-  m_bodyImageLeftExtent = leftExtent;
+  const bool bodyNeedsUpdate =
+      !m_cachedBodyValid || m_cachedBodyHeight != currentHeight ||
+      m_cachedBodyPlaying != m_playing || m_cachedBodyDpr != currentDpr ||
+      m_cachedBodyThemeColor != currentThemeColor;
 
-  const qreal bodyWidthLogical = leftExtent + rightExtent;
-  const int bodyPixelWidth = qCeil(bodyWidthLogical * currentDpr);
-  const int bodyPixelHeight = qCeil(currentHeight * currentDpr);
+  if (bodyNeedsUpdate) {
+    m_cachedBodyHeight = currentHeight;
+    m_cachedBodyPlaying = m_playing;
+    m_cachedBodyDpr = currentDpr;
+    m_cachedBodyThemeColor = currentThemeColor;
+    m_cachedBodyValid = true;
+    m_themeColor = currentThemeColor;
 
-  if (bodyPixelWidth > 0 && bodyPixelHeight > 0) {
-    QImage bodyImg(bodyPixelWidth, bodyPixelHeight,
-                   QImage::Format_ARGB32_Premultiplied);
-    bodyImg.setDevicePixelRatio(currentDpr);
-    bodyImg.fill(Qt::transparent);
+    const qreal leftExtent = playheadGlowLeftExtent(m_playing);
+    const qreal rightExtent = playheadGlowRightExtent(m_playing);
+    const qreal peakAlpha = playheadPeakAlpha(m_playing);
+    m_bodyImageLeftExtent = leftExtent;
 
-    QPainter painter(&bodyImg);
-    painter.setRenderHint(QPainter::Antialiasing);
+    const qreal bodyWidthLogical = leftExtent + rightExtent;
+    const int bodyPixelWidth = qCeil(bodyWidthLogical * currentDpr);
+    const int bodyPixelHeight = qCeil(currentHeight * currentDpr);
 
-    if (leftExtent > 0.0) {
-      QLinearGradient gradient(0, 0, leftExtent, 0);
-      for (const auto &stop : kPlayheadGradientStops) {
-        QColor stopColor = m_themeColor;
-        stopColor.setAlphaF(peakAlpha * stop.alphaFactor);
-        gradient.setColorAt(stop.position, stopColor);
+    if (bodyPixelWidth > 0 && bodyPixelHeight > 0) {
+      QImage bodyImg(bodyPixelWidth, bodyPixelHeight,
+                     QImage::Format_ARGB32_Premultiplied);
+      bodyImg.setDevicePixelRatio(currentDpr);
+      bodyImg.fill(Qt::transparent);
+
+      QPainter painter(&bodyImg);
+      painter.setRenderHint(QPainter::Antialiasing);
+
+      if (leftExtent > 0.0) {
+        QLinearGradient gradient(0, 0, leftExtent, 0);
+        for (const auto &stop : kPlayheadGradientStops) {
+          QColor stopColor = currentThemeColor;
+          stopColor.setAlphaF(peakAlpha * stop.alphaFactor);
+          gradient.setColorAt(stop.position, stopColor);
+        }
+        painter.fillRect(QRectF(0, 0, leftExtent, currentHeight), gradient);
       }
-      painter.fillRect(QRectF(0, 0, leftExtent, currentHeight), gradient);
-    }
-    if (rightExtent > 0.0) {
-      QLinearGradient gradient(leftExtent + rightExtent, 0, leftExtent, 0);
-      for (const auto &stop : kPlayheadGradientStops) {
-        QColor stopColor = m_themeColor;
-        stopColor.setAlphaF(peakAlpha * stop.alphaFactor);
-        gradient.setColorAt(stop.position, stopColor);
+      if (!m_playing && rightExtent > 0.0) {
+        QLinearGradient gradient(leftExtent + rightExtent, 0, leftExtent, 0);
+        for (const auto &stop : kPlayheadGradientStops) {
+          QColor stopColor = currentThemeColor;
+          stopColor.setAlphaF(peakAlpha * stop.alphaFactor);
+          gradient.setColorAt(stop.position, stopColor);
+        }
+        painter.fillRect(QRectF(leftExtent, 0, rightExtent, currentHeight),
+                         gradient);
       }
-      painter.fillRect(QRectF(leftExtent, 0, rightExtent, currentHeight),
-                       gradient);
-    }
 
-    QPen corePen(m_themeColor, kPlayheadLineWidth, Qt::SolidLine, Qt::FlatCap);
-    painter.setPen(corePen);
-    painter.drawLine(QPointF(leftExtent, 0),
-                     QPointF(leftExtent, currentHeight));
-    painter.end();
+      QPen corePen(currentThemeColor, kPlayheadLineWidth, Qt::SolidLine,
+                   Qt::FlatCap);
+      painter.setPen(corePen);
+      painter.drawLine(QPointF(leftExtent, 0),
+                       QPointF(leftExtent, currentHeight));
+      painter.end();
 
-    m_bodyImage = std::move(bodyImg);
-  } else {
-    m_bodyImage = QImage();
-  }
-
-  const qreal triWidthLogical = 2.0 * kPlayheadTriangleHalfWidth;
-  const qreal triHeightLogical = kPlayheadTriangleHeight;
-  const int triPixelWidth = qCeil(triWidthLogical * currentDpr);
-  const int triPixelHeight = qCeil(triHeightLogical * currentDpr);
-
-  if (triPixelWidth > 0 && triPixelHeight > 0) {
-    QImage triImg(triPixelWidth, triPixelHeight,
-                  QImage::Format_ARGB32_Premultiplied);
-    triImg.setDevicePixelRatio(currentDpr);
-    triImg.fill(Qt::transparent);
-
-    QPainter painter(&triImg);
-    painter.setRenderHint(QPainter::Antialiasing);
-
-    QPainterPath path;
-    if (!m_trianglePointsUp) {
-      path.moveTo(0, 0);
-      path.lineTo(triWidthLogical, 0);
-      path.lineTo(kPlayheadTriangleHalfWidth, triHeightLogical);
-      path.closeSubpath();
+      m_bodyImage = std::move(bodyImg);
     } else {
-      path.moveTo(0, triHeightLogical);
-      path.lineTo(triWidthLogical, triHeightLogical);
-      path.lineTo(kPlayheadTriangleHalfWidth, 0);
-      path.closeSubpath();
+      m_bodyImage = QImage();
     }
-    painter.fillPath(path, m_themeColor);
-    painter.end();
+  }
 
-    m_triangleImage = std::move(triImg);
-  } else {
-    m_triangleImage = QImage();
+  const bool triangleNeedsUpdate =
+      !m_cachedTriangleValid ||
+      m_cachedTrianglePointsUp != m_trianglePointsUp ||
+      m_cachedTriangleDpr != currentDpr ||
+      m_cachedTriangleThemeColor != currentThemeColor;
+
+  if (triangleNeedsUpdate) {
+    m_cachedTrianglePointsUp = m_trianglePointsUp;
+    m_cachedTriangleDpr = currentDpr;
+    m_cachedTriangleThemeColor = currentThemeColor;
+    m_cachedTriangleValid = true;
+    m_themeColor = currentThemeColor;
+
+    const qreal triWidthLogical = 2.0 * kPlayheadTriangleHalfWidth;
+    const qreal triHeightLogical = kPlayheadTriangleHeight;
+    const int triPixelWidth = qCeil(triWidthLogical * currentDpr);
+    const int triPixelHeight = qCeil(triHeightLogical * currentDpr);
+
+    if (triPixelWidth > 0 && triPixelHeight > 0) {
+      QImage triImg(triPixelWidth, triPixelHeight,
+                    QImage::Format_ARGB32_Premultiplied);
+      triImg.setDevicePixelRatio(currentDpr);
+      triImg.fill(Qt::transparent);
+
+      QPainter painter(&triImg);
+      painter.setRenderHint(QPainter::Antialiasing);
+
+      QPainterPath path;
+      if (!m_trianglePointsUp) {
+        path.moveTo(0, 0);
+        path.lineTo(triWidthLogical, 0);
+        path.lineTo(kPlayheadTriangleHalfWidth, triHeightLogical);
+        path.closeSubpath();
+      } else {
+        path.moveTo(0, triHeightLogical);
+        path.lineTo(triWidthLogical, triHeightLogical);
+        path.lineTo(kPlayheadTriangleHalfWidth, 0);
+        path.closeSubpath();
+      }
+      painter.fillPath(path, currentThemeColor);
+      painter.end();
+
+      m_triangleImage = std::move(triImg);
+    } else {
+      m_triangleImage = QImage();
+    }
   }
 }
 

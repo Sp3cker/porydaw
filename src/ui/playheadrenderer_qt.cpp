@@ -6,37 +6,6 @@
 
 namespace songview {
 
-namespace {
-
-QRegion computePlayheadRegion(const PlayheadOverlay &overlay) {
-  const qreal x = overlay.finalX();
-  const qreal dpr =
-      overlay.m_devicePixelRatio > 0.0 ? overlay.m_devicePixelRatio : 1.0;
-  const int top = overlay.m_playheadGeometry.top();
-
-  QRegion region;
-
-  if (!overlay.m_bodyImage.isNull()) {
-    const QRect bodyRect = QRectF(x - overlay.m_bodyImageLeftExtent, top,
-                                  overlay.m_bodyImage.width() / dpr,
-                                  overlay.m_bodyImage.height() / dpr)
-                               .toAlignedRect();
-    region += QRegion(bodyRect).intersected(overlay.m_visibleSurfaceRegion);
-  }
-
-  if (!overlay.m_triangleImage.isNull()) {
-    const QRect triRect = QRectF(x - kPlayheadTriangleHalfWidth, top,
-                                 overlay.m_triangleImage.width() / dpr,
-                                 overlay.m_triangleImage.height() / dpr)
-                              .toAlignedRect();
-    region += QRegion(triRect).intersected(overlay.m_triangleClip);
-  }
-
-  return region;
-}
-
-} // namespace
-
 class PlayheadOverlay::Platform final {
 public:
   explicit Platform(PlayheadOverlay &overlay) : m_overlay(overlay) {}
@@ -44,7 +13,7 @@ public:
   void synchronize() {
     QRegion currentRegion;
     if (m_overlay.m_visible && !m_overlay.m_playheadGeometry.isEmpty()) {
-      currentRegion = computePlayheadRegion(m_overlay);
+      currentRegion = computePlayheadRegion();
     }
 
     const QRegion dirty = m_lastRegion + currentRegion;
@@ -80,10 +49,36 @@ public:
   }
 
 private:
+  QRegion computePlayheadRegion() const {
+    const qreal x = m_overlay.finalX();
+    const qreal dpr =
+        m_overlay.m_devicePixelRatio > 0.0 ? m_overlay.m_devicePixelRatio : 1.0;
+    const int top = m_overlay.m_playheadGeometry.top();
+
+    QRegion region;
+
+    if (!m_overlay.m_bodyImage.isNull()) {
+      const QRect bodyRect = QRectF(x - m_overlay.m_bodyImageLeftExtent, top,
+                                    m_overlay.m_bodyImage.width() / dpr,
+                                    m_overlay.m_bodyImage.height() / dpr)
+                                 .toAlignedRect();
+      region += QRegion(bodyRect).intersected(m_overlay.m_visibleSurfaceRegion);
+    }
+
+    if (!m_overlay.m_triangleImage.isNull()) {
+      const QRect triRect = QRectF(x - kPlayheadTriangleHalfWidth, top,
+                                   m_overlay.m_triangleImage.width() / dpr,
+                                   m_overlay.m_triangleImage.height() / dpr)
+                                .toAlignedRect();
+      region += QRegion(triRect).intersected(m_overlay.m_triangleClip);
+    }
+
+    return region;
+  }
+
   PlayheadOverlay &m_overlay;
   QRegion m_lastRegion;
 };
-
 void PlayheadOverlay::initializePlatform() {
   m_platform.reset(new Platform(*this));
 }

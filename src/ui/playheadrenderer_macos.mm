@@ -129,7 +129,17 @@ public:
 
   void attachToNativeView() {
     auto *parentWidget = m_overlay.parentWidget();
-    WId parentWId = parentWidget ? parentWidget->internalWinId() : 0;
+    if (!parentWidget) {
+      if (m_attachedView) {
+        [m_rootLayer.get() removeFromSuperlayer];
+        m_attachedView = nullptr;
+      }
+      return;
+    }
+    WId parentWId = parentWidget->internalWinId();
+    if (parentWId == 0 && parentWidget->isVisible()) {
+      parentWId = parentWidget->winId();
+    }
     auto *parentView =
         parentWId ? reinterpret_cast<NSView *>(parentWId) : nullptr;
     if (parentView != m_attachedView ||
@@ -205,6 +215,7 @@ public:
           const qreal dpr = m_overlay.m_bodyImage.devicePixelRatio() > 0.0
                                 ? m_overlay.m_bodyImage.devicePixelRatio()
                                 : 1.0;
+          m_bodyLayer.get().contentsScale = dpr;
           const CGFloat logicalW = m_overlay.m_bodyImage.width() / dpr;
           const CGFloat logicalH = m_overlay.m_bodyImage.height() / dpr;
           m_bodyLayer.get().bounds = CGRectMake(0.0, 0.0, logicalW, logicalH);
@@ -224,6 +235,7 @@ public:
           const qreal dpr = m_overlay.m_triangleImage.devicePixelRatio() > 0.0
                                 ? m_overlay.m_triangleImage.devicePixelRatio()
                                 : 1.0;
+          m_triangleLayer.get().contentsScale = dpr;
           const CGFloat logicalW = m_overlay.m_triangleImage.width() / dpr;
           const CGFloat logicalH = m_overlay.m_triangleImage.height() / dpr;
           m_triangleLayer.get().bounds =

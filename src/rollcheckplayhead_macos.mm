@@ -166,6 +166,8 @@ void checkMacPlayheadLifecycle(QStringList &failures) {
     return;
   }
 
+  win->destroy();
+  processPaints();
   win->create();
   processPaints();
 
