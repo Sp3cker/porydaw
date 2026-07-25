@@ -50,7 +50,9 @@ inline constexpr qreal playheadPeakAlpha(bool playing) {
 }
 
 class PlayheadOverlay final : public QWidget {
+#ifdef PORYDAW_USE_NATIVE_PLAYHEAD
   class Platform;
+#endif
 
 public:
   // Every timeline-aligned widget the playhead must cross, with each one's
@@ -86,17 +88,25 @@ private:
   QRect visibleSurfaceRect(const QWidget &surface, QWidget &owner,
                            int origin) const;
   void synchronizeGeometry();
-  void updateArtwork();
-
-  void initializePlatform();
-  void synchronizePlatform();
-  void paintPlatform(QPaintEvent *event);
+  bool updateArtwork();
 
   Surfaces m_surfaces;
+
+#ifdef PORYDAW_USE_NATIVE_PLAYHEAD
+  void initializePlatform(QWidget &owner);
+  void setPlatformLayout();
+  void setPlatformArtwork();
+  void setPlatformPosition();
+
   struct PlatformDeleter {
     void operator()(Platform *platform) const;
   };
   std::unique_ptr<Platform, PlatformDeleter> m_platform;
+#else
+  QRegion playheadRegion() const;
+  void updatePaintRegion();
+  QRegion m_lastPaintedRegion;
+#endif
 
   QRegion m_visibleSurfaceRegion;
   QRect m_playheadGeometry;
@@ -108,7 +118,6 @@ private:
 
   bool m_trianglePointsUp = false;
   qreal m_devicePixelRatio = 1.0;
-  QColor m_themeColor;
 
   QImage m_bodyImage;
   qreal m_bodyImageLeftExtent = 0.0;

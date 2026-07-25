@@ -8,7 +8,6 @@
 #include <QWidget>
 #include <array>
 #include <memory>
-#include <utility>
 
 #if __has_feature(objc_arc)
 #error playheadrenderer_macos.mm must be compiled without ARC
@@ -53,46 +52,41 @@ public:
   DisabledActionTransaction &operator=(DisabledActionTransaction &&) = delete;
 };
 
-auto makeDisabledActions() -> RetainedObject<NSDictionary> {
-  auto *disabled = [NSNull null];
-  return RetainedObject<NSDictionary> {
-    [@{
-      @"anchorPoint" : disabled,
-      @"backgroundColor" : disabled,
-      @"bounds" : disabled,
-      @"contents" : disabled,
-      @"hidden" : disabled,
-      @"mask" : disabled,
-      @"position" : disabled,
-      @"sublayers" : disabled,
-      @"transform" : disabled,
-    } retain]
-  };
-}
-
-void configureLayer(CALayer *layer, NSDictionary *disabledActions) {
-  layer.actions = disabledActions;
-  layer.anchorPoint = CGPointZero;
-}
-
 void setLayerRect(CALayer *layer, const CGRect &rect) {
   layer.bounds = CGRectMake(0.0, 0.0, rect.size.width, rect.size.height);
   layer.position = rect.origin;
+}
+
+void setLayerContents(CALayer *layer, const QImage &image) {
+  if (image.isNull()) {
+    layer.contents = nil;
+    return;
+  }
+
+  CGImageRef imageRef = image.toCGImage();
+  layer.contents = (id)imageRef;
+  CGImageRelease(imageRef);
+
+  const qreal dpr =
+      image.devicePixelRatio() > 0.0 ? image.devicePixelRatio() : 1.0;
+  const QSizeF logicalSize = image.deviceIndependentSize();
+  layer.contentsScale = dpr;
+  layer.bounds =
+      CGRectMake(0.0, 0.0, logicalSize.width(), logicalSize.height());
 }
 
 } // namespace
 
 class PlayheadOverlay::Platform final {
 public:
-  explicit Platform(PlayheadOverlay &overlay) : m_overlay(overlay) {
-    auto disabledActions = makeDisabledActions();
+  explicit Platform(QWidget &owner) : m_owner(owner) {
+    DisabledActionTransaction transaction;
 
     m_rootLayer.reset([CALayer new]);
     m_rootLayer.get().name = @"PorydawPlayheadLayer";
     m_bodyClipLayer.reset([CALayer new]);
     m_bodyMaskLayer.reset([CAShapeLayer new]);
     m_bodyLayer.reset([CALayer new]);
-
     m_triangleClipLayer.reset([CALayer new]);
     m_triangleMaskLayer.reset([CAShapeLayer new]);
     m_triangleLayer.reset([CALayer new]);
@@ -103,20 +97,19 @@ public:
         m_triangleClipLayer.get(), m_triangleMaskLayer.get(),
         m_triangleLayer.get()};
     for (auto *layer : layers) {
-      configureLayer(layer, disabledActions.get());
+      layer.anchorPoint = CGPointZero;
     }
 
     m_rootLayer.get().geometryFlipped = NO;
     m_rootLayer.get().hidden = YES;
 
-    auto maskColor =
-        RetainedCoreFoundation<CGColor>{CGColorCreateSRGB(1.0, 1.0, 1.0, 1.0)};
-    m_bodyMaskLayer.get().fillColor = maskColor.get();
-    m_triangleMaskLayer.get().fillColor = maskColor.get();
+    CGColorRef maskColor = CGColorCreateSRGB(1.0, 1.0, 1.0, 1.0);
+    m_bodyMaskLayer.get().fillColor = maskColor;
+    m_triangleMaskLayer.get().fillColor = maskColor;
+    CGColorRelease(maskColor);
 
     m_bodyClipLayer.get().mask = m_bodyMaskLayer.get();
     m_triangleClipLayer.get().mask = m_triangleMaskLayer.get();
-
     [m_bodyClipLayer.get() addSublayer:m_bodyLayer.get()];
     [m_triangleClipLayer.get() addSublayer:m_triangleLayer.get()];
     [m_rootLayer.get() addSublayer:m_bodyClipLayer.get()];
@@ -127,144 +120,74 @@ public:
 
   ~Platform() { [m_rootLayer.get() removeFromSuperlayer]; }
 
-  void attachToNativeView() {
-    auto *parentWidget = m_overlay.parentWidget();
-    if (!parentWidget) {
-      if (m_attachedView) {
-        [m_rootLayer.get() removeFromSuperlayer];
-        m_attachedView = nullptr;
-      }
-      return;
-    }
-    WId parentWId = parentWidget->internalWinId();
-    if (parentWId == 0 && parentWidget->isVisible()) {
-      parentWId = parentWidget->winId();
-    }
-    auto *parentView =
-        parentWId ? reinterpret_cast<NSView *>(parentWId) : nullptr;
-    if (parentView != m_attachedView ||
-        (parentView && m_rootLayer.get().superlayer != parentView.layer)) {
-      if (m_attachedView && m_attachedView != parentView) {
-        [m_rootLayer.get() removeFromSuperlayer];
-        m_attachedView = nullptr;
-      }
-      if (parentView) {
-        parentView.wantsLayer = YES;
-        if (m_rootLayer.get().superlayer != parentView.layer) {
-          [m_rootLayer.get() removeFromSuperlayer];
-          [parentView.layer addSublayer:m_rootLayer.get()];
-        }
-        m_attachedView = parentView;
-      }
-    }
-  }
-
-  void synchronize() {
+  void setLayout(const QSize &overlaySize, const QRegion &visibleSurfaces,
+                 const QRect &triangleClip) {
     attachToNativeView();
-
-    const bool positionOnly =
-        m_hasSynced &&
-        m_lastVisibleSurfaceRegion == m_overlay.m_visibleSurfaceRegion &&
-        m_lastTriangleClip == m_overlay.m_triangleClip &&
-        m_lastOverlaySize == m_overlay.size() &&
-        m_lastBodyImageCacheKey == m_overlay.m_bodyImage.cacheKey() &&
-        m_lastTriangleImageCacheKey == m_overlay.m_triangleImage.cacheKey();
-
     DisabledActionTransaction transaction;
 
-    if (!positionOnly) {
-      const auto rootBounds =
-          CGRectMake(0.0, 0.0, m_overlay.width(), m_overlay.height());
-      setLayerRect(m_rootLayer.get(), rootBounds);
-      setLayerRect(m_bodyClipLayer.get(), rootBounds);
-      setLayerRect(m_bodyMaskLayer.get(), rootBounds);
-      setLayerRect(m_triangleClipLayer.get(), rootBounds);
-      setLayerRect(m_triangleMaskLayer.get(), rootBounds);
+    const auto rootBounds =
+        CGRectMake(0.0, 0.0, overlaySize.width(), overlaySize.height());
+    setLayerRect(m_rootLayer.get(), rootBounds);
+    setLayerRect(m_bodyClipLayer.get(), rootBounds);
+    setLayerRect(m_bodyMaskLayer.get(), rootBounds);
+    setLayerRect(m_triangleClipLayer.get(), rootBounds);
+    setLayerRect(m_triangleMaskLayer.get(), rootBounds);
 
-      if (!m_hasSynced ||
-          m_lastVisibleSurfaceRegion != m_overlay.m_visibleSurfaceRegion) {
-        auto surfacePath =
-            RetainedCoreFoundation<CGPath>{CGPathCreateMutable()};
-        for (const QRect &rect : m_overlay.m_visibleSurfaceRegion) {
-          CGPathAddRect(
-              surfacePath.get(), nullptr,
-              CGRectMake(rect.x(), rect.y(), rect.width(), rect.height()));
-        }
-        m_bodyMaskLayer.get().path = surfacePath.get();
-        m_lastVisibleSurfaceRegion = m_overlay.m_visibleSurfaceRegion;
-      }
-
-      if (!m_hasSynced || m_lastTriangleClip != m_overlay.m_triangleClip) {
-        auto triangleMaskPath =
-            RetainedCoreFoundation<CGPath>{CGPathCreateMutable()};
-        CGPathAddRect(triangleMaskPath.get(), nullptr,
-                      CGRectMake(m_overlay.m_triangleClip.x(),
-                                 m_overlay.m_triangleClip.y(),
-                                 m_overlay.m_triangleClip.width(),
-                                 m_overlay.m_triangleClip.height()));
-        m_triangleMaskLayer.get().path = triangleMaskPath.get();
-        m_lastTriangleClip = m_overlay.m_triangleClip;
-      }
-
-      if (!m_hasSynced ||
-          m_lastBodyImageCacheKey != m_overlay.m_bodyImage.cacheKey()) {
-        if (!m_overlay.m_bodyImage.isNull()) {
-          CGImageRef cgImg = m_overlay.m_bodyImage.toCGImage();
-          m_bodyLayer.get().contents = (id)cgImg;
-          CGImageRelease(cgImg);
-          const qreal dpr = m_overlay.m_bodyImage.devicePixelRatio() > 0.0
-                                ? m_overlay.m_bodyImage.devicePixelRatio()
-                                : 1.0;
-          m_bodyLayer.get().contentsScale = dpr;
-          const CGFloat logicalW = m_overlay.m_bodyImage.width() / dpr;
-          const CGFloat logicalH = m_overlay.m_bodyImage.height() / dpr;
-          m_bodyLayer.get().bounds = CGRectMake(0.0, 0.0, logicalW, logicalH);
-        } else {
-          m_bodyLayer.get().contents = nil;
-        }
-        m_lastBodyImageCacheKey = m_overlay.m_bodyImage.cacheKey();
-      }
-
-      if (!m_hasSynced ||
-          m_lastTriangleImageCacheKey != m_overlay.m_triangleImage.cacheKey()) {
-        if (!m_overlay.m_triangleImage.isNull()) {
-          CGImageRef cgImg = m_overlay.m_triangleImage.toCGImage();
-          m_triangleLayer.get().contents = (id)cgImg;
-          CGImageRelease(cgImg);
-          const qreal dpr = m_overlay.m_triangleImage.devicePixelRatio() > 0.0
-                                ? m_overlay.m_triangleImage.devicePixelRatio()
-                                : 1.0;
-          m_triangleLayer.get().contentsScale = dpr;
-          const CGFloat logicalW = m_overlay.m_triangleImage.width() / dpr;
-          const CGFloat logicalH = m_overlay.m_triangleImage.height() / dpr;
-          m_triangleLayer.get().bounds =
-              CGRectMake(0.0, 0.0, logicalW, logicalH);
-        } else {
-          m_triangleLayer.get().contents = nil;
-        }
-        m_lastTriangleImageCacheKey = m_overlay.m_triangleImage.cacheKey();
-      }
-
-      m_lastOverlaySize = m_overlay.size();
+    auto surfacePath = RetainedCoreFoundation<CGPath>{CGPathCreateMutable()};
+    for (const QRect &rect : visibleSurfaces) {
+      CGPathAddRect(
+          surfacePath.get(), nullptr,
+          CGRectMake(rect.x(), rect.y(), rect.width(), rect.height()));
     }
+    m_bodyMaskLayer.get().path = surfacePath.get();
 
-    const qreal finalX = m_overlay.finalX();
-    const CGFloat bodyX = finalX - m_overlay.m_bodyImageLeftExtent;
-    const CGFloat bodyY = m_overlay.m_playheadGeometry.top();
-    m_bodyLayer.get().position = CGPointMake(bodyX, bodyY);
-
-    const CGFloat triX = finalX - kPlayheadTriangleHalfWidth;
-    const CGFloat triY = m_overlay.m_playheadGeometry.top();
-    m_triangleLayer.get().position = CGPointMake(triX, triY);
-
-    m_rootLayer.get().hidden = m_overlay.m_visible ? NO : YES;
-    m_hasSynced = true;
+    auto trianglePath = RetainedCoreFoundation<CGPath>{CGPathCreateMutable()};
+    CGPathAddRect(trianglePath.get(), nullptr,
+                  CGRectMake(triangleClip.x(), triangleClip.y(),
+                             triangleClip.width(), triangleClip.height()));
+    m_triangleMaskLayer.get().path = trianglePath.get();
   }
 
-  void paint(QPaintEvent *) {}
+  void setArtwork(const QImage &bodyImage, qreal bodyImageLeftExtent,
+                  const QImage &triangleImage) {
+    DisabledActionTransaction transaction;
+    setLayerContents(m_bodyLayer.get(), bodyImage);
+    setLayerContents(m_triangleLayer.get(), triangleImage);
+    m_bodyImageLeftExtent = bodyImageLeftExtent;
+  }
+
+  void setPosition(qreal finalX, int top, bool visible) {
+    attachToNativeView();
+    DisabledActionTransaction transaction;
+    m_bodyLayer.get().position =
+        CGPointMake(finalX - m_bodyImageLeftExtent, top);
+    m_triangleLayer.get().position =
+        CGPointMake(finalX - kPlayheadTriangleHalfWidth, top);
+    m_rootLayer.get().hidden = visible ? NO : YES;
+  }
 
 private:
-  PlayheadOverlay &m_overlay;
+  void attachToNativeView() {
+    WId ownerWId = m_owner.internalWinId();
+    if (ownerWId == 0 && m_owner.isVisible()) {
+      ownerWId = m_owner.winId();
+    }
+    auto *ownerView = ownerWId ? reinterpret_cast<NSView *>(ownerWId) : nullptr;
+    if (ownerView == m_attachedView &&
+        (!ownerView || m_rootLayer.get().superlayer == ownerView.layer)) {
+      return;
+    }
+
+    [m_rootLayer.get() removeFromSuperlayer];
+    m_attachedView = nullptr;
+    if (ownerView) {
+      ownerView.wantsLayer = YES;
+      [ownerView.layer addSublayer:m_rootLayer.get()];
+      m_attachedView = ownerView;
+    }
+  }
+
+  QWidget &m_owner;
   NSView *m_attachedView = nullptr;
   RetainedObject<CALayer> m_rootLayer;
   RetainedObject<CALayer> m_bodyClipLayer;
@@ -273,34 +196,32 @@ private:
   RetainedObject<CALayer> m_triangleClipLayer;
   RetainedObject<CAShapeLayer> m_triangleMaskLayer;
   RetainedObject<CALayer> m_triangleLayer;
-
-  QRegion m_lastVisibleSurfaceRegion;
-  QRect m_lastTriangleClip;
-  QSize m_lastOverlaySize;
-  qint64 m_lastBodyImageCacheKey = -1;
-  qint64 m_lastTriangleImageCacheKey = -1;
-  bool m_hasSynced = false;
+  qreal m_bodyImageLeftExtent = 0.0;
 };
 
-void PlayheadOverlay::initializePlatform() {
-  m_platform.reset(new Platform(*this));
+void PlayheadOverlay::initializePlatform(QWidget &owner) {
+  m_platform.reset(new Platform(owner));
 }
 
-void PlayheadOverlay::synchronizePlatform() {
-  if (m_platform) {
-    m_platform->synchronize();
-  }
+void PlayheadOverlay::setPlatformLayout() {
+  Q_ASSERT(m_platform);
+  m_platform->setLayout(size(), m_visibleSurfaceRegion, m_triangleClip);
 }
 
-void PlayheadOverlay::paintPlatform(QPaintEvent *event) {
-  if (m_platform) {
-    m_platform->paint(event);
-  }
+void PlayheadOverlay::setPlatformArtwork() {
+  Q_ASSERT(m_platform);
+  m_platform->setArtwork(m_bodyImage, m_bodyImageLeftExtent, m_triangleImage);
+}
+
+void PlayheadOverlay::setPlatformPosition() {
+  Q_ASSERT(m_platform);
+  m_platform->setPosition(finalX(), m_playheadGeometry.top(), m_visible);
 }
 
 void PlayheadOverlay::PlatformDeleter::operator()(Platform *platform) const {
   delete platform;
 }
+
 PlayheadOverlay::~PlayheadOverlay() = default;
 
 } // namespace songview

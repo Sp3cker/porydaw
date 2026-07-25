@@ -34,7 +34,9 @@ PlayheadOverlay::PlayheadOverlay(QWidget &owner, const Surfaces &surfaces)
   observeSurfaceGeometry(m_surfaces.lanes);
   observeSurfaceGeometry(m_surfaces.strip);
 
-  initializePlatform();
+#ifdef PORYDAW_USE_NATIVE_PLAYHEAD
+  initializePlatform(owner);
+#endif
   synchronizeGeometry();
   show();
 }
@@ -43,12 +45,23 @@ void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing) {
   if (m_timelineX == timelineX && m_visible == visible && m_playing == playing)
     return;
 
+  const bool playingChanged = m_playing != playing;
+
   m_timelineX = timelineX;
   m_visible = visible;
   m_playing = playing;
 
-  updateArtwork();
-  synchronizePlatform();
+#ifdef PORYDAW_USE_NATIVE_PLAYHEAD
+  if (playingChanged && updateArtwork()) {
+    setPlatformArtwork();
+  }
+  setPlatformPosition();
+#else
+  if (playingChanged) {
+    updateArtwork();
+  }
+  updatePaintRegion();
+#endif
 }
 
 bool PlayheadOverlay::eventFilter(QObject *, QEvent *event) {
@@ -79,15 +92,43 @@ void PlayheadOverlay::changeEvent(QEvent *event) {
   case QEvent::PaletteChange:
   case QEvent::StyleChange:
   case QEvent::FontChange:
-    updateArtwork();
-    synchronizePlatform();
+    if (updateArtwork()) {
+#ifdef PORYDAW_USE_NATIVE_PLAYHEAD
+      setPlatformArtwork();
+#else
+      updatePaintRegion();
+#endif
+    }
     break;
   default:
     break;
   }
 }
 
-void PlayheadOverlay::paintEvent(QPaintEvent *event) { paintPlatform(event); }
+void PlayheadOverlay::paintEvent(QPaintEvent *event) {
+#ifdef PORYDAW_USE_NATIVE_PLAYHEAD
+  (void)event;
+#else
+  if (!m_visible || m_playheadGeometry.isEmpty()) {
+    return;
+  }
+
+  QPainter painter(this);
+  const qreal x = finalX();
+  const int top = m_playheadGeometry.top();
+
+  if (!m_bodyImage.isNull() && !m_visibleSurfaceRegion.isEmpty()) {
+    painter.setClipRegion(m_visibleSurfaceRegion);
+    painter.drawImage(QPointF(x - m_bodyImageLeftExtent, top), m_bodyImage);
+  }
+
+  if (!m_triangleImage.isNull() && !m_triangleClip.isEmpty()) {
+    painter.setClipRect(m_triangleClip, Qt::ReplaceClip);
+    painter.drawImage(QPointF(x - kPlayheadTriangleHalfWidth, top),
+                      m_triangleImage);
+  }
+#endif
+}
 
 QRect PlayheadOverlay::visibleSurfaceRect(const QWidget &surface,
                                           QWidget &owner, int origin) const {
@@ -143,24 +184,34 @@ void PlayheadOverlay::synchronizeGeometry() {
   m_trianglePointsUp = !m_surfaces.roll.isVisible();
   m_devicePixelRatio = owner.devicePixelRatioF();
 
-  updateArtwork();
-  synchronizePlatform();
+  const bool artworkChanged = updateArtwork();
+#ifdef PORYDAW_USE_NATIVE_PLAYHEAD
+  setPlatformLayout();
+  if (artworkChanged) {
+    setPlatformArtwork();
+  }
+  setPlatformPosition();
+#else
+  updatePaintRegion();
+#endif
   raise();
 }
 
-void PlayheadOverlay::updateArtwork() {
+bool PlayheadOverlay::updateArtwork() {
   const QColor currentThemeColor =
       themes::color(themes::Role::song_view_playhead);
   const int currentHeight = m_playheadGeometry.height();
   const qreal currentDpr = m_devicePixelRatio > 0.0 ? m_devicePixelRatio : 1.0;
   const bool geometryValid = !m_playheadGeometry.isEmpty() && currentHeight > 0;
+  bool artworkChanged = false;
 
   if (!geometryValid) {
+    artworkChanged = !m_bodyImage.isNull() || !m_triangleImage.isNull();
     m_bodyImage = QImage();
     m_triangleImage = QImage();
     m_cachedBodyValid = false;
     m_cachedTriangleValid = false;
-    return;
+    return artworkChanged;
   }
 
   const bool bodyNeedsUpdate =
@@ -169,12 +220,12 @@ void PlayheadOverlay::updateArtwork() {
       m_cachedBodyThemeColor != currentThemeColor;
 
   if (bodyNeedsUpdate) {
+    artworkChanged = true;
     m_cachedBodyHeight = currentHeight;
     m_cachedBodyPlaying = m_playing;
     m_cachedBodyDpr = currentDpr;
     m_cachedBodyThemeColor = currentThemeColor;
     m_cachedBodyValid = true;
-    m_themeColor = currentThemeColor;
 
     const qreal leftExtent = playheadGlowLeftExtent(m_playing);
     const qreal rightExtent = playheadGlowRightExtent(m_playing);
@@ -234,11 +285,11 @@ void PlayheadOverlay::updateArtwork() {
       m_cachedTriangleThemeColor != currentThemeColor;
 
   if (triangleNeedsUpdate) {
+    artworkChanged = true;
     m_cachedTrianglePointsUp = m_trianglePointsUp;
     m_cachedTriangleDpr = currentDpr;
     m_cachedTriangleThemeColor = currentThemeColor;
     m_cachedTriangleValid = true;
-    m_themeColor = currentThemeColor;
 
     const qreal triWidthLogical = 2.0 * kPlayheadTriangleHalfWidth;
     const qreal triHeightLogical = kPlayheadTriangleHeight;
@@ -274,6 +325,48 @@ void PlayheadOverlay::updateArtwork() {
       m_triangleImage = QImage();
     }
   }
+  return artworkChanged;
 }
+
+#ifndef PORYDAW_USE_NATIVE_PLAYHEAD
+QRegion PlayheadOverlay::playheadRegion() const {
+  const qreal x = finalX();
+  const qreal dpr = m_devicePixelRatio > 0.0 ? m_devicePixelRatio : 1.0;
+  const int top = m_playheadGeometry.top();
+
+  QRegion region;
+  if (!m_bodyImage.isNull()) {
+    const QRect bodyRect =
+        QRectF(x - m_bodyImageLeftExtent, top, m_bodyImage.width() / dpr,
+               m_bodyImage.height() / dpr)
+            .toAlignedRect();
+    region += QRegion(bodyRect).intersected(m_visibleSurfaceRegion);
+  }
+
+  if (!m_triangleImage.isNull()) {
+    const QRect triangleRect =
+        QRectF(x - kPlayheadTriangleHalfWidth, top,
+               m_triangleImage.width() / dpr, m_triangleImage.height() / dpr)
+            .toAlignedRect();
+    region += QRegion(triangleRect).intersected(m_triangleClip);
+  }
+  return region;
+}
+
+void PlayheadOverlay::updatePaintRegion() {
+  QRegion currentRegion;
+  if (m_visible && !m_playheadGeometry.isEmpty()) {
+    currentRegion = playheadRegion();
+  }
+
+  const QRegion dirty = m_lastPaintedRegion + currentRegion;
+  m_lastPaintedRegion = currentRegion;
+  if (!dirty.isEmpty()) {
+    update(dirty);
+  }
+}
+
+PlayheadOverlay::~PlayheadOverlay() = default;
+#endif
 
 } // namespace songview

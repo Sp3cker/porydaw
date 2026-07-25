@@ -154,15 +154,12 @@ if(APPLE)
     target_sources(porydaw_app PRIVATE
         src/ui/playheadrenderer_macos.mm
     )
+    target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_NATIVE_PLAYHEAD)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
     find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
     target_link_libraries(porydaw_app PRIVATE
         ${APPKIT_FRAMEWORK}
         ${QUARTZCORE_FRAMEWORK}
-    )
-else()
-    target_sources(porydaw_app PRIVATE
-        src/ui/playheadrenderer_qt.cpp
     )
 endif()
 target_include_directories(porydaw_app PUBLIC
