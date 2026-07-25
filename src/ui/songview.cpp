@@ -161,6 +161,15 @@ QColor trackHeaderAlsoSelectedColor() {
   color.setAlpha(99);
   return color;
 }
+// Perceptual blend for receding a color into its backdrop (silent-in-game
+// track headers): t = 0 keeps `color`, t = 1 lands on `backdrop`.
+QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t) {
+  const themes::Oklab from = themes::oklabFromColor(color);
+  const themes::Oklab to = themes::oklabFromColor(backdrop);
+  return themes::colorFromOklab({from.lightness + (to.lightness - from.lightness) * t,
+                                 from.a + (to.a - from.a) * t,
+                                 from.b + (to.b - from.b) * t});
+}
 std::size_t trackIdentityIndex(int track) {
   const auto count = static_cast<int>(themes::trackIdentityColorCount);
   return static_cast<std::size_t>(((track % count) + count) % count);
@@ -4128,13 +4137,38 @@ protected:
         titleMetrics.elidedText(title,
                        Qt::ElideRight, textW);
         // The song's music player never starts this track in-game
-        // (MPlayStart), so playback mutes it; the header says why.
+        // (MPlayStart), so playback mutes it; the header must read as inert
+        // at a glance: text recedes most of the way into the backdrop and a
+        // faint cross spans the row, under the text so labels stay legible.
         const bool silentInGame = isSilentInGame();
+        const QColor backdrop = selected
+            ? themes::color(themes::Role::song_view_track_header_selection)
+            : (m_sv->trackSelectionMask() & (1u << m_track))
+                ? trackHeaderAlsoSelectedColor()
+                : palette().color(QPalette::Window);
+        QColor titleColor = selected
+            ? themes::color(themes::Role::song_view_track_header_selection_text)
+            : themes::color(themes::Role::song_view_primary_text);
+        QColor subtitleColor = selected
+            ? themes::color(themes::Role::song_view_track_header_selection_text)
+            : themes::color(themes::Role::song_view_secondary_text);
+        if (silentInGame) {
+            titleColor = mixTowardOklab(titleColor, backdrop, selected ? 0.35 : 0.6);
+            subtitleColor = mixTowardOklab(subtitleColor, backdrop, selected ? 0.35 : 0.6);
+            QColor cross = mixTowardOklab(titleColor, backdrop, 0.3);
+            p.save();
+            p.setRenderHint(QPainter::Antialiasing);
+            p.setPen(QPen(cross, lyt::singlePixel()));
+            const QRectF box =
+                QRectF(rect()).adjusted(lyt::space(Space::One), lyt::space(Space::One),
+                                        -lyt::space(Space::One),
+                                        -lyt::space(Space::One) - lyt::singlePixel());
+            p.drawLine(box.topLeft(), box.bottomRight());
+            p.drawLine(box.bottomLeft(), box.topRight());
+            p.restore();
+        }
         p.setFont(titleFont);
-        p.setPen(silentInGame && !selected
-                     ? themes::color(themes::Role::song_view_secondary_text)
-                     : selected ? themes::color(themes::Role::song_view_track_header_selection_text)
-                      : themes::color(themes::Role::song_view_primary_text));
+        p.setPen(titleColor);
     const auto subtitleFont = typography::caption(normalTitleFont);
     const auto subtitleMetrics = QFontMetrics(subtitleFont);
     const auto textLayout = ::layout::twoLineText(
@@ -4153,8 +4187,7 @@ protected:
         p.drawText(titleBox, Qt::AlignLeft | Qt::AlignVCenter, visibleTitle);
 
     p.setFont(subtitleFont);
-    p.setPen(selected ? themes::color(themes::Role::song_view_track_header_selection_text)
-                      : themes::color(themes::Role::song_view_secondary_text));
+    p.setPen(subtitleColor);
         m_shownProgram = m_sv->currentProgram(m_track);
     const QString subtitle = silentInGame
         ? SongView::tr("silent in-game · %1").arg(m_sv->instrumentLabel(m_track))
