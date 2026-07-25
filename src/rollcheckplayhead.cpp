@@ -4,11 +4,17 @@
 #include <QEvent>
 #include <QObject>
 #include <QPaintEvent>
+#include <QPainter>
+#include <QPixmap>
 #include <QRegion>
 #include <QWidget>
 #include <algorithm>
 #include <cmath>
 #include <vector>
+
+#ifdef __APPLE__
+#include <QGuiApplication>
+#endif
 
 #include "core/miditimeline.h"
 #include "ui/eventlistview.h"
@@ -16,6 +22,45 @@
 #include "ui/songview.h"
 
 namespace {
+#ifdef __APPLE__
+bool usesNativeMacPlayheadRenderer()
+{
+    return QGuiApplication::platformName() == QLatin1String("cocoa");
+}
+#endif
+
+QPixmap grabPlayheadOverlay(SongView &view, songview::PlayheadOverlay &marker,
+                            QStringList &failures)
+{
+#ifdef __APPLE__
+    if (usesNativeMacPlayheadRenderer())
+        return renderMacPlayheadOverlay(view, failures);
+#else
+    (void)view;
+    (void)failures;
+#endif
+    return marker.grab();
+}
+
+QPixmap grabSongViewWithPlayhead(SongView &view,
+                                 songview::PlayheadOverlay &marker,
+                                 QStringList &failures)
+{
+    QPixmap pixmap = view.grab();
+#ifdef __APPLE__
+    if (usesNativeMacPlayheadRenderer()) {
+        const QPixmap overlay = renderMacPlayheadOverlay(view, failures);
+        if (!overlay.isNull()) {
+            QPainter painter(&pixmap);
+            painter.drawPixmap(marker.mapTo(&view, QPoint()), overlay);
+        }
+    }
+#else
+    (void)marker;
+    (void)failures;
+#endif
+    return pixmap;
+}
 
 class PaintRegionProbe : public QObject
 {
@@ -181,7 +226,8 @@ void checkEventListRendering(SongView &view,
     const QRect eventListArea =
         QRect(events->mapTo(&view, QPoint()), events->size())
             .intersected(view.rect());
-    const QPixmap composedPixmap = view.grab();
+    const QPixmap composedPixmap =
+        grabSongViewWithPlayhead(view, marker, failures);
     const QImage composedImage = composedPixmap.toImage();
     const qreal composedDpr = composedPixmap.devicePixelRatio();
     if (!events->isVisible() || eventListArea.isEmpty()) {
@@ -254,10 +300,12 @@ void checkFractionalMovement(SongView &view, const MidiTimeline &timeline,
     }
     view.setPlayheadSample(fractionalStartSample, true);
     processPaints();
-    const qreal fractionalStart = playheadCenter(marker.grab(), playheadColor);
+    const qreal fractionalStart = playheadCenter(
+        grabPlayheadOverlay(view, marker, failures), playheadColor);
     view.setPlayheadSample(fractionalEndSample, true);
     processPaints();
-    const qreal fractionalEnd = playheadCenter(marker.grab(), playheadColor);
+    const qreal fractionalEnd = playheadCenter(
+        grabPlayheadOverlay(view, marker, failures), playheadColor);
     const qreal expectedDelta =
         (timeline.tickForSample(fractionalEndSample)
          - timeline.tickForSample(fractionalStartSample)) * view.pxPerTick();
@@ -318,11 +366,13 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     const uint64_t secondSample = timeline.sampleForTick(secondTick);
     view.setPlayheadSample(firstSample, false);
     processPaints();
-    const qreal firstMarkerCenter = playheadCenter(marker.grab(), playheadColor);
+    const qreal firstMarkerCenter = playheadCenter(
+        grabPlayheadOverlay(view, marker, failures), playheadColor);
     checkCenter(firstMarkerCenter, firstSample, QStringLiteral("stopped"));
     const QRect rulerArea(ruler->mapTo(&view, QPoint()), ruler->size());
     if (firstMarkerCenter >= 0.0) {
-        const QPixmap composedPixmap = view.grab();
+        const QPixmap composedPixmap =
+            grabSongViewWithPlayhead(view, marker, failures);
         const qreal playheadX =
             marker.mapTo(&view, QPoint()).x() + firstMarkerCenter;
         if (hasPlayheadRedLine(composedPixmap.toImage(),
@@ -344,7 +394,8 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
         probe.repaintedBroadly(&marker, maxPlayheadExposureWidth);
     const bool anotherWidgetPaintedBroadly =
         probe.repaintedAnyBroadly(&marker, maxPlayheadExposureWidth);
-    const QPixmap playingPixmap = marker.grab();
+    const QPixmap playingPixmap =
+        grabPlayheadOverlay(view, marker, failures);
     const qreal playingMarkerCenter = playheadCenter(playingPixmap, playheadColor);
     checkCenter(playingMarkerCenter, secondSample, QStringLiteral("playing"));
     if (overlayPaintedBroadly)
@@ -353,7 +404,8 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
         failures.append("playhead move repainted another timeline widget broadly");
     view.setPlayheadSample(secondSample, false);
     processPaints();
-    const QPixmap stoppedPixmap = marker.grab();
+    const QPixmap stoppedPixmap =
+        grabPlayheadOverlay(view, marker, failures);
     const qreal stoppedMarkerCenter = playheadCenter(stoppedPixmap, playheadColor);
     checkCenter(stoppedMarkerCenter, secondSample, QStringLiteral("stopped"));
     if (playingPixmap.toImage() == stoppedPixmap.toImage())
@@ -371,6 +423,10 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
 QStringList playheadOverlayCheckFailures(SongView &view, const MidiTimeline &timeline)
 {
     QStringList failures;
+#ifdef __APPLE__
+    if (usesNativeMacPlayheadRenderer())
+        checkMacPlayheadLifecycle(failures);
+#endif
     const bool viewWasVisible = view.isVisible();
     const bool viewHadDontShowOnScreen = view.testAttribute(Qt::WA_DontShowOnScreen);
     if (auto *marker = findPlayheadOverlay(view)) {
