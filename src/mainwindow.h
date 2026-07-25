@@ -84,6 +84,7 @@ private slots:
     void exportWav();
     void openSongSettings();
     void openEngineSettings();
+    void openKeyboardShortcuts();
     void newSong();
     void importMidi();
     void importSample();

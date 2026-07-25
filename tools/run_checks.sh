@@ -103,6 +103,7 @@ run ignorecheck      -    --ignorecheck SCRATCH
 run primecheck       -    --primecheck
 run transportcheck   -    --transportcheck
 run audiocheck       -    --audiocheck
+run keymapcheck      -    --keymapcheck
 run polycheck        -    --polycheck
 
 # samplecheck builds its own fake projects and requires a scratch dir that

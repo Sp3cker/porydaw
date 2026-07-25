@@ -72,6 +72,10 @@ int runSampleCheck(const QString &scratchDir,
 // ignorecheck.cpp; sidecar-dir .gitignore check (self-contained, builds its
 // own scratch projects; the scratch dir must not exist).
 int runIgnoreCheck(const QString &scratchDir);
+// keymapcheck.cpp; user-configurable shortcut check: registry table/matching/
+// persistence + offscreen shortcuts-dialog driving (self-contained, no
+// project needed; redirects QSettings itself).
+int runKeymapCheck();
 // eventviewcheck.cpp; raw MIDI event list check (model API + offscreen UI);
 // the optional song label + path save that song's rendered event list.
 int runEventViewCheck(const QString &projectRoot,
@@ -163,6 +167,8 @@ int main(int argc, char *argv[])
         return runTransportCheck();
     if (args.contains(QStringLiteral("--audiocheck")))
         return runAudioCheck();
+    if (args.contains(QStringLiteral("--keymapcheck")))
+        return runKeymapCheck();
     const int editCheck = args.indexOf(QStringLiteral("--editcheck"));
     if (editCheck >= 0 && editCheck + 1 < args.size())
         return runEditCheck(args[editCheck + 1]);

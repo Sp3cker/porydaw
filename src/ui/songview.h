@@ -365,9 +365,12 @@ public:
     void nudgeTimeSelection(bool right);
     // Shared shortcut handling for the roll and the lanes area: range
     // copy/cut/delete while a time selection is active, paste of range
-    // clips, and Ctrl+arrow transpose/nudge of the selection. Returns true
-    // when consumed.
+    // clips, and transpose/nudge of the selection (keymap commands).
+    // Returns true when consumed.
     bool handleEditKey(QKeyEvent *event);
+    // Semitone step for the transpose command the event matches (0 if none);
+    // shared by the note- and time-selection key paths.
+    int transposeStepFor(const QKeyEvent *event) const;
     // Copy/Cut/Delete/Paste/Clear context menu on the active selection.
     void showTimeSelectionMenu(const QPoint &globalPos);
 
