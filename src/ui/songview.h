@@ -46,8 +46,10 @@ constexpr int kGutterW = kHeaderW + kKeyboardW;
 // top = 127), and that bar — grabbable anywhere across the note's
 // width — drags the velocity. Below the threshold there is no bar and
 // notes are all-Move; the right-click menu remains the velocity
-// fallback. Also the default key height, so the handle is available out
-// of the box.
+// fallback, and the roll.velocity_drag modifier chord (Ctrl by default,
+// Ableton-style) turns a vertical drag from anywhere on a note into a
+// velocity drag at any zoom. Also the default key height, so the handle
+// is available out of the box.
 constexpr int kVelHandleMinKeyH = 12;
 // Auto snap grid: the zoom-adaptive grid shows the finest subdivision from
 // the feel's ladder whose cells are at least this wide, so lower values

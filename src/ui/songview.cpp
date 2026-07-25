@@ -1346,6 +1346,29 @@ protected:
         m_dVel = 0;
 
         if (hit) {
+            // Ableton-style velocity gesture: with the bound modifier chord
+            // held (Ctrl by default), a vertical drag from anywhere on the
+            // note adjusts velocity. Deferred like the empty-space press:
+            // the click action (Ctrl's selection toggle) resolves on
+            // release, a drag past the threshold in mouseMoveEvent.
+            const Qt::KeyboardModifiers gestureMods =
+                keymap::Registry::instance().modifierBinding(
+                    QStringLiteral("roll.velocity_drag"));
+            const Qt::KeyboardModifiers pressMods = event->modifiers()
+                & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier
+                   | Qt::MetaModifier);
+            if (gestureMods != Qt::NoModifier && pressMods == gestureMods) {
+                m_velModPress = true;
+                m_velModMods = pressMods;
+                m_velAnchor = *hit;
+                m_velAudEff = mid2agbEffectiveVelocity(hit->velocity);
+                m_sv->announceNote(*hit);
+                m_lastVelocity = hit->velocity;
+                auditionKey(hit->key, hit->velocity);
+                m_auditioned = true;
+                update();
+                return;
+            }
             std::vector<SongView::NoteId> ids = m_sv->selection();
             const SongView::NoteId id{hit->startTick, hit->key};
             if (event->modifiers() & Qt::ControlModifier) {
@@ -1479,6 +1502,23 @@ protected:
             // (one snap cell until the drag crosses the next snap line).
             beginDraw();
         }
+        if (m_velModPress && m_drag == Drag::None) {
+            // The deferred modifier press becomes a velocity drag once it
+            // travels vertically past the click threshold (so a jittery
+            // Ctrl+click stays a selection toggle). The same event falls
+            // through to the Velocity branch, which measures from the press.
+            if (std::abs(event->pos().y() - m_pressPos.y())
+                < QApplication::startDragDistance())
+                return;
+            m_velModPress = false;
+            if (!m_sv->isSelected(m_velAnchor))
+                m_sv->setSelection(
+                    {SongView::NoteId{m_velAnchor.startTick, m_velAnchor.key}});
+            m_drag = Drag::Velocity;
+            // The pass at the top of this event ran before the drag
+            // existed; re-pin the mark to the note's row now.
+            setHoverKey(m_velAnchor.key);
+        }
         if (m_drag == Drag::None) {
             // Hover cursor: resize handle at note left/right edges, velocity
             // handle along the note's velocity bar (when zoomed in enough).
@@ -1487,7 +1527,17 @@ protected:
             const ViewNote *hit =
                 m_sv->document() && event->pos().x() >= kKeyboardW ? hitNote(event->pos())
                                                                    : nullptr;
-            if (hit && nearRightEdge(*hit, event->pos()))
+            // The velocity-gesture modifier held over a note wins over the
+            // edge handles, exactly as the press does.
+            const Qt::KeyboardModifiers hoverMods = event->modifiers()
+                & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier
+                   | Qt::MetaModifier);
+            if (hit && hoverMods != Qt::NoModifier
+                && hoverMods
+                    == keymap::Registry::instance().modifierBinding(
+                        QStringLiteral("roll.velocity_drag")))
+                setCursor(Qt::SizeVerCursor);
+            else if (hit && nearRightEdge(*hit, event->pos()))
                 setCursor(m_cursors.rightEdge);
             else if (hit && nearLeftEdge(*hit, event->pos()))
                 setCursor(m_cursors.leftEdge);
@@ -1654,6 +1704,26 @@ protected:
                 update();
                 return;
             }
+        }
+        if (event->button() == Qt::LeftButton && m_velModPress) {
+            // The modifier press never grew into a velocity drag: give the
+            // click its undeferred meaning — Ctrl in the chord keeps its
+            // selection toggle, any other chord selects like a plain click.
+            m_velModPress = false;
+            const SongView::NoteId id{m_velAnchor.startTick, m_velAnchor.key};
+            if (m_velModMods & Qt::ControlModifier) {
+                std::vector<SongView::NoteId> ids = m_sv->selection();
+                const auto it = std::find(ids.begin(), ids.end(), id);
+                if (it != ids.end())
+                    ids.erase(it);
+                else
+                    ids.push_back(id);
+                m_sv->setSelection(std::move(ids));
+            } else if (!m_sv->isSelected(m_velAnchor)) {
+                m_sv->setSelection({id});
+            }
+            update();
+            return;
         }
         if (event->button() != Qt::LeftButton || m_drag == Drag::None)
             return;
@@ -2396,6 +2466,9 @@ private:
                                              // covers; entrants audition
     ViewNote m_velAnchor{};    // pressed note of a velocity drag (a copy)
     int m_velAudEff = -1;      // last effective velocity auditioned mid-drag
+    bool m_velModPress = false; // velocity-modifier press on a note; click
+                                // vs. vertical velocity drag undecided
+    Qt::KeyboardModifiers m_velModMods = Qt::NoModifier; // that press's chord
     int m_kbdKey = -1;         // key sounding from a keyboard-column press
     int m_soundingKey = -1;    // auditioned key highlighted on the keyboard
     int m_hoverKey = -1;       // key row under the cursor; -1 = no mark

@@ -14,8 +14,12 @@ struct Def {
     const char *name;
     // Platform-adaptive default; UnknownKey means use `keys` instead.
     QKeySequence::StandardKey standard;
-    // Portable-text alternates separated by ';' ("Delete;Backspace").
+    // Portable-text alternates separated by ';' ("Delete;Backspace"). For a
+    // modifier command this holds the default modifier chord ("Ctrl").
     const char *keys;
+    // Mouse-gesture modifier command ("hold X and drag"): bound to a bare
+    // modifier chord, never a key sequence.
+    bool modifier;
 };
 
 // Stable order: the settings UI lists commands exactly as they appear here.
@@ -102,6 +106,11 @@ const Def kDefs[] = {
      QT_TR_NOOP("Nudge Left"), QKeySequence::UnknownKey, "Ctrl+Left"},
     {"roll.nudge_right", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Nudge Right"), QKeySequence::UnknownKey, "Ctrl+Right"},
+    // Ableton-style: hold the modifier and drag vertically anywhere on a
+    // note to adjust its velocity. Qt maps Ctrl to Cmd on macOS.
+    {"roll.velocity_drag", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Adjust Velocity (Hold + Drag Note)"),
+     QKeySequence::UnknownKey, "Ctrl", true},
 };
 
 const Def *findDef(const QString &id)
@@ -115,6 +124,8 @@ const Def *findDef(const QString &id)
 
 QList<QKeySequence> defaultBindings(const Def &def)
 {
+    if (def.modifier) // modifier chords are not key sequences
+        return {};
     if (def.standard != QKeySequence::UnknownKey)
         return QKeySequence::keyBindings(def.standard);
     QList<QKeySequence> out;
@@ -157,7 +168,7 @@ QList<CommandInfo> Registry::commands() const
     out.reserve(int(std::size(kDefs)));
     for (const Def &def : kDefs) {
         out.append({QLatin1String(def.id), def.context, tr(def.category),
-                    tr(def.name), defaultBindings(def)});
+                    tr(def.name), defaultBindings(def), def.modifier});
     }
     return out;
 }
@@ -169,14 +180,14 @@ CommandInfo Registry::command(const QString &id) const
     if (!def)
         return {};
     return {QLatin1String(def->id), def->context, tr(def->category),
-            tr(def->name), defaultBindings(*def)};
+            tr(def->name), defaultBindings(*def), def->modifier};
 }
 
 QList<QKeySequence> Registry::bindings(const QString &id) const
 {
     const Def *def = findDef(id);
     Q_ASSERT(def);
-    if (!def)
+    if (!def || def->modifier)
         return {};
     const QSettings settings;
     const QString key = settingsKey(id);
@@ -201,8 +212,8 @@ bool Registry::isOverridden(const QString &id) const
 void Registry::setBinding(const QString &id, const QKeySequence &sequence)
 {
     const Def *def = findDef(id);
-    Q_ASSERT(def);
-    if (!def)
+    Q_ASSERT(def && !def->modifier);
+    if (!def || def->modifier)
         return;
     QSettings settings;
     // Setting a command back to its (sole) default is a reset, keeping the
@@ -215,6 +226,81 @@ void Registry::setBinding(const QString &id, const QKeySequence &sequence)
                           sequence.toString(QKeySequence::PortableText));
     applyToActions();
     emit bindingsChanged();
+}
+
+Qt::KeyboardModifiers Registry::modifierBinding(const QString &id) const
+{
+    const Def *def = findDef(id);
+    Q_ASSERT(def && def->modifier);
+    if (!def || !def->modifier)
+        return Qt::NoModifier;
+    const QSettings settings;
+    const QString key = settingsKey(id);
+    if (!settings.contains(key))
+        return modifierFromText(QLatin1String(def->keys));
+    const QString stored = settings.value(key).toString();
+    if (stored.isEmpty()) // explicitly unbound: the gesture is off
+        return Qt::NoModifier;
+    const Qt::KeyboardModifiers mods = modifierFromText(stored);
+    if (mods == Qt::NoModifier) // unparseable hand-edited value: fall back
+        return modifierFromText(QLatin1String(def->keys));
+    return mods;
+}
+
+void Registry::setModifierBinding(const QString &id, Qt::KeyboardModifiers mods)
+{
+    const Def *def = findDef(id);
+    Q_ASSERT(def && def->modifier);
+    if (!def || !def->modifier)
+        return;
+    QSettings settings;
+    // Same delta-only store as setBinding: the default is a reset, and
+    // NoModifier persists as the empty "explicitly unbound" marker.
+    if (mods != Qt::NoModifier
+        && mods == modifierFromText(QLatin1String(def->keys)))
+        settings.remove(settingsKey(id));
+    else
+        settings.setValue(settingsKey(id), mods == Qt::NoModifier
+                                               ? QString()
+                                               : modifierText(mods));
+    emit bindingsChanged();
+}
+
+QString Registry::modifierText(Qt::KeyboardModifiers mods)
+{
+    // Portable text on purpose (it is also the storage form); Qt's own
+    // portable sequence text spells modifiers the same way.
+    QStringList parts;
+    if (mods & Qt::ControlModifier)
+        parts.append(QStringLiteral("Ctrl"));
+    if (mods & Qt::ShiftModifier)
+        parts.append(QStringLiteral("Shift"));
+    if (mods & Qt::AltModifier)
+        parts.append(QStringLiteral("Alt"));
+    if (mods & Qt::MetaModifier)
+        parts.append(QStringLiteral("Meta"));
+    return parts.join(QLatin1Char('+'));
+}
+
+Qt::KeyboardModifiers Registry::modifierFromText(const QString &text)
+{
+    Qt::KeyboardModifiers mods = Qt::NoModifier;
+    const QStringList parts =
+        text.split(QLatin1Char('+'), Qt::SkipEmptyParts);
+    for (const QString &part : parts) {
+        const QString token = part.trimmed();
+        if (token.compare(QLatin1String("Ctrl"), Qt::CaseInsensitive) == 0)
+            mods |= Qt::ControlModifier;
+        else if (token.compare(QLatin1String("Shift"), Qt::CaseInsensitive) == 0)
+            mods |= Qt::ShiftModifier;
+        else if (token.compare(QLatin1String("Alt"), Qt::CaseInsensitive) == 0)
+            mods |= Qt::AltModifier;
+        else if (token.compare(QLatin1String("Meta"), Qt::CaseInsensitive) == 0)
+            mods |= Qt::MetaModifier;
+        else
+            return Qt::NoModifier;
+    }
+    return mods;
 }
 
 void Registry::resetBinding(const QString &id)
@@ -249,6 +335,24 @@ QStringList Registry::conflicts(const QString &excludeId, Context context,
     return out;
 }
 
+QStringList Registry::modifierConflicts(const QString &excludeId,
+                                        Context context,
+                                        Qt::KeyboardModifiers mods) const
+{
+    QStringList out;
+    if (mods == Qt::NoModifier)
+        return out;
+    for (const Def &def : kDefs) {
+        const QString id = QLatin1String(def.id);
+        if (!def.modifier || id == excludeId
+            || !contextsOverlap(context, def.context))
+            continue;
+        if (modifierBinding(id) == mods)
+            out.append(id);
+    }
+    return out;
+}
+
 bool Registry::matches(const QKeyEvent *event, const QString &id) const
 {
     const int key = event->key();
@@ -269,7 +373,7 @@ bool Registry::matches(const QKeyEvent *event, const QString &id) const
 
 void Registry::attach(const QString &id, QAction *action)
 {
-    Q_ASSERT(findDef(id));
+    Q_ASSERT(findDef(id) && !findDef(id)->modifier);
     m_actions.append({id, QPointer<QAction>(action)});
     action->setShortcuts(bindings(id));
 }

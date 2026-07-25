@@ -11,7 +11,9 @@
 #include <QPixmap>
 #include <QPoint>
 #include <QRect>
+#include <QSettings>
 #include <QString>
+#include <QTemporaryDir>
 #include <QTimer>
 #include <QWidget>
 #include <algorithm>
@@ -37,7 +39,11 @@
 // its row at the latched velocity (glissing across rows while held,
 // released on mouse-up) and still parks the edit cursor on release; a
 // press that grows into a draw does not re-attack the sounding key, and
-// any horizontal travel at all grows it (no drag threshold). Ctrl+arrows transpose (Shift: octave)
+// any horizontal travel at all grows it (no drag threshold). Holding the
+// roll.velocity_drag modifier chord (Ctrl by default) turns a vertical
+// drag from anywhere on a note into an Ableton-style velocity drag; a
+// modifier click without the drag keeps Ctrl's selection toggle, resolved
+// on release. Ctrl+arrows transpose (Shift: octave)
 // and nudge the selection along the same absolute grid — both the roll's
 // note selection and a multi-track time selection — and the view follows
 // notes moved out of sight with a minimal scroll (flush at the edge, not
@@ -54,10 +60,11 @@
 namespace {
 
 void sendMouse(QWidget *w, QEvent::Type type, QPoint pos, Qt::MouseButton button,
-               Qt::MouseButtons buttons)
+               Qt::MouseButtons buttons,
+               Qt::KeyboardModifiers mods = Qt::NoModifier)
 {
     QMouseEvent ev(type, QPointF(pos), QPointF(w->mapToGlobal(pos)), button,
-                   buttons, Qt::NoModifier);
+                   buttons, mods);
     QCoreApplication::sendEvent(w, &ev);
 }
 
@@ -88,6 +95,17 @@ void sendKey(QWidget *w, int key, Qt::KeyboardModifiers mods)
 int runRollCheck(const QString &projectRoot, const QString &songLabel,
                  const QString &screenshotPath)
 {
+    // The roll consults keymap::Registry (Ctrl+arrow transposes, the
+    // velocity-drag modifier chord), so redirect QSettings into a temp dir
+    // first — a user's rebinds must not leak into the gesture assertions.
+    QTemporaryDir settingsDir;
+    if (settingsDir.isValid()) {
+        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope,
+                           settingsDir.path());
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
+                           settingsDir.path());
+    }
+
     DecompProject project;
     QString error;
     if (!project.open(projectRoot, &error)) {
@@ -523,6 +541,55 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("a tiny horizontal drag did not draw a note");
         else if (tiny.duration != view.snapTicksAt(f.tick))
             fail("the tiny-drag note is not one snap cell long");
+    }
+
+    // Modifier velocity gesture (Ableton-style): with the roll.velocity_drag
+    // chord held (Ctrl by default), a vertical drag from anywhere on note B
+    // adjusts its velocity — 1px = 1 step, 15px down lands 93 -> 78 — with
+    // the hover mark pinned to the note's row. Without the drag the
+    // Ctrl+click keeps its selection-toggle meaning (deferred to release),
+    // and a vertical jitter under the drag threshold is still that click:
+    // it toggles, changes no velocity, and pushes no undo command.
+    {
+        click(roll, b.center); // plain click: select B (velocity 93)
+        const int preCount = doc.undoStack()->count();
+        sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                  Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, b.center + QPoint(0, 15),
+                  Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+        if (roll->property("hoverKey").toInt() != b.key)
+            fail("modifier velocity drag did not pin the hover mark");
+        sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15),
+                  Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+        DocNote bMod;
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod)
+            || bMod.velocity != 78)
+            fail("modifier velocity drag did not land at 78");
+        if (doc.undoStack()->count() != preCount + 1)
+            fail("modifier velocity drag did not push exactly one command");
+
+        const SongView::NoteId bId{uint32_t(b.tick), uint8_t(b.key)};
+        sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                  Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton,
+                  Qt::NoButton, Qt::ControlModifier);
+        if (std::find(view.selection().begin(), view.selection().end(), bId)
+            != view.selection().end())
+            fail("Ctrl+click did not toggle the note out of the selection");
+
+        sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                  Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, b.center + QPoint(0, 3),
+                  Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 3),
+                  Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+        if (view.selection().size() != 1 || !(view.selection().front() == bId))
+            fail("a sub-threshold Ctrl-jitter did not act as the toggle click");
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod)
+            || bMod.velocity != 78)
+            fail("a sub-threshold Ctrl-jitter changed the velocity");
+        if (doc.undoStack()->count() != preCount + 1)
+            fail("a Ctrl-click or jitter pushed an undo command");
     }
 
     // Edge resize snaps to the ruler's absolute grid, not to grid-sized
@@ -997,21 +1064,21 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         }
     }
 
-    // Eighteen commands: draw, set, draw, nudge, draw, the double-click
-    // delete, the press-grown draw, the tiny-drag draw, add, two resizes,
-    // the three note-selection presses MERGED into one, the off-grid
-    // behind-the-back move, Ctrl+Left (all the scroll-follow presses merge
-    // into it), two time-selection moves (kept separate by the clean-index
-    // save point), the inline rename, and the mid-song voice change — plus,
-    // when the song has a second track, the header-drag track move and the
-    // editor commit the drop flushes. Undoing them all must restore the
-    // original bytes.
+    // Nineteen commands: draw, set, draw, nudge, draw, the double-click
+    // delete, the press-grown draw, the tiny-drag draw, the modifier
+    // velocity nudge, add, two resizes, the three note-selection presses
+    // MERGED into one, the off-grid behind-the-back move, Ctrl+Left (all
+    // the scroll-follow presses merge into it), two time-selection moves
+    // (kept separate by the clean-index save point), the inline rename, and
+    // the mid-song voice change — plus, when the song has a second track,
+    // the header-drag track move and the editor commit the drop flushes.
+    // Undoing them all must restore the original bytes.
     int undos = 0;
     while (doc.undoStack()->canUndo() && undos < 100) {
         doc.undoStack()->undo();
         undos++;
     }
-    if (undos != 18 + (reordered ? (dragRenamed ? 2 : 1) : 0))
+    if (undos != 19 + (reordered ? (dragRenamed ? 2 : 1) : 0))
         fail("gesture pass pushed an unexpected number of undo commands");
     if (doc.smf().write() != baseline)
         fail("undoing every gesture did not restore the original bytes");

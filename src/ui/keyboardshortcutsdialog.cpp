@@ -1,5 +1,6 @@
 #include "keyboardshortcutsdialog.h"
 
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -56,6 +57,23 @@ KeyboardShortcutsDialog::KeyboardShortcutsDialog(QWidget *parent)
     connect(m_capture, &QKeySequenceEdit::keySequenceChanged, this,
             &KeyboardShortcutsDialog::captureChanged);
 
+    // QKeySequenceEdit cannot record a bare modifier chord, so modifier
+    // commands pick theirs from a fixed list instead.
+    m_modCapture = new QComboBox(this);
+    for (const auto mods :
+         {Qt::KeyboardModifiers(Qt::ControlModifier),
+          Qt::KeyboardModifiers(Qt::ShiftModifier),
+          Qt::KeyboardModifiers(Qt::AltModifier),
+          Qt::ControlModifier | Qt::ShiftModifier,
+          Qt::ControlModifier | Qt::AltModifier,
+          Qt::ShiftModifier | Qt::AltModifier}) {
+        m_modCapture->addItem(keymap::Registry::modifierText(mods),
+                              int(mods.toInt()));
+    }
+    m_modCapture->hide();
+    connect(m_modCapture, &QComboBox::activated, this,
+            &KeyboardShortcutsDialog::captureChanged);
+
     m_assignButton = new QPushButton(tr("&Assign"), this);
     connect(m_assignButton, &QPushButton::clicked, this,
             &KeyboardShortcutsDialog::assign);
@@ -71,6 +89,7 @@ KeyboardShortcutsDialog::KeyboardShortcutsDialog(QWidget *parent)
 
     auto *editRow = new QHBoxLayout;
     editRow->addWidget(m_capture, 1);
+    editRow->addWidget(m_modCapture, 1);
     editRow->addWidget(m_assignButton);
     editRow->addWidget(m_clearButton);
     editRow->addWidget(m_resetButton);
@@ -127,8 +146,10 @@ void KeyboardShortcutsDialog::rebuildTree()
             font.setBold(true);
             categoryItem->setFont(0, font);
         }
-        auto *item = new QTreeWidgetItem(
-            categoryItem, {info.name, bindingText(registry.bindings(info.id))});
+        const QString binding = info.modifier
+            ? keymap::Registry::modifierText(registry.modifierBinding(info.id))
+            : bindingText(registry.bindings(info.id));
+        auto *item = new QTreeWidgetItem(categoryItem, {info.name, binding});
         item->setData(0, kIdRole, info.id);
         if (registry.isOverridden(info.id)) {
             // Non-default bindings read bold, Qt Creator-style.
@@ -180,10 +201,20 @@ void KeyboardShortcutsDialog::currentRowChanged()
         return;
     }
     auto &registry = keymap::Registry::instance();
-    const QList<QKeySequence> bindings = registry.bindings(id);
-    const QSignalBlocker blocker(m_capture); // loading isn't a user edit
-    m_capture->setKeySequence(bindings.isEmpty() ? QKeySequence()
-                                                 : bindings.first());
+    const bool modifier = registry.command(id).modifier;
+    m_capture->setVisible(!modifier);
+    m_modCapture->setVisible(modifier);
+    if (modifier) {
+        const int index =
+            m_modCapture->findData(int(registry.modifierBinding(id).toInt()));
+        const QSignalBlocker blocker(m_modCapture);
+        m_modCapture->setCurrentIndex(std::max(0, index));
+    } else {
+        const QList<QKeySequence> bindings = registry.bindings(id);
+        const QSignalBlocker blocker(m_capture); // loading isn't a user edit
+        m_capture->setKeySequence(bindings.isEmpty() ? QKeySequence()
+                                                     : bindings.first());
+    }
     m_resetButton->setEnabled(registry.isOverridden(id));
 }
 
@@ -191,14 +222,22 @@ void KeyboardShortcutsDialog::captureChanged()
 {
     m_conflictLabel->clear();
     const QString id = currentCommandId();
-    QKeySequence seq = m_capture->keySequence();
-    if (id.isEmpty() || seq.isEmpty())
+    if (id.isEmpty())
         return;
-    if (seq.count() > 1) // pre-6.4 QKeySequenceEdit records multi-stroke
-        seq = QKeySequence(seq[0].toCombined());
     auto &registry = keymap::Registry::instance();
-    const QStringList conflicts =
-        registry.conflicts(id, registry.command(id).context, seq);
+    QStringList conflicts;
+    if (registry.command(id).modifier) {
+        conflicts = registry.modifierConflicts(
+            id, registry.command(id).context,
+            Qt::KeyboardModifiers(QFlag(m_modCapture->currentData().toInt())));
+    } else {
+        QKeySequence seq = m_capture->keySequence();
+        if (seq.isEmpty())
+            return;
+        if (seq.count() > 1) // pre-6.4 QKeySequenceEdit records multi-stroke
+            seq = QKeySequence(seq[0].toCombined());
+        conflicts = registry.conflicts(id, registry.command(id).context, seq);
+    }
     if (conflicts.isEmpty())
         return;
     QStringList names;
@@ -214,12 +253,28 @@ void KeyboardShortcutsDialog::assign()
     const QString id = currentCommandId();
     if (id.isEmpty())
         return;
+    auto &registry = keymap::Registry::instance();
+    if (registry.command(id).modifier) {
+        const Qt::KeyboardModifiers mods(
+            QFlag(m_modCapture->currentData().toInt()));
+        if (mods == Qt::NoModifier)
+            return;
+        m_applying = true;
+        // Same steal as below, among the modifier gestures.
+        const QStringList conflicts =
+            registry.modifierConflicts(id, registry.command(id).context, mods);
+        for (const QString &other : conflicts)
+            registry.setModifierBinding(other, Qt::NoModifier);
+        registry.setModifierBinding(id, mods);
+        m_applying = false;
+        rebuildTree();
+        return;
+    }
     QKeySequence seq = m_capture->keySequence();
     if (seq.count() > 1)
         seq = QKeySequence(seq[0].toCombined());
     if (seq.isEmpty())
         return;
-    auto &registry = keymap::Registry::instance();
     m_applying = true;
     // Assigning steals the key: the same sequence firing two commands in one
     // context would be ambiguous, so the loser goes unbound (still visible in
@@ -238,8 +293,12 @@ void KeyboardShortcutsDialog::clearBinding()
     const QString id = currentCommandId();
     if (id.isEmpty())
         return;
+    auto &registry = keymap::Registry::instance();
     m_applying = true;
-    keymap::Registry::instance().setBinding(id, QKeySequence());
+    if (registry.command(id).modifier)
+        registry.setModifierBinding(id, Qt::NoModifier);
+    else
+        registry.setBinding(id, QKeySequence());
     m_applying = false;
     rebuildTree();
 }

@@ -2,6 +2,7 @@
 
 #include <QDialog>
 
+class QComboBox;
 class QKeySequenceEdit;
 class QLabel;
 class QLineEdit;
@@ -33,6 +34,9 @@ private:
     QLineEdit *m_filter = nullptr;
     QTreeWidget *m_tree = nullptr;
     QKeySequenceEdit *m_capture = nullptr;
+    // Modifier commands (hold-and-drag gestures) pick from a chord list
+    // instead of the key-sequence capture; the two swap per selected row.
+    QComboBox *m_modCapture = nullptr;
     QPushButton *m_assignButton = nullptr;
     QPushButton *m_clearButton = nullptr;
     QPushButton *m_resetButton = nullptr;

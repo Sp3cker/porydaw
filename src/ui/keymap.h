@@ -24,7 +24,10 @@ struct CommandInfo {
     Context context;
     QString category;  // user-visible group ("File", "Piano Roll", ...)
     QString name;      // user-visible name
-    QList<QKeySequence> defaults;
+    QList<QKeySequence> defaults; // empty for modifier commands
+    // Mouse-gesture modifier command: bound to a bare modifier chord
+    // ("hold Ctrl and drag"), not a key sequence.
+    bool modifier = false;
 };
 
 // Central shortcut table: every user-configurable binding flows through here.
@@ -57,10 +60,25 @@ public:
     void resetBinding(const QString &id);
     void resetAll();
 
+    // Modifier commands: the effective bare-modifier chord (user override if
+    // stored, else the default; NoModifier = unbound, gesture disabled).
+    // Sequence bindings() on a modifier command report empty, and vice versa.
+    Qt::KeyboardModifiers modifierBinding(const QString &id) const;
+    void setModifierBinding(const QString &id, Qt::KeyboardModifiers mods);
+
+    // Portable storage/display text for a modifier chord ("Ctrl+Shift") and
+    // its parse; unknown tokens make the whole parse NoModifier.
+    static QString modifierText(Qt::KeyboardModifiers mods);
+    static Qt::KeyboardModifiers modifierFromText(const QString &text);
+
     // Commands other than excludeId whose effective bindings contain
     // sequence and whose context can be active at the same time as context.
     QStringList conflicts(const QString &excludeId, Context context,
                           const QKeySequence &sequence) const;
+
+    // Same, among modifier commands sharing the bare-modifier chord.
+    QStringList modifierConflicts(const QString &excludeId, Context context,
+                                  Qt::KeyboardModifiers mods) const;
 
     // Single-keystroke match against the command's effective bindings.
     // Keypad/GroupSwitch modifiers are ignored so numpad arrows keep working.

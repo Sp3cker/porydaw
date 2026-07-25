@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QAction>
+#include <QComboBox>
 #include <QKeyEvent>
 #include <QKeySequenceEdit>
 #include <QLabel>
@@ -18,8 +19,11 @@
 // non-empty names, no default conflicts), event matching (exact modifiers,
 // keypad tolerance, alternate defaults), override/unbind/reset with
 // delta-only QSettings persistence, live re-application to attached
-// QActions, cross-context conflict detection, and the shortcuts dialog
-// (filter, assign with steal-on-conflict, per-row reset) driven offscreen.
+// QActions, cross-context conflict detection, modifier commands (mouse
+// gestures bound to a bare modifier chord, with the same delta-only
+// override/unbind/reset and text round-trip), and the shortcuts dialog
+// (filter, assign with steal-on-conflict, per-row reset, and the modifier
+// chord picker swapping in for the key capture) driven offscreen.
 // QSettings is redirected into a temp dir first, so the user's real keymap
 // is never read or written.
 
@@ -224,8 +228,57 @@ int runKeymapCheck()
               "unused sequence reported a conflict");
     }
 
-    // 8. Dialog: filter narrows rows, assigning through the capture widget
+    // 8. Modifier commands: the velocity-drag gesture ships on Ctrl, never
+    // matches key events, and overrides/unbinds/resets through the same
+    // delta-only store; the chord text round-trips in any spelling.
+    {
+        const QString id = QStringLiteral("roll.velocity_drag");
+        check(registry.command(id).modifier,
+              "velocity drag is not a modifier command");
+        check(registry.modifierBinding(id) == Qt::ControlModifier,
+              "velocity drag does not default to Ctrl");
+        check(registry.bindings(id).isEmpty(),
+              "modifier command reports key-sequence bindings");
+        check(!keyMatches(id, Qt::Key_C, Qt::ControlModifier),
+              "a key event matched a modifier command");
+
+        registry.setModifierBinding(id, Qt::AltModifier);
+        check(registry.modifierBinding(id) == Qt::AltModifier,
+              "modifier override did not apply");
+        check(registry.isOverridden(id),
+              "modifier override not marked as overridden");
+        check(QSettings().value(QStringLiteral("keymap/roll.velocity_drag"))
+                      .toString()
+                  == QStringLiteral("Alt"),
+              "modifier override not persisted as portable text");
+
+        registry.setModifierBinding(id, Qt::ControlModifier);
+        check(!registry.isOverridden(id),
+              "re-assigning the default modifier should store no delta");
+
+        registry.setModifierBinding(id, Qt::NoModifier);
+        check(registry.modifierBinding(id) == Qt::NoModifier
+                  && registry.isOverridden(id),
+              "modifier unbind did not persist as an empty delta");
+        registry.resetBinding(id);
+        check(registry.modifierBinding(id) == Qt::ControlModifier,
+              "modifier reset did not restore Ctrl");
+
+        check(keymap::Registry::modifierFromText(QStringLiteral("ctrl+shift"))
+                  == (Qt::ControlModifier | Qt::ShiftModifier),
+              "modifier text parse is not case-insensitive");
+        check(keymap::Registry::modifierText(Qt::ControlModifier
+                                             | Qt::ShiftModifier)
+                  == QStringLiteral("Ctrl+Shift"),
+              "modifier chord text did not serialize canonically");
+        check(keymap::Registry::modifierFromText(QStringLiteral("Ctrl+F5"))
+                  == Qt::NoModifier,
+              "a non-modifier token parsed as a chord");
+    }
+
+    // 9. Dialog: filter narrows rows, assigning through the capture widget
     // steals from the conflicting command, and per-row Reset restores it.
+    // Modifier commands swap the key capture for the chord picker.
     {
         KeyboardShortcutsDialog dialog;
         dialog.show(); // lay the tree out so column geometry is real
@@ -292,6 +345,37 @@ int runKeymapCheck()
         check(keyMatches(QStringLiteral("file.save_song"), Qt::Key_S,
                          Qt::ControlModifier),
               "Save Song did not get Ctrl+S back after reset");
+
+        // Modifier row: the chord picker replaces the key capture, assigns
+        // through the registry, and per-row Reset restores the default.
+        auto *modCapture = dialog.findChild<QComboBox *>();
+        if (check(modCapture != nullptr, "modifier chord picker missing")) {
+            tree->setCurrentItem(
+                findCommandItem(tree, QStringLiteral("roll.velocity_drag")));
+            check(modCapture->isVisible() && !capture->isVisible(),
+                  "modifier row did not swap in the chord picker");
+            const int altIndex =
+                modCapture->findData(int(Qt::AltModifier));
+            check(altIndex >= 0, "chord picker offers no Alt");
+            modCapture->setCurrentIndex(altIndex);
+            assignButton->click();
+            check(registry.modifierBinding(QStringLiteral("roll.velocity_drag"))
+                      == Qt::AltModifier,
+                  "chord picker assign did not apply the modifier");
+            QTreeWidgetItem *velItem =
+                findCommandItem(tree, QStringLiteral("roll.velocity_drag"));
+            check(velItem && velItem->text(1) == QStringLiteral("Alt"),
+                  "tree does not show the new modifier chord");
+            tree->setCurrentItem(velItem);
+            resetButton->click();
+            check(registry.modifierBinding(QStringLiteral("roll.velocity_drag"))
+                      == Qt::ControlModifier,
+                  "modifier reset did not restore Ctrl");
+            tree->setCurrentItem(
+                findCommandItem(tree, QStringLiteral("roll.copy")));
+            check(!modCapture->isVisible() && capture->isVisible(),
+                  "leaving the modifier row did not restore the key capture");
+        }
     }
 
     registry.resetAll();
