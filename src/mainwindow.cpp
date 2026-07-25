@@ -733,19 +733,18 @@ SongSession *MainWindow::createSession()
     });
     // Moving the edit cursor while playing (or paused) seeks playback there,
     // chasing controller state to the landing position.
-    connect(s->view, &SongView::editCursorMoved, this,
-            [this, s](uint64_t tick) {
-              if (s == m_active && m_audioOk && m_audio.songLoaded() &&
-                  m_audio.transport() != Transport::Stopped) {
-                const uint64_t targetSample =
-                    m_audio.timeline()->sampleForTick(tick);
-                m_audio.seek(targetSample);
-                if (m_audio.transport() == Transport::Paused)
-                  s->view->setPlayheadSample(targetSample, false);
-                else
-                  synchronizePlayhead();
-              }
-            });
+    connect(s->view, &SongView::editCursorMoved, this, [this, s](uint64_t tick) {
+        if (s == m_active && m_audioOk && m_audio.songLoaded()
+            && m_audio.transport() != Transport::Stopped) {
+            const uint64_t targetSample = m_audio.timeline()->sampleForTick(tick);
+            m_audio.seek(targetSample);
+            // The seek lands within one audio period; show its target now
+            // rather than the stale engine playhead (while playing, the
+            // playhead timer takes over from the next real position).
+            s->view->setPlayheadSample(targetSample,
+                                       m_audio.transport() == Transport::Playing);
+        }
+    });
     connect(&s->doc, &SongDocument::documentChanged, this,
             [this, s] { onDocumentChanged(*s); });
     connect(s->doc.undoStack(), &QUndoStack::cleanChanged, this,
@@ -2680,11 +2679,19 @@ void MainWindow::startPlayback(bool fromEditCursor)
 {
     if (!m_audioOk || !m_active || !m_audio.songLoaded())
         return;
-    if (fromEditCursor || m_audio.transport() == Transport::Stopped)
-        m_audio.seek(
-            m_audio.timeline()->sampleForTick(m_active->view->editCursorTick()));
+    const bool seekToCursor =
+        fromEditCursor || m_audio.transport() == Transport::Stopped;
+    uint64_t target = 0;
+    if (seekToCursor) {
+        target = m_audio.timeline()->sampleForTick(m_active->view->editCursorTick());
+        m_audio.seek(target);
+    }
     m_audio.play();
     synchronizePlayhead();
+    // The seek lands within one audio period; show its target now rather
+    // than the stale engine playhead synchronizePlayhead just read.
+    if (seekToCursor)
+        m_active->view->setPlayheadSample(target, true);
 }
 
 void MainWindow::pausePlayback()
