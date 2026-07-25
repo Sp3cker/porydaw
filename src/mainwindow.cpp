@@ -747,12 +747,11 @@ SongSession *MainWindow::createSession()
     });
     connect(&s->doc, &SongDocument::documentChanged, this,
             [this, s] { onDocumentChanged(*s); });
-    connect(s->doc.undoStack(), &QUndoStack::cleanChanged, this,
-            [this, s](bool) {
-              updateTabTitle(*s);
-              if (s == m_active)
-                updateWindowTitle();
-            });
+    connect(s->doc.undoStack(), &QUndoStack::cleanChanged, this, [this, s](bool) {
+        updateTabTitle(*s);
+        if (s == m_active)
+            updateWindowTitle();
+    });
     m_undoGroup->addStack(s->doc.undoStack());
     m_sessions.push_back(std::move(owned));
     return s;
@@ -2898,82 +2897,75 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     }
 
     const double playedSeconds = double(m_audio.playheadSamples()) / m_audio.sampleRate();
-    qInfo("selftest: after 3s wall clock — playhead %.2fs, transport %d, PCM "
-          "%d/%d active",
+    qInfo("selftest: after 3s wall clock — playhead %.2fs, transport %d, PCM %d/%d active",
           playedSeconds, int(m_audio.transport()), m_audio.activePcmChannels(),
           m_audio.maxPcmChannels());
 
-    bool ok = m_audio.transport() == Transport::Playing &&
-              playedSeconds > 1.0 &&
-              m_audio.playheadSamples() >= posBeforeEdit && vgEditOk;
+    bool ok = m_audio.transport() == Transport::Playing && playedSeconds > 1.0
+        && m_audio.playheadSamples() >= posBeforeEdit && vgEditOk;
     if (ok) {
-      pausePlayback();
-      QTimer::singleShot(150, &loop, &QEventLoop::quit);
-      loop.exec();
-      const uint64_t pausedSample = m_audio.playheadSamples();
-      const double pausedViewTick = tab->view->playheadTick();
-      const double pausedEngineTick =
-          m_audio.timeline()->tickForSample(pausedSample);
-      constexpr double kPausedPlayheadToleranceTicks = 0.25;
-      ok = std::abs(pausedViewTick - pausedEngineTick) <=
-           kPausedPlayheadToleranceTicks;
-      if (!ok) {
-        qWarning("selftest: paused playhead reconciliation FAILED "
-                 "(view %.3f ticks, engine %.3f ticks at %llu samples)",
-                 pausedViewTick, pausedEngineTick,
-                 static_cast<unsigned long long>(pausedSample));
-      }
-
-      if (ok) {
-        const MidiTimeline *tl = m_audio.timeline();
-        const uint64_t maxTick =
-            (tl && tl->lengthTicks > 0) ? tl->lengthTicks - 1 : 9600;
-        const uint64_t pausedTargetTick =
-            (pausedViewTick >= 960.0)
-                ? static_cast<uint64_t>(pausedViewTick - 480.0)
-                : std::min<uint64_t>(
-                      static_cast<uint64_t>(pausedViewTick + 960.0), maxTick);
-
-        tab->view->commitEditCursor(pausedTargetTick);
-        const double immediateViewTick = tab->view->playheadTick();
-        const bool pausedViewOk =
-            std::abs(immediateViewTick - double(pausedTargetTick)) <=
-            kPausedPlayheadToleranceTicks;
-        if (!pausedViewOk) {
-          qWarning("selftest: paused edit-cursor visible playhead FAILED "
-                   "(target %llu ticks, view %.3f ticks)",
-                   static_cast<unsigned long long>(pausedTargetTick),
-                   immediateViewTick);
-        }
-
-        QTimer::singleShot(200, &loop, &QEventLoop::quit);
+        pausePlayback();
+        QTimer::singleShot(150, &loop, &QEventLoop::quit);
         loop.exec();
-        const uint64_t afterPausedSeekSample = m_audio.playheadSamples();
-        const double afterPausedSeekEngineTick =
-            m_audio.timeline()->tickForSample(afterPausedSeekSample);
-        const bool pausedEngineOk =
-            std::abs(afterPausedSeekEngineTick - double(pausedTargetTick)) <=
-            kPausedPlayheadToleranceTicks;
-        if (!pausedEngineOk) {
-          qWarning("selftest: paused edit-cursor engine seek FAILED "
-                   "(target %llu ticks, engine %.3f ticks at %llu samples)",
-                   static_cast<unsigned long long>(pausedTargetTick),
-                   afterPausedSeekEngineTick,
-                   static_cast<unsigned long long>(afterPausedSeekSample));
+        const uint64_t pausedSample = m_audio.playheadSamples();
+        const double pausedViewTick = tab->view->playheadTick();
+        const double pausedEngineTick =
+            m_audio.timeline()->tickForSample(pausedSample);
+        constexpr double kPausedPlayheadToleranceTicks = 0.25;
+        ok = std::abs(pausedViewTick - pausedEngineTick) <= kPausedPlayheadToleranceTicks;
+        if (!ok) {
+            qWarning("selftest: paused playhead reconciliation FAILED "
+                     "(view %.3f ticks, engine %.3f ticks at %llu samples)",
+                     pausedViewTick, pausedEngineTick,
+                     static_cast<unsigned long long>(pausedSample));
         }
 
-        ok = pausedViewOk && pausedEngineOk;
         if (ok) {
-          qInfo("selftest: paused edit-cursor seek OK "
-                "(target %llu ticks, view %.3f ticks, engine %.3f ticks)",
-                static_cast<unsigned long long>(pausedTargetTick),
-                immediateViewTick, afterPausedSeekEngineTick);
-        }
-      }
+            const MidiTimeline *tl = m_audio.timeline();
+            const uint64_t maxTick = (tl && tl->lengthTicks > 0) ? tl->lengthTicks - 1 : 9600;
+            const uint64_t pausedTargetTick = (pausedViewTick >= 960.0)
+                ? static_cast<uint64_t>(pausedViewTick - 480.0)
+                : std::min<uint64_t>(static_cast<uint64_t>(pausedViewTick + 960.0), maxTick);
 
-      if (ok) {
-        startPlayback();
-      }
+            tab->view->commitEditCursor(pausedTargetTick);
+            const double immediateViewTick = tab->view->playheadTick();
+            const bool pausedViewOk =
+                std::abs(immediateViewTick - double(pausedTargetTick))
+                <= kPausedPlayheadToleranceTicks;
+            if (!pausedViewOk) {
+                qWarning("selftest: paused edit-cursor visible playhead FAILED "
+                         "(target %llu ticks, view %.3f ticks)",
+                         static_cast<unsigned long long>(pausedTargetTick),
+                         immediateViewTick);
+            }
+
+            QTimer::singleShot(200, &loop, &QEventLoop::quit);
+            loop.exec();
+            const uint64_t afterPausedSeekSample = m_audio.playheadSamples();
+            const double afterPausedSeekEngineTick =
+                m_audio.timeline()->tickForSample(afterPausedSeekSample);
+            const bool pausedEngineOk =
+                std::abs(afterPausedSeekEngineTick - double(pausedTargetTick))
+                <= kPausedPlayheadToleranceTicks;
+            if (!pausedEngineOk) {
+                qWarning("selftest: paused edit-cursor engine seek FAILED "
+                         "(target %llu ticks, engine %.3f ticks at %llu samples)",
+                         static_cast<unsigned long long>(pausedTargetTick),
+                         afterPausedSeekEngineTick,
+                         static_cast<unsigned long long>(afterPausedSeekSample));
+            }
+
+            ok = pausedViewOk && pausedEngineOk;
+            if (ok) {
+                qInfo("selftest: paused edit-cursor seek OK "
+                      "(target %llu ticks, view %.3f ticks, engine %.3f ticks)",
+                      static_cast<unsigned long long>(pausedTargetTick),
+                      immediateViewTick, afterPausedSeekEngineTick);
+            }
+        }
+
+        if (ok)
+            startPlayback();
     }
 
     // M2 polish: edit-cursor seek mid-playback, then play-from-cursor out of
