@@ -117,6 +117,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
     auto timeline = doc.buildTimeline(48000.0);
     SongView view;
+    if (view.internalWinId() != 0 || view.testAttribute(Qt::WA_NativeWindow)) {
+        std::fprintf(stderr, "rollcheck: FAIL %s: SongView constructor forced native window creation\n",
+                     qUtf8Printable(songLabel));
+        return 1;
+    }
     view.resize(1280, 800);
     view.setSong(timeline.get(), nullptr);
     view.setDocument(&doc);
