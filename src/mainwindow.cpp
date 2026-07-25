@@ -224,8 +224,7 @@ MainWindow::MainWindow(QWidget *parent)
         box->setAttribute(Qt::WA_DeleteOnClose);
         box->show();
     }
-    statusBar()->showMessage(
-        !m_audioOk ? tr("No audio device.")
+    statusBar()->showMessage(!m_audioOk ? tr("No audio device.")
         : m_audio.usingNullBackend()
             ? tr("No audio output: silent null device.")
             : tr("Audio ready (%1 Hz, %2). Open a decomp project to get started.")
@@ -235,7 +234,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_uiTimer = new QTimer(this);
     m_playheadTimer = new QTimer(this);
 
-    m_uiTimer->setInterval(50);
+    m_uiTimer->setInterval(100);
     connect(m_uiTimer, &QTimer::timeout, this, &MainWindow::uiTick);
     m_uiTimer->start();
     m_playheadTimer->setTimerType(Qt::PreciseTimer);
@@ -2681,32 +2680,25 @@ void MainWindow::updatePolyStatus(bool force)
     m_lastPolyLoaded = true;
 }
 
-void MainWindow::resetTimedUiCache()
-{
-    m_statusUiPhase = 0;
+void MainWindow::resetTimedUiCache() {
     m_lastTimeText.clear();
     m_timeCacheValid = false;
     m_polyCacheValid = false;
 }
 
-void MainWindow::uiTick()
-{
-    updatePolyStatus(/*force=*/false);
-    if (m_statusUiPhase == 0)
+void MainWindow::uiTick() {
         updateTimeLabel(/*force=*/false);
-    m_statusUiPhase ^= 1u;
+  updatePolyStatus(/*force=*/false);
 
-    if (m_audioOk && m_active && m_audio.songLoaded()
-        && m_polyDock->isVisible()) {
+  if (m_audioOk && m_active && m_audio.songLoaded() &&
+      m_polyDock->isVisible()) {
         AudioEngine::PolySnapshot snap;
         m_audio.polySnapshot(&snap);
         m_polyPanel->updateSnapshot(snap);
     }
-    updateTransportActions();
 }
 
-void MainWindow::synchronizePlayhead()
-{
+void MainWindow::synchronizePlayhead() {
     if (!m_audioOk || !m_active || !m_audio.songLoaded()) {
         // This also runs synchronously from activateSession(nullptr).
         m_playheadTimer->stop();
@@ -2714,41 +2706,42 @@ void MainWindow::synchronizePlayhead()
     }
 
     const bool playing = m_audio.transport() == Transport::Playing;
+  const bool playheadTimerWasActive = m_playheadTimer->isActive();
     m_active->view->setPlayheadSample(m_audio.playheadSamples(), playing);
     if (playing) {
         if (!m_playheadTimer->isActive())
             m_playheadTimer->start();
     } else {
         m_playheadTimer->stop();
+    if (playheadTimerWasActive)
+      updateTransportActions();
     }
 }
 
-
-void MainWindow::startPlayback(bool fromEditCursor)
-{
+void MainWindow::startPlayback(bool fromEditCursor) {
     if (!m_audioOk || !m_active || !m_audio.songLoaded())
         return;
     if (fromEditCursor || m_audio.transport() == Transport::Stopped)
         m_audio.seek(
             m_audio.timeline()->sampleForTick(m_active->view->editCursorTick()));
     m_audio.play();
+  updateTransportActions();
     synchronizePlayhead();
 }
 
-void MainWindow::pausePlayback()
-{
+void MainWindow::pausePlayback() {
     m_audio.pause();
+  updateTransportActions();
     synchronizePlayhead();
 }
 
-void MainWindow::stopPlayback()
-{
+void MainWindow::stopPlayback() {
     m_audio.stop();
+  updateTransportActions();
     synchronizePlayhead();
 }
 
-void MainWindow::updateTransportActions()
-{
+void MainWindow::updateTransportActions() {
     const bool loaded = m_audioOk && m_audio.songLoaded();
     const Transport t = m_audio.transport();
     m_goToStartAction->setEnabled(loaded);

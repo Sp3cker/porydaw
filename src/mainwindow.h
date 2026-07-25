@@ -309,8 +309,7 @@ private:
     QLabel *m_polyLostLabel = nullptr;
     QTimer *m_uiTimer = nullptr;
     QTimer *m_playheadTimer = nullptr;
-    // The coarse status clock updates polyphony at 20 Hz and time at 10 Hz.
-    unsigned m_statusUiPhase = 0;
+    // Time and polyphony share one 10 Hz status update.
     QString m_lastTimeText;
     int m_lastActivePcmChannels = 0;
     int m_lastMaxPcmChannels = 0;
