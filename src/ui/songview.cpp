@@ -57,6 +57,7 @@
 #include "core/mid2agbtables.h"
 #include "core/songdocument.h"
 #include "ui/eventlistview.h"
+#include "ui/keymap.h"
 #include "ui/playheadoverlay.h"
 
 namespace lyt = ::layout;
@@ -394,10 +395,15 @@ public:
         setStyle(menuStyle);
         m_velocityAction = addAction(QString());
         addSeparator();
+        // Display-only hints (the real bindings live in keyPressEvent):
+        // mirror the keymap so a rebind doesn't leave the menu lying.
+        const auto &keys = keymap::Registry::instance();
         m_copyAction = addAction(SongView::tr("Copy"));
-        m_copyAction->setShortcut(QKeySequence::Copy);
+        m_copyAction->setShortcut(
+            keys.bindings(QStringLiteral("roll.copy")).value(0));
         m_cutAction = addAction(SongView::tr("Cut"));
-        m_cutAction->setShortcut(QKeySequence::Cut);
+        m_cutAction->setShortcut(
+            keys.bindings(QStringLiteral("roll.cut")).value(0));
         m_deleteAction = addAction(SongView::tr("Delete"));
     }
 
@@ -1706,13 +1712,14 @@ protected:
         // exclusive, so there is never a real conflict.
         if (m_sv->handleEditKey(event))
             return;
+        const auto &keys = keymap::Registry::instance();
         SongDocument *doc = m_sv->document();
-        if (doc
-            && (event->matches(QKeySequence::Copy) || event->matches(QKeySequence::Cut))) {
+        const bool cut = keys.matches(event, QStringLiteral("roll.cut"));
+        if (doc && (cut || keys.matches(event, QStringLiteral("roll.copy")))) {
             const std::vector<DocNote> notes = resolveSelection();
             if (!notes.empty()) {
                 copyNotes(notes);
-                if (event->matches(QKeySequence::Cut)) {
+                if (cut) {
                     doc->deleteNotes(notes);
                     m_sv->clearSelection();
                 }
@@ -1720,17 +1727,17 @@ protected:
             event->accept();
             return;
         }
-        if (doc && event->matches(QKeySequence::Paste)) {
+        if (doc && keys.matches(event, QStringLiteral("roll.paste"))) {
             pasteAtEditCursor();
             event->accept();
             return;
         }
-        if (doc && event->matches(QKeySequence::SelectAll)) {
+        if (doc && keys.matches(event, QStringLiteral("roll.select_all"))) {
             selectAllNotes();
             event->accept();
             return;
         }
-        if (doc && (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)) {
+        if (doc && keys.matches(event, QStringLiteral("roll.delete"))) {
             const std::vector<DocNote> notes = resolveSelection();
             if (!notes.empty()) {
                 doc->deleteNotes(notes);
@@ -1739,16 +1746,18 @@ protected:
             event->accept();
             return;
         }
-        if (doc && (event->modifiers() & Qt::ControlModifier)
-            && (event->key() == Qt::Key_Up || event->key() == Qt::Key_Down)) {
-            const int step = event->modifiers() & Qt::ShiftModifier ? 12 : 1;
-            transposeSelection(event->key() == Qt::Key_Up ? step : -step);
-            event->accept();
-            return;
+        if (doc) {
+            const int transpose = m_sv->transposeStepFor(event);
+            if (transpose != 0) {
+                transposeSelection(transpose);
+                event->accept();
+                return;
+            }
         }
-        if (doc && (event->modifiers() & Qt::ControlModifier)
-            && (event->key() == Qt::Key_Left || event->key() == Qt::Key_Right)) {
-            nudgeSelection(event->key() == Qt::Key_Right);
+        if (doc
+            && (keys.matches(event, QStringLiteral("roll.nudge_left"))
+                || keys.matches(event, QStringLiteral("roll.nudge_right")))) {
+            nudgeSelection(keys.matches(event, QStringLiteral("roll.nudge_right")));
             event->accept();
             return;
         }
@@ -5392,42 +5401,62 @@ void SongView::pasteRangeAtEditCursor()
     announce(tr("Pasted range · edit cursor moved to its end — paste again to repeat"));
 }
 
+// Maps the four transpose commands to their semitone step, 0 when the event
+// matches none. Shared by the note-selection and time-selection key paths so
+// a rebinding changes both at once.
+int SongView::transposeStepFor(const QKeyEvent *event) const
+{
+    const auto &keys = keymap::Registry::instance();
+    if (keys.matches(event, QStringLiteral("roll.transpose_up")))
+        return 1;
+    if (keys.matches(event, QStringLiteral("roll.transpose_down")))
+        return -1;
+    if (keys.matches(event, QStringLiteral("roll.transpose_up_octave")))
+        return 12;
+    if (keys.matches(event, QStringLiteral("roll.transpose_down_octave")))
+        return -12;
+    return 0;
+}
+
 bool SongView::handleEditKey(QKeyEvent *event)
 {
     if (!m_document)
         return false;
+    const auto &keys = keymap::Registry::instance();
     const bool sel = m_timeSel.active();
-    if (sel && event->matches(QKeySequence::Copy)) {
+    if (sel && keys.matches(event, QStringLiteral("roll.copy"))) {
         copyTimeSelection();
         event->accept();
         return true;
     }
-    if (sel && event->matches(QKeySequence::Cut)) {
+    if (sel && keys.matches(event, QStringLiteral("roll.cut"))) {
         copyTimeSelection();
         deleteTimeSelection();
         event->accept();
         return true;
+    }
+    if (sel && keys.matches(event, QStringLiteral("roll.delete"))) {
+        deleteTimeSelection();
+        event->accept();
+        return true;
+    }
+    if (sel) {
+        const int transpose = transposeStepFor(event);
+        if (transpose != 0) {
+            transposeTimeSelection(transpose);
+            event->accept();
+            return true;
+        }
     }
     if (sel
-        && (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)) {
-        deleteTimeSelection();
+        && (keys.matches(event, QStringLiteral("roll.nudge_left"))
+            || keys.matches(event, QStringLiteral("roll.nudge_right")))) {
+        nudgeTimeSelection(keys.matches(event, QStringLiteral("roll.nudge_right")));
         event->accept();
         return true;
     }
-    if (sel && (event->modifiers() & Qt::ControlModifier)
-        && (event->key() == Qt::Key_Up || event->key() == Qt::Key_Down)) {
-        const int step = event->modifiers() & Qt::ShiftModifier ? 12 : 1;
-        transposeTimeSelection(event->key() == Qt::Key_Up ? step : -step);
-        event->accept();
-        return true;
-    }
-    if (sel && (event->modifiers() & Qt::ControlModifier)
-        && (event->key() == Qt::Key_Left || event->key() == Qt::Key_Right)) {
-        nudgeTimeSelection(event->key() == Qt::Key_Right);
-        event->accept();
-        return true;
-    }
-    if (event->matches(QKeySequence::Paste) && m_clip.span > 0 && !m_clip.empty()) {
+    if (keys.matches(event, QStringLiteral("roll.paste")) && m_clip.span > 0
+        && !m_clip.empty()) {
         pasteRangeAtEditCursor();
         event->accept();
         return true;
@@ -5440,14 +5469,16 @@ void SongView::showTimeSelectionMenu(const QPoint &globalPos)
     if (!m_document || !m_timeSel.active())
         return;
     QMenu menu(this);
+    // Display-only hints mirroring the keymap, like the note context menu.
+    const auto &keys = keymap::Registry::instance();
     QAction *copy = menu.addAction(tr("Copy range"));
-    copy->setShortcut(QKeySequence::Copy);
+    copy->setShortcut(keys.bindings(QStringLiteral("roll.copy")).value(0));
     QAction *cut = menu.addAction(tr("Cut range"));
-    cut->setShortcut(QKeySequence::Cut);
+    cut->setShortcut(keys.bindings(QStringLiteral("roll.cut")).value(0));
     QAction *del = menu.addAction(tr("Delete range"));
     QAction *removeContents = menu.addAction(tr("Remove contents (shift left)"));
     QAction *paste = menu.addAction(tr("Paste at edit cursor"));
-    paste->setShortcut(QKeySequence::Paste);
+    paste->setShortcut(keys.bindings(QStringLiteral("roll.paste")).value(0));
     paste->setEnabled(m_clip.span > 0 && !m_clip.empty());
     menu.addSeparator();
     QAction *clear = menu.addAction(tr("Clear selection"));

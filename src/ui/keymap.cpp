@@ -1,0 +1,284 @@
+#include "keymap.h"
+
+#include <QAction>
+#include <QKeyEvent>
+#include <QSettings>
+
+namespace keymap {
+namespace {
+
+struct Def {
+    const char *id;
+    Context context;
+    const char *category;
+    const char *name;
+    // Platform-adaptive default; UnknownKey means use `keys` instead.
+    QKeySequence::StandardKey standard;
+    // Portable-text alternates separated by ';' ("Delete;Backspace").
+    const char *keys;
+};
+
+// Stable order: the settings UI lists commands exactly as they appear here.
+const Def kDefs[] = {
+    // File
+    {"file.open_project", Context::Global, QT_TR_NOOP("File"),
+     QT_TR_NOOP("Open Project"), QKeySequence::Open, ""},
+    {"file.new_song", Context::Global, QT_TR_NOOP("File"),
+     QT_TR_NOOP("New Song"), QKeySequence::New, ""},
+    {"file.import_midi", Context::Global, QT_TR_NOOP("File"),
+     QT_TR_NOOP("Import MIDI"), QKeySequence::UnknownKey, ""},
+    {"file.save_song", Context::Global, QT_TR_NOOP("File"),
+     QT_TR_NOOP("Save Song"), QKeySequence::Save, ""},
+    {"file.register_song", Context::Global, QT_TR_NOOP("File"),
+     QT_TR_NOOP("Register Song"), QKeySequence::UnknownKey, ""},
+    {"file.close_tab", Context::Global, QT_TR_NOOP("File"),
+     QT_TR_NOOP("Close Tab"), QKeySequence::Close, ""},
+    {"file.export_wav", Context::Global, QT_TR_NOOP("File"),
+     QT_TR_NOOP("Export WAV"), QKeySequence::UnknownKey, ""},
+    {"file.quit", Context::Global, QT_TR_NOOP("File"), QT_TR_NOOP("Quit"),
+     QKeySequence::Quit, ""},
+    // Edit
+    {"edit.undo", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Undo"),
+     QKeySequence::Undo, ""},
+    {"edit.redo", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Redo"),
+     QKeySequence::Redo, ""},
+    {"edit.song_settings", Context::Global, QT_TR_NOOP("Edit"),
+     QT_TR_NOOP("Song Settings"), QKeySequence::UnknownKey, ""},
+    {"edit.engine_settings", Context::Global, QT_TR_NOOP("Edit"),
+     QT_TR_NOOP("Engine Settings"), QKeySequence::UnknownKey, ""},
+    {"edit.keyboard_shortcuts", Context::Global, QT_TR_NOOP("Edit"),
+     QT_TR_NOOP("Keyboard Shortcuts"), QKeySequence::UnknownKey, ""},
+    // View
+    {"view.theme", Context::Global, QT_TR_NOOP("View"), QT_TR_NOOP("Theme"),
+     QKeySequence::UnknownKey, ""},
+    {"view.event_list", Context::Global, QT_TR_NOOP("View"),
+     QT_TR_NOOP("MIDI Event List"), QKeySequence::UnknownKey, "Ctrl+Shift+E"},
+    // Tools
+    {"tools.import_sample", Context::Global, QT_TR_NOOP("Tools"),
+     QT_TR_NOOP("Import Sample"), QKeySequence::UnknownKey, ""},
+    // Transport
+    {"transport.go_to_start", Context::Global, QT_TR_NOOP("Transport"),
+     QT_TR_NOOP("Go to Start"), QKeySequence::UnknownKey, "Home"},
+    {"transport.play", Context::Global, QT_TR_NOOP("Transport"),
+     QT_TR_NOOP("Play"), QKeySequence::UnknownKey, ""},
+    {"transport.play_pause", Context::Global, QT_TR_NOOP("Transport"),
+     QT_TR_NOOP("Play/Pause"), QKeySequence::UnknownKey, "Space"},
+    {"transport.pause", Context::Global, QT_TR_NOOP("Transport"),
+     QT_TR_NOOP("Pause"), QKeySequence::UnknownKey, ""},
+    {"transport.stop", Context::Global, QT_TR_NOOP("Transport"),
+     QT_TR_NOOP("Stop"), QKeySequence::UnknownKey, ""},
+    {"transport.loop", Context::Global, QT_TR_NOOP("Transport"),
+     QT_TR_NOOP("Toggle Loop"), QKeySequence::UnknownKey, ""},
+    // Songs dock
+    {"songs.find", Context::Global, QT_TR_NOOP("Songs"),
+     QT_TR_NOOP("Find Song"), QKeySequence::Find, ""},
+    // Piano roll. The old modifier-changes-the-step families (Ctrl+Up, with
+    // Shift meaning an octave) are split into explicit commands so each step
+    // is independently rebindable.
+    {"roll.copy", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Copy Selection"), QKeySequence::Copy, ""},
+    {"roll.cut", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Cut Selection"), QKeySequence::Cut, ""},
+    {"roll.paste", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Paste at Edit Cursor"), QKeySequence::Paste, ""},
+    {"roll.select_all", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Select All Notes"), QKeySequence::SelectAll, ""},
+    {"roll.delete", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Delete Selection"), QKeySequence::UnknownKey,
+     "Delete;Backspace"},
+    {"roll.transpose_up", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Transpose Up (Semitone)"), QKeySequence::UnknownKey,
+     "Ctrl+Up"},
+    {"roll.transpose_down", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Transpose Down (Semitone)"), QKeySequence::UnknownKey,
+     "Ctrl+Down"},
+    {"roll.transpose_up_octave", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Transpose Up (Octave)"), QKeySequence::UnknownKey,
+     "Ctrl+Shift+Up"},
+    {"roll.transpose_down_octave", Context::PianoRoll,
+     QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Transpose Down (Octave)"),
+     QKeySequence::UnknownKey, "Ctrl+Shift+Down"},
+    {"roll.nudge_left", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Nudge Left"), QKeySequence::UnknownKey, "Ctrl+Left"},
+    {"roll.nudge_right", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Nudge Right"), QKeySequence::UnknownKey, "Ctrl+Right"},
+};
+
+const Def *findDef(const QString &id)
+{
+    for (const Def &def : kDefs) {
+        if (id == QLatin1String(def.id))
+            return &def;
+    }
+    return nullptr;
+}
+
+QList<QKeySequence> defaultBindings(const Def &def)
+{
+    if (def.standard != QKeySequence::UnknownKey)
+        return QKeySequence::keyBindings(def.standard);
+    QList<QKeySequence> out;
+    const QString keys = QLatin1String(def.keys);
+    // ';' separates alternates; QKeySequence's own multi-stroke separator is
+    // ", " so the two never collide.
+    for (const QString &part : keys.split(QLatin1Char(';'), Qt::SkipEmptyParts)) {
+        const QKeySequence seq =
+            QKeySequence::fromString(part, QKeySequence::PortableText);
+        if (!seq.isEmpty())
+            out.append(seq);
+    }
+    return out;
+}
+
+QString settingsKey(const QString &id)
+{
+    return QStringLiteral("keymap/") + id;
+}
+
+// Global shortcuts stay live while any local context has focus.
+bool contextsOverlap(Context a, Context b)
+{
+    return a == b || a == Context::Global || b == Context::Global;
+}
+
+} // namespace
+
+Registry::Registry() = default;
+
+Registry &Registry::instance()
+{
+    static Registry registry;
+    return registry;
+}
+
+QList<CommandInfo> Registry::commands() const
+{
+    QList<CommandInfo> out;
+    out.reserve(int(std::size(kDefs)));
+    for (const Def &def : kDefs) {
+        out.append({QLatin1String(def.id), def.context, tr(def.category),
+                    tr(def.name), defaultBindings(def)});
+    }
+    return out;
+}
+
+CommandInfo Registry::command(const QString &id) const
+{
+    const Def *def = findDef(id);
+    Q_ASSERT(def);
+    if (!def)
+        return {};
+    return {QLatin1String(def->id), def->context, tr(def->category),
+            tr(def->name), defaultBindings(*def)};
+}
+
+QList<QKeySequence> Registry::bindings(const QString &id) const
+{
+    const Def *def = findDef(id);
+    Q_ASSERT(def);
+    if (!def)
+        return {};
+    const QSettings settings;
+    const QString key = settingsKey(id);
+    if (!settings.contains(key))
+        return defaultBindings(*def);
+    const QString stored = settings.value(key).toString();
+    if (stored.isEmpty()) // explicitly unbound
+        return {};
+    const QKeySequence seq =
+        QKeySequence::fromString(stored, QKeySequence::PortableText);
+    if (seq.isEmpty()) // unparseable hand-edited value: fall back
+        return defaultBindings(*def);
+    return {seq};
+}
+
+bool Registry::isOverridden(const QString &id) const
+{
+    const QSettings settings;
+    return settings.contains(settingsKey(id));
+}
+
+void Registry::setBinding(const QString &id, const QKeySequence &sequence)
+{
+    const Def *def = findDef(id);
+    Q_ASSERT(def);
+    if (!def)
+        return;
+    QSettings settings;
+    // Setting a command back to its (sole) default is a reset, keeping the
+    // store delta-only.
+    const QList<QKeySequence> defaults = defaultBindings(*def);
+    if (!sequence.isEmpty() && defaults.size() == 1 && defaults[0] == sequence)
+        settings.remove(settingsKey(id));
+    else
+        settings.setValue(settingsKey(id),
+                          sequence.toString(QKeySequence::PortableText));
+    applyToActions();
+    emit bindingsChanged();
+}
+
+void Registry::resetBinding(const QString &id)
+{
+    QSettings settings;
+    settings.remove(settingsKey(id));
+    applyToActions();
+    emit bindingsChanged();
+}
+
+void Registry::resetAll()
+{
+    QSettings settings;
+    settings.remove(QStringLiteral("keymap"));
+    applyToActions();
+    emit bindingsChanged();
+}
+
+QStringList Registry::conflicts(const QString &excludeId, Context context,
+                                const QKeySequence &sequence) const
+{
+    QStringList out;
+    if (sequence.isEmpty())
+        return out;
+    for (const Def &def : kDefs) {
+        const QString id = QLatin1String(def.id);
+        if (id == excludeId || !contextsOverlap(context, def.context))
+            continue;
+        if (bindings(id).contains(sequence))
+            out.append(id);
+    }
+    return out;
+}
+
+bool Registry::matches(const QKeyEvent *event, const QString &id) const
+{
+    const int key = event->key();
+    if (key == 0 || key == Qt::Key_unknown || key == Qt::Key_Control
+        || key == Qt::Key_Shift || key == Qt::Key_Alt || key == Qt::Key_Meta)
+        return false;
+    // Keypad arrows arrive with KeypadModifier set; bindings never carry it.
+    const auto mods = event->modifiers()
+        & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier
+           | Qt::MetaModifier);
+    const int combined = key | int(mods.toInt());
+    for (const QKeySequence &seq : bindings(id)) {
+        if (seq.count() == 1 && seq[0].toCombined() == combined)
+            return true;
+    }
+    return false;
+}
+
+void Registry::attach(const QString &id, QAction *action)
+{
+    Q_ASSERT(findDef(id));
+    m_actions.append({id, QPointer<QAction>(action)});
+    action->setShortcuts(bindings(id));
+}
+
+void Registry::applyToActions()
+{
+    m_actions.removeIf([](const Attached &a) { return a.action.isNull(); });
+    for (const Attached &a : m_actions)
+        a.action->setShortcuts(bindings(a.id));
+}
+
+} // namespace keymap

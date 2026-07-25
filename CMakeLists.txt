@@ -126,6 +126,10 @@ qt_add_library(porydaw_app STATIC
     src/ui/samplepicker.h
     src/ui/voicegroupbrowser.cpp
     src/ui/voicegroupbrowser.h
+    src/ui/keymap.cpp
+    src/ui/keymap.h
+    src/ui/keyboardshortcutsdialog.cpp
+    src/ui/keyboardshortcutsdialog.h
     src/ui/enginesettingsdialog.cpp
     src/ui/enginesettingsdialog.h
     src/ui/songsettingsdialog.cpp
@@ -181,6 +185,7 @@ qt_add_executable(porydaw
     src/ignorecheck.cpp
     src/samplecheck.cpp
     src/sessioncheck.cpp
+    src/keymapcheck.cpp
     resources/fonts.qrc
 )
 qt_add_resources(porydaw "cursor_images"

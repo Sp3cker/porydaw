@@ -47,6 +47,8 @@
 #include "core/miditimeline.h"
 #include "project/samplereg.h"
 #include "project/songregistry.h"
+#include "ui/keyboardshortcutsdialog.h"
+#include "ui/keymap.h"
 #include "ui/newsongwizard.h"
 #include "ui/sampleeditordialog.h"
 #include "ui/sf2zonepicker.h"
@@ -262,64 +264,78 @@ MainWindow::~MainWindow()
 
 void MainWindow::buildUi()
 {
+    // Every user-facing action registers with the keymap so its shortcut is
+    // rebindable; the registry owns defaults and re-applies user changes.
+    auto &keys = keymap::Registry::instance();
+
     // Menu
     QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
     QAction *openAction = fileMenu->addAction(tr("&Open Project..."), this,
                                               &MainWindow::openProject);
-    openAction->setShortcut(QKeySequence::Open);
+    keys.attach(QStringLiteral("file.open_project"), openAction);
     m_newSongAction = fileMenu->addAction(tr("&New Song..."), this, &MainWindow::newSong);
-    m_newSongAction->setShortcut(QKeySequence::New);
+    keys.attach(QStringLiteral("file.new_song"), m_newSongAction);
     m_newSongAction->setEnabled(false);
     m_importAction =
         fileMenu->addAction(tr("&Import MIDI..."), this, &MainWindow::importMidi);
+    keys.attach(QStringLiteral("file.import_midi"), m_importAction);
     m_importAction->setEnabled(false);
     m_saveAction = fileMenu->addAction(tr("&Save Song"), this, &MainWindow::saveSong);
-    m_saveAction->setShortcut(QKeySequence::Save);
+    keys.attach(QStringLiteral("file.save_song"), m_saveAction);
     m_saveAction->setEnabled(false);
     m_registerAction = fileMenu->addAction(tr("Re&gister Song"), this,
                                            &MainWindow::registerLoadedSong);
+    keys.attach(QStringLiteral("file.register_song"), m_registerAction);
     m_registerAction->setEnabled(false);
     m_closeTabAction = fileMenu->addAction(tr("&Close Tab"), this, [this] {
         if (m_tabs->currentIndex() >= 0)
             closeTab(m_tabs->currentIndex());
     });
-    m_closeTabAction->setShortcut(QKeySequence::Close);
+    keys.attach(QStringLiteral("file.close_tab"), m_closeTabAction);
     m_closeTabAction->setEnabled(false);
     fileMenu->addSeparator();
     m_exportWavAction = fileMenu->addAction(tr("Export &WAV..."), this,
                                             &MainWindow::exportWav);
+    keys.attach(QStringLiteral("file.export_wav"), m_exportWavAction);
     m_exportWavAction->setEnabled(false);
     fileMenu->addSeparator();
     QAction *quitAction = fileMenu->addAction(tr("&Quit"), this, &QWidget::close);
-    quitAction->setShortcut(QKeySequence::Quit);
+    keys.attach(QStringLiteral("file.quit"), quitAction);
 
     // Edit menu: undo/redo route to the active tab's stack.
     QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
     m_undoGroup = new QUndoGroup(this);
     QAction *undoAction = m_undoGroup->createUndoAction(this, tr("&Undo"));
-    undoAction->setShortcut(QKeySequence::Undo);
+    keys.attach(QStringLiteral("edit.undo"), undoAction);
     editMenu->addAction(undoAction);
     QAction *redoAction = m_undoGroup->createRedoAction(this, tr("&Redo"));
-    redoAction->setShortcut(QKeySequence::Redo);
+    keys.attach(QStringLiteral("edit.redo"), redoAction);
     editMenu->addAction(redoAction);
     editMenu->addSeparator();
     m_settingsAction = editMenu->addAction(tr("Song Se&ttings..."), this,
                                            &MainWindow::openSongSettings);
+    keys.attach(QStringLiteral("edit.song_settings"), m_settingsAction);
     m_settingsAction->setEnabled(false);
     // Global GBA-accuracy knobs (SPEC §7); not song-scoped, so always enabled.
-    editMenu->addAction(tr("&Engine Settings..."), this,
-                        &MainWindow::openEngineSettings);
+    QAction *engineSettingsAction = editMenu->addAction(
+        tr("&Engine Settings..."), this, &MainWindow::openEngineSettings);
+    keys.attach(QStringLiteral("edit.engine_settings"), engineSettingsAction);
+    QAction *shortcutsAction =
+        editMenu->addAction(tr("&Keyboard Shortcuts..."), this,
+                            &MainWindow::openKeyboardShortcuts);
+    keys.attach(QStringLiteral("edit.keyboard_shortcuts"), shortcutsAction);
     auto *viewMenu = menuBar()->addMenu(tr("&View"));
-    viewMenu->addAction(tr("&Theme..."), this, [this] {
+    QAction *themeAction = viewMenu->addAction(tr("&Theme..."), this, [this] {
         m_themeDialog->show();
         m_themeDialog->raise();
         m_themeDialog->activateWindow();
     });
+    keys.attach(QStringLiteral("view.theme"), themeAction);
 
     // View menu: piano roll vs raw MIDI event list, per tab.
     m_eventListAction = viewMenu->addAction(tr("MIDI &Event List"));
     m_eventListAction->setCheckable(true);
-    m_eventListAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+E")));
+    keys.attach(QStringLiteral("view.event_list"), m_eventListAction);
     m_eventListAction->setEnabled(false);
     connect(m_eventListAction, &QAction::toggled, this, [this](bool on) {
         if (m_active)
@@ -330,6 +346,7 @@ void MainWindow::buildUi()
     QMenu *toolsMenu = menuBar()->addMenu(tr("&Tools"));
     m_importSampleAction = toolsMenu->addAction(tr("Import &Sample..."), this,
                                                 &MainWindow::importSample);
+    keys.attach(QStringLiteral("tools.import_sample"), m_importSampleAction);
     m_importSampleAction->setEnabled(false);
 
     // Transport toolbar
@@ -341,7 +358,7 @@ void MainWindow::buildUi()
     transport->setIconSize(transport->iconSize());
 
     m_goToStartAction = new QAction(tr("Go to Start"), this);
-    m_goToStartAction->setShortcut(Qt::Key_Home);
+    keys.attach(QStringLiteral("transport.go_to_start"), m_goToStartAction);
     connect(m_goToStartAction, &QAction::triggered, this, [this] {
         if (m_active)
             m_active->view->goToStart();
@@ -349,6 +366,7 @@ void MainWindow::buildUi()
     transport->addAction(m_goToStartAction);
 
     m_playAction = new QAction(tr("Play"), this);
+    keys.attach(QStringLiteral("transport.play"), m_playAction);
     connect(m_playAction, &QAction::triggered, this, [this] { startPlayback(); });
     transport->addAction(m_playAction);
 
@@ -357,7 +375,7 @@ void MainWindow::buildUi()
     // (or unpausing) with Space always restarts from the edit cursor; the
     // Play button is the resume-from-pause path.
     m_playPauseAction = new QAction(tr("Play/Pause"), this);
-    m_playPauseAction->setShortcut(Qt::Key_Space);
+    keys.attach(QStringLiteral("transport.play_pause"), m_playPauseAction);
     connect(m_playPauseAction, &QAction::triggered, this, [this] {
         if (m_audio.transport() == Transport::Playing)
             pausePlayback();
@@ -367,14 +385,17 @@ void MainWindow::buildUi()
     addAction(m_playPauseAction);
 
     m_pauseAction = new QAction(tr("Pause"), this);
+    keys.attach(QStringLiteral("transport.pause"), m_pauseAction);
     connect(m_pauseAction, &QAction::triggered, this, [this] { pausePlayback(); });
     transport->addAction(m_pauseAction);
 
     m_stopAction = new QAction(tr("Stop"), this);
+    keys.attach(QStringLiteral("transport.stop"), m_stopAction);
     connect(m_stopAction, &QAction::triggered, this, [this] { stopPlayback(); });
     transport->addAction(m_stopAction);
 
     m_loopAction = new QAction(tr("Loop"), this);
+    keys.attach(QStringLiteral("transport.loop"), m_loopAction);
     m_loopAction->setCheckable(true);
     m_loopAction->setChecked(true);
     connect(m_loopAction, &QAction::toggled, this,
@@ -419,7 +440,7 @@ void MainWindow::buildUi()
     addDockWidget(Qt::LeftDockWidgetArea, dock);
 
     auto *findAction = new QAction(tr("Find Song"), this);
-    findAction->setShortcut(QKeySequence::Find);
+    keys.attach(QStringLiteral("songs.find"), findAction);
     connect(findAction, &QAction::triggered, this,
             [this] { m_songList->focusSearch(); });
     addAction(findAction);
@@ -1569,6 +1590,12 @@ void MainWindow::openSongSettings()
                               SongRegistry::voicegroupArgs(m_project.root()), this);
     if (dialog.exec() == QDialog::Accepted)
         m_active->doc.setCfg(dialog.cfg());
+}
+
+void MainWindow::openKeyboardShortcuts()
+{
+    KeyboardShortcutsDialog dialog(this);
+    dialog.exec();
 }
 
 void MainWindow::openEngineSettings()
