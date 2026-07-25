@@ -24,6 +24,7 @@
 #include <QTabBar>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QWizard>
 
 #include <array>
 #include <cstdio>
@@ -278,6 +279,10 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application) {
       application.styleSheet().contains(
           QStringLiteral("QHeaderView::section{border:0;}")),
       "Layout did not install permanent zero-border headers at startup");
+  QWizard wizard;
+  wizard.ensurePolished();
+  reporter.check(wizard.wizardStyle() == QWizard::ClassicStyle,
+                 "the application did not enforce ClassicStyle for QWizard");
   const auto settingsPath = directory.filePath(QStringLiteral("settings.ini"));
   QSettings settings(settingsPath, QSettings::IniFormat);
   settings.setValue(QStringLiteral("theme/mode"), QStringLiteral("custom"));

@@ -59,8 +59,10 @@ QString colorName(const Theme &theme, Role role) {
 
 QString windowStyleSheet(const Theme &theme) {
   return QStringLiteral(
-             "QMainWindow,QDialog,QDockWidget,QScrollArea,QStackedWidget{"
+             "QMainWindow,QDialog,QWizard,QWizardPage,QDockWidget,QScrollArea,"
+             "QStackedWidget{"
              "background-color:%1;color:%2;}"
+             "QWizard{qproperty-wizardStyle:ClassicStyle;}"
              "QLabel#voicegroupEditorNotice{color:%3;}")
       .arg(colorName(theme, Role::window_background))
       .arg(colorName(theme, Role::window_text))
@@ -180,17 +182,19 @@ QString trackControlStyleSheet(const Theme &theme) {
 QString inputStyleSheet(const Theme &theme) {
   return QStringLiteral(
              "QLineEdit,QTextEdit,QPlainTextEdit{background-color:%1;"
-             "color:%2;border-top-color:%3;border-left-color:%3;"
-             "border-right-color:%4;border-bottom-color:%4;"
-             "selection-background-color:%5;selection-color:%6;}"
+             "color:%2;border-color:%3;"
+             "selection-background-color:%4;selection-color:%5;}"
              "QLineEdit:focus,QTextEdit:focus,QPlainTextEdit:focus{"
-             "border-color:%7;}"
+             "border-color:%6;}"
              "QLineEdit:disabled,QTextEdit:disabled,QPlainTextEdit:disabled{"
-             "color:%8;}")
-      .arg(colorName(theme, Role::input_background))
-      .arg(colorName(theme, Role::input_text))
-      .arg(colorName(theme, Role::input_highlight_outline))
-      .arg(colorName(theme, Role::input_outline))
+             "color:%7;border-color:%3;}"
+             "QLineEdit QToolButton,QLineEdit QToolButton:hover,"
+             "QLineEdit QToolButton:focus,QLineEdit QToolButton:pressed,"
+             "QLineEdit QToolButton:checked,QLineEdit QToolButton:disabled{"
+             "background-color:transparent;border-color:transparent;}")
+      .arg(colorName(theme, Role::combo_background))
+      .arg(colorName(theme, Role::combo_text))
+      .arg(colorName(theme, Role::combo_outline))
       .arg(colorName(theme, Role::selection_background))
       .arg(colorName(theme, Role::selection_text))
       .arg(colorName(theme, Role::focus_outline))
@@ -318,10 +322,9 @@ QString spinBoxStyleSheet(const Theme &theme) {
   return spinArrowStyleSheet(theme) +
          QStringLiteral(
              "QAbstractSpinBox{background-color:%1;color:%2;"
-             "border-top-color:%3;border-left-color:%3;"
-             "border-right-color:%4;border-bottom-color:%4;}"
+             "border-color:%3;}"
              "QAbstractSpinBox:focus{border-color:%5;}"
-             "QAbstractSpinBox:disabled{color:%6;}"
+             "QAbstractSpinBox:disabled{color:%6;border-color:%3;}"
              "QAbstractSpinBox::up-button,QAbstractSpinBox::down-button{"
              "background-color:%7;color:%8;border-color:%4;}"
              "QAbstractSpinBox::up-button:hover,"
@@ -336,9 +339,9 @@ QString spinBoxStyleSheet(const Theme &theme) {
              // hover/pressed so focus keeps the accent border through both.
              "QAbstractSpinBox::up-button:focus,"
              "QAbstractSpinBox::down-button:focus{border-color:%5;}")
-      .arg(colorName(theme, Role::spin_box_background))
-      .arg(colorName(theme, Role::spin_box_text))
-      .arg(colorName(theme, Role::input_highlight_outline))
+      .arg(colorName(theme, Role::combo_background))
+      .arg(colorName(theme, Role::combo_text))
+      .arg(colorName(theme, Role::combo_outline))
       .arg(colorName(theme, Role::spin_box_outline))
       .arg(colorName(theme, Role::focus_outline))
       .arg(colorName(theme, Role::disabled_text))
