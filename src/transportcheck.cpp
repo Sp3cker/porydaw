@@ -166,6 +166,17 @@ int runTransportCheck()
             fail("Stop did not cancel a pending seek");
     }
 
+    // An edit that rebuilds the timeline must not drop a just-published
+    // seek: updateTimeline folds the pending target into its rebuild
+    // position instead of clearing it.
+    engine.seek(midSong);
+    engine.updateTimeline(timeline.get());
+    if (!waitFor([&] { return engine.playheadSamples() == midSong; }, 2000))
+        fail("updateTimeline dropped a pending seek");
+    engine.seek(0);
+    if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
+        fail("reset seek after updateTimeline not applied");
+
     // A short audition whose note-off has already gone out, leaving a
     // ringing slow-release tail — the reported symptom. Fails the whole
     // check if the preview never sounds or the tail dies early (the

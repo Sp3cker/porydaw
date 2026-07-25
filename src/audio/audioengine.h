@@ -83,7 +83,11 @@ public:
     // returns.
     void updateTimeline(const MidiTimeline *timeline);
     // Hot: requests a jump at the next audio callback. Releases sounding
-    // notes and chases controller state at the landing position.
+    // notes and chases controller state at the landing position. Works in
+    // any transport state; playing from Stopped starts wherever the last
+    // seek (or the stop-time reset to 0) left the playhead. Takes effect
+    // within one audio period — read the target back, not playheadSamples(),
+    // when acting immediately after.
     void seek(uint64_t samplePos);
     // Cold: re-applies song settings (master volume, reverb) to the engine.
     void updateSettings(const SongSettings &settings);

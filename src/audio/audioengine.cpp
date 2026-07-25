@@ -213,11 +213,17 @@ void AudioEngine::updateTimeline(const MidiTimeline *timeline)
         return;
     if (m_deviceStarted)
         ma_device_stop(m_device);
-    m_pendingSeek.store(kNoPendingSeek, std::memory_order_release);
 
-    const uint64_t pos = m_player.position();
+    // A seek published but not yet applied by the audio thread must survive
+    // the rebuild — dropping it would silently ignore an edit-cursor move
+    // that raced this edit. The device is stopped, so the exchange can't
+    // race applyPendingSeek.
+    const uint64_t pending =
+        m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
+    const uint64_t pos = pending != kNoPendingSeek ? pending : m_player.position();
     m_timeline = timeline;
     m_player.seek(pos, m_timeline);
+    m_playhead.store(pos);
     // Release sounding notes: their note-offs may have moved or vanished in
     // the rebuilt timeline. Envelopes fade naturally, so brief edits during
     // playback don't hard-cut the audio.
@@ -377,6 +383,8 @@ void AudioEngine::pause()
 
 void AudioEngine::stop()
 {
+    // Cancel before publishing the transport change: once the callback can
+    // see Stopped, no stale seek may survive to move the rewound playhead.
     m_pendingSeek.store(kNoPendingSeek, std::memory_order_release);
     m_transport.store(static_cast<int>(Transport::Stopped));
 }
@@ -641,6 +649,9 @@ void AudioEngine::applyPolyDebug()
 
 void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
 {
+    // Transition before pending seek: a Stop rewinds the player, so a seek
+    // requested after stop() (play-from-cursor) must land on top of the
+    // rewind, not under it.
     applyTransportTransition();
     applyPendingSeek();
     applyMuteTransition();
