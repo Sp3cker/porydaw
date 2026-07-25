@@ -52,8 +52,11 @@ void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing) {
   m_playing = playing;
 
 #ifdef PORYDAW_USE_NATIVE_PLAYHEAD
-  if (playingChanged && updateArtwork()) {
-    setPlatformArtwork();
+  if (playingChanged) {
+    const auto artworkChanges = updateArtwork();
+    if (artworkChanges) {
+      setPlatformArtwork(artworkChanges);
+    }
   }
   setPlatformPosition();
 #else
@@ -91,15 +94,16 @@ void PlayheadOverlay::changeEvent(QEvent *event) {
   case QEvent::ApplicationPaletteChange:
   case QEvent::PaletteChange:
   case QEvent::StyleChange:
-  case QEvent::FontChange:
-    if (updateArtwork()) {
+  case QEvent::FontChange: {
+    const auto artworkChanges = updateArtwork();
+    if (artworkChanges) {
 #ifdef PORYDAW_USE_NATIVE_PLAYHEAD
-      setPlatformArtwork();
+      setPlatformArtwork(artworkChanges);
 #else
       updatePaintRegion();
 #endif
     }
-    break;
+  } break;
   default:
     break;
   }
@@ -184,11 +188,11 @@ void PlayheadOverlay::synchronizeGeometry() {
   m_trianglePointsUp = !m_surfaces.roll.isVisible();
   m_devicePixelRatio = owner.devicePixelRatioF();
 
-  const bool artworkChanged = updateArtwork();
+  const auto artworkChanges = updateArtwork();
 #ifdef PORYDAW_USE_NATIVE_PLAYHEAD
   setPlatformLayout();
-  if (artworkChanged) {
-    setPlatformArtwork();
+  if (artworkChanges) {
+    setPlatformArtwork(artworkChanges);
   }
   setPlatformPosition();
 #else
@@ -197,21 +201,22 @@ void PlayheadOverlay::synchronizeGeometry() {
   raise();
 }
 
-bool PlayheadOverlay::updateArtwork() {
+PlayheadOverlay::ArtworkChanges PlayheadOverlay::updateArtwork() {
   const QColor currentThemeColor =
       themes::color(themes::Role::song_view_playhead);
   const int currentHeight = m_playheadGeometry.height();
   const qreal currentDpr = m_devicePixelRatio > 0.0 ? m_devicePixelRatio : 1.0;
   const bool geometryValid = !m_playheadGeometry.isEmpty() && currentHeight > 0;
-  bool artworkChanged = false;
+  auto artworkChanges = ArtworkChanges{};
 
   if (!geometryValid) {
-    artworkChanged = !m_bodyImage.isNull() || !m_triangleImage.isNull();
+    artworkChanges.body = !m_bodyImage.isNull();
+    artworkChanges.triangle = !m_triangleImage.isNull();
     m_bodyImage = QImage();
     m_triangleImage = QImage();
     m_cachedBodyValid = false;
     m_cachedTriangleValid = false;
-    return artworkChanged;
+    return artworkChanges;
   }
 
   const bool bodyNeedsUpdate =
@@ -220,7 +225,7 @@ bool PlayheadOverlay::updateArtwork() {
       m_cachedBodyThemeColor != currentThemeColor;
 
   if (bodyNeedsUpdate) {
-    artworkChanged = true;
+    artworkChanges.body = true;
     m_cachedBodyHeight = currentHeight;
     m_cachedBodyPlaying = m_playing;
     m_cachedBodyDpr = currentDpr;
@@ -285,7 +290,7 @@ bool PlayheadOverlay::updateArtwork() {
       m_cachedTriangleThemeColor != currentThemeColor;
 
   if (triangleNeedsUpdate) {
-    artworkChanged = true;
+    artworkChanges.triangle = true;
     m_cachedTrianglePointsUp = m_trianglePointsUp;
     m_cachedTriangleDpr = currentDpr;
     m_cachedTriangleThemeColor = currentThemeColor;
@@ -325,7 +330,7 @@ bool PlayheadOverlay::updateArtwork() {
       m_triangleImage = QImage();
     }
   }
-  return artworkChanged;
+  return artworkChanges;
 }
 
 #ifndef PORYDAW_USE_NATIVE_PLAYHEAD

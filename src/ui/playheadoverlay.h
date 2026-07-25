@@ -85,17 +85,24 @@ protected:
   void paintEvent(QPaintEvent *event) override;
 
 private:
+  struct ArtworkChanges {
+    bool body = false;
+    bool triangle = false;
+
+    explicit operator bool() const { return body || triangle; }
+  };
+
   QRect visibleSurfaceRect(const QWidget &surface, QWidget &owner,
                            int origin) const;
   void synchronizeGeometry();
-  bool updateArtwork();
+  ArtworkChanges updateArtwork();
 
   Surfaces m_surfaces;
 
 #ifdef PORYDAW_USE_NATIVE_PLAYHEAD
   void initializePlatform(QWidget &owner);
   void setPlatformLayout();
-  void setPlatformArtwork();
+  void setPlatformArtwork(ArtworkChanges changes);
   void setPlatformPosition();
 
   struct PlatformDeleter {

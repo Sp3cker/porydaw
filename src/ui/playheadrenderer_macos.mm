@@ -123,6 +123,11 @@ public:
   void setLayout(const QSize &overlaySize, const QRegion &visibleSurfaces,
                  const QRect &triangleClip) {
     attachToNativeView();
+    if (m_hasLayout && m_overlaySize == overlaySize &&
+        m_visibleSurfaces == visibleSurfaces &&
+        m_triangleClip == triangleClip) {
+      return;
+    }
     DisabledActionTransaction transaction;
 
     const auto rootBounds =
@@ -146,14 +151,24 @@ public:
                   CGRectMake(triangleClip.x(), triangleClip.y(),
                              triangleClip.width(), triangleClip.height()));
     m_triangleMaskLayer.get().path = trianglePath.get();
+
+    m_overlaySize = overlaySize;
+    m_visibleSurfaces = visibleSurfaces;
+    m_triangleClip = triangleClip;
+    m_hasLayout = true;
   }
 
   void setArtwork(const QImage &bodyImage, qreal bodyImageLeftExtent,
-                  const QImage &triangleImage) {
+                  const QImage &triangleImage,
+                  PlayheadOverlay::ArtworkChanges changes) {
     DisabledActionTransaction transaction;
-    setLayerContents(m_bodyLayer.get(), bodyImage);
-    setLayerContents(m_triangleLayer.get(), triangleImage);
-    m_bodyImageLeftExtent = bodyImageLeftExtent;
+    if (changes.body) {
+      setLayerContents(m_bodyLayer.get(), bodyImage);
+      m_bodyImageLeftExtent = bodyImageLeftExtent;
+    }
+    if (changes.triangle) {
+      setLayerContents(m_triangleLayer.get(), triangleImage);
+    }
   }
 
   void setPosition(qreal finalX, int top, bool visible) {
@@ -196,6 +211,10 @@ private:
   RetainedObject<CALayer> m_triangleClipLayer;
   RetainedObject<CAShapeLayer> m_triangleMaskLayer;
   RetainedObject<CALayer> m_triangleLayer;
+  QSize m_overlaySize;
+  QRegion m_visibleSurfaces;
+  QRect m_triangleClip;
+  bool m_hasLayout = false;
   qreal m_bodyImageLeftExtent = 0.0;
 };
 
@@ -208,9 +227,10 @@ void PlayheadOverlay::setPlatformLayout() {
   m_platform->setLayout(size(), m_visibleSurfaceRegion, m_triangleClip);
 }
 
-void PlayheadOverlay::setPlatformArtwork() {
+void PlayheadOverlay::setPlatformArtwork(ArtworkChanges changes) {
   Q_ASSERT(m_platform);
-  m_platform->setArtwork(m_bodyImage, m_bodyImageLeftExtent, m_triangleImage);
+  m_platform->setArtwork(m_bodyImage, m_bodyImageLeftExtent, m_triangleImage,
+                         changes);
 }
 
 void PlayheadOverlay::setPlatformPosition() {
