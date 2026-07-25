@@ -309,7 +309,6 @@ Theme resolveDarkPreset(const preset_colors::PresetColors &colors) {
       Role::selection_text,
       Role::tab_selected_text,
       Role::button_pressed_text,
-      Role::menu_item_hover_text,
       Role::menu_item_pressed_text,
       Role::item_selected_text,
       Role::header_checked_text,
@@ -354,7 +353,9 @@ Theme derive(const QColor &primary, const QColor &accent) {
   theme.color(Role::toolbar_text) = chromeText;
   theme.color(Role::transport_text) = chromeText;
   theme.color(Role::menu_bar_background) = chromeBackground;
-  theme.color(Role::menu_bar_text) = chromeText;
+  theme.color(Role::menu_bar_text) =
+      stateTextColor(windowText, accent, {chromeBackground},
+                     {chromeBackground});
   theme.color(Role::header_background) = chromeBackground;
   theme.color(Role::header_text) = chromeText;
   theme.color(Role::scrollbar_background) = chromeBackground;
@@ -393,8 +394,6 @@ Theme derive(const QColor &primary, const QColor &accent) {
   theme.color(Role::indicator_text) = windowText;
   theme.color(Role::indicator_background) = inputBackground;
   theme.color(Role::indicator_hover_background) = buttonHoverBackground;
-  theme.color(Role::menu_background) = inputBackground;
-  theme.color(Role::menu_text) = windowText;
   theme.color(Role::tooltip_background) = inputBackground;
   theme.color(Role::tooltip_text) = windowText;
 
@@ -414,9 +413,9 @@ Theme derive(const QColor &primary, const QColor &accent) {
   theme.color(Role::polyphony_value_background) = itemBackground;
   const auto viewHoverBackground = viewRamp.hover;
   theme.color(Role::item_hover_background) = viewHoverBackground;
+  theme.color(Role::menu_item_hover_background) = viewHoverBackground;
   const auto viewSelectedBackground = viewRamp.active;
   theme.color(Role::item_selected_background) = viewSelectedBackground;
-  theme.color(Role::menu_item_hover_background) = viewSelectedBackground;
 
   // Outline roles stay component-specific even while they share this swatch.
   // A later border change can therefore affect one widget family only.
@@ -440,7 +439,8 @@ Theme derive(const QColor &primary, const QColor &accent) {
   theme.color(Role::splitter_outline) = outline;
   theme.color(Role::menu_separator) = outline;
   theme.color(Role::splitter_handle) = outline;
-  theme.color(Role::splitter_handle_hover_background) = accent;
+  theme.color(Role::splitter_handle_hover_background) =
+      buttonActiveBackground;
   const auto gridLines = surface(0.12);
 
   // Accent becomes a selection fill only after entering the touchable range;
@@ -512,16 +512,18 @@ Theme derive(const QColor &primary, const QColor &accent) {
   const auto itemText =
       stateTextColor(windowText, accent, {itemBackground}, {itemBackground});
   theme.color(Role::item_text) = itemText;
+  theme.color(Role::menu_background) = itemBackground;
+  theme.color(Role::menu_text) = itemText;
   theme.color(Role::track_header_panel_text) = itemText;
   theme.color(Role::polyphony_value_text) = itemText;
   const auto viewHoverText = stateTextColor(
       windowText, accent, {viewHoverBackground},
       {viewBackground, viewHoverBackground, viewSelectedBackground});
   theme.color(Role::item_hover_text) = viewHoverText;
+  theme.color(Role::menu_item_hover_text) = viewHoverText;
   const auto viewSelectedText =
       selectedTextColor(accent, {viewSelectedBackground});
   theme.color(Role::item_selected_text) = viewSelectedText;
-  theme.color(Role::menu_item_hover_text) = viewSelectedText;
 
   const auto disabledText = deriveDisabledText(
       windowText, windowBackground,

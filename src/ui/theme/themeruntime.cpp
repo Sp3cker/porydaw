@@ -423,10 +423,10 @@ QString menuBarStyleSheet(const Theme &theme) {
       .arg(colorName(theme, Role::menu_bar_background))
       .arg(colorName(theme, Role::menu_bar_text))
       .arg(colorName(theme, Role::menu_bar_outline))
-      .arg(colorName(theme, Role::menu_item_hover_background))
-      .arg(colorName(theme, Role::menu_item_hover_text))
-      .arg(colorName(theme, Role::menu_item_pressed_background))
-      .arg(colorName(theme, Role::menu_item_pressed_text));
+      .arg(colorName(theme, Role::button_hover_background))
+      .arg(colorName(theme, Role::button_hover_text))
+      .arg(colorName(theme, Role::button_pressed_background))
+      .arg(colorName(theme, Role::button_pressed_text));
 }
 
 QString menuStyleSheet(const Theme &theme) {
@@ -443,8 +443,8 @@ QString menuStyleSheet(const Theme &theme) {
       .arg(colorName(theme, Role::menu_background))
       .arg(colorName(theme, Role::menu_text))
       .arg(colorName(theme, Role::menu_outline))
-      .arg(colorName(theme, Role::menu_item_hover_background))
-      .arg(colorName(theme, Role::menu_item_hover_text))
+      .arg(colorName(theme, Role::item_hover_background))
+      .arg(colorName(theme, Role::item_hover_text))
       .arg(colorName(theme, Role::menu_item_pressed_background))
       .arg(colorName(theme, Role::menu_item_pressed_text))
       .arg(colorName(theme, Role::disabled_text))

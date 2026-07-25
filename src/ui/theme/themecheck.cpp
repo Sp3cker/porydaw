@@ -94,6 +94,54 @@ bool isCompleteTrackIdentityPalette() {
   return true;
 }
 
+void checkMenuBarStateContrast(Reporter &reporter,
+                               const themes::Theme &theme) {
+  reporter.check(
+      themes::contrastRatio(theme.color(themes::Role::menu_bar_text),
+                            theme.color(themes::Role::menu_bar_background)) >=
+          4.5,
+      "menu-bar text is unreadable in its resting state");
+  reporter.check(
+      themes::contrastRatio(
+          theme.color(themes::Role::button_hover_text),
+          theme.color(themes::Role::button_hover_background)) >= 4.5,
+      "menu-bar text is unreadable in its hover state");
+  reporter.check(
+      themes::contrastRatio(
+          theme.color(themes::Role::button_pressed_text),
+          theme.color(themes::Role::button_pressed_background)) >= 4.5,
+      "menu-bar text is unreadable in its pressed state");
+}
+
+void checkSharedControlColors(Reporter &reporter,
+                              const themes::Theme &theme) {
+  reporter.check(
+      theme.color(themes::Role::combo_drop_down_pressed_background) ==
+          theme.color(themes::Role::button_pressed_background),
+      "a ComboBox arrow lane does not use the pressed-button color");
+  reporter.check(
+      theme.color(themes::Role::menu_background) ==
+              theme.color(themes::Role::item_background) &&
+          theme.color(themes::Role::menu_text) ==
+              theme.color(themes::Role::item_text),
+      "a popup menu does not use the item-view surface and text colors");
+  reporter.check(
+      theme.color(themes::Role::menu_item_hover_background) ==
+              theme.color(themes::Role::item_hover_background) &&
+          theme.color(themes::Role::menu_item_hover_text) ==
+              theme.color(themes::Role::item_hover_text),
+      "a popup menu does not use the item-view hover colors");
+  reporter.check(
+      themes::contrastRatio(
+          theme.color(themes::Role::menu_item_hover_text),
+          theme.color(themes::Role::menu_item_hover_background)) >= 4.5,
+      "popup-menu text is unreadable in its hover state");
+  reporter.check(
+      theme.color(themes::Role::splitter_handle_hover_background) ==
+          theme.color(themes::Role::button_pressed_background),
+      "an active splitter handle does not use the pressed-button color");
+}
+
 void checkDerivedThemes(Reporter &reporter) {
   reporter.check(themes::isValidColorPair(QColor("#000000"), QColor("#FFFFFF")),
                  "a valid color pair was rejected");
@@ -118,6 +166,8 @@ void checkDerivedThemes(Reporter &reporter) {
     const auto theme = themes::derive(primary, accent);
     reporter.check(isComplete(theme),
                    "a derived theme has an unset or translucent role");
+    checkMenuBarStateContrast(reporter, theme);
+    checkSharedControlColors(reporter, theme);
     // Disabled text must be legible on the window surface yet clearly
     // dimmer than enabled text; a derived theme once returned the most
     // text-like readable candidate, making disabled items look enabled.
@@ -157,6 +207,8 @@ void checkDerivedThemes(Reporter &reporter) {
   for (const auto &theme : fixedThemes) {
     reporter.check(isComplete(theme),
                    "a fixed theme has an unset or translucent role");
+    checkMenuBarStateContrast(reporter, theme);
+    checkSharedControlColors(reporter, theme);
     reporter.check(
         theme.color(themes::Role::combo_drop_down_hover_background) ==
             theme.color(themes::Role::button_hover_background),

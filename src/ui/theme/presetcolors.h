@@ -164,7 +164,7 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::window_text,
     PresetColor::control_background,
     PresetColor::control_hover_background,
-    PresetColor::accent,
+    PresetColor::control_pressed_background,
     PresetColor::outline,
 
     PresetColor::control_background,
@@ -187,10 +187,10 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::chrome_background,
     PresetColor::window_text,
     PresetColor::outline,
-    PresetColor::input_background,
+    PresetColor::item_background,
     PresetColor::window_text,
     PresetColor::outline,
-    PresetColor::selection_background,
+    PresetColor::item_hover_background,
     PresetColor::window_text,
     PresetColor::control_pressed_background,
     PresetColor::window_text,
@@ -227,7 +227,7 @@ inline constexpr auto rolePresetColors = std::array{
 
     PresetColor::window_background,
     PresetColor::separator,
-    PresetColor::accent,
+    PresetColor::control_pressed_background,
     PresetColor::outline,
 
     PresetColor::control_pressed_background,
