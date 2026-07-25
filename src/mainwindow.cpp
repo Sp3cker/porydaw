@@ -37,6 +37,14 @@
 #include <QChildEvent>
 #include <QCloseEvent>
 
+#ifdef Q_OS_WIN
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <dwmapi.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -71,6 +79,16 @@ constexpr int kVoiceEditCommandId = 0x7661; // 'va': voice-edit merge id
 
 const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
 const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
+
+#ifdef Q_OS_WIN
+// These names and values come from the current Windows SDK. The bundled
+// MinGW header stops at DWMWA_PASSIVE_UPDATE_MODE, so keep the compatibility
+// values strongly typed until its dwmapi.h catches up.
+enum class DwmWindowAttribute : DWORD {
+    CaptionColor = 35, // DWMWA_CAPTION_COLOR
+    TextColor = 36,    // DWMWA_TEXT_COLOR
+};
+#endif
 
 QIcon tintedStandardIcon(QWidget &widget, QStyle::StandardPixmap icon,
                          const QSize &size)
@@ -194,6 +212,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_themeController =
         std::make_unique<themes::ThemeController>(*qApp, *m_themeSettings);
     m_themeController->restore();
+    updateWindowFrameTheme();
     m_themeDialog =
         std::make_unique<themes::ThemeDialog>(*m_themeController, this);
     buildUi();
@@ -669,6 +688,25 @@ void MainWindow::updateDockTabFonts()
         tabBar->setFont(dockTabFont);
 }
 
+void MainWindow::updateWindowFrameTheme()
+{
+#ifdef Q_OS_WIN
+    const auto caption = themes::color(themes::Role::toolbar_background);
+    const auto text = themes::color(themes::Role::toolbar_text);
+    const COLORREF captionColor =
+        RGB(caption.red(), caption.green(), caption.blue());
+    const COLORREF textColor = RGB(text.red(), text.green(), text.blue());
+    const HWND hwnd = reinterpret_cast<HWND>(winId());
+    const auto setColor = [hwnd](DwmWindowAttribute attribute,
+                                 const COLORREF &color) {
+        DwmSetWindowAttribute(hwnd, static_cast<DWORD>(attribute), &color,
+                              sizeof(color));
+    };
+    setColor(DwmWindowAttribute::CaptionColor, captionColor);
+    setColor(DwmWindowAttribute::TextColor, textColor);
+#endif
+}
+
 void MainWindow::childEvent(QChildEvent *event)
 {
     QMainWindow::childEvent(event);
@@ -679,10 +717,12 @@ void MainWindow::childEvent(QChildEvent *event)
 void MainWindow::changeEvent(QEvent *event)
 {
     QMainWindow::changeEvent(event);
-    if ((event->type() == QEvent::ApplicationPaletteChange ||
-         event->type() == QEvent::StyleChange) &&
-        m_goToStartAction)
-        refreshTransportIcons();
+    if (event->type() == QEvent::ApplicationPaletteChange ||
+        event->type() == QEvent::StyleChange) {
+        updateWindowFrameTheme();
+        if (m_goToStartAction)
+            refreshTransportIcons();
+    }
 }
 
 

@@ -103,6 +103,7 @@ private slots:
 
 private:
     void buildUi();
+    void updateWindowFrameTheme();
     void updateDockTabFonts();
     // The dialog-less half of openProject; also the session-restore entry.
     // On failure warns via dialog (interactive) or status bar (restore).

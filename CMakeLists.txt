@@ -198,6 +198,16 @@ qt_add_resources(porydaw "cursor_images"
         resources/right-drag@2x.png
 )
 target_link_libraries(porydaw PRIVATE porydaw_app)
+if(WIN32)
+    add_custom_command(TARGET porydaw POST_BUILD
+        COMMAND Qt6::windeployqt
+                --no-translations
+                --no-opengl-sw
+                --no-system-d3d-compiler
+                "$<TARGET_FILE:porydaw>"
+        VERBATIM
+    )
+endif()
 
 include(CTest)
 if(BUILD_TESTING)
@@ -216,12 +226,17 @@ if(BUILD_TESTING)
              COMMAND porydaw_themechecks --themecheck)
     add_test(NAME porydaw_fontcheck
              COMMAND porydaw_themechecks --fontcheck)
-    set_tests_properties(porydaw_theme_checks porydaw_fontcheck
+    set_tests_properties(porydaw_theme_checks
         PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    if(APPLE)
+        set_tests_properties(porydaw_fontcheck
+            PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    endif()
 endif()
 
 if(WIN32)
     set_target_properties(porydaw PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_link_libraries(porydaw_app PRIVATE dwmapi)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         # MinGW: statically link libgcc/libstdc++/winpthread so the exe
         # doesn't depend on libgcc_s_seh-1.dll etc. at runtime.
