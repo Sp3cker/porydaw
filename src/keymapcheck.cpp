@@ -1,3 +1,4 @@
+#include <QApplication>
 #include <QAction>
 #include <QKeyEvent>
 #include <QKeySequenceEdit>
@@ -227,6 +228,8 @@ int runKeymapCheck()
     // steals from the conflicting command, and per-row Reset restores it.
     {
         KeyboardShortcutsDialog dialog;
+        dialog.show(); // lay the tree out so column geometry is real
+        QApplication::processEvents();
         auto *tree = dialog.findChild<QTreeWidget *>();
         auto *filter = dialog.findChild<QLineEdit *>();
         auto *capture = dialog.findChild<QKeySequenceEdit *>();
@@ -236,6 +239,15 @@ int runKeymapCheck()
                    "dialog widgets missing")) {
             return failures ? 1 : 0;
         }
+
+        // The command column must fit its widest row out of the box (user
+        // report: names were cut off until the header was dragged).
+        // sizeHintForColumn is re-protected by QTreeView; the base keeps it
+        // public.
+        const int columnHint =
+            static_cast<QAbstractItemView *>(tree)->sizeHintForColumn(0);
+        check(tree->columnWidth(0) >= columnHint,
+              "command column narrower than its contents");
 
         filter->setText(QStringLiteral("Transpose"));
         QTreeWidgetItem *findSong =

@@ -98,6 +98,10 @@ KeyboardShortcutsDialog::KeyboardShortcutsDialog(QWidget *parent)
             });
 
     rebuildTree();
+    // Fit the command column to its widest row once, up front — the 100px
+    // header default truncates most names. Not re-fit on rebuilds, so a
+    // manual column drag survives assigning/resetting bindings.
+    m_tree->resizeColumnToContents(0);
     resize(520, 560);
 }
 
