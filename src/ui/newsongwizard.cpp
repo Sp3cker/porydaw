@@ -300,8 +300,14 @@ NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported,
     setWindowTitle(tr("Import MIDI — %1").arg(QFileInfo(sourcePath).fileName()));
     // m_imported arrives coerced to format 1 (SmfFile::read), so the
     // analysis and written .mid both deal in one chunk per channel, like
-    // every song porydaw opens.
-    m_analysis = analyzeForImport(m_imported);
+    // every song porydaw opens. The track-budget warning is computed against
+    // the first music player (the identity page's default, normally BGM) and
+    // names it, since the analysis page precedes the player choice.
+    const QVector<MusicPlayer> players =
+        SongRegistry::musicPlayers(project->root());
+    const MusicPlayer &defaultPlayer = players.first();
+    m_analysis = analyzeForImport(m_imported, defaultPlayer.trackCount,
+                                  defaultPlayer.name);
     if (m_imported.wasFormat0)
         m_analysis.warnings.prepend(
             tr("Format 0 file — imported as format 1 (one chunk per channel)."));

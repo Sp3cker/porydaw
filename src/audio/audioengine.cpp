@@ -446,7 +446,11 @@ uint32_t AudioEngine::effectiveMuteMask() const
 {
     const uint32_t mute = m_muteMask.load();
     const uint32_t solo = m_soloMask.load();
-    return (solo ? (mute | ~solo) : mute) & 0xFFFF;
+    // Tracks beyond the music player's budget are silent in-game
+    // (MPlayStart never starts them); solo cannot bring them back.
+    return ((solo ? (mute | ~solo) : mute)
+            | trackBudgetMuteMask(m_settings.trackBudget))
+        & 0xFFFF;
 }
 
 void AudioEngine::applyTransportTransition()

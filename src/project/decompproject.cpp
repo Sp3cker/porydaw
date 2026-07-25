@@ -30,7 +30,17 @@ bool DecompProject::open(const QString &rootDir, QString *error)
     discoverUnregisteredSongs();
     if (!parseMidiCfg())
         parseSongsMk();
+    m_players = SongRegistry::musicPlayers(m_root);
     return true;
+}
+
+int DecompProject::trackBudgetFor(const SongInfo &song) const
+{
+    for (const MusicPlayer &p : m_players) {
+        if (p.name == song.player)
+            return p.trackCount >= 0 ? p.trackCount : 16;
+    }
+    return 16;
 }
 
 bool DecompProject::reload(QString *error)
@@ -43,6 +53,7 @@ void DecompProject::close()
 {
     m_root.clear();
     m_songs.clear();
+    m_players.clear();
 }
 
 bool DecompProject::parseSongTable(QString *error)

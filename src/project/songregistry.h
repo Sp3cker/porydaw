@@ -14,11 +14,6 @@ struct SmfFile;
 // songs.h, ld_script.ld) directly — inserting or correcting only the song's
 // own lines, byte-conservative for everything else.
 
-struct MusicPlayer {
-    QString name;  // e.g. "MUSIC_PLAYER_BGM"
-    int number = 0; // the .equiv value; also the song macro's third argument
-};
-
 struct RegistrationPlan {
     QString label;    // e.g. "mus_foo"
     QString constant; // e.g. "MUS_FOO"

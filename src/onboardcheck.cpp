@@ -142,6 +142,64 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     const QVector<MusicPlayer> players = SongRegistry::musicPlayers(projectRoot);
     check(!players.isEmpty(), "no music players parsed from song_table.inc");
 
+    // ---- Music-player track budgets -----------------------------------------
+    // Deterministic fixture regardless of the checkout: swap in a known
+    // music_player_table.inc, assert parsing + budget resolution, restore.
+    {
+        const QString tablePath =
+            projectRoot + QStringLiteral("/sound/music_player_table.inc");
+        const QByteArray original = readAllBytes(tablePath);
+        QFile table(tablePath);
+        check(table.open(QIODevice::WriteOnly | QIODevice::Truncate),
+              "rewrite music_player_table.inc fixture");
+        // BGM overridden to 12 via equiv, SE1 literal, SE2 clamped from a
+        // NUM_TRACKS beyond the engine's 16, SE3 via an unknown symbol.
+        table.write("\t.equiv NUM_TRACKS_BGM, 12\n"
+                    "\t.equiv NUM_TRACKS_SE2, 20\n\n"
+                    "gMPlayTable::\n"
+                    "\tmusic_player gMPlayInfo_BGM, gMPlayTrack_BGM, NUM_TRACKS_BGM, 0\n"
+                    "\tmusic_player gMPlayInfo_SE1, gMPlayTrack_SE1, 3, 1\n"
+                    "\tmusic_player gMPlayInfo_SE2, gMPlayTrack_SE2, NUM_TRACKS_SE2, 1\n"
+                    "\tmusic_player gMPlayInfo_SE3, gMPlayTrack_SE3, NUM_TRACKS_WHO, 0\n");
+        table.close();
+
+        const QVector<MusicPlayer> budgeted = SongRegistry::musicPlayers(projectRoot);
+        auto countFor = [&budgeted](const QString &name) {
+            for (const MusicPlayer &p : budgeted) {
+                if (p.name == name)
+                    return p.trackCount;
+            }
+            return -2;
+        };
+        check(countFor(QStringLiteral("MUSIC_PLAYER_BGM")) == 12,
+              "BGM budget follows the project's NUM_TRACKS override");
+        check(countFor(QStringLiteral("MUSIC_PLAYER_SE1")) == 3,
+              "literal track count parsed");
+        check(countFor(QStringLiteral("MUSIC_PLAYER_SE2")) == 16,
+              "budget clamped to the engine's 16 like MPlayOpen");
+        check(countFor(QStringLiteral("MUSIC_PLAYER_SE3")) == -1,
+              "unresolvable count stays unknown");
+
+        DecompProject budgetProject;
+        check(budgetProject.open(projectRoot, &error), "reopen for budgets");
+        SongInfo bgmSong;
+        bgmSong.player = QStringLiteral("MUSIC_PLAYER_BGM");
+        check(budgetProject.trackBudgetFor(bgmSong) == 12,
+              "trackBudgetFor resolves the song's player");
+        bgmSong.player = QStringLiteral("MUSIC_PLAYER_SE3");
+        check(budgetProject.trackBudgetFor(bgmSong) == 16,
+              "unknown budget falls back to the engine ceiling");
+
+        if (original.isEmpty()) {
+            QFile::remove(tablePath);
+        } else {
+            check(table.open(QIODevice::WriteOnly | QIODevice::Truncate),
+                  "restore music_player_table.inc");
+            table.write(original);
+            table.close();
+        }
+    }
+
     // ---- New Song flow ------------------------------------------------------
     const QString label = QStringLiteral("mus_onboardcheck");
     const QString constant = SongRegistry::constantForLabel(label);
@@ -297,6 +355,24 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     check(sawInert, "import: CC91 not classified inert");
     check(analysis.tracks.size() == 2 && analysis.tracks[1].programs.size() == 2,
           "import: per-track program usage");
+    check(analysis.silentTracks == 0, "import: no budget warning at default 16");
+
+    // Track-budget warning: with a 1-track player, the second mapped track is
+    // silent in-game and the warning names the player and its allocation.
+    {
+        const ImportAnalysis tight =
+            analyzeForImport(external, 1, QStringLiteral("MUSIC_PLAYER_BGM"));
+        check(tight.silentTracks == 1, "import: silent track counted");
+        bool sawBudgetWarning = false;
+        for (const QString &w : tight.warnings) {
+            if (w.contains(QStringLiteral("MUSIC_PLAYER_BGM"))
+                && w.contains(QStringLiteral("silent in-game")))
+                sawBudgetWarning = true;
+        }
+        check(sawBudgetWarning, "import: budget warning names the player");
+        check(analyzeForImport(external, -1).silentTracks == 0,
+              "import: unknown budget warns about nothing");
+    }
 
     SmfFile imported = external;
 

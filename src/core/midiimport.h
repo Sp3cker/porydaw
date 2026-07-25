@@ -35,13 +35,19 @@ struct ImportAnalysis {
     int smfTrackCount = 0;
     int mappedTracks = 0;  // engine tracks (first 16 channel-bearing chunks)
     int droppedTracks = 0; // channel-bearing chunks beyond the m4a limit
+    int silentTracks = 0;  // mapped tracks beyond the player's track budget
     int peakConcurrentNotes = 0;
     std::vector<ImportTrackInfo> tracks; // one per mapped engine track
     std::vector<ImportCcUsage> ccs;      // by CC number, ascending
     QStringList warnings;                // human-readable mapping-pass flags
 };
 
-ImportAnalysis analyzeForImport(const SmfFile &smf);
+// trackBudget/playerName describe the music player the song will run on
+// (MusicPlayer::trackCount): mapped tracks at or beyond the budget never
+// start in-game, which is worth a warning of its own below the hard 16
+// ceiling. Budget 16 (or a negative unknown) disables that warning.
+ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget = 16,
+                                const QString &playerName = QString());
 
 // Rescale every event tick (and each track's end-of-track tick) onto a new
 // division, using the same floor arithmetic as mid2agb's event conversion

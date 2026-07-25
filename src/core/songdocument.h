@@ -4,6 +4,7 @@
 #include <QString>
 #include <QUndoStack>
 #include <QVector>
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -100,6 +101,13 @@ public:
     int engineTrackCount() const { return int(m_engineToSmf.size()); }
     int smfTrackFor(int engineTrack) const;
     uint8_t channelFor(int engineTrack) const;
+
+    // Tracks this song's music player allocates in-game (DecompProject::
+    // trackBudgetFor, set by the owner after load). MPlayStart never starts
+    // tracks at or beyond this index, so playback mutes them and the UI
+    // marks them; editing is never gated on it. Default 16 = engine ceiling.
+    int trackBudget() const { return m_trackBudget; }
+    void setTrackBudget(int budget) { m_trackBudget = std::clamp(budget, 0, 16); }
 
     // Lookups. Results go stale on any mutation.
     std::vector<DocNote> notesForTrack(int engineTrack) const;
@@ -382,4 +390,5 @@ private:
 
     std::vector<int> m_engineToSmf;      // engine track -> SMF track
     std::vector<uint8_t> m_engineChannel; // engine track -> MIDI channel
+    int m_trackBudget = 16;
 };

@@ -33,7 +33,8 @@ std::vector<int> engineTrackMap(const SmfFile &smf, int *dropped)
 
 } // namespace
 
-ImportAnalysis analyzeForImport(const SmfFile &smf)
+ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget,
+                                const QString &playerName)
 {
     ImportAnalysis a;
     a.division = smf.division;
@@ -41,6 +42,8 @@ ImportAnalysis analyzeForImport(const SmfFile &smf)
 
     const auto map = engineTrackMap(smf, &a.droppedTracks);
     a.mappedTracks = int(map.size());
+    if (trackBudget >= 0 && trackBudget < kMaxEngineTracks)
+        a.silentTracks = std::max(0, a.mappedTracks - trackBudget);
 
     QMap<uint8_t, int> ccCounts;
     // (engineTrack << 8 | key) -> depth, so overlapping same-key notes count
@@ -132,6 +135,14 @@ ImportAnalysis analyzeForImport(const SmfFile &smf)
         a.warnings.append(QObject::tr("%1 track(s) beyond the m4a 16-track limit "
                                       "will not play.")
                               .arg(a.droppedTracks));
+    if (a.silentTracks > 0)
+        a.warnings.append(
+            QObject::tr("%1 track(s) beyond %2's %3-track allocation "
+                        "(sound/music_player_table.inc) will be silent in-game.")
+                .arg(a.silentTracks)
+                .arg(playerName.isEmpty() ? QStringLiteral("the music player")
+                                          : playerName)
+                .arg(trackBudget));
     if (a.division % 24 != 0)
         a.warnings.append(
             QObject::tr("Division %1 is not a multiple of 24; mid2agb quantizes to "

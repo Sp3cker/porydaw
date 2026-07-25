@@ -17,6 +17,16 @@ struct SongCfg {
     bool noCompression = false;  // -N
 };
 
+struct MusicPlayer {
+    QString name;  // e.g. "MUSIC_PLAYER_BGM"
+    int number = 0; // the .equiv value; also the song macro's third argument
+    // Tracks this player allocates (music_player_table.inc), clamped to the
+    // engine's 16 the way MPlayOpen clamps. MPlayStart never starts a song
+    // track at or beyond this index, so it bounds what sounds in-game.
+    // -1 when the table couldn't be parsed (no limit assumed).
+    int trackCount = -1;
+};
+
 struct SongInfo {
     int id = -1;             // index in the project's song vector; equals the
                              // numeric song ID only when registered
@@ -49,6 +59,13 @@ public:
     const QString &root() const { return m_root; }
     const QVector<SongInfo> &songs() const { return m_songs; }
 
+    // Engine tracks the song's music player allocates (its MusicPlayer::
+    // trackCount, cached at open). Tracks at or beyond this never start
+    // in-game (MPlayStart), so playback and the UI treat them as silent.
+    // 16 when the player is unknown or the table couldn't be parsed — the
+    // engine ceiling, i.e. no porydaw-invented limit.
+    int trackBudgetFor(const SongInfo &song) const;
+
     // Loader-compatible voicegroup names to try, in order, for a song.
     // mid2agb emits "voicegroup" + <-G arg> as the symbol; poryaaaa's loader
     // wants the file-basename form with any "voicegroup_" prefix stripped.
@@ -71,4 +88,5 @@ private:
 
     QString m_root;
     QVector<SongInfo> m_songs;
+    QVector<MusicPlayer> m_players; // cached at open (one file read)
 };

@@ -4086,6 +4086,14 @@ public:
 
     int track() const { return m_track; }
 
+    // True when the song's music player never starts this track in-game
+    // (track index at or beyond SongDocument::trackBudget).
+    bool isSilentInGame() const
+    {
+        const SongDocument *doc = m_sv->document();
+        return doc && m_track >= doc->trackBudget();
+    }
+
 protected:
     void paintEvent(QPaintEvent *) override
     {
@@ -4119,8 +4127,13 @@ protected:
     const auto visibleTitle =
         titleMetrics.elidedText(title,
                        Qt::ElideRight, textW);
+        // The song's music player never starts this track in-game
+        // (MPlayStart), so playback mutes it; the header says why.
+        const bool silentInGame = isSilentInGame();
         p.setFont(titleFont);
-        p.setPen(selected ? themes::color(themes::Role::song_view_track_header_selection_text)
+        p.setPen(silentInGame && !selected
+                     ? themes::color(themes::Role::song_view_secondary_text)
+                     : selected ? themes::color(themes::Role::song_view_track_header_selection_text)
                       : themes::color(themes::Role::song_view_primary_text));
     const auto subtitleFont = typography::caption(normalTitleFont);
     const auto subtitleMetrics = QFontMetrics(subtitleFont);
@@ -4143,9 +4156,11 @@ protected:
     p.setPen(selected ? themes::color(themes::Role::song_view_track_header_selection_text)
                       : themes::color(themes::Role::song_view_secondary_text));
         m_shownProgram = m_sv->currentProgram(m_track);
+    const QString subtitle = silentInGame
+        ? SongView::tr("silent in-game · %1").arg(m_sv->instrumentLabel(m_track))
+        : m_sv->instrumentLabel(m_track);
     p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
-               subtitleMetrics.elidedText(m_sv->instrumentLabel(m_track),
-                                              Qt::ElideRight, textW));
+               subtitleMetrics.elidedText(subtitle, Qt::ElideRight, textW));
     }
 
     // The painted voice line (paintEvent's instrument-label rect): a plain
@@ -4194,6 +4209,15 @@ public:
         QString tip = SongView::tr("%1 notes · %2")
                           .arg(tl->tracks[m_track].noteCount)
                           .arg(m_sv->instrumentLabel(m_track));
+        if (isSilentInGame()) {
+            tip += SongView::tr(
+                "\nSilent in-game: this song's music player only allocates "
+                "%1 track(s) (sound/music_player_table.inc), and the game "
+                "never starts the tracks beyond them. porydaw plays it the "
+                "same way. Raise the player's track count in the project to "
+                "use this track.")
+                       .arg(m_sv->document()->trackBudget());
+        }
         if (m_sv->document()) {
             tip += SongView::tr("\nDouble-click to rename · right-click "
                                 "to change voice, duplicate, or delete"

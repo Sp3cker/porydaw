@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -21,9 +22,20 @@ struct SongSettings {
     uint8_t songVolume = 127;   // mid2agb -V (0-127)
     uint8_t reverb = 0;         // mid2agb -R (0-127)
     uint8_t maxPcmChannels = 5; // pokeemerald m4aSoundInit default
+    uint8_t trackBudget = 16;   // song's music player track count (SongDocument)
     float pcmMixRate = 13379.0f; // GBA-accurate DirectSound mix rate
     bool analogFilter = false;  // GBA analog output low-pass (SPEC §7)
 };
+
+// Mute bits for the tracks a song's music player never starts: MPlayStart
+// stops at min(song tracks, player tracks), so tracks at or beyond the
+// budget are silent in-game and porydaw plays them the same way.
+inline uint32_t trackBudgetMuteMask(int trackBudget)
+{
+    if (trackBudget >= MAX_TRACKS)
+        return 0;
+    return (0xFFFFu << std::max(0, trackBudget)) & 0xFFFFu;
+}
 
 enum class Transport : int {
     Stopped = 0,
@@ -181,6 +193,7 @@ public:
     int activePcmChannels() const { return m_activePcm.load(); }
     int activeCgbChannels() const { return m_activeCgb.load(); }
     int maxPcmChannels() const { return m_settings.maxPcmChannels; }
+    int trackBudget() const { return m_settings.trackBudget; }
     uint64_t polyLostTotal() const; // dropped + stolen + tail-cut, all tracks
 
     // GUI-thread copy of the engine's polyphony-overflow state (the engine

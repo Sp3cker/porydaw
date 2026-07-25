@@ -156,6 +156,13 @@ data through mid2agb's transforms before it reaches the engine:
   compiled `.s` header would (`VOL * mvl / mxv`, `reverb_set + N`).
 - The UI shows both the drawn and the effective (quantized) value — e.g.
   "velocity 93 → GBA plays 90" — so quantization is visible, not mysterious.
+- Music-player track budgets honored: the song's player only allocates
+  `NUM_TRACKS_*` tracks (`sound/music_player_table.inc`, e.g. BGM = 10 in
+  vanilla, engine ceiling 16), and `MPlayStart` silently never starts tracks
+  beyond them — so playback mutes those tracks, their headers read "silent
+  in-game", and import warns. Parsed from the project's own table, so raising
+  `NUM_TRACKS_BGM` in the project raises porydaw's budget with it; editing is
+  never gated on the budget.
 
 ### 4.4 Sidecar view state
 

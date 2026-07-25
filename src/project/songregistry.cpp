@@ -147,6 +147,38 @@ QVector<MusicPlayer> musicPlayers(const QString &projectRoot)
     }
     if (players.isEmpty())
         players.append({QStringLiteral("MUSIC_PLAYER_BGM"), 0});
+
+    // Track budgets from music_player_table.inc: ".equiv NUM_TRACKS_BGM, 10"
+    // symbols, then the ordered music_player entries — gMPlayTable index n is
+    // player number n (that is how m4aSongNumStart indexes the table).
+    // "	music_player gMPlayInfo_BGM, gMPlayTrack_BGM, NUM_TRACKS_BGM, 0"
+    static const QRegularExpression playerRe(
+        QStringLiteral(R"(^\s*music_player\s+\w+\s*,\s*\w+\s*,\s*(\w+))"));
+    QHash<QString, int> equivs;
+    QVector<int> counts; // by table order
+    for (const QString &line :
+         readLines(projectRoot + QStringLiteral("/sound/music_player_table.inc"))) {
+        const QRegularExpressionMatch eq = equivRe.match(line);
+        if (eq.hasMatch()) {
+            equivs.insert(eq.captured(1), eq.captured(2).toInt());
+            continue;
+        }
+        const QRegularExpressionMatch mp = playerRe.match(line);
+        if (!mp.hasMatch())
+            continue;
+        const QString arg = mp.captured(1);
+        bool literal = false;
+        int count = arg.toInt(&literal);
+        if (!literal)
+            count = equivs.value(arg, -1);
+        // MPlayOpen clamps to MAX_MUSICPLAYER_TRACKS; a 0-track player never
+        // opens at all, so 0 stays 0 (every track silent).
+        counts.append(count < 0 ? -1 : std::min(count, 16));
+    }
+    for (MusicPlayer &p : players) {
+        if (p.number >= 0 && p.number < counts.size())
+            p.trackCount = counts[p.number];
+    }
     return players;
 }
 

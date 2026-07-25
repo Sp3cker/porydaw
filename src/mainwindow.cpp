@@ -1203,6 +1203,7 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
 
     if (!session)
         session = createSession();
+    session->doc.setTrackBudget(m_project.trackBudgetFor(song));
     QString error;
     if (!session->doc.load(song, &error)) {
         voicegroup_free(vg);
@@ -1616,6 +1617,7 @@ SongSettings MainWindow::songSettingsFor(const SongSession &session) const
     settings.songVolume = uint8_t(cfg.masterVolume);
     settings.reverb = uint8_t(cfg.reverb > 0 ? cfg.reverb : 0);
     settings.maxPcmChannels = uint8_t(m_engineSettings.maxPcmChannels);
+    settings.trackBudget = uint8_t(session.doc.trackBudget());
     settings.pcmMixRate = m_engineSettings.pcmMixRate;
     settings.analogFilter = m_engineSettings.analogFilter;
     return settings;
