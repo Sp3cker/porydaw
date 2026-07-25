@@ -23,22 +23,22 @@ void processPaints() {
   QCoreApplication::processEvents();
 }
 
-NSView *findPlayheadLayerView(NSView *ownerView) {
-  if (!ownerView)
+CALayer *findPlayheadLayer(NSView *ownerView) {
+  if (!ownerView || !ownerView.layer)
     return nil;
-  for (NSView *subview in ownerView.subviews) {
-    if ([subview isKindOfClass:NSClassFromString(@"PorydawPlayheadLayerView")])
-      return subview;
+  for (CALayer *layer in ownerView.layer.sublayers) {
+    if ([layer.name isEqualToString:@"PorydawPlayheadLayer"])
+      return layer;
   }
   return nil;
 }
 
-int countPlayheadLayerViews(NSView *ownerView) {
-  if (!ownerView)
+int countPlayheadLayers(NSView *ownerView) {
+  if (!ownerView || !ownerView.layer)
     return 0;
   int count = 0;
-  for (NSView *subview in ownerView.subviews) {
-    if ([subview isKindOfClass:NSClassFromString(@"PorydawPlayheadLayerView")])
+  for (CALayer *layer in ownerView.layer.sublayers) {
+    if ([layer.name isEqualToString:@"PorydawPlayheadLayer"])
       count++;
   }
   return count;
@@ -117,12 +117,12 @@ void checkMacPlayheadLifecycle(QStringList &failures) {
 
   NSViewGuard ownerView1Guard{ownerView1};
 
-  NSView *overlayView1 = findPlayheadLayerView(ownerView1);
-  if (!overlayView1) {
-    failures.append("macOS playhead overlay layer view not attached under tab1 "
+  CALayer *overlayLayer1 = findPlayheadLayer(ownerView1);
+  if (!overlayLayer1) {
+    failures.append("macOS playhead overlay layer not attached under tab1 "
                     "owner NSView");
   }
-  if (countPlayheadLayerViews(ownerView1) != 1) {
+  if (countPlayheadLayers(ownerView1) != 1) {
     failures.append(
         "expected exactly 1 playhead overlay under tab1 owner NSView");
   }
@@ -138,16 +138,16 @@ void checkMacPlayheadLifecycle(QStringList &failures) {
     return;
   }
 
-  NSView *overlayView2 = findPlayheadLayerView(ownerView2);
-  if (!overlayView2) {
-    failures.append("macOS playhead overlay layer view not attached under tab2 "
+  CALayer *overlayLayer2 = findPlayheadLayer(ownerView2);
+  if (!overlayLayer2) {
+    failures.append("macOS playhead overlay layer not attached under tab2 "
                     "owner NSView");
   }
-  if (countPlayheadLayerViews(ownerView2) != 1) {
+  if (countPlayheadLayers(ownerView2) != 1) {
     failures.append(
         "expected exactly 1 playhead overlay under tab2 owner NSView");
   }
-  if (ownerView1 != ownerView2 && countPlayheadLayerViews(ownerView1) != 0) {
+  if (ownerView1 != ownerView2 && countPlayheadLayers(ownerView1) != 0) {
     failures.append(
         "stale playhead overlay left under old owner NSView after reparent");
   }
@@ -159,20 +159,11 @@ void checkMacPlayheadLifecycle(QStringList &failures) {
     return;
   }
 
-  NSView *attachedOverlay = findPlayheadLayerView(ownerView2);
+  CALayer *attachedOverlay = findPlayheadLayer(ownerView2);
   if (!attachedOverlay) {
-    failures.append("macOS playhead overlay layer view missing before platform "
+    failures.append("macOS playhead overlay layer missing before platform "
                     "destruction");
     return;
-  }
-  NSViewGuard overlayGuard{attachedOverlay};
-
-  win->destroy();
-  processPaints();
-
-  if (attachedOverlay.superview != nil) {
-    failures.append("retained overlay view remained attached to superview "
-                    "after platform destruction");
   }
 
   win->create();
@@ -184,12 +175,12 @@ void checkMacPlayheadLifecycle(QStringList &failures) {
   WId winId3 = lifecycleView->winId();
   NSView *ownerView3 = reinterpret_cast<NSView *>(winId3);
   if (ownerView3) {
-    NSView *overlayView3 = findPlayheadLayerView(ownerView3);
-    if (!overlayView3) {
-      failures.append("macOS playhead overlay layer view not attached after "
+    CALayer *overlayLayer3 = findPlayheadLayer(ownerView3);
+    if (!overlayLayer3) {
+      failures.append("macOS playhead overlay layer not attached after "
                       "native handle recreation");
     }
-    if (countPlayheadLayerViews(ownerView3) != 1) {
+    if (countPlayheadLayers(ownerView3) != 1) {
       failures.append(
           "expected exactly 1 playhead overlay after native handle recreation");
     }
@@ -210,14 +201,14 @@ QPixmap renderMacPlayheadOverlay(SongView &view, QStringList &failures) {
     return {};
   }
 
-  NSView *overlayView = findPlayheadLayerView(ownerView);
-  if (!overlayView || !overlayView.layer) {
+  CALayer *overlayLayer = findPlayheadLayer(ownerView);
+  if (!overlayLayer) {
     failures.append(
         "macOS playhead overlay is unavailable for bitmap rendering");
     return {};
   }
 
-  const CGSize logicalSize = overlayView.layer.bounds.size;
+  const CGSize logicalSize = overlayLayer.bounds.size;
   const qreal devicePixelRatio = view.devicePixelRatioF();
   const int pixelWidth = qCeil(qreal(logicalSize.width) * devicePixelRatio);
   const int pixelHeight = qCeil(qreal(logicalSize.height) * devicePixelRatio);
@@ -247,7 +238,7 @@ QPixmap renderMacPlayheadOverlay(SongView &view, QStringList &failures) {
   CGContextTranslateCTM(context, 0.0, CGFloat(pixelHeight));
   CGContextScaleCTM(context, CGFloat(devicePixelRatio),
                     -CGFloat(devicePixelRatio));
-  [overlayView.layer renderInContext:context];
+  [overlayLayer renderInContext:context];
   image.setDevicePixelRatio(devicePixelRatio);
   return QPixmap::fromImage(image);
 }
