@@ -158,16 +158,19 @@ public:
     m_hasLayout = true;
   }
 
-  void setArtwork(const QImage &bodyImage, qreal bodyImageLeftExtent,
-                  const QImage &triangleImage,
-                  PlayheadOverlay::ArtworkChanges changes) {
+  void setImages(const QImage &bodyImage, qreal bodyImageLeftExtent,
+                 const QImage &triangleImage) {
     DisabledActionTransaction transaction;
-    if (changes.body) {
+    const auto bodyImageCacheKey = bodyImage.cacheKey();
+    if (m_bodyImageCacheKey != bodyImageCacheKey) {
       setLayerContents(m_bodyLayer.get(), bodyImage);
       m_bodyImageLeftExtent = bodyImageLeftExtent;
+      m_bodyImageCacheKey = bodyImageCacheKey;
     }
-    if (changes.triangle) {
+    const auto triangleImageCacheKey = triangleImage.cacheKey();
+    if (m_triangleImageCacheKey != triangleImageCacheKey) {
       setLayerContents(m_triangleLayer.get(), triangleImage);
+      m_triangleImageCacheKey = triangleImageCacheKey;
     }
   }
 
@@ -215,6 +218,8 @@ private:
   QRegion m_visibleSurfaces;
   QRect m_triangleClip;
   bool m_hasLayout = false;
+  qint64 m_bodyImageCacheKey = -1;
+  qint64 m_triangleImageCacheKey = -1;
   qreal m_bodyImageLeftExtent = 0.0;
 };
 
@@ -227,10 +232,9 @@ void PlayheadOverlay::setPlatformLayout() {
   m_platform->setLayout(size(), m_visibleSurfaceRegion, m_triangleClip);
 }
 
-void PlayheadOverlay::setPlatformArtwork(ArtworkChanges changes) {
+void PlayheadOverlay::setPlatformImages() {
   Q_ASSERT(m_platform);
-  m_platform->setArtwork(m_bodyImage, m_bodyImageLeftExtent, m_triangleImage,
-                         changes);
+  m_platform->setImages(m_bodyImage, m_bodyImageLeftExtent, m_triangleImage);
 }
 
 void PlayheadOverlay::setPlatformPosition() {
