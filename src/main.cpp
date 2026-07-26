@@ -1,7 +1,5 @@
 #include <QApplication>
-#include <QEventLoop>
 #include <QStyleHints>
-#include <QWidget>
 
 #include "mainwindow.h"
 #include "ui/applicationstartup.h"
@@ -201,15 +199,7 @@ int main(int argc, char *argv[])
     }
 
     MainWindow window;
-    QWidget startupCover(&window);
-    startupCover.setAutoFillBackground(true);
-    startupCover.setPalette(window.palette());
-    startupCover.setGeometry(window.rect());
-    startupCover.show();
-    window.show();
-    startupCover.raise();
-    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-    window.restoreSession();
-    startupCover.hide();
+    ui::showCoveredWhileRestoring(window,
+                                  [&window] { window.restoreSession(); });
     return app.exec();
 }

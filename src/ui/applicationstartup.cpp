@@ -6,6 +6,8 @@
 #include "typography.h"
 
 #include <QApplication>
+#include <QEventLoop>
+#include <QWidget>
 
 namespace ui {
 // Kept separate so startup ordering can be tested.
@@ -29,6 +31,26 @@ bool initializeApplication(QApplication &application)
     // window's ThemeController::restore() replaces it with the stored choice.
     themes::apply(application, themes::vanilla());
     return true;
+}
+
+void showCoveredWhileRestoring(QWidget &window,
+                               const std::function<void()> &restore)
+{
+    QWidget cover(&window);
+    cover.setAutoFillBackground(true);
+    cover.setPalette(window.palette());
+    cover.show();
+    window.show();
+    // Sized only after show(): a restored maximized state grows the window
+    // during show(), and the cover must span the final geometry.
+    cover.setGeometry(window.rect());
+    cover.raise();
+    // One event-loop pass paints the cover now, before restore blocks; user
+    // input stays queued so nothing acts on the half-restored session.
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+    restore();
+    // Falling out of scope removes the cover; the restored UI paints in
+    // app.exec()'s first frame.
 }
 
 } // namespace ui
