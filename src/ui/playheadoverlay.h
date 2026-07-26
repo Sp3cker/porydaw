@@ -3,6 +3,7 @@
 #include <QColor>
 #include <QRect>
 #include <QRegion>
+#include <QString>
 #include <QWidget>
 #include <array>
 #include <cstddef>
@@ -48,12 +49,35 @@ inline constexpr qreal playheadPeakAlpha(bool playing) {
   return playing ? kPlayheadPeakPlaying : kPlayheadPeakPaused;
 }
 
-class PlayheadOverlay final : public QWidget {
-  class Platform;
-  struct PlatformDeleter {
-    void operator()(Platform *platform) const;
-  };
+struct PlayheadFrame {
+  QSize overlaySize;
+  QRegion bodyClip;
+  QRect triangleClip;
+  QRect playheadGeometry;
+  QColor color;
+  qreal x;
+  qreal devicePixelRatio;
+  quint64 staticGeneration;
+  bool visible;
+  bool playing;
+  bool trianglePointsUp;
+};
 
+enum class PlayheadSyncState { Applied, Deferred, Failed };
+struct PlayheadSyncResult {
+  PlayheadSyncState state;
+  QString error;
+};
+
+class PlayheadBackend {
+public:
+  virtual ~PlayheadBackend() = default;
+  virtual PlayheadSyncResult synchronize(const PlayheadFrame &frame) = 0;
+};
+
+std::unique_ptr<PlayheadBackend> createPlayheadBackend(QWidget &owner);
+
+class PlayheadOverlay final : public QWidget {
 public:
   struct Surfaces {
     QWidget *ruler = nullptr;
@@ -74,12 +98,11 @@ public:
         m_playing == playing)
       return;
 
-    const bool playingChanged = m_playing != playing;
     m_timelineX = timelineX;
     m_visible = visible;
     m_playing = playing;
 
-    updatePlayhead(playingChanged);
+    updatePlayhead();
   }
 
 protected:
@@ -94,15 +117,10 @@ private:
 
   QRect visibleSurfaceRect(const QWidget *surface, QWidget *owner,
                            int origin) const;
+  void observeSurfaceGeometry();
   void synchronizeGeometry();
-  void updatePlayhead(bool playingChanged);
-
-  void disablePlatform(const char *failure, bool repaint = true);
-  void initializePlatform(QWidget &owner);
-  void attachPlatformToNativeView();
-  void setPlatformLayout();
-  void setPlatformAppearance();
-  void setPlatformPosition();
+  void synchronizeBackend();
+  void updatePlayhead();
 
   QRegion playheadRegion() const;
   void updatePaintRegion();
@@ -110,7 +128,7 @@ private:
   Surfaces m_surfaces;
   QColor m_color;
 
-  std::unique_ptr<Platform, PlatformDeleter> m_platform;
+  std::unique_ptr<PlayheadBackend> m_backend;
   QRegion m_lastPaintedRegion;
 
   QRegion m_visibleSurfaceRegion;
@@ -123,6 +141,11 @@ private:
 
   bool m_trianglePointsUp = false;
   qreal m_devicePixelRatio = 1.0;
+  quint64 m_staticGeneration = 0;
+  bool m_backendAttempted = false;
+  bool m_backendApplied = false;
+  bool m_backendSyncing = false;
+  bool m_backendSyncPending = false;
 };
 
 } // namespace songview
