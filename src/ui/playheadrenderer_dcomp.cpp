@@ -169,11 +169,11 @@ struct VisualClip {
 
 } // namespace
 
-class PlayheadOverlay::Platform final {
+class DCompPlayheadBackend final : public PlayheadBackend {
 public:
-  explicit Platform(QWidget &owner) : m_owner(owner) {}
+  explicit DCompPlayheadBackend(QWidget &owner) : m_owner(owner) {}
 
-  ~Platform() {
+  ~DCompPlayheadBackend() override {
     if (m_hostWindow)
       ShowWindow(m_hostWindow, SW_HIDE);
     m_bodyClips.clear();
@@ -182,6 +182,32 @@ public:
     m_target.reset();
     if (m_hostWindow)
       DestroyWindow(m_hostWindow);
+  }
+
+  PlayheadSyncResult synchronize(const PlayheadFrame &frame) override {
+    QWidget *topLevel = m_owner.window();
+    if (!topLevel || !topLevel->internalWinId())
+      return {PlayheadSyncState::Deferred, {}};
+    if (!m_initialized) {
+      if (!initialize())
+        return failure();
+      m_initialized = true;
+    }
+
+    const bool fullFrame = m_appliedGeneration != frame.staticGeneration;
+    const bool ok =
+        fullFrame
+            ? synchronize(frame.overlaySize, frame.bodyClip, frame.triangleClip,
+                          frame.playheadGeometry, frame.devicePixelRatio,
+                          frame.x, frame.color, frame.visible, frame.playing,
+                          frame.trianglePointsUp)
+            : setPlayhead(frame.x, frame.visible, frame.playing,
+                          frame.trianglePointsUp);
+    if (!ok)
+      return failure();
+    if (fullFrame)
+      m_appliedGeneration = frame.staticGeneration;
+    return {PlayheadSyncState::Applied, {}};
   }
 
   bool initialize() {
@@ -212,12 +238,12 @@ public:
   bool synchronize(const QSize &overlaySize,
                    const QRegion &visibleSurfaceRegion,
                    const QRect &triangleClip, const QRect &playheadGeometry,
-                   qreal finalX, const QColor &color, bool visible,
-                   bool playing, bool trianglePointsUp) {
+                   qreal devicePixelRatio, qreal finalX, const QColor &color,
+                   bool visible, bool playing, bool trianglePointsUp) {
     if (!ensureHostWindow() || !updateHostPlacement())
       return false;
 
-    const qreal dpr = std::max<qreal>(m_owner.devicePixelRatioF(), 1.0);
+    const qreal dpr = std::max<qreal>(devicePixelRatio, 1.0);
     const bool surfacesChanged =
         m_devicePixelRatio != dpr ||
         m_playheadHeight != playheadGeometry.height() || m_color != color;
@@ -240,7 +266,7 @@ public:
 
     if (surfacesChanged && !createCachedSurfaces())
       return false;
-    if ((clipsChanged || surfacesChanged) && !rebuildVisualTree())
+    if (clipsChanged && !rebuildVisualTree())
       return false;
     if (!setVisualContent() || !setVisualLayout() || !setVisualPosition()) {
       return false;
@@ -253,6 +279,8 @@ public:
     const bool positionChanged = m_finalX != finalX;
     const bool contentChanged = m_visible != visible || m_playing != playing ||
                                 m_trianglePointsUp != trianglePointsUp;
+    if (!positionChanged && !contentChanged)
+      return true;
     m_finalX = finalX;
     m_visible = visible;
     m_playing = playing;
@@ -265,6 +293,13 @@ public:
   }
 
 private:
+  PlayheadSyncResult failure() const {
+    return {
+        PlayheadSyncState::Failed,
+        QStringLiteral("DirectComposition HRESULT 0x%1")
+            .arg(static_cast<quint32>(m_lastError), 8, 16, QLatin1Char('0'))};
+  }
+
   bool fail(HRESULT result) {
     m_lastError = result;
     return false;
@@ -274,7 +309,7 @@ private:
     QWidget *topLevel = m_owner.window();
     if (!topLevel)
       return fail(E_HANDLE);
-    const HWND ownerWindow = reinterpret_cast<HWND>(topLevel->winId());
+    const HWND ownerWindow = reinterpret_cast<HWND>(topLevel->internalWinId());
     if (!ownerWindow)
       return fail(E_HANDLE);
     if (m_hostWindow && m_ownerWindow == ownerWindow)
@@ -686,57 +721,14 @@ private:
   int m_triangleSurfaceWidth = 0;
   int m_triangleSurfaceHeight = 0;
   qreal m_triangleCenter = 0.0;
+  quint64 m_appliedGeneration = 0;
+  bool m_initialized = false;
 };
 
-void PlayheadOverlay::initializePlatform(QWidget &owner) {
-  if (m_platform ||
-      qEnvironmentVariableIsSet("PORYDAW_FORCE_WIDGET_PLAYHEAD") ||
-      QGuiApplication::platformName() != QLatin1String("windows")) {
-    return;
-  }
-
-  m_platform.reset(new Platform(owner));
-  if (!m_platform->initialize())
-    disablePlatform("unavailable", false);
+std::unique_ptr<PlayheadBackend> createPlayheadBackend(QWidget &owner) {
+  if (QGuiApplication::platformName() != QLatin1String("windows"))
+    return {};
+  return std::make_unique<DCompPlayheadBackend>(owner);
 }
-
-void PlayheadOverlay::disablePlatform(const char *failure, bool repaint) {
-  qWarning("DirectComposition playhead %s (HRESULT 0x%08lx); "
-           "using QWidget fallback",
-           failure, static_cast<unsigned long>(m_platform->lastError()));
-  m_platform.reset();
-  if (repaint)
-    updatePaintRegion();
-}
-
-void PlayheadOverlay::attachPlatformToNativeView() {}
-
-void PlayheadOverlay::setPlatformLayout() {}
-
-void PlayheadOverlay::setPlatformAppearance() {}
-
-void PlayheadOverlay::setPlatformPosition() {
-  if (!m_platform)
-    return;
-  if (!m_platform->synchronize(size(), m_visibleSurfaceRegion, m_triangleClip,
-                               m_playheadGeometry, finalX(), m_color, m_visible,
-                               m_playing, m_trianglePointsUp))
-    disablePlatform("failed");
-}
-
-void PlayheadOverlay::updatePlayhead(bool playingChanged) {
-  Q_UNUSED(playingChanged);
-  if (!m_platform)
-    return updatePaintRegion();
-  if (!m_platform->setPlayhead(finalX(), m_visible, m_playing,
-                               m_trianglePointsUp))
-    disablePlatform("failed");
-}
-
-void PlayheadOverlay::PlatformDeleter::operator()(Platform *platform) const {
-  delete platform;
-}
-
-PlayheadOverlay::~PlayheadOverlay() = default;
 
 } // namespace songview

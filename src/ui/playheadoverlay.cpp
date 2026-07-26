@@ -1,29 +1,18 @@
 #include "playheadoverlay.h"
 #include "theme/themeruntime.h"
 
+#include <QDebug>
 #include <QEvent>
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
+#include <algorithm>
 
 namespace songview {
 
 #ifndef PORYDAW_USE_NATIVE_PLAYHEAD
-void PlayheadOverlay::initializePlatform(QWidget &) {}
-void PlayheadOverlay::attachPlatformToNativeView() {}
-void PlayheadOverlay::setPlatformLayout() {}
-void PlayheadOverlay::setPlatformAppearance() {}
-void PlayheadOverlay::setPlatformPosition() {}
-
-void PlayheadOverlay::updatePlayhead(bool playingChanged) {
-  Q_UNUSED(playingChanged);
-  updatePaintRegion();
-}
-
-void PlayheadOverlay::PlatformDeleter::operator()(Platform *) const {}
-
-PlayheadOverlay::~PlayheadOverlay() = default;
+std::unique_ptr<PlayheadBackend> createPlayheadBackend(QWidget &) { return {}; }
 #endif
 
 PlayheadOverlay::PlayheadOverlay(QWidget *owner, const Surfaces &surfaces)
@@ -38,28 +27,34 @@ PlayheadOverlay::PlayheadOverlay(QWidget *owner, const Surfaces &surfaces)
   setAttribute(Qt::WA_TransparentForMouseEvents);
   setAttribute(Qt::WA_NoSystemBackground);
 
-  const auto observeSurfaceGeometry = [this, owner](QWidget *surface) {
-    for (QWidget *widget = surface; widget; widget = widget->parentWidget()) {
-      widget->installEventFilter(this);
-      if (widget == owner)
-        break;
-    }
-  };
-  observeSurfaceGeometry(m_surfaces.ruler);
-  observeSurfaceGeometry(m_surfaces.roll);
-  observeSurfaceGeometry(m_surfaces.lanes);
-  observeSurfaceGeometry(m_surfaces.strip);
+  observeSurfaceGeometry();
 
-  initializePlatform(*owner);
   synchronizeGeometry();
   show();
+}
+
+PlayheadOverlay::~PlayheadOverlay() = default;
+
+void PlayheadOverlay::observeSurfaceGeometry() {
+  const auto observe = [this](QWidget *surface) {
+    for (QWidget *widget = surface; widget; widget = widget->parentWidget()) {
+      widget->installEventFilter(this);
+    }
+  };
+  observe(m_surfaces.ruler);
+  observe(m_surfaces.roll);
+  observe(m_surfaces.lanes);
+  observe(m_surfaces.strip);
 }
 
 bool PlayheadOverlay::eventFilter(QObject *, QEvent *event) {
   switch (event->type()) {
   case QEvent::Show:
   case QEvent::WinIdChange:
-    attachPlatformToNativeView();
+    synchronizeGeometry();
+    break;
+  case QEvent::ParentChange:
+    observeSurfaceGeometry();
     synchronizeGeometry();
     break;
   case QEvent::Hide:
@@ -88,9 +83,8 @@ void PlayheadOverlay::changeEvent(QEvent *event) {
     const QColor newColor = themes::color(themes::Role::song_view_playhead);
     if (m_color != newColor) {
       m_color = newColor;
-      setPlatformAppearance();
-      setPlatformPosition();
-      updatePaintRegion();
+      ++m_staticGeneration;
+      synchronizeBackend();
     }
     break;
   }
@@ -100,7 +94,7 @@ void PlayheadOverlay::changeEvent(QEvent *event) {
 }
 
 void PlayheadOverlay::paintEvent(QPaintEvent *event) {
-  if (m_platform) {
+  if (m_backendApplied) {
     (void)event;
     return;
   }
@@ -197,7 +191,7 @@ void PlayheadOverlay::synchronizeGeometry() {
                             m_surfaces.ruler->size());
   const int playheadTop = rulerGeometry.bottom() + 1;
   const QRect playheadGeometry(0, playheadTop, owner.width(),
-                               owner.height() - playheadTop);
+                               std::max(0, owner.height() - playheadTop));
   const QRect rulerVisible =
       visibleSurfaceRect(m_surfaces.ruler, &owner, m_surfaces.rulerOrigin);
   const QRect triangleClip(rulerVisible.left(), playheadTop,
@@ -223,12 +217,56 @@ void PlayheadOverlay::synchronizeGeometry() {
   m_trianglePointsUp = !m_surfaces.roll->isVisible();
   m_devicePixelRatio = owner.devicePixelRatioF();
 
-  setPlatformLayout();
-  setPlatformAppearance();
-  setPlatformPosition();
-  updatePaintRegion();
+  ++m_staticGeneration;
+  synchronizeBackend();
   raise();
 }
+
+void PlayheadOverlay::synchronizeBackend() {
+  if (m_backendSyncing) {
+    m_backendSyncPending = true;
+    return;
+  }
+
+  m_backendSyncing = true;
+  do {
+    m_backendSyncPending = false;
+    QWidget *owner = parentWidget();
+    if (!m_backend && !m_backendAttempted && owner && owner->isVisible()) {
+      m_backendAttempted = true;
+      if (!qEnvironmentVariableIsSet("PORYDAW_FORCE_WIDGET_PLAYHEAD"))
+        m_backend = createPlayheadBackend(*owner);
+    }
+
+    if (m_backend) {
+      const PlayheadFrame frame{size(),
+                                m_visibleSurfaceRegion,
+                                m_triangleClip,
+                                m_playheadGeometry,
+                                m_color,
+                                finalX(),
+                                m_devicePixelRatio,
+                                m_staticGeneration,
+                                m_visible,
+                                m_playing,
+                                m_trianglePointsUp};
+      const PlayheadSyncResult result = m_backend->synchronize(frame);
+      m_backendApplied = result.state == PlayheadSyncState::Applied;
+      if (result.state == PlayheadSyncState::Failed) {
+        qWarning().noquote()
+            << "Native playhead failed; using QWidget fallback:"
+            << result.error;
+        m_backend.reset();
+      }
+    } else {
+      m_backendApplied = false;
+    }
+  } while (m_backendSyncPending && m_backend);
+  m_backendSyncing = false;
+  updatePaintRegion();
+}
+
+void PlayheadOverlay::updatePlayhead() { synchronizeBackend(); }
 
 QRegion PlayheadOverlay::playheadRegion() const {
   const qreal x = finalX();
@@ -251,11 +289,8 @@ QRegion PlayheadOverlay::playheadRegion() const {
 }
 
 void PlayheadOverlay::updatePaintRegion() {
-  if (m_platform) {
-    return;
-  }
   QRegion currentRegion;
-  if (m_visible && !m_playheadGeometry.isEmpty()) {
+  if (!m_backendApplied && m_visible && !m_playheadGeometry.isEmpty()) {
     currentRegion = playheadRegion();
   }
 
