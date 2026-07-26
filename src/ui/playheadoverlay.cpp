@@ -89,6 +89,7 @@ void PlayheadOverlay::changeEvent(QEvent *event) {
     if (m_color != newColor) {
       m_color = newColor;
       setPlatformAppearance();
+      setPlatformPosition();
       updatePaintRegion();
     }
     break;
