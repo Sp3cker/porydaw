@@ -6,14 +6,17 @@
 #include "typography.h"
 #include "ui/layout.h"
 
+#include <QAction>
 #include <QApplication>
 #include <QComboBox>
 #include <QContextMenuEvent>
 #include <QCursor>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QEnterEvent>
 #include <QEvent>
 #include <QFontMetrics>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QInputDialog>
@@ -37,7 +40,6 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSpinBox>
-#include <QSplitter>
 #include <QStackedWidget>
 #include <QToolButton>
 #include <QToolTip>
@@ -76,6 +78,7 @@ constexpr int kMinLaneH = 28;
 constexpr int kMaxLaneH = 128;
 constexpr int kAddLaneH = 20;
 constexpr int kLanesAreaH = 150;
+constexpr int kAutomationHandleH = 4;
 constexpr double kMinPxPerBeat = 4.0;
 constexpr double kMaxPxPerBeat = 640.0;
 constexpr double kMinKeyHeight = 4.0;
@@ -122,6 +125,7 @@ double cursorAnchoredScroll(double anchor, double oldScale, double oldScroll,
 }
 constexpr int kVoiceAuditionKey = 60; // middle C, matching the voicegroup browser
 constexpr int kVoiceAuditionVel = 112;
+constexpr int kVoiceMarkerHitRadius = 9;
 // Resize hit-zone reach at a note's left/right edges (rollcheck probes
 // 6.8 DIPs inside the ends, so the zone must reach past that). Outside the
 // note the full reach always applies; inside, both zones shrink to leave at
@@ -134,6 +138,96 @@ qreal edgeGripInnerReach(const QRectF &noteRect)
     return std::clamp((noteRect.width() - kMoveZoneMin) / 2.0, 0.0,
                       kEdgeGripReach);
 }
+
+class AutomationOverlayHost final : public QWidget
+{
+public:
+    explicit AutomationOverlayHost(QWidget *parent)
+        : QWidget(parent)
+    {
+    }
+
+    std::function<void()> resized;
+
+protected:
+    void resizeEvent(QResizeEvent *event) override
+    {
+        QWidget::resizeEvent(event);
+        if (resized)
+            resized();
+    }
+};
+
+class AutomationDrawerHandle final : public QWidget
+{
+public:
+    explicit AutomationDrawerHandle(QWidget *parent)
+        : QWidget(parent)
+    {
+        setCursor(Qt::SplitVCursor);
+        setMouseTracking(true);
+    }
+
+    std::function<void(int)> dragged;
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter p(this);
+        p.fillRect(
+            rect(),
+            themes::color(
+                m_hovered
+                    ? themes::Role::splitter_handle_hover_background
+                    : themes::Role::splitter_handle));
+    }
+
+    void enterEvent(QEnterEvent *) override
+    {
+        m_hovered = true;
+        update();
+    }
+
+    void leaveEvent(QEvent *) override
+    {
+        m_hovered = false;
+        update();
+    }
+
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        if (event->button() != Qt::LeftButton)
+            return;
+        m_dragging = true;
+        m_lastGlobalY = event->globalPosition().y();
+        event->accept();
+    }
+
+    void mouseMoveEvent(QMouseEvent *event) override
+    {
+        if (!m_dragging || !(event->buttons() & Qt::LeftButton))
+            return;
+        const int globalY = event->globalPosition().y();
+        const int delta = globalY - m_lastGlobalY;
+        m_lastGlobalY = globalY;
+        if (delta != 0 && dragged)
+            dragged(delta);
+        event->accept();
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        if (event->button() == Qt::LeftButton) {
+            m_dragging = false;
+            event->accept();
+        }
+    }
+
+private:
+    bool m_hovered = false;
+    bool m_dragging = false;
+    int m_lastGlobalY = 0;
+};
 
 bool isBlackKey(int key)
 {
@@ -2810,6 +2904,25 @@ public:
         update();
     }
 
+    // Apply the document's post-mutation old-slot-to-new-slot map to the
+    // track-owned height and value-range overrides. Keys for owners mapped
+    // to -1 (or outside the 16 engine slots) are discarded.
+    void remapTrackRowState(const QVector<int> &newEngineSlotByOldSlot)
+    {
+        const auto newEngineSlotForOldSlot =
+            [&newEngineSlotByOldSlot](int oldEngineSlot) {
+                if (oldEngineSlot < 0
+                    || oldEngineSlot >= newEngineSlotByOldSlot.size())
+                    return -1;
+                const int newEngineSlot =
+                    newEngineSlotByOldSlot[oldEngineSlot];
+                return newEngineSlot >= 0 && newEngineSlot < 16
+                    ? newEngineSlot : -1;
+            };
+        remapEngineSlotKeys(m_rowHeights, newEngineSlotForOldSlot);
+        remapEngineSlotKeys(m_rowRanges, newEngineSlotForOldSlot);
+    }
+
     // A mouse gesture is live (pan, point/sweep/line edit, row resize,
     // right-press sweep); the playhead follow-scroll pauses while one runs
     // so the view doesn't jump under the cursor.
@@ -2817,6 +2930,20 @@ public:
     {
         return m_panning || m_gesture != Gesture::None || m_dragRow >= 0
             || m_resizeRow >= 0 || m_rightPress;
+    }
+
+    void clearHoverFeedback()
+    {
+        if (m_hoverRow < 0)
+            return;
+        const int previousHoverRow = m_hoverRow;
+        m_hoverRow = -1;
+        m_voiceInsertionPreviewVisible = false;
+        if (previousHoverRow < int(m_rows.size()))
+            update(QRect(0, rowTop(previousHoverRow), width(),
+                         rowHeight(m_rows[previousHoverRow])));
+        else
+            update();
     }
     void setViewHeights(int laneH, const QHash<QString, int> &overrides)
     {
@@ -2831,6 +2958,7 @@ public:
     void rebuildRows()
     {
         m_rows.clear();
+        m_selectedTrackVoiceChanges.clear();
         m_dragRow = -1;
         m_resizeRow = -1;
         m_gesture = Gesture::None;
@@ -2841,20 +2969,21 @@ public:
         if (m_sv->timeline()) {
             m_rows.push_back({Row::Tempo});
             const SongViewModel &model = m_sv->model();
-            const int selected = m_sv->selectedTrack();
+            const int selectedTrack = m_sv->selectedTrack();
             // The voice row shows whenever the track has changes; with a
             // document attached it is always present as the place to add one.
-            bool voiceRow = m_sv->document() != nullptr;
-            for (const VoiceChange &vc : model.voices) {
-                if (vc.track == selected) {
-                    voiceRow = true;
-                    break;
-                }
+            bool showVoiceRow = m_sv->document() != nullptr;
+            for (const VoiceChange &change : model.voices) {
+                if (change.track != selectedTrack)
+                    continue;
+                showVoiceRow = true;
+                m_selectedTrackVoiceChanges.push_back(change);
             }
-            if (voiceRow)
+            if (showVoiceRow)
                 m_rows.push_back({Row::Voice});
             for (const AutoLane &lane : model.lanes)
-                if (lane.track == selected)
+                if (lane.track == selectedTrack
+                    && !m_sv->laneHidden(lane.track, lane.cc))
                     m_rows.push_back({Row::Lane, lane.track, lane.cc});
         }
         applyHeight();
@@ -2862,26 +2991,34 @@ public:
     }
 
 protected:
-    void paintEvent(QPaintEvent *) override
+    void paintEvent(QPaintEvent *event) override
     {
+        const QRegion &paintRegion = event->region();
         QPainter p(this);
         const qreal dpr = p.device()->devicePixelRatioF();
-        p.fillRect(rect(), themes::color(themes::Role::song_view_piano_roll_background));
+        p.fillRect(paintRegion.boundingRect(),
+                   themes::color(themes::Role::song_view_piano_roll_background));
         if (!m_sv->timeline())
             return;
 
         int rowY = 0;
         for (size_t i = 0; i < m_rows.size(); i++) {
             const int h = rowHeight(m_rows[i]);
-            paintRow(p, m_rows[i], QRect(0, rowY, width(), h));
+            const QRect rowRect(0, rowY, width(), h);
+            if (paintRegion.intersects(rowRect))
+                paintRow(p, m_rows[i], rowRect);
             rowY += h;
         }
 
         if (m_sv->document()) {
             const QRect strip = addLaneRect();
-            p.setPen(themes::color(themes::Role::song_view_add_automation_lane_action));
-            p.drawText(strip.adjusted(8, 0, -8, 0), Qt::AlignLeft | Qt::AlignVCenter,
-                       SongView::tr("+ Add lane"));
+            if (paintRegion.intersects(strip)) {
+                p.setPen(
+                    themes::color(themes::Role::song_view_add_automation_lane_action));
+                p.drawText(strip.adjusted(8, 0, -8, 0),
+                           Qt::AlignLeft | Qt::AlignVCenter,
+                           SongView::tr("+ Add lane"));
+            }
         }
 
         // Drag preview: the pending stream (sweep) or ramp (line), plus a
@@ -2923,18 +3060,85 @@ protected:
             p.setClipping(false);
         }
 
-        paintHoverReadout(p);
+        if (m_hoverRow >= 0 && m_hoverRow < int(m_rows.size())
+            && paintRegion.intersects(QRect(0, rowTop(m_hoverRow), width(),
+                                          rowHeight(m_rows[m_hoverRow]))))
+            paintHoverReadout(p);
     }
 
-    // Idle-hover readout: a marker on the curve with the value in effect at
-    // the cursor's tick (the last point at or before it — lanes hold their
-    // value until the next point, so this matches what the curve shows).
+    // Idle-hover readout: voice rows preview the snapped insertion tick;
+    // value lanes mark the value in effect at the cursor's tick (the last
+    // point at or before it, since lanes hold until the next point).
     void paintHoverReadout(QPainter &p)
     {
         if (m_dragRow >= 0 || m_selSweep || m_hoverRow < 0
             || m_hoverRow >= int(m_rows.size()))
             return;
         const Row &row = m_rows[m_hoverRow];
+        if (row.kind == Row::Voice) {
+            if (!m_sv->document() || !m_voiceInsertionPreviewVisible)
+                return;
+
+            const uint64_t insertionTick = m_voiceInsertionPreviewTick;
+            const int voice = selectedTrackVoiceAtTick(insertionTick);
+
+            const int insertionX = kGutterW + m_sv->contentX(double(insertionTick));
+            const QRect plot(kGutterW, rowTop(m_hoverRow), width() - kGutterW,
+                             rowHeight(row));
+            const QColor previewColor =
+                themes::color(themes::Role::song_view_edit_preview_outline);
+            const QColor backgroundColor =
+                themes::color(themes::Role::song_view_piano_roll_background);
+            p.setClipRect(plot);
+            const int lineTop = plot.top() + 4;
+            const int lineBottom = plot.bottom() - 4;
+            p.setPen(backgroundColor);
+            p.drawLine(insertionX, lineTop, insertionX, lineBottom);
+            p.setPen(QPen(previewColor, 1, Qt::DashLine));
+            p.drawLine(insertionX, lineTop, insertionX, lineBottom);
+
+            const QString fullLabel =
+                QStringLiteral("→ %1 %2")
+                    .arg(voice, 3, 10, QLatin1Char('0'))
+                    .arg(m_sv->voiceShortName(uint8_t(voice)));
+            constexpr int labelGap = 6;
+            const int fullLabelWidth =
+                fontMetrics().horizontalAdvance(fullLabel);
+            const int rightSpace =
+                std::max(0, plot.right() - insertionX - labelGap + 1);
+            const int leftSpace =
+                std::max(0, insertionX - labelGap - plot.left());
+            const bool labelOnRight =
+                rightSpace >= fullLabelWidth
+                || (leftSpace < fullLabelWidth && rightSpace >= leftSpace);
+            const int labelSpace = labelOnRight ? rightSpace : leftSpace;
+            const QString label =
+                fontMetrics().elidedText(fullLabel, Qt::ElideRight, labelSpace);
+            if (!label.isEmpty()) {
+                const int labelWidth = fontMetrics().horizontalAdvance(label);
+                const int labelX = labelOnRight ? insertionX + labelGap
+                                                : insertionX - labelGap - labelWidth;
+                const QRect labelRect(labelX, plot.top() + 4, labelWidth,
+                                      plot.height() - 8);
+                p.fillRect(labelRect, backgroundColor);
+                p.setPen(previewColor);
+                p.drawText(labelRect, Qt::AlignLeft | Qt::AlignVCenter, label);
+                p.setPen(
+                    QPen(SongView::trackColor(m_sv->selectedTrack()), 2));
+                for (const VoiceChange &change :
+                     m_selectedTrackVoiceChanges) {
+                    const int markerX =
+                        kGutterW + m_sv->contentX(double(change.tick));
+                    if (markerX >= labelRect.left()
+                        && markerX <= labelRect.right()) {
+                        p.drawLine(
+                            markerX, lineTop, markerX, lineBottom);
+                    }
+                }
+            }
+            p.setClipping(false);
+            return;
+        }
         const std::vector<LanePoint> *points = rowPoints(row);
         if (!points || points->empty())
             return;
@@ -2999,7 +3203,7 @@ protected:
     {
         // Any press starts a gesture (or a menu); the idle readout would
         // paint stale under it. The next idle move restores it.
-        clearHover();
+        clearHoverFeedback();
         if (event->button() == Qt::MiddleButton) {
             // Reaper-style pan: drag scrolls the timeline and the lane list.
             // Tracked in global coords — the vertical scroll moves this
@@ -3009,26 +3213,30 @@ protected:
             setCursor(Qt::ClosedHandCursor);
             return;
         }
-        const int boundary = event->button() == Qt::LeftButton
-                                 ? rowBoundaryAt(event->pos().y())
-                                 : -1;
+        const int boundary = rowBoundaryAt(event->pos().y());
         if (boundary >= 0) {
-            // Dragging the divider under a row gives it an individual
-            // height, overriding the shared Ctrl+wheel height.
-            m_resizeRow = boundary;
-            m_resizeOrigH = rowHeight(m_rows[boundary]);
-            m_resizePressY = event->pos().y();
+            if (event->button() == Qt::LeftButton) {
+                // Dragging the divider under a row gives it an
+                // individual height, overriding the shared Ctrl+wheel height.
+                m_resizeRow = boundary;
+                m_resizeOrigH = rowHeight(m_rows[boundary]);
+                m_resizePressY = event->pos().y();
+            }
+            // A separator is neither row. Consume every other press so it
+            // cannot fall through to a neighboring lane's context action.
+            event->accept();
             return;
         }
+        const int ri = rowIndexAt(event->pos().y());
         SongDocument *doc = m_sv->document();
         if (!doc)
             return;
-        if (event->button() == Qt::LeftButton
+        if ((event->button() == Qt::LeftButton
+             || event->button() == Qt::RightButton)
             && addLaneRect().contains(event->pos())) {
             showAddLaneMenu(event->globalPosition().toPoint());
             return;
         }
-        const int ri = rowIndexAt(event->pos().y());
         if (ri < 0)
             return;
         setFocus();
@@ -3134,9 +3342,10 @@ protected:
             return;
         }
         if (m_dragRow < 0) {
-            setCursor(rowBoundaryAt(event->pos().y()) >= 0 ? Qt::SplitVCursor
-                                                           : Qt::ArrowCursor);
-            updateHover(event->position().x(), event->pos().y());
+            const int boundary = rowBoundaryAt(event->pos().y());
+            const bool overRowBoundary = boundary >= 0;
+            setCursor(overRowBoundary ? Qt::SplitVCursor : Qt::ArrowCursor);
+            updateHover(event->position(), overRowBoundary);
             return;
         }
         const bool fine = event->modifiers() & Qt::AltModifier;
@@ -3285,7 +3494,7 @@ protected:
         QWidget::keyPressEvent(event);
     }
 
-    void leaveEvent(QEvent *) override { clearHover(); }
+    void leaveEvent(QEvent *) override { clearHoverFeedback(); }
 
 private:
     // Lane rows carry their identity BY VALUE, never a pointer into
@@ -3374,9 +3583,14 @@ private:
             return;
         }
         if (row.kind == Row::Voice) {
-            DocLanePoint hit;
-            if (voiceChangeNear(event->position().x(), &hit))
-                doc->deleteLanePoints(m_sv->selectedTrack(), DOC_CC_VOICE, {hit});
+            if (const VoiceChange *change =
+                    voiceChangeNear(event->position().x())) {
+                DocLanePoint point;
+                if (doc->findLanePoint(m_sv->selectedTrack(), DOC_CC_VOICE,
+                                       change->tick, &point))
+                    doc->deleteLanePoints(m_sv->selectedTrack(), DOC_CC_VOICE,
+                                          {point});
+            }
             return;
         }
         uint8_t cc;
@@ -3394,26 +3608,50 @@ private:
     }
 
     // Voice change within the marker hit radius of x, if any.
-    bool voiceChangeNear(qreal x, DocLanePoint *out) const
+    const VoiceChange *voiceChangeNear(qreal x) const
     {
-        SongDocument *doc = m_sv->document();
-        if (!doc)
-            return false;
-        bool found = false;
-        qreal bestDist = 9.0; // same radius as nearestPoint
+        const double cursorTick = rawTickAt(x);
+        const double hitRadiusTicks =
+            double(kVoiceMarkerHitRadius) / m_sv->pxPerTick();
+        const double firstTick = std::max(0.0, cursorTick - hitRadiusTicks);
+        auto change = std::lower_bound(
+            m_selectedTrackVoiceChanges.begin(),
+            m_selectedTrackVoiceChanges.end(), firstTick,
+            [](const VoiceChange &candidate, double tick) {
+                return double(candidate.tick) < tick;
+            });
+
+        const VoiceChange *nearestChange = nullptr;
+        qreal nearestDistance = kVoiceMarkerHitRadius;
+        const double lastTick = cursorTick + hitRadiusTicks;
         const qreal dpr = devicePixelRatioF();
-        for (const DocLanePoint &pt :
-             doc->lanePoints(m_sv->selectedTrack(), DOC_CC_VOICE)) {
-            const qreal dist =
-                std::abs(m_sv->displayX(double(pt.tick), kGutterW, dpr) - x);
-            if (dist < bestDist) {
-                bestDist = dist;
-                *out = pt;
-                found = true;
+        for (; change != m_selectedTrackVoiceChanges.end()
+             && double(change->tick) <= lastTick;
+             ++change) {
+            const qreal distance = std::abs(
+                m_sv->displayX(double(change->tick), kGutterW, dpr) - x);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestChange = &*change;
             }
         }
-        return found;
+        return nearestChange;
     }
+
+    int selectedTrackVoiceAtTick(uint64_t tick) const
+    {
+        const auto change = std::upper_bound(
+            m_selectedTrackVoiceChanges.begin(),
+            m_selectedTrackVoiceChanges.end(), tick,
+            [](uint64_t candidateTick, const VoiceChange &candidate) {
+                return candidateTick < candidate.tick;
+            });
+        return change == m_selectedTrackVoiceChanges.begin()
+                   ? 0
+                   : (change - 1)->program;
+    }
+
+
 
     // Per-row geometry: individually-resized rows (divider drag) override
     // the shared m_laneH. Keys survive track switches, so each lane keeps
@@ -3434,6 +3672,77 @@ private:
     static QString laneKey(int track, uint8_t cc)
     {
         return QStringLiteral("cc:%1:%2").arg(track).arg(cc);
+    }
+
+    template<typename EngineSlotRemap>
+    static void remapEngineSlotKeys(QHash<QString, int> &rowState,
+                                    EngineSlotRemap newEngineSlotForOldSlot)
+    {
+        QHash<QString, int> remappedRowState;
+        remappedRowState.reserve(rowState.size());
+
+        for (auto rowStateIt = rowState.constBegin();
+             rowStateIt != rowState.constEnd(); ++rowStateIt) {
+            const QString &rowKey = rowStateIt.key();
+            QString engineSlotText;
+            QString controllerText;
+            bool isVoiceRowKey = false;
+
+            if (rowKey.startsWith(QStringLiteral("voice:"))) {
+                engineSlotText = rowKey.mid(6);
+                isVoiceRowKey = true;
+            } else if (rowKey.startsWith(QStringLiteral("cc:"))) {
+                const qsizetype controllerSeparator =
+                    rowKey.indexOf(QLatin1Char(':'), 3);
+                if (controllerSeparator < 0
+                    || rowKey.indexOf(QLatin1Char(':'),
+                                      controllerSeparator + 1) >= 0) {
+                    remappedRowState.insert(rowKey, rowStateIt.value());
+                    continue;
+                }
+                engineSlotText = rowKey.mid(3, controllerSeparator - 3);
+                controllerText = rowKey.mid(controllerSeparator + 1);
+
+                bool controllerIsInteger = false;
+                const qlonglong controllerNumber =
+                    controllerText.toLongLong(&controllerIsInteger);
+                if (!controllerIsInteger || controllerNumber < 0
+                    || controllerNumber > 255
+                    || QString::number(controllerNumber) != controllerText) {
+                    remappedRowState.insert(rowKey, rowStateIt.value());
+                    continue;
+                }
+            } else {
+                remappedRowState.insert(rowKey, rowStateIt.value());
+                continue;
+            }
+
+            bool engineSlotIsInteger = false;
+            const qlonglong oldEngineSlotNumber =
+                engineSlotText.toLongLong(&engineSlotIsInteger);
+            if (!engineSlotIsInteger
+                || QString::number(oldEngineSlotNumber) != engineSlotText) {
+                remappedRowState.insert(rowKey, rowStateIt.value());
+                continue;
+            }
+            if (oldEngineSlotNumber < 0 || oldEngineSlotNumber > INT_MAX)
+                continue;
+
+            const int newEngineSlot =
+                newEngineSlotForOldSlot(int(oldEngineSlotNumber));
+            if (newEngineSlot < 0)
+                continue;
+
+            const QString newRowKey =
+                isVoiceRowKey
+                    ? QStringLiteral("voice:%1").arg(newEngineSlot)
+                    : QStringLiteral("cc:%1:%2")
+                          .arg(newEngineSlot)
+                          .arg(controllerText);
+            remappedRowState.insert(newRowKey, rowStateIt.value());
+        }
+
+        rowState.swap(remappedRowState);
     }
 
     int rowHeight(const Row &row) const
@@ -3466,8 +3775,8 @@ private:
         return -1;
     }
 
-    // Divider hit test: the bottom edge of row i (±3 px) starts an
-    // individual-height drag for that row.
+    // Divider hit test: every bottom edge is an inert separator for context
+    // actions and a resize handle for left-button drags.
     int rowBoundaryAt(int y) const
     {
         int bottom = 0;
@@ -3523,12 +3832,22 @@ private:
     // Menu of §4.2 audible parameters without a lane on the selected track.
     void showAddLaneMenu(const QPoint &globalPos)
     {
+        struct LaneMenuChoice {
+            QAction *action;
+            uint8_t cc;
+            bool showsHiddenLane;
+            QString laneName;
+        };
+
         const int track = m_sv->selectedTrack();
+        const SongViewModel &model = m_sv->model();
         QMenu menu;
+        std::vector<LaneMenuChoice> laneMenuChoices;
+        bool addLaneAvailable = false;
         static constexpr uint8_t kAudibleCcs[] = {0x01, 0x07, 0x0A, 0x14, 0x15,
                                                   LANE_CC_BEND};
         for (uint8_t cc : kAudibleCcs) {
-            if (m_sv->model().findLane(track, cc))
+            if (model.findLane(track, cc) || m_sv->laneHidden(track, cc))
                 continue;
             QString label;
             if (cc == LANE_CC_BEND) {
@@ -3538,14 +3857,55 @@ private:
                 label = QStringLiteral("%1 (%2)").arg(QLatin1String(info.display),
                                                       QLatin1String(info.name));
             }
-            menu.addAction(label)->setData(int(cc));
+            QAction *action = menu.addAction(label);
+            laneMenuChoices.push_back({action, cc, false, {}});
+            addLaneAvailable = true;
         }
-        if (menu.isEmpty())
+        if (!addLaneAvailable)
             menu.addAction(SongView::tr("All parameters already have lanes"))
                 ->setEnabled(false);
-        QAction *chosen = menu.exec(globalPos);
-        if (chosen && chosen->data().isValid())
-            m_sv->addEmptyLane(track, uint8_t(chosen->data().toInt()));
+
+        bool hiddenLaneAvailable = false;
+        for (const std::pair<int, uint8_t> &hiddenLane : m_sv->hiddenLanes()) {
+            if (hiddenLane.first != track)
+                continue;
+            const uint8_t cc = hiddenLane.second;
+            const AutoLane *lane = model.findLane(track, cc);
+            QString laneName;
+            if (lane)
+                laneName = lane->name;
+            else if (cc == LANE_CC_BEND)
+                laneName = SongView::tr("Pitch bend");
+            else {
+                const M4aCcInfo info = m4aClassifyCc(cc);
+                laneName = info.eventClass == M4aEventClass::AudibleLane
+                               ? QLatin1String(info.display)
+                               : SongView::tr("CC %1").arg(cc);
+            }
+            if (!hiddenLaneAvailable) {
+                menu.addSeparator();
+                hiddenLaneAvailable = true;
+            }
+            QAction *action =
+                menu.addAction(SongView::tr("Show: %1 (hidden)").arg(laneName));
+            laneMenuChoices.push_back({action, cc, true, laneName});
+        }
+
+        QAction *selectedAction = menu.exec(globalPos);
+        if (!selectedAction)
+            return;
+        for (const LaneMenuChoice &choice : laneMenuChoices) {
+            if (selectedAction != choice.action)
+                continue;
+            if (choice.showsHiddenLane) {
+                m_sv->showLane(track, choice.cc);
+                m_sv->announce(
+                    SongView::tr("Showed the %1 lane").arg(choice.laneName));
+            } else {
+                m_sv->addEmptyLane(track, choice.cc);
+            }
+            return;
+        }
     }
 
     // Gutter menu on a CC/bend lane: clear its events (the lane stays,
@@ -3571,6 +3931,7 @@ private:
                                   && !clip.lanes.front().points.empty());
         }
         menu.addSeparator();
+        QAction *hideLaneAction = menu.addAction(SongView::tr("Hide lane"));
         QAction *clear = menu.addAction(SongView::tr("Clear events"));
         clear->setEnabled(!empty);
         QAction *del = menu.addAction(empty ? SongView::tr("Remove empty lane")
@@ -3603,6 +3964,11 @@ private:
                 setLaneRange(track, cc, opt.second);
                 return;
             }
+        }
+        if (chosen == hideLaneAction) {
+            m_sv->hideLane(track, cc);
+            m_sv->announce(SongView::tr("Hid the %1 lane").arg(name));
+            return;
         }
 
         SongDocument *doc = m_sv->document();
@@ -3669,27 +4035,25 @@ private:
     {
         SongDocument *doc = m_sv->document();
         const int track = m_sv->selectedTrack();
-        if (event->button() != Qt::LeftButton)
+        if (!doc || event->button() != Qt::LeftButton)
             return;
-        DocLanePoint hitPt;
-        if (voiceChangeNear(event->position().x(), &hitPt)) {
-            const DocLanePoint *hit = &hitPt;
-            int voice = hit->value;
-            if (m_sv->pickVoice(SongView::tr("Change voice"), hit->value, &voice)
-                && voice != hit->value)
-                doc->moveLanePoint(track, DOC_CC_VOICE, *hit, hit->tick, voice);
+        const uint64_t tick = m_sv->snapTick(m_sv->tickAtContentX(
+            std::max(qreal(kGutterW), event->position().x()) - kGutterW));
+        const qreal insertionX = m_sv->displayX(
+            double(tick), kGutterW, devicePixelRatioF());
+        const VoiceChange *change = voiceChangeNear(event->position().x());
+        if (!change)
+            change = voiceChangeNear(insertionX);
+        if (change) {
+            DocLanePoint hit;
+            if (!doc->findLanePoint(track, DOC_CC_VOICE, change->tick, &hit))
+                return;
+            int voice = hit.value;
+            if (m_sv->pickVoice(SongView::tr("Change voice"), hit.value, &voice)
+                && voice != hit.value)
+                doc->moveLanePoint(track, DOC_CC_VOICE, hit, hit.tick, voice);
         } else {
-            const std::vector<DocLanePoint> changes =
-                doc->lanePoints(track, DOC_CC_VOICE);
-            const uint64_t tick = m_sv->snapTick(m_sv->tickAtContentX(
-                std::max(qreal(kGutterW), event->position().x()) - kGutterW));
-            // Preselect the voice already sounding at that tick.
-            int voice = 0;
-            for (const DocLanePoint &pt : changes) {
-                if (pt.tick > tick)
-                    break;
-                voice = pt.value;
-            }
+            int voice = selectedTrackVoiceAtTick(tick);
             if (m_sv->pickVoice(SongView::tr("Insert voice change"), voice, &voice))
                 doc->addLanePoint(track, DOC_CC_VOICE, tick, voice);
         }
@@ -3912,31 +4276,60 @@ private:
                      std::max(qreal(kGutterW), x) - kGutterW));
     }
 
-    // Idle cursor position for the hover readout: raw (unsnapped) tick, so
-    // the readout tracks the pixel, not the grid. Rows without a value curve
-    // (the voice row, the gutter) clear it.
-    void updateHover(qreal x, int y)
+    // Idle cursor position for hover feedback: raw (unsnapped) tick for
+    // value readouts and as the input to the voice row's snapped preview.
+    // The gutter, row resize handles, and rows without either affordance
+    // clear it.
+    void updateHover(QPointF pos, bool overRowBoundary)
     {
-        const int ri = x >= kGutterW ? rowIndexAt(y) : -1;
-        if (ri < 0 || !rowPoints(m_rows[ri])) {
-            clearHover();
+        if (overRowBoundary) {
+            clearHoverFeedback();
             return;
         }
-        const double tick = rawTickAt(x);
-        if (ri == m_hoverRow && tick == m_hoverTick)
+        const int rowIndex = pos.x() >= kGutterW ? rowIndexAt(pos.y()) : -1;
+        const bool voiceInsertionPreviewAvailable =
+            rowIndex >= 0 && m_rows[rowIndex].kind == Row::Voice
+            && m_sv->document();
+        if (rowIndex < 0 || (!rowPoints(m_rows[rowIndex])
+                && !voiceInsertionPreviewAvailable)) {
+            clearHoverFeedback();
             return;
-        m_hoverRow = ri;
+        }
+
+        const double tick = rawTickAt(pos.x());
+        if (voiceInsertionPreviewAvailable) {
+            const uint64_t insertionTick = m_sv->snapTick(tick);
+            const int insertionX =
+                kGutterW + m_sv->contentX(double(insertionTick));
+            const bool previewVisible =
+                !voiceChangeNear(pos.x()) && !voiceChangeNear(insertionX);
+            const bool sameRow = rowIndex == m_hoverRow;
+            const bool previewChanged =
+                !sameRow
+                || previewVisible != m_voiceInsertionPreviewVisible
+                || (previewVisible
+                    && insertionTick != m_voiceInsertionPreviewTick);
+            m_hoverRow = rowIndex;
+            m_hoverTick = tick;
+            m_voiceInsertionPreviewTick = insertionTick;
+            m_voiceInsertionPreviewVisible = previewVisible;
+            if (previewChanged) {
+                if (sameRow)
+                    update(QRect(0, rowTop(rowIndex), width(),
+                                 rowHeight(m_rows[rowIndex])));
+                else
+                    update();
+            }
+            return;
+        }
+
+        if (rowIndex == m_hoverRow && tick == m_hoverTick)
+            return;
+        m_hoverRow = rowIndex;
         m_hoverTick = tick;
         update();
     }
 
-    void clearHover()
-    {
-        if (m_hoverRow < 0)
-            return;
-        m_hoverRow = -1;
-        update();
-    }
 
     // Invert paintCurve's valueY mapping; ri indexes the row for geometry.
     int valueAtY(const Row &row, int ri, int yPos) const
@@ -4017,16 +4410,24 @@ private:
 
     void paintRow(QPainter &p, const Row &row, const QRect &r)
     {
-        const QRect plot(kGutterW, r.top(), width() - kGutterW, r.height());
         p.setClipRect(r);
         p.setPen(themes::color(themes::Role::song_view_separator));
         p.drawLine(r.left(), r.bottom(), r.right(), r.bottom());
 
         // Gutter label.
         const QString name = rowTitle(row);
+        const QColor primaryText =
+            themes::color(themes::Role::song_view_primary_text);
+        p.setPen(primaryText);
+        const auto titleFont = typography::bold(font());
+        const auto captionFont = typography::caption(font());
+        QRect textBounds(8, r.top(), kGutterW - 16, r.height());
+
+        p.setFont(titleFont);
         int minV = 0, maxV = 127;
         const std::vector<LanePoint> *points = nullptr;
-        QColor curve = themes::color(themes::Role::song_view_automation_default_curve);
+        QColor curve =
+            themes::color(themes::Role::song_view_automation_default_curve);
         rowRange(row, &minV, &maxV);
         switch (row.kind) {
         case Row::Tempo:
@@ -4042,17 +4443,12 @@ private:
             break;
         }
 
-        p.setPen(themes::color(themes::Role::song_view_primary_text));
-    const auto titleFont = typography::bold( p.font());
-    const auto captionFont = typography::caption(
-        p.font());
-    const auto textLayout = ::layout::twoLineText(
-        titleFont, titleFont, captionFont, ::layout::Space::Zero);
-    const auto textBoxes =
-        textLayout.align(QRect(8, r.top(), kGutterW - 16, r.height()),::layout::VerticalAlignment::Center);
-        p.setFont(titleFont);
-    p.drawText(textBoxes.primary, Qt::AlignLeft | Qt::AlignVCenter, name);
-    p.setFont(captionFont);
+        const auto textLayout = ::layout::twoLineText(
+            titleFont, titleFont, captionFont, ::layout::Space::Zero);
+        const auto textBoxes = textLayout.align(
+            textBounds, ::layout::VerticalAlignment::Center);
+        p.drawText(textBoxes.primary, Qt::AlignLeft | Qt::AlignVCenter, name);
+        p.setFont(captionFont);
         if (points && !points->empty()) {
             p.setPen(themes::color(themes::Role::song_view_secondary_text));
             p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
@@ -4065,17 +4461,17 @@ private:
             p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
                        SongView::tr("empty · click to add points"));
         } else if (row.kind == Row::Voice && m_sv->document()) {
-            int count = 0;
-            for (const VoiceChange &vc : m_sv->model().voices)
-                if (vc.track == m_sv->selectedTrack())
-                    count++;
+            const int voiceChangeCount = int(m_selectedTrackVoiceChanges.size());
             p.setPen(themes::color(themes::Role::song_view_secondary_text));
             p.drawText(
-          textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
-                       count ? SongView::tr("%n change(s) · click to edit", nullptr, count)
-                             : SongView::tr("no voice set · click to add"));
+                textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
+                voiceChangeCount
+                    ? SongView::tr("%n change(s) · click to edit", nullptr,
+                                   voiceChangeCount)
+                    : SongView::tr("no voice set · click to add"));
         }
 
+        const QRect plot(kGutterW, r.top(), width() - kGutterW, r.height());
         p.setClipRect(plot);
         drawGrid(p, m_sv, plot, kGutterW);
 
@@ -4126,39 +4522,43 @@ private:
 
     void paintVoiceRow(QPainter &p, const QRect &plot)
     {
-        const SongViewModel &model = m_sv->model();
-        const int selected = m_sv->selectedTrack();
-        std::vector<const VoiceChange *> changes;
-        for (const VoiceChange &vc : model.voices)
-            if (vc.track == selected)
-                changes.push_back(&vc);
-
-        const QColor color = SongView::trackColor(selected);
+        const int selectedTrack = m_sv->selectedTrack();
+        const QColor color = SongView::trackColor(selectedTrack);
         const qreal dpr = p.device()->devicePixelRatioF();
-        for (size_t i = 0; i < changes.size(); i++) {
+        auto paintChange = [&](const VoiceChange &change, qreal regionEndX) {
             const qreal x =
-                m_sv->displayX(double(changes[i]->tick), kGutterW, dpr);
-            const qreal xEnd =
-                i + 1 < changes.size()
-                    ? m_sv->displayX(double(changes[i + 1]->tick), kGutterW, dpr)
-                                 : plot.right();
-            if (xEnd < plot.left() || x > plot.right())
-                continue;
+                m_sv->displayX(double(change.tick), kGutterW, dpr);
+            if (regionEndX < plot.left() || x > plot.right())
+                return;
             p.setPen(QPen(color, 2));
             p.drawLine(QLineF(x, plot.top() + 4, x, plot.bottom() - 4));
             p.setPen(themes::color(themes::Role::song_view_primary_text));
-            const QString text = QStringLiteral("%1 %2")
-                                     .arg(int(changes[i]->program), 3, 10, QLatin1Char('0'))
-                                     .arg(m_sv->voiceShortName(changes[i]->program));
+            const QString text =
+                QStringLiteral("%1 %2")
+                    .arg(int(change.program), 3, 10, QLatin1Char('0'))
+                    .arg(m_sv->voiceShortName(change.program));
             // Keep the label readable while its voice region is scrolled
             // partially off the left edge.
             const qreal textX = std::max<qreal>(x + 4, plot.left() + 4);
-            const qreal textW = std::max<qreal>(10.0, xEnd - textX - 4);
-            p.drawText(QRectF(textX, plot.top() + 4, textW, plot.height() - 8),
+            const qreal textWidth =
+                std::max<qreal>(10.0, regionEndX - textX - 4);
+            p.drawText(QRectF(textX, plot.top() + 4, textWidth,
+                              plot.height() - 8),
                        Qt::AlignLeft | Qt::AlignVCenter,
                        fontMetrics().elidedText(text, Qt::ElideRight,
-                                                qFloor(textW)));
+                                                qFloor(textWidth)));
+        };
+
+        const VoiceChange *previousChange = nullptr;
+        for (const VoiceChange &change : m_selectedTrackVoiceChanges) {
+            if (previousChange)
+                paintChange(
+                    *previousChange,
+                    m_sv->displayX(double(change.tick), kGutterW, dpr));
+            previousChange = &change;
         }
+        if (previousChange)
+            paintChange(*previousChange, plot.right());
     }
 
     // Left-drag gestures: Point moves an existing point (press landed near
@@ -4172,6 +4572,7 @@ private:
     SongView *m_sv;
     QScrollArea *m_scroll;      // hosting scroll area, for lane-zoom pinning
     std::vector<Row> m_rows;
+    std::vector<VoiceChange> m_selectedTrackVoiceChanges;
     int m_laneH = kLaneH;       // shared row height; Ctrl+wheel rescales
     int m_laneZoomAccum = 0;    // sub-notch wheel remainder, like zoomKeyHeight
     QHash<QString, int> m_rowHeights; // individual row heights (rowKey → px)
@@ -4199,6 +4600,8 @@ private:
     int m_prevValue = 0;
     int m_hoverRow = -1;       // row under an idle cursor; -1 = no readout
     double m_hoverTick = 0.0;  // raw tick under the idle cursor
+    uint64_t m_voiceInsertionPreviewTick = 0;
+    bool m_voiceInsertionPreviewVisible = false;
 };
 
 // ---------------------------------------------------------------- OtherStrip
@@ -4972,16 +5375,27 @@ SongView::SongView(QWidget *parent)
     m_ruler = new TimeRuler(this);
     vbox->addWidget(m_ruler);
 
-    // Roll (with headers) above, automation lanes below, split by a
-    // draggable boundary; kLanesAreaH is only the initial lanes height.
-    m_splitter = new QSplitter(Qt::Vertical, this);
-    m_splitter->setChildrenCollapsible(false);
-    auto *rollPane = new QWidget(m_splitter);
+    // The roll always owns the full content rectangle. Automations is a
+    // positioned overlay on top of it, so opening the drawer never changes
+    // track-header or piano-roll layout.
+    auto *overlay = new AutomationOverlayHost(this);
+    m_automationOverlay = overlay;
+    m_automationDrawerHeight = kLanesAreaH;
+    auto *overlayLayout = new QVBoxLayout(overlay);
+    overlayLayout->setContentsMargins(0, 0, 0, 0);
+    overlayLayout->setSpacing(0);
+    auto *rollPane = new QWidget(overlay);
+    overlayLayout->addWidget(rollPane);
     auto *mid = new QHBoxLayout(rollPane);
     mid->setContentsMargins(0, 0, 0, 0);
     mid->setSpacing(0);
-    auto *headerScroll = new QScrollArea(this);
-    headerScroll->setFixedWidth(kHeaderW);
+    auto *headerColumn = new QWidget(rollPane);
+    headerColumn->setFixedWidth(kHeaderW);
+    auto *headerColumnLayout = new QGridLayout(headerColumn);
+    headerColumnLayout->setContentsMargins(0, 0, 0, 0);
+    headerColumnLayout->setSpacing(0);
+    auto *headerScroll = new QScrollArea(headerColumn);
+    headerScroll->setObjectName(QStringLiteral("trackHeaderScroll"));
     headerScroll->setFrameShape(QFrame::NoFrame);
     headerScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     headerScroll->setWidgetResizable(true);
@@ -4991,7 +5405,30 @@ SongView::SongView(QWidget *parent)
     headerScroll->setFocusPolicy(Qt::NoFocus);
     m_headers = new TrackHeaderPanel(this);
     headerScroll->setWidget(m_headers);
-    mid->addWidget(headerScroll);
+    headerColumnLayout->addWidget(headerScroll, 0, 0);
+
+    m_automationDrawerAction = new QAction(tr("Automations"), this);
+    m_automationDrawerAction->setObjectName(
+        QStringLiteral("automationDrawerAction"));
+    m_automationDrawerAction->setCheckable(true);
+    m_automationDrawerAction->setChecked(true);
+    m_automationDrawerAction->setShortcut(QKeySequence(Qt::Key_A));
+    m_automationDrawerAction->setShortcutContext(Qt::WindowShortcut);
+    m_automationDrawerAction->setAutoRepeat(false);
+    m_automationDrawerAction->setToolTip(
+        tr("Show or hide automation lanes (A)"));
+    addAction(m_automationDrawerAction);
+
+    m_automationDrawerTab = new QToolButton(overlay);
+    m_automationDrawerTab->setObjectName(
+        QStringLiteral("automationDrawerTab"));
+    m_automationDrawerTab->setDefaultAction(m_automationDrawerAction);
+    m_automationDrawerTab->setAutoRaise(false);
+    m_automationDrawerTab->setFocusPolicy(Qt::NoFocus);
+    m_automationDrawerTab->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    m_automationDrawerTab->setSizePolicy(QSizePolicy::Expanding,
+                                         QSizePolicy::Fixed);
+    mid->addWidget(headerColumn);
   // The note grid and raw event list share the roll's slot. Headers, ruler,
   // and automation lanes remain visible on either page.
     m_rollStack = new QStackedWidget(this);
@@ -5009,9 +5446,9 @@ SongView::SongView(QWidget *parent)
     m_events = new EventListView(this);
     m_rollStack->addWidget(m_events);
     mid->addWidget(m_rollStack, 1);
-    m_splitter->addWidget(rollPane);
 
-    m_lanesScroll = new QScrollArea(this);
+    m_lanesScroll = new QScrollArea(overlay);
+    m_lanesScroll->setObjectName(QStringLiteral("automationDrawer"));
     m_lanesScroll->setMinimumHeight(kLaneH + kAddLaneH);
     m_lanesScroll->setFrameShape(QFrame::NoFrame);
     m_lanesScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -5022,10 +5459,28 @@ SongView::SongView(QWidget *parent)
     themes::registerGridLineRepaintTarget(*m_ruler);
     themes::registerGridLineRepaintTarget(*m_roll);
     themes::registerGridLineRepaintTarget(*m_lanes);
-    m_splitter->addWidget(m_lanesScroll);
-    m_splitter->setStretchFactor(0, 1);
-    m_splitter->setStretchFactor(1, 0);
-    vbox->addWidget(m_splitter, 1);
+
+    auto *drawerHandle = new AutomationDrawerHandle(overlay);
+    drawerHandle->setObjectName(QStringLiteral("automationDrawerHandle"));
+    m_automationDrawerHandle = drawerHandle;
+    drawerHandle->dragged = [this](int delta) {
+        if (!automationDrawerVisible())
+            return;
+        m_automationDrawerHeight -= delta;
+        layoutAutomationDrawer();
+    };
+    overlay->resized = [this] { layoutAutomationDrawer(); };
+    m_lanesScroll->raise();
+    drawerHandle->raise();
+    m_automationDrawerTab->raise();
+    vbox->addWidget(overlay, 1);
+
+    connect(m_automationDrawerAction, &QAction::triggered, this,
+            [this](bool visible) {
+                setAutomationDrawerVisible(visible);
+                announce(visible ? tr("Automation lanes shown")
+                                 : tr("Automation lanes hidden"));
+            });
 
     m_strip = new OtherStrip(this);
     vbox->addWidget(m_strip);
@@ -5062,6 +5517,7 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_voicegroup = voicegroup;
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
     m_emptyLanes.clear();
+    m_hiddenLanes.clear();
     m_selection.clear();
     m_timeSel = TimeSelection();
     m_clip = Clip();
@@ -5081,6 +5537,7 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_gridFeel = GridFeel::Straight;
     m_gridMinDenom = 0;
     m_ruler->syncGridControls();
+    setAutomationDrawerVisible(true);
 
     m_selectedTrack = 0;
     if (timeline) {
@@ -5157,11 +5614,14 @@ void SongView::updateSong(const MidiTimeline *timeline)
 void SongView::setDocument(SongDocument *document)
 {
     if (m_document != document) {
-        if (m_document)
-            disconnect(m_document, &SongDocument::trackMoved, this, nullptr);
-        if (document)
-            connect(document, &SongDocument::trackMoved, this,
-                    &SongView::onTrackMoved);
+        if (m_document) {
+            disconnect(m_document, &SongDocument::engineTracksRemapped,
+                       this, nullptr);
+        }
+        if (document) {
+            connect(document, &SongDocument::engineTracksRemapped, this,
+                    &SongView::onEngineTracksRemapped);
+        }
     }
     m_document = document;
     m_selection.clear();
@@ -5197,6 +5657,92 @@ void SongView::focusContent()
         m_roll->setFocus();
 }
 
+bool SongView::automationDrawerVisible() const
+{
+    return m_lanesScroll && !m_lanesScroll->isHidden();
+}
+
+void SongView::setAutomationDrawerVisible(bool visible)
+{
+    if (!m_lanesScroll)
+        return;
+    const bool wasVisible = automationDrawerVisible();
+    if (wasVisible == visible) {
+        if (m_automationDrawerAction)
+            m_automationDrawerAction->setChecked(visible);
+        return;
+    }
+
+    const QWidget *focused = QApplication::focusWidget();
+    const bool restoreContentFocus =
+        !visible && focused
+        && (focused == m_lanes || m_lanesScroll->isAncestorOf(focused));
+    const bool freezeUpdates = updatesEnabled();
+    if (freezeUpdates)
+        setUpdatesEnabled(false);
+    if (m_automationDrawerAction)
+        m_automationDrawerAction->setChecked(visible);
+    if (!visible) {
+        m_lanes->clearHoverFeedback();
+        m_lanesScroll->hide();
+    } else {
+        m_lanesScroll->show();
+    }
+
+    // This only repositions overlay children. The roll and track headers keep
+    // their full geometry, avoiding both layout movement and the close flicker.
+    layoutAutomationDrawer();
+    updateScrollbars();
+    if (m_playheadOverlay)
+        syncPlayheadOverlay();
+    if (freezeUpdates) {
+        setUpdatesEnabled(true);
+        update();
+    }
+    if (restoreContentFocus)
+        focusContent();
+}
+
+void SongView::layoutAutomationDrawer()
+{
+    if (!m_automationOverlay || !m_lanesScroll || !m_automationDrawerTab
+        || !m_automationDrawerHandle)
+        return;
+
+    const int hostW = m_automationOverlay->width();
+    const int hostH = m_automationOverlay->height();
+    const int tabH = std::max(1, m_automationDrawerTab->sizeHint().height());
+    if (hostW <= 0 || hostH <= 0) {
+        m_automationDrawerHandle->hide();
+        return;
+    }
+
+    const int minDrawerH = std::min(kLaneH + kAddLaneH, hostH);
+    const int maxDrawerH =
+        std::max(minDrawerH, hostH - std::min(120, hostH));
+    m_automationDrawerHeight =
+        std::clamp(m_automationDrawerHeight, minDrawerH, maxDrawerH);
+
+    if (automationDrawerVisible()) {
+        const int drawerTop = hostH - m_automationDrawerHeight;
+        m_lanesScroll->setGeometry(
+            0, drawerTop, hostW, m_automationDrawerHeight);
+        m_automationDrawerHandle->setGeometry(
+            kHeaderW, std::max(0, drawerTop - kAutomationHandleH / 2),
+            std::max(0, hostW - kHeaderW), kAutomationHandleH);
+        m_automationDrawerTab->setGeometry(
+            0, std::max(0, drawerTop - tabH), kHeaderW, tabH);
+        m_automationDrawerHandle->show();
+        m_lanesScroll->raise();
+        m_automationDrawerHandle->raise();
+    } else {
+        m_automationDrawerHandle->hide();
+        m_automationDrawerTab->setGeometry(
+            0, std::max(0, hostH - tabH), kHeaderW, tabH);
+    }
+    m_automationDrawerTab->raise();
+}
+
 void SongView::addEmptyLane(int track, uint8_t cc)
 {
     if (track < 0 || track > 15 || !m_timeline)
@@ -5220,6 +5766,38 @@ void SongView::removeEmptyLane(int track, uint8_t cc)
         }
     }
     m_lanes->rebuildRows();
+}
+void SongView::hideLane(int track, uint8_t cc)
+{
+    if (track < 0 || track > 15 || !m_timeline)
+        return;
+    const std::pair<int, uint8_t> laneIdentity(track, cc);
+    if (laneHidden(track, cc) || !m_model.findLane(track, cc))
+        return;
+    m_hiddenLanes.push_back(laneIdentity);
+    m_lanes->rebuildRows();
+}
+
+void SongView::showLane(int track, uint8_t cc)
+{
+    const std::pair<int, uint8_t> laneIdentity(track, cc);
+    const auto remainingEnd =
+        std::remove(m_hiddenLanes.begin(), m_hiddenLanes.end(), laneIdentity);
+    if (remainingEnd == m_hiddenLanes.end())
+        return;
+    m_hiddenLanes.erase(remainingEnd, m_hiddenLanes.end());
+    if (!m_model.findLane(track, cc)) {
+        addEmptyLane(track, cc);
+        return;
+    }
+    m_lanes->rebuildRows();
+}
+
+bool SongView::laneHidden(int track, uint8_t cc) const
+{
+    const std::pair<int, uint8_t> laneIdentity(track, cc);
+    return std::find(m_hiddenLanes.begin(), m_hiddenLanes.end(), laneIdentity)
+           != m_hiddenLanes.end();
 }
 
 void SongView::setLaneDisplayRange(int track, uint8_t cc, int maxValue)
@@ -5273,8 +5851,14 @@ SongView::ViewState SongView::viewState() const
     state.laneHeight = m_lanes->laneHeight();
     state.laneHeights = m_lanes->rowHeightOverrides();
     state.laneRanges = m_lanes->rowRangeOverrides();
-    state.splitterSizes = m_splitter->sizes();
+    state.automationDrawerVisible = automationDrawerVisible();
+    const int overlayH =
+        m_automationOverlay ? m_automationOverlay->height() : 0;
+    state.splitterSizes = {
+        std::max(1, overlayH - m_automationDrawerHeight),
+        std::max(1, m_automationDrawerHeight)};
     state.emptyLanes = m_emptyLanes;
+    state.hiddenLanes = m_hiddenLanes;
     state.gridMinDenom = m_gridMinDenom;
     state.gridTriplet = m_gridFeel == GridFeel::Triplet;
     state.eventList = eventListVisible();
@@ -5297,17 +5881,22 @@ void SongView::applyViewState(const ViewState &state)
                    == m_emptyLanes.end())
             m_emptyLanes.push_back(lane);
     mergeEmptyLanes();
+    m_hiddenLanes.clear();
+    for (const std::pair<int, uint8_t> &hiddenLane : state.hiddenLanes)
+        if (hiddenLane.first >= 0 && hiddenLane.first < 16
+            && (hiddenLane.second <= 0x7F || hiddenLane.second == LANE_CC_BEND)
+            && !laneHidden(hiddenLane.first, hiddenLane.second))
+            m_hiddenLanes.push_back(hiddenLane);
     m_lanes->setViewHeights(state.laneHeight, state.laneHeights);
     m_lanes->setRowRanges(state.laneRanges);
     if (state.selectedTrack >= 0 && state.selectedTrack < 16
         && m_timeline->tracks[state.selectedTrack].used)
         selectTrack(state.selectedTrack);
     if (state.splitterSizes.size() == 2 && state.splitterSizes[0] > 0
-        && state.splitterSizes[1] > 0) {
-        // Real sizes exist; skip resizeEvent's default split.
-        m_splitInit = true;
-        m_splitter->setSizes(state.splitterSizes);
-    }
+        && state.splitterSizes[1] > 0)
+        m_automationDrawerHeight = state.splitterSizes[1];
+    setAutomationDrawerVisible(state.automationDrawerVisible);
+    layoutAutomationDrawer();
     m_lanes->rebuildRows();
     updateScrollbars();
     setHScroll(std::max(0.0, state.scrollPx));
@@ -5329,6 +5918,7 @@ void SongView::setGridFeel(GridFeel feel)
         return;
     m_gridFeel = feel;
     m_ruler->syncGridControls();
+    m_lanes->clearHoverFeedback();
     refreshTimelineViews();
 }
 
@@ -5340,6 +5930,7 @@ void SongView::setGridMinDenom(int denom)
         return;
     m_gridMinDenom = denom;
     m_ruler->syncGridControls();
+    m_lanes->clearHoverFeedback();
     refreshTimelineViews();
 }
 
@@ -5880,6 +6471,17 @@ int SongView::transposeStepFor(const QKeyEvent *event) const
 
 bool SongView::handleEditKey(QKeyEvent *event)
 {
+    // QAction normally consumes this first. Keeping the exact-key fallback
+    // here also covers synthesized/direct child events used by the editor
+    // harnesses; modified A still reaches its normal command (for example,
+    // Ctrl+A in the piano roll).
+    if (event->key() == Qt::Key_A
+        && event->modifiers() == Qt::NoModifier) {
+        if (!event->isAutoRepeat())
+            m_automationDrawerAction->trigger();
+        event->accept();
+        return true;
+    }
     if (!m_document)
         return false;
     const auto &keys = keymap::Registry::instance();
@@ -6343,36 +6945,8 @@ void SongView::deleteTrack(int track)
 {
     if (!m_document || track < 0 || track > 15 || m_document->smfTrackFor(track) < 0)
         return;
-    // Removing a chunk shifts every higher engine slot down by one; move
-    // the per-track view state with it, before the document edit rebuilds
-    // the headers and lanes.
-    const uint32_t low = (1u << track) - 1;
-    const uint32_t mute = (m_muteMask & low) | ((m_muteMask >> 1) & ~low);
-    const uint32_t solo = (m_soloMask & low) | ((m_soloMask >> 1) & ~low);
-    if (mute != m_muteMask) {
-        m_muteMask = mute;
-        emit muteMaskChanged(mute);
-    }
-    if (solo != m_soloMask) {
-        m_soloMask = solo;
-        emit soloMaskChanged(solo);
-    }
-    for (auto it = m_emptyLanes.begin(); it != m_emptyLanes.end();) {
-        if (it->first == track) {
-            it = m_emptyLanes.erase(it);
-        } else {
-            if (it->first > track)
-                it->first--;
-            ++it;
-        }
-    }
-    if (m_selectedTrack > track)
-        m_selectedTrack--;
-    // Track slots shift; collapse the multi-track scope and drop the time
-    // selection rather than remap them.
-    m_trackSelMask = 1u << m_selectedTrack;
-    clearTimeSelection();
-    m_document->deleteTrack(track); // rebuilds via documentChanged
+    // The post-mutation remap runs before documentChanged rebuilds the views.
+    m_document->deleteTrack(track);
     announce(tr("Deleted track %1").arg(track + 1));
 }
 
@@ -6380,52 +6954,96 @@ void SongView::moveTrack(int from, int to)
 {
     if (!m_document)
         return;
-    // The document decides validity; the per-track view state follows in
-    // onTrackMoved, which the reorder op signals through — undo and redo
-    // replay the same permutation, so the masks stay on their tracks.
+    // The document decides validity. Its post-mutation engine-slot map
+    // carries all surviving per-track view state on apply, undo, and redo.
     if (m_document->moveTrack(from, to)) // rebuilds via documentChanged
         announce(tr("Moved track %1 to slot %2").arg(from + 1).arg(to + 1));
 }
 
-void SongView::onTrackMoved(int, int, const QVector<int> &map)
+void SongView::onEngineTracksRemapped(
+    const QVector<int> &newEngineSlotByOldSlot)
 {
-    // A reorder op is applying or reverting (interactive move, undo, or
-    // redo — the document emits each direction with the inverse map): rotate
-    // the per-track view state along with the renumbered engine slots
-    // (deleteTrack's shift, generalized). The note selection needs nothing:
-    // it is (tick, key) on the selected track, and the selected track's
-    // number moves with its notes. The document is mid-mutation: remap
-    // state only, don't read it back.
-    if (map.size() < 16)
-        return;
-    const auto newIndex = [&map](int t) {
-        return t >= 0 && t < 16 ? map[t] : t;
-    };
-    const auto permuteMask = [&newIndex](uint32_t mask) {
-        uint32_t out = 0;
-        for (int t = 0; t < 16; t++) {
-            if (mask & (1u << t))
-                out |= 1u << newIndex(t);
+    // This signal arrives after SongDocument has rebuilt its engine-track
+    // mapping but before documentChanged rebuilds the views. Remap state
+    // only: newly introduced slots have no old owner and therefore keep
+    // defaults.
+    const int newEngineSlotCount =
+        m_document
+            ? std::clamp(m_document->engineTrackCount(), 0, 16)
+            : 0;
+    const auto newEngineSlotForOldSlot =
+        [&newEngineSlotByOldSlot, newEngineSlotCount](int oldEngineSlot) {
+            if (oldEngineSlot < 0
+                || oldEngineSlot >= newEngineSlotByOldSlot.size())
+                return -1;
+            const int newEngineSlot =
+                newEngineSlotByOldSlot[oldEngineSlot];
+            return newEngineSlot >= 0 && newEngineSlot < newEngineSlotCount
+                ? newEngineSlot : -1;
+        };
+
+    const auto remapTrackMask = [&newEngineSlotForOldSlot](uint32_t trackMask) {
+        uint32_t remappedTrackMask = 0;
+        for (int oldEngineSlot = 0; oldEngineSlot < 16; ++oldEngineSlot) {
+            if (!(trackMask & (uint32_t{1} << oldEngineSlot)))
+                continue;
+            const int newEngineSlot =
+                newEngineSlotForOldSlot(oldEngineSlot);
+            if (newEngineSlot >= 0)
+                remappedTrackMask |= uint32_t{1} << newEngineSlot;
         }
-        return out;
+        return remappedTrackMask;
     };
-    const uint32_t mute = permuteMask(m_muteMask);
-    const uint32_t solo = permuteMask(m_soloMask);
-    if (mute != m_muteMask) {
-        m_muteMask = mute;
-        emit muteMaskChanged(mute);
+    const uint32_t newMuteMask = remapTrackMask(m_muteMask);
+    const uint32_t newSoloMask = remapTrackMask(m_soloMask);
+    if (newMuteMask != m_muteMask) {
+        m_muteMask = newMuteMask;
+        emit muteMaskChanged(newMuteMask);
     }
-    if (solo != m_soloMask) {
-        m_soloMask = solo;
-        emit soloMaskChanged(solo);
+    if (newSoloMask != m_soloMask) {
+        m_soloMask = newSoloMask;
+        emit soloMaskChanged(newSoloMask);
     }
-    for (auto &lane : m_emptyLanes)
-        lane.first = newIndex(lane.first);
-    m_selectedTrack = newIndex(m_selectedTrack);
-    // The multi-track scope and time selection are track-addressed;
-    // collapse them like deleteTrack does rather than remap.
-    m_trackSelMask = 1u << m_selectedTrack;
-    clearTimeSelection();
+
+    const auto remapLaneOwners =
+        [&newEngineSlotForOldSlot](auto &laneIdentities) {
+            for (auto laneIdentity = laneIdentities.begin();
+                 laneIdentity != laneIdentities.end();) {
+                const int newEngineSlot =
+                    newEngineSlotForOldSlot(laneIdentity->first);
+                if (newEngineSlot < 0) {
+                    laneIdentity = laneIdentities.erase(laneIdentity);
+                } else {
+                    laneIdentity->first = newEngineSlot;
+                    ++laneIdentity;
+                }
+            }
+        };
+    remapLaneOwners(m_emptyLanes);
+    remapLaneOwners(m_hiddenLanes);
+    m_lanes->remapTrackRowState(newEngineSlotByOldSlot);
+
+    const int oldSelectedEngineSlot = m_selectedTrack;
+    const int newSelectedEngineSlot =
+        newEngineSlotForOldSlot(oldSelectedEngineSlot);
+    if (newSelectedEngineSlot >= 0) {
+        m_selectedTrack = newSelectedEngineSlot;
+    } else {
+        // Keep the same numbered slot when another owner now occupies it;
+        // when deletion removed the tail, fall back to the new last slot.
+        m_selection.clear();
+        m_selectedTrack = newEngineSlotCount > 0
+            ? std::min(std::max(oldSelectedEngineSlot, 0),
+                       newEngineSlotCount - 1)
+            : 0;
+    }
+
+    // Multi-track/time selection is address-based rather than owner-based.
+    // Collapse it without repainting; documentChanged refreshes the views.
+    m_trackSelMask = newEngineSlotCount > 0
+        ? uint32_t{1} << m_selectedTrack
+        : 0;
+    m_timeSel = TimeSelection();
 }
 
 void SongView::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
@@ -6490,6 +7108,7 @@ void SongView::zoomAroundContentX(double factor, qreal anchorContentX)
                                m_pxPerTick),
                            0.0, maxHScroll());
     updateScrollbars();
+    m_lanes->clearHoverFeedback();
     refreshTimelineViews();
 }
 
@@ -6538,8 +7157,10 @@ void SongView::setHScroll(double px)
         m_hbar->setValue(scrollbarValue);
     m_hbar->blockSignals(false);
     }
-    if (cameraChanged)
-    refreshTimelineViews();
+    if (cameraChanged) {
+        m_lanes->clearHoverFeedback();
+        refreshTimelineViews();
+    }
 }
 
 void SongView::ensureTickVisible(uint64_t tick)
@@ -6620,6 +7241,7 @@ void SongView::setVScroll(double y)
 
 void SongView::updateScrollbars()
 {
+
     m_hbar->blockSignals(true);
     m_hbar->setRange(0, scrollUnits(maxHScroll()));
     m_hbar->setPageStep(scrollUnits(double(viewportWidth())));
@@ -6645,13 +7267,7 @@ void SongView::refreshTimelineViews()
 void SongView::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
-    // The splitter starts with the lanes area at its classic fixed height;
-    // sizes can only be applied once real geometry exists.
-    if (!m_splitInit && m_splitter->height() > 0) {
-        m_splitInit = true;
-        m_splitter->setSizes(
-            {std::max(120, m_splitter->height() - kLanesAreaH), kLanesAreaH});
-    }
+    layoutAutomationDrawer();
     updateScrollbars();
     syncPlayheadOverlay();
 }

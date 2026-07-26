@@ -137,7 +137,7 @@ QString tabStyleSheet(const Theme &theme) {
 }
 
 QString buttonStyleSheet(const Theme &theme) {
-  return QStringLiteral(
+  const QString buttons = QStringLiteral(
              "QPushButton,QToolButton{background-color:%1;color:%2;"
              "border-color:%3;}"
              "QPushButton:hover,QToolButton:hover{background-color:%4;"
@@ -157,6 +157,13 @@ QString buttonStyleSheet(const Theme &theme) {
       .arg(colorName(theme, Role::button_pressed_background))
       .arg(colorName(theme, Role::button_pressed_text))
       .arg(colorName(theme, Role::disabled_text));
+  return buttons
+      + QStringLiteral(
+            "QToolButton#automationDrawerTab:checked{"
+            "background-color:%1;color:%2;border-color:%3;}")
+            .arg(colorName(theme, Role::item_selected_background))
+            .arg(colorName(theme, Role::item_selected_text))
+            .arg(colorName(theme, Role::button_outline));
 }
 
 QString trackControlStyleSheet(const Theme &theme) {

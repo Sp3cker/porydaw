@@ -178,9 +178,20 @@ void checkEventListRendering(SongView &view,
     const qreal playheadX = marker.mapTo(&view, QPoint()).x() + stoppedMarkerCenter;
     view.setEventListVisible(true);
     processPaints();
-    const QRect eventListArea =
+    QRect eventListArea =
         QRect(events->mapTo(&view, QPoint()), events->size())
             .intersected(view.rect());
+    // The automation drawer is an overlay on the lower part of the roll
+    // stack, including when the event list page is active. Its playhead line
+    // is valid; restrict the event-list assertion to the uncovered portion.
+    if (auto *drawer =
+            view.findChild<QWidget *>(QStringLiteral("automationDrawer"));
+        drawer && drawer->isVisible()) {
+        const QRect drawerArea(
+            drawer->mapTo(&view, QPoint()), drawer->size());
+        if (drawerArea.intersects(eventListArea))
+            eventListArea.setBottom(drawerArea.top() - 1);
+    }
     const QPixmap composedPixmap = view.grab();
     const QImage composedImage = composedPixmap.toImage();
     const qreal composedDpr = composedPixmap.devicePixelRatio();

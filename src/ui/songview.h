@@ -20,12 +20,13 @@ extern "C" {
 }
 
 class EventListView;
+class QAction;
 class QKeyEvent;
 class QScrollArea;
 class QScrollBar;
-class QSplitter;
 class QStackedWidget;
 class QWheelEvent;
+class QToolButton;
 class SongDocument;
 
 namespace songview {
@@ -134,8 +135,10 @@ public:
         QHash<QString, int> laneHeights; // per-row overrides (AutomationArea keys)
         QHash<QString, int> laneRanges;  // per-lane display max (AutomationArea
                                          // keys); 0 = auto-fit to the data
-        QList<int> splitterSizes; // roll pane, lanes pane
+        QList<int> splitterSizes; // legacy roll/drawer sizes; [1] is drawer height
+        bool automationDrawerVisible = true;
         std::vector<std::pair<int, uint8_t>> emptyLanes; // (track, cc)
+        std::vector<std::pair<int, uint8_t>> hiddenLanes; // (track, cc)
         int gridMinDenom = 0;     // drawn-grid floor as a note denominator
                                   // (4/8/16/32); 0 = down to the clock grid
         bool gridTriplet = false; // triplet vs straight beat subdivisions
@@ -152,6 +155,21 @@ public:
     // swapped; once the lane gets its first point the model carries it.
     void addEmptyLane(int track, uint8_t cc);
     void removeEmptyLane(int track, uint8_t cc);
+
+    // Automation lanes hidden without changing their events. Visibility is
+    // per-song view state and follows tracks when they are renumbered.
+    void hideLane(int track, uint8_t cc);
+    void showLane(int track, uint8_t cc);
+    bool laneHidden(int track, uint8_t cc) const;
+    const std::vector<std::pair<int, uint8_t>> &hiddenLanes() const
+    {
+        return m_hiddenLanes;
+    }
+
+    // Whole automation drawer. The persistent bottom-left tab and the
+    // unmodified A shortcut both toggle this cosmetic, per-song state.
+    void setAutomationDrawerVisible(bool visible);
+    bool automationDrawerVisible() const;
 
     // Display max for a CC lane's value axis (0 = auto-fit): the lane
     // menu's "Value range" choice, exposed for the harnesses. View state
@@ -245,13 +263,11 @@ public:
 
     // Track create/duplicate/delete (header-panel entry points; all undoable
     // through the document). addTrack picks the new track's voice first, then
-    // selects the created track; duplicateTrack selects the copy (a fresh
-    // slot, so no per-track view state moves); deleteTrack shifts the view's
-    // per-track state (mute/solo, empty lanes, selection) over the removed
-    // engine slot; moveTrack (header-row drag; the track's chunk moves —
-    // AGB track order is chunk order) rotates that state along with the
-    // reordered engine slots — in onTrackMoved, off the document's
-    // trackMoved signal, so undo/redo rotate it back too.
+    // selects the created track; duplicateTrack selects the copy. The
+    // document's post-mutation old-slot-to-new-slot map carries mute/solo,
+    // lane, and selection state with every surviving engine track across all
+    // edits, undo, and redo. moveTrack is the header-row drag entry point; its
+    // chunk moves because AGB track order is SMF chunk order.
     void addTrack();
     void duplicateTrack(int track);
     void deleteTrack(int track);
@@ -506,9 +522,10 @@ protected:
 
 private:
     uint64_t gridTicksIn(const GridSeg &seg, bool snap = false) const;
-    // Document trackMoved handler: rotates the per-track view state with the
-    // renumbered engine slots on apply, undo, and redo alike.
-    void onTrackMoved(int fromChunk, int toChunk, const QVector<int> &map);
+    // Unified post-mutation engine-slot handler. The document has already
+    // rebuilt its map; newEngineSlotByOldSlot[oldSlot] is the current slot,
+    // or -1 when the old owner disappeared. documentChanged refreshes views.
+    void onEngineTracksRemapped(const QVector<int> &newEngineSlotByOldSlot);
     // A mouse gesture is live in the ruler, roll, or lanes (pan, drag,
     // sweep); playhead follow-scroll pauses while one runs.
     bool userGestureActive() const;
@@ -519,6 +536,7 @@ private:
     void setVScroll(double y);
     double maxRollScroll() const;
     void updateScrollbars();
+    void layoutAutomationDrawer();
     void rebuildAfterSongChange();
     void mergeEmptyLanes();
     // Engine tracks a track-scoped time selection resolves to (used and
@@ -549,6 +567,7 @@ private:
     GridFeel m_gridFeel = GridFeel::Straight;
     int m_gridMinDenom = 0; // note denominator; 0 = clock-grid floor
     std::vector<std::pair<int, uint8_t>> m_emptyLanes; // (track, cc), unsorted
+    std::vector<std::pair<int, uint8_t>> m_hiddenLanes; // (track, cc), unsorted
 
     songview::TimeRuler *m_ruler = nullptr;
     songview::TrackHeaderPanel *m_headers = nullptr;
@@ -556,9 +575,12 @@ private:
     QStackedWidget *m_rollStack = nullptr; // page 0: roll (+vbar), page 1: event list
     EventListView *m_events = nullptr;
     songview::AutomationArea *m_lanes = nullptr;
+    QWidget *m_automationOverlay = nullptr;
     QScrollArea *m_lanesScroll = nullptr;
-    QSplitter *m_splitter = nullptr; // roll above, lanes area below
-    bool m_splitInit = false;        // initial sizes applied on first layout
+    QWidget *m_automationDrawerHandle = nullptr;
+    QAction *m_automationDrawerAction = nullptr;
+    QToolButton *m_automationDrawerTab = nullptr;
+    int m_automationDrawerHeight = 0;
     songview::OtherStrip *m_strip = nullptr;
     songview::PlayheadOverlay *m_playheadOverlay = nullptr;
     QScrollBar *m_hbar = nullptr;

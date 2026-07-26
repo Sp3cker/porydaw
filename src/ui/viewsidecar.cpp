@@ -42,6 +42,8 @@ bool load(const QString &projectRoot, const QString &songLabel,
     loaded.gridMinDenom = obj.value(QLatin1String("gridMinDenom")).toInt(0);
     loaded.gridTriplet = obj.value(QLatin1String("gridTriplet")).toBool(false);
     loaded.eventList = obj.value(QLatin1String("eventList")).toBool(false);
+    loaded.automationDrawerVisible =
+        obj.value(QLatin1String("automationDrawerVisible")).toBool(true);
     const QJsonObject lanes = obj.value(QLatin1String("laneHeights")).toObject();
     for (auto it = lanes.begin(); it != lanes.end(); ++it)
         loaded.laneHeights.insert(it.key(), it.value().toInt());
@@ -55,6 +57,15 @@ bool load(const QString &projectRoot, const QString &songLabel,
         loaded.emptyLanes.push_back(
             {lane.value(QLatin1String("track")).toInt(-1),
              uint8_t(lane.value(QLatin1String("cc")).toInt(0))});
+    }
+    for (const QJsonValue &laneValue :
+         obj.value(QLatin1String("hiddenLanes")).toArray()) {
+        const QJsonObject lane = laneValue.toObject();
+        const int laneTrack = lane.value(QLatin1String("track")).toInt(-1);
+        const int laneCc = lane.value(QLatin1String("cc")).toInt(-1);
+        if (laneTrack >= 0 && laneTrack < 16
+            && ((laneCc >= 0 && laneCc <= 0x7F) || laneCc == LANE_CC_BEND))
+            loaded.hiddenLanes.push_back({laneTrack, uint8_t(laneCc)});
     }
     *state = loaded;
     return true;
@@ -87,6 +98,8 @@ bool save(const QString &projectRoot, const QString &songLabel,
     obj.insert(QLatin1String("gridMinDenom"), state.gridMinDenom);
     obj.insert(QLatin1String("gridTriplet"), state.gridTriplet);
     obj.insert(QLatin1String("eventList"), state.eventList);
+    obj.insert(QLatin1String("automationDrawerVisible"),
+               state.automationDrawerVisible);
     if (!state.laneHeights.isEmpty()) {
         QJsonObject lanes;
         for (auto it = state.laneHeights.begin(); it != state.laneHeights.end(); ++it)
@@ -112,6 +125,16 @@ bool save(const QString &projectRoot, const QString &songLabel,
             lanes.append(entry);
         }
         obj.insert(QLatin1String("emptyLanes"), lanes);
+    }
+    if (!state.hiddenLanes.empty()) {
+        QJsonArray hiddenLanes;
+        for (const std::pair<int, uint8_t> &hiddenLane : state.hiddenLanes) {
+            QJsonObject entry;
+            entry.insert(QLatin1String("track"), hiddenLane.first);
+            entry.insert(QLatin1String("cc"), int(hiddenLane.second));
+            hiddenLanes.append(entry);
+        }
+        obj.insert(QLatin1String("hiddenLanes"), hiddenLanes);
     }
     root.insert(QLatin1String("view"), obj);
 

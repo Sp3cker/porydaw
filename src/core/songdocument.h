@@ -5,6 +5,7 @@
 #include <QUndoStack>
 #include <QVector>
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -288,15 +289,17 @@ public:
 signals:
     // Emitted after every mutation, undo, and redo.
     void documentChanged();
-    // Emitted while a track-reorder MoveTrack op applies or reverts, before
-    // the documentChanged that follows. fromChunk/toChunk are the chunk
-    // endpoints. engineMap has 16 entries: engineMap[t] is where the track
-    // at engine slot t (pre-move numbering) lands — a contiguous rotation
-    // between the endpoints, identity elsewhere. Undo emits the inverse, so
-    // receivers holding per-track or per-chunk state remap it here and stay
-    // right across undo/redo. The document is mid-mutation when this fires:
-    // remap state only, don't read back.
-    void trackMoved(int fromChunk, int toChunk, QVector<int> engineMap);
+    // Emitted after an undoable SMF mutation has rebuilt the engine-track map
+    // and before documentChanged(), only when engine-track count or track
+    // identity/order changed. newEngineSlotByOldSlot always has 16 entries:
+    // entry oldSlot maps that pre-mutation slot to its post-mutation slot;
+    // -1 means the old owner disappeared. Newly introduced slots have no old
+    // entry and receive default view state.
+    void engineTracksRemapped(QVector<int> newEngineSlotByOldSlot);
+    // Emitted immediately before a MoveTrack chunk movement applies or
+    // reverts, solely so EventListView can preserve its anchored SMF chunk.
+    // fromChunk and toChunk are that movement's chunk endpoints.
+    void trackMoved(int fromChunk, int toChunk);
 
 private:
     friend class SongEditCommand;
@@ -324,6 +327,9 @@ private:
 
     void applyOps(std::vector<EditOp> &ops);
     void revertOps(std::vector<EditOp> &ops);
+    void emitEngineTrackRemapIfChanged(
+        const std::array<int, 16> &currentSmfChunkIndexByOldEngineSlot,
+        int oldEngineSlotCount);
     void pushEdit(const QString &text, std::vector<EditOp> ops);
     void rebuildTrackMap();
     int engineTrackForChunk(int chunk) const; // -1 = no engine slot
