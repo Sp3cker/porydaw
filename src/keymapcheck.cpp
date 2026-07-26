@@ -7,6 +7,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSettings>
+#include <QScrollBar>
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <cstdio>
@@ -336,6 +337,8 @@ int runKeymapCheck()
         // Steal: give Save Song's Ctrl+S to the roll copy command.
         tree->setCurrentItem(findCommandItem(tree, QStringLiteral("roll.copy")));
         capture->setKeySequence(QKeySequence(QStringLiteral("Ctrl+S")));
+        const int scrollBeforeAssign = tree->verticalScrollBar()->maximum() / 2;
+        tree->verticalScrollBar()->setValue(scrollBeforeAssign);
         assignButton->click();
         check(registry.bindings(QStringLiteral("roll.copy"))
                   == QList<QKeySequence>{QKeySequence(QStringLiteral("Ctrl+S"))},
@@ -343,6 +346,8 @@ int runKeymapCheck()
         check(registry.isOverridden(QStringLiteral("file.save_song"))
                   && registry.bindings(QStringLiteral("file.save_song")).isEmpty(),
               "conflicting command was not unbound by the steal");
+        check(tree->verticalScrollBar()->value() == scrollBeforeAssign,
+              "dialog assign did not preserve the list scroll position");
 
         QTreeWidgetItem *copyItem =
             findCommandItem(tree, QStringLiteral("roll.copy"));

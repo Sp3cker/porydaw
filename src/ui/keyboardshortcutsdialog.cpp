@@ -9,6 +9,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
@@ -164,6 +165,7 @@ QString KeyboardShortcutsDialog::currentCommandId() const
 void KeyboardShortcutsDialog::rebuildTree()
 {
     const QString selected = currentCommandId();
+    const int scrollPosition = m_tree->verticalScrollBar()->value();
     m_tree->clear();
     auto &registry = keymap::Registry::instance();
     QTreeWidgetItem *categoryItem = nullptr;
@@ -197,6 +199,7 @@ void KeyboardShortcutsDialog::rebuildTree()
         m_tree->setCurrentItem(toReselect);
     else
         currentRowChanged();
+    m_tree->verticalScrollBar()->setValue(scrollPosition);
 }
 
 void KeyboardShortcutsDialog::applyFilter()
