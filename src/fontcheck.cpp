@@ -65,29 +65,36 @@ int runFontCheck(int expectedBaseFontPx) {
   const auto body = QApplication::font();
   const auto bodyInfo = QFontInfo(body);
   const auto expectedBodySize = qMax(1, qRound(*baseFontPx * 1.25));
+  check(body.hintingPreference() == QFont::PreferFullHinting,
+        "Body does not prefer fully hinted glyph outlines");
   check(bodyInfo.family() == QStringLiteral("Atkinson Hyperlegible Next") &&
             bodyInfo.pixelSize() == expectedBodySize &&
             bodyInfo.weight() == QFont::Normal,
         "Body has the wrong face, size, or weight");
-  const auto monoInfo = QFontInfo(typography::bodyMono(body));
+  const auto mono = typography::bodyMono(body);
+  const auto monoInfo = QFontInfo(mono);
+  check(mono.hintingPreference() == QFont::PreferFullHinting,
+        "Body Mono does not prefer fully hinted glyph outlines");
   check(monoInfo.family() == QStringLiteral("Atkinson Hyperlegible Mono") &&
             monoInfo.pixelSize() == expectedBodySize &&
             monoInfo.weight() == QFont::Normal,
         "Body Mono has the wrong face, size, or weight");
   const auto caption = typography::caption(body);
   const auto captionInfo = QFontInfo(caption);
+  check(caption.hintingPreference() == QFont::PreferFullHinting,
+        "Caption does not prefer fully hinted glyph outlines");
   check(captionInfo.family() == QStringLiteral("Atkinson Hyperlegible Next") &&
             captionInfo.pixelSize() == *baseFontPx &&
             captionInfo.weight() == QFont::Normal,
         "Caption has the wrong face, size, or weight");
   const auto bodyBoldInfo = QFontInfo(typography::bold(body));
   check(bodyBoldInfo.pixelSize() == bodyInfo.pixelSize() &&
-            bodyBoldInfo.weight() > bodyInfo.weight(),
-        "Body Bold changed size or failed to increase weight");
+            bodyBoldInfo.weight() == QFont::DemiBold,
+        "Body Bold changed size or failed to resolve to the emphasis face");
   const auto captionBoldInfo = QFontInfo(typography::bold(caption));
   check(captionBoldInfo.pixelSize() == captionInfo.pixelSize() &&
-            captionBoldInfo.weight() > captionInfo.weight(),
-        "Caption Bold changed size or failed to increase weight");
+            captionBoldInfo.weight() == QFont::DemiBold,
+        "Caption Bold changed size or failed to resolve to the emphasis face");
   const auto captionHeight = QFontMetrics(caption).height();
   for (auto height = 0; height <= captionHeight + 4; ++height) {
     const auto fitted = typography::fitted(body, height);

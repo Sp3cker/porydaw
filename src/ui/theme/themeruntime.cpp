@@ -59,8 +59,10 @@ QString colorName(const Theme &theme, Role role) {
 
 QString windowStyleSheet(const Theme &theme) {
   return QStringLiteral(
-             "QMainWindow,QDialog,QDockWidget,QScrollArea,QStackedWidget{"
+             "QMainWindow,QDialog,QWizard,QWizardPage,QDockWidget,QScrollArea,"
+             "QStackedWidget{"
              "background-color:%1;color:%2;}"
+             "QWizard{qproperty-wizardStyle:ClassicStyle;}"
              "QLabel#voicegroupEditorNotice{color:%3;}")
       .arg(colorName(theme, Role::window_background))
       .arg(colorName(theme, Role::window_text))
@@ -180,16 +182,18 @@ QString trackControlStyleSheet(const Theme &theme) {
 QString inputStyleSheet(const Theme &theme) {
   return QStringLiteral(
              "QLineEdit,QTextEdit,QPlainTextEdit{background-color:%1;"
-             "color:%2;border-top-color:%3;border-left-color:%3;"
-             "border-right-color:%4;border-bottom-color:%4;"
-             "selection-background-color:%5;selection-color:%6;}"
+             "color:%2;border-color:%3;"
+             "selection-background-color:%4;selection-color:%5;}"
              "QLineEdit:focus,QTextEdit:focus,QPlainTextEdit:focus{"
-             "border-color:%7;}"
+             "border-color:%6;}"
              "QLineEdit:disabled,QTextEdit:disabled,QPlainTextEdit:disabled{"
-             "color:%8;}")
+             "color:%7;border-color:%3;}"
+             "QLineEdit QToolButton,QLineEdit QToolButton:hover,"
+             "QLineEdit QToolButton:focus,QLineEdit QToolButton:pressed,"
+             "QLineEdit QToolButton:checked,QLineEdit QToolButton:disabled{"
+             "background-color:transparent;border-color:transparent;}")
       .arg(colorName(theme, Role::input_background))
       .arg(colorName(theme, Role::input_text))
-      .arg(colorName(theme, Role::input_highlight_outline))
       .arg(colorName(theme, Role::input_outline))
       .arg(colorName(theme, Role::selection_background))
       .arg(colorName(theme, Role::selection_text))
@@ -318,16 +322,18 @@ QString spinBoxStyleSheet(const Theme &theme) {
   return spinArrowStyleSheet(theme) +
          QStringLiteral(
              "QAbstractSpinBox{background-color:%1;color:%2;"
-             "border-top-color:%3;border-left-color:%3;"
-             "border-right-color:%4;border-bottom-color:%4;}"
-             "QAbstractSpinBox:focus{border-color:%5;}"
-             "QAbstractSpinBox:disabled{color:%6;}"
+             "border-color:%3;}"
+             // The field's own QLineEdit paints on top of it; transparent
+             // keeps the field surface (and disabled tint) showing through.
+             "QAbstractSpinBox QLineEdit{background-color:transparent;}"
+             "QAbstractSpinBox:focus{border-color:%4;}"
+             "QAbstractSpinBox:disabled{color:%5;border-color:%3;}"
              "QAbstractSpinBox::up-button,QAbstractSpinBox::down-button{"
-             "background-color:%7;color:%8;border-color:%4;}"
+             "background-color:%6;color:%7;border-color:%3;}"
              "QAbstractSpinBox::up-button:hover,"
-             "QAbstractSpinBox::down-button:hover{background-color:%9;}"
+             "QAbstractSpinBox::down-button:hover{background-color:%8;}"
              "QAbstractSpinBox::up-button:pressed,"
-             "QAbstractSpinBox::down-button:pressed{background-color:%10;}"
+             "QAbstractSpinBox::down-button:pressed{background-color:%9;}"
              // The button lane sits on the border box, hiding the right run
              // of the widget's own border; without this the focus outline
              // stops dead at the lane. States must FOLLOW the subcontrol:
@@ -335,10 +341,9 @@ QString spinBoxStyleSheet(const Theme &theme) {
              // painting resting borders in accent. Ordered after
              // hover/pressed so focus keeps the accent border through both.
              "QAbstractSpinBox::up-button:focus,"
-             "QAbstractSpinBox::down-button:focus{border-color:%5;}")
+             "QAbstractSpinBox::down-button:focus{border-color:%4;}")
       .arg(colorName(theme, Role::spin_box_background))
       .arg(colorName(theme, Role::spin_box_text))
-      .arg(colorName(theme, Role::input_highlight_outline))
       .arg(colorName(theme, Role::spin_box_outline))
       .arg(colorName(theme, Role::focus_outline))
       .arg(colorName(theme, Role::disabled_text))
@@ -423,10 +428,10 @@ QString menuBarStyleSheet(const Theme &theme) {
       .arg(colorName(theme, Role::menu_bar_background))
       .arg(colorName(theme, Role::menu_bar_text))
       .arg(colorName(theme, Role::menu_bar_outline))
-      .arg(colorName(theme, Role::menu_item_hover_background))
-      .arg(colorName(theme, Role::menu_item_hover_text))
-      .arg(colorName(theme, Role::menu_item_pressed_background))
-      .arg(colorName(theme, Role::menu_item_pressed_text));
+      .arg(colorName(theme, Role::button_hover_background))
+      .arg(colorName(theme, Role::button_hover_text))
+      .arg(colorName(theme, Role::button_pressed_background))
+      .arg(colorName(theme, Role::button_pressed_text));
 }
 
 QString menuStyleSheet(const Theme &theme) {
@@ -443,8 +448,8 @@ QString menuStyleSheet(const Theme &theme) {
       .arg(colorName(theme, Role::menu_background))
       .arg(colorName(theme, Role::menu_text))
       .arg(colorName(theme, Role::menu_outline))
-      .arg(colorName(theme, Role::menu_item_hover_background))
-      .arg(colorName(theme, Role::menu_item_hover_text))
+      .arg(colorName(theme, Role::item_hover_background))
+      .arg(colorName(theme, Role::item_hover_text))
       .arg(colorName(theme, Role::menu_item_pressed_background))
       .arg(colorName(theme, Role::menu_item_pressed_text))
       .arg(colorName(theme, Role::disabled_text))

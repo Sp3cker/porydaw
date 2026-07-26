@@ -1,7 +1,7 @@
 <RCC>
     <qresource prefix="/fonts">
-        <file>AtkinsonHyperlegibleNext-Regular.otf</file>
-        <file>AtkinsonHyperlegibleNext-SemiBold.otf</file>
-        <file>AtkinsonHyperlegibleMono-Regular.otf</file>
+        <file>AtkinsonHyperlegibleNext-Regular.ttf</file>
+        <file>AtkinsonHyperlegibleNext-SemiBold.ttf</file>
+        <file>AtkinsonHyperlegibleMono-Regular.ttf</file>
     </qresource>
 </RCC>

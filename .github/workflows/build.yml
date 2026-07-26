@@ -71,3 +71,9 @@ jobs:
 
       - name: Run harnesses
         run: tools/run_checks.sh build-asan/porydaw "$RUNNER_TEMP/pokeemerald"
+
+      # run_checks.sh covers the main binary's --*check flags only; the theme
+      # and font checks live in a separate ctest binary and were previously
+      # not gated anywhere in CI.
+      - name: Run theme and font checks
+        run: ctest --test-dir build-asan --output-on-failure

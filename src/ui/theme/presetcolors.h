@@ -36,13 +36,13 @@ enum class PresetColor {
   separator,
   /// Resting buttons/tabs and combo-box/spin-box field or arrow-lane surfaces.
   control_background,
-  /// Hovered buttons/tabs/combo fields, indicators, headers, and input
-  /// outlines.
+  /// Hovered buttons/tabs/indicators/headers, and the shared resting surface
+  /// of combo, text, and spin-box fields.
   control_hover_background,
   /// Pressed buttons, menus, headers, checked Mute/Solo controls, and
   /// unterminated-note outlines.
   control_pressed_background,
-  /// Text fields, popup menus, tooltips, and checkbox/radio indicator surfaces.
+  /// Tooltips and checkbox/radio indicator surfaces.
   input_background,
   /// Alternating item rows and disabled checkbox/radio indicator surfaces.
   alternate_background,
@@ -155,19 +155,18 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::outline,
     PresetColor::outline,
 
-    PresetColor::input_background,
+    PresetColor::control_hover_background,
     PresetColor::window_text,
     PresetColor::outline,
-    PresetColor::control_hover_background,
 
     PresetColor::control_hover_background,
     PresetColor::window_text,
     PresetColor::control_background,
     PresetColor::control_hover_background,
-    PresetColor::accent,
+    PresetColor::control_pressed_background,
     PresetColor::outline,
 
-    PresetColor::control_background,
+    PresetColor::control_hover_background,
     PresetColor::window_text,
     PresetColor::outline,
     PresetColor::control_background,
@@ -187,10 +186,10 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::chrome_background,
     PresetColor::window_text,
     PresetColor::outline,
-    PresetColor::input_background,
+    PresetColor::item_background,
     PresetColor::window_text,
     PresetColor::outline,
-    PresetColor::selection_background,
+    PresetColor::item_hover_background,
     PresetColor::window_text,
     PresetColor::control_pressed_background,
     PresetColor::window_text,
@@ -227,7 +226,7 @@ inline constexpr auto rolePresetColors = std::array{
 
     PresetColor::window_background,
     PresetColor::separator,
-    PresetColor::accent,
+    PresetColor::control_pressed_background,
     PresetColor::outline,
 
     PresetColor::control_pressed_background,
@@ -337,7 +336,10 @@ constexpr PresetColors makeDarkNeutralHigh() {
   colors.color(PresetColor::chrome_background) = "#424242";
   colors.color(PresetColor::separator) = "#262626";
   colors.color(PresetColor::control_background) = "#1A1A1A";
-  colors.color(PresetColor::control_hover_background) = "#6C6C6C";
+  // 4.69:1 under the shared window text; the old #6C6C6C held only 3.68:1,
+  // so hovered controls and menu-bar items failed the AA floor themecheck
+  // enforces.
+  colors.color(PresetColor::control_hover_background) = "#5C5C5C";
   colors.color(PresetColor::control_pressed_background) = "#00D3F2";
   colors.color(PresetColor::input_background) = "#252525";
   colors.color(PresetColor::alternate_background) = "#575757";
@@ -375,7 +377,10 @@ constexpr PresetColors makeImmaterial() {
   colors.color(PresetColor::chrome_background) = "#363941";
   colors.color(PresetColor::separator) = "#292A2E";
   colors.color(PresetColor::control_background) = "#292A2E";
-  colors.color(PresetColor::control_hover_background) = "#5F626B";
+  // 4.60:1 under the shared window text; the old #5F626B held only 3.76:1,
+  // so hovered controls and menu-bar items failed the AA floor themecheck
+  // enforces.
+  colors.color(PresetColor::control_hover_background) = "#52555E";
   colors.color(PresetColor::control_pressed_background) = "#F98CBE";
   colors.color(PresetColor::input_background) = "#25272B";
   colors.color(PresetColor::alternate_background) = "#52545C";

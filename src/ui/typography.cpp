@@ -14,6 +14,15 @@ constexpr auto monoFamily = "Atkinson Hyperlegible Mono";
 
 std::optional<int> capturedBaseFontPx;
 
+void setFace(QFont &font, QFont::Weight weight)
+{
+    font.setFamily(QString::fromLatin1(proportionalFamily));
+    font.setStyleName({});
+    font.setWeight(weight);
+    font.setStyle(QFont::StyleNormal);
+    font.setHintingPreference(QFont::PreferFullHinting);
+}
+
 int resolvedPixelSize(const QFont &font)
 {
     return qMax(1, QFontInfo(font).pixelSize());
@@ -33,20 +42,17 @@ bool installBundledFonts(QApplication &application)
     if (baseFontPx <= 0)
         return false;
     const auto regular = QFontDatabase::addApplicationFont(
-        QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-Regular.otf"));
+        QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-Regular.ttf"));
     const auto semibold = QFontDatabase::addApplicationFont(
-        QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-SemiBold.otf"));
+        QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf"));
     const auto mono = QFontDatabase::addApplicationFont(
-        QStringLiteral(":/fonts/AtkinsonHyperlegibleMono-Regular.otf"));
+        QStringLiteral(":/fonts/AtkinsonHyperlegibleMono-Regular.ttf"));
     if (regular < 0 || semibold < 0 || mono < 0)
         return false;
     if (!capturedBaseFontPx)
         capturedBaseFontPx = baseFontPx;
     auto font = application.font();
-    font.setFamily(QString::fromLatin1(proportionalFamily));
-    font.setStyleName({});
-    font.setWeight(QFont::Normal);
-    font.setStyle(QFont::StyleNormal);
+    setFace(font, QFont::Normal);
     font.setPixelSize(qMax(1, qRound(*capturedBaseFontPx * 1.25)));
     application.setFont(font);
     const auto resolved = QFontInfo(application.font());
@@ -66,6 +72,7 @@ QFont bodyMono(const QFont &body)
     font.setStyleName(QStringLiteral("Regular"));
     font.setWeight(QFont::Normal);
     font.setStyle(QFont::StyleNormal);
+    font.setHintingPreference(QFont::PreferFullHinting);
     font.setPixelSize(resolvedPixelSize(body));
     return font;
 }
@@ -73,10 +80,7 @@ QFont bodyMono(const QFont &body)
 QFont caption(const QFont &source)
 {
     auto font = source;
-    font.setFamily(QString::fromLatin1(proportionalFamily));
-    font.setStyleName({});
-    font.setWeight(QFont::Normal);
-    font.setStyle(QFont::StyleNormal);
+    setFace(font, QFont::Normal);
     font.setPixelSize(capturedBaseFontPx.value_or(resolvedPixelSize(source)));
     return font;
 }

@@ -1,4 +1,5 @@
 #include "voicegroupbrowser.h"
+#include "typography.h"
 
 #include <QComboBox>
 #include <QEvent>
@@ -447,7 +448,10 @@ void VoicegroupBrowser::setVoicegroup(const LoadedVoiceGroup *vg)
 void VoicegroupBrowser::markUsedRow(QTreeWidgetItem *item, bool used)
 {
     QFont f = item->font(0);
-    f.setBold(used);
+    if (used)
+        f = typography::bold(f);
+    else
+        f.setWeight(QFont::Normal);
     for (int col = 0; col < item->columnCount(); col++)
         item->setFont(col, f);
     item->setToolTip(0, used ? tr("Used by this song") : QString());

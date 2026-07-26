@@ -1,4 +1,5 @@
 #include "samplepicker.h"
+#include "typography.h"
 
 #include <QApplication>
 #include <QEvent>
@@ -185,7 +186,7 @@ QTreeWidgetItem *SamplePickerButton::addSection(const QString &title)
     auto *item = new QTreeWidgetItem(m_list, {title});
     item->setFlags(Qt::ItemIsEnabled); // a label, never current/selected
     QFont f = item->font(0);
-    f.setBold(true);
+    f = typography::bold(f);
     item->setFont(0, f);
     return item;
 }

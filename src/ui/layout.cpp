@@ -179,6 +179,10 @@ QString comfortGeometryStyleSheet(const FontScaledGeometry &geometry) {
           "QMenu::separator{height:%4;margin:%3 %2;}"
           "QToolTip{padding:%3 %1;}"
           "QLineEdit,QTextEdit,QPlainTextEdit,QAbstractSpinBox{padding:%3 %1;}"
+          "QLineEdit,QTextEdit,QPlainTextEdit{border-radius:%1;}"
+          "QLineEdit QToolButton{border:0;border-radius:0;padding:0;}"
+          "QAbstractSpinBox{border-radius:%1;}"
+          "QAbstractSpinBox QLineEdit{border:0;padding:0;}"
           "QHeaderView::section{padding:%3 %1;}")
           .arg(pixels(geometry.one), pixels(geometry.two),
                pixels(geometry.half), pixels(geometry.border));

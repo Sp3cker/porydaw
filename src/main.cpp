@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
     }
 
     MainWindow window;
-    window.show();
-    window.restoreSession();
+    ui::showCoveredWhileRestoring(window,
+                                  [&window] { window.restoreSession(); });
     return app.exec();
 }
