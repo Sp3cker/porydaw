@@ -19,6 +19,19 @@ namespace {
 // The command id lives on the item so filtering/sorting never desyncs it.
 constexpr int kIdRole = Qt::UserRole;
 
+QKeySequence capturedKeySequence(const QKeySequence &sequence)
+{
+    if (sequence.isEmpty())
+        return {};
+    auto chord = sequence[0];
+#ifdef Q_OS_MACOS
+    auto modifiers = chord.keyboardModifiers();
+    modifiers.setFlag(Qt::KeypadModifier, false);
+    chord = QKeyCombination(modifiers, chord.key());
+#endif
+    return QKeySequence(chord);
+}
+
 QString bindingText(const QList<QKeySequence> &sequences)
 {
     QStringList parts;
@@ -231,11 +244,13 @@ void KeyboardShortcutsDialog::captureChanged()
             id, registry.command(id).context,
             Qt::KeyboardModifiers(QFlag(m_modCapture->currentData().toInt())));
     } else {
-        QKeySequence seq = m_capture->keySequence();
+        const QKeySequence seq = capturedKeySequence(m_capture->keySequence());
         if (seq.isEmpty())
             return;
-        if (seq.count() > 1) // pre-6.4 QKeySequenceEdit records multi-stroke
-            seq = QKeySequence(seq[0].toCombined());
+        if (seq != m_capture->keySequence()) {
+            const QSignalBlocker blocker(m_capture);
+            m_capture->setKeySequence(seq);
+        }
         conflicts = registry.conflicts(id, registry.command(id).context, seq);
     }
     if (conflicts.isEmpty())
@@ -270,9 +285,7 @@ void KeyboardShortcutsDialog::assign()
         rebuildTree();
         return;
     }
-    QKeySequence seq = m_capture->keySequence();
-    if (seq.count() > 1)
-        seq = QKeySequence(seq[0].toCombined());
+    const QKeySequence seq = capturedKeySequence(m_capture->keySequence());
     if (seq.isEmpty())
         return;
     m_applying = true;

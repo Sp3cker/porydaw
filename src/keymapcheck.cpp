@@ -81,6 +81,13 @@ int runKeymapCheck()
         return ok;
     };
 
+#ifdef Q_OS_MACOS
+    const QKeySequence keypadShiftUp(QKeyCombination(
+        Qt::ShiftModifier | Qt::KeypadModifier, Qt::Key_Up));
+    const QKeySequence shiftUp(
+        QKeyCombination(Qt::ShiftModifier, Qt::Key_Up));
+#endif
+
     auto &registry = keymap::Registry::instance();
 
     // 1. Shipped table sanity: unique ids, visible names/categories, and no
@@ -301,6 +308,19 @@ int runKeymapCheck()
             static_cast<QAbstractItemView *>(tree)->sizeHintForColumn(0);
         check(tree->columnWidth(0) >= columnHint,
               "command column narrower than its contents");
+
+#ifdef Q_OS_MACOS
+        tree->setCurrentItem(
+            findCommandItem(tree, QStringLiteral("roll.copy")));
+        capture->setKeySequence(keypadShiftUp);
+        check(capture->keySequence() == shiftUp,
+              "macOS shortcut capture still exposes the keypad modifier");
+        assignButton->click();
+        check(registry.bindings(QStringLiteral("roll.copy"))
+                  == QList<QKeySequence>{shiftUp},
+              "macOS shortcut assignment retained the keypad modifier");
+        registry.resetBinding(QStringLiteral("roll.copy"));
+#endif
 
         filter->setText(QStringLiteral("Transpose"));
         QTreeWidgetItem *findSong =
