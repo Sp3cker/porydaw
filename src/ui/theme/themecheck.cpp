@@ -409,6 +409,14 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application) {
   const auto ink = QColor(255, 0, 255);
   table.item(1, 0)->setText(QStringLiteral("XXXX"));
   table.item(1, 0)->setForeground(ink);
+  // The scan below wants a pixel that is exactly the ink color, but whether
+  // an antialiased glyph keeps any full-coverage pixel depends on the host
+  // rasterizer (FreeType version, fontconfig hinting). Render this probe
+  // aliased and large so every drawn pixel carries the foreground verbatim.
+  auto inkFont = table.font();
+  inkFont.setPixelSize(24);
+  inkFont.setStyleStrategy(QFont::NoAntialias);
+  table.item(1, 0)->setFont(inkFont);
   const auto inkImage = table.viewport()->grab().toImage();
   auto foundInk = false;
   for (auto y = 0; y < inkImage.height() && !foundInk; ++y) {
