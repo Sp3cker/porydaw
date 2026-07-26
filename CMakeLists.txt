@@ -199,14 +199,22 @@ qt_add_resources(porydaw "cursor_images"
 )
 target_link_libraries(porydaw PRIVATE porydaw_app)
 if(WIN32)
-    add_custom_command(TARGET porydaw POST_BUILD
-        COMMAND Qt6::windeployqt
-                --no-translations
-                --no-opengl-sw
-                --no-system-d3d-compiler
-                "$<TARGET_FILE:porydaw>"
-        VERBATIM
-    )
+    # Stage the Qt DLLs beside porydaw.exe so the build tree runs directly.
+    # The imported windeployqt target ships with Qt 6.3+; without it the
+    # build still succeeds and the DLLs must come from PATH.
+    if(TARGET Qt6::windeployqt)
+        add_custom_command(TARGET porydaw POST_BUILD
+            COMMAND Qt6::windeployqt
+                    --no-translations
+                    --no-opengl-sw
+                    --no-system-d3d-compiler
+                    "$<TARGET_FILE:porydaw>"
+            VERBATIM
+        )
+    else()
+        message(WARNING "Qt6::windeployqt not available (needs Qt >= 6.3); "
+                        "porydaw.exe will need the Qt DLLs on PATH")
+    endif()
 endif()
 
 include(CTest)
@@ -228,7 +236,10 @@ if(BUILD_TESTING)
              COMMAND porydaw_themechecks --fontcheck)
     set_tests_properties(porydaw_theme_checks
         PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
-    if(APPLE)
+    # fontcheck runs on the native platform on Windows so it exercises the
+    # real font stack the TTF hinting targets; everywhere else offscreen
+    # keeps headless runs (CI, WSL) working.
+    if(NOT WIN32)
         set_tests_properties(porydaw_fontcheck
             PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     endif()

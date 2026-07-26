@@ -83,7 +83,9 @@ const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 #ifdef Q_OS_WIN
 // These names and values come from the current Windows SDK. The bundled
 // MinGW header stops at DWMWA_PASSIVE_UPDATE_MODE, so keep the compatibility
-// values strongly typed until its dwmapi.h catches up.
+// values strongly typed until its dwmapi.h catches up. Both attributes exist
+// since Windows 11; on Windows 10 DwmSetWindowAttribute rejects them and the
+// stock title bar stays, which is the intended graceful fallback.
 enum class DwmWindowAttribute : DWORD {
     CaptionColor = 35, // DWMWA_CAPTION_COLOR
     TextColor = 36,    // DWMWA_TEXT_COLOR
