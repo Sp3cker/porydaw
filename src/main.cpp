@@ -84,6 +84,9 @@ int runEventViewCheck(const QString &projectRoot,
 
 int main(int argc, char *argv[])
 {
+    // Start with Fusion so Qt never loads the unstable modern Windows style
+    // plugin before the application-level style is applied.
+    qputenv("QT_STYLE_OVERRIDE", QByteArrayLiteral("fusion"));
     QApplication app(argc, argv);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
     // The OS dark theme renders badly (notably on Windows); force light until
