@@ -201,7 +201,7 @@ QLinearGradient loopGlow(qreal edgeX, qreal transparentX) {
   gradient.setColorAt(0.2, color);
   gradient.setColorAt(1.0, transparent); return gradient; }
 QColor loopEdge() { return themes::color(themes::Role::song_view_loop_marker); }
-QColor playheadColor() { return themes::color(themes::Role::song_view_playhead); }
+
 QColor pianoRollAccidentalLaneColor() {
   return themes::color(themes::Role::song_view_piano_roll_accidental_lane);
 }
@@ -5071,7 +5071,7 @@ SongView::SongView(QWidget *parent)
     playheadSurfaces.strip = m_strip;
     playheadSurfaces.stripOrigin = kGutterW;
     m_playheadOverlay =
-        new PlayheadOverlay(this, playheadSurfaces, playheadColor());
+        new PlayheadOverlay(this, playheadSurfaces);
 
     m_hbar = new QScrollBar(Qt::Horizontal, this);
     m_hbar->setSingleStep(kScrollUnitsPerDip);

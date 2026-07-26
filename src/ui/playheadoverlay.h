@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QColor>
-#include <QImage>
 #include <QRect>
 #include <QRegion>
 #include <QWidget>
@@ -50,15 +49,12 @@ inline constexpr qreal playheadPeakAlpha(bool playing) {
 }
 
 class PlayheadOverlay final : public QWidget {
-#ifdef PORYDAW_USE_NATIVE_PLAYHEAD
   class Platform;
-#endif
+  struct PlatformDeleter {
+    void operator()(Platform *platform) const;
+  };
 
 public:
-  // Every timeline-aligned widget the playhead must cross, with each one's
-  // content origin (the local x of timeline tick 0's column). A surface
-  // missing from this list silently gets no playhead — a new timeline
-  // widget in SongView must be added here.
   struct Surfaces {
     QWidget *ruler = nullptr;
     int rulerOrigin = 0;
@@ -70,14 +66,20 @@ public:
     int stripOrigin = 0;
   };
 
-  PlayheadOverlay(QWidget *owner, const Surfaces &surfaces,
-                  const QColor &color);
+  PlayheadOverlay(QWidget *owner, const Surfaces &surfaces);
   ~PlayheadOverlay() override;
 
-  void setPlayhead(qreal timelineX, bool visible, bool playing);
+  inline void setPlayhead(qreal timelineX, bool visible, bool playing) {
+    if (m_timelineX == timelineX && m_visible == visible &&
+        m_playing == playing)
+      return;
 
-  qreal finalX() const {
-    return static_cast<qreal>(m_timelineOrigin) + m_timelineX;
+    const bool playingChanged = m_playing != playing;
+    m_timelineX = timelineX;
+    m_visible = visible;
+    m_playing = playing;
+
+    updatePlayhead(playingChanged);
   }
 
 protected:
@@ -86,27 +88,28 @@ protected:
   void paintEvent(QPaintEvent *event) override;
 
 private:
+  qreal finalX() const {
+    return static_cast<qreal>(m_timelineOrigin) + m_timelineX;
+  }
+
   QRect visibleSurfaceRect(const QWidget *surface, QWidget *owner,
                            int origin) const;
   void synchronizeGeometry();
-  bool updateImages();
+  void updatePlayhead(bool playingChanged);
+
+  void initializePlatform(QWidget &owner);
+  void attachPlatformToNativeView();
+  void setPlatformLayout();
+  void setPlatformAppearance();
+  void setPlatformPosition();
+
+  QRegion playheadRegion() const;
+  void updatePaintRegion();
 
   Surfaces m_surfaces;
   QColor m_color;
 
-#ifdef PORYDAW_USE_NATIVE_PLAYHEAD
-  void initializePlatform(QWidget &owner);
-  void setPlatformLayout();
-  void setPlatformImages();
-  void setPlatformPosition();
-
-  struct PlatformDeleter {
-    void operator()(Platform *platform) const;
-  };
   std::unique_ptr<Platform, PlatformDeleter> m_platform;
-#endif
-  QRegion playheadRegion() const;
-  void updatePaintRegion();
   QRegion m_lastPaintedRegion;
 
   QRegion m_visibleSurfaceRegion;
@@ -119,21 +122,6 @@ private:
 
   bool m_trianglePointsUp = false;
   qreal m_devicePixelRatio = 1.0;
-
-  QImage m_bodyImage;
-  qreal m_bodyImageLeftExtent = 0.0;
-  QImage m_triangleImage;
-
-  int m_cachedBodyHeight = -1;
-  bool m_cachedBodyPlaying = false;
-  qreal m_cachedBodyDpr = 0.0;
-  QColor m_cachedBodyThemeColor;
-  bool m_cachedBodyValid = false;
-
-  bool m_cachedTrianglePointsUp = false;
-  qreal m_cachedTriangleDpr = 0.0;
-  QColor m_cachedTriangleThemeColor;
-  bool m_cachedTriangleValid = false;
 };
 
 } // namespace songview
