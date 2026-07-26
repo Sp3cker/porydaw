@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QSettings>
 #include <QTemporaryDir>
 #include <QTreeWidget>
@@ -22,8 +23,9 @@
 // QActions, cross-context conflict detection, modifier commands (mouse
 // gestures bound to a bare modifier chord, with the same delta-only
 // override/unbind/reset and text round-trip), and the shortcuts dialog
-// (filter, assign with steal-on-conflict, per-row reset, and the modifier
-// chord picker swapping in for the key capture) driven offscreen.
+// (filter, keypad-stripped capture, assign with steal-on-conflict, per-row
+// reset, scroll-position retention, and the modifier chord picker swapping
+// in for the key capture) driven offscreen.
 // QSettings is redirected into a temp dir first, so the user's real keymap
 // is never read or written.
 
@@ -302,6 +304,24 @@ int runKeymapCheck()
         check(tree->columnWidth(0) >= columnHint,
               "command column narrower than its contents");
 
+        // Captures shed the keypad flag on every platform (macOS nav keys
+        // and numpad arrows arrive with it set): bindings never carry it,
+        // so keeping it would store a binding that can never match.
+        const QKeySequence keypadShiftUp(QKeyCombination(
+            Qt::ShiftModifier | Qt::KeypadModifier, Qt::Key_Up));
+        const QKeySequence shiftUp(
+            QKeyCombination(Qt::ShiftModifier, Qt::Key_Up));
+        tree->setCurrentItem(
+            findCommandItem(tree, QStringLiteral("roll.copy")));
+        capture->setKeySequence(keypadShiftUp);
+        check(capture->keySequence() == shiftUp,
+              "shortcut capture kept the keypad modifier");
+        assignButton->click();
+        check(registry.bindings(QStringLiteral("roll.copy"))
+                  == QList<QKeySequence>{shiftUp},
+              "shortcut assignment kept the keypad modifier");
+        registry.resetBinding(QStringLiteral("roll.copy"));
+
         filter->setText(QStringLiteral("Transpose"));
         QTreeWidgetItem *findSong =
             findCommandItem(tree, QStringLiteral("songs.find"));
@@ -316,6 +336,8 @@ int runKeymapCheck()
         // Steal: give Save Song's Ctrl+S to the roll copy command.
         tree->setCurrentItem(findCommandItem(tree, QStringLiteral("roll.copy")));
         capture->setKeySequence(QKeySequence(QStringLiteral("Ctrl+S")));
+        const int scrollBeforeAssign = tree->verticalScrollBar()->maximum() / 2;
+        tree->verticalScrollBar()->setValue(scrollBeforeAssign);
         assignButton->click();
         check(registry.bindings(QStringLiteral("roll.copy"))
                   == QList<QKeySequence>{QKeySequence(QStringLiteral("Ctrl+S"))},
@@ -323,6 +345,8 @@ int runKeymapCheck()
         check(registry.isOverridden(QStringLiteral("file.save_song"))
                   && registry.bindings(QStringLiteral("file.save_song")).isEmpty(),
               "conflicting command was not unbound by the steal");
+        check(tree->verticalScrollBar()->value() == scrollBeforeAssign,
+              "dialog assign did not preserve the list scroll position");
 
         QTreeWidgetItem *copyItem =
             findCommandItem(tree, QStringLiteral("roll.copy"));
@@ -357,6 +381,17 @@ int runKeymapCheck()
             const int altIndex =
                 modCapture->findData(int(Qt::AltModifier));
             check(altIndex >= 0, "chord picker offers no Alt");
+#ifdef Q_OS_MACOS
+            const int ctrlShiftIndex = modCapture->findData(
+                int((Qt::ControlModifier | Qt::ShiftModifier).toInt()));
+            check(modCapture->itemText(
+                      modCapture->findData(int(Qt::ControlModifier)))
+                          == QStringLiteral("⌘")
+                      && modCapture->itemText(altIndex) == QStringLiteral("⌥")
+                      && modCapture->itemText(ctrlShiftIndex)
+                          == QStringLiteral("⇧⌘"),
+                  "chord picker does not use native macOS modifier labels");
+#endif
             modCapture->setCurrentIndex(altIndex);
             assignButton->click();
             check(registry.modifierBinding(QStringLiteral("roll.velocity_drag"))
@@ -364,8 +399,13 @@ int runKeymapCheck()
                   "chord picker assign did not apply the modifier");
             QTreeWidgetItem *velItem =
                 findCommandItem(tree, QStringLiteral("roll.velocity_drag"));
+#ifdef Q_OS_MACOS
+            check(velItem && velItem->text(1) == QStringLiteral("⌥"),
+                  "tree does not show the native macOS modifier chord");
+#else
             check(velItem && velItem->text(1) == QStringLiteral("Alt"),
                   "tree does not show the new modifier chord");
+#endif
             tree->setCurrentItem(velItem);
             resetButton->click();
             check(registry.modifierBinding(QStringLiteral("roll.velocity_drag"))

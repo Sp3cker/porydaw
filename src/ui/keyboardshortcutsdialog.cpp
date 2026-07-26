@@ -9,6 +9,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
@@ -18,6 +19,41 @@ namespace {
 
 // The command id lives on the item so filtering/sorting never desyncs it.
 constexpr int kIdRole = Qt::UserRole;
+
+QString modifierDisplayText(Qt::KeyboardModifiers mods)
+{
+#ifdef Q_OS_MACOS
+    // Qt swaps the pair on macOS: ControlModifier is the ⌘ Command key and
+    // MetaModifier is the ⌃ Control key. Glyph order is Apple's canonical
+    // ⌃⌥⇧⌘, matching what QKeySequence::NativeText renders for sequences.
+    QString text;
+    if (mods.testFlag(Qt::MetaModifier))
+        text += QStringLiteral("⌃");
+    if (mods.testFlag(Qt::AltModifier))
+        text += QStringLiteral("⌥");
+    if (mods.testFlag(Qt::ShiftModifier))
+        text += QStringLiteral("⇧");
+    if (mods.testFlag(Qt::ControlModifier))
+        text += QStringLiteral("⌘");
+    return text;
+#else
+    return keymap::Registry::modifierText(mods);
+#endif
+}
+
+QKeySequence capturedKeySequence(const QKeySequence &sequence)
+{
+    if (sequence.isEmpty())
+        return {};
+    auto chord = sequence[0];
+    // Registry::matches() masks the keypad flag out of every event —
+    // "bindings never carry it" — so a capture that kept the flag (macOS
+    // nav keys, numpad arrows elsewhere) would store a binding that can
+    // never fire.
+    auto modifiers = chord.keyboardModifiers();
+    modifiers.setFlag(Qt::KeypadModifier, false);
+    return QKeySequence(QKeyCombination(modifiers, chord.key()));
+}
 
 QString bindingText(const QList<QKeySequence> &sequences)
 {
@@ -67,7 +103,7 @@ KeyboardShortcutsDialog::KeyboardShortcutsDialog(QWidget *parent)
           Qt::ControlModifier | Qt::ShiftModifier,
           Qt::ControlModifier | Qt::AltModifier,
           Qt::ShiftModifier | Qt::AltModifier}) {
-        m_modCapture->addItem(keymap::Registry::modifierText(mods),
+        m_modCapture->addItem(modifierDisplayText(mods),
                               int(mods.toInt()));
     }
     m_modCapture->hide();
@@ -133,6 +169,7 @@ QString KeyboardShortcutsDialog::currentCommandId() const
 void KeyboardShortcutsDialog::rebuildTree()
 {
     const QString selected = currentCommandId();
+    const int scrollPosition = m_tree->verticalScrollBar()->value();
     m_tree->clear();
     auto &registry = keymap::Registry::instance();
     QTreeWidgetItem *categoryItem = nullptr;
@@ -146,9 +183,9 @@ void KeyboardShortcutsDialog::rebuildTree()
             font.setBold(true);
             categoryItem->setFont(0, font);
         }
-        const QString binding = info.modifier
-            ? keymap::Registry::modifierText(registry.modifierBinding(info.id))
-            : bindingText(registry.bindings(info.id));
+        const QString binding =
+            info.modifier ? modifierDisplayText(registry.modifierBinding(info.id))
+                          : bindingText(registry.bindings(info.id));
         auto *item = new QTreeWidgetItem(categoryItem, {info.name, binding});
         item->setData(0, kIdRole, info.id);
         if (registry.isOverridden(info.id)) {
@@ -166,6 +203,11 @@ void KeyboardShortcutsDialog::rebuildTree()
         m_tree->setCurrentItem(toReselect);
     else
         currentRowChanged();
+    // Last on purpose: setCurrentItem auto-scrolls to the selection, and
+    // keeping the user's list position is the point. The scrollbar range is
+    // still the pre-clear one (recompute is deferred), which clamps
+    // correctly only because a rebuild recreates the identical item set.
+    m_tree->verticalScrollBar()->setValue(scrollPosition);
 }
 
 void KeyboardShortcutsDialog::applyFilter()
@@ -231,11 +273,13 @@ void KeyboardShortcutsDialog::captureChanged()
             id, registry.command(id).context,
             Qt::KeyboardModifiers(QFlag(m_modCapture->currentData().toInt())));
     } else {
-        QKeySequence seq = m_capture->keySequence();
+        const QKeySequence seq = capturedKeySequence(m_capture->keySequence());
         if (seq.isEmpty())
             return;
-        if (seq.count() > 1) // pre-6.4 QKeySequenceEdit records multi-stroke
-            seq = QKeySequence(seq[0].toCombined());
+        if (seq != m_capture->keySequence()) {
+            const QSignalBlocker blocker(m_capture);
+            m_capture->setKeySequence(seq);
+        }
         conflicts = registry.conflicts(id, registry.command(id).context, seq);
     }
     if (conflicts.isEmpty())
@@ -270,9 +314,7 @@ void KeyboardShortcutsDialog::assign()
         rebuildTree();
         return;
     }
-    QKeySequence seq = m_capture->keySequence();
-    if (seq.count() > 1)
-        seq = QKeySequence(seq[0].toCombined());
+    const QKeySequence seq = capturedKeySequence(m_capture->keySequence());
     if (seq.isEmpty())
         return;
     m_applying = true;
