@@ -23,6 +23,9 @@ constexpr int kIdRole = Qt::UserRole;
 QString modifierDisplayText(Qt::KeyboardModifiers mods)
 {
 #ifdef Q_OS_MACOS
+    // Qt swaps the pair on macOS: ControlModifier is the ⌘ Command key and
+    // MetaModifier is the ⌃ Control key. Glyph order is Apple's canonical
+    // ⌃⌥⇧⌘, matching what QKeySequence::NativeText renders for sequences.
     QString text;
     if (mods.testFlag(Qt::MetaModifier))
         text += QStringLiteral("⌃");
@@ -43,12 +46,13 @@ QKeySequence capturedKeySequence(const QKeySequence &sequence)
     if (sequence.isEmpty())
         return {};
     auto chord = sequence[0];
-#ifdef Q_OS_MACOS
+    // Registry::matches() masks the keypad flag out of every event —
+    // "bindings never carry it" — so a capture that kept the flag (macOS
+    // nav keys, numpad arrows elsewhere) would store a binding that can
+    // never fire.
     auto modifiers = chord.keyboardModifiers();
     modifiers.setFlag(Qt::KeypadModifier, false);
-    chord = QKeyCombination(modifiers, chord.key());
-#endif
-    return QKeySequence(chord);
+    return QKeySequence(QKeyCombination(modifiers, chord.key()));
 }
 
 QString bindingText(const QList<QKeySequence> &sequences)
@@ -199,6 +203,10 @@ void KeyboardShortcutsDialog::rebuildTree()
         m_tree->setCurrentItem(toReselect);
     else
         currentRowChanged();
+    // Last on purpose: setCurrentItem auto-scrolls to the selection, and
+    // keeping the user's list position is the point. The scrollbar range is
+    // still the pre-clear one (recompute is deferred), which clamps
+    // correctly only because a rebuild recreates the identical item set.
     m_tree->verticalScrollBar()->setValue(scrollPosition);
 }
 

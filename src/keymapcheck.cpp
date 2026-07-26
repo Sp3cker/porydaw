@@ -6,8 +6,8 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
-#include <QSettings>
 #include <QScrollBar>
+#include <QSettings>
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <cstdio>
@@ -23,8 +23,9 @@
 // QActions, cross-context conflict detection, modifier commands (mouse
 // gestures bound to a bare modifier chord, with the same delta-only
 // override/unbind/reset and text round-trip), and the shortcuts dialog
-// (filter, assign with steal-on-conflict, per-row reset, and the modifier
-// chord picker swapping in for the key capture) driven offscreen.
+// (filter, keypad-stripped capture, assign with steal-on-conflict, per-row
+// reset, scroll-position retention, and the modifier chord picker swapping
+// in for the key capture) driven offscreen.
 // QSettings is redirected into a temp dir first, so the user's real keymap
 // is never read or written.
 
@@ -81,13 +82,6 @@ int runKeymapCheck()
         }
         return ok;
     };
-
-#ifdef Q_OS_MACOS
-    const QKeySequence keypadShiftUp(QKeyCombination(
-        Qt::ShiftModifier | Qt::KeypadModifier, Qt::Key_Up));
-    const QKeySequence shiftUp(
-        QKeyCombination(Qt::ShiftModifier, Qt::Key_Up));
-#endif
 
     auto &registry = keymap::Registry::instance();
 
@@ -310,18 +304,23 @@ int runKeymapCheck()
         check(tree->columnWidth(0) >= columnHint,
               "command column narrower than its contents");
 
-#ifdef Q_OS_MACOS
+        // Captures shed the keypad flag on every platform (macOS nav keys
+        // and numpad arrows arrive with it set): bindings never carry it,
+        // so keeping it would store a binding that can never match.
+        const QKeySequence keypadShiftUp(QKeyCombination(
+            Qt::ShiftModifier | Qt::KeypadModifier, Qt::Key_Up));
+        const QKeySequence shiftUp(
+            QKeyCombination(Qt::ShiftModifier, Qt::Key_Up));
         tree->setCurrentItem(
             findCommandItem(tree, QStringLiteral("roll.copy")));
         capture->setKeySequence(keypadShiftUp);
         check(capture->keySequence() == shiftUp,
-              "macOS shortcut capture still exposes the keypad modifier");
+              "shortcut capture kept the keypad modifier");
         assignButton->click();
         check(registry.bindings(QStringLiteral("roll.copy"))
                   == QList<QKeySequence>{shiftUp},
-              "macOS shortcut assignment retained the keypad modifier");
+              "shortcut assignment kept the keypad modifier");
         registry.resetBinding(QStringLiteral("roll.copy"));
-#endif
 
         filter->setText(QStringLiteral("Transpose"));
         QTreeWidgetItem *findSong =
