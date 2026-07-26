@@ -200,9 +200,15 @@ qt_add_resources(porydaw "cursor_images"
 target_link_libraries(porydaw PRIVATE porydaw_app)
 if(WIN32)
     # Stage the Qt DLLs beside porydaw.exe so the build tree runs directly.
-    # The imported windeployqt target ships with Qt 6.3+; without it the
-    # build still succeeds and the DLLs must come from PATH.
-    if(TARGET Qt6::windeployqt)
+    # Static Qt links everything into the exe, leaving windeployqt nothing
+    # to stage — it fails with "does not seem to be a Qt executable" — so
+    # the step only runs against a shared Qt. The imported windeployqt
+    # target ships with Qt 6.3+; without it the build still succeeds and
+    # the DLLs must come from PATH.
+    get_target_property(porydaw_qt_core_type Qt6::Core TYPE)
+    if(porydaw_qt_core_type STREQUAL "STATIC_LIBRARY")
+        # Nothing to deploy.
+    elseif(TARGET Qt6::windeployqt)
         add_custom_command(TARGET porydaw POST_BUILD
             COMMAND Qt6::windeployqt
                     --no-translations
