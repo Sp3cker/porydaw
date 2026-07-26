@@ -371,30 +371,32 @@ Theme derive(const QColor &primary, const QColor &accent) {
   theme.color(Role::button_pressed_background) = buttonActiveBackground;
   theme.color(Role::tab_background) = buttonBackground;
   theme.color(Role::tab_hover_background) = buttonHoverBackground;
+  // Combo, text, and spin-box fields keep separate roles but share one
+  // resting surface; themecheck pins the trio together so a later change
+  // must stay deliberate.
   theme.color(Role::combo_background) = buttonHoverBackground;
+  theme.color(Role::input_background) = buttonHoverBackground;
+  theme.color(Role::spin_box_background) = buttonHoverBackground;
   theme.color(Role::combo_drop_down_background) = buttonBackground;
   theme.color(Role::combo_drop_down_hover_background) = buttonRamp.hover;
   theme.color(Role::combo_drop_down_pressed_background) = buttonRamp.active;
-  theme.color(Role::spin_box_background) = buttonBackground;
   theme.color(Role::spin_button_background) = buttonBackground;
   theme.color(Role::spin_button_hover_background) = buttonRamp.hover;
   theme.color(Role::spin_button_pressed_background) = buttonRamp.active;
   theme.color(Role::header_hover_background) = buttonHoverBackground;
   theme.color(Role::header_checked_background) = buttonActiveBackground;
 
-  // Recess editable and popup surfaces opposite the main surface direction,
-  // falling back toward neutral if Window Text would become unreadable.
-  const auto inputBackground =
+  // Recess indicator and tooltip surfaces opposite the main surface
+  // direction, falling back toward neutral if Window Text would become
+  // unreadable.
+  const auto recessedBackground =
       keepSurfaceReadable(shiftOklabLightness(neutralBase, direction * -0.04),
                           neutralBase, windowText);
-  theme.color(Role::input_background) = inputBackground;
-  theme.color(Role::input_text) = windowText;
-  theme.color(Role::input_highlight_outline) = buttonHoverBackground;
   theme.color(Role::focus_outline) = accent;
   theme.color(Role::indicator_text) = windowText;
-  theme.color(Role::indicator_background) = inputBackground;
+  theme.color(Role::indicator_background) = recessedBackground;
   theme.color(Role::indicator_hover_background) = buttonHoverBackground;
-  theme.color(Role::tooltip_background) = inputBackground;
+  theme.color(Role::tooltip_background) = recessedBackground;
   theme.color(Role::tooltip_text) = windowText;
 
   // Lists, track headers, and polyphony values share the item surface; their
@@ -491,7 +493,6 @@ Theme derive(const QColor &primary, const QColor &accent) {
                      {buttonBackground, windowBackground, itemBackground});
   theme.color(Role::button_text) = buttonText;
   theme.color(Role::tab_text) = buttonText;
-  theme.color(Role::spin_box_text) = buttonText;
   theme.color(Role::spin_button_text) = buttonText;
   const auto buttonHoverText = stateTextColor(
       windowText, accent, {buttonHoverBackground},
@@ -499,6 +500,8 @@ Theme derive(const QColor &primary, const QColor &accent) {
   theme.color(Role::button_hover_text) = buttonHoverText;
   theme.color(Role::tab_hover_text) = buttonHoverText;
   theme.color(Role::combo_text) = buttonHoverText;
+  theme.color(Role::input_text) = buttonHoverText;
+  theme.color(Role::spin_box_text) = buttonHoverText;
   theme.color(Role::header_hover_text) = buttonHoverText;
   const auto buttonActiveText =
       selectedTextColor(accent, {buttonActiveBackground});
@@ -527,7 +530,7 @@ Theme derive(const QColor &primary, const QColor &accent) {
 
   const auto disabledText = deriveDisabledText(
       windowText, windowBackground,
-      {windowBackground, buttonBackground, inputBackground, itemBackground});
+      {windowBackground, buttonBackground, recessedBackground, itemBackground});
   theme.color(Role::disabled_text) = disabledText;
   theme.color(Role::secondary_text) = disabledText;
 

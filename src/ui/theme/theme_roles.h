@@ -46,7 +46,6 @@ enum class Role {
   input_background,
   input_text,
   input_outline,
-  input_highlight_outline,
 
   // QComboBox field and drop-down lane.
   combo_background,

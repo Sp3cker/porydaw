@@ -182,8 +182,7 @@ QString comfortGeometryStyleSheet(const FontScaledGeometry &geometry) {
           "QLineEdit,QTextEdit,QPlainTextEdit{border-radius:%1;}"
           "QLineEdit QToolButton{border:0;border-radius:0;padding:0;}"
           "QAbstractSpinBox{border-radius:%1;}"
-          "QAbstractSpinBox QLineEdit{background-color:transparent;"
-          "border:0;padding:0;}"
+          "QAbstractSpinBox QLineEdit{border:0;padding:0;}"
           "QHeaderView::section{padding:%3 %1;}")
           .arg(pixels(geometry.one), pixels(geometry.two),
                pixels(geometry.half), pixels(geometry.border));

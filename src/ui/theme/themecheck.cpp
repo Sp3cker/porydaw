@@ -141,6 +141,27 @@ void checkSharedControlColors(Reporter &reporter,
       theme.color(themes::Role::splitter_handle_hover_background) ==
           theme.color(themes::Role::button_pressed_background),
       "an active splitter handle does not use the pressed-button color");
+  reporter.check(
+      theme.color(themes::Role::input_background) ==
+              theme.color(themes::Role::combo_background) &&
+          theme.color(themes::Role::input_text) ==
+              theme.color(themes::Role::combo_text) &&
+          theme.color(themes::Role::input_outline) ==
+              theme.color(themes::Role::combo_outline),
+      "a text field does not share the combo field surface");
+  reporter.check(
+      theme.color(themes::Role::spin_box_background) ==
+              theme.color(themes::Role::combo_background) &&
+          theme.color(themes::Role::spin_box_text) ==
+              theme.color(themes::Role::combo_text) &&
+          theme.color(themes::Role::spin_box_outline) ==
+              theme.color(themes::Role::combo_outline),
+      "a spin-box field does not share the combo field surface");
+  reporter.check(
+      themes::contrastRatio(theme.color(themes::Role::combo_text),
+                            theme.color(themes::Role::combo_background)) >=
+          4.5,
+      "field text is unreadable on the shared field surface");
 }
 
 void checkDerivedThemes(Reporter &reporter) {

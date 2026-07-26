@@ -36,13 +36,13 @@ enum class PresetColor {
   separator,
   /// Resting buttons/tabs and combo-box/spin-box field or arrow-lane surfaces.
   control_background,
-  /// Hovered buttons/tabs/combo fields, indicators, headers, and input
-  /// outlines.
+  /// Hovered buttons/tabs/indicators/headers, and the shared resting surface
+  /// of combo, text, and spin-box fields.
   control_hover_background,
   /// Pressed buttons, menus, headers, checked Mute/Solo controls, and
   /// unterminated-note outlines.
   control_pressed_background,
-  /// Text fields, popup menus, tooltips, and checkbox/radio indicator surfaces.
+  /// Tooltips and checkbox/radio indicator surfaces.
   input_background,
   /// Alternating item rows and disabled checkbox/radio indicator surfaces.
   alternate_background,
@@ -155,10 +155,9 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::outline,
     PresetColor::outline,
 
-    PresetColor::input_background,
+    PresetColor::control_hover_background,
     PresetColor::window_text,
     PresetColor::outline,
-    PresetColor::control_hover_background,
 
     PresetColor::control_hover_background,
     PresetColor::window_text,
@@ -167,7 +166,7 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::control_pressed_background,
     PresetColor::outline,
 
-    PresetColor::control_background,
+    PresetColor::control_hover_background,
     PresetColor::window_text,
     PresetColor::outline,
     PresetColor::control_background,
