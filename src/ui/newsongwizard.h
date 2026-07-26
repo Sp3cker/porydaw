@@ -18,17 +18,23 @@ class AnalysisPage;
 //
 // The wizard only collects choices; MainWindow writes the .mid + midi.cfg
 // line and registers the song in the three registration files.
+//
+// `voicegroupArgs` is the project's -G choices (SongRegistry::voicegroupArgs);
+// the caller passes it in because scanning every voicegroup file is too slow
+// to redo per dialog — MainWindow hands over its cached catalog.
 class NewSongWizard : public QWizard
 {
     Q_OBJECT
 
 public:
     // Blank new song.
-    NewSongWizard(DecompProject *project, QWidget *parent = nullptr);
+    NewSongWizard(DecompProject *project, const QStringList &voicegroupArgs,
+                  QWidget *parent = nullptr);
     // Import: `imported` is the parsed external file (kept as-is apart from
     // the analysis page's optional division rescale).
     NewSongWizard(DecompProject *project, SmfFile imported,
-                  const QString &sourcePath, QWidget *parent = nullptr);
+                  const QString &sourcePath, const QStringList &voicegroupArgs,
+                  QWidget *parent = nullptr);
 
     QString label() const;
     QString constant() const;
@@ -43,7 +49,7 @@ public:
     QString newVoicegroupName() const;
 
 private:
-    void buildPages(const QString &sourcePath);
+    void buildPages(const QString &sourcePath, const QStringList &voicegroupArgs);
 
     DecompProject *m_project;
     bool m_importMode = false;

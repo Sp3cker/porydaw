@@ -1630,7 +1630,7 @@ void MainWindow::openSongSettings()
     if (!m_active)
         return;
     SongSettingsDialog dialog(m_active->doc.cfg(), m_active->doc.label(),
-                              SongRegistry::voicegroupArgs(m_project.root()), this);
+                              vgCatalog().groupArgs, this);
     if (dialog.exec() == QDialog::Accepted)
         m_active->doc.setCfg(dialog.cfg());
 }
@@ -1669,7 +1669,7 @@ void MainWindow::newSong()
 {
     if (!m_project.isOpen())
         return;
-    NewSongWizard wizard(&m_project, this);
+    NewSongWizard wizard(&m_project, vgCatalog().groupArgs, this);
     if (wizard.exec() != QDialog::Accepted)
         return;
     finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(),
@@ -1695,7 +1695,8 @@ void MainWindow::importMidi()
         QMessageBox::warning(this, tr("Import MIDI"), error);
         return;
     }
-    NewSongWizard wizard(&m_project, std::move(smf), path, this);
+    NewSongWizard wizard(&m_project, std::move(smf), path, vgCatalog().groupArgs,
+                         this);
     if (wizard.exec() != QDialog::Accepted)
         return;
     finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(),
@@ -2580,8 +2581,7 @@ void MainWindow::newVoicegroup()
     const QString name = nameEdit->text().trimmed();
     if (name.isEmpty())
         return;
-    if (SongRegistry::voicegroupArgs(m_project.root())
-            .contains(QStringLiteral("_") + name)) {
+    if (vgCatalog().groupArgs.contains(QStringLiteral("_") + name)) {
         QMessageBox::warning(this, tr("New Voicegroup"),
                              tr("A voicegroup named %1 already exists.").arg(name));
         return;
@@ -2962,7 +2962,7 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     // (wizard pages enumerate voicegroups/players). Registration itself is
     // write-through now, exercised by --onboardcheck against a scratch copy.
     {
-        NewSongWizard wizard(&m_project, this);
+        NewSongWizard wizard(&m_project, vgCatalog().groupArgs, this);
         EngineSettingsDialog engineDialog(m_engineSettings, this);
         qInfo("selftest: New Song wizard + engine settings dialog constructed");
     }

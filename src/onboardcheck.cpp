@@ -397,7 +397,7 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     // The wizard end of the same option: the analysis page offers the rescale
     // (default on) and songFile() applies it with the Sound page's clock base.
     {
-        NewSongWizard wizard(&project, external, QStringLiteral("ext.mid"));
+        NewSongWizard wizard(&project, external, QStringLiteral("ext.mid"), vgArgs);
         auto *rescale = wizard.page(0)->findChild<QCheckBox *>();
         check(rescale && rescale->isChecked(),
               "wizard: rescale checkbox missing or off for division 400");

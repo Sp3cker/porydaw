@@ -100,8 +100,9 @@ private:
 class SoundPage : public QWizardPage
 {
 public:
-    SoundPage(DecompProject *project, const IdentityPage *identity)
-        : m_project(project), m_identity(identity)
+    SoundPage(DecompProject *project, const IdentityPage *identity,
+              const QStringList &voicegroupArgs)
+        : m_identity(identity), m_vgArgs(voicegroupArgs)
     {
         setTitle(tr("Sound settings"));
         setSubTitle(tr("The song's voicegroup and mid2agb flags — its entry in "
@@ -117,9 +118,7 @@ public:
             QDir(project->root() + QStringLiteral("/sound/voicegroups")).exists();
         if (m_canCreateVoicegroup)
             m_voicegroup->addItem(newVoicegroupText());
-        m_vgArgs = SongRegistry::voicegroupArgs(project->root());
-        const QStringList &args = m_vgArgs;
-        for (const QString &arg : args)
+        for (const QString &arg : m_vgArgs)
             m_voicegroup->addItem(SongRegistry::voicegroupDisplayName(arg));
         // Default to the first existing voicegroup, not the create entry.
         if (m_canCreateVoicegroup && m_voicegroup->count() > 1)
@@ -167,8 +166,7 @@ public:
     bool validatePage() override
     {
         if (newVoicegroupSelected()
-            && SongRegistry::voicegroupArgs(m_project->root())
-                   .contains(QStringLiteral("_") + m_identity->label())) {
+            && m_vgArgs.contains(QStringLiteral("_") + m_identity->label())) {
             QMessageBox::warning(
                 this, tr("New Voicegroup"),
                 tr("A voicegroup named voicegroup_%1 already exists — pick it "
@@ -202,7 +200,6 @@ private:
         return tr("(create a new voicegroup for this song)");
     }
 
-    DecompProject *m_project;
     const IdentityPage *m_identity;
     bool m_canCreateVoicegroup = false;
     QStringList m_vgArgs;
@@ -285,15 +282,17 @@ private:
 
 // ---- The wizard -------------------------------------------------------------
 
-NewSongWizard::NewSongWizard(DecompProject *project, QWidget *parent)
+NewSongWizard::NewSongWizard(DecompProject *project,
+                             const QStringList &voicegroupArgs, QWidget *parent)
     : QWizard(parent), m_project(project)
 {
     setWindowTitle(tr("New Song"));
-    buildPages(QString());
+    buildPages(QString(), voicegroupArgs);
 }
 
 NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported,
-                             const QString &sourcePath, QWidget *parent)
+                             const QString &sourcePath,
+                             const QStringList &voicegroupArgs, QWidget *parent)
     : QWizard(parent), m_project(project), m_importMode(true),
       m_imported(std::move(imported))
 {
@@ -311,10 +310,11 @@ NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported,
     if (m_imported.wasFormat0)
         m_analysis.warnings.prepend(
             tr("Format 0 file — imported as format 1 (one chunk per channel)."));
-    buildPages(sourcePath);
+    buildPages(sourcePath, voicegroupArgs);
 }
 
-void NewSongWizard::buildPages(const QString &sourcePath)
+void NewSongWizard::buildPages(const QString &sourcePath,
+                               const QStringList &voicegroupArgs)
 {
     setOption(QWizard::NoBackButtonOnStartPage);
     setMinimumSize(::layout::fontPx(52), ::layout::fontPx(38));
@@ -335,7 +335,7 @@ void NewSongWizard::buildPages(const QString &sourcePath)
 
     m_identity = new IdentityPage(m_project, suggested);
     addPage(m_identity);
-    m_sound = new SoundPage(m_project, m_identity);
+    m_sound = new SoundPage(m_project, m_identity, voicegroupArgs);
     addPage(m_sound);
 }
 
