@@ -110,7 +110,10 @@ SmfFile buildOverflowSong()
 // Same minimal voicegroup as loopcheck: a looped PCM square that sustains at
 // full level, with a slow enough release that a tail is alive to be cut.
 struct TestVoicegroup {
-    int8_t sample[64];
+    // 64 samples + the loader's guard byte: the interpolating mixer reads
+    // one sample ahead, and voicegroup_loader duplicates the last byte past
+    // the end (wd->data[size] = data[size - 1]).
+    int8_t sample[65];
     WaveData wave;
     ToneData voices[128];
 
@@ -118,6 +121,7 @@ struct TestVoicegroup {
     {
         for (int i = 0; i < 64; i++)
             sample[i] = i < 32 ? 100 : -100;
+        sample[64] = sample[63];
         std::memset(&wave, 0, sizeof(wave));
         wave.status = 0xC000; // looped
         wave.freq = 8363u * 1024u;

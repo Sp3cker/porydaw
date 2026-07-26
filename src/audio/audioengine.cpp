@@ -355,6 +355,14 @@ void AudioEngine::unloadSong()
 {
     if (m_deviceStarted)
         ma_device_stop(m_device);
+    // Hard-cut sounding channels while the device is parked. Both transport
+    // fields are assigned below, so the callback's Playing→Stopped transition
+    // never fires and cutAllSound would never run — leaving mid-note channels
+    // CHN_ON (with no note-offs coming after the player reset) still reading
+    // WaveData owned by the voicegroup the caller frees right after this
+    // returns. loadSong is exempt only because its engine reinit zeroes the
+    // channels.
+    m4a_engine_all_sound_off(m_engine.get());
     m_pendingSeek.store(kNoPendingSeek, std::memory_order_release);
     m_timeline = nullptr;
     m_voicegroup = nullptr;

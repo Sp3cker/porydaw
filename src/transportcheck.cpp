@@ -18,8 +18,11 @@
 // active-channel telemetry isolates the previews: after each transition the
 // count must drop to zero. Scenarios: play from Stopped with a ringing tail;
 // pause with a preview sounding; the Space path (pause, audition, seek +
-// play — Space toggles pause, so this is how playback usually starts); and
-// resuming with a preview still counting down.
+// play — Space toggles pause, so this is how playback usually starts);
+// resuming with a preview still counting down; and unloadSong with the song
+// still playing (the song-switch path — the caller frees the outgoing
+// voicegroup right after unloadSong returns, so a channel left CHN_ON would
+// keep rendering the freed WaveData).
 
 namespace {
 
@@ -66,10 +69,40 @@ SmfFile buildSilentSong()
     return smf;
 }
 
+// One track holding a note for the whole song: the unload scenario needs the
+// PLAYER, not a preview, to be the source of the sounding channel.
+SmfFile buildNoteSong()
+{
+    SmfFile smf;
+    smf.format = 1;
+    smf.division = kDivision;
+    smf.tracks.resize(2);
+
+    SmfTrack &conductor = smf.tracks[0];
+    SmfEvent tempo;
+    tempo.tick = 0;
+    tempo.status = 0xFF;
+    tempo.metaType = 0x51;
+    tempo.blob = QByteArray("\x07\xA1\x20", 3); // 120 BPM
+    conductor.events.push_back(tempo);
+    conductor.endTick = 4800;
+
+    SmfTrack &t0 = smf.tracks[1];
+    t0.events.push_back(channelEvent(0, 0xC0, 0, 0));
+    t0.events.push_back(channelEvent(0, 0x90, 60, 127));
+    t0.events.push_back(channelEvent(4800, 0x80, 60, 0));
+    t0.endTick = 4800;
+
+    return smf;
+}
+
 // A minimal in-memory voicegroup (primecheck's recipe): one looped PCM square
 // wave, instant attack, full sustain; only the release rates differ.
 struct TestVoicegroup {
-    int8_t sample[64];
+    // 64 samples + the loader's guard byte: the interpolating mixer reads
+    // one sample ahead, and voicegroup_loader duplicates the last byte past
+    // the end (wd->data[size] = data[size - 1]).
+    int8_t sample[65];
     WaveData wave;
     LoadedVoiceGroup vg;
 
@@ -77,6 +110,7 @@ struct TestVoicegroup {
     {
         for (int i = 0; i < 64; i++)
             sample[i] = i < 32 ? 100 : -100;
+        sample[64] = sample[63];
         std::memset(&wave, 0, sizeof(wave));
         wave.status = 0xC000; // looped
         wave.freq = 8363u * 1024u;
@@ -93,6 +127,55 @@ struct TestVoicegroup {
             v.sustain = 255;
             v.release = 254; // slow: (env * 254) >> 8 per frame, ~12 s ring
         }
+    }
+};
+
+// TestVoicegroup's heap-backed twin for the unload scenario: freeAll mimics
+// voicegroup_free while the device keeps running, so under ASAN a channel
+// that survives unloadSong turns into a use-after-free report instead of
+// silently rendering stale sample memory.
+struct HeapVoicegroup {
+    int8_t *sample = nullptr;
+    WaveData *wave = nullptr;
+    LoadedVoiceGroup *vg = nullptr;
+
+    HeapVoicegroup()
+    {
+        // 64 samples + the loader's guard byte: the interpolating mixer reads
+        // one sample ahead, and voicegroup_loader duplicates the last byte
+        // past the end (wd->data[size] = data[size - 1]).
+        sample = new int8_t[65];
+        for (int i = 0; i < 64; i++)
+            sample[i] = i < 32 ? 100 : -100;
+        sample[64] = sample[63];
+        wave = new WaveData();
+        std::memset(wave, 0, sizeof(*wave));
+        wave->status = 0xC000; // looped
+        wave->freq = 8363u * 1024u;
+        wave->loopStart = 0;
+        wave->size = 64;
+        wave->data = sample;
+        vg = new LoadedVoiceGroup();
+        std::memset(vg, 0, sizeof(*vg));
+        for (ToneData &v : vg->voices) {
+            v.type = VOICE_DIRECTSOUND;
+            v.key = 60;
+            v.wav = wave;
+            v.attack = 255;
+            v.decay = 0;
+            v.sustain = 255;
+            v.release = 254;
+        }
+    }
+
+    void freeAll()
+    {
+        delete vg;
+        delete wave;
+        delete[] sample;
+        vg = nullptr;
+        wave = nullptr;
+        sample = nullptr;
     }
 };
 
@@ -239,6 +322,36 @@ int runTransportCheck()
 
     engine.stop();
     engine.unloadSong();
+
+    // Unload with the song still playing — the song-switch path. unloadSong
+    // assigns both transport fields itself, so the callback never sees a
+    // Playing→Stopped transition and cutAllSound never runs there; the cut
+    // must happen inside unloadSong. MainWindow::loadSong frees the outgoing
+    // voicegroup right after unloadSong returns, so freeAll + the sleep below
+    // give ASAN a window to catch any channel still rendering it.
+    const SmfFile noteSmf = buildNoteSong();
+    auto noteTimeline = MidiTimeline::build(noteSmf, engine.sampleRate());
+    HeapVoicegroup hvg;
+    if (!noteTimeline || noteTimeline->usedTrackCount != 1) {
+        fail("note song built wrong");
+    } else {
+        engine.loadSong(noteTimeline.get(), hvg.vg, SongSettings{});
+        engine.play();
+        if (!waitFor([&] { return active() >= 1; }, 2000)) {
+            fail("song note never sounded before unload");
+            engine.unloadSong();
+        } else {
+            engine.unloadSong();
+            if (!waitFor([&] { return active() == 0; }, 2000))
+                fail("unloadSong left song channels sounding — they outlive "
+                     "the voicegroup the switch path frees");
+        }
+    }
+    hvg.freeAll();
+    // The device keeps calling back; a channel that survived the unload now
+    // reads the freed WaveData (ASAN reports it even when the count above
+    // somehow reached zero).
+    QThread::msleep(300);
 
     if (failures == 0)
         std::printf("transportcheck: PASS\n");

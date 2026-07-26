@@ -100,7 +100,10 @@ SmfFile buildLoopSong()
 // full level until its note-off, so a note whose note-off never arrives stays
 // keyed on (and audible) forever — exactly the reported symptom.
 struct TestVoicegroup {
-    int8_t sample[64];
+    // 64 samples + the loader's guard byte: the interpolating mixer reads
+    // one sample ahead, and voicegroup_loader duplicates the last byte past
+    // the end (wd->data[size] = data[size - 1]).
+    int8_t sample[65];
     WaveData wave;
     ToneData voices[128];
 
@@ -108,6 +111,7 @@ struct TestVoicegroup {
     {
         for (int i = 0; i < 64; i++)
             sample[i] = i < 32 ? 100 : -100;
+        sample[64] = sample[63];
         std::memset(&wave, 0, sizeof(wave));
         wave.status = 0xC000; // looped
         wave.freq = 8363u * 1024u;
