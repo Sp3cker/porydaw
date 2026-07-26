@@ -173,6 +173,13 @@ target_include_directories(porydaw_app PUBLIC
     external/stb
 )
 target_link_libraries(porydaw_app PUBLIC Qt6::Widgets poryaaaa_engine)
+if(WIN32)
+    target_sources(porydaw_app PRIVATE
+        src/ui/playheadrenderer_dcomp.cpp
+    )
+    target_compile_definitions(porydaw_app PRIVATE PORYDAW_USE_NATIVE_PLAYHEAD)
+    target_link_libraries(porydaw_app PRIVATE d2d1 d3d11 dcomp dxgi)
+endif()
 if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)
     target_link_libraries(porydaw_app PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
