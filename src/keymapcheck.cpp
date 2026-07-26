@@ -377,6 +377,17 @@ int runKeymapCheck()
             const int altIndex =
                 modCapture->findData(int(Qt::AltModifier));
             check(altIndex >= 0, "chord picker offers no Alt");
+#ifdef Q_OS_MACOS
+            const int ctrlShiftIndex = modCapture->findData(
+                int((Qt::ControlModifier | Qt::ShiftModifier).toInt()));
+            check(modCapture->itemText(
+                      modCapture->findData(int(Qt::ControlModifier)))
+                          == QStringLiteral("⌘")
+                      && modCapture->itemText(altIndex) == QStringLiteral("⌥")
+                      && modCapture->itemText(ctrlShiftIndex)
+                          == QStringLiteral("⇧⌘"),
+                  "chord picker does not use native macOS modifier labels");
+#endif
             modCapture->setCurrentIndex(altIndex);
             assignButton->click();
             check(registry.modifierBinding(QStringLiteral("roll.velocity_drag"))
@@ -384,8 +395,13 @@ int runKeymapCheck()
                   "chord picker assign did not apply the modifier");
             QTreeWidgetItem *velItem =
                 findCommandItem(tree, QStringLiteral("roll.velocity_drag"));
+#ifdef Q_OS_MACOS
+            check(velItem && velItem->text(1) == QStringLiteral("⌥"),
+                  "tree does not show the native macOS modifier chord");
+#else
             check(velItem && velItem->text(1) == QStringLiteral("Alt"),
                   "tree does not show the new modifier chord");
+#endif
             tree->setCurrentItem(velItem);
             resetButton->click();
             check(registry.modifierBinding(QStringLiteral("roll.velocity_drag"))

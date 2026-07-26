@@ -19,6 +19,24 @@ namespace {
 // The command id lives on the item so filtering/sorting never desyncs it.
 constexpr int kIdRole = Qt::UserRole;
 
+QString modifierDisplayText(Qt::KeyboardModifiers mods)
+{
+#ifdef Q_OS_MACOS
+    QString text;
+    if (mods.testFlag(Qt::MetaModifier))
+        text += QStringLiteral("⌃");
+    if (mods.testFlag(Qt::AltModifier))
+        text += QStringLiteral("⌥");
+    if (mods.testFlag(Qt::ShiftModifier))
+        text += QStringLiteral("⇧");
+    if (mods.testFlag(Qt::ControlModifier))
+        text += QStringLiteral("⌘");
+    return text;
+#else
+    return keymap::Registry::modifierText(mods);
+#endif
+}
+
 QKeySequence capturedKeySequence(const QKeySequence &sequence)
 {
     if (sequence.isEmpty())
@@ -80,7 +98,7 @@ KeyboardShortcutsDialog::KeyboardShortcutsDialog(QWidget *parent)
           Qt::ControlModifier | Qt::ShiftModifier,
           Qt::ControlModifier | Qt::AltModifier,
           Qt::ShiftModifier | Qt::AltModifier}) {
-        m_modCapture->addItem(keymap::Registry::modifierText(mods),
+        m_modCapture->addItem(modifierDisplayText(mods),
                               int(mods.toInt()));
     }
     m_modCapture->hide();
@@ -159,9 +177,9 @@ void KeyboardShortcutsDialog::rebuildTree()
             font.setBold(true);
             categoryItem->setFont(0, font);
         }
-        const QString binding = info.modifier
-            ? keymap::Registry::modifierText(registry.modifierBinding(info.id))
-            : bindingText(registry.bindings(info.id));
+        const QString binding =
+            info.modifier ? modifierDisplayText(registry.modifierBinding(info.id))
+                          : bindingText(registry.bindings(info.id));
         auto *item = new QTreeWidgetItem(categoryItem, {info.name, binding});
         item->setData(0, kIdRole, info.id);
         if (registry.isOverridden(info.id)) {
