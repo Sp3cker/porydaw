@@ -337,7 +337,10 @@ constexpr PresetColors makeDarkNeutralHigh() {
   colors.color(PresetColor::chrome_background) = "#424242";
   colors.color(PresetColor::separator) = "#262626";
   colors.color(PresetColor::control_background) = "#1A1A1A";
-  colors.color(PresetColor::control_hover_background) = "#6C6C6C";
+  // 4.69:1 under the shared window text; the old #6C6C6C held only 3.68:1,
+  // so hovered controls and menu-bar items failed the AA floor themecheck
+  // enforces.
+  colors.color(PresetColor::control_hover_background) = "#5C5C5C";
   colors.color(PresetColor::control_pressed_background) = "#00D3F2";
   colors.color(PresetColor::input_background) = "#252525";
   colors.color(PresetColor::alternate_background) = "#575757";
@@ -375,7 +378,10 @@ constexpr PresetColors makeImmaterial() {
   colors.color(PresetColor::chrome_background) = "#363941";
   colors.color(PresetColor::separator) = "#292A2E";
   colors.color(PresetColor::control_background) = "#292A2E";
-  colors.color(PresetColor::control_hover_background) = "#5F626B";
+  // 4.60:1 under the shared window text; the old #5F626B held only 3.76:1,
+  // so hovered controls and menu-bar items failed the AA floor themecheck
+  // enforces.
+  colors.color(PresetColor::control_hover_background) = "#52555E";
   colors.color(PresetColor::control_pressed_background) = "#F98CBE";
   colors.color(PresetColor::input_background) = "#25272B";
   colors.color(PresetColor::alternate_background) = "#52545C";
