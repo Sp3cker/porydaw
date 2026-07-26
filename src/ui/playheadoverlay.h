@@ -97,7 +97,7 @@ private:
   void synchronizeGeometry();
   void updatePlayhead(bool playingChanged);
 
-  void disablePlatform();
+  void disablePlatform(const char *failure, bool repaint = true);
   void initializePlatform(QWidget &owner);
   void attachPlatformToNativeView();
   void setPlatformLayout();
