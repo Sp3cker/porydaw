@@ -4,4 +4,5 @@ build-*/
 compile_commands.json
 CMakeUserPresets.json
 *.user
+.vs/
 .DS_Store
