@@ -9,7 +9,7 @@ class QLineEdit;
 class QTreeWidget;
 
 // The pre-editor zone-selection step for SoundFont imports
-// (docs/sample-studio/PLAN.md §2 Sf2ZonePicker): a searchable sample list
+// (docs/sample-editor/PLAN.md §2 Sf2ZonePicker): a searchable sample list
 // grouped under instrument/preset labels. Pure view over a parsed Sf2File —
 // it returns the picked zone index and writes nothing; the owner extracts
 // the zone and runs the ordinary editor flow.

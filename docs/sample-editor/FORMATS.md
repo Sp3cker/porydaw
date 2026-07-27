@@ -1,6 +1,6 @@
-# Sample Studio — Format & Pitch-Math Reference
+# Sample Editor — Format & Pitch-Math Reference
 
-Byte-level ground truth for everything Sample Studio reads and writes.
+Byte-level ground truth for everything Sample Editor reads and writes.
 Verified 2026-07-19 against `tools/wav2agb` in `/home/huderlem/pokeemerald`
 (ipatix wav2agb v1.1, extended) and pory4a's
 `external/poryaaaa/plugin/voicegroup_loader.c`. Cite-by-name; line numbers
@@ -180,7 +180,7 @@ DirectSoundWaveData_<name>::
 
 ## 5. SoundFont (.sf2) subset consumed
 
-RIFF form `sfbk`; Sample Studio reads only:
+RIFF form `sfbk`; Sample Editor reads only:
 
 - `sdta` → `smpl` sub-chunk: 16-bit LE PCM sample pool. (`sm24` extension
   chunk: ignored.)

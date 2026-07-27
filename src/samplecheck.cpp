@@ -43,7 +43,7 @@ extern "C" {
 #include "voicegroup_loader.h"
 }
 
-// --samplecheck <scratchDir> [corpusRoot]: Sample Studio check, phases 1-6.
+// --samplecheck <scratchDir> [corpusRoot]: Sample Editor check, phases 1-6.
 // Phase 1: builds fully-fresh fake decomp projects under scratchDir — a
 // wav2agb one, a legacy-aif one, a rule-less one, an .inc-less one, and a
 // CRLF-.inc one — then drives probe → inspect → register → loader-resolve
@@ -2210,7 +2210,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
 
     // ---- compressed formats (phase 4): dr_mp3 / dr_flac / stb_vorbis ----
     // Fixtures are embedded (samplecheck_fixtures.h, regenerate with
-    // docs/sample-studio/tools/make_fixtures.py): a 440 Hz amp-0.5 sine per
+    // docs/sample-editor/tools/make_fixtures.py): a 440 Hz amp-0.5 sine per
     // codec. FLAC is lossless, so its decode is asserted bit-exact against
     // a golden FNV-1a hash; the lossy codecs get exact structure (length /
     // rate / channels — deterministic for the vendored decoders) plus

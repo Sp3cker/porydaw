@@ -91,15 +91,15 @@ enum class PresetColor {
   /// Overflow-table row flash on a fresh drop: a fixed identity red faded
   /// by the panel.
   polyphony_flash,
-  /// Sample Studio waveform trace, drawn on the item surface behind it.
+  /// Sample Editor waveform trace, drawn on the item surface behind it.
   sample_waveform_ink,
-  /// Sample Studio crop handles: the amber domain color, kept legible on the
+  /// Sample Editor crop handles: the amber domain color, kept legible on the
   /// item surface.
   sample_crop_handle,
-  /// Sample Studio loop handles, loop tint, and seam-start trace: the blue
+  /// Sample Editor loop handles, loop tint, and seam-start trace: the blue
   /// domain color, kept legible on the item and alternate surfaces.
   sample_loop_handle,
-  /// Sample Studio seam-end trace: the red domain color, kept legible on the
+  /// Sample Editor seam-end trace: the red domain color, kept legible on the
   /// seam inset's alternate surface.
   sample_seam_end_ink,
   /// Sentinel for the number of authored preset colors; not rendered.

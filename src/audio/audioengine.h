@@ -125,7 +125,7 @@ public:
     // change never disturbs playback track state. velocity 0 releases.
     void previewVoice(uint8_t voice, uint8_t key, uint8_t velocity);
 
-    // Hot: Sample Studio in-memory sample audition (PLAN.md §4). Plays the
+    // Hot: Sample Editor in-memory sample audition (PLAN.md §4). Plays the
     // rendered s8 bytes through the audition engine instance on a dedicated
     // track, so an unregistered sample is heard with the engine's real
     // fetch/loop/envelope math. A new publish releases the previous
@@ -255,7 +255,7 @@ private:
     // Audition instance: voice previews and sample auditions, mixed on top
     // of the main engine.
     std::unique_ptr<M4AEngine> m_previewEngine;
-    // Sample Studio audition slots (PLAN.md §4), played on the audition
+    // Sample Editor audition slots (PLAN.md §4), played on the audition
     // instance's track 1 (previewVoice owns track 0).
     static constexpr int kAuditionTrack = 1;
     AuditionSlots m_audition;

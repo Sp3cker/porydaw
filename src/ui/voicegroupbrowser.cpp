@@ -247,7 +247,7 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
             });
     connect(m_samplePicker, &SamplePickerButton::auditionStopRequested, this,
             &VoicegroupBrowser::sampleAuditionStopRequested);
-    // Sample Studio entry (SPEC §6.2): visible on DirectSound sample voices.
+    // Sample Editor entry (SPEC §6.2): visible on DirectSound sample voices.
     // Glyph-only tool buttons — the picker needs the row's width, and the
     // tooltips carry the words the labels used to.
     m_newSampleButton = new QToolButton(m_symbolRow);
@@ -264,7 +264,7 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     m_editSampleButton->setText(QStringLiteral("✎"));
     m_editSampleButton->setAutoRaise(true);
     m_editSampleButton->setToolTip(
-        tr("Edit sample: reopen this voice's sample in Sample Studio."));
+        tr("Edit sample: reopen this voice's sample in Sample Editor."));
     symbolLayout->addWidget(m_editSampleButton);
     connect(m_editSampleButton, &QToolButton::clicked, this,
             [this] { emit editSampleRequested(currentSlot()); });

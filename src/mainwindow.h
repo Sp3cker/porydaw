@@ -88,7 +88,7 @@ private slots:
     void newSong();
     void importMidi();
     void importSample();
-    // Sample Studio entry (slot >= 0: browser-initiated — after the commit
+    // Sample Editor entry (slot >= 0: browser-initiated — after the commit
     // the new sample is auto-assigned to that voice slot as an undo command).
     void importSampleForSlot(int slot);
     // "Edit sample…" reopen (PLAN.md §6 phase 6): the slot's committed

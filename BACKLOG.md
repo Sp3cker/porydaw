@@ -11,7 +11,7 @@ lives in SPEC.md §8; this is the loose-ends list between milestones.
   warning counts all notes; CGB-voiced notes don't consume PCM channels, and
   with the voicegroup + program map known the estimate could be exact.
 
-## Sample Studio (shipped; design: docs/sample-studio/)
+## Sample Editor (shipped; design: docs/sample-editor/)
 
 The custom-DirectSound-sample feature shipped (all six phases; SPEC §6.2).
 Items explicitly deferred out of it:

@@ -53,7 +53,7 @@ int runTransportCheck();
 // audiocheck.cpp; prints the resolved audio backend and whether the silent
 // null-device fallback is in effect (self-contained, no project needed).
 int runAudioCheck();
-// samplecheck.cpp; Sample Studio check (phases 1-6): registrar/import
+// samplecheck.cpp; Sample Editor check (phases 1-6): registrar/import
 // refusals, the headless pipeline (decode, resample, quantize, normalize,
 // write, engine-loader parity), the phase-3 editor (pitch detection,
 // loop suggestion, crossfade bake, audition slots, offscreen waveform/undo

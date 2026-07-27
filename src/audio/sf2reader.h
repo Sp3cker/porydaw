@@ -7,7 +7,7 @@
 
 struct ImportedSample;
 
-// Minimal in-house SoundFont zone extractor (docs/sample-studio/PLAN.md §2
+// Minimal in-house SoundFont zone extractor (docs/sample-editor/PLAN.md §2
 // Sf2Reader, subset spec FORMATS.md §5). Reads only the sdta/smpl 16-bit PCM
 // pool and the pdta shdr records, plus phdr/inst/ibag/igen (and the
 // pbag/pgen index arrays that link presets to instruments) purely for the

@@ -1,6 +1,6 @@
-# Sample Studio — Context Dossier
+# Sample Editor — Context Dossier
 
-This is the verified-facts reference for implementing **Sample Studio**: end-to-end
+This is the verified-facts reference for implementing **Sample Editor**: end-to-end
 custom DirectSound instrument sample creation inside porydaw (import → crop /
 retune / resample / normalize / loop → audition → commit into the decomp
 project). Everything here was verified against real code on 2026-07-19; line
@@ -26,7 +26,7 @@ project (external tools: Wavosaur, etc.):
 6. Fiddle with loop points until the loop doesn't click.
 7. Save the .wav into the samples directory and hand-register it.
 
-Sample Studio does all of this in porydaw. Two of the steps dissolve entirely:
+Sample Editor does all of this in porydaw. Two of the steps dissolve entirely:
 
 - **Retuning needs no DSP.** The `smpl` chunk of the .wav carries the base MIDI
   key, and wav2agb bakes it into the sample's pitch word at build time (see
@@ -194,7 +194,7 @@ normalizer, no loop detection. Everything in DSP.md is net-new.
 
 - Persistent project-state views are docks (VoicegroupBrowser, Polyphony);
   transactional flows are dialogs/wizards where the widget collects choices
-  and **MainWindow does the writes** (NewSongWizard). Sample Studio is a
+  and **MainWindow does the writes** (NewSongWizard). Sample Editor is a
   modal dialog (PLAN.md §5).
 - The import wizard's instrument-mapping step was **deliberately removed** —
   never reintroduce program-remap UI in any form.
@@ -204,7 +204,7 @@ normalizer, no loop detection. Everything in DSP.md is net-new.
   Every flag needs all its arguments; scratch projects must be fully fresh.
   Models: `--vgcheck` (builds fake decomp projects with
   `direct_sound_data.inc`), `--vgsavecheck` (exercises
-  `ensureSynthDataIncluded`), `--exportcheck`. Sample Studio adds
+  `ensureSynthDataIncluded`), `--exportcheck`. Sample Editor adds
   `--samplecheck`, with sections accreting per phase.
 - Qt baseline is **6.2**; scratch-build philosophy (no heavyweight deps —
   vendored single-header C libraries are the accepted pattern; the engine

@@ -603,7 +603,7 @@ Theme derive(const QColor &primary, const QColor &accent) {
   theme.color(Role::song_view_file_event_marker) = outline;
   theme.color(Role::song_view_add_automation_lane_action) = disabledText;
 
-  // The Sample Studio waveform is a one-pixel trace on the item surface, so
+  // The Sample Editor waveform is a one-pixel trace on the item surface, so
   // it needs ink-grade contrast; keep the accent hue like the severity inks.
   theme.color(Role::sample_waveform_ink) = severityText(accent, itemBackground);
   // Its handles and seam traces are identity domain colors (amber = crop,

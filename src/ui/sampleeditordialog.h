@@ -25,7 +25,7 @@ class QSpinBox;
 class QToolButton;
 class WaveformView;
 
-// The Sample Studio dialog (docs/sample-studio/PLAN.md §5): the dominant
+// The Sample Editor dialog (docs/sample-editor/PLAN.md §5): the dominant
 // waveform view with crop/loop drag handles (height user-resizable via a
 // splitter), a "Loop this sample" checkbox whose loop-chrome frame
 // disappears entirely for one-shots and seeds the best analyzer

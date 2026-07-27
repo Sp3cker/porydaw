@@ -7,7 +7,7 @@
 #include "audio/sampledata.h"
 
 // DirectSound sample registration for wav2agb-pipeline decomp projects
-// (docs/sample-studio/FORMATS.md §4): verbatim-copy a prepared .wav into
+// (docs/sample-editor/FORMATS.md §4): verbatim-copy a prepared .wav into
 // sound/direct_sound_samples/ and append its registration block to
 // sound/direct_sound_data.inc. Follows the VoicegroupSource house rules:
 // byte-conservative CRLF-preserving QSaveFile writes, actionable refusals.
@@ -53,7 +53,7 @@ struct SampleWavInfo {
 };
 
 // Provenance sidecar for a committed sample (.porydaw/samples/<name>.json,
-// docs/sample-studio/PLAN.md §3): which source file it came from (content
+// docs/sample-editor/PLAN.md §3): which source file it came from (content
 // hash guards against edits behind porydaw's back, plus the decode choices
 // that aren't in the params) and the full edit parameters, so "Edit sample…"
 // reopens the hi-res source exactly where the user left it. The project is

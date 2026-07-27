@@ -271,7 +271,7 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   channels → tracks (warn > 16 or > polyphony budget), unmapped CCs flagged — then
   saved into the project as a new song file.
 
-**Sample Studio (custom DirectSound samples; design: `docs/sample-studio/`):**
+**Sample Editor (custom DirectSound samples; design: `docs/sample-editor/`):**
 Tools → Import Sample (or "New…" / "Edit…" beside the sample picker in the
 voicegroup dock) opens a modal editor over any .wav/.aif/.mp3/.flac/.ogg
 source or .sf2 zone: non-destructive crop / loop / retune / resample /
@@ -412,11 +412,11 @@ through a private engine instance with §7 semantics — loop count + fadeout
 for looping songs, ring-out tail otherwise, selectable sample rate, streamed
 16-bit stereo output with progress/cancel; `--exportcheck` harness.
 
-**Sample Studio (shipped after M4):**
+**Sample Editor (shipped after M4):**
 Custom DirectSound sample creation end to end — import → crop / retune /
 resample / normalize / loop → engine-true audition → write-through commit
 and registration, with provenance sidecars for reopening. Details in §6.2;
-design and formats in `docs/sample-studio/`.
+design and formats in `docs/sample-editor/`.
 
 **Later / opt-in ideas (explicitly out of scope for v1):**
 keysplit table *editing*, full project

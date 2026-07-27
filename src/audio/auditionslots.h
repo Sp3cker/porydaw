@@ -10,7 +10,7 @@ extern "C" {
 #include "m4a_engine.h"
 }
 
-// The Sample Studio audition-slot protocol (docs/sample-studio/PLAN.md §4):
+// The Sample Editor audition-slot protocol (docs/sample-editor/PLAN.md §4):
 // audition an unregistered, in-memory sample through the real engine, with
 // live re-render during loop-handle drags, without stopping the device.
 //

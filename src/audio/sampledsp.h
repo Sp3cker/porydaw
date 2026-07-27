@@ -8,7 +8,7 @@
 
 #include "sampledata.h"
 
-// Pure stateless DSP for the Sample Studio pipeline (docs/sample-studio/
+// Pure stateless DSP for the Sample Editor pipeline (docs/sample-editor/
 // DSP.md): windowed-sinc resampler, wav2agb-bit-matched quantizer,
 // zero-crossing snap, marker mapping, the corpus-measured normalization
 // gain, YIN pitch detection, loop-point suggestion, and seam metrics.

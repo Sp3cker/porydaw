@@ -1,4 +1,4 @@
-# Sample Studio — Implementation Plan
+# Sample Editor — Implementation Plan
 
 Phased plan for building end-to-end custom DirectSound sample creation in
 porydaw. Read [CONTEXT.md](CONTEXT.md) first (verified codebase/format facts
@@ -41,7 +41,7 @@ audition; single wav2agb output pipeline (retune via metadata, never DSP).
 | **SampleRegistrar** | `src/project/samplereg.{h,cpp}` | `probeSampleFormat(root)`; name/symbol validation vs `directSoundSymbols()` + on-disk collisions; `registerSample(root, name, wavBytes, &error)` — QSaveFile write of `sound/direct_sound_samples/<name>.wav` + CRLF-preserving append of the registration block to `sound/direct_sound_data.inc` (grammar FORMATS.md §4), mirroring `ensureSynthDataIncluded` conventions; verify a wav2agb `%.bin: %.wav` pattern rule exists, refuse actionably otherwise. Separate file — `voicegroupsource.cpp` is already ~1400 lines; reuse its file-local helpers by extraction if needed. |
 | **AudioEngine audition** | additions to `src/audio/audioengine.{h,cpp}` | In-memory sample audition on `m_previewEngine` — protocol in §4. |
 | **WaveformView** | `src/ui/waveformview.{h,cpp}` | Zoomable waveform (peak pyramid); crop + loop drag handles; seam overlay (PROCESSED pre-loop-end vs pre-loop-start windows superimposed, owner-fed via setSeamOverlay so the crossfade bake / normalize / resample are visible in it); playhead during audition. Pure view: emits param-change signals; owner applies to the document. |
-| **SampleEditorDialog** | `src/ui/sampleeditordialog.{h,cpp}` | The "Sample Studio" — §5. |
+| **SampleEditorDialog** | `src/ui/sampleeditordialog.{h,cpp}` | The "Sample Editor" — §5. |
 | **Sf2ZonePicker** | `src/ui/sf2zonepicker.{h,cpp}` | Searchable zone list (grouped by instrument/preset labels), pre-editor step for .sf2 files. |
 | **Harness** | `src/samplecheck.cpp` | `int runSampleCheck(...)`; forward-declare + dispatch in `src/main.cpp`; add to `CMakeLists.txt`; `QT_QPA_PLATFORM=offscreen`; builds fully-fresh fake decomp projects (the `--vgcheck` pattern). Sections accrete per phase. |
 | **Vendored decoders** | `external/dr_libs/` (dr_wav.h, dr_mp3.h, dr_flac.h), `external/stb/stb_vorbis.c` | Public-domain/MIT-0 single-file C. QAudioDecoder rejected: runtime codec-backend dependency, async API, Qt 6.2 fragility across three OSes. |
@@ -122,7 +122,7 @@ with a brief device pause; the dialog is modal and song playback is
 typically stopped. Do not ship a hand-rolled sample-player simulator —
 engine fidelity is the point (DSP.md §8).
 
-## 5. Sample Studio dialog
+## 5. Sample Editor dialog
 
 Modal resizable QDialog (transactional flow ending in a commit — dock is
 wrong: docks are persistent project-state views; wizard is wrong: one screen
@@ -237,7 +237,7 @@ hash equals committed bytes.
 
 ### Cross-phase docs duty
 Whichever phase lands last updates SPEC.md (§6.2 editing behaviors gains a
-Sample Studio subsection; §8 marks the roadmap item shipped) and prunes the
+Sample Editor subsection; §8 marks the roadmap item shipped) and prunes the
 BACKLOG entry.
 
 ## 7. Open questions (recorded, non-blocking)

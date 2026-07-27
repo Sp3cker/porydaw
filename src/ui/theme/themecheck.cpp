@@ -287,7 +287,7 @@ void checkDerivedThemes(Reporter &reporter) {
               "a dark derived lane readout is unreadable");
   laneLegible(themes::derive(QColor("#F2F2F2"), QColor("#0055AA")),
               "a light derived lane readout is unreadable");
-  // Sample Studio inks paint on the item surface (waveform trace, crop and
+  // Sample Editor inks paint on the item surface (waveform trace, crop and
   // loop handles) and the seam inset's alternate surface (loop and seam-end
   // traces); Vanilla once shipped the trace at 1.16:1 and the handles near
   // 1.5:1 by borrowing palette colors and identity tints.
@@ -307,15 +307,15 @@ void checkDerivedThemes(Reporter &reporter) {
         what);
   };
   waveformLegible(themes::vanilla(),
-                  "a Vanilla Sample Studio ink is unreadable");
+                  "a Vanilla Sample Editor ink is unreadable");
   waveformLegible(themes::darkNeutralHigh(),
-                  "a Dark Neutral High Sample Studio ink is unreadable");
+                  "a Dark Neutral High Sample Editor ink is unreadable");
   waveformLegible(themes::immaterial(),
-                  "an Immaterial Sample Studio ink is unreadable");
+                  "an Immaterial Sample Editor ink is unreadable");
   waveformLegible(themes::derive(QColor("#2B2D31"), QColor("#66CCFF")),
-                  "a dark derived Sample Studio ink is unreadable");
+                  "a dark derived Sample Editor ink is unreadable");
   waveformLegible(themes::derive(QColor("#F2F2F2"), QColor("#0055AA")),
-                  "a light derived Sample Studio ink is unreadable");
+                  "a light derived Sample Editor ink is unreadable");
 }
 
 

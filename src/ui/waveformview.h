@@ -7,7 +7,7 @@
 #include "audio/sampledata.h"
 #include "audio/sampledsp.h"
 
-// The Sample Studio waveform view (docs/sample-studio/PLAN.md §Modules):
+// The Sample Editor waveform view (docs/sample-editor/PLAN.md §Modules):
 // zoomable source-domain waveform over a peak pyramid, with draggable crop
 // and loop handles, a loop-seam overlay (the PROCESSED pre-loop-end and
 // pre-loop-start windows superimposed, fed by the owner via setSeamOverlay

@@ -4,7 +4,7 @@
 
 #include "sampledata.h"
 
-// Hi-res sample decoding front door (docs/sample-studio/PLAN.md §2
+// Hi-res sample decoding front door (docs/sample-editor/PLAN.md §2
 // SampleImport): any supported source file → an immutable ImportedSample,
 // dispatching on sniffed magic, never extension. Containers: .wav (vendored
 // dr_wav) and .aif (small in-house reader cribbed from pory4a's

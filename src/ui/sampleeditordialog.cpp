@@ -181,7 +181,7 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     : QDialog(parent), m_doc(std::move(sample)),
       m_validator(std::move(validator)), m_engine(engine)
 {
-    setWindowTitle(tr("Sample Studio"));
+    setWindowTitle(tr("Sample Editor"));
     if (destAdsr) {
         m_hasDestAdsr = true;
         m_destAdsr = *destAdsr;

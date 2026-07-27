@@ -1,4 +1,4 @@
-# Sample Studio — DSP Specification
+# Sample Editor — DSP Specification
 
 Signal-processing design for the sample pipeline. No DSP code exists in
 porydaw or pory4a today; everything here is net-new, implemented from scratch

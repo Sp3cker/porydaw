@@ -6,7 +6,7 @@
 
 #include <vector>
 
-// Value types for the Sample Studio pipeline (docs/sample-studio/PLAN.md §2).
+// Value types for the Sample Editor pipeline (docs/sample-editor/PLAN.md §2).
 // The editing model is non-destructive: an immutable decoded ImportedSample
 // plus an equality-comparable SampleEditParams, rendered deterministically to
 // a ProcessedSample by SampleDocument (pipeline order DSP.md §1).

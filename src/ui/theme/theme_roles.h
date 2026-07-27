@@ -178,14 +178,14 @@ enum class Role {
   song_view_file_event_marker,
   song_view_add_automation_lane_action,
 
-  // Sample Studio waveform trace, painted on the item surface behind it.
+  // Sample Editor waveform trace, painted on the item surface behind it.
   sample_waveform_ink,
-  // Sample Studio crop handles (amber domain color) on the item surface.
+  // Sample Editor crop handles (amber domain color) on the item surface.
   sample_crop_handle,
-  // Sample Studio loop handles, loop-region tint, and seam-start trace
+  // Sample Editor loop handles, loop-region tint, and seam-start trace
   // (blue domain color) on the item and alternate surfaces.
   sample_loop_handle,
-  // Sample Studio seam-end trace (red domain color) on the seam inset's
+  // Sample Editor seam-end trace (red domain color) on the seam inset's
   // alternate surface.
   sample_seam_end_ink,
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Measure level statistics of a DirectSound sample corpus (.wav files).
 
-Purpose: derive/verify the Sample Studio normalization constants
+Purpose: derive/verify the Sample Editor normalization constants
 (kTargetLoopRms, kPeakCeiling) from a reference sample set -- canonically
 the sc88pro instrument samples shipped in pokeemerald.
 
