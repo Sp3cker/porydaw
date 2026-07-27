@@ -19,8 +19,10 @@
 #include <QString>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QWheelEvent>
 #include <QWidget>
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <vector>
 
@@ -71,6 +73,58 @@ void sendMouse(QWidget *w, QEvent::Type type, QPoint pos,
     QCoreApplication::sendEvent(w, &ev);
 }
 
+void sendMouse(QWidget *w, QEvent::Type type, QPointF pos,
+                              Qt::MouseButton button, Qt::MouseButtons buttons,
+                              Qt::KeyboardModifiers mods = Qt::NoModifier) {
+    QMouseEvent ev(type, pos, QPointF(w->mapToGlobal(pos.toPoint())), button,
+                                  buttons, mods);
+    QCoreApplication::sendEvent(w, &ev);
+}
+
+void sendWheel(QWidget *w, QPointF pos, int angleDeltaY, int pixelDeltaY = 0,
+               Qt::KeyboardModifiers mods = Qt::ControlModifier,
+               int pixelDeltaX = 0) {
+    QWheelEvent ev(pos, QPointF(w->mapToGlobal(pos.toPoint())),
+                                  QPoint(pixelDeltaX, pixelDeltaY),
+                                  QPoint(0, angleDeltaY), Qt::NoButton,
+                                  mods, Qt::NoScrollPhase, false);
+    QCoreApplication::sendEvent(w, &ev);
+}
+
+// Test-side mirror of the roll's vertical projection. It intentionally
+// samples the same independently-snapped half-open row boundaries without
+// making the roll's private paint geometry part of SongView's public API.
+struct SnappedRows {
+    const SongView &view;
+    const QWidget &roll;
+
+    qreal dpr() const { return roll.devicePixelRatioF(); }
+    qreal pixel() const { return 1.0 / dpr(); }
+    qreal edge(int row) const {
+        return std::round((row * view.keyHeight() - view.scrollY()) * dpr()) /
+                      dpr();
+    }
+    qreal top(int key) const { return edge(127 - key); }
+    qreal bottom(int key) const { return edge(128 - key); }
+    int keyAt(qreal y) const {
+        for (int row = 0; row < 128; ++row)
+            if (y < edge(row + 1))
+                return 127 - row;
+        return 0;
+    }
+    int centerY(int key) const { return int(std::floor((top(key) + bottom(key)) / 2)); }
+    QRectF noteRect(int x0, int x1, int key) const {
+        return QRectF(x0, top(key) + pixel(), std::max(2, x1 - x0),
+                                    std::max(2.0 * pixel(), bottom(key) - top(key) - pixel()));
+    }
+    QRectF noteBox(const QRectF &rect) const {
+        return rect.adjusted(0, 0, -pixel(), -pixel());
+    }
+    int noteTopProbeY(int key) const {
+        return int(std::floor(noteRect(0, 1, key).top() + pixel()));
+    }
+};
+
 void click(QWidget *w, QPoint pos) {
     sendMouse(w, QEvent::MouseButtonPress, pos, Qt::LeftButton, Qt::LeftButton);
     sendMouse(w, QEvent::MouseButtonRelease, pos, Qt::LeftButton, Qt::NoButton);
@@ -104,6 +158,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                            settingsDir.path());
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
                            settingsDir.path());
+        // Registry is initialized during application startup; force the
+        // harness's redirected format so it cannot consult a user's registry
+        // override for a gesture binding.
+        QSettings::setDefaultFormat(QSettings::IniFormat);
     }
 
     DecompProject project;
@@ -172,19 +230,279 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         fail("no engine track to draw on");
         return 1;
     }
-    const int keyH = view.keyHeight();
+
+    // The Y camera is continuous: partial wheel deltas are immediately
+    // multiplicative, preserve the cursor's content row, and remain precise
+    // through the integer-native scrollbar projection.
+    {
+        const SongView::ViewState original = view.viewState();
+        SongView::ViewState zoom = original;
+        zoom.keyHeight = 8.0;
+        zoom.scrollY = 300.0;
+        view.applyViewState(zoom);
+        const QPointF anchor(songview::kKeyboardW + 40.0, 200.0);
+
+        for (int i = 0; i < 4; ++i)
+            sendWheel(roll, anchor, 30);
+        const double partialHeight = view.keyHeight();
+        const double partialScroll = view.scrollY();
+
+        view.applyViewState(zoom);
+        sendWheel(roll, anchor, 120);
+        if (std::abs(view.keyHeight() - partialHeight) > 1e-12 ||
+                std::abs(view.scrollY() - partialScroll) > 1e-10)
+            fail("four partial Ctrl-wheel deltas differ from one full notch");
+
+        view.applyViewState(zoom);
+        const double anchoredRow = (anchor.y() + view.scrollY()) / view.keyHeight();
+        sendWheel(roll, anchor, 30);
+        if (std::abs((anchor.y() + view.scrollY()) / view.keyHeight()
+                                  - anchoredRow) > 1e-12)
+            fail("Ctrl-wheel zoom moved the cursor's content row");
+
+        view.applyViewState(zoom);
+        for (int i = 0; i < 10; ++i)
+            sendWheel(roll, anchor, 120);
+        if (std::abs(view.keyHeight() - 16.0) > 1e-12)
+            fail("ten Ctrl-wheel notches did not double key height");
+
+        view.applyViewState(zoom);
+        sendWheel(roll, anchor, 0, 240);
+        if (std::abs(view.keyHeight() - 16.0) > 1e-12)
+            fail("240-pixel Ctrl-wheel zoom did not double key height");
+
+
+        view.applyViewState(zoom);
+        const double keyboardScroll = view.scrollY();
+        sendWheel(roll, QPointF(songview::kKeyboardW - 1.0, anchor.y()),
+                  0, 1, Qt::NoModifier);
+        if (std::abs(view.scrollY() - (keyboardScroll - 0.5)) > 1e-12)
+            fail("pixel-only wheel over keyboard did not scroll note range");
+        view.applyViewState(zoom);
+        for (int i = 0; i < 4; ++i)
+            sendWheel(roll, anchor, 30);
+        for (int i = 0; i < 4; ++i)
+            sendWheel(roll, anchor, -30);
+        if (std::abs(view.keyHeight() - zoom.keyHeight) > 1e-12 ||
+                std::abs(view.scrollY() - zoom.scrollY) > 1e-10)
+            fail("equal Ctrl-wheel zoom in/out did not restore the camera");
+
+        zoom.keyHeight = 9.375;
+        zoom.scrollY = 257.625;
+        view.applyViewState(zoom);
+        const SongView::ViewState fractional = view.viewState();
+        if (std::abs(fractional.keyHeight - zoom.keyHeight) > 1e-12 ||
+                std::abs(fractional.scrollY - zoom.scrollY) > 1e-12)
+            fail("fractional vertical view state did not round-trip");
+
+        const int boundaryRow = 40;
+        const qreal dpr = roll->devicePixelRatioF();
+        const qreal boundary = std::round((boundaryRow * view.keyHeight()
+                                                                              - view.scrollY()) * dpr) / dpr;
+        sendMouse(roll, QEvent::MouseMove,
+                            QPointF(songview::kKeyboardW + 40.0, boundary - 0.25),
+                            Qt::NoButton, Qt::NoButton);
+        if (roll->property("hoverKey").toInt() != 128 - boundaryRow)
+            fail("hovering above a snapped pitch boundary chose the wrong key");
+        sendMouse(roll, QEvent::MouseMove,
+                            QPointF(songview::kKeyboardW + 40.0, boundary + 0.25),
+                            Qt::NoButton, Qt::NoButton);
+        if (roll->property("hoverKey").toInt() != 127 - boundaryRow)
+            fail("hovering below a snapped pitch boundary chose the wrong key");
+
+        // Integer-valued legacy vertical state still applies unchanged after the
+        // type migration.
+        zoom.keyHeight = 11;
+        zoom.scrollY = 217;
+        view.applyViewState(zoom);
+        const SongView::ViewState legacy = view.viewState();
+        if (legacy.keyHeight != 11.0 || legacy.scrollY != 217.0)
+            fail("legacy integer vertical view state no longer applies");
+        view.applyViewState(original);
+        (void)view.grab(); // consume the restoration repaint before later probes
+        QCoreApplication::processEvents();
+    }
+
+    // The X camera follows the same continuous contract as the Y camera:
+    // wheel deltas compose, the exact qreal cursor anchor stays pinned, and
+    // the integer scrollbar is only a projection of the fractional camera.
+    {
+        const SongView::ViewState original = view.viewState();
+        SongView::ViewState zoom = original;
+        zoom.pxPerBeat = 500.125;
+        zoom.scrollPx = 23.625;
+        const QPointF anchor(songview::kKeyboardW + 73.375, 200.0);
+        const qreal anchorContentX = anchor.x() - songview::kKeyboardW;
+
+        view.applyViewState(zoom);
+        for (int i = 0; i < 4; ++i)
+            sendWheel(roll, anchor, 30, 0, Qt::NoModifier);
+        const double partialScale = view.pxPerBeat();
+        const double partialScroll = view.viewState().scrollPx;
+
+        view.applyViewState(zoom);
+        sendWheel(roll, anchor, 120, 0, Qt::NoModifier);
+        const double fullScale = view.pxPerBeat();
+        const double fullScroll = view.viewState().scrollPx;
+        const double expectedFullScale =
+            zoom.pxPerBeat * std::pow(1.0015, 120.0);
+        if (std::abs(fullScale - expectedFullScale) > 1e-10)
+            fail("timeline-wheel notch changed horizontal zoom sensitivity");
+        if (std::abs(fullScale - partialScale) > 1e-12 ||
+                std::abs(fullScroll - partialScroll) > 1e-9)
+            fail("four partial timeline-wheel deltas differ from one full notch");
+
+        view.applyViewState(zoom);
+        sendWheel(roll, anchor, 0, 24, Qt::NoModifier);
+        if (std::abs(view.pxPerBeat() - fullScale) > 1e-12 ||
+                std::abs(view.viewState().scrollPx - fullScroll) > 1e-9)
+            fail("timeline pixel-wheel delta was not consumed continuously");
+
+
+        view.applyViewState(zoom);
+        const double horizontalScroll = view.viewState().scrollPx;
+        const double horizontalScale = view.pxPerBeat();
+        sendWheel(roll, anchor, 0, 0, Qt::NoModifier, 8);
+        if (std::abs(view.viewState().scrollPx - (horizontalScroll - 8.0)) > 1e-12 ||
+                std::abs(view.pxPerBeat() - horizontalScale) > 1e-12)
+            fail("pixel-only horizontal wheel did not scroll timeline");
+        view.applyViewState(zoom);
+        const double anchoredTick = view.tickAtContentX(anchorContentX);
+        sendWheel(roll, anchor, 30, 0, Qt::NoModifier);
+        if (std::abs(view.tickAtContentX(anchorContentX) - anchoredTick) > 1e-9)
+            fail("timeline-wheel zoom moved the cursor's fractional anchor tick");
+
+        view.applyViewState(zoom);
+        for (int i = 0; i < 4; ++i)
+            sendWheel(roll, anchor, 30, 0, Qt::NoModifier);
+        for (int i = 0; i < 4; ++i)
+            sendWheel(roll, anchor, -30, 0, Qt::NoModifier);
+        if (std::abs(view.pxPerBeat() - zoom.pxPerBeat) > 1e-10 ||
+                std::abs(view.viewState().scrollPx - zoom.scrollPx) > 1e-9)
+            fail("equal timeline-wheel zoom in/out did not restore the camera");
+
+        zoom.pxPerBeat = 311.375;
+        zoom.scrollPx = 47.625;
+        view.applyViewState(zoom);
+        const SongView::ViewState fractional = view.viewState();
+        if (std::abs(fractional.pxPerBeat - zoom.pxPerBeat) > 1e-12 ||
+                std::abs(fractional.scrollPx - zoom.scrollPx) > 1e-12)
+            fail("fractional horizontal view state did not round-trip");
+
+        // Integer-valued legacy horizontal state remains a valid sidecar value
+        // after scrollPx becomes fractional.
+        zoom.pxPerBeat = 320.0;
+        zoom.scrollPx = 17.0;
+        view.applyViewState(zoom);
+        const SongView::ViewState legacy = view.viewState();
+        if (legacy.pxPerBeat != 320.0 || legacy.scrollPx != 17.0)
+            fail("legacy integer horizontal view state no longer applies");
+
+        view.applyViewState(original);
+        (void)view.grab();
+        QCoreApplication::processEvents();
+    }
+
+    // Exact tick geometry rounds once, after adding the destination widget's
+    // origin. Its affine inverse must still snap every visible snap-grid tick
+    // back to itself at both one- and two-device-pixel scaling.
+    {
+        const SongView::ViewState original = view.viewState();
+        const QSize originalSize = view.size();
+        view.resize(180, originalSize.height());
+        (void)view.grab();
+        QCoreApplication::processEvents();
+
+        struct CameraProbe {
+            double pxPerBeat;
+            double scrollPx;
+        };
+        const CameraProbe probes[] = {
+            {4.125, 0.375},
+            {37.375, 13.625},
+            {512.5, 71.3125},
+        };
+        const qreal origins[] = {
+            qreal(songview::kKeyboardW),
+            qreal(songview::kGutterW) + 0.25,
+        };
+        const qreal dprs[] = {1.0, 2.0};
+
+        for (const CameraProbe &probe : probes) {
+            SongView::ViewState state = original;
+            state.pxPerBeat = probe.pxPerBeat;
+            state.scrollPx = probe.scrollPx;
+            state.gridMinDenom = 0;
+            view.applyViewState(state);
+            const SongView::ViewState applied = view.viewState();
+            if (std::abs(applied.pxPerBeat - probe.pxPerBeat) > 1e-12 ||
+                    std::abs(applied.scrollPx - probe.scrollPx) > 1e-12)
+                fail("fractional projection camera did not apply exactly");
+
+            const qreal visibleWidth =
+                qreal(roll->width() - songview::kKeyboardW);
+            uint64_t tick =
+                view.snapTickUp(std::max(0.0, view.tickAtContentX(0.0)));
+            int visibleTicks = 0;
+            bool mappingFailed = false;
+            const double affineTick =
+                view.tickAtContentX(visibleWidth * 0.371) + 0.375;
+            if (std::abs(view.tickAtContentX(view.contentX(affineTick))
+                         - affineTick) > 1e-9)
+                fail("raw horizontal projection lost fractional tick precision");
+            for (int guard = 0; guard < 10000; ++guard) {
+                const qreal rawX = view.contentX(double(tick));
+                if (rawX > visibleWidth)
+                    break;
+                if (rawX >= 0.0) {
+                    visibleTicks++;
+                    for (qreal origin : origins) {
+                        for (qreal dpr : dprs) {
+                            const qreal displayed =
+                                view.displayX(double(tick), origin, dpr);
+                            const qreal expected = std::round(
+                                (origin + rawX) * dpr) / dpr;
+                            if (std::abs(displayed - expected) > 1e-12)
+                                mappingFailed = true;
+                            const uint64_t roundTrip = view.snapTick(
+                                view.tickAtContentX(displayed - origin));
+                            if (roundTrip != tick)
+                                mappingFailed = true;
+                        }
+                    }
+                }
+                const uint64_t next =
+                    view.snapTickUp(double(tick) + 1.0);
+                if (next <= tick) {
+                    mappingFailed = true;
+                    break;
+                }
+                tick = next;
+            }
+            if (visibleTicks < 2)
+                fail("fractional projection camera exposed too few snap ticks");
+            if (mappingFailed)
+                fail("display/inverse projection changed a visible snap-grid tick");
+        }
+
+        view.resize(originalSize);
+        (void)view.grab();
+        view.applyViewState(original);
+        QCoreApplication::processEvents();
+    }
+    const SnappedRows rows{view, *roll};
 
     // Hover readout: the cursor anywhere over the roll marks its key row
     // on the keyboard column (mirrored in the hoverKey property); leaving
     // the widget clears the mark.
     {
         const int y = roll->height() / 2;
-        const int expected = std::clamp(127 - (y + view.scrollY()) / keyH, 0, 127);
+        const int expected = rows.keyAt(y);
         sendMouse(roll, QEvent::MouseMove, QPoint(songview::kKeyboardW + 40, y),
                             Qt::NoButton, Qt::NoButton);
         if (roll->property("hoverKey").toInt() != expected)
             fail("hovering the notes area did not mark its key row");
-        sendMouse(roll, QEvent::MouseMove, QPoint(4, y + keyH), Qt::NoButton,
+        sendMouse(roll, QEvent::MouseMove, QPoint(4, rows.centerY(expected - 1)), Qt::NoButton,
                   Qt::NoButton);
         if (roll->property("hoverKey").toInt() != expected - 1)
             fail("hovering the keyboard column did not follow the key row");
@@ -226,8 +544,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                             bool checkAllTracks = false) -> Cell {
       Cell cell;
       for (int key = 115; key >= 24; key--) {
-        const int y = (127 - key) * keyH - view.scrollY();
-        if (y < 0 || y + keyH > roll->height())
+            const qreal top = rows.top(key);
+            const qreal bottom = rows.bottom(key);
+            if (top < 0 || bottom > roll->height())
           continue;
         for (int probe = firstProbe;
              probe < roll->width() - songview::kKeyboardW - 40; probe += 24) {
@@ -251,12 +570,132 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
           // Mid snap-cell, not mid drawn-cell: snapping is finer than
           // the drawn grid, so a draw at the cell's visual center
           // would anchor at the snap line there, not at cell.tick.
-          cell.center = QPoint((x0 + xs) / 2, y + keyH / 2 + 1);
+                cell.center = QPoint((x0 + xs) / 2, rows.centerY(key));
           return cell;
         }
       }
       return cell;
     };
+
+    // Regression for the complete paint-to-edit path: use the physical-pixel
+    // centers of two adjacent displayed snap boundaries, then require the
+    // document note to start at that displayed cell rather than a neighbor.
+    {
+        const SongView::ViewState original = view.viewState();
+        const QSize originalSize = view.size();
+        view.resize(180, originalSize.height());
+        (void)view.grab();
+        QCoreApplication::processEvents();
+
+        SongView::ViewState fractional = original;
+        fractional.pxPerBeat = 31.375;
+        fractional.scrollPx = 0.625;
+        view.applyViewState(fractional);
+        const SongView::ViewState applied = view.viewState();
+        if (std::abs(applied.pxPerBeat - fractional.pxPerBeat) > 1e-12 ||
+                std::abs(applied.scrollPx - fractional.scrollPx) > 1e-12)
+            fail("fractional edit camera did not apply exactly");
+
+        struct FractionalEditProbe {
+            uint64_t tick = 0;
+            uint64_t previous = 0;
+            uint64_t next = 0;
+            int key = -1;
+            QPointF center;
+        } probe;
+        const qreal origin = qreal(songview::kKeyboardW);
+        const qreal dpr = roll->devicePixelRatioF();
+        const qreal rightLimit = qreal(roll->width()) - 4.0;
+
+        for (int key = 115; key >= 24 && probe.key < 0; --key) {
+            const qreal top = rows.top(key);
+            const qreal bottom = rows.bottom(key);
+            if (top < 0.0 || bottom > roll->height())
+                continue;
+            uint64_t tick =
+                view.snapTickUp(std::max(0.0, view.tickAtContentX(4.0)));
+            for (int guard = 0; guard < 1000; ++guard) {
+                const uint64_t next =
+                    view.snapTickUp(double(tick) + 1.0);
+                if (next <= tick)
+                    break;
+                const qreal leftX = view.displayX(double(tick), origin, dpr);
+                const qreal rightX = view.displayX(double(next), origin, dpr);
+                if (leftX > rightLimit)
+                    break;
+                const uint64_t dur = view.gridTicksAt(tick);
+                const uint64_t previous =
+                    tick == 0 ? tick : view.snapTickDown(double(tick) - 1.0);
+                if (leftX >= origin + 4.0 && rightX <= rightLimit
+                        && rightX - leftX >= 4.0
+                        && !occupied(tick, dur, key)) {
+                    const qreal centerX = (leftX + rightX) / 2.0;
+                    if (std::abs(centerX - std::round(centerX)) < 1e-12) {
+                        tick = next;
+                        continue;
+                    }
+                    const QPointF center(centerX, (top + bottom) / 2.0);
+                    if (view.snapTickDown(
+                            view.tickAtContentX(center.x() - origin)) == tick) {
+                        probe.tick = tick;
+                        probe.previous = previous;
+                        probe.next = next;
+                        probe.key = key;
+                        probe.center = center;
+                        break;
+                    }
+                }
+                tick = next;
+            }
+        }
+
+        if (probe.key < 0) {
+            fail("no empty fractional displayed cell for edit regression");
+        } else {
+            const QByteArray beforeProbe = doc.smf().write();
+            const int undoIndex = doc.undoStack()->index();
+            sendMouse(roll, QEvent::MouseButtonDblClick, probe.center,
+                      Qt::LeftButton, Qt::LeftButton);
+            sendMouse(roll, QEvent::MouseButtonRelease, probe.center,
+                      Qt::LeftButton, Qt::NoButton);
+
+            DocNote exact;
+            if (!doc.findNote(track, probe.tick, uint8_t(probe.key), &exact))
+                fail("fractional displayed-cell edit saved at the wrong tick");
+            DocNote neighbor;
+            const bool atPrevious = probe.previous != probe.tick
+                && doc.findNote(track, probe.previous, uint8_t(probe.key), &neighbor);
+            const bool atNext =
+                doc.findNote(track, probe.next, uint8_t(probe.key), &neighbor);
+            if (atPrevious || atNext)
+                fail("fractional displayed-cell edit saved in a neighboring cell");
+
+            if (doc.undoStack()->index() <= undoIndex)
+                fail("fractional displayed-cell edit pushed no undo command");
+            while (doc.undoStack()->index() > undoIndex
+                   && doc.undoStack()->canUndo())
+                doc.undoStack()->undo();
+
+            DocNote residue;
+            const bool exactResidue =
+                doc.findNote(track, probe.tick, uint8_t(probe.key), &residue);
+            const bool previousResidue = probe.previous != probe.tick
+                && doc.findNote(track, probe.previous, uint8_t(probe.key), &residue);
+            const bool nextResidue =
+                doc.findNote(track, probe.next, uint8_t(probe.key), &residue);
+            if (exactResidue || previousResidue || nextResidue)
+                fail("undo left the fractional displayed-cell probe in the document");
+            if (doc.undoStack()->index() != undoIndex
+                    || doc.smf().write() != beforeProbe
+                    || view.document() != &doc || !view.timeline())
+                fail("fractional displayed-cell probe did not restore document state");
+        }
+
+        view.resize(originalSize);
+        (void)view.grab();
+        view.applyViewState(original);
+        QCoreApplication::processEvents();
+    }
 
     // Baseline: the pencil draws at velocity 100 on a fresh document.
     const Cell a = findFreeCell(40, true);
@@ -293,9 +732,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         songview::kKeyboardW + view.contentX(double(noteA.tick));
     const int noteRightX = songview::kKeyboardW
         + view.contentX(double(noteA.tick + noteA.duration));
-    const QRect noteInteractionRect(
-        noteLeftX, (127 - noteA.key) * keyH - view.scrollY() + 1,
-        std::max(2, noteRightX - noteLeftX), std::max(2, keyH - 1));
+    const QRectF noteFrame =
+        rows.noteRect(noteLeftX, noteRightX, noteA.key);
+    const QRect noteInteractionRect = noteFrame.toAlignedRect();
     bool paintEscapedInteractionRect = false;
     for (int y = noteInteractionRect.top();
          y <= noteInteractionRect.bottom(); ++y) {
@@ -312,8 +751,19 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (paintEscapedInteractionRect)
       fail("note color escaped past its black box");
 
-    const QRect paintedNoteBox =
-        noteInteractionRect.adjusted(0, 0, -1, -1);
+    const QRect paintedNoteBox = rows.noteBox(noteFrame).toAlignedRect();
+    const QRectF twoPixelBarNoteRect(
+        noteFrame.left(), noteFrame.top(), noteFrame.width(),
+        20 * rows.pixel());
+    const QRectF twoPixelBarNoteBox = rows.noteBox(twoPixelBarNoteRect);
+    const QRectF velocityZeroBar =
+        songview::velBarRect(twoPixelBarNoteRect, 0, rows.dpr());
+    if (qRound(velocityZeroBar.height() / rows.pixel()) != 2
+        || velocityZeroBar.left() < twoPixelBarNoteBox.left()
+        || velocityZeroBar.right() > twoPixelBarNoteBox.right()
+        || velocityZeroBar.top() < twoPixelBarNoteBox.top()
+        || velocityZeroBar.bottom() > twoPixelBarNoteBox.bottom())
+      fail("two-pixel velocity-zero bar escaped painted note box");
     // Timeline overlays are composited above notes and can tint frame colors
     // by a few channel values.
     const auto isBlackBorder = [](QRgb pixel) {
@@ -327,26 +777,6 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
           && std::abs(actualColor.green() - selectionRingColor.green()) <= 16
           && std::abs(actualColor.blue() - selectionRingColor.blue()) <= 16;
     };
-    const int noteCenterX = paintedNoteBox.center().x();
-    if (!isSelectionRingColor(
-            rollAfterDrawing.pixel(noteCenterX, paintedNoteBox.top()))
-        || !isSelectionRingColor(
-            rollAfterDrawing.pixel(noteCenterX, paintedNoteBox.top() + 1))) {
-      fail("selected note outer frame does not use the selection color");
-    }
-    const QRect insetNoteBorder = paintedNoteBox.adjusted(2, 2, -2, -2);
-    if (!isBlackBorder(rollAfterDrawing.pixel(
-            insetNoteBorder.center().x(), insetNoteBorder.top())))
-      fail("selected note did not have an inset black top border");
-    if (!isBlackBorder(rollAfterDrawing.pixel(
-            insetNoteBorder.center().x(), insetNoteBorder.bottom())))
-      fail("selected note did not have an inset black bottom border");
-    if (!isBlackBorder(rollAfterDrawing.pixel(
-            insetNoteBorder.left(), insetNoteBorder.center().y())))
-      fail("selected note did not have an inset black left border");
-    if (!isBlackBorder(rollAfterDrawing.pixel(
-            insetNoteBorder.right(), insetNoteBorder.center().y())))
-      fail("selected note did not have an inset black right border");
 
     const QColor velocityZeroColor = SongView::noteColor(track, 0);
     const QColor velocityMaximumColor = SongView::noteColor(track, 127);
@@ -375,6 +805,75 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         != expectedNoteColor)
       fail("note interior color does not match noteColor(track, 100)");
 
+    // Probe the selected 3px ring, its 2px black inset, and the unselected
+    // bottom edge with the camera centered at a fractional scale.
+    {
+      const SongView::ViewState originalView = view.viewState();
+      SongView::ViewState fractionalView = originalView;
+      fractionalView.keyHeight = 16.375;
+      fractionalView.scrollY =
+          std::max(0.0,
+                   (127.5 - double(noteA.key)) * fractionalView.keyHeight
+                       - roll->height() / 2.0);
+      view.applyViewState(fractionalView);
+
+      const SnappedRows fractionalRows{view, *roll};
+      const QRectF fractionalNoteBox = fractionalRows.noteBox(
+          fractionalRows.noteRect(noteLeftX, noteRightX, noteA.key));
+      const QPixmap selectedNotePixmap = roll->grab();
+      const QImage selectedNoteImage = selectedNotePixmap.toImage();
+      const qreal devicePixelRatio = selectedNotePixmap.devicePixelRatio();
+      const auto toPhysicalPixel = [devicePixelRatio](qreal position) {
+        return qRound(position * devicePixelRatio);
+      };
+      const int leftPixel = toPhysicalPixel(fractionalNoteBox.left());
+      const int rightPixel = toPhysicalPixel(fractionalNoteBox.right());
+      const int topPixel = toPhysicalPixel(fractionalNoteBox.top());
+      const int bottomPixel = toPhysicalPixel(fractionalNoteBox.bottom());
+      const int centerPixelX = toPhysicalPixel(fractionalNoteBox.center().x());
+      const int centerPixelY = toPhysicalPixel(fractionalNoteBox.center().y());
+      for (int ringPixel = 0; ringPixel < 3; ++ringPixel) {
+        if (!isSelectionRingColor(
+                selectedNoteImage.pixel(centerPixelX,
+                                        topPixel + ringPixel))
+            || !isSelectionRingColor(
+                selectedNoteImage.pixel(centerPixelX,
+                                        bottomPixel - 1 - ringPixel))) {
+          fail("selected note frame is not a contiguous 3px selection ring");
+        }
+      }
+      for (int borderPixel = 0; borderPixel < 2; ++borderPixel) {
+        if (!isBlackBorder(selectedNoteImage.pixel(
+                centerPixelX, topPixel + 3 + borderPixel)))
+          fail("selected note did not have an inset black top border");
+        if (!isBlackBorder(selectedNoteImage.pixel(
+                centerPixelX, bottomPixel - 4 - borderPixel)))
+          fail("selected note did not have an inset black bottom border");
+        if (!isBlackBorder(selectedNoteImage.pixel(
+                leftPixel + 3 + borderPixel, centerPixelY)))
+          fail("selected note did not have an inset black left border");
+        if (!isBlackBorder(selectedNoteImage.pixel(
+                rightPixel - 4 - borderPixel, centerPixelY)))
+          fail("selected note did not have an inset black right border");
+      }
+
+      view.clearSelection();
+      const QImage unselectedNoteImage = roll->grab().toImage();
+      if (!isBlackBorder(
+              unselectedNoteImage.pixel(centerPixelX, bottomPixel - 2))
+          || !isBlackBorder(
+              unselectedNoteImage.pixel(centerPixelX, bottomPixel - 1))) {
+        fail("unselected note lacks a contiguous 2px black bottom border");
+      } else if (QColor(
+                     unselectedNoteImage.pixel(centerPixelX, bottomPixel))
+                 == expectedNoteColor) {
+        fail("unselected note face appears below its black bottom border");
+      }
+
+      view.applyViewState(originalView);
+      QCoreApplication::processEvents();
+    }
+
     const int selectedTrackBeforeGhostProbe = view.selectedTrack();
     const int ghostTrack =
         (selectedTrackBeforeGhostProbe + 1) % doc.engineTrackCount();
@@ -389,13 +888,13 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                               paintedNoteBox.top());
     const QRgb ghostTopInterior =
         ghostNoteRender.pixel(paintedNoteBox.center().x(),
-                              paintedNoteBox.top() + 1);
+                              paintedNoteBox.top() + 2);
     const QRgb ghostBottomEdge =
         ghostNoteRender.pixel(paintedNoteBox.center().x(),
                               paintedNoteBox.bottom());
     const QRgb ghostBottomInterior =
         ghostNoteRender.pixel(paintedNoteBox.center().x(),
-                              paintedNoteBox.bottom() - 1);
+                              paintedNoteBox.bottom() - 2);
 
     if (ghostTopEdge != ghostTopInterior
         || ghostBottomEdge != ghostBottomInterior)
@@ -453,7 +952,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         while (clearKey <= 127 && occupied(a.tick, a.dur, clearKey))
             clearKey++;
         const QPoint clearGlobal =
-                roll->mapToGlobal(a.center - QPoint(0, (clearKey - a.key) * keyH));
+                roll->mapToGlobal(QPoint(a.center.x(), rows.centerY(clearKey)));
         sendMouse(noteMenu, QEvent::MouseButtonPress,
                   noteMenu->mapFromGlobal(clearGlobal), Qt::RightButton,
                   Qt::RightButton);
@@ -471,10 +970,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // Drag latch: grab note B's velocity bar and pull 20px up (1px = 1
     // step), 73 -> 93. The latch must follow the dragged value, not the
     // press value.
-    const QRect bRect(0, (127 - b.key) * keyH - view.scrollY() + 1, 1,
-                      std::max(2, keyH - 1));
-    const QPoint bHandle(b.center.x(),
-                         songview::velBarRect(bRect, 73).center().y());
+    const QRectF bRect = rows.noteRect(0, 1, b.key);
+    const QPoint bHandle(
+            b.center.x(), qRound(songview::velBarRect(bRect, 73, rows.dpr()).center().y()));
     sendMouse(roll, QEvent::MouseButtonPress, bHandle, Qt::LeftButton,
               Qt::LeftButton);
     sendMouse(roll, QEvent::MouseMove, bHandle - QPoint(0, 20), Qt::NoButton,
@@ -510,12 +1008,13 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     DocNote bNow;
     if (doc.findNote(track, b.tick, uint8_t(b.key), &bNow)) {
         doc.setNotesVelocity({bNow}, 20);
-        const QPoint bTop(b.center.x(), (127 - b.key) * keyH - view.scrollY() + 2);
+        const QPoint bTop(b.center.x(), rows.noteTopProbeY(b.key));
         sendMouse(roll, QEvent::MouseButtonPress, bTop, Qt::LeftButton,
                   Qt::LeftButton);
-        sendMouse(roll, QEvent::MouseMove, bTop - QPoint(0, 2 * keyH), Qt::NoButton,
+        const QPoint movedTop(bTop.x(), rows.noteTopProbeY(b.key + 2));
+        sendMouse(roll, QEvent::MouseMove, movedTop, Qt::NoButton,
                             Qt::LeftButton);
-        sendMouse(roll, QEvent::MouseButtonRelease, bTop - QPoint(0, 2 * keyH),
+        sendMouse(roll, QEvent::MouseButtonRelease, movedTop,
                   Qt::LeftButton, Qt::NoButton);
         if (doc.findNote(track, b.tick, uint8_t(b.key), &bNow))
             fail("top-of-note drag on a low-velocity note did not move the "
@@ -619,11 +1118,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (aud != std::vector<std::pair<int, int>>{{e.key, 93}})
             fail(
                     "empty-space press did not audition its row at the latched velocity");
-        sendMouse(roll, QEvent::MouseMove, e.center + QPoint(0, keyH), Qt::NoButton,
+        const QPoint gliss(e.center.x(), rows.centerY(e.key - 1));
+        sendMouse(roll, QEvent::MouseMove, gliss, Qt::NoButton,
                             Qt::LeftButton);
         if (aud.empty() || aud.back() != std::make_pair(e.key - 1, 93))
             fail("holding the press across a row did not gliss the preview");
-        sendMouse(roll, QEvent::MouseButtonRelease, e.center + QPoint(0, keyH),
+        sendMouse(roll, QEvent::MouseButtonRelease, gliss,
                   Qt::LeftButton, Qt::NoButton);
         if (aud.empty() || aud.back().second != 0)
             fail("releasing the press did not release the preview");
@@ -735,7 +1235,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     const uint64_t snapCell = view.snapTicksAt(d.tick);
     const uint32_t offDur = uint32_t(d.dur + d.dur / 4);
     doc.addNote(track, d.tick, uint8_t(d.key), offDur, 100);
-    const int rowY = (127 - d.key) * keyH - view.scrollY() + keyH / 2 + 1;
+    const int rowY = rows.centerY(d.key);
     const QPoint edge(
             songview::kKeyboardW + view.contentX(double(d.tick + offDur)), rowY);
     const QPoint leftEdge(songview::kKeyboardW + view.contentX(double(d.tick)),
@@ -820,11 +1320,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // than re-anchoring. Vertical: park the note's row above the viewport,
     // and Ctrl+Up must land it flush at the top edge.
     const int keyNow = d.key - 11;
-    view.scrollRollBy((129 - keyNow) * keyH - view.scrollY());
-    if ((128 - keyNow) * keyH - view.scrollY() > 0)
+    view.scrollRollBy((129 - keyNow) * view.keyHeight() - view.scrollY());
+    if ((128 - keyNow) * view.keyHeight() - view.scrollY() > 1e-9)
         fail("could not park the note's row above the viewport");
     sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
-    if (view.scrollY() != (126 - keyNow) * keyH)
+    if (std::abs(view.scrollY() - (126 - keyNow) * view.keyHeight()) > 1e-9)
         fail("Ctrl+Up above the viewport did not scroll the row flush to the top");
     sendKey(roll, Qt::Key_Down, Qt::ControlModifier); // undo the extra semitone
 
@@ -833,23 +1333,26 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // paste jump). Then ride it right across the viewport: once the end
     // crosses the right edge, it must stay flush there.
     uint64_t nStart = d.tick + snapCell;
+    const qreal dpr = roll->devicePixelRatioF();
+    const qreal physicalPixel = dpr > 0.0 ? 1.0 / dpr : 1.0;
     view.scrollByPx(view.contentX(double(nStart + snapCell)) + 40);
-    if (view.contentX(double(nStart + snapCell)) >= 0)
+    if (view.displayX(double(nStart + snapCell), 0.0, dpr) >= 0.0)
         fail("could not park the note past the left edge");
     sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
     nStart += snapCell;
-    if (view.contentX(double(nStart)) != 0)
+    if (view.displayX(double(nStart), 0.0, dpr) != 0.0)
         fail("Ctrl+Right off-screen-left did not scroll the start flush to the "
                   "left edge");
-    const int vw = std::max(50, roll->width() - songview::kKeyboardW);
-    const int cellPx =
+    const qreal vw = std::max(50, roll->width() - songview::kKeyboardW);
+    const qreal cellPx =
         view.contentX(double(nStart + snapCell)) - view.contentX(double(nStart));
     const int rides =
             (vw - view.contentX(double(nStart + snapCell))) / cellPx + 2;
     for (int i = 0; i < rides; i++)
         sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
     nStart += uint64_t(rides) * snapCell;
-    if (view.contentX(double(nStart + snapCell)) != vw - 1)
+    if (view.displayX(double(nStart + snapCell), 0.0, dpr)
+            != vw - physicalPixel)
         fail(
                 "riding the nudge right did not keep the note's end at the right edge");
     // Ride back home so the time-selection checks below find the note
@@ -1064,7 +1567,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             if (!pickerSeen)
                 fail("voice-line double-click did not open the voice picker");
             if (!searchFilteredList)
-                fail("voice picker search did not filter and restore its list");
+                fail("voice picker search did not select and restore its first match");
             auto *renameEditor =
                 view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
             if (renameEditor && !renameEditor->isHidden())

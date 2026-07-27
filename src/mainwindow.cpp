@@ -3275,8 +3275,9 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             const SongView::ViewState restored = tab->view->viewState();
             QString constant, player;
             ok = std::abs(restored.pxPerBeat - saved.pxPerBeat) < 0.001
-                && restored.keyHeight == saved.keyHeight
-                && restored.scrollPx == saved.scrollPx
+                                && std::abs(restored.keyHeight - saved.keyHeight) < 0.001
+                && std::abs(restored.scrollPx - saved.scrollPx) < 0.001
+                                && std::abs(restored.scrollY - saved.scrollY) < 0.001
                 && restored.selectedTrack == saved.selectedTrack
                 && restored.editCursorTick == saved.editCursorTick
                 && restored.laneHeight == saved.laneHeight
