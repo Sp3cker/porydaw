@@ -157,7 +157,7 @@ enum class Role {
   song_view_secondary_text,
   song_view_selection_fill,
   song_view_selection_edge,
-  song_view_selected_note_inner_border,
+  song_view_note_velocity_zero,
   song_view_loop_marker,
   song_view_edit_cursor,
   song_view_edit_preview_outline,

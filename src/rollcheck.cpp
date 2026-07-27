@@ -1,3 +1,4 @@
+#include "ui/theme/themeruntime.h"
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDialog>
@@ -62,31 +63,28 @@
 
 namespace {
 
-void sendMouse(QWidget *w, QEvent::Type type, QPoint pos, Qt::MouseButton button,
-               Qt::MouseButtons buttons,
-               Qt::KeyboardModifiers mods = Qt::NoModifier)
-{
+void sendMouse(QWidget *w, QEvent::Type type, QPoint pos,
+                              Qt::MouseButton button, Qt::MouseButtons buttons,
+                              Qt::KeyboardModifiers mods = Qt::NoModifier) {
     QMouseEvent ev(type, QPointF(pos), QPointF(w->mapToGlobal(pos)), button,
                    buttons, mods);
     QCoreApplication::sendEvent(w, &ev);
 }
 
-void click(QWidget *w, QPoint pos)
-{
+void click(QWidget *w, QPoint pos) {
     sendMouse(w, QEvent::MouseButtonPress, pos, Qt::LeftButton, Qt::LeftButton);
     sendMouse(w, QEvent::MouseButtonRelease, pos, Qt::LeftButton, Qt::NoButton);
 }
 
 // The pencil gesture: Qt replaces a fast second press with a DblClick event,
 // and the note commits on the release that follows.
-void drawNote(QWidget *w, QPoint pos)
-{
-    sendMouse(w, QEvent::MouseButtonDblClick, pos, Qt::LeftButton, Qt::LeftButton);
+void drawNote(QWidget *w, QPoint pos) {
+    sendMouse(w, QEvent::MouseButtonDblClick, pos, Qt::LeftButton,
+                        Qt::LeftButton);
     sendMouse(w, QEvent::MouseButtonRelease, pos, Qt::LeftButton, Qt::NoButton);
 }
 
-void sendKey(QWidget *w, int key, Qt::KeyboardModifiers mods)
-{
+void sendKey(QWidget *w, int key, Qt::KeyboardModifiers mods) {
     QKeyEvent press(QEvent::KeyPress, key, mods);
     QCoreApplication::sendEvent(w, &press);
     QKeyEvent release(QEvent::KeyRelease, key, mods);
@@ -96,8 +94,7 @@ void sendKey(QWidget *w, int key, Qt::KeyboardModifiers mods)
 } // namespace
 
 int runRollCheck(const QString &projectRoot, const QString &songLabel,
-                 const QString &screenshotPath)
-{
+                                  const QString &screenshotPath) {
     // The roll consults keymap::Registry (Ctrl+arrow transposes, the
     // velocity-drag modifier chord), so redirect QSettings into a temp dir
     // first — a user's rebinds must not leak into the gesture assertions.
@@ -182,11 +179,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // the widget clears the mark.
     {
         const int y = roll->height() / 2;
-        const int expected =
-            std::clamp(127 - (y + view.scrollY()) / keyH, 0, 127);
-        sendMouse(roll, QEvent::MouseMove,
-                  QPoint(songview::kKeyboardW + 40, y), Qt::NoButton,
-                  Qt::NoButton);
+        const int expected = std::clamp(127 - (y + view.scrollY()) / keyH, 0, 127);
+        sendMouse(roll, QEvent::MouseMove, QPoint(songview::kKeyboardW + 40, y),
+                            Qt::NoButton, Qt::NoButton);
         if (roll->property("hoverKey").toInt() != expected)
             fail("hovering the notes area did not mark its key row");
         sendMouse(roll, QEvent::MouseMove, QPoint(4, y + keyH), Qt::NoButton,
@@ -202,76 +197,211 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // A row/cell is taken if a note of the selected track sits within one
     // cell of it (the roll's hit test pads note rects by 2px; a full cell of
     // clearance keeps the check's clicks unambiguous).
-    auto occupied = [&](uint64_t tick, uint64_t dur, int key) {
-        for (const DocNote &note : doc.notesForTrack(track)) {
-            if (int(note.key) != key)
-                continue;
-            const uint64_t end = note.unterminated()
-                                     ? UINT64_MAX
-                                     : note.tick + note.duration + dur;
-            if (note.tick < tick + 2 * dur && end > tick)
-                return true;
+    auto occupied = [&](uint64_t tick, uint64_t dur, int key,
+                        bool checkAllTracks = false) {
+      const int startTrack = checkAllTracks ? 0 : track;
+      const int endTrack = checkAllTracks ? doc.engineTrackCount() : track + 1;
+      for (int t = startTrack; t < endTrack; ++t) {
+        for (const DocNote &note : doc.notesForTrack(t)) {
+          if (int(note.key) != key)
+            continue;
+          const uint64_t end = note.unterminated()
+                                   ? UINT64_MAX
+                                   : note.tick + note.duration + dur;
+          if (note.tick < tick + 2 * dur && end > tick)
+            return true;
         }
-        return false;
+      }
+      return false;
     };
 
     // A free grid cell with a click target at mid-cell x, mid-row y (the
     // Move zone).
     struct Cell {
-        uint64_t tick = 0, dur = 0;
-        int key = -1;
-        QPoint center;
+      uint64_t tick = 0, dur = 0;
+      int key = -1;
+      QPoint center;
     };
-    auto findFreeCell = [&]() -> Cell {
-        Cell cell;
-        for (int key = 115; key >= 24; key--) {
-            const int y = (127 - key) * keyH - view.scrollY();
-            if (y < 0 || y + keyH > roll->height())
-                continue;
-            for (int probe = 8; probe < roll->width() - songview::kKeyboardW - 40;
-                 probe += 24) {
-                const uint64_t tick = view.snapTickDown(view.tickAtContentX(probe));
-                const uint64_t dur = view.gridTicksAt(tick);
-                const int x0 = songview::kKeyboardW + view.contentX(double(tick));
-                const int x1 =
-                    songview::kKeyboardW + view.contentX(double(tick + dur));
-                const int xs = songview::kKeyboardW
-                    + view.contentX(double(tick + view.snapTicksAt(tick)));
-                // Wide enough that the click target clears the 3px resize
-                // edges once a note fills the cell.
-                if (x0 < songview::kKeyboardW || x1 - x0 < 12 || xs - x0 < 8
-                    || x1 >= roll->width())
-                    continue;
-                if (occupied(tick, dur, key))
-                    continue;
-                cell.tick = tick;
-                cell.dur = dur;
-                cell.key = key;
-                // Mid snap-cell, not mid drawn-cell: snapping is finer than
-                // the drawn grid, so a draw at the cell's visual center
-                // would anchor at the snap line there, not at cell.tick.
-                cell.center = QPoint((x0 + xs) / 2, y + keyH / 2 + 1);
-                return cell;
-            }
+    auto findFreeCell = [&](int firstProbe = 8,
+                            bool checkAllTracks = false) -> Cell {
+      Cell cell;
+      for (int key = 115; key >= 24; key--) {
+        const int y = (127 - key) * keyH - view.scrollY();
+        if (y < 0 || y + keyH > roll->height())
+          continue;
+        for (int probe = firstProbe;
+             probe < roll->width() - songview::kKeyboardW - 40; probe += 24) {
+          const uint64_t tick = view.snapTickDown(view.tickAtContentX(probe));
+          const uint64_t dur = view.gridTicksAt(tick);
+          const int x0 = songview::kKeyboardW + view.contentX(double(tick));
+          const int x1 =
+              songview::kKeyboardW + view.contentX(double(tick + dur));
+          const int xs = songview::kKeyboardW +
+                         view.contentX(double(tick + view.snapTicksAt(tick)));
+          // Wide enough that the click target clears the 3px resize
+          // edges once a note fills the cell.
+          if (x0 < songview::kKeyboardW || x1 - x0 < 12 || xs - x0 < 8 ||
+              x1 >= roll->width())
+            continue;
+          if (occupied(tick, dur, key, checkAllTracks))
+            continue;
+          cell.tick = tick;
+          cell.dur = dur;
+          cell.key = key;
+          // Mid snap-cell, not mid drawn-cell: snapping is finer than
+          // the drawn grid, so a draw at the cell's visual center
+          // would anchor at the snap line there, not at cell.tick.
+          cell.center = QPoint((x0 + xs) / 2, y + keyH / 2 + 1);
+          return cell;
         }
-        return cell;
+      }
+      return cell;
     };
 
     // Baseline: the pencil draws at velocity 100 on a fresh document.
-    const Cell a = findFreeCell();
+    const Cell a = findFreeCell(40, true);
     if (a.key < 0) {
-        fail("no free grid cell to draw in");
-        return 1;
+      fail("no free grid cell to draw in");
+      return 1;
     }
+    // Keep timeline overlays away from the note border under test.
+    const uint64_t overlayTick = a.tick + 3 * a.dur;
+    view.setPlayheadSample(timeline->sampleForTick(overlayTick), false);
+    view.setEditCursorTick(overlayTick);
+    QImage rollBeforeDrawing(roll->size(),
+                             QImage::Format_ARGB32_Premultiplied);
+    rollBeforeDrawing.fill(Qt::transparent);
+    roll->render(&rollBeforeDrawing);
     drawNote(roll, a.center);
     DocNote noteA;
     if (!doc.findNote(track, a.tick, uint8_t(a.key), &noteA)) {
-        fail("pencil draw produced no note");
-        return failures;
+      fail("pencil draw produced no note");
+      return failures;
     }
     if (noteA.velocity != 100)
-        fail("fresh document does not draw at velocity 100");
+      fail("fresh document does not draw at velocity 100");
 
+    // The painted box is one pixel smaller on its right and bottom edges
+    // than the note's interaction rect. Those reserved pixels must retain
+    // the underlying roll instead of leaking the note fill past its border.
+    view.setEditCursorTick(overlayTick);
+    QImage rollAfterDrawing(roll->size(),
+                            QImage::Format_ARGB32_Premultiplied);
+    rollAfterDrawing.fill(Qt::transparent);
+    roll->render(&rollAfterDrawing);
+    const int noteLeftX =
+        songview::kKeyboardW + view.contentX(double(noteA.tick));
+    const int noteRightX = songview::kKeyboardW
+        + view.contentX(double(noteA.tick + noteA.duration));
+    const QRect noteInteractionRect(
+        noteLeftX, (127 - noteA.key) * keyH - view.scrollY() + 1,
+        std::max(2, noteRightX - noteLeftX), std::max(2, keyH - 1));
+    bool paintEscapedInteractionRect = false;
+    for (int y = noteInteractionRect.top();
+         y <= noteInteractionRect.bottom(); ++y) {
+      paintEscapedInteractionRect |=
+          rollAfterDrawing.pixel(noteInteractionRect.right(), y)
+          != rollBeforeDrawing.pixel(noteInteractionRect.right(), y);
+    }
+    for (int x = noteInteractionRect.left();
+         x <= noteInteractionRect.right(); ++x) {
+      paintEscapedInteractionRect |=
+          rollAfterDrawing.pixel(x, noteInteractionRect.bottom())
+          != rollBeforeDrawing.pixel(x, noteInteractionRect.bottom());
+    }
+    if (paintEscapedInteractionRect)
+      fail("note color escaped past its black box");
+
+    const QRect paintedNoteBox =
+        noteInteractionRect.adjusted(0, 0, -1, -1);
+    // Timeline overlays are composited above notes and can tint frame colors
+    // by a few channel values.
+    const auto isBlackBorder = [](QRgb pixel) {
+      return qRed(pixel) <= 16 && qGreen(pixel) <= 16 && qBlue(pixel) <= 16;
+    };
+    const QColor selectionRingColor =
+        themes::color(themes::Role::item_selected_background);
+    const auto isSelectionRingColor = [selectionRingColor](QRgb pixel) {
+      const QColor actualColor(pixel);
+      return std::abs(actualColor.red() - selectionRingColor.red()) <= 16
+          && std::abs(actualColor.green() - selectionRingColor.green()) <= 16
+          && std::abs(actualColor.blue() - selectionRingColor.blue()) <= 16;
+    };
+    const int noteCenterX = paintedNoteBox.center().x();
+    if (!isSelectionRingColor(
+            rollAfterDrawing.pixel(noteCenterX, paintedNoteBox.top()))
+        || !isSelectionRingColor(
+            rollAfterDrawing.pixel(noteCenterX, paintedNoteBox.top() + 1))) {
+      fail("selected note outer frame does not use the selection color");
+    }
+    const QRect insetNoteBorder = paintedNoteBox.adjusted(2, 2, -2, -2);
+    if (!isBlackBorder(rollAfterDrawing.pixel(
+            insetNoteBorder.center().x(), insetNoteBorder.top())))
+      fail("selected note did not have an inset black top border");
+    if (!isBlackBorder(rollAfterDrawing.pixel(
+            insetNoteBorder.center().x(), insetNoteBorder.bottom())))
+      fail("selected note did not have an inset black bottom border");
+    if (!isBlackBorder(rollAfterDrawing.pixel(
+            insetNoteBorder.left(), insetNoteBorder.center().y())))
+      fail("selected note did not have an inset black left border");
+    if (!isBlackBorder(rollAfterDrawing.pixel(
+            insetNoteBorder.right(), insetNoteBorder.center().y())))
+      fail("selected note did not have an inset black right border");
+
+    const QColor velocityZeroColor = SongView::noteColor(track, 0);
+    const QColor velocityMaximumColor = SongView::noteColor(track, 127);
+    const QColor velocityMidpointColor = SongView::noteColor(track, 64);
+    const QColor velocityZeroThemeColor =
+        themes::color(themes::Role::song_view_note_velocity_zero);
+    const QColor trackIdentityColor = SongView::trackColor(track);
+
+    if (velocityZeroColor != velocityZeroThemeColor)
+      fail("velocity 0 note color does not equal theme neutral");
+    if (velocityZeroColor.alpha() != 255)
+      fail("velocity 0 note color is not opaque");
+    if (velocityMaximumColor != trackIdentityColor)
+      fail("velocity 127 note color does not equal track color");
+    if (velocityMaximumColor.alpha() != 255)
+      fail("velocity 127 note color is not opaque");
+    if (velocityMidpointColor.alpha() != 255)
+      fail("intermediate velocity note color is not opaque");
+    if (velocityMidpointColor == velocityZeroColor
+        || velocityMidpointColor == velocityMaximumColor)
+      fail("intermediate velocity note color equals endpoint color");
+
+    const QColor expectedNoteColor = SongView::noteColor(track, 100);
+    const QPoint noteInteriorSample = paintedNoteBox.center();
+    if (QColor(rollAfterDrawing.pixel(noteInteriorSample))
+        != expectedNoteColor)
+      fail("note interior color does not match noteColor(track, 100)");
+
+    const int selectedTrackBeforeGhostProbe = view.selectedTrack();
+    const int ghostTrack =
+        (selectedTrackBeforeGhostProbe + 1) % doc.engineTrackCount();
+    view.selectTrack(ghostTrack);
+    QImage ghostNoteRender(roll->size(),
+                           QImage::Format_ARGB32_Premultiplied);
+    ghostNoteRender.fill(Qt::transparent);
+    roll->render(&ghostNoteRender);
+
+    const QRgb ghostTopEdge =
+        ghostNoteRender.pixel(paintedNoteBox.center().x(),
+                              paintedNoteBox.top());
+    const QRgb ghostTopInterior =
+        ghostNoteRender.pixel(paintedNoteBox.center().x(),
+                              paintedNoteBox.top() + 1);
+    const QRgb ghostBottomEdge =
+        ghostNoteRender.pixel(paintedNoteBox.center().x(),
+                              paintedNoteBox.bottom());
+    const QRgb ghostBottomInterior =
+        ghostNoteRender.pixel(paintedNoteBox.center().x(),
+                              paintedNoteBox.bottom() - 1);
+
+    if (ghostTopEdge != ghostTopInterior
+        || ghostBottomEdge != ghostBottomInterior)
+      fail("ghost note face edge does not match adjacent interior pixel");
+
+    view.selectTrack(selectedTrackBeforeGhostProbe);
     // Click latch: give note A a distinctive velocity behind the view's
     // back, click it, and the next drawn note must inherit it.
     doc.setNotesVelocity({noteA}, 73);
@@ -306,8 +436,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   noteMenu->mapFromGlobal(aGlobal), Qt::RightButton,
                   Qt::RightButton);
         sendMouse(noteMenu, QEvent::MouseButtonRelease,
-                  noteMenu->mapFromGlobal(aGlobal), Qt::RightButton,
-                  Qt::NoButton);
+                            noteMenu->mapFromGlobal(aGlobal), Qt::RightButton, Qt::NoButton);
         QCoreApplication::processEvents();
         const std::vector<SongView::NoteId> &selection = view.selection();
         const SongView::NoteId aId{uint32_t(a.tick), uint8_t(a.key)};
@@ -323,8 +452,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         int clearKey = a.key + 1;
         while (clearKey <= 127 && occupied(a.tick, a.dur, clearKey))
             clearKey++;
-        const QPoint clearGlobal = roll->mapToGlobal(
-            a.center - QPoint(0, (clearKey - a.key) * keyH));
+        const QPoint clearGlobal =
+                roll->mapToGlobal(a.center - QPoint(0, (clearKey - a.key) * keyH));
         sendMouse(noteMenu, QEvent::MouseButtonPress,
                   noteMenu->mapFromGlobal(clearGlobal), Qt::RightButton,
                   Qt::RightButton);
@@ -357,8 +486,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     sendMouse(roll, QEvent::MouseButtonRelease, bHandle - QPoint(0, 20),
               Qt::LeftButton, Qt::NoButton);
     DocNote dragged;
-    if (!doc.findNote(track, b.tick, uint8_t(b.key), &dragged)
-        || dragged.velocity != 93)
+    if (!doc.findNote(track, b.tick, uint8_t(b.key), &dragged) ||
+            dragged.velocity != 93)
         fail("velocity-handle drag did not land at 93");
     const Cell c = findFreeCell();
     if (c.key < 0) {
@@ -381,12 +510,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     DocNote bNow;
     if (doc.findNote(track, b.tick, uint8_t(b.key), &bNow)) {
         doc.setNotesVelocity({bNow}, 20);
-        const QPoint bTop(b.center.x(),
-                          (127 - b.key) * keyH - view.scrollY() + 2);
+        const QPoint bTop(b.center.x(), (127 - b.key) * keyH - view.scrollY() + 2);
         sendMouse(roll, QEvent::MouseButtonPress, bTop, Qt::LeftButton,
                   Qt::LeftButton);
-        sendMouse(roll, QEvent::MouseMove, bTop - QPoint(0, 2 * keyH),
-                  Qt::NoButton, Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseMove, bTop - QPoint(0, 2 * keyH), Qt::NoButton,
+                            Qt::LeftButton);
         sendMouse(roll, QEvent::MouseButtonRelease, bTop - QPoint(0, 2 * keyH),
                   Qt::LeftButton, Qt::NoButton);
         if (doc.findNote(track, b.tick, uint8_t(b.key), &bNow))
@@ -413,8 +541,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     {
         std::vector<int> onKeys, offKeys;
         quint32 minDur = UINT32_MAX;
-        auto conn = QObject::connect(
-            &view, &SongView::auditionNoteTimed, &view,
+        auto conn = QObject::connect(&view, &SongView::auditionNoteTimed, &view,
             [&](int, int key, int velocity, quint32 dur) {
                 if (velocity > 0) {
                     onKeys.push_back(key);
@@ -435,25 +562,24 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("sweeping the band over a note did not audition it");
         // Retreat to a band covering nothing: the departed notes' previews
         // must release now, not ring out their durations.
-        sendMouse(roll, QEvent::MouseMove, sweepStart + QPoint(4, 4),
-                  Qt::NoButton, Qt::RightButton);
+        sendMouse(roll, QEvent::MouseMove, sweepStart + QPoint(4, 4), Qt::NoButton,
+                            Qt::RightButton);
         if (std::find(offKeys.begin(), offKeys.end(), a.key) == offKeys.end())
             fail("shrinking the band did not release the departed note");
-        sendMouse(roll, QEvent::MouseMove, sweepEnd, Qt::NoButton,
-                  Qt::RightButton);
+        sendMouse(roll, QEvent::MouseMove, sweepEnd, Qt::NoButton, Qt::RightButton);
         sendMouse(roll, QEvent::MouseButtonRelease, sweepEnd, Qt::RightButton,
                   Qt::NoButton);
         QObject::disconnect(conn);
         if (std::count(onKeys.begin(), onKeys.end(), a.key) < 2)
             fail("re-covering a note did not re-audition it");
         const std::vector<SongView::NoteId> &sel = view.selection();
-        if (sel.size() < 2
-            || std::find(sel.begin(), sel.end(),
-                         SongView::NoteId{uint32_t(a.tick), uint8_t(a.key)})
-                   == sel.end()
-            || std::find(sel.begin(), sel.end(),
-                         SongView::NoteId{uint32_t(b.tick), uint8_t(b.key)})
-                   == sel.end())
+        if (sel.size() < 2 ||
+                std::find(sel.begin(), sel.end(),
+                                    SongView::NoteId{uint32_t(a.tick), uint8_t(a.key)}) ==
+                        sel.end() ||
+                std::find(sel.begin(), sel.end(),
+                                    SongView::NoteId{uint32_t(b.tick), uint8_t(b.key)}) ==
+                        sel.end())
             fail("band release did not select the swept notes");
         // Every key that auditioned was eventually released (mid-drag or at
         // the drag's end).
@@ -491,9 +617,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendMouse(roll, QEvent::MouseButtonPress, e.center, Qt::LeftButton,
                   Qt::LeftButton);
         if (aud != std::vector<std::pair<int, int>>{{e.key, 93}})
-            fail("empty-space press did not audition its row at the latched velocity");
-        sendMouse(roll, QEvent::MouseMove, e.center + QPoint(0, keyH),
-                  Qt::NoButton, Qt::LeftButton);
+            fail(
+                    "empty-space press did not audition its row at the latched velocity");
+        sendMouse(roll, QEvent::MouseMove, e.center + QPoint(0, keyH), Qt::NoButton,
+                            Qt::LeftButton);
         if (aud.empty() || aud.back() != std::make_pair(e.key - 1, 93))
             fail("holding the press across a row did not gliss the preview");
         sendMouse(roll, QEvent::MouseButtonRelease, e.center + QPoint(0, keyH),
@@ -502,9 +629,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("releasing the press did not release the preview");
         if (doc.undoStack()->count() != preCount)
             fail("a plain empty-space click edited the document");
-        if (view.editCursorTick()
-            != view.snapTick(
-                view.tickAtContentX(e.center.x() - songview::kKeyboardW)))
+        if (view.editCursorTick() !=
+                view.snapTick(view.tickAtContentX(e.center.x() - songview::kKeyboardW)))
             fail("the press audition broke the click's edit-cursor park");
         // Draw growth: press the still-free cell again and drag right past
         // the drag threshold; the press's preview must carry into the draw
@@ -535,8 +661,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         }
         sendMouse(roll, QEvent::MouseButtonPress, f.center, Qt::LeftButton,
                   Qt::LeftButton);
-        sendMouse(roll, QEvent::MouseMove, f.center + QPoint(2, 0),
-                  Qt::NoButton, Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseMove, f.center + QPoint(2, 0), Qt::NoButton,
+                            Qt::LeftButton);
         sendMouse(roll, QEvent::MouseButtonRelease, f.center + QPoint(2, 0),
                   Qt::LeftButton, Qt::NoButton);
         DocNote tiny;
@@ -558,15 +684,15 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         const int preCount = doc.undoStack()->count();
         sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
                   Qt::LeftButton, Qt::ControlModifier);
-        sendMouse(roll, QEvent::MouseMove, b.center + QPoint(0, 15),
-                  Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, b.center + QPoint(0, 15), Qt::NoButton,
+                            Qt::LeftButton, Qt::ControlModifier);
         if (roll->property("hoverKey").toInt() != b.key)
             fail("modifier velocity drag did not pin the hover mark");
         sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15),
                   Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
         DocNote bMod;
-        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod)
-            || bMod.velocity != 78)
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) ||
+                bMod.velocity != 78)
             fail("modifier velocity drag did not land at 78");
         if (doc.undoStack()->count() != preCount + 1)
             fail("modifier velocity drag did not push exactly one command");
@@ -576,20 +702,20 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::LeftButton, Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton,
                   Qt::NoButton, Qt::ControlModifier);
-        if (std::find(view.selection().begin(), view.selection().end(), bId)
-            != view.selection().end())
+        if (std::find(view.selection().begin(), view.selection().end(), bId) !=
+                view.selection().end())
             fail("Ctrl+click did not toggle the note out of the selection");
 
         sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
                   Qt::LeftButton, Qt::ControlModifier);
-        sendMouse(roll, QEvent::MouseMove, b.center + QPoint(0, 3),
-                  Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, b.center + QPoint(0, 3), Qt::NoButton,
+                            Qt::LeftButton, Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 3),
                   Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
         if (view.selection().size() != 1 || !(view.selection().front() == bId))
             fail("a sub-threshold Ctrl-jitter did not act as the toggle click");
-        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod)
-            || bMod.velocity != 78)
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) ||
+                bMod.velocity != 78)
             fail("a sub-threshold Ctrl-jitter changed the velocity");
         if (doc.undoStack()->count() != preCount + 1)
             fail("a Ctrl-click or jitter pushed an undo command");
@@ -610,34 +736,37 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     const uint32_t offDur = uint32_t(d.dur + d.dur / 4);
     doc.addNote(track, d.tick, uint8_t(d.key), offDur, 100);
     const int rowY = (127 - d.key) * keyH - view.scrollY() + keyH / 2 + 1;
-    const QPoint edge(songview::kKeyboardW + view.contentX(double(d.tick + offDur)),
+    const QPoint edge(
+            songview::kKeyboardW + view.contentX(double(d.tick + offDur)), rowY);
+    const QPoint leftEdge(songview::kKeyboardW + view.contentX(double(d.tick)),
                       rowY);
-    const QPoint leftEdge(songview::kKeyboardW + view.contentX(double(d.tick)), rowY);
     sendMouse(roll, QEvent::MouseMove, leftEdge, Qt::NoButton, Qt::NoButton);
     const QPixmap expectedLeftCursor =
         QIcon(QStringLiteral(":/cursors/left-drag.png"))
             .pixmap(QSize(24, 24), roll->devicePixelRatioF());
-    if (roll->cursor().pixmap().devicePixelRatio()
-            != expectedLeftCursor.devicePixelRatio()
-        || roll->cursor().pixmap().toImage() != expectedLeftCursor.toImage())
+    if (roll->cursor().pixmap().devicePixelRatio() !=
+                    expectedLeftCursor.devicePixelRatio() ||
+            roll->cursor().pixmap().toImage() != expectedLeftCursor.toImage())
         fail("left note edge did not show its DPI-matched custom cursor");
     sendMouse(roll, QEvent::MouseMove, edge, Qt::NoButton, Qt::NoButton);
     const QPixmap expectedRightCursor =
         QIcon(QStringLiteral(":/cursors/right-drag.png"))
             .pixmap(QSize(24, 24), roll->devicePixelRatioF());
-    if (roll->cursor().pixmap().devicePixelRatio()
-            != expectedRightCursor.devicePixelRatio()
-        || roll->cursor().pixmap().toImage() != expectedRightCursor.toImage())
+    if (roll->cursor().pixmap().devicePixelRatio() !=
+                    expectedRightCursor.devicePixelRatio() ||
+            roll->cursor().pixmap().toImage() != expectedRightCursor.toImage())
         fail("right note edge did not show its DPI-matched custom cursor");
-    const QPoint pull(
-        songview::kKeyboardW + view.contentX(double(d.tick) + 1.9 * double(d.dur)),
+    const QPoint pull(songview::kKeyboardW +
+                                                view.contentX(double(d.tick) + 1.9 * double(d.dur)),
         rowY);
-    sendMouse(roll, QEvent::MouseButtonPress, edge, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(roll, QEvent::MouseButtonPress, edge, Qt::LeftButton,
+                        Qt::LeftButton);
     sendMouse(roll, QEvent::MouseMove, pull, Qt::NoButton, Qt::LeftButton);
-    sendMouse(roll, QEvent::MouseButtonRelease, pull, Qt::LeftButton, Qt::NoButton);
+    sendMouse(roll, QEvent::MouseButtonRelease, pull, Qt::LeftButton,
+                        Qt::NoButton);
     DocNote resized;
-    if (!doc.findNote(track, d.tick, uint8_t(d.key), &resized)
-        || resized.duration != 2 * d.dur)
+    if (!doc.findNote(track, d.tick, uint8_t(d.key), &resized) ||
+            resized.duration != 2 * d.dur)
         fail("off-grid right-edge drag did not snap the end to the ruler grid");
 
     // Overshooting the drag past the note's start must stop at one snap
@@ -645,22 +774,25 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     const QPoint edge2(
         songview::kKeyboardW + view.contentX(double(d.tick + 2 * d.dur)), rowY);
     const QPoint overshoot(
-        songview::kKeyboardW + view.contentX(double(d.tick) - 0.5 * double(d.dur)),
+            songview::kKeyboardW +
+                    view.contentX(double(d.tick) - 0.5 * double(d.dur)),
         rowY);
-    sendMouse(roll, QEvent::MouseButtonPress, edge2, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(roll, QEvent::MouseButtonPress, edge2, Qt::LeftButton,
+                        Qt::LeftButton);
     sendMouse(roll, QEvent::MouseMove, overshoot, Qt::NoButton, Qt::LeftButton);
     sendMouse(roll, QEvent::MouseButtonRelease, overshoot, Qt::LeftButton,
               Qt::NoButton);
     DocNote collapsed;
-    if (!doc.findNote(track, d.tick, uint8_t(d.key), &collapsed)
-        || collapsed.duration != snapCell)
+    if (!doc.findNote(track, d.tick, uint8_t(d.key), &collapsed) ||
+            collapsed.duration != snapCell)
         fail("overshot right-edge drag did not stop at one snap cell");
 
     // Keyboard transpose/nudge on note D (clicking it selects it):
     // Ctrl+Up is a semitone, Ctrl+Shift+Down an octave, and Ctrl+Right
     // moves one snap cell from an on-grid start.
-    const QPoint dCenter(songview::kKeyboardW
-                             + view.contentX(double(d.tick) + 0.5 * double(snapCell)),
+    const QPoint dCenter(
+            songview::kKeyboardW +
+                    view.contentX(double(d.tick) + 0.5 * double(snapCell)),
                          rowY);
     click(roll, dCenter);
     sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
@@ -707,16 +839,19 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
     nStart += snapCell;
     if (view.contentX(double(nStart)) != 0)
-        fail("Ctrl+Right off-screen-left did not scroll the start flush to the left edge");
+        fail("Ctrl+Right off-screen-left did not scroll the start flush to the "
+                  "left edge");
     const int vw = std::max(50, roll->width() - songview::kKeyboardW);
     const int cellPx =
         view.contentX(double(nStart + snapCell)) - view.contentX(double(nStart));
-    const int rides = (vw - view.contentX(double(nStart + snapCell))) / cellPx + 2;
+    const int rides =
+            (vw - view.contentX(double(nStart + snapCell))) / cellPx + 2;
     for (int i = 0; i < rides; i++)
         sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
     nStart += uint64_t(rides) * snapCell;
     if (view.contentX(double(nStart + snapCell)) != vw - 1)
-        fail("riding the nudge right did not keep the note's end at the right edge");
+        fail(
+                "riding the nudge right did not keep the note's end at the right edge");
     // Ride back home so the time-selection checks below find the note
     // where they expect it; every press so far merges into one command.
     for (int i = 0; i < rides + 1; i++)
@@ -740,7 +875,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 10), &transposed))
         fail("time-selection Ctrl+Up did not transpose the covered note");
     sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
-    if (!doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed))
+    if (!doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10),
+                                        &transposed))
         fail("time-selection Ctrl+Right did not nudge the covered note");
     if (view.timeSelection().startTick != d.tick + 2 * snapCell)
         fail("time-selection band did not follow the nudge");
@@ -813,8 +949,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             editor->setText(QStringLiteral("["));
             sendKey(editor, Qt::Key_Return, Qt::NoModifier);
             QCoreApplication::processEvents();
-            if (doc.trackName(track) != QStringLiteral("Rolled")
-                || doc.undoStack()->count() != commands)
+            if (doc.trackName(track) != QStringLiteral("Rolled") ||
+                    doc.undoStack()->count() != commands)
                 fail("loop-marker name was not refused");
         }
     }
@@ -861,8 +997,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         } else {
             int revealed = -1, reveals = 0;
             const QMetaObject::Connection conn = QObject::connect(
-                &view, &SongView::revealVoiceRequested,
-                [&](int program) { revealed = program; reveals++; });
+                    &view, &SongView::revealVoiceRequested, [&](int program) {
+                        revealed = program;
+                        reveals++;
+                    });
             const int preCount = doc.undoStack()->count();
             const QPoint voicePos(row->width() / 2, 30); // the painted voice line
             click(row, voicePos);
@@ -875,8 +1013,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             // not reveal on release (adjacent drop slot: no move commits).
             sendMouse(row, QEvent::MouseButtonPress, voicePos, Qt::LeftButton,
                       Qt::LeftButton);
-            sendMouse(row, QEvent::MouseMove, voicePos + QPoint(0, 25),
-                      Qt::NoButton, Qt::LeftButton);
+            sendMouse(row, QEvent::MouseMove, voicePos + QPoint(0, 25), Qt::NoButton,
+                                Qt::LeftButton);
             sendMouse(row, QEvent::MouseButtonRelease, voicePos + QPoint(0, 25),
                       Qt::LeftButton, Qt::NoButton);
             QCoreApplication::processEvents();
@@ -1011,8 +1149,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             const auto movedNotes = doc.notesForTrack(1);
             bool same = movedNotes.size() == firstNotes.size();
             for (size_t i = 0; same && i < movedNotes.size(); i++) {
-                same = movedNotes[i].tick == firstNotes[i].tick
-                    && movedNotes[i].key == firstNotes[i].key;
+                same = movedNotes[i].tick == firstNotes[i].tick &&
+                              movedNotes[i].key == firstNotes[i].key;
             }
             if (!same) {
                 fail("header drag did not move the track's notes to slot 1");
@@ -1064,8 +1202,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             if (view.selectedTrack() != int(target.track))
                 fail("revealNote did not select the track");
             const auto &sel = view.selection();
-            if (sel.size() != 1
-                || !(sel[0] == SongView::NoteId{target.startTick, target.key}))
+            if (sel.size() != 1 ||
+                    !(sel[0] == SongView::NoteId{target.startTick, target.key}))
                 fail("revealNote did not select the note");
 
             // A key the track never plays: no note found, but the track
@@ -1081,8 +1219,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     freeKey = k;
             }
             if (freeKey >= 0) {
-                if (view.revealNote(target.track, uint8_t(freeKey),
-                                    target.startTick))
+                if (view.revealNote(target.track, uint8_t(freeKey), target.startTick))
                     fail("revealNote found a note on an unused key");
                 if (view.selectedTrack() != int(target.track))
                     fail("revealNote miss dropped the track selection");

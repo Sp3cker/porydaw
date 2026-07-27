@@ -195,6 +195,7 @@ public:
     void setTrackSolo(int track, bool on);
 
     static QColor trackColor(int track);
+        static QColor noteColor(int track, int velocity);
     // The track's program at the display position — the playhead while
     // playing, the edit cursor otherwise — so the header label follows the
     // song's voice changes. Before the first change it stays firstProgram

@@ -150,9 +150,7 @@ QLinearGradient loopGlow(int edgeX, int transparentX) {
   gradient.setColorAt(0.2, color);
   gradient.setColorAt(1.0, transparent); return gradient; }
 QColor loopEdge() { return themes::color(themes::Role::song_view_loop_marker); }
-QColor playheadColor() { return themes::color(themes::Role::song_view_playhead); } QColor unterminatedNoteOutlineColor() {
-  return themes::color(themes::Role::song_view_unterminated_note_outline);
-}
+QColor playheadColor() { return themes::color(themes::Role::song_view_playhead); }
 QColor pianoRollAccidentalLaneColor() {
   return themes::color(themes::Role::song_view_piano_roll_accidental_lane);
 }
@@ -180,29 +178,25 @@ std::size_t trackIdentityIndex(int track) {
 const QColor &trackTextColor(int track) {
   return themes::trackIdentityTextColor(trackIdentityIndex(track)); }
 
-// Ghost notes (unselected tracks) as an opaque faint tint of the track's
-// identity color. A plain 24% alpha composite reads right on light themes,
-// but over a dark roll the light pastels gain enough lightness to compete
-// with the active track; capping the ghost's OKLab lightness offset from
-// the roll background keeps ghosts equally recessive in every theme.
+// Ghost notes (unselected tracks) mix 24% of their track identity into the
+// row background in OKLab. Cap only the lightness offset so bright identities
+// stay equally recessive on light and dark themes.
 QColor ghostNoteColor(int track, bool accidentalRow) {
   const auto &identity = themes::trackIdentityColor(trackIdentityIndex(track));
   const auto background = themes::color(
       accidentalRow ? themes::Role::song_view_piano_roll_accidental_lane
                     : themes::Role::song_view_piano_roll_background);
-  const auto channel = [](int identityChannel, int backgroundChannel) {
-    return (60 * identityChannel + 195 * backgroundChannel + 127) / 255;
-  };
-  const auto mixed = QColor::fromRgb(channel(identity.red(), background.red()),
-                                     channel(identity.green(), background.green()),
-                                     channel(identity.blue(), background.blue()));
-  constexpr auto kMaxGhostLightnessOffset = 0.055;
-  const auto backgroundLightness = themes::oklabLightness(background);
-  const auto offset = themes::oklabLightness(mixed) - backgroundLightness;
-  if (std::abs(offset) <= kMaxGhostLightnessOffset)
-    return mixed;
-  return themes::shiftOklabLightness(
-      mixed, std::copysign(kMaxGhostLightnessOffset, offset) - offset);
+  const auto identityLab = themes::oklabFromColor(identity);
+  const auto backgroundLab = themes::oklabFromColor(background);
+  constexpr auto kIdentityWeight = 60.0 / 255.0;
+  constexpr auto kMaxLightnessOffset = 0.055;
+  const auto lightnessOffset = std::clamp(
+      (identityLab.lightness - backgroundLab.lightness) * kIdentityWeight,
+      -kMaxLightnessOffset, kMaxLightnessOffset);
+  return themes::colorFromOklab(
+      {backgroundLab.lightness + lightnessOffset,
+       backgroundLab.a + (identityLab.a - backgroundLab.a) * kIdentityWeight,
+       backgroundLab.b + (identityLab.b - backgroundLab.b) * kIdentityWeight});
 }
 
 // Draw the loop-region band across rect. x positions are
@@ -311,7 +305,7 @@ void forEachSubGridLine(const SongView *sv, double t0, double t1,
 
 QColor gridLineColor(int alpha = 255) {
   auto color = themes::color(themes::Role::song_view_grid);
-  color.setAlpha(alpha);
+  color.setAlpha((color.alpha() * alpha + 127) / 255);
   return color;
 }
 
@@ -322,14 +316,16 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, int origin)
 {
     if (!sv->timeline())
         return;
+    const qreal dpr = p.device()->devicePixelRatioF();
+    const qreal physicalPixel = dpr > 0.0 ? 1.0 / dpr : 1.0;
     const double t0 = std::max(0.0, sv->tickAtContentX(rect.left() - origin));
     const double t1 = sv->tickAtContentX(rect.right() - origin) + 1;
     const bool drawBeats = sv->pxPerBeat() >= 10.0;
     // Batches 0-2 hold sub-grid levels 1-3 (fading lighter), 3 beats, 4
     // finest-grid beats, 5 bars; painted in that order so beats and bars
     // land on top.
-    const std::array<QColor, 6> colors = {gridLineColor(90),  gridLineColor(70),
-                                          gridLineColor(50),  gridLineColor(160),
+    const std::array<QColor, 6> colors = {gridLineColor(125), gridLineColor(100),
+                                          gridLineColor(75),  gridLineColor(160),
                                           gridLineColor(200), gridLineColor()};
     std::array<QVector<QLine>, 6> batches;
     forEachSubGridLine(sv, t0, t1, [&](uint64_t tick, int level) {
@@ -350,7 +346,8 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, int origin)
     for (size_t i = 0; i < batches.size(); ++i) {
         if (batches[i].isEmpty())
             continue;
-        p.setPen(colors[i]);
+        // Grid lines are two physical pixels on every display scale.
+        p.setPen(QPen(colors[i], 2.0 * physicalPixel));
         p.drawLines(batches[i]);
     }
 }
@@ -1181,12 +1178,70 @@ MidiCursors loadMidiCursors(qreal devicePixelRatio)
             centeredCursor(rightEdge.pixmap(cursorSize, devicePixelRatio))};
 }
 
+QRectF noteFrame(const QPainter &painter, const QRect &noteRect, int insetPixels)
+{
+    const qreal insetDips =
+        insetPixels / painter.device()->devicePixelRatioF();
+    return QRectF(noteRect.left(), noteRect.top(), noteRect.width() - 1,
+                  noteRect.height() - 1)
+        .adjusted(insetDips, insetDips, -insetDips, -insetDips);
+}
+
+bool drawRectFrame(QPainter &painter, const QRect &rect, const QColor &color,
+                   int thicknessPixels, int insetPixels = 0)
+{
+    const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
+    if (thicknessPixels <= 0
+        || qRound(rect.width() * devicePixelRatio)
+            <= 2 * (insetPixels + thicknessPixels)
+        || qRound(rect.height() * devicePixelRatio)
+            <= 2 * (insetPixels + thicknessPixels))
+        return false;
+
+    painter.save();
+    QPen framePen(color, 0);
+    framePen.setJoinStyle(Qt::MiterJoin);
+    painter.setPen(framePen);
+    painter.setBrush(Qt::NoBrush);
+    for (int pixel = 0; pixel < thicknessPixels; ++pixel)
+        painter.drawRect(noteFrame(painter, rect, insetPixels + pixel));
+    painter.restore();
+    return true;
+}
+
+bool drawNoteBoxBorder(QPainter &painter, const QRect &noteBox,
+                       bool unterminated, int insetPixels = 0)
+{
+    constexpr int kBorderThicknessPixels = 2;
+    if (!unterminated) {
+        return drawRectFrame(painter, noteBox, Qt::black,
+                             kBorderThicknessPixels, insetPixels);
+    }
+    const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
+    if (qRound(noteBox.width() * devicePixelRatio)
+            <= 2 * (insetPixels + kBorderThicknessPixels)
+        || qRound(noteBox.height() * devicePixelRatio)
+            <= 2 * (insetPixels + kBorderThicknessPixels))
+        return false;
+
+    painter.save();
+    QPen borderPen(Qt::black, 0);
+    borderPen.setCapStyle(Qt::FlatCap);
+    borderPen.setJoinStyle(Qt::MiterJoin);
+    borderPen.setDashPattern({4, 2});
+    painter.setPen(borderPen);
+    painter.setBrush(Qt::NoBrush);
+    for (int pixel = 0; pixel < kBorderThicknessPixels; ++pixel)
+        painter.drawRect(noteFrame(painter, noteBox, insetPixels + pixel));
+    painter.restore();
+    return true;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------- PianoRoll
 
-class PianoRoll : public QWidget
-{
+class PianoRoll : public QWidget {
 public:
     explicit PianoRoll(SongView *sv)
         : QWidget(sv)
@@ -1230,27 +1285,24 @@ protected:
         const QRect grid(kKeyboardW, 0, width() - kKeyboardW, height());
         p.setClipRect(grid);
 
-        // Pitch row shading + separators where two natural rows touch
-        // (B/C and E/F) — everywhere else an accidental row already
-        // breaks up the naturals.
+                // Pitch row shading plus a hairline between every semitone.
     const
         QColor accidentalRow = pianoRollAccidentalLaneColor();
         const QColor octaveLine =
         themes::color(themes::Role::song_view_piano_keyboard_separator);
-        // E/F stays lighter than the C octave delineator.
-        QColor naturalLine = octaveLine;
-        naturalLine.setAlpha(90);
+                // Every semitone boundary uses the beat-grid color; C boundaries
+                // retain the stronger octave delineator.
+                const QPen keyLinePen(gridLineColor(50), 0);
+                const QPen octavePen(octaveLine, 0);
         for (int key = 0; key < 128; key++) {
             const int y = keyToY(key);
             if (y + keyH < 0 || y > height())
                 continue;
             if (isBlackKey(key))
                 p.fillRect(QRect(grid.left(), y, grid.width(), keyH), accidentalRow);
-            if (key % 12 == 0 || key % 12 == 5) { // under every C and F
-                p.setPen(key % 12 == 0 ? octaveLine : naturalLine);
+                        p.setPen(key % 12 == 0 ? octavePen : keyLinePen);
                 p.drawLine(grid.left(), y + keyH, grid.right(), y + keyH);
             }
-        }
 
         drawGrid(p, m_sv, grid, kKeyboardW);
 
@@ -2133,61 +2185,84 @@ private:
         m_sv->setSelection(std::move(ids));
     }
 
-    void drawNotes(QPainter &p, const SongViewModel &model, int selected, bool ghostPass)
+    void drawNotes(QPainter &painter, const SongViewModel &model,
+                   int selectedTrack, bool drawingGhostNotes)
     {
-        const int keyH = m_sv->keyHeight();
-        const bool velZoomed = keyH >= kVelHandleMinKeyH;
-    // Velocity labels are optional at tight zoom levels; never force a
-    // minimum face that can clip vertically.
-    const auto velocityFont =!ghostPass && m_drag == Drag::Velocity
-                                  ? typography::fitted( p.font(), keyH)
-                                  :std::optional<QFont>{};
-    if(velocityFont)
-            p.setFont(*velocityFont);
+        const int keyHeight = m_sv->keyHeight();
+        const bool showVelocityHandles = keyHeight >= kVelHandleMinKeyH;
+        // Velocity labels are optional at tight zoom levels; never force a
+        // minimum face that can clip vertically.
+        const auto velocityFont =
+            !drawingGhostNotes && m_drag == Drag::Velocity
+                ? typography::fitted(painter.font(), keyHeight)
+                : std::optional<QFont>{};
+        if (velocityFont)
+            painter.setFont(*velocityFont);
+
         for (const ViewNote &note : model.notes) {
-            const bool ghost = note.track != selected;
-            if (ghost != ghostPass)
+            const bool isGhostNote = note.track != selectedTrack;
+            if (isGhostNote != drawingGhostNotes)
                 continue;
-            const QRect r = displayedNoteRect(note);
-            if (r.right() < kKeyboardW || r.left() > width())
+            const QRect noteRect = displayedNoteRect(note);
+            if (noteRect.right() < kKeyboardW || noteRect.left() > width())
                 continue;
-            if (r.bottom() < 0 || r.top() > height())
+            if (noteRect.bottom() < 0 || noteRect.top() > height())
                 continue;
-            QColor c = SongView::trackColor(note.track);
-            if (ghost) {
-                p.fillRect(r, ghostNoteColor(note.track, isBlackKey(note.key)));
-            } else {
-                int vel = note.velocity;
-                if (m_drag == Drag::Velocity && m_sv->isSelected(note))
-                    vel = std::clamp(int(note.velocity) + m_dVel, 1, 127);
-                c.setAlpha(120 + vel); // velocity shows as opacity
-                p.fillRect(r, c);
-                // Velocity bar (bottom = 0, top = 127) once zoomed in
-                // enough; it is the drag handle and tracks the drag preview.
-                if (velZoomed) {
-                    p.fillRect(velBarRect(r, vel),
-                               SongView::trackColor(note.track).darker(170));
+
+            const QRect noteBox = noteRect.adjusted(0, 0, -1, -1);
+            if (isGhostNote) {
+                painter.fillRect(
+                    noteBox,
+                    ghostNoteColor(note.track, isBlackKey(note.key)));
+                continue;
+            }
+
+            int renderedVelocity = note.velocity;
+            if (m_drag == Drag::Velocity && m_sv->isSelected(note)) {
+                renderedVelocity =
+                    std::clamp(int(note.velocity) + m_dVel, 1, 127);
+            }
+            painter.fillRect(
+                noteBox, SongView::noteColor(note.track, renderedVelocity));
+
+            // Mixing one-third toward black in OKLab keeps the bar distinct
+            // without rotating the track identity hue.
+            if (showVelocityHandles) {
+                painter.fillRect(
+                    velBarRect(noteRect, renderedVelocity),
+                    mixTowardOklab(SongView::trackColor(note.track), Qt::black,
+                                   1.0 / 3.0));
+            }
+
+            // While a velocity drag is live, every current-track note shows
+            // its previewed value.
+            if (m_drag == Drag::Velocity && velocityFont) {
+                const QString velocityText = QString::number(renderedVelocity);
+                if (noteRect.width()
+                    >= painter.fontMetrics().horizontalAdvance(velocityText)
+                        + 4) {
+                    painter.setPen(trackTextColor(note.track));
+                    painter.drawText(noteRect, Qt::AlignCenter, velocityText);
                 }
-                // While a velocity drag is live, every current-track note
-                // shows its (previewed) value.
-                if (m_drag == Drag::Velocity && velocityFont) {
-                    const QString text = QString::number(vel);
-                    if (r.width() >= p.fontMetrics().horizontalAdvance(text) + 4) {
-                        p.setPen(trackTextColor(note.track));
-                        p.drawText(r, Qt::AlignCenter, text);
-                    }
-                }
-                if (m_sv->isSelected(note)) {
-                    p.setPen(QPen(themes::color(themes::Role::song_view_selected_note_inner_border), 1));
-                    p.drawRect(r.adjusted(0, 0, -1, -1));
-                    p.setPen(QPen(themes::color(themes::Role::song_view_selection_edge), 1));
-                    p.drawRect(r.adjusted(-1, -1, 0, 0));
+            }
+
+            if (m_sv->isSelected(note)) {
+                constexpr int kSelectionRingThicknessPixels = 3;
+                const QColor selectionColor =
+                    themes::color(themes::Role::item_selected_background);
+                if (drawRectFrame(painter, noteBox, selectionColor,
+                                  kSelectionRingThicknessPixels)) {
+                    // Insets are physical pixels too, so fractional display
+                    // scale cannot change the ring or inner border thickness.
+                    drawNoteBoxBorder(painter, noteBox, note.unterminated,
+                                      kSelectionRingThicknessPixels);
                 } else {
-                    p.setPen(note.unterminated
-                                 ? QPen(unterminatedNoteOutlineColor(), 1, Qt::DashLine)
-                                 : QPen(SongView::trackColor(note.track).darker(150), 1));
-                    p.drawRect(r.adjusted(0, 0, -1, -1));
+                    // At extreme zoom there is no room for a frame plus a
+                    // face. Keep the note visible as a solid selection mark.
+                    painter.fillRect(noteBox, selectionColor);
                 }
+            } else {
+                drawNoteBoxBorder(painter, noteBox, note.unterminated);
             }
         }
     }
@@ -2195,8 +2270,8 @@ private:
     // The pending note of a draw gesture, solid like the real note. (Move and
     // resize gestures need no extra pass: drawNotes paints the selected notes
     // at their dragged geometry via displayedNoteRect.)
-    void drawDragPreview(QPainter &p, const SongViewModel &model, int selected)
-    {
+        void drawDragPreview(QPainter &p, const SongViewModel &model,
+                                                  int selected) {
         Q_UNUSED(model);
         if (m_drag != Drag::Draw)
             return;
@@ -2205,11 +2280,9 @@ private:
             kKeyboardW + m_sv->contentX(double(m_drawTick + uint64_t(m_drawDur)));
         const QRect r(x0, keyToY(m_drawKey) + 1, std::max(2, x1 - x0),
                       std::max(2, m_sv->keyHeight() - 1));
-        QColor c = SongView::trackColor(selected);
-        c.setAlpha(120 + m_lastVelocity);
-        p.fillRect(r, c);
-        p.setPen(QPen(SongView::trackColor(selected).darker(150), 1));
-        p.drawRect(r.adjusted(0, 0, -1, -1));
+            const QRect box = r.adjusted(0, 0, -1, -1);
+            p.fillRect(box, SongView::noteColor(selected, m_lastVelocity));
+            drawNoteBoxBorder(p, box, false);
     }
 
     // Where the note sits on screen right now: its stored geometry, displaced
@@ -2318,6 +2391,8 @@ private:
         if (labelFont)
             p.setFont(*labelFont);
         const int hovered = m_hoverKey;
+                const QPen separatorPen(
+                        themes::color(themes::Role::song_view_piano_keyboard_separator), 0);
         for (int key = 0; key < 128; key++) {
             const int y = keyToY(key);
             if (y + keyH < 0 || y > height())
@@ -2342,8 +2417,7 @@ private:
                 // B/C and E/F are the only spots where two natural
                 // keys touch, so those bottom edges get a separator.
                 if (key % 12 == 0 || key % 12 == 5) {
-                    p.setPen(themes::color(
-                        themes::Role::song_view_piano_keyboard_separator));
+                                        p.setPen(separatorPen);
                     p.drawLine(0, y + keyH, kKeyboardW, y + keyH);
                 }
                 if (key % 12 == 0) {
@@ -5857,13 +5931,22 @@ void SongView::setTrackSolo(int track, bool on)
     }
 }
 
-QColor SongView::trackColor(int track)
-{
+QColor SongView::trackColor(int track) {
     return themes::trackIdentityColor(trackIdentityIndex(track));
 }
 
-int SongView::currentProgram(int track) const
-{
+QColor SongView::noteColor(int track, int velocity) {
+    if (velocity <= 0)
+        return themes::color(themes::Role::song_view_note_velocity_zero);
+    if (velocity >= 127)
+        return trackColor(track);
+    const double t = 1.0 - (double(velocity) / 127.0);
+    return mixTowardOklab(
+            trackColor(track),
+            themes::color(themes::Role::song_view_note_velocity_zero), t);
+}
+
+int SongView::currentProgram(int track) const {
     if (!m_timeline)
         return -1;
     int prog = m_timeline->tracks[track].firstProgram;
