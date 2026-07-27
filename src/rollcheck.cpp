@@ -118,7 +118,7 @@ struct SnappedRows {
                                     std::max(2.0 * pixel(), bottom(key) - top(key) - pixel()));
     }
     QRectF noteBox(const QRectF &rect) const {
-        return rect.adjusted(0, 0, -pixel(), -pixel());
+        return rect.adjusted(0, 0, 0, -pixel());
     }
     int noteTopProbeY(int key) const {
         return int(std::floor(noteRect(0, 1, key).top() + pixel()));
@@ -720,9 +720,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (noteA.velocity != 100)
       fail("fresh document does not draw at velocity 100");
 
-    // The painted box is one pixel smaller on its right and bottom edges
-    // than the note's interaction rect. Those reserved pixels must retain
-    // the underlying roll instead of leaking the note fill past its border.
+    // The painted box runs flush to the note's right interaction edge
+    // (consecutive notes abut with no phantom rest column) but stops one
+    // pixel above the bottom edge, whose reserved row must retain the
+    // underlying roll. Nothing may paint past the end tick's column.
     view.setEditCursorTick(overlayTick);
     QImage rollAfterDrawing(roll->size(),
                             QImage::Format_ARGB32_Premultiplied);
@@ -739,8 +740,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     for (int y = noteInteractionRect.top();
          y <= noteInteractionRect.bottom(); ++y) {
       paintEscapedInteractionRect |=
-          rollAfterDrawing.pixel(noteInteractionRect.right(), y)
-          != rollBeforeDrawing.pixel(noteInteractionRect.right(), y);
+          rollAfterDrawing.pixel(noteInteractionRect.right() + 1, y)
+          != rollBeforeDrawing.pixel(noteInteractionRect.right() + 1, y);
     }
     for (int x = noteInteractionRect.left();
          x <= noteInteractionRect.right(); ++x) {
@@ -804,6 +805,52 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (QColor(rollAfterDrawing.pixel(noteInteriorSample))
         != expectedNoteColor)
       fail("note interior color does not match noteColor(track, 100)");
+
+    // A note ending exactly where the next begins must paint every column
+    // across the pair — no reserved background column that reads as a rest
+    // between them. (findFreeCell guaranteed the adjacent cell is empty.)
+    doc.addNote(track, noteA.tick + noteA.duration, noteA.key,
+                noteA.duration, 100);
+    const int abuttingRightX = songview::kKeyboardW
+        + view.contentX(double(noteA.tick + 2 * noteA.duration));
+    QImage abuttingImage(roll->size(), QImage::Format_ARGB32_Premultiplied);
+    abuttingImage.fill(Qt::transparent);
+    roll->render(&abuttingImage);
+    const int abuttingMidY = rows.centerY(noteA.key);
+    bool restGapFound = false;
+    for (int x = noteInteractionRect.left(); x < abuttingRightX; ++x) {
+      restGapFound |= abuttingImage.pixel(x, abuttingMidY)
+          == rollBeforeDrawing.pixel(x, abuttingMidY);
+    }
+    if (restGapFound)
+      fail("abutting notes left an unpainted rest-like gap column");
+
+    // At a key height where only ~3 face pixels remain, the border thins to
+    // one pixel instead of vanishing while neighboring larger notes keep
+    // theirs.
+    {
+      const SongView::ViewState originalView = view.viewState();
+      SongView::ViewState tinyView = originalView;
+      tinyView.keyHeight = 5.0;
+      tinyView.scrollY =
+          std::max(0.0, (127.5 - double(noteA.key)) * tinyView.keyHeight
+                            - roll->height() / 2.0);
+      view.applyViewState(tinyView);
+      const SnappedRows tinyRows{view, *roll};
+      const QRectF tinyBox = tinyRows.noteBox(
+          tinyRows.noteRect(noteRightX, abuttingRightX, noteA.key));
+      QImage tinyImage(roll->size(), QImage::Format_ARGB32_Premultiplied);
+      tinyImage.fill(Qt::transparent);
+      roll->render(&tinyImage);
+      const int tinyCenterX = qRound(tinyBox.center().x());
+      if (!isBlackBorder(
+              tinyImage.pixel(tinyCenterX, qRound(tinyBox.top()))))
+        fail("tiny note lost its border instead of thinning it");
+      if (isBlackBorder(
+              tinyImage.pixel(tinyCenterX, qRound(tinyBox.top()) + 1)))
+        fail("tiny note border swallowed the note face");
+      view.applyViewState(originalView);
+    }
 
     // Probe the selected 3px ring, its 2px black inset, and the unselected
     // bottom edge with the camera centered at a fractional scale.
@@ -1754,21 +1801,22 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         }
     }
 
-    // Nineteen commands: draw, set, draw, nudge, draw, the double-click
+    // Twenty commands: draw, set, draw, nudge, draw, the double-click
     // delete, the press-grown draw, the tiny-drag draw, the modifier
-    // velocity nudge, add, two resizes, the three note-selection presses
-    // MERGED into one, the off-grid behind-the-back move, Ctrl+Left (all
-    // the scroll-follow presses merge into it), two time-selection moves
-    // (kept separate by the clean-index save point), the inline rename, and
-    // the mid-song voice change — plus, when the song has a second track,
-    // the header-drag track move and the editor commit the drop flushes.
-    // Undoing them all must restore the original bytes.
+    // velocity nudge, the abutting-note fixture add, add, two resizes, the
+    // three note-selection presses MERGED into one, the off-grid
+    // behind-the-back move, Ctrl+Left (all the scroll-follow presses merge
+    // into it), two time-selection moves (kept separate by the clean-index
+    // save point), the inline rename, and the mid-song voice change — plus,
+    // when the song has a second track, the header-drag track move and the
+    // editor commit the drop flushes. Undoing them all must restore the
+    // original bytes.
     int undos = 0;
     while (doc.undoStack()->canUndo() && undos < 100) {
         doc.undoStack()->undo();
         undos++;
     }
-    if (undos != 19 + (reordered ? (dragRenamed ? 2 : 1) : 0))
+    if (undos != 20 + (reordered ? (dragRenamed ? 2 : 1) : 0))
         fail("gesture pass pushed an unexpected number of undo commands");
     if (doc.smf().write() != baseline)
         fail("undoing every gesture did not restore the original bytes");

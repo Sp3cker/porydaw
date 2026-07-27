@@ -1276,21 +1276,35 @@ QRectF noteFrame(const QPainter &painter, const QRectF &noteRect,
         .adjusted(insetDips, insetDips, -insetDips, -insetDips);
 }
 
-bool drawRectFrame(QPainter &painter, const QRectF &rect,
-                   const QColor &color, int thicknessPixels,
-                   int insetPixels = 0)
+// Largest frame thickness (up to requestedPixels) that still leaves at
+// least one physical pixel of face visible between the frames; 0 when not
+// even a one-pixel frame fits. Small notes keep a thinner frame instead of
+// abruptly losing it a zoom step before their neighbors do.
+int fittedFrameThickness(const QPainter &painter, const QRectF &rect,
+                         int requestedPixels, int insetPixels)
 {
     const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
-    if (thicknessPixels <= 0
-        || qRound(rect.width() * devicePixelRatio)
-            <= 2 * (insetPixels + thicknessPixels)
-        || qRound(rect.height() * devicePixelRatio)
-            <= 2 * (insetPixels + thicknessPixels))
-        return false;
+    const int minDimension =
+        std::min(qRound(rect.width() * devicePixelRatio),
+                 qRound(rect.height() * devicePixelRatio));
+    return std::clamp((minDimension - 1) / 2 - insetPixels, 0,
+                      requestedPixels);
+}
 
-    // Paint one solid ring around the half-open note enclosure. Separate
-    // cosmetic outlines can quantize onto non-adjacent device rows at
-    // fractional scale factors, exposing the note face between them.
+// Returns the thickness actually painted (0 = nothing fit).
+int drawRectFrame(QPainter &painter, const QRectF &rect,
+                  const QColor &color, int thicknessPixels,
+                  int insetPixels = 0)
+{
+    thicknessPixels =
+        fittedFrameThickness(painter, rect, thicknessPixels, insetPixels);
+    if (thicknessPixels <= 0)
+        return 0;
+
+    // Paint one solid ring around the note box. Separate cosmetic outlines
+    // can quantize onto non-adjacent device rows at fractional scale
+    // factors, exposing the note face between them.
+    const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
     const qreal physicalPixel = logicalPhysicalPixel(devicePixelRatio);
     const qreal insetDips = insetPixels * physicalPixel;
     const qreal thicknessDips = thicknessPixels * physicalPixel;
@@ -1312,23 +1326,22 @@ bool drawRectFrame(QPainter &painter, const QRectF &rect,
                frame.top() + thicknessDips, thicknessDips,
                frame.height() - 2 * thicknessDips),
         color);
-    return true;
+    return thicknessPixels;
 }
 
-bool drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox,
+void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox,
                        bool unterminated, int insetPixels = 0)
 {
     constexpr int kBorderThicknessPixels = 2;
     if (!unterminated) {
-        return drawRectFrame(painter, noteBox, Qt::black,
-                             kBorderThicknessPixels, insetPixels);
+        drawRectFrame(painter, noteBox, Qt::black, kBorderThicknessPixels,
+                      insetPixels);
+        return;
     }
-    const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
-    if (qRound(noteBox.width() * devicePixelRatio)
-            <= 2 * (insetPixels + kBorderThicknessPixels)
-        || qRound(noteBox.height() * devicePixelRatio)
-            <= 2 * (insetPixels + kBorderThicknessPixels))
-        return false;
+    const int thickness = fittedFrameThickness(
+        painter, noteBox, kBorderThicknessPixels, insetPixels);
+    if (thickness <= 0)
+        return;
 
     painter.save();
     QPen borderPen(Qt::black, 0);
@@ -1337,10 +1350,9 @@ bool drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox,
     borderPen.setDashPattern({4, 2});
     painter.setPen(borderPen);
     painter.setBrush(Qt::NoBrush);
-    for (int pixel = 0; pixel < kBorderThicknessPixels; ++pixel)
+    for (int pixel = 0; pixel < thickness; ++pixel)
         painter.drawRect(noteFrame(painter, noteBox, insetPixels + pixel));
     painter.restore();
-    return true;
 }
 
 } // namespace
@@ -2164,10 +2176,12 @@ private:
             note.key);
     }
 
+    // The painted box: flush with the note's end on the right so
+    // consecutive notes abut (their black borders separate them), one
+    // pixel short on the bottom so the row hairline stays visible.
     QRectF noteBox(const QRectF &rect) const
     {
-        const qreal pixel = physicalPixel();
-        return rect.adjusted(0, 0, -pixel, -pixel);
+        return rect.adjusted(0, 0, 0, -physicalPixel());
     }
 
     // Topmost (last-drawn) note of the selected track under pos. The rect is
@@ -2429,12 +2443,16 @@ private:
                 constexpr int kSelectionRingThicknessPixels = 3;
                 const QColor selectionColor =
                     themes::color(themes::Role::item_selected_background);
-                if (drawRectFrame(painter, noteBox, selectionColor,
-                                  kSelectionRingThicknessPixels)) {
-                    // Insets are physical pixels too, so fractional display
-                    // scale cannot change the ring or inner border thickness.
+                // The ring thins before it disappears; the black border
+                // insets by whatever ring actually fit. Insets are physical
+                // pixels too, so fractional display scale cannot change the
+                // ring or inner border thickness.
+                const int ringThickness =
+                    drawRectFrame(painter, noteBox, selectionColor,
+                                  kSelectionRingThicknessPixels);
+                if (ringThickness > 0) {
                     drawNoteBoxBorder(painter, noteBox, note.unterminated,
-                                      kSelectionRingThicknessPixels);
+                                      ringThickness);
                 } else {
                     // At extreme zoom there is no room for a frame plus a
                     // face. Keep the note visible as a solid selection mark.
