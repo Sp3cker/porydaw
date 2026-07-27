@@ -574,11 +574,10 @@ Theme derive(const QColor &primary, const QColor &accent) {
   theme.color(Role::song_view_secondary_text) = disabledText;
   theme.color(Role::song_view_selection_fill) = selectionBackground;
   theme.color(Role::song_view_selection_edge) = selectionBackground;
-  theme.color(Role::song_view_selected_note_inner_border) = selectionText;
+  theme.color(Role::song_view_note_velocity_zero) = disabledText;
   theme.color(Role::song_view_loop_marker) = selectionBackground;
   theme.color(Role::song_view_edit_cursor) = windowText;
   theme.color(Role::song_view_edit_preview_outline) = windowText;
-  theme.color(Role::song_view_unterminated_note_outline) = accent;
   theme.color(Role::song_view_grid) = gridLines;
   theme.color(Role::song_view_piano_roll_background) = windowBackground;
   theme.color(Role::song_view_piano_roll_accidental_lane) =
@@ -631,15 +630,21 @@ Theme withGridLineContrast(Theme theme, int contrast) {
   const auto grid = theme.color(Role::song_view_grid);
   const auto background = theme.color(Role::song_view_piano_roll_background);
   if (contrast < 50) {
-    theme.color(Role::song_view_grid) =
+    auto adjusted =
         mixColors(grid, background, static_cast<double>(contrast) / 50.0);
+    adjusted.setAlpha((grid.alpha() * contrast + 25) / 50);
+    theme.color(Role::song_view_grid) = adjusted;
     return theme;
   }
   const auto endpoint = relativeLuminance(grid) <= relativeLuminance(background)
                             ? QColor::fromRgb(0, 0, 0)
                             : QColor::fromRgb(255, 255, 255);
   const auto endpointWeight = static_cast<double>(contrast - 50) / 50.0;
-  theme.color(Role::song_view_grid) = mixColors(endpoint, grid, endpointWeight);
+  auto adjusted = mixColors(endpoint, grid, endpointWeight);
+  adjusted.setAlpha(
+      grid.alpha() +
+      ((255 - grid.alpha()) * (contrast - 50) + 25) / 50);
+  theme.color(Role::song_view_grid) = adjusted;
   return theme;
 }
 

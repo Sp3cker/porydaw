@@ -279,12 +279,44 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     const auto tickAtContentX = [&view](int x) {
         return uint64_t(std::ceil(std::max(0.0, view.tickAtContentX(x))));
     };
-    const uint64_t firstTick = tickAtContentX(plotWidth / 3);
-    const uint64_t secondTick = tickAtContentX(plotWidth / 3 + 12);
-    const int firstX = view.contentX(double(firstTick));
-    const int secondX = view.contentX(double(secondTick));
-    if (firstX < 0 || secondX >= plotWidth || secondX <= firstX
-        || secondX - firstX > 32) {
+    uint64_t firstTick = 0;
+    uint64_t firstSample = 0, secondSample = 0;
+    int firstX = 0, secondX = 0;
+    bool foundInterval = false;
+    for (int x = plotWidth / 3; x + 12 < plotWidth; ++x) {
+        const uint64_t candidateFirstTick = tickAtContentX(x);
+        const uint64_t candidateSecondTick = tickAtContentX(x + 12);
+        const int candidateFirstX = view.contentX(double(candidateFirstTick));
+        const int candidateSecondX = view.contentX(double(candidateSecondTick));
+        if (candidateFirstX < 0 || candidateSecondX >= plotWidth
+            || candidateSecondX <= candidateFirstX
+            || candidateSecondX - candidateFirstX > 32)
+            continue;
+        // Skip intervals straddling a program change: the frames at the two
+        // probe positions would then differ beyond the playhead itself.
+        const uint64_t candidateFirstSample = timeline.sampleForTick(candidateFirstTick);
+        const uint64_t candidateSecondSample = timeline.sampleForTick(candidateSecondTick);
+        const uint64_t firstDisplayTick =
+            uint64_t(timeline.tickForSample(candidateFirstSample));
+        const uint64_t secondDisplayTick =
+            uint64_t(timeline.tickForSample(candidateSecondSample));
+        const bool crossesProgramChange = std::any_of(
+            timeline.events.cbegin(), timeline.events.cend(),
+            [=](const TimelineEvent &event) {
+                return event.type == 0xC && event.tick > firstDisplayTick
+                    && event.tick <= secondDisplayTick;
+            });
+        if (crossesProgramChange)
+            continue;
+        firstTick = candidateFirstTick;
+        firstSample = candidateFirstSample;
+        secondSample = candidateSecondSample;
+        firstX = candidateFirstX;
+        secondX = candidateSecondX;
+        foundInterval = true;
+        break;
+    }
+    if (!foundInterval) {
         failures.append("could not choose nearby visible playhead ticks");
         return;
     }
@@ -314,8 +346,6 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
                     .arg(state));
         }
     };
-    const uint64_t firstSample = timeline.sampleForTick(firstTick);
-    const uint64_t secondSample = timeline.sampleForTick(secondTick);
     view.setPlayheadSample(firstSample, false);
     processPaints();
     const qreal firstMarkerCenter = playheadCenter(marker.grab(), playheadColor);

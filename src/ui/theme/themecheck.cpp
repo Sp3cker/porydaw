@@ -71,11 +71,14 @@ protected:
   void paintEvent(QPaintEvent *) override { ++count; }
 };
 
-// Paint code has no fallback path: every public role must resolve to an
-// opaque color.
+// Paint code has no fallback path: every public role must resolve to a valid
+// color. Only the grid may be translucent.
 bool isComplete(const themes::Theme &theme) {
-  for (const auto &color : theme.colors) {
-    if (!color.isValid() || color.alpha() != 255)
+  for (std::size_t index = 0; index < theme.colors.size(); ++index) {
+    const auto color = theme.colors[index];
+    const auto role = static_cast<themes::Role>(index);
+    if (!color.isValid() ||
+        (role != themes::Role::song_view_grid && color.alpha() != 255))
       return false;
   }
   return true;
@@ -226,9 +229,21 @@ void checkDerivedThemes(Reporter &reporter) {
       themes::darkNeutralHigh(),
       themes::immaterial(),
   };
+  reporter.check(
+      themes::vanilla().color(themes::Role::song_view_grid) ==
+          QColor::fromRgb(0x04, 0x00, 0x00, 0x3F),
+      "Vanilla does not use its authored grid line color");
+  reporter.check(
+      themes::darkNeutralHigh().color(themes::Role::song_view_grid) ==
+          QColor::fromRgb(0x03, 0x03, 0x03, 0x54),
+      "Dark Neutral High does not use its authored grid line color");
+  reporter.check(
+      themes::immaterial().color(themes::Role::song_view_grid) ==
+          QColor::fromRgb(0x03, 0x06, 0x06, 0x54),
+      "Immaterial does not use its authored grid line color");
   for (const auto &theme : fixedThemes) {
     reporter.check(isComplete(theme),
-                   "a fixed theme has an unset or translucent role");
+                   "a fixed theme has an unset or invalid role");
     checkMenuBarStateContrast(reporter, theme);
     checkSharedControlColors(reporter, theme);
     reporter.check(
@@ -241,8 +256,13 @@ void checkDerivedThemes(Reporter &reporter) {
     const auto grid = theme.color(themes::Role::song_view_grid);
     const auto background =
         theme.color(themes::Role::song_view_piano_roll_background);
+    const auto softened = themes::withGridLineContrast(theme, 0)
+                              .color(themes::Role::song_view_grid);
     const auto strengthened = themes::withGridLineContrast(theme, 100)
                                   .color(themes::Role::song_view_grid);
+    reporter.check(softened.alpha() < grid.alpha() &&
+                       strengthened.alpha() > grid.alpha(),
+                   "grid line contrast does not adjust opacity");
     reporter.check(
         (themes::relativeLuminance(grid) <=
              themes::relativeLuminance(background) &&

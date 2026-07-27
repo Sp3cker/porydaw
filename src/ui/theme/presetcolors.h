@@ -39,8 +39,7 @@ enum class PresetColor {
   /// Hovered buttons/tabs/indicators/headers, and the shared resting surface
   /// of combo, text, and spin-box fields.
   control_hover_background,
-  /// Pressed buttons, menus, headers, checked Mute/Solo controls, and
-  /// unterminated-note outlines.
+  /// Pressed buttons, menus, headers, and checked Mute/Solo controls.
   control_pressed_background,
   /// Tooltips and checkbox/radio indicator surfaces.
   input_background,
@@ -53,8 +52,10 @@ enum class PresetColor {
   secondary_text,
   /// Hovered list/tree rows and item-view surfaces.
   item_hover_background,
-  /// Scrollbar thumbs and SongView grid lines.
+  /// Scrollbar thumbs.
   scrollbar_handle,
+  /// SongView grid lines.
+  grid_line,
   /// SongView piano-roll note area background; its lightness selects the
   /// authored accidental-lane color.
   piano_roll_background,
@@ -108,7 +109,7 @@ enum class PresetColor {
 
 inline constexpr auto presetColorCount =
     static_cast<std::size_t>(PresetColor::count);
-static_assert(presetColorCount == 35);
+static_assert(presetColorCount == 36);
 
 constexpr PresetColor presetColorFor(Role role);
 
@@ -267,13 +268,12 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::secondary_text,
     PresetColor::selection_background,
     PresetColor::accent,
-    PresetColor::window_text,
+    PresetColor::disabled_text,
     PresetColor::selection_background,
     PresetColor::window_text,
     PresetColor::window_text,
     PresetColor::playhead,
-    PresetColor::control_pressed_background,
-    PresetColor::scrollbar_handle,
+    PresetColor::grid_line,
     PresetColor::piano_roll_background,
     PresetColor::piano_roll_accidental_lane,
     PresetColor::piano_natural_key,
@@ -319,12 +319,13 @@ constexpr PresetColors makeVanilla() {
   colors.color(PresetColor::secondary_text) = "#57514C";
   colors.color(PresetColor::item_hover_background) = "#E7E2DC";
   colors.color(PresetColor::scrollbar_handle) = "#A49D97";
-  colors.color(PresetColor::piano_roll_background) = "#D9D3CF";
-  colors.color(PresetColor::piano_roll_accidental_lane) = "#C9C3BF";
+  colors.color(PresetColor::grid_line) = "#3F040000";
+  colors.color(PresetColor::piano_roll_background) = "#D4CCC7";
+  colors.color(PresetColor::piano_roll_accidental_lane) = "#B7AFA9";
   colors.color(PresetColor::playhead) = "#E24242";
   colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
   colors.color(PresetColor::piano_black_key) = "#202224";
-  colors.color(PresetColor::piano_keyboard_separator) = "#9A9A9A";
+  colors.color(PresetColor::piano_keyboard_separator) = "#BCB4AF";
   colors.color(PresetColor::piano_keyboard_label) = "#1A1A1A";
   colors.color(PresetColor::polyphony_cell_text) = "#F0F0F4";
   colors.color(PresetColor::polyphony_active_cell) = "#268C38";
@@ -373,8 +374,9 @@ constexpr PresetColors makeDarkNeutralHigh() {
   colors.color(PresetColor::secondary_text) = "#BDBDBD";
   colors.color(PresetColor::item_hover_background) = "#5B5B5B";
   colors.color(PresetColor::scrollbar_handle) = "#262626";
+  colors.color(PresetColor::grid_line) = "#54030303";
   colors.color(PresetColor::piano_roll_background) = "#454545";
-  colors.color(PresetColor::piano_roll_accidental_lane) = "#383838";
+  colors.color(PresetColor::piano_roll_accidental_lane) = "#363636";
   colors.color(PresetColor::playhead) = "#E24242";
   colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
   colors.color(PresetColor::piano_black_key) = "#202224";
@@ -422,7 +424,8 @@ constexpr PresetColors makeImmaterial() {
   colors.color(PresetColor::item_background) = "#393C43";
   colors.color(PresetColor::secondary_text) = "#A5A8B0";
   colors.color(PresetColor::item_hover_background) = "#51545C";
-  colors.color(PresetColor::scrollbar_handle) = "#212225"; // also grid color
+  colors.color(PresetColor::scrollbar_handle) = "#212225";
+  colors.color(PresetColor::grid_line) = "#54030606";
   colors.color(PresetColor::piano_roll_background) = "#3C3F46";
   colors.color(PresetColor::piano_roll_accidental_lane) = "#2F3239";
   colors.color(PresetColor::playhead) = "#E24242";
@@ -456,11 +459,11 @@ constexpr bool isHexDigit(char value) {
 
 constexpr bool isCompletePreset(const PresetColors &colors) {
   for (const HexColor color : colors.values) {
-    if (color.size() != 7 || color[0] != '#' || !isHexDigit(color[1]) ||
-        !isHexDigit(color[2]) || !isHexDigit(color[3]) ||
-        !isHexDigit(color[4]) || !isHexDigit(color[5]) ||
-        !isHexDigit(color[6])) {
+    if ((color.size() != 7 && color.size() != 9) || color[0] != '#')
       return false;
+    for (std::size_t index = 1; index < color.size(); ++index) {
+      if (!isHexDigit(color[index]))
+        return false;
     }
   }
   return true;
