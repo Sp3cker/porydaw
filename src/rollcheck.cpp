@@ -1,14 +1,17 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDialog>
+#include <QDialogButtonBox>
 #include <QElapsedTimer>
 #include <QIcon>
 #include <QImage>
 #include <QKeyEvent>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QMouseEvent>
 #include <QMenu>
 #include <QPixmap>
+#include <QPushButton>
 #include <QPoint>
 #include <QRect>
 #include <QSettings>
@@ -886,9 +889,30 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             QTimer poll;
             poll.setInterval(0);
             bool pickerSeen = false;
+            bool searchFilteredList = false;
             QObject::connect(&poll, &QTimer::timeout, [&] {
                 if (QDialog *dlg = view.findChild<QDialog *>()) {
                     pickerSeen = true;
+                    auto *searchField = dlg->findChild<QLineEdit *>();
+                    auto *voiceList = dlg->findChild<QListWidget *>();
+                    auto *dialogButtons = dlg->findChild<QDialogButtonBox *>();
+                    if (searchField && voiceList && dialogButtons) {
+                        searchField->setText(QStringLiteral("127  "));
+                        searchFilteredList =
+                            voiceList->item(0)->isHidden()
+                            && !voiceList->item(127)->isHidden();
+                        searchField->clear();
+                        searchFilteredList &= !voiceList->item(0)->isHidden();
+                        voiceList->setCurrentRow(127);
+                        searchField->setText(QStringLiteral("1"));
+                        searchFilteredList &=
+                            voiceList->currentRow() == 1
+                            && !voiceList->item(1)->isHidden()
+                            && !voiceList->item(127)->isHidden()
+                            && dialogButtons->button(QDialogButtonBox::Ok)->isEnabled();
+                        searchField->clear();
+                        searchFilteredList &= voiceList->currentRow() == 0;
+                    }
                     dlg->reject();
                 }
             });
@@ -901,6 +925,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             poll.stop();
             if (!pickerSeen)
                 fail("voice-line double-click did not open the voice picker");
+            if (!searchFilteredList)
+                fail("voice picker search did not filter and restore its list");
             auto *renameEditor =
                 view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
             if (renameEditor && !renameEditor->isHidden())

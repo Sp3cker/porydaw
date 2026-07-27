@@ -3989,7 +3989,11 @@ public:
     {
         setWindowTitle(title);
         resize(lyt::fontPx(30), lyt::fontPx(110.0 / 3.0));
-        auto *layout = new QVBoxLayout(this);
+        auto *dialogLayout = new QVBoxLayout(this);
+        auto *searchField = new QLineEdit(this);
+        searchField->setPlaceholderText(tr("Search voices..."));
+        searchField->setClearButtonEnabled(true);
+        dialogLayout->addWidget(searchField);
         m_list = new QListWidget(this);
         m_list->setUniformItemSizes(true);
         m_list->setToolTip(SongView::tr("Click and hold to audition (middle C)."));
@@ -3999,13 +4003,29 @@ public:
                                 .arg(sv->voiceShortName(uint8_t(v))));
         m_list->setCurrentRow(std::clamp(initialVoice, 0, VOICEGROUP_SIZE - 1));
         m_list->scrollToItem(m_list->currentItem(), QAbstractItemView::PositionAtCenter);
-        layout->addWidget(m_list, 1);
+        dialogLayout->addWidget(m_list, 1);
 
-        auto *buttons =
+        auto *dialogButtons =
             new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-        connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
-        connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-        layout->addWidget(buttons);
+        connect(dialogButtons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+        connect(dialogButtons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+        dialogLayout->addWidget(dialogButtons);
+        connect(searchField, &QLineEdit::textChanged, this,
+                [this, dialogButtons](const QString &query) {
+                    QListWidgetItem *firstMatchingVoice = nullptr;
+                    for (int voiceIndex = 0; voiceIndex < m_list->count(); ++voiceIndex) {
+                        QListWidgetItem *voiceItem = m_list->item(voiceIndex);
+                        const bool matchesQuery =
+                            voiceItem->text().contains(query, Qt::CaseInsensitive);
+                        voiceItem->setHidden(!matchesQuery);
+                        if (matchesQuery && !firstMatchingVoice)
+                            firstMatchingVoice = voiceItem;
+                    }
+                    m_list->setCurrentItem(firstMatchingVoice);
+                    dialogButtons->button(QDialogButtonBox::Ok)
+                        ->setEnabled(firstMatchingVoice);
+                });
+        searchField->setFocus();
 
         connect(m_list, &QListWidget::itemPressed, this, [this](QListWidgetItem *item) {
             releaseVoice();
