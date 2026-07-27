@@ -22,10 +22,10 @@ QColor handleColor(WaveformView::Handle handle)
     switch (handle) {
     case WaveformView::CropStartHandle:
     case WaveformView::CropEndHandle:
-        return QColor(0xE0, 0xA0, 0x30);
+        return themes::color(themes::Role::sample_crop_handle);
     case WaveformView::LoopStartHandle:
     case WaveformView::LoopEndHandle:
-        return QColor(0x40, 0xB0, 0xE0);
+        return themes::color(themes::Role::sample_loop_handle);
     default:
         return Qt::gray;
     }
@@ -397,8 +397,9 @@ void WaveformView::paintEvent(QPaintEvent *event)
             p.setPen(QPen(c, 1));
             p.drawPath(path);
         };
-        drawWindow(m_seamEnd, QColor(0xE8, 0x50, 0x50));
-        drawWindow(m_seamStart, QColor(0x40, 0xB0, 0xE0));
+        drawWindow(m_seamEnd,
+                   themes::color(themes::Role::sample_seam_end_ink));
+        drawWindow(m_seamStart, handleColor(LoopStartHandle));
         p.setPen(palette().color(QPalette::Mid));
         p.drawText(inset.adjusted(4, 2, -4, -2), Qt::AlignBottom,
                    tr("seam"));

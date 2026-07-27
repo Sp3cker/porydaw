@@ -93,13 +93,22 @@ enum class PresetColor {
   polyphony_flash,
   /// Sample Studio waveform trace, drawn on the item surface behind it.
   sample_waveform_ink,
+  /// Sample Studio crop handles: the amber domain color, kept legible on the
+  /// item surface.
+  sample_crop_handle,
+  /// Sample Studio loop handles, loop tint, and seam-start trace: the blue
+  /// domain color, kept legible on the item and alternate surfaces.
+  sample_loop_handle,
+  /// Sample Studio seam-end trace: the red domain color, kept legible on the
+  /// seam inset's alternate surface.
+  sample_seam_end_ink,
   /// Sentinel for the number of authored preset colors; not rendered.
   count,
 };
 
 inline constexpr auto presetColorCount =
     static_cast<std::size_t>(PresetColor::count);
-static_assert(presetColorCount == 32);
+static_assert(presetColorCount == 35);
 
 constexpr PresetColor presetColorFor(Role role);
 
@@ -280,6 +289,9 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::secondary_text,
 
     PresetColor::sample_waveform_ink,
+    PresetColor::sample_crop_handle,
+    PresetColor::sample_loop_handle,
+    PresetColor::sample_seam_end_ink,
 };
 
 static_assert(rolePresetColors.size() == roleCount);
@@ -327,6 +339,12 @@ constexpr PresetColors makeVanilla() {
   // selection cyan sat 1.16:1 there); this is the accent hue walked toward
   // black by the same policy Custom themes use, landing at 5.09:1.
   colors.color(PresetColor::sample_waveform_ink) = "#005B63";
+  // The identity amber/blue/red sat 1.47/1.54/2.29:1 on the light surfaces;
+  // each is its hue walked toward black by the Custom-theme policy to the
+  // 3:1 UI-component bar (3.22, 3.33 worst-surface, 3.05:1).
+  colors.color(PresetColor::sample_crop_handle) = "#92681F";
+  colors.color(PresetColor::sample_loop_handle) = "#2A7292";
+  colors.color(PresetColor::sample_seam_end_ink) = "#C54444";
   return colors;
 }
 
@@ -373,6 +391,12 @@ constexpr PresetColors makeDarkNeutralHigh() {
   // Matches the selection cyan the waveform always rendered here: 5.83:1 on
   // the item surface, so this preset keeps its look.
   colors.color(PresetColor::sample_waveform_ink) = "#9FCDD7";
+  // The identity amber already clears the bar here (4.42:1); the blue and
+  // red walk one and seven steps toward white for the seam inset's lighter
+  // alternate surface (3.07 and 3.06:1 there).
+  colors.color(PresetColor::sample_crop_handle) = "#E0A030";
+  colors.color(PresetColor::sample_loop_handle) = "#4AB4E2";
+  colors.color(PresetColor::sample_seam_end_ink) = "#F08D8D";
   return colors;
 }
 
@@ -416,6 +440,12 @@ constexpr PresetColors makeImmaterial() {
   // Matches the selection cyan the waveform always rendered here: 6.37:1 on
   // the item surface, so this preset keeps its look.
   colors.color(PresetColor::sample_waveform_ink) = "#ABCAD2";
+  // The identity amber and blue already clear the bar here (4.86 and 3.06:1
+  // worst-surface); the red walks six steps toward white for the seam
+  // inset's alternate surface (3.01:1 there).
+  colors.color(PresetColor::sample_crop_handle) = "#E0A030";
+  colors.color(PresetColor::sample_loop_handle) = "#40B0E0";
+  colors.color(PresetColor::sample_seam_end_ink) = "#EF8585";
   return colors;
 }
 

@@ -236,16 +236,29 @@ QColor deriveDisabledText(const QColor &globalText,
   return blackOrWhiteByWorstContrast(fills);
 }
 
-// Severity inks keep their hue but must stay readable on the surface hosting
-// them; blend toward that surface's contrast endpoint until they are.
-QColor severityText(const QColor &tint, const QColor &background) {
-  const auto endpoint = blackOrWhiteByWorstContrast({background});
+// Domain-colored inks keep their identity hue but must clear the given bar on
+// every surface hosting them; blend toward the shared contrast endpoint until
+// they do.
+QColor domainInk(const QColor &tint, const std::initializer_list<QColor> &fills,
+                 double minimumRatio) {
+  const auto endpoint = blackOrWhiteByWorstContrast(fills);
   for (auto step = 0; step <= 20; ++step) {
     const auto candidate = mixColors(endpoint, tint, step * 0.05);
-    if (contrastRatio(candidate, background) >= kTextContrastThreshold)
+    auto readable = true;
+    for (const auto &fill : fills) {
+      if (contrastRatio(candidate, fill) < minimumRatio)
+        readable = false;
+    }
+    if (readable)
       return candidate;
   }
   return endpoint;
+}
+
+// Severity inks keep their hue but must stay readable on the surface hosting
+// them; blend toward that surface's contrast endpoint until they are.
+QColor severityText(const QColor &tint, const QColor &background) {
+  return domainInk(tint, {background}, kTextContrastThreshold);
 }
 
 // Prefer theme colors before black or white. sharedFills keeps reused text
@@ -593,6 +606,20 @@ Theme derive(const QColor &primary, const QColor &accent) {
   // The Sample Studio waveform is a one-pixel trace on the item surface, so
   // it needs ink-grade contrast; keep the accent hue like the severity inks.
   theme.color(Role::sample_waveform_ink) = severityText(accent, itemBackground);
+  // Its handles and seam traces are identity domain colors (amber = crop,
+  // blue = loop, red = seam end) held to the UI-component bar on the
+  // surfaces hosting them; the blue also draws inside the seam inset, which
+  // uses the alternate surface.
+  theme.color(Role::sample_crop_handle) =
+      domainInk(QColor::fromRgb(0xE0, 0xA0, 0x30), {itemBackground},
+                kChromeTextContrastThreshold);
+  theme.color(Role::sample_loop_handle) =
+      domainInk(QColor::fromRgb(0x40, 0xB0, 0xE0),
+                {itemBackground, itemAlternateBackground},
+                kChromeTextContrastThreshold);
+  theme.color(Role::sample_seam_end_ink) =
+      domainInk(QColor::fromRgb(0xE8, 0x50, 0x50), {itemAlternateBackground},
+                kChromeTextContrastThreshold);
 
   return theme;
 }

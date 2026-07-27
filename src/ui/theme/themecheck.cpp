@@ -287,25 +287,35 @@ void checkDerivedThemes(Reporter &reporter) {
               "a dark derived lane readout is unreadable");
   laneLegible(themes::derive(QColor("#F2F2F2"), QColor("#0055AA")),
               "a light derived lane readout is unreadable");
-  // The Sample Studio waveform trace paints on the item surface; Vanilla once
-  // shipped it at 1.16:1 there by borrowing the palette's selection color.
+  // Sample Studio inks paint on the item surface (waveform trace, crop and
+  // loop handles) and the seam inset's alternate surface (loop and seam-end
+  // traces); Vanilla once shipped the trace at 1.16:1 and the handles near
+  // 1.5:1 by borrowing palette colors and identity tints.
   auto waveformLegible = [&](const themes::Theme &theme, const char *what) {
+    const auto item = theme.color(themes::Role::item_background);
+    const auto alternate =
+        theme.color(themes::Role::item_alternate_background);
+    const auto legible = [&](themes::Role role, const QColor &surface) {
+      return themes::contrastRatio(theme.color(role), surface) >= 3.0;
+    };
     reporter.check(
-        themes::contrastRatio(theme.color(themes::Role::sample_waveform_ink),
-                              theme.color(themes::Role::item_background)) >=
-            3.0,
+        legible(themes::Role::sample_waveform_ink, item) &&
+            legible(themes::Role::sample_crop_handle, item) &&
+            legible(themes::Role::sample_loop_handle, item) &&
+            legible(themes::Role::sample_loop_handle, alternate) &&
+            legible(themes::Role::sample_seam_end_ink, alternate),
         what);
   };
   waveformLegible(themes::vanilla(),
-                  "the Vanilla waveform trace is unreadable");
+                  "a Vanilla Sample Studio ink is unreadable");
   waveformLegible(themes::darkNeutralHigh(),
-                  "the Dark Neutral High waveform trace is unreadable");
+                  "a Dark Neutral High Sample Studio ink is unreadable");
   waveformLegible(themes::immaterial(),
-                  "the Immaterial waveform trace is unreadable");
+                  "an Immaterial Sample Studio ink is unreadable");
   waveformLegible(themes::derive(QColor("#2B2D31"), QColor("#66CCFF")),
-                  "a dark derived waveform trace is unreadable");
+                  "a dark derived Sample Studio ink is unreadable");
   waveformLegible(themes::derive(QColor("#F2F2F2"), QColor("#0055AA")),
-                  "a light derived waveform trace is unreadable");
+                  "a light derived Sample Studio ink is unreadable");
 }
 
 
