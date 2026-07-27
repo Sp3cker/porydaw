@@ -447,6 +447,64 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         }
     }
 
+    // ---- songs.h ID-ordered backfill -----------------------------------------
+    // The same strip + re-register proof for songs.h: a mid-table song's
+    // define must return to its ID position between its neighbors, not be
+    // appended. Vanilla files end with hex-valued sentinels after the last
+    // real ID (MUS_NONE 0xFFFF, PHONEME_ID_NONE 0xFF); a backfill must not
+    // be dragged past them — their leading digit once parsed as value 0.
+    {
+        const QByteArray original = readAllBytes(songsHPath);
+        QList<QByteArray> lines = original.split('\n');
+        const SongInfo *midSong = nullptr;
+        int lineAt = -1;
+        for (int id = registeredCount / 2; id < registeredCount && !midSong; id++) {
+            const SongInfo &s = project.songs().at(id);
+            if (!s.registered || s.constant.isEmpty())
+                continue;
+            // The song's own define, in exactly the shape registerSong would
+            // rewrite (no trailing comment), and only one of it. The line
+            // directly above must be the ID-1 define — reinserting after the
+            // last smaller value is only byte-identical when no section
+            // comment or blank line sits between the two (the freed-slot
+            // scenario this proves).
+            const QRegularExpression exactRe(
+                QStringLiteral("^#define %1\\s+%2$").arg(s.constant).arg(id));
+            const QRegularExpression prevRe(
+                QStringLiteral("^\\s*#define\\s+\\w+\\s+%1\\b").arg(id - 1));
+            int found = -1, hits = 0;
+            for (int i = 0; i < lines.size(); i++) {
+                if (exactRe.match(QString::fromUtf8(lines[i])).hasMatch()) {
+                    found = i;
+                    hits++;
+                }
+            }
+            if (hits == 1 && found > 0
+                && prevRe.match(QString::fromUtf8(lines[found - 1])).hasMatch()) {
+                midSong = &s;
+                lineAt = found;
+            }
+        }
+        check(midSong != nullptr, "songs.h backfill: no mid-table candidate song");
+        if (midSong) {
+            lines.removeAt(lineAt);
+            QFile out(songsHPath);
+            check(out.open(QIODevice::WriteOnly), "songs.h backfill: rewrite songs.h");
+            out.write(lines.join('\n'));
+            out.close();
+            check(readAllBytes(songsHPath) != original,
+                  "songs.h backfill: strip was a no-op");
+            check(SongRegistry::registerSong(
+                      projectRoot, midSong->label, midSong->constant,
+                      midSong->player.isEmpty() ? QStringLiteral("MUSIC_PLAYER_BGM")
+                                                : midSong->player,
+                      &regError, &songId),
+                  "songs.h backfill: registerSong failed");
+            check(readAllBytes(songsHPath) == original,
+                  "backfilled songs.h define not restored at its ID position");
+        }
+    }
+
     // ---- Register Song action wiring ----------------------------------------
     // Strip the song's charmap line — the state of any song registered before
     // porydaw wrote charmap entries. The song still reads as registered from

@@ -419,7 +419,10 @@ bool registerSong(const QString &projectRoot, const QString &label,
     // define whose value drifted from the table index. Appended songs land
     // after the last define as before (their ID exceeds every value); a song
     // reusing a freed slot lands between its ID neighbors, keeping the file
-    // sorted like the charmap insertion below.
+    // sorted like the charmap insertion below. Only whole decimal values
+    // count as IDs: the hex sentinels after the real entries (MUS_NONE
+    // 0xFFFF, PHONEME_ID_NONE 0xFF) would otherwise read as value 0 and
+    // drag every insertion past them to the end of the file.
     {
         const QString path = projectRoot + QStringLiteral("/include/constants/songs.h");
         RawLines f = readRawLines(path);
@@ -431,7 +434,7 @@ bool registerSong(const QString &projectRoot, const QString &label,
         const QRegularExpression ownRe(
             QStringLiteral(R"(^(\s*#define\s+%1\s+)(\d+)(.*)$)").arg(constant));
         static const QRegularExpression anyDefineRe(
-            QStringLiteral(R"(^\s*#define\s+\w+\s+(\d+))"));
+            QStringLiteral(R"(^\s*#define\s+\w+\s+(\d+)\b)"));
         static const QRegularExpression endifRe(QStringLiteral(R"(^\s*#endif\b)"));
         int own = -1, insertAfter = -1, firstDefine = -1, firstEndif = -1;
         QRegularExpressionMatch ownMatch;
