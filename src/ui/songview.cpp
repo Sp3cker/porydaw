@@ -1,4 +1,5 @@
 #include "songview.h"
+#include "layout.h"
 #include "theme/color_math.h"
 #include "theme/trackidentitycolors.h"
 #include "theme/themeruntime.h"
@@ -122,7 +123,7 @@ double cursorAnchoredScroll(double anchor, double oldScale, double oldScroll,
 constexpr int kVoiceAuditionKey = 60; // middle C, matching the voicegroup browser
 constexpr int kVoiceAuditionVel = 112;
 // Resize hit-zone half-width at a note's left/right edges.
-constexpr int kEdgeW = 3;
+constexpr qreal kEdgeW = static_cast<double>(layout::Space::Eight);
 
 bool isBlackKey(int key)
 {
@@ -1505,6 +1506,8 @@ protected:
         m_dVel = 0;
 
         if (hit) {
+            const bool rightEdge = nearRightEdge(*hit, event->position());
+            const bool leftEdge = nearLeftEdge(*hit, event->position());
             // Ableton-style velocity gesture: with the bound modifier chord
             // held (Ctrl by default), a vertical drag from anywhere on the
             // note adjusts velocity. Deferred like the empty-space press:
@@ -1516,7 +1519,8 @@ protected:
             const Qt::KeyboardModifiers pressMods = event->modifiers()
                 & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier
                    | Qt::MetaModifier);
-            if (gestureMods != Qt::NoModifier && pressMods == gestureMods) {
+            if (gestureMods != Qt::NoModifier && pressMods == gestureMods &&
+                !rightEdge && !leftEdge) {
                 m_velModPress = true;
                 m_velModMods = pressMods;
                 m_velAnchor = *hit;
@@ -1530,7 +1534,8 @@ protected:
             }
             std::vector<SongView::NoteId> ids = m_sv->selection();
             const SongView::NoteId id{hit->startTick, hit->key};
-            if (event->modifiers() & Qt::ControlModifier) {
+            if ((event->modifiers() & Qt::ControlModifier) &&
+                !rightEdge && !leftEdge) {
                 const auto it = std::find(ids.begin(), ids.end(), id);
                 if (it != ids.end())
                     ids.erase(it);
@@ -1544,11 +1549,11 @@ protected:
             // Reaper-style velocity latch: touching a note makes its velocity
             // the default for the next drawn note.
             m_lastVelocity = hit->velocity;
-                        if (nearRightEdge(*hit, event->position())) {
+                        if (rightEdge) {
                 m_drag = Drag::Resize;
                 m_gripTick = hit->endTick;
                 m_gripOpposite = hit->startTick;
-                        } else if (nearLeftEdge(*hit, event->position())) {
+                        } else if (leftEdge) {
                 m_drag = Drag::ResizeLeft;
                 m_gripTick = hit->startTick;
                 m_gripOpposite = hit->endTick;
@@ -1686,21 +1691,20 @@ protected:
                                 m_sv->document() && event->position().x() >= kKeyboardW
                                         ? hitNote(event->position())
                                                                    : nullptr;
-            // The velocity-gesture modifier held over a note wins over the
-            // edge handles, exactly as the press does.
+            // Resize edges win over both velocity-hover paths.
             const Qt::KeyboardModifiers hoverMods = event->modifiers()
                 & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier
                    | Qt::MetaModifier);
-            if (hit && hoverMods != Qt::NoModifier
-                && hoverMods
-                    == keymap::Registry::instance().modifierBinding(
-                        QStringLiteral("roll.velocity_drag")))
-                setCursor(Qt::SizeVerCursor);
-                        else if (hit && nearRightEdge(*hit, event->position()))
+            if (hit && nearRightEdge(*hit, event->position()))
                 setCursor(m_cursors.rightEdge);
-                        else if (hit && nearLeftEdge(*hit, event->position()))
+            else if (hit && nearLeftEdge(*hit, event->position()))
                 setCursor(m_cursors.leftEdge);
-                        else if (hit && nearVelocityHandle(*hit, event->position()))
+            else if (hit && hoverMods != Qt::NoModifier
+                     && hoverMods
+                         == keymap::Registry::instance().modifierBinding(
+                             QStringLiteral("roll.velocity_drag")))
+                setCursor(Qt::SizeVerCursor);
+            else if (hit && nearVelocityHandle(*hit, event->position()))
                 setCursor(Qt::SizeVerCursor);
             else
                 setCursor(Qt::ArrowCursor);
