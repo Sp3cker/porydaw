@@ -916,10 +916,21 @@ void MainWindow::activateSession(SongSession *session, bool force)
     updateVoicegroupBrowser();
     updatePolyPanelContext(session);
 
-    bool registered = true;
-    if (session->songId >= 0 && session->songId < m_project.songs().size())
-        registered = m_project.songs().at(session->songId).registered;
-    m_registerAction->setEnabled(!registered);
+    // Register Song stays available while ANY registration file lacks (or
+    // mis-states) the song's line — not only for unregistered strays. A song
+    // registered before porydaw wrote charmap.txt entries reads as registered
+    // from the song table, but still needs a re-register to backfill.
+    bool complete = true;
+    if (session->songId >= 0 && session->songId < m_project.songs().size()) {
+        const SongInfo &song = m_project.songs().at(session->songId);
+        const QString constant = song.constant.isEmpty()
+                                     ? SongRegistry::constantForLabel(song.label)
+                                     : song.constant;
+        complete =
+            SongRegistry::checkRegistration(m_project.root(), song.label, constant)
+                .complete();
+    }
+    m_registerAction->setEnabled(!complete);
     m_songLabel->setText(QStringLiteral("  %1").arg(session->doc.label()));
     m_songList->setCurrentSong(session->songId);
     updateWindowTitle();

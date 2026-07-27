@@ -60,6 +60,12 @@ public:
     bool runTabCheck(const QString &projectRoot, const QString &songA,
                      const QString &songB);
 
+    // Register Song action wiring (part of --onboardcheck; onboardcheck.cpp):
+    // a partially registered song keeps the action enabled, and running it
+    // heals the registration. Writes into the project: scratch copy only,
+    // QSettings must be redirected. Failures count into onboardcheck's total.
+    bool runRegisterActionCheck(const QString &projectRoot, const QString &label);
+
     // Solo-overflow visibility gate (--polycheck stage C; polycheck.cpp):
     // the engine inverts only while the invert checkbox is checked AND the
     // Polyphony dock is visible. No project needed; QSettings must be

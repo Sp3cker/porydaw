@@ -1,14 +1,18 @@
+#include <QAction>
 #include <QCheckBox>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
+#include <QSettings>
 #include <QString>
+#include <QTemporaryDir>
 #include <cstdio>
 
 #include "core/midiimport.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
+#include "mainwindow.h"
 #include "project/decompproject.h"
 #include "project/songregistry.h"
 #include "ui/newsongwizard.h"
@@ -394,6 +398,38 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     check(registered && registered->constant == constant,
           "constant not matched from songs.h");
 
+    // ---- Register Song action wiring ----------------------------------------
+    // Strip the song's charmap line — the state of any song registered before
+    // porydaw wrote charmap entries. The song still reads as registered from
+    // the song table, but File → Register Song must stay enabled, and running
+    // it must backfill the line byte-identically.
+    if (plan.charmapApplicable) {
+        const QByteArray full = readAllBytes(charmapPath);
+        QByteArray stripped = full;
+        const int at = stripped.indexOf(plan.charmapLine.toUtf8());
+        check(at >= 0, "action check: charmap entry not found");
+        int end = stripped.indexOf('\n', at);
+        end = end < 0 ? stripped.size() : end + 1;
+        stripped.remove(at, end - at);
+        QFile out(charmapPath);
+        check(out.open(QIODevice::WriteOnly) && out.write(stripped) == stripped.size(),
+              "action check: rewrite charmap.txt");
+        out.close();
+
+        // Redirected settings: the user's real session is never touched.
+        QTemporaryDir settingsDir;
+        check(settingsDir.isValid(), "action check: no temp dir for settings");
+        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope,
+                           settingsDir.path());
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
+                           settingsDir.path());
+        MainWindow window;
+        check(window.runRegisterActionCheck(projectRoot, label),
+              "register-action check did not run");
+        check(readAllBytes(charmapPath) == full,
+              "backfill did not restore charmap.txt byte-identically");
+    }
+
     if (haveMid2agb)
         check(compilesThroughMid2agb(mid2agb, midPath, cfg.rawFlags),
               "blank new song does not compile through mid2agb");
@@ -511,4 +547,28 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     std::printf("onboardcheck: %s (%d failures)\n", g_failures ? "FAIL" : "PASS",
                 g_failures);
     return g_failures ? 1 : 0;
+}
+
+bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QString &label)
+{
+    m_persistSession = false;
+    if (!openProjectDir(projectRoot, /*interactive=*/false)) {
+        std::fprintf(stderr, "onboardcheck: project failed to open in MainWindow\n");
+        return false;
+    }
+    loadSongByLabel(label);
+    if (!m_active || m_active->doc.label() != label) {
+        std::fprintf(stderr, "onboardcheck: '%s' did not load in MainWindow\n",
+                     qUtf8Printable(label));
+        return false;
+    }
+    check(m_registerAction->isEnabled(),
+          "Register Song disabled for a song missing its charmap entry");
+    registerLoadedSong();
+    check(!m_registerAction->isEnabled(), "Register Song still enabled after backfill");
+    // A fresh activation recomputes the enable state from the files on disk.
+    activateSession(m_active, /*force=*/true);
+    check(!m_registerAction->isEnabled(),
+          "re-activation re-enabled Register Song for a complete registration");
+    return true;
 }
