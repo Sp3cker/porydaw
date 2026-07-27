@@ -287,6 +287,25 @@ void checkDerivedThemes(Reporter &reporter) {
               "a dark derived lane readout is unreadable");
   laneLegible(themes::derive(QColor("#F2F2F2"), QColor("#0055AA")),
               "a light derived lane readout is unreadable");
+  // The Sample Studio waveform trace paints on the item surface; Vanilla once
+  // shipped it at 1.16:1 there by borrowing the palette's selection color.
+  auto waveformLegible = [&](const themes::Theme &theme, const char *what) {
+    reporter.check(
+        themes::contrastRatio(theme.color(themes::Role::sample_waveform_ink),
+                              theme.color(themes::Role::item_background)) >=
+            3.0,
+        what);
+  };
+  waveformLegible(themes::vanilla(),
+                  "the Vanilla waveform trace is unreadable");
+  waveformLegible(themes::darkNeutralHigh(),
+                  "the Dark Neutral High waveform trace is unreadable");
+  waveformLegible(themes::immaterial(),
+                  "the Immaterial waveform trace is unreadable");
+  waveformLegible(themes::derive(QColor("#2B2D31"), QColor("#66CCFF")),
+                  "a dark derived waveform trace is unreadable");
+  waveformLegible(themes::derive(QColor("#F2F2F2"), QColor("#0055AA")),
+                  "a light derived waveform trace is unreadable");
 }
 
 

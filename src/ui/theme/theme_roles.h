@@ -178,6 +178,9 @@ enum class Role {
   song_view_file_event_marker,
   song_view_add_automation_lane_action,
 
+  // Sample Studio waveform trace, painted on the item surface behind it.
+  sample_waveform_ink,
+
   count,
 };
 

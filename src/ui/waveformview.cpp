@@ -1,5 +1,7 @@
 #include "waveformview.h"
 
+#include "ui/theme/themeruntime.h"
+
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
@@ -309,8 +311,9 @@ void WaveformView::paintEvent(QPaintEvent *event)
                    loopTint);
     }
 
-    // Waveform columns via the pyramid.
-    p.setPen(palette().color(QPalette::Highlight));
+    // Waveform columns via the pyramid. The palette's Highlight is a
+    // selection surface, not an ink; Vanilla's sat 1.16:1 on Base here.
+    p.setPen(themes::color(themes::Role::sample_waveform_ink));
     for (int px = 0; px < r.width(); px++) {
         const qint64 from = qint64(std::floor(m_scroll + px * m_spp));
         const qint64 to = std::max<qint64>(

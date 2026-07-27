@@ -91,13 +91,15 @@ enum class PresetColor {
   /// Overflow-table row flash on a fresh drop: a fixed identity red faded
   /// by the panel.
   polyphony_flash,
+  /// Sample Studio waveform trace, drawn on the item surface behind it.
+  sample_waveform_ink,
   /// Sentinel for the number of authored preset colors; not rendered.
   count,
 };
 
 inline constexpr auto presetColorCount =
     static_cast<std::size_t>(PresetColor::count);
-static_assert(presetColorCount == 31);
+static_assert(presetColorCount == 32);
 
 constexpr PresetColor presetColorFor(Role role);
 
@@ -276,6 +278,8 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::accent,
     PresetColor::outline,
     PresetColor::secondary_text,
+
+    PresetColor::sample_waveform_ink,
 };
 
 static_assert(rolePresetColors.size() == roleCount);
@@ -319,6 +323,10 @@ constexpr PresetColors makeVanilla() {
   colors.color(PresetColor::polyphony_dropped_text) = "#9C2B2B";
   colors.color(PresetColor::polyphony_stolen_text) = "#6E4A06";
   colors.color(PresetColor::polyphony_flash) = "#D92626";
+  // The accent is too pale for a trace on the light item surface (the raw
+  // selection cyan sat 1.16:1 there); this is the accent hue walked toward
+  // black by the same policy Custom themes use, landing at 5.09:1.
+  colors.color(PresetColor::sample_waveform_ink) = "#005B63";
   return colors;
 }
 
@@ -362,6 +370,9 @@ constexpr PresetColors makeDarkNeutralHigh() {
   colors.color(PresetColor::polyphony_dropped_text) = "#F09999";
   colors.color(PresetColor::polyphony_stolen_text) = "#E2A854";
   colors.color(PresetColor::polyphony_flash) = "#D92626";
+  // Matches the selection cyan the waveform always rendered here: 5.83:1 on
+  // the item surface, so this preset keeps its look.
+  colors.color(PresetColor::sample_waveform_ink) = "#9FCDD7";
   return colors;
 }
 
@@ -402,6 +413,9 @@ constexpr PresetColors makeImmaterial() {
   colors.color(PresetColor::polyphony_dropped_text) = "#F09999";
   colors.color(PresetColor::polyphony_stolen_text) = "#E2A854";
   colors.color(PresetColor::polyphony_flash) = "#D92626";
+  // Matches the selection cyan the waveform always rendered here: 6.37:1 on
+  // the item surface, so this preset keeps its look.
+  colors.color(PresetColor::sample_waveform_ink) = "#ABCAD2";
   return colors;
 }
 
