@@ -44,6 +44,9 @@ signals:
     // Context-menu "Open in New Tab" (plain activation replaces the current
     // tab's song).
     void songOpenInNewTabRequested(int songId);
+    // Context-menu "Register Song" — offered on songs whose registration is
+    // missing entries (unregistered strays and partial registrations alike).
+    void songRegisterRequested(int songId);
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;

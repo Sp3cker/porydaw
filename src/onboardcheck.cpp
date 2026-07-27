@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QListWidget>
 #include <QProcess>
 #include <QSettings>
 #include <QString>
@@ -16,6 +17,7 @@
 #include "project/decompproject.h"
 #include "project/songregistry.h"
 #include "ui/newsongwizard.h"
+#include "ui/songlistpanel.h"
 
 // --onboardcheck <projectRoot> [mid2agbPath]: M3 onboarding check. Exercises
 // the New Song and Import backends headlessly against a scratch copy of a
@@ -564,9 +566,44 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
     }
     check(m_registerAction->isEnabled(),
           "Register Song disabled for a song missing its charmap entry");
-    registerLoadedSong();
+
+    // The model carries the gap and the song browser badges it.
+    const auto findSong = [this](const QString &wanted) -> const SongInfo * {
+        for (const SongInfo &s : m_project.songs()) {
+            if (s.label == wanted)
+                return &s;
+        }
+        return nullptr;
+    };
+    const SongInfo *info = findSong(label);
+    check(info && info->registered,
+          "partially registered song no longer counts as table-registered");
+    check(info
+              && info->registrationGaps
+                     == QStringList{QStringLiteral("charmap.txt")},
+          "registrationGaps does not name the stripped charmap entry");
+    auto *list = m_songList->findChild<QListWidget *>();
+    const auto itemFor = [list](int id) -> QListWidgetItem * {
+        for (int i = 0; list && i < list->count(); i++) {
+            if (list->item(i)->data(Qt::UserRole).toInt() == id)
+                return list->item(i);
+        }
+        return nullptr;
+    };
+    QListWidgetItem *item = info ? itemFor(info->id) : nullptr;
+    check(item && item->text().contains(QStringLiteral("not fully registered")),
+          "song list shows no badge for a partial registration");
+
+    // The context menu's Register Song path heals the registration.
+    if (info)
+        registerSongById(info->id);
     check(!m_registerAction->isEnabled(), "Register Song still enabled after backfill");
-    // A fresh activation recomputes the enable state from the files on disk.
+    info = findSong(label);
+    check(info && info->registrationGaps.isEmpty(),
+          "registration gaps not cleared by the backfill");
+    item = info ? itemFor(info->id) : nullptr;
+    check(item && item->text() == label, "badge not cleared after the backfill");
+    // A fresh activation recomputes the enable state from the reloaded songs.
     activateSession(m_active, /*force=*/true);
     check(!m_registerAction->isEnabled(),
           "re-activation re-enabled Register Song for a complete registration");

@@ -324,8 +324,12 @@ entries (or none at all).
 
 If registration fails (e.g. an unwritable file), the chosen constant/player
 persist in the sidecar and the song shows a badge in the song browser;
-**File → Register Song** retries. The same action registers stray `.mid` files
-dropped into `sound/songs/midi/` by hand.
+**File → Register Song** (or right-click → **Register Song** in the browser)
+retries. The same action registers stray `.mid` files dropped into
+`sound/songs/midi/` by hand, and completes *partial* registrations — a song
+present in the table but missing an entry elsewhere (e.g. one registered
+before porydaw wrote `charmap.txt` entries) is badged "not fully registered",
+with per-song gaps audited in one pass over the four files at project open.
 
 ## 7. Playback integration
 

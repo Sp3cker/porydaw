@@ -457,6 +457,8 @@ void MainWindow::buildUi()
     connect(m_songList, &SongListPanel::songActivated, this, &MainWindow::songActivated);
     connect(m_songList, &SongListPanel::songOpenInNewTabRequested, this,
             &MainWindow::songOpenInNewTab);
+    connect(m_songList, &SongListPanel::songRegisterRequested, this,
+            &MainWindow::registerSongById);
     dock->setWidget(m_songList);
     addDockWidget(Qt::LeftDockWidgetArea, dock);
 
@@ -921,15 +923,8 @@ void MainWindow::activateSession(SongSession *session, bool force)
     // registered before porydaw wrote charmap.txt entries reads as registered
     // from the song table, but still needs a re-register to backfill.
     bool complete = true;
-    if (session->songId >= 0 && session->songId < m_project.songs().size()) {
-        const SongInfo &song = m_project.songs().at(session->songId);
-        const QString constant = song.constant.isEmpty()
-                                     ? SongRegistry::constantForLabel(song.label)
-                                     : song.constant;
-        complete =
-            SongRegistry::checkRegistration(m_project.root(), song.label, constant)
-                .complete();
-    }
+    if (session->songId >= 0 && session->songId < m_project.songs().size())
+        complete = m_project.songs().at(session->songId).registrationGaps.isEmpty();
     m_registerAction->setEnabled(!complete);
     m_songLabel->setText(QStringLiteral("  %1").arg(session->doc.label()));
     m_songList->setCurrentSong(session->songId);
@@ -2110,30 +2105,38 @@ void MainWindow::finishCreateSong(const SmfFile &smf, const QString &label,
 
 void MainWindow::registerLoadedSong()
 {
-    SongSession *session = m_active;
-    if (!session || session->songId < 0 || session->songId >= m_project.songs().size())
+    if (m_active && m_active->songId >= 0
+        && m_active->songId < m_project.songs().size())
+        registerSongById(m_active->songId);
+}
+
+void MainWindow::registerSongById(int songId)
+{
+    if (songId < 0 || songId >= m_project.songs().size())
         return;
-    const SongInfo song = m_project.songs().at(session->songId);
+    const SongInfo song = m_project.songs().at(songId);
     const QString constant = song.constant.isEmpty()
                                  ? SongRegistry::constantForLabel(song.label)
                                  : song.constant;
     const QString player = song.player.isEmpty() ? QStringLiteral("MUSIC_PLAYER_BGM")
                                                  : song.player;
     QString error;
-    int songId = -1;
+    int newId = -1;
     if (!SongRegistry::registerSong(m_project.root(), song.label, constant, player,
-                                    &error, &songId)) {
+                                    &error, &newId)) {
         QMessageBox::warning(this, tr("Register Song"), error);
         return;
     }
     SongRegistry::clearRegistrationMeta(m_project.root(), song.label);
     statusBar()->showMessage(
-        tr("Registered %1 as %2 (song ID %3)").arg(song.label, constant).arg(songId),
+        tr("Registered %1 as %2 (song ID %3)").arg(song.label, constant).arg(newId),
         8000);
     // The open tab keeps its document; only the registry-derived state
-    // (badge, song ids) needs refreshing.
+    // (badge, song ids) needs refreshing. Ids may shift in the reload, so
+    // the action refresh matches by label.
     reloadProject();
-    m_registerAction->setEnabled(false);
+    if (m_active && m_active->doc.label() == song.label)
+        m_registerAction->setEnabled(false);
 }
 
 void MainWindow::reloadProject()

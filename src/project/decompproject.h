@@ -39,6 +39,12 @@ struct SongInfo {
     // false: the .mid exists in sound/songs/midi/ but song_table.inc has no
     // entry yet — registerSong hasn't run (or failed) for it.
     bool registered = true;
+    // Registration files still missing (or mis-stating) this song's entry,
+    // e.g. "charmap.txt" for a song registered before porydaw wrote charmap
+    // entries. Empty when the registration is complete. Stamped at open from
+    // SongRegistry::checkRegistrations; drives the browser badge and the
+    // Register Song enablement.
+    QStringList registrationGaps;
     SongCfg cfg;
 
     bool isPlayable() const { return hasMid; }

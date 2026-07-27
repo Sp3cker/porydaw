@@ -102,6 +102,9 @@ private slots:
     // it checks out, else from the committed 8-bit .wav.
     void editSampleForSlot(int slot);
     void registerLoadedSong();
+    // Shared by File → Register Song (the loaded song) and the song list's
+    // right-click Register Song (any song, open or not).
+    void registerSongById(int songId);
     void uiTick();
     void onVoiceEditRequested(int slot, const VgVoice &voice, bool structural);
     void tabChanged(int index);

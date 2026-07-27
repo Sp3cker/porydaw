@@ -1,5 +1,6 @@
 #include "songlistpanel.h"
 
+#include <QAction>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QKeyEvent>
@@ -107,6 +108,16 @@ SongListPanel::SongListPanel(QWidget *parent) : QWidget(parent)
                 menu.addAction(tr("Open in New Tab"), this, [this, songId] {
                     emit songOpenInNewTabRequested(songId);
                 });
+                menu.addSeparator();
+                QAction *reg = menu.addAction(tr("Register Song"), this, [this, songId] {
+                    emit songRegisterRequested(songId);
+                });
+                bool incomplete = false;
+                for (const SongInfo &song : m_songs) {
+                    if (song.id == songId)
+                        incomplete = !song.registered || !song.registrationGaps.isEmpty();
+                }
+                reg->setEnabled(incomplete);
                 menu.exec(m_list->viewport()->mapToGlobal(pos));
             });
     layout->addWidget(m_list, 1);
@@ -294,14 +305,23 @@ void SongListPanel::rebuildList()
     m_list->clear();
     for (const SongInfo *song : visible) {
         QString text = song->label;
+        const bool partial = song->registered && !song->registrationGaps.isEmpty();
         if (!song->registered)
             text += tr("  ⚠ not registered");
+        else if (partial)
+            text += tr("  ⚠ not fully registered");
         auto *item = new QListWidgetItem(text, m_list);
         item->setData(Qt::UserRole, song->id);
         if (!song->registered) {
             item->setForeground(QColor(0xc0, 0x80, 0x30));
             item->setToolTip(tr("This song's .mid exists but song_table.inc has no "
-                                "entry. Open it and use File → Register Song."));
+                                "entry. Right-click → Register Song."));
+        } else if (partial) {
+            item->setForeground(QColor(0xc0, 0x80, 0x30));
+            item->setToolTip(tr("This song is missing its entry in: %1. "
+                                "Right-click → Register Song completes it.")
+                                 .arg(song->registrationGaps.join(
+                                     QStringLiteral(", "))));
         }
     }
 

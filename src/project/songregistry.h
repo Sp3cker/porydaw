@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -91,6 +92,13 @@ bool registerSong(const QString &projectRoot, const QString &label,
 // mis-registration).
 RegistrationStatus checkRegistration(const QString &projectRoot, const QString &label,
                                      const QString &constant);
+
+// checkRegistration for every song at once, keyed by label: one read of
+// each registration file for the whole project (the song browser audits
+// hundreds of songs at open). A song with no parsed constant is checked
+// under its label-derived default, like the Register Song action.
+QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot,
+                                                      const QVector<SongInfo> &songs);
 
 // Rebuilds a song's midi.cfg flag list from its properties, keeping unknown
 // flags (e.g. -L) and the original flag order intact.

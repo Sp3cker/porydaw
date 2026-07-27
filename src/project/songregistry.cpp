@@ -484,63 +484,88 @@ bool registerSong(const QString &projectRoot, const QString &label,
 RegistrationStatus checkRegistration(const QString &projectRoot, const QString &label,
                                      const QString &constant)
 {
-    RegistrationStatus status;
+    SongInfo song;
+    song.label = label;
+    song.constant = constant;
+    return checkRegistrations(projectRoot, {song}).value(label);
+}
 
-    int tableIndex = -1;
+QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot,
+                                                      const QVector<SongInfo> &songs)
+{
+    // song_table.inc: label -> index (a duplicate label's last entry wins).
+    QHash<QString, int> tableIndex;
     int count = 0;
     for (const QString &line :
          readLines(projectRoot + QStringLiteral("/sound/song_table.inc"))) {
         const QRegularExpressionMatch m = songLineRe().match(line);
         if (!m.hasMatch())
             continue;
-        if (m.captured(2) == label)
-            tableIndex = count;
+        tableIndex.insert(m.captured(2), count);
         count++;
     }
-    status.inSongTable = tableIndex >= 0;
 
-    const QRegularExpression defineRe(
-        QStringLiteral(R"(^\s*#define\s+%1\s+(\d+))").arg(constant));
+    // songs.h: name -> first numeric define's value.
+    static const QRegularExpression defineRe(
+        QStringLiteral(R"(^\s*#define\s+(\w+)\s+(\d+))"));
+    QHash<QString, int> defines;
     for (const QString &line :
          readLines(projectRoot + QStringLiteral("/include/constants/songs.h"))) {
         const QRegularExpressionMatch m = defineRe.match(line);
-        if (!m.hasMatch())
-            continue;
-        // Once the table entry exists, the define must carry its real index.
-        status.inSongsH = tableIndex < 0 || m.captured(1).toInt() == tableIndex;
-        break;
+        if (m.hasMatch() && !defines.contains(m.captured(1)))
+            defines.insert(m.captured(1), m.captured(2).toInt());
     }
 
-    const QString needle = QStringLiteral("sound/songs/midi/%1.o").arg(label);
-    status.ldApplicable = false;
+    // ld_script.ld: the per-song object labels.
+    static const QRegularExpression ldObjectRe(
+        QStringLiteral(R"(sound/songs/midi/(\w+)\.o)"));
+    bool ldApplicable = false;
+    QSet<QString> ldLabels;
     for (const QString &line : readLines(projectRoot + QStringLiteral("/ld_script.ld"))) {
         if (line.contains(QStringLiteral("sound/songs/midi/")))
-            status.ldApplicable = true;
-        if (line.contains(needle)) {
-            status.inLdScript = true;
-            break;
-        }
+            ldApplicable = true;
+        QRegularExpressionMatchIterator it = ldObjectRe.globalMatch(line);
+        while (it.hasNext())
+            ldLabels.insert(it.next().captured(1));
     }
 
-    // charmap.txt: once the table entry exists, the constant's value bytes
-    // must encode its real index (little-endian).
-    const QSet<QString> songNames = songsHConstantNames(projectRoot);
-    status.charmapApplicable = false;
-    bool sawOwnEntry = false;
+    // charmap.txt: name -> first entry's decoded value; the file is a song
+    // section at all only when some entry is named by a songs.h constant.
+    QHash<QString, int> charmapValues;
+    bool charmapApplicable = false;
     for (const QString &line : readLines(projectRoot + QStringLiteral("/charmap.txt"))) {
         const QRegularExpressionMatch m = charmapEntryRe().match(line);
         if (!m.hasMatch())
             continue;
-        if (songNames.contains(m.captured(1)))
-            status.charmapApplicable = true;
-        if (m.captured(1) != constant || sawOwnEntry)
-            continue;
-        sawOwnEntry = true;
-        const int value = m.captured(3).toInt(nullptr, 16)
-                          | m.captured(4).toInt(nullptr, 16) << 8;
-        status.inCharmap = tableIndex < 0 || value == tableIndex;
+        if (defines.contains(m.captured(1)))
+            charmapApplicable = true;
+        if (!charmapValues.contains(m.captured(1)))
+            charmapValues.insert(m.captured(1),
+                                 m.captured(3).toInt(nullptr, 16)
+                                     | m.captured(4).toInt(nullptr, 16) << 8);
     }
-    return status;
+
+    QHash<QString, RegistrationStatus> statuses;
+    for (const SongInfo &song : songs) {
+        const QString constant =
+            song.constant.isEmpty() ? constantForLabel(song.label) : song.constant;
+        RegistrationStatus status;
+        const int index = tableIndex.value(song.label, -1);
+        status.inSongTable = index >= 0;
+        // Once the table entry exists, the songs.h define and the charmap
+        // entry must carry its real index.
+        const auto define = defines.constFind(constant);
+        if (define != defines.constEnd())
+            status.inSongsH = index < 0 || define.value() == index;
+        status.ldApplicable = ldApplicable;
+        status.inLdScript = ldLabels.contains(song.label);
+        status.charmapApplicable = charmapApplicable;
+        const auto charmapValue = charmapValues.constFind(constant);
+        if (charmapValue != charmapValues.constEnd())
+            status.inCharmap = index < 0 || charmapValue.value() == index;
+        statuses.insert(song.label, status);
+    }
+    return statuses;
 }
 
 QStringList mergeCfgFlags(const SongCfg &cfg)
