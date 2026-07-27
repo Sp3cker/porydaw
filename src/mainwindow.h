@@ -66,6 +66,13 @@ public:
     // QSettings must be redirected. Failures count into onboardcheck's total.
     bool runRegisterActionCheck(const QString &projectRoot, const QString &label);
 
+    // Delete Song action wiring (part of --onboardcheck; onboardcheck.cpp):
+    // deleting an open song closes its tab, drops it from the model and the
+    // browser, and moves its .mid to .porydaw/trash/. Writes into the
+    // project: scratch copy only, QSettings must be redirected. Failures
+    // count into onboardcheck's total.
+    bool runDeleteActionCheck(const QString &projectRoot, const QString &label);
+
     // Solo-overflow visibility gate (--polycheck stage C; polycheck.cpp):
     // the engine inverts only while the invert checkbox is checked AND the
     // Polyphony dock is visible. No project needed; QSettings must be
@@ -105,6 +112,10 @@ private slots:
     // Shared by File → Register Song (the loaded song) and the song list's
     // right-click Register Song (any song, open or not).
     void registerSongById(int songId);
+    // The song list's right-click Delete Song: confirms what will be removed
+    // (offering the song's voicegroup when nothing else uses it), then
+    // performs the deletion.
+    void deleteSongById(int songId);
     void uiTick();
     void onVoiceEditRequested(int slot, const VgVoice &voice, bool structural);
     void tabChanged(int index);
@@ -129,6 +140,13 @@ private:
     void finishCreateSong(const SmfFile &smf, const QString &label,
                           const QString &constant, const QString &player,
                           const SongCfg &cfg, const QString &newVoicegroup);
+    // The dialog-less half of deleteSongById (also the harness entry): closes
+    // the song's tab discarding its edits, moves the .mid to .porydaw/trash/,
+    // removes the flag line, unregisters, drops the sidecar, deletes the
+    // named voicegroup (empty = keep), and reloads the project. Best-effort:
+    // every step runs; false collects what failed into *error.
+    bool performSongDeletion(const SongInfo &song, const QString &deleteVoicegroupName,
+                             QString *error);
     void reloadProject();
 
     // --- tab/session plumbing ---

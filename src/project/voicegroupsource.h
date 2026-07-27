@@ -265,6 +265,13 @@ public:
     // doesn't exist — the loader and browser discover the file regardless).
     static bool appendIncludeLine(const QString &projectRoot, const QString &name,
                                   QString *error);
+    // The inverse pair, for deleting a song's now-unused voicegroup: drops
+    // the hub's .include line (no-op when absent), then the .inc file itself.
+    // Idempotent — an already-deleted voicegroup is a success.
+    static bool removeIncludeLine(const QString &projectRoot, const QString &name,
+                                  QString *error);
+    static bool deleteVoicegroup(const QString &projectRoot, const QString &name,
+                                 QString *error);
 
 private:
     struct Line {

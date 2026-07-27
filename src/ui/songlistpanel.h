@@ -47,6 +47,8 @@ signals:
     // Context-menu "Register Song" — offered on songs whose registration is
     // missing entries (unregistered strays and partial registrations alike).
     void songRegisterRequested(int songId);
+    // Context-menu "Delete Song…" — MainWindow confirms and performs it.
+    void songDeleteRequested(int songId);
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;

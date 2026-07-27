@@ -174,6 +174,11 @@ int runMkCheck(const QString &projectRoot, const QString &songLabel)
     }
 
     // A label with no rule yet appends one that parses back.
+    const auto mkBytes = [&mkPath]() {
+        QFile f(mkPath);
+        return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+    };
+    const QByteArray preAppend = mkBytes();
     const QString newLabel = QStringLiteral("mus_mkcheck_new");
     const QStringList newFlags = {QStringLiteral("-E"), QStringLiteral("-R50"),
                                   QStringLiteral("-G%1").arg(song->cfg.voicegroupArg),
@@ -182,6 +187,19 @@ int runMkCheck(const QString &projectRoot, const QString &songLabel)
               "appending a new rule failed")) {
         const QHash<QString, QStringList> parsed = SongsMk::parseFlags(mkPath);
         check(parsed.value(newLabel) == newFlags, "appended rule does not parse back");
+
+        // Deleting it must restore songs.mk byte-identically (removeSongFlags
+        // routes to SongsMk::removeRule when there's no midi.cfg), and a
+        // second removal is a no-op.
+        if (check(SongRegistry::removeSongFlags(midiDir, newLabel, &error),
+                  "removing the appended rule failed")) {
+            check(!SongsMk::parseFlags(mkPath).contains(newLabel),
+                  "removed rule still parses");
+            check(mkBytes() == preAppend, "rule removal did not round-trip songs.mk");
+            check(SongRegistry::removeSongFlags(midiDir, newLabel, &error),
+                  "second rule removal failed");
+            check(mkBytes() == preAppend, "second rule removal changed songs.mk");
+        }
     }
 
     std::printf("mkcheck: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);

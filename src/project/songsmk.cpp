@@ -225,4 +225,56 @@ bool writeRule(const QString &mkPath, const QString &label, const QStringList &f
     return true;
 }
 
+bool removeRule(const QString &mkPath, const QString &label, QString *error)
+{
+    QByteArray content;
+    {
+        QFile in(mkPath);
+        if (!in.open(QIODevice::ReadOnly))
+            return true; // no songs.mk — nothing stored here
+        content = in.readAll();
+    }
+    const bool endsWithNewline = content.isEmpty() || content.endsWith('\n');
+    QList<QByteArray> lines = content.split('\n');
+    if (endsWithNewline && !lines.isEmpty())
+        lines.removeLast(); // the empty piece after the final newline
+
+    const auto textAt = [&lines](int i) {
+        return QString::fromUtf8(lines[i].endsWith('\r') ? lines[i].chopped(1)
+                                                         : lines[i]);
+    };
+    int ruleIdx = -1;
+    for (int i = 0; i < lines.size(); i++) {
+        const QRegularExpressionMatch m = ruleRe().match(textAt(i));
+        if (m.hasMatch() && m.captured(1) == label) {
+            ruleIdx = i;
+            break;
+        }
+    }
+    if (ruleIdx < 0)
+        return true;
+
+    int end = ruleIdx + 1; // past the rule's recipe lines
+    while (end < lines.size() && textAt(end).startsWith(QLatin1Char('\t')))
+        end++;
+    lines.erase(lines.begin() + ruleIdx, lines.begin() + end);
+    // The blank separator writeRule added before the rule, unless removing it
+    // would join two non-blank neighbors.
+    if (ruleIdx > 0 && textAt(ruleIdx - 1).trimmed().isEmpty()
+        && (ruleIdx >= lines.size() || textAt(ruleIdx).trimmed().isEmpty()))
+        lines.removeAt(ruleIdx - 1);
+
+    QFile out(mkPath);
+    if (!out.open(QIODevice::WriteOnly)) {
+        if (error)
+            *error = QStringLiteral("Cannot write %1").arg(mkPath);
+        return false;
+    }
+    QByteArray joined = lines.join('\n');
+    if (endsWithNewline)
+        joined += '\n';
+    out.write(joined);
+    return true;
+}
+
 } // namespace SongsMk

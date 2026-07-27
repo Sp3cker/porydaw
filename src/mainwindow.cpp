@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QColor>
 #include <QComboBox>
 #include <QDialog>
@@ -24,6 +25,7 @@
 #include <QPainter>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QPushButton>
 #include <QSettings>
 #include <QSpinBox>
 #include <QStatusBar>
@@ -54,6 +56,7 @@
 #include "audio/wavexport.h"
 #include "core/miditimeline.h"
 #include "project/samplereg.h"
+#include "project/sidecar.h"
 #include "project/songregistry.h"
 #include "ui/keyboardshortcutsdialog.h"
 #include "ui/keymap.h"
@@ -459,6 +462,8 @@ void MainWindow::buildUi()
             &MainWindow::songOpenInNewTab);
     connect(m_songList, &SongListPanel::songRegisterRequested, this,
             &MainWindow::registerSongById);
+    connect(m_songList, &SongListPanel::songDeleteRequested, this,
+            &MainWindow::deleteSongById);
     dock->setWidget(m_songList);
     addDockWidget(Qt::LeftDockWidgetArea, dock);
 
@@ -2137,6 +2142,139 @@ void MainWindow::registerSongById(int songId)
     reloadProject();
     if (m_active && m_active->doc.label() == song.label)
         m_registerAction->setEnabled(false);
+}
+
+void MainWindow::deleteSongById(int songId)
+{
+    if (songId < 0 || songId >= m_project.songs().size())
+        return;
+    const SongInfo song = m_project.songs().at(songId);
+    const QString constant = song.constant.isEmpty()
+                                 ? SongRegistry::constantForLabel(song.label)
+                                 : song.constant;
+    const RemovalPlan plan =
+        SongRegistry::makeRemovalPlan(m_project.root(), song.label, constant);
+    if (plan.tableIndex == 0) {
+        QMessageBox::warning(
+            this, tr("Delete Song"),
+            tr("%1 is the first song_table.inc entry (song ID 0), the engine's "
+               "fallback song — it cannot be deleted.")
+                .arg(song.label));
+        return;
+    }
+    const QString vgName = SongRegistry::deletableVoicegroup(
+        m_project.root(), m_project.songs(), song.label);
+
+    QMessageBox box(this);
+    box.setWindowTitle(tr("Delete Song"));
+    box.setIcon(QMessageBox::Warning);
+    box.setText(tr("Delete %1?").arg(song.label));
+    QStringList details;
+    details << tr("• Its .mid moves to .porydaw/trash/ (recoverable)");
+    QStringList files;
+    if (plan.tableIndex >= 0)
+        files << QStringLiteral("song_table.inc");
+    if (plan.inSongsH)
+        files << QStringLiteral("songs.h");
+    if (plan.inLdScript)
+        files << QStringLiteral("ld_script.ld");
+    if (plan.inCharmap)
+        files << QStringLiteral("charmap.txt");
+    if (song.hasCfg)
+        files << QStringLiteral("midi.cfg / songs.mk");
+    if (!files.isEmpty())
+        details << tr("• Its lines are removed from %1").arg(files.join(QStringLiteral(", ")));
+    if (plan.tableIndex > 0 && !plan.lastEntry)
+        details << tr("• Its song_table.inc entry becomes a reusable free slot, "
+                      "so no other song's ID changes");
+    box.setInformativeText(details.join(QLatin1Char('\n')));
+    QCheckBox *vgBox = nullptr;
+    if (!vgName.isEmpty()) {
+        vgBox = new QCheckBox(
+            tr("Also delete voicegroup %1 (used only by this song)")
+                .arg(SongRegistry::voicegroupDisplayName(song.cfg.voicegroupArg)),
+            &box);
+        vgBox->setChecked(true);
+        box.setCheckBox(vgBox);
+    }
+    QPushButton *del = box.addButton(tr("Delete"), QMessageBox::DestructiveRole);
+    box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(QMessageBox::Cancel);
+    box.exec();
+    if (box.clickedButton() != del)
+        return;
+
+    QString error;
+    if (!performSongDeletion(song, vgBox && vgBox->isChecked() ? vgName : QString(),
+                             &error)) {
+        QMessageBox::warning(this, tr("Delete Song"), error);
+        return;
+    }
+    statusBar()->showMessage(
+        tr("Deleted %1 — its .mid is recoverable from .porydaw/trash/")
+            .arg(song.label),
+        8000);
+}
+
+bool MainWindow::performSongDeletion(const SongInfo &song,
+                                     const QString &deleteVoicegroupName,
+                                     QString *error)
+{
+    const QString root = m_project.root();
+    const QString constant = song.constant.isEmpty()
+                                 ? SongRegistry::constantForLabel(song.label)
+                                 : song.constant;
+    // Re-checked here so the harness path can't slip past the dialog's guard.
+    const RemovalPlan plan = SongRegistry::makeRemovalPlan(root, song.label, constant);
+    if (plan.tableIndex == 0) {
+        if (error)
+            *error = tr("%1 is the engine's fallback song (song ID 0) and cannot "
+                        "be deleted.")
+                         .arg(song.label);
+        return false;
+    }
+
+    // The song's tab goes first: unsaved edits belong to the song being
+    // deleted, and closing re-binds (or unloads) the audio engine before the
+    // files disappear underneath it.
+    if (SongSession *session = sessionForLabel(song.label)) {
+        destroySession(session);
+        persistOpenTabs();
+    }
+
+    QStringList problems;
+    QString err;
+    const QString midiDir = root + QStringLiteral("/sound/songs/midi");
+    const QString midPath = midiDir + QStringLiteral("/%1.mid").arg(song.label);
+    if (QFile::exists(midPath)) {
+        Sidecar::ensureDir(root, QStringLiteral("trash"));
+        QString target =
+            root + QStringLiteral("/.porydaw/trash/%1.mid").arg(song.label);
+        for (int n = 2; QFile::exists(target); n++)
+            target = root
+                     + QStringLiteral("/.porydaw/trash/%1-%2.mid").arg(song.label).arg(n);
+        if (!QFile::rename(midPath, target))
+            problems << tr("Could not move %1 to %2").arg(midPath, target);
+    }
+    // mid2agb's generated assembly, stale once the .mid is gone.
+    QFile::remove(midiDir + QStringLiteral("/%1.s").arg(song.label));
+
+    if (!SongRegistry::removeSongFlags(midiDir, song.label, &err))
+        problems << err;
+    if (!SongRegistry::unregisterSong(root, song.label, constant, &err))
+        problems << err;
+    SongRegistry::removeSongSidecar(root, song.label);
+    if (!deleteVoicegroupName.isEmpty()
+        && !VoicegroupSource::deleteVoicegroup(root, deleteVoicegroupName, &err))
+        problems << err;
+
+    reloadProject(); // also rebuilds the browser and drops the vg catalog
+    if (!problems.isEmpty()) {
+        if (error)
+            *error = problems.join(QLatin1Char('\n'));
+        return false;
+    }
+    return true;
 }
 
 void MainWindow::reloadProject()

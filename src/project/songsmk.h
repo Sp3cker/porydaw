@@ -28,4 +28,9 @@ QHash<QString, QStringList> parseFlags(const QString &mkPath);
 bool writeRule(const QString &mkPath, const QString &label, const QStringList &flags,
                QString *error);
 
+// Removes the song's rule (target line plus its recipe lines), and the blank
+// separator writeRule added before it when the removal leaves the blank
+// doubled or trailing. A missing file or rule is a no-op success.
+bool removeRule(const QString &mkPath, const QString &label, QString *error);
+
 } // namespace SongsMk

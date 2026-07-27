@@ -1583,3 +1583,68 @@ bool VoicegroupSource::appendIncludeLine(const QString &projectRoot, const QStri
     out.write(joined);
     return true;
 }
+
+bool VoicegroupSource::removeIncludeLine(const QString &projectRoot, const QString &name,
+                                         QString *error)
+{
+    const QString hubPath = projectRoot + QStringLiteral("/sound/voice_groups.inc");
+    if (!QFile::exists(hubPath))
+        return true;
+
+    bool ok = false;
+    const QByteArray content = readAllBytes(hubPath, &ok);
+    if (!ok) {
+        if (error)
+            *error = QStringLiteral("Cannot read %1").arg(hubPath);
+        return false;
+    }
+    bool endsWithNewline = false;
+    QList<QByteArray> lines = splitLines(content, &endsWithNewline);
+
+    const QByteArray needle = "\"sound/voicegroups/" + name.toUtf8() + ".inc\"";
+    int at = -1;
+    for (int i = 0; i < lines.size(); i++) {
+        QByteArray line = lines.at(i);
+        if (line.endsWith('\r'))
+            line.chop(1);
+        if (line.trimmed().startsWith(".include") && line.contains(needle)) {
+            at = i;
+            break;
+        }
+    }
+    if (at < 0)
+        return true;
+    lines.removeAt(at);
+
+    QFile out(hubPath);
+    if (!out.open(QIODevice::WriteOnly)) {
+        if (error)
+            *error = QStringLiteral("Cannot write %1").arg(hubPath);
+        return false;
+    }
+    QByteArray joined;
+    for (int i = 0; i < lines.size(); i++) {
+        if (i > 0)
+            joined += '\n';
+        joined += lines.at(i);
+    }
+    if (endsWithNewline && !lines.isEmpty())
+        joined += '\n';
+    out.write(joined);
+    return true;
+}
+
+bool VoicegroupSource::deleteVoicegroup(const QString &projectRoot, const QString &name,
+                                        QString *error)
+{
+    if (!removeIncludeLine(projectRoot, name, error))
+        return false;
+    const QString path =
+        projectRoot + QStringLiteral("/sound/voicegroups/%1.inc").arg(name);
+    if (QFile::exists(path) && !QFile::remove(path)) {
+        if (error)
+            *error = QStringLiteral("Cannot delete %1").arg(path);
+        return false;
+    }
+    return true;
+}

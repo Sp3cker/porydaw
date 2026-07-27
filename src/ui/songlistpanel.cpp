@@ -118,6 +118,9 @@ SongListPanel::SongListPanel(QWidget *parent) : QWidget(parent)
                         incomplete = !song.registered || !song.registrationGaps.isEmpty();
                 }
                 reg->setEnabled(incomplete);
+                menu.addAction(tr("Delete Song…"), this, [this, songId] {
+                    emit songDeleteRequested(songId);
+                });
                 menu.exec(m_list->viewport()->mapToGlobal(pos));
             });
     layout->addWidget(m_list, 1);
