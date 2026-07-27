@@ -38,25 +38,22 @@ const QRegularExpression &songLineRe()
     return re;
 }
 
-// A song-table line carrying the free-slot marker after its arguments.
-bool isFreeSlotLine(const QString &text, const QRegularExpressionMatch &m)
-{
-    return QStringView(text).mid(m.capturedEnd()).contains(SongRegistry::freeSlotMarker());
-}
-
 // One pass over song_table.inc's lines, everything the planners and the
-// delete path need. Free-slot entries keep their index (that is their whole
-// point) but never record a label occurrence — the tombstone borrows the
-// index-0 song's label, and counting it would misattribute that song's
-// table index. The entry at index 0 is never a free slot, marked or not.
+// delete path need. A free slot is an entry past index 0 bearing entry 0's
+// label: entry 0 is the engine's fallback song (mus_dummy), so a later
+// duplicate of it is a placeholder by construction — deletion leaves
+// exactly that, and hand-written dummy placeholders count too. Free slots
+// keep their index (that is their whole point) but never record a label
+// occurrence, so the fallback song's own table index stays 0.
 struct SongTableScan {
     int count = 0;         // song entries, free slots included
-    int labelIndex = -1;   // the label's index (last unmarked occurrence)
+    int labelIndex = -1;   // the label's index (last non-free occurrence)
     int labelLine = -1;
     QString labelIndent;
-    int freeIndex = -1;    // lowest free slot past index 0
+    int freeIndex = -1;    // lowest free slot
     int freeLine = -1;
     int lastSongLine = -1;
+    QString lastSongLabel; // the final entry's label
     QString indent;        // the last entry's indentation
     // Entry 0's pieces — the template for the free-slot line a deletion
     // leaves behind.
@@ -67,8 +64,7 @@ SongTableScan scanSongTable(const QStringList &lines, const QString &label)
 {
     SongTableScan scan;
     for (int i = 0; i < lines.size(); i++) {
-        const QString &text = lines.at(i);
-        const QRegularExpressionMatch m = songLineRe().match(text);
+        const QRegularExpressionMatch m = songLineRe().match(lines.at(i));
         if (!m.hasMatch())
             continue;
         if (scan.count == 0) {
@@ -76,8 +72,8 @@ SongTableScan scanSongTable(const QStringList &lines, const QString &label)
             scan.firstPlayer = m.captured(3);
             scan.firstPlayerNum = m.captured(4);
         }
-        if (isFreeSlotLine(text, m)) {
-            if (scan.count > 0 && scan.freeLine < 0) {
+        if (scan.count > 0 && m.captured(2) == scan.firstLabel) {
+            if (scan.freeLine < 0) {
                 scan.freeIndex = scan.count;
                 scan.freeLine = i;
             }
@@ -88,6 +84,7 @@ SongTableScan scanSongTable(const QStringList &lines, const QString &label)
         }
         scan.indent = m.captured(1);
         scan.lastSongLine = i;
+        scan.lastSongLabel = m.captured(2);
         scan.count++;
     }
     return scan;
@@ -559,11 +556,6 @@ bool registerSong(const QString &projectRoot, const QString &label,
     return true;
 }
 
-QString freeSlotMarker()
-{
-    return QStringLiteral("@ porydaw: free slot");
-}
-
 RemovalPlan makeRemovalPlan(const QString &projectRoot, const QString &label,
                             const QString &constant)
 {
@@ -617,25 +609,20 @@ bool unregisterSong(const QString &projectRoot, const QString &label,
             if (scan.labelLine >= 0 && scan.labelLine == scan.lastSongLine) {
                 f.removeAt(scan.labelLine);
                 // Free slots only hold their index for the songs after them;
-                // any now left trailing can go too (never entry 0).
+                // any now left trailing can go too (never entry 0 itself).
                 for (;;) {
                     const SongTableScan tail = scanSongTable(f.texts(), label);
-                    if (tail.lastSongLine < 0 || tail.count <= 1)
-                        break;
-                    const QString last = f.text(tail.lastSongLine);
-                    if (!isFreeSlotLine(last, songLineRe().match(last)))
+                    if (tail.count <= 1 || tail.lastSongLabel != tail.firstLabel)
                         break;
                     f.removeAt(tail.lastSongLine);
                 }
             } else if (scan.labelLine >= 0) {
-                // Mid-table: a free-slot entry keeps every later song's ID.
-                // The line points at entry 0 (the fallback song), so the
-                // table stays buildable.
-                f.replace(scan.labelLine, QStringLiteral("%1song %2, %3, %4 %5")
+                // Mid-table: a free slot — a duplicate of entry 0's dummy
+                // line — keeps every later song's ID and the table buildable.
+                f.replace(scan.labelLine, QStringLiteral("%1song %2, %3, %4")
                                               .arg(scan.labelIndent, scan.firstLabel,
                                                    scan.firstPlayer,
-                                                   scan.firstPlayerNum,
-                                                   freeSlotMarker()));
+                                                   scan.firstPlayerNum));
             }
             if (!writeRawLines(path, f, error))
                 return false;
@@ -779,16 +766,20 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
                                                       const QVector<SongInfo> &songs)
 {
     // song_table.inc: label -> index (a duplicate label's last entry wins).
-    // Free-slot entries occupy their index but don't count as their borrowed
-    // label — a tombstone must not read as the fallback song's real entry.
+    // Free slots — entries past index 0 bearing entry 0's label — occupy
+    // their index but don't count as the fallback song's entry, whose own
+    // index must stay 0.
     QHash<QString, int> tableIndex;
     int count = 0;
+    QString firstLabel;
     for (const QString &line :
          readLines(projectRoot + QStringLiteral("/sound/song_table.inc"))) {
         const QRegularExpressionMatch m = songLineRe().match(line);
         if (!m.hasMatch())
             continue;
-        if (!isFreeSlotLine(line, m))
+        if (count == 0)
+            firstLabel = m.captured(2);
+        if (count == 0 || m.captured(2) != firstLabel)
             tableIndex.insert(m.captured(2), count);
         count++;
     }

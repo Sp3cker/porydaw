@@ -595,9 +595,10 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
 
     // ---- Delete Song --------------------------------------------------------
     // The inverse of the flows above. A full create→register→delete cycle
-    // must leave every file byte-identical; a mid-table delete leaves a
-    // marked free slot that keeps later IDs stable and is reused by the next
-    // registration; entry 0 (the fallback song) is untouchable either way.
+    // must leave every file byte-identical; a mid-table delete leaves a free
+    // slot — a plain duplicate of entry 0's dummy line — that keeps later
+    // IDs stable and is reused by the next registration; entry 0 itself (the
+    // fallback song) is untouchable either way.
     const QString cfgPath = midiDir + QStringLiteral("/midi.cfg");
     QString firstLabel; // the song table's entry 0
     {
@@ -607,19 +608,32 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         const QByteArray charmap0 = readAllBytes(charmapPath);
         const QByteArray cfg0 = readAllBytes(cfgPath);
 
-        static const QRegularExpression firstSongRe(
+        static const QRegularExpression songEntryRe(
             QStringLiteral(R"(^\s*song\s+(\w+))"));
-        int firstSongLine = -1;
-        const QList<QByteArray> tableLines = table0.split('\n');
-        for (int i = 0; i < tableLines.size() && firstLabel.isEmpty(); i++) {
+        int tableEntries = 0;
+        for (const QByteArray &line : table0.split('\n')) {
             const QRegularExpressionMatch m =
-                firstSongRe.match(QString::fromUtf8(tableLines[i]));
-            if (m.hasMatch()) {
+                songEntryRe.match(QString::fromUtf8(line));
+            if (!m.hasMatch())
+                continue;
+            if (firstLabel.isEmpty())
                 firstLabel = m.captured(1);
-                firstSongLine = i;
-            }
+            tableEntries++;
         }
         check(!firstLabel.isEmpty(), "delete: no entry 0 in song_table.inc");
+        // Entries bearing entry 0's label; one more than at the snapshot
+        // means one free slot is open.
+        const auto dummyEntries = [&]() {
+            int n = 0;
+            for (const QByteArray &line : readAllBytes(tablePath).split('\n')) {
+                const QRegularExpressionMatch m =
+                    songEntryRe.match(QString::fromUtf8(line));
+                if (m.hasMatch() && m.captured(1) == firstLabel)
+                    n++;
+            }
+            return n;
+        };
+        const int dummies0 = dummyEntries();
 
         const QString labelA = QStringLiteral("mus_onboardcheck_del_a");
         const QString labelB = QStringLiteral("mus_onboardcheck_del_b");
@@ -653,11 +667,9 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         createAndRegister(labelB, &idB);
         check(idB == idA + 1, "delete: fresh registrations not sequential");
 
-        // Mid-table delete: A leaves a marked free slot; B keeps its ID.
+        // Mid-table delete: A leaves a free slot; B keeps its ID.
         deleteSong(labelA);
-        const QByteArray marker = SongRegistry::freeSlotMarker().toUtf8();
-        check(readAllBytes(tablePath).contains(marker),
-              "mid-table delete left no free-slot marker");
+        check(dummyEntries() == dummies0 + 1, "mid-table delete left no free slot");
         check(!readAllBytes(songsHPath).contains("MUS_ONBOARDCHECK_DEL_A"),
               "deleted song's define still in songs.h");
         check(!readAllBytes(ldPath).contains("mus_onboardcheck_del_a.o"),
@@ -685,7 +697,7 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         check(planC.songId == idA, "free slot not proposed for the next song");
         createAndRegister(labelC, &idC);
         check(idC == idA, "free slot not reused on registration");
-        check(!readAllBytes(tablePath).contains(marker), "reused slot kept its marker");
+        check(dummyEntries() == dummies0, "reused slot kept its dummy entry");
         {
             const QByteArray songsH = readAllBytes(songsHPath);
             const auto defineAt = [&songsH](const char *constant) {
@@ -721,7 +733,7 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         // collapses the trailing free slot. Everything must round-trip to the
         // pre-cycle bytes.
         deleteSong(labelC);
-        check(readAllBytes(tablePath).contains(marker), "re-deleted slot lost its marker");
+        check(dummyEntries() == dummies0 + 1, "re-deleted slot is not free again");
         deleteSong(labelB);
         check(readAllBytes(tablePath) == table0, "song_table.inc did not round-trip");
         check(readAllBytes(songsHPath) == songsH0, "songs.h did not round-trip");
@@ -739,27 +751,18 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
                   "unregisterSong deleted the fallback song");
             check(readAllBytes(tablePath) == table0, "refused delete still wrote");
         }
-        // ...and never a free slot, marker or not.
-        if (firstSongLine >= 0) {
-            const RegistrationPlan before = SongRegistry::makePlan(
-                projectRoot, QStringLiteral("mus_onboardcheck_probe"),
-                QStringLiteral("MUS_ONBOARDCHECK_PROBE"),
-                QStringLiteral("MUSIC_PLAYER_BGM"));
-            QList<QByteArray> tampered = tableLines;
-            tampered[firstSongLine] += " " + marker;
-            QFile out(tablePath);
-            check(out.open(QIODevice::WriteOnly), "tamper: rewrite song_table.inc");
-            out.write(tampered.join('\n'));
-            out.close();
+        // ...and never a free slot: entry 0 bears the dummy label like any
+        // tombstone would, but the planner must not offer ID 0 — on a table
+        // whose only dummy entry IS entry 0, it appends.
+        {
             const RegistrationPlan probed = SongRegistry::makePlan(
                 projectRoot, QStringLiteral("mus_onboardcheck_probe"),
                 QStringLiteral("MUS_ONBOARDCHECK_PROBE"),
                 QStringLiteral("MUSIC_PLAYER_BGM"));
-            check(probed.songId == before.songId && probed.songId != 0,
-                  "a marked entry 0 was offered as a free slot");
-            QFile restore(tablePath);
-            check(restore.open(QIODevice::WriteOnly), "tamper: restore song_table.inc");
-            restore.write(table0);
+            check(probed.songId != 0, "entry 0 was offered as a free slot");
+            if (dummies0 == 1)
+                check(probed.songId == tableEntries,
+                      "planner did not append with no free slots open");
         }
 
         // An unregistered stray (the imported song): no table entry at all,

@@ -35,8 +35,8 @@ struct RemovalPlan {
     int tableIndex = -1; // the song's table index; -1 = no table entry
     int tableCount = 0;
     // The final entry's line is removed outright (no song after it shifts).
-    // A mid-table entry instead becomes a free slot (see freeSlotMarker), so
-    // every later song keeps its ID.
+    // A mid-table entry instead becomes a free slot — a duplicate of entry
+    // 0's dummy line — so every later song keeps its ID.
     bool lastEntry = false;
     bool inSongsH = false;
     bool inLdScript = false;
@@ -89,10 +89,11 @@ QString constantForLabel(const QString &label);
 RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
                           const QString &constant, const QString &player);
 
-// Writes the song into all registration files: appends the song_table.inc
-// entry, the songs.h #define, and the ld_script.ld object line, and inserts
-// the charmap.txt ID mapping in the sound section's ID order (the last two
-// when applicable). Idempotent —
+// Writes the song into all registration files: the song_table.inc entry
+// (filling the lowest free slot a deleted song left, else appending), the
+// songs.h #define and charmap.txt ID mapping each at their ID-order
+// position, and the ld_script.ld object line (the last two when
+// applicable). Idempotent —
 // entries that already exist are left byte-identical, except a songs.h
 // define or charmap.txt entry whose ID no longer matches the song's table
 // index, which is corrected in place. Only the song's own lines change.
@@ -101,24 +102,21 @@ bool registerSong(const QString &projectRoot, const QString &label,
                   const QString &constant, const QString &player, QString *error,
                   int *songId = nullptr);
 
-// The assembly comment a deleted mid-table song leaves on its song_table.inc
-// entry. A marked entry still occupies its index (later songs keep their
-// IDs) but reads as free: makePlan/registerSong reuse the lowest marked slot
-// for the next song instead of appending. The entry at index 0 is the
-// project's fallback song (mus_dummy) and is never treated as free, marker
-// or not.
-QString freeSlotMarker();
-
 // What unregisterSong would edit, for the Delete Song confirmation dialog.
 RemovalPlan makeRemovalPlan(const QString &projectRoot, const QString &label,
                             const QString &constant);
 
 // The inverse of registerSong: removes the song's songs.h define, ld_script
 // object line, and charmap entry, and removes its song_table.inc entry when
-// it is the last one (also dropping free-slot entries left trailing) or
-// replaces it with a free-slot entry when other songs follow. Byte-
-// conservative and idempotent — a song with no entries anywhere is a no-op
-// success. Refuses the entry at table index 0 (the project's fallback song).
+// it is the last one (also dropping free slots left trailing) or replaces
+// it with a free slot when other songs follow. A free slot is a plain
+// duplicate of entry 0's line — the engine's fallback song (mus_dummy), so
+// any later entry bearing its label is a placeholder by construction, no
+// marker needed — which keeps every later song's index and stays reusable:
+// makePlan/registerSong fill the lowest free slot before growing the table.
+// Entry 0 itself is never a free slot, and this refuses to delete it.
+// Byte-conservative and idempotent — a song with no entries anywhere is a
+// no-op success.
 bool unregisterSong(const QString &projectRoot, const QString &label,
                     const QString &constant, QString *error);
 
