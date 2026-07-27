@@ -16,9 +16,9 @@
 // --onboardcheck <projectRoot> [mid2agbPath]: M3 onboarding check. Exercises
 // the New Song and Import backends headlessly against a scratch copy of a
 // project — it writes into it. Creates a song, verifies its files and sidecar,
-// registers it (porydaw writes song_table.inc / songs.h / ld_script.ld
-// directly), verifies idempotency and stale-ID correction, and runs an
-// external-MIDI import (analysis + division rescale),
+// registers it (porydaw writes song_table.inc / songs.h / ld_script.ld /
+// charmap.txt directly), verifies idempotency and stale-ID correction, and
+// runs an external-MIDI import (analysis + division rescale),
 // compiling both songs through the project's real mid2agb.
 
 namespace {
@@ -242,7 +242,8 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     }
 
     RegistrationStatus status = SongRegistry::checkRegistration(projectRoot, label, constant);
-    check(!status.inSongTable && !status.inSongsH && !status.complete(),
+    check(!status.inSongTable && !status.inSongsH && !status.inCharmap
+              && !status.complete(),
           "fresh song already looks registered");
 
     RegistrationPlan plan = SongRegistry::makePlan(projectRoot, label, constant,
@@ -253,6 +254,45 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     check(plan.songsHLine.startsWith(QStringLiteral("#define MUS_ONBOARDCHECK"))
               && plan.songsHLine.endsWith(QString::number(plan.songId)),
           "songs.h line malformed");
+
+    // charmap.txt: the constant maps to the ID as little-endian hex bytes.
+    const QString charmapPath = projectRoot + QStringLiteral("/charmap.txt");
+    const QString charmapBytes =
+        QStringLiteral("%1 %2")
+            .arg(plan.songId & 0xFF, 2, 16, QLatin1Char('0'))
+            .arg((plan.songId >> 8) & 0xFF, 2, 16, QLatin1Char('0'))
+            .toUpper();
+    check(plan.charmapApplicable, "charmap.txt song section not detected");
+    check(plan.charmapLine.startsWith(constant)
+              && plan.charmapLine.endsWith(QStringLiteral("= ") + charmapBytes),
+          "charmap line malformed");
+
+    // A column-aligned sound section (pokeruby, pokefirered) pads "=" into a
+    // shared column, and non-song two-byte entries don't disturb the anchor
+    // or the alignment. Fixture-swap a tiny aligned charmap and re-plan.
+    {
+        const QByteArray original = readAllBytes(charmapPath);
+        const QByteArray fixtureLine = "MUS_DUMMY                 = 00 00";
+        QFile cm(charmapPath);
+        check(cm.open(QIODevice::WriteOnly | QIODevice::Truncate),
+              "rewrite charmap.txt fixture");
+        cm.write(fixtureLine + "\n"
+                 "MUS_LITTLEROOT_TEST       = 5E 01\n"
+                 "PKMN = 53 54\n");
+        cm.close();
+        const RegistrationPlan aligned = SongRegistry::makePlan(
+            projectRoot, label, constant, QStringLiteral("MUSIC_PLAYER_BGM"));
+        check(aligned.charmapApplicable, "aligned fixture: section not detected");
+        const int equalsColumn = fixtureLine.indexOf('=');
+        check(aligned.charmapLine
+                  == constant + QString(equalsColumn - constant.size(), QLatin1Char(' '))
+                         + QStringLiteral("= ") + charmapBytes,
+              "aligned fixture: charmap line not padded to the '=' column");
+        check(cm.open(QIODevice::WriteOnly | QIODevice::Truncate),
+              "restore charmap.txt");
+        cm.write(original);
+        cm.close();
+    }
 
     // porydaw writes the registration files itself.
     QString regError;
@@ -275,11 +315,15 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         check(readAllBytes(ldPath).contains(
                   QStringLiteral("sound/songs/midi/%1.o").arg(label).toUtf8()),
               "ld_script.ld missing the song's object line");
+    if (plan.charmapApplicable)
+        check(readAllBytes(charmapPath).contains(plan.charmapLine.toUtf8()),
+              "charmap.txt missing the song's ID mapping");
 
     // Registering again must be a byte-level no-op.
     const QByteArray tableBefore = readAllBytes(tablePath);
     const QByteArray songsHBefore = readAllBytes(songsHPath);
     const QByteArray ldBefore = readAllBytes(ldPath);
+    const QByteArray charmapBefore = readAllBytes(charmapPath);
     check(SongRegistry::registerSong(projectRoot, label, constant,
                                      QStringLiteral("MUSIC_PLAYER_BGM"), &regError,
                                      &songId),
@@ -287,7 +331,8 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     check(songId == registeredCount, "song ID drifted on re-register");
     check(readAllBytes(tablePath) == tableBefore
               && readAllBytes(songsHPath) == songsHBefore
-              && readAllBytes(ldPath) == ldBefore,
+              && readAllBytes(ldPath) == ldBefore
+              && readAllBytes(charmapPath) == charmapBefore,
           "re-register was not byte-identical");
 
     // A songs.h define whose ID drifted from the table index gets corrected.
@@ -313,6 +358,29 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
                                          &songId),
               "registerSong after tamper failed");
         check(readAllBytes(songsHPath) == songsHBefore, "stale define not corrected");
+    }
+
+    // Likewise a charmap.txt entry whose ID bytes drifted.
+    if (plan.charmapApplicable) {
+        QByteArray tampered = charmapBefore;
+        const int at = tampered.indexOf(plan.charmapLine.toUtf8());
+        check(at >= 0, "charmap tamper: entry not found");
+        QByteArray line = plan.charmapLine.toUtf8();
+        line.replace(charmapBytes.toUtf8(), QByteArrayLiteral("FF 7F"));
+        tampered.replace(at, plan.charmapLine.size(), line);
+        QFile out(charmapPath);
+        check(out.open(QIODevice::WriteOnly) && out.write(tampered) == tampered.size(),
+              "charmap tamper: rewrite charmap.txt");
+        out.close();
+
+        status = SongRegistry::checkRegistration(projectRoot, label, constant);
+        check(!status.inCharmap, "stale charmap bytes not detected");
+        check(SongRegistry::registerSong(projectRoot, label, constant,
+                                         QStringLiteral("MUSIC_PLAYER_BGM"), &regError,
+                                         &songId),
+              "registerSong after charmap tamper failed");
+        check(readAllBytes(charmapPath) == charmapBefore,
+              "stale charmap bytes not corrected");
     }
 
     check(project.reload(&error), "project reload after registration");

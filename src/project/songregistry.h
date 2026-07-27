@@ -10,9 +10,9 @@ struct SmfFile;
 
 // The onboarding backend (SPEC.md §6.3): everything the New Song / Import
 // wizards need to create a song and register it. porydaw writes the .mid,
-// the midi.cfg line, and the three registration files (song_table.inc,
-// songs.h, ld_script.ld) directly — inserting or correcting only the song's
-// own lines, byte-conservative for everything else.
+// the midi.cfg line, and the registration files (song_table.inc, songs.h,
+// ld_script.ld, charmap.txt) directly — inserting or correcting only the
+// song's own lines, byte-conservative for everything else.
 
 struct RegistrationPlan {
     QString label;    // e.g. "mus_foo"
@@ -23,18 +23,23 @@ struct RegistrationPlan {
     QString songTableLine;    // "\tsong mus_foo, MUSIC_PLAYER_BGM, 0"
     QString songsHLine;       // "#define MUS_FOO 610"
     QString ldLine;           // "        sound/songs/midi/mus_foo.o(.rodata);"
+    QString charmapLine;      // "MUS_FOO = 62 02" — the ID, little-endian bytes
     bool ldApplicable = true; // false when ld_script.ld has no per-song lines
+    bool charmapApplicable = true; // false when charmap.txt has no song entries
 };
 
 struct RegistrationStatus {
     bool inSongTable = false;
     bool inSongsH = false;
     bool inLdScript = false;
+    bool inCharmap = false;
     bool ldApplicable = true;
+    bool charmapApplicable = true;
 
     bool complete() const
     {
-        return inSongTable && inSongsH && (inLdScript || !ldApplicable);
+        return inSongTable && inSongsH && (inLdScript || !ldApplicable)
+               && (inCharmap || !charmapApplicable);
     }
 };
 
@@ -64,24 +69,26 @@ QVector<MusicPlayer> musicPlayers(const QString &projectRoot);
 // Default constant for a label: "mus_foo" -> "MUS_FOO".
 QString constantForLabel(const QString &label);
 
-// Computes the three registration lines against the files as they are on
-// disk right now, matching each file's existing indentation/alignment.
+// Computes the registration lines against the files as they are on disk
+// right now, matching each file's existing indentation/alignment.
 RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
                           const QString &constant, const QString &player);
 
-// Writes the song into all three registration files: appends the
-// song_table.inc entry, the songs.h #define, and the ld_script.ld object
-// line (when applicable). Idempotent — entries that already exist are left
-// byte-identical, except a songs.h define whose ID no longer matches the
-// song's table index, which is corrected in place. Only the song's own
-// lines change. On success *songId carries the song's table index.
+// Writes the song into all registration files: appends the song_table.inc
+// entry, the songs.h #define, the ld_script.ld object line, and the
+// charmap.txt ID mapping (the last two when applicable). Idempotent —
+// entries that already exist are left byte-identical, except a songs.h
+// define or charmap.txt entry whose ID no longer matches the song's table
+// index, which is corrected in place. Only the song's own lines change.
+// On success *songId carries the song's table index.
 bool registerSong(const QString &projectRoot, const QString &label,
                   const QString &constant, const QString &player, QString *error,
                   int *songId = nullptr);
 
-// Re-parses the three files from disk. The songs.h item additionally
-// requires the define's value to match the label's actual song-table index
-// once the table entry exists (a mismatched ID is a mis-registration).
+// Re-parses the registration files from disk. The songs.h and charmap.txt
+// items additionally require their value to match the label's actual
+// song-table index once the table entry exists (a mismatched ID is a
+// mis-registration).
 RegistrationStatus checkRegistration(const QString &projectRoot, const QString &label,
                                      const QString &constant);
 

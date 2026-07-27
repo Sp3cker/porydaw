@@ -6,6 +6,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
+#include <QSet>
 #include <QTextStream>
 #include <algorithm>
 
@@ -34,6 +35,42 @@ const QRegularExpression &songLineRe()
     static const QRegularExpression re(
         QStringLiteral(R"(^(\s*)song\s+(\w+)\s*,\s*(\w+)\s*,\s*(\w+))"));
     return re;
+}
+
+// "MUS_DUMMY = 00 00" — a charmap.txt entry whose value is two hex bytes.
+// Only entries named by a songs.h constant are treated as song-ID mappings;
+// other two-byte entries ("PKMN = 53 54", the FD placeholders) are not.
+const QRegularExpression &charmapEntryRe()
+{
+    static const QRegularExpression re(
+        QStringLiteral(R"(^(\w+)( *)= *([0-9A-Fa-f]{2}) ([0-9A-Fa-f]{2})\s*$)"));
+    return re;
+}
+
+// Numeric #define names from songs.h. charmap.txt's sound section mirrors
+// these constants (text control codes address songs by ID), which is what
+// lets porydaw recognize that section without any marker in the file.
+QSet<QString> songsHConstantNames(const QString &projectRoot)
+{
+    static const QRegularExpression defineRe(
+        QStringLiteral(R"(^\s*#define\s+(\w+)\s+\d)"));
+    QSet<QString> names;
+    for (const QString &line :
+         readLines(projectRoot + QStringLiteral("/include/constants/songs.h"))) {
+        const QRegularExpressionMatch m = defineRe.match(line);
+        if (m.hasMatch())
+            names.insert(m.captured(1));
+    }
+    return names;
+}
+
+// A song ID as charmap.txt value bytes: little-endian, uppercase hex.
+QString charmapIdBytes(int songId)
+{
+    return QStringLiteral("%1 %2")
+        .arg(songId & 0xFF, 2, 16, QLatin1Char('0'))
+        .arg((songId >> 8) & 0xFF, 2, 16, QLatin1Char('0'))
+        .toUpper();
 }
 
 QString sidecarPath(const QString &projectRoot, const QString &label)
@@ -253,6 +290,33 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
     if (plan.ldApplicable)
         plan.ldLine =
             QStringLiteral("%1sound/songs/midi/%2.o(.rodata);").arg(ldIndent, label);
+
+    // charmap.txt: the sound section mirrors songs.h — each constant maps to
+    // its song ID as two little-endian hex bytes, so text control codes like
+    // {PLAY_BGM} can name songs. A charmap with no such entries (or no
+    // charmap.txt at all) skips this file.
+    const QSet<QString> songNames = songsHConstantNames(projectRoot);
+    int equalsColumn = -1;
+    bool columnAligned = true;
+    plan.charmapApplicable = false;
+    for (const QString &line : readLines(projectRoot + QStringLiteral("/charmap.txt"))) {
+        const QRegularExpressionMatch m = charmapEntryRe().match(line);
+        if (!m.hasMatch() || !songNames.contains(m.captured(1)))
+            continue;
+        plan.charmapApplicable = true;
+        if (equalsColumn < 0)
+            equalsColumn = m.capturedEnd(2);
+        else if (m.capturedEnd(2) != equalsColumn)
+            columnAligned = false;
+    }
+    if (plan.charmapApplicable) {
+        // Vanilla emerald puts one space between name and "="; ruby and
+        // firered pad "=" into a shared column. Follow the section's style.
+        const int pad =
+            columnAligned ? std::max(1, equalsColumn - int(constant.size())) : 1;
+        plan.charmapLine = constant + QString(pad, QLatin1Char(' '))
+                           + QStringLiteral("= ") + charmapIdBytes(plan.songId);
+    }
     return plan;
 }
 
@@ -366,6 +430,54 @@ bool registerSong(const QString &projectRoot, const QString &label,
         if (!writeRawLines(path, f, error))
             return false;
     }
+
+    // charmap.txt: insert the ID mapping after the sound section's last
+    // entry, or correct an existing entry whose bytes drifted from the table
+    // index. Projects whose charmap has no song entries skip this file.
+    if (plan.charmapApplicable) {
+        const QString path = projectRoot + QStringLiteral("/charmap.txt");
+        RawLines f = readRawLines(path);
+        if (!f.loaded) {
+            if (error)
+                *error = QStringLiteral("Cannot read %1").arg(path);
+            return false;
+        }
+        // songs.h was just written, so the set includes this song's constant.
+        const QSet<QString> songNames = songsHConstantNames(projectRoot);
+        const QRegularExpression ownAnyRe(
+            QStringLiteral(R"(^\s*%1\s*=)").arg(constant));
+        int own = -1, lastEntry = -1;
+        bool ownAnyForm = false;
+        QRegularExpressionMatch ownMatch;
+        for (int i = 0; i < f.lines.size(); i++) {
+            const QString text = f.text(i);
+            // An entry in any shape (extra bytes, trailing comment) still
+            // counts as present — never insert a duplicate; but only the
+            // standard two-byte form is corrected.
+            if (ownAnyRe.match(text).hasMatch())
+                ownAnyForm = true;
+            const QRegularExpressionMatch m = charmapEntryRe().match(text);
+            if (!m.hasMatch())
+                continue;
+            if (m.captured(1) == constant && own < 0) {
+                own = i;
+                ownMatch = m;
+            }
+            if (songNames.contains(m.captured(1)))
+                lastEntry = i;
+        }
+        if (own >= 0) {
+            const int value = ownMatch.captured(3).toInt(nullptr, 16)
+                              | ownMatch.captured(4).toInt(nullptr, 16) << 8;
+            if (value != plan.songId)
+                f.replace(own, f.text(own).left(ownMatch.capturedStart(3))
+                                   + charmapIdBytes(plan.songId));
+        } else if (!ownAnyForm && lastEntry >= 0) {
+            f.insert(lastEntry + 1, plan.charmapLine);
+        }
+        if (!writeRawLines(path, f, error))
+            return false;
+    }
     return true;
 }
 
@@ -408,6 +520,25 @@ RegistrationStatus checkRegistration(const QString &projectRoot, const QString &
             status.inLdScript = true;
             break;
         }
+    }
+
+    // charmap.txt: once the table entry exists, the constant's value bytes
+    // must encode its real index (little-endian).
+    const QSet<QString> songNames = songsHConstantNames(projectRoot);
+    status.charmapApplicable = false;
+    bool sawOwnEntry = false;
+    for (const QString &line : readLines(projectRoot + QStringLiteral("/charmap.txt"))) {
+        const QRegularExpressionMatch m = charmapEntryRe().match(line);
+        if (!m.hasMatch())
+            continue;
+        if (songNames.contains(m.captured(1)))
+            status.charmapApplicable = true;
+        if (m.captured(1) != constant || sawOwnEntry)
+            continue;
+        sawOwnEntry = true;
+        const int value = m.captured(3).toInt(nullptr, 16)
+                          | m.captured(4).toInt(nullptr, 16) << 8;
+        status.inCharmap = tableIndex < 0 || value == tableIndex;
     }
     return status;
 }
