@@ -148,11 +148,14 @@ QList<QByteArray> splitLines(const QByteArray &content, bool *endsWithNewline)
     return lines;
 }
 
-// Collects "Label::" symbols; a label whose .incbin points into a cries
-// directory is a pokemon cry, not an instrument sample, and is skipped.
+// Collects "Label::" and "Label:" symbols (a single colon is a file-local
+// GAS label — it still assembles and links because sample data shares its
+// assembly unit with the voicegroups referencing it, so it must be listed);
+// a label whose .incbin points into a cries directory is a pokemon cry, not
+// an instrument sample, and is skipped.
 void collectSampleSymbols(const QByteArray &content, QStringList *symbols)
 {
-    static const QRegularExpression labelRe(QStringLiteral(R"(^(\w+)::)"));
+    static const QRegularExpression labelRe(QStringLiteral(R"(^(\w+)::?)"));
     static const QRegularExpression incbinRe(
         QStringLiteral(R"(^\s*\.incbin\s+"([^"]+)\")"));
     QString pending;
@@ -344,13 +347,15 @@ bool ensureSynthDataIncluded(const QString &projectRoot, QString *error)
     return true;
 }
 
-// Collects "Label::" symbols whose next content line is a set_synth_* macro,
-// in file order. Mirrors parse_direct_sound_data_file's label tracking: an
-// .incbin or synth macro consumes the pending label; a new label replaces it.
+// Collects "Label::" and "Label:" symbols whose next content line is a
+// set_synth_* macro, in file order (single-colon leniency must match
+// collectSampleSymbols, or a file-local synth def would leak into the sample
+// list). Mirrors parse_direct_sound_data_file's label tracking: an .incbin
+// or synth macro consumes the pending label; a new label replaces it.
 void collectSynthDefs(const QByteArray &content,
                       QList<QPair<QString, VgSynthDesc>> *defs)
 {
-    static const QRegularExpression labelRe(QStringLiteral(R"(^(\w+)::)"));
+    static const QRegularExpression labelRe(QStringLiteral(R"(^(\w+)::?)"));
     QString pending;
     bool unusedNewline = false;
     for (const QByteArray &raw : splitLines(content, &unusedNewline)) {

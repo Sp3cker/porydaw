@@ -17,7 +17,9 @@ extern "C" {
 // the pre-save preview path (temp file + loader config override), saves, then
 // verifies: only the edited lines changed byte-for-byte, a plain reload
 // produces the expected ToneData with every untouched slot identical to the
-// baseline, and a created voicegroup is discoverable and loadable.
+// baseline, and a created voicegroup is discoverable and loadable. Also
+// covers synthetic mini-projects: typical-ADSR modes, Golden Sun synths,
+// and single-colon (file-local) sample labels in both scan and loader.
 // Run this against a scratch copy of a project — it writes into it.
 
 namespace {
@@ -848,6 +850,121 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
                 std::printf("vgcheck: synth scan/dedupe/write OK\n");
         }
         QDir(fakeRoot).removeRecursively();
+    }
+
+    // ---- single-colon labels: file-local sample symbols still count ----
+    // GAS accepts "Name:" (file-local) as well as "Name::" (global), and a
+    // single-colon sample assembles and links because sample data shares its
+    // assembly unit with the voicegroups referencing it — so both the catalog
+    // scan and the loader must recognize both forms.
+    {
+        const int before = failures;
+        const QString fakeRoot = projectRoot + QStringLiteral("/.porydaw/coloncheck");
+        QDir().mkpath(fakeRoot + QStringLiteral("/sound/direct_sound_samples"));
+        QDir().mkpath(fakeRoot + QStringLiteral("/sound/programmable_wave_samples"));
+        QDir().mkpath(fakeRoot + QStringLiteral("/sound/voicegroups"));
+        const auto writeFile = [](const QString &path, const QByteArray &bytes) {
+            QFile out(path);
+            return out.open(QIODevice::WriteOnly) && out.write(bytes) == bytes.size();
+        };
+        const auto expectColon = [&failures](const char *what, bool ok) {
+            if (!ok) {
+                std::fprintf(stderr, "vgcheck: FAIL: single-colon %s\n", what);
+                failures++;
+            }
+        };
+        // AGB sample .bin: 16-byte header (type, status, freq, loopStart,
+        // size), then signed 8-bit PCM.
+        const auto sampleBin = [](char fill) {
+            QByteArray bin(16, '\0');
+            bin[12] = 4; // size
+            bin += QByteArray(4, fill);
+            return bin;
+        };
+        const bool wrote =
+            writeFile(fakeRoot
+                          + QStringLiteral(
+                              "/sound/direct_sound_samples/colon_single.bin"),
+                      sampleBin('\x11'))
+            && writeFile(fakeRoot
+                             + QStringLiteral(
+                                 "/sound/direct_sound_samples/colon_double.bin"),
+                         sampleBin('\x22'))
+            && writeFile(fakeRoot
+                             + QStringLiteral(
+                                 "/sound/programmable_wave_samples/colon_wave.pcm"),
+                         QByteArray(16, '\x33'))
+            && writeFile(
+                fakeRoot + QStringLiteral("/sound/direct_sound_data.inc"),
+                "\t.align 2\n"
+                "DirectSoundWaveData_colon_double::\n"
+                "\t.incbin \"sound/direct_sound_samples/colon_double.bin\"\n"
+                "\n"
+                "\t.align 2\n"
+                "DirectSoundWaveData_colon_single: @ file-local label\n"
+                "\t.incbin \"sound/direct_sound_samples/colon_single.bin\"\n"
+                "\n"
+                "\t.align 2\n"
+                "ColonCheckSynth:\n"
+                "\tset_synth_25\n")
+            && writeFile(
+                fakeRoot + QStringLiteral("/sound/programmable_wave_data.inc"),
+                "\t.align 2\n"
+                "ProgrammableWaveData_colon_wave:\n"
+                "\t.incbin \"sound/programmable_wave_samples/colon_wave.pcm\"\n")
+            && writeFile(
+                fakeRoot + QStringLiteral("/sound/voicegroups/coloncheck.inc"),
+                "voicegroup_coloncheck::\n"
+                "\tvoice_directsound 60, 0, DirectSoundWaveData_colon_single, "
+                "255, 0, 255, 165\n"
+                "\tvoice_directsound 60, 0, DirectSoundWaveData_colon_double, "
+                "255, 0, 255, 165\n"
+                "\tvoice_programmable_wave 60, 0, ProgrammableWaveData_colon_wave, "
+                "0, 0, 15, 3\n");
+        if (!wrote) {
+            std::fprintf(stderr, "vgcheck: cannot write coloncheck mini-project\n");
+            failures++;
+        } else {
+            const VgDirectSoundScan scan =
+                VoicegroupSource::directSoundCatalog(fakeRoot);
+            expectColon("catalog lists the single-colon sample",
+                        scan.directSound.contains(QStringLiteral(
+                            "DirectSoundWaveData_colon_single")));
+            expectColon("catalog lists the double-colon sample",
+                        scan.directSound.contains(QStringLiteral(
+                            "DirectSoundWaveData_colon_double")));
+            expectColon("synth def stays out of the sample list",
+                        !scan.directSound.contains(
+                            QStringLiteral("ColonCheckSynth")));
+            expectColon("single-colon synth def is scanned",
+                        scan.synths.find(QStringLiteral("ColonCheckSynth"))
+                            != nullptr);
+            expectColon("prog-wave scan sees the single-colon label",
+                        VoicegroupSource::progWaveSymbols(fakeRoot).contains(
+                            QStringLiteral("ProgrammableWaveData_colon_wave")));
+
+            LoadedVoiceGroup *vg = voicegroup_load(
+                fakeRoot.toUtf8().constData(), "coloncheck", nullptr);
+            if (!vg) {
+                std::fprintf(stderr,
+                             "vgcheck: FAIL: coloncheck voicegroup_load failed\n");
+                failures++;
+            } else {
+                const ToneData &s = vg->voices[0];
+                const ToneData &d = vg->voices[1];
+                const ToneData &w = vg->voices[2];
+                expectColon("loader resolves the single-colon sample",
+                            s.wav && s.wav->size == 4 && s.wav->data[0] == 0x11);
+                expectColon("loader resolves the double-colon sample",
+                            d.wav && d.wav->size == 4 && d.wav->data[0] == 0x22);
+                expectColon("loader resolves the single-colon prog wave",
+                            w.wavePointer != nullptr);
+                voicegroup_free(vg);
+            }
+        }
+        QDir(fakeRoot).removeRecursively();
+        if (failures == before)
+            std::printf("vgcheck: single-colon label scan OK\n");
     }
 
     // ---- Golden Sun synths: loader roundtrip through the real voicegroup ----
