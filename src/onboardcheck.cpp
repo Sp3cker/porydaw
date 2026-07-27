@@ -400,6 +400,53 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     check(registered && registered->constant == constant,
           "constant not matched from songs.h");
 
+    // ---- charmap ID-ordered backfill -----------------------------------------
+    // A mid-table song whose charmap line went missing gets it reinserted at
+    // its ID position between its neighbors, not appended — proven by the
+    // file round-tripping byte-identically through strip + re-register.
+    if (plan.charmapApplicable) {
+        const QByteArray original = readAllBytes(charmapPath);
+        QList<QByteArray> lines = original.split('\n');
+        const SongInfo *midSong = nullptr;
+        int lineAt = -1;
+        for (int id = registeredCount / 2; id < registeredCount && !midSong; id++) {
+            const SongInfo &s = project.songs().at(id);
+            if (!s.registered || s.constant.isEmpty())
+                continue;
+            // The song's own line, and only one of it (alias constants that
+            // share an ID would make the strip ambiguous).
+            int found = -1, hits = 0;
+            for (int i = 0; i < lines.size(); i++) {
+                if (lines[i].startsWith(s.constant.toUtf8() + ' ')) {
+                    found = i;
+                    hits++;
+                }
+            }
+            if (hits == 1) {
+                midSong = &s;
+                lineAt = found;
+            }
+        }
+        check(midSong != nullptr, "ordered backfill: no mid-table candidate song");
+        if (midSong) {
+            lines.removeAt(lineAt);
+            QFile out(charmapPath);
+            check(out.open(QIODevice::WriteOnly), "ordered backfill: rewrite charmap.txt");
+            out.write(lines.join('\n'));
+            out.close();
+            check(readAllBytes(charmapPath) != original,
+                  "ordered backfill: strip was a no-op");
+            check(SongRegistry::registerSong(
+                      projectRoot, midSong->label, midSong->constant,
+                      midSong->player.isEmpty() ? QStringLiteral("MUSIC_PLAYER_BGM")
+                                                : midSong->player,
+                      &regError, &songId),
+                  "ordered backfill: registerSong failed");
+            check(readAllBytes(charmapPath) == original,
+                  "backfilled charmap line not restored at its ID position");
+        }
+    }
+
     // ---- Register Song action wiring ----------------------------------------
     // Strip the song's charmap line — the state of any song registered before
     // porydaw wrote charmap entries. The song still reads as registered from

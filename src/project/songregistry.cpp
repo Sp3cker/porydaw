@@ -431,9 +431,10 @@ bool registerSong(const QString &projectRoot, const QString &label,
             return false;
     }
 
-    // charmap.txt: insert the ID mapping after the sound section's last
-    // entry, or correct an existing entry whose bytes drifted from the table
-    // index. Projects whose charmap has no song entries skip this file.
+    // charmap.txt: insert the ID mapping at its position in the sound
+    // section's ID order (a backfilled song lands between its neighbors, not
+    // appended), or correct an existing entry whose bytes drifted from the
+    // table index. Projects whose charmap has no song entries skip this file.
     if (plan.charmapApplicable) {
         const QString path = projectRoot + QStringLiteral("/charmap.txt");
         RawLines f = readRawLines(path);
@@ -446,7 +447,7 @@ bool registerSong(const QString &projectRoot, const QString &label,
         const QSet<QString> songNames = songsHConstantNames(projectRoot);
         const QRegularExpression ownAnyRe(
             QStringLiteral(R"(^\s*%1\s*=)").arg(constant));
-        int own = -1, lastEntry = -1;
+        int own = -1, insertAfter = -1, firstEntry = -1;
         bool ownAnyForm = false;
         QRegularExpressionMatch ownMatch;
         for (int i = 0; i < f.lines.size(); i++) {
@@ -457,14 +458,18 @@ bool registerSong(const QString &projectRoot, const QString &label,
             if (ownAnyRe.match(text).hasMatch())
                 ownAnyForm = true;
             const QRegularExpressionMatch m = charmapEntryRe().match(text);
-            if (!m.hasMatch())
+            if (!m.hasMatch() || !songNames.contains(m.captured(1)))
                 continue;
             if (m.captured(1) == constant && own < 0) {
                 own = i;
                 ownMatch = m;
             }
-            if (songNames.contains(m.captured(1)))
-                lastEntry = i;
+            if (firstEntry < 0)
+                firstEntry = i;
+            const int value = m.captured(3).toInt(nullptr, 16)
+                              | m.captured(4).toInt(nullptr, 16) << 8;
+            if (value < plan.songId)
+                insertAfter = i;
         }
         if (own >= 0) {
             const int value = ownMatch.captured(3).toInt(nullptr, 16)
@@ -472,8 +477,13 @@ bool registerSong(const QString &projectRoot, const QString &label,
             if (value != plan.songId)
                 f.replace(own, f.text(own).left(ownMatch.capturedStart(3))
                                    + charmapIdBytes(plan.songId));
-        } else if (!ownAnyForm && lastEntry >= 0) {
-            f.insert(lastEntry + 1, plan.charmapLine);
+        } else if (!ownAnyForm) {
+            // After the last entry with a smaller ID; a song whose ID
+            // precedes every existing entry goes before the first one.
+            if (insertAfter >= 0)
+                f.insert(insertAfter + 1, plan.charmapLine);
+            else if (firstEntry >= 0)
+                f.insert(firstEntry, plan.charmapLine);
         }
         if (!writeRawLines(path, f, error))
             return false;

@@ -76,8 +76,9 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
                           const QString &constant, const QString &player);
 
 // Writes the song into all registration files: appends the song_table.inc
-// entry, the songs.h #define, the ld_script.ld object line, and the
-// charmap.txt ID mapping (the last two when applicable). Idempotent —
+// entry, the songs.h #define, and the ld_script.ld object line, and inserts
+// the charmap.txt ID mapping in the sound section's ID order (the last two
+// when applicable). Idempotent —
 // entries that already exist are left byte-identical, except a songs.h
 // define or charmap.txt entry whose ID no longer matches the song's table
 // index, which is corrected in place. Only the song's own lines change.

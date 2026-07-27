@@ -312,7 +312,9 @@ charmap.txt               →  MUS_FOO = 62 02
 ```
 
 Each line is computed from the parsed project (next free ID, existing
-indentation/alignment) and inserted after the file's last matching entry; every
+indentation/alignment) and inserted after the file's last matching entry —
+except in `charmap.txt`, where the line lands at its position in the sound
+section's ID order, so a backfilled song sits between its neighbors; every
 other line keeps its exact bytes. `charmap.txt`'s sound section — recognized as
 the two-hex-byte entries named by `songs.h` constants — maps each constant to
 its ID as little-endian bytes so text control codes like `{PLAY_BGM}` can name
