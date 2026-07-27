@@ -1277,17 +1277,18 @@ QRectF noteFrame(const QPainter &painter, const QRectF &noteRect,
 }
 
 // Largest frame thickness (up to requestedPixels) that still leaves at
-// least one physical pixel of face visible between the frames; 0 when not
-// even a one-pixel frame fits. Small notes keep a thinner frame instead of
-// abruptly losing it a zoom step before their neighbors do.
+// least one physical pixel of face visible between the top and bottom
+// strips; 0 when not even a one-pixel frame fits. Fitting uses the row
+// height ONLY: rows are uniform at a given zoom, so every note at that
+// zoom carries the same frame weight — a narrow note lets its side strips
+// overlap into a solid sliver rather than shedding the frame its wider
+// neighbors keep.
 int fittedFrameThickness(const QPainter &painter, const QRectF &rect,
                          int requestedPixels, int insetPixels)
 {
     const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
-    const int minDimension =
-        std::min(qRound(rect.width() * devicePixelRatio),
-                 qRound(rect.height() * devicePixelRatio));
-    return std::clamp((minDimension - 1) / 2 - insetPixels, 0,
+    const int heightPixels = qRound(rect.height() * devicePixelRatio);
+    return std::clamp((heightPixels - 1) / 2 - insetPixels, 0,
                       requestedPixels);
 }
 
@@ -1317,14 +1318,15 @@ int drawRectFrame(QPainter &painter, const QRectF &rect,
         QRectF(frame.left(), frame.bottom() - thicknessDips,
                frame.width(), thicknessDips),
         color);
+    const qreal sideHeight =
+        std::max(0.0, frame.height() - 2 * thicknessDips);
     painter.fillRect(
         QRectF(frame.left(), frame.top() + thicknessDips, thicknessDips,
-               frame.height() - 2 * thicknessDips),
+               sideHeight),
         color);
     painter.fillRect(
         QRectF(frame.right() - thicknessDips,
-               frame.top() + thicknessDips, thicknessDips,
-               frame.height() - 2 * thicknessDips),
+               frame.top() + thicknessDips, thicknessDips, sideHeight),
         color);
     return thicknessPixels;
 }
@@ -1332,14 +1334,15 @@ int drawRectFrame(QPainter &painter, const QRectF &rect,
 void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox,
                        bool unterminated, int insetPixels = 0)
 {
-    constexpr int kBorderThicknessPixels = 2;
+    const int borderPixels = songview::noteBorderPixels(
+        painter.device()->devicePixelRatioF());
     if (!unterminated) {
-        drawRectFrame(painter, noteBox, Qt::black, kBorderThicknessPixels,
+        drawRectFrame(painter, noteBox, Qt::black, borderPixels,
                       insetPixels);
         return;
     }
-    const int thickness = fittedFrameThickness(
-        painter, noteBox, kBorderThicknessPixels, insetPixels);
+    const int thickness =
+        fittedFrameThickness(painter, noteBox, borderPixels, insetPixels);
     if (thickness <= 0)
         return;
 
@@ -2440,16 +2443,15 @@ private:
             }
 
             if (m_sv->isSelected(note)) {
-                constexpr int kSelectionRingThicknessPixels = 3;
                 const QColor selectionColor =
                     themes::color(themes::Role::item_selected_background);
                 // The ring thins before it disappears; the black border
                 // insets by whatever ring actually fit. Insets are physical
                 // pixels too, so fractional display scale cannot change the
                 // ring or inner border thickness.
-                const int ringThickness =
-                    drawRectFrame(painter, noteBox, selectionColor,
-                                  kSelectionRingThicknessPixels);
+                const int ringThickness = drawRectFrame(
+                    painter, noteBox, selectionColor,
+                    songview::selectionRingPixels(devicePixelRatioF()));
                 if (ringThickness > 0) {
                     drawNoteBoxBorder(painter, noteBox, note.unterminated,
                                       ringThickness);

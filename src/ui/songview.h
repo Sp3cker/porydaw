@@ -74,6 +74,20 @@ inline QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr = 1.0)
     return QRectF(noteRect.left() + pixel, y,
                   std::max(pixel, noteRect.width() - 2 * pixel), barH);
 }
+// Frame weights for note borders and the selection ring, in physical
+// pixels for the given display ratio. Authored in DIPs (border 1, ring
+// 1.5) so a display at 100% scale shows the same visual weight a HiDPI
+// display does; painting still lands on whole physical pixels so
+// fractional scale factors cannot open seams. Exposed so roll checks
+// assert the same math the paint code uses.
+inline int noteBorderPixels(qreal dpr)
+{
+    return std::max(1, qRound(dpr));
+}
+inline int selectionRingPixels(qreal dpr)
+{
+    return std::max(1, qRound(1.5 * dpr));
+}
 } // namespace songview
 
 // Song view: time ruler, multi-track piano roll (selected track in full

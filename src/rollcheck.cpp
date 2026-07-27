@@ -852,6 +852,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
       view.applyViewState(originalView);
     }
 
+
     // Probe the selected 3px ring, its 2px black inset, and the unselected
     // bottom edge with the camera centered at a fractional scale.
     {
@@ -879,41 +880,49 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
       const int bottomPixel = toPhysicalPixel(fractionalNoteBox.bottom());
       const int centerPixelX = toPhysicalPixel(fractionalNoteBox.center().x());
       const int centerPixelY = toPhysicalPixel(fractionalNoteBox.center().y());
-      for (int ringPixel = 0; ringPixel < 3; ++ringPixel) {
+      // Frame weights scale with the display ratio (1-DIP border, 1.5-DIP
+      // ring) — assert exactly the pixel counts the paint code derives.
+      const int ringPixels = songview::selectionRingPixels(devicePixelRatio);
+      const int borderPixels = songview::noteBorderPixels(devicePixelRatio);
+      for (int ringPixel = 0; ringPixel < ringPixels; ++ringPixel) {
         if (!isSelectionRingColor(
                 selectedNoteImage.pixel(centerPixelX,
                                         topPixel + ringPixel))
             || !isSelectionRingColor(
                 selectedNoteImage.pixel(centerPixelX,
                                         bottomPixel - 1 - ringPixel))) {
-          fail("selected note frame is not a contiguous 3px selection ring");
+          fail("selected note frame is not a contiguous selection ring");
         }
       }
-      for (int borderPixel = 0; borderPixel < 2; ++borderPixel) {
+      for (int borderPixel = 0; borderPixel < borderPixels; ++borderPixel) {
         if (!isBlackBorder(selectedNoteImage.pixel(
-                centerPixelX, topPixel + 3 + borderPixel)))
+                centerPixelX, topPixel + ringPixels + borderPixel)))
           fail("selected note did not have an inset black top border");
         if (!isBlackBorder(selectedNoteImage.pixel(
-                centerPixelX, bottomPixel - 4 - borderPixel)))
+                centerPixelX,
+                bottomPixel - 1 - ringPixels - borderPixel)))
           fail("selected note did not have an inset black bottom border");
         if (!isBlackBorder(selectedNoteImage.pixel(
-                leftPixel + 3 + borderPixel, centerPixelY)))
+                leftPixel + ringPixels + borderPixel, centerPixelY)))
           fail("selected note did not have an inset black left border");
         if (!isBlackBorder(selectedNoteImage.pixel(
-                rightPixel - 4 - borderPixel, centerPixelY)))
+                rightPixel - 1 - ringPixels - borderPixel, centerPixelY)))
           fail("selected note did not have an inset black right border");
       }
+      // The ring must stop where the black border starts.
+      if (isSelectionRingColor(selectedNoteImage.pixel(
+              centerPixelX, topPixel + ringPixels)))
+        fail("selection ring is thicker than its display-scaled weight");
 
       view.clearSelection();
       const QImage unselectedNoteImage = roll->grab().toImage();
-      if (!isBlackBorder(
-              unselectedNoteImage.pixel(centerPixelX, bottomPixel - 2))
-          || !isBlackBorder(
-              unselectedNoteImage.pixel(centerPixelX, bottomPixel - 1))) {
-        fail("unselected note lacks a contiguous 2px black bottom border");
-      } else if (QColor(
-                     unselectedNoteImage.pixel(centerPixelX, bottomPixel))
-                 == expectedNoteColor) {
+      for (int borderPixel = 0; borderPixel < borderPixels; ++borderPixel) {
+        if (!isBlackBorder(unselectedNoteImage.pixel(
+                centerPixelX, bottomPixel - 1 - borderPixel)))
+          fail("unselected note lacks its black bottom border");
+      }
+      if (QColor(unselectedNoteImage.pixel(centerPixelX, bottomPixel))
+          == expectedNoteColor) {
         fail("unselected note face appears below its black bottom border");
       }
 
@@ -1357,6 +1366,42 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
               Qt::NoButton);
     if (roll->cursor().shape() != Qt::ArrowCursor)
         fail("narrow-note middle lost its move target to the edge resize zones");
+
+    // Frame weight is fitted by row height only, so squeezing this
+    // one-snap-cell note to ~2px wide at minimum horizontal zoom keeps the
+    // same border its wide neighbors have instead of shedding it.
+    {
+        const SongView::ViewState originalView = view.viewState();
+        view.clearSelection(); // the resize press selected note d
+        SongView::ViewState narrowView = originalView;
+        narrowView.pxPerBeat = 4.0;
+        const double narrowPxPerTick = 4.0 / double(timeline->ticksPerBeat);
+        narrowView.scrollPx =
+            std::max(0.0, double(d.tick) * narrowPxPerTick - 100.0);
+        view.applyViewState(narrowView);
+        const SnappedRows narrowRows{view, *roll};
+        const int narrowLeftX =
+            songview::kKeyboardW + view.contentX(double(d.tick));
+        const int narrowRightX = songview::kKeyboardW
+            + view.contentX(double(d.tick + snapCell));
+        if (narrowRightX - narrowLeftX > 3)
+            fail("narrow-zoom fixture note is unexpectedly wide");
+        const QRectF narrowBox = narrowRows.noteBox(
+            narrowRows.noteRect(narrowLeftX, narrowRightX, d.key));
+        QImage narrowImage(roll->size(),
+                           QImage::Format_ARGB32_Premultiplied);
+        narrowImage.fill(Qt::transparent);
+        roll->render(&narrowImage);
+        const auto isNarrowBorder = [&](QRgb pixel) {
+            return qRed(pixel) <= 16 && qGreen(pixel) <= 16
+                && qBlue(pixel) <= 16;
+        };
+        if (!isNarrowBorder(
+                narrowImage.pixel(qRound(narrowBox.center().x()),
+                                  qRound(narrowBox.top()))))
+            fail("narrow note shed the border its wide neighbors keep");
+        view.applyViewState(originalView);
+    }
 
     // Keyboard transpose/nudge on note D (clicking it selects it):
     // Ctrl+Up is a semitone, Ctrl+Shift+Down an octave, and Ctrl+Right
