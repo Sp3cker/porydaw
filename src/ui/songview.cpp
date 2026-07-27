@@ -122,8 +122,18 @@ double cursorAnchoredScroll(double anchor, double oldScale, double oldScroll,
 }
 constexpr int kVoiceAuditionKey = 60; // middle C, matching the voicegroup browser
 constexpr int kVoiceAuditionVel = 112;
-// Resize hit-zone half-width at a note's left/right edges.
-constexpr qreal kEdgeW = static_cast<double>(layout::Space::Eight);
+// Resize hit-zone reach at a note's left/right edges (rollcheck probes
+// 6.8 DIPs inside the ends, so the zone must reach past that). Outside the
+// note the full reach always applies; inside, both zones shrink to leave at
+// least kMoveZoneMin between them so short notes keep a grabbable middle
+// for move drags.
+constexpr qreal kEdgeGripReach = 7.0;
+constexpr qreal kMoveZoneMin = 6.0;
+qreal edgeGripInnerReach(const QRectF &noteRect)
+{
+    return std::clamp((noteRect.width() - kMoveZoneMin) / 2.0, 0.0,
+                      kEdgeGripReach);
+}
 
 bool isBlackKey(int key)
 {
@@ -1337,7 +1347,8 @@ bool drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox,
 
 // ---------------------------------------------------------------- PianoRoll
 
-class PianoRoll : public QWidget {
+class PianoRoll : public QWidget
+{
 public:
     explicit PianoRoll(SongView *sv)
         : QWidget(sv)
@@ -1380,25 +1391,24 @@ protected:
         const QRect grid(kKeyboardW, 0, width() - kKeyboardW, height());
         p.setClipRect(grid);
 
-                // Pitch row shading plus a hairline between every semitone.
-    const
-        QColor accidentalRow = pianoRollAccidentalLaneColor();
+        // Pitch row shading plus a hairline under every semitone row; C rows
+        // keep the stronger octave delineator, on the same snapped edge as
+        // the keyboard column's separators.
+        const QColor accidentalRow = pianoRollAccidentalLaneColor();
         const QColor octaveLine =
-        themes::color(themes::Role::song_view_piano_keyboard_separator);
-                // Every semitone line crosses its lane's center; C lanes retain
-                // the stronger octave delineator.
-                const QPen keyLinePen(gridLineColor(50), 0);
-                const QPen octavePen(octaveLine, 0);
+            themes::color(themes::Role::song_view_piano_keyboard_separator);
+        const QPen keyLinePen(gridLineColor(50), 0);
+        const QPen octavePen(octaveLine, 0);
         for (int key = 0; key < 128; key++) {
-                        const QRectF row = keyRect(key, grid.left(), grid.width());
-                        if (row.bottom() <= 0 || row.top() >= height())
+            const QRectF row = keyRect(key, grid.left(), grid.width());
+            if (row.bottom() <= 0 || row.top() >= height())
                 continue;
             if (isBlackKey(key))
-                                p.fillRect(row, accidentalRow);
-                        p.setPen(key % 12 == 0 ? octavePen : keyLinePen);
-                        p.drawLine(grid.left(), row.center().y(), grid.right(),
-                                   row.center().y());
-            }
+                p.fillRect(row, accidentalRow);
+            p.setPen(key % 12 == 0 ? octavePen : keyLinePen);
+            p.drawLine(QLineF(grid.left(), row.bottom(), grid.right(),
+                              row.bottom()));
+        }
 
         drawGrid(p, m_sv, grid, kKeyboardW);
 
@@ -1434,7 +1444,7 @@ protected:
         const QPoint delta = wheelDelta(event);
         const int d = delta.y() ? delta.y() : delta.x();
         if (event->modifiers() & Qt::ControlModifier) {
-                        m_sv->zoomKeyHeight(event);
+            m_sv->zoomKeyHeight(event);
         } else if (event->modifiers() & Qt::ShiftModifier) {
             m_sv->scrollByPx(-d);
         } else if (delta.x() && !delta.y()) {
@@ -1467,7 +1477,7 @@ protected:
         // Keyboard column: audition the clicked key on the selected track.
         if (event->position().x() < kKeyboardW) {
             if (event->button() == Qt::LeftButton) {
-                                m_kbdKey = yToKey(event->position().y());
+                m_kbdKey = yToKey(event->position().y());
                 auditionKey(m_kbdKey, 100);
             }
             return;
@@ -1549,15 +1559,15 @@ protected:
             // Reaper-style velocity latch: touching a note makes its velocity
             // the default for the next drawn note.
             m_lastVelocity = hit->velocity;
-                        if (rightEdge) {
+            if (rightEdge) {
                 m_drag = Drag::Resize;
                 m_gripTick = hit->endTick;
                 m_gripOpposite = hit->startTick;
-                        } else if (leftEdge) {
+            } else if (leftEdge) {
                 m_drag = Drag::ResizeLeft;
                 m_gripTick = hit->startTick;
                 m_gripOpposite = hit->endTick;
-                        } else if (nearVelocityHandle(*hit, event->position())) {
+            } else if (nearVelocityHandle(*hit, event->position())) {
                 m_drag = Drag::Velocity;
                 m_velAnchor = *hit;
                 m_velAudEff = mid2agbEffectiveVelocity(hit->velocity);
@@ -1597,7 +1607,7 @@ protected:
         if (event->button() == Qt::LeftButton && doc
             && event->position().x() >= kKeyboardW) {
             setFocus();
-                        if (const ViewNote *hit = hitNote(event->position())) {
+            if (const ViewNote *hit = hitNote(event->position())) {
                 DocNote note;
                 if (doc->findNote(m_sv->selectedTrack(), hit->startTick,
                                   hit->key, &note)) {
@@ -1608,7 +1618,7 @@ protected:
             }
             m_pressPos = m_curPos = event->position();
             m_pressTick = m_sv->tickAtContentX(event->position().x() - kKeyboardW);
-                        m_pressKey = yToKey(event->position().y());
+            m_pressKey = yToKey(event->position().y());
             beginDraw();
             return;
         }
@@ -1620,8 +1630,9 @@ protected:
         // A velocity drag moves the cursor vertically while the note's
         // pitch stays put; the mark pins to the note so the readout
         // doesn't wander off its row.
-        setHoverKey(m_drag == Drag::Velocity ? m_velAnchor.key
-                                                                                          : yToKey(event->position().y()));
+        setHoverKey(m_drag == Drag::Velocity
+                        ? m_velAnchor.key
+                        : yToKey(event->position().y()));
         if (m_panning) {
             const QPointF d = event->globalPosition() - m_panPos;
             m_panPos = event->globalPosition();
@@ -1632,7 +1643,7 @@ protected:
         if (m_kbdKey >= 0) {
             // Keyboard column: dragging glisses — the sounding key follows
             // the cursor (the engine's mono preview releases the old key).
-                        const int key = yToKey(event->position().y());
+            const int key = yToKey(event->position().y());
             if (key != m_kbdKey) {
                 m_kbdKey = key;
                 auditionKey(m_kbdKey, 100);
@@ -1649,7 +1660,7 @@ protected:
         if (m_leftPress && m_drag == Drag::None) {
             // The pressed row's preview glisses with the cursor, like the
             // keyboard column; a draw started below anchors on the new row.
-                        const int key = yToKey(event->position().y());
+            const int key = yToKey(event->position().y());
             if (key != m_pressKey) {
                 m_pressKey = key;
                 auditionKey(key, m_lastVelocity);
@@ -1688,9 +1699,9 @@ protected:
             if (m_cursors.dpr != devicePixelRatioF())
                 m_cursors = loadMidiCursors(devicePixelRatioF());
             const ViewNote *hit =
-                                m_sv->document() && event->position().x() >= kKeyboardW
-                                        ? hitNote(event->position())
-                                                                   : nullptr;
+                m_sv->document() && event->position().x() >= kKeyboardW
+                    ? hitNote(event->position())
+                    : nullptr;
             // Resize edges win over both velocity-hover paths.
             const Qt::KeyboardModifiers hoverMods = event->modifiers()
                 & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier
@@ -1719,7 +1730,7 @@ protected:
             int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
 
         if (m_drag == Drag::Move) {
-                        const int dKey = yToKey(event->position().y()) - m_pressKey;
+            const int dKey = yToKey(event->position().y()) - m_pressKey;
             if (snappedD != m_dTick || dKey != m_dKey) {
                 m_dTick = snappedD;
                 if (dKey != m_dKey) {
@@ -1790,7 +1801,7 @@ protected:
                 start = m_sv->snapTickDown(tick);
                 dur = int64_t(anchor + uint64_t(grid) - start);
             }
-                        const int key = yToKey(event->position().y());
+            const int key = yToKey(event->position().y());
             if (start != m_drawTick || dur != m_drawDur || key != m_drawKey) {
                 m_drawTick = start;
                 m_drawDur = dur;
@@ -1810,7 +1821,7 @@ protected:
             sel.endTick = std::max(m_rightAnchorTick, t);
             m_sv->setTimeSelection(sel);
         } else if (m_drag == Drag::Band) {
-                        auditionBandEntrants(QRectF(m_pressPos, m_curPos).normalized());
+            auditionBandEntrants(QRectF(m_pressPos, m_curPos).normalized());
             update();
         }
     }
@@ -1844,7 +1855,7 @@ protected:
                     m_sv->clearTimeSelection();
             } else if (drag == Drag::Band) {
                 stopBandAuditions();
-                                selectBand(QRectF(m_pressPos, m_curPos).normalized(),
+                selectBand(QRectF(m_pressPos, m_curPos).normalized(),
                            event->modifiers() & Qt::ControlModifier);
             } else if (doc && m_rightHit) {
                 const std::vector<SongView::NoteId> &sel = m_sv->selection();
@@ -2041,47 +2052,50 @@ private:
         return x >= startX && x < endX;
     }
 
-        // The roll has one vertical projection. Every row edge is independently
-        // snapped from the continuous camera, so adjacent rows meet exactly at
-        // fractional display scales without accumulated rounding error.
-        const std::array<qreal, 129> &rowEdges() const
+    // The roll has one vertical projection. Every row edge is independently
+    // snapped from the continuous camera, so adjacent rows meet exactly at
+    // fractional display scales without accumulated rounding error.
+    const std::array<qreal, 129> &rowEdges() const
     {
-                const qreal dpr = devicePixelRatioF();
-                const qreal keyHeight = m_sv->keyHeight();
-                const qreal scrollY = m_sv->scrollY();
-                if (!m_rowEdgesValid || m_rowEdgesDpr != dpr
-                        || m_rowEdgesKeyHeight != keyHeight
-                        || m_rowEdgesScrollY != scrollY) {
-                        for (int row = 0; row <= 128; ++row) {
-                                const qreal ideal = row * keyHeight - scrollY;
-                                m_rowEdges[row] = std::round(ideal * dpr) / dpr;
-                        }
-                        m_rowEdgesDpr = dpr;
-                        m_rowEdgesKeyHeight = keyHeight;
-                        m_rowEdgesScrollY = scrollY;
-                        m_rowEdgesValid = true;
-    }
-                return m_rowEdges;
+        const qreal dpr = devicePixelRatioF();
+        const qreal keyHeight = m_sv->keyHeight();
+        const qreal scrollY = m_sv->scrollY();
+        if (!m_rowEdgesValid || m_rowEdgesDpr != dpr
+            || m_rowEdgesKeyHeight != keyHeight
+            || m_rowEdgesScrollY != scrollY) {
+            for (int row = 0; row <= 128; ++row) {
+                const qreal ideal = row * keyHeight - scrollY;
+                m_rowEdges[row] = std::round(ideal * dpr) / dpr;
+            }
+            m_rowEdgesDpr = dpr;
+            m_rowEdgesKeyHeight = keyHeight;
+            m_rowEdgesScrollY = scrollY;
+            m_rowEdgesValid = true;
         }
-
-        qreal keyTop(int key) const { return rowEdges()[127 - key]; }
-        qreal keyBottom(int key) const { return rowEdges()[128 - key]; }
-
-        QRectF keyRect(int key, qreal x, qreal width) const
-    {
-                const qreal top = keyTop(key);
-                return QRectF(x, top, width, keyBottom(key) - top);
+        return m_rowEdges;
     }
 
-        int yToKey(qreal y) const
-        {
-                const std::array<qreal, 129> &edges = rowEdges();
-                const auto edge = std::upper_bound(edges.begin(), edges.end(), y);
-                const int row = std::clamp(int(edge - edges.begin()) - 1, 0, 127);
-                return 127 - row;
-        }
+    qreal keyTop(int key) const { return rowEdges()[127 - key]; }
+    qreal keyBottom(int key) const { return rowEdges()[128 - key]; }
 
-        qreal physicalPixel() const { return logicalPhysicalPixel(devicePixelRatioF()); }
+    QRectF keyRect(int key, qreal x, qreal width) const
+    {
+        const qreal top = keyTop(key);
+        return QRectF(x, top, width, keyBottom(key) - top);
+    }
+
+    int yToKey(qreal y) const
+    {
+        const std::array<qreal, 129> &edges = rowEdges();
+        const auto edge = std::upper_bound(edges.begin(), edges.end(), y);
+        const int row = std::clamp(int(edge - edges.begin()) - 1, 0, 127);
+        return 127 - row;
+    }
+
+    qreal physicalPixel() const
+    {
+        return logicalPhysicalPixel(devicePixelRatioF());
+    }
 
     // Key row under the cursor: the keyboard column mirrors it with a tint
     // and a note-name chip so the row reads at any zoom (-1 = cursor left
@@ -2132,74 +2146,76 @@ private:
         update();
     }
 
-        QRectF noteRect(qreal x0, qreal x1, int key) const
+    QRectF noteRect(qreal x0, qreal x1, int key) const
     {
-                const qreal pixel = physicalPixel();
-                return QRectF(x0, keyTop(key) + pixel,
-                              std::max<qreal>(2.0, x1 - x0),
-                              std::max(2.0 * pixel,
-                                       keyBottom(key) - keyTop(key) - pixel));
-        }
+        const qreal pixel = physicalPixel();
+        return QRectF(x0, keyTop(key) + pixel,
+                      std::max<qreal>(2.0, x1 - x0),
+                      std::max(2.0 * pixel,
+                               keyBottom(key) - keyTop(key) - pixel));
+    }
 
-        QRectF noteRect(const ViewNote &note) const
-        {
-                const qreal dpr = devicePixelRatioF();
-                return noteRect(
-                    m_sv->displayX(double(note.startTick), kKeyboardW, dpr),
-                    m_sv->displayX(double(note.endTick), kKeyboardW, dpr),
-                    note.key);
-        }
+    QRectF noteRect(const ViewNote &note) const
+    {
+        const qreal dpr = devicePixelRatioF();
+        return noteRect(
+            m_sv->displayX(double(note.startTick), kKeyboardW, dpr),
+            m_sv->displayX(double(note.endTick), kKeyboardW, dpr),
+            note.key);
+    }
 
-        QRectF noteBox(const QRectF &rect) const
-        {
-                const qreal pixel = physicalPixel();
-                return rect.adjusted(0, 0, -pixel, -pixel);
+    QRectF noteBox(const QRectF &rect) const
+    {
+        const qreal pixel = physicalPixel();
+        return rect.adjusted(0, 0, -pixel, -pixel);
     }
 
     // Topmost (last-drawn) note of the selected track under pos. The rect is
     // widened a little on both sides so the edge resize handles can be
     // grabbed from just outside the note.
-        const ViewNote *hitNote(QPointF pos) const
+    const ViewNote *hitNote(QPointF pos) const
     {
         const int selected = m_sv->selectedTrack();
         const ViewNote *hit = nullptr;
+        const qreal reach = kEdgeGripReach;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != selected)
                 continue;
-                        const QRectF r =
-                            noteRect(note).adjusted(-kEdgeW, 0, kEdgeW, 0);
-                        if (pos.x() >= r.left() && pos.x() < r.right()
-                                && pos.y() >= r.top() && pos.y() < r.bottom())
+            const QRectF r = noteRect(note).adjusted(-reach, 0, reach, 0);
+            if (pos.x() >= r.left() && pos.x() < r.right()
+                && pos.y() >= r.top() && pos.y() < r.bottom())
                 hit = &note;
         }
         return hit;
     }
 
-        bool nearRightEdge(const ViewNote &note, QPointF pos) const
-        {
-                const QRectF r = noteRect(note);
-                return pos.x() >= r.right() - kEdgeW
-                        && pos.x() <= r.right() + kEdgeW;
-        }
-
-        bool nearLeftEdge(const ViewNote &note, QPointF pos) const
+    bool nearRightEdge(const ViewNote &note, QPointF pos) const
     {
-                const QRectF r = noteRect(note);
-        return pos.x() >= r.left() - kEdgeW && pos.x() <= r.left() + kEdgeW;
+        const QRectF r = noteRect(note);
+        return pos.x() >= r.right() - edgeGripInnerReach(r)
+            && pos.x() <= r.right() + kEdgeGripReach;
     }
 
-        bool nearVelocityHandle(const ViewNote &note, QPointF pos) const
+    bool nearLeftEdge(const ViewNote &note, QPointF pos) const
+    {
+        const QRectF r = noteRect(note);
+        return pos.x() >= r.left() - kEdgeGripReach
+            && pos.x() <= r.left() + edgeGripInnerReach(r);
+    }
+
+    bool nearVelocityHandle(const ViewNote &note, QPointF pos) const
     {
         if (m_sv->keyHeight() < kVelHandleMinKeyH)
             return false;
-                const QRectF r = noteRect(note);
+        const QRectF r = noteRect(note);
         // The bar itself is 1-2px; grab within a few pixels of it, more
         // generously on taller notes.
-                const QRectF bar = velBarRect(r, note.velocity, devicePixelRatioF());
-                const qreal pad = std::clamp(qRound(r.height() / physicalPixel()) / 6, 2, 4)
-                        * physicalPixel();
-        return pos.x() > r.left() + kEdgeW && pos.x() < r.right() - kEdgeW
-                        && pos.y() >= bar.top() - pad && pos.y() < bar.bottom() + pad;
+        const QRectF bar = velBarRect(r, note.velocity, devicePixelRatioF());
+        const qreal pad = std::clamp(qRound(r.height() / physicalPixel()) / 6, 2, 4)
+            * physicalPixel();
+        const qreal inner = edgeGripInnerReach(r);
+        return pos.x() > r.left() + inner && pos.x() < r.right() - inner
+            && pos.y() >= bar.top() - pad && pos.y() < bar.bottom() + pad;
     }
 
     // Resolves the current selection to document notes (skips stale ids).
@@ -2433,8 +2449,8 @@ private:
     // The pending note of a draw gesture, solid like the real note. (Move and
     // resize gestures need no extra pass: drawNotes paints the selected notes
     // at their dragged geometry via displayedNoteRect.)
-        void drawDragPreview(QPainter &p, const SongViewModel &model,
-                                                  int selected) {
+    void drawDragPreview(QPainter &p, const SongViewModel &model, int selected)
+    {
         Q_UNUSED(model);
         if (m_drag != Drag::Draw)
             return;
@@ -2442,16 +2458,16 @@ private:
         const qreal x0 = m_sv->displayX(double(m_drawTick), kKeyboardW, dpr);
         const qreal x1 = m_sv->displayX(
             double(m_drawTick + uint64_t(m_drawDur)), kKeyboardW, dpr);
-            const QRectF r = noteRect(x0, x1, m_drawKey);
-            const QRectF box = noteBox(r);
-            p.fillRect(box, SongView::noteColor(selected, m_lastVelocity));
-            drawNoteBoxBorder(p, box, false);
+        const QRectF r = noteRect(x0, x1, m_drawKey);
+        const QRectF box = noteBox(r);
+        p.fillRect(box, SongView::noteColor(selected, m_lastVelocity));
+        drawNoteBoxBorder(p, box, false);
     }
 
     // Where the note sits on screen right now: its stored geometry, displaced
     // by the live move/resize deltas when it's part of the gesture. Mirrors
     // the clamping applied on release in mouseReleaseEvent.
-        QRectF displayedNoteRect(const ViewNote &note) const
+    QRectF displayedNoteRect(const ViewNote &note) const
     {
         const bool dragging = m_drag == Drag::Move || m_drag == Drag::Resize
             || m_drag == Drag::ResizeLeft;
@@ -2472,7 +2488,7 @@ private:
         const qreal dpr = devicePixelRatioF();
         const qreal x0 = m_sv->displayX(double(tick), kKeyboardW, dpr);
         const qreal x1 = m_sv->displayX(double(endTick), kKeyboardW, dpr);
-                return noteRect(x0, x1, key);
+        return noteRect(x0, x1, key);
     }
 
     void showNoteMenu(QPointF localPos)
@@ -2555,11 +2571,11 @@ private:
         if (labelFont)
             p.setFont(*labelFont);
         const int hovered = m_hoverKey;
-                const QPen separatorPen(
-                        themes::color(themes::Role::song_view_piano_keyboard_separator), 0);
+        const QPen separatorPen(
+            themes::color(themes::Role::song_view_piano_keyboard_separator), 0);
         for (int key = 0; key < 128; key++) {
-                        const QRectF keyRect = this->keyRect(key, 0, kKeyboardW);
-                        if (keyRect.bottom() <= 0 || keyRect.top() >= height())
+            const QRectF keyRect = this->keyRect(key, 0, kKeyboardW);
+            if (keyRect.bottom() <= 0 || keyRect.top() >= height())
                 continue;
             const bool sounding = key == m_soundingKey;
             if (isBlackKey(key)) {
@@ -2580,15 +2596,16 @@ private:
                 // B/C and E/F are the only spots where two natural
                 // keys touch, so those bottom edges get a separator.
                 if (key % 12 == 0 || key % 12 == 5) {
-                                        p.setPen(separatorPen);
-                                        p.drawLine(0, keyRect.bottom(), kKeyboardW, keyRect.bottom());
+                    p.setPen(separatorPen);
+                    p.drawLine(QLineF(0, keyRect.bottom(), kKeyboardW,
+                                      keyRect.bottom()));
                 }
                 if (key % 12 == 0) {
                     p.setPen(themes::color(
                         themes::Role::song_view_piano_keyboard_label));
                     if (labelFont) {
-                                                p.drawText(QRectF(0, keyRect.top(), kKeyboardW - 3,
-                                                                                    keyRect.height()),
+                        p.drawText(QRectF(0, keyRect.top(), kKeyboardW - 3,
+                                          keyRect.height()),
                                    Qt::AlignRight | Qt::AlignVCenter,
                                    keyName(key));
                     }
@@ -2597,7 +2614,7 @@ private:
             if (key == hovered && !sounding) {
                 QColor h = m_sv->palette().color(QPalette::Highlight);
                 h.setAlpha(80);
-                                p.fillRect(keyRect, h);
+                p.fillRect(keyRect, h);
             }
         }
         // Note-name chip on the hovered row: keys can be as short as 4px,
@@ -2611,10 +2628,10 @@ private:
             const QFontMetrics fm(cf);
             const int cw = fm.horizontalAdvance(name) + 8;
             const int ch = fm.height() + 2;
-                        const QRectF hoveredRect = keyRect(hovered, 0, kKeyboardW);
-                        const qreal cy = std::clamp(hoveredRect.center().y() - ch / 2.0,
-                                                                                0.0, qreal(std::max(0, height() - ch)));
-                        const QRectF chip(kKeyboardW - 2 - cw, cy, cw, ch);
+            const QRectF hoveredRect = keyRect(hovered, 0, kKeyboardW);
+            const qreal cy = std::clamp(hoveredRect.center().y() - ch / 2.0,
+                                        0.0, qreal(std::max(0, height() - ch)));
+            const QRectF chip(kKeyboardW - 2 - cw, cy, cw, ch);
             p.save();
             p.setRenderHint(QPainter::Antialiasing);
             p.setPen(Qt::NoPen);
@@ -2634,7 +2651,7 @@ private:
     // length is the ceiling), so sweeping across a chord hears its notes
     // together without long notes ringing on. A note swept out and back in
     // re-auditions.
-        void auditionBandEntrants(const QRectF &band)
+    void auditionBandEntrants(const QRectF &band)
     {
         std::vector<SongView::NoteId> inBand;
         for (const ViewNote &note : m_sv->model().notes) {
@@ -2669,7 +2686,7 @@ private:
         m_bandAud.clear();
     }
 
-        void selectBand(const QRectF &band, bool additive)
+    void selectBand(const QRectF &band, bool additive)
     {
         std::vector<SongView::NoteId> ids = additive
                                                 ? m_sv->selection()
@@ -2688,11 +2705,11 @@ private:
 
     SongView *m_sv;
     MidiCursors m_cursors;
-        mutable std::array<qreal, 129> m_rowEdges{};
-        mutable qreal m_rowEdgesDpr = 0.0;
-        mutable qreal m_rowEdgesKeyHeight = 0.0;
-        mutable qreal m_rowEdgesScrollY = 0.0;
-        mutable bool m_rowEdgesValid = false;
+    mutable std::array<qreal, 129> m_rowEdges{};
+    mutable qreal m_rowEdgesDpr = 0.0;
+    mutable qreal m_rowEdgesKeyHeight = 0.0;
+    mutable qreal m_rowEdgesScrollY = 0.0;
+    mutable bool m_rowEdgesValid = false;
     Drag m_drag = Drag::None;
     QPointF m_pressPos;
     QPointF m_curPos;
@@ -5061,7 +5078,7 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
 
 void SongView::rebuildAfterSongChange()
 {
-        double initialScrollY = 0.0;
+    double initialScrollY = 0.0;
     if (m_timeline) {
         // Default zoom: 32 px per beat, scrolled so the notes' pitch range
         // is centered in the roll.
@@ -5069,15 +5086,15 @@ void SongView::rebuildAfterSongChange()
         const int midKey = m_model.minNoteKey <= m_model.maxNoteKey
                                ? (m_model.minNoteKey + m_model.maxNoteKey) / 2
                                : 60;
-                initialScrollY = std::max(0.0, (127 - midKey) * m_keyHeight
-                                                                              - std::max(200, m_roll->height()) / 2.0);
+        initialScrollY = std::max(0.0, (127 - midKey) * m_keyHeight
+                                           - std::max(200, m_roll->height()) / 2.0);
     } else {
         m_pxPerTick = 1.0;
     }
     m_headers->rebuild();
     m_lanes->rebuildRows();
     updateScrollbars();
-        setVScroll(initialScrollY);
+    setVScroll(initialScrollY);
     refreshTimelineViews();
 }
 
@@ -6134,22 +6151,25 @@ void SongView::setTrackSolo(int track, bool on)
     }
 }
 
-QColor SongView::trackColor(int track) {
+QColor SongView::trackColor(int track)
+{
     return themes::trackIdentityColor(trackIdentityIndex(track));
 }
 
-QColor SongView::noteColor(int track, int velocity) {
+QColor SongView::noteColor(int track, int velocity)
+{
     if (velocity <= 0)
         return themes::color(themes::Role::song_view_note_velocity_zero);
     if (velocity >= 127)
         return trackColor(track);
     const double t = 1.0 - (double(velocity) / 127.0);
     return mixTowardOklab(
-            trackColor(track),
-            themes::color(themes::Role::song_view_note_velocity_zero), t);
+        trackColor(track),
+        themes::color(themes::Role::song_view_note_velocity_zero), t);
 }
 
-int SongView::currentProgram(int track) const {
+int SongView::currentProgram(int track) const
+{
     if (!m_timeline)
         return -1;
     int prog = m_timeline->tracks[track].firstProgram;
@@ -6455,25 +6475,25 @@ void SongView::zoomAroundContentX(double factor, qreal anchorContentX)
 
 void SongView::zoomKeyHeight(const QWheelEvent *event)
 {
-        if (!m_timeline)
+    if (!m_timeline)
         return;
-        const double zoomDelta = wheelAngleUnits(event);
-        if (zoomDelta == 0.0)
+    const double zoomDelta = wheelAngleUnits(event);
+    if (zoomDelta == 0.0)
         return;
-        const double oldH = m_keyHeight;
-        const double newH = std::clamp(oldH * std::exp2(zoomDelta / 1200.0),
-                                       kMinKeyHeight, kMaxKeyHeight);
+    const double oldH = m_keyHeight;
+    const double newH = std::clamp(oldH * std::exp2(zoomDelta / 1200.0),
+                                   kMinKeyHeight, kMaxKeyHeight);
     if (newH == m_keyHeight)
         return;
-        // Pin the content row under the cursor before projecting to the scrollbar.
-        const double anchorY = event->position().y();
-        const double anchoredScroll =
-                cursorAnchoredScroll(anchorY, oldH, m_scrollY, newH);
+    // Pin the content row under the cursor before projecting to the scrollbar.
+    const double anchorY = event->position().y();
+    const double anchoredScroll =
+        cursorAnchoredScroll(anchorY, oldH, m_scrollY, newH);
     m_keyHeight = newH;
     updateScrollbars();
-        setVScroll(std::clamp(anchoredScroll, 0.0, maxRollScroll()));
-        // The camera scale changed even when the cursor anchor keeps its scroll
-        // offset numerically unchanged.
+    setVScroll(std::clamp(anchoredScroll, 0.0, maxRollScroll()));
+    // The camera scale changed even when the cursor anchor keeps its scroll
+    // offset numerically unchanged.
     m_roll->update();
 }
 
@@ -6484,7 +6504,7 @@ void SongView::scrollByPx(double dx)
 
 void SongView::scrollRollBy(double dy)
 {
-        setVScroll(m_scrollY + dy);
+    setVScroll(m_scrollY + dy);
 }
 
 void SongView::setHScroll(double px)
@@ -6560,22 +6580,22 @@ double SongView::maxHScroll() const
 
 double SongView::maxRollScroll() const
 {
-        return std::max(0.0, 128.0 * m_keyHeight - m_roll->height());
+    return std::max(0.0, 128.0 * m_keyHeight - m_roll->height());
 }
 
 void SongView::setVScroll(double y)
 {
-        const double newY = std::clamp(y, 0.0, maxRollScroll());
-        const bool cameraChanged = m_scrollY != newY;
-        m_scrollY = newY;
-        const int scrollbarValue = scrollUnits(m_scrollY);
-        if (m_vbar->value() != scrollbarValue) {
-                m_vbar->blockSignals(true);
-                m_vbar->setValue(scrollbarValue);
-                m_vbar->blockSignals(false);
-        }
-        if (cameraChanged)
-                m_roll->update();
+    const double newY = std::clamp(y, 0.0, maxRollScroll());
+    const bool cameraChanged = m_scrollY != newY;
+    m_scrollY = newY;
+    const int scrollbarValue = scrollUnits(m_scrollY);
+    if (m_vbar->value() != scrollbarValue) {
+        m_vbar->blockSignals(true);
+        m_vbar->setValue(scrollbarValue);
+        m_vbar->blockSignals(false);
+    }
+    if (cameraChanged)
+        m_roll->update();
 }
 
 void SongView::updateScrollbars()

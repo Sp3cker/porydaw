@@ -162,7 +162,6 @@ enum class Role {
   song_view_edit_cursor,
   song_view_edit_preview_outline,
   song_view_playhead,
-  song_view_unterminated_note_outline,
   song_view_grid,
   song_view_piano_roll_background,
   song_view_piano_roll_accidental_lane,

@@ -39,8 +39,7 @@ enum class PresetColor {
   /// Hovered buttons/tabs/indicators/headers, and the shared resting surface
   /// of combo, text, and spin-box fields.
   control_hover_background,
-  /// Pressed buttons, menus, headers, checked Mute/Solo controls, and
-  /// unterminated-note outlines.
+  /// Pressed buttons, menus, headers, and checked Mute/Solo controls.
   control_pressed_background,
   /// Tooltips and checkbox/radio indicator surfaces.
   input_background,
@@ -274,7 +273,6 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::window_text,
     PresetColor::window_text,
     PresetColor::playhead,
-    PresetColor::control_pressed_background,
     PresetColor::grid_line,
     PresetColor::piano_roll_background,
     PresetColor::piano_roll_accidental_lane,
@@ -321,13 +319,13 @@ constexpr PresetColors makeVanilla() {
   colors.color(PresetColor::secondary_text) = "#57514C";
   colors.color(PresetColor::item_hover_background) = "#E7E2DC";
   colors.color(PresetColor::scrollbar_handle) = "#A49D97";
-  colors.color(PresetColor::grid_line) = "#3f040000";
-  colors.color(PresetColor::piano_roll_background) = "#d4ccc7";
-  colors.color(PresetColor::piano_roll_accidental_lane) = "#b7afa9";
+  colors.color(PresetColor::grid_line) = "#3F040000";
+  colors.color(PresetColor::piano_roll_background) = "#D4CCC7";
+  colors.color(PresetColor::piano_roll_accidental_lane) = "#B7AFA9";
   colors.color(PresetColor::playhead) = "#E24242";
   colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
   colors.color(PresetColor::piano_black_key) = "#202224";
-  colors.color(PresetColor::piano_keyboard_separator) = "#bcb4af";
+  colors.color(PresetColor::piano_keyboard_separator) = "#BCB4AF";
   colors.color(PresetColor::piano_keyboard_label) = "#1A1A1A";
   colors.color(PresetColor::polyphony_cell_text) = "#F0F0F4";
   colors.color(PresetColor::polyphony_active_cell) = "#268C38";

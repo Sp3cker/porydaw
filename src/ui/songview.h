@@ -63,14 +63,16 @@ constexpr double kAutoGridMinCellPx = 16.0;
 // compatible while the roll supplies its actual display scale.
 inline QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr = 1.0)
 {
-        const qreal pixel = 1.0 / dpr;
-        const qreal barH = qRound(noteRect.height() / pixel) >= 20 ? 2 * pixel : pixel;
-        const qreal innerH = noteRect.height() - 2 * pixel;
-        const qreal y = std::min(noteRect.top() + pixel
-                                                                    + (127 - velocity) * (innerH - pixel) / 127.0,
+    const qreal pixel = 1.0 / dpr;
+    const qreal barH =
+        qRound(noteRect.height() / pixel) >= 20 ? 2 * pixel : pixel;
+    const qreal innerH = noteRect.height() - 2 * pixel;
+    const qreal y =
+        std::min(noteRect.top() + pixel
+                     + (127 - velocity) * (innerH - pixel) / 127.0,
                  noteRect.bottom() - pixel - barH);
-        return QRectF(noteRect.left() + pixel, y,
-                                    std::max(pixel, noteRect.width() - 2 * pixel), barH);
+    return QRectF(noteRect.left() + pixel, y,
+                  std::max(pixel, noteRect.width() - 2 * pixel), barH);
 }
 } // namespace songview
 
@@ -109,9 +111,9 @@ public:
     struct ViewState {
         bool valid = false;
         double pxPerBeat = 32.0;  // horizontal zoom (ticks-per-beat neutral)
-                double keyHeight = songview::kVelHandleMinKeyH; // vertical roll zoom
+        double keyHeight = songview::kVelHandleMinKeyH; // vertical roll zoom
         double scrollPx = 0.0;
-                double scrollY = 0.0;
+        double scrollY = 0.0;
         int selectedTrack = 0;
         uint64_t editCursorTick = 0;
         int laneHeight = 48;      // shared automation row height
@@ -158,8 +160,8 @@ public:
     qreal displayX(double tick, qreal origin, qreal dpr) const;
     double pxPerTick() const { return m_pxPerTick; }
     double pxPerBeat() const;
-        double scrollY() const { return m_scrollY; }
-        double keyHeight() const { return m_keyHeight; }
+    double scrollY() const { return m_scrollY; }
+    double keyHeight() const { return m_keyHeight; }
     double playheadTick() const { return m_playheadTick; }
 
     // Edit cursor (Reaper-style): placed by clicking the ruler or empty
@@ -199,7 +201,7 @@ public:
     void setTrackSolo(int track, bool on);
 
     static QColor trackColor(int track);
-        static QColor noteColor(int track, int velocity);
+    static QColor noteColor(int track, int velocity);
     // The track's program at the display position — the playhead while
     // playing, the edit cursor otherwise — so the header label follows the
     // song's voice changes. Before the first change it stays firstProgram
@@ -440,10 +442,10 @@ public:
     // Interaction from children.
     void zoomAroundContentX(double factor, qreal anchorContentX);
     // Vertical roll zoom (key height) from Ctrl+wheel, pinning the key under
-        // anchorY (roll-local y). The wheel event supplies continuous deltas.
-        void zoomKeyHeight(const QWheelEvent *event);
+    // the cursor. The wheel event supplies continuous deltas.
+    void zoomKeyHeight(const QWheelEvent *event);
     void scrollByPx(double dx);
-        void scrollRollBy(double dy);
+    void scrollRollBy(double dy);
     // Scrolls horizontally so the tick sits a third of the way into the
     // viewport if it is currently off-screen; on-screen ticks are left
     // alone. Pastes anchor at the edit cursor, which can be scrolled out
@@ -500,8 +502,8 @@ private:
     int viewportWidth() const;
     void setHScroll(double px);
     double maxHScroll() const;
-        void setVScroll(double y);
-        double maxRollScroll() const;
+    void setVScroll(double y);
+    double maxRollScroll() const;
     void updateScrollbars();
     void rebuildAfterSongChange();
     void mergeEmptyLanes();

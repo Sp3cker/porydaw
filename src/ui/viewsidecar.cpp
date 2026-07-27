@@ -32,9 +32,9 @@ bool load(const QString &projectRoot, const QString &songLabel,
     SongView::ViewState loaded;
     loaded.valid = true;
     loaded.pxPerBeat = obj.value(QLatin1String("pxPerBeat")).toDouble(loaded.pxPerBeat);
-        loaded.keyHeight = obj.value(QLatin1String("keyHeight")).toDouble(loaded.keyHeight);
+    loaded.keyHeight = obj.value(QLatin1String("keyHeight")).toDouble(loaded.keyHeight);
     loaded.scrollPx = obj.value(QLatin1String("scrollPx")).toDouble(0.0);
-        loaded.scrollY = obj.value(QLatin1String("scrollY")).toDouble(0.0);
+    loaded.scrollY = obj.value(QLatin1String("scrollY")).toDouble(0.0);
     loaded.selectedTrack = obj.value(QLatin1String("selectedTrack")).toInt(0);
     loaded.editCursorTick =
         uint64_t(std::max(0.0, obj.value(QLatin1String("editCursorTick")).toDouble(0)));

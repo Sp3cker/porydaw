@@ -578,7 +578,6 @@ Theme derive(const QColor &primary, const QColor &accent) {
   theme.color(Role::song_view_loop_marker) = selectionBackground;
   theme.color(Role::song_view_edit_cursor) = windowText;
   theme.color(Role::song_view_edit_preview_outline) = windowText;
-  theme.color(Role::song_view_unterminated_note_outline) = accent;
   theme.color(Role::song_view_grid) = gridLines;
   theme.color(Role::song_view_piano_roll_background) = windowBackground;
   theme.color(Role::song_view_piano_roll_accidental_lane) =

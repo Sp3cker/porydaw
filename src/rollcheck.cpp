@@ -1298,6 +1298,19 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             collapsed.duration != snapCell)
         fail("overshot right-edge drag did not stop at one snap cell");
 
+    // The collapsed note is one snap cell (16 DIPs here) wide. Inside a
+    // note that narrow the edge zones shrink to leave a grabbable middle,
+    // so 6 DIPs in from the right edge (below the velocity bar) is part of
+    // that middle: the hover shows the plain arrow, not a resize cursor.
+    const QPointF narrowMiddle(
+        songview::kKeyboardW +
+            view.contentX(double(d.tick) + double(snapCell)) - 6,
+        rows.bottom(d.key) - 2);
+    sendMouse(roll, QEvent::MouseMove, narrowMiddle, Qt::NoButton,
+              Qt::NoButton);
+    if (roll->cursor().shape() != Qt::ArrowCursor)
+        fail("narrow-note middle lost its move target to the edge resize zones");
+
     // Keyboard transpose/nudge on note D (clicking it selects it):
     // Ctrl+Up is a semitone, Ctrl+Shift+Down an octave, and Ctrl+Right
     // moves one snap cell from an on-grid start.
