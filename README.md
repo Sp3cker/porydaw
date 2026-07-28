@@ -36,3 +36,4 @@ Porydaw's code has been built with heavy usage of Claude Code--bootstrapped with
 [pokeruby]: https://github.com/pret/pokeruby
 [pokeemerald]: https://github.com/pret/pokeemerald
 [pokefirered]: https://github.com/pret/pokefirered
+[changelog]: https://github.com/huderlem/porydaw/blob/main/CHANGELOG.md
