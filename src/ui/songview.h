@@ -17,6 +17,7 @@
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "ui/songviewmodel.h"
+#include "core/psgvelocitymodel.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -419,6 +420,16 @@ public:
       return tick == other.tick && key == other.key;
     }
   };
+  int canonicalNoteVelocity(int track, uint64_t tick, uint8_t key,
+                            int proposedVelocity) const;
+  std::optional<uint8_t>
+  noteVelocityLevel(int track, uint64_t tick, uint8_t key,
+                    int velocity) const;
+  std::optional<uint8_t>
+  velocityForLevel(int track, uint64_t tick, uint8_t key,
+                   uint8_t requestedLevel) const;
+  std::optional<VelocityDetentInfo>
+  velocityDetentsForNotes(int track, const std::vector<NoteId> &notes) const;
   const std::vector<NoteId> &selection() const { return m_selection; }
   bool isSelected(const ViewNote &note) const;
   void setSelection(std::vector<NoteId> ids);
@@ -482,9 +493,8 @@ public:
   // ruler grid line and the covered contents (notes and automation
   // points) move with it; the band follows.
   void nudgeTimeSelection(bool right);
-  // Focus-sensitive dispatcher for designated editor surfaces: drawer A/V
-  // keys plus the shared note- and time-selection commands. Returns true
-  // when consumed.
+  // Focus-sensitive dispatcher for shared note- and time-selection commands.
+  // Returns true when consumed.
   bool handleEditKey(QKeyEvent *event);
   // A note transpose auditions until the focused editor surface receives a
   // non-repeating key release.

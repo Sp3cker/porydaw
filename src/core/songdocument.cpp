@@ -798,6 +798,7 @@ void SongDocument::setNotesVelocity(const std::vector<DocNote> &notes, uint8_t v
     pushEdit(tr("set velocity"), std::move(ops));
 }
 
+
 void SongDocument::nudgeNotesVelocity(const std::vector<DocNote> &notes, int delta)
 {
     if (notes.empty() || delta == 0)

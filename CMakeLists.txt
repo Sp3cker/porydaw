@@ -142,10 +142,14 @@ qt_add_library(porydaw_app STATIC
     src/ui/songviewmodel.h
     src/ui/editordrawer.cpp
     src/ui/editordrawer.h
+    src/core/psgvelocitymodel.cpp
+    src/core/psgvelocitymodel.h
     src/ui/songview.cpp
     src/ui/songview.h
     src/ui/velocityarea.cpp
     src/ui/velocityarea.h
+    src/ui/velocityaxis.cpp
+    src/ui/velocityaxis.h
     src/ui/playheadoverlay.cpp
     src/ui/playheadoverlay.h
     src/ui/eventlistview.cpp
@@ -172,6 +176,10 @@ qt_add_executable(porydaw
     src/rollcheckautomation.cpp
     src/rollcheckautomation.h
     src/rollcheck.cpp
+    src/rollcheckpsgvelocity.cpp
+    src/rollcheckpsgvelocity.h
+    src/rollcheckpsgvelocitymixed.cpp
+    src/rollcheckpsgvelocitymixed.h
     src/rollcheckplayhead.cpp
     src/rollcheckplayhead.h
     src/viewcheck.cpp

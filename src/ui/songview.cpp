@@ -1377,7 +1377,42 @@ void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox,
   painter.restore();
 }
 
+
+int activeLaneValue(const SongViewModel &model, int track, uint8_t cc,
+                    uint64_t tick, int defaultValue)
+{
+    const AutoLane *lane = model.findLane(track, cc);
+    if (!lane)
+        return defaultValue;
+    int value = defaultValue;
+    for (const LanePoint &point : lane->points) {
+        if (point.tick > tick)
+            break;
+        value = point.value;
+    }
+    return value;
+}
+
+std::optional<PsgVelocityContext>
+psgVelocityContext(const SongView *sv, int track, uint64_t tick, uint8_t key)
+{
+    const SongDocument *doc = sv ? sv->document() : nullptr;
+    const LoadedVoiceGroup *voicegroup = sv ? sv->voicegroup() : nullptr;
+    if (!doc || !voicegroup || track < 0 || track >= 16)
+        return std::nullopt;
+
+    const int program = sv->programAt(track, tick);
+    if (program < 0 || program >= VOICEGROUP_SIZE)
+        return std::nullopt;
+
+    const ToneData &tone = voicegroup->voices[std::size_t(program)];
+    const SongViewModel &model = sv->model();
+    return makePsgVelocityContext(
+        tone, key, activeLaneValue(model, track, 7, tick, 127),
+        activeLaneValue(model, track, 10, tick, 64), doc->cfg().masterVolume);
+}
 } // namespace
+
 
 // ---------------------------------------------------------------- PianoRoll
 
@@ -1546,6 +1581,8 @@ protected:
     if (hit) {
       const bool rightEdge = nearRightEdge(*hit, event->position());
       const bool leftEdge = nearLeftEdge(*hit, event->position());
+      const int latchedVelocity = m_sv->canonicalNoteVelocity(
+          hit->track, hit->startTick, hit->key, hit->velocity);
       // Ableton-style velocity gesture: with the bound modifier chord
       // held (Ctrl by default), a vertical drag from anywhere on the
       // note adjusts velocity. Deferred like the empty-space press:
@@ -1562,9 +1599,9 @@ protected:
         m_velModPress = true;
         m_velModMods = pressMods;
         m_velAnchor = *hit;
-        m_velAudEff = mid2agbEffectiveVelocity(hit->velocity);
+        m_velAudEff = mid2agbEffectiveVelocity(latchedVelocity);
         m_sv->announceNote(*hit);
-        m_lastVelocity = hit->velocity;
+        m_lastVelocity = uint8_t(latchedVelocity);
         auditionKey(hit->key, hit->velocity);
         m_auditioned = true;
         update();
@@ -1583,10 +1620,10 @@ protected:
       } else if (!m_sv->isSelected(*hit)) {
         m_sv->setSelection({id});
       }
-      m_sv->announceNote(*hit);
-      // Reaper-style velocity latch: touching a note makes its velocity
-      // the default for the next drawn note.
-      m_lastVelocity = hit->velocity;
+      // Reaper-style velocity latch: touching a note makes its audible
+      // velocity class the default for the next drawn note.
+      m_lastVelocity = uint8_t(latchedVelocity);
+      int grabbedVelocity = hit->velocity;
       if (rightEdge) {
         m_drag = Drag::Resize;
         m_gripTick = hit->endTick;
@@ -1598,14 +1635,20 @@ protected:
       } else if (nearVelocityHandle(*hit, event->position())) {
         m_drag = Drag::Velocity;
         m_velAnchor = *hit;
-        m_velAudEff = mid2agbEffectiveVelocity(hit->velocity);
+        m_velAudEff = mid2agbEffectiveVelocity(latchedVelocity);
         beginVelocityDrag();
+        ViewNote preview = *hit;
+        preview.velocity = uint8_t(latchedVelocity);
+        m_sv->announceNote(preview);
+        grabbedVelocity = latchedVelocity;
       } else {
         m_drag = Drag::Move;
       }
+      if (m_drag != Drag::Velocity)
+        m_sv->announceNote(*hit);
       // Sound the grabbed note so a press gives the same pitch feedback
       // a drag already does.
-      auditionKey(hit->key, hit->velocity);
+      auditionKey(hit->key, grabbedVelocity);
       m_auditioned = true;
     } else if (doc) {
       // Empty space: deferred, Reaper-style. A horizontal drag from
@@ -1794,12 +1837,14 @@ protected:
       const int dv = m_pressPos.toPoint().y() - event->pos().y(); // up = louder
       if (dv != m_dVel) {
         m_dVel = dv;
-        const int vel = std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127);
+        const int vel = m_sv->canonicalNoteVelocity(
+            m_velAnchor.track, m_velAnchor.startTick, m_velAnchor.key,
+            int(m_velAnchor.velocity) + m_dVel);
         ViewNote preview = m_velAnchor;
         preview.velocity = uint8_t(vel);
         m_sv->announceNote(preview);
-        // Re-audition whenever the effective (played) velocity moves
-        // to the next mid2agb step.
+        // DirectSound keeps its mid2agb-step transition; CGB detents
+        // change this value only when the hardware class changes.
         const int eff = mid2agbEffectiveVelocity(vel);
         if (eff != m_velAudEff) {
           m_velAudEff = eff;
@@ -1967,10 +2012,26 @@ protected:
       }
       m_sv->setSelection(std::move(ids));
     } else if (doc && drag == Drag::Velocity && m_dVel != 0) {
-      doc->nudgeNotesVelocity(selectedDocumentNotes(*m_sv), m_dVel);
-      // Latch the dragged note's final velocity for the next draw.
-      m_lastVelocity =
-          uint8_t(std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127));
+      const std::vector<DocNote> notes = selectedDocumentNotes(*m_sv);
+      std::vector<SongDocument::NoteVelocity> edits;
+      edits.reserve(notes.size());
+      bool needsExactVelocities = false;
+      for (const DocNote &note : notes) {
+        const int proposed =
+            std::clamp(int(note.velocity) + m_dVel, 1, 127);
+        const uint8_t velocity = uint8_t(m_sv->canonicalNoteVelocity(
+            note.engineTrack, note.tick, note.key, proposed));
+        needsExactVelocities |= velocity != proposed;
+        edits.push_back({note, velocity});
+      }
+      if (needsExactVelocities)
+        doc->setNotesVelocities(edits);
+      else
+        doc->nudgeNotesVelocity(notes, m_dVel);
+      // Latch the dragged note's final detent for the next draw.
+      m_lastVelocity = uint8_t(m_sv->canonicalNoteVelocity(
+          m_velAnchor.track, m_velAnchor.startTick, m_velAnchor.key,
+          int(m_velAnchor.velocity) + m_dVel));
     }
     m_dTick = 0;
     m_dKey = 0;
@@ -2238,8 +2299,7 @@ private:
       if (showVelocityHandles) {
         painter.fillRect(
             velBarRect(noteRect, renderedVelocity, devicePixelRatioF()),
-            mixTowardOklab(SongView::trackColor(note.track), Qt::black,
-                           1.0 / 3.0));
+            trackStemColor(note.track));
       }
 
       // While a velocity drag is live, every current-track note shows
@@ -2367,8 +2427,20 @@ private:
                                SongView::tr("Velocity (1-127):"),
                                notes.front().velocity, 1, 127, 1, &ok);
       if (ok) {
-        doc->setNotesVelocity(notes, uint8_t(velocity));
-        m_lastVelocity = uint8_t(velocity);
+        std::vector<SongDocument::NoteVelocity> edits;
+        edits.reserve(notes.size());
+        bool needsExactVelocities = false;
+        for (const DocNote &note : notes) {
+          const uint8_t snapped = uint8_t(m_sv->canonicalNoteVelocity(
+              note.engineTrack, note.tick, note.key, velocity));
+          needsExactVelocities |= snapped != velocity;
+          edits.push_back({note, snapped});
+        }
+        if (needsExactVelocities)
+          doc->setNotesVelocities(edits);
+        else
+          doc->setNotesVelocity(notes, uint8_t(velocity));
+        m_lastVelocity = edits.front().velocity;
       }
       break;
     }
@@ -2560,9 +2632,10 @@ public:
       return std::nullopt;
     for (const auto &target : m_velocityDragTargets) {
       if (target.id.tick == note.startTick && target.id.key == note.key) {
-        const int vel =
+        const int proposed =
             std::clamp(int(target.originalVelocity) + m_dVel, 1, 127);
-        return uint8_t(vel);
+        return uint8_t(m_sv->canonicalNoteVelocity(
+            note.track, note.startTick, note.key, proposed));
       }
     }
     return std::nullopt;
@@ -4925,6 +4998,57 @@ void TrackHeaderRow::mouseReleaseEvent(QMouseEvent *event) {
 // ------------------------------------------------------------------ SongView
 
 using namespace songview;
+int SongView::canonicalNoteVelocity(int track, uint64_t tick, uint8_t key,
+                                    int proposedVelocity) const
+{
+  const auto context = songview::psgVelocityContext(this, track, tick, key);
+  if (!context)
+    return std::clamp(proposedVelocity, 1, 127);
+  return psgCanonicalVelocity(*context, proposedVelocity);
+}
+
+std::optional<uint8_t>
+SongView::noteVelocityLevel(int track, uint64_t tick, uint8_t key,
+                            int velocity) const
+{
+  const auto context = songview::psgVelocityContext(this, track, tick, key);
+  if (!context)
+    return std::nullopt;
+  return psgVelocityLevel(
+      *context, uint8_t(std::clamp(velocity, 1, 127)));
+}
+
+std::optional<uint8_t>
+SongView::velocityForLevel(int track, uint64_t tick, uint8_t key,
+                           uint8_t requestedLevel) const
+{
+  const auto context = songview::psgVelocityContext(this, track, tick, key);
+  if (!context)
+    return std::nullopt;
+  return psgVelocityForLevel(psgVelocityDetents(*context), requestedLevel);
+}
+
+std::optional<VelocityDetentInfo>
+SongView::velocityDetentsForNotes(
+    int track, const std::vector<NoteId> &notes) const
+{
+  if (notes.empty())
+    return std::nullopt;
+
+  const auto common = songview::psgVelocityContext(
+      this, track, notes.front().tick, notes.front().key);
+  if (!common)
+    return std::nullopt;
+  for (std::size_t i = 1; i < notes.size(); ++i) {
+    const auto context = songview::psgVelocityContext(
+        this, track, notes[i].tick, notes[i].key);
+    if (!context || *context != *common)
+      return std::nullopt;
+  }
+  return psgVelocityDetents(*common);
+}
+
+
 
 SongView::SongView(QWidget *parent) : QWidget(parent) {
   auto *vbox = new QVBoxLayout(this);
@@ -5156,6 +5280,7 @@ void SongView::setEventListVisible(bool visible) {
   if (eventListVisible() == visible)
     return;
   m_rollStack->setCurrentIndex(visible ? 1 : 0);
+  m_editorDrawer->setShortcutsEnabled(!visible);
   if (visible) {
     // The list skips refreshes while hidden; catch up when shown.
     m_events->refresh();
@@ -6040,14 +6165,14 @@ int SongView::transposeStepFor(const QKeyEvent *event) const {
 }
 
 bool SongView::handleEditKey(QKeyEvent *event) {
-  // Only designated editor surfaces call this dispatcher, so plain A/V stay
-  // ordinary text input in inline editors. Modified A/V still reach their
-  // keymap commands (for example, Ctrl+A and Ctrl+V).
+  // Window shortcuts normally consume plain A/V. This fallback keeps the
+  // same behavior in embedded or inactive editor surfaces.
   if ((event->key() == Qt::Key_A || event->key() == Qt::Key_V) &&
       event->modifiers() == Qt::NoModifier) {
     if (!event->isAutoRepeat()) {
-      m_editorDrawer->toggleDrawerPage(event->key() == Qt::Key_A ? DrawerPage::Automations
-                                           : DrawerPage::Velocity);
+      m_editorDrawer->toggleDrawerPage(
+          event->key() == Qt::Key_A ? DrawerPage::Automations
+                                    : DrawerPage::Velocity);
     }
     event->accept();
     return true;
@@ -6368,14 +6493,28 @@ QColor SongView::trackColor(int track) {
 }
 
 QColor SongView::noteColor(int track, int velocity) {
-  if (velocity <= 0)
-    return themes::color(themes::Role::song_view_note_velocity_zero);
-  if (velocity >= 127)
-    return trackColor(track);
-  const double t = 1.0 - (double(velocity) / 127.0);
-  return mixTowardOklab(
-      trackColor(track),
-      themes::color(themes::Role::song_view_note_velocity_zero), t);
+  // 16 identities × 128 velocities; rebuilt when the theme zero-velocity
+  // color changes. Steady-state paint is a table load (mixTowardOklab is
+  // only paid on rebuild).
+  static std::array<std::array<QColor, 128>, themes::trackIdentityColorCount>
+      table;
+  static QRgb zeroKey{};
+
+  const auto &zero =
+      themes::color(themes::Role::song_view_note_velocity_zero);
+  if (zeroKey != zero.rgba()) {
+    zeroKey = zero.rgba();
+    for (std::size_t i = 0; i < table.size(); ++i) {
+      const auto &fill = themes::trackIdentityColor(i);
+      table[i][0] = zero;
+      table[i][127] = fill;
+      for (int v = 1; v < 127; ++v)
+        table[i][static_cast<std::size_t>(v)] =
+            mixTowardOklab(fill, zero, 1.0 - double(v) / 127.0);
+    }
+  }
+  const int v = std::clamp(velocity, 0, 127);
+  return table[trackIdentityIndex(track)][static_cast<std::size_t>(v)];
 }
 
 int SongView::programAt(int track, uint64_t tick) const {

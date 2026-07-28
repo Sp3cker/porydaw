@@ -25,11 +25,14 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <vector>
 
 #include "core/songdocument.h"
 #include "project/decompproject.h"
 #include "rollcheckautomation.h"
+#include "rollcheckpsgvelocity.h"
+#include "project/voicegroupsource.h"
 #include "rollcheckplayhead.h"
 #include "ui/songview.h"
 #include "ui/velocityarea.h"
@@ -206,6 +209,22 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         return 1;
     }
     const QByteArray baseline = doc.smf().write();
+
+    VoicegroupSource voicegroupSource;
+    if (!voicegroupSource.open(projectRoot, doc.cfg().voicegroupArg, &error)) {
+        std::fprintf(stderr, "rollcheck: %s\n", qUtf8Printable(error));
+        return 1;
+    }
+    const QByteArray rootUtf8 = projectRoot.toLocal8Bit();
+    const QByteArray voicegroupName = voicegroupSource.loadName().toLocal8Bit();
+    std::unique_ptr<LoadedVoiceGroup, decltype(&voicegroup_free)> voicegroup(
+        voicegroup_load(rootUtf8.constData(), voicegroupName.constData(), nullptr),
+        &voicegroup_free);
+    if (!voicegroup) {
+        std::fprintf(stderr, "rollcheck: could not load voicegroup %s\n",
+                     voicegroupName.constData());
+        return 1;
+    }
 
     auto timeline = doc.buildTimeline(48000.0);
     SongView view;
@@ -1299,6 +1318,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (doc.undoStack()->count() != preCount + 1)
             fail("a Ctrl-click or jitter pushed an undo command");
     }
+    failures += runRollCheckPsgVelocity(
+        {doc, view, voicegroup.get(), songLabel, track, b.center});
 
     // Edge resize snaps to the ruler's absolute grid, not to grid-sized
     // offsets from the note's own end: give a note an off-grid duration
