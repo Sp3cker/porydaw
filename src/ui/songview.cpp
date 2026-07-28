@@ -1708,9 +1708,21 @@ protected:
                 < QApplication::startDragDistance())
                 return;
             m_velModPress = false;
-            if (!m_sv->isSelected(m_velAnchor))
-                m_sv->setSelection(
-                    {SongView::NoteId{m_velAnchor.startTick, m_velAnchor.key}});
+            if (!m_sv->isSelected(m_velAnchor)) {
+                const SongView::NoteId id{m_velAnchor.startTick,
+                                          m_velAnchor.key};
+                if (m_velModMods & Qt::ControlModifier) {
+                    // Ctrl in the chord: like the Ctrl+edge grab, the
+                    // gesture joins the note to the bulk selection built
+                    // with the same modifier instead of replacing it, and
+                    // the drag then nudges the whole selection.
+                    std::vector<SongView::NoteId> ids = m_sv->selection();
+                    ids.push_back(id);
+                    m_sv->setSelection(std::move(ids));
+                } else {
+                    m_sv->setSelection({id});
+                }
+            }
             m_drag = Drag::Velocity;
             // The pass at the top of this event ran before the drag
             // existed; re-pin the mark to the note's row now.

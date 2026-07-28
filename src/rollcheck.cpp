@@ -51,7 +51,9 @@
 // modifier click without the drag keeps Ctrl's selection toggle, resolved
 // on release. The edge resize grips stay live under Ctrl, but a
 // bulk-select click landing on one joins the note to the selection
-// instead of replacing it, and the drag resizes the whole selection. Ctrl+arrows transpose (Shift: octave)
+// instead of replacing it, and the drag resizes the whole selection;
+// a Ctrl+velocity drag on an unselected note likewise joins it and
+// nudges the whole selection. Ctrl+arrows transpose (Shift: octave)
 // and nudge the selection along the same absolute grid — both the roll's
 // note selection and a multi-track time selection — and the view follows
 // notes moved out of sight with a minimal scroll (flush at the edge, not
@@ -1277,6 +1279,40 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("a sub-threshold Ctrl-jitter changed the velocity");
         if (doc.undoStack()->count() != preCount + 1)
             fail("a Ctrl-click or jitter pushed an undo command");
+
+        // Bulk-selection preservation, mirroring the Ctrl+edge grab: with
+        // note A selected, a Ctrl+velocity drag on unselected note B joins
+        // B to the selection instead of replacing it, and the nudge lands
+        // on BOTH notes in one command.
+        click(roll, a.center); // selection = {A}
+        DocNote aBefore, bBefore;
+        if (!doc.findNote(track, a.tick, uint8_t(a.key), &aBefore) ||
+                !doc.findNote(track, b.tick, uint8_t(b.key), &bBefore))
+            fail("notes A/B went missing before the joined velocity drag");
+        const int joinCount = doc.undoStack()->count();
+        sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                  Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, b.center + QPoint(0, 15),
+                  Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15),
+                  Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+        const SongView::NoteId aId{uint32_t(a.tick), uint8_t(a.key)};
+        const std::vector<SongView::NoteId> &joined = view.selection();
+        if (joined.size() != 2 ||
+                std::find(joined.begin(), joined.end(), aId) == joined.end() ||
+                std::find(joined.begin(), joined.end(), bId) == joined.end())
+            fail("a Ctrl+velocity drag replaced the bulk selection");
+        DocNote aAfter, bAfter;
+        if (!doc.findNote(track, a.tick, uint8_t(a.key), &aAfter) ||
+                aAfter.velocity != aBefore.velocity - 15)
+            fail("the joined Ctrl+velocity drag did not nudge the other note");
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bAfter) ||
+                bAfter.velocity != bBefore.velocity - 15)
+            fail("the joined Ctrl+velocity drag did not nudge the grabbed note");
+        if (doc.undoStack()->count() != joinCount + 1)
+            fail("the joined velocity drag did not push exactly one command");
+        doc.undoStack()->undo(); // restore both velocities for later checks
+        view.clearSelection();
     }
 
     // Edge resize snaps to the ruler's absolute grid, not to grid-sized
