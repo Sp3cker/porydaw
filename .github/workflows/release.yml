@@ -132,7 +132,15 @@ jobs:
         run: cmake --build build -j3
 
       - name: Create Disk Image
-        run: macdeployqt build/porydaw.app -dmg
+        # macdeployqt adds Qt frameworks/plugins to the bundle, which breaks
+        # the ad-hoc signature the linker gave the binary; Gatekeeper then
+        # refuses the app ("code has no resources but signature indicates
+        # they must be present"). -codesign=- re-signs the whole bundle
+        # ad-hoc after deployment, before the dmg is built. The verify step
+        # fails the job if the seal is still broken.
+        run: |
+          macdeployqt build/porydaw.app -dmg -codesign=-
+          codesign --verify --deep --strict --verbose=2 build/porydaw.app
 
       - name: Prep Release Directory
         run: |

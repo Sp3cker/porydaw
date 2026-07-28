@@ -7,6 +7,8 @@
  - [Download Porydaw for macOS (intel)](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-x86_64.zip).
  - [Download Porydaw for Linux](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-linux.zip) (AppImage).
 
+**macOS users**: Porydaw is not notarized with Apple, so macOS quarantines the downloaded app and blocks the first launch. To allow it, try to open the app once, then go to System Settings → Privacy & Security, scroll down to the message about porydaw, and click **Open Anyway**. Alternatively, run `xattr -d com.apple.quarantine /Applications/porydaw.app` in Terminal.
+
 Building from source requires CMake 3.21+, a C11/C++17 compiler, and Qt 6.2 or newer (Widgets).
 
 Porydaw embeds the [poryaaaa](https://github.com/huderlem/poryaaaa) engine as a git submodule, so clone with `--recursive`. If you already cloned without it, run `git submodule update --init` inside the repository.
