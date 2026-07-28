@@ -236,6 +236,9 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
 - **Center — Arrangement + Piano roll:** track headers (≤ 16 tracks; name, instrument,
   mute/solo, volume/pan mini-controls) beside a shared-timeline piano roll. Selected
   track is editable; other tracks ghosted. Loop region rendered from `[`/`]` markers.
+  View → Color Notes by Velocity (app-wide, persisted) swaps the selected track's
+  note fills from track-identity color to a velocity hue ramp — purple `#5f44e9`
+  (velocity 1) through the spectrum to red `#e90904` (127); ghost notes unchanged.
 - **Bottom — Automation lanes:** per-track, addable from the m4a parameter list (§4.2),
   drawn as line/step editors. Tempo lane always available at the top level. 0-based CC
   lanes have a zoomable value axis (gutter menu → Value range: auto-fit or a fixed

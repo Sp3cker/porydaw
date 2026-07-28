@@ -57,6 +57,8 @@ const Def kDefs[] = {
      QKeySequence::UnknownKey, ""},
     {"view.event_list", Context::Global, QT_TR_NOOP("View"),
      QT_TR_NOOP("MIDI Event List"), QKeySequence::UnknownKey, "Ctrl+Shift+E"},
+    {"view.velocity_colors", Context::Global, QT_TR_NOOP("View"),
+     QT_TR_NOOP("Color Notes by Velocity"), QKeySequence::UnknownKey, ""},
     // Tools
     {"tools.import_sample", Context::Global, QT_TR_NOOP("Tools"),
      QT_TR_NOOP("Import Sample"), QKeySequence::UnknownKey, ""},

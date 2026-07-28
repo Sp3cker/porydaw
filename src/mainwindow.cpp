@@ -83,6 +83,7 @@ constexpr int kVoiceEditCommandId = 0x7661; // 'va': voice-edit merge id
 
 const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
 const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
+const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
 
 #ifdef Q_OS_WIN
 // These names and values come from the current Windows SDK. The bundled
@@ -645,6 +646,28 @@ void MainWindow::buildUi()
     polyDockAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+P")));
     viewMenu->addAction(polyDockAction);
 
+    // Last View item, set off by a separator: velocity-hue note fills. An
+    // app-wide reading preference (like the theme), not per-song view
+    // state: it persists in QSettings and applies to every open tab at
+    // once.
+    viewMenu->addSeparator();
+    m_velocityColorsAction = viewMenu->addAction(tr("Color Notes by &Velocity"));
+    m_velocityColorsAction->setCheckable(true);
+    keys.attach(QStringLiteral("view.velocity_colors"), m_velocityColorsAction);
+    {
+        QSettings settings;
+        m_velocityColorsAction->setChecked(
+            settings.value(kVelocityColorsKey, false).toBool());
+    }
+    connect(m_velocityColorsAction, &QAction::toggled, this, [this](bool on) {
+        QSettings settings;
+        settings.setValue(kVelocityColorsKey, on);
+        for (int i = 0; i < m_tabs->count(); i++) {
+            if (SongSession *s = sessionForWidget(m_tabs->widget(i)))
+                s->view->setVelocityColorMode(on);
+        }
+    });
+
     // Song tabs: each open song lives in its own tab with its own view,
     // document, and undo stack.
     m_tabs = new QTabWidget(this);
@@ -799,6 +822,7 @@ SongSession *MainWindow::createSession()
     auto owned = std::make_unique<SongSession>();
     SongSession *s = owned.get();
     s->view = new SongView;
+    s->view->setVelocityColorMode(m_velocityColorsAction->isChecked());
     connect(s->view, &SongView::muteMaskChanged, this, [this, s](uint32_t mask) {
         if (s == m_active)
             m_audio.setMuteMask(mask);

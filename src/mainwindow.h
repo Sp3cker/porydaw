@@ -333,6 +333,7 @@ private:
     QAction *m_exportWavAction = nullptr;
     QAction *m_settingsAction = nullptr;
     QAction *m_eventListAction = nullptr;
+    QAction *m_velocityColorsAction = nullptr;
     QLabel *m_masterVolCaption = nullptr;
     QSpinBox *m_masterVolSpin = nullptr;
     QLabel *m_timeLabel = nullptr;

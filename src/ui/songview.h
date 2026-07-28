@@ -216,6 +216,15 @@ public:
 
     static QColor trackColor(int track);
     static QColor noteColor(int track, int velocity);
+    // Velocity-hue display mode (View menu, app-wide): the active track's
+    // note fills take their hue from velocity — purple (1) sweeping the long
+    // way around the wheel to red (127) — instead of the track identity.
+    // Ghost notes and every other identity-colored surface are unchanged.
+    static QColor velocityNoteColor(int velocity);
+    bool velocityColorMode() const { return m_velocityColorMode; }
+    void setVelocityColorMode(bool on);
+    // The active-track note fill under the current display mode.
+    QColor noteFillColor(int track, int velocity) const;
     // The track's program at the display position — the playhead while
     // playing, the edit cursor otherwise — so the header label follows the
     // song's voice changes. Before the first change it stays firstProgram
@@ -548,6 +557,7 @@ private:
     uint32_t m_trackSelMask = 0; // header multi-selection (see trackSelectionMask)
     GridFeel m_gridFeel = GridFeel::Straight;
     int m_gridMinDenom = 0; // note denominator; 0 = clock-grid floor
+    bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)
     std::vector<std::pair<int, uint8_t>> m_emptyLanes; // (track, cc), unsorted
 
     songview::TimeRuler *m_ruler = nullptr;

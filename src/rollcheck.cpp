@@ -960,7 +960,67 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         || ghostBottomEdge != ghostBottomInterior)
       fail("ghost note face edge does not match adjacent interior pixel");
 
+    // Velocity-color display mode (View menu, app-wide): the active track's
+    // note fills take their hue from velocity — exact purple and red
+    // endpoints, the hue falling monotonically through the spectrum between
+    // — while ghost notes keep the identity rendering byte-for-byte.
+    if (SongView::velocityNoteColor(1) != QColor(0x5f, 0x44, 0xe9))
+      fail("velocity 1 fill is not the purple endpoint #5f44e9");
+    if (SongView::velocityNoteColor(127) != QColor(0xe9, 0x09, 0x04))
+      fail("velocity 127 fill is not the red endpoint #e90904");
+    if (SongView::velocityNoteColor(0)
+        != themes::color(themes::Role::song_view_note_velocity_zero))
+      fail("velocity 0 fill is not the theme neutral");
+    for (int velocity = 2; velocity <= 127; ++velocity) {
+      const QColor lower = SongView::velocityNoteColor(velocity - 1);
+      const QColor upper = SongView::velocityNoteColor(velocity);
+      if (upper.alpha() != 255) {
+        fail("velocity fill is not opaque");
+        break;
+      }
+      if (upper.hsvHueF() > lower.hsvHueF()) {
+        fail("velocity hue does not fall monotonically from purple to red");
+        break;
+      }
+    }
+
+    // noteA is a ghost while ghostTrack is selected: flipping the mode must
+    // not move a single sampled ghost pixel.
+    view.setVelocityColorMode(true);
+    QImage ghostVelocityRender(roll->size(),
+                               QImage::Format_ARGB32_Premultiplied);
+    ghostVelocityRender.fill(Qt::transparent);
+    roll->render(&ghostVelocityRender);
+    if (ghostVelocityRender.pixel(paintedNoteBox.center().x(),
+                                  paintedNoteBox.top()) != ghostTopEdge
+        || ghostVelocityRender.pixel(paintedNoteBox.center().x(),
+                                     paintedNoteBox.top() + 2)
+            != ghostTopInterior
+        || ghostVelocityRender.pixel(paintedNoteBox.center().x(),
+                                     paintedNoteBox.bottom()) != ghostBottomEdge
+        || ghostVelocityRender.pixel(paintedNoteBox.center().x(),
+                                     paintedNoteBox.bottom() - 2)
+            != ghostBottomInterior)
+      fail("velocity-color mode changed a ghost note's rendering");
+
     view.selectTrack(selectedTrackBeforeGhostProbe);
+    QImage velocityModeRender(roll->size(),
+                              QImage::Format_ARGB32_Premultiplied);
+    velocityModeRender.fill(Qt::transparent);
+    roll->render(&velocityModeRender);
+    if (QColor(velocityModeRender.pixel(noteInteriorSample))
+        != SongView::velocityNoteColor(100))
+      fail("velocity-mode note interior does not match velocityNoteColor(100)");
+
+    view.setVelocityColorMode(false);
+    QImage identityRestoredRender(roll->size(),
+                                  QImage::Format_ARGB32_Premultiplied);
+    identityRestoredRender.fill(Qt::transparent);
+    roll->render(&identityRestoredRender);
+    if (QColor(identityRestoredRender.pixel(noteInteriorSample))
+        != expectedNoteColor)
+      fail("disabling velocity-color mode did not restore identity fills");
+
     // Click latch: give note A a distinctive velocity behind the view's
     // back, click it, and the next drawn note must inherit it.
     doc.setNotesVelocity({noteA}, 73);

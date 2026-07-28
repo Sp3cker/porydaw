@@ -2437,17 +2437,21 @@ private:
                 renderedVelocity =
                     std::clamp(int(note.velocity) + m_dVel, 1, 127);
             }
-            painter.fillRect(
-                noteBox, SongView::noteColor(note.track, renderedVelocity));
+            const QColor fill =
+                m_sv->noteFillColor(note.track, renderedVelocity);
+            painter.fillRect(noteBox, fill);
 
             // Mixing one-third toward black in OKLab keeps the bar distinct
-            // without rotating the track identity hue.
+            // without rotating the identity hue. In velocity-color mode the
+            // full-strength fill already is the identity.
             if (showVelocityHandles) {
+                const QColor identity = m_sv->velocityColorMode()
+                    ? fill
+                    : SongView::trackColor(note.track);
                 painter.fillRect(
                     velBarRect(noteRect, renderedVelocity,
                                devicePixelRatioF()),
-                    mixTowardOklab(SongView::trackColor(note.track), Qt::black,
-                                   1.0 / 3.0));
+                    mixTowardOklab(identity, Qt::black, 1.0 / 3.0));
             }
 
             // While a velocity drag is live, every current-track note shows
@@ -2457,7 +2461,15 @@ private:
                 if (noteRect.width()
                     >= painter.fontMetrics().horizontalAdvance(velocityText)
                         + 4) {
-                    painter.setPen(trackTextColor(note.track));
+                    // Velocity fills span the whole spectrum, so no single
+                    // paired text color works; pick the stronger of b/w.
+                    painter.setPen(
+                        m_sv->velocityColorMode()
+                            ? (themes::contrastRatio(fill, Qt::white)
+                                       >= themes::contrastRatio(fill, Qt::black)
+                                   ? QColor(Qt::white)
+                                   : QColor(Qt::black))
+                            : trackTextColor(note.track));
                     painter.drawText(noteRect, Qt::AlignCenter, velocityText);
                 }
             }
@@ -2500,7 +2512,7 @@ private:
             double(m_drawTick + uint64_t(m_drawDur)), kKeyboardW, dpr);
         const QRectF r = noteRect(x0, x1, m_drawKey);
         const QRectF box = noteBox(r);
-        p.fillRect(box, SongView::noteColor(selected, m_lastVelocity));
+        p.fillRect(box, m_sv->noteFillColor(selected, m_lastVelocity));
         drawNoteBoxBorder(p, box, false);
     }
 
@@ -6206,6 +6218,44 @@ QColor SongView::noteColor(int track, int velocity)
     return mixTowardOklab(
         trackColor(track),
         themes::color(themes::Role::song_view_note_velocity_zero), t);
+}
+
+QColor SongView::velocityNoteColor(int velocity)
+{
+    if (velocity <= 0)
+        return themes::color(themes::Role::song_view_note_velocity_zero);
+    // Purple's hue (~250°) interpolates linearly down to red's (~1°), which
+    // is the long way around the wheel — through blue, green, and yellow —
+    // so the full spectrum spreads across the velocity range.
+    static const QColor kMinVelocity(0x5f, 0x44, 0xe9);
+    static const QColor kMaxVelocity(0xe9, 0x09, 0x04);
+    if (velocity <= 1)
+        return kMinVelocity;
+    if (velocity >= 127)
+        return kMaxVelocity;
+    const float t = float(velocity - 1) / 126.0f;
+    float h0, s0, v0, h1, s1, v1;
+    kMinVelocity.getHsvF(&h0, &s0, &v0);
+    kMaxVelocity.getHsvF(&h1, &s1, &v1);
+    // Quantize to 8-bit RGB: QColor equality is spec- and depth-sensitive,
+    // and callers compare against rendered pixels.
+    return QColor(QColor::fromHsvF(h0 + (h1 - h0) * t, s0 + (s1 - s0) * t,
+                                   v0 + (v1 - v0) * t)
+                      .rgb());
+}
+
+void SongView::setVelocityColorMode(bool on)
+{
+    if (m_velocityColorMode == on)
+        return;
+    m_velocityColorMode = on;
+    m_roll->update();
+}
+
+QColor SongView::noteFillColor(int track, int velocity) const
+{
+    return m_velocityColorMode ? velocityNoteColor(velocity)
+                               : noteColor(track, velocity);
 }
 
 int SongView::currentProgram(int track) const
