@@ -10,19 +10,16 @@ Porydaw is designed for both music beginners and power users who are familiar wi
 
 View the [Changelog][changelog] to see what's new.
 
+## Download
 
-## Building
+Download Porydaw below to start using it immediately. Older versions of Porydaw may be downloaded from the [Releases][releases] page.
 
-Requires CMake 3.21+, a C11/C++17 compiler, and Qt 6 (Widgets).
+ - [Download Porydaw for Windows](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-windows.zip).
+ - [Download Porydaw for macOS (arm)](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-arm64.zip).
+ - [Download Porydaw for macOS (intel)](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-x86_64.zip).
+ - [Download Porydaw for Linux](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-linux.zip) (AppImage).
 
-```sh
-git clone --recursive https://github.com/huderlem/porydaw.git
-cd porydaw
-cmake -B build
-cmake --build build
-```
-
-If you cloned without `--recursive`, run `git submodule update --init` first.
+Read [INSTALL.md](INSTALL.md) for instructions on how to compile Porydaw from source.
 
 ## License
 
@@ -37,3 +34,4 @@ Porydaw's code has been built with heavy usage of Claude Code--bootstrapped with
 [pokeemerald]: https://github.com/pret/pokeemerald
 [pokefirered]: https://github.com/pret/pokefirered
 [changelog]: https://github.com/huderlem/porydaw/blob/main/CHANGELOG.md
+[releases]: https://github.com/huderlem/porydaw/releases
