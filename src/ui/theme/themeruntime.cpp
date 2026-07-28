@@ -73,7 +73,7 @@ QString trackHeaderStyleSheet(const Theme &theme) {
   return QStringLiteral("QWidget#trackHeaderPanel{background-color:%1;color:%2;"
                         "border-color:%3;}"
                         "QLabel#polyphonyPcmValue,QLabel#polyphonyCgbValue,"
-                        "QLabel#polyphonyLostValue{"
+                        "QLabel#polyphonyLostValue,QLabel#noteInfoValue{"
                         "background-color:%4;color:%5;}")
       .arg(colorName(theme, Role::track_header_panel_background))
       .arg(colorName(theme, Role::track_header_panel_text))
@@ -137,33 +137,34 @@ QString tabStyleSheet(const Theme &theme) {
 }
 
 QString buttonStyleSheet(const Theme &theme) {
-  const QString buttons = QStringLiteral(
-             "QPushButton,QToolButton{background-color:%1;color:%2;"
-             "border-color:%3;}"
-             "QPushButton:hover,QToolButton:hover{background-color:%4;"
-             "color:%5;border-color:%3;}"
-             "QPushButton:focus,QToolButton:focus{border-color:%6;}"
-             "QPushButton:pressed,QPushButton:checked,QToolButton:pressed,"
-             "QToolButton:checked{background-color:%7;color:%8;"
-             "border-color:%3;}"
-             "QPushButton:disabled,QToolButton:disabled{background-color:%1;"
-             "color:%9;border-color:%3;}")
-      .arg(colorName(theme, Role::button_background))
-      .arg(colorName(theme, Role::button_text))
-      .arg(colorName(theme, Role::button_outline))
-      .arg(colorName(theme, Role::button_hover_background))
-      .arg(colorName(theme, Role::button_hover_text))
-      .arg(colorName(theme, Role::focus_outline))
-      .arg(colorName(theme, Role::button_pressed_background))
-      .arg(colorName(theme, Role::button_pressed_text))
-      .arg(colorName(theme, Role::disabled_text));
-  return buttons
-      + QStringLiteral(
-            "QToolButton#automationDrawerTab:checked{"
-            "background-color:%1;color:%2;border-color:%3;}")
-            .arg(colorName(theme, Role::item_selected_background))
-            .arg(colorName(theme, Role::item_selected_text))
-            .arg(colorName(theme, Role::button_outline));
+  const QString buttons =
+      QStringLiteral(
+          "QPushButton,QToolButton{background-color:%1;color:%2;"
+          "border-color:%3;}"
+          "QPushButton:hover,QToolButton:hover{background-color:%4;"
+          "color:%5;border-color:%3;}"
+          "QPushButton:focus,QToolButton:focus{border-color:%6;}"
+          "QPushButton:pressed,QPushButton:checked,QToolButton:pressed,"
+          "QToolButton:checked{background-color:%7;color:%8;"
+          "border-color:%3;}"
+          "QPushButton:disabled,QToolButton:disabled{background-color:%1;"
+          "color:%9;border-color:%3;}")
+          .arg(colorName(theme, Role::button_background))
+          .arg(colorName(theme, Role::button_text))
+          .arg(colorName(theme, Role::button_outline))
+          .arg(colorName(theme, Role::button_hover_background))
+          .arg(colorName(theme, Role::button_hover_text))
+          .arg(colorName(theme, Role::focus_outline))
+          .arg(colorName(theme, Role::button_pressed_background))
+          .arg(colorName(theme, Role::button_pressed_text))
+          .arg(colorName(theme, Role::disabled_text));
+  return buttons +
+         QStringLiteral("QToolButton#automationDrawerTab:checked,QToolButton#"
+                        "velocityDrawerTab:checked{"
+                        "background-color:%1;color:%2;border-color:%3;}")
+             .arg(colorName(theme, Role::item_selected_background))
+             .arg(colorName(theme, Role::item_selected_text))
+             .arg(colorName(theme, Role::button_outline));
 }
 
 QString trackControlStyleSheet(const Theme &theme) {

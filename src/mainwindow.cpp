@@ -667,6 +667,76 @@ void MainWindow::buildUi()
     polyLayout->addWidget(m_polyLostCaption);
     statusBar()->addPermanentWidget(m_polyMeter);
     m_polyMeter->hide();
+    // Status bar: note info widget (monospaced fixed-width value chips)
+    m_noteInfoWidget = new QWidget(this);
+    auto *noteLayout = new QHBoxLayout(m_noteInfoWidget);
+    noteLayout->setContentsMargins(0, 0, 0, 0);
+    noteLayout->setSpacing(::layout::space(::layout::Space::Half));
+
+    m_noteKeyLabel = new QLabel(m_noteInfoWidget);
+    m_noteKeyLabel->setFont(valueFont);
+    m_noteKeyLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    m_noteKeyLabel->setFixedWidth(
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("G#-1")));
+    auto *sepVel = new QLabel(QStringLiteral("· velocity"), m_noteInfoWidget);
+    m_noteVelLabel = new QLabel(m_noteInfoWidget);
+    m_noteVelLabel->setObjectName(QStringLiteral("noteInfoValue"));
+    m_noteVelLabel->setFont(valueFont);
+    m_noteVelLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_noteVelLabel->setAttribute(Qt::WA_StyledBackground);
+    m_noteVelLabel->setContentsMargins(fieldInset, 0, fieldInset, 0);
+    m_noteVelLabel->setFixedWidth(
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("127")) +
+        2 * fieldInset);
+
+    auto *sepPlays = new QLabel(QStringLiteral("→ plays"), m_noteInfoWidget);
+    m_noteEffVelLabel = new QLabel(m_noteInfoWidget);
+    m_noteEffVelLabel->setObjectName(QStringLiteral("noteInfoValue"));
+    m_noteEffVelLabel->setFont(valueFont);
+    m_noteEffVelLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_noteEffVelLabel->setAttribute(Qt::WA_StyledBackground);
+    m_noteEffVelLabel->setContentsMargins(fieldInset, 0, fieldInset, 0);
+    m_noteEffVelLabel->setFixedWidth(
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("127")) +
+        2 * fieldInset);
+
+    auto *sepLength = new QLabel(QStringLiteral("· length"), m_noteInfoWidget);
+    m_noteTicksLabel = new QLabel(m_noteInfoWidget);
+    m_noteTicksLabel->setObjectName(QStringLiteral("noteInfoValue"));
+    m_noteTicksLabel->setFont(valueFont);
+    m_noteTicksLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_noteTicksLabel->setAttribute(Qt::WA_StyledBackground);
+    m_noteTicksLabel->setContentsMargins(fieldInset, 0, fieldInset, 0);
+    m_noteTicksLabel->setFixedWidth(
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("99999")) +
+        2 * fieldInset);
+
+    auto *sepClocks = new QLabel(QStringLiteral("ticks →"), m_noteInfoWidget);
+    m_noteClocksLabel = new QLabel(m_noteInfoWidget);
+    m_noteClocksLabel->setObjectName(QStringLiteral("noteInfoValue"));
+    m_noteClocksLabel->setFont(valueFont);
+    m_noteClocksLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_noteClocksLabel->setAttribute(Qt::WA_StyledBackground);
+    m_noteClocksLabel->setContentsMargins(fieldInset, 0, fieldInset, 0);
+    m_noteClocksLabel->setFixedWidth(
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("99999")) +
+        2 * fieldInset);
+
+    auto *sepClocksEnd = new QLabel(QStringLiteral("clocks"), m_noteInfoWidget);
+
+    noteLayout->addWidget(m_noteKeyLabel);
+    noteLayout->addWidget(sepVel);
+    noteLayout->addWidget(m_noteVelLabel);
+    noteLayout->addWidget(sepPlays);
+    noteLayout->addWidget(m_noteEffVelLabel);
+    noteLayout->addWidget(sepLength);
+    noteLayout->addWidget(m_noteTicksLabel);
+    noteLayout->addWidget(sepClocks);
+    noteLayout->addWidget(m_noteClocksLabel);
+    noteLayout->addWidget(sepClocksEnd);
+
+    statusBar()->addWidget(m_noteInfoWidget);
+    m_noteInfoWidget->hide();
 
     // Initial focus goes to the song list (via the panel's focus proxy), not
     // its filter box — first in tab order, which otherwise wins on show and
@@ -782,8 +852,26 @@ SongSession *MainWindow::createSession()
                 if (s == m_active && m_audioOk)
                     m_audio.previewVoice(uint8_t(voice), uint8_t(key), uint8_t(velocity));
             });
+    connect(s->view, &SongView::noteAnnounced, this,
+            [this, s](const QString &keyName, int vel, int effVel, int64_t ticks,
+                      int64_t effClocks) {
+                if (s != m_active)
+                    return;
+                statusBar()->clearMessage();
+                m_noteKeyLabel->setText(keyName);
+                m_noteVelLabel->setText(QString::number(vel));
+                m_noteEffVelLabel->setText(QString::number(effVel));
+                m_noteTicksLabel->setText(QString::number(ticks));
+                m_noteClocksLabel->setText(QString::number(effClocks));
+                m_noteInfoWidget->show();
+            });
     connect(s->view, &SongView::statusMessage, this,
-            [this](const QString &text) { statusBar()->showMessage(text, 6000); });
+            [this, s](const QString &text) {
+                if (s != m_active)
+                    return;
+                m_noteInfoWidget->hide();
+                statusBar()->showMessage(text, 6000);
+            });
     // Jump-from-context voice navigation (header voice line, event list):
     // raise the dock and select the slot. No keyboard focus moves — Space
     // and the roll's shortcuts keep working.

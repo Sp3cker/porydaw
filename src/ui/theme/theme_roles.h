@@ -158,6 +158,7 @@ enum class Role {
   song_view_selection_fill,
   song_view_selection_edge,
   song_view_note_velocity_zero,
+  song_view_velocity_node,
   song_view_loop_marker,
   song_view_edit_cursor,
   song_view_edit_preview_outline,

@@ -178,19 +178,17 @@ void checkEventListRendering(SongView &view,
     const qreal playheadX = marker.mapTo(&view, QPoint()).x() + stoppedMarkerCenter;
     view.setEventListVisible(true);
     processPaints();
-    QRect eventListArea =
-        QRect(events->mapTo(&view, QPoint()), events->size())
-            .intersected(view.rect());
-    // The automation drawer is an overlay on the lower part of the roll
-    // stack, including when the event list page is active. Its playhead line
-    // is valid; restrict the event-list assertion to the uncovered portion.
+    QRect eventListArea = QRect(events->mapTo(&view, QPoint()), events->size())
+                              .intersected(view.rect());
+    // The editor drawer overlays the lower part of the roll stack, including
+    // when the event list page is active. Its playhead line is valid; restrict
+    // the event-list assertion to the uncovered portion.
     if (auto *drawer =
-            view.findChild<QWidget *>(QStringLiteral("automationDrawer"));
+            view.findChild<QWidget *>(QStringLiteral("editorDrawer"));
         drawer && drawer->isVisible()) {
-        const QRect drawerArea(
-            drawer->mapTo(&view, QPoint()), drawer->size());
-        if (drawerArea.intersects(eventListArea))
-            eventListArea.setBottom(drawerArea.top() - 1);
+      const QRect drawerArea(drawer->mapTo(&view, QPoint()), drawer->size());
+      if (drawerArea.intersects(eventListArea))
+        eventListArea.setBottom(drawerArea.top() - 1);
     }
     const QPixmap composedPixmap = view.grab();
     const QImage composedImage = composedPixmap.toImage();

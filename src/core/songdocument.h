@@ -148,6 +148,11 @@ public:
     void setNotesVelocity(const std::vector<DocNote> &notes, uint8_t velocity);
     // Relative velocity change, clamped to 1-127 per note.
     void nudgeNotesVelocity(const std::vector<DocNote> &notes, int delta);
+    struct NoteVelocity {
+      DocNote note;
+      uint8_t velocity;
+    };
+    void setNotesVelocities(const std::vector<NoteVelocity> &edits);
 
     void addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value);
     // Gesture write (freehand sweep / line ramp): replaces every point of the

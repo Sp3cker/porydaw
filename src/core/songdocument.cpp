@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <algorithm>
 #include <map>
+#include <set>
 
 #include "core/miditimeline.h"
 #include "project/songregistry.h"
@@ -868,37 +869,63 @@ void SongDocument::nudgeNotesVelocity(const std::vector<DocNote> &notes, int del
         op.type = EditOp::ModifyEvent;
         op.smfTrack = note.smfTrack;
         op.index = note.onIndex;
-        op.event = makeChannelEvent(0x9, note.channel, note.tick, note.key,
-                                    uint8_t(std::clamp(int(note.velocity) + delta, 1, 127)));
+        op.event = makeChannelEvent(
+            0x9, note.channel, note.tick, note.key,
+            uint8_t(std::clamp(int(note.velocity) + delta, 1, 127)));
         ops.push_back(op);
     }
     pushEdit(tr("adjust velocity"), std::move(ops));
 }
+void SongDocument::setNotesVelocities(const std::vector<NoteVelocity> &edits) {
+  if (edits.empty())
+    return;
+  std::vector<EditOp> ops;
+  std::set<std::pair<int, size_t>> seen;
+  for (const NoteVelocity &edit : edits) {
+    std::pair<int, size_t> key{edit.note.smfTrack, edit.note.onIndex};
+    if (!seen.insert(key).second)
+      continue;
+    uint8_t newVel = std::clamp<uint8_t>(edit.velocity, 1, 127);
+    if (newVel == edit.note.velocity)
+      continue;
+    EditOp op;
+    op.type = EditOp::ModifyEvent;
+    op.smfTrack = edit.note.smfTrack;
+    op.index = edit.note.onIndex;
+    op.event = makeChannelEvent(0x9, edit.note.channel, edit.note.tick,
+                                edit.note.key, newVel);
+    ops.push_back(op);
+  }
+  if (ops.empty())
+    return;
+  pushEdit(tr("paint note velocities"), std::move(ops));
+}
 
 SmfEvent SongDocument::makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick,
-                                     int value) const
-{
-    if (cc == DOC_CC_TEMPO) {
-        SmfEvent ev;
-        ev.tick = tick;
-        ev.status = 0xFF;
-        ev.metaType = 0x51;
-        const uint32_t usPerBeat =
-            uint32_t(60000000.0 / double(std::clamp(value, 1, 999)) + 0.5);
-        ev.blob.resize(3);
-        ev.blob[0] = char((usPerBeat >> 16) & 0xFF);
-        ev.blob[1] = char((usPerBeat >> 8) & 0xFF);
-        ev.blob[2] = char(usPerBeat & 0xFF);
-        return ev;
-    }
-    if (cc == DOC_CC_BEND) {
-        const int bend14 = std::clamp(value, -8192, 8191) + 8192;
-        return makeChannelEvent(0xE, channel, tick, uint8_t(bend14 & 0x7F),
-                                uint8_t((bend14 >> 7) & 0x7F));
-    }
-    if (cc == DOC_CC_VOICE)
-        return makeChannelEvent(0xC, channel, tick, uint8_t(std::clamp(value, 0, 127)), 0);
-    return makeChannelEvent(0xB, channel, tick, cc, uint8_t(std::clamp(value, 0, 127)));
+                                     int value) const {
+  if (cc == DOC_CC_TEMPO) {
+    SmfEvent ev;
+    ev.tick = tick;
+    ev.status = 0xFF;
+    ev.metaType = 0x51;
+    const uint32_t usPerBeat =
+        uint32_t(60000000.0 / double(std::clamp(value, 1, 999)) + 0.5);
+    ev.blob.resize(3);
+    ev.blob[0] = char((usPerBeat >> 16) & 0xFF);
+    ev.blob[1] = char((usPerBeat >> 8) & 0xFF);
+    ev.blob[2] = char(usPerBeat & 0xFF);
+    return ev;
+  }
+  if (cc == DOC_CC_BEND) {
+    const int bend14 = std::clamp(value, -8192, 8191) + 8192;
+    return makeChannelEvent(0xE, channel, tick, uint8_t(bend14 & 0x7F),
+                            uint8_t((bend14 >> 7) & 0x7F));
+  }
+  if (cc == DOC_CC_VOICE)
+    return makeChannelEvent(0xC, channel, tick,
+                            uint8_t(std::clamp(value, 0, 127)), 0);
+  return makeChannelEvent(0xB, channel, tick, cc,
+                          uint8_t(std::clamp(value, 0, 127)));
 }
 
 void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value)

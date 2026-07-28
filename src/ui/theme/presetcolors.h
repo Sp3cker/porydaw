@@ -101,15 +101,16 @@ enum class PresetColor {
   /// domain color, kept legible on the item and alternate surfaces.
   sample_loop_handle,
   /// Sample Editor seam-end trace: the red domain color, kept legible on the
-  /// seam inset's alternate surface.
   sample_seam_end_ink,
+  /// SongView velocity bars and node handles.
+  velocity_node,
   /// Sentinel for the number of authored preset colors; not rendered.
   count,
 };
 
 inline constexpr auto presetColorCount =
     static_cast<std::size_t>(PresetColor::count);
-static_assert(presetColorCount == 36);
+static_assert(presetColorCount == 37);
 
 constexpr PresetColor presetColorFor(Role role);
 
@@ -269,6 +270,7 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::selection_background,
     PresetColor::accent,
     PresetColor::disabled_text,
+    PresetColor::velocity_node,
     PresetColor::selection_background,
     PresetColor::window_text,
     PresetColor::window_text,
@@ -346,6 +348,7 @@ constexpr PresetColors makeVanilla() {
   colors.color(PresetColor::sample_crop_handle) = "#92681F";
   colors.color(PresetColor::sample_loop_handle) = "#2A7292";
   colors.color(PresetColor::sample_seam_end_ink) = "#C54444";
+  colors.color(PresetColor::velocity_node) = "#E95449";
   return colors;
 }
 
@@ -399,6 +402,7 @@ constexpr PresetColors makeDarkNeutralHigh() {
   colors.color(PresetColor::sample_crop_handle) = "#E0A030";
   colors.color(PresetColor::sample_loop_handle) = "#4AB4E2";
   colors.color(PresetColor::sample_seam_end_ink) = "#F08D8D";
+  colors.color(PresetColor::velocity_node) = "#E95449";
   return colors;
 }
 
@@ -449,6 +453,7 @@ constexpr PresetColors makeImmaterial() {
   colors.color(PresetColor::sample_crop_handle) = "#E0A030";
   colors.color(PresetColor::sample_loop_handle) = "#40B0E0";
   colors.color(PresetColor::sample_seam_end_ink) = "#EF8585";
+  colors.color(PresetColor::velocity_node) = "#E95449";
   return colors;
 }
 
