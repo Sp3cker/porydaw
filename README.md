@@ -1,11 +1,14 @@
 # Porydaw
 
-It's like [Porymap](https://github.com/huderlem/porymap), but for music.  An easy-to-use DAW for Gen 3 Pokémon decompilation projects ([pokeemerald][pokeemerald], [pokefirered][pokefirered], and [pokeruby][pokeruby]).
+[![Actions Status](https://github.com/huderlem/porydaw/workflows/Build/badge.svg)](https://github.com/huderlem/porydaw/actions)
+
+A music editor for the Pokémon generation 3 decompilation projects ([pokeruby][pokeruby], [pokeemerald][pokeemerald], and [pokefirered][pokefirered]).
 
 In Porydaw, load your decomp project directory to load the music-related project data. Then, play, edit, and create music. It sounds just like it does in-game.  When saving, Porydaw writes and creates the necessary files directly into the decomp project.  It also supports importing MIDI files, making it easy to whip up songs and voicegroups for brand new songs.
 
-Porydaw is designed for people who *aren't* DAW power users--maybe they've used tools like Sappy and Anvil Studio for their music needs. If you love
-your existing DAW (FL Studio, Reaper, etc.), keep using it--the [poryaaaa CLAP plugin](https://github.com/huderlem/poryaaaa) serves that power-user workflow.
+Porydaw is designed for both music beginners and power users who are familiar with DAW programs.  If you've used Sappy or Anvil Studio for your musical needs in the past, then Porydaw is for you!  If you're a power user who loves your existing DAW (FL Studio, Reaper, etc.), give Porydaw a try--but if you can't be pulled away, the [poryaaaa CLAP plugin](https://github.com/huderlem/poryaaaa) helps serve that power-user workflow.
+
+View the [Changelog][changelog] to see what's new.
 
 
 ## Building
