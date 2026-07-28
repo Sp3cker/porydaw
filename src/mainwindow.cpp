@@ -38,6 +38,7 @@
 
 #include <QChildEvent>
 #include <QCloseEvent>
+#include <QKeyEvent>
 
 #ifdef Q_OS_WIN
 #ifndef WIN32_LEAN_AND_MEAN
@@ -458,6 +459,14 @@ void MainWindow::buildUi()
     // Typed values land once on commit (Enter/focus-out), not per keystroke,
     // so a typed "100" is one undo entry — arrow steps are one each.
     m_masterVolSpin->setKeyboardTracking(false);
+    // Focused, the spinbox's line edit claims every typable key's
+    // ShortcutOverride — including Space, which is transport play/pause.
+    // A space can never be part of a number, so refuse it (eventFilter)
+    // and the window shortcut keeps working mid-tweak. The line edit is
+    // the focus proxy that actually sees the key events.
+    m_masterVolSpin->installEventFilter(this);
+    if (auto *volEdit = m_masterVolSpin->findChild<QLineEdit *>())
+        volEdit->installEventFilter(this);
     connect(m_masterVolSpin, &QSpinBox::valueChanged, this, [this](int value) {
         if (!m_active || m_active->doc.cfg().masterVolume == value)
             return;
@@ -2977,6 +2986,18 @@ void MainWindow::updateTransportActions()
     m_pauseAction->setEnabled(loaded && t == Transport::Playing);
     m_stopAction->setEnabled(loaded && t != Transport::Stopped);
     m_loopAction->setEnabled(loaded);
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if ((watched == m_masterVolSpin
+         || watched->parent() == m_masterVolSpin)
+        && event->type() == QEvent::ShortcutOverride
+        && static_cast<QKeyEvent *>(event)->key() == Qt::Key_Space) {
+        event->ignore();
+        return true;
+    }
+    return QMainWindow::eventFilter(watched, event);
 }
 
 void MainWindow::syncMasterVolumeControl()

@@ -89,6 +89,10 @@ protected:
     void closeEvent(QCloseEvent *event) override;
     void changeEvent(QEvent *event) override;
     void childEvent(QChildEvent *event) override;
+    // Installed on the master-volume spinbox (and its line edit): refuses
+    // the Space ShortcutOverride so play/pause keeps working while the
+    // field is focused.
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
     void openProject();

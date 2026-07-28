@@ -1,5 +1,8 @@
+#include <QApplication>
 #include <QEventLoop>
 #include <QFile>
+#include <QKeyEvent>
+#include <QLineEdit>
 #include <QSettings>
 #include <QSpinBox>
 #include <QTabWidget>
@@ -146,6 +149,25 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA,
               "undo did not revert the spinbox's cfg edit");
         check(volSpin->value() == volBefore,
               "undo did not sync the spinbox back to the old volume");
+
+        // The focused spinbox must not starve the play/pause shortcut: its
+        // line edit (the focus proxy that sees key events) refuses Space's
+        // ShortcutOverride, while still claiming digits for normal typing.
+        auto *volEdit = volSpin->findChild<QLineEdit *>();
+        if (check(volEdit != nullptr, "volume spinbox has no line edit")) {
+            QKeyEvent spaceOverride(QEvent::ShortcutOverride, Qt::Key_Space,
+                                    Qt::NoModifier, QStringLiteral(" "));
+            spaceOverride.ignore();
+            QApplication::sendEvent(volEdit, &spaceOverride);
+            check(!spaceOverride.isAccepted(),
+                  "volume spinbox claimed Space from the play/pause shortcut");
+            QKeyEvent digitOverride(QEvent::ShortcutOverride, Qt::Key_5,
+                                    Qt::NoModifier, QStringLiteral("5"));
+            digitOverride.ignore();
+            QApplication::sendEvent(volEdit, &digitOverride);
+            check(digitOverride.isAccepted(),
+                  "volume spinbox no longer claims plain digit keys");
+        }
     }
 
     // 6. Re-opening an already open song focuses its tab, no duplicates.
