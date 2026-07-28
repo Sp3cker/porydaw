@@ -1567,6 +1567,14 @@ protected:
                 else
                     ids.push_back(id);
                 m_sv->setSelection(std::move(ids));
+            } else if (event->modifiers() & Qt::ControlModifier) {
+                // Ctrl+edge grab: the grip still starts a resize of the
+                // whole selection, so a bulk-select click landing on an
+                // edge must join the note to the selection, not replace it.
+                if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
+                    ids.push_back(id);
+                    m_sv->setSelection(std::move(ids));
+                }
             } else if (!m_sv->isSelected(*hit)) {
                 m_sv->setSelection({id});
             }

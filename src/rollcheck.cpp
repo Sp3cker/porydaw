@@ -49,7 +49,9 @@
 // roll.velocity_drag modifier chord (Ctrl by default) turns a vertical
 // drag from anywhere on a note into an Ableton-style velocity drag; a
 // modifier click without the drag keeps Ctrl's selection toggle, resolved
-// on release. Ctrl+arrows transpose (Shift: octave)
+// on release. The edge resize grips stay live under Ctrl, but a
+// bulk-select click landing on one joins the note to the selection
+// instead of replacing it, and the drag resizes the whole selection. Ctrl+arrows transpose (Shift: octave)
 // and nudge the selection along the same absolute grid — both the roll's
 // note selection and a multi-track time selection — and the view follows
 // notes moved out of sight with a minimal scroll (flush at the edge, not
@@ -1326,15 +1328,75 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                                                 view.contentX(double(d.tick) + 1.9 * double(d.dur)),
         rowY);
     sendMouse(roll, QEvent::MouseButtonPress, rightHandle, Qt::LeftButton,
-              Qt::LeftButton, Qt::ControlModifier);
-    sendMouse(roll, QEvent::MouseMove, pull, Qt::NoButton, Qt::LeftButton,
-              Qt::ControlModifier);
+              Qt::LeftButton);
+    sendMouse(roll, QEvent::MouseMove, pull, Qt::NoButton, Qt::LeftButton);
     sendMouse(roll, QEvent::MouseButtonRelease, pull, Qt::LeftButton,
-              Qt::NoButton, Qt::ControlModifier);
+              Qt::NoButton);
     DocNote resized;
     if (!doc.findNote(track, d.tick, uint8_t(d.key), &resized) ||
             resized.duration != 2 * d.dur)
         fail("off-grid right-edge drag did not snap the end to the ruler grid");
+
+    // Ctrl+grabbing an edge keeps the bulk selection: with note B
+    // selected, a Ctrl+press on note D's right-edge grip joins D to the
+    // selection instead of replacing it, and the drag that follows
+    // resizes the whole selection — both notes — in one undo command. A
+    // stationary Ctrl+edge click just joins, editing nothing.
+    {
+        const qreal dpr = roll->devicePixelRatioF();
+        const QPointF ctrlEdge(
+            view.displayX(double(d.tick + 2 * d.dur), songview::kKeyboardW,
+                          dpr) -
+                6.8,
+            rowY);
+        click(roll, b.center); // selection = {B}
+        const int preCount = doc.undoStack()->count();
+        DocNote bBefore;
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bBefore))
+            fail("note B went missing before the Ctrl+edge grab");
+        sendMouse(roll, QEvent::MouseButtonPress, ctrlEdge, Qt::LeftButton,
+                  Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, ctrlEdge, Qt::LeftButton,
+                  Qt::NoButton, Qt::ControlModifier);
+        const SongView::NoteId bId{uint32_t(b.tick), uint8_t(b.key)};
+        const SongView::NoteId dId{uint32_t(d.tick), uint8_t(d.key)};
+        const std::vector<SongView::NoteId> &sel = view.selection();
+        if (sel.size() != 2 ||
+                std::find(sel.begin(), sel.end(), bId) == sel.end() ||
+                std::find(sel.begin(), sel.end(), dId) == sel.end())
+            fail("a Ctrl+edge click did not join the note to the selection");
+        DocNote still;
+        if (!doc.findNote(track, d.tick, uint8_t(d.key), &still) ||
+                still.duration != 2 * d.dur)
+            fail("a stationary Ctrl+edge click resized the note");
+        if (doc.undoStack()->count() != preCount)
+            fail("a stationary Ctrl+edge click pushed an undo command");
+        // Pull the grip one drawn cell further right: both selected notes
+        // must grow by that same delta.
+        const qreal cellPx =
+            view.displayX(double(d.tick + 3 * d.dur), songview::kKeyboardW,
+                          dpr) -
+            view.displayX(double(d.tick + 2 * d.dur), songview::kKeyboardW,
+                          dpr);
+        const QPointF pull2(ctrlEdge.x() + cellPx, rowY);
+        sendMouse(roll, QEvent::MouseButtonPress, ctrlEdge, Qt::LeftButton,
+                  Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, pull2, Qt::NoButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, pull2, Qt::LeftButton,
+                  Qt::NoButton, Qt::ControlModifier);
+        DocNote dAfter, bAfter;
+        if (!doc.findNote(track, d.tick, uint8_t(d.key), &dAfter) ||
+                dAfter.duration != 3 * d.dur)
+            fail("Ctrl+edge drag did not resize the grabbed note");
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bAfter) ||
+                bAfter.duration != bBefore.duration + d.dur)
+            fail("Ctrl+edge drag did not resize the rest of the selection");
+        if (doc.undoStack()->count() != preCount + 1)
+            fail("Ctrl+edge drag did not push exactly one command");
+        doc.undoStack()->undo(); // restore both durations for later checks
+        view.clearSelection();
+    }
 
     // Overshooting the drag past the note's start must stop at one snap
     // cell, not collapse to the document's 1-tick floor.
