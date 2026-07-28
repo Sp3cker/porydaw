@@ -7,6 +7,8 @@
 class QAction;
 class QResizeEvent;
 class QScrollArea;
+class QShortcut;
+class QShowEvent;
 class QStackedWidget;
 class QString;
 class QToolButton;
@@ -26,6 +28,7 @@ public:
   void setDrawerVisible(bool visible);
   void setDrawerHeight(int height);
   void toggleDrawerPage(DrawerPage page);
+  void setShortcutsEnabled(bool enabled);
 
   DrawerPage drawerPage() const { return m_drawerPage; }
   bool drawerVisible() const { return m_drawerVisible; }
@@ -39,6 +42,7 @@ signals:
 
 protected:
   void resizeEvent(QResizeEvent *event) override;
+  void showEvent(QShowEvent *event) override;
 
 private:
   class ResizeHandle;
@@ -53,9 +57,12 @@ private:
   QToolButton *m_automationTab = nullptr;
   QAction *m_velocityAction = nullptr;
   QToolButton *m_velocityTab = nullptr;
+  QShortcut *m_automationShortcut = nullptr;
+  QShortcut *m_velocityShortcut = nullptr;
   int m_drawerHeight = 0;
   DrawerPage m_drawerPage = DrawerPage::Automations;
   bool m_drawerVisible = true;
+  bool m_drawerHeightInitialized = false;
 };
 
 } // namespace songview

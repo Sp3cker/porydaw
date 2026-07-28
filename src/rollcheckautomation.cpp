@@ -421,6 +421,13 @@ void checkEditorDrawerAndLanes(const SongInfo &song, QStringList &failures) {
       openSizes.size() != 2 || openSizes[0] <= 0 || openSizes[1] <= 0) {
     failures.append("editor drawer did not begin open with positive sizes");
   }
+  const int expectedDrawerHeight = drawer->parentWidget()->height() / 5;
+  if (openSizes.size() == 2 && openSizes[1] != expectedDrawerHeight) {
+    failures.append(
+        QStringLiteral("editor drawer default height was %1, expected %2")
+            .arg(openSizes[1])
+            .arg(expectedDrawerHeight));
+  }
 
   // VelocityArea is an editor surface: make its page current and render it
   // before delivering a representative shared command. The offscreen harness
@@ -490,6 +497,37 @@ void checkEditorDrawerAndLanes(const SongInfo &song, QStringList &failures) {
       view.drawerPage() != SongView::DrawerPage::Velocity) {
     failures.append("V from VelocityArea did not hide the Velocity drawer");
   }
+
+  // Drawer shortcuts are window commands, not editor-surface commands. They
+  // must still work when focus is on a non-text sibling of SongView.
+  QWidget shortcutWindow;
+  shortcutWindow.resize(640, 360);
+  SongView shortcutView(&shortcutWindow);
+  shortcutView.setGeometry(shortcutWindow.rect());
+  QWidget shortcutProbe(&shortcutWindow);
+  shortcutProbe.setFocusPolicy(Qt::StrongFocus);
+  shortcutProbe.resize(1, 1);
+  shortcutWindow.show();
+  shortcutWindow.activateWindow();
+  shortcutProbe.show();
+  shortcutProbe.raise();
+  processUiEvents();
+  shortcutView.setDrawerVisible(false);
+  shortcutProbe.setFocus(Qt::OtherFocusReason);
+  sendKey(&shortcutProbe, Qt::Key_A, Qt::NoModifier);
+  processUiEvents();
+  if (!shortcutView.drawerVisible() ||
+      shortcutView.drawerPage() != SongView::DrawerPage::Automations) {
+    failures.append("A did not open the drawer from window focus");
+  }
+  shortcutProbe.setFocus(Qt::OtherFocusReason);
+  sendKey(&shortcutProbe, Qt::Key_V, Qt::NoModifier);
+  processUiEvents();
+  if (!shortcutView.drawerVisible() ||
+      shortcutView.drawerPage() != SongView::DrawerPage::Velocity) {
+    failures.append("V did not open its drawer page from window focus");
+  }
+  shortcutWindow.close();
   view.setDrawerPage(SongView::DrawerPage::Automations);
   view.setDrawerVisible(true);
   processUiEvents();
@@ -535,14 +573,14 @@ void checkEditorDrawerAndLanes(const SongInfo &song, QStringList &failures) {
     failures.append("event list table not found for drawer shortcut check");
   } else {
     eventTable->setFocus(Qt::OtherFocusReason);
+    const bool drawerVisibleFromEventList = view.drawerVisible();
+    const SongView::DrawerPage drawerPageFromEventList = view.drawerPage();
     sendKey(eventTable, Qt::Key_A, Qt::NoModifier);
     processUiEvents();
-    if (view.drawerVisible())
-      failures.append("A from the event list did not hide the drawer");
-    sendKey(eventTable, Qt::Key_A, Qt::NoModifier);
-    processUiEvents();
-    if (!view.drawerVisible())
-      failures.append("A from the event list did not reopen the drawer");
+    if (view.drawerVisible() != drawerVisibleFromEventList ||
+        view.drawerPage() != drawerPageFromEventList) {
+      failures.append("A changed the drawer from the event list");
+    }
   }
   view.setEventListVisible(false);
   roll->setFocus(Qt::OtherFocusReason);

@@ -1089,10 +1089,6 @@ bool EventListView::eventFilter(QObject *watched, QEvent *event)
         }
         if (event->type() == QEvent::KeyPress) {
             auto *keyEvent = static_cast<QKeyEvent *>(event);
-            if ((keyEvent->key() == Qt::Key_A
-                || keyEvent->key() == Qt::Key_V) && keyEvent->modifiers() == Qt::NoModifier
-                && m_sv->handleEditKey(keyEvent))
-                return true;
             if (keyEvent->key() == Qt::Key_Delete
                 || keyEvent->key() == Qt::Key_Backspace) {
                 deleteSelected();

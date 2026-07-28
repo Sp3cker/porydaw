@@ -6,11 +6,14 @@
 #include <QEnterEvent>
 #include <QEvent>
 #include <QFrame>
+#include <QKeySequence>
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
 #include <QResizeEvent>
 #include <QScrollArea>
+#include <QShortcut>
+#include <QShowEvent>
 #include <QStackedWidget>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -20,7 +23,7 @@ namespace {
 
 constexpr int kLaneH = 48;
 constexpr int kAddLaneH = 20;
-constexpr int kLanesAreaH = 150;
+constexpr int kDefaultDrawerHeightDivisor = 5;
 constexpr int kAutomationHandleH = 4;
 
 } // namespace
@@ -89,7 +92,7 @@ private:
 
 EditorDrawer::EditorDrawer(QWidget *mainContent, QWidget *automationPage,
                            QWidget *velocityPage, QWidget *parent)
-    : QWidget(parent), m_drawerHeight(kLanesAreaH) {
+    : QWidget(parent) {
   auto *overlayLayout = new QVBoxLayout(this);
   overlayLayout->setContentsMargins(0, 0, 0, 0);
   overlayLayout->setSpacing(0);
@@ -150,10 +153,27 @@ EditorDrawer::EditorDrawer(QWidget *mainContent, QWidget *automationPage,
   m_automationTab->raise();
   m_velocityTab->raise();
 
+  m_automationShortcut =
+      new QShortcut(QKeySequence(Qt::Key_A), this);
+  m_automationShortcut->setContext(Qt::WindowShortcut);
+  connect(m_automationShortcut, &QShortcut::activated, this, [this] {
+    toggleDrawerPage(DrawerPage::Automations);
+  });
+  m_velocityShortcut = new QShortcut(QKeySequence(Qt::Key_V), this);
+  m_velocityShortcut->setContext(Qt::WindowShortcut);
+  connect(m_velocityShortcut, &QShortcut::activated, this, [this] {
+    toggleDrawerPage(DrawerPage::Velocity);
+  });
+
   connect(m_automationAction, &QAction::triggered, this,
           [this] { toggleDrawerPage(DrawerPage::Automations); });
   connect(m_velocityAction, &QAction::triggered, this,
           [this] { toggleDrawerPage(DrawerPage::Velocity); });
+}
+
+void EditorDrawer::setShortcutsEnabled(bool enabled) {
+  m_automationShortcut->setEnabled(enabled);
+  m_velocityShortcut->setEnabled(enabled);
 }
 
 void EditorDrawer::setDrawerPage(DrawerPage page) {
@@ -191,6 +211,7 @@ void EditorDrawer::setDrawerVisible(bool visible) {
 }
 
 void EditorDrawer::setDrawerHeight(int height) {
+  m_drawerHeightInitialized = true;
   if (m_drawerHeight == height)
     return;
   m_drawerHeight = height;
@@ -222,10 +243,21 @@ void EditorDrawer::syncDrawerTabs() {
                                m_drawerPage == DrawerPage::Velocity);
 }
 
+void EditorDrawer::showEvent(QShowEvent *event) {
+  QWidget::showEvent(event);
+  if (m_drawerHeightInitialized)
+    return;
+  m_drawerHeight = height() / kDefaultDrawerHeightDivisor;
+  m_drawerHeightInitialized = true;
+  layoutEditorDrawer();
+}
+
 void EditorDrawer::layoutEditorDrawer() {
   const int hostW = width();
   const int hostH = height();
   const int tabH = std::max(1, m_automationTab->sizeHint().height());
+  if (!m_drawerHeightInitialized)
+    m_drawerHeight = hostH / kDefaultDrawerHeightDivisor;
   if (hostW <= 0 || hostH <= 0) {
     m_resizeHandle->hide();
     return;
