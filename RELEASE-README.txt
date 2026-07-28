@@ -9,9 +9,7 @@ Porydaw is designed for both music beginners and power users who are familiar wi
 
 macOS note:
     Porydaw is not notarized with Apple, so macOS quarantines the downloaded
-    app and blocks the first launch. To allow it: try to open the app once,
-    then go to System Settings -> Privacy & Security, scroll down to the
-    message about porydaw, and click "Open Anyway". Alternatively, run this
+    app and blocks the first launch. To allow it, run this
     in Terminal after copying the app to /Applications:
         xattr -d com.apple.quarantine /Applications/porydaw.app
 
