@@ -200,10 +200,10 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
     if (model->rowCount() != int(filterEvents.size()) + 1)
         fail("all-checked filter does not show every event");
 
-    // A track move permutes the chunk numbering at constant count (invisible
-    // to the count-changed re-anchor): the list must follow its anchored
-    // chunk to the new index — and back on undo.
-    if (doc.engineTrackCount() >= 2) {
+    // A track move permutes the chunk numbering at constant count: the list
+  // must follow its anchored chunk to the new index across move, undo, and
+  // redo.
+  if (doc.engineTrackCount() >= 2) {
         int anchorEngine = -1;
         for (int e = 0; e < doc.engineTrackCount(); e++) {
             if (doc.smfTrackFor(e) == chunk)
@@ -223,7 +223,62 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             doc.undoStack()->undo();
             if (chunkCombo->currentData().toInt() != chunk)
                 fail("undoing the move did not re-anchor the chunk combo");
+        doc.undoStack()->redo();
+      if (chunkCombo->currentData().toInt() != movedChunk)
+        fail("redoing the move did not re-anchor the chunk combo");
+      doc.undoStack()->undo();
+      if (chunkCombo->currentData().toInt() != chunk)
+        fail("undoing the move again did not re-anchor the chunk combo");
+    }
+  }
+
+  // An engine-only chunk losing its channel events becomes metadata-only;
+  // the combo label must refresh from "Chunk X — Track Y" to "Chunk X
+  // (tempo/meta)" and restore on undo.
+  int testEngineChunk = -1;
+  for (int e = 0; e < doc.engineTrackCount(); e++) {
+    const int smfTrack = doc.smfTrackFor(e);
+    if (smfTrack >= 0 && !doc.smf().tracks[smfTrack].events.empty()) {
+      testEngineChunk = smfTrack;
+      break;
+    }
+  }
+  if (testEngineChunk >= 0) {
+    const int comboIdxBefore = chunkCombo->findData(testEngineChunk);
+    if (comboIdxBefore >= 0) {
+      const QString labelBefore = chunkCombo->itemText(comboIdxBefore);
+      if (!labelBefore.contains(QStringLiteral("Track")))
+        fail("initial combo label missing Track marker");
+
+      std::vector<size_t> channelIndices;
+      const auto &eventsInChunk = doc.smf().tracks[testEngineChunk].events;
+      for (size_t i = 0; i < eventsInChunk.size(); i++) {
+        if (eventsInChunk[i].isChannel())
+          channelIndices.push_back(i);
+      }
+      if (!channelIndices.empty()) {
+        doc.deleteRawEvents(testEngineChunk, channelIndices);
+        const int comboIdxAfter = chunkCombo->findData(testEngineChunk);
+        if (comboIdxAfter >= 0) {
+          const QString labelAfter = chunkCombo->itemText(comboIdxAfter);
+          if (!labelAfter.contains(QStringLiteral("(tempo/meta)")))
+            fail("combo label did not refresh to tempo/meta after losing "
+                 "channel events");
+        } else {
+          fail("chunk combo lost chunk item after losing channel events");
         }
+        doc.undoStack()->undo();
+        const int comboIdxRestored = chunkCombo->findData(testEngineChunk);
+        if (comboIdxRestored >= 0) {
+          const QString labelRestored = chunkCombo->itemText(comboIdxRestored);
+          if (labelRestored != labelBefore)
+            fail("combo label did not restore after undo of channel event "
+                 "deletion");
+        } else {
+          fail("chunk combo lost chunk item after undo");
+        }
+      }
+    }
     }
 
     // Playhead marker: exactly the row the play cursor last passed carries a
@@ -382,8 +437,34 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
     if (image.isNull())
         fail("offscreen render produced no image");
     if (!screenshotPath.isEmpty()) {
-        image.save(screenshotPath);
-        std::printf("eventviewcheck: wrote %s\n", qUtf8Printable(screenshotPath));
+      image.save(screenshotPath);
+      std::printf("eventviewcheck: wrote %s\n", qUtf8Printable(screenshotPath));
+    }
+
+    // Deleting the chunk currently anchored by the event list must fall back
+    // to the surviving track selected by SongView, rather than treating the
+    // deleted-chunk sentinel as "no remap pending" and restoring stale data.
+    if (doc.engineTrackCount() >= 2) {
+      const int removedEngineTrack = doc.engineTrackCount() - 1;
+      view.selectTrack(removedEngineTrack);
+      const int removedChunk = doc.smfTrackFor(removedEngineTrack);
+      if (chunkCombo->currentData().toInt() != removedChunk)
+        fail("deletion fixture did not anchor the final track chunk");
+
+      view.deleteTrack(removedEngineTrack);
+      const int survivingChunk = doc.smfTrackFor(view.selectedTrack());
+      if (survivingChunk < 0) {
+        fail("track deletion left no selected-track chunk");
+      } else {
+        if (chunkCombo->currentData().toInt() != survivingChunk)
+          fail("chunk combo did not follow the selected track after "
+               "deleting its anchor");
+        if (model->rowCount() !=
+            int(doc.smf().tracks[survivingChunk].events.size()) + 1)
+          fail("event table did not follow the selected track after "
+               "deleting its anchor");
+      }
+      doc.undoStack()->undo();
     }
 
     // View-state round trip carries the mode both ways.

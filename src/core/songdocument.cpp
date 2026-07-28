@@ -32,65 +32,13 @@ bool metaIsTimeSig(const SmfEvent &ev)
 // Move the chunk at `from` to index `to`, the chunks between shifting by one
 // toward the vacated slot. applyOps and revertOps share it with the endpoints
 // swapped — the mirror lives here, not in two hand-maintained rotates.
-void moveChunk(std::vector<SmfTrack> &tracks, int from, int to)
+template <typename T> void moveChunk(std::vector<T> &tracks, int from, int to)
 {
     const auto begin = tracks.begin();
     if (from < to)
         std::rotate(begin + from, begin + from + 1, begin + to + 1);
     else
         std::rotate(begin + to, begin + from, begin + from + 1);
-}
-
-// Keep each old engine-slot owner attached to its current SMF chunk index
-// while structural edits renumber chunks.
-void adjustOwnerChunkIndicesAfterInsert(
-    std::array<int, 16> &currentSmfChunkIndexByOldEngineSlot,
-    int oldEngineSlotCount, int insertedSmfChunkIndex)
-{
-    for (int oldEngineSlot = 0; oldEngineSlot < oldEngineSlotCount;
-         oldEngineSlot++) {
-        int &currentSmfChunkIndex =
-            currentSmfChunkIndexByOldEngineSlot[oldEngineSlot];
-        if (currentSmfChunkIndex >= insertedSmfChunkIndex)
-            currentSmfChunkIndex++;
-    }
-}
-
-void adjustOwnerChunkIndicesAfterRemoval(
-    std::array<int, 16> &currentSmfChunkIndexByOldEngineSlot,
-    int oldEngineSlotCount, int removedSmfChunkIndex)
-{
-    for (int oldEngineSlot = 0; oldEngineSlot < oldEngineSlotCount;
-         oldEngineSlot++) {
-        int &currentSmfChunkIndex =
-            currentSmfChunkIndexByOldEngineSlot[oldEngineSlot];
-        if (currentSmfChunkIndex == removedSmfChunkIndex)
-            currentSmfChunkIndex = -1;
-        else if (currentSmfChunkIndex > removedSmfChunkIndex)
-            currentSmfChunkIndex--;
-    }
-}
-
-void adjustOwnerChunkIndicesAfterMove(
-    std::array<int, 16> &currentSmfChunkIndexByOldEngineSlot,
-    int oldEngineSlotCount, int sourceSmfChunkIndex,
-    int destinationSmfChunkIndex)
-{
-    for (int oldEngineSlot = 0; oldEngineSlot < oldEngineSlotCount;
-         oldEngineSlot++) {
-        int &currentSmfChunkIndex =
-            currentSmfChunkIndexByOldEngineSlot[oldEngineSlot];
-        if (currentSmfChunkIndex == sourceSmfChunkIndex)
-            currentSmfChunkIndex = destinationSmfChunkIndex;
-        else if (sourceSmfChunkIndex < destinationSmfChunkIndex
-                 && currentSmfChunkIndex > sourceSmfChunkIndex
-                 && currentSmfChunkIndex <= destinationSmfChunkIndex)
-            currentSmfChunkIndex--;
-        else if (destinationSmfChunkIndex < sourceSmfChunkIndex
-                 && currentSmfChunkIndex >= destinationSmfChunkIndex
-                 && currentSmfChunkIndex < sourceSmfChunkIndex)
-            currentSmfChunkIndex++;
-    }
 }
 
 bool cfgSemanticEqual(const SongCfg &a, const SongCfg &b)
@@ -322,15 +270,6 @@ uint8_t SongDocument::channelFor(int engineTrack) const
     if (engineTrack < 0 || engineTrack >= int(m_engineChannel.size()))
         return 0;
     return m_engineChannel[engineTrack];
-}
-
-int SongDocument::engineTrackForChunk(int chunk) const
-{
-    for (int t = 0; t < int(m_engineToSmf.size()); t++) {
-        if (m_engineToSmf[t] == chunk)
-            return t;
-    }
-    return -1;
 }
 
 std::vector<DocNote> SongDocument::notesForTrack(int engineTrack) const
@@ -881,7 +820,8 @@ void SongDocument::setNotesVelocities(const std::vector<NoteVelocity> &edits) {
     return;
   std::vector<EditOp> ops;
   std::set<std::pair<int, size_t>> seen;
-  for (const NoteVelocity &edit : edits) {
+  for (auto it = edits.rbegin(); it != edits.rend(); ++it) {
+    const NoteVelocity &edit = *it;
     std::pair<int, size_t> key{edit.note.smfTrack, edit.note.onIndex};
     if (!seen.insert(key).second)
       continue;
@@ -1773,48 +1713,32 @@ std::unique_ptr<MidiTimeline> SongDocument::buildTimeline(double sampleRate) con
     return timeline;
 }
 
-void SongDocument::emitEngineTrackRemapIfChanged(
-    const std::array<int, 16> &currentSmfChunkIndexByOldEngineSlot,
-    int oldEngineSlotCount)
-{
-    QVector<int> newEngineSlotByOldSlot(16, -1);
-    bool engineSlotMappingChanged = oldEngineSlotCount != engineTrackCount();
-    for (int oldEngineSlot = 0; oldEngineSlot < oldEngineSlotCount;
-         oldEngineSlot++) {
-        const int currentSmfChunkIndex =
-            currentSmfChunkIndexByOldEngineSlot[oldEngineSlot];
-        const int newEngineSlot = currentSmfChunkIndex >= 0
-            ? engineTrackForChunk(currentSmfChunkIndex) : -1;
-        newEngineSlotByOldSlot[oldEngineSlot] = newEngineSlot;
-        if (newEngineSlot != oldEngineSlot)
-            engineSlotMappingChanged = true;
+void SongDocument::applyOps(std::vector<EditOp> &ops) {
+  const int oldChunkCount = int(m_smf.tracks.size());
+  std::vector<int> chunkIds(oldChunkCount);
+  for (int i = 0; i < oldChunkCount; ++i) {
+    chunkIds[i] = i;
+  }
+  const int oldEngineSlotCount= engineTrackCount();
+  const std::vector<int> oldEngineToSmf = m_engineToSmf;
+  std::vector<int> oldSmfToEngine(oldChunkCount, -1);
+    for (int slot = 0; slot < oldEngineSlotCount ; ++slot) {
+    const int chunk = oldEngineToSmf[slot];
+    if (chunk >= 0
+            && chunk < oldChunkCount) {
+      oldSmfToEngine[chunk] = slot;
     }
-    if (engineSlotMappingChanged)
-        emit engineTracksRemapped(std::move(newEngineSlotByOldSlot));
-}
+  }
 
-
-void SongDocument::applyOps(std::vector<EditOp> &ops)
-{
-    const int oldEngineSlotCount = engineTrackCount();
-    std::array<int, 16> currentSmfChunkIndexByOldEngineSlot{};
-    std::copy_n(m_engineToSmf.begin(), oldEngineSlotCount,
-                currentSmfChunkIndexByOldEngineSlot.begin());
-    for (EditOp &op : ops) {
+  for (EditOp &op : ops) {
         switch (op.type) {
         case EditOp::InsertEvent: {
             SmfTrack &track = m_smf.tracks[op.smfTrack];
             auto &evs = track.events;
-            // End of the tick group, so unedited same-tick data keeps its
-            // original relative order (mid2agb stable-sorts by time+type, so
-            // same-type order within a tick is significant).
             auto it = std::upper_bound(evs.begin(), evs.end(), op.event.tick,
                                        [](uint64_t t, const SmfEvent &e) {
                                            return t < e.tick;
                                        });
-            // Setup events (program change, CC, bend) must precede same-tick
-            // notes or the note plays with the stale value — both here and in
-            // mid2agb, which keeps file order within a tick.
             if (op.event.isChannel() && op.event.typeNibble() >= 0xB) {
                 while (it != evs.begin()) {
                     const SmfEvent &prev = *std::prev(it);
@@ -1824,12 +1748,6 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
                     --it;
                 }
             }
-            // A note end must precede same-tick note-ons: pairing (here and
-            // in mid2agb) gives every note-on the first same-key end that
-            // follows it, so an end landing after an on at the same tick
-            // gets claimed by that later note — the earlier note swallows
-            // its neighbors and the real end goes orphaned. Canonical
-            // intra-tick order is setup events, note ends, note-ons.
             if (op.event.isChannel() && op.event.isNoteEnd()) {
                 while (it != evs.begin()) {
                     const SmfEvent &prev = *std::prev(it);
@@ -1859,16 +1777,12 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
         }
         case EditOp::InsertTrack:
             m_smf.tracks.insert(m_smf.tracks.begin() + long(op.smfTrack), op.trackData);
-            adjustOwnerChunkIndicesAfterInsert(
-                currentSmfChunkIndexByOldEngineSlot, oldEngineSlotCount,
-                op.smfTrack);
+            chunkIds.insert(chunkIds.begin() + long(op.smfTrack), -1);
             break;
         case EditOp::RemoveTrack:
             op.trackData = m_smf.tracks[op.smfTrack];
             m_smf.tracks.erase(m_smf.tracks.begin() + long(op.smfTrack));
-            adjustOwnerChunkIndicesAfterRemoval(
-                currentSmfChunkIndexByOldEngineSlot, oldEngineSlotCount,
-                op.smfTrack);
+            chunkIds.erase(chunkIds.begin() + long(op.smfTrack));
             break;
         case EditOp::SetTrackEnd: {
             SmfTrack &track = m_smf.tracks[op.smfTrack];
@@ -1877,26 +1791,79 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
             break;
         }
         case EditOp::MoveTrack:
-            emit trackMoved(op.smfTrack, op.smfTrackTo);
             moveChunk(m_smf.tracks, op.smfTrack, op.smfTrackTo);
-            adjustOwnerChunkIndicesAfterMove(
-                currentSmfChunkIndexByOldEngineSlot, oldEngineSlotCount,
-                op.smfTrack, op.smfTrackTo);
-            break;
-        }
+      moveChunk(chunkIds, op.smfTrack, op.smfTrackTo);
+      break;
     }
-    rebuildTrackMap();
-    emitEngineTrackRemapIfChanged(
-        currentSmfChunkIndexByOldEngineSlot, oldEngineSlotCount);
+  }
+  rebuildTrackMap();
+
+  TrackRemap remap;
+  remap.newSmfChunkByOldChunk.fill(-1, oldChunkCount);
+  for (int newChunk = 0; newChunk < int(m_smf.tracks.size()); ++newChunk) {
+    const int oldChunk = chunkIds[newChunk];
+    if (oldChunk >= 0 && oldChunk < oldChunkCount) {
+      remap.newSmfChunkByOldChunk[oldChunk] = newChunk;
+    }
+  }
+
+  remap.newEngineSlotByOldSlot.fill(-1, oldEngineSlotCount);
+  for (int newSlot = 0; newSlot < int(m_engineToSmf.size()); ++newSlot) {
+    const int newChunk = m_engineToSmf[newSlot];
+    const int oldChunk = (newChunk >= 0 && newChunk < int(chunkIds.size()))
+                             ? chunkIds[newChunk]
+                             : -1;
+    if (oldChunk >= 0 && oldChunk < oldChunkCount) {
+      const int oldSlot = oldSmfToEngine[oldChunk];
+      if (oldSlot >= 0 && oldSlot < oldEngineSlotCount) {
+        remap.newEngineSlotByOldSlot[oldSlot] = newSlot;
+      }
+    }
+  }
+
+  bool nonIdentity =
+      (remap.newSmfChunkByOldChunk.size() != int(m_smf.tracks.size())) ||
+      (remap.newEngineSlotByOldSlot.size() != engineTrackCount());
+  if (!nonIdentity) {
+    for (int i = 0; i < remap.newSmfChunkByOldChunk.size(); ++i) {
+      if (remap.newSmfChunkByOldChunk[i] != i) {
+        nonIdentity = true;
+        break;
+      }
+    }
+  }
+  if (!nonIdentity) {
+    for (int i = 0; i < remap.newEngineSlotByOldSlot.size(); ++i) {
+      if (remap.newEngineSlotByOldSlot[i] != i) {
+        nonIdentity = true;
+        break;
+      }
+    }
+  }
+
+  if (nonIdentity) {
+    emit tracksRemapped(remap);
+  }
 }
 
 void SongDocument::revertOps(std::vector<EditOp> &ops)
 {
-    const int oldEngineSlotCount = engineTrackCount();
-    std::array<int, 16> currentSmfChunkIndexByOldEngineSlot{};
-    std::copy_n(m_engineToSmf.begin(), oldEngineSlotCount,
-                currentSmfChunkIndexByOldEngineSlot.begin());
-    for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
+    const int oldChunkCount = int(m_smf.tracks.size());
+  std::vector<int> chunkIds(oldChunkCount);
+  for (int i = 0; i < oldChunkCount; ++i) {
+    chunkIds[i] = i;
+  }
+  const int oldEngineSlotCount = engineTrackCount();
+    const std::vector<int> oldEngineToSmf = m_engineToSmf;
+  std::vector<int> oldSmfToEngine(oldChunkCount, -1);
+  for (int slot = 0; slot < oldEngineSlotCount; ++slot) {
+    const int chunk = oldEngineToSmf[slot];
+    if (chunk >= 0 && chunk < oldChunkCount) {
+      oldSmfToEngine[chunk] = slot;
+    }
+  }
+
+  for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
         EditOp &op = *it;
         switch (op.type) {
         case EditOp::InsertEvent: {
@@ -1915,31 +1882,69 @@ void SongDocument::revertOps(std::vector<EditOp> &ops)
             break;
         case EditOp::InsertTrack:
             m_smf.tracks.erase(m_smf.tracks.begin() + long(op.smfTrack));
-            adjustOwnerChunkIndicesAfterRemoval(
-                currentSmfChunkIndexByOldEngineSlot, oldEngineSlotCount,
-                op.smfTrack);
+            chunkIds.erase(chunkIds.begin() + long(op.smfTrack));
             break;
         case EditOp::RemoveTrack:
             m_smf.tracks.insert(m_smf.tracks.begin() + long(op.smfTrack), op.trackData);
-            adjustOwnerChunkIndicesAfterInsert(
-                currentSmfChunkIndexByOldEngineSlot, oldEngineSlotCount,
-                op.smfTrack);
+            chunkIds.insert(chunkIds.begin() + long(op.smfTrack), -1);
             break;
         case EditOp::SetTrackEnd:
             m_smf.tracks[op.smfTrack].endTick = op.oldEndTick;
             break;
         case EditOp::MoveTrack:
-            emit trackMoved(op.smfTrackTo, op.smfTrack);
             moveChunk(m_smf.tracks, op.smfTrackTo, op.smfTrack);
-            adjustOwnerChunkIndicesAfterMove(
-                currentSmfChunkIndexByOldEngineSlot, oldEngineSlotCount,
-                op.smfTrackTo, op.smfTrack);
-            break;
-        }
+      moveChunk(chunkIds, op.smfTrackTo, op.smfTrack);
+      break;
     }
-    rebuildTrackMap();
-    emitEngineTrackRemapIfChanged(
-        currentSmfChunkIndexByOldEngineSlot, oldEngineSlotCount);
+  }
+  rebuildTrackMap();
+
+  TrackRemap remap;
+  remap.newSmfChunkByOldChunk.fill(-1, oldChunkCount);
+  for (int newChunk = 0; newChunk < int(m_smf.tracks.size()); ++newChunk) {
+    const int oldChunk = chunkIds[newChunk];
+    if (oldChunk >= 0 && oldChunk < oldChunkCount) {
+      remap.newSmfChunkByOldChunk[oldChunk] = newChunk;
+    }
+  }
+
+  remap.newEngineSlotByOldSlot.fill(-1, oldEngineSlotCount);
+  for (int newSlot = 0; newSlot < int(m_engineToSmf.size()); ++newSlot) {
+    const int newChunk = m_engineToSmf[newSlot];
+    const int oldChunk = (newChunk >= 0 && newChunk < int(chunkIds.size()))
+                             ? chunkIds[newChunk]
+                             : -1;
+    if (oldChunk >= 0 && oldChunk < oldChunkCount) {
+      const int oldSlot = oldSmfToEngine[oldChunk];
+      if (oldSlot >= 0 && oldSlot < oldEngineSlotCount) {
+        remap.newEngineSlotByOldSlot[oldSlot] = newSlot;
+      }
+    }
+  }
+
+  bool nonIdentity =
+      (remap.newSmfChunkByOldChunk.size() != int(m_smf.tracks.size())) ||
+      (remap.newEngineSlotByOldSlot.size() != engineTrackCount());
+  if (!nonIdentity) {
+    for (int i = 0; i < remap.newSmfChunkByOldChunk.size(); ++i) {
+      if (remap.newSmfChunkByOldChunk[i] != i) {
+        nonIdentity = true;
+        break;
+      }
+    }
+  }
+  if (!nonIdentity) {
+    for (int i = 0; i < remap.newEngineSlotByOldSlot.size(); ++i) {
+      if (remap.newEngineSlotByOldSlot[i] != i) {
+        nonIdentity = true;
+        break;
+      }
+    }
+  }
+
+  if (nonIdentity) {
+    emit tracksRemapped(remap);
+  }
 }
 
 void SongDocument::pushEdit(const QString &text, std::vector<EditOp> ops)

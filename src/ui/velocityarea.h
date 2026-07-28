@@ -1,0 +1,70 @@
+#pragma once
+
+#include <map>
+#include <vector>
+
+#include <QWidget>
+
+#include "ui/songview.h"
+
+namespace songview {
+
+double velocityToY(int velocity, double height);
+int yToVelocity(double y, double height);
+
+class VelocityArea : public QWidget {
+public:
+  explicit VelocityArea(SongView *sv);
+
+  bool gestureActive() const;
+  void cancelGesture();
+
+protected:
+  void paintEvent(QPaintEvent *event) override;
+  void mousePressEvent(QMouseEvent *event) override;
+  void mouseMoveEvent(QMouseEvent *event) override;
+  void mouseReleaseEvent(QMouseEvent *event) override;
+  void keyPressEvent(QKeyEvent *event) override;
+  void keyReleaseEvent(QKeyEvent *event) override;
+  void wheelEvent(QWheelEvent *event) override;
+
+private:
+  enum class DragState {
+    Idle,
+    PendingHandleDrag,
+    PendingBandSelect,
+    RelativeDrag,
+    BandSelect,
+    FreehandSweep,
+    MiddlePan
+  };
+
+  struct NoteIdCompare {
+    bool operator()(const SongView::NoteId &a,
+                    const SongView::NoteId &b) const {
+      if (a.tick != b.tick)
+        return a.tick < b.tick;
+      return a.key < b.key;
+    }
+  };
+
+  int valueAtY(double y) const;
+  std::vector<SongView::NoteId> hitNotesAt(QPointF pos) const;
+  void selectBand(const QRectF &band, bool additive);
+  void seedSweepAt(QPointF pos);
+  void updateSweep(QPointF p0, QPointF p1);
+
+  SongView *m_sv = nullptr;
+  DragState m_dragState = DragState::Idle;
+  QPoint m_panStartPos;
+  QPoint m_pressPos;
+  QPointF m_lastMousePos;
+  int m_pressVel = 0;
+  bool m_ctrlPress = false;
+  std::vector<SongView::NoteId> m_deferredHitNotes;
+  std::map<SongView::NoteId, int, NoteIdCompare> m_origVelocities;
+  std::map<SongView::NoteId, int, NoteIdCompare> m_previews;
+  std::map<SongView::NoteId, int, NoteIdCompare> m_sweepPreviews;
+};
+
+} // namespace songview

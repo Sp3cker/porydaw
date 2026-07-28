@@ -4,28 +4,28 @@
 #include <QCheckBox>
 #include <QColor>
 #include <QComboBox>
+#include <QDebug>
 #include <QDialog>
 #include <QDialogButtonBox>
-#include <QDebug>
 #include <QDir>
 #include <QDockWidget>
-#include <QFormLayout>
-#include <QFontMetrics>
-#include <QHBoxLayout>
-#include <QLineEdit>
-#include <QRegularExpressionValidator>
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontMetrics>
+#include <QFormLayout>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
-#include <QPainter>
 #include <QMessageBox>
+#include <QPainter>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QRegularExpressionValidator>
 #include <QSettings>
 #include <QSpinBox>
 #include <QStatusBar>
@@ -43,8 +43,8 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <windows.h>
 #include <dwmapi.h>
+#include <windows.h>
 #endif
 
 #include <algorithm>
@@ -60,11 +60,11 @@
 #include "project/songregistry.h"
 #include "ui/keyboardshortcutsdialog.h"
 #include "ui/keymap.h"
+#include "ui/layout.h"
 #include "ui/newsongwizard.h"
+#include "ui/polyphonypanel.h"
 #include "ui/sampleeditordialog.h"
 #include "ui/sf2zonepicker.h"
-#include "ui/polyphonypanel.h"
-#include "ui/layout.h"
 #include "ui/songlistpanel.h"
 #include "ui/songsettingsdialog.h"
 #include "ui/songview.h"
@@ -1448,7 +1448,8 @@ void MainWindow::onDocumentChanged(SongSession &session)
                                         active ? m_vgBrowser->currentSlot() : 0);
         } else {
             statusBar()->showMessage(
-                tr("Voicegroup not found (tried: %1) — keeping the previous one until save.")
+                tr("Voicegroup not found (tried: %1) — keeping "
+                                  "the previous one until save.")
                     .arg(tried),
                 8000);
         }
@@ -2875,7 +2876,8 @@ bool MainWindow::maybeSaveSession(SongSession &session)
         m_tabs->setCurrentWidget(session.view);
     const auto choice = QMessageBox::question(
         this, tr("Unsaved Changes"),
-        vgDirty ? tr("%1 has unsaved changes (including voicegroup edits). Save them?")
+        vgDirty ? tr("%1 has unsaved changes (including voicegroup edits). Save "
+               "them?")
                       .arg(session.doc.label())
                 : tr("%1 has unsaved changes. Save them?").arg(session.doc.label()),
         QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
@@ -3208,7 +3210,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     }
 
     const double playedSeconds = double(m_audio.playheadSamples()) / m_audio.sampleRate();
-    qInfo("selftest: after 3s wall clock — playhead %.2fs, transport %d, PCM %d/%d active",
+    qInfo("selftest: after 3s wall clock — playhead %.2fs, transport %d, PCM "
+        "%d/%d active",
           playedSeconds, int(m_audio.transport()), m_audio.activePcmChannels(),
           m_audio.maxPcmChannels());
 
@@ -3371,7 +3374,9 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                 && restored.laneHeight == saved.laneHeight
                 && restored.gridMinDenom == 8
                 && restored.gridTriplet
-                && restored.laneRanges.value(QStringLiteral("cc:0:1"), -1) == 16
+                && restored.rowStates
+                   .value(SongView::AutomationRowId::controller(0, 0x01))
+                   .range.value_or(-1) == 16
                 && SongRegistry::loadRegistrationMeta(m_project.root(), target->label,
                                                       &constant, &player)
                 && constant == QLatin1String("MUS_SELFTEST");

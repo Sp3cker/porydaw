@@ -917,22 +917,21 @@ EventListView::EventListView(SongView *sv, QWidget *parent)
             [this](const QModelIndex &index) { jumpCursorToRow(index.row()); });
 }
 
-void EventListView::setDocument(SongDocument *document)
-{
-    if (m_document != document) {
-        if (m_document)
-            disconnect(m_document, nullptr, this, nullptr);
-        m_document = document;
-        m_pendingChunk = -1;
-        if (m_document) {
-            connect(m_document, &SongDocument::documentChanged, this,
-                    &EventListView::refresh);
-            connect(m_document, &SongDocument::trackMoved, this,
-                    &EventListView::onTrackMoved);
-        }
+void EventListView::setDocument(SongDocument *document) {
+  if (m_document != document) {
+    if (m_document)
+      disconnect(m_document, nullptr, this, nullptr);
+    m_document = document;
+    m_pendingChunk.reset();
+    if (m_document) {
+      connect(m_document, &SongDocument::documentChanged, this,
+              &EventListView::refresh);
+      connect(m_document, &SongDocument::tracksRemapped, this,
+              &EventListView::onTracksRemapped);
     }
-    rebuildChunkCombo();
-    syncTrackSelection();
+  }
+  rebuildChunkCombo();
+  syncTrackSelection();
 }
 
 void EventListView::refresh()
@@ -948,29 +947,7 @@ void EventListView::refresh()
     // flags/setData bounds-check against the live event vector).
     if (isHidden())
         return;
-    if (m_chunk->count() != int(m_document->smf().tracks.size())) {
-        // A track add/delete (or file reload) shifted the chunk numbering,
-        // so the old combo index may now name a different chunk; re-anchor
-        // on the roll's selected track rather than trust the raw index.
-        m_pendingChunk = -1;
-        rebuildChunkCombo();
-        syncTrackSelection();
-    } else if (m_pendingChunk >= 0) {
-        // A track move permuted the chunk numbering at constant count (the
-        // count check can't see it): follow the anchored chunk to its new
-        // index and refresh the combo's stale Track labels.
-        const int target = m_pendingChunk;
-        m_pendingChunk = -1;
-        rebuildChunkCombo();
-        const int idx = m_chunk->findData(target);
-        if (idx >= 0) {
-            m_syncing = true;
-            m_chunk->setCurrentIndex(idx);
-            m_syncing = false;
-            m_model->setSource(m_document, target);
-        }
-    } else {
-        const QModelIndex current = m_table->currentIndex();
+    const QModelIndex current = m_table->currentIndex();
         QList<int> selectedRows;
         if (m_table->selectionModel()) {
             const QModelIndexList rows = m_table->selectionModel()->selectedRows();
@@ -978,15 +955,12 @@ void EventListView::refresh()
                 selectedRows.append(row.row());
         }
         m_settingCurrent = true;
-        m_model->reload();
+        rebuildChunkCombo();
         const int rowCount = m_model->rowCount();
         if (current.isValid() && rowCount > 0) {
             const int row = std::min(current.row(), rowCount - 1);
             m_table->setCurrentIndex(m_model->index(row, current.column()));
         }
-        // Re-select by row position: exact for value edits (rows are
-        // stable), approximate after inserts/deletes — good enough to keep
-        // a multi-row selection alive across the reset.
         if (selectedRows.size() > 1 && m_table->selectionModel()) {
             QItemSelection selection;
             for (int row : selectedRows) {
@@ -998,7 +972,6 @@ void EventListView::refresh()
                                               QItemSelectionModel::ClearAndSelect);
         }
         m_settingCurrent = false;
-    }
     updateCountLabel();
     updatePlayRow();
 }
@@ -1021,35 +994,22 @@ void EventListView::syncTrackSelection()
     updatePlayRow();
 }
 
-void EventListView::onTrackMoved(int fromChunk, int toChunk)
-{
-    // Remap the anchored chunk through the rotation, into m_pendingChunk
-    // for the documentChanged refresh that follows (the document is
-    // mid-mutation here — no reads, no rebuild yet). Starts from a prior
-    // pending value so moves chain while the page is hidden and refreshes
-    // are skipped.
-    const int cur = m_pendingChunk >= 0 ? m_pendingChunk : currentChunk();
-    if (cur < 0)
-        return;
-    int next = cur;
-    if (cur == fromChunk)
-        next = toChunk;
-    else if (fromChunk < toChunk && cur > fromChunk && cur <= toChunk)
-        next = cur - 1;
-    else if (toChunk < fromChunk && cur >= toChunk && cur < fromChunk)
-        next = cur + 1;
-    // Set even when the index is unchanged: chunks elsewhere in the rotation
-    // swapped occupants, so the combo's Track labels need the rebuild.
-    m_pendingChunk = next;
+void EventListView::onTracksRemapped(const SongDocument::TrackRemap &remap) {
+  // Remap the anchored chunk for the documentChanged refresh that follows
+  // (the document is mid-mutation here — no reads or rebuilds). A removed
+  // anchor remains -1 through any further hidden-page remaps.
+  const int cur = m_pendingChunk.has_value() ? *m_pendingChunk : currentChunk();
+  if (cur < 0 || cur >= remap.newSmfChunkByOldChunk.size())
+    return;
+  m_pendingChunk = remap.newSmfChunkByOldChunk[cur];
 }
 
-void EventListView::setPlayheadTick(double tick, bool playing)
-{
-    if (m_playTick == tick && m_playing == playing)
-        return;
-    m_playTick = tick;
-    m_playing = playing;
-    updatePlayRow();
+void EventListView::setPlayheadTick(double tick, bool playing) {
+  if (m_playTick == tick && m_playing == playing)
+    return;
+  m_playTick = tick;
+  m_playing = playing;
+  updatePlayRow();
 }
 
 void EventListView::updatePlayRow()
@@ -1129,8 +1089,8 @@ bool EventListView::eventFilter(QObject *watched, QEvent *event)
         }
         if (event->type() == QEvent::KeyPress) {
             auto *keyEvent = static_cast<QKeyEvent *>(event);
-            if (keyEvent->key() == Qt::Key_A
-                && keyEvent->modifiers() == Qt::NoModifier
+            if ((keyEvent->key() == Qt::Key_A
+                || keyEvent->key() == Qt::Key_V) && keyEvent->modifiers() == Qt::NoModifier
                 && m_sv->handleEditKey(keyEvent))
                 return true;
             if (keyEvent->key() == Qt::Key_Delete
@@ -1143,35 +1103,38 @@ bool EventListView::eventFilter(QObject *watched, QEvent *event)
     return QWidget::eventFilter(watched, event);
 }
 
-void EventListView::rebuildChunkCombo()
-{
-    m_syncing = true;
-    const int previous = currentChunk();
-    m_chunk->clear();
-    if (m_document) {
-        const SmfFile &smf = m_document->smf();
-        for (int t = 0; t < int(smf.tracks.size()); t++) {
-            int engineTrack = -1;
-            for (int e = 0; e < m_document->engineTrackCount(); e++) {
-                if (m_document->smfTrackFor(e) == t) {
-                    engineTrack = e;
-                    break;
-                }
-            }
-            QString label;
-            if (engineTrack >= 0)
-                label = tr("Chunk %1 — Track %2").arg(t).arg(engineTrack + 1);
-            else
-                label = tr("Chunk %1 (tempo/meta)").arg(t);
-            m_chunk->addItem(label, t);
+void EventListView::rebuildChunkCombo() {
+  m_syncing = true;
+  const bool remapPending = m_pendingChunk.has_value();
+  int target = m_pendingChunk.value_or(currentChunk());
+  m_pendingChunk.reset();
+  m_chunk->clear();
+  if (m_document) {
+    if (remapPending && target < 0)
+      target = m_document->smfTrackFor(m_sv->selectedTrack());
+    const SmfFile &smf = m_document->smf();
+    for (int t = 0; t < int(smf.tracks.size()); t++) {
+      int engineTrack = -1;
+      for (int e = 0; e < m_document->engineTrackCount(); e++) {
+        if (m_document->smfTrackFor(e) == t) {
+          engineTrack = e;
+          break;
         }
-        const int restore = m_chunk->findData(previous);
-        m_chunk->setCurrentIndex(restore >= 0 ? restore : 0);
+      }
+      QString label;
+      if (engineTrack >= 0)
+        label = tr("Chunk %1 — Track %2").arg(t).arg(engineTrack + 1);
+      else
+        label = tr("Chunk %1 (tempo/meta)").arg(t);
+      m_chunk->addItem(label, t);
     }
-    m_syncing = false;
-    m_model->setSource(m_document, currentChunk());
-    updateCountLabel();
-    updatePlayRow();
+    const int restore = target >= 0 ? m_chunk->findData(target) : -1;
+    m_chunk->setCurrentIndex(restore >= 0 ? restore : 0);
+  }
+  m_syncing = false;
+  m_model->setSource(m_document, currentChunk());
+  updateCountLabel();
+  updatePlayRow();
 }
 
 void EventListView::chunkPicked(int)

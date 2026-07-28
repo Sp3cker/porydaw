@@ -81,7 +81,12 @@ class SongDocument : public QObject
     Q_OBJECT
 
 public:
-    explicit SongDocument(QObject *parent = nullptr);
+    struct TrackRemap {
+    QVector<int> newSmfChunkByOldChunk;
+    QVector<int> newEngineSlotByOldSlot;
+  };
+
+  explicit SongDocument(QObject *parent = nullptr);
 
     bool load(const SongInfo &song, QString *error);
     bool save(QString *error);
@@ -295,16 +300,9 @@ signals:
     // Emitted after every mutation, undo, and redo.
     void documentChanged();
     // Emitted after an undoable SMF mutation has rebuilt the engine-track map
-    // and before documentChanged(), only when engine-track count or track
-    // identity/order changed. newEngineSlotByOldSlot always has 16 entries:
-    // entry oldSlot maps that pre-mutation slot to its post-mutation slot;
-    // -1 means the old owner disappeared. Newly introduced slots have no old
-    // entry and receive default view state.
-    void engineTracksRemapped(QVector<int> newEngineSlotByOldSlot);
-    // Emitted immediately before a MoveTrack chunk movement applies or
-    // reverts, solely so EventListView can preserve its anchored SMF chunk.
-    // fromChunk and toChunk are that movement's chunk endpoints.
-    void trackMoved(int fromChunk, int toChunk);
+    // and before documentChanged(), only when SMF chunk or engine track
+  // identity/order changed.
+  void tracksRemapped(SongDocument::TrackRemap remap);
 
 private:
     friend class SongEditCommand;
@@ -332,12 +330,8 @@ private:
 
     void applyOps(std::vector<EditOp> &ops);
     void revertOps(std::vector<EditOp> &ops);
-    void emitEngineTrackRemapIfChanged(
-        const std::array<int, 16> &currentSmfChunkIndexByOldEngineSlot,
-        int oldEngineSlotCount);
     void pushEdit(const QString &text, std::vector<EditOp> ops);
     void rebuildTrackMap();
-    int engineTrackForChunk(int chunk) const; // -1 = no engine slot
     // Lowest MIDI channel no existing engine track uses; -1 when all 16 are
     // taken.
     int freeChannel() const;

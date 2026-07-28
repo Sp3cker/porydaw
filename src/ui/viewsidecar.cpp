@@ -5,11 +5,92 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSaveFile>
+#include <QStringView>
 #include <algorithm>
+#include <optional>
 
 #include "project/sidecar.h"
 
 namespace ViewSidecar {
+
+namespace {
+
+std::optional<int> decodeRowNumber(QStringView text, int maximum) {
+  if (text.isEmpty() || (text.size() > 1 && text.at(0) == QLatin1Char('0')))
+    return std::nullopt;
+  for (const QChar character : text) {
+    if (character.unicode() < '0' || character.unicode() > '9')
+      return std::nullopt;
+  }
+  bool ok = false;
+  const int value = text.toInt(&ok);
+  if (!ok || value > maximum)
+    return std::nullopt;
+  return value;
+}
+
+std::optional<SongView::AutomationRowId>
+decodeAutomationRowKey(const QString &key) {
+  const QStringView keyView(key);
+  if (keyView == QLatin1String("tempo"))
+    return SongView::AutomationRowId::tempo();
+  if (keyView.startsWith(QLatin1String("voice:"))) {
+    const auto track = decodeRowNumber(keyView.mid(6), 15);
+    if (track.has_value())
+      return SongView::AutomationRowId::voice(*track);
+    return std::nullopt;
+  }
+  if (!keyView.startsWith(QLatin1String("cc:")))
+    return std::nullopt;
+  const qsizetype controllerSeparator = keyView.indexOf(QLatin1Char(':'), 3);
+  if (controllerSeparator < 0 ||
+      keyView.indexOf(QLatin1Char(':'), controllerSeparator + 1) >= 0)
+    return std::nullopt;
+  const auto track =
+      decodeRowNumber(keyView.mid(3, controllerSeparator - 3), 15);
+  const auto controller =
+      decodeRowNumber(keyView.mid(controllerSeparator + 1), 255);
+  if (!track.has_value() || !controller.has_value())
+    return std::nullopt;
+  return SongView::AutomationRowId::controller(*track, uint8_t(*controller));
+}
+
+QString encodeAutomationRowKey(const SongView::AutomationRowId &id) {
+  switch (id.kind) {
+  case SongView::AutomationRowId::Kind::Tempo:
+    return QStringLiteral("tempo");
+  case SongView::AutomationRowId::Kind::Voice:
+    return QStringLiteral("voice:%1").arg(id.track);
+  case SongView::AutomationRowId::Kind::Controller:
+    return QStringLiteral("cc:%1:%2").arg(id.track).arg(int(id.cc));
+  }
+  return {};
+}
+
+std::optional<std::pair<int, uint8_t>>
+decodeLaneIdentity(const QJsonValue &value) {
+  if (!value.isObject())
+    return std::nullopt;
+  const QJsonObject object = value.toObject();
+  const QJsonValue trackValue = object.value(QLatin1String("track"));
+  const QJsonValue ccValue = object.value(QLatin1String("cc"));
+  if (!trackValue.isDouble() || !ccValue.isDouble())
+    return std::nullopt;
+  const int track = trackValue.toInt(-1);
+  const int cc = ccValue.toInt(-1);
+  if (!SongView::isValidLaneIdentity(track, cc))
+    return std::nullopt;
+  return std::pair<int, uint8_t>(track, uint8_t(cc));
+}
+
+QJsonObject encodeLaneIdentity(const std::pair<int, uint8_t> &laneIdentity) {
+  QJsonObject object;
+  object.insert(QLatin1String("track"), laneIdentity.first);
+  object.insert(QLatin1String("cc"), int(laneIdentity.second));
+  return object;
+}
+
+} // namespace
 
 QString pathFor(const QString &projectRoot, const QString &songLabel) {
   return QStringLiteral("%1/.porydaw/%2.json").arg(projectRoot, songLabel);
@@ -45,41 +126,39 @@ bool load(const QString &projectRoot, const QString &songLabel,
   loaded.gridMinDenom = obj.value(QLatin1String("gridMinDenom")).toInt(0);
   loaded.gridTriplet = obj.value(QLatin1String("gridTriplet")).toBool(false);
   loaded.eventList = obj.value(QLatin1String("eventList")).toBool(false);
-  if (obj.contains(QLatin1String("drawerVisible")))
-    loaded.drawerVisible =
-        obj.value(QLatin1String("drawerVisible")).toBool(true);
-  else if (obj.contains(QLatin1String("automationDrawerVisible")))
-    loaded.drawerVisible =
-        obj.value(QLatin1String("automationDrawerVisible")).toBool(true);
-  else
-    loaded.drawerVisible = true;
+  loaded.drawerVisible = obj.value(QLatin1String("drawerVisible")).toBool(true);
   const QString drawerPageStr =
       obj.value(QLatin1String("drawerPage")).toString();
   loaded.drawerPage = (drawerPageStr == QLatin1String("velocity"))
                           ? SongView::DrawerPage::Velocity
                           : SongView::DrawerPage::Automations;
-  const QJsonObject lanes = obj.value(QLatin1String("laneHeights")).toObject();
-  for (auto it = lanes.begin(); it != lanes.end(); ++it)
-    loaded.laneHeights.insert(it.key(), it.value().toInt());
+  const QJsonObject heights = obj.value(QLatin1String("laneHeights")).toObject();
+  for (auto it = heights.begin(); it != heights.end(); ++it)
+    {
+    const auto rowId = decodeAutomationRowKey(it.key());
+    if (rowId.has_value())
+      loaded.rowStates[*rowId].height = it.value().toInt();
+  }
   const QJsonObject ranges = obj.value(QLatin1String("laneRanges")).toObject();
   for (auto it = ranges.begin(); it != ranges.end(); ++it)
-    loaded.laneRanges.insert(it.key(), it.value().toInt());
+    {
+    const auto rowId = decodeAutomationRowKey(it.key());
+    if (rowId.has_value())
+      loaded.rowStates[*rowId].range = it.value().toInt();
+  }
   for (const QJsonValue &v : obj.value(QLatin1String("splitter")).toArray())
     loaded.splitterSizes.push_back(v.toInt());
-  for (const QJsonValue &v : obj.value(QLatin1String("emptyLanes")).toArray()) {
-    const QJsonObject lane = v.toObject();
-    loaded.emptyLanes.push_back(
-        {lane.value(QLatin1String("track")).toInt(-1),
-         uint8_t(lane.value(QLatin1String("cc")).toInt(0))});
+  for (const QJsonValue &value : obj.value(QLatin1String("emptyLanes")).toArray()) {
+    const auto laneIdentity = decodeLaneIdentity(value);
+    if (laneIdentity.has_value())
+      loaded.emptyLanes.push_back(
+        *laneIdentity);
   }
-  for (const QJsonValue &laneValue :
+  for (const QJsonValue &value :
        obj.value(QLatin1String("hiddenLanes")).toArray()) {
-    const QJsonObject lane = laneValue.toObject();
-    const int laneTrack = lane.value(QLatin1String("track")).toInt(-1);
-    const int laneCc = lane.value(QLatin1String("cc")).toInt(-1);
-    if (laneTrack >= 0 && laneTrack < 16 &&
-        ((laneCc >= 0 && laneCc <= 0x7F) || laneCc == LANE_CC_BEND))
-      loaded.hiddenLanes.push_back({laneTrack, uint8_t(laneCc)});
+    const auto laneIdentity = decodeLaneIdentity(value);
+    if (laneIdentity.has_value())
+      loaded.hiddenLanes.push_back(*laneIdentity);
   }
   *state = loaded;
   return true;
@@ -116,42 +195,35 @@ bool save(const QString &projectRoot, const QString &songLabel,
              state.drawerPage == SongView::DrawerPage::Velocity
                  ? QLatin1String("velocity")
                  : QLatin1String("automations"));
-  if (!state.laneHeights.isEmpty()) {
-    QJsonObject lanes;
-    for (auto it = state.laneHeights.begin(); it != state.laneHeights.end();
+  QJsonObject heights;
+  QJsonObject ranges;
+    for (auto it = state.rowStates.constBegin(); it != state.rowStates.constEnd();
          ++it)
-      lanes.insert(it.key(), it.value());
-    obj.insert(QLatin1String("laneHeights"), lanes);
+      {
+    const QString key = encodeAutomationRowKey(it.key());
+    if (key.isEmpty())
+      continue;
+    if (it.value().height.has_value())
+      heights.insert(key, *it.value().height);
+    if (it.value().range.has_value())
+      ranges.insert(key, *it.value().range);
   }
-  if (!state.laneRanges.isEmpty()) {
-    QJsonObject ranges;
-    for (auto it = state.laneRanges.begin(); it != state.laneRanges.end(); ++it)
-      ranges.insert(it.key(), it.value());
-    obj.insert(QLatin1String("laneRanges"), ranges);
-  }
+  if (!heights.isEmpty())
+    obj.insert(QLatin1String("laneHeights"), heights);
+  if (!ranges.isEmpty()) obj.insert(QLatin1String("laneRanges"), ranges);
   QJsonArray splitter;
   for (int size : state.splitterSizes)
     splitter.append(size);
   obj.insert(QLatin1String("splitter"), splitter);
   if (!state.emptyLanes.empty()) {
     QJsonArray lanes;
-    for (const std::pair<int, uint8_t> &lane : state.emptyLanes) {
-      QJsonObject entry;
-      entry.insert(QLatin1String("track"), lane.first);
-      entry.insert(QLatin1String("cc"), int(lane.second));
-      lanes.append(entry);
-    }
+    for (const std::pair<int, uint8_t> &lane : state.emptyLanes) lanes.append(encodeLaneIdentity(lane));
     obj.insert(QLatin1String("emptyLanes"), lanes);
   }
   if (!state.hiddenLanes.empty()) {
-    QJsonArray hiddenLanes;
-    for (const std::pair<int, uint8_t> &hiddenLane : state.hiddenLanes) {
-      QJsonObject entry;
-      entry.insert(QLatin1String("track"), hiddenLane.first);
-      entry.insert(QLatin1String("cc"), int(hiddenLane.second));
-      hiddenLanes.append(entry);
-    }
-    obj.insert(QLatin1String("hiddenLanes"), hiddenLanes);
+    QJsonArray lanes;
+    for (const std::pair<int, uint8_t> &lane : state.hiddenLanes) lanes.append(encodeLaneIdentity(lane));
+    obj.insert(QLatin1String("hiddenLanes"), lanes);
   }
   root.insert(QLatin1String("view"), obj);
 

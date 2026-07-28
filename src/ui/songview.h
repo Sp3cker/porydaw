@@ -3,18 +3,19 @@
 
 #include <QColor>
 #include <QHash>
-#include <algorithm>
 #include <QList>
 #include <QRectF>
 #include <QSet>
 #include <QWidget>
+#include <algorithm>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <utility>
 #include <vector>
-#include <optional>
 
 #include "core/miditimeline.h"
+#include "core/songdocument.h"
 #include "ui/songviewmodel.h"
 
 extern "C" {
@@ -22,19 +23,19 @@ extern "C" {
 }
 
 class EventListView;
-class QAction;
 class QKeyEvent;
-class QScrollArea;
+class QPainter;
 class QScrollBar;
 class QStackedWidget;
 class QWheelEvent;
-class QToolButton;
 class SongDocument;
+class SongView;
 
 namespace songview {
 class TimeRuler;
 class PianoRoll;
 class AutomationArea;
+class EditorDrawer;
 class VelocityArea;
 class OtherStrip;
 class PlayheadOverlay;
@@ -92,6 +93,13 @@ inline int selectionRingPixels(qreal dpr)
 {
     return std::max(1, qRound(1.5 * dpr));
 }
+QPoint wheelDelta(const QWheelEvent *event);
+double wheelAngleUnits(const QWheelEvent *event);
+QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t);
+void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin);
+void drawOverlays(QPainter &p, const SongView *sv, const QRect &rect,
+                  qreal origin, bool timeSelCovered);
+std::vector<DocNote> selectedDocumentNotes(const SongView &view);
 } // namespace songview
 
 // Song view: time ruler, multi-track piano roll (selected track in full
@@ -127,6 +135,56 @@ public:
   // Per-song sidecar view state (SPEC §4.4): the cosmetic state worth
   // restoring when the song is reopened. Everything is clamped/validated
   // on apply, so a stale or hand-edited sidecar can't wedge the view.
+  struct AutomationRowId {
+    enum class Kind { Tempo, Voice, Controller };
+    Kind kind = Kind::Tempo;
+    int track = 0;
+    uint8_t cc = 0;
+
+    static AutomationRowId tempo() { return {Kind::Tempo, 0, 0}; }
+    static AutomationRowId voice(int trk) { return {Kind::Voice, trk, 0}; }
+    static AutomationRowId controller(int trk, uint8_t ctrl) {
+      return {Kind::Controller, trk, ctrl};
+    }
+
+    friend bool operator==(const AutomationRowId &a, const AutomationRowId &b) {
+      if (a.kind != b.kind)
+        return false;
+      if (a.kind == Kind::Tempo)
+        return true;
+      if (a.kind == Kind::Voice)
+        return a.track == b.track;
+      return a.track == b.track && a.cc == b.cc;
+    }
+    friend bool operator!=(const AutomationRowId &a, const AutomationRowId &b) {
+      return !(a == b);
+    }
+    friend size_t qHash(const AutomationRowId &id, size_t seed = 0) {
+      uint32_t val = static_cast<uint32_t>(id.kind);
+      if (id.kind == AutomationRowId::Kind::Voice) {
+        val |= (static_cast<uint32_t>(id.track) << 2);
+      } else if (id.kind == AutomationRowId::Kind::Controller) {
+        val |= (static_cast<uint32_t>(id.track) << 2) |
+               (static_cast<uint32_t>(id.cc) << 18);
+      }
+      return ::qHash(val, seed);
+    }
+  };
+
+  struct AutomationRowDisplayState {
+    std::optional<int> height;
+    std::optional<int> range;
+
+    friend bool operator==(const AutomationRowDisplayState &a,
+                           const AutomationRowDisplayState &b) {
+      return a.height == b.height && a.range == b.range;
+    }
+    friend bool operator!=(const AutomationRowDisplayState &a,
+                           const AutomationRowDisplayState &b) {
+      return !(a == b);
+    }
+  };
+
   struct ViewState {
     bool valid = false;
     double pxPerBeat = 32.0; // horizontal zoom (ticks-per-beat neutral)
@@ -136,12 +194,9 @@ public:
     int selectedTrack = 0;
     uint64_t editCursorTick = 0;
     int laneHeight = 48;             // shared automation row height
-    QHash<QString, int> laneHeights; // per-row overrides (AutomationArea keys)
-    QHash<QString, int> laneRanges;  // per-lane display max (AutomationArea
-                                     // keys); 0 = auto-fit to the data
+    QHash<AutomationRowId, AutomationRowDisplayState> rowStates;
     QList<int> splitterSizes; // legacy roll/drawer sizes; [1] is drawer height
     bool drawerVisible = true;
-    bool automationDrawerVisible = true;
     DrawerPage drawerPage = DrawerPage::Automations;
     std::vector<std::pair<int, uint8_t>> emptyLanes;  // (track, cc)
     std::vector<std::pair<int, uint8_t>> hiddenLanes; // (track, cc)
@@ -154,6 +209,8 @@ public:
   // Call after setSong (and setDocument); a default-constructed (invalid)
   // state is a no-op.
   void applyViewState(const ViewState &state);
+
+  static bool isValidLaneIdentity(int track, int cc);
 
   // User-added automation lanes with no events yet (SPEC §6.1 "addable from
   // the m4a parameter list"). They live in view state — the model derives
@@ -177,9 +234,6 @@ public:
   DrawerPage drawerPage() const;
   void setDrawerVisible(bool visible);
   bool drawerVisible() const;
-  bool automationDrawerVisible() const { return drawerVisible(); }
-  void setAutomationDrawerVisible(bool visible) { setDrawerVisible(visible); }
-
   // Display max for a CC lane's value axis (0 = auto-fit): the lane
   // menu's "Value range" choice, exposed for the harnesses. View state
   // only — lane values themselves are untouched.
@@ -251,6 +305,7 @@ public:
   // playing, the edit cursor otherwise — so the header label follows the
   // song's voice changes. Before the first change it stays firstProgram
   // (which is what primes the engine), -1 if the track has none.
+  int programAt(int track, uint64_t tick) const;
   int currentProgram(int track) const;
   QString
   instrumentLabel(int track) const; // "042 name (type)" from the voicegroup
@@ -364,6 +419,12 @@ public:
   void setSelection(std::vector<NoteId> ids);
   void clearSelection();
 
+  // Note-selection operations owned by SongView so every editor surface and
+  // the roll context menu act on the same selection.
+  void copyNoteSelection();
+  void cutNoteSelection();
+  void deleteNoteSelection();
+
   // Time-range selection: a half-open [startTick, endTick) span with a
   // scope — the header-selected tracks (ruler sweep and Shift+right-drag
   // in the roll behave identically; the scope resolves LIVE from
@@ -416,11 +477,14 @@ public:
   // ruler grid line and the covered contents (notes and automation
   // points) move with it; the band follows.
   void nudgeTimeSelection(bool right);
-  // Shared shortcut handling for the roll and the lanes area: range
-  // copy/cut/delete while a time selection is active, paste of range
-  // clips, and transpose/nudge of the selection (keymap commands).
-  // Returns true when consumed.
+  // Focus-sensitive dispatcher for designated editor surfaces: drawer A/V
+  // keys plus the shared note- and time-selection commands. Returns true
+  // when consumed.
   bool handleEditKey(QKeyEvent *event);
+  // A note transpose auditions until the focused editor surface receives a
+  // non-repeating key release.
+  void releaseEditKeyAudition();
+  int editKeyAuditionKey() const;
   // Semitone step for the transpose command the event matches (0 if none);
   // shared by the note- and time-selection key paths.
   int transposeStepFor(const QKeyEvent *event) const;
@@ -462,10 +526,10 @@ public:
   std::optional<uint8_t> noteVelocityPreview(const ViewNote &note) const;
   void updateNoteViews();
 
-  // Child-widget entry point for the auditionNote signal.
-  void audition(int track, int key, int velocity) {
-    emit auditionNote(track, key, velocity);
-  }
+  // Child-gesture entry point for the single-note preview. A new gesture
+  // replaces any keyboard-transpose audition, so its later key release cannot
+  // silence the gesture's note.
+  void audition(int track, int key, int velocity) ;
 
   // Fixed-length audition for the band-sweep chord preview: the note's tick
   // span converts to samples through the display timeline, so the preview
@@ -540,11 +604,11 @@ protected:
 private:
   uint64_t gridTicksIn(const GridSeg &seg, bool snap = false) const;
   // Unified post-mutation engine-slot handler. The document has already
-  // rebuilt its map; newEngineSlotByOldSlot[oldSlot] is the current slot,
+  // rebuilt its map; remap.newEngineSlotByOldSlot[oldSlot] is the current slot,
   // or -1 when the old owner disappeared. documentChanged refreshes views.
-  void onEngineTracksRemapped(const QVector<int> &newEngineSlotByOldSlot);
-  // A mouse gesture is live in the ruler, roll, or lanes (pan, drag,
-  // sweep); playhead follow-scroll pauses while one runs.
+  void onTracksRemapped(const SongDocument::TrackRemap &remap);
+  // A mouse gesture is live in the ruler, roll, automation lanes, or velocity
+  // area (pan, drag, sweep); playhead follow-scroll pauses while one runs.
   bool userGestureActive() const;
   void syncPlayheadOverlay();
   int viewportWidth() const;
@@ -553,9 +617,6 @@ private:
   void setVScroll(double y);
   double maxRollScroll() const;
   void updateScrollbars();
-  void layoutEditorDrawer();
-  void toggleDrawerPage(DrawerPage page);
-  void syncDrawerTabs();
   void rebuildAfterSongChange();
   void mergeEmptyLanes();
   // Engine tracks a track-scoped time selection resolves to (used and
@@ -563,6 +624,12 @@ private:
   // model lanes plus the voice changes).
   std::vector<int> timeSelectionTracks() const;
   std::vector<uint8_t> trackCcs(int track) const;
+
+  void writeNoteClipboard(const std::vector<DocNote> &notes);
+  void pasteNotesAtEditCursor();
+  void selectAllNotes();
+  void transposeNoteSelection(int dKey);
+  void nudgeNoteSelection(bool right);
 
   const MidiTimeline *m_timeline = nullptr;
   const LoadedVoiceGroup *m_voicegroup = nullptr;
@@ -582,6 +649,11 @@ private:
   std::vector<NoteId> m_selection;
   TimeSelection m_timeSel;
   Clip m_clip;
+  struct EditKeyAudition {
+    int track;
+    int key;
+  };
+  std::optional<EditKeyAudition> m_editKeyAudition;
   uint32_t m_trackSelMask =
       0; // header multi-selection (see trackSelectionMask)
   GridFeel m_gridFeel = GridFeel::Straight;
@@ -597,18 +669,12 @@ private:
   EventListView *m_events = nullptr;
   songview::AutomationArea *m_lanes = nullptr;
   songview::VelocityArea *m_velocityArea = nullptr;
-  QStackedWidget *m_drawerStack = nullptr;
-  QWidget *m_editorOverlay = nullptr;
-  QScrollArea *m_lanesScroll = nullptr;
-  QWidget *m_editorDrawerHandle = nullptr;
-  QAction *m_automationDrawerAction = nullptr;
-  QToolButton *m_automationDrawerTab = nullptr;
-  QAction *m_velocityDrawerAction = nullptr;
-  QToolButton *m_velocityDrawerTab = nullptr;
-  int m_editorDrawerHeight = 0;
-  DrawerPage m_drawerPage = DrawerPage::Automations;
+  songview::EditorDrawer *m_editorDrawer = nullptr;
   songview::OtherStrip *m_strip = nullptr;
   songview::PlayheadOverlay *m_playheadOverlay = nullptr;
   QScrollBar *m_hbar = nullptr;
   QScrollBar *m_vbar = nullptr;
-};
+  };
+
+using AutomationRowId = SongView::AutomationRowId;
+using AutomationRowDisplayState = SongView::AutomationRowDisplayState;

@@ -13,7 +13,6 @@
 #include <QCursor>
 #include <QDialog>
 #include <QDialogButtonBox>
-#include <QEnterEvent>
 #include <QEvent>
 #include <QFontMetrics>
 #include <QGridLayout>
@@ -59,9 +58,16 @@
 
 #include "core/mid2agbtables.h"
 #include "core/songdocument.h"
+#include "ui/editordrawer.h"
 #include "ui/eventlistview.h"
 #include "ui/keymap.h"
 #include "ui/playheadoverlay.h"
+
+#include "ui/velocityarea.h"
+namespace lyt = ::layout;
+using Space = lyt::Space;
+
+namespace songview {
 
 std::vector<DocNote> selectedDocumentNotes(const SongView &view) {
   std::vector<DocNote> notes;
@@ -76,10 +82,17 @@ std::vector<DocNote> selectedDocumentNotes(const SongView &view) {
   return notes;
 }
 
-namespace lyt = ::layout;
-using Space = lyt::Space;
+QPoint wheelDelta(const QWheelEvent *event) {
+  const QPoint pixelDelta = event->pixelDelta();
+  return pixelDelta.isNull() ? event->angleDelta() : pixelDelta;
+}
 
-namespace songview {
+double wheelAngleUnits(const QWheelEvent *event) {
+  if (event->phase() == Qt::ScrollMomentum)
+    return 0.0;
+  const QPoint delta = wheelDelta(event);
+  return double(delta.y()) * (event->pixelDelta().isNull() ? 1.0 : 5.0);
+}
 
 namespace {
 
@@ -90,8 +103,6 @@ constexpr int kLaneH = 48; // default row height; Ctrl+wheel rescales
 constexpr int kMinLaneH = 28;
 constexpr int kMaxLaneH = 128;
 constexpr int kAddLaneH = 20;
-constexpr int kLanesAreaH = 150;
-constexpr int kAutomationHandleH = 4;
 constexpr double kMinPxPerBeat = 4.0;
 constexpr double kMaxPxPerBeat = 640.0;
 constexpr double kMinKeyHeight = 4.0;
@@ -107,18 +118,6 @@ int scrollUnits(double dip) {
 }
 
 double scrollDips(int units) { return double(units) / kScrollUnitsPerDip; }
-
-QPoint wheelDelta(const QWheelEvent *event) {
-  const QPoint pixelDelta = event->pixelDelta();
-  return pixelDelta.isNull() ? event->angleDelta() : pixelDelta;
-}
-
-double wheelAngleUnits(const QWheelEvent *event) {
-  if (event->phase() == Qt::ScrollMomentum)
-    return 0.0;
-  const QPoint delta = wheelDelta(event);
-  return double(delta.y()) * (event->pixelDelta().isNull() ? 1.0 : 5.0);
-}
 
 double cursorAnchoredScroll(double anchor, double oldScale, double oldScroll,
                             double newScale) {
@@ -140,80 +139,6 @@ qreal edgeGripInnerReach(const QRectF &noteRect) {
   return std::clamp((noteRect.width() - kMoveZoneMin) / 2.0, 0.0,
                     kEdgeGripReach);
 }
-
-class AutomationOverlayHost final : public QWidget {
-public:
-  explicit AutomationOverlayHost(QWidget *parent) : QWidget(parent) {}
-
-  std::function<void()> resized;
-
-protected:
-  void resizeEvent(QResizeEvent *event) override {
-    QWidget::resizeEvent(event);
-    if (resized)
-      resized();
-  }
-};
-
-class AutomationDrawerHandle final : public QWidget {
-public:
-  explicit AutomationDrawerHandle(QWidget *parent) : QWidget(parent) {
-    setCursor(Qt::SplitVCursor);
-    setMouseTracking(true);
-  }
-
-  std::function<void(int)> dragged;
-
-protected:
-  void paintEvent(QPaintEvent *) override {
-    QPainter p(this);
-    p.fillRect(
-        rect(),
-        themes::color(m_hovered ? themes::Role::splitter_handle_hover_background
-                                : themes::Role::splitter_handle));
-  }
-
-  void enterEvent(QEnterEvent *) override {
-    m_hovered = true;
-    update();
-  }
-
-  void leaveEvent(QEvent *) override {
-    m_hovered = false;
-    update();
-  }
-
-  void mousePressEvent(QMouseEvent *event) override {
-    if (event->button() != Qt::LeftButton)
-      return;
-    m_dragging = true;
-    m_lastGlobalY = event->globalPosition().y();
-    event->accept();
-  }
-
-  void mouseMoveEvent(QMouseEvent *event) override {
-    if (!m_dragging || !(event->buttons() & Qt::LeftButton))
-      return;
-    const int globalY = event->globalPosition().y();
-    const int delta = globalY - m_lastGlobalY;
-    m_lastGlobalY = globalY;
-    if (delta != 0 && dragged)
-      dragged(delta);
-    event->accept();
-  }
-
-  void mouseReleaseEvent(QMouseEvent *event) override {
-    if (event->button() == Qt::LeftButton) {
-      m_dragging = false;
-      event->accept();
-    }
-  }
-
-private:
-  bool m_hovered = false;
-  bool m_dragging = false;
-  int m_lastGlobalY = 0;
-};
 
 bool isBlackKey(int key) {
   switch (key % 12) {
@@ -298,6 +223,8 @@ QColor trackHeaderAlsoSelectedColor() {
   color.setAlpha(99);
   return color;
 }
+} // namespace
+
 // Perceptual blend for receding a color into its backdrop (silent-in-game
 // track headers): t = 0 keeps `color`, t = 1 lands on `backdrop`.
 QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t) {
@@ -307,6 +234,8 @@ QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t) {
       {from.lightness + (to.lightness - from.lightness) * t,
        from.a + (to.a - from.a) * t, from.b + (to.b - from.b) * t});
 }
+namespace {
+
 std::size_t trackIdentityIndex(int track) {
   const auto count = static_cast<int>(themes::trackIdentityColorCount);
   return static_cast<std::size_t>(((track % count) + count) % count);
@@ -338,6 +267,8 @@ QColor ghostNoteColor(int track, bool accidentalRow) {
        backgroundLab.a + (identityLab.a - backgroundLab.a) * kIdentityWeight,
        backgroundLab.b + (identityLab.b - backgroundLab.b) * kIdentityWeight});
 }
+
+} // namespace
 
 // Draw the loop-region band across rect. x positions are
 // computed with origin = local x of timeline tick 0's content position.
@@ -400,6 +331,8 @@ void drawOverlays(QPainter &p, const SongView *sv, const QRect &rect,
     p.drawLine(QLineF(cursorX, rect.top(), cursorX, rect.bottom()));
   }
 }
+
+namespace {
 
 // Subdivision level of a sub-beat grid tick (relative to its segment's
 // start): 1 = the beat's first split (half beat, or a third in triplet
@@ -466,6 +399,8 @@ QColor gridLineColor(int alpha = 255) {
   return color;
 }
 
+} // namespace
+
 // Vertical bar/beat grid lines inside rect, with zoom-adaptive sub-beat
 // lines at the snap grid's positions fading lighter per subdivision level.
 // Lines are batched per level so each color is a single drawLines() call.
@@ -513,6 +448,8 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect,
     p.drawLines(batches[i]);
   }
 }
+
+namespace {
 
 // macOS flashes a triggered menu item for 80 ms before hiding the menu;
 // suppress the flash so picking an action feels instant.
@@ -2020,59 +1957,8 @@ protected:
   }
 
   void keyPressEvent(QKeyEvent *event) override {
-    // Time-selection range ops (and range-clip paste) win over the
-    // note-selection shortcuts; the two selections are mutually
-    // exclusive, so there is never a real conflict.
     if (m_sv->handleEditKey(event))
       return;
-    const auto &keys = keymap::Registry::instance();
-    SongDocument *doc = m_sv->document();
-    const bool cut = keys.matches(event, QStringLiteral("roll.cut"));
-    if (doc && (cut || keys.matches(event, QStringLiteral("roll.copy")))) {
-      const std::vector<DocNote> notes = selectedDocumentNotes(*m_sv);
-      if (!notes.empty()) {
-        copyNotes(notes);
-        if (cut) {
-          doc->deleteNotes(notes);
-          m_sv->clearSelection();
-        }
-      }
-      event->accept();
-      return;
-    }
-    if (doc && keys.matches(event, QStringLiteral("roll.paste"))) {
-      pasteAtEditCursor();
-      event->accept();
-      return;
-    }
-    if (doc && keys.matches(event, QStringLiteral("roll.select_all"))) {
-      selectAllNotes();
-      event->accept();
-      return;
-    }
-    if (doc && keys.matches(event, QStringLiteral("roll.delete"))) {
-      const std::vector<DocNote> notes = selectedDocumentNotes(*m_sv);
-      if (!notes.empty()) {
-        doc->deleteNotes(notes);
-        m_sv->clearSelection();
-      }
-      event->accept();
-      return;
-    }
-    if (doc) {
-      const int transpose = m_sv->transposeStepFor(event);
-      if (transpose != 0) {
-        transposeSelection(transpose);
-        event->accept();
-        return;
-      }
-    }
-    if (doc && (keys.matches(event, QStringLiteral("roll.nudge_left")) ||
-                keys.matches(event, QStringLiteral("roll.nudge_right")))) {
-      nudgeSelection(keys.matches(event, QStringLiteral("roll.nudge_right")));
-      event->accept();
-      return;
-    }
     if (event->key() == Qt::Key_Escape) {
       m_drag = Drag::None;
       m_leftPress = false;
@@ -2090,13 +1976,15 @@ protected:
   }
 
   void keyReleaseEvent(QKeyEvent *event) override {
-    // End the transpose audition when the shortcut's keys come up.
-    // Autorepeat releases are skipped so a held Ctrl+Up keeps sounding
-    // the moving pitch; the Drag::None guard keeps a stray key release
-    // from cutting a mouse gesture's preview short.
-    if (!event->isAutoRepeat() && m_auditioned && m_drag == Drag::None) {
+    // End a transpose audition when the shortcut's keys come up. Autorepeat
+    // releases are skipped so a held Ctrl+Up keeps sounding the moving pitch.
+    // A stray release still must not cut a live mouse-gesture preview short.
+    if (!event->isAutoRepeat() ) {
+      m_sv->releaseEditKeyAudition();
+      if (m_auditioned && m_drag == Drag::None) {
       auditionKey(0, 0);
       m_auditioned = false;
+    }
     }
     QWidget::keyReleaseEvent(event);
   }
@@ -2276,136 +2164,10 @@ private:
            pos.y() >= bar.top() - pad && pos.y() < bar.bottom() + pad;
   }
 
-  // Ctrl+Up/Down (Shift: octave). Transposes keep intervals: if any
-  // selected note would clamp at the key range, the whole move is a
-  // no-op. The first note sounds at its new pitch, like a vertical
-  // drag; the key release ends it (keyReleaseEvent).
-  void transposeSelection(int dKey) {
-    SongDocument *doc = m_sv->document();
-    const std::vector<DocNote> notes = selectedDocumentNotes(*m_sv);
-    if (!doc || notes.empty())
-      return;
-    for (const DocNote &note : notes) {
-      const int key = int(note.key) + dKey;
-      if (key < 0 || key > 127)
-        return;
-    }
-    doc->moveNotes(notes, 0, dKey, /*mergeable=*/true);
-    // Follow the notes with the selection.
-    std::vector<SongView::NoteId> ids;
-    for (const DocNote &note : notes)
-      ids.push_back({uint32_t(note.tick), uint8_t(int(note.key) + dKey)});
-    m_sv->setSelection(std::move(ids));
-    // Keep the moved notes in sight: the row the move headed toward
-    // scrolls into view just enough (no re-centering).
-    int edge = int(notes.front().key) + dKey;
-    for (const DocNote &note : notes) {
-      const int key = int(note.key) + dKey;
-      edge = dKey > 0 ? std::max(edge, key) : std::min(edge, key);
-    }
-    m_sv->ensureKeyVisible(edge);
-    auditionKey(int(notes.front().key) + dKey, notes.front().velocity);
-    m_auditioned = true;
-    update();
-  }
-
-  // Ctrl+Left/Right. The earliest selected note's start moves to the
-  // previous/next ruler grid line — absolute positions, like a draw or
-  // edge resize, so an off-grid selection lands on the grid first —
-  // and the rest keep their offsets from it.
-  void nudgeSelection(bool right) {
-    SongDocument *doc = m_sv->document();
-    const std::vector<DocNote> notes = selectedDocumentNotes(*m_sv);
-    if (!doc || notes.empty())
-      return;
-    uint64_t anchor = UINT64_MAX;
-    for (const DocNote &note : notes)
-      anchor = std::min(anchor, note.tick);
-    const uint64_t snapped =
-        drawnGridTick(m_sv, double(anchor) + (right ? 1.0 : -1.0), right);
-    const int64_t dTick = int64_t(snapped) - int64_t(anchor);
-    if (dTick == 0)
-      return;
-    doc->moveNotes(notes, dTick, 0, /*mergeable=*/true);
-    // Follow the notes with the selection.
-    std::vector<SongView::NoteId> ids;
-    for (const DocNote &note : notes)
-      ids.push_back({uint32_t(int64_t(note.tick) + dTick), note.key});
-    m_sv->setSelection(std::move(ids));
-    // Keep the moved notes in sight, scrolling just enough.
-    uint64_t lo = UINT64_MAX, hi = 0;
-    for (const DocNote &note : notes) {
-      const uint64_t tick = uint64_t(int64_t(note.tick) + dTick);
-      lo = std::min(lo, tick);
-      hi = std::max(hi, tick + note.duration);
-    }
-    m_sv->ensureRangeVisible(lo, hi, right);
-    update();
-  }
-
-  // Fills the clipboard with the notes as a plain note clip (span 0,
-  // additive paste), ticks relative to the block start.
-  void copyNotes(const std::vector<DocNote> &notes) {
-    uint64_t base = UINT64_MAX;
-    for (const DocNote &note : notes)
-      base = std::min(base, note.tick);
-    SongView::Clip clip;
-    SongView::ClipTrack ct{m_sv->selectedTrack(), {}};
-    for (const DocNote &note : notes)
-      ct.notes.push_back({uint32_t(note.tick - base), note.key,
-                          note.duration
-                              ? note.duration
-                              : uint32_t(m_sv->gridTicksAt(note.tick)),
-                          note.velocity});
-    clip.tracks.push_back(std::move(ct));
-    m_sv->clipboard() = std::move(clip);
-    m_sv->announce(
-        SongView::tr("Copied %n note(s)", nullptr, int(notes.size())));
-  }
-
-  // Pastes a plain note clip onto the selected track, anchored at the edit
-  // cursor (snapped to the grid), and selects the pasted notes. Range
-  // clips (span > 0) are handled by SongView::pasteRangeAtEditCursor.
-  void pasteAtEditCursor() {
-    SongDocument *doc = m_sv->document();
-    const SongView::Clip &clip = m_sv->clipboard();
-    if (!doc || clip.span != 0 || clip.tracks.empty() ||
-        clip.tracks.front().notes.empty())
-      return;
-    const uint64_t base = m_sv->snapTick(double(m_sv->editCursorTick()));
-    std::vector<SongDocument::NewNote> notes;
-    std::vector<SongView::NoteId> ids;
-    uint64_t end = base;
-    for (const SongView::ClipNote &cn : clip.tracks.front().notes) {
-      const uint64_t tick = base + cn.relTick;
-      notes.push_back({tick, cn.key, cn.duration, cn.velocity});
-      ids.push_back({uint32_t(tick), cn.key});
-      end = std::max(end, tick + cn.duration);
-    }
-    doc->addNotes(m_sv->selectedTrack(), notes);
-    m_sv->setSelection(std::move(ids));
-    // Like pasteRangeAtEditCursor: advance the edit cursor past the pasted
-    // notes so repeated Ctrl+V lays copies back-to-back, but keep the view
-    // anchored on the content that just landed.
-    m_sv->commitEditCursor(end);
-    m_sv->ensureTickVisible(base);
-    m_sv->announce(
-        SongView::tr("Pasted %n note(s)", nullptr, int(notes.size())));
-  }
-
   void selectKeyNotes(int key) {
     std::vector<SongView::NoteId> ids;
     for (const ViewNote &note : m_sv->model().notes) {
       if (note.track == m_sv->selectedTrack() && note.key == key)
-        ids.push_back({note.startTick, note.key});
-    }
-    m_sv->setSelection(std::move(ids));
-  }
-
-  void selectAllNotes() {
-    std::vector<SongView::NoteId> ids;
-    for (const ViewNote &note : m_sv->model().notes) {
-      if (note.track == m_sv->selectedTrack())
         ids.push_back({note.startTick, note.key});
     }
     m_sv->setSelection(std::move(ids));
@@ -2565,20 +2327,18 @@ private:
     SongDocument *doc = m_sv->document();
     if (!doc)
       return;
-    const std::vector<DocNote> notes = selectedDocumentNotes(*m_sv);
-    if (notes.empty())
-      return;
     switch (choice) {
     case NoteMenuChoice::Copy:
-      copyNotes(notes);
+      m_sv->copyNoteSelection();
       break;
     case NoteMenuChoice::Cut:
-      copyNotes(notes);
-      doc->deleteNotes(notes);
-      m_sv->clearSelection();
+      m_sv->cutNoteSelection();
       break;
     case NoteMenuChoice::Velocity: {
-      bool ok = false;
+      const std::vector<DocNote> notes = selectedDocumentNotes(*m_sv);
+    if (notes.empty())
+      return;
+    bool ok = false;
       const int velocity =
           QInputDialog::getInt(this, SongView::tr("Note velocity"),
                                SongView::tr("Velocity (1-127):"),
@@ -2590,8 +2350,7 @@ private:
       break;
     }
     case NoteMenuChoice::Delete:
-      doc->deleteNotes(notes);
-      m_sv->clearSelection();
+      m_sv->deleteNoteSelection();
       break;
     case NoteMenuChoice::None:
       break;
@@ -2614,7 +2373,7 @@ private:
       const QRectF keyRect = this->keyRect(key, 0, kKeyboardW);
       if (keyRect.bottom() <= 0 || keyRect.top() >= height())
         continue;
-      const bool sounding = key == m_soundingKey;
+      const bool sounding = key == m_soundingKey|| key == m_sv->editKeyAuditionKey();
       if (isBlackKey(key)) {
         p.fillRect(keyRect,
                    sounding
@@ -2817,10 +2576,8 @@ public:
 
 class AutomationArea : public QWidget {
 public:
-  AutomationArea(SongView *sv, QScrollArea *scroll)
-      : QWidget(nullptr), m_sv(sv),
-        m_scroll(scroll) // parented by the scroll area
-  {
+  explicit AutomationArea(SongView *sv)
+      : QWidget(nullptr), m_sv(sv){
     setObjectName(QStringLiteral("automationArea")); // findChild for tests
     setMinimumHeight(kLaneH);
     setMouseTracking(true); // divider hover cursor
@@ -2830,25 +2587,30 @@ public:
   }
 
   // View-state plumbing for the .porydaw sidecar: the shared row height
-  // plus the individually-resized rows (keyed by rowKey). laneH <= 0
+  // plus the individually-resized rows (keyed by AutomationRowId). laneH <= 0
   // resets to the default.
   int laneHeight() const { return m_laneH; }
-  const QHash<QString, int> &rowHeightOverrides() const { return m_rowHeights; }
-
-  // Per-lane value-axis zoom (rowKey → display max; 0 = auto-fit). Same
-  // sidecar plumbing as the row heights.
-  const QHash<QString, int> &rowRangeOverrides() const { return m_rowRanges; }
-  void setRowRanges(const QHash<QString, int> &ranges) {
-    m_rowRanges.clear();
-    for (auto it = ranges.begin(); it != ranges.end(); ++it)
-      m_rowRanges.insert(it.key(), std::clamp(it.value(), 0, 127));
+  const QHash<AutomationRowId, AutomationRowDisplayState> &rowDisplayStates() const { return m_rowStates;
+  }
+  void setRowDisplayStates(
+      const QHash<AutomationRowId, AutomationRowDisplayState> &states) {
+    m_rowStates.clear();
+    for (auto it = states.constBegin(); it != states.constEnd(); ++it)
+      {
+      AutomationRowDisplayState state = it.value();
+      if (state.height.has_value())
+        state.height = std::clamp(*state.height, kMinLaneH, kMaxLaneH);
+      if (state.range.has_value())
+        state.range = std::clamp(*state.range, 0, 127);
+      if (state.height.has_value() || state.range.has_value())
+        m_rowStates.insert(it.key(), state);
+    }
+    applyHeight();
     update();
   }
   void setLaneRange(int track, uint8_t cc, int value) {
-    if (value == laneRangeDefault(cc))
-      m_rowRanges.remove(laneKey(track, cc));
-    else
-      m_rowRanges.insert(laneKey(track, cc), std::clamp(value, 0, 127));
+    m_rowStates[AutomationRowId::controller(track, cc)].range =
+        std::clamp(value , 0, 127);
     update();
   }
 
@@ -2863,8 +2625,20 @@ public:
       const int newEngineSlot = newEngineSlotByOldSlot[oldEngineSlot];
       return newEngineSlot >= 0 && newEngineSlot < 16 ? newEngineSlot : -1;
     };
-    remapEngineSlotKeys(m_rowHeights, newEngineSlotForOldSlot);
-    remapEngineSlotKeys(m_rowRanges, newEngineSlotForOldSlot);
+    QHash<AutomationRowId, AutomationRowDisplayState> remapped;
+    for (auto it = m_rowStates.constBegin(); it != m_rowStates.constEnd();
+         ++it) {
+      AutomationRowId id = it.key();
+      if (id.kind == AutomationRowId::Kind::Voice ||
+          id.kind == AutomationRowId::Kind::Controller) {
+        const int newTrack = newEngineSlotForOldSlot(id.track);
+        if (newTrack < 0)
+          continue;
+        id.track = newTrack;
+      }
+      remapped.insert(id, it.value());
+    }
+    m_rowStates = std::move(remapped);
   }
 
   // A mouse gesture is live (pan, point/sweep/line edit, row resize,
@@ -2887,12 +2661,8 @@ public:
     else
       update();
   }
-  void setViewHeights(int laneH, const QHash<QString, int> &overrides) {
+  void setViewHeights(int laneH) {
     m_laneH = laneH > 0 ? std::clamp(laneH, kMinLaneH, kMaxLaneH) : kLaneH;
-    m_rowHeights.clear();
-    for (auto it = overrides.begin(); it != overrides.end(); ++it)
-      m_rowHeights.insert(it.key(),
-                          std::clamp(it.value(), kMinLaneH, kMaxLaneH));
     applyHeight();
     update();
   }
@@ -2908,7 +2678,7 @@ public:
     m_selSweep = false;
     m_hoverRow = -1;
     if (m_sv->timeline()) {
-      m_rows.push_back({Row::Tempo});
+      m_rows.push_back(AutomationRowId::tempo());
       const SongViewModel &model = m_sv->model();
       const int selectedTrack = m_sv->selectedTrack();
       // The voice row shows whenever the track has changes; with a
@@ -2921,11 +2691,11 @@ public:
         m_selectedTrackVoiceChanges.push_back(change);
       }
       if (showVoiceRow)
-        m_rows.push_back({Row::Voice});
+        m_rows.push_back(AutomationRowId::voice(selectedTrack));
       for (const AutoLane &lane : model.lanes)
         if (lane.track == selectedTrack &&
             !m_sv->laneHidden(lane.track, lane.cc))
-          m_rows.push_back({Row::Lane, lane.track, lane.cc});
+          m_rows.push_back(AutomationRowId::controller(lane.track, lane.cc));
     }
     applyHeight();
     update();
@@ -3014,8 +2784,8 @@ protected:
     if (m_dragRow >= 0 || m_selSweep || m_hoverRow < 0 ||
         m_hoverRow >= int(m_rows.size()))
       return;
-    const Row &row = m_rows[m_hoverRow];
-    if (row.kind == Row::Voice) {
+    const AutomationRowId &row = m_rows[m_hoverRow];
+    if (row.kind == AutomationRowId::Kind::Voice) {
       if (!m_sv->document() || !m_voiceInsertionPreviewVisible)
         return;
 
@@ -3062,9 +2832,10 @@ protected:
         p.drawText(labelRect, Qt::AlignLeft | Qt::AlignVCenter, label);
         p.setPen(QPen(SongView::trackColor(m_sv->selectedTrack()), 2));
         for (const VoiceChange &change : m_selectedTrackVoiceChanges) {
-          const int markerX = kGutterW + m_sv->contentX(double(change.tick));
+          const qreal markerX = m_sv->displayX(double(change.tick), kGutterW ,
+                                               p.device()->devicePixelRatioF());
           if (markerX >= labelRect.left() && markerX <= labelRect.right()) {
-            p.drawLine(markerX, lineTop, markerX, lineBottom);
+            p.drawLine(QLineF(markerX, lineTop, markerX, lineBottom));
           }
         }
       }
@@ -3171,7 +2942,7 @@ protected:
     if (ri < 0)
       return;
     setFocus();
-    const Row &row = m_rows[ri];
+    const AutomationRowId &row = m_rows[ri];
     if (event->position().x() < kGutterW) {
       if (const AutoLane *lane = rowLane(row);
           lane && (event->button() == Qt::LeftButton ||
@@ -3191,7 +2962,7 @@ protected:
                                        event->modifiers() & Qt::AltModifier);
       return;
     }
-    if (row.kind == Row::Voice) {
+    if (row.kind == AutomationRowId::Kind::Voice) {
       voiceRowPress(event);
       return;
     }
@@ -3243,8 +3014,8 @@ protected:
       const QPointF d = event->globalPosition() - m_panPos;
       m_panPos = event->globalPosition();
       m_sv->scrollByPx(-d.x());
-      if (m_scroll) {
-        QScrollBar *vbar = m_scroll->verticalScrollBar();
+      if (auto *scroll = scrollArea()) {
+        auto *vbar = scroll->verticalScrollBar();
         vbar->setValue(vbar->value() - int(d.y()));
       }
       return;
@@ -3254,7 +3025,7 @@ protected:
           std::clamp(m_resizeOrigH + event->pos().y() - m_resizePressY,
                      kMinLaneH, kMaxLaneH);
       if (newH != rowHeight(m_rows[m_resizeRow])) {
-        m_rowHeights.insert(rowKey(m_rows[m_resizeRow]), newH);
+        m_rowStates[m_rows[m_resizeRow]].height = newH;
         applyHeight();
         update();
       }
@@ -3309,7 +3080,7 @@ protected:
     if (event->button() != Qt::LeftButton || m_dragRow < 0 ||
         m_dragRow >= int(m_rows.size()))
       return;
-    const Row &row = m_rows[m_dragRow];
+    const AutomationRowId &row = m_rows[m_dragRow];
     const Gesture gesture = m_gesture;
     m_gesture = Gesture::None;
     m_dragRow = -1;
@@ -3373,7 +3144,7 @@ protected:
     const int ri = rowIndexAt(event->pos().y());
     if (ri < 0)
       return;
-    const Row &row = m_rows[ri];
+    const AutomationRowId &row = m_rows[ri];
     uint8_t cc;
     int track;
     if (!rowTarget(row, &cc, &track))
@@ -3418,6 +3189,12 @@ protected:
     QWidget::keyPressEvent(event);
   }
 
+  void keyReleaseEvent(QKeyEvent *event) override {
+    if (!event->isAutoRepeat())
+      m_sv->releaseEditKeyAudition();
+    QWidget::keyReleaseEvent(event);
+  }
+
   void leaveEvent(QEvent *) override { clearHoverFeedback(); }
 
 private:
@@ -3426,14 +3203,8 @@ private:
   // heights before rebuildRows repopulates them), so a cached pointer
   // dangles the moment the model is reassigned. Anything needing the
   // live lane (points, name) resolves it through rowLane().
-  struct Row {
-    enum Kind { Tempo, Voice, Lane } kind;
-    int track = 0;
-    uint8_t cc = 0;
-  };
-
-  const AutoLane *rowLane(const Row &row) const {
-    if (row.kind != Row::Lane)
+  const AutoLane *rowLane(const AutomationRowId &row) const {
+    if (row.kind != AutomationRowId::Kind::Controller)
       return nullptr;
     for (const AutoLane &lane : m_sv->model().lanes) {
       if (lane.track == row.track && lane.cc == row.cc)
@@ -3445,13 +3216,13 @@ private:
   // The lane identity a row contributes to a lane-scoped time selection:
   // (engine track, cc), with the global tempo row as track -1 so it
   // survives track switches.
-  std::pair<int, uint8_t> rowIdentity(const Row &row) const {
+  std::pair<int, uint8_t> rowIdentity(const AutomationRowId &row) const {
     switch (row.kind) {
-    case Row::Tempo:
+    case AutomationRowId::Kind::Tempo:
       return {-1, DOC_CC_TEMPO};
-    case Row::Voice:
-      return {m_sv->selectedTrack(), DOC_CC_VOICE};
-    case Row::Lane:
+    case AutomationRowId::Kind::Voice:
+      return {row.track, DOC_CC_VOICE};
+    case AutomationRowId::Kind::Controller:
       return {row.track, row.cc};
     }
     return {-1, 0};
@@ -3488,7 +3259,7 @@ private:
     SongDocument *doc = m_sv->document();
     if (!doc || m_rightRow < 0 || m_rightRow >= int(m_rows.size()))
       return;
-    const Row &row = m_rows[m_rightRow];
+    const AutomationRowId &row = m_rows[m_rightRow];
     const std::pair<int, uint8_t> id = rowIdentity(row);
     const SongView::TimeSelection &sel = m_sv->timeSelection();
     const qreal x = event->position().x();
@@ -3500,7 +3271,7 @@ private:
       m_sv->showTimeSelectionMenu(event->globalPosition().toPoint());
       return;
     }
-    if (row.kind == Row::Voice) {
+    if (row.kind == AutomationRowId::Kind::Voice) {
       if (const VoiceChange *change = voiceChangeNear(event->position().x())) {
         DocLanePoint point;
         if (doc->findLanePoint(m_sv->selectedTrack(), DOC_CC_VOICE,
@@ -3552,106 +3323,18 @@ private:
   }
 
   int selectedTrackVoiceAtTick(uint64_t tick) const {
-    const auto change = std::upper_bound(
-        m_selectedTrackVoiceChanges.begin(), m_selectedTrackVoiceChanges.end(),
-        tick, [](uint64_t candidateTick, const VoiceChange &candidate) {
-          return candidateTick < candidate.tick;
-        });
-    return change == m_selectedTrackVoiceChanges.begin()
-               ? 0
-               : (change - 1)->program;
+    return std::max(0, m_sv->programAt(m_sv->selectedTrack(),
+        tick));
   }
 
   // Per-row geometry: individually-resized rows (divider drag) override
-  // the shared m_laneH. Keys survive track switches, so each lane keeps
+  // the shared m_laneH. Identities survive track switches, so each lane keeps
   // its height when the user comes back to the track.
-  QString rowKey(const Row &row) const {
-    switch (row.kind) {
-    case Row::Tempo:
-      return QStringLiteral("tempo");
-    case Row::Voice:
-      return QStringLiteral("voice:%1").arg(m_sv->selectedTrack());
-    case Row::Lane:
-      return laneKey(row.track, row.cc);
-    }
-    return QString();
-  }
-
-  static QString laneKey(int track, uint8_t cc) {
-    return QStringLiteral("cc:%1:%2").arg(track).arg(cc);
-  }
-
-  template <typename EngineSlotRemap>
-  static void remapEngineSlotKeys(QHash<QString, int> &rowState,
-                                  EngineSlotRemap newEngineSlotForOldSlot) {
-    QHash<QString, int> remappedRowState;
-    remappedRowState.reserve(rowState.size());
-
-    for (auto rowStateIt = rowState.constBegin();
-         rowStateIt != rowState.constEnd(); ++rowStateIt) {
-      const QString &rowKey = rowStateIt.key();
-      QString engineSlotText;
-      QString controllerText;
-      bool isVoiceRowKey = false;
-
-      if (rowKey.startsWith(QStringLiteral("voice:"))) {
-        engineSlotText = rowKey.mid(6);
-        isVoiceRowKey = true;
-      } else if (rowKey.startsWith(QStringLiteral("cc:"))) {
-        const qsizetype controllerSeparator =
-            rowKey.indexOf(QLatin1Char(':'), 3);
-        if (controllerSeparator < 0 ||
-            rowKey.indexOf(QLatin1Char(':'), controllerSeparator + 1) >= 0) {
-          remappedRowState.insert(rowKey, rowStateIt.value());
-          continue;
-        }
-        engineSlotText = rowKey.mid(3, controllerSeparator - 3);
-        controllerText = rowKey.mid(controllerSeparator + 1);
-
-        bool controllerIsInteger = false;
-        const qlonglong controllerNumber =
-            controllerText.toLongLong(&controllerIsInteger);
-        if (!controllerIsInteger || controllerNumber < 0 ||
-            controllerNumber > 255 ||
-            QString::number(controllerNumber) != controllerText) {
-          remappedRowState.insert(rowKey, rowStateIt.value());
-          continue;
-        }
-      } else {
-        remappedRowState.insert(rowKey, rowStateIt.value());
-        continue;
-      }
-
-      bool engineSlotIsInteger = false;
-      const qlonglong oldEngineSlotNumber =
-          engineSlotText.toLongLong(&engineSlotIsInteger);
-      if (!engineSlotIsInteger ||
-          QString::number(oldEngineSlotNumber) != engineSlotText) {
-        remappedRowState.insert(rowKey, rowStateIt.value());
-        continue;
-      }
-      if (oldEngineSlotNumber < 0 || oldEngineSlotNumber > INT_MAX)
-        continue;
-
-      const int newEngineSlot =
-          newEngineSlotForOldSlot(int(oldEngineSlotNumber));
-      if (newEngineSlot < 0)
-        continue;
-
-      const QString newRowKey =
-          isVoiceRowKey ? QStringLiteral("voice:%1").arg(newEngineSlot)
-                        : QStringLiteral("cc:%1:%2")
-                              .arg(newEngineSlot)
-                              .arg(controllerText);
-      remappedRowState.insert(newRowKey, rowStateIt.value());
-    }
-
-    rowState.swap(remappedRowState);
-  }
-
-  int rowHeight(const Row &row) const {
-    const auto it = m_rowHeights.constFind(rowKey(row));
-    return it != m_rowHeights.constEnd() ? it.value() : m_laneH;
+  int rowHeight(const AutomationRowId &row) const {
+    const auto it = m_rowStates.constFind(row);
+    if (it == m_rowStates.constEnd() || !it.value().height.has_value())
+      return m_laneH;
+    return *it .value() .height;
   }
 
   // Top of row `index`; index == m_rows.size() gives the total height.
@@ -3715,13 +3398,17 @@ private:
     if (newH == m_laneH)
       return;
     const double factor = double(newH) / double(m_laneH);
-    for (auto it = m_rowHeights.begin(); it != m_rowHeights.end(); ++it)
-      it.value() = std::clamp(int(std::lround(it.value() * factor)), kMinLaneH,
+    for (auto it = m_rowStates.begin(); it != m_rowStates.end(); ++it)
+      {
+      auto &height = it.value() .height;
+      if (height.has_value())
+        height = std::clamp(int(std::lround(*height * factor)), kMinLaneH,
                               kMaxLaneH);
+    }
     m_laneH = newH;
     applyHeight();
-    if (m_scroll) {
-      QScrollBar *vbar = m_scroll->verticalScrollBar();
+    if (auto *scroll = scrollArea()) {
+      auto *vbar = scroll->verticalScrollBar();
       const int viewportY = anchorY - vbar->value();
       vbar->setValue(int(std::lround(anchorY * factor)) - viewportY);
     }
@@ -3836,8 +3523,10 @@ private:
     std::vector<std::pair<QAction *, int>> rangeActions;
     if (laneRangeZoomable(cc)) {
       QMenu *range = menu.addMenu(SongView::tr("Value range"));
+      const AutomationRowDisplayState rowState =
+          m_rowStates.value(AutomationRowId::controller(track, cc));
       const int current =
-          m_rowRanges.value(laneKey(track, cc), laneRangeDefault(cc));
+          rowState.range.value_or(laneRangeDefault(cc));
       const std::pair<int, QString> options[] = {
           {0, SongView::tr("Auto (fit to data)")},
           {16, QStringLiteral("0–16")},
@@ -3954,13 +3643,13 @@ private:
   }
 
   // Document target of an editable row; false for the voice row.
-  bool rowTarget(const Row &row, uint8_t *cc, int *track) const {
-    if (row.kind == Row::Tempo) {
+  bool rowTarget(const AutomationRowId &row, uint8_t *cc, int *track) const {
+    if (row.kind == AutomationRowId::Kind::Tempo) {
       *cc = DOC_CC_TEMPO;
       *track = m_sv->selectedTrack();
       return true;
     }
-    if (row.kind == Row::Lane) {
+    if (row.kind == AutomationRowId::Kind::Controller) {
       *cc = row.cc; // LANE_CC_BEND == DOC_CC_BEND
       *track = row.track;
       return true;
@@ -3968,8 +3657,8 @@ private:
     return false;
   }
 
-  const std::vector<LanePoint> *rowPoints(const Row &row) const {
-    if (row.kind == Row::Tempo)
+  const std::vector<LanePoint> *rowPoints(const AutomationRowId &row) const {
+    if (row.kind == AutomationRowId::Kind::Tempo)
       return &m_sv->model().tempoLane;
     if (const AutoLane *lane = rowLane(row))
       return &lane->points;
@@ -4000,17 +3689,17 @@ private:
     return 127;
   }
 
-  void rowRange(const Row &row, int *minV, int *maxV) const {
+  void rowRange(const AutomationRowId &row, int *minV, int *maxV) const {
     *minV = 0;
     *maxV = 127;
-    if (row.kind == Row::Tempo) {
+    if (row.kind == AutomationRowId::Kind::Tempo) {
       *maxV = 200;
       for (const LanePoint &pt : m_sv->model().tempoLane)
         *maxV = std::max(*maxV, pt.value + 20);
-    } else if (row.kind == Row::Lane && row.cc == LANE_CC_BEND) {
+    } else if (row.kind == AutomationRowId::Kind::Controller && row.cc == LANE_CC_BEND) {
       *minV = -8192;
       *maxV = 8191;
-    } else if (row.kind == Row::Lane && laneRangeZoomable(row.cc)) {
+    } else if (row.kind == AutomationRowId::Kind::Controller && laneRangeZoomable(row.cc)) {
       // Zoomed value axis: the display max shrinks so a small useful
       // range (MOD's 0..20, say) gets the row's pixels. Data outside
       // the chosen range always grows the axis back — points never
@@ -4020,18 +3709,19 @@ private:
         for (const LanePoint &pt : lane->points)
           dataMax = std::max(dataMax, pt.value);
       }
-      const int mode = m_rowRanges.value(rowKey(row), laneRangeDefault(row.cc));
+      const auto rowState = m_rowStates.value(row);
+      const int mode = rowState.range.value_or(laneRangeDefault(row.cc));
       *maxV = mode > 0 ? std::max(mode, dataMax) : laneAutoMax(dataMax);
     }
   }
 
-  QString rowTitle(const Row &row) const {
+  QString rowTitle(const AutomationRowId &row) const {
     switch (row.kind) {
-    case Row::Tempo:
+    case AutomationRowId::Kind::Tempo:
       return SongView::tr("Tempo (BPM)");
-    case Row::Voice:
+    case AutomationRowId::Kind::Voice:
       return SongView::tr("Voice");
-    case Row::Lane: {
+    case AutomationRowId::Kind::Controller: {
       if (row.cc == LANE_CC_BEND)
         return SongView::tr("Pitch bend (BEND)");
       const M4aCcInfo info = m4aClassifyCc(row.cc);
@@ -4046,8 +3736,8 @@ private:
 
   // The m4a display convention used elsewhere in the app (PAN/TUNE as
   // c_v±, bend signed): a raw "64" for pan hides that it IS center.
-  QString formatRowValue(const Row &row, int v) const {
-    if (row.kind == Row::Lane) {
+  QString formatRowValue(const AutomationRowId &row, int v) const {
+    if (row.kind == AutomationRowId::Kind::Controller) {
       if (row.cc == LANE_CC_BEND)
         return m4aFormatBend(v);
       return m4aFormatCcValue(row.cc, uint8_t(v));
@@ -4057,8 +3747,8 @@ private:
 
   // Neutral value a Ctrl-drag magnetizes to; only lanes where "centered"
   // is meaningful and hard to hit by eye.
-  bool rowDetent(const Row &row, int *value) const {
-    if (row.kind != Row::Lane)
+  bool rowDetent(const AutomationRowId &row, int *value) const {
+    if (row.kind != AutomationRowId::Kind::Controller)
       return false;
     if (row.cc == 0x0A || row.cc == 0x18) { // PAN/TUNE: c_v 0
       *value = 64;
@@ -4074,10 +3764,10 @@ private:
   // Type-in editor: the only way to hit an arbitrary exact value, since a
   // pixel spans several value units at normal lane heights. Input uses the
   // display convention; PAN/TUNE entry is c_v (stored value minus 64).
-  bool editValue(const Row &row, int *value) {
+  bool editValue(const AutomationRowId &row, int *value) {
     int minShown = 0, maxShown = 127, offset = 0; // stored = shown + offset
     QString label = SongView::tr("Value:");
-    if (row.kind == Row::Tempo) {
+    if (row.kind == AutomationRowId::Kind::Tempo) {
       minShown = 1;
       maxShown = 999;
       label = SongView::tr("BPM:");
@@ -4100,7 +3790,7 @@ private:
     return ok;
   }
 
-  const LanePoint *nearestPoint(const Row &row, qreal x) const {
+  const LanePoint *nearestPoint(const AutomationRowId &row, qreal x) const {
     const std::vector<LanePoint> *points = rowPoints(row);
     if (!points)
       return nullptr;
@@ -4122,7 +3812,7 @@ private:
   // freehand curve has a point on every grid cell, so an x-only radius
   // (nearestPoint, kept for right-click delete) would capture every press
   // and make redrawing impossible; grab the dot itself to move a point.
-  const LanePoint *grabPoint(const Row &row, int ri, qreal x, int y) const {
+  const LanePoint *grabPoint(const AutomationRowId &row, int ri, qreal x, int y) const {
     const std::vector<LanePoint> *points = rowPoints(row);
     if (!points)
       return nullptr;
@@ -4166,7 +3856,7 @@ private:
     }
     const int rowIndex = pos.x() >= kGutterW ? rowIndexAt(pos.y()) : -1;
     const bool voiceInsertionPreviewAvailable =
-        rowIndex >= 0 && m_rows[rowIndex].kind == Row::Voice &&
+        rowIndex >= 0 && m_rows[rowIndex].kind == AutomationRowId::Kind::Voice &&
         m_sv->document();
     if (rowIndex < 0 ||
         (!rowPoints(m_rows[rowIndex]) && !voiceInsertionPreviewAvailable)) {
@@ -4206,7 +3896,7 @@ private:
   }
 
   // Invert paintCurve's valueY mapping; ri indexes the row for geometry.
-  int valueAtY(const Row &row, int ri, int yPos) const {
+  int valueAtY(const AutomationRowId &row, int ri, int yPos) const {
     int minV, maxV;
     rowRange(row, &minV, &maxV);
     const int top = rowTop(ri) + 5;
@@ -4218,9 +3908,9 @@ private:
   void updateDrag(qreal x, int y, bool fine, bool detent) {
     if (m_dragRow < 0 || m_dragRow >= int(m_rows.size()))
       return;
-    const Row &row = m_rows[m_dragRow];
+    const AutomationRowId &row = m_rows[m_dragRow];
     m_dragValue = valueAtY(row, m_dragRow, y);
-    if (row.kind == Row::Tempo)
+    if (row.kind == AutomationRowId::Kind::Tempo)
       m_dragValue = std::max(1, m_dragValue);
     // Ctrl detent: magnetize to the lane's neutral value within ~8 px,
     // so dead-center doesn't require pixel-perfect aim.
@@ -4276,7 +3966,7 @@ private:
     return pts;
   }
 
-  void paintRow(QPainter &p, const Row &row, const QRect &r) {
+  void paintRow(QPainter &p, const AutomationRowId &row, const QRect &r) {
     p.setClipRect(r);
     p.setPen(themes::color(themes::Role::song_view_separator));
     p.drawLine(r.left(), r.bottom(), r.right(), r.bottom());
@@ -4297,13 +3987,13 @@ private:
         themes::color(themes::Role::song_view_automation_default_curve);
     rowRange(row, &minV, &maxV);
     switch (row.kind) {
-    case Row::Tempo:
+    case AutomationRowId::Kind::Tempo:
       points = &m_sv->model().tempoLane;
       curve = themes::color(themes::Role::song_view_automation_tempo_curve);
       break;
-    case Row::Voice:
+    case AutomationRowId::Kind::Voice:
       break;
-    case Row::Lane:
+    case AutomationRowId::Kind::Controller:
       if (const AutoLane *lane = rowLane(row))
         points = &lane->points;
       curve = SongView::trackColor(row.track);
@@ -4323,11 +4013,11 @@ private:
                      .arg(points->size())
                      .arg(minV)
                      .arg(maxV));
-    } else if (points && row.kind == Row::Lane) {
+    } else if (points && row.kind == AutomationRowId::Kind::Controller) {
       p.setPen(themes::color(themes::Role::song_view_secondary_text));
       p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
                  SongView::tr("empty · click to add points"));
-    } else if (row.kind == Row::Voice && m_sv->document()) {
+    } else if (row.kind == AutomationRowId::Kind::Voice && m_sv->document()) {
       const int voiceChangeCount = int(m_selectedTrackVoiceChanges.size());
       p.setPen(themes::color(themes::Role::song_view_secondary_text));
       p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
@@ -4341,11 +4031,11 @@ private:
     p.setClipRect(plot);
     drawGrid(p, m_sv, plot, kGutterW);
 
-    if (row.kind == Row::Voice)
+    if (row.kind == AutomationRowId::Kind::Voice)
       paintVoiceRow(p, plot);
     else if (points)
       paintCurve(p, plot, *points, minV, maxV, curve,
-                 row.kind == Row::Lane && row.cc == LANE_CC_BEND);
+                 row.kind == AutomationRowId::Kind::Controller && row.cc == LANE_CC_BEND);
 
     const std::pair<int, uint8_t> id = rowIdentity(row);
     drawOverlays(p, m_sv, plot, kGutterW,
@@ -4427,17 +4117,20 @@ private:
   // grid instead of the visible grid throughout; Ctrl magnetizes the value
   // to the lane's neutral (pan/tune center, zero bend); double-click opens
   // a type-in for the exact value.
+  QScrollArea *scrollArea() const {
+    auto *viewport = parentWidget();
+    return viewport ? qobject_cast<QScrollArea *>(viewport->parentWidget())
+                    : nullptr;
+  }
+
   enum class Gesture { None, Point, Sweep, Line };
 
   SongView *m_sv;
-  QScrollArea *m_scroll; // hosting scroll area, for lane-zoom pinning
-  std::vector<Row> m_rows;
+  std::vector<AutomationRowId> m_rows;
   std::vector<VoiceChange> m_selectedTrackVoiceChanges;
   int m_laneH = kLaneH;    // shared row height; Ctrl+wheel rescales
   int m_laneZoomAccum = 0; // sub-notch wheel remainder, like zoomKeyHeight
-  QHash<QString, int> m_rowHeights; // individual row heights (rowKey → px)
-  QHash<QString, int> m_rowRanges;  // display max per lane (rowKey → value;
-                                    // 0 = auto-fit); absent = CC default
+  QHash<AutomationRowId, AutomationRowDisplayState> m_rowStates;
   int m_resizeRow = -1;             // row whose bottom divider is being dragged
   int m_resizeOrigH = 0;
   int m_resizePressY = 0;
@@ -4462,746 +4155,6 @@ private:
   double m_hoverTick = 0.0; // raw tick under the idle cursor
   uint64_t m_voiceInsertionPreviewTick = 0;
   bool m_voiceInsertionPreviewVisible = false;
-};
-// ----------------------------------------------------------- VelocityArea
-
-struct NoteIdCompare {
-  bool operator()(const SongView::NoteId &a, const SongView::NoteId &b) const {
-    if (a.tick != b.tick)
-      return a.tick < b.tick;
-    return a.key < b.key;
-  }
-};
-
-class VelocityArea : public QWidget {
-public:
-  explicit VelocityArea(SongView *sv) : QWidget(nullptr), m_sv(sv) {
-    setObjectName(QStringLiteral("velocityArea"));
-    setMouseTracking(true);
-    setFocusPolicy(Qt::ClickFocus);
-  }
-
-  bool gestureActive() const { return m_dragState != DragState::Idle; }
-
-  void cancelGesture() {
-    m_dragState = DragState::Idle;
-    m_ctrlPress = false;
-    m_deferredHitNotes.clear();
-    m_origVelocities.clear();
-    m_previews.clear();
-    m_sweepPreviews.clear();
-    update();
-  }
-
-protected:
-  void paintEvent(QPaintEvent * /*event*/) override {
-    QPainter p(this);
-    p.setRenderHint(QPainter::Antialiasing, false);
-
-    const QRect gutterRect(0, 0, kGutterW, height());
-    const QRect plot(kGutterW, 0, width() - kGutterW, height());
-    const qreal dpr = devicePixelRatioF();
-
-    p.fillRect(plot,
-               themes::color(themes::Role::song_view_piano_roll_background));
-    p.fillRect(
-        gutterRect,
-        themes::color(themes::Role::song_view_timeline_chrome_background));
-    p.setPen(themes::color(themes::Role::song_view_separator));
-    p.drawLine(kGutterW - 1, 0, kGutterW - 1, height());
-
-    const QColor iconColor =
-        themes::color(themes::Role::song_view_secondary_text);
-    p.fillRect(QRectF(10.0, 14.0, 2.5, 5.0), iconColor);
-    p.fillRect(QRectF(14.5, 11.0, 2.5, 8.0), iconColor);
-    p.fillRect(QRectF(19.0, 8.0, 2.5, 11.0), iconColor);
-
-    const double top = 6.0;
-    const double bottom = double(height()) - 6.0;
-    const double availH = bottom - top;
-    auto valueY = [&](int v) {
-      return bottom - (v - 1) * (bottom - top) / 126.0;
-    };
-
-    std::vector<int> tickValues;
-    std::vector<int> labelValues;
-
-    if (availH < 72.0) {
-      labelValues = {127, 64, 1};
-      tickValues = {127, 96, 64, 32, 1};
-    } else if (availH < 144.0) {
-      labelValues = (availH >= 100.0) ? std::vector<int>{127, 96, 64, 32, 1}
-                                      : std::vector<int>{127, 64, 1};
-      tickValues = {127, 112, 96, 80, 64, 48, 32, 16, 1};
-    } else if (availH < 288.0) {
-      labelValues = {127, 112, 96, 80, 64, 48, 32, 16, 1};
-      tickValues = {127, 120, 112, 104, 96, 88, 80, 72, 64,
-                    56,  48,  40,  32,  24, 16, 8,  1};
-    } else {
-      labelValues = {127, 120, 112, 104, 96, 88, 80, 72, 64,
-                     56,  48,  40,  32,  24, 16, 8,  1};
-      for (int v = 127; v >= 1; v -= 4) {
-        tickValues.push_back(v == 3 ? 1 : v);
-      }
-    }
-
-    const int sepX = kGutterW - 1;
-    const QFont captionFont = typography::caption(p.font());
-    p.setFont(captionFont);
-
-    for (int v : tickValues) {
-      const double y = valueY(v);
-      const bool isMajor = (std::find(labelValues.begin(), labelValues.end(),
-                                      v) != labelValues.end());
-      const int tickLen = isMajor ? 6 : 4;
-      p.setPen(
-          QPen(themes::color(themes::Role::song_view_secondary_text), 1.0));
-      p.drawLine(QLineF(sepX - tickLen, y, sepX, y));
-    }
-
-    for (int v : labelValues) {
-      const double y = valueY(v);
-      const QString text = QString::number(v);
-      const QRectF textBounds(sepX - 45, y - 8, 37, 16);
-      p.setPen(themes::color(themes::Role::song_view_secondary_text));
-      p.drawText(textBounds, Qt::AlignRight | Qt::AlignVCenter, text);
-    }
-
-    const std::vector<SongView::NoteId> &currentSel = m_sv->selection();
-    std::set<int> activeVelocities;
-    if (m_dragState == DragState::RelativeDrag) {
-      for (const auto &pair : m_previews)
-        activeVelocities.insert(pair.second);
-    } else if (m_dragState == DragState::FreehandSweep) {
-      for (const auto &pair : m_sweepPreviews)
-        activeVelocities.insert(pair.second);
-    } else if (m_sv->timeline()) {
-      for (const ViewNote &note : m_sv->model().notes) {
-        if (note.track != m_sv->selectedTrack())
-          continue;
-        SongView::NoteId id{note.startTick, note.key};
-        for (const auto &s : currentSel) {
-          if (s.tick == id.tick && s.key == id.key) {
-            int vel = note.velocity;
-            if (const auto p = m_sv->noteVelocityPreview(note))
-              vel = *p;
-            activeVelocities.insert(vel);
-            break;
-          }
-        }
-      }
-    }
-
-    for (int v : activeVelocities) {
-      const double y = valueY(v);
-      const QColor selColor =
-          themes::color(themes::Role::item_selected_background);
-      p.setPen(QPen(selColor, 1.5));
-      p.drawLine(QLineF(sepX - 8, y, sepX, y));
-      if (std::find(labelValues.begin(), labelValues.end(), v) ==
-          labelValues.end()) {
-        const QString text = QString::number(v);
-        const QRectF textBounds(sepX - 45, y - 8, 35, 16);
-        p.setFont(typography::bold(captionFont));
-        p.setPen(selColor);
-        p.drawText(textBounds, Qt::AlignRight | Qt::AlignVCenter, text);
-      }
-    }
-
-    if (!m_sv->timeline())
-      return;
-
-    p.setClipRect(plot);
-    drawGrid(p, m_sv, plot, kGutterW);
-    drawOverlays(p, m_sv, plot, kGutterW,
-                 m_sv->timeSelectionCoversTrack(m_sv->selectedTrack()));
-
-    // Watermark title in plot background
-    p.setFont(typography::bold(p.font()));
-    p.setPen(themes::color(themes::Role::song_view_secondary_text));
-    p.drawText(QRectF(plot.left() + 8, plot.top() + 4, 120, 20),
-               Qt::AlignLeft | Qt::AlignTop, SongView::tr("Velocity"));
-    const QColor nodeColor = SongView::trackColor(m_sv->selectedTrack());
-    const QColor stemColor = mixTowardOklab(nodeColor, Qt::black, 1.0 / 3.0);
-    const QColor selBgColor =
-        themes::color(themes::Role::item_selected_background);
-    const QColor previewOutlineColor =
-        themes::color(themes::Role::song_view_edit_preview_outline);
-
-    struct RenderNote {
-      qreal xStart;
-      qreal xEnd;
-      double y;
-      bool isSelected;
-      bool hasPreview;
-    };
-
-    std::vector<RenderNote> notesToDraw;
-    notesToDraw.reserve(m_sv->model().notes.size());
-
-    for (const ViewNote &note : m_sv->model().notes) {
-      if (note.track != m_sv->selectedTrack())
-        continue;
-
-      const qreal xStart =
-          m_sv->displayX(double(note.startTick), kGutterW, dpr);
-      const qreal xEnd = m_sv->displayX(double(note.endTick), kGutterW, dpr);
-      if (xEnd < plot.left() - 6 || xStart > plot.right() + 6)
-        continue;
-
-      SongView::NoteId noteId{note.startTick, note.key};
-      bool isSelected = false;
-      for (const auto &s : currentSel) {
-        if (s.tick == noteId.tick && s.key == noteId.key) {
-          isSelected = true;
-          break;
-        }
-      }
-
-      int vel = note.velocity;
-      bool hasPreview = false;
-
-      if (m_dragState == DragState::RelativeDrag) {
-        auto it = m_previews.find(noteId);
-        if (it != m_previews.end()) {
-          vel = it->second;
-          hasPreview = true;
-        }
-      } else if (m_dragState == DragState::FreehandSweep) {
-        auto it = m_sweepPreviews.find(noteId);
-        if (it != m_sweepPreviews.end()) {
-          vel = it->second;
-          hasPreview = true;
-        }
-      } else if (const auto p = m_sv->noteVelocityPreview(note)) {
-        vel = *p;
-        hasPreview = true;
-      }
-
-      const double y = valueY(vel);
-      notesToDraw.push_back(
-          {xStart, std::max(xStart + 1.0, xEnd), y, isSelected, hasPreview});
-    }
-
-    p.setClipping(true);
-    const qreal stemWidth = 2.0 / dpr;
-
-    // Pass 1: Draw horizontal duration lines (AA off for crisp horizontal
-    // strokes)
-    p.setRenderHint(QPainter::Antialiasing, false);
-
-    // Unselected lines
-    for (const auto &rn : notesToDraw) {
-      if (rn.isSelected || rn.hasPreview)
-        continue;
-      const qreal lx0 = std::max<qreal>(rn.xStart, plot.left());
-      const qreal lx1 = std::min<qreal>(rn.xEnd, plot.right());
-      if (lx1 >= lx0) {
-        p.setPen(QPen(stemColor, stemWidth, Qt::SolidLine, Qt::FlatCap));
-        p.drawLine(QLineF(lx0, rn.y, lx1, rn.y));
-      }
-    }
-
-    // Selected lines
-    for (const auto &rn : notesToDraw) {
-      if (!rn.isSelected || rn.hasPreview)
-        continue;
-      const qreal lx0 = std::max<qreal>(rn.xStart, plot.left());
-      const qreal lx1 = std::min<qreal>(rn.xEnd, plot.right());
-      if (lx1 >= lx0) {
-        p.setPen(QPen(selBgColor, stemWidth + (1.0 / dpr), Qt::SolidLine,
-                      Qt::FlatCap));
-        p.drawLine(QLineF(lx0, rn.y, lx1, rn.y));
-      }
-    }
-
-    // Preview lines
-    for (const auto &rn : notesToDraw) {
-      if (!rn.hasPreview)
-        continue;
-      const qreal lx0 = std::max<qreal>(rn.xStart, plot.left());
-      const qreal lx1 = std::min<qreal>(rn.xEnd, plot.right());
-      if (lx1 >= lx0) {
-        p.setPen(
-            QPen(previewOutlineColor, stemWidth, Qt::SolidLine, Qt::FlatCap));
-        p.drawLine(QLineF(lx0, rn.y, lx1, rn.y));
-      }
-    }
-
-    // Pass 2: Draw circular node dots at (xStart, y) (AA on)
-    p.setRenderHint(QPainter::Antialiasing, true);
-
-    // Unselected nodes
-    for (const auto &rn : notesToDraw) {
-      if (rn.isSelected || rn.hasPreview)
-        continue;
-      if (rn.xStart >= plot.left() - 6 && rn.xStart <= plot.right() + 6) {
-        p.setPen(QPen(Qt::black, 1.0));
-        p.setBrush(nodeColor);
-        p.drawEllipse(QPointF(rn.xStart, rn.y), 3.5, 3.5);
-      }
-    }
-
-    // Selected nodes
-    for (const auto &rn : notesToDraw) {
-      if (!rn.isSelected || rn.hasPreview)
-        continue;
-      if (rn.xStart >= plot.left() - 6 && rn.xStart <= plot.right() + 6) {
-        p.setPen(QPen(selBgColor, 2.0));
-        p.setBrush(Qt::NoBrush);
-        p.drawEllipse(QPointF(rn.xStart, rn.y), 4.5, 4.5);
-        p.setPen(QPen(Qt::black, 1.0));
-        p.setBrush(nodeColor);
-        p.drawEllipse(QPointF(rn.xStart, rn.y), 3.5, 3.5);
-      }
-    }
-
-    // Preview nodes
-    for (const auto &rn : notesToDraw) {
-      if (!rn.hasPreview)
-        continue;
-      if (rn.xStart >= plot.left() - 6 && rn.xStart <= plot.right() + 6) {
-        p.setPen(QPen(previewOutlineColor, 1.5));
-        p.setBrush(previewOutlineColor);
-        p.drawEllipse(QPointF(rn.xStart, rn.y), 3.0, 3.0);
-      }
-    }
-
-    p.setRenderHint(QPainter::Antialiasing, false);
-
-    if (m_dragState == DragState::BandSelect) {
-      const QRectF band =
-          QRectF(QPointF(m_pressPos), m_lastMousePos).normalized();
-      const QColor color =
-          themes::color(themes::Role::song_view_selection_edge);
-      p.setPen(QPen(color, 1, Qt::DashLine));
-      p.setBrush(Qt::NoBrush);
-      p.drawRect(band);
-    }
-
-    p.setClipping(false);
-  }
-
-  void mousePressEvent(QMouseEvent *event) override {
-    clearHoverFeedback();
-    if (!m_sv->timeline())
-      return;
-
-    if (event->button() == Qt::MiddleButton) {
-      m_dragState = DragState::MiddlePan;
-      m_panStartPos = event->pos();
-      return;
-    }
-
-    if (event->button() == Qt::RightButton) {
-      if (event->position().x() < kGutterW || !m_sv->document())
-        return;
-      m_dragState = DragState::PendingBandSelect;
-      m_pressPos = event->pos();
-      m_lastMousePos = event->position();
-      return;
-    }
-
-    if (event->button() != Qt::LeftButton)
-      return;
-
-    if (event->position().x() < kGutterW)
-      return;
-
-    const double top = 6.0;
-    const double bottom = double(height()) - 6.0;
-    auto valueY = [&](int v) {
-      return bottom - (v - 1) * (bottom - top) / 126.0;
-    };
-    const qreal dpr = devicePixelRatioF();
-    const QPointF pos = event->position();
-
-    const std::vector<SongView::NoteId> hitNotes =
-        hitNotesAt(event->position());
-
-    const bool canEdit = (m_sv->document() != nullptr);
-    if (!canEdit)
-      return;
-
-    if (!hitNotes.empty()) {
-      const auto &currentSel = m_sv->selection();
-      bool allHitSelected = true;
-      for (const auto &hit : hitNotes) {
-        bool found = false;
-        for (const auto &s : currentSel) {
-          if (s.tick == hit.tick && s.key == hit.key) {
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          allHitSelected = false;
-          break;
-        }
-      }
-
-      const bool isCtrl = (event->modifiers() & Qt::ControlModifier) != 0;
-      if (isCtrl) {
-        m_ctrlPress = true;
-        m_deferredHitNotes = hitNotes;
-      } else {
-        m_ctrlPress = false;
-        m_deferredHitNotes = hitNotes;
-        if (!allHitSelected) {
-          m_sv->setSelection(hitNotes);
-        }
-      }
-
-      if (canEdit) {
-        m_dragState = DragState::PendingHandleDrag;
-        m_pressPos = event->pos();
-        m_pressVel = valueAtY(event->position().y());
-
-        m_origVelocities.clear();
-        SongDocument *doc = m_sv->document();
-        for (const auto &s : m_sv->selection()) {
-          DocNote note;
-          if (doc->findNote(m_sv->selectedTrack(), s.tick, s.key, &note)) {
-            m_origVelocities[s] = note.velocity;
-          }
-        }
-        if (isCtrl) {
-          for (const auto &hit : hitNotes) {
-            DocNote note;
-            if (doc->findNote(m_sv->selectedTrack(), hit.tick, hit.key,
-                              &note)) {
-              m_origVelocities[hit] = note.velocity;
-            }
-          }
-        }
-      }
-    } else {
-      if (canEdit) {
-        m_dragState = DragState::FreehandSweep;
-        m_pressPos = event->pos();
-        m_lastMousePos = event->position();
-        m_sweepPreviews.clear();
-        seedSweepAt(event->position());
-        update();
-      }
-    }
-  }
-
-  void mouseMoveEvent(QMouseEvent *event) override {
-    if (m_dragState == DragState::MiddlePan) {
-      const QPoint delta = event->pos() - m_panStartPos;
-      m_sv->scrollByPx(-delta.x());
-      m_panStartPos = event->pos();
-      return;
-    }
-
-    if (m_dragState == DragState::PendingBandSelect &&
-        (event->pos() - m_pressPos).manhattanLength() >=
-            QApplication::startDragDistance()) {
-      m_dragState = DragState::BandSelect;
-    }
-    if (m_dragState == DragState::BandSelect) {
-      m_lastMousePos = event->position();
-      update();
-      return;
-    }
-
-    if (m_dragState == DragState::PendingHandleDrag) {
-      if ((event->pos() - m_pressPos).manhattanLength() >=
-          QApplication::startDragDistance()) {
-        if (m_ctrlPress) {
-          auto newSel = m_sv->selection();
-          for (const auto &hit : m_deferredHitNotes) {
-            bool found = false;
-            for (const auto &s : newSel) {
-              if (s.tick == hit.tick && s.key == hit.key) {
-                found = true;
-                break;
-              }
-            }
-            if (!found)
-              newSel.push_back(hit);
-          }
-          m_sv->setSelection(newSel);
-          m_ctrlPress = false;
-        }
-        m_dragState = DragState::RelativeDrag;
-      }
-    }
-
-    if (m_dragState == DragState::RelativeDrag) {
-      const int currentVel = valueAtY(event->position().y());
-      const int delta = currentVel - m_pressVel;
-      m_previews.clear();
-      SongDocument *doc = m_sv->document();
-      for (const auto &s : m_sv->selection()) {
-        DocNote note;
-        if (doc->findNote(m_sv->selectedTrack(), s.tick, s.key, &note)) {
-          int origV = note.velocity;
-          auto it = m_origVelocities.find(s);
-          if (it != m_origVelocities.end())
-            origV = it->second;
-          int newV = std::clamp(origV + delta, 1, 127);
-          m_previews[s] = newV;
-        }
-      }
-      if (!m_deferredHitNotes.empty()) {
-        const auto &hit = m_deferredHitNotes.front();
-        const auto preview = m_previews.find(hit);
-        if (preview != m_previews.end()) {
-          for (const ViewNote &note : m_sv->model().notes) {
-            if (note.track != m_sv->selectedTrack() ||
-                note.startTick != hit.tick || note.key != hit.key)
-              continue;
-            ViewNote announced = note;
-            announced.velocity = uint8_t(preview->second);
-            m_sv->announceNote(announced);
-            break;
-          }
-        }
-      }
-      update();
-    } else if (m_dragState == DragState::FreehandSweep) {
-      updateSweep(m_lastMousePos, event->position());
-      m_lastMousePos = event->position();
-      update();
-    }
-  }
-
-  void mouseReleaseEvent(QMouseEvent *event) override {
-    if (m_dragState == DragState::MiddlePan) {
-      m_dragState = DragState::Idle;
-      return;
-    }
-
-    if (event->button() == Qt::RightButton &&
-        (m_dragState == DragState::PendingBandSelect ||
-         m_dragState == DragState::BandSelect)) {
-      if (m_dragState == DragState::BandSelect) {
-        selectBand(QRectF(QPointF(m_pressPos), event->position()).normalized(),
-                   event->modifiers() & Qt::ControlModifier);
-      } else {
-        std::vector<SongView::NoteId> selection =
-            event->modifiers() & Qt::ControlModifier
-                ? m_sv->selection()
-                : std::vector<SongView::NoteId>();
-        for (const SongView::NoteId &hit : hitNotesAt(event->position())) {
-          const auto found = std::find(selection.begin(), selection.end(), hit);
-          if (found != selection.end())
-            selection.erase(found);
-          else
-            selection.push_back(hit);
-        }
-        m_sv->setSelection(std::move(selection));
-      }
-      cancelGesture();
-      return;
-    }
-
-    if (m_dragState == DragState::PendingHandleDrag) {
-      if (m_ctrlPress) {
-        auto newSel = m_sv->selection();
-        for (const auto &hit : m_deferredHitNotes) {
-          auto it = std::find_if(
-              newSel.begin(), newSel.end(), [&](const SongView::NoteId &s) {
-                return s.tick == hit.tick && s.key == hit.key;
-              });
-          if (it != newSel.end()) {
-            newSel.erase(it);
-          } else {
-            newSel.push_back(hit);
-          }
-        }
-        m_sv->setSelection(newSel);
-      }
-      cancelGesture();
-      return;
-    }
-
-    if (m_dragState == DragState::RelativeDrag) {
-      const int currentVel = valueAtY(event->position().y());
-      const int delta = currentVel - m_pressVel;
-      if (delta != 0) {
-        std::vector<DocNote> notes = selectedDocumentNotes(*m_sv);
-        if (!notes.empty() && m_sv->document()) {
-          m_sv->document()->nudgeNotesVelocity(notes, delta);
-        }
-      }
-      cancelGesture();
-      return;
-    }
-
-    if (m_dragState == DragState::FreehandSweep) {
-      SongDocument *doc = m_sv->document();
-      if (doc && !m_sweepPreviews.empty()) {
-        std::vector<SongDocument::NoteVelocity> edits;
-        for (const auto &pair : m_sweepPreviews) {
-          DocNote note;
-          if (doc->findNote(m_sv->selectedTrack(), pair.first.tick,
-                            pair.first.key, &note)) {
-            edits.push_back({note, uint8_t(pair.second)});
-          }
-        }
-        if (!edits.empty()) {
-          doc->setNotesVelocities(edits);
-        }
-      }
-      cancelGesture();
-      return;
-    }
-
-    m_dragState = DragState::Idle;
-  }
-
-  void keyPressEvent(QKeyEvent *event) override {
-    if (event->key() == Qt::Key_Escape) {
-      cancelGesture();
-      event->accept();
-      return;
-    }
-    QWidget::keyPressEvent(event);
-  }
-
-  void wheelEvent(QWheelEvent *event) override {
-    const QPoint delta = wheelDelta(event);
-    const int d = delta.y() ? delta.y() : delta.x();
-    if (event->modifiers() & Qt::ShiftModifier) {
-      m_sv->scrollByPx(-d);
-    } else if (delta.x() && !delta.y()) {
-      m_sv->scrollByPx(-delta.x());
-    } else if (event->position().x() < kGutterW) {
-      event->ignore();
-      return;
-    } else {
-      const double zoomDelta = wheelAngleUnits(event);
-      if (zoomDelta != 0.0)
-        m_sv->zoomAroundContentX(std::pow(1.0015, zoomDelta),
-                                 event->position().x() - kGutterW);
-    }
-    event->accept();
-  }
-
-private:
-  int valueAtY(double y) const {
-    const double top = 6.0;
-    const double bottom = double(height()) - 6.0;
-    const double clampedY = std::clamp(y, top, bottom);
-    return 1 + int(std::round((bottom - clampedY) * 126.0 / (bottom - top)));
-  }
-
-  std::vector<SongView::NoteId> hitNotesAt(QPointF pos) const {
-    const double top = 6.0;
-    const double bottom = double(height()) - 6.0;
-    const auto valueY = [&](int velocity) {
-      return bottom - (velocity - 1) * (bottom - top) / 126.0;
-    };
-    const qreal dpr = devicePixelRatioF();
-    std::vector<SongView::NoteId> hits;
-    for (const ViewNote &note : m_sv->model().notes) {
-      if (note.track != m_sv->selectedTrack())
-        continue;
-      const qreal xStart =
-          m_sv->displayX(double(note.startTick), kGutterW, dpr);
-      const qreal xEnd = m_sv->displayX(double(note.endTick), kGutterW, dpr);
-      const double y = valueY(note.velocity);
-      const bool hitDot =
-          (std::abs(pos.x() - xStart) <= 6.0 && std::abs(pos.y() - y) <= 6.0);
-      const bool hitLine = (pos.x() >= xStart - 2.0 && pos.x() <= xEnd + 2.0 &&
-                            std::abs(pos.y() - y) <= 4.0);
-      if (hitDot || hitLine) {
-        hits.push_back({note.startTick, note.key});
-      }
-    }
-    return hits;
-  }
-
-  void selectBand(const QRectF &band, bool additive) {
-    std::vector<SongView::NoteId> selection =
-        additive ? m_sv->selection() : std::vector<SongView::NoteId>();
-    const double top = 6.0;
-    const double bottom = double(height()) - 6.0;
-    const auto valueY = [&](int velocity) {
-      return bottom - (velocity - 1) * (bottom - top) / 126.0;
-    };
-    const qreal dpr = devicePixelRatioF();
-    for (const ViewNote &note : m_sv->model().notes) {
-      if (note.track != m_sv->selectedTrack())
-        continue;
-      const qreal xStart =
-          m_sv->displayX(double(note.startTick), kGutterW, dpr);
-      const qreal xEnd = m_sv->displayX(double(note.endTick), kGutterW, dpr);
-      const double y = valueY(note.velocity);
-      const QRectF dotBox(QPointF(xStart, y) - QPointF(4.0, 4.0),
-                          QSizeF(8.0, 8.0));
-      const QRectF lineBox(xStart, y - 2.0, std::max<qreal>(1.0, xEnd - xStart),
-                           4.0);
-      const SongView::NoteId id{note.startTick, note.key};
-      if ((dotBox.intersects(band) || lineBox.intersects(band)) &&
-          std::find(selection.begin(), selection.end(), id) ==
-              selection.end()) {
-        selection.push_back(id);
-      }
-    }
-    m_sv->setSelection(std::move(selection));
-  }
-
-  void seedSweepAt(QPointF pos) {
-    const qreal dpr = devicePixelRatioF();
-    const int vel = valueAtY(pos.y());
-    for (const ViewNote &note : m_sv->model().notes) {
-      if (note.track != m_sv->selectedTrack())
-        continue;
-      const qreal noteX = m_sv->displayX(double(note.startTick), kGutterW, dpr);
-      if (std::abs(noteX - pos.x()) <= 6.0) {
-        m_sweepPreviews[{note.startTick, note.key}] = vel;
-      }
-    }
-  }
-
-  void updateSweep(QPointF p0, QPointF p1) {
-    const qreal dpr = devicePixelRatioF();
-    const qreal minX = std::min(p0.x(), p1.x());
-    const qreal maxX = std::max(p0.x(), p1.x());
-
-    for (const ViewNote &note : m_sv->model().notes) {
-      if (note.track != m_sv->selectedTrack())
-        continue;
-      const qreal noteX = m_sv->displayX(double(note.startTick), kGutterW, dpr);
-      if (noteX >= minX && noteX <= maxX) {
-        qreal interpY = p1.y();
-        if (std::abs(p1.x() - p0.x()) >= 0.001) {
-          qreal t = (noteX - p0.x()) / (p1.x() - p0.x());
-          interpY = p0.y() + t * (p1.y() - p0.y());
-        }
-        int vel = valueAtY(interpY);
-        m_sweepPreviews[{note.startTick, note.key}] = vel;
-      }
-    }
-  }
-
-  void clearHoverFeedback() {}
-
-  enum class DragState {
-    Idle,
-    PendingHandleDrag,
-    PendingBandSelect,
-    RelativeDrag,
-    BandSelect,
-    FreehandSweep,
-    MiddlePan
-  };
-
-  SongView *m_sv = nullptr;
-  DragState m_dragState = DragState::Idle;
-  QPoint m_panStartPos;
-  QPoint m_pressPos;
-  QPointF m_lastMousePos;
-  int m_pressVel = 0;
-  bool m_ctrlPress = false;
-  std::vector<SongView::NoteId> m_deferredHitNotes;
-  std::map<SongView::NoteId, int, NoteIdCompare> m_origVelocities;
-  std::map<SongView::NoteId, int, NoteIdCompare> m_previews;
-  std::map<SongView::NoteId, int, NoteIdCompare> m_sweepPreviews;
 };
 
 // ---------------------------------------------------------------- OtherStrip
@@ -5958,17 +4911,9 @@ SongView::SongView(QWidget *parent) : QWidget(parent) {
   m_ruler = new TimeRuler(this);
   vbox->addWidget(m_ruler);
 
-  // The roll always owns the full content rectangle. Automations is a
-  // positioned overlay on top of it, so opening the drawer never changes
-  // track-header or piano-roll layout.
-  auto *overlay = new AutomationOverlayHost(this);
-  m_editorOverlay = overlay;
-  m_editorDrawerHeight = kLanesAreaH;
-  auto *overlayLayout = new QVBoxLayout(overlay);
-  overlayLayout->setContentsMargins(0, 0, 0, 0);
-  overlayLayout->setSpacing(0);
-  auto *rollPane = new QWidget(overlay);
-  overlayLayout->addWidget(rollPane);
+  // EditorDrawer owns the positioned overlay. The roll still fills its host,
+  // so opening the drawer never changes track-header or piano-roll layout.
+  auto *rollPane = new QWidget;
   auto *mid = new QHBoxLayout(rollPane);
   mid->setContentsMargins(0, 0, 0, 0);
   mid->setSpacing(0);
@@ -5990,44 +4935,6 @@ SongView::SongView(QWidget *parent) : QWidget(parent) {
   headerScroll->setWidget(m_headers);
   headerColumnLayout->addWidget(headerScroll, 0, 0);
 
-  m_automationDrawerAction = new QAction(tr("Automations"), this);
-  m_automationDrawerAction->setObjectName(
-      QStringLiteral("automationDrawerAction"));
-  m_automationDrawerAction->setCheckable(true);
-  m_automationDrawerAction->setChecked(true);
-  m_automationDrawerAction->setShortcut(QKeySequence(Qt::Key_A));
-  m_automationDrawerAction->setShortcutContext(Qt::WindowShortcut);
-  m_automationDrawerAction->setAutoRepeat(false);
-  m_automationDrawerAction->setToolTip(tr("Show or hide automation lanes (A)"));
-  addAction(m_automationDrawerAction);
-
-  m_automationDrawerTab = new QToolButton(overlay);
-  m_automationDrawerTab->setObjectName(QStringLiteral("automationDrawerTab"));
-  m_automationDrawerTab->setDefaultAction(m_automationDrawerAction);
-  m_automationDrawerTab->setAutoRaise(false);
-  m_automationDrawerTab->setFocusPolicy(Qt::NoFocus);
-  m_automationDrawerTab->setToolButtonStyle(Qt::ToolButtonTextOnly);
-  m_automationDrawerTab->setSizePolicy(QSizePolicy::Expanding,
-                                       QSizePolicy::Fixed);
-
-  m_velocityDrawerAction = new QAction(tr("Velocity"), this);
-  m_velocityDrawerAction->setObjectName(QStringLiteral("velocityDrawerAction"));
-  m_velocityDrawerAction->setCheckable(true);
-  m_velocityDrawerAction->setChecked(false);
-  m_velocityDrawerAction->setShortcut(QKeySequence(Qt::Key_V));
-  m_velocityDrawerAction->setShortcutContext(Qt::WindowShortcut);
-  m_velocityDrawerAction->setAutoRepeat(false);
-  m_velocityDrawerAction->setToolTip(tr("Show or hide note velocities (V)"));
-  addAction(m_velocityDrawerAction);
-
-  m_velocityDrawerTab = new QToolButton(overlay);
-  m_velocityDrawerTab->setObjectName(QStringLiteral("velocityDrawerTab"));
-  m_velocityDrawerTab->setDefaultAction(m_velocityDrawerAction);
-  m_velocityDrawerTab->setAutoRaise(false);
-  m_velocityDrawerTab->setFocusPolicy(Qt::NoFocus);
-  m_velocityDrawerTab->setToolButtonStyle(Qt::ToolButtonTextOnly);
-  m_velocityDrawerTab->setSizePolicy(QSizePolicy::Expanding,
-                                     QSizePolicy::Fixed);
   mid->addWidget(headerColumn);
   // The note grid and raw event list share the roll's slot. Headers, ruler,
   // and automation lanes remain visible on either page.
@@ -6047,53 +4954,28 @@ SongView::SongView(QWidget *parent) : QWidget(parent) {
   m_rollStack->addWidget(m_events);
   mid->addWidget(m_rollStack, 1);
 
-  m_drawerStack = new QStackedWidget(overlay);
-  m_drawerStack->setObjectName(QStringLiteral("editorDrawer"));
-  m_drawerStack->setMinimumHeight(kLaneH + kAddLaneH);
-  m_drawerStack->setFocusPolicy(Qt::NoFocus);
-
-  m_lanesScroll = new QScrollArea(m_drawerStack);
-  m_lanesScroll->setFrameShape(QFrame::NoFrame);
-  m_lanesScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  m_lanesScroll->setWidgetResizable(true);
-  m_lanesScroll->setFocusPolicy(Qt::NoFocus);
-  m_lanes = new AutomationArea(this, m_lanesScroll);
-  m_lanesScroll->setWidget(m_lanes);
-  m_drawerStack->addWidget(m_lanesScroll);
+  m_lanes = new AutomationArea(this);
 
   m_velocityArea = new songview::VelocityArea(this);
-  m_drawerStack->addWidget(m_velocityArea);
+  m_editorDrawer =
+      new songview::EditorDrawer(rollPane, m_lanes, m_velocityArea, this);
+  vbox->addWidget(m_editorDrawer, 1);
   themes::registerGridLineRepaintTarget(*m_ruler);
   themes::registerGridLineRepaintTarget(*m_roll);
   themes::registerGridLineRepaintTarget(*m_lanes);
   themes::registerGridLineRepaintTarget(*m_velocityArea);
 
-  auto *drawerHandle = new AutomationDrawerHandle(overlay);
-  drawerHandle->setObjectName(QStringLiteral("editorDrawerHandle"));
-  m_editorDrawerHandle = drawerHandle;
-  drawerHandle->dragged = [this](int delta) {
-    if (!drawerVisible())
-      return;
-    m_editorDrawerHeight -= delta;
-    layoutEditorDrawer();
-  };
-  overlay->resized = [this] { layoutEditorDrawer(); };
-  m_drawerStack->raise();
-  drawerHandle->raise();
-  m_automationDrawerTab->raise();
-  m_velocityDrawerTab->raise();
-  vbox->addWidget(overlay, 1);
+  connect(m_editorDrawer, &songview::EditorDrawer::drawerStateChanged, this,
+          [this]{
+            m_velocityArea->cancelGesture();
+            m_lanes->clearHoverFeedback();
+            updateScrollbars();
+            syncPlayheadOverlay();
+          });
+  connect(m_editorDrawer, &songview::EditorDrawer::announceRequested, this,
+          [this] (const QString &text) { announce(text); });
 
-  connect(m_automationDrawerAction, &QAction::triggered, this, [this] {
-    toggleDrawerPage(DrawerPage::Automations);
-    announce(drawerVisible() ? tr("Automation lanes shown")
-                             : tr("Automation lanes hidden"));
-  });
-  connect(m_velocityDrawerAction, &QAction::triggered, this, [this] {
-    toggleDrawerPage(DrawerPage::Velocity);
-    announce(drawerVisible() ? tr("Velocity lane shown")
-                             : tr("Velocity lane hidden"));
-  });
+  connect(m_editorDrawer, &songview::EditorDrawer::contentFocusRequested, this, &SongView::focusContent);
 
   m_strip = new OtherStrip(this);
   vbox->addWidget(m_strip);
@@ -6102,7 +4984,7 @@ SongView::SongView(QWidget *parent) : QWidget(parent) {
   playheadSurfaces.rulerOrigin = kGutterW;
   playheadSurfaces.roll = m_roll;
   playheadSurfaces.rollOrigin = kKeyboardW;
-  playheadSurfaces.lanes = m_drawerStack;
+  playheadSurfaces.lanes = m_editorDrawer->timelineSurface();
   playheadSurfaces.lanesOrigin = kGutterW;
   playheadSurfaces.strip = m_strip;
   playheadSurfaces.stripOrigin = kGutterW;
@@ -6143,8 +5025,8 @@ void SongView::setSong(const MidiTimeline *timeline,
   m_events->setPlayheadTick(-1.0, false); // another song's ticks are stale
   // Lane heights/value ranges and the snap grid are per-song view state;
   // back to defaults until a sidecar (applyViewState) says otherwise.
-  m_lanes->setViewHeights(0, {});
-  m_lanes->setRowRanges({});
+  m_lanes->setViewHeights(0);
+  m_lanes->setRowDisplayStates({});
   m_gridFeel = GridFeel::Straight;
   m_gridMinDenom = 0;
   m_ruler->syncGridControls();
@@ -6228,19 +5110,19 @@ void SongView::updateSong(const MidiTimeline *timeline) {
 void SongView::setDocument(SongDocument *document) {
   if (m_document != document) {
     if (m_document) {
-      disconnect(m_document, &SongDocument::engineTracksRemapped, this,
+      disconnect(m_document, &SongDocument::tracksRemapped, this,
                  nullptr);
     }
+    m_document = document;
     if (document) {
-      connect(document, &SongDocument::engineTracksRemapped, this,
-              &SongView::onEngineTracksRemapped);
+      connect(document, &SongDocument::tracksRemapped, this,
+              &SongView::onTracksRemapped);
     }
-  }
-  m_document = document;
-  m_selection.clear();
+    m_selection.clear();
   m_headers->rebuild();   // the "+ Add track" button follows editability
   m_lanes->rebuildRows(); // the "+ Add lane" strip follows editability
   m_events->setDocument(document);
+}
 }
 
 bool SongView::eventListVisible() const {
@@ -6268,127 +5150,22 @@ void SongView::focusContent() {
 }
 
 void SongView::setDrawerPage(DrawerPage page) {
-  if (m_drawerPage == page)
-    return;
-  if (m_velocityArea)
-    m_velocityArea->cancelGesture();
-  if (m_lanes)
-    m_lanes->clearHoverFeedback();
-  m_drawerPage = page;
-  if (m_drawerStack)
-    m_drawerStack->setCurrentIndex(page == DrawerPage::Velocity ? 1 : 0);
-  syncDrawerTabs();
-  if (m_playheadOverlay)
-    syncPlayheadOverlay();
+  m_editorDrawer->setDrawerPage(page);
 }
 
-SongView::DrawerPage SongView::drawerPage() const { return m_drawerPage; }
+SongView::DrawerPage SongView::drawerPage() const { return m_editorDrawer->drawerPage(); }
 
 bool SongView::drawerVisible() const {
-  return m_drawerStack && !m_drawerStack->isHidden();
+  return m_editorDrawer->drawerVisible();
 }
 
 void SongView::setDrawerVisible(bool visible) {
-  if (!m_drawerStack)
-    return;
-  const bool wasVisible = drawerVisible();
-  if (wasVisible == visible) {
-    syncDrawerTabs();
-    return;
-  }
-
-  const QWidget *focused = QApplication::focusWidget();
-  const bool restoreContentFocus =
-      !visible && focused &&
-      (focused == m_drawerStack || m_drawerStack->isAncestorOf(focused));
-  const bool freezeUpdates = updatesEnabled();
-  if (freezeUpdates)
-    setUpdatesEnabled(false);
-  if (!visible) {
-    if (m_lanes)
-      m_lanes->clearHoverFeedback();
-    if (m_velocityArea)
-      m_velocityArea->cancelGesture();
-    m_drawerStack->hide();
-  } else {
-    m_drawerStack->show();
-  }
-  syncDrawerTabs();
-
-  layoutEditorDrawer();
-  updateScrollbars();
-  if (m_playheadOverlay)
-    syncPlayheadOverlay();
-  if (freezeUpdates) {
-    setUpdatesEnabled(true);
-    update();
-  }
-  if (restoreContentFocus)
-    focusContent();
+  m_editorDrawer->setDrawerVisible(visible);
 }
 
-void SongView::toggleDrawerPage(DrawerPage page) {
-  if (drawerVisible() && m_drawerPage == page) {
-    setDrawerVisible(false);
-  } else {
-    setDrawerPage(page);
-    setDrawerVisible(true);
-  }
-}
-
-void SongView::syncDrawerTabs() {
-  const bool vis = drawerVisible();
-  if (m_automationDrawerAction)
-    m_automationDrawerAction->setChecked(vis && m_drawerPage ==
-                                                    DrawerPage::Automations);
-  if (m_velocityDrawerAction)
-    m_velocityDrawerAction->setChecked(vis &&
-                                       m_drawerPage == DrawerPage::Velocity);
-}
-
-void SongView::layoutEditorDrawer() {
-  if (!m_editorOverlay || !m_drawerStack || !m_automationDrawerTab ||
-      !m_velocityDrawerTab || !m_editorDrawerHandle)
-    return;
-
-  const int hostW = m_editorOverlay->width();
-  const int hostH = m_editorOverlay->height();
-  const int tabH = std::max(1, m_automationDrawerTab->sizeHint().height());
-  if (hostW <= 0 || hostH <= 0) {
-    m_editorDrawerHandle->hide();
-    return;
-  }
-
-  const int minDrawerH = std::min(kLaneH + kAddLaneH, hostH);
-  const int maxDrawerH = std::max(minDrawerH, hostH - std::min(120, hostH));
-  m_editorDrawerHeight =
-      std::clamp(m_editorDrawerHeight, minDrawerH, maxDrawerH);
-
-  const int tabW1 = kHeaderW / 2;
-  const int tabW2 = kHeaderW - tabW1;
-
-  if (drawerVisible()) {
-    const int drawerTop = hostH - m_editorDrawerHeight;
-    m_drawerStack->setGeometry(0, drawerTop, hostW, m_editorDrawerHeight);
-    m_editorDrawerHandle->setGeometry(
-        kHeaderW, std::max(0, drawerTop - kAutomationHandleH / 2),
-        std::max(0, hostW - kHeaderW), kAutomationHandleH);
-    m_automationDrawerTab->setGeometry(0, std::max(0, drawerTop - tabH), tabW1,
-                                       tabH);
-    m_velocityDrawerTab->setGeometry(tabW1, std::max(0, drawerTop - tabH),
-                                     tabW2, tabH);
-    m_editorDrawerHandle->show();
-    m_drawerStack->raise();
-    m_editorDrawerHandle->raise();
-  } else {
-    m_editorDrawerHandle->hide();
-    m_automationDrawerTab->setGeometry(0, std::max(0, hostH - tabH), tabW1,
-                                       tabH);
-    m_velocityDrawerTab->setGeometry(tabW1, std::max(0, hostH - tabH), tabW2,
-                                     tabH);
-  }
-  m_automationDrawerTab->raise();
-  m_velocityDrawerTab->raise();
+bool SongView::isValidLaneIdentity(int track, int cc) {
+  return track >= 0 && track < 16 &&
+         ((cc >= 0 && cc <= 0x7F) || cc == LANE_CC_BEND);
 }
 
 void SongView::addEmptyLane(int track, uint8_t cc) {
@@ -6490,13 +5267,12 @@ SongView::ViewState SongView::viewState() const {
   state.selectedTrack = m_selectedTrack;
   state.editCursorTick = m_editCursorTick;
   state.laneHeight = m_lanes->laneHeight();
-  state.laneHeights = m_lanes->rowHeightOverrides();
-  state.laneRanges = m_lanes->rowRangeOverrides();
+  state.rowStates = m_lanes->rowDisplayStates();
   state.drawerVisible = drawerVisible();
-  state.drawerPage = m_drawerPage;
-  const int overlayH = m_editorOverlay ? m_editorOverlay->height() : 0;
-  state.splitterSizes = {std::max(1, overlayH - m_editorDrawerHeight),
-                         std::max(1, m_editorDrawerHeight)};
+  state.drawerPage = drawerPage();
+  const int drawerHeight = m_editorDrawer->drawerHeight();
+  state.splitterSizes = {std::max(1, m_editorDrawer->height() - drawerHeight),
+                         std::max(1, drawerHeight)};
   state.emptyLanes = m_emptyLanes;
   state.hiddenLanes = m_hiddenLanes;
   state.gridMinDenom = m_gridMinDenom;
@@ -6516,28 +5292,26 @@ void SongView::applyViewState(const ViewState &state) {
   m_editCursorTick =
       std::min<uint64_t>(state.editCursorTick, m_timeline->lengthTicks);
   for (const std::pair<int, uint8_t> &lane : state.emptyLanes)
-    if (lane.first >= 0 && lane.first < 16 &&
+    if (isValidLaneIdentity(lane.first , lane.second) &&
         std::find(m_emptyLanes.begin(), m_emptyLanes.end(), lane) ==
             m_emptyLanes.end())
       m_emptyLanes.push_back(lane);
   mergeEmptyLanes();
   m_hiddenLanes.clear();
   for (const std::pair<int, uint8_t> &hiddenLane : state.hiddenLanes)
-    if (hiddenLane.first >= 0 && hiddenLane.first < 16 &&
-        (hiddenLane.second <= 0x7F || hiddenLane.second == LANE_CC_BEND) &&
+    if (isValidLaneIdentity(hiddenLane.first , hiddenLane.second ) &&
         !laneHidden(hiddenLane.first, hiddenLane.second))
       m_hiddenLanes.push_back(hiddenLane);
-  m_lanes->setViewHeights(state.laneHeight, state.laneHeights);
-  m_lanes->setRowRanges(state.laneRanges);
+  m_lanes->setViewHeights(state.laneHeight);
+  m_lanes->setRowDisplayStates(state.rowStates);
   if (state.selectedTrack >= 0 && state.selectedTrack < 16 &&
       m_timeline->tracks[state.selectedTrack].used)
     selectTrack(state.selectedTrack);
   setDrawerPage(state.drawerPage);
   if (state.splitterSizes.size() == 2 && state.splitterSizes[0] > 0 &&
       state.splitterSizes[1] > 0)
-    m_editorDrawerHeight = state.splitterSizes[1];
+    m_editorDrawer->setDrawerHeight(state.splitterSizes[1]);
   setDrawerVisible(state.drawerVisible);
-  layoutEditorDrawer();
   m_lanes->rebuildRows();
   updateScrollbars();
   setHScroll(std::max(0.0, state.scrollPx));
@@ -7071,6 +5845,161 @@ void SongView::pasteRangeAtEditCursor() {
       "Pasted range · edit cursor moved to its end — paste again to repeat"));
 }
 
+// Plain note clips are additive and tick-relative to the first selected note.
+// The selection-facing entry points share this writer so cut never resolves
+// the same document notes twice.
+void SongView::writeNoteClipboard(const std::vector<DocNote> &notes) {
+  uint64_t base = UINT64_MAX;
+  for (const DocNote &note : notes)
+    base = std::min(base, note.tick);
+  Clip clip;
+  ClipTrack track{m_selectedTrack, {}};
+  for (const DocNote &note : notes)
+    track.notes.push_back(
+        {uint32_t(note.tick - base), note.key,
+         note.duration ? note.duration : uint32_t(gridTicksAt(note.tick)),
+         note.velocity});
+  clip.tracks.push_back(std::move(track));
+  m_clip = std::move(clip);
+  announce(tr("Copied %n note(s)", nullptr, int(notes.size())));
+}
+
+void SongView::copyNoteSelection() {
+  const std::vector<DocNote> notes = selectedDocumentNotes(*this);
+  if (!notes.empty())
+    writeNoteClipboard(notes);
+}
+
+void SongView::cutNoteSelection() {
+  const std::vector<DocNote> notes = selectedDocumentNotes(*this);
+  if (notes.empty())
+    return;
+  writeNoteClipboard(notes);
+  m_document->deleteNotes(notes);
+  clearSelection();
+}
+
+void SongView::deleteNoteSelection() {
+  const std::vector<DocNote> notes = selectedDocumentNotes(*this);
+  if (notes.empty())
+    return;
+  m_document->deleteNotes(notes);
+  clearSelection();
+}
+
+// Paste a plain note clip onto the selected track at the snapped edit cursor.
+// Range clips retain their replace semantics in pasteRangeAtEditCursor.
+void SongView::pasteNotesAtEditCursor() {
+  if (!m_document || m_clip.span != 0 || m_clip.tracks.empty() ||
+      m_clip.tracks.front().notes.empty())
+    return;
+  const uint64_t base = snapTick(double(m_editCursorTick));
+  std::vector<SongDocument::NewNote> notes;
+  std::vector<NoteId> ids;
+  uint64_t end = base;
+  for (const ClipNote &note : m_clip.tracks.front().notes) {
+    const uint64_t tick = base + note.relTick;
+    notes.push_back({tick, note.key, note.duration, note.velocity});
+    ids.push_back({uint32_t(tick), note.key});
+    end = std::max(end, tick + note.duration);
+  }
+  m_document->addNotes(m_selectedTrack, notes);
+  setSelection(std::move(ids));
+  commitEditCursor(end);
+  ensureTickVisible(base);
+  announce(tr("Pasted %n note(s)", nullptr, int(notes.size())));
+}
+
+void SongView::selectAllNotes() {
+  std::vector<NoteId> ids;
+  for (const ViewNote &note : m_model.notes) {
+    if (note.track == m_selectedTrack)
+      ids.push_back({note.startTick, note.key});
+  }
+  setSelection(std::move(ids));
+}
+
+// Transposes keep intervals: if any selected note would leave the MIDI key
+// range, the whole move is a no-op. The first moved note auditions until the
+// focused editor surface receives a real key release.
+void SongView::transposeNoteSelection(int dKey) {
+  const std::vector<DocNote> notes = selectedDocumentNotes(*this);
+  if (notes.empty())
+    return;
+  for (const DocNote &note : notes) {
+    const int key = int(note.key) + dKey;
+    if (key < 0 || key > 127)
+      return;
+  }
+  m_document->moveNotes(notes, 0, dKey, /*mergeable=*/true);
+  std::vector<NoteId> ids;
+  for (const DocNote &note : notes)
+    ids.push_back({uint32_t(note.tick), uint8_t(int(note.key) + dKey)});
+  setSelection(std::move(ids));
+  int edge = int(notes.front().key) + dKey;
+  for (const DocNote &note : notes) {
+    const int key = int(note.key) + dKey;
+    edge = dKey > 0 ? std::max(edge, key) : std::min(edge, key);
+  }
+  ensureKeyVisible(edge);
+  const int key = int(notes.front().key) + dKey;
+  m_editKeyAudition = EditKeyAudition{m_selectedTrack, key};
+  emit auditionNote(m_selectedTrack, key, notes.front().velocity);
+  if (m_roll)
+    m_roll->update();
+}
+
+// Move the earliest selected note to the adjacent drawn-grid line and keep
+// every selected note's offset from it.
+void SongView::nudgeNoteSelection(bool right) {
+  const std::vector<DocNote> notes = selectedDocumentNotes(*this);
+  if (notes.empty())
+    return;
+  uint64_t anchor = UINT64_MAX;
+  for (const DocNote &note : notes)
+    anchor = std::min(anchor, note.tick);
+  const uint64_t snapped =
+      drawnGridTick(this, double(anchor) + (right ? 1.0 : -1.0), right);
+  const int64_t dTick = int64_t(snapped) - int64_t(anchor);
+  if (dTick == 0)
+    return;
+  m_document->moveNotes(notes, dTick, 0, /*mergeable=*/true);
+  std::vector<NoteId> ids;
+  for (const DocNote &note : notes)
+    ids.push_back({uint32_t(int64_t(note.tick) + dTick), note.key});
+  setSelection(std::move(ids));
+  uint64_t lo = UINT64_MAX;
+  uint64_t hi = 0;
+  for (const DocNote &note : notes) {
+    const uint64_t tick = uint64_t(int64_t(note.tick) + dTick);
+    lo = std::min(lo, tick);
+    hi = std::max(hi, tick + note.duration);
+  }
+  ensureRangeVisible(lo, hi, right);
+}
+
+void SongView::audition(int track, int key, int velocity) {
+  const bool replacedEditAudition = m_editKeyAudition.has_value();
+  m_editKeyAudition.reset();
+  emit auditionNote(track, key, velocity);
+  if (replacedEditAudition && m_roll)
+    m_roll->update();
+}
+
+int SongView::editKeyAuditionKey() const {
+  return m_editKeyAudition ? m_editKeyAudition->key : -1;
+}
+
+void SongView::releaseEditKeyAudition() {
+  if (!m_editKeyAudition)
+    return;
+  const EditKeyAudition active = *m_editKeyAudition;
+  m_editKeyAudition.reset();
+  emit auditionNote(active.track, active.key, 0);
+  if (m_roll)
+    m_roll->update();
+}
+
 // Maps the four transpose commands to their semitone step, 0 when the event
 // matches none. Shared by the note-selection and time-selection key paths so
 // a rebinding changes both at once.
@@ -7088,16 +6017,14 @@ int SongView::transposeStepFor(const QKeyEvent *event) const {
 }
 
 bool SongView::handleEditKey(QKeyEvent *event) {
-  // QAction normally consumes these first. Keeping the exact-key fallback
-  // here also covers synthesized/direct child events used by the editor
-  // harnesses; modified A/V still reach their normal commands (for example,
-  // Ctrl+A in the piano roll and Ctrl+V for paste).
+  // Only designated editor surfaces call this dispatcher, so plain A/V stay
+  // ordinary text input in inline editors. Modified A/V still reach their
+  // keymap commands (for example, Ctrl+A and Ctrl+V).
   if ((event->key() == Qt::Key_A || event->key() == Qt::Key_V) &&
       event->modifiers() == Qt::NoModifier) {
     if (!event->isAutoRepeat()) {
-      (event->key() == Qt::Key_A ? m_automationDrawerAction
-                                 : m_velocityDrawerAction)
-          ->trigger();
+      m_editorDrawer->toggleDrawerPage(event->key() == Qt::Key_A ? DrawerPage::Automations
+                                           : DrawerPage::Velocity);
     }
     event->accept();
     return true;
@@ -7105,24 +6032,24 @@ bool SongView::handleEditKey(QKeyEvent *event) {
   if (!m_document)
     return false;
   const auto &keys = keymap::Registry::instance();
-  const bool sel = m_timeSel.active();
-  if (sel && keys.matches(event, QStringLiteral("roll.copy"))) {
+  const bool timeSelection = m_timeSel.active();
+  if (timeSelection && keys.matches(event, QStringLiteral("roll.copy"))) {
     copyTimeSelection();
     event->accept();
     return true;
   }
-  if (sel && keys.matches(event, QStringLiteral("roll.cut"))) {
+  if (timeSelection && keys.matches(event, QStringLiteral("roll.cut"))) {
     copyTimeSelection();
     deleteTimeSelection();
     event->accept();
     return true;
   }
-  if (sel && keys.matches(event, QStringLiteral("roll.delete"))) {
+  if (timeSelection && keys.matches(event, QStringLiteral("roll.delete"))) {
     deleteTimeSelection();
     event->accept();
     return true;
   }
-  if (sel) {
+  if (timeSelection) {
     const int transpose = transposeStepFor(event);
     if (transpose != 0) {
       transposeTimeSelection(transpose);
@@ -7130,15 +6057,48 @@ bool SongView::handleEditKey(QKeyEvent *event) {
       return true;
     }
   }
-  if (sel && (keys.matches(event, QStringLiteral("roll.nudge_left")) ||
+  if (timeSelection && (keys.matches(event, QStringLiteral("roll.nudge_left")) ||
               keys.matches(event, QStringLiteral("roll.nudge_right")))) {
     nudgeTimeSelection(keys.matches(event, QStringLiteral("roll.nudge_right")));
     event->accept();
     return true;
   }
-  if (keys.matches(event, QStringLiteral("roll.paste")) && m_clip.span > 0 &&
-      !m_clip.empty()) {
-    pasteRangeAtEditCursor();
+  if (keys.matches(event, QStringLiteral("roll.paste")) ) {
+    if (m_clip.span > 0 &&
+      !m_clip.empty()) pasteRangeAtEditCursor();
+    else
+      pasteNotesAtEditCursor();
+    event->accept();
+    return true;
+  }
+  const bool cut = keys.matches(event, QStringLiteral("roll.cut"));
+  if (cut || keys.matches(event, QStringLiteral("roll.copy"))) {
+    if (cut)
+      cutNoteSelection();
+    else
+      copyNoteSelection();
+    event->accept();
+    return true;
+  }
+  if (keys.matches(event, QStringLiteral("roll.select_all"))) {
+    selectAllNotes();
+    event->accept();
+    return true;
+  }
+  if (keys.matches(event, QStringLiteral("roll.delete"))) {
+    deleteNoteSelection();
+    event->accept();
+    return true;
+  }
+  const int transpose = transposeStepFor(event);
+  if (transpose != 0) {
+    transposeNoteSelection(transpose);
+    event->accept();
+    return true;
+  }
+  if (keys.matches(event, QStringLiteral("roll.nudge_left")) ||
+      keys.matches(event, QStringLiteral("roll.nudge_right"))) {
+    nudgeNoteSelection(keys.matches(event, QStringLiteral("roll.nudge_right")));
     event->accept();
     return true;
   }
@@ -7232,8 +6192,7 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing) {
 bool SongView::userGestureActive() const {
   return (m_ruler && m_ruler->gestureActive()) ||
          (m_roll && m_roll->gestureActive()) ||
-         (m_lanes && m_lanes->gestureActive());
-  (m_lanes && m_lanes->gestureActive()) ||
+         (m_lanes && m_lanes->gestureActive())||
       (m_velocityArea && m_velocityArea->gestureActive());
 }
 
@@ -7396,18 +6355,22 @@ QColor SongView::noteColor(int track, int velocity) {
       themes::color(themes::Role::song_view_note_velocity_zero), t);
 }
 
-int SongView::currentProgram(int track) const {
+int SongView::programAt(int track, uint64_t tick) const {
   if (!m_timeline)
     return -1;
-  int prog = m_timeline->tracks[track].firstProgram;
-  const uint64_t tick = m_playing ? uint64_t(m_playheadTick) : m_editCursorTick;
-  for (const VoiceChange &vc : m_model.voices) {
-    if (vc.tick > tick)
+  int program = m_timeline->tracks[track].firstProgram;
+  for (const VoiceChange &change : m_model.voices) {
+    if (change.tick > tick)
       break;
-    if (vc.track == track)
-      prog = vc.program;
+    if (change.track == track)
+      program = change.program;
   }
-  return prog;
+  return program;
+}
+
+int SongView::currentProgram(int track) const {
+  const uint64_t tick = m_playing ? uint64_t(m_playheadTick) : m_editCursorTick;
+  return programAt(track, tick );
 }
 
 void SongView::revealVoice(int program) {
@@ -7562,8 +6525,8 @@ void SongView::moveTrack(int from, int to) {
     announce(tr("Moved track %1 to slot %2").arg(from + 1).arg(to + 1));
 }
 
-void SongView::onEngineTracksRemapped(
-    const QVector<int> &newEngineSlotByOldSlot) {
+void SongView::onTracksRemapped(const SongDocument::TrackRemap &remap) {
+  const QVector<int> &newEngineSlotByOldSlot= remap.newEngineSlotByOldSlot;
   // This signal arrives after SongDocument has rebuilt its engine-track
   // mapping but before documentChanged rebuilds the views. Remap state
   // only: newly introduced slots have no old owner and therefore keep
@@ -7864,7 +6827,6 @@ void SongView::refreshTimelineViews() {
 
 void SongView::resizeEvent(QResizeEvent *event) {
   QWidget::resizeEvent(event);
-  layoutEditorDrawer();
   updateScrollbars();
   syncPlayheadOverlay();
 }

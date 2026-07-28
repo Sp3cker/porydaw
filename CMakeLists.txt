@@ -140,8 +140,12 @@ qt_add_library(porydaw_app STATIC
     src/ui/songlistpanel.h
     src/ui/songviewmodel.cpp
     src/ui/songviewmodel.h
+    src/ui/editordrawer.cpp
+    src/ui/editordrawer.h
     src/ui/songview.cpp
     src/ui/songview.h
+    src/ui/velocityarea.cpp
+    src/ui/velocityarea.h
     src/ui/playheadoverlay.cpp
     src/ui/playheadoverlay.h
     src/ui/eventlistview.cpp
@@ -165,6 +169,8 @@ qt_add_executable(porydaw
     src/main.cpp
     src/tabcheck.cpp
     src/eventviewcheck.cpp
+    src/rollcheckautomation.cpp
+    src/rollcheckautomation.h
     src/rollcheck.cpp
     src/rollcheckplayhead.cpp
     src/rollcheckplayhead.h

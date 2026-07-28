@@ -575,7 +575,6 @@ Theme derive(const QColor &primary, const QColor &accent) {
   theme.color(Role::song_view_selection_fill) = selectionBackground;
   theme.color(Role::song_view_selection_edge) = selectionBackground;
   theme.color(Role::song_view_note_velocity_zero) = disabledText;
-  theme.color(Role::song_view_velocity_node) = QColor::fromRgb(0xE9, 0x54, 0x49);
   theme.color(Role::song_view_loop_marker) = selectionBackground;
   theme.color(Role::song_view_edit_cursor) = windowText;
   theme.color(Role::song_view_edit_preview_outline) = windowText;

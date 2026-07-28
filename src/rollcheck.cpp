@@ -1,6 +1,5 @@
 #include "ui/theme/themeruntime.h"
 #include <QApplication>
-#include <QAction>
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -10,11 +9,11 @@
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QMouseEvent>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPixmap>
-#include <QPushButton>
 #include <QPoint>
+#include <QPushButton>
 #include <QRect>
 #include <QSettings>
 #include <QString>
@@ -30,9 +29,10 @@
 
 #include "core/songdocument.h"
 #include "project/decompproject.h"
+#include "rollcheckautomation.h"
 #include "rollcheckplayhead.h"
 #include "ui/songview.h"
-#include "ui/viewsidecar.h"
+#include "ui/velocityarea.h"
 
 // --rollcheck <projectRoot> <song> [shot.png]: piano-roll gesture check.
 // Drives the roll widget offscreen with synthesized mouse events: the
@@ -136,26 +136,6 @@ struct SnappedRows {
 void click(QWidget *w, QPoint pos) {
     sendMouse(w, QEvent::MouseButtonPress, pos, Qt::LeftButton, Qt::LeftButton);
     sendMouse(w, QEvent::MouseButtonRelease, pos, Qt::LeftButton, Qt::NoButton);
-}
-
-bool separatorClickOpenedMenu(QWidget *widget, QPoint pos,
-                              Qt::MouseButton button)
-{
-    bool opened = false;
-    QTimer menuPoll;
-    menuPoll.setInterval(0);
-    QObject::connect(&menuPoll, &QTimer::timeout, [&] {
-        if (QWidget *popup = QApplication::activePopupWidget()) {
-            opened = true;
-            popup->close();
-        }
-    });
-    menuPoll.start();
-    sendMouse(widget, QEvent::MouseButtonPress, pos, button, button);
-    sendMouse(widget, QEvent::MouseButtonRelease, pos, button, Qt::NoButton);
-    QCoreApplication::processEvents();
-    menuPoll.stop();
-    return opened;
 }
 
 // The pencil gesture: Qt replaces a fast second press with a DblClick event,
@@ -1543,14 +1523,40 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (view.timeSelection().startTick != d.tick + 2 * snapCell)
         fail("time-selection band did not follow the nudge");
 
-    // Playhead follow-scroll pauses while a mouse gesture is live: with a
-    // middle-button pan held in the roll (or the lanes), a playing playhead
-    // far past the right edge must not move the view; releasing the button
-    // lets the next playhead tick scroll again.
-    auto *lanes = view.findChild<QWidget *>(QStringLiteral("automationArea"));
+    // Velocity projection has a fixed inset at both endpoints, and every
+  // integer MIDI velocity must survive a projection round trip.
+  {
+    constexpr double projectionHeight = 180.0;
+    if (std::abs(songview::velocityToY(127, projectionHeight) - 6.0) > 1e-12 ||
+        std::abs(songview::velocityToY(1, projectionHeight) -
+                 (projectionHeight - 6.0)) > 1e-12 ||
+        songview::yToVelocity(0.0, projectionHeight) != 127 ||
+        songview::yToVelocity(projectionHeight, projectionHeight) != 1) {
+      fail("velocity projection endpoints changed");
+    }
+    for (int velocity = 1; velocity <= 127; ++velocity) {
+      if (songview::yToVelocity(
+              songview::velocityToY(velocity, projectionHeight),
+              projectionHeight) != velocity) {
+        fail("velocity projection did not round-trip an integer value");
+        break;
+      }
+    }
+  }
+
+  // Playhead follow-scroll pauses while a mouse gesture is live: with a
+    // middle-button pan held in the roll, automation lanes, or velocity editor,
+  // a playing playhead far past the right edge must not move the view;
+  // releasing the button lets the next playhead tick scroll again.
+  auto *lanes = view.findChild<QWidget *>(QStringLiteral("automationArea"));
     if (!lanes)
         fail("automation area not found");
-    for (QWidget *panned : {roll, lanes}) {
+    auto *velocityArea = static_cast<songview::VelocityArea *>(
+      view.findChild<QWidget *>(QStringLiteral("velocityArea")));
+  if (!velocityArea)
+    fail("velocity area not found");
+  QWidget *const pannedAreas[] = {roll, lanes, velocityArea};
+  for (QWidget *panned : pannedAreas) {
         if (!panned)
             continue;
         const int home = view.contentX(0.0);
@@ -1559,17 +1565,99 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         const QPoint mid(panned->width() / 2, panned->height() / 2);
         sendMouse(panned, QEvent::MouseButtonPress, mid, Qt::MiddleButton,
                   Qt::MiddleButton);
-        view.setPlayheadSample(timeline->sampleForTick(farTick), true);
+        if (panned == velocityArea && !velocityArea->gestureActive())
+      fail("velocity-area pan did not start an active gesture");
+    view.setPlayheadSample(timeline->sampleForTick(farTick), true);
         if (view.contentX(0.0) != home)
             fail("playhead follow-scroll moved the view during a pan gesture");
         sendMouse(panned, QEvent::MouseButtonRelease, mid, Qt::MiddleButton,
                   Qt::NoButton);
-        view.setPlayheadSample(timeline->sampleForTick(farTick), true);
+        if (panned == velocityArea && velocityArea->gestureActive())
+      fail("velocity-area pan remained active after release");
+    view.setPlayheadSample(timeline->sampleForTick(farTick), true);
         if (view.contentX(0.0) == home)
             fail("playhead follow-scroll did not resume after the pan ended");
         view.setPlayheadSample(0, false);
         view.scrollByPx(view.contentX(0.0) - home); // back where it started
     }
+
+  // programAt retains the timeline's domain value: firstProgram applies
+  // before the first voice event, while another track with no program stays
+  // -1 even after that event. The AutomationArea boundary alone adapts -1 to
+  // program 0 for its insertion preview.
+  {
+    constexpr uint64_t firstVoiceTick = 48;
+    constexpr int firstProgram = 41;
+    SmfFile programSmf;
+    programSmf.format = 1;
+    programSmf.division = 24;
+    programSmf.tracks.resize(3);
+    programSmf.tracks[0].endTick = 96;
+    SmfTrack &noProgramTrack = programSmf.tracks[1];
+    SmfEvent noteOn;
+    noteOn.status = 0x90;
+    noteOn.data0 = 60;
+    noteOn.data1 = 100;
+    SmfEvent noteOff = noteOn;
+    noteOff.tick = 24;
+    noteOff.status = 0x80;
+    noteOff.data1 = 0;
+    noProgramTrack.events = {noteOn, noteOff};
+    noProgramTrack.endTick = 96;
+    SmfTrack &programTrack = programSmf.tracks[2];
+    SmfEvent firstVoice;
+    firstVoice.tick = firstVoiceTick;
+    firstVoice.status = 0xC0;
+    firstVoice.data0 = uint8_t(firstProgram);
+    programTrack.events = {firstVoice};
+    programTrack.endTick = 96;
+    auto programTimeline = MidiTimeline::build(programSmf, 48000.0);
+    if (!programTimeline) {
+      fail("could not build the program-resolution timeline");
+    } else {
+      SongView programView;
+      programView.resize(640, 360);
+      programView.setSong(programTimeline.get(), nullptr);
+      if (programView.programAt(1, firstVoiceTick - 1) != firstProgram)
+        fail("programAt did not use firstProgram before the first change");
+      if (programView.programAt(0, firstVoiceTick + 1) != -1)
+        fail("programAt replaced a no-program track's -1 fallback");
+      programView.setDocument(&doc);
+      (void)programView.grab();
+      auto *programAutomationArea =
+          programView.findChild<QWidget *>(QStringLiteral("automationArea"));
+      const int laneHeight = programView.viewState().laneHeight;
+      if (!programAutomationArea ||
+          programAutomationArea->width() <= songview::kGutterW ||
+          programAutomationArea->height() < 2 * laneHeight) {
+        fail("program preview automation area was not laid out");
+      } else {
+        QEvent leaveAutomation(QEvent::Leave);
+        QCoreApplication::sendEvent(programAutomationArea, &leaveAutomation);
+        QImage withoutPreview(programAutomationArea->size(),
+                              QImage::Format_ARGB32_Premultiplied);
+        withoutPreview.fill(Qt::transparent);
+        programAutomationArea->render(&withoutPreview);
+        const QPoint previewPosition(songview::kGutterW + 40,
+                                     laneHeight + laneHeight / 2);
+        sendMouse(programAutomationArea, QEvent::MouseMove, previewPosition,
+                  Qt::NoButton, Qt::NoButton);
+        QImage noProgramPreview(programAutomationArea->size(),
+                                QImage::Format_ARGB32_Premultiplied);
+        noProgramPreview.fill(Qt::transparent);
+        programAutomationArea->render(&noProgramPreview);
+        if (noProgramPreview == withoutPreview)
+          fail("no-program voice insertion preview did not render");
+        programTimeline->tracks[0].firstProgram = 0;
+        QImage explicitZeroPreview(programAutomationArea->size(),
+                                   QImage::Format_ARGB32_Premultiplied);
+        explicitZeroPreview.fill(Qt::transparent);
+        programAutomationArea->render(&explicitZeroPreview);
+        if (noProgramPreview != explicitZeroPreview)
+          fail("automation insertion preview did not default -1 to program 0");
+      }
+    }
+  }
 
     // A stopped playhead is a thin child overlay. Moving it must preserve the
     // timeline parents' backing stores instead of repainting their contents.
@@ -1589,11 +1677,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         } else {
             // Printable A belongs to a focused text editor, not the drawer
             // shortcut; the editor's ShortcutOverride must win.
-            const bool drawerWasVisible = view.automationDrawerVisible();
+            const bool drawerWasVisible = view.drawerVisible();
             editor->setText(QString());
             sendTextKey(editor, Qt::Key_A, QStringLiteral("a"));
             if (editor->text() != QLatin1String("a")
-                || view.automationDrawerVisible() != drawerWasVisible)
+                || view.drawerVisible() != drawerWasVisible)
                 fail("A toggled the drawer instead of typing in the rename editor");
             editor->setText(QStringLiteral("Rolled"));
             sendKey(editor, Qt::Key_Return, Qt::NoModifier);
@@ -1625,760 +1713,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         }
     }
 
-    // The header voice line is live: currentProgram is the last program
-    // change at or before the display position — the playhead while playing,
-    // the edit cursor otherwise — falling back to the track's first program
-    // (which is what primes the engine before any change).
-    {
-        view.setEditCursorTick(0);
-        const int base = view.currentProgram(track);
-        const int changed = base == 5 ? 6 : 5;
-        const uint64_t vcTick = a.tick + 4 * a.dur;
-        doc.addLanePoint(track, DOC_CC_VOICE, vcTick, changed);
-        // A track with no program at all adopts the added one everywhere
-        // (it becomes the priming first program).
-        const int atStart = base < 0 ? changed : base;
-        if (view.currentProgram(track) != atStart)
-            fail("voice label at the start did not show the priming program");
-        view.setEditCursorTick(vcTick);
-        if (view.currentProgram(track) != changed)
-            fail("voice label did not follow the edit cursor past the change");
-        view.setEditCursorTick(0);
-        view.setPlayheadSample(timeline->sampleForTick(vcTick), true);
-        if (view.currentProgram(track) != changed)
-            fail("voice label did not follow the playing playhead");
-        view.setPlayheadSample(0, false); // stopped: back to the edit cursor
-        if (view.currentProgram(track) != atStart)
-            fail("voice label did not return to the edit cursor after stop");
-    }
-
-    // Voice-row hover previews the same snapped insertion and preselected
-    // program that a click commits. Existing markers retain click priority.
-    {
-        const int laneHeight = view.viewState().laneHeight;
-        const int voiceRowTop = laneHeight;
-        const int voiceRowCenter = voiceRowTop + laneHeight / 2;
-        int cursorX = -1;
-        int insertionX = -1;
-        uint64_t insertionTick = 0;
-        for (int candidateX = songview::kGutterW + 24;
-             candidateX < automationArea->width() - 24; candidateX += 7) {
-            const double rawTick = std::max(
-                0.0, view.tickAtContentX(candidateX - songview::kGutterW));
-            const uint64_t candidateTick = view.snapTick(rawTick);
-            const int candidateInsertionX =
-                songview::kGutterW + view.contentX(double(candidateTick));
-            bool nearVoiceChange = false;
-            for (const VoiceChange &change : view.model().voices) {
-                if (change.track != track)
-                    continue;
-                const int changeX =
-                    songview::kGutterW + view.contentX(double(change.tick));
-                if (std::abs(changeX - candidateX) < 12
-                    || std::abs(changeX - candidateInsertionX) < 12) {
-                    nearVoiceChange = true;
-                    break;
-                }
-            }
-            DocLanePoint existingChange;
-            if (!nearVoiceChange
-                && !doc.findLanePoint(track, DOC_CC_VOICE, candidateTick,
-                                      &existingChange)) {
-                cursorX = candidateX;
-                insertionX = candidateInsertionX;
-                insertionTick = candidateTick;
-                break;
-            }
-        }
-        if (cursorX < 0) {
-            fail("no empty visible voice-row position for hover");
-        } else {
-            cursorX = insertionX;
-            constexpr int markerHitRadius = 9;
-            const auto voiceMarkerX = [&](uint64_t tick) {
-                return songview::kGutterW + view.contentX(double(tick));
-            };
-            uint64_t leftMarkerTick = insertionTick;
-            while (leftMarkerTick > 0
-                   && insertionX - voiceMarkerX(leftMarkerTick)
-                          < markerHitRadius)
-                --leftMarkerTick;
-            uint64_t rightMarkerTick = insertionTick;
-            while (voiceMarkerX(rightMarkerTick) - insertionX
-                   < markerHitRadius)
-                ++rightMarkerTick;
-            const int previewVoiceProgram =
-                std::max(0, view.currentProgram(track));
-            const int undoIndexBeforePreviewMarkers =
-                doc.undoStack()->index();
-            doc.addLanePoint(
-                track, DOC_CC_VOICE, leftMarkerTick, previewVoiceProgram);
-            doc.addLanePoint(
-                track, DOC_CC_VOICE, rightMarkerTick, previewVoiceProgram);
-            const int leftMarkerX = voiceMarkerX(leftMarkerTick);
-            const int rightMarkerX = voiceMarkerX(rightMarkerTick);
-            const QRect voiceRow(songview::kGutterW, voiceRowTop,
-                                 automationArea->width() - songview::kGutterW,
-                                 laneHeight);
-            const auto changedPixelCount =
-                [](const QImage &before, const QImage &after,
-                   const QRect &region) {
-                    int changedPixels = 0;
-                    const QRect compared =
-                        region.intersected(before.rect()).intersected(after.rect());
-                    for (int y = compared.top(); y <= compared.bottom(); ++y)
-                        for (int x = compared.left(); x <= compared.right(); ++x)
-                            if (before.pixel(x, y) != after.pixel(x, y))
-                                ++changedPixels;
-                    return changedPixels;
-                };
-            QEvent leaveAutomation(QEvent::Leave);
-            QCoreApplication::sendEvent(automationArea, &leaveAutomation);
-            QCoreApplication::processEvents();
-            const QImage withoutPreview = automationArea->grab().toImage();
-            sendMouse(automationArea, QEvent::MouseMove,
-                      QPoint(cursorX, voiceRowCenter), Qt::NoButton,
-                      Qt::NoButton);
-            QCoreApplication::processEvents();
-            const QImage withPreview = automationArea->grab().toImage();
-            if (changedPixelCount(withoutPreview, withPreview, voiceRow) == 0) {
-                fail("voice-row hover did not paint an insertion preview");
-            } else {
-                const QRect leftOfMarkers(
-                    voiceRow.left(), voiceRow.top(),
-                    std::max(0, leftMarkerX - voiceRow.left() - 2),
-                    voiceRow.height());
-                const QRect rightOfMarkers(
-                    rightMarkerX + 2, voiceRow.top(),
-                    std::max(0, voiceRow.right() - rightMarkerX - 1),
-                    voiceRow.height());
-                if (changedPixelCount(
-                        withoutPreview, withPreview, leftOfMarkers)
-                        + changedPixelCount(
-                            withoutPreview, withPreview, rightOfMarkers)
-                    == 0) {
-                    fail("voice identity disappeared between close markers");
-                }
-                const QRect leftMarkerStroke(
-                    leftMarkerX, voiceRow.top() + 4, 1,
-                    voiceRow.height() - 8);
-                const QRect rightMarkerStroke(
-                    rightMarkerX, voiceRow.top() + 4, 1,
-                    voiceRow.height() - 8);
-                if (changedPixelCount(
-                        withoutPreview, withPreview, leftMarkerStroke)
-                        + changedPixelCount(
-                            withoutPreview, withPreview, rightMarkerStroke)
-                    != 0) {
-                    fail("voice preview obscured an adjacent marker");
-                }
-            }
-            sendMouse(automationArea, QEvent::MouseMove,
-                      QPoint(cursorX, voiceRow.bottom()), Qt::NoButton,
-                      Qt::NoButton);
-            QCoreApplication::processEvents();
-            const QImage overResizeHandle =
-                automationArea->grab().toImage();
-            if (changedPixelCount(
-                    withoutPreview, overResizeHandle, voiceRow) != 0)
-                fail("voice-row preview remained over a resize handle");
-            sendMouse(automationArea, QEvent::MouseMove,
-                      QPoint(cursorX, voiceRowCenter), Qt::NoButton,
-                      Qt::NoButton);
-            QCoreApplication::processEvents();
-
-            int expectedVoiceProgram = 0;
-            for (const VoiceChange &change : view.model().voices) {
-                if (change.tick > insertionTick)
-                    break;
-                if (change.track == track)
-                    expectedVoiceProgram = change.program;
-            }
-            bool pickerAccepted = false;
-            QTimer pickerPoll;
-            pickerPoll.setInterval(0);
-            QObject::connect(&pickerPoll, &QTimer::timeout, [&] {
-                if (QDialog *dialog = view.findChild<QDialog *>()) {
-                    pickerAccepted = true;
-                    dialog->accept();
-                }
-            });
-            pickerPoll.start();
-            sendMouse(automationArea, QEvent::MouseButtonPress,
-                      QPoint(cursorX, voiceRowCenter), Qt::LeftButton,
-                      Qt::LeftButton);
-            sendMouse(automationArea, QEvent::MouseButtonRelease,
-                      QPoint(cursorX, voiceRowCenter), Qt::LeftButton,
-                      Qt::NoButton);
-            pickerPoll.stop();
-            QCoreApplication::processEvents();
-            DocLanePoint insertedChange;
-            if (!pickerAccepted
-                || !doc.findLanePoint(track, DOC_CC_VOICE, insertionTick,
-                                      &insertedChange)
-                || insertedChange.value != expectedVoiceProgram) {
-                fail("voice-row click disagreed with its hover preview");
-            } else {
-                QCoreApplication::sendEvent(automationArea, &leaveAutomation);
-                QCoreApplication::processEvents();
-                const QImage markerWithoutHover =
-                    automationArea->grab().toImage();
-                sendMouse(automationArea, QEvent::MouseMove,
-                          QPoint(insertionX, voiceRowCenter), Qt::NoButton,
-                          Qt::NoButton);
-                QCoreApplication::processEvents();
-                const QImage markerWithHover = automationArea->grab().toImage();
-                if (changedPixelCount(
-                        markerWithoutHover, markerWithHover, voiceRow)
-                    != 0)
-                    fail("insert preview remained over an existing voice marker");
-                doc.undoStack()->undo();
-                QCoreApplication::processEvents();
-            }
-            while (doc.undoStack()->index()
-                   > undoIndexBeforePreviewMarkers) {
-                doc.undoStack()->undo();
-            }
-            QCoreApplication::processEvents();
-        }
-    }
-
-    // The persistent bottom-left tab and the unmodified A shortcut hide and
-    // show the whole automation drawer. The drawer is a true overlay: opening
-    // it must not resize the roll or track headers. The closed state carries
-    // the last positive drawer height through ViewState and the sidecar, and
-    // none of these cosmetic operations may touch MIDI or the undo stack.
-    {
-        auto *drawer =
-            view.findChild<QWidget *>(QStringLiteral("automationDrawer"));
-        auto *drawerTab =
-            view.findChild<QWidget *>(QStringLiteral("automationDrawerTab"));
-        auto *headerScroll =
-            view.findChild<QWidget *>(QStringLiteral("trackHeaderScroll"));
-        auto *drawerAction =
-            view.findChild<QAction *>(QStringLiteral("automationDrawerAction"));
-        auto *drawerHandle =
-            view.findChild<QWidget *>(
-                QStringLiteral("automationDrawerHandle"));
-        if (!drawer || !drawerTab || !headerScroll || !drawerAction
-            || !drawerHandle) {
-            fail("automation drawer controls not found");
-        } else {
-            if (headerScroll->geometry()
-                != headerScroll->parentWidget()->rect())
-                fail("Automations tab shortened the track-header viewport");
-            if (drawerHandle->geometry().x() != songview::kHeaderW
-                || drawerHandle->geometry().right()
-                       != drawerHandle->parentWidget()->width() - 1)
-                fail("automation divider extends underneath its tab");
-            if (drawerAction->shortcutContext() != Qt::WindowShortcut)
-                fail("automation shortcut is not active across the song window");
-
-            const QByteArray midiBeforeDrawer = doc.smf().write();
-            const int undoCountBeforeDrawer = doc.undoStack()->count();
-            const int rollHeightBeforeDrawer = roll->height();
-            const int headerHeightBeforeDrawer = headerScroll->height();
-            const SongView::ViewState openState = view.viewState();
-            const QList<int> openSizes = openState.splitterSizes;
-            if (!openState.automationDrawerVisible
-                || openSizes.size() != 2 || openSizes[0] <= 0
-                || openSizes[1] <= 0) {
-                fail("automation drawer did not begin open with positive sizes");
-            }
-
-            click(drawerTab, drawerTab->rect().center());
-            QCoreApplication::processEvents();
-            const SongView::ViewState tabHiddenState = view.viewState();
-            if (view.automationDrawerVisible() || !drawer->isHidden()
-                || tabHiddenState.automationDrawerVisible)
-                fail("Automations tab did not hide the drawer");
-            if (!drawerHandle->isHidden())
-                fail("automation divider remained after closing the drawer");
-            if (roll->height() != rollHeightBeforeDrawer
-                || headerScroll->height() != headerHeightBeforeDrawer)
-                fail("closing the automation overlay changed SongView flow");
-            if (tabHiddenState.splitterSizes != openSizes)
-                fail("hidden drawer forgot its expanded splitter sizes");
-            if (drawerTab->isHidden())
-                fail("hiding the drawer also hid its Automations tab");
-
-            roll->setFocus();
-            sendKey(roll, Qt::Key_A, Qt::NoModifier);
-            QCoreApplication::processEvents();
-            if (!view.automationDrawerVisible() || drawer->isHidden())
-                fail("A did not reopen the automation drawer");
-            if (drawerHandle->isHidden())
-                fail("A did not restore the automation divider");
-            if (roll->height() != rollHeightBeforeDrawer
-                || headerScroll->height() != headerHeightBeforeDrawer)
-                fail("opening the automation overlay changed SongView flow");
-            if (view.viewState().splitterSizes != openSizes)
-                fail("reopening the drawer did not restore its splitter sizes");
-
-            view.setEventListVisible(true);
-            auto *eventTable =
-                view.findChild<QWidget *>(QStringLiteral("eventListTable"));
-            if (!eventTable) {
-                fail("event list table not found for drawer shortcut check");
-            } else {
-                eventTable->setFocus();
-                sendKey(eventTable, Qt::Key_A, Qt::NoModifier);
-                QCoreApplication::processEvents();
-                if (view.automationDrawerVisible())
-                    fail("A from the event list did not hide the drawer");
-                sendKey(eventTable, Qt::Key_A, Qt::NoModifier);
-                QCoreApplication::processEvents();
-                if (!view.automationDrawerVisible())
-                    fail("A from the event list did not reopen the drawer");
-            }
-            view.setEventListVisible(false);
-
-            sendKey(roll, Qt::Key_A, Qt::NoModifier);
-            QCoreApplication::processEvents();
-            const SongView::ViewState hiddenState = view.viewState();
-            if (view.automationDrawerVisible()
-                || hiddenState.automationDrawerVisible)
-                fail("A did not hide the automation drawer");
-
-            QTemporaryDir sidecarRoot;
-            SongView::ViewState restoredState;
-            const QString sidecarSong =
-                QStringLiteral("rollcheck_automation_drawer");
-            const bool sidecarRoundTripped =
-                sidecarRoot.isValid()
-                && ViewSidecar::save(
-                    sidecarRoot.path(), sidecarSong, hiddenState)
-                && ViewSidecar::load(
-                    sidecarRoot.path(), sidecarSong, &restoredState);
-            view.setAutomationDrawerVisible(true);
-            if (!sidecarRoundTripped) {
-                fail("automation drawer state did not persist through its sidecar");
-            } else {
-                view.applyViewState(restoredState);
-                if (view.automationDrawerVisible()
-                    || restoredState.automationDrawerVisible
-                    || view.viewState().splitterSizes != openSizes) {
-                    fail("sidecar round trip lost the hidden drawer or its size");
-                }
-            }
-            view.setAutomationDrawerVisible(true);
-            if (!view.automationDrawerVisible()
-                || view.viewState().splitterSizes != openSizes)
-                fail("drawer did not reopen at its sidecar-restored size");
-            if (doc.smf().write() != midiBeforeDrawer
-                || doc.undoStack()->count() != undoCountBeforeDrawer)
-                fail("automation drawer visibility changed MIDI or undo state");
-        }
-    }
-
-    // A row separator is neither neighboring lane. Clicking it with either
-    // button must not leak through to a lane or Add-lane context menu.
-    {
-        const SongView::ViewState laneState = view.viewState();
-        int separatorLaneCc = -1;
-        for (const AutoLane &lane : view.model().lanes) {
-            if (lane.track == track
-                && !view.laneHidden(lane.track, lane.cc)) {
-                separatorLaneCc = lane.cc;
-                break;
-            }
-        }
-        if (separatorLaneCc < 0) {
-            fail("no visible selected-track automation lane for separator check");
-        } else {
-            const QString voiceKey =
-                QStringLiteral("voice:%1").arg(track);
-            const QString laneKey =
-                QStringLiteral("cc:%1:%2").arg(track).arg(separatorLaneCc);
-            const int tempoHeight =
-                laneState.laneHeights.value(QStringLiteral("tempo"),
-                                            laneState.laneHeight);
-            const int voiceHeight =
-                laneState.laneHeights.value(voiceKey, laneState.laneHeight);
-            const int laneHeight =
-                laneState.laneHeights.value(laneKey, laneState.laneHeight);
-            const int separatorY =
-                tempoHeight + voiceHeight + laneHeight - 1;
-            const int undoCountBeforeSeparators = doc.undoStack()->count();
-            const QByteArray midiBeforeSeparators = doc.smf().write();
-            if (separatorClickOpenedMenu(
-                    automationArea, QPoint(80, separatorY),
-                    Qt::LeftButton))
-                fail("left-clicking a lane separator opened a menu");
-            if (separatorClickOpenedMenu(
-                    automationArea, QPoint(80, separatorY),
-                    Qt::RightButton))
-                fail("right-clicking a lane separator opened a menu");
-            if (doc.undoStack()->count() != undoCountBeforeSeparators
-                || doc.smf().write() != midiBeforeSeparators)
-                fail("separator clicks changed MIDI or undo state");
-        }
-    }
-
-    // Hiding a lane changes only row visibility. The Add-lane strip remains
-    // the recovery surface, including when opened with the right button.
-    {
-        bool addedEmptyLane = false;
-        int laneCc = -1;
-        for (const AutoLane &lane : view.model().lanes) {
-            if (lane.track == track) {
-                laneCc = lane.cc;
-                break;
-            }
-        }
-        if (laneCc < 0) {
-            for (uint8_t cc : kAudibleLaneCcs) {
-                if (!view.model().findLane(track, cc)) {
-                    laneCc = cc;
-                    view.addEmptyLane(track, cc);
-                    addedEmptyLane = true;
-                    break;
-                }
-            }
-        }
-        if (laneCc < 0) {
-            fail("no automation lane available for hide/show");
-        } else {
-            const uint8_t hiddenLaneCc = uint8_t(laneCc);
-            const QByteArray documentBeforeHide = doc.smf().write();
-            const int heightBeforeHide = automationArea->minimumHeight();
-            view.hideLane(track, hiddenLaneCc);
-            if (!view.laneHidden(track, hiddenLaneCc)
-                || view.model().findLane(track, hiddenLaneCc) == nullptr
-                || automationArea->minimumHeight() >= heightBeforeHide
-                || doc.smf().write() != documentBeforeHide) {
-                fail("hiding a lane changed its model data or kept its row");
-            }
-
-            bool showActionChosen = false;
-            QTimer menuPoll;
-            menuPoll.setInterval(0);
-            QObject::connect(&menuPoll, &QTimer::timeout, [&] {
-                QMenu *menu =
-                    qobject_cast<QMenu *>(QApplication::activePopupWidget());
-                if (!menu)
-                    return;
-                for (QAction *action : menu->actions()) {
-                    if (!action->text().startsWith(QStringLiteral("Show:")))
-                        continue;
-                    showActionChosen = true;
-                    const QPoint actionCenter =
-                        menu->actionGeometry(action).center();
-                    sendMouse(menu, QEvent::MouseButtonPress, actionCenter,
-                              Qt::LeftButton, Qt::LeftButton);
-                    sendMouse(menu, QEvent::MouseButtonRelease, actionCenter,
-                              Qt::LeftButton, Qt::NoButton);
-                    return;
-                }
-                menu->close();
-            });
-            menuPoll.start();
-            const QPoint addLanePosition(
-                songview::kGutterW + 10,
-                automationArea->minimumHeight() - 10);
-            sendMouse(automationArea, QEvent::MouseButtonPress, addLanePosition,
-                      Qt::RightButton, Qt::RightButton);
-            menuPoll.stop();
-            sendMouse(automationArea, QEvent::MouseButtonRelease, addLanePosition,
-                      Qt::RightButton, Qt::NoButton);
-            QCoreApplication::processEvents();
-            if (!showActionChosen || view.laneHidden(track, hiddenLaneCc)
-                || automationArea->minimumHeight() != heightBeforeHide
-                || doc.smf().write() != documentBeforeHide) {
-                fail("the Add-lane menu did not restore hidden lane data");
-            }
-
-            view.hideLane(track, hiddenLaneCc);
-            const SongView::ViewState hiddenViewState = view.viewState();
-            QTemporaryDir sidecarRoot;
-            SongView::ViewState restoredViewState;
-            const QString sidecarSong = QStringLiteral("rollcheck_hidden_lane");
-            if (!sidecarRoot.isValid()
-                || !ViewSidecar::save(
-                    sidecarRoot.path(), sidecarSong, hiddenViewState)
-                || !ViewSidecar::load(
-                    sidecarRoot.path(), sidecarSong, &restoredViewState)) {
-                fail("hidden lane view state did not persist through its sidecar");
-            } else {
-                view.showLane(track, hiddenLaneCc);
-                view.applyViewState(restoredViewState);
-                if (!view.laneHidden(track, hiddenLaneCc))
-                    fail("sidecar round trip lost a hidden lane");
-            }
-            view.showLane(track, hiddenLaneCc);
-            if (addedEmptyLane)
-                view.removeEmptyLane(track, hiddenLaneCc);
-        }
-    }
-
-    // Deleting the owner removes its hidden-lane identity instead of leaving
-    // stale view state on the track that shifts into that slot.
-    {
-        SongDocument deletionDocument;
-        if (!deletionDocument.load(*info, &error)) {
-            fail("could not reload the song for hidden-lane deletion");
-        } else if (deletionDocument.engineTrackCount() >= 2) {
-            auto deletionTimeline = deletionDocument.buildTimeline(48000.0);
-            SongView deletionView;
-            deletionView.setSong(deletionTimeline.get(), nullptr);
-            deletionView.setDocument(&deletionDocument);
-            QObject::connect(
-                &deletionDocument, &SongDocument::documentChanged,
-                &deletionView, [&] {
-                    auto rebuilt = deletionDocument.buildTimeline(48000.0);
-                    deletionView.updateSong(rebuilt.get());
-                    deletionTimeline = std::move(rebuilt);
-                });
-            const int trackToDelete = deletionView.selectedTrack();
-            const int survivingTrack = trackToDelete + 1;
-            int survivingLaneCc = -1;
-            for (const AutoLane &lane : deletionView.model().lanes) {
-                if (lane.track == survivingTrack) {
-                    survivingLaneCc = lane.cc;
-                    break;
-                }
-            }
-            if (survivingLaneCc < 0) {
-                for (uint8_t cc : kAudibleLaneCcs) {
-                    if (!deletionView.model().findLane(survivingTrack, cc)) {
-                        survivingLaneCc = cc;
-                        deletionView.addEmptyLane(survivingTrack, cc);
-                        break;
-                    }
-                }
-            }
-            int hiddenLaneCc = -1;
-            for (const AutoLane &lane : deletionView.model().lanes) {
-                if (lane.track == trackToDelete) {
-                    hiddenLaneCc = lane.cc;
-                    break;
-                }
-            }
-            if (hiddenLaneCc < 0) {
-                for (uint8_t cc : kAudibleLaneCcs) {
-                    if (!deletionView.model().findLane(trackToDelete, cc)) {
-                        hiddenLaneCc = cc;
-                        deletionView.addEmptyLane(trackToDelete, cc);
-                        break;
-                    }
-                }
-            }
-            if (hiddenLaneCc < 0) {
-                fail("no lane available for hidden-lane deletion");
-            } else if (survivingLaneCc < 0) {
-                fail("no higher-track lane available for deletion remap");
-            } else {
-                deletionView.hideLane(trackToDelete, uint8_t(hiddenLaneCc));
-                const uint8_t survivingCc = uint8_t(survivingLaneCc);
-                const auto laneRowKey = [survivingCc](int engineTrack) {
-                    return QStringLiteral("cc:%1:%2")
-                        .arg(engineTrack)
-                        .arg(survivingCc);
-                };
-                constexpr int survivingLaneHeight = 73;
-                constexpr int survivingLaneRange = 91;
-                SongView::ViewState trackState = deletionView.viewState();
-                trackState.laneHeights.insert(
-                    laneRowKey(survivingTrack), survivingLaneHeight);
-                trackState.laneRanges.insert(
-                    laneRowKey(survivingTrack), survivingLaneRange);
-                deletionView.applyViewState(trackState);
-                const int trackCountBeforeDelete =
-                    deletionDocument.engineTrackCount();
-                deletionView.deleteTrack(trackToDelete);
-                QCoreApplication::processEvents();
-                if (deletionDocument.engineTrackCount()
-                    != trackCountBeforeDelete - 1)
-                    fail("hidden-lane owner was not deleted");
-                if (deletionView.laneHidden(
-                        trackToDelete, uint8_t(hiddenLaneCc)))
-                    fail("deleting a track left its hidden-lane state behind");
-                const SongView::ViewState shiftedTrackState =
-                    deletionView.viewState();
-                if (shiftedTrackState.laneHeights.value(
-                        laneRowKey(trackToDelete))
-                        != survivingLaneHeight
-                    || shiftedTrackState.laneRanges.value(
-                           laneRowKey(trackToDelete))
-                           != survivingLaneRange) {
-                    fail("deleting a lower track left lane row state behind");
-                }
-
-                deletionDocument.undoStack()->undo();
-                QCoreApplication::processEvents();
-                const SongView::ViewState restoredTrackState =
-                    deletionView.viewState();
-                if (deletionDocument.engineTrackCount()
-                    != trackCountBeforeDelete) {
-                    fail("undoing track deletion did not restore the track");
-                }
-                if (restoredTrackState.laneHeights.value(
-                        laneRowKey(survivingTrack))
-                        != survivingLaneHeight
-                    || restoredTrackState.laneRanges.value(
-                           laneRowKey(survivingTrack))
-                           != survivingLaneRange) {
-                    fail("undoing track deletion left lane row state behind");
-                }
-
-                deletionDocument.undoStack()->redo();
-                QCoreApplication::processEvents();
-                const SongView::ViewState redoneTrackState =
-                    deletionView.viewState();
-                if (redoneTrackState.laneHeights.value(
-                        laneRowKey(trackToDelete))
-                        != survivingLaneHeight
-                    || redoneTrackState.laneRanges.value(
-                           laneRowKey(trackToDelete))
-                           != survivingLaneRange) {
-                    fail("redoing track deletion did not re-shift lane row state");
-                }
-            }
-        }
-    }
-
-    // Engine-slot view state follows the same SMF chunk when deleting every
-    // channel event leaves a metadata-only gap, and when a later reorder
-    // crosses that gap. These two transitions exercise the remap producer;
-    // adjacent checks cover each individual kind of per-track view state.
-    const char *engineRemapFailure = [&]() -> const char * {
-        SongDocument remapDocument;
-        if (!remapDocument.load(*info, &error))
-            return "could not reload the song for engine-slot remapping";
-        if (remapDocument.engineTrackCount() < 3)
-            return "engine-slot remapping requires at least three tracks";
-
-        auto remapTimeline = remapDocument.buildTimeline(48000.0);
-        SongView remapView;
-        remapView.setSong(remapTimeline.get(), nullptr);
-        remapView.setDocument(&remapDocument);
-        QObject::connect(
-            &remapDocument, &SongDocument::documentChanged,
-            &remapView, [&] {
-                auto rebuiltTimeline =
-                    remapDocument.buildTimeline(48000.0);
-                remapView.updateSong(rebuiltTimeline.get());
-                remapTimeline = std::move(rebuiltTimeline);
-            });
-
-        constexpr int leadingEngineSlotBeforeRemoval = 0;
-        constexpr int removedEngineSlotBeforeRemoval = 1;
-        constexpr int stateOwnerEngineSlotBeforeRemoval = 2;
-        constexpr int leadingEngineSlotAfterRemoval = 0;
-        constexpr int stateOwnerEngineSlotAfterRemoval = 1;
-        const int leadingSmfChunkIndex =
-            remapDocument.smfTrackFor(leadingEngineSlotBeforeRemoval);
-        const int middleSmfChunkIndex =
-            remapDocument.smfTrackFor(removedEngineSlotBeforeRemoval);
-        const int stateOwnerSmfChunkIndex =
-            remapDocument.smfTrackFor(stateOwnerEngineSlotBeforeRemoval);
-        if (leadingSmfChunkIndex < 0 || middleSmfChunkIndex < 0
-            || stateOwnerSmfChunkIndex < 0
-            || !(leadingSmfChunkIndex < middleSmfChunkIndex
-                 && middleSmfChunkIndex < stateOwnerSmfChunkIndex)) {
-            return "three tracks were not ordered around a middle SMF chunk";
-        }
-
-        // Keep the middle chunk alive after its channel events are removed.
-        SmfEvent middleChunkMetadataEvent;
-        middleChunkMetadataEvent.status = 0xFF;
-        middleChunkMetadataEvent.metaType = 0x01;
-        middleChunkMetadataEvent.blob =
-            QByteArrayLiteral("rollcheck engine-slot remap");
-        remapDocument.insertRawEvent(
-            middleSmfChunkIndex, middleChunkMetadataEvent);
-
-        std::vector<size_t> middleChannelEventIndices;
-        const auto &middleChunkEvents =
-            remapDocument.smf().tracks[middleSmfChunkIndex].events;
-        for (size_t eventIndex = 0;
-             eventIndex < middleChunkEvents.size(); ++eventIndex) {
-            if (middleChunkEvents[eventIndex].isChannel())
-                middleChannelEventIndices.push_back(eventIndex);
-        }
-        if (middleChannelEventIndices.empty())
-            return "middle track has no channel events to remove";
-
-        const auto onlyEngineSlotIsMuted =
-            [&](int expectedMutedEngineSlot) {
-                for (int engineSlot = 0; engineSlot < 16; ++engineSlot) {
-                    if (remapView.trackMuted(engineSlot)
-                        != (engineSlot == expectedMutedEngineSlot)) {
-                        return false;
-                    }
-                }
-                return true;
-            };
-
-        remapView.setTrackMute(stateOwnerEngineSlotBeforeRemoval, true);
-        if (!onlyEngineSlotIsMuted(stateOwnerEngineSlotBeforeRemoval))
-            return "could not establish mute ownership before event removal";
-
-        const int engineSlotCountBeforeRemoval =
-            remapDocument.engineTrackCount();
-        remapDocument.deleteRawEvents(
-            middleSmfChunkIndex, middleChannelEventIndices);
-        QCoreApplication::processEvents();
-        const auto &middleChunkEventsAfterRemoval =
-            remapDocument.smf().tracks[middleSmfChunkIndex].events;
-        const bool middleChunkIsMetadataOnly =
-            !middleChunkEventsAfterRemoval.empty()
-            && std::all_of(
-                middleChunkEventsAfterRemoval.begin(),
-                middleChunkEventsAfterRemoval.end(),
-                [](const SmfEvent &event) { return !event.isChannel(); });
-        if (!middleChunkIsMetadataOnly
-            || remapDocument.engineTrackCount()
-                != engineSlotCountBeforeRemoval - 1) {
-            return "channel-event removal did not leave a metadata-only chunk";
-        }
-        if (!onlyEngineSlotIsMuted(stateOwnerEngineSlotAfterRemoval))
-            return "channel-event removal did not shift mute ownership";
-
-        remapDocument.undoStack()->undo();
-        QCoreApplication::processEvents();
-        if (!onlyEngineSlotIsMuted(stateOwnerEngineSlotBeforeRemoval))
-            return "event-removal undo did not restore mute ownership";
-
-        remapDocument.undoStack()->redo();
-        QCoreApplication::processEvents();
-        if (!onlyEngineSlotIsMuted(stateOwnerEngineSlotAfterRemoval))
-            return "event-removal redo did not re-shift mute ownership";
-
-        // Reset the sentinel so this phase independently detects the inverse
-        // mapping used when undoing a move across the metadata-only chunk.
-        remapView.setSong(remapTimeline.get(), nullptr);
-        remapView.setTrackMute(stateOwnerEngineSlotAfterRemoval, true);
-        if (!onlyEngineSlotIsMuted(stateOwnerEngineSlotAfterRemoval))
-            return "could not establish mute ownership before chunk reorder";
-        if (remapDocument.smfTrackFor(leadingEngineSlotAfterRemoval)
-                != leadingSmfChunkIndex
-            || remapDocument.smfTrackFor(stateOwnerEngineSlotAfterRemoval)
-                != stateOwnerSmfChunkIndex
-            || !(leadingSmfChunkIndex < middleSmfChunkIndex
-                 && middleSmfChunkIndex < stateOwnerSmfChunkIndex)) {
-            return "metadata-only chunk was not between surviving tracks";
-        }
-
-        remapView.moveTrack(
-            leadingEngineSlotAfterRemoval, stateOwnerEngineSlotAfterRemoval);
-        QCoreApplication::processEvents();
-        if (!onlyEngineSlotIsMuted(leadingEngineSlotAfterRemoval))
-            return "metadata-crossing reorder did not move mute ownership";
-
-        remapDocument.undoStack()->undo();
-        QCoreApplication::processEvents();
-        if (!onlyEngineSlotIsMuted(stateOwnerEngineSlotAfterRemoval))
-            return "metadata-crossing reorder undo lost mute ownership";
-
-        remapDocument.undoStack()->redo();
-        QCoreApplication::processEvents();
-        if (!onlyEngineSlotIsMuted(leadingEngineSlotAfterRemoval))
-            return "metadata-crossing reorder redo lost mute ownership";
-        return nullptr;
-    }();
-    if (engineRemapFailure)
-        fail(engineRemapFailure);
+    for (const QString &failure : automationCheckFailures(*info))
+    fail(qUtf8Printable(failure));
 
     // Jump-from-context: a completed plain click on a header row's voice
     // line emits revealVoiceRequested with the track's current program (the
@@ -2513,19 +1849,19 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             }
         }
         const SongView::ViewState laneStateBeforeMove = view.viewState();
-        const auto movingLaneRowKey = [hiddenLaneCc](int engineTrack) {
-            return QStringLiteral("cc:%1:%2")
-                .arg(engineTrack)
-                .arg(hiddenLaneCc);
+        const auto movingLaneRowId = [hiddenLaneCc](int engineTrack) {
+            return SongView::AutomationRowId::controller(engineTrack,
+                                                   uint8_t(hiddenLaneCc));
         };
         constexpr int movingLaneHeight = 75;
         constexpr int movingLaneRange = 89;
-        if (hiddenLaneCc >= 0) {
+        SongView::AutomationRowDisplayState movingLaneDisplayState;
+    movingLaneDisplayState.height = movingLaneHeight;
+    movingLaneDisplayState.range = movingLaneRange;
+    if (hiddenLaneCc >= 0) {
             SongView::ViewState movingLaneState = laneStateBeforeMove;
-            movingLaneState.laneHeights.insert(
-                movingLaneRowKey(0), movingLaneHeight);
-            movingLaneState.laneRanges.insert(
-                movingLaneRowKey(0), movingLaneRange);
+            movingLaneState.rowStates.insert(
+                movingLaneRowId(0), movingLaneDisplayState);
             view.applyViewState(movingLaneState);
             view.hideLane(0, uint8_t(hiddenLaneCc));
         }
@@ -2565,12 +1901,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("canceling the reorder moved hidden-lane state");
             if (hiddenLaneCc >= 0) {
                 const SongView::ViewState canceledMoveState = view.viewState();
-                if (canceledMoveState.laneHeights.value(
-                           movingLaneRowKey(0))
-                           != movingLaneHeight
-                    || canceledMoveState.laneRanges.value(
-                           movingLaneRowKey(0))
-                           != movingLaneRange) {
+                if (canceledMoveState.rowStates.value(
+                           movingLaneRowId(0))
+                           != movingLaneDisplayState) {
                     fail("canceling the reorder moved lane row state");
                 }
             }
@@ -2609,12 +1942,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             } else {
                 const SongView::ViewState movedLaneState = view.viewState();
                 if (hiddenLaneCc >= 0
-                    && (movedLaneState.laneHeights.value(
-                               movingLaneRowKey(1))
-                               != movingLaneHeight
-                        || movedLaneState.laneRanges.value(
-                               movingLaneRowKey(1))
-                               != movingLaneRange)) {
+                    && movedLaneState.rowStates.value(
+                               movingLaneRowId(1))
+                               != movingLaneDisplayState) {
                     fail("header drag did not move lane row state");
                 }
                 reordered = true;
@@ -2630,12 +1960,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     fail("undoing the move left hidden-lane state behind");
                 const SongView::ViewState undoneMoveState = view.viewState();
                 if (hiddenLaneCc >= 0
-                    && (undoneMoveState.laneHeights.value(
-                               movingLaneRowKey(0))
-                               != movingLaneHeight
-                        || undoneMoveState.laneRanges.value(
-                               movingLaneRowKey(0))
-                               != movingLaneRange)) {
+                    && undoneMoveState.rowStates.value(
+                               movingLaneRowId(0))
+                               != movingLaneDisplayState) {
                     fail("undoing the move left lane row state behind");
                 }
                 doc.undoStack()->redo();
@@ -2646,12 +1973,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     fail("redoing the move did not re-move hidden-lane state");
                 const SongView::ViewState redoneMoveState = view.viewState();
                 if (hiddenLaneCc >= 0
-                    && (redoneMoveState.laneHeights.value(
-                               movingLaneRowKey(1))
-                               != movingLaneHeight
-                        || redoneMoveState.laneRanges.value(
-                               movingLaneRowKey(1))
-                               != movingLaneRange)) {
+                    && redoneMoveState.rowStates.value(
+                               movingLaneRowId(1))
+                               != movingLaneDisplayState) {
                     fail("redoing the move did not re-move lane row state");
                 }
             }
@@ -2660,23 +1984,16 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (hiddenLaneCc >= 0) {
             const int laneTrackAfterCheck = reordered ? 1 : 0;
             view.showLane(laneTrackAfterCheck, uint8_t(hiddenLaneCc));
-            const QString originalLaneRowKey = movingLaneRowKey(0);
-            const QString laneRowKeyAfterCheck =
-                movingLaneRowKey(laneTrackAfterCheck);
+            const SongView::AutomationRowId originalLaneRowId = movingLaneRowId(0);
+            const SongView::AutomationRowId laneRowIdAfterCheck =
+          movingLaneRowId(laneTrackAfterCheck);
             SongView::ViewState cleanedLaneState = view.viewState();
-            if (laneStateBeforeMove.laneHeights.contains(originalLaneRowKey)) {
-                cleanedLaneState.laneHeights.insert(
-                    laneRowKeyAfterCheck,
-                    laneStateBeforeMove.laneHeights.value(originalLaneRowKey));
+            if (laneStateBeforeMove.rowStates.contains(originalLaneRowId)) {
+                cleanedLaneState.rowStates.insert(
+                    laneRowIdAfterCheck,
+                    laneStateBeforeMove.rowStates.value(originalLaneRowId));
             } else {
-                cleanedLaneState.laneHeights.remove(laneRowKeyAfterCheck);
-            }
-            if (laneStateBeforeMove.laneRanges.contains(originalLaneRowKey)) {
-                cleanedLaneState.laneRanges.insert(
-                    laneRowKeyAfterCheck,
-                    laneStateBeforeMove.laneRanges.value(originalLaneRowKey));
-            } else {
-                cleanedLaneState.laneRanges.remove(laneRowKeyAfterCheck);
+                cleanedLaneState.rowStates.remove(laneRowIdAfterCheck);
             }
             view.applyViewState(cleanedLaneState);
 
@@ -2741,14 +2058,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         }
     }
 
-    // Twenty commands: draw, set, draw, nudge, draw, the double-click
-    // delete, the press-grown draw, the tiny-drag draw, the modifier
+    // Nineteen commands: draw, set, draw, nudge, draw, the double-click
+  // delete, the press-grown draw, the tiny-drag draw, the modifier
     // velocity nudge, the abutting-note fixture add, add, two resizes, the
     // three note-selection presses MERGED into one, the off-grid
     // behind-the-back move, Ctrl+Left (all the scroll-follow presses merge
     // into it), two time-selection moves (kept separate by the clean-index
-    // save point), the inline rename, and the mid-song voice change — plus,
-    // when the song has a second track, the header-drag track move and the
+    // save point), and the inline rename — plus,
+  // when the song has a second track, the header-drag track move and the
     // editor commit the drop flushes. Undoing them all must restore the
     // original bytes.
     int undos = 0;
@@ -2757,7 +2074,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         undos++;
     }
     const int expectedUndos =
-        20 + (reordered ? (dragRenamed ? 2 : 1) : 0);
+        19 + (reordered ? (dragRenamed ? 2 : 1) : 0);
     if (undos != expectedUndos) {
         fail(qUtf8Printable(
             QStringLiteral(
