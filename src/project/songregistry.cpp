@@ -49,6 +49,9 @@ struct SongTableScan {
     int count = 0;         // song entries, free slots included
     int labelIndex = -1;   // the label's index (last non-free occurrence)
     int labelLine = -1;
+    // Every index bearing the label: forks fill new table slots with copies
+    // of real songs (vanilla uses a dummy), so one label can own several.
+    QVector<int> labelIndices;
     QString labelIndent;
     int freeIndex = -1;    // lowest free slot
     int freeLine = -1;
@@ -80,6 +83,7 @@ SongTableScan scanSongTable(const QStringList &lines, const QString &label)
         } else if (m.captured(2) == label) {
             scan.labelIndex = scan.count;
             scan.labelLine = i;
+            scan.labelIndices.append(scan.count);
             scan.labelIndent = m.captured(1);
         }
         scan.indent = m.captured(1);
@@ -471,16 +475,10 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
     plan.player = player;
 
     // song_table.inc: match the existing entries' indentation; the third
-    // argument mirrors the player's .equiv number. Once the table entry
-    // exists, the proposed ID is its actual index rather than the append
-    // position; otherwise a free slot left by a deleted song is reused
-    // before growing the table.
+    // argument mirrors the player's .equiv number.
     const SongTableScan scan = scanSongTable(
         readLines(projectRoot + QStringLiteral("/sound/song_table.inc")), label);
     const QString indent = scan.count > 0 ? scan.indent : QStringLiteral("\t");
-    plan.songId = scan.labelIndex >= 0
-                      ? scan.labelIndex
-                      : (scan.freeIndex >= 0 ? scan.freeIndex : scan.count);
 
     int playerNum = 0;
     for (const MusicPlayer &p : musicPlayers(projectRoot)) {
@@ -490,16 +488,36 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
     plan.songTableLine =
         QStringLiteral("%1song %2, %3, %4").arg(indent, label, player).arg(playerNum);
 
-    // songs.h: pad the constant to the file's existing value column.
+    // songs.h: the file's value column for padding, and the constant's own
+    // current value — needed to settle which entry is THE song's when a
+    // label owns several table indices.
     static const QRegularExpression defineRe(
-        QStringLiteral(R"(^#define\s+([A-Z0-9_]+)(\s+)\d)"));
+        QStringLiteral(R"(^#define\s+([A-Z0-9_]+)(\s+)(\d+))"));
     int valueColumn = 0;
+    int ownValue = -1;
     for (const QString &line :
          readLines(projectRoot + QStringLiteral("/include/constants/songs.h"))) {
         const QRegularExpressionMatch m = defineRe.match(line);
-        if (m.hasMatch())
-            valueColumn = m.capturedEnd(2);
+        if (!m.hasMatch())
+            continue;
+        valueColumn = m.capturedEnd(2);
+        if (ownValue < 0 && m.captured(1) == constant)
+            ownValue = m.captured(3).toInt();
     }
+
+    // The proposed ID. An existing song keeps its identity: when the label
+    // owns several table entries (forks alias real songs into filler slots
+    // — pokezelda repeats ten labels), the define picking ANY of them is
+    // already correct and stays; a define naming none of them drifted, and
+    // heals to the label's first entry. A new song fills the lowest free
+    // slot a deleted song left before growing the table.
+    if (!scan.labelIndices.isEmpty())
+        plan.songId = ownValue >= 0 && scan.labelIndices.contains(ownValue)
+                          ? ownValue
+                          : scan.labelIndices.first();
+    else
+        plan.songId = scan.freeIndex >= 0 ? scan.freeIndex : scan.count;
+
     QString define = QStringLiteral("#define ") + constant;
     const int pad = valueColumn - define.size();
     define += QString(std::max(1, pad), QLatin1Char(' '));
@@ -1043,11 +1061,13 @@ RegistrationStatus checkRegistration(const QString &projectRoot, const QString &
 QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot,
                                                       const QVector<SongInfo> &songs)
 {
-    // song_table.inc: label -> index (a duplicate label's last entry wins).
-    // Free slots — entries past index 0 bearing entry 0's label — occupy
-    // their index but don't count as the fallback song's entry, whose own
-    // index must stay 0.
-    QHash<QString, int> tableIndex;
+    // song_table.inc: label -> every index bearing it. Forks fill new table
+    // slots with copies of real songs (vanilla uses a dummy label), so one
+    // label can legitimately own several indices — a define naming any of
+    // them is correctly registered. Free slots — entries past index 0
+    // bearing entry 0's label — occupy their index but don't count as the
+    // fallback song's entries, whose own index must stay 0.
+    QHash<QString, QVector<int>> tableIndices;
     int count = 0;
     QString firstLabel;
     for (const QString &line :
@@ -1058,7 +1078,7 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
         if (count == 0)
             firstLabel = m.captured(2);
         if (count == 0 || m.captured(2) != firstLabel)
-            tableIndex.insert(m.captured(2), count);
+            tableIndices[m.captured(2)].append(count);
         count++;
     }
 
@@ -1116,19 +1136,20 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
         const QString constant =
             song.constant.isEmpty() ? constantForLabel(song.label) : song.constant;
         RegistrationStatus status;
-        const int index = tableIndex.value(song.label, -1);
-        status.inSongTable = index >= 0;
-        // Once the table entry exists, the songs.h define and the charmap
-        // entry must carry its real index.
+        const QVector<int> indices = tableIndices.value(song.label);
+        status.inSongTable = !indices.isEmpty();
+        // Once a table entry exists, the songs.h define and the charmap
+        // entry must carry one of the label's real indices.
         const auto define = defines.constFind(constant);
         if (define != defines.constEnd())
-            status.inSongsH = index < 0 || define.value() == index;
+            status.inSongsH = indices.isEmpty() || indices.contains(define.value());
         status.ldApplicable = ldApplicable;
         status.inLdScript = ldLabels.contains(song.label);
         status.charmapApplicable = charmapApplicable;
         const auto charmapValue = charmapValues.constFind(constant);
         if (charmapValue != charmapValues.constEnd())
-            status.inCharmap = index < 0 || charmapValue.value() == index;
+            status.inCharmap =
+                indices.isEmpty() || indices.contains(charmapValue.value());
         status.debugApplicable = debugScan.applicable();
         status.inDebugMenu = debugNames.contains(constant);
         statuses.insert(song.label, status);

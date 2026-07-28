@@ -506,6 +506,68 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         }
     }
 
+    // ---- Aliased table entries -----------------------------------------------
+    // Forks fill new table slots with copies of real songs (pokezelda field
+    // report: mus_rg_mt_moon at both 455 and 498), so a label can own several
+    // indices. A songs.h define / charmap entry naming ANY of them is
+    // correctly registered — the checker must not flag it, and registerSong
+    // must not "correct" the define to the duplicate's index. A define
+    // naming none of them still heals, to the label's first entry.
+    {
+        const QByteArray table0 = readAllBytes(tablePath);
+        const QByteArray songsH0 = readAllBytes(songsHPath);
+        const QByteArray charmap0 = readAllBytes(charmapPath);
+        QFile table(tablePath);
+        check(table.open(QIODevice::Append), "alias: append duplicate entry");
+        table.write(plan.songTableLine.toUtf8() + "\n");
+        table.close();
+
+        status = SongRegistry::checkRegistration(projectRoot, label, constant);
+        check(status.complete(), "aliased table entry flagged the song");
+        const RegistrationPlan aliased = SongRegistry::makePlan(
+            projectRoot, label, constant, QStringLiteral("MUSIC_PLAYER_BGM"));
+        check(aliased.songId == plan.songId,
+              "aliased plan abandoned the define's own index");
+        check(SongRegistry::registerSong(projectRoot, label, constant,
+                                         QStringLiteral("MUSIC_PLAYER_BGM"),
+                                         &regError, &songId),
+              "aliased registerSong failed");
+        check(readAllBytes(songsHPath) == songsH0
+                  && readAllBytes(charmapPath) == charmap0,
+              "aliased registerSong rewrote the define or charmap entry");
+
+        // Genuine drift heals to the label's FIRST entry, not the alias.
+        {
+            QByteArray tampered = songsH0;
+            const QByteArray goodDefine =
+                QStringLiteral("#define %1").arg(constant).toUtf8();
+            const int at = tampered.indexOf(goodDefine);
+            check(at >= 0, "alias drift: define not found");
+            const int end = tampered.indexOf('\n', at);
+            QByteArray line = tampered.mid(at, end - at);
+            line.replace(QByteArray::number(plan.songId), QByteArrayLiteral("9999"));
+            tampered.replace(at, end - at, line);
+            QFile out(songsHPath);
+            check(out.open(QIODevice::WriteOnly)
+                      && out.write(tampered) == tampered.size(),
+                  "alias drift: rewrite songs.h");
+            out.close();
+            status = SongRegistry::checkRegistration(projectRoot, label, constant);
+            check(!status.inSongsH, "drifted define not flagged despite alias");
+            check(SongRegistry::registerSong(projectRoot, label, constant,
+                                             QStringLiteral("MUSIC_PLAYER_BGM"),
+                                             &regError, &songId),
+                  "alias drift: registerSong failed");
+            check(readAllBytes(songsHPath) == songsH0,
+                  "drifted define not healed to the label's first entry");
+        }
+
+        check(table.open(QIODevice::WriteOnly | QIODevice::Truncate)
+                  && table.write(table0) == table0.size(),
+              "alias: restore song_table.inc");
+        table.close();
+    }
+
     // ---- src/debug.c sound lists ---------------------------------------------
     // pokeemerald-expansion's debug menu lists every song as an X-macro entry
     // in src/debug.c's SOUND_LIST_BGM / SOUND_LIST_SE. Vanilla has no such

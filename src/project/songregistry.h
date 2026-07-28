@@ -104,8 +104,9 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
 // position, the ld_script.ld object line, and the src/debug.c sound-list
 // X-macro entry (the last three when applicable). Idempotent —
 // entries that already exist are left byte-identical, except a songs.h
-// define or charmap.txt entry whose ID no longer matches the song's table
-// index, which is corrected in place. Only the song's own lines change.
+// define or charmap.txt entry whose ID matches none of the label's table
+// entries (a label can own several — forks alias real songs into filler
+// slots), which is corrected in place. Only the song's own lines change.
 // On success *songId carries the song's table index.
 bool registerSong(const QString &projectRoot, const QString &label,
                   const QString &constant, const QString &player, QString *error,
@@ -141,9 +142,10 @@ QString deletableVoicegroup(const QString &projectRoot, const QVector<SongInfo> 
                             const QString &songLabel);
 
 // Re-parses the registration files from disk. The songs.h and charmap.txt
-// items additionally require their value to match the label's actual
-// song-table index once the table entry exists (a mismatched ID is a
-// mis-registration).
+// items additionally require their value to match one of the label's
+// song-table indices once a table entry exists (a value naming none of
+// them is a mis-registration; several indices per label are legitimate —
+// forks fill new slots with copies of real songs).
 RegistrationStatus checkRegistration(const QString &projectRoot, const QString &label,
                                      const QString &constant);
 
