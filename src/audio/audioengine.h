@@ -194,7 +194,7 @@ public:
     int activeCgbChannels() const { return m_activeCgb.load(); }
     int maxPcmChannels() const { return m_settings.maxPcmChannels; }
     int trackBudget() const { return m_settings.trackBudget; }
-    uint64_t polyLostTotal() const; // dropped + stolen + tail-cut, all tracks
+    uint64_t polyLostTotal() const; // dropped + stolen, all tracks (no tail cuts)
 
     // GUI-thread copy of the engine's polyphony-overflow state (the engine
     // header documents these fields as safe for lock-free monitor reads).

@@ -403,11 +403,13 @@ uint64_t AudioEngine::polyLostTotal() const
     // monitor reads from the GUI thread.
     if (!m_engine)
         return 0;
+    // Tail cuts are deliberately excluded: a shortened release is barely
+    // audible, and folding it in makes the transport-bar count alarmingly
+    // large. The Polyphony dock still shows tail cuts in their own column.
     uint64_t total = 0;
     for (int t = 0; t < MAX_TRACKS; t++) {
         total += m_engine->polyDropCount[t];
         total += m_engine->polyStealCount[t];
-        total += m_engine->polyTailCutCount[t];
     }
     return total;
 }
