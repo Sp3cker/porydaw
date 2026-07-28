@@ -12,6 +12,7 @@ macOS note:
     app and blocks the first launch. To allow it, run this
     in Terminal after copying the app to /Applications:
         xattr -d com.apple.quarantine /Applications/porydaw.app
+    These steps are also in "RUN AFTER INSTALL.txt" inside the .dmg.
 
 Project home:
     https://github.com/huderlem/porydaw

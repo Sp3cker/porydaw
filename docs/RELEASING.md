@@ -42,8 +42,12 @@ the release artifacts (`.github/workflows/release.yml`).
      changelog has no entry for the tag),
    - builds and attaches self-contained artifacts:
      - `porydaw-linux.zip` — AppImage (bundled Qt),
-     - `porydaw-macos-arm64.zip` / `porydaw-macos-x86_64.zip` — `.dmg` via
-       `macdeployqt`.
+     - `porydaw-macos-arm64.zip` / `porydaw-macos-x86_64.zip` — `.dmg` built
+       with `hdiutil` after `macdeployqt` deploys and ad-hoc signs the bundle.
+       The dmg contains the app, an `/Applications` drag-install shortcut,
+       and `RUN AFTER INSTALL.txt` (the quarantine-removal instructions —
+       inside the dmg, and deliberately not named README, so people actually
+       see them).
 
 6. **Build and upload the Windows artifact manually.** The Windows build is
    statically linked against the local static Qt kit (CI has no static Qt, so

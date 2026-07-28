@@ -7,7 +7,7 @@
  - [Download Porydaw for macOS (intel)](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-x86_64.zip).
  - [Download Porydaw for Linux](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-linux.zip) (AppImage).
 
-**macOS users**: Porydaw is not notarized with Apple, so macOS quarantines the downloaded app and blocks the first launch. To allow it, run `xattr -d com.apple.quarantine /Applications/porydaw.app` in Terminal.
+**macOS users**: Porydaw is not notarized with Apple, so macOS quarantines the downloaded app and blocks the first launch. To allow it, copy the app into `/Applications` first, then run `xattr -d com.apple.quarantine /Applications/porydaw.app` in Terminal. These steps are also in `RUN AFTER INSTALL.txt` inside the `.dmg`.
 
 Building from source requires CMake 3.21+, a C11/C++17 compiler, and Qt 6.2 or newer (Widgets).
 

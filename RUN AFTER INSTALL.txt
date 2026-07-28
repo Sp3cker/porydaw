@@ -1,0 +1,23 @@
+Porydaw is not notarized with Apple, so macOS quarantines the downloaded
+app and refuses to launch it. (The warning claims the app is "damaged" --
+it isn't; this is how macOS treats any app that isn't notarized.)
+
+After installing, remove the quarantine flag by hand:
+
+  1. Drag porydaw.app onto the Applications shortcut in this window
+     (or copy it wherever you keep your apps).
+
+  2. Open Terminal (Applications > Utilities > Terminal) and run:
+
+       xattr -d com.apple.quarantine /Applications/porydaw.app
+
+     If you put the app somewhere other than /Applications, change the
+     path in the command to match.
+
+  3. Launch Porydaw normally.
+
+Project home:
+    https://github.com/huderlem/porydaw
+
+Install notes:
+    https://github.com/huderlem/porydaw/blob/main/INSTALL.md

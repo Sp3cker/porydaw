@@ -138,9 +138,30 @@ jobs:
         # they must be present"). -codesign=- re-signs the whole bundle
         # ad-hoc after deployment, before the dmg is built. The verify step
         # fails the job if the seal is still broken.
+        #
+        # The dmg is built with hdiutil rather than macdeployqt -dmg so the
+        # window that opens on mount also shows "RUN AFTER INSTALL.txt" (the
+        # quarantine-removal instructions users must see, deliberately not
+        # named README) and an /Applications shortcut for drag-install.
+        # hdiutil create is occasionally flaky on CI runners ("resource
+        # busy"), hence the retry loop.
         run: |
-          macdeployqt build/porydaw.app -dmg -codesign=-
+          macdeployqt build/porydaw.app -codesign=-
           codesign --verify --deep --strict --verbose=2 build/porydaw.app
+          mkdir dmg-root
+          cp -R build/porydaw.app dmg-root/
+          cp "RUN AFTER INSTALL.txt" dmg-root/
+          ln -s /Applications dmg-root/Applications
+          created=
+          for attempt in 1 2 3; do
+            if hdiutil create -volname porydaw -srcfolder dmg-root -ov \
+                -format UDZO build/porydaw.dmg; then
+              created=1
+              break
+            fi
+            sleep 5
+          done
+          [ -n "$created" ]
 
       - name: Prep Release Directory
         run: |
