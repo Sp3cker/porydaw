@@ -435,6 +435,38 @@ void MainWindow::buildUi()
     m_songLabel = new QLabel(this);
     transport->addWidget(m_songLabel);
 
+    // The song's master volume (mid2agb -V), also in Song Settings — close
+    // at hand because it's the knob reached for while auditioning. The
+    // spinbox drives the same undoable cfg edit as the dialog, so it marks
+    // the song dirty, applies to playback live, and follows undo/redo.
+    transport->addSeparator();
+    const QString volTip = tr("Master volume (mid2agb -V): scales every track "
+                              "volume (VOL × master ÷ 128). Saved with the "
+                              "song's settings.");
+    m_masterVolCaption = new QLabel(tr("Volume"), this);
+    m_masterVolCaption->setContentsMargins(::layout::space(::layout::Space::Two), 0,
+                                           ::layout::space(::layout::Space::One), 0);
+    m_masterVolCaption->setToolTip(volTip);
+    m_masterVolCaption->setEnabled(false);
+    transport->addWidget(m_masterVolCaption);
+    m_masterVolSpin = new QSpinBox(this);
+    m_masterVolSpin->setObjectName(QStringLiteral("transportMasterVolume"));
+    m_masterVolSpin->setRange(0, 127);
+    m_masterVolSpin->setValue(SongCfg().masterVolume);
+    m_masterVolSpin->setToolTip(volTip);
+    m_masterVolSpin->setEnabled(false);
+    // Typed values land once on commit (Enter/focus-out), not per keystroke,
+    // so a typed "100" is one undo entry — arrow steps are one each.
+    m_masterVolSpin->setKeyboardTracking(false);
+    connect(m_masterVolSpin, &QSpinBox::valueChanged, this, [this](int value) {
+        if (!m_active || m_active->doc.cfg().masterVolume == value)
+            return;
+        SongCfg cfg = m_active->doc.cfg();
+        cfg.masterVolume = value;
+        m_active->doc.setCfg(cfg);
+    });
+    transport->addWidget(m_masterVolSpin);
+
     // Dock titles and the tab strip share this metric-derived outer height so
     // neither clips when the platform font or small-icon metric changes.
     const auto chromeHeight = layout::chromeRowHeight(
@@ -874,6 +906,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
         m_audio.stop();
     m_active = session;
     m_undoGroup->setActiveStack(session ? session->doc.undoStack() : nullptr);
+    syncMasterVolumeControl();
 
     const bool loaded = session != nullptr;
     m_saveAction->setEnabled(loaded);
@@ -1393,6 +1426,9 @@ void MainWindow::onDocumentChanged(SongSession &session)
         // Program changes may have been added/removed; refresh the dock's
         // used-voice marks (no-op when the set is unchanged).
         m_vgBrowser->setUsedVoices(session.view->usedVoices());
+        // Cfg may have changed from any source (Song Settings, undo/redo);
+        // the toolbar spinbox mirrors it.
+        syncMasterVolumeControl();
     }
 }
 
@@ -2941,6 +2977,16 @@ void MainWindow::updateTransportActions()
     m_pauseAction->setEnabled(loaded && t == Transport::Playing);
     m_stopAction->setEnabled(loaded && t != Transport::Stopped);
     m_loopAction->setEnabled(loaded);
+}
+
+void MainWindow::syncMasterVolumeControl()
+{
+    const bool loaded = m_active != nullptr;
+    m_masterVolCaption->setEnabled(loaded);
+    m_masterVolSpin->setEnabled(loaded);
+    QSignalBlocker blocker(m_masterVolSpin);
+    m_masterVolSpin->setValue(loaded ? m_active->doc.cfg().masterVolume
+                                     : SongCfg().masterVolume);
 }
 
 bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabel)

@@ -1,6 +1,7 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QSettings>
+#include <QSpinBox>
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -116,6 +117,36 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA,
     m_undoGroup->activeStack()->undo();
     check(!tabA->doc.isDirty() && !tabB->doc.isDirty(),
           "undo through the group did not clean the active tab");
+
+    // 5b. The transport master-volume spinbox mirrors the active tab's cfg,
+    // follows tab switches, and drives the same undoable cfg edit as Song
+    // Settings (so undo reverts both the cfg and the spinbox).
+    auto *volSpin = findChild<QSpinBox *>(QStringLiteral("transportMasterVolume"));
+    if (check(volSpin != nullptr, "transport master-volume spinbox not found")) {
+        check(volSpin->isEnabled()
+                  && volSpin->value() == tabA->doc.cfg().masterVolume,
+              "spinbox does not show the active tab's master volume");
+        const int volBefore = tabA->doc.cfg().masterVolume;
+        const int volEdited = volBefore == 100 ? 101 : 100;
+        volSpin->setValue(volEdited);
+        check(tabA->doc.cfg().masterVolume == volEdited && tabA->doc.isDirty(),
+              "spinbox edit did not land as an undoable cfg change");
+        check(tabA->appliedVolume == volEdited,
+              "spinbox edit did not reach the engine-applied volume");
+        m_tabs->setCurrentWidget(tabB->view);
+        check(volSpin->value() == tabB->doc.cfg().masterVolume,
+              "spinbox did not follow the tab switch");
+        check(!tabB->doc.isDirty(),
+              "tab switch leaked a volume edit into the other tab");
+        m_tabs->setCurrentWidget(tabA->view);
+        check(volSpin->value() == volEdited,
+              "spinbox lost the edited tab's volume across the round trip");
+        m_undoGroup->activeStack()->undo();
+        check(tabA->doc.cfg().masterVolume == volBefore && !tabA->doc.isDirty(),
+              "undo did not revert the spinbox's cfg edit");
+        check(volSpin->value() == volBefore,
+              "undo did not sync the spinbox back to the old volume");
+    }
 
     // 6. Re-opening an already open song focuses its tab, no duplicates.
     loadSongByLabel(songB, /*newTab=*/true);

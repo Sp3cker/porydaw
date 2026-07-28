@@ -17,6 +17,7 @@ class QDockWidget;
 class QLabel;
 class QTabWidget;
 class QSettings;
+class QSpinBox;
 class QToolBar;
 class QTimer;
 class QWidget;
@@ -248,6 +249,9 @@ private:
     SongSettings songSettingsFor(const SongSession &session) const;
     void refreshTransportIcons();
     void updateTransportActions();
+    // Points the transport toolbar's master-volume spinbox at the active
+    // tab's cfg (disabled with no tab). Never emits valueChanged.
+    void syncMasterVolumeControl();
     void synchronizePlayhead();
     void updateWindowTitle();
     QString formatTime(uint64_t samples) const;
@@ -325,6 +329,8 @@ private:
     QAction *m_exportWavAction = nullptr;
     QAction *m_settingsAction = nullptr;
     QAction *m_eventListAction = nullptr;
+    QLabel *m_masterVolCaption = nullptr;
+    QSpinBox *m_masterVolSpin = nullptr;
     QLabel *m_timeLabel = nullptr;
     QLabel *m_songLabel = nullptr;
     QWidget *m_polyMeter = nullptr;
