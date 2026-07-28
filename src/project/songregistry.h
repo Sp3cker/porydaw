@@ -12,8 +12,9 @@ struct SmfFile;
 // The onboarding backend (SPEC.md §6.3): everything the New Song / Import
 // wizards need to create a song and register it. porydaw writes the .mid,
 // the midi.cfg line, and the registration files (song_table.inc, songs.h,
-// ld_script.ld, charmap.txt) directly — inserting or correcting only the
-// song's own lines, byte-conservative for everything else.
+// ld_script.ld, charmap.txt, src/debug.c) directly — inserting or
+// correcting only the song's own lines, byte-conservative for everything
+// else.
 
 struct RegistrationPlan {
     QString label;    // e.g. "mus_foo"
@@ -25,8 +26,12 @@ struct RegistrationPlan {
     QString songsHLine;       // "#define MUS_FOO 610"
     QString ldLine;           // "        sound/songs/midi/mus_foo.o(.rodata);"
     QString charmapLine;      // "MUS_FOO = 62 02" — the ID, little-endian bytes
+    // "    X(MUS_FOO)          \" — the debug menu's sound-list entry in its
+    // mid-list form; one landing at a list's end drops the '\' continuation.
+    QString debugLine;
     bool ldApplicable = true; // false when ld_script.ld has no per-song lines
     bool charmapApplicable = true; // false when charmap.txt has no song entries
+    bool debugApplicable = true;   // false when src/debug.c has no sound lists
 };
 
 // What deleting a song would do to sound/song_table.inc, plus which other
@@ -41,6 +46,7 @@ struct RemovalPlan {
     bool inSongsH = false;
     bool inLdScript = false;
     bool inCharmap = false;
+    bool inDebugMenu = false;
 };
 
 struct RegistrationStatus {
@@ -48,13 +54,16 @@ struct RegistrationStatus {
     bool inSongsH = false;
     bool inLdScript = false;
     bool inCharmap = false;
+    bool inDebugMenu = false;
     bool ldApplicable = true;
     bool charmapApplicable = true;
+    bool debugApplicable = true;
 
     bool complete() const
     {
         return inSongTable && inSongsH && (inLdScript || !ldApplicable)
-               && (inCharmap || !charmapApplicable);
+               && (inCharmap || !charmapApplicable)
+               && (inDebugMenu || !debugApplicable);
     }
 };
 
@@ -92,8 +101,8 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
 // Writes the song into all registration files: the song_table.inc entry
 // (filling the lowest free slot a deleted song left, else appending), the
 // songs.h #define and charmap.txt ID mapping each at their ID-order
-// position, and the ld_script.ld object line (the last two when
-// applicable). Idempotent —
+// position, the ld_script.ld object line, and the src/debug.c sound-list
+// X-macro entry (the last three when applicable). Idempotent —
 // entries that already exist are left byte-identical, except a songs.h
 // define or charmap.txt entry whose ID no longer matches the song's table
 // index, which is corrected in place. Only the song's own lines change.
@@ -107,7 +116,8 @@ RemovalPlan makeRemovalPlan(const QString &projectRoot, const QString &label,
                             const QString &constant);
 
 // The inverse of registerSong: removes the song's songs.h define, ld_script
-// object line, and charmap entry, and removes its song_table.inc entry when
+// object line, charmap entry, and src/debug.c sound-list entry, and
+// removes its song_table.inc entry when
 // it is the last one (also dropping free slots left trailing) or replaces
 // it with a free slot when other songs follow. A free slot is a plain
 // duplicate of entry 0's line — the engine's fallback song (mus_dummy), so

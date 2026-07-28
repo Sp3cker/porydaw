@@ -126,6 +126,104 @@ QString charmapIdBytes(int songId)
         .toUpper();
 }
 
+// pokeemerald-expansion's src/debug.c lists every song its debug menu can
+// play as X-macro entries under two #defines — MUS_* in SOUND_LIST_BGM,
+// SE_* in SOUND_LIST_SE — each line "    X(MUS_FOO)          \" with the
+// continuation backslashes column-aligned and the macro's final line bare.
+// (Which list an entry sits in is cosmetic: both feed one array indexed by
+// the constant's value, and the menu's search filters by name prefix.)
+// Vanilla pokeemerald has no such file, so the whole leg is "applicable"
+// only when a sound-list #define exists at all.
+struct DebugSoundList {
+    QString name; // SOUND_LIST_BGM or SOUND_LIST_SE
+    int defineLine = -1;
+    QVector<int> entryLines;
+    QStringList entryNames;
+};
+
+struct DebugSoundScan {
+    QVector<DebugSoundList> lists;
+    QString indent = QStringLiteral("    ");
+    int slashColumn = -1; // shared '\' column; -1 when not column-aligned
+    bool applicable() const { return !lists.isEmpty(); }
+};
+
+// "    X(MUS_FOO)          \" or, for a macro's final line, "    X(MUS_FOO)"
+const QRegularExpression &debugEntryRe()
+{
+    static const QRegularExpression re(
+        QStringLiteral(R"(^(\s*)X\((\w+)\)\s*(\\?)\s*$)"));
+    return re;
+}
+
+// A '\'-terminated line continues the macro onto the next line (trailing
+// spaces after the backslash tolerated, as compilers tolerate them).
+bool continuesMacro(const QString &line)
+{
+    int end = line.size();
+    while (end > 0 && line.at(end - 1).isSpace())
+        end--;
+    return end > 0 && line.at(end - 1) == QLatin1Char('\\');
+}
+
+DebugSoundScan scanDebugSoundLists(const QStringList &lines)
+{
+    static const QRegularExpression defineRe(
+        QStringLiteral(R"(^#define\s+(SOUND_LIST_BGM|SOUND_LIST_SE)\b)"));
+    DebugSoundScan scan;
+    bool aligned = true;
+    for (int i = 0; i < lines.size(); i++) {
+        const QRegularExpressionMatch dm = defineRe.match(lines.at(i));
+        if (!dm.hasMatch())
+            continue;
+        DebugSoundList list;
+        list.name = dm.captured(1);
+        list.defineLine = i;
+        int j = i;
+        while (j < lines.size() - 1 && continuesMacro(lines.at(j))) {
+            j++;
+            const QRegularExpressionMatch em = debugEntryRe().match(lines.at(j));
+            if (!em.hasMatch())
+                continue;
+            list.entryLines.append(j);
+            list.entryNames.append(em.captured(2));
+            scan.indent = em.captured(1);
+            if (!em.captured(3).isEmpty()) {
+                const int slash = int(lines.at(j).lastIndexOf(QLatin1Char('\\')));
+                if (scan.slashColumn < 0)
+                    scan.slashColumn = slash;
+                else if (slash != scan.slashColumn)
+                    aligned = false;
+            }
+        }
+        scan.lists.append(list);
+        i = j;
+    }
+    if (!aligned)
+        scan.slashColumn = -1;
+    return scan;
+}
+
+// The mid-list form of an entry line: pad the '\' into the shared column
+// (one space when the lists aren't aligned or the name is too long).
+QString debugContinuation(const QString &text, int slashColumn)
+{
+    const int pad = std::max(1, slashColumn - int(text.size()));
+    return text + QString(pad, QLatin1Char(' ')) + QLatin1Char('\\');
+}
+
+// The inverse: a macro's new final line sheds its continuation.
+QString debugStripContinuation(QString text)
+{
+    const int slash = int(text.lastIndexOf(QLatin1Char('\\')));
+    if (slash >= 0) {
+        text.truncate(slash);
+        while (!text.isEmpty() && text.endsWith(QLatin1Char(' ')))
+            text.chop(1);
+    }
+    return text;
+}
+
 QString sidecarPath(const QString &projectRoot, const QString &label)
 {
     return projectRoot + QStringLiteral("/.porydaw/") + label + QStringLiteral(".json");
@@ -376,6 +474,16 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
         plan.charmapLine = constant + QString(pad, QLatin1Char(' '))
                            + QStringLiteral("= ") + charmapIdBytes(plan.songId);
     }
+
+    // src/debug.c: the expansion debug menu's sound lists, one X-macro entry
+    // per song. Projects without the file or the lists (vanilla) skip it.
+    const DebugSoundScan debugScan = scanDebugSoundLists(
+        readLines(projectRoot + QStringLiteral("/src/debug.c")));
+    plan.debugApplicable = debugScan.applicable();
+    if (plan.debugApplicable)
+        plan.debugLine = debugContinuation(
+            debugScan.indent + QStringLiteral("X(") + constant + QLatin1Char(')'),
+            debugScan.slashColumn);
     return plan;
 }
 
@@ -556,6 +664,75 @@ bool registerSong(const QString &projectRoot, const QString &label,
         if (!writeRawLines(path, f, error))
             return false;
     }
+
+    // src/debug.c: the X-macro entry at its position in the target list's ID
+    // order (by the songs.h values just written) — SE_* constants under
+    // SOUND_LIST_SE, everything else under SOUND_LIST_BGM. An entry already
+    // present in either list stays put; only the sound lists are touched,
+    // never other X macros in the file. The macro's '\' continuations are
+    // rewired as needed: a new final line arrives bare and hands the old
+    // final line a continuation.
+    if (plan.debugApplicable) {
+        const QString path = projectRoot + QStringLiteral("/src/debug.c");
+        RawLines f = readRawLines(path);
+        if (!f.loaded) {
+            if (error)
+                *error = QStringLiteral("Cannot read %1").arg(path);
+            return false;
+        }
+        const DebugSoundScan scan = scanDebugSoundLists(f.texts());
+        bool present = false;
+        const DebugSoundList *target = nullptr;
+        const QString wantList = constant.startsWith(QStringLiteral("SE_"))
+                                     ? QStringLiteral("SOUND_LIST_SE")
+                                     : QStringLiteral("SOUND_LIST_BGM");
+        for (const DebugSoundList &list : scan.lists) {
+            present = present || list.entryNames.contains(constant);
+            if (!target || list.name == wantList)
+                target = &list;
+        }
+        if (!present && target) {
+            static const QRegularExpression defineValueRe(
+                QStringLiteral(R"(^\s*#define\s+(\w+)\s+(\d+)\b)"));
+            QHash<QString, int> ids;
+            for (const QString &line : readLines(
+                     projectRoot + QStringLiteral("/include/constants/songs.h"))) {
+                const QRegularExpressionMatch m = defineValueRe.match(line);
+                if (m.hasMatch() && !ids.contains(m.captured(1)))
+                    ids.insert(m.captured(1), m.captured(2).toInt());
+            }
+            // After the last entry with a known smaller ID; before the first
+            // entry when the ID precedes them all; alone after the #define
+            // when the list is empty.
+            int insertAfter = -1;
+            for (int e = 0; e < target->entryNames.size(); e++) {
+                const auto it = ids.constFind(target->entryNames.at(e));
+                if (it != ids.constEnd() && it.value() < plan.songId)
+                    insertAfter = e;
+            }
+            int at;
+            if (insertAfter >= 0)
+                at = target->entryLines.at(insertAfter) + 1;
+            else if (!target->entryLines.isEmpty())
+                at = target->entryLines.first();
+            else
+                at = target->defineLine + 1;
+            const QString bare =
+                scan.indent + QStringLiteral("X(") + constant + QLatin1Char(')');
+            if (continuesMacro(f.text(at - 1))) {
+                // Splicing between two macro lines: the new line continues.
+                f.insert(at, debugContinuation(bare, scan.slashColumn));
+            } else {
+                // The line above was the macro's end; the new line takes over
+                // as the bare final line and hands it a continuation.
+                f.replace(at - 1,
+                          debugContinuation(f.text(at - 1), scan.slashColumn));
+                f.insert(at, bare);
+            }
+        }
+        if (!writeRawLines(path, f, error))
+            return false;
+    }
     return true;
 }
 
@@ -587,6 +764,10 @@ RemovalPlan makeRemovalPlan(const QString &projectRoot, const QString &label,
         if (m.hasMatch() && m.captured(1) == constant)
             plan.inCharmap = true;
     }
+    const DebugSoundScan debugScan = scanDebugSoundLists(
+        readLines(projectRoot + QStringLiteral("/src/debug.c")));
+    for (const DebugSoundList &list : debugScan.lists)
+        plan.inDebugMenu = plan.inDebugMenu || list.entryNames.contains(constant);
     return plan;
 }
 
@@ -678,6 +859,30 @@ bool unregisterSong(const QString &projectRoot, const QString &label,
                     f.removeAt(i);
                     break;
                 }
+            }
+            if (!writeRawLines(path, f, error))
+                return false;
+        }
+    }
+
+    // src/debug.c: the constant's X-macro entry, from whichever sound list
+    // carries it. Removing a macro's final line promotes the line above —
+    // an entry, or the #define itself when the list empties — to macro end,
+    // shedding its '\' continuation.
+    {
+        const QString path = projectRoot + QStringLiteral("/src/debug.c");
+        RawLines f = readRawLines(path);
+        if (f.loaded) {
+            const DebugSoundScan scan = scanDebugSoundLists(f.texts());
+            for (const DebugSoundList &list : scan.lists) {
+                const int e = int(list.entryNames.indexOf(constant));
+                if (e < 0)
+                    continue;
+                const int line = list.entryLines.at(e);
+                if (!continuesMacro(f.text(line)))
+                    f.replace(line - 1, debugStripContinuation(f.text(line - 1)));
+                f.removeAt(line);
+                break;
             }
             if (!writeRawLines(path, f, error))
                 return false;
@@ -827,6 +1032,15 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
                                      | m.captured(4).toInt(nullptr, 16) << 8);
     }
 
+    // src/debug.c: the debug menu's sound lists name songs by constant alone
+    // (no ID to drift), so presence is the whole check.
+    const DebugSoundScan debugScan = scanDebugSoundLists(
+        readLines(projectRoot + QStringLiteral("/src/debug.c")));
+    QSet<QString> debugNames;
+    for (const DebugSoundList &list : debugScan.lists)
+        for (const QString &name : list.entryNames)
+            debugNames.insert(name);
+
     QHash<QString, RegistrationStatus> statuses;
     for (const SongInfo &song : songs) {
         const QString constant =
@@ -845,6 +1059,8 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
         const auto charmapValue = charmapValues.constFind(constant);
         if (charmapValue != charmapValues.constEnd())
             status.inCharmap = index < 0 || charmapValue.value() == index;
+        status.debugApplicable = debugScan.applicable();
+        status.inDebugMenu = debugNames.contains(constant);
         statuses.insert(song.label, status);
     }
     return statuses;

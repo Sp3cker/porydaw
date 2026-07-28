@@ -2180,6 +2180,8 @@ void MainWindow::deleteSongById(int songId)
         files << QStringLiteral("ld_script.ld");
     if (plan.inCharmap)
         files << QStringLiteral("charmap.txt");
+    if (plan.inDebugMenu)
+        files << QStringLiteral("src/debug.c");
     if (song.hasCfg)
         files << QStringLiteral("midi.cfg / songs.mk");
     if (!files.isEmpty())

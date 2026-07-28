@@ -29,8 +29,8 @@ bool DecompProject::open(const QString &rootDir, QString *error)
     parseSongConstants();
     discoverUnregisteredSongs();
     // Which registration files still miss each song's entry — one pass over
-    // the four files for the whole project (checkRegistration per song would
-    // reopen them hundreds of times).
+    // the registration files for the whole project (checkRegistration per
+    // song would reopen them hundreds of times).
     const QHash<QString, RegistrationStatus> statuses =
         SongRegistry::checkRegistrations(m_root, m_songs);
     for (SongInfo &song : m_songs) {
@@ -44,6 +44,8 @@ bool DecompProject::open(const QString &rootDir, QString *error)
             song.registrationGaps.append(QStringLiteral("ld_script.ld"));
         if (status.charmapApplicable && !status.inCharmap)
             song.registrationGaps.append(QStringLiteral("charmap.txt"));
+        if (status.debugApplicable && !status.inDebugMenu)
+            song.registrationGaps.append(QStringLiteral("src/debug.c"));
     }
     if (!parseMidiCfg())
         parseSongsMk();

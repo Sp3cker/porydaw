@@ -40,7 +40,7 @@ in the UI, not fights against a general-purpose DAW's assumptions.
 | Fork vs. scratch | **Build from scratch** | Existing DAWs (LMMS, Qtractor, Ardour, …) are enormous codebases centered on features we don't need (audio tracks, plugin graphs), while porydaw's value is m4a-native constraints. The hard real-time parts already exist in poryaaaa. |
 | UI stack | **Qt 6 / C++** | Same stack as porymap: proven cross-platform shipping to this exact audience, native menus/dialogs/docking, well-trodden piano-roll territory (LMMS/Qtractor are Qt). |
 | Song source of truth | **The `.mid` file is canonical** | porydaw edits `sound/songs/midi/*.mid` in place, constrained to the mid2agb-compatible subset. Saving *is* exporting. Perfect interop: the same file opens in any DAW; porydaw can never corrupt a build. |
-| Project write-back depth | **All song-related files** *(revised 2026-07-05; originally "songs only" with copy-paste snippets)* | porydaw writes `.mid` files, the song's `midi.cfg` line, and the registration files (`song_table.inc`, `songs.h`, `ld_script.ld`, `charmap.txt`) directly — inserting or correcting only the song's own lines, byte-conservative for everything else (§6.3). Voicegroup `.inc` files: the editor rewrites only the edited voice lines, preserving every other byte (§5.3). Nothing outside this set is ever modified. |
+| Project write-back depth | **All song-related files** *(revised 2026-07-05; originally "songs only" with copy-paste snippets)* | porydaw writes `.mid` files, the song's `midi.cfg` line, and the registration files (`song_table.inc`, `songs.h`, `ld_script.ld`, `charmap.txt`, `src/debug.c`) directly — inserting or correcting only the song's own lines, byte-conservative for everything else (§6.3). Voicegroup `.inc` files: the editor rewrites only the edited voice lines, preserving every other byte (§5.3). Nothing outside this set is ever modified. |
 | Repo shape | **New repo; poryaaaa as git submodule** | porydaw is its own CMake project consuming poryaaaa's engine sources (`ENGINE_SOURCES` set). Fixes the engine needs (see §9) are upstreamed to poryaaaa so the CLAP plugin benefits too. |
 | Synth | **poryaaaa engine core, statically linked** | `plugin/m4a_engine.{h,c}` + `m4a_channel.c` + `m4a_tables.c` + `m4a_reverb.c` + `voicegroup_loader.c` — a self-contained C11 library with no CLAP/GUI dependency, already proven embeddable by `cmd/poryaaaa_render.c`. |
 
@@ -309,6 +309,7 @@ sound/song_table.inc      →  song mus_foo, MUSIC_PLAYER_BGM, 0
 include/constants/songs.h →  #define MUS_FOO 610
 ld_script.ld              →  sound/songs/midi/mus_foo.o(.rodata);
 charmap.txt               →  MUS_FOO = 62 02
+src/debug.c               →  X(MUS_FOO)          \
 ```
 
 Each line is computed from the parsed project (next free ID, existing
@@ -322,7 +323,12 @@ songs. Registration is idempotent — existing entries are left untouched, excep
 a `songs.h` define or `charmap.txt` entry whose ID drifted from the song's
 table index, which is corrected in place. Projects whose `ld_script.ld` has no
 per-song object lines skip that file, and likewise a `charmap.txt` with no song
-entries (or none at all).
+entries (or none at all). On pokeemerald-expansion projects, `src/debug.c`'s
+debug-menu sound tester lists every song as an X-macro entry under
+`SOUND_LIST_BGM` / `SOUND_LIST_SE`; porydaw inserts the entry in the
+prefix-matching list at its ID position (rewiring the macro's `\`
+continuations when it lands at a list's end) and removes it on song deletion.
+Projects without those lists (vanilla) skip the file.
 
 If registration fails (e.g. an unwritable file), the chosen constant/player
 persist in the sidecar and the song shows a badge in the song browser;
@@ -331,7 +337,8 @@ retries. The same action registers stray `.mid` files dropped into
 `sound/songs/midi/` by hand, and completes *partial* registrations — a song
 present in the table but missing an entry elsewhere (e.g. one registered
 before porydaw wrote `charmap.txt` entries) is badged "not fully registered",
-with per-song gaps audited in one pass over the four files at project open.
+with per-song gaps audited in one pass over the registration files at project
+open.
 
 ## 7. Playback integration
 
