@@ -3,9 +3,9 @@ name: Release
 # Cutting a release (docs/RELEASING.md): finalize CHANGELOG.md + bump the
 # CMake project version on main, then `git tag X.Y.Z && git push --tags`.
 # This workflow creates the GitHub release with that version's changelog
-# section as the body and attaches self-contained builds for each platform.
-# Locally-built static bundles can be uploaded to the same release manually
-# afterwards.
+# section as the body and attaches self-contained Linux and macOS builds.
+# The Windows build is statically linked against Qt, which CI can't produce;
+# it's built locally and uploaded to the release manually (docs/RELEASING.md).
 
 permissions:
   contents: write
@@ -136,48 +136,6 @@ jobs:
           cp build/porydaw.dmg "$BUILD_NAME/porydaw.dmg"
           cp RELEASE-README.txt "$BUILD_NAME/README.txt"
           zip -r "$BUILD_NAME.zip" "$BUILD_NAME"
-
-      - name: Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ env.BUILD_NAME }}.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build-windows:
-    needs: create-release
-    runs-on: windows-latest
-    env:
-      BUILD_NAME: porydaw-windows
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.9.*'
-          cache: true
-
-      - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-
-      - name: Build
-        run: cmake --build build --config Release
-
-      - name: Prep Release Directory
-        # windeployqt stages the Qt DLLs and plugins beside the exe;
-        # --compiler-runtime includes the MSVC runtime DLLs so users don't
-        # need the VC++ redistributable installed.
-        run: |
-          mkdir ${{ env.BUILD_NAME }}
-          cp build/Release/porydaw.exe ${{ env.BUILD_NAME }}/porydaw.exe
-          windeployqt --no-translations --no-opengl-sw --no-system-d3d-compiler --compiler-runtime ${{ env.BUILD_NAME }}/porydaw.exe
-          cp RELEASE-README.txt ${{ env.BUILD_NAME }}/README.txt
-
-      - name: Bundle Release Directory
-        run: powershell.exe -Command "Compress-Archive -Path ${{ env.BUILD_NAME }} -DestinationPath ${{ env.BUILD_NAME }}.zip"
 
       - name: Release
         uses: softprops/action-gh-release@v2

@@ -43,13 +43,16 @@ the release artifacts (`.github/workflows/release.yml`).
    - builds and attaches self-contained artifacts:
      - `porydaw-linux.zip` — AppImage (bundled Qt),
      - `porydaw-macos-arm64.zip` / `porydaw-macos-x86_64.zip` — `.dmg` via
-       `macdeployqt`,
-     - `porydaw-windows.zip` — `porydaw.exe` + Qt DLLs via `windeployqt`.
+       `macdeployqt`.
 
-6. **Optional manual artifacts.** Locally built static builds (e.g. the static
-   Qt Windows kit) can be uploaded to the same release afterwards via the
-   GitHub UI or:
+6. **Build and upload the Windows artifact manually.** The Windows build is
+   statically linked against the local static Qt kit (CI has no static Qt, so
+   this stays a local step). Build it, zip `porydaw.exe` together with
+   `RELEASE-README.txt` (renamed `README.txt`) as `porydaw-windows.zip`, and
+   attach it to the release via the GitHub UI or:
 
    ```sh
-   gh release upload X.Y.Z porydaw-windows-static.zip
+   gh release upload X.Y.Z porydaw-windows.zip
    ```
+
+   Any other locally built bundles can be added the same way.
