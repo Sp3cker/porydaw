@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=porydaw
+Comment=A DAW for Gen 3 Pokémon decompilation projects
+Exec=porydaw
+Icon=porydaw
+Categories=AudioVideo;Audio;Midi;
+Terminal=false
