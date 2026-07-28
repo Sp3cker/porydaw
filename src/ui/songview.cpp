@@ -247,28 +247,51 @@ const QColor &trackTextColor(int track) {
   return themes::trackIdentityTextColor(trackIdentityIndex(track));
 }
 
-// Ghost notes (unselected tracks) mix 24% of their track identity into the
-// row background in OKLab. Cap only the lightness offset so bright identities
-// stay equally recessive on light and dark themes.
-QColor ghostNoteColor(int track, bool accidentalRow) {
-  const auto &identity = themes::trackIdentityColor(trackIdentityIndex(track));
-  const auto background = themes::color(
-      accidentalRow ? themes::Role::song_view_piano_roll_accidental_lane
-                    : themes::Role::song_view_piano_roll_background);
-  const auto identityLab = themes::oklabFromColor(identity);
-  const auto backgroundLab = themes::oklabFromColor(background);
-  constexpr auto kIdentityWeight = 60.0 / 255.0;
-  constexpr auto kMaxLightnessOffset = 0.055;
-  const auto lightnessOffset = std::clamp(
-      (identityLab.lightness - backgroundLab.lightness) * kIdentityWeight,
-      -kMaxLightnessOffset, kMaxLightnessOffset);
-  return themes::colorFromOklab(
-      {backgroundLab.lightness + lightnessOffset,
-       backgroundLab.a + (identityLab.a - backgroundLab.a) * kIdentityWeight,
-       backgroundLab.b + (identityLab.b - backgroundLab.b) * kIdentityWeight});
+} // namespace
+
+// Velocity-bar / stem shade: fixed mix of each identity toward black (once).
+const QColor &trackStemColor(int track) {
+  static const auto stems = [] {
+    std::array<QColor, themes::trackIdentityColorCount> result{};
+    for (std::size_t i = 0; i < result.size(); ++i)
+      result[i] = mixTowardOklab(themes::trackIdentityColor(i), Qt::black,
+                                 1.0 / 3.0);
+    return result;
+  }();
+  return stems[trackIdentityIndex(track)];
 }
 
-} // namespace
+// Ghost notes (unselected tracks): mix ~24% of the track identity into the row
+// background in OKLab, with a capped lightness offset. 16 identities × 2 row
+// kinds, rebuilt only when the theme's piano-roll backgrounds change.
+QColor ghostNoteColor(int track, bool accidentalRow) {
+  static std::array<std::array<QColor, 2>, themes::trackIdentityColorCount>
+      colors;
+  static QRgb bgKey[2]{};
+
+  const auto &whiteBg =
+      themes::color(themes::Role::song_view_piano_roll_background);
+  const auto &accBg =
+      themes::color(themes::Role::song_view_piano_roll_accidental_lane);
+  if (bgKey[0] != whiteBg.rgba() || bgKey[1] != accBg.rgba()) {
+    bgKey[0] = whiteBg.rgba();
+    bgKey[1] = accBg.rgba();
+    const themes::Oklab bg[2] = {themes::oklabFromColor(whiteBg),
+                                 themes::oklabFromColor(accBg)};
+    constexpr double w = 60.0 / 255.0, maxL = 0.055;
+    for (std::size_t i = 0; i < colors.size(); ++i) {
+      const auto id = themes::oklabFromColor(themes::trackIdentityColor(i));
+      for (int b = 0; b < 2; ++b) {
+        const double dL =
+            std::clamp((id.lightness - bg[b].lightness) * w, -maxL, maxL);
+        colors[i][b] = themes::colorFromOklab(
+            {bg[b].lightness + dL, bg[b].a + (id.a - bg[b].a) * w,
+             bg[b].b + (id.b - bg[b].b) * w});
+      }
+    }
+  }
+  return colors[trackIdentityIndex(track)][accidentalRow];
+}
 
 // Draw the loop-region band across rect. x positions are
 // computed with origin = local x of timeline tick 0's content position.

@@ -27,7 +27,7 @@ struct SrgbSample {
   int blue = 0;
 };
 
-/// Converts an opaque sRGB color to OKLab.
+/// Converts an opaque sRGB color to OKLab (8-bit channels via linear LUT).
 Oklab oklabFromColor(const QColor &color);
 /// Converts OKLab coordinates to sRGB, clipping to gamut and using alpha.
 QColor colorFromOklab(const Oklab &color, int alpha = 255);
