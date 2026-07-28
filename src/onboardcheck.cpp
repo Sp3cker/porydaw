@@ -713,6 +713,99 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
                                        "#define SOUND_LIST_SE\n"),
               "empty-list insert did not hand the #define its continuation");
 
+        // Older expansion debug menus (and forks of them) use a two-argument
+        // entry form with a quoted display name, per-list column alignment
+        // (the BGM and SE lists align differently), every line '\'-continued,
+        // and a blank line ending the macro. New entries must match that
+        // shape — a field report caught the single-arg form being inserted
+        // into (and never recognized in) such a file.
+        {
+            const auto namedLine = [](const char *constant, int commaCol,
+                                      int parenCol, int slashCol) {
+                QByteArray t("    X(");
+                t += constant;
+                t += QByteArray(commaCol - t.size(), ' ') + ", \"";
+                QByteArray display(constant);
+                display.replace('_', '-');
+                t += display + "\"";
+                t += QByteArray(parenCol - t.size(), ' ') + ")";
+                t += QByteArray(slashCol - t.size(), ' ') + "\\";
+                return t + "\n";
+            };
+            const QByteArray named0 =
+                QByteArrayLiteral("#define SOUND_LIST_BGM \\\n")
+                + namedLine("MUS_GSC_ROUTE38", 34, 60, 62)
+                + namedLine("MUS_VICTORY_WILD", 34, 60, 62) + "\n"
+                + QByteArrayLiteral("#define SOUND_LIST_SE \\\n")
+                + namedLine("SE_USE_ITEM", 28, 50, 52) + "\n";
+            writeDebug(named0);
+            check(SongRegistry::checkRegistration(
+                      projectRoot, QStringLiteral("mus_gsc_route38"),
+                      QStringLiteral("MUS_GSC_ROUTE38"))
+                      .inDebugMenu,
+                  "two-argument debug entry not recognized");
+
+            // Appending keeps the named shape and the BGM list's columns.
+            check(SongRegistry::registerSong(projectRoot, label, constant,
+                                             QStringLiteral("MUSIC_PLAYER_BGM"),
+                                             &regError, &songId),
+                  "named-style registerSong failed");
+            const QByteArray namedMain =
+                QByteArrayLiteral("#define SOUND_LIST_BGM \\\n")
+                + namedLine("MUS_GSC_ROUTE38", 34, 60, 62)
+                + namedLine("MUS_VICTORY_WILD", 34, 60, 62)
+                + namedLine("MUS_ONBOARDCHECK", 34, 60, 62) + "\n"
+                + QByteArrayLiteral("#define SOUND_LIST_SE \\\n")
+                + namedLine("SE_USE_ITEM", 28, 50, 52) + "\n";
+            check(readAllBytes(debugCPath) == namedMain,
+                  "named entry not appended in the list's shape");
+            check(SongRegistry::registerSong(projectRoot, label, constant,
+                                             QStringLiteral("MUSIC_PLAYER_BGM"),
+                                             &regError, &songId)
+                      && readAllBytes(debugCPath) == namedMain,
+                  "named entry duplicated on re-register");
+
+            // Mid-list ID order holds in the named shape too.
+            check(SongRegistry::registerSong(
+                      projectRoot, QStringLiteral("mus_caught"),
+                      QStringLiteral("MUS_CAUGHT"),
+                      QStringLiteral("MUSIC_PLAYER_BGM"), &regError, &songId),
+                  "named mid-list registerSong failed");
+            const QByteArray namedCaught =
+                QByteArrayLiteral("#define SOUND_LIST_BGM \\\n")
+                + namedLine("MUS_GSC_ROUTE38", 34, 60, 62)
+                + namedLine("MUS_CAUGHT", 34, 60, 62)
+                + namedLine("MUS_VICTORY_WILD", 34, 60, 62)
+                + namedLine("MUS_ONBOARDCHECK", 34, 60, 62) + "\n"
+                + QByteArrayLiteral("#define SOUND_LIST_SE \\\n")
+                + namedLine("SE_USE_ITEM", 28, 50, 52) + "\n";
+            check(readAllBytes(debugCPath) == namedCaught,
+                  "named backfill not at its ID position");
+
+            // The SE list's own (different) columns drive SE entries, and
+            // unregistering round-trips everything.
+            check(SongRegistry::registerSong(projectRoot, seLabel, seConstant,
+                                             QStringLiteral("MUSIC_PLAYER_BGM"),
+                                             &regError, &songId),
+                  "named SE registerSong failed");
+            const QByteArray namedSe =
+                QByteArrayLiteral("#define SOUND_LIST_BGM \\\n")
+                + namedLine("MUS_GSC_ROUTE38", 34, 60, 62)
+                + namedLine("MUS_CAUGHT", 34, 60, 62)
+                + namedLine("MUS_VICTORY_WILD", 34, 60, 62)
+                + namedLine("MUS_ONBOARDCHECK", 34, 60, 62) + "\n"
+                + QByteArrayLiteral("#define SOUND_LIST_SE \\\n")
+                + namedLine("SE_USE_ITEM", 28, 50, 52)
+                + namedLine("SE_ONBOARDCHECK", 28, 50, 52) + "\n";
+            check(readAllBytes(debugCPath) == namedSe,
+                  "named SE entry not aligned to the SE list's columns");
+            check(SongRegistry::unregisterSong(projectRoot, seLabel, seConstant,
+                                               &error)
+                      && readAllBytes(debugCPath) == namedCaught
+                      && readAllBytes(tablePath) == tableR,
+                  "named SE registration did not round-trip");
+        }
+
         // A vanilla scratch loses the fixture outright; an expansion checkout
         // gets its own debug.c back (the song's entry was already in the
         // snapshot — registerSong wrote it before this section).

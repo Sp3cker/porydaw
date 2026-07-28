@@ -128,31 +128,43 @@ QString charmapIdBytes(int songId)
 
 // pokeemerald-expansion's src/debug.c lists every song its debug menu can
 // play as X-macro entries under two #defines — MUS_* in SOUND_LIST_BGM,
-// SE_* in SOUND_LIST_SE — each line "    X(MUS_FOO)          \" with the
-// continuation backslashes column-aligned and the macro's final line bare.
-// (Which list an entry sits in is cosmetic: both feed one array indexed by
-// the constant's value, and the menu's search filters by name prefix.)
-// Vanilla pokeemerald has no such file, so the whole leg is "applicable"
-// only when a sound-list #define exists at all.
+// SE_* in SOUND_LIST_SE. (Which list an entry sits in is cosmetic: both
+// feed one array indexed by the constant's value, and the menu's search
+// filters by name prefix.) Two entry shapes exist in the wild:
+//
+//   X(MUS_FOO)                \      current expansion (COMPOUND_STRING);
+//                                    the macro's final line is bare
+//   X(MUS_FOO   , "MUS-FOO"   ) \    older expansion and forks of it: a
+//                                    display-name argument, every line
+//                                    continued, a blank line ends the macro
+//
+// Both column-align within a list, but the two lists may align differently,
+// so style is learned per list. Vanilla pokeemerald has no such file, so
+// the whole leg is "applicable" only when a sound-list #define exists.
 struct DebugSoundList {
     QString name; // SOUND_LIST_BGM or SOUND_LIST_SE
     int defineLine = -1;
     QVector<int> entryLines;
     QStringList entryNames;
+    // Style, learned from this list's own entries. Columns are -1 when the
+    // entries don't align (or nothing carries the column to learn from).
+    QString indent = QStringLiteral("    ");
+    bool named = false;   // entries carry the "MUS-FOO" display-name argument
+    int commaColumn = -1; // ',' column in named entries
+    int parenColumn = -1; // ')' column in named entries
+    int slashColumn = -1; // '\' continuation column
 };
 
 struct DebugSoundScan {
     QVector<DebugSoundList> lists;
-    QString indent = QStringLiteral("    ");
-    int slashColumn = -1; // shared '\' column; -1 when not column-aligned
     bool applicable() const { return !lists.isEmpty(); }
 };
 
-// "    X(MUS_FOO)          \" or, for a macro's final line, "    X(MUS_FOO)"
+// Either entry shape, with or without the trailing continuation.
 const QRegularExpression &debugEntryRe()
 {
     static const QRegularExpression re(
-        QStringLiteral(R"(^(\s*)X\((\w+)\)\s*(\\?)\s*$)"));
+        QStringLiteral(R"(^(\s*)X\((\w+) *(, *"[^"]*" *)?\)\s*(\\?)\s*$)"));
     return re;
 }
 
@@ -171,7 +183,6 @@ DebugSoundScan scanDebugSoundLists(const QStringList &lines)
     static const QRegularExpression defineRe(
         QStringLiteral(R"(^#define\s+(SOUND_LIST_BGM|SOUND_LIST_SE)\b)"));
     DebugSoundScan scan;
-    bool aligned = true;
     for (int i = 0; i < lines.size(); i++) {
         const QRegularExpressionMatch dm = defineRe.match(lines.at(i));
         if (!dm.hasMatch())
@@ -179,6 +190,14 @@ DebugSoundScan scanDebugSoundLists(const QStringList &lines)
         DebugSoundList list;
         list.name = dm.captured(1);
         list.defineLine = i;
+        // A column stays aligned while every entry that carries it agrees.
+        const auto learn = [](int *column, bool *aligned, int at) {
+            if (*column < 0)
+                *column = at;
+            else if (at != *column)
+                *aligned = false;
+        };
+        bool commaAligned = true, parenAligned = true, slashAligned = true;
         int j = i;
         while (j < lines.size() - 1 && continuesMacro(lines.at(j))) {
             j++;
@@ -187,25 +206,80 @@ DebugSoundScan scanDebugSoundLists(const QStringList &lines)
                 continue;
             list.entryLines.append(j);
             list.entryNames.append(em.captured(2));
-            scan.indent = em.captured(1);
-            if (!em.captured(3).isEmpty()) {
-                const int slash = int(lines.at(j).lastIndexOf(QLatin1Char('\\')));
-                if (scan.slashColumn < 0)
-                    scan.slashColumn = slash;
-                else if (slash != scan.slashColumn)
-                    aligned = false;
+            list.indent = em.captured(1);
+            if (em.capturedStart(3) >= 0) {
+                list.named = true;
+                learn(&list.commaColumn, &commaAligned, int(em.capturedStart(3)));
+                learn(&list.parenColumn, &parenAligned, int(em.capturedEnd(3)));
             }
+            if (!em.captured(4).isEmpty())
+                learn(&list.slashColumn, &slashAligned,
+                      int(lines.at(j).lastIndexOf(QLatin1Char('\\'))));
         }
+        if (!commaAligned)
+            list.commaColumn = -1;
+        if (!parenAligned)
+            list.parenColumn = -1;
+        if (!slashAligned)
+            list.slashColumn = -1;
         scan.lists.append(list);
         i = j;
     }
-    if (!aligned)
-        scan.slashColumn = -1;
     return scan;
 }
 
-// The mid-list form of an entry line: pad the '\' into the shared column
-// (one space when the lists aren't aligned or the name is too long).
+// The list a constant belongs in: SE_* under SOUND_LIST_SE, everything
+// else under SOUND_LIST_BGM, whichever exists when the wanted one doesn't.
+const DebugSoundList *debugTargetList(const DebugSoundScan &scan,
+                                      const QString &constant)
+{
+    if (scan.lists.isEmpty())
+        return nullptr;
+    const QString want = constant.startsWith(QStringLiteral("SE_"))
+                             ? QStringLiteral("SOUND_LIST_SE")
+                             : QStringLiteral("SOUND_LIST_BGM");
+    const DebugSoundList *target = &scan.lists.first();
+    for (const DebugSoundList &list : scan.lists) {
+        if (list.name == want)
+            target = &list;
+    }
+    return target;
+}
+
+// The list whose entries lend a new line its style: the target, unless it
+// is empty and another list has entries to imitate.
+const DebugSoundList *debugStyleList(const DebugSoundScan &scan,
+                                     const DebugSoundList *target)
+{
+    if (!target->entryNames.isEmpty())
+        return target;
+    for (const DebugSoundList &list : scan.lists) {
+        if (!list.entryNames.isEmpty())
+            return &list;
+    }
+    return target;
+}
+
+// An entry line (sans continuation) in the style's shape: the named form
+// derives the display name by hyphenating the constant, padding into the
+// style's columns when its entries align.
+QString debugEntryText(const DebugSoundList &style, const QString &constant)
+{
+    QString text = style.indent + QStringLiteral("X(") + constant;
+    if (style.named) {
+        QString display = constant;
+        display.replace(QLatin1Char('_'), QLatin1Char('-'));
+        if (style.commaColumn > int(text.size()))
+            text += QString(style.commaColumn - int(text.size()), QLatin1Char(' '));
+        text += QStringLiteral(", \"") + display + QLatin1Char('"');
+        if (style.parenColumn > int(text.size()))
+            text += QString(style.parenColumn - int(text.size()), QLatin1Char(' '));
+    }
+    return text + QLatin1Char(')');
+}
+
+// The mid-list form: pad the '\' into the style's column (one space when
+// the entries don't align or the line is too long).
 QString debugContinuation(const QString &text, int slashColumn)
 {
     const int pad = std::max(1, slashColumn - int(text.size()));
@@ -480,10 +554,12 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
     const DebugSoundScan debugScan = scanDebugSoundLists(
         readLines(projectRoot + QStringLiteral("/src/debug.c")));
     plan.debugApplicable = debugScan.applicable();
-    if (plan.debugApplicable)
-        plan.debugLine = debugContinuation(
-            debugScan.indent + QStringLiteral("X(") + constant + QLatin1Char(')'),
-            debugScan.slashColumn);
+    if (plan.debugApplicable) {
+        const DebugSoundList *style =
+            debugStyleList(debugScan, debugTargetList(debugScan, constant));
+        plan.debugLine = debugContinuation(debugEntryText(*style, constant),
+                                           style->slashColumn);
+    }
     return plan;
 }
 
@@ -682,15 +758,9 @@ bool registerSong(const QString &projectRoot, const QString &label,
         }
         const DebugSoundScan scan = scanDebugSoundLists(f.texts());
         bool present = false;
-        const DebugSoundList *target = nullptr;
-        const QString wantList = constant.startsWith(QStringLiteral("SE_"))
-                                     ? QStringLiteral("SOUND_LIST_SE")
-                                     : QStringLiteral("SOUND_LIST_BGM");
-        for (const DebugSoundList &list : scan.lists) {
+        for (const DebugSoundList &list : scan.lists)
             present = present || list.entryNames.contains(constant);
-            if (!target || list.name == wantList)
-                target = &list;
-        }
+        const DebugSoundList *target = debugTargetList(scan, constant);
         if (!present && target) {
             static const QRegularExpression defineValueRe(
                 QStringLiteral(R"(^\s*#define\s+(\w+)\s+(\d+)\b)"));
@@ -717,16 +787,16 @@ bool registerSong(const QString &projectRoot, const QString &label,
                 at = target->entryLines.first();
             else
                 at = target->defineLine + 1;
-            const QString bare =
-                scan.indent + QStringLiteral("X(") + constant + QLatin1Char(')');
+            const DebugSoundList *style = debugStyleList(scan, target);
+            const QString bare = debugEntryText(*style, constant);
             if (continuesMacro(f.text(at - 1))) {
                 // Splicing between two macro lines: the new line continues.
-                f.insert(at, debugContinuation(bare, scan.slashColumn));
+                f.insert(at, debugContinuation(bare, style->slashColumn));
             } else {
                 // The line above was the macro's end; the new line takes over
                 // as the bare final line and hands it a continuation.
                 f.replace(at - 1,
-                          debugContinuation(f.text(at - 1), scan.slashColumn));
+                          debugContinuation(f.text(at - 1), style->slashColumn));
                 f.insert(at, bare);
             }
         }
