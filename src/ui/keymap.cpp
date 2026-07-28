@@ -78,6 +78,9 @@ const Def kDefs[] = {
     // Songs dock
     {"songs.find", Context::Global, QT_TR_NOOP("Songs"),
      QT_TR_NOOP("Find Song"), QKeySequence::Find, ""},
+    // Help
+    {"help.about", Context::Global, QT_TR_NOOP("Help"),
+     QT_TR_NOOP("About porydaw"), QKeySequence::UnknownKey, ""},
     // Piano roll. The old modifier-changes-the-step families (Ctrl+Up, with
     // Shift meaning an octave) are split into explicit commands so each step
     // is independently rebindable.

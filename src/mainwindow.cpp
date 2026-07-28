@@ -375,6 +375,25 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("tools.import_sample"), m_importSampleAction);
     m_importSampleAction->setEnabled(false);
 
+    QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
+    QAction *aboutAction =
+        helpMenu->addAction(tr("&About porydaw"), this, [this] {
+            QMessageBox::about(
+                this, tr("About porydaw"),
+                tr("<h3>porydaw %1</h3>"
+                   "<p>It's like Porymap, but for music. An easy-to-use DAW "
+                   "for Gen 3 Pokémon decompilation projects.</p>"
+                   "<p>Running on Qt %2.</p>"
+                   "<p><a href=\"https://github.com/huderlem/porydaw\">"
+                   "github.com/huderlem/porydaw</a></p>")
+                    .arg(QStringLiteral(PORYDAW_VERSION),
+                         QLatin1String(qVersion())));
+        });
+    // Qt recognizes the "About" text and relocates this into the application
+    // menu on macOS.
+    aboutAction->setMenuRole(QAction::AboutRole);
+    keys.attach(QStringLiteral("help.about"), aboutAction);
+
     // Transport toolbar
     QToolBar *transport = m_transportToolbar = addToolBar(tr("Transport"));
     // saveState() persists dock/toolbar layout by objectName only.

@@ -1,3 +1,5 @@
+#include <cstdio>
+
 #include <QApplication>
 #include <QStyleHints>
 
@@ -97,12 +99,16 @@ int main(int argc, char *argv[])
     // same on every machine.
     QApplication::setStyle(QStringLiteral("fusion"));
     QApplication::setApplicationName("porydaw");
-    QApplication::setApplicationVersion("0.1.0");
+    QApplication::setApplicationVersion(QStringLiteral(PORYDAW_VERSION));
     QApplication::setOrganizationName("huderlem");
     if (!ui::initializeApplication(app))
         return 1;
 
     const QStringList args = app.arguments();
+    if (args.contains(QStringLiteral("--version"))) {
+        std::printf("porydaw %s (Qt %s)\n", PORYDAW_VERSION, qVersion());
+        return 0;
+    }
     const int selfTest = args.indexOf(QStringLiteral("--selftest"));
     if (selfTest >= 0 && selfTest + 2 < args.size()) {
         MainWindow window;

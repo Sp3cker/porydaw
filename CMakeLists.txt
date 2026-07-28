@@ -155,6 +155,10 @@ target_include_directories(porydaw_app PUBLIC
     external/dr_libs
     external/stb
 )
+# The project() version is the single source of truth (docs/RELEASING.md);
+# release CI refuses a tag that doesn't match it.
+target_compile_definitions(porydaw_app PUBLIC
+    PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Widgets poryaaaa_engine)
 if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)
@@ -261,7 +265,11 @@ if(WIN32)
     endif()
 endif()
 if(APPLE)
-    set_target_properties(porydaw PROPERTIES MACOSX_BUNDLE TRUE)
+    set_target_properties(porydaw PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+        MACOSX_BUNDLE_GUI_IDENTIFIER com.huderlem.porydaw)
 endif()
 
 # ---- Offline render CLI (development/testing: parity vs poryaaaa_render) ----
