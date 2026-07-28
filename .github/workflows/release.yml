@@ -45,7 +45,11 @@ jobs:
 
   build-linux:
     needs: create-release
-    runs-on: ubuntu-latest
+    # Pinned to the oldest supported runner: AppImages never bundle glibc, so
+    # the build machine's glibc is the artifact's compatibility floor. Building
+    # on 22.04 (glibc 2.35) keeps the AppImage runnable on 22.04-era distros;
+    # ubuntu-latest (24.04, glibc 2.39) produced binaries that fail there.
+    runs-on: ubuntu-22.04
     env:
       BUILD_NAME: porydaw-linux
     steps:
