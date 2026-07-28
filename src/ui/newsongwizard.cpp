@@ -20,6 +20,20 @@
 
 // ---- Identity: label, constant, music player ------------------------------
 
+// Song labels are lowercase; fold typed capitals (Shift, Caps Lock) into the
+// convention instead of swallowing the keystroke.
+class LowercaseNameValidator : public QRegularExpressionValidator
+{
+public:
+    using QRegularExpressionValidator::QRegularExpressionValidator;
+
+    State validate(QString &input, int &pos) const override
+    {
+        input = input.toLower();
+        return QRegularExpressionValidator::validate(input, pos);
+    }
+};
+
 class IdentityPage : public QWizardPage
 {
 public:
@@ -34,7 +48,7 @@ public:
         m_name = new QLineEdit(suggestedLabel, this);
         m_name->setPlaceholderText(QStringLiteral("mus_my_song"));
         static const QRegularExpression nameRe(QStringLiteral("[a-z_][a-z0-9_]*"));
-        m_name->setValidator(new QRegularExpressionValidator(nameRe, this));
+        m_name->setValidator(new LowercaseNameValidator(nameRe, this));
         form->addRow(tr("&Name:"), m_name);
 
         m_nameHint = new QLabel(this);

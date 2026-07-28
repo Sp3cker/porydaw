@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QProcess>
 #include <QSettings>
@@ -618,6 +619,26 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
             rescale->setChecked(false);
             check(wizard.songFile().division == 400,
                   "wizard: opting out of the rescale still rescaled");
+        }
+
+        // The name validator folds typed capitals (Shift, Caps Lock) into the
+        // lowercase convention instead of swallowing the keystroke; characters
+        // outside the label grammar are still rejected outright.
+        QLineEdit *nameEdit = nullptr;
+        for (QLineEdit *edit : wizard.findChildren<QLineEdit *>()) {
+            if (edit->placeholderText() == QStringLiteral("mus_my_song"))
+                nameEdit = edit;
+        }
+        check(nameEdit, "wizard: name field not found");
+        if (nameEdit) {
+            nameEdit->clear();
+            nameEdit->insert(QStringLiteral("MUS_Loud_3"));
+            check(nameEdit->text() == QStringLiteral("mus_loud_3"),
+                  "wizard: typed capitals not folded to lowercase");
+            nameEdit->clear();
+            nameEdit->insert(QStringLiteral("mus 3!"));
+            check(nameEdit->text().isEmpty(),
+                  "wizard: characters outside the label grammar accepted");
         }
     }
 
