@@ -30,7 +30,6 @@ private:
     QStringList m_voicegroupArgs;
     QComboBox *m_voicegroup;
     QSpinBox *m_volume;
-    QCheckBox *m_reverbOn;
     QSpinBox *m_reverb;
     QSpinBox *m_priority;
     QCheckBox *m_exactGate;

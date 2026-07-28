@@ -153,7 +153,8 @@ data through mid2agb's transforms before it reaches the engine:
   reimplemented in the document layer).
 - Timing quantized to the song's clock base (24 or 48 clocks/beat per its `-X` flag).
 - Master volume (`-V`) and reverb (`-R`) from `midi.cfg` applied exactly as the
-  compiled `.s` header would (`VOL * mvl / mxv`, `reverb_set + N`).
+  compiled `.s` header would (`VOL * mvl / mxv`, `reverb_set + N`); a song with
+  no `-R` flag plays at the vanilla `STD_REVERB` default (50).
 - The UI shows both the drawn and the effective (quantized) value — e.g.
   "velocity 93 → GBA plays 90" — so quantization is visible, not mysterious.
 - Music-player track budgets honored: the song's player only allocates

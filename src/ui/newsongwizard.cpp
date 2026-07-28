@@ -5,7 +5,6 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFormLayout>
-#include <QGridLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
@@ -146,16 +145,10 @@ public:
         m_volume->setValue(100);
         form->addRow(tr("&Master volume (-V):"), m_volume);
 
-        auto *reverbRow = new QGridLayout;
-        m_reverbOn = new QCheckBox(tr("Override"), this);
-        m_reverbOn->setChecked(true);
         m_reverb = new QSpinBox(this);
         m_reverb->setRange(0, 127);
-        m_reverb->setValue(50);
-        connect(m_reverbOn, &QCheckBox::toggled, m_reverb, &QSpinBox::setEnabled);
-        reverbRow->addWidget(m_reverbOn, 0, 0);
-        reverbRow->addWidget(m_reverb, 0, 1);
-        form->addRow(tr("&Reverb (-R):"), reverbRow);
+        m_reverb->setValue(SongCfg::kDefaultReverb);
+        form->addRow(tr("&Reverb (-R):"), m_reverb);
 
         m_priority = new QSpinBox(this);
         m_priority->setRange(0, 127);
@@ -199,7 +192,7 @@ public:
                                 : SongRegistry::voicegroupArgFromDisplay(
                                       m_voicegroup->currentText().trimmed(), m_vgArgs);
         cfg.masterVolume = m_volume->value();
-        cfg.reverb = m_reverbOn->isChecked() ? m_reverb->value() : -1;
+        cfg.reverb = m_reverb->value();
         cfg.priority = m_priority->value();
         cfg.exactGate = m_exactGate->isChecked();
         cfg.extendedClocks = m_extendedClocks->isChecked();
@@ -219,7 +212,6 @@ private:
     QStringList m_vgArgs;
     QComboBox *m_voicegroup;
     QSpinBox *m_volume;
-    QCheckBox *m_reverbOn;
     QSpinBox *m_reverb;
     QSpinBox *m_priority;
     QCheckBox *m_exactGate;

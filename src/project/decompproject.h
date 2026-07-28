@@ -7,10 +7,15 @@
 // Per-song mid2agb options from the song's line in sound/songs/midi/midi.cfg
 // (or, in projects predating midi.cfg, its songs.mk rule).
 struct SongCfg {
+    // Vanilla songs.mk passes -R$(STD_REVERB) = 50 to every song, so a song
+    // whose flags lack -R effectively plays at 50 in-game; treat that as the
+    // default wherever the flag is absent.
+    static constexpr int kDefaultReverb = 50;
+
     QStringList rawFlags;    // the flags as written ($(VAR) refs pre-expanded)
     QString voicegroupArg;   // -G value, e.g. "_abandoned_ship" (mid2agb default: "_dummy")
     int masterVolume = 127;  // -V (0-127)
-    int reverb = -1;         // -R, -1 = flag absent (no reverb override)
+    int reverb = -1;         // -R, -1 = flag absent (defaults to kDefaultReverb)
     int priority = 0;        // -P
     bool exactGate = false;  // -E
     bool extendedClocks = false; // -X (48 clocks/beat)

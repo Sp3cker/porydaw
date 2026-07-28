@@ -36,21 +36,11 @@ SongSettingsDialog::SongSettingsDialog(const SongCfg &cfg, const QString &songLa
     m_volume->setToolTip(tr("mid2agb -V: scales every track volume (VOL × master ÷ 128)."));
     form->addRow(tr("&Master volume (-V):"), m_volume);
 
-    auto *reverbRow = new QHBoxLayout;
-    m_reverbOn = new QCheckBox(tr("Override"), this);
-    m_reverbOn->setChecked(cfg.reverb >= 0);
     m_reverb = new QSpinBox(this);
     m_reverb->setRange(0, 127);
-    m_reverb->setValue(cfg.reverb >= 0 ? cfg.reverb : 50);
-    m_reverb->setEnabled(cfg.reverb >= 0);
-    connect(m_reverbOn, &QCheckBox::toggled, m_reverb, &QSpinBox::setEnabled);
-    reverbRow->addWidget(m_reverbOn);
-    reverbRow->addWidget(m_reverb, 1);
-    auto *reverbHolder = new QWidget(this);
-    reverbHolder->setLayout(reverbRow);
-    reverbHolder->setToolTip(
-        tr("mid2agb -R: song reverb level; unchecked leaves the player default."));
-    form->addRow(tr("&Reverb (-R):"), reverbHolder);
+    m_reverb->setValue(cfg.reverb >= 0 ? cfg.reverb : SongCfg::kDefaultReverb);
+    m_reverb->setToolTip(tr("mid2agb -R: song reverb level (vanilla default 50)."));
+    form->addRow(tr("&Reverb (-R):"), m_reverb);
 
     m_priority = new QSpinBox(this);
     m_priority->setRange(0, 127);
@@ -95,7 +85,7 @@ SongCfg SongSettingsDialog::cfg() const
     cfg.voicegroupArg = SongRegistry::voicegroupArgFromDisplay(
         m_voicegroup->currentText().trimmed(), m_voicegroupArgs);
     cfg.masterVolume = m_volume->value();
-    cfg.reverb = m_reverbOn->isChecked() ? m_reverb->value() : -1;
+    cfg.reverb = m_reverb->value();
     cfg.priority = m_priority->value();
     cfg.exactGate = m_exactGate->isChecked();
     cfg.extendedClocks = m_extendedClocks->isChecked();

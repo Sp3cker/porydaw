@@ -19,6 +19,7 @@
 #include "project/songregistry.h"
 #include "ui/newsongwizard.h"
 #include "ui/songlistpanel.h"
+#include "ui/songsettingsdialog.h"
 
 // --onboardcheck <projectRoot> [mid2agbPath]: M3 onboarding check. Exercises
 // the New Song and Import backends headlessly against a scratch copy of a
@@ -1012,6 +1013,20 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
             check(nameEdit->text().isEmpty(),
                   "wizard: characters outside the label grammar accepted");
         }
+
+        // Reverb is a plain value, not an optional override: the wizard emits
+        // an explicit -R at the vanilla STD_REVERB default.
+        check(wizard.cfg().reverb == SongCfg::kDefaultReverb,
+              "wizard: reverb does not default to 50");
+        check(wizard.cfg().rawFlags.contains(QStringLiteral("-R50")),
+              "wizard: default reverb not written as an explicit -R flag");
+
+        // Song Settings likewise: a cfg whose flags lack -R comes back healed
+        // to the default rather than staying absent.
+        SongCfg bare;
+        SongSettingsDialog dialog(bare, QStringLiteral("mus_bare"), vgArgs);
+        check(dialog.cfg().reverb == SongCfg::kDefaultReverb,
+              "song settings: absent -R does not heal to the default reverb");
     }
 
     const QString importLabel = QStringLiteral("mus_onboardcheck_import");
