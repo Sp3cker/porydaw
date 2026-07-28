@@ -275,6 +275,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         zoom.keyHeight = 8.0;
         zoom.scrollY = 300.0;
         view.applyViewState(zoom);
+        const double appliedZoomHeight = view.keyHeight();
+        const double appliedZoomScroll = view.scrollY();
         const QPointF anchor(songview::kKeyboardW + 40.0, 200.0);
 
         for (int i = 0; i < 4; ++i)
@@ -318,8 +320,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             sendWheel(roll, anchor, 30);
         for (int i = 0; i < 4; ++i)
             sendWheel(roll, anchor, -30);
-        if (std::abs(view.keyHeight() - zoom.keyHeight) > 1e-12 ||
-                std::abs(view.scrollY() - zoom.scrollY) > 1e-10)
+        if (std::abs(view.keyHeight() - appliedZoomHeight) > 1e-12 ||
+                std::abs(view.scrollY() - appliedZoomScroll) > 1e-10)
             fail("equal Ctrl-wheel zoom in/out did not restore the camera");
 
         zoom.keyHeight = 9.375;
@@ -1477,12 +1479,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         fail("Ctrl+Left did not snap the off-grid note back to the grid");
 
     // Keyboard moves keep the notes in view, scrolling just enough rather
-    // than re-anchoring. Vertical: park the note's row above the viewport,
-    // and Ctrl+Up must land it flush at the top edge.
+    // than re-anchoring. Vertical: park the note with its row top above the
+    // viewport, then Ctrl+Up must land the new row flush at the top edge.
     const int keyNow = d.key - 11;
     view.scrollRollBy((129 - keyNow) * view.keyHeight() - view.scrollY());
-    if ((128 - keyNow) * view.keyHeight() - view.scrollY() > 1e-9)
-        fail("could not park the note's row above the viewport");
+    if ((127 - keyNow) * view.keyHeight() - view.scrollY() >= -1e-9)
+        fail("could not park the note's row top above the viewport");
     sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
     if (std::abs(view.scrollY() - (126 - keyNow) * view.keyHeight()) > 1e-9)
         fail("Ctrl+Up above the viewport did not scroll the row flush to the top");
@@ -1493,24 +1495,27 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // paste jump). Then ride it right across the viewport: once the end
     // crosses the right edge, it must stay flush there.
     uint64_t nStart = d.tick + snapCell;
+    const uint64_t nudgeStep = view.gridTicksAt(nStart);
     const qreal dpr = roll->devicePixelRatioF();
     const qreal physicalPixel = dpr > 0.0 ? 1.0 / dpr : 1.0;
     view.scrollByPx(view.contentX(double(nStart + snapCell)) + 40);
     if (view.displayX(double(nStart + snapCell), 0.0, dpr) >= 0.0)
         fail("could not park the note past the left edge");
     sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
-    nStart += snapCell;
+    nStart += nudgeStep;
     if (view.displayX(double(nStart), 0.0, dpr) != 0.0)
         fail("Ctrl+Right off-screen-left did not scroll the start flush to the "
                   "left edge");
     const qreal vw = std::max(50, roll->width() - songview::kKeyboardW);
-    const qreal cellPx =
-        view.contentX(double(nStart + snapCell)) - view.contentX(double(nStart));
+    const qreal nudgePx = view.contentX(double(nStart + nudgeStep))
+        - view.contentX(double(nStart));
+    const qreal displayedEnd =
+        view.displayX(double(nStart + snapCell), 0.0, dpr);
     const int rides =
-            (vw - view.contentX(double(nStart + snapCell))) / cellPx + 2;
+        int(std::ceil((vw - physicalPixel - displayedEnd) / nudgePx)) + 2;
     for (int i = 0; i < rides; i++)
         sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
-    nStart += uint64_t(rides) * snapCell;
+    nStart += uint64_t(rides) * nudgeStep;
     if (view.displayX(double(nStart + snapCell), 0.0, dpr)
             != vw - physicalPixel)
         fail(
@@ -1537,11 +1542,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 10), &transposed))
         fail("time-selection Ctrl+Up did not transpose the covered note");
+    const uint64_t timeNudgeStart = band.startTick + nudgeStep;
     sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
-    if (!doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10),
-                                        &transposed))
+    if (!doc.findNote(track, timeNudgeStart, uint8_t(d.key - 10),
+                      &transposed))
         fail("time-selection Ctrl+Right did not nudge the covered note");
-    if (view.timeSelection().startTick != d.tick + 2 * snapCell)
+    if (view.timeSelection().startTick != timeNudgeStart)
         fail("time-selection band did not follow the nudge");
 
     // Velocity projection has a fixed inset at both endpoints, and every
