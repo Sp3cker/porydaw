@@ -12,19 +12,27 @@
 #include <QMessageBox>
 #include <QRegularExpressionValidator>
 #include <QSpinBox>
+#include <QStandardItemModel>
 #include <QTreeWidget>
 #include <QVBoxLayout>
+#include <algorithm>
 
 #include "project/songregistry.h"
 #include "ui/layout.h"
 
 // ---- Identity: label, constant, music player ------------------------------
+static int playerTrackCapacity(const MusicPlayer &player)
+{
+    return player.trackCount < 0 ? 16 : std::min(player.trackCount, 16);
+}
 
 class IdentityPage : public QWizardPage
 {
 public:
-    IdentityPage(DecompProject *project, const QString &suggestedLabel)
-        : m_project(project)
+    IdentityPage(DecompProject *project, const QString &suggestedLabel,
+                 int minimumTrackCount = 0,
+                 bool requireCompatiblePlayer = false)
+        : m_project(project), m_requireCompatiblePlayer(requireCompatiblePlayer)
     {
         setTitle(tr("Song identity"));
         setSubTitle(tr("Names the .mid file, the song_table.inc entry, and the "
@@ -41,12 +49,33 @@ public:
         m_nameHint->setStyleSheet(QStringLiteral("color: #c05050;"));
         form->addRow(QString(), m_nameHint);
 
+        m_player = new QComboBox(this);
+        m_player->setObjectName(QStringLiteral("playerCombo"));
+        const bool annotateCapacity = minimumTrackCount > 0;
+        const QVector<MusicPlayer> players =
+            SongRegistry::musicPlayers(project->root());
+        for (const MusicPlayer &p : players) {
+            const int capacity = playerTrackCapacity(p);
+            const QString display =
+                annotateCapacity ? tr("%1 (%2 tracks)").arg(p.name).arg(capacity)
+                                 : p.name;
+            m_player->addItem(display, p.name);
+        }
+        if (annotateCapacity) {
+            auto *model = qobject_cast<QStandardItemModel *>(m_player->model());
+            int firstCompatible = -1;
+            for (int i = 0; i < m_player->count(); i++) {
+                if (playerTrackCapacity(players.at(i)) < minimumTrackCount)
+                    model->item(i)->setEnabled(false);
+                else if (firstCompatible < 0)
+                    firstCompatible = i;
+            }
+            if (firstCompatible >= 0)
+                m_player->setCurrentIndex(firstCompatible);
+        }
         m_constant = new QLineEdit(this);
         form->addRow(tr("&Constant:"), m_constant);
 
-        m_player = new QComboBox(this);
-        for (const MusicPlayer &p : SongRegistry::musicPlayers(project->root()))
-            m_player->addItem(p.name);
         m_player->setToolTip(tr("BGM for music; SE players for sound effects and "
                                 "fanfares that interrupt music."));
         form->addRow(tr("&Player:"), m_player);
@@ -68,6 +97,13 @@ public:
         const QString name = m_name->text();
         if (name.isEmpty() || m_constant->text().isEmpty())
             return false;
+        if (m_requireCompatiblePlayer) {
+            const int index = m_player->currentIndex();
+            auto *model = qobject_cast<QStandardItemModel *>(m_player->model());
+            const auto *item = model == nullptr ? nullptr : model->item(index);
+            if (item == nullptr || !item->isEnabled())
+                return false;
+        }
         for (const SongInfo &song : m_project->songs()) {
             if (song.label == name) {
                 m_nameHint->setText(tr("A song named %1 already exists.").arg(name));
@@ -84,7 +120,7 @@ public:
 
     QString label() const { return m_name->text(); }
     QString constant() const { return m_constant->text(); }
-    QString player() const { return m_player->currentText(); }
+    QString player() const { return m_player->currentData().toString(); }
 
 private:
     DecompProject *m_project;
@@ -93,6 +129,7 @@ private:
     QComboBox *m_player;
     QLabel *m_nameHint;
     bool m_constantEdited = false;
+    bool m_requireCompatiblePlayer = false;
 };
 
 // ---- Sound: voicegroup + midi.cfg flags ------------------------------------
@@ -313,8 +350,41 @@ NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported,
     buildPages(sourcePath, voicegroupArgs);
 }
 
+NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported,
+                             const QString &sourcePath,
+                             const QStringList &voicegroupArgs,
+                             int minimumTrackCount, QWidget *parent)
+    : QWizard(parent), m_project(project), m_importMode(true),
+      m_imported(std::move(imported))
+{
+    setWindowTitle(tr("Import MIDI — %1").arg(QFileInfo(sourcePath).fileName()));
+    const QVector<MusicPlayer> players =
+        SongRegistry::musicPlayers(project->root());
+    const MusicPlayer *defaultPlayer = nullptr;
+    for (const MusicPlayer &player : players) {
+        if (minimumTrackCount <= 0
+            || playerTrackCapacity(player) >= minimumTrackCount) {
+            defaultPlayer = &player;
+            break;
+        }
+    }
+    if (defaultPlayer) {
+        m_analysis = analyzeForImport(m_imported,
+                                      playerTrackCapacity(*defaultPlayer),
+                                      defaultPlayer->name);
+    } else {
+        m_analysis = analyzeForImport(m_imported, -1);
+    }
+    if (m_imported.wasFormat0)
+        m_analysis.warnings.prepend(
+            tr("Format 0 file — imported as format 1 (one chunk per channel)."));
+    buildPages(sourcePath, voicegroupArgs, minimumTrackCount, true);
+}
+
 void NewSongWizard::buildPages(const QString &sourcePath,
-                               const QStringList &voicegroupArgs)
+                               const QStringList &voicegroupArgs,
+                               int minimumTrackCount,
+                               bool requireCompatiblePlayer)
 {
     setOption(QWizard::NoBackButtonOnStartPage);
     setMinimumSize(::layout::fontPx(52), ::layout::fontPx(38));
@@ -333,7 +403,8 @@ void NewSongWizard::buildPages(const QString &sourcePath,
         addPage(m_analysisPage);
     }
 
-    m_identity = new IdentityPage(m_project, suggested);
+    m_identity = new IdentityPage(m_project, suggested, minimumTrackCount,
+                                  requireCompatiblePlayer);
     addPage(m_identity);
     m_sound = new SoundPage(m_project, m_identity, voicegroupArgs);
     addPage(m_sound);

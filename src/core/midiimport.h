@@ -20,6 +20,7 @@ struct ImportTrackInfo {
     // Programs in order of first use; empty means every note plays voice 0
     // (mid2agb's initial program) — worth flagging against the voicegroup.
     std::vector<uint8_t> programs;
+    std::vector<uint8_t> channels;   // used MIDI channels, in source order
     bool notesBeforeProgram = false; // notes sound before the first VOICE
 };
 
@@ -41,6 +42,23 @@ struct ImportAnalysis {
     std::vector<ImportCcUsage> ccs;      // by CC number, ascending
     QStringList warnings;                // human-readable mapping-pass flags
 };
+
+// Importable note-bearing chunks, in source order. Unlike analyzeForImport,
+// this scan is not capped at the m4a 16-track engine limit.
+std::vector<ImportTrackInfo> noteBearingImportTracks(const SmfFile &smf);
+
+// Build a format-1 file containing the selected musical chunks plus the
+// source-global events needed by a standalone song.
+SmfFile selectedMidiForNewSong(const SmfFile &smf,
+                               const std::vector<int> &selectedTracks);
+
+// Build the selected musical chunks for appending to an existing song,
+// omitting events that are global to the destination song.
+SmfFile selectedMidiForAppend(const SmfFile &smf,
+                              const std::vector<int> &selectedTracks);
+
+// Earliest real note-on tick, or UINT64_MAX when the file has no note-ons.
+uint64_t earliestNoteTick(const SmfFile &smf);
 
 // trackBudget/playerName describe the music player the song will run on
 // (MusicPlayer::trackCount): mapped tracks at or beyond the budget never

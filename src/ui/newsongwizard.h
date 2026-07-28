@@ -35,6 +35,10 @@ public:
     NewSongWizard(DecompProject *project, SmfFile imported,
                   const QString &sourcePath, const QStringList &voicegroupArgs,
                   QWidget *parent = nullptr);
+    // Drag-and-drop import with a preflight track requirement.
+    NewSongWizard(DecompProject *project, SmfFile imported,
+                  const QString &sourcePath, const QStringList &voicegroupArgs,
+                  int minimumTrackCount, QWidget *parent = nullptr);
 
     QString label() const;
     QString constant() const;
@@ -49,7 +53,9 @@ public:
     QString newVoicegroupName() const;
 
 private:
-    void buildPages(const QString &sourcePath, const QStringList &voicegroupArgs);
+    void buildPages(const QString &sourcePath, const QStringList &voicegroupArgs,
+                    int minimumTrackCount = 0,
+                    bool requireCompatiblePlayer = false);
 
     DecompProject *m_project;
     bool m_importMode = false;

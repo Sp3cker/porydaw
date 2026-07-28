@@ -1419,6 +1419,43 @@ void SongDocument::deleteTimeSig(uint64_t tick)
     pushEdit(tr("delete time signature"), std::move(ops));
 }
 
+int SongDocument::availableImportTrackSlots() const {
+  return std::max(0, std::min(16, m_trackBudget) - engineTrackCount());
+}
+
+int SongDocument::appendImportedTracks(const SmfFile &smf) {
+  if (m_smf.division == 0 || smf.division == 0 ||
+      m_smf.division != smf.division)
+    return -1;
+  int importCount = 0;
+  for (const SmfTrack &track : smf.tracks) {
+    if (std::any_of(track.events.begin(), track.events.end(),
+                    [](const SmfEvent &ev) { return ev.isChannel(); }))
+      importCount++;
+  }
+  if (importCount == 0 || importCount > availableImportTrackSlots())
+    return -1;
+
+  const int firstEngineTrack = engineTrackCount();
+  std::vector<EditOp> ops;
+  ops.reserve(size_t(importCount));
+  int smfTrack = int(m_smf.tracks.size());
+  for (const SmfTrack &track : smf.tracks) {
+    const bool channelBearing =
+        std::any_of(track.events.begin(), track.events.end(),
+                    [](const SmfEvent &ev) { return ev.isChannel(); });
+    if (!channelBearing)
+      continue;
+    EditOp insert;
+    insert.type = EditOp::InsertTrack;
+    insert.smfTrack = smfTrack++;
+    insert.trackData = track;
+    ops.push_back(std::move(insert));
+  }
+  pushEdit(tr("append imported tracks"), std::move(ops));
+  return firstEngineTrack;
+}
+
 int SongDocument::freeChannel() const
 {
     bool used[16] = {};

@@ -3,6 +3,8 @@
 #include <QMap>
 #include <QObject>
 #include <algorithm>
+#include <limits>
+#include <utility>
 
 #include "ui/m4asemantics.h"
 
@@ -10,6 +12,50 @@ namespace {
 
 constexpr int kMaxEngineTracks = 16; // m4a MAX_TRACKS
 constexpr int kDefaultPcmBudget = 5; // pokeemerald m4aSoundInit maxChans
+
+bool isRealNoteOn(const SmfEvent &ev) {
+  return ev.isChannel() && ev.isNoteOn();
+}
+
+bool hasRealNoteOn(const SmfTrack &track) {
+  return std::any_of(track.events.begin(), track.events.end(), isRealNoteOn);
+}
+
+ImportTrackInfo inspectImportTrack(const SmfTrack &track, int smfTrack) {
+  ImportTrackInfo info;
+  info.smfTrack = smfTrack;
+  SmfChannelPrefix prefix;
+  bool nameSeen = false;
+  for (const SmfEvent &ev : track.events) {
+    prefix.observe(ev);
+    if (ev.isMeta() && ev.metaType == 0x03 && !nameSeen && prefix.channel < 0) {
+      nameSeen = true;
+      info.name = QString::fromLatin1(ev.blob).trimmed();
+    }
+    if (!ev.isChannel())
+      continue;
+    if (std::find(info.channels.begin(), info.channels.end(), ev.channel()) ==
+        info.channels.end())
+      info.channels.push_back(ev.channel());
+    switch (ev.typeNibble()) {
+    case 0x9:
+      if (ev.data1 != 0) {
+        info.noteCount++;
+        if (info.programs.empty())
+          info.notesBeforeProgram = true;
+      }
+      break;
+    case 0xC:
+      if (std::find(info.programs.begin(), info.programs.end(), ev.data0) ==
+          info.programs.end())
+        info.programs.push_back(ev.data0);
+      break;
+    default:
+      break;
+    }
+  }
+  return info;
+}
 
 // Mirrors SongDocument::rebuildTrackMap / MidiTimeline::build: the first 16
 // channel-bearing chunks, as chunk indices in file order.
@@ -31,7 +77,191 @@ std::vector<int> engineTrackMap(const SmfFile &smf, int *dropped)
     return map;
 }
 
+bool validTimeSignature(const SmfEvent &ev) {
+  return ev.isMeta() && ev.metaType == 0x58 && ev.blob.size() >= 2;
+}
+
+bool validKeySignature(const SmfEvent &ev) {
+  return ev.isMeta() && ev.metaType == 0x59 && ev.blob.size() >= 2;
+}
+
+// Returns whether this event is global when read as a source chunk. The
+// first unprefixed 0x03 is always the chunk name, including marker-looking
+// text; later unprefixed 0x03 markers are global.
+bool isSourceGlobalEvent(const SmfEvent &ev, const SmfChannelPrefix &prefix,
+                         bool *nameSeen) {
+  if (!ev.isMeta())
+    return false;
+  if (ev.metaType == 0x03) {
+    if (prefix.channel >= 0 && !smfMetaIsMarker(ev))
+      return false;
+    if (prefix.channel < 0 && !*nameSeen) {
+      *nameSeen = true;
+      return false;
+    }
+  }
+  return (ev.metaType == 0x51 && ev.blob.size() == 3) ||
+         validTimeSignature(ev) || validKeySignature(ev) || smfMetaIsMarker(ev);
+}
+
+SmfTrack appendableTrack(const SmfTrack &source) {
+  SmfTrack result = source;
+  result.events.clear();
+  SmfChannelPrefix prefix;
+  bool nameSeen = false;
+  for (const SmfEvent &ev : source.events) {
+    prefix.observe(ev);
+    if (!isSourceGlobalEvent(ev, prefix, &nameSeen))
+      result.events.push_back(ev);
+  }
+  return result;
+}
+
+struct RetainedGlobal {
+  SmfEvent event;
+  int sourceTrack = -1;
+  size_t sourceEvent = 0;
+  int prefixChannel = -1;
+};
+
+SmfEvent nameContextEvent(const SmfEvent *sourceName) {
+  SmfEvent result;
+  result.status = 0xFF;
+  result.metaType = 0x03;
+  if (sourceName != nullptr && !smfMetaIsMarker(*sourceName))
+    result.blob = sourceName->blob;
+  return result;
+}
+
+SmfEvent channelPrefixEvent(uint64_t tick, int channel) {
+  SmfEvent result;
+  result.tick = tick;
+  result.status = 0xFF;
+  result.metaType = 0x20;
+  result.blob = QByteArray(1, char(channel));
+  return result;
+}
+
+bool retainedGlobalOrder(const RetainedGlobal &a, const RetainedGlobal &b) {
+  if (a.event.tick != b.event.tick)
+    return a.event.tick < b.event.tick;
+  if (a.sourceTrack != b.sourceTrack)
+    return a.sourceTrack < b.sourceTrack;
+  return a.sourceEvent < b.sourceEvent;
+}
+
+std::vector<bool> validatedSelection(const SmfFile &smf,
+                                     const std::vector<int> &indices) {
+  std::vector<bool> selected(smf.tracks.size(), false);
+  for (const int index : indices) {
+    if (index >= 0 && index < int(smf.tracks.size()))
+      selected[index] = true;
+  }
+  return selected;
+}
+
 } // namespace
+
+std::vector<ImportTrackInfo> noteBearingImportTracks(const SmfFile &smf) {
+  std::vector<ImportTrackInfo> tracks;
+  for (size_t i = 0; i < smf.tracks.size(); i++) {
+    ImportTrackInfo info = inspectImportTrack(smf.tracks[i], int(i));
+    if (info.noteCount > 0)
+      tracks.push_back(std::move(info));
+  }
+  return tracks;
+}
+
+SmfFile selectedMidiForNewSong(const SmfFile &smf,
+                               const std::vector<int> &selectedTracks) {
+  SmfFile result;
+  result.format = 1;
+  result.division = smf.division;
+  result.wasFormat0 = smf.wasFormat0;
+
+  const std::vector<bool> selected = validatedSelection(smf, selectedTracks);
+  std::vector<RetainedGlobal> globals;
+  SmfEvent firstName;
+  bool haveFirstName = false;
+  bool needsNameContext = false;
+  uint64_t globalEndTick = 0;
+  for (size_t sourceTrack = 0; sourceTrack < smf.tracks.size(); sourceTrack++) {
+    const SmfTrack &source = smf.tracks[sourceTrack];
+    SmfChannelPrefix prefix;
+    bool nameSeen = false;
+    bool trackHasGlobal = false;
+    for (size_t sourceEvent = 0; sourceEvent < source.events.size();
+         sourceEvent++) {
+      const SmfEvent &ev = source.events[sourceEvent];
+      prefix.observe(ev);
+      const bool firstUnprefixedName =
+          ev.isMeta() && ev.metaType == 0x03 && prefix.channel < 0 && !nameSeen;
+      if (firstUnprefixedName && !haveFirstName) {
+        firstName = ev;
+        haveFirstName = true;
+      }
+      if (!isSourceGlobalEvent(ev, prefix, &nameSeen))
+        continue;
+      trackHasGlobal = true;
+      RetainedGlobal global;
+      global.event = ev;
+      global.sourceTrack = int(sourceTrack);
+      global.sourceEvent = sourceEvent;
+      if (ev.metaType == 0x03 && prefix.channel >= 0)
+        global.prefixChannel = prefix.channel;
+      else if (ev.metaType == 0x03)
+        needsNameContext = true;
+      globals.push_back(std::move(global));
+    }
+    if (trackHasGlobal)
+      globalEndTick = std::max(globalEndTick, source.endTick);
+  }
+  std::stable_sort(globals.begin(), globals.end(), retainedGlobalOrder);
+
+  SmfTrack globalTrack;
+  globalTrack.endTick = globalEndTick;
+  if (needsNameContext)
+    globalTrack.events.push_back(
+        nameContextEvent(haveFirstName ? &firstName : nullptr));
+  for (const RetainedGlobal &global : globals) {
+    if (global.prefixChannel >= 0)
+      globalTrack.events.push_back(
+          channelPrefixEvent(global.event.tick, global.prefixChannel));
+    globalTrack.events.push_back(global.event);
+  }
+  result.tracks.push_back(std::move(globalTrack));
+
+  for (size_t sourceTrack = 0; sourceTrack < smf.tracks.size(); sourceTrack++) {
+    if (selected[sourceTrack] && hasRealNoteOn(smf.tracks[sourceTrack]))
+      result.tracks.push_back(appendableTrack(smf.tracks[sourceTrack]));
+  }
+  return result;
+}
+
+SmfFile selectedMidiForAppend(const SmfFile &smf,
+                              const std::vector<int> &selectedTracks) {
+  SmfFile result;
+  result.format = 1;
+  result.division = smf.division;
+  result.wasFormat0 = smf.wasFormat0;
+  const std::vector<bool> selected = validatedSelection(smf, selectedTracks);
+  for (size_t i = 0; i < smf.tracks.size(); i++) {
+    if (selected[i] && hasRealNoteOn(smf.tracks[i]))
+      result.tracks.push_back(appendableTrack(smf.tracks[i]));
+  }
+  return result;
+}
+
+uint64_t earliestNoteTick(const SmfFile &smf) {
+  uint64_t earliest = std::numeric_limits<uint64_t>::max();
+  for (const SmfTrack &track : smf.tracks) {
+    for (const SmfEvent &ev : track.events) {
+      if (isRealNoteOn(ev))
+        earliest = std::min(earliest, ev.tick);
+    }
+  }
+  return earliest;
+}
 
 ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget,
                                 const QString &playerName)
@@ -59,25 +289,14 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget,
 
     for (int et = 0; et < int(map.size()); et++) {
         const int smfTrack = map[et];
-        ImportTrackInfo info;
-        info.smfTrack = smfTrack;
-
-        // Name rule mirrors trackNameLoc/MidiTimeline: the chunk's first
-        // unprefixed 0x03 — a Channel-Prefix-scoped 0x03 is never its name.
-        SmfChannelPrefix prefix;
+        ImportTrackInfo info =
+            inspectImportTrack(smf.tracks[smfTrack], smfTrack);
         for (const SmfEvent &ev : smf.tracks[smfTrack].events) {
-            prefix.observe(ev);
-            if (ev.isMeta() && ev.metaType == 0x03 && info.name.isEmpty()
-                && prefix.channel < 0)
-                info.name = QString::fromLatin1(ev.blob).trimmed();
             if (!ev.isChannel())
                 continue;
             switch (ev.typeNibble()) {
             case 0x9:
                 if (ev.data1 != 0) {
-                    info.noteCount++;
-                    if (info.programs.empty())
-                        info.notesBeforeProgram = true;
                     edges.push_back({ev.tick, true, et, ev.data0});
                     break;
                 }
@@ -87,11 +306,6 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget,
                 break;
             case 0xB:
                 ccCounts[ev.data0]++;
-                break;
-            case 0xC:
-                if (std::find(info.programs.begin(), info.programs.end(), ev.data0)
-                    == info.programs.end())
-                    info.programs.push_back(ev.data0);
                 break;
             default:
                 break;

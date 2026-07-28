@@ -140,6 +140,7 @@ private:
     void finishCreateSong(const SmfFile &smf, const QString &label,
                           const QString &constant, const QString &player,
                           const SongCfg &cfg, const QString &newVoicegroup);
+    void handleDroppedMidi(const QString &path);
     // The dialog-less half of deleteSongById (also the harness entry): closes
     // the song's tab discarding its edits, moves the .mid to .porydaw/trash/,
     // removes the flag line, unregisters, drops the sidecar, deletes the

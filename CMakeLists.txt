@@ -115,6 +115,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/applicationstartup.cpp
     src/ui/applicationstartup.h
     src/ui/newsongwizard.cpp
+    src/ui/mididropdialog.cpp
+    src/ui/mididropdialog.h
     src/ui/newsongwizard.h
     src/ui/sampleeditordialog.cpp
     src/ui/sampleeditordialog.h

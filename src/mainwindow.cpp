@@ -4,28 +4,32 @@
 #include <QCheckBox>
 #include <QColor>
 #include <QComboBox>
+#include <QDebug>
 #include <QDialog>
 #include <QDialogButtonBox>
-#include <QDebug>
 #include <QDir>
 #include <QDockWidget>
-#include <QFormLayout>
-#include <QFontMetrics>
-#include <QHBoxLayout>
-#include <QLineEdit>
-#include <QRegularExpressionValidator>
+#include <QDragEnterEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontMetrics>
+#include <QFormLayout>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
-#include <QPainter>
 #include <QMessageBox>
+#include <QMimeData>
+#include <QPainter>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QRegularExpressionValidator>
 #include <QSettings>
 #include <QSpinBox>
 #include <QStatusBar>
@@ -35,6 +39,7 @@
 #include <QTimer>
 #include <QToolBar>
 #include <QUndoGroup>
+#include <QUrl>
 
 #include <QChildEvent>
 #include <QCloseEvent>
@@ -54,17 +59,19 @@
 #include "audio/sampleimport.h"
 #include "audio/sf2reader.h"
 #include "audio/wavexport.h"
+#include "core/midiimport.h"
 #include "core/miditimeline.h"
 #include "project/samplereg.h"
 #include "project/sidecar.h"
 #include "project/songregistry.h"
 #include "ui/keyboardshortcutsdialog.h"
 #include "ui/keymap.h"
+#include "ui/layout.h"
+#include "ui/mididropdialog.h"
 #include "ui/newsongwizard.h"
+#include "ui/polyphonypanel.h"
 #include "ui/sampleeditordialog.h"
 #include "ui/sf2zonepicker.h"
-#include "ui/polyphonypanel.h"
-#include "ui/layout.h"
 #include "ui/songlistpanel.h"
 #include "ui/songsettingsdialog.h"
 #include "ui/songview.h"
@@ -74,6 +81,8 @@
 #include "ui/typography.h"
 #include "ui/viewsidecar.h"
 #include "ui/voicegroupbrowser.h"
+#include <functional>
+#include <utility>
 
 #include <QUndoCommand>
 
@@ -126,6 +135,76 @@ QIcon tintedStandardIcon(QWidget &widget, QStyle::StandardPixmap icon,
                      QIcon::On);
     return result;
 }
+
+class MidiDropTabWidget final : public QTabWidget {
+public:
+  using DropHandler = std::function<void(const QList<QUrl> &)>;
+
+  explicit MidiDropTabWidget(DropHandler handler, QWidget *parent = nullptr)
+      : QTabWidget(parent), m_handler(std::move(handler)) {
+    setAcceptDrops(true);
+  }
+
+protected:
+  void dragEnterEvent(QDragEnterEvent *event) override {
+    if (overContent(event->position().toPoint()) &&
+        acceptableUrls(event->mimeData())) {
+      event->acceptProposedAction();
+      return;
+    }
+    event->ignore();
+  }
+
+  void dragMoveEvent(QDragMoveEvent *event) override {
+    if (overContent(event->position().toPoint()) &&
+        acceptableUrls(event->mimeData())) {
+      event->acceptProposedAction();
+      return;
+    }
+    event->ignore();
+  }
+
+  void dropEvent(QDropEvent *event) override {
+    if (!overContent(event->position().toPoint()) ||
+        !acceptableUrls(event->mimeData())) {
+      event->ignore();
+      return;
+    }
+    const QList<QUrl> urls = event->mimeData()->urls();
+    event->acceptProposedAction();
+    m_handler(urls);
+  }
+
+private:
+  static bool isMidiUrl(const QUrl &url) {
+    if (!url.isLocalFile())
+      return false;
+    const QString path = url.toLocalFile();
+    return !path.isEmpty() &&
+           (QFileInfo(path).suffix().compare(QStringLiteral("mid"),
+                                             Qt::CaseInsensitive) == 0 ||
+            QFileInfo(path).suffix().compare(QStringLiteral("midi"),
+                                             Qt::CaseInsensitive) == 0);
+  }
+
+  static bool acceptableUrls(const QMimeData *mimeData) {
+    if (!mimeData)
+      return false;
+    const QList<QUrl> urls = mimeData->urls();
+    if (urls.isEmpty())
+      return false;
+    return std::all_of(urls.cbegin(), urls.cend(), isMidiUrl);
+  }
+
+  bool overContent(const QPoint &position) const {
+    if (!rect().contains(position))
+      return false;
+    const QTabBar *bar = tabBar();
+    return !bar || !bar->geometry().contains(position);
+  }
+
+  DropHandler m_handler;
+};
 } // namespace
 
 // A voicegroup voice edit, on its tab's undo stack: song and voicegroup
@@ -606,7 +685,17 @@ void MainWindow::buildUi()
 
     // Song tabs: each open song lives in its own tab with its own view,
     // document, and undo stack.
-    m_tabs = new QTabWidget(this);
+    m_tabs = new MidiDropTabWidget(
+        [this](const QList<QUrl> &urls) {
+          if (urls.size() != 1) {
+            QMessageBox::warning(
+                this, tr("Import MIDI"),
+                tr("Drop exactly one local .mid or .midi file at a time."));
+            return;
+          }
+          handleDroppedMidi(urls.front().toLocalFile());
+        },
+        this);
     m_tabs->setTabsClosable(true);
     m_tabs->setMovable(true);
     m_tabs->setDocumentMode(true);
@@ -1712,6 +1801,119 @@ void MainWindow::importMidi()
         return;
     finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(),
                      wizard.player(), wizard.cfg(), wizard.newVoicegroupName());
+}
+
+void MainWindow::handleDroppedMidi(const QString &path) {
+  if (!m_project.isOpen()) {
+    QMessageBox::warning(
+        this, tr("Import MIDI"),
+        tr("Open a decomp project before dropping a MIDI file."));
+    return;
+  }
+  const QFileInfo fileInfo(path);
+  if (path.isEmpty() || (fileInfo.suffix().compare(QStringLiteral("mid"),
+                                                   Qt::CaseInsensitive) != 0 &&
+                         fileInfo.suffix().compare(QStringLiteral("midi"),
+                                                   Qt::CaseInsensitive) != 0)) {
+    QMessageBox::warning(this, tr("Import MIDI"),
+                         tr("Drop a local .mid or .midi file."));
+    return;
+  }
+
+  SmfFile smf;
+  QString error;
+  if (!SmfFile::readFile(path, &smf, &error)) {
+    QMessageBox::warning(this, tr("Import MIDI"),
+                         tr("Could not read %1 as a MIDI file: %2")
+                             .arg(fileInfo.fileName(), error));
+    return;
+  }
+  const std::vector<ImportTrackInfo> eligible = noteBearingImportTracks(smf);
+  if (eligible.empty()) {
+    QMessageBox::warning(
+        this, tr("Import MIDI"),
+        tr("This MIDI file has no note-bearing tracks to import."));
+    return;
+  }
+
+  int newSongCapacity = 0;
+  for (const MusicPlayer &player :
+       SongRegistry::musicPlayers(m_project.root())) {
+    const int capacity = player.trackCount < 0 ? 16 : player.trackCount;
+    newSongCapacity = std::max(newSongCapacity, std::clamp(capacity, 0, 16));
+  }
+
+  const QString activeLabel = m_active ? m_active->doc.label() : QString();
+  const int appendCapacity =
+      m_active ? m_active->doc.availableImportTrackSlots() : 0;
+  const uint16_t activeDivision =
+      m_active ? m_active->doc.smf().division : uint16_t{0};
+  if ((!m_active && newSongCapacity == 0) ||
+      (m_active && appendCapacity == 0 && newSongCapacity == 0)) {
+    QMessageBox::warning(
+        this, tr("Import MIDI"),
+        tr("There is no available destination for this MIDI file. Add a "
+           "MusicPlayer entry or free a track slot in the active song, then "
+           "try again."));
+    return;
+  }
+
+  const auto createNewSong = [this, &smf,
+                              &path](const std::vector<int> &selected) {
+    SmfFile selectedSmf = selectedMidiForNewSong(smf, selected);
+    NewSongWizard wizard(&m_project, std::move(selectedSmf), path,
+                         vgCatalog().groupArgs, int(selected.size()), this);
+    if (wizard.exec() != QDialog::Accepted)
+      return;
+    finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(),
+                     wizard.player(), wizard.cfg(), wizard.newVoicegroupName());
+  };
+
+  if (!m_active && eligible.size() == 1) {
+    createNewSong({eligible.front().smfTrack});
+    return;
+  }
+
+  MidiDropDialog dialog(smf, eligible, activeLabel, appendCapacity,
+                        newSongCapacity, activeDivision, this);
+  if (dialog.exec() != QDialog::Accepted)
+    return;
+  const std::vector<int> selected = dialog.selectedTracks();
+  if (selected.empty())
+    return;
+  if (dialog.destination() == MidiDropDialog::NewSong) {
+    createNewSong(selected);
+    return;
+  }
+
+  stopPlayback();
+  SmfFile imported = selectedMidiForAppend(smf, selected);
+  rescaleDivision(&imported, m_active->doc.smf().division);
+  const int firstTrack = m_active->doc.appendImportedTracks(imported);
+  if (firstTrack < 0) {
+    QMessageBox::warning(
+        this, tr("Import MIDI"),
+        tr("The selected tracks no longer fit in the active song."));
+    return;
+  }
+  const std::vector<DocNote> notes = m_active->doc.notesForTrack(firstTrack);
+  if (!notes.empty()) {
+    const auto earliest =
+        std::min_element(notes.begin(), notes.end(),
+                         [](const DocNote &left, const DocNote &right) {
+                           if (left.tick != right.tick)
+                             return left.tick < right.tick;
+                           return left.key < right.key;
+                         });
+    m_active->view->revealNote(firstTrack, earliest->key, earliest->tick);
+    m_active->view->ensureTickVisible(earliest->tick);
+  } else {
+    m_active->view->selectTrack(firstTrack);
+    m_active->view->ensureTickVisible(0);
+  }
+  statusBar()->showMessage(tr("Imported %1 track(s) into %2.")
+                               .arg(selected.size())
+                               .arg(m_active->doc.label()));
 }
 
 void MainWindow::importSample()

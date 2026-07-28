@@ -1,13 +1,19 @@
 #include <QAction>
 #include <QCheckBox>
+#include <QComboBox>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QLabel>
 #include <QListWidget>
 #include <QProcess>
+#include <QPushButton>
+#include <QRadioButton>
 #include <QSettings>
 #include <QString>
 #include <QTemporaryDir>
+#include <algorithm>
 #include <cstdio>
 
 #include "core/midiimport.h"
@@ -16,6 +22,7 @@
 #include "mainwindow.h"
 #include "project/decompproject.h"
 #include "project/songregistry.h"
+#include "ui/mididropdialog.h"
 #include "ui/newsongwizard.h"
 #include "ui/songlistpanel.h"
 
@@ -585,6 +592,75 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
               "import: unknown budget warns about nothing");
     }
 
+    // Drag-import selection keeps note-bearing source chunks distinct, moves
+    // standalone globals into MTrk 0 exactly once, and strips them for append.
+    const std::vector<ImportTrackInfo> selectable = noteBearingImportTracks(external);
+    check(selectable.size() == 2 && selectable[0].smfTrack == 1
+              && selectable[0].channels == std::vector<uint8_t>{0}
+              && selectable[0].noteCount == 7 && selectable[1].smfTrack == 2
+              && selectable[1].channels == std::vector<uint8_t>{1}
+              && selectable[1].noteCount == 2,
+          "drag import: selectable track analysis");
+    SmfFile selectionSource = external;
+    SmfEvent laterTempo;
+    laterTempo.status = 0xFF;
+    laterTempo.metaType = 0x51;
+    laterTempo.tick = 240;
+    laterTempo.blob = QByteArray("\x07\xA1\x20", 3);
+    selectionSource.tracks[2].events.insert(selectionSource.tracks[2].events.begin() + 2,
+                                            laterTempo);
+    const auto countTempo = [](const SmfTrack &track) {
+        return std::count_if(track.events.begin(), track.events.end(),
+                             [](const SmfEvent &event) {
+                                 return event.isMeta() && event.metaType == 0x51;
+                             });
+    };
+    const SmfFile selectedSong = selectedMidiForNewSong(selectionSource, {1});
+    check(selectedSong.format == 1 && selectedSong.tracks.size() == 2
+              && countTempo(selectedSong.tracks[0]) == 2
+              && countTempo(selectedSong.tracks[1]) == 0
+              && earliestNoteTick(selectedSong) == 480,
+          "drag import: standalone selection projection");
+    const SmfFile selectedAppend = selectedMidiForAppend(selectionSource, {2});
+    check(selectedAppend.tracks.size() == 1
+              && countTempo(selectedAppend.tracks[0]) == 0
+              && earliestNoteTick(selectedAppend) == 0,
+          "drag import: append selection projection");
+
+    // The preflight defaults to Append, caps the checked prefix to free slots,
+    // clears warnings with Clear All, and expands selection for Create New.
+    {
+        MidiDropDialog dialog(external, selectable, QStringLiteral("Active"), 1, 2, 24);
+        check(dialog.destination() == MidiDropDialog::Append
+                  && dialog.selectedTracks() == std::vector<int>{1},
+              "drag dialog: append default and capacity prefix");
+        auto *clearAll = dialog.findChild<QPushButton *>("clearAllTracks");
+        auto *buttons = dialog.findChild<QDialogButtonBox *>();
+        auto *warnings = dialog.findChild<QLabel *>("importWarnings");
+        check(clearAll && buttons && warnings, "drag dialog: controls not found");
+        if (clearAll && buttons && warnings) {
+            clearAll->click();
+            check(dialog.selectedTracks().empty()
+                      && !buttons->button(QDialogButtonBox::Ok)->isEnabled()
+                      && warnings->text().isEmpty(),
+                  "drag dialog: Clear All state");
+        }
+        auto *newSong = dialog.findChild<QRadioButton *>("newSongDestination");
+        check(newSong && newSong->isEnabled(), "drag dialog: new-song choice unavailable");
+        if (newSong) {
+            newSong->click();
+            check(dialog.destination() == MidiDropDialog::NewSong
+                      && dialog.selectedTracks() == std::vector<int>({1, 2}),
+                  "drag dialog: new-song capacity selection");
+        }
+
+        MidiDropDialog noNewSong(external, selectable, QStringLiteral("Active"), 1, 0, 24);
+        auto *disabledNewSong =
+            noNewSong.findChild<QRadioButton *>("newSongDestination");
+        check(disabledNewSong && !disabledNewSong->isEnabled(),
+              "drag dialog: zero-capacity new song enabled");
+    }
+
     SmfFile imported = external;
 
     // Division rescale onto the 24-clock grid (the wizard's default for a
@@ -619,6 +695,13 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
             check(wizard.songFile().division == 400,
                   "wizard: opting out of the rescale still rescaled");
         }
+
+        NewSongWizard dragWizard(&project, external, QStringLiteral("ext.mid"), vgArgs,
+                                 int(selectable.size()));
+        auto *player = dragWizard.findChild<QComboBox *>("playerCombo");
+        check(player && !dragWizard.player().isEmpty()
+                  && player->currentData().toString() == dragWizard.player(),
+              "drag wizard: no compatible raw player selected");
     }
 
     const QString importLabel = QStringLiteral("mus_onboardcheck_import");
@@ -645,6 +728,31 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         SongDocument doc;
         check(doc.load(*importedSong, &error), "imported song fails to open");
         check(doc.engineTrackCount() == 2, "imported song engine track count");
+
+        SmfFile appendBatch = selectedMidiForAppend(external, {1, 2});
+        rescaleDivision(&appendBatch, doc.smf().division);
+        const int available = doc.availableImportTrackSlots();
+        check(available >= 2, "append import: expected two available slots");
+        if (available >= 2 && !appendBatch.tracks.empty()) {
+            SmfFile oversized;
+            oversized.format = 1;
+            oversized.division = doc.smf().division;
+            for (int i = 0; i <= available; i++)
+                oversized.tracks.push_back(appendBatch.tracks.front());
+            check(doc.appendImportedTracks(oversized) == -1
+                      && doc.engineTrackCount() == 2,
+                  "append import: over-capacity batch was not atomic");
+
+            check(doc.appendImportedTracks(appendBatch) == 2
+                      && doc.engineTrackCount() == 4 && doc.isDirty(),
+                  "append import: batch did not append atomically");
+            doc.undoStack()->undo();
+            check(doc.engineTrackCount() == 2,
+                  "append import: one undo did not remove the batch");
+            doc.undoStack()->redo();
+            check(doc.engineTrackCount() == 4,
+                  "append import: one redo did not restore the batch");
+        }
     }
 
     if (haveMid2agb)

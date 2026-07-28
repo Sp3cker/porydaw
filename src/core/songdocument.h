@@ -109,6 +109,13 @@ public:
     int trackBudget() const { return m_trackBudget; }
     void setTrackBudget(int budget) { m_trackBudget = std::clamp(budget, 0, 16); }
 
+    // Capacity for importing channel-bearing chunks, bounded by both the
+    // engine's 16-track ceiling and this song's player allocation.
+    int availableImportTrackSlots() const;
+    // Append every channel-bearing chunk in one undoable operation. Returns
+    // the pre-append engine-track count, or -1 when the import is rejected.
+    int appendImportedTracks(const SmfFile &smf);
+
     // Lookups. Results go stale on any mutation.
     std::vector<DocNote> notesForTrack(int engineTrack) const;
     bool findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const;
