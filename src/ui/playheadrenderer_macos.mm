@@ -5,6 +5,7 @@
 
 #include <QGuiApplication>
 #include <QImage>
+#include <QPoint>
 #include <QRect>
 #include <QRegion>
 #include <QSize>
@@ -133,16 +134,22 @@ public:
         m_rootLayer.get() != m_attachedView.layer.sublayers.lastObject) {
       [m_attachedView.layer addSublayer:m_rootLayer.get()];
     }
+    const QPoint overlayOffset =
+        m_owner.mapTo(m_owner.window(), QPoint(0, 0));
     if (m_hasLayout && m_overlaySize == overlaySize &&
+        m_overlayOffset == overlayOffset &&
         m_visibleSurfaces == visibleSurfaces &&
         m_triangleClip == triangleClip) {
       return;
     }
 
     DisabledActionTransaction transaction;
+    const auto rootRect =
+        CGRectMake(overlayOffset.x(), overlayOffset.y(), overlaySize.width(),
+                   overlaySize.height());
     const auto rootBounds =
         CGRectMake(0.0, 0.0, overlaySize.width(), overlaySize.height());
-    setLayerRect(m_rootLayer.get(), rootBounds);
+    setLayerRect(m_rootLayer.get(), rootRect);
     setLayerRect(m_bodyClipLayer.get(), rootBounds);
     setLayerRect(m_bodyMaskLayer.get(), rootBounds);
     setLayerRect(m_triangleClipLayer.get(), rootBounds);
@@ -163,6 +170,7 @@ public:
     m_triangleMaskLayer.get().path = trianglePath.get();
 
     m_overlaySize = overlaySize;
+    m_overlayOffset = overlayOffset;
     m_visibleSurfaces = visibleSurfaces;
     m_triangleClip = triangleClip;
     m_hasLayout = true;
@@ -203,11 +211,13 @@ public:
 
 private:
   void attachToNativeView() {
-    WId ownerWId = m_owner.internalWinId();
-    if (ownerWId == 0 && m_owner.isVisible()) {
-      ownerWId = m_owner.winId();
+    QWidget *topLevel = m_owner.window();
+    WId topLevelWId = topLevel ? topLevel->internalWinId() : 0;
+    if (topLevelWId == 0 && topLevel && topLevel->isVisible()) {
+      topLevelWId = topLevel->winId();
     }
-    auto *ownerView = ownerWId ? reinterpret_cast<NSView *>(ownerWId) : nullptr;
+    auto *ownerView =
+        topLevelWId ? reinterpret_cast<NSView *>(topLevelWId) : nullptr;
     if (ownerView == m_attachedView &&
         (!ownerView || m_rootLayer.get().superlayer == ownerView.layer)) {
       return;
@@ -216,7 +226,6 @@ private:
     [m_rootLayer.get() removeFromSuperlayer];
     m_attachedView = nullptr;
     if (ownerView) {
-      ownerView.wantsLayer = YES;
       [ownerView.layer addSublayer:m_rootLayer.get()];
       m_attachedView = ownerView;
     }
@@ -235,6 +244,7 @@ private:
   RetainedObject<CALayer> m_triangleLayer;
 
   QSize m_overlaySize;
+  QPoint m_overlayOffset;
   QRegion m_visibleSurfaces;
   QRect m_triangleClip;
   bool m_hasLayout = false;
