@@ -466,12 +466,17 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     }
 
     // Jump-from-context reveal and used-voice marks: rows for programs the
-    // song references render bold, revealTrackVoice raises the dock and
-    // selects the track's current program, and document edits that add or
-    // remove voice changes keep the marks in sync.
+    // song references render with a highlighted background, revealTrackVoice
+    // raises the dock and selects the track's current program, and document
+    // edits that add or remove voice changes keep the marks in sync.
     {
         QTreeWidget *tree = m_vgBrowser->findChild<QTreeWidget *>();
         if (check(tree != nullptr, "voicegroup browser has no tree")) {
+            // An unmarked row keeps the default (no-fill) brush, so a set
+            // background brush is the mark.
+            const auto marked = [](const QTreeWidgetItem *item) {
+                return item->background(0).style() != Qt::NoBrush;
+            };
             const QSet<int> used = tab->view->usedVoices();
             check(!used.isEmpty(), "song reports no used voices");
             int unused = -1;
@@ -482,11 +487,11 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             bool marksOk = true;
             for (int p : used) {
                 const QTreeWidgetItem *item = tree->topLevelItem(p);
-                marksOk = marksOk && item && item->font(0).bold();
+                marksOk = marksOk && item && marked(item);
             }
-            check(marksOk, "used voices are not marked bold in the dock");
-            check(unused < 0 || !tree->topLevelItem(unused)->font(0).bold(),
-                  "an unused voice is marked bold");
+            check(marksOk, "used voices are not highlighted in the dock");
+            check(unused < 0 || !marked(tree->topLevelItem(unused)),
+                  "an unused voice is highlighted");
 
             // Track-header path: the dock reappears and the track's current
             // program becomes the selected slot.
@@ -506,10 +511,10 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
 
                 // A new voice change gains the mark; undoing it clears it.
                 tab->doc.addLanePoint(track, DOC_CC_VOICE, 480, unused);
-                check(tree->topLevelItem(unused)->font(0).bold(),
+                check(marked(tree->topLevelItem(unused)),
                       "a new voice change did not gain the used mark");
                 tab->doc.undoStack()->undo();
-                check(!tree->topLevelItem(unused)->font(0).bold(),
+                check(!marked(tree->topLevelItem(unused)),
                       "undoing the voice change did not clear the used mark");
             }
         }

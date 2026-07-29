@@ -79,8 +79,8 @@ public:
     // the roll's shortcuts must keep working during playback.
     void revealSlot(int slot);
     // The programs the song actually references (first programs + voice
-    // changes); their rows render bold so the handful of voices in play
-    // stands out of the 128.
+    // changes); their rows render with a highlighted background so the
+    // handful of voices in play stands out of the 128.
     void setUsedVoices(const QSet<int> &used);
     // The source's voice at slot changed outside the editor (an undo/redo,
     // or the owner applying a requested edit): refresh the slot's row, and
@@ -119,6 +119,7 @@ signals:
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
+    void changeEvent(QEvent *event) override;
 
 private:
     void pressedVoice(QTreeWidgetItem *item);

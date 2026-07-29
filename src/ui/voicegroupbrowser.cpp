@@ -19,6 +19,8 @@
 
 #include "ui/m4asemantics.h"
 
+#include "ui/theme/themeruntime.h"
+
 #include "project/songregistry.h"
 
 namespace {
@@ -446,17 +448,37 @@ void VoicegroupBrowser::setVoicegroup(const LoadedVoiceGroup *vg)
 
 void VoicegroupBrowser::markUsedRow(QTreeWidgetItem *item, bool used)
 {
-    // A weight-only font: everything unset resolves against the tree's font
-    // at paint time, so rows follow the typeface preference instead of
-    // freezing the family and size that were current when they were marked.
-    // The style name is cleared explicitly so an inherited named style
-    // cannot override the weight.
-    QFont f;
-    f.setStyleName({});
-    f.setWeight(used ? QFont::DemiBold : QFont::Normal);
-    for (int col = 0; col < item->columnCount(); col++)
-        item->setFont(col, f);
+    // A translucent accent tint over the item surface. indicator_checked_
+    // background is the accent's fill role in every theme, and the accent's
+    // saturation makes the tint read on the near-neutral item surface where
+    // a selection_background tint washes out (the light presets' selection
+    // cyan lands within 1.05:1 of the item surface). 30% keeps the row's
+    // text above the 4.5:1 bar in all three presets. The brush freezes the
+    // color that was current when the row was marked, so changeEvent()
+    // re-marks every row on PaletteChange.
+    QBrush brush;
+    if (used) {
+        QColor tint = themes::color(themes::Role::indicator_checked_background);
+        tint.setAlphaF(0.30f);
+        brush = tint;
+    }
+    // The tree's count, not the item's: an item without ADSR text (drumkit,
+    // keysplit) has no data in column 2 yet, and item->columnCount() would
+    // leave that cell untinted.
+    for (int col = 0; col < m_tree->columnCount(); col++)
+        item->setBackground(col, brush);
     item->setToolTip(0, used ? tr("Used by this song") : QString());
+}
+
+// Used-row tints are inked when they are marked; a theme change would
+// otherwise leave them in the old theme's selection color.
+void VoicegroupBrowser::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::PaletteChange) {
+        for (int i = 0; i < m_tree->topLevelItemCount(); i++)
+            markUsedRow(m_tree->topLevelItem(i), m_usedVoices.contains(i));
+    }
 }
 
 void VoicegroupBrowser::setUsedVoices(const QSet<int> &used)

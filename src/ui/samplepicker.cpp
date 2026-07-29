@@ -184,9 +184,8 @@ QTreeWidgetItem *SamplePickerButton::addSection(const QString &title)
 {
     auto *item = new QTreeWidgetItem(m_list, {title});
     item->setFlags(Qt::ItemIsEnabled); // a label, never current/selected
-    // Weight-only, like VoicegroupBrowser::markUsedRow: the section header
-    // resolves family and size from the list's font at paint time, so it
-    // follows the typeface preference.
+    // A weight-only font: the section header resolves family and size from
+    // the list's font at paint time, so it follows the typeface preference.
     QFont f;
     f.setStyleName({});
     f.setWeight(QFont::DemiBold);

@@ -8,6 +8,7 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMimeData>
+#include <QScrollBar>
 #include <QSettings>
 #include <QString>
 #include <QStringList>
@@ -37,6 +38,8 @@
 // the end-of-track row is not copyable). Deleting a multi-row selection
 // clears the highlight instead of restoring it onto the surviving rows;
 // a single-row delete keeps its current row so Delete can be spammed.
+// The app-wide Follow Playhead toggle stops the running scrollTo while
+// the tint keeps tracking.
 
 namespace {
 
@@ -517,6 +520,44 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             }
             // Leave the song as found: two deletes + three inserts.
             for (int i = 0; i < 5 && doc.undoStack()->canUndo(); i++)
+                doc.undoStack()->undo();
+        }
+        {
+            // The app-wide Follow Playhead toggle: off, the playing row
+            // keeps its tint but the running scrollTo stops — the table
+            // stays where the user scrolled it. grab() first so the table
+            // has real geometry; a short song (the first song is often a
+            // sound effect) gets padded with undoable row copies until the
+            // table actually overflows its viewport.
+            (void)view.grab();
+            auto *vbar = table->verticalScrollBar();
+            int padded = 0;
+            while (vbar->maximum() <= 0 && padded < 200) {
+                for (int i = 0; i < 25 && padded < 200; i++, padded++)
+                    events->insertCopyOfRow(0);
+                (void)view.grab();
+            }
+            if (vbar->maximum() <= 0) {
+                fail("event table has no scroll range for the follow check");
+            } else {
+                const double pastEnd = double(track.endTick) + 10.0;
+                events->setPlayheadTick(0.0, false); // park the play row high
+                vbar->setValue(0);
+                events->setPlayheadTick(pastEnd, true);
+                if (vbar->value() == 0)
+                    fail("follow-on playback did not scroll the event table");
+                events->setPlayheadTick(0.0, false);
+                vbar->setValue(0);
+                events->setFollowPlayhead(false);
+                events->setPlayheadTick(pastEnd, true);
+                if (vbar->value() != 0)
+                    fail("follow-off playback scrolled the event table");
+                if (!tinted(model->rowCount() - 1))
+                    fail("follow-off playback lost the playhead tint");
+                events->setFollowPlayhead(true);
+            }
+            // Leave the song as found.
+            for (int i = 0; i < padded && doc.undoStack()->canUndo(); i++)
                 doc.undoStack()->undo();
         }
         // For the screenshot: playing, so the follow-scroll brings the

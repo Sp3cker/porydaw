@@ -41,6 +41,9 @@ public:
     // a mouse button or editing a cell). SongView pushes this every UI tick;
     // cheap when the row didn't change.
     void setPlayheadTick(double tick, bool playing);
+    // App-wide Follow Playhead toggle: off, the playing row is still tinted
+    // but the table stops scrolling to it.
+    void setFollowPlayhead(bool on);
     // Context-menu insert: a copy of the given table row's event at that
     // row's own tick. Public because the menu itself blocks in exec() and
     // can't be driven by the offscreen harness.
@@ -88,4 +91,5 @@ private:
     int m_pendingChunk = -1;
     double m_playTick = -1.0;      // last playhead tick pushed (-1 = none)
     bool m_playing = false;
+    bool m_followPlayhead = true;  // scroll to the playing row (transport bar)
 };

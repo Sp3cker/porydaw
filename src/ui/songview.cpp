@@ -4508,7 +4508,6 @@ public:
         m_mute->setCheckable(true);
         m_mute->setFixedSize(buttonExtent, buttonExtent);
     m_mute->setObjectName(QStringLiteral("trackMuteButton"));
-        m_mute->setToolTip(SongView::tr("Mute"));
         // Headers are rebuilt on every document edit; keep the persistent
         // mute/solo state (checked before connect, so nothing re-emits).
         m_mute->setChecked(sv->trackMuted(track));
@@ -4520,10 +4519,37 @@ public:
         m_solo->setCheckable(true);
         m_solo->setFixedSize(buttonExtent, buttonExtent);
     m_solo->setObjectName(QStringLiteral("trackSoloButton"));
-        m_solo->setToolTip(SongView::tr("Solo"));
         m_solo->setChecked(sv->trackSoloed(track));
         connect(m_solo, &QToolButton::toggled, this,
                 [this](bool on) { m_sv->setTrackSolo(m_track, on); });
+        // The keyboard toggles change the masks without a header rebuild;
+        // follow them. Re-entry through toggled is safe: setTrackMute/Solo
+        // no-op when the bit already matches.
+        connect(sv, &SongView::muteMaskChanged, this, [this](uint32_t mask) {
+            m_mute->setChecked(mask & (1u << m_track));
+        });
+        connect(sv, &SongView::soloMaskChanged, this, [this](uint32_t mask) {
+            m_solo->setChecked(mask & (1u << m_track));
+        });
+        // Display-only binding hints, like the context menus'. Live: the
+        // shortcuts dialog can rebind without a header rebuild.
+        const auto retip = [this] {
+            const auto &keys = keymap::Registry::instance();
+            const auto hint = [&keys](const QString &id, const QString &name) {
+                const QKeySequence seq = keys.bindings(id).value(0);
+                return seq.isEmpty()
+                           ? name
+                           : QStringLiteral("%1 (%2)").arg(
+                                 name, seq.toString(QKeySequence::NativeText));
+            };
+            m_mute->setToolTip(
+                hint(QStringLiteral("roll.mute_tracks"), SongView::tr("Mute")));
+            m_solo->setToolTip(
+                hint(QStringLiteral("roll.solo_tracks"), SongView::tr("Solo")));
+        };
+        retip();
+        connect(&keymap::Registry::instance(), &keymap::Registry::bindingsChanged,
+                this, retip);
         buttons->addStretch();
         buttons->addWidget(m_mute);
     buttons->addStretch();
@@ -6029,6 +6055,16 @@ bool SongView::handleEditKey(QKeyEvent *event)
         event->accept();
         return true;
     }
+    if (keys.matches(event, QStringLiteral("roll.mute_tracks"))) {
+        toggleMuteOnSelectedTracks();
+        event->accept();
+        return true;
+    }
+    if (keys.matches(event, QStringLiteral("roll.solo_tracks"))) {
+        toggleSoloOnSelectedTracks();
+        event->accept();
+        return true;
+    }
     return false;
 }
 
@@ -6105,10 +6141,11 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
         return;
     m_playheadTick = m_timeline->tickForSample(samplePos);
     m_playing = playing;
-    // Follow the playhead — but not while the user is mid-gesture (panning,
-    // dragging notes or selections, sweeping automation): yanking the view
-    // out from under a held mouse button is disorienting.
-    if (playing && !userGestureActive()) {
+    // Follow the playhead — unless following is switched off (transport
+    // bar), and never while the user is mid-gesture (panning, dragging notes
+    // or selections, sweeping automation): yanking the view out from under a
+    // held mouse button is disorienting.
+    if (playing && m_followPlayhead && !userGestureActive()) {
         const qreal px = contentX(m_playheadTick);
         const qreal vw = viewportWidth();
         if (px < 0.0 || px > vw * 85.0 / 100.0)
@@ -6279,6 +6316,45 @@ void SongView::setTrackSolo(int track, bool on)
     }
 }
 
+// Names the scoped tracks for the status line: "track 3" or "tracks 1, 3".
+static QString scopedTracksText(uint32_t mask)
+{
+    QStringList nums;
+    for (int t = 0; t < 16; t++) {
+        if (mask & (1u << t))
+            nums << QString::number(t + 1);
+    }
+    return nums.size() == 1
+               ? SongView::tr("track %1").arg(nums.first())
+               : SongView::tr("tracks %1").arg(nums.join(QStringLiteral(", ")));
+}
+
+void SongView::toggleMuteOnSelectedTracks()
+{
+    const uint32_t scope = trackSelectionMask();
+    const bool allOn = (m_muteMask & scope) == scope;
+    const uint32_t mask = allOn ? (m_muteMask & ~scope) : (m_muteMask | scope);
+    if (mask == m_muteMask)
+        return;
+    m_muteMask = mask;
+    emit muteMaskChanged(mask);
+    announce(allOn ? tr("Unmuted %1").arg(scopedTracksText(scope))
+                   : tr("Muted %1").arg(scopedTracksText(scope)));
+}
+
+void SongView::toggleSoloOnSelectedTracks()
+{
+    const uint32_t scope = trackSelectionMask();
+    const bool allOn = (m_soloMask & scope) == scope;
+    const uint32_t mask = allOn ? (m_soloMask & ~scope) : (m_soloMask | scope);
+    if (mask == m_soloMask)
+        return;
+    m_soloMask = mask;
+    emit soloMaskChanged(mask);
+    announce(allOn ? tr("Unsoloed %1").arg(scopedTracksText(scope))
+                   : tr("Soloed %1").arg(scopedTracksText(scope)));
+}
+
 QColor SongView::trackColor(int track)
 {
     return themes::trackIdentityColor(trackIdentityIndex(track));
@@ -6318,6 +6394,12 @@ QColor SongView::velocityNoteColor(int velocity)
     return QColor(QColor::fromHsvF(h0 + (h1 - h0) * t, s0 + (s1 - s0) * t,
                                    v0 + (v1 - v0) * t)
                       .rgb());
+}
+
+void SongView::setFollowPlayhead(bool on)
+{
+    m_followPlayhead = on;
+    m_events->setFollowPlayhead(on);
 }
 
 void SongView::setVelocityColorMode(bool on)

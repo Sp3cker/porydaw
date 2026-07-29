@@ -77,6 +77,8 @@ const Def kDefs[] = {
      QT_TR_NOOP("Stop"), QKeySequence::UnknownKey, ""},
     {"transport.loop", Context::Global, QT_TR_NOOP("Transport"),
      QT_TR_NOOP("Toggle Loop"), QKeySequence::UnknownKey, ""},
+    {"transport.follow_playhead", Context::Global, QT_TR_NOOP("Transport"),
+     QT_TR_NOOP("Follow Playhead"), QKeySequence::UnknownKey, ""},
     // Songs dock
     {"songs.find", Context::Global, QT_TR_NOOP("Songs"),
      QT_TR_NOOP("Find Song"), QKeySequence::Find, ""},
@@ -113,6 +115,12 @@ const Def kDefs[] = {
      QT_TR_NOOP("Nudge Left"), QKeySequence::UnknownKey, "Ctrl+Left"},
     {"roll.nudge_right", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Nudge Right"), QKeySequence::UnknownKey, "Ctrl+Right"},
+    // Toggle the header buttons from the keyboard, over the whole
+    // multi-track scope (the selected track plus Ctrl/Shift-scoped rows).
+    {"roll.mute_tracks", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Mute Selected Tracks"), QKeySequence::UnknownKey, "M"},
+    {"roll.solo_tracks", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Solo Selected Tracks"), QKeySequence::UnknownKey, "S"},
     // Ableton-style: hold the modifier and drag vertically anywhere on a
     // note to adjust its velocity. Qt maps Ctrl to Cmd on macOS.
     {"roll.velocity_drag", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),

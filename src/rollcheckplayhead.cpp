@@ -853,6 +853,39 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     checkFractionalMovement(view, timeline, marker, playheadColor, firstTick,
                             failures);
 }
+
+// The transport bar's Follow Playhead toggle: on (the default), playback
+// scrolls once the playhead crosses 85% of the viewport; off, the camera
+// stays exactly where the user put it however far the playhead runs.
+void checkFollowScroll(SongView &view, const MidiTimeline &timeline,
+                       QStringList &failures)
+{
+    const SongView::ViewState saved = view.viewState();
+    SongView::ViewState parked = saved;
+    parked.scrollPx = 0.0;
+    // Zoom in far enough that the content is guaranteed wider than the
+    // viewport — the follow-scroll clamps to the scrollable range, so a
+    // short song at a narrow zoom would make the follow-on case a no-op.
+    parked.pxPerBeat = 512.0;
+    view.applyViewState(parked);
+    // A tick well past the right edge of the parked viewport.
+    const uint64_t farTick =
+        uint64_t(double(view.width()) * 4.0 / view.pxPerTick()) + 1;
+    const uint64_t farSample = timeline.sampleForTick(farTick);
+    view.setPlayheadSample(farSample, true);
+    if (view.viewState().scrollPx <= 0.0)
+        failures.append("follow-on playback did not scroll to the playhead");
+    view.applyViewState(parked);
+    view.setFollowPlayhead(false);
+    view.setPlayheadSample(farSample, true);
+    if (view.viewState().scrollPx != 0.0)
+        failures.append("follow-off playback still scrolled the view");
+    view.setFollowPlayhead(true);
+    view.setPlayheadSample(farSample, true);
+    if (view.viewState().scrollPx <= 0.0)
+        failures.append("re-enabled follow did not scroll to the playhead");
+    view.applyViewState(saved);
+}
 } // namespace
 
 QStringList playheadOverlayCheckFailures(SongView &view,
@@ -874,6 +907,7 @@ QStringList playheadOverlayCheckFailures(SongView &view,
             processPaints();
         }
         checkPlayheadRendering(view, timeline, *marker, failures);
+        checkFollowScroll(view, timeline, failures);
     } else {
         failures.append("unified playhead overlay not found");
     }

@@ -1173,6 +1173,11 @@ void EventListView::setPlayheadTick(double tick, bool playing)
     updatePlayRow();
 }
 
+void EventListView::setFollowPlayhead(bool on)
+{
+    m_followPlayhead = on;
+}
+
 void EventListView::updatePlayRow()
 {
     // Hidden (the roll's page is current): the model's rows may be stale and
@@ -1197,9 +1202,12 @@ void EventListView::updatePlayRow()
     m_model->setPlayRow(row);
     if (!m_playing || row < 0)
         return;
-    // Follow the playhead like the roll does — but never yank the table
-    // while the user is holding a mouse button (row-drag selection, the
-    // scrollbar) or editing a cell.
+    // Follow the playhead like the roll does — unless following is switched
+    // off (transport bar), and never yank the table while the user is
+    // holding a mouse button (row-drag selection, the scrollbar) or editing
+    // a cell.
+    if (!m_followPlayhead)
+        return;
     if (QApplication::mouseButtons() != Qt::NoButton)
         return;
     QWidget *focus = QApplication::focusWidget();

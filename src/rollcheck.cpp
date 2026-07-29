@@ -14,6 +14,7 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QPoint>
+#include <QToolButton>
 #include <QRect>
 #include <QSettings>
 #include <QString>
@@ -62,6 +63,9 @@
 // header row reorders the tracks, the mute flag following the moved
 // track through undo and redo; a right-button release cancels the drag,
 // and a drop with a rename editor open commits the typed name first.
+// Bare M and S toggle mute/solo over the multi-track scope (mixed state
+// resolving toward on), the header buttons following without a rebuild
+// and the undo stack untouched.
 // The cursor over the roll marks its key row on the keyboard column
 // (with a note-name chip) — held through gestures so a drag's target row
 // stays readable — cleared when the cursor leaves the widget.
@@ -2007,6 +2011,58 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     fail("revealNote miss dropped the track selection");
             }
         }
+    }
+
+    // Keyboard mute/solo: bare M and S toggle the header buttons over the
+    // multi-track scope — the selected track alone, or every Ctrl-scoped
+    // row — with a mixed scope resolving toward on. View state only: the
+    // undo stack must not move, and the header buttons follow the masks
+    // without a panel rebuild.
+    {
+        const int preCount = doc.undoStack()->count();
+        const int track = view.selectedTrack();
+        if (view.muteMask() != 0 || view.soloMask() != 0)
+            fail("mute/solo masks not clean before the keyboard toggles");
+        sendKey(roll, Qt::Key_M, Qt::NoModifier);
+        if (!view.trackMuted(track))
+            fail("M did not mute the selected track");
+        auto *row = view.findChild<QWidget *>(
+            QStringLiteral("trackHeaderRow%1").arg(track));
+        auto *muteButton = row ? row->findChild<QToolButton *>(
+                                     QStringLiteral("trackMuteButton"))
+                               : nullptr;
+        if (!muteButton || !muteButton->isChecked())
+            fail("keyboard mute did not check the header button");
+        sendKey(roll, Qt::Key_M, Qt::NoModifier);
+        if (view.muteMask() != 0)
+            fail("second M did not unmute the selected track");
+        if (muteButton && muteButton->isChecked())
+            fail("keyboard unmute did not uncheck the header button");
+        sendKey(roll, Qt::Key_S, Qt::NoModifier);
+        if (!view.trackSoloed(track))
+            fail("S did not solo the selected track");
+        sendKey(roll, Qt::Key_S, Qt::NoModifier);
+        if (view.soloMask() != 0)
+            fail("second S did not unsolo the selected track");
+
+        // Multi-track scope + mixed state: with another track Ctrl-scoped
+        // in and already muted, M mutes the rest (on wins), and the next M
+        // clears the whole scope.
+        const int other = track == 0 ? 1 : 0;
+        if (view.findChild<QWidget *>(
+                QStringLiteral("trackHeaderRow%1").arg(other))) {
+            view.trackHeaderClicked(other, Qt::ControlModifier);
+            view.setTrackMute(other, true);
+            sendKey(roll, Qt::Key_M, Qt::NoModifier);
+            if (!view.trackMuted(track) || !view.trackMuted(other))
+                fail("M over a mixed scope did not mute every scoped track");
+            sendKey(roll, Qt::Key_M, Qt::NoModifier);
+            if (view.muteMask() != 0)
+                fail("second M did not unmute the whole scope");
+            view.trackHeaderClicked(track, Qt::NoModifier); // collapse scope
+        }
+        if (doc.undoStack()->count() != preCount)
+            fail("keyboard mute/solo touched the undo stack");
     }
 
     // Twenty commands: draw, set, draw, nudge, draw, the double-click

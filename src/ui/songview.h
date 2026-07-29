@@ -215,6 +215,11 @@ public:
     uint32_t soloMask() const { return m_soloMask; }
     void setTrackMute(int track, bool on);
     void setTrackSolo(int track, bool on);
+    // Keyboard face of the header buttons, over the multi-track scope:
+    // mixed state resolves toward on (mute/solo everything in the scope),
+    // a second press turns it back off.
+    void toggleMuteOnSelectedTracks();
+    void toggleSoloOnSelectedTracks();
 
     static QColor trackColor(int track);
     static QColor noteColor(int track, int velocity);
@@ -225,6 +230,10 @@ public:
     static QColor velocityNoteColor(int velocity);
     bool velocityColorMode() const { return m_velocityColorMode; }
     void setVelocityColorMode(bool on);
+    // App-wide Follow Playhead toggle (transport bar / View menu): off, the
+    // playback follow-scroll — the roll's and the event list's — is
+    // suppressed and the camera stays where the user put it.
+    void setFollowPlayhead(bool on);
     // The active-track note fill under the current display mode.
     QColor noteFillColor(int track, int velocity) const;
     // The track's program at the display position — the playhead while
@@ -560,6 +569,7 @@ private:
     GridFeel m_gridFeel = GridFeel::Straight;
     int m_gridMinDenom = 0; // note denominator; 0 = clock-grid floor
     bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)
+    bool m_followPlayhead = true;     // playback follow-scroll (transport bar)
     std::vector<std::pair<int, uint8_t>> m_emptyLanes; // (track, cc), unsorted
 
     songview::TimeRuler *m_ruler = nullptr;

@@ -128,6 +128,15 @@ int runKeymapCheck()
         check(keyMatches(QStringLiteral("roll.copy"), Qt::Key_C,
                          Qt::ControlModifier),
               "Ctrl+C should match roll.copy");
+        check(keyMatches(QStringLiteral("roll.mute_tracks"), Qt::Key_M,
+                         Qt::NoModifier),
+              "M should match mute tracks");
+        check(!keyMatches(QStringLiteral("roll.mute_tracks"), Qt::Key_M,
+                          Qt::ControlModifier),
+              "Ctrl+M must not match mute tracks");
+        check(keyMatches(QStringLiteral("roll.solo_tracks"), Qt::Key_S,
+                         Qt::NoModifier),
+              "S should match solo tracks");
         check(keyMatches(QStringLiteral("transport.play_pause"), Qt::Key_Space,
                          Qt::NoModifier),
               "Space should match play/pause");

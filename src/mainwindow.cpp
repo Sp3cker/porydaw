@@ -87,6 +87,7 @@ const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
 const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
 const QString kSystemFontKey = QStringLiteral("systemFont");
+const QString kFollowPlayheadKey = QStringLiteral("followPlayhead");
 
 #ifdef Q_OS_WIN
 // These names and values come from the current Windows SDK. The bundled
@@ -473,6 +474,36 @@ void MainWindow::buildUi()
     connect(m_loopAction, &QAction::toggled, this,
             [this](bool on) { m_audio.setLoopEnabled(on); });
     transport->addAction(m_loopAction);
+
+    // Whether playback drags the view along. Off, the playhead runs
+    // offscreen and the camera stays where the user put it — zoomed in on a
+    // phrase, playback must not yank the view away. App-wide and persisted;
+    // the checked state restores before the connect so the toggle handler
+    // (which walks m_tabs, not built yet) never runs during setup.
+    m_followPlayheadAction = new QAction(tr("&Follow Playhead"), this);
+    keys.attach(QStringLiteral("transport.follow_playhead"),
+                m_followPlayheadAction);
+    m_followPlayheadAction->setCheckable(true);
+    // The toolbar glyph must not leak into the View menu: a checkable
+    // action with a visible icon renders the icon INSTEAD of the check
+    // indicator there, hiding the on/off state.
+    m_followPlayheadAction->setIconVisibleInMenu(false);
+    m_followPlayheadAction->setToolTip(
+        tr("Scroll the view to keep the playhead visible during playback"));
+    {
+        QSettings settings;
+        m_followPlayheadAction->setChecked(
+            settings.value(kFollowPlayheadKey, true).toBool());
+    }
+    connect(m_followPlayheadAction, &QAction::toggled, this, [this](bool on) {
+        QSettings settings;
+        settings.setValue(kFollowPlayheadKey, on);
+        for (int i = 0; i < m_tabs->count(); i++) {
+            if (SongSession *s = sessionForWidget(m_tabs->widget(i)))
+                s->view->setFollowPlayhead(on);
+        }
+    });
+    transport->addAction(m_followPlayheadAction);
     refreshTransportIcons();
 
     m_timeLabel = new QLabel(QStringLiteral("--:--.- / --:--.-"), this);
@@ -739,6 +770,10 @@ void MainWindow::buildUi()
         }
     });
 
+    // The transport bar's follow toggle, findable here too: an app-wide
+    // persisted preference like the rest of this group.
+    viewMenu->addAction(m_followPlayheadAction);
+
     // Song tabs: each open song lives in its own tab with its own view,
     // document, and undo stack.
     m_tabs = new QTabWidget(this);
@@ -833,6 +868,8 @@ void MainWindow::refreshTransportIcons()
         tintedStandardIcon(*this, QStyle::SP_MediaStop, size));
     m_loopAction->setIcon(
         tintedStandardIcon(*this, QStyle::SP_BrowserReload, size));
+    m_followPlayheadAction->setIcon(
+        tintedStandardIcon(*this, QStyle::SP_MediaSeekForward, size));
 }
 
 void MainWindow::updateDockTabFonts()
@@ -905,6 +942,7 @@ SongSession *MainWindow::createSession()
     SongSession *s = owned.get();
     s->view = new SongView;
     s->view->setVelocityColorMode(m_velocityColorsAction->isChecked());
+    s->view->setFollowPlayhead(m_followPlayheadAction->isChecked());
     connect(s->view, &SongView::muteMaskChanged, this, [this, s](uint32_t mask) {
         if (s == m_active)
             m_audio.setMuteMask(mask);

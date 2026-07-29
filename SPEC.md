@@ -235,7 +235,9 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   project scan didn't list still commit via an explicit fallback row.
 - **Center — Arrangement + Piano roll:** track headers (≤ 16 tracks; name, instrument,
   mute/solo, volume/pan mini-controls) beside a shared-timeline piano roll. Selected
-  track is editable; other tracks ghosted. Loop region rendered from `[`/`]` markers.
+  track is editable; other tracks ghosted. `M`/`S` (rebindable) toggle mute/solo over
+  the selected track(s) — the whole Ctrl/Shift header scope, mixed state resolving
+  toward on. Loop region rendered from `[`/`]` markers.
   View → Color Notes by Velocity (app-wide, persisted) swaps the selected track's
   note fills from track-identity color to a velocity hue ramp — purple `#5f44e9`
   (velocity 1) through the spectrum to red `#e90904` (127); ghost notes unchanged.
@@ -245,7 +247,9 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   0–16/32/64/127 display max, persisted in the sidecar §4.4); MOD auto-fits by default
   since its musical range is roughly 0–20. Display only — event values are untouched,
   and data beyond the chosen range grows the axis rather than clipping.
-- **Transport bar:** play/pause/stop, loop toggle, position, tempo display, master
+- **Transport bar:** play/pause/stop, loop toggle, a follow-playhead toggle (also in
+  the View menu; off, playback stops scrolling the roll and event list — the camera
+  stays where the user put it; app-wide, persisted), position, tempo display, master
   volume, and a **polyphony meter** fed by the engine's overflow-debug counters
   showing DirectSound channel usage against the project's `maxChans` (dropped/stolen
   notes flash a warning — the #1 mystery for newcomers).

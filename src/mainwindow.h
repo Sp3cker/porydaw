@@ -333,6 +333,7 @@ private:
     QAction *m_pauseAction = nullptr;
     QAction *m_stopAction = nullptr;
     QAction *m_loopAction = nullptr;
+    QAction *m_followPlayheadAction = nullptr;
     QAction *m_saveAction = nullptr;
     QAction *m_exportWavAction = nullptr;
     QAction *m_settingsAction = nullptr;
