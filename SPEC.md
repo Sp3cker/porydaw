@@ -262,6 +262,19 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   roll; live preview notes read "live" instead.
 - **Song Settings dialog:** the `midi.cfg` flags presented as friendly controls
   (voicegroup dropdown, reverb slider, master volume, priority, exact-gate toggle).
+- **MIDI event list** (View → MIDI Event List; swaps in for the piano roll):
+  every event of one SMF chunk as an editable table row — tick, type, channel,
+  data bytes, meta/sysex payload, decoded summary — with per-category
+  filtering, an end-of-track row, and a playhead-following row tint. Cell
+  edits go through the document's raw-event API (shared undo stack); inserts
+  land at their tick's canonical position (setup events → note ends →
+  note-ons, the intra-tick order mid2agb's pairing depends on). Because
+  same-tick order is otherwise significant — the file preserves it and
+  mid2agb stable-sorts by time+type — rows can be reordered directly: drag a
+  row between same-tick siblings (the drop indicator only appears where the
+  drop is legal), nudge with Alt+Up/Down (rebindable), or use the context
+  menu's "Move up/down within tick". Reorders never cross a tick boundary
+  (the Tick cell retimes) and never unpin the canonical class order.
 - **Typeface preference:** the UI ships with the bundled Atkinson Hyperlegible
   scale (Body 1.25× the platform's base font size, Caption at the base size).
   View → Use System Font (app-wide, persisted) swaps the whole scale onto the

@@ -17,6 +17,7 @@ namespace keymap {
 enum class Context {
     Global,
     PianoRoll,
+    EventList,
 };
 
 struct CommandInfo {

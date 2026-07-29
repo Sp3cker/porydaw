@@ -4,11 +4,15 @@
 #include <QElapsedTimer>
 #include <QFontInfo>
 #include <QImage>
+#include <QKeyEvent>
 #include <QMenu>
+#include <QMimeData>
+#include <QSettings>
 #include <QString>
 #include <QStringList>
 #include <QStyleOptionViewItem>
 #include <QTableView>
+#include <QTemporaryDir>
 #include <algorithm>
 #include <cstdio>
 #include <memory>
@@ -373,6 +377,82 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             if (doc.smf().tracks[chunk].events.size() != total)
                 fail("insertCopyOfRow on the end-of-track row mutated the chunk");
         }
+        {
+            // Same-tick reorder. A fresh tick group past the end — CC 7,
+            // CC 10, note-on — swaps its CC pair by a model drop (the drag's
+            // engine) and swaps it back with the Alt+Up nudge through the
+            // table's event filter; illegal gaps (past the note-on, another
+            // tick) are refused before any mutation.
+            const int chunk2 = chunkCombo->currentData().toInt();
+            const uint64_t group = doc.smf().tracks[chunk2].endTick + 100;
+            SmfEvent ccA;
+            ccA.tick = group;
+            ccA.status = 0xB0;
+            ccA.data0 = 7;
+            ccA.data1 = 1;
+            SmfEvent ccB = ccA;
+            ccB.data0 = 10;
+            ccB.data1 = 2;
+            SmfEvent on;
+            on.tick = group;
+            on.status = 0x90;
+            on.data0 = 60;
+            on.data1 = 90;
+            doc.insertRawEvent(chunk2, ccA);
+            doc.insertRawEvent(chunk2, ccB);
+            doc.insertRawEvent(chunk2, on);
+            const long long iA = indexOf(doc.smf().tracks[chunk2], ccA);
+            const long long iB = indexOf(doc.smf().tracks[chunk2], ccB);
+            const long long iN = indexOf(doc.smf().tracks[chunk2], on);
+            if (iA < 0 || iB != iA + 1 || iN != iA + 2) {
+                fail("ui reorder scaffold not in canonical order");
+            } else {
+                // Unfiltered, display rows == event indices.
+                const std::unique_ptr<QMimeData> mime(
+                    model->mimeData({model->index(int(iA), 0)}));
+                if (!mime) {
+                    fail("row drag produced no mime data");
+                } else {
+                    if (!model->canDropMimeData(mime.get(), Qt::MoveAction,
+                                                int(iN), 0, QModelIndex()))
+                        fail("legal same-tick drop refused");
+                    if (model->canDropMimeData(mime.get(), Qt::MoveAction,
+                                               int(iN) + 1, 0, QModelIndex()))
+                        fail("drop past a same-tick note-on accepted");
+                    if (model->canDropMimeData(mime.get(), Qt::MoveAction, 0, 0,
+                                               QModelIndex()))
+                        fail("cross-tick drop accepted");
+                    if (!model->dropMimeData(mime.get(), Qt::MoveAction,
+                                             int(iN), 0, QModelIndex()))
+                        fail("legal same-tick drop not performed");
+                    QCoreApplication::processEvents(); // queued reorder + refresh
+                    const auto &evs = doc.smf().tracks[chunk2];
+                    if (indexOf(evs, ccB) != iA || indexOf(evs, ccA) != iB)
+                        fail("drop did not swap the same-tick CC pair");
+                    if (table->currentIndex().row() != int(iB))
+                        fail("selection did not follow the dropped event");
+                }
+                // Nudge the pair back: current row is the dropped CC, one
+                // Alt+Up returns it ahead of its sibling.
+                table->setCurrentIndex(model->index(int(iB), 0));
+                QKeyEvent press(QEvent::KeyPress, Qt::Key_Up, Qt::AltModifier);
+                QCoreApplication::sendEvent(table, &press);
+                const auto &evs = doc.smf().tracks[chunk2];
+                if (indexOf(evs, ccA) != iA || indexOf(evs, ccB) != iB)
+                    fail("Alt+Up nudge did not restore the pair's order");
+                if (table->currentIndex().row() != int(iA))
+                    fail("selection did not follow the nudged event");
+                // At the top of its legal range: a further nudge is a no-op.
+                const int undoCount = doc.undoStack()->count();
+                QKeyEvent again(QEvent::KeyPress, Qt::Key_Up, Qt::AltModifier);
+                QCoreApplication::sendEvent(table, &again);
+                if (doc.undoStack()->count() != undoCount)
+                    fail("a blocked nudge pushed an undo entry");
+            }
+            // Leave the song as found: two reorders + three inserts.
+            for (int i = 0; i < 5 && doc.undoStack()->canUndo(); i++)
+                doc.undoStack()->undo();
+        }
         // For the screenshot: playing, so the follow-scroll brings the
         // tinted row into view (also exercises the scrollTo path).
         events->setPlayheadTick(double(markerTick), true);
@@ -405,6 +485,17 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
 int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
                       const QString &screenshotPath)
 {
+    // The UI pass drives keymap-bound nudges (Alt+Up), so redirect QSettings
+    // into a temp dir: the check must see the shipped defaults, not the
+    // user's rebindings.
+    QTemporaryDir settingsDir;
+    if (settingsDir.isValid()) {
+        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope,
+                           settingsDir.path());
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
+                           settingsDir.path());
+    }
+
     DecompProject project;
     QString error;
     if (!project.open(projectRoot, &error)) {
@@ -522,10 +613,93 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
             }
         }
 
-        // Undo everything: byte-identical; redo deterministic. (The script
-        // is net-zero — insert, move, delete, EOT clamped back — so the
-        // redone bytes are compared against the captured edited state, not
-        // against "anything but the baseline".)
+        // Reorder: a same-tick setup pair swaps by explicit position — the
+        // one raw edit that picks position — while the clamp keeps setup
+        // ahead of the group's note-on and refuses to leave the tick.
+        if (ok) {
+            const uint64_t group = base + 1000;
+            SmfEvent ccA;
+            ccA.tick = group;
+            ccA.status = uint8_t(0xB0 | channel);
+            ccA.data0 = 7;
+            ccA.data1 = 1;
+            SmfEvent ccB = ccA;
+            ccB.data0 = 10;
+            ccB.data1 = 2;
+            SmfEvent on;
+            on.tick = group;
+            on.status = uint8_t(0x90 | channel);
+            on.data0 = 60;
+            on.data1 = 100;
+            doc.insertRawEvent(chunk, ccA);
+            doc.insertRawEvent(chunk, ccB);
+            doc.insertRawEvent(chunk, on);
+            const long long iA = indexOf(track, ccA);
+            const long long iB = indexOf(track, ccB);
+            const long long iN = indexOf(track, on);
+            if (iA < 0 || iB != iA + 1 || iN != iA + 2) {
+                fail("reorder scaffold not in canonical order");
+                ok = false;
+            }
+            size_t first = 0, last = 0;
+            if (ok) {
+                // The CC roams its setup run, never past the note-on; the
+                // note-on is pinned behind the whole run.
+                if (!doc.rawEventMoveBounds(chunk, size_t(iA), &first, &last)
+                    || first != size_t(iA) || last != size_t(iB)) {
+                    fail("rawEventMoveBounds wrong for a same-tick setup event");
+                    ok = false;
+                }
+                if (!doc.rawEventMoveBounds(chunk, size_t(iN), &first, &last)
+                    || first != size_t(iN) || last != size_t(iN)) {
+                    fail("rawEventMoveBounds lets a note-on cross its setup run");
+                    ok = false;
+                }
+            }
+            if (ok) {
+                doc.moveRawEvent(chunk, size_t(iA), size_t(iB));
+                if (indexOf(track, ccB) != iA || indexOf(track, ccA) != iB
+                    || indexOf(track, on) != iN || !trackSorted(track)) {
+                    fail("moveRawEvent did not swap the same-tick pair");
+                    ok = false;
+                }
+            }
+            if (ok) {
+                // Clamped moves that land on the current position are no-ops
+                // and must not grow the undo stack: past the note-on (the
+                // event already sits at its last legal slot) and across the
+                // tick boundary toward index 0.
+                const int undoCount = doc.undoStack()->count();
+                doc.moveRawEvent(chunk, size_t(iB), size_t(iN));
+                doc.moveRawEvent(chunk, size_t(iA), 0);
+                if (doc.undoStack()->count() != undoCount
+                    || indexOf(track, ccA) != iB || indexOf(track, ccB) != iA) {
+                    fail("a clamped no-op move mutated the chunk or undo stack");
+                    ok = false;
+                }
+            }
+            if (ok) {
+                // Direct undo/redo of the move: the final undo-all cannot see
+                // a broken MoveEvent revert, because the whole scaffold group
+                // is erased by the insert undos either way.
+                doc.undoStack()->undo();
+                if (indexOf(track, ccA) != iA || indexOf(track, ccB) != iB) {
+                    fail("undoing the reorder did not restore the order");
+                    ok = false;
+                }
+                doc.undoStack()->redo();
+                if (indexOf(track, ccA) != iB || indexOf(track, ccB) != iA) {
+                    fail("redoing the reorder did not reapply the swap");
+                    ok = false;
+                }
+            }
+        }
+
+        // Undo everything: byte-identical; redo deterministic. (Most of the
+        // script is net-zero — insert, move, delete, EOT clamped back — so
+        // the redone bytes are compared against the captured edited state,
+        // not against "anything but the baseline". The reorder scaffold
+        // above stays in, putting the swap itself under both comparisons.)
         const QByteArray edited = doc.smf().write();
         while (doc.undoStack()->canUndo())
             doc.undoStack()->undo();

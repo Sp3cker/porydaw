@@ -11,6 +11,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
+#include <QMimeData>
 #include <QMouseEvent>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
@@ -21,9 +22,11 @@
 #include <QVBoxLayout>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 
 #include "core/smf.h"
 #include "core/songdocument.h"
+#include "ui/keymap.h"
 #include "ui/m4asemantics.h"
 #include "ui/songview.h"
 #include "ui/typography.h"
@@ -116,6 +119,9 @@ QString blobText(const SmfEvent &ev)
 // full on every repaint of its cell. The editor (EditRole) still gets the
 // complete text.
 constexpr int kBlobDisplayBytes = 64;
+
+// Internal row-reorder drags carry the dragged event's chunk index.
+constexpr char kEventRowMime[] = "application/x-porydaw-event-row";
 
 QString blobDisplayText(const SmfEvent &ev)
 {
@@ -556,15 +562,19 @@ public:
     {
         Qt::ItemFlags f = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
         const SmfTrack *tr = track();
-        if (!tr || !index.isValid())
+        if (!tr)
             return f;
+        // Drops land only on the root — between rows, never onto one.
+        if (!index.isValid())
+            return f | Qt::ItemIsDropEnabled;
         if (index.row() == int(m_rows.size())) {
             if (index.column() == ColTick)
                 f |= Qt::ItemIsEditable;
-            return f;
+            return f; // the end-of-track row is not draggable
         }
         if (m_rows[index.row()] >= tr->events.size()) // stale while hidden
             return f;
+        f |= Qt::ItemIsDragEnabled;
         const SmfEvent &ev = tr->events[m_rows[index.row()]];
         switch (index.column()) {
         case ColTick:
@@ -667,6 +677,104 @@ public:
         return true;
     }
 
+    // ---- Row drag-and-drop: reorder within a tick group. Items carry the
+    // drag flag but never the drop flag, so every drop is a between-rows gap
+    // on the root. The drop itself routes through the view's reorder handler
+    // (queued — the document edit resets this model, which must not happen
+    // inside the view's drop-event processing).
+
+    void setReorderHandler(std::function<void(size_t, size_t)> handler)
+    {
+        m_reorder = std::move(handler);
+    }
+
+    Qt::DropActions supportedDropActions() const override { return Qt::MoveAction; }
+
+    QStringList mimeTypes() const override
+    {
+        return {QString::fromLatin1(kEventRowMime)};
+    }
+
+    QMimeData *mimeData(const QModelIndexList &indexes) const override
+    {
+        // Single-row drags only: a multi-row reorder has no defined meaning
+        // (returning null aborts the drag before it starts).
+        long long src = -1;
+        for (const QModelIndex &index : indexes) {
+            const long long i = eventIndexForRow(index.row());
+            if (i < 0 || (src >= 0 && i != src))
+                return nullptr; // the end-of-track row, or a second row
+            src = i;
+        }
+        if (src < 0)
+            return nullptr;
+        auto *mime = new QMimeData;
+        mime->setData(QString::fromLatin1(kEventRowMime), QByteArray::number(src));
+        return mime;
+    }
+
+    // The dragged event index and the post-move destination a drop at (row,
+    // parent) means; false when the payload or position is unusable. The
+    // destination is the gap's position in the post-move vector, so hidden
+    // (filtered-out) neighbors keep their places around it.
+    bool dropTarget(const QMimeData *data, int row, const QModelIndex &parent,
+                    size_t *from, size_t *dest) const
+    {
+        const SmfTrack *tr = track();
+        if (!tr || !data->hasFormat(QString::fromLatin1(kEventRowMime)))
+            return false;
+        bool ok = false;
+        const qulonglong src =
+            data->data(QString::fromLatin1(kEventRowMime)).toULongLong(&ok);
+        if (!ok || src >= tr->events.size())
+            return false;
+        int gap = parent.isValid() ? parent.row() : row;
+        if (gap < 0)
+            gap = int(m_rows.size()); // empty space below the rows
+        size_t target;
+        if (gap < int(m_rows.size())) {
+            // Before the event shown at the gap: it keeps sitting after the
+            // moved event, so the destination is its pre-move index minus
+            // the slot the move vacates below it.
+            const size_t t = m_rows[gap];
+            if (t >= tr->events.size())
+                return false; // stale while hidden
+            target = t > src ? t - 1 : t;
+        } else {
+            // At or past the end-of-track row: after the last shown event.
+            if (m_rows.empty() || m_rows.back() >= tr->events.size())
+                return false;
+            target = m_rows.back() > src ? m_rows.back() : size_t(src);
+        }
+        *from = size_t(src);
+        *dest = target;
+        return true;
+    }
+
+    bool canDropMimeData(const QMimeData *data, Qt::DropAction action, int row,
+                         int column, const QModelIndex &parent) const override
+    {
+        Q_UNUSED(column);
+        size_t from, dest, first, last;
+        return action == Qt::MoveAction && m_doc
+            && dropTarget(data, row, parent, &from, &dest)
+            && m_doc->rawEventMoveBounds(m_chunk, from, &first, &last)
+            && dest >= first && dest <= last && dest != from;
+    }
+
+    bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row,
+                      int column, const QModelIndex &parent) override
+    {
+        if (!canDropMimeData(data, action, row, column, parent) || !m_reorder)
+            return false;
+        size_t from, dest;
+        dropTarget(data, row, parent, &from, &dest);
+        QMetaObject::invokeMethod(
+            this, [handler = m_reorder, from, dest] { handler(from, dest); },
+            Qt::QueuedConnection);
+        return true;
+    }
+
 private:
     const SmfTrack *track() const
     {
@@ -693,6 +801,7 @@ private:
     int m_filter = FilterAll; // FilterBit mask of the shown categories
     int m_playRow = -1; // display row under the playhead; -1 = none
     std::vector<size_t> m_rows; // display row -> chunk event index (ascending)
+    std::function<void(size_t, size_t)> m_reorder; // drop -> view (from, dest)
 };
 
 namespace {
@@ -868,6 +977,20 @@ EventListView::EventListView(SongView *sv, QWidget *parent)
     m_table->setEditTriggers(QAbstractItemView::DoubleClicked
                              | QAbstractItemView::EditKeyPressed
                              | QAbstractItemView::SelectedClicked);
+    // Same-tick reorder by dragging a row between two others. InternalMove
+    // with overwrite off makes every drop a between-rows gap; the model
+    // vetoes gaps outside the dragged event's legal same-tick range, so the
+    // drop indicator only appears where the drop would land. The source row
+    // is never removed by the view: the model routes the drop into a
+    // document reorder and implements no removeRows.
+    m_table->setDragEnabled(true);
+    m_table->setAcceptDrops(true);
+    m_table->setDropIndicatorShown(true);
+    m_table->setDragDropMode(QAbstractItemView::InternalMove);
+    m_table->setDragDropOverwriteMode(false);
+    m_table->setDefaultDropAction(Qt::MoveAction);
+    m_model->setReorderHandler(
+        [this](size_t from, size_t dest) { reorderEvent(from, dest); });
     m_table->setAlternatingRowColors(true);
     m_table->setFrameShape(QFrame::NoFrame);
     m_table->verticalHeader()->setDefaultSectionSize(m_table->fontMetrics().height() + 6);
@@ -1131,6 +1254,82 @@ void EventListView::changeEvent(QEvent *event)
         applyRowIndexFont();
 }
 
+// Same-tick reorder: place the event at `from` so it lands at `dest` in the
+// chunk's vector (both indices pre-clamped by the callers, and clamped again
+// by the document). The current row follows the moved event — the refresh
+// restores by row position, which now names a sibling.
+void EventListView::reorderEvent(size_t from, size_t dest)
+{
+    const int chunk = m_model->chunk();
+    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
+        return;
+    size_t first, last;
+    if (!m_document->rawEventMoveBounds(chunk, from, &first, &last))
+        return;
+    dest = std::clamp(dest, first, last);
+    if (dest == from)
+        return;
+    m_document->moveRawEvent(chunk, from, dest); // refresh via documentChanged
+    const int row = m_model->rowForEventIndex(dest);
+    if (row >= 0) {
+        const QModelIndex idx = m_model->index(row, EventTableModel::ColTick);
+        m_settingCurrent = true;
+        m_table->setCurrentIndex(idx);
+        m_settingCurrent = false;
+        m_table->scrollTo(idx);
+    }
+    updatePlayRow();
+}
+
+// The post-move destination for nudging `row` past its visible neighbor in
+// `delta`'s direction (±1), or -1 when the move is impossible — off the
+// table, across a tick boundary, or pinned by the canonical intra-tick
+// order. `why` (optional) gets a user-facing reason for the latter two.
+long long EventListView::moveDestForRow(int row, int delta, QString *why) const
+{
+    const int chunk = m_model->chunk();
+    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
+        return -1;
+    const long long src = m_model->eventIndexForRow(row);
+    const long long target = m_model->eventIndexForRow(row + delta);
+    if (src < 0 || target < 0)
+        return -1; // no current event row, or nudged against the table's edge
+    const auto &events = m_document->smf().tracks[chunk].events;
+    if (size_t(src) >= events.size() || size_t(target) >= events.size())
+        return -1;
+    if (events[size_t(target)].tick != events[size_t(src)].tick) {
+        if (why)
+            *why = tr("Events reorder within their tick — edit the Tick cell "
+                      "to retime");
+        return -1;
+    }
+    // Erasing the source slot and inserting at the neighbor's pre-move index
+    // lands the event just past the neighbor in either direction.
+    size_t first, last;
+    if (!m_document->rawEventMoveBounds(chunk, size_t(src), &first, &last))
+        return -1;
+    if (size_t(target) < first || size_t(target) > last) {
+        if (why)
+            *why = tr("Setup events stay ahead of same-tick notes, and note "
+                      "ends ahead of note-ons");
+        return -1;
+    }
+    return target;
+}
+
+void EventListView::moveCurrentRow(int delta)
+{
+    const int row = m_table->currentIndex().row();
+    QString why;
+    const long long dest = moveDestForRow(row, delta, &why);
+    if (dest < 0) {
+        if (!why.isEmpty() && m_sv)
+            m_sv->announce(why);
+        return;
+    }
+    reorderEvent(size_t(m_model->eventIndexForRow(row)), size_t(dest));
+}
+
 bool EventListView::eventFilter(QObject *watched, QEvent *event)
 {
     if (watched == m_table) {
@@ -1149,6 +1348,15 @@ bool EventListView::eventFilter(QObject *watched, QEvent *event)
             if (keyEvent->key() == Qt::Key_Delete
                 || keyEvent->key() == Qt::Key_Backspace) {
                 deleteSelected();
+                return true;
+            }
+            const auto &keys = keymap::Registry::instance();
+            if (keys.matches(keyEvent, QStringLiteral("eventlist.move_up"))) {
+                moveCurrentRow(-1);
+                return true;
+            }
+            if (keys.matches(keyEvent, QStringLiteral("eventlist.move_down"))) {
+                moveCurrentRow(1);
                 return true;
             }
         }
@@ -1328,6 +1536,18 @@ void EventListView::showContextMenu(const QPoint &pos)
         showProgram = events[src].data0;
         showVoice = menu.addAction(tr("Show voice in voicegroup"));
     }
+    // Same-tick reorder, mirroring the drag and the Alt+Up/Down nudges.
+    // Present whenever the click hit an event row, enabled only when that
+    // direction has a legal same-tick landing spot.
+    QAction *moveUp = nullptr;
+    QAction *moveDown = nullptr;
+    if (src >= 0) {
+        menu.addSeparator();
+        moveUp = menu.addAction(tr("Move up within tick"));
+        moveUp->setEnabled(moveDestForRow(idx.row(), -1, nullptr) >= 0);
+        moveDown = menu.addAction(tr("Move down within tick"));
+        moveDown->setEnabled(moveDestForRow(idx.row(), 1, nullptr) >= 0);
+    }
     menu.addSeparator();
     QAction *del = menu.addAction(deletable > 0
                                       ? tr("Delete %n event(s)", nullptr, deletable)
@@ -1342,6 +1562,14 @@ void EventListView::showContextMenu(const QPoint &pos)
             insertCopyOfRow(idx.row());
         else
             addEvent();
+    } else if ((moveUp && chosen == moveUp) || (moveDown && chosen == moveDown)) {
+        // Act on the clicked row, which may sit inside a wider selection
+        // without being the current row.
+        const long long dest =
+            moveDestForRow(idx.row(), chosen == moveUp ? -1 : 1, nullptr);
+        if (dest >= 0)
+            reorderEvent(size_t(m_model->eventIndexForRow(idx.row())),
+                         size_t(dest));
     } else if (showVoice && chosen == showVoice) {
         m_sv->revealVoice(showProgram);
     } else if (chosen == del) {

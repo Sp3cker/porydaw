@@ -229,6 +229,22 @@ public:
     void insertRawEvent(int smfTrack, const SmfEvent &event);
     void modifyRawEvent(int smfTrack, size_t index, const SmfEvent &event);
     void deleteRawEvents(int smfTrack, std::vector<size_t> indices);
+    // Reorder within a tick: the event at index ends up at destIndex (its
+    // position in the post-move vector). Same-tick order is significant —
+    // the file keeps it and mid2agb stable-sorts — so this is the one raw
+    // edit that picks position directly. The destination is clamped to
+    // rawEventMoveBounds, so a move can never cross a tick boundary or
+    // break the canonical intra-tick invariants insert maintains; a move
+    // whose clamped destination is the current position is a no-op.
+    void moveRawEvent(int smfTrack, size_t index, size_t destIndex);
+    // The inclusive [first, last] range moveRawEvent would accept for the
+    // event at index: its own tick group, minus positions that would put a
+    // setup event after a same-tick note or a note-end after a same-tick
+    // note-on (in either direction — the moved event may not cross an
+    // event the canonical order pins it against). False when index is out
+    // of range.
+    bool rawEventMoveBounds(int smfTrack, size_t index, size_t *first,
+                            size_t *last) const;
     // Move the chunk's end-of-track marker; clamped so it never precedes the
     // chunk's last event.
     void setTrackEndTick(int smfTrack, uint64_t tick);
@@ -308,6 +324,7 @@ private:
             InsertEvent,
             RemoveEvent,
             ModifyEvent,
+            MoveEvent,   // reorder within a tick group: index -> indexTo
             InsertTrack, // insert trackData as chunk smfTrack
             RemoveTrack, // remove chunk smfTrack (contents recorded on apply)
             SetTrackEnd, // set chunk endTick to event.tick (old recorded on apply)
@@ -315,7 +332,8 @@ private:
         } type;
         int smfTrack = 0;
         int smfTrackTo = 0; // MoveTrack: the chunk's index after the move
-        size_t index = 0;   // Remove/Modify: target; Insert: recorded on apply
+        size_t index = 0;   // Remove/Modify/Move: target; Insert: recorded on apply
+        size_t indexTo = 0; // MoveEvent: the event's index after the move
         SmfEvent event;     // Insert: new event; Modify: new content (same tick)
         SmfEvent oldEvent;  // recorded on apply (Remove/Modify)
         uint64_t oldEndTick = 0; // recorded on apply (Insert past track end)
