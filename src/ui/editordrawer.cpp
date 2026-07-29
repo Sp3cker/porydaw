@@ -1,12 +1,15 @@
 #include "ui/editordrawer.h"
 #include "theme/themeruntime.h"
+#include "ui/layout.h"
 
 #include <QAction>
 #include <QApplication>
 #include <QEnterEvent>
-#include <QEvent>
 #include <QFrame>
+#include <QHBoxLayout>
+#include <QIcon>
 #include <QKeySequence>
+#include <QLabel>
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
@@ -14,6 +17,7 @@
 #include <QScrollArea>
 #include <QShortcut>
 #include <QShowEvent>
+#include <QSize>
 #include <QStackedWidget>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -25,6 +29,7 @@ constexpr int kLaneH = 48;
 constexpr int kAddLaneH = 20;
 constexpr int kDefaultDrawerHeightDivisor = 5;
 constexpr int kAutomationHandleH = 4;
+constexpr int kVelocityIconExtent = 14;
 
 } // namespace
 
@@ -117,6 +122,10 @@ EditorDrawer::EditorDrawer(QWidget *mainContent, QWidget *automationPage,
 
   m_velocityAction = new QAction(tr("Velocity"), this);
   m_velocityAction->setObjectName(QStringLiteral("velocityDrawerAction"));
+  QIcon velocityIcon(QStringLiteral(":/icons/velocity-bars.png"));
+  velocityIcon.addFile(QStringLiteral(":/icons/velocity-bars-selected.png"),
+                       QSize(), QIcon::Normal, QIcon::On);
+  m_velocityAction->setIcon(velocityIcon);
   m_velocityAction->setCheckable(true);
   m_velocityAction->setChecked(false);
   m_velocityAction->setAutoRepeat(false);
@@ -130,6 +139,16 @@ EditorDrawer::EditorDrawer(QWidget *mainContent, QWidget *automationPage,
   m_velocityTab->setFocusPolicy(Qt::NoFocus);
   m_velocityTab->setToolButtonStyle(Qt::ToolButtonTextOnly);
   m_velocityTab->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  m_velocityIcon = new QLabel(m_velocityTab);
+  m_velocityIcon->setFixedSize(QSize(kVelocityIconExtent, kVelocityIconExtent));
+  m_velocityIcon->setAttribute(Qt::WA_TransparentForMouseEvents);
+  auto *velocityTabLayout = new QHBoxLayout(m_velocityTab);
+  const int tabInset = ::layout::space(::layout::Space::Two);
+  velocityTabLayout->setContentsMargins(tabInset, 0, tabInset, 0);
+  velocityTabLayout->setSpacing(::layout::space(::layout::Space::One));
+  velocityTabLayout->addStretch(1);
+  velocityTabLayout->addWidget(m_velocityIcon);
+  syncVelocityIcon();
 
   m_drawerStack = new QStackedWidget(this);
   m_drawerStack->setObjectName(QStringLiteral("editorDrawer"));
@@ -153,17 +172,22 @@ EditorDrawer::EditorDrawer(QWidget *mainContent, QWidget *automationPage,
   m_automationTab->raise();
   m_velocityTab->raise();
 
-  m_automationShortcut =
-      new QShortcut(QKeySequence(Qt::Key_A), this);
+  m_automationShortcut = new QShortcut(QKeySequence(Qt::Key_A), this);
   m_automationShortcut->setContext(Qt::WindowShortcut);
-  connect(m_automationShortcut, &QShortcut::activated, this, [this] {
-    toggleDrawerPage(DrawerPage::Automations);
-  });
+  connect(m_automationShortcut, &QShortcut::activated, this,
+          [this] { toggleDrawerPage(DrawerPage::Automations); });
   m_velocityShortcut = new QShortcut(QKeySequence(Qt::Key_V), this);
   m_velocityShortcut->setContext(Qt::WindowShortcut);
-  connect(m_velocityShortcut, &QShortcut::activated, this, [this] {
-    toggleDrawerPage(DrawerPage::Velocity);
+  connect(m_velocityShortcut, &QShortcut::activated, this,
+          [this] { toggleDrawerPage(DrawerPage::Velocity); });
+  connect(m_velocityTab, &QToolButton::pressed, this, [this] {
+    static const QIcon pressedIcon(
+        QStringLiteral(":/icons/velocity-bars-selected.png"));
+    m_velocityIcon->setPixmap(pressedIcon.pixmap(
+        m_velocityIcon->size(), m_velocityIcon->devicePixelRatioF()));
   });
+  connect(m_velocityTab, &QToolButton::released, this,
+          [this] { syncVelocityIcon(); });
 
   connect(m_automationAction, &QAction::triggered, this,
           [this] { toggleDrawerPage(DrawerPage::Automations); });
@@ -241,6 +265,15 @@ void EditorDrawer::syncDrawerTabs() {
                                  m_drawerPage == DrawerPage::Automations);
   m_velocityAction->setChecked(m_drawerVisible &&
                                m_drawerPage == DrawerPage::Velocity);
+  syncVelocityIcon();
+}
+
+void EditorDrawer::syncVelocityIcon() {
+  const QIcon::State state =
+      m_velocityAction->isChecked() ? QIcon::On : QIcon::Off;
+  m_velocityIcon->setPixmap(m_velocityAction->icon().pixmap(
+      m_velocityIcon->size(), m_velocityIcon->devicePixelRatioF(),
+      QIcon::Normal, state));
 }
 
 void EditorDrawer::showEvent(QShowEvent *event) {

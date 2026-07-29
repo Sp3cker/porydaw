@@ -211,6 +211,15 @@ qt_add_resources(porydaw "cursor_images"
         resources/right-drag.png
         resources/right-drag@2x.png
 )
+qt_add_resources(porydaw "velocity_icon"
+    PREFIX "/icons"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    FILES
+        resources/velocity-bars.png
+        resources/velocity-bars@2x.png
+        resources/velocity-bars-selected.png
+        resources/velocity-bars-selected@2x.png
+)
 target_link_libraries(porydaw PRIVATE porydaw_app)
 if(WIN32)
     # Stage the Qt DLLs beside porydaw.exe so the build tree runs directly.

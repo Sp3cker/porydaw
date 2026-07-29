@@ -5,6 +5,7 @@
 #include <QWidget>
 
 class QAction;
+class QLabel;
 class QResizeEvent;
 class QScrollArea;
 class QShortcut;
@@ -49,6 +50,7 @@ private:
 
   void layoutEditorDrawer();
   void syncDrawerTabs();
+  void syncVelocityIcon();
 
   QStackedWidget *m_drawerStack = nullptr;
   QScrollArea *m_lanesScroll = nullptr;
@@ -57,6 +59,7 @@ private:
   QToolButton *m_automationTab = nullptr;
   QAction *m_velocityAction = nullptr;
   QToolButton *m_velocityTab = nullptr;
+  QLabel *m_velocityIcon = nullptr;
   QShortcut *m_automationShortcut = nullptr;
   QShortcut *m_velocityShortcut = nullptr;
   int m_drawerHeight = 0;
