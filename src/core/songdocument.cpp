@@ -80,6 +80,7 @@ private:
     std::vector<SongDocument::EditOp> m_ops;
 };
 
+
 class SongCfgCommand : public QUndoCommand
 {
 public:
@@ -798,6 +799,7 @@ void SongDocument::setNotesVelocity(const std::vector<DocNote> &notes, uint8_t v
     pushEdit(tr("set velocity"), std::move(ops));
 }
 
+
 void SongDocument::nudgeNotesVelocity(const std::vector<DocNote> &notes, int delta)
 {
     if (notes.empty() || delta == 0)
@@ -840,6 +842,7 @@ void SongDocument::setNotesVelocities(const std::vector<NoteVelocity> &edits) {
     return;
   pushEdit(tr("paint note velocities"), std::move(ops));
 }
+
 
 SmfEvent SongDocument::makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick,
                                      int value) const {

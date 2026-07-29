@@ -142,10 +142,14 @@ qt_add_library(porydaw_app STATIC
     src/ui/songviewmodel.h
     src/ui/editordrawer.cpp
     src/ui/editordrawer.h
+    src/core/psgvelocitymodel.cpp
+    src/core/psgvelocitymodel.h
     src/ui/songview.cpp
     src/ui/songview.h
     src/ui/velocityarea.cpp
     src/ui/velocityarea.h
+    src/ui/velocityaxis.cpp
+    src/ui/velocityaxis.h
     src/ui/playheadoverlay.cpp
     src/ui/playheadoverlay.h
     src/ui/eventlistview.cpp
@@ -176,6 +180,10 @@ qt_add_executable(porydaw
     src/rollcheckautomation.cpp
     src/rollcheckautomation.h
     src/rollcheck.cpp
+    src/rollcheckpsgvelocity.cpp
+    src/rollcheckpsgvelocity.h
+    src/rollcheckpsgvelocitymixed.cpp
+    src/rollcheckpsgvelocitymixed.h
     src/rollcheckplayhead.cpp
     src/rollcheckplayhead.h
     src/viewcheck.cpp
@@ -206,6 +214,15 @@ qt_add_resources(porydaw "cursor_images"
         resources/left-drag@2x.png
         resources/right-drag.png
         resources/right-drag@2x.png
+)
+qt_add_resources(porydaw "velocity_icon"
+    PREFIX "/icons"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    FILES
+        resources/velocity-bars.png
+        resources/velocity-bars@2x.png
+        resources/velocity-bars-selected.png
+        resources/velocity-bars-selected@2x.png
 )
 target_link_libraries(porydaw PRIVATE porydaw_app)
 if(WIN32)

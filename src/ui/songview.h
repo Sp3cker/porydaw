@@ -8,6 +8,7 @@
 #include <QSet>
 #include <QWidget>
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -15,6 +16,7 @@
 #include <vector>
 
 #include "core/miditimeline.h"
+#include "core/psgvelocitymodel.h"
 #include "core/songdocument.h"
 #include "ui/songviewmodel.h"
 
@@ -57,6 +59,9 @@ constexpr int kGutterW = kHeaderW + kKeyboardW;
 // velocity drag at any zoom. Also the default key height, so the handle
 // is available out of the box.
 constexpr int kVelHandleMinKeyH = 12;
+// A stationary press remains a click; the first moved pixel starts either
+// modifier-note or Velocity-pane node velocity editing.
+constexpr int kVelocityDragDistance = 1;
 // Auto snap grid: the zoom-adaptive grid shows the finest subdivision from
 // the feel's ladder whose cells are at least this wide, so lower values
 // mean a busier grid at the same zoom. Exposed so viewcheck derives its
@@ -66,18 +71,17 @@ constexpr double kAutoGridMinCellPx = 16.0;
 // from kVelHandleMinKeyH up, the grab target for velocity drags. Exposed
 // for roll interaction checks. The default DPR keeps integer-DIP callers
 // compatible while the roll supplies its actual display scale.
-inline QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr = 1.0)
-{
-    const qreal pixel = 1.0 / dpr;
-    const qreal barH =
-        qRound(noteRect.height() / pixel) >= 20 ? 2 * pixel : pixel;
-    const qreal innerH = noteRect.height() - 2 * pixel;
-    const qreal y =
-        std::min(noteRect.top() + pixel
-                     + (127 - velocity) * (innerH - pixel) / 127.0,
-                 noteRect.bottom() - pixel - barH);
-    return QRectF(noteRect.left() + pixel, y,
-                  std::max(pixel, noteRect.width() - 2 * pixel), barH);
+inline QRectF velBarRect(const QRectF &noteRect, int velocity,
+                         qreal dpr = 1.0) {
+  const qreal pixel = 1.0 / dpr;
+  const qreal barH =
+      qRound(noteRect.height() / pixel) >= 20 ? 2 * pixel : pixel;
+  const qreal innerH = noteRect.height() - 2 * pixel;
+  const qreal y = std::min(noteRect.top() + pixel +
+                               (127 - velocity) * (innerH - pixel) / 127.0,
+                           noteRect.bottom() - pixel - barH);
+  return QRectF(noteRect.left() + pixel, y,
+                std::max(pixel, noteRect.width() - 2 * pixel), barH);
 }
 // Frame weights for note borders and the selection ring, in physical
 // pixels for the given display ratio. Authored in DIPs (border 1, ring
@@ -85,13 +89,9 @@ inline QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr = 1.0)
 // display does; painting still lands on whole physical pixels so
 // fractional scale factors cannot open seams. Exposed so roll checks
 // assert the same math the paint code uses.
-inline int noteBorderPixels(qreal dpr)
-{
-    return std::max(1, qRound(dpr));
-}
-inline int selectionRingPixels(qreal dpr)
-{
-    return std::max(1, qRound(1.5 * dpr));
+inline int noteBorderPixels(qreal dpr) { return std::max(1, qRound(dpr)); }
+inline int selectionRingPixels(qreal dpr) {
+  return std::max(1, qRound(1.5 * dpr));
 }
 QPoint wheelDelta(const QWheelEvent *event);
 double wheelAngleUnits(const QWheelEvent *event);
@@ -198,7 +198,7 @@ public:
     double scrollY = 0.0;
     int selectedTrack = 0;
     uint64_t editCursorTick = 0;
-    int laneHeight = 48;             // shared automation row height
+    int laneHeight = 48; // shared automation row height
     QHash<AutomationRowId, AutomationRowDisplayState> rowStates;
     QList<int> splitterSizes; // legacy roll/drawer sizes; [1] is drawer height
     bool drawerVisible = true;
@@ -425,8 +425,23 @@ public:
       return tick == other.tick && key == other.key;
     }
   };
+  int canonicalNoteVelocity(int track, uint64_t tick, uint8_t key,
+                            int proposedVelocity) const;
+  std::optional<uint8_t> noteVelocityLevel(int track, uint64_t tick,
+                                           uint8_t key, int velocity) const;
+  std::optional<uint8_t> velocityForLevel(int track, uint64_t tick, uint8_t key,
+                                          uint8_t requestedLevel) const;
+  // A nonempty interaction scope must share one structural detent model.
+  // Empty scope resolves the selected track at the active cursor/playhead tick.
+  std::optional<VelocityDetentInfo>
+  velocityAxisDetents(int track, const std::vector<NoteId> &notes) const;
   const std::vector<NoteId> &selection() const { return m_selection; }
   bool isSelected(const ViewNote &note) const;
+  // While a band moves, both note surfaces render this preview instead of
+  // committed selection; an engaged empty vector intentionally highlights none.
+  bool isSelectionHighlighted(const ViewNote &note) const;
+  void setProvisionalSelectionHighlight(std::vector<NoteId> ids);
+  void clearProvisionalSelectionHighlight();
   void setSelection(std::vector<NoteId> ids);
   void clearSelection();
 
@@ -488,9 +503,8 @@ public:
   // ruler grid line and the covered contents (notes and automation
   // points) move with it; the band follows.
   void nudgeTimeSelection(bool right);
-  // Focus-sensitive dispatcher for designated editor surfaces: drawer A/V
-  // keys plus the shared note- and time-selection commands. Returns true
-  // when consumed.
+  // Focus-sensitive dispatcher for shared note- and time-selection commands.
+  // Returns true when consumed.
   bool handleEditKey(QKeyEvent *event);
   // A note transpose auditions until the focused editor surface receives a
   // non-repeating key release.
@@ -540,7 +554,7 @@ public:
   // Child-gesture entry point for the single-note preview. A new gesture
   // replaces any keyboard-transpose audition, so its later key release cannot
   // silence the gesture's note.
-  void audition(int track, int key, int velocity) ;
+  void audition(int track, int key, int velocity);
 
   // Fixed-length audition for the band-sweep chord preview: the note's tick
   // span converts to samples through the display timeline, so the preview
@@ -629,6 +643,8 @@ private:
   double maxRollScroll() const;
   void updateScrollbars();
   void rebuildAfterSongChange();
+  std::optional<PsgVelocityContext> velocityAxisContext(int track) const;
+  void refreshVelocityAxisContext();
   void mergeEmptyLanes();
   // Engine tracks a track-scoped time selection resolves to (used and
   // document-mapped), and the copyable lane identities of one track (its
@@ -646,6 +662,7 @@ private:
   const LoadedVoiceGroup *m_voicegroup = nullptr;
   SongDocument *m_document = nullptr;
   SongViewModel m_model;
+  std::optional<PsgVelocityContext> m_velocityAxisContext;
 
   double m_pxPerTick = 1.0;
   double m_scrollX = 0.0;
@@ -659,6 +676,7 @@ private:
   uint32_t m_soloMask = 0;
   bool m_velocityColorMode = false;
   std::vector<NoteId> m_selection;
+  std::optional<std::vector<NoteId>> m_provisionalSelectionHighlight;
   TimeSelection m_timeSel;
   Clip m_clip;
   struct EditKeyAudition {
@@ -686,7 +704,7 @@ private:
   songview::PlayheadOverlay *m_playheadOverlay = nullptr;
   QScrollBar *m_hbar = nullptr;
   QScrollBar *m_vbar = nullptr;
-  };
+};
 
 using AutomationRowId = SongView::AutomationRowId;
 using AutomationRowDisplayState = SongView::AutomationRowDisplayState;

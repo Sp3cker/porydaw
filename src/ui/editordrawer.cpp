@@ -4,7 +4,6 @@
 #include <QAction>
 #include <QApplication>
 #include <QEnterEvent>
-#include <QEvent>
 #include <QFrame>
 #include <QKeySequence>
 #include <QMouseEvent>
@@ -153,17 +152,14 @@ EditorDrawer::EditorDrawer(QWidget *mainContent, QWidget *automationPage,
   m_automationTab->raise();
   m_velocityTab->raise();
 
-  m_automationShortcut =
-      new QShortcut(QKeySequence(Qt::Key_A), this);
+  m_automationShortcut = new QShortcut(QKeySequence(Qt::Key_A), this);
   m_automationShortcut->setContext(Qt::WindowShortcut);
-  connect(m_automationShortcut, &QShortcut::activated, this, [this] {
-    toggleDrawerPage(DrawerPage::Automations);
-  });
+  connect(m_automationShortcut, &QShortcut::activated, this,
+          [this] { toggleDrawerPage(DrawerPage::Automations); });
   m_velocityShortcut = new QShortcut(QKeySequence(Qt::Key_V), this);
   m_velocityShortcut->setContext(Qt::WindowShortcut);
-  connect(m_velocityShortcut, &QShortcut::activated, this, [this] {
-    toggleDrawerPage(DrawerPage::Velocity);
-  });
+  connect(m_velocityShortcut, &QShortcut::activated, this,
+          [this] { toggleDrawerPage(DrawerPage::Velocity); });
 
   connect(m_automationAction, &QAction::triggered, this,
           [this] { toggleDrawerPage(DrawerPage::Automations); });
@@ -242,6 +238,7 @@ void EditorDrawer::syncDrawerTabs() {
   m_velocityAction->setChecked(m_drawerVisible &&
                                m_drawerPage == DrawerPage::Velocity);
 }
+
 
 void EditorDrawer::showEvent(QShowEvent *event) {
   QWidget::showEvent(event);

@@ -1,3 +1,4 @@
+#include <QFile>
 #include <QElapsedTimer>
 #include <QString>
 #include <QTemporaryDir>
@@ -84,6 +85,7 @@ int runEditCheck(const QString &projectRoot)
                 ok = false;
             }
         };
+
 
         if (track >= 0) {
             // Note ops: add, move, resize, re-velocity, delete.

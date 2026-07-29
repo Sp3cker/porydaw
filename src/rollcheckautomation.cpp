@@ -11,6 +11,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QStackedWidget>
@@ -27,6 +28,8 @@
 #include "project/decompproject.h"
 #include "ui/songview.h"
 #include "ui/velocityarea.h"
+#include "ui/theme/themeruntime.h"
+#include "ui/velocityaxis.h"
 #include "ui/viewsidecar.h"
 
 namespace {
@@ -396,16 +399,24 @@ void checkEditorDrawerAndLanes(const SongInfo &song, QStringList &failures) {
       view.findChild<QWidget *>(QStringLiteral("velocityArea")));
   auto *drawer =
       view.findChild<QStackedWidget *>(QStringLiteral("editorDrawer"));
-  auto *drawerTab =
+  auto *automationTab =
       view.findChild<QWidget *>(QStringLiteral("automationDrawerTab"));
+  auto *velocityTab =
+      view.findChild<QWidget *>(QStringLiteral("velocityDrawerTab"));
+  auto *velocityAction =
+      view.findChild<QAction *>(QStringLiteral("velocityDrawerAction"));
   auto *headerScroll =
       view.findChild<QWidget *>(QStringLiteral("trackHeaderScroll"));
   auto *drawerHandle =
       view.findChild<QWidget *>(QStringLiteral("editorDrawerHandle"));
-  if (!roll || !automationArea || !velocityArea || !drawer || !drawerTab ||
-      !headerScroll || !drawerHandle) {
+  if (!roll || !automationArea || !velocityArea || !drawer || !automationTab ||
+      !velocityTab || !velocityAction || !headerScroll || !drawerHandle) {
     failures.append("editor drawer controls not found");
     return;
+  }
+  if (!velocityAction->icon().isNull() ||
+      velocityTab->findChild<QLabel *>(QString(), Qt::FindDirectChildrenOnly)) {
+    failures.append("Velocity drawer tab is not text-only");
   }
   if (headerScroll->geometry() != headerScroll->parentWidget()->rect())
     failures.append("editor drawer shortened the track-header viewport");
@@ -445,6 +456,41 @@ void checkEditorDrawerAndLanes(const SongInfo &song, QStringList &failures) {
   if (velocityArea->focusPolicy() == Qt::NoFocus)
     failures.append("velocity editor is not focusable");
   QWidget *const velocityKeyTarget = velocityArea;
+
+  const uint64_t middleTick = noteTick + uint64_t(clock) * 8;
+  const uint64_t minimumTick = noteTick + uint64_t(clock) * 16;
+  constexpr uint8_t middleKey = noteKey + 1;
+  constexpr uint8_t minimumKey = noteKey + 2;
+  constexpr uint8_t middleVelocity = 60;
+  constexpr uint8_t minimumVelocity = 20;
+  document.addNote(0, middleTick, middleKey, clock * 4, middleVelocity);
+  document.addNote(0, minimumTick, minimumKey, clock * 4, minimumVelocity);
+  document.undoStack()->clear();
+  const std::vector<SongView::NoteId> velocityLabelSelection{
+      {uint32_t(noteTick), noteKey},
+      {uint32_t(middleTick), middleKey},
+      {uint32_t(minimumTick), minimumKey},
+  };
+  view.setSelection(velocityLabelSelection);
+  processUiEvents();
+  const QImage selectedVelocityLabels = captureLogical(*velocityArea);
+  const auto selectedTextPixelsAt = [&](int velocity) {
+    const int centerY =
+        qRound(songview::velocityToY(velocity, velocityArea->height()));
+    const QRect labelRegion(songview::kGutterW - 46, centerY - 12, 35, 24);
+    return colorPixelCount(
+        selectedVelocityLabels, labelRegion,
+        themes::color(themes::Role::item_selected_background));
+  };
+  if (selectedTextPixelsAt(minimumVelocity) == 0 ||
+      selectedTextPixelsAt(100) == 0) {
+    failures.append(
+        "velocity graduation omitted a selected minimum or maximum value");
+  }
+  if (selectedTextPixelsAt(middleVelocity) != 0) {
+    failures.append(
+        "velocity graduation rendered a selected value between the extrema");
+  }
 
   // One Delete press is the representative shared note command. Assert that
   // exact command count, undo it, and clear the local stack so the fixture is
@@ -536,7 +582,7 @@ void checkEditorDrawerAndLanes(const SongInfo &song, QStringList &failures) {
   const int undoCountBeforeDrawer = document.undoStack()->count();
   const int rollHeightBeforeDrawer = roll->height();
   const int headerHeightBeforeDrawer = headerScroll->height();
-  click(drawerTab, drawerTab->rect().center());
+  click(automationTab, automationTab->rect().center());
   processUiEvents();
   const SongView::ViewState tabHiddenState = view.viewState();
   if (view.drawerVisible() || !drawer->isHidden() ||
@@ -551,7 +597,7 @@ void checkEditorDrawerAndLanes(const SongInfo &song, QStringList &failures) {
   }
   if (tabHiddenState.splitterSizes != openSizes)
     failures.append("hidden editor drawer forgot its expanded sizes");
-  if (drawerTab->isHidden())
+  if (automationTab->isHidden())
     failures.append("hiding the editor drawer also hid its Automations tab");
   roll->setFocus(Qt::OtherFocusReason);
   sendKey(roll, Qt::Key_A, Qt::NoModifier);
