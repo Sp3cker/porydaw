@@ -1160,6 +1160,106 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
           const int linearTarget =
               songview::yToVelocity(target.y(), velocityArea->height());
           const int pcmIndex = doc.undoStack()->index();
+          const QImage labelsBefore = velocityArea->grab().toImage();
+          const int relativeDragDistance = QApplication::startDragDistance() + 1;
+          const int horizontalDrag =
+              handle.x() + relativeDragDistance < velocityArea->width()
+                  ? relativeDragDistance
+                  : -relativeDragDistance;
+          const QPoint sameVelocityTarget =
+              handle + QPoint(horizontalDrag, 0);
+          sendMouse(velocityArea, QEvent::MouseButtonPress, handle,
+                    Qt::LeftButton, Qt::LeftButton);
+          sendMouse(velocityArea, QEvent::MouseMove, sameVelocityTarget,
+                    Qt::NoButton, Qt::LeftButton);
+          QCoreApplication::processEvents();
+          const QImage labelsDuring = velocityArea->grab().toImage();
+          sendMouse(velocityArea, QEvent::MouseButtonRelease,
+                    sameVelocityTarget, Qt::LeftButton, Qt::NoButton);
+          QCoreApplication::processEvents();
+          const QImage labelsAfterRelease = velocityArea->grab().toImage();
+
+          const auto logicalCrop = [](const QImage &image,
+                                      const QRectF &logicalRect) {
+            const qreal imageDpr = image.devicePixelRatio();
+            const QRect pixelRect(
+                qFloor(logicalRect.left() * imageDpr),
+                qFloor(logicalRect.top() * imageDpr),
+                qCeil(logicalRect.width() * imageDpr),
+                qCeil(logicalRect.height() * imageDpr));
+            return image.copy(pixelRect.intersected(image.rect()));
+          };
+          const auto gutterInk = [](const QImage &image,
+                                    const QRectF &logicalRect) {
+            const qreal imageDpr = image.devicePixelRatio();
+            const QRect pixelRect(
+                qFloor(logicalRect.left() * imageDpr),
+                qFloor(logicalRect.top() * imageDpr),
+                qCeil(logicalRect.width() * imageDpr),
+                qCeil(logicalRect.height() * imageDpr));
+            const QRect bounds = pixelRect.intersected(image.rect());
+            int ink = 0;
+            for (int y = bounds.top(); y <= bounds.bottom(); ++y) {
+              const QRgb background = image.pixel(0, y);
+              for (int x = bounds.left(); x <= bounds.right(); ++x)
+                ink += image.pixel(x, y) != background;
+            }
+            return ink;
+          };
+          const int sepX = songview::kGutterW - 1;
+          const qreal labelRadius = 10.0;
+          const qreal staticLabelY =
+              songview::velocityToY(127, velocityArea->height());
+          const QRectF staticLabelRegion(
+              1.0, staticLabelY - labelRadius, sepX - 9.0,
+              2.0 * labelRadius + 1.0);
+          const qreal liveY =
+              songview::velocityToY(64, velocityArea->height());
+          const QRectF liveLabelRegion(
+              1.0, liveY - labelRadius, sepX - 9.0,
+              2.0 * labelRadius + 1.0);
+          const qreal retainedTickY =
+              songview::velocityToY(96, velocityArea->height());
+          const QRectF retainedTickRegion(
+              sepX - 6.0, retainedTickY - 1.0, 5.0, 3.0);
+
+          const bool staticLabelWasVisible =
+              gutterInk(labelsBefore, staticLabelRegion) > 0;
+          const bool staticLabelHidden =
+              gutterInk(labelsDuring, staticLabelRegion) == 0;
+          const bool liveLabelVisible =
+              gutterInk(labelsDuring, liveLabelRegion) > 0 &&
+              logicalCrop(labelsDuring, liveLabelRegion) !=
+                  logicalCrop(labelsBefore, liveLabelRegion);
+          const bool tickRetained =
+              gutterInk(labelsDuring, retainedTickRegion) > 0 &&
+              logicalCrop(labelsDuring, retainedTickRegion) ==
+                  logicalCrop(labelsBefore, retainedTickRegion);
+          const bool labelsReturned =
+              logicalCrop(labelsAfterRelease, staticLabelRegion) ==
+                  logicalCrop(labelsBefore, staticLabelRegion) &&
+              logicalCrop(labelsAfterRelease, liveLabelRegion) ==
+                  logicalCrop(labelsBefore, liveLabelRegion);
+          if (!staticLabelWasVisible || !staticLabelHidden ||
+              !liveLabelVisible || !tickRetained || !labelsReturned) {
+            fail("sample velocity drag did not hide only static ruler labels");
+          }
+
+          sendMouse(velocityArea, QEvent::MouseButtonPress, handle,
+                    Qt::LeftButton, Qt::LeftButton);
+          sendMouse(velocityArea, QEvent::MouseMove, sameVelocityTarget,
+                    Qt::NoButton, Qt::LeftButton);
+          QKeyEvent cancelLabelDrag(QEvent::KeyPress, Qt::Key_Escape,
+                                    Qt::NoModifier);
+          QCoreApplication::sendEvent(velocityArea, &cancelLabelDrag);
+          QCoreApplication::processEvents();
+          const QImage labelsAfterCancel = velocityArea->grab().toImage();
+          if (logicalCrop(labelsAfterCancel, staticLabelRegion) !=
+                  logicalCrop(labelsBefore, staticLabelRegion) ||
+              logicalCrop(labelsAfterCancel, liveLabelRegion) !=
+                  logicalCrop(labelsBefore, liveLabelRegion)) {
+            fail("cancelled sample velocity drag did not restore ruler labels");
+          }
           const QPoint onePixelStep = handle + QPoint(0, 1);
           const int onePixelVelocity = std::clamp(
               64 + songview::yToVelocity(onePixelStep.y(),

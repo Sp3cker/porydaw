@@ -165,6 +165,8 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
   const std::vector<SongView::NoteId> &currentSel = m_sv->selection();
 
   if (!detentInfo) {
+    const bool hideGraduationLabels =
+        m_dragState == DragState::RelativeDrag;
     for (int v : tickValues) {
       const double y = axis.velocityToY(v);
       const bool isMajor = (std::find(labelValues.begin(), labelValues.end(),
@@ -175,13 +177,15 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
       p.drawLine(QLineF(sepX - tickLen, y, sepX, y));
     }
 
-    for (int v : labelValues) {
-      const double y = axis.velocityToY(v);
-      const QString text = QString::number(v);
-      const QRectF textBounds(sepX - 45, y - labelHeight / 2.0, 37,
-                              labelHeight);
-      p.setPen(themes::color(themes::Role::song_view_secondary_text));
-      p.drawText(textBounds, Qt::AlignRight | Qt::AlignVCenter, text);
+    if (!hideGraduationLabels) {
+      for (int v : labelValues) {
+        const double y = axis.velocityToY(v);
+        const QString text = QString::number(v);
+        const QRectF textBounds(sepX - 45, y - labelHeight / 2.0, 37,
+                                labelHeight);
+        p.setPen(themes::color(themes::Role::song_view_secondary_text));
+        p.drawText(textBounds, Qt::AlignRight | Qt::AlignVCenter, text);
+      }
     }
 
     std::set<int> activeVelocities;
@@ -216,8 +220,9 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
           themes::color(themes::Role::item_selected_background);
       p.setPen(QPen(selColor, 1.5));
       p.drawLine(QLineF(sepX - 8, y, sepX, y));
-      if (std::find(labelValues.begin(), labelValues.end(), v) ==
-          labelValues.end()) {
+      if (hideGraduationLabels ||
+          std::find(labelValues.begin(), labelValues.end(), v) ==
+              labelValues.end()) {
         const QString text = QString::number(v);
         const QRectF textBounds(sepX - 45, y - labelHeight / 2.0, 35,
                                 labelHeight);
