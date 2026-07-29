@@ -182,8 +182,6 @@ qt_add_executable(porydaw
     src/rollcheck.cpp
     src/rollcheckpsgvelocity.cpp
     src/rollcheckpsgvelocity.h
-    src/rollcheckpsgvelocitymixed.cpp
-    src/rollcheckpsgvelocitymixed.h
     src/rollcheckplayhead.cpp
     src/rollcheckplayhead.h
     src/viewcheck.cpp

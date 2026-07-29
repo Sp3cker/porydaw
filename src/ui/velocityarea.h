@@ -60,6 +60,8 @@ private:
   void updateSweep(QPointF p0, QPointF p1, const VelocityAxis &axis);
   std::optional<int> graduationVelocityAt(QPointF pos,
                                           const VelocityAxis &axis) const;
+  std::vector<int>
+  detentGraduationVelocities(const VelocityAxis &axis) const;
   void setSelectedVelocities(int velocity);
   std::vector<SongView::NoteId> detentContextNotes() const;
 

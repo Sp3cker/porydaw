@@ -150,6 +150,8 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
   const VelocityAxis axis = displayAxis();
   const std::vector<SongView::NoteId> detentNotes = detentContextNotes();
   const auto &detentInfo = axis.detents();
+  const std::vector<int> detentVelocities =
+      detentGraduationVelocities(axis);
   const RulerGraduations graduations =
       rulerGraduations(axis.velocityToY(1) - axis.velocityToY(127));
   const std::vector<int> &tickValues = graduations.ticks;
@@ -230,11 +232,9 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
   std::set<int> activeLevels;
   if (detentInfo) {
     const int detentCount = int(detentInfo->levels.size());
-    detentMessage =
-        SongView::tr("Song volume %1 gives PSG %2 %3 volume levels.")
-            .arg(m_sv->document()->cfg().masterVolume)
-            .arg(m4aVoiceTypeName(detentInfo->voiceType))
-            .arg(detentCount);
+    detentMessage = SongView::tr("%1 has %2 volume levels.")
+                        .arg(m4aVoiceTypeName(detentInfo->voiceType))
+                        .arg(detentCount);
     for (const SongView::NoteId &id : detentNotes) {
       int velocity = -1;
       if (const auto preview = m_previews.find(id);
@@ -281,8 +281,6 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
         makeDetentLabelLayout(sepX, detentCount, labelHeight);
     for (int level = 0; level < detentCount; ++level) {
       const double y = axis.levelToY(level);
-      const VelocityDetentLevel &description =
-          detentInfo->levels[std::size_t(level)];
       const bool active = activeLevels.find(level) != activeLevels.end();
       QColor color =
           themes::color(active ? themes::Role::item_selected_background
@@ -292,7 +290,7 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
 
       const QString label = SongView::tr("Volume %1 (%2)")
                                 .arg(level + 1)
-                                .arg(description.velocity);
+                                .arg(detentVelocities[std::size_t(level)]);
       p.setFont(active ? boldCaptionFont : captionFont);
       p.drawText(labelLayout.bounds(level, y),
                  Qt::AlignRight | Qt::AlignVCenter, label);
@@ -349,7 +347,6 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
     qreal xEnd;
     double y;
     bool isSelected;
-    bool isHeld;
   };
 
   std::vector<RenderNote> notesToDraw;
@@ -383,20 +380,9 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
       vel = *p;
     }
 
-    bool isHeld = false;
-    const auto noteDetents = m_sv->velocityAxisDetents(note.track, {noteId});
-    if (axis.compatibleWith(noteDetents)) {
-      const auto level =
-          m_sv->noteVelocityLevel(note.track, note.startTick, note.key, vel);
-      if (level) {
-        const auto representative = m_sv->velocityForLevel(
-            note.track, note.startTick, note.key, *level);
-        isHeld = representative && *representative != vel;
-      }
-    }
     const double y = noteY(note, vel, axis);
     notesToDraw.push_back(
-        {xStart, std::max(xStart + 1.0, xEnd), y, isSelected, isHeld});
+        {xStart, std::max(xStart + 1.0, xEnd), y, isSelected});
   }
 
   p.setClipping(true);
@@ -439,12 +425,6 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
     if (rn.isSelected)
       continue;
     if (rn.xStart >= plot.left() - 6 && rn.xStart <= plot.right() + 6) {
-      if (rn.isHeld) {
-        p.setPen(QPen(themes::color(themes::Role::song_view_secondary_text),
-                      1.0 / dpr));
-        p.setBrush(Qt::NoBrush);
-        p.drawEllipse(QPointF(rn.xStart, rn.y), 5.5, 5.5);
-      }
       p.setPen(QPen(Qt::black, 1.0));
       p.setBrush(nodeColor);
       p.drawEllipse(QPointF(rn.xStart, rn.y), 3.5, 3.5);
@@ -456,11 +436,6 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
     if (!rn.isSelected)
       continue;
     if (rn.xStart >= plot.left() - 6 && rn.xStart <= plot.right() + 6) {
-      if (rn.isHeld) {
-        p.setPen(QPen(selBgColor, 1.0 / dpr));
-        p.setBrush(Qt::NoBrush);
-        p.drawEllipse(QPointF(rn.xStart, rn.y), 6.0, 6.0);
-      }
       p.setPen(QPen(selBgColor, 2.0));
       p.setBrush(Qt::NoBrush);
       p.drawEllipse(QPointF(rn.xStart, rn.y), 4.5, 4.5);
@@ -901,6 +876,53 @@ VelocityAxis VelocityArea::displayAxis() const {
   return VelocityAxis(double(height()), detents);
 }
 
+std::vector<int>
+VelocityArea::detentGraduationVelocities(const VelocityAxis &axis) const {
+  const auto &detents = axis.detents();
+  if (!detents)
+    return {};
+
+  std::vector<int> result;
+  result.reserve(detents->levels.size());
+  for (const VelocityDetentLevel &level : detents->levels)
+    result.push_back(level.velocity);
+
+  std::vector<std::optional<int>> selectedValues(result.size());
+  std::vector<bool> conflictingValues(result.size());
+  const auto consider = [&](const SongView::NoteId &id, int velocity) {
+    const auto level = m_sv->noteVelocityLevel(
+        m_sv->selectedTrack(), id.tick, id.key, velocity);
+    if (!level || *level >= result.size())
+      return;
+    std::optional<int> &selected = selectedValues[*level];
+    if (!selected)
+      selected = velocity;
+    else if (*selected != velocity)
+      conflictingValues[*level] = true;
+  };
+
+  if (!m_origVelocities.empty()) {
+    for (const auto &[id, velocity] : m_origVelocities)
+      consider(id, velocity);
+  } else {
+    const std::vector<SongView::NoteId> contextNotes = detentContextNotes();
+    const std::set<SongView::NoteId, NoteIdCompare> context(
+        contextNotes.begin(), contextNotes.end());
+    for (const ViewNote &note : m_sv->model().notes) {
+      const SongView::NoteId id{note.startTick, note.key};
+      if (note.track == m_sv->selectedTrack() &&
+          context.find(id) != context.end())
+        consider(id, note.velocity);
+    }
+  }
+
+  for (std::size_t level = 0; level < result.size(); ++level) {
+    if (selectedValues[level] && !conflictingValues[level])
+      result[level] = *selectedValues[level];
+  }
+  return result;
+}
+
 std::optional<int>
 VelocityArea::graduationVelocityAt(QPointF pos,
                                    const VelocityAxis &axis) const {
@@ -916,7 +938,7 @@ VelocityArea::graduationVelocityAt(QPointF pos,
       const QRectF labelBounds =
           labelLayout.bounds(level, axis.levelToY(level));
       if (labelBounds.contains(pos))
-        return detentInfo->levels[std::size_t(level)].velocity;
+        return detentGraduationVelocities(axis)[std::size_t(level)];
     }
     return std::nullopt;
   }

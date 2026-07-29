@@ -5,10 +5,6 @@
 #include <algorithm>
 #include <cstddef>
 
-extern "C" {
-#include "m4a_channel.h"
-}
-
 namespace {
 
 const ToneData *resolveVoice(const ToneData &tone, uint8_t key) {
@@ -44,9 +40,7 @@ uint8_t representativeVelocity(int low, int high) {
 } // namespace
 
 std::optional<PsgVelocityContext> makePsgVelocityContext(const ToneData &tone,
-                                                         uint8_t key, int cc7,
-                                                         int cc10,
-                                                         int masterVolume) {
+                                                         uint8_t key) {
   const ToneData *voice = resolveVoice(tone, key);
   if (!voice)
     return std::nullopt;
@@ -54,49 +48,23 @@ std::optional<PsgVelocityContext> makePsgVelocityContext(const ToneData &tone,
   const uint8_t voiceType = voice->type & VOICE_TYPE_CGB_MASK;
   if (voiceType < VOICE_SQUARE_1 || voiceType > VOICE_NOISE)
     return std::nullopt;
-
-  const uint32_t volume = uint32_t(std::clamp(cc7, 0, 127) *
-                                   std::clamp(masterVolume, 0, 127) / 127);
-  const uint32_t scaledVolume = volume * 64 >> 5;
-  const int pan = std::clamp(2 * (std::clamp(cc10, 0, 127) - 64), -128, 127);
-  int8_t rhythmPan = 0;
-  if ((tone.type & VOICE_KEYSPLIT_ALL) && (voice->panSweep & 0x80))
-    rhythmPan = int8_t((int(voice->panSweep) - 0xC0) * 2);
-
-  return PsgVelocityContext{
-      voiceType,
-      uint8_t(uint32_t(pan + 128) * scaledVolume >> 8),
-      uint8_t(uint32_t(127 - pan) * scaledVolume >> 8),
-      rhythmPan,
-  };
+  return PsgVelocityContext{voiceType};
 }
 
 uint8_t psgVelocityLevel(const PsgVelocityContext &context,
                          uint8_t storedVelocity) {
-  const uint32_t effectiveVelocity = uint32_t(
-      mid2agbEffectiveVelocity(std::clamp<int>(storedVelocity, 1, 127)));
-  const uint32_t panR = uint32_t(0x80 + context.rhythmPan);
-  const uint32_t panL = uint32_t(0x7F - context.rhythmPan);
-
-  M4ACGBChannel channel{};
-  channel.type = context.voiceType;
-  channel.rightVolume = uint8_t(std::min<uint32_t>(
-      (panR * effectiveVelocity * context.volMR) >> 14, 0xFF));
-  channel.leftVolume = uint8_t(std::min<uint32_t>(
-      (panL * effectiveVelocity * context.volML) >> 14, 0xFF));
-  channel.panMask = 0xFF;
-  m4a_cgb_mod_vol(&channel);
-
-  const uint8_t envelopeGoal = channel.envelopeGoal & 0x0F;
+  const uint8_t hardwareLevel = uint8_t(
+      (mid2agbEffectiveVelocity(std::clamp<int>(storedVelocity, 1, 127)) - 1) /
+      8);
   if (context.voiceType != VOICE_PROGRAMMABLE_WAVE)
-    return envelopeGoal;
-  if (envelopeGoal <= 1)
+    return hardwareLevel;
+  if (hardwareLevel <= 1)
     return 0;
-  if (envelopeGoal <= 5)
+  if (hardwareLevel <= 5)
     return 1;
-  if (envelopeGoal <= 9)
+  if (hardwareLevel <= 9)
     return 2;
-  if (envelopeGoal <= 13)
+  if (hardwareLevel <= 13)
     return 3;
   return 4;
 }

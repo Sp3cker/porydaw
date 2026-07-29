@@ -1,5 +1,4 @@
 #include "rollcheckpsgvelocity.h"
-#include "rollcheckpsgvelocitymixed.h"
 
 #include <QAction>
 #include <QApplication>
@@ -7,6 +6,7 @@
 #include <QContextMenuEvent>
 #include <QEvent>
 #include <QFocusEvent>
+#include <QImage>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QMouseEvent>
@@ -159,24 +159,21 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
   if (songLabel == QStringLiteral("mus_poke_center") && view.timeline() &&
       view.timeline()->tracks[5].used) {
     const int originalTrack = view.selectedTrack();
-    // Track 6 alternates two Square 2 programs while changing PAN and VOL.
+    // Track 6 changes PAN and VOL while alternating Square 2 programs.
+    // Intrinsic graduations must remain identical for the same voice type.
     const std::array<uint64_t, 11> probeTicks{0,   132, 199, 210, 276, 300,
                                               330, 408, 433, 481, 600};
-    auto expectedDetents = std::optional<VelocityDetentInfo>{};
     view.setVoicegroup(voicegroup);
     view.selectTrack(5);
     for (const uint64_t tick : probeTicks) {
       view.setPlayheadSample(view.timeline()->sampleForTick(tick), true);
-      const auto detents = view.velocityAxisDetents(5, {});
-      if (!detents) {
-        fail("Poke Center track 6 lost detents across program changes");
-        break;
-      }
-      if (!expectedDetents) {
-        expectedDetents = detents;
-      } else if (!velocityDetentsCompatible(*expectedDetents, *detents)) {
-        fail("Poke Center track 6 detents shifted while its active programs "
-             "remained Square 2");
+      const auto idleDetents = view.velocityAxisDetents(5, {});
+      const auto noteDetents =
+          view.velocityAxisDetents(5, {{uint32_t(tick), 60}});
+      if (!idleDetents || !noteDetents ||
+          !velocityDetentsCompatible(*idleDetents, *noteDetents)) {
+        fail("Poke Center track 6 detents diverged for the same intrinsic "
+             "voice type");
         break;
       }
     }
@@ -201,6 +198,7 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
 
     int waveSlot = -1;
     int cgb16Slot = -1;
+    int noiseSlot = -1;
     int pcmSlot = -1;
     for (int slot = 0; slot < VOICEGROUP_SIZE; slot++) {
       const ToneData &tone = voicegroup->voices[slot];
@@ -208,6 +206,8 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
       if (type & (VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL))
         continue;
       const int cgbType = type & VOICE_TYPE_CGB_MASK;
+      if (noiseSlot < 0 && cgbType == VOICE_NOISE)
+        noiseSlot = slot;
       if (waveSlot < 0 && cgbType == VOICE_PROGRAMMABLE_WAVE &&
           tone.wavePointer) {
         waveSlot = slot;
@@ -311,7 +311,7 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
         const QString waveType = m4aVoiceTypeName(waveDetents->voiceType);
         const bool showedSelectedNoteType =
             trackVelocityArea->accessibleDescription().contains(
-                QStringLiteral("PSG %1 ").arg(waveType));
+                QStringLiteral("%1 has ").arg(waveType));
         view.trackHeaderClicked(track, Qt::NoModifier);
         (void)trackVelocityArea->grab();
         QCoreApplication::processEvents();
@@ -319,7 +319,7 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
         trackHeaderVoiceTypeUpdated =
             showedSelectedNoteType && view.selection().empty() &&
             trackVelocityArea->accessibleDescription().contains(
-                QStringLiteral("PSG %1 ").arg(idleType));
+                QStringLiteral("%1 has ").arg(idleType));
       }
       view.setDrawerPage(originalDrawerPage);
       view.setDrawerVisible(originalDrawerVisible);
@@ -547,105 +547,182 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
         doc.setCfg(reducedVolume);
         QEvent leaveVelocityArea(QEvent::Leave);
         QApplication::sendEvent(velocityArea, &leaveVelocityArea);
-        auto checkReducedDetents =
+        auto checkIntrinsicDetents =
             [&](const NoteCase &note,
-                std::size_t hardwareCapacity) -> std::size_t {
+                std::size_t expectedCount) -> bool {
           const auto info = view.velocityAxisDetents(
               track, {{uint32_t(note.cell.tick), uint8_t(note.cell.key)}});
           const auto maximumLevel = view.noteVelocityLevel(
               track, note.cell.tick, uint8_t(note.cell.key), 127);
           if (!info || !maximumLevel) {
-            fail("reduced-volume PSG detents were unavailable");
-            return 0;
+            fail("intrinsic PSG detents were unavailable");
+            return false;
           }
 
-          const std::size_t reachableCount = std::size_t(*maximumLevel) + 1;
-          if (info->levels.size() != reachableCount) {
-            fail("PSG detents exposed unreachable hardware levels");
+          bool valid = true;
+          if (info->levels.size() != expectedCount ||
+              std::size_t(*maximumLevel) + 1 != expectedCount) {
+            fail("mixer attenuation changed the intrinsic PSG level count");
+            valid = false;
           }
-          if (reachableCount >= hardwareCapacity) {
-            fail("reduced master volume did not reduce the "
-                 "reachable PSG level count");
-          }
-
           for (std::size_t level = 0; level < info->levels.size(); ++level) {
             const VelocityDetentLevel &detent = info->levels[level];
             if (detent.audible != (level != 0)) {
-              fail("PSG detent audibility did not match its "
-                   "hardware level");
+              fail("PSG detent audibility did not match its intrinsic level");
+              valid = false;
             }
             const auto resolvedLevel = view.noteVelocityLevel(
                 track, note.cell.tick, uint8_t(note.cell.key), detent.velocity);
             if (!resolvedLevel || *resolvedLevel != level) {
-              fail("a reduced-volume PSG label was not a "
-                   "current-mixer representative");
+              fail("PSG label was not an intrinsic-level representative");
+              valid = false;
             }
             if (view.canonicalNoteVelocity(
                     track, note.cell.tick, uint8_t(note.cell.key),
                     detent.velocity) != detent.velocity) {
-              fail("a reduced-volume PSG label was not the "
-                   "canonical current-mixer midpoint");
+              fail("PSG label was not its intrinsic-level midpoint");
+              valid = false;
             }
           }
           if (info->levels.empty() || info->levels.front().audible) {
             fail("PSG level zero was unavailable or audible");
-            return reachableCount;
+            valid = false;
+          } else {
+            const auto highest = view.velocityForLevel(
+                track, note.cell.tick, uint8_t(note.cell.key),
+                uint8_t(expectedCount - 1));
+            if (!highest || *highest != info->levels.back().velocity) {
+              fail("highest intrinsic PSG level did not resolve");
+              valid = false;
+            }
           }
-          const auto clamped = view.velocityForLevel(
-              track, note.cell.tick, uint8_t(note.cell.key),
-              uint8_t(hardwareCapacity - 1));
-          if (clamped != info->levels.back().velocity) {
-            fail("an unreachable upper PSG level did not clamp "
-                 "to the highest visible representative");
-          }
-          return reachableCount;
+          return valid;
         };
 
-        bool songVolumeMessageUpdated = false;
+        bool intrinsicLevelsIgnoreMixer = true;
         const auto waveAtCursor =
             std::find_if(notes.begin(), notes.end(), [](const NoteCase &note) {
               return note.family == DetentFamily::Wave;
             });
-        if (waveAtCursor != notes.end()) {
+        if (waveAtCursor == notes.end()) {
+          intrinsicLevelsIgnoreMixer = false;
+        } else {
           view.setEditCursorTick(waveAtCursor->cell.tick);
           view.setSelection({{uint32_t(waveAtCursor->cell.tick),
                               uint8_t(waveAtCursor->cell.key)}});
           (void)velocityArea->grab();
           QCoreApplication::processEvents();
-          const std::size_t reachableCount =
-              checkReducedDetents(*waveAtCursor, 5);
-          if (reachableCount == 0 ||
-              !velocityArea->accessibleDescription().contains(
-                  QStringLiteral("%1 volume levels").arg(reachableCount))) {
-            fail("velocity graduations exposed unreachable wave "
-                 "levels");
-          }
-          songVolumeMessageUpdated =
+          intrinsicLevelsIgnoreMixer &=
+              checkIntrinsicDetents(*waveAtCursor, 5);
+          intrinsicLevelsIgnoreMixer &=
               velocityArea->accessibleDescription() ==
-              QStringLiteral(
-                  "Velocity. Song volume 50 gives PSG Wave %1 volume levels.")
-                  .arg(reachableCount);
+              QStringLiteral("Velocity. Wave has 5 volume levels.");
         }
-        benchmarkCase("song_volume_message_updates",
-                      songVolumeMessageUpdated);
         const auto square =
             std::find_if(notes.begin(), notes.end(), [](const NoteCase &note) {
               return note.family == DetentFamily::Cgb16;
             });
-        if (square != notes.end()) {
+        if (square == notes.end()) {
+          intrinsicLevelsIgnoreMixer = false;
+        } else {
           view.setEditCursorTick(square->cell.tick);
           view.setSelection(
               {{uint32_t(square->cell.tick), uint8_t(square->cell.key)}});
           (void)velocityArea->grab();
           QCoreApplication::processEvents();
-          const std::size_t reachableCount = checkReducedDetents(*square, 16);
-          if (reachableCount == 0 ||
-              !velocityArea->accessibleDescription().contains(
-                  QStringLiteral("%1 volume levels").arg(reachableCount))) {
-            fail("velocity graduations exposed unreachable square "
-                 "levels");
+          intrinsicLevelsIgnoreMixer &= checkIntrinsicDetents(*square, 16);
+          const auto squareDetents =
+              view.velocityAxisDetents(track, view.selection());
+          intrinsicLevelsIgnoreMixer &=
+              squareDetents &&
+              velocityArea->accessibleDescription() ==
+                  QStringLiteral("Velocity. %1 has 16 volume levels.")
+                      .arg(m4aVoiceTypeName(squareDetents->voiceType));
+        }
+        benchmarkCase("intrinsic_levels_ignore_mixer",
+                      intrinsicLevelsIgnoreMixer);
+
+        bool noiseHasSixteenLevels = false;
+        bool noiseEditPreservedDetents = false;
+        if (noiseSlot >= 0) {
+          const Cell noiseCell = findFreeCell(8, false, true);
+          if (noiseCell.key < 0) {
+            fail("no free grid cell for Noise detent stability");
+          } else {
+            const int noiseIndex = doc.undoStack()->index();
+            SongCfg noiseVolume = doc.cfg();
+            noiseVolume.masterVolume = 105;
+            doc.setCfg(noiseVolume);
+            doc.addLanePoint(track, DOC_CC_VOICE, noiseCell.tick, noiseSlot);
+            doc.addLanePoint(track, 0x07, noiseCell.tick, 48);
+            doc.addLanePoint(track, 0x0A, noiseCell.tick, 64);
+            doc.addNote(track, noiseCell.tick, uint8_t(noiseCell.key),
+                        uint32_t(noiseCell.dur), 64);
+            const SongView::NoteId noiseId{uint32_t(noiseCell.tick),
+                                           uint8_t(noiseCell.key)};
+            view.setEditCursorTick(noiseCell.tick);
+            view.clearSelection();
+            (void)velocityArea->grab();
+            QCoreApplication::processEvents();
+
+            const auto beforeEdit = view.velocityAxisDetents(track, {});
+            noiseHasSixteenLevels =
+                beforeEdit && beforeEdit->levels.size() == 16 &&
+                velocityArea->accessibleDescription().contains(
+                    QStringLiteral("Noise has 16 volume levels."));
+            if (!noiseHasSixteenLevels)
+              fail("Noise pane did not expose its 16 hardware volume levels");
+            const songview::VelocityAxis beforeAxis(
+                double(velocityArea->height()), beforeEdit);
+            const auto noteDetents =
+                view.velocityAxisDetents(track, {noiseId});
+            const auto startLevel = view.noteVelocityLevel(
+                track, noiseCell.tick, uint8_t(noiseCell.key), 64);
+            const bool categorical =
+                startLevel && beforeAxis.compatibleWith(noteDetents);
+            const qreal noiseDpr = velocityArea->devicePixelRatioF();
+            const QPoint handle(
+                qRound(view.displayX(double(noiseCell.tick),
+                                     songview::kGutterW, noiseDpr)),
+                qRound(categorical ? beforeAxis.levelToY(*startLevel)
+                                   : beforeAxis.velocityToY(64)));
+            QPoint target = handle - QPoint(0, 12);
+            if (categorical) {
+              const int targetLevel =
+                  *startLevel + 1 < beforeEdit->levels.size()
+                      ? int(*startLevel + 1)
+                      : int(*startLevel - 1);
+              target.setY(qRound(beforeAxis.levelToY(targetLevel)));
+            }
+            sendMouse(velocityArea, QEvent::MouseButtonPress, handle,
+                      Qt::LeftButton, Qt::LeftButton);
+            sendMouse(velocityArea, QEvent::MouseMove, target, Qt::NoButton,
+                      Qt::LeftButton);
+            sendMouse(velocityArea, QEvent::MouseButtonRelease, target,
+                      Qt::LeftButton, Qt::NoButton);
+
+            DocNote edited;
+            if (view.selection() != std::vector<SongView::NoteId>{noiseId} ||
+                !doc.findNote(track, noiseCell.tick, uint8_t(noiseCell.key),
+                              &edited) ||
+                edited.velocity == 64) {
+              fail("Noise detent stability gesture did not edit its note");
+            } else {
+              const auto afterEdit =
+                  view.velocityAxisDetents(track, view.selection());
+              noiseEditPreservedDetents =
+                  beforeEdit && afterEdit &&
+                  velocityDetentsCompatible(*beforeEdit, *afterEdit);
+              if (!noiseEditPreservedDetents)
+                fail("editing Noise velocity changed detent graduations");
+            }
+            while (doc.undoStack()->index() > noiseIndex)
+              doc.undoStack()->undo();
           }
         }
+        benchmarkCase("noise_has_sixteen_levels", noiseHasSixteenLevels);
+        benchmarkCase("noise_edit_preserves_graduations",
+                      noiseEditPreservedDetents);
 
         // A note can precede its track's first explicit program
         // change. The timeline's canonical firstProgram must still
@@ -1063,11 +1140,6 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
           }
         }
 
-        if (cgb16Slot >= 0) {
-          failures += runRollCheckPsgVelocityMixed(
-              {doc, view, songLabel, track, cgb16Slot});
-        }
-
         const auto pcm =
             std::find_if(notes.begin(), notes.end(), [](const NoteCase &note) {
               return note.family == DetentFamily::Pcm;
@@ -1189,16 +1261,18 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
 
         const QString detentDescription =
             velocityArea->accessibleDescription();
-        const bool contextualDetentMessage =
-            detentDescription.startsWith(
-                QStringLiteral("Velocity. Song volume %1 gives PSG ")
-                    .arg(doc.cfg().masterVolume)) &&
+        const bool intrinsicDetentMessage =
+            detentDescription.startsWith(QStringLiteral("Velocity. ")) &&
+            detentDescription.contains(QStringLiteral(" has ")) &&
+            !detentDescription.contains(QStringLiteral("Song volume")) &&
             detentDescription.endsWith(QStringLiteral(" volume levels."));
-        benchmarkCase("contextual_level_message", contextualDetentMessage);
+        benchmarkCase("intrinsic_level_message", intrinsicDetentMessage);
 
         bool originReturnPreservesStoredValue = false;
         bool undoRestoresStoredValue = false;
         bool exactInputRestoresStoredValue = false;
+        bool exactVelocityIsGraduation = false;
+        bool exactVelocityHasNoRing = false;
         if (researchSquare != notes.end()) {
           const SongView::NoteId id{uint32_t(researchSquare->cell.tick),
                                     uint8_t(researchSquare->cell.key)};
@@ -1228,6 +1302,48 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
                                        qRound(axis.levelToY(*originLevel)));
               const QPoint adjacentPoint(
                   noteX, qRound(axis.levelToY(adjacentLevel)));
+
+              const int graduationX =
+                  *originLevel % 2 == 0 ? songview::kGutterW * 3 / 4
+                                        : songview::kGutterW / 4;
+              const QPoint originGraduationPoint(graduationX, originPoint.y());
+              sendMouse(velocityArea, QEvent::MouseButtonPress,
+                        originGraduationPoint, Qt::LeftButton, Qt::LeftButton);
+              sendMouse(velocityArea, QEvent::MouseButtonRelease,
+                        originGraduationPoint, Qt::LeftButton, Qt::NoButton);
+              DocNote afterGraduationClick;
+              exactVelocityIsGraduation =
+                  doc.findNote(track, id.tick, id.key,
+                               &afterGraduationClick) &&
+                  afterGraduationClick.velocity == 95;
+              while (doc.undoStack()->index() > originSetupIndex + 1)
+                doc.undoStack()->undo();
+              QCoreApplication::processEvents();
+
+              const uint8_t representativeVelocity =
+                  detents->levels[*originLevel].velocity;
+              DocNote exactNote;
+              if (representativeVelocity != 95 &&
+                  doc.findNote(track, id.tick, id.key, &exactNote)) {
+                const QImage exactImage = velocityArea->grab().toImage();
+                doc.setNotesVelocity({exactNote}, representativeVelocity);
+                QCoreApplication::processEvents();
+                const QImage representativeImage =
+                    velocityArea->grab().toImage();
+                const qreal imageDpr = exactImage.devicePixelRatio();
+                const QPoint nodePixel(qRound(originPoint.x() * imageDpr),
+                                       qRound(originPoint.y() * imageDpr));
+                const int radius = int(std::ceil(8.0 * imageDpr));
+                const QRect nodeBounds(nodePixel.x() - radius,
+                                       nodePixel.y() - radius, radius * 2 + 1,
+                                       radius * 2 + 1);
+                exactVelocityHasNoRing =
+                    exactImage.copy(nodeBounds) ==
+                    representativeImage.copy(nodeBounds);
+                if (doc.undoStack()->index() > originSetupIndex + 1)
+                  doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+              }
 
               sendMouse(velocityArea, QEvent::MouseButtonPress, originPoint,
                         Qt::LeftButton, Qt::LeftButton);
@@ -1294,6 +1410,9 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
           while (doc.undoStack()->index() > originSetupIndex)
             doc.undoStack()->undo();
         }
+        benchmarkCase("exact_velocity_is_graduation",
+                      exactVelocityIsGraduation);
+        benchmarkCase("exact_velocity_has_no_ring", exactVelocityHasNoRing);
         benchmarkCase("origin_level_restores_exact",
                       originReturnPreservesStoredValue);
         benchmarkCase("undo_restores_exact", undoRestoresStoredValue);

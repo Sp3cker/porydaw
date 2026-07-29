@@ -1393,36 +1393,18 @@ void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox,
   painter.restore();
 }
 
-int activeLaneValue(const SongViewModel &model, int track, uint8_t cc,
-                    uint64_t tick, int defaultValue) {
-  const AutoLane *lane = model.findLane(track, cc);
-  if (!lane)
-    return defaultValue;
-  int value = defaultValue;
-  for (const LanePoint &point : lane->points) {
-    if (point.tick > tick)
-      break;
-    value = point.value;
-  }
-  return value;
-}
-
 std::optional<PsgVelocityContext>
 psgVelocityContext(const SongView *sv, int track, uint64_t tick, uint8_t key) {
-  const SongDocument *doc = sv ? sv->document() : nullptr;
   const LoadedVoiceGroup *voicegroup = sv ? sv->voicegroup() : nullptr;
-  if (!doc || !voicegroup || track < 0 || track >= 16)
+  if (!sv || !sv->document() || !voicegroup || track < 0 || track >= 16)
     return std::nullopt;
 
   const int program = sv->programAt(track, tick);
   if (program < 0 || program >= VOICEGROUP_SIZE)
     return std::nullopt;
 
-  const ToneData &tone = voicegroup->voices[std::size_t(program)];
-  const SongViewModel &model = sv->model();
   return makePsgVelocityContext(
-      tone, key, activeLaneValue(model, track, 7, tick, 127),
-      activeLaneValue(model, track, 10, tick, 64), doc->cfg().masterVolume);
+      voicegroup->voices[std::size_t(program)], key);
 }
 } // namespace
 
@@ -5052,6 +5034,7 @@ void TrackHeaderRow::mouseReleaseEvent(QMouseEvent *event) {
 // ------------------------------------------------------------------ SongView
 
 using namespace songview;
+
 int SongView::canonicalNoteVelocity(int track, uint64_t tick, uint8_t key,
                                     int proposedVelocity) const {
   const auto context = songview::psgVelocityContext(this, track, tick, key);
@@ -5090,10 +5073,7 @@ SongView::velocityAxisContext(int track) const {
   const ToneData &tone = m_voicegroup->voices[std::size_t(program)];
   if (tone.type & (VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL))
     return std::nullopt;
-  // The idle ruler describes the active program's detent model. Track
-  // VOL/PAN automation affects note loudness, not the ruler's geometry.
-  return makePsgVelocityContext(tone, 0, 127, 64,
-                                m_document->cfg().masterVolume);
+  return songview::psgVelocityContext(this, track, tick, 0);
 }
 
 void SongView::refreshVelocityAxisContext() {

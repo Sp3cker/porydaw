@@ -37,8 +37,8 @@ if [[ -z "$summary" || "$summary" == *$'\n'* ]]; then
   exit 2
 fi
 read -r passed total <<<"$summary"
-if [[ "$total" -ne 8 ]]; then
-  echo "autoresearch: expected 8 velocity contracts, got $total" >&2
+if [[ "$total" -ne 12 ]]; then
+  echo "autoresearch: expected 12 velocity contracts, got $total" >&2
   exit 2
 fi
 if [[ "$passed" -ne "$total" ]]; then

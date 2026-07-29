@@ -10,16 +10,9 @@ extern "C" {
 
 struct PsgVelocityContext {
   uint8_t voiceType;
-  uint8_t volMR;
-  uint8_t volML;
-  int8_t rhythmPan;
 
   bool operator==(const PsgVelocityContext &other) const {
-    return voiceType == other.voiceType && volMR == other.volMR &&
-           volML == other.volML && rhythmPan == other.rhythmPan;
-  }
-  bool operator!=(const PsgVelocityContext &other) const {
-    return !(*this == other);
+    return voiceType == other.voiceType;
   }
 };
 
@@ -34,9 +27,7 @@ struct VelocityDetentInfo {
 };
 
 std::optional<PsgVelocityContext> makePsgVelocityContext(const ToneData &tone,
-                                                         uint8_t key, int cc7,
-                                                         int cc10,
-                                                         int masterVolume);
+                                                         uint8_t key);
 uint8_t psgVelocityLevel(const PsgVelocityContext &context,
                          uint8_t storedVelocity);
 uint8_t psgCanonicalVelocity(const PsgVelocityContext &context,
