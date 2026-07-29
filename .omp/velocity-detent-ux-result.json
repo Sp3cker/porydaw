@@ -1,0 +1,199 @@
+{
+  "context": {
+    "surfaces": [
+      "VelocityArea detent ruler",
+      "PianoRoll vel bar / Ctrl-drag",
+      "status note info",
+      "Set velocity\u2026 dialog"
+    ],
+    "existingCopy": [
+      "Volume %1 (%2)",
+      "PSG %1 has %2 levels.",
+      "Set velocity\u2026 (%1)",
+      "Velocity (1-127):",
+      "\u00b7 velocity \u2026 \u2192 plays \u2026"
+    ],
+    "authoritativeRule": "Document stores MIDI velocity 1\u2013127; detent edit paths write level representatives via velocityForLevel / canonicalNoteVelocity; level geometry parks every note of a level on the same Y.",
+    "scenario": "Note stored 95; audible detents include representatives 50 and 100 (same audible class as 95 until edit snaps)."
+  },
+  "vocabulary": {
+    "velocity": "stored MIDI value",
+    "level": "hardware audible step (Volume N)",
+    "snap": "write that level\u2019s representative velocity",
+    "held": "stored value \u2260 its level\u2019s representative",
+    "origin": "pre-gesture stored velocity"
+  },
+  "models": [
+    {
+      "id": "A",
+      "name": "Continuous rail",
+      "summary": "Always plot dots on 1\u2013127 Y; draw faint level guides. Drag free, release snaps to nearest level rep.",
+      "snapUnderstanding": "Guides + release jump teach snap; status shows post-snap velocity.",
+      "restore95": "Only Undo, or type 95 if dialog stores exact (today it canonical-snaps).",
+      "fit": "Fights current categorical axis and mixed-selection level drags; busy at many notes."
+    },
+    {
+      "id": "B",
+      "name": "Level rail only",
+      "summary": "Keep today\u2019s level Y for all notes. Off-rep is invisible until status/dialog. First drag/commit snaps to rep.",
+      "snapUnderstanding": "Audition changes only at level crossings; labels Volume N (rep).",
+      "restore95": "Undo after commit; no on-canvas held cue.",
+      "fit": "Compact, matches code, fails the 95 discoverability case."
+    },
+    {
+      "id": "C",
+      "name": "Held mark + origin restore",
+      "summary": "Keep level Y. Mark held notes. Live gesture remembers origin and restores exact stored velocity when the pointer returns to the origin level band. No new modes or prefs.",
+      "snapUnderstanding": "Leaving origin level writes/previews that level\u2019s rep; ruler stays Volume N (rep).",
+      "restore95": "Same gesture: return to origin band \u2192 95. After commit: Undo. Explicit: Set velocity\u2026 types exact 95 (no snap on typed entry).",
+      "fit": "Uses m_origVelocities + level geometry; compact; solves held + restore."
+    },
+    {
+      "id": "D",
+      "name": "Alt fine / level coarse",
+      "summary": "Default level snap; Alt-drag edits continuous stored velocity without snap.",
+      "snapUnderstanding": "Two gestures; easy to miss Alt; conflicts with existing modifier load (Ctrl select, velocity-drag chord).",
+      "restore95": "Alt-drag to 95 or type 95.",
+      "fit": "Powerful but heavier vocabulary and chord collision risk."
+    }
+  ],
+  "recommendation": {
+    "modelId": "C",
+    "name": "Held mark + origin restore",
+    "rationale": [
+      "Preserves detented VelocityAxis and Volume N (rep) labels already painted.",
+      "Makes off-detent 95 visible without a second axis or modal.",
+      "Restore of exact 95 is local to the edit gesture (origin), then Undo\u2014no config.",
+      "Aligns roll, lane, and status on one controlled vocabulary."
+    ],
+    "states": {
+      "initialDisplay": {
+        "lane": {
+          "dotY": "level Y for 95\u2019s audible class (same row as Volume that owns 95)",
+          "heldMark": "selected held note: hollow ring or 1px gap ring around filled dot; unselected held: same at lower contrast",
+          "onDetentMark": "filled dot only (stored == rep)",
+          "ruler": "Volume N (rep) e.g. Volume 2 (50), Volume 3 (100)",
+          "watermark": "PSG Wave has 5 levels. (existing pattern)",
+          "rollBar": "bar height tracks stored 95; optional 1px held notch when selected"
+        },
+        "statusOnAnnounce": "velocity 95 \u00b7 Volume 3 \u00b7 held",
+        "tooltipHoverDot": "95 \u00b7 Volume 3 \u00b7 held",
+        "tooltipHoverOnDetent": "100 \u00b7 Volume 3",
+        "tooltipHoverRulerLabel": "Volume 3 \u00b7 snap 100",
+        "accessibleNameDot": "Velocity 95, Volume 3, held",
+        "accessibleDescriptionPane": "Velocity. PSG Wave has 5 levels."
+      },
+      "firstEdit": {
+        "press": "Cache origin per note (already m_origVelocities). No write yet.",
+        "crossLevelOrDragThreshold": "Preview snaps to level rep under pointer (velocityForLevel). Cursor blank as today.",
+        "statusLive": "velocity 100 \u00b7 Volume 3",
+        "audition": "Retrigger only when level changes (existing roll pattern).",
+        "escape": "Cancel gesture; keep 95; clear previews."
+      },
+      "movingBetweenDetents": {
+        "mouse": "Vertical drag steps level-by-level; horizontal freehand sweep paints level under Y.",
+        "clickRulerLabel": "Selection \u2192 that level\u2019s rep (existing graduation click; label affordance).",
+        "keyboard": "No new chords. Existing Undo/redo. Optional later: same nudge keys as roll if already bound to velocity\u2014out of scope unless present.",
+        "status": "velocity <rep> \u00b7 Volume N",
+        "tooltipDuringDrag": "Volume N \u00b7 snap <rep>"
+      },
+      "restoring95": {
+        "sameGesture": {
+          "action": "Move pointer back into the origin level\u2019s hit band (level that contained origin 95).",
+          "result": "Preview/commit target = origin 95 (exact), not Volume rep.",
+          "status": "velocity 95 \u00b7 Volume 3 \u00b7 held \u00b7 origin",
+          "tooltip": "95 \u00b7 origin"
+        },
+        "afterCommit": {
+          "primary": "Undo \u2192 95",
+          "explicit": "Set velocity\u2026 \u2192 enter 95 \u2192 store exact 95 (change from today\u2019s canonical snap on dialog OK)",
+          "notOffered": "No sticky Restore button, no prefs, no second modal"
+        },
+        "rollParity": "Ctrl/vel-bar drag uses same origin-band exact restore while gesture alive; release outside origin keeps last snapped rep."
+      },
+      "mixedSelections": {
+        "compatibleDetents": "Shared level axis; each note levelDelta from its own origin level; held marks per-note; origin restore per-note when pointer level == that note\u2019s origin level.",
+        "incompatibleDetents": "Axis falls back continuous (existing velocityAxisDetents null). No Volume labels. Drag uses canonicalNoteVelocity per note. Status: velocity <n> only. Held mark omitted (no shared level model).",
+        "mixedHeldAndOnDetent": "Independent marks; snap still by level; origin restore only notes whose origin level matches pointer level.",
+        "clickVolumeLabel": "All selected writable notes \u2192 that label\u2019s rep (exact write of rep value)."
+      },
+      "accessibility": {
+        "pane": "Velocity. PSG %1 has %2 levels.",
+        "focusDot": "Name: Velocity 95, Volume 3, held. Help: Drag to change volume level. Return to origin level to keep 95.",
+        "focusRuler": "Name: Volume 3, snap 100. Help: Click to set selection to 100.",
+        "liveRegionOnDrag": "Volume 3, 100 then on origin return 95, held, origin",
+        "contrast": "Held ring uses selection edge / secondary text tokens already in lane; active level labels stay bold + item_selected_background ticks."
+      }
+    },
+    "labels": {
+      "rulerLevel": "Volume %1 (%2)",
+      "watermark": "PSG %1 has %2 levels.",
+      "statusOnDetent": "velocity %1 \u00b7 Volume %2",
+      "statusHeld": "velocity %1 \u00b7 Volume %2 \u00b7 held",
+      "statusOrigin": "velocity %1 \u00b7 Volume %2 \u00b7 held \u00b7 origin",
+      "statusDraggingSnapped": "velocity %1 \u00b7 Volume %2",
+      "tooltipHeld": "%1 \u00b7 Volume %2 \u00b7 held",
+      "tooltipOnDetent": "%1 \u00b7 Volume %2",
+      "tooltipOrigin": "%1 \u00b7 origin",
+      "tooltipRuler": "Volume %1 \u00b7 snap %2",
+      "menu": "Set velocity\u2026 (%1)",
+      "dialogTitle": "Note velocity",
+      "dialogPrompt": "Velocity (1-127):",
+      "inaudibleLevelOptional": "Volume %1 (silent)"
+    },
+    "mouseKeyboard": {
+      "laneDotDrag": "Relative level drag; blank cursor; Esc cancel; release commits.",
+      "laneEmptyDrag": "Freehand sweep to level under Y (rep write).",
+      "laneRulerClick": "Set selection to label rep.",
+      "rollVelBarOrModifierDrag": "Same snap + origin restore rules as lane.",
+      "rightClickMenu": "Set velocity\u2026 shows stored value; OK stores typed value exact (no auto-snap).",
+      "undo": "Restores prior stored velocity including 95."
+    },
+    "failureModes": [
+      {
+        "id": "silent-snap",
+        "risk": "User never sees 95\u2260rep and thinks lane lost data.",
+        "mitigation": "Held ring + status/tooltip always include held when selected/hovered."
+      },
+      {
+        "id": "origin-miss",
+        "risk": "User overshoots origin band and cannot re-find 95 mid-gesture.",
+        "mitigation": "Origin band = full level row hit, not sub-pixel Y; status shows origin when armed; Esc cancels to 95."
+      },
+      {
+        "id": "dialog-resnap",
+        "risk": "Today\u2019s dialog canonical-snaps 95\u2192rep and blocks explicit restore.",
+        "mitigation": "Typed Set velocity\u2026 stores exact; snap only from level UI (drag/label/sweep)."
+      },
+      {
+        "id": "mixed-axis-drop",
+        "risk": "Incompatible multi-note selection drops Volume labels; held language disappears.",
+        "mitigation": "Status stays velocity-only; no false Volume N; avoid inventing a merged scale."
+      },
+      {
+        "id": "rep-collision",
+        "risk": "User confuses label rep 100 with held 95 on same row.",
+        "mitigation": "Dot stays on shared level Y; held mark + numeric 95 in status/tooltip; never relabel Volume to 95."
+      },
+      {
+        "id": "audible-false-precision",
+        "risk": "Continuous roll bar suggests 95 sounds different from 100.",
+        "mitigation": "Announce Volume N with velocity; audition only on level change."
+      }
+    ]
+  },
+  "rejectedForPrimary": [
+    {
+      "id": "A",
+      "why": "Breaks categorical PSG lane already shipped; weak mixed level edit."
+    },
+    {
+      "id": "B",
+      "why": "No held affordance; restore is Undo-only folklore."
+    },
+    {
+      "id": "D",
+      "why": "Extra modifier mode; collides with Ctrl select / velocity-drag chord; more verbose."
+    }
+  ]
+}
