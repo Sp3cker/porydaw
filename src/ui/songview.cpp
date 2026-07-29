@@ -51,7 +51,6 @@
 #include <functional>
 #include <map>
 #include <numeric>
-#include <set>
 #include <utility>
 
 #include <optional>
@@ -403,17 +402,34 @@ void forEachSubGridLine(const SongView *sv, double t0, double t1,
     at = seg.next;
   }
 }
-// Finds a drawn-grid boundary in the direction of travel. Keyboard nudges
-// use this rather than the finer editing snap so every destination is visible.
-uint64_t drawnGridTick(const SongView *sv, double tick, bool upward) {
-  tick = std::max(0.0, tick);
-  const SongView::GridSeg seg = sv->gridSegAt(uint64_t(tick));
-  const uint64_t g = std::max<uint64_t>(1, sv->gridTicksAt(uint64_t(tick)));
-  const uint64_t lo =
-      seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
-  if (!upward || double(lo) >= tick)
-    return lo;
-  return std::min(lo + g, seg.next);
+// Keyboard nudging follows the painted grid's two-level cadence. An off-grid
+// anchor first aligns directionally to the finest painted lattice. From a
+// major line it takes one fine step; from an intervening fine line it keeps
+// that phase and advances by one major interval. Segment edges cap the move,
+// and a left move from an edge uses the preceding segment's phase.
+int64_t nudgeGridDelta(const SongView *sv, uint64_t tick, bool right) {
+  if (!right && tick == 0)
+    return 0;
+
+  const uint64_t query = !right && tick > 0 ? tick - 1 : tick;
+  const SongView::GridSeg seg = sv->gridSegAt(query);
+  const uint64_t major = std::max<uint64_t>(1, sv->gridTicksAt(query));
+  const uint64_t snap = std::max<uint64_t>(1, sv->snapTicksAt(query));
+  const uint64_t fine =
+      snap < major &&
+              sv->pxPerTick() * double(snap) >= songview::kAutoGridMinCellPx
+          ? snap
+          : major;
+  const uint64_t rel = tick - seg.start;
+  const uint64_t fineRemainder = rel % fine;
+  const uint64_t step =
+      fineRemainder != 0
+          ? (right ? fine - fineRemainder : fineRemainder)
+          : (rel % major == 0 ? fine : major);
+
+  if (right)
+    return int64_t(std::min(step, seg.next - tick));
+  return -int64_t(std::min(step, tick - seg.start));
 }
 
 QColor gridLineColor(int alpha = 255) {
@@ -5541,7 +5557,14 @@ void SongView::applyViewState(const ViewState &state) {
   setDrawerVisible(state.drawerVisible);
   m_lanes->rebuildRows();
   updateScrollbars();
-  setHScroll(std::max(0.0, state.scrollPx));
+  // A sidecar camera is authoritative even when the widget is temporarily
+  // wider than the scaled song. Keep the scrollbar as its clamped projection
+  // without feeding that projection back into the fractional camera.
+  m_scrollX = std::max(0.0, state.scrollPx);
+  m_hbar->blockSignals(true);
+  m_hbar->setValue(std::clamp(scrollUnits(m_scrollX), m_hbar->minimum(),
+                              m_hbar->maximum()));
+  m_hbar->blockSignals(false);
   setVScroll(state.scrollY);
   setEventListVisible(state.eventList);
   refreshTimelineViews();
@@ -5949,9 +5972,7 @@ void SongView::nudgeTimeSelection(bool right) {
     return;
   const uint64_t s = m_timeSel.startTick;
   const uint64_t e = m_timeSel.endTick;
-  const uint64_t snapped =
-      drawnGridTick(this, double(s) + (right ? 1.0 : -1.0), right);
-  const int64_t dTick = int64_t(snapped) - int64_t(s);
+  const int64_t dTick = nudgeGridDelta(this, s, right);
   if (dTick == 0)
     return;
   std::vector<DocNote> notes;
@@ -6209,9 +6230,7 @@ void SongView::nudgeNoteSelection(bool right) {
   uint64_t anchor = UINT64_MAX;
   for (const DocNote &note : notes)
     anchor = std::min(anchor, note.tick);
-  const uint64_t snapped =
-      drawnGridTick(this, double(anchor) + (right ? 1.0 : -1.0), right);
-  const int64_t dTick = int64_t(snapped) - int64_t(anchor);
+  const int64_t dTick = nudgeGridDelta(this, anchor, right);
   if (dTick == 0)
     return;
   m_document->moveNotes(notes, dTick, 0, /*mergeable=*/true);
@@ -6640,7 +6659,9 @@ int SongView::programAt(int track, uint64_t tick) const {
 }
 
 int SongView::currentProgram(int track) const {
-  const uint64_t tick = m_playing ? uint64_t(m_playheadTick) : m_editCursorTick;
+  const uint64_t tick =
+      m_playing ? uint64_t(std::lround(std::max(0.0, m_playheadTick)))
+                : m_editCursorTick;
   return programAt(track, tick);
 }
 

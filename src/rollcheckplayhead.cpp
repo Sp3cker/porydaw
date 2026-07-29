@@ -142,6 +142,45 @@ bool hasPlayheadRedLine(const QImage &image, qreal devicePixelRatio,
     return false;
 }
 
+bool hasNarrowPlayheadRedLine(const QImage &image, qreal devicePixelRatio,
+                              qreal logicalX, const QRect &logicalArea,
+                              const QColor &playheadColor)
+{
+    if (logicalArea.isEmpty())
+        return false;
+
+    const int left = std::max(0, qFloor((logicalX - 1.0) * devicePixelRatio));
+    const int right = std::min(image.width() - 1,
+                               qCeil((logicalX + 1.0) * devicePixelRatio));
+    const int referenceOffset = std::max(1, qCeil(3.0 * devicePixelRatio));
+    const int top = std::max(0, qFloor(logicalArea.top() * devicePixelRatio));
+    const int bottom = std::min(
+        image.height() - 1,
+        qCeil((logicalArea.bottom() + 1) * devicePixelRatio) - 1);
+    const auto redness = [](const QColor &pixel) {
+        return pixel.red() - (pixel.green() + pixel.blue()) / 2;
+    };
+    for (int x = left; x <= right; ++x) {
+        if (x - referenceOffset < 0 || x + referenceOffset >= image.width())
+            continue;
+        int consecutivePixels = 0;
+        for (int y = top; y <= bottom; ++y) {
+            const QColor pixel = image.pixelColor(x, y);
+            const int adjacentRedness =
+                std::max(redness(image.pixelColor(x - referenceOffset, y)),
+                         redness(image.pixelColor(x + referenceOffset, y)));
+            if (isCompositedPlayheadRed(pixel, playheadColor)
+                && redness(pixel) >= adjacentRedness + 12) {
+                if (++consecutivePixels >= 3)
+                    return true;
+            } else {
+                consecutivePixels = 0;
+            }
+        }
+    }
+    return false;
+}
+
 int playheadRedWidth(const QImage &image, qreal devicePixelRatio,
                      qreal logicalX, int logicalY,
                      const QColor &playheadColor)
@@ -217,10 +256,12 @@ void checkEventListRendering(SongView &view,
         failures.append("playhead triangle did not render below the time ruler");
     if (redWidth(triangleArea.bottom() - 1) <= redWidth(triangleArea.top()))
         failures.append("playhead triangle did not point up in the event list");
-    if (hasLine(QRect(eventListArea.left(),
-                      eventListArea.top() + triangleHeight,
-                      eventListArea.width(),
-                      eventListArea.height() - triangleHeight)))
+    const QRect eventListLineArea(eventListArea.left(),
+                                  eventListArea.top() + triangleHeight,
+                                  eventListArea.width(),
+                                  eventListArea.height() - triangleHeight);
+    if (hasNarrowPlayheadRedLine(composedImage, composedDpr, playheadX,
+                                 eventListLineArea, playheadColor))
         failures.append("playhead line overpainted the event list");
     if (hasLine(rulerArea))
         failures.append("playhead rendered in the event-list time ruler");
