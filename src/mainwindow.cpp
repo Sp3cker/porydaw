@@ -288,19 +288,19 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-  // The sessions delete their views below; the tab widget notices the
-  // pages vanishing and would fire currentChanged into handlers that walk
-  // the half-destroyed session list.
-  if (m_tabs)
-    disconnect(m_tabs, nullptr, this, nullptr);
-  if (m_uiTimer)
-    m_uiTimer->stop();
-  if (m_playheadTimer)
-    m_playheadTimer->stop();
-  // Stop the audio thread before the sessions free the timeline and
-  // voicegroup it borrows.
-  m_audio.shutdown();
-  voicegroup_free_samples(m_sampleSet);
+    // The sessions delete their views below; the tab widget notices the
+    // pages vanishing and would fire currentChanged into handlers that walk
+    // the half-destroyed session list.
+    if (m_tabs)
+        disconnect(m_tabs, nullptr, this, nullptr);
+    if (m_uiTimer)
+        m_uiTimer->stop();
+    if (m_playheadTimer)
+        m_playheadTimer->stop();
+    // Stop the audio thread before the sessions free the timeline and
+    // voicegroup it borrows.
+    m_audio.shutdown();
+    voicegroup_free_samples(m_sampleSet);
 }
 
 void MainWindow::buildUi()
@@ -1037,31 +1037,31 @@ void MainWindow::activateSession(SongSession *session, bool force)
     }
 
     if (!session) {
-      if (m_audioOk)
-        m_audio.unloadSong();
-      m_polyPanel->clearSession();
-      m_vgBrowser->setVoicegroup(nullptr);
-      updateVgDockTitle();
-      m_registerAction->setEnabled(false);
-      m_songLabel->clear();
-      resetTimedUiCache();
-      updateTimeLabel(/*force=*/true);
-      updatePolyStatus(/*force=*/true);
-      m_songList->setCurrentSong(-1);
-      updateWindowTitle();
-      updateTransportActions();
-      persistOpenTabs();
-      synchronizePlayhead();
-      return;
+        if (m_audioOk)
+            m_audio.unloadSong();
+        m_polyPanel->clearSession();
+        m_vgBrowser->setVoicegroup(nullptr);
+        updateVgDockTitle();
+        m_registerAction->setEnabled(false);
+        m_songLabel->clear();
+        resetTimedUiCache();
+        updateTimeLabel(/*force=*/true);
+        updatePolyStatus(/*force=*/true);
+        m_songList->setCurrentSong(-1);
+        updateWindowTitle();
+        updateTransportActions();
+        persistOpenTabs();
+        synchronizePlayhead();
+        return;
     }
 
     // Only on a genuine switch: while re-binding the same session (force),
     // the engine may still borrow this session's voicegroup, which the
     // refresh would free.
     if (session != previous)
-      maybeRefreshVoicegroup(*session);
+        maybeRefreshVoicegroup(*session);
     if (m_audioOk)
-      attachEngine(*session);
+        attachEngine(*session);
     synchronizePlayhead();
     updateVoicegroupBrowser();
     updatePolyPanelContext(session);
@@ -2998,150 +2998,155 @@ void MainWindow::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
-void MainWindow::updateTimeLabel(bool force) {
-  const bool loaded = m_audioOk && m_active && m_audio.songLoaded();
-  const QString text = loaded
-                           ? QStringLiteral("%1 / %2").arg(
-                                 formatTime(m_audio.playheadSamples()),
-                                 formatTime(m_audio.timeline()->lengthSamples))
-                           : QStringLiteral("--:--.- / --:--.-");
-  if (force || !m_timeCacheValid || text != m_lastTimeText)
-    m_timeLabel->setText(text);
-  m_lastTimeText = text;
-  m_timeCacheValid = true;
+void MainWindow::updateTimeLabel(bool force)
+{
+    const bool loaded = m_audioOk && m_active && m_audio.songLoaded();
+    const QString text = loaded ? QStringLiteral("%1 / %2").arg(
+                                      formatTime(m_audio.playheadSamples()),
+                                      formatTime(m_audio.timeline()->lengthSamples))
+                                : QStringLiteral("--:--.- / --:--.-");
+    if (force || !m_timeCacheValid || text != m_lastTimeText)
+        m_timeLabel->setText(text);
+    m_lastTimeText = text;
+    m_timeCacheValid = true;
 }
 
-void MainWindow::updatePolyStatus(bool force) {
-  const bool loaded = m_audioOk && m_active && m_audio.songLoaded();
-  if (!loaded) {
-    if (force || !m_polyCacheValid || m_lastPolyLoaded) {
-      m_pcmValueLabel->clear();
-      m_cgbValueLabel->clear();
-      m_polyLostLabel->clear();
-      m_polyLostSeparator->hide();
-      m_polyLostLabel->hide();
-      m_polyLostCaption->hide();
-      m_polyMeter->hide();
+void MainWindow::updatePolyStatus(bool force)
+{
+    const bool loaded = m_audioOk && m_active && m_audio.songLoaded();
+    if (!loaded) {
+        if (force || !m_polyCacheValid || m_lastPolyLoaded) {
+            m_pcmValueLabel->clear();
+            m_cgbValueLabel->clear();
+            m_polyLostLabel->clear();
+            m_polyLostSeparator->hide();
+            m_polyLostLabel->hide();
+            m_polyLostCaption->hide();
+            m_polyMeter->hide();
+        }
+        m_lastPolyLoaded = false;
+        m_polyCacheValid = true;
+        return;
     }
-    m_lastPolyLoaded = false;
+
+    const int pcm = m_audio.activePcmChannels();
+    const int maxPcm = m_audio.maxPcmChannels();
+    const int cgb = m_audio.activeCgbChannels();
+    const uint64_t lost = m_audio.polyLostTotal();
+    const bool hadCache = m_polyCacheValid && m_lastPolyLoaded;
+
+    if (force || !hadCache || pcm != m_lastActivePcmChannels
+        || maxPcm != m_lastMaxPcmChannels)
+        m_pcmValueLabel->setText(QStringLiteral("%1/%2").arg(pcm).arg(maxPcm));
+    if (force || !hadCache || cgb != m_lastActiveCgbChannels)
+        m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(cgb));
+    if (force || !hadCache || lost != m_lastPolyphonyLostTotal) {
+        const bool hasLost = lost > 0;
+        m_polyLostLabel->setText(hasLost ? QString::number(lost) : QString());
+        m_polyLostSeparator->setVisible(hasLost);
+        m_polyLostLabel->setVisible(hasLost);
+        m_polyLostCaption->setVisible(hasLost);
+    }
+    if (force || !hadCache)
+        m_polyMeter->show();
+
+    m_lastActivePcmChannels = pcm;
+    m_lastMaxPcmChannels = maxPcm;
+    m_lastActiveCgbChannels = cgb;
+    m_lastPolyphonyLostTotal = lost;
     m_polyCacheValid = true;
-    return;
-  }
-
-  const int pcm = m_audio.activePcmChannels();
-  const int maxPcm = m_audio.maxPcmChannels();
-  const int cgb = m_audio.activeCgbChannels();
-  const uint64_t lost = m_audio.polyLostTotal();
-  const bool hadCache = m_polyCacheValid && m_lastPolyLoaded;
-
-  if (force || !hadCache || pcm != m_lastActivePcmChannels ||
-      maxPcm != m_lastMaxPcmChannels)
-    m_pcmValueLabel->setText(QStringLiteral("%1/%2").arg(pcm).arg(maxPcm));
-  if (force || !hadCache || cgb != m_lastActiveCgbChannels)
-    m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(cgb));
-  if (force || !hadCache || lost != m_lastPolyphonyLostTotal) {
-    const bool hasLost = lost > 0;
-    m_polyLostLabel->setText(hasLost ? QString::number(lost) : QString());
-    m_polyLostSeparator->setVisible(hasLost);
-    m_polyLostLabel->setVisible(hasLost);
-    m_polyLostCaption->setVisible(hasLost);
-  }
-  if (force || !hadCache)
-    m_polyMeter->show();
-
-  m_lastActivePcmChannels = pcm;
-  m_lastMaxPcmChannels = maxPcm;
-  m_lastActiveCgbChannels = cgb;
-  m_lastPolyphonyLostTotal = lost;
-  m_polyCacheValid = true;
-  m_lastPolyLoaded = true;
+    m_lastPolyLoaded = true;
 }
 
-void MainWindow::resetTimedUiCache() {
-  m_lastTimeText.clear();
-  m_timeCacheValid = false;
-  m_polyCacheValid = false;
+void MainWindow::resetTimedUiCache()
+{
+    m_lastTimeText.clear();
+    m_timeCacheValid = false;
+    m_polyCacheValid = false;
 }
 
-void MainWindow::uiTick() {
-  updateTimeLabel(/*force=*/false);
-  updatePolyStatus(/*force=*/false);
+void MainWindow::uiTick()
+{
+    updateTimeLabel(/*force=*/false);
+    updatePolyStatus(/*force=*/false);
 
-  if (m_audioOk && m_active && m_audio.songLoaded() &&
-      m_polyDock->isVisible()) {
-    AudioEngine::PolySnapshot snap;
-    m_audio.polySnapshot(&snap);
-    m_polyPanel->updateSnapshot(snap);
-  }
+    if (m_audioOk && m_active && m_audio.songLoaded() && m_polyDock->isVisible()) {
+        AudioEngine::PolySnapshot snap;
+        m_audio.polySnapshot(&snap);
+        m_polyPanel->updateSnapshot(snap);
+    }
 }
 
-void MainWindow::synchronizePlayhead() {
-  const bool songLoaded = m_audioOk && m_active && m_audio.songLoaded();
-  const bool playing =
-      songLoaded && m_audio.transport() == Transport::Playing;
-  const int uiInterval = playing ? kPlaybackUiIntervalMs : kIdleUiIntervalMs;
-  if (m_uiTimer->interval() != uiInterval)
-    m_uiTimer->setInterval(uiInterval);
+void MainWindow::synchronizePlayhead()
+{
+    const bool songLoaded = m_audioOk && m_active && m_audio.songLoaded();
+    const bool playing = songLoaded && m_audio.transport() == Transport::Playing;
+    const int uiInterval = playing ? kPlaybackUiIntervalMs : kIdleUiIntervalMs;
+    if (m_uiTimer->interval() != uiInterval)
+        m_uiTimer->setInterval(uiInterval);
 
-  if (!songLoaded) {
-    // This also runs synchronously from activateSession(nullptr).
-    m_playheadTimer->stop();
-    return;
-  }
+    if (!songLoaded) {
+        // This also runs synchronously from activateSession(nullptr).
+        m_playheadTimer->stop();
+        return;
+    }
 
-  const bool playheadTimerWasActive = m_playheadTimer->isActive();
-  m_active->view->setPlayheadSample(m_audio.playheadSamples(), playing);
-  if (playing) {
-    if (!m_playheadTimer->isActive())
-      m_playheadTimer->start();
-  } else {
-    m_playheadTimer->stop();
-    if (playheadTimerWasActive)
-      updateTransportActions();
-  }
+    const bool playheadTimerWasActive = m_playheadTimer->isActive();
+    m_active->view->setPlayheadSample(m_audio.playheadSamples(), playing);
+    if (playing) {
+        if (!m_playheadTimer->isActive())
+            m_playheadTimer->start();
+    } else {
+        m_playheadTimer->stop();
+        if (playheadTimerWasActive)
+            updateTransportActions();
+    }
 }
 
-void MainWindow::startPlayback(bool fromEditCursor) {
-  if (!m_audioOk || !m_active || !m_audio.songLoaded())
-    return;
-  const bool seekToCursor =
-      fromEditCursor || m_audio.transport() == Transport::Stopped;
-  uint64_t target = 0;
-  if (seekToCursor) {
-    target =
-        m_audio.timeline()->sampleForTick(m_active->view->editCursorTick());
-    m_audio.seek(target);
-  }
-  m_audio.play();
-  updateTransportActions();
-  synchronizePlayhead();
-  // The seek lands within one audio period; show its target now rather
-  // than the stale engine playhead synchronizePlayhead just read.
-  if (seekToCursor)
-    m_active->view->setPlayheadSample(target, true);
+void MainWindow::startPlayback(bool fromEditCursor)
+{
+    if (!m_audioOk || !m_active || !m_audio.songLoaded())
+        return;
+    const bool seekToCursor =
+        fromEditCursor || m_audio.transport() == Transport::Stopped;
+    uint64_t target = 0;
+    if (seekToCursor) {
+        target = m_audio.timeline()->sampleForTick(m_active->view->editCursorTick());
+        m_audio.seek(target);
+    }
+    m_audio.play();
+    updateTransportActions();
+    synchronizePlayhead();
+    // The seek lands within one audio period; show its target now rather
+    // than the stale engine playhead synchronizePlayhead just read.
+    if (seekToCursor)
+        m_active->view->setPlayheadSample(target, true);
 }
 
-void MainWindow::pausePlayback() {
-  m_audio.pause();
-  updateTransportActions();
-  synchronizePlayhead();
+void MainWindow::pausePlayback()
+{
+    m_audio.pause();
+    updateTransportActions();
+    synchronizePlayhead();
 }
 
-void MainWindow::stopPlayback() {
-  m_audio.stop();
-  updateTransportActions();
-  synchronizePlayhead();
+void MainWindow::stopPlayback()
+{
+    m_audio.stop();
+    updateTransportActions();
+    synchronizePlayhead();
 }
 
-void MainWindow::updateTransportActions() {
-  const bool loaded = m_audioOk && m_audio.songLoaded();
-  const Transport t = m_audio.transport();
-  m_goToStartAction->setEnabled(loaded);
-  m_playAction->setEnabled(loaded && t != Transport::Playing);
-  m_playPauseAction->setEnabled(loaded);
-  m_pauseAction->setEnabled(loaded && t == Transport::Playing);
-  m_stopAction->setEnabled(loaded && t != Transport::Stopped);
-  m_loopAction->setEnabled(loaded);
+void MainWindow::updateTransportActions()
+{
+    const bool loaded = m_audioOk && m_audio.songLoaded();
+    const Transport t = m_audio.transport();
+    m_goToStartAction->setEnabled(loaded);
+    m_playAction->setEnabled(loaded && t != Transport::Playing);
+    m_playPauseAction->setEnabled(loaded);
+    m_pauseAction->setEnabled(loaded && t == Transport::Playing);
+    m_stopAction->setEnabled(loaded && t != Transport::Stopped);
+    m_loopAction->setEnabled(loaded);
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
