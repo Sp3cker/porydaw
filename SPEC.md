@@ -380,6 +380,28 @@ open.
 - **Offline WAV export** reuses the same timeline against a faster-than-realtime
   render loop (loop count, fadeout — feature parity with `poryaaaa_render`).
 
+### 7.1 Playhead rendering & timeline paint caching
+
+- One transparent `PlayheadOverlay` widget spans every timeline-aligned surface
+  (ruler triangle, roll, automation lanes, other-events strip) and draws the
+  glow + 1 px core at a sample-accurate, fractional x.
+- **Native compositor paths:** on macOS the playhead is CALayer sublayers of the
+  top-level window's content view (masked to the visible surfaces); on Windows a
+  DirectComposition visual tree in a transparent `WS_EX_NOREDIRECTIONBITMAP`
+  child window. A playhead tick is then a single float position update + commit —
+  no Qt repaints at all. Any platform failure logs a warning and falls back
+  permanently (for that overlay) to the widget path; the
+  `PORYDAW_FORCE_WIDGET_PLAYHEAD` environment variable forces the fallback for
+  debugging. Elsewhere (Linux, and whenever the platform path is unavailable)
+  the overlay paints antialiased vectors, which keeps the same subpixel motion.
+- **Timeline paint caching:** roll, lanes, and strip derive from
+  `TimelineSurface`, which rasterizes content into a cached pixmap so the
+  playhead sweeping across them costs blits, not note/lane re-rasters. Content
+  changes must go through `invalidateContent()` — a plain `update()` repaints
+  the stale cache (see the class comment in `src/ui/timelinesurface.h`).
+- **Update cadences:** playhead timer 60 Hz while playing; time/polyphony status
+  labels 10 Hz while playing, 2 Hz otherwise, writing widgets only on change.
+
 ## 8. Roadmap
 
 Each milestone is releasable on all three OSes.

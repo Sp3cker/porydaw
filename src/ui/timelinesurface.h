@@ -12,6 +12,9 @@ class QPainter;
 
 namespace songview {
 
+// Paint counters for the rollcheck harness: how often and how many device
+// pixels paintContent() actually rasterized, plus the cache's estimated
+// footprint. Playhead sweeps must leave these untouched (pure cache blits).
 struct TimelineSurfaceDiagnostics
 {
     quint64 contentPaintCount = 0;
@@ -33,6 +36,20 @@ struct TimelineSurfaceDiagnostics
     }
 };
 
+// Pixmap-backed paint cache for timeline-aligned widgets. Subclasses render
+// through paintContent() into a cached pixmap and paint events blit it, so
+// the playhead overlay sweeping slivers across a surface at 60 Hz costs
+// blits instead of full note/lane rasters.
+//
+// CONTRACT: every content change must go through invalidateContent() — a
+// plain update() schedules a repaint of the STALE cache and the change
+// silently never appears. The cache self-invalidates on resize and on
+// appearance changes (palette/font/style/theme). Re-rasterization is
+// bounded to the regions paint events expose: off-viewport dirt (the
+// automation lanes are a full-height scroll-area content widget) stays
+// pending until scrolling exposes it, while QWidget::render/grab() covers
+// the full rect. Surfaces whose pixel estimate exceeds a 256 MB budget, and
+// pixmap-allocation failures, paint uncached.
 class TimelineSurface : public QWidget
 {
 public:
