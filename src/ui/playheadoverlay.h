@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QImage>
 #include <QRect>
 #include <QRegion>
 #include <QString>
@@ -53,10 +54,13 @@ inline constexpr qreal playheadPeakAlpha(bool playing) {
 
 struct PlayheadFrame {
   QSize overlaySize;
-  QRegion bodyClip;
+  const QRegion &bodyClip;
   QRect triangleClip;
   QRect playheadGeometry;
   QColor color;
+  const QImage &bodyImage;
+  qreal bodyImageLeftExtent;
+  const QImage &triangleImage;
   qreal x;
   qreal devicePixelRatio;
   quint64 staticGeneration;
@@ -82,19 +86,8 @@ std::unique_ptr<PlayheadBackend> createPlayheadBackend(QWidget &owner);
 class PlayheadOverlay final : public QWidget {
 public:
   explicit PlayheadOverlay(QWidget *owner, TimelineSurfaces surfaces);
+  void setPlayhead(qreal timelineX, bool visible, bool playing);
   ~PlayheadOverlay() override;
-
-  inline void setPlayhead(qreal timelineX, bool visible, bool playing) {
-    if (m_timelineX == timelineX && m_visible == visible &&
-        m_playing == playing)
-      return;
-
-    m_timelineX = timelineX;
-    m_visible = visible;
-    m_playing = playing;
-
-    updatePlayhead();
-  }
 
 protected:
   bool eventFilter(QObject *watched, QEvent *event) override;
@@ -111,6 +104,7 @@ private:
   void observeSurfaceGeometry();
   void synchronizeGeometry();
   void synchronizeBackend();
+  bool updateImages();
   void updatePlayhead();
 
   QRegion playheadRegion() const;
@@ -118,6 +112,20 @@ private:
 
   TimelineSurfaces m_surfaces;
   QColor m_color;
+  QImage m_bodyImage;
+  qreal m_bodyImageLeftExtent = 0.0;
+  QImage m_triangleImage;
+
+  int m_cachedBodyHeight = -1;
+  bool m_cachedBodyPlaying = false;
+  qreal m_cachedBodyDpr = 0.0;
+  QColor m_cachedBodyThemeColor;
+  bool m_cachedBodyValid = false;
+
+  bool m_cachedTrianglePointsUp = false;
+  qreal m_cachedTriangleDpr = 0.0;
+  QColor m_cachedTriangleThemeColor;
+  bool m_cachedTriangleValid = false;
 
   std::unique_ptr<PlayheadBackend> m_backend;
   QRegion m_lastPaintedRegion;

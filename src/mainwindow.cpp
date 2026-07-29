@@ -268,29 +268,37 @@ MainWindow::MainWindow(QWidget *parent)
     m_uiTimer = new QTimer(this);
     m_playheadTimer = new QTimer(this);
 
-    m_uiTimer->setInterval(33);
+    m_uiTimer->setInterval(100);
     connect(m_uiTimer, &QTimer::timeout, this, &MainWindow::uiTick);
     m_uiTimer->start();
     m_playheadTimer->setTimerType(Qt::PreciseTimer);
     // 60hz is 16.6 ms; Qt can tick faster than this, making the playhead move
     // faster than 60hz and wasting time.
     m_playheadTimer->setInterval(17);
-    connect(m_playheadTimer, &QTimer::timeout, this, &MainWindow::synchronizePlayhead);
+    connect(m_playheadTimer, &QTimer::timeout, this,
+            &MainWindow::synchronizePlayhead);
+    resetTimedUiCache();
+    updateTimeLabel(/*force=*/true);
+    updatePolyStatus(/*force=*/true);
 
     updateTransportActions();
 }
 
 MainWindow::~MainWindow()
 {
-    // The sessions delete their views below; the tab widget notices the
-    // pages vanishing and would fire currentChanged into handlers that walk
-    // the half-destroyed session list.
-    if (m_tabs)
-        disconnect(m_tabs, nullptr, this, nullptr);
-    // Stop the audio thread before the sessions free the timeline and
-    // voicegroup it borrows.
-    m_audio.shutdown();
-    voicegroup_free_samples(m_sampleSet);
+  // The sessions delete their views below; the tab widget notices the
+  // pages vanishing and would fire currentChanged into handlers that walk
+  // the half-destroyed session list.
+  if (m_tabs)
+    disconnect(m_tabs, nullptr, this, nullptr);
+  if (m_uiTimer)
+    m_uiTimer->stop();
+  if (m_playheadTimer)
+    m_playheadTimer->stop();
+  // Stop the audio thread before the sessions free the timeline and
+  // voicegroup it borrows.
+  m_audio.shutdown();
+  voicegroup_free_samples(m_sampleSet);
 }
 
 void MainWindow::buildUi()
@@ -1027,39 +1035,37 @@ void MainWindow::activateSession(SongSession *session, bool force)
     }
 
     if (!session) {
-        if (m_audioOk)
-            m_audio.unloadSong();
-        m_polyPanel->clearSession();
-        m_vgBrowser->setVoicegroup(nullptr);
-        updateVgDockTitle();
-        m_registerAction->setEnabled(false);
-        m_songLabel->clear();
-        m_timeLabel->setText(QStringLiteral("--:--.- / --:--.-"));
-        m_polyMeter->hide();
-        m_pcmValueLabel->clear();
-        m_cgbValueLabel->clear();
-        m_polyLostLabel->clear();
-        m_polyLostSeparator->hide();
-        m_polyLostLabel->hide();
-        m_polyLostCaption->hide();
-        m_songList->setCurrentSong(-1);
-        updateWindowTitle();
-        updateTransportActions();
-        persistOpenTabs();
-        synchronizePlayhead();
-        return;
+      if (m_audioOk)
+        m_audio.unloadSong();
+      m_polyPanel->clearSession();
+      m_vgBrowser->setVoicegroup(nullptr);
+      updateVgDockTitle();
+      m_registerAction->setEnabled(false);
+      m_songLabel->clear();
+      resetTimedUiCache();
+      updateTimeLabel(/*force=*/true);
+      updatePolyStatus(/*force=*/true);
+      m_songList->setCurrentSong(-1);
+      updateWindowTitle();
+      updateTransportActions();
+      persistOpenTabs();
+      synchronizePlayhead();
+      return;
     }
 
     // Only on a genuine switch: while re-binding the same session (force),
     // the engine may still borrow this session's voicegroup, which the
     // refresh would free.
     if (session != previous)
-        maybeRefreshVoicegroup(*session);
+      maybeRefreshVoicegroup(*session);
     if (m_audioOk)
-        attachEngine(*session);
+      attachEngine(*session);
     synchronizePlayhead();
     updateVoicegroupBrowser();
     updatePolyPanelContext(session);
+    resetTimedUiCache();
+    updateTimeLabel(/*force=*/true);
+    updatePolyStatus(/*force=*/true);
 
     // Register Song stays available while ANY registration file lacks (or
     // mis-states) the song's line — not only for unregistered strays. A song
@@ -2990,98 +2996,144 @@ void MainWindow::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
-void MainWindow::uiTick()
-{
-    if (!m_audioOk)
-        return;
-    if (m_active && m_audio.songLoaded()) {
-        const uint64_t length = m_audio.timeline()->lengthSamples;
-        m_timeLabel->setText(QStringLiteral("%1 / %2")
-                                 .arg(formatTime(m_audio.playheadSamples()),
-                                      formatTime(length)));
+void MainWindow::updateTimeLabel(bool force) {
+  const bool loaded = m_audioOk && m_active && m_audio.songLoaded();
+  const QString text = loaded
+                           ? QStringLiteral("%1 / %2").arg(
+                                 formatTime(m_audio.playheadSamples()),
+                                 formatTime(m_audio.timeline()->lengthSamples))
+                           : QStringLiteral("--:--.- / --:--.-");
+  if (force || !m_timeCacheValid || text != m_lastTimeText)
+    m_timeLabel->setText(text);
+  m_lastTimeText = text;
+  m_timeCacheValid = true;
+}
 
-        const uint64_t lost = m_audio.polyLostTotal();
-        m_pcmValueLabel->setText(
-            QStringLiteral("%1/%2")
-                .arg(m_audio.activePcmChannels())
-                .arg(m_audio.maxPcmChannels()));
-        m_cgbValueLabel->setText(
-            QStringLiteral("%1/4").arg(m_audio.activeCgbChannels()));
-        const bool hasLost = lost > 0;
-        m_polyLostLabel->setText(hasLost ? QString::number(lost) : QString());
-        m_polyLostSeparator->setVisible(hasLost);
-        m_polyLostLabel->setVisible(hasLost);
-        m_polyLostCaption->setVisible(hasLost);
-        m_polyMeter->show();
-
-        if (m_polyDock->isVisible()) {
-            AudioEngine::PolySnapshot snap;
-            m_audio.polySnapshot(&snap);
-            m_polyPanel->updateSnapshot(snap);
-        }
+void MainWindow::updatePolyStatus(bool force) {
+  const bool loaded = m_audioOk && m_active && m_audio.songLoaded();
+  if (!loaded) {
+    if (force || !m_polyCacheValid || m_lastPolyLoaded) {
+      m_pcmValueLabel->clear();
+      m_cgbValueLabel->clear();
+      m_polyLostLabel->clear();
+      m_polyLostSeparator->hide();
+      m_polyLostLabel->hide();
+      m_polyLostCaption->hide();
+      m_polyMeter->hide();
     }
-    updateTransportActions();
+    m_lastPolyLoaded = false;
+    m_polyCacheValid = true;
+    return;
+  }
+
+  const int pcm = m_audio.activePcmChannels();
+  const int maxPcm = m_audio.maxPcmChannels();
+  const int cgb = m_audio.activeCgbChannels();
+  const uint64_t lost = m_audio.polyLostTotal();
+  const bool hadCache = m_polyCacheValid && m_lastPolyLoaded;
+
+  if (force || !hadCache || pcm != m_lastActivePcmChannels ||
+      maxPcm != m_lastMaxPcmChannels)
+    m_pcmValueLabel->setText(QStringLiteral("%1/%2").arg(pcm).arg(maxPcm));
+  if (force || !hadCache || cgb != m_lastActiveCgbChannels)
+    m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(cgb));
+  if (force || !hadCache || lost != m_lastPolyphonyLostTotal) {
+    const bool hasLost = lost > 0;
+    m_polyLostLabel->setText(hasLost ? QString::number(lost) : QString());
+    m_polyLostSeparator->setVisible(hasLost);
+    m_polyLostLabel->setVisible(hasLost);
+    m_polyLostCaption->setVisible(hasLost);
+  }
+  if (force || !hadCache)
+    m_polyMeter->show();
+
+  m_lastActivePcmChannels = pcm;
+  m_lastMaxPcmChannels = maxPcm;
+  m_lastActiveCgbChannels = cgb;
+  m_lastPolyphonyLostTotal = lost;
+  m_polyCacheValid = true;
+  m_lastPolyLoaded = true;
 }
 
-void MainWindow::synchronizePlayhead()
-{
-    if (!m_audioOk || !m_active || !m_audio.songLoaded()) {
-        // This also runs synchronously from activateSession(nullptr).
-        m_playheadTimer->stop();
-        return;
-    }
-
-    const bool playing = m_audio.transport() == Transport::Playing;
-    m_active->view->setPlayheadSample(m_audio.playheadSamples(), playing);
-    if (playing) {
-        if (!m_playheadTimer->isActive())
-            m_playheadTimer->start();
-    } else {
-        m_playheadTimer->stop();
-    }
+void MainWindow::resetTimedUiCache() {
+  m_lastTimeText.clear();
+  m_timeCacheValid = false;
+  m_polyCacheValid = false;
 }
 
-void MainWindow::startPlayback(bool fromEditCursor)
-{
-    if (!m_audioOk || !m_active || !m_audio.songLoaded())
-        return;
-    const bool seekToCursor =
-        fromEditCursor || m_audio.transport() == Transport::Stopped;
-    uint64_t target = 0;
-    if (seekToCursor) {
-        target = m_audio.timeline()->sampleForTick(m_active->view->editCursorTick());
-        m_audio.seek(target);
-    }
-    m_audio.play();
-    synchronizePlayhead();
-    // The seek lands within one audio period; show its target now rather
-    // than the stale engine playhead synchronizePlayhead just read.
-    if (seekToCursor)
-        m_active->view->setPlayheadSample(target, true);
+void MainWindow::uiTick() {
+  updateTimeLabel(/*force=*/false);
+  updatePolyStatus(/*force=*/false);
+
+  if (m_audioOk && m_active && m_audio.songLoaded() &&
+      m_polyDock->isVisible()) {
+    AudioEngine::PolySnapshot snap;
+    m_audio.polySnapshot(&snap);
+    m_polyPanel->updateSnapshot(snap);
+  }
 }
 
-void MainWindow::pausePlayback()
-{
-    m_audio.pause();
-    synchronizePlayhead();
+void MainWindow::synchronizePlayhead() {
+  if (!m_audioOk || !m_active || !m_audio.songLoaded()) {
+    // This also runs synchronously from activateSession(nullptr).
+    m_playheadTimer->stop();
+    return;
+  }
+
+  const bool playing = m_audio.transport() == Transport::Playing;
+  const bool playheadTimerWasActive = m_playheadTimer->isActive();
+  m_active->view->setPlayheadSample(m_audio.playheadSamples(), playing);
+  if (playing) {
+    if (!m_playheadTimer->isActive())
+      m_playheadTimer->start();
+  } else {
+    m_playheadTimer->stop();
+    if (playheadTimerWasActive)
+      updateTransportActions();
+  }
 }
 
-void MainWindow::stopPlayback()
-{
-    m_audio.stop();
-    synchronizePlayhead();
+void MainWindow::startPlayback(bool fromEditCursor) {
+  if (!m_audioOk || !m_active || !m_audio.songLoaded())
+    return;
+  const bool seekToCursor =
+      fromEditCursor || m_audio.transport() == Transport::Stopped;
+  uint64_t target = 0;
+  if (seekToCursor) {
+    target =
+        m_audio.timeline()->sampleForTick(m_active->view->editCursorTick());
+    m_audio.seek(target);
+  }
+  m_audio.play();
+  updateTransportActions();
+  synchronizePlayhead();
+  // The seek lands within one audio period; show its target now rather
+  // than the stale engine playhead synchronizePlayhead just read.
+  if (seekToCursor)
+    m_active->view->setPlayheadSample(target, true);
 }
 
-void MainWindow::updateTransportActions()
-{
-    const bool loaded = m_audioOk && m_audio.songLoaded();
-    const Transport t = m_audio.transport();
-    m_goToStartAction->setEnabled(loaded);
-    m_playAction->setEnabled(loaded && t != Transport::Playing);
-    m_playPauseAction->setEnabled(loaded);
-    m_pauseAction->setEnabled(loaded && t == Transport::Playing);
-    m_stopAction->setEnabled(loaded && t != Transport::Stopped);
-    m_loopAction->setEnabled(loaded);
+void MainWindow::pausePlayback() {
+  m_audio.pause();
+  updateTransportActions();
+  synchronizePlayhead();
+}
+
+void MainWindow::stopPlayback() {
+  m_audio.stop();
+  updateTransportActions();
+  synchronizePlayhead();
+}
+
+void MainWindow::updateTransportActions() {
+  const bool loaded = m_audioOk && m_audio.songLoaded();
+  const Transport t = m_audio.transport();
+  m_goToStartAction->setEnabled(loaded);
+  m_playAction->setEnabled(loaded && t != Transport::Playing);
+  m_playPauseAction->setEnabled(loaded);
+  m_pauseAction->setEnabled(loaded && t == Transport::Playing);
+  m_stopAction->setEnabled(loaded && t != Transport::Stopped);
+  m_loopAction->setEnabled(loaded);
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
@@ -3140,6 +3192,9 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     }
     qInfo("selftest: loaded %s (%zu events, %d tracks)", qUtf8Printable(target->label),
           m_audio.timeline()->events.size(), m_audio.timeline()->usedTrackCount);
+    // Realize the shown window before timed playback, especially under
+    // profilers where deferred widget setup may otherwise consume the run.
+    QApplication::processEvents();
 
     startPlayback();
     QEventLoop loop;

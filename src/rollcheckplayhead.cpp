@@ -303,63 +303,72 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
                     "the keyboard");
 }
 
-void checkEventListRendering(SongView &view,
-                             songview::PlayheadOverlay &marker,
+void checkEventListRendering(SongView &view, songview::PlayheadOverlay &marker,
                              qreal stoppedMarkerCenter, const QRect &rulerArea,
-                             const QColor &playheadColor, QStringList &failures)
-{
-    auto *events = view.findChild<EventListView *>();
-    if (!events) {
-        failures.append("EventListView child not found");
-        return;
-    }
-    const qreal playheadX = marker.mapTo(&view, QPoint()).x() + stoppedMarkerCenter;
-    view.setEventListVisible(true);
-    processPaints();
-    const QRect eventListArea =
-        QRect(events->mapTo(&view, QPoint()), events->size())
-            .intersected(view.rect());
-    const QPixmap composedPixmap =
-        grabSongViewWithPlayhead(view, marker, failures);
-    const QImage composedImage = composedPixmap.toImage();
-    const qreal composedDpr = composedPixmap.devicePixelRatio();
-    if (!events->isVisible() || eventListArea.isEmpty()) {
-        failures.append("event list is not visible for the playhead check");
-        return;
-    }
-    if (playheadX < eventListArea.left() || playheadX > eventListArea.right()) {
-        failures.append("could not map playhead into the event list");
-        return;
-    }
-    const int triangleHeight = std::min(songview::kPlayheadTriangleHeight + 1,
-                                        eventListArea.height());
-    const QRect triangleArea(eventListArea.left(), eventListArea.top(),
-                             eventListArea.width(), triangleHeight);
-    const auto hasLine = [&](const QRect &area) {
-        return hasPlayheadRedLine(composedImage, composedDpr, playheadX, area,
-                                  playheadColor);
-    };
-    const auto redWidth = [&](int y) {
-        return playheadRedWidth(composedImage, composedDpr, playheadX, y,
-                                playheadColor);
-    };
-    if (!hasLine(triangleArea))
-        failures.append("playhead triangle did not render below the time ruler");
-    if (redWidth(triangleArea.bottom() - 1) <= redWidth(triangleArea.top()))
-        failures.append("playhead triangle did not point up in the event list");
-    if (hasLine(QRect(eventListArea.left(),
-                      eventListArea.top() + triangleHeight,
-                      eventListArea.width(),
-                      eventListArea.height() - triangleHeight)))
-        failures.append("playhead line overpainted the event list");
-    if (hasLine(rulerArea))
-        failures.append("playhead rendered in the event-list time ruler");
-    if (!hasLine(QRect(0, 0, view.width(), eventListArea.top()))
-        && !hasLine(QRect(0, eventListArea.bottom() + 1, view.width(),
-                          view.height() - eventListArea.bottom() - 1))) {
-        failures.append("playhead overlay did not render on visible timeline "
-                        "surfaces");
-    }
+                             const QColor &playheadColor,
+                             QStringList &failures) {
+  auto *events = view.findChild<EventListView *>();
+  if (!events) {
+    failures.append("EventListView child not found");
+    return;
+  }
+  const QPoint markerOffset = marker.mapTo(&view, QPoint());
+  const qreal playheadXInView = markerOffset.x() + stoppedMarkerCenter;
+  view.setEventListVisible(true);
+  processPaints();
+  const QRect eventListArea =
+      QRect(events->mapTo(&view, QPoint()), events->size())
+          .intersected(view.rect());
+  const QPixmap overlayPixmap = grabPlayheadOverlay(view, marker, failures);
+  if (overlayPixmap.isNull())
+    return;
+  const QImage overlayImage = overlayPixmap.toImage();
+  const qreal overlayDpr = overlayPixmap.devicePixelRatio();
+  if (!events->isVisible() || eventListArea.isEmpty()) {
+    failures.append("event list is not visible for the playhead check");
+    return;
+  }
+  if (playheadXInView < eventListArea.left() ||
+      playheadXInView > eventListArea.right()) {
+    failures.append("could not map playhead into the event list");
+    return;
+  }
+  const QRect eventListOverlayArea = eventListArea.translated(-markerOffset);
+  const int triangleHeight = std::min(songview::kPlayheadTriangleHeight + 1,
+                                      eventListOverlayArea.height());
+  const QRect triangleArea(eventListOverlayArea.left(),
+                           eventListOverlayArea.top(),
+                           eventListOverlayArea.width(), triangleHeight);
+  const auto hasLine = [&](const QRect &area) {
+    return hasPlayheadRedLine(overlayImage, overlayDpr, stoppedMarkerCenter,
+                              area, playheadColor);
+  };
+  const auto redWidth = [&](int y) {
+    return playheadRedWidth(overlayImage, overlayDpr, stoppedMarkerCenter, y,
+                            playheadColor);
+  };
+  if (!hasLine(triangleArea))
+    failures.append("playhead triangle did not render below the time ruler");
+  if (redWidth(triangleArea.bottom() - 1) <= redWidth(triangleArea.top()))
+    failures.append("playhead triangle did not point up in the event list");
+  if (hasLine(QRect(eventListOverlayArea.left(),
+                    eventListOverlayArea.top() + triangleHeight,
+                    eventListOverlayArea.width(),
+                    eventListOverlayArea.height() - triangleHeight))) {
+    failures.append("playhead line overpainted the event list");
+  }
+  if (hasLine(rulerArea.translated(-markerOffset)))
+    failures.append("playhead rendered in the event-list time ruler");
+  const QRect upperTimelineArea =
+      QRect(0, 0, view.width(), eventListArea.top()).translated(-markerOffset);
+  const QRect lowerTimelineArea =
+      QRect(0, eventListArea.bottom() + 1, view.width(),
+            view.height() - eventListArea.bottom() - 1)
+          .translated(-markerOffset);
+  if (!hasLine(upperTimelineArea) && !hasLine(lowerTimelineArea)) {
+    failures.append("playhead overlay did not render on visible timeline "
+                    "surfaces");
+  }
 }
 
 void checkFractionalMovement(SongView &view, const MidiTimeline &timeline,

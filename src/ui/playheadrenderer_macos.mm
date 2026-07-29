@@ -3,8 +3,8 @@
 #import <AppKit/AppKit.h>
 #import <QuartzCore/QuartzCore.h>
 
-#include <QColor>
 #include <QGuiApplication>
+#include <QImage>
 #include <QRect>
 #include <QRegion>
 #include <QSize>
@@ -28,6 +28,17 @@ struct ReleaseObject {
 
 template <class T> using RetainedObject = std::unique_ptr<T, ReleaseObject>;
 
+struct ReleaseCoreFoundation {
+  template <class T> void operator()(T *object) const noexcept {
+    if (object) {
+      CFRelease(object);
+    }
+  }
+};
+
+template <class T>
+using RetainedCoreFoundation = std::unique_ptr<T, ReleaseCoreFoundation>;
+
 class DisabledActionTransaction final {
 public:
   DisabledActionTransaction() {
@@ -49,6 +60,23 @@ void setLayerRect(CALayer *layer, const CGRect &rect) {
   layer.position = rect.origin;
 }
 
+void setLayerContents(CALayer *layer, const QImage &image) {
+  if (image.isNull()) {
+    layer.contents = nil;
+    return;
+  }
+
+  auto imageRef = RetainedCoreFoundation<CGImage>{image.toCGImage()};
+  layer.contents = (id)imageRef.get();
+
+  const qreal dpr =
+      image.devicePixelRatio() > 0.0 ? image.devicePixelRatio() : 1.0;
+  const QSizeF logicalSize = image.deviceIndependentSize();
+  layer.contentsScale = dpr;
+  layer.bounds =
+      CGRectMake(0.0, 0.0, logicalSize.width(), logicalSize.height());
+}
+
 } // namespace
 
 class MacPlayheadBackend final : public PlayheadBackend {
@@ -63,43 +91,29 @@ public:
     m_bodyMaskLayer.reset([CAShapeLayer new]);
     m_bodyLayer.reset([CALayer new]);
 
-    m_leftGlowLayer.reset([CAGradientLayer new]);
-    m_rightGlowLayer.reset([CAGradientLayer new]);
-    m_coreLayer.reset([CALayer new]);
-
     m_triangleClipLayer.reset([CALayer new]);
     m_triangleMaskLayer.reset([CAShapeLayer new]);
-    m_triangleLayer.reset([CAShapeLayer new]);
+    m_triangleLayer.reset([CALayer new]);
 
-    const std::array<CALayer *, 10> layers = {
+    const std::array<CALayer *, 7> layers = {
         m_rootLayer.get(),         m_bodyClipLayer.get(),
         m_bodyMaskLayer.get(),     m_bodyLayer.get(),
-        m_leftGlowLayer.get(),     m_rightGlowLayer.get(),
-        m_coreLayer.get(),         m_triangleClipLayer.get(),
-        m_triangleMaskLayer.get(), m_triangleLayer.get()};
+        m_triangleClipLayer.get(), m_triangleMaskLayer.get(),
+        m_triangleLayer.get()};
     for (auto *layer : layers) {
       layer.anchorPoint = CGPointZero;
     }
 
     m_rootLayer.get().geometryFlipped = NO;
     m_rootLayer.get().hidden = YES;
-    m_leftGlowLayer.get().startPoint = CGPointMake(0.0, 0.5);
-    m_leftGlowLayer.get().endPoint = CGPointMake(1.0, 0.5);
 
-    m_rightGlowLayer.get().startPoint = CGPointMake(1.0, 0.5);
-    m_rightGlowLayer.get().endPoint = CGPointMake(0.0, 0.5);
-
-    CGColorRef maskColor = CGColorCreateSRGB(1.0, 1.0, 1.0, 1.0);
-    m_bodyMaskLayer.get().fillColor = maskColor;
-    m_triangleMaskLayer.get().fillColor = maskColor;
-    CGColorRelease(maskColor);
+    auto maskColor =
+        RetainedCoreFoundation<CGColor>{CGColorCreateSRGB(1.0, 1.0, 1.0, 1.0)};
+    m_bodyMaskLayer.get().fillColor = maskColor.get();
+    m_triangleMaskLayer.get().fillColor = maskColor.get();
 
     m_bodyClipLayer.get().mask = m_bodyMaskLayer.get();
     m_triangleClipLayer.get().mask = m_triangleMaskLayer.get();
-
-    [m_bodyLayer.get() addSublayer:m_leftGlowLayer.get()];
-    [m_bodyLayer.get() addSublayer:m_rightGlowLayer.get()];
-    [m_bodyLayer.get() addSublayer:m_coreLayer.get()];
 
     [m_bodyClipLayer.get() addSublayer:m_bodyLayer.get()];
     [m_triangleClipLayer.get() addSublayer:m_triangleLayer.get()];
@@ -118,10 +132,15 @@ public:
     attachToNativeView();
     if (!m_attachedView || m_rootLayer.get().superlayer != m_attachedView.layer)
       return {PlayheadSyncState::Deferred, {}};
+
     DisabledActionTransaction transaction;
-    setLayout(frame.overlaySize, frame.bodyClip, frame.triangleClip);
-    setAppearance(frame.color, frame.playheadGeometry.height(), frame.playing,
-                  frame.trianglePointsUp, frame.devicePixelRatio);
+    if (!m_hasStaticGeneration ||
+        m_cachedStaticGeneration != frame.staticGeneration) {
+      setLayout(frame.overlaySize, frame.bodyClip, frame.triangleClip);
+      m_cachedStaticGeneration = frame.staticGeneration;
+      m_hasStaticGeneration = true;
+    }
+    setImages(frame.bodyImage, frame.bodyImageLeftExtent, frame.triangleImage);
     setPosition(frame.x, frame.playheadGeometry.top(), frame.visible);
     return {PlayheadSyncState::Applied, {}};
   }
@@ -161,21 +180,19 @@ public:
     setLayerRect(m_triangleClipLayer.get(), rootBounds);
     setLayerRect(m_triangleMaskLayer.get(), rootBounds);
 
-    CGMutablePathRef surfacePath = CGPathCreateMutable();
+    auto surfacePath = RetainedCoreFoundation<CGPath>{CGPathCreateMutable()};
     for (const QRect &rect : visibleSurfaces) {
       CGPathAddRect(
-          surfacePath, nullptr,
+          surfacePath.get(), nullptr,
           CGRectMake(rect.x(), rect.y(), rect.width(), rect.height()));
     }
-    m_bodyMaskLayer.get().path = surfacePath;
-    CGPathRelease(surfacePath);
+    m_bodyMaskLayer.get().path = surfacePath.get();
 
-    CGMutablePathRef trianglePath = CGPathCreateMutable();
-    CGPathAddRect(trianglePath, nullptr,
+    auto trianglePath = RetainedCoreFoundation<CGPath>{CGPathCreateMutable()};
+    CGPathAddRect(trianglePath.get(), nullptr,
                   CGRectMake(triangleClip.x(), triangleClip.y(),
                              triangleClip.width(), triangleClip.height()));
-    m_triangleMaskLayer.get().path = trianglePath;
-    CGPathRelease(trianglePath);
+    m_triangleMaskLayer.get().path = trianglePath.get();
 
     m_overlaySize = overlaySize;
     m_visibleSurfaces = visibleSurfaces;
@@ -183,109 +200,25 @@ public:
     m_hasLayout = true;
   }
 
-  void setAppearance(const QColor &color, int height, bool playing,
-                     bool trianglePointsUp, qreal dpr) {
-    if (m_hasAppearance && m_cachedColor == color && m_cachedHeight == height &&
-        m_cachedPlaying == playing &&
-        m_cachedTrianglePointsUp == trianglePointsUp && m_cachedDpr == dpr) {
-      return;
-    }
-    const CGFloat scale = static_cast<CGFloat>(dpr > 0.0 ? dpr : 1.0);
-    const std::array<CALayer *, 10> drawableLayers = {
-        m_rootLayer.get(),         m_bodyClipLayer.get(),
-        m_bodyMaskLayer.get(),     m_bodyLayer.get(),
-        m_leftGlowLayer.get(),     m_rightGlowLayer.get(),
-        m_coreLayer.get(),         m_triangleClipLayer.get(),
-        m_triangleMaskLayer.get(), m_triangleLayer.get()};
-    for (auto *layer : drawableLayers) {
-      layer.contentsScale = scale;
-    }
-    m_bodyLayer.get().rasterizationScale = scale;
-    m_triangleLayer.get().rasterizationScale = scale;
-
-    const qreal leftExtent = playheadGlowLeftExtent(playing);
-    const qreal rightExtent = playheadGlowRightExtent(playing);
-    m_bodyLeftExtent = leftExtent;
-
-    const qreal bodyWidth = leftExtent + rightExtent;
-    m_bodyLayer.get().bounds = CGRectMake(0.0, 0.0, bodyWidth, height);
-
-    m_leftGlowLayer.get().bounds = CGRectMake(0.0, 0.0, leftExtent, height);
-    m_leftGlowLayer.get().position = CGPointMake(0.0, 0.0);
-
-    if (!playing && rightExtent > 0.0) {
-      m_rightGlowLayer.get().hidden = NO;
-      m_rightGlowLayer.get().bounds = CGRectMake(0.0, 0.0, rightExtent, height);
-      m_rightGlowLayer.get().position = CGPointMake(leftExtent, 0.0);
-    } else {
-      m_rightGlowLayer.get().hidden = YES;
+  void setImages(const QImage &bodyImage, qreal bodyImageLeftExtent,
+                 const QImage &triangleImage) {
+    const auto bodyImageCacheKey = bodyImage.cacheKey();
+    if (m_bodyImageCacheKey != bodyImageCacheKey) {
+      setLayerContents(m_bodyLayer.get(), bodyImage);
+      m_bodyImageLeftExtent = bodyImageLeftExtent;
+      m_bodyImageCacheKey = bodyImageCacheKey;
     }
 
-    m_coreLayer.get().bounds = CGRectMake(0.0, 0.0, kPlayheadLineWidth, height);
-    m_coreLayer.get().position =
-        CGPointMake(leftExtent - kPlayheadLineWidth / 2.0, 0.0);
-
-    const qreal r = color.redF();
-    const qreal g = color.greenF();
-    const qreal b = color.blueF();
-    const qreal a = color.alphaF();
-
-    CGColorRef cgColor = CGColorCreateSRGB(r, g, b, a);
-    m_coreLayer.get().backgroundColor = cgColor;
-
-    NSMutableArray *colors =
-        [NSMutableArray arrayWithCapacity:kPlayheadGradientStops.size()];
-    NSMutableArray *locations =
-        [NSMutableArray arrayWithCapacity:kPlayheadGradientStops.size()];
-    const qreal peakAlpha = playheadPeakAlpha(playing);
-    for (const auto &stop : kPlayheadGradientStops) {
-      const qreal alpha = peakAlpha * stop.alphaFactor;
-      CGColorRef stopColor = CGColorCreateSRGB(r, g, b, alpha);
-      [colors addObject:(id)stopColor];
-      CGColorRelease(stopColor);
-      [locations addObject:@(stop.position)];
+    const auto triangleImageCacheKey = triangleImage.cacheKey();
+    if (m_triangleImageCacheKey != triangleImageCacheKey) {
+      setLayerContents(m_triangleLayer.get(), triangleImage);
+      m_triangleImageCacheKey = triangleImageCacheKey;
     }
-
-    m_leftGlowLayer.get().colors = colors;
-    m_leftGlowLayer.get().locations = locations;
-    m_rightGlowLayer.get().colors = colors;
-    m_rightGlowLayer.get().locations = locations;
-
-    const CGFloat triWidth =
-        static_cast<CGFloat>(2.0 * kPlayheadTriangleHalfWidth);
-    const CGFloat triHeight = static_cast<CGFloat>(kPlayheadTriangleHeight);
-    const CGFloat triHalfWidth =
-        static_cast<CGFloat>(kPlayheadTriangleHalfWidth);
-
-    m_triangleLayer.get().bounds = CGRectMake(0.0, 0.0, triWidth, triHeight);
-    m_triangleLayer.get().fillColor = cgColor;
-
-    CGMutablePathRef triPath = CGPathCreateMutable();
-    if (!trianglePointsUp) {
-      CGPathMoveToPoint(triPath, nullptr, 0.0, 0.0);
-      CGPathAddLineToPoint(triPath, nullptr, triWidth, 0.0);
-      CGPathAddLineToPoint(triPath, nullptr, triHalfWidth, triHeight);
-    } else {
-      CGPathMoveToPoint(triPath, nullptr, 0.0, triHeight);
-      CGPathAddLineToPoint(triPath, nullptr, triWidth, triHeight);
-      CGPathAddLineToPoint(triPath, nullptr, triHalfWidth, 0.0);
-    }
-    CGPathCloseSubpath(triPath);
-    m_triangleLayer.get().path = triPath;
-    CGPathRelease(triPath);
-
-    CGColorRelease(cgColor);
-
-    m_cachedColor = color;
-    m_cachedHeight = height;
-    m_cachedPlaying = playing;
-    m_cachedTrianglePointsUp = trianglePointsUp;
-    m_cachedDpr = dpr;
-    m_hasAppearance = true;
   }
 
   void setPosition(qreal finalX, int top, bool visible) {
-    m_bodyLayer.get().position = CGPointMake(finalX - m_bodyLeftExtent, top);
+    m_bodyLayer.get().position =
+        CGPointMake(finalX - m_bodyImageLeftExtent, top);
     m_triangleLayer.get().position =
         CGPointMake(finalX - kPlayheadTriangleHalfWidth, top);
     m_rootLayer.get().hidden = visible ? NO : YES;
@@ -299,27 +232,21 @@ private:
   RetainedObject<CALayer> m_bodyClipLayer;
   RetainedObject<CAShapeLayer> m_bodyMaskLayer;
   RetainedObject<CALayer> m_bodyLayer;
-  RetainedObject<CAGradientLayer> m_leftGlowLayer;
-  RetainedObject<CAGradientLayer> m_rightGlowLayer;
-  RetainedObject<CALayer> m_coreLayer;
 
   RetainedObject<CALayer> m_triangleClipLayer;
   RetainedObject<CAShapeLayer> m_triangleMaskLayer;
-  RetainedObject<CAShapeLayer> m_triangleLayer;
+  RetainedObject<CALayer> m_triangleLayer;
 
   QSize m_overlaySize;
   QRegion m_visibleSurfaces;
   QRect m_triangleClip;
   bool m_hasLayout = false;
+  quint64 m_cachedStaticGeneration = 0;
+  bool m_hasStaticGeneration = false;
 
-  QColor m_cachedColor;
-  int m_cachedHeight = -1;
-  bool m_cachedPlaying = false;
-  bool m_cachedTrianglePointsUp = false;
-  qreal m_cachedDpr = 0.0;
-  bool m_hasAppearance = false;
-
-  qreal m_bodyLeftExtent = 0.0;
+  qint64 m_bodyImageCacheKey = -1;
+  qint64 m_triangleImageCacheKey = -1;
+  qreal m_bodyImageLeftExtent = 0.0;
 };
 
 std::unique_ptr<PlayheadBackend> createPlayheadBackend(QWidget &owner) {
