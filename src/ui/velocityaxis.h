@@ -10,8 +10,8 @@ class VelocityAxis {
 public:
   enum class Mode { Continuous, Detented };
 
-  explicit VelocityAxis(double height,
-                        std::optional<VelocityDetentInfo> detents = std::nullopt);
+  explicit VelocityAxis(
+      double height, std::optional<VelocityDetentInfo> detents = std::nullopt);
 
   double velocityToY(int velocity) const;
   int yToVelocity(double y) const;
@@ -20,15 +20,15 @@ public:
 
   Mode mode() const;
   const std::optional<VelocityDetentInfo> &detents() const;
-  bool compatibleWith(
-      const std::optional<VelocityDetentInfo> &other) const;
+  bool compatibleWith(const std::optional<VelocityDetentInfo> &other) const;
 
 private:
-  static double categoricalLevelToY(int level, int levelCount,
-                                    double height);
+  static double categoricalLevelToY(int level, int levelCount, double height,
+                                    double inset);
   friend double velocityLevelToY(int level, int levelCount, double height);
 
   double m_height;
+  double m_verticalInset;
   std::optional<VelocityDetentInfo> m_detents;
 };
 

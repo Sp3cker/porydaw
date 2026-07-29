@@ -1,4 +1,5 @@
 #include "ui/velocityaxis.h"
+#include "ui/layout.h"
 
 #include <algorithm>
 #include <cmath>
@@ -7,71 +8,66 @@
 namespace songview {
 namespace {
 
-constexpr double kVelocityVerticalInset = 6.0;
 constexpr int kMinimumVelocity = 1;
 constexpr int kMaximumVelocity = 127;
-constexpr double kDetentTopInset = 28.0;
-constexpr double kDetentBottomInset = 10.0;
 
-bool structurallyEqual(const VelocityDetentInfo &left,
-                       const VelocityDetentInfo &right) {
-  if (left.voiceType != right.voiceType ||
-      left.levels.size() != right.levels.size())
-    return false;
-  return std::equal(
-      left.levels.begin(), left.levels.end(), right.levels.begin(),
-      [](const VelocityDetentLevel &a, const VelocityDetentLevel &b) {
-        return a.velocity == b.velocity && a.audible == b.audible;
-      });
+struct VerticalRange {
+  double top;
+  double bottom;
+};
+
+VerticalRange verticalRange(double height, double inset) {
+  const double bottom = std::max(0.0, height - inset);
+  return {std::min(inset, bottom), bottom};
 }
 
 } // namespace
 
 VelocityAxis::VelocityAxis(double height,
                            std::optional<VelocityDetentInfo> detents)
-    : m_height(height), m_detents(std::move(detents)) {}
+    : m_height(height), m_verticalInset(layout::space(layout::Space::Three)),
+      m_detents(std::move(detents)) {}
 
 double VelocityAxis::velocityToY(int velocity) const {
-  const double top = kVelocityVerticalInset;
-  const double bottom = m_height - kVelocityVerticalInset;
-  return bottom - (velocity - kMinimumVelocity) * (bottom - top) /
-                      (kMaximumVelocity - kMinimumVelocity);
+  const VerticalRange range = verticalRange(m_height, m_verticalInset);
+  return range.bottom - (velocity - kMinimumVelocity) *
+                            (range.bottom - range.top) /
+                            (kMaximumVelocity - kMinimumVelocity);
 }
 
 int VelocityAxis::yToVelocity(double y) const {
-  const double top = kVelocityVerticalInset;
-  const double bottom = m_height - kVelocityVerticalInset;
-  const double clampedY = std::clamp(y, top, bottom);
+  const VerticalRange range = verticalRange(m_height, m_verticalInset);
+  if (range.bottom <= range.top)
+    return kMinimumVelocity;
+  const double clampedY = std::clamp(y, range.top, range.bottom);
   return kMinimumVelocity +
-         int(std::round((bottom - clampedY) *
+         int(std::round((range.bottom - clampedY) *
                         (kMaximumVelocity - kMinimumVelocity) /
-                        (bottom - top)));
+                        (range.bottom - range.top)));
 }
 
 double VelocityAxis::categoricalLevelToY(int level, int levelCount,
-                                         double height) {
-  const double bottom = std::max(0.0, height - kDetentBottomInset);
-  const double top = std::min(kDetentTopInset, bottom);
+                                         double height, double inset) {
+  const VerticalRange range = verticalRange(height, inset);
   if (levelCount <= 1)
-    return bottom;
-  return bottom - level * (bottom - top) / (levelCount - 1);
+    return range.bottom;
+  return range.bottom - level * (range.bottom - range.top) / (levelCount - 1);
 }
 
 double VelocityAxis::levelToY(int level) const {
   const int count = m_detents ? int(m_detents->levels.size()) : 0;
-  return categoricalLevelToY(level, count, m_height);
+  return categoricalLevelToY(level, count, m_height, m_verticalInset);
 }
 
 int VelocityAxis::yToLevel(double y) const {
-  const double bottom = std::max(0.0, m_height - kDetentBottomInset);
-  const double top = std::min(kDetentTopInset, bottom);
+  const VerticalRange range = verticalRange(m_height, m_verticalInset);
   const int count = m_detents ? int(m_detents->levels.size()) : 0;
-  if (count <= 1 || bottom <= top)
+  if (count <= 1 || range.bottom <= range.top)
     return 0;
-  const double clampedY = std::clamp(y, top, bottom);
-  return std::clamp(
-      int(std::round((bottom - clampedY) * (count - 1) / (bottom - top))),
-      0, count - 1);
+  const double clampedY = std::clamp(y, range.top, range.bottom);
+  return std::clamp(int(std::round((range.bottom - clampedY) * (count - 1) /
+                                   (range.bottom - range.top))),
+                    0, count - 1);
 }
 
 VelocityAxis::Mode VelocityAxis::mode() const {
@@ -84,7 +80,7 @@ const std::optional<VelocityDetentInfo> &VelocityAxis::detents() const {
 
 bool VelocityAxis::compatibleWith(
     const std::optional<VelocityDetentInfo> &other) const {
-  return m_detents && other && structurallyEqual(*m_detents, *other);
+  return m_detents && other && velocityDetentsCompatible(*m_detents, *other);
 }
 
 double velocityToY(int velocity, double height) {
@@ -92,7 +88,8 @@ double velocityToY(int velocity, double height) {
 }
 
 double velocityLevelToY(int level, int levelCount, double height) {
-  return VelocityAxis::categoricalLevelToY(level, levelCount, height);
+  return VelocityAxis::categoricalLevelToY(level, levelCount, height,
+                                           layout::space(layout::Space::Three));
 }
 
 int yToVelocity(double y, double height) {

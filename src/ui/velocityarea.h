@@ -10,13 +10,13 @@
 
 namespace songview {
 
-
 class VelocityArea : public QWidget {
 public:
   explicit VelocityArea(SongView *sv);
 
   bool gestureActive() const;
   void cancelGesture();
+  std::optional<uint8_t> velocityPreview(const ViewNote &note) const;
 
 protected:
   void paintEvent(QPaintEvent *event) override;
@@ -52,10 +52,12 @@ private:
                const VelocityAxis &axis) const;
   std::vector<SongView::NoteId> hitNotesAt(QPointF pos,
                                            const VelocityAxis &axis) const;
-  void selectBand(const QRectF &band, bool additive,
-                  const VelocityAxis &axis);
+  void selectBand(const QRectF &band, bool additive, const VelocityAxis &axis);
   void seedSweepAt(QPointF pos, const VelocityAxis &axis);
   void updateSweep(QPointF p0, QPointF p1, const VelocityAxis &axis);
+  std::optional<int> graduationVelocityAt(QPointF pos,
+                                          const VelocityAxis &axis) const;
+  void setSelectedVelocities(int velocity);
   std::vector<SongView::NoteId> detentContextNotes() const;
 
   SongView *m_sv = nullptr;
