@@ -6065,10 +6065,11 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
         return;
     m_playheadTick = m_timeline->tickForSample(samplePos);
     m_playing = playing;
-    // Follow the playhead — but not while the user is mid-gesture (panning,
-    // dragging notes or selections, sweeping automation): yanking the view
-    // out from under a held mouse button is disorienting.
-    if (playing && !userGestureActive()) {
+    // Follow the playhead — unless following is switched off (transport
+    // bar), and never while the user is mid-gesture (panning, dragging notes
+    // or selections, sweeping automation): yanking the view out from under a
+    // held mouse button is disorienting.
+    if (playing && m_followPlayhead && !userGestureActive()) {
         const qreal px = contentX(m_playheadTick);
         const qreal vw = viewportWidth();
         if (px < 0.0 || px > vw * 85.0 / 100.0)
@@ -6317,6 +6318,12 @@ QColor SongView::velocityNoteColor(int velocity)
     return QColor(QColor::fromHsvF(h0 + (h1 - h0) * t, s0 + (s1 - s0) * t,
                                    v0 + (v1 - v0) * t)
                       .rgb());
+}
+
+void SongView::setFollowPlayhead(bool on)
+{
+    m_followPlayhead = on;
+    m_events->setFollowPlayhead(on);
 }
 
 void SongView::setVelocityColorMode(bool on)
