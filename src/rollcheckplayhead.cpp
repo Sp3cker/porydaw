@@ -225,69 +225,73 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
   const QImage beforeHover = pianoRoll.grab().toImage();
   processPaints();
 
-  const songview::TimelineSurfaceDiagnostics diagnosticsBefore =
+  const qreal dpr = pianoRoll.devicePixelRatioF();
+  const int cacheKeyboardPixelWidth =
+      std::min(qCeil(pianoRoll.width() * dpr),
+               qCeil(songview::kKeyboardW * dpr));
+  const int maxReadoutPixelHeight =
+      std::min(qCeil(pianoRoll.height() * dpr), qCeil(72 * dpr));
+  const quint64 maxKeyboardReadoutPaintPixels =
+      quint64(cacheKeyboardPixelWidth) * quint64(maxReadoutPixelHeight);
+  const auto checkPaintScope =
+      [&](const songview::TimelineSurfaceDiagnostics &before,
+          const songview::TimelineSurfaceDiagnostics &after,
+          const QString &action) {
+        if (after.contentPaintCount <= before.contentPaintCount ||
+            after.contentPaintPixelCount <= before.contentPaintPixelCount) {
+          failures.append(
+              QStringLiteral("piano-roll hover %1 painted no content")
+                  .arg(action));
+          return;
+        }
+        const quint64 painted =
+            after.contentPaintPixelCount - before.contentPaintPixelCount;
+        if (painted > maxKeyboardReadoutPaintPixels) {
+          failures.append(
+              QStringLiteral("piano-roll hover %1 painted %2 device pixels "
+                             "(readout budget %3)")
+                  .arg(action)
+                  .arg(painted)
+                  .arg(maxKeyboardReadoutPaintPixels));
+        }
+      };
+
+  const QPoint firstPosition(1, pianoRoll.height() / 2);
+  const songview::TimelineSurfaceDiagnostics beforeFirst =
       pianoRoll.diagnostics();
   paintProbe.clear();
-  const QPoint hoverPosition(1, pianoRoll.height() / 2);
-  QMouseEvent hoverEvent(QEvent::MouseMove, QPointF(hoverPosition),
-                         QPointF(pianoRoll.mapToGlobal(hoverPosition)),
+  QMouseEvent firstEvent(QEvent::MouseMove, QPointF(firstPosition),
+                         QPointF(pianoRoll.mapToGlobal(firstPosition)),
                          Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-  QCoreApplication::sendEvent(&pianoRoll, &hoverEvent);
+  QCoreApplication::sendEvent(&pianoRoll, &firstEvent);
   processPaints();
-
-  const bool pianoRollRepainted = paintProbe.repainted(&pianoRoll);
-  const int repaintWidth = paintProbe.maxPaintWidth(&pianoRoll);
-  const songview::TimelineSurfaceDiagnostics diagnosticsAfter =
+  const bool firstRepainted = paintProbe.repainted(&pianoRoll);
+  const int firstRepaintWidth = paintProbe.maxPaintWidth(&pianoRoll);
+  const songview::TimelineSurfaceDiagnostics afterFirst =
       pianoRoll.diagnostics();
-  const QImage afterHover = pianoRoll.grab().toImage();
-
-  if (!pianoRollRepainted || repaintWidth > songview::kKeyboardW) {
+  const QImage afterFirstHover = pianoRoll.grab().toImage();
+  if (!firstRepainted || firstRepaintWidth > songview::kKeyboardW) {
     failures.append(
-        QStringLiteral("partial timeline cache update repainted %1 px "
-                       "(budget %2)")
-            .arg(repaintWidth)
+        QStringLiteral("piano-roll hover repainted %1 px (budget %2)")
+            .arg(firstRepaintWidth)
             .arg(songview::kKeyboardW));
   }
-  if (diagnosticsAfter.contentPaintCount !=
-      diagnosticsBefore.contentPaintCount + 1) {
-    failures.append("partial timeline cache update painted content more "
-                    "than once");
-  }
-  if (beforeHover.size() != afterHover.size() ||
-      beforeHover.devicePixelRatio() != afterHover.devicePixelRatio()) {
-    failures.append("partial timeline cache update changed image geometry");
+  checkPaintScope(beforeFirst, afterFirst, QStringLiteral("entry"));
+
+  if (beforeHover.size() != afterFirstHover.size() ||
+      beforeHover.devicePixelRatio() != afterFirstHover.devicePixelRatio()) {
+    failures.append("piano-roll hover changed image geometry");
     return;
   }
-
   const int keyboardPixelWidth =
-      std::min(afterHover.width(),
-               qCeil(songview::kKeyboardW * afterHover.devicePixelRatio()));
-  const qreal cacheDevicePixelRatio = pianoRoll.devicePixelRatioF();
-  const int cacheKeyboardPixelWidth =
-      std::min(qCeil(pianoRoll.width() * cacheDevicePixelRatio),
-               qCeil(songview::kKeyboardW * cacheDevicePixelRatio));
-  const int cachePixelHeight =
-      qCeil(pianoRoll.height() * cacheDevicePixelRatio);
-  const quint64 maxKeyboardPaintPixels =
-      quint64(cacheKeyboardPixelWidth) * quint64(cachePixelHeight);
-  if (diagnosticsAfter.contentPaintPixelCount <=
-      diagnosticsBefore.contentPaintPixelCount) {
-    failures.append("partial timeline cache update painted no content pixels");
-  } else if (diagnosticsAfter.contentPaintPixelCount -
-                 diagnosticsBefore.contentPaintPixelCount >
-             maxKeyboardPaintPixels) {
-    failures.append(
-        QStringLiteral("partial timeline cache update painted %1 device "
-                       "pixels (budget %2)")
-            .arg(diagnosticsAfter.contentPaintPixelCount -
-                 diagnosticsBefore.contentPaintPixelCount)
-            .arg(maxKeyboardPaintPixels));
-  }
+      std::min(afterFirstHover.width(),
+               qCeil(songview::kKeyboardW *
+                     afterFirstHover.devicePixelRatio()));
   bool keyboardChanged = false;
   bool timelineChanged = false;
-  for (int y = 0; y < afterHover.height(); ++y) {
-    for (int x = 0; x < afterHover.width(); ++x) {
-      if (beforeHover.pixel(x, y) == afterHover.pixel(x, y))
+  for (int y = 0; y < afterFirstHover.height(); ++y) {
+    for (int x = 0; x < afterFirstHover.width(); ++x) {
+      if (beforeHover.pixel(x, y) == afterFirstHover.pixel(x, y))
         continue;
       if (x < keyboardPixelWidth)
         keyboardChanged = true;
@@ -296,12 +300,249 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
     }
   }
   if (!keyboardChanged)
-    failures.append("partial timeline cache update did not change the "
-                    "keyboard");
+    failures.append("piano-roll hover did not change the keyboard");
   if (timelineChanged)
-    failures.append("partial timeline cache update changed pixels outside "
-                    "the keyboard");
+    failures.append("piano-roll hover changed pixels outside the keyboard");
+
+  const int moveDistance = std::max(12, pianoRoll.height() / 6);
+  const QPoint secondPosition(
+      1, std::clamp(firstPosition.y() + moveDistance, 0,
+                    pianoRoll.height() - 1));
+  const songview::TimelineSurfaceDiagnostics beforeMove =
+      pianoRoll.diagnostics();
+  paintProbe.clear();
+  QMouseEvent secondEvent(QEvent::MouseMove, QPointF(secondPosition),
+                          QPointF(pianoRoll.mapToGlobal(secondPosition)),
+                          Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+  QCoreApplication::sendEvent(&pianoRoll, &secondEvent);
+  processPaints();
+  const bool moveRepainted = paintProbe.repainted(&pianoRoll);
+  const int moveRepaintWidth = paintProbe.maxPaintWidth(&pianoRoll);
+  const songview::TimelineSurfaceDiagnostics afterMove =
+      pianoRoll.diagnostics();
+  const QImage afterMoveHover = pianoRoll.grab().toImage();
+  if (afterMoveHover == afterFirstHover)
+    failures.append("piano-roll hover move did not move its key readout");
+  if (!moveRepainted || moveRepaintWidth > songview::kKeyboardW) {
+    failures.append(
+        QStringLiteral("piano-roll hover move repainted %1 px (budget %2)")
+            .arg(moveRepaintWidth)
+            .arg(songview::kKeyboardW));
+  }
+  checkPaintScope(beforeMove, afterMove, QStringLiteral("move"));
+
+  const songview::TimelineSurfaceDiagnostics beforeClear =
+      pianoRoll.diagnostics();
+  paintProbe.clear();
+  QCoreApplication::sendEvent(&pianoRoll, &leaveEvent);
+  processPaints();
+  const bool clearRepainted = paintProbe.repainted(&pianoRoll);
+  const int clearRepaintWidth = paintProbe.maxPaintWidth(&pianoRoll);
+  const songview::TimelineSurfaceDiagnostics afterClear =
+      pianoRoll.diagnostics();
+  const QImage afterClearImage = pianoRoll.grab().toImage();
+  if (afterClearImage != beforeHover)
+    failures.append("piano-roll hover pixels did not restore after leave");
+  if (!clearRepainted || clearRepaintWidth > songview::kKeyboardW) {
+    failures.append(
+        QStringLiteral("piano-roll hover clear repainted %1 px (budget %2)")
+            .arg(clearRepaintWidth)
+            .arg(songview::kKeyboardW));
+  }
+  checkPaintScope(beforeClear, afterClear, QStringLiteral("clear"));
 }
+
+void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes,
+                                     PaintRegionProbe &paintProbe,
+                                     QStringList &failures) {
+  QEvent leaveEvent(QEvent::Leave);
+  QCoreApplication::sendEvent(&lanes, &leaveEvent);
+  processPaints();
+  const QImage baseline = lanes.grab().toImage();
+  processPaints();
+
+  const int plotLeft = songview::kGutterW;
+  const int plotWidth = lanes.width() - plotLeft;
+  if (plotWidth <= 32 || lanes.height() <= 0) {
+    failures.append("automation hover check has no visible curve area");
+    return;
+  }
+
+  struct HoverResult {
+    QPoint position;
+    QImage image;
+    songview::TimelineSurfaceDiagnostics before;
+    songview::TimelineSurfaceDiagnostics after;
+    int repaintWidth = 0;
+    bool repainted = false;
+  };
+  HoverResult hover;
+  bool foundReadout = false;
+  const std::array<int, 3> candidateXs{{
+      plotLeft + (plotWidth * 3) / 4,
+      plotLeft + plotWidth / 2,
+      plotLeft + plotWidth - std::min(24, plotWidth / 8),
+  }};
+  constexpr int candidateRowStep = 12;
+  for (int y = candidateRowStep / 2;
+       y < lanes.height() && !foundReadout; y += candidateRowStep) {
+    for (const int candidateX : candidateXs) {
+      const QPoint position(
+          std::clamp(candidateX, plotLeft, lanes.width() - 1), y);
+      hover.position = position;
+      hover.before = lanes.diagnostics();
+      paintProbe.clear();
+      QMouseEvent hoverEvent(QEvent::MouseMove, QPointF(position),
+                             QPointF(lanes.mapToGlobal(position)),
+                             Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+      QCoreApplication::sendEvent(&lanes, &hoverEvent);
+      processPaints();
+      hover.repainted = paintProbe.repainted(&lanes);
+      hover.repaintWidth = paintProbe.maxPaintWidth(&lanes);
+      hover.after = lanes.diagnostics();
+      hover.image = lanes.grab().toImage();
+      foundReadout = hover.image.size() == baseline.size() &&
+                     hover.image.devicePixelRatio() ==
+                         baseline.devicePixelRatio() &&
+                     hover.image != baseline;
+      if (foundReadout)
+        break;
+      QCoreApplication::sendEvent(&lanes, &leaveEvent);
+      processPaints();
+    }
+  }
+  if (!foundReadout) {
+    failures.append("automation idle hover did not render a visible readout");
+    paintProbe.clear();
+    return;
+  }
+
+  const qreal dpr = lanes.devicePixelRatioF();
+  const int maxReadoutWidth =
+      std::min(192, std::max(64, lanes.width() / 3));
+  const quint64 maxReadoutPaintPixels =
+      quint64(qCeil(maxReadoutWidth * dpr)) *
+      quint64(qCeil(std::min(64, lanes.height()) * dpr));
+  const quint64 wholeSurfacePixels =
+      quint64(qCeil(lanes.width() * dpr)) *
+      quint64(qCeil(lanes.height() * dpr));
+  if (!hover.repainted || hover.repaintWidth > maxReadoutWidth) {
+    failures.append(
+        QStringLiteral("automation hover repainted %1 px (budget %2)")
+            .arg(hover.repaintWidth)
+            .arg(maxReadoutWidth));
+  }
+  if (hover.after.contentPaintCount <= hover.before.contentPaintCount ||
+      hover.after.contentPaintPixelCount <= hover.before.contentPaintPixelCount) {
+    failures.append("automation hover did not paint lane content");
+  } else {
+    const quint64 hoverPaintPixels =
+        hover.after.contentPaintPixelCount - hover.before.contentPaintPixelCount;
+    if (hoverPaintPixels > maxReadoutPaintPixels ||
+        hoverPaintPixels * 2 >= wholeSurfacePixels) {
+      failures.append(
+          QStringLiteral("automation hover painted %1 device pixels "
+                         "(readout budget %2)")
+              .arg(hoverPaintPixels)
+              .arg(maxReadoutPaintPixels));
+    }
+  }
+
+  const int moveDistance = std::min(96, std::max(48, plotWidth / 6));
+  int secondX =
+      std::min(lanes.width() - 1, hover.position.x() + moveDistance);
+  if (secondX - hover.position.x() < std::min(24, plotWidth / 4))
+    secondX = std::max(plotLeft, hover.position.x() - moveDistance);
+  const QPoint secondPosition(secondX, hover.position.y());
+  const songview::TimelineSurfaceDiagnostics beforeMove = lanes.diagnostics();
+  paintProbe.clear();
+  QMouseEvent moveEvent(QEvent::MouseMove, QPointF(secondPosition),
+                        QPointF(lanes.mapToGlobal(secondPosition)),
+                        Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+  QCoreApplication::sendEvent(&lanes, &moveEvent);
+  processPaints();
+  const bool moveRepainted = paintProbe.repainted(&lanes);
+  const int moveRepaintWidth = paintProbe.maxPaintWidth(&lanes);
+  const songview::TimelineSurfaceDiagnostics afterMove = lanes.diagnostics();
+  const QImage moved = lanes.grab().toImage();
+  bool firstReadoutPixelsRestored = false;
+  if (moved.size() == baseline.size() &&
+      moved.devicePixelRatio() == baseline.devicePixelRatio()) {
+    for (int y = 0; y < baseline.height() && !firstReadoutPixelsRestored; ++y) {
+      for (int x = 0; x < baseline.width(); ++x) {
+        if (hover.image.pixel(x, y) != baseline.pixel(x, y) &&
+            moved.pixel(x, y) == baseline.pixel(x, y)) {
+          firstReadoutPixelsRestored = true;
+          break;
+        }
+      }
+    }
+  }
+  if (moved == hover.image || moved == baseline)
+    failures.append("automation hover move did not move its visible readout");
+  if (!firstReadoutPixelsRestored) {
+    failures.append(
+        "automation hover move did not restore the old readout pixels");
+  }
+  const int maxMoveRepaintWidth =
+      std::min(lanes.width(),
+               maxReadoutWidth + std::abs(secondX - hover.position.x()));
+  if (!moveRepainted || moveRepaintWidth > maxMoveRepaintWidth) {
+    failures.append(
+        QStringLiteral("automation hover move repainted %1 px (budget %2)")
+            .arg(moveRepaintWidth)
+            .arg(maxMoveRepaintWidth));
+  }
+  if (afterMove.contentPaintCount <= beforeMove.contentPaintCount ||
+      afterMove.contentPaintPixelCount <= beforeMove.contentPaintPixelCount) {
+    failures.append("automation hover move did not paint lane content");
+  } else {
+    const quint64 movePaintPixels =
+        afterMove.contentPaintPixelCount - beforeMove.contentPaintPixelCount;
+    const quint64 maxMovePaintPixels = maxReadoutPaintPixels * 2;
+    if (movePaintPixels > maxMovePaintPixels ||
+        movePaintPixels * 2 >= wholeSurfacePixels) {
+      failures.append(
+          QStringLiteral("automation hover move painted %1 device pixels "
+                         "(old/new readout budget %2)")
+              .arg(movePaintPixels)
+              .arg(maxMovePaintPixels));
+    }
+  }
+
+  const songview::TimelineSurfaceDiagnostics beforeClear = lanes.diagnostics();
+  paintProbe.clear();
+  QCoreApplication::sendEvent(&lanes, &leaveEvent);
+  processPaints();
+  const bool clearRepainted = paintProbe.repainted(&lanes);
+  const int clearRepaintWidth = paintProbe.maxPaintWidth(&lanes);
+  const songview::TimelineSurfaceDiagnostics afterClear = lanes.diagnostics();
+  const QImage cleared = lanes.grab().toImage();
+  if (cleared != baseline)
+    failures.append("automation hover pixels did not restore after leave");
+  if (!clearRepainted || clearRepaintWidth > maxReadoutWidth) {
+    failures.append(
+        QStringLiteral("automation hover clear repainted %1 px (budget %2)")
+            .arg(clearRepaintWidth)
+            .arg(maxReadoutWidth));
+  }
+  if (afterClear.contentPaintCount <= beforeClear.contentPaintCount ||
+      afterClear.contentPaintPixelCount <= beforeClear.contentPaintPixelCount) {
+    failures.append("automation hover clear did not paint lane content");
+  } else {
+    const quint64 clearPaintPixels =
+        afterClear.contentPaintPixelCount - beforeClear.contentPaintPixelCount;
+    if (clearPaintPixels > maxReadoutPaintPixels ||
+        clearPaintPixels * 2 >= wholeSurfacePixels) {
+      failures.append(
+          QStringLiteral("automation hover clear painted %1 device pixels "
+                         "(readout budget %2)")
+              .arg(clearPaintPixels)
+              .arg(maxReadoutPaintPixels));
+    }
+  }
+}
+
 
 void checkEventListRendering(SongView &view, songview::PlayheadOverlay &marker,
                              qreal stoppedMarkerCenter, const QRect &rulerArea,
@@ -402,16 +643,23 @@ void checkFractionalMovement(SongView &view, const MidiTimeline &timeline,
     }
     view.setPlayheadSample(fractionalStartSample, true);
     processPaints();
-    const qreal fractionalStart = playheadCenter(
-        grabPlayheadOverlay(view, marker, failures), playheadColor);
+    const QPixmap fractionalStartPixmap =
+        grabPlayheadOverlay(view, marker, failures);
+    const qreal fractionalStart =
+        playheadCenter(fractionalStartPixmap, playheadColor);
     view.setPlayheadSample(fractionalEndSample, true);
     processPaints();
-    const qreal fractionalEnd = playheadCenter(
-        grabPlayheadOverlay(view, marker, failures), playheadColor);
+    const QPixmap fractionalEndPixmap =
+        grabPlayheadOverlay(view, marker, failures);
+    const qreal fractionalEnd =
+        playheadCenter(fractionalEndPixmap, playheadColor);
     const qreal expectedDelta =
         (timeline.tickForSample(fractionalEndSample)
          - timeline.tickForSample(fractionalStartSample)) * view.pxPerTick();
-    if (std::abs((fractionalEnd - fractionalStart) - expectedDelta) > 0.2) {
+    const qreal devicePixelRatio = fractionalEndPixmap.devicePixelRatio();
+    if (devicePixelRatio > 1.0
+        && std::abs((fractionalEnd - fractionalStart) - expectedDelta)
+               > 0.5 / devicePixelRatio) {
         failures.append("fractional playhead movement did not match its timeline "
                         "position");
     }
@@ -541,6 +789,7 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     }
 
     checkPianoRollKeyboardCacheUpdate(surfaces.roll.widget, probe, failures);
+    checkAutomationHoverCacheUpdate(surfaces.lanes.widget, probe, failures);
     probe.clear();
     const auto diagnosticsBefore = [&cachedSurfaces] {
       std::array<songview::TimelineSurfaceDiagnostics, 3> diagnostics;

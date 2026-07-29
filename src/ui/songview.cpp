@@ -2132,6 +2132,38 @@ private:
         return logicalPhysicalPixel(devicePixelRatioF());
     }
 
+    struct KeyboardHoverGeometry {
+        QRectF highlightRect;
+        QString name;
+        QFont chipFont;
+        QRectF chipRect;
+        QRegion paintRegion;
+    };
+
+    std::optional<KeyboardHoverGeometry> keyboardHoverGeometry(int key) const
+    {
+        if (key < 0 || key > 127)
+            return std::nullopt;
+
+        const QRectF highlight = keyRect(key, 0, kKeyboardW);
+        const QString name = midiKeyName(key);
+        QFont chipFont = font();
+        chipFont.setPixelSize(10);
+        const QFontMetrics metrics(chipFont);
+        const int chipWidth = metrics.horizontalAdvance(name) + 8;
+        const int chipHeight = metrics.height() + 2;
+        const qreal chipY =
+            std::clamp(highlight.center().y() - chipHeight / 2.0, 0.0,
+                       qreal(std::max(0, height() - chipHeight)));
+        const QRectF chip(kKeyboardW - 2 - chipWidth, chipY, chipWidth,
+                          chipHeight);
+        QRegion paintRegion(chip.toAlignedRect());
+        if (key != m_soundingKey)
+            paintRegion |= QRegion(highlight.toAlignedRect());
+        paintRegion &= QRegion(0, 0, kKeyboardW, height());
+        return KeyboardHoverGeometry{highlight, name, chipFont, chip, paintRegion};
+    }
+
     // Key row under the cursor: the keyboard column mirrors it with a tint
     // and a note-name chip so the row reads at any zoom (-1 = cursor left
     // the roll). Exposed as a dynamic property for the check harness.
@@ -2139,9 +2171,15 @@ private:
     {
         if (key == m_hoverKey)
             return;
+        const auto oldGeometry = keyboardHoverGeometry(m_hoverKey);
+        const QRegion oldRegion =
+            oldGeometry ? oldGeometry->paintRegion : QRegion();
         m_hoverKey = key;
         setProperty("hoverKey", m_hoverKey);
-        invalidateContent(QRegion(0, 0, kKeyboardW, height()));
+        const auto newGeometry = keyboardHoverGeometry(m_hoverKey);
+        const QRegion newRegion =
+            newGeometry ? newGeometry->paintRegion : QRegion();
+        invalidateContent(oldRegion | newRegion);
     }
 
     // All roll auditions go through here so the keyboard column can mark the
@@ -2625,6 +2663,7 @@ private:
         const int hovered = m_hoverKey;
         const QPen separatorPen(
             themes::color(themes::Role::song_view_piano_keyboard_separator), 0);
+        const auto hoverGeometry = keyboardHoverGeometry(hovered);
         for (int key = 0; key < 128; key++) {
             const QRectF keyRect = this->keyRect(key, 0, kKeyboardW);
             if (keyRect.bottom() <= 0 || keyRect.top() >= height())
@@ -2663,34 +2702,25 @@ private:
                     }
                 }
             }
-            if (key == hovered && !sounding) {
+            if (key == hovered && !sounding && hoverGeometry) {
                 QColor h = m_sv->palette().color(QPalette::Highlight);
                 h.setAlpha(80);
-                p.fillRect(keyRect, h);
+                p.fillRect(hoverGeometry->highlightRect, h);
             }
         }
         // Note-name chip on the hovered row: keys can be as short as 4px,
         // so the name gets its own fixed-size readout instead of in-row
         // text, vertically clamped so edge rows stay readable.
-        if (hovered >= 0) {
-            const QString name = midiKeyName(hovered);
-            QFont cf = p.font();
-            cf.setPixelSize(10);
-            p.setFont(cf);
-            const QFontMetrics fm(cf);
-            const int cw = fm.horizontalAdvance(name) + 8;
-            const int ch = fm.height() + 2;
-            const QRectF hoveredRect = keyRect(hovered, 0, kKeyboardW);
-            const qreal cy = std::clamp(hoveredRect.center().y() - ch / 2.0,
-                                        0.0, qreal(std::max(0, height() - ch)));
-            const QRectF chip(kKeyboardW - 2 - cw, cy, cw, ch);
+        if (hoverGeometry) {
+            p.setFont(hoverGeometry->chipFont);
             p.save();
             p.setRenderHint(QPainter::Antialiasing);
             p.setPen(Qt::NoPen);
             p.setBrush(QColor(0x30, 0x30, 0x30, 230));
-            p.drawRoundedRect(chip, 3, 3);
+            p.drawRoundedRect(hoverGeometry->chipRect, 3, 3);
             p.setPen(Qt::white);
-            p.drawText(chip, Qt::AlignCenter, name);
+            p.drawText(hoverGeometry->chipRect, Qt::AlignCenter,
+                       hoverGeometry->name);
             p.restore();
         }
         p.setPen(themes::color(themes::Role::song_view_separator));
@@ -2957,47 +2987,85 @@ protected:
         paintHoverReadout(p);
     }
 
+private:
+    struct HoverReadoutGeometry {
+        QPointF markerCenter;
+        QPointF textBaseline;
+        QFont font;
+        QString text;
+        QRect clipRect;
+        QRegion paintRegion;
+    };
+
+    std::optional<HoverReadoutGeometry> hoverReadoutGeometry(int rowIndex,
+                                                             double tick) const
+    {
+        if (rowIndex < 0 || rowIndex >= int(m_rows.size()))
+            return std::nullopt;
+        const Row &row = m_rows[rowIndex];
+        const std::vector<LanePoint> *points = rowPoints(row);
+        if (!points || points->empty())
+            return std::nullopt;
+        const auto it = std::upper_bound(
+            points->begin(), points->end(), tick,
+            [](double t, const LanePoint &pt) { return t < double(pt.tick); });
+        if (it == points->begin())
+            return std::nullopt;
+
+        const int value = (it - 1)->value;
+        int minV, maxV;
+        rowRange(row, &minV, &maxV);
+        const int top = rowTop(rowIndex) + 5;
+        const int bottom = rowBottom(rowIndex) - 1 - 4;
+        const QPointF marker(
+            m_sv->displayX(tick, kGutterW, devicePixelRatioF()),
+            bottom - (value - minV) * (bottom - top) / std::max(1, maxV - minV));
+        const QString text = formatRowValue(row, value);
+        const QFont readoutFont = typography::caption(font());
+        const QFontMetrics metrics(readoutFont);
+        const int textWidth = metrics.horizontalAdvance(text);
+        const qreal textX =
+            marker.x() + 6 + textWidth > width() ? marker.x() - 6 - textWidth
+                                                : marker.x() + 6;
+        const QPointF baseline(
+            textX, std::max(marker.y() - 4,
+                            qreal(rowTop(rowIndex) + metrics.ascent() + 2)));
+        const QRect clip(kGutterW, rowTop(rowIndex), width() - kGutterW,
+                         rowHeight(row));
+        // A one-pixel antialiased ellipse stroke can cover the pixel just
+        // outside its nominal three-pixel radii.
+        const QRect markerBounds =
+            QRectF(marker.x() - 4, marker.y() - 4, 9, 9).toAlignedRect();
+        const QRect textBounds =
+            QRectF(metrics.boundingRect(text)).translated(baseline).toAlignedRect();
+        const QRegion paintRegion =
+            (QRegion(markerBounds) | QRegion(textBounds)) & QRegion(clip);
+        if (paintRegion.isEmpty())
+            return std::nullopt;
+        return HoverReadoutGeometry{marker, baseline, readoutFont, text, clip,
+                                    paintRegion};
+    }
+
     // Idle-hover readout: a marker on the curve with the value in effect at
     // the cursor's tick (the last point at or before it — lanes hold their
     // value until the next point, so this matches what the curve shows).
     void paintHoverReadout(QPainter &p)
     {
-        if (m_dragRow >= 0 || m_selSweep || m_hoverRow < 0
-            || m_hoverRow >= int(m_rows.size()))
+        if (m_dragRow >= 0 || m_selSweep)
             return;
-        const Row &row = m_rows[m_hoverRow];
-        const std::vector<LanePoint> *points = rowPoints(row);
-        if (!points || points->empty())
+        const auto geometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
+        if (!geometry)
             return;
-        const auto it = std::upper_bound(
-            points->begin(), points->end(), m_hoverTick,
-            [](double t, const LanePoint &pt) { return t < double(pt.tick); });
-        if (it == points->begin())
-            return; // before the first point: no value in effect yet
-        const int value = (it - 1)->value;
-        int minV, maxV;
-        rowRange(row, &minV, &maxV);
-        const int top = rowTop(m_hoverRow) + 5;
-        const int bottom = rowBottom(m_hoverRow) - 1 - 4;
-        const qreal x =
-            m_sv->displayX(m_hoverTick, kGutterW,
-                           p.device()->devicePixelRatioF());
-        const int y =
-            bottom - (value - minV) * (bottom - top) / std::max(1, maxV - minV);
-        p.setClipRect(
-            QRect(kGutterW, rowTop(m_hoverRow), width() - kGutterW, rowHeight(row)));
+        p.setFont(geometry->font);
+        p.setClipRect(geometry->clipRect);
         p.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
         p.setBrush(Qt::NoBrush);
-        p.drawEllipse(QPointF(x, y), 3, 3);
-        const QString text = formatRowValue(row, value);
-        // Keep the label inside the row: flip left of the cursor at the right
-        // edge, and keep the baseline below the row top when the curve is high.
-        const int tw = fontMetrics().horizontalAdvance(text);
-        const qreal tx = x + 6 + tw > width() ? x - 6 - tw : x + 6;
-        const int ty = std::max(y - 4, rowTop(m_hoverRow) + fontMetrics().ascent() + 2);
-        p.drawText(QPointF(tx, ty), text);
+        p.drawEllipse(geometry->markerCenter, 3, 3);
+        p.drawText(geometry->textBaseline, geometry->text);
         p.setClipping(false);
     }
+
+protected:
 
     void wheelEvent(QWheelEvent *event) override
     {
@@ -3956,17 +4024,26 @@ private:
         const double tick = rawTickAt(x);
         if (ri == m_hoverRow && tick == m_hoverTick)
             return;
+        const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
+        const QRegion oldRegion =
+            oldGeometry ? oldGeometry->paintRegion : QRegion();
         m_hoverRow = ri;
         m_hoverTick = tick;
-        invalidateContent();
+        const auto newGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
+        const QRegion newRegion =
+            newGeometry ? newGeometry->paintRegion : QRegion();
+        invalidateContent(oldRegion | newRegion);
     }
 
     void clearHover()
     {
         if (m_hoverRow < 0)
             return;
+        const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
+        const QRegion oldRegion =
+            oldGeometry ? oldGeometry->paintRegion : QRegion();
         m_hoverRow = -1;
-        invalidateContent();
+        invalidateContent(oldRegion);
     }
 
     // Invert paintCurve's valueY mapping; ri indexes the row for geometry.
