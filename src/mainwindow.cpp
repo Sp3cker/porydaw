@@ -474,6 +474,10 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("transport.follow_playhead"),
                 m_followPlayheadAction);
     m_followPlayheadAction->setCheckable(true);
+    // The toolbar glyph must not leak into the View menu: a checkable
+    // action with a visible icon renders the icon INSTEAD of the check
+    // indicator there, hiding the on/off state.
+    m_followPlayheadAction->setIconVisibleInMenu(false);
     m_followPlayheadAction->setToolTip(
         tr("Scroll the view to keep the playhead visible during playback"));
     {
