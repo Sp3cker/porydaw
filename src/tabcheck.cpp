@@ -64,6 +64,8 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA,
     check(m_audio.timeline() == tabA->timeline.get()
               && m_audio.voicegroup() == tabA->voicegroup,
           "engine is not borrowing the first tab's data");
+    check(m_uiTimer->interval() == 500,
+          "paused UI cadence is not 500 ms");
 
     // 2. Second song in a new tab becomes the active one.
     loadSongByLabel(songB, /*newTab=*/true);
@@ -108,9 +110,14 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA,
     m_audio.play();
     wait(200);
     check(m_audio.transport() == Transport::Playing, "playback did not start");
+    synchronizePlayhead();
+    check(m_uiTimer->interval() == 100,
+          "playback UI cadence is not 100 ms");
     m_tabs->setCurrentWidget(tabB->view);
     check(m_audio.transport() == Transport::Stopped,
           "switching tabs did not stop playback");
+    check(m_uiTimer->interval() == 500,
+          "stopped UI cadence is not 500 ms");
     check(m_audio.timeline() == tabB->timeline.get(),
           "engine timeline is not the newly active tab's");
 
@@ -207,7 +214,23 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA,
               && tabB->doc.undoStack()->count() == 0,
           "re-activating the open song did not reload it in place");
 
-    // 9. The open-tab set is recorded for restoreSession.
+    // 9. Closing the final playing tab restores the no-tab UI cadence.
+    m_audio.play();
+    wait(200);
+    synchronizePlayhead();
+    check(m_uiTimer->interval() == 100,
+          "final-tab close precondition is not playback cadence");
+    closeTab(m_tabs->indexOf(tabB->view));
+    check(m_tabs->count() == 0 && m_active == nullptr
+              && m_uiTimer->interval() == 500,
+          "closing final playing tab did not restore 500 ms UI cadence");
+
+    // Reopen through the normal lifecycle so the restoration contract below
+    // still persists both tabs with song A active.
+    loadSongByLabel(songB);
+    tabB = m_active;
+
+    // 10. The open-tab set is recorded for restoreSession.
     loadSongByLabel(songA, /*newTab=*/true);
     tabA = m_active;
     {
@@ -220,7 +243,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA,
               "lastSongLabel is not the active tab");
     }
 
-    // 9b. Saving a voicegroup refreshes every other CLEAN tab on the same
+    // 10b. Saving a voicegroup refreshes every other CLEAN tab on the same
     // file immediately — waiting for activation would leave a stale parse
     // whose next save reverts this one. Needs two songs sharing a -G.
     if (tabA->vgSource && tabB->vgSource
@@ -257,7 +280,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA,
                     "mus_b_dome_lobby)\n");
     }
 
-    // 10. A clean background tab follows its voicegroup file when the file
+    // 11. A clean background tab follows its voicegroup file when the file
     // changes on disk (as after a save from another tab).
     if (tabB->vgSource) {
         const QString vgPath = tabB->vgSource->filePath();

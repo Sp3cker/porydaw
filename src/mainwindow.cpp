@@ -80,8 +80,8 @@
 
 namespace {
 constexpr int kVoiceEditCommandId = 0x7661; // 'va': voice-edit merge id
-constexpr int kIdleUiIntervalMs = 100;
-constexpr int kPlaybackUiIntervalMs = 500;
+constexpr int kIdleUiIntervalMs = 500;
+constexpr int kPlaybackUiIntervalMs = 100;
 
 const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
 const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
@@ -3076,17 +3076,20 @@ void MainWindow::uiTick() {
 }
 
 void MainWindow::synchronizePlayhead() {
-  if (!m_audioOk || !m_active || !m_audio.songLoaded()) {
+  const bool songLoaded = m_audioOk && m_active && m_audio.songLoaded();
+  const bool playing =
+      songLoaded && m_audio.transport() == Transport::Playing;
+  const int uiInterval = playing ? kPlaybackUiIntervalMs : kIdleUiIntervalMs;
+  if (m_uiTimer->interval() != uiInterval)
+    m_uiTimer->setInterval(uiInterval);
+
+  if (!songLoaded) {
     // This also runs synchronously from activateSession(nullptr).
     m_playheadTimer->stop();
     return;
   }
 
-  const bool playing = m_audio.transport() == Transport::Playing;
   const bool playheadTimerWasActive = m_playheadTimer->isActive();
-  const int uiInterval = playing ? kPlaybackUiIntervalMs : kIdleUiIntervalMs;
-  if (m_uiTimer->interval() != uiInterval)
-    m_uiTimer->setInterval(uiInterval);
   m_active->view->setPlayheadSample(m_audio.playheadSamples(), playing);
   if (playing) {
     if (!m_playheadTimer->isActive())
