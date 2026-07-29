@@ -291,3 +291,15 @@ target_link_libraries(porydaw_render_cli PRIVATE Qt6::Core poryaaaa_engine)
 if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(porydaw_render_cli PRIVATE -static)
 endif()
+
+# ---- Color-blend algorithm microbench (mixTowardOklab / ghostNoteColor) ----
+# Not a test: development tool for timing the pure OKLab blend algorithms.
+# Link the app library so the bench calls the real implementations; no paint
+# or widget work is timed. Prefer a Release build dir for usable numbers.
+qt_add_executable(porydaw_color_blend_bench
+    tools/color_blend_bench.cpp
+)
+target_link_libraries(porydaw_color_blend_bench PRIVATE porydaw_app)
+if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_options(porydaw_color_blend_bench PRIVATE -static)
+endif()

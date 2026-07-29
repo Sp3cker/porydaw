@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 
 namespace themes {
 namespace {
@@ -51,29 +52,46 @@ LinearRgb toLinearRgb(const Oklab &lab) {
       -0.0041960863 * lCubed - 0.7034186147 * mCubed + 1.7076147010 * sCubed};
 }
 
-int gammaChannel(double channel) {
-  const auto encoded = linearToSrgb(channel);
-  const auto scaled = clamp(encoded * 255.0, 0.0, 255.0);
-  return static_cast<int>(std::floor(scaled + 0.5));
-}
-
-QColor colorFromLinearRgb(const LinearRgb &rgb, int alpha = 255) {
-  return QColor::fromRgb(gammaChannel(rgb.red), gammaChannel(rgb.green),
-                         gammaChannel(rgb.blue), alpha);
-}
-
+// 8-bit sRGB → linear: one load (decode path of oklabFromColor).
 double linearChannel(int channel) {
-  // QColor channels are exactly 8-bit here, so cache every possible decoded
-  // value instead of evaluating the transfer power function in raster loops.
-  static const auto channels = [] {
+  static const auto table = [] {
     std::array<double, 256> result{};
     for (auto index = std::size_t{0}; index < result.size(); ++index)
       result[index] =
           srgbToLinear(static_cast<double>(index) / (result.size() - 1));
     return result;
   }();
-  Q_ASSERT(channel >= 0 && channel < static_cast<int>(channels.size()));
-  return channels[static_cast<std::size_t>(channel)];
+  Q_ASSERT(channel >= 0 && channel < 256);
+  return table[static_cast<std::size_t>(channel)];
+}
+
+// linear → 8-bit sRGB for colorFromOklab. A dense table of the IEC encode
+// (built once with linearToSrgb) is a load; binary search over the 256-entry
+// decode table was slower than libm pow on Apple Silicon, which is what made
+// mixTowardOklab look ~2× worse in the microbench.
+int gammaChannel(double linear) {
+  // 4k samples: max error vs round(linearToSrgb*255) is 1 code on spot checks;
+  // UI blends do not need bit-exact transfer reconstruction.
+  constexpr auto kSamples = 4096;
+  static const auto table = [] {
+    std::array<std::uint8_t, kSamples> result{};
+    for (int index = 0; index < kSamples; ++index) {
+      const auto encoded =
+          linearToSrgb(static_cast<double>(index) / (kSamples - 1));
+      result[static_cast<std::size_t>(index)] = static_cast<std::uint8_t>(
+          std::floor(clamp(encoded * 255.0, 0.0, 255.0) + 0.5));
+    }
+    return result;
+  }();
+  linear = clamp(linear, 0.0, 1.0);
+  const auto index =
+      static_cast<std::size_t>(std::floor(linear * (kSamples - 1) + 0.5));
+  return table[index];
+}
+
+QColor colorFromLinearRgb(const LinearRgb &rgb, int alpha = 255) {
+  return QColor::fromRgb(gammaChannel(rgb.red), gammaChannel(rgb.green),
+                         gammaChannel(rgb.blue), alpha);
 }
 
 SrgbSample encodedSample(const LinearRgb &rgb) {
@@ -93,9 +111,9 @@ bool inUnitInterval(double value) {
 
 Oklab oklabFromColor(const QColor &color) {
   const auto rgb = color.toRgb();
-  const auto red = srgbToLinear(rgb.redF());
-  const auto green = srgbToLinear(rgb.greenF());
-  const auto blue = srgbToLinear(rgb.blueF());
+  const auto red = linearChannel(rgb.red());
+  const auto green = linearChannel(rgb.green());
+  const auto blue = linearChannel(rgb.blue());
   const auto l = std::cbrt(0.4122214708 * red + 0.5363325363 * green +
                            0.0514459929 * blue);
   const auto m = std::cbrt(0.2119034982 * red + 0.6806995451 * green +

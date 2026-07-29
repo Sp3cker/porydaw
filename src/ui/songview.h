@@ -96,6 +96,11 @@ inline int selectionRingPixels(qreal dpr)
 QPoint wheelDelta(const QWheelEvent *event);
 double wheelAngleUnits(const QWheelEvent *event);
 QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t);
+// Ghost notes (unselected tracks): blend a fixed weight of the track
+// identity into the row background in OKLab, with a capped lightness offset.
+QColor ghostNoteColor(int track, bool accidentalRow);
+// Track identity mixed one-third toward black in OKLab (velocity stems/bars).
+const QColor &trackStemColor(int track);
 void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin);
 void drawOverlays(QPainter &p, const SongView *sv, const QRect &rect,
                   qreal origin, bool timeSelCovered);
