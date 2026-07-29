@@ -5044,7 +5044,10 @@ SongView::velocityAxisContext(int track) const {
   const ToneData &tone = m_voicegroup->voices[std::size_t(program)];
   if (tone.type & (VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL))
     return std::nullopt;
-  return songview::psgVelocityContext(this, track, tick, 0);
+  // The idle ruler describes the active program's detent model. Track
+  // VOL/PAN automation affects note loudness, not the ruler's geometry.
+  return makePsgVelocityContext(tone, 0, 127, 64,
+                                m_document->cfg().masterVolume);
 }
 
 void SongView::refreshVelocityAxisContext() {

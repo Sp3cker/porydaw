@@ -10,6 +10,7 @@
 #include <QWidget>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <optional>
@@ -135,6 +136,34 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
     }
     return cell;
   };
+
+  if (songLabel == QStringLiteral("mus_poke_center") && view.timeline() &&
+      view.timeline()->tracks[5].used) {
+    const int originalTrack = view.selectedTrack();
+    // Track 6 alternates two Square 2 programs while changing PAN and VOL.
+    const std::array<uint64_t, 11> probeTicks{0,   132, 199, 210, 276, 300,
+                                              330, 408, 433, 481, 600};
+    auto expectedDetents = std::optional<VelocityDetentInfo>{};
+    view.setVoicegroup(voicegroup);
+    view.selectTrack(5);
+    for (const uint64_t tick : probeTicks) {
+      view.setPlayheadSample(view.timeline()->sampleForTick(tick), true);
+      const auto detents = view.velocityAxisDetents(5, {});
+      if (!detents) {
+        fail("Poke Center track 6 lost detents across program changes");
+        break;
+      }
+      if (!expectedDetents) {
+        expectedDetents = detents;
+      } else if (!velocityDetentsCompatible(*expectedDetents, *detents)) {
+        fail("Poke Center track 6 detents shifted while its active programs "
+             "remained Square 2");
+        break;
+      }
+    }
+    view.setPlayheadSample(0, false);
+    view.selectTrack(originalTrack);
+  }
 
   // Hardware velocity detents are per resolved voice, not per selection:
   // one mixed drag must write each note's exact canonical value in one
