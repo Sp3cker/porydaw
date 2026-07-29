@@ -1,7 +1,6 @@
 #include "playheadoverlay.h"
 #include "theme/themeruntime.h"
 
-#include <QDebug>
 #include <QEvent>
 #include <QLinearGradient>
 #include <QPainter>
@@ -12,10 +11,6 @@
 #include <utility>
 
 namespace songview {
-
-#ifndef PORYDAW_USE_NATIVE_PLAYHEAD
-std::unique_ptr<PlayheadBackend> createPlayheadBackend(QWidget &) { return {}; }
-#endif
 
 PlayheadOverlay::PlayheadOverlay(QWidget *owner, TimelineSurfaces surfaces)
     : QWidget(owner), m_surfaces(surfaces),
@@ -31,7 +26,9 @@ PlayheadOverlay::PlayheadOverlay(QWidget *owner, TimelineSurfaces surfaces)
   show();
 }
 
+#ifndef PORYDAW_USE_DIRECT_PLAYHEAD
 PlayheadOverlay::~PlayheadOverlay() = default;
+#endif
 
 void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing) {
   if (m_timelineX == timelineX && m_visible == visible && m_playing == playing)
@@ -43,8 +40,13 @@ void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing) {
   m_visible = visible;
   m_playing = playing;
 
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+  if (playingChanged && updateImages() && m_platform)
+    setPlatformImages();
+#else
   if (playingChanged)
     (void)updateImages();
+#endif
   updatePlayhead();
 }
 
@@ -102,9 +104,14 @@ void PlayheadOverlay::changeEvent(QEvent *event) {
     const QColor newColor = themes::color(themes::Role::song_view_playhead);
     if (m_color != newColor) {
       m_color = newColor;
-      ++m_staticGeneration;
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+      if (updateImages() && m_platform)
+        setPlatformImages();
+      updatePlayhead();
+#else
       (void)updateImages();
-      synchronizeBackend();
+      updatePlayhead();
+#endif
     }
     break;
   }
@@ -115,7 +122,7 @@ void PlayheadOverlay::changeEvent(QEvent *event) {
 
 void PlayheadOverlay::paintEvent(QPaintEvent *event) {
   (void)event;
-  if (m_backendApplied || !m_visible || m_playheadGeometry.isEmpty())
+  if (m_platformApplied || !m_visible || m_playheadGeometry.isEmpty())
     return;
 
   QPainter painter(this);
@@ -191,61 +198,40 @@ void PlayheadOverlay::synchronizeGeometry() {
   m_timelineOrigin = timelineOrigin;
   m_trianglePointsUp = !m_surfaces.roll.widget.isVisible();
   m_devicePixelRatio = owner.devicePixelRatioF();
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+  bool platformCreated = false;
+  if (!m_platform && !m_platformAttempted && owner.isVisible()) {
+    m_platformAttempted = true;
+    if (!qEnvironmentVariableIsSet("PORYDAW_FORCE_WIDGET_PLAYHEAD")) {
+      initializePlatform(owner);
+      platformCreated = true;
+    }
+  }
+#endif
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+  const bool imagesChanged = updateImages();
+  if (m_platform && (imagesChanged || platformCreated))
+    setPlatformImages();
+  if (m_platform)
+    setPlatformLayout();
+  updatePlayhead();
+#else
   (void)updateImages();
-
-  ++m_staticGeneration;
-  synchronizeBackend();
+  m_platformApplied = false;
+  updatePaintRegion();
+#endif
   raise();
 }
 
-void PlayheadOverlay::synchronizeBackend() {
-  if (m_backendSyncing) {
-    m_backendSyncPending = true;
-    return;
-  }
-
-  m_backendSyncing = true;
-  do {
-    m_backendSyncPending = false;
-    QWidget *owner = parentWidget();
-    if (!m_backend && !m_backendAttempted && owner && owner->isVisible()) {
-      m_backendAttempted = true;
-      if (!qEnvironmentVariableIsSet("PORYDAW_FORCE_WIDGET_PLAYHEAD"))
-        m_backend = createPlayheadBackend(*owner);
-    }
-
-    if (m_backend) {
-      const PlayheadFrame frame{size(),
-                                m_visibleSurfaceRegion,
-                                m_triangleClip,
-                                m_playheadGeometry,
-                                m_color,
-                                m_bodyImage,
-                                m_bodyImageLeftExtent,
-                                m_triangleImage,
-                                finalX(),
-                                m_devicePixelRatio,
-                                m_staticGeneration,
-                                m_visible,
-                                m_playing,
-                                m_trianglePointsUp};
-      const PlayheadSyncResult result = m_backend->synchronize(frame);
-      m_backendApplied = result.state == PlayheadSyncState::Applied;
-      if (result.state == PlayheadSyncState::Failed) {
-        qWarning().noquote()
-            << "Native playhead failed; using QWidget fallback:"
-            << result.error;
-        m_backend.reset();
-      }
-    } else {
-      m_backendApplied = false;
-    }
-  } while (m_backendSyncPending && m_backend);
-  m_backendSyncing = false;
+void PlayheadOverlay::updatePlayhead() {
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+  m_platformApplied = m_platform && setPlatformPosition();
   updatePaintRegion();
+#else
+  m_platformApplied = false;
+  updatePaintRegion();
+#endif
 }
-
-void PlayheadOverlay::updatePlayhead() { synchronizeBackend(); }
 
 bool PlayheadOverlay::updateImages() {
   const QColor currentThemeColor = m_color;
@@ -402,7 +388,7 @@ QRegion PlayheadOverlay::playheadRegion() const {
 }
 
 void PlayheadOverlay::updatePaintRegion() {
-  if (m_backendApplied) {
+  if (m_platformApplied) {
     if (!m_lastPaintedRegion.isEmpty()) {
       update(m_lastPaintedRegion);
       m_lastPaintedRegion = QRegion();

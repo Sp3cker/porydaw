@@ -4,7 +4,6 @@
 #include <QImage>
 #include <QRect>
 #include <QRegion>
-#include <QString>
 #include <QWidget>
 #include <array>
 #include <cstddef>
@@ -52,37 +51,6 @@ inline constexpr qreal playheadPeakAlpha(bool playing) {
   return playing ? kPlayheadPeakPlaying : kPlayheadPeakPaused;
 }
 
-struct PlayheadFrame {
-  QSize overlaySize;
-  const QRegion &bodyClip;
-  QRect triangleClip;
-  QRect playheadGeometry;
-  QColor color;
-  const QImage &bodyImage;
-  qreal bodyImageLeftExtent;
-  const QImage &triangleImage;
-  qreal x;
-  qreal devicePixelRatio;
-  quint64 staticGeneration;
-  bool visible;
-  bool playing;
-  bool trianglePointsUp;
-};
-
-enum class PlayheadSyncState { Applied, Deferred, Failed };
-struct PlayheadSyncResult {
-  PlayheadSyncState state;
-  QString error;
-};
-
-class PlayheadBackend {
-public:
-  virtual ~PlayheadBackend() = default;
-  virtual PlayheadSyncResult synchronize(const PlayheadFrame &frame) = 0;
-};
-
-std::unique_ptr<PlayheadBackend> createPlayheadBackend(QWidget &owner);
-
 class PlayheadOverlay final : public QWidget {
 public:
   explicit PlayheadOverlay(QWidget *owner, TimelineSurfaces surfaces);
@@ -103,7 +71,17 @@ private:
                            int origin) const;
   void observeSurfaceGeometry();
   void synchronizeGeometry();
-  void synchronizeBackend();
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+  struct Platform;
+  struct PlatformDeleter {
+    void operator()(Platform *platform) const;
+  };
+
+  void initializePlatform(QWidget &owner);
+  void setPlatformLayout();
+  void setPlatformImages();
+  bool setPlatformPosition();
+#endif
   bool updateImages();
   void updatePlayhead();
 
@@ -127,7 +105,9 @@ private:
   QColor m_cachedTriangleThemeColor;
   bool m_cachedTriangleValid = false;
 
-  std::unique_ptr<PlayheadBackend> m_backend;
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+  std::unique_ptr<Platform, PlatformDeleter> m_platform;
+#endif
   QRegion m_lastPaintedRegion;
 
   QRegion m_visibleSurfaceRegion;
@@ -140,11 +120,10 @@ private:
 
   bool m_trianglePointsUp = false;
   qreal m_devicePixelRatio = 1.0;
-  quint64 m_staticGeneration = 0;
-  bool m_backendAttempted = false;
-  bool m_backendApplied = false;
-  bool m_backendSyncing = false;
-  bool m_backendSyncPending = false;
+  bool m_platformApplied = false;
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+  bool m_platformAttempted = false;
+#endif
 };
 
 } // namespace songview

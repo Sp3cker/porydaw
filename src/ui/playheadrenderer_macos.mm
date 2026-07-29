@@ -79,9 +79,9 @@ void setLayerContents(CALayer *layer, const QImage &image) {
 
 } // namespace
 
-class MacPlayheadBackend final : public PlayheadBackend {
+class PlayheadOverlay::Platform final {
 public:
-  explicit MacPlayheadBackend(QWidget &owner) : m_owner(owner) {
+  explicit Platform(QWidget &owner) : m_owner(owner) {
     DisabledActionTransaction transaction;
 
     m_rootLayer.reset([CALayer new]);
@@ -121,57 +121,25 @@ public:
     [m_rootLayer.get() addSublayer:m_bodyClipLayer.get()];
     [m_rootLayer.get() addSublayer:m_triangleClipLayer.get()];
 
-    if (m_owner.isVisible()) {
-      attachToNativeView();
-    }
-  }
-
-  ~MacPlayheadBackend() override { [m_rootLayer.get() removeFromSuperlayer]; }
-
-  PlayheadSyncResult synchronize(const PlayheadFrame &frame) override {
     attachToNativeView();
-    if (!m_attachedView || m_rootLayer.get().superlayer != m_attachedView.layer)
-      return {PlayheadSyncState::Deferred, {}};
-
-    DisabledActionTransaction transaction;
-    if (!m_hasStaticGeneration ||
-        m_cachedStaticGeneration != frame.staticGeneration) {
-      setLayout(frame.overlaySize, frame.bodyClip, frame.triangleClip);
-      m_cachedStaticGeneration = frame.staticGeneration;
-      m_hasStaticGeneration = true;
-    }
-    setImages(frame.bodyImage, frame.bodyImageLeftExtent, frame.triangleImage);
-    setPosition(frame.x, frame.playheadGeometry.top(), frame.visible);
-    return {PlayheadSyncState::Applied, {}};
   }
 
-  void attachToNativeView() {
-    WId ownerWId = m_owner.internalWinId();
-    if (ownerWId == 0 && m_owner.isVisible()) {
-      ownerWId = m_owner.winId();
-    }
-    auto *ownerView = ownerWId ? reinterpret_cast<NSView *>(ownerWId) : nullptr;
-    if (ownerView == m_attachedView &&
-        (!ownerView || m_rootLayer.get().superlayer == ownerView.layer)) {
-      return;
-    }
-
-    [m_rootLayer.get() removeFromSuperlayer];
-    m_attachedView = nullptr;
-    if (ownerView) {
-      ownerView.wantsLayer = YES;
-      [ownerView.layer addSublayer:m_rootLayer.get()];
-      m_attachedView = ownerView;
-    }
-  }
+  ~Platform() { [m_rootLayer.get() removeFromSuperlayer]; }
 
   void setLayout(const QSize &overlaySize, const QRegion &visibleSurfaces,
                  const QRect &triangleClip) {
+    attachToNativeView();
+    if (m_attachedView &&
+        m_rootLayer.get() != m_attachedView.layer.sublayers.lastObject) {
+      [m_attachedView.layer addSublayer:m_rootLayer.get()];
+    }
     if (m_hasLayout && m_overlaySize == overlaySize &&
         m_visibleSurfaces == visibleSurfaces &&
         m_triangleClip == triangleClip) {
       return;
     }
+
+    DisabledActionTransaction transaction;
     const auto rootBounds =
         CGRectMake(0.0, 0.0, overlaySize.width(), overlaySize.height());
     setLayerRect(m_rootLayer.get(), rootBounds);
@@ -202,6 +170,7 @@ public:
 
   void setImages(const QImage &bodyImage, qreal bodyImageLeftExtent,
                  const QImage &triangleImage) {
+    DisabledActionTransaction transaction;
     const auto bodyImageCacheKey = bodyImage.cacheKey();
     if (m_bodyImageCacheKey != bodyImageCacheKey) {
       setLayerContents(m_bodyLayer.get(), bodyImage);
@@ -216,15 +185,43 @@ public:
     }
   }
 
-  void setPosition(qreal finalX, int top, bool visible) {
+  bool setPosition(qreal finalX, int top, bool visible) {
+    attachToNativeView();
+    if (!m_attachedView ||
+        m_rootLayer.get().superlayer != m_attachedView.layer) {
+      return false;
+    }
+
+    DisabledActionTransaction transaction;
     m_bodyLayer.get().position =
         CGPointMake(finalX - m_bodyImageLeftExtent, top);
     m_triangleLayer.get().position =
         CGPointMake(finalX - kPlayheadTriangleHalfWidth, top);
     m_rootLayer.get().hidden = visible ? NO : YES;
+    return true;
   }
 
 private:
+  void attachToNativeView() {
+    WId ownerWId = m_owner.internalWinId();
+    if (ownerWId == 0 && m_owner.isVisible()) {
+      ownerWId = m_owner.winId();
+    }
+    auto *ownerView = ownerWId ? reinterpret_cast<NSView *>(ownerWId) : nullptr;
+    if (ownerView == m_attachedView &&
+        (!ownerView || m_rootLayer.get().superlayer == ownerView.layer)) {
+      return;
+    }
+
+    [m_rootLayer.get() removeFromSuperlayer];
+    m_attachedView = nullptr;
+    if (ownerView) {
+      ownerView.wantsLayer = YES;
+      [ownerView.layer addSublayer:m_rootLayer.get()];
+      m_attachedView = ownerView;
+    }
+  }
+
   QWidget &m_owner;
   NSView *m_attachedView = nullptr;
 
@@ -241,18 +238,38 @@ private:
   QRegion m_visibleSurfaces;
   QRect m_triangleClip;
   bool m_hasLayout = false;
-  quint64 m_cachedStaticGeneration = 0;
-  bool m_hasStaticGeneration = false;
 
   qint64 m_bodyImageCacheKey = -1;
   qint64 m_triangleImageCacheKey = -1;
   qreal m_bodyImageLeftExtent = 0.0;
 };
 
-std::unique_ptr<PlayheadBackend> createPlayheadBackend(QWidget &owner) {
+void PlayheadOverlay::initializePlatform(QWidget &owner) {
   if (QGuiApplication::platformName() != QLatin1String("cocoa"))
-    return {};
-  return std::make_unique<MacPlayheadBackend>(owner);
+    return;
+
+  m_platform.reset(new Platform(owner));
 }
+
+void PlayheadOverlay::setPlatformLayout() {
+  Q_ASSERT(m_platform);
+  m_platform->setLayout(size(), m_visibleSurfaceRegion, m_triangleClip);
+}
+
+void PlayheadOverlay::setPlatformImages() {
+  Q_ASSERT(m_platform);
+  m_platform->setImages(m_bodyImage, m_bodyImageLeftExtent, m_triangleImage);
+}
+
+bool PlayheadOverlay::setPlatformPosition() {
+  Q_ASSERT(m_platform);
+  return m_platform->setPosition(finalX(), m_playheadGeometry.top(), m_visible);
+}
+
+void PlayheadOverlay::PlatformDeleter::operator()(Platform *platform) const {
+  delete platform;
+}
+
+PlayheadOverlay::~PlayheadOverlay() = default;
 
 } // namespace songview
