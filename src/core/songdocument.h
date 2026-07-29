@@ -5,6 +5,7 @@
 #include <QUndoStack>
 #include <QVector>
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -80,7 +81,12 @@ class SongDocument : public QObject
     Q_OBJECT
 
 public:
-    explicit SongDocument(QObject *parent = nullptr);
+    struct TrackRemap {
+    QVector<int> newSmfChunkByOldChunk;
+    QVector<int> newEngineSlotByOldSlot;
+  };
+
+  explicit SongDocument(QObject *parent = nullptr);
 
     bool load(const SongInfo &song, QString *error);
     bool save(QString *error);
@@ -147,6 +153,11 @@ public:
     void setNotesVelocity(const std::vector<DocNote> &notes, uint8_t velocity);
     // Relative velocity change, clamped to 1-127 per note.
     void nudgeNotesVelocity(const std::vector<DocNote> &notes, int delta);
+    struct NoteVelocity {
+      DocNote note;
+      uint8_t velocity;
+    };
+    void setNotesVelocities(const std::vector<NoteVelocity> &edits);
 
     void addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value);
     // Gesture write (freehand sweep / line ramp): replaces every point of the
@@ -304,15 +315,10 @@ public:
 signals:
     // Emitted after every mutation, undo, and redo.
     void documentChanged();
-    // Emitted while a track-reorder MoveTrack op applies or reverts, before
-    // the documentChanged that follows. fromChunk/toChunk are the chunk
-    // endpoints. engineMap has 16 entries: engineMap[t] is where the track
-    // at engine slot t (pre-move numbering) lands — a contiguous rotation
-    // between the endpoints, identity elsewhere. Undo emits the inverse, so
-    // receivers holding per-track or per-chunk state remap it here and stay
-    // right across undo/redo. The document is mid-mutation when this fires:
-    // remap state only, don't read back.
-    void trackMoved(int fromChunk, int toChunk, QVector<int> engineMap);
+    // Emitted after an undoable SMF mutation has rebuilt the engine-track map
+    // and before documentChanged(), only when SMF chunk or engine track
+  // identity/order changed.
+  void tracksRemapped(SongDocument::TrackRemap remap);
 
 private:
     friend class SongEditCommand;
@@ -344,7 +350,6 @@ private:
     void revertOps(std::vector<EditOp> &ops);
     void pushEdit(const QString &text, std::vector<EditOp> ops);
     void rebuildTrackMap();
-    int engineTrackForChunk(int chunk) const; // -1 = no engine slot
     // Lowest MIDI channel no existing engine track uses; -1 when all 16 are
     // taken.
     int freeChannel() const;

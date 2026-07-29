@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QStyleHints>
+#include <string_view>
 
 #include "mainwindow.h"
 #include "ui/applicationstartup.h"
@@ -16,15 +17,18 @@ int runEditCheck(const QString &projectRoot);
 // savecheck.cpp; M2 edited-save check (writes into the project: use a copy).
 int runSaveCheck(const QString &projectRoot, const QString &songLabel,
                  const QString &mid2agbPath = QString());
-// onboardcheck.cpp; M3 New Song + import check (writes into the project: use a copy).
+// onboardcheck.cpp; M3 New Song + import check (writes into the project: use a
+// copy).
 int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath = QString());
-// vgcheck.cpp; voicegroup edit/save/create check (writes into the project: use a copy).
+// vgcheck.cpp; voicegroup edit/save/create check (writes into the project: use
+// a copy).
 int runVgCheck(const QString &projectRoot, const QString &songLabel);
 // vgsavecheck.cpp; unified song+voicegroup undo/save check through MainWindow,
 // against redirected QSettings (writes into the project: use a copy).
 int runVgSaveCheck(const QString &projectRoot, const QString &songLabel,
                    const QString &screenshotPath = QString());
-// exportcheck.cpp; WAV export check (writes a .wav into the project: use a copy).
+// exportcheck.cpp; WAV export check (writes a .wav into the project: use a
+// copy).
 int runExportCheck(const QString &projectRoot, const QString &songLabel);
 // mkcheck.cpp; songs.mk-fallback parse/write check for projects with no
 // midi.cfg (writes into the project: use a copy).
@@ -47,7 +51,8 @@ int runLoopCheck();
 // stamps/invert audibility + offscreen PolyphonyPanel (self-contained, no
 // project needed); the optional path saves the rendered panel.
 int runPolyCheck(const QString &screenshotPath = QString());
-// primecheck.cpp; audition voice-priming check (self-contained, no project needed).
+// primecheck.cpp; audition voice-priming check (self-contained, no project
+// needed).
 int runPrimeCheck();
 // transportcheck.cpp; playback-start halts ringing auditions (self-contained,
 // no project needed; SKIPs without an audio device).
@@ -84,9 +89,35 @@ int runEventViewCheck(const QString &projectRoot,
                       const QString &screenshotSong = QString(),
                       const QString &screenshotPath = QString());
 
-int main(int argc, char *argv[])
+namespace {
+
+void removeStyleArguments(int &argc, char *argv[])
 {
-    // Start with Fusion so Qt never loads the unstable modern Windows style
+    constexpr auto SHORT_STYLE_PREFIX = std::string_view{"-style="};
+  constexpr auto LONG_STYLE_PREFIX = std::string_view{"--style="};
+  auto writeIndex = 1;
+  for (auto readIndex = 1; readIndex < argc; ++readIndex) {
+    const auto argument = std::string_view{argv[readIndex]};
+    if (argument == "-style" || argument == "--style") {
+      if (readIndex + 1 < argc)
+        ++readIndex;
+      continue;
+    }
+    if (argument.substr(0, SHORT_STYLE_PREFIX.size()) == SHORT_STYLE_PREFIX ||
+        argument.substr(0, LONG_STYLE_PREFIX.size()) == LONG_STYLE_PREFIX) {
+      continue;
+    }
+    argv[writeIndex++] = argv[readIndex];
+  }
+  argc = writeIndex;
+  argv[argc] = nullptr;
+}
+
+} // namespace
+
+int main(int argc, char *argv[]) {
+  removeStyleArguments(argc, argv);
+  // Start with Fusion so Qt never loads the unstable modern Windows style
     // plugin before the application-level style is applied.
     qputenv("QT_STYLE_OVERRIDE", QByteArrayLiteral("fusion"));
     QApplication app(argc, argv);
@@ -98,9 +129,9 @@ int main(int argc, char *argv[])
     // Fusion everywhere: the native windows11 style paints item-view
     // selections as low-contrast accent-colored per-cell pills and has
     // sticky-hover repaint bugs. Set after QApplication so it also wins
-    // over -style/QT_STYLE_OVERRIDE — released binaries should look the
-    // same on every machine.
-    QApplication::setStyle(QStringLiteral("fusion"));
+    // over QT_STYLE_OVERRIDE — released binaries should look the same on
+  // every machine.
+  QApplication::setStyle(QStringLiteral("fusion"));
     QApplication::setApplicationName("porydaw");
     QApplication::setApplicationVersion(QStringLiteral(PORYDAW_VERSION));
     QApplication::setOrganizationName("huderlem");

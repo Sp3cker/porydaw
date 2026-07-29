@@ -9,11 +9,11 @@
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QMouseEvent>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPixmap>
-#include <QPushButton>
 #include <QPoint>
+#include <QPushButton>
 #include <QRect>
 #include <QSettings>
 #include <QString>
@@ -24,12 +24,15 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <vector>
 
 #include "core/songdocument.h"
 #include "project/decompproject.h"
+#include "rollcheckautomation.h"
 #include "rollcheckplayhead.h"
 #include "ui/songview.h"
+#include "ui/velocityarea.h"
 
 // --rollcheck <projectRoot> <song> [shot.png]: piano-roll gesture check.
 // Drives the roll widget offscreen with synthesized mouse events: the
@@ -65,9 +68,14 @@
 // The cursor over the roll marks its key row on the keyboard column
 // (with a note-name chip) — held through gestures so a drag's target row
 // stays readable — cleared when the cursor leaves the widget.
-// Undoing every gesture must restore the original bytes.
+// The voice row previews snapped insertions, suppresses the preview over
+// existing markers, and commits the previewed voice. Hiding or restoring an
+// automation lane, and hiding or showing the whole automation drawer, change
+// only view state, including through ViewState.
+// Undoing every document gesture must restore the original bytes.
 
 namespace {
+constexpr uint8_t kAudibleLaneCcs[] = {0x01, 0x07, 0x0A, 0x14, 0x15};
 
 void sendMouse(QWidget *w, QEvent::Type type, QPoint pos,
                               Qt::MouseButton button, Qt::MouseButtons buttons,
@@ -146,6 +154,14 @@ void sendKey(QWidget *w, int key, Qt::KeyboardModifiers mods) {
     QKeyEvent press(QEvent::KeyPress, key, mods);
     QCoreApplication::sendEvent(w, &press);
     QKeyEvent release(QEvent::KeyRelease, key, mods);
+    QCoreApplication::sendEvent(w, &release);
+}
+
+void sendTextKey(QWidget *w, int key, const QString &text)
+{
+    QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, text);
+    QCoreApplication::sendEvent(w, &press);
+    QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, text);
     QCoreApplication::sendEvent(w, &release);
 }
 
@@ -495,6 +511,13 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QCoreApplication::processEvents();
     }
     const SnappedRows rows{view, *roll};
+    auto *automationArea =
+        view.findChild<QWidget *>(QStringLiteral("automationArea"));
+    if (!automationArea || automationArea->width() <= songview::kGutterW
+        || automationArea->height() <= 0) {
+        fail("automation area not found or not laid out");
+        return 1;
+    }
 
     // Hover readout: the cursor anywhere over the roll marks its key row
     // on the keyboard column (mirrored in the hoverKey property); leaving
@@ -1658,14 +1681,40 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (view.timeSelection().startTick != d.tick + 2 * snapCell)
         fail("time-selection band did not follow the nudge");
 
-    // Playhead follow-scroll pauses while a mouse gesture is live: with a
-    // middle-button pan held in the roll (or the lanes), a playing playhead
-    // far past the right edge must not move the view; releasing the button
-    // lets the next playhead tick scroll again.
-    auto *lanes = view.findChild<QWidget *>(QStringLiteral("automationArea"));
+    // Velocity projection has a fixed inset at both endpoints, and every
+  // integer MIDI velocity must survive a projection round trip.
+  {
+    constexpr double projectionHeight = 180.0;
+    if (std::abs(songview::velocityToY(127, projectionHeight) - 6.0) > 1e-12 ||
+        std::abs(songview::velocityToY(1, projectionHeight) -
+                 (projectionHeight - 6.0)) > 1e-12 ||
+        songview::yToVelocity(0.0, projectionHeight) != 127 ||
+        songview::yToVelocity(projectionHeight, projectionHeight) != 1) {
+      fail("velocity projection endpoints changed");
+    }
+    for (int velocity = 1; velocity <= 127; ++velocity) {
+      if (songview::yToVelocity(
+              songview::velocityToY(velocity, projectionHeight),
+              projectionHeight) != velocity) {
+        fail("velocity projection did not round-trip an integer value");
+        break;
+      }
+    }
+  }
+
+  // Playhead follow-scroll pauses while a mouse gesture is live: with a
+    // middle-button pan held in the roll, automation lanes, or velocity editor,
+  // a playing playhead far past the right edge must not move the view;
+  // releasing the button lets the next playhead tick scroll again.
+  auto *lanes = view.findChild<QWidget *>(QStringLiteral("automationArea"));
     if (!lanes)
         fail("automation area not found");
-    for (QWidget *panned : {roll, lanes}) {
+    auto *velocityArea = static_cast<songview::VelocityArea *>(
+      view.findChild<QWidget *>(QStringLiteral("velocityArea")));
+  if (!velocityArea)
+    fail("velocity area not found");
+  QWidget *const pannedAreas[] = {roll, lanes, velocityArea};
+  for (QWidget *panned : pannedAreas) {
         if (!panned)
             continue;
         const int home = view.contentX(0.0);
@@ -1674,17 +1723,99 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         const QPoint mid(panned->width() / 2, panned->height() / 2);
         sendMouse(panned, QEvent::MouseButtonPress, mid, Qt::MiddleButton,
                   Qt::MiddleButton);
-        view.setPlayheadSample(timeline->sampleForTick(farTick), true);
+        if (panned == velocityArea && !velocityArea->gestureActive())
+      fail("velocity-area pan did not start an active gesture");
+    view.setPlayheadSample(timeline->sampleForTick(farTick), true);
         if (view.contentX(0.0) != home)
             fail("playhead follow-scroll moved the view during a pan gesture");
         sendMouse(panned, QEvent::MouseButtonRelease, mid, Qt::MiddleButton,
                   Qt::NoButton);
-        view.setPlayheadSample(timeline->sampleForTick(farTick), true);
+        if (panned == velocityArea && velocityArea->gestureActive())
+      fail("velocity-area pan remained active after release");
+    view.setPlayheadSample(timeline->sampleForTick(farTick), true);
         if (view.contentX(0.0) == home)
             fail("playhead follow-scroll did not resume after the pan ended");
         view.setPlayheadSample(0, false);
         view.scrollByPx(view.contentX(0.0) - home); // back where it started
     }
+
+  // programAt retains the timeline's domain value: firstProgram applies
+  // before the first voice event, while another track with no program stays
+  // -1 even after that event. The AutomationArea boundary alone adapts -1 to
+  // program 0 for its insertion preview.
+  {
+    constexpr uint64_t firstVoiceTick = 48;
+    constexpr int firstProgram = 41;
+    SmfFile programSmf;
+    programSmf.format = 1;
+    programSmf.division = 24;
+    programSmf.tracks.resize(3);
+    programSmf.tracks[0].endTick = 96;
+    SmfTrack &noProgramTrack = programSmf.tracks[1];
+    SmfEvent noteOn;
+    noteOn.status = 0x90;
+    noteOn.data0 = 60;
+    noteOn.data1 = 100;
+    SmfEvent noteOff = noteOn;
+    noteOff.tick = 24;
+    noteOff.status = 0x80;
+    noteOff.data1 = 0;
+    noProgramTrack.events = {noteOn, noteOff};
+    noProgramTrack.endTick = 96;
+    SmfTrack &programTrack = programSmf.tracks[2];
+    SmfEvent firstVoice;
+    firstVoice.tick = firstVoiceTick;
+    firstVoice.status = 0xC0;
+    firstVoice.data0 = uint8_t(firstProgram);
+    programTrack.events = {firstVoice};
+    programTrack.endTick = 96;
+    auto programTimeline = MidiTimeline::build(programSmf, 48000.0);
+    if (!programTimeline) {
+      fail("could not build the program-resolution timeline");
+    } else {
+      SongView programView;
+      programView.resize(640, 360);
+      programView.setSong(programTimeline.get(), nullptr);
+      if (programView.programAt(1, firstVoiceTick - 1) != firstProgram)
+        fail("programAt did not use firstProgram before the first change");
+      if (programView.programAt(0, firstVoiceTick + 1) != -1)
+        fail("programAt replaced a no-program track's -1 fallback");
+      programView.setDocument(&doc);
+      (void)programView.grab();
+      auto *programAutomationArea =
+          programView.findChild<QWidget *>(QStringLiteral("automationArea"));
+      const int laneHeight = programView.viewState().laneHeight;
+      if (!programAutomationArea ||
+          programAutomationArea->width() <= songview::kGutterW ||
+          programAutomationArea->height() < 2 * laneHeight) {
+        fail("program preview automation area was not laid out");
+      } else {
+        QEvent leaveAutomation(QEvent::Leave);
+        QCoreApplication::sendEvent(programAutomationArea, &leaveAutomation);
+        QImage withoutPreview(programAutomationArea->size(),
+                              QImage::Format_ARGB32_Premultiplied);
+        withoutPreview.fill(Qt::transparent);
+        programAutomationArea->render(&withoutPreview);
+        const QPoint previewPosition(songview::kGutterW + 40,
+                                     laneHeight + laneHeight / 2);
+        sendMouse(programAutomationArea, QEvent::MouseMove, previewPosition,
+                  Qt::NoButton, Qt::NoButton);
+        QImage noProgramPreview(programAutomationArea->size(),
+                                QImage::Format_ARGB32_Premultiplied);
+        noProgramPreview.fill(Qt::transparent);
+        programAutomationArea->render(&noProgramPreview);
+        if (noProgramPreview == withoutPreview)
+          fail("no-program voice insertion preview did not render");
+        programTimeline->tracks[0].firstProgram = 0;
+        QImage explicitZeroPreview(programAutomationArea->size(),
+                                   QImage::Format_ARGB32_Premultiplied);
+        explicitZeroPreview.fill(Qt::transparent);
+        programAutomationArea->render(&explicitZeroPreview);
+        if (noProgramPreview != explicitZeroPreview)
+          fail("automation insertion preview did not default -1 to program 0");
+      }
+    }
+  }
 
     // A stopped playhead is a thin child overlay. Moving it must preserve the
     // timeline parents' backing stores instead of repainting their contents.
@@ -1702,6 +1833,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (!editor || editor->isHidden()) {
             fail("rename editor did not open");
         } else {
+            // Printable A belongs to a focused text editor, not the drawer
+            // shortcut; the editor's ShortcutOverride must win.
+            const bool drawerWasVisible = view.drawerVisible();
+            editor->setText(QString());
+            sendTextKey(editor, Qt::Key_A, QStringLiteral("a"));
+            if (editor->text() != QLatin1String("a")
+                || view.drawerVisible() != drawerWasVisible)
+                fail("A toggled the drawer instead of typing in the rename editor");
             editor->setText(QStringLiteral("Rolled"));
             sendKey(editor, Qt::Key_Return, Qt::NoModifier);
             QCoreApplication::processEvents(); // the queued document commit
@@ -1732,32 +1871,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         }
     }
 
-    // The header voice line is live: currentProgram is the last program
-    // change at or before the display position — the playhead while playing,
-    // the edit cursor otherwise — falling back to the track's first program
-    // (which is what primes the engine before any change).
-    {
-        view.setEditCursorTick(0);
-        const int base = view.currentProgram(track);
-        const int changed = base == 5 ? 6 : 5;
-        const uint64_t vcTick = a.tick + 4 * a.dur;
-        doc.addLanePoint(track, DOC_CC_VOICE, vcTick, changed);
-        // A track with no program at all adopts the added one everywhere
-        // (it becomes the priming first program).
-        const int atStart = base < 0 ? changed : base;
-        if (view.currentProgram(track) != atStart)
-            fail("voice label at the start did not show the priming program");
-        view.setEditCursorTick(vcTick);
-        if (view.currentProgram(track) != changed)
-            fail("voice label did not follow the edit cursor past the change");
-        view.setEditCursorTick(0);
-        view.setPlayheadSample(timeline->sampleForTick(vcTick), true);
-        if (view.currentProgram(track) != changed)
-            fail("voice label did not follow the playing playhead");
-        view.setPlayheadSample(0, false); // stopped: back to the edit cursor
-        if (view.currentProgram(track) != atStart)
-            fail("voice label did not return to the edit cursor after stop");
-    }
+    for (const QString &failure : automationCheckFailures(*info))
+    fail(qUtf8Printable(failure));
 
     // Jump-from-context: a completed plain click on a header row's voice
     // line emits revealVoiceRequested with the track's current program (the
@@ -1868,11 +1983,46 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // tracks swap slots, the notes and the mute flag following, as ONE undo
     // command (committed queued, so the event loop must spin). A non-left
     // release mid-drag cancels instead of dropping, a rename editor still
-    // open at the drop gets its text committed rather than destroyed, and
-    // undo/redo re-permute the mute flag along with the tracks.
+    // open at the drop gets its text committed rather than destroyed. Mute
+    // and hidden-lane state must follow the move, its undo, and its redo.
     bool reordered = false;
     bool dragRenamed = false;
     if (doc.engineTrackCount() >= 2) {
+        int hiddenLaneCc = -1;
+        bool addedEmptyLane = false;
+        for (const AutoLane &lane : view.model().lanes) {
+            if (lane.track == 0) {
+                hiddenLaneCc = lane.cc;
+                break;
+            }
+        }
+        if (hiddenLaneCc < 0) {
+            for (uint8_t cc : kAudibleLaneCcs) {
+                if (!view.model().findLane(0, cc)) {
+                    hiddenLaneCc = cc;
+                    view.addEmptyLane(0, cc);
+                    addedEmptyLane = true;
+                    break;
+                }
+            }
+        }
+        const SongView::ViewState laneStateBeforeMove = view.viewState();
+        const auto movingLaneRowId = [hiddenLaneCc](int engineTrack) {
+            return SongView::AutomationRowId::controller(engineTrack,
+                                                   uint8_t(hiddenLaneCc));
+        };
+        constexpr int movingLaneHeight = 75;
+        constexpr int movingLaneRange = 89;
+        SongView::AutomationRowDisplayState movingLaneDisplayState;
+    movingLaneDisplayState.height = movingLaneHeight;
+    movingLaneDisplayState.range = movingLaneRange;
+    if (hiddenLaneCc >= 0) {
+            SongView::ViewState movingLaneState = laneStateBeforeMove;
+            movingLaneState.rowStates.insert(
+                movingLaneRowId(0), movingLaneDisplayState);
+            view.applyViewState(movingLaneState);
+            view.hideLane(0, uint8_t(hiddenLaneCc));
+        }
         // The panel was rebuilt by the edits above; force a layout pass so
         // the rows have real positions for the drop-slot hit test.
         (void)view.grab();
@@ -1904,6 +2054,17 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             QCoreApplication::processEvents();
             if (doc.undoStack()->count() != preDragCount)
                 fail("right-button release mid-drag committed the reorder");
+            if (hiddenLaneCc >= 0
+                && !view.laneHidden(0, uint8_t(hiddenLaneCc)))
+                fail("canceling the reorder moved hidden-lane state");
+            if (hiddenLaneCc >= 0) {
+                const SongView::ViewState canceledMoveState = view.viewState();
+                if (canceledMoveState.rowStates.value(
+                           movingLaneRowId(0))
+                           != movingLaneDisplayState) {
+                    fail("canceling the reorder moved lane row state");
+                }
+            }
 
             // An open rename editor rides along: the drop commits its text
             // Reaper-style (before the move, so it names the right track)
@@ -1933,20 +2094,71 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("header drag did not move the track's notes to slot 1");
             } else if (!view.trackMuted(1) || view.trackMuted(0)) {
                 fail("header drag did not move the mute flag with the track");
+            } else if (hiddenLaneCc >= 0
+                       && !view.laneHidden(1, uint8_t(hiddenLaneCc))) {
+                fail("header drag did not move hidden-lane state with the track");
             } else {
+                const SongView::ViewState movedLaneState = view.viewState();
+                if (hiddenLaneCc >= 0
+                    && movedLaneState.rowStates.value(
+                               movingLaneRowId(1))
+                               != movingLaneDisplayState) {
+                    fail("header drag did not move lane row state");
+                }
                 reordered = true;
                 if (dragRenamed && doc.trackName(1) != QStringLiteral("Dragged"))
                     fail("the open rename editor's text was lost in the drop");
-                // The document's trackMoved signal re-permutes the view
-                // state on undo and redo too — the mute bit follows.
+                // The document's trackMoved signal re-permutes every per-track
+                // view state on undo and redo.
                 doc.undoStack()->undo();
                 if (!view.trackMuted(0) || view.trackMuted(1))
                     fail("undoing the move left the mute flag behind");
+                if (hiddenLaneCc >= 0
+                    && !view.laneHidden(0, uint8_t(hiddenLaneCc)))
+                    fail("undoing the move left hidden-lane state behind");
+                const SongView::ViewState undoneMoveState = view.viewState();
+                if (hiddenLaneCc >= 0
+                    && undoneMoveState.rowStates.value(
+                               movingLaneRowId(0))
+                               != movingLaneDisplayState) {
+                    fail("undoing the move left lane row state behind");
+                }
                 doc.undoStack()->redo();
                 if (!view.trackMuted(1) || view.trackMuted(0))
                     fail("redoing the move did not re-move the mute flag");
+                if (hiddenLaneCc >= 0
+                    && !view.laneHidden(1, uint8_t(hiddenLaneCc)))
+                    fail("redoing the move did not re-move hidden-lane state");
+                const SongView::ViewState redoneMoveState = view.viewState();
+                if (hiddenLaneCc >= 0
+                    && redoneMoveState.rowStates.value(
+                               movingLaneRowId(1))
+                               != movingLaneDisplayState) {
+                    fail("redoing the move did not re-move lane row state");
+                }
             }
             view.setTrackMute(1, false);
+        }
+        if (hiddenLaneCc >= 0) {
+            const int laneTrackAfterCheck = reordered ? 1 : 0;
+            view.showLane(laneTrackAfterCheck, uint8_t(hiddenLaneCc));
+            const SongView::AutomationRowId originalLaneRowId = movingLaneRowId(0);
+            const SongView::AutomationRowId laneRowIdAfterCheck =
+          movingLaneRowId(laneTrackAfterCheck);
+            SongView::ViewState cleanedLaneState = view.viewState();
+            if (laneStateBeforeMove.rowStates.contains(originalLaneRowId)) {
+                cleanedLaneState.rowStates.insert(
+                    laneRowIdAfterCheck,
+                    laneStateBeforeMove.rowStates.value(originalLaneRowId));
+            } else {
+                cleanedLaneState.rowStates.remove(laneRowIdAfterCheck);
+            }
+            view.applyViewState(cleanedLaneState);
+
+            if (addedEmptyLane) {
+                view.removeEmptyLane(
+                    laneTrackAfterCheck, uint8_t(hiddenLaneCc));
+            }
         }
     }
 
@@ -2004,14 +2216,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         }
     }
 
-    // Twenty commands: draw, set, draw, nudge, draw, the double-click
-    // delete, the press-grown draw, the tiny-drag draw, the modifier
+    // Nineteen commands: draw, set, draw, nudge, draw, the double-click
+  // delete, the press-grown draw, the tiny-drag draw, the modifier
     // velocity nudge, the abutting-note fixture add, add, two resizes, the
     // three note-selection presses MERGED into one, the off-grid
     // behind-the-back move, Ctrl+Left (all the scroll-follow presses merge
     // into it), two time-selection moves (kept separate by the clean-index
-    // save point), the inline rename, and the mid-song voice change — plus,
-    // when the song has a second track, the header-drag track move and the
+    // save point), and the inline rename — plus,
+  // when the song has a second track, the header-drag track move and the
     // editor commit the drop flushes. Undoing them all must restore the
     // original bytes.
     int undos = 0;
@@ -2019,8 +2231,15 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         doc.undoStack()->undo();
         undos++;
     }
-    if (undos != 20 + (reordered ? (dragRenamed ? 2 : 1) : 0))
-        fail("gesture pass pushed an unexpected number of undo commands");
+    const int expectedUndos =
+        19 + (reordered ? (dragRenamed ? 2 : 1) : 0);
+    if (undos != expectedUndos) {
+        fail(qUtf8Printable(
+            QStringLiteral(
+                "gesture pass pushed %1 undo commands; expected %2")
+                .arg(undos)
+                .arg(expectedUndos)));
+    }
     if (doc.smf().write() != baseline)
         fail("undoing every gesture did not restore the original bytes");
 

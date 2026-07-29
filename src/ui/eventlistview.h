@@ -1,13 +1,14 @@
 #pragma once
 
+#include "core/songdocument.h"
 #include <QWidget>
+#include <optional>
 
 class QComboBox;
 class QLabel;
 class QMenu;
 class QTableView;
 class QToolButton;
-class SongDocument;
 class SongView;
 struct SmfEvent;
 
@@ -68,7 +69,7 @@ private:
     void jumpCursorToRow(int row);
     int currentChunk() const;
     void selectEventRow(int chunk, const SmfEvent &event);
-    void onTrackMoved(int fromChunk, int toChunk);
+    void onTracksRemapped(const SongDocument::TrackRemap &remap);
 
     SongView *m_sv;
     SongDocument *m_document = nullptr;
@@ -81,11 +82,10 @@ private:
     bool m_syncing = false;
     bool m_settingCurrent = false; // programmatic row changes must not
                                    // commit the edit cursor
-    // Where the current chunk landed after track moves (trackMoved remaps
-    // it, chaining while the page is hidden); -1 = no move pending. refresh
-    // consumes it — a reorder keeps the chunk count, so the count heuristic
-    // alone would keep showing the old index's new occupant.
-    int m_pendingChunk = -1;
-    double m_playTick = -1.0;      // last playhead tick pushed (-1 = none)
+    // Where the anchored chunk landed after track remappings; std::nullopt
+    // means no remap is pending, while -1 means the anchored chunk was
+    // removed. refresh consumes the value after chained hidden-page remaps.
+    std::optional<int> m_pendingChunk;
+    double m_playTick = -1.0; // last playhead tick pushed (-1 = none)
     bool m_playing = false;
 };

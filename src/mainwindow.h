@@ -345,6 +345,12 @@ private:
     QLabel *m_polyLostSeparator = nullptr;
     QLabel *m_polyLostCaption = nullptr;
     QLabel *m_polyLostLabel = nullptr;
+    QWidget *m_noteInfoWidget = nullptr;
+    QLabel *m_noteKeyLabel = nullptr;
+    QLabel *m_noteVelLabel = nullptr;
+    QLabel *m_noteEffVelLabel = nullptr;
+    QLabel *m_noteTicksLabel = nullptr;
+    QLabel *m_noteClocksLabel = nullptr;
     QTimer *m_uiTimer = nullptr;
     QTimer *m_playheadTimer = nullptr;
 };

@@ -101,7 +101,6 @@ enum class PresetColor {
   /// domain color, kept legible on the item and alternate surfaces.
   sample_loop_handle,
   /// Sample Editor seam-end trace: the red domain color, kept legible on the
-  /// seam inset's alternate surface.
   sample_seam_end_ink,
   /// Sentinel for the number of authored preset colors; not rendered.
   count,

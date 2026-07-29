@@ -139,28 +139,82 @@ int runEditCheck(const QString &projectRoot)
                 }
             }
             if (ok) {
-                doc.setNotesVelocity({note}, 88);
-                if (!doc.findNote(track, base + step * 6, 63, &note) || note.velocity != 88) {
-                    fail("velocity edit not applied");
-                    ok = false;
-                }
+              doc.setNotesVelocity({note}, 88);
+              if (!doc.findNote(track, base + step * 6, 63, &note) ||
+                  note.velocity != 88) {
+                fail("velocity edit not applied");
+                ok = false;
+              }
             }
             if (ok) {
-                doc.nudgeNotesVelocity({note}, -30);
-                if (!doc.findNote(track, base + step * 6, 63, &note) || note.velocity != 58) {
-                    fail("velocity nudge not applied");
-                    ok = false;
-                }
+              doc.nudgeNotesVelocity({note}, -30);
+              if (!doc.findNote(track, base + step * 6, 63, &note) ||
+                  note.velocity != 58) {
+                fail("velocity nudge not applied");
+                ok = false;
+              }
             }
             if (ok) {
-                doc.nudgeNotesVelocity({note}, 200); // must clamp to 127
-                if (!doc.findNote(track, base + step * 6, 63, &note) || note.velocity != 127) {
-                    fail("velocity nudge not clamped");
-                    ok = false;
+              doc.nudgeNotesVelocity({note}, 200); // must clamp to 127
+              if (!doc.findNote(track, base + step * 6, 63, &note) ||
+                  note.velocity != 127) {
+                fail("velocity nudge not clamped");
+                ok = false;
+              }
+            }
+            if (ok) {
+              // A duplicate batch is ordered: the last request for a note
+              // wins, even when an earlier request is a no-op.
+              const uint8_t originalVelocity = note.velocity;
+              constexpr uint8_t changedVelocity = 91;
+              const int countBeforeBatch = doc.undoStack()->count();
+              const int indexBeforeBatch = doc.undoStack()->index();
+              doc.setNotesVelocities(
+                  {{note, originalVelocity}, {note, changedVelocity}});
+              if (!doc.findNote(track, base + step * 6, 63, &note) ||
+                  note.velocity != changedVelocity ||
+                  doc.undoStack()->count() != countBeforeBatch + 1 ||
+                  doc.undoStack()->index() != indexBeforeBatch + 1) {
+                fail("duplicate velocity batch did not apply its final "
+                     "request as one command");
+                ok = false;
+              } else {
+                doc.undoStack()->undo();
+                if (!doc.findNote(track, base + step * 6, 63, &note) ||
+                    note.velocity != originalVelocity ||
+                    doc.undoStack()->index() != indexBeforeBatch) {
+                  fail("duplicate velocity batch undo did not restore "
+                       "the original velocity");
+                  ok = false;
                 }
+              }
+              if (ok) {
+                doc.undoStack()->redo();
+                if (!doc.findNote(track, base + step * 6, 63, &note) ||
+                    note.velocity != changedVelocity ||
+                    doc.undoStack()->index() != indexBeforeBatch + 1) {
+                  fail("duplicate velocity batch redo did not restore "
+                       "the final request");
+                  ok = false;
+                }
+              }
+              if (ok) {
+                doc.undoStack()->undo();
+                doc.findNote(track, base + step * 6, 63, &note);
+                doc.setNotesVelocities(
+                    {{note, changedVelocity}, {note, originalVelocity}});
+                if (!doc.findNote(track, base + step * 6, 63, &note) ||
+                    note.velocity != originalVelocity ||
+                    doc.undoStack()->count() != countBeforeBatch + 1 ||
+                    doc.undoStack()->index() != indexBeforeBatch) {
+                  fail("final-no-op duplicate velocity batch pushed a "
+                       "command");
+                  ok = false;
+                }
+              }
             }
             if (ok)
-                doc.deleteNotes({note});
+              doc.deleteNotes({note});
 
             // Batch add (clipboard paste): both notes in one undoable command.
             if (ok) {
@@ -657,83 +711,148 @@ int runEditCheck(const QString &projectRoot)
         // loop markers — stay with chunk 0 even when the move displaces it
         // (mid2agb and the tempo lane read them only there).
         if (ok && doc.engineTrackCount() >= 2 && track >= 0) {
-            doc.addLanePoint(track, DOC_CC_TEMPO, base + step * 110, 145);
-            doc.setTimeSig(base + step * 112, 5, 2);
-            const uint64_t loopStartBefore = doc.loopTick(false);
-            const uint64_t loopEndBefore = doc.loopTick(true);
-            const auto srcNotes = doc.notesForTrack(0);
-            const uint8_t srcChannel = doc.channelFor(0);
-            const int last = doc.engineTrackCount() - 1;
-            const int countBefore = doc.undoStack()->count();
-            doc.moveTrack(0, 0); // no-op guard
-            if (doc.undoStack()->count() != countBefore) {
-                fail("moveTrack onto itself pushed a command");
-                ok = false;
+          doc.addLanePoint(track, DOC_CC_TEMPO, base + step * 110, 145);
+          doc.setTimeSig(base + step * 112, 5, 2);
+          const uint64_t loopStartBefore = doc.loopTick(false);
+          const uint64_t loopEndBefore = doc.loopTick(true);
+          const auto srcNotes = doc.notesForTrack(0);
+          const uint8_t srcChannel = doc.channelFor(0);
+          const int last = doc.engineTrackCount() - 1;
+          const int countBefore = doc.undoStack()->count();
+          const int oldFromEngine = 0;
+          const int oldToEngine = last;
+          const int oldFromChunk = doc.smfTrackFor(oldFromEngine);
+          const int oldToChunk = doc.smfTrackFor(oldToEngine);
+
+          struct RemapObserver {
+            std::vector<SongDocument::TrackRemap> remaps;
+            int documentChangedCount = 0;
+            bool timingValid = true;
+
+            void reset() {
+              remaps.clear();
+              documentChangedCount = 0;
+              timingValid = true;
             }
-            auto seqChunkHas = [&doc](uint8_t metaType, uint64_t tick) {
-                for (const SmfEvent &ev : doc.smf().tracks[0].events) {
-                    if (ev.isMeta() && ev.metaType == metaType && ev.tick == tick)
-                        return true;
-                }
-                return false;
-            };
-            auto notesMatch = [&doc](int engineTrack,
-                                     const std::vector<DocNote> &want) {
-                const auto got = doc.notesForTrack(engineTrack);
-                if (got.size() != want.size())
-                    return false;
-                for (size_t i = 0; i < got.size(); i++) {
-                    if (got[i].tick != want[i].tick || got[i].key != want[i].key
-                        || got[i].duration != want[i].duration
-                        || got[i].velocity != want[i].velocity)
-                        return false;
-                }
+
+            bool complete() const {
+              return timingValid && remaps.size() == 1 &&
+                     documentChangedCount == 1;
+            }
+          } obs;
+
+          QMetaObject::Connection connDoc =
+              QObject::connect(&doc, &SongDocument::documentChanged, [&]() {
+                if (obs.remaps.size() != 1 || obs.documentChangedCount != 0)
+                  obs.timingValid = false;
+                ++obs.documentChangedCount;
+              });
+          QMetaObject::Connection connRemap = QObject::connect(
+              &doc, &SongDocument::tracksRemapped,
+              [&](const SongDocument::TrackRemap &remap) {
+                if (!obs.remaps.empty() || obs.documentChangedCount != 0)
+                  obs.timingValid = false;
+                obs.remaps.push_back(remap);
+              });
+
+          obs.reset();
+          doc.moveTrack(0, 0); // no-op guard
+          if (doc.undoStack()->count() != countBefore || !obs.remaps.empty() ||
+              obs.documentChangedCount != 0) {
+            fail("moveTrack onto itself pushed a command");
+            ok = false;
+          }
+          auto seqChunkHas = [&doc](uint8_t metaType, uint64_t tick) {
+            for (const SmfEvent &ev : doc.smf().tracks[0].events) {
+              if (ev.isMeta() && ev.metaType == metaType && ev.tick == tick)
                 return true;
-            };
-            if (ok) {
-                doc.moveTrack(0, last);
-                mutateAndCheck("events unsorted after moveTrack");
             }
-            if (ok && doc.undoStack()->count() != countBefore + 1) {
-                fail("moveTrack was not a single undo command");
+            return false;
+          };
+          auto notesMatch = [&doc](int engineTrack,
+                                   const std::vector<DocNote> &want) {
+            const auto got = doc.notesForTrack(engineTrack);
+            if (got.size() != want.size())
+              return false;
+            for (size_t i = 0; i < got.size(); i++) {
+              if (got[i].tick != want[i].tick || got[i].key != want[i].key ||
+                  got[i].duration != want[i].duration ||
+                  got[i].velocity != want[i].velocity)
+                return false;
+            }
+            return true;
+          };
+          if (ok) {
+            obs.reset();
+            doc.moveTrack(oldFromEngine, oldToEngine);
+            mutateAndCheck("events unsorted after moveTrack");
+          }
+          if (ok && (!obs.complete() ||
+                     obs.remaps[0].newEngineSlotByOldSlot.value(
+                         oldFromEngine) != oldToEngine ||
+                     obs.remaps[0].newSmfChunkByOldChunk.value(oldFromChunk) !=
+                         oldToChunk)) {
+            fail("moveTrack did not emit valid tracksRemapped signal prior to "
+                 "documentChanged");
+            ok = false;
+          }
+          if (ok && doc.undoStack()->count() != countBefore + 1) {
+            fail("moveTrack was not a single undo command");
+            ok = false;
+          }
+          if (ok && (!notesMatch(last, srcNotes) ||
+                     doc.channelFor(last) != srcChannel)) {
+            fail("moved track's notes or channel changed");
+            ok = false;
+          }
+          if (ok && (!seqChunkHas(0x51, base + step * 110) ||
+                     !seqChunkHas(0x58, base + step * 112))) {
+            fail("seq globals did not stay with chunk 0 across the move");
+            ok = false;
+          }
+          if (ok && (doc.loopTick(false) != loopStartBefore ||
+                     doc.loopTick(true) != loopEndBefore)) {
+            fail("moveTrack lost the loop markers");
+            ok = false;
+          }
+          if (ok) {
+            obs.reset();
+            doc.undoStack()->undo();
+            if (!notesMatch(0, srcNotes)) {
+              fail("moveTrack undo did not restore the track order");
+              ok = false;
+            } else if (!obs.complete() ||
+                       obs.remaps[0].newEngineSlotByOldSlot.value(
+                           oldToEngine) != oldFromEngine ||
+                       obs.remaps[0].newSmfChunkByOldChunk.value(oldToChunk) !=
+                           oldFromChunk) {
+              fail("moveTrack undo did not emit expected tracksRemapped");
+              ok = false;
+            } else {
+              obs.reset();
+              doc.undoStack()->redo();
+              if (!obs.complete() ||
+                  obs.remaps[0].newEngineSlotByOldSlot.value(oldFromEngine) !=
+                      oldToEngine ||
+                  obs.remaps[0].newSmfChunkByOldChunk.value(oldFromChunk) !=
+                      oldToChunk) {
+                fail("moveTrack redo did not emit expected tracksRemapped");
                 ok = false;
+              }
             }
-            if (ok
-                && (!notesMatch(last, srcNotes) || doc.channelFor(last) != srcChannel)) {
-                fail("moved track's notes or channel changed");
-                ok = false;
+          }
+          QObject::disconnect(connDoc);
+          QObject::disconnect(connRemap);
+          if (ok) {
+            doc.moveTrack(last, 0); // and back again
+            mutateAndCheck("events unsorted after moveTrack back");
+            if (!notesMatch(0, srcNotes) ||
+                !seqChunkHas(0x51, base + step * 110) ||
+                !seqChunkHas(0x58, base + step * 112)) {
+              fail("moving the track back did not restore its slot");
+              ok = false;
             }
-            if (ok
-                && (!seqChunkHas(0x51, base + step * 110)
-                    || !seqChunkHas(0x58, base + step * 112))) {
-                fail("seq globals did not stay with chunk 0 across the move");
-                ok = false;
-            }
-            if (ok
-                && (doc.loopTick(false) != loopStartBefore
-                    || doc.loopTick(true) != loopEndBefore)) {
-                fail("moveTrack lost the loop markers");
-                ok = false;
-            }
-            if (ok) {
-                doc.undoStack()->undo();
-                if (!notesMatch(0, srcNotes)) {
-                    fail("moveTrack undo did not restore the track order");
-                    ok = false;
-                } else {
-                    doc.undoStack()->redo();
-                }
-            }
-            if (ok) {
-                doc.moveTrack(last, 0); // and back again
-                mutateAndCheck("events unsorted after moveTrack back");
-                if (!notesMatch(0, srcNotes)
-                    || !seqChunkHas(0x51, base + step * 110)
-                    || !seqChunkHas(0x58, base + step * 112)) {
-                    fail("moving the track back did not restore its slot");
-                    ok = false;
-                }
-            }
+          }
         }
 
         // Reordering must not confuse chunk-0 metas that only LOOK like loop
@@ -1053,7 +1172,8 @@ int runEditCheck(const QString &projectRoot)
             // Chunk layout: 0 conductor, 1..3 channels 1/4/7, 4 the
             // name-only channel-9 chunk.
             if (!hasMeta(chunks[2], 0x04, "Gtr")) {
-                fail0("prefixed instrument-name meta did not travel to its channel chunk");
+                fail0("prefixed instrument-name meta did not travel to its channel "
+              "chunk");
                 ok = false;
             }
             if (ok
