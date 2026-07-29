@@ -3,15 +3,19 @@
 #include "ui/typography.h"
 
 #include <QApplication>
+#include <QCoreApplication>
 #include <QDir>
+#include <QEvent>
 #include <QFile>
 #include <QFont>
 #include <QImage>
 #include <QPainter>
 #include <QPalette>
+#include <QPointer>
 #include <QPolygonF>
 
 #include <QSet>
+#include <QVector>
 #include <QWidget>
 #include <optional>
 
@@ -21,7 +25,7 @@ namespace {
 // Qt has one application palette, so runtime theme state is intentionally
 // process-wide and captured before the first application-level override.
 std::optional<QPalette> capturedStartupPalette;
-QSet<QWidget *> gridLineRepaintTargets;
+QSet<QWidget *> gridLineRefreshTargets;
 std::optional<Theme> currentTheme;
 
 // QPalette covers colors Qt paints natively; the component QSS fragments below
@@ -558,7 +562,7 @@ QString splitterStyleSheet(const Theme &theme) {
       .arg(colorName(theme, Role::splitter_handle_hover_background));
 }
 
-// Theme colors are role-driven; geometry is cached independently by layout.
+// Theme colors are role-driven; stylesheet fragments stay grouped by widget.
 QString colorStyleSheet(const Theme &theme) {
   return windowStyleSheet(theme) + trackHeaderStyleSheet(theme) +
          toolbarStyleSheet(theme) + tabStyleSheet(theme) +
@@ -591,22 +595,35 @@ void initialize(QApplication &application) {
     capturedStartupPalette = application.palette();
 }
 
-void registerGridLineRepaintTarget(QWidget &widget) {
-  gridLineRepaintTargets.insert(&widget);
+void registerGridLineRefreshTarget(QWidget &widget) {
+  if (gridLineRefreshTargets.contains(&widget))
+    return;
+  gridLineRefreshTargets.insert(&widget);
+
   auto *const target = &widget;
   QObject::connect(&widget, &QObject::destroyed,
-                   [target] { gridLineRepaintTargets.remove(target); });
+                   [target] { gridLineRefreshTargets.remove(target); });
 }
 
 void apply(QApplication &application, const Theme &theme) {
   initialize(application);
-  // Grid contrast affects only custom-painted Song Views. Reinstalling the
-  // application palette and stylesheet here needlessly restyles native tab
-  // bars while the slider is dragged.
+  // Grid contrast affects only custom-painted timeline widgets. Reinstalling
+  // the application palette and stylesheet here needlessly restyles native
+  // tab bars while the slider is dragged.
   if (currentTheme && onlyGridLineColorChanged(*currentTheme, theme)) {
     currentTheme = theme;
-    for (auto *widget : gridLineRepaintTargets)
-      widget->update();
+    QVector<QPointer<QWidget>> targets;
+    targets.reserve(gridLineRefreshTargets.size());
+    for (auto *target : gridLineRefreshTargets)
+      targets.append(target);
+    for (const auto &target : targets) {
+      if (!target)
+        continue;
+      QEvent themeChange(QEvent::ThemeChange);
+      QCoreApplication::sendEvent(target, &themeChange);
+      if (target)
+        target->update();
+    }
     return;
   }
   // Always resolve from the platform baseline, never from the previous theme;

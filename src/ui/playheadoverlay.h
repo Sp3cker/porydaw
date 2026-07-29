@@ -9,6 +9,8 @@
 #include <cstddef>
 #include <memory>
 
+#include "timelinesurface.h"
+
 class QEvent;
 class QPaintEvent;
 
@@ -79,18 +81,7 @@ std::unique_ptr<PlayheadBackend> createPlayheadBackend(QWidget &owner);
 
 class PlayheadOverlay final : public QWidget {
 public:
-  struct Surfaces {
-    QWidget *ruler = nullptr;
-    int rulerOrigin = 0;
-    QWidget *roll = nullptr;
-    int rollOrigin = 0;
-    QWidget *lanes = nullptr;
-    int lanesOrigin = 0;
-    QWidget *strip = nullptr;
-    int stripOrigin = 0;
-  };
-
-  PlayheadOverlay(QWidget *owner, const Surfaces &surfaces);
+  explicit PlayheadOverlay(QWidget *owner, TimelineSurfaces surfaces);
   ~PlayheadOverlay() override;
 
   inline void setPlayhead(qreal timelineX, bool visible, bool playing) {
@@ -125,7 +116,7 @@ private:
   QRegion playheadRegion() const;
   void updatePaintRegion();
 
-  Surfaces m_surfaces;
+  TimelineSurfaces m_surfaces;
   QColor m_color;
 
   std::unique_ptr<PlayheadBackend> m_backend;

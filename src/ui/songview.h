@@ -14,6 +14,7 @@
 
 #include "core/miditimeline.h"
 #include "ui/songviewmodel.h"
+#include "ui/timelinesurface.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -168,6 +169,7 @@ public:
     const MidiTimeline *timeline() const { return m_timeline; }
     const SongViewModel &model() const { return m_model; }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
+    songview::TimelineSurfaces timelineSurfaces() noexcept;
 
     qreal contentX(double tick) const { return qreal(tick * m_pxPerTick - m_scrollX); }
     double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / m_pxPerTick; }

@@ -16,6 +16,7 @@
 #include <QLineEdit>
 #include <QPaintEvent>
 #include <QPixmap>
+#include <QPointer>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSettings>
@@ -28,6 +29,7 @@
 
 #include <array>
 #include <cstdio>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -63,12 +65,22 @@ protected:
   }
 };
 
-class PaintCounter final : public QWidget {
+class ThemeRefreshProbe final : public QWidget {
 public:
-  int count = 0;
+  int themeChangeCount = 0;
+  int paintCount = 0;
+  QColor gridColor;
 
 protected:
-  void paintEvent(QPaintEvent *) override { ++count; }
+  bool event(QEvent *event) override {
+    if (event && event->type() == QEvent::ThemeChange) {
+      ++themeChangeCount;
+      gridColor = themes::color(themes::Role::song_view_grid);
+    }
+    return QWidget::event(event);
+  }
+
+  void paintEvent(QPaintEvent *) override { ++paintCount; }
 };
 
 // Paint code has no fallback path: every public role must resolve to a valid
@@ -524,27 +536,50 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application) {
   QTabBar tabBar;
   tabBar.addTab(QStringLiteral("Open Song"));
   tabBar.show();
-  PaintCounter gridPaintTarget;
+  ThemeRefreshProbe gridPaintTarget;
   gridPaintTarget.resize(10, 10);
   gridPaintTarget.show();
   application.processEvents();
-  themes::registerGridLineRepaintTarget(gridPaintTarget);
-  gridPaintTarget.count = 0;
+  themes::registerGridLineRefreshTarget(gridPaintTarget);
+  themes::registerGridLineRefreshTarget(gridPaintTarget);
+  gridPaintTarget.paintCount = 0;
+  gridPaintTarget.themeChangeCount = 0;
   StyleChangeCounter tabStyleChanges;
   tabBar.installEventFilter(&tabStyleChanges);
   const auto tabBeforeContrastChange = tabBar.grab().toImage();
+  const auto paletteBeforeContrastChange = application.palette();
+  const auto styleSheetBeforeContrastChange = application.styleSheet();
   const auto defaultGrid = themes::color(themes::Role::song_view_grid);
   const auto gridBackground =
       themes::color(themes::Role::song_view_piano_roll_background);
+  const auto initialRefreshCount = gridPaintTarget.themeChangeCount;
   gridLineContrast->setValue(100);
   const auto strengthenedGrid = themes::color(themes::Role::song_view_grid);
+  reporter.check(gridPaintTarget.themeChangeCount == initialRefreshCount + 1,
+                 "duplicate grid target registration caused multiple refreshes");
+  reporter.check(gridPaintTarget.gridColor == strengthenedGrid,
+                 "grid refresh observed the old theme color");
   gridLineContrast->setValue(0);
   const auto softenedGrid = themes::color(themes::Role::song_view_grid);
+  reporter.check(gridPaintTarget.themeChangeCount == initialRefreshCount + 2,
+                 "grid contrast did not refresh its target once");
+  reporter.check(gridPaintTarget.gridColor == softenedGrid,
+                 "grid refresh did not observe the softened theme color");
   reporter.check(themes::contrastRatio(strengthenedGrid, gridBackground) >
                          themes::contrastRatio(defaultGrid, gridBackground) &&
                      themes::contrastRatio(softenedGrid, gridBackground) <
                          themes::contrastRatio(defaultGrid, gridBackground),
                  "the Grid Line Contrast dial did not preview both directions");
+  auto destroyedTarget = std::make_unique<ThemeRefreshProbe>();
+  QPointer<ThemeRefreshProbe> destroyedTargetGuard(destroyedTarget.get());
+  themes::registerGridLineRefreshTarget(*destroyedTarget);
+  destroyedTarget.reset();
+  reporter.check(destroyedTargetGuard.isNull(),
+                 "destroyed grid target was not cleaned up");
+  const auto refreshCountBeforeCleanup = gridPaintTarget.themeChangeCount;
+  gridLineContrast->setValue(10);
+  reporter.check(gridPaintTarget.themeChangeCount == refreshCountBeforeCleanup + 1,
+                 "grid refresh failed after a registered target was destroyed");
   gridLineContrast->setValue(themes::defaultGridLineContrast);
   application.processEvents();
   reporter.check(tabStyleChanges.count == 0,
@@ -552,7 +587,10 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application) {
   reporter.check(
       tabBar.grab().toImage() == tabBeforeContrastChange,
       "changing grid line contrast changed the open-song tab bar pixels");
-  reporter.check(gridPaintTarget.count > 0,
+  reporter.check(application.palette() == paletteBeforeContrastChange &&
+                     application.styleSheet() == styleSheetBeforeContrastChange,
+                 "changing grid line contrast churned global application style");
+  reporter.check(gridPaintTarget.paintCount > 0,
                  "grid contrast did not repaint its registered paint target");
   darkNeutralHigh->click();
   checkGeometry();

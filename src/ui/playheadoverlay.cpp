@@ -15,14 +15,10 @@ namespace songview {
 std::unique_ptr<PlayheadBackend> createPlayheadBackend(QWidget &) { return {}; }
 #endif
 
-PlayheadOverlay::PlayheadOverlay(QWidget *owner, const Surfaces &surfaces)
+PlayheadOverlay::PlayheadOverlay(QWidget *owner, TimelineSurfaces surfaces)
     : QWidget(owner), m_surfaces(surfaces),
       m_color(themes::color(themes::Role::song_view_playhead)) {
   Q_ASSERT(owner);
-  Q_ASSERT(m_surfaces.ruler);
-  Q_ASSERT(m_surfaces.roll);
-  Q_ASSERT(m_surfaces.lanes);
-  Q_ASSERT(m_surfaces.strip);
 
   setAttribute(Qt::WA_TransparentForMouseEvents);
   setAttribute(Qt::WA_NoSystemBackground);
@@ -41,10 +37,10 @@ void PlayheadOverlay::observeSurfaceGeometry() {
       widget->installEventFilter(this);
     }
   };
-  observe(m_surfaces.ruler);
-  observe(m_surfaces.roll);
-  observe(m_surfaces.lanes);
-  observe(m_surfaces.strip);
+  observe(&m_surfaces.ruler.widget);
+  observe(&m_surfaces.roll.widget);
+  observe(&m_surfaces.lanes.widget);
+  observe(&m_surfaces.strip.widget);
 }
 
 bool PlayheadOverlay::eventFilter(QObject *, QEvent *event) {
@@ -187,24 +183,28 @@ void PlayheadOverlay::synchronizeGeometry() {
   Q_ASSERT(ownerWidget);
   QWidget &owner = *ownerWidget;
 
-  const QRect rulerGeometry(m_surfaces.ruler->mapTo(&owner, QPoint(0, 0)),
-                            m_surfaces.ruler->size());
+  const QRect rulerGeometry(m_surfaces.ruler.widget.mapTo(&owner, QPoint(0, 0)),
+                            m_surfaces.ruler.widget.size());
   const int playheadTop = rulerGeometry.bottom() + 1;
   const QRect playheadGeometry(0, playheadTop, owner.width(),
                                std::max(0, owner.height() - playheadTop));
-  const QRect rulerVisible =
-      visibleSurfaceRect(m_surfaces.ruler, &owner, m_surfaces.rulerOrigin);
+  const QRect rulerVisible = visibleSurfaceRect(
+      &m_surfaces.ruler.widget, &owner, m_surfaces.ruler.timelineOrigin);
   const QRect triangleClip(rulerVisible.left(), playheadTop,
                            rulerVisible.width(), kPlayheadTriangleHeight + 1);
 
   const QRegion visibleSurfaces =
-      QRegion(
-          visibleSurfaceRect(m_surfaces.roll, &owner, m_surfaces.rollOrigin)) +
-      visibleSurfaceRect(m_surfaces.lanes, &owner, m_surfaces.lanesOrigin) +
-      visibleSurfaceRect(m_surfaces.strip, &owner, m_surfaces.stripOrigin);
+      QRegion(visibleSurfaceRect(&m_surfaces.roll.widget, &owner,
+                                 m_surfaces.roll.timelineOrigin)) +
+      visibleSurfaceRect(&m_surfaces.lanes.widget, &owner,
+                         m_surfaces.lanes.timelineOrigin) +
+      visibleSurfaceRect(&m_surfaces.strip.widget, &owner,
+                         m_surfaces.strip.timelineOrigin);
 
   const int timelineOrigin =
-      m_surfaces.ruler->mapTo(&owner, QPoint(m_surfaces.rulerOrigin, 0)).x();
+      m_surfaces.ruler.widget
+          .mapTo(&owner, QPoint(m_surfaces.ruler.timelineOrigin, 0))
+          .x();
 
   const bool overlayGeometryChanged = geometry() != owner.rect();
   if (overlayGeometryChanged)
@@ -214,7 +214,7 @@ void PlayheadOverlay::synchronizeGeometry() {
   m_playheadGeometry = playheadGeometry;
   m_triangleClip = triangleClip;
   m_timelineOrigin = timelineOrigin;
-  m_trianglePointsUp = !m_surfaces.roll->isVisible();
+  m_trianglePointsUp = !m_surfaces.roll.widget.isVisible();
   m_devicePixelRatio = owner.devicePixelRatioF();
 
   ++m_staticGeneration;

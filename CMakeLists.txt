@@ -145,6 +145,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songlistpanel.h
     src/ui/songviewmodel.cpp
     src/ui/songviewmodel.h
+    src/ui/timelinesurface.cpp
+    src/ui/timelinesurface.h
     src/ui/songview.cpp
     src/ui/songview.h
     src/ui/playheadoverlay.cpp
