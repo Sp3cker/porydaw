@@ -77,6 +77,8 @@ const Def kDefs[] = {
      QT_TR_NOOP("Stop"), QKeySequence::UnknownKey, ""},
     {"transport.loop", Context::Global, QT_TR_NOOP("Transport"),
      QT_TR_NOOP("Toggle Loop"), QKeySequence::UnknownKey, ""},
+    {"transport.follow_playhead", Context::Global, QT_TR_NOOP("Transport"),
+     QT_TR_NOOP("Follow Playhead"), QKeySequence::UnknownKey, ""},
     // Songs dock
     {"songs.find", Context::Global, QT_TR_NOOP("Songs"),
      QT_TR_NOOP("Find Song"), QKeySequence::Find, ""},

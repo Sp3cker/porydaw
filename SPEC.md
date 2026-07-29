@@ -245,7 +245,9 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   0–16/32/64/127 display max, persisted in the sidecar §4.4); MOD auto-fits by default
   since its musical range is roughly 0–20. Display only — event values are untouched,
   and data beyond the chosen range grows the axis rather than clipping.
-- **Transport bar:** play/pause/stop, loop toggle, position, tempo display, master
+- **Transport bar:** play/pause/stop, loop toggle, a follow-playhead toggle (also in
+  the View menu; off, playback stops scrolling the roll and event list — the camera
+  stays where the user put it; app-wide, persisted), position, tempo display, master
   volume, and a **polyphony meter** fed by the engine's overflow-debug counters
   showing DirectSound channel usage against the project's `maxChans` (dropped/stolen
   notes flash a warning — the #1 mystery for newcomers).

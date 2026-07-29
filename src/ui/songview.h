@@ -223,6 +223,10 @@ public:
     static QColor velocityNoteColor(int velocity);
     bool velocityColorMode() const { return m_velocityColorMode; }
     void setVelocityColorMode(bool on);
+    // App-wide Follow Playhead toggle (transport bar / View menu): off, the
+    // playback follow-scroll — the roll's and the event list's — is
+    // suppressed and the camera stays where the user put it.
+    void setFollowPlayhead(bool on);
     // The active-track note fill under the current display mode.
     QColor noteFillColor(int track, int velocity) const;
     // The track's program at the display position — the playhead while
@@ -558,6 +562,7 @@ private:
     GridFeel m_gridFeel = GridFeel::Straight;
     int m_gridMinDenom = 0; // note denominator; 0 = clock-grid floor
     bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)
+    bool m_followPlayhead = true;     // playback follow-scroll (transport bar)
     std::vector<std::pair<int, uint8_t>> m_emptyLanes; // (track, cc), unsorted
 
     songview::TimeRuler *m_ruler = nullptr;
