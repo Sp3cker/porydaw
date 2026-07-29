@@ -1129,18 +1129,36 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     const QPoint sweepStart(songview::kKeyboardW + 1, 0);
     const QPoint sweepEnd(std::max(a.center.x(), b.center.x()) + 4,
                           std::max(a.center.y(), b.center.y()) + 4);
+    const auto hasSelectionRing = [&](const Cell &cell) {
+      const qreal dpr = roll->devicePixelRatioF();
+      const int noteRight = qRound(view.displayX(
+          double(cell.tick + cell.dur), songview::kKeyboardW, dpr));
+      const QRectF box = rows.noteBox(rows.noteRect(0, 1, cell.key));
+      const QPixmap pixmap = roll->grab();
+      const qreal imageDpr = pixmap.devicePixelRatio();
+      return isSelectionRingColor(
+          pixmap.toImage().pixel(qRound((noteRight - 2) * imageDpr),
+                                 qRound(box.top() * imageDpr)));
+    };
+    view.clearSelection();
     sendMouse(roll, QEvent::MouseButtonPress, sweepStart, Qt::RightButton,
               Qt::RightButton);
     sendMouse(roll, QEvent::MouseMove, a.center + QPoint(4, 4), Qt::NoButton,
               Qt::RightButton);
     if (std::find(onKeys.begin(), onKeys.end(), a.key) == onKeys.end())
       fail("sweeping the band over a note did not audition it");
+    if (!view.selection().empty())
+      fail("band preview committed selection before release");
+    if (!hasSelectionRing(a))
+      fail("band entrant was not highlighted before release");
     // Retreat to a band covering nothing: the departed notes' previews
     // must release now, not ring out their durations.
     sendMouse(roll, QEvent::MouseMove, sweepStart + QPoint(4, 4), Qt::NoButton,
               Qt::RightButton);
     if (std::find(offKeys.begin(), offKeys.end(), a.key) == offKeys.end())
       fail("shrinking the band did not release the departed note");
+    if (hasSelectionRing(a))
+      fail("departed band note remained highlighted");
     sendMouse(roll, QEvent::MouseMove, sweepEnd, Qt::NoButton, Qt::RightButton);
     sendMouse(roll, QEvent::MouseButtonRelease, sweepEnd, Qt::RightButton,
               Qt::NoButton);
@@ -1169,6 +1187,27 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
       fail("band sweep auditioned a zero-length note");
     if (doc.undoStack()->count() != preBandCount)
       fail("band sweep pushed an undo command");
+    const SongView::NoteId aId{uint32_t(a.tick), uint8_t(a.key)};
+    const SongView::NoteId bId{uint32_t(b.tick), uint8_t(b.key)};
+    view.setSelection({bId});
+    const QPoint additiveStart = a.center - QPoint(8, 8);
+    const QPoint additiveEnd = a.center + QPoint(8, 8);
+    sendMouse(roll, QEvent::MouseButtonPress, additiveStart, Qt::RightButton,
+              Qt::RightButton, Qt::ControlModifier);
+    sendMouse(roll, QEvent::MouseMove, additiveEnd, Qt::NoButton,
+              Qt::RightButton, Qt::ControlModifier);
+    if (view.selection().size() != 1 || !(view.selection().front() == bId))
+      fail("additive band preview mutated committed selection");
+    if (!hasSelectionRing(a) || !hasSelectionRing(b))
+      fail("additive band preview did not show the selection union");
+    sendMouse(roll, QEvent::MouseButtonRelease, additiveEnd, Qt::RightButton,
+              Qt::NoButton, Qt::ControlModifier);
+    if (std::find(view.selection().begin(), view.selection().end(), aId) ==
+            view.selection().end() ||
+        std::find(view.selection().begin(), view.selection().end(), bId) ==
+            view.selection().end()) {
+      fail("additive band release did not commit the selection union");
+    }
     view.clearSelection(); // the sections below manage their own
   }
 

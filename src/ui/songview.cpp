@@ -1556,6 +1556,7 @@ protected:
       m_pressPos = m_curPos = event->position();
       m_rightPress = true;
       m_rightShift = event->modifiers() & Qt::ShiftModifier;
+      m_bandAdditive = event->modifiers() & Qt::ControlModifier;
       m_rightAnchorTick = m_sv->snapTick(
           m_sv->tickAtContentX(event->position().x() - kKeyboardW));
       m_rightHit = hit != nullptr;
@@ -1721,6 +1722,7 @@ protected:
             QApplication::startDragDistance()) {
       m_drag = m_rightShift ? Drag::TimeSel : Drag::Band;
       m_bandAud.clear();
+      m_bandAdditive = event->modifiers() & Qt::ControlModifier;
     }
     if (m_leftPress && m_drag == Drag::None) {
       // The pressed row's preview glisses with the cursor, like the
@@ -1886,6 +1888,7 @@ protected:
       sel.endTick = std::max(m_rightAnchorTick, t);
       m_sv->setTimeSelection(sel);
     } else if (m_drag == Drag::Band) {
+      m_bandAdditive = event->modifiers() & Qt::ControlModifier;
       auditionBandEntrants(QRectF(m_pressPos, m_curPos).normalized());
       update();
     }
@@ -1918,9 +1921,9 @@ protected:
         else
           m_sv->clearTimeSelection();
       } else if (drag == Drag::Band) {
+        m_bandAdditive = event->modifiers() & Qt::ControlModifier;
         stopBandAuditions();
-        selectBand(QRectF(m_pressPos, m_curPos).normalized(),
-                   event->modifiers() & Qt::ControlModifier);
+        selectBand(QRectF(m_pressPos, m_curPos).normalized(), m_bandAdditive);
       } else if (doc && m_rightHit) {
         const std::vector<SongView::NoteId> &sel = m_sv->selection();
         if (std::find(sel.begin(), sel.end(), m_rightHitId) == sel.end())
@@ -2307,7 +2310,14 @@ private:
         }
       }
 
-      if (m_sv->isSelected(note)) {
+      const SongView::NoteId id{note.startTick, note.key};
+      const bool bandSelected =
+          std::find(m_bandAud.begin(), m_bandAud.end(), id) != m_bandAud.end();
+      const bool selected =
+          m_drag == Drag::Band
+              ? bandSelected || (m_bandAdditive && m_sv->isSelected(note))
+              : m_sv->isSelected(note);
+      if (selected) {
         const QColor selectionColor =
             themes::color(themes::Role::item_selected_background);
         // The ring thins before it disappears; the black border
@@ -2648,6 +2658,7 @@ public:
   SongView::NoteId m_rightHitId{}; // …this one
   std::vector<SongView::NoteId> m_bandAud; // notes the band currently
                                            // covers; entrants audition
+  bool m_bandAdditive = false; // band preview unions the committed selection
   ViewNote m_velAnchor{};     // pressed note of a velocity drag (a copy)
   int m_velAudEff = -1;       // last effective velocity auditioned mid-drag
   bool m_velModPress = false; // velocity-modifier press on a note; click
@@ -5021,47 +5032,55 @@ SongView::velocityForLevel(int track, uint64_t tick, uint8_t key,
   return psgVelocityForLevel(psgVelocityDetents(*context), requestedLevel);
 }
 
+std::optional<PsgVelocityContext>
+SongView::velocityAxisContext(int track) const {
+  if (!m_document || !m_voicegroup || !m_timeline || track < 0 || track >= 16)
+    return std::nullopt;
+  const uint64_t tick =
+      m_playing ? uint64_t(m_playheadTick) : m_editCursorTick;
+  const int program = programAt(track, tick);
+  if (program < 0 || program >= VOICEGROUP_SIZE)
+    return std::nullopt;
+  const ToneData &tone = m_voicegroup->voices[std::size_t(program)];
+  if (tone.type & (VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL))
+    return std::nullopt;
+  return songview::psgVelocityContext(this, track, tick, 0);
+}
+
+void SongView::refreshVelocityAxisContext() {
+  const auto context = velocityAxisContext(m_selectedTrack);
+  if (context == m_velocityAxisContext)
+    return;
+  m_velocityAxisContext = context;
+  if (m_velocityArea)
+    m_velocityArea->update();
+}
+
 std::optional<VelocityDetentInfo>
 SongView::velocityAxisDetents(int track,
                               const std::vector<NoteId> &notes) const {
   if (track < 0 || track >= 16)
     return std::nullopt;
-  auto resolve = [this, track](uint64_t tick, uint8_t key) {
-    const auto context = songview::psgVelocityContext(this, track, tick, key);
+  if (notes.empty()) {
+    const auto context = velocityAxisContext(track);
     return context
                ? std::optional<VelocityDetentInfo>{psgVelocityDetents(*context)}
                : std::nullopt;
-  };
+  }
   auto commonDetents = std::optional<VelocityDetentInfo>{};
-  const auto include = [&commonDetents, &resolve](uint64_t tick, uint8_t key) {
-    const auto detents = resolve(tick, key);
-    if (!detents)
-      return false;
+  for (const auto &note : notes) {
+    const auto context =
+        songview::psgVelocityContext(this, track, note.tick, note.key);
+    if (!context)
+      return std::nullopt;
+    const auto detents = psgVelocityDetents(*context);
     if (!commonDetents) {
       commonDetents = detents;
-      return true;
-    }
-    return velocityDetentsCompatible(*commonDetents, *detents);
-  };
-  if (!notes.empty()) {
-    for (const auto &note : notes) {
-      if (!include(note.tick, note.key))
-        return std::nullopt;
-    }
-    return commonDetents;
-  }
-  auto &cached = m_velocityAxisDetentCache[std::size_t(track)];
-  if (cached.valid)
-    return cached.detents;
-  for (const auto &note : m_model.notes) {
-    if (note.track == track && !include(note.startTick, note.key)) {
-      commonDetents.reset();
-      break;
+    } else if (!velocityDetentsCompatible(*commonDetents, detents)) {
+      return std::nullopt;
     }
   }
-  cached.valid = true;
-  cached.detents = commonDetents;
-  return cached.detents;
+  return commonDetents;
 }
 
 SongView::SongView(QWidget *parent) : QWidget(parent) {
@@ -5171,7 +5190,6 @@ void SongView::setSong(const MidiTimeline *timeline,
   m_timeline = timeline;
   m_voicegroup = voicegroup;
   m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
-  invalidateVelocityAxisDetents();
   m_emptyLanes.clear();
   m_hiddenLanes.clear();
   m_selection.clear();
@@ -5208,6 +5226,7 @@ void SongView::setSong(const MidiTimeline *timeline,
     }
   }
   m_trackSelMask = 1u << m_selectedTrack;
+  refreshVelocityAxisContext();
 
   rebuildAfterSongChange();
 }
@@ -5238,7 +5257,6 @@ void SongView::updateSong(const MidiTimeline *timeline) {
     m_velocityArea->cancelGesture();
   m_timeline = timeline;
   m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
-  invalidateVelocityAxisDetents();
   mergeEmptyLanes();
 
   if (timeline && !timeline->tracks[m_selectedTrack].used) {
@@ -5265,6 +5283,8 @@ void SongView::updateSong(const MidiTimeline *timeline) {
   }
   m_selection = std::move(keep);
 
+  refreshVelocityAxisContext();
+
   m_headers->rebuild();
   m_lanes->rebuildRows();
   updateScrollbars();
@@ -5277,7 +5297,7 @@ void SongView::setDocument(SongDocument *document) {
       disconnect(m_document, &SongDocument::tracksRemapped, this, nullptr);
     }
     m_document = document;
-    invalidateVelocityAxisDetents();
+    refreshVelocityAxisContext();
     if (document) {
       connect(document, &SongDocument::tracksRemapped, this,
               &SongView::onTracksRemapped);
@@ -5487,7 +5507,7 @@ void SongView::applyViewState(const ViewState &state) {
 
 void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup) {
   m_voicegroup = voicegroup;
-  invalidateVelocityAxisDetents();
+  refreshVelocityAxisContext();
   m_headers->rebuild();
   refreshTimelineViews();
 }
@@ -6342,6 +6362,7 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing) {
     return;
   m_playheadTick = m_timeline->tickForSample(samplePos);
   m_playing = playing;
+  refreshVelocityAxisContext();
   // Follow the playhead — but not while the user is mid-gesture (panning,
   // dragging notes or selections, sweeping automation): yanking the view
   // out from under a held mouse button is disorienting.
@@ -6374,6 +6395,7 @@ void SongView::setEditCursorTick(uint64_t tick) {
   if (m_editCursorTick == tick)
     return;
   m_editCursorTick = tick;
+  refreshVelocityAxisContext();
   m_headers->syncVoices();
   refreshTimelineViews();
 }
@@ -6404,6 +6426,7 @@ void SongView::selectTrack(int track) {
   if (m_velocityArea)
     m_velocityArea->cancelGesture();
   m_selectedTrack = track;
+  refreshVelocityAxisContext();
   // Programmatic selection collapses the multi-track scope;
   // trackHeaderClicked restores it for modifier clicks.
   m_trackSelMask = 1u << track;
@@ -6706,7 +6729,6 @@ void SongView::moveTrack(int from, int to) {
 }
 
 void SongView::onTracksRemapped(const SongDocument::TrackRemap &remap) {
-  invalidateVelocityAxisDetents();
   const QVector<int> &newEngineSlotByOldSlot = remap.newEngineSlotByOldSlot;
   // This signal arrives after SongDocument has rebuilt its engine-track
   // mapping but before documentChanged rebuilds the views. Remap state
@@ -6833,10 +6855,6 @@ void SongView::forEachGridLine(
       bar += int((segTicks + barTicks - 1) / barTicks);
     }
   }
-}
-void SongView::invalidateVelocityAxisDetents() {
-  for (auto &cached : m_velocityAxisDetentCache)
-    cached.valid = false;
 }
 
 void SongView::updateNoteViews() {

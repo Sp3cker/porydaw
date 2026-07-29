@@ -49,6 +49,14 @@ RulerGraduations rulerGraduations(double height) {
   return result;
 }
 
+void retainExtrema(std::set<int> &values) {
+  if (values.size() <= 2)
+    return;
+  const int minimum = *values.begin();
+  const int maximum = *values.rbegin();
+  values = {minimum, maximum};
+}
+
 int velocityLabelHeight(const QFont &captionFont,
                         const QFont &boldCaptionFont) {
   return std::max(QFontMetrics(captionFont).height(),
@@ -192,6 +200,8 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
       }
     }
 
+    retainExtrema(activeVelocities);
+
     for (int v : activeVelocities) {
       const double y = axis.velocityToY(v);
       const QColor selColor =
@@ -249,6 +259,8 @@ void VelocityArea::paintEvent(QPaintEvent * /*event*/) {
       }
     }
   }
+  retainExtrema(activeLevels);
+
   const QString accessibleDescription =
       detentMessage.isEmpty() ? SongView::tr("Velocity")
                               : SongView::tr("Velocity. %1").arg(detentMessage);
@@ -849,7 +861,7 @@ VelocityAxis VelocityArea::displayAxis() const {
   if (m_gestureAxis)
     return *m_gestureAxis;
   const auto detents =
-      m_sv->velocityAxisDetents(m_sv->selectedTrack(), detentContextNotes());
+      m_sv->velocityAxisDetents(m_sv->selectedTrack(), {});
   return VelocityAxis(double(height()), detents);
 }
 

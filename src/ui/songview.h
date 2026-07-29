@@ -426,7 +426,7 @@ public:
   std::optional<uint8_t> velocityForLevel(int track, uint64_t tick, uint8_t key,
                                           uint8_t requestedLevel) const;
   // A nonempty interaction scope must share one structural detent model.
-  // Empty scope asks for the cached common model of every note on the track.
+  // Empty scope resolves the selected track at the active cursor/playhead tick.
   std::optional<VelocityDetentInfo>
   velocityAxisDetents(int track, const std::vector<NoteId> &notes) const;
   const std::vector<NoteId> &selection() const { return m_selection; }
@@ -632,7 +632,8 @@ private:
   double maxRollScroll() const;
   void updateScrollbars();
   void rebuildAfterSongChange();
-  void invalidateVelocityAxisDetents();
+  std::optional<PsgVelocityContext> velocityAxisContext(int track) const;
+  void refreshVelocityAxisContext();
   void mergeEmptyLanes();
   // Engine tracks a track-scoped time selection resolves to (used and
   // document-mapped), and the copyable lane identities of one track (its
@@ -650,11 +651,7 @@ private:
   const LoadedVoiceGroup *m_voicegroup = nullptr;
   SongDocument *m_document = nullptr;
   SongViewModel m_model;
-  struct VelocityAxisDetentCache {
-    bool valid = false;
-    std::optional<VelocityDetentInfo> detents;
-  };
-  mutable std::array<VelocityAxisDetentCache, 16> m_velocityAxisDetentCache;
+  std::optional<PsgVelocityContext> m_velocityAxisContext;
 
   double m_pxPerTick = 1.0;
   double m_scrollX = 0.0;

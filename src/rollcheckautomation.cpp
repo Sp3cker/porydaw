@@ -27,6 +27,8 @@
 #include "project/decompproject.h"
 #include "ui/songview.h"
 #include "ui/velocityarea.h"
+#include "ui/theme/themeruntime.h"
+#include "ui/velocityaxis.h"
 #include "ui/viewsidecar.h"
 
 namespace {
@@ -445,6 +447,41 @@ void checkEditorDrawerAndLanes(const SongInfo &song, QStringList &failures) {
   if (velocityArea->focusPolicy() == Qt::NoFocus)
     failures.append("velocity editor is not focusable");
   QWidget *const velocityKeyTarget = velocityArea;
+
+  const uint64_t middleTick = noteTick + uint64_t(clock) * 8;
+  const uint64_t minimumTick = noteTick + uint64_t(clock) * 16;
+  constexpr uint8_t middleKey = noteKey + 1;
+  constexpr uint8_t minimumKey = noteKey + 2;
+  constexpr uint8_t middleVelocity = 60;
+  constexpr uint8_t minimumVelocity = 20;
+  document.addNote(0, middleTick, middleKey, clock * 4, middleVelocity);
+  document.addNote(0, minimumTick, minimumKey, clock * 4, minimumVelocity);
+  document.undoStack()->clear();
+  const std::vector<SongView::NoteId> velocityLabelSelection{
+      {uint32_t(noteTick), noteKey},
+      {uint32_t(middleTick), middleKey},
+      {uint32_t(minimumTick), minimumKey},
+  };
+  view.setSelection(velocityLabelSelection);
+  processUiEvents();
+  const QImage selectedVelocityLabels = captureLogical(*velocityArea);
+  const auto selectedTextPixelsAt = [&](int velocity) {
+    const int centerY =
+        qRound(songview::velocityToY(velocity, velocityArea->height()));
+    const QRect labelRegion(songview::kGutterW - 46, centerY - 12, 35, 24);
+    return colorPixelCount(
+        selectedVelocityLabels, labelRegion,
+        themes::color(themes::Role::item_selected_background));
+  };
+  if (selectedTextPixelsAt(minimumVelocity) == 0 ||
+      selectedTextPixelsAt(100) == 0) {
+    failures.append(
+        "velocity graduation omitted a selected minimum or maximum value");
+  }
+  if (selectedTextPixelsAt(middleVelocity) != 0) {
+    failures.append(
+        "velocity graduation rendered a selected value between the extrema");
+  }
 
   // One Delete press is the representative shared note command. Assert that
   // exact command count, undo it, and clear the local stack so the fixture is

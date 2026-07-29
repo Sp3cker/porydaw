@@ -276,27 +276,7 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
         } else {
           QEvent leaveVelocityArea(QEvent::Leave);
           QApplication::sendEvent(initialVelocityArea, &leaveVelocityArea);
-          const songview::VelocityAxis continuousAxis(
-              double(initialVelocityArea->height()), std::nullopt);
-          const QPoint initialHandle(
-              qRound(view.displayX(double(initialSquare->cell.tick),
-                                   songview::kGutterW,
-                                   initialVelocityArea->devicePixelRatioF())),
-              qRound(continuousAxis.velocityToY(64)));
-          sendMouse(initialVelocityArea, QEvent::MouseMove, initialHandle,
-                    Qt::NoButton, Qt::NoButton);
-          (void)initialVelocityArea->grab();
-          QCoreApplication::processEvents();
-          if (initialVelocityArea->accessibleDescription() !=
-              QStringLiteral("Velocity")) {
-            fail("hovered unselected velocity pane synthesized a "
-                 "PSG context");
-          }
 
-          view.setSelection({{uint32_t(initialSquare->cell.tick),
-                              uint8_t(initialSquare->cell.key)}});
-          (void)initialVelocityArea->grab();
-          QCoreApplication::processEvents();
           const auto initialMaximumLevel =
               view.noteVelocityLevel(track, initialSquare->cell.tick,
                                      uint8_t(initialSquare->cell.key), 127);
@@ -304,9 +284,97 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
               !initialVelocityArea->accessibleDescription().contains(
                   QStringLiteral("%1 levels")
                       .arg(int(*initialMaximumLevel) + 1))) {
-            fail("selected Square 1 note did not supply velocity "
-                 "graduations");
+            fail("idle velocity pane at Square 1 edit cursor did not supply "
+                 "velocity graduations");
           }
+
+          const auto initialPcm =
+              std::find_if(notes.begin(), notes.end(), [](const NoteCase &note) {
+                return note.family == DetentFamily::Pcm;
+              });
+          if (initialPcm != notes.end()) {
+            view.setEditCursorTick(initialPcm->cell.tick);
+            (void)initialVelocityArea->grab();
+            QCoreApplication::processEvents();
+            if (initialVelocityArea->accessibleDescription() !=
+                QStringLiteral("Velocity")) {
+              fail("stopped edit cursor at DirectSound note did not resolve "
+                   "continuous velocity graduations");
+            }
+          }
+
+          const auto initialWave =
+              std::find_if(notes.begin(), notes.end(), [](const NoteCase &note) {
+                return note.family == DetentFamily::Wave;
+              });
+          if (initialWave != notes.end()) {
+            view.setEditCursorTick(initialWave->cell.tick);
+            (void)initialVelocityArea->grab();
+            QCoreApplication::processEvents();
+            const auto waveMaxLevel =
+                view.noteVelocityLevel(track, initialWave->cell.tick,
+                                       uint8_t(initialWave->cell.key), 127);
+            if (!waveMaxLevel ||
+                !initialVelocityArea->accessibleDescription().contains(
+                    QStringLiteral("%1 levels")
+                        .arg(int(*waveMaxLevel) + 1))) {
+              fail("stopped edit cursor at programmable-wave note did not "
+                   "resolve wave velocity graduations");
+            }
+          }
+
+          if (view.timeline()) {
+            const uint64_t otherTick =
+                initialPcm != notes.end() ? initialPcm->cell.tick : 0;
+            view.setEditCursorTick(otherTick);
+
+            const uint64_t squareSample =
+                view.timeline()->sampleForTick(initialSquare->cell.tick);
+            view.setPlayheadSample(squareSample, true);
+            (void)initialVelocityArea->grab();
+            QCoreApplication::processEvents();
+            if (!initialMaximumLevel ||
+                !initialVelocityArea->accessibleDescription().contains(
+                    QStringLiteral("%1 levels")
+                        .arg(int(*initialMaximumLevel) + 1))) {
+              fail("playing playhead at Square 1 note did not resolve square "
+                   "velocity graduations");
+            }
+
+            if (initialPcm != notes.end()) {
+              const uint64_t pcmSample =
+                  view.timeline()->sampleForTick(initialPcm->cell.tick);
+              view.setPlayheadSample(pcmSample, true);
+              (void)initialVelocityArea->grab();
+              QCoreApplication::processEvents();
+              if (initialVelocityArea->accessibleDescription() !=
+                  QStringLiteral("Velocity")) {
+                fail("playing playhead at DirectSound note did not resolve "
+                     "continuous velocity graduations");
+              }
+            }
+
+            if (initialWave != notes.end()) {
+              const uint64_t waveSample =
+                  view.timeline()->sampleForTick(initialWave->cell.tick);
+              view.setPlayheadSample(waveSample, true);
+              (void)initialVelocityArea->grab();
+              QCoreApplication::processEvents();
+              const auto waveMaxLevel =
+                  view.noteVelocityLevel(track, initialWave->cell.tick,
+                                         uint8_t(initialWave->cell.key), 127);
+              if (!waveMaxLevel ||
+                  !initialVelocityArea->accessibleDescription().contains(
+                      QStringLiteral("%1 levels")
+                          .arg(int(*waveMaxLevel) + 1))) {
+                fail("playing playhead at programmable-wave note did not "
+                     "resolve wave velocity graduations");
+              }
+            }
+
+            view.setPlayheadSample(0, false);
+          }
+          view.setEditCursorTick(initialSquare->cell.tick);
         }
         view.setDrawerPage(initialDrawerPage);
         view.setDrawerVisible(initialDrawerVisible);
@@ -441,6 +509,7 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
               return note.family == DetentFamily::Wave;
             });
         if (waveAtCursor != notes.end()) {
+          view.setEditCursorTick(waveAtCursor->cell.tick);
           view.setSelection({{uint32_t(waveAtCursor->cell.tick),
                               uint8_t(waveAtCursor->cell.key)}});
           (void)velocityArea->grab();
@@ -459,6 +528,7 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
               return note.family == DetentFamily::Cgb16;
             });
         if (square != notes.end()) {
+          view.setEditCursorTick(square->cell.tick);
           view.setSelection(
               {{uint32_t(square->cell.tick), uint8_t(square->cell.key)}});
           (void)velocityArea->grab();
@@ -600,6 +670,7 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
           const std::vector<SongView::NoteId> pair = {
               {uint32_t(anchor->cell.tick), uint8_t(anchor->cell.key)},
               {uint32_t(partner.tick), uint8_t(partner.key)}};
+          view.setEditCursorTick(anchor->cell.tick);
           view.setSelection(pair);
           (void)velocityArea->grab();
           QCoreApplication::processEvents();
@@ -834,6 +905,7 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
         if (pcm != notes.end()) {
           const SongView::NoteId pcmId{uint32_t(pcm->cell.tick),
                                        uint8_t(pcm->cell.key)};
+          view.setEditCursorTick(pcm->cell.tick);
           view.setSelection({pcmId});
           (void)velocityArea->grab();
           QCoreApplication::processEvents();
