@@ -104,62 +104,71 @@ void checkMacPlayheadLifecycle(QStringList &failures) {
   tab1.show();
   processPaints();
 
-  WId winId1 = lifecycleView->winId();
+  // The renderer attaches its layer to the SongView's top-level window's
+  // content NSView (Platform::attachToNativeView walks m_owner.window()),
+  // NOT to any view of the SongView itself — the SongView stays an alien
+  // widget with no native handle, exactly as in the app. Every layer probe
+  // below therefore inspects the enclosing tab widget's window view.
+  const WId winId1 = tab1.winId();
   if (winId1 == 0) {
-    failures.append("SongView winId is null after tab1 show");
+    failures.append("tab1 winId is null after show");
     return;
   }
-  NSView *ownerView1 = reinterpret_cast<NSView *>(winId1);
-  if (!ownerView1) {
-    failures.append("SongView NSView is null after tab1 show");
+  NSView *windowView1 = reinterpret_cast<NSView *>(winId1);
+  if (!windowView1) {
+    failures.append("tab1 window NSView is null after show");
     return;
   }
 
-  NSViewGuard ownerView1Guard{ownerView1};
+  NSViewGuard windowView1Guard{windowView1};
 
-  CALayer *overlayLayer1 = findPlayheadLayer(ownerView1);
+  CALayer *overlayLayer1 = findPlayheadLayer(windowView1);
   if (!overlayLayer1) {
-    failures.append("macOS playhead overlay layer not attached under tab1 "
-                    "owner NSView");
+    failures.append("macOS playhead overlay layer not attached under tab1's "
+                    "window NSView");
   }
-  if (countPlayheadLayers(ownerView1) != 1) {
+  if (countPlayheadLayers(windowView1) != 1) {
     failures.append(
-        "expected exactly 1 playhead overlay under tab1 owner NSView");
+        "expected exactly 1 playhead overlay under tab1's window NSView");
+  }
+  if (lifecycleView->testAttribute(Qt::WA_NativeWindow)) {
+    failures.append("attaching the playhead layer forced the SongView "
+                    "native");
   }
 
   tab2.show();
   tab2.addTab(lifecycleView.get(), QStringLiteral("Tab 2"));
   processPaints();
 
-  WId winId2 = lifecycleView->winId();
-  NSView *ownerView2 = reinterpret_cast<NSView *>(winId2);
-  if (!ownerView2) {
-    failures.append("SongView NSView is null after tab2 reparent");
+  const WId winId2 = tab2.winId();
+  NSView *windowView2 = reinterpret_cast<NSView *>(winId2);
+  if (!windowView2) {
+    failures.append("tab2 window NSView is null after reparent");
     return;
   }
 
-  CALayer *overlayLayer2 = findPlayheadLayer(ownerView2);
+  CALayer *overlayLayer2 = findPlayheadLayer(windowView2);
   if (!overlayLayer2) {
-    failures.append("macOS playhead overlay layer not attached under tab2 "
-                    "owner NSView");
+    failures.append("macOS playhead overlay layer not attached under tab2's "
+                    "window NSView");
   }
-  if (countPlayheadLayers(ownerView2) != 1) {
+  if (countPlayheadLayers(windowView2) != 1) {
     failures.append(
-        "expected exactly 1 playhead overlay under tab2 owner NSView");
+        "expected exactly 1 playhead overlay under tab2's window NSView");
   }
-  if (ownerView1 != ownerView2 && countPlayheadLayers(ownerView1) != 0) {
+  if (windowView1 != windowView2 && countPlayheadLayers(windowView1) != 0) {
     failures.append(
-        "stale playhead overlay left under old owner NSView after reparent");
+        "stale playhead overlay left under old window NSView after reparent");
   }
 
-  QWindow *win = lifecycleView->windowHandle();
+  QWindow *win = tab2.windowHandle();
   if (!win) {
     failures.append(
-        "SongView windowHandle is null before native surface recreation");
+        "tab2 windowHandle is null before native surface recreation");
     return;
   }
 
-  CALayer *attachedOverlay = findPlayheadLayer(ownerView2);
+  CALayer *attachedOverlay = findPlayheadLayer(windowView2);
   if (!attachedOverlay) {
     failures.append("macOS playhead overlay layer missing before platform "
                     "destruction");
@@ -171,23 +180,24 @@ void checkMacPlayheadLifecycle(QStringList &failures) {
   win->create();
   processPaints();
 
-  lifecycleView->show();
+  tab2.show();
   processPaints();
 
-  WId winId3 = lifecycleView->winId();
-  NSView *ownerView3 = reinterpret_cast<NSView *>(winId3);
-  if (ownerView3) {
-    CALayer *overlayLayer3 = findPlayheadLayer(ownerView3);
+  const WId winId3 = tab2.winId();
+  NSView *windowView3 = reinterpret_cast<NSView *>(winId3);
+  if (windowView3) {
+    CALayer *overlayLayer3 = findPlayheadLayer(windowView3);
     if (!overlayLayer3) {
       failures.append("macOS playhead overlay layer not attached after "
                       "native handle recreation");
     }
-    if (countPlayheadLayers(ownerView3) != 1) {
+    if (countPlayheadLayers(windowView3) != 1) {
       failures.append(
           "expected exactly 1 playhead overlay after native handle recreation");
     }
   } else {
-    failures.append("SongView NSView is null after native handle recreation");
+    failures.append("tab2 window NSView is null after native handle "
+                    "recreation");
   }
 
   tab2.removeTab(tab2.indexOf(lifecycleView.get()));
@@ -196,10 +206,13 @@ void checkMacPlayheadLifecycle(QStringList &failures) {
 
 QPixmap renderMacPlayheadOverlay(SongView &view, QStringList &failures) {
   assert([NSThread isMainThread]);
-  auto *ownerView = reinterpret_cast<NSView *>(view.winId());
+  // The layer lives on the top-level window's content NSView (see
+  // checkMacPlayheadLifecycle). In rollcheck the SongView is that top level,
+  // but resolve through window() so the lookup mirrors the renderer.
+  auto *ownerView = reinterpret_cast<NSView *>(view.window()->winId());
   if (!ownerView) {
     failures.append(
-        "SongView NSView is null for macOS playhead bitmap rendering");
+        "window NSView is null for macOS playhead bitmap rendering");
     return {};
   }
 
