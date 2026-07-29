@@ -80,6 +80,8 @@
 
 namespace {
 constexpr int kVoiceEditCommandId = 0x7661; // 'va': voice-edit merge id
+constexpr int kIdleUiIntervalMs = 100;
+constexpr int kPlaybackUiIntervalMs = 500;
 
 const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
 const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
@@ -268,7 +270,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_uiTimer = new QTimer(this);
     m_playheadTimer = new QTimer(this);
 
-    m_uiTimer->setInterval(100);
+    m_uiTimer->setInterval(kIdleUiIntervalMs);
     connect(m_uiTimer, &QTimer::timeout, this, &MainWindow::uiTick);
     m_uiTimer->start();
     m_playheadTimer->setTimerType(Qt::PreciseTimer);
@@ -3082,6 +3084,9 @@ void MainWindow::synchronizePlayhead() {
 
   const bool playing = m_audio.transport() == Transport::Playing;
   const bool playheadTimerWasActive = m_playheadTimer->isActive();
+  const int uiInterval = playing ? kPlaybackUiIntervalMs : kIdleUiIntervalMs;
+  if (m_uiTimer->interval() != uiInterval)
+    m_uiTimer->setInterval(uiInterval);
   m_active->view->setPlayheadSample(m_audio.playheadSamples(), playing);
   if (playing) {
     if (!m_playheadTimer->isActive())
