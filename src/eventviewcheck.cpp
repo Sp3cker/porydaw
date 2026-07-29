@@ -35,7 +35,8 @@
 // edit cursor when a row is focused — but never on programmatic restores —
 // and inserts a copy of a row at its own tick (the context menu's insert;
 // the end-of-track row is not copyable). Deleting a multi-row selection
-// clears the highlight instead of restoring it onto the surviving rows.
+// clears the highlight instead of restoring it onto the surviving rows;
+// a single-row delete keeps its current row so Delete can be spammed.
 
 namespace {
 
@@ -496,9 +497,26 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                     fail("multi-row delete left the selection painted");
                 if (table->currentIndex().isValid())
                     fail("multi-row delete left a stale current row");
+                // Single-row delete keeps a current row (the refresh lands
+                // it on the next event) so repeated Delete presses mow
+                // through the list.
+                doc.insertRawEvent(chunk2, ccA);
+                const long long iSolo = indexOf(doc.smf().tracks[chunk2], ccA);
+                if (iSolo < 0) {
+                    fail("single-delete scaffold not inserted");
+                } else {
+                    table->setCurrentIndex(model->index(int(iSolo), 0));
+                    QKeyEvent del2(QEvent::KeyPress, Qt::Key_Delete,
+                                   Qt::NoModifier);
+                    QCoreApplication::sendEvent(table, &del2);
+                    if (countMatching(doc.smf().tracks[chunk2], ccA) != 0)
+                        fail("single-row Delete did not remove the row");
+                    if (!table->currentIndex().isValid())
+                        fail("single-row delete lost the current row");
+                }
             }
-            // Leave the song as found: one delete + two inserts.
-            for (int i = 0; i < 3 && doc.undoStack()->canUndo(); i++)
+            // Leave the song as found: two deletes + three inserts.
+            for (int i = 0; i < 5 && doc.undoStack()->canUndo(); i++)
                 doc.undoStack()->undo();
         }
         // For the screenshot: playing, so the follow-scroll brings the

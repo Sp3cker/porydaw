@@ -1590,11 +1590,14 @@ void EventListView::deleteSelected()
             indices.push_back(size_t(i));
     }
     if (!indices.empty()) {
-        // Drop the highlight (and current row) first: the documentChanged
-        // refresh restores multi-row selections by row position, which would
-        // repaint the deleted rows' highlight onto the survivors — reading
-        // as if nothing was deleted.
-        m_table->selectionModel()->clear();
+        // Multi-row delete: drop the highlight (and current row) first — the
+        // documentChanged refresh restores multi-row selections by row
+        // position, which would repaint the deleted rows' highlight onto the
+        // survivors, reading as if nothing was deleted. A single-row delete
+        // keeps its current row so the refresh lands it on the next event
+        // and repeated Delete presses mow through the list.
+        if (indices.size() > 1)
+            m_table->selectionModel()->clear();
         m_document->deleteRawEvents(chunk, std::move(indices));
     }
 }
