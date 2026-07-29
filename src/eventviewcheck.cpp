@@ -4,6 +4,7 @@
 #include <QElapsedTimer>
 #include <QFontInfo>
 #include <QImage>
+#include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMimeData>
@@ -33,7 +34,8 @@
 // row under the playhead (end-of-track row past the end), commits the
 // edit cursor when a row is focused — but never on programmatic restores —
 // and inserts a copy of a row at its own tick (the context menu's insert;
-// the end-of-track row is not copyable).
+// the end-of-track row is not copyable). Deleting a multi-row selection
+// clears the highlight instead of restoring it onto the surviving rows.
 
 namespace {
 
@@ -451,6 +453,52 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             }
             // Leave the song as found: two reorders + three inserts.
             for (int i = 0; i < 5 && doc.undoStack()->canUndo(); i++)
+                doc.undoStack()->undo();
+        }
+        {
+            // Deleting a multi-row selection clears the highlight: the
+            // refresh's by-position restore must not repaint the deleted
+            // rows' selection onto the surviving rows.
+            const int chunk2 = chunkCombo->currentData().toInt();
+            const uint64_t group = doc.smf().tracks[chunk2].endTick + 100;
+            SmfEvent ccA;
+            ccA.tick = group;
+            ccA.status = 0xB0;
+            ccA.data0 = 7;
+            ccA.data1 = 11;
+            SmfEvent ccB = ccA;
+            ccB.data0 = 10;
+            ccB.data1 = 22;
+            doc.insertRawEvent(chunk2, ccA);
+            doc.insertRawEvent(chunk2, ccB);
+            const long long iA = indexOf(doc.smf().tracks[chunk2], ccA);
+            const long long iB = indexOf(doc.smf().tracks[chunk2], ccB);
+            if (iA < 0 || iB < 0) {
+                fail("multi-delete scaffold not inserted");
+            } else {
+                // Unfiltered, display rows == event indices.
+                QItemSelection sel;
+                sel.select(model->index(int(iA), 0),
+                           model->index(int(iA), model->columnCount() - 1));
+                sel.select(model->index(int(iB), 0),
+                           model->index(int(iB), model->columnCount() - 1));
+                // Current first: setCurrentIndex issues its own
+                // ClearAndSelect and would collapse the pair to one row.
+                table->setCurrentIndex(model->index(int(iB), 0));
+                table->selectionModel()->select(
+                    sel, QItemSelectionModel::ClearAndSelect);
+                QKeyEvent del(QEvent::KeyPress, Qt::Key_Delete, Qt::NoModifier);
+                QCoreApplication::sendEvent(table, &del);
+                const auto &evs = doc.smf().tracks[chunk2];
+                if (countMatching(evs, ccA) != 0 || countMatching(evs, ccB) != 0)
+                    fail("Delete key did not remove the selected rows");
+                if (table->selectionModel()->hasSelection())
+                    fail("multi-row delete left the selection painted");
+                if (table->currentIndex().isValid())
+                    fail("multi-row delete left a stale current row");
+            }
+            // Leave the song as found: one delete + two inserts.
+            for (int i = 0; i < 3 && doc.undoStack()->canUndo(); i++)
                 doc.undoStack()->undo();
         }
         // For the screenshot: playing, so the follow-scroll brings the

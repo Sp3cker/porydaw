@@ -1589,8 +1589,14 @@ void EventListView::deleteSelected()
         if (i >= 0) // the EOT row is not deletable; skip it silently
             indices.push_back(size_t(i));
     }
-    if (!indices.empty())
+    if (!indices.empty()) {
+        // Drop the highlight (and current row) first: the documentChanged
+        // refresh restores multi-row selections by row position, which would
+        // repaint the deleted rows' highlight onto the survivors — reading
+        // as if nothing was deleted.
+        m_table->selectionModel()->clear();
         m_document->deleteRawEvents(chunk, std::move(indices));
+    }
 }
 
 void EventListView::updateCountLabel()
