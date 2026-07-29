@@ -12,6 +12,73 @@
 
 namespace songview {
 
+namespace {
+
+// Paused = centered on the bar, dimmer. Playing = 1 unit less radius and
+// left-trailing only (the half-line-width right extent keeps room for the
+// core in the pre-rendered platform strip). Core is 1px in both states.
+constexpr qreal playheadGlowLeftExtent(bool playing)
+{
+    return playing ? qreal(kPlayheadGlowRadius - 1) : qreal(kPlayheadGlowRadius);
+}
+
+constexpr qreal playheadGlowRightExtent(bool playing)
+{
+    return playing ? (kPlayheadLineWidth / 2.0) : qreal(kPlayheadGlowRadius);
+}
+
+constexpr qreal playheadPeakAlpha(bool playing)
+{
+    return playing ? kPlayheadPeakPlaying : kPlayheadPeakPaused;
+}
+
+// Quadratic bloom: t=0 outer (α=0) → t=1 at the bar (α=peak).
+void setQuadStops(QLinearGradient &g, const QColor &color, qreal peakAlpha)
+{
+    QColor stopColor = color;
+    for (int i = 0; i <= 8; ++i) {
+        const qreal t = qreal(i) / 8.0;
+        stopColor.setAlphaF(peakAlpha * t * t);
+        g.setColorAt(t, stopColor);
+    }
+}
+
+// Draws the glow + 1px core with the bar at x. All coordinates may be
+// fractional: the playhead position is sample-accurate and the antialiased
+// vector fill keeps its subpixel motion (rollcheck asserts this at dpr 1).
+void paintPlayheadBody(QPainter &painter, qreal x, int top, int height,
+                       bool playing, const QColor &color)
+{
+    const qreal left = playheadGlowLeftExtent(playing);
+    const qreal right = playing ? 0.0 : qreal(kPlayheadGlowRadius);
+    const qreal peak = playheadPeakAlpha(playing);
+    if (left > 0.0) {
+        QLinearGradient gradient(x - left, 0, x, 0);
+        setQuadStops(gradient, color, peak);
+        painter.fillRect(QRectF(x - left, top, left, height), gradient);
+    }
+    if (right > 0.0) {
+        QLinearGradient gradient(x + right, 0, x, 0);
+        setQuadStops(gradient, color, peak);
+        painter.fillRect(QRectF(x, top, right, height), gradient);
+    }
+
+    QPen core(color, kPlayheadLineWidth, Qt::SolidLine, Qt::FlatCap);
+    painter.setPen(core);
+    painter.drawLine(QPointF(x, top), QPointF(x, top + height));
+}
+
+const QPainterPath kPlayheadTrianglePath = [] {
+    QPainterPath path;
+    path.moveTo(-kPlayheadTriangleHalfWidth, 0);
+    path.lineTo(kPlayheadTriangleHalfWidth, 0);
+    path.lineTo(0, kPlayheadTriangleHeight);
+    path.closeSubpath();
+    return path;
+}();
+
+} // namespace
+
 PlayheadOverlay::PlayheadOverlay(QWidget *owner, TimelineSurfaces surfaces)
     : QWidget(owner)
     , m_surfaces(surfaces)
@@ -37,7 +104,9 @@ void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing)
     if (m_timelineX == timelineX && m_visible == visible && m_playing == playing)
         return;
 
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     const bool playingChanged = m_playing != playing;
+#endif
 
     m_timelineX = timelineX;
     m_visible = visible;
@@ -46,9 +115,6 @@ void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing)
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     if (playingChanged && updateImages() && m_platform)
         setPlatformImages();
-#else
-    if (playingChanged)
-        (void)updateImages();
 #endif
     updatePlayhead();
 }
@@ -113,11 +179,8 @@ void PlayheadOverlay::changeEvent(QEvent *event)
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
             if (updateImages() && m_platform)
                 setPlatformImages();
-            updatePlayhead();
-#else
-            (void)updateImages();
-            updatePlayhead();
 #endif
+            updatePlayhead();
         }
         break;
     }
@@ -129,29 +192,36 @@ void PlayheadOverlay::changeEvent(QEvent *event)
 void PlayheadOverlay::paintEvent(QPaintEvent *event)
 {
     (void)event;
-    if (m_platformApplied || !m_visible || m_playheadGeometry.isEmpty())
+    if (m_platformApplied || !m_visible || m_playheadGeometry.isEmpty()
+        || (m_visibleSurfaceRegion.isEmpty() && m_triangleClip.isEmpty()))
         return;
 
     QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
     const qreal x = finalX();
     const int top = m_playheadGeometry.top();
+    const int height = m_playheadGeometry.height();
 
-    if (!m_bodyImage.isNull() && !m_visibleSurfaceRegion.isEmpty()) {
+    if (!m_visibleSurfaceRegion.isEmpty()) {
         painter.setClipRegion(m_visibleSurfaceRegion);
-        painter.drawImage(QPointF(x - m_bodyImageLeftExtent, top), m_bodyImage);
+        paintPlayheadBody(painter, x, top, height, m_playing, m_color);
     }
 
-    if (!m_triangleImage.isNull() && !m_triangleClip.isEmpty()) {
+    if (!m_triangleClip.isEmpty()) {
         painter.setClipRect(m_triangleClip, Qt::ReplaceClip);
-        painter.drawImage(QPointF(x - kPlayheadTriangleHalfWidth, top),
-                          m_triangleImage);
+        painter.translate(
+            x, top + (m_trianglePointsUp ? kPlayheadTriangleHeight : 0));
+        if (m_trianglePointsUp)
+            painter.scale(1.0, -1.0);
+        painter.fillPath(kPlayheadTrianglePath, m_color);
     }
 }
 
 QRect PlayheadOverlay::visibleSurfaceRect(const QWidget *surface, QWidget *owner,
                                           int origin) const
 {
-    if (!surface || origin >= surface->width())
+    if (origin >= surface->width())
         return {};
     QPoint offset = surface->mapTo(owner, QPoint(0, 0));
     QRect visible(offset + QPoint(origin, 0),
@@ -215,8 +285,6 @@ void PlayheadOverlay::synchronizeGeometry()
             platformCreated = true;
         }
     }
-#endif
-#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     const bool imagesChanged = updateImages();
     if (m_platform && (imagesChanged || platformCreated))
         setPlatformImages();
@@ -224,9 +292,7 @@ void PlayheadOverlay::synchronizeGeometry()
         setPlatformLayout();
     updatePlayhead();
 #else
-    (void)updateImages();
-    m_platformApplied = false;
-    updatePaintRegion();
+    updatePlayhead();
 #endif
     raise();
 }
@@ -235,13 +301,13 @@ void PlayheadOverlay::updatePlayhead()
 {
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     m_platformApplied = m_platform && setPlatformPosition();
-    updatePaintRegion();
 #else
     m_platformApplied = false;
-    updatePaintRegion();
 #endif
+    updatePaintRegion();
 }
 
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
 bool PlayheadOverlay::updateImages()
 {
     const QColor currentThemeColor = m_color;
@@ -274,7 +340,6 @@ bool PlayheadOverlay::updateImages()
 
         const qreal leftExtent = playheadGlowLeftExtent(m_playing);
         const qreal rightExtent = playheadGlowRightExtent(m_playing);
-        const qreal peakAlpha = playheadPeakAlpha(m_playing);
         m_bodyImageLeftExtent = leftExtent;
 
         const qreal bodyWidthLogical = leftExtent + rightExtent;
@@ -289,32 +354,10 @@ bool PlayheadOverlay::updateImages()
 
             QPainter painter(&bodyImg);
             painter.setRenderHint(QPainter::Antialiasing);
-
-            if (leftExtent > 0.0) {
-                QLinearGradient gradient(0, 0, leftExtent, 0);
-                for (const auto &stop : kPlayheadGradientStops) {
-                    QColor stopColor = currentThemeColor;
-                    stopColor.setAlphaF(peakAlpha * stop.alphaFactor);
-                    gradient.setColorAt(stop.position, stopColor);
-                }
-                painter.fillRect(QRectF(0, 0, leftExtent, currentHeight), gradient);
-            }
-            if (!m_playing && rightExtent > 0.0) {
-                QLinearGradient gradient(leftExtent + rightExtent, 0, leftExtent, 0);
-                for (const auto &stop : kPlayheadGradientStops) {
-                    QColor stopColor = currentThemeColor;
-                    stopColor.setAlphaF(peakAlpha * stop.alphaFactor);
-                    gradient.setColorAt(stop.position, stopColor);
-                }
-                painter.fillRect(QRectF(leftExtent, 0, rightExtent, currentHeight),
-                                 gradient);
-            }
-
-            QPen corePen(currentThemeColor, kPlayheadLineWidth, Qt::SolidLine,
-                         Qt::FlatCap);
-            painter.setPen(corePen);
-            painter.drawLine(QPointF(leftExtent, 0),
-                             QPointF(leftExtent, currentHeight));
+            // The bar sits leftExtent from the image's left edge; the
+            // platform renderers position the image so it lands on finalX.
+            paintPlayheadBody(painter, leftExtent, 0, currentHeight, m_playing,
+                              currentThemeColor);
             painter.end();
 
             m_bodyImage = std::move(bodyImg);
@@ -348,20 +391,11 @@ bool PlayheadOverlay::updateImages()
 
             QPainter painter(&triImg);
             painter.setRenderHint(QPainter::Antialiasing);
-
-            QPainterPath path;
-            if (!m_trianglePointsUp) {
-                path.moveTo(0, 0);
-                path.lineTo(triWidthLogical, 0);
-                path.lineTo(kPlayheadTriangleHalfWidth, triHeightLogical);
-                path.closeSubpath();
-            } else {
-                path.moveTo(0, triHeightLogical);
-                path.lineTo(triWidthLogical, triHeightLogical);
-                path.lineTo(kPlayheadTriangleHalfWidth, 0);
-                path.closeSubpath();
-            }
-            painter.fillPath(path, currentThemeColor);
+            painter.translate(kPlayheadTriangleHalfWidth,
+                              m_trianglePointsUp ? triHeightLogical : 0);
+            if (m_trianglePointsUp)
+                painter.scale(1.0, -1.0);
+            painter.fillPath(kPlayheadTrianglePath, currentThemeColor);
             painter.end();
 
             m_triangleImage = std::move(triImg);
@@ -371,29 +405,29 @@ bool PlayheadOverlay::updateImages()
     }
     return imagesChanged;
 }
+#endif // PORYDAW_USE_DIRECT_PLAYHEAD
 
 QRegion PlayheadOverlay::playheadRegion() const
 {
+    // Maximum extents (the paused centered bloom) plus antialias padding:
+    // one state-independent bound keeps play/pause transitions covered.
+    constexpr qreal kAntialiasPadding = 1.0;
     const qreal x = finalX();
-    const qreal dpr = m_devicePixelRatio > 0.0 ? m_devicePixelRatio : 1.0;
     const int top = m_playheadGeometry.top();
 
-    QRegion region;
-    if (!m_bodyImage.isNull()) {
-        const QRect bodyRect =
-            QRectF(x - m_bodyImageLeftExtent, top, m_bodyImage.width() / dpr,
-                   m_bodyImage.height() / dpr)
-                .toAlignedRect();
-        region += QRegion(bodyRect).intersected(m_visibleSurfaceRegion);
-    }
+    const QRect bodyRect =
+        QRectF(x - kPlayheadGlowRadius - kAntialiasPadding, top,
+               2.0 * kPlayheadGlowRadius + kAntialiasPadding * 2.0,
+               m_playheadGeometry.height())
+            .toAlignedRect();
+    QRegion region = QRegion(bodyRect).intersected(m_visibleSurfaceRegion);
 
-    if (!m_triangleImage.isNull()) {
-        const QRect triangleRect =
-            QRectF(x - kPlayheadTriangleHalfWidth, top,
-                   m_triangleImage.width() / dpr, m_triangleImage.height() / dpr)
-                .toAlignedRect();
-        region += QRegion(triangleRect).intersected(m_triangleClip);
-    }
+    const QRect triangleRect =
+        QRectF(x - kPlayheadTriangleHalfWidth - kAntialiasPadding, top,
+               2.0 * kPlayheadTriangleHalfWidth + kAntialiasPadding * 2.0,
+               kPlayheadTriangleHeight + 1)
+            .toAlignedRect();
+    region += QRegion(triangleRect).intersected(m_triangleClip);
     return region;
 }
 

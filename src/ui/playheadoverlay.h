@@ -1,13 +1,14 @@
 #pragma once
 
 #include <QColor>
-#include <QImage>
 #include <QRect>
 #include <QRegion>
 #include <QWidget>
-#include <array>
-#include <cstddef>
 #include <memory>
+
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+#include <QImage>
+#endif
 
 #include "timelinesurface.h"
 
@@ -16,44 +17,14 @@ class QPaintEvent;
 
 namespace songview {
 
+// Shared playhead metrics: the widget painter, the platform renderers, and
+// the check harness must all agree on these.
 constexpr int kPlayheadGlowRadius = 10;
 constexpr int kPlayheadTriangleHalfWidth = 4;
 constexpr int kPlayheadTriangleHeight = 8;
 constexpr qreal kPlayheadLineWidth = 1.0;
 constexpr qreal kPlayheadPeakPlaying = 0.13;
 constexpr qreal kPlayheadPeakPaused = 0.06;
-
-struct PlayheadGradientStop
-{
-    qreal position;    // 0.0 to 1.0
-    qreal alphaFactor; // t * t
-};
-
-constexpr std::array<PlayheadGradientStop, 9> kPlayheadGradientStops = [] {
-    std::array<PlayheadGradientStop, 9> stops{};
-    for (int i = 0; i <= 8; ++i) {
-        const qreal t = static_cast<qreal>(i) / 8.0;
-        stops[static_cast<std::size_t>(i)] = PlayheadGradientStop{t, t * t};
-    }
-    return stops;
-}();
-
-inline constexpr qreal playheadGlowLeftExtent(bool playing)
-{
-    return playing ? static_cast<qreal>(kPlayheadGlowRadius - 1)
-                   : static_cast<qreal>(kPlayheadGlowRadius);
-}
-
-inline constexpr qreal playheadGlowRightExtent(bool playing)
-{
-    return playing ? (kPlayheadLineWidth / 2.0)
-                   : static_cast<qreal>(kPlayheadGlowRadius);
-}
-
-inline constexpr qreal playheadPeakAlpha(bool playing)
-{
-    return playing ? kPlayheadPeakPlaying : kPlayheadPeakPaused;
-}
 
 class PlayheadOverlay final : public QWidget
 {
@@ -88,8 +59,8 @@ private:
     void setPlatformLayout();
     void setPlatformImages();
     bool setPlatformPosition();
-#endif
     bool updateImages();
+#endif
     void updatePlayhead();
 
     QRegion playheadRegion() const;
@@ -97,6 +68,12 @@ private:
 
     TimelineSurfaces m_surfaces;
     QColor m_color;
+
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+    // Pre-rendered strips for the platform compositors. macOS uploads them
+    // as CALayer contents; on Windows updateImages() only serves as the
+    // change detector that triggers re-uploading the DComp surfaces. The
+    // widget fallback below paints vectors and never reads these.
     QImage m_bodyImage;
     qreal m_bodyImageLeftExtent = 0.0;
     QImage m_triangleImage;
@@ -112,7 +89,6 @@ private:
     QColor m_cachedTriangleThemeColor;
     bool m_cachedTriangleValid = false;
 
-#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     std::unique_ptr<Platform, PlatformDeleter> m_platform;
 #endif
     QRegion m_lastPaintedRegion;

@@ -639,10 +639,9 @@ void checkFractionalMovement(SongView &view, const MidiTimeline &timeline,
     const qreal expectedDelta = (timeline.tickForSample(fractionalEndSample)
                                  - timeline.tickForSample(fractionalStartSample))
                                 * view.pxPerTick();
-    const qreal devicePixelRatio = fractionalEndPixmap.devicePixelRatio();
-    if (devicePixelRatio > 1.0
-        && std::abs((fractionalEnd - fractionalStart) - expectedDelta)
-               > 0.5 / devicePixelRatio) {
+    // Unconditional, including dpr 1 (main asserted 0.2px there): the widget
+    // path must place the strips subpixel-accurately, not snap to pixels.
+    if (std::abs((fractionalEnd - fractionalStart) - expectedDelta) > 0.2) {
         failures.append("fractional playhead movement did not match its timeline "
                         "position");
     }
