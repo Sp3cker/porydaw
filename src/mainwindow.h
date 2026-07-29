@@ -251,6 +251,7 @@ private:
     // The session's cfg (volume/reverb) merged with the global engine knobs
     // — everything AudioEngine::updateSettings applies.
     SongSettings songSettingsFor(const SongSession &session) const;
+    void refreshDerivedFonts();
     void refreshTransportIcons();
     void updateTransportActions();
     // Points the transport toolbar's master-volume spinbox at the active

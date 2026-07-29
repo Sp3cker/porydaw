@@ -871,9 +871,7 @@ EventListView::EventListView(SongView *sv, QWidget *parent)
     m_table->setAlternatingRowColors(true);
     m_table->setFrameShape(QFrame::NoFrame);
     m_table->verticalHeader()->setDefaultSectionSize(m_table->fontMetrics().height() + 6);
-    auto rowIndexFont = typography::bodyMono(m_table->font());
-    rowIndexFont.setPixelSize(qMax(1, rowIndexFont.pixelSize() - 1));
-    m_table->verticalHeader()->setFont(rowIndexFont);
+    applyRowIndexFont();
     m_table->horizontalHeader()->setHighlightSections(false);
     m_table->horizontalHeader()->setStretchLastSection(true);
     m_table->setColumnWidth(EventTableModel::ColTick, 70);
@@ -1112,6 +1110,25 @@ void EventListView::jumpCursorToRow(int row)
     // Even when the cursor didn't move (a same-tick sibling of the tinted
     // row was clicked), the playhead tint must follow the new current row.
     updatePlayRow();
+}
+
+// The row-index header carries an explicitly derived Body Mono face, so it
+// does not follow application font changes on its own. Re-derive whenever
+// the typeface preference lands (font change) or the repolish that carries
+// it finishes (style change) — the source font is only current after both.
+void EventListView::applyRowIndexFont()
+{
+    auto rowIndexFont = typography::bodyMono(m_table->font());
+    rowIndexFont.setPixelSize(qMax(1, rowIndexFont.pixelSize() - 1));
+    m_table->verticalHeader()->setFont(rowIndexFont);
+}
+
+void EventListView::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::ApplicationFontChange ||
+        event->type() == QEvent::StyleChange)
+        applyRowIndexFont();
 }
 
 bool EventListView::eventFilter(QObject *watched, QEvent *event)

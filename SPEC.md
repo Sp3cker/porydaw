@@ -262,6 +262,13 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   roll; live preview notes read "live" instead.
 - **Song Settings dialog:** the `midi.cfg` flags presented as friendly controls
   (voicegroup dropdown, reverb slider, master volume, priority, exact-gate toggle).
+- **Typeface preference:** the UI ships with the bundled Atkinson Hyperlegible
+  scale (Body 1.25× the platform's base font size, Caption at the base size).
+  View → Use System Font (app-wide, persisted) swaps the whole scale onto the
+  platform font at its native size — Body at the platform size, Caption one
+  1.25 step below, Body Mono on the platform's fixed-pitch face — so porydaw
+  matches the machine's other Qt applications; toggling reapplies the theme
+  so every polished widget updates at once.
 
 ### 6.2 Editing behaviors
 

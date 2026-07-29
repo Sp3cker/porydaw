@@ -39,6 +39,10 @@ public:
   void preview(const ThemeSelection &candidate);
   bool commit(const ThemeSelection &candidate);
   void discardPreview();
+  /// Re-applies the committed selection unchanged. For callers that altered
+  /// application-wide presentation inputs outside the theme (typography's
+  /// system-font preference) and need the repolish to land them.
+  void reapply();
   const ThemeSelection &committedSelection() const;
 
 private:

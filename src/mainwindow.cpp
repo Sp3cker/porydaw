@@ -84,6 +84,7 @@ constexpr int kVoiceEditCommandId = 0x7661; // 'va': voice-edit merge id
 const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
 const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
+const QString kSystemFontKey = QStringLiteral("systemFont");
 
 #ifdef Q_OS_WIN
 // These names and values come from the current Windows SDK. The bundled
@@ -218,6 +219,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_themeSettings = std::make_unique<QSettings>();
     m_themeController =
         std::make_unique<themes::ThemeController>(*qApp, *m_themeSettings);
+    // Before restore(): the theme apply installs the Body font, so the
+    // system-font preference must already be in force for the first paint.
+    typography::setUseSystemFont(
+        m_themeSettings->value(kSystemFontKey, false).toBool());
     m_themeController->restore();
     updateWindowFrameTheme();
     m_themeDialog =
@@ -358,6 +363,26 @@ void MainWindow::buildUi()
     });
     keys.attach(QStringLiteral("view.theme"), themeAction);
 
+    // App-wide typeface preference: the bundled Atkinson Hyperlegible scale,
+    // or the platform font other Qt applications use. Persisted like the
+    // theme; reapplying the committed theme repolishes every widget so the
+    // swap lands at once.
+    QAction *systemFontAction = viewMenu->addAction(tr("Use System &Font"));
+    systemFontAction->setCheckable(true);
+    keys.attach(QStringLiteral("view.system_font"), systemFontAction);
+    {
+        QSettings settings;
+        systemFontAction->setChecked(
+            settings.value(kSystemFontKey, false).toBool());
+    }
+    connect(systemFontAction, &QAction::toggled, this, [this](bool on) {
+        QSettings settings;
+        settings.setValue(kSystemFontKey, on);
+        typography::setUseSystemFont(on);
+        m_themeController->reapply();
+        refreshDerivedFonts();
+    });
+
     // View menu: piano roll vs raw MIDI event list, per tab.
     m_eventListAction = viewMenu->addAction(tr("MIDI &Event List"));
     m_eventListAction->setCheckable(true);
@@ -468,7 +493,6 @@ void MainWindow::buildUi()
     refreshTransportIcons();
 
     m_timeLabel = new QLabel(QStringLiteral("--:--.- / --:--.-"), this);
-    m_timeLabel->setFont(typography::bodyMono(font()));
     m_timeLabel->setContentsMargins(::layout::space(::layout::Space::Three), 0,
                                     ::layout::space(::layout::Space::Three), 0);
     transport->addWidget(m_timeLabel);
@@ -725,32 +749,22 @@ void MainWindow::buildUi()
     polyLayout->setContentsMargins(0, 0, 0, 0);
     polyLayout->setSpacing(::layout::space(::layout::Space::Half));
     const auto fieldInset = ::layout::space(::layout::Space::Half);
-    const auto valueFont = typography::bodyMono(font());
     auto *pcmCaption = new QLabel(tr("PCM"), m_polyMeter);
     m_pcmValueLabel = new QLabel(m_polyMeter);
     m_pcmValueLabel->setObjectName(QStringLiteral("polyphonyPcmValue"));
-    m_pcmValueLabel->setFont(valueFont);
     m_pcmValueLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     m_pcmValueLabel->setAttribute(Qt::WA_StyledBackground);
     m_pcmValueLabel->setContentsMargins(fieldInset, 0, fieldInset, 0);
-    m_pcmValueLabel->setFixedWidth(
-        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("15/15")) +
-        2 * fieldInset);
     auto *separator = new QLabel(QStringLiteral("·"), m_polyMeter);
     auto *cgbCaption = new QLabel(tr("CGB"), m_polyMeter);
     m_cgbValueLabel = new QLabel(m_polyMeter);
     m_cgbValueLabel->setObjectName(QStringLiteral("polyphonyCgbValue"));
-    m_cgbValueLabel->setFont(valueFont);
     m_cgbValueLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     m_cgbValueLabel->setAttribute(Qt::WA_StyledBackground);
     m_cgbValueLabel->setContentsMargins(fieldInset, 0, fieldInset, 0);
-    m_cgbValueLabel->setFixedWidth(
-        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("4/4")) +
-        2 * fieldInset);
     m_polyLostSeparator = new QLabel(QStringLiteral("·"), m_polyMeter);
     m_polyLostLabel = new QLabel(m_polyMeter);
     m_polyLostLabel->setObjectName(QStringLiteral("polyphonyLostValue"));
-    m_polyLostLabel->setFont(valueFont);
     m_polyLostLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     m_polyLostLabel->setAttribute(Qt::WA_StyledBackground);
     m_polyLostLabel->setContentsMargins(fieldInset, 0, fieldInset, 0);
@@ -769,11 +783,32 @@ void MainWindow::buildUi()
     polyLayout->addWidget(m_polyLostCaption);
     statusBar()->addPermanentWidget(m_polyMeter);
     m_polyMeter->hide();
+    refreshDerivedFonts();
 
     // Initial focus goes to the song list (via the panel's focus proxy), not
     // its filter box — first in tab order, which otherwise wins on show and
     // swallowed the first keystrokes into the search field.
     m_songList->setFocus();
+}
+
+// Fonts derived from typography at build time (not inherited from the
+// application font) need explicit re-derivation when the typeface preference
+// changes; the value labels also size themselves from the derived metrics.
+void MainWindow::refreshDerivedFonts()
+{
+    const auto fieldInset = ::layout::space(::layout::Space::Half);
+    const auto valueFont = typography::bodyMono(font());
+    m_timeLabel->setFont(valueFont);
+    m_pcmValueLabel->setFont(valueFont);
+    m_pcmValueLabel->setFixedWidth(
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("15/15")) +
+        2 * fieldInset);
+    m_cgbValueLabel->setFont(valueFont);
+    m_cgbValueLabel->setFixedWidth(
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("4/4")) +
+        2 * fieldInset);
+    m_polyLostLabel->setFont(valueFont);
+    updateDockTabFonts();
 }
 
 void MainWindow::refreshTransportIcons()

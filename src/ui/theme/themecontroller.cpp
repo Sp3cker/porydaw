@@ -66,6 +66,10 @@ void ThemeController::discardPreview() {
   apply(m_application, resolve(m_selection));
 }
 
+void ThemeController::reapply() {
+  apply(m_application, resolve(m_selection));
+}
+
 const ThemeSelection &ThemeController::committedSelection() const {
   return m_selection;
 }

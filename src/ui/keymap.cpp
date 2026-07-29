@@ -55,6 +55,8 @@ const Def kDefs[] = {
     // View
     {"view.theme", Context::Global, QT_TR_NOOP("View"), QT_TR_NOOP("Theme"),
      QKeySequence::UnknownKey, ""},
+    {"view.system_font", Context::Global, QT_TR_NOOP("View"),
+     QT_TR_NOOP("Use System Font"), QKeySequence::UnknownKey, ""},
     {"view.event_list", Context::Global, QT_TR_NOOP("View"),
      QT_TR_NOOP("MIDI Event List"), QKeySequence::UnknownKey, "Ctrl+Shift+E"},
     {"view.velocity_colors", Context::Global, QT_TR_NOOP("View"),
