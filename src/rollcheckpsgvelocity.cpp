@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "core/songdocument.h"
+#include "ui/m4asemantics.h"
 #include "ui/songview.h"
 #include "ui/velocityarea.h"
 #include "ui/velocityaxis.h"
@@ -279,6 +280,55 @@ int runRollCheckPsgVelocity(const RollCheckPsgVelocityContext &context) {
         }
         notes.push_back({slot.family, cell});
       }
+    }
+    bool trackHeaderVoiceTypeUpdated = false;
+    const auto headerWave =
+        std::find_if(notes.begin(), notes.end(), [](const NoteCase &note) {
+          return note.family == DetentFamily::Wave;
+        });
+    const auto headerCgb =
+        std::find_if(notes.begin(), notes.end(), [](const NoteCase &note) {
+          return note.family == DetentFamily::Cgb16;
+        });
+    if (headerWave != notes.end() && headerCgb != notes.end()) {
+      const SongView::DrawerPage originalDrawerPage = view.drawerPage();
+      const bool originalDrawerVisible = view.drawerVisible();
+      view.selectTrack(track);
+      view.setEditCursorTick(headerCgb->cell.tick);
+      view.setDrawerPage(SongView::DrawerPage::Velocity);
+      view.setDrawerVisible(true);
+      QCoreApplication::processEvents();
+      auto *trackVelocityArea = static_cast<songview::VelocityArea *>(
+          view.findChild<QWidget *>(QStringLiteral("velocityArea")));
+      const SongView::NoteId waveId{static_cast<uint32_t>(headerWave->cell.tick),
+                                    uint8_t(headerWave->cell.key)};
+      const auto waveDetents = view.velocityAxisDetents(track, {waveId});
+      const auto idleDetents = view.velocityAxisDetents(track, {});
+      if (trackVelocityArea && waveDetents && idleDetents &&
+          waveDetents->voiceType != idleDetents->voiceType) {
+        view.setSelection({waveId});
+        (void)trackVelocityArea->grab();
+        const QString waveType = m4aVoiceTypeName(waveDetents->voiceType);
+        const bool showedSelectedNoteType =
+            trackVelocityArea->accessibleDescription().contains(
+                QStringLiteral("PSG %1 ").arg(waveType));
+        view.trackHeaderClicked(track, Qt::NoModifier);
+        (void)trackVelocityArea->grab();
+        QCoreApplication::processEvents();
+        const QString idleType = m4aVoiceTypeName(idleDetents->voiceType);
+        trackHeaderVoiceTypeUpdated =
+            showedSelectedNoteType && view.selection().empty() &&
+            trackVelocityArea->accessibleDescription().contains(
+                QStringLiteral("PSG %1 ").arg(idleType));
+      }
+      view.setDrawerPage(originalDrawerPage);
+      view.setDrawerVisible(originalDrawerVisible);
+    }
+    benchmarkCase("track_header_updates_voice_type",
+                  trackHeaderVoiceTypeUpdated);
+    if (!trackHeaderVoiceTypeUpdated) {
+      fail("selecting a track header did not update the velocity pane voice "
+           "type");
     }
 
     auto dragVelocity = [&](const NoteCase &note, int startVelocity,

@@ -6572,6 +6572,7 @@ void SongView::trackHeaderClicked(int track, Qt::KeyboardModifiers modifiers) {
     m_trackSelMask = mask | (1u << m_selectedTrack);
   } else {
     selectTrack(track);
+    clearSelection();
     m_trackSelMask = 1u << track; // collapse even when already primary
   }
   m_headers->syncSelection();
