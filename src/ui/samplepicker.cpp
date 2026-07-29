@@ -1,5 +1,4 @@
 #include "samplepicker.h"
-#include "typography.h"
 
 #include <QApplication>
 #include <QEvent>
@@ -185,8 +184,12 @@ QTreeWidgetItem *SamplePickerButton::addSection(const QString &title)
 {
     auto *item = new QTreeWidgetItem(m_list, {title});
     item->setFlags(Qt::ItemIsEnabled); // a label, never current/selected
-    QFont f = item->font(0);
-    f = typography::bold(f);
+    // Weight-only, like VoicegroupBrowser::markUsedRow: the section header
+    // resolves family and size from the list's font at paint time, so it
+    // follows the typeface preference.
+    QFont f;
+    f.setStyleName({});
+    f.setWeight(QFont::DemiBold);
     item->setFont(0, f);
     return item;
 }

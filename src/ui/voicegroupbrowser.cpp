@@ -1,5 +1,4 @@
 #include "voicegroupbrowser.h"
-#include "typography.h"
 
 #include <QComboBox>
 #include <QEvent>
@@ -447,11 +446,14 @@ void VoicegroupBrowser::setVoicegroup(const LoadedVoiceGroup *vg)
 
 void VoicegroupBrowser::markUsedRow(QTreeWidgetItem *item, bool used)
 {
-    QFont f = item->font(0);
-    if (used)
-        f = typography::bold(f);
-    else
-        f.setWeight(QFont::Normal);
+    // A weight-only font: everything unset resolves against the tree's font
+    // at paint time, so rows follow the typeface preference instead of
+    // freezing the family and size that were current when they were marked.
+    // The style name is cleared explicitly so an inherited named style
+    // cannot override the weight.
+    QFont f;
+    f.setStyleName({});
+    f.setWeight(used ? QFont::DemiBold : QFont::Normal);
     for (int col = 0; col < item->columnCount(); col++)
         item->setFont(col, f);
     item->setToolTip(0, used ? tr("Used by this song") : QString());
