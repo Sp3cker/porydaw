@@ -273,7 +273,9 @@ if(BUILD_TESTING)
              COMMAND porydaw_themechecks --themecheck)
     add_test(NAME porydaw_fontcheck
              COMMAND porydaw_themechecks --fontcheck)
-    set_tests_properties(porydaw_theme_checks
+    add_test(NAME porydaw_darkbase_check
+             COMMAND porydaw_themechecks --darkbasecheck)
+    set_tests_properties(porydaw_theme_checks porydaw_darkbase_check
         PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     # fontcheck runs on the native platform on Windows so it exercises the
     # real font stack the TTF hinting targets; everywhere else offscreen

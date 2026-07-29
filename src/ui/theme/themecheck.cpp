@@ -9,23 +9,31 @@
 #include "ui/theme/trackidentitycolors.h"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QCursor>
 #include <QEvent>
+#include <QGroupBox>
 #include <QHeaderView>
+#include <QLabel>
 #include <QLineEdit>
 #include <QPaintEvent>
 #include <QPixmap>
 #include <QPointer>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QScrollBar>
 #include <QSettings>
 #include <QSlider>
 #include <QStyleOptionComboBox>
 #include <QTabBar>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QVBoxLayout>
 #include <QWizard>
+
+#include <cmath>
 
 #include <array>
 #include <cstdio>
@@ -676,5 +684,87 @@ int runThemeCheck() {
   reporter.check(application != nullptr, "themecheck requires QApplication");
   if (application)
     checkThemeWorkflow(reporter, *application);
+  return reporter.finish();
+}
+
+// See kDarkBaselinePoison in themecheck.h: every platform palette role was
+// poisoned before initializeApplication captured the baseline, and the
+// default Vanilla theme has been applied over it. Themed chrome must not
+// show the baseline anywhere — this is what a light preset over a dark
+// macOS system appearance relies on.
+int runDarkBaselineCheck() {
+  Reporter reporter;
+  const auto vanillaTheme = themes::vanilla();
+  const QPalette palette = QApplication::palette();
+  reporter.check(palette.color(QPalette::Active, QPalette::Window) ==
+                     vanillaTheme.color(themes::Role::window_background),
+                 "window background did not mask the dark baseline");
+  reporter.check(palette.color(QPalette::Active, QPalette::WindowText) ==
+                     vanillaTheme.color(themes::Role::window_text),
+                 "window text did not mask the dark baseline");
+  reporter.check(palette.color(QPalette::Active, QPalette::Base) ==
+                     vanillaTheme.color(themes::Role::item_background),
+                 "item background did not mask the dark baseline");
+
+  // A zoo of the stock controls porydaw's chrome uses, grabbed and scanned
+  // for surviving poison pixels. Roles the theme leaves to the platform
+  // (Midlight, BrightText, Shadow, tooltips, Qt 6.6's Accent) surface here
+  // if any style actually paints with them.
+  QWidget zoo;
+  zoo.setAttribute(Qt::WA_DontShowOnScreen);
+  auto *layout = new QVBoxLayout(&zoo);
+  layout->addWidget(new QLabel(QStringLiteral("Label"), &zoo));
+  layout->addWidget(new QPushButton(QStringLiteral("Button"), &zoo));
+  auto *lineEdit = new QLineEdit(QStringLiteral("edit"), &zoo);
+  layout->addWidget(lineEdit);
+  auto *checkBox = new QCheckBox(QStringLiteral("Check"), &zoo);
+  checkBox->setChecked(true);
+  layout->addWidget(checkBox);
+  auto *radio = new QRadioButton(QStringLiteral("Radio"), &zoo);
+  radio->setChecked(true);
+  layout->addWidget(radio);
+  auto *combo = new QComboBox(&zoo);
+  combo->addItem(QStringLiteral("Combo"));
+  layout->addWidget(combo);
+  auto *progress = new QProgressBar(&zoo);
+  progress->setRange(0, 100);
+  progress->setValue(60);
+  layout->addWidget(progress);
+  auto *slider = new QSlider(Qt::Horizontal, &zoo);
+  slider->setValue(40);
+  layout->addWidget(slider);
+  auto *tabs = new QTabBar(&zoo);
+  tabs->addTab(QStringLiteral("One"));
+  tabs->addTab(QStringLiteral("Two"));
+  layout->addWidget(tabs);
+  auto *group = new QGroupBox(QStringLiteral("Group"), &zoo);
+  auto *groupLayout = new QVBoxLayout(group);
+  groupLayout->addWidget(new QLabel(QStringLiteral("inside"), group));
+  layout->addWidget(group);
+  auto *scroll = new QScrollBar(Qt::Horizontal, &zoo);
+  scroll->setRange(0, 100);
+  layout->addWidget(scroll);
+  zoo.show();
+  QApplication::processEvents();
+
+  const QImage image = zoo.grab().toImage();
+  int poisonPixels = 0;
+  for (int y = 0; y < image.height(); ++y) {
+    for (int x = 0; x < image.width(); ++x) {
+      const QColor pixel = image.pixelColor(x, y);
+      const int distance = std::abs(pixel.red() - kDarkBaselinePoison.red()) +
+                           std::abs(pixel.green() - kDarkBaselinePoison.green()) +
+                           std::abs(pixel.blue() - kDarkBaselinePoison.blue());
+      if (distance <= 24)
+        ++poisonPixels;
+    }
+  }
+  if (poisonPixels > 0) {
+    std::fprintf(stderr,
+                 "themecheck: darkbase: %d poison pixels in the control zoo\n",
+                 poisonPixels);
+  }
+  reporter.check(poisonPixels == 0,
+                 "dark platform baseline leaked into themed chrome");
   return reporter.finish();
 }
