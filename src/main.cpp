@@ -87,9 +87,9 @@ int runEventViewCheck(const QString &projectRoot,
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-    // The OS dark theme renders badly (notably on Windows); force light until
-    // the widgets are audited for dark palettes.
+#if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    // The Windows dark theme renders badly; force light until the widgets are
+    // audited for dark palettes. macOS keeps the system appearance.
     app.styleHints()->setColorScheme(Qt::ColorScheme::Light);
 #endif
     // Fusion everywhere: the native windows11 style paints item-view
