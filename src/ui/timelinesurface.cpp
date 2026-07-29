@@ -4,7 +4,6 @@
 #include <QPaintEvent>
 #include <QPainter>
 #include <QResizeEvent>
-#include <limits>
 
 namespace songview {
 
@@ -167,13 +166,8 @@ void TimelineSurface::resizeEvent(QResizeEvent *event)
 
 void TimelineSurface::countContentPaint(quint64 pixelCount) noexcept
 {
-    constexpr quint64 max = std::numeric_limits<quint64>::max();
-    if (m_diagnostics.contentPaintCount != max)
-        ++m_diagnostics.contentPaintCount;
-    if (m_diagnostics.contentPaintPixelCount > max - pixelCount)
-        m_diagnostics.contentPaintPixelCount = max;
-    else
-        m_diagnostics.contentPaintPixelCount += pixelCount;
+    ++m_diagnostics.contentPaintCount;
+    m_diagnostics.contentPaintPixelCount += pixelCount;
 }
 
 } // namespace songview

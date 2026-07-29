@@ -160,10 +160,7 @@ if(APPLE)
     target_sources(porydaw_app PRIVATE
         src/ui/playheadrenderer_macos.mm
     )
-    target_compile_definitions(porydaw_app PUBLIC
-        PORYDAW_USE_NATIVE_PLAYHEAD
-        PORYDAW_USE_DIRECT_PLAYHEAD
-    )
+    target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_DIRECT_PLAYHEAD)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
     find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
     target_link_libraries(porydaw_app PRIVATE
@@ -184,10 +181,7 @@ target_compile_definitions(porydaw_app PUBLIC
 target_link_libraries(porydaw_app PUBLIC Qt6::Widgets poryaaaa_engine)
 if(WIN32)
     target_sources(porydaw_app PRIVATE src/ui/playheadrenderer_dcomp.cpp)
-    target_compile_definitions(porydaw_app PUBLIC
-        PORYDAW_USE_NATIVE_PLAYHEAD
-        PORYDAW_USE_DIRECT_PLAYHEAD
-    )
+    target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_DIRECT_PLAYHEAD)
     target_link_libraries(porydaw_app PRIVATE d2d1 d3d11 dcomp dxgi)
 endif()
 if(UNIX AND NOT APPLE)
