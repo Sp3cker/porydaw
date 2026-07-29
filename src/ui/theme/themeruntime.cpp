@@ -1,5 +1,6 @@
 #include "themeruntime.h"
 #include "ui/layout.h"
+#include "ui/typography.h"
 
 #include <QApplication>
 #include <QDir>
@@ -615,6 +616,15 @@ void apply(QApplication &application, const Theme &theme) {
   applyPaletteGroup(palette, QPalette::Inactive, theme);
   applyPaletteGroup(palette, QPalette::Disabled, theme);
   currentTheme = theme;
+  // Reassert Body before restyling, not just after: desktop components
+  // (qt5ct/qt6ct-style platform themes, portal settings) can reset the
+  // application font behind Qt's back. Widgets already polished by the
+  // stylesheet keep their frozen font until the repolish below, which
+  // re-resolves them against the application font at that moment — so an
+  // apply that only reads the current font would flip the whole UI onto the
+  // reset font and cement it.
+  if (const auto body = typography::bodyFont())
+    application.setFont(*body);
   application.setPalette(palette);
   application.setStyleSheet(layout::composeStyleSheet(colorStyleSheet(theme)));
   // Installing the stylesheet rebuilds Qt's platform class-font table on

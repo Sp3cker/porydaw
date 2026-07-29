@@ -16,6 +16,10 @@ bool installBundledFonts(QApplication &application);
 /// Returns the platform-resolved base font pixel size captured during font
 /// installation.
 std::optional<int> baseFontPx();
+/// Returns the application Body font installed by installBundledFonts, so
+/// callers can reassert it against desktop components that reset the
+/// application font behind Qt's back.
+std::optional<QFont> bodyFont();
 QFont bodyMono(const QFont &body);
 QFont caption(const QFont &source);
 QFont bold(const QFont &source);

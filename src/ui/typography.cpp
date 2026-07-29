@@ -13,6 +13,7 @@ constexpr auto proportionalFamily = "Atkinson Hyperlegible Next";
 constexpr auto monoFamily = "Atkinson Hyperlegible Mono";
 
 std::optional<int> capturedBaseFontPx;
+std::optional<QFont> installedBodyFont;
 
 void setFace(QFont &font, QFont::Weight weight)
 {
@@ -56,13 +57,22 @@ bool installBundledFonts(QApplication &application)
     font.setPixelSize(qMax(1, qRound(*capturedBaseFontPx * 1.25)));
     application.setFont(font);
     const auto resolved = QFontInfo(application.font());
-    return resolved.family() == QString::fromLatin1(proportionalFamily) &&
-           resolved.pixelSize() == qMax(1, qRound(*capturedBaseFontPx * 1.25));
+    const auto installed =
+        resolved.family() == QString::fromLatin1(proportionalFamily) &&
+        resolved.pixelSize() == qMax(1, qRound(*capturedBaseFontPx * 1.25));
+    if (installed)
+        installedBodyFont = font;
+    return installed;
 }
 
 std::optional<int> baseFontPx()
 {
     return capturedBaseFontPx;
+}
+
+std::optional<QFont> bodyFont()
+{
+    return installedBodyFont;
 }
 
 QFont bodyMono(const QFont &body)

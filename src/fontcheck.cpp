@@ -1,10 +1,13 @@
 #include "ui/layout.h"
+#include "ui/theme/themeresolver.h"
+#include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
 #include <QApplication>
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QFontMetricsF>
+#include <QLabel>
 #include <QtGlobal>
 
 #include <array>
@@ -124,6 +127,28 @@ int runFontCheck(int expectedBaseFontPx) {
                     typography::glyphCenteringOffset(body, selected, text))
                 .center() == referenceBounds.center(),
         "Displayed glyph bounds are not centered");
+  // Desktop components (qt5ct/qt6ct-style platform themes, portal settings)
+  // can reset the application font after startup. Widgets frozen by
+  // stylesheet polish hide the reset until the next theme apply repolishes
+  // them, so the apply must restore Body rather than cement the reset font.
+  check(typography::bodyFont().has_value(),
+        "Typography did not capture the installed Body font");
+  QLabel probe(QStringLiteral("probe"));
+  probe.show();
+  probe.ensurePolished();
+  check(QFontInfo(probe.font()).family() ==
+            QStringLiteral("Atkinson Hyperlegible Next"),
+        "A polished widget does not start on Body");
+  auto reset = QApplication::font();
+  reset.setFamily(QStringLiteral("Atkinson Hyperlegible Mono"));
+  QApplication::setFont(reset);
+  themes::apply(*application, themes::vanilla());
+  check(QFontInfo(QApplication::font()).family() ==
+            QStringLiteral("Atkinson Hyperlegible Next"),
+        "Theme apply did not restore Body after an external font reset");
+  check(QFontInfo(probe.font()).family() ==
+            QStringLiteral("Atkinson Hyperlegible Next"),
+        "Theme apply left a polished widget on the externally reset font");
   if (failures == 0)
     std::printf("fontcheck: PASS\n");
   return failures == 0 ? 0 : 1;
