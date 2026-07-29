@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 The initial release, in progress.
 
+### Added
+- Same-tick events in the MIDI event list can be reordered: drag a row
+  between its siblings, press Alt+Up/Down, or use the context menu's
+  "Move up/down within tick". Order at a tick is meaningful to mid2agb, so
+  moves stay within the tick (retime via the Tick cell) and keep setup
+  events ahead of notes and note ends ahead of note-ons.
+
 ## [0.1.0] - 2026-07-28
 Test of the release process.
 

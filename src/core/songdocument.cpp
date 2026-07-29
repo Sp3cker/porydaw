@@ -1273,6 +1273,57 @@ void SongDocument::deleteRawEvents(int smfTrack, std::vector<size_t> indices)
     pushEdit(tr("delete %n event(s)", nullptr, int(ops.size())), std::move(ops));
 }
 
+bool SongDocument::rawEventMoveBounds(int smfTrack, size_t index, size_t *first,
+                                      size_t *last) const
+{
+    if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()))
+        return false;
+    const auto &evs = m_smf.tracks[smfTrack].events;
+    if (index >= evs.size())
+        return false;
+    const SmfEvent &moved = evs[index];
+    // The pinning relation, exactly the pair rules InsertEvent's canonical
+    // placement enforces: a setup event (CC, program, channel aftertouch,
+    // bend) stays ahead of a same-tick note, a note-end ahead of a same-tick
+    // note-on. Metas and sysex are pinned against nothing — their position
+    // within the tick group is freely the user's.
+    const auto pinnedBefore = [](const SmfEvent &a, const SmfEvent &b) {
+        if (a.isChannel() && a.typeNibble() >= 0xB && b.isChannel()
+            && b.typeNibble() <= 0x9)
+            return true;
+        return a.isChannel() && a.isNoteEnd() && b.isNoteOn();
+    };
+    size_t lo = index;
+    while (lo > 0 && evs[lo - 1].tick == moved.tick
+           && !pinnedBefore(evs[lo - 1], moved))
+        lo--;
+    size_t hi = index;
+    while (hi + 1 < evs.size() && evs[hi + 1].tick == moved.tick
+           && !pinnedBefore(moved, evs[hi + 1]))
+        hi++;
+    *first = lo;
+    *last = hi;
+    return true;
+}
+
+void SongDocument::moveRawEvent(int smfTrack, size_t index, size_t destIndex)
+{
+    size_t first, last;
+    if (!rawEventMoveBounds(smfTrack, index, &first, &last))
+        return;
+    destIndex = std::clamp(destIndex, first, last);
+    if (destIndex == index)
+        return;
+    std::vector<EditOp> ops;
+    EditOp op;
+    op.type = EditOp::MoveEvent;
+    op.smfTrack = smfTrack;
+    op.index = index;
+    op.indexTo = destIndex;
+    ops.push_back(op);
+    pushEdit(tr("reorder event"), std::move(ops));
+}
+
 void SongDocument::setTrackEndTick(int smfTrack, uint64_t tick)
 {
     if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()))
@@ -1774,6 +1825,15 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
             evs[op.index] = op.event;
             break;
         }
+        case EditOp::MoveEvent: {
+            // Both indices sit inside one tick group (moveRawEvent clamps),
+            // so tick order is untouched by construction.
+            auto &evs = m_smf.tracks[op.smfTrack].events;
+            const SmfEvent ev = evs[op.index];
+            evs.erase(evs.begin() + long(op.index));
+            evs.insert(evs.begin() + long(op.indexTo), ev);
+            break;
+        }
         case EditOp::InsertTrack:
             m_smf.tracks.insert(m_smf.tracks.begin() + long(op.smfTrack), op.trackData);
             break;
@@ -1820,6 +1880,13 @@ void SongDocument::revertOps(std::vector<EditOp> &ops)
         case EditOp::ModifyEvent:
             m_smf.tracks[op.smfTrack].events[op.index] = op.oldEvent;
             break;
+        case EditOp::MoveEvent: {
+            auto &evs = m_smf.tracks[op.smfTrack].events;
+            const SmfEvent ev = evs[op.indexTo];
+            evs.erase(evs.begin() + long(op.indexTo));
+            evs.insert(evs.begin() + long(op.index), ev);
+            break;
+        }
         case EditOp::InsertTrack:
             m_smf.tracks.erase(m_smf.tracks.begin() + long(op.smfTrack));
             break;

@@ -57,6 +57,9 @@ private:
     void updateFilterText();
     void addEvent();
     void deleteSelected();
+    void reorderEvent(size_t from, size_t dest);
+    long long moveDestForRow(int row, int delta, QString *why) const;
+    void moveCurrentRow(int delta);
     void showContextMenu(const QPoint &pos);
     void updateCountLabel();
     void updatePlayRow();

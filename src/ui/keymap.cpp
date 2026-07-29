@@ -116,6 +116,14 @@ const Def kDefs[] = {
     {"roll.velocity_drag", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Adjust Velocity (Hold + Drag Note)"),
      QKeySequence::UnknownKey, "Ctrl", true},
+    // MIDI event list: same-tick reorder nudges (the keyboard face of the
+    // row drag).
+    {"eventlist.move_up", Context::EventList, QT_TR_NOOP("MIDI Event List"),
+     QT_TR_NOOP("Move Event Up (Same Tick)"), QKeySequence::UnknownKey,
+     "Alt+Up"},
+    {"eventlist.move_down", Context::EventList, QT_TR_NOOP("MIDI Event List"),
+     QT_TR_NOOP("Move Event Down (Same Tick)"), QKeySequence::UnknownKey,
+     "Alt+Down"},
 };
 
 const Def *findDef(const QString &id)
