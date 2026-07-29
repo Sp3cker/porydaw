@@ -3,6 +3,7 @@
 #include <QMainWindow>
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "audio/audioengine.h"
@@ -258,9 +259,8 @@ private:
     // tab's cfg (disabled with no tab). Never emits valueChanged.
     void syncMasterVolumeControl();
     void synchronizePlayhead();
-    void updateTimeLabel(bool force);
-    void updatePolyStatus(bool force);
-    void resetTimedUiCache();
+    void updateTimeLabel();
+    void updatePolyStatus();
     void updateWindowTitle();
     QString formatTime(uint64_t samples) const;
 
@@ -351,13 +351,22 @@ private:
     QLabel *m_polyLostLabel = nullptr;
     QTimer *m_uiTimer = nullptr;
     QTimer *m_playheadTimer = nullptr;
-    // Time and polyphony share one 10 Hz status update.
+    // Last values applied to the status widgets (uiTick runs at 2 Hz idle,
+    // 10 Hz during playback; unchanged values skip the label writes).
+    struct PolyStatusSnapshot {
+        bool loaded = false;
+        int activePcm = 0;
+        int maxPcm = 0;
+        int activeCgb = 0;
+        uint64_t lostTotal = 0;
+
+        bool operator==(const PolyStatusSnapshot &other) const
+        {
+            return loaded == other.loaded && activePcm == other.activePcm
+                && maxPcm == other.maxPcm && activeCgb == other.activeCgb
+                && lostTotal == other.lostTotal;
+        }
+    };
     QString m_lastTimeText;
-    int m_lastActivePcmChannels = 0;
-    int m_lastMaxPcmChannels = 0;
-    int m_lastActiveCgbChannels = 0;
-    uint64_t m_lastPolyphonyLostTotal = 0;
-    bool m_timeCacheValid = false;
-    bool m_polyCacheValid = false;
-    bool m_lastPolyLoaded = false;
+    std::optional<PolyStatusSnapshot> m_lastPolyStatus;
 };

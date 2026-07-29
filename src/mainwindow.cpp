@@ -280,9 +280,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_playheadTimer->setInterval(17);
     connect(m_playheadTimer, &QTimer::timeout, this,
             &MainWindow::synchronizePlayhead);
-    resetTimedUiCache();
-    updateTimeLabel(/*force=*/true);
-    updatePolyStatus(/*force=*/true);
+    updateTimeLabel();
+    updatePolyStatus();
 
     updateTransportActions();
 }
@@ -1082,9 +1081,8 @@ void MainWindow::activateSession(SongSession *session, bool force)
         updateVgDockTitle();
         m_registerAction->setEnabled(false);
         m_songLabel->clear();
-        resetTimedUiCache();
-        updateTimeLabel(/*force=*/true);
-        updatePolyStatus(/*force=*/true);
+        updateTimeLabel();
+        updatePolyStatus();
         m_songList->setCurrentSong(-1);
         updateWindowTitle();
         updateTransportActions();
@@ -1103,9 +1101,8 @@ void MainWindow::activateSession(SongSession *session, bool force)
     synchronizePlayhead();
     updateVoicegroupBrowser();
     updatePolyPanelContext(session);
-    resetTimedUiCache();
-    updateTimeLabel(/*force=*/true);
-    updatePolyStatus(/*force=*/true);
+    updateTimeLabel();
+    updatePolyStatus();
 
     // Register Song stays available while ANY registration file lacks (or
     // mis-states) the song's line — not only for unregistered strays. A song
@@ -3036,83 +3033,74 @@ void MainWindow::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
-void MainWindow::updateTimeLabel(bool force)
+// QLabel::setText repaints even for identical text, so both status
+// updaters compare against the last applied value and only touch the
+// widgets on change. Nothing else writes these labels, so the caches
+// cannot go stale.
+void MainWindow::updateTimeLabel()
 {
     const bool loaded = m_audioOk && m_active && m_audio.songLoaded();
     const QString text = loaded ? QStringLiteral("%1 / %2").arg(
                                       formatTime(m_audio.playheadSamples()),
                                       formatTime(m_audio.timeline()->lengthSamples))
                                 : QStringLiteral("--:--.- / --:--.-");
-    if (force || !m_timeCacheValid || text != m_lastTimeText)
-        m_timeLabel->setText(text);
+    if (text == m_lastTimeText)
+        return;
     m_lastTimeText = text;
-    m_timeCacheValid = true;
+    m_timeLabel->setText(text);
 }
 
-void MainWindow::updatePolyStatus(bool force)
+void MainWindow::updatePolyStatus()
 {
-    const bool loaded = m_audioOk && m_active && m_audio.songLoaded();
-    if (!loaded) {
-        if (force || !m_polyCacheValid || m_lastPolyLoaded) {
-            m_pcmValueLabel->clear();
-            m_cgbValueLabel->clear();
-            m_polyLostLabel->clear();
-            m_polyLostSeparator->hide();
-            m_polyLostLabel->hide();
-            m_polyLostCaption->hide();
-            m_polyMeter->hide();
-        }
-        m_lastPolyLoaded = false;
-        m_polyCacheValid = true;
+    PolyStatusSnapshot status;
+    status.loaded = m_audioOk && m_active && m_audio.songLoaded();
+    if (status.loaded) {
+        status.activePcm = m_audio.activePcmChannels();
+        status.maxPcm = m_audio.maxPcmChannels();
+        status.activeCgb = m_audio.activeCgbChannels();
+        status.lostTotal = m_audio.polyLostTotal();
+    }
+    if (m_lastPolyStatus && *m_lastPolyStatus == status)
+        return;
+    m_lastPolyStatus = status;
+
+    if (!status.loaded) {
+        m_pcmValueLabel->clear();
+        m_cgbValueLabel->clear();
+        m_polyLostLabel->clear();
+        m_polyLostSeparator->hide();
+        m_polyLostLabel->hide();
+        m_polyLostCaption->hide();
+        m_polyMeter->hide();
         return;
     }
 
-    const int pcm = m_audio.activePcmChannels();
-    const int maxPcm = m_audio.maxPcmChannels();
-    const int cgb = m_audio.activeCgbChannels();
-    const uint64_t lost = m_audio.polyLostTotal();
-    const bool hadCache = m_polyCacheValid && m_lastPolyLoaded;
-
-    if (force || !hadCache || pcm != m_lastActivePcmChannels
-        || maxPcm != m_lastMaxPcmChannels)
-        m_pcmValueLabel->setText(QStringLiteral("%1/%2").arg(pcm).arg(maxPcm));
-    if (force || !hadCache || cgb != m_lastActiveCgbChannels)
-        m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(cgb));
-    if (force || !hadCache || lost != m_lastPolyphonyLostTotal) {
-        const bool hasLost = lost > 0;
-        m_polyLostLabel->setText(hasLost ? QString::number(lost) : QString());
-        m_polyLostSeparator->setVisible(hasLost);
-        m_polyLostLabel->setVisible(hasLost);
-        m_polyLostCaption->setVisible(hasLost);
-    }
-    if (force || !hadCache)
-        m_polyMeter->show();
-
-    m_lastActivePcmChannels = pcm;
-    m_lastMaxPcmChannels = maxPcm;
-    m_lastActiveCgbChannels = cgb;
-    m_lastPolyphonyLostTotal = lost;
-    m_polyCacheValid = true;
-    m_lastPolyLoaded = true;
-}
-
-void MainWindow::resetTimedUiCache()
-{
-    m_lastTimeText.clear();
-    m_timeCacheValid = false;
-    m_polyCacheValid = false;
+    m_pcmValueLabel->setText(
+        QStringLiteral("%1/%2").arg(status.activePcm).arg(status.maxPcm));
+    m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(status.activeCgb));
+    const bool hasLost = status.lostTotal > 0;
+    m_polyLostLabel->setText(hasLost ? QString::number(status.lostTotal)
+                                     : QString());
+    m_polyLostSeparator->setVisible(hasLost);
+    m_polyLostLabel->setVisible(hasLost);
+    m_polyLostCaption->setVisible(hasLost);
+    m_polyMeter->show();
 }
 
 void MainWindow::uiTick()
 {
-    updateTimeLabel(/*force=*/false);
-    updatePolyStatus(/*force=*/false);
+    updateTimeLabel();
+    updatePolyStatus();
 
     if (m_audioOk && m_active && m_audio.songLoaded() && m_polyDock->isVisible()) {
         AudioEngine::PolySnapshot snap;
         m_audio.polySnapshot(&snap);
         m_polyPanel->updateSnapshot(snap);
     }
+    // Safety net for transport transitions no handler observed (the engine
+    // stopping on its own while the playhead timer is idle): cheap no-op
+    // setEnabled calls at the status cadence.
+    updateTransportActions();
 }
 
 void MainWindow::synchronizePlayhead()
