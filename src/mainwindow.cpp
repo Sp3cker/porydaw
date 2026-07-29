@@ -356,33 +356,6 @@ void MainWindow::buildUi()
                             &MainWindow::openKeyboardShortcuts);
     keys.attach(QStringLiteral("edit.keyboard_shortcuts"), shortcutsAction);
     auto *viewMenu = menuBar()->addMenu(tr("&View"));
-    QAction *themeAction = viewMenu->addAction(tr("&Theme..."), this, [this] {
-        m_themeDialog->show();
-        m_themeDialog->raise();
-        m_themeDialog->activateWindow();
-    });
-    keys.attach(QStringLiteral("view.theme"), themeAction);
-
-    // App-wide typeface preference: the bundled Atkinson Hyperlegible scale,
-    // or the platform font other Qt applications use. Persisted like the
-    // theme; reapplying the committed theme repolishes every widget so the
-    // swap lands at once.
-    QAction *systemFontAction = viewMenu->addAction(tr("Use System &Font"));
-    systemFontAction->setCheckable(true);
-    keys.attach(QStringLiteral("view.system_font"), systemFontAction);
-    {
-        QSettings settings;
-        systemFontAction->setChecked(
-            settings.value(kSystemFontKey, false).toBool());
-    }
-    connect(systemFontAction, &QAction::toggled, this, [this](bool on) {
-        QSettings settings;
-        settings.setValue(kSystemFontKey, on);
-        typography::setUseSystemFont(on);
-        m_themeController->reapply();
-        refreshDerivedFonts();
-    });
-
     // View menu: piano roll vs raw MIDI event list, per tab.
     m_eventListAction = viewMenu->addAction(tr("MIDI &Event List"));
     m_eventListAction->setCheckable(true);
@@ -708,11 +681,37 @@ void MainWindow::buildUi()
     polyDockAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+P")));
     viewMenu->addAction(polyDockAction);
 
-    // Last View item, set off by a separator: velocity-hue note fills. An
-    // app-wide reading preference (like the theme), not per-song view
-    // state: it persists in QSettings and applies to every open tab at
-    // once.
+    // App-wide appearance preferences, set off by a separator from the
+    // per-song view state above: the theme, the typeface, and the
+    // velocity-hue note fills all persist in QSettings and apply to every
+    // open tab at once.
     viewMenu->addSeparator();
+    QAction *themeAction = viewMenu->addAction(tr("&Theme..."), this, [this] {
+        m_themeDialog->show();
+        m_themeDialog->raise();
+        m_themeDialog->activateWindow();
+    });
+    keys.attach(QStringLiteral("view.theme"), themeAction);
+
+    // The typeface: the bundled Atkinson Hyperlegible scale, or the platform
+    // font other Qt applications use. Reapplying the committed theme
+    // repolishes every widget so the swap lands at once.
+    QAction *systemFontAction = viewMenu->addAction(tr("Use System &Font"));
+    systemFontAction->setCheckable(true);
+    keys.attach(QStringLiteral("view.system_font"), systemFontAction);
+    {
+        QSettings settings;
+        systemFontAction->setChecked(
+            settings.value(kSystemFontKey, false).toBool());
+    }
+    connect(systemFontAction, &QAction::toggled, this, [this](bool on) {
+        QSettings settings;
+        settings.setValue(kSystemFontKey, on);
+        typography::setUseSystemFont(on);
+        m_themeController->reapply();
+        refreshDerivedFonts();
+    });
+
     m_velocityColorsAction = viewMenu->addAction(tr("Color Notes by &Velocity"));
     m_velocityColorsAction->setCheckable(true);
     keys.attach(QStringLiteral("view.velocity_colors"), m_velocityColorsAction);
