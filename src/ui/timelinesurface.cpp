@@ -33,7 +33,7 @@ TimelineSurfaceDiagnostics TimelineSurface::diagnostics() const noexcept
     return m_diagnostics;
 }
 
-void TimelineSurface::paintEvent(QPaintEvent *)
+void TimelineSurface::paintEvent(QPaintEvent *event)
 {
     const qreal dpr = devicePixelRatioF();
     const QSize pixelSize(qCeil(width() * dpr), qCeil(height() * dpr));
@@ -77,7 +77,20 @@ void TimelineSurface::paintEvent(QPaintEvent *)
         return;
     }
 
-    const QRegion dirtyRegion = m_dirtyContentRegion.intersected(rect());
+    // Re-rasterize only the dirty content this paint event exposes. The
+    // automation lanes are a full-height content widget inside a scroll
+    // area: without this bound, a full invalidation (every drag move)
+    // rasterizes its off-viewport rows too. Dirt outside the event region
+    // stays pending and repaints exactly once when Qt exposes it — and
+    // QWidget::render (so grab()) delivers the full rect, keeping offscreen
+    // snapshots complete.
+    const QRegion dirtyRegion =
+        m_dirtyContentRegion.intersected(event->region()).intersected(rect());
+    if (dirtyRegion.isEmpty()) {
+        QPainter painter(this);
+        painter.drawPixmap(QPointF(0, 0), m_contentCache);
+        return;
+    }
     if (dirtyRegion == QRegion(rect())) {
         m_contentCache.fill(Qt::transparent);
         QPainter cachePainter(&m_contentCache);

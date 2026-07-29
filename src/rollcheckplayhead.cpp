@@ -597,6 +597,53 @@ void checkEventListRendering(SongView &view, songview::PlayheadOverlay &marker,
     }
 }
 
+// A full invalidation of the automation lanes — every drag move does one —
+// must rasterize only the rows the scroll viewport exposes; off-viewport
+// dirt stays pending until scrolled in. Shrinks the view so the lanes are
+// guaranteed taller than their viewport, then bounds the painted pixels.
+void checkLanesViewportBoundedRepaint(SongView &view,
+                                      songview::TimelineSurface &lanes,
+                                      QStringList &failures)
+{
+    const QSize savedSize = view.size();
+    view.resize(savedSize.width(), 360);
+    processPaints();
+    const QWidget *viewport = lanes.parentWidget();
+    if (!viewport || lanes.height() <= viewport->height()) {
+        failures.append("could not make the lanes taller than their viewport "
+                        "for the bounded-repaint check");
+        view.resize(savedSize);
+        processPaints();
+        return;
+    }
+
+    // Settle the resize-induced full repaint before measuring.
+    (void)lanes.grab();
+    processPaints();
+
+    const songview::TimelineSurfaceDiagnostics before = lanes.diagnostics();
+    lanes.invalidateContent();
+    processPaints();
+    const songview::TimelineSurfaceDiagnostics after = lanes.diagnostics();
+    const qreal dpr = lanes.devicePixelRatioF();
+    const quint64 painted =
+        after.contentPaintPixelCount - before.contentPaintPixelCount;
+    const quint64 viewportBudget = quint64(qCeil(lanes.width() * dpr))
+                                   * quint64(qCeil((viewport->height() + 1) * dpr));
+    if (after.contentPaintCount <= before.contentPaintCount || painted == 0) {
+        failures.append("lanes full invalidation painted no content");
+    } else if (painted > viewportBudget) {
+        failures.append(
+            QStringLiteral("lanes full invalidation painted %1 device pixels "
+                           "(viewport budget %2): off-viewport rows were "
+                           "rasterized")
+                .arg(painted)
+                .arg(viewportBudget));
+    }
+    view.resize(savedSize);
+    processPaints();
+}
+
 void checkFractionalMovement(SongView &view, const MidiTimeline &timeline,
                              songview::PlayheadOverlay &marker,
                              const QColor &playheadColor, uint64_t firstTick,
@@ -851,6 +898,7 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     processPaints();
     checkFractionalMovement(view, timeline, marker, playheadColor, firstTick,
                             failures);
+    checkLanesViewportBoundedRepaint(view, surfaces.lanes.widget, failures);
 }
 
 // The transport bar's Follow Playhead toggle: on (the default), playback
