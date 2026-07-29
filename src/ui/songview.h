@@ -213,6 +213,11 @@ public:
     uint32_t soloMask() const { return m_soloMask; }
     void setTrackMute(int track, bool on);
     void setTrackSolo(int track, bool on);
+    // Keyboard face of the header buttons, over the multi-track scope:
+    // mixed state resolves toward on (mute/solo everything in the scope),
+    // a second press turns it back off.
+    void toggleMuteOnSelectedTracks();
+    void toggleSoloOnSelectedTracks();
 
     static QColor trackColor(int track);
     static QColor noteColor(int track, int velocity);
