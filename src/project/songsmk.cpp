@@ -26,8 +26,7 @@ const QRegularExpression &ruleRe()
 
 QString expandVars(QString text, const QHash<QString, QString> &vars)
 {
-    static const QRegularExpression refRe(
-        QStringLiteral(R"(\$\(([A-Za-z_][A-Za-z0-9_]*)\))"));
+    static const QRegularExpression refRe(QStringLiteral(R"(\$\(([A-Za-z_][A-Za-z0-9_]*)\))"));
     // Nested definitions terminate because unknown names expand to "" (as in
     // make); the depth cap breaks self-referential cycles.
     for (int depth = 0; depth < 8 && text.contains(QLatin1Char('$')); depth++) {
@@ -133,16 +132,15 @@ bool writeRule(const QString &mkPath, const QString &label, const QStringList &f
 
     QHash<QString, QString> vars;
     for (const QByteArray &raw : lines) {
-        const QString text =
-            QString::fromUtf8(raw.endsWith('\r') ? raw.chopped(1) : raw);
+        const QString text = QString::fromUtf8(raw.endsWith('\r') ? raw.chopped(1) : raw);
         if (!text.startsWith(QLatin1Char('\t')))
             collectVar(text, &vars);
     }
 
     int ruleIdx = -1;
     for (int i = 0; i < lines.size(); i++) {
-        const QString text = QString::fromUtf8(
-            lines[i].endsWith('\r') ? lines[i].chopped(1) : lines[i]);
+        const QString text =
+            QString::fromUtf8(lines[i].endsWith('\r') ? lines[i].chopped(1) : lines[i]);
         const QRegularExpressionMatch m = ruleRe().match(text);
         if (m.hasMatch() && m.captured(1) == label) {
             ruleIdx = i;
@@ -154,8 +152,7 @@ bool writeRule(const QString &mkPath, const QString &label, const QStringList &f
     if (ruleIdx >= 0) {
         for (int i = ruleIdx + 1; i < lines.size(); i++) {
             const bool hadCr = lines[i].endsWith('\r');
-            const QString text =
-                QString::fromUtf8(hadCr ? lines[i].chopped(1) : lines[i]);
+            const QString text = QString::fromUtf8(hadCr ? lines[i].chopped(1) : lines[i]);
             if (!text.startsWith(QLatin1Char('\t')))
                 break; // past the rule's recipe
             if (!text.contains(QStringLiteral("$(MID)")))
@@ -168,22 +165,20 @@ bool writeRule(const QString &mkPath, const QString &label, const QStringList &f
             const QStringList tokens = text.trimmed().split(ws, Qt::SkipEmptyParts);
             for (const QString &token : tokens) {
                 if (token.size() >= 2 && token[0] == QLatin1Char('-'))
-                    existing.insert(token[1].toUpper(),
-                                    {token, expandVars(token, vars)});
+                    existing.insert(token[1].toUpper(), {token, expandVars(token, vars)});
             }
             QStringList spelled;
             for (const QString &flag : flags) {
-                const auto it = flag.size() >= 2 ? existing.constFind(flag[1].toUpper())
-                                                 : existing.constEnd();
-                spelled << (it != existing.constEnd()
-                                    && it->second.compare(flag, Qt::CaseInsensitive) == 0
+                const auto it =
+                    flag.size() >= 2 ? existing.constFind(flag[1].toUpper()) : existing.constEnd();
+                spelled << (it != existing.constEnd() &&
+                                    it->second.compare(flag, Qt::CaseInsensitive) == 0
                                 ? it->first
                                 : flag);
             }
 
             const int at = text.indexOf(QStringLiteral("$@"));
-            QString newText = at >= 0 ? text.left(at + 2)
-                                      : QStringLiteral("\t$(MID) $< $@");
+            QString newText = at >= 0 ? text.left(at + 2) : QStringLiteral("\t$(MID) $< $@");
             if (!spelled.isEmpty())
                 newText += QLatin1Char(' ') + spelled.join(QLatin1Char(' '));
             lines[i] = newText.toUtf8();
@@ -204,10 +199,8 @@ bool writeRule(const QString &mkPath, const QString &label, const QStringList &f
         } else {
             if (!lines.isEmpty() && lines.last() != eol)
                 lines.append(eol); // blank separator, matching the file's style
-            lines.append(QStringLiteral("$(MID_SUBDIR)/%1.s: %.s: %.mid")
-                             .arg(label)
-                             .toUtf8()
-                         + eol);
+            lines.append(QStringLiteral("$(MID_SUBDIR)/%1.s: %.s: %.mid").arg(label).toUtf8() +
+                         eol);
             lines.append(recipe.toUtf8() + eol);
         }
     }
@@ -240,8 +233,7 @@ bool removeRule(const QString &mkPath, const QString &label, QString *error)
         lines.removeLast(); // the empty piece after the final newline
 
     const auto textAt = [&lines](int i) {
-        return QString::fromUtf8(lines[i].endsWith('\r') ? lines[i].chopped(1)
-                                                         : lines[i]);
+        return QString::fromUtf8(lines[i].endsWith('\r') ? lines[i].chopped(1) : lines[i]);
     };
     int ruleIdx = -1;
     for (int i = 0; i < lines.size(); i++) {
@@ -260,8 +252,8 @@ bool removeRule(const QString &mkPath, const QString &label, QString *error)
     lines.erase(lines.begin() + ruleIdx, lines.begin() + end);
     // The blank separator writeRule added before the rule, unless removing it
     // would join two non-blank neighbors.
-    if (ruleIdx > 0 && textAt(ruleIdx - 1).trimmed().isEmpty()
-        && (ruleIdx >= lines.size() || textAt(ruleIdx).trimmed().isEmpty()))
+    if (ruleIdx > 0 && textAt(ruleIdx - 1).trimmed().isEmpty() &&
+        (ruleIdx >= lines.size() || textAt(ruleIdx).trimmed().isEmpty()))
         lines.removeAt(ruleIdx - 1);
 
     QFile out(mkPath);

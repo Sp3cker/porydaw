@@ -20,6 +20,5 @@ bool importAudioFile(const QString &path, ImportedSample *out, QString *error,
 
 // Same, over in-memory bytes (the harness feeds generated fixtures without
 // touching disk more than once). sourcePath only labels the result.
-bool importAudioBytes(const QByteArray &bytes, const QString &sourcePath,
-                      ImportedSample *out, QString *error,
-                      bool leftChannelOnly = false);
+bool importAudioBytes(const QByteArray &bytes, const QString &sourcePath, ImportedSample *out,
+                      QString *error, bool leftChannelOnly = false);

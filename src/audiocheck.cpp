@@ -14,20 +14,17 @@ int runAudioCheck()
     AudioEngine engine;
     QString error;
     if (!engine.init(&error)) {
-        std::printf("audiocheck: SKIP (no audio device: %s)\n",
-                    qUtf8Printable(error));
+        std::printf("audiocheck: SKIP (no audio device: %s)\n", qUtf8Printable(error));
         return 0;
     }
 
     const QString backend = engine.backendName();
-    const double periodMs = engine.sampleRate() > 0
-        ? 1000.0 * engine.periodSizeFrames() / engine.sampleRate()
-        : 0.0;
+    const double periodMs =
+        engine.sampleRate() > 0 ? 1000.0 * engine.periodSizeFrames() / engine.sampleRate() : 0.0;
     std::printf("audiocheck: backend=%s rate=%d period=%dx%d frames "
                 "(~%.0f ms) silent-null-fallback=%s\n",
-                qUtf8Printable(backend), int(engine.sampleRate()),
-                engine.periodCount(), engine.periodSizeFrames(), periodMs,
-                engine.usingNullBackend() ? "yes" : "no");
+                qUtf8Printable(backend), int(engine.sampleRate()), engine.periodCount(),
+                engine.periodSizeFrames(), periodMs, engine.usingNullBackend() ? "yes" : "no");
 
     int failures = 0;
     if (backend.isEmpty()) {
@@ -35,9 +32,8 @@ int runAudioCheck()
         failures++;
     }
     if (engine.usingNullBackend() != (backend == QStringLiteral("Null"))) {
-        std::fprintf(stderr,
-                     "audiocheck: FAIL: null-backend flag disagrees with "
-                     "the backend name\n");
+        std::fprintf(stderr, "audiocheck: FAIL: null-backend flag disagrees with "
+                             "the backend name\n");
         failures++;
     }
 

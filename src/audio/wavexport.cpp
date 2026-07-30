@@ -43,21 +43,18 @@ WavExportTotals wavExportTotals(const MidiTimeline &timeline, const WavExportOpt
     const double rate = double(opts.sampleRate);
     if (timeline.hasLoop()) {
         const uint64_t loopDuration = timeline.loopEndSample - timeline.loopStartSample;
-        totals.fadeStartSample =
-            timeline.loopStartSample + uint64_t(opts.loopCount) * loopDuration;
-        totals.totalSamples =
-            totals.fadeStartSample + uint64_t(opts.fadeoutSeconds * rate + 0.5);
+        totals.fadeStartSample = timeline.loopStartSample + uint64_t(opts.loopCount) * loopDuration;
+        totals.totalSamples = totals.fadeStartSample + uint64_t(opts.fadeoutSeconds * rate + 0.5);
     } else {
-        totals.totalSamples =
-            timeline.lengthSamples + uint64_t(opts.tailSeconds * rate + 0.5);
+        totals.totalSamples = timeline.lengthSamples + uint64_t(opts.tailSeconds * rate + 0.5);
     }
     return totals;
 }
 
 bool exportWav(const QString &path, const MidiTimeline &timeline,
                const LoadedVoiceGroup *voicegroup, const SongSettings &settings,
-               const WavExportOptions &opts,
-               const std::function<bool(double)> &progress, QString *error)
+               const WavExportOptions &opts, const std::function<bool(double)> &progress,
+               QString *error)
 {
     const WavExportTotals totals = wavExportTotals(timeline, opts);
     const uint64_t dataSize = totals.totalSamples * 4; // 16-bit stereo
@@ -66,9 +63,9 @@ bool exportWav(const QString &path, const MidiTimeline &timeline,
         return false;
     }
     if (dataSize + 36 > UINT32_MAX) {
-        *error = QCoreApplication::translate(
-            "WavExport", "The rendered file would exceed the 4 GB WAV limit — "
-                         "reduce the loop count.");
+        *error = QCoreApplication::translate("WavExport",
+                                             "The rendered file would exceed the 4 GB WAV limit — "
+                                             "reduce the loop count.");
         return false;
     }
 
@@ -117,8 +114,7 @@ bool exportWav(const QString &path, const MidiTimeline &timeline,
     uint64_t pos = 0;
     while (ok && pos < totals.totalSamples) {
         const uint32_t n = uint32_t(std::min<uint64_t>(kChunk, totals.totalSamples - pos));
-        player.render(&engine, &timeline, bufL.data(), bufR.data(), n,
-                      timeline.hasLoop(), 0);
+        player.render(&engine, &timeline, bufL.data(), bufR.data(), n, timeline.hasLoop(), 0);
 
         pcm.resize(int(n) * 4);
         char *out = pcm.data();

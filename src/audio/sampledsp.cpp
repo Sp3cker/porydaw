@@ -40,9 +40,7 @@ double kaiserFromArg(double arg)
         std::vector<double> t(kKaiserTableN + 1);
         const double i0Beta = besselI0(kBeta);
         for (int i = 0; i <= kKaiserTableN; i++)
-            t[size_t(i)] =
-                besselI0(kBeta * std::sqrt(double(i) / kKaiserTableN))
-                / i0Beta;
+            t[size_t(i)] = besselI0(kBeta * std::sqrt(double(i) / kKaiserTableN)) / i0Beta;
         return t;
     }();
     const double x = arg * kKaiserTableN;
@@ -53,16 +51,14 @@ double kaiserFromArg(double arg)
 
 } // namespace
 
-std::vector<float> resampleSinc(const float *x, qint64 n, double ratio,
-                                qint64 outCount, qint64 loopWrapStart,
-                                qint64 loopWrapExcl)
+std::vector<float> resampleSinc(const float *x, qint64 n, double ratio, qint64 outCount,
+                                qint64 loopWrapStart, qint64 loopWrapExcl)
 {
     std::vector<float> y(size_t(outCount > 0 ? outCount : 0), 0.0f);
     if (n <= 0 || outCount <= 0 || ratio <= 0.0)
         return y;
 
-    const qint64 loopLen =
-        loopWrapExcl > loopWrapStart ? loopWrapExcl - loopWrapStart : 0;
+    const qint64 loopLen = loopWrapExcl > loopWrapStart ? loopWrapExcl - loopWrapStart : 0;
     const auto sample = [&](qint64 k) -> double {
         if (k < 0)
             return 0.0; // silence-before-attack is truth
@@ -102,10 +98,8 @@ std::vector<float> resampleSinc(const float *x, qint64 n, double ratio,
             const double arg = 1.0 - v * v;
             if (arg >= 0.0) {
                 // h(u) = 2fc·sinc(2fc·u)·kaiser = sin(2π·fc·u)/(π·u)·kaiser.
-                const double h = (std::abs(u) < 1e-9
-                                      ? 2.0 * fc
-                                      : s / (kPi * u))
-                    * kaiserFromArg(arg);
+                const double h =
+                    (std::abs(u) < 1e-9 ? 2.0 * fc : s / (kPi * u)) * kaiserFromArg(arg);
                 num += sample(k) * h;
                 den += h;
             }
@@ -151,9 +145,8 @@ qint64 nearestZeroCrossing(const float *x, qint64 n, qint64 idx)
     idx = qBound(qint64(0), idx, n - 1);
     const auto crossesAt = [&](qint64 i) {
         // A crossing sits between i−1 and i.
-        return i > 0 && i < n
-            && ((x[i - 1] < 0.0f && x[i] >= 0.0f)
-                || (x[i - 1] >= 0.0f && x[i] < 0.0f));
+        return i > 0 && i < n &&
+               ((x[i - 1] < 0.0f && x[i] >= 0.0f) || (x[i - 1] >= 0.0f && x[i] < 0.0f));
     };
     for (qint64 d = 0; d < n; d++) {
         if (crossesAt(idx - d))
@@ -164,8 +157,7 @@ qint64 nearestZeroCrossing(const float *x, qint64 n, qint64 idx)
     return idx;
 }
 
-double normalizeGain(const float *x, qint64 n, bool loopedMode,
-                     qint64 loopStart, QString *warning)
+double normalizeGain(const float *x, qint64 n, bool loopedMode, qint64 loopStart, QString *warning)
 {
     if (warning)
         warning->clear();
@@ -176,8 +168,7 @@ double normalizeGain(const float *x, qint64 n, bool loopedMode,
         peak = std::max(peak, std::abs(double(x[i])));
     if (peak < 2.0 / 128.0) {
         if (warning)
-            *warning = QStringLiteral(
-                "silent sample — auto-normalize skipped.");
+            *warning = QStringLiteral("silent sample — auto-normalize skipped.");
         return 1.0;
     }
 
@@ -190,8 +181,7 @@ double normalizeGain(const float *x, qint64 n, bool loopedMode,
         const double rms = std::sqrt(sum / double(n - loopStart));
         if (rms <= 0.0) {
             if (warning)
-                *warning = QStringLiteral(
-                    "silent loop region — auto-normalize skipped.");
+                *warning = QStringLiteral("silent loop region — auto-normalize skipped.");
             return 1.0;
         }
         gain = kTargetLoopRms / rms;
@@ -223,8 +213,7 @@ double yinDifferenceFrac(const float *x, qint64 window, double tau)
     const double f = tau - double(t0);
     double sum = 0.0;
     for (qint64 j = 0; j < window; j++) {
-        const double delayed = double(x[j + t0]) * (1.0 - f)
-            + double(x[j + t0 + 1]) * f;
+        const double delayed = double(x[j + t0]) * (1.0 - f) + double(x[j + t0 + 1]) * f;
         const double d = double(x[j]) - delayed;
         sum += d * d;
     }
@@ -262,10 +251,8 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
     if (rate <= 0.0 || n < kFrame)
         return result;
 
-    const qint64 tauMin =
-        std::max<qint64>(2, qint64(std::floor(rate / 2000.0)));
-    const qint64 tauMax =
-        std::min<qint64>(kWindow - 2, qint64(std::ceil(rate / 40.0)));
+    const qint64 tauMin = std::max<qint64>(2, qint64(std::floor(rate / 2000.0)));
+    const qint64 tauMax = std::min<qint64>(kWindow - 2, qint64(std::ceil(rate / 40.0)));
     if (tauMax <= tauMin)
         return result;
 
@@ -283,15 +270,12 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
         for (qint64 tau = 1; tau <= tauMax; tau++) {
             double sum = 0.0;
             for (qint64 j = 0; j < kWindow; j++) {
-                const double diff =
-                    double(frame[j]) - double(frame[j + tau]);
+                const double diff = double(frame[j]) - double(frame[j + tau]);
                 sum += diff * diff;
             }
             d[size_t(tau)] = sum;
             cum[size_t(tau)] = cum[size_t(tau) - 1] + sum;
-            cmnd[size_t(tau)] = cum[size_t(tau)] > 0.0
-                ? sum * double(tau) / cum[size_t(tau)]
-                : 1.0;
+            cmnd[size_t(tau)] = cum[size_t(tau)] > 0.0 ? sum * double(tau) / cum[size_t(tau)] : 1.0;
         }
 
         // First minimum below the threshold (descend to its local bottom),
@@ -299,8 +283,7 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
         qint64 best = -1;
         for (qint64 tau = tauMin; tau <= tauMax; tau++) {
             if (cmnd[size_t(tau)] < kThreshold) {
-                while (tau + 1 <= tauMax
-                       && cmnd[size_t(tau + 1)] < cmnd[size_t(tau)])
+                while (tau + 1 <= tauMax && cmnd[size_t(tau + 1)] < cmnd[size_t(tau)])
                     tau++;
                 best = tau;
                 break;
@@ -330,11 +313,9 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
             }
         }
         if (bestTau - 0.1 >= lo && bestTau + 0.1 <= hi) {
-            const double va =
-                yinDifferenceFrac(frame, kWindow, bestTau - 0.1);
+            const double va = yinDifferenceFrac(frame, kWindow, bestTau - 0.1);
             const double vb = bestVal;
-            const double vc =
-                yinDifferenceFrac(frame, kWindow, bestTau + 0.1);
+            const double vc = yinDifferenceFrac(frame, kWindow, bestTau + 0.1);
             const double denom = va - 2.0 * vb + vc;
             if (denom > 0.0)
                 bestTau += 0.1 * 0.5 * (va - vc) / denom;
@@ -346,8 +327,7 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
         // refined difference is also ~zero IS the true period — adopt the
         // smallest such lag.
         const auto cumAt = [&](double tau) {
-            const qint64 t0 =
-                qBound<qint64>(1, qint64(std::floor(tau)), tauMax - 1);
+            const qint64 t0 = qBound<qint64>(1, qint64(std::floor(tau)), tauMax - 1);
             const double f = tau - double(t0);
             return cum[size_t(t0)] * (1.0 - f) + cum[size_t(t0) + 1] * f;
         };
@@ -362,8 +342,7 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
                 continue;
             double bt = 0.0, bv = 0.0;
             bool have = false;
-            for (double tau = std::max(1.0, tc - 0.6); tau <= tc + 0.6;
-                 tau += 0.05) {
+            for (double tau = std::max(1.0, tc - 0.6); tau <= tc + 0.6; tau += 0.05) {
                 const double v = yinDifferenceFrac(frame, kWindow, tau);
                 if (!have || v < bv) {
                     have = true;
@@ -375,10 +354,8 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
                 // Sub-step parabola: the 0.05 grid alone quantizes small
                 // lags by several cents.
                 if (bt - 0.05 >= 1.0) {
-                    const double va =
-                        yinDifferenceFrac(frame, kWindow, bt - 0.05);
-                    const double vc =
-                        yinDifferenceFrac(frame, kWindow, bt + 0.05);
+                    const double va = yinDifferenceFrac(frame, kWindow, bt - 0.05);
+                    const double vc = yinDifferenceFrac(frame, kWindow, bt + 0.05);
                     const double denom = va - 2.0 * bv + vc;
                     if (denom > 0.0)
                         bt += 0.05 * 0.5 * (va - vc) / denom;
@@ -406,9 +383,7 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
         f0s.push_back(f.f0);
     std::sort(f0s.begin(), f0s.end());
     const size_t mid = f0s.size() / 2;
-    const double medianF0 = f0s.size() & 1
-        ? f0s[mid]
-        : 0.5 * (f0s[mid - 1] + f0s[mid]);
+    const double medianF0 = f0s.size() & 1 ? f0s[mid] : 0.5 * (f0s[mid - 1] + f0s[mid]);
     for (const double f0 : f0s) {
         const double cents = 1200.0 * std::log2(f0 / medianF0);
         if (std::abs(cents) > 50.0)
@@ -425,19 +400,17 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
     return result;
 }
 
-std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate,
-                                       double period, qint64 regionA,
-                                       qint64 regionB)
+std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate, double period,
+                                       qint64 regionA, qint64 regionB)
 {
     std::vector<LoopCandidate> out;
     if (!x || n < 256 || rate <= 0.0)
         return out;
 
     const bool pitched = period > 0.0;
-    const qint64 W = pitched
-        ? qBound<qint64>(qint64(128), qint64(std::llround(2.0 * period)),
-                       qint64(512))
-        : 128;
+    const qint64 W =
+        pitched ? qBound<qint64>(qint64(128), qint64(std::llround(2.0 * period)), qint64(512))
+                : 128;
 
     // The b window needs S − W ≥ 0 and the a window reads W real samples
     // past E (the untrimmed tail). A buffer that can't fit both windows
@@ -456,8 +429,7 @@ std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate,
     // ladder from 50 ms.
     std::vector<qint64> lengths;
     if (pitched) {
-        const double lMin =
-            std::max(2.0 * period, 0.030 * rate);
+        const double lMin = std::max(2.0 * period, 0.030 * rate);
         for (qint64 k = qint64(std::ceil(lMin / period));; k++) {
             const qint64 L = qint64(std::llround(double(k) * period));
             if (L > regionLen)
@@ -511,9 +483,7 @@ std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate,
         for (qint64 E = eStart; E <= Bmax; E += 4) {
             const double aa = energy(E + 1 - wCoarse, E + wCoarse + 1);
             const double bb = energy(E + 1 - wCoarse - L, E + wCoarse + 1 - L);
-            const double ncc = (aa > 0.0 && bb > 0.0)
-                ? numer / std::sqrt(aa * bb)
-                : 0.0;
+            const double ncc = (aa > 0.0 && bb > 0.0) ? numer / std::sqrt(aa * bb) : 0.0;
             // Pre-gate the survivor pool with the (O(1), prefix-summed)
             // level gates: on material where near-perfect NCC is abundant
             // (steady tones), the 200 coarse survivors would otherwise be an
@@ -524,26 +494,22 @@ std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate,
             const double bbF = energy(S - W, S + W);
             const double head = energy(S, S + tenth);
             const double tail = energy(E + 1 - tenth, E + 1);
-            const bool preGate = aaF > 0.0 && bbF > 0.0 && head > 0.0
-                && tail > 0.0
-                && std::abs(10.0 * std::log10(aaF / bbF)) <= 1.5
-                && std::abs(10.0 * std::log10(head / tail)) <= 1.0;
+            const bool preGate = aaF > 0.0 && bbF > 0.0 && head > 0.0 && tail > 0.0 &&
+                                 std::abs(10.0 * std::log10(aaF / bbF)) <= 1.5 &&
+                                 std::abs(10.0 * std::log10(head / tail)) <= 1.0;
             std::vector<Coarse> &pool = preGate ? top : fallback;
             const size_t cap = preGate ? kTopKeep : kFallbackKeep;
             if (pool.size() < cap || ncc > pool.front().ncc) {
                 Coarse c{ncc, L, E};
                 const auto pos = std::lower_bound(
                     pool.begin(), pool.end(), c,
-                    [](const Coarse &a, const Coarse &b) {
-                        return a.ncc < b.ncc;
-                    });
+                    [](const Coarse &a, const Coarse &b) { return a.ncc < b.ncc; });
                 pool.insert(pos, c);
                 if (pool.size() > cap)
                     pool.erase(pool.begin());
             }
             // Slide the window forward 4 samples.
-            for (qint64 j = E + wCoarse + 1;
-                 j <= std::min(E + wCoarse + 4, n - 1); j++)
+            for (qint64 j = E + wCoarse + 1; j <= std::min(E + wCoarse + 4, n - 1); j++)
                 numer += double(x[j]) * double(x[j - L]);
             for (qint64 j = E + 1 - wCoarse; j <= E + 4 - wCoarse; j++)
                 numer -= double(x[j]) * double(x[j - L]);
@@ -586,35 +552,31 @@ std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate,
         const qint64 tenth = std::max<qint64>(1, c.L / 10);
         const double head = energy(S, S + tenth);
         const double tail = energy(bestE + 1 - tenth, bestE + 1);
-        const bool gates = dRmsDb <= 1.5 && head > 0.0 && tail > 0.0
-            && std::abs(10.0 * std::log10(head / tail)) <= 1.0;
+        const bool gates = dRmsDb <= 1.5 && head > 0.0 && tail > 0.0 &&
+                           std::abs(10.0 * std::log10(head / tail)) <= 1.0;
         LoopCandidate cand;
         cand.loopStart = S;
         cand.loopEnd = bestE;
         cand.ncc = bestNcc;
         cand.passedGates = gates;
-        cand.score = 0.6 * bestNcc
-            + 0.2 * (1.0 - std::min(dRmsDb, 1.5) / 1.5)
-            + 0.2 * (logLMax > 0.0 ? std::log(double(c.L)) / logLMax : 0.0);
+        cand.score = 0.6 * bestNcc + 0.2 * (1.0 - std::min(dRmsDb, 1.5) / 1.5) +
+                     0.2 * (logLMax > 0.0 ? std::log(double(c.L)) / logLMax : 0.0);
         scored.push_back({cand, dRmsDb});
     }
 
     // Gate-passing candidates first, best score first; dedupe candidates
     // whose S and E both sit within P/2 of a better one.
-    std::sort(scored.begin(), scored.end(),
-              [](const Scored &a, const Scored &b) {
-                  if (a.cand.passedGates != b.cand.passedGates)
-                      return a.cand.passedGates;
-                  return a.cand.score > b.cand.score;
-              });
-    const qint64 dedupe = pitched
-        ? std::max<qint64>(qint64(std::llround(period / 2.0)), 8)
-        : 64;
+    std::sort(scored.begin(), scored.end(), [](const Scored &a, const Scored &b) {
+        if (a.cand.passedGates != b.cand.passedGates)
+            return a.cand.passedGates;
+        return a.cand.score > b.cand.score;
+    });
+    const qint64 dedupe = pitched ? std::max<qint64>(qint64(std::llround(period / 2.0)), 8) : 64;
     for (const Scored &s : scored) {
         bool duplicate = false;
         for (const LoopCandidate &kept : out) {
-            if (std::llabs(kept.loopStart - s.cand.loopStart) <= dedupe
-                && std::llabs(kept.loopEnd - s.cand.loopEnd) <= dedupe) {
+            if (std::llabs(kept.loopStart - s.cand.loopStart) <= dedupe &&
+                std::llabs(kept.loopEnd - s.cand.loopEnd) <= dedupe) {
                 duplicate = true;
                 break;
             }
@@ -628,15 +590,13 @@ std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate,
     return out;
 }
 
-void refineLoop(const float *x, qint64 n, double period, qint64 *loopStart,
-                qint64 *loopEnd)
+void refineLoop(const float *x, qint64 n, double period, qint64 *loopStart, qint64 *loopEnd)
 {
     if (!x || !loopStart || !loopEnd || n < 32)
         return;
-    const qint64 W = period > 0.0
-        ? qBound<qint64>(qint64(128), qint64(std::llround(2.0 * period)),
-                       qint64(512))
-        : 128;
+    const qint64 W =
+        period > 0.0 ? qBound<qint64>(qint64(128), qint64(std::llround(2.0 * period)), qint64(512))
+                     : 128;
     qint64 bestS = *loopStart, bestE = *loopEnd;
     double bestNcc = -2.0;
     for (qint64 dS = -8; dS <= 8; dS++) {
@@ -659,8 +619,7 @@ void refineLoop(const float *x, qint64 n, double period, qint64 *loopStart,
     }
 }
 
-SeamMetrics seamMetricsAt(const qint8 *s8, qint64 n, qint64 loopStart,
-                          qint64 loopEnd)
+SeamMetrics seamMetricsAt(const qint8 *s8, qint64 n, qint64 loopStart, qint64 loopEnd)
 {
     SeamMetrics seam;
     const qint64 S = loopStart, E = loopEnd;
@@ -723,8 +682,7 @@ void PeakPyramid::build(const float *x, qint64 n)
             const std::vector<MinMax> &prev = levels.back();
             for (qint64 b = 0; b < buckets; b++) {
                 const size_t from = size_t(b) * kBlock;
-                const size_t to =
-                    std::min(prev.size(), from + size_t(kBlock));
+                const size_t to = std::min(prev.size(), from + size_t(kBlock));
                 MinMax m = prev[from];
                 for (size_t i = from + 1; i < to; i++) {
                     m.lo = std::min(m.lo, prev[i].lo);
@@ -740,8 +698,7 @@ void PeakPyramid::build(const float *x, qint64 n)
     }
 }
 
-PeakPyramid::MinMax PeakPyramid::query(const float *x, qint64 from,
-                                       qint64 to) const
+PeakPyramid::MinMax PeakPyramid::query(const float *x, qint64 from, qint64 to) const
 {
     from = std::max<qint64>(0, from);
     to = std::min(to, frameCount);

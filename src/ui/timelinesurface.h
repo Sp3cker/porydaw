@@ -26,8 +26,7 @@ QRegion expandRegionToDeviceGrid(const QRegion &region, int grid);
 // Paint counters for the rollcheck harness: how often and how many device
 // pixels paintContent() actually rasterized, plus the cache's estimated
 // footprint. Playhead sweeps must leave these untouched (pure cache blits).
-struct TimelineSurfaceDiagnostics
-{
+struct TimelineSurfaceDiagnostics {
     quint64 contentPaintCount = 0;
     quint64 contentPaintPixelCount = 0;
     quint64 estimatedContentCacheBytes = 0;
@@ -35,9 +34,9 @@ struct TimelineSurfaceDiagnostics
     friend bool operator==(const TimelineSurfaceDiagnostics &lhs,
                            const TimelineSurfaceDiagnostics &rhs) noexcept
     {
-        return lhs.contentPaintCount == rhs.contentPaintCount
-               && lhs.contentPaintPixelCount == rhs.contentPaintPixelCount
-               && lhs.estimatedContentCacheBytes == rhs.estimatedContentCacheBytes;
+        return lhs.contentPaintCount == rhs.contentPaintCount &&
+               lhs.contentPaintPixelCount == rhs.contentPaintPixelCount &&
+               lhs.estimatedContentCacheBytes == rhs.estimatedContentCacheBytes;
     }
 
     friend bool operator!=(const TimelineSurfaceDiagnostics &lhs,
@@ -63,17 +62,17 @@ struct TimelineSurfaceDiagnostics
 // pixmap-allocation failures, paint uncached.
 class TimelineSurface : public QWidget
 {
-public:
+  public:
     explicit TimelineSurface(QWidget *parent = nullptr);
 
     void invalidateContent();
     void invalidateContent(const QRegion &region);
     TimelineSurfaceDiagnostics diagnostics() const noexcept;
 
-protected:
+  protected:
     virtual void paintContent(QPainter &painter) = 0;
 
-private:
+  private:
     void paintEvent(QPaintEvent *event) final;
     void changeEvent(QEvent *event) final;
     void resizeEvent(QResizeEvent *event) final;
@@ -84,20 +83,17 @@ private:
     TimelineSurfaceDiagnostics m_diagnostics;
 };
 
-struct TimelineBand
-{
+struct TimelineBand {
     QWidget &widget;
     int timelineOrigin;
 };
 
-struct CachedTimelineBand
-{
+struct CachedTimelineBand {
     TimelineSurface &widget;
     int timelineOrigin;
 };
 
-struct TimelineSurfaces
-{
+struct TimelineSurfaces {
     TimelineBand ruler;
     CachedTimelineBand roll;
     CachedTimelineBand lanes;

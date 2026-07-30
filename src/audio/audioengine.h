@@ -19,12 +19,12 @@ struct ma_device;
 struct ma_context;
 
 struct SongSettings {
-    uint8_t songVolume = 127;   // mid2agb -V (0-127)
-    uint8_t reverb = 0;         // mid2agb -R (0-127)
-    uint8_t maxPcmChannels = 5; // pokeemerald m4aSoundInit default
-    uint8_t trackBudget = 16;   // song's music player track count (SongDocument)
+    uint8_t songVolume = 127;    // mid2agb -V (0-127)
+    uint8_t reverb = 0;          // mid2agb -R (0-127)
+    uint8_t maxPcmChannels = 5;  // pokeemerald m4aSoundInit default
+    uint8_t trackBudget = 16;    // song's music player track count (SongDocument)
     float pcmMixRate = 13379.0f; // GBA-accurate DirectSound mix rate
-    bool analogFilter = false;  // GBA analog output low-pass (SPEC §7)
+    bool analogFilter = false;   // GBA analog output low-pass (SPEC §7)
 };
 
 // Mute bits for the tracks a song's music player never starts: MPlayStart
@@ -58,7 +58,7 @@ enum class Transport : int {
 //    struct, which its header documents as safe for lock-free monitoring.
 class AudioEngine
 {
-public:
+  public:
     AudioEngine();
     ~AudioEngine();
 
@@ -117,8 +117,7 @@ public:
     // thread sends each note-off itself once the duration elapses. velocity
     // 0 releases that track+key's preview early instead (durationSamples
     // ignored).
-    void previewNoteTimed(uint8_t track, uint8_t key, uint8_t velocity,
-                          uint32_t durationSamples);
+    void previewNoteTimed(uint8_t track, uint8_t key, uint8_t velocity, uint32_t durationSamples);
 
     // Hot: audition a voicegroup entry by program number (SPEC §6.1 voicegroup
     // browser). Runs on a second engine instance (SPEC §3) so the program
@@ -131,16 +130,13 @@ public:
     // fetch/loop/envelope math. A new publish releases the previous
     // audition. Returns false when every slot is still busy (the caller
     // coalesces — retry on the next re-render).
-    bool auditionSample(const QByteArray &s8, uint32_t freq,
-                        uint32_t loopStart, bool looped, uint8_t key,
-                        const AuditionSlots::Adsr &adsr, uint8_t toneKey = 60)
+    bool auditionSample(const QByteArray &s8, uint32_t freq, uint32_t loopStart, bool looped,
+                        uint8_t key, const AuditionSlots::Adsr &adsr, uint8_t toneKey = 60)
     {
-        return m_audition.publishNote(s8, freq, loopStart, looped, key, adsr,
-                                      toneKey);
+        return m_audition.publishNote(s8, freq, loopStart, looped, key, adsr, toneKey);
     }
     // CGB programmable-wave audition (16 packed bytes; CGB-range adsr).
-    bool auditionWave(const QByteArray &wave16, uint8_t key,
-                      const AuditionSlots::Adsr &adsr)
+    bool auditionWave(const QByteArray &wave16, uint8_t key, const AuditionSlots::Adsr &adsr)
     {
         return m_audition.publishWave(wave16, key, adsr);
     }
@@ -221,7 +217,7 @@ public:
     };
     void polySnapshot(PolySnapshot *out) const;
 
-private:
+  private:
     static void dataCallback(ma_device *device, void *output, const void *input,
                              uint32_t frameCount);
     void process(float *interleavedOut, uint32_t frameCount);

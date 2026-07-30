@@ -33,8 +33,7 @@ std::vector<int> engineTrackMap(const SmfFile &smf, int *dropped)
 
 } // namespace
 
-ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget,
-                                const QString &playerName)
+ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QString &playerName)
 {
     ImportAnalysis a;
     a.division = smf.division;
@@ -67,8 +66,7 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget,
         SmfChannelPrefix prefix;
         for (const SmfEvent &ev : smf.tracks[smfTrack].events) {
             prefix.observe(ev);
-            if (ev.isMeta() && ev.metaType == 0x03 && info.name.isEmpty()
-                && prefix.channel < 0)
+            if (ev.isMeta() && ev.metaType == 0x03 && info.name.isEmpty() && prefix.channel < 0)
                 info.name = QString::fromLatin1(ev.blob).trimmed();
             if (!ev.isChannel())
                 continue;
@@ -89,8 +87,8 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget,
                 ccCounts[ev.data0]++;
                 break;
             case 0xC:
-                if (std::find(info.programs.begin(), info.programs.end(), ev.data0)
-                    == info.programs.end())
+                if (std::find(info.programs.begin(), info.programs.end(), ev.data0) ==
+                    info.programs.end())
                     info.programs.push_back(ev.data0);
                 break;
             default:
@@ -126,8 +124,8 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget,
         usage.cc = it.key();
         usage.count = it.value();
         usage.audible = info.eventClass == M4aEventClass::AudibleLane;
-        usage.label = QStringLiteral("%1 — %2").arg(QLatin1String(info.name),
-                                                    QLatin1String(info.display));
+        usage.label =
+            QStringLiteral("%1 — %2").arg(QLatin1String(info.name), QLatin1String(info.display));
         a.ccs.push_back(usage);
     }
 
@@ -140,26 +138,22 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget,
             QObject::tr("%1 track(s) beyond %2's %3-track allocation "
                         "(sound/music_player_table.inc) will be silent in-game.")
                 .arg(a.silentTracks)
-                .arg(playerName.isEmpty() ? QStringLiteral("the music player")
-                                          : playerName)
+                .arg(playerName.isEmpty() ? QStringLiteral("the music player") : playerName)
                 .arg(trackBudget));
     if (a.division % 24 != 0)
-        a.warnings.append(
-            QObject::tr("Division %1 is not a multiple of 24; mid2agb quantizes to "
-                        "24 clocks per beat, so timing will shift slightly.")
-                .arg(a.division));
+        a.warnings.append(QObject::tr("Division %1 is not a multiple of 24; mid2agb quantizes to "
+                                      "24 clocks per beat, so timing will shift slightly.")
+                              .arg(a.division));
     if (a.peakConcurrentNotes > kDefaultPcmBudget)
-        a.warnings.append(
-            QObject::tr("Up to %1 notes sound at once; the GBA mixes %2 sample-based "
-                        "notes (CGB square/wave/noise voices don't count). Extra "
-                        "notes will be dropped or stolen.")
-                .arg(a.peakConcurrentNotes)
-                .arg(kDefaultPcmBudget));
+        a.warnings.append(QObject::tr("Up to %1 notes sound at once; the GBA mixes %2 sample-based "
+                                      "notes (CGB square/wave/noise voices don't count). Extra "
+                                      "notes will be dropped or stolen.")
+                              .arg(a.peakConcurrentNotes)
+                              .arg(kDefaultPcmBudget));
     for (const ImportTrackInfo &t : a.tracks) {
         if (t.noteCount > 0 && t.notesBeforeProgram) {
-            a.warnings.append(
-                QObject::tr("Some tracks play notes before any program change; those "
-                            "notes use voice 0."));
+            a.warnings.append(QObject::tr("Some tracks play notes before any program change; those "
+                                          "notes use voice 0."));
             break;
         }
     }

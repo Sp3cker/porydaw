@@ -21,10 +21,10 @@ enum class Context {
 };
 
 struct CommandInfo {
-    QString id;        // stable, never shown ("roll.transpose_up")
+    QString id; // stable, never shown ("roll.transpose_up")
     Context context;
-    QString category;  // user-visible group ("File", "Piano Roll", ...)
-    QString name;      // user-visible name
+    QString category;             // user-visible group ("File", "Piano Roll", ...)
+    QString name;                 // user-visible name
     QList<QKeySequence> defaults; // empty for modifier commands
     // Mouse-gesture modifier command: bound to a bare modifier chord
     // ("hold Ctrl and drag"), not a key sequence.
@@ -42,7 +42,7 @@ struct CommandInfo {
 class Registry : public QObject
 {
     Q_OBJECT
-public:
+  public:
     static Registry &instance();
 
     // All commands in stable table order (the settings UI's display order).
@@ -89,10 +89,10 @@ public:
     // every user change for the action's lifetime.
     void attach(const QString &id, QAction *action);
 
-signals:
+  signals:
     void bindingsChanged();
 
-private:
+  private:
     Registry();
     void applyToActions();
 

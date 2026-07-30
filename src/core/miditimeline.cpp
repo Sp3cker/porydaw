@@ -36,15 +36,16 @@ bool textIsLoopMarker(const char *buf, uint32_t len, char marker)
     uint32_t s = 0, e = len;
     while (s < e && (buf[s] == ' ' || buf[s] == '\t' || buf[s] == '\r' || buf[s] == '\n'))
         s++;
-    while (e > s && (buf[e - 1] == ' ' || buf[e - 1] == '\t' || buf[e - 1] == '\r' || buf[e - 1] == '\n'))
+    while (e > s &&
+           (buf[e - 1] == ' ' || buf[e - 1] == '\t' || buf[e - 1] == '\r' || buf[e - 1] == '\n'))
         e--;
     return (e - s == 1) && buf[s] == marker;
 }
 
 // Convert an absolute tick to an absolute sample index via the tempo map.
 // Default tempo: 500000 us/beat (120 BPM).
-uint64_t tickToSample(uint64_t tick, const std::vector<TempoChange> &tempos,
-                      uint32_t tpqn, double sampleRate)
+uint64_t tickToSample(uint64_t tick, const std::vector<TempoChange> &tempos, uint32_t tpqn,
+                      double sampleRate)
 {
     double samples = 0.0;
     uint64_t prevTick = 0;
@@ -143,49 +144,47 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
                     push(0xC);
                     break;
                 case 0xD: // channel pressure: not played
-                    rawOthers.push_back({tick, uint16_t(t),
-                                         QStringLiteral("Channel pressure %1").arg(sev.data0)});
+                    rawOthers.push_back(
+                        {tick, uint16_t(t), QStringLiteral("Channel pressure %1").arg(sev.data0)});
                     break;
                 case 0xE:
                     push(0xE);
                     break;
                 }
             } else if (sev.isSysEx()) {
-                rawOthers.push_back({tick, uint16_t(t),
-                                     QStringLiteral("SysEx (%1 bytes)").arg(sev.blob.size())});
+                rawOthers.push_back(
+                    {tick, uint16_t(t), QStringLiteral("SysEx (%1 bytes)").arg(sev.blob.size())});
             } else if (sev.isMeta()) {
                 const uint8_t metaType = sev.metaType;
                 const QByteArray &blob = sev.blob;
                 if (metaType == 0x51 && blob.size() == 3) {
                     const uint8_t *p = reinterpret_cast<const uint8_t *>(blob.constData());
-                    tempos.push_back({tick, (static_cast<uint32_t>(p[0]) << 16)
-                                                | (static_cast<uint32_t>(p[1]) << 8) | p[2]});
+                    tempos.push_back({tick, (static_cast<uint32_t>(p[0]) << 16) |
+                                                (static_cast<uint32_t>(p[1]) << 8) | p[2]});
                 } else if (metaType == 0x58 && blob.size() >= 2) {
                     timeSigs.push_back({tick, uint8_t(blob[0]), uint8_t(blob[1])});
                 } else if (metaType == 0x20 && blob.size() >= 1) {
                     // Channel Prefix: scoping handled by `prefix` above.
-                } else if (metaType == 0x03 && prefix.channel >= 0
-                           && !smfMetaIsMarker(sev)) {
+                } else if (metaType == 0x03 && prefix.channel >= 0 && !smfMetaIsMarker(sev)) {
                     // A channel-scoped name: not this chunk's. Marker text
                     // is exempt — mid2agb reads markers regardless of the
                     // prefix, so it falls through to the marker check.
-                } else if (metaType == 0x03 && prefix.channel < 0
-                           && trackNames[t].isEmpty()) {
+                } else if (metaType == 0x03 && prefix.channel < 0 && trackNames[t].isEmpty()) {
                     const int len = std::min<int>(blob.size(), 64);
                     trackNames[t] = QString::fromLatin1(blob.constData(), len).trimmed();
                 } else if (metaType >= 0x01 && metaType <= 0x07) {
                     // Text-type meta: check for loop markers ('[' / ']').
                     const uint32_t len = uint32_t(std::min<int>(blob.size(), 32));
-                    if (textIsLoopMarker(blob.constData(), len, '[')
-                        && loopStartTick == UINT64_MAX) {
+                    if (textIsLoopMarker(blob.constData(), len, '[') &&
+                        loopStartTick == UINT64_MAX) {
                         loopStartTick = tick;
-                    } else if (textIsLoopMarker(blob.constData(), len, ']')
-                               && loopEndTick == UINT64_MAX) {
+                    } else if (textIsLoopMarker(blob.constData(), len, ']') &&
+                               loopEndTick == UINT64_MAX) {
                         loopEndTick = tick;
                     } else {
                         static const char *const kTextMetaNames[] = {
-                            "Text", "Copyright", "Track name", "Instrument",
-                            "Lyric", "Marker", "Cue point"};
+                            "Text",  "Copyright", "Track name", "Instrument",
+                            "Lyric", "Marker",    "Cue point"};
                         const QString text =
                             QString::fromLatin1(blob.constData(), int(len)).trimmed();
                         if (!text.isEmpty())
@@ -204,12 +203,11 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
         }
     }
 
-    std::stable_sort(rawEvents.begin(), rawEvents.end(),
-                     [](const RawEvent &a, const RawEvent &b) {
-                         if (a.tick != b.tick)
-                             return a.tick < b.tick;
-                         return a.origIndex < b.origIndex;
-                     });
+    std::stable_sort(rawEvents.begin(), rawEvents.end(), [](const RawEvent &a, const RawEvent &b) {
+        if (a.tick != b.tick)
+            return a.tick < b.tick;
+        return a.origIndex < b.origIndex;
+    });
     std::sort(tempos.begin(), tempos.end(),
               [](const TempoChange &a, const TempoChange &b) { return a.tick < b.tick; });
 
@@ -279,11 +277,10 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
     }
 
     // Merge, tempo first at equal positions so it takes effect before notes.
-    std::merge(tempoEvents.begin(), tempoEvents.end(), noteEvents.begin(), noteEvents.end(),
-               std::back_inserter(timeline->events),
-               [](const TimelineEvent &a, const TimelineEvent &b) {
-                   return a.samplePos < b.samplePos;
-               });
+    std::merge(
+        tempoEvents.begin(), tempoEvents.end(), noteEvents.begin(), noteEvents.end(),
+        std::back_inserter(timeline->events),
+        [](const TimelineEvent &a, const TimelineEvent &b) { return a.samplePos < b.samplePos; });
 
     for (const TimelineEvent &ev : timeline->events) {
         timeline->lengthSamples = std::max(timeline->lengthSamples, ev.samplePos);
@@ -310,8 +307,7 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
     timeline->otherEvents.reserve(rawOthers.size());
     for (RawOther &ro : rawOthers) {
         const int engineTrack = smfToEngine[ro.smfTrack];
-        timeline->otherEvents.push_back({ro.tick,
-                                         tickToSample(ro.tick, tempos, tpqn, sampleRate),
+        timeline->otherEvents.push_back({ro.tick, tickToSample(ro.tick, tempos, tpqn, sampleRate),
                                          engineTrack, std::move(ro.label)});
         timeline->lengthTicks = std::max(timeline->lengthTicks, ro.tick);
     }

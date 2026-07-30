@@ -77,9 +77,10 @@ int writeWav(const char *path, const std::vector<float> &left, const std::vector
 int main(int argc, char *argv[])
 {
     if (argc < 5) {
-        fprintf(stderr, "Usage: %s <projectRoot> <voicegroup> <file.mid> <out.wav> "
-                        "[--seconds N] [--sample-rate HZ] [--song-volume V] [--reverb R] "
-                        "[--no-loop]\n",
+        fprintf(stderr,
+                "Usage: %s <projectRoot> <voicegroup> <file.mid> <out.wav> "
+                "[--seconds N] [--sample-rate HZ] [--song-volume V] [--reverb R] "
+                "[--no-loop]\n",
                 argv[0]);
         return 1;
     }
@@ -143,8 +144,7 @@ int main(int argc, char *argv[])
     uint64_t pos = 0;
     while (pos < totalSamples) {
         const uint32_t n = uint32_t(std::min<uint64_t>(kChunk, totalSamples - pos));
-        player.render(&engine, timeline.get(), outL.data() + pos, outR.data() + pos, n,
-                      loop, 0);
+        player.render(&engine, timeline.get(), outL.data() + pos, outR.data() + pos, n, loop, 0);
         pos += n;
     }
 

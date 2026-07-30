@@ -15,7 +15,7 @@ class SongSettingsDialog : public QDialog
 {
     Q_OBJECT
 
-public:
+  public:
     // voicegroupArgs: the project's -G choices (SongRegistry::voicegroupArgs);
     // the combo stays editable so unknown/new symbols still work.
     SongSettingsDialog(const SongCfg &cfg, const QString &songLabel,
@@ -25,7 +25,7 @@ public:
     // reconciles them with these values).
     SongCfg cfg() const;
 
-private:
+  private:
     SongCfg m_original;
     QStringList m_voicegroupArgs;
     QComboBox *m_voicegroup;

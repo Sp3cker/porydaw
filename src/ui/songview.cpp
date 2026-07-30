@@ -1,8 +1,8 @@
 #include "songview.h"
 #include "layout.h"
 #include "theme/color_math.h"
-#include "theme/trackidentitycolors.h"
 #include "theme/themeruntime.h"
+#include "theme/trackidentitycolors.h"
 #include "typography.h"
 #include "ui/layout.h"
 #include "ui/timelinesurface.h"
@@ -21,8 +21,8 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
-#include <QLinearGradient>
 #include <QLineEdit>
+#include <QLinearGradient>
 #include <QListWidget>
 #include <QMenu>
 #include <QMessageBox>
@@ -52,7 +52,6 @@
 #include <map>
 #include <numeric>
 #include <utility>
-
 
 #include <optional>
 
@@ -90,8 +89,7 @@ qreal logicalPhysicalPixel(qreal dpr)
 
 int scrollUnits(double dip)
 {
-    const double units =
-        std::clamp(dip * kScrollUnitsPerDip, 0.0, double(INT_MAX));
+    const double units = std::clamp(dip * kScrollUnitsPerDip, 0.0, double(INT_MAX));
     return int(std::lround(units));
 }
 
@@ -111,12 +109,10 @@ double wheelAngleUnits(const QWheelEvent *event)
     if (event->phase() == Qt::ScrollMomentum)
         return 0.0;
     const QPoint delta = wheelDelta(event);
-    return double(delta.y())
-        * (event->pixelDelta().isNull() ? 1.0 : 5.0);
+    return double(delta.y()) * (event->pixelDelta().isNull() ? 1.0 : 5.0);
 }
 
-double cursorAnchoredScroll(double anchor, double oldScale, double oldScroll,
-                            double newScale)
+double cursorAnchoredScroll(double anchor, double oldScale, double oldScroll, double newScale)
 {
     const double content = (anchor + oldScroll) / oldScale;
     return content * newScale - anchor;
@@ -132,31 +128,33 @@ constexpr qreal kEdgeGripReach = 7.0;
 constexpr qreal kMoveZoneMin = 6.0;
 qreal edgeGripInnerReach(const QRectF &noteRect)
 {
-    return std::clamp((noteRect.width() - kMoveZoneMin) / 2.0, 0.0,
-                      kEdgeGripReach);
+    return std::clamp((noteRect.width() - kMoveZoneMin) / 2.0, 0.0, kEdgeGripReach);
 }
 
 bool isBlackKey(int key)
 {
     switch (key % 12) {
-    case 1: case 3: case 6: case 8: case 10:
+    case 1:
+    case 3:
+    case 6:
+    case 8:
+    case 10:
         return true;
     default:
         return false;
     }
 }
 
-QString keyName(int key) {
-  static const char *const names[] = {"C",  "C#", "D",  "D#", "E",  "F",
-                                      "F#", "G",  "G#", "A",  "A#", "B"};
-  return QStringLiteral("%1%2")
-      .arg(QLatin1String(names[key % 12]))
-      .arg(key / 12 - 1);
+QString keyName(int key)
+{
+    static const char *const names[] = {"C",  "C#", "D",  "D#", "E",  "F",
+                                        "F#", "G",  "G#", "A",  "A#", "B"};
+    return QStringLiteral("%1%2").arg(QLatin1String(names[key % 12])).arg(key / 12 - 1);
 }
 
-QString timeSigLabel(int numerator, int denomPow2) {
-  return QStringLiteral("%1/%2").arg(numerator).arg(1
-                                                    << std::min(denomPow2, 6));
+QString timeSigLabel(int numerator, int denomPow2)
+{
+    return QStringLiteral("%1/%2").arg(numerator).arg(1 << std::min(denomPow2, 6));
 }
 
 // Modal numerator/denominator editor for a ruler time-signature marker.
@@ -175,8 +173,7 @@ bool askTimeSignature(QWidget *parent, int *numerator, int *denomPow2)
     row->addWidget(num);
     row->addWidget(new QLabel(QStringLiteral("/"), &dlg));
     row->addWidget(den);
-    auto *buttons =
-        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
     auto *layout = new QVBoxLayout(&dlg);
@@ -191,64 +188,76 @@ bool askTimeSignature(QWidget *parent, int *numerator, int *denomPow2)
 
 // SongView paint paths request canvas-specific roles directly, making each
 // visible element traceable without knowing a shared theme alias.
-QLinearGradient loopGlow(qreal edgeX, qreal transparentX) {
-  auto color = themes::color(themes::Role::song_view_loop_marker);
-  auto transparent = color;
-  color.setAlpha(150);
-  transparent.setAlpha(0);
-  QLinearGradient gradient(edgeX, 0, transparentX, 0);
-  gradient.setColorAt(0.0, color);
-  color.setAlpha(18);
-  gradient.setColorAt(0.2, color);
-  gradient.setColorAt(1.0, transparent); return gradient; }
-QColor loopEdge() { return themes::color(themes::Role::song_view_loop_marker); }
-
-QColor pianoRollAccidentalLaneColor() {
-  return themes::color(themes::Role::song_view_piano_roll_accidental_lane);
+QLinearGradient loopGlow(qreal edgeX, qreal transparentX)
+{
+    auto color = themes::color(themes::Role::song_view_loop_marker);
+    auto transparent = color;
+    color.setAlpha(150);
+    transparent.setAlpha(0);
+    QLinearGradient gradient(edgeX, 0, transparentX, 0);
+    gradient.setColorAt(0.0, color);
+    color.setAlpha(18);
+    gradient.setColorAt(0.2, color);
+    gradient.setColorAt(1.0, transparent);
+    return gradient;
 }
-QColor trackHeaderAlsoSelectedColor() {
-  auto color = themes::color(themes::Role::song_view_track_header_selection);
-  color.setAlpha(99);
-  return color;
+QColor loopEdge()
+{
+    return themes::color(themes::Role::song_view_loop_marker);
+}
+
+QColor pianoRollAccidentalLaneColor()
+{
+    return themes::color(themes::Role::song_view_piano_roll_accidental_lane);
+}
+QColor trackHeaderAlsoSelectedColor()
+{
+    auto color = themes::color(themes::Role::song_view_track_header_selection);
+    color.setAlpha(99);
+    return color;
 }
 // Perceptual blend for receding a color into its backdrop (silent-in-game
 // track headers): t = 0 keeps `color`, t = 1 lands on `backdrop`.
-QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t) {
-  const themes::Oklab from = themes::oklabFromColor(color);
-  const themes::Oklab to = themes::oklabFromColor(backdrop);
-  return themes::colorFromOklab({from.lightness + (to.lightness - from.lightness) * t,
-                                 from.a + (to.a - from.a) * t,
-                                 from.b + (to.b - from.b) * t});
+QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t)
+{
+    const themes::Oklab from = themes::oklabFromColor(color);
+    const themes::Oklab to = themes::oklabFromColor(backdrop);
+    return themes::colorFromOklab({from.lightness + (to.lightness - from.lightness) * t,
+                                   from.a + (to.a - from.a) * t, from.b + (to.b - from.b) * t});
 }
-std::size_t trackIdentityIndex(int track) {
-  const auto count = static_cast<int>(themes::trackIdentityColorCount);
-  return static_cast<std::size_t>(((track % count) + count) % count);
+std::size_t trackIdentityIndex(int track)
+{
+    const auto count = static_cast<int>(themes::trackIdentityColorCount);
+    return static_cast<std::size_t>(((track % count) + count) % count);
 }
 
 // Saturated fills identify tracks; their paired text colors are used only where
 // labels need contrast against those fills.
-const QColor &trackTextColor(int track) {
-  return themes::trackIdentityTextColor(trackIdentityIndex(track)); }
+const QColor &trackTextColor(int track)
+{
+    return themes::trackIdentityTextColor(trackIdentityIndex(track));
+}
 
 // Ghost notes (unselected tracks) mix 24% of their track identity into the
 // row background in OKLab. Cap only the lightness offset so bright identities
 // stay equally recessive on light and dark themes.
-QColor ghostNoteColor(int track, bool accidentalRow) {
-  const auto &identity = themes::trackIdentityColor(trackIdentityIndex(track));
-  const auto background = themes::color(
-      accidentalRow ? themes::Role::song_view_piano_roll_accidental_lane
-                    : themes::Role::song_view_piano_roll_background);
-  const auto identityLab = themes::oklabFromColor(identity);
-  const auto backgroundLab = themes::oklabFromColor(background);
-  constexpr auto kIdentityWeight = 60.0 / 255.0;
-  constexpr auto kMaxLightnessOffset = 0.055;
-  const auto lightnessOffset = std::clamp(
-      (identityLab.lightness - backgroundLab.lightness) * kIdentityWeight,
-      -kMaxLightnessOffset, kMaxLightnessOffset);
-  return themes::colorFromOklab(
-      {backgroundLab.lightness + lightnessOffset,
-       backgroundLab.a + (identityLab.a - backgroundLab.a) * kIdentityWeight,
-       backgroundLab.b + (identityLab.b - backgroundLab.b) * kIdentityWeight});
+QColor ghostNoteColor(int track, bool accidentalRow)
+{
+    const auto &identity = themes::trackIdentityColor(trackIdentityIndex(track));
+    const auto background =
+        themes::color(accidentalRow ? themes::Role::song_view_piano_roll_accidental_lane
+                                    : themes::Role::song_view_piano_roll_background);
+    const auto identityLab = themes::oklabFromColor(identity);
+    const auto backgroundLab = themes::oklabFromColor(background);
+    constexpr auto kIdentityWeight = 60.0 / 255.0;
+    constexpr auto kMaxLightnessOffset = 0.055;
+    const auto lightnessOffset =
+        std::clamp((identityLab.lightness - backgroundLab.lightness) * kIdentityWeight,
+                   -kMaxLightnessOffset, kMaxLightnessOffset);
+    return themes::colorFromOklab(
+        {backgroundLab.lightness + lightnessOffset,
+         backgroundLab.a + (identityLab.a - backgroundLab.a) * kIdentityWeight,
+         backgroundLab.b + (identityLab.b - backgroundLab.b) * kIdentityWeight});
 }
 
 // Draw the loop-region band across rect. x positions are
@@ -278,28 +287,21 @@ void drawOverlays(QPainter &p, const SongView *sv, const QRect &rect, qreal orig
         }
     }
     if (tl->loopStartTick != UINT64_MAX || tl->loopEndTick != UINT64_MAX) {
-    const bool hasStart = tl->loopStartTick != UINT64_MAX;
-    const bool hasEnd = tl->loopEndTick != UINT64_MAX;
-        const qreal x0 = hasStart
-                             ? sv->displayX(double(tl->loopStartTick), origin, dpr)
-                           : rect.left();
-        const qreal x1 = hasEnd
-                             ? sv->displayX(double(tl->loopEndTick), origin, dpr)
-                           : rect.right();
+        const bool hasStart = tl->loopStartTick != UINT64_MAX;
+        const bool hasEnd = tl->loopEndTick != UINT64_MAX;
+        const qreal x0 =
+            hasStart ? sv->displayX(double(tl->loopStartTick), origin, dpr) : rect.left();
+        const qreal x1 = hasEnd ? sv->displayX(double(tl->loopEndTick), origin, dpr) : rect.right();
         if (x1 > rect.left() && x0 < rect.right()) {
-            const qreal glowWidth =
-                std::min<qreal>(lyt::space(Space::Eight), x1 - x0);
-      if (hasStart && glowWidth > 0) {
+            const qreal glowWidth = std::min<qreal>(lyt::space(Space::Eight), x1 - x0);
+            if (hasStart && glowWidth > 0) {
                 const QRectF glowRect(x0, rect.top(), glowWidth, rect.height());
-                p.fillRect(glowRect.intersected(QRectF(rect)),
-                           loopGlow(x0, x0 + glowWidth));
-      }
-      if (hasEnd && glowWidth > 0) {
-                const QRectF glowRect(x1 - glowWidth, rect.top(), glowWidth,
-                             rect.height());
-                p.fillRect(glowRect.intersected(QRectF(rect)),
-                           loopGlow(x1, x1 - glowWidth));
-      }
+                p.fillRect(glowRect.intersected(QRectF(rect)), loopGlow(x0, x0 + glowWidth));
+            }
+            if (hasEnd && glowWidth > 0) {
+                const QRectF glowRect(x1 - glowWidth, rect.top(), glowWidth, rect.height());
+                p.fillRect(glowRect.intersected(QRectF(rect)), loopGlow(x1, x1 - glowWidth));
+            }
             p.setPen(QPen(loopEdge(), 1));
             if (hasStart)
                 p.drawLine(QLineF(x0, rect.top(), x0, rect.bottom()));
@@ -309,8 +311,7 @@ void drawOverlays(QPainter &p, const SongView *sv, const QRect &rect, qreal orig
     }
     const qreal cursorX = sv->displayX(double(sv->editCursorTick()), origin, dpr);
     if (cursorX >= rect.left() && cursorX <= rect.right()) {
-        p.setPen(QPen(themes::color(themes::Role::song_view_edit_cursor), 1,
-                     Qt::DashLine));
+        p.setPen(QPen(themes::color(themes::Role::song_view_edit_cursor), 1, Qt::DashLine));
         p.drawLine(QLineF(cursorX, rect.top(), cursorX, rect.bottom()));
     }
 }
@@ -344,8 +345,7 @@ void forEachSubGridLine(const SongView *sv, double t0, double t1,
         const SongView::GridSeg seg = sv->gridSegAt(at);
         const uint64_t segEnd = std::min(seg.next, end);
         const uint64_t g = sv->gridTicksAt(at);
-        if (g > 0 && g < seg.beatTicks
-            && sv->pxPerTick() * double(seg.beatTicks) >= 10.0) {
+        if (g > 0 && g < seg.beatTicks && sv->pxPerTick() * double(seg.beatTicks) >= 10.0) {
             const uint64_t k = at > seg.start ? (at - seg.start + g - 1) / g : 0;
             for (uint64_t tick = seg.start + k * g; tick < segEnd; tick += g) {
                 if ((tick - seg.start) % seg.beatTicks == 0)
@@ -359,10 +359,11 @@ void forEachSubGridLine(const SongView *sv, double t0, double t1,
     }
 }
 
-QColor gridLineColor(int alpha = 255) {
-  auto color = themes::color(themes::Role::song_view_grid);
-  color.setAlpha((color.alpha() * alpha + 127) / 255);
-  return color;
+QColor gridLineColor(int alpha = 255)
+{
+    auto color = themes::color(themes::Role::song_view_grid);
+    color.setAlpha((color.alpha() * alpha + 127) / 255);
+    return color;
 }
 
 // Vertical bar/beat grid lines inside rect, with zoom-adaptive sub-beat
@@ -375,35 +376,27 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin)
     const qreal dpr = p.device()->devicePixelRatioF();
     const qreal physicalPixel = logicalPhysicalPixel(dpr);
     const qreal roundingMargin = physicalPixel / 2.0;
-    const double t0 = std::max(
-        0.0, sv->tickAtContentX(rect.left() - origin - roundingMargin));
+    const double t0 = std::max(0.0, sv->tickAtContentX(rect.left() - origin - roundingMargin));
     const double t1 =
-        sv->tickAtContentX(rect.x() + rect.width() - physicalPixel - origin
-                           + roundingMargin)
-        + 1;
+        sv->tickAtContentX(rect.x() + rect.width() - physicalPixel - origin + roundingMargin) + 1;
     const bool drawBeats = sv->pxPerBeat() >= 10.0;
     // Batches 0-2 hold sub-grid levels 1-3 (fading lighter), 3 beats, 4
     // finest-grid beats, 5 bars; painted in that order so beats and bars
     // land on top.
-    const std::array<QColor, 6> colors = {gridLineColor(125), gridLineColor(100),
-                                          gridLineColor(75),  gridLineColor(160),
-                                          gridLineColor(200), gridLineColor()};
+    const std::array<QColor, 6> colors = {gridLineColor(125), gridLineColor(100), gridLineColor(75),
+                                          gridLineColor(160), gridLineColor(200), gridLineColor()};
     std::array<QVector<QLineF>, 6> batches;
     forEachSubGridLine(sv, t0, t1, [&](uint64_t tick, int level) {
         const qreal x = sv->displayX(double(tick), origin, dpr);
         batches[level - 1].append(QLineF(x, rect.top(), x, rect.bottom()));
     });
-    sv->forEachGridLine(uint64_t(t0), uint64_t(t1),
-                        [&](uint64_t tick, bool isBar, int, int) {
-                            if (!isBar && !drawBeats)
-                                return;
-                            const qreal x = sv->displayX(double(tick), origin, dpr);
-                            const bool atFinestGrid =
-                                sv->document() &&
-                                sv->gridTicksAt(tick) == sv->fineGridTicks();
-                            batches[isBar ? 5 : atFinestGrid ? 4 : 3].append(
-                                QLineF(x, rect.top(), x, rect.bottom()));
-                        });
+    sv->forEachGridLine(uint64_t(t0), uint64_t(t1), [&](uint64_t tick, bool isBar, int, int) {
+        if (!isBar && !drawBeats)
+            return;
+        const qreal x = sv->displayX(double(tick), origin, dpr);
+        const bool atFinestGrid = sv->document() && sv->gridTicksAt(tick) == sv->fineGridTicks();
+        batches[isBar ? 5 : atFinestGrid ? 4 : 3].append(QLineF(x, rect.top(), x, rect.bottom()));
+    });
     for (size_t i = 0; i < batches.size(); ++i) {
         if (batches[i].isEmpty())
             continue;
@@ -417,7 +410,7 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin)
 // suppress the flash so picking an action feels instant.
 class NoteMenuStyle final : public QProxyStyle
 {
-public:
+  public:
     // Base the proxy on Fusion explicitly, matching the application style set
     // in main(). QApplication::style()->name() looks like it would mirror the
     // app style, but once the theme installs a stylesheet the app style is a
@@ -428,8 +421,7 @@ public:
     // Fusion keeps the menu on the same style as the rest of the app.
     NoteMenuStyle() : QProxyStyle(QStringLiteral("Fusion")) {}
 
-    int styleHint(StyleHint hint, const QStyleOption *option,
-                  const QWidget *widget,
+    int styleHint(StyleHint hint, const QStyleOption *option, const QWidget *widget,
                   QStyleHintReturn *returnData) const override
     {
         if (hint == SH_Menu_FlashTriggeredItem)
@@ -448,14 +440,13 @@ enum class NoteMenuChoice {
 // Kept alive by PianoRoll so opening it does not reconstruct its actions.
 class NoteContextMenu final : public QMenu
 {
-public:
+  public:
     // Called when an outside right-click may move the menu to another note;
     // returns false when the click hit nothing, so the press falls through
     // to QMenu (which dismisses the popup like any outside click).
-    explicit NoteContextMenu(
-        QWidget *parent, std::function<bool(QPointF)> onOutsideRightClick)
-        : QMenu(parent),
-          m_onOutsideRightClick(std::move(onOutsideRightClick))
+    explicit NoteContextMenu(QWidget *parent, std::function<bool(QPointF)> onOutsideRightClick)
+        : QMenu(parent)
+        , m_onOutsideRightClick(std::move(onOutsideRightClick))
     {
         auto *menuStyle = new NoteMenuStyle;
         menuStyle->setParent(this);
@@ -466,18 +457,15 @@ public:
         // mirror the keymap so a rebind doesn't leave the menu lying.
         const auto &keys = keymap::Registry::instance();
         m_copyAction = addAction(SongView::tr("Copy"));
-        m_copyAction->setShortcut(
-            keys.bindings(QStringLiteral("roll.copy")).value(0));
+        m_copyAction->setShortcut(keys.bindings(QStringLiteral("roll.copy")).value(0));
         m_cutAction = addAction(SongView::tr("Cut"));
-        m_cutAction->setShortcut(
-            keys.bindings(QStringLiteral("roll.cut")).value(0));
+        m_cutAction->setShortcut(keys.bindings(QStringLiteral("roll.cut")).value(0));
         m_deleteAction = addAction(SongView::tr("Delete"));
     }
 
     void showMenuAt(QPoint globalPos, int velocity)
     {
-        m_velocityAction->setText(
-            SongView::tr("Set velocity… (%1)").arg(velocity));
+        m_velocityAction->setText(SongView::tr("Set velocity… (%1)").arg(velocity));
         popup(globalPos);
     }
 
@@ -494,39 +482,40 @@ public:
         return NoteMenuChoice::None;
     }
 
-protected:
+  protected:
     // A right-click on another note while the popup is open retargets the
     // menu in one gesture instead of spending the click on dismissal.
     void mousePressEvent(QMouseEvent *event) override
     {
-        if (event->button() == Qt::RightButton
-            && !QRectF(rect()).contains(event->position())
-            && m_onOutsideRightClick(event->globalPosition())) {
+        if (event->button() == Qt::RightButton && !QRectF(rect()).contains(event->position()) &&
+            m_onOutsideRightClick(event->globalPosition())) {
             event->accept();
             return;
         }
         QMenu::mousePressEvent(event);
     }
 
-private:
+  private:
     std::function<bool(QPointF)> m_onOutsideRightClick;
     QAction *m_velocityAction = nullptr;
     QAction *m_copyAction = nullptr;
     QAction *m_cutAction = nullptr;
     QAction *m_deleteAction = nullptr;
 };
-QFont timeRulerFont(const QFont &source) {
-  auto font = typography::bodyMono(typography::caption(source));
-  font.setPixelSize(std::max(1, font.pixelSize() - lyt::singlePixel()));
-  font.setLetterSpacing(QFont::AbsoluteSpacing, -0.5);
-  return font;
+QFont timeRulerFont(const QFont &source)
+{
+    auto font = typography::bodyMono(typography::caption(source));
+    font.setPixelSize(std::max(1, font.pixelSize() - lyt::singlePixel()));
+    font.setLetterSpacing(QFont::AbsoluteSpacing, -0.5);
+    return font;
 }
 // "bar.beat" labels sit one size below the bar numbers so the two label
 // tiers read apart even where the deemphasized color alone wouldn't.
-QFont beatRulerFont(const QFont &source) {
-  auto font = timeRulerFont(source);
-  font.setPixelSize(std::max(1, font.pixelSize() - lyt::singlePixel()));
-  return font;
+QFont beatRulerFont(const QFont &source)
+{
+    auto font = timeRulerFont(source);
+    font.setPixelSize(std::max(1, font.pixelSize() - lyt::singlePixel()));
+    return font;
 }
 
 } // namespace
@@ -535,21 +524,19 @@ QFont beatRulerFont(const QFont &source) {
 
 class TimeRuler : public QWidget
 {
-public:
-    explicit TimeRuler(SongView *sv)
-        : QWidget(sv), m_sv(sv)
+  public:
+    explicit TimeRuler(SongView *sv) : QWidget(sv), m_sv(sv)
     {
-    // The ruler has a bold marker row and a regular bar-number/tick row.
-    // Each row reserves its face's occupied glyph height plus semantic
-    // padding, so a narrow ruler never clips text or relies on pixels.
-    const auto markerRowPadding = lyt::singlePixel();
-    const auto tickRowPadding = lyt::singlePixel();
-    const auto rulerFont = timeRulerFont(font());
-    const QFontMetrics markerMetrics(typography::bold(rulerFont));
-    const QFontMetrics tickMetrics(rulerFont);
-    m_markerHeight = markerMetrics.height() + markerRowPadding;
-    const auto rulerHeight =
-        m_markerHeight + tickMetrics.height() + tickRowPadding;
+        // The ruler has a bold marker row and a regular bar-number/tick row.
+        // Each row reserves its face's occupied glyph height plus semantic
+        // padding, so a narrow ruler never clips text or relies on pixels.
+        const auto markerRowPadding = lyt::singlePixel();
+        const auto tickRowPadding = lyt::singlePixel();
+        const auto rulerFont = timeRulerFont(font());
+        const QFontMetrics markerMetrics(typography::bold(rulerFont));
+        const QFontMetrics tickMetrics(rulerFont);
+        m_markerHeight = markerMetrics.height() + markerRowPadding;
+        const auto rulerHeight = m_markerHeight + tickMetrics.height() + tickRowPadding;
         setFixedHeight(rulerHeight);
         setMouseTracking(true);
 
@@ -595,8 +582,7 @@ public:
     void syncGridControls()
     {
         m_divCombo->setCurrentIndex(std::max(0, m_divCombo->findData(m_sv->gridMinDenom())));
-        m_feelCombo->setCurrentIndex(m_sv->gridFeel() == SongView::GridFeel::Triplet ? 1
-                                                                                     : 0);
+        m_feelCombo->setCurrentIndex(m_sv->gridFeel() == SongView::GridFeel::Triplet ? 1 : 0);
     }
 
     // A mouse gesture is live (marker/time-sig/selection-edge drag, cursor
@@ -604,27 +590,27 @@ public:
     // one runs so the view doesn't jump under the cursor.
     bool gestureActive() const
     {
-        return m_dragMarker >= 0 || m_dragTimeSig || m_placingCursor
-            || m_rightPress || m_dragSelEdge >= 0;
+        return m_dragMarker >= 0 || m_dragTimeSig || m_placingCursor || m_rightPress ||
+               m_dragSelEdge >= 0;
     }
 
-protected:
+  protected:
     void paintEvent(QPaintEvent *) override
     {
         QPainter p(this);
         const qreal dpr = p.device()->devicePixelRatioF();
-    const QFont rulerFont = timeRulerFont(p.font());
-    const QFont beatFont = beatRulerFont(p.font());
-    p.setFont(rulerFont);
-    const QColor chrome =
-        themes::color(themes::Role::song_view_timeline_chrome_background);
-    p.fillRect(rect(), chrome);
+        const QFont rulerFont = timeRulerFont(p.font());
+        const QFont beatFont = beatRulerFont(p.font());
+        p.setFont(rulerFont);
+        const QColor chrome = themes::color(themes::Role::song_view_timeline_chrome_background);
+        p.fillRect(rect(), chrome);
         p.setPen(QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
         p.drawLine(0, rect().bottom(), width(), rect().bottom());
 
         if (!m_sv->timeline()) {
             p.setPen(palette().color(QPalette::PlaceholderText));
-            p.drawText(rect().adjusted(kGutterW + lyt::space(Space::Two), 0, 0, 0), Qt::AlignVCenter,
+            p.drawText(rect().adjusted(kGutterW + lyt::space(Space::Two), 0, 0, 0),
+                       Qt::AlignVCenter,
                        SongView::tr("No song loaded — double-click a song in the browser."));
             return;
         }
@@ -637,45 +623,38 @@ protected:
 
         const qreal physicalPixel = logicalPhysicalPixel(dpr);
         const qreal roundingMargin = physicalPixel / 2.0;
-        const double t0 = std::max(
-            0.0,
-            m_sv->tickAtContentX(area.left() - kGutterW - roundingMargin));
-        const double t1 =
-            m_sv->tickAtContentX(area.x() + area.width() - physicalPixel
-                                 - kGutterW + roundingMargin)
-            + 1;
+        const double t0 =
+            std::max(0.0, m_sv->tickAtContentX(area.left() - kGutterW - roundingMargin));
+        const double t1 = m_sv->tickAtContentX(area.x() + area.width() - physicalPixel - kGutterW +
+                                               roundingMargin) +
+                          1;
         const auto indicatorColor = gridLineColor();
-    // Beat labels recede a step past secondary text: blended a quarter of
-    // the way into the ruler chrome so they read as texture next to the
-    // bar numbers, in every theme.
-    const QColor secondary =
-        themes::color(themes::Role::song_view_secondary_text);
-    const auto recede = [&](int fg, int bg) {
-      return (191 * fg + 64 * bg + 127) / 255;
-    };
-    const QColor textColor(recede(secondary.red(), chrome.red()),
-                           recede(secondary.green(), chrome.green()),
-                           recede(secondary.blue(), chrome.blue()));
+        // Beat labels recede a step past secondary text: blended a quarter of
+        // the way into the ruler chrome so they read as texture next to the
+        // bar numbers, in every theme.
+        const QColor secondary = themes::color(themes::Role::song_view_secondary_text);
+        const auto recede = [&](int fg, int bg) { return (191 * fg + 64 * bg + 127) / 255; };
+        const QColor textColor(recede(secondary.red(), chrome.red()),
+                               recede(secondary.green(), chrome.green()),
+                               recede(secondary.blue(), chrome.blue()));
 
-    const QRect ticks = tickRow();
-    const int tickBottom = ticks.bottom();
-    const QFontMetrics tickMetrics(p.font());
-    const QFontMetrics beatMetrics(beatFont);
-    const int tickBaseline = ticks.top() + tickMetrics.ascent();
-    const auto barCapWidth = lyt::space(Space::Half);
-    const auto indicatorRise = lyt::space(Space::Half);
-    const auto labelGap = lyt::singlePixel();
-    const auto beatDetailReserve = lyt::space(Space::Two);
-    const bool drawBeatTicks = m_sv->pxPerBeat() >= 10.0;
+        const QRect ticks = tickRow();
+        const int tickBottom = ticks.bottom();
+        const QFontMetrics tickMetrics(p.font());
+        const QFontMetrics beatMetrics(beatFont);
+        const int tickBaseline = ticks.top() + tickMetrics.ascent();
+        const auto barCapWidth = lyt::space(Space::Half);
+        const auto indicatorRise = lyt::space(Space::Half);
+        const auto labelGap = lyt::singlePixel();
+        const auto beatDetailReserve = lyt::space(Space::Two);
+        const bool drawBeatTicks = m_sv->pxPerBeat() >= 10.0;
 
         // Short sub-beat ticks at the snap grid, mirroring the roll's grid.
         p.setPen(indicatorColor);
         forEachSubGridLine(m_sv, t0, t1, [&](uint64_t tick, int level) {
             const qreal x = m_sv->displayX(double(tick), kGutterW, dpr);
-      const int tickHeight =
-          level == 1 ? lyt::space(Space::Half) : lyt::singlePixel();
-            p.drawLine(QLineF(x, tickBottom - tickHeight + lyt::singlePixel(), x,
-                              tickBottom));
+            const int tickHeight = level == 1 ? lyt::space(Space::Half) : lyt::singlePixel();
+            p.drawLine(QLineF(x, tickBottom - tickHeight + lyt::singlePixel(), x, tickBottom));
         });
 
         // Bar numbers are the primary labels; the in-between beats only earn
@@ -683,126 +662,108 @@ protected:
         // ruler stays sparse until the zoom genuinely has room for detail.
         // One decision per paint, sized to the widest label in view, so a
         // ruler never shows some beat labels while suppressing others.
-        const QColor barTextColor =
-            themes::color(themes::Role::song_view_primary_text);
+        const QColor barTextColor = themes::color(themes::Role::song_view_primary_text);
         const double beatLabelZoomFactor = 3.0;
         int widestDetailWidth = 0;
         m_sv->forEachGridLine(
-            uint64_t(t0), uint64_t(t1),
-            [&](uint64_t, bool, int barNumber, int beatNumber) {
+            uint64_t(t0), uint64_t(t1), [&](uint64_t, bool, int barNumber, int beatNumber) {
                 widestDetailWidth = std::max(
-                    widestDetailWidth,
-                    beatMetrics.horizontalAdvance(
-                        QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber)));
+                    widestDetailWidth, beatMetrics.horizontalAdvance(
+                                           QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber)));
             });
         const bool showBeatLabels =
-            m_sv->pxPerBeat() >=
-            beatLabelZoomFactor * (barCapWidth + 2 * labelGap +
-                                   beatDetailReserve + widestDetailWidth);
+            m_sv->pxPerBeat() >= beatLabelZoomFactor * (barCapWidth + 2 * labelGap +
+                                                        beatDetailReserve + widestDetailWidth);
         qreal lastLabelRight = area.left() - labelGap;
-        m_sv->forEachGridLine(uint64_t(t0), uint64_t(t1),
-                              [&](uint64_t tick, bool isBar, int barNumber, int beatNumber) {
-                                  const qreal x =
-                                      m_sv->displayX(double(tick), kGutterW, dpr);
-          const auto detailedLabel =
-              QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber);
-          if (!isBar && !showBeatLabels) {
-            if (drawBeatTicks) {
-                                  p.setPen(indicatorColor);
-                                  p.drawLine(QLineF(
-                                      x, ticks.center().y() - indicatorRise, x,
-                                      tickBottom));
-            }
-            return;
-          }
-          const auto label =
-              isBar ? QString::number(barNumber) : detailedLabel;
-          const int labelWidth =
-              (isBar ? tickMetrics : beatMetrics).horizontalAdvance(label);
-          const qreal labelX = x + barCapWidth;
-          if (labelX < lastLabelRight + labelGap) {
-            if (!isBar && drawBeatTicks) {
-              p.setPen(indicatorColor);
-              p.drawLine(QLineF(x, ticks.center().y() - indicatorRise, x,
-                                tickBottom));
-                                  }
-            return;
-          }
-          p.setPen(indicatorColor);
-          if (isBar) {
-            const int indicatorTop = ticks.top() - indicatorRise;
-            p.drawLine(QLineF(x, indicatorTop, x, tickBottom));
-            p.drawLine(QLineF(x, indicatorTop, x + barCapWidth, indicatorTop));
-          } else {
-            p.drawLine(QLineF(x, ticks.center().y() - indicatorRise, x,
-                              tickBottom));
-          }
-          p.setPen(isBar ? barTextColor : textColor);
-          p.setFont(isBar ? rulerFont : beatFont);
-          p.drawText(QPointF(labelX, tickBaseline), label);
-          p.setFont(rulerFont);
-          lastLabelRight = labelX + labelWidth;
-                              });
+        m_sv->forEachGridLine(
+            uint64_t(t0), uint64_t(t1),
+            [&](uint64_t tick, bool isBar, int barNumber, int beatNumber) {
+                const qreal x = m_sv->displayX(double(tick), kGutterW, dpr);
+                const auto detailedLabel = QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber);
+                if (!isBar && !showBeatLabels) {
+                    if (drawBeatTicks) {
+                        p.setPen(indicatorColor);
+                        p.drawLine(QLineF(x, ticks.center().y() - indicatorRise, x, tickBottom));
+                    }
+                    return;
+                }
+                const auto label = isBar ? QString::number(barNumber) : detailedLabel;
+                const int labelWidth = (isBar ? tickMetrics : beatMetrics).horizontalAdvance(label);
+                const qreal labelX = x + barCapWidth;
+                if (labelX < lastLabelRight + labelGap) {
+                    if (!isBar && drawBeatTicks) {
+                        p.setPen(indicatorColor);
+                        p.drawLine(QLineF(x, ticks.center().y() - indicatorRise, x, tickBottom));
+                    }
+                    return;
+                }
+                p.setPen(indicatorColor);
+                if (isBar) {
+                    const int indicatorTop = ticks.top() - indicatorRise;
+                    p.drawLine(QLineF(x, indicatorTop, x, tickBottom));
+                    p.drawLine(QLineF(x, indicatorTop, x + barCapWidth, indicatorTop));
+                } else {
+                    p.drawLine(QLineF(x, ticks.center().y() - indicatorRise, x, tickBottom));
+                }
+                p.setPen(isBar ? barTextColor : textColor);
+                p.setFont(isBar ? rulerFont : beatFont);
+                p.drawText(QPointF(labelX, tickBaseline), label);
+                p.setFont(rulerFont);
+                lastLabelRight = labelX + labelWidth;
+            });
 
         const MidiTimeline *tl = m_sv->timeline();
-    p.setFont(typography::bold(rulerFont));
+        p.setFont(typography::bold(rulerFont));
 
-    const QRect markers = markerRow();
-    const int markerBaseline = textBaseline(markers,
-        p.fontMetrics());
+        const QRect markers = markerRow();
+        const int markerBaseline = textBaseline(markers, p.fontMetrics());
 
         // Time-signature chips in the marker row; a placeholder 4/4 shows
         // at tick 0 while no 0x58 meta governs the opening bars.
         for (const SigChip &chip : sigChips()) {
             if (chip.x > area.right() || chip.labelX + chip.labelW < area.left())
                 continue;
-            p.setPen(palette().color(chip.implicit ? QPalette::PlaceholderText
-                                                   : QPalette::WindowText));
+            p.setPen(
+                palette().color(chip.implicit ? QPalette::PlaceholderText : QPalette::WindowText));
             p.drawLine(QLineF(chip.x, markers.top(), chip.x, markers.bottom()));
             if (chip.labelW > 0)
                 p.drawText(QPointF(chip.labelX, markerBaseline),
-                   timeSigLabel(chip.numerator, chip.denomPow2));
+                           timeSigLabel(chip.numerator, chip.denomPow2));
         }
 
         // Loop bracket glyphs above the band edges.
         p.setPen(loopEdge());
         if (tl->loopStartTick != UINT64_MAX) {
             const qreal x =
-                m_sv->displayX(double(tl->loopStartTick), kGutterW, dpr)
-                + lyt::space(Space::Half);
+                m_sv->displayX(double(tl->loopStartTick), kGutterW, dpr) + lyt::space(Space::Half);
             p.drawText(QPointF(x, markerBaseline), QStringLiteral("["));
         }
         if (tl->loopEndTick != UINT64_MAX) {
             const qreal x =
-                m_sv->displayX(double(tl->loopEndTick), kGutterW, dpr)
-                + lyt::space(Space::Half);
+                m_sv->displayX(double(tl->loopEndTick), kGutterW, dpr) + lyt::space(Space::Half);
             p.drawText(QPointF(x, markerBaseline), QStringLiteral("]"));
         }
 
         // Marker / time-signature drag preview.
-    const auto markerStroke = lyt::space(Space::Half);
+        const auto markerStroke = lyt::space(Space::Half);
         if (m_dragMarker >= 0 || m_dragTimeSig) {
             const qreal x = m_sv->displayX(double(m_dragTick), kGutterW, dpr);
-            p.setPen(QPen(m_dragMarker >= 0 ? loopEdge()
-                                            : palette().color(QPalette::WindowText),
-                    markerStroke));
+            p.setPen(QPen(m_dragMarker >= 0 ? loopEdge() : palette().color(QPalette::WindowText),
+                          markerStroke));
             p.drawLine(QLineF(x, 0, x, height()));
         }
 
         // Time-selection edge handles (the 1px band edges come from
-    // drawOverlays); the marker row is their grab zone, while the tick
-    // row stays scrub territory.
+        // drawOverlays); the marker row is their grab zone, while the tick
+        // row stays scrub territory.
         const SongView::TimeSelection &tsel = m_sv->timeSelection();
         if (tsel.active()) {
             p.setPen(QPen(themes::color(themes::Role::song_view_selection_edge), markerStroke));
-            const qreal sx0 =
-                m_sv->displayX(double(tsel.startTick), kGutterW, dpr);
-            const qreal sx1 =
-                m_sv->displayX(double(tsel.endTick), kGutterW, dpr);
+            const qreal sx0 = m_sv->displayX(double(tsel.startTick), kGutterW, dpr);
+            const qreal sx1 = m_sv->displayX(double(tsel.endTick), kGutterW, dpr);
             p.drawLine(QLineF(sx0, markers.top(), sx0, markers.bottom()));
             p.drawLine(QLineF(sx1, markers.top(), sx1, markers.bottom()));
         }
-
     }
 
     void wheelEvent(QWheelEvent *event) override
@@ -829,8 +790,8 @@ protected:
         const MidiTimeline *tl = m_sv->timeline();
         if (!tl || event->position().x() < kGutterW)
             return;
-        const uint64_t clickTick = m_sv->snapTick(
-            m_sv->tickAtContentX(event->position().x() - kGutterW));
+        const uint64_t clickTick =
+            m_sv->snapTick(m_sv->tickAtContentX(event->position().x() - kGutterW));
 
         if (event->button() == Qt::RightButton) {
             // Deferred: a drag from here sweeps out a time selection;
@@ -854,9 +815,8 @@ protected:
         uint64_t sigTick;
         int sigNum, sigDen;
         bool sigImplicit;
-        if (doc && hitTimeSigChip(event->position(), &sigTick, &sigNum, &sigDen,
-                                  &sigImplicit)
-            && !sigImplicit) {
+        if (doc && hitTimeSigChip(event->position(), &sigTick, &sigNum, &sigDen, &sigImplicit) &&
+            !sigImplicit) {
             // Drag moves the signature; starting at its own tick keeps a
             // plain click (and the first half of a double-click) a no-op.
             m_dragTimeSig = true;
@@ -877,14 +837,13 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override
     {
         const auto dragTick = [this, event] {
-            return m_sv->snapTick(m_sv->tickAtContentX(
-                std::max(qreal(kGutterW), event->position().x()) - kGutterW));
+            return m_sv->snapTick(
+                m_sv->tickAtContentX(std::max(qreal(kGutterW), event->position().x()) - kGutterW));
         };
         if (m_rightPress) {
-            if (!m_selSweep
-                && (event->position().toPoint() - m_rightPressPos.toPoint())
-                       .manhattanLength()
-                       >= QApplication::startDragDistance())
+            if (!m_selSweep &&
+                (event->position().toPoint() - m_rightPressPos.toPoint()).manhattanLength() >=
+                    QApplication::startDragDistance())
                 m_selSweep = true;
             if (m_selSweep) {
                 const uint64_t tick = dragTick();
@@ -923,13 +882,12 @@ protected:
         uint64_t sigTick;
         int sigNum, sigDen;
         bool sigImplicit;
-        setCursor(m_sv->document()
-                          && (hitMarker(event->position()) >= 0
-                              || hitSelEdge(event->position()) >= 0
-                              || hitTimeSigChip(event->position(), &sigTick,
-                                                &sigNum, &sigDen, &sigImplicit))
-                      ? Qt::SplitHCursor
-                      : Qt::ArrowCursor);
+        setCursor(
+            m_sv->document() &&
+                    (hitMarker(event->position()) >= 0 || hitSelEdge(event->position()) >= 0 ||
+                     hitTimeSigChip(event->position(), &sigTick, &sigNum, &sigDen, &sigImplicit))
+                ? Qt::SplitHCursor
+                : Qt::ArrowCursor);
     }
 
     void mouseReleaseEvent(QMouseEvent *event) override
@@ -984,9 +942,8 @@ protected:
         uint64_t sigTick;
         int numerator, denomPow2;
         bool implicit;
-        if (event->button() != Qt::LeftButton || !doc
-            || !hitTimeSigChip(event->position(), &sigTick, &numerator,
-                               &denomPow2, &implicit))
+        if (event->button() != Qt::LeftButton || !doc ||
+            !hitTimeSigChip(event->position(), &sigTick, &numerator, &denomPow2, &implicit))
             return;
         // The first press of the double-click armed a chip drag or cursor
         // placement; cancel it before the modal editor swallows the release.
@@ -997,20 +954,19 @@ protected:
         update();
     }
 
-private:
-  QRect markerRow() const { return QRect(0, 0, width(), m_markerHeight); }
+  private:
+    QRect markerRow() const { return QRect(0, 0, width(), m_markerHeight); }
 
-  QRect tickRow() const {
-    return QRect(0, m_markerHeight, width(), height() - m_markerHeight);
-  }
+    QRect tickRow() const { return QRect(0, m_markerHeight, width(), height() - m_markerHeight); }
 
-  int textBaseline(const QRect &row, const QFontMetrics &metrics) const {
-    return row.top() + (row.height() - metrics.height()) / 2 + metrics.ascent();
-  }
+    int textBaseline(const QRect &row, const QFontMetrics &metrics) const
+    {
+        return row.top() + (row.height() - metrics.height()) / 2 + metrics.ascent();
+    }
 
-  // Loop-marker and selection-edge grab zones live in the marker row —
-  // where the bracket glyphs and edge handles are drawn — so the tick row
-  // always scrubs the edit cursor even directly on a marker line.
+    // Loop-marker and selection-edge grab zones live in the marker row —
+    // where the bracket glyphs and edge handles are drawn — so the tick row
+    // always scrubs the edit cursor even directly on a marker line.
 
     // 0 = start marker, 1 = end marker, -1 = neither near pos.
     int hitMarker(QPointF pos) const
@@ -1018,17 +974,15 @@ private:
         const MidiTimeline *tl = m_sv->timeline();
         if (!tl || !QRectF(markerRow()).contains(pos))
             return -1;
-    const auto markerHitHalfWidth = lyt::space(Space::Two);
+        const auto markerHitHalfWidth = lyt::space(Space::Two);
         const qreal dpr = devicePixelRatioF();
-        if (tl->loopStartTick != UINT64_MAX
-            && std::abs(m_sv->displayX(double(tl->loopStartTick), kGutterW, dpr)
-                        - pos.x())
-                   <= markerHitHalfWidth)
+        if (tl->loopStartTick != UINT64_MAX &&
+            std::abs(m_sv->displayX(double(tl->loopStartTick), kGutterW, dpr) - pos.x()) <=
+                markerHitHalfWidth)
             return 0;
-        if (tl->loopEndTick != UINT64_MAX
-            && std::abs(m_sv->displayX(double(tl->loopEndTick), kGutterW, dpr)
-                        - pos.x())
-                   <= markerHitHalfWidth)
+        if (tl->loopEndTick != UINT64_MAX &&
+            std::abs(m_sv->displayX(double(tl->loopEndTick), kGutterW, dpr) - pos.x()) <=
+                markerHitHalfWidth)
             return 1;
         return -1;
     }
@@ -1039,9 +993,9 @@ private:
         int numerator;
         int denomPow2;
         bool implicit; // no 0x58 meta behind it (editing one creates the event)
-        qreal x;      // stem position (widget coords)
-        qreal labelX; // label left edge, nudged right past a loop bracket
-        qreal labelW; // 0: label hidden behind the next chip (stem only)
+        qreal x;       // stem position (widget coords)
+        qreal labelX;  // label left edge, nudged right past a loop bracket
+        qreal labelW;  // 0: label hidden behind the next chip (stem only)
     };
 
     // Chip layout shared by paint and hit-testing: shadowed same-tick
@@ -1055,11 +1009,10 @@ private:
         if (!tl)
             return chips;
         const qreal dpr = devicePixelRatioF();
-    const auto boldFont = typography::bold( font());
+        const auto boldFont = typography::bold(font());
         const QFontMetrics fm(boldFont);
-    const auto labelInset = lyt::space(Space::Half);
-        const auto add = [&](uint64_t tick, int numerator, int denomPow2,
-                             bool implicit) {
+        const auto labelInset = lyt::space(Space::Half);
+        const auto add = [&](uint64_t tick, int numerator, int denomPow2, bool implicit) {
             const qreal x = m_sv->displayX(double(tick), kGutterW, dpr);
             chips.push_back({tick, numerator, denomPow2, implicit, x, x + labelInset,
                              qreal(fm.horizontalAdvance(timeSigLabel(numerator, denomPow2)))});
@@ -1067,23 +1020,21 @@ private:
         if (tl->timeSigs.empty() || tl->timeSigs.front().tick != 0)
             add(0, 4, 2, true);
         for (size_t i = 0; i < tl->timeSigs.size(); i++) {
-            if (i + 1 < tl->timeSigs.size()
-                && tl->timeSigs[i + 1].tick == tl->timeSigs[i].tick)
+            if (i + 1 < tl->timeSigs.size() && tl->timeSigs[i + 1].tick == tl->timeSigs[i].tick)
                 continue; // shadowed duplicate: the last at a tick wins
             const TimeSigPoint &ts = tl->timeSigs[i];
             add(ts.tick, ts.numerator ? ts.numerator : 4, ts.denomPow2, false);
         }
         const uint64_t loops[2] = {tl->loopStartTick, tl->loopEndTick};
-    const qreal bracketWidth = fm.horizontalAdvance(QStringLiteral("["));
+        const qreal bracketWidth = fm.horizontalAdvance(QStringLiteral("["));
         for (SigChip &chip : chips) {
             for (uint64_t loopTick : loops) {
                 if (loopTick == UINT64_MAX)
                     continue;
                 const qreal bracketStart =
                     m_sv->displayX(double(loopTick), kGutterW, dpr) + labelInset;
-        const qreal bracketRight = bracketStart + bracketWidth;
-                if (bracketRight > chip.labelX &&
-            bracketStart < chip.labelX + chip.labelW)
+                const qreal bracketRight = bracketStart + bracketWidth;
+                if (bracketRight > chip.labelX && bracketStart < chip.labelX + chip.labelW)
                     chip.labelX = bracketRight + labelInset;
             }
         }
@@ -1096,19 +1047,19 @@ private:
 
     // Chip hit-test in the ruler's top half, including the placeholder 4/4
     // at tick 0. Fills the chip's tick and values.
-    bool hitTimeSigChip(QPointF pos, uint64_t *tick, int *numerator,
-                        int *denomPow2, bool *implicit) const
+    bool hitTimeSigChip(QPointF pos, uint64_t *tick, int *numerator, int *denomPow2,
+                        bool *implicit) const
     {
         if (!QRectF(markerRow()).contains(pos))
             return false;
         const std::vector<SigChip> chips = sigChips();
-    const auto stemHitHalfWidth = lyt::space(Space::One);
-    const auto hitFuzz = lyt::singlePixel();
+        const auto stemHitHalfWidth = lyt::space(Space::One);
+        const auto hitFuzz = lyt::singlePixel();
         // Back to front so the rightmost chip wins where chips crowd.
         for (auto it = chips.rbegin(); it != chips.rend(); ++it) {
             const bool onStem = std::abs(it->x - pos.x()) <= stemHitHalfWidth;
-            const bool onLabel = it->labelW > 0 && pos.x() >= it->labelX - hitFuzz
-                && pos.x() <= it->labelX + it->labelW + hitFuzz;
+            const bool onLabel = it->labelW > 0 && pos.x() >= it->labelX - hitFuzz &&
+                                 pos.x() <= it->labelX + it->labelW + hitFuzz;
             if (onStem || onLabel) {
                 *tick = it->tick;
                 *numerator = it->numerator;
@@ -1139,15 +1090,13 @@ private:
         const SongView::TimeSelection &sel = m_sv->timeSelection();
         if (!sel.active() || !QRectF(markerRow()).contains(pos))
             return -1;
-    const auto markerHitHalfWidth = lyt::space(Space::Two);
+        const auto markerHitHalfWidth = lyt::space(Space::Two);
         const qreal dpr = devicePixelRatioF();
-        if (std::abs(m_sv->displayX(double(sel.startTick), kGutterW, dpr)
-                     - pos.x())
-            <= markerHitHalfWidth)
+        if (std::abs(m_sv->displayX(double(sel.startTick), kGutterW, dpr) - pos.x()) <=
+            markerHitHalfWidth)
             return 0;
-        if (std::abs(m_sv->displayX(double(sel.endTick), kGutterW, dpr)
-                     - pos.x())
-            <= markerHitHalfWidth)
+        if (std::abs(m_sv->displayX(double(sel.endTick), kGutterW, dpr) - pos.x()) <=
+            markerHitHalfWidth)
             return 1;
         return -1;
     }
@@ -1162,8 +1111,7 @@ private:
         QAction *setStart = menu.addAction(SongView::tr("Set loop start here"));
         QAction *setEnd = menu.addAction(SongView::tr("Set loop end here"));
         QAction *remove = menu.addAction(SongView::tr("Remove loop markers"));
-        remove->setEnabled(tl->loopStartTick != UINT64_MAX
-                           || tl->loopEndTick != UINT64_MAX);
+        remove->setEnabled(tl->loopStartTick != UINT64_MAX || tl->loopEndTick != UINT64_MAX);
         QAction *loopFromSel = nullptr;
         QAction *removeContents = nullptr;
         QAction *clearSel = nullptr;
@@ -1171,8 +1119,7 @@ private:
         if (sel.active()) {
             menu.addSeparator();
             loopFromSel = menu.addAction(SongView::tr("Set loop to selection"));
-            removeContents =
-                menu.addAction(SongView::tr("Remove selection contents (shift left)"));
+            removeContents = menu.addAction(SongView::tr("Remove selection contents (shift left)"));
             clearSel = menu.addAction(SongView::tr("Clear time selection"));
         }
         menu.addSeparator();
@@ -1183,9 +1130,8 @@ private:
             hitTimeSigChip(m_rightPressPos, &sigTick, &sigNum, &sigDen, &sigImplicit);
         if (!onChip)
             sigAtTick(clickTick, &sigNum, &sigDen);
-        QAction *editSig =
-            menu.addAction(onChip ? SongView::tr("Edit time signature…")
-                                  : SongView::tr("Set time signature here…"));
+        QAction *editSig = menu.addAction(onChip ? SongView::tr("Edit time signature…")
+                                                 : SongView::tr("Set time signature here…"));
         QAction *removeSig = menu.addAction(SongView::tr("Remove time signature"));
         removeSig->setEnabled(onChip && !sigImplicit);
         QAction *chosen = menu.exec(globalPos);
@@ -1222,11 +1168,11 @@ private:
     bool m_dragTimeSig = false;     // chip drag is live; commits moveTimeSig
     uint64_t m_dragTimeSigFrom = 0; // the dragged signature's original tick
     bool m_placingCursor = false;
-    bool m_rightPress = false;  // right button held; sweep vs. menu undecided
-    bool m_selSweep = false;    // right-drag time-selection sweep is live
+    bool m_rightPress = false; // right button held; sweep vs. menu undecided
+    bool m_selSweep = false;   // right-drag time-selection sweep is live
     QPointF m_rightPressPos;
-    uint64_t m_selAnchor = 0;   // snapped tick of the right press
-    int m_dragSelEdge = -1;     // selection edge being left-dragged (0/1)
+    uint64_t m_selAnchor = 0;         // snapped tick of the right press
+    int m_dragSelEdge = -1;           // selection edge being left-dragged (0/1)
     QComboBox *m_divCombo = nullptr;  // minimum snap subdivision (gutter)
     QComboBox *m_feelCombo = nullptr; // straight / triplet
 };
@@ -1250,11 +1196,9 @@ struct MidiCursors {
 // default elsewhere (e.g. Windows multiplies by the screen scale itself).
 QCursor centeredCursor(const QPixmap &pm)
 {
-    const qreal dpr = QGuiApplication::platformName() == QLatin1String("xcb")
-                          ? 1.0
-                          : pm.devicePixelRatio();
-    return QCursor(pm, qRound(pm.width() / (2.0 * dpr)),
-                   qRound(pm.height() / (2.0 * dpr)));
+    const qreal dpr =
+        QGuiApplication::platformName() == QLatin1String("xcb") ? 1.0 : pm.devicePixelRatio();
+    return QCursor(pm, qRound(pm.width() / (2.0 * dpr)), qRound(pm.height() / (2.0 * dpr)));
 }
 
 MidiCursors loadMidiCursors(qreal devicePixelRatio)
@@ -1262,16 +1206,13 @@ MidiCursors loadMidiCursors(qreal devicePixelRatio)
     const QSize cursorSize(24, 24);
     const QIcon leftEdge(QStringLiteral(":/cursors/left-drag.png"));
     const QIcon rightEdge(QStringLiteral(":/cursors/right-drag.png"));
-    return {devicePixelRatio,
-            centeredCursor(leftEdge.pixmap(cursorSize, devicePixelRatio)),
+    return {devicePixelRatio, centeredCursor(leftEdge.pixmap(cursorSize, devicePixelRatio)),
             centeredCursor(rightEdge.pixmap(cursorSize, devicePixelRatio))};
 }
 
-QRectF noteFrame(const QPainter &painter, const QRectF &noteRect,
-                 int insetPixels)
+QRectF noteFrame(const QPainter &painter, const QRectF &noteRect, int insetPixels)
 {
-    const qreal physicalPixel =
-        logicalPhysicalPixel(painter.device()->devicePixelRatioF());
+    const qreal physicalPixel = logicalPhysicalPixel(painter.device()->devicePixelRatioF());
     const qreal insetDips = insetPixels * physicalPixel;
     return noteRect.adjusted(0, 0, -physicalPixel, -physicalPixel)
         .adjusted(insetDips, insetDips, -insetDips, -insetDips);
@@ -1284,22 +1225,19 @@ QRectF noteFrame(const QPainter &painter, const QRectF &noteRect,
 // zoom carries the same frame weight — a narrow note lets its side strips
 // overlap into a solid sliver rather than shedding the frame its wider
 // neighbors keep.
-int fittedFrameThickness(const QPainter &painter, const QRectF &rect,
-                         int requestedPixels, int insetPixels)
+int fittedFrameThickness(const QPainter &painter, const QRectF &rect, int requestedPixels,
+                         int insetPixels)
 {
     const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
     const int heightPixels = qRound(rect.height() * devicePixelRatio);
-    return std::clamp((heightPixels - 1) / 2 - insetPixels, 0,
-                      requestedPixels);
+    return std::clamp((heightPixels - 1) / 2 - insetPixels, 0, requestedPixels);
 }
 
 // Returns the thickness actually painted (0 = nothing fit).
-int drawRectFrame(QPainter &painter, const QRectF &rect,
-                  const QColor &color, int thicknessPixels,
+int drawRectFrame(QPainter &painter, const QRectF &rect, const QColor &color, int thicknessPixels,
                   int insetPixels = 0)
 {
-    thicknessPixels =
-        fittedFrameThickness(painter, rect, thicknessPixels, insetPixels);
+    thicknessPixels = fittedFrameThickness(painter, rect, thicknessPixels, insetPixels);
     if (thicknessPixels <= 0)
         return 0;
 
@@ -1310,40 +1248,28 @@ int drawRectFrame(QPainter &painter, const QRectF &rect,
     const qreal physicalPixel = logicalPhysicalPixel(devicePixelRatio);
     const qreal insetDips = insetPixels * physicalPixel;
     const qreal thicknessDips = thicknessPixels * physicalPixel;
-    const QRectF frame =
-        rect.adjusted(insetDips, insetDips, -insetDips, -insetDips);
+    const QRectF frame = rect.adjusted(insetDips, insetDips, -insetDips, -insetDips);
+    painter.fillRect(QRectF(frame.left(), frame.top(), frame.width(), thicknessDips), color);
     painter.fillRect(
-        QRectF(frame.left(), frame.top(), frame.width(), thicknessDips),
-        color);
-    painter.fillRect(
-        QRectF(frame.left(), frame.bottom() - thicknessDips,
-               frame.width(), thicknessDips),
-        color);
-    const qreal sideHeight =
-        std::max(0.0, frame.height() - 2 * thicknessDips);
-    painter.fillRect(
-        QRectF(frame.left(), frame.top() + thicknessDips, thicknessDips,
-               sideHeight),
-        color);
-    painter.fillRect(
-        QRectF(frame.right() - thicknessDips,
-               frame.top() + thicknessDips, thicknessDips, sideHeight),
-        color);
+        QRectF(frame.left(), frame.bottom() - thicknessDips, frame.width(), thicknessDips), color);
+    const qreal sideHeight = std::max(0.0, frame.height() - 2 * thicknessDips);
+    painter.fillRect(QRectF(frame.left(), frame.top() + thicknessDips, thicknessDips, sideHeight),
+                     color);
+    painter.fillRect(QRectF(frame.right() - thicknessDips, frame.top() + thicknessDips,
+                            thicknessDips, sideHeight),
+                     color);
     return thicknessPixels;
 }
 
-void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox,
-                       bool unterminated, int insetPixels = 0)
+void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox, bool unterminated,
+                       int insetPixels = 0)
 {
-    const int borderPixels = songview::noteBorderPixels(
-        painter.device()->devicePixelRatioF());
+    const int borderPixels = songview::noteBorderPixels(painter.device()->devicePixelRatioF());
     if (!unterminated) {
-        drawRectFrame(painter, noteBox, Qt::black, borderPixels,
-                      insetPixels);
+        drawRectFrame(painter, noteBox, Qt::black, borderPixels, insetPixels);
         return;
     }
-    const int thickness =
-        fittedFrameThickness(painter, noteBox, borderPixels, insetPixels);
+    const int thickness = fittedFrameThickness(painter, noteBox, borderPixels, insetPixels);
     if (thickness <= 0)
         return;
 
@@ -1365,7 +1291,7 @@ void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox,
 
 class PianoRoll : public TimelineSurface
 {
-public:
+  public:
     explicit PianoRoll(SongView *sv)
         : TimelineSurface(sv)
         , m_sv(sv)
@@ -1377,8 +1303,7 @@ public:
         setMouseTracking(true);
         setFocusPolicy(Qt::ClickFocus);
         m_noteMenu = new NoteContextMenu(
-            this,
-            [this](QPointF globalPos) { return moveNoteMenu(globalPos); });
+            this, [this](QPointF globalPos) { return moveNoteMenu(globalPos); });
         connect(m_noteMenu, &QMenu::triggered, this, [this](QAction *action) {
             handleNoteMenuChoice(m_noteMenu->handleAction(action));
         });
@@ -1390,11 +1315,10 @@ public:
     // under the cursor.
     bool gestureActive() const
     {
-        return m_panning || m_drag != Drag::None || m_leftPress || m_rightPress
-            || m_kbdKey >= 0;
+        return m_panning || m_drag != Drag::None || m_leftPress || m_rightPress || m_kbdKey >= 0;
     }
 
-protected:
+  protected:
     void paintContent(QPainter &p) override
     {
         p.fillRect(rect(), themes::color(themes::Role::song_view_piano_roll_background));
@@ -1413,8 +1337,7 @@ protected:
         // keep the stronger octave delineator, on the same snapped edge as
         // the keyboard column's separators.
         const QColor accidentalRow = pianoRollAccidentalLaneColor();
-        const QColor octaveLine =
-            themes::color(themes::Role::song_view_piano_keyboard_separator);
+        const QColor octaveLine = themes::color(themes::Role::song_view_piano_keyboard_separator);
         const QPen keyLinePen(gridLineColor(50), 0);
         const QPen octavePen(octaveLine, 0);
         for (int key = 0; key < 128; key++) {
@@ -1424,8 +1347,7 @@ protected:
             if (isBlackKey(key))
                 p.fillRect(row, accidentalRow);
             p.setPen(key % 12 == 0 ? octavePen : keyLinePen);
-            p.drawLine(QLineF(grid.left(), row.bottom(), grid.right(),
-                              row.bottom()));
+            p.drawLine(QLineF(grid.left(), row.bottom(), grid.right(), row.bottom()));
         }
 
         drawGrid(p, m_sv, grid, kKeyboardW);
@@ -1502,7 +1424,7 @@ protected:
         }
 
         SongDocument *doc = m_sv->document();
-                const ViewNote *hit = doc ? hitNote(event->position()) : nullptr;
+        const ViewNote *hit = doc ? hitNote(event->position()) : nullptr;
 
         if (event->button() == Qt::RightButton) {
             // Deferred: a drag from here rubber-band-selects (with Shift, it
@@ -1515,8 +1437,8 @@ protected:
             m_pressPos = m_curPos = event->position();
             m_rightPress = true;
             m_rightShift = event->modifiers() & Qt::ShiftModifier;
-            m_rightAnchorTick = m_sv->snapTick(
-                m_sv->tickAtContentX(event->position().x() - kKeyboardW));
+            m_rightAnchorTick =
+                m_sv->snapTick(m_sv->tickAtContentX(event->position().x() - kKeyboardW));
             m_rightHit = hit != nullptr;
             if (hit)
                 m_rightHitId = {hit->startTick, hit->key};
@@ -1527,7 +1449,7 @@ protected:
 
         m_pressPos = m_curPos = event->position();
         m_pressTick = m_sv->tickAtContentX(event->position().x() - kKeyboardW);
-                m_pressKey = yToKey(event->position().y());
+        m_pressKey = yToKey(event->position().y());
         m_dTick = 0;
         m_dKey = 0;
         m_dDur = 0;
@@ -1542,13 +1464,12 @@ protected:
             // the click action (Ctrl's selection toggle) resolves on
             // release, a drag past the threshold in mouseMoveEvent.
             const Qt::KeyboardModifiers gestureMods =
-                keymap::Registry::instance().modifierBinding(
-                    QStringLiteral("roll.velocity_drag"));
-            const Qt::KeyboardModifiers pressMods = event->modifiers()
-                & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier
-                   | Qt::MetaModifier);
-            if (gestureMods != Qt::NoModifier && pressMods == gestureMods &&
-                !rightEdge && !leftEdge) {
+                keymap::Registry::instance().modifierBinding(QStringLiteral("roll.velocity_drag"));
+            const Qt::KeyboardModifiers pressMods =
+                event->modifiers() &
+                (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
+            if (gestureMods != Qt::NoModifier && pressMods == gestureMods && !rightEdge &&
+                !leftEdge) {
                 m_velModPress = true;
                 m_velModMods = pressMods;
                 m_velAnchor = *hit;
@@ -1562,8 +1483,7 @@ protected:
             }
             std::vector<SongView::NoteId> ids = m_sv->selection();
             const SongView::NoteId id{hit->startTick, hit->key};
-            if ((event->modifiers() & Qt::ControlModifier) &&
-                !rightEdge && !leftEdge) {
+            if ((event->modifiers() & Qt::ControlModifier) && !rightEdge && !leftEdge) {
                 const auto it = std::find(ids.begin(), ids.end(), id);
                 if (it != ids.end())
                     ids.erase(it);
@@ -1630,13 +1550,11 @@ protected:
         // deletes that note. Anywhere else a fast click-click behaves as two
         // presses — Qt replaces the second press with this event.
         SongDocument *doc = m_sv->document();
-        if (event->button() == Qt::LeftButton && doc
-            && event->position().x() >= kKeyboardW) {
+        if (event->button() == Qt::LeftButton && doc && event->position().x() >= kKeyboardW) {
             setFocus();
             if (const ViewNote *hit = hitNote(event->position())) {
                 DocNote note;
-                if (doc->findNote(m_sv->selectedTrack(), hit->startTick,
-                                  hit->key, &note)) {
+                if (doc->findNote(m_sv->selectedTrack(), hit->startTick, hit->key, &note)) {
                     doc->deleteNotes({note});
                     m_sv->clearSelection();
                 }
@@ -1656,9 +1574,7 @@ protected:
         // A velocity drag moves the cursor vertically while the note's
         // pitch stays put; the mark pins to the note so the readout
         // doesn't wander off its row.
-        setHoverKey(m_drag == Drag::Velocity
-                        ? m_velAnchor.key
-                        : yToKey(event->position().y()));
+        setHoverKey(m_drag == Drag::Velocity ? m_velAnchor.key : yToKey(event->position().y()));
         if (m_panning) {
             const QPointF d = event->globalPosition() - m_panPos;
             m_panPos = event->globalPosition();
@@ -1677,9 +1593,9 @@ protected:
             return;
         }
         m_curPos = event->position();
-        if (m_rightPress && m_drag == Drag::None
-            && (event->pos() - m_pressPos.toPoint()).manhattanLength()
-                   >= QApplication::startDragDistance()) {
+        if (m_rightPress && m_drag == Drag::None &&
+            (event->pos() - m_pressPos.toPoint()).manhattanLength() >=
+                QApplication::startDragDistance()) {
             m_drag = m_rightShift ? Drag::TimeSel : Drag::Band;
             m_bandAud.clear();
         }
@@ -1693,9 +1609,8 @@ protected:
                 m_auditioned = true;
             }
         }
-        if (m_leftPress && m_drag == Drag::None
-            && std::abs(event->position().x() - m_pressPos.x())
-                   >= lyt::space(Space::One)) {
+        if (m_leftPress && m_drag == Drag::None &&
+            std::abs(event->position().x() - m_pressPos.x()) >= lyt::space(Space::One)) {
             // The deferred empty-space press turns out to be a draw gesture.
             // Space::One of horizontal travel starts it — enough to filter
             // click jitter while staying well under the platform drag
@@ -1710,13 +1625,12 @@ protected:
             // travels vertically past the click threshold (so a jittery
             // Ctrl+click stays a selection toggle). The same event falls
             // through to the Velocity branch, which measures from the press.
-            if (std::abs(event->pos().y() - m_pressPos.toPoint().y())
-                < QApplication::startDragDistance())
+            if (std::abs(event->pos().y() - m_pressPos.toPoint().y()) <
+                QApplication::startDragDistance())
                 return;
             m_velModPress = false;
             if (!m_sv->isSelected(m_velAnchor)) {
-                const SongView::NoteId id{m_velAnchor.startTick,
-                                          m_velAnchor.key};
+                const SongView::NoteId id{m_velAnchor.startTick, m_velAnchor.key};
                 if (m_velModMods & Qt::ControlModifier) {
                     // Ctrl in the chord: like the Ctrl+edge grab, the
                     // gesture joins the note to the bulk selection built
@@ -1739,22 +1653,20 @@ protected:
             // handle along the note's velocity bar (when zoomed in enough).
             if (m_cursors.dpr != devicePixelRatioF())
                 m_cursors = loadMidiCursors(devicePixelRatioF());
-            const ViewNote *hit =
-                m_sv->document() && event->position().x() >= kKeyboardW
-                    ? hitNote(event->position())
-                    : nullptr;
+            const ViewNote *hit = m_sv->document() && event->position().x() >= kKeyboardW
+                                      ? hitNote(event->position())
+                                      : nullptr;
             // Resize edges win over both velocity-hover paths.
-            const Qt::KeyboardModifiers hoverMods = event->modifiers()
-                & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier
-                   | Qt::MetaModifier);
+            const Qt::KeyboardModifiers hoverMods =
+                event->modifiers() &
+                (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
             if (hit && nearRightEdge(*hit, event->position()))
                 setCursor(m_cursors.rightEdge);
             else if (hit && nearLeftEdge(*hit, event->position()))
                 setCursor(m_cursors.leftEdge);
-            else if (hit && hoverMods != Qt::NoModifier
-                     && hoverMods
-                         == keymap::Registry::instance().modifierBinding(
-                             QStringLiteral("roll.velocity_drag")))
+            else if (hit && hoverMods != Qt::NoModifier &&
+                     hoverMods == keymap::Registry::instance().modifierBinding(
+                                      QStringLiteral("roll.velocity_drag")))
                 setCursor(Qt::SizeVerCursor);
             else if (hit && nearVelocityHandle(*hit, event->position()))
                 setCursor(Qt::SizeVerCursor);
@@ -1763,12 +1675,9 @@ protected:
             return;
         }
 
-        const double tick =
-            m_sv->tickAtContentX(event->position().x() - kKeyboardW);
-        const int64_t grid =
-            int64_t(m_sv->snapTicksAt(uint64_t(std::max(0.0, m_pressTick))));
-        const int64_t snappedD =
-            int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
+        const double tick = m_sv->tickAtContentX(event->position().x() - kKeyboardW);
+        const int64_t grid = int64_t(m_sv->snapTicksAt(uint64_t(std::max(0.0, m_pressTick))));
+        const int64_t snappedD = int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
 
         if (m_drag == Drag::Move) {
             const int dKey = yToKey(event->position().y()) - m_pressKey;
@@ -1779,8 +1688,7 @@ protected:
                     // Audition the new pitch while dragging vertically.
                     const std::vector<DocNote> notes = resolveSelection();
                     if (!notes.empty()) {
-                        const int key =
-                            std::clamp(int(notes.front().key) + m_dKey, 0, 127);
+                        const int key = std::clamp(int(notes.front().key) + m_dKey, 0, 127);
                         auditionKey(key, notes.front().velocity);
                         m_auditioned = true;
                     }
@@ -1788,16 +1696,16 @@ protected:
                 invalidateContent();
             }
         } else if (m_drag == Drag::Resize || m_drag == Drag::ResizeLeft) {
-      // Snap the dragged edge to absolute ruler grid lines, not offsets from
-      // its original (possibly off-grid) position. Keep at least one tick.
+            // Snap the dragged edge to absolute ruler grid lines, not offsets from
+            // its original (possibly off-grid) position. Keep at least one tick.
             const double desired = double(m_gripTick) + (tick - m_pressTick);
-            const uint64_t snapped = m_drag == Drag::Resize
-                ? std::max(m_sv->snapTick(desired),
-                           m_sv->snapTickUp(double(m_gripOpposite) + 1.0))
-                : std::min(m_sv->snapTick(desired),
-                           m_sv->snapTickDown(double(m_gripOpposite) - 1.0));
+            const uint64_t snapped =
+                m_drag == Drag::Resize ? std::max(m_sv->snapTick(desired),
+                                                  m_sv->snapTickUp(double(m_gripOpposite) + 1.0))
+                                       : std::min(m_sv->snapTick(desired),
+                                                  m_sv->snapTickDown(double(m_gripOpposite) - 1.0));
             const int64_t delta =
-                std::abs(desired - double(m_gripTick)) < std::abs(desired - double( snapped))
+                std::abs(desired - double(m_gripTick)) < std::abs(desired - double(snapped))
                     ? 0
                     : int64_t(snapped) - int64_t(m_gripTick);
             int64_t &target = m_drag == Drag::Resize ? m_dDur : m_dTick;
@@ -1806,8 +1714,7 @@ protected:
                 invalidateContent();
             }
         } else if (m_drag == Drag::Velocity) {
-            const int dv =
-                m_pressPos.toPoint().y() - event->pos().y(); // up = louder
+            const int dv = m_pressPos.toPoint().y() - event->pos().y(); // up = louder
             if (dv != m_dVel) {
                 m_dVel = dv;
                 const int vel = std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127);
@@ -1835,8 +1742,7 @@ protected:
             uint64_t start = anchor;
             int64_t dur;
             if (tick >= double(anchor)) {
-                const uint64_t end =
-                    std::max(anchor + uint64_t(grid), m_sv->snapTickUp(tick));
+                const uint64_t end = std::max(anchor + uint64_t(grid), m_sv->snapTickUp(tick));
                 dur = int64_t(end - anchor);
             } else {
                 start = m_sv->snapTickDown(tick);
@@ -1949,8 +1855,8 @@ protected:
         m_drag = Drag::None;
 
         if (doc && drag == Drag::Draw) {
-            doc->addNote(m_sv->selectedTrack(), m_drawTick, uint8_t(m_drawKey),
-                         uint32_t(m_drawDur), m_lastVelocity);
+            doc->addNote(m_sv->selectedTrack(), m_drawTick, uint8_t(m_drawKey), uint32_t(m_drawDur),
+                         m_lastVelocity);
             m_sv->setSelection({{uint32_t(m_drawTick), uint8_t(m_drawKey)}});
         } else if (doc && drag == Drag::Move && (m_dTick != 0 || m_dKey != 0)) {
             const std::vector<DocNote> notes = resolveSelection();
@@ -1958,9 +1864,8 @@ protected:
             // Follow the notes with the selection.
             std::vector<SongView::NoteId> ids;
             for (const DocNote &note : notes)
-                ids.push_back(
-                    {uint32_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick)),
-                     uint8_t(std::clamp(int(note.key) + m_dKey, 0, 127))});
+                ids.push_back({uint32_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick)),
+                               uint8_t(std::clamp(int(note.key) + m_dKey, 0, 127))});
             m_sv->setSelection(std::move(ids));
         } else if (doc && drag == Drag::Resize && m_dDur != 0) {
             doc->resizeNotes(resolveSelection(), m_dDur);
@@ -1971,19 +1876,17 @@ protected:
             // it (same clamp as the document: the note-off pins the drag).
             std::vector<SongView::NoteId> ids;
             for (const DocNote &note : notes) {
-                const int64_t maxTick = note.unterminated()
-                                            ? INT64_MAX
-                                            : int64_t(note.tick + note.duration) - 1;
-                ids.push_back({uint32_t(std::clamp<int64_t>(
-                                   int64_t(note.tick) + m_dTick, 0, maxTick)),
-                               note.key});
+                const int64_t maxTick =
+                    note.unterminated() ? INT64_MAX : int64_t(note.tick + note.duration) - 1;
+                ids.push_back(
+                    {uint32_t(std::clamp<int64_t>(int64_t(note.tick) + m_dTick, 0, maxTick)),
+                     note.key});
             }
             m_sv->setSelection(std::move(ids));
         } else if (doc && drag == Drag::Velocity && m_dVel != 0) {
             doc->nudgeNotesVelocity(resolveSelection(), m_dVel);
             // Latch the dragged note's final velocity for the next draw.
-            m_lastVelocity =
-                uint8_t(std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127));
+            m_lastVelocity = uint8_t(std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127));
         }
         m_dTick = 0;
         m_dKey = 0;
@@ -2041,9 +1944,8 @@ protected:
                 return;
             }
         }
-        if (doc
-            && (keys.matches(event, QStringLiteral("roll.nudge_left"))
-                || keys.matches(event, QStringLiteral("roll.nudge_right")))) {
+        if (doc && (keys.matches(event, QStringLiteral("roll.nudge_left")) ||
+                    keys.matches(event, QStringLiteral("roll.nudge_right")))) {
             nudgeSelection(keys.matches(event, QStringLiteral("roll.nudge_right")));
             event->accept();
             return;
@@ -2075,7 +1977,7 @@ protected:
         QWidget::keyReleaseEvent(event);
     }
 
-private:
+  private:
     enum class Drag { None, Band, TimeSel, Move, Resize, ResizeLeft, Velocity, Draw };
 
     // Whether pos falls inside the active time selection's band as this
@@ -2086,10 +1988,8 @@ private:
         if (!sel.active() || !m_sv->timeSelectionCoversTrack(m_sv->selectedTrack()))
             return false;
         const qreal dpr = devicePixelRatioF();
-        const qreal startX =
-            m_sv->displayX(double(sel.startTick), kKeyboardW, dpr);
-        const qreal endX =
-            m_sv->displayX(double(sel.endTick), kKeyboardW, dpr);
+        const qreal startX = m_sv->displayX(double(sel.startTick), kKeyboardW, dpr);
+        const qreal endX = m_sv->displayX(double(sel.endTick), kKeyboardW, dpr);
         return x >= startX && x < endX;
     }
 
@@ -2101,9 +2001,8 @@ private:
         const qreal dpr = devicePixelRatioF();
         const qreal keyHeight = m_sv->keyHeight();
         const qreal scrollY = m_sv->scrollY();
-        if (!m_rowEdgesValid || m_rowEdgesDpr != dpr
-            || m_rowEdgesKeyHeight != keyHeight
-            || m_rowEdgesScrollY != scrollY) {
+        if (!m_rowEdgesValid || m_rowEdgesDpr != dpr || m_rowEdgesKeyHeight != keyHeight ||
+            m_rowEdgesScrollY != scrollY) {
             for (int row = 0; row <= 128; ++row) {
                 const qreal ideal = row * keyHeight - scrollY;
                 m_rowEdges[row] = std::round(ideal * dpr) / dpr;
@@ -2133,10 +2032,7 @@ private:
         return 127 - row;
     }
 
-    qreal physicalPixel() const
-    {
-        return logicalPhysicalPixel(devicePixelRatioF());
-    }
+    qreal physicalPixel() const { return logicalPhysicalPixel(devicePixelRatioF()); }
 
     struct KeyboardHoverGeometry {
         QRectF highlightRect;
@@ -2158,11 +2054,9 @@ private:
         const QFontMetrics metrics(chipFont);
         const int chipWidth = metrics.horizontalAdvance(name) + 8;
         const int chipHeight = metrics.height() + 2;
-        const qreal chipY =
-            std::clamp(highlight.center().y() - chipHeight / 2.0, 0.0,
-                       qreal(std::max(0, height() - chipHeight)));
-        const QRectF chip(kKeyboardW - 2 - chipWidth, chipY, chipWidth,
-                          chipHeight);
+        const qreal chipY = std::clamp(highlight.center().y() - chipHeight / 2.0, 0.0,
+                                       qreal(std::max(0, height() - chipHeight)));
+        const QRectF chip(kKeyboardW - 2 - chipWidth, chipY, chipWidth, chipHeight);
         QRegion paintRegion(chip.toAlignedRect());
         if (key != m_soundingKey)
             paintRegion |= QRegion(highlight.toAlignedRect());
@@ -2178,13 +2072,11 @@ private:
         if (key == m_hoverKey)
             return;
         const auto oldGeometry = keyboardHoverGeometry(m_hoverKey);
-        const QRegion oldRegion =
-            oldGeometry ? oldGeometry->paintRegion : QRegion();
+        const QRegion oldRegion = oldGeometry ? oldGeometry->paintRegion : QRegion();
         m_hoverKey = key;
         setProperty("hoverKey", m_hoverKey);
         const auto newGeometry = keyboardHoverGeometry(m_hoverKey);
-        const QRegion newRegion =
-            newGeometry ? newGeometry->paintRegion : QRegion();
+        const QRegion newRegion = newGeometry ? newGeometry->paintRegion : QRegion();
         invalidateContent(oldRegion | newRegion);
     }
 
@@ -2228,28 +2120,21 @@ private:
     QRectF noteRect(qreal x0, qreal x1, int key) const
     {
         const qreal pixel = physicalPixel();
-        return QRectF(x0, keyTop(key) + pixel,
-                      std::max<qreal>(2.0, x1 - x0),
-                      std::max(2.0 * pixel,
-                               keyBottom(key) - keyTop(key) - pixel));
+        return QRectF(x0, keyTop(key) + pixel, std::max<qreal>(2.0, x1 - x0),
+                      std::max(2.0 * pixel, keyBottom(key) - keyTop(key) - pixel));
     }
 
     QRectF noteRect(const ViewNote &note) const
     {
         const qreal dpr = devicePixelRatioF();
-        return noteRect(
-            m_sv->displayX(double(note.startTick), kKeyboardW, dpr),
-            m_sv->displayX(double(note.endTick), kKeyboardW, dpr),
-            note.key);
+        return noteRect(m_sv->displayX(double(note.startTick), kKeyboardW, dpr),
+                        m_sv->displayX(double(note.endTick), kKeyboardW, dpr), note.key);
     }
 
     // The painted box: flush with the note's end on the right so
     // consecutive notes abut (their black borders separate them), one
     // pixel short on the bottom so the row hairline stays visible.
-    QRectF noteBox(const QRectF &rect) const
-    {
-        return rect.adjusted(0, 0, 0, -physicalPixel());
-    }
+    QRectF noteBox(const QRectF &rect) const { return rect.adjusted(0, 0, 0, -physicalPixel()); }
 
     // Topmost (last-drawn) note of the selected track under pos. The rect is
     // widened a little on both sides so the edge resize handles can be
@@ -2263,8 +2148,8 @@ private:
             if (note.track != selected)
                 continue;
             const QRectF r = noteRect(note).adjusted(-reach, 0, reach, 0);
-            if (pos.x() >= r.left() && pos.x() < r.right()
-                && pos.y() >= r.top() && pos.y() < r.bottom())
+            if (pos.x() >= r.left() && pos.x() < r.right() && pos.y() >= r.top() &&
+                pos.y() < r.bottom())
                 hit = &note;
         }
         return hit;
@@ -2273,15 +2158,14 @@ private:
     bool nearRightEdge(const ViewNote &note, QPointF pos) const
     {
         const QRectF r = noteRect(note);
-        return pos.x() >= r.right() - edgeGripInnerReach(r)
-            && pos.x() <= r.right() + kEdgeGripReach;
+        return pos.x() >= r.right() - edgeGripInnerReach(r) &&
+               pos.x() <= r.right() + kEdgeGripReach;
     }
 
     bool nearLeftEdge(const ViewNote &note, QPointF pos) const
     {
         const QRectF r = noteRect(note);
-        return pos.x() >= r.left() - kEdgeGripReach
-            && pos.x() <= r.left() + edgeGripInnerReach(r);
+        return pos.x() >= r.left() - kEdgeGripReach && pos.x() <= r.left() + edgeGripInnerReach(r);
     }
 
     bool nearVelocityHandle(const ViewNote &note, QPointF pos) const
@@ -2292,11 +2176,11 @@ private:
         // The bar itself is 1-2px; grab within a few pixels of it, more
         // generously on taller notes.
         const QRectF bar = velBarRect(r, note.velocity, devicePixelRatioF());
-        const qreal pad = std::clamp(qRound(r.height() / physicalPixel()) / 6, 2, 4)
-            * physicalPixel();
+        const qreal pad =
+            std::clamp(qRound(r.height() / physicalPixel()) / 6, 2, 4) * physicalPixel();
         const qreal inner = edgeGripInnerReach(r);
-        return pos.x() > r.left() + inner && pos.x() < r.right() - inner
-            && pos.y() >= bar.top() - pad && pos.y() < bar.bottom() + pad;
+        return pos.x() > r.left() + inner && pos.x() < r.right() - inner &&
+               pos.y() >= bar.top() - pad && pos.y() < bar.bottom() + pad;
     }
 
     // Resolves the current selection to document notes (skips stale ids).
@@ -2361,9 +2245,8 @@ private:
         uint64_t anchor = UINT64_MAX;
         for (const DocNote &note : notes)
             anchor = std::min(anchor, note.tick);
-        const uint64_t snapped = right
-                                     ? m_sv->snapTickUp(double(anchor) + 1.0)
-                                     : m_sv->snapTickDown(double(anchor) - 1.0);
+        const uint64_t snapped = right ? m_sv->snapTickUp(double(anchor) + 1.0)
+                                       : m_sv->snapTickDown(double(anchor) - 1.0);
         const int64_t dTick = int64_t(snapped) - int64_t(anchor);
         if (dTick == 0)
             return;
@@ -2394,10 +2277,10 @@ private:
         SongView::Clip clip;
         SongView::ClipTrack ct{m_sv->selectedTrack(), {}};
         for (const DocNote &note : notes)
-            ct.notes.push_back({uint32_t(note.tick - base), note.key,
-                                note.duration ? note.duration
-                                              : uint32_t(m_sv->gridTicksAt(note.tick)),
-                                note.velocity});
+            ct.notes.push_back(
+                {uint32_t(note.tick - base), note.key,
+                 note.duration ? note.duration : uint32_t(m_sv->gridTicksAt(note.tick)),
+                 note.velocity});
         clip.tracks.push_back(std::move(ct));
         m_sv->clipboard() = std::move(clip);
         m_sv->announce(SongView::tr("Copied %n note(s)", nullptr, int(notes.size())));
@@ -2410,8 +2293,7 @@ private:
     {
         SongDocument *doc = m_sv->document();
         const SongView::Clip &clip = m_sv->clipboard();
-        if (!doc || clip.span != 0 || clip.tracks.empty()
-            || clip.tracks.front().notes.empty())
+        if (!doc || clip.span != 0 || clip.tracks.empty() || clip.tracks.front().notes.empty())
             return;
         const uint64_t base = m_sv->snapTick(double(m_sv->editCursorTick()));
         std::vector<SongDocument::NewNote> notes;
@@ -2443,8 +2325,8 @@ private:
         m_sv->setSelection(std::move(ids));
     }
 
-    void drawNotes(QPainter &painter, const SongViewModel &model,
-                   int selectedTrack, bool drawingGhostNotes)
+    void drawNotes(QPainter &painter, const SongViewModel &model, int selectedTrack,
+                   bool drawingGhostNotes)
     {
         const double keyHeight = m_sv->keyHeight();
         const bool showVelocityHandles = keyHeight >= kVelHandleMinKeyH;
@@ -2452,8 +2334,7 @@ private:
         // minimum face that can clip vertically.
         const auto velocityFont =
             !drawingGhostNotes && m_drag == Drag::Velocity
-                ? typography::fitted(painter.font(),
-                                     int(std::lround(keyHeight)))
+                ? typography::fitted(painter.font(), int(std::lround(keyHeight)))
                 : std::optional<QFont>{};
         if (velocityFont)
             painter.setFont(*velocityFont);
@@ -2470,67 +2351,55 @@ private:
 
             const QRectF noteBox = this->noteBox(noteRect);
             if (isGhostNote) {
-                painter.fillRect(
-                    noteBox,
-                    ghostNoteColor(note.track, isBlackKey(note.key)));
+                painter.fillRect(noteBox, ghostNoteColor(note.track, isBlackKey(note.key)));
                 continue;
             }
 
             int renderedVelocity = note.velocity;
             if (m_drag == Drag::Velocity && m_sv->isSelected(note)) {
-                renderedVelocity =
-                    std::clamp(int(note.velocity) + m_dVel, 1, 127);
+                renderedVelocity = std::clamp(int(note.velocity) + m_dVel, 1, 127);
             }
-            const QColor fill =
-                m_sv->noteFillColor(note.track, renderedVelocity);
+            const QColor fill = m_sv->noteFillColor(note.track, renderedVelocity);
             painter.fillRect(noteBox, fill);
 
             // Mixing one-third toward black in OKLab keeps the bar distinct
             // without rotating the identity hue. In velocity-color mode the
             // full-strength fill already is the identity.
             if (showVelocityHandles) {
-                const QColor identity = m_sv->velocityColorMode()
-                    ? fill
-                    : SongView::trackColor(note.track);
-                painter.fillRect(
-                    velBarRect(noteRect, renderedVelocity,
-                               devicePixelRatioF()),
-                    mixTowardOklab(identity, Qt::black, 1.0 / 3.0));
+                const QColor identity =
+                    m_sv->velocityColorMode() ? fill : SongView::trackColor(note.track);
+                painter.fillRect(velBarRect(noteRect, renderedVelocity, devicePixelRatioF()),
+                                 mixTowardOklab(identity, Qt::black, 1.0 / 3.0));
             }
 
             // While a velocity drag is live, every current-track note shows
             // its previewed value.
             if (m_drag == Drag::Velocity && velocityFont) {
                 const QString velocityText = QString::number(renderedVelocity);
-                if (noteRect.width()
-                    >= painter.fontMetrics().horizontalAdvance(velocityText)
-                        + 4) {
+                if (noteRect.width() >= painter.fontMetrics().horizontalAdvance(velocityText) + 4) {
                     // Velocity fills span the whole spectrum, so no single
                     // paired text color works; pick the stronger of b/w.
-                    painter.setPen(
-                        m_sv->velocityColorMode()
-                            ? (themes::contrastRatio(fill, Qt::white)
-                                       >= themes::contrastRatio(fill, Qt::black)
-                                   ? QColor(Qt::white)
-                                   : QColor(Qt::black))
-                            : trackTextColor(note.track));
+                    painter.setPen(m_sv->velocityColorMode()
+                                       ? (themes::contrastRatio(fill, Qt::white) >=
+                                                  themes::contrastRatio(fill, Qt::black)
+                                              ? QColor(Qt::white)
+                                              : QColor(Qt::black))
+                                       : trackTextColor(note.track));
                     painter.drawText(noteRect, Qt::AlignCenter, velocityText);
                 }
             }
 
             if (m_sv->isSelected(note)) {
-                const QColor selectionColor =
-                    themes::color(themes::Role::item_selected_background);
+                const QColor selectionColor = themes::color(themes::Role::item_selected_background);
                 // The ring thins before it disappears; the black border
                 // insets by whatever ring actually fit. Insets are physical
                 // pixels too, so fractional display scale cannot change the
                 // ring or inner border thickness.
-                const int ringThickness = drawRectFrame(
-                    painter, noteBox, selectionColor,
-                    songview::selectionRingPixels(devicePixelRatioF()));
+                const int ringThickness =
+                    drawRectFrame(painter, noteBox, selectionColor,
+                                  songview::selectionRingPixels(devicePixelRatioF()));
                 if (ringThickness > 0) {
-                    drawNoteBoxBorder(painter, noteBox, note.unterminated,
-                                      ringThickness);
+                    drawNoteBoxBorder(painter, noteBox, note.unterminated, ringThickness);
                 } else {
                     // At extreme zoom there is no room for a frame plus a
                     // face. Keep the note visible as a solid selection mark.
@@ -2552,8 +2421,7 @@ private:
             return;
         const qreal dpr = p.device()->devicePixelRatioF();
         const qreal x0 = m_sv->displayX(double(m_drawTick), kKeyboardW, dpr);
-        const qreal x1 = m_sv->displayX(
-            double(m_drawTick + uint64_t(m_drawDur)), kKeyboardW, dpr);
+        const qreal x1 = m_sv->displayX(double(m_drawTick + uint64_t(m_drawDur)), kKeyboardW, dpr);
         const QRectF r = noteRect(x0, x1, m_drawKey);
         const QRectF box = noteBox(r);
         p.fillRect(box, m_sv->noteFillColor(selected, m_lastVelocity));
@@ -2565,20 +2433,18 @@ private:
     // the clamping applied on release in mouseReleaseEvent.
     QRectF displayedNoteRect(const ViewNote &note) const
     {
-        const bool dragging = m_drag == Drag::Move || m_drag == Drag::Resize
-            || m_drag == Drag::ResizeLeft;
+        const bool dragging =
+            m_drag == Drag::Move || m_drag == Drag::Resize || m_drag == Drag::ResizeLeft;
         if (!dragging || !m_sv->isSelected(note))
             return noteRect(note);
         int64_t tick, endTick;
         if (m_drag == Drag::ResizeLeft) {
             // The note-off pins the gesture; only the start moves.
             endTick = int64_t(note.endTick);
-            tick = std::clamp<int64_t>(int64_t(note.startTick) + m_dTick, 0,
-                                       endTick - 1);
+            tick = std::clamp<int64_t>(int64_t(note.startTick) + m_dTick, 0, endTick - 1);
         } else {
             tick = std::max<int64_t>(0, int64_t(note.startTick) + m_dTick);
-            endTick = std::max<int64_t>(tick + 1,
-                                        int64_t(note.endTick) + m_dTick + m_dDur);
+            endTick = std::max<int64_t>(tick + 1, int64_t(note.endTick) + m_dTick + m_dDur);
         }
         const int key = std::clamp(int(note.key) + m_dKey, 0, 127);
         const qreal dpr = devicePixelRatioF();
@@ -2603,11 +2469,8 @@ private:
     // another widget) so the caller can dismiss the popup instead.
     bool moveNoteMenu(QPointF globalPos)
     {
-        const QPointF pos =
-            globalPos - QPointF(mapToGlobal(QPoint(0, 0)));
-        const ViewNote *hit = m_sv->document() && pos.x() >= kKeyboardW
-                                  ? hitNote(pos)
-                                  : nullptr;
+        const QPointF pos = globalPos - QPointF(mapToGlobal(QPoint(0, 0)));
+        const ViewNote *hit = m_sv->document() && pos.x() >= kKeyboardW ? hitNote(pos) : nullptr;
         if (!hit)
             return false;
         if (!m_sv->isSelected(*hit))
@@ -2636,10 +2499,9 @@ private:
             break;
         case NoteMenuChoice::Velocity: {
             bool ok = false;
-            const int velocity = QInputDialog::getInt(
-                this, SongView::tr("Note velocity"),
-                SongView::tr("Velocity (1-127):"),
-                notes.front().velocity, 1, 127, 1, &ok);
+            const int velocity = QInputDialog::getInt(this, SongView::tr("Note velocity"),
+                                                      SongView::tr("Velocity (1-127):"),
+                                                      notes.front().velocity, 1, 127, 1, &ok);
             if (ok) {
                 doc->setNotesVelocity(notes, uint8_t(velocity));
                 m_lastVelocity = uint8_t(velocity);
@@ -2657,18 +2519,15 @@ private:
 
     void drawKeyboard(QPainter &p)
     {
-                const int keyH = int(std::lround(m_sv->keyHeight()));
-        p.fillRect(
-            QRect(0, 0, kKeyboardW, height()),
-            themes::color(
-                themes::Role::song_view_piano_keyboard_natural_key));
+        const int keyH = int(std::lround(m_sv->keyHeight()));
+        p.fillRect(QRect(0, 0, kKeyboardW, height()),
+                   themes::color(themes::Role::song_view_piano_keyboard_natural_key));
         // Natural-key labels disappear when no real font face fits the lane.
         const auto labelFont = typography::fitted(p.font(), keyH);
         if (labelFont)
             p.setFont(*labelFont);
         const int hovered = m_hoverKey;
-        const QPen separatorPen(
-            themes::color(themes::Role::song_view_piano_keyboard_separator), 0);
+        const QPen separatorPen(themes::color(themes::Role::song_view_piano_keyboard_separator), 0);
         const auto hoverGeometry = keyboardHoverGeometry(hovered);
         for (int key = 0; key < 128; key++) {
             const QRectF keyRect = this->keyRect(key, 0, kKeyboardW);
@@ -2676,35 +2535,26 @@ private:
                 continue;
             const bool sounding = key == m_soundingKey;
             if (isBlackKey(key)) {
-                p.fillRect(
-                    keyRect,
-                    sounding
-                        ? themes::color(
-                              themes::Role::song_view_piano_keyboard_active_key)
-                        : themes::color(
-                              themes::Role::song_view_piano_keyboard_black_key));
+                p.fillRect(keyRect,
+                           sounding
+                               ? themes::color(themes::Role::song_view_piano_keyboard_active_key)
+                               : themes::color(themes::Role::song_view_piano_keyboard_black_key));
             } else {
                 if (sounding) {
-                    p.fillRect(
-                        keyRect,
-                        themes::color(
-                            themes::Role::song_view_piano_keyboard_active_key));
+                    p.fillRect(keyRect,
+                               themes::color(themes::Role::song_view_piano_keyboard_active_key));
                 }
                 // B/C and E/F are the only spots where two natural
                 // keys touch, so those bottom edges get a separator.
                 if (key % 12 == 0 || key % 12 == 5) {
                     p.setPen(separatorPen);
-                    p.drawLine(QLineF(0, keyRect.bottom(), kKeyboardW,
-                                      keyRect.bottom()));
+                    p.drawLine(QLineF(0, keyRect.bottom(), kKeyboardW, keyRect.bottom()));
                 }
                 if (key % 12 == 0) {
-                    p.setPen(themes::color(
-                        themes::Role::song_view_piano_keyboard_label));
+                    p.setPen(themes::color(themes::Role::song_view_piano_keyboard_label));
                     if (labelFont) {
-                        p.drawText(QRectF(0, keyRect.top(), kKeyboardW - 3,
-                                          keyRect.height()),
-                                   Qt::AlignRight | Qt::AlignVCenter,
-                                   keyName(key));
+                        p.drawText(QRectF(0, keyRect.top(), kKeyboardW - 3, keyRect.height()),
+                                   Qt::AlignRight | Qt::AlignVCenter, keyName(key));
                     }
                 }
             }
@@ -2725,8 +2575,7 @@ private:
             p.setBrush(QColor(0x30, 0x30, 0x30, 230));
             p.drawRoundedRect(hoverGeometry->chipRect, 3, 3);
             p.setPen(Qt::white);
-            p.drawText(hoverGeometry->chipRect, Qt::AlignCenter,
-                       hoverGeometry->name);
+            p.drawText(hoverGeometry->chipRect, Qt::AlignCenter, hoverGeometry->name);
             p.restore();
         }
         p.setPen(themes::color(themes::Role::song_view_separator));
@@ -2743,13 +2592,12 @@ private:
     {
         std::vector<SongView::NoteId> inBand;
         for (const ViewNote &note : m_sv->model().notes) {
-            if (note.track != m_sv->selectedTrack()
-                || !noteRect(note).intersects(band))
+            if (note.track != m_sv->selectedTrack() || !noteRect(note).intersects(band))
                 continue;
             const SongView::NoteId id{note.startTick, note.key};
             if (std::find(m_bandAud.begin(), m_bandAud.end(), id) == m_bandAud.end())
-                m_sv->auditionTimed(note.track, note.key, note.velocity,
-                                    note.startTick, note.endTick);
+                m_sv->auditionTimed(note.track, note.key, note.velocity, note.startTick,
+                                    note.endTick);
             inBand.push_back(id);
         }
         for (const SongView::NoteId &old : m_bandAud) {
@@ -2776,9 +2624,8 @@ private:
 
     void selectBand(const QRectF &band, bool additive)
     {
-        std::vector<SongView::NoteId> ids = additive
-                                                ? m_sv->selection()
-                                                : std::vector<SongView::NoteId>();
+        std::vector<SongView::NoteId> ids =
+            additive ? m_sv->selection() : std::vector<SongView::NoteId>();
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != m_sv->selectedTrack())
                 continue;
@@ -2809,31 +2656,31 @@ private:
     int m_dKey = 0;
     int64_t m_dDur = 0;
     int m_dVel = 0;
-    uint64_t m_drawTick = 0;   // pending note of a draw gesture
+    uint64_t m_drawTick = 0; // pending note of a draw gesture
     int64_t m_drawDur = 0;
-    int m_drawKey = 0;         // follows the cursor vertically mid-draw
-    uint64_t m_drawAnchor = 0; // grid cell pressed; drags pivot around it
-    bool m_leftPress = false;  // left button held on empty space; cursor
-                               // move vs. draw undecided
-    bool m_rightPress = false; // right button held; band vs. menu undecided
-    bool m_rightShift = false; // …with Shift: drag sweeps a time selection
-    uint64_t m_rightAnchorTick = 0; // snapped tick of the right press
-    bool m_rightHit = false;   // that press landed on a note…
-    SongView::NoteId m_rightHitId{}; // …this one
+    int m_drawKey = 0;                       // follows the cursor vertically mid-draw
+    uint64_t m_drawAnchor = 0;               // grid cell pressed; drags pivot around it
+    bool m_leftPress = false;                // left button held on empty space; cursor
+                                             // move vs. draw undecided
+    bool m_rightPress = false;               // right button held; band vs. menu undecided
+    bool m_rightShift = false;               // …with Shift: drag sweeps a time selection
+    uint64_t m_rightAnchorTick = 0;          // snapped tick of the right press
+    bool m_rightHit = false;                 // that press landed on a note…
+    SongView::NoteId m_rightHitId{};         // …this one
     std::vector<SongView::NoteId> m_bandAud; // notes the band currently
                                              // covers; entrants audition
-    ViewNote m_velAnchor{};    // pressed note of a velocity drag (a copy)
-    int m_velAudEff = -1;      // last effective velocity auditioned mid-drag
-    bool m_velModPress = false; // velocity-modifier press on a note; click
-                                // vs. vertical velocity drag undecided
+    ViewNote m_velAnchor{};                  // pressed note of a velocity drag (a copy)
+    int m_velAudEff = -1;                    // last effective velocity auditioned mid-drag
+    bool m_velModPress = false;              // velocity-modifier press on a note; click
+                                             // vs. vertical velocity drag undecided
     Qt::KeyboardModifiers m_velModMods = Qt::NoModifier; // that press's chord
-    int m_kbdKey = -1;         // key sounding from a keyboard-column press
-    int m_soundingKey = -1;    // auditioned key highlighted on the keyboard
-    int m_hoverKey = -1;       // key row under the cursor; -1 = no mark
-    bool m_auditioned = false; // a drag/draw preview note is sounding
+    int m_kbdKey = -1;            // key sounding from a keyboard-column press
+    int m_soundingKey = -1;       // auditioned key highlighted on the keyboard
+    int m_hoverKey = -1;          // key row under the cursor; -1 = no mark
+    bool m_auditioned = false;    // a drag/draw preview note is sounding
     uint8_t m_lastVelocity = 100; // latches to touched/velocity-edited notes
-    bool m_panning = false;    // middle-drag pan
-    QPointF m_panPos;          // last pan sample, global coords
+    bool m_panning = false;       // middle-drag pan
+    QPointF m_panPos;             // last pan sample, global coords
     NoteContextMenu *m_noteMenu = nullptr;
 };
 
@@ -2841,9 +2688,11 @@ private:
 
 class AutomationArea : public TimelineSurface
 {
-public:
+  public:
     AutomationArea(SongView *sv, QScrollArea *scroll)
-        : TimelineSurface(nullptr), m_sv(sv), m_scroll(scroll) // parented by the scroll area
+        : TimelineSurface(nullptr)
+        , m_sv(sv)
+        , m_scroll(scroll) // parented by the scroll area
     {
         setObjectName(QStringLiteral("automationArea")); // findChild for tests
         setMinimumHeight(kLaneH);
@@ -2883,8 +2732,8 @@ public:
     // so the view doesn't jump under the cursor.
     bool gestureActive() const
     {
-        return m_panning || m_gesture != Gesture::None || m_dragRow >= 0
-            || m_resizeRow >= 0 || m_rightPress;
+        return m_panning || m_gesture != Gesture::None || m_dragRow >= 0 || m_resizeRow >= 0 ||
+               m_rightPress;
     }
     void setViewHeights(int laneH, const QHash<QString, int> &overrides)
     {
@@ -2929,7 +2778,7 @@ public:
         invalidateContent();
     }
 
-protected:
+  protected:
     void paintContent(QPainter &p) override
     {
         const qreal dpr = p.device()->devicePixelRatioF();
@@ -2961,9 +2810,7 @@ protected:
             auto valueY = [&](int v) {
                 return bottom - (v - minV) * (bottom - top) / std::max(1, maxV - minV);
             };
-            auto tickX = [&](uint64_t t) {
-                return m_sv->displayX(double(t), kGutterW, dpr);
-            };
+            auto tickX = [&](uint64_t t) { return m_sv->displayX(double(t), kGutterW, dpr); };
             p.save();
             p.setClipRect(QRect(kGutterW, rowTop(m_dragRow), width() - kGutterW,
                                 rowHeight(m_rows[m_dragRow])),
@@ -2974,10 +2821,8 @@ protected:
                 // Hold-value steps, like paintCurve draws committed points.
                 for (size_t i = 0; i + 1 < m_sweep.size(); i++) {
                     const int y = valueY(m_sweep[i].second);
-                    p.drawLine(QLineF(tickX(m_sweep[i].first), y,
-                                      tickX(m_sweep[i + 1].first), y));
-                    p.drawLine(QLineF(tickX(m_sweep[i + 1].first), y,
-                               tickX(m_sweep[i + 1].first),
+                    p.drawLine(QLineF(tickX(m_sweep[i].first), y, tickX(m_sweep[i + 1].first), y));
+                    p.drawLine(QLineF(tickX(m_sweep[i + 1].first), y, tickX(m_sweep[i + 1].first),
                                       valueY(m_sweep[i + 1].second)));
                 }
             } else if (m_gesture == Gesture::Line) {
@@ -2987,15 +2832,14 @@ protected:
             const qreal x = tickX(m_dragTick);
             const int y = valueY(m_dragValue);
             p.drawEllipse(QPointF(x, y), 3, 3);
-            p.drawText(QPointF(x + 6, y - 4),
-                       formatRowValue(m_rows[m_dragRow], m_dragValue));
+            p.drawText(QPointF(x + 6, y - 4), formatRowValue(m_rows[m_dragRow], m_dragValue));
             p.restore();
         }
 
         paintHoverReadout(p);
     }
 
-private:
+  private:
     struct HoverReadoutGeometry {
         QPointF markerCenter;
         QPointF textBaseline;
@@ -3005,8 +2849,7 @@ private:
         QRegion paintRegion;
     };
 
-    std::optional<HoverReadoutGeometry> hoverReadoutGeometry(int rowIndex,
-                                                             double tick) const
+    std::optional<HoverReadoutGeometry> hoverReadoutGeometry(int rowIndex, double tick) const
     {
         if (rowIndex < 0 || rowIndex >= int(m_rows.size()))
             return std::nullopt;
@@ -3014,9 +2857,9 @@ private:
         const std::vector<LanePoint> *points = rowPoints(row);
         if (!points || points->empty())
             return std::nullopt;
-        const auto it = std::upper_bound(
-            points->begin(), points->end(), tick,
-            [](double t, const LanePoint &pt) { return t < double(pt.tick); });
+        const auto it =
+            std::upper_bound(points->begin(), points->end(), tick,
+                             [](double t, const LanePoint &pt) { return t < double(pt.tick); });
         if (it == points->begin())
             return std::nullopt;
 
@@ -3025,25 +2868,20 @@ private:
         rowRange(row, &minV, &maxV);
         const int top = rowTop(rowIndex) + 5;
         const int bottom = rowBottom(rowIndex) - 1 - 4;
-        const QPointF marker(
-            m_sv->displayX(tick, kGutterW, devicePixelRatioF()),
-            bottom - (value - minV) * (bottom - top) / std::max(1, maxV - minV));
+        const QPointF marker(m_sv->displayX(tick, kGutterW, devicePixelRatioF()),
+                             bottom - (value - minV) * (bottom - top) / std::max(1, maxV - minV));
         const QString text = formatRowValue(row, value);
         const QFont readoutFont = typography::caption(font());
         const QFontMetrics metrics(readoutFont);
         const int textWidth = metrics.horizontalAdvance(text);
         const qreal textX =
-            marker.x() + 6 + textWidth > width() ? marker.x() - 6 - textWidth
-                                                : marker.x() + 6;
+            marker.x() + 6 + textWidth > width() ? marker.x() - 6 - textWidth : marker.x() + 6;
         const QPointF baseline(
-            textX, std::max(marker.y() - 4,
-                            qreal(rowTop(rowIndex) + metrics.ascent() + 2)));
-        const QRect clip(kGutterW, rowTop(rowIndex), width() - kGutterW,
-                         rowHeight(row));
+            textX, std::max(marker.y() - 4, qreal(rowTop(rowIndex) + metrics.ascent() + 2)));
+        const QRect clip(kGutterW, rowTop(rowIndex), width() - kGutterW, rowHeight(row));
         // A one-pixel antialiased ellipse stroke can cover the pixel just
         // outside its nominal three-pixel radii.
-        const QRect markerBounds =
-            QRectF(marker.x() - 4, marker.y() - 4, 9, 9).toAlignedRect();
+        const QRect markerBounds = QRectF(marker.x() - 4, marker.y() - 4, 9, 9).toAlignedRect();
         // boundingRect is the FONT's idea of the ink extents; the platform
         // raster can exceed it (DirectWrite/ClearType glyphs bleed a pixel
         // or two past GDI-style metrics on Windows), and any painted pixel
@@ -3053,12 +2891,10 @@ private:
                                      .translated(baseline)
                                      .toAlignedRect()
                                      .adjusted(-3, -3, 3, 3);
-        const QRegion paintRegion =
-            (QRegion(markerBounds) | QRegion(textBounds)) & QRegion(clip);
+        const QRegion paintRegion = (QRegion(markerBounds) | QRegion(textBounds)) & QRegion(clip);
         if (paintRegion.isEmpty())
             return std::nullopt;
-        return HoverReadoutGeometry{marker, baseline, readoutFont, text, clip,
-                                    paintRegion};
+        return HoverReadoutGeometry{marker, baseline, readoutFont, text, clip, paintRegion};
     }
 
     // Idle-hover readout: a marker on the curve with the value in effect at
@@ -3081,8 +2917,7 @@ private:
         p.restore();
     }
 
-protected:
-
+  protected:
     void wheelEvent(QWheelEvent *event) override
     {
         // Same bindings as the roll's notes area: plain wheel over the plot
@@ -3124,9 +2959,8 @@ protected:
             setCursor(Qt::ClosedHandCursor);
             return;
         }
-        const int boundary = event->button() == Qt::LeftButton
-                                 ? rowBoundaryAt(event->pos().y())
-                                 : -1;
+        const int boundary =
+            event->button() == Qt::LeftButton ? rowBoundaryAt(event->pos().y()) : -1;
         if (boundary >= 0) {
             // Dragging the divider under a row gives it an individual
             // height, overriding the shared Ctrl+wheel height.
@@ -3138,8 +2972,7 @@ protected:
         SongDocument *doc = m_sv->document();
         if (!doc)
             return;
-        if (event->button() == Qt::LeftButton
-            && addLaneRect().contains(event->pos())) {
+        if (event->button() == Qt::LeftButton && addLaneRect().contains(event->pos())) {
             showAddLaneMenu(event->globalPosition().toPoint());
             return;
         }
@@ -3150,9 +2983,7 @@ protected:
         const Row &row = m_rows[ri];
         if (event->position().x() < kGutterW) {
             if (const AutoLane *lane = rowLane(row);
-                lane
-                && (event->button() == Qt::LeftButton
-                    || event->button() == Qt::RightButton))
+                lane && (event->button() == Qt::LeftButton || event->button() == Qt::RightButton))
                 showLaneMenu(*lane, event->globalPosition().toPoint());
             return;
         }
@@ -3164,8 +2995,7 @@ protected:
             m_rightPress = true;
             m_rightPressPos = event->pos();
             m_rightRow = ri;
-            m_selAnchorTick = m_sv->snapTick(
-                rawTickAt(event->position().x()),
+            m_selAnchorTick = m_sv->snapTick(rawTickAt(event->position().x()),
                                              event->modifiers() & Qt::AltModifier);
             return;
         }
@@ -3184,8 +3014,7 @@ protected:
         const bool fine = event->modifiers() & Qt::AltModifier;
         updateDrag(event->position().x(), event->pos().y(), fine,
                    event->modifiers() & Qt::ControlModifier);
-        const LanePoint *grab =
-            grabPoint(row, ri, event->position().x(), event->pos().y());
+        const LanePoint *grab = grabPoint(row, ri, event->position().x(), event->pos().y());
         if (event->modifiers() & Qt::ShiftModifier) {
             // Line ramp: the press anchors one end, release commits the
             // interpolated segment (checked before the point grab so a
@@ -3230,8 +3059,7 @@ protected:
         }
         if (m_resizeRow >= 0 && m_resizeRow < int(m_rows.size())) {
             const int newH =
-                std::clamp(m_resizeOrigH + event->pos().y() - m_resizePressY,
-                           kMinLaneH, kMaxLaneH);
+                std::clamp(m_resizeOrigH + event->pos().y() - m_resizePressY, kMinLaneH, kMaxLaneH);
             if (newH != rowHeight(m_rows[m_resizeRow])) {
                 m_rowHeights.insert(rowKey(m_rows[m_resizeRow]), newH);
                 applyHeight();
@@ -3240,17 +3068,15 @@ protected:
             return;
         }
         if (m_rightPress) {
-            if (!m_selSweep
-                && (event->pos() - m_rightPressPos).manhattanLength()
-                       >= QApplication::startDragDistance())
+            if (!m_selSweep && (event->pos() - m_rightPressPos).manhattanLength() >=
+                                   QApplication::startDragDistance())
                 m_selSweep = true;
             if (m_selSweep)
                 updateSelSweep(event);
             return;
         }
         if (m_dragRow < 0) {
-            setCursor(rowBoundaryAt(event->pos().y()) >= 0 ? Qt::SplitVCursor
-                                                           : Qt::ArrowCursor);
+            setCursor(rowBoundaryAt(event->pos().y()) >= 0 ? Qt::SplitVCursor : Qt::ArrowCursor);
             updateHover(event->position().x(), event->pos().y());
             return;
         }
@@ -3286,8 +3112,7 @@ protected:
             m_resizeRow = -1;
             return;
         }
-        if (event->button() != Qt::LeftButton || m_dragRow < 0
-            || m_dragRow >= int(m_rows.size()))
+        if (event->button() != Qt::LeftButton || m_dragRow < 0 || m_dragRow >= int(m_rows.size()))
             return;
         const Row &row = m_rows[m_dragRow];
         const Gesture gesture = m_gesture;
@@ -3306,15 +3131,15 @@ protected:
             DocLanePoint pt;
             // Skip the no-op commit: a plain click on a point (including the
             // first half of a double-click) must not touch the document.
-            if (doc->findLanePoint(track, cc, uint64_t(m_dragOrigTick), &pt)
-                && (pt.tick != m_dragTick || pt.value != m_dragValue))
+            if (doc->findLanePoint(track, cc, uint64_t(m_dragOrigTick), &pt) &&
+                (pt.tick != m_dragTick || pt.value != m_dragValue))
                 doc->moveLanePoint(track, cc, pt, m_dragTick, m_dragValue);
         } else if (gesture == Gesture::Sweep) {
             // writeLanePoints even for a plain click: it overwrites any
             // point already sitting on the tick instead of duplicating it.
             if (!m_sweep.empty())
-                doc->writeLanePoints(track, cc, m_sweep.front().first,
-                                     m_sweep.back().first, sweepPoints());
+                doc->writeLanePoints(track, cc, m_sweep.front().first, m_sweep.back().first,
+                                     sweepPoints());
             m_sweep.clear();
         } else if (gesture == Gesture::Line) {
             const bool fine = event->modifiers() & Qt::AltModifier;
@@ -3332,9 +3157,8 @@ protected:
                 std::max<uint64_t>(1, fine ? m_sv->fineGridTicks() : m_sv->gridTicksAt(a));
             std::vector<SongDocument::LanePointValue> pts;
             for (uint64_t t = a; t < b; t += g)
-                pts.push_back({t, va
-                                      + int(std::llround(double(vb - va) * double(t - a)
-                                                         / double(b - a)))});
+                pts.push_back(
+                    {t, va + int(std::llround(double(vb - va) * double(t - a) / double(b - a)))});
             pts.push_back({b, vb});
             doc->writeLanePoints(track, cc, a, b, pts);
         }
@@ -3348,8 +3172,7 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override
     {
         SongDocument *doc = m_sv->document();
-        if (!doc || event->button() != Qt::LeftButton
-            || event->position().x() < kGutterW)
+        if (!doc || event->button() != Qt::LeftButton || event->position().x() < kGutterW)
             return;
         const int ri = rowIndexAt(event->pos().y());
         if (ri < 0)
@@ -3377,9 +3200,8 @@ protected:
             tick = m_sv->snapTick(rawTickAt(event->position().x()),
                                   event->modifiers() & Qt::AltModifier);
             DocLanePoint pt;
-            value = doc->findLanePoint(track, cc, tick, &pt)
-                        ? pt.value
-                        : valueAtY(row, ri, event->pos().y());
+            value = doc->findLanePoint(track, cc, tick, &pt) ? pt.value
+                                                             : valueAtY(row, ri, event->pos().y());
         }
         if (!editValue(row, &value))
             return;
@@ -3402,7 +3224,7 @@ protected:
 
     void leaveEvent(QEvent *) override { clearHover(); }
 
-private:
+  private:
     // Lane rows carry their identity BY VALUE, never a pointer into
     // model.lanes: rows outlive a model rebuild (setSong resets view
     // heights before rebuildRows repopulates them), so a cached pointer
@@ -3448,15 +3270,13 @@ private:
         if (m_rightRow < 0 || m_rightRow >= int(m_rows.size()))
             return;
         const bool fine = event->modifiers() & Qt::AltModifier;
-        const uint64_t tick =
-            m_sv->snapTick(rawTickAt(event->position().x()), fine);
+        const uint64_t tick = m_sv->snapTick(rawTickAt(event->position().x()), fine);
         SongView::TimeSelection sel;
         sel.startTick = std::min(m_selAnchorTick, tick);
         sel.endTick = std::max(m_selAnchorTick, tick);
         sel.scope = SongView::TimeSelection::Lanes;
         int r0 = m_rightRow;
-        int r1 = rowIndexAt(
-            std::clamp(event->pos().y(), 0, rowTop(int(m_rows.size())) - 1));
+        int r1 = rowIndexAt(std::clamp(event->pos().y(), 0, rowTop(int(m_rows.size())) - 1));
         if (r1 < 0)
             r1 = r0;
         if (r0 > r1)
@@ -3479,12 +3299,10 @@ private:
         const SongView::TimeSelection &sel = m_sv->timeSelection();
         const qreal x = event->position().x();
         const qreal dpr = devicePixelRatioF();
-        const qreal startX =
-            m_sv->displayX(double(sel.startTick), kGutterW, dpr);
-        const qreal endX =
-            m_sv->displayX(double(sel.endTick), kGutterW, dpr);
-        if (sel.active() && m_sv->timeSelectionCoversRow(id.first, id.second)
-            && x >= startX && x < endX) {
+        const qreal startX = m_sv->displayX(double(sel.startTick), kGutterW, dpr);
+        const qreal endX = m_sv->displayX(double(sel.endTick), kGutterW, dpr);
+        if (sel.active() && m_sv->timeSelectionCoversRow(id.first, id.second) && x >= startX &&
+            x < endX) {
             m_sv->showTimeSelectionMenu(event->globalPosition().toPoint());
             return;
         }
@@ -3498,8 +3316,7 @@ private:
         int track;
         if (!rowTarget(row, &cc, &track))
             return;
-        if (const LanePoint *nearPt =
-                nearestPoint(row, event->position().x())) {
+        if (const LanePoint *nearPt = nearestPoint(row, event->position().x())) {
             DocLanePoint pt;
             if (doc->findLanePoint(track, cc, nearPt->tick, &pt))
                 doc->deleteLanePoints(track, cc, {pt});
@@ -3517,10 +3334,8 @@ private:
         bool found = false;
         qreal bestDist = 9.0; // same radius as nearestPoint
         const qreal dpr = devicePixelRatioF();
-        for (const DocLanePoint &pt :
-             doc->lanePoints(m_sv->selectedTrack(), DOC_CC_VOICE)) {
-            const qreal dist =
-                std::abs(m_sv->displayX(double(pt.tick), kGutterW, dpr) - x);
+        for (const DocLanePoint &pt : doc->lanePoints(m_sv->selectedTrack(), DOC_CC_VOICE)) {
+            const qreal dist = std::abs(m_sv->displayX(double(pt.tick), kGutterW, dpr) - x);
             if (dist < bestDist) {
                 bestDist = dist;
                 *out = pt;
@@ -3594,10 +3409,7 @@ private:
         return -1;
     }
 
-    QRect addLaneRect() const
-    {
-        return QRect(0, rowTop(int(m_rows.size())), width(), kAddLaneH);
-    }
+    QRect addLaneRect() const { return QRect(0, rowTop(int(m_rows.size())), width(), kAddLaneH); }
 
     void applyHeight()
     {
@@ -3623,8 +3435,7 @@ private:
             return;
         const double factor = double(newH) / double(m_laneH);
         for (auto it = m_rowHeights.begin(); it != m_rowHeights.end(); ++it)
-            it.value() = std::clamp(int(std::lround(it.value() * factor)),
-                                    kMinLaneH, kMaxLaneH);
+            it.value() = std::clamp(int(std::lround(it.value() * factor)), kMinLaneH, kMaxLaneH);
         m_laneH = newH;
         applyHeight();
         if (m_scroll) {
@@ -3640,8 +3451,7 @@ private:
     {
         const int track = m_sv->selectedTrack();
         QMenu menu;
-        static constexpr uint8_t kAudibleCcs[] = {0x01, 0x07, 0x0A, 0x14, 0x15,
-                                                  LANE_CC_BEND};
+        static constexpr uint8_t kAudibleCcs[] = {0x01, 0x07, 0x0A, 0x14, 0x15, LANE_CC_BEND};
         for (uint8_t cc : kAudibleCcs) {
             if (m_sv->model().findLane(track, cc))
                 continue;
@@ -3656,8 +3466,7 @@ private:
             menu.addAction(label)->setData(int(cc));
         }
         if (menu.isEmpty())
-            menu.addAction(SongView::tr("All parameters already have lanes"))
-                ->setEnabled(false);
+            menu.addAction(SongView::tr("All parameters already have lanes"))->setEnabled(false);
         QAction *chosen = menu.exec(globalPos);
         if (chosen && chosen->data().isValid())
             m_sv->addEmptyLane(track, uint8_t(chosen->data().toInt()));
@@ -3682,20 +3491,19 @@ private:
         // clips are anchored at the edit cursor instead.
         {
             const SongView::Clip &clip = m_sv->clipboard();
-            pasteLane->setEnabled(clip.wholeLane && clip.lanes.size() == 1
-                                  && !clip.lanes.front().points.empty());
+            pasteLane->setEnabled(clip.wholeLane && clip.lanes.size() == 1 &&
+                                  !clip.lanes.front().points.empty());
         }
         menu.addSeparator();
         QAction *clear = menu.addAction(SongView::tr("Clear events"));
         clear->setEnabled(!empty);
-        QAction *del = menu.addAction(empty ? SongView::tr("Remove empty lane")
-                                            : SongView::tr("Delete lane"));
+        QAction *del =
+            menu.addAction(empty ? SongView::tr("Remove empty lane") : SongView::tr("Delete lane"));
         // Value-axis zoom: display range only, the events keep their values.
         std::vector<std::pair<QAction *, int>> rangeActions;
         if (laneRangeZoomable(cc)) {
             QMenu *range = menu.addMenu(SongView::tr("Value range"));
-            const int current =
-                m_rowRanges.value(laneKey(track, cc), laneRangeDefault(cc));
+            const int current = m_rowRanges.value(laneKey(track, cc), laneRangeDefault(cc));
             const std::pair<int, QString> options[] = {
                 {0, SongView::tr("Auto (fit to data)")},
                 {16, QStringLiteral("0–16")},
@@ -3733,9 +3541,9 @@ private:
                 cl.points.push_back({uint32_t(pt.tick), pt.value});
             clip.lanes.push_back(std::move(cl));
             m_sv->clipboard() = std::move(clip);
-            m_sv->announce(SongView::tr("Copied the %1 lane (%n point(s))", nullptr,
-                                        int(points.size()))
-                               .arg(name));
+            m_sv->announce(
+                SongView::tr("Copied the %1 lane (%n point(s))", nullptr, int(points.size()))
+                    .arg(name));
             return;
         }
         if (chosen == pasteLane) {
@@ -3745,8 +3553,7 @@ private:
             SongDocument::RangeEdit edit;
             edit.removePoints = points;
             SongDocument::RangeEdit::LaneWrite lw{track, cc, {}};
-            for (const std::pair<uint32_t, int> &pv :
-                 m_sv->clipboard().lanes.front().points)
+            for (const std::pair<uint32_t, int> &pv : m_sv->clipboard().lanes.front().points)
                 lw.points.push_back({uint64_t(pv.first), pv.second});
             edit.addPoints.push_back(std::move(lw));
             doc->applyRangeEdit(SongView::tr("paste lane"), edit);
@@ -3760,13 +3567,11 @@ private:
             m_sv->addEmptyLane(track, cc);
             doc->deleteLanePoints(track, cc, points);
         } else if (chosen == del) {
-            if (!points.empty()
-                && QMessageBox::question(
-                       this, SongView::tr("Delete lane"),
-                       SongView::tr("Delete the %1 lane and its %2 events?")
-                           .arg(name)
-                           .arg(points.size()))
-                       != QMessageBox::Yes)
+            if (!points.empty() &&
+                QMessageBox::question(this, SongView::tr("Delete lane"),
+                                      SongView::tr("Delete the %1 lane and its %2 events?")
+                                          .arg(name)
+                                          .arg(points.size())) != QMessageBox::Yes)
                 return;
             m_sv->removeEmptyLane(track, cc); // forget the view state first
             if (!points.empty())
@@ -3790,14 +3595,13 @@ private:
         if (voiceChangeNear(event->position().x(), &hitPt)) {
             const DocLanePoint *hit = &hitPt;
             int voice = hit->value;
-            if (m_sv->pickVoice(SongView::tr("Change voice"), hit->value, &voice)
-                && voice != hit->value)
+            if (m_sv->pickVoice(SongView::tr("Change voice"), hit->value, &voice) &&
+                voice != hit->value)
                 doc->moveLanePoint(track, DOC_CC_VOICE, *hit, hit->tick, voice);
         } else {
-            const std::vector<DocLanePoint> changes =
-                doc->lanePoints(track, DOC_CC_VOICE);
-            const uint64_t tick = m_sv->snapTick(m_sv->tickAtContentX(
-                std::max(qreal(kGutterW), event->position().x()) - kGutterW));
+            const std::vector<DocLanePoint> changes = doc->lanePoints(track, DOC_CC_VOICE);
+            const uint64_t tick = m_sv->snapTick(
+                m_sv->tickAtContentX(std::max(qreal(kGutterW), event->position().x()) - kGutterW));
             // Preselect the voice already sounding at that tick.
             int voice = 0;
             for (const DocLanePoint &pt : changes) {
@@ -3882,8 +3686,7 @@ private:
                 for (const LanePoint &pt : lane->points)
                     dataMax = std::max(dataMax, pt.value);
             }
-            const int mode =
-                m_rowRanges.value(rowKey(row), laneRangeDefault(row.cc));
+            const int mode = m_rowRanges.value(rowKey(row), laneRangeDefault(row.cc));
             *maxV = mode > 0 ? std::max(mode, dataMax) : laneAutoMax(dataMax);
         }
     }
@@ -3900,9 +3703,8 @@ private:
                 return SongView::tr("Pitch bend (BEND)");
             const M4aCcInfo info = m4aClassifyCc(row.cc);
             const AutoLane *lane = rowLane(row);
-            return QStringLiteral("%1 (%2)").arg(
-                lane ? lane->name : QLatin1String(info.name),
-                QLatin1String(info.name));
+            return QStringLiteral("%1 (%2)").arg(lane ? lane->name : QLatin1String(info.name),
+                                                 QLatin1String(info.name));
         }
         }
         return QString();
@@ -3959,9 +3761,8 @@ private:
             label = SongView::tr("c_v value (0 = center):");
         }
         bool ok = false;
-        const int shown = QInputDialog::getInt(this, rowTitle(row), label,
-                                               *value - offset, minShown,
-                                               maxShown, 1, &ok);
+        const int shown = QInputDialog::getInt(this, rowTitle(row), label, *value - offset,
+                                               minShown, maxShown, 1, &ok);
         if (ok)
             *value = shown + offset;
         return ok;
@@ -3976,8 +3777,7 @@ private:
         qreal bestDist = 9.0;
         const qreal dpr = devicePixelRatioF();
         for (const LanePoint &pt : *points) {
-            const qreal dist =
-                std::abs(m_sv->displayX(double(pt.tick), kGutterW, dpr) - x);
+            const qreal dist = std::abs(m_sv->displayX(double(pt.tick), kGutterW, dpr) - x);
             if (dist < bestDist) {
                 bestDist = dist;
                 best = &pt;
@@ -4004,11 +3804,9 @@ private:
         qreal bestDist = qreal(INT_MAX);
         const qreal dpr = devicePixelRatioF();
         for (const LanePoint &pt : *points) {
-            const qreal dx =
-                m_sv->displayX(double(pt.tick), kGutterW, dpr) - x;
-            const int dy = bottom
-                           - (pt.value - minV) * (bottom - top) / std::max(1, maxV - minV)
-                           - y;
+            const qreal dx = m_sv->displayX(double(pt.tick), kGutterW, dpr) - x;
+            const int dy =
+                bottom - (pt.value - minV) * (bottom - top) / std::max(1, maxV - minV) - y;
             if (std::abs(dx) > 7 || std::abs(dy) > 7)
                 continue;
             const qreal dist = dx * dx + qreal(dy * dy);
@@ -4022,9 +3820,7 @@ private:
 
     double rawTickAt(qreal x) const
     {
-        return std::max(
-            0.0, m_sv->tickAtContentX(
-                     std::max(qreal(kGutterW), x) - kGutterW));
+        return std::max(0.0, m_sv->tickAtContentX(std::max(qreal(kGutterW), x) - kGutterW));
     }
 
     // Idle cursor position for the hover readout: raw (unsnapped) tick, so
@@ -4041,13 +3837,11 @@ private:
         if (ri == m_hoverRow && tick == m_hoverTick)
             return;
         const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
-        const QRegion oldRegion =
-            oldGeometry ? oldGeometry->paintRegion : QRegion();
+        const QRegion oldRegion = oldGeometry ? oldGeometry->paintRegion : QRegion();
         m_hoverRow = ri;
         m_hoverTick = tick;
         const auto newGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
-        const QRegion newRegion =
-            newGeometry ? newGeometry->paintRegion : QRegion();
+        const QRegion newRegion = newGeometry ? newGeometry->paintRegion : QRegion();
         invalidateContent(oldRegion | newRegion);
     }
 
@@ -4056,8 +3850,7 @@ private:
         if (m_hoverRow < 0)
             return;
         const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
-        const QRegion oldRegion =
-            oldGeometry ? oldGeometry->paintRegion : QRegion();
+        const QRegion oldRegion = oldGeometry ? oldGeometry->paintRegion : QRegion();
         m_hoverRow = -1;
         invalidateContent(oldRegion);
     }
@@ -4109,8 +3902,7 @@ private:
         for (uint64_t t = t0; t <= t1; t += g) {
             int v = m_dragValue;
             if (to != from) {
-                const double f =
-                    std::clamp((double(t) - from) / (to - from), 0.0, 1.0);
+                const double f = std::clamp((double(t) - from) / (to - from), 0.0, 1.0);
                 v = m_prevValue + int(std::llround(f * (m_dragValue - m_prevValue)));
             }
             sweepUpsert(t, v);
@@ -4168,23 +3960,19 @@ private:
         }
 
         p.setPen(themes::color(themes::Role::song_view_primary_text));
-    const auto titleFont = typography::bold( p.font());
-    const auto captionFont = typography::caption(
-        p.font());
-    const auto textLayout = ::layout::twoLineText(
-        titleFont, titleFont, captionFont, ::layout::Space::Zero);
-    const auto textBoxes =
-        textLayout.align(QRect(8, r.top(), kGutterW - 16, r.height()),::layout::VerticalAlignment::Center);
+        const auto titleFont = typography::bold(p.font());
+        const auto captionFont = typography::caption(p.font());
+        const auto textLayout =
+            ::layout::twoLineText(titleFont, titleFont, captionFont, ::layout::Space::Zero);
+        const auto textBoxes = textLayout.align(QRect(8, r.top(), kGutterW - 16, r.height()),
+                                                ::layout::VerticalAlignment::Center);
         p.setFont(titleFont);
-    p.drawText(textBoxes.primary, Qt::AlignLeft | Qt::AlignVCenter, name);
-    p.setFont(captionFont);
+        p.drawText(textBoxes.primary, Qt::AlignLeft | Qt::AlignVCenter, name);
+        p.setFont(captionFont);
         if (points && !points->empty()) {
             p.setPen(themes::color(themes::Role::song_view_secondary_text));
             p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
-                       SongView::tr("%1 points · %2..%3")
-                           .arg(points->size())
-                           .arg(minV)
-                           .arg(maxV));
+                       SongView::tr("%1 points · %2..%3").arg(points->size()).arg(minV).arg(maxV));
         } else if (points && row.kind == Row::Lane) {
             p.setPen(themes::color(themes::Role::song_view_secondary_text));
             p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
@@ -4195,8 +3983,7 @@ private:
                 if (vc.track == m_sv->selectedTrack())
                     count++;
             p.setPen(themes::color(themes::Role::song_view_secondary_text));
-            p.drawText(
-          textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
+            p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
                        count ? SongView::tr("%n change(s) · click to edit", nullptr, count)
                              : SongView::tr("no voice set · click to add"));
         }
@@ -4211,13 +3998,12 @@ private:
                        row.kind == Row::Lane && row.cc == LANE_CC_BEND);
 
         const std::pair<int, uint8_t> id = rowIdentity(row);
-        drawOverlays(p, m_sv, plot, kGutterW,
-                     m_sv->timeSelectionCoversRow(id.first, id.second));
+        drawOverlays(p, m_sv, plot, kGutterW, m_sv->timeSelectionCoversRow(id.first, id.second));
         p.restore();
     }
 
-    void paintCurve(QPainter &p, const QRect &plot, const std::vector<LanePoint> &points,
-                    int minV, int maxV, const QColor &color, bool centerLine)
+    void paintCurve(QPainter &p, const QRect &plot, const std::vector<LanePoint> &points, int minV,
+                    int maxV, const QColor &color, bool centerLine)
     {
         const int top = plot.top() + 5;
         const int bottom = plot.bottom() - 4;
@@ -4231,19 +4017,16 @@ private:
         }
         p.setPen(QPen(color, 2));
         for (size_t i = 0; i < points.size(); i++) {
-            const qreal x0 =
-                m_sv->displayX(double(points[i].tick), kGutterW, dpr);
-            const qreal x1 =
-                i + 1 < points.size()
-                    ? m_sv->displayX(double(points[i + 1].tick), kGutterW, dpr)
-                               : plot.right();
+            const qreal x0 = m_sv->displayX(double(points[i].tick), kGutterW, dpr);
+            const qreal x1 = i + 1 < points.size()
+                                 ? m_sv->displayX(double(points[i + 1].tick), kGutterW, dpr)
+                                 : plot.right();
             if (x1 < plot.left() || x0 > plot.right())
                 continue;
             const int y = valueY(points[i].value);
             p.drawLine(QLineF(x0, y, x1, y)); // hold value until the next point
             if (i + 1 < points.size())
-                p.drawLine(
-                    QLineF(x1, y, x1, valueY(points[i + 1].value)));
+                p.drawLine(QLineF(x1, y, x1, valueY(points[i + 1].value)));
             if (m_sv->pxPerBeat() >= 24.0)
                 p.fillRect(QRectF(x0 - 1, y - 1, 3, 3), color);
         }
@@ -4261,12 +4044,10 @@ private:
         const QColor color = SongView::trackColor(selected);
         const qreal dpr = p.device()->devicePixelRatioF();
         for (size_t i = 0; i < changes.size(); i++) {
-            const qreal x =
-                m_sv->displayX(double(changes[i]->tick), kGutterW, dpr);
-            const qreal xEnd =
-                i + 1 < changes.size()
-                    ? m_sv->displayX(double(changes[i + 1]->tick), kGutterW, dpr)
-                                 : plot.right();
+            const qreal x = m_sv->displayX(double(changes[i]->tick), kGutterW, dpr);
+            const qreal xEnd = i + 1 < changes.size()
+                                   ? m_sv->displayX(double(changes[i + 1]->tick), kGutterW, dpr)
+                                   : plot.right();
             if (xEnd < plot.left() || x > plot.right())
                 continue;
             p.setPen(QPen(color, 2));
@@ -4281,8 +4062,7 @@ private:
             const qreal textW = std::max<qreal>(10.0, xEnd - textX - 4);
             p.drawText(QRectF(textX, plot.top() + 4, textW, plot.height() - 8),
                        Qt::AlignLeft | Qt::AlignVCenter,
-                       fontMetrics().elidedText(text, Qt::ElideRight,
-                                                qFloor(textW)));
+                       fontMetrics().elidedText(text, Qt::ElideRight, qFloor(textW)));
         }
     }
 
@@ -4295,22 +4075,22 @@ private:
     enum class Gesture { None, Point, Sweep, Line };
 
     SongView *m_sv;
-    QScrollArea *m_scroll;      // hosting scroll area, for lane-zoom pinning
+    QScrollArea *m_scroll; // hosting scroll area, for lane-zoom pinning
     std::vector<Row> m_rows;
-    int m_laneH = kLaneH;       // shared row height; Ctrl+wheel rescales
-    int m_laneZoomAccum = 0;    // sub-notch wheel remainder, like zoomKeyHeight
+    int m_laneH = kLaneH;             // shared row height; Ctrl+wheel rescales
+    int m_laneZoomAccum = 0;          // sub-notch wheel remainder, like zoomKeyHeight
     QHash<QString, int> m_rowHeights; // individual row heights (rowKey → px)
     QHash<QString, int> m_rowRanges;  // display max per lane (rowKey → value;
                                       // 0 = auto-fit); absent = CC default
-    int m_resizeRow = -1;       // row whose bottom divider is being dragged
+    int m_resizeRow = -1;             // row whose bottom divider is being dragged
     int m_resizeOrigH = 0;
     int m_resizePressY = 0;
-    bool m_panning = false;     // middle-drag pan
-    QPointF m_panPos;           // last pan sample, global coords
-    bool m_rightPress = false;  // right button held; sweep vs. click undecided
-    bool m_selSweep = false;    // right-drag time-selection sweep is live
+    bool m_panning = false;    // middle-drag pan
+    QPointF m_panPos;          // last pan sample, global coords
+    bool m_rightPress = false; // right button held; sweep vs. click undecided
+    bool m_selSweep = false;   // right-drag time-selection sweep is live
     QPoint m_rightPressPos;
-    int m_rightRow = -1;        // row of the right press
+    int m_rightRow = -1; // row of the right press
     uint64_t m_selAnchorTick = 0;
     Gesture m_gesture = Gesture::None;
     int m_dragRow = -1;
@@ -4318,27 +4098,26 @@ private:
     uint64_t m_dragTick = 0;
     int m_dragValue = 0;
     std::vector<std::pair<uint64_t, int>> m_sweep; // tick-sorted freehand samples
-    uint64_t m_lineStartTick = 0; // Shift-drag anchor
+    uint64_t m_lineStartTick = 0;                  // Shift-drag anchor
     int m_lineStartValue = 0;
     double m_prevTick = 0.0; // last raw (unsnapped) sweep sample
     int m_prevValue = 0;
-    int m_hoverRow = -1;       // row under an idle cursor; -1 = no readout
-    double m_hoverTick = 0.0;  // raw tick under the idle cursor
+    int m_hoverRow = -1;      // row under an idle cursor; -1 = no readout
+    double m_hoverTick = 0.0; // raw tick under the idle cursor
 };
 
 // ---------------------------------------------------------------- OtherStrip
 
 class OtherStrip : public TimelineSurface
 {
-public:
-    explicit OtherStrip(SongView *sv)
-        : TimelineSurface(sv), m_sv(sv)
+  public:
+    explicit OtherStrip(SongView *sv) : TimelineSurface(sv), m_sv(sv)
     {
         setFixedHeight(QFontMetrics(font()).height() + lyt::space(Space::Two));
         setMouseTracking(true);
     }
 
-protected:
+  protected:
     void paintContent(QPainter &p) override
     {
         const qreal dpr = p.device()->devicePixelRatioF();
@@ -4348,7 +4127,7 @@ protected:
 
         const SongViewModel &model = m_sv->model();
         p.setPen(themes::color(themes::Role::song_view_primary_text));
-    const auto textInset = lyt::space(Space::Two);
+        const auto textInset = lyt::space(Space::Two);
         p.drawText(QRect(textInset, 0, kGutterW - 2 * textInset, height()), Qt::AlignVCenter,
                    SongView::tr("Other events (%1)").arg(model.strip.size()));
         if (!m_sv->timeline())
@@ -4384,14 +4163,12 @@ protected:
         }
         QStringList lines;
         for (const StripItem &item : m_sv->model().strip) {
-            const qreal x =
-                m_sv->displayX(double(item.tick), kGutterW, devicePixelRatioF());
+            const qreal x = m_sv->displayX(double(item.tick), kGutterW, devicePixelRatioF());
             if (std::abs(x - event->position().x()) > 4)
                 continue;
             const double seconds = double(tl->sampleForTick(item.tick)) / tl->sampleRate;
-            QString where = item.track >= 0
-                                ? SongView::tr("Track %1").arg(item.track + 1)
-                                : SongView::tr("File");
+            QString where = item.track >= 0 ? SongView::tr("Track %1").arg(item.track + 1)
+                                            : SongView::tr("File");
             lines << QStringLiteral("%1:%2 · %3 · %4")
                          .arg(int(seconds) / 60)
                          .arg(int(seconds) % 60, 2, 10, QLatin1Char('0'))
@@ -4404,11 +4181,11 @@ protected:
         if (lines.isEmpty())
             QToolTip::hideText();
         else
-            QToolTip::showText(event->globalPosition().toPoint(),
-                               lines.join(QStringLiteral("\n")), this);
+            QToolTip::showText(event->globalPosition().toPoint(), lines.join(QStringLiteral("\n")),
+                               this);
     }
 
-private:
+  private:
     SongView *m_sv;
 };
 
@@ -4419,10 +4196,11 @@ private:
 // through the preview engine; double-click chooses.
 class VoicePickerDialog : public QDialog
 {
-public:
+  public:
     VoicePickerDialog(SongView *sv, const QString &title, int initialVoice,
                       std::function<void(int, int)> audition)
-        : QDialog(sv), m_audition(std::move(audition))
+        : QDialog(sv)
+        , m_audition(std::move(audition))
     {
         setWindowTitle(title);
         resize(lyt::fontPx(30), lyt::fontPx(110.0 / 3.0));
@@ -4459,8 +4237,7 @@ public:
                             firstMatchingVoice = voiceItem;
                     }
                     m_list->setCurrentItem(firstMatchingVoice);
-                    dialogButtons->button(QDialogButtonBox::Ok)
-                        ->setEnabled(firstMatchingVoice);
+                    dialogButtons->button(QDialogButtonBox::Ok)->setEnabled(firstMatchingVoice);
                 });
         searchField->setFocus();
 
@@ -4486,7 +4263,7 @@ public:
         return QDialog::eventFilter(watched, event);
     }
 
-private:
+  private:
     void releaseVoice()
     {
         if (m_sounding < 0)
@@ -4504,27 +4281,28 @@ private:
 
 class TrackHeaderRow : public QWidget
 {
-public:
+  public:
     TrackHeaderRow(SongView *sv, int track, QWidget *parent)
-        : QWidget(parent), m_sv(sv), m_track(track)
+        : QWidget(parent)
+        , m_sv(sv)
+        , m_track(track)
     {
-    const auto buttonExtent = ::layout::fontPx(1.5);
+        const auto buttonExtent = ::layout::fontPx(1.5);
         setFixedHeight(::layout::fontPx(4.0));
         auto *layout = new QHBoxLayout(this);
         layout->setContentsMargins(::layout::space(::layout::Space::Zero),
-                               ::layout::space(::layout::Space::Zero),
-                               ::layout::space(::layout::Space::One),
-                               ::layout::singlePixel());
+                                   ::layout::space(::layout::Space::Zero),
+                                   ::layout::space(::layout::Space::One), ::layout::singlePixel());
         layout->addStretch();
 
         auto *buttons = new QVBoxLayout;
         buttons->setSpacing(::layout::space(::layout::Space::Zero));
         m_mute = new QToolButton(this);
-    m_mute->setAutoRaise(false);
+        m_mute->setAutoRaise(false);
         m_mute->setText(QStringLiteral("M"));
         m_mute->setCheckable(true);
         m_mute->setFixedSize(buttonExtent, buttonExtent);
-    m_mute->setObjectName(QStringLiteral("trackMuteButton"));
+        m_mute->setObjectName(QStringLiteral("trackMuteButton"));
         // Headers are rebuilt on every document edit; keep the persistent
         // mute/solo state (checked before connect, so nothing re-emits).
         m_mute->setChecked(sv->trackMuted(track));
@@ -4535,45 +4313,39 @@ public:
         m_solo->setText(QStringLiteral("S"));
         m_solo->setCheckable(true);
         m_solo->setFixedSize(buttonExtent, buttonExtent);
-    m_solo->setObjectName(QStringLiteral("trackSoloButton"));
+        m_solo->setObjectName(QStringLiteral("trackSoloButton"));
         m_solo->setChecked(sv->trackSoloed(track));
         connect(m_solo, &QToolButton::toggled, this,
                 [this](bool on) { m_sv->setTrackSolo(m_track, on); });
         // The keyboard toggles change the masks without a header rebuild;
         // follow them. Re-entry through toggled is safe: setTrackMute/Solo
         // no-op when the bit already matches.
-        connect(sv, &SongView::muteMaskChanged, this, [this](uint32_t mask) {
-            m_mute->setChecked(mask & (1u << m_track));
-        });
-        connect(sv, &SongView::soloMaskChanged, this, [this](uint32_t mask) {
-            m_solo->setChecked(mask & (1u << m_track));
-        });
+        connect(sv, &SongView::muteMaskChanged, this,
+                [this](uint32_t mask) { m_mute->setChecked(mask & (1u << m_track)); });
+        connect(sv, &SongView::soloMaskChanged, this,
+                [this](uint32_t mask) { m_solo->setChecked(mask & (1u << m_track)); });
         // Display-only binding hints, like the context menus'. Live: the
         // shortcuts dialog can rebind without a header rebuild.
         const auto retip = [this] {
             const auto &keys = keymap::Registry::instance();
             const auto hint = [&keys](const QString &id, const QString &name) {
                 const QKeySequence seq = keys.bindings(id).value(0);
-                return seq.isEmpty()
-                           ? name
-                           : QStringLiteral("%1 (%2)").arg(
-                                 name, seq.toString(QKeySequence::NativeText));
+                return seq.isEmpty() ? name
+                                     : QStringLiteral("%1 (%2)").arg(
+                                           name, seq.toString(QKeySequence::NativeText));
             };
-            m_mute->setToolTip(
-                hint(QStringLiteral("roll.mute_tracks"), SongView::tr("Mute")));
-            m_solo->setToolTip(
-                hint(QStringLiteral("roll.solo_tracks"), SongView::tr("Solo")));
+            m_mute->setToolTip(hint(QStringLiteral("roll.mute_tracks"), SongView::tr("Mute")));
+            m_solo->setToolTip(hint(QStringLiteral("roll.solo_tracks"), SongView::tr("Solo")));
         };
         retip();
-        connect(&keymap::Registry::instance(), &keymap::Registry::bindingsChanged,
-                this, retip);
+        connect(&keymap::Registry::instance(), &keymap::Registry::bindingsChanged, this, retip);
         buttons->addStretch();
         buttons->addWidget(m_mute);
-    buttons->addStretch();
+        buttons->addStretch();
         buttons->addWidget(m_solo);
-    buttons->addStretch();
+        buttons->addStretch();
         layout->addLayout(buttons);
-    layout->setAlignment(buttons, Qt::AlignVCenter);
+        layout->setAlignment(buttons, Qt::AlignVCenter);
     }
 
     int track() const { return m_track; }
@@ -4586,14 +4358,14 @@ public:
         return doc && m_track >= doc->trackBudget();
     }
 
-protected:
+  protected:
     void paintEvent(QPaintEvent *) override
     {
         QPainter p(this);
         const bool selected = m_sv->selectedTrack() == m_track;
         if (selected) {
-      // The derived selection fill has the required lightness gap. Keep
-      // it opaque so the visible header reaches that target.
+            // The derived selection fill has the required lightness gap. Keep
+            // it opaque so the visible header reaches that target.
             p.fillRect(rect(), themes::color(themes::Role::song_view_track_header_selection));
         } else if (m_sv->trackSelectionMask() & (1u << m_track)) {
             // Part of the multi-track scope (Ctrl/Shift+click), lighter than
@@ -4610,31 +4382,26 @@ protected:
             name = SongView::tr("Track %1").arg(m_track + 1);
         const auto textInset = lyt::space(Space::Two);
         const auto textW = width() - lyt::fontPx(2) - textInset;
-    const auto title =
-                       QStringLiteral("%1 · %2").arg(m_track + 1).arg(name);
-    const auto normalTitleFont = p.font();
-    const auto titleFont =
-        selected ? typography::bold(normalTitleFont) : normalTitleFont;
-    const auto titleMetrics = QFontMetrics(titleFont);
-    const auto visibleTitle =
-        titleMetrics.elidedText(title,
-                       Qt::ElideRight, textW);
+        const auto title = QStringLiteral("%1 · %2").arg(m_track + 1).arg(name);
+        const auto normalTitleFont = p.font();
+        const auto titleFont = selected ? typography::bold(normalTitleFont) : normalTitleFont;
+        const auto titleMetrics = QFontMetrics(titleFont);
+        const auto visibleTitle = titleMetrics.elidedText(title, Qt::ElideRight, textW);
         // The song's music player never starts this track in-game
         // (MPlayStart), so playback mutes it; the header must read as inert
         // at a glance: text recedes most of the way into the backdrop and a
         // faint cross spans the row, under the text so labels stay legible.
         const bool silentInGame = isSilentInGame();
-        const QColor backdrop = selected
-            ? themes::color(themes::Role::song_view_track_header_selection)
-            : (m_sv->trackSelectionMask() & (1u << m_track))
-                ? trackHeaderAlsoSelectedColor()
-                : palette().color(QPalette::Window);
+        const QColor backdrop =
+            selected ? themes::color(themes::Role::song_view_track_header_selection)
+            : (m_sv->trackSelectionMask() & (1u << m_track)) ? trackHeaderAlsoSelectedColor()
+                                                             : palette().color(QPalette::Window);
         QColor titleColor = selected
-            ? themes::color(themes::Role::song_view_track_header_selection_text)
-            : themes::color(themes::Role::song_view_primary_text);
-        QColor subtitleColor = selected
-            ? themes::color(themes::Role::song_view_track_header_selection_text)
-            : themes::color(themes::Role::song_view_secondary_text);
+                                ? themes::color(themes::Role::song_view_track_header_selection_text)
+                                : themes::color(themes::Role::song_view_primary_text);
+        QColor subtitleColor =
+            selected ? themes::color(themes::Role::song_view_track_header_selection_text)
+                     : themes::color(themes::Role::song_view_secondary_text);
         if (silentInGame) {
             titleColor = mixTowardOklab(titleColor, backdrop, selected ? 0.35 : 0.6);
             subtitleColor = mixTowardOklab(subtitleColor, backdrop, selected ? 0.35 : 0.6);
@@ -4642,41 +4409,38 @@ protected:
             p.save();
             p.setRenderHint(QPainter::Antialiasing);
             p.setPen(QPen(cross, lyt::singlePixel()));
-            const QRectF box =
-                QRectF(rect()).adjusted(lyt::space(Space::One), lyt::space(Space::One),
-                                        -lyt::space(Space::One),
-                                        -lyt::space(Space::One) - lyt::singlePixel());
+            const QRectF box = QRectF(rect()).adjusted(
+                lyt::space(Space::One), lyt::space(Space::One), -lyt::space(Space::One),
+                -lyt::space(Space::One) - lyt::singlePixel());
             p.drawLine(box.topLeft(), box.bottomRight());
             p.drawLine(box.bottomLeft(), box.topRight());
             p.restore();
         }
         p.setFont(titleFont);
         p.setPen(titleColor);
-    const auto subtitleFont = typography::caption(normalTitleFont);
-    const auto subtitleMetrics = QFontMetrics(subtitleFont);
-    const auto textLayout = ::layout::twoLineText(
-        normalTitleFont, typography::bold(normalTitleFont), subtitleFont,
-        ::layout::Space::Half);
-    // The bottom pixel belongs to the separator, not the row's content.
-    const auto textBounds =
-        QRect(10, 0, textW, height() - lyt::singlePixel());
-    const auto textBoxes = textLayout.align(
-        textBounds,::layout::VerticalAlignment::Center);
-    // Bold and regular glyph bounds differ. Translate the selected title
-    // so changing weight does not make the visible text jump.
-    const auto titleBox = QRectF(textBoxes.primary)
-                              .translated(typography::glyphCenteringOffset(
-                                  normalTitleFont, titleFont, visibleTitle));
+        const auto subtitleFont = typography::caption(normalTitleFont);
+        const auto subtitleMetrics = QFontMetrics(subtitleFont);
+        const auto textLayout =
+            ::layout::twoLineText(normalTitleFont, typography::bold(normalTitleFont), subtitleFont,
+                                  ::layout::Space::Half);
+        // The bottom pixel belongs to the separator, not the row's content.
+        const auto textBounds = QRect(10, 0, textW, height() - lyt::singlePixel());
+        const auto textBoxes = textLayout.align(textBounds, ::layout::VerticalAlignment::Center);
+        // Bold and regular glyph bounds differ. Translate the selected title
+        // so changing weight does not make the visible text jump.
+        const auto titleBox = QRectF(textBoxes.primary)
+                                  .translated(typography::glyphCenteringOffset(
+                                      normalTitleFont, titleFont, visibleTitle));
         p.drawText(titleBox, Qt::AlignLeft | Qt::AlignVCenter, visibleTitle);
 
-    p.setFont(subtitleFont);
-    p.setPen(subtitleColor);
+        p.setFont(subtitleFont);
+        p.setPen(subtitleColor);
         m_shownProgram = m_sv->currentProgram(m_track);
-    const QString subtitle = silentInGame
-        ? SongView::tr("silent in-game · %1").arg(m_sv->instrumentLabel(m_track))
-        : m_sv->instrumentLabel(m_track);
-    p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
-               subtitleMetrics.elidedText(subtitle, Qt::ElideRight, textW));
+        const QString subtitle =
+            silentInGame ? SongView::tr("silent in-game · %1").arg(m_sv->instrumentLabel(m_track))
+                         : m_sv->instrumentLabel(m_track);
+        p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
+                   subtitleMetrics.elidedText(subtitle, Qt::ElideRight, textW));
     }
 
     // The painted voice line (paintEvent's instrument-label rect): a plain
@@ -4688,12 +4452,12 @@ protected:
         m_sv->trackHeaderClicked(m_track, event->modifiers());
         // A plain left press may become a reorder drag (the track's chunk
         // moves — AGB track order is chunk order).
-        m_dragArmed = event->button() == Qt::LeftButton
-            && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier))
-            && m_sv->document();
-        m_voiceClickArmed = event->button() == Qt::LeftButton
-            && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier))
-            && voiceLineRect().contains(event->pos());
+        m_dragArmed = event->button() == Qt::LeftButton &&
+                      !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) &&
+                      m_sv->document();
+        m_voiceClickArmed = event->button() == Qt::LeftButton &&
+                            !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) &&
+                            voiceLineRect().contains(event->pos());
         m_pressPos = event->pos();
     }
 
@@ -4701,7 +4465,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
 
-public:
+  public:
     // Inline rename: a line edit overlaid on the row's name line. Return
     // commits, Escape cancels (both restore the roll's focus), focus-out
     // commits Reaper-style. The document edit itself is queued by
@@ -4726,12 +4490,11 @@ public:
                           .arg(tl->tracks[m_track].noteCount)
                           .arg(m_sv->instrumentLabel(m_track));
         if (isSilentInGame()) {
-            tip += SongView::tr(
-                "\nSilent in-game: this song's music player only allocates "
-                "%1 track(s) (sound/music_player_table.inc), and the game "
-                "never starts the tracks beyond them. porydaw plays it the "
-                "same way. Raise the player's track count in the project to "
-                "use this track.")
+            tip += SongView::tr("\nSilent in-game: this song's music player only allocates "
+                                "%1 track(s) (sound/music_player_table.inc), and the game "
+                                "never starts the tracks beyond them. porydaw plays it the "
+                                "same way. Raise the player's track count in the project to "
+                                "use this track.")
                        .arg(m_sv->document()->trackBudget());
         }
         if (m_sv->document()) {
@@ -4772,7 +4535,7 @@ public:
     // silently drop the typed name.
     void commitOpenRename() { finishRename(true, false); }
 
-protected:
+  protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override
     {
         m_sv->selectTrack(m_track);
@@ -4782,8 +4545,7 @@ protected:
         // row out from under its own event handler.
         if (voiceLineRect().contains(event->pos())) {
             QMetaObject::invokeMethod(
-                m_sv, [sv = m_sv, t = m_track] { sv->editTrackVoice(t); },
-                Qt::QueuedConnection);
+                m_sv, [sv = m_sv, t = m_track] { sv->editTrackVoice(t); }, Qt::QueuedConnection);
             return;
         }
         beginRename();
@@ -4800,8 +4562,7 @@ protected:
         m_sv->selectTrack(m_track);
         QMenu menu(this);
         QAction *voiceAction = menu.addAction(SongView::tr("Change voice..."));
-        QAction *showVoiceAction =
-            menu.addAction(SongView::tr("Show voice in voicegroup"));
+        QAction *showVoiceAction = menu.addAction(SongView::tr("Show voice in voicegroup"));
         QAction *renameAction = menu.addAction(SongView::tr("Rename track..."));
         QAction *duplicateAction = menu.addAction(SongView::tr("Duplicate track"));
         duplicateAction->setEnabled(m_sv->document()->canAddTrack());
@@ -4817,16 +4578,13 @@ protected:
             m_sv->revealTrackVoice(m_track);
         } else if (chosen == voiceAction) {
             QMetaObject::invokeMethod(
-                m_sv, [sv = m_sv, t = m_track] { sv->editTrackVoice(t); },
-                Qt::QueuedConnection);
+                m_sv, [sv = m_sv, t = m_track] { sv->editTrackVoice(t); }, Qt::QueuedConnection);
         } else if (chosen == duplicateAction) {
             QMetaObject::invokeMethod(
-                m_sv, [sv = m_sv, t = m_track] { sv->duplicateTrack(t); },
-                Qt::QueuedConnection);
+                m_sv, [sv = m_sv, t = m_track] { sv->duplicateTrack(t); }, Qt::QueuedConnection);
         } else if (chosen == deleteAction) {
             QMetaObject::invokeMethod(
-                m_sv, [sv = m_sv, t = m_track] { sv->deleteTrack(t); },
-                Qt::QueuedConnection);
+                m_sv, [sv = m_sv, t = m_track] { sv->deleteTrack(t); }, Qt::QueuedConnection);
         }
     }
 
@@ -4838,8 +4596,7 @@ protected:
                 finishRename(false, true);
                 return true;
             }
-            if (keyEvent->key() == Qt::Key_Return
-                || keyEvent->key() == Qt::Key_Enter) {
+            if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
                 finishRename(true, true);
                 return true;
             }
@@ -4855,7 +4612,7 @@ protected:
             m_editor->setGeometry(editorRect());
     }
 
-private:
+  private:
     // The row's name line, clear of the color strip and the M/S column.
     QRect editorRect() const { return QRect(6, 2, width() - 32, 20); }
 
@@ -4893,9 +4650,8 @@ private:
 
 class TrackHeaderPanel : public QWidget
 {
-public:
-    explicit TrackHeaderPanel(SongView *sv)
-        : QWidget(nullptr), m_sv(sv)
+  public:
+    explicit TrackHeaderPanel(SongView *sv) : QWidget(nullptr), m_sv(sv)
     {
         setObjectName(QStringLiteral("trackHeaderPanel"));
         setAttribute(Qt::WA_StyledBackground);
@@ -4956,8 +4712,9 @@ public:
                 add->setToolTip(SongView::tr("Add a track (picks its voice first)"));
                 // Queued: the edit rebuilds this panel, deleting the button
                 // out from under its own clicked handler.
-                connect(add, &QPushButton::clicked, m_sv,
-                        [sv = m_sv] { sv->addTrack(); }, Qt::QueuedConnection);
+                connect(
+                    add, &QPushButton::clicked, m_sv, [sv = m_sv] { sv->addTrack(); },
+                    Qt::QueuedConnection);
                 m_layout->insertWidget(m_layout->count() - 1, add);
                 m_rows.push_back(add);
             }
@@ -5011,8 +4768,8 @@ public:
         }
         m_dropSlot = slot;
         const int y = slot < int(m_trackRows.size())
-            ? m_trackRows[size_t(slot)]->y()
-            : m_trackRows.back()->y() + m_trackRows.back()->height();
+                          ? m_trackRows[size_t(slot)]->y()
+                          : m_trackRows.back()->y() + m_trackRows.back()->height();
         m_indicator->setGeometry(0, y - 1, width(), 3);
         m_indicator->raise();
         m_indicator->show();
@@ -5048,11 +4805,10 @@ public:
         // Queued: the edit rebuilds this panel, deleting the dragged row out
         // from under its own mouse-release handler.
         QMetaObject::invokeMethod(
-            m_sv, [sv = m_sv, from, target] { sv->moveTrack(from, target); },
-            Qt::QueuedConnection);
+            m_sv, [sv = m_sv, from, target] { sv->moveTrack(from, target); }, Qt::QueuedConnection);
     }
 
-private:
+  private:
     SongView *m_sv;
     QVBoxLayout *m_layout;
     std::vector<QWidget *> m_rows;
@@ -5069,9 +4825,8 @@ void TrackHeaderRow::mouseMoveEvent(QMouseEvent *event)
 {
     auto *panel = static_cast<TrackHeaderPanel *>(parentWidget());
     if (!m_dragging) {
-        if (!m_dragArmed || !(event->buttons() & Qt::LeftButton)
-            || (event->pos() - m_pressPos).manhattanLength()
-                < QApplication::startDragDistance())
+        if (!m_dragArmed || !(event->buttons() & Qt::LeftButton) ||
+            (event->pos() - m_pressPos).manhattanLength() < QApplication::startDragDistance())
             return;
         m_dragging = panel->beginRowDrag(m_track);
         if (!m_dragging)
@@ -5122,8 +4877,7 @@ songview::TimelineSurfaces SongView::timelineSurfaces() noexcept
     };
 }
 
-SongView::SongView(QWidget *parent)
-    : QWidget(parent)
+SongView::SongView(QWidget *parent) : QWidget(parent)
 {
     auto *vbox = new QVBoxLayout(this);
     vbox->setContentsMargins(0, 0, 0, 0);
@@ -5152,8 +4906,8 @@ SongView::SongView(QWidget *parent)
     m_headers = new TrackHeaderPanel(this);
     headerScroll->setWidget(m_headers);
     mid->addWidget(headerScroll);
-  // The note grid and raw event list share the roll's slot. Headers, ruler,
-  // and automation lanes remain visible on either page.
+    // The note grid and raw event list share the roll's slot. Headers, ruler,
+    // and automation lanes remain visible on either page.
     m_rollStack = new QStackedWidget(this);
     auto *rollPage = new QWidget(m_rollStack);
     auto *rollBox = new QHBoxLayout(rollPage);
@@ -5162,8 +4916,8 @@ SongView::SongView(QWidget *parent)
     m_roll = new PianoRoll(this);
     rollBox->addWidget(m_roll, 1);
     m_vbar = new QScrollBar(Qt::Vertical, this);
-  ::layout::configureListPositionIndicator(*m_vbar);
-        m_vbar->setSingleStep(kScrollUnitsPerDip);
+    ::layout::configureListPositionIndicator(*m_vbar);
+    m_vbar->setSingleStep(kScrollUnitsPerDip);
     rollBox->addWidget(m_vbar);
     m_rollStack->addWidget(rollPage);
     m_events = new EventListView(this);
@@ -5199,12 +4953,8 @@ SongView::SongView(QWidget *parent)
     hbarRow->addWidget(m_hbar);
     vbox->addLayout(hbarRow);
 
-    connect(m_hbar, &QScrollBar::valueChanged, this, [this](int v) {
-        setHScroll(scrollDips(v));
-    });
-    connect(m_vbar, &QScrollBar::valueChanged, this, [this](int v) {
-        setVScroll(scrollDips(v));
-    });
+    connect(m_hbar, &QScrollBar::valueChanged, this, [this](int v) { setHScroll(scrollDips(v)); });
+    connect(m_vbar, &QScrollBar::valueChanged, this, [this](int v) { setVScroll(scrollDips(v)); });
 }
 
 void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup)
@@ -5257,8 +5007,8 @@ void SongView::rebuildAfterSongChange()
         const int midKey = m_model.minNoteKey <= m_model.maxNoteKey
                                ? (m_model.minNoteKey + m_model.maxNoteKey) / 2
                                : 60;
-        initialScrollY = std::max(0.0, (127 - midKey) * m_keyHeight
-                                           - std::max(200, m_roll->height()) / 2.0);
+        initialScrollY =
+            std::max(0.0, (127 - midKey) * m_keyHeight - std::max(200, m_roll->height()) / 2.0);
     } else {
         m_pxPerTick = 1.0;
     }
@@ -5290,8 +5040,7 @@ void SongView::updateSong(const MidiTimeline *timeline)
     std::vector<NoteId> keep;
     for (const NoteId &id : m_selection) {
         for (const ViewNote &note : m_model.notes) {
-            if (note.track == m_selectedTrack && note.startTick == id.tick
-                && note.key == id.key) {
+            if (note.track == m_selectedTrack && note.startTick == id.tick && note.key == id.key) {
                 keep.push_back(id);
                 break;
             }
@@ -5311,8 +5060,7 @@ void SongView::setDocument(SongDocument *document)
         if (m_document)
             disconnect(m_document, &SongDocument::trackMoved, this, nullptr);
         if (document)
-            connect(document, &SongDocument::trackMoved, this,
-                    &SongView::onTrackMoved);
+            connect(document, &SongDocument::trackMoved, this, &SongView::onTrackMoved);
     }
     m_document = document;
     m_selection.clear();
@@ -5332,7 +5080,7 @@ void SongView::setEventListVisible(bool visible)
         return;
     m_rollStack->setCurrentIndex(visible ? 1 : 0);
     if (visible) {
-    // The list skips refreshes while hidden; catch up when shown.
+        // The list skips refreshes while hidden; catch up when shown.
         m_events->refresh();
         m_events->syncTrackSelection();
     }
@@ -5361,9 +5109,9 @@ void SongView::addEmptyLane(int track, uint8_t cc)
 
 void SongView::removeEmptyLane(int track, uint8_t cc)
 {
-    m_emptyLanes.erase(std::remove(m_emptyLanes.begin(), m_emptyLanes.end(),
-                                   std::pair<int, uint8_t>(track, cc)),
-                       m_emptyLanes.end());
+    m_emptyLanes.erase(
+        std::remove(m_emptyLanes.begin(), m_emptyLanes.end(), std::pair<int, uint8_t>(track, cc)),
+        m_emptyLanes.end());
     for (auto it = m_model.lanes.begin(); it != m_model.lanes.end(); ++it) {
         if (it->track == track && it->cc == cc && it->points.empty()) {
             m_model.lanes.erase(it);
@@ -5443,18 +5191,17 @@ void SongView::applyViewState(const ViewState &state)
     setGridFeel(state.gridTriplet ? GridFeel::Triplet : GridFeel::Straight);
     m_editCursorTick = std::min<uint64_t>(state.editCursorTick, m_timeline->lengthTicks);
     for (const std::pair<int, uint8_t> &lane : state.emptyLanes)
-        if (lane.first >= 0 && lane.first < 16
-            && std::find(m_emptyLanes.begin(), m_emptyLanes.end(), lane)
-                   == m_emptyLanes.end())
+        if (lane.first >= 0 && lane.first < 16 &&
+            std::find(m_emptyLanes.begin(), m_emptyLanes.end(), lane) == m_emptyLanes.end())
             m_emptyLanes.push_back(lane);
     mergeEmptyLanes();
     m_lanes->setViewHeights(state.laneHeight, state.laneHeights);
     m_lanes->setRowRanges(state.laneRanges);
-    if (state.selectedTrack >= 0 && state.selectedTrack < 16
-        && m_timeline->tracks[state.selectedTrack].used)
+    if (state.selectedTrack >= 0 && state.selectedTrack < 16 &&
+        m_timeline->tracks[state.selectedTrack].used)
         selectTrack(state.selectedTrack);
-    if (state.splitterSizes.size() == 2 && state.splitterSizes[0] > 0
-        && state.splitterSizes[1] > 0) {
+    if (state.splitterSizes.size() == 2 && state.splitterSizes[0] > 0 &&
+        state.splitterSizes[1] > 0) {
         // Real sizes exist; skip resizeEvent's default split.
         m_splitInit = true;
         m_splitter->setSizes(state.splitterSizes);
@@ -5462,7 +5209,7 @@ void SongView::applyViewState(const ViewState &state)
     m_lanes->rebuildRows();
     updateScrollbars();
     setHScroll(std::max(0.0, state.scrollPx));
-        setVScroll(state.scrollY);
+    setVScroll(state.scrollY);
     setEventListVisible(state.eventList);
     refreshTimelineViews();
 }
@@ -5509,8 +5256,8 @@ SongView::GridSeg SongView::gridSegAt(uint64_t tick) const
         // Same-tick duplicates overwrite: the last at a tick wins, matching
         // forEachGridLine.
         seg.start = ts.tick;
-        seg.beatTicks = std::max<uint64_t>(
-            1, (uint64_t(tpb) * 4) >> std::min<int>(ts.denomPow2, 63));
+        seg.beatTicks =
+            std::max<uint64_t>(1, (uint64_t(tpb) * 4) >> std::min<int>(ts.denomPow2, 63));
     }
     return seg;
 }
@@ -5532,7 +5279,7 @@ uint64_t SongView::snapTicksAt(uint64_t tick) const
 uint64_t SongView::gridTicksIn(const GridSeg &seg, bool snap) const
 {
     const uint64_t clock = m_document ? m_document->ticksPerClock() : 1;
-  // Finest visible subdivision at least kAutoGridMinCellPx wide from the
+    // Finest visible subdivision at least kAutoGridMinCellPx wide from the
     // feel's ladder
     // (divisions per beat), floored at the mid2agb clock grid and at the
     // user's minimum note value. The floor is one division per beat of the
@@ -5542,9 +5289,10 @@ uint64_t SongView::gridTicksIn(const GridSeg &seg, bool snap) const
     static constexpr uint64_t kStraight[] = {32, 16, 8, 4, 2, 1};
     static constexpr uint64_t kTriplet[] = {48, 24, 12, 6, 3, 1};
     const bool triplet = m_gridFeel == GridFeel::Triplet;
-    const uint64_t maxDiv = m_gridMinDenom == 0
-        ? UINT64_MAX
-        : std::max<uint64_t>(1, uint64_t(m_gridMinDenom) * (triplet ? 3 : 2) / 8);
+    const uint64_t maxDiv =
+        m_gridMinDenom == 0
+            ? UINT64_MAX
+            : std::max<uint64_t>(1, uint64_t(m_gridMinDenom) * (triplet ? 3 : 2) / 8);
     const double pxPerSegBeat = m_pxPerTick * double(seg.beatTicks);
     const uint64_t *ladder = triplet ? kTriplet : kStraight;
     constexpr int kSteps = 6;
@@ -5563,19 +5311,16 @@ uint64_t SongView::gridTicksIn(const GridSeg &seg, bool snap) const
     // floor only — snapping steps past it too. gcd keeps the snap grid a
     // divisor of the drawn grid when a beat's ticks don't split evenly, so
     // every drawn line stays snappable.
-    const uint64_t vis =
-        std::max(std::max<uint64_t>(1, seg.beatTicks / ladder[step]), clock);
+    const uint64_t vis = std::max(std::max<uint64_t>(1, seg.beatTicks / ladder[step]), clock);
     if (!snap || step == 0)
         return vis;
-    const uint64_t fine =
-        std::max<uint64_t>(1, seg.beatTicks / ladder[step - 1]);
+    const uint64_t fine = std::max<uint64_t>(1, seg.beatTicks / ladder[step - 1]);
     return std::max(std::gcd(vis, fine), clock);
 }
 
 uint64_t SongView::fineGridTicks() const
 {
-    return m_document ? std::max<uint32_t>(1, m_document->ticksPerClock())
-                      : gridTicksAt(0);
+    return m_document ? std::max<uint32_t>(1, m_document->ticksPerClock()) : gridTicksAt(0);
 }
 
 uint64_t SongView::snapTick(double tick, bool fine) const
@@ -5610,12 +5355,11 @@ uint64_t SongView::snapTickUp(double tick) const
     tick = std::max(0.0, tick);
     const GridSeg seg = gridSegAt(uint64_t(tick));
     const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, /*snap=*/true));
-    const uint64_t lo =
-        seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
+    const uint64_t lo = seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
     if (double(lo) >= tick)
         return lo;
-  // The next signature's tick is itself a grid position, so the upper
-  // candidate never crosses it.
+    // The next signature's tick is itself a grid position, so the upper
+    // candidate never crosses it.
     return std::min(lo + g, seg.next);
 }
 
@@ -5675,8 +5419,7 @@ bool SongView::timeSelectionCoversRow(int track, uint8_t cc) const
         return false;
     if (m_timeSel.scope == TimeSelection::Lanes)
         return std::find(m_timeSel.lanes.begin(), m_timeSel.lanes.end(),
-                         std::pair<int, uint8_t>(track, cc))
-            != m_timeSel.lanes.end();
+                         std::pair<int, uint8_t>(track, cc)) != m_timeSel.lanes.end();
     // Track scopes cover the track's CC/voice rows, never the global tempo.
     if (cc == DOC_CC_TEMPO)
         return false;
@@ -5687,8 +5430,8 @@ void SongView::announceTimeSelection()
 {
     if (!m_timeSel.active() || !m_timeline)
         return;
-    const double beats = double(m_timeSel.endTick - m_timeSel.startTick)
-                         / double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
+    const double beats = double(m_timeSel.endTick - m_timeSel.startTick) /
+                         double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
     QString scope;
     if (m_timeSel.scope == TimeSelection::Lanes) {
         scope = tr("%n lane(s)", nullptr, int(m_timeSel.lanes.size()));
@@ -5762,10 +5505,10 @@ void SongView::copyTimeSelection()
             for (const DocNote &note : m_document->notesForTrack(t)) {
                 if (note.tick < s || note.tick >= e)
                     continue;
-                ct.notes.push_back({uint32_t(note.tick - s), note.key,
-                                    note.duration ? note.duration
-                                                  : uint32_t(gridTicksAt(note.tick)),
-                                    note.velocity});
+                ct.notes.push_back(
+                    {uint32_t(note.tick - s), note.key,
+                     note.duration ? note.duration : uint32_t(gridTicksAt(note.tick)),
+                     note.velocity});
             }
             noteCount += int(ct.notes.size());
             clip.tracks.push_back(std::move(ct));
@@ -5774,9 +5517,7 @@ void SongView::copyTimeSelection()
         }
     }
     m_clip = std::move(clip);
-    announce(tr("Copied range: %1 note(s), %2 automation point(s)")
-                 .arg(noteCount)
-                 .arg(pointCount));
+    announce(tr("Copied range: %1 note(s), %2 automation point(s)").arg(noteCount).arg(pointCount));
 }
 
 void SongView::deleteTimeSelection()
@@ -5813,15 +5554,12 @@ void SongView::deleteTimeSelection()
     const int notes = int(edit.removeNotes.size());
     const int points = int(edit.removePoints.size());
     m_document->applyRangeEdit(tr("delete range"), edit);
-    announce(tr("Deleted range: %1 note(s), %2 automation point(s)")
-                 .arg(notes)
-                 .arg(points));
+    announce(tr("Deleted range: %1 note(s), %2 automation point(s)").arg(notes).arg(points));
 }
 
 void SongView::transposeTimeSelection(int dKey)
 {
-    if (!m_document || !m_timeSel.active() || dKey == 0
-        || m_timeSel.scope == TimeSelection::Lanes)
+    if (!m_document || !m_timeSel.active() || dKey == 0 || m_timeSel.scope == TimeSelection::Lanes)
         return;
     const uint64_t s = m_timeSel.startTick;
     const uint64_t e = m_timeSel.endTick;
@@ -5853,8 +5591,7 @@ void SongView::transposeTimeSelection(int dKey)
     }
     ensureKeyVisible(edge);
     announce(tr("Transposed %n note(s) by %1", nullptr, int(notes.size()))
-                 .arg(dKey > 0 ? QStringLiteral("+%1").arg(dKey)
-                               : QString::number(dKey)));
+                 .arg(dKey > 0 ? QStringLiteral("+%1").arg(dKey) : QString::number(dKey)));
 }
 
 void SongView::nudgeTimeSelection(bool right)
@@ -5863,8 +5600,7 @@ void SongView::nudgeTimeSelection(bool right)
         return;
     const uint64_t s = m_timeSel.startTick;
     const uint64_t e = m_timeSel.endTick;
-    const uint64_t snapped =
-        right ? snapTickUp(double(s) + 1.0) : snapTickDown(double(s) - 1.0);
+    const uint64_t snapped = right ? snapTickUp(double(s) + 1.0) : snapTickDown(double(s) - 1.0);
     const int64_t dTick = int64_t(snapped) - int64_t(s);
     if (dTick == 0)
         return;
@@ -5919,9 +5655,8 @@ void SongView::removeTimeSelectionContents()
         for (int t = 0; t < 16; t++)
             used += m_timeline->tracks[t].used ? 1 : 0;
         scope.wholeSong = int(scope.tracks.size()) == used;
-        scopeText = scope.wholeSong
-                        ? tr("all tracks")
-                        : tr("%n track(s)", nullptr, int(scope.tracks.size()));
+        scopeText = scope.wholeSong ? tr("all tracks")
+                                    : tr("%n track(s)", nullptr, int(scope.tracks.size()));
     }
     if (!m_document->removeTimeRange(s, e, scope)) {
         announce(tr("Nothing to remove in the time selection"));
@@ -5931,8 +5666,7 @@ void SongView::removeTimeSelectionContents()
     // was; clear it and park the edit cursor at the seam.
     clearTimeSelection();
     commitEditCursor(s);
-    const double beats = double(e - s)
-                         / double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
+    const double beats = double(e - s) / double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
     announce(tr("Removed %1 beats on %2 — later events shifted left")
                  .arg(beats, 0, 'g', 4)
                  .arg(scopeText));
@@ -5978,8 +5712,7 @@ void SongView::pasteRangeAtEditCursor()
         if (!ct.notes.empty()) {
             SongDocument::RangeEdit::TrackNotes tn{t, {}};
             for (const ClipNote &cn : ct.notes)
-                tn.notes.push_back(
-                    {s + cn.relTick, cn.key, cn.duration, cn.velocity});
+                tn.notes.push_back({s + cn.relTick, cn.key, cn.duration, cn.velocity});
             edit.addNotes.push_back(std::move(tn));
         }
     }
@@ -6059,15 +5792,13 @@ bool SongView::handleEditKey(QKeyEvent *event)
             return true;
         }
     }
-    if (sel
-        && (keys.matches(event, QStringLiteral("roll.nudge_left"))
-            || keys.matches(event, QStringLiteral("roll.nudge_right")))) {
+    if (sel && (keys.matches(event, QStringLiteral("roll.nudge_left")) ||
+                keys.matches(event, QStringLiteral("roll.nudge_right")))) {
         nudgeTimeSelection(keys.matches(event, QStringLiteral("roll.nudge_right")));
         event->accept();
         return true;
     }
-    if (keys.matches(event, QStringLiteral("roll.paste")) && m_clip.span > 0
-        && !m_clip.empty()) {
+    if (keys.matches(event, QStringLiteral("roll.paste")) && m_clip.span > 0 && !m_clip.empty()) {
         pasteRangeAtEditCursor();
         event->accept();
         return true;
@@ -6127,17 +5858,16 @@ void SongView::announceNote(const ViewNote &note)
     const bool ext = m_document && m_document->cfg().extendedClocks;
     const bool exact = m_document && m_document->cfg().exactGate;
     const int64_t ticks = int64_t(note.endTick) - int64_t(note.startTick);
-    emit statusMessage(tr("%1 · velocity %2 → plays %3 · length %4 ticks → %5 clocks")
-                           .arg(keyName(note.key))
-                           .arg(note.velocity)
-                           .arg(mid2agbEffectiveVelocity(note.velocity))
-                           .arg(ticks)
-                           .arg(mid2agbEffectiveDuration(ticks, m_timeline->ticksPerBeat,
-                                                         ext, exact)));
+    emit statusMessage(
+        tr("%1 · velocity %2 → plays %3 · length %4 ticks → %5 clocks")
+            .arg(keyName(note.key))
+            .arg(note.velocity)
+            .arg(mid2agbEffectiveVelocity(note.velocity))
+            .arg(ticks)
+            .arg(mid2agbEffectiveDuration(ticks, m_timeline->ticksPerBeat, ext, exact)));
 }
 
-void SongView::auditionTimed(int track, int key, int velocity, uint64_t startTick,
-                             uint64_t endTick)
+void SongView::auditionTimed(int track, int key, int velocity, uint64_t startTick, uint64_t endTick)
 {
     if (!m_timeline || endTick <= startTick)
         return;
@@ -6148,8 +5878,7 @@ void SongView::auditionTimed(int track, int key, int velocity, uint64_t startTic
     if (cap > 0)
         dur = std::min(dur, cap);
     if (dur > 0)
-        emit auditionNoteTimed(track, key, velocity,
-                               quint32(std::min<uint64_t>(dur, UINT32_MAX)));
+        emit auditionNoteTimed(track, key, velocity, quint32(std::min<uint64_t>(dur, UINT32_MAX)));
 }
 
 void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
@@ -6175,16 +5904,14 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
 
 bool SongView::userGestureActive() const
 {
-    return (m_ruler && m_ruler->gestureActive())
-        || (m_roll && m_roll->gestureActive())
-        || (m_lanes && m_lanes->gestureActive());
+    return (m_ruler && m_ruler->gestureActive()) || (m_roll && m_roll->gestureActive()) ||
+           (m_lanes && m_lanes->gestureActive());
 }
 
 void SongView::syncPlayheadOverlay()
 {
     if (m_playheadOverlay) {
-        m_playheadOverlay->setPlayhead(
-            contentX(m_playheadTick), m_timeline != nullptr, m_playing);
+        m_playheadOverlay->setPlayhead(contentX(m_playheadTick), m_timeline != nullptr, m_playing);
     }
 }
 
@@ -6341,9 +6068,8 @@ static QString scopedTracksText(uint32_t mask)
         if (mask & (1u << t))
             nums << QString::number(t + 1);
     }
-    return nums.size() == 1
-               ? SongView::tr("track %1").arg(nums.first())
-               : SongView::tr("tracks %1").arg(nums.join(QStringLiteral(", ")));
+    return nums.size() == 1 ? SongView::tr("track %1").arg(nums.first())
+                            : SongView::tr("tracks %1").arg(nums.join(QStringLiteral(", ")));
 }
 
 void SongView::toggleMuteOnSelectedTracks()
@@ -6384,9 +6110,8 @@ QColor SongView::noteColor(int track, int velocity)
     if (velocity >= 127)
         return trackColor(track);
     const double t = 1.0 - (double(velocity) / 127.0);
-    return mixTowardOklab(
-        trackColor(track),
-        themes::color(themes::Role::song_view_note_velocity_zero), t);
+    return mixTowardOklab(trackColor(track),
+                          themes::color(themes::Role::song_view_note_velocity_zero), t);
 }
 
 QColor SongView::velocityNoteColor(int velocity)
@@ -6408,9 +6133,8 @@ QColor SongView::velocityNoteColor(int velocity)
     kMaxVelocity.getHsvF(&h1, &s1, &v1);
     // Quantize to 8-bit RGB: QColor equality is spec- and depth-sensitive,
     // and callers compare against rendered pixels.
-    return QColor(QColor::fromHsvF(h0 + (h1 - h0) * t, s0 + (s1 - s0) * t,
-                                   v0 + (v1 - v0) * t)
-                      .rgb());
+    return QColor(
+        QColor::fromHsvF(h0 + (h1 - h0) * t, s0 + (s1 - s0) * t, v0 + (v1 - v0) * t).rgb());
 }
 
 void SongView::setFollowPlayhead(bool on)
@@ -6429,8 +6153,7 @@ void SongView::setVelocityColorMode(bool on)
 
 QColor SongView::noteFillColor(int track, int velocity) const
 {
-    return m_velocityColorMode ? velocityNoteColor(velocity)
-                               : noteColor(track, velocity);
+    return m_velocityColorMode ? velocityNoteColor(velocity) : noteColor(track, velocity);
 }
 
 int SongView::currentProgram(int track) const
@@ -6527,8 +6250,8 @@ void SongView::editTrackVoice(int track)
     if (changes.empty())
         m_document->addLanePoint(track, DOC_CC_VOICE, 0, voice);
     else if (voice != initial)
-        m_document->moveLanePoint(track, DOC_CC_VOICE, changes.front(),
-                                  changes.front().tick, voice);
+        m_document->moveLanePoint(track, DOC_CC_VOICE, changes.front(), changes.front().tick,
+                                  voice);
 }
 
 void SongView::renameTrack(int track)
@@ -6545,7 +6268,8 @@ void SongView::commitTrackRename(int track, const QString &name)
     const QString trimmed = name.trimmed();
     if (nameIsLoopMarker(trimmed)) {
         announce(tr("\"%1\" is read by the song build as a loop or label "
-                    "marker, so it can't be a track name.").arg(trimmed));
+                    "marker, so it can't be a track name.")
+                     .arg(trimmed));
         return;
     }
     // Queued: the commit arrives from the header row's editor signal, and
@@ -6643,9 +6367,7 @@ void SongView::onTrackMoved(int, int, const QVector<int> &map)
     // state only, don't read it back.
     if (map.size() < 16)
         return;
-    const auto newIndex = [&map](int t) {
-        return t >= 0 && t < 16 ? map[t] : t;
-    };
+    const auto newIndex = [&map](int t) { return t >= 0 && t < 16 ? map[t] : t; };
     const auto permuteMask = [&newIndex](uint32_t mask) {
         uint32_t out = 0;
         for (int t = 0; t < 16; t++) {
@@ -6711,7 +6433,7 @@ void SongView::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
                 if (tick < tickBegin)
                     continue;
                 fn(tick, k % seg.beatsPerBar == 0, bar + int(k / seg.beatsPerBar),
-           int(k % seg.beatsPerBar) + 1);
+                   int(k % seg.beatsPerBar) + 1);
             }
         }
         if (i + 1 < segs.size()) {
@@ -6728,12 +6450,10 @@ void SongView::zoomAroundContentX(double factor, qreal anchorContentX)
         return;
     const double tpb = double(m_timeline->ticksPerBeat);
     const double oldPxPerTick = m_pxPerTick;
-    m_pxPerTick = std::clamp(oldPxPerTick * factor, kMinPxPerBeat / tpb,
-                             kMaxPxPerBeat / tpb);
-    m_scrollX = std::clamp(cursorAnchoredScroll(
-                               double(anchorContentX), oldPxPerTick, m_scrollX,
-                               m_pxPerTick),
-                           0.0, maxHScroll());
+    m_pxPerTick = std::clamp(oldPxPerTick * factor, kMinPxPerBeat / tpb, kMaxPxPerBeat / tpb);
+    m_scrollX = std::clamp(
+        cursorAnchoredScroll(double(anchorContentX), oldPxPerTick, m_scrollX, m_pxPerTick), 0.0,
+        maxHScroll());
     updateScrollbars();
     refreshTimelineViews();
 }
@@ -6746,14 +6466,13 @@ void SongView::zoomKeyHeight(const QWheelEvent *event)
     if (zoomDelta == 0.0)
         return;
     const double oldH = m_keyHeight;
-    const double newH = std::clamp(oldH * std::exp2(zoomDelta / 1200.0),
-                                   kMinKeyHeight, kMaxKeyHeight);
+    const double newH =
+        std::clamp(oldH * std::exp2(zoomDelta / 1200.0), kMinKeyHeight, kMaxKeyHeight);
     if (newH == m_keyHeight)
         return;
     // Pin the content row under the cursor before projecting to the scrollbar.
     const double anchorY = event->position().y();
-    const double anchoredScroll =
-        cursorAnchoredScroll(anchorY, oldH, m_scrollY, newH);
+    const double anchoredScroll = cursorAnchoredScroll(anchorY, oldH, m_scrollY, newH);
     m_keyHeight = newH;
     updateScrollbars();
     setVScroll(std::clamp(anchoredScroll, 0.0, maxRollScroll()));
@@ -6779,12 +6498,12 @@ void SongView::setHScroll(double px)
     m_scrollX = newX;
     const int scrollbarValue = scrollUnits(m_scrollX);
     if (m_hbar->value() != scrollbarValue) {
-    m_hbar->blockSignals(true);
+        m_hbar->blockSignals(true);
         m_hbar->setValue(scrollbarValue);
-    m_hbar->blockSignals(false);
+        m_hbar->blockSignals(false);
     }
     if (cameraChanged)
-    refreshTimelineViews();
+        refreshTimelineViews();
 }
 
 void SongView::ensureTickVisible(uint64_t tick)
@@ -6822,13 +6541,13 @@ void SongView::ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool pre
 
 void SongView::ensureKeyVisible(int key)
 {
-        const double y0 = (127 - key) * m_keyHeight - m_scrollY;
-        const double y1 = y0 + m_keyHeight;
+    const double y0 = (127 - key) * m_keyHeight - m_scrollY;
+    const double y1 = y0 + m_keyHeight;
     const int vh = m_roll->height();
     if (y0 < 0)
-                setVScroll(m_scrollY + y0);
+        setVScroll(m_scrollY + y0);
     else if (y1 > vh)
-                setVScroll(m_scrollY + y1 - vh);
+        setVScroll(m_scrollY + y1 - vh);
 }
 
 int SongView::viewportWidth() const
@@ -6875,7 +6594,7 @@ void SongView::updateScrollbars()
     m_vbar->setRange(0, scrollUnits(maxRollScroll()));
     m_vbar->setPageStep(scrollUnits(double(m_roll->height())));
     m_vbar->blockSignals(false);
-        setVScroll(m_scrollY);
+    setVScroll(m_scrollY);
 }
 
 void SongView::refreshTimelineViews()
@@ -6894,8 +6613,7 @@ void SongView::resizeEvent(QResizeEvent *event)
     // sizes can only be applied once real geometry exists.
     if (!m_splitInit && m_splitter->height() > 0) {
         m_splitInit = true;
-        m_splitter->setSizes(
-            {std::max(120, m_splitter->height() - kLanesAreaH), kLanesAreaH});
+        m_splitter->setSizes({std::max(120, m_splitter->height() - kLanesAreaH), kLanesAreaH});
     }
     updateScrollbars();
     syncPlayheadOverlay();

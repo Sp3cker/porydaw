@@ -26,15 +26,14 @@ class NewSongWizard : public QWizard
 {
     Q_OBJECT
 
-public:
+  public:
     // Blank new song.
     NewSongWizard(DecompProject *project, const QStringList &voicegroupArgs,
                   QWidget *parent = nullptr);
     // Import: `imported` is the parsed external file (kept as-is apart from
     // the analysis page's optional division rescale).
-    NewSongWizard(DecompProject *project, SmfFile imported,
-                  const QString &sourcePath, const QStringList &voicegroupArgs,
-                  QWidget *parent = nullptr);
+    NewSongWizard(DecompProject *project, SmfFile imported, const QString &sourcePath,
+                  const QStringList &voicegroupArgs, QWidget *parent = nullptr);
 
     QString label() const;
     QString constant() const;
@@ -48,7 +47,7 @@ public:
     // already carries its -G arg). Empty for an existing voicegroup.
     QString newVoicegroupName() const;
 
-private:
+  private:
     void buildPages(const QString &sourcePath, const QStringList &voicegroupArgs);
 
     DecompProject *m_project;

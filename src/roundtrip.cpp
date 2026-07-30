@@ -54,8 +54,7 @@ QString firstDiffLine(const QByteArray &a, const QByteArray &b)
         if (la[i] != lb[i])
             return QStringLiteral("line %1: '%2' vs '%3'")
                 .arg(i + 1)
-                .arg(QString::fromLatin1(la[i]).trimmed(),
-                     QString::fromLatin1(lb[i]).trimmed());
+                .arg(QString::fromLatin1(la[i]).trimmed(), QString::fromLatin1(lb[i]).trimmed());
     }
     return QStringLiteral("line count %1 vs %2").arg(la.size()).arg(lb.size());
 }
@@ -100,8 +99,8 @@ int runRoundTrip(const QString &projectRoot, const QString &mid2agbArg)
 
         QFile origFile(song.midPath);
         if (!origFile.open(QIODevice::ReadOnly)) {
-            std::fprintf(stderr, "roundtrip: FAIL %s: cannot read %s\n",
-                         qUtf8Printable(song.label), qUtf8Printable(song.midPath));
+            std::fprintf(stderr, "roundtrip: FAIL %s: cannot read %s\n", qUtf8Printable(song.label),
+                         qUtf8Printable(song.midPath));
             failures++;
             continue;
         }
@@ -139,8 +138,8 @@ int runRoundTrip(const QString &projectRoot, const QString &mid2agbArg)
 
         const QByteArray origS = compileMid(mid2agb, song.cfg.rawFlags, origMid, &error);
         if (origS.isNull()) {
-            std::fprintf(stderr, "roundtrip: FAIL %s: original: %s\n",
-                         qUtf8Printable(song.label), qUtf8Printable(error));
+            std::fprintf(stderr, "roundtrip: FAIL %s: original: %s\n", qUtf8Printable(song.label),
+                         qUtf8Printable(error));
             failures++;
             continue;
         }
@@ -154,8 +153,7 @@ int runRoundTrip(const QString &projectRoot, const QString &mid2agbArg)
 
         if (origS != savedS) {
             std::fprintf(stderr, "roundtrip: FAIL %s: .s output differs — %s\n",
-                         qUtf8Printable(song.label),
-                         qUtf8Printable(firstDiffLine(origS, savedS)));
+                         qUtf8Printable(song.label), qUtf8Printable(firstDiffLine(origS, savedS)));
             failures++;
         }
         checked++;

@@ -11,18 +11,15 @@ int AuditionSlots::retiredSlot() const
     const uint64_t ackGen = ack >> 8;
     const uint32_t active = uint32_t(ack) & 0xFF;
     for (int s = 0; s < kSlots; s++) {
-        if (m_slots[s].gen != 0
-            && (m_slots[s].gen > ackGen || ((active >> s) & 1)))
+        if (m_slots[s].gen != 0 && (m_slots[s].gen > ackGen || ((active >> s) & 1)))
             continue;
         return s;
     }
     return -1;
 }
 
-bool AuditionSlots::publishNote(const QByteArray &s8, uint32_t freq,
-                                uint32_t loopStart, bool looped,
-                                uint8_t midiKey, const Adsr &adsr,
-                                uint8_t toneKey)
+bool AuditionSlots::publishNote(const QByteArray &s8, uint32_t freq, uint32_t loopStart,
+                                bool looped, uint8_t midiKey, const Adsr &adsr, uint8_t toneKey)
 {
     if (s8.isEmpty())
         return false;
@@ -32,8 +29,7 @@ bool AuditionSlots::publishNote(const QByteArray &s8, uint32_t freq,
 
     Slot &sl = m_slots[slot];
     sl.bytes.assign(reinterpret_cast<const int8_t *>(s8.constData()),
-                    reinterpret_cast<const int8_t *>(s8.constData())
-                        + s8.size());
+                    reinterpret_cast<const int8_t *>(s8.constData()) + s8.size());
     // The engine's interpolating mixer reads one sample past the current
     // position (m4a_pcm_channel_render's s1 lookahead); the voicegroup
     // loader pads every WaveData with a repeat of the final sample for
@@ -56,14 +52,12 @@ bool AuditionSlots::publishNote(const QByteArray &s8, uint32_t freq,
 
     m_gen++;
     sl.gen = m_gen;
-    m_publish.store((m_gen << 16) | (uint64_t(slot) << 8)
-                        | uint64_t(midiKey & 0x7F),
+    m_publish.store((m_gen << 16) | (uint64_t(slot) << 8) | uint64_t(midiKey & 0x7F),
                     std::memory_order_release);
     return true;
 }
 
-bool AuditionSlots::publishWave(const QByteArray &wave16, uint8_t midiKey,
-                                const Adsr &adsr)
+bool AuditionSlots::publishWave(const QByteArray &wave16, uint8_t midiKey, const Adsr &adsr)
 {
     if (wave16.size() != 16)
         return false;
@@ -88,8 +82,7 @@ bool AuditionSlots::publishWave(const QByteArray &wave16, uint8_t midiKey,
 
     m_gen++;
     sl.gen = m_gen;
-    m_publish.store((m_gen << 16) | (uint64_t(slot) << 8)
-                        | uint64_t(midiKey & 0x7F),
+    m_publish.store((m_gen << 16) | (uint64_t(slot) << 8) | uint64_t(midiKey & 0x7F),
                     std::memory_order_release);
     return true;
 }
@@ -148,8 +141,7 @@ void AuditionSlots::apply(M4AEngine *engine, int track)
             continue;
         for (int s = 0; s < kSlots; s++) {
             const Slot &sl = m_slots[s];
-            if (sl.tone.type == VOICE_PROGRAMMABLE_WAVE
-                && ch.wavePointer == sl.tone.wavePointer)
+            if (sl.tone.type == VOICE_PROGRAMMABLE_WAVE && ch.wavePointer == sl.tone.wavePointer)
                 mask |= 1u << s;
         }
     }

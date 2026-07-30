@@ -32,7 +32,7 @@ class VoicegroupBrowser;
 namespace themes {
 class ThemeController;
 class ThemeDialog;
-}
+} // namespace themes
 
 class MainWindow : public QMainWindow
 {
@@ -40,7 +40,7 @@ class MainWindow : public QMainWindow
 
     friend class VoiceEditCommand; // calls applyVoiceEdit from undo/redo
 
-public:
+  public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
@@ -59,8 +59,7 @@ public:
     // Multi-tab check (--tabcheck; tabcheck.cpp): per-tab documents and undo
     // stacks, playback stopping on tab switches, tab close/replace, and
     // multi-tab session persistence. QSettings must be redirected.
-    bool runTabCheck(const QString &projectRoot, const QString &songA,
-                     const QString &songB);
+    bool runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB);
 
     // Register Song action wiring (part of --onboardcheck; onboardcheck.cpp):
     // a partially registered song keeps the action enabled, and running it
@@ -86,7 +85,7 @@ public:
     // harnesses never inherit (or overwrite) the user's session.
     void restoreSession();
 
-protected:
+  protected:
     void closeEvent(QCloseEvent *event) override;
     void changeEvent(QEvent *event) override;
     void childEvent(QChildEvent *event) override;
@@ -95,7 +94,7 @@ protected:
     // field is focused.
     bool eventFilter(QObject *watched, QEvent *event) override;
 
-private slots:
+  private slots:
     void openProject();
     void songActivated(int songId);
     void songOpenInNewTab(int songId);
@@ -127,7 +126,7 @@ private slots:
     void tabChanged(int index);
     void closeTab(int index);
 
-private:
+  private:
     void buildUi();
     void updateWindowFrameTheme();
     void updateDockTabFonts();
@@ -143,9 +142,8 @@ private:
     // wizard asked for one, writes the .mid + midi.cfg line, registers the
     // song in the three registration files, reloads the project, and opens
     // the song in a new tab.
-    void finishCreateSong(const SmfFile &smf, const QString &label,
-                          const QString &constant, const QString &player,
-                          const SongCfg &cfg, const QString &newVoicegroup);
+    void finishCreateSong(const SmfFile &smf, const QString &label, const QString &constant,
+                          const QString &player, const SongCfg &cfg, const QString &newVoicegroup);
     // The dialog-less half of deleteSongById (also the harness entry): closes
     // the song's tab discarding its edits, moves the .mid to .porydaw/trash/,
     // removes the flag line, unregisters, drops the sidecar, deletes the
@@ -362,9 +360,9 @@ private:
 
         bool operator==(const PolyStatusSnapshot &other) const
         {
-            return loaded == other.loaded && activePcm == other.activePcm
-                && maxPcm == other.maxPcm && activeCgb == other.activeCgb
-                && lostTotal == other.lostTotal;
+            return loaded == other.loaded && activePcm == other.activePcm &&
+                   maxPcm == other.maxPcm && activeCgb == other.activeCgb &&
+                   lostTotal == other.lostTotal;
         }
     };
     QString m_lastTimeText;

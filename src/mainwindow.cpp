@@ -4,28 +4,28 @@
 #include <QCheckBox>
 #include <QColor>
 #include <QComboBox>
+#include <QDebug>
 #include <QDialog>
 #include <QDialogButtonBox>
-#include <QDebug>
 #include <QDir>
 #include <QDockWidget>
-#include <QFormLayout>
-#include <QFontMetrics>
-#include <QHBoxLayout>
-#include <QLineEdit>
-#include <QRegularExpressionValidator>
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontMetrics>
+#include <QFormLayout>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
-#include <QPainter>
 #include <QMessageBox>
+#include <QPainter>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QRegularExpressionValidator>
 #include <QSettings>
 #include <QSpinBox>
 #include <QStatusBar>
@@ -44,8 +44,8 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <windows.h>
 #include <dwmapi.h>
+#include <windows.h>
 #endif
 
 #include <algorithm>
@@ -61,11 +61,11 @@
 #include "project/songregistry.h"
 #include "ui/keyboardshortcutsdialog.h"
 #include "ui/keymap.h"
+#include "ui/layout.h"
 #include "ui/newsongwizard.h"
+#include "ui/polyphonypanel.h"
 #include "ui/sampleeditordialog.h"
 #include "ui/sf2zonepicker.h"
-#include "ui/polyphonypanel.h"
-#include "ui/layout.h"
 #include "ui/songlistpanel.h"
 #include "ui/songsettingsdialog.h"
 #include "ui/songview.h"
@@ -101,12 +101,10 @@ enum class DwmWindowAttribute : DWORD {
 };
 #endif
 
-QIcon tintedStandardIcon(QWidget &widget, QStyle::StandardPixmap icon,
-                         const QSize &size)
+QIcon tintedStandardIcon(QWidget &widget, QStyle::StandardPixmap icon, const QSize &size)
 {
     const auto tinted = [&](themes::Role role) {
-        auto pixmap = widget.style()->standardIcon(icon).pixmap(
-            size, widget.devicePixelRatioF());
+        auto pixmap = widget.style()->standardIcon(icon).pixmap(size, widget.devicePixelRatioF());
         QPainter painter(&pixmap);
         painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
         painter.fillRect(pixmap.rect(), themes::color(role));
@@ -120,16 +118,11 @@ QIcon tintedStandardIcon(QWidget &widget, QStyle::StandardPixmap icon,
     // Disabled gets an explicit theme tint: Qt's generated gray-out barely
     // shifts a light glyph on a dark toolbar.
     QIcon result(tinted(themes::Role::transport_text));
-    result.addPixmap(tinted(themes::Role::button_hover_text), QIcon::Active,
-                     QIcon::Off);
-    result.addPixmap(tinted(themes::Role::button_pressed_text), QIcon::Normal,
-                     QIcon::On);
-    result.addPixmap(tinted(themes::Role::button_pressed_text), QIcon::Active,
-                     QIcon::On);
-    result.addPixmap(tinted(themes::Role::disabled_text), QIcon::Disabled,
-                     QIcon::Off);
-    result.addPixmap(tinted(themes::Role::disabled_text), QIcon::Disabled,
-                     QIcon::On);
+    result.addPixmap(tinted(themes::Role::button_hover_text), QIcon::Active, QIcon::Off);
+    result.addPixmap(tinted(themes::Role::button_pressed_text), QIcon::Normal, QIcon::On);
+    result.addPixmap(tinted(themes::Role::button_pressed_text), QIcon::Active, QIcon::On);
+    result.addPixmap(tinted(themes::Role::disabled_text), QIcon::Disabled, QIcon::Off);
+    result.addPixmap(tinted(themes::Role::disabled_text), QIcon::Disabled, QIcon::On);
     return result;
 }
 } // namespace
@@ -143,15 +136,18 @@ QIcon tintedStandardIcon(QWidget &widget, QStyle::StandardPixmap icon,
 // command lives in that session's own undo stack, so they die together.
 class VoiceEditCommand : public QUndoCommand
 {
-public:
-    VoiceEditCommand(MainWindow *window, SongSession *session, const QString &loadName,
-                     int slot, const VgVoice &before, const VgVoice &after,
-                     bool structural)
-        : QUndoCommand(QObject::tr("edit voice %1").arg(slot)), m_window(window),
-          m_session(session), m_loadName(loadName), m_slot(slot), m_before(before),
-          m_after(after), m_structural(structural)
-    {
-    }
+  public:
+    VoiceEditCommand(MainWindow *window, SongSession *session, const QString &loadName, int slot,
+                     const VgVoice &before, const VgVoice &after, bool structural)
+        : QUndoCommand(QObject::tr("edit voice %1").arg(slot))
+        , m_window(window)
+        , m_session(session)
+        , m_loadName(loadName)
+        , m_slot(slot)
+        , m_before(before)
+        , m_after(after)
+        , m_structural(structural)
+    {}
 
     const QString &loadName() const { return m_loadName; }
     int slot() const { return m_slot; }
@@ -165,10 +161,8 @@ public:
     bool mergeWith(const QUndoCommand *other) override
     {
         auto *o = static_cast<const VoiceEditCommand *>(other);
-        if (o->m_loadName != m_loadName || o->m_slot != m_slot || m_structural
-            || o->m_structural
-            || changedFields(o->m_before, o->m_after)
-                != changedFields(m_before, m_after))
+        if (o->m_loadName != m_loadName || o->m_slot != m_slot || m_structural || o->m_structural ||
+            changedFields(o->m_before, o->m_after) != changedFields(m_before, m_after))
             return false;
         m_after = o->m_after;
         if (m_after == m_before)
@@ -185,7 +179,7 @@ public:
         m_window->applyVoiceEdit(*m_session, m_loadName, m_slot, m_before, m_structural);
     }
 
-private:
+  private:
     static uint changedFields(const VgVoice &a, const VgVoice &b)
     {
         uint mask = 0;
@@ -213,33 +207,28 @@ private:
     bool m_structural;
 };
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle(QStringLiteral("porydaw"));
     resize(::layout::fontPx(92), ::layout::fontPx(57));
     m_engineSettings = EngineSettings::load();
     m_themeSettings = std::make_unique<QSettings>();
-    m_themeController =
-        std::make_unique<themes::ThemeController>(*qApp, *m_themeSettings);
+    m_themeController = std::make_unique<themes::ThemeController>(*qApp, *m_themeSettings);
     // Before restore(): the theme apply installs the Body font, so the
     // system-font preference must already be in force for the first paint.
-    typography::setUseSystemFont(
-        m_themeSettings->value(kSystemFontKey, false).toBool());
+    typography::setUseSystemFont(m_themeSettings->value(kSystemFontKey, false).toBool());
     m_themeController->restore();
     updateWindowFrameTheme();
-    m_themeDialog =
-        std::make_unique<themes::ThemeDialog>(*m_themeController, this);
+    m_themeDialog = std::make_unique<themes::ThemeDialog>(*m_themeController, this);
     buildUi();
 
     QSettings settings;
     restoreGeometry(settings.value(QStringLiteral("windowGeometry")).toByteArray());
     restoreState(settings.value(QStringLiteral("windowState")).toByteArray());
     updateDockTabFonts();
-    m_songList->restoreFilters(
-        settings.value(QStringLiteral("songFilterText")).toString(),
-        settings.value(QStringLiteral("songFilterSort")).toInt(),
-        settings.value(QStringLiteral("songFilterCategory")).toString());
+    m_songList->restoreFilters(settings.value(QStringLiteral("songFilterText")).toString(),
+                               settings.value(QStringLiteral("songFilterSort")).toInt(),
+                               settings.value(QStringLiteral("songFilterCategory")).toString());
 
     QString audioError;
     m_audioOk = m_audio.init(&audioError);
@@ -249,14 +238,13 @@ MainWindow::MainWindow(QWidget *parent)
     } else if (m_audio.usingNullBackend()) {
         // Non-modal: harnesses construct MainWindow offscreen and must not
         // block on a dialog (CI runs without a real audio server).
-        auto *box = new QMessageBox(
-            QMessageBox::Warning, tr("No Audio Output"),
-            tr("No working audio backend was found, so playback will be "
-               "silent.\n\nOn WSL this usually means the Linux distro is "
-               "missing the PulseAudio client library (sudo apt install "
-               "libpulse0) or WSLg is out of date (run \"wsl --update\" "
-               "from Windows, then restart WSL)."),
-            QMessageBox::Ok, this);
+        auto *box = new QMessageBox(QMessageBox::Warning, tr("No Audio Output"),
+                                    tr("No working audio backend was found, so playback will be "
+                                       "silent.\n\nOn WSL this usually means the Linux distro is "
+                                       "missing the PulseAudio client library (sudo apt install "
+                                       "libpulse0) or WSLg is out of date (run \"wsl --update\" "
+                                       "from Windows, then restart WSL)."),
+                                    QMessageBox::Ok, this);
         box->setAttribute(Qt::WA_DeleteOnClose);
         box->show();
     }
@@ -278,8 +266,7 @@ MainWindow::MainWindow(QWidget *parent)
     // 60hz is 16.6 ms; Qt can tick faster than this, making the playhead move
     // faster than 60hz and wasting time.
     m_playheadTimer->setInterval(17);
-    connect(m_playheadTimer, &QTimer::timeout, this,
-            &MainWindow::synchronizePlayhead);
+    connect(m_playheadTimer, &QTimer::timeout, this, &MainWindow::synchronizePlayhead);
     updateTimeLabel();
     updatePolyStatus();
 
@@ -311,21 +298,20 @@ void MainWindow::buildUi()
 
     // Menu
     QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
-    QAction *openAction = fileMenu->addAction(tr("&Open Project..."), this,
-                                              &MainWindow::openProject);
+    QAction *openAction =
+        fileMenu->addAction(tr("&Open Project..."), this, &MainWindow::openProject);
     keys.attach(QStringLiteral("file.open_project"), openAction);
     m_newSongAction = fileMenu->addAction(tr("&New Song..."), this, &MainWindow::newSong);
     keys.attach(QStringLiteral("file.new_song"), m_newSongAction);
     m_newSongAction->setEnabled(false);
-    m_importAction =
-        fileMenu->addAction(tr("&Import MIDI..."), this, &MainWindow::importMidi);
+    m_importAction = fileMenu->addAction(tr("&Import MIDI..."), this, &MainWindow::importMidi);
     keys.attach(QStringLiteral("file.import_midi"), m_importAction);
     m_importAction->setEnabled(false);
     m_saveAction = fileMenu->addAction(tr("&Save Song"), this, &MainWindow::saveSong);
     keys.attach(QStringLiteral("file.save_song"), m_saveAction);
     m_saveAction->setEnabled(false);
-    m_registerAction = fileMenu->addAction(tr("Re&gister Song"), this,
-                                           &MainWindow::registerLoadedSong);
+    m_registerAction =
+        fileMenu->addAction(tr("Re&gister Song"), this, &MainWindow::registerLoadedSong);
     keys.attach(QStringLiteral("file.register_song"), m_registerAction);
     m_registerAction->setEnabled(false);
     m_closeTabAction = fileMenu->addAction(tr("&Close Tab"), this, [this] {
@@ -335,8 +321,7 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("file.close_tab"), m_closeTabAction);
     m_closeTabAction->setEnabled(false);
     fileMenu->addSeparator();
-    m_exportWavAction = fileMenu->addAction(tr("Export &WAV..."), this,
-                                            &MainWindow::exportWav);
+    m_exportWavAction = fileMenu->addAction(tr("Export &WAV..."), this, &MainWindow::exportWav);
     keys.attach(QStringLiteral("file.export_wav"), m_exportWavAction);
     m_exportWavAction->setEnabled(false);
     fileMenu->addSeparator();
@@ -353,17 +338,16 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("edit.redo"), redoAction);
     editMenu->addAction(redoAction);
     editMenu->addSeparator();
-    m_settingsAction = editMenu->addAction(tr("Song Se&ttings..."), this,
-                                           &MainWindow::openSongSettings);
+    m_settingsAction =
+        editMenu->addAction(tr("Song Se&ttings..."), this, &MainWindow::openSongSettings);
     keys.attach(QStringLiteral("edit.song_settings"), m_settingsAction);
     m_settingsAction->setEnabled(false);
     // Global GBA-accuracy knobs (SPEC §7); not song-scoped, so always enabled.
-    QAction *engineSettingsAction = editMenu->addAction(
-        tr("&Engine Settings..."), this, &MainWindow::openEngineSettings);
+    QAction *engineSettingsAction =
+        editMenu->addAction(tr("&Engine Settings..."), this, &MainWindow::openEngineSettings);
     keys.attach(QStringLiteral("edit.engine_settings"), engineSettingsAction);
     QAction *shortcutsAction =
-        editMenu->addAction(tr("&Keyboard Shortcuts..."), this,
-                            &MainWindow::openKeyboardShortcuts);
+        editMenu->addAction(tr("&Keyboard Shortcuts..."), this, &MainWindow::openKeyboardShortcuts);
     keys.attach(QStringLiteral("edit.keyboard_shortcuts"), shortcutsAction);
     auto *viewMenu = menuBar()->addMenu(tr("&View"));
     // View menu: piano roll vs raw MIDI event list, per tab.
@@ -378,44 +362,41 @@ void MainWindow::buildUi()
 
     // Tools menu: project-level utilities that aren't song-scoped.
     QMenu *toolsMenu = menuBar()->addMenu(tr("&Tools"));
-    m_importSampleAction = toolsMenu->addAction(tr("Import &Sample..."), this,
-                                                &MainWindow::importSample);
+    m_importSampleAction =
+        toolsMenu->addAction(tr("Import &Sample..."), this, &MainWindow::importSample);
     keys.attach(QStringLiteral("tools.import_sample"), m_importSampleAction);
     m_importSampleAction->setEnabled(false);
 
     QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
-    QAction *aboutAction =
-        helpMenu->addAction(tr("&About porydaw"), this, [this] {
-            QMessageBox::about(
-                this, tr("About porydaw"),
-                tr("<h3>porydaw %1</h3>"
-                   "<p>A music editor for the Pokémon generation 3 "
-                   "decompilation projects "
-                   "(<a href=\"https://github.com/pret/pokeruby\">pokeruby</a>, "
-                   "<a href=\"https://github.com/pret/pokeemerald\">pokeemerald</a>, "
-                   "and <a href=\"https://github.com/pret/pokefirered\">"
-                   "pokefirered</a>).</p>"
-                   "<p>In Porydaw, load your decomp project directory to load "
-                   "the music-related project data. Then, play, edit, and "
-                   "create music. It sounds just like it does in-game. When "
-                   "saving, Porydaw writes and creates the necessary files "
-                   "directly into the decomp project. It also supports "
-                   "importing MIDI files, making it easy to whip up songs and "
-                   "voicegroups for brand new songs.</p>"
-                   "<p>Porydaw is designed for both music beginners and power "
-                   "users who are familiar with DAW programs. If you've used "
-                   "Sappy or Anvil Studio for your musical needs in the past, "
-                   "then Porydaw is for you! If you're a power user who loves "
-                   "your existing DAW (FL Studio, Reaper, etc.), give Porydaw "
-                   "a try&mdash;but if you can't be pulled away, the "
-                   "<a href=\"https://github.com/huderlem/poryaaaa\">poryaaaa "
-                   "CLAP plugin</a> helps serve that power-user workflow.</p>"
-                   "<p>Running on Qt %2.</p>"
-                   "<p><a href=\"https://github.com/huderlem/porydaw\">"
-                   "github.com/huderlem/porydaw</a></p>")
-                    .arg(QStringLiteral(PORYDAW_VERSION),
-                         QLatin1String(qVersion())));
-        });
+    QAction *aboutAction = helpMenu->addAction(tr("&About porydaw"), this, [this] {
+        QMessageBox::about(this, tr("About porydaw"),
+                           tr("<h3>porydaw %1</h3>"
+                              "<p>A music editor for the Pokémon generation 3 "
+                              "decompilation projects "
+                              "(<a href=\"https://github.com/pret/pokeruby\">pokeruby</a>, "
+                              "<a href=\"https://github.com/pret/pokeemerald\">pokeemerald</a>, "
+                              "and <a href=\"https://github.com/pret/pokefirered\">"
+                              "pokefirered</a>).</p>"
+                              "<p>In Porydaw, load your decomp project directory to load "
+                              "the music-related project data. Then, play, edit, and "
+                              "create music. It sounds just like it does in-game. When "
+                              "saving, Porydaw writes and creates the necessary files "
+                              "directly into the decomp project. It also supports "
+                              "importing MIDI files, making it easy to whip up songs and "
+                              "voicegroups for brand new songs.</p>"
+                              "<p>Porydaw is designed for both music beginners and power "
+                              "users who are familiar with DAW programs. If you've used "
+                              "Sappy or Anvil Studio for your musical needs in the past, "
+                              "then Porydaw is for you! If you're a power user who loves "
+                              "your existing DAW (FL Studio, Reaper, etc.), give Porydaw "
+                              "a try&mdash;but if you can't be pulled away, the "
+                              "<a href=\"https://github.com/huderlem/poryaaaa\">poryaaaa "
+                              "CLAP plugin</a> helps serve that power-user workflow.</p>"
+                              "<p>Running on Qt %2.</p>"
+                              "<p><a href=\"https://github.com/huderlem/porydaw\">"
+                              "github.com/huderlem/porydaw</a></p>")
+                               .arg(QStringLiteral(PORYDAW_VERSION), QLatin1String(qVersion())));
+    });
     // Qt recognizes the "About" text and relocates this into the application
     // menu on macOS.
     aboutAction->setMenuRole(QAction::AboutRole);
@@ -470,8 +451,7 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("transport.loop"), m_loopAction);
     m_loopAction->setCheckable(true);
     m_loopAction->setChecked(true);
-    connect(m_loopAction, &QAction::toggled, this,
-            [this](bool on) { m_audio.setLoopEnabled(on); });
+    connect(m_loopAction, &QAction::toggled, this, [this](bool on) { m_audio.setLoopEnabled(on); });
     transport->addAction(m_loopAction);
 
     // Whether playback drags the view along. Off, the playhead runs
@@ -480,8 +460,7 @@ void MainWindow::buildUi()
     // the checked state restores before the connect so the toggle handler
     // (which walks m_tabs, not built yet) never runs during setup.
     m_followPlayheadAction = new QAction(tr("&Follow Playhead"), this);
-    keys.attach(QStringLiteral("transport.follow_playhead"),
-                m_followPlayheadAction);
+    keys.attach(QStringLiteral("transport.follow_playhead"), m_followPlayheadAction);
     m_followPlayheadAction->setCheckable(true);
     // The toolbar glyph must not leak into the View menu: a checkable
     // action with a visible icon renders the icon INSTEAD of the check
@@ -491,8 +470,7 @@ void MainWindow::buildUi()
         tr("Scroll the view to keep the playhead visible during playback"));
     {
         QSettings settings;
-        m_followPlayheadAction->setChecked(
-            settings.value(kFollowPlayheadKey, true).toBool());
+        m_followPlayheadAction->setChecked(settings.value(kFollowPlayheadKey, true).toBool());
     }
     connect(m_followPlayheadAction, &QAction::toggled, this, [this](bool on) {
         QSettings settings;
@@ -554,8 +532,8 @@ void MainWindow::buildUi()
 
     // Dock titles and the tab strip share this metric-derived outer height so
     // neither clips when the platform font or small-icon metric changes.
-    const auto chromeHeight = layout::chromeRowHeight(
-        font(), style()->pixelMetric(QStyle::PM_SmallIconSize));
+    const auto chromeHeight =
+        layout::chromeRowHeight(font(), style()->pixelMetric(QStyle::PM_SmallIconSize));
     const auto installDockTitle = [chromeHeight](QDockWidget *target) {
         auto *title = new QLabel(target->windowTitle(), target);
         title->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
@@ -563,8 +541,7 @@ void MainWindow::buildUi()
                                   ::layout::space(::layout::Space::Two), 0);
         title->setFixedHeight(chromeHeight);
         title->setAttribute(Qt::WA_TransparentForMouseEvents);
-        QObject::connect(target, &QDockWidget::windowTitleChanged, title,
-                         &QLabel::setText);
+        QObject::connect(target, &QDockWidget::windowTitleChanged, title, &QLabel::setText);
         target->setTitleBarWidget(title);
     };
 
@@ -577,17 +554,14 @@ void MainWindow::buildUi()
     connect(m_songList, &SongListPanel::songActivated, this, &MainWindow::songActivated);
     connect(m_songList, &SongListPanel::songOpenInNewTabRequested, this,
             &MainWindow::songOpenInNewTab);
-    connect(m_songList, &SongListPanel::songRegisterRequested, this,
-            &MainWindow::registerSongById);
-    connect(m_songList, &SongListPanel::songDeleteRequested, this,
-            &MainWindow::deleteSongById);
+    connect(m_songList, &SongListPanel::songRegisterRequested, this, &MainWindow::registerSongById);
+    connect(m_songList, &SongListPanel::songDeleteRequested, this, &MainWindow::deleteSongById);
     dock->setWidget(m_songList);
     addDockWidget(Qt::LeftDockWidgetArea, dock);
 
     auto *findAction = new QAction(tr("Find Song"), this);
     keys.attach(QStringLiteral("songs.find"), findAction);
-    connect(findAction, &QAction::triggered, this,
-            [this] { m_songList->focusSearch(); });
+    connect(findAction, &QAction::triggered, this, [this] { m_songList->focusSearch(); });
     addAction(findAction);
 
     // Voicegroup browser dock (SPEC §6.1): the active tab's instruments,
@@ -625,40 +599,34 @@ void MainWindow::buildUi()
         info.seconds = info.rateHz > 0 ? double(wd->size) / info.rateHz : 0.0;
         return info;
     });
-    connect(m_vgBrowser, &VoicegroupBrowser::sampleAuditionRequested, this,
-            [this](const QString &symbol, VgAuditionKind kind,
-                   const AuditionSlots::Adsr &adsr) {
-                if (!m_audioOk)
-                    return;
-                if (kind == VgAuditionKind::Keysplit) {
-                    auditionKeysplit(symbol);
-                    return;
-                }
-                if (kind == VgAuditionKind::Wave) {
-                    ensureSampleSet();
-                    const uint32_t *pw = m_progWaves.value(symbol, nullptr);
-                    if (pw)
-                        m_audio.auditionWave(
-                            QByteArray::fromRawData(
-                                reinterpret_cast<const char *>(pw), 16),
-                            60, adsr);
-                    return;
-                }
-                const WaveData *wd = sampleWaveFor(symbol);
-                if (!wd || !wd->data || wd->size == 0)
-                    return;
-                m_audio.auditionSample(
-                    QByteArray::fromRawData(
-                        reinterpret_cast<const char *>(wd->data),
-                        int(wd->size)),
-                    wd->freq, wd->loopStart, (wd->status & 0x4000) != 0, 60,
-                    adsr);
-            });
-    connect(m_vgBrowser, &VoicegroupBrowser::sampleAuditionStopRequested, this,
-            [this] {
-                if (m_audioOk)
-                    m_audio.auditionSampleOff();
-            });
+    connect(
+        m_vgBrowser, &VoicegroupBrowser::sampleAuditionRequested, this,
+        [this](const QString &symbol, VgAuditionKind kind, const AuditionSlots::Adsr &adsr) {
+            if (!m_audioOk)
+                return;
+            if (kind == VgAuditionKind::Keysplit) {
+                auditionKeysplit(symbol);
+                return;
+            }
+            if (kind == VgAuditionKind::Wave) {
+                ensureSampleSet();
+                const uint32_t *pw = m_progWaves.value(symbol, nullptr);
+                if (pw)
+                    m_audio.auditionWave(
+                        QByteArray::fromRawData(reinterpret_cast<const char *>(pw), 16), 60, adsr);
+                return;
+            }
+            const WaveData *wd = sampleWaveFor(symbol);
+            if (!wd || !wd->data || wd->size == 0)
+                return;
+            m_audio.auditionSample(
+                QByteArray::fromRawData(reinterpret_cast<const char *>(wd->data), int(wd->size)),
+                wd->freq, wd->loopStart, (wd->status & 0x4000) != 0, 60, adsr);
+        });
+    connect(m_vgBrowser, &VoicegroupBrowser::sampleAuditionStopRequested, this, [this] {
+        if (m_audioOk)
+            m_audio.auditionSampleOff();
+    });
     // The dock's voicegroup selector: same undoable cfg edit as Song
     // Settings; onDocumentChanged does the actual swap (and, on a
     // not-found arg, keeps the old voicegroup with a status message).
@@ -668,9 +636,8 @@ void MainWindow::buildUi()
                     return;
                 SongCfg cfg = m_active->doc.cfg();
                 // "_dummy" IS the empty arg's meaning; don't write it out.
-                if (arg == cfg.voicegroupArg
-                    || (cfg.voicegroupArg.isEmpty()
-                        && arg == QLatin1String("_dummy")))
+                if (arg == cfg.voicegroupArg ||
+                    (cfg.voicegroupArg.isEmpty() && arg == QLatin1String("_dummy")))
                     return;
                 cfg.voicegroupArg = arg;
                 m_active->doc.setCfg(cfg);
@@ -683,8 +650,7 @@ void MainWindow::buildUi()
     // window state restores visibility/placement on later runs.
     m_polyDock = new QDockWidget(tr("Polyphony"), this);
     m_polyDock->setObjectName(QStringLiteral("polyphonyDock"));
-    m_polyDock->setFeatures(QDockWidget::DockWidgetMovable
-                            | QDockWidget::DockWidgetClosable);
+    m_polyDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetClosable);
     m_polyPanel = new PolyphonyPanel(m_polyDock);
     // Solo-overflow only inverts the audio while the dock is on screen: with
     // the checkbox out of sight there is nothing to explain the weird
@@ -692,8 +658,7 @@ void MainWindow::buildUi()
     // (checkbox still checked) resumes it.
     const auto applyPolyInvert = [this] {
         if (m_audioOk)
-            m_audio.setPolyDebugInvert(m_polyPanel->invertChecked()
-                                       && m_polyDock->isVisible());
+            m_audio.setPolyDebugInvert(m_polyPanel->invertChecked() && m_polyDock->isVisible());
     };
     connect(m_polyPanel, &PolyphonyPanel::invertToggled, this, applyPolyInvert);
     connect(m_polyDock, &QDockWidget::visibilityChanged, this, applyPolyInvert);
@@ -741,8 +706,7 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("view.system_font"), systemFontAction);
     {
         QSettings settings;
-        systemFontAction->setChecked(
-            settings.value(kSystemFontKey, false).toBool());
+        systemFontAction->setChecked(settings.value(kSystemFontKey, false).toBool());
     }
     connect(systemFontAction, &QAction::toggled, this, [this](bool on) {
         QSettings settings;
@@ -757,8 +721,7 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("view.velocity_colors"), m_velocityColorsAction);
     {
         QSettings settings;
-        m_velocityColorsAction->setChecked(
-            settings.value(kVelocityColorsKey, false).toBool());
+        m_velocityColorsAction->setChecked(settings.value(kVelocityColorsKey, false).toBool());
     }
     connect(m_velocityColorsAction, &QAction::toggled, this, [this](bool on) {
         QSettings settings;
@@ -782,8 +745,7 @@ void MainWindow::buildUi()
     m_tabs->tabBar()->setFixedHeight(chromeHeight);
     connect(m_tabs, &QTabWidget::currentChanged, this, &MainWindow::tabChanged);
     connect(m_tabs, &QTabWidget::tabCloseRequested, this, &MainWindow::closeTab);
-    connect(m_tabs->tabBar(), &QTabBar::tabMoved, this,
-            [this](int, int) { persistOpenTabs(); });
+    connect(m_tabs->tabBar(), &QTabBar::tabMoved, this, [this](int, int) { persistOpenTabs(); });
     setCentralWidget(m_tabs);
 
     // Status bar: polyphony meter
@@ -844,12 +806,10 @@ void MainWindow::refreshDerivedFonts()
     m_timeLabel->setFont(valueFont);
     m_pcmValueLabel->setFont(valueFont);
     m_pcmValueLabel->setFixedWidth(
-        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("15/15")) +
-        2 * fieldInset);
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("15/15")) + 2 * fieldInset);
     m_cgbValueLabel->setFont(valueFont);
     m_cgbValueLabel->setFixedWidth(
-        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("4/4")) +
-        2 * fieldInset);
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("4/4")) + 2 * fieldInset);
     m_polyLostLabel->setFont(valueFont);
     updateDockTabFonts();
 }
@@ -857,25 +817,18 @@ void MainWindow::refreshDerivedFonts()
 void MainWindow::refreshTransportIcons()
 {
     const auto size = m_transportToolbar->iconSize();
-    m_goToStartAction->setIcon(
-        tintedStandardIcon(*this, QStyle::SP_MediaSkipBackward, size));
-    m_playAction->setIcon(
-        tintedStandardIcon(*this, QStyle::SP_MediaPlay, size));
-    m_pauseAction->setIcon(
-        tintedStandardIcon(*this, QStyle::SP_MediaPause, size));
-    m_stopAction->setIcon(
-        tintedStandardIcon(*this, QStyle::SP_MediaStop, size));
-    m_loopAction->setIcon(
-        tintedStandardIcon(*this, QStyle::SP_BrowserReload, size));
-    m_followPlayheadAction->setIcon(
-        tintedStandardIcon(*this, QStyle::SP_MediaSeekForward, size));
+    m_goToStartAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaSkipBackward, size));
+    m_playAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaPlay, size));
+    m_pauseAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaPause, size));
+    m_stopAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaStop, size));
+    m_loopAction->setIcon(tintedStandardIcon(*this, QStyle::SP_BrowserReload, size));
+    m_followPlayheadAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaSeekForward, size));
 }
 
 void MainWindow::updateDockTabFonts()
 {
     const auto dockTabFont = typography::bold(font());
-    for (auto *tabBar :
-         findChildren<QTabBar *>(QString(), Qt::FindDirectChildrenOnly))
+    for (auto *tabBar : findChildren<QTabBar *>(QString(), Qt::FindDirectChildrenOnly))
         tabBar->setFont(dockTabFont);
 }
 
@@ -884,14 +837,11 @@ void MainWindow::updateWindowFrameTheme()
 #ifdef Q_OS_WIN
     const auto caption = themes::color(themes::Role::toolbar_background);
     const auto text = themes::color(themes::Role::toolbar_text);
-    const COLORREF captionColor =
-        RGB(caption.red(), caption.green(), caption.blue());
+    const COLORREF captionColor = RGB(caption.red(), caption.green(), caption.blue());
     const COLORREF textColor = RGB(text.red(), text.green(), text.blue());
     const HWND hwnd = reinterpret_cast<HWND>(winId());
-    const auto setColor = [hwnd](DwmWindowAttribute attribute,
-                                 const COLORREF &color) {
-        DwmSetWindowAttribute(hwnd, static_cast<DWORD>(attribute), &color,
-                              sizeof(color));
+    const auto setColor = [hwnd](DwmWindowAttribute attribute, const COLORREF &color) {
+        DwmSetWindowAttribute(hwnd, static_cast<DWORD>(attribute), &color, sizeof(color));
     };
     setColor(DwmWindowAttribute::CaptionColor, captionColor);
     setColor(DwmWindowAttribute::TextColor, textColor);
@@ -908,14 +858,12 @@ void MainWindow::childEvent(QChildEvent *event)
 void MainWindow::changeEvent(QEvent *event)
 {
     QMainWindow::changeEvent(event);
-    if (event->type() == QEvent::ApplicationPaletteChange ||
-        event->type() == QEvent::StyleChange) {
+    if (event->type() == QEvent::ApplicationPaletteChange || event->type() == QEvent::StyleChange) {
         updateWindowFrameTheme();
         if (m_goToStartAction)
             refreshTransportIcons();
     }
 }
-
 
 SongSession *MainWindow::sessionForWidget(QWidget *widget) const
 {
@@ -950,22 +898,20 @@ SongSession *MainWindow::createSession()
         if (s == m_active)
             m_audio.setSoloMask(mask);
     });
-    connect(s->view, &SongView::auditionNote, this,
-            [this, s](int track, int key, int velocity) {
-                if (s == m_active && m_audioOk && m_audio.songLoaded())
-                    m_audio.previewNote(uint8_t(track), uint8_t(key), uint8_t(velocity));
-            });
+    connect(s->view, &SongView::auditionNote, this, [this, s](int track, int key, int velocity) {
+        if (s == m_active && m_audioOk && m_audio.songLoaded())
+            m_audio.previewNote(uint8_t(track), uint8_t(key), uint8_t(velocity));
+    });
     connect(s->view, &SongView::auditionNoteTimed, this,
             [this, s](int track, int key, int velocity, quint32 durationSamples) {
                 if (s == m_active && m_audioOk && m_audio.songLoaded())
-                    m_audio.previewNoteTimed(uint8_t(track), uint8_t(key),
-                                             uint8_t(velocity), durationSamples);
+                    m_audio.previewNoteTimed(uint8_t(track), uint8_t(key), uint8_t(velocity),
+                                             durationSamples);
             });
-    connect(s->view, &SongView::auditionVoice, this,
-            [this, s](int voice, int key, int velocity) {
-                if (s == m_active && m_audioOk)
-                    m_audio.previewVoice(uint8_t(voice), uint8_t(key), uint8_t(velocity));
-            });
+    connect(s->view, &SongView::auditionVoice, this, [this, s](int voice, int key, int velocity) {
+        if (s == m_active && m_audioOk)
+            m_audio.previewVoice(uint8_t(voice), uint8_t(key), uint8_t(velocity));
+    });
     connect(s->view, &SongView::statusMessage, this,
             [this](const QString &text) { statusBar()->showMessage(text, 6000); });
     // Jump-from-context voice navigation (header voice line, event list):
@@ -988,19 +934,17 @@ SongSession *MainWindow::createSession()
     // Moving the edit cursor while playing (or paused) seeks playback there,
     // chasing controller state to the landing position.
     connect(s->view, &SongView::editCursorMoved, this, [this, s](uint64_t tick) {
-        if (s == m_active && m_audioOk && m_audio.songLoaded()
-            && m_audio.transport() != Transport::Stopped) {
+        if (s == m_active && m_audioOk && m_audio.songLoaded() &&
+            m_audio.transport() != Transport::Stopped) {
             const uint64_t targetSample = m_audio.timeline()->sampleForTick(tick);
             m_audio.seek(targetSample);
             // The seek lands within one audio period; show its target now
             // rather than the stale engine playhead (while playing, the
             // playhead timer takes over from the next real position).
-            s->view->setPlayheadSample(targetSample,
-                                       m_audio.transport() == Transport::Playing);
+            s->view->setPlayheadSample(targetSample, m_audio.transport() == Transport::Playing);
         }
     });
-    connect(&s->doc, &SongDocument::documentChanged, this,
-            [this, s] { onDocumentChanged(*s); });
+    connect(&s->doc, &SongDocument::documentChanged, this, [this, s] { onDocumentChanged(*s); });
     connect(s->doc.undoStack(), &QUndoStack::cleanChanged, this, [this, s](bool) {
         updateTabTitle(*s);
         if (s == m_active)
@@ -1121,8 +1065,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
 
 void MainWindow::attachEngine(SongSession &session)
 {
-    m_audio.loadSong(session.timeline.get(), session.voicegroup,
-                     songSettingsFor(session));
+    m_audio.loadSong(session.timeline.get(), session.voicegroup, songSettingsFor(session));
     // loadSong resets the engine's masks; the view remembers the tab's.
     m_audio.setMuteMask(session.view->muteMask());
     m_audio.setSoloMask(session.view->soloMask());
@@ -1144,8 +1087,7 @@ void MainWindow::updatePolyPanelContext(SongSession *session)
     QStringList voiceNames;
     if (session->voicegroup) {
         for (int v = 0; v < VOICEGROUP_SIZE; v++)
-            voiceNames.append(
-                QString::fromLatin1(session->voicegroup->voiceNames[v]));
+            voiceNames.append(QString::fromLatin1(session->voicegroup->voiceNames[v]));
     }
     m_polyPanel->setVoiceNames(voiceNames);
 }
@@ -1177,8 +1119,7 @@ void MainWindow::refreshSessionsAfterVgSave(const QString &filePath, SongSession
 {
     for (const auto &owned : m_sessions) {
         SongSession *session = owned.get();
-        if (session == except || !session->vgSource
-            || session->vgSource->filePath() != filePath)
+        if (session == except || !session->vgSource || session->vgSource->filePath() != filePath)
             continue;
         if (session->vgSource->dirty())
             continue; // unsaved edits stay; last save wins, as documented
@@ -1186,8 +1127,7 @@ void MainWindow::refreshSessionsAfterVgSave(const QString &filePath, SongSession
         LoadedVoiceGroup *vg = loadVoicegroupFor(session->doc.cfg(), &tried);
         if (!vg)
             continue; // keep the previous sound
-        const int keepSlot =
-            session == m_active ? m_vgBrowser->currentSlot() : 0;
+        const int keepSlot = session == m_active ? m_vgBrowser->currentSlot() : 0;
         swapVoicegroup(*session, vg, keepSlot);
         // Fresh parse of the saved file (also re-records its mtime), then
         // re-point the browser at it — swapVoicegroup bound the old one.
@@ -1216,8 +1156,7 @@ void MainWindow::persistOpenTabs()
         return;
     }
     settings.setValue(kLastOpenSongsKey, labels);
-    settings.setValue(kLastSongLabelKey,
-                      m_active ? m_active->doc.label() : labels.first());
+    settings.setValue(kLastSongLabelKey, m_active ? m_active->doc.label() : labels.first());
 }
 
 void MainWindow::refreshSessionSongIds()
@@ -1240,9 +1179,8 @@ void MainWindow::updateTabTitle(SongSession &session)
     const int index = m_tabs->indexOf(session.view);
     if (index < 0)
         return;
-    m_tabs->setTabText(index, session.isDirty()
-                                  ? session.doc.label() + QLatin1Char('*')
-                                  : session.doc.label());
+    m_tabs->setTabText(index, session.isDirty() ? session.doc.label() + QLatin1Char('*')
+                                                : session.doc.label());
 }
 
 void MainWindow::tabChanged(int index)
@@ -1326,8 +1264,7 @@ bool MainWindow::openProjectDir(const QString &dir, bool interactive)
         if (interactive)
             QMessageBox::warning(this, tr("Open Project"), error);
         else
-            statusBar()->showMessage(
-                tr("Couldn't reopen last project %1: %2").arg(dir, error));
+            statusBar()->showMessage(tr("Couldn't reopen last project %1: %2").arg(dir, error));
         return false;
     }
     QSettings settings;
@@ -1429,9 +1366,9 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
     LoadedVoiceGroup *vg = loadVoicegroupFor(song.cfg, &tried);
     if (!vg) {
         QApplication::restoreOverrideCursor();
-        QMessageBox::warning(this, tr("Load Song"),
-                             tr("Could not load the voicegroup for %1 (tried: %2).")
-                                 .arg(song.label, tried));
+        QMessageBox::warning(
+            this, tr("Load Song"),
+            tr("Could not load the voicegroup for %1 (tried: %2).").arg(song.label, tried));
         return;
     }
 
@@ -1537,8 +1474,7 @@ void MainWindow::onDocumentChanged(SongSession &session)
             // Replayed edits aren't in the disk file just loaded; audition
             // them through the preview shadow like any unsaved edit.
             if (session.vgSource && session.vgSource->dirty())
-                reloadVoicegroupPreview(session,
-                                        active ? m_vgBrowser->currentSlot() : 0);
+                reloadVoicegroupPreview(session, active ? m_vgBrowser->currentSlot() : 0);
         } else {
             statusBar()->showMessage(
                 tr("Voicegroup not found (tried: %1) — keeping the previous one until save.")
@@ -1546,8 +1482,7 @@ void MainWindow::onDocumentChanged(SongSession &session)
                 8000);
         }
     }
-    if (cfg.masterVolume != session.appliedVolume
-        || cfg.reverb != session.appliedReverb) {
+    if (cfg.masterVolume != session.appliedVolume || cfg.reverb != session.appliedReverb) {
         if (active && m_audio.songLoaded())
             m_audio.updateSettings(songSettingsFor(session));
         session.appliedVolume = cfg.masterVolume;
@@ -1568,9 +1503,8 @@ void MainWindow::onDocumentChanged(SongSession &session)
         updateWindowTitle();
         // Keep the dock's voicegroup selector on the cfg even when no swap
         // ran (the arg's voicegroup wasn't found, or its change was undone).
-        m_vgBrowser->setCurrentVoicegroupArg(cfg.voicegroupArg.isEmpty()
-                                                 ? QStringLiteral("_dummy")
-                                                 : cfg.voicegroupArg);
+        m_vgBrowser->setCurrentVoicegroupArg(cfg.voicegroupArg.isEmpty() ? QStringLiteral("_dummy")
+                                                                         : cfg.voicegroupArg);
         // Program changes may have been added/removed; refresh the dock's
         // used-voice marks (no-op when the set is unchanged).
         m_vgBrowser->setUsedVoices(session.view->usedVoices());
@@ -1614,8 +1548,7 @@ bool MainWindow::saveSession(SongSession &session)
                 newDefs.append(def);
         }
         if (!newDefs.isEmpty()) {
-            if (!VoicegroupSource::writeSynthDefinitions(m_project.root(),
-                                                         newDefs, &error)) {
+            if (!VoicegroupSource::writeSynthDefinitions(m_project.root(), newDefs, &error)) {
                 QMessageBox::warning(this, tr("Save Voicegroup"), error);
                 return false;
             }
@@ -1663,8 +1596,7 @@ bool MainWindow::saveSession(SongSession &session)
     if (session.songId >= 0)
         m_project.setSongCfg(session.songId, session.doc.cfg());
     statusBar()->showMessage(
-        vgWasDirty ? tr("Saved %1 and %2")
-                         .arg(session.doc.midPath(), session.vgSource->filePath())
+        vgWasDirty ? tr("Saved %1 and %2").arg(session.doc.midPath(), session.vgSource->filePath())
                    : tr("Saved %1").arg(session.doc.midPath()),
         5000);
     updateTabTitle(session);
@@ -1740,16 +1672,13 @@ void MainWindow::exportWav()
         MidiTimeline scaled;
         scaled.lengthSamples = uint64_t(double(m_audio.timeline()->lengthSamples) * scale);
         if (hasLoop) {
-            scaled.loopStartSample =
-                uint64_t(double(m_audio.timeline()->loopStartSample) * scale);
-            scaled.loopEndSample =
-                uint64_t(double(m_audio.timeline()->loopEndSample) * scale);
+            scaled.loopStartSample = uint64_t(double(m_audio.timeline()->loopStartSample) * scale);
+            scaled.loopEndSample = uint64_t(double(m_audio.timeline()->loopEndSample) * scale);
         }
         const uint64_t total = wavExportTotals(scaled, opts).totalSamples;
         const int seconds = int(double(total) / opts.sampleRate + 0.5);
         durationLabel->setText(
-            QStringLiteral("%1:%2").arg(seconds / 60).arg(seconds % 60, 2, 10,
-                                                          QLatin1Char('0')));
+            QStringLiteral("%1:%2").arg(seconds / 60).arg(seconds % 60, 2, 10, QLatin1Char('0')));
     };
     connect(rateBox, &QComboBox::currentIndexChanged, &dialog, updateDuration);
     if (loopCountBox)
@@ -1760,8 +1689,7 @@ void MainWindow::exportWav()
         connect(tailBox, &QDoubleSpinBox::valueChanged, &dialog, updateDuration);
     updateDuration();
 
-    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
-                                         &dialog);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
@@ -1770,13 +1698,12 @@ void MainWindow::exportWav()
     const WavExportOptions opts = currentOptions();
 
     QSettings appSettings;
-    const QString startDir = appSettings
-                                 .value(QStringLiteral("lastWavExportDir"),
-                                        QFileInfo(session->doc.midPath()).path())
-                                 .toString();
+    const QString startDir =
+        appSettings
+            .value(QStringLiteral("lastWavExportDir"), QFileInfo(session->doc.midPath()).path())
+            .toString();
     const QString path = QFileDialog::getSaveFileName(
-        this, tr("Export WAV"),
-        startDir + QLatin1Char('/') + session->doc.label() + ".wav",
+        this, tr("Export WAV"), startDir + QLatin1Char('/') + session->doc.label() + ".wav",
         tr("WAV files (*.wav)"));
     if (path.isEmpty())
         return;
@@ -1784,8 +1711,8 @@ void MainWindow::exportWav()
 
     stopPlayback();
 
-    QProgressDialog progress(tr("Rendering %1...").arg(session->doc.label()),
-                             tr("Cancel"), 0, 1000, this);
+    QProgressDialog progress(tr("Rendering %1...").arg(session->doc.label()), tr("Cancel"), 0, 1000,
+                             this);
     progress.setWindowModality(Qt::WindowModal);
     progress.setMinimumDuration(0);
 
@@ -1794,13 +1721,13 @@ void MainWindow::exportWav()
     // rate — so unsaved document and voice edits export as heard.
     auto timeline = session->doc.buildTimeline(double(opts.sampleRate));
     QString error;
-    const bool ok = ::exportWav(path, *timeline, session->voicegroup,
-                                songSettingsFor(*session), opts,
-                              [&](double fraction) {
-                                  progress.setValue(int(fraction * 1000));
-                                  return !progress.wasCanceled();
-                              },
-                              &error);
+    const bool ok = ::exportWav(
+        path, *timeline, session->voicegroup, songSettingsFor(*session), opts,
+        [&](double fraction) {
+            progress.setValue(int(fraction * 1000));
+            return !progress.wasCanceled();
+        },
+        &error);
     progress.setValue(1000);
     if (!ok) {
         if (!error.isEmpty())
@@ -1811,11 +1738,10 @@ void MainWindow::exportWav()
     }
     const uint64_t total = wavExportTotals(*timeline, opts).totalSamples;
     statusBar()->showMessage(tr("Exported %1 (%2 @ %3 Hz)")
-                                 .arg(path,
-                                      QStringLiteral("%1:%2")
-                                          .arg(int(total / uint64_t(opts.sampleRate)) / 60)
-                                          .arg(int(total / uint64_t(opts.sampleRate)) % 60,
-                                               2, 10, QLatin1Char('0')))
+                                 .arg(path, QStringLiteral("%1:%2")
+                                                .arg(int(total / uint64_t(opts.sampleRate)) / 60)
+                                                .arg(int(total / uint64_t(opts.sampleRate)) % 60, 2,
+                                                     10, QLatin1Char('0')))
                                  .arg(opts.sampleRate),
                              8000);
 }
@@ -1824,8 +1750,8 @@ void MainWindow::openSongSettings()
 {
     if (!m_active)
         return;
-    SongSettingsDialog dialog(m_active->doc.cfg(), m_active->doc.label(),
-                              vgCatalog().groupArgs, this);
+    SongSettingsDialog dialog(m_active->doc.cfg(), m_active->doc.label(), vgCatalog().groupArgs,
+                              this);
     if (dialog.exec() == QDialog::Accepted)
         m_active->doc.setCfg(dialog.cfg());
 }
@@ -1852,8 +1778,7 @@ SongSettings MainWindow::songSettingsFor(const SongSession &session) const
     const SongCfg &cfg = session.doc.cfg();
     SongSettings settings;
     settings.songVolume = uint8_t(cfg.masterVolume);
-    settings.reverb =
-        uint8_t(cfg.reverb >= 0 ? cfg.reverb : SongCfg::kDefaultReverb);
+    settings.reverb = uint8_t(cfg.reverb >= 0 ? cfg.reverb : SongCfg::kDefaultReverb);
     settings.maxPcmChannels = uint8_t(m_engineSettings.maxPcmChannels);
     settings.trackBudget = uint8_t(session.doc.trackBudget());
     settings.pcmMixRate = m_engineSettings.pcmMixRate;
@@ -1868,8 +1793,8 @@ void MainWindow::newSong()
     NewSongWizard wizard(&m_project, vgCatalog().groupArgs, this);
     if (wizard.exec() != QDialog::Accepted)
         return;
-    finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(),
-                     wizard.player(), wizard.cfg(), wizard.newVoicegroupName());
+    finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(), wizard.player(),
+                     wizard.cfg(), wizard.newVoicegroupName());
 }
 
 void MainWindow::importMidi()
@@ -1879,8 +1804,8 @@ void MainWindow::importMidi()
     QSettings settings;
     const QString startDir =
         settings.value(QStringLiteral("lastImportDir"), QDir::homePath()).toString();
-    const QString path = QFileDialog::getOpenFileName(
-        this, tr("Import MIDI"), startDir, tr("MIDI files (*.mid *.midi)"));
+    const QString path = QFileDialog::getOpenFileName(this, tr("Import MIDI"), startDir,
+                                                      tr("MIDI files (*.mid *.midi)"));
     if (path.isEmpty())
         return;
     settings.setValue(QStringLiteral("lastImportDir"), QFileInfo(path).path());
@@ -1891,12 +1816,11 @@ void MainWindow::importMidi()
         QMessageBox::warning(this, tr("Import MIDI"), error);
         return;
     }
-    NewSongWizard wizard(&m_project, std::move(smf), path, vgCatalog().groupArgs,
-                         this);
+    NewSongWizard wizard(&m_project, std::move(smf), path, vgCatalog().groupArgs, this);
     if (wizard.exec() != QDialog::Accepted)
         return;
-    finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(),
-                     wizard.player(), wizard.cfg(), wizard.newVoicegroupName());
+    finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(), wizard.player(),
+                     wizard.cfg(), wizard.newVoicegroupName());
 }
 
 void MainWindow::importSample()
@@ -1910,16 +1834,14 @@ void MainWindow::importSampleForSlot(int slot)
         return;
     // Refuse before the file dialog: a legacy-aif or unwired project can't
     // take samples no matter which file is picked.
-    const SampleFormatProbe probe =
-        SampleRegistrar::probeSampleFormat(m_project.root());
+    const SampleFormatProbe probe = SampleRegistrar::probeSampleFormat(m_project.root());
     if (!probe.ok()) {
         QMessageBox::warning(this, tr("Import Sample"), probe.refusal);
         return;
     }
     QSettings settings;
     const QString startDir =
-        settings.value(QStringLiteral("lastSampleDir"), QDir::homePath())
-            .toString();
+        settings.value(QStringLiteral("lastSampleDir"), QDir::homePath()).toString();
     const QString path = QFileDialog::getOpenFileName(
         this, tr("Import Sample"), startDir,
         tr("Audio files (*.wav *.aif *.aiff *.mp3 *.flac *.ogg *.sf2);;"
@@ -1930,8 +1852,7 @@ void MainWindow::importSampleForSlot(int slot)
 
     QFile sourceFile(path);
     if (!sourceFile.open(QIODevice::ReadOnly)) {
-        QMessageBox::warning(this, tr("Import Sample"),
-                             tr("Cannot read %1.").arg(path));
+        QMessageBox::warning(this, tr("Import Sample"), tr("Cannot read %1.").arg(path));
         return;
     }
     const QByteArray sourceBytes = sourceFile.readAll();
@@ -1948,40 +1869,34 @@ void MainWindow::importSampleForSlot(int slot)
         // the chosen zone then rides the ordinary editor pipeline.
         Sf2File font;
         if (!readSf2Bytes(sourceBytes, path, &font, &error)) {
-            QMessageBox::warning(
-                this, tr("Import Sample"),
-                tr("%1: %2").arg(QFileInfo(path).fileName(), error));
+            QMessageBox::warning(this, tr("Import Sample"),
+                                 tr("%1: %2").arg(QFileInfo(path).fileName(), error));
             return;
         }
         Sf2ZonePicker picker(font, this);
         if (picker.exec() != QDialog::Accepted)
             return;
         if (!extractSf2Zone(font, picker.selectedZone(), &sample, &error)) {
-            QMessageBox::warning(
-                this, tr("Import Sample"),
-                tr("%1: %2").arg(QFileInfo(path).fileName(), error));
+            QMessageBox::warning(this, tr("Import Sample"),
+                                 tr("%1: %2").arg(QFileInfo(path).fileName(), error));
             return;
         }
         sf2Zone = picker.selectedZone();
     } else {
         if (!importAudioBytes(sourceBytes, path, &sample, &error)) {
-            QMessageBox::warning(
-                this, tr("Import Sample"),
-                tr("%1: %2").arg(QFileInfo(path).fileName(), error));
+            QMessageBox::warning(this, tr("Import Sample"),
+                                 tr("%1: %2").arg(QFileInfo(path).fileName(), error));
             return;
         }
-        if (sample.phaseCancelStereo
-            && QMessageBox::question(
-                   this, tr("Import Sample"),
-                   tr("The left and right channels of %1 are "
-                      "phase-cancelling — the mono mix may sound hollow.\n\n"
-                      "Import the left channel only instead?")
-                       .arg(QFileInfo(path).fileName()))
-                == QMessageBox::Yes) {
+        if (sample.phaseCancelStereo &&
+            QMessageBox::question(this, tr("Import Sample"),
+                                  tr("The left and right channels of %1 are "
+                                     "phase-cancelling — the mono mix may sound hollow.\n\n"
+                                     "Import the left channel only instead?")
+                                      .arg(QFileInfo(path).fileName())) == QMessageBox::Yes) {
             if (!importAudioBytes(sourceBytes, path, &sample, &error, true)) {
-                QMessageBox::warning(
-                    this, tr("Import Sample"),
-                    tr("%1: %2").arg(QFileInfo(path).fileName(), error));
+                QMessageBox::warning(this, tr("Import Sample"),
+                                     tr("%1: %2").arg(QFileInfo(path).fileName(), error));
                 return;
             }
             leftOnly = true;
@@ -1997,26 +1912,23 @@ void MainWindow::importSampleForSlot(int slot)
     if (slot >= 0 && m_active && m_active->vgSource) {
         const VgVoice *dest = m_active->vgSource->voiceAt(slot);
         if (dest && !vgMacroIsCgb(dest->macro)) {
-            destAdsr = {uint8_t(dest->attack), uint8_t(dest->decay),
-                        uint8_t(dest->sustain), uint8_t(dest->release)};
+            destAdsr = {uint8_t(dest->attack), uint8_t(dest->decay), uint8_t(dest->sustain),
+                        uint8_t(dest->release)};
             hasDestAdsr = true;
         }
     }
     SampleEditorDialog dialog(
         std::move(sample),
         [root, symbols](const QString &name, QString *validationError) {
-            return SampleRegistrar::validateSampleName(root, name, symbols,
-                                                       validationError);
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         },
-        m_audioOk ? &m_audio : nullptr, hasDestAdsr ? &destAdsr : nullptr,
-        this);
+        m_audioOk ? &m_audio : nullptr, hasDestAdsr ? &destAdsr : nullptr, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
 
     // Write-through commit (not undoable, like song registration): the
     // rendered .wav (FORMATS.md §1) plus its direct_sound_data.inc block.
-    if (!SampleRegistrar::registerSample(root, dialog.sampleName(),
-                                         dialog.wavBytes(), &error)) {
+    if (!SampleRegistrar::registerSample(root, dialog.sampleName(), dialog.wavBytes(), &error)) {
         QMessageBox::warning(this, tr("Import Sample"), error);
         return;
     }
@@ -2030,12 +1942,9 @@ void MainWindow::importSampleForSlot(int slot)
     sidecar.sf2Zone = sf2Zone;
     sidecar.params = dialog.document()->params();
     QString sidecarError;
-    if (!SampleRegistrar::writeSampleSidecar(root, dialog.sampleName(), sidecar,
-                                             &sidecarError))
+    if (!SampleRegistrar::writeSampleSidecar(root, dialog.sampleName(), sidecar, &sidecarError))
         statusBar()->showMessage(
-            tr("Sample imported, but saving its edit history failed: %1")
-                .arg(sidecarError),
-            8000);
+            tr("Sample imported, but saving its edit history failed: %1").arg(sidecarError), 8000);
     invalidateVgCatalog();
     updateVoicegroupBrowser();
 
@@ -2048,10 +1957,9 @@ void MainWindow::importSampleForSlot(int slot)
         // replacing its ADSR (or key/pan/macro variant) would commit
         // something other than what was heard.
         const VgVoice *dest = m_active->vgSource->voiceAt(slot);
-        const bool keepDest = dest
-            && (dest->macro == VgMacro::DirectSound
-                || dest->macro == VgMacro::DirectSoundNoResample
-                || dest->macro == VgMacro::DirectSoundAlt);
+        const bool keepDest = dest && (dest->macro == VgMacro::DirectSound ||
+                                       dest->macro == VgMacro::DirectSoundNoResample ||
+                                       dest->macro == VgMacro::DirectSoundAlt);
         VgVoice voice;
         if (keepDest) {
             voice = *dest;
@@ -2059,24 +1967,22 @@ void MainWindow::importSampleForSlot(int slot)
             voice.macro = VgMacro::DirectSound;
             voice.key = 60;
             voice.pan = 0;
-            const VgAdsr adsr = vgDefaultAdsr(
-                vgCatalog().typicalAdsr, voice.macro,
-                QStringLiteral("DirectSoundWaveData_") + dialog.sampleName());
+            const VgAdsr adsr =
+                vgDefaultAdsr(vgCatalog().typicalAdsr, voice.macro,
+                              QStringLiteral("DirectSoundWaveData_") + dialog.sampleName());
             voice.attack = adsr.attack;
             voice.decay = adsr.decay;
             voice.sustain = adsr.sustain;
             voice.release = adsr.release;
         }
-        voice.symbol =
-            QStringLiteral("DirectSoundWaveData_") + dialog.sampleName();
+        voice.symbol = QStringLiteral("DirectSoundWaveData_") + dialog.sampleName();
         onVoiceEditRequested(slot, voice, true);
         m_vgBrowser->revealSlot(slot);
     }
-    statusBar()->showMessage(
-        tr("Imported %1 — DirectSoundWaveData_%1 is now available to "
-           "voicegroups")
-            .arg(dialog.sampleName()),
-        8000);
+    statusBar()->showMessage(tr("Imported %1 — DirectSoundWaveData_%1 is now available to "
+                                "voicegroups")
+                                 .arg(dialog.sampleName()),
+                             8000);
 }
 
 void MainWindow::editSampleForSlot(int slot)
@@ -2086,9 +1992,8 @@ void MainWindow::editSampleForSlot(int slot)
     const QString prefix = QStringLiteral("DirectSoundWaveData_");
     const VgVoice *voice = m_active->vgSource->voiceAt(slot);
     if (!voice || !voice->symbol.startsWith(prefix)) {
-        QMessageBox::warning(
-            this, tr("Edit Sample"),
-            tr("This voice does not reference a DirectSound sample."));
+        QMessageBox::warning(this, tr("Edit Sample"),
+                             tr("This voice does not reference a DirectSound sample."));
         return;
     }
     const QString name = voice->symbol.mid(prefix.size());
@@ -2098,14 +2003,12 @@ void MainWindow::editSampleForSlot(int slot)
         QMessageBox::warning(this, tr("Edit Sample"), probe.refusal);
         return;
     }
-    const QString wavPath =
-        probe.samplesDir + QStringLiteral("/%1.wav").arg(name);
+    const QString wavPath = probe.samplesDir + QStringLiteral("/%1.wav").arg(name);
     if (!QFile::exists(wavPath)) {
-        QMessageBox::warning(
-            this, tr("Edit Sample"),
-            tr("%1.wav does not exist in sound/direct_sound_samples — only "
-               "samples with a .wav source can be edited here.")
-                .arg(name));
+        QMessageBox::warning(this, tr("Edit Sample"),
+                             tr("%1.wav does not exist in sound/direct_sound_samples — only "
+                                "samples with a .wav source can be edited here.")
+                                 .arg(name));
         return;
     }
 
@@ -2118,67 +2021,58 @@ void MainWindow::editSampleForSlot(int slot)
     bool haveParams = false; // sidecar params apply to that source
     QString error;
     if (SampleRegistrar::readSampleSidecar(root, name, &sidecar)) {
-        const auto decodeSource = [&](const QByteArray &bytes,
-                                      ImportedSample *out, QString *err) {
+        const auto decodeSource = [&](const QByteArray &bytes, ImportedSample *out, QString *err) {
             if (sidecar.sf2Zone >= 0) {
                 Sf2File font;
-                return readSf2Bytes(bytes, sidecar.sourcePath, &font, err)
-                    && extractSf2Zone(font, sidecar.sf2Zone, out, err);
+                return readSf2Bytes(bytes, sidecar.sourcePath, &font, err) &&
+                       extractSf2Zone(font, sidecar.sf2Zone, out, err);
             }
-            return importAudioBytes(bytes, sidecar.sourcePath, out, err,
-                                    sidecar.leftOnly);
+            return importAudioBytes(bytes, sidecar.sourcePath, out, err, sidecar.leftOnly);
         };
         QFile sourceFile(sidecar.sourcePath);
         QByteArray sourceBytes;
         if (sourceFile.open(QIODevice::ReadOnly))
             sourceBytes = sourceFile.readAll();
         if (sourceBytes.isEmpty()) {
-            QMessageBox::information(
-                this, tr("Edit Sample"),
-                tr("The original source (%1) is no longer readable; editing "
-                   "the committed 8-bit sample instead.")
-                    .arg(sidecar.sourcePath));
-        } else if (SampleRegistrar::sourceHashHex(sourceBytes)
-                   != sidecar.sourceSha256) {
-            const QMessageBox::StandardButton pick = QMessageBox::question(
-                this, tr("Edit Sample"),
-                tr("%1 has changed since this sample was created, so the "
-                   "saved edit settings no longer apply to it.\n\n"
-                   "Re-import the changed file with fresh settings? "
-                   "(\"No\" edits the committed 8-bit sample instead.)")
-                    .arg(sidecar.sourcePath),
-                QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+            QMessageBox::information(this, tr("Edit Sample"),
+                                     tr("The original source (%1) is no longer readable; editing "
+                                        "the committed 8-bit sample instead.")
+                                         .arg(sidecar.sourcePath));
+        } else if (SampleRegistrar::sourceHashHex(sourceBytes) != sidecar.sourceSha256) {
+            const QMessageBox::StandardButton pick =
+                QMessageBox::question(this, tr("Edit Sample"),
+                                      tr("%1 has changed since this sample was created, so the "
+                                         "saved edit settings no longer apply to it.\n\n"
+                                         "Re-import the changed file with fresh settings? "
+                                         "(\"No\" edits the committed 8-bit sample instead.)")
+                                          .arg(sidecar.sourcePath),
+                                      QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
             if (pick == QMessageBox::Cancel)
                 return;
             if (pick == QMessageBox::Yes) {
                 if (!decodeSource(sourceBytes, &sample, &error)) {
-                    QMessageBox::warning(
-                        this, tr("Edit Sample"),
-                        tr("%1: %2").arg(sidecar.sourcePath, error));
+                    QMessageBox::warning(this, tr("Edit Sample"),
+                                         tr("%1: %2").arg(sidecar.sourcePath, error));
                     return;
                 }
-                sidecar.sourceSha256 =
-                    SampleRegistrar::sourceHashHex(sourceBytes);
+                sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
                 fromSource = true;
             }
         } else if (decodeSource(sourceBytes, &sample, &error)) {
             fromSource = true;
             haveParams = true;
         } else {
-            QMessageBox::information(
-                this, tr("Edit Sample"),
-                tr("The original source (%1) no longer decodes (%2); editing "
-                   "the committed 8-bit sample instead.")
-                    .arg(sidecar.sourcePath, error));
+            QMessageBox::information(this, tr("Edit Sample"),
+                                     tr("The original source (%1) no longer decodes (%2); editing "
+                                        "the committed 8-bit sample instead.")
+                                         .arg(sidecar.sourcePath, error));
         }
     }
     if (!fromSource) {
         QFile wavFile(wavPath);
-        if (!wavFile.open(QIODevice::ReadOnly)
-            || !importAudioBytes(wavFile.readAll(), wavPath, &sample,
-                                 &error)) {
-            QMessageBox::warning(this, tr("Edit Sample"),
-                                 tr("%1: %2").arg(wavPath, error));
+        if (!wavFile.open(QIODevice::ReadOnly) ||
+            !importAudioBytes(wavFile.readAll(), wavPath, &sample, &error)) {
+            QMessageBox::warning(this, tr("Edit Sample"), tr("%1: %2").arg(wavPath, error));
             return;
         }
     }
@@ -2186,8 +2080,8 @@ void MainWindow::editSampleForSlot(int slot)
     AuditionSlots::Adsr destAdsr;
     bool hasDestAdsr = false;
     if (!vgMacroIsCgb(voice->macro)) {
-        destAdsr = {uint8_t(voice->attack), uint8_t(voice->decay),
-                    uint8_t(voice->sustain), uint8_t(voice->release)};
+        destAdsr = {uint8_t(voice->attack), uint8_t(voice->decay), uint8_t(voice->sustain),
+                    uint8_t(voice->release)};
         hasDestAdsr = true;
     }
     SampleEditorDialog dialog(
@@ -2196,12 +2090,10 @@ void MainWindow::editSampleForSlot(int slot)
             if (candidate == name)
                 return true;
             if (validationError)
-                *validationError =
-                    tr("the sample keeps its registered name (%1).").arg(name);
+                *validationError = tr("the sample keeps its registered name (%1).").arg(name);
             return false;
         },
-        m_audioOk ? &m_audio : nullptr, hasDestAdsr ? &destAdsr : nullptr,
-        this);
+        m_audioOk ? &m_audio : nullptr, hasDestAdsr ? &destAdsr : nullptr, this);
     dialog.setEditTarget(name);
     if (haveParams)
         dialog.applyParamsExternal(sidecar.params);
@@ -2210,20 +2102,16 @@ void MainWindow::editSampleForSlot(int slot)
 
     // Write-through commit: overwrite the .wav in place; the registration
     // block already exists and stays untouched.
-    if (!SampleRegistrar::updateSample(root, name, dialog.wavBytes(),
-                                       &error)) {
+    if (!SampleRegistrar::updateSample(root, name, dialog.wavBytes(), &error)) {
         QMessageBox::warning(this, tr("Edit Sample"), error);
         return;
     }
     if (fromSource) {
         sidecar.params = dialog.document()->params();
         QString sidecarError;
-        if (!SampleRegistrar::writeSampleSidecar(root, name, sidecar,
-                                                 &sidecarError))
+        if (!SampleRegistrar::writeSampleSidecar(root, name, sidecar, &sidecarError))
             statusBar()->showMessage(
-                tr("Sample saved, but saving its edit history failed: %1")
-                    .arg(sidecarError),
-                8000);
+                tr("Sample saved, but saving its edit history failed: %1").arg(sidecarError), 8000);
     } else {
         // The session came from the committed bytes, which were just
         // replaced — a stale sidecar would misdescribe them on the next
@@ -2236,40 +2124,35 @@ void MainWindow::editSampleForSlot(int slot)
     // edit is audible without reopening the song.
     if (m_active && m_active->vgSource)
         reloadVoicegroupPreview(*m_active, slot);
-    statusBar()->showMessage(
-        tr("Saved %1 — the ROM's .bin recompiles on the next build")
-            .arg(name),
-        8000);
+    statusBar()->showMessage(tr("Saved %1 — the ROM's .bin recompiles on the next build").arg(name),
+                             8000);
 }
 
-void MainWindow::finishCreateSong(const SmfFile &smf, const QString &label,
-                                  const QString &constant, const QString &player,
-                                  const SongCfg &cfg, const QString &newVoicegroup)
+void MainWindow::finishCreateSong(const SmfFile &smf, const QString &label, const QString &constant,
+                                  const QString &player, const SongCfg &cfg,
+                                  const QString &newVoicegroup)
 {
     QString error;
     // The voicegroup first: the song's -G already points at it, so nothing
     // else may be written if it can't exist. Starts as the dummy template —
     // the user configures it in the Voicegroup dock.
     if (!newVoicegroup.isEmpty()) {
-        if (!VoicegroupSource::createVoicegroup(m_project.root(), newVoicegroup,
-                                                QString(), QString(), &error)
-            || !VoicegroupSource::appendIncludeLine(m_project.root(), newVoicegroup,
-                                                    &error)) {
+        if (!VoicegroupSource::createVoicegroup(m_project.root(), newVoicegroup, QString(),
+                                                QString(), &error) ||
+            !VoicegroupSource::appendIncludeLine(m_project.root(), newVoicegroup, &error)) {
             QMessageBox::warning(this, tr("New Song"), error);
             return;
         }
     }
 
     const QString midiDir = m_project.root() + QStringLiteral("/sound/songs/midi");
-    if (!smf.writeFile(midiDir + QStringLiteral("/%1.mid").arg(label), &error)
-        || !SongRegistry::writeSongFlags(midiDir, label,
-                                         SongRegistry::mergeCfgFlags(cfg), &error)) {
+    if (!smf.writeFile(midiDir + QStringLiteral("/%1.mid").arg(label), &error) ||
+        !SongRegistry::writeSongFlags(midiDir, label, SongRegistry::mergeCfgFlags(cfg), &error)) {
         QMessageBox::warning(this, tr("New Song"), error);
         return;
     }
     int songId = -1;
-    if (!SongRegistry::registerSong(m_project.root(), label, constant, player, &error,
-                                    &songId)) {
+    if (!SongRegistry::registerSong(m_project.root(), label, constant, player, &error, &songId)) {
         // Keep the chosen constant/player so Register Song can retry later;
         // the song shows a badge in the browser until then.
         SongRegistry::saveRegistrationMeta(m_project.root(), label, constant, player);
@@ -2279,9 +2162,8 @@ void MainWindow::finishCreateSong(const SmfFile &smf, const QString &label,
                                  .arg(midiDir, label, error));
     } else {
         SongRegistry::clearRegistrationMeta(m_project.root(), label);
-        QString message = tr("Created and registered %1 as %2 (song ID %3)")
-                              .arg(label, constant)
-                              .arg(songId);
+        QString message =
+            tr("Created and registered %1 as %2 (song ID %3)").arg(label, constant).arg(songId);
         if (!newVoicegroup.isEmpty())
             message += tr(" — configure its new voicegroup in the Voicegroup dock");
         statusBar()->showMessage(message, 8000);
@@ -2295,8 +2177,7 @@ void MainWindow::finishCreateSong(const SmfFile &smf, const QString &label,
 
 void MainWindow::registerLoadedSong()
 {
-    if (m_active && m_active->songId >= 0
-        && m_active->songId < m_project.songs().size())
+    if (m_active && m_active->songId >= 0 && m_active->songId < m_project.songs().size())
         registerSongById(m_active->songId);
 }
 
@@ -2305,22 +2186,19 @@ void MainWindow::registerSongById(int songId)
     if (songId < 0 || songId >= m_project.songs().size())
         return;
     const SongInfo song = m_project.songs().at(songId);
-    const QString constant = song.constant.isEmpty()
-                                 ? SongRegistry::constantForLabel(song.label)
-                                 : song.constant;
-    const QString player = song.player.isEmpty() ? QStringLiteral("MUSIC_PLAYER_BGM")
-                                                 : song.player;
+    const QString constant =
+        song.constant.isEmpty() ? SongRegistry::constantForLabel(song.label) : song.constant;
+    const QString player = song.player.isEmpty() ? QStringLiteral("MUSIC_PLAYER_BGM") : song.player;
     QString error;
     int newId = -1;
-    if (!SongRegistry::registerSong(m_project.root(), song.label, constant, player,
-                                    &error, &newId)) {
+    if (!SongRegistry::registerSong(m_project.root(), song.label, constant, player, &error,
+                                    &newId)) {
         QMessageBox::warning(this, tr("Register Song"), error);
         return;
     }
     SongRegistry::clearRegistrationMeta(m_project.root(), song.label);
     statusBar()->showMessage(
-        tr("Registered %1 as %2 (song ID %3)").arg(song.label, constant).arg(newId),
-        8000);
+        tr("Registered %1 as %2 (song ID %3)").arg(song.label, constant).arg(newId), 8000);
     // The open tab keeps its document; only the registry-derived state
     // (badge, song ids) needs refreshing. Ids may shift in the reload, so
     // the action refresh matches by label.
@@ -2334,21 +2212,18 @@ void MainWindow::deleteSongById(int songId)
     if (songId < 0 || songId >= m_project.songs().size())
         return;
     const SongInfo song = m_project.songs().at(songId);
-    const QString constant = song.constant.isEmpty()
-                                 ? SongRegistry::constantForLabel(song.label)
-                                 : song.constant;
-    const RemovalPlan plan =
-        SongRegistry::makeRemovalPlan(m_project.root(), song.label, constant);
+    const QString constant =
+        song.constant.isEmpty() ? SongRegistry::constantForLabel(song.label) : song.constant;
+    const RemovalPlan plan = SongRegistry::makeRemovalPlan(m_project.root(), song.label, constant);
     if (plan.tableIndex == 0) {
-        QMessageBox::warning(
-            this, tr("Delete Song"),
-            tr("%1 is the first song_table.inc entry (song ID 0), the engine's "
-               "fallback song — it cannot be deleted.")
-                .arg(song.label));
+        QMessageBox::warning(this, tr("Delete Song"),
+                             tr("%1 is the first song_table.inc entry (song ID 0), the engine's "
+                                "fallback song — it cannot be deleted.")
+                                 .arg(song.label));
         return;
     }
-    const QString vgName = SongRegistry::deletableVoicegroup(
-        m_project.root(), m_project.songs(), song.label);
+    const QString vgName =
+        SongRegistry::deletableVoicegroup(m_project.root(), m_project.songs(), song.label);
 
     QMessageBox box(this);
     box.setWindowTitle(tr("Delete Song"));
@@ -2377,10 +2252,9 @@ void MainWindow::deleteSongById(int songId)
     box.setInformativeText(details.join(QLatin1Char('\n')));
     QCheckBox *vgBox = nullptr;
     if (!vgName.isEmpty()) {
-        vgBox = new QCheckBox(
-            tr("Also delete voicegroup %1 (used only by this song)")
-                .arg(SongRegistry::voicegroupDisplayName(song.cfg.voicegroupArg)),
-            &box);
+        vgBox = new QCheckBox(tr("Also delete voicegroup %1 (used only by this song)")
+                                  .arg(SongRegistry::voicegroupDisplayName(song.cfg.voicegroupArg)),
+                              &box);
         vgBox->setChecked(true);
         box.setCheckBox(vgBox);
     }
@@ -2392,25 +2266,20 @@ void MainWindow::deleteSongById(int songId)
         return;
 
     QString error;
-    if (!performSongDeletion(song, vgBox && vgBox->isChecked() ? vgName : QString(),
-                             &error)) {
+    if (!performSongDeletion(song, vgBox && vgBox->isChecked() ? vgName : QString(), &error)) {
         QMessageBox::warning(this, tr("Delete Song"), error);
         return;
     }
     statusBar()->showMessage(
-        tr("Deleted %1 — its .mid is recoverable from .porydaw/trash/")
-            .arg(song.label),
-        8000);
+        tr("Deleted %1 — its .mid is recoverable from .porydaw/trash/").arg(song.label), 8000);
 }
 
-bool MainWindow::performSongDeletion(const SongInfo &song,
-                                     const QString &deleteVoicegroupName,
+bool MainWindow::performSongDeletion(const SongInfo &song, const QString &deleteVoicegroupName,
                                      QString *error)
 {
     const QString root = m_project.root();
-    const QString constant = song.constant.isEmpty()
-                                 ? SongRegistry::constantForLabel(song.label)
-                                 : song.constant;
+    const QString constant =
+        song.constant.isEmpty() ? SongRegistry::constantForLabel(song.label) : song.constant;
     // Re-checked here so the harness path can't slip past the dialog's guard.
     const RemovalPlan plan = SongRegistry::makeRemovalPlan(root, song.label, constant);
     if (plan.tableIndex == 0) {
@@ -2435,11 +2304,9 @@ bool MainWindow::performSongDeletion(const SongInfo &song,
     const QString midPath = midiDir + QStringLiteral("/%1.mid").arg(song.label);
     if (QFile::exists(midPath)) {
         Sidecar::ensureDir(root, QStringLiteral("trash"));
-        QString target =
-            root + QStringLiteral("/.porydaw/trash/%1.mid").arg(song.label);
+        QString target = root + QStringLiteral("/.porydaw/trash/%1.mid").arg(song.label);
         for (int n = 2; QFile::exists(target); n++)
-            target = root
-                     + QStringLiteral("/.porydaw/trash/%1-%2.mid").arg(song.label).arg(n);
+            target = root + QStringLiteral("/.porydaw/trash/%1-%2.mid").arg(song.label).arg(n);
         if (!QFile::rename(midPath, target))
             problems << tr("Could not move %1 to %2").arg(midPath, target);
     }
@@ -2451,8 +2318,8 @@ bool MainWindow::performSongDeletion(const SongInfo &song,
     if (!SongRegistry::unregisterSong(root, song.label, constant, &err))
         problems << err;
     SongRegistry::removeSongSidecar(root, song.label);
-    if (!deleteVoicegroupName.isEmpty()
-        && !VoicegroupSource::deleteVoicegroup(root, deleteVoicegroupName, &err))
+    if (!deleteVoicegroupName.isEmpty() &&
+        !VoicegroupSource::deleteVoicegroup(root, deleteVoicegroupName, &err))
         problems << err;
 
     reloadProject(); // also rebuilds the browser and drops the vg catalog
@@ -2503,9 +2370,9 @@ void MainWindow::updateVoicegroupBrowser()
     m_vgBrowser->setVoicegroupChoices(catalog.groupArgs);
     m_vgBrowser->setCurrentVoicegroupArg(arg);
     m_vgBrowser->setSource(
-        session->vgSource.get(), catalog.directSound, catalog.progWave,
-        catalog.keysplits, catalog.drumkits, catalog.typicalAdsr, catalog.synths,
-        m_pendingSynths, [this](const VgSynthDesc &desc) -> QString {
+        session->vgSource.get(), catalog.directSound, catalog.progWave, catalog.keysplits,
+        catalog.drumkits, catalog.typicalAdsr, catalog.synths, m_pendingSynths,
+        [this](const VgSynthDesc &desc) -> QString {
             // Mint a pending symbol for the descriptor — nothing is written;
             // the definition reaches disk when a voicegroup referencing it
             // saves. Value-equal definitions (on disk or pending) are reused.
@@ -2513,26 +2380,22 @@ void MainWindow::updateVoicegroupBrowser()
             QString symbol = synths.symbolFor(desc);
             if (!symbol.isEmpty())
                 return symbol;
-            for (auto it = m_pendingSynths.constBegin();
-                 it != m_pendingSynths.constEnd(); ++it) {
+            for (auto it = m_pendingSynths.constBegin(); it != m_pendingSynths.constEnd(); ++it) {
                 if (it.value() == desc)
                     return it.key();
             }
             if (!synths.creatable()) {
-                statusBar()->showMessage(
-                    tr("Cannot create synth instrument: this project doesn't "
-                       "define the set_synth_* macros (Golden Sun synths need "
-                       "ipatix's improved mixer)."),
-                    8000);
+                statusBar()->showMessage(tr("Cannot create synth instrument: this project doesn't "
+                                            "define the set_synth_* macros (Golden Sun synths need "
+                                            "ipatix's improved mixer)."),
+                                         8000);
                 return QString();
             }
             // Param-named; a hand-written symbol with the same name but
             // different bytes (or a plain sample) forces a suffix.
             symbol = vgSynthSymbolName(desc);
             const QString base = symbol;
-            for (int i = 2; synths.find(symbol)
-                 || vgCatalog().directSound.contains(symbol);
-                 i++)
+            for (int i = 2; synths.find(symbol) || vgCatalog().directSound.contains(symbol); i++)
                 symbol = base + QStringLiteral("_%1").arg(i);
             m_pendingSynths.insert(symbol, desc);
             return symbol;
@@ -2592,26 +2455,21 @@ void MainWindow::ensureSampleSet()
         keysplits.push_back(utf8(pair.first));
         tables.push_back(utf8(pair.second));
     }
-    m_sampleSet = voicegroup_load_samples(
-        m_project.root().toLocal8Bit().constData(), samples.data(),
-        int(samples.size()), waves.data(), int(waves.size()),
-        keysplits.data(), tables.data(), int(keysplits.size()), nullptr);
+    m_sampleSet =
+        voicegroup_load_samples(m_project.root().toLocal8Bit().constData(), samples.data(),
+                                int(samples.size()), waves.data(), int(waves.size()),
+                                keysplits.data(), tables.data(), int(keysplits.size()), nullptr);
     if (!m_sampleSet)
         return;
-    for (int i = 0; i < catalog.directSound.size() && i < m_sampleSet->count;
-         i++) {
+    for (int i = 0; i < catalog.directSound.size() && i < m_sampleSet->count; i++) {
         if (m_sampleSet->waves[i])
-            m_sampleWaves.insert(catalog.directSound.at(i),
-                                 m_sampleSet->waves[i]);
+            m_sampleWaves.insert(catalog.directSound.at(i), m_sampleSet->waves[i]);
     }
-    for (int i = 0;
-         i < catalog.progWave.size() && i < m_sampleSet->progWaveCount; i++) {
+    for (int i = 0; i < catalog.progWave.size() && i < m_sampleSet->progWaveCount; i++) {
         if (m_sampleSet->progWaves[i])
-            m_progWaves.insert(catalog.progWave.at(i),
-                               m_sampleSet->progWaves[i]);
+            m_progWaves.insert(catalog.progWave.at(i), m_sampleSet->progWaves[i]);
     }
-    for (int i = 0;
-         i < catalog.keysplits.size() && i < m_sampleSet->keysplitCount; i++) {
+    for (int i = 0; i < catalog.keysplits.size() && i < m_sampleSet->keysplitCount; i++) {
         const LoadedKeysplit &ks = m_sampleSet->keysplits[i];
         if (ks.subGroup && ks.table)
             m_keysplits.insert(catalog.keysplits.at(i).first, ks);
@@ -2639,21 +2497,16 @@ void MainWindow::auditionKeysplit(const QString &symbol)
     const ToneData &sub = it->subGroup[idx];
     if (sub.type & (VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL))
         return; // nested split: the engine refuses these too
-    const AuditionSlots::Adsr adsr{sub.attack, sub.decay, sub.sustain,
-                                   sub.release};
+    const AuditionSlots::Adsr adsr{sub.attack, sub.decay, sub.sustain, sub.release};
     const int cgbType = sub.type & 0x07;
     if (cgbType == 0 && sub.wav && sub.wav->data && sub.wav->size > 0) {
         m_audio.auditionSample(
-            QByteArray::fromRawData(
-                reinterpret_cast<const char *>(sub.wav->data),
-                int(sub.wav->size)),
-            sub.wav->freq, sub.wav->loopStart,
-            (sub.wav->status & 0x4000) != 0, 60, adsr, sub.key);
+            QByteArray::fromRawData(reinterpret_cast<const char *>(sub.wav->data),
+                                    int(sub.wav->size)),
+            sub.wav->freq, sub.wav->loopStart, (sub.wav->status & 0x4000) != 0, 60, adsr, sub.key);
     } else if (cgbType == VOICE_PROGRAMMABLE_WAVE && sub.wavePointer) {
         m_audio.auditionWave(
-            QByteArray::fromRawData(
-                reinterpret_cast<const char *>(sub.wavePointer), 16),
-            60, adsr);
+            QByteArray::fromRawData(reinterpret_cast<const char *>(sub.wavePointer), 16), 60, adsr);
     }
     // Square/noise sub-voices: rare, and their audition would need CGB
     // square plumbing — silently skipped.
@@ -2666,8 +2519,7 @@ void MainWindow::openVoicegroupSource(SongSession &session, const SongCfg &cfg)
     if (!session.vgSource->open(m_project.root(), cfg.voicegroupArg, &error)) {
         session.vgSource.reset();
         session.vgFileTime = QDateTime();
-        statusBar()->showMessage(
-            tr("Voicegroup editing unavailable: %1").arg(error), 8000);
+        statusBar()->showMessage(tr("Voicegroup editing unavailable: %1").arg(error), 8000);
         return;
     }
     session.vgFileTime = QFileInfo(session.vgSource->filePath()).lastModified();
@@ -2682,9 +2534,8 @@ void MainWindow::onVoiceEditRequested(int slot, const VgVoice &voice, bool struc
     if (!before || *before == voice)
         return;
     // push() applies the edit (redo) via applyVoiceEdit.
-    session->doc.undoStack()->push(
-        new VoiceEditCommand(this, session, session->vgSource->loadName(), slot,
-                             *before, voice, structural));
+    session->doc.undoStack()->push(new VoiceEditCommand(
+        this, session, session->vgSource->loadName(), slot, *before, voice, structural));
 }
 
 void MainWindow::applyVoiceEdit(SongSession &session, const QString &loadName, int slot,
@@ -2748,12 +2599,11 @@ void MainWindow::onVoiceEdited(SongSession &session, int slot, bool structural)
 
 void MainWindow::reloadVoicegroupPreview(SongSession &session, int keepSlot)
 {
-    const QString previewDir =
-        m_project.root() + QStringLiteral("/.porydaw/vgpreview");
+    const QString previewDir = m_project.root() + QStringLiteral("/.porydaw/vgpreview");
     QDir().mkpath(previewDir);
     {
-        QFile out(previewDir + QLatin1Char('/') + session.vgSource->loadName()
-                  + QStringLiteral(".inc"));
+        QFile out(previewDir + QLatin1Char('/') + session.vgSource->loadName() +
+                  QStringLiteral(".inc"));
         if (!out.open(QIODevice::WriteOnly)) {
             statusBar()->showMessage(tr("Cannot write voicegroup preview file."), 8000);
             return;
@@ -2793,10 +2643,8 @@ bool MainWindow::applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *
     bool changed = false;
     for (int slot = 0; slot < VOICEGROUP_SIZE; slot++) {
         const VgVoice *v = session.vgSource->voiceAt(slot);
-        if (!v
-            || (v->macro != VgMacro::DirectSound
-                && v->macro != VgMacro::DirectSoundNoResample
-                && v->macro != VgMacro::DirectSoundAlt))
+        if (!v || (v->macro != VgMacro::DirectSound && v->macro != VgMacro::DirectSoundNoResample &&
+                   v->macro != VgMacro::DirectSoundAlt))
             continue;
         const VgSynthDesc *desc = synthDescForSymbol(v->symbol);
         if (!desc)
@@ -2805,11 +2653,8 @@ bool MainWindow::applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *
         // rebuild voiceNames never runs — sync the slot's name here or track
         // labels and the browser tree keep showing the pre-edit symbol.
         const QByteArray name = v->symbol.toUtf8();
-        if (qstrncmp(vg->voiceNames[slot], name.constData(),
-                     VG_VOICE_NAME_LEN - 1)
-            != 0) {
-            std::strncpy(vg->voiceNames[slot], name.constData(),
-                         VG_VOICE_NAME_LEN - 1);
+        if (qstrncmp(vg->voiceNames[slot], name.constData(), VG_VOICE_NAME_LEN - 1) != 0) {
+            std::strncpy(vg->voiceNames[slot], name.constData(), VG_VOICE_NAME_LEN - 1);
             vg->voiceNames[slot][VG_VOICE_NAME_LEN - 1] = '\0';
             changed = true;
         }
@@ -2830,9 +2675,9 @@ bool MainWindow::applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *
         if (!tone) {
             tone = std::make_unique<SynthToneBuf>();
             std::memset(tone.get(), 0, sizeof(SynthToneBuf));
-            tone->wd.status = 0x4000;     // loop flag, as the synth header sets
-            tone->wd.freq = 0x01058920;   // 64-sample period lands on middle C
-            tone->wd.size = 0;            // size 0 = synth descriptor
+            tone->wd.status = 0x4000;   // loop flag, as the synth header sets
+            tone->wd.freq = 0x01058920; // 64-sample period lands on middle C
+            tone->wd.size = 0;          // size 0 = synth descriptor
             tone->wd.data = reinterpret_cast<int8_t *>(tone->bytes);
         }
         tone->bytes[0] = 0x80;
@@ -2886,14 +2731,12 @@ void MainWindow::newVoicegroup()
     if (!m_project.isOpen())
         return;
     if (!QDir(m_project.root() + QStringLiteral("/sound/voicegroups")).exists()) {
-        QMessageBox::information(
-            this, tr("New Voicegroup"),
-            tr("This project keeps all voicegroups in one file; creating new "
-               "per-file voicegroups isn't supported for that layout."));
+        QMessageBox::information(this, tr("New Voicegroup"),
+                                 tr("This project keeps all voicegroups in one file; creating new "
+                                    "per-file voicegroups isn't supported for that layout."));
         return;
     }
-    VoicegroupSource *activeSource =
-        m_active ? m_active->vgSource.get() : nullptr;
+    VoicegroupSource *activeSource = m_active ? m_active->vgSource.get() : nullptr;
 
     QDialog dialog(this);
     dialog.setWindowTitle(tr("New Voicegroup"));
@@ -2904,13 +2747,11 @@ void MainWindow::newVoicegroup()
     form->addRow(tr("Name"), nameEdit);
     auto *sourceCombo = new QComboBox(&dialog);
     if (activeSource)
-        sourceCombo->addItem(tr("Copy of %1")
-                                 .arg(QFileInfo(activeSource->filePath()).fileName()),
+        sourceCombo->addItem(tr("Copy of %1").arg(QFileInfo(activeSource->filePath()).fileName()),
                              activeSource->filePath());
     sourceCombo->addItem(tr("Empty (dummy template)"), QString());
     form->addRow(tr("Start from"), sourceCombo);
-    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
-                                         &dialog);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
@@ -2929,12 +2770,12 @@ void MainWindow::newVoicegroup()
     const QString copyFrom = sourceCombo->currentData().toString();
     const QString sectionLabel =
         (!copyFrom.isEmpty() && activeSource && copyFrom == activeSource->filePath())
-        ? activeSource->sectionLabel()
-        : QString();
+            ? activeSource->sectionLabel()
+            : QString();
     QString error;
-    if (!VoicegroupSource::createVoicegroup(m_project.root(), name, copyFrom,
-                                            sectionLabel, &error)
-        || !VoicegroupSource::appendIncludeLine(m_project.root(), name, &error)) {
+    if (!VoicegroupSource::createVoicegroup(m_project.root(), name, copyFrom, sectionLabel,
+                                            &error) ||
+        !VoicegroupSource::appendIncludeLine(m_project.root(), name, &error)) {
         QMessageBox::warning(this, tr("New Voicegroup"), error);
         return;
     }
@@ -2946,11 +2787,10 @@ void MainWindow::newVoicegroup()
         SongCfg cfg = m_active->doc.cfg();
         cfg.voicegroupArg = QStringLiteral("_") + name;
         m_active->doc.setCfg(cfg);
-        statusBar()->showMessage(
-            tr("Created sound/voicegroups/%1.inc and assigned it to %2 "
-               "(voicegroup_%1).")
-                .arg(name, m_active->doc.label()),
-            10000);
+        statusBar()->showMessage(tr("Created sound/voicegroups/%1.inc and assigned it to %2 "
+                                    "(voicegroup_%1).")
+                                     .arg(name, m_active->doc.label()),
+                                 10000);
     } else {
         statusBar()->showMessage(
             tr("Created sound/voicegroups/%1.inc — assign it with the voicegroup "
@@ -2989,22 +2829,18 @@ void MainWindow::saveViewState(SongSession &session)
 {
     if (session.doc.label().isEmpty())
         return;
-    ViewSidecar::save(m_project.root(), session.doc.label(),
-                      session.view->viewState());
+    ViewSidecar::save(m_project.root(), session.doc.label(), session.view->viewState());
 }
 
 void MainWindow::updateWindowTitle()
 {
-    const QString project =
-        m_project.isOpen() ? QDir(m_project.root()).dirName() : QString();
+    const QString project = m_project.isOpen() ? QDir(m_project.root()).dirName() : QString();
     if (m_active) {
-        setWindowTitle(
-            QStringLiteral("%1[*] — %2 — porydaw").arg(m_active->doc.label(), project));
+        setWindowTitle(QStringLiteral("%1[*] — %2 — porydaw").arg(m_active->doc.label(), project));
         setWindowModified(m_active->isDirty());
     } else {
-        setWindowTitle(project.isEmpty()
-                           ? QStringLiteral("porydaw")
-                           : QStringLiteral("%1 — porydaw").arg(project));
+        setWindowTitle(project.isEmpty() ? QStringLiteral("porydaw")
+                                         : QStringLiteral("%1 — porydaw").arg(project));
         setWindowModified(false);
     }
 }
@@ -3027,8 +2863,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
         settings.setValue(QStringLiteral("windowState"), saveState());
         settings.setValue(QStringLiteral("songFilterText"), m_songList->searchText());
         settings.setValue(QStringLiteral("songFilterSort"), m_songList->sortIndex());
-        settings.setValue(QStringLiteral("songFilterCategory"),
-                          m_songList->categoryPrefix());
+        settings.setValue(QStringLiteral("songFilterCategory"), m_songList->categoryPrefix());
     }
     event->accept();
 }
@@ -3040,10 +2875,10 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::updateTimeLabel()
 {
     const bool loaded = m_audioOk && m_active && m_audio.songLoaded();
-    const QString text = loaded ? QStringLiteral("%1 / %2").arg(
-                                      formatTime(m_audio.playheadSamples()),
-                                      formatTime(m_audio.timeline()->lengthSamples))
-                                : QStringLiteral("--:--.- / --:--.-");
+    const QString text =
+        loaded ? QStringLiteral("%1 / %2").arg(formatTime(m_audio.playheadSamples()),
+                                               formatTime(m_audio.timeline()->lengthSamples))
+               : QStringLiteral("--:--.- / --:--.-");
     if (text == m_lastTimeText)
         return;
     m_lastTimeText = text;
@@ -3075,12 +2910,10 @@ void MainWindow::updatePolyStatus()
         return;
     }
 
-    m_pcmValueLabel->setText(
-        QStringLiteral("%1/%2").arg(status.activePcm).arg(status.maxPcm));
+    m_pcmValueLabel->setText(QStringLiteral("%1/%2").arg(status.activePcm).arg(status.maxPcm));
     m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(status.activeCgb));
     const bool hasLost = status.lostTotal > 0;
-    m_polyLostLabel->setText(hasLost ? QString::number(status.lostTotal)
-                                     : QString());
+    m_polyLostLabel->setText(hasLost ? QString::number(status.lostTotal) : QString());
     m_polyLostSeparator->setVisible(hasLost);
     m_polyLostLabel->setVisible(hasLost);
     m_polyLostCaption->setVisible(hasLost);
@@ -3133,8 +2966,7 @@ void MainWindow::startPlayback(bool fromEditCursor)
 {
     if (!m_audioOk || !m_active || !m_audio.songLoaded())
         return;
-    const bool seekToCursor =
-        fromEditCursor || m_audio.transport() == Transport::Stopped;
+    const bool seekToCursor = fromEditCursor || m_audio.transport() == Transport::Stopped;
     uint64_t target = 0;
     if (seekToCursor) {
         target = m_audio.timeline()->sampleForTick(m_active->view->editCursorTick());
@@ -3177,10 +3009,9 @@ void MainWindow::updateTransportActions()
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
-    if ((watched == m_masterVolSpin
-         || watched->parent() == m_masterVolSpin)
-        && event->type() == QEvent::ShortcutOverride
-        && static_cast<QKeyEvent *>(event)->key() == Qt::Key_Space) {
+    if ((watched == m_masterVolSpin || watched->parent() == m_masterVolSpin) &&
+        event->type() == QEvent::ShortcutOverride &&
+        static_cast<QKeyEvent *>(event)->key() == Qt::Key_Space) {
         event->ignore();
         return true;
     }
@@ -3193,8 +3024,7 @@ void MainWindow::syncMasterVolumeControl()
     m_masterVolCaption->setEnabled(loaded);
     m_masterVolSpin->setEnabled(loaded);
     QSignalBlocker blocker(m_masterVolSpin);
-    m_masterVolSpin->setValue(loaded ? m_active->doc.cfg().masterVolume
-                                     : SongCfg().masterVolume);
+    m_masterVolSpin->setValue(loaded ? m_active->doc.cfg().masterVolume : SongCfg().masterVolume);
 }
 
 bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabel)
@@ -3217,8 +3047,7 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         }
     }
     if (!target || !target->isPlayable()) {
-        qWarning("selftest: song '%s' not found or has no MIDI source",
-                 qUtf8Printable(songLabel));
+        qWarning("selftest: song '%s' not found or has no MIDI source", qUtf8Printable(songLabel));
         return false;
     }
     qInfo("selftest: project opened, %lld songs", (long long)m_project.songs().size());
@@ -3280,10 +3109,9 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             // DirectSound family only: keysplit/drumkit voices are non-CGB
             // too, but have no scalar fields and take sub-voicegroup symbols,
             // not samples.
-            if (!v
-                || (v->macro != VgMacro::DirectSound
-                    && v->macro != VgMacro::DirectSoundNoResample
-                    && v->macro != VgMacro::DirectSoundAlt))
+            if (!v ||
+                (v->macro != VgMacro::DirectSound && v->macro != VgMacro::DirectSoundNoResample &&
+                 v->macro != VgMacro::DirectSoundAlt))
                 continue;
             if (dsSlot < 0)
                 dsSlot = i;
@@ -3304,16 +3132,16 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             VgVoice v = original;
             v.release = v.release == 25 ? 26 : 25;
             onVoiceEditRequested(dsSlot, v, false);
-            vgEditOk = tab->vgSource->dirty() && tab->doc.isDirty()
-                && m_audio.voicegroup()->voices[dsSlot].release == uint8_t(v.release);
+            vgEditOk = tab->vgSource->dirty() && tab->doc.isDirty() &&
+                       m_audio.voicegroup()->voices[dsSlot].release == uint8_t(v.release);
             if (donorSlot >= 0) {
                 undosNeeded = 2; // structural edits never merge with scalar ones
                 const QByteArray donorName(m_audio.voicegroup()->voiceNames[donorSlot]);
                 v.symbol = tab->vgSource->voiceAt(donorSlot)->symbol;
                 onVoiceEditRequested(dsSlot, v, true);
-                vgEditOk = vgEditOk
-                    && QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == donorName
-                    && m_audio.transport() == Transport::Playing;
+                vgEditOk = vgEditOk &&
+                           QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == donorName &&
+                           m_audio.transport() == Transport::Playing;
             }
             // Voice edits ride the song's undo stack; undoing them all must
             // land back on the exact on-disk state (clean, nothing written).
@@ -3325,19 +3153,16 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                 in.open(QIODevice::ReadOnly);
                 fileAfter = in.readAll();
             }
-            vgEditOk = vgEditOk && !tab->vgSource->dirty() && !tab->doc.isDirty()
-                && fileAfter == fileBefore
-                && *tab->vgSource->voiceAt(dsSlot) == original
-                && m_audio.voicegroup()->voices[dsSlot].release
-                    == uint8_t(original.release)
-                && QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == originalName;
+            vgEditOk = vgEditOk && !tab->vgSource->dirty() && !tab->doc.isDirty() &&
+                       fileAfter == fileBefore && *tab->vgSource->voiceAt(dsSlot) == original &&
+                       m_audio.voicegroup()->voices[dsSlot].release == uint8_t(original.release) &&
+                       QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == originalName;
             if (vgEditOk)
                 qInfo("selftest: voicegroup edit + preview reload + undo OK "
                       "(slot %d, donor %d)",
                       dsSlot, donorSlot);
             else
-                qWarning("selftest: voicegroup edit FAILED (slot %d, donor %d)", dsSlot,
-                         donorSlot);
+                qWarning("selftest: voicegroup edit FAILED (slot %d, donor %d)", dsSlot, donorSlot);
         } else {
             qInfo("selftest: voicegroup edit skipped (no sample voices)");
         }
@@ -3357,9 +3182,9 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         const uint64_t before = m_audio.playheadSamples();
         QTimer::singleShot(300, &loop, &QEventLoop::quit);
         loop.exec();
-        const bool engineOk = m_audio.maxPcmChannels() == 8
-            && m_audio.playheadSamples() != before
-            && m_audio.transport() == Transport::Playing;
+        const bool engineOk = m_audio.maxPcmChannels() == 8 &&
+                              m_audio.playheadSamples() != before &&
+                              m_audio.transport() == Transport::Playing;
         m_audio.updateSettings(songSettingsFor(*tab));
         if (!engineOk) {
             qWarning("selftest: engine-settings update mid-playback FAILED "
@@ -3384,16 +3209,15 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
           playedSeconds, int(m_audio.transport()), m_audio.activePcmChannels(),
           m_audio.maxPcmChannels());
 
-    bool ok = m_audio.transport() == Transport::Playing && playedSeconds > 1.0
-        && m_audio.playheadSamples() >= posBeforeEdit && vgEditOk;
+    bool ok = m_audio.transport() == Transport::Playing && playedSeconds > 1.0 &&
+              m_audio.playheadSamples() >= posBeforeEdit && vgEditOk;
     if (ok) {
         pausePlayback();
         QTimer::singleShot(150, &loop, &QEventLoop::quit);
         loop.exec();
         const uint64_t pausedSample = m_audio.playheadSamples();
         const double pausedViewTick = tab->view->playheadTick();
-        const double pausedEngineTick =
-            m_audio.timeline()->tickForSample(pausedSample);
+        const double pausedEngineTick = m_audio.timeline()->tickForSample(pausedSample);
         constexpr double kPausedPlayheadToleranceTicks = 0.25;
         ok = std::abs(pausedViewTick - pausedEngineTick) <= kPausedPlayheadToleranceTicks;
         if (!ok) {
@@ -3406,20 +3230,19 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         if (ok) {
             const MidiTimeline *tl = m_audio.timeline();
             const uint64_t maxTick = (tl && tl->lengthTicks > 0) ? tl->lengthTicks - 1 : 9600;
-            const uint64_t pausedTargetTick = (pausedViewTick >= 960.0)
-                ? static_cast<uint64_t>(pausedViewTick - 480.0)
-                : std::min<uint64_t>(static_cast<uint64_t>(pausedViewTick + 960.0), maxTick);
+            const uint64_t pausedTargetTick =
+                (pausedViewTick >= 960.0)
+                    ? static_cast<uint64_t>(pausedViewTick - 480.0)
+                    : std::min<uint64_t>(static_cast<uint64_t>(pausedViewTick + 960.0), maxTick);
 
             tab->view->commitEditCursor(pausedTargetTick);
             const double immediateViewTick = tab->view->playheadTick();
-            const bool pausedViewOk =
-                std::abs(immediateViewTick - double(pausedTargetTick))
-                <= kPausedPlayheadToleranceTicks;
+            const bool pausedViewOk = std::abs(immediateViewTick - double(pausedTargetTick)) <=
+                                      kPausedPlayheadToleranceTicks;
             if (!pausedViewOk) {
                 qWarning("selftest: paused edit-cursor visible playhead FAILED "
                          "(target %llu ticks, view %.3f ticks)",
-                         static_cast<unsigned long long>(pausedTargetTick),
-                         immediateViewTick);
+                         static_cast<unsigned long long>(pausedTargetTick), immediateViewTick);
             }
 
             QTimer::singleShot(200, &loop, &QEventLoop::quit);
@@ -3428,8 +3251,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             const double afterPausedSeekEngineTick =
                 m_audio.timeline()->tickForSample(afterPausedSeekSample);
             const bool pausedEngineOk =
-                std::abs(afterPausedSeekEngineTick - double(pausedTargetTick))
-                <= kPausedPlayheadToleranceTicks;
+                std::abs(afterPausedSeekEngineTick - double(pausedTargetTick)) <=
+                kPausedPlayheadToleranceTicks;
             if (!pausedEngineOk) {
                 qWarning("selftest: paused edit-cursor engine seek FAILED "
                          "(target %llu ticks, engine %.3f ticks at %llu samples)",
@@ -3442,8 +3265,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             if (ok) {
                 qInfo("selftest: paused edit-cursor seek OK "
                       "(target %llu ticks, view %.3f ticks, engine %.3f ticks)",
-                      static_cast<unsigned long long>(pausedTargetTick),
-                      immediateViewTick, afterPausedSeekEngineTick);
+                      static_cast<unsigned long long>(pausedTargetTick), immediateViewTick,
+                      afterPausedSeekEngineTick);
             }
         }
 
@@ -3471,8 +3294,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         QTimer::singleShot(300, &loop, &QEventLoop::quit);
         loop.exec();
         const uint64_t afterRestart = m_audio.playheadSamples();
-        ok = afterSeek >= seekSample && m_audio.transport() == Transport::Playing
-            && afterRestart >= seekSample;
+        ok = afterSeek >= seekSample && m_audio.transport() == Transport::Playing &&
+             afterRestart >= seekSample;
         if (ok)
             qInfo("selftest: edit-cursor seek + play-from-cursor OK (cursor %.2fs)",
                   double(seekSample) / m_audio.sampleRate());
@@ -3496,8 +3319,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             QTimer::singleShot(150, &loop, &QEventLoop::quit);
             loop.exec();
             const uint64_t afterSpace = m_audio.playheadSamples();
-            ok = m_audio.transport() == Transport::Playing && afterSpace >= seekSample
-                && afterSpace < pausedAt;
+            ok = m_audio.transport() == Transport::Playing && afterSpace >= seekSample &&
+                 afterSpace < pausedAt;
             if (ok)
                 qInfo("selftest: Space-from-pause restarted at edit cursor OK "
                       "(paused %.2fs, restarted to %.2fs)",
@@ -3534,24 +3357,23 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             tab->view->applyViewState(loaded);
             const SongView::ViewState restored = tab->view->viewState();
             QString constant, player;
-            ok = std::abs(restored.pxPerBeat - saved.pxPerBeat) < 0.001
-                && std::abs(restored.keyHeight - saved.keyHeight) < 0.001
-                && std::abs(restored.scrollPx - saved.scrollPx) < 0.001
-                && std::abs(restored.scrollY - saved.scrollY) < 0.001
-                && restored.selectedTrack == saved.selectedTrack
-                && restored.editCursorTick == saved.editCursorTick
-                && restored.laneHeight == saved.laneHeight
-                && restored.gridMinDenom == 8
-                && restored.gridTriplet
-                && restored.laneRanges.value(QStringLiteral("cc:0:1"), -1) == 16
-                && SongRegistry::loadRegistrationMeta(m_project.root(), target->label,
-                                                      &constant, &player)
-                && constant == QLatin1String("MUS_SELFTEST");
+            ok = std::abs(restored.pxPerBeat - saved.pxPerBeat) < 0.001 &&
+                 std::abs(restored.keyHeight - saved.keyHeight) < 0.001 &&
+                 std::abs(restored.scrollPx - saved.scrollPx) < 0.001 &&
+                 std::abs(restored.scrollY - saved.scrollY) < 0.001 &&
+                 restored.selectedTrack == saved.selectedTrack &&
+                 restored.editCursorTick == saved.editCursorTick &&
+                 restored.laneHeight == saved.laneHeight && restored.gridMinDenom == 8 &&
+                 restored.gridTriplet &&
+                 restored.laneRanges.value(QStringLiteral("cc:0:1"), -1) == 16 &&
+                 SongRegistry::loadRegistrationMeta(m_project.root(), target->label, &constant,
+                                                    &player) &&
+                 constant == QLatin1String("MUS_SELFTEST");
         }
         QFile::remove(ViewSidecar::pathFor(m_project.root(), target->label));
-        tab->view->setGridMinDenom(0); // don't leak the test grid into a
+        tab->view->setGridMinDenom(0);                        // don't leak the test grid into a
         tab->view->setGridFeel(SongView::GridFeel::Straight); // shutdown save
-        tab->view->setLaneDisplayRange(0, 0x01, 0); // nor the MOD axis zoom
+        tab->view->setLaneDisplayRange(0, 0x01, 0);           // nor the MOD axis zoom
         if (ok)
             qInfo("selftest: sidecar view-state round trip OK");
         else
@@ -3576,8 +3398,5 @@ QString MainWindow::formatTime(uint64_t samples) const
     const int mins = int(seconds) / 60;
     const int secs = int(seconds) % 60;
     const int tenths = int(seconds * 10) % 10;
-    return QStringLiteral("%1:%2.%3")
-        .arg(mins)
-        .arg(secs, 2, 10, QLatin1Char('0'))
-        .arg(tenths);
+    return QStringLiteral("%1:%2.%3").arg(mins).arg(secs, 2, 10, QLatin1Char('0')).arg(tenths);
 }

@@ -28,7 +28,7 @@ class PolyphonyPanel : public QWidget
 {
     Q_OBJECT
 
-public:
+  public:
     explicit PolyphonyPanel(QWidget *parent = nullptr);
 
     // Session context, pushed by MainWindow at the same choke points where
@@ -56,18 +56,18 @@ public:
     bool gridFullyVisible() const;
     int vScrollRange() const; // >0 when the content scrolls (short window)
 
-signals:
+  signals:
     void invertToggled(bool on);
     void resetRequested();
     // Double-clicked event row: jump the edit cursor to tick and reveal the
     // lost note (track + midiKey identify it; see SongView::revealNote).
     void jumpToEvent(uint64_t tick, int track, int midiKey);
 
-protected:
+  protected:
     void resizeEvent(QResizeEvent *event) override;
     void changeEvent(QEvent *event) override;
 
-private:
+  private:
     void appendEvent(const M4APolyEvent &ev);
     void applyLogItemInk(QListWidgetItem *item);
     void refreshTable(const AudioEngine::PolySnapshot &snap);

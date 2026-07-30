@@ -2,11 +2,11 @@
 
 #include <QColor>
 #include <QHash>
-#include <algorithm>
 #include <QList>
 #include <QRectF>
 #include <QSet>
 #include <QWidget>
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <utility>
@@ -65,15 +65,11 @@ constexpr double kAutoGridMinCellPx = 16.0;
 inline QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr = 1.0)
 {
     const qreal pixel = 1.0 / dpr;
-    const qreal barH =
-        qRound(noteRect.height() / pixel) >= 20 ? 2 * pixel : pixel;
+    const qreal barH = qRound(noteRect.height() / pixel) >= 20 ? 2 * pixel : pixel;
     const qreal innerH = noteRect.height() - 2 * pixel;
-    const qreal y =
-        std::min(noteRect.top() + pixel
-                     + (127 - velocity) * (innerH - pixel) / 127.0,
-                 noteRect.bottom() - pixel - barH);
-    return QRectF(noteRect.left() + pixel, y,
-                  std::max(pixel, noteRect.width() - 2 * pixel), barH);
+    const qreal y = std::min(noteRect.top() + pixel + (127 - velocity) * (innerH - pixel) / 127.0,
+                             noteRect.bottom() - pixel - barH);
+    return QRectF(noteRect.left() + pixel, y, std::max(pixel, noteRect.width() - 2 * pixel), barH);
 }
 // Frame weights for note borders and the selection ring, in physical
 // pixels for the given display ratio. Authored in DIPs (border 1, ring
@@ -103,7 +99,7 @@ class SongView : public QWidget
 {
     Q_OBJECT
 
-public:
+  public:
     explicit SongView(QWidget *parent = nullptr);
 
     void setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup);
@@ -125,22 +121,22 @@ public:
     // on apply, so a stale or hand-edited sidecar can't wedge the view.
     struct ViewState {
         bool valid = false;
-        double pxPerBeat = 32.0;  // horizontal zoom (ticks-per-beat neutral)
+        double pxPerBeat = 32.0;                        // horizontal zoom (ticks-per-beat neutral)
         double keyHeight = songview::kVelHandleMinKeyH; // vertical roll zoom
         double scrollPx = 0.0;
         double scrollY = 0.0;
         int selectedTrack = 0;
         uint64_t editCursorTick = 0;
-        int laneHeight = 48;      // shared automation row height
-        QHash<QString, int> laneHeights; // per-row overrides (AutomationArea keys)
-        QHash<QString, int> laneRanges;  // per-lane display max (AutomationArea
-                                         // keys); 0 = auto-fit to the data
-        QList<int> splitterSizes; // roll pane, lanes pane
+        int laneHeight = 48;                             // shared automation row height
+        QHash<QString, int> laneHeights;                 // per-row overrides (AutomationArea keys)
+        QHash<QString, int> laneRanges;                  // per-lane display max (AutomationArea
+                                                         // keys); 0 = auto-fit to the data
+        QList<int> splitterSizes;                        // roll pane, lanes pane
         std::vector<std::pair<int, uint8_t>> emptyLanes; // (track, cc)
-        int gridMinDenom = 0;     // drawn-grid floor as a note denominator
-                                  // (4/8/16/32); 0 = down to the clock grid
-        bool gridTriplet = false; // triplet vs straight beat subdivisions
-        bool eventList = false;   // raw MIDI event list instead of the roll
+        int gridMinDenom = 0;                            // drawn-grid floor as a note denominator
+                                                         // (4/8/16/32); 0 = down to the clock grid
+        bool gridTriplet = false;                        // triplet vs straight beat subdivisions
+        bool eventList = false;                          // raw MIDI event list instead of the roll
     };
     ViewState viewState() const;
     // Call after setSong (and setDocument); a default-constructed (invalid)
@@ -290,9 +286,8 @@ public:
     // Bar/beat grid over [tickBegin, tickEnd): calls fn(tick, isBarStart,
     // barNumber, beatNumber) for every beat, honoring the song's time
     // signature changes.
-    void forEachGridLine(
-        uint64_t tickBegin, uint64_t tickEnd,
-        const std::function<void(uint64_t, bool, int, int)> &fn) const;
+    void forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
+                         const std::function<void(uint64_t, bool, int, int)> &fn) const;
 
     // --- editing support for the child widgets ---
     // Grid feel and floor (the ruler's grid controls): the zoom-adaptive
@@ -439,7 +434,7 @@ public:
         std::vector<std::pair<uint32_t, int>> points; // (relTick, value)
     };
     struct Clip {
-        uint64_t span = 0; // ticks covered; 0 = plain note clip
+        uint64_t span = 0;      // ticks covered; 0 = plain note clip
         bool wholeLane = false; // gutter "Copy lane" (paste-lane anchor is 0)
         std::vector<ClipTrack> tracks;
         std::vector<ClipLane> lanes;
@@ -451,24 +446,17 @@ public:
     void announceNote(const ViewNote &note);
 
     // Child-widget entry point for the auditionNote signal.
-    void audition(int track, int key, int velocity)
-    {
-        emit auditionNote(track, key, velocity);
-    }
+    void audition(int track, int key, int velocity) { emit auditionNote(track, key, velocity); }
 
     // Fixed-length audition for the band-sweep chord preview: the note's tick
     // span converts to samples through the display timeline, so the preview
     // lasts at most as long as the note does in the song (tempo changes
     // included).
-    void auditionTimed(int track, int key, int velocity, uint64_t startTick,
-                       uint64_t endTick);
+    void auditionTimed(int track, int key, int velocity, uint64_t startTick, uint64_t endTick);
 
     // Early release for a timed audition (the band no longer covers the
     // note); the velocity-0 form of the same signal.
-    void auditionTimedOff(int track, int key)
-    {
-        emit auditionNoteTimed(track, key, 0, 0);
-    }
+    void auditionTimedOff(int track, int key) { emit auditionNoteTimed(track, key, 0, 0); }
 
     // Child-widget entry point for the statusMessage signal.
     void announce(const QString &text) { emit statusMessage(text); }
@@ -496,7 +484,7 @@ public:
     void ensureKeyVisible(int key);
     void refreshTimelineViews();
 
-signals:
+  signals:
     void muteMaskChanged(uint32_t mask);
     void soloMaskChanged(uint32_t mask);
     void selectedTrackChanged(int track);
@@ -505,8 +493,7 @@ signals:
     // Self-releasing audition (band-sweep chord preview); forwarded to
     // AudioEngine::previewNoteTimed, which sends the note-off itself.
     // velocity 0 releases the track+key's preview early.
-    void auditionNoteTimed(int track, int key, int velocity,
-                           quint32 durationSamples);
+    void auditionNoteTimed(int track, int key, int velocity, quint32 durationSamples);
     // Voicegroup-entry audition from the voice picker; routed to
     // AudioEngine::previewVoice like the voicegroup browser's signal.
     void auditionVoice(int voice, int key, int velocity);
@@ -521,10 +508,10 @@ signals:
     // voicegroup dock and selects this slot.
     void revealVoiceRequested(int program);
 
-protected:
+  protected:
     void resizeEvent(QResizeEvent *event) override;
 
-private:
+  private:
     uint64_t gridTicksIn(const GridSeg &seg, bool snap = false) const;
     // Document trackMoved handler: rotates the per-track view state with the
     // renumbered engine slots on apply, undo, and redo alike.
@@ -554,8 +541,8 @@ private:
 
     double m_pxPerTick = 1.0;
     double m_scrollX = 0.0;
-        double m_scrollY = 0.0;
-        double m_keyHeight = songview::kVelHandleMinKeyH;
+    double m_scrollY = 0.0;
+    double m_keyHeight = songview::kVelHandleMinKeyH;
     int m_selectedTrack = 0;
     double m_playheadTick = 0.0;
     uint64_t m_editCursorTick = 0;
@@ -567,9 +554,9 @@ private:
     Clip m_clip;
     uint32_t m_trackSelMask = 0; // header multi-selection (see trackSelectionMask)
     GridFeel m_gridFeel = GridFeel::Straight;
-    int m_gridMinDenom = 0; // note denominator; 0 = clock-grid floor
-    bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)
-    bool m_followPlayhead = true;     // playback follow-scroll (transport bar)
+    int m_gridMinDenom = 0;                            // note denominator; 0 = clock-grid floor
+    bool m_velocityColorMode = false;                  // velocityNoteColor fills (View menu)
+    bool m_followPlayhead = true;                      // playback follow-scroll (transport bar)
     std::vector<std::pair<int, uint8_t>> m_emptyLanes; // (track, cc), unsorted
 
     songview::TimeRuler *m_ruler = nullptr;

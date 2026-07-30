@@ -35,15 +35,15 @@ constexpr uint32_t kDivision = 24;
 constexpr double kSampleRate = 48000.0;
 constexpr uint64_t kSamplesPerTick = 1000;
 
-constexpr uint64_t kLoopStartTick = 96;  // measure 2
-constexpr uint64_t kLoopEndTick = 288;   // downbeat of measure 4
-constexpr uint8_t kBodyKey = 60;     // ticks 96-120, plays every pass
-constexpr uint8_t kEndsAtKey = 62;   // ticks 264-288, off exactly at loop end
-constexpr uint8_t kSpansKey = 65;    // ticks 240-300, crosses the loop end (60
-                                     // clocks: direct note -> gate-carry)
-constexpr uint8_t kBoundaryKey = 64; // ticks 288-312, the reported stuck note
-constexpr uint8_t kTieKey = 67;      // ticks 192-312, crosses the loop end (120
-                                     // clocks: TIE + EOT -> held forever)
+constexpr uint64_t kLoopStartTick = 96; // measure 2
+constexpr uint64_t kLoopEndTick = 288;  // downbeat of measure 4
+constexpr uint8_t kBodyKey = 60;        // ticks 96-120, plays every pass
+constexpr uint8_t kEndsAtKey = 62;      // ticks 264-288, off exactly at loop end
+constexpr uint8_t kSpansKey = 65;       // ticks 240-300, crosses the loop end (60
+                                        // clocks: direct note -> gate-carry)
+constexpr uint8_t kBoundaryKey = 64;    // ticks 288-312, the reported stuck note
+constexpr uint8_t kTieKey = 67;         // ticks 192-312, crosses the loop end (120
+                                        // clocks: TIE + EOT -> held forever)
 
 SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
 {
@@ -167,8 +167,7 @@ int runProbes(const MidiTimeline &timeline, bool looping, std::vector<Probe> pro
     size_t next = 0;
     const uint64_t total = probes.back().samplePos + kChunk;
     while (rendered < total && next < probes.size()) {
-        const uint32_t n =
-            uint32_t(std::min<uint64_t>(kChunk, probes[next].samplePos - rendered));
+        const uint32_t n = uint32_t(std::min<uint64_t>(kChunk, probes[next].samplePos - rendered));
         player.render(&engine, &timeline, bufL, bufR, n, looping, 0);
         rendered += n;
         if (rendered != probes[next].samplePos)
@@ -177,10 +176,8 @@ int runProbes(const MidiTimeline &timeline, bool looping, std::vector<Probe> pro
         const Probe &probe = probes[next++];
         const std::vector<uint8_t> keys = keyedOnKeys(engine);
         if (keys != probe.expectedKeys) {
-            std::fprintf(stderr,
-                         "loopcheck: FAIL: %s (looping=%d, t=%llu): keyed-on notes [",
-                         probe.what, int(looping),
-                         (unsigned long long)probe.samplePos);
+            std::fprintf(stderr, "loopcheck: FAIL: %s (looping=%d, t=%llu): keyed-on notes [",
+                         probe.what, int(looping), (unsigned long long)probe.samplePos);
             for (uint8_t k : keys)
                 std::fprintf(stderr, " %d", k);
             std::fprintf(stderr, " ], expected [");
@@ -202,9 +199,9 @@ int runLoopCheck()
 
     const SmfFile smf = buildLoopSong();
     const auto timeline = MidiTimeline::build(smf, kSampleRate);
-    if (!timeline || !timeline->hasLoop()
-        || timeline->loopStartSample != kLoopStartTick * kSamplesPerTick
-        || timeline->loopEndSample != kLoopEndTick * kSamplesPerTick) {
+    if (!timeline || !timeline->hasLoop() ||
+        timeline->loopStartSample != kLoopStartTick * kSamplesPerTick ||
+        timeline->loopEndSample != kLoopEndTick * kSamplesPerTick) {
         std::fprintf(stderr, "loopcheck: synthesized song has wrong loop points\n");
         return 1;
     }
@@ -218,22 +215,22 @@ int runLoopCheck()
     // releases at its full written duration — global sample 300000 — so it
     // is still keyed at 298000 and gone by 310000.
     const uint64_t quiet = 200000, bodyStart = 298000, afterCarry = 310000;
-    failures += runProbes(*timeline, true,
-                          {{quiet, {kTieKey}, "pass-1 tied note sounds"},
-                           {bodyStart, {kBodyKey, kSpansKey, kTieKey},
-                            "pass-2 gate-carry holds across the wrap, "
-                            "loop-end note-off honored"},
-                           {afterCarry, {kBodyKey, kTieKey},
-                            "gate-carry releases at written duration"},
-                           {quiet + loopLen, {kTieKey, kTieKey},
-                            "pass-2 tied note stacks, no other stuck notes"},
-                           {quiet + 2 * loopLen, {kTieKey, kTieKey, kTieKey},
-                            "pass-3 tied note stacks again"}});
+    failures += runProbes(
+        *timeline, true,
+        {{quiet, {kTieKey}, "pass-1 tied note sounds"},
+         {bodyStart,
+          {kBodyKey, kSpansKey, kTieKey},
+          "pass-2 gate-carry holds across the wrap, "
+          "loop-end note-off honored"},
+         {afterCarry, {kBodyKey, kTieKey}, "gate-carry releases at written duration"},
+         {quiet + loopLen, {kTieKey, kTieKey}, "pass-2 tied note stacks, no other stuck notes"},
+         {quiet + 2 * loopLen, {kTieKey, kTieKey, kTieKey}, "pass-3 tied note stacks again"}});
 
     // Not looping: playback runs straight through, so the note at the loop
     // end and both notes spanning it sound normally.
     failures += runProbes(*timeline, false,
-                          {{bodyStart, {kBoundaryKey, kSpansKey, kTieKey},
+                          {{bodyStart,
+                            {kBoundaryKey, kSpansKey, kTieKey},
                             "loop-boundary notes play when not looping"}});
 
     std::printf("loopcheck: %s\n", failures == 0 ? "PASS" : "FAIL");

@@ -23,7 +23,7 @@
 // convention instead of swallowing the keystroke.
 class LowercaseNameValidator : public QRegularExpressionValidator
 {
-public:
+  public:
     using QRegularExpressionValidator::QRegularExpressionValidator;
 
     State validate(QString &input, int &pos) const override
@@ -35,9 +35,8 @@ public:
 
 class IdentityPage : public QWizardPage
 {
-public:
-    IdentityPage(DecompProject *project, const QString &suggestedLabel)
-        : m_project(project)
+  public:
+    IdentityPage(DecompProject *project, const QString &suggestedLabel) : m_project(project)
     {
         setTitle(tr("Song identity"));
         setSubTitle(tr("Names the .mid file, the song_table.inc entry, and the "
@@ -69,8 +68,10 @@ public:
                 m_constant->setText(SongRegistry::constantForLabel(text));
             emit completeChanged();
         });
-        connect(m_constant, &QLineEdit::textEdited, this,
-                [this] { m_constantEdited = true; emit completeChanged(); });
+        connect(m_constant, &QLineEdit::textEdited, this, [this] {
+            m_constantEdited = true;
+            emit completeChanged();
+        });
         if (!suggestedLabel.isEmpty())
             m_constant->setText(SongRegistry::constantForLabel(suggestedLabel));
     }
@@ -87,8 +88,8 @@ public:
                 return false;
             }
         }
-        if (QFileInfo::exists(m_project->root()
-                              + QStringLiteral("/sound/songs/midi/%1.mid").arg(name))) {
+        if (QFileInfo::exists(m_project->root() +
+                              QStringLiteral("/sound/songs/midi/%1.mid").arg(name))) {
             m_nameHint->setText(tr("%1.mid already exists.").arg(name));
             return false;
         }
@@ -99,7 +100,7 @@ public:
     QString constant() const { return m_constant->text(); }
     QString player() const { return m_player->currentText(); }
 
-private:
+  private:
     DecompProject *m_project;
     QLineEdit *m_name;
     QLineEdit *m_constant;
@@ -112,10 +113,11 @@ private:
 
 class SoundPage : public QWizardPage
 {
-public:
+  public:
     SoundPage(DecompProject *project, const IdentityPage *identity,
               const QStringList &voicegroupArgs)
-        : m_identity(identity), m_vgArgs(voicegroupArgs)
+        : m_identity(identity)
+        , m_vgArgs(voicegroupArgs)
     {
         setTitle(tr("Sound settings"));
         setSubTitle(tr("The song's voicegroup and mid2agb flags — its entry in "
@@ -136,8 +138,7 @@ public:
         // Default to the first existing voicegroup, not the create entry.
         if (m_canCreateVoicegroup && m_voicegroup->count() > 1)
             m_voicegroup->setCurrentIndex(1);
-        m_voicegroup->setToolTip(
-            tr("The symbol is \"voicegroup_\" + this name (mid2agb -G)."));
+        m_voicegroup->setToolTip(tr("The symbol is \"voicegroup_\" + this name (mid2agb -G)."));
         form->addRow(tr("&Voicegroup:"), m_voicegroup);
 
         m_volume = new QSpinBox(this);
@@ -172,13 +173,12 @@ public:
 
     bool validatePage() override
     {
-        if (newVoicegroupSelected()
-            && m_vgArgs.contains(QStringLiteral("_") + m_identity->label())) {
-            QMessageBox::warning(
-                this, tr("New Voicegroup"),
-                tr("A voicegroup named voicegroup_%1 already exists — pick it "
-                   "from the list instead.")
-                    .arg(m_identity->label()));
+        if (newVoicegroupSelected() &&
+            m_vgArgs.contains(QStringLiteral("_") + m_identity->label())) {
+            QMessageBox::warning(this, tr("New Voicegroup"),
+                                 tr("A voicegroup named voicegroup_%1 already exists — pick it "
+                                    "from the list instead.")
+                                     .arg(m_identity->label()));
             return false;
         }
         return true;
@@ -201,11 +201,8 @@ public:
         return cfg;
     }
 
-private:
-    static QString newVoicegroupText()
-    {
-        return tr("(create a new voicegroup for this song)");
-    }
+  private:
+    static QString newVoicegroupText() { return tr("(create a new voicegroup for this song)"); }
 
     const IdentityPage *m_identity;
     bool m_canCreateVoicegroup = false;
@@ -223,21 +220,20 @@ private:
 
 class AnalysisPage : public QWizardPage
 {
-public:
+  public:
     AnalysisPage(const ImportAnalysis &a, const QString &sourcePath)
     {
         setTitle(tr("MIDI analysis"));
         setSubTitle(QFileInfo(sourcePath).fileName());
 
         auto *layout = new QVBoxLayout(this);
-        auto *summary = new QLabel(
-            tr("Division %1 · %2 chunk(s) → <b>%3 m4a track(s)</b> · peak "
-               "%4 simultaneous note(s)")
-                .arg(a.division)
-                .arg(a.smfTrackCount)
-                .arg(a.mappedTracks)
-                .arg(a.peakConcurrentNotes),
-            this);
+        auto *summary = new QLabel(tr("Division %1 · %2 chunk(s) → <b>%3 m4a track(s)</b> · peak "
+                                      "%4 simultaneous note(s)")
+                                       .arg(a.division)
+                                       .arg(a.smfTrackCount)
+                                       .arg(a.mappedTracks)
+                                       .arg(a.peakConcurrentNotes),
+                                   this);
         summary->setWordWrap(true);
         layout->addWidget(summary);
 
@@ -249,15 +245,14 @@ public:
         }
 
         if (a.division % 24 != 0) {
-            m_rescale = new QCheckBox(
-                tr("Rescale timing to the m4a clock grid (24 clocks per beat, "
-                   "48 with -X)"),
-                this);
+            m_rescale =
+                new QCheckBox(tr("Rescale timing to the m4a clock grid (24 clocks per beat, "
+                                 "48 with -X)"),
+                              this);
             m_rescale->setChecked(true);
-            m_rescale->setToolTip(
-                tr("Rewrites every event tick with the same rounding mid2agb "
-                   "applies, so the editor grid matches playback exactly. "
-                   "Uncheck to keep the file's original ticks."));
+            m_rescale->setToolTip(tr("Rewrites every event tick with the same rounding mid2agb "
+                                     "applies, so the editor grid matches playback exactly. "
+                                     "Uncheck to keep the file's original ticks."));
             layout->addWidget(m_rescale);
         }
 
@@ -282,25 +277,27 @@ public:
 
     bool rescaleSelected() const { return m_rescale && m_rescale->isChecked(); }
 
-private:
+  private:
     QCheckBox *m_rescale = nullptr;
 };
 
 // ---- The wizard -------------------------------------------------------------
 
-NewSongWizard::NewSongWizard(DecompProject *project,
-                             const QStringList &voicegroupArgs, QWidget *parent)
-    : QWizard(parent), m_project(project)
+NewSongWizard::NewSongWizard(DecompProject *project, const QStringList &voicegroupArgs,
+                             QWidget *parent)
+    : QWizard(parent)
+    , m_project(project)
 {
     setWindowTitle(tr("New Song"));
     buildPages(QString(), voicegroupArgs);
 }
 
-NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported,
-                             const QString &sourcePath,
+NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported, const QString &sourcePath,
                              const QStringList &voicegroupArgs, QWidget *parent)
-    : QWizard(parent), m_project(project), m_importMode(true),
-      m_imported(std::move(imported))
+    : QWizard(parent)
+    , m_project(project)
+    , m_importMode(true)
+    , m_imported(std::move(imported))
 {
     setWindowTitle(tr("Import MIDI — %1").arg(QFileInfo(sourcePath).fileName()));
     // m_imported arrives coerced to format 1 (SmfFile::read), so the
@@ -308,19 +305,16 @@ NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported,
     // every song porydaw opens. The track-budget warning is computed against
     // the first music player (the identity page's default, normally BGM) and
     // names it, since the analysis page precedes the player choice.
-    const QVector<MusicPlayer> players =
-        SongRegistry::musicPlayers(project->root());
+    const QVector<MusicPlayer> players = SongRegistry::musicPlayers(project->root());
     const MusicPlayer &defaultPlayer = players.first();
-    m_analysis = analyzeForImport(m_imported, defaultPlayer.trackCount,
-                                  defaultPlayer.name);
+    m_analysis = analyzeForImport(m_imported, defaultPlayer.trackCount, defaultPlayer.name);
     if (m_imported.wasFormat0)
         m_analysis.warnings.prepend(
             tr("Format 0 file — imported as format 1 (one chunk per channel)."));
     buildPages(sourcePath, voicegroupArgs);
 }
 
-void NewSongWizard::buildPages(const QString &sourcePath,
-                               const QStringList &voicegroupArgs)
+void NewSongWizard::buildPages(const QString &sourcePath, const QStringList &voicegroupArgs)
 {
     setOption(QWizard::NoBackButtonOnStartPage);
     setMinimumSize(::layout::fontPx(52), ::layout::fontPx(38));
@@ -329,11 +323,10 @@ void NewSongWizard::buildPages(const QString &sourcePath,
     if (m_importMode) {
         // "Cool Song.mid" -> "mus_cool_song"
         suggested = QFileInfo(sourcePath).completeBaseName().toLower();
-        suggested.replace(QRegularExpression(QStringLiteral("[^a-z0-9]+")),
-                          QStringLiteral("_"));
+        suggested.replace(QRegularExpression(QStringLiteral("[^a-z0-9]+")), QStringLiteral("_"));
         suggested.remove(QRegularExpression(QStringLiteral("^_+|_+$")));
-        if (!suggested.startsWith(QStringLiteral("mus_"))
-            && !suggested.startsWith(QStringLiteral("se_")))
+        if (!suggested.startsWith(QStringLiteral("mus_")) &&
+            !suggested.startsWith(QStringLiteral("se_")))
             suggested.prepend(QStringLiteral("mus_"));
         m_analysisPage = new AnalysisPage(m_analysis, sourcePath);
         addPage(m_analysisPage);

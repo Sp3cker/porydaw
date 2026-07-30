@@ -26,12 +26,12 @@ class EngineSettingsDialog : public QDialog
 {
     Q_OBJECT
 
-public:
+  public:
     explicit EngineSettingsDialog(const EngineSettings &settings, QWidget *parent = nullptr);
 
     EngineSettings settings() const;
 
-private:
+  private:
     void applyToWidgets(const EngineSettings &settings);
 
     QSpinBox *m_polyphony = nullptr;

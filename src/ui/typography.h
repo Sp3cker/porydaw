@@ -36,7 +36,6 @@ QFont bold(const QFont &source);
 /// Failure is explicit so callers cannot silently paint clipped text.
 std::optional<QFont> fitted(const QFont &base, int availableHeight);
 /// Aligns the visible bounds of a substituted glyph with the reference face.
-QPointF glyphCenteringOffset(const QFont &reference, const QFont &displayed,
-                             QStringView text);
+QPointF glyphCenteringOffset(const QFont &reference, const QFont &displayed, QStringView text);
 
 } // namespace typography

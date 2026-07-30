@@ -12,18 +12,18 @@ struct SongCfg {
     // default wherever the flag is absent.
     static constexpr int kDefaultReverb = 50;
 
-    QStringList rawFlags;    // the flags as written ($(VAR) refs pre-expanded)
-    QString voicegroupArg;   // -G value, e.g. "_abandoned_ship" (mid2agb default: "_dummy")
-    int masterVolume = 127;  // -V (0-127)
-    int reverb = -1;         // -R, -1 = flag absent (defaults to kDefaultReverb)
-    int priority = 0;        // -P
-    bool exactGate = false;  // -E
+    QStringList rawFlags;        // the flags as written ($(VAR) refs pre-expanded)
+    QString voicegroupArg;       // -G value, e.g. "_abandoned_ship" (mid2agb default: "_dummy")
+    int masterVolume = 127;      // -V (0-127)
+    int reverb = -1;             // -R, -1 = flag absent (defaults to kDefaultReverb)
+    int priority = 0;            // -P
+    bool exactGate = false;      // -E
     bool extendedClocks = false; // -X (48 clocks/beat)
     bool noCompression = false;  // -N
 };
 
 struct MusicPlayer {
-    QString name;  // e.g. "MUSIC_PLAYER_BGM"
+    QString name;   // e.g. "MUSIC_PLAYER_BGM"
     int number = 0; // the .equiv value; also the song macro's third argument
     // Tracks this player allocates (music_player_table.inc), clamped to the
     // engine's 16 the way MPlayOpen clamps. MPlayStart never starts a song
@@ -33,12 +33,12 @@ struct MusicPlayer {
 };
 
 struct SongInfo {
-    int id = -1;             // index in the project's song vector; equals the
-                             // numeric song ID only when registered
-    QString label;           // e.g. "mus_abandoned_ship"
-    QString constant;        // e.g. "MUS_ABANDONED_SHIP" (from songs.h, if matched)
-    QString player;          // e.g. "MUSIC_PLAYER_BGM"
-    QString midPath;         // absolute path to the .mid source, if it exists
+    int id = -1;      // index in the project's song vector; equals the
+                      // numeric song ID only when registered
+    QString label;    // e.g. "mus_abandoned_ship"
+    QString constant; // e.g. "MUS_ABANDONED_SHIP" (from songs.h, if matched)
+    QString player;   // e.g. "MUSIC_PLAYER_BGM"
+    QString midPath;  // absolute path to the .mid source, if it exists
     bool hasMid = false;
     bool hasCfg = false;
     // false: the .mid exists in sound/songs/midi/ but song_table.inc has no
@@ -62,7 +62,7 @@ struct SongInfo {
 // voicegroup_loader.
 class DecompProject
 {
-public:
+  public:
     bool open(const QString &rootDir, QString *error);
     void close();
 
@@ -90,7 +90,7 @@ public:
     // registers a song). Song ids are reassigned.
     bool reload(QString *error);
 
-private:
+  private:
     bool parseSongTable(QString *error);
     void parseSongConstants();
     bool parseMidiCfg(); // false if midi.cfg does not exist (or can't open)

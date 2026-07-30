@@ -82,8 +82,8 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
     QString error;
     SongDocument doc;
     if (!doc.load(song, &error)) {
-        std::fprintf(stderr, "eventviewcheck: FAIL ui %s: %s\n",
-                     qUtf8Printable(song.label), qUtf8Printable(error));
+        std::fprintf(stderr, "eventviewcheck: FAIL ui %s: %s\n", qUtf8Printable(song.label),
+                     qUtf8Printable(error));
         return 1;
     }
     auto tl = doc.buildTimeline(48000.0);
@@ -95,8 +95,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
 
     int failures = 0;
     auto fail = [&](const char *what) {
-        std::fprintf(stderr, "eventviewcheck: FAIL ui %s: %s\n",
-                     qUtf8Printable(song.label), what);
+        std::fprintf(stderr, "eventviewcheck: FAIL ui %s: %s\n", qUtf8Printable(song.label), what);
         failures++;
     };
 
@@ -133,20 +132,19 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
     const auto monoFamily = QFontInfo(typography::bodyMono(table->font())).family();
     constexpr int numericColumns[] = {0, 2, 3, 4};
     for (const auto column : numericColumns) {
-        const auto cellFont =
-            model->data(model->index(0, column), Qt::FontRole).value<QFont>();
+        const auto cellFont = model->data(model->index(0, column), Qt::FontRole).value<QFont>();
         if (QFontInfo(cellFont).family() != monoFamily)
             fail("a numeric event cell does not use the monospace face");
-        if (cellFont.letterSpacingType() != QFont::AbsoluteSpacing
-            || cellFont.letterSpacing() != -0.5)
+        if (cellFont.letterSpacingType() != QFont::AbsoluteSpacing ||
+            cellFont.letterSpacing() != -0.5)
             fail("a numeric event cell does not use tightened spacing");
         QStyleOptionViewItem editorOption;
         editorOption.initFrom(table);
-        auto editor = std::unique_ptr<QWidget>(table->itemDelegate()->createEditor(
-            table, editorOption, model->index(0, column)));
-        if (!editor || QFontInfo(editor->font()).family() != monoFamily
-            || editor->font().letterSpacingType() != QFont::AbsoluteSpacing
-            || editor->font().letterSpacing() != -0.5)
+        auto editor = std::unique_ptr<QWidget>(
+            table->itemDelegate()->createEditor(table, editorOption, model->index(0, column)));
+        if (!editor || QFontInfo(editor->font()).family() != monoFamily ||
+            editor->font().letterSpacingType() != QFont::AbsoluteSpacing ||
+            editor->font().letterSpacing() != -0.5)
             fail("a numeric event editor does not match its column font");
     }
 
@@ -187,13 +185,11 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             action->setChecked(names.contains(action->text()));
     };
     const auto &filterEvents = doc.smf().tracks[chunk].events;
-    const size_t metas = size_t(std::count_if(
-        filterEvents.begin(), filterEvents.end(),
-        [](const SmfEvent &ev) { return ev.isMeta(); }));
-    const size_t notes = size_t(std::count_if(
-        filterEvents.begin(), filterEvents.end(), [](const SmfEvent &ev) {
-            return ev.isChannel()
-                && (ev.typeNibble() == 0x8 || ev.typeNibble() == 0x9);
+    const size_t metas = size_t(std::count_if(filterEvents.begin(), filterEvents.end(),
+                                              [](const SmfEvent &ev) { return ev.isMeta(); }));
+    const size_t notes =
+        size_t(std::count_if(filterEvents.begin(), filterEvents.end(), [](const SmfEvent &ev) {
+            return ev.isChannel() && (ev.typeNibble() == 0x8 || ev.typeNibble() == 0x9);
         }));
     setChecks({QStringLiteral("Meta")});
     if (model->rowCount() != int(metas) + 1)
@@ -220,15 +216,13 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 anchorEngine = e;
         }
         if (anchorEngine >= 0) {
-            const int target = anchorEngine == doc.engineTrackCount() - 1
-                ? 0
-                : doc.engineTrackCount() - 1;
+            const int target =
+                anchorEngine == doc.engineTrackCount() - 1 ? 0 : doc.engineTrackCount() - 1;
             view.moveTrack(anchorEngine, target);
             const int movedChunk = doc.smfTrackFor(target);
             if (chunkCombo->currentData().toInt() != movedChunk)
                 fail("chunk combo did not follow the moved track");
-            if (model->rowCount()
-                != int(doc.smf().tracks[movedChunk].events.size()) + 1)
+            if (model->rowCount() != int(doc.smf().tracks[movedChunk].events.size()) + 1)
                 fail("event table did not follow the moved track");
             doc.undoStack()->undo();
             if (chunkCombo->currentData().toInt() != chunk)
@@ -259,8 +253,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 fail("playhead row not tinted");
             if (tinted(expect + 1) || (expect > 0 && tinted(expect - 1)))
                 fail("playhead tint on the wrong row");
-            events->setPlayheadTick(double(doc.smf().tracks[chunk].endTick) + 10.0,
-                                    false);
+            events->setPlayheadTick(double(doc.smf().tracks[chunk].endTick) + 10.0, false);
             if (!tinted(model->rowCount() - 1))
                 fail("end-of-track row not tinted past the end");
             if (tinted(expect))
@@ -307,8 +300,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             const auto &evs = doc.smf().tracks[chunk].events;
             const double runTick = double(evs[runFirst].tick);
             int runLast = runFirst;
-            while (runLast + 1 < int(evs.size())
-                   && evs[runLast + 1].tick == evs[runFirst].tick)
+            while (runLast + 1 < int(evs.size()) && evs[runLast + 1].tick == evs[runFirst].tick)
                 runLast++;
             table->setCurrentIndex(model->index(runFirst, 0));
             events->setPlayheadTick(runTick, false);
@@ -414,22 +406,19 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 fail("ui reorder scaffold not in canonical order");
             } else {
                 // Unfiltered, display rows == event indices.
-                const std::unique_ptr<QMimeData> mime(
-                    model->mimeData({model->index(int(iA), 0)}));
+                const std::unique_ptr<QMimeData> mime(model->mimeData({model->index(int(iA), 0)}));
                 if (!mime) {
                     fail("row drag produced no mime data");
                 } else {
-                    if (!model->canDropMimeData(mime.get(), Qt::MoveAction,
-                                                int(iN), 0, QModelIndex()))
+                    if (!model->canDropMimeData(mime.get(), Qt::MoveAction, int(iN), 0,
+                                                QModelIndex()))
                         fail("legal same-tick drop refused");
-                    if (model->canDropMimeData(mime.get(), Qt::MoveAction,
-                                               int(iN) + 1, 0, QModelIndex()))
-                        fail("drop past a same-tick note-on accepted");
-                    if (model->canDropMimeData(mime.get(), Qt::MoveAction, 0, 0,
+                    if (model->canDropMimeData(mime.get(), Qt::MoveAction, int(iN) + 1, 0,
                                                QModelIndex()))
+                        fail("drop past a same-tick note-on accepted");
+                    if (model->canDropMimeData(mime.get(), Qt::MoveAction, 0, 0, QModelIndex()))
                         fail("cross-tick drop accepted");
-                    if (!model->dropMimeData(mime.get(), Qt::MoveAction,
-                                             int(iN), 0, QModelIndex()))
+                    if (!model->dropMimeData(mime.get(), Qt::MoveAction, int(iN), 0, QModelIndex()))
                         fail("legal same-tick drop not performed");
                     QCoreApplication::processEvents(); // queued reorder + refresh
                     const auto &evs = doc.smf().tracks[chunk2];
@@ -489,8 +478,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 // Current first: setCurrentIndex issues its own
                 // ClearAndSelect and would collapse the pair to one row.
                 table->setCurrentIndex(model->index(int(iB), 0));
-                table->selectionModel()->select(
-                    sel, QItemSelectionModel::ClearAndSelect);
+                table->selectionModel()->select(sel, QItemSelectionModel::ClearAndSelect);
                 QKeyEvent del(QEvent::KeyPress, Qt::Key_Delete, Qt::NoModifier);
                 QCoreApplication::sendEvent(table, &del);
                 const auto &evs = doc.smf().tracks[chunk2];
@@ -509,8 +497,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                     fail("single-delete scaffold not inserted");
                 } else {
                     table->setCurrentIndex(model->index(int(iSolo), 0));
-                    QKeyEvent del2(QEvent::KeyPress, Qt::Key_Delete,
-                                   Qt::NoModifier);
+                    QKeyEvent del2(QEvent::KeyPress, Qt::Key_Delete, Qt::NoModifier);
                     QCoreApplication::sendEvent(table, &del2);
                     if (countMatching(doc.smf().tracks[chunk2], ccA) != 0)
                         fail("single-row Delete did not remove the row");
@@ -597,10 +584,8 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
     // user's rebindings.
     QTemporaryDir settingsDir;
     if (settingsDir.isValid()) {
-        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope,
-                           settingsDir.path());
-        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
-                           settingsDir.path());
+        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
     }
 
     DecompProject project;
@@ -621,8 +606,8 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
 
         SongDocument doc;
         if (!doc.load(song, &error)) {
-            std::fprintf(stderr, "eventviewcheck: FAIL %s: %s\n",
-                         qUtf8Printable(song.label), qUtf8Printable(error));
+            std::fprintf(stderr, "eventviewcheck: FAIL %s: %s\n", qUtf8Printable(song.label),
+                         qUtf8Printable(error));
             failures++;
             continue;
         }
@@ -632,8 +617,7 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
             continue;
 
         auto fail = [&](const char *what) {
-            std::fprintf(stderr, "eventviewcheck: FAIL %s: %s\n",
-                         qUtf8Printable(song.label), what);
+            std::fprintf(stderr, "eventviewcheck: FAIL %s: %s\n", qUtf8Printable(song.label), what);
             failures++;
         };
         const auto &track = doc.smf().tracks[chunk];
@@ -660,8 +644,8 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
         ev.data0 = 7;
         ev.data1 = 64;
         doc.insertRawEvent(chunk, ev);
-        if (track.events.size() != before + 1 || !trackSorted(track)
-            || countMatching(track, ev) != 1 || track.endTick != base) {
+        if (track.events.size() != before + 1 || !trackSorted(track) ||
+            countMatching(track, ev) != 1 || track.endTick != base) {
             fail("insertRawEvent produced wrong content");
             ok = false;
         }
@@ -686,8 +670,8 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
             moved.tick = 0;
             const size_t movedBefore = countMatching(track, moved);
             doc.modifyRawEvent(chunk, size_t(idx), moved);
-            if (countMatching(track, moved) != movedBefore + 1
-                || !trackSorted(track) || track.events.size() != before + 1) {
+            if (countMatching(track, moved) != movedBefore + 1 || !trackSorted(track) ||
+                track.events.size() != before + 1) {
                 fail("tick-moving modifyRawEvent produced wrong content");
                 ok = false;
             }
@@ -711,8 +695,7 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
                 fail("setTrackEndTick did not move the end");
                 ok = false;
             }
-            const uint64_t lastTick =
-                track.events.empty() ? 0 : track.events.back().tick;
+            const uint64_t lastTick = track.events.empty() ? 0 : track.events.back().tick;
             doc.setTrackEndTick(chunk, 0);
             if (track.endTick != lastTick) {
                 fail("setTrackEndTick not clamped at the last event");
@@ -752,21 +735,21 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
             if (ok) {
                 // The CC roams its setup run, never past the note-on; the
                 // note-on is pinned behind the whole run.
-                if (!doc.rawEventMoveBounds(chunk, size_t(iA), &first, &last)
-                    || first != size_t(iA) || last != size_t(iB)) {
+                if (!doc.rawEventMoveBounds(chunk, size_t(iA), &first, &last) ||
+                    first != size_t(iA) || last != size_t(iB)) {
                     fail("rawEventMoveBounds wrong for a same-tick setup event");
                     ok = false;
                 }
-                if (!doc.rawEventMoveBounds(chunk, size_t(iN), &first, &last)
-                    || first != size_t(iN) || last != size_t(iN)) {
+                if (!doc.rawEventMoveBounds(chunk, size_t(iN), &first, &last) ||
+                    first != size_t(iN) || last != size_t(iN)) {
                     fail("rawEventMoveBounds lets a note-on cross its setup run");
                     ok = false;
                 }
             }
             if (ok) {
                 doc.moveRawEvent(chunk, size_t(iA), size_t(iB));
-                if (indexOf(track, ccB) != iA || indexOf(track, ccA) != iB
-                    || indexOf(track, on) != iN || !trackSorted(track)) {
+                if (indexOf(track, ccB) != iA || indexOf(track, ccA) != iB ||
+                    indexOf(track, on) != iN || !trackSorted(track)) {
                     fail("moveRawEvent did not swap the same-tick pair");
                     ok = false;
                 }
@@ -779,8 +762,8 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
                 const int undoCount = doc.undoStack()->count();
                 doc.moveRawEvent(chunk, size_t(iB), size_t(iN));
                 doc.moveRawEvent(chunk, size_t(iA), 0);
-                if (doc.undoStack()->count() != undoCount
-                    || indexOf(track, ccA) != iB || indexOf(track, ccB) != iA) {
+                if (doc.undoStack()->count() != undoCount || indexOf(track, ccA) != iB ||
+                    indexOf(track, ccB) != iA) {
                     fail("a clamped no-op move mutated the chunk or undo stack");
                     ok = false;
                 }
@@ -831,17 +814,15 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
         if (song.label == screenshotSong) {
             uiChecked = true;
             failures += runUiPass(song, screenshotPath);
-        } else if (!uiChecked && screenshotSong.isEmpty()
-                   && !doc.smf().tracks[chunk].events.empty()) {
+        } else if (!uiChecked && screenshotSong.isEmpty() &&
+                   !doc.smf().tracks[chunk].events.empty()) {
             uiChecked = true;
             failures += runUiPass(song, QString());
         }
         checked++;
     }
 
-    std::printf("eventviewcheck: %d songs in %lld ms\n", checked,
-                (long long)timer.elapsed());
-    std::printf("eventviewcheck: %s (%d failures)\n", failures ? "FAIL" : "PASS",
-                failures);
+    std::printf("eventviewcheck: %d songs in %lld ms\n", checked, (long long)timer.elapsed());
+    std::printf("eventviewcheck: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);
     return failures ? 1 : 0;
 }

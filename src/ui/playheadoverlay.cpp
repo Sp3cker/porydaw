@@ -46,8 +46,8 @@ void setQuadStops(QLinearGradient &g, const QColor &color, qreal peakAlpha)
 // Draws the glow + 1px core with the bar at x. All coordinates may be
 // fractional: the playhead position is sample-accurate and the antialiased
 // vector fill keeps its subpixel motion (rollcheck asserts this at dpr 1).
-void paintPlayheadBody(QPainter &painter, qreal x, int top, int height,
-                       bool playing, const QColor &color)
+void paintPlayheadBody(QPainter &painter, qreal x, int top, int height, bool playing,
+                       const QColor &color)
 {
     const qreal left = playheadGlowLeftExtent(playing);
     const qreal right = playing ? 0.0 : qreal(kPlayheadGlowRadius);
@@ -200,8 +200,8 @@ void PlayheadOverlay::changeEvent(QEvent *event)
 void PlayheadOverlay::paintEvent(QPaintEvent *event)
 {
     (void)event;
-    if (m_platformApplied || !m_visible || m_playheadGeometry.isEmpty()
-        || (m_visibleSurfaceRegion.isEmpty() && m_triangleClip.isEmpty()))
+    if (m_platformApplied || !m_visible || m_playheadGeometry.isEmpty() ||
+        (m_visibleSurfaceRegion.isEmpty() && m_triangleClip.isEmpty()))
         return;
 
     QPainter painter(this);
@@ -218,22 +218,19 @@ void PlayheadOverlay::paintEvent(QPaintEvent *event)
 
     if (!m_triangleClip.isEmpty()) {
         painter.setClipRect(m_triangleClip, Qt::ReplaceClip);
-        painter.translate(
-            x, top + (m_trianglePointsUp ? kPlayheadTriangleHeight : 0));
+        painter.translate(x, top + (m_trianglePointsUp ? kPlayheadTriangleHeight : 0));
         if (m_trianglePointsUp)
             painter.scale(1.0, -1.0);
         painter.fillPath(kPlayheadTrianglePath, m_color);
     }
 }
 
-QRect PlayheadOverlay::visibleSurfaceRect(const QWidget *surface, QWidget *owner,
-                                          int origin) const
+QRect PlayheadOverlay::visibleSurfaceRect(const QWidget *surface, QWidget *owner, int origin) const
 {
     if (origin >= surface->width())
         return {};
     QPoint offset = surface->mapTo(owner, QPoint(0, 0));
-    QRect visible(offset + QPoint(origin, 0),
-                  QSize(surface->width() - origin, surface->height()));
+    QRect visible(offset + QPoint(origin, 0), QSize(surface->width() - origin, surface->height()));
     for (const QWidget *widget = surface; widget; widget = widget->parentWidget()) {
         if (!widget->isVisible())
             return {};
@@ -256,23 +253,19 @@ void PlayheadOverlay::synchronizeGeometry()
     const int playheadTop = rulerGeometry.bottom() + 1;
     const QRect playheadGeometry(0, playheadTop, owner.width(),
                                  std::max(0, owner.height() - playheadTop));
-    const QRect rulerVisible = visibleSurfaceRect(&m_surfaces.ruler.widget, &owner,
-                                                  m_surfaces.ruler.timelineOrigin);
+    const QRect rulerVisible =
+        visibleSurfaceRect(&m_surfaces.ruler.widget, &owner, m_surfaces.ruler.timelineOrigin);
     const QRect triangleClip(rulerVisible.left(), playheadTop, rulerVisible.width(),
                              kPlayheadTriangleHeight + 1);
 
     const QRegion visibleSurfaces =
-        QRegion(visibleSurfaceRect(&m_surfaces.roll.widget, &owner,
-                                   m_surfaces.roll.timelineOrigin))
-        + visibleSurfaceRect(&m_surfaces.lanes.widget, &owner,
-                             m_surfaces.lanes.timelineOrigin)
-        + visibleSurfaceRect(&m_surfaces.strip.widget, &owner,
-                             m_surfaces.strip.timelineOrigin);
+        QRegion(
+            visibleSurfaceRect(&m_surfaces.roll.widget, &owner, m_surfaces.roll.timelineOrigin)) +
+        visibleSurfaceRect(&m_surfaces.lanes.widget, &owner, m_surfaces.lanes.timelineOrigin) +
+        visibleSurfaceRect(&m_surfaces.strip.widget, &owner, m_surfaces.strip.timelineOrigin);
 
     const int timelineOrigin =
-        m_surfaces.ruler.widget
-            .mapTo(&owner, QPoint(m_surfaces.ruler.timelineOrigin, 0))
-            .x();
+        m_surfaces.ruler.widget.mapTo(&owner, QPoint(m_surfaces.ruler.timelineOrigin, 0)).x();
 
     const bool overlayGeometryChanged = geometry() != owner.rect();
     if (overlayGeometryChanged)
@@ -333,10 +326,10 @@ bool PlayheadOverlay::updateImages()
         return imagesChanged;
     }
 
-    const bool bodyNeedsUpdate =
-        !m_cachedBodyValid || m_cachedBodyHeight != currentHeight
-        || m_cachedBodyPlaying != m_playing || m_cachedBodyDpr != currentDpr
-        || m_cachedBodyThemeColor != currentThemeColor;
+    const bool bodyNeedsUpdate = !m_cachedBodyValid || m_cachedBodyHeight != currentHeight ||
+                                 m_cachedBodyPlaying != m_playing ||
+                                 m_cachedBodyDpr != currentDpr ||
+                                 m_cachedBodyThemeColor != currentThemeColor;
 
     if (bodyNeedsUpdate) {
         imagesChanged = true;
@@ -355,8 +348,7 @@ bool PlayheadOverlay::updateImages()
         const int bodyPixelHeight = qCeil(currentHeight * currentDpr);
 
         if (bodyPixelWidth > 0 && bodyPixelHeight > 0) {
-            QImage bodyImg(bodyPixelWidth, bodyPixelHeight,
-                           QImage::Format_ARGB32_Premultiplied);
+            QImage bodyImg(bodyPixelWidth, bodyPixelHeight, QImage::Format_ARGB32_Premultiplied);
             bodyImg.setDevicePixelRatio(currentDpr);
             bodyImg.fill(Qt::transparent);
 
@@ -364,8 +356,7 @@ bool PlayheadOverlay::updateImages()
             painter.setRenderHint(QPainter::Antialiasing);
             // The bar sits leftExtent from the image's left edge; the
             // platform renderers position the image so it lands on finalX.
-            paintPlayheadBody(painter, leftExtent, 0, currentHeight, m_playing,
-                              currentThemeColor);
+            paintPlayheadBody(painter, leftExtent, 0, currentHeight, m_playing, currentThemeColor);
             painter.end();
 
             m_bodyImage = std::move(bodyImg);
@@ -375,9 +366,8 @@ bool PlayheadOverlay::updateImages()
     }
 
     const bool triangleNeedsUpdate =
-        !m_cachedTriangleValid || m_cachedTrianglePointsUp != m_trianglePointsUp
-        || m_cachedTriangleDpr != currentDpr
-        || m_cachedTriangleThemeColor != currentThemeColor;
+        !m_cachedTriangleValid || m_cachedTrianglePointsUp != m_trianglePointsUp ||
+        m_cachedTriangleDpr != currentDpr || m_cachedTriangleThemeColor != currentThemeColor;
 
     if (triangleNeedsUpdate) {
         imagesChanged = true;
@@ -392,8 +382,7 @@ bool PlayheadOverlay::updateImages()
         const int triPixelHeight = qCeil(triHeightLogical * currentDpr);
 
         if (triPixelWidth > 0 && triPixelHeight > 0) {
-            QImage triImg(triPixelWidth, triPixelHeight,
-                          QImage::Format_ARGB32_Premultiplied);
+            QImage triImg(triPixelWidth, triPixelHeight, QImage::Format_ARGB32_Premultiplied);
             triImg.setDevicePixelRatio(currentDpr);
             triImg.fill(Qt::transparent);
 
@@ -425,16 +414,14 @@ QRegion PlayheadOverlay::playheadRegion() const
 
     const QRect bodyRect =
         QRectF(x - kPlayheadGlowRadius - kAntialiasPadding, top,
-               2.0 * kPlayheadGlowRadius + kAntialiasPadding * 2.0,
-               m_playheadGeometry.height())
+               2.0 * kPlayheadGlowRadius + kAntialiasPadding * 2.0, m_playheadGeometry.height())
             .toAlignedRect();
     QRegion region = QRegion(bodyRect).intersected(m_visibleSurfaceRegion);
 
-    const QRect triangleRect =
-        QRectF(x - kPlayheadTriangleHalfWidth - kAntialiasPadding, top,
-               2.0 * kPlayheadTriangleHalfWidth + kAntialiasPadding * 2.0,
-               kPlayheadTriangleHeight + 1)
-            .toAlignedRect();
+    const QRect triangleRect = QRectF(x - kPlayheadTriangleHalfWidth - kAntialiasPadding, top,
+                                      2.0 * kPlayheadTriangleHalfWidth + kAntialiasPadding * 2.0,
+                                      kPlayheadTriangleHeight + 1)
+                                   .toAlignedRect();
     region += QRegion(triangleRect).intersected(m_triangleClip);
     return region;
 }
@@ -445,12 +432,10 @@ void PlayheadOverlay::updatePaintRegion()
     // device pixels with its own rounding — snap them to whole device pixels
     // so fractional scale factors cannot shave boundary pixels on screen
     // (same discipline as TimelineSurface::invalidateContent).
-    const int grid = deviceAlignmentGrid(m_devicePixelRatio > 0.0
-                                             ? m_devicePixelRatio
-                                             : devicePixelRatioF());
+    const int grid =
+        deviceAlignmentGrid(m_devicePixelRatio > 0.0 ? m_devicePixelRatio : devicePixelRatioF());
     const auto snapped = [grid, this](const QRegion &region) {
-        return grid == 0 ? QRegion(rect())
-                         : expandRegionToDeviceGrid(region, grid);
+        return grid == 0 ? QRegion(rect()) : expandRegionToDeviceGrid(region, grid);
     };
 
     if (m_platformApplied) {

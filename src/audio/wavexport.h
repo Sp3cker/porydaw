@@ -40,5 +40,5 @@ WavExportTotals wavExportTotals(const MidiTimeline &timeline, const WavExportOpt
 // Real failures set a non-empty *error.
 bool exportWav(const QString &path, const MidiTimeline &timeline,
                const LoadedVoiceGroup *voicegroup, const SongSettings &settings,
-               const WavExportOptions &opts,
-               const std::function<bool(double)> &progress, QString *error);
+               const WavExportOptions &opts, const std::function<bool(double)> &progress,
+               QString *error);

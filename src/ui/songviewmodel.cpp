@@ -66,12 +66,10 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
         case 0xB: { // control change
             const M4aCcInfo info = m4aClassifyCc(ev.data0);
             if (info.eventClass == M4aEventClass::AudibleLane) {
-                laneFor(model, ev.track, ev.data0, info.lane,
-                        QString::fromLatin1(info.display))
+                laneFor(model, ev.track, ev.data0, info.lane, QString::fromLatin1(info.display))
                     .points.push_back({ev.tick, int(ev.data1)});
             } else {
-                model.strip.push_back(
-                    {ev.tick, ev.track, m4aAdvancedCcLabel(ev.data0, ev.data1)});
+                model.strip.push_back({ev.tick, ev.track, m4aAdvancedCcLabel(ev.data0, ev.data1)});
             }
             break;
         }

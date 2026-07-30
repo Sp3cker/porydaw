@@ -26,9 +26,8 @@ inline constexpr double kMaxAutoGain = 15.848931924611133; // +24 dB
 // When loopWrapExcl > 0 the input wraps past that index back into
 // [loopWrapStart, loopWrapExcl) — the continuation the GBA actually plays;
 // otherwise it zero-pads past n. |ratio − 1| < 1e-9 is a bit-exact bypass.
-std::vector<float> resampleSinc(const float *x, qint64 n, double ratio,
-                                qint64 outCount, qint64 loopWrapStart = 0,
-                                qint64 loopWrapExcl = 0);
+std::vector<float> resampleSinc(const float *x, qint64 n, double ratio, qint64 outCount,
+                                qint64 loopWrapStart = 0, qint64 loopWrapExcl = 0);
 
 // The wav2agb-bit-matched quantizer: clamp(floor(x·128), −128, 127), in
 // double (DSP.md §2).
@@ -62,8 +61,7 @@ inline qint64 mapMarker(qint64 srcPos, qint64 cropStart, double ratio)
 // [loopStart, n), capped so post-gain peak ≤ kPeakCeiling. One-shot: pure
 // peak normalize to kPeakCeiling. Guards: near-silent input refuses
 // auto-normalize (g = 1 + warning), automatic gain caps at +24 dB.
-double normalizeGain(const float *x, qint64 n, bool loopedMode,
-                     qint64 loopStart, QString *warning);
+double normalizeGain(const float *x, qint64 n, bool loopedMode, qint64 loopStart, QString *warning);
 
 // YIN pitch detection (DSP.md §4): difference function → CMND → absolute
 // threshold 0.10 → fractional-lag refinement. Frames of 4096 samples at 50%
@@ -96,23 +94,20 @@ struct LoopCandidate {
     double score = 0.0;
     bool passedGates = false;
 };
-std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate,
-                                       double period, qint64 regionA,
-                                       qint64 regionB);
+std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate, double period,
+                                       qint64 regionA, qint64 regionB);
 
 // Refine pass (shared with DSP.md §3's preserve-imported-loop mode): local
 // full-window NCC search over ±8 samples around S and E to re-seat the seam
 // on the current grid. Adjusts *loopStart/*loopEnd in place.
-void refineLoop(const float *x, qint64 n, double period, qint64 *loopStart,
-                qint64 *loopEnd);
+void refineLoop(const float *x, qint64 n, double period, qint64 *loopStart, qint64 *loopEnd);
 
 // Post-quantize seam click metrics at loop (S, E) in the signed-8 domain
 // (DSP.md §6), against the engine's linear-interpolated wrap s[E] → s[S].
 // The NCC comparison window past E reads real samples when the buffer still
 // has them (candidate evaluation on an untrimmed tail) and wraps into the
 // loop otherwise (E == n−1, the exported shape).
-SeamMetrics seamMetricsAt(const qint8 *s8, qint64 n, qint64 loopStart,
-                          qint64 loopEnd);
+SeamMetrics seamMetricsAt(const qint8 *s8, qint64 n, qint64 loopStart, qint64 loopEnd);
 
 // Min/max peak pyramid for the waveform view: level k summarizes blocks of
 // 16^(k+1) samples, so a paint pass reads O(width) buckets at any zoom.

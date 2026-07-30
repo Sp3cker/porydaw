@@ -44,12 +44,10 @@ QStringList makeFilePaths(const QString &projectRoot)
 
 // Whether any make file has a pattern rule "%.bin: ...%.<srcExt>" whose
 // recipe mentions the given tool (as $(VAR) or a literal path).
-bool hasPatternRule(const QStringList &makeFiles, const char *srcExt,
-                    const char *tool)
+bool hasPatternRule(const QStringList &makeFiles, const char *srcExt, const char *tool)
 {
     const QRegularExpression targetRe(
-        QStringLiteral(R"(%\.bin\s*:(?!=).*%\.%1\s*$)")
-            .arg(QLatin1String(srcExt)));
+        QStringLiteral(R"(%\.bin\s*:(?!=).*%\.%1\s*$)").arg(QLatin1String(srcExt)));
     for (const QString &path : makeFiles) {
         bool ok = false;
         const QByteArray content = readAllBytes(path, &ok);
@@ -83,9 +81,9 @@ SampleFormatProbe SampleRegistrar::probeSampleFormat(const QString &projectRoot)
     probe.incPath = projectRoot + QStringLiteral("/sound/direct_sound_data.inc");
     probe.samplesDir = projectRoot + QStringLiteral("/sound/direct_sound_samples");
     if (!QFile::exists(probe.incPath)) {
-        probe.refusal = QStringLiteral(
-            "cannot find sound/direct_sound_data.inc — samples are registered "
-            "there. Set up pret's sample layout, then import again.");
+        probe.refusal =
+            QStringLiteral("cannot find sound/direct_sound_data.inc — samples are registered "
+                           "there. Set up pret's sample layout, then import again.");
         return probe;
     }
     const QStringList makeFiles = makeFilePaths(projectRoot);
@@ -95,16 +93,15 @@ SampleFormatProbe SampleRegistrar::probeSampleFormat(const QString &projectRoot)
     }
     if (hasPatternRule(makeFiles, "aif", "aif2pcm")) {
         probe.pipeline = SampleFormatProbe::LegacyAif;
-        probe.refusal = QStringLiteral(
-            "this project predates wav2agb: its samples build from .aif "
-            "sources via aif2pcm. Port the sample pipeline to wav2agb "
-            "(pret's current layout), then import again.");
+        probe.refusal = QStringLiteral("this project predates wav2agb: its samples build from .aif "
+                                       "sources via aif2pcm. Port the sample pipeline to wav2agb "
+                                       "(pret's current layout), then import again.");
         return probe;
     }
-    probe.refusal = QStringLiteral(
-        "cannot find a wav2agb build rule (%.bin: %.wav) in the project's "
-        "make files; add pret's audio_rules.mk pattern rule, then import "
-        "again.");
+    probe.refusal =
+        QStringLiteral("cannot find a wav2agb build rule (%.bin: %.wav) in the project's "
+                       "make files; add pret's audio_rules.mk pattern rule, then import "
+                       "again.");
     return probe;
 }
 
@@ -113,8 +110,8 @@ QString SampleRegistrar::sanitizeSampleName(const QString &raw)
     QString name;
     bool pendingSep = false;
     for (const QChar c : raw.toLower()) {
-        if ((c >= QLatin1Char('a') && c <= QLatin1Char('z'))
-            || (c >= QLatin1Char('0') && c <= QLatin1Char('9'))) {
+        if ((c >= QLatin1Char('a') && c <= QLatin1Char('z')) ||
+            (c >= QLatin1Char('0') && c <= QLatin1Char('9'))) {
             if (pendingSep && !name.isEmpty())
                 name += QLatin1Char('_');
             pendingSep = false;
@@ -126,10 +123,8 @@ QString SampleRegistrar::sanitizeSampleName(const QString &raw)
     return name;
 }
 
-bool SampleRegistrar::validateSampleName(const QString &projectRoot,
-                                         const QString &name,
-                                         const QStringList &existingSymbols,
-                                         QString *error)
+bool SampleRegistrar::validateSampleName(const QString &projectRoot, const QString &name,
+                                         const QStringList &existingSymbols, QString *error)
 {
     static const QRegularExpression grammarRe(QStringLiteral("^[a-z0-9_]+$"));
     if (name.isEmpty()) {
@@ -139,25 +134,21 @@ bool SampleRegistrar::validateSampleName(const QString &projectRoot,
     }
     if (!grammarRe.match(name).hasMatch()) {
         if (error)
-            *error = QStringLiteral(
-                "sample names use lowercase letters, digits, and underscores "
-                "only.");
+            *error = QStringLiteral("sample names use lowercase letters, digits, and underscores "
+                                    "only.");
         return false;
     }
     const QString symbol = QStringLiteral("DirectSoundWaveData_") + name;
     if (existingSymbols.contains(symbol)) {
         if (error)
-            *error =
-                QStringLiteral("%1 already exists in this project.").arg(symbol);
+            *error = QStringLiteral("%1 already exists in this project.").arg(symbol);
         return false;
     }
-    const QString samplesDir =
-        projectRoot + QStringLiteral("/sound/direct_sound_samples/");
+    const QString samplesDir = projectRoot + QStringLiteral("/sound/direct_sound_samples/");
     for (const char *ext : {".wav", ".bin", ".aif"}) {
         if (QFile::exists(samplesDir + name + QLatin1String(ext))) {
             if (error)
-                *error = QStringLiteral(
-                             "%1%2 already exists in sound/direct_sound_samples.")
+                *error = QStringLiteral("%1%2 already exists in sound/direct_sound_samples.")
                              .arg(name, QLatin1String(ext));
             return false;
         }
@@ -168,8 +159,7 @@ bool SampleRegistrar::validateSampleName(const QString &projectRoot,
 // Mirrors load_wav_from_path (external/poryaaaa/plugin/voicegroup_loader.c)
 // chunk-for-chunk, plus the wav2agb-only hard errors (multiple smpl loops,
 // non-forward loop type) and an explicit mono check.
-bool SampleRegistrar::inspectSampleWav(const QByteArray &bytes,
-                                       SampleWavInfo *info, QString *error)
+bool SampleRegistrar::inspectSampleWav(const QByteArray &bytes, SampleWavInfo *info, QString *error)
 {
     const auto fail = [error](const QString &message) {
         if (error)
@@ -180,17 +170,14 @@ bool SampleRegistrar::inspectSampleWav(const QByteArray &bytes,
         return quint16(quint8(bytes[at])) | quint16(quint8(bytes[at + 1])) << 8;
     };
     const auto u32 = [&bytes](qsizetype at) {
-        return quint32(quint8(bytes[at])) | quint32(quint8(bytes[at + 1])) << 8
-            | quint32(quint8(bytes[at + 2])) << 16
-            | quint32(quint8(bytes[at + 3])) << 24;
+        return quint32(quint8(bytes[at])) | quint32(quint8(bytes[at + 1])) << 8 |
+               quint32(quint8(bytes[at + 2])) << 16 | quint32(quint8(bytes[at + 3])) << 24;
     };
-    if (bytes.size() < 12 || !bytes.startsWith("RIFF")
-        || bytes.mid(8, 4) != "WAVE")
+    if (bytes.size() < 12 || !bytes.startsWith("RIFF") || bytes.mid(8, 4) != "WAVE")
         return fail(QStringLiteral("not a RIFF/WAVE file."));
 
     SampleWavInfo wav;
-    const qsizetype fileEnd =
-        qMin<qsizetype>(bytes.size(), 8 + qsizetype(u32(4)));
+    const qsizetype fileEnd = qMin<qsizetype>(bytes.size(), 8 + qsizetype(u32(4)));
     bool fmtFound = false, dataFound = false;
     quint32 dataLen = 0, smplLoopType = 0, smplNumLoops = 0;
     qsizetype pos = 12;
@@ -230,31 +217,26 @@ bool SampleRegistrar::inspectSampleWav(const QByteArray &bytes,
     if (!fmtFound || !dataFound)
         return fail(QStringLiteral("missing fmt or data chunk."));
     if (wav.channels != 1)
-        return fail(QStringLiteral(
-                        "only mono samples are supported (this file has %1 "
-                        "channels).")
+        return fail(QStringLiteral("only mono samples are supported (this file has %1 "
+                                   "channels).")
                         .arg(wav.channels));
     quint32 bytesPerSample = 0;
-    if (wav.formatTag == 1
-        && (wav.bitsPerSample == 8 || wav.bitsPerSample == 16
-            || wav.bitsPerSample == 24 || wav.bitsPerSample == 32))
+    if (wav.formatTag == 1 && (wav.bitsPerSample == 8 || wav.bitsPerSample == 16 ||
+                               wav.bitsPerSample == 24 || wav.bitsPerSample == 32))
         bytesPerSample = quint32(wav.bitsPerSample) / 8;
-    else if (wav.formatTag == 3
-             && (wav.bitsPerSample == 32 || wav.bitsPerSample == 64))
+    else if (wav.formatTag == 3 && (wav.bitsPerSample == 32 || wav.bitsPerSample == 64))
         bytesPerSample = quint32(wav.bitsPerSample) / 8;
     if (bytesPerSample == 0)
         return fail(QStringLiteral("unsupported sample format (tag %1, %2-bit).")
                         .arg(wav.formatTag)
                         .arg(wav.bitsPerSample));
     if (smplNumLoops > 1)
-        return fail(QStringLiteral(
-                        "the smpl chunk declares %1 loops; wav2agb supports at "
-                        "most one.")
+        return fail(QStringLiteral("the smpl chunk declares %1 loops; wav2agb supports at "
+                                   "most one.")
                         .arg(smplNumLoops));
     if (wav.loopEnabled && smplLoopType != 0)
-        return fail(QStringLiteral(
-                        "the smpl loop is not a forward loop (type %1); "
-                        "wav2agb only supports forward loops.")
+        return fail(QStringLiteral("the smpl loop is not a forward loop (type %1); "
+                                   "wav2agb only supports forward loops.")
                         .arg(smplLoopType));
     wav.numSamples = dataLen / bytesPerSample;
 
@@ -272,8 +254,8 @@ bool SampleRegistrar::inspectSampleWav(const QByteArray &bytes,
         wav.waveFreq = quint32(double(wav.sampleRate) * 1024.0);
     } else {
         const double tuning = double(wav.pitchFraction) / (4294967296.0 * 100.0);
-        const double pitch = double(wav.sampleRate)
-            * std::pow(2.0, (60.0 - double(wav.midiKey)) / 12.0 + tuning / 1200.0);
+        const double pitch = double(wav.sampleRate) *
+                             std::pow(2.0, (60.0 - double(wav.midiKey)) / 12.0 + tuning / 1200.0);
         wav.waveFreq = quint32(pitch * 1024.0);
     }
     if (info)
@@ -281,8 +263,7 @@ bool SampleRegistrar::inspectSampleWav(const QByteArray &bytes,
     return true;
 }
 
-bool SampleRegistrar::registerSample(const QString &projectRoot,
-                                     const QString &name,
+bool SampleRegistrar::registerSample(const QString &projectRoot, const QString &name,
                                      const QByteArray &wavBytes, QString *error)
 {
     const SampleFormatProbe probe = probeSampleFormat(projectRoot);
@@ -293,8 +274,7 @@ bool SampleRegistrar::registerSample(const QString &projectRoot,
     }
     // Symbols are re-scanned here (not taken from the caller's catalog) so a
     // stale cache can never let a duplicate through to the .inc.
-    if (!validateSampleName(projectRoot, name,
-                            VoicegroupSource::directSoundSymbols(projectRoot),
+    if (!validateSampleName(projectRoot, name, VoicegroupSource::directSoundSymbols(projectRoot),
                             error))
         return false;
 
@@ -305,11 +285,10 @@ bool SampleRegistrar::registerSample(const QString &projectRoot,
             *error = QStringLiteral("cannot create %1.").arg(probe.samplesDir);
         return false;
     }
-    const QString wavPath =
-        probe.samplesDir + QStringLiteral("/%1.wav").arg(name);
+    const QString wavPath = probe.samplesDir + QStringLiteral("/%1.wav").arg(name);
     QSaveFile wavOut(wavPath);
-    if (!wavOut.open(QIODevice::WriteOnly)
-        || wavOut.write(wavBytes) != wavBytes.size() || !wavOut.commit()) {
+    if (!wavOut.open(QIODevice::WriteOnly) || wavOut.write(wavBytes) != wavBytes.size() ||
+        !wavOut.commit()) {
         if (error)
             *error = QStringLiteral("cannot write %1.").arg(wavPath);
         return false;
@@ -340,8 +319,8 @@ bool SampleRegistrar::registerSample(const QString &projectRoot,
         block += eol; // blank line between entries, as in the shipped layout
     block += alignIndent + ".align 2" + eol;
     block += "DirectSoundWaveData_" + name.toUtf8() + "::" + eol;
-    block += incbinIndent + ".incbin \"sound/direct_sound_samples/"
-        + name.toUtf8() + ".bin\"" + eol;
+    block +=
+        incbinIndent + ".incbin \"sound/direct_sound_samples/" + name.toUtf8() + ".bin\"" + eol;
 
     QSaveFile incOut(probe.incPath);
     if (!incOut.open(QIODevice::WriteOnly)) {
@@ -359,8 +338,7 @@ bool SampleRegistrar::registerSample(const QString &projectRoot,
     return true;
 }
 
-bool SampleRegistrar::updateSample(const QString &projectRoot,
-                                   const QString &name,
+bool SampleRegistrar::updateSample(const QString &projectRoot, const QString &name,
                                    const QByteArray &wavBytes, QString *error)
 {
     const SampleFormatProbe probe = probeSampleFormat(projectRoot);
@@ -372,25 +350,22 @@ bool SampleRegistrar::updateSample(const QString &projectRoot,
     const QString symbol = QStringLiteral("DirectSoundWaveData_") + name;
     if (!VoicegroupSource::directSoundSymbols(projectRoot).contains(symbol)) {
         if (error)
-            *error = QStringLiteral(
-                         "%1 is not registered in this project; use Import "
-                         "Sample to add new samples.")
+            *error = QStringLiteral("%1 is not registered in this project; use Import "
+                                    "Sample to add new samples.")
                          .arg(symbol);
         return false;
     }
-    const QString wavPath =
-        probe.samplesDir + QStringLiteral("/%1.wav").arg(name);
+    const QString wavPath = probe.samplesDir + QStringLiteral("/%1.wav").arg(name);
     if (!QFile::exists(wavPath)) {
         if (error)
-            *error = QStringLiteral(
-                         "%1.wav does not exist in sound/direct_sound_samples "
-                         "— only samples with a .wav source can be updated.")
+            *error = QStringLiteral("%1.wav does not exist in sound/direct_sound_samples "
+                                    "— only samples with a .wav source can be updated.")
                          .arg(name);
         return false;
     }
     QSaveFile wavOut(wavPath);
-    if (!wavOut.open(QIODevice::WriteOnly)
-        || wavOut.write(wavBytes) != wavBytes.size() || !wavOut.commit()) {
+    if (!wavOut.open(QIODevice::WriteOnly) || wavOut.write(wavBytes) != wavBytes.size() ||
+        !wavOut.commit()) {
         if (error)
             *error = QStringLiteral("cannot write %1.").arg(wavPath);
         return false;
@@ -398,8 +373,7 @@ bool SampleRegistrar::updateSample(const QString &projectRoot,
     return true;
 }
 
-QString SampleRegistrar::sampleSidecarPath(const QString &projectRoot,
-                                           const QString &name)
+QString SampleRegistrar::sampleSidecarPath(const QString &projectRoot, const QString &name)
 {
     return projectRoot + QStringLiteral("/.porydaw/samples/%1.json").arg(name);
 }
@@ -407,14 +381,11 @@ QString SampleRegistrar::sampleSidecarPath(const QString &projectRoot,
 QString SampleRegistrar::sourceHashHex(const QByteArray &sourceBytes)
 {
     return QString::fromLatin1(
-        QCryptographicHash::hash(sourceBytes, QCryptographicHash::Sha256)
-            .toHex());
+        QCryptographicHash::hash(sourceBytes, QCryptographicHash::Sha256).toHex());
 }
 
-bool SampleRegistrar::writeSampleSidecar(const QString &projectRoot,
-                                         const QString &name,
-                                         const SampleSidecar &sidecar,
-                                         QString *error)
+bool SampleRegistrar::writeSampleSidecar(const QString &projectRoot, const QString &name,
+                                         const SampleSidecar &sidecar, QString *error)
 {
     const QString path = sampleSidecarPath(projectRoot, name);
     Sidecar::ensureDir(projectRoot, QStringLiteral("samples"));
@@ -439,16 +410,15 @@ bool SampleRegistrar::writeSampleSidecar(const QString &projectRoot,
     params.insert(QStringLiteral("fadeOut"), p.fadeOut);
     params.insert(QStringLiteral("crossfadeOn"), p.crossfadeOn);
     params.insert(QStringLiteral("ditherOn"), p.ditherOn);
-    params.insert(QStringLiteral("exactPitchOverride"),
-                  double(p.exactPitchOverride));
+    params.insert(QStringLiteral("exactPitchOverride"), double(p.exactPitchOverride));
     QJsonObject root;
     root.insert(QStringLiteral("version"), sidecar.version);
     root.insert(QStringLiteral("source"), source);
     root.insert(QStringLiteral("params"), params);
 
     QSaveFile out(path);
-    if (!out.open(QIODevice::WriteOnly) || !out.write(QJsonDocument(root).toJson())
-        || !out.commit()) {
+    if (!out.open(QIODevice::WriteOnly) || !out.write(QJsonDocument(root).toJson()) ||
+        !out.commit()) {
         if (error)
             *error = QStringLiteral("cannot write %1.").arg(path);
         return false;
@@ -456,8 +426,7 @@ bool SampleRegistrar::writeSampleSidecar(const QString &projectRoot,
     return true;
 }
 
-bool SampleRegistrar::readSampleSidecar(const QString &projectRoot,
-                                        const QString &name,
+bool SampleRegistrar::readSampleSidecar(const QString &projectRoot, const QString &name,
                                         SampleSidecar *sidecar)
 {
     QFile in(sampleSidecarPath(projectRoot, name));
@@ -491,21 +460,18 @@ bool SampleRegistrar::readSampleSidecar(const QString &projectRoot,
         qBound(0, params.value(QStringLiteral("normalizeMode")).toInt(),
                int(SampleEditParams::NormalizeOff)));
     p.dcRemove = SampleEditParams::Toggle(
-        qBound(0, params.value(QStringLiteral("dcRemove")).toInt(),
-               int(SampleEditParams::Off)));
+        qBound(0, params.value(QStringLiteral("dcRemove")).toInt(), int(SampleEditParams::Off)));
     p.fadeIn = params.value(QStringLiteral("fadeIn")).toBool(true);
     p.fadeOut = params.value(QStringLiteral("fadeOut")).toBool(true);
     p.crossfadeOn = params.value(QStringLiteral("crossfadeOn")).toBool();
     p.ditherOn = params.value(QStringLiteral("ditherOn")).toBool();
-    p.exactPitchOverride = quint32(
-        params.value(QStringLiteral("exactPitchOverride")).toDouble());
+    p.exactPitchOverride = quint32(params.value(QStringLiteral("exactPitchOverride")).toDouble());
     if (sidecar)
         *sidecar = sc;
     return true;
 }
 
-void SampleRegistrar::removeSampleSidecar(const QString &projectRoot,
-                                          const QString &name)
+void SampleRegistrar::removeSampleSidecar(const QString &projectRoot, const QString &name)
 {
     QFile::remove(sampleSidecarPath(projectRoot, name));
 }

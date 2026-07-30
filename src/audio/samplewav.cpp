@@ -9,8 +9,7 @@ void putU16(QByteArray *out, quint16 v)
 
 void putU32(QByteArray *out, quint32 v)
 {
-    out->append(char(v)).append(char(v >> 8)).append(char(v >> 16)).append(
-        char(v >> 24));
+    out->append(char(v)).append(char(v >> 8)).append(char(v >> 16)).append(char(v >> 24));
 }
 
 } // namespace
@@ -22,8 +21,8 @@ QByteArray writeSampleWav(const ProcessedSample &sample)
 
     wav += "fmt ";
     putU32(&wav, 16);
-    putU16(&wav, 1); // PCM
-    putU16(&wav, 1); // mono
+    putU16(&wav, 1);                   // PCM
+    putU16(&wav, 1);                   // mono
     putU32(&wav, sample.declaredRate); // the exact rate lives in agbp
     putU32(&wav, sample.declaredRate); // byte rate (1 byte per frame)
     putU16(&wav, 1);                   // block align

@@ -34,7 +34,7 @@ class VoicegroupBrowser : public QWidget
 {
     Q_OBJECT
 
-public:
+  public:
     explicit VoicegroupBrowser(QWidget *parent = nullptr);
 
     // vg may be nullptr (no song loaded). Not owned; the caller must clear it
@@ -60,8 +60,7 @@ public:
     // touching disk, returning "" on failure after reporting the error
     // itself.
     void setSource(VoicegroupSource *source, const QStringList &sampleSymbols,
-                   const QStringList &waveSymbols,
-                   const QList<QPair<QString, QString>> &keysplits,
+                   const QStringList &waveSymbols, const QList<QPair<QString, QString>> &keysplits,
                    const QStringList &drumkits,
                    const VgAdsrDefaults &adsrDefaults = VgAdsrDefaults(),
                    const VgSynthCatalog &synths = VgSynthCatalog(),
@@ -87,7 +86,7 @@ public:
     // the editor panel when it currently shows that slot.
     void voiceChanged(int slot);
 
-signals:
+  signals:
     // velocity 0 releases. Routed to AudioEngine::previewVoice.
     void auditionVoice(int voice, int key, int velocity);
     // The sample picker's browse audition: play the symbol's committed data
@@ -117,11 +116,11 @@ signals:
     // undoable cfg edit and reflects it back via setCurrentVoicegroupArg.
     void voicegroupChangeRequested(const QString &arg);
 
-protected:
+  protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
     void changeEvent(QEvent *event) override;
 
-private:
+  private:
     void pressedVoice(QTreeWidgetItem *item);
     void releaseVoice();
     void markUsedRow(QTreeWidgetItem *item, bool used);
@@ -147,9 +146,9 @@ private:
     // The same choices partitioned for the picker's sections.
     QStringList m_keysplitChoices, m_plainSamples, m_phonemes;
     QStringList m_waveSymbols;
-    QStringList m_drumkitChoices; // sub-voicegroups used as drumkits
+    QStringList m_drumkitChoices;             // sub-voicegroups used as drumkits
     QHash<QString, QString> m_keysplitTables; // sub-voicegroup -> table
-    VgSynthCatalog m_synths; // on-disk definitions only (the dropdown)
+    VgSynthCatalog m_synths;                  // on-disk definitions only (the dropdown)
     // Symbol lookup: on-disk definitions plus pending (unsaved) ones.
     QHash<QString, VgSynthDesc> m_synthBySymbol;
     std::function<QString(const VgSynthDesc &)> m_mintSynth;
@@ -165,7 +164,7 @@ private:
     QLabel *m_notice = nullptr;
     QComboBox *m_typeCombo = nullptr;
     QWidget *m_symbolRow = nullptr;
-    QComboBox *m_symbolCombo = nullptr; // wave/drumkit/synth symbol lists
+    QComboBox *m_symbolCombo = nullptr;           // wave/drumkit/synth symbol lists
     SamplePickerButton *m_samplePicker = nullptr; // sample-list voices
     QToolButton *m_newSampleButton = nullptr;
     QToolButton *m_editSampleButton = nullptr;

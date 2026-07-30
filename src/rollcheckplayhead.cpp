@@ -28,8 +28,8 @@ namespace {
 #ifdef __APPLE__
 bool usesNativeMacPlayheadRenderer()
 {
-    return QGuiApplication::platformName() == QLatin1String("cocoa")
-        && songview::platformPlayheadRendererEnabled();
+    return QGuiApplication::platformName() == QLatin1String("cocoa") &&
+           songview::platformPlayheadRendererEnabled();
 }
 #endif
 
@@ -67,14 +67,13 @@ QPixmap grabSongViewWithPlayhead(SongView &view, songview::PlayheadOverlay &mark
 
 class PaintRegionProbe : public QObject
 {
-public:
+  public:
     void clear() { m_regions.clear(); }
 
     bool repainted(const QWidget *widget) const
     {
-        return std::any_of(
-            m_regions.cbegin(), m_regions.cend(),
-            [=](const DirtyRegion &region) { return region.widget == widget; });
+        return std::any_of(m_regions.cbegin(), m_regions.cend(),
+                           [=](const DirtyRegion &region) { return region.widget == widget; });
     }
 
     int maxPaintWidth(const QWidget *widget) const
@@ -89,23 +88,20 @@ public:
 
     bool repaintedAnyBroadly(const QWidget *allowed, int maxWidth) const
     {
-        return std::any_of(
-            m_regions.cbegin(), m_regions.cend(), [=](const DirtyRegion &region) {
-                return region.widget != allowed && region.bounds.width() > maxWidth;
-            });
+        return std::any_of(m_regions.cbegin(), m_regions.cend(), [=](const DirtyRegion &region) {
+            return region.widget != allowed && region.bounds.width() > maxWidth;
+        });
     }
 
     bool repaintedBroadly(const QWidget *widget, int maxWidth) const
     {
-        return std::any_of(
-            m_regions.cbegin(), m_regions.cend(), [=](const DirtyRegion &region) {
-                return region.widget == widget && region.bounds.width() > maxWidth;
-            });
+        return std::any_of(m_regions.cbegin(), m_regions.cend(), [=](const DirtyRegion &region) {
+            return region.widget == widget && region.bounds.width() > maxWidth;
+        });
     }
 
-private:
-    struct DirtyRegion
-    {
+  private:
+    struct DirtyRegion {
         QWidget *widget;
         QRect bounds;
     };
@@ -113,9 +109,8 @@ private:
     bool eventFilter(QObject *watched, QEvent *event) override
     {
         if (event->type() == QEvent::Paint) {
-            m_regions.push_back(
-                {static_cast<QWidget *>(watched),
-                 static_cast<QPaintEvent *>(event)->region().boundingRect()});
+            m_regions.push_back({static_cast<QWidget *>(watched),
+                                 static_cast<QPaintEvent *>(event)->region().boundingRect()});
         }
         return QObject::eventFilter(watched, event);
     }
@@ -134,17 +129,16 @@ songview::PlayheadOverlay *findPlayheadOverlay(SongView &view)
 
 bool isPlayheadRed(const QColor &pixel, const QColor &playheadColor)
 {
-    const int colorDistance = std::abs(pixel.red() - playheadColor.red())
-                              + std::abs(pixel.green() - playheadColor.green())
-                              + std::abs(pixel.blue() - playheadColor.blue());
+    const int colorDistance = std::abs(pixel.red() - playheadColor.red()) +
+                              std::abs(pixel.green() - playheadColor.green()) +
+                              std::abs(pixel.blue() - playheadColor.blue());
     return colorDistance <= 12 && pixel.alpha() > 0;
 }
 
 bool isCompositedPlayheadRed(const QColor &pixel, const QColor &playheadColor)
 {
-    return isPlayheadRed(pixel, playheadColor)
-           || (pixel.red() - pixel.green() >= 24
-               && pixel.red() - pixel.blue() >= 24);
+    return isPlayheadRed(pixel, playheadColor) ||
+           (pixel.red() - pixel.green() >= 24 && pixel.red() - pixel.blue() >= 24);
 }
 
 qreal playheadCenter(const QPixmap &pixmap, const QColor &playheadColor)
@@ -172,12 +166,10 @@ bool hasPlayheadRedLine(const QImage &image, qreal devicePixelRatio, qreal logic
         return false;
 
     const int left = std::max(0, qFloor((logicalX - 1.0) * devicePixelRatio));
-    const int right =
-        std::min(image.width() - 1, qCeil((logicalX + 1.0) * devicePixelRatio));
+    const int right = std::min(image.width() - 1, qCeil((logicalX + 1.0) * devicePixelRatio));
     const int top = std::max(0, qFloor(logicalArea.top() * devicePixelRatio));
     const int bottom =
-        std::min(image.height() - 1,
-                 qCeil((logicalArea.bottom() + 1) * devicePixelRatio) - 1);
+        std::min(image.height() - 1, qCeil((logicalArea.bottom() + 1) * devicePixelRatio) - 1);
     for (int x = left; x <= right; ++x) {
         int consecutivePixels = 0;
         for (int y = top; y <= bottom; ++y) {
@@ -192,14 +184,12 @@ bool hasPlayheadRedLine(const QImage &image, qreal devicePixelRatio, qreal logic
     return false;
 }
 
-int playheadRedWidth(const QImage &image, qreal devicePixelRatio, qreal logicalX,
-                     int logicalY, const QColor &playheadColor)
+int playheadRedWidth(const QImage &image, qreal devicePixelRatio, qreal logicalX, int logicalY,
+                     const QColor &playheadColor)
 {
     const int left = std::max(0, qFloor((logicalX - 4.0) * devicePixelRatio));
-    const int right =
-        std::min(image.width() - 1, qCeil((logicalX + 4.0) * devicePixelRatio));
-    const int y =
-        std::clamp(qRound(logicalY * devicePixelRatio), 0, image.height() - 1);
+    const int right = std::min(image.width() - 1, qCeil((logicalX + 4.0) * devicePixelRatio));
+    const int y = std::clamp(qRound(logicalY * devicePixelRatio), 0, image.height() - 1);
     int width = 0;
     for (int x = left; x <= right; ++x) {
         if (isCompositedPlayheadRed(image.pixelColor(x, y), playheadColor))
@@ -215,8 +205,7 @@ void processPaints()
 }
 
 void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
-                                       PaintRegionProbe &paintProbe,
-                                       QStringList &failures)
+                                       PaintRegionProbe &paintProbe, QStringList &failures)
 {
     QEvent leaveEvent(QEvent::Leave);
     QCoreApplication::sendEvent(&pianoRoll, &leaveEvent);
@@ -227,39 +216,33 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
     const qreal dpr = pianoRoll.devicePixelRatioF();
     const int cacheKeyboardPixelWidth =
         std::min(qCeil(pianoRoll.width() * dpr), qCeil(songview::kKeyboardW * dpr));
-    const int maxReadoutPixelHeight =
-        std::min(qCeil(pianoRoll.height() * dpr), qCeil(72 * dpr));
+    const int maxReadoutPixelHeight = std::min(qCeil(pianoRoll.height() * dpr), qCeil(72 * dpr));
     const quint64 maxKeyboardReadoutPaintPixels =
         quint64(cacheKeyboardPixelWidth) * quint64(maxReadoutPixelHeight);
-    const auto checkPaintScope =
-        [&](const songview::TimelineSurfaceDiagnostics &before,
-            const songview::TimelineSurfaceDiagnostics &after,
-            const QString &action) {
-            if (after.contentPaintCount <= before.contentPaintCount
-                || after.contentPaintPixelCount <= before.contentPaintPixelCount) {
-                failures.append(
-                    QStringLiteral("piano-roll hover %1 painted no content")
-                        .arg(action));
-                return;
-            }
-            const quint64 painted =
-                after.contentPaintPixelCount - before.contentPaintPixelCount;
-            if (painted > maxKeyboardReadoutPaintPixels) {
-                failures.append(
-                    QStringLiteral("piano-roll hover %1 painted %2 device pixels "
-                                   "(readout budget %3)")
-                        .arg(action)
-                        .arg(painted)
-                        .arg(maxKeyboardReadoutPaintPixels));
-            }
-        };
+    const auto checkPaintScope = [&](const songview::TimelineSurfaceDiagnostics &before,
+                                     const songview::TimelineSurfaceDiagnostics &after,
+                                     const QString &action) {
+        if (after.contentPaintCount <= before.contentPaintCount ||
+            after.contentPaintPixelCount <= before.contentPaintPixelCount) {
+            failures.append(QStringLiteral("piano-roll hover %1 painted no content").arg(action));
+            return;
+        }
+        const quint64 painted = after.contentPaintPixelCount - before.contentPaintPixelCount;
+        if (painted > maxKeyboardReadoutPaintPixels) {
+            failures.append(QStringLiteral("piano-roll hover %1 painted %2 device pixels "
+                                           "(readout budget %3)")
+                                .arg(action)
+                                .arg(painted)
+                                .arg(maxKeyboardReadoutPaintPixels));
+        }
+    };
 
     const QPoint firstPosition(1, pianoRoll.height() / 2);
     const songview::TimelineSurfaceDiagnostics beforeFirst = pianoRoll.diagnostics();
     paintProbe.clear();
     QMouseEvent firstEvent(QEvent::MouseMove, QPointF(firstPosition),
-                           QPointF(pianoRoll.mapToGlobal(firstPosition)),
-                           Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+                           QPointF(pianoRoll.mapToGlobal(firstPosition)), Qt::NoButton,
+                           Qt::NoButton, Qt::NoModifier);
     QCoreApplication::sendEvent(&pianoRoll, &firstEvent);
     processPaints();
     const bool firstRepainted = paintProbe.repainted(&pianoRoll);
@@ -267,21 +250,19 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
     const songview::TimelineSurfaceDiagnostics afterFirst = pianoRoll.diagnostics();
     const QImage afterFirstHover = pianoRoll.grab().toImage();
     if (!firstRepainted || firstRepaintWidth > songview::kKeyboardW) {
-        failures.append(
-            QStringLiteral("piano-roll hover repainted %1 px (budget %2)")
-                .arg(firstRepaintWidth)
-                .arg(songview::kKeyboardW));
+        failures.append(QStringLiteral("piano-roll hover repainted %1 px (budget %2)")
+                            .arg(firstRepaintWidth)
+                            .arg(songview::kKeyboardW));
     }
     checkPaintScope(beforeFirst, afterFirst, QStringLiteral("entry"));
 
-    if (beforeHover.size() != afterFirstHover.size()
-        || beforeHover.devicePixelRatio() != afterFirstHover.devicePixelRatio()) {
+    if (beforeHover.size() != afterFirstHover.size() ||
+        beforeHover.devicePixelRatio() != afterFirstHover.devicePixelRatio()) {
         failures.append("piano-roll hover changed image geometry");
         return;
     }
-    const int keyboardPixelWidth =
-        std::min(afterFirstHover.width(),
-                 qCeil(songview::kKeyboardW * afterFirstHover.devicePixelRatio()));
+    const int keyboardPixelWidth = std::min(
+        afterFirstHover.width(), qCeil(songview::kKeyboardW * afterFirstHover.devicePixelRatio()));
     bool keyboardChanged = false;
     bool timelineChanged = false;
     for (int y = 0; y < afterFirstHover.height(); ++y) {
@@ -305,8 +286,8 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
     const songview::TimelineSurfaceDiagnostics beforeMove = pianoRoll.diagnostics();
     paintProbe.clear();
     QMouseEvent secondEvent(QEvent::MouseMove, QPointF(secondPosition),
-                            QPointF(pianoRoll.mapToGlobal(secondPosition)),
-                            Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+                            QPointF(pianoRoll.mapToGlobal(secondPosition)), Qt::NoButton,
+                            Qt::NoButton, Qt::NoModifier);
     QCoreApplication::sendEvent(&pianoRoll, &secondEvent);
     processPaints();
     const bool moveRepainted = paintProbe.repainted(&pianoRoll);
@@ -316,10 +297,9 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
     if (afterMoveHover == afterFirstHover)
         failures.append("piano-roll hover move did not move its key readout");
     if (!moveRepainted || moveRepaintWidth > songview::kKeyboardW) {
-        failures.append(
-            QStringLiteral("piano-roll hover move repainted %1 px (budget %2)")
-                .arg(moveRepaintWidth)
-                .arg(songview::kKeyboardW));
+        failures.append(QStringLiteral("piano-roll hover move repainted %1 px (budget %2)")
+                            .arg(moveRepaintWidth)
+                            .arg(songview::kKeyboardW));
     }
     checkPaintScope(beforeMove, afterMove, QStringLiteral("move"));
 
@@ -334,10 +314,9 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
     if (afterClearImage != beforeHover)
         failures.append("piano-roll hover pixels did not restore after leave");
     if (!clearRepainted || clearRepaintWidth > songview::kKeyboardW) {
-        failures.append(
-            QStringLiteral("piano-roll hover clear repainted %1 px (budget %2)")
-                .arg(clearRepaintWidth)
-                .arg(songview::kKeyboardW));
+        failures.append(QStringLiteral("piano-roll hover clear repainted %1 px (budget %2)")
+                            .arg(clearRepaintWidth)
+                            .arg(songview::kKeyboardW));
     }
     checkPaintScope(beforeClear, afterClear, QStringLiteral("clear"));
 }
@@ -348,8 +327,8 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
 // misaligned patch transforms or clip regions leave one-device-pixel "cursor
 // trails" that this catches (originally reproduced with 83 ghost pixels at
 // 1.25x; run rollcheck under QT_SCALE_FACTOR=1.25 to exercise that case).
-void checkHoverSweepRestores(songview::TimelineSurface &surface,
-                             const QString &name, QStringList &failures)
+void checkHoverSweepRestores(songview::TimelineSurface &surface, const QString &name,
+                             QStringList &failures)
 {
     QEvent leaveEvent(QEvent::Leave);
     QCoreApplication::sendEvent(&surface, &leaveEvent);
@@ -362,12 +341,10 @@ void checkHoverSweepRestores(songview::TimelineSurface &surface,
         const int x0 = 2;
         const int x1 = surface.width() - 2;
         for (int i = 0; i <= 20; ++i) {
-            const int x = leftToRight ? x0 + (x1 - x0) * i / 20
-                                      : x1 - (x1 - x0) * i / 20;
+            const int x = leftToRight ? x0 + (x1 - x0) * i / 20 : x1 - (x1 - x0) * i / 20;
             const QPoint pos(x, y);
-            QMouseEvent move(QEvent::MouseMove, QPointF(pos),
-                             QPointF(surface.mapToGlobal(pos)), Qt::NoButton,
-                             Qt::NoButton, Qt::NoModifier);
+            QMouseEvent move(QEvent::MouseMove, QPointF(pos), QPointF(surface.mapToGlobal(pos)),
+                             Qt::NoButton, Qt::NoButton, Qt::NoModifier);
             QCoreApplication::sendEvent(&surface, &move);
             processPaints();
         }
@@ -387,13 +364,10 @@ void checkHoverSweepRestores(songview::TimelineSurface &surface,
         }
     }
     failures.append(
-        QStringLiteral("%1 cursor sweep left %2 ghost pixels behind")
-            .arg(name)
-            .arg(ghostPixels));
+        QStringLiteral("%1 cursor sweep left %2 ghost pixels behind").arg(name).arg(ghostPixels));
 }
 
-void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes,
-                                     PaintRegionProbe &paintProbe,
+void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes, PaintRegionProbe &paintProbe,
                                      QStringList &failures)
 {
     QEvent leaveEvent(QEvent::Leave);
@@ -409,8 +383,7 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes,
         return;
     }
 
-    struct HoverResult
-    {
+    struct HoverResult {
         QPoint position;
         QImage image;
         songview::TimelineSurfaceDiagnostics before;
@@ -426,27 +399,24 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes,
         plotLeft + plotWidth - std::min(24, plotWidth / 8),
     }};
     constexpr int candidateRowStep = 12;
-    for (int y = candidateRowStep / 2; y < lanes.height() && !foundReadout;
-         y += candidateRowStep) {
+    for (int y = candidateRowStep / 2; y < lanes.height() && !foundReadout; y += candidateRowStep) {
         for (const int candidateX : candidateXs) {
-            const QPoint position(
-                std::clamp(candidateX, plotLeft, lanes.width() - 1), y);
+            const QPoint position(std::clamp(candidateX, plotLeft, lanes.width() - 1), y);
             hover.position = position;
             hover.before = lanes.diagnostics();
             paintProbe.clear();
             QMouseEvent hoverEvent(QEvent::MouseMove, QPointF(position),
-                                   QPointF(lanes.mapToGlobal(position)),
-                                   Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+                                   QPointF(lanes.mapToGlobal(position)), Qt::NoButton, Qt::NoButton,
+                                   Qt::NoModifier);
             QCoreApplication::sendEvent(&lanes, &hoverEvent);
             processPaints();
             hover.repainted = paintProbe.repainted(&lanes);
             hover.repaintWidth = paintProbe.maxPaintWidth(&lanes);
             hover.after = lanes.diagnostics();
             hover.image = lanes.grab().toImage();
-            foundReadout =
-                hover.image.size() == baseline.size()
-                && hover.image.devicePixelRatio() == baseline.devicePixelRatio()
-                && hover.image != baseline;
+            foundReadout = hover.image.size() == baseline.size() &&
+                           hover.image.devicePixelRatio() == baseline.devicePixelRatio() &&
+                           hover.image != baseline;
             if (foundReadout)
                 break;
             QCoreApplication::sendEvent(&lanes, &leaveEvent);
@@ -462,30 +432,26 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes,
     const qreal dpr = lanes.devicePixelRatioF();
     const int maxReadoutWidth = std::min(192, std::max(64, lanes.width() / 3));
     const quint64 maxReadoutPaintPixels =
-        quint64(qCeil(maxReadoutWidth * dpr))
-        * quint64(qCeil(std::min(64, lanes.height()) * dpr));
+        quint64(qCeil(maxReadoutWidth * dpr)) * quint64(qCeil(std::min(64, lanes.height()) * dpr));
     const quint64 wholeSurfacePixels =
         quint64(qCeil(lanes.width() * dpr)) * quint64(qCeil(lanes.height() * dpr));
     if (!hover.repainted || hover.repaintWidth > maxReadoutWidth) {
-        failures.append(
-            QStringLiteral("automation hover repainted %1 px (budget %2)")
-                .arg(hover.repaintWidth)
-                .arg(maxReadoutWidth));
+        failures.append(QStringLiteral("automation hover repainted %1 px (budget %2)")
+                            .arg(hover.repaintWidth)
+                            .arg(maxReadoutWidth));
     }
-    if (hover.after.contentPaintCount <= hover.before.contentPaintCount
-        || hover.after.contentPaintPixelCount
-               <= hover.before.contentPaintPixelCount) {
+    if (hover.after.contentPaintCount <= hover.before.contentPaintCount ||
+        hover.after.contentPaintPixelCount <= hover.before.contentPaintPixelCount) {
         failures.append("automation hover did not paint lane content");
     } else {
         const quint64 hoverPaintPixels =
             hover.after.contentPaintPixelCount - hover.before.contentPaintPixelCount;
-        if (hoverPaintPixels > maxReadoutPaintPixels
-            || hoverPaintPixels * 2 >= wholeSurfacePixels) {
-            failures.append(
-                QStringLiteral("automation hover painted %1 device pixels "
-                               "(readout budget %2)")
-                    .arg(hoverPaintPixels)
-                    .arg(maxReadoutPaintPixels));
+        if (hoverPaintPixels > maxReadoutPaintPixels ||
+            hoverPaintPixels * 2 >= wholeSurfacePixels) {
+            failures.append(QStringLiteral("automation hover painted %1 device pixels "
+                                           "(readout budget %2)")
+                                .arg(hoverPaintPixels)
+                                .arg(maxReadoutPaintPixels));
         }
     }
 
@@ -497,8 +463,8 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes,
     const songview::TimelineSurfaceDiagnostics beforeMove = lanes.diagnostics();
     paintProbe.clear();
     QMouseEvent moveEvent(QEvent::MouseMove, QPointF(secondPosition),
-                          QPointF(lanes.mapToGlobal(secondPosition)), Qt::NoButton,
-                          Qt::NoButton, Qt::NoModifier);
+                          QPointF(lanes.mapToGlobal(secondPosition)), Qt::NoButton, Qt::NoButton,
+                          Qt::NoModifier);
     QCoreApplication::sendEvent(&lanes, &moveEvent);
     processPaints();
     const bool moveRepainted = paintProbe.repainted(&lanes);
@@ -506,12 +472,12 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes,
     const songview::TimelineSurfaceDiagnostics afterMove = lanes.diagnostics();
     const QImage moved = lanes.grab().toImage();
     bool firstReadoutPixelsRestored = false;
-    if (moved.size() == baseline.size()
-        && moved.devicePixelRatio() == baseline.devicePixelRatio()) {
+    if (moved.size() == baseline.size() &&
+        moved.devicePixelRatio() == baseline.devicePixelRatio()) {
         for (int y = 0; y < baseline.height() && !firstReadoutPixelsRestored; ++y) {
             for (int x = 0; x < baseline.width(); ++x) {
-                if (hover.image.pixel(x, y) != baseline.pixel(x, y)
-                    && moved.pixel(x, y) == baseline.pixel(x, y)) {
+                if (hover.image.pixel(x, y) != baseline.pixel(x, y) &&
+                    moved.pixel(x, y) == baseline.pixel(x, y)) {
                     firstReadoutPixelsRestored = true;
                     break;
                 }
@@ -521,31 +487,27 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes,
     if (moved == hover.image || moved == baseline)
         failures.append("automation hover move did not move its visible readout");
     if (!firstReadoutPixelsRestored) {
-        failures.append(
-            "automation hover move did not restore the old readout pixels");
+        failures.append("automation hover move did not restore the old readout pixels");
     }
-    const int maxMoveRepaintWidth = std::min(
-        lanes.width(), maxReadoutWidth + std::abs(secondX - hover.position.x()));
+    const int maxMoveRepaintWidth =
+        std::min(lanes.width(), maxReadoutWidth + std::abs(secondX - hover.position.x()));
     if (!moveRepainted || moveRepaintWidth > maxMoveRepaintWidth) {
-        failures.append(
-            QStringLiteral("automation hover move repainted %1 px (budget %2)")
-                .arg(moveRepaintWidth)
-                .arg(maxMoveRepaintWidth));
+        failures.append(QStringLiteral("automation hover move repainted %1 px (budget %2)")
+                            .arg(moveRepaintWidth)
+                            .arg(maxMoveRepaintWidth));
     }
-    if (afterMove.contentPaintCount <= beforeMove.contentPaintCount
-        || afterMove.contentPaintPixelCount <= beforeMove.contentPaintPixelCount) {
+    if (afterMove.contentPaintCount <= beforeMove.contentPaintCount ||
+        afterMove.contentPaintPixelCount <= beforeMove.contentPaintPixelCount) {
         failures.append("automation hover move did not paint lane content");
     } else {
         const quint64 movePaintPixels =
             afterMove.contentPaintPixelCount - beforeMove.contentPaintPixelCount;
         const quint64 maxMovePaintPixels = maxReadoutPaintPixels * 2;
-        if (movePaintPixels > maxMovePaintPixels
-            || movePaintPixels * 2 >= wholeSurfacePixels) {
-            failures.append(
-                QStringLiteral("automation hover move painted %1 device pixels "
-                               "(old/new readout budget %2)")
-                    .arg(movePaintPixels)
-                    .arg(maxMovePaintPixels));
+        if (movePaintPixels > maxMovePaintPixels || movePaintPixels * 2 >= wholeSurfacePixels) {
+            failures.append(QStringLiteral("automation hover move painted %1 device pixels "
+                                           "(old/new readout budget %2)")
+                                .arg(movePaintPixels)
+                                .arg(maxMovePaintPixels));
         }
     }
 
@@ -560,24 +522,22 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes,
     if (cleared != baseline)
         failures.append("automation hover pixels did not restore after leave");
     if (!clearRepainted || clearRepaintWidth > maxReadoutWidth) {
-        failures.append(
-            QStringLiteral("automation hover clear repainted %1 px (budget %2)")
-                .arg(clearRepaintWidth)
-                .arg(maxReadoutWidth));
+        failures.append(QStringLiteral("automation hover clear repainted %1 px (budget %2)")
+                            .arg(clearRepaintWidth)
+                            .arg(maxReadoutWidth));
     }
-    if (afterClear.contentPaintCount <= beforeClear.contentPaintCount
-        || afterClear.contentPaintPixelCount <= beforeClear.contentPaintPixelCount) {
+    if (afterClear.contentPaintCount <= beforeClear.contentPaintCount ||
+        afterClear.contentPaintPixelCount <= beforeClear.contentPaintPixelCount) {
         failures.append("automation hover clear did not paint lane content");
     } else {
         const quint64 clearPaintPixels =
             afterClear.contentPaintPixelCount - beforeClear.contentPaintPixelCount;
-        if (clearPaintPixels > maxReadoutPaintPixels
-            || clearPaintPixels * 2 >= wholeSurfacePixels) {
-            failures.append(
-                QStringLiteral("automation hover clear painted %1 device pixels "
-                               "(readout budget %2)")
-                    .arg(clearPaintPixels)
-                    .arg(maxReadoutPaintPixels));
+        if (clearPaintPixels > maxReadoutPaintPixels ||
+            clearPaintPixels * 2 >= wholeSurfacePixels) {
+            failures.append(QStringLiteral("automation hover clear painted %1 device pixels "
+                                           "(readout budget %2)")
+                                .arg(clearPaintPixels)
+                                .arg(maxReadoutPaintPixels));
         }
     }
 }
@@ -595,8 +555,8 @@ void checkEventListRendering(SongView &view, songview::PlayheadOverlay &marker,
     const qreal playheadXInView = markerOffset.x() + stoppedMarkerCenter;
     view.setEventListVisible(true);
     processPaints();
-    const QRect eventListArea = QRect(events->mapTo(&view, QPoint()), events->size())
-                                    .intersected(view.rect());
+    const QRect eventListArea =
+        QRect(events->mapTo(&view, QPoint()), events->size()).intersected(view.rect());
     const QPixmap overlayPixmap = grabPlayheadOverlay(view, marker, failures);
     if (overlayPixmap.isNull())
         return;
@@ -606,30 +566,27 @@ void checkEventListRendering(SongView &view, songview::PlayheadOverlay &marker,
         failures.append("event list is not visible for the playhead check");
         return;
     }
-    if (playheadXInView < eventListArea.left()
-        || playheadXInView > eventListArea.right()) {
+    if (playheadXInView < eventListArea.left() || playheadXInView > eventListArea.right()) {
         failures.append("could not map playhead into the event list");
         return;
     }
     const QRect eventListOverlayArea = eventListArea.translated(-markerOffset);
-    const int triangleHeight = std::min(songview::kPlayheadTriangleHeight + 1,
-                                        eventListOverlayArea.height());
+    const int triangleHeight =
+        std::min(songview::kPlayheadTriangleHeight + 1, eventListOverlayArea.height());
     const QRect triangleArea(eventListOverlayArea.left(), eventListOverlayArea.top(),
                              eventListOverlayArea.width(), triangleHeight);
     const auto hasLine = [&](const QRect &area) {
-        return hasPlayheadRedLine(overlayImage, overlayDpr, stoppedMarkerCenter,
-                                  area, playheadColor);
+        return hasPlayheadRedLine(overlayImage, overlayDpr, stoppedMarkerCenter, area,
+                                  playheadColor);
     };
     const auto redWidth = [&](int y) {
-        return playheadRedWidth(overlayImage, overlayDpr, stoppedMarkerCenter, y,
-                                playheadColor);
+        return playheadRedWidth(overlayImage, overlayDpr, stoppedMarkerCenter, y, playheadColor);
     };
     if (!hasLine(triangleArea))
         failures.append("playhead triangle did not render below the time ruler");
     if (redWidth(triangleArea.bottom() - 1) <= redWidth(triangleArea.top()))
         failures.append("playhead triangle did not point up in the event list");
-    if (hasLine(QRect(eventListOverlayArea.left(),
-                      eventListOverlayArea.top() + triangleHeight,
+    if (hasLine(QRect(eventListOverlayArea.left(), eventListOverlayArea.top() + triangleHeight,
                       eventListOverlayArea.width(),
                       eventListOverlayArea.height() - triangleHeight))) {
         failures.append("playhead line overpainted the event list");
@@ -638,10 +595,9 @@ void checkEventListRendering(SongView &view, songview::PlayheadOverlay &marker,
         failures.append("playhead rendered in the event-list time ruler");
     const QRect upperTimelineArea =
         QRect(0, 0, view.width(), eventListArea.top()).translated(-markerOffset);
-    const QRect lowerTimelineArea =
-        QRect(0, eventListArea.bottom() + 1, view.width(),
-              view.height() - eventListArea.bottom() - 1)
-            .translated(-markerOffset);
+    const QRect lowerTimelineArea = QRect(0, eventListArea.bottom() + 1, view.width(),
+                                          view.height() - eventListArea.bottom() - 1)
+                                        .translated(-markerOffset);
     if (!hasLine(upperTimelineArea) && !hasLine(lowerTimelineArea)) {
         failures.append("playhead overlay did not render on visible timeline "
                         "surfaces");
@@ -652,8 +608,7 @@ void checkEventListRendering(SongView &view, songview::PlayheadOverlay &marker,
 // must rasterize only the rows the scroll viewport exposes; off-viewport
 // dirt stays pending until scrolled in. Shrinks the view so the lanes are
 // guaranteed taller than their viewport, then bounds the painted pixels.
-void checkLanesViewportBoundedRepaint(SongView &view,
-                                      songview::TimelineSurface &lanes,
+void checkLanesViewportBoundedRepaint(SongView &view, songview::TimelineSurface &lanes,
                                       QStringList &failures)
 {
     const QSize savedSize = view.size();
@@ -677,30 +632,27 @@ void checkLanesViewportBoundedRepaint(SongView &view,
     processPaints();
     const songview::TimelineSurfaceDiagnostics after = lanes.diagnostics();
     const qreal dpr = lanes.devicePixelRatioF();
-    const quint64 painted =
-        after.contentPaintPixelCount - before.contentPaintPixelCount;
+    const quint64 painted = after.contentPaintPixelCount - before.contentPaintPixelCount;
     // + 9: room for the cache's device-alignment expansion (up to 4 logical
     // px per edge at quarter scale factors) plus edge rounding.
-    const quint64 viewportBudget = quint64(qCeil(lanes.width() * dpr))
-                                   * quint64(qCeil((viewport->height() + 9) * dpr));
+    const quint64 viewportBudget =
+        quint64(qCeil(lanes.width() * dpr)) * quint64(qCeil((viewport->height() + 9) * dpr));
     if (after.contentPaintCount <= before.contentPaintCount || painted == 0) {
         failures.append("lanes full invalidation painted no content");
     } else if (painted > viewportBudget) {
-        failures.append(
-            QStringLiteral("lanes full invalidation painted %1 device pixels "
-                           "(viewport budget %2): off-viewport rows were "
-                           "rasterized")
-                .arg(painted)
-                .arg(viewportBudget));
+        failures.append(QStringLiteral("lanes full invalidation painted %1 device pixels "
+                                       "(viewport budget %2): off-viewport rows were "
+                                       "rasterized")
+                            .arg(painted)
+                            .arg(viewportBudget));
     }
     view.resize(savedSize);
     processPaints();
 }
 
 void checkFractionalMovement(SongView &view, const MidiTimeline &timeline,
-                             songview::PlayheadOverlay &marker,
-                             const QColor &playheadColor, uint64_t firstTick,
-                             QStringList &failures)
+                             songview::PlayheadOverlay &marker, const QColor &playheadColor,
+                             uint64_t firstTick, QStringList &failures)
 {
     uint64_t fractionalStartSample = timeline.sampleForTick(firstTick);
     uint64_t fractionalEndSample = fractionalStartSample;
@@ -708,8 +660,7 @@ void checkFractionalMovement(SongView &view, const MidiTimeline &timeline,
     int fractionalBucketX = view.contentX(playheadTick);
     double fractionalStartX = playheadTick * view.pxPerTick();
     const uint64_t fractionalSearchEnd = timeline.sampleForTick(firstTick + 2);
-    for (uint64_t sample = fractionalStartSample + 1; sample <= fractionalSearchEnd;
-         ++sample) {
+    for (uint64_t sample = fractionalStartSample + 1; sample <= fractionalSearchEnd; ++sample) {
         playheadTick = timeline.tickForSample(sample);
         const int x = view.contentX(playheadTick);
         const double exactX = playheadTick * view.pxPerTick();
@@ -728,17 +679,15 @@ void checkFractionalMovement(SongView &view, const MidiTimeline &timeline,
     }
     view.setPlayheadSample(fractionalStartSample, true);
     processPaints();
-    const QPixmap fractionalStartPixmap =
-        grabPlayheadOverlay(view, marker, failures);
-    const qreal fractionalStart =
-        playheadCenter(fractionalStartPixmap, playheadColor);
+    const QPixmap fractionalStartPixmap = grabPlayheadOverlay(view, marker, failures);
+    const qreal fractionalStart = playheadCenter(fractionalStartPixmap, playheadColor);
     view.setPlayheadSample(fractionalEndSample, true);
     processPaints();
     const QPixmap fractionalEndPixmap = grabPlayheadOverlay(view, marker, failures);
     const qreal fractionalEnd = playheadCenter(fractionalEndPixmap, playheadColor);
-    const qreal expectedDelta = (timeline.tickForSample(fractionalEndSample)
-                                 - timeline.tickForSample(fractionalStartSample))
-                                * view.pxPerTick();
+    const qreal expectedDelta = (timeline.tickForSample(fractionalEndSample) -
+                                 timeline.tickForSample(fractionalStartSample)) *
+                                view.pxPerTick();
     // Unconditional, including dpr 1 (main asserted 0.2px there): the widget
     // path must place the strips subpixel-accurately, not snap to pixels.
     if (std::abs((fractionalEnd - fractionalStart) - expectedDelta) > 0.2) {
@@ -767,26 +716,20 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
         const uint64_t candidateSecondTick = tickAtContentX(x + 12);
         const int candidateFirstX = view.contentX(double(candidateFirstTick));
         const int candidateSecondX = view.contentX(double(candidateSecondTick));
-        if (candidateFirstX < 0 || candidateSecondX >= plotWidth
-            || candidateSecondX <= candidateFirstX
-            || candidateSecondX - candidateFirstX > 32)
+        if (candidateFirstX < 0 || candidateSecondX >= plotWidth ||
+            candidateSecondX <= candidateFirstX || candidateSecondX - candidateFirstX > 32)
             continue;
         // Skip intervals straddling a program change: the frames at the two
         // probe positions would then differ beyond the playhead itself.
-        const uint64_t candidateFirstSample =
-            timeline.sampleForTick(candidateFirstTick);
-        const uint64_t candidateSecondSample =
-            timeline.sampleForTick(candidateSecondTick);
-        const uint64_t firstDisplayTick =
-            uint64_t(timeline.tickForSample(candidateFirstSample));
-        const uint64_t secondDisplayTick =
-            uint64_t(timeline.tickForSample(candidateSecondSample));
-        const bool crossesProgramChange =
-            std::any_of(timeline.events.cbegin(), timeline.events.cend(),
-                        [=](const TimelineEvent &event) {
-                            return event.type == 0xC && event.tick > firstDisplayTick
-                                   && event.tick <= secondDisplayTick;
-                        });
+        const uint64_t candidateFirstSample = timeline.sampleForTick(candidateFirstTick);
+        const uint64_t candidateSecondSample = timeline.sampleForTick(candidateSecondTick);
+        const uint64_t firstDisplayTick = uint64_t(timeline.tickForSample(candidateFirstSample));
+        const uint64_t secondDisplayTick = uint64_t(timeline.tickForSample(candidateSecondSample));
+        const bool crossesProgramChange = std::any_of(
+            timeline.events.cbegin(), timeline.events.cend(), [=](const TimelineEvent &event) {
+                return event.type == 0xC && event.tick > firstDisplayTick &&
+                       event.tick <= secondDisplayTick;
+            });
         if (crossesProgramChange)
             continue;
         firstTick = candidateFirstTick;
@@ -803,8 +746,7 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     }
 
     const songview::TimelineSurfaces surfaces = view.timelineSurfaces();
-    struct CachedSurfaceCheck
-    {
+    struct CachedSurfaceCheck {
         const char *name;
         songview::CachedTimelineBand band;
     };
@@ -820,19 +762,16 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
         child->installEventFilter(&probe);
     const QColor playheadColor(226, 66, 66);
     const auto expectedCenter = [&](uint64_t sample) {
-        const QPoint timelineOrigin = surfaces.ruler.widget.mapTo(
-            &view, QPoint(surfaces.ruler.timelineOrigin, 0));
-        return qreal(marker.mapFrom(&view, timelineOrigin).x())
-               + view.contentX(timeline.tickForSample(sample));
+        const QPoint timelineOrigin =
+            surfaces.ruler.widget.mapTo(&view, QPoint(surfaces.ruler.timelineOrigin, 0));
+        return qreal(marker.mapFrom(&view, timelineOrigin).x()) +
+               view.contentX(timeline.tickForSample(sample));
     };
-    const auto checkCenter = [&](qreal center, uint64_t sample,
-                                 const QString &state) {
+    const auto checkCenter = [&](qreal center, uint64_t sample, const QString &state) {
         const qreal expected = expectedCenter(sample);
-        if (!marker.isVisible() || center < 0.0
-            || std::abs(center - expected) > 1.0) {
+        if (!marker.isVisible() || center < 0.0 || std::abs(center - expected) > 1.0) {
             failures.append(
-                QStringLiteral("%1 playhead did not render at its expected position")
-                    .arg(state));
+                QStringLiteral("%1 playhead did not render at its expected position").arg(state));
         }
     };
 
@@ -846,37 +785,31 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     }
     processPaints();
     for (const CachedSurfaceCheck &surface : cachedSurfaces) {
-        const songview::TimelineSurfaceDiagnostics diagnostics =
-            surface.band.widget.diagnostics();
+        const songview::TimelineSurfaceDiagnostics diagnostics = surface.band.widget.diagnostics();
         const QString surfaceName = QString::fromLatin1(surface.name);
-        if (diagnostics.contentPaintCount == 0
-            || diagnostics.contentPaintPixelCount == 0) {
+        if (diagnostics.contentPaintCount == 0 || diagnostics.contentPaintPixelCount == 0) {
             failures.append(
-                QStringLiteral("%1 did not warm its timeline content cache")
-                    .arg(surfaceName));
+                QStringLiteral("%1 did not warm its timeline content cache").arg(surfaceName));
         }
 
         const qreal dpr = surface.band.widget.devicePixelRatioF();
-        const quint64 expectedCacheBytes =
-            quint64(qCeil(surface.band.widget.width() * dpr))
-            * quint64(qCeil(surface.band.widget.height() * dpr)) * quint64(4);
+        const quint64 expectedCacheBytes = quint64(qCeil(surface.band.widget.width() * dpr)) *
+                                           quint64(qCeil(surface.band.widget.height() * dpr)) *
+                                           quint64(4);
         constexpr quint64 maxEstimatedCacheBytes = 256ULL * 1024ULL * 1024ULL;
-        if (expectedCacheBytes > 0 && expectedCacheBytes <= maxEstimatedCacheBytes
-            && diagnostics.estimatedContentCacheBytes != expectedCacheBytes) {
-            failures.append(
-                QStringLiteral("%1 reported %2 estimated cache bytes (expected %3)")
-                    .arg(surfaceName)
-                    .arg(diagnostics.estimatedContentCacheBytes)
-                    .arg(expectedCacheBytes));
+        if (expectedCacheBytes > 0 && expectedCacheBytes <= maxEstimatedCacheBytes &&
+            diagnostics.estimatedContentCacheBytes != expectedCacheBytes) {
+            failures.append(QStringLiteral("%1 reported %2 estimated cache bytes (expected %3)")
+                                .arg(surfaceName)
+                                .arg(diagnostics.estimatedContentCacheBytes)
+                                .arg(expectedCacheBytes));
         }
     }
 
     checkPianoRollKeyboardCacheUpdate(surfaces.roll.widget, probe, failures);
     checkAutomationHoverCacheUpdate(surfaces.lanes.widget, probe, failures);
-    checkHoverSweepRestores(surfaces.lanes.widget,
-                            QStringLiteral("automation lanes"), failures);
-    checkHoverSweepRestores(surfaces.roll.widget, QStringLiteral("piano roll"),
-                            failures);
+    checkHoverSweepRestores(surfaces.lanes.widget, QStringLiteral("automation lanes"), failures);
+    checkHoverSweepRestores(surfaces.roll.widget, QStringLiteral("piano roll"), failures);
     probe.clear();
     const auto diagnosticsBefore = [&cachedSurfaces] {
         std::array<songview::TimelineSurfaceDiagnostics, 3> diagnostics;
@@ -892,13 +825,10 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     const QRect rulerArea(surfaces.ruler.widget.mapTo(&view, QPoint()),
                           surfaces.ruler.widget.size());
     if (firstMarkerCenter >= 0.0) {
-        const QPixmap composedPixmap =
-            grabSongViewWithPlayhead(view, marker, failures);
-        const qreal playheadX =
-            marker.mapTo(&view, QPoint()).x() + firstMarkerCenter;
-        if (hasPlayheadRedLine(composedPixmap.toImage(),
-                               composedPixmap.devicePixelRatio(), playheadX,
-                               rulerArea, playheadColor)) {
+        const QPixmap composedPixmap = grabSongViewWithPlayhead(view, marker, failures);
+        const qreal playheadX = marker.mapTo(&view, QPoint()).x() + firstMarkerCenter;
+        if (hasPlayheadRedLine(composedPixmap.toImage(), composedPixmap.devicePixelRatio(),
+                               playheadX, rulerArea, playheadColor)) {
             failures.append("playhead rendered in the time ruler");
         }
     }
@@ -906,8 +836,7 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     processPaints();
     probe.clear();
 #ifdef __APPLE__
-    if (usesNativeMacPlayheadRenderer()
-        && renderMacPlayheadOverlay(view, failures).isNull())
+    if (usesNativeMacPlayheadRenderer() && renderMacPlayheadOverlay(view, failures).isNull())
         return;
 #endif
     view.setPlayheadSample(secondSample, true);
@@ -928,11 +857,9 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     if (cacheRegenerated)
         failures.append("playhead move regenerated cached timeline content");
     // Dirty strip: move delta + full glow diameter + full triangle width.
-    const int maxPlayheadExposureWidth = secondX - firstX
-                                         + 2 * songview::kPlayheadGlowRadius
-                                         + 2 * songview::kPlayheadTriangleHalfWidth;
-    const bool overlayPaintedBroadly =
-        probe.repaintedBroadly(&marker, maxPlayheadExposureWidth);
+    const int maxPlayheadExposureWidth = secondX - firstX + 2 * songview::kPlayheadGlowRadius +
+                                         2 * songview::kPlayheadTriangleHalfWidth;
+    const bool overlayPaintedBroadly = probe.repaintedBroadly(&marker, maxPlayheadExposureWidth);
     const bool anotherWidgetPaintedBroadly =
         probe.repaintedAnyBroadly(&marker, maxPlayheadExposureWidth);
     const QPixmap playingPixmap = grabPlayheadOverlay(view, marker, failures);
@@ -949,20 +876,17 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     checkCenter(stoppedMarkerCenter, secondSample, QStringLiteral("stopped"));
     if (playingPixmap.toImage() == stoppedPixmap.toImage())
         failures.append("playing and stopped playheads rendered identically");
-    checkEventListRendering(view, marker, stoppedMarkerCenter, rulerArea,
-                            playheadColor, failures);
+    checkEventListRendering(view, marker, stoppedMarkerCenter, rulerArea, playheadColor, failures);
     view.setEventListVisible(false);
     processPaints();
-    checkFractionalMovement(view, timeline, marker, playheadColor, firstTick,
-                            failures);
+    checkFractionalMovement(view, timeline, marker, playheadColor, firstTick, failures);
     checkLanesViewportBoundedRepaint(view, surfaces.lanes.widget, failures);
 }
 
 // The transport bar's Follow Playhead toggle: on (the default), playback
 // scrolls once the playhead crosses 85% of the viewport; off, the camera
 // stays exactly where the user put it however far the playhead runs.
-void checkFollowScroll(SongView &view, const MidiTimeline &timeline,
-                       QStringList &failures)
+void checkFollowScroll(SongView &view, const MidiTimeline &timeline, QStringList &failures)
 {
     const SongView::ViewState saved = view.viewState();
     SongView::ViewState parked = saved;
@@ -973,8 +897,7 @@ void checkFollowScroll(SongView &view, const MidiTimeline &timeline,
     parked.pxPerBeat = 512.0;
     view.applyViewState(parked);
     // A tick well past the right edge of the parked viewport.
-    const uint64_t farTick =
-        uint64_t(double(view.width()) * 4.0 / view.pxPerTick()) + 1;
+    const uint64_t farTick = uint64_t(double(view.width()) * 4.0 / view.pxPerTick()) + 1;
     const uint64_t farSample = timeline.sampleForTick(farTick);
     view.setPlayheadSample(farSample, true);
     if (view.viewState().scrollPx <= 0.0)
@@ -992,8 +915,7 @@ void checkFollowScroll(SongView &view, const MidiTimeline &timeline,
 }
 } // namespace
 
-QStringList playheadOverlayCheckFailures(SongView &view,
-                                         const MidiTimeline &timeline)
+QStringList playheadOverlayCheckFailures(SongView &view, const MidiTimeline &timeline)
 {
     QStringList failures;
 #ifdef __APPLE__

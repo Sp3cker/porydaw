@@ -26,8 +26,8 @@ QString vgSampleDisplayName(const QString &symbol)
 {
     // vg_set_voice_name's prefix list (voicegroup_loader.c), so the picker,
     // the button, and the voice tree all shorten symbols the same way.
-    static const char *const kPrefixes[] = {
-        "DirectSoundWaveData_", "ProgrammableWaveData_", "voicegroup_"};
+    static const char *const kPrefixes[] = {"DirectSoundWaveData_", "ProgrammableWaveData_",
+                                            "voicegroup_"};
     for (const char *prefix : kPrefixes) {
         const QLatin1String p(prefix);
         if (symbol.startsWith(p) && symbol.size() > p.size())
@@ -36,8 +36,7 @@ QString vgSampleDisplayName(const QString &symbol)
     return symbol;
 }
 
-SamplePickerButton::SamplePickerButton(QWidget *parent)
-    : QPushButton(parent)
+SamplePickerButton::SamplePickerButton(QWidget *parent) : QPushButton(parent)
 {
     setObjectName(QStringLiteral("vgSamplePickerButton"));
     // The button must shrink with a narrow dock; the label elides instead.
@@ -46,8 +45,7 @@ SamplePickerButton::SamplePickerButton(QWidget *parent)
     updateButtonText();
 }
 
-void SamplePickerButton::setChoices(const QStringList &keysplits,
-                                    const QStringList &samples,
+void SamplePickerButton::setChoices(const QStringList &keysplits, const QStringList &samples,
                                     const QStringList &phonemes)
 {
     m_keysplits = keysplits;
@@ -69,8 +67,7 @@ void SamplePickerButton::setDisplayFullSymbols(bool on)
     updateButtonText();
 }
 
-void SamplePickerButton::setInfoProvider(
-    std::function<SamplePickInfo(const QString &)> provider)
+void SamplePickerButton::setInfoProvider(std::function<SamplePickInfo(const QString &)> provider)
 {
     m_info = std::move(provider);
 }
@@ -82,13 +79,10 @@ bool SamplePickerButton::popupVisible() const
 
 void SamplePickerButton::updateButtonText()
 {
-    const QString name =
-        m_fullNames ? m_currentSymbol : vgSampleDisplayName(m_currentSymbol);
+    const QString name = m_fullNames ? m_currentSymbol : vgSampleDisplayName(m_currentSymbol);
     const int avail = width() - 24; // frame + a hint of breathing room
-    setText(name.isEmpty()
-                ? tr("(none)")
-                : fontMetrics().elidedText(name, Qt::ElideMiddle,
-                                           qMax(40, avail)));
+    setText(name.isEmpty() ? tr("(none)")
+                           : fontMetrics().elidedText(name, Qt::ElideMiddle, qMax(40, avail)));
     setToolTip(m_currentSymbol);
 }
 
@@ -140,23 +134,21 @@ void SamplePickerButton::openPopup()
         connect(m_auditionOffTimer, &QTimer::timeout, this,
                 &SamplePickerButton::auditionStopRequested);
 
-        connect(m_search, &QLineEdit::textChanged, this,
-                [this] { applyFilter(); });
+        connect(m_search, &QLineEdit::textChanged, this, [this] { applyFilter(); });
         connect(m_search, &QLineEdit::returnPressed, this,
                 [this] { commitItem(m_list->currentItem()); });
         connect(m_list, &QTreeWidget::itemClicked, this,
                 [this](QTreeWidgetItem *item) { commitItem(item); });
-        connect(m_list, &QTreeWidget::currentItemChanged, this,
-                [this](QTreeWidgetItem *item) {
-                    updateDetail();
-                    if (m_positioning || !item)
-                        return;
-                    const QString symbol = item->data(0, kSymbolRole).toString();
-                    if (symbol.isEmpty() || item == m_typedRow)
-                        return;
-                    emit auditionRequested(symbol);
-                    m_auditionOffTimer->start();
-                });
+        connect(m_list, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem *item) {
+            updateDetail();
+            if (m_positioning || !item)
+                return;
+            const QString symbol = item->data(0, kSymbolRole).toString();
+            if (symbol.isEmpty() || item == m_typedRow)
+                return;
+            emit auditionRequested(symbol);
+            m_auditionOffTimer->start();
+        });
         m_search->installEventFilter(this);
         frame->installEventFilter(this);
         m_popup = frame;
@@ -219,12 +211,10 @@ void SamplePickerButton::rebuildList()
         if (s.symbols->isEmpty())
             continue;
         // A lone section (typically plain samples) needs no header.
-        QTreeWidgetItem *parent =
-            nonEmpty > 1 ? addSection(s.title) : m_list->invisibleRootItem();
+        QTreeWidgetItem *parent = nonEmpty > 1 ? addSection(s.title) : m_list->invisibleRootItem();
         for (const QString &symbol : *s.symbols) {
             auto *row = new QTreeWidgetItem(parent);
-            row->setText(0, m_fullNames ? symbol
-                                        : vgSampleDisplayName(symbol));
+            row->setText(0, m_fullNames ? symbol : vgSampleDisplayName(symbol));
             row->setData(0, kSymbolRole, symbol);
             row->setData(0, kKeysplitRole, s.keysplit);
             row->setToolTip(0, symbol);
@@ -257,8 +247,8 @@ void SamplePickerButton::applyFilter()
         if (filter.isEmpty())
             return true;
         const QString symbol = row->data(0, kSymbolRole).toString();
-        return row->text(0).contains(filter, Qt::CaseInsensitive)
-            || symbol.contains(filter, Qt::CaseInsensitive);
+        return row->text(0).contains(filter, Qt::CaseInsensitive) ||
+               symbol.contains(filter, Qt::CaseInsensitive);
     };
     const auto visitRow = [&](QTreeWidgetItem *row) {
         const bool match = rowMatches(row);
@@ -323,8 +313,7 @@ QTreeWidgetItem *SamplePickerButton::firstSelectableRow() const
 void SamplePickerButton::updateDetail()
 {
     QTreeWidgetItem *item = m_list ? m_list->currentItem() : nullptr;
-    const QString symbol =
-        item ? item->data(0, kSymbolRole).toString() : QString();
+    const QString symbol = item ? item->data(0, kSymbolRole).toString() : QString();
     if (symbol.isEmpty()) {
         m_detail->setText(QString());
         return;
@@ -335,8 +324,7 @@ void SamplePickerButton::updateDetail()
     }
     const SamplePickInfo info = m_info ? m_info(symbol) : SamplePickInfo{};
     if (!info.known) {
-        m_detail->setText(item == m_typedRow ? tr("Unlisted symbol")
-                                             : QString());
+        m_detail->setText(item == m_typedRow ? tr("Unlisted symbol") : QString());
         return;
     }
     m_detail->setText(tr("%1 · %2 Hz · %3 s")

@@ -13,7 +13,9 @@
 
 SongSettingsDialog::SongSettingsDialog(const SongCfg &cfg, const QString &songLabel,
                                        const QStringList &voicegroupArgs, QWidget *parent)
-    : QDialog(parent), m_original(cfg), m_voicegroupArgs(voicegroupArgs)
+    : QDialog(parent)
+    , m_original(cfg)
+    , m_voicegroupArgs(voicegroupArgs)
 {
     setWindowTitle(tr("Song Settings — %1").arg(songLabel));
 
@@ -23,8 +25,7 @@ SongSettingsDialog::SongSettingsDialog(const SongCfg &cfg, const QString &songLa
     m_voicegroup->setEditable(true);
     for (const QString &arg : voicegroupArgs)
         m_voicegroup->addItem(SongRegistry::voicegroupDisplayName(arg));
-    m_voicegroup->setCurrentText(
-        SongRegistry::voicegroupDisplayName(cfg.voicegroupArg));
+    m_voicegroup->setCurrentText(SongRegistry::voicegroupDisplayName(cfg.voicegroupArg));
     m_voicegroup->lineEdit()->setPlaceholderText(QStringLiteral("dummy"));
     m_voicegroup->setToolTip(tr("The symbol is \"voicegroup_\" + this name (mid2agb -G), "
                                 "e.g. \"abandoned_ship\" → voicegroup_abandoned_ship."));
@@ -67,13 +68,11 @@ SongSettingsDialog::SongSettingsDialog(const SongCfg &cfg, const QString &songLa
     layout->addWidget(m_extendedClocks);
     layout->addWidget(m_noCompression);
 
-    auto *note = new QLabel(
-        tr("Saved to this song's mid2agb flags (midi.cfg or songs.mk)."), this);
+    auto *note = new QLabel(tr("Saved to this song's mid2agb flags (midi.cfg or songs.mk)."), this);
     note->setStyleSheet(QStringLiteral("color: gray;"));
     layout->addWidget(note);
 
-    auto *buttons =
-        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     layout->addWidget(buttons);

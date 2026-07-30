@@ -34,8 +34,7 @@ int runMkCheck(const QString &projectRoot, const QString &songLabel);
 int runSessionCheck(const QString &projectRoot, const QString &songLabel);
 // tabcheck.cpp; multi-tab check against redirected QSettings (writes view
 // sidecars into the project: use a copy).
-int runTabCheck(const QString &projectRoot, const QString &songA,
-                const QString &songB);
+int runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB);
 // rollcheck.cpp; piano-roll gesture check (pencil draw + velocity latch +
 // header-drag track reorder); the optional path saves the rendered view
 // after the gestures.
@@ -68,8 +67,7 @@ int runAudioCheck();
 // sound/direct_sound_samples corpus gates the corpus-conditional sections.
 // The optional third argument saves editor-dialog screenshots there (plus
 // a -oneshot variant with the loop frame hidden).
-int runSampleCheck(const QString &scratchDir,
-                   const QString &corpusRoot = QString(),
+int runSampleCheck(const QString &scratchDir, const QString &corpusRoot = QString(),
                    const QString &screenshotPath = QString());
 // ignorecheck.cpp; sidecar-dir .gitignore check (self-contained, builds its
 // own scratch projects; the scratch dir must not exist).
@@ -80,8 +78,7 @@ int runIgnoreCheck(const QString &scratchDir);
 int runKeymapCheck();
 // eventviewcheck.cpp; raw MIDI event list check (model API + offscreen UI);
 // the optional song label + path save that song's rendered event list.
-int runEventViewCheck(const QString &projectRoot,
-                      const QString &screenshotSong = QString(),
+int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong = QString(),
                       const QString &screenshotPath = QString());
 
 int main(int argc, char *argv[])
@@ -122,8 +119,7 @@ int main(int argc, char *argv[])
     }
     const int onboardCheck = args.indexOf(QStringLiteral("--onboardcheck"));
     if (onboardCheck >= 0 && onboardCheck + 1 < args.size()) {
-        const QString mid2agb =
-            onboardCheck + 2 < args.size() ? args[onboardCheck + 2] : QString();
+        const QString mid2agb = onboardCheck + 2 < args.size() ? args[onboardCheck + 2] : QString();
         return runOnboardCheck(args[onboardCheck + 1], mid2agb);
     }
     const int vgCheck = args.indexOf(QStringLiteral("--vgcheck"));
@@ -131,10 +127,8 @@ int main(int argc, char *argv[])
         return runVgCheck(args[vgCheck + 1], args[vgCheck + 2]);
     const int vgSaveCheck = args.indexOf(QStringLiteral("--vgsavecheck"));
     if (vgSaveCheck >= 0 && vgSaveCheck + 2 < args.size()) {
-        const QString shot =
-            vgSaveCheck + 3 < args.size() ? args[vgSaveCheck + 3] : QString();
-        return runVgSaveCheck(args[vgSaveCheck + 1], args[vgSaveCheck + 2],
-                              shot);
+        const QString shot = vgSaveCheck + 3 < args.size() ? args[vgSaveCheck + 3] : QString();
+        return runVgSaveCheck(args[vgSaveCheck + 1], args[vgSaveCheck + 2], shot);
     }
     const int exportCheck = args.indexOf(QStringLiteral("--exportcheck"));
     if (exportCheck >= 0 && exportCheck + 2 < args.size())
@@ -147,22 +141,18 @@ int main(int argc, char *argv[])
         return runSessionCheck(args[sessionCheck + 1], args[sessionCheck + 2]);
     const int tabCheck = args.indexOf(QStringLiteral("--tabcheck"));
     if (tabCheck >= 0 && tabCheck + 3 < args.size())
-        return runTabCheck(args[tabCheck + 1], args[tabCheck + 2],
-                           args[tabCheck + 3]);
+        return runTabCheck(args[tabCheck + 1], args[tabCheck + 2], args[tabCheck + 3]);
     if (args.contains(QStringLiteral("--loopcheck")))
         return runLoopCheck();
     const int polyCheck = args.indexOf(QStringLiteral("--polycheck"));
     if (polyCheck >= 0) {
-        const QString path =
-            polyCheck + 1 < args.size() ? args[polyCheck + 1] : QString();
+        const QString path = polyCheck + 1 < args.size() ? args[polyCheck + 1] : QString();
         return runPolyCheck(path);
     }
     const int sampleCheck = args.indexOf(QStringLiteral("--samplecheck"));
     if (sampleCheck >= 0 && sampleCheck + 1 < args.size()) {
-        const QString corpus =
-            sampleCheck + 2 < args.size() ? args[sampleCheck + 2] : QString();
-        const QString shot =
-            sampleCheck + 3 < args.size() ? args[sampleCheck + 3] : QString();
+        const QString corpus = sampleCheck + 2 < args.size() ? args[sampleCheck + 2] : QString();
+        const QString shot = sampleCheck + 3 < args.size() ? args[sampleCheck + 3] : QString();
         return runSampleCheck(args[sampleCheck + 1], corpus, shot);
     }
     if (args.contains(QStringLiteral("--primecheck")))
@@ -189,8 +179,7 @@ int main(int argc, char *argv[])
     }
     const int rollCheck = args.indexOf(QStringLiteral("--rollcheck"));
     if (rollCheck >= 0 && rollCheck + 2 < args.size()) {
-        const QString path =
-            rollCheck + 3 < args.size() ? args[rollCheck + 3] : QString();
+        const QString path = rollCheck + 3 < args.size() ? args[rollCheck + 3] : QString();
         return runRollCheck(args[rollCheck + 1], args[rollCheck + 2], path);
     }
     const int roundTrip = args.indexOf(QStringLiteral("--roundtrip"));
@@ -206,7 +195,6 @@ int main(int argc, char *argv[])
     }
 
     MainWindow window;
-    ui::showCoveredWhileRestoring(window,
-                                  [&window] { window.restoreSession(); });
+    ui::showCoveredWhileRestoring(window, [&window] { window.restoreSession(); });
     return app.exec();
 }

@@ -26,8 +26,7 @@ QByteArray readFileBytes(const QString &path)
 
 } // namespace
 
-int runSaveCheck(const QString &projectRoot, const QString &songLabel,
-                 const QString &mid2agbPath)
+int runSaveCheck(const QString &projectRoot, const QString &songLabel, const QString &mid2agbPath)
 {
     DecompProject project;
     QString error;
@@ -45,8 +44,7 @@ int runSaveCheck(const QString &projectRoot, const QString &songLabel,
         return 1;
     }
 
-    const QString cfgPath =
-        QFileInfo(song->midPath).dir().filePath(QStringLiteral("midi.cfg"));
+    const QString cfgPath = QFileInfo(song->midPath).dir().filePath(QStringLiteral("midi.cfg"));
     const QStringList cfgBefore =
         QString::fromUtf8(readFileBytes(cfgPath)).split(QLatin1Char('\n'));
 
@@ -107,8 +105,7 @@ int runSaveCheck(const QString &projectRoot, const QString &songLabel,
         return 1;
     }
     DocNote note;
-    if (!doc2.findNote(track, base, 72, &note) || note.velocity != 93
-        || note.duration != 24) {
+    if (!doc2.findNote(track, base, 72, &note) || note.velocity != 93 || note.duration != 24) {
         std::fprintf(stderr, "savecheck: FAIL: edited note missing after reload\n");
         failures++;
     }
@@ -126,8 +123,7 @@ int runSaveCheck(const QString &projectRoot, const QString &songLabel,
     }
 
     // Every other midi.cfg line must be byte-identical.
-    const QStringList cfgAfter =
-        QString::fromUtf8(readFileBytes(cfgPath)).split(QLatin1Char('\n'));
+    const QStringList cfgAfter = QString::fromUtf8(readFileBytes(cfgPath)).split(QLatin1Char('\n'));
     if (cfgBefore.size() != cfgAfter.size()) {
         std::fprintf(stderr, "savecheck: FAIL: midi.cfg line count changed (%lld -> %lld)\n",
                      (long long)cfgBefore.size(), (long long)cfgAfter.size());
@@ -138,8 +134,8 @@ int runSaveCheck(const QString &projectRoot, const QString &songLabel,
             const bool isSongLine =
                 cfgBefore[i].section(QLatin1Char(':'), 0, 0).trimmed() == fileName;
             if (!isSongLine && cfgBefore[i] != cfgAfter[i]) {
-                std::fprintf(stderr, "savecheck: FAIL: midi.cfg line %d changed: '%s'\n",
-                             i + 1, qUtf8Printable(cfgAfter[i]));
+                std::fprintf(stderr, "savecheck: FAIL: midi.cfg line %d changed: '%s'\n", i + 1,
+                             qUtf8Printable(cfgAfter[i]));
                 failures++;
             }
             if (isSongLine)
@@ -154,8 +150,7 @@ int runSaveCheck(const QString &projectRoot, const QString &songLabel,
     if (QFileInfo::exists(mid2agb)) {
         QProcess proc;
         const QString outS = song2->midPath.left(song2->midPath.size() - 4) + ".s";
-        proc.start(mid2agb, QStringList()
-                                << doc2.cfg().rawFlags << song2->midPath << outS);
+        proc.start(mid2agb, QStringList() << doc2.cfg().rawFlags << song2->midPath << outS);
         proc.waitForFinished(15000);
         if (proc.exitStatus() != QProcess::NormalExit || proc.exitCode() != 0) {
             std::fprintf(stderr, "savecheck: FAIL: mid2agb rejected the saved file: %s\n",

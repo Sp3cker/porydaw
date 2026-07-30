@@ -53,8 +53,8 @@ constexpr int kSynthTypeData = -1;
 
 bool macroIsDsFamily(VgMacro m)
 {
-    return m == VgMacro::DirectSound || m == VgMacro::DirectSoundNoResample
-        || m == VgMacro::DirectSoundAlt;
+    return m == VgMacro::DirectSound || m == VgMacro::DirectSoundNoResample ||
+           m == VgMacro::DirectSoundAlt;
 }
 
 // A loaded DirectSound tone whose sample has size 0 is a Golden Sun synth
@@ -76,8 +76,7 @@ bool macroIsWave(VgMacro m)
 
 bool macroUsesSampleList(VgMacro m)
 {
-    return m == VgMacro::Keysplit
-        || (vgMacroHasSymbol(m) && !macroIsWave(m) && !macroIsDrumkit(m));
+    return m == VgMacro::Keysplit || (vgMacroHasSymbol(m) && !macroIsWave(m) && !macroIsDrumkit(m));
 }
 
 bool macroIsSquare1(VgMacro m)
@@ -114,8 +113,7 @@ QString adsrText(const VgVoice &v)
 
 } // namespace
 
-VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
-    : QWidget(parent)
+VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
 {
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -136,18 +134,17 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     m_vgCombo->setInsertPolicy(QComboBox::NoInsert);
     m_vgCombo->setEnabled(false);
     m_vgCombo->lineEdit()->setPlaceholderText(tr("No song loaded"));
-    m_vgCombo->setToolTip(
-        tr("The song's voicegroup: the prefix plus this name form the "
-           "symbol, e.g. \"abandoned_ship\" → voicegroup_abandoned_ship "
-           "(mid2agb -G). Changing it is undoable."));
+    m_vgCombo->setToolTip(tr("The song's voicegroup: the prefix plus this name form the "
+                             "symbol, e.g. \"abandoned_ship\" → voicegroup_abandoned_ship "
+                             "(mid2agb -G). Changing it is undoable."));
     vgLayout->addWidget(m_vgCombo, 1);
     layout->addWidget(vgRow);
 
     const auto commitVgArg = [this] {
         if (m_updating || !m_vgCombo->isEnabled())
             return;
-        const QString arg = SongRegistry::voicegroupArgFromDisplay(
-            m_vgCombo->currentText().trimmed(), m_vgChoices);
+        const QString arg =
+            SongRegistry::voicegroupArgFromDisplay(m_vgCombo->currentText().trimmed(), m_vgChoices);
         if (arg == m_vgArg)
             return;
         m_vgArg = arg;
@@ -159,13 +156,12 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     const int columnPadding = ::layout::space(::layout::Space::Two);
 
     m_tree = new QTreeWidget(this);
-  ::layout::configureListPositionIndicator(*m_tree->verticalScrollBar());
+    ::layout::configureListPositionIndicator(*m_tree->verticalScrollBar());
     m_tree->setColumnCount(3);
     m_tree->setHeaderLabels({tr("Voice"), tr("Type"), tr("ADSR")});
-  m_tree->setStyleSheet(
-      QStringLiteral("QTreeWidget::item{padding-left:%1px;}"
-                     "QHeaderView::section{padding-left:%1px;}")
-          .arg(columnPadding));
+    m_tree->setStyleSheet(QStringLiteral("QTreeWidget::item{padding-left:%1px;}"
+                                         "QHeaderView::section{padding-left:%1px;}")
+                              .arg(columnPadding));
     m_tree->setRootIsDecorated(false);
     m_tree->setUniformRowHeights(true);
     m_tree->setAllColumnsShowFocus(true);
@@ -178,16 +174,14 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     // voice, releasing the mouse anywhere releases the note.
     connect(m_tree, &QTreeWidget::itemPressed, this, &VoicegroupBrowser::pressedVoice);
     m_tree->viewport()->installEventFilter(this);
-    connect(m_tree, &QTreeWidget::currentItemChanged, this,
-            [this] { populateEditor(); });
+    connect(m_tree, &QTreeWidget::currentItemChanged, this, [this] { populateEditor(); });
 
     // ---- editor panel for the selected voice ----
     m_editor = new QWidget(this);
     auto *form = new QFormLayout(m_editor);
-    form->setContentsMargins(::layout::space(::layout::Space::One),
-                           ::layout::space(::layout::Space::Half),
-                           ::layout::space(::layout::Space::One),
-                           ::layout::space(::layout::Space::Half));
+    form->setContentsMargins(
+        ::layout::space(::layout::Space::One), ::layout::space(::layout::Space::Half),
+        ::layout::space(::layout::Space::One), ::layout::space(::layout::Space::Half));
     form->setVerticalSpacing(::layout::space(::layout::Space::Half));
 
     m_notice = new QLabel(m_editor);
@@ -219,12 +213,10 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     // loop badges, and audition-on-highlight instead of a mile-long menu.
     m_samplePicker = new SamplePickerButton(m_symbolRow);
     symbolLayout->addWidget(m_samplePicker, 1);
-    connect(m_samplePicker, &SamplePickerButton::symbolPicked, this,
-            [this] { commitEdit(); });
+    connect(m_samplePicker, &SamplePickerButton::symbolPicked, this, [this] { commitEdit(); });
     connect(m_samplePicker, &SamplePickerButton::auditionRequested, this,
             [this](const QString &symbol) {
-                const VgVoice *voice =
-                    m_source ? m_source->voiceAt(currentSlot()) : nullptr;
+                const VgVoice *voice = m_source ? m_source->voiceAt(currentSlot()) : nullptr;
                 // The destination voice's envelope, so the browse audition
                 // sounds like the commit would. A keysplit row's envelope
                 // comes from its resolved sub-voice instead (a keysplit
@@ -234,15 +226,13 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
                 VgAuditionKind kind = VgAuditionKind::Sample;
                 if (voice && macroIsWave(voice->macro)) {
                     kind = VgAuditionKind::Wave;
-                    adsr = {uint8_t(voice->attack & 0x07),
-                            uint8_t(voice->decay & 0x07),
-                            uint8_t(voice->sustain & 0x0F),
-                            uint8_t(voice->release & 0x07)};
+                    adsr = {uint8_t(voice->attack & 0x07), uint8_t(voice->decay & 0x07),
+                            uint8_t(voice->sustain & 0x0F), uint8_t(voice->release & 0x07)};
                 } else if (m_keysplitTables.contains(symbol)) {
                     kind = VgAuditionKind::Keysplit;
                 } else if (voice && macroIsDsFamily(voice->macro)) {
-                    adsr = {uint8_t(voice->attack), uint8_t(voice->decay),
-                            uint8_t(voice->sustain), uint8_t(voice->release)};
+                    adsr = {uint8_t(voice->attack), uint8_t(voice->decay), uint8_t(voice->sustain),
+                            uint8_t(voice->release)};
                 }
                 emit sampleAuditionRequested(symbol, kind, adsr);
             });
@@ -255,8 +245,7 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     m_newSampleButton->setObjectName(QStringLiteral("vgNewSampleButton"));
     m_newSampleButton->setText(QStringLiteral("+"));
     m_newSampleButton->setAutoRaise(true);
-    m_newSampleButton->setToolTip(
-        tr("New sample: import a sample and assign it to this voice."));
+    m_newSampleButton->setToolTip(tr("New sample: import a sample and assign it to this voice."));
     symbolLayout->addWidget(m_newSampleButton);
     connect(m_newSampleButton, &QToolButton::clicked, this,
             [this] { emit newSampleRequested(currentSlot()); });
@@ -264,8 +253,7 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     m_editSampleButton->setObjectName(QStringLiteral("vgEditSampleButton"));
     m_editSampleButton->setText(QStringLiteral("✎"));
     m_editSampleButton->setAutoRaise(true);
-    m_editSampleButton->setToolTip(
-        tr("Edit sample: reopen this voice's sample in Sample Editor."));
+    m_editSampleButton->setToolTip(tr("Edit sample: reopen this voice's sample in Sample Editor."));
     symbolLayout->addWidget(m_editSampleButton);
     connect(m_editSampleButton, &QToolButton::clicked, this,
             [this] { emit editSampleRequested(currentSlot()); });
@@ -280,14 +268,12 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     m_sweepTimeSpin = new QSpinBox(m_sweepRow);
     m_sweepTimeSpin->setRange(0, 7);
     m_sweepTimeSpin->setSpecialValueText(tr("Off"));
-    m_sweepTimeSpin->setToolTip(
-        tr("Speed: 128 Hz clocks between pitch steps (1 = fastest, 7 = "
-           "slowest, Off = no sweep)."));
+    m_sweepTimeSpin->setToolTip(tr("Speed: 128 Hz clocks between pitch steps (1 = fastest, 7 = "
+                                   "slowest, Off = no sweep)."));
     m_sweepDirCombo = new QComboBox(m_sweepRow);
     m_sweepDirCombo->addItems({tr("Rise"), tr("Fall")});
-    m_sweepDirCombo->setToolTip(
-        tr("Direction. A rising sweep silences the note when it overflows "
-           "the highest pitch."));
+    m_sweepDirCombo->setToolTip(tr("Direction. A rising sweep silences the note when it overflows "
+                                   "the highest pitch."));
     m_sweepShiftSpin = new QSpinBox(m_sweepRow);
     m_sweepShiftSpin->setRange(0, 7);
     m_sweepShiftSpin->setToolTip(
@@ -299,8 +285,8 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     addRow(tr("Sweep"), m_sweepRow, &m_sweepLabel);
 
     m_dutyCombo = new QComboBox(m_editor);
-    m_dutyCombo->addItems({QStringLiteral("12.5%"), QStringLiteral("25%"),
-                           QStringLiteral("50%"), QStringLiteral("75%")});
+    m_dutyCombo->addItems({QStringLiteral("12.5%"), QStringLiteral("25%"), QStringLiteral("50%"),
+                           QStringLiteral("75%")});
     addRow(tr("Duty"), m_dutyCombo, &m_dutyLabel);
 
     m_periodCombo = new QComboBox(m_editor);
@@ -317,8 +303,8 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     auto *synthLayout = new QHBoxLayout(m_synthParamsRow);
     synthLayout->setContentsMargins(0, 0, 0, 0);
     synthLayout->setSpacing(2);
-    for (QSpinBox **spin : {&m_synthDutySpin, &m_synthStepSpin, &m_synthDepthSpin,
-                            &m_synthPhaseSpin}) {
+    for (QSpinBox **spin :
+         {&m_synthDutySpin, &m_synthStepSpin, &m_synthDepthSpin, &m_synthPhaseSpin}) {
         *spin = new QSpinBox(m_synthParamsRow);
         (*spin)->setRange(0, 255);
         // Commit on steps/editing-finished only: every distinct value here
@@ -327,15 +313,12 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
         (*spin)->setKeyboardTracking(false);
         synthLayout->addWidget(*spin);
     }
-    m_synthDutySpin->setToolTip(
-        tr("Base duty cycle: the pulse width the wave centers on "
-           "(128 = 50% square)."));
-    m_synthStepSpin->setToolTip(
-        tr("Duty LFO step per frame: how fast the pulse width wobbles "
-           "(0 = static)."));
-    m_synthDepthSpin->setToolTip(
-        tr("Modulation amount: how far the pulse width swings around the "
-           "base duty."));
+    m_synthDutySpin->setToolTip(tr("Base duty cycle: the pulse width the wave centers on "
+                                   "(128 = 50% square)."));
+    m_synthStepSpin->setToolTip(tr("Duty LFO step per frame: how fast the pulse width wobbles "
+                                   "(0 = static)."));
+    m_synthDepthSpin->setToolTip(tr("Modulation amount: how far the pulse width swings around the "
+                                    "base duty."));
     m_synthPhaseSpin->setToolTip(tr("Duty LFO phase offset."));
     addRow(tr("Duty LFO"), m_synthParamsRow, &m_synthParamsLabel);
 
@@ -364,8 +347,7 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     buttonLayout->addWidget(m_newButton);
     buttonLayout->addStretch(1);
     form->addRow(buttons);
-    connect(m_newButton, &QPushButton::clicked, this,
-            &VoicegroupBrowser::newVoicegroupRequested);
+    connect(m_newButton, &QPushButton::clicked, this, &VoicegroupBrowser::newVoicegroupRequested);
     layout->addWidget(m_editor);
 
     // Space stays the transport toggle even while an editor field has focus:
@@ -381,9 +363,9 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     m_samplePicker->setFocusPolicy(Qt::NoFocus);
     for (QWidget *w : std::initializer_list<QWidget *>{
              m_tree, m_vgCombo, m_typeCombo, m_symbolCombo, m_dutyCombo, m_periodCombo,
-             m_synthWaveCombo, m_synthDutySpin, m_synthStepSpin, m_synthDepthSpin,
-             m_synthPhaseSpin, m_sweepTimeSpin, m_sweepDirCombo, m_sweepShiftSpin,
-             m_attackSpin, m_decaySpin, m_sustainSpin, m_releaseSpin}) {
+             m_synthWaveCombo, m_synthDutySpin, m_synthStepSpin, m_synthDepthSpin, m_synthPhaseSpin,
+             m_sweepTimeSpin, m_sweepDirCombo, m_sweepShiftSpin, m_attackSpin, m_decaySpin,
+             m_sustainSpin, m_releaseSpin}) {
         w->installEventFilter(this);
         for (QLineEdit *edit : w->findChildren<QLineEdit *>())
             edit->installEventFilter(this);
@@ -397,9 +379,9 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent)
     connect(m_periodCombo, &QComboBox::activated, this, commit);
     connect(m_sweepDirCombo, &QComboBox::activated, this, commit);
     connect(m_synthWaveCombo, &QComboBox::activated, this, commit);
-    for (QSpinBox *spin : {m_sweepTimeSpin, m_sweepShiftSpin, m_synthDutySpin,
-                           m_synthStepSpin, m_synthDepthSpin, m_synthPhaseSpin,
-                           m_attackSpin, m_decaySpin, m_sustainSpin, m_releaseSpin})
+    for (QSpinBox *spin :
+         {m_sweepTimeSpin, m_sweepShiftSpin, m_synthDutySpin, m_synthStepSpin, m_synthDepthSpin,
+          m_synthPhaseSpin, m_attackSpin, m_decaySpin, m_sustainSpin, m_releaseSpin})
         connect(spin, &QSpinBox::valueChanged, this, commit);
 
     populateEditor();
@@ -413,8 +395,7 @@ void VoicegroupBrowser::setVoicegroup(const LoadedVoiceGroup *vg)
         m_source = nullptr; // a cleared voicegroup invalidates the source too
     m_tree->clear();
     m_vgCombo->setEnabled(vg != nullptr);
-    m_vgCombo->lineEdit()->setPlaceholderText(vg ? QStringLiteral("dummy")
-                                                 : tr("No song loaded"));
+    m_vgCombo->lineEdit()->setPlaceholderText(vg ? QStringLiteral("dummy") : tr("No song loaded"));
     if (!vg) {
         m_updating = true;
         m_vgArg.clear();
@@ -428,10 +409,10 @@ void VoicegroupBrowser::setVoicegroup(const LoadedVoiceGroup *vg)
         const ToneData &voice = vg->voices[i];
         QString name = QString::fromUtf8(vg->voiceNames[i]).trimmed();
         const QString type =
-            toneIsSynth(voice) ? tr("Synth (Golden Sun)")
-                               : m4aVoiceTypeName(voice.type);
+            toneIsSynth(voice) ? tr("Synth (Golden Sun)") : m4aVoiceTypeName(voice.type);
         auto *item = new QTreeWidgetItem(m_tree);
-        item->setText(0, QStringLiteral("%1  %2").arg(i, 3, 10, QLatin1Char('0'))
+        item->setText(0, QStringLiteral("%1  %2")
+                             .arg(i, 3, 10, QLatin1Char('0'))
                              .arg(name.isEmpty() ? type : name));
         item->setText(1, type);
         if (voice.type != VOICE_KEYSPLIT && voice.type != VOICE_KEYSPLIT_ALL)
@@ -515,12 +496,10 @@ void VoicegroupBrowser::setCurrentVoicegroupArg(const QString &arg)
     m_updating = false;
 }
 
-void VoicegroupBrowser::setSource(VoicegroupSource *source,
-                                  const QStringList &sampleSymbols,
+void VoicegroupBrowser::setSource(VoicegroupSource *source, const QStringList &sampleSymbols,
                                   const QStringList &waveSymbols,
                                   const QList<QPair<QString, QString>> &keysplits,
-                                  const QStringList &drumkits,
-                                  const VgAdsrDefaults &adsrDefaults,
+                                  const QStringList &drumkits, const VgAdsrDefaults &adsrDefaults,
                                   const VgSynthCatalog &synths,
                                   const QHash<QString, VgSynthDesc> &pendingSynths,
                                   std::function<QString(const VgSynthDesc &)> mintSynth)
@@ -552,17 +531,14 @@ void VoicegroupBrowser::setSource(VoicegroupSource *source,
     }
     m_sampleChoices += sampleSymbols; // already sorted, phonemes last
     for (const QString &symbol : sampleSymbols) {
-        (symbol.contains(QStringLiteral("Phoneme")) ? m_phonemes
-                                                    : m_plainSamples)
-            .append(symbol);
+        (symbol.contains(QStringLiteral("Phoneme")) ? m_phonemes : m_plainSamples).append(symbol);
     }
     // populateEditor hands the picker the list its voice browses (the sample
     // partition, or the wave list for programmable-wave voices).
     populateEditor();
 }
 
-void VoicegroupBrowser::setSampleInfoProvider(
-    std::function<SamplePickInfo(const QString &)> fn)
+void VoicegroupBrowser::setSampleInfoProvider(std::function<SamplePickInfo(const QString &)> fn)
 {
     m_samplePicker->setInfoProvider(std::move(fn));
 }
@@ -613,8 +589,7 @@ bool VoicegroupBrowser::eventFilter(QObject *watched, QEvent *event)
     // fires instead of the input inserting a space / toggling.
     if (event->type() == QEvent::ShortcutOverride) {
         auto *keyEvent = static_cast<QKeyEvent *>(event);
-        if (keyEvent->key() == Qt::Key_Space
-            && keyEvent->modifiers() == Qt::NoModifier) {
+        if (keyEvent->key() == Qt::Key_Space && keyEvent->modifiers() == Qt::NoModifier) {
             keyEvent->ignore();
             return true;
         }
@@ -631,8 +606,7 @@ void VoicegroupBrowser::setEditorRowsVisible(VgMacro macro, bool synth, bool vis
     showRow(m_typeLabel, m_typeCombo, visible);
     showRow(m_symbolLabel, m_symbolRow, visible && vgMacroHasSymbol(macro));
     showRow(m_sweepLabel, m_sweepRow, visible && macroIsSquare1(macro));
-    showRow(m_dutyLabel, m_dutyCombo,
-            visible && (macroIsSquare1(macro) || macroIsSquare2(macro)));
+    showRow(m_dutyLabel, m_dutyCombo, visible && (macroIsSquare1(macro) || macroIsSquare2(macro)));
     showRow(m_periodLabel, m_periodCombo, visible && macroIsNoise(macro));
     showRow(m_synthWaveLabel, m_synthWaveCombo, visible && synth);
     // The pulse LFO row narrows further by waveform (populateEditor).
@@ -641,8 +615,7 @@ void VoicegroupBrowser::setEditorRowsVisible(VgMacro macro, bool synth, bool vis
             visible && macro != VgMacro::Keysplit && !macroIsDrumkit(macro));
 }
 
-bool VoicegroupBrowser::synthDescFor(const VgVoice &voice, int slot,
-                                     VgSynthDesc *desc) const
+bool VoicegroupBrowser::synthDescFor(const VgVoice &voice, int slot, VgSynthDesc *desc) const
 {
     if (!macroIsDsFamily(voice.macro))
         return false;
@@ -670,8 +643,7 @@ void VoicegroupBrowser::populateEditor()
 {
     m_updating = true;
     const int slot = currentSlot();
-    const VgVoice *voice =
-        (m_source && slot >= 0) ? m_source->voiceAt(slot) : nullptr;
+    const VgVoice *voice = (m_source && slot >= 0) ? m_source->voiceAt(slot) : nullptr;
 
     if (!voice) {
         setEditorRowsVisible(VgMacro::DirectSound, false, false);
@@ -737,9 +709,10 @@ void VoicegroupBrowser::populateEditor()
     if (vgMacroHasSymbol(voice->macro)) {
         const bool wave = macroIsWave(voice->macro);
         const bool drumkit = macroIsDrumkit(voice->macro);
-        m_symbolLabel->setText(synth ? tr("Synth")
-                                     : wave ? tr("Wave")
-                                            : drumkit ? tr("Drumkit") : tr("Sample"));
+        m_symbolLabel->setText(synth     ? tr("Synth")
+                               : wave    ? tr("Wave")
+                               : drumkit ? tr("Drumkit")
+                                         : tr("Sample"));
         // Sample-list voices (plain samples and keysplits) and wave voices
         // use the picker — browsing with audition matters for both; the
         // short drumkit/synth lists keep the combo.
@@ -751,11 +724,9 @@ void VoicegroupBrowser::populateEditor()
             // shared DirectSoundWaveData_ prefix.
             m_samplePicker->setDisplayFullSymbols(wave);
             if (wave)
-                m_samplePicker->setChoices(QStringList(), m_waveSymbols,
-                                           QStringList());
+                m_samplePicker->setChoices(QStringList(), m_waveSymbols, QStringList());
             else
-                m_samplePicker->setChoices(m_keysplitChoices, m_plainSamples,
-                                           m_phonemes);
+                m_samplePicker->setChoices(m_keysplitChoices, m_plainSamples, m_phonemes);
             m_samplePicker->setCurrentSymbol(voice->symbol);
         } else {
             m_symbolCombo->clear();
@@ -770,8 +741,7 @@ void VoicegroupBrowser::populateEditor()
             }
             m_symbolCombo->setCurrentText(voice->symbol);
         }
-        const bool sampleVoice = !synth && !wave && !drumkit
-            && macroIsDsFamily(voice->macro);
+        const bool sampleVoice = !synth && !wave && !drumkit && macroIsDsFamily(voice->macro);
         m_newSampleButton->setVisible(sampleVoice);
         m_editSampleButton->setVisible(sampleVoice);
     }
@@ -812,8 +782,7 @@ void VoicegroupBrowser::commitEdit()
     // the symbol check below restores the keysplit macro. Synth voices read
     // as the kSynthTypeData pseudo-type instead.
     const int selData = m_typeCombo->currentData().toInt();
-    const int shownData =
-        curSynth ? kSynthTypeData : int(typeComboMacro(cur->macro));
+    const int shownData = curSynth ? kSynthTypeData : int(typeComboMacro(cur->macro));
     const bool typeChanged = selData != shownData;
 
     if (selData == kSynthTypeData) {
@@ -830,8 +799,7 @@ void VoicegroupBrowser::commitEdit()
             // adopt the project's first definition (or a plain 50% pulse).
             if (!m_synths.defs.isEmpty())
                 desc = m_synths.defs.first().second;
-        } else if (comboSymbol != cur->symbol
-                   && m_synthBySymbol.contains(comboSymbol)) {
+        } else if (comboSymbol != cur->symbol && m_synthBySymbol.contains(comboSymbol)) {
             // Picked a definition: honor the symbol as chosen. Resolving it
             // back through the descriptor would land value-equal twins (any
             // two saws compare equal) on whichever one scans first.
@@ -856,8 +824,8 @@ void VoicegroupBrowser::commitEdit()
             } else {
                 symbol = m_synths.symbolFor(desc); // on-disk definitions
                 if (symbol.isEmpty()) {            // then pending ones
-                    for (auto it = m_synthBySymbol.constBegin();
-                         it != m_synthBySymbol.constEnd(); ++it) {
+                    for (auto it = m_synthBySymbol.constBegin(); it != m_synthBySymbol.constEnd();
+                         ++it) {
                         if (it.value() == desc) {
                             symbol = it.key();
                             break;
@@ -886,10 +854,9 @@ void VoicegroupBrowser::commitEdit()
         // voice shares it (samples and keysplits share the picker's sample
         // list; waves have their own picker list; drumkits and synths each
         // have their own combo list).
-        const bool comboShowsThisList = wave
-            ? macroIsWave(cur->macro)
-            : drumkit ? macroIsDrumkit(cur->macro)
-                      : macroUsesSampleList(cur->macro) && !curSynth;
+        const bool comboShowsThisList = wave      ? macroIsWave(cur->macro)
+                                        : drumkit ? macroIsDrumkit(cur->macro)
+                                                  : macroUsesSampleList(cur->macro) && !curSynth;
         QString symbol;
         if (comboShowsThisList) {
             symbol = drumkit ? m_symbolCombo->currentText().trimmed()
@@ -897,8 +864,8 @@ void VoicegroupBrowser::commitEdit()
         }
         // A deliberate Type change away from a keysplit or synth voice
         // overrides the stale symbol shown in the combo.
-        if (!wave && !drumkit && typeChanged
-            && (m_keysplitTables.contains(symbol) || m_synthBySymbol.contains(symbol)))
+        if (!wave && !drumkit && typeChanged &&
+            (m_keysplitTables.contains(symbol) || m_synthBySymbol.contains(symbol)))
             symbol.clear();
         if (symbol.isEmpty()) {
             if (wave)
@@ -933,9 +900,9 @@ void VoicegroupBrowser::commitEdit()
     // ones instead.
     const int oldFamily = vgAdsrFamily(cur->macro);
     const int newFamily = vgAdsrFamily(v.macro);
-    const bool crossedFamily = newFamily != oldFamily
-        && (oldFamily < 0 || newFamily < 0
-            || vgMacroIsCgb(v.macro) != vgMacroIsCgb(cur->macro));
+    const bool crossedFamily =
+        newFamily != oldFamily &&
+        (oldFamily < 0 || newFamily < 0 || vgMacroIsCgb(v.macro) != vgMacroIsCgb(cur->macro));
     if (crossedFamily && oldFamily >= 0)
         m_adsrHistory[slot][oldFamily] =
             VgAdsr{cur->attack, cur->decay, cur->sustain, cur->release};
@@ -944,8 +911,8 @@ void VoicegroupBrowser::commitEdit()
         if (crossedFamily) {
             const QHash<int, VgAdsr> remembered = m_adsrHistory.value(slot);
             const VgAdsr adopted = remembered.contains(newFamily)
-                ? remembered.value(newFamily)
-                : vgDefaultAdsr(m_adsrDefaults, v.macro, v.symbol);
+                                       ? remembered.value(newFamily)
+                                       : vgDefaultAdsr(m_adsrDefaults, v.macro, v.symbol);
             v.attack = adopted.attack;
             v.decay = adopted.decay;
             v.sustain = adopted.sustain;
@@ -958,9 +925,9 @@ void VoicegroupBrowser::commitEdit()
             // An untouched envelope follows the instrument: when the values
             // are exactly what adoption chose for the old symbol (the user
             // never tuned them), a symbol change re-adopts for the new one.
-            if (vgMacroHasSymbol(v.macro) && v.symbol != cur->symbol
-                && VgAdsr{v.attack, v.decay, v.sustain, v.release}
-                       == vgDefaultAdsr(m_adsrDefaults, cur->macro, cur->symbol)) {
+            if (vgMacroHasSymbol(v.macro) && v.symbol != cur->symbol &&
+                VgAdsr{v.attack, v.decay, v.sustain, v.release} ==
+                    vgDefaultAdsr(m_adsrDefaults, cur->macro, cur->symbol)) {
                 const VgAdsr fresh = vgDefaultAdsr(m_adsrDefaults, v.macro, v.symbol);
                 v.attack = fresh.attack;
                 v.decay = fresh.decay;
@@ -970,8 +937,8 @@ void VoicegroupBrowser::commitEdit()
         }
         // Recompose NR10 from the three fields; bit 7 is unused by the sweep
         // unit, so keep the file's value for it.
-        v.sweep = (cur->sweep & 0x80) | (m_sweepTimeSpin->value() << 4)
-            | (m_sweepDirCombo->currentIndex() << 3) | m_sweepShiftSpin->value();
+        v.sweep = (cur->sweep & 0x80) | (m_sweepTimeSpin->value() << 4) |
+                  (m_sweepDirCombo->currentIndex() << 3) | m_sweepShiftSpin->value();
         v.duty = m_dutyCombo->currentIndex();
         v.period = m_periodCombo->currentIndex();
         if (vgMacroIsCgb(v.macro)) {
@@ -1003,8 +970,8 @@ void VoicegroupBrowser::commitEdit()
     // from on undo, so it must take the reload path, where the loader
     // re-reads the .bin itself.
     bool structural = vgVoiceStructuralChange(*cur, v);
-    if (curSynth && selData == kSynthTypeData && v.macro == cur->macro
-        && m_synthBySymbol.contains(cur->symbol))
+    if (curSynth && selData == kSynthTypeData && v.macro == cur->macro &&
+        m_synthBySymbol.contains(cur->symbol))
         structural = false;
     emit voiceEditRequested(slot, v, structural);
 }
@@ -1024,10 +991,11 @@ void VoicegroupBrowser::updateRow(int slot)
         return;
     VgSynthDesc desc;
     const QString type = synthDescFor(*voice, slot, &desc)
-        ? tr("Synth (Golden Sun)")
-        : m4aVoiceTypeName(vgMacroVoiceType(voice->macro));
+                             ? tr("Synth (Golden Sun)")
+                             : m4aVoiceTypeName(vgMacroVoiceType(voice->macro));
     const QString name = vgMacroHasSymbol(voice->macro) ? voice->symbol : QString();
-    item->setText(0, QStringLiteral("%1  %2").arg(slot, 3, 10, QLatin1Char('0'))
+    item->setText(0, QStringLiteral("%1  %2")
+                         .arg(slot, 3, 10, QLatin1Char('0'))
                          .arg(name.isEmpty() ? type : name));
     item->setText(1, type);
     item->setText(2, adsrText(*voice));

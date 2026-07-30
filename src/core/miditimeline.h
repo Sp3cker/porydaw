@@ -14,9 +14,9 @@ constexpr uint8_t TIMELINE_EVT_TEMPO = 0x1;
 
 struct TimelineEvent {
     uint64_t samplePos;
-    uint32_t tick;  // absolute SMF tick (viewer grid position)
+    uint32_t tick; // absolute SMF tick (viewer grid position)
     uint8_t type;
-    uint8_t track;  // engine track index (0-15), already mapped from SMF track/channel
+    uint8_t track; // engine track index (0-15), already mapped from SMF track/channel
     uint8_t data0;
     uint8_t data1;
 };
@@ -68,7 +68,7 @@ struct SmfFile;
 
 class MidiTimeline
 {
-public:
+  public:
     static std::unique_ptr<MidiTimeline> load(const QString &path, double sampleRate,
                                               QString *error);
 
@@ -96,14 +96,14 @@ public:
     uint64_t lengthTicks = 0;
     uint64_t loopStartTick = UINT64_MAX;
     uint64_t loopEndTick = UINT64_MAX;
-    std::vector<TempoPoint> tempoMap;   // sorted by tick, first entry at tick 0
-    std::vector<TimeSigPoint> timeSigs; // sorted by tick, may be empty
+    std::vector<TempoPoint> tempoMap;    // sorted by tick, first entry at tick 0
+    std::vector<TimeSigPoint> timeSigs;  // sorted by tick, may be empty
     std::vector<OtherEvent> otherEvents; // sorted by tick
 
     bool hasLoop() const
     {
-        return loopStartSample != UINT64_MAX && loopEndSample != UINT64_MAX
-            && loopEndSample > loopStartSample;
+        return loopStartSample != UINT64_MAX && loopEndSample != UINT64_MAX &&
+               loopEndSample > loopStartSample;
     }
 
     // Tick <-> sample conversion through the tempo map (viewer/UI thread).

@@ -4,8 +4,7 @@
 
 #include "core/mid2agbtables.h"
 
-void TimelinePlayer::dispatchEvent(M4AEngine *engine, const TimelineEvent &ev,
-                                   uint32_t muteMask)
+void TimelinePlayer::dispatchEvent(M4AEngine *engine, const TimelineEvent &ev, uint32_t muteMask)
 {
     switch (ev.type) {
     case TIMELINE_EVT_TEMPO:
@@ -32,8 +31,7 @@ void TimelinePlayer::dispatchEvent(M4AEngine *engine, const TimelineEvent &ev,
         m4a_engine_program_change(engine, ev.track, ev.data0);
         break;
     case 0xE:
-        m4a_engine_pitch_bend(engine, ev.track,
-                              int16_t(((int(ev.data1) << 7) | ev.data0) - 8192));
+        m4a_engine_pitch_bend(engine, ev.track, int16_t(((int(ev.data1) << 7) | ev.data0) - 8192));
         break;
     }
 }
@@ -50,17 +48,28 @@ void TimelinePlayer::chase(M4AEngine *engine, const MidiTimeline *timeline, uint
         if (ev.samplePos > pos)
             break;
         switch (ev.type) {
-        case 0xB: cc[ev.track][ev.data0 & 0x7F] = &ev; break;
-        case 0xC: program[ev.track] = &ev; break;
-        case 0xE: bend[ev.track] = &ev; break;
-        case TIMELINE_EVT_TEMPO: tempo = &ev; break;
+        case 0xB:
+            cc[ev.track][ev.data0 & 0x7F] = &ev;
+            break;
+        case 0xC:
+            program[ev.track] = &ev;
+            break;
+        case 0xE:
+            bend[ev.track] = &ev;
+            break;
+        case TIMELINE_EVT_TEMPO:
+            tempo = &ev;
+            break;
         }
     }
 
     // Engine reset defaults for the stateful controllers (the track-init
     // values in m4a_engine.c). The opt-in ones — portamento, PWM — are
     // no-ops in the engine while their feature is disabled.
-    static constexpr struct { uint8_t cc; uint8_t value; } kCcDefaults[] = {
+    static constexpr struct {
+        uint8_t cc;
+        uint8_t value;
+    } kCcDefaults[] = {
         {0x01, 0},   // MOD
         {0x05, 0},   // PORTAMENTO
         {0x07, 127}, // VOL
@@ -115,11 +124,10 @@ void TimelinePlayer::seek(uint64_t pos, const MidiTimeline *timeline)
     // nothing stays keyed on across it.
     clearKeyedOn();
     m_pos = pos;
-    m_cursor = size_t(std::lower_bound(timeline->events.begin(), timeline->events.end(), pos,
-                                       [](const TimelineEvent &e, uint64_t p) {
-                                           return e.samplePos < p;
-                                       })
-                      - timeline->events.begin());
+    m_cursor = size_t(
+        std::lower_bound(timeline->events.begin(), timeline->events.end(), pos,
+                         [](const TimelineEvent &e, uint64_t p) { return e.samplePos < p; }) -
+        timeline->events.begin());
 }
 
 void TimelinePlayer::render(M4AEngine *engine, const MidiTimeline *timeline, float *outL,
@@ -144,8 +152,8 @@ void TimelinePlayer::render(M4AEngine *engine, const MidiTimeline *timeline, flo
                     i++;
                 }
             }
-            while (m_cursor < timeline->events.size()
-                   && timeline->events[m_cursor].samplePos <= m_pos) {
+            while (m_cursor < timeline->events.size() &&
+                   timeline->events[m_cursor].samplePos <= m_pos) {
                 const TimelineEvent &ev = timeline->events[m_cursor];
                 m_cursor++;
                 // While looping, a note starting at the loop end must not
@@ -166,12 +174,12 @@ void TimelinePlayer::render(M4AEngine *engine, const MidiTimeline *timeline, flo
             if (loop && m_pos >= timeline->loopEndSample) {
                 wrapNotes(engine, timeline);
                 m_pos = timeline->loopStartSample;
-                m_cursor = size_t(std::lower_bound(timeline->events.begin(),
-                                                   timeline->events.end(), m_pos,
-                                                   [](const TimelineEvent &e, uint64_t pos) {
-                                                       return e.samplePos < pos;
-                                                   })
-                                  - timeline->events.begin());
+                m_cursor =
+                    size_t(std::lower_bound(timeline->events.begin(), timeline->events.end(), m_pos,
+                                            [](const TimelineEvent &e, uint64_t pos) {
+                                                return e.samplePos < pos;
+                                            }) -
+                           timeline->events.begin());
                 continue;
             }
             break;
@@ -240,8 +248,8 @@ void TimelinePlayer::wrapNotes(M4AEngine *engine, const MidiTimeline *timeline)
                 // exactGate=true: only the raw clock count matters here — the
                 // duration LUT never moves a note across the 96-clock line.
                 const int clocks = mid2agbEffectiveDuration(
-                    int64_t(off->tick) - int64_t(m_keyedOnTick[track][key]),
-                    timeline->ticksPerBeat, timeline->extendedClocks, true);
+                    int64_t(off->tick) - int64_t(m_keyedOnTick[track][key]), timeline->ticksPerBeat,
+                    timeline->extendedClocks, true);
                 if (clocks > 96)
                     continue; // TIE + EOT: the EOT is unreachable — held forever
                 if (m_pendingOffCount < kMaxPendingOffs) {

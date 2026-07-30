@@ -25,24 +25,24 @@ struct ImportedSample {
     int baseKey = 60;          // smpl unity note / AIFF INST base note
     double fracSemitone = 0.0; // standard semantics, ∈ [0, 1)
     bool hasLoop = false;
-    qint64 loopStart = 0;      // inclusive source frame
-    qint64 loopEndIncl = 0;    // inclusive; agbl override already applied
+    qint64 loopStart = 0;   // inclusive source frame
+    qint64 loopEndIncl = 0; // inclusive; agbl override already applied
     // Playable length for one-shots: agbl override when present, else the
     // full frame count (the engine never plays past a nonzero agbl).
     qint64 playLength = 0;
-    quint32 exactPitch = 0;    // source agbp word verbatim (0 = absent)
+    quint32 exactPitch = 0; // source agbp word verbatim (0 = absent)
     // The container carried real pitch metadata (smpl / AIFF INST / agbp);
     // false means baseKey 60 is a mere default and the editor should prefill
     // from pitch detection instead (DSP.md §4 — never silently applied
     // otherwise).
     bool hasPitchMetadata = false;
-    QString suggestedName;     // sanitized from the source basename
+    QString suggestedName; // sanitized from the source basename
     QString sourcePath;
     SourceKind sourceKind = Wav;
 
     // Decode diagnostics (display + default-parameter policy).
     int sourceChannels = 1;
-    int sourceBits = 0;        // container bits per sample
+    int sourceBits = 0; // container bits per sample
     bool sourceFloat = false;
     // 8-bit unsigned mono PCM .wav — the shipped-GBA shape. Prepared files
     // get no-op default params so a phase-1-style import stays byte-faithful.
@@ -50,7 +50,7 @@ struct ImportedSample {
     // Stereo source whose channels phase-cancel (negative L/R correlation);
     // the importer downmixed anyway, the caller may offer left-only.
     bool phaseCancelStereo = false;
-    QStringList warnings;      // clipped floats, phase-cancelling stereo, ...
+    QStringList warnings; // clipped floats, phase-cancelling stereo, ...
 
     qint64 frameCount() const { return qint64(buffer.size()); }
 };
@@ -63,22 +63,21 @@ constexpr double kGbaDefaultRate = 13379.0;
 // indices (crop end exclusive, loop end inclusive); the render maps them to
 // the final grid stage by stage (DSP.md §1 marker bookkeeping).
 struct SampleEditParams {
-    enum NormalizeMode { NormalizeAuto, NormalizeLooped, NormalizeOneShot,
-                         NormalizeOff };
+    enum NormalizeMode { NormalizeAuto, NormalizeLooped, NormalizeOneShot, NormalizeOff };
     enum Toggle { Auto, On, Off };
 
     qint64 cropStart = 0; // inclusive
     qint64 cropEnd = 0;   // exclusive
     bool loopOn = false;
-    qint64 loopStart = 0;   // inclusive, uncropped source coords
-    qint64 loopEnd = 0;     // inclusive, uncropped source coords
-    int baseKey = 60;       // smpl unity note to export
+    qint64 loopStart = 0;       // inclusive, uncropped source coords
+    qint64 loopEnd = 0;         // inclusive, uncropped source coords
+    int baseKey = 60;           // smpl unity note to export
     double fineTuneCents = 0.0; // [0, 100) — fraction of a semitone above key
     double targetRate = 0.0;    // output rate (doubles allowed, FORMATS.md §1)
     NormalizeMode normalizeMode = NormalizeAuto;
-    Toggle dcRemove = Auto; // Auto = on when looped (DSP.md §5 guards)
-    bool fadeIn = true;     // 1.5 ms raised-cosine at the final start
-    bool fadeOut = true;    // one-shots: 5 ms raised-cosine to exactly 0
+    Toggle dcRemove = Auto;   // Auto = on when looped (DSP.md §5 guards)
+    bool fadeIn = true;       // 1.5 ms raised-cosine at the final start
+    bool fadeOut = true;      // one-shots: 5 ms raised-cosine to exactly 0
     bool crossfadeOn = false; // loop-seam crossfade bake (lands in phase 3)
     bool ditherOn = false;    // TPDF ±1 LSB, fixed seed (DSP.md §2)
     // Carry a source agbp word verbatim while the pipeline leaves pitch
@@ -87,14 +86,12 @@ struct SampleEditParams {
 
     bool operator==(const SampleEditParams &o) const
     {
-        return cropStart == o.cropStart && cropEnd == o.cropEnd
-            && loopOn == o.loopOn && loopStart == o.loopStart
-            && loopEnd == o.loopEnd && baseKey == o.baseKey
-            && fineTuneCents == o.fineTuneCents && targetRate == o.targetRate
-            && normalizeMode == o.normalizeMode && dcRemove == o.dcRemove
-            && fadeIn == o.fadeIn && fadeOut == o.fadeOut
-            && crossfadeOn == o.crossfadeOn && ditherOn == o.ditherOn
-            && exactPitchOverride == o.exactPitchOverride;
+        return cropStart == o.cropStart && cropEnd == o.cropEnd && loopOn == o.loopOn &&
+               loopStart == o.loopStart && loopEnd == o.loopEnd && baseKey == o.baseKey &&
+               fineTuneCents == o.fineTuneCents && targetRate == o.targetRate &&
+               normalizeMode == o.normalizeMode && dcRemove == o.dcRemove && fadeIn == o.fadeIn &&
+               fadeOut == o.fadeOut && crossfadeOn == o.crossfadeOn && ditherOn == o.ditherOn &&
+               exactPitchOverride == o.exactPitchOverride;
     }
     bool operator!=(const SampleEditParams &o) const { return !(*this == o); }
 };
@@ -115,10 +112,10 @@ struct SeamMetrics {
 // and export metadata (FORMATS.md §1-3). freq/loopStart/size/looped are
 // exactly the WaveData header the build and pory4a's loader will derive.
 struct ProcessedSample {
-    QByteArray s8;          // final quantized samples (size == this->size)
-    quint32 freq = 0;       // agbp pitch word = round(effectiveRate·1024)
-    quint32 loopStart = 0;  // output-domain
-    quint32 size = 0;       // output-domain sample count (loop end == end)
+    QByteArray s8;         // final quantized samples (size == this->size)
+    quint32 freq = 0;      // agbp pitch word = round(effectiveRate·1024)
+    quint32 loopStart = 0; // output-domain
+    quint32 size = 0;      // output-domain sample count (loop end == end)
     bool looped = false;
     // .wav export metadata:
     quint32 declaredRate = 0;  // fmt sampleRate = round(outputRate)

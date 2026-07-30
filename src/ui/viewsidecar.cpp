@@ -16,8 +16,7 @@ QString pathFor(const QString &projectRoot, const QString &songLabel)
     return QStringLiteral("%1/.porydaw/%2.json").arg(projectRoot, songLabel);
 }
 
-bool load(const QString &projectRoot, const QString &songLabel,
-          SongView::ViewState *state)
+bool load(const QString &projectRoot, const QString &songLabel, SongView::ViewState *state)
 {
     QFile file(pathFor(projectRoot, songLabel));
     if (!file.open(QIODevice::ReadOnly))
@@ -52,16 +51,14 @@ bool load(const QString &projectRoot, const QString &songLabel,
         loaded.splitterSizes.push_back(v.toInt());
     for (const QJsonValue &v : obj.value(QLatin1String("emptyLanes")).toArray()) {
         const QJsonObject lane = v.toObject();
-        loaded.emptyLanes.push_back(
-            {lane.value(QLatin1String("track")).toInt(-1),
-             uint8_t(lane.value(QLatin1String("cc")).toInt(0))});
+        loaded.emptyLanes.push_back({lane.value(QLatin1String("track")).toInt(-1),
+                                     uint8_t(lane.value(QLatin1String("cc")).toInt(0))});
     }
     *state = loaded;
     return true;
 }
 
-bool save(const QString &projectRoot, const QString &songLabel,
-          const SongView::ViewState &state)
+bool save(const QString &projectRoot, const QString &songLabel, const SongView::ViewState &state)
 {
     if (!state.valid || songLabel.isEmpty())
         return false;

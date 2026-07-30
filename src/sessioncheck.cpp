@@ -27,10 +27,8 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         std::fprintf(stderr, "sessioncheck: no temp dir for settings\n");
         return 1;
     }
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope,
-                       settingsDir.path());
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
-                       settingsDir.path());
+    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
 
     int failures = 0;
     const auto check = [&failures](bool ok, const char *what) {
@@ -72,11 +70,10 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         settings.sync();
         MainWindow window;
         window.restoreSession();
-        check(window.statusBar()->currentMessage().startsWith(
-                  QStringLiteral("Opened")),
+        check(window.statusBar()->currentMessage().startsWith(QStringLiteral("Opened")),
               "remembered project did not open");
-        check(window.windowTitle()
-                  == QStringLiteral("%1 — porydaw").arg(QDir(projectRoot).dirName()),
+        check(window.windowTitle() ==
+                  QStringLiteral("%1 — porydaw").arg(QDir(projectRoot).dirName()),
               "title is not the project name (or a song loaded unasked)");
     }
 
@@ -91,18 +88,15 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         QSettings().setValue(QStringLiteral("lastSongLabel"), songLabel);
         MainWindow window;
         window.restoreSession();
-        check(window.windowTitle().startsWith(songLabel),
-              "remembered song did not load");
+        check(window.windowTitle().startsWith(songLabel), "remembered song did not load");
         // The song list (the app's only QListWidget) tracks the loaded song.
         auto *list = window.findChild<QListWidget *>();
-        check(list && list->currentItem()
-                  && list->currentItem()->text().startsWith(songLabel),
+        check(list && list->currentItem() && list->currentItem()->text().startsWith(songLabel),
               "restored song is not selected in the song list");
         // Distinctive filter state — search text, A–Z sort, a real
         // category — for block 5 to find again after the relaunch.
         auto *search = window.findChild<QLineEdit *>(QStringLiteral("songListSearch"));
-        auto *category =
-            window.findChild<QComboBox *>(QStringLiteral("songListCategory"));
+        auto *category = window.findChild<QComboBox *>(QStringLiteral("songListCategory"));
         auto *sort = window.findChild<QComboBox *>(QStringLiteral("songListSort"));
         if (check(search && category && sort, "song list filter widgets not found")) {
             if (category->count() > 1)
@@ -117,21 +111,17 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         window.resize(777, 505);
         check(window.close(), "close was refused");
         QSettings settings;
-        check(!settings.value(QStringLiteral("windowGeometry"))
-                   .toByteArray()
-                   .isEmpty(),
+        check(!settings.value(QStringLiteral("windowGeometry")).toByteArray().isEmpty(),
               "close did not save window geometry");
-        check(settings.value(QStringLiteral("lastProjectDir")).toString()
-                  == projectRoot,
+        check(settings.value(QStringLiteral("lastProjectDir")).toString() == projectRoot,
               "close lost the remembered project");
-        check(settings.value(QStringLiteral("lastSongLabel")).toString()
-                  == songLabel,
+        check(settings.value(QStringLiteral("lastSongLabel")).toString() == songLabel,
               "close lost the remembered song");
-        check(settings.value(QStringLiteral("lastOpenSongs")).toStringList()
-                  == QStringList(songLabel),
+        check(settings.value(QStringLiteral("lastOpenSongs")).toStringList() ==
+                  QStringList(songLabel),
               "close did not record the open tab list");
-        check(settings.value(QStringLiteral("songFilterText")).toString()
-                  == QStringLiteral("filterme"),
+        check(settings.value(QStringLiteral("songFilterText")).toString() ==
+                  QStringLiteral("filterme"),
               "close did not save the song filter text");
     }
 
@@ -140,8 +130,7 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
     // combo, so it's checked after restoreSession().
     {
         MainWindow window;
-        check(window.size() == QSize(777, 505),
-              "new window did not restore the saved geometry");
+        check(window.size() == QSize(777, 505), "new window did not restore the saved geometry");
         window.restoreSession();
         check(window.windowTitle().startsWith(songLabel),
               "relaunch did not restore project and song");
@@ -149,10 +138,8 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         check(search && search->text() == QStringLiteral("filterme"),
               "relaunch did not restore the song filter text");
         auto *sort = window.findChild<QComboBox *>(QStringLiteral("songListSort"));
-        check(sort && sort->currentIndex() == 1,
-              "relaunch did not restore the song sort order");
-        auto *category =
-            window.findChild<QComboBox *>(QStringLiteral("songListCategory"));
+        check(sort && sort->currentIndex() == 1, "relaunch did not restore the song sort order");
+        auto *category = window.findChild<QComboBox *>(QStringLiteral("songListCategory"));
         check(category && category->currentData().toString() == filterCategory,
               "relaunch did not restore the song category filter");
     }

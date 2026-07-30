@@ -36,8 +36,8 @@ struct SampleWavInfo {
     quint32 numSamples = 0; // data length / bytes-per-sample
     // smpl chunk:
     bool hasSmpl = false;
-    quint32 midiKey = 60;       // dwMIDIUnityNote, clamped to 127
-    quint32 pitchFraction = 0;  // dwMIDIPitchFraction, raw
+    quint32 midiKey = 60;      // dwMIDIUnityNote, clamped to 127
+    quint32 pitchFraction = 0; // dwMIDIPitchFraction, raw
     bool loopEnabled = false;
     quint32 loopStart = 0;   // inclusive sample index
     quint32 loopEndIncl = 0; // inclusive sample index
@@ -61,8 +61,8 @@ struct SampleWavInfo {
 // 8-bit .wav.
 struct SampleSidecar {
     int version = 1;
-    QString sourcePath;   // absolute path of the imported source file
-    QString sourceSha256; // hex SHA-256 of the source file's bytes
+    QString sourcePath;    // absolute path of the imported source file
+    QString sourceSha256;  // hex SHA-256 of the source file's bytes
     bool leftOnly = false; // stereo source imported as left channel only
     int sf2Zone = -1;      // .sf2 zone index; -1 for ordinary audio files
     SampleEditParams params;
@@ -70,7 +70,7 @@ struct SampleSidecar {
 
 class SampleRegistrar
 {
-public:
+  public:
     // Detects the project's sample pipeline. Refuses (with instructions)
     // when sound/direct_sound_data.inc is missing, when the project builds
     // samples from .aif via aif2pcm (pre-wav2agb fork), or when no wav2agb
@@ -85,14 +85,12 @@ public:
     // declared symbols (pass VoicegroupSource::directSoundSymbols) and
     // on-disk sample files.
     static bool validateSampleName(const QString &projectRoot, const QString &name,
-                                   const QStringList &existingSymbols,
-                                   QString *error);
+                                   const QStringList &existingSymbols, QString *error);
 
     // Parses the RIFF header chunks (fmt/data/smpl/agbp/agbl) and refuses
     // files the pipeline can't take: non-mono, unsupported sample formats,
     // multiple smpl loops, non-forward loops.
-    static bool inspectSampleWav(const QByteArray &bytes, SampleWavInfo *info,
-                                 QString *error);
+    static bool inspectSampleWav(const QByteArray &bytes, SampleWavInfo *info, QString *error);
 
     // Writes sound/direct_sound_samples/<name>.wav verbatim, then appends the
     // registration block to sound/direct_sound_data.inc matching its line
@@ -110,15 +108,11 @@ public:
     // Provenance sidecar plumbing. Reads validate the version and required
     // fields; writes are QSaveFile-atomic. The sidecar is auxiliary — a
     // failed write must not fail the commit that triggered it.
-    static QString sampleSidecarPath(const QString &projectRoot,
-                                     const QString &name);
+    static QString sampleSidecarPath(const QString &projectRoot, const QString &name);
     static QString sourceHashHex(const QByteArray &sourceBytes);
-    static bool writeSampleSidecar(const QString &projectRoot,
-                                   const QString &name,
-                                   const SampleSidecar &sidecar,
-                                   QString *error);
-    static bool readSampleSidecar(const QString &projectRoot,
-                                  const QString &name, SampleSidecar *sidecar);
-    static void removeSampleSidecar(const QString &projectRoot,
-                                    const QString &name);
+    static bool writeSampleSidecar(const QString &projectRoot, const QString &name,
+                                   const SampleSidecar &sidecar, QString *error);
+    static bool readSampleSidecar(const QString &projectRoot, const QString &name,
+                                  SampleSidecar *sidecar);
+    static void removeSampleSidecar(const QString &projectRoot, const QString &name);
 };

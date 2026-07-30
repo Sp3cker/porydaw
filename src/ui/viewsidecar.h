@@ -14,12 +14,10 @@ namespace ViewSidecar {
 QString pathFor(const QString &projectRoot, const QString &songLabel);
 
 // False (state untouched) when the sidecar is missing or malformed.
-bool load(const QString &projectRoot, const QString &songLabel,
-          SongView::ViewState *state);
+bool load(const QString &projectRoot, const QString &songLabel, SongView::ViewState *state);
 
 // Creates <projectroot>/.porydaw/ on demand; no-op for an invalid state
 // (no song loaded).
-bool save(const QString &projectRoot, const QString &songLabel,
-          const SongView::ViewState &state);
+bool save(const QString &projectRoot, const QString &songLabel, const SongView::ViewState &state);
 
 } // namespace ViewSidecar

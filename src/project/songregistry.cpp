@@ -46,14 +46,14 @@ const QRegularExpression &songLineRe()
 // keep their index (that is their whole point) but never record a label
 // occurrence, so the fallback song's own table index stays 0.
 struct SongTableScan {
-    int count = 0;         // song entries, free slots included
-    int labelIndex = -1;   // the label's index (last non-free occurrence)
+    int count = 0;       // song entries, free slots included
+    int labelIndex = -1; // the label's index (last non-free occurrence)
     int labelLine = -1;
     // Every index bearing the label: forks fill new table slots with copies
     // of real songs (vanilla uses a dummy), so one label can own several.
     QVector<int> labelIndices;
     QString labelIndent;
-    int freeIndex = -1;    // lowest free slot
+    int freeIndex = -1; // lowest free slot
     int freeLine = -1;
     int lastSongLine = -1;
     QString lastSongLabel; // the final entry's label
@@ -109,8 +109,7 @@ const QRegularExpression &charmapEntryRe()
 // lets porydaw recognize that section without any marker in the file.
 QSet<QString> songsHConstantNames(const QString &projectRoot)
 {
-    static const QRegularExpression defineRe(
-        QStringLiteral(R"(^\s*#define\s+(\w+)\s+\d)"));
+    static const QRegularExpression defineRe(QStringLiteral(R"(^\s*#define\s+(\w+)\s+\d)"));
     QSet<QString> names;
     for (const QString &line :
          readLines(projectRoot + QStringLiteral("/include/constants/songs.h"))) {
@@ -234,8 +233,7 @@ DebugSoundScan scanDebugSoundLists(const QStringList &lines)
 
 // The list a constant belongs in: SE_* under SOUND_LIST_SE, everything
 // else under SOUND_LIST_BGM, whichever exists when the wanted one doesn't.
-const DebugSoundList *debugTargetList(const DebugSoundScan &scan,
-                                      const QString &constant)
+const DebugSoundList *debugTargetList(const DebugSoundScan &scan, const QString &constant)
 {
     if (scan.lists.isEmpty())
         return nullptr;
@@ -252,8 +250,7 @@ const DebugSoundList *debugTargetList(const DebugSoundScan &scan,
 
 // The list whose entries lend a new line its style: the target, unless it
 // is empty and another list has entries to imitate.
-const DebugSoundList *debugStyleList(const DebugSoundScan &scan,
-                                     const DebugSoundList *target)
+const DebugSoundList *debugStyleList(const DebugSoundScan &scan, const DebugSoundList *target)
 {
     if (!target->entryNames.isEmpty())
         return target;
@@ -414,12 +411,10 @@ QString voicegroupArgFromDisplay(const QString &text, const QStringList &knownAr
 QVector<MusicPlayer> musicPlayers(const QString &projectRoot)
 {
     // "	.equiv MUSIC_PLAYER_BGM,0"
-    static const QRegularExpression equivRe(
-        QStringLiteral(R"(^\s*\.equiv\s+(\w+)\s*,\s*(\d+))"));
+    static const QRegularExpression equivRe(QStringLiteral(R"(^\s*\.equiv\s+(\w+)\s*,\s*(\d+))"));
 
     QVector<MusicPlayer> players;
-    for (const QString &line :
-         readLines(projectRoot + QStringLiteral("/sound/song_table.inc"))) {
+    for (const QString &line : readLines(projectRoot + QStringLiteral("/sound/song_table.inc"))) {
         const QRegularExpressionMatch m = equivRe.match(line);
         if (m.hasMatch())
             players.append({m.captured(1), m.captured(2).toInt()});
@@ -466,8 +461,8 @@ QString constantForLabel(const QString &label)
     return label.toUpper();
 }
 
-RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
-                          const QString &constant, const QString &player)
+RegistrationPlan makePlan(const QString &projectRoot, const QString &label, const QString &constant,
+                          const QString &player)
 {
     RegistrationPlan plan;
     plan.label = label;
@@ -476,8 +471,8 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
 
     // song_table.inc: match the existing entries' indentation; the third
     // argument mirrors the player's .equiv number.
-    const SongTableScan scan = scanSongTable(
-        readLines(projectRoot + QStringLiteral("/sound/song_table.inc")), label);
+    const SongTableScan scan =
+        scanSongTable(readLines(projectRoot + QStringLiteral("/sound/song_table.inc")), label);
     const QString indent = scan.count > 0 ? scan.indent : QStringLiteral("\t");
 
     int playerNum = 0;
@@ -537,8 +532,7 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
         ldIndent = line.left(at);
     }
     if (plan.ldApplicable)
-        plan.ldLine =
-            QStringLiteral("%1sound/songs/midi/%2.o(.rodata);").arg(ldIndent, label);
+        plan.ldLine = QStringLiteral("%1sound/songs/midi/%2.o(.rodata);").arg(ldIndent, label);
 
     // charmap.txt: the sound section mirrors songs.h — each constant maps to
     // its song ID as two little-endian hex bytes, so text control codes like
@@ -561,29 +555,26 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
     if (plan.charmapApplicable) {
         // Vanilla emerald puts one space between name and "="; ruby and
         // firered pad "=" into a shared column. Follow the section's style.
-        const int pad =
-            columnAligned ? std::max(1, equalsColumn - int(constant.size())) : 1;
-        plan.charmapLine = constant + QString(pad, QLatin1Char(' '))
-                           + QStringLiteral("= ") + charmapIdBytes(plan.songId);
+        const int pad = columnAligned ? std::max(1, equalsColumn - int(constant.size())) : 1;
+        plan.charmapLine = constant + QString(pad, QLatin1Char(' ')) + QStringLiteral("= ") +
+                           charmapIdBytes(plan.songId);
     }
 
     // src/debug.c: the expansion debug menu's sound lists, one X-macro entry
     // per song. Projects without the file or the lists (vanilla) skip it.
-    const DebugSoundScan debugScan = scanDebugSoundLists(
-        readLines(projectRoot + QStringLiteral("/src/debug.c")));
+    const DebugSoundScan debugScan =
+        scanDebugSoundLists(readLines(projectRoot + QStringLiteral("/src/debug.c")));
     plan.debugApplicable = debugScan.applicable();
     if (plan.debugApplicable) {
         const DebugSoundList *style =
             debugStyleList(debugScan, debugTargetList(debugScan, constant));
-        plan.debugLine = debugContinuation(debugEntryText(*style, constant),
-                                           style->slashColumn);
+        plan.debugLine = debugContinuation(debugEntryText(*style, constant), style->slashColumn);
     }
     return plan;
 }
 
-bool registerSong(const QString &projectRoot, const QString &label,
-                  const QString &constant, const QString &player, QString *error,
-                  int *songId)
+bool registerSong(const QString &projectRoot, const QString &label, const QString &constant,
+                  const QString &player, QString *error, int *songId)
 {
     const RegistrationPlan plan = makePlan(projectRoot, label, constant, player);
     if (songId)
@@ -659,8 +650,8 @@ bool registerSong(const QString &projectRoot, const QString &label,
         }
         if (own >= 0) {
             if (ownMatch.captured(2).toInt() != plan.songId)
-                f.replace(own, ownMatch.captured(1) + QString::number(plan.songId)
-                                   + ownMatch.captured(3));
+                f.replace(own, ownMatch.captured(1) + QString::number(plan.songId) +
+                                   ownMatch.captured(3));
         } else if (insertAfter >= 0) {
             f.insert(insertAfter + 1, plan.songsHLine);
         } else if (firstDefine >= 0) {
@@ -715,8 +706,7 @@ bool registerSong(const QString &projectRoot, const QString &label,
         }
         // songs.h was just written, so the set includes this song's constant.
         const QSet<QString> songNames = songsHConstantNames(projectRoot);
-        const QRegularExpression ownAnyRe(
-            QStringLiteral(R"(^\s*%1\s*=)").arg(constant));
+        const QRegularExpression ownAnyRe(QStringLiteral(R"(^\s*%1\s*=)").arg(constant));
         int own = -1, insertAfter = -1, firstEntry = -1;
         bool ownAnyForm = false;
         QRegularExpressionMatch ownMatch;
@@ -736,17 +726,17 @@ bool registerSong(const QString &projectRoot, const QString &label,
             }
             if (firstEntry < 0)
                 firstEntry = i;
-            const int value = m.captured(3).toInt(nullptr, 16)
-                              | m.captured(4).toInt(nullptr, 16) << 8;
+            const int value = m.captured(3).toInt(nullptr, 16) | m.captured(4).toInt(nullptr, 16)
+                                                                     << 8;
             if (value < plan.songId)
                 insertAfter = i;
         }
         if (own >= 0) {
-            const int value = ownMatch.captured(3).toInt(nullptr, 16)
-                              | ownMatch.captured(4).toInt(nullptr, 16) << 8;
+            const int value = ownMatch.captured(3).toInt(nullptr, 16) |
+                              ownMatch.captured(4).toInt(nullptr, 16) << 8;
             if (value != plan.songId)
-                f.replace(own, f.text(own).left(ownMatch.capturedStart(3))
-                                   + charmapIdBytes(plan.songId));
+                f.replace(own, f.text(own).left(ownMatch.capturedStart(3)) +
+                                   charmapIdBytes(plan.songId));
         } else if (!ownAnyForm) {
             // After the last entry with a smaller ID; a song whose ID
             // precedes every existing entry goes before the first one.
@@ -783,8 +773,8 @@ bool registerSong(const QString &projectRoot, const QString &label,
             static const QRegularExpression defineValueRe(
                 QStringLiteral(R"(^\s*#define\s+(\w+)\s+(\d+)\b)"));
             QHash<QString, int> ids;
-            for (const QString &line : readLines(
-                     projectRoot + QStringLiteral("/include/constants/songs.h"))) {
+            for (const QString &line :
+                 readLines(projectRoot + QStringLiteral("/include/constants/songs.h"))) {
                 const QRegularExpressionMatch m = defineValueRe.match(line);
                 if (m.hasMatch() && !ids.contains(m.captured(1)))
                     ids.insert(m.captured(1), m.captured(2).toInt());
@@ -813,8 +803,7 @@ bool registerSong(const QString &projectRoot, const QString &label,
             } else {
                 // The line above was the macro's end; the new line takes over
                 // as the bare final line and hands it a continuation.
-                f.replace(at - 1,
-                          debugContinuation(f.text(at - 1), style->slashColumn));
+                f.replace(at - 1, debugContinuation(f.text(at - 1), style->slashColumn));
                 f.insert(at, bare);
             }
         }
@@ -828,22 +817,20 @@ RemovalPlan makeRemovalPlan(const QString &projectRoot, const QString &label,
                             const QString &constant)
 {
     RemovalPlan plan;
-    const SongTableScan scan = scanSongTable(
-        readLines(projectRoot + QStringLiteral("/sound/song_table.inc")), label);
+    const SongTableScan scan =
+        scanSongTable(readLines(projectRoot + QStringLiteral("/sound/song_table.inc")), label);
     plan.tableIndex = scan.labelIndex;
     plan.tableCount = scan.count;
     plan.lastEntry = scan.labelLine >= 0 && scan.labelLine == scan.lastSongLine;
 
-    const QRegularExpression defineRe(
-        QStringLiteral(R"(^\s*#define\s+%1\s+\d)").arg(constant));
+    const QRegularExpression defineRe(QStringLiteral(R"(^\s*#define\s+%1\s+\d)").arg(constant));
     for (const QString &line :
          readLines(projectRoot + QStringLiteral("/include/constants/songs.h"))) {
         if (defineRe.match(line).hasMatch())
             plan.inSongsH = true;
     }
     const QString needle = QStringLiteral("sound/songs/midi/%1.o").arg(label);
-    for (const QString &line :
-         readLines(projectRoot + QStringLiteral("/ld_script.ld"))) {
+    for (const QString &line : readLines(projectRoot + QStringLiteral("/ld_script.ld"))) {
         if (line.contains(needle))
             plan.inLdScript = true;
     }
@@ -852,15 +839,15 @@ RemovalPlan makeRemovalPlan(const QString &projectRoot, const QString &label,
         if (m.hasMatch() && m.captured(1) == constant)
             plan.inCharmap = true;
     }
-    const DebugSoundScan debugScan = scanDebugSoundLists(
-        readLines(projectRoot + QStringLiteral("/src/debug.c")));
+    const DebugSoundScan debugScan =
+        scanDebugSoundLists(readLines(projectRoot + QStringLiteral("/src/debug.c")));
     for (const DebugSoundList &list : debugScan.lists)
         plan.inDebugMenu = plan.inDebugMenu || list.entryNames.contains(constant);
     return plan;
 }
 
-bool unregisterSong(const QString &projectRoot, const QString &label,
-                    const QString &constant, QString *error)
+bool unregisterSong(const QString &projectRoot, const QString &label, const QString &constant,
+                    QString *error)
 {
     // song_table.inc first: the index-0 refusal must precede any edit, and
     // the other files' entries are meaningless once the table entry is gone.
@@ -871,10 +858,9 @@ bool unregisterSong(const QString &projectRoot, const QString &label,
             const SongTableScan scan = scanSongTable(f.texts(), label);
             if (scan.labelIndex == 0) {
                 if (error)
-                    *error = QStringLiteral(
-                                 "%1 is the first song_table.inc entry (song ID "
-                                 "0), the engine's fallback song — it cannot be "
-                                 "deleted.")
+                    *error = QStringLiteral("%1 is the first song_table.inc entry (song ID "
+                                            "0), the engine's fallback song — it cannot be "
+                                            "deleted.")
                                  .arg(label);
                 return false;
             }
@@ -893,8 +879,7 @@ bool unregisterSong(const QString &projectRoot, const QString &label,
                 // line — keeps every later song's ID and the table buildable.
                 f.replace(scan.labelLine, QStringLiteral("%1song %2, %3, %4")
                                               .arg(scan.labelIndent, scan.firstLabel,
-                                                   scan.firstPlayer,
-                                                   scan.firstPlayerNum));
+                                                   scan.firstPlayer, scan.firstPlayerNum));
             }
             if (!writeRawLines(path, f, error))
                 return false;
@@ -1024,13 +1009,12 @@ QString deletableVoicegroup(const QString &projectRoot, const QVector<SongInfo> 
     // break the link outright, not merely dangle.
     const QByteArray symbolBytes = symbol.toUtf8();
     const auto isIdentChar = [](char c) {
-        return c == '_' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z')
-               || (c >= 'a' && c <= 'z');
+        return c == '_' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') ||
+               (c >= 'a' && c <= 'z');
     };
     for (const QString &top : {QStringLiteral("/src"), QStringLiteral("/include")}) {
-        QDirIterator it(projectRoot + top,
-                        {QStringLiteral("*.c"), QStringLiteral("*.h")}, QDir::Files,
-                        QDirIterator::Subdirectories);
+        QDirIterator it(projectRoot + top, {QStringLiteral("*.c"), QStringLiteral("*.h")},
+                        QDir::Files, QDirIterator::Subdirectories);
         while (it.hasNext()) {
             QFile file(it.next());
             if (!file.open(QIODevice::ReadOnly))
@@ -1040,8 +1024,7 @@ QString deletableVoicegroup(const QString &projectRoot, const QVector<SongInfo> 
                  at = content.indexOf(symbolBytes, at + 1)) {
                 const qsizetype end = at + symbolBytes.size();
                 const bool startsClean = at == 0 || !isIdentChar(content.at(at - 1));
-                if (startsClean
-                    && (end >= content.size() || !isIdentChar(content.at(end))))
+                if (startsClean && (end >= content.size() || !isIdentChar(content.at(end))))
                     return {};
             }
         }
@@ -1070,8 +1053,7 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
     QHash<QString, QVector<int>> tableIndices;
     int count = 0;
     QString firstLabel;
-    for (const QString &line :
-         readLines(projectRoot + QStringLiteral("/sound/song_table.inc"))) {
+    for (const QString &line : readLines(projectRoot + QStringLiteral("/sound/song_table.inc"))) {
         const QRegularExpressionMatch m = songLineRe().match(line);
         if (!m.hasMatch())
             continue;
@@ -1083,8 +1065,7 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
     }
 
     // songs.h: name -> first numeric define's value.
-    static const QRegularExpression defineRe(
-        QStringLiteral(R"(^\s*#define\s+(\w+)\s+(\d+))"));
+    static const QRegularExpression defineRe(QStringLiteral(R"(^\s*#define\s+(\w+)\s+(\d+))"));
     QHash<QString, int> defines;
     for (const QString &line :
          readLines(projectRoot + QStringLiteral("/include/constants/songs.h"))) {
@@ -1094,8 +1075,7 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
     }
 
     // ld_script.ld: the per-song object labels.
-    static const QRegularExpression ldObjectRe(
-        QStringLiteral(R"(sound/songs/midi/(\w+)\.o)"));
+    static const QRegularExpression ldObjectRe(QStringLiteral(R"(sound/songs/midi/(\w+)\.o)"));
     bool ldApplicable = false;
     QSet<QString> ldLabels;
     for (const QString &line : readLines(projectRoot + QStringLiteral("/ld_script.ld"))) {
@@ -1117,15 +1097,14 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
         if (defines.contains(m.captured(1)))
             charmapApplicable = true;
         if (!charmapValues.contains(m.captured(1)))
-            charmapValues.insert(m.captured(1),
-                                 m.captured(3).toInt(nullptr, 16)
-                                     | m.captured(4).toInt(nullptr, 16) << 8);
+            charmapValues.insert(m.captured(1), m.captured(3).toInt(nullptr, 16) |
+                                                    m.captured(4).toInt(nullptr, 16) << 8);
     }
 
     // src/debug.c: the debug menu's sound lists name songs by constant alone
     // (no ID to drift), so presence is the whole check.
-    const DebugSoundScan debugScan = scanDebugSoundLists(
-        readLines(projectRoot + QStringLiteral("/src/debug.c")));
+    const DebugSoundScan debugScan =
+        scanDebugSoundLists(readLines(projectRoot + QStringLiteral("/src/debug.c")));
     QSet<QString> debugNames;
     for (const DebugSoundList &list : debugScan.lists)
         for (const QString &name : list.entryNames)
@@ -1148,8 +1127,7 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
         status.charmapApplicable = charmapApplicable;
         const auto charmapValue = charmapValues.constFind(constant);
         if (charmapValue != charmapValues.constEnd())
-            status.inCharmap =
-                indices.isEmpty() || indices.contains(charmapValue.value());
+            status.inCharmap = indices.isEmpty() || indices.contains(charmapValue.value());
         status.debugApplicable = debugScan.applicable();
         status.inDebugMenu = debugNames.contains(constant);
         statuses.insert(song.label, status);
@@ -1164,8 +1142,8 @@ QStringList mergeCfgFlags(const SongCfg &cfg)
     QStringList flags = cfg.rawFlags;
     const auto setValue = [&flags](char letter, const QString &value) {
         for (int i = 0; i < flags.size(); i++) {
-            if (flags[i].size() >= 2 && flags[i][0] == QLatin1Char('-')
-                && flags[i][1].toUpper() == QLatin1Char(letter)) {
+            if (flags[i].size() >= 2 && flags[i][0] == QLatin1Char('-') &&
+                flags[i][1].toUpper() == QLatin1Char(letter)) {
                 if (value.isNull())
                     flags.removeAt(i);
                 else
@@ -1190,8 +1168,8 @@ QStringList mergeCfgFlags(const SongCfg &cfg)
     return flags;
 }
 
-bool writeMidiCfgLine(const QString &midiDir, const QString &label,
-                      const QStringList &flags, QString *error)
+bool writeMidiCfgLine(const QString &midiDir, const QString &label, const QStringList &flags,
+                      QString *error)
 {
     // Binary in/out: only the song's own line may change, byte for byte —
     // including CRLF line endings (vanilla midi.cfg uses them).
@@ -1247,8 +1225,8 @@ bool writeMidiCfgLine(const QString &midiDir, const QString &label,
     return true;
 }
 
-bool writeSongFlags(const QString &midiDir, const QString &label,
-                    const QStringList &flags, QString *error)
+bool writeSongFlags(const QString &midiDir, const QString &label, const QStringList &flags,
+                    QString *error)
 {
     if (!QFile::exists(QDir(midiDir).filePath(QStringLiteral("midi.cfg")))) {
         const QString mkPath =
@@ -1259,8 +1237,7 @@ bool writeSongFlags(const QString &midiDir, const QString &label,
     return writeMidiCfgLine(midiDir, label, flags, error);
 }
 
-static bool removeMidiCfgLine(const QString &midiDir, const QString &label,
-                              QString *error)
+static bool removeMidiCfgLine(const QString &midiDir, const QString &label, QString *error)
 {
     // The exact inverse of writeMidiCfgLine's append: the song's own line
     // vanishes, every other byte stays.
@@ -1281,8 +1258,7 @@ static bool removeMidiCfgLine(const QString &midiDir, const QString &label,
     bool removed = false;
     for (int i = 0; i < lines.size(); i++) {
         const QByteArray &line = lines.at(i);
-        const QString text =
-            QString::fromUtf8(line.endsWith('\r') ? line.chopped(1) : line);
+        const QString text = QString::fromUtf8(line.endsWith('\r') ? line.chopped(1) : line);
         const int colon = text.indexOf(QLatin1Char(':'));
         if (colon <= 0 || text.left(colon).trimmed() != fileName)
             continue;
@@ -1310,8 +1286,7 @@ bool removeSongFlags(const QString &midiDir, const QString &label, QString *erro
 {
     if (!removeMidiCfgLine(midiDir, label, error))
         return false;
-    const QString mkPath =
-        SongsMk::path(QDir::cleanPath(midiDir + QStringLiteral("/../../..")));
+    const QString mkPath = SongsMk::path(QDir::cleanPath(midiDir + QStringLiteral("/../../..")));
     if (QFile::exists(mkPath))
         return SongsMk::removeRule(mkPath, label, error);
     return true;
@@ -1358,8 +1333,8 @@ SmfFile blankSong()
     return smf;
 }
 
-bool saveRegistrationMeta(const QString &projectRoot, const QString &label,
-                          const QString &constant, const QString &player)
+bool saveRegistrationMeta(const QString &projectRoot, const QString &label, const QString &constant,
+                          const QString &player)
 {
     const QString path = sidecarPath(projectRoot, label);
     QJsonObject root;
@@ -1381,8 +1356,8 @@ bool saveRegistrationMeta(const QString &projectRoot, const QString &label,
     return true;
 }
 
-bool loadRegistrationMeta(const QString &projectRoot, const QString &label,
-                          QString *constant, QString *player)
+bool loadRegistrationMeta(const QString &projectRoot, const QString &label, QString *constant,
+                          QString *player)
 {
     QFile in(sidecarPath(projectRoot, label));
     if (!in.open(QIODevice::ReadOnly))

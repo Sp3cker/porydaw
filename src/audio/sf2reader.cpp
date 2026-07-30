@@ -30,8 +30,7 @@ quint16 leU16(const quint8 *p)
 
 quint32 leU32(const quint8 *p)
 {
-    return quint32(p[0]) | quint32(p[1]) << 8 | quint32(p[2]) << 16
-        | quint32(p[3]) << 24;
+    return quint32(p[0]) | quint32(p[1]) << 8 | quint32(p[2]) << 16 | quint32(p[3]) << 24;
 }
 
 // Fixed 20-byte record name, NUL-trimmed.
@@ -40,20 +39,17 @@ QString recName(const quint8 *p)
     int len = 0;
     while (len < 20 && p[len] != 0)
         len++;
-    return QString::fromLatin1(reinterpret_cast<const char *>(p), len)
-        .trimmed();
+    return QString::fromLatin1(reinterpret_cast<const char *>(p), len).trimmed();
 }
 
 } // namespace
 
 bool sf2Magic(const QByteArray &bytes)
 {
-    return bytes.size() >= 12 && bytes.startsWith("RIFF")
-        && bytes.mid(8, 4) == "sfbk";
+    return bytes.size() >= 12 && bytes.startsWith("RIFF") && bytes.mid(8, 4) == "sfbk";
 }
 
-bool readSf2Bytes(const QByteArray &bytes, const QString &sourcePath,
-                  Sf2File *out, QString *error)
+bool readSf2Bytes(const QByteArray &bytes, const QString &sourcePath, Sf2File *out, QString *error)
 {
     *out = Sf2File();
     out->sourcePath = sourcePath;
@@ -74,9 +70,8 @@ bool readSf2Bytes(const QByteArray &bytes, const QString &sourcePath,
     const struct {
         const char *id;
         Span *span;
-    } wanted[] = {{"smpl", &smpl}, {"phdr", &phdr}, {"pbag", &pbag},
-                  {"pgen", &pgen}, {"inst", &inst}, {"ibag", &ibag},
-                  {"igen", &igen}, {"shdr", &shdr}};
+    } wanted[] = {{"smpl", &smpl}, {"phdr", &phdr}, {"pbag", &pbag}, {"pgen", &pgen},
+                  {"inst", &inst}, {"ibag", &ibag}, {"igen", &igen}, {"shdr", &shdr}};
 
     qint64 pos = 12;
     while (pos + 8 <= total) {
@@ -92,8 +87,7 @@ bool readSf2Bytes(const QByteArray &bytes, const QString &sourcePath,
                 if (sp + 8 + subLen > listEnd)
                     return fail(error, corruptText());
                 for (const auto &w : wanted) {
-                    if (std::memcmp(data + sp, w.id, 4) == 0
-                        && w.span->at < 0) {
+                    if (std::memcmp(data + sp, w.id, 4) == 0 && w.span->at < 0) {
                         w.span->at = sp + 8;
                         w.span->len = subLen;
                     }
@@ -104,11 +98,9 @@ bool readSf2Bytes(const QByteArray &bytes, const QString &sourcePath,
         pos = at + chunkLen + (chunkLen & 1);
     }
     if (smpl.at < 0)
-        return fail(error, QStringLiteral(
-                        "the SoundFont has no sample data (smpl chunk)."));
+        return fail(error, QStringLiteral("the SoundFont has no sample data (smpl chunk)."));
     if (shdr.at < 0 || shdr.len < 46)
-        return fail(error, QStringLiteral(
-                        "the SoundFont has no sample headers (shdr chunk)."));
+        return fail(error, QStringLiteral("the SoundFont has no sample headers (shdr chunk)."));
 
     out->pool = bytes.mid(smpl.at, smpl.len & ~qint64(1));
 
@@ -173,21 +165,18 @@ bool readSf2Bytes(const QByteArray &bytes, const QString &sourcePath,
         if (zone.sampleType & 0x8000)
             continue; // ROM sample — skipped (FORMATS.md §5)
         // Also drops the all-zero EOS terminator record.
-        if (zone.end <= zone.start || qint64(zone.end) > poolFrames
-            || zone.sampleRate == 0)
+        if (zone.end <= zone.start || qint64(zone.end) > poolFrames || zone.sampleRate == 0)
             continue;
         if (sampleInst[size_t(r)] >= 0) {
             const int i = sampleInst[size_t(r)];
             zone.instrument = recName(data + inst.at + qint64(i) * 22);
             if (instPreset[size_t(i)] >= 0)
-                zone.preset = recName(
-                    data + phdr.at + qint64(instPreset[size_t(i)]) * 38);
+                zone.preset = recName(data + phdr.at + qint64(instPreset[size_t(i)]) * 38);
         }
         out->zones.push_back(zone);
     }
     if (out->zones.empty())
-        return fail(error, QStringLiteral(
-                        "the SoundFont contains no importable samples."));
+        return fail(error, QStringLiteral("the SoundFont contains no importable samples."));
     return true;
 }
 
@@ -199,8 +188,7 @@ bool readSf2File(const QString &path, Sf2File *out, QString *error)
     return readSf2Bytes(file.readAll(), path, out, error);
 }
 
-bool extractSf2Zone(const Sf2File &file, int zoneIndex, ImportedSample *out,
-                    QString *error)
+bool extractSf2Zone(const Sf2File &file, int zoneIndex, ImportedSample *out, QString *error)
 {
     if (zoneIndex < 0 || zoneIndex >= int(file.zones.size()))
         return fail(error, QStringLiteral("no SoundFont zone selected."));
@@ -210,19 +198,18 @@ bool extractSf2Zone(const Sf2File &file, int zoneIndex, ImportedSample *out,
     out->sourcePath = file.sourcePath;
     out->suggestedName = SampleRegistrar::sanitizeSampleName(zone.name);
     if (out->suggestedName.isEmpty())
-        out->suggestedName = SampleRegistrar::sanitizeSampleName(
-            QFileInfo(file.sourcePath).completeBaseName());
+        out->suggestedName =
+            SampleRegistrar::sanitizeSampleName(QFileInfo(file.sourcePath).completeBaseName());
     out->sourceKind = ImportedSample::Sf2;
     out->sourceChannels = 1;
     out->sourceBits = 16;
 
     const qint64 n = zone.frames();
     out->buffer.resize(size_t(n));
-    const quint8 *p = reinterpret_cast<const quint8 *>(file.pool.constData())
-        + qint64(zone.start) * 2;
+    const quint8 *p =
+        reinterpret_cast<const quint8 *>(file.pool.constData()) + qint64(zone.start) * 2;
     for (qint64 i = 0; i < n; i++)
-        out->buffer[size_t(i)] =
-            float(double(qint16(leU16(p + i * 2))) / 32768.0);
+        out->buffer[size_t(i)] = float(double(qint16(leU16(p + i * 2))) / 32768.0);
     out->sampleRate = double(zone.sampleRate);
     out->playLength = n;
 
@@ -230,9 +217,7 @@ bool extractSf2Zone(const Sf2File &file, int zoneIndex, ImportedSample *out,
     // key and let the editor prefill from pitch detection instead.
     if (zone.originalPitch <= 127) {
         const double exactKey =
-            qBound(0.0, double(zone.originalPitch)
-                       + double(zone.pitchCorrection) / 100.0,
-                   127.99);
+            qBound(0.0, double(zone.originalPitch) + double(zone.pitchCorrection) / 100.0, 127.99);
         out->baseKey = int(std::floor(exactKey));
         out->fracSemitone = exactKey - std::floor(exactKey);
         out->hasPitchMetadata = true;
@@ -246,7 +231,6 @@ bool extractSf2Zone(const Sf2File &file, int zoneIndex, ImportedSample *out,
         out->loopEndIncl = qint64(zone.loopEndExcl) - qint64(zone.start) - 1;
     }
     if (zone.stereoPair())
-        out->warnings +=
-            QStringLiteral("stereo pair — imported one channel.");
+        out->warnings += QStringLiteral("stereo pair — imported one channel.");
     return true;
 }

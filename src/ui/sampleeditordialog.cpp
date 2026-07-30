@@ -16,9 +16,9 @@
 #include <QShortcut>
 #include <QSpinBox>
 #include <QSplitter>
-#include <QValidator>
 #include <QToolButton>
 #include <QVBoxLayout>
+#include <QValidator>
 
 #include <algorithm>
 #include <climits>
@@ -40,8 +40,7 @@ QString sourceLine(const ImportedSample &s)
     QString kind;
     switch (s.sourceKind) {
     case ImportedSample::Wav:
-        kind = s.sourceFloat ? QStringLiteral("float WAV")
-                             : QStringLiteral("PCM WAV");
+        kind = s.sourceFloat ? QStringLiteral("float WAV") : QStringLiteral("PCM WAV");
         break;
     case ImportedSample::Aif:
         kind = QStringLiteral("AIFF");
@@ -68,14 +67,11 @@ QString sourceLine(const ImportedSample &s)
     QString text = QStringLiteral("%1, %2 channel%3, %4 Hz, %5 samples")
                        .arg(kind)
                        .arg(s.sourceChannels)
-                       .arg(s.sourceChannels == 1 ? QString()
-                                                  : QStringLiteral("s"))
-                       .arg(s.sampleRate, 0, 'f',
-                            s.sampleRate == std::floor(s.sampleRate) ? 0 : 2)
+                       .arg(s.sourceChannels == 1 ? QString() : QStringLiteral("s"))
+                       .arg(s.sampleRate, 0, 'f', s.sampleRate == std::floor(s.sampleRate) ? 0 : 2)
                        .arg(s.frameCount());
     if (s.sampleRate > 0)
-        text += QStringLiteral(" (%1 s)").arg(
-            double(s.frameCount()) / s.sampleRate, 0, 'f', 2);
+        text += QStringLiteral(" (%1 s)").arg(double(s.frameCount()) / s.sampleRate, 0, 'f', 2);
     return text;
 }
 
@@ -87,8 +83,7 @@ int parseMidiKey(const QString &text, int fallback)
     const int direct = t.toInt(&ok);
     if (ok)
         return qBound(0, direct, 127);
-    static const QRegularExpression re(
-        QStringLiteral("^([A-Ga-g])([#b]?)(-?\\d+)"));
+    static const QRegularExpression re(QStringLiteral("^([A-Ga-g])([#b]?)(-?\\d+)"));
     const QRegularExpressionMatch m = re.match(t);
     if (!m.hasMatch())
         return fallback;
@@ -105,22 +100,16 @@ int parseMidiKey(const QString &text, int fallback)
 // read pitches, not key numbers — and parses either form back.
 class MidiKeySpinBox : public QSpinBox
 {
-public:
+  public:
     using QSpinBox::QSpinBox;
 
-protected:
+  protected:
     QString textFromValue(int value) const override
     {
         return QStringLiteral("%1 (%2)").arg(midiKeyName(value)).arg(value);
     }
-    int valueFromText(const QString &text) const override
-    {
-        return parseMidiKey(text, value());
-    }
-    QValidator::State validate(QString &, int &) const override
-    {
-        return QValidator::Acceptable;
-    }
+    int valueFromText(const QString &text) const override { return parseMidiKey(text, value()); }
+    QValidator::State validate(QString &, int &) const override { return QValidator::Acceptable; }
 };
 
 } // namespace
@@ -131,15 +120,15 @@ protected:
 // starting value vanishes.
 class SampleParamsCommand : public QUndoCommand
 {
-public:
-    SampleParamsCommand(SampleEditorDialog *dialog,
-                        const SampleEditParams &before,
+  public:
+    SampleParamsCommand(SampleEditorDialog *dialog, const SampleEditParams &before,
                         const SampleEditParams &after, int mergeKey)
-        : QUndoCommand(QObject::tr("edit sample parameters")),
-          m_dialog(dialog), m_before(before), m_after(after),
-          m_mergeKey(mergeKey)
-    {
-    }
+        : QUndoCommand(QObject::tr("edit sample parameters"))
+        , m_dialog(dialog)
+        , m_before(before)
+        , m_after(after)
+        , m_mergeKey(mergeKey)
+    {}
 
     int id() const override { return kSampleParamsCommandId; }
 
@@ -165,7 +154,7 @@ public:
     }
     void undo() override { m_dialog->applyParamsExternal(m_before); }
 
-private:
+  private:
     SampleEditorDialog *m_dialog;
     SampleEditParams m_before;
     SampleEditParams m_after;
@@ -173,13 +162,13 @@ private:
     bool m_first = true;
 };
 
-SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
-                                       NameValidator validator,
-                                       AudioEngine *engine,
-                                       const AuditionSlots::Adsr *destAdsr,
+SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator validator,
+                                       AudioEngine *engine, const AuditionSlots::Adsr *destAdsr,
                                        QWidget *parent)
-    : QDialog(parent), m_doc(std::move(sample)),
-      m_validator(std::move(validator)), m_engine(engine)
+    : QDialog(parent)
+    , m_doc(std::move(sample))
+    , m_validator(std::move(validator))
+    , m_engine(engine)
 {
     setWindowTitle(tr("Sample Editor"));
     if (destAdsr) {
@@ -196,9 +185,8 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
         SampleEditParams p = m_doc.params();
         const double exact = 69.0 + 12.0 * std::log2(m_pitch.f0 / 440.0);
         p.baseKey = qBound(0, int(std::floor(exact)), 127);
-        p.fineTuneCents = qBound(
-            0.0, std::round((exact - std::floor(exact)) * 10000.0) / 100.0,
-            99.99);
+        p.fineTuneCents =
+            qBound(0.0, std::round((exact - std::floor(exact)) * 10000.0) / 100.0, 99.99);
         m_doc.setParams(p);
     }
 
@@ -218,12 +206,10 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     m_waveform = new WaveformView(this);
     m_waveform->setSample(&m_doc.source());
     split->addWidget(m_waveform);
-    connect(m_waveform, &WaveformView::gestureStarted, this, [this] {
-        m_gestureBase = m_doc.params();
-    });
+    connect(m_waveform, &WaveformView::gestureStarted, this,
+            [this] { m_gestureBase = m_doc.params(); });
     connect(m_waveform, &WaveformView::markersDragged, this,
-            [this](qint64 cropStart, qint64 cropEnd, qint64 loopStart,
-                   qint64 loopEnd) {
+            [this](qint64 cropStart, qint64 cropEnd, qint64 loopStart, qint64 loopEnd) {
                 // Live while dragging: apply directly (undo lands once, on
                 // gesture end) and keep a sounding looped audition current.
                 SampleEditParams p = m_doc.params();
@@ -242,8 +228,7 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
             });
     connect(m_waveform, &WaveformView::gestureFinished, this, [this] {
         if (m_doc.params() != m_gestureBase)
-            m_undo.push(new SampleParamsCommand(this, m_gestureBase,
-                                                m_doc.params(), -1));
+            m_undo.push(new SampleParamsCommand(this, m_gestureBase, m_doc.params(), -1));
     });
 
     // Everything below the waveform (except the dialog buttons) lives on a
@@ -276,8 +261,7 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     m_nameStatus->setWordWrap(true);
     column->addWidget(m_nameStatus);
 
-    const auto makeSpin = [this](const char *name, int min, int max,
-                                 int value, int mergeKey) {
+    const auto makeSpin = [this](const char *name, int min, int max, int value, int mergeKey) {
         auto *spin = new QSpinBox(this);
         spin->setObjectName(QLatin1String(name));
         spin->setRange(min, max);
@@ -305,17 +289,13 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     seamRow->addWidget(m_seamBadge);
     m_tryLoop = new QPushButton(tr("Try another loop"), this);
     m_tryLoop->setObjectName(QStringLiteral("sampleTryLoop"));
-    m_tryLoop->setToolTip(
-        tr("Cycle through the loop points the analyzer found."));
-    connect(m_tryLoop, &QPushButton::clicked, this,
-            &SampleEditorDialog::tryAnotherLoop);
+    m_tryLoop->setToolTip(tr("Cycle through the loop points the analyzer found."));
+    connect(m_tryLoop, &QPushButton::clicked, this, &SampleEditorDialog::tryAnotherLoop);
     seamRow->addWidget(m_tryLoop);
     m_refineButton = new QPushButton(tr("Refine"), this);
     m_refineButton->setObjectName(QStringLiteral("sampleRefineLoop"));
-    m_refineButton->setToolTip(
-        tr("Re-seat the current loop markers with a local seam search."));
-    connect(m_refineButton, &QPushButton::clicked, this,
-            &SampleEditorDialog::refineCurrentLoop);
+    m_refineButton->setToolTip(tr("Re-seat the current loop markers with a local seam search."));
+    connect(m_refineButton, &QPushButton::clicked, this, &SampleEditorDialog::refineCurrentLoop);
     seamRow->addWidget(m_refineButton);
     m_suggestStatus = new QLabel(this);
     m_suggestStatus->setObjectName(QStringLiteral("sampleSuggestStatus"));
@@ -323,10 +303,8 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     seamRow->addStretch();
     loopLayout->addLayout(seamRow);
 
-    m_loopStart = makeSpin("sampleLoopStart", 0, frames - 1,
-                           int(defaults.loopStart), 3);
-    m_loopEnd = makeSpin("sampleLoopEnd", 0, frames - 1,
-                         int(defaults.loopEnd), 4);
+    m_loopStart = makeSpin("sampleLoopStart", 0, frames - 1, int(defaults.loopStart), 3);
+    m_loopEnd = makeSpin("sampleLoopEnd", 0, frames - 1, int(defaults.loopEnd), 4);
     auto *rangeRow = new QHBoxLayout;
     rangeRow->addWidget(new QLabel(tr("Loop range (samples):"), this));
     rangeRow->addWidget(m_loopStart);
@@ -338,12 +316,10 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     auto *seamOptsRow = new QHBoxLayout;
     m_crossfade = new QCheckBox(tr("Smooth seam (crossfade)"), this);
     m_crossfade->setObjectName(QStringLiteral("sampleCrossfade"));
-    m_crossfade->setToolTip(
-        tr("Bakes the loop end into the pre-loop material to smooth the "
-           "seam."));
+    m_crossfade->setToolTip(tr("Bakes the loop end into the pre-loop material to smooth the "
+                               "seam."));
     m_crossfade->setChecked(defaults.crossfadeOn);
-    connect(m_crossfade, &QCheckBox::toggled, this,
-            [this] { applyParamsFromUi(-1); });
+    connect(m_crossfade, &QCheckBox::toggled, this, [this] { applyParamsFromUi(-1); });
     seamOptsRow->addWidget(m_crossfade);
     seamOptsRow->addStretch();
     loopLayout->addLayout(seamOptsRow);
@@ -374,18 +350,15 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     m_baseKey->setRange(0, 127);
     m_baseKey->setValue(defaults.baseKey);
     m_baseKey->setKeyboardTracking(false);
-    m_baseKey->setToolTip(
-        tr("The key this sample sounds at, as a note name or MIDI number."));
-    connect(m_baseKey, &QSpinBox::valueChanged, this,
-            [this] { applyParamsFromUi(5); });
+    m_baseKey->setToolTip(tr("The key this sample sounds at, as a note name or MIDI number."));
+    connect(m_baseKey, &QSpinBox::valueChanged, this, [this] { applyParamsFromUi(5); });
     // The detect chrome is quiet-agreement UI: hidden while the current
     // key matches the detection, visible (one button naming the detected
     // key) only on a real mismatch — updatePitchHint decides via
     // refreshOutputs and fills in the button text.
     m_pitchApply = new QPushButton(this);
     m_pitchApply->setObjectName(QStringLiteral("samplePitchApply"));
-    connect(m_pitchApply, &QPushButton::clicked, this,
-            &SampleEditorDialog::applyDetectedPitch);
+    connect(m_pitchApply, &QPushButton::clicked, this, &SampleEditorDialog::applyDetectedPitch);
     auto *keyRow = new QHBoxLayout;
     keyRow->addWidget(m_baseKey);
     keyRow->addSpacing(12);
@@ -396,13 +369,10 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     m_rateCombo = new QComboBox(this);
     m_rateCombo->setObjectName(QStringLiteral("sampleRateCombo"));
     m_rateCombo->setEditable(true);
-    m_rateCombo->setToolTip(
-        tr("Output sample rate — 13379 Hz is the common GBA music rate."));
-    m_rateCombo->addItem(tr("Keep source (%1 Hz)")
-                             .arg(src.sampleRate, 0, 'f',
-                                  src.sampleRate == std::floor(src.sampleRate)
-                                      ? 0
-                                      : 2));
+    m_rateCombo->setToolTip(tr("Output sample rate — 13379 Hz is the common GBA music rate."));
+    m_rateCombo->addItem(
+        tr("Keep source (%1 Hz)")
+            .arg(src.sampleRate, 0, 'f', src.sampleRate == std::floor(src.sampleRate) ? 0 : 2));
     for (const int rate : kGbaMixRates)
         m_rateCombo->addItem(QString::number(rate));
     // Reflect the document defaults (fresh sources default to the GBA mix
@@ -415,8 +385,7 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     // Apply on commit (preset pick, Enter, focus-out) — not per keystroke:
     // every apply is a full synchronous pipeline render (~120 ms/5 s of
     // source), too heavy to run while a custom rate is being typed.
-    connect(m_rateCombo, &QComboBox::currentIndexChanged, this,
-            [this] { applyParamsFromUi(-1); });
+    connect(m_rateCombo, &QComboBox::currentIndexChanged, this, [this] { applyParamsFromUi(-1); });
     connect(m_rateCombo->lineEdit(), &QLineEdit::editingFinished, this,
             [this] { applyParamsFromUi(-1); });
     auto *rateRow = new QHBoxLayout;
@@ -430,9 +399,8 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     auto *audition = new QHBoxLayout;
     m_playButton = new QPushButton(tr("Play"), this);
     m_playButton->setObjectName(QStringLiteral("sampleAuditionPlay"));
-    m_playButton->setToolTip(
-        tr("Audition the render — looped when the loop is enabled; "
-           "one-shots repeat with a short gap until stopped."));
+    m_playButton->setToolTip(tr("Audition the render — looped when the loop is enabled; "
+                                "one-shots repeat with a short gap until stopped."));
     connect(m_playButton, &QPushButton::clicked, this, [this] {
         if (m_auditionMode != AuditionMode::None)
             stopAudition();
@@ -463,15 +431,13 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     audition->addStretch();
     column->addLayout(audition);
     if (!m_engine) {
-        for (QWidget *w : std::initializer_list<QWidget *>{
-                 m_playButton, m_auditionKey}) {
+        for (QWidget *w : std::initializer_list<QWidget *>{m_playButton, m_auditionKey}) {
             w->setEnabled(false);
             w->setToolTip(tr("Audio is unavailable."));
         }
     }
     m_auditionTimer.setInterval(33);
-    connect(&m_auditionTimer, &QTimer::timeout, this,
-            &SampleEditorDialog::auditionTick);
+    connect(&m_auditionTimer, &QTimer::timeout, this, &SampleEditorDialog::auditionTick);
 
     m_outputSummary = new QLabel(this);
     m_outputSummary->setObjectName(QStringLiteral("sampleOutputSummary"));
@@ -496,11 +462,9 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
         m_advancedToggle->setArrowType(on ? Qt::DownArrow : Qt::RightArrow);
     });
 
-    advForm->addRow(tr("Format:"),
-                    new QLabel(sourceLine(src), m_advancedBody));
+    advForm->addRow(tr("Format:"), new QLabel(sourceLine(src), m_advancedBody));
 
-    m_cropStart = makeSpin("sampleCropStart", 0, frames - 1,
-                           int(defaults.cropStart), 1);
+    m_cropStart = makeSpin("sampleCropStart", 0, frames - 1, int(defaults.cropStart), 1);
     m_cropEnd = makeSpin("sampleCropEnd", 1, frames, int(defaults.cropEnd), 2);
     auto *cropRow = new QHBoxLayout;
     cropRow->addWidget(m_cropStart);
@@ -517,8 +481,7 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     m_fineTune->setValue(defaults.fineTuneCents);
     m_sourceCents = m_fineTune->value(); // spin-rounded source tuning
     m_fineTune->setKeyboardTracking(false);
-    connect(m_fineTune, &QDoubleSpinBox::valueChanged, this,
-            [this] { applyParamsFromUi(6); });
+    connect(m_fineTune, &QDoubleSpinBox::valueChanged, this, [this] { applyParamsFromUi(6); });
     auto *tuneRow = new QHBoxLayout;
     tuneRow->addWidget(m_fineTune);
     tuneRow->addStretch();
@@ -526,8 +489,8 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
 
     m_normalizeMode = new QComboBox(this);
     m_normalizeMode->setObjectName(QStringLiteral("sampleNormalizeMode"));
-    m_normalizeMode->addItems({tr("Auto"), tr("Looped (−9 dBFS loop RMS)"),
-                               tr("One-shot (peak)"), tr("Off")});
+    m_normalizeMode->addItems(
+        {tr("Auto"), tr("Looped (−9 dBFS loop RMS)"), tr("One-shot (peak)"), tr("Off")});
     m_normalizeMode->setCurrentIndex(int(defaults.normalizeMode));
     connect(m_normalizeMode, &QComboBox::currentIndexChanged, this,
             [this] { applyParamsFromUi(-1); });
@@ -549,12 +512,10 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     column->addStretch();
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Cancel, this);
-    m_addButton = buttons->addButton(tr("Add to Project"),
-                                     QDialogButtonBox::AcceptRole);
+    m_addButton = buttons->addButton(tr("Add to Project"), QDialogButtonBox::AcceptRole);
     m_addButton->setObjectName(QStringLiteral("sampleAddButton"));
-    m_addButton->setToolTip(
-        tr("Exports the .wav into sound/direct_sound_samples/ and registers "
-           "it; the build's %.bin rule compiles it."));
+    m_addButton->setToolTip(tr("Exports the .wav into sound/direct_sound_samples/ and registers "
+                               "it; the build's %.bin rule compiles it."));
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     layout->addWidget(buttons);
@@ -566,8 +527,7 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample,
     auto *redoSc = new QShortcut(QKeySequence::Redo, this);
     connect(redoSc, &QShortcut::activated, &m_undo, &QUndoStack::redo);
 
-    connect(m_nameEdit, &QLineEdit::textChanged, this,
-            &SampleEditorDialog::validateName);
+    connect(m_nameEdit, &QLineEdit::textChanged, this, &SampleEditorDialog::validateName);
     validateName();
     refreshOutputs();
 }
@@ -586,9 +546,8 @@ void SampleEditorDialog::setEditTarget(const QString &name)
 {
     m_nameEdit->setText(name);
     m_nameEdit->setReadOnly(true);
-    m_nameEdit->setToolTip(
-        tr("The sample keeps its registered name; renaming is not supported "
-           "here."));
+    m_nameEdit->setToolTip(tr("The sample keeps its registered name; renaming is not supported "
+                              "here."));
     m_addButton->setText(tr("Save Sample"));
     setWindowTitle(tr("Edit Sample — %1").arg(name));
     validateName();
@@ -617,21 +576,18 @@ void SampleEditorDialog::applyParamsFromUi(int mergeKey)
     bool rateOk = false;
     const double rate = m_rateCombo->currentText().toDouble(&rateOk);
     p.targetRate = rateOk && rate > 0.0 ? rate : src.sampleRate;
-    p.normalizeMode =
-        SampleEditParams::NormalizeMode(m_normalizeMode->currentIndex());
+    p.normalizeMode = SampleEditParams::NormalizeMode(m_normalizeMode->currentIndex());
     // The source agbp word stays authoritative only while the pipeline
     // leaves pitch untouched (identity rate, source key/tuning). Tuning
     // compares against the spin's own rounded rendition of the source
     // fraction — both sides are spin values, so equality is exact.
-    const bool pitchUntouched = src.exactPitch != 0
-        && p.targetRate == src.sampleRate && p.baseKey == src.baseKey
-        && p.fineTuneCents == m_sourceCents;
+    const bool pitchUntouched = src.exactPitch != 0 && p.targetRate == src.sampleRate &&
+                                p.baseKey == src.baseKey && p.fineTuneCents == m_sourceCents;
     p.exactPitchOverride = pitchUntouched ? src.exactPitch : 0;
     commitParams(p, mergeKey);
 }
 
-void SampleEditorDialog::commitParams(const SampleEditParams &params,
-                                      int mergeKey)
+void SampleEditorDialog::commitParams(const SampleEditParams &params, int mergeKey)
 {
     const SampleEditParams before = m_doc.params();
     if (params == before)
@@ -684,8 +640,7 @@ void SampleEditorDialog::refreshOutputs()
     const SampleEditParams &p = m_doc.params();
     m_loopGroup->setVisible(p.loopOn);
     updatePitchHint();
-    m_waveform->setMarkers(p.cropStart, p.cropEnd, p.loopStart, p.loopEnd,
-                           p.loopOn);
+    m_waveform->setMarkers(p.cropStart, p.cropEnd, p.loopStart, p.loopEnd, p.loopOn);
     // The waveform trace shows the normalized amplitude (1.0 when the
     // normalize stage is off or a no-op).
     m_waveform->setGain(out.normalizeGain);
@@ -699,38 +654,32 @@ void SampleEditorDialog::refreshOutputs()
         const qint64 E = qint64(out.size) - 1;
         const qint64 w = std::min<qint64>({256, E - S, S + 1, E + 1});
         if (w >= 8 && qint64(out.preview.size()) > E) {
-            seamEnd.assign(out.preview.begin() + (E - w + 1),
-                           out.preview.begin() + (E + 1));
-            seamStart.assign(out.preview.begin() + (S - w + 1),
-                             out.preview.begin() + (S + 1));
+            seamEnd.assign(out.preview.begin() + (E - w + 1), out.preview.begin() + (E + 1));
+            seamStart.assign(out.preview.begin() + (S - w + 1), out.preview.begin() + (S + 1));
         }
     }
     m_waveform->setSeamOverlay(std::move(seamEnd), std::move(seamStart));
 
-    const double gainDb =
-        out.normalizeGain > 0.0 ? 20.0 * std::log10(out.normalizeGain) : 0.0;
-    m_gainReadout->setText(
-        p.normalizeMode == SampleEditParams::NormalizeOff
-            ? tr("gain 0.0 dB")
-            : tr("gain %1 dB").arg(gainDb, 0, 'f', 1));
+    const double gainDb = out.normalizeGain > 0.0 ? 20.0 * std::log10(out.normalizeGain) : 0.0;
+    m_gainReadout->setText(p.normalizeMode == SampleEditParams::NormalizeOff
+                               ? tr("gain 0.0 dB")
+                               : tr("gain %1 dB").arg(gainDb, 0, 'f', 1));
 
     // The seam badge (DSP.md §6): green amp ≤ 2 LSB and deriv ≤ 3
     // LSB/sample, amber up to double those, red otherwise.
     const bool seamKnown = out.looped && out.seam.valid;
-    const bool green =
-        seamKnown && out.seam.ampLsb <= 2 && out.seam.derivLsb <= 3;
-    const bool amber =
-        seamKnown && out.seam.ampLsb <= 4 && out.seam.derivLsb <= 6;
+    const bool green = seamKnown && out.seam.ampLsb <= 2 && out.seam.derivLsb <= 3;
+    const bool amber = seamKnown && out.seam.ampLsb <= 4 && out.seam.derivLsb <= 6;
     if (seamKnown) {
         m_seamBadge->setVisible(true);
-        m_seamBadge->setText(green ? tr("seam: clean")
-                                   : amber ? tr("seam: fair")
-                                           : tr("seam: click"));
+        m_seamBadge->setText(green   ? tr("seam: clean")
+                             : amber ? tr("seam: fair")
+                                     : tr("seam: click"));
         m_seamBadge->setStyleSheet(
             QStringLiteral("background: %1; color: black; border-radius: 3px;")
-                .arg(green ? QStringLiteral("#7CCB7C")
-                           : amber ? QStringLiteral("#E0C060")
-                                   : QStringLiteral("#E08080")));
+                .arg(green   ? QStringLiteral("#7CCB7C")
+                     : amber ? QStringLiteral("#E0C060")
+                             : QStringLiteral("#E08080")));
     } else {
         m_seamBadge->setVisible(false);
     }
@@ -741,22 +690,17 @@ void SampleEditorDialog::refreshOutputs()
     QStringList lines;
     QString brief;
     if (out.outputRate > 0)
-        brief = tr("%1 s · ").arg(double(out.size) / out.outputRate, 0, 'f',
-                                  2);
-    brief += romBytes >= 1024
-        ? tr("%1 KB ROM").arg(double(romBytes) / 1024.0, 0, 'f', 1)
-        : tr("%1 bytes ROM").arg(romBytes);
+        brief = tr("%1 s · ").arg(double(out.size) / out.outputRate, 0, 'f', 2);
+    brief += romBytes >= 1024 ? tr("%1 KB ROM").arg(double(romBytes) / 1024.0, 0, 'f', 1)
+                              : tr("%1 bytes ROM").arg(romBytes);
     lines += brief;
     for (const QString &w : m_doc.source().warnings + out.warnings)
         lines += tr("Warning: %1").arg(w);
     m_outputSummary->setText(lines.join(QLatin1Char('\n')));
 
     QStringList detail;
-    QString first =
-        tr("Output: %1 samples @ %2 Hz").arg(out.size).arg(out.declaredRate);
-    first += out.looped
-        ? tr(" — loop %1..%2").arg(out.loopStart).arg(out.size)
-        : tr(" — one-shot");
+    QString first = tr("Output: %1 samples @ %2 Hz").arg(out.size).arg(out.declaredRate);
+    first += out.looped ? tr(" — loop %1..%2").arg(out.loopStart).arg(out.size) : tr(" — one-shot");
     detail += first;
     detail += tr("Pitch: %1 Hz at C4 (60) — agbp %2, unity %3 (%4)")
                   .arg(double(out.freq) / 1024.0, 0, 'f', 2)
@@ -765,9 +709,7 @@ void SampleEditorDialog::refreshOutputs()
                   .arg(midiKeyName(out.unityNote));
     QString cost = tr("ROM cost: %1 bytes").arg(romBytes);
     if (out.seam.valid) {
-        cost += tr(" — seam amp %1 LSB, slope %2")
-                    .arg(out.seam.ampLsb)
-                    .arg(out.seam.derivLsb);
+        cost += tr(" — seam amp %1 LSB, slope %2").arg(out.seam.ampLsb).arg(out.seam.derivLsb);
         if (out.seam.nccValid)
             cost += tr(", match %1%").arg(int(out.seam.ncc * 100.0));
     }
@@ -780,12 +722,11 @@ void SampleEditorDialog::validateName()
     QString error;
     const bool ok = m_validator && m_validator(m_nameEdit->text(), &error);
     m_addButton->setEnabled(ok);
-    m_nameStatus->setText(
-        ok ? (m_nameEdit->isReadOnly()
-                  ? tr("Saves over DirectSoundWaveData_%1's sample data")
-                  : tr("Registers as DirectSoundWaveData_%1"))
-                 .arg(m_nameEdit->text())
-           : error);
+    m_nameStatus->setText(ok ? (m_nameEdit->isReadOnly()
+                                    ? tr("Saves over DirectSoundWaveData_%1's sample data")
+                                    : tr("Registers as DirectSoundWaveData_%1"))
+                                   .arg(m_nameEdit->text())
+                             : error);
 }
 
 void SampleEditorDialog::ensurePitchDetected()
@@ -824,21 +765,19 @@ void SampleEditorDialog::updatePitchHint()
     bool show = false;
     if (m_pitch.pitched) {
         const double exact = 69.0 + 12.0 * std::log2(m_pitch.f0 / 440.0);
-        const double current = double(m_doc.params().baseKey)
-            + m_doc.params().fineTuneCents / 100.0;
+        const double current =
+            double(m_doc.params().baseKey) + m_doc.params().fineTuneCents / 100.0;
         show = std::abs(exact - current) > 0.40;
         if (show) {
             const int nearest = qBound(0, int(std::lround(exact)), 127);
             const double cents = (exact - double(nearest)) * 100.0;
-            m_pitchApply->setText(tr("Use detected pitch (%1)")
-                                      .arg(midiKeyName(nearest)));
-            m_pitchApply->setToolTip(
-                tr("Set the base key and cents from the detected pitch: "
-                   "%1 %2%3¢ (%4 Hz).")
-                    .arg(midiKeyName(nearest))
-                    .arg(cents >= 0 ? QStringLiteral("+") : QString())
-                    .arg(cents, 0, 'f', 0)
-                    .arg(m_pitch.f0, 0, 'f', 1));
+            m_pitchApply->setText(tr("Use detected pitch (%1)").arg(midiKeyName(nearest)));
+            m_pitchApply->setToolTip(tr("Set the base key and cents from the detected pitch: "
+                                        "%1 %2%3¢ (%4 Hz).")
+                                         .arg(midiKeyName(nearest))
+                                         .arg(cents >= 0 ? QStringLiteral("+") : QString())
+                                         .arg(cents, 0, 'f', 0)
+                                         .arg(m_pitch.f0, 0, 'f', 1));
         }
     }
     m_pitchApply->setVisible(show);
@@ -851,9 +790,7 @@ void SampleEditorDialog::applyDetectedPitch()
     const double exact = 69.0 + 12.0 * std::log2(m_pitch.f0 / 440.0);
     SampleEditParams p = m_doc.params();
     p.baseKey = qBound(0, int(std::floor(exact)), 127);
-    p.fineTuneCents = qBound(
-        0.0, std::round((exact - std::floor(exact)) * 10000.0) / 100.0,
-        99.99);
+    p.fineTuneCents = qBound(0.0, std::round((exact - std::floor(exact)) * 10000.0) / 100.0, 99.99);
     p.exactPitchOverride = 0;
     commitParams(p, -1);
 }
@@ -896,18 +833,15 @@ void SampleEditorDialog::computeChips()
     const double srcRate = m_doc.source().sampleRate;
     const double ratio = srcRate > 0.0 ? ana.outputRate / srcRate : 1.0;
     if (n < 256) {
-        m_suggestStatus->setText(
-            tr("sample too short for a loop search — drag the markers."));
+        m_suggestStatus->setText(tr("sample too short for a loop search — drag the markers."));
         return;
     }
-    const double period =
-        m_pitch.pitched ? ana.outputRate / m_pitch.f0 : 0.0;
+    const double period = m_pitch.pitched ? ana.outputRate / m_pitch.f0 : 0.0;
     const std::vector<SampleDsp::LoopCandidate> cands =
         SampleDsp::suggestLoop(ana.preview.data(), n, ana.outputRate, period,
                                qint64(std::llround(0.40 * double(n))), n - 1);
     if (cands.empty()) {
-        m_suggestStatus->setText(
-            tr("no loop candidates found — drag the markers."));
+        m_suggestStatus->setText(tr("no loop candidates found — drag the markers."));
         return;
     }
 
@@ -915,12 +849,9 @@ void SampleEditorDialog::computeChips()
     for (const SampleDsp::LoopCandidate &cand : cands) {
         Chip chip;
         chip.cand = cand;
-        chip.metrics =
-            SampleDsp::seamMetricsAt(s8, n, cand.loopStart, cand.loopEnd);
-        chip.srcStart = cur.cropStart
-            + qint64(std::llround(double(cand.loopStart) / ratio));
-        chip.srcEnd = cur.cropStart
-            + qint64(std::llround(double(cand.loopEnd) / ratio));
+        chip.metrics = SampleDsp::seamMetricsAt(s8, n, cand.loopStart, cand.loopEnd);
+        chip.srcStart = cur.cropStart + qint64(std::llround(double(cand.loopStart) / ratio));
+        chip.srcEnd = cur.cropStart + qint64(std::llround(double(cand.loopEnd) / ratio));
         m_chips.push_back(chip);
     }
 }
@@ -929,8 +860,8 @@ void SampleEditorDialog::computeChips()
 bool SampleEditorDialog::ensureChips()
 {
     const SampleEditParams &p = m_doc.params();
-    if (!m_chipsValid || m_chipsCropStart != p.cropStart
-        || m_chipsCropEnd != p.cropEnd || m_chipsRate != p.targetRate)
+    if (!m_chipsValid || m_chipsCropStart != p.cropStart || m_chipsCropEnd != p.cropEnd ||
+        m_chipsRate != p.targetRate)
         computeChips();
     return !m_chips.empty();
 }
@@ -948,8 +879,7 @@ void SampleEditorDialog::autoPopulateLoop()
         m_suggestStatus->setText(tr("loop 1 of %1").arg(m_chips.size()));
         p.loopStart = best.srcStart;
         p.loopEnd = best.srcEnd;
-        p.crossfadeOn =
-            !(best.metrics.ampLsb <= 2 && best.metrics.derivLsb <= 3);
+        p.crossfadeOn = !(best.metrics.ampLsb <= 2 && best.metrics.derivLsb <= 3);
     } else {
         // No candidate: loop the whole crop so the handles land somewhere
         // sane; the status line explains.
@@ -965,8 +895,7 @@ void SampleEditorDialog::tryAnotherLoop()
         return;
     // Freshly recomputed candidates restart at the best one; otherwise
     // advance past the one currently applied.
-    applyChip(m_chipIndex < 0 ? 0
-                              : (m_chipIndex + 1) % int(m_chips.size()));
+    applyChip(m_chipIndex < 0 ? 0 : (m_chipIndex + 1) % int(m_chips.size()));
 }
 
 void SampleEditorDialog::applyChip(int index)
@@ -975,8 +904,7 @@ void SampleEditorDialog::applyChip(int index)
         return;
     const Chip &chip = m_chips[size_t(index)];
     m_chipIndex = index;
-    m_suggestStatus->setText(
-        tr("loop %1 of %2").arg(index + 1).arg(m_chips.size()));
+    m_suggestStatus->setText(tr("loop %1 of %2").arg(index + 1).arg(m_chips.size()));
     SampleEditParams p = m_doc.params();
     p.loopOn = true;
     p.loopStart = chip.srcStart;
@@ -999,13 +927,10 @@ void SampleEditorDialog::refineCurrentLoop()
     if (n < 32)
         return;
     qint64 S = qBound<qint64>(
-        0, qint64(std::llround(double(cur.loopStart - cur.cropStart) * ratio)),
-        n - 2);
+        0, qint64(std::llround(double(cur.loopStart - cur.cropStart) * ratio)), n - 2);
     qint64 E = qBound<qint64>(
-        S + 1, qint64(std::llround(double(cur.loopEnd - cur.cropStart) * ratio)),
-        n - 1);
-    const double period =
-        m_pitch.pitched ? ana.outputRate / m_pitch.f0 : 0.0;
+        S + 1, qint64(std::llround(double(cur.loopEnd - cur.cropStart) * ratio)), n - 1);
+    const double period = m_pitch.pitched ? ana.outputRate / m_pitch.f0 : 0.0;
     SampleDsp::refineLoop(ana.preview.data(), n, period, &S, &E);
     SampleEditParams p = cur;
     p.loopStart = cur.cropStart + qint64(std::llround(double(S) / ratio));
@@ -1031,18 +956,14 @@ void SampleEditorDialog::startAudition(bool looped)
     if (m_hasDestAdsr && m_useDestAdsr->isChecked())
         adsr = m_destAdsr;
     const uint8_t key = uint8_t(m_auditionKey->value());
-    m_republishPending = !m_engine->auditionSample(bytes, out.freq, loopStart,
-                                                   loopFlag, key, adsr);
+    m_republishPending = !m_engine->auditionSample(bytes, out.freq, loopStart, loopFlag, key, adsr);
     m_auditionMode = looped ? AuditionMode::Loop : AuditionMode::Once;
     m_auditionLooped = loopFlag;
     m_auditionSize = quint32(bytes.size());
     m_auditionLoopStart = loopStart;
-    m_auditionRate = double(out.freq) / 1024.0
-        * std::pow(2.0, (double(key) - 60.0) / 12.0);
+    m_auditionRate = double(out.freq) / 1024.0 * std::pow(2.0, (double(key) - 60.0) / 12.0);
     const double srcRate = m_doc.source().sampleRate;
-    m_auditionRatio = out.outputRate > 0.0 && srcRate > 0.0
-        ? out.outputRate / srcRate
-        : 1.0;
+    m_auditionRatio = out.outputRate > 0.0 && srcRate > 0.0 ? out.outputRate / srcRate : 1.0;
     m_auditionCrop = m_doc.params().cropStart;
     m_auditionPos = 0.0;
     m_auditionGapLeft = 0.0;
@@ -1104,7 +1025,5 @@ void SampleEditorDialog::auditionTick()
         m_waveform->setPlayhead(-1);
         return;
     }
-    m_waveform->setPlayhead(
-        m_auditionCrop
-        + qint64(std::llround(m_auditionPos / m_auditionRatio)));
+    m_waveform->setPlayhead(m_auditionCrop + qint64(std::llround(m_auditionPos / m_auditionRatio)));
 }

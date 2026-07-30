@@ -28,7 +28,7 @@ extern "C" {
 //    every pass — exactly as on hardware.
 class TimelinePlayer
 {
-public:
+  public:
     void reset()
     {
         m_pos = 0;
@@ -77,7 +77,7 @@ public:
     void render(M4AEngine *engine, const MidiTimeline *timeline, float *outL, float *outR,
                 uint32_t frames, bool looping, uint32_t muteMask);
 
-private:
+  private:
     static void dispatchEvent(M4AEngine *engine, const TimelineEvent &ev, uint32_t muteMask);
 
     void wrapNotes(M4AEngine *engine, const MidiTimeline *timeline);

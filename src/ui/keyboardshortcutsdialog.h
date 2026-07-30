@@ -17,10 +17,10 @@ class KeyboardShortcutsDialog : public QDialog
 {
     Q_OBJECT
 
-public:
+  public:
     explicit KeyboardShortcutsDialog(QWidget *parent = nullptr);
 
-private:
+  private:
     void rebuildTree();
     void applyFilter();
     void currentRowChanged();

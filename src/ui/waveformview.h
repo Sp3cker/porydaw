@@ -19,19 +19,18 @@ class WaveformView : public QWidget
 {
     Q_OBJECT
 
-public:
+  public:
     explicit WaveformView(QWidget *parent = nullptr);
 
     // Not owned; the owner keeps the sample alive for this view's lifetime.
     void setSample(const ImportedSample *sample);
-    void setMarkers(qint64 cropStart, qint64 cropEnd, qint64 loopStart,
-                    qint64 loopEnd, bool loopOn);
+    void setMarkers(qint64 cropStart, qint64 cropEnd, qint64 loopStart, qint64 loopEnd,
+                    bool loopOn);
     // The seam-inset traces, in FINAL render domain (equal lengths; empty
     // hides the inset): the window leading into the loop end and the one
     // leading into the loop start. Owner-fed from the processed output so
     // the crossfade bake / normalize / resample all show up in the inset.
-    void setSeamOverlay(std::vector<float> endWindow,
-                        std::vector<float> startWindow);
+    void setSeamOverlay(std::vector<float> endWindow, std::vector<float> startWindow);
     // Display gain for the trace (the normalize stage's applied gain), so
     // the waveform shows the amplitude the render actually has. Clamped
     // to full scale when the gain would clip past the widget.
@@ -42,8 +41,7 @@ public:
     void setPlayhead(qint64 sourceSample);
     bool gestureActive() const { return m_drag != NoHandle || m_panning; }
 
-    enum Handle { NoHandle, CropStartHandle, CropEndHandle, LoopStartHandle,
-                  LoopEndHandle };
+    enum Handle { NoHandle, CropStartHandle, CropEndHandle, LoopStartHandle, LoopEndHandle };
 
     // View mapping + handle geometry (also the harness's drag targets).
     int xForSample(qint64 sample) const;
@@ -53,14 +51,13 @@ public:
     QSize sizeHint() const override { return {640, 220}; }
     QSize minimumSizeHint() const override { return {320, 120}; }
 
-signals:
+  signals:
     void gestureStarted();
     // Emitted live while a handle drags; the owner applies to the document.
-    void markersDragged(qint64 cropStart, qint64 cropEnd, qint64 loopStart,
-                        qint64 loopEnd);
+    void markersDragged(qint64 cropStart, qint64 cropEnd, qint64 loopStart, qint64 loopEnd);
     void gestureFinished();
 
-protected:
+  protected:
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -69,7 +66,7 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
-private:
+  private:
     Handle hitHandle(const QPoint &pos) const;
     qint64 handleSample(Handle handle) const;
     void dragHandleTo(qint64 sample);

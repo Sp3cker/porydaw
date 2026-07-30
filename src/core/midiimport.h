@@ -14,8 +14,8 @@
 // transform: a division rescale onto the m4a clock grid.
 
 struct ImportTrackInfo {
-    int smfTrack = -1;      // chunk index
-    QString name;           // track-name meta, if present
+    int smfTrack = -1; // chunk index
+    QString name;      // track-name meta, if present
     int noteCount = 0;
     // Programs in order of first use; empty means every note plays voice 0
     // (mid2agb's initial program) — worth flagging against the voicegroup.
@@ -26,7 +26,7 @@ struct ImportTrackInfo {
 struct ImportCcUsage {
     uint8_t cc = 0;
     int count = 0;
-    QString label; // m4a meaning ("VOL — Volume") or "CC n (ignored by mid2agb)"
+    QString label;        // m4a meaning ("VOL — Volume") or "CC n (ignored by mid2agb)"
     bool audible = false; // rendered by the engine (vs. kept-but-inert)
 };
 

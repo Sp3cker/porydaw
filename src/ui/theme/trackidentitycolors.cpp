@@ -9,34 +9,37 @@ namespace themes {
 namespace {
 
 using TrackIdentityColorPair = std::pair<QColor, QColor>;
-using TrackIdentityPalette =
-    std::array<TrackIdentityColorPair, trackIdentityColorCount>;
+using TrackIdentityPalette = std::array<TrackIdentityColorPair, trackIdentityColorCount>;
 
-QColor colorFromHex(std::string_view hex) {
-  return QColor(QLatin1String(hex.data(), static_cast<int>(hex.size())));
+QColor colorFromHex(std::string_view hex)
+{
+    return QColor(QLatin1String(hex.data(), static_cast<int>(hex.size())));
 }
 
-const TrackIdentityPalette &resolvedTrackIdentityPalette() {
-  static const auto palette = [] {
-    TrackIdentityPalette result;
-    for (std::size_t index = 0; index < trackIdentityColorCount; ++index) {
-      const auto fill = colorFromHex(track_identity_colors::fills[index]);
-      const auto text = colorFromHex(track_identity_colors::texts[index]);
-      result[index] = {fill, text};
-    }
-    return result;
-  }();
-  return palette;
+const TrackIdentityPalette &resolvedTrackIdentityPalette()
+{
+    static const auto palette = [] {
+        TrackIdentityPalette result;
+        for (std::size_t index = 0; index < trackIdentityColorCount; ++index) {
+            const auto fill = colorFromHex(track_identity_colors::fills[index]);
+            const auto text = colorFromHex(track_identity_colors::texts[index]);
+            result[index] = {fill, text};
+        }
+        return result;
+    }();
+    return palette;
 }
 
 } // namespace
 
-const QColor &trackIdentityColor(std::size_t index) {
-  return resolvedTrackIdentityPalette().at(index).first;
+const QColor &trackIdentityColor(std::size_t index)
+{
+    return resolvedTrackIdentityPalette().at(index).first;
 }
 
-const QColor &trackIdentityTextColor(std::size_t index) {
-  return resolvedTrackIdentityPalette().at(index).second;
+const QColor &trackIdentityTextColor(std::size_t index)
+{
+    return resolvedTrackIdentityPalette().at(index).second;
 }
 
 } // namespace themes

@@ -81,8 +81,7 @@ bool AudioEngine::init(QString *error)
     // which underruns at miniaudio's 10 ms low-latency default and is heard
     // as constant crackling.
     bool havePeriodMs = false;
-    int periodMs = qEnvironmentVariableIntValue("PORYDAW_AUDIO_PERIOD_MS",
-                                                &havePeriodMs);
+    int periodMs = qEnvironmentVariableIntValue("PORYDAW_AUDIO_PERIOD_MS", &havePeriodMs);
 #ifdef __linux__
     if ((!havePeriodMs || periodMs <= 0) && runningUnderWsl()) {
         periodMs = 30;
@@ -103,8 +102,7 @@ bool AudioEngine::init(QString *error)
     // When every real backend fails (headless CI, WSL without libpulse),
     // miniaudio's default context falls back to its null device: playback
     // runs but is silent. Record which backend won so the UI can warn.
-    m_backendName = QString::fromUtf8(
-        ma_get_backend_name(m_device->pContext->backend));
+    m_backendName = QString::fromUtf8(ma_get_backend_name(m_device->pContext->backend));
     m_isNullBackend = (m_device->pContext->backend == ma_backend_null);
     m_periodFrames = int(m_device->playback.internalPeriodSizeInFrames);
     m_periodCount = int(m_device->playback.internalPeriods);
@@ -218,8 +216,7 @@ void AudioEngine::updateTimeline(const MidiTimeline *timeline)
     // the rebuild — dropping it would silently ignore an edit-cursor move
     // that raced this edit. The device is stopped, so the exchange can't
     // race applyPendingSeek.
-    const uint64_t pending =
-        m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
+    const uint64_t pending = m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
     const uint64_t pos = pending != kNoPendingSeek ? pending : m_player.position();
     m_timeline = timeline;
     m_player.seek(pos, m_timeline);
@@ -249,8 +246,7 @@ void AudioEngine::seek(uint64_t samplePos)
 
 void AudioEngine::applyPendingSeek()
 {
-    const uint64_t samplePos =
-        m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
+    const uint64_t samplePos = m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
     if (samplePos == kNoPendingSeek || !m_timeline)
         return;
 
@@ -326,8 +322,8 @@ void AudioEngine::resetPreviewEngine()
 void AudioEngine::previewNote(uint8_t track, uint8_t key, uint8_t velocity)
 {
     m_previewGen++;
-    m_previewCmd.store((uint32_t(m_previewGen) << 24) | (uint32_t(track & 0x0F) << 16)
-                       | (uint32_t(key & 0x7F) << 8) | velocity);
+    m_previewCmd.store((uint32_t(m_previewGen) << 24) | (uint32_t(track & 0x0F) << 16) |
+                       (uint32_t(key & 0x7F) << 8) | velocity);
 }
 
 void AudioEngine::previewNoteTimed(uint8_t track, uint8_t key, uint8_t velocity,
@@ -338,17 +334,16 @@ void AudioEngine::previewNoteTimed(uint8_t track, uint8_t key, uint8_t velocity,
     const uint32_t w = m_timedWrite.load(std::memory_order_relaxed);
     if (w - m_timedRead.load(std::memory_order_acquire) >= kTimedRingSize)
         return;
-    m_timedRing[w % kTimedRingSize] = {uint8_t(track & 0x0F), uint8_t(key & 0x7F),
-                                       velocity, durationSamples};
+    m_timedRing[w % kTimedRingSize] = {uint8_t(track & 0x0F), uint8_t(key & 0x7F), velocity,
+                                       durationSamples};
     m_timedWrite.store(w + 1, std::memory_order_release);
 }
 
 void AudioEngine::previewVoice(uint8_t voice, uint8_t key, uint8_t velocity)
 {
     m_previewVoiceGen++;
-    m_previewVoiceCmd.store((uint64_t(m_previewVoiceGen) << 32)
-                            | (uint64_t(voice & 0x7F) << 16) | (uint64_t(key & 0x7F) << 8)
-                            | velocity);
+    m_previewVoiceCmd.store((uint64_t(m_previewVoiceGen) << 32) | (uint64_t(voice & 0x7F) << 16) |
+                            (uint64_t(key & 0x7F) << 8) | velocity);
 }
 
 void AudioEngine::unloadSong()
@@ -434,14 +429,12 @@ void AudioEngine::polySnapshot(PolySnapshot *out) const
     }
     for (int i = 0; i < TOTAL_PCM_CHANNELS; i++) {
         const M4APCMChannel &ch = engine->pcmChannels[i];
-        out->pcm[i] = {(ch.status & CHN_ON) != 0,
-                       (ch.status & (CHN_STOP | CHN_IEC)) != 0,
+        out->pcm[i] = {(ch.status & CHN_ON) != 0, (ch.status & (CHN_STOP | CHN_IEC)) != 0,
                        uint8_t(ch.trackIndex), uint8_t(ch.midiKey)};
     }
     for (int i = 0; i < TOTAL_CGB_CHANNELS; i++) {
         const M4ACGBChannel &ch = engine->cgbChannels[i];
-        out->cgb[i] = {(ch.status & CHN_ON) != 0,
-                       (ch.status & (CHN_STOP | CHN_IEC)) != 0,
+        out->cgb[i] = {(ch.status & CHN_ON) != 0, (ch.status & (CHN_STOP | CHN_IEC)) != 0,
                        uint8_t(ch.trackIndex), uint8_t(ch.midiKey)};
     }
 }
@@ -458,9 +451,7 @@ uint32_t AudioEngine::effectiveMuteMask() const
     const uint32_t solo = m_soloMask.load();
     // Tracks beyond the music player's budget are silent in-game
     // (MPlayStart never starts them); solo cannot bring them back.
-    return ((solo ? (mute | ~solo) : mute)
-            | trackBudgetMuteMask(m_settings.trackBudget))
-        & 0xFFFF;
+    return ((solo ? (mute | ~solo) : mute) | trackBudgetMuteMask(m_settings.trackBudget)) & 0xFFFF;
 }
 
 void AudioEngine::applyTransportTransition()
@@ -500,8 +491,7 @@ void AudioEngine::cutAllSound()
 {
     m4a_engine_all_sound_off(m_engine.get());
     m_timedActiveCount = 0;
-    m_timedRead.store(m_timedWrite.load(std::memory_order_acquire),
-                      std::memory_order_release);
+    m_timedRead.store(m_timedWrite.load(std::memory_order_acquire), std::memory_order_release);
     m_previewTrack = -1;
     m_previewKey = -1;
 }
@@ -561,8 +551,7 @@ void AudioEngine::applyTimedPreviews(uint32_t frameCount)
         if (cmd.velocity == 0) {
             // Early release: the band no longer covers the note.
             for (int i = 0; i < m_timedActiveCount; i++) {
-                if (m_timedActive[i].track == cmd.track
-                    && m_timedActive[i].key == cmd.key) {
+                if (m_timedActive[i].track == cmd.track && m_timedActive[i].key == cmd.key) {
                     m4a_engine_note_off(m_engine.get(), cmd.track, cmd.key);
                     m_timedActive[i] = m_timedActive[--m_timedActiveCount];
                     break;
@@ -591,8 +580,7 @@ void AudioEngine::applyTimedPreviews(uint32_t frameCount)
                         slot = i;
                 }
             }
-            m4a_engine_note_off(m_engine.get(), m_timedActive[slot].track,
-                                m_timedActive[slot].key);
+            m4a_engine_note_off(m_engine.get(), m_timedActive[slot].track, m_timedActive[slot].key);
         }
         m4a_engine_note_on(m_engine.get(), cmd.track, cmd.key, cmd.velocity);
         m_timedActive[slot] = {cmd.track, cmd.key, int64_t(cmd.durationSamples)};
@@ -604,8 +592,7 @@ void AudioEngine::applyTimedPreviews(uint32_t frameCount)
     for (int i = 0; i < m_timedActiveCount;) {
         m_timedActive[i].remaining -= frameCount;
         if (m_timedActive[i].remaining <= 0) {
-            m4a_engine_note_off(m_engine.get(), m_timedActive[i].track,
-                                m_timedActive[i].key);
+            m4a_engine_note_off(m_engine.get(), m_timedActive[i].track, m_timedActive[i].key);
             m_timedActive[i] = m_timedActive[--m_timedActiveCount];
         } else {
             i++;
@@ -694,13 +681,11 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
 
         if (playing) {
             const bool looping = m_loopEnabled.load();
-            m_player.render(engine, tl, m_bufL.get(), m_bufR.get(), n, looping,
-                            m_appliedMute);
+            m_player.render(engine, tl, m_bufL.get(), m_bufR.get(), n, looping, m_appliedMute);
 
             // Auto-stop a non-looping song after the tail rings out.
-            if (!(looping && tl->hasLoop())
-                && m_player.position()
-                       > tl->lengthSamples + uint64_t(kTailSeconds * m_sampleRate)) {
+            if (!(looping && tl->hasLoop()) &&
+                m_player.position() > tl->lengthSamples + uint64_t(kTailSeconds * m_sampleRate)) {
                 m_transport.store(static_cast<int>(Transport::Stopped));
                 applyTransportTransition();
             }

@@ -32,10 +32,7 @@ QRegion expandRegionToDeviceGrid(const QRegion &region, int grid)
     return expanded;
 }
 
-TimelineSurface::TimelineSurface(QWidget *parent)
-    : QWidget(parent)
-{
-}
+TimelineSurface::TimelineSurface(QWidget *parent) : QWidget(parent) {}
 
 void TimelineSurface::invalidateContent()
 {
@@ -57,8 +54,8 @@ void TimelineSurface::invalidateContent(const QRegion &region)
     QRegion clipped = region.intersected(rect());
     if (clipped.isEmpty())
         return;
-    clipped = grid == 0 ? QRegion(rect())
-                        : expandRegionToDeviceGrid(clipped, grid).intersected(rect());
+    clipped =
+        grid == 0 ? QRegion(rect()) : expandRegionToDeviceGrid(clipped, grid).intersected(rect());
     m_dirtyContentRegion |= clipped;
     QWidget::update(clipped);
 }
@@ -72,17 +69,14 @@ void TimelineSurface::paintEvent(QPaintEvent *event)
 {
     const qreal dpr = devicePixelRatioF();
     const QSize pixelSize(qCeil(width() * dpr), qCeil(height() * dpr));
-    const qint64 estimatedCacheBytes =
-        qint64(pixelSize.width()) * qint64(pixelSize.height()) * 4;
+    const qint64 estimatedCacheBytes = qint64(pixelSize.width()) * qint64(pixelSize.height()) * 4;
     constexpr qint64 maxEstimatedCacheBytes = 256 * 1024 * 1024;
     // Diagnostic escape hatch: paints every surface directly, isolating the
     // cache when hunting stale-pixel artifacts in the field.
-    static const bool forceUncached =
-        qEnvironmentVariableIsSet("PORYDAW_FORCE_UNCACHED_TIMELINE");
-    const bool estimateFitsBudget = !forceUncached && pixelSize.width() > 0
-                                    && pixelSize.height() > 0
-                                    && estimatedCacheBytes > 0
-                                    && estimatedCacheBytes <= maxEstimatedCacheBytes;
+    static const bool forceUncached = qEnvironmentVariableIsSet("PORYDAW_FORCE_UNCACHED_TIMELINE");
+    const bool estimateFitsBudget = !forceUncached && pixelSize.width() > 0 &&
+                                    pixelSize.height() > 0 && estimatedCacheBytes > 0 &&
+                                    estimatedCacheBytes <= maxEstimatedCacheBytes;
 
     if (!estimateFitsBudget) {
         m_contentCache = {};
@@ -93,8 +87,8 @@ void TimelineSurface::paintEvent(QPaintEvent *event)
         return;
     }
 
-    if (m_contentCache.size() != pixelSize
-        || !qFuzzyCompare(m_contentCache.devicePixelRatio(), dpr)) {
+    if (m_contentCache.size() != pixelSize ||
+        !qFuzzyCompare(m_contentCache.devicePixelRatio(), dpr)) {
         m_contentCache = QPixmap(pixelSize);
         if (!m_contentCache.isNull()) {
             m_contentCache.setDevicePixelRatio(dpr);
@@ -154,8 +148,7 @@ void TimelineSurface::paintEvent(QPaintEvent *event)
     //    so the engine's clamp stays device-aligned.
     const int alignmentGrid = deviceAlignmentGrid(dpr);
     const QRegion repaintRegion =
-        alignmentGrid == 0 ? QRegion(rect())
-                           : expandRegionToDeviceGrid(dirtyRegion, alignmentGrid);
+        alignmentGrid == 0 ? QRegion(rect()) : expandRegionToDeviceGrid(dirtyRegion, alignmentGrid);
 
     if (QRegion(rect()).subtracted(repaintRegion).isEmpty()) {
         m_contentCache.fill(Qt::transparent);
@@ -171,12 +164,10 @@ void TimelineSurface::paintEvent(QPaintEvent *event)
         cachePainter.setCompositionMode(QPainter::CompositionMode_SourceOver);
         quint64 repaintDevicePixels = 0;
         for (const QRect &logicalRect : repaintRegion) {
-            const quint64 deviceWidth =
-                quint64(qCeil((logicalRect.right() + 1) * dpr))
-                - quint64(qFloor(logicalRect.left() * dpr));
-            const quint64 deviceHeight =
-                quint64(qCeil((logicalRect.bottom() + 1) * dpr))
-                - quint64(qFloor(logicalRect.top() * dpr));
+            const quint64 deviceWidth = quint64(qCeil((logicalRect.right() + 1) * dpr)) -
+                                        quint64(qFloor(logicalRect.left() * dpr));
+            const quint64 deviceHeight = quint64(qCeil((logicalRect.bottom() + 1) * dpr)) -
+                                         quint64(qFloor(logicalRect.top() * dpr));
             repaintDevicePixels += deviceWidth * deviceHeight;
         }
         countContentPaint(repaintDevicePixels);

@@ -105,8 +105,7 @@ int runEditCheck(const QString &projectRoot)
             if (ok) {
                 doc.resizeNotes({note}, int64_t(step) * 2);
                 mutateAndCheck("events unsorted after resizeNotes");
-                if (!doc.findNote(track, base + step * 8, 63, &note)
-                    || note.duration != step * 6) {
+                if (!doc.findNote(track, base + step * 8, 63, &note) || note.duration != step * 6) {
                     fail("resize produced wrong duration");
                     ok = false;
                 }
@@ -115,8 +114,7 @@ int runEditCheck(const QString &projectRoot)
                 // Left resize: the note-on moves, the note-off stays pinned.
                 doc.resizeNotesLeft({note}, -int64_t(step) * 2);
                 mutateAndCheck("events unsorted after resizeNotesLeft");
-                if (!doc.findNote(track, base + step * 6, 63, &note)
-                    || note.duration != step * 8) {
+                if (!doc.findNote(track, base + step * 6, 63, &note) || note.duration != step * 8) {
                     fail("left resize produced wrong start/duration");
                     ok = false;
                 }
@@ -125,14 +123,13 @@ int runEditCheck(const QString &projectRoot)
                 // Dragging the note-on past the note-off clamps to 1 tick left.
                 doc.resizeNotesLeft({note}, int64_t(step) * 100);
                 mutateAndCheck("events unsorted after clamped resizeNotesLeft");
-                if (!doc.findNote(track, base + step * 14 - 1, 63, &note)
-                    || note.duration != 1) {
+                if (!doc.findNote(track, base + step * 14 - 1, 63, &note) || note.duration != 1) {
                     fail("left resize not clamped at the note-off");
                     ok = false;
                 } else {
                     doc.resizeNotesLeft({note}, -int64_t(step) * 8 + 1);
-                    if (!doc.findNote(track, base + step * 6, 63, &note)
-                        || note.duration != step * 8) {
+                    if (!doc.findNote(track, base + step * 6, 63, &note) ||
+                        note.duration != step * 8) {
                         fail("left resize could not restore the note");
                         ok = false;
                     }
@@ -168,14 +165,14 @@ int runEditCheck(const QString &projectRoot)
                                      {base + step * 22, 67, step * 2, 96}});
                 mutateAndCheck("events unsorted after addNotes");
                 DocNote a, b;
-                if (!doc.findNote(track, base + step * 20, 64, &a)
-                    || !doc.findNote(track, base + step * 22, 67, &b)) {
+                if (!doc.findNote(track, base + step * 20, 64, &a) ||
+                    !doc.findNote(track, base + step * 22, 67, &b)) {
                     fail("batch-added notes not found");
                     ok = false;
                 } else {
                     doc.undoStack()->undo();
-                    if (doc.findNote(track, base + step * 20, 64, &a)
-                        || doc.findNote(track, base + step * 22, 67, &b)) {
+                    if (doc.findNote(track, base + step * 20, 64, &a) ||
+                        doc.findNote(track, base + step * 22, 67, &b)) {
                         fail("addNotes was not a single undo command");
                         ok = false;
                     } else {
@@ -196,19 +193,17 @@ int runEditCheck(const QString &projectRoot)
                 doc.addNote(track, seam - step * 2, 60, step * 2, 100);
                 mutateAndCheck("events unsorted after abutting addNote");
                 DocNote leftNote, rightNote;
-                if (!doc.findNote(track, seam - step * 2, 60, &leftNote)
-                    || !doc.findNote(track, seam, 60, &rightNote)
-                    || leftNote.duration != step * 2 || rightNote.duration != step * 2
-                    || leftNote.endIndex == rightNote.endIndex) {
+                if (!doc.findNote(track, seam - step * 2, 60, &leftNote) ||
+                    !doc.findNote(track, seam, 60, &rightNote) || leftNote.duration != step * 2 ||
+                    rightNote.duration != step * 2 || leftNote.endIndex == rightNote.endIndex) {
                     fail("abutting notes mis-paired (note end after same-tick note-on)");
                     ok = false;
                 } else {
                     doc.deleteNotes({leftNote, rightNote});
                     bool leftover = false;
-                    for (const SmfEvent &ev :
-                         doc.smf().tracks[size_t(leftNote.smfTrack)].events) {
-                        leftover |= ev.tick >= seam - step * 2 && ev.isChannel()
-                            && (ev.isNoteOn() || ev.isNoteEnd());
+                    for (const SmfEvent &ev : doc.smf().tracks[size_t(leftNote.smfTrack)].events) {
+                        leftover |= ev.tick >= seam - step * 2 && ev.isChannel() &&
+                                    (ev.isNoteOn() || ev.isNoteEnd());
                     }
                     if (leftover) {
                         fail("deleting abutting notes left a note event behind");
@@ -244,18 +239,18 @@ int runEditCheck(const QString &projectRoot)
                 mutateAndCheck("events unsorted after applyRangeEdit");
                 DocNote n;
                 DocLanePoint p;
-                if (doc.findNote(track, base + step * 30, 60, &n)
-                    || doc.findNote(track, base + step * 32, 62, &n)
-                    || !doc.findNote(track, base + step * 40, 65, &n)
-                    || !doc.findLanePoint(track, 7, base + step * 40, &p) || p.value != 70
-                    || !doc.findLanePoint(track, DOC_CC_TEMPO, base + step * 41, &p)
-                    || p.value != 155) {
+                if (doc.findNote(track, base + step * 30, 60, &n) ||
+                    doc.findNote(track, base + step * 32, 62, &n) ||
+                    !doc.findNote(track, base + step * 40, 65, &n) ||
+                    !doc.findLanePoint(track, 7, base + step * 40, &p) || p.value != 70 ||
+                    !doc.findLanePoint(track, DOC_CC_TEMPO, base + step * 41, &p) ||
+                    p.value != 155) {
                     fail("range edit produced wrong content");
                     ok = false;
                 } else {
                     doc.undoStack()->undo();
-                    if (!doc.findNote(track, base + step * 30, 60, &n)
-                        || doc.findNote(track, base + step * 40, 65, &n)) {
+                    if (!doc.findNote(track, base + step * 30, 60, &n) ||
+                        doc.findNote(track, base + step * 40, 65, &n)) {
                         fail("applyRangeEdit was not a single undo command");
                         ok = false;
                     } else {
@@ -290,23 +285,21 @@ int runEditCheck(const QString &projectRoot)
                 mutateAndCheck("events unsorted after moveRange");
                 DocNote n;
                 DocLanePoint p;
-                if (doc.findNote(track, base + step * 80, 60, &n)
-                    || !doc.findNote(track, base + step * 83, 60, &n)
-                    || n.duration != step * 2
-                    || !doc.findNote(track, base + step * 85, 64, &n)
-                    || !doc.findLanePoint(track, 7, base + step * 83, &p)
-                    || p.value != 45
-                    || !doc.findLanePoint(track, DOC_CC_TEMPO, base + step * 84, &p)
-                    || p.value != 140) {
+                if (doc.findNote(track, base + step * 80, 60, &n) ||
+                    !doc.findNote(track, base + step * 83, 60, &n) || n.duration != step * 2 ||
+                    !doc.findNote(track, base + step * 85, 64, &n) ||
+                    !doc.findLanePoint(track, 7, base + step * 83, &p) || p.value != 45 ||
+                    !doc.findLanePoint(track, DOC_CC_TEMPO, base + step * 84, &p) ||
+                    p.value != 140) {
                     fail("range move produced wrong content");
                     ok = false;
                 }
                 if (ok) {
                     doc.moveRange(moveNotes, movePoints, 0); // no-op guard
                     doc.undoStack()->undo();
-                    if (!doc.findNote(track, base + step * 80, 60, &n)
-                        || doc.findNote(track, base + step * 83, 60, &n)
-                        || !doc.findLanePoint(track, 7, base + step * 80, &p)) {
+                    if (!doc.findNote(track, base + step * 80, 60, &n) ||
+                        doc.findNote(track, base + step * 83, 60, &n) ||
+                        !doc.findLanePoint(track, 7, base + step * 80, &p)) {
                         fail("moveRange was not a single undo command");
                         ok = false;
                     } else {
@@ -332,10 +325,8 @@ int runEditCheck(const QString &projectRoot)
                 } else {
                     doc.moveNotes({m}, 0, 1);
                     mutateAndCheck("events unsorted after overlap transpose");
-                    if (!doc.findNote(track, base + step * 88, 71, &m)
-                        || m.duration != step * 4
-                        || !doc.findNote(track, base + step * 92, 71, &s)
-                        || s.duration != step * 2) {
+                    if (!doc.findNote(track, base + step * 88, 71, &m) || m.duration != step * 4 ||
+                        !doc.findNote(track, base + step * 92, 71, &s) || s.duration != step * 2) {
                         fail("transpose onto a note's head did not keep its tail");
                         ok = false;
                     }
@@ -344,9 +335,8 @@ int runEditCheck(const QString &projectRoot)
                 if (ok) {
                     doc.resizeNotes({m}, step * 4); // M 88..96 covers S 92..94
                     mutateAndCheck("events unsorted after overlap resize");
-                    if (!doc.findNote(track, base + step * 88, 71, &m)
-                        || m.duration != step * 8
-                        || doc.findNote(track, base + step * 92, 71, &s)) {
+                    if (!doc.findNote(track, base + step * 88, 71, &m) || m.duration != step * 8 ||
+                        doc.findNote(track, base + step * 92, 71, &s)) {
                         fail("resize across a covered note did not remove it");
                         ok = false;
                     }
@@ -356,19 +346,16 @@ int runEditCheck(const QString &projectRoot)
                 if (ok) {
                     doc.addNote(track, base + step * 94, 71, step * 4, 100);
                     mutateAndCheck("events unsorted after overlapping addNote");
-                    if (!doc.findNote(track, base + step * 88, 71, &m)
-                        || m.duration != step * 6
-                        || !doc.findNote(track, base + step * 94, 71, &s)
-                        || s.duration != step * 4) {
+                    if (!doc.findNote(track, base + step * 88, 71, &m) || m.duration != step * 6 ||
+                        !doc.findNote(track, base + step * 94, 71, &s) || s.duration != step * 4) {
                         fail("overlapping add did not trim the covered tail");
                         ok = false;
                     }
                 }
                 if (ok) {
                     doc.undoStack()->undo();
-                    if (!doc.findNote(track, base + step * 88, 71, &m)
-                        || m.duration != step * 8
-                        || doc.findNote(track, base + step * 94, 71, &s)) {
+                    if (!doc.findNote(track, base + step * 88, 71, &m) || m.duration != step * 8 ||
+                        doc.findNote(track, base + step * 94, 71, &s)) {
                         fail("overlap trim was not part of the edit's own undo");
                         ok = false;
                     } else {
@@ -394,31 +381,29 @@ int runEditCheck(const QString &projectRoot)
                 }
                 if (ok) {
                     doc.moveNotes({m}, 0, 1, true); // M onto S: S trimmed
-                    if (!doc.findNote(track, base + step * 102, 70, &s)
-                        || s.duration != step * 2) {
+                    if (!doc.findNote(track, base + step * 102, 70, &s) || s.duration != step * 2) {
                         fail("mergeable transpose did not trim the overlap");
                         ok = false;
                     }
                 }
                 if (ok) {
                     doc.findNote(track, base + step * 100, 70, &m); // re-resolve
-                    doc.moveNotes({m}, 0, 1, true); // past S: merged, +2 total
+                    doc.moveNotes({m}, 0, 1, true);                 // past S: merged, +2 total
                     if (doc.undoStack()->count() != countBefore + 1) {
                         fail("consecutive mergeable moves did not merge");
                         ok = false;
-                    } else if (!doc.findNote(track, base + step * 100, 71, &m)
-                               || m.duration != step * 2
-                               || !doc.findNote(track, base + step * 100, 70, &s)
-                               || s.duration != step * 4) {
+                    } else if (!doc.findNote(track, base + step * 100, 71, &m) ||
+                               m.duration != step * 2 ||
+                               !doc.findNote(track, base + step * 100, 70, &s) ||
+                               s.duration != step * 4) {
                         fail("merged transpose did not restore the trimmed note");
                         ok = false;
                     }
                 }
                 if (ok) {
                     doc.undoStack()->undo();
-                    if (!doc.findNote(track, base + step * 100, 69, &m)
-                        || !doc.findNote(track, base + step * 100, 70, &s)
-                        || s.duration != step * 4) {
+                    if (!doc.findNote(track, base + step * 100, 69, &m) ||
+                        !doc.findNote(track, base + step * 100, 70, &s) || s.duration != step * 4) {
                         fail("merged move undo did not restore the gesture start");
                         ok = false;
                     } else {
@@ -454,20 +439,17 @@ int runEditCheck(const QString &projectRoot)
                 mutateAndCheck("events unsorted after removeTimeRange");
                 DocNote n;
                 DocLanePoint p;
-                if (ok
-                    && (!doc.findNote(track, base + step * 50, 60, &n)
-                        || doc.findNote(track, base + step * 52, 62, &n)
-                        || !doc.findNote(track, base + step * 53, 64, &n)
-                        || !doc.findLanePoint(track, 7, base + step * 51, &p)
-                        || p.value != 40)) {
+                if (ok && (!doc.findNote(track, base + step * 50, 60, &n) ||
+                           doc.findNote(track, base + step * 52, 62, &n) ||
+                           !doc.findNote(track, base + step * 53, 64, &n) ||
+                           !doc.findLanePoint(track, 7, base + step * 51, &p) || p.value != 40)) {
                     fail("ripple remove produced wrong content");
                     ok = false;
                 }
                 if (ok) {
                     doc.undoStack()->undo();
-                    if (!doc.findNote(track, base + step * 56, 64, &n)
-                        || !doc.findLanePoint(track, 7, base + step * 52, &p)
-                        || p.value != 40) {
+                    if (!doc.findNote(track, base + step * 56, 64, &n) ||
+                        !doc.findLanePoint(track, 7, base + step * 52, &p) || p.value != 40) {
                         fail("removeTimeRange was not a single undo command");
                         ok = false;
                     } else {
@@ -506,20 +488,16 @@ int runEditCheck(const QString &projectRoot)
                     if (sig.tick == base + step * 61 && sig.numerator == 3)
                         sigAtSeam = true;
                 }
-                if (ok
-                    && (!sigAtSeam
-                        || !doc.findLanePoint(track, DOC_CC_TEMPO, base + step * 61, &p)
-                        || p.value != 150
-                        || !doc.findNote(track, base + step * 62, 65, &n)
-                        || maxEnd() != endBefore - step * 4
-                        || doc.loopTick(false) != loopStartBefore)) {
+                if (ok &&
+                    (!sigAtSeam || !doc.findLanePoint(track, DOC_CC_TEMPO, base + step * 61, &p) ||
+                     p.value != 150 || !doc.findNote(track, base + step * 62, 65, &n) ||
+                     maxEnd() != endBefore - step * 4 || doc.loopTick(false) != loopStartBefore)) {
                     fail("whole-song ripple produced wrong content");
                     ok = false;
                 }
                 if (ok) {
                     doc.undoStack()->undo();
-                    if (!doc.findNote(track, base + step * 66, 65, &n)
-                        || maxEnd() != endBefore) {
+                    if (!doc.findNote(track, base + step * 66, 65, &n) || maxEnd() != endBefore) {
                         fail("whole-song removeTimeRange was not a single undo command");
                         ok = false;
                     } else {
@@ -534,14 +512,13 @@ int runEditCheck(const QString &projectRoot)
                 doc.addLanePoint(track, DOC_CC_VOICE, base + step, 5);
                 mutateAndCheck("events unsorted after voice add");
                 DocLanePoint vc;
-                if (!doc.findLanePoint(track, DOC_CC_VOICE, base + step, &vc)
-                    || vc.value != 5) {
+                if (!doc.findLanePoint(track, DOC_CC_VOICE, base + step, &vc) || vc.value != 5) {
                     fail("voice change not found after add");
                     ok = false;
                 } else {
                     doc.moveLanePoint(track, DOC_CC_VOICE, vc, vc.tick, 9);
-                    if (!doc.findLanePoint(track, DOC_CC_VOICE, base + step, &vc)
-                        || vc.value != 9) {
+                    if (!doc.findLanePoint(track, DOC_CC_VOICE, base + step, &vc) ||
+                        vc.value != 9) {
                         fail("voice value edit not applied");
                         ok = false;
                     } else {
@@ -637,10 +614,10 @@ int runEditCheck(const QString &projectRoot)
                 const auto copyNotes = doc.notesForTrack(copy);
                 bool same = copyNotes.size() == srcNotes.size();
                 for (size_t i = 0; same && i < copyNotes.size(); i++) {
-                    same = copyNotes[i].tick == srcNotes[i].tick
-                        && copyNotes[i].key == srcNotes[i].key
-                        && copyNotes[i].duration == srcNotes[i].duration
-                        && copyNotes[i].velocity == srcNotes[i].velocity;
+                    same = copyNotes[i].tick == srcNotes[i].tick &&
+                           copyNotes[i].key == srcNotes[i].key &&
+                           copyNotes[i].duration == srcNotes[i].duration &&
+                           copyNotes[i].velocity == srcNotes[i].velocity;
                 }
                 if (!same) {
                     fail("duplicated track's notes differ from the source");
@@ -677,15 +654,13 @@ int runEditCheck(const QString &projectRoot)
                 }
                 return false;
             };
-            auto notesMatch = [&doc](int engineTrack,
-                                     const std::vector<DocNote> &want) {
+            auto notesMatch = [&doc](int engineTrack, const std::vector<DocNote> &want) {
                 const auto got = doc.notesForTrack(engineTrack);
                 if (got.size() != want.size())
                     return false;
                 for (size_t i = 0; i < got.size(); i++) {
-                    if (got[i].tick != want[i].tick || got[i].key != want[i].key
-                        || got[i].duration != want[i].duration
-                        || got[i].velocity != want[i].velocity)
+                    if (got[i].tick != want[i].tick || got[i].key != want[i].key ||
+                        got[i].duration != want[i].duration || got[i].velocity != want[i].velocity)
                         return false;
                 }
                 return true;
@@ -698,20 +673,17 @@ int runEditCheck(const QString &projectRoot)
                 fail("moveTrack was not a single undo command");
                 ok = false;
             }
-            if (ok
-                && (!notesMatch(last, srcNotes) || doc.channelFor(last) != srcChannel)) {
+            if (ok && (!notesMatch(last, srcNotes) || doc.channelFor(last) != srcChannel)) {
                 fail("moved track's notes or channel changed");
                 ok = false;
             }
-            if (ok
-                && (!seqChunkHas(0x51, base + step * 110)
-                    || !seqChunkHas(0x58, base + step * 112))) {
+            if (ok &&
+                (!seqChunkHas(0x51, base + step * 110) || !seqChunkHas(0x58, base + step * 112))) {
                 fail("seq globals did not stay with chunk 0 across the move");
                 ok = false;
             }
-            if (ok
-                && (doc.loopTick(false) != loopStartBefore
-                    || doc.loopTick(true) != loopEndBefore)) {
+            if (ok &&
+                (doc.loopTick(false) != loopStartBefore || doc.loopTick(true) != loopEndBefore)) {
                 fail("moveTrack lost the loop markers");
                 ok = false;
             }
@@ -727,9 +699,8 @@ int runEditCheck(const QString &projectRoot)
             if (ok) {
                 doc.moveTrack(last, 0); // and back again
                 mutateAndCheck("events unsorted after moveTrack back");
-                if (!notesMatch(0, srcNotes)
-                    || !seqChunkHas(0x51, base + step * 110)
-                    || !seqChunkHas(0x58, base + step * 112)) {
+                if (!notesMatch(0, srcNotes) || !seqChunkHas(0x51, base + step * 110) ||
+                    !seqChunkHas(0x58, base + step * 112)) {
                     fail("moving the track back did not restore its slot");
                     ok = false;
                 }
@@ -765,9 +736,8 @@ int runEditCheck(const QString &projectRoot)
                 fail("a '['-named track lost its name in the move");
                 ok = false;
             }
-            if (ok
-                && (doc.loopTick(false) != loopStartBefore
-                    || doc.loopTick(true) != loopEndBefore)) {
+            if (ok &&
+                (doc.loopTick(false) != loopStartBefore || doc.loopTick(true) != loopEndBefore)) {
                 fail("a '[' track name was misread as a loop marker");
                 ok = false;
             }
@@ -794,9 +764,8 @@ int runEditCheck(const QString &projectRoot)
             const uint64_t loopEndBefore = doc.loopTick(true);
             doc.deleteTrack(track);
             mutateAndCheck("events unsorted after deleteTrack of a song track");
-            if (ok
-                && (doc.loopTick(false) != loopStartBefore
-                    || doc.loopTick(true) != loopEndBefore)) {
+            if (ok &&
+                (doc.loopTick(false) != loopStartBefore || doc.loopTick(true) != loopEndBefore)) {
                 fail("deleteTrack lost the loop markers");
                 ok = false;
             }
@@ -817,8 +786,7 @@ int runEditCheck(const QString &projectRoot)
             // (first 0x03 in the chunk) finds it.
             if (ok) {
                 const auto timeline = doc.buildTimeline(48000.0);
-                if (!timeline
-                    || timeline->tracks[track].name != QStringLiteral("editcheck name")) {
+                if (!timeline || timeline->tracks[track].name != QStringLiteral("editcheck name")) {
                     fail("renamed track not visible in the timeline projection");
                     ok = false;
                 }
@@ -837,8 +805,8 @@ int runEditCheck(const QString &projectRoot)
                 const int count = doc.undoStack()->count();
                 doc.renameTrack(track, QStringLiteral("["));
                 doc.renameTrack(track, QStringLiteral(" ][ "));
-                if (doc.undoStack()->count() != count
-                    || doc.trackName(track) != QStringLiteral("editcheck name")) {
+                if (doc.undoStack()->count() != count ||
+                    doc.trackName(track) != QStringLiteral("editcheck name")) {
                     fail("loop-marker name was not refused");
                     ok = false;
                 }
@@ -882,8 +850,8 @@ int runEditCheck(const QString &projectRoot)
             }
             if (ok) {
                 doc.setTimeSig(base, 7, 2); // 7/4, replacing in place
-                if (!findSig(base, &sig) || sig.numerator != 7 || sig.denomPow2 != 2
-                    || doc.timeSigs().size() != sigsBefore + 1) {
+                if (!findSig(base, &sig) || sig.numerator != 7 || sig.denomPow2 != 2 ||
+                    doc.timeSigs().size() != sigsBefore + 1) {
                     fail("time signature edit did not replace in place");
                     ok = false;
                 }
@@ -891,8 +859,7 @@ int runEditCheck(const QString &projectRoot)
             if (ok) {
                 doc.moveTimeSig(base, base + step * 4);
                 mutateAndCheck("events unsorted after moveTimeSig");
-                if (findSig(base, &sig) || !findSig(base + step * 4, &sig)
-                    || sig.numerator != 7) {
+                if (findSig(base, &sig) || !findSig(base + step * 4, &sig) || sig.numerator != 7) {
                     fail("time signature not moved");
                     ok = false;
                 }
@@ -1008,37 +975,31 @@ int runEditCheck(const QString &projectRoot)
         info.midPath = midPath;
         info.hasMid = true;
         SongDocument doc;
-        bool ok = tmp.isValid() && smf.writeFile(midPath, &werror)
-            && doc.load(info, &werror);
+        bool ok = tmp.isValid() && smf.writeFile(midPath, &werror) && doc.load(info, &werror);
         if (!ok)
             fail0("could not write/load the synthetic format-0 file");
-        if (ok
-            && (doc.smf().format != 1 || !doc.smf().wasFormat0
-                || doc.smf().tracks.size() != 5 || doc.engineTrackCount() != 3)) {
+        if (ok && (doc.smf().format != 1 || !doc.smf().wasFormat0 || doc.smf().tracks.size() != 5 ||
+                   doc.engineTrackCount() != 3)) {
             fail0("load did not split into conductor + one chunk per channel");
             ok = false;
         }
-        if (ok
-            && (doc.channelFor(0) != 1 || doc.channelFor(1) != 4
-                || doc.channelFor(2) != 7 || doc.smfTrackFor(0) != 1)) {
+        if (ok && (doc.channelFor(0) != 1 || doc.channelFor(1) != 4 || doc.channelFor(2) != 7 ||
+                   doc.smfTrackFor(0) != 1)) {
             fail0("converted chunks not in ascending channel order");
             ok = false;
         }
         if (ok) {
             const auto note = [&doc](int track) {
                 const auto notes = doc.notesForTrack(track);
-                return notes.size() == 1 && notes[0].duration == 24
-                    ? int(notes[0].key)
-                    : -1;
+                return notes.size() == 1 && notes[0].duration == 24 ? int(notes[0].key) : -1;
             };
             if (note(0) != 60 || note(1) != 64 || note(2) != 67) {
                 fail0("notes did not land on their channel's chunk");
                 ok = false;
             }
         }
-        if (ok
-            && (doc.trackName(1) != QStringLiteral("Lead")
-                || !doc.trackName(0).isEmpty() || !doc.trackName(2).isEmpty())) {
+        if (ok && (doc.trackName(1) != QStringLiteral("Lead") || !doc.trackName(0).isEmpty() ||
+                   !doc.trackName(2).isEmpty())) {
             fail0("the prefixed name did not become its channel chunk's name");
             ok = false;
         }
@@ -1056,8 +1017,7 @@ int runEditCheck(const QString &projectRoot)
                 fail0("prefixed instrument-name meta did not travel to its channel chunk");
                 ok = false;
             }
-            if (ok
-                && (!hasMeta(chunks[0], 0x03, ":") || hasMeta(chunks[3], 0x03, ":"))) {
+            if (ok && (!hasMeta(chunks[0], 0x03, ":") || hasMeta(chunks[3], 0x03, ":"))) {
                 fail0("prefixed marker-text meta did not stay in the conductor chunk");
                 ok = false;
             }
@@ -1067,9 +1027,8 @@ int runEditCheck(const QString &projectRoot)
                 bool prefixedMarker = false;
                 const auto &evs = chunks[0].events;
                 for (size_t i = 1; i < evs.size(); i++) {
-                    if (evs[i].isMeta() && evs[i].metaType == 0x03
-                        && evs[i].blob == ":" && evs[i - 1].isMeta()
-                        && evs[i - 1].metaType == 0x20)
+                    if (evs[i].isMeta() && evs[i].metaType == 0x03 && evs[i].blob == ":" &&
+                        evs[i - 1].isMeta() && evs[i - 1].metaType == 0x20)
                         prefixedMarker = true;
                 }
                 if (!prefixedMarker) {
@@ -1113,17 +1072,16 @@ int runEditCheck(const QString &projectRoot)
                 }
             }
         }
-        if (ok
-            && (doc.loopTick(false) != 12 || doc.loopTick(true) != 36
-                || doc.lanePoints(0, DOC_CC_TEMPO).size() != 1)) {
+        if (ok && (doc.loopTick(false) != 12 || doc.loopTick(true) != 36 ||
+                   doc.lanePoints(0, DOC_CC_TEMPO).size() != 1)) {
             fail0("seq globals did not stay readable in chunk 0");
             ok = false;
         }
         if (ok) {
             const auto timeline = doc.buildTimeline(48000.0);
-            if (!timeline || timeline->usedTrackCount != 3
-                || timeline->tracks[1].name != QStringLiteral("Lead")
-                || timeline->loopStartTick != 12) {
+            if (!timeline || timeline->usedTrackCount != 3 ||
+                timeline->tracks[1].name != QStringLiteral("Lead") ||
+                timeline->loopStartTick != 12) {
                 fail0("conversion not reflected in the timeline projection");
                 ok = false;
             }
@@ -1220,8 +1178,7 @@ int runEditCheck(const QString &projectRoot)
         info.midPath = midPath;
         info.hasMid = true;
         SongDocument doc;
-        bool ok = tmp.isValid() && smf.writeFile(midPath, &werror)
-            && doc.load(info, &werror);
+        bool ok = tmp.isValid() && smf.writeFile(midPath, &werror) && doc.load(info, &werror);
         if (!ok)
             failM("could not write/load the synthetic file");
         if (ok && doc.trackName(0) != QStringLiteral("Real")) {
@@ -1241,8 +1198,7 @@ int runEditCheck(const QString &projectRoot)
         }
         if (ok) {
             doc.renameTrack(0, QStringLiteral("Renamed"));
-            if (doc.trackName(0) != QStringLiteral("Renamed")
-                || doc.loopTick(false) != 0) {
+            if (doc.trackName(0) != QStringLiteral("Renamed") || doc.loopTick(false) != 0) {
                 failM("rename clobbered the loop marker instead of the name");
             }
         }

@@ -31,30 +31,25 @@ bool platformPlayheadRendererEnabled();
 
 class PlayheadOverlay final : public QWidget
 {
-public:
+  public:
     explicit PlayheadOverlay(QWidget *owner, TimelineSurfaces surfaces);
     void setPlayhead(qreal timelineX, bool visible, bool playing);
     ~PlayheadOverlay() override;
 
-protected:
+  protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
     void changeEvent(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
 
-private:
-    qreal finalX() const
-    {
-        return static_cast<qreal>(m_timelineOrigin) + m_timelineX;
-    }
+  private:
+    qreal finalX() const { return static_cast<qreal>(m_timelineOrigin) + m_timelineX; }
 
-    QRect visibleSurfaceRect(const QWidget *surface, QWidget *owner,
-                             int origin) const;
+    QRect visibleSurfaceRect(const QWidget *surface, QWidget *owner, int origin) const;
     void observeSurfaceGeometry();
     void synchronizeGeometry();
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     class Platform;
-    struct PlatformDeleter
-    {
+    struct PlatformDeleter {
         void operator()(Platform *platform) const;
     };
 

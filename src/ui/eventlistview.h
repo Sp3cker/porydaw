@@ -26,7 +26,7 @@ class EventListView : public QWidget
 {
     Q_OBJECT
 
-public:
+  public:
     explicit EventListView(SongView *sv, QWidget *parent = nullptr);
 
     // May be null (read-only sessions have no raw model to show).
@@ -49,11 +49,11 @@ public:
     // can't be driven by the offscreen harness.
     void insertCopyOfRow(int row);
 
-protected:
+  protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
     void changeEvent(QEvent *event) override;
 
-private:
+  private:
     void applyRowIndexFont();
     void rebuildChunkCombo();
     void chunkPicked(int comboIndex);
@@ -78,8 +78,8 @@ private:
     eventlist::EventTableModel *m_model;
     QTableView *m_table;
     QComboBox *m_chunk;
-    QToolButton *m_filter;   // opens m_filterMenu; text summarizes the checks
-    QMenu *m_filterMenu;     // one checkable action per event category
+    QToolButton *m_filter; // opens m_filterMenu; text summarizes the checks
+    QMenu *m_filterMenu;   // one checkable action per event category
     QLabel *m_count;
     bool m_syncing = false;
     bool m_settingCurrent = false; // programmatic row changes must not
@@ -89,7 +89,7 @@ private:
     // consumes it — a reorder keeps the chunk count, so the count heuristic
     // alone would keep showing the old index's new occupant.
     int m_pendingChunk = -1;
-    double m_playTick = -1.0;      // last playhead tick pushed (-1 = none)
+    double m_playTick = -1.0; // last playhead tick pushed (-1 = none)
     bool m_playing = false;
-    bool m_followPlayhead = true;  // scroll to the playing row (transport bar)
+    bool m_followPlayhead = true; // scroll to the playing row (transport bar)
 };

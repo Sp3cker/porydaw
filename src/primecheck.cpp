@@ -29,9 +29,9 @@ constexpr uint32_t kDivision = 24;
 constexpr double kSampleRate = 48000.0;
 constexpr uint64_t kSamplesPerTick = 1000;
 
-constexpr uint8_t kProgAtZero = 5;  // engine track 0, tick 0
-constexpr uint8_t kProgLater = 9;   // engine track 0, tick 96
-constexpr uint8_t kProgTrack1 = 7;  // engine track 1, tick 48 (its first)
+constexpr uint8_t kProgAtZero = 5; // engine track 0, tick 0
+constexpr uint8_t kProgLater = 9;  // engine track 0, tick 96
+constexpr uint8_t kProgTrack1 = 7; // engine track 1, tick 48 (its first)
 constexpr uint64_t kLaterTick = 96;
 
 SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
@@ -141,9 +141,8 @@ int checkTrackProgram(const M4AEngine &engine, int track, uint8_t program, const
     const M4ATrack &t = engine.tracks[track];
     if (t.currentProgram != program || t.currentVoice.wav == nullptr) {
         std::fprintf(stderr,
-                     "primecheck: FAIL: %s: track %d has program %d (wav %s), expected %d\n",
-                     what, track, t.currentProgram,
-                     t.currentVoice.wav ? "set" : "null", program);
+                     "primecheck: FAIL: %s: track %d has program %d (wav %s), expected %d\n", what,
+                     track, t.currentProgram, t.currentVoice.wav ? "set" : "null", program);
         return 1;
     }
     return 0;
@@ -174,9 +173,8 @@ int runPrimeCheck()
         TimelinePlayer::chase(&engine, timeline.get(), 0);
         m4a_engine_note_on(&engine, 1, 60, 127);
         if (rendersAudibly(&engine)) {
-            std::fprintf(stderr,
-                         "primecheck: FAIL: unprimed track 1 audition was audible "
-                         "(control expectation changed?)\n");
+            std::fprintf(stderr, "primecheck: FAIL: unprimed track 1 audition was audible "
+                                 "(control expectation changed?)\n");
             failures++;
         }
         m4a_engine_destroy(&engine);
@@ -194,8 +192,7 @@ int runPrimeCheck()
                                       "chase-applied voice not overridden by a later one");
         failures += checkTrackProgram(engine, 1, kProgTrack1, "later voice primed at load");
         if (engine.tracks[2].currentVoice.wav != nullptr) {
-            std::fprintf(stderr,
-                         "primecheck: FAIL: track with no voice event was primed anyway\n");
+            std::fprintf(stderr, "primecheck: FAIL: track with no voice event was primed anyway\n");
             failures++;
         }
 

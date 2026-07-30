@@ -43,9 +43,8 @@ int runMkCheck(const QString &projectRoot, const QString &songLabel)
     const QString mkPath = SongsMk::path(projectRoot);
     const QString midiDir = projectRoot + QStringLiteral("/sound/songs/midi");
     if (QFile::exists(QDir(midiDir).filePath(QStringLiteral("midi.cfg")))) {
-        std::fprintf(stderr,
-                     "mkcheck: project has a midi.cfg — run this against a "
-                     "songs.mk-only project\n");
+        std::fprintf(stderr, "mkcheck: project has a midi.cfg — run this against a "
+                             "songs.mk-only project\n");
         return 1;
     }
     if (!QFile::exists(mkPath)) {
@@ -96,11 +95,11 @@ int runMkCheck(const QString &projectRoot, const QString &songLabel)
             if (before[i] == after[i])
                 continue;
             changed++;
-            const bool isSongRecipe = i > 0 && before[i - 1].contains(target)
-                                      && after[i].contains(QStringLiteral("$(MID)"));
+            const bool isSongRecipe = i > 0 && before[i - 1].contains(target) &&
+                                      after[i].contains(QStringLiteral("$(MID)"));
             if (!isSongRecipe) {
-                std::fprintf(stderr, "mkcheck: FAIL: unrelated line %d changed: '%s'\n",
-                             i + 1, qUtf8Printable(after[i]));
+                std::fprintf(stderr, "mkcheck: FAIL: unrelated line %d changed: '%s'\n", i + 1,
+                             qUtf8Printable(after[i]));
                 failures++;
             } else {
                 std::printf("mkcheck: recipe now: %s\n", qUtf8Printable(after[i]));
@@ -124,8 +123,7 @@ int runMkCheck(const QString &projectRoot, const QString &songLabel)
         check(song2->cfg.masterVolume == 111, "volume 111 not persisted");
         check(song2->cfg.voicegroupArg == song->cfg.voicegroupArg,
               "voicegroup arg changed by the volume write");
-        check(song2->cfg.reverb == song->cfg.reverb,
-              "reverb changed by the volume write");
+        check(song2->cfg.reverb == song->cfg.reverb, "reverb changed by the volume write");
     }
 
     // A song whose recipe spells reverb as -R$(STD_REVERB) must keep that
@@ -155,20 +153,18 @@ int runMkCheck(const QString &projectRoot, const QString &songLabel)
             SongCfg varCfg = varSong->cfg;
             varCfg.masterVolume = 99;
             if (check(SongRegistry::writeSongFlags(midiDir, varLabel,
-                                                   SongRegistry::mergeCfgFlags(varCfg),
-                                                   &error),
+                                                   SongRegistry::mergeCfgFlags(varCfg), &error),
                       "writing the $(STD_REVERB) song failed")) {
                 bool kept = false;
                 const QStringList lines = readAllLines(mkPath);
                 for (int i = 0; i + 1 < lines.size(); i++) {
-                    if (lines[i].contains(QStringLiteral("/%1.s").arg(varLabel))
-                        && lines[i + 1].contains(QStringLiteral("-R$(STD_REVERB)"))
-                        && lines[i + 1].contains(QStringLiteral("-V099")))
+                    if (lines[i].contains(QStringLiteral("/%1.s").arg(varLabel)) &&
+                        lines[i + 1].contains(QStringLiteral("-R$(STD_REVERB)")) &&
+                        lines[i + 1].contains(QStringLiteral("-V099")))
                         kept = true;
                 }
                 check(kept, "-R$(STD_REVERB) spelling not preserved");
-                std::printf("mkcheck: %s keeps -R$(STD_REVERB)\n",
-                            qUtf8Printable(varLabel));
+                std::printf("mkcheck: %s keeps -R$(STD_REVERB)\n", qUtf8Printable(varLabel));
             }
         }
     }
@@ -193,8 +189,7 @@ int runMkCheck(const QString &projectRoot, const QString &songLabel)
         // second removal is a no-op.
         if (check(SongRegistry::removeSongFlags(midiDir, newLabel, &error),
                   "removing the appended rule failed")) {
-            check(!SongsMk::parseFlags(mkPath).contains(newLabel),
-                  "removed rule still parses");
+            check(!SongsMk::parseFlags(mkPath).contains(newLabel), "removed rule still parses");
             check(mkBytes() == preAppend, "rule removal did not round-trip songs.mk");
             check(SongRegistry::removeSongFlags(midiDir, newLabel, &error),
                   "second rule removal failed");

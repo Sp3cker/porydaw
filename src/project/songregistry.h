@@ -22,14 +22,14 @@ struct RegistrationPlan {
     QString player;   // e.g. "MUSIC_PLAYER_BGM"
     int songId = -1;  // proposed ID = current count of song-table entries
 
-    QString songTableLine;    // "\tsong mus_foo, MUSIC_PLAYER_BGM, 0"
-    QString songsHLine;       // "#define MUS_FOO 610"
-    QString ldLine;           // "        sound/songs/midi/mus_foo.o(.rodata);"
-    QString charmapLine;      // "MUS_FOO = 62 02" — the ID, little-endian bytes
+    QString songTableLine; // "\tsong mus_foo, MUSIC_PLAYER_BGM, 0"
+    QString songsHLine;    // "#define MUS_FOO 610"
+    QString ldLine;        // "        sound/songs/midi/mus_foo.o(.rodata);"
+    QString charmapLine;   // "MUS_FOO = 62 02" — the ID, little-endian bytes
     // "    X(MUS_FOO)          \" — the debug menu's sound-list entry in its
     // mid-list form; one landing at a list's end drops the '\' continuation.
     QString debugLine;
-    bool ldApplicable = true; // false when ld_script.ld has no per-song lines
+    bool ldApplicable = true;      // false when ld_script.ld has no per-song lines
     bool charmapApplicable = true; // false when charmap.txt has no song entries
     bool debugApplicable = true;   // false when src/debug.c has no sound lists
 };
@@ -61,9 +61,8 @@ struct RegistrationStatus {
 
     bool complete() const
     {
-        return inSongTable && inSongsH && (inLdScript || !ldApplicable)
-               && (inCharmap || !charmapApplicable)
-               && (inDebugMenu || !debugApplicable);
+        return inSongTable && inSongsH && (inLdScript || !ldApplicable) &&
+               (inCharmap || !charmapApplicable) && (inDebugMenu || !debugApplicable);
     }
 };
 
@@ -95,8 +94,8 @@ QString constantForLabel(const QString &label);
 
 // Computes the registration lines against the files as they are on disk
 // right now, matching each file's existing indentation/alignment.
-RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
-                          const QString &constant, const QString &player);
+RegistrationPlan makePlan(const QString &projectRoot, const QString &label, const QString &constant,
+                          const QString &player);
 
 // Writes the song into all registration files: the song_table.inc entry
 // (filling the lowest free slot a deleted song left, else appending), the
@@ -108,9 +107,8 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label,
 // entries (a label can own several — forks alias real songs into filler
 // slots), which is corrected in place. Only the song's own lines change.
 // On success *songId carries the song's table index.
-bool registerSong(const QString &projectRoot, const QString &label,
-                  const QString &constant, const QString &player, QString *error,
-                  int *songId = nullptr);
+bool registerSong(const QString &projectRoot, const QString &label, const QString &constant,
+                  const QString &player, QString *error, int *songId = nullptr);
 
 // What unregisterSong would edit, for the Delete Song confirmation dialog.
 RemovalPlan makeRemovalPlan(const QString &projectRoot, const QString &label,
@@ -128,8 +126,8 @@ RemovalPlan makeRemovalPlan(const QString &projectRoot, const QString &label,
 // Entry 0 itself is never a free slot, and this refuses to delete it.
 // Byte-conservative and idempotent — a song with no entries anywhere is a
 // no-op success.
-bool unregisterSong(const QString &projectRoot, const QString &label,
-                    const QString &constant, QString *error);
+bool unregisterSong(const QString &projectRoot, const QString &label, const QString &constant,
+                    QString *error);
 
 // The song's voicegroup when deleting the song may delete it too: its -G arg
 // resolves to a file under sound/voicegroups/, no other song's -G references
@@ -162,14 +160,14 @@ QStringList mergeCfgFlags(const SongCfg &cfg);
 
 // Updates or appends the song's line in <midiDir>/midi.cfg, byte-conservative
 // for every other line (vanilla midi.cfg is CRLF; per-line \r is preserved).
-bool writeMidiCfgLine(const QString &midiDir, const QString &label,
-                      const QStringList &flags, QString *error);
+bool writeMidiCfgLine(const QString &midiDir, const QString &label, const QStringList &flags,
+                      QString *error);
 
 // Persists a song's flags wherever the project stores them: its midi.cfg
 // line when <midiDir>/midi.cfg exists, its songs.mk rule for projects
 // predating midi.cfg, and a fresh midi.cfg when the project has neither.
-bool writeSongFlags(const QString &midiDir, const QString &label,
-                    const QStringList &flags, QString *error);
+bool writeSongFlags(const QString &midiDir, const QString &label, const QStringList &flags,
+                    QString *error);
 
 // Removes the song's flag storage everywhere it may live: its midi.cfg line
 // and its songs.mk rule (a project can carry both when midi.cfg arrived
@@ -189,10 +187,10 @@ SmfFile blankSong();
 // Pending-registration metadata in the sidecar (.porydaw/<label>.json), so
 // an unregistered song's chosen constant/player survive a project reopen
 // when registerSong could not complete (SPEC §6.3).
-bool saveRegistrationMeta(const QString &projectRoot, const QString &label,
-                          const QString &constant, const QString &player);
-bool loadRegistrationMeta(const QString &projectRoot, const QString &label,
-                          QString *constant, QString *player);
+bool saveRegistrationMeta(const QString &projectRoot, const QString &label, const QString &constant,
+                          const QString &player);
+bool loadRegistrationMeta(const QString &projectRoot, const QString &label, QString *constant,
+                          QString *player);
 void clearRegistrationMeta(const QString &projectRoot, const QString &label);
 
 } // namespace SongRegistry

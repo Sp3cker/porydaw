@@ -79,7 +79,7 @@ class SongDocument : public QObject
 {
     Q_OBJECT
 
-public:
+  public:
     explicit SongDocument(QObject *parent = nullptr);
 
     bool load(const SongInfo &song, QString *error);
@@ -121,8 +121,7 @@ public:
     std::vector<DocTimeSig> timeSigs() const;
 
     // Edits. Each call pushes one undoable command and emits documentChanged.
-    void addNote(int engineTrack, uint64_t tick, uint8_t key, uint32_t duration,
-                 uint8_t velocity);
+    void addNote(int engineTrack, uint64_t tick, uint8_t key, uint32_t duration, uint8_t velocity);
     // Batch insert (clipboard paste): all notes land in one undoable command.
     struct NewNote {
         uint64_t tick;
@@ -156,12 +155,11 @@ public:
         uint64_t tick;
         int value;
     };
-    void writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin,
-                         uint64_t tickEnd, const std::vector<LanePointValue> &points);
-    void moveLanePoint(int engineTrack, uint8_t cc, const DocLanePoint &point,
-                       uint64_t newTick, int newValue);
-    void deleteLanePoints(int engineTrack, uint8_t cc,
-                          const std::vector<DocLanePoint> &points);
+    void writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin, uint64_t tickEnd,
+                         const std::vector<LanePointValue> &points);
+    void moveLanePoint(int engineTrack, uint8_t cc, const DocLanePoint &point, uint64_t newTick,
+                       int newValue);
+    void deleteLanePoints(int engineTrack, uint8_t cc, const std::vector<DocLanePoint> &points);
 
     // Multi-track range edit (time-selection delete/paste): removals and
     // insertions across any mix of tracks and lanes, applied as one undoable
@@ -185,8 +183,8 @@ public:
 
         bool empty() const
         {
-            return removeNotes.empty() && removePoints.empty() && addNotes.empty()
-                && addPoints.empty();
+            return removeNotes.empty() && removePoints.empty() && addNotes.empty() &&
+                   addPoints.empty();
         }
     };
     void applyRangeEdit(const QString &text, const RangeEdit &edit);
@@ -195,8 +193,8 @@ public:
     // and lanes, tempo included) by a tick delta as one undoable command.
     // Events are re-inserted with their exact bytes, so tempo blobs keep
     // their precise microseconds and unterminated notes stay unterminated.
-    void moveRange(const std::vector<DocNote> &notes,
-                   const std::vector<DocLanePoint> &points, int64_t dTick);
+    void moveRange(const std::vector<DocNote> &notes, const std::vector<DocLanePoint> &points,
+                   int64_t dTick);
 
     // Ripple delete (time-selection "Remove contents"): erases [startTick,
     // endTick) on the scoped streams and closes the gap — everything at or
@@ -211,7 +209,7 @@ public:
     // chunk's end-of-track tick, so the song itself gets shorter. One
     // undoable command; returns false when nothing would change.
     struct RippleScope {
-        std::vector<int> tracks; // engine tracks (ignored when wholeSong)
+        std::vector<int> tracks;                    // engine tracks (ignored when wholeSong)
         std::vector<std::pair<int, uint8_t>> lanes; // (engineTrack, cc); -1 = tempo
         bool wholeSong = false;
     };
@@ -243,8 +241,7 @@ public:
     // note-on (in either direction — the moved event may not cross an
     // event the canonical order pins it against). False when index is out
     // of range.
-    bool rawEventMoveBounds(int smfTrack, size_t index, size_t *first,
-                            size_t *last) const;
+    bool rawEventMoveBounds(int smfTrack, size_t index, size_t *first, size_t *last) const;
     // Move the chunk's end-of-track marker; clamped so it never precedes the
     // chunk's last event.
     void setTrackEndTick(int smfTrack, uint64_t tick);
@@ -301,7 +298,7 @@ public:
     // Playable projection for the audio engine (MidiTimeline::build).
     std::unique_ptr<MidiTimeline> buildTimeline(double sampleRate) const;
 
-signals:
+  signals:
     // Emitted after every mutation, undo, and redo.
     void documentChanged();
     // Emitted while a track-reorder MoveTrack op applies or reverts, before
@@ -314,7 +311,7 @@ signals:
     // remap state only, don't read back.
     void trackMoved(int fromChunk, int toChunk, QVector<int> engineMap);
 
-private:
+  private:
     friend class SongEditCommand;
     friend class SongCfgCommand;
     friend class MoveNotesCommand;
@@ -331,13 +328,13 @@ private:
             MoveTrack    // move chunk smfTrack so it lands at index smfTrackTo
         } type;
         int smfTrack = 0;
-        int smfTrackTo = 0; // MoveTrack: the chunk's index after the move
-        size_t index = 0;   // Remove/Modify/Move: target; Insert: recorded on apply
-        size_t indexTo = 0; // MoveEvent: the event's index after the move
-        SmfEvent event;     // Insert: new event; Modify: new content (same tick)
-        SmfEvent oldEvent;  // recorded on apply (Remove/Modify)
+        int smfTrackTo = 0;      // MoveTrack: the chunk's index after the move
+        size_t index = 0;        // Remove/Modify/Move: target; Insert: recorded on apply
+        size_t indexTo = 0;      // MoveEvent: the event's index after the move
+        SmfEvent event;          // Insert: new event; Modify: new content (same tick)
+        SmfEvent oldEvent;       // recorded on apply (Remove/Modify)
         uint64_t oldEndTick = 0; // recorded on apply (Insert past track end)
-        SmfTrack trackData; // InsertTrack: content; RemoveTrack: recorded on apply
+        SmfTrack trackData;      // InsertTrack: content; RemoveTrack: recorded on apply
     };
 
     void applyOps(std::vector<EditOp> &ops);
@@ -350,13 +347,11 @@ private:
     int freeChannel() const;
 
     // Builder helpers (operate on current state; see applyOps for index rules).
-    SmfEvent makeChannelEvent(uint8_t typeNibble, uint8_t channel, uint64_t tick,
-                              uint8_t data0, uint8_t data1) const;
-    void appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel,
-                             uint64_t tick, uint8_t key, uint32_t duration,
-                             uint8_t velocity) const;
-    void appendRemoveOps(std::vector<EditOp> &ops, int smfTrack,
-                         std::vector<size_t> indices) const;
+    SmfEvent makeChannelEvent(uint8_t typeNibble, uint8_t channel, uint64_t tick, uint8_t data0,
+                              uint8_t data1) const;
+    void appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel, uint64_t tick,
+                             uint8_t key, uint32_t duration, uint8_t velocity) const;
+    void appendRemoveOps(std::vector<EditOp> &ops, int smfTrack, std::vector<size_t> indices) const;
     // Same-key overlap resolution for edits that write notes. The pairing
     // rule (every note-on takes the first same-key end after it) cannot
     // represent two overlapping notes on one key — a written note landing
@@ -382,8 +377,8 @@ private:
                              std::vector<EditOp> &trims) const;
     // moveNotes' op builder, split out so MoveNotesCommand can rebuild the
     // move with an accumulated delta when merging keyboard presses.
-    std::vector<EditOp> buildMoveNotesOps(const std::vector<DocNote> &notes,
-                                          int64_t dTick, int dKey) const;
+    std::vector<EditOp> buildMoveNotesOps(const std::vector<DocNote> &notes, int64_t dTick,
+                                          int dKey) const;
     // Replace one event: modify in place when the tick is unchanged (the
     // event keeps its position within its tick group — mid2agb stable-sorts,
     // so same-tick order is significant), else remove + re-insert so ticks
@@ -406,7 +401,7 @@ private:
     bool m_hadCfgLine = false;
     QUndoStack m_undoStack;
 
-    std::vector<int> m_engineToSmf;      // engine track -> SMF track
+    std::vector<int> m_engineToSmf;       // engine track -> SMF track
     std::vector<uint8_t> m_engineChannel; // engine track -> MIDI channel
     int m_trackBudget = 16;
 };

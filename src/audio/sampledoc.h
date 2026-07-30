@@ -8,7 +8,7 @@
 // swap; the decoded buffer is never mutated (PLAN.md §1 design stances).
 class SampleDocument
 {
-public:
+  public:
     explicit SampleDocument(ImportedSample source);
 
     const ImportedSample &source() const { return m_source; }
@@ -27,7 +27,7 @@ public:
     // The cached render; re-renders only when the params changed.
     const ProcessedSample &processed();
 
-private:
+  private:
     ProcessedSample render() const;
 
     ImportedSample m_source;

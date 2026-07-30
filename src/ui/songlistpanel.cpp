@@ -57,10 +57,9 @@ bool isSubsequence(const QString &needle, const QString &hay)
 SongListPanel::SongListPanel(QWidget *parent) : QWidget(parent)
 {
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(::layout::space(::layout::Space::One),
-                               ::layout::space(::layout::Space::One),
-                               ::layout::space(::layout::Space::One),
-                               ::layout::space(::layout::Space::One));
+    layout->setContentsMargins(
+        ::layout::space(::layout::Space::One), ::layout::space(::layout::Space::One),
+        ::layout::space(::layout::Space::One), ::layout::space(::layout::Space::One));
     layout->setSpacing(::layout::space(::layout::Space::One));
 
     m_search = new QLineEdit(this);
@@ -79,16 +78,14 @@ SongListPanel::SongListPanel(QWidget *parent) : QWidget(parent)
     m_category = new QComboBox(this);
     m_category->setObjectName(QStringLiteral("songListCategory"));
     m_category->addItem(tr("All"), kAllCategory);
-    connect(m_category, &QComboBox::currentIndexChanged, this,
-            &SongListPanel::rebuildList);
+    connect(m_category, &QComboBox::currentIndexChanged, this, &SongListPanel::rebuildList);
     filters->addWidget(m_category, 1);
     m_sort = new QComboBox(this);
     m_sort->setObjectName(QStringLiteral("songListSort"));
     m_sort->addItem(tr("ID order"));
     m_sort->addItem(tr("A–Z"));
     m_sort->setToolTip(tr("Sort by song ID or alphabetically"));
-    connect(m_sort, &QComboBox::currentIndexChanged, this,
-            &SongListPanel::rebuildList);
+    connect(m_sort, &QComboBox::currentIndexChanged, this, &SongListPanel::rebuildList);
     filters->addWidget(m_sort);
     layout->addLayout(filters);
 
@@ -96,33 +93,28 @@ SongListPanel::SongListPanel(QWidget *parent) : QWidget(parent)
     ::layout::configureListPositionIndicator(*m_list->verticalScrollBar());
     connect(m_list, &QListWidget::itemActivated, this, &SongListPanel::activateItem);
     m_list->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(m_list, &QListWidget::customContextMenuRequested, this,
-            [this](const QPoint &pos) {
-                QListWidgetItem *item = m_list->itemAt(pos);
-                if (!item)
-                    return;
-                const int songId = item->data(Qt::UserRole).toInt();
-                QMenu menu(this);
-                menu.addAction(tr("Open"), this,
-                               [this, songId] { emit songActivated(songId); });
-                menu.addAction(tr("Open in New Tab"), this, [this, songId] {
-                    emit songOpenInNewTabRequested(songId);
-                });
-                menu.addSeparator();
-                QAction *reg = menu.addAction(tr("Register Song"), this, [this, songId] {
-                    emit songRegisterRequested(songId);
-                });
-                bool incomplete = false;
-                for (const SongInfo &song : m_songs) {
-                    if (song.id == songId)
-                        incomplete = !song.registered || !song.registrationGaps.isEmpty();
-                }
-                reg->setEnabled(incomplete);
-                menu.addAction(tr("Delete Song…"), this, [this, songId] {
-                    emit songDeleteRequested(songId);
-                });
-                menu.exec(m_list->viewport()->mapToGlobal(pos));
-            });
+    connect(m_list, &QListWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
+        QListWidgetItem *item = m_list->itemAt(pos);
+        if (!item)
+            return;
+        const int songId = item->data(Qt::UserRole).toInt();
+        QMenu menu(this);
+        menu.addAction(tr("Open"), this, [this, songId] { emit songActivated(songId); });
+        menu.addAction(tr("Open in New Tab"), this,
+                       [this, songId] { emit songOpenInNewTabRequested(songId); });
+        menu.addSeparator();
+        QAction *reg = menu.addAction(tr("Register Song"), this,
+                                      [this, songId] { emit songRegisterRequested(songId); });
+        bool incomplete = false;
+        for (const SongInfo &song : m_songs) {
+            if (song.id == songId)
+                incomplete = !song.registered || !song.registrationGaps.isEmpty();
+        }
+        reg->setEnabled(incomplete);
+        menu.addAction(tr("Delete Song…"), this,
+                       [this, songId] { emit songDeleteRequested(songId); });
+        menu.exec(m_list->viewport()->mapToGlobal(pos));
+    });
     layout->addWidget(m_list, 1);
 
     m_count = new QLabel(this);
@@ -135,8 +127,7 @@ SongListPanel::SongListPanel(QWidget *parent) : QWidget(parent)
     // panel (same convention as the voicegroup editor's inputs — see
     // eventFilter). Filter queries never need a literal space: labels have
     // none and the fuzzy fallback covers multi-part queries.
-    for (QWidget *w :
-         std::initializer_list<QWidget *>{m_search, m_category, m_sort, m_list})
+    for (QWidget *w : std::initializer_list<QWidget *>{m_search, m_category, m_sort, m_list})
         w->installEventFilter(this);
 }
 
@@ -166,8 +157,7 @@ QString SongListPanel::categoryPrefix() const
     // Before any project opened, the restored category is still pending —
     // report it, not the combo's placeholder All, so a project-less run
     // doesn't wipe the remembered category.
-    return m_pendingCategory.isEmpty() ? m_category->currentData().toString()
-                                       : m_pendingCategory;
+    return m_pendingCategory.isEmpty() ? m_category->currentData().toString() : m_pendingCategory;
 }
 
 void SongListPanel::restoreFilters(const QString &search, int sortIndex,
@@ -207,16 +197,15 @@ bool SongListPanel::eventFilter(QObject *watched, QEvent *event)
     // fires instead of the input inserting a space / toggling.
     if (event->type() == QEvent::ShortcutOverride) {
         auto *keyEvent = static_cast<QKeyEvent *>(event);
-        if (keyEvent->key() == Qt::Key_Space
-            && keyEvent->modifiers() == Qt::NoModifier) {
+        if (keyEvent->key() == Qt::Key_Space && keyEvent->modifiers() == Qt::NoModifier) {
             keyEvent->ignore();
             return true;
         }
     }
     if (watched == m_search && event->type() == QEvent::KeyPress) {
         const int key = static_cast<QKeyEvent *>(event)->key();
-        if (key == Qt::Key_Up || key == Qt::Key_Down || key == Qt::Key_PageUp
-            || key == Qt::Key_PageDown) {
+        if (key == Qt::Key_Up || key == Qt::Key_Down || key == Qt::Key_PageUp ||
+            key == Qt::Key_PageDown) {
             QCoreApplication::sendEvent(m_list, event);
             return true;
         }
@@ -247,17 +236,15 @@ void SongListPanel::rebuildCategories()
                   return a < b;
               });
 
-    const QString previous = m_pendingCategory.isEmpty()
-                                 ? m_category->currentData().toString()
-                                 : m_pendingCategory;
-    m_pendingCategory.clear(); // one shot: a missing category falls back to All
+    const QString previous =
+        m_pendingCategory.isEmpty() ? m_category->currentData().toString() : m_pendingCategory;
+    m_pendingCategory.clear();          // one shot: a missing category falls back to All
     QSignalBlocker blocker(m_category); // rebuildList runs once, after
     m_category->clear();
     m_category->addItem(tr("All (%1)").arg(m_songs.size()), kAllCategory);
     for (const QString &prefix : m_knownPrefixes)
-        m_category->addItem(
-            QStringLiteral("%1 (%2)").arg(categoryName(prefix)).arg(counts[prefix]),
-            prefix);
+        m_category->addItem(QStringLiteral("%1 (%2)").arg(categoryName(prefix)).arg(counts[prefix]),
+                            prefix);
     if (other > 0)
         m_category->addItem(tr("Other (%1)").arg(other), kOtherCategory);
     const int keep = m_category->findData(previous);
@@ -277,16 +264,14 @@ bool SongListPanel::matchesFilters(const SongInfo &song) const
     const QString query = m_search->text().trimmed().toLower();
     if (query.isEmpty())
         return true;
-    const QString hay =
-        song.label.toLower() + QLatin1Char(' ') + song.constant.toLower();
+    const QString hay = song.label.toLower() + QLatin1Char(' ') + song.constant.toLower();
     const QStringList words = query.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     if (std::all_of(words.begin(), words.end(),
                     [&hay](const QString &w) { return hay.contains(w); }))
         return true;
     // Fuzzy fallback: "musrival" finds mus_rival.
-    return words.size() == 1
-        && (isSubsequence(query, song.label.toLower())
-            || isSubsequence(query, song.constant.toLower()));
+    return words.size() == 1 && (isSubsequence(query, song.label.toLower()) ||
+                                 isSubsequence(query, song.constant.toLower()));
 }
 
 void SongListPanel::rebuildList()
@@ -297,12 +282,10 @@ void SongListPanel::rebuildList()
             visible.append(&song);
     }
     if (m_sort->currentIndex() == 1) {
-        std::sort(visible.begin(), visible.end(),
-                  [](const SongInfo *a, const SongInfo *b) {
-                      const int cmp = QString::compare(a->label, b->label,
-                                                       Qt::CaseInsensitive);
-                      return cmp != 0 ? cmp < 0 : a->id < b->id;
-                  });
+        std::sort(visible.begin(), visible.end(), [](const SongInfo *a, const SongInfo *b) {
+            const int cmp = QString::compare(a->label, b->label, Qt::CaseInsensitive);
+            return cmp != 0 ? cmp < 0 : a->id < b->id;
+        });
     }
 
     m_list->clear();
@@ -323,8 +306,7 @@ void SongListPanel::rebuildList()
             item->setForeground(QColor(0xc0, 0x80, 0x30));
             item->setToolTip(tr("This song is missing its entry in: %1. "
                                 "Right-click → Register Song completes it.")
-                                 .arg(song->registrationGaps.join(
-                                     QStringLiteral(", "))));
+                                 .arg(song->registrationGaps.join(QStringLiteral(", "))));
         }
     }
 

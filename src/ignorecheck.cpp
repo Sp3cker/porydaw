@@ -57,8 +57,7 @@ int runIgnoreCheck(const QString &scratchDir)
 
     int caseNo = 0;
     const auto freshRoot = [&](bool gitDir) {
-        const QString root =
-            scratchDir + QStringLiteral("/proj%1").arg(++caseNo);
+        const QString root = scratchDir + QStringLiteral("/proj%1").arg(++caseNo);
         QDir().mkpath(root);
         if (gitDir)
             QDir().mkpath(root + QStringLiteral("/.git"));
@@ -70,21 +69,18 @@ int runIgnoreCheck(const QString &scratchDir)
         const QString root = freshRoot(true);
         writeFile(root + gi, "*.o\nbuild/\n");
         expect(Sidecar::ensureDir(root), "existing-file ensureDir succeeds");
-        expect(QDir(root + QStringLiteral("/.porydaw")).exists(),
-               "sidecar dir created");
+        expect(QDir(root + QStringLiteral("/.porydaw")).exists(), "sidecar dir created");
         expect(readFileBytes(root + gi) == "*.o\nbuild/\n.porydaw/\n",
                "entry appended, prior bytes preserved");
     }
 
     { // every already-present spelling leaves the file byte-untouched
-        const char *spellings[] = {".porydaw", ".porydaw/", "/.porydaw",
-                                   "/.porydaw/"};
+        const char *spellings[] = {".porydaw", ".porydaw/", "/.porydaw", "/.porydaw/"};
         for (const char *s : spellings) {
             const QString root = freshRoot(true);
             const QByteArray seed = QByteArray("*.o\n") + s + "\nbuild/\n";
             writeFile(root + gi, seed);
-            expect(Sidecar::ensureDir(root),
-                   "present-spelling ensureDir succeeds");
+            expect(Sidecar::ensureDir(root), "present-spelling ensureDir succeeds");
             expect(readFileBytes(root + gi) == seed,
                    "already-present spelling leaves .gitignore untouched");
         }
@@ -102,8 +98,7 @@ int runIgnoreCheck(const QString &scratchDir)
         expect(Sidecar::ensureDir(root), "non-repo ensureDir succeeds");
         expect(QDir(root + QStringLiteral("/.porydaw")).exists(),
                "non-repo still gets the sidecar dir");
-        expect(!QFileInfo::exists(root + gi),
-               "non-repo .gitignore not created");
+        expect(!QFileInfo::exists(root + gi), "non-repo .gitignore not created");
     }
 
     { // CRLF file keeps CRLF, including on the appended entry
@@ -124,8 +119,7 @@ int runIgnoreCheck(const QString &scratchDir)
 
     { // .git as a plain file (worktree/submodule checkout) counts as a repo
         const QString root = freshRoot(false);
-        writeFile(root + QStringLiteral("/.git"),
-                  "gitdir: ../.git/worktrees/proj\n");
+        writeFile(root + QStringLiteral("/.git"), "gitdir: ../.git/worktrees/proj\n");
         expect(Sidecar::ensureDir(root), ".git-file ensureDir succeeds");
         expect(readFileBytes(root + gi) == ".porydaw/\n",
                ".git-file checkout still gets the entry");
@@ -133,15 +127,13 @@ int runIgnoreCheck(const QString &scratchDir)
 
     { // subdir variant, and a second call is a byte no-op
         const QString root = freshRoot(true);
-        expect(Sidecar::ensureDir(root, QStringLiteral("samples")),
-               "subdir ensureDir succeeds");
+        expect(Sidecar::ensureDir(root, QStringLiteral("samples")), "subdir ensureDir succeeds");
         expect(QDir(root + QStringLiteral("/.porydaw/samples")).exists(),
                "subdir created under the sidecar dir");
         const QByteArray once = readFileBytes(root + gi);
         expect(once == ".porydaw/\n", "subdir call still writes the entry");
         expect(Sidecar::ensureDir(root), "second ensureDir succeeds");
-        expect(readFileBytes(root + gi) == once,
-               "second call leaves .gitignore untouched");
+        expect(readFileBytes(root + gi) == once, "second call leaves .gitignore untouched");
     }
 
     { // a commented-out entry does not count as present

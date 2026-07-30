@@ -33,8 +33,7 @@ QColor handleColor(WaveformView::Handle handle)
 
 } // namespace
 
-WaveformView::WaveformView(QWidget *parent)
-    : QWidget(parent)
+WaveformView::WaveformView(QWidget *parent) : QWidget(parent)
 {
     setObjectName(QStringLiteral("sampleWaveform"));
     setMouseTracking(true);
@@ -54,8 +53,8 @@ void WaveformView::setSample(const ImportedSample *sample)
     update();
 }
 
-void WaveformView::setMarkers(qint64 cropStart, qint64 cropEnd,
-                              qint64 loopStart, qint64 loopEnd, bool loopOn)
+void WaveformView::setMarkers(qint64 cropStart, qint64 cropEnd, qint64 loopStart, qint64 loopEnd,
+                              bool loopOn)
 {
     m_cropStart = cropStart;
     m_cropEnd = cropEnd;
@@ -65,8 +64,7 @@ void WaveformView::setMarkers(qint64 cropStart, qint64 cropEnd,
     update();
 }
 
-void WaveformView::setSeamOverlay(std::vector<float> endWindow,
-                                  std::vector<float> startWindow)
+void WaveformView::setSeamOverlay(std::vector<float> endWindow, std::vector<float> startWindow)
 {
     if (m_seamEnd == endWindow && m_seamStart == startWindow)
         return;
@@ -122,8 +120,7 @@ qint64 WaveformView::handleSample(Handle handle) const
 QPoint WaveformView::handlePoint(Handle handle) const
 {
     const bool loop = handle == LoopStartHandle || handle == LoopEndHandle;
-    return {xForSample(handleSample(handle)),
-            loop ? height() * 3 / 4 : height() / 4};
+    return {xForSample(handleSample(handle)), loop ? height() * 3 / 4 : height() / 4};
 }
 
 WaveformView::Handle WaveformView::hitHandle(const QPoint &pos) const
@@ -161,8 +158,7 @@ void WaveformView::clampView()
     const double minSpp = 0.05;
     const double maxSpp = double(n) / std::max(1, width() - 2);
     m_spp = qBound(minSpp, m_spp, std::max(minSpp, maxSpp));
-    m_scroll = qBound(0.0, m_scroll,
-                      std::max(0.0, double(n) - m_spp * width()));
+    m_scroll = qBound(0.0, m_scroll, std::max(0.0, double(n) - m_spp * width()));
 }
 
 void WaveformView::dragHandleTo(qint64 sample)
@@ -206,8 +202,7 @@ void WaveformView::mousePressEvent(QMouseEvent *event)
             return;
         }
     }
-    if (event->button() == Qt::LeftButton
-        || event->button() == Qt::MiddleButton) {
+    if (event->button() == Qt::LeftButton || event->button() == Qt::MiddleButton) {
         m_panning = true;
         m_panX = event->pos().x();
         m_panScroll = m_scroll;
@@ -273,8 +268,7 @@ void WaveformView::wheelEvent(QWheelEvent *event)
     if (!m_sample || m_sample->frameCount() <= 0)
         return;
     m_userZoomed = true;
-    const double factor =
-        std::pow(1.2, -event->angleDelta().y() / 120.0);
+    const double factor = std::pow(1.2, -event->angleDelta().y() / 120.0);
     const double anchorX = event->position().x();
     const double anchorSample = m_scroll + anchorX * m_spp;
     m_spp *= factor;
@@ -306,8 +300,7 @@ void WaveformView::paintEvent(QPaintEvent *event)
     if (m_loopOn) {
         QColor loopTint = handleColor(LoopStartHandle);
         loopTint.setAlpha(28);
-        p.fillRect(QRect(QPoint(xForSample(m_loopStart), 0),
-                         QPoint(xForSample(m_loopEnd), h)),
+        p.fillRect(QRect(QPoint(xForSample(m_loopStart), 0), QPoint(xForSample(m_loopEnd), h)),
                    loopTint);
     }
 
@@ -316,18 +309,13 @@ void WaveformView::paintEvent(QPaintEvent *event)
     p.setPen(themes::color(themes::Role::sample_waveform_ink));
     for (int px = 0; px < r.width(); px++) {
         const qint64 from = qint64(std::floor(m_scroll + px * m_spp));
-        const qint64 to = std::max<qint64>(
-            from + 1, qint64(std::ceil(m_scroll + (px + 1) * m_spp)));
+        const qint64 to =
+            std::max<qint64>(from + 1, qint64(std::ceil(m_scroll + (px + 1) * m_spp)));
         if (to <= 0 || from >= n)
             continue;
-        const SampleDsp::PeakPyramid::MinMax mm =
-            m_pyramid.query(x, from, to);
-        const int y0 = mid
-            - int(std::lround(qBound(-1.0, double(mm.hi) * m_gain, 1.0)
-                              * yScale));
-        const int y1 = mid
-            - int(std::lround(qBound(-1.0, double(mm.lo) * m_gain, 1.0)
-                              * yScale));
+        const SampleDsp::PeakPyramid::MinMax mm = m_pyramid.query(x, from, to);
+        const int y0 = mid - int(std::lround(qBound(-1.0, double(mm.hi) * m_gain, 1.0) * yScale));
+        const int y1 = mid - int(std::lround(qBound(-1.0, double(mm.lo) * m_gain, 1.0) * yScale));
         p.drawLine(px, y0, px, std::max(y1, y0 + 1));
     }
     p.setPen(QColor(128, 128, 128, 120));
@@ -346,10 +334,8 @@ void WaveformView::paintEvent(QPaintEvent *event)
         const QColor c = handleColor(handle);
         p.setPen(QPen(c, m_drag == handle || m_hover == handle ? 2 : 1));
         p.drawLine(hx, 0, hx, h);
-        const bool loop =
-            handle == LoopStartHandle || handle == LoopEndHandle;
-        const bool leftGrip =
-            handle == CropStartHandle || handle == LoopStartHandle;
+        const bool loop = handle == LoopStartHandle || handle == LoopEndHandle;
+        const bool leftGrip = handle == CropStartHandle || handle == LoopStartHandle;
         const int gy = loop ? h - 8 : 0;
         p.fillRect(QRect(leftGrip ? hx : hx - 6, gy, 7, 8), c);
     };
@@ -373,22 +359,19 @@ void WaveformView::paintEvent(QPaintEvent *event)
     // superimposed on the one leading into the loop start (owner-fed via
     // setSeamOverlay) — matched shapes mean a clean seam, and render-stage
     // effects like the crossfade bake visibly reshape the traces.
-    if (m_loopOn && m_seamEnd.size() >= 8
-        && m_seamEnd.size() == m_seamStart.size()) {
+    if (m_loopOn && m_seamEnd.size() >= 8 && m_seamEnd.size() == m_seamStart.size()) {
         const qint64 w = qint64(m_seamEnd.size());
         const QRect inset(r.width() - 236, 6, 228, 56);
         p.fillRect(inset, palette().color(QPalette::AlternateBase));
         p.setPen(palette().color(QPalette::Mid));
         p.drawRect(inset);
-        const auto drawWindow = [&](const std::vector<float> &win,
-                                    const QColor &c) {
+        const auto drawWindow = [&](const std::vector<float> &win, const QColor &c) {
             QPainterPath path;
             for (qint64 i = 0; i < w; i++) {
                 const double v = double(win[size_t(i)]);
-                const double px = inset.left() + 1
-                    + double(i) * (inset.width() - 2) / double(w - 1);
-                const double py = inset.center().y()
-                    - v * (inset.height() * 0.45);
+                const double px =
+                    inset.left() + 1 + double(i) * (inset.width() - 2) / double(w - 1);
+                const double py = inset.center().y() - v * (inset.height() * 0.45);
                 if (i == 0)
                     path.moveTo(px, py);
                 else
@@ -397,11 +380,9 @@ void WaveformView::paintEvent(QPaintEvent *event)
             p.setPen(QPen(c, 1));
             p.drawPath(path);
         };
-        drawWindow(m_seamEnd,
-                   themes::color(themes::Role::sample_seam_end_ink));
+        drawWindow(m_seamEnd, themes::color(themes::Role::sample_seam_end_ink));
         drawWindow(m_seamStart, handleColor(LoopStartHandle));
         p.setPen(palette().color(QPalette::Mid));
-        p.drawText(inset.adjusted(4, 2, -4, -2), Qt::AlignBottom,
-                   tr("seam"));
+        p.drawText(inset.adjusted(4, 2, -4, -2), Qt::AlignBottom, tr("seam"));
     }
 }

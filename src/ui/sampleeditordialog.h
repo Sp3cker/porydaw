@@ -43,7 +43,7 @@ class SampleEditorDialog : public QDialog
 {
     Q_OBJECT
 
-public:
+  public:
     // validator: name -> ok, filling *error with the refusal shown inline
     // (SampleRegistrar::validateSampleName bound to the project).
     using NameValidator = std::function<bool(const QString &, QString *)>;
@@ -52,8 +52,7 @@ public:
     // is the destination voice's envelope (browser-initiated flow) and
     // enables the "use destination voice ADSR" audition option.
     SampleEditorDialog(ImportedSample sample, NameValidator validator,
-                       AudioEngine *engine = nullptr,
-                       const AuditionSlots::Adsr *destAdsr = nullptr,
+                       AudioEngine *engine = nullptr, const AuditionSlots::Adsr *destAdsr = nullptr,
                        QWidget *parent = nullptr);
 
     // The validated registration name (valid whenever the dialog accepts).
@@ -76,10 +75,10 @@ public:
     // surgery — out of scope) and the commit button reads "Save Sample".
     void setEditTarget(const QString &name);
 
-protected:
+  protected:
     void done(int result) override; // silence the audition on any close
 
-private:
+  private:
     void applyParamsFromUi(int mergeKey);
     void commitParams(const SampleEditParams &params, int mergeKey);
     void syncUiFromParams();
@@ -141,11 +140,11 @@ private:
     enum class AuditionMode { None, Once, Loop };
     AuditionMode m_auditionMode = AuditionMode::None;
     bool m_republishPending = false;
-    double m_auditionPos = 0.0;   // output-domain samples
+    double m_auditionPos = 0.0;     // output-domain samples
     double m_auditionGapLeft = 0.0; // seconds until a one-shot repeats
-    double m_auditionRate = 0.0;  // output samples/sec at the audition key
-    double m_auditionRatio = 1.0; // output rate / source rate
-    qint64 m_auditionCrop = 0;    // source crop start for playhead mapping
+    double m_auditionRate = 0.0;    // output samples/sec at the audition key
+    double m_auditionRatio = 1.0;   // output rate / source rate
+    qint64 m_auditionCrop = 0;      // source crop start for playhead mapping
     quint32 m_auditionSize = 0;
     quint32 m_auditionLoopStart = 0;
     bool m_auditionLooped = false;

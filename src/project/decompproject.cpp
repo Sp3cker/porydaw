@@ -81,9 +81,8 @@ bool DecompProject::parseSongTable(QString *error)
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         if (error)
-            *error = QStringLiteral(
-                         "Cannot open %1.\n\nIs this a pokeemerald/pokefirered/pokeruby "
-                         "project directory?")
+            *error = QStringLiteral("Cannot open %1.\n\nIs this a pokeemerald/pokefirered/pokeruby "
+                                    "project directory?")
                          .arg(path);
         return false;
     }
@@ -162,8 +161,7 @@ void DecompProject::discoverUnregisteredSongs()
         known.insert(song.label);
 
     const QDir midiDir(m_root + QStringLiteral("/sound/songs/midi"));
-    const QStringList mids =
-        midiDir.entryList({QStringLiteral("*.mid")}, QDir::Files, QDir::Name);
+    const QStringList mids = midiDir.entryList({QStringLiteral("*.mid")}, QDir::Files, QDir::Name);
     for (const QString &fileName : mids) {
         const QString label = fileName.chopped(4);
         if (known.contains(label))
@@ -248,8 +246,8 @@ bool DecompProject::parseMidiCfg()
         if (name.endsWith(QStringLiteral(".mid"), Qt::CaseInsensitive))
             name.chop(4);
 
-        byLabel.insert(name, cfgFromFlags(line.mid(colon + 1).split(
-                                 QLatin1Char(' '), Qt::SkipEmptyParts)));
+        byLabel.insert(
+            name, cfgFromFlags(line.mid(colon + 1).split(QLatin1Char(' '), Qt::SkipEmptyParts)));
     }
 
     for (SongInfo &song : m_songs) {
@@ -265,8 +263,7 @@ bool DecompProject::parseMidiCfg()
 void DecompProject::parseSongsMk()
 {
     // Pre-midi.cfg projects: per-song make rules in <root>/songs.mk.
-    const QHash<QString, QStringList> byLabel =
-        SongsMk::parseFlags(SongsMk::path(m_root));
+    const QHash<QString, QStringList> byLabel = SongsMk::parseFlags(SongsMk::path(m_root));
     for (SongInfo &song : m_songs) {
         const auto it = byLabel.constFind(song.label);
         if (it != byLabel.constEnd()) {
@@ -292,8 +289,7 @@ void DecompProject::setSongCfg(int id, const SongCfg &cfg)
 QStringList DecompProject::voicegroupCandidates(const SongCfg &cfg)
 {
     // mid2agb's default -G argument is "_dummy" (symbol voicegroup_dummy).
-    const QString arg = cfg.voicegroupArg.isEmpty() ? QStringLiteral("_dummy")
-                                                    : cfg.voicegroupArg;
+    const QString arg = cfg.voicegroupArg.isEmpty() ? QStringLiteral("_dummy") : cfg.voicegroupArg;
     const QString symbol = QStringLiteral("voicegroup") + arg;
 
     QStringList candidates;

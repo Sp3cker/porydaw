@@ -32,8 +32,7 @@ EngineSettings EngineSettings::load()
     QSettings qs;
     EngineSettings s;
     s.maxPcmChannels =
-        qBound(1, qs.value(kKeyPolyphony, defaults.maxPcmChannels).toInt(),
-               int(MAX_PCM_CHANNELS));
+        qBound(1, qs.value(kKeyPolyphony, defaults.maxPcmChannels).toInt(), int(MAX_PCM_CHANNELS));
     s.pcmMixRate = qs.value(kKeyMixRate, double(defaults.pcmMixRate)).toFloat();
     if (s.pcmMixRate < 0.0f)
         s.pcmMixRate = defaults.pcmMixRate;
@@ -67,9 +66,8 @@ EngineSettingsDialog::EngineSettingsDialog(const EngineSettings &settings, QWidg
 
     m_mixRate = new QComboBox(this);
     for (int rate : kGbaMixRates) {
-        const QString label = rate == kGbaDefaultRate
-                                  ? tr("%1 Hz (GBA default)").arg(rate)
-                                  : tr("%1 Hz").arg(rate);
+        const QString label =
+            rate == kGbaDefaultRate ? tr("%1 Hz (GBA default)").arg(rate) : tr("%1 Hz").arg(rate);
         m_mixRate->addItem(label, rate);
     }
     m_mixRate->addItem(tr("Host rate (clean, no GBA resampling)"), 0);
@@ -88,8 +86,7 @@ EngineSettingsDialog::EngineSettingsDialog(const EngineSettings &settings, QWidg
     layout->addLayout(form);
     layout->addWidget(m_analogFilter);
 
-    auto *buttons =
-        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     QPushButton *defaultsButton =
         buttons->addButton(tr("Restore Defaults"), QDialogButtonBox::ResetRole);
     connect(defaultsButton, &QPushButton::clicked, this,

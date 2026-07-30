@@ -56,20 +56,19 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
         // (mid2agb pairing: every note-on takes the first same-key end
         // after it, without consuming it).
         const size_t tempoEvents =
-            size_t(std::count_if(tl->events.begin(), tl->events.end(),
-                                 [](const TimelineEvent &ev) {
-                                     return ev.type == TIMELINE_EVT_TEMPO;
-                                 }));
+            size_t(std::count_if(tl->events.begin(), tl->events.end(), [](const TimelineEvent &ev) {
+                return ev.type == TIMELINE_EVT_TEMPO;
+            }));
         size_t lanePoints = 0;
         for (const AutoLane &lane : model.lanes)
             lanePoints += lane.points.size();
         const size_t stripFromEvents = model.strip.size() - tl->otherEvents.size();
-        const size_t offEvents = size_t(
-            std::count_if(tl->events.begin(), tl->events.end(),
-                          [](const TimelineEvent &ev) { return ev.type == 0x8; }));
+        const size_t offEvents =
+            size_t(std::count_if(tl->events.begin(), tl->events.end(),
+                                 [](const TimelineEvent &ev) { return ev.type == 0x8; }));
         const size_t pairedOffs = offEvents - model.orphanNoteOffs;
-        const size_t bucketSum = model.notes.size() + pairedOffs + lanePoints
-            + model.voices.size() + tempoEvents + stripFromEvents;
+        const size_t bucketSum = model.notes.size() + pairedOffs + lanePoints +
+                                 model.voices.size() + tempoEvents + stripFromEvents;
         if (bucketSum != tl->events.size()) {
             std::fprintf(stderr,
                          "viewcheck: FAIL %s: %zu events but %zu presented "
@@ -136,16 +135,12 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
             };
             zoom.pxPerBeat = 4.0 * cellPx - 1.0; // 1/16 cells just too narrow
             view.applyViewState(zoom);
-            expectGrid("straight auto below threshold",
-                       std::max<uint64_t>(1, tpb / 2));
-            expectSnap("straight auto below threshold",
-                       std::max<uint64_t>(1, tpb / 4));
+            expectGrid("straight auto below threshold", std::max<uint64_t>(1, tpb / 2));
+            expectSnap("straight auto below threshold", std::max<uint64_t>(1, tpb / 4));
             zoom.pxPerBeat = 4.0 * cellPx; // 1/16 cells exactly at threshold
             view.applyViewState(zoom);
-            expectGrid("straight auto at threshold",
-                       std::max<uint64_t>(1, tpb / 4));
-            expectSnap("straight auto at threshold",
-                       std::max<uint64_t>(1, tpb / 8));
+            expectGrid("straight auto at threshold", std::max<uint64_t>(1, tpb / 4));
+            expectSnap("straight auto at threshold", std::max<uint64_t>(1, tpb / 8));
             zoom.pxPerBeat = 6.0 * cellPx; // sixth-beat triplet cells at threshold
             view.applyViewState(zoom);
             view.setGridFeel(SongView::GridFeel::Triplet);
@@ -153,8 +148,7 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
             expectSnap("triplet auto", std::max<uint64_t>(1, tpb / 12));
             view.setGridMinDenom(8);
             expectGrid("triplet 1/8", std::max<uint64_t>(1, tpb / 3));
-            expectSnap("triplet 1/8 snaps past the display floor",
-                       std::max<uint64_t>(1, tpb / 6));
+            expectSnap("triplet 1/8 snaps past the display floor", std::max<uint64_t>(1, tpb / 6));
             zoom.pxPerBeat = 4.0 * cellPx;
             view.applyViewState(zoom);
             view.setGridFeel(SongView::GridFeel::Straight);
@@ -164,8 +158,7 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
                        std::max<uint64_t>(1, tpb / 8));
             view.setGridMinDenom(4);
             expectGrid("straight 1/4", tpb);
-            expectSnap("straight 1/4 snaps to half-beats",
-                       std::max<uint64_t>(1, tpb / 2));
+            expectSnap("straight 1/4 snaps to half-beats", std::max<uint64_t>(1, tpb / 2));
             view.setGridMinDenom(0);
             std::printf("viewcheck: snap-grid semantics checked on %s\n",
                         qUtf8Printable(song.label));
@@ -188,8 +181,7 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
             std::fprintf(stderr,
                          "viewcheck: FAIL %s: %d grid line(s) not snappable "
                          "(first at tick %llu)\n",
-                         qUtf8Printable(song.label), badSnaps,
-                         (unsigned long long)badTick);
+                         qUtf8Printable(song.label), badSnaps, (unsigned long long)badTick);
             failures++;
         }
         view.setSong(nullptr, nullptr);
@@ -215,8 +207,8 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
 
     std::printf("viewcheck: %d songs in %lld ms — %zu events -> %zu notes, %zu lane "
                 "points, %zu strip items\n",
-                checked, (long long)timer.elapsed(), totalEvents, totalNotes,
-                totalLanePoints, totalStrip);
+                checked, (long long)timer.elapsed(), totalEvents, totalNotes, totalLanePoints,
+                totalStrip);
     if (songsWithUnpaired || songsWithOrphans || songsWithDropped)
         std::printf("viewcheck: quirks — %d songs with unpaired note-ons, %d with orphan "
                     "note-offs, %d with dropped tracks (all still displayed)\n",

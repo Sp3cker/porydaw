@@ -33,8 +33,7 @@ bool initializeApplication(QApplication &application)
     return true;
 }
 
-void showCoveredWhileRestoring(QWidget &window,
-                               const std::function<void()> &restore)
+void showCoveredWhileRestoring(QWidget &window, const std::function<void()> &restore)
 {
     QWidget cover(&window);
     cover.setAutoFillBackground(true);

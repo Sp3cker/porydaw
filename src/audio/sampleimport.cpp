@@ -44,8 +44,8 @@ bool fail(QString *error, const QString &message)
 // Interleaved hi-res frames → mono canonical floats (DSP.md §2): arithmetic
 // channel mean, or channel 0 when leftOnly. Flags phase-cancelling stereo
 // (negative full-file L/R correlation) so the caller can offer left-only.
-void downmix(const std::vector<double> &interleaved, int channels,
-             bool leftOnly, ImportedSample *out)
+void downmix(const std::vector<double> &interleaved, int channels, bool leftOnly,
+             ImportedSample *out)
 {
     const size_t frames = channels > 0 ? interleaved.size() / channels : 0;
     out->buffer.resize(frames);
@@ -72,10 +72,10 @@ void downmix(const std::vector<double> &interleaved, int channels,
         }
         if (ll > 0.0 && rr > 0.0 && lr / std::sqrt(ll * rr) < 0.0) {
             out->phaseCancelStereo = true;
-            out->warnings += QStringLiteral(
-                "left and right channels are phase-cancelling — the mono mix "
-                "may sound hollow; consider re-importing with the left "
-                "channel only.");
+            out->warnings +=
+                QStringLiteral("left and right channels are phase-cancelling — the mono mix "
+                               "may sound hollow; consider re-importing with the left "
+                               "channel only.");
         }
     }
 }
@@ -88,10 +88,8 @@ void finishDiagnostics(ImportedSample *out)
         if (std::abs(v) >= 0.9999f)
             atFullScale++;
     }
-    if (out->frameCount() > 0
-        && double(atFullScale) / double(out->frameCount()) > 0.001)
-        out->warnings += QStringLiteral(
-            "source is already clipped (%1 samples at full scale).")
+    if (out->frameCount() > 0 && double(atFullScale) / double(out->frameCount()) > 0.001)
+        out->warnings += QStringLiteral("source is already clipped (%1 samples at full scale).")
                              .arg(atFullScale);
 }
 
@@ -100,18 +98,14 @@ void finishDiagnostics(ImportedSample *out)
 // rates like 3344.75 Hz exactly.
 double rateFromAgbPitch(quint32 agbp, double exactKey)
 {
-    return (double(agbp) / 1024.0)
-        * std::pow(2.0, (exactKey - 60.0) / 12.0);
+    return (double(agbp) / 1024.0) * std::pow(2.0, (exactKey - 60.0) / 12.0);
 }
 
-bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
-               QString *error)
+bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QString *error)
 {
     drwav wav;
-    if (!drwav_init_memory_with_metadata(&wav, bytes.constData(),
-                                         size_t(bytes.size()), 0, nullptr))
-        return fail(error,
-                    QStringLiteral("the WAV file is corrupt or truncated."));
+    if (!drwav_init_memory_with_metadata(&wav, bytes.constData(), size_t(bytes.size()), 0, nullptr))
+        return fail(error, QStringLiteral("the WAV file is corrupt or truncated."));
 
     const quint16 tag = wav.translatedFormatTag;
     const int bits = wav.bitsPerSample;
@@ -149,8 +143,7 @@ bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
     const size_t bytesPerFrame = size_t(bits / 8) * size_t(channels);
     if (frames > quint64(bytes.size()) / bytesPerFrame) {
         drwav_uninit(&wav);
-        return fail(error,
-                    QStringLiteral("the WAV file is corrupt or truncated."));
+        return fail(error, QStringLiteral("the WAV file is corrupt or truncated."));
     }
     std::vector<quint8> raw(size_t(frames) * bytesPerFrame);
     const quint64 read = drwav_read_pcm_frames(&wav, frames, raw.data());
@@ -171,13 +164,12 @@ bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
                 loopEndIncl = m.data.smpl.pLoops[0].lastSampleOffset;
                 hasLoop = true;
             }
-        } else if (m.type == drwav_metadata_type_unknown
-                   && m.data.unknown.chunkLocation
-                       == drwav_metadata_location_top_level
-                   && m.data.unknown.dataSizeInBytes >= 4) {
+        } else if (m.type == drwav_metadata_type_unknown &&
+                   m.data.unknown.chunkLocation == drwav_metadata_location_top_level &&
+                   m.data.unknown.dataSizeInBytes >= 4) {
             const quint8 *d = m.data.unknown.pData;
-            const quint32 value = quint32(d[0]) | quint32(d[1]) << 8
-                | quint32(d[2]) << 16 | quint32(d[3]) << 24;
+            const quint32 value =
+                quint32(d[0]) | quint32(d[1]) << 8 | quint32(d[2]) << 16 | quint32(d[3]) << 24;
             if (std::memcmp(m.data.unknown.id, "agbp", 4) == 0)
                 agbp = value;
             else if (std::memcmp(m.data.unknown.id, "agbl", 4) == 0)
@@ -186,8 +178,7 @@ bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
     }
     drwav_uninit(&wav);
     if (read < frames)
-        return fail(error,
-                    QStringLiteral("the WAV file is corrupt or truncated."));
+        return fail(error, QStringLiteral("the WAV file is corrupt or truncated."));
 
     std::vector<double> interleaved(size_t(frames) * size_t(channels));
     const quint8 *p = raw.data();
@@ -199,8 +190,7 @@ bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
         } else if (tag == DR_WAVE_FORMAT_PCM && bits == 16) {
             v = double(qint16(quint16(p[0]) | quint16(p[1]) << 8)) / 32768.0;
         } else if (tag == DR_WAVE_FORMAT_PCM && bits == 24) {
-            qint32 s = qint32(quint32(p[0]) | quint32(p[1]) << 8
-                              | quint32(p[2]) << 16);
+            qint32 s = qint32(quint32(p[0]) | quint32(p[1]) << 8 | quint32(p[2]) << 16);
             if (s & 0x800000)
                 s -= 0x1000000;
             v = double(s) / 8388608.0;
@@ -226,12 +216,9 @@ bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
         p += size_t(bits / 8);
     }
     if (clamped > 0)
-        out->warnings += QStringLiteral(
-                             "%1 float samples beyond ±1.0 were clamped.")
-                             .arg(clamped);
+        out->warnings += QStringLiteral("%1 float samples beyond ±1.0 were clamped.").arg(clamped);
     if (hasLoop && loopType != 0) {
-        out->warnings += QStringLiteral(
-            "the smpl loop is not a forward loop — ignored.");
+        out->warnings += QStringLiteral("the smpl loop is not a forward loop — ignored.");
         hasLoop = false;
     }
 
@@ -264,13 +251,11 @@ bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
             out->loopStart = qint64(loopStart);
             out->loopEndIncl = loopEndExcl - 1;
         } else {
-            out->warnings += QStringLiteral(
-                "the smpl loop is empty or out of range — ignored.");
+            out->warnings += QStringLiteral("the smpl loop is empty or out of range — ignored.");
         }
     }
     if (agbp != 0)
-        out->sampleRate = rateFromAgbPitch(
-            agbp, double(out->baseKey) + out->fracSemitone);
+        out->sampleRate = rateFromAgbPitch(agbp, double(out->baseKey) + out->fracSemitone);
     else
         out->sampleRate = declaredRate;
     return true;
@@ -280,8 +265,7 @@ bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
 
 quint32 beU32(const quint8 *p)
 {
-    return quint32(p[0]) << 24 | quint32(p[1]) << 16 | quint32(p[2]) << 8
-        | quint32(p[3]);
+    return quint32(p[0]) << 24 | quint32(p[1]) << 16 | quint32(p[2]) << 8 | quint32(p[3]);
 }
 
 quint16 beU16(const quint8 *p)
@@ -303,8 +287,7 @@ double readExtended80(const quint8 *p)
     return sign * std::ldexp(double(mantissa), exponent - 16383 - 63);
 }
 
-bool decodeAif(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
-               QString *error)
+bool decodeAif(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QString *error)
 {
     const quint8 *data = reinterpret_cast<const quint8 *>(bytes.constData());
     const qint64 total = bytes.size();
@@ -333,12 +316,10 @@ bool decodeAif(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
             sampleSize = beU16(data + at + 6);
             sampleRate = readExtended80(data + at + 8);
             commFound = true;
-        } else if (std::memcmp(hdr, "MARK", 4) == 0 && chunkLen >= 2
-                   && markers.empty()) {
+        } else if (std::memcmp(hdr, "MARK", 4) == 0 && chunkLen >= 2 && markers.empty()) {
             const quint16 numMarkers = beU16(data + at);
             qint64 mp = at + 2;
-            for (quint16 i = 0; i < numMarkers && mp + 7 <= at + chunkLen;
-                 i++) {
+            for (quint16 i = 0; i < numMarkers && mp + 7 <= at + chunkLen; i++) {
                 const quint16 id = beU16(data + mp);
                 const quint32 position = beU32(data + mp + 2);
                 markers.push_back({id, position});
@@ -365,23 +346,19 @@ bool decodeAif(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
         pos = at + chunkLen + (chunkLen & 1);
     }
     if (!commFound || !ssndFound)
-        return fail(error,
-                    QStringLiteral("missing COMM or SSND chunk in the AIFF "
-                                   "file."));
+        return fail(error, QStringLiteral("missing COMM or SSND chunk in the AIFF "
+                                          "file."));
     if (channels < 1 || numFrames == 0)
         return fail(error, QStringLiteral("no audio data."));
-    if (sampleSize != 8 && sampleSize != 16 && sampleSize != 24
-        && sampleSize != 32)
+    if (sampleSize != 8 && sampleSize != 16 && sampleSize != 24 && sampleSize != 32)
         return fail(error, QStringLiteral("unsupported AIFF sample size "
                                           "(%1-bit).")
                                .arg(sampleSize));
     if (sampleRate <= 0.0)
-        return fail(error,
-                    QStringLiteral("the AIFF COMM sample rate is invalid."));
+        return fail(error, QStringLiteral("the AIFF COMM sample rate is invalid."));
 
     const int bytesPerSample = sampleSize / 8;
-    const qint64 availableFrames =
-        ssndDataBytes / (qint64(bytesPerSample) * channels);
+    const qint64 availableFrames = ssndDataBytes / (qint64(bytesPerSample) * channels);
     const qint64 frames = qMin<qint64>(numFrames, availableFrames);
     if (frames <= 0)
         return fail(error, QStringLiteral("no audio data."));
@@ -438,8 +415,8 @@ bool decodeAif(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
             out->loopStart = loopStart;
             out->loopEndIncl = loopEndExcl - 1;
         } else {
-            out->warnings += QStringLiteral(
-                "the AIFF sustain loop is empty or out of range — ignored.");
+            out->warnings +=
+                QStringLiteral("the AIFF sustain loop is empty or out of range — ignored.");
         }
     }
     return true;
@@ -449,30 +426,24 @@ bool decodeAif(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
 // All three decode to interleaved hi-res floats and run through the same
 // downmix as the PCM containers; nothing downstream changes (PLAN.md §6).
 
-bool decodeMp3(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
-               QString *error)
+bool decodeMp3(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QString *error)
 {
     drmp3 mp3;
-    if (!drmp3_init_memory(&mp3, bytes.constData(), size_t(bytes.size()),
-                           nullptr))
-        return fail(error,
-                    QStringLiteral("the MP3 file is corrupt or truncated."));
+    if (!drmp3_init_memory(&mp3, bytes.constData(), size_t(bytes.size()), nullptr))
+        return fail(error, QStringLiteral("the MP3 file is corrupt or truncated."));
     const int channels = int(mp3.channels);
 
     // MP3 has no reliable frame count up front — decode in chunks.
     std::vector<float> pcm;
     std::vector<float> chunk(4096 * size_t(channels));
     for (;;) {
-        const drmp3_uint64 read =
-            drmp3_read_pcm_frames_f32(&mp3, 4096, chunk.data());
+        const drmp3_uint64 read = drmp3_read_pcm_frames_f32(&mp3, 4096, chunk.data());
         if (read == 0)
             break;
-        pcm.insert(pcm.end(), chunk.begin(),
-                   chunk.begin() + size_t(read) * size_t(channels));
+        pcm.insert(pcm.end(), chunk.begin(), chunk.begin() + size_t(read) * size_t(channels));
         if (qint64(pcm.size()) > kMaxImportSamples) {
             drmp3_uninit(&mp3);
-            return fail(error, QStringLiteral(
-                            "the MP3 file is too long to import."));
+            return fail(error, QStringLiteral("the MP3 file is too long to import."));
         }
     }
     const quint32 rate = mp3.sampleRate;
@@ -494,14 +465,11 @@ bool decodeMp3(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
     return true;
 }
 
-bool decodeFlac(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
-                QString *error)
+bool decodeFlac(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QString *error)
 {
-    drflac *flac = drflac_open_memory(bytes.constData(),
-                                      size_t(bytes.size()), nullptr);
+    drflac *flac = drflac_open_memory(bytes.constData(), size_t(bytes.size()), nullptr);
     if (!flac)
-        return fail(error,
-                    QStringLiteral("the FLAC file is corrupt or truncated."));
+        return fail(error, QStringLiteral("the FLAC file is corrupt or truncated."));
     const int channels = int(flac->channels);
     const quint64 frames = flac->totalPCMFrameCount;
     if (channels < 1 || frames == 0) {
@@ -510,8 +478,7 @@ bool decodeFlac(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
     }
     if (qint64(frames) > kMaxImportSamples / channels) {
         drflac_close(flac);
-        return fail(error,
-                    QStringLiteral("the FLAC file is too long to import."));
+        return fail(error, QStringLiteral("the FLAC file is too long to import."));
     }
 
     // dr_flac's s32 output is scaled up to fill 32 bits regardless of the
@@ -522,8 +489,7 @@ bool decodeFlac(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
     const quint32 rate = flac->sampleRate;
     drflac_close(flac);
     if (read < frames)
-        return fail(error,
-                    QStringLiteral("the FLAC file is corrupt or truncated."));
+        return fail(error, QStringLiteral("the FLAC file is corrupt or truncated."));
 
     std::vector<double> interleaved(raw.size());
     for (size_t i = 0; i < raw.size(); i++)
@@ -538,33 +504,29 @@ bool decodeFlac(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
     return true;
 }
 
-bool decodeOgg(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
-               QString *error)
+bool decodeOgg(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QString *error)
 {
     int err = 0;
-    stb_vorbis *v = stb_vorbis_open_memory(
-        reinterpret_cast<const unsigned char *>(bytes.constData()),
-        int(bytes.size()), &err, nullptr);
+    stb_vorbis *v =
+        stb_vorbis_open_memory(reinterpret_cast<const unsigned char *>(bytes.constData()),
+                               int(bytes.size()), &err, nullptr);
     if (!v)
-        return fail(error, QStringLiteral(
-                        "cannot decode the Ogg file — only Ogg Vorbis is "
-                        "supported (Opus and other codecs are not)."));
+        return fail(error, QStringLiteral("cannot decode the Ogg file — only Ogg Vorbis is "
+                                          "supported (Opus and other codecs are not)."));
     const stb_vorbis_info info = stb_vorbis_get_info(v);
     const int channels = info.channels;
 
     std::vector<float> pcm;
     std::vector<float> chunk(4096 * size_t(channels));
     for (;;) {
-        const int read = stb_vorbis_get_samples_float_interleaved(
-            v, channels, chunk.data(), int(chunk.size()));
+        const int read =
+            stb_vorbis_get_samples_float_interleaved(v, channels, chunk.data(), int(chunk.size()));
         if (read <= 0)
             break;
-        pcm.insert(pcm.end(), chunk.begin(),
-                   chunk.begin() + size_t(read) * size_t(channels));
+        pcm.insert(pcm.end(), chunk.begin(), chunk.begin() + size_t(read) * size_t(channels));
         if (qint64(pcm.size()) > kMaxImportSamples) {
             stb_vorbis_close(v);
-            return fail(error, QStringLiteral(
-                            "the Ogg file is too long to import."));
+            return fail(error, QStringLiteral("the Ogg file is too long to import."));
         }
     }
     const unsigned rate = info.sample_rate;
@@ -586,28 +548,23 @@ bool decodeOgg(const QByteArray &bytes, bool leftOnly, ImportedSample *out,
 
 } // namespace
 
-bool importAudioBytes(const QByteArray &bytes, const QString &sourcePath,
-                      ImportedSample *out, QString *error,
-                      bool leftChannelOnly)
+bool importAudioBytes(const QByteArray &bytes, const QString &sourcePath, ImportedSample *out,
+                      QString *error, bool leftChannelOnly)
 {
     *out = ImportedSample();
     out->sourcePath = sourcePath;
-    out->suggestedName = SampleRegistrar::sanitizeSampleName(
-        QFileInfo(sourcePath).completeBaseName());
+    out->suggestedName =
+        SampleRegistrar::sanitizeSampleName(QFileInfo(sourcePath).completeBaseName());
 
     bool ok;
-    if (bytes.size() >= 12 && bytes.startsWith("RIFF")
-        && bytes.mid(8, 4) == "WAVE") {
+    if (bytes.size() >= 12 && bytes.startsWith("RIFF") && bytes.mid(8, 4) == "WAVE") {
         ok = decodeWav(bytes, leftChannelOnly, out, error);
-    } else if (bytes.size() >= 12 && bytes.startsWith("FORM")
-               && bytes.mid(8, 4) == "AIFF") {
+    } else if (bytes.size() >= 12 && bytes.startsWith("FORM") && bytes.mid(8, 4) == "AIFF") {
         ok = decodeAif(bytes, leftChannelOnly, out, error);
-    } else if (bytes.size() >= 12 && bytes.startsWith("FORM")
-               && bytes.mid(8, 4) == "AIFC") {
+    } else if (bytes.size() >= 12 && bytes.startsWith("FORM") && bytes.mid(8, 4) == "AIFC") {
         return fail(error, QStringLiteral("AIFF-C is not supported — export "
                                           "uncompressed AIFF or WAV."));
-    } else if (bytes.size() >= 12 && bytes.startsWith("RIFF")
-               && bytes.mid(8, 4) == "sfbk") {
+    } else if (bytes.size() >= 12 && bytes.startsWith("RIFF") && bytes.mid(8, 4) == "sfbk") {
         // SoundFonts route through Sf2Reader + the zone picker, never this
         // single-stream front door (FORMATS.md §5).
         return fail(error, QStringLiteral("SoundFont files hold multiple "
@@ -617,24 +574,21 @@ bool importAudioBytes(const QByteArray &bytes, const QString &sourcePath,
         ok = decodeFlac(bytes, leftChannelOnly, out, error);
     } else if (bytes.size() >= 4 && bytes.startsWith("OggS")) {
         ok = decodeOgg(bytes, leftChannelOnly, out, error);
-    } else if (bytes.size() >= 4
-               && (bytes.startsWith("ID3")
-                   || (quint8(bytes[0]) == 0xFF
-                       && (quint8(bytes[1]) & 0xE0) == 0xE0))) {
+    } else if (bytes.size() >= 4 &&
+               (bytes.startsWith("ID3") ||
+                (quint8(bytes[0]) == 0xFF && (quint8(bytes[1]) & 0xE0) == 0xE0))) {
         ok = decodeMp3(bytes, leftChannelOnly, out, error);
     } else {
-        return fail(error,
-                    QStringLiteral("not a supported audio file (WAV, AIFF, "
-                                   "MP3, FLAC, and Ogg Vorbis sources are "
-                                   "supported)."));
+        return fail(error, QStringLiteral("not a supported audio file (WAV, AIFF, "
+                                          "MP3, FLAC, and Ogg Vorbis sources are "
+                                          "supported)."));
     }
     if (ok)
         finishDiagnostics(out);
     return ok;
 }
 
-bool importAudioFile(const QString &path, ImportedSample *out, QString *error,
-                     bool leftChannelOnly)
+bool importAudioFile(const QString &path, ImportedSample *out, QString *error, bool leftChannelOnly)
 {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))

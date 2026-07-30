@@ -41,9 +41,9 @@ struct VoiceSnap {
 
     bool operator==(const VoiceSnap &o) const
     {
-        return type == o.type && key == o.key && panSweep == o.panSweep
-            && attack == o.attack && decay == o.decay && sustain == o.sustain
-            && release == o.release && name == o.name && packed == o.packed;
+        return type == o.type && key == o.key && panSweep == o.panSweep && attack == o.attack &&
+               decay == o.decay && sustain == o.sustain && release == o.release && name == o.name &&
+               packed == o.packed;
     }
 };
 
@@ -60,8 +60,8 @@ VoiceSnap snapVoice(const LoadedVoiceGroup *vg, int i)
     s.release = td.release;
     s.name = QByteArray(vg->voiceNames[i]);
     const uint8_t cgb = td.type & VOICE_TYPE_CGB_MASK;
-    if (td.type != VOICE_KEYSPLIT && td.type != VOICE_KEYSPLIT_ALL
-        && (cgb == VOICE_SQUARE_1 || cgb == VOICE_SQUARE_2 || cgb == VOICE_NOISE))
+    if (td.type != VOICE_KEYSPLIT && td.type != VOICE_KEYSPLIT_ALL &&
+        (cgb == VOICE_SQUARE_1 || cgb == VOICE_SQUARE_2 || cgb == VOICE_NOISE))
         s.packed = reinterpret_cast<uintptr_t>(td.wavePointer);
     return s;
 }
@@ -71,8 +71,7 @@ VoiceSnap snapVoice(const LoadedVoiceGroup *vg, int i)
 QByteArray loaderVoiceName(const QString &symbol)
 {
     QByteArray name = symbol.toUtf8();
-    for (const char *prefix : {"DirectSoundWaveData_", "ProgrammableWaveData_",
-                               "voicegroup_"}) {
+    for (const char *prefix : {"DirectSoundWaveData_", "ProgrammableWaveData_", "voicegroup_"}) {
         if (name.startsWith(prefix) && name.size() > int(qstrlen(prefix))) {
             name = name.mid(int(qstrlen(prefix)));
             break;
@@ -83,12 +82,21 @@ QByteArray loaderVoiceName(const QString &symbol)
 
 bool isDirectSound(VgMacro m)
 {
-    return m == VgMacro::DirectSound || m == VgMacro::DirectSoundNoResample
-        || m == VgMacro::DirectSoundAlt;
+    return m == VgMacro::DirectSound || m == VgMacro::DirectSoundNoResample ||
+           m == VgMacro::DirectSoundAlt;
 }
-bool isSquare1(VgMacro m) { return m == VgMacro::Square1 || m == VgMacro::Square1Alt; }
-bool isNoise(VgMacro m) { return m == VgMacro::Noise || m == VgMacro::NoiseAlt; }
-bool isProgWave(VgMacro m) { return m == VgMacro::ProgWave || m == VgMacro::ProgWaveAlt; }
+bool isSquare1(VgMacro m)
+{
+    return m == VgMacro::Square1 || m == VgMacro::Square1Alt;
+}
+bool isNoise(VgMacro m)
+{
+    return m == VgMacro::Noise || m == VgMacro::NoiseAlt;
+}
+bool isProgWave(VgMacro m)
+{
+    return m == VgMacro::ProgWave || m == VgMacro::ProgWaveAlt;
+}
 
 // What a loader parse of the edited line must produce, built by running the
 // model's own ToneData packing against a blank voice of the right type.
@@ -111,8 +119,7 @@ VoiceSnap expectedSnap(const VoicegroupSource &src, int slot, const QByteArray &
     return s;
 }
 
-int checkSlot(const LoadedVoiceGroup *vg, int slot, const VoiceSnap &expected,
-              const char *what)
+int checkSlot(const LoadedVoiceGroup *vg, int slot, const VoiceSnap &expected, const char *what)
 {
     const VoiceSnap got = snapVoice(vg, slot);
     if (got == expected)
@@ -121,11 +128,11 @@ int checkSlot(const LoadedVoiceGroup *vg, int slot, const VoiceSnap &expected,
                  "vgcheck: FAIL: %s slot %d mismatch: "
                  "type %u/%u key %u/%u panSweep %u/%u adsr %u %u %u %u / %u %u %u %u "
                  "packed %lu/%lu name '%s'/'%s' (got/expected)\n",
-                 what, slot, got.type, expected.type, got.key, expected.key,
-                 got.panSweep, expected.panSweep, got.attack, got.decay, got.sustain,
-                 got.release, expected.attack, expected.decay, expected.sustain,
-                 expected.release, ulong(got.packed), ulong(expected.packed),
-                 got.name.constData(), expected.name.constData());
+                 what, slot, got.type, expected.type, got.key, expected.key, got.panSweep,
+                 expected.panSweep, got.attack, got.decay, got.sustain, got.release,
+                 expected.attack, expected.decay, expected.sustain, expected.release,
+                 ulong(got.packed), ulong(expected.packed), got.name.constData(),
+                 expected.name.constData());
     return 1;
 }
 
@@ -155,14 +162,14 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         return 1;
     }
     std::printf("vgcheck: %s layout, file %s, load name %s\n",
-                src.monolithic() ? "monolithic" : "per-file",
-                qUtf8Printable(src.filePath()), qUtf8Printable(src.loadName()));
+                src.monolithic() ? "monolithic" : "per-file", qUtf8Printable(src.filePath()),
+                qUtf8Printable(src.loadName()));
     const QByteArray fileBefore = readFileBytes(src.filePath());
 
     const QByteArray rootUtf8 = projectRoot.toLocal8Bit();
     const QByteArray loadName = src.loadName().toLocal8Bit();
-    LoadedVoiceGroup *baseline = voicegroup_load(rootUtf8.constData(),
-                                                 loadName.constData(), nullptr);
+    LoadedVoiceGroup *baseline =
+        voicegroup_load(rootUtf8.constData(), loadName.constData(), nullptr);
     if (!baseline) {
         std::fprintf(stderr, "vgcheck: baseline voicegroup_load failed for '%s'\n",
                      loadName.constData());
@@ -188,8 +195,7 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
             pwSlot = i;
     }
     if (dsSlot < 0 && sq1Slot < 0 && noiseSlot < 0 && pwSlot < 0) {
-        std::fprintf(stderr, "vgcheck: no editable voices in %s\n",
-                     qUtf8Printable(src.filePath()));
+        std::fprintf(stderr, "vgcheck: no editable voices in %s\n", qUtf8Printable(src.filePath()));
         voicegroup_free(baseline);
         return 1;
     }
@@ -211,8 +217,8 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         QByteArray expectedName = baseSnaps[dsSlot].name;
         for (int i = 0; i < VOICEGROUP_SIZE; i++) {
             const VgVoice *o = src.voiceAt(i);
-            if (i != dsSlot && o && isDirectSound(o->macro)
-                && o->symbol != src.voiceAt(dsSlot)->symbol) {
+            if (i != dsSlot && o && isDirectSound(o->macro) &&
+                o->symbol != src.voiceAt(dsSlot)->symbol) {
                 v.symbol = o->symbol;
                 expectedName = baseSnaps[i].name;
                 break;
@@ -272,8 +278,8 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         editedLines++;
         editedSlots.append(ksSlot);
         expected.append(expectedSnap(src, ksSlot, baseSnaps[ksDonor].name));
-        std::printf("vgcheck: edited Keysplit slot %d (sub-vg/table from slot %d)\n",
-                    ksSlot, ksDonor);
+        std::printf("vgcheck: edited Keysplit slot %d (sub-vg/table from slot %d)\n", ksSlot,
+                    ksDonor);
     }
     // Drumkit swap: point one keysplit_all voice at a different observed
     // drumkit sub-voicegroup, and convert a spare basic voice into a drumkit.
@@ -307,8 +313,8 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
     if (!drumkits.isEmpty()) {
         for (int i = 0; i < VOICEGROUP_SIZE && dkConvSlot < 0; i++) {
             const VgVoice *v = src.voiceAt(i);
-            if (v && !editedSlots.contains(i) && v->macro != VgMacro::Keysplit
-                && v->macro != VgMacro::KeysplitAll)
+            if (v && !editedSlots.contains(i) && v->macro != VgMacro::Keysplit &&
+                v->macro != VgMacro::KeysplitAll)
                 dkConvSlot = i;
         }
     }
@@ -335,8 +341,7 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
     const QString previewDir = projectRoot + QStringLiteral("/.porydaw/vgpreview");
     QDir().mkpath(previewDir);
     {
-        QFile out(previewDir + QStringLiteral("/") + src.loadName()
-                  + QStringLiteral(".inc"));
+        QFile out(previewDir + QStringLiteral("/") + src.loadName() + QStringLiteral(".inc"));
         if (!out.open(QIODevice::WriteOnly)) {
             std::fprintf(stderr, "vgcheck: cannot write preview file\n");
             voicegroup_free(baseline);
@@ -348,8 +353,7 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
     std::memset(&cfg, 0, sizeof(cfg));
     std::strncpy(cfg.voicegroupPaths[0], ".porydaw/vgpreview", VG_MAX_PATH_LEN - 1);
     cfg.voicegroupPathCount = 1;
-    LoadedVoiceGroup *preview =
-        voicegroup_load(rootUtf8.constData(), loadName.constData(), &cfg);
+    LoadedVoiceGroup *preview = voicegroup_load(rootUtf8.constData(), loadName.constData(), &cfg);
     if (!preview) {
         std::fprintf(stderr, "vgcheck: FAIL: preview voicegroup_load failed\n");
         failures++;
@@ -391,8 +395,7 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
                     changed++;
             }
             if (changed != editedLines) {
-                std::fprintf(stderr,
-                             "vgcheck: FAIL: %d lines changed on save, expected %d\n",
+                std::fprintf(stderr, "vgcheck: FAIL: %d lines changed on save, expected %d\n",
                              changed, editedLines);
                 failures++;
             } else {
@@ -411,15 +414,13 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         for (int e = 0; e < editedSlots.size(); e++)
             failures += checkSlot(reloaded, editedSlots.at(e), expected.at(e), "reload");
         if (ksSlot >= 0 && ksDonor >= 0 && !reloaded->voices[ksSlot].subGroup) {
-            std::fprintf(stderr,
-                         "vgcheck: FAIL: swapped keysplit slot %d has no sub-voicegroup\n",
+            std::fprintf(stderr, "vgcheck: FAIL: swapped keysplit slot %d has no sub-voicegroup\n",
                          ksSlot);
             failures++;
         }
         for (int slot : {dkSlot >= 0 && !dkDonor.isEmpty() ? dkSlot : -1, dkConvSlot}) {
             if (slot >= 0 && !reloaded->voices[slot].subGroup) {
-                std::fprintf(stderr,
-                             "vgcheck: FAIL: drumkit slot %d has no sub-voicegroup\n",
+                std::fprintf(stderr, "vgcheck: FAIL: drumkit slot %d has no sub-voicegroup\n",
                              slot);
                 failures++;
             }
@@ -452,13 +453,11 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         for (int slot : editedSlots) {
             const VgVoice *a = src.voiceAt(slot);
             const VgVoice *b = src2.voiceAt(slot);
-            if (!a || !b || a->macro != b->macro || a->key != b->key || a->pan != b->pan
-                || a->symbol != b->symbol || a->sweep != b->sweep || a->duty != b->duty
-                || a->period != b->period || a->attack != b->attack
-                || a->decay != b->decay || a->sustain != b->sustain
-                || a->release != b->release) {
-                std::fprintf(stderr, "vgcheck: FAIL: slot %d fields did not round-trip\n",
-                             slot);
+            if (!a || !b || a->macro != b->macro || a->key != b->key || a->pan != b->pan ||
+                a->symbol != b->symbol || a->sweep != b->sweep || a->duty != b->duty ||
+                a->period != b->period || a->attack != b->attack || a->decay != b->decay ||
+                a->sustain != b->sustain || a->release != b->release) {
+                std::fprintf(stderr, "vgcheck: FAIL: slot %d fields did not round-trip\n", slot);
                 failures++;
             }
         }
@@ -468,13 +467,10 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
     if (QDir(projectRoot + QStringLiteral("/sound/voicegroups")).exists()) {
         const QString hubPath = projectRoot + QStringLiteral("/sound/voice_groups.inc");
         const QByteArray hubBefore = readFileBytes(hubPath);
-        if (!VoicegroupSource::createVoicegroup(projectRoot,
-                                                QStringLiteral("vgcheck_new"),
-                                                src.filePath(), src.sectionLabel(),
-                                                &error)
-            || !VoicegroupSource::appendIncludeLine(projectRoot,
-                                                    QStringLiteral("vgcheck_new"),
-                                                    &error)) {
+        if (!VoicegroupSource::createVoicegroup(projectRoot, QStringLiteral("vgcheck_new"),
+                                                src.filePath(), src.sectionLabel(), &error) ||
+            !VoicegroupSource::appendIncludeLine(projectRoot, QStringLiteral("vgcheck_new"),
+                                                 &error)) {
             std::fprintf(stderr, "vgcheck: FAIL: create: %s\n", qUtf8Printable(error));
             failures++;
         } else {
@@ -485,14 +481,12 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
                 failures++;
             } else {
                 for (int e = 0; e < editedSlots.size(); e++)
-                    failures +=
-                        checkSlot(created, editedSlots.at(e), expected.at(e), "created");
+                    failures += checkSlot(created, editedSlots.at(e), expected.at(e), "created");
                 voicegroup_free(created);
             }
             if (!SongRegistry::voicegroupArgs(projectRoot)
                      .contains(QStringLiteral("_vgcheck_new"))) {
-                std::fprintf(stderr,
-                             "vgcheck: FAIL: _vgcheck_new missing from voicegroupArgs\n");
+                std::fprintf(stderr, "vgcheck: FAIL: _vgcheck_new missing from voicegroupArgs\n");
                 failures++;
             }
             if (QFile::exists(hubPath)) {
@@ -523,26 +517,24 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
             std::fprintf(stderr, "vgcheck: cannot write adsrcheck voicegroup\n");
             failures++;
         } else {
-            out.write(
-                "voicegroup_adsrcheck::\n"
-                "\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 0 @ filler: release 0\n"
-                "\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 0\n"
-                "\tvoice_square_1 60, 0, 0, 2, 1, 2, 10, 3\n"
-                "\tvoice_square_1 60, 0, 0, 2, 1, 2, 10, 3\n"
-                "\tvoice_square_1 60, 0, 0, 2, 2, 0, 12, 1\n"
-                "\tvoice_square_2 60, 0, 2, 9, 2, 20, 11 @ masks to 1 2 4 3\n"
-                "\tvoice_directsound 60, 0, AdsrCheckA, 255, 0, 255, 165\n"
-                "\tvoice_directsound_no_resample 60, 0, AdsrCheckA, 255, 0, 255, 165\n"
-                "\tvoice_directsound 60, 0, AdsrCheckA, 200, 100, 128, 216\n"
-                "\tvoice_directsound 60, 0, AdsrCheckB, 0, 0, 255, 165 @ silent: attack 0\n"
-                "\tvoice_noise 60, 0, 0, 1, 0, 13, 2\n");
+            out.write("voicegroup_adsrcheck::\n"
+                      "\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 0 @ filler: release 0\n"
+                      "\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 0\n"
+                      "\tvoice_square_1 60, 0, 0, 2, 1, 2, 10, 3\n"
+                      "\tvoice_square_1 60, 0, 0, 2, 1, 2, 10, 3\n"
+                      "\tvoice_square_1 60, 0, 0, 2, 2, 0, 12, 1\n"
+                      "\tvoice_square_2 60, 0, 2, 9, 2, 20, 11 @ masks to 1 2 4 3\n"
+                      "\tvoice_directsound 60, 0, AdsrCheckA, 255, 0, 255, 165\n"
+                      "\tvoice_directsound_no_resample 60, 0, AdsrCheckA, 255, 0, 255, 165\n"
+                      "\tvoice_directsound 60, 0, AdsrCheckA, 200, 100, 128, 216\n"
+                      "\tvoice_directsound 60, 0, AdsrCheckB, 0, 0, 255, 165 @ silent: attack 0\n"
+                      "\tvoice_noise 60, 0, 0, 1, 0, 13, 2\n");
             out.close();
             const VgAdsrDefaults defaults = VoicegroupSource::typicalAdsr(fakeRoot);
-            const auto expectAdsr = [&failures](const char *what, bool present,
-                                                const VgAdsr &got, int a, int d, int s,
-                                                int r) {
-                if (!present || got.attack != a || got.decay != d || got.sustain != s
-                    || got.release != r) {
+            const auto expectAdsr = [&failures](const char *what, bool present, const VgAdsr &got,
+                                                int a, int d, int s, int r) {
+                if (!present || got.attack != a || got.decay != d || got.sustain != s ||
+                    got.release != r) {
                     std::fprintf(stderr,
                                  "vgcheck: FAIL: typicalAdsr %s = %d %d %d %d "
                                  "(present %d), expected %d %d %d %d\n",
@@ -565,28 +557,23 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
                        defaults.byFamily.value(noise), 1, 0, 13, 2);
             expectAdsr("symbol AdsrCheckA",
                        defaults.bySymbol.contains(QStringLiteral("AdsrCheckA")),
-                       defaults.bySymbol.value(QStringLiteral("AdsrCheckA")),
-                       255, 0, 255, 165);
+                       defaults.bySymbol.value(QStringLiteral("AdsrCheckA")), 255, 0, 255, 165);
             if (defaults.bySymbol.contains(QStringLiteral("AdsrCheckB"))) {
-                std::fprintf(stderr,
-                             "vgcheck: FAIL: silent AdsrCheckB envelope not excluded\n");
+                std::fprintf(stderr, "vgcheck: FAIL: silent AdsrCheckB envelope not excluded\n");
                 failures++;
             }
             // Adoption order: symbol beats family beats the built-in fallback.
             expectAdsr("adopt via symbol", true,
-                       vgDefaultAdsr(defaults, VgMacro::DirectSound,
-                                     QStringLiteral("AdsrCheckA")),
+                       vgDefaultAdsr(defaults, VgMacro::DirectSound, QStringLiteral("AdsrCheckA")),
                        255, 0, 255, 165);
             expectAdsr("adopt via family", true,
-                       vgDefaultAdsr(defaults, VgMacro::Square1Alt, QString()),
-                       1, 2, 10, 3);
+                       vgDefaultAdsr(defaults, VgMacro::Square1Alt, QString()), 1, 2, 10, 3);
             expectAdsr("adopt CGB fallback", true,
-                       vgDefaultAdsr(defaults, VgMacro::ProgWave,
-                                     QStringLiteral("NoSuchWave")),
-                       0, 0, 15, 3);
+                       vgDefaultAdsr(defaults, VgMacro::ProgWave, QStringLiteral("NoSuchWave")), 0,
+                       0, 15, 3);
             expectAdsr("adopt DirectSound fallback", true,
-                       vgDefaultAdsr(VgAdsrDefaults(), VgMacro::DirectSound, QString()),
-                       255, 0, 255, 165);
+                       vgDefaultAdsr(VgAdsrDefaults(), VgMacro::DirectSound, QString()), 255, 0,
+                       255, 165);
             if (failures == before)
                 std::printf("vgcheck: typical-ADSR synthetic scan OK\n");
         }
@@ -597,36 +584,33 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
     {
         const int before = failures;
         const VgAdsrDefaults defaults = VoicegroupSource::typicalAdsr(projectRoot);
-        for (auto it = defaults.byFamily.constBegin(); it != defaults.byFamily.constEnd();
-             ++it) {
+        for (auto it = defaults.byFamily.constBegin(); it != defaults.byFamily.constEnd(); ++it) {
             const bool cgb = it.key() != vgAdsrFamily(VgMacro::DirectSound);
             const VgAdsr &a = it.value();
             const int maxAdr = cgb ? 7 : 255;
-            if (a.release <= 0 || a.release > maxAdr || a.attack < 0 || a.attack > maxAdr
-                || a.decay < 0 || a.decay > maxAdr || a.sustain < 0
-                || a.sustain > (cgb ? 15 : 255) || (!cgb && a.attack == 0)) {
+            if (a.release <= 0 || a.release > maxAdr || a.attack < 0 || a.attack > maxAdr ||
+                a.decay < 0 || a.decay > maxAdr || a.sustain < 0 || a.sustain > (cgb ? 15 : 255) ||
+                (!cgb && a.attack == 0)) {
                 std::fprintf(stderr,
                              "vgcheck: FAIL: project typical ADSR for %s unusable: "
                              "%d %d %d %d\n",
-                             qUtf8Printable(vgMacroDisplayName(VgMacro(it.key()))),
-                             a.attack, a.decay, a.sustain, a.release);
+                             qUtf8Printable(vgMacroDisplayName(VgMacro(it.key()))), a.attack,
+                             a.decay, a.sustain, a.release);
                 failures++;
             } else {
                 std::printf("vgcheck: typical %s ADSR: %d %d %d %d\n",
-                            qUtf8Printable(vgMacroDisplayName(VgMacro(it.key()))),
-                            a.attack, a.decay, a.sustain, a.release);
+                            qUtf8Printable(vgMacroDisplayName(VgMacro(it.key()))), a.attack,
+                            a.decay, a.sustain, a.release);
             }
         }
-        for (auto it = defaults.bySymbol.constBegin(); it != defaults.bySymbol.constEnd();
-             ++it) {
+        for (auto it = defaults.bySymbol.constBegin(); it != defaults.bySymbol.constEnd(); ++it) {
             const VgAdsr &a = it.value();
-            if (a.release <= 0 || a.release > 255 || a.attack < 0 || a.attack > 255
-                || a.decay < 0 || a.decay > 255 || a.sustain < 0 || a.sustain > 255) {
+            if (a.release <= 0 || a.release > 255 || a.attack < 0 || a.attack > 255 ||
+                a.decay < 0 || a.decay > 255 || a.sustain < 0 || a.sustain > 255) {
                 std::fprintf(stderr,
                              "vgcheck: FAIL: project typical ADSR for symbol %s "
                              "unusable: %d %d %d %d\n",
-                             qUtf8Printable(it.key()), a.attack, a.decay, a.sustain,
-                             a.release);
+                             qUtf8Printable(it.key()), a.attack, a.decay, a.sustain, a.release);
                 failures++;
             }
         }
@@ -651,91 +635,75 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
                 failures++;
             }
         };
-        bool wrote = writeFile(
-            fakeRoot + QStringLiteral("/asm/macros/music_voice.inc"),
-            "\t.macro set_synth_pulse base_duty=0x80, duty_step=0x00, "
-            "mod_depth=0x00, duty_phase=0x00\n\t.endm\n"
-            "\t.macro set_synth_saw\n\t.endm\n"
-            "\t.macro set_synth_triangle\n\t.endm\n"
-            "\t.macro set_synth_custom parameter1:req, parameter2:req, "
-            "parameter3:req, parameter4:req\n\t.endm\n");
+        bool wrote = writeFile(fakeRoot + QStringLiteral("/asm/macros/music_voice.inc"),
+                               "\t.macro set_synth_pulse base_duty=0x80, duty_step=0x00, "
+                               "mod_depth=0x00, duty_phase=0x00\n\t.endm\n"
+                               "\t.macro set_synth_saw\n\t.endm\n"
+                               "\t.macro set_synth_triangle\n\t.endm\n"
+                               "\t.macro set_synth_custom parameter1:req, parameter2:req, "
+                               "parameter3:req, parameter4:req\n\t.endm\n");
         // An inline definition in direct_sound_data.inc (Golden Sun layout)
         // next to a normal sample the symbol list must keep.
-        wrote = wrote
-            && writeFile(fakeRoot + QStringLiteral("/sound/direct_sound_data.inc"),
-                         "\t.align 2\n"
-                         "DirectSoundWaveData_synthcheck_sample::\n"
-                         "\t.incbin \"sound/direct_sound_samples/sample.bin\"\n"
-                         "\n"
-                         "\t.align 2\n"
-                         "SynthCheckInline:: @ Golden Sun pulse\n"
-                         "\tset_synth_custom 0x10, 0xF0, 0xE0, 0x80\n");
+        wrote = wrote && writeFile(fakeRoot + QStringLiteral("/sound/direct_sound_data.inc"),
+                                   "\t.align 2\n"
+                                   "DirectSoundWaveData_synthcheck_sample::\n"
+                                   "\t.incbin \"sound/direct_sound_samples/sample.bin\"\n"
+                                   "\n"
+                                   "\t.align 2\n"
+                                   "SynthCheckInline:: @ Golden Sun pulse\n"
+                                   "\tset_synth_custom 0x10, 0xF0, 0xE0, 0x80\n");
         // A CRLF synth data file: appended entries must match its endings.
-        wrote = wrote
-            && writeFile(fakeRoot
-                             + QStringLiteral("/sound/direct_sound_synth_data.inc"),
-                         "\t.align 2\r\n"
-                         "SynthCheckSaw::\r\n"
-                         "    set_synth_25\r\n");
+        wrote = wrote && writeFile(fakeRoot + QStringLiteral("/sound/direct_sound_synth_data.inc"),
+                                   "\t.align 2\r\n"
+                                   "SynthCheckSaw::\r\n"
+                                   "    set_synth_25\r\n");
         // The build hub: the writer must wire the synth data file into the
         // assembly (an .include next to direct_sound_data.inc's) or the ROM
         // build fails on the saved symbols while porydaw plays them fine.
         QDir().mkpath(fakeRoot + QStringLiteral("/data"));
-        const QString soundDataPath =
-            fakeRoot + QStringLiteral("/data/sound_data.s");
-        wrote = wrote
-            && writeFile(soundDataPath,
-                         "\t.section .rodata\n"
-                         "\t.include \"sound/direct_sound_data.inc\"\n"
-                         "\t.include \"sound/music_player_table.inc\"\n");
+        const QString soundDataPath = fakeRoot + QStringLiteral("/data/sound_data.s");
+        wrote = wrote && writeFile(soundDataPath, "\t.section .rodata\n"
+                                                  "\t.include \"sound/direct_sound_data.inc\"\n"
+                                                  "\t.include \"sound/music_player_table.inc\"\n");
         if (!wrote) {
             std::fprintf(stderr, "vgcheck: cannot write synthcheck mini-project\n");
             failures++;
         } else {
-            const VgSynthCatalog catalog =
-                VoicegroupSource::synthInstruments(fakeRoot);
+            const VgSynthCatalog catalog = VoicegroupSource::synthInstruments(fakeRoot);
             expectSynth("scan finds both definitions", catalog.defs.size() == 2);
-            const VgSynthDesc *inl =
-                catalog.find(QStringLiteral("SynthCheckInline"));
+            const VgSynthDesc *inl = catalog.find(QStringLiteral("SynthCheckInline"));
             expectSynth("inline pulse parsed",
-                        inl
-                            && *inl
-                                == VgSynthDesc{0, 0x10, 0xF0, 0xE0, 0x80});
+                        inl && *inl == VgSynthDesc{0, 0x10, 0xF0, 0xE0, 0x80});
             const VgSynthDesc *saw = catalog.find(QStringLiteral("SynthCheckSaw"));
-            expectSynth("set_synth_25 alias parsed as saw",
-                        saw && saw->waveform == 1);
+            expectSynth("set_synth_25 alias parsed as saw", saw && saw->waveform == 1);
             expectSynth("macro words discovered",
                         catalog.macroWords.size() == 4 && catalog.creatable());
 
-            const QStringList samples =
-                VoicegroupSource::directSoundSymbols(fakeRoot);
+            const QStringList samples = VoicegroupSource::directSoundSymbols(fakeRoot);
             expectSynth("sample list keeps the PCM sample",
-                        samples.contains(QStringLiteral(
-                            "DirectSoundWaveData_synthcheck_sample")));
+                        samples.contains(QStringLiteral("DirectSoundWaveData_synthcheck_sample")));
             expectSynth("sample list excludes synth definitions",
-                        !samples.contains(QStringLiteral("SynthCheckInline"))
-                            && !samples.contains(QStringLiteral("SynthCheckSaw")));
+                        !samples.contains(QStringLiteral("SynthCheckInline")) &&
+                            !samples.contains(QStringLiteral("SynthCheckSaw")));
 
             // Canonical param-derived symbol names.
             const VgSynthDesc fresh{0, 0x40, 2, 3, 4};
             expectSynth("pulse symbol name",
-                        vgSynthSymbolName(fresh)
-                            == QStringLiteral("DirectSoundSynth_GoldenSun_40020304"));
-            expectSynth("saw symbol name",
-                        vgSynthSymbolName(VgSynthDesc{1, 0, 0, 0, 0})
-                            == QStringLiteral("DirectSoundSynth_GoldenSun_Saw"));
+                        vgSynthSymbolName(fresh) ==
+                            QStringLiteral("DirectSoundSynth_GoldenSun_40020304"));
+            expectSynth("saw symbol name", vgSynthSymbolName(VgSynthDesc{1, 0, 0, 0, 0}) ==
+                                               QStringLiteral("DirectSoundSynth_GoldenSun_Saw"));
             expectSynth("triangle symbol name",
-                        vgSynthSymbolName(VgSynthDesc{2, 0, 0, 0, 0})
-                            == QStringLiteral("DirectSoundSynth_GoldenSun_Triangle"));
+                        vgSynthSymbolName(VgSynthDesc{2, 0, 0, 0, 0}) ==
+                            QStringLiteral("DirectSoundSynth_GoldenSun_Triangle"));
 
             // Value-equal descriptors resolve to existing symbols, whichever
             // file defines them (this is the commit-time dedupe).
             expectSynth("dedupe reuses the inline pulse",
-                        catalog.symbolFor(VgSynthDesc{0, 0x10, 0xF0, 0xE0, 0x80})
-                            == QStringLiteral("SynthCheckInline"));
-            expectSynth("dedupe reuses the saw",
-                        catalog.symbolFor(VgSynthDesc{1, 0, 0, 0, 0})
-                            == QStringLiteral("SynthCheckSaw"));
+                        catalog.symbolFor(VgSynthDesc{0, 0x10, 0xF0, 0xE0, 0x80}) ==
+                            QStringLiteral("SynthCheckInline"));
+            expectSynth("dedupe reuses the saw", catalog.symbolFor(VgSynthDesc{1, 0, 0, 0, 0}) ==
+                                                     QStringLiteral("SynthCheckSaw"));
 
             // The save-time writer: appends new definitions, skips ones
             // already on disk with equal bytes, refuses conflicting bytes.
@@ -743,46 +711,39 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
                 fakeRoot + QStringLiteral("/sound/direct_sound_synth_data.inc");
             const QList<QPair<QString, VgSynthDesc>> newDefs = {
                 {vgSynthSymbolName(fresh), fresh},
-                {vgSynthSymbolName(VgSynthDesc{2, 0, 0, 0, 0}),
-                 VgSynthDesc{2, 0, 0, 0, 0}},
+                {vgSynthSymbolName(VgSynthDesc{2, 0, 0, 0, 0}), VgSynthDesc{2, 0, 0, 0, 0}},
             };
             expectSynth("write appends new definitions",
-                        VoicegroupSource::writeSynthDefinitions(fakeRoot, newDefs,
-                                                                &error));
+                        VoicegroupSource::writeSynthDefinitions(fakeRoot, newDefs, &error));
             // The wiring: sound_data.s gains the synth include, right after
             // the direct_sound_data.inc line it anchors on.
             const QByteArray soundData = readFileBytes(soundDataPath);
-            expectSynth(
-                "write wires the synth data file into the build",
-                soundData.contains("\t.include \"sound/direct_sound_data.inc\"\n"
-                                   "\t.include "
-                                   "\"sound/direct_sound_synth_data.inc\"\n"));
-            const VgSynthCatalog written =
-                VoicegroupSource::synthInstruments(fakeRoot);
+            expectSynth("write wires the synth data file into the build",
+                        soundData.contains("\t.include \"sound/direct_sound_data.inc\"\n"
+                                           "\t.include "
+                                           "\"sound/direct_sound_synth_data.inc\"\n"));
+            const VgSynthCatalog written = VoicegroupSource::synthInstruments(fakeRoot);
             const VgSynthDesc *minted =
                 written.find(QStringLiteral("DirectSoundSynth_GoldenSun_40020304"));
             expectSynth("written pulse parses back", minted && *minted == fresh);
             expectSynth("written triangle parses back",
-                        written.find(
-                            QStringLiteral("DirectSoundSynth_GoldenSun_Triangle"))
-                            != nullptr);
+                        written.find(QStringLiteral("DirectSoundSynth_GoldenSun_Triangle")) !=
+                            nullptr);
             const QByteArray grown = readFileBytes(synthPath);
             const QByteArray wired = readFileBytes(soundDataPath);
             expectSynth("re-writing the same definitions is a no-op",
-                        VoicegroupSource::writeSynthDefinitions(fakeRoot, newDefs,
-                                                                &error)
-                            && readFileBytes(synthPath) == grown
-                            && readFileBytes(soundDataPath) == wired);
+                        VoicegroupSource::writeSynthDefinitions(fakeRoot, newDefs, &error) &&
+                            readFileBytes(synthPath) == grown &&
+                            readFileBytes(soundDataPath) == wired);
             expectSynth("the include is wired exactly once",
                         wired.count("direct_sound_synth_data.inc") == 1);
             error.clear();
             expectSynth("conflicting bytes under an existing name refused",
                         !VoicegroupSource::writeSynthDefinitions(
                             fakeRoot,
-                            {{QStringLiteral("SynthCheckSaw"),
-                              VgSynthDesc{0, 9, 9, 9, 9}}},
-                            &error)
-                            && !error.isEmpty() && readFileBytes(synthPath) == grown);
+                            {{QStringLiteral("SynthCheckSaw"), VgSynthDesc{0, 9, 9, 9, 9}}},
+                            &error) &&
+                            !error.isEmpty() && readFileBytes(synthPath) == grown);
             // The CRLF file must stay CRLF: no bare '\n' anywhere.
             bool crlfOk = true;
             for (int i = 0; i < grown.size(); i++) {
@@ -793,29 +754,26 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
 
             // Without the set_synth_* macros, existing definitions still
             // resolve but new ones are refused (they wouldn't assemble).
-            const QString bareRoot =
-                projectRoot + QStringLiteral("/.porydaw/synthcheck_bare");
+            const QString bareRoot = projectRoot + QStringLiteral("/.porydaw/synthcheck_bare");
             QDir().mkpath(bareRoot + QStringLiteral("/sound"));
-            if (!writeFile(bareRoot
-                               + QStringLiteral("/sound/direct_sound_synth_data.inc"),
+            if (!writeFile(bareRoot + QStringLiteral("/sound/direct_sound_synth_data.inc"),
                            "SynthCheckSaw::\n    set_synth_saw\n")) {
                 std::fprintf(stderr, "vgcheck: cannot write synthcheck_bare\n");
                 failures++;
             } else {
-                const VgSynthCatalog bare =
-                    VoicegroupSource::synthInstruments(bareRoot);
+                const VgSynthCatalog bare = VoicegroupSource::synthInstruments(bareRoot);
                 expectSynth("gate: not creatable without macros", !bare.creatable());
                 expectSynth("gate: existing definition still resolves",
-                            bare.symbolFor(VgSynthDesc{1, 0, 0, 0, 0})
-                                == QStringLiteral("SynthCheckSaw"));
+                            bare.symbolFor(VgSynthDesc{1, 0, 0, 0, 0}) ==
+                                QStringLiteral("SynthCheckSaw"));
                 error.clear();
                 expectSynth("gate: new definition refused",
                             !VoicegroupSource::writeSynthDefinitions(
                                 bareRoot,
                                 {{QStringLiteral("DirectSoundSynth_GoldenSun_09090909"),
                                   VgSynthDesc{0, 9, 9, 9, 9}}},
-                                &error)
-                                && !error.isEmpty());
+                                &error) &&
+                                !error.isEmpty());
             }
             QDir(bareRoot).removeRecursively();
 
@@ -827,23 +785,20 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
                 projectRoot + QStringLiteral("/.porydaw/synthcheck_unwired");
             QDir().mkpath(unwiredRoot + QStringLiteral("/sound"));
             QDir().mkpath(unwiredRoot + QStringLiteral("/asm/macros"));
-            if (!writeFile(unwiredRoot
-                               + QStringLiteral("/asm/macros/music_voice.inc"),
+            if (!writeFile(unwiredRoot + QStringLiteral("/asm/macros/music_voice.inc"),
                            "\t.macro set_synth_pulse a=0, b=0, c=0, d=0\n"
                            "\t.endm\n")) {
                 std::fprintf(stderr, "vgcheck: cannot write synthcheck_unwired\n");
                 failures++;
             } else {
                 error.clear();
-                expectSynth(
-                    "unwired build refused with instructions",
-                    !VoicegroupSource::writeSynthDefinitions(
-                        unwiredRoot,
-                        {{QStringLiteral("DirectSoundSynth_GoldenSun_09090909"),
-                          VgSynthDesc{0, 9, 9, 9, 9}}},
-                        &error)
-                        && error.contains(
-                            QStringLiteral("direct_sound_synth_data.inc")));
+                expectSynth("unwired build refused with instructions",
+                            !VoicegroupSource::writeSynthDefinitions(
+                                unwiredRoot,
+                                {{QStringLiteral("DirectSoundSynth_GoldenSun_09090909"),
+                                  VgSynthDesc{0, 9, 9, 9, 9}}},
+                                &error) &&
+                                error.contains(QStringLiteral("direct_sound_synth_data.inc")));
             }
             QDir(unwiredRoot).removeRecursively();
             if (failures == before)
@@ -882,72 +837,59 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
             return bin;
         };
         const bool wrote =
-            writeFile(fakeRoot
-                          + QStringLiteral(
-                              "/sound/direct_sound_samples/colon_single.bin"),
-                      sampleBin('\x11'))
-            && writeFile(fakeRoot
-                             + QStringLiteral(
-                                 "/sound/direct_sound_samples/colon_double.bin"),
-                         sampleBin('\x22'))
-            && writeFile(fakeRoot
-                             + QStringLiteral(
-                                 "/sound/programmable_wave_samples/colon_wave.pcm"),
-                         QByteArray(16, '\x33'))
-            && writeFile(
-                fakeRoot + QStringLiteral("/sound/direct_sound_data.inc"),
-                "\t.align 2\n"
-                "DirectSoundWaveData_colon_double::\n"
-                "\t.incbin \"sound/direct_sound_samples/colon_double.bin\"\n"
-                "\n"
-                "\t.align 2\n"
-                "DirectSoundWaveData_colon_single: @ file-local label\n"
-                "\t.incbin \"sound/direct_sound_samples/colon_single.bin\"\n"
-                "\n"
-                "\t.align 2\n"
-                "ColonCheckSynth:\n"
-                "\tset_synth_25\n")
-            && writeFile(
-                fakeRoot + QStringLiteral("/sound/programmable_wave_data.inc"),
-                "\t.align 2\n"
-                "ProgrammableWaveData_colon_wave:\n"
-                "\t.incbin \"sound/programmable_wave_samples/colon_wave.pcm\"\n")
-            && writeFile(
-                fakeRoot + QStringLiteral("/sound/voicegroups/coloncheck.inc"),
-                "voicegroup_coloncheck::\n"
-                "\tvoice_directsound 60, 0, DirectSoundWaveData_colon_single, "
-                "255, 0, 255, 165\n"
-                "\tvoice_directsound 60, 0, DirectSoundWaveData_colon_double, "
-                "255, 0, 255, 165\n"
-                "\tvoice_programmable_wave 60, 0, ProgrammableWaveData_colon_wave, "
-                "0, 0, 15, 3\n");
+            writeFile(fakeRoot + QStringLiteral("/sound/direct_sound_samples/colon_single.bin"),
+                      sampleBin('\x11')) &&
+            writeFile(fakeRoot + QStringLiteral("/sound/direct_sound_samples/colon_double.bin"),
+                      sampleBin('\x22')) &&
+            writeFile(fakeRoot + QStringLiteral("/sound/programmable_wave_samples/colon_wave.pcm"),
+                      QByteArray(16, '\x33')) &&
+            writeFile(fakeRoot + QStringLiteral("/sound/direct_sound_data.inc"),
+                      "\t.align 2\n"
+                      "DirectSoundWaveData_colon_double::\n"
+                      "\t.incbin \"sound/direct_sound_samples/colon_double.bin\"\n"
+                      "\n"
+                      "\t.align 2\n"
+                      "DirectSoundWaveData_colon_single: @ file-local label\n"
+                      "\t.incbin \"sound/direct_sound_samples/colon_single.bin\"\n"
+                      "\n"
+                      "\t.align 2\n"
+                      "ColonCheckSynth:\n"
+                      "\tset_synth_25\n") &&
+            writeFile(fakeRoot + QStringLiteral("/sound/programmable_wave_data.inc"),
+                      "\t.align 2\n"
+                      "ProgrammableWaveData_colon_wave:\n"
+                      "\t.incbin \"sound/programmable_wave_samples/colon_wave.pcm\"\n") &&
+            writeFile(fakeRoot + QStringLiteral("/sound/voicegroups/coloncheck.inc"),
+                      "voicegroup_coloncheck::\n"
+                      "\tvoice_directsound 60, 0, DirectSoundWaveData_colon_single, "
+                      "255, 0, 255, 165\n"
+                      "\tvoice_directsound 60, 0, DirectSoundWaveData_colon_double, "
+                      "255, 0, 255, 165\n"
+                      "\tvoice_programmable_wave 60, 0, ProgrammableWaveData_colon_wave, "
+                      "0, 0, 15, 3\n");
         if (!wrote) {
             std::fprintf(stderr, "vgcheck: cannot write coloncheck mini-project\n");
             failures++;
         } else {
-            const VgDirectSoundScan scan =
-                VoicegroupSource::directSoundCatalog(fakeRoot);
-            expectColon("catalog lists the single-colon sample",
-                        scan.directSound.contains(QStringLiteral(
-                            "DirectSoundWaveData_colon_single")));
-            expectColon("catalog lists the double-colon sample",
-                        scan.directSound.contains(QStringLiteral(
-                            "DirectSoundWaveData_colon_double")));
+            const VgDirectSoundScan scan = VoicegroupSource::directSoundCatalog(fakeRoot);
+            expectColon(
+                "catalog lists the single-colon sample",
+                scan.directSound.contains(QStringLiteral("DirectSoundWaveData_colon_single")));
+            expectColon(
+                "catalog lists the double-colon sample",
+                scan.directSound.contains(QStringLiteral("DirectSoundWaveData_colon_double")));
             expectColon("synth def stays out of the sample list",
-                        !scan.directSound.contains(
-                            QStringLiteral("ColonCheckSynth")));
+                        !scan.directSound.contains(QStringLiteral("ColonCheckSynth")));
             expectColon("single-colon synth def is scanned",
-                        scan.synths.find(QStringLiteral("ColonCheckSynth"))
-                            != nullptr);
+                        scan.synths.find(QStringLiteral("ColonCheckSynth")) != nullptr);
             expectColon("prog-wave scan sees the single-colon label",
                         VoicegroupSource::progWaveSymbols(fakeRoot).contains(
                             QStringLiteral("ProgrammableWaveData_colon_wave")));
 
-            LoadedVoiceGroup *vg = voicegroup_load(
-                fakeRoot.toUtf8().constData(), "coloncheck", nullptr);
+            LoadedVoiceGroup *vg =
+                voicegroup_load(fakeRoot.toUtf8().constData(), "coloncheck", nullptr);
             if (!vg) {
-                std::fprintf(stderr,
-                             "vgcheck: FAIL: coloncheck voicegroup_load failed\n");
+                std::fprintf(stderr, "vgcheck: FAIL: coloncheck voicegroup_load failed\n");
                 failures++;
             } else {
                 const ToneData &s = vg->voices[0];
@@ -957,8 +899,7 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
                             s.wav && s.wav->size == 4 && s.wav->data[0] == 0x11);
                 expectColon("loader resolves the double-colon sample",
                             d.wav && d.wav->size == 4 && d.wav->data[0] == 0x22);
-                expectColon("loader resolves the single-colon prog wave",
-                            w.wavePointer != nullptr);
+                expectColon("loader resolves the single-colon prog wave", w.wavePointer != nullptr);
                 voicegroup_free(vg);
             }
         }
@@ -973,8 +914,7 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         // The loader needs only the data file, not the .macro definitions, so
         // this works on projects without synth support. Append (never
         // truncate) in case the project already has synth definitions.
-        QFile synthData(projectRoot
-                        + QStringLiteral("/sound/direct_sound_synth_data.inc"));
+        QFile synthData(projectRoot + QStringLiteral("/sound/direct_sound_synth_data.inc"));
         if (!synthData.open(QIODevice::WriteOnly | QIODevice::Append)) {
             std::fprintf(stderr, "vgcheck: cannot append synth data file\n");
             failures++;
@@ -986,23 +926,20 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
             v.symbol = QStringLiteral("VgcheckSynthPulse");
             src.setVoice(dsSlot, v);
             if (!src.save(&error)) {
-                std::fprintf(stderr, "vgcheck: synth save: %s\n",
-                             qUtf8Printable(error));
+                std::fprintf(stderr, "vgcheck: synth save: %s\n", qUtf8Printable(error));
                 failures++;
             } else {
-                LoadedVoiceGroup *vg = voicegroup_load(rootUtf8.constData(),
-                                                       loadName.constData(), nullptr);
+                LoadedVoiceGroup *vg =
+                    voicegroup_load(rootUtf8.constData(), loadName.constData(), nullptr);
                 if (!vg) {
                     std::fprintf(stderr, "vgcheck: synth voicegroup_load failed\n");
                     failures++;
                 } else {
                     const ToneData &td = vg->voices[dsSlot];
-                    const auto *d = td.wav
-                        ? reinterpret_cast<const uint8_t *>(td.wav->data)
-                        : nullptr;
-                    if ((td.type & ~0x18) != 0 || !td.wav || td.wav->size != 0 || !d
-                        || d[1] != 0 || d[2] != 0x21 || d[3] != 0x43 || d[4] != 0x65
-                        || d[5] != 0x87) {
+                    const auto *d =
+                        td.wav ? reinterpret_cast<const uint8_t *>(td.wav->data) : nullptr;
+                    if ((td.type & ~0x18) != 0 || !td.wav || td.wav->size != 0 || !d || d[1] != 0 ||
+                        d[2] != 0x21 || d[3] != 0x43 || d[4] != 0x65 || d[5] != 0x87) {
                         std::fprintf(stderr,
                                      "vgcheck: FAIL: synth voice slot %d didn't load "
                                      "as a pulse descriptor\n",

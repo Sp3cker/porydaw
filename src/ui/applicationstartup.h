@@ -15,7 +15,6 @@ bool initializeApplication(QApplication &application);
 /// keeps the first visible frame themed (Windows otherwise flashes a white
 /// frame until the first paint after restore), and the cover hides the
 /// intermediate layouts restore produces.
-void showCoveredWhileRestoring(QWidget &window,
-                               const std::function<void()> &restore);
+void showCoveredWhileRestoring(QWidget &window, const std::function<void()> &restore);
 
 } // namespace ui

@@ -33,12 +33,12 @@ void ensureGitignore(const QString &projectRoot)
     }
     for (QByteArray line : bytes.split('\n')) {
         line = line.trimmed();
-        if (line == ".porydaw" || line == ".porydaw/" || line == "/.porydaw"
-            || line == "/.porydaw/")
+        if (line == ".porydaw" || line == ".porydaw/" || line == "/.porydaw" ||
+            line == "/.porydaw/")
             return;
     }
-    const QByteArray eol = bytes.contains("\r\n") ? QByteArrayLiteral("\r\n")
-                                                  : QByteArrayLiteral("\n");
+    const QByteArray eol =
+        bytes.contains("\r\n") ? QByteArrayLiteral("\r\n") : QByteArrayLiteral("\n");
     if (!bytes.isEmpty() && !bytes.endsWith('\n'))
         bytes += eol;
     bytes += ".porydaw/" + eol;

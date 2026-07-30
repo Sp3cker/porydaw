@@ -22,7 +22,7 @@ struct SmfEvent {
     uint8_t metaType = 0; // valid when status == 0xFF
     uint8_t data0 = 0;    // channel-voice data bytes
     uint8_t data1 = 0;
-    QByteArray blob;      // meta/sysex payload
+    QByteArray blob; // meta/sysex payload
 
     bool isMeta() const { return status == 0xFF; }
     bool isSysEx() const { return status == 0xF0 || status == 0xF7; }
@@ -32,16 +32,13 @@ struct SmfEvent {
     bool isNoteOn() const { return typeNibble() == 0x9 && data1 != 0; }
     // Anything that ends a sounding note: note-off or note-on with velocity 0
     // (mid2agb accepts both interchangeably).
-    bool isNoteEnd() const
-    {
-        return typeNibble() == 0x8 || (typeNibble() == 0x9 && data1 == 0);
-    }
+    bool isNoteEnd() const { return typeNibble() == 0x8 || (typeNibble() == 0x9 && data1 == 0); }
 };
 
 inline bool operator==(const SmfEvent &a, const SmfEvent &b)
 {
-    return a.tick == b.tick && a.status == b.status && a.metaType == b.metaType
-        && a.data0 == b.data0 && a.data1 == b.data1 && a.blob == b.blob;
+    return a.tick == b.tick && a.status == b.status && a.metaType == b.metaType &&
+           a.data0 == b.data0 && a.data1 == b.data1 && a.blob == b.blob;
 }
 
 inline bool operator!=(const SmfEvent &a, const SmfEvent &b)
@@ -84,7 +81,7 @@ struct SmfChannelPrefix {
 };
 
 struct SmfFile {
-    uint16_t format = 1;   // always 1 after parse; see wasFormat0
+    uint16_t format = 1;    // always 1 after parse; see wasFormat0
     uint16_t division = 24; // ticks per quarter note (metrical only)
     std::vector<SmfTrack> tracks;
     bool wasFormat0 = false; // parsed as format 0, coerced by convertToFormat1

@@ -92,10 +92,10 @@ SmfFile buildOverflowSong()
         uint8_t key;
     };
     const NoteSpec specs[4] = {
-        {kStealTick, kStealOffTick, kStealKey},  // engine track 0
-        {kHoldOnTick, kHoldOffTick, kHoldKey},   // engine track 1
-        {kDropTick, 200, kDropKey},              // engine track 2
-        {kTailCutTick, kHoldOffTick, kTailKey},  // engine track 3
+        {kStealTick, kStealOffTick, kStealKey}, // engine track 0
+        {kHoldOnTick, kHoldOffTick, kHoldKey},  // engine track 1
+        {kDropTick, 200, kDropKey},             // engine track 2
+        {kTailCutTick, kHoldOffTick, kTailKey}, // engine track 3
     };
     for (int t = 0; t < 4; t++) {
         SmfTrack &track = smf.tracks[t + 1];
@@ -182,19 +182,19 @@ RenderResult renderSong(M4AEngine *engine, const MidiTimeline &timeline)
     return result;
 }
 
-int checkEvent(const M4AEngine &engine, int index, uint8_t type, uint8_t track,
-               uint8_t key, uint8_t byTrack, uint32_t tick, const char *what)
+int checkEvent(const M4AEngine &engine, int index, uint8_t type, uint8_t track, uint8_t key,
+               uint8_t byTrack, uint32_t tick, const char *what)
 {
     const M4APolyEvent &ev = engine.polyEvents[index];
-    if (ev.type == type && ev.trackIndex == track && ev.midiKey == key
-        && ev.byTrack == byTrack && ev.tick == tick)
+    if (ev.type == type && ev.trackIndex == track && ev.midiKey == key && ev.byTrack == byTrack &&
+        ev.tick == tick)
         return 0;
     std::fprintf(stderr,
                  "polycheck: FAIL: %s: event %d = {type %d, trk %d, key %d, "
                  "by %d, tick %u}, expected {type %d, trk %d, key %d, by %d, "
                  "tick %u}\n",
-                 what, index, ev.type, ev.trackIndex, ev.midiKey, ev.byTrack,
-                 ev.tick, type, track, key, byTrack, tick);
+                 what, index, ev.type, ev.trackIndex, ev.midiKey, ev.byTrack, ev.tick, type, track,
+                 key, byTrack, tick);
     return 1;
 }
 
@@ -230,16 +230,15 @@ int runEngineStage()
     check(engine.polyTailCutCount[0] == 1, "tail cut counted for track 0");
     uint64_t others = 0;
     for (int t = 0; t < MAX_TRACKS; t++) {
-        others += engine.polyDropCount[t] + engine.polyStealCount[t]
-            + engine.polyTailCutCount[t];
+        others += engine.polyDropCount[t] + engine.polyStealCount[t] + engine.polyTailCutCount[t];
     }
     check(others == 3, "no unexpected counters");
-    failures += checkEvent(engine, 0, M4A_POLY_STOLEN, 1, kHoldKey, 0,
-                           uint32_t(kStealTick), "steal event with thief's tick");
-    failures += checkEvent(engine, 1, M4A_POLY_DROPPED, 2, kDropKey, 2,
-                           uint32_t(kDropTick), "drop event with its own tick");
-    failures += checkEvent(engine, 2, M4A_POLY_TAIL_CUT, 0, kStealKey, 3,
-                           uint32_t(kTailCutTick), "tail-cut event with thief's tick");
+    failures += checkEvent(engine, 0, M4A_POLY_STOLEN, 1, kHoldKey, 0, uint32_t(kStealTick),
+                           "steal event with thief's tick");
+    failures += checkEvent(engine, 1, M4A_POLY_DROPPED, 2, kDropKey, 2, uint32_t(kDropTick),
+                           "drop event with its own tick");
+    failures += checkEvent(engine, 2, M4A_POLY_TAIL_CUT, 0, kStealKey, 3, uint32_t(kTailCutTick),
+                           "tail-cut event with thief's tick");
     m4a_engine_destroy(&engine);
 
     // ---- Live notes carry the sentinel (host never set the clock) ----
@@ -329,15 +328,14 @@ int runEngineStage()
             for (uint32_t i = 0; i < kChunk; i++)
                 peak = std::max({peak, std::fabs(bufL[i]), std::fabs(bufR[i])});
             for (int i = 0; i < TOTAL_PCM_CHANNELS; i++) {
-                if ((engine.pcmChannels[i].status & CHN_ON)
-                    && engine.pcmChannels[i].trackIndex != 0)
+                if ((engine.pcmChannels[i].status & CHN_ON) &&
+                    engine.pcmChannels[i].trackIndex != 0)
                     foreignChannelOwner = true;
             }
         }
         check(peak > 1e-4f, "budget: track 0 still audible");
         check(!foreignChannelOwner, "budget: no channel ever owned by track >= 1");
-        check(engine.polyEventTotal == 0,
-              "budget: muted tracks cause no overflow events");
+        check(engine.polyEventTotal == 0, "budget: muted tracks cause no overflow events");
     }
     m4a_engine_destroy(&engine);
 
@@ -436,17 +434,14 @@ int runWidgetStage(const QString &screenshotPath)
     const QString newest = panel.logRowText(0);
     const QString middle = panel.logRowText(1);
     const QString oldest = panel.logRowText(2);
-    check(newest.contains(QStringLiteral("live"))
-              && newest.contains(QStringLiteral("dropped")),
+    check(newest.contains(QStringLiteral("live")) && newest.contains(QStringLiteral("dropped")),
           "newest row first: the live drop");
-    check(middle.contains(QStringLiteral("3:2.0"))
-              && middle.contains(QStringLiteral("tail cut")),
+    check(middle.contains(QStringLiteral("3:2.0")) && middle.contains(QStringLiteral("tail cut")),
           "bar:beat honors the mid-song 3/4 change");
-    check(oldest.contains(QStringLiteral("2:1.0"))
-              && oldest.contains(QStringLiteral("Trk 3"))
-              && oldest.contains(QStringLiteral("C4"))
-              && oldest.contains(QStringLiteral("voice_piano"))
-              && oldest.contains(QStringLiteral("cut off by Trk 5")),
+    check(oldest.contains(QStringLiteral("2:1.0")) && oldest.contains(QStringLiteral("Trk 3")) &&
+              oldest.contains(QStringLiteral("C4")) &&
+              oldest.contains(QStringLiteral("voice_piano")) &&
+              oldest.contains(QStringLiteral("cut off by Trk 5")),
           "steal row: position, track, note, voice name, thief");
 
     panel.activateLogRow(2);
@@ -469,8 +464,8 @@ int runWidgetStage(const QString &screenshotPath)
         AudioEngine::PolySnapshot burst;
         burst.maxPcmChannels = 5;
         for (int i = 0; i < 60; i++)
-            burst.events[total++ % M4A_POLY_EVENT_CAPACITY] =
-                {M4A_POLY_DROPPED, 0, 60, 0, 0, uint32_t(total)};
+            burst.events[total++ % M4A_POLY_EVENT_CAPACITY] = {M4A_POLY_DROPPED, 0, 60, 0, 0,
+                                                               uint32_t(total)};
         burst.eventTotal = total;
         panel.updateSnapshot(burst);
     }
@@ -505,8 +500,7 @@ int runWidgetStage(const QString &screenshotPath)
     check(!panel.wideLayoutActive(), "narrow panel stacks the sections");
     check(panel.overflowSectionRect().top() >= panel.usageSectionRect().bottom(),
           "stacked: overflow table sits below the channel grid");
-    check(panel.gridFullyVisible(),
-          "narrow grid tall enough for all wrapped cell rows");
+    check(panel.gridFullyVisible(), "narrow grid tall enough for all wrapped cell rows");
     panel.resize(900, 600);
     settle();
     check(panel.wideLayoutActive(), "wide panel goes side by side");
@@ -518,8 +512,8 @@ int runWidgetStage(const QString &screenshotPath)
         wideImage.fill(Qt::white);
         panel.render(&wideImage);
         QFileInfo info(screenshotPath);
-        wideImage.save(info.path() + QLatin1Char('/') + info.completeBaseName()
-                       + QStringLiteral("-wide.") + info.suffix());
+        wideImage.save(info.path() + QLatin1Char('/') + info.completeBaseName() +
+                       QStringLiteral("-wide.") + info.suffix());
     }
     // Short window: once the sections are squeezed to their minimums the
     // panel scrolls instead of clipping the bottom off-window; tall windows
@@ -533,8 +527,8 @@ int runWidgetStage(const QString &screenshotPath)
         shortImage.fill(Qt::white);
         panel.render(&shortImage);
         QFileInfo info(screenshotPath);
-        shortImage.save(info.path() + QLatin1Char('/') + info.completeBaseName()
-                        + QStringLiteral("-short.") + info.suffix());
+        shortImage.save(info.path() + QLatin1Char('/') + info.completeBaseName() +
+                        QStringLiteral("-short.") + info.suffix());
     }
     panel.resize(380, 980);
     settle();
@@ -603,10 +597,8 @@ int runPolyCheck(const QString &screenshotPath)
         std::fprintf(stderr, "polycheck: no temp dir for settings\n");
         failures++;
     } else {
-        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope,
-                           settingsDir.path());
-        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
-                           settingsDir.path());
+        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
         MainWindow window;
         if (!window.runPolyGateCheck())
             failures++;

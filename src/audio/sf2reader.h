@@ -27,15 +27,14 @@ struct Sf2Zone {
     int originalPitch = 60;  // byOriginalPitch; > 127 = unpitched convention
     int pitchCorrection = 0; // chPitchCorrection, signed cents
     quint16 sampleType = 1;
-    QString instrument;      // grouping label; empty = unreferenced
-    QString preset;          // grouping label; empty = none
+    QString instrument; // grouping label; empty = unreferenced
+    QString preset;     // grouping label; empty = none
 
     qint64 frames() const { return qint64(end) - qint64(start); }
     bool stereoPair() const { return sampleType == 2 || sampleType == 4; }
     bool hasLoop() const
     {
-        return loopStart >= start && loopEndExcl <= end
-            && loopEndExcl >= loopStart + 2;
+        return loopStart >= start && loopEndExcl <= end && loopEndExcl >= loopStart + 2;
     }
 };
 
@@ -53,8 +52,7 @@ bool sf2Magic(const QByteArray &bytes);
 // Parse a SoundFont byte stream. Refuses actionably on corrupt/truncated
 // containers, on missing smpl/shdr chunks, and when no importable zone
 // remains. sourcePath only labels the result.
-bool readSf2Bytes(const QByteArray &bytes, const QString &sourcePath,
-                  Sf2File *out, QString *error);
+bool readSf2Bytes(const QByteArray &bytes, const QString &sourcePath, Sf2File *out, QString *error);
 bool readSf2File(const QString &path, Sf2File *out, QString *error);
 
 // Selected zone → hi-res ImportedSample (FORMATS.md §5 mapping): the zone's
@@ -62,5 +60,4 @@ bool readSf2File(const QString &path, Sf2File *out, QString *error);
 // inclusive, unity = originalPitch with pitchCorrection folded in and the
 // fraction renormalized to [0, 1) by borrowing from the key. Left/right
 // stereo-linked zones import this channel and carry the pair warning.
-bool extractSf2Zone(const Sf2File &file, int zoneIndex, ImportedSample *out,
-                    QString *error);
+bool extractSf2Zone(const Sf2File &file, int zoneIndex, ImportedSample *out, QString *error);

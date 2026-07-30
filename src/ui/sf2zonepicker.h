@@ -17,14 +17,14 @@ class Sf2ZonePicker : public QDialog
 {
     Q_OBJECT
 
-public:
+  public:
     // file must outlive the dialog (the owner holds it across exec()).
     explicit Sf2ZonePicker(const Sf2File &file, QWidget *parent = nullptr);
 
     // Index into file.zones; -1 until a zone row is chosen.
     int selectedZone() const { return m_selected; }
 
-private:
+  private:
     void rebuild();
     void updateSelection();
 

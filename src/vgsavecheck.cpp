@@ -10,11 +10,11 @@
 #include <QLineEdit>
 #include <QMouseEvent>
 #include <QPointer>
-#include <QTreeWidgetItemIterator>
 #include <QSettings>
 #include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QTreeWidgetItemIterator>
 #include <cstdio>
 
 #include "ui/songview.h"
@@ -97,10 +97,8 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     int dsSlot = -1;
     for (int i = 0; i < VOICEGROUP_SIZE && dsSlot < 0; i++) {
         const VgVoice *v = tab->vgSource->voiceAt(i);
-        if (v
-            && (v->macro == VgMacro::DirectSound
-                || v->macro == VgMacro::DirectSoundNoResample
-                || v->macro == VgMacro::DirectSoundAlt))
+        if (v && (v->macro == VgMacro::DirectSound || v->macro == VgMacro::DirectSoundNoResample ||
+                  v->macro == VgMacro::DirectSoundAlt))
             dsSlot = i;
     }
     if (dsSlot < 0) {
@@ -129,8 +127,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     check(!tab->doc.isDirty() && !tab->vgSource->dirty(),
           "undo did not return the session to clean");
     check(!isWindowModified(), "undo left the window marked modified");
-    check(readFileBytes(vgPath) == vgBytesOriginal,
-          "voicegroup file changed without a save");
+    check(readFileBytes(vgPath) == vgBytesOriginal, "voicegroup file changed without a save");
 
     // 3. Redo the voice edit, add a note edit, save once: both files written.
     tab->doc.undoStack()->redo();
@@ -150,15 +147,12 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     tab->doc.addNote(track, base, 72, 24, 93);
     check(saveSession(*tab), "unified save failed");
     check(!tab->doc.isDirty() && !tab->vgSource->dirty(), "still dirty after save");
-    check(readFileBytes(vgPath) != vgBytesOriginal,
-          "save did not write the voicegroup file");
-    check(readFileBytes(tab->doc.midPath()) != midBytesOriginal,
-          "save did not write the .mid");
+    check(readFileBytes(vgPath) != vgBytesOriginal, "save did not write the voicegroup file");
+    check(readFileBytes(tab->doc.midPath()) != midBytesOriginal, "save did not write the .mid");
     {
         VoicegroupSource fresh;
-        check(fresh.open(projectRoot, tab->doc.cfg().voicegroupArg, &error)
-                  && fresh.voiceAt(dsSlot)
-                  && fresh.voiceAt(dsSlot)->release == edited.release,
+        check(fresh.open(projectRoot, tab->doc.cfg().voicegroupArg, &error) &&
+                  fresh.voiceAt(dsSlot) && fresh.voiceAt(dsSlot)->release == edited.release,
               "saved voice edit not present in a fresh parse");
     }
 
@@ -202,9 +196,9 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         tab->doc.undoStack()->undo(); // the -G switch
         check(tab->vgSource && tab->vgSource->loadName() == vgLoadName,
               "undoing the -G switch did not reopen the old voicegroup");
-        check(tab->vgSource && tab->vgSource->voiceAt(dsSlot)
-                  && tab->vgSource->voiceAt(dsSlot)->release == edited2.release
-                  && tab->vgSource->dirty(),
+        check(tab->vgSource && tab->vgSource->voiceAt(dsSlot) &&
+                  tab->vgSource->voiceAt(dsSlot)->release == edited2.release &&
+                  tab->vgSource->dirty(),
               "undoing the -G switch did not replay the unsaved voice edit");
         tab->doc.undoStack()->undo(); // the voice edit
         check(tab->vgSource && !tab->vgSource->dirty() && !tab->doc.isDirty(),
@@ -216,30 +210,25 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         // undoable cfg edit, and undo refreshes the selector's text. The
         // selector shows args in display form: the leading underscore folds
         // into the fixed "voicegroup_" prefix.
-        QComboBox *vgCombo =
-            m_vgBrowser->findChild<QComboBox *>(QStringLiteral("vgArgCombo"));
+        QComboBox *vgCombo = m_vgBrowser->findChild<QComboBox *>(QStringLiteral("vgArgCombo"));
         if (check(vgCombo != nullptr, "no voicegroup selector in the dock")) {
             const QString originalArg = tab->doc.cfg().voicegroupArg;
             const QString shown = SongRegistry::voicegroupDisplayName(
                 originalArg.isEmpty() ? QStringLiteral("_dummy") : originalArg);
             check(vgCombo->isEnabled() && vgCombo->currentText() == shown,
                   "dock selector does not show the song's voicegroup");
-            check(vgCombo->findText(SongRegistry::voicegroupDisplayName(otherArg))
-                      >= 0,
+            check(vgCombo->findText(SongRegistry::voicegroupDisplayName(otherArg)) >= 0,
                   "dock selector is missing a known voicegroup arg");
             vgCombo->setCurrentText(SongRegistry::voicegroupDisplayName(otherArg));
-            QMetaObject::invokeMethod(vgCombo, "activated", Qt::DirectConnection,
-                                      Q_ARG(int, 0));
+            QMetaObject::invokeMethod(vgCombo, "activated", Qt::DirectConnection, Q_ARG(int, 0));
             check(tab->doc.cfg().voicegroupArg == otherArg && tab->doc.isDirty(),
                   "dock selector did not commit an undoable -G switch");
             check(tab->vgSource && tab->vgSource->loadName() != vgLoadName,
                   "dock selector switch did not swap the voicegroup source");
             tab->doc.undoStack()->undo(); // the selector's -G switch
-            check(tab->doc.cfg().voicegroupArg == originalArg
-                      && !tab->doc.isDirty(),
+            check(tab->doc.cfg().voicegroupArg == originalArg && !tab->doc.isDirty(),
                   "undoing the dock selector switch did not restore the cfg");
-            check(vgCombo->currentText() == shown,
-                  "undo did not refresh the dock selector's text");
+            check(vgCombo->currentText() == shown, "undo did not refresh the dock selector's text");
             check(tab->vgSource && tab->vgSource->loadName() == vgLoadName,
                   "undoing the dock selector switch did not reopen the old "
                   "voicegroup");
@@ -259,12 +248,12 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         if (check(releaseSpin != nullptr, "no Release spin box in the editor")) {
             const int uiValue = original.release == 25 ? 26 : 25;
             releaseSpin->setValue(uiValue);
-            check(tab->doc.isDirty() && tab->vgSource->dirty()
-                      && tab->vgSource->voiceAt(dsSlot)->release == uiValue,
+            check(tab->doc.isDirty() && tab->vgSource->dirty() &&
+                      tab->vgSource->voiceAt(dsSlot)->release == uiValue,
                   "editing the Release spin box did not push an undo command");
             tab->doc.undoStack()->undo();
-            check(!tab->doc.isDirty() && !tab->vgSource->dirty()
-                      && releaseSpin->value() == original.release,
+            check(!tab->doc.isDirty() && !tab->vgSource->dirty() &&
+                      releaseSpin->value() == original.release,
                   "undo did not refresh the Release spin box");
         }
     }
@@ -281,28 +270,24 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         QDir().mkpath(projectRoot + QStringLiteral("/asm/macros"));
         bool wrote = false;
         {
-            QFile macros(projectRoot
-                         + QStringLiteral("/asm/macros/vgsavecheck_synth.inc"));
-            wrote = macros.open(QIODevice::WriteOnly)
-                && macros.write("\t.macro set_synth_pulse base_duty=0x80, "
-                                "duty_step=0x00, mod_depth=0x00, duty_phase=0x00\n"
-                                "\t.endm\n"
-                                "\t.macro set_synth_saw\n\t.endm\n"
-                                "\t.macro set_synth_triangle\n\t.endm\n")
-                    > 0;
+            QFile macros(projectRoot + QStringLiteral("/asm/macros/vgsavecheck_synth.inc"));
+            wrote = macros.open(QIODevice::WriteOnly) &&
+                    macros.write("\t.macro set_synth_pulse base_duty=0x80, "
+                                 "duty_step=0x00, mod_depth=0x00, duty_phase=0x00\n"
+                                 "\t.endm\n"
+                                 "\t.macro set_synth_saw\n\t.endm\n"
+                                 "\t.macro set_synth_triangle\n\t.endm\n") > 0;
         }
         {
             QFile data(synthPath);
-            wrote = wrote && data.open(QIODevice::WriteOnly | QIODevice::Append)
-                && data.write("\n\t.align 2\nVgSaveCheckSaw::\n\tset_synth_saw\n")
-                    > 0;
+            wrote = wrote && data.open(QIODevice::WriteOnly | QIODevice::Append) &&
+                    data.write("\n\t.align 2\nVgSaveCheckSaw::\n\tset_synth_saw\n") > 0;
         }
         if (!check(wrote, "cannot write synth support files"))
             return false;
         invalidateVgCatalog();
         updateVoicegroupBrowser(); // hand the browser the new catalog
-        const VgSynthCatalog setupCatalog =
-            VoicegroupSource::synthInstruments(projectRoot);
+        const VgSynthCatalog setupCatalog = VoicegroupSource::synthInstruments(projectRoot);
         const int defsAfterSetup = setupCatalog.defs.size();
         const QByteArray synthBytesSetup = readFileBytes(synthPath);
         const int indexBeforeSynth = tab->doc.undoStack()->index();
@@ -313,18 +298,16 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         int synthSlot = -1;
         for (int i = 0; i < VOICEGROUP_SIZE && synthSlot < 0; i++) {
             const VgVoice *v = tab->vgSource->voiceAt(i);
-            if (v
-                && (v->macro == VgMacro::DirectSound
-                    || v->macro == VgMacro::DirectSoundNoResample
-                    || v->macro == VgMacro::DirectSoundAlt)
-                && !setupCatalog.find(v->symbol))
+            if (v &&
+                (v->macro == VgMacro::DirectSound || v->macro == VgMacro::DirectSoundNoResample ||
+                 v->macro == VgMacro::DirectSoundAlt) &&
+                !setupCatalog.find(v->symbol))
                 synthSlot = i;
         }
         if (synthSlot < 0) {
             std::printf("vgsavecheck: note: every sample voice is already a "
                         "synth, synth section skipped\n");
-            std::printf("vgsavecheck: %s (%d failures)\n",
-                        failures ? "FAIL" : "PASS", failures);
+            std::printf("vgsavecheck: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);
             return failures == 0;
         }
         const VgVoice synthOriginal = *tab->vgSource->voiceAt(synthSlot);
@@ -340,8 +323,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             }
             // The dock's voicegroup selector is editable too; the symbol
             // combo is the editable one inside the editor panel.
-            if (combo->isEditable()
-                && combo->objectName() != QLatin1String("vgArgCombo"))
+            if (combo->isEditable() && combo->objectName() != QLatin1String("vgArgCombo"))
                 symbolCombo = combo;
         }
         QSpinBox *dutySpin = nullptr, *stepSpin = nullptr, *depthSpin = nullptr,
@@ -356,8 +338,8 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             else if (spin->toolTip().startsWith(QStringLiteral("Duty LFO phase")))
                 phaseSpin = spin;
         }
-        if (check(typeCombo && symbolCombo && waveCombo && dutySpin && stepSpin
-                      && depthSpin && phaseSpin,
+        if (check(typeCombo && symbolCombo && waveCombo && dutySpin && stepSpin && depthSpin &&
+                      phaseSpin,
                   "synth editor widgets not found")) {
             const auto activate = [](QComboBox *combo, int index) {
                 combo->setCurrentIndex(index);
@@ -370,8 +352,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                     synthIndex = i;
             }
             activate(typeCombo, synthIndex);
-            check(tab->vgSource->voiceAt(synthSlot)->symbol
-                      != synthOriginal.symbol,
+            check(tab->vgSource->voiceAt(synthSlot)->symbol != synthOriginal.symbol,
                   "switching the voice to Synth did not take");
             // Dial a known pulse through several commits (each one mints).
             activate(waveCombo, 0);
@@ -379,8 +360,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             stepSpin->setValue(0x43);
             depthSpin->setValue(0x65);
             phaseSpin->setValue(0x87);
-            const QString wantSymbol =
-                vgSynthSymbolName(VgSynthDesc{0, 0x21, 0x43, 0x65, 0x87});
+            const QString wantSymbol = vgSynthSymbolName(VgSynthDesc{0, 0x21, 0x43, 0x65, 0x87});
             check(tab->vgSource->voiceAt(synthSlot)->symbol == wantSymbol,
                   "param edits did not land on the param-named symbol");
             check(readFileBytes(synthPath) == synthBytesSetup,
@@ -390,16 +370,12 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 listed = listed || symbolCombo->itemText(i) == wantSymbol;
             check(!listed, "an unsaved definition appeared in the dropdown");
             const ToneData &td = m_audio.voicegroup()->voices[synthSlot];
-            check(td.wav && td.wav->size == 0
-                      && uint8_t(td.wav->data[1]) == 0
-                      && uint8_t(td.wav->data[2]) == 0x21
-                      && uint8_t(td.wav->data[5]) == 0x87,
+            check(td.wav && td.wav->size == 0 && uint8_t(td.wav->data[1]) == 0 &&
+                      uint8_t(td.wav->data[2]) == 0x21 && uint8_t(td.wav->data[5]) == 0x87,
                   "param edits were not patched into the loaded tone");
             // The scalar path renames the voice too (param-named symbols):
             // voiceNames feeds track labels and the browser tree.
-            check(QString::fromUtf8(
-                      m_audio.voicegroup()->voiceNames[synthSlot])
-                      == wantSymbol,
+            check(QString::fromUtf8(m_audio.voicegroup()->voiceNames[synthSlot]) == wantSymbol,
                   "param edits did not sync the loaded voice name");
 
             // Save: exactly one definition (the referenced one) is written,
@@ -409,16 +385,13 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             check(readFileBytes(synthPath).contains(wantSymbol.toUtf8() + "::"),
                   "save did not write the referenced synth definition");
             bool wired = false;
-            for (const QString &dir :
-                 {projectRoot + QStringLiteral("/data"), projectRoot}) {
+            for (const QString &dir : {projectRoot + QStringLiteral("/data"), projectRoot}) {
                 QDirIterator wiredIt(dir, {QStringLiteral("*.s")}, QDir::Files);
                 while (wiredIt.hasNext() && !wired)
-                    wired = readFileBytes(wiredIt.next())
-                                .contains("direct_sound_synth_data.inc");
+                    wired = readFileBytes(wiredIt.next()).contains("direct_sound_synth_data.inc");
             }
             check(wired, "save did not wire the synth data file into the build");
-            check(VoicegroupSource::synthInstruments(projectRoot).defs.size()
-                      == defsAfterSetup + 1,
+            check(VoicegroupSource::synthInstruments(projectRoot).defs.size() == defsAfterSetup + 1,
                   "save wrote more than the one referenced definition");
             listed = false;
             for (int i = 0; i < symbolCombo->count(); i++)
@@ -432,8 +405,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             activate(waveCombo, 1);
             const QString sawSymbol = tab->vgSource->voiceAt(synthSlot)->symbol;
             // find() points into the catalog: it must outlive the pointer.
-            const VgSynthCatalog sawCatalog =
-                VoicegroupSource::synthInstruments(projectRoot);
+            const VgSynthCatalog sawCatalog = VoicegroupSource::synthInstruments(projectRoot);
             const VgSynthDesc *sawDef = sawCatalog.find(sawSymbol);
             check(sawDef && sawDef->waveform == 1,
                   "waveform flip to saw did not dedupe onto an on-disk saw");
@@ -441,11 +413,10 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             // Deduped onto an on-disk 50% pulse when the project has one,
             // minted under the param name otherwise — never the duty-0 name.
             const QString pulseSymbol = tab->vgSource->voiceAt(synthSlot)->symbol;
-            const VgSynthCatalog pulseCatalog =
-                VoicegroupSource::synthInstruments(projectRoot);
+            const VgSynthCatalog pulseCatalog = VoicegroupSource::synthInstruments(projectRoot);
             const VgSynthDesc *pulseDef = pulseCatalog.find(pulseSymbol);
-            check((pulseDef && *pulseDef == VgSynthDesc{})
-                      || pulseSymbol == vgSynthSymbolName(VgSynthDesc{}),
+            check((pulseDef && *pulseDef == VgSynthDesc{}) ||
+                      pulseSymbol == vgSynthSymbolName(VgSynthDesc{}),
                   "waveform flip back to pulse did not adopt the 50% default");
             while (tab->doc.undoStack()->index() > indexBeforeFlips)
                 tab->doc.undoStack()->undo();
@@ -500,8 +471,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             check(prog >= 0, "track under test has no program");
             tab->view->revealTrackVoice(track);
             check(!m_vgDock->isHidden(), "reveal did not show the voicegroup dock");
-            check(m_vgBrowser->currentSlot() == prog,
-                  "reveal did not select the track's program");
+            check(m_vgBrowser->currentSlot() == prog, "reveal did not select the track's program");
 
             if (unused >= 0) {
                 // Explicit-program path (the event list's context menu).
@@ -538,8 +508,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         activateWindow();
         QCoreApplication::processEvents();
         const QString argBefore = tab->doc.cfg().voicegroupArg;
-        QComboBox *vgCombo =
-            m_vgBrowser->findChild<QComboBox *>(QStringLiteral("vgArgCombo"));
+        QComboBox *vgCombo = m_vgBrowser->findChild<QComboBox *>(QStringLiteral("vgArgCombo"));
         int otherTrack = -1;
         const MidiTimeline *tl = tab->view->timeline();
         for (int t = 0; t < 16 && otherTrack < 0 && tl; t++) {
@@ -558,50 +527,41 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 if (check(row != nullptr, "no header row for the other track")) {
                     const QPoint pos(5, 5);
                     QMouseEvent press(QEvent::MouseButtonPress, QPointF(pos),
-                                      QPointF(row->mapToGlobal(pos)),
-                                      Qt::LeftButton, Qt::LeftButton,
-                                      Qt::NoModifier);
+                                      QPointF(row->mapToGlobal(pos)), Qt::LeftButton,
+                                      Qt::LeftButton, Qt::NoModifier);
                     QCoreApplication::sendEvent(row, &press);
-                    check(!row.isNull(),
-                          "header rebuild freed the row inside its own press");
+                    check(!row.isNull(), "header rebuild freed the row inside its own press");
                     check(tab->view->selectedTrack() == otherTrack,
                           "the header click did not select its track");
                     check(tab->doc.cfg().voicegroupArg == otherArg,
                           "the mid-press -G edit did not commit");
                     if (!row.isNull()) {
-                        QMouseEvent release(QEvent::MouseButtonRelease,
-                                            QPointF(pos),
-                                            QPointF(row->mapToGlobal(pos)),
-                                            Qt::LeftButton, Qt::NoButton,
-                                            Qt::NoModifier);
+                        QMouseEvent release(QEvent::MouseButtonRelease, QPointF(pos),
+                                            QPointF(row->mapToGlobal(pos)), Qt::LeftButton,
+                                            Qt::NoButton, Qt::NoModifier);
                         QCoreApplication::sendEvent(row, &release);
                     }
                 }
                 QCoreApplication::processEvents(); // deferred row deletion
                 // The rebuilt panel is functional: its fresh rows select.
-                QWidget *fresh = tab->view->findChild<QWidget *>(
-                    QStringLiteral("trackHeaderRow%1").arg(track));
-                if (check(fresh != nullptr, "no rebuilt header row")
-                    && track != otherTrack) {
+                QWidget *fresh =
+                    tab->view->findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));
+                if (check(fresh != nullptr, "no rebuilt header row") && track != otherTrack) {
                     QMouseEvent press(QEvent::MouseButtonPress, QPointF(QPoint(5, 5)),
-                                      QPointF(fresh->mapToGlobal(QPoint(5, 5))),
-                                      Qt::LeftButton, Qt::LeftButton,
-                                      Qt::NoModifier);
+                                      QPointF(fresh->mapToGlobal(QPoint(5, 5))), Qt::LeftButton,
+                                      Qt::LeftButton, Qt::NoModifier);
                     QCoreApplication::sendEvent(fresh, &press);
-                    QMouseEvent release(QEvent::MouseButtonRelease,
-                                        QPointF(QPoint(5, 5)),
-                                        QPointF(fresh->mapToGlobal(QPoint(5, 5))),
-                                        Qt::LeftButton, Qt::NoButton,
-                                        Qt::NoModifier);
+                    QMouseEvent release(QEvent::MouseButtonRelease, QPointF(QPoint(5, 5)),
+                                        QPointF(fresh->mapToGlobal(QPoint(5, 5))), Qt::LeftButton,
+                                        Qt::NoButton, Qt::NoModifier);
                     QCoreApplication::sendEvent(fresh, &release);
                     QCoreApplication::processEvents();
                     check(tab->view->selectedTrack() == track,
                           "a rebuilt header row did not select its track");
                 }
                 tab->doc.undoStack()->undo(); // the mid-press -G switch
-                check(tab->doc.cfg().voicegroupArg == argBefore
-                          && tab->vgSource
-                          && tab->vgSource->loadName() == vgLoadName,
+                check(tab->doc.cfg().voicegroupArg == argBefore && tab->vgSource &&
+                          tab->vgSource->loadName() == vgLoadName,
                       "undo did not restore the mid-press -G switch");
             }
         }
@@ -614,12 +574,11 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     {
         m_vgBrowser->revealSlot(dsSlot);
         QCoreApplication::processEvents();
-        auto *picker = m_vgBrowser->findChild<SamplePickerButton *>(
-            QStringLiteral("vgSamplePickerButton"));
+        auto *picker =
+            m_vgBrowser->findChild<SamplePickerButton *>(QStringLiteral("vgSamplePickerButton"));
         QComboBox *symbolCombo = nullptr;
         for (QComboBox *combo : m_vgBrowser->findChildren<QComboBox *>()) {
-            if (combo->isEditable()
-                && combo->objectName() != QLatin1String("vgArgCombo"))
+            if (combo->isEditable() && combo->objectName() != QLatin1String("vgArgCombo"))
                 symbolCombo = combo;
         }
         if (check(picker && symbolCombo, "no sample picker in the editor")) {
@@ -632,32 +591,27 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             QStringList auditioned;
             QList<VgAuditionKind> auditionKinds;
             int stops = 0;
-            QMetaObject::Connection c1 = connect(
-                m_vgBrowser, &VoicegroupBrowser::sampleAuditionRequested, this,
-                [&auditioned, &auditionKinds](const QString &s,
-                                              VgAuditionKind kind,
-                                              const AuditionSlots::Adsr &) {
-                    auditioned.append(s);
-                    auditionKinds.append(kind);
-                });
-            QMetaObject::Connection c2 = connect(
-                m_vgBrowser, &VoicegroupBrowser::sampleAuditionStopRequested,
-                this, [&stops] { stops++; });
+            QMetaObject::Connection c1 =
+                connect(m_vgBrowser, &VoicegroupBrowser::sampleAuditionRequested, this,
+                        [&auditioned, &auditionKinds](const QString &s, VgAuditionKind kind,
+                                                      const AuditionSlots::Adsr &) {
+                            auditioned.append(s);
+                            auditionKinds.append(kind);
+                        });
+            QMetaObject::Connection c2 =
+                connect(m_vgBrowser, &VoicegroupBrowser::sampleAuditionStopRequested, this,
+                        [&stops] { stops++; });
 
             picker->openPopup();
-            auto *search = picker->findChild<QLineEdit *>(
-                QStringLiteral("vgSamplePickerSearch"));
-            auto *list = picker->findChild<QTreeWidget *>(
-                QStringLiteral("vgSamplePickerList"));
-            if (check(search && list && picker->popupVisible(),
-                      "picker popup did not open")) {
+            auto *search = picker->findChild<QLineEdit *>(QStringLiteral("vgSamplePickerSearch"));
+            auto *list = picker->findChild<QTreeWidget *>(QStringLiteral("vgSamplePickerList"));
+            if (check(search && list && picker->popupVisible(), "picker popup did not open")) {
                 // The popup floats over the browser, so it carries the menu
                 // outline; its corner pixel is that border.
-                QWidget *popupFrame = picker->findChild<QWidget *>(
-                    QStringLiteral("vgSamplePickerPopup"));
-                check(popupFrame
-                          && popupFrame->grab().toImage().pixelColor(0, 0)
-                              == themes::color(themes::Role::menu_outline),
+                QWidget *popupFrame =
+                    picker->findChild<QWidget *>(QStringLiteral("vgSamplePickerPopup"));
+                check(popupFrame && popupFrame->grab().toImage().pixelColor(0, 0) ==
+                                        themes::color(themes::Role::menu_outline),
                       "the picker popup is missing the menu outline");
                 // Every catalog sample is listed, and the committed sample
                 // data drives at least one loop badge (vanilla projects have
@@ -683,9 +637,8 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 if (ksRow) {
                     const int seen = auditioned.size();
                     list->setCurrentItem(ksRow);
-                    check(auditioned.size() == seen + 1
-                              && auditionKinds.last()
-                                  == VgAuditionKind::Keysplit,
+                    check(auditioned.size() == seen + 1 &&
+                              auditionKinds.last() == VgAuditionKind::Keysplit,
                           "keysplit row did not audition as a keysplit");
                 } else {
                     std::printf("vgsavecheck: note: no keysplit instruments, "
@@ -693,17 +646,16 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 }
 
                 if (!screenshotPath.isEmpty()) {
-                    QWidget *popup = picker->findChild<QWidget *>(
-                        QStringLiteral("vgSamplePickerPopup"));
+                    QWidget *popup =
+                        picker->findChild<QWidget *>(QStringLiteral("vgSamplePickerPopup"));
                     check(popup && popup->grab().save(screenshotPath),
                           "could not save the picker screenshot");
                     // A -dock variant of the browser itself: the editor
                     // panel's Sample row (picker + glyph tool buttons).
                     const QFileInfo info(screenshotPath);
-                    check(m_vgBrowser->grab().save(
-                              info.path() + QLatin1Char('/')
-                              + info.completeBaseName()
-                              + QStringLiteral("-dock.") + info.suffix()),
+                    check(m_vgBrowser->grab().save(info.path() + QLatin1Char('/') +
+                                                   info.completeBaseName() +
+                                                   QStringLiteral("-dock.") + info.suffix()),
                           "could not save the dock screenshot");
                 }
 
@@ -711,32 +663,27 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 // the filter narrows onto it, highlighting auditions it, and
                 // Return commits it as an undoable voice edit.
                 QString target;
-                for (QTreeWidgetItemIterator it(list); *it && target.isEmpty();
-                     ++it) {
+                for (QTreeWidgetItemIterator it(list); *it && target.isEmpty(); ++it) {
                     const QString s = (*it)->data(0, Qt::UserRole).toString();
-                    if (!s.isEmpty() && s != before.symbol
-                        && !(*it)->data(0, Qt::UserRole + 1).toBool())
+                    if (!s.isEmpty() && s != before.symbol &&
+                        !(*it)->data(0, Qt::UserRole + 1).toBool())
                         target = s;
                 }
                 if (check(!target.isEmpty(), "no alternate sample to pick")) {
                     search->setText(target);
                     check(auditioned.contains(target),
                           "filtering onto a sample did not audition it");
-                    QKeyEvent ret(QEvent::KeyPress, Qt::Key_Return,
-                                  Qt::NoModifier);
+                    QKeyEvent ret(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
                     QCoreApplication::sendEvent(search, &ret);
-                    check(!picker->popupVisible(),
-                          "committing a pick did not close the popup");
+                    check(!picker->popupVisible(), "committing a pick did not close the popup");
                     check(stops > 0, "closing the popup did not stop audition");
-                    check(tab->vgSource->voiceAt(dsSlot)
-                              && tab->vgSource->voiceAt(dsSlot)->symbol == target,
+                    check(tab->vgSource->voiceAt(dsSlot) &&
+                              tab->vgSource->voiceAt(dsSlot)->symbol == target,
                           "the picked symbol did not commit");
-                    check(tab->doc.isDirty(),
-                          "the picked symbol did not push an undo command");
+                    check(tab->doc.isDirty(), "the picked symbol did not push an undo command");
                     tab->doc.undoStack()->undo();
-                    check(tab->vgSource->voiceAt(dsSlot)
-                              && tab->vgSource->voiceAt(dsSlot)->symbol
-                                  == before.symbol,
+                    check(tab->vgSource->voiceAt(dsSlot) &&
+                              tab->vgSource->voiceAt(dsSlot)->symbol == before.symbol,
                           "undo did not restore the picked symbol");
                     check(picker->currentSymbol() == before.symbol,
                           "undo did not refresh the picker's label");
@@ -749,13 +696,12 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 search->setText(unlisted);
                 QKeyEvent ret(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
                 QCoreApplication::sendEvent(search, &ret);
-                check(tab->vgSource->voiceAt(dsSlot)
-                          && tab->vgSource->voiceAt(dsSlot)->symbol == unlisted,
+                check(tab->vgSource->voiceAt(dsSlot) &&
+                          tab->vgSource->voiceAt(dsSlot)->symbol == unlisted,
                       "an unlisted typed symbol did not commit");
                 tab->doc.undoStack()->undo();
-                check(tab->vgSource->voiceAt(dsSlot)
-                          && tab->vgSource->voiceAt(dsSlot)->symbol
-                              == before.symbol,
+                check(tab->vgSource->voiceAt(dsSlot) &&
+                          tab->vgSource->voiceAt(dsSlot)->symbol == before.symbol,
                       "undo did not restore the unlisted symbol");
 
                 // Wave voices share the picker: switching the Type swaps the
@@ -766,44 +712,33 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                                 "wave picker section skipped\n");
                 } else {
                     QComboBox *typeCombo = nullptr;
-                    for (QComboBox *combo :
-                         m_vgBrowser->findChildren<QComboBox *>()) {
+                    for (QComboBox *combo : m_vgBrowser->findChildren<QComboBox *>()) {
                         if (combo->findData(int(VgMacro::ProgWave)) >= 0)
                             typeCombo = combo;
                     }
                     int undos = 0;
                     if (check(typeCombo != nullptr, "no Type combo")) {
-                        const int waveIndex =
-                            typeCombo->findData(int(VgMacro::ProgWave));
+                        const int waveIndex = typeCombo->findData(int(VgMacro::ProgWave));
                         typeCombo->setCurrentIndex(waveIndex);
-                        QMetaObject::invokeMethod(typeCombo, "activated",
-                                                  Qt::DirectConnection,
+                        QMetaObject::invokeMethod(typeCombo, "activated", Qt::DirectConnection,
                                                   Q_ARG(int, waveIndex));
                         undos++;
-                        const VgVoice *waveVoice =
-                            tab->vgSource->voiceAt(dsSlot);
-                        check(waveVoice
-                                  && waveVoice->macro == VgMacro::ProgWave,
+                        const VgVoice *waveVoice = tab->vgSource->voiceAt(dsSlot);
+                        check(waveVoice && waveVoice->macro == VgMacro::ProgWave,
                               "type switch to Prog Wave did not take");
-                        check(picker->isVisible()
-                                  && picker->currentSymbol()
-                                      == waveVoice->symbol,
+                        check(picker->isVisible() && picker->currentSymbol() == waveVoice->symbol,
                               "wave voice does not show the picker");
 
                         picker->openPopup();
                         QString otherWave;
-                        for (QTreeWidgetItemIterator it(list);
-                             *it && otherWave.isEmpty(); ++it) {
-                            const QString s =
-                                (*it)->data(0, Qt::UserRole).toString();
+                        for (QTreeWidgetItemIterator it(list); *it && otherWave.isEmpty(); ++it) {
+                            const QString s = (*it)->data(0, Qt::UserRole).toString();
                             if (!s.isEmpty() && s != waveVoice->symbol)
                                 otherWave = s;
                         }
                         for (QTreeWidgetItemIterator it(list); *it; ++it) {
-                            const QString s =
-                                (*it)->data(0, Qt::UserRole).toString();
-                            check(s.isEmpty()
-                                      || vgCatalog().progWave.contains(s),
+                            const QString s = (*it)->data(0, Qt::UserRole).toString();
+                            check(s.isEmpty() || vgCatalog().progWave.contains(s),
                                   "wave picker lists a non-wave symbol");
                             // Waves show the verbatim symbol (samples strip
                             // their shared prefix; waves don't).
@@ -813,34 +748,29 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                         if (otherWave.isEmpty()) {
                             std::printf("vgsavecheck: note: single wave, "
                                         "wave audition/pick skipped\n");
-                            QWidget *popup = picker->findChild<QWidget *>(
-                                QStringLiteral("vgSamplePickerPopup"));
+                            QWidget *popup =
+                                picker->findChild<QWidget *>(QStringLiteral("vgSamplePickerPopup"));
                             if (popup)
                                 popup->hide();
                         } else {
                             const int seen = auditioned.size();
                             search->setText(otherWave);
-                            check(auditioned.size() > seen
-                                      && auditioned.last() == otherWave
-                                      && auditionKinds.last()
-                                          == VgAuditionKind::Wave,
+                            check(auditioned.size() > seen && auditioned.last() == otherWave &&
+                                      auditionKinds.last() == VgAuditionKind::Wave,
                                   "filtering onto a wave did not audition "
                                   "it as a wave");
-                            QKeyEvent waveRet(QEvent::KeyPress, Qt::Key_Return,
-                                              Qt::NoModifier);
+                            QKeyEvent waveRet(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
                             QCoreApplication::sendEvent(search, &waveRet);
                             undos++;
-                            check(tab->vgSource->voiceAt(dsSlot)
-                                      && tab->vgSource->voiceAt(dsSlot)->symbol
-                                          == otherWave,
-                              "the picked wave did not commit");
+                            check(tab->vgSource->voiceAt(dsSlot) &&
+                                      tab->vgSource->voiceAt(dsSlot)->symbol == otherWave,
+                                  "the picked wave did not commit");
                         }
                         while (undos-- > 0)
                             tab->doc.undoStack()->undo();
-                        const VgVoice *restored =
-                            tab->vgSource->voiceAt(dsSlot);
-                        check(restored && restored->macro == before.macro
-                                  && restored->symbol == before.symbol,
+                        const VgVoice *restored = tab->vgSource->voiceAt(dsSlot);
+                        check(restored && restored->macro == before.macro &&
+                                  restored->symbol == before.symbol,
                               "undo did not restore the sample voice after "
                               "the wave round trip");
                     }
@@ -872,24 +802,20 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             }
         });
         newVoicegroup();
-        check(QFile::exists(projectRoot + QStringLiteral("/sound/voicegroups/")
-                            + newName + QStringLiteral(".inc")),
+        check(QFile::exists(projectRoot + QStringLiteral("/sound/voicegroups/") + newName +
+                            QStringLiteral(".inc")),
               "New… did not create the voicegroup file");
-        check(tab->doc.cfg().voicegroupArg == QStringLiteral("_") + newName
-                  && tab->doc.isDirty(),
+        check(tab->doc.cfg().voicegroupArg == QStringLiteral("_") + newName && tab->doc.isDirty(),
               "New… did not auto-assign the voicegroup as an undoable edit");
-        check(tab->vgSource
-                  && tab->vgSource->filePath().endsWith(
-                      newName + QStringLiteral(".inc")),
+        check(tab->vgSource && tab->vgSource->filePath().endsWith(newName + QStringLiteral(".inc")),
               "New… auto-assign did not swap the voicegroup source");
         tab->doc.undoStack()->undo();
-        check(tab->doc.cfg().voicegroupArg == argBefore && tab->vgSource
-                  && tab->vgSource->loadName() == vgLoadName,
+        check(tab->doc.cfg().voicegroupArg == argBefore && tab->vgSource &&
+                  tab->vgSource->loadName() == vgLoadName,
               "undoing the New… auto-assign did not restore the voicegroup");
     }
 
-    std::printf("vgsavecheck: %s (%d failures)\n", failures ? "FAIL" : "PASS",
-                failures);
+    std::printf("vgsavecheck: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);
     return failures == 0;
 }
 
@@ -902,10 +828,8 @@ int runVgSaveCheck(const QString &projectRoot, const QString &songLabel,
         std::fprintf(stderr, "vgsavecheck: no temp dir for settings\n");
         return 1;
     }
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope,
-                       settingsDir.path());
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
-                       settingsDir.path());
+    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
 
     MainWindow window;
     return window.runVgSaveCheck(projectRoot, songLabel, screenshotPath) ? 0 : 1;

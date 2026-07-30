@@ -18,7 +18,7 @@ class SongListPanel : public QWidget
 {
     Q_OBJECT
 
-public:
+  public:
     explicit SongListPanel(QWidget *parent = nullptr);
 
     // Replaces the panel's contents (non-playable songs are dropped) while
@@ -32,14 +32,13 @@ public:
     QString searchText() const;
     int sortIndex() const;
     QString categoryPrefix() const;
-    void restoreFilters(const QString &search, int sortIndex,
-                        const QString &categoryPrefix);
+    void restoreFilters(const QString &search, int sortIndex, const QString &categoryPrefix);
     void focusSearch();
     // Marks the loaded song: selects it, scrolls it into view, and keeps it
     // selected across list rebuilds. -1 (or a filtered-out id) deselects.
     void setCurrentSong(int songId);
 
-signals:
+  signals:
     void songActivated(int songId);
     // Context-menu "Open in New Tab" (plain activation replaces the current
     // tab's song).
@@ -50,10 +49,10 @@ signals:
     // Context-menu "Delete Song…" — MainWindow confirms and performs it.
     void songDeleteRequested(int songId);
 
-protected:
+  protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
-private:
+  private:
     void rebuildCategories();
     void rebuildList();
     bool matchesFilters(const SongInfo &song) const;

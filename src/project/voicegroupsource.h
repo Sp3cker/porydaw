@@ -46,9 +46,9 @@ struct VgVoice {
     int pan = 0;
     QString symbol; // DirectSound sample / programmable-wave / keysplit or drumkit sub-voicegroup
     QString keysplitTable; // keysplit only
-    int sweep = 0;  // square_1 only
-    int duty = 2;   // square_1/2 only
-    int period = 0; // noise only
+    int sweep = 0;         // square_1 only
+    int duty = 2;          // square_1/2 only
+    int period = 0;        // noise only
     int attack = 0;
     int decay = 0;
     int sustain = 0;
@@ -56,10 +56,10 @@ struct VgVoice {
 
     bool operator==(const VgVoice &o) const
     {
-        return macro == o.macro && key == o.key && pan == o.pan && symbol == o.symbol
-            && keysplitTable == o.keysplitTable && sweep == o.sweep && duty == o.duty
-            && period == o.period && attack == o.attack && decay == o.decay
-            && sustain == o.sustain && release == o.release;
+        return macro == o.macro && key == o.key && pan == o.pan && symbol == o.symbol &&
+               keysplitTable == o.keysplitTable && sweep == o.sweep && duty == o.duty &&
+               period == o.period && attack == o.attack && decay == o.decay &&
+               sustain == o.sustain && release == o.release;
     }
     bool operator!=(const VgVoice &o) const { return !(*this == o); }
 };
@@ -74,8 +74,8 @@ struct VgAdsr {
 
     bool operator==(const VgAdsr &o) const
     {
-        return attack == o.attack && decay == o.decay && sustain == o.sustain
-            && release == o.release;
+        return attack == o.attack && decay == o.decay && sustain == o.sustain &&
+               release == o.release;
     }
     bool operator!=(const VgAdsr &o) const { return !(*this == o); }
 };
@@ -101,9 +101,8 @@ struct VgSynthDesc {
     {
         if (waveform != o.waveform)
             return false;
-        return waveform != 0
-            || (baseDuty == o.baseDuty && dutyStep == o.dutyStep
-                && modDepth == o.modDepth && phase == o.phase);
+        return waveform != 0 || (baseDuty == o.baseDuty && dutyStep == o.dutyStep &&
+                                 modDepth == o.modDepth && phase == o.phase);
     }
     bool operator!=(const VgSynthDesc &o) const { return !(*this == o); }
 };
@@ -160,8 +159,7 @@ struct VgDirectSoundScan {
 // the project-typical envelope for its instrument symbol, then for its
 // family, then a full-sustain fallback with a short release tail (an
 // instant release-0 cutoff clicks audibly).
-VgAdsr vgDefaultAdsr(const VgAdsrDefaults &defaults, VgMacro macro,
-                     const QString &symbol);
+VgAdsr vgDefaultAdsr(const VgAdsrDefaults &defaults, VgMacro macro, const QString &symbol);
 
 // A voice edit is "structural" when audio can't be updated by poking scalar
 // ToneData fields: the macro (voice type) or a sample/wave symbol changed, so
@@ -185,7 +183,7 @@ enum class VgLineKind {
 // and lossy, so saving works from this text model, never from ToneData.
 class VoicegroupSource
 {
-public:
+  public:
     // Locates the file (or monolithic section) declaring "voicegroup<arg>"
     // and parses it. arg is the song's mid2agb -G value ("" means "_dummy").
     bool open(const QString &projectRoot, const QString &voicegroupArg, QString *error);
@@ -258,35 +256,32 @@ public:
     // voicegroup to copy the voice lines from; empty means the 128-slot dummy
     // template. Requires the per-file layout (sound/voicegroups/ exists).
     static bool createVoicegroup(const QString &projectRoot, const QString &name,
-                                 const QString &copyFromFile,
-                                 const QString &copySectionLabel, QString *error);
+                                 const QString &copyFromFile, const QString &copySectionLabel,
+                                 QString *error);
     // Appends .include "sound/voicegroups/<name>.inc" after the last .include
     // in sound/voice_groups.inc (byte-conservative; no-op if the hub file
     // doesn't exist — the loader and browser discover the file regardless).
-    static bool appendIncludeLine(const QString &projectRoot, const QString &name,
-                                  QString *error);
+    static bool appendIncludeLine(const QString &projectRoot, const QString &name, QString *error);
     // The inverse pair, for deleting a song's now-unused voicegroup: drops
     // the hub's .include line (no-op when absent), then the .inc file itself.
     // Idempotent — an already-deleted voicegroup is a success.
-    static bool removeIncludeLine(const QString &projectRoot, const QString &name,
-                                  QString *error);
-    static bool deleteVoicegroup(const QString &projectRoot, const QString &name,
-                                 QString *error);
+    static bool removeIncludeLine(const QString &projectRoot, const QString &name, QString *error);
+    static bool deleteVoicegroup(const QString &projectRoot, const QString &name, QString *error);
 
-private:
+  private:
     struct Line {
         QByteArray raw; // original bytes, no '\n', trailing '\r' kept
         VgLineKind kind = VgLineKind::Other;
         int slot = -1;
-        VgVoice voice;            // valid when kind == Editable
+        VgVoice voice; // valid when kind == Editable
         // raw as of open/reload or the last save; a line is dirty while raw
         // differs, so an edit undone back to the on-disk value counts clean.
         QByteArray pristine;
         // Editable-line formatting, captured for faithful re-rendering:
-        QByteArray indent;        // leading whitespace
-        QByteArray macroText;     // macro word incl. any trailing space
+        QByteArray indent;             // leading whitespace
+        QByteArray macroText;          // macro word incl. any trailing space
         QVector<QByteArray> argPieces; // between-comma pieces, whitespace kept
-        QByteArray tail;          // trailing whitespace + comment
+        QByteArray tail;               // trailing whitespace + comment
     };
 
     bool parse(const QByteArray &content, QString *error);

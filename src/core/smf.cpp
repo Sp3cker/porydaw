@@ -33,10 +33,9 @@ struct Reader {
     {
         if (pos + 4 > size)
             return false;
-        *out = (static_cast<uint32_t>(data[pos]) << 24)
-             | (static_cast<uint32_t>(data[pos + 1]) << 16)
-             | (static_cast<uint32_t>(data[pos + 2]) << 8)
-             | static_cast<uint32_t>(data[pos + 3]);
+        *out = (static_cast<uint32_t>(data[pos]) << 24) |
+               (static_cast<uint32_t>(data[pos + 1]) << 16) |
+               (static_cast<uint32_t>(data[pos + 2]) << 8) | static_cast<uint32_t>(data[pos + 3]);
         pos += 4;
         return true;
     }
@@ -135,9 +134,8 @@ bool parseTrack(Reader &r, size_t end, int trackIndex, SmfTrack *track, QString 
                                 QStringLiteral("Track %1: truncated event data").arg(trackIndex));
             } else {
                 if (!runningStatus)
-                    return fail(error,
-                                QStringLiteral("Track %1: data byte with no running status")
-                                    .arg(trackIndex));
+                    return fail(error, QStringLiteral("Track %1: data byte with no running status")
+                                           .arg(trackIndex));
                 status = runningStatus;
                 data0 = b;
             }
@@ -205,16 +203,17 @@ bool SmfFile::read(const QByteArray &bytes, SmfFile *out, QString *error)
 
     uint32_t hdrLen;
     uint16_t format, numTracks, division;
-    if (!r.readU32(&hdrLen) || !r.readU16(&format) || !r.readU16(&numTracks)
-        || !r.readU16(&division))
+    if (!r.readU32(&hdrLen) || !r.readU16(&format) || !r.readU16(&numTracks) ||
+        !r.readU16(&division))
         return fail(error, QStringLiteral("Invalid MIDI header"));
     if (hdrLen < 6)
         return fail(error, QStringLiteral("Invalid MIDI header length"));
     r.pos += hdrLen - 6;
 
     if (format > 1)
-        return fail(error, QStringLiteral("Unsupported MIDI format %1 (only 0 and 1 supported)")
-                               .arg(format));
+        return fail(
+            error,
+            QStringLiteral("Unsupported MIDI format %1 (only 0 and 1 supported)").arg(format));
     if (division & 0x8000)
         return fail(error, QStringLiteral("SMPTE time division is not supported"));
     if (division == 0)
@@ -228,9 +227,9 @@ bool SmfFile::read(const QByteArray &bytes, SmfFile *out, QString *error)
 
     for (uint16_t t = 0; t < numTracks; t++) {
         if (r.pos + 8 > r.size || memcmp(r.data + r.pos, "MTrk", 4) != 0)
-            return fail(error, QStringLiteral("Missing MTrk chunk for track %1 of %2")
-                                   .arg(t + 1)
-                                   .arg(numTracks));
+            return fail(
+                error,
+                QStringLiteral("Missing MTrk chunk for track %1 of %2").arg(t + 1).arg(numTracks));
         r.pos += 4;
         uint32_t trackLen;
         if (!r.readU32(&trackLen) || r.pos + trackLen > r.size)
@@ -323,8 +322,8 @@ bool SmfFile::writeFile(const QString &path, QString *error) const
 
 bool smfTextIsMarker(const QString &text)
 {
-    return text == QLatin1String("[") || text == QLatin1String("]")
-        || text == QLatin1String("][") || text == QLatin1String(":");
+    return text == QLatin1String("[") || text == QLatin1String("]") ||
+           text == QLatin1String("][") || text == QLatin1String(":");
 }
 
 bool smfMetaIsMarker(const SmfEvent &ev)
@@ -359,8 +358,8 @@ void convertToFormat1(SmfFile *smf)
                 channels[ev.channel()].events.push_back(ev);
             } else if (ev.isMeta() && ev.metaType == 0x20 && ev.blob.size() >= 1) {
                 // Dropped: the per-channel chunk structure carries its meaning.
-            } else if (ev.isMeta() && ev.metaType == 0x03 && prefix.channel >= 0
-                       && smfMetaIsMarker(ev)) {
+            } else if (ev.isMeta() && ev.metaType == 0x03 && prefix.channel >= 0 &&
+                       smfMetaIsMarker(ev)) {
                 // A prefixed 0x03 carrying marker text: mid2agb reads it as
                 // a marker from the seq chunk (prefixes don't exempt it),
                 // so it must stay in chunk 0 for the .s to survive — and it
@@ -373,8 +372,8 @@ void convertToFormat1(SmfFile *smf)
                 pfx.blob = QByteArray(1, char(prefix.channel));
                 conductor.events.push_back(pfx);
                 conductor.events.push_back(ev);
-            } else if (ev.isMeta() && ev.metaType >= 0x01 && ev.metaType <= 0x07
-                       && prefix.channel >= 0 && !smfMetaIsMarker(ev)) {
+            } else if (ev.isMeta() && ev.metaType >= 0x01 && ev.metaType <= 0x07 &&
+                       prefix.channel >= 0 && !smfMetaIsMarker(ev)) {
                 // Channel-scoped text (names, instrument names, lyrics)
                 // travels to its channel's chunk. Marker text is exempt:
                 // mid2agb reads markers from the seq chunk regardless of
@@ -390,9 +389,7 @@ void convertToFormat1(SmfFile *smf)
     smf->tracks.clear();
     conductor.endTick = endTick;
     std::stable_sort(conductor.events.begin(), conductor.events.end(),
-                     [](const SmfEvent &a, const SmfEvent &b) {
-                         return a.tick < b.tick;
-                     });
+                     [](const SmfEvent &a, const SmfEvent &b) { return a.tick < b.tick; });
     smf->tracks.push_back(std::move(conductor));
     for (int c = 0; c < 16; c++) {
         // A bucket holding only channel-scoped text (no channel events)
@@ -405,9 +402,7 @@ void convertToFormat1(SmfFile *smf)
         // out-of-spec extra chunks may need it (stable: same-tick order
         // within each source chunk survives).
         std::stable_sort(channels[c].events.begin(), channels[c].events.end(),
-                         [](const SmfEvent &a, const SmfEvent &b) {
-                             return a.tick < b.tick;
-                         });
+                         [](const SmfEvent &a, const SmfEvent &b) { return a.tick < b.tick; });
         smf->tracks.push_back(std::move(channels[c]));
     }
 }

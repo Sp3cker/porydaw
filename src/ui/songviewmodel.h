@@ -50,8 +50,8 @@ struct StripItem {
 };
 
 struct SongViewModel {
-    std::vector<ViewNote> notes;    // sorted by startTick
-    std::vector<AutoLane> lanes;    // grouped by track, lane order per §4.2
+    std::vector<ViewNote> notes;      // sorted by startTick
+    std::vector<AutoLane> lanes;      // grouped by track, lane order per §4.2
     std::vector<LanePoint> tempoLane; // BPM points from the tempo map
     std::vector<VoiceChange> voices;  // sorted by tick
     std::vector<StripItem> strip;     // sorted by tick; advanced CCs + parser leftovers

@@ -208,8 +208,7 @@ int runTransportCheck()
     AudioEngine engine;
     QString error;
     if (!engine.init(&error)) {
-        std::printf("transportcheck: SKIP (no audio device: %s)\n",
-                    qUtf8Printable(error));
+        std::printf("transportcheck: SKIP (no audio device: %s)\n", qUtf8Printable(error));
         return 0;
     }
 

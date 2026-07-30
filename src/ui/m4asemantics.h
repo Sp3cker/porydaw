@@ -11,13 +11,13 @@
 // A drawable automation lane. Values are the lane identity used by the viewer;
 // CC-backed lanes exist per (track, cc), Bend/Tempo are dedicated event types.
 enum class M4aLane {
-    Mod,        // CC 1  -> MOD (LFO depth)
-    Volume,     // CC 7  -> VOL
-    Pan,        // CC 10 -> PAN
-    BendRange,  // CC 20 -> BENDR
-    LfoSpeed,   // CC 21 -> LFOS
-    PitchBend,  // pitch-bend events -> BEND
-    Tempo,      // tempo meta -> TEMPO (song-level lane)
+    Mod,       // CC 1  -> MOD (LFO depth)
+    Volume,    // CC 7  -> VOL
+    Pan,       // CC 10 -> PAN
+    BendRange, // CC 20 -> BENDR
+    LfoSpeed,  // CC 21 -> LFOS
+    PitchBend, // pitch-bend events -> BEND
+    Tempo,     // tempo meta -> TEMPO (song-level lane)
 };
 
 // How the viewer treats one incoming event.

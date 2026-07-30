@@ -88,7 +88,7 @@ QString formatBarBeat(const MidiTimeline *tl, uint32_t tick)
 // but a dock is narrow).
 class PolyChannelGrid : public QWidget
 {
-public:
+  public:
     explicit PolyChannelGrid(QWidget *parent = nullptr) : QWidget(parent)
     {
         setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -96,8 +96,8 @@ public:
 
     void setSnapshot(const AudioEngine::PolySnapshot &snap)
     {
-        const bool relayout = snap.maxPcmChannels != m_snap.maxPcmChannels
-            || snap.invert != m_snap.invert;
+        const bool relayout =
+            snap.maxPcmChannels != m_snap.maxPcmChannels || snap.invert != m_snap.invert;
         m_snap = snap;
         if (relayout)
             updateGeometry();
@@ -115,15 +115,11 @@ public:
     QSize sizeHint() const override
     {
         const int defaultW = kCellW * 5 + kGap * 4;
-        return QSize(defaultW,
-                     layoutHeight(m_hintWidth > 0 ? m_hintWidth : defaultW));
+        return QSize(defaultW, layoutHeight(m_hintWidth > 0 ? m_hintWidth : defaultW));
     }
-    QSize minimumSizeHint() const override
-    {
-        return QSize(kCellW + kGap, kCellH);
-    }
+    QSize minimumSizeHint() const override { return QSize(kCellW + kGap, kCellH); }
 
-protected:
+  protected:
     void resizeEvent(QResizeEvent *event) override
     {
         QWidget::resizeEvent(event);
@@ -137,28 +133,24 @@ protected:
     {
         QPainter p(this);
         int y = 0;
-        paintGroup(&p, y, tr("PCM"), m_snap.pcm, m_snap.maxPcmChannels, false,
-                   false);
+        paintGroup(&p, y, tr("PCM"), m_snap.pcm, m_snap.maxPcmChannels, false, false);
         paintGroup(&p, y, tr("CGB"), m_snap.cgb, MAX_CGB_CHANNELS, true, false);
         if (m_snap.invert) {
             paintCaption(&p, y, tr("Lost sounds currently playing (solo overflow):"));
-            paintGroup(&p, y, tr("PCM"), m_snap.pcm + MAX_PCM_CHANNELS,
-                       MAX_PCM_CHANNELS, false, true);
-            paintGroup(&p, y, tr("CGB"), m_snap.cgb + MAX_CGB_CHANNELS,
-                       MAX_CGB_CHANNELS, true, true);
+            paintGroup(&p, y, tr("PCM"), m_snap.pcm + MAX_PCM_CHANNELS, MAX_PCM_CHANNELS, false,
+                       true);
+            paintGroup(&p, y, tr("CGB"), m_snap.cgb + MAX_CGB_CHANNELS, MAX_CGB_CHANNELS, true,
+                       true);
         }
     }
 
-private:
+  private:
     static constexpr int kCellW = 46;
     static constexpr int kCellH = 34;
     static constexpr int kGap = 4;
     static constexpr int kCaptionH = 18;
 
-    int cellsPerRow(int width) const
-    {
-        return std::max(1, (width + kGap) / (kCellW + kGap));
-    }
+    int cellsPerRow(int width) const { return std::max(1, (width + kGap) / (kCellW + kGap)); }
 
     int groupHeight(int count, int width) const
     {
@@ -168,11 +160,11 @@ private:
 
     int layoutHeight(int width) const
     {
-        int h = groupHeight(std::max<int>(m_snap.maxPcmChannels, 1), width)
-            + groupHeight(MAX_CGB_CHANNELS, width);
+        int h = groupHeight(std::max<int>(m_snap.maxPcmChannels, 1), width) +
+                groupHeight(MAX_CGB_CHANNELS, width);
         if (m_snap.invert) {
-            h += kCaptionH + groupHeight(MAX_PCM_CHANNELS, width)
-                + groupHeight(MAX_CGB_CHANNELS, width);
+            h += kCaptionH + groupHeight(MAX_PCM_CHANNELS, width) +
+                 groupHeight(MAX_CGB_CHANNELS, width);
         }
         return h;
     }
@@ -180,17 +172,14 @@ private:
     void paintCaption(QPainter *p, int &y, const QString &text)
     {
         p->setPen(palette().color(QPalette::Disabled, QPalette::Text));
-        p->drawText(QRect(0, y, width(), kCaptionH),
-                    Qt::AlignLeft | Qt::AlignVCenter, text);
+        p->drawText(QRect(0, y, width(), kCaptionH), Qt::AlignLeft | Qt::AlignVCenter, text);
         y += kCaptionH;
     }
 
     void paintGroup(QPainter *p, int &y, const QString &caption,
-                    const AudioEngine::PolyChannel *channels, int count,
-                    bool isCgb, bool shadow)
+                    const AudioEngine::PolyChannel *channels, int count, bool isCgb, bool shadow)
     {
-        static const char *cgbNames[MAX_CGB_CHANNELS] = {"Sq1", "Sq2", "Wave",
-                                                         "Noise"};
+        static const char *cgbNames[MAX_CGB_CHANNELS] = {"Sq1", "Sq2", "Wave", "Noise"};
         paintCaption(p, y, caption);
         const int perRow = cellsPerRow(width());
         for (int i = 0; i < count; i++) {
@@ -200,22 +189,21 @@ private:
             const int state = !ch.on ? 0 : shadow ? 3 : ch.releasing ? 2 : 1;
             QString label;
             if (isCgb) {
-                label = QString::fromLatin1(cgbNames[i]) + QLatin1Char('\n')
-                    + (ch.on ? QStringLiteral("T%1 %2").arg(ch.track + 1).arg(
-                           midiKeyName(ch.midiKey))
-                             : QStringLiteral("--"));
+                label =
+                    QString::fromLatin1(cgbNames[i]) + QLatin1Char('\n') +
+                    (ch.on ? QStringLiteral("T%1 %2").arg(ch.track + 1).arg(midiKeyName(ch.midiKey))
+                           : QStringLiteral("--"));
             } else {
-                label = ch.on ? QStringLiteral("T%1\n%2").arg(ch.track + 1).arg(
-                            midiKeyName(ch.midiKey))
-                              : QStringLiteral("--");
+                label =
+                    ch.on ? QStringLiteral("T%1\n%2").arg(ch.track + 1).arg(midiKeyName(ch.midiKey))
+                          : QStringLiteral("--");
             }
             const QRect rect(x, cy, kCellW, kCellH);
             p->setPen(Qt::NoPen);
             p->setBrush(cellColor(state));
             p->drawRoundedRect(rect, 3, 3);
-            p->setPen(themes::color(
-                state == 0 ? themes::Role::polyphony_cell_free_text
-                           : themes::Role::polyphony_cell_text));
+            p->setPen(themes::color(state == 0 ? themes::Role::polyphony_cell_free_text
+                                               : themes::Role::polyphony_cell_text));
             QFont f = font();
             f.setPixelSize(10);
             p->setFont(f);
@@ -292,8 +280,7 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     overflowLayout->addLayout(tableHeader);
 
     m_table = new QTableWidget(0, 4, m_overflowBox);
-    m_table->setHorizontalHeaderLabels(
-        {tr("Track"), tr("Dropped"), tr("Cut Off"), tr("Tail Cut")});
+    m_table->setHorizontalHeaderLabels({tr("Track"), tr("Dropped"), tr("Cut Off"), tr("Tail Cut")});
     const QString columnHelp[4] = {
         tr("Track whose sound was lost."),
         tr("Notes that never played at all: every channel was in use and none "
@@ -309,8 +296,7 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
         m_table->horizontalHeaderItem(c)->setToolTip(columnHelp[c]);
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     for (int c = 1; c < 4; c++)
-        m_table->horizontalHeader()->setSectionResizeMode(
-            c, QHeaderView::ResizeToContents);
+        m_table->horizontalHeader()->setSectionResizeMode(c, QHeaderView::ResizeToContents);
     m_table->verticalHeader()->hide();
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_table->setSelectionMode(QAbstractItemView::NoSelection);
@@ -483,9 +469,8 @@ void PolyphonyPanel::updateSnapshot(const AudioEngine::PolySnapshot &snap)
 
 void PolyphonyPanel::appendEvent(const M4APolyEvent &ev)
 {
-    const QString pos = ev.tick == M4A_POLY_TICK_NONE
-        ? tr("live")
-        : formatBarBeat(m_timeline, ev.tick);
+    const QString pos =
+        ev.tick == M4A_POLY_TICK_NONE ? tr("live") : formatBarBeat(m_timeline, ev.tick);
     QString voice = m_voiceNames.value(ev.program).trimmed();
     if (voice.isEmpty())
         voice = tr("voice %1").arg(ev.program);
@@ -498,14 +483,10 @@ void PolyphonyPanel::appendEvent(const M4APolyEvent &ev)
         text = tr("%1 | %2: dropped (no channel available)").arg(pos, who);
         break;
     case M4A_POLY_STOLEN:
-        text = tr("%1 | %2: cut off by Trk %3")
-                   .arg(pos, who)
-                   .arg(ev.byTrack + 1);
+        text = tr("%1 | %2: cut off by Trk %3").arg(pos, who).arg(ev.byTrack + 1);
         break;
     default:
-        text = tr("%1 | %2: release tail cut by Trk %3")
-                   .arg(pos, who)
-                   .arg(ev.byTrack + 1);
+        text = tr("%1 | %2: release tail cut by Trk %3").arg(pos, who).arg(ev.byTrack + 1);
         break;
     }
     auto *item = new QListWidgetItem(text);
@@ -523,12 +504,10 @@ void PolyphonyPanel::applyLogItemInk(QListWidgetItem *item)
 {
     switch (item->data(Qt::UserRole + 3).toInt()) {
     case M4A_POLY_DROPPED:
-        item->setForeground(
-            themes::color(themes::Role::polyphony_log_dropped_text));
+        item->setForeground(themes::color(themes::Role::polyphony_log_dropped_text));
         break;
     case M4A_POLY_STOLEN:
-        item->setForeground(
-            themes::color(themes::Role::polyphony_log_stolen_text));
+        item->setForeground(themes::color(themes::Role::polyphony_log_stolen_text));
         break;
     default:
         item->setForeground(palette().color(QPalette::Disabled, QPalette::Text));
@@ -552,12 +531,11 @@ void PolyphonyPanel::refreshTable(const AudioEngine::PolySnapshot &snap)
     const qint64 now = m_clock.elapsed();
     bool changed = !m_prevValid;
     for (int t = 0; t < MAX_TRACKS; t++) {
-        if (m_prevValid
-            && (snap.drop[t] > m_prevDrop[t] || snap.steal[t] > m_prevSteal[t]
-                || snap.tailCut[t] > m_prevTailCut[t]))
+        if (m_prevValid && (snap.drop[t] > m_prevDrop[t] || snap.steal[t] > m_prevSteal[t] ||
+                            snap.tailCut[t] > m_prevTailCut[t]))
             m_flashMs[t] = now;
-        if (snap.drop[t] != m_prevDrop[t] || snap.steal[t] != m_prevSteal[t]
-            || snap.tailCut[t] != m_prevTailCut[t])
+        if (snap.drop[t] != m_prevDrop[t] || snap.steal[t] != m_prevSteal[t] ||
+            snap.tailCut[t] != m_prevTailCut[t])
             changed = true;
         m_prevDrop[t] = snap.drop[t];
         m_prevSteal[t] = snap.steal[t];
@@ -587,8 +565,7 @@ void PolyphonyPanel::refreshTable(const AudioEngine::PolySnapshot &snap)
         if (name.isEmpty())
             name = tr("Track %1").arg(t + 1);
         const QString cells[4] = {name, QString::number(snap.drop[t]),
-                                  QString::number(snap.steal[t]),
-                                  QString::number(snap.tailCut[t])};
+                                  QString::number(snap.steal[t]), QString::number(snap.tailCut[t])};
         QColor bg = Qt::transparent;
         if (m_flashMs[t] > 0 && now - m_flashMs[t] < kFlashMs) {
             bg = themes::color(themes::Role::polyphony_flash_background);

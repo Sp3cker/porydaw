@@ -32,7 +32,7 @@ class SamplePickerButton : public QPushButton
 {
     Q_OBJECT
 
-public:
+  public:
     explicit SamplePickerButton(QWidget *parent = nullptr);
 
     // The three sections, each already sorted. Keysplit instruments audition
@@ -53,7 +53,7 @@ public:
     void openPopup();
     bool popupVisible() const;
 
-signals:
+  signals:
     // A choice was committed (list row or typed symbol). The owner treats it
     // like the old combo's activated(): adopt the symbol and commit the edit.
     void symbolPicked(const QString &symbol);
@@ -61,11 +61,11 @@ signals:
     void auditionRequested(const QString &symbol);
     void auditionStopRequested();
 
-protected:
+  protected:
     void resizeEvent(QResizeEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
 
-private:
+  private:
     void rebuildList();
     void applyFilter();
     void updateDetail();

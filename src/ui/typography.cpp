@@ -67,8 +67,7 @@ bool installBundledFonts(QApplication &application)
         return false;
     if (!capturedPlatformFont) {
         capturedPlatformFont = application.font();
-        capturedFixedFamily =
-            QFontDatabase::systemFont(QFontDatabase::FixedFont).family();
+        capturedFixedFamily = QFontDatabase::systemFont(QFontDatabase::FixedFont).family();
     }
     const auto regular = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-Regular.ttf"));
@@ -85,9 +84,8 @@ bool installBundledFonts(QApplication &application)
     font.setPixelSize(qMax(1, qRound(*capturedBaseFontPx * 1.25)));
     application.setFont(font);
     const auto resolved = QFontInfo(application.font());
-    const auto installed =
-        resolved.family() == QString::fromLatin1(proportionalFamily) &&
-        resolved.pixelSize() == qMax(1, qRound(*capturedBaseFontPx * 1.25));
+    const auto installed = resolved.family() == QString::fromLatin1(proportionalFamily) &&
+                           resolved.pixelSize() == qMax(1, qRound(*capturedBaseFontPx * 1.25));
     if (installed)
         installedBodyFont = systemFontPreferred ? systemBody() : font;
     return installed;
@@ -112,8 +110,7 @@ void setUseSystemFont(bool preferred)
 
 QString systemFontFamily()
 {
-    return capturedPlatformFont ? QFontInfo(*capturedPlatformFont).family()
-                                : QString();
+    return capturedPlatformFont ? QFontInfo(*capturedPlatformFont).family() : QString();
 }
 
 QString systemMonoFamily()
@@ -175,14 +172,11 @@ std::optional<QFont> fitted(const QFont &base, int availableHeight)
     return std::nullopt;
 }
 
-QPointF glyphCenteringOffset(const QFont &reference, const QFont &displayed,
-                             QStringView text)
+QPointF glyphCenteringOffset(const QFont &reference, const QFont &displayed, QStringView text)
 {
     const auto string = text.toString();
-    const auto referenceCenter =
-        QFontMetricsF(reference).tightBoundingRect(string).center();
-    const auto displayedCenter =
-        QFontMetricsF(displayed).tightBoundingRect(string).center();
+    const auto referenceCenter = QFontMetricsF(reference).tightBoundingRect(string).center();
+    const auto displayedCenter = QFontMetricsF(displayed).tightBoundingRect(string).center();
     return referenceCenter - displayedCenter;
 }
 

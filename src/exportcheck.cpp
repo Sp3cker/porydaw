@@ -23,8 +23,8 @@ namespace {
 
 uint32_t leU32(const QByteArray &b, int off)
 {
-    return uint32_t(uint8_t(b[off])) | uint32_t(uint8_t(b[off + 1])) << 8
-        | uint32_t(uint8_t(b[off + 2])) << 16 | uint32_t(uint8_t(b[off + 3])) << 24;
+    return uint32_t(uint8_t(b[off])) | uint32_t(uint8_t(b[off + 1])) << 8 |
+           uint32_t(uint8_t(b[off + 2])) << 16 | uint32_t(uint8_t(b[off + 3])) << 24;
 }
 
 uint16_t leU16(const QByteArray &b, int off)
@@ -59,8 +59,7 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
             song = &s;
     }
     if (!song) {
-        std::fprintf(stderr, "exportcheck: song '%s' not found\n",
-                     qUtf8Printable(songLabel));
+        std::fprintf(stderr, "exportcheck: song '%s' not found\n", qUtf8Printable(songLabel));
         return 1;
     }
 
@@ -94,25 +93,25 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
 
     const auto timeline = doc.buildTimeline(double(opts.sampleRate));
     const WavExportTotals totals = wavExportTotals(*timeline, opts);
-    const uint64_t loopDuration = timeline->hasLoop()
-        ? timeline->loopEndSample - timeline->loopStartSample
-        : 0;
-    const uint64_t expectedTotal = timeline->hasLoop()
-        ? timeline->loopStartSample + loopDuration + uint64_t(opts.sampleRate)
-        : timeline->lengthSamples + uint64_t(opts.sampleRate);
+    const uint64_t loopDuration =
+        timeline->hasLoop() ? timeline->loopEndSample - timeline->loopStartSample : 0;
+    const uint64_t expectedTotal =
+        timeline->hasLoop() ? timeline->loopStartSample + loopDuration + uint64_t(opts.sampleRate)
+                            : timeline->lengthSamples + uint64_t(opts.sampleRate);
     if (totals.totalSamples != expectedTotal)
         fail("length math does not match poryaaaa_render semantics");
 
     const QString wavPath = projectRoot + QStringLiteral("/exportcheck.wav");
     double lastFraction = -1.0;
     bool monotonic = true;
-    if (!exportWav(wavPath, *timeline, vg, settings, opts,
-                   [&](double fraction) {
-                       monotonic = monotonic && fraction > lastFraction;
-                       lastFraction = fraction;
-                       return true;
-                   },
-                   &error)) {
+    if (!exportWav(
+            wavPath, *timeline, vg, settings, opts,
+            [&](double fraction) {
+                monotonic = monotonic && fraction > lastFraction;
+                lastFraction = fraction;
+                return true;
+            },
+            &error)) {
         std::fprintf(stderr, "exportcheck: export: %s\n", qUtf8Printable(error));
         voicegroup_free(vg);
         return 1;
@@ -128,14 +127,14 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
     if (uint64_t(wav.size()) != 44 + dataSize)
         fail("file size does not match the rendered length");
     if (wav.size() >= 44) {
-        if (std::memcmp(wav.constData(), "RIFF", 4) != 0
-            || std::memcmp(wav.constData() + 8, "WAVE", 4) != 0
-            || std::memcmp(wav.constData() + 12, "fmt ", 4) != 0
-            || std::memcmp(wav.constData() + 36, "data", 4) != 0)
+        if (std::memcmp(wav.constData(), "RIFF", 4) != 0 ||
+            std::memcmp(wav.constData() + 8, "WAVE", 4) != 0 ||
+            std::memcmp(wav.constData() + 12, "fmt ", 4) != 0 ||
+            std::memcmp(wav.constData() + 36, "data", 4) != 0)
             fail("RIFF/WAVE chunk layout is wrong");
-        else if (leU16(wav, 20) != 1 || leU16(wav, 22) != 2 || leU16(wav, 34) != 16
-                 || leU32(wav, 24) != uint32_t(opts.sampleRate)
-                 || leU32(wav, 40) != uint32_t(dataSize))
+        else if (leU16(wav, 20) != 1 || leU16(wav, 22) != 2 || leU16(wav, 34) != 16 ||
+                 leU32(wav, 24) != uint32_t(opts.sampleRate) ||
+                 leU32(wav, 40) != uint32_t(dataSize))
             fail("fmt/data header fields are wrong");
     }
     if (uint64_t(wav.size()) == 44 + dataSize) {
@@ -148,8 +147,7 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
             fail("rendered audio is (nearly) silent");
         if (timeline->hasLoop()) {
             int tailPeak = 0;
-            for (uint64_t i = (totals.totalSamples - 16) * 2;
-                 i < totals.totalSamples * 2; i++)
+            for (uint64_t i = (totals.totalSamples - 16) * 2; i < totals.totalSamples * 2; i++)
                 tailPeak = std::max(tailPeak, std::abs(int(sampleAt(wav, i))));
             if (tailPeak > peak / 16)
                 fail("fadeout did not reach silence");
@@ -158,8 +156,7 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
     QFile::remove(wavPath);
 
     // Cancelled exports must clean up after themselves.
-    if (exportWav(wavPath, *timeline, vg, settings, opts,
-                  [](double) { return false; }, &error))
+    if (exportWav(wavPath, *timeline, vg, settings, opts, [](double) { return false; }, &error))
         fail("cancelled export reported success");
     else if (!error.isEmpty())
         fail("cancel produced an error instead of a clean abort");
