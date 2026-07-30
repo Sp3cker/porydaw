@@ -1305,7 +1305,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     const uint32_t offDur = uint32_t(d.dur + d.dur / 4);
     doc.addNote(track, d.tick, uint8_t(d.key), offDur, 100);
     const int rowY = rows.centerY(d.key);
-    // Probe 6.8 DIPs inward at both ends on the velocity bar itself. The
+    // Probe 2.8 DIPs inward at both ends on the velocity bar itself. The
     // resize zones must win over the overlapping velocity hover.
     const qreal resizeNoteLeftX =
         view.displayX(double(d.tick), songview::kKeyboardW, roll->devicePixelRatioF());
@@ -1313,8 +1313,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         view.displayX(double(d.tick + offDur), songview::kKeyboardW, roll->devicePixelRatioF());
     const int resizeHandleY =
         qRound(songview::velBarRect(rows.noteRect(0, 1, d.key), 100, rows.dpr()).center().y());
-    const QPointF leftHandle(resizeNoteLeftX + 6.8, resizeHandleY);
-    const QPointF rightHandle(resizeNoteRightX - 6.8, resizeHandleY);
+    const QPointF leftHandle(resizeNoteLeftX + 2.8, resizeHandleY);
+    const QPointF rightHandle(resizeNoteRightX - 2.8, resizeHandleY);
     sendMouse(roll, QEvent::MouseMove, leftHandle, Qt::NoButton, Qt::NoButton, Qt::ControlModifier);
     const QPixmap expectedLeftCursor = QIcon(QStringLiteral(":/cursors/left-drag.png"))
                                            .pixmap(QSize(24, 24), roll->devicePixelRatioF());
@@ -1345,7 +1345,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     {
         const qreal dpr = roll->devicePixelRatioF();
         const QPointF ctrlEdge(
-            view.displayX(double(d.tick + 2 * d.dur), songview::kKeyboardW, dpr) - 6.8, rowY);
+            view.displayX(double(d.tick + 2 * d.dur), songview::kKeyboardW, dpr) - 2.8, rowY);
         click(roll, b.center); // selection = {B}
         const int preCount = doc.undoStack()->count();
         DocNote bBefore;

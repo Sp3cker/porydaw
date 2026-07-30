@@ -120,11 +120,11 @@ double cursorAnchoredScroll(double anchor, double oldScale, double oldScroll, do
 constexpr int kVoiceAuditionKey = 60; // middle C, matching the voicegroup browser
 constexpr int kVoiceAuditionVel = 112;
 // Resize hit-zone reach at a note's left/right edges (rollcheck probes
-// 6.8 DIPs inside the ends, so the zone must reach past that). Outside the
+// 2.8 DIPs inside the ends, so the zone must reach past that). Outside the
 // note the full reach always applies; inside, both zones shrink to leave at
 // least kMoveZoneMin between them so short notes keep a grabbable middle
 // for move drags.
-constexpr qreal kEdgeGripReach = 7.0;
+constexpr qreal kEdgeGripReach = 3.0;
 constexpr qreal kMoveZoneMin = 6.0;
 qreal edgeGripInnerReach(const QRectF &noteRect)
 {
