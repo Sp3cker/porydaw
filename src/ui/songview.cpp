@@ -3336,7 +3336,9 @@ class AutomationArea : public TimelineSurface
         const qreal dpr = devicePixelRatioF();
         for (const DocLanePoint &pt : doc->lanePoints(m_sv->selectedTrack(), DOC_CC_VOICE)) {
             const qreal dist = std::abs(m_sv->displayX(double(pt.tick), kGutterW, dpr) - x);
-            if (dist < bestDist) {
+            // Ties go to the later point: of same-tick duplicates it is the
+            // audible winner.
+            if (dist < bestDist || (found && dist == bestDist)) {
                 bestDist = dist;
                 *out = pt;
                 found = true;
@@ -3778,7 +3780,9 @@ class AutomationArea : public TimelineSurface
         const qreal dpr = devicePixelRatioF();
         for (const LanePoint &pt : *points) {
             const qreal dist = std::abs(m_sv->displayX(double(pt.tick), kGutterW, dpr) - x);
-            if (dist < bestDist) {
+            // Ties go to the later point: of same-tick duplicates it is the
+            // audible winner.
+            if (dist < bestDist || (best && dist == bestDist)) {
                 bestDist = dist;
                 best = &pt;
             }
@@ -3810,7 +3814,9 @@ class AutomationArea : public TimelineSurface
             if (std::abs(dx) > 7 || std::abs(dy) > 7)
                 continue;
             const qreal dist = dx * dx + qreal(dy * dy);
-            if (dist < bestDist) {
+            // Ties go to the later point: of same-tick duplicates it is the
+            // audible winner.
+            if (dist < bestDist || (best && dist == bestDist)) {
                 bestDist = dist;
                 best = &pt;
             }
@@ -6243,15 +6249,23 @@ void SongView::editTrackVoice(int track)
     if (!m_document || track < 0 || track > 15)
         return;
     const std::vector<DocLanePoint> changes = m_document->lanePoints(track, DOC_CC_VOICE);
-    const int initial = changes.empty() ? 0 : changes.front().value;
+    // The track's initial voice is the LAST change on the first change's
+    // tick: same-tick duplicates are audibly last-wins, and the header label
+    // (currentProgram) already reads them that way — edit what it shows.
+    const DocLanePoint *target = nullptr;
+    for (const DocLanePoint &pt : changes) {
+        if (pt.tick != changes.front().tick)
+            break;
+        target = &pt;
+    }
+    const int initial = target ? target->value : 0;
     int voice = initial;
     if (!pickVoice(tr("Track %1 voice").arg(track + 1), initial, &voice))
         return;
-    if (changes.empty())
+    if (!target)
         m_document->addLanePoint(track, DOC_CC_VOICE, 0, voice);
     else if (voice != initial)
-        m_document->moveLanePoint(track, DOC_CC_VOICE, changes.front(), changes.front().tick,
-                                  voice);
+        m_document->moveLanePoint(track, DOC_CC_VOICE, *target, target->tick, voice);
 }
 
 void SongView::renameTrack(int track)

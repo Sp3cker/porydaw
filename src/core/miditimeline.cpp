@@ -208,8 +208,10 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
             return a.tick < b.tick;
         return a.origIndex < b.origIndex;
     });
-    std::sort(tempos.begin(), tempos.end(),
-              [](const TempoChange &a, const TempoChange &b) { return a.tick < b.tick; });
+    // stable: same-tick duplicate tempos must keep file order so the last
+    // one in the file is the one that wins, matching mid2agb's stable sort.
+    std::stable_sort(tempos.begin(), tempos.end(),
+                     [](const TempoChange &a, const TempoChange &b) { return a.tick < b.tick; });
 
     auto timeline = std::make_unique<MidiTimeline>();
     timeline->sampleRate = sampleRate;
@@ -296,14 +298,16 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
     if (timeline->loopEndTick != UINT64_MAX)
         timeline->lengthTicks = std::max(timeline->lengthTicks, timeline->loopEndTick);
 
-    std::sort(timeSigs.begin(), timeSigs.end(),
-              [](const TimeSigPoint &a, const TimeSigPoint &b) { return a.tick < b.tick; });
+    // stable: the bar grid honors the last same-tick signature in file order.
+    std::stable_sort(timeSigs.begin(), timeSigs.end(),
+                     [](const TimeSigPoint &a, const TimeSigPoint &b) { return a.tick < b.tick; });
     timeline->timeSigs = std::move(timeSigs);
 
     // Map the not-played events onto engine tracks (metas keep -1 unless their
     // SMF chunk got an engine slot) and time them for display.
-    std::sort(rawOthers.begin(), rawOthers.end(),
-              [](const RawOther &a, const RawOther &b) { return a.tick < b.tick; });
+    // stable: keeps same-tick strip entries in file order for display.
+    std::stable_sort(rawOthers.begin(), rawOthers.end(),
+                     [](const RawOther &a, const RawOther &b) { return a.tick < b.tick; });
     timeline->otherEvents.reserve(rawOthers.size());
     for (RawOther &ro : rawOthers) {
         const int engineTrack = smfToEngine[ro.smfTrack];

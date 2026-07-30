@@ -3,6 +3,7 @@
 #include <QMap>
 #include <QObject>
 #include <algorithm>
+#include <map>
 
 #include "ui/m4asemantics.h"
 
@@ -158,6 +159,87 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QStri
         }
     }
     return a;
+}
+
+namespace {
+
+// The engine slot a pure state-setter writes, or -1 for events where every
+// occurrence matters. Slots are per channel; CCs get one slot per controller
+// number (the m4a CC vocabulary has no cross-CC coupling outside the excluded
+// protocols, and CCs it ignores set no state at all), poly aftertouch one per
+// key. CC numbers follow tools/mid2agb/agb.cpp via m4aClassifyCc's table.
+int setterSlot(const SmfEvent &ev)
+{
+    if (ev.isMeta()) {
+        // Tempo and time signature; other metas (text, markers, ports) are
+        // identities, not values — two on one tick can both be meant.
+        if (ev.metaType == 0x51 || ev.metaType == 0x58)
+            return 0x10000 | ev.metaType;
+        return -1;
+    }
+    if (!ev.isChannel())
+        return -1;
+    const int channel = ev.status & 0x0F;
+    switch (ev.typeNibble()) {
+    case 0xB:
+        switch (ev.data0) {
+        case 0x0C: // MEMACC plumbing: an op CC fires using state stashed by
+        case 0x0D: // its neighbors, and the ops include conditional branches —
+        case 0x0E: // every occurrence is an action.
+        case 0x0F:
+        case 0x10:
+        case 0x11: // loop Label
+        case 0x1D: // XCMD: same stash-then-fire shape as MEMACC
+        case 0x1E:
+        case 0x1F:
+            return -1;
+        default:
+            return (0xB << 12) | (channel << 7) | ev.data0;
+        }
+    case 0xA: // poly aftertouch: one slot per key
+        return (0xA << 12) | (channel << 7) | ev.data0;
+    case 0xC:
+    case 0xD:
+    case 0xE:
+        return (ev.typeNibble() << 12) | (channel << 7);
+    default: // notes
+        return -1;
+    }
+}
+
+} // namespace
+
+int removeRedundantSetterEvents(SmfFile *smf)
+{
+    int removed = 0;
+    for (SmfTrack &track : smf->tracks) {
+        std::vector<SmfEvent> &evs = track.events;
+        std::vector<char> drop(evs.size(), 0);
+        std::map<int, size_t> lastForSlot; // within the current tick only
+        uint64_t runTick = 0;
+        for (size_t i = 0; i < evs.size(); i++) {
+            if (i == 0 || evs[i].tick != runTick) {
+                lastForSlot.clear();
+                runTick = evs[i].tick;
+            }
+            const int slot = setterSlot(evs[i]);
+            if (slot < 0)
+                continue;
+            const auto it = lastForSlot.find(slot);
+            if (it != lastForSlot.end()) {
+                drop[it->second] = 1;
+                removed++;
+            }
+            lastForSlot[slot] = i;
+        }
+        size_t out = 0;
+        for (size_t i = 0; i < evs.size(); i++) {
+            if (!drop[i])
+                evs[out++] = std::move(evs[i]);
+        }
+        evs.resize(out);
+    }
+    return removed;
 }
 
 void rescaleDivision(SmfFile *smf, uint16_t newDivision)

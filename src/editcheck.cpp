@@ -1204,6 +1204,133 @@ int runEditCheck(const QString &projectRoot)
         }
     }
 
+    // Same-tick duplicate setters (a foreign file's repeated channel-init
+    // block): the loader preserves them — sanitizing is the import wizard's
+    // job — but every editing surface resolves the run LAST-wins, matching
+    // playback, and writing onto an occupied tick replaces what sits there
+    // instead of stacking another duplicate. Undo restores the duplicates.
+    {
+        auto failD = [&](const char *what) {
+            std::fprintf(stderr, "editcheck: FAIL same-tick-dup: %s\n", what);
+            failures++;
+        };
+        auto chEvent = [](uint8_t status, uint64_t tick, uint8_t d0, uint8_t d1) {
+            SmfEvent ev;
+            ev.tick = tick;
+            ev.status = status;
+            ev.data0 = d0;
+            ev.data1 = d1;
+            return ev;
+        };
+        auto meta = [](uint64_t tick, uint8_t type, QByteArray blob) {
+            SmfEvent ev;
+            ev.tick = tick;
+            ev.status = 0xFF;
+            ev.metaType = type;
+            ev.blob = std::move(blob);
+            return ev;
+        };
+        SmfFile smf;
+        smf.format = 1;
+        smf.division = 24;
+        SmfTrack conductor;
+        conductor.events.push_back(meta(0, 0x51, QByteArray("\x07\xA1\x20", 3))); // 120 BPM
+        conductor.events.push_back(meta(0, 0x51, QByteArray("\x06\x1A\x80", 3))); // 150 BPM
+        conductor.endTick = 96;
+        smf.tracks.push_back(conductor);
+        SmfTrack ch0;
+        ch0.events.push_back(chEvent(0xC0, 0, 5, 0));
+        ch0.events.push_back(chEvent(0xB0, 0, 7, 100));
+        ch0.events.push_back(chEvent(0xC0, 0, 9, 0));
+        ch0.events.push_back(chEvent(0xB0, 0, 7, 80));
+        ch0.events.push_back(chEvent(0x90, 0, 60, 100));
+        ch0.events.push_back(chEvent(0x80, 96, 60, 0));
+        ch0.endTick = 96;
+        smf.tracks.push_back(ch0);
+
+        QTemporaryDir tmp;
+        const QString midPath = tmp.path() + QStringLiteral("/dups.mid");
+        QString werror;
+        SongInfo info;
+        info.label = QStringLiteral("dups");
+        info.midPath = midPath;
+        info.hasMid = true;
+        SongDocument doc;
+        bool ok = tmp.isValid() && smf.writeFile(midPath, &werror) && doc.load(info, &werror);
+        if (!ok)
+            failD("could not write/load the synthetic file");
+        const QByteArray baseline = ok ? doc.smf().write() : QByteArray();
+        const auto ccPointsAt = [&doc](uint8_t cc, uint64_t tick) {
+            std::vector<DocLanePoint> at;
+            for (const DocLanePoint &pt : doc.lanePoints(0, cc)) {
+                if (pt.tick == tick)
+                    at.push_back(pt);
+            }
+            return at;
+        };
+        if (ok && (doc.lanePoints(0, DOC_CC_VOICE).size() != 2 || ccPointsAt(7, 0).size() != 2)) {
+            failD("the loader no longer preserves same-tick duplicates");
+            ok = false;
+        }
+        DocLanePoint pt;
+        if (ok && (!doc.findLanePoint(0, 7, 0, &pt) || pt.value != 80)) {
+            failD("findLanePoint did not return the last CC at the tick");
+            ok = false;
+        }
+        if (ok && (!doc.findLanePoint(0, DOC_CC_VOICE, 0, &pt) || pt.value != 9)) {
+            failD("findLanePoint did not return the last program at the tick");
+            ok = false;
+        }
+        if (ok && (!doc.findLanePoint(0, DOC_CC_TEMPO, 0, &pt) || pt.value != 150)) {
+            failD("findLanePoint did not return the last tempo at the tick");
+            ok = false;
+        }
+        if (ok) {
+            // A value edit targets the winner AND heals the shadowed
+            // duplicate under it, in one undoable edit.
+            doc.findLanePoint(0, 7, 0, &pt);
+            doc.moveLanePoint(0, 7, pt, 0, 60);
+            const auto after = ccPointsAt(7, 0);
+            if (after.size() != 1 || after[0].value != 60) {
+                failD("a value edit left the shadowed duplicate behind");
+                ok = false;
+            }
+            doc.undoStack()->undo();
+            const auto restored = ccPointsAt(7, 0);
+            if (ok &&
+                (restored.size() != 2 || restored[0].value != 100 || restored[1].value != 80)) {
+                failD("undo did not restore the shadowed duplicate");
+                ok = false;
+            }
+        }
+        if (ok) {
+            // addLanePoint replaces the whole run on its tick.
+            doc.addLanePoint(0, 7, 0, 70);
+            if (ccPointsAt(7, 0).size() != 1) {
+                failD("addLanePoint stacked another duplicate on the tick");
+                ok = false;
+            }
+            doc.undoStack()->undo();
+        }
+        if (ok) {
+            // A cross-tick move landing on an occupied tick replaces the
+            // run there too.
+            doc.addLanePoint(0, 7, 48, 55);
+            doc.findLanePoint(0, 7, 48, &pt);
+            doc.moveLanePoint(0, 7, pt, 0, 55);
+            if (ccPointsAt(7, 0).size() != 1 || !ccPointsAt(7, 48).empty()) {
+                failD("a cross-tick move did not replace the destination run");
+                ok = false;
+            }
+        }
+        if (ok) {
+            while (doc.undoStack()->canUndo())
+                doc.undoStack()->undo();
+            if (doc.smf().write() != baseline)
+                failD("undo-all did not restore the duplicated file byte-for-byte");
+        }
+    }
+
     std::printf("editcheck: %d songs in %lld ms\n", checked, (long long)timer.elapsed());
     std::printf("editcheck: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);
     return failures ? 1 : 0;

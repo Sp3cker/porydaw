@@ -402,13 +402,19 @@ std::vector<DocLanePoint> SongDocument::lanePoints(int engineTrack, uint8_t cc) 
 bool SongDocument::findLanePoint(int engineTrack, uint8_t cc, uint64_t tick,
                                  DocLanePoint *out) const
 {
+    // The LAST point at the tick, mirroring setTimeSig: playback applies a
+    // tick's events in order, so among same-tick duplicates the last is the
+    // audible one — edits must target it, not a shadowed earlier value.
+    bool found = false;
     for (const DocLanePoint &pt : lanePoints(engineTrack, cc)) {
+        if (pt.tick > tick)
+            break;
         if (pt.tick == tick) {
             *out = pt;
-            return true;
+            found = true;
         }
     }
-    return false;
+    return found;
 }
 
 bool SongDocument::findLoopMarkerEvent(bool endMarker, int *smfTrack, size_t *index) const
@@ -860,11 +866,21 @@ void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int 
     const int smfTrack = cc == DOC_CC_TEMPO ? 0 : smfTrackFor(engineTrack);
     if (smfTrack < 0 || m_smf.tracks.empty())
         return;
+    std::vector<EditOp> ops;
+    // A point already on the tick is replaced, not shadowed: only the last of
+    // same-tick duplicates is audible, so keeping the old one would just
+    // leave an inert ghost under the new value.
+    std::vector<size_t> replaced;
+    for (const DocLanePoint &pt : lanePoints(engineTrack, cc)) {
+        if (pt.tick == tick)
+            replaced.push_back(pt.index);
+    }
+    appendRemoveOps(ops, smfTrack, std::move(replaced));
     EditOp op;
     op.type = EditOp::InsertEvent;
     op.smfTrack = smfTrack;
     op.event = makeLaneEvent(cc, channelFor(engineTrack), tick, value);
-    std::vector<EditOp> ops{op};
+    ops.push_back(op);
     pushEdit(cc == DOC_CC_VOICE ? tr("add voice change") : tr("add automation point"),
              std::move(ops));
 }
@@ -899,8 +915,30 @@ void SongDocument::moveLanePoint(int engineTrack, uint8_t cc, const DocLanePoint
 {
     const QString text = cc == DOC_CC_VOICE ? tr("change voice") : tr("edit automation point");
     std::vector<EditOp> ops;
-    appendEventEditOps(ops, point.smfTrack, point.index,
-                       makeLaneEvent(cc, channelFor(engineTrack), newTick, newValue));
+    // Landing on an occupied tick replaces what sits there (see addLanePoint);
+    // for a same-tick value edit this also heals shadowed duplicates under
+    // the edited point.
+    std::vector<size_t> shadowed;
+    for (const DocLanePoint &pt : lanePoints(engineTrack, cc)) {
+        if (pt.tick == newTick && pt.index != point.index)
+            shadowed.push_back(pt.index);
+    }
+    const SmfEvent event = makeLaneEvent(cc, channelFor(engineTrack), newTick, newValue);
+    if (newTick == point.tick) {
+        // ModifyEvent first so a value edit keeps the point's position within
+        // its tick group; a modify shifts no indices, so the shadowed
+        // removals stay valid after it.
+        appendEventEditOps(ops, point.smfTrack, point.index, event);
+        appendRemoveOps(ops, point.smfTrack, std::move(shadowed));
+    } else {
+        shadowed.push_back(point.index);
+        appendRemoveOps(ops, point.smfTrack, std::move(shadowed));
+        EditOp insert;
+        insert.type = EditOp::InsertEvent;
+        insert.smfTrack = point.smfTrack;
+        insert.event = event;
+        ops.push_back(insert);
+    }
     pushEdit(text, std::move(ops));
 }
 

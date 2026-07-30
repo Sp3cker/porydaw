@@ -297,7 +297,14 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   stack and one dirty/save state (they are one document to the user).
 - MIDI file import: open an arbitrary external `.mid`, get a guided analysis pass —
   channels → tracks (warn > 16 or > polyphony budget), unmapped CCs flagged — then
-  saved into the project as a new song file.
+  saved into the project as a new song file. Import silently drops same-tick
+  duplicate state-setters (repeated channel-init blocks are a common export
+  artifact), keeping the last of each run — the only one mid2agb's output ever
+  lets the engine hear; notes, text/marker metas, and coupled-protocol CCs
+  (MEMACC, XCMD, the loop Label) always survive. Files already in the project
+  are never sanitized on open (the round-trip guarantee): the editing surfaces
+  instead resolve a same-tick run last-wins — matching playback — and writing
+  onto an occupied tick replaces the run rather than stacking another duplicate.
 
 **Sample Editor (custom DirectSound samples; design: `docs/sample-editor/`):**
 Tools → Import Sample (or "New…" / "Edit…" beside the sample picker in the

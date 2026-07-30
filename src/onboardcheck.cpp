@@ -967,6 +967,145 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
               "song settings: absent -R does not heal to the default reverb");
     }
 
+    // Same-tick duplicate setters: the import silently keeps only the last of
+    // each same-slot run (exporters love repeating the channel-init block),
+    // while events whose every occurrence acts — notes, text metas, MEMACC
+    // plumbing, the loop Label — survive untouched and in order.
+    {
+        const auto metaEvent = [](uint64_t tick, uint8_t type, QByteArray blob) {
+            SmfEvent ev;
+            ev.tick = tick;
+            ev.status = 0xFF;
+            ev.metaType = type;
+            ev.blob = std::move(blob);
+            return ev;
+        };
+        const auto channelEvent = [](uint8_t status, uint64_t tick, uint8_t d0, uint8_t d1) {
+            SmfEvent ev;
+            ev.status = status;
+            ev.tick = tick;
+            ev.data0 = d0;
+            ev.data1 = d1;
+            return ev;
+        };
+        SmfFile dups;
+        dups.format = 1;
+        dups.division = 24;
+        SmfTrack conductor;
+        conductor.events.push_back(metaEvent(0, 0x51, QByteArray("\x06\x1A\x80", 3))); // 150 BPM
+        conductor.events.push_back(metaEvent(0, 0x51, QByteArray("\x07\xA1\x20", 3))); // 120 BPM
+        conductor.events.push_back(metaEvent(0, 0x01, QByteArrayLiteral("a")));
+        conductor.events.push_back(metaEvent(0, 0x01, QByteArrayLiteral("a")));
+        conductor.endTick = 192;
+        dups.tracks.push_back(conductor);
+        SmfTrack ch0;
+        ch0.events.push_back(channelEvent(0xC0, 0, 5, 0));
+        ch0.events.push_back(channelEvent(0xB0, 0, 7, 100));
+        ch0.events.push_back(channelEvent(0xC0, 0, 9, 0));
+        ch0.events.push_back(channelEvent(0xE0, 0, 0, 0x20));
+        ch0.events.push_back(channelEvent(0xB0, 0, 101, 0));
+        ch0.events.push_back(channelEvent(0xB0, 0, 7, 80));
+        ch0.events.push_back(channelEvent(0xB0, 0, 0x0D, 1)); // MEMACC op select
+        ch0.events.push_back(channelEvent(0xB0, 0, 0x11, 2)); // loop Label
+        ch0.events.push_back(channelEvent(0xC0, 0, 12, 0));
+        ch0.events.push_back(channelEvent(0xE0, 0, 0, 0x40));
+        ch0.events.push_back(channelEvent(0xB0, 0, 101, 0));
+        ch0.events.push_back(channelEvent(0xB0, 0, 0x0D, 1));
+        ch0.events.push_back(channelEvent(0xB0, 0, 0x11, 3));
+        ch0.events.push_back(channelEvent(0xA0, 0, 60, 10));
+        ch0.events.push_back(channelEvent(0xA0, 0, 61, 11));
+        ch0.events.push_back(channelEvent(0xA0, 0, 60, 12));
+        ch0.events.push_back(channelEvent(0x90, 0, 60, 100));
+        ch0.events.push_back(channelEvent(0x90, 0, 64, 100));
+        ch0.events.push_back(channelEvent(0xB0, 96, 7, 70));
+        ch0.events.push_back(channelEvent(0xC0, 96, 3, 0));
+        ch0.events.push_back(channelEvent(0xB0, 96, 7, 60));
+        ch0.events.push_back(channelEvent(0x80, 192, 60, 0));
+        ch0.events.push_back(channelEvent(0x80, 192, 64, 0));
+        ch0.events.push_back(channelEvent(0xB0, 192, 7, 50));
+        ch0.endTick = 192;
+        dups.tracks.push_back(ch0);
+
+        SmfFile direct = dups;
+        // A tempo, 2 programs, CC7, bend, CC101, and polyAT(60) at tick 0,
+        // plus the CC7 at 96.
+        check(removeRedundantSetterEvents(&direct) == 8, "dedup: wrong removal count");
+        check(removeRedundantSetterEvents(&direct) == 0, "dedup: not idempotent");
+        const auto countEvents = [](const SmfTrack &track, uint8_t nibble, int cc) {
+            int n = 0;
+            for (const SmfEvent &ev : track.events) {
+                if (ev.isChannel() && ev.typeNibble() == nibble && (cc < 0 || ev.data0 == cc))
+                    n++;
+            }
+            return n;
+        };
+        int tempoCount = 0, textCount = 0;
+        for (const SmfEvent &ev : direct.tracks[0].events) {
+            if (!ev.isMeta())
+                continue;
+            if (ev.metaType == 0x51) {
+                tempoCount++;
+                check(ev.blob == QByteArray("\x07\xA1\x20", 3), "dedup: kept the wrong tempo");
+            }
+            textCount += ev.metaType == 0x01 ? 1 : 0;
+        }
+        check(tempoCount == 1, "dedup: same-tick tempo metas not collapsed");
+        check(textCount == 2, "dedup: text metas were touched");
+        const SmfTrack &lead = direct.tracks[1];
+        check(countEvents(lead, 0xC, -1) == 2, "dedup: program-change count");
+        check(countEvents(lead, 0xB, 7) == 3, "dedup: CC7 count");
+        check(countEvents(lead, 0xE, -1) == 1, "dedup: bend count");
+        check(countEvents(lead, 0xB, 101) == 1, "dedup: inert-CC count");
+        check(countEvents(lead, 0xB, 0x0D) == 2, "dedup: MEMACC CCs were touched");
+        check(countEvents(lead, 0xB, 0x11) == 2, "dedup: Label CCs were touched");
+        check(countEvents(lead, 0xA, 60) == 1 && countEvents(lead, 0xA, 61) == 1,
+              "dedup: poly-aftertouch not keyed per note");
+        check(countEvents(lead, 0x9, -1) == 2 && countEvents(lead, 0x8, -1) == 2,
+              "dedup: notes were touched");
+        // The kept run preserves values, positions, and relative order: the
+        // winners are the LAST of each run, still ahead of the tick's notes,
+        // and the Label pair keeps its 2-then-3 file order.
+        bool progOk = false, ccOk = false, bendOk = false, orderOk = true;
+        int lastLabel = 0, firstNoteIdx = -1, progIdx = -1;
+        for (size_t i = 0; i < lead.events.size(); i++) {
+            const SmfEvent &ev = lead.events[i];
+            if (ev.tick != 0)
+                break;
+            if (ev.typeNibble() == 0xC) {
+                progOk = ev.data0 == 12;
+                progIdx = int(i);
+            }
+            if (ev.typeNibble() == 0xB && ev.data0 == 7)
+                ccOk = ev.data1 == 80;
+            if (ev.typeNibble() == 0xE)
+                bendOk = ev.data1 == 0x40;
+            if (ev.typeNibble() == 0xB && ev.data0 == 0x11) {
+                orderOk = orderOk && ev.data1 > lastLabel;
+                lastLabel = ev.data1;
+            }
+            if (ev.typeNibble() == 0x9 && firstNoteIdx < 0)
+                firstNoteIdx = int(i);
+        }
+        check(progOk && ccOk && bendOk, "dedup: a run's survivor is not its last value");
+        check(orderOk && lastLabel == 3, "dedup: kept events lost their relative order");
+        check(progIdx >= 0 && firstNoteIdx > progIdx,
+              "dedup: setter drifted past the tick's notes");
+        for (const SmfTrack &track : direct.tracks) {
+            uint64_t prev = 0;
+            for (const SmfEvent &ev : track.events) {
+                check(ev.tick >= prev, "dedup: tick order regressed");
+                prev = ev.tick;
+            }
+        }
+
+        // The wizard end: songFile() applies the dedup silently on import.
+        NewSongWizard wizard(&project, dups, QStringLiteral("dups.mid"), vgArgs);
+        const SmfFile cleaned = wizard.songFile();
+        check(cleaned.tracks.size() == 2 && countEvents(cleaned.tracks[1], 0xB, 7) == 3 &&
+                  countEvents(cleaned.tracks[1], 0xC, -1) == 2,
+              "wizard: songFile() did not dedup same-tick setters");
+    }
+
     const QString importLabel = QStringLiteral("mus_onboardcheck_import");
     const QString importMid = midiDir + QStringLiteral("/%1.mid").arg(importLabel);
     check(imported.writeFile(importMid, &error), "write imported .mid");

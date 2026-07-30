@@ -8,10 +8,10 @@
 #include "core/smf.h"
 
 // External-MIDI import analysis (SPEC.md §6.2): everything the import wizard
-// shows about an arbitrary .mid before it becomes a project song. The file's
-// bytes are kept as-is on import — mid2agb rescales the division and ignores
-// CCs outside its vocabulary — so the pass is a lens plus one optional
-// transform: a division rescale onto the m4a clock grid.
+// shows about an arbitrary .mid before it becomes a project song. The
+// analysis pass is a pure lens; the import itself applies two transforms —
+// a silent same-tick setter dedup (removeRedundantSetterEvents) and an
+// optional division rescale onto the m4a clock grid.
 
 struct ImportTrackInfo {
     int smfTrack = -1; // chunk index
@@ -58,3 +58,13 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget = 16,
 // import by one clock, because mid2agb floors onset and duration
 // independently while a tick rescale floors onset and note-off.
 void rescaleDivision(SmfFile *smf, uint16_t newDivision);
+
+// Drop same-tick duplicate state-setters, keeping the last of each run in
+// place. Exporters commonly emit a channel-init block several times over
+// (duplicate tick-0 program/volume/pan/bend), and since both mid2agb's output
+// and the engine apply a tick's events in order, only the last of a same-slot
+// run is ever audible — the rest just shadow it from every editing surface.
+// Events where every occurrence acts (notes, text/marker metas, and the
+// coupled-protocol CCs: MEMACC plumbing, XCMD, the loop Label) are never
+// touched. Returns the number of events removed.
+int removeRedundantSetterEvents(SmfFile *smf);
