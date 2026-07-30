@@ -30,8 +30,6 @@ tools/format.sh          # reformat src/ and tools/ in place
 tools/format.sh --check  # what CI runs
 ```
 
-The one-time mechanical reformat commit is listed in [.git-blame-ignore-revs](.git-blame-ignore-revs); run `git config blame.ignoreRevsFile .git-blame-ignore-revs` to hide it from local `git blame` (GitHub's blame view skips it automatically).
-
 ## License
 
 Porydaw is licensed under [GPL-3.0](LICENSE). The embedded poryaaaa engine is
