@@ -48,7 +48,10 @@ The coordinator owns the integration branch and is the only role that:
 
 The coordinator does not accept a task merely because it builds.
 
-### Dependencies agent
+### git-operations-runner
+Task 00 MUST be assigned to `git-operations-runner`, which performs the initial
+Git worktree and branch setup described below.
+
 
 Task 00 creates the clean integration worktree, all task worktree directories,
 the branch map, isolated build and fixture conventions, and the unchanged-base
@@ -92,7 +95,7 @@ failure back to the owning task. It is not a place to hide unreviewed fixes.
 Task 00 creates this disposable runtime structure:
 
 ```text
-<repo>/.worktrees/editor-drawer-reimplementation/
+/Users/spencer/dev/cProjects/porydaw/.worktrees/editor-drawer-reimplementation/
   base/
   oracle/
   integration/
