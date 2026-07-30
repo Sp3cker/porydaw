@@ -70,12 +70,16 @@ def main():
         f"// libsndfile: {sf.__libsndfile_version__}",
         "#pragma once",
         "",
+        "// clang-format off",
+        "",
     ]
     for name, data, desc in fixtures:
         parts.append(f"// {desc} ({len(data)} bytes)")
         parts.append(c_array(name, data))
         parts.append(f"static const unsigned int {name}Len = {len(data)};")
         parts.append("")
+    parts.append("// clang-format on")
+    parts.append("")
     OUT.write_text("\n".join(parts))
     print(f"wrote {OUT}")
     for name, data, _ in fixtures:

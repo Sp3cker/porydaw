@@ -5,6 +5,8 @@
 // libsndfile: 1.2.2
 #pragma once
 
+// clang-format off
+
 // MP3 (lame): 440 Hz sine, amp 0.5, mono 22050 Hz, 0.25 s (1589 bytes)
 static const unsigned char kFixtureMp3[] = {
     0xff, 0xf3, 0x80, 0xc4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1215,3 +1217,4 @@ static const unsigned char kFixtureOpus[] = {
     0x4a, 0xc4, 0x9d, 0xba, 0xb0,
 };
 static const unsigned int kFixtureOpusLen = 1637;
+// clang-format on

@@ -1,0 +1,41 @@
+# porydaw code style — codifies the conventions already in the tree.
+# Qt-flavored: 4-space indent, Type *ptr, function/class braces on their
+# own line, attached braces everywhere else, 100-column limit.
+Language: Cpp
+Standard: c++17
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 100
+PointerAlignment: Right
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterFunction: true
+  AfterStruct: false
+  AfterEnum: false
+  AfterNamespace: false
+  AfterUnion: false
+  AfterControlStatement: Never
+  BeforeElse: false
+  BeforeCatch: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortLambdasOnASingleLine: All
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: CurrentLine
+AlignAfterOpenBracket: Align
+AlwaysBreakTemplateDeclarations: Yes
+SpaceAfterTemplateKeyword: true
+IndentCaseLabels: false
+NamespaceIndentation: None
+FixNamespaceComments: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+# Includes: keep the existing hand-grouped blocks (own header / Qt /
+# project / std) — only sort alphabetically within each blank-line block.
+SortIncludes: CaseSensitive
+IncludeBlocks: Preserve
+ReflowComments: false
