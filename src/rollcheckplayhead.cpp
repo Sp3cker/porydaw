@@ -341,6 +341,56 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
     checkPaintScope(beforeClear, afterClear, QStringLiteral("clear"));
 }
 
+// A dense serpentine cursor sweep across the whole surface, then leave: the
+// hover ink must restore every pixel it touched. Guards the partial-repaint
+// path of the content cache — at fractional device pixel ratios (125%/150%),
+// misaligned patch transforms or clip regions leave one-device-pixel "cursor
+// trails" that this catches (originally reproduced with 83 ghost pixels at
+// 1.25x; run rollcheck under QT_SCALE_FACTOR=1.25 to exercise that case).
+void checkHoverSweepRestores(songview::TimelineSurface &surface,
+                             const QString &name, QStringList &failures)
+{
+    QEvent leaveEvent(QEvent::Leave);
+    QCoreApplication::sendEvent(&surface, &leaveEvent);
+    processPaints();
+    const QImage baseline = surface.grab().toImage();
+    processPaints();
+
+    bool leftToRight = true;
+    for (int y = 4; y < surface.height(); y += 8) {
+        const int x0 = 2;
+        const int x1 = surface.width() - 2;
+        for (int i = 0; i <= 20; ++i) {
+            const int x = leftToRight ? x0 + (x1 - x0) * i / 20
+                                      : x1 - (x1 - x0) * i / 20;
+            const QPoint pos(x, y);
+            QMouseEvent move(QEvent::MouseMove, QPointF(pos),
+                             QPointF(surface.mapToGlobal(pos)), Qt::NoButton,
+                             Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(&surface, &move);
+            processPaints();
+        }
+        leftToRight = !leftToRight;
+    }
+    QCoreApplication::sendEvent(&surface, &leaveEvent);
+    processPaints();
+
+    const QImage after = surface.grab().toImage();
+    if (after == baseline)
+        return;
+    int ghostPixels = 0;
+    for (int y = 0; y < baseline.height(); ++y) {
+        for (int x = 0; x < baseline.width(); ++x) {
+            if (after.pixel(x, y) != baseline.pixel(x, y))
+                ++ghostPixels;
+        }
+    }
+    failures.append(
+        QStringLiteral("%1 cursor sweep left %2 ghost pixels behind")
+            .arg(name)
+            .arg(ghostPixels));
+}
+
 void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes,
                                      PaintRegionProbe &paintProbe,
                                      QStringList &failures)
@@ -628,8 +678,10 @@ void checkLanesViewportBoundedRepaint(SongView &view,
     const qreal dpr = lanes.devicePixelRatioF();
     const quint64 painted =
         after.contentPaintPixelCount - before.contentPaintPixelCount;
+    // + 9: room for the cache's device-alignment expansion (up to 4 logical
+    // px per edge at quarter scale factors) plus edge rounding.
     const quint64 viewportBudget = quint64(qCeil(lanes.width() * dpr))
-                                   * quint64(qCeil((viewport->height() + 1) * dpr));
+                                   * quint64(qCeil((viewport->height() + 9) * dpr));
     if (after.contentPaintCount <= before.contentPaintCount || painted == 0) {
         failures.append("lanes full invalidation painted no content");
     } else if (painted > viewportBudget) {
@@ -820,6 +872,10 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
 
     checkPianoRollKeyboardCacheUpdate(surfaces.roll.widget, probe, failures);
     checkAutomationHoverCacheUpdate(surfaces.lanes.widget, probe, failures);
+    checkHoverSweepRestores(surfaces.lanes.widget,
+                            QStringLiteral("automation lanes"), failures);
+    checkHoverSweepRestores(surfaces.roll.widget, QStringLiteral("piano roll"),
+                            failures);
     probe.clear();
     const auto diagnosticsBefore = [&cachedSurfaces] {
         std::array<songview::TimelineSurfaceDiagnostics, 3> diagnostics;

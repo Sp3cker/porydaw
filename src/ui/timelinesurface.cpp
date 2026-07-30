@@ -90,51 +90,79 @@ void TimelineSurface::paintEvent(QPaintEvent *event)
         painter.drawPixmap(QPointF(0, 0), m_contentCache);
         return;
     }
-    if (dirtyRegion == QRegion(rect())) {
+
+    // Partial repaints must be pixel-identical to a full repaint, or stale
+    // fringes accumulate in the cache ("cursor trails"). Two ingredients:
+    //
+    // 1. Render straight into the cache under a clip — the painter transform
+    //    is then the full repaint's, so rasterization matches bit-for-bit.
+    //    (An intermediate patch pixmap is NOT equivalent: its fractional
+    //    translate, deviceLeft / dpr, perturbs coordinates that land exactly
+    //    on device-pixel boundaries at fractional scale factors.) This
+    //    relies on paintContent implementations only ever narrowing the
+    //    painter's clip (save + Qt::IntersectClip + restore, no ReplaceClip).
+    //
+    // 2. The clip itself must sit on whole device pixels, or Qt recomposes
+    //    the boundary pixels at partial clip coverage. Snap each dirty rect
+    //    outward to the smallest logical grid whose device size is integral
+    //    (1 at integer scales, 2 at 150%, 4 at any quarter scale — exact in
+    //    binary floating point). With no practical grid, repaint fully.
+    int alignmentGrid = 0;
+    for (int candidate = 1; candidate <= 64; ++candidate) {
+        const qreal scaled = dpr * candidate;
+        if (qAbs(scaled - qRound(scaled)) < 1e-9) {
+            alignmentGrid = candidate;
+            break;
+        }
+    }
+    QRegion repaintRegion;
+    if (alignmentGrid == 0) {
+        repaintRegion = rect();
+    } else if (alignmentGrid == 1) {
+        repaintRegion = dirtyRegion;
+    } else {
+        for (const QRect &dirtyRect : dirtyRegion) {
+            const int left = (dirtyRect.left() / alignmentGrid) * alignmentGrid;
+            const int top = (dirtyRect.top() / alignmentGrid) * alignmentGrid;
+            const int right = ((dirtyRect.right() + alignmentGrid) / alignmentGrid)
+                              * alignmentGrid;
+            const int bottom = ((dirtyRect.bottom() + alignmentGrid) / alignmentGrid)
+                               * alignmentGrid;
+            // Overhang past the widget is fine: the pixmap edge is a whole
+            // device pixel, so the engine's clamp stays device-aligned.
+            repaintRegion += QRect(left, top, right - left, bottom - top);
+        }
+    }
+
+    if (QRegion(rect()).subtracted(repaintRegion).isEmpty()) {
         m_contentCache.fill(Qt::transparent);
         QPainter cachePainter(&m_contentCache);
         countContentPaint(quint64(pixelSize.width()) * quint64(pixelSize.height()));
         paintContent(cachePainter);
+        m_dirtyContentRegion = QRegion();
     } else {
-        for (const QRect &logicalRect : dirtyRegion) {
-            const int deviceLeft = qFloor(logicalRect.left() * dpr);
-            const int deviceTop = qFloor(logicalRect.top() * dpr);
-            const int deviceRight = qCeil((logicalRect.right() + 1) * dpr);
-            const int deviceBottom = qCeil((logicalRect.bottom() + 1) * dpr);
-            const QRect deviceRect = QRect(QPoint(deviceLeft, deviceTop),
-                                           QPoint(deviceRight - 1, deviceBottom - 1))
-                                         .intersected(QRect(QPoint(), pixelSize));
-            if (deviceRect.isEmpty())
-                continue;
-
-            QPixmap dirtyPatch(deviceRect.size());
-            if (dirtyPatch.isNull()) {
-                QPainter painter(this);
-                countContentPaint(quint64(pixelSize.width())
-                                  * quint64(pixelSize.height()));
-                paintContent(painter);
-                return;
-            }
-            dirtyPatch.setDevicePixelRatio(dpr);
-            dirtyPatch.fill(Qt::transparent);
-
-            const QPointF logicalPatchOrigin(deviceRect.left() / dpr,
-                                             deviceRect.top() / dpr);
-            {
-                QPainter patchPainter(&dirtyPatch);
-                patchPainter.translate(-logicalPatchOrigin);
-                countContentPaint(quint64(deviceRect.width())
-                                  * quint64(deviceRect.height()));
-                paintContent(patchPainter);
-            }
-            {
-                QPainter cachePainter(&m_contentCache);
-                cachePainter.setCompositionMode(QPainter::CompositionMode_Source);
-                cachePainter.drawPixmap(logicalPatchOrigin, dirtyPatch);
-            }
+        QPainter cachePainter(&m_contentCache);
+        cachePainter.setClipRegion(repaintRegion);
+        cachePainter.setCompositionMode(QPainter::CompositionMode_Clear);
+        cachePainter.fillRect(rect(), Qt::transparent);
+        cachePainter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        quint64 repaintDevicePixels = 0;
+        for (const QRect &logicalRect : repaintRegion) {
+            const quint64 deviceWidth =
+                quint64(qCeil((logicalRect.right() + 1) * dpr))
+                - quint64(qFloor(logicalRect.left() * dpr));
+            const quint64 deviceHeight =
+                quint64(qCeil((logicalRect.bottom() + 1) * dpr))
+                - quint64(qFloor(logicalRect.top() * dpr));
+            repaintDevicePixels += deviceWidth * deviceHeight;
         }
+        countContentPaint(repaintDevicePixels);
+        paintContent(cachePainter);
+        // Everything under the (possibly expanded) repaint is fresh now; any
+        // pending dirt it covered still has its own queued update event, so
+        // the screen catches up even though the cache is already clean.
+        m_dirtyContentRegion -= repaintRegion;
     }
-    m_dirtyContentRegion -= dirtyRegion;
 
     QPainter painter(this);
     painter.drawPixmap(QPointF(0, 0), m_contentCache);

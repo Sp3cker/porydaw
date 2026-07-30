@@ -1404,7 +1404,10 @@ protected:
         }
 
         const QRect grid(kKeyboardW, 0, width() - kKeyboardW, height());
-        p.setClipRect(grid);
+        // Narrow, never replace: the cached-surface painter arrives clipped
+        // to the dirty region and partial repaints must stay inside it.
+        p.save();
+        p.setClipRect(grid, Qt::IntersectClip);
 
         // Pitch row shading plus a hairline under every semitone row; C rows
         // keep the stronger octave delineator, on the same snapped edge as
@@ -1446,7 +1449,7 @@ protected:
         drawOverlays(p, m_sv, grid, kKeyboardW,
                      m_sv->timeSelectionCoversTrack(m_sv->selectedTrack()));
 
-        p.setClipping(false);
+        p.restore();
         drawKeyboard(p);
     }
 
@@ -2958,8 +2961,10 @@ protected:
             auto tickX = [&](uint64_t t) {
                 return m_sv->displayX(double(t), kGutterW, dpr);
             };
+            p.save();
             p.setClipRect(QRect(kGutterW, rowTop(m_dragRow), width() - kGutterW,
-                                rowHeight(m_rows[m_dragRow])));
+                                rowHeight(m_rows[m_dragRow])),
+                          Qt::IntersectClip);
             p.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
             p.setBrush(Qt::NoBrush);
             if (m_gesture == Gesture::Sweep && m_sweep.size() > 1) {
@@ -2981,7 +2986,7 @@ protected:
             p.drawEllipse(QPointF(x, y), 3, 3);
             p.drawText(QPointF(x + 6, y - 4),
                        formatRowValue(m_rows[m_dragRow], m_dragValue));
-            p.setClipping(false);
+            p.restore();
         }
 
         paintHoverReadout(p);
@@ -3056,13 +3061,14 @@ private:
         const auto geometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
         if (!geometry)
             return;
+        p.save();
         p.setFont(geometry->font);
-        p.setClipRect(geometry->clipRect);
+        p.setClipRect(geometry->clipRect, Qt::IntersectClip);
         p.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
         p.setBrush(Qt::NoBrush);
         p.drawEllipse(geometry->markerCenter, 3, 3);
         p.drawText(geometry->textBaseline, geometry->text);
-        p.setClipping(false);
+        p.restore();
     }
 
 protected:
@@ -4126,7 +4132,8 @@ private:
     void paintRow(QPainter &p, const Row &row, const QRect &r)
     {
         const QRect plot(kGutterW, r.top(), width() - kGutterW, r.height());
-        p.setClipRect(r);
+        p.save();
+        p.setClipRect(r, Qt::IntersectClip);
         p.setPen(themes::color(themes::Role::song_view_separator));
         p.drawLine(r.left(), r.bottom(), r.right(), r.bottom());
 
@@ -4184,7 +4191,7 @@ private:
                              : SongView::tr("no voice set · click to add"));
         }
 
-        p.setClipRect(plot);
+        p.setClipRect(plot, Qt::IntersectClip);
         drawGrid(p, m_sv, plot, kGutterW);
 
         if (row.kind == Row::Voice)
@@ -4196,7 +4203,7 @@ private:
         const std::pair<int, uint8_t> id = rowIdentity(row);
         drawOverlays(p, m_sv, plot, kGutterW,
                      m_sv->timeSelectionCoversRow(id.first, id.second));
-        p.setClipping(false);
+        p.restore();
     }
 
     void paintCurve(QPainter &p, const QRect &plot, const std::vector<LanePoint> &points,
@@ -4338,7 +4345,7 @@ protected:
             return;
 
         const QRect area(kGutterW, 0, width() - kGutterW, height());
-        p.setClipRect(area);
+        p.setClipRect(area, Qt::IntersectClip);
         drawOverlays(p, m_sv, area, kGutterW, false);
 
         const int cy = height() / 2;
