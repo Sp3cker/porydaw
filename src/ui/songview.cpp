@@ -1697,10 +1697,12 @@ protected:
             && std::abs(event->position().x() - m_pressPos.x())
                    >= lyt::space(Space::One)) {
             // The deferred empty-space press turns out to be a draw gesture.
-            // ANY horizontal travel starts it — no drag threshold — so the
-            // pending note appears immediately; this same event falls
-            // through to the Draw branch, which sizes it from the cursor
-            // (one snap cell until the drag crosses the next snap line).
+            // Space::One of horizontal travel starts it — enough to filter
+            // click jitter while staying well under the platform drag
+            // threshold, so the pending note still appears near-immediately;
+            // this same event falls through to the Draw branch, which sizes
+            // it from the cursor (one snap cell until the drag crosses the
+            // next snap line).
             beginDraw();
         }
         if (m_velModPress && m_drag == Drag::None) {
