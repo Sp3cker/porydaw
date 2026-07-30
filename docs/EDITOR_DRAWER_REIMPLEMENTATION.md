@@ -36,7 +36,9 @@ The reimplementation must:
    velocities.
 5. Persist view-only drawer and lane state per song without changing MIDI.
 6. Keep playback rendering and interaction responsive.
-7. Arrive as a short, clear series of buildable commits.
+7. Source all drawer, automation, velocity, and shared-origin static geometry
+   from shared `layout` enums or values.
+8. Arrive as a short, clear series of buildable commits.
 
 ## Non-goals
 
@@ -113,6 +115,139 @@ Each commit in the final series must build, pass its focused checks, and be
 safe to review when applied in order. Revert dependent commits in reverse
 order.
 
+## Static geometry contract
+
+All static on-screen geometry present in the final `EditorDrawer`, automation
+editor, `VelocityArea`, and `VelocityAxis`, whether pre-existing, moved, or
+new, must come from the shared `layout` module. Shared track-header,
+piano-keyboard, and plot-origin geometry used by those components follows the
+same rule in every consumer. The codebase spells the namespace `layout`; use
+its enums and resolved values.
+
+This rule covers fixed coordinates, widths, heights, gaps, insets, margins,
+borders, resize increments, minimum and maximum extents, hit radii, pointer
+tolerances, and screen-density thresholds. Derived geometry may add, subtract,
+partition, or clamp resolved `layout` values and live widget bounds. Ratios,
+ticks, MIDI values, item counts, and coordinates derived solely from current
+widget bounds are not static geometry. A literal offset, clamp, tolerance,
+stroke, or minimum added to a live bound remains static geometry and must use
+`layout`.
+
+Use:
+
+- `layout::space(layout::Space::...)` for spacing and small extents;
+- `layout::singlePixel()` only for a true one-unit hairline;
+- semantically named `layout` accessors for font-scaled static geometry;
+- `QFontMetrics` only to measure the current text, with every fixed inset or
+  extra bound supplied by `layout`; and
+- a named value added to `src/ui/layout.{h,cpp}` when no existing public
+  `layout` value expresses the required geometry.
+
+Calls such as `layout::fontPx(n)` with a numeric factor may appear only inside
+`src/ui/layout.cpp`, behind a semantic accessor. The target components may use
+`layout::Space` tokens, true live font or Qt style metrics, and named `layout`
+accessors; they may not disguise a local constant as a `fontPx` multiplier.
+Any static addition to a font or Qt style metric must itself be a `layout`
+value.
+
+No raw screen-space literal, feature-owned `k...Px` table, or direct numeric
+geometry argument may remain in the target components. Resolve each semantic
+value once and reuse it for size hints, layout, painting, hit testing,
+scrolling, persistence clamps, and checks so those paths cannot drift.
+
+The following measurements are the raw geometry values formerly stated in this
+document, observed at the audited reference's default captured font scale.
+They preserve the UX oracle but are not implementation constants. The
+implementation must expose a semantically named `layout` value for each
+independent measurement, prove that it resolves to the reference measurement
+at the audit scale, and prove that it follows its declared `layout` scaling or
+intentional `layout::singlePixel()` invariance at a second base font scale.
+Derived measurements must remain derived.
+
+| Semantic `layout` value | Audited default (logical pixels) |
+| --- | ---: |
+| Editor track-header width | 210 |
+| Piano-keyboard width | 52 |
+| Drawer resize-handle height | 4 |
+| Default automation-row height | 48 |
+| Minimum automation-row height | 28 |
+| Maximum automation-row height | 128 |
+| Automation-row wheel increment | 4 |
+| Add-automation-lane strip height | 20 |
+| Minimum visible piano-roll height | 120 |
+| Automation point-hit radius | 7 |
+| Automation neutral-snap radius | 8 |
+| Automation delete-time radius | 9 |
+| Automation point-detail threshold, per beat | 24 |
+| Continuous-axis density thresholds `D1`, `D2`, `D3`, and `D4` | 72, 100, 144, 288 |
+| Velocity start-node hit radius | 6 |
+| Velocity duration-line vertical radius | 4 |
+| Velocity duration-line horizontal slop | 2 |
+| Velocity relative-drag activation distance | 1 |
+| Velocity freehand stationary-stamp radius | 6 |
+
+This table is not an allowlist or a complete inventory. The preparatory layout
+commit must also inventory paint extents, text bounds, hover and clipping
+slop, strokes, and every other static geometry value found while extracting
+the existing automation editor and reading the reference drawer and velocity
+pages. Those values follow the same `layout` rule even when this document does
+not assign them an audited number.
+
+The plot origin is the resolved track-header width plus the resolved
+piano-keyboard width. Tab widths partition the resolved track-header width.
+The minimum open drawer height is the resolved default automation-row height
+plus the resolved add-lane-strip height. None of those derived values gets its
+own literal.
+
+### Required geometry gates
+
+The characterization commit must check in the complete set of geometry call
+sites and observed default outcomes as focused characterization cases. The
+layout-migration commit must turn that call-site inventory into the
+standard-library-only gate:
+
+```text
+python3 tools/check_editor_layout_geometry.py
+```
+
+The command must inspect the final implementations of `EditorDrawer`, the
+automation editor, `VelocityArea`, and `VelocityAxis`, including their headers
+and any shared track-header, piano-keyboard, or plot-origin definitions and
+consumers in `SongView`. It must reject raw numeric geometry in:
+
+- fixed-size, minimum-size, maximum-size, margin, spacing, and geometry calls;
+- rectangle, point, size, transform, clip, and painter coordinates;
+- pen widths, node radii, text bounds, hover or clipping slop, and strokes;
+- pointer-distance and screen-density comparisons; and
+- constants or aliases that feed any of those paths.
+
+The gate may exempt a domain value, collection index, ratio, or true live font
+or Qt style metric only by naming its source symbol and reason. It may not
+exempt geometry. A broad file, line-range, or numeric-pattern suppression is
+invalid. Once migration lands, the checker is the sole scoped source-location
+inventory; do not retain a second hand-maintained allowlist.
+
+Run the layout resolver check in fresh processes with these fixed inputs:
+
+```text
+QT_QPA_PLATFORM=offscreen <build>/porydaw_themechecks \
+  --editor-layout-check --base-font-px 12
+QT_QPA_PLATFORM=offscreen <build>/porydaw_themechecks \
+  --editor-layout-check --base-font-px 16
+```
+
+The audit input is `12`; the alternate input is `16`. Resolve a positive
+font-relative factor as `qMax(1, qRound(baseFontPx * factor))`, keep
+`layout::Space::Zero` at zero, and keep `layout::singlePixel()` at one.
+Resolve component values before deriving sums, halves, and clamps. Give the
+first tab integer half of the resolved header width and the second tab the
+remainder. The two runs must check the complete inventory, the audited-default
+table, the declared scaling or invariance of each semantic value, and the
+derived geometry.
+
+Run both resolver commands and the source-audit command after the layout
+migration, after every later feature commit, and in the final suite.
+
 ## Global behavior
 
 The piano roll remains the primary editor. The drawer overlays its bottom edge;
@@ -183,17 +318,17 @@ their full geometry under it.
 
 | Element | Required geometry |
 | --- | --- |
-| Track-header gutter | 210 px |
-| Piano keyboard | 52 px |
-| Plot origin | 262 px from the left edge |
-| Automation tab | first 105 px of the header gutter |
-| Velocity tab | second 105 px of the header gutter |
-| Resize handle | 4 px high, from x=210 through the plot's right edge |
-| Default automation row | 48 px high |
-| Add-lane strip | 20 px high |
-| Minimum open drawer | 68 px, or the host height when smaller |
+| Track-header gutter | Resolved editor track-header width |
+| Piano keyboard | Resolved piano-keyboard width |
+| Plot origin | Track-header width plus piano-keyboard width |
+| Automation tab | First half of the resolved track-header width |
+| Velocity tab | Remaining half of the resolved track-header width |
+| Resize handle | Resolved handle height, from the track-header edge through the plot's right edge |
+| Default automation row | Resolved default automation-row height |
+| Add-lane strip | Resolved add-automation-lane strip height |
+| Minimum open drawer | Default row plus add-lane strip, or the host height when smaller |
 | Default open height | one fifth of the host height |
-| Maximum open height | leave at least 120 px of roll when the host permits |
+| Maximum open height | Leave at least the resolved minimum piano-roll height when the host permits |
 
 The tab row sits just above the open drawer. When closed, it sits at the host's
 bottom edge and remains visible. The tabs are text-only, use normal checked
@@ -314,11 +449,11 @@ The overlay uses only `splitter[1]` when restoring drawer height;
 `splitter[0]` remains a positive compatibility value and must not shrink the
 underlying roll. Missing or short arrays use the one-fifth default.
 
-Clamp `laneHeight` and each `laneHeights` value to `28...128`. A
-`laneRanges` value is an integer clamped to `0...127`; `0` means Auto and a
-positive value is an exact fixed display maximum. Preserve valid non-menu
-values such as 91 across load, track remap, and save. The menu exposes only the
-five common choices defined below.
+Clamp `laneHeight` and each `laneHeights` value to the current resolved
+automation-row height bounds. A `laneRanges` value is an integer clamped to
+`0...127`; `0` means Auto and a positive value is an exact fixed display
+maximum. Preserve valid non-menu values such as 91 across load, track remap,
+and save. The menu exposes only the five common choices defined below.
 
 Persist row height and range state even after a row is hidden or deleted so
 that recreating it restores its display. Save view state on song-tab close,
@@ -359,8 +494,8 @@ selection includes only visible rows crossed by the selection.
 
 ### Add-lane strip
 
-Show the 20 px add-lane strip only when a document is attached. Its menu lists
-available parameters in this order:
+Show the resolved-height add-lane strip only when a document is attached. Its
+menu lists available parameters in this order:
 
 1. `Modulation (MOD)` (CC1)
 2. `Volume (VOL)` (CC7)
@@ -434,7 +569,7 @@ Replaced the <name> lane
 | Input | Result |
 | --- | --- |
 | Middle drag | Pan horizontal time and vertical lane scroll |
-| Ctrl-wheel | Change all row heights by 4 px per notch, clamped to 28...128 px |
+| Ctrl-wheel | Change all row heights by the resolved row increment per notch, clamped to the resolved row-height bounds |
 | Shift-wheel or horizontal wheel | Scroll time horizontally |
 | Plain wheel over plot | Zoom time around the pointer |
 | Plain wheel over gutter | Let the outer vertical scroll handle it |
@@ -446,7 +581,7 @@ the shared height.
 
 ### Point editing
 
-A point dot has a 7 px hit radius in both axes.
+A point dot uses the resolved automation point-hit radius in both axes.
 
 - Left-dragging a point moves it.
 - Pressing and releasing a point without a change is a no-op.
@@ -456,12 +591,12 @@ A point dot has a 7 px hit radius in both axes.
 - Alt applies the MIDI-clock grid.
 - Normal endpoint snapping uses the editor's current snap rules.
 - Ctrl magnetizes pan and tune to stored value 64, and pitch bend to zero, when
-  the pointer is within about 8 px.
+  the pointer is within the resolved automation neutral-snap radius.
 
 A right drag makes a half-open time selection across every visible row crossed
 by the drag. Right-clicking inside that selection opens its menu. Outside a
-selection, right-clicking within 9 px on the time axis deletes the nearby
-point; its vertical distance does not matter.
+selection, right-clicking within the resolved automation delete-time radius on
+the time axis deletes the nearby point; its vertical distance does not matter.
 
 Right-clicking an empty controller or tempo row clears the time selection.
 Right-clicking an empty voice row does not.
@@ -508,7 +643,7 @@ stopped, it follows the edit cursor.
 ### Drawing and hover
 
 Draw automation as held-step curves. Show point dots when horizontal zoom is at
-least 24 px per beat.
+least the resolved automation point-detail threshold per beat.
 
 - Tempo uses its accent color.
 - Controller rows retain track identity.
@@ -585,21 +720,23 @@ axis, selection, and starting values for the full gesture.
 
 ### Continuous axis
 
-The gutter ends at x=262 and the plot begins there. Place stored velocity 127
-at the top and 1 at the bottom, with the standard vertical inset
-`layout::Space::Three`.
+The gutter ends at the derived plot origin and the plot begins there. Place
+stored velocity 127 at the top and 1 at the bottom, with the standard vertical
+inset `layout::space(layout::Space::Three)`.
 
 Let `H` be the drawable vertical span from the y position for 127 to the y
 position for 1. This is the page height minus the top and bottom
-`layout::Space::Three` insets. Adapt ruler density to `H`:
+`layout::Space::Three` insets. Let `D1 < D2 < D3 < D4` be the four resolved
+continuous-axis density thresholds from the static geometry contract. Adapt
+ruler density to `H`:
 
 | Drawable span `H` | Labels | Tick marks |
 | --- | --- | --- |
-| below 72 px | 127, 64, 1 | 127, 96, 64, 32, 1 |
-| 72...99 px | 127, 64, 1 | 127, 112, 96, 80, 64, 48, 32, 16, 1 |
-| 100...143 px | 127, 96, 64, 32, 1 | 127, 112, 96, 80, 64, 48, 32, 16, 1 |
-| 144...287 px | 127, 112, 96, ..., 16, 1 | 127, 120, 112, ..., 8, 1 |
-| 288 px or more | 127, 120, 112, ..., 8, 1 | 127, 123, 119, ..., 7, 1 |
+| `H < D1` | 127, 64, 1 | 127, 96, 64, 32, 1 |
+| `D1 <= H < D2` | 127, 64, 1 | 127, 112, 96, 80, 64, 48, 32, 16, 1 |
+| `D2 <= H < D3` | 127, 96, 64, 32, 1 | 127, 112, 96, 80, 64, 48, 32, 16, 1 |
+| `D3 <= H < D4` | 127, 112, 96, ..., 16, 1 | 127, 120, 112, ..., 8, 1 |
+| `H >= D4` | 127, 120, 112, ..., 8, 1 | 127, 123, 119, ..., 7, 1 |
 
 Always include 1 and 127. Emphasize only the minimum and maximum active
 selected or preview values.
@@ -696,9 +833,10 @@ also draw:
 
 A note is hit when the pointer is:
 
-- within 6 px of its start node; or
-- no more than 4 px vertically from its duration line, with x between 2 px
-  before note start and 2 px after note end.
+- within the resolved velocity start-node hit radius; or
+- no more than the resolved duration-line vertical radius from its duration
+  line, with x extended by the resolved duration-line horizontal slop before
+  note start and after note end.
 
 Selection behavior:
 
@@ -720,8 +858,9 @@ on blank space preserves it.
 
 ### Velocity editing gestures
 
-A relative drag starts once the pointer moves at least 1 Manhattan pixel or the
-intrinsic level changes.
+A relative drag starts once the pointer moves at least the resolved velocity
+relative-drag activation distance in Manhattan distance or the intrinsic level
+changes.
 
 On a continuous axis, apply one shared proposed-velocity delta to the gesture
 snapshot. Clamp a DirectSound result to `1...127`. For each PSG note in an
@@ -736,14 +875,14 @@ starting value when the drag returns to its starting level. A move to another
 level uses that level's representative.
 
 A left press in blank plot space starts freehand painting at once. The initial
-stationary stamp changes start nodes within 6 px on the x axis. During motion,
-each segment changes every start node whose x lies between its two pointer
-samples, inclusive. It does not hit duration stems. Interpolate pointer y at
-each crossed node so a fast sweep does not leave gaps. A note compatible with
-the frozen intrinsic axis uses the requested level's representative. An
-incompatible note maps y continuously, then canonicalizes through that note's
-own voice context; DirectSound and unresolved notes keep the continuous exact
-value.
+stationary stamp changes start nodes within the resolved velocity freehand
+stationary-stamp radius on the x axis. During motion, each segment changes
+every start node whose x lies between its two pointer samples, inclusive. It
+does not hit duration stems. Interpolate pointer y at each crossed node so a
+fast sweep does not leave gaps. A note compatible with the frozen intrinsic
+axis uses the requested level's representative. An incompatible note maps y
+continuously, then canonicalizes through that note's own voice context;
+DirectSound and unresolved notes keep the continuous exact value.
 
 Other input:
 
@@ -879,8 +1018,8 @@ The reference implementation exposed these risks. They are not UX to copy:
 3. Current-voice lookup must use `drawerContextTick` across the drawer.
 4. Applying restored view state more than once must replace, not append,
    view-only lane lists.
-5. Very narrow widgets must clamp plot width at zero; no geometry may extend
-   through the 262 px gutter.
+5. Widgets narrower than the derived plot origin must clamp plot width at zero;
+   no geometry may extend through the gutter.
 6. The reference row-key decoder accepts controller numbers `128...254` even
    though no such lane identity is valid. The reimplementation must reject
    them per the sidecar rules.
@@ -913,6 +1052,12 @@ baseline before using the full roll check as an acceptance gate.
 
 Write or adapt focused checks on the fresh base for:
 
+- **LAY-01** — both fixed-input `--editor-layout-check` processes and
+  `python3 tools/check_editor_layout_geometry.py` pass; every inventoried value
+  resolves through `layout`, follows its declared scaling or
+  `layout::singlePixel()` invariance, and matches its audited default; plot
+  origin, tab partitioning, and minimum drawer height remain derived; size,
+  paint, hit-test, and clamp paths consume the same resolved values;
 - **CORE-01** — complete track remaps for move, insert, duplicate, delete, and
   metadata-only/engine-track transitions; no-op suppression; signal order;
   Undo; and Redo;
@@ -920,7 +1065,8 @@ Write or adapt focused checks on the fresh base for:
 - **CORE-03** — revision-checked batch velocity mutation, stale rejection,
   no-op filtering, selection continuity, and exact Undo;
 - **DRW-01** — overlay geometry, unchanged roll geometry, and widths below
-  262 px clamping plot width to zero without drawing through the gutter;
+  the derived plot origin clamping plot width to zero without drawing through
+  the gutter;
 - **DRW-02** — text-only non-focusable tabs, tab toggles, and `A`/`V`
   shortcuts, including a two-song `tabcheck` proving that only the active tab
   changes or announces;
@@ -1007,6 +1153,9 @@ Noise, Wave, and key-split notes:
    smooth without steady content rebuilds.
 10. **UX-10** — Close and reopen the song and confirm view state returns
     without a MIDI diff.
+11. **UX-11** — Repeat drawer layout, resize, automation point targeting,
+    velocity note targeting, and ruler-density checks at the second base-font
+    scale; confirm that visual geometry and hit testing stay aligned.
 
 Run the full existing roll check after the focused checks. Compare any
 pre-existing failure against the same current-base fixture before assigning it
@@ -1025,6 +1174,11 @@ and record the second valid song used by `tabcheck`.
 <porydaw> --keymapcheck
 <porydaw> --sessioncheck <scratch-project> mus_lovely
 <porydaw> --tabcheck <scratch-project> mus_lovely <second-valid-song>
+QT_QPA_PLATFORM=offscreen <build>/porydaw_themechecks \
+  --editor-layout-check --base-font-px 12
+QT_QPA_PLATFORM=offscreen <build>/porydaw_themechecks \
+  --editor-layout-check --base-font-px 16
+python3 tools/check_editor_layout_geometry.py
 ```
 
 Run each command on the pinned fixture revision with isolated settings where
@@ -1036,6 +1190,7 @@ touched module.
 
 | Contract section | Acceptance IDs |
 | --- | --- |
+| Static geometry contract | LAY-01, DRW-01, AUT-02, VEL-02, UX-11 |
 | Track-identity remapping | CORE-01, UX-04 |
 | Drawer layout, pages, focus, and persistence | DRW-01...DRW-05, LIFE-01, UX-01, UX-02, UX-10 |
 | Automation rows, menus, gestures, and Undo | AUT-01...AUT-03, LIFE-01, UX-03, UX-04 |
@@ -1074,7 +1229,7 @@ commands for the final run and when attributing failures.
 
 ## Required commit series
 
-Implement the work as eight ordered commits:
+Implement the work as ten ordered commits:
 
 1. **Publish complete track-identity remaps**
    - Cover move, insert, duplicate, delete, metadata-only/engine-track
@@ -1091,42 +1246,75 @@ Implement the work as eight ordered commits:
    - Cover stale rejection, deduplication, no-op filtering, and one-command
      Undo.
    - Make no drawer UI change.
-4. **Characterize and expose the existing automation page**
+4. **Characterize editor static geometry**
+   - Add focused characterization cases containing a complete call-site and
+     default-outcome inventory of existing automation, shared header/keyboard,
+     and reference drawer and velocity geometry.
+   - Record the audited defaults, fixed `12` and `16` inputs, rounding rule,
+     derived-value rules, and reasoned non-geometry exceptions.
+   - Add characterization checks without changing production geometry or UX.
+   - Make no drawer or velocity-page change.
+5. **Move shared editor geometry into `layout`**
+   - Add and check named `layout` accessors for the full inventory, including
+     values that later drawer and velocity commits will consume.
+   - Add the scoped no-argument source checker from the characterized call-site
+     inventory; it becomes the sole source-location inventory.
+   - Replace every static geometry literal in the existing automation editor.
+   - Move track-header and piano-keyboard widths to `layout`, update every
+     consumer, derive plot origin from them, and leave no `SongView` constant
+     or alias that can drift.
+   - Make both fixed-input resolver checks and the no-argument source checker
+     pass, preserving visible geometry and interaction at the audit scale.
+   - Make no drawer or velocity-page change.
+6. **Characterize and expose the existing automation page**
    - Add focused checks for the current point, sweep, ramp, row-resize, range,
      menu, selection, and Undo behavior on the fresh base.
    - Make only the structural change needed to host the page in an overlay.
    - Make no visible UX change.
-5. **Add the editor drawer shell and saved page state**
+7. **Add the editor drawer shell and saved page state**
    - Add overlay layout, tabs, shortcuts, resize, focus return, cancellation,
      and sidecar fields.
+   - Consume the predeclared named `layout` values and extend **LAY-01** for
+     every drawer geometry path.
    - Place the existing automation editor in the drawer without changing its
      editing rules.
-6. **Complete the automation drawer deltas**
+8. **Complete the automation drawer deltas**
    - Preserve the base's row resizing, range behavior, and menus.
    - Add typed row-state persistence and remapping, hidden/show lanes, and only
      the exact menu and gesture differences named in this document.
-   - Extend the characterization checks for the new behavior.
-7. **Add the continuous velocity page and shared selection editing**
+   - Extend the behavior checks and **LAY-01** for every changed geometry path.
+9. **Add the continuous velocity page and shared selection editing**
    - Keep intrinsic axes disabled.
+   - Consume the predeclared named `layout` values and extend **LAY-01** for
+     every velocity geometry path.
    - Add continuous gesture, freehand, cancellation, accessibility, status,
      and Undo checks.
-8. **Add intrinsic PSG graduations and finish velocity UX**
+10. **Add intrinsic PSG graduations and finish velocity UX**
    - Add Square, Noise, Wave, exact-value, mixer-independence, and native
      pass/fail checks.
+   - Extend **LAY-01** for any changed drawing or hit-test path.
 
 If a feature commit first needs a structural change, land that change as its
 own behavior-preserving refactor immediately before the feature. Do not hide a
 refactor inside a feature diff. Do not combine this series into one large
 commit, and do not mix optional fixes into it.
 
+Commits 6 through 10 may add no feature-local static geometry. If the
+characterization missed a needed value, first extend the inventory, add its
+named `layout` accessor and resolver checks, and make the source gate pass in a
+separate preparatory refactor.
+
 Before each commit:
 
 1. Build the application.
 2. Run the focused checks added or touched by that commit.
-3. Inspect the staged diff for whole-file churn and unrelated files.
-4. Confirm the commit message names one behavior or refactor.
+3. Starting with commit 5, run both fixed-input resolver commands and
+   `python3 tools/check_editor_layout_geometry.py`.
+4. Inspect the staged diff for raw static screen-space literals, whole-file
+   churn, and unrelated files.
+5. Confirm the commit message names one behavior or refactor.
 
-After the eighth commit, run the full relevant check set and manual UX pass.
+After the tenth commit, run the full relevant check set and manual UX pass.
 
 ## Explicit exclusions from the reference branch
 
@@ -1159,8 +1347,12 @@ The work is complete when:
 
 - every required behavior in this document has recorded evidence under its
   mapped automated or manual acceptance ID;
-- all eight commits, plus any named preparatory refactor, build and pass their
+- all ten commits, plus any named preparatory refactor, build and pass their
   focused checks when applied in order;
+- all static geometry in the drawer, automation editor, velocity editor, and
+  their shared track-header, piano-keyboard, and plot-origin paths resolves
+  through shared `layout` enums or values, with **LAY-01** passing at both font
+  scales;
 - the feature diff adds or modifies none of the excluded paths or hunks;
 - drawer and lane state round-trip without altering MIDI;
 - automation parity and the new lane behavior pass;
