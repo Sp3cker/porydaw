@@ -37,6 +37,7 @@ struct ImportAnalysis {
     int droppedTracks = 0; // channel-bearing chunks beyond the m4a limit
     int silentTracks = 0;  // mapped tracks beyond the player's track budget
     int peakConcurrentNotes = 0;
+    int sampleNoteLimit = 0;
     std::vector<ImportTrackInfo> tracks; // one per mapped engine track
     std::vector<ImportCcUsage> ccs;      // by CC number, ascending
     QStringList warnings;                // human-readable mapping-pass flags

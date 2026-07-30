@@ -38,6 +38,7 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QStri
 {
     ImportAnalysis a;
     a.division = smf.division;
+    a.sampleNoteLimit = kDefaultPcmBudget;
     a.smfTrackCount = int(smf.tracks.size());
 
     const auto map = engineTrackMap(smf, &a.droppedTracks);

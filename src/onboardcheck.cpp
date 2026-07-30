@@ -859,6 +859,7 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     ImportAnalysis analysis = analyzeForImport(external);
     check(analysis.mappedTracks == 2, "import: mapped track count");
     check(analysis.peakConcurrentNotes == 7, "import: peak polyphony");
+    check(analysis.sampleNoteLimit == 5, "import: sample note limit");
     bool sawDivisionWarning = false, sawPolyWarning = false;
     for (const QString &w : analysis.warnings) {
         if (w.contains(QStringLiteral("Division")))

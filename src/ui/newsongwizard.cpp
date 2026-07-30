@@ -12,10 +12,15 @@
 #include <QRegularExpressionValidator>
 #include <QSpinBox>
 #include <QTreeWidget>
+#include <QToolButton>
 #include <QVBoxLayout>
+
+#include <algorithm>
+#include <functional>
 
 #include "project/songregistry.h"
 #include "ui/layout.h"
+
 
 // ---- Identity: label, constant, music player ------------------------------
 
@@ -58,7 +63,7 @@ class IdentityPage : public QWizardPage
 
         m_player = new QComboBox(this);
         for (const MusicPlayer &p : SongRegistry::musicPlayers(project->root()))
-            m_player->addItem(p.name);
+            m_player->addItem(p.name, p.name);
         m_player->setToolTip(tr("BGM for music; SE players for sound effects and "
                                 "fanfares that interrupt music."));
         form->addRow(tr("&Player:"), m_player);
@@ -98,7 +103,24 @@ class IdentityPage : public QWizardPage
 
     QString label() const { return m_name->text(); }
     QString constant() const { return m_constant->text(); }
-    QString player() const { return m_player->currentText(); }
+    QString player() const
+    {
+        const QString data = m_player->currentData().toString();
+        return data.isEmpty() ? m_player->currentText() : data;
+    }
+
+    void selectPlayer(const QString &name)
+    {
+        const int index = m_player->findData(name);
+        if (index >= 0)
+            m_player->setCurrentIndex(index);
+    }
+
+    void onPlayerChanged(const std::function<void(const QString &)> &callback)
+    {
+        connect(m_player, &QComboBox::currentIndexChanged, this,
+                [this, callback] { callback(player()); });
+    }
 
   private:
     DecompProject *m_project;
@@ -216,35 +238,54 @@ class SoundPage : public QWizardPage
     QCheckBox *m_noCompression;
 };
 
-// ---- Analysis: what's in the external file ---------------------------------
+// ---- Analysis: what the import will change ----------------------------------
 
 class AnalysisPage : public QWizardPage
 {
   public:
-    AnalysisPage(const ImportAnalysis &a, const QString &sourcePath)
+    AnalysisPage(const SmfFile &smf, const ImportAnalysis &analysis,
+                 const QVector<MusicPlayer> &players, const QString &sourcePath,
+                 IdentityPage *identity)
+        : m_smf(smf)
+        , m_analysis(analysis)
+        , m_players(players)
+        , m_identity(identity)
     {
         setTitle(tr("MIDI analysis"));
         setSubTitle(QFileInfo(sourcePath).fileName());
 
         auto *layout = new QVBoxLayout(this);
-        auto *summary = new QLabel(tr("Division %1 · %2 chunk(s) → <b>%3 m4a track(s)</b> · peak "
-                                      "%4 simultaneous note(s)")
-                                       .arg(a.division)
-                                       .arg(a.smfTrackCount)
-                                       .arg(a.mappedTracks)
-                                       .arg(a.peakConcurrentNotes),
-                                   this);
-        summary->setWordWrap(true);
-        layout->addWidget(summary);
+        auto *roleForm = new QFormLayout;
+        m_player = new QComboBox(this);
+        for (const MusicPlayer &player : m_players)
+            m_player->addItem(player.name, player.name);
+        m_player->setToolTip(tr("BGM for music; SE players for sound effects and "
+                                "fanfares that interrupt music."));
+        roleForm->addRow(tr("&Player:"), m_player);
+        layout->addLayout(roleForm);
 
-        for (const QString &warning : a.warnings) {
-            auto *w = new QLabel(QStringLiteral("⚠ ") + warning, this);
-            w->setWordWrap(true);
-            w->setStyleSheet(QStringLiteral("color: #c08030;"));
-            layout->addWidget(w);
-        }
+        m_fileTracks = new QLabel(this);
+        layout->addWidget(m_fileTracks);
+        m_gameTrackLimit = new QLabel(this);
+        layout->addWidget(m_gameTrackLimit);
 
-        if (a.division % 24 != 0) {
+        m_status = new QLabel(this);
+        m_status->setWordWrap(true);
+        layout->addWidget(m_status);
+
+        m_summary = new QLabel(this);
+        m_summary->setWordWrap(true);
+        layout->addWidget(m_summary);
+        m_trackAction = makeNotice(layout);
+        m_noteLimitHeading = new QLabel(tr("<b>Peak simultaneous notes:</b>"), this);
+        layout->addWidget(m_noteLimitHeading);
+
+        m_polyphony = makeNotice(layout);
+        m_defaultInstrument = makeNotice(layout);
+        m_format = makeNotice(layout);
+        m_controller = makeNotice(layout);
+
+        if (m_smf.division % 24 != 0) {
             m_rescale =
                 new QCheckBox(tr("Rescale timing to the m4a clock grid (24 clocks per beat, "
                                  "48 with -X)"),
@@ -256,28 +297,176 @@ class AnalysisPage : public QWizardPage
             layout->addWidget(m_rescale);
         }
 
-        auto *tree = new QTreeWidget(this);
-        tree->setColumnCount(3);
-        tree->setHeaderLabels({tr("Controller"), tr("m4a meaning"), tr("Events")});
-        tree->setRootIsDecorated(false);
-        tree->setUniformRowHeights(true);
-        tree->header()->setSectionResizeMode(1, QHeaderView::Stretch);
-        for (const ImportCcUsage &cc : a.ccs) {
-            auto *item = new QTreeWidgetItem(tree);
-            item->setText(0, QStringLiteral("CC %1").arg(cc.cc));
-            item->setText(1, cc.audible ? cc.label
-                                        : tr("%1 (kept, but silent in-game)").arg(cc.label));
-            item->setText(2, QString::number(cc.count));
-            if (!cc.audible)
-                item->setForeground(1, QBrush(QColor(0xc0, 0x80, 0x30)));
+        if (!m_analysis.ccs.empty()) {
+            auto *ccToggle = new QToolButton(this);
+            ccToggle->setText(tr("Controllers used"));
+            ccToggle->setCheckable(true);
+            ccToggle->setAutoRaise(true);
+            ccToggle->setArrowType(Qt::RightArrow);
+            ccToggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+            layout->addWidget(ccToggle);
+
+            auto *ccBody = new QWidget(this);
+            auto *ccLayout = new QVBoxLayout(ccBody);
+            auto *tree = new QTreeWidget(ccBody);
+            tree->setColumnCount(4);
+            tree->setHeaderLabels(
+                {tr("Controller"), tr("m4a meaning"), tr("Events"), tr("Audible")});
+            tree->setRootIsDecorated(false);
+            tree->setUniformRowHeights(true);
+            tree->header()->setSectionResizeMode(1, QHeaderView::Stretch);
+            for (const ImportCcUsage &cc : m_analysis.ccs) {
+                auto *item = new QTreeWidgetItem(tree);
+                item->setText(0, QStringLiteral("CC %1").arg(cc.cc));
+                item->setText(1, cc.label);
+                item->setText(2, QString::number(cc.count));
+                item->setText(3, cc.audible ? tr("Yes") : tr("No"));
+                if (!cc.audible)
+                    item->setForeground(3, QBrush(QColor(0xc0, 0x80, 0x30)));
+            }
+            ccLayout->addWidget(tree);
+            ccBody->setVisible(false);
+            layout->addWidget(ccBody);
+            connect(ccToggle, &QToolButton::toggled, this, [ccToggle, ccBody](bool on) {
+                ccBody->setVisible(on);
+                ccToggle->setArrowType(on ? Qt::DownArrow : Qt::RightArrow);
+            });
         }
-        layout->addWidget(new QLabel(tr("Controllers used:"), this));
-        layout->addWidget(tree, 1);
+        connect(m_player, &QComboBox::currentIndexChanged, this, [this] { refresh(); });
+        m_identity->onPlayerChanged([this](const QString &name) { selectPlayer(name); });
+        refresh();
     }
 
     bool rescaleSelected() const { return m_rescale && m_rescale->isChecked(); }
 
   private:
+    QLabel *makeNotice(QVBoxLayout *layout)
+    {
+        auto *notice = new QLabel(this);
+        notice->setWordWrap(true);
+        notice->setStyleSheet(QStringLiteral("color: #c08030;"));
+        layout->addWidget(notice);
+        return notice;
+    }
+
+    void selectPlayer(const QString &name)
+    {
+        const int index = m_player->findData(name);
+        if (index >= 0)
+            m_player->setCurrentIndex(index);
+    }
+
+    void setNotice(QLabel *label, const QString &text)
+    {
+        label->setText(text);
+        label->setVisible(!text.isEmpty());
+    }
+
+    void refresh()
+    {
+        const int index = m_player->currentIndex();
+        if (index < 0 || index >= m_players.size())
+            return;
+        const MusicPlayer &player = m_players.at(index);
+        const int trackLimit = player.trackCount < 0 ? 16 : std::min(player.trackCount, 16);
+        m_analysis = analyzeForImport(m_smf, trackLimit, player.name);
+        m_identity->selectPlayer(player.name);
+
+        const int sourceTracks = m_analysis.mappedTracks + m_analysis.droppedTracks;
+        m_fileTracks->setText(tr("MIDI tracks: %1").arg(sourceTracks));
+        m_gameTrackLimit->setText(tr("Player track limit: %1").arg(trackLimit));
+
+        QStringList status;
+        if (m_analysis.droppedTracks > 0)
+            status.append(tr("Tracks 17 through %1 will not be imported.").arg(sourceTracks));
+        if (status.isEmpty() && m_analysis.silentTracks == 0)
+            status.append(tr("No track mapping changes."));
+        m_status->setText(QStringLiteral("<b>%1</b>").arg(status.join(QStringLiteral("<br>"))));
+        m_status->setVisible(!status.isEmpty());
+
+        QStringList actions;
+        if (m_analysis.droppedTracks > 0) {
+            actions.append(tr("Reduce the MIDI file to 16 tracks to import every track."));
+        }
+        if (m_analysis.silentTracks > 0) {
+            actions.append(
+                tr("Reduce the MIDI file to %1 tracks to play every track.").arg(trackLimit));
+            actions.append(
+                tr("After import, move tracks %1 through %2 above track %3 to play them.")
+                    .arg(trackLimit + 1)
+                    .arg(m_analysis.mappedTracks)
+                    .arg(trackLimit));
+        }
+        setNotice(m_trackAction, actions.join(QLatin1Char(' ')));
+
+        if (m_analysis.droppedTracks > 0) {
+            QString text = tr("%1 of %2 tracks will be imported; %3 omitted.")
+                               .arg(m_analysis.mappedTracks)
+                               .arg(sourceTracks)
+                               .arg(m_analysis.droppedTracks);
+            if (m_analysis.silentTracks > 0) {
+                text += tr(" Tracks %1 through %2 will be silent in-game.")
+                            .arg(trackLimit + 1)
+                            .arg(m_analysis.mappedTracks);
+            }
+            m_summary->setText(text);
+        } else if (m_analysis.silentTracks > 0) {
+            m_summary->setText(
+                tr("%1 tracks imported; tracks %2 through %3 silent in-game.")
+                    .arg(m_analysis.mappedTracks)
+                    .arg(trackLimit + 1)
+                    .arg(m_analysis.mappedTracks));
+        } else {
+            m_summary->setText(
+                tr("%1 tracks imported.").arg(m_analysis.mappedTracks));
+        }
+        setNotice(
+            m_polyphony,
+            m_analysis.peakConcurrentNotes > m_analysis.sampleNoteLimit
+                ? tr("Up to %1 notes sound at once; the GBA mixes %2 sample-based notes. CGB square, wave, and noise voices do not count. Extra notes can be dropped or stolen.")
+                      .arg(m_analysis.peakConcurrentNotes)
+                      .arg(m_analysis.sampleNoteLimit)
+                : QString());
+
+        const bool notesBeforeInstrument =
+            std::any_of(m_analysis.tracks.cbegin(), m_analysis.tracks.cend(),
+                        [](const ImportTrackInfo &track) {
+                            return track.noteCount > 0 && track.notesBeforeProgram;
+                        });
+        setNotice(m_defaultInstrument,
+                  notesBeforeInstrument
+                      ? tr("Some tracks play notes before any program change; those notes use voice 0.")
+                      : QString());
+        setNotice(m_format,
+                  m_smf.wasFormat0
+                      ? tr("Format 0 file imported as format 1, one track per channel.")
+                      : QString());
+        const bool hasSilentController =
+            std::any_of(m_analysis.ccs.cbegin(), m_analysis.ccs.cend(),
+                        [](const ImportCcUsage &cc) { return !cc.audible; });
+        setNotice(m_controller,
+                  hasSilentController
+                      ? tr("Some controller events are retained but silent in-game.")
+                      : QString());
+        m_noteLimitHeading->setVisible(
+            m_analysis.peakConcurrentNotes > m_analysis.sampleNoteLimit);
+    }
+
+    const SmfFile &m_smf;
+    ImportAnalysis m_analysis;
+    QVector<MusicPlayer> m_players;
+    IdentityPage *m_identity;
+    QComboBox *m_player;
+    QLabel *m_fileTracks;
+    QLabel *m_gameTrackLimit;
+    QLabel *m_status;
+    QLabel *m_trackAction;
+    QLabel *m_summary;
+    QLabel *m_noteLimitHeading;
+    QLabel *m_polyphony;
+    QLabel *m_defaultInstrument;
+    QLabel *m_format;
+    QLabel *m_controller;
     QCheckBox *m_rescale = nullptr;
 };
 
@@ -300,17 +489,9 @@ NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported, const QSt
     , m_imported(std::move(imported))
 {
     setWindowTitle(tr("Import MIDI — %1").arg(QFileInfo(sourcePath).fileName()));
-    // m_imported arrives coerced to format 1 (SmfFile::read), so the
-    // analysis and written .mid both deal in one chunk per channel, like
-    // every song porydaw opens. The track-budget warning is computed against
-    // the first music player (the identity page's default, normally BGM) and
-    // names it, since the analysis page precedes the player choice.
     const QVector<MusicPlayer> players = SongRegistry::musicPlayers(project->root());
     const MusicPlayer &defaultPlayer = players.first();
     m_analysis = analyzeForImport(m_imported, defaultPlayer.trackCount, defaultPlayer.name);
-    if (m_imported.wasFormat0)
-        m_analysis.warnings.prepend(
-            tr("Format 0 file — imported as format 1 (one chunk per channel)."));
     buildPages(sourcePath, voicegroupArgs);
 }
 
@@ -328,11 +509,15 @@ void NewSongWizard::buildPages(const QString &sourcePath, const QStringList &voi
         if (!suggested.startsWith(QStringLiteral("mus_")) &&
             !suggested.startsWith(QStringLiteral("se_")))
             suggested.prepend(QStringLiteral("mus_"));
-        m_analysisPage = new AnalysisPage(m_analysis, sourcePath);
-        addPage(m_analysisPage);
     }
 
     m_identity = new IdentityPage(m_project, suggested);
+    if (m_importMode) {
+        const QVector<MusicPlayer> players = SongRegistry::musicPlayers(m_project->root());
+        m_analysisPage =
+            new AnalysisPage(m_imported, m_analysis, players, sourcePath, m_identity);
+        addPage(m_analysisPage);
+    }
     addPage(m_identity);
     m_sound = new SoundPage(m_project, m_identity, voicegroupArgs);
     addPage(m_sound);
