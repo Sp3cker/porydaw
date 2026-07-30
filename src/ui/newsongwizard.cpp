@@ -269,7 +269,16 @@ class AnalysisPage : public QWizardPage
         setSubTitle(QFileInfo(sourcePath).fileName());
 
         auto *layout = new QVBoxLayout(this);
+        const int zeroSpace = ::layout::space(::layout::Space::Zero);
+        const int inlineSpace = ::layout::space(::layout::Space::Two);
+        const int verticalSpace = ::layout::space(::layout::Space::Three);
+        const int pageMargin = ::layout::space(::layout::Space::Three);
+        layout->setContentsMargins(pageMargin, pageMargin, pageMargin, pageMargin);
+        layout->setSpacing(verticalSpace);
         auto *roleForm = new QFormLayout;
+        roleForm->setContentsMargins(zeroSpace, zeroSpace, zeroSpace, zeroSpace);
+        roleForm->setHorizontalSpacing(inlineSpace);
+        roleForm->setVerticalSpacing(verticalSpace);
         m_player = new QComboBox(this);
         for (const MusicPlayer &player : m_players)
             m_player->addItem(playerRoleName(player.name, false), player.name);
@@ -277,6 +286,7 @@ class AnalysisPage : public QWizardPage
             tr("Select Background music for a song. Select Sound effect for a sound. Also select it for a fanfare."));
         roleForm->addRow(tr("The song will be used as:"), m_player);
         layout->addLayout(roleForm);
+        layout->addSpacing(::layout::space(::layout::Space::One));
 
         m_fileTracks = new QLabel(this);
         layout->addWidget(m_fileTracks);
@@ -320,6 +330,9 @@ class AnalysisPage : public QWizardPage
 
             auto *ccBody = new QWidget(this);
             auto *ccLayout = new QVBoxLayout(ccBody);
+            ccLayout->setContentsMargins(::layout::space(::layout::Space::Eight), zeroSpace,
+                                         zeroSpace, zeroSpace);
+            ccLayout->setSpacing(verticalSpace);
             auto *tree = new QTreeWidget(ccBody);
             tree->setColumnCount(4);
             tree->setHeaderLabels(
@@ -344,6 +357,7 @@ class AnalysisPage : public QWizardPage
                 ccToggle->setArrowType(on ? Qt::DownArrow : Qt::RightArrow);
             });
         }
+        layout->addStretch(1);
         connect(m_player, &QComboBox::currentIndexChanged, this, [this] { refresh(); });
         m_identity->onPlayerChanged([this](const QString &name) { selectPlayer(name); });
         refresh();
@@ -516,7 +530,8 @@ NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported, const QSt
 void NewSongWizard::buildPages(const QString &sourcePath, const QStringList &voicegroupArgs)
 {
     setOption(QWizard::NoBackButtonOnStartPage);
-    setMinimumSize(::layout::fontPx(52), ::layout::fontPx(38));
+    setMinimumSize(::layout::fontPx(m_importMode ? 60 : 52),
+                   ::layout::fontPx(m_importMode ? 44 : 38));
 
     QString suggested;
     if (m_importMode) {
