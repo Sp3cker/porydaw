@@ -862,9 +862,9 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     check(analysis.sampleNoteLimit == 5, "import: sample note limit");
     bool sawDivisionWarning = false, sawPolyWarning = false;
     for (const QString &w : analysis.warnings) {
-        if (w.contains(QStringLiteral("Division")))
+        if (w.contains(QStringLiteral("note timing")))
             sawDivisionWarning = true;
-        if (w.contains(QStringLiteral("at once")))
+        if (w.contains(QStringLiteral("same time")))
             sawPolyWarning = true;
     }
     check(sawDivisionWarning, "import: no division warning for 480 ppqn");
@@ -891,7 +891,7 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         bool sawBudgetWarning = false;
         for (const QString &w : tight.warnings) {
             if (w.contains(QStringLiteral("MUSIC_PLAYER_BGM")) &&
-                w.contains(QStringLiteral("silent in-game")))
+                w.contains(QStringLiteral("will not play")))
                 sawBudgetWarning = true;
         }
         check(sawBudgetWarning, "import: budget warning names the player");

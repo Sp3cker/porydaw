@@ -132,30 +132,32 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QStri
     }
 
     if (a.droppedTracks > 0)
-        a.warnings.append(QObject::tr("%1 track(s) beyond the m4a 16-track limit "
-                                      "will not play.")
-                              .arg(a.droppedTracks));
-    if (a.silentTracks > 0)
         a.warnings.append(
-            QObject::tr("%1 track(s) beyond %2's %3-track allocation "
-                        "(sound/music_player_table.inc) will be silent in-game.")
+            QObject::tr("Porydaw will not import %1 tracks. The MIDI file contains more than 16 tracks.")
+                .arg(a.droppedTracks));
+    if (a.silentTracks > 0) {
+        QString displayName = playerName;
+        if (playerName == QStringLiteral("MUSIC_PLAYER_BGM"))
+            displayName = QObject::tr("Background music (%1)").arg(playerName);
+        a.warnings.append(
+            QObject::tr("The game will not play %1 tracks for %2. This player can play %3 tracks.")
                 .arg(a.silentTracks)
-                .arg(playerName.isEmpty() ? QStringLiteral("the music player") : playerName)
+                .arg(displayName.isEmpty() ? QObject::tr("the selected audio player") : displayName)
                 .arg(trackBudget));
+    }
     if (a.division % 24 != 0)
-        a.warnings.append(QObject::tr("Division %1 is not a multiple of 24; mid2agb quantizes to "
-                                      "24 clocks per beat, so timing will shift slightly.")
-                              .arg(a.division));
+        a.warnings.append(
+            QObject::tr("Porydaw will adjust the note timing. The source timing value is %1.")
+                .arg(a.division));
     if (a.peakConcurrentNotes > kDefaultPcmBudget)
-        a.warnings.append(QObject::tr("Up to %1 notes sound at once; the GBA mixes %2 sample-based "
-                                      "notes (CGB square/wave/noise voices don't count). Extra "
-                                      "notes will be dropped or stolen.")
-                              .arg(a.peakConcurrentNotes)
-                              .arg(kDefaultPcmBudget));
+        a.warnings.append(
+            QObject::tr("%1 notes play at the same time. The Game Boy Advance can mix %2 sample notes at the same time. Square, wave, and noise sounds do not use this limit. The game can stop some sample notes.")
+                .arg(a.peakConcurrentNotes)
+                .arg(kDefaultPcmBudget));
     for (const ImportTrackInfo &t : a.tracks) {
         if (t.noteCount > 0 && t.notesBeforeProgram) {
-            a.warnings.append(QObject::tr("Some tracks play notes before any program change; those "
-                                          "notes use voice 0."));
+            a.warnings.append(QObject::tr("Some notes start before the MIDI data selects an instrument. "
+                                          "These notes use instrument 0."));
             break;
         }
     }
