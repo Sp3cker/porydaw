@@ -399,6 +399,10 @@ open.
   playhead sweeping across them costs blits, not note/lane re-rasters. Content
   changes must go through `invalidateContent()` — a plain `update()` repaints
   the stale cache (see the class comment in `src/ui/timelinesurface.h`).
+  Partial updates and clips are snapped to a device-aligned logical grid so
+  fractional scale factors cannot leave stale boundary pixels;
+  `PORYDAW_FORCE_UNCACHED_TIMELINE` disables the cache entirely for
+  diagnosing stale-pixel artifacts in the field.
 - **Update cadences:** playhead timer 60 Hz while playing; time/polyphony status
   labels 10 Hz while playing, 2 Hz otherwise, writing widgets only on change.
 

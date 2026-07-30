@@ -12,6 +12,17 @@ class QPainter;
 
 namespace songview {
 
+// Smallest logical grid whose device size is integral at this device pixel
+// ratio (1 at integer scales, 2 at 150%, 4 at any quarter scale); 0 when no
+// grid up to 64 works. Partial updates and clips snapped to this grid keep
+// every scaled edge on whole device pixels, so neither Qt's update-region
+// rounding nor partial clip coverage can shave boundary pixels at
+// fractional scale factors.
+int deviceAlignmentGrid(qreal dpr) noexcept;
+// Expands every rect of the region outward to the grid. grid <= 1 returns
+// the region unchanged.
+QRegion expandRegionToDeviceGrid(const QRegion &region, int grid);
+
 // Paint counters for the rollcheck harness: how often and how many device
 // pixels paintContent() actually rasterized, plus the cache's estimated
 // footprint. Playhead sweeps must leave these untouched (pure cache blits).

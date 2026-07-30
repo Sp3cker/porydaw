@@ -206,6 +206,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                      qUtf8Printable(songLabel));
         return 1;
     }
+    if (qEnvironmentVariableIsSet("PORYDAW_FORCE_UNCACHED_TIMELINE")) {
+        // The diagnostic mode invalidates every paint-budget assertion below.
+        std::fprintf(stderr,
+                     "rollcheck: FAIL %s: unset PORYDAW_FORCE_UNCACHED_TIMELINE "
+                     "(diagnostic mode breaks the cache paint budgets)\n",
+                     qUtf8Printable(songLabel));
+        return 1;
+    }
     view.resize(1280, 800);
     view.setSong(timeline.get(), nullptr);
     view.setDocument(&doc);

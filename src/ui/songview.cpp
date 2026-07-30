@@ -3041,8 +3041,15 @@ private:
         // outside its nominal three-pixel radii.
         const QRect markerBounds =
             QRectF(marker.x() - 4, marker.y() - 4, 9, 9).toAlignedRect();
-        const QRect textBounds =
-            QRectF(metrics.boundingRect(text)).translated(baseline).toAlignedRect();
+        // boundingRect is the FONT's idea of the ink extents; the platform
+        // raster can exceed it (DirectWrite/ClearType glyphs bleed a pixel
+        // or two past GDI-style metrics on Windows), and any painted pixel
+        // outside this region becomes a permanent trail behind the moving
+        // readout. Pad generously — the region only sizes a repaint.
+        const QRect textBounds = QRectF(metrics.boundingRect(text))
+                                     .translated(baseline)
+                                     .toAlignedRect()
+                                     .adjusted(-3, -3, 3, 3);
         const QRegion paintRegion =
             (QRegion(markerBounds) | QRegion(textBounds)) & QRegion(clip);
         if (paintRegion.isEmpty())

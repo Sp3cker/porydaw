@@ -433,9 +433,21 @@ QRegion PlayheadOverlay::playheadRegion() const
 
 void PlayheadOverlay::updatePaintRegion()
 {
+    // Update regions become backing-store flush regions, which Qt scales to
+    // device pixels with its own rounding — snap them to whole device pixels
+    // so fractional scale factors cannot shave boundary pixels on screen
+    // (same discipline as TimelineSurface::invalidateContent).
+    const int grid = deviceAlignmentGrid(m_devicePixelRatio > 0.0
+                                             ? m_devicePixelRatio
+                                             : devicePixelRatioF());
+    const auto snapped = [grid, this](const QRegion &region) {
+        return grid == 0 ? QRegion(rect())
+                         : expandRegionToDeviceGrid(region, grid);
+    };
+
     if (m_platformApplied) {
         if (!m_lastPaintedRegion.isEmpty()) {
-            update(m_lastPaintedRegion);
+            update(snapped(m_lastPaintedRegion));
             m_lastPaintedRegion = QRegion();
         }
         return;
@@ -449,7 +461,7 @@ void PlayheadOverlay::updatePaintRegion()
     const QRegion dirty = m_lastPaintedRegion + currentRegion;
     m_lastPaintedRegion = currentRegion;
     if (!dirty.isEmpty()) {
-        update(dirty);
+        update(snapped(dirty));
     }
 }
 
