@@ -221,6 +221,16 @@ if(APPLE)
         src/rollcheckplayhead_macos.mm
     )
 endif()
+qt_add_resources(porydaw "app_icon"
+    PREFIX "/icons"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    FILES
+        resources/porydaw-16.png
+        resources/porydaw-32.png
+        resources/porydaw-48.png
+        resources/porydaw-128.png
+        resources/porydaw-256.png
+)
 qt_add_resources(porydaw "cursor_images"
     PREFIX "/cursors"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
@@ -288,6 +298,8 @@ endif()
 
 if(WIN32)
     set_target_properties(porydaw PROPERTIES WIN32_EXECUTABLE TRUE)
+    # Embeds resources/porydaw.ico as the executable's Explorer/taskbar icon.
+    target_sources(porydaw PRIVATE resources/porydaw.rc)
     target_link_libraries(porydaw_app PRIVATE dwmapi)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         # MinGW: statically link libgcc/libstdc++/winpthread so the exe
@@ -300,7 +312,11 @@ if(APPLE)
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
-        MACOSX_BUNDLE_GUI_IDENTIFIER com.huderlem.porydaw)
+        MACOSX_BUNDLE_GUI_IDENTIFIER com.huderlem.porydaw
+        MACOSX_BUNDLE_ICON_FILE porydaw.icns)
+    target_sources(porydaw PRIVATE resources/porydaw.icns)
+    set_source_files_properties(resources/porydaw.icns PROPERTIES
+        MACOSX_PACKAGE_LOCATION Resources)
 endif()
 
 # ---- Offline render CLI (development/testing: parity vs poryaaaa_render) ----

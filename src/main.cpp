@@ -1,6 +1,7 @@
 #include <cstdio>
 
 #include <QApplication>
+#include <QIcon>
 #include <QStyleHints>
 
 #include "mainwindow.h"
@@ -98,6 +99,13 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName("porydaw");
     QApplication::setApplicationVersion(QStringLiteral(PORYDAW_VERSION));
     QApplication::setOrganizationName("huderlem");
+    QIcon appIcon;
+    for (int size : {16, 32, 48, 128, 256})
+        appIcon.addFile(QStringLiteral(":/icons/porydaw-%1.png").arg(size));
+    QApplication::setWindowIcon(appIcon);
+    // Wayland ignores the window icon; it resolves the icon through the
+    // desktop entry instead (Icon=porydaw in resources/porydaw.desktop).
+    QGuiApplication::setDesktopFileName(QStringLiteral("porydaw"));
     if (!ui::initializeApplication(app))
         return 1;
 
