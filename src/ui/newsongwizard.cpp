@@ -21,19 +21,12 @@
 #include "project/songregistry.h"
 #include "ui/layout.h"
 
-static QString playerRoleName(const QString &symbol, bool includeSymbol)
+// "track 4" / "tracks 4 through 9" — ranges stay grammatical when they
+// collapse to a single track.
+static QString trackRangeText(int first, int last)
 {
-    QString role;
-    if (symbol == QStringLiteral("MUSIC_PLAYER_BGM")) {
-        role = QObject::tr("Background music");
-    } else if (symbol.startsWith(QStringLiteral("MUSIC_PLAYER_SE"))) {
-        const QString number = symbol.mid(15);
-        role = number.isEmpty() ? QObject::tr("Sound effect")
-                                : QObject::tr("Sound effect %1").arg(number);
-    } else {
-        return symbol;
-    }
-    return includeSymbol ? QObject::tr("%1 (%2)").arg(role, symbol) : role;
+    return first == last ? QObject::tr("track %1").arg(first)
+                         : QObject::tr("tracks %1 through %2").arg(first).arg(last);
 }
 
 // ---- Identity: label, constant, music player ------------------------------
@@ -130,9 +123,11 @@ class IdentityPage : public QWizardPage
             m_player->setCurrentIndex(index);
     }
 
-    void onPlayerChanged(const std::function<void(const QString &)> &callback)
+    // context receives the connection, so a callback into another page dies
+    // with that page rather than dangling.
+    void onPlayerChanged(QObject *context, const std::function<void(const QString &)> &callback)
     {
-        connect(m_player, &QComboBox::currentIndexChanged, this,
+        connect(m_player, &QComboBox::currentIndexChanged, context,
                 [this, callback] { callback(player()); });
     }
 
@@ -301,9 +296,6 @@ class AnalysisPage : public QWizardPage
         m_summary->setWordWrap(true);
         layout->addWidget(m_summary);
         m_trackAction = makeNotice(layout);
-        m_noteLimitHeading = new QLabel(tr("<b>Note limit:</b>"), this);
-        layout->addWidget(m_noteLimitHeading);
-
         m_polyphony = makeNotice(layout);
         m_defaultInstrument = makeNotice(layout);
         m_format = makeNotice(layout);
@@ -335,7 +327,7 @@ class AnalysisPage : public QWizardPage
             auto *tree = new QTreeWidget(ccBody);
             tree->setColumnCount(4);
             tree->setHeaderLabels(
-                {tr("Controller"), tr("Function"), tr("Number"), tr("In the game")});
+                {tr("Controller"), tr("Function"), tr("Events"), tr("In the game")});
             tree->setRootIsDecorated(false);
             tree->setUniformRowHeights(true);
             tree->header()->setSectionResizeMode(1, QHeaderView::Stretch);
@@ -358,7 +350,7 @@ class AnalysisPage : public QWizardPage
         }
         layout->addStretch(1);
         connect(m_player, &QComboBox::currentIndexChanged, this, [this] { refresh(); });
-        m_identity->onPlayerChanged([this](const QString &name) { selectPlayer(name); });
+        m_identity->onPlayerChanged(this, [this](const QString &name) { selectPlayer(name); });
         refresh();
     }
 
@@ -398,13 +390,14 @@ class AnalysisPage : public QWizardPage
         m_identity->selectPlayer(player.name);
 
         const int sourceTracks = m_analysis.mappedTracks + m_analysis.droppedTracks;
-        m_fileTracks->setText(tr("This file has %1 tracks.").arg(sourceTracks));
+        m_fileTracks->setText(tr("This file has %1.").arg(trackCountPhrase(sourceTracks)));
         m_gameTrackLimit->setText(
             tr("The maximum number of tracks in the game is %1.").arg(trackLimit));
 
         QStringList status;
         if (m_analysis.droppedTracks > 0) {
-            status.append(tr("Porydaw will not import tracks 17 through %1.").arg(sourceTracks));
+            status.append(tr("Porydaw will not import %1.")
+                              .arg(trackRangeText(m_analysis.mappedTracks + 1, sourceTracks)));
         }
         if (status.isEmpty() && m_analysis.silentTracks == 0)
             status.append(tr("Porydaw can import this MIDI file."));
@@ -417,56 +410,52 @@ class AnalysisPage : public QWizardPage
                 tr("To import all tracks, use a maximum of 16 tracks in the MIDI file."));
         }
         if (m_analysis.silentTracks > 0) {
+            actions.append(tr("To play all tracks in the game, use a maximum of %1 in the "
+                              "MIDI file.")
+                               .arg(trackCountPhrase(trackLimit)));
             actions.append(
-                tr("To play all tracks in the game, use a maximum of %1 tracks in the MIDI file.")
-                    .arg(trackLimit));
-            actions.append(
-                tr("After import, move tracks %1 through %2 above track %3 to play them.")
-                    .arg(trackLimit + 1)
-                    .arg(m_analysis.mappedTracks)
-                    .arg(trackLimit));
+                m_analysis.silentTracks == 1
+                    ? tr("After import, move track %1 above track %2 to play it.")
+                          .arg(m_analysis.mappedTracks)
+                          .arg(trackLimit)
+                    : tr("After import, move tracks %1 through %2 above track %3 to play them.")
+                          .arg(trackLimit + 1)
+                          .arg(m_analysis.mappedTracks)
+                          .arg(trackLimit));
         }
         setNotice(m_trackAction, actions.join(QLatin1Char(' ')));
 
         if (m_analysis.droppedTracks > 0) {
-            QString text = tr("Porydaw will import %1 of %2 tracks. It will not import %3 tracks.")
+            QString text = tr("Porydaw will import %1 of %2 tracks. It will not import %3.")
                                .arg(m_analysis.mappedTracks)
                                .arg(sourceTracks)
-                               .arg(m_analysis.droppedTracks);
+                               .arg(trackCountPhrase(m_analysis.droppedTracks));
             if (m_analysis.silentTracks > 0) {
-                text += tr(" The game will mute tracks %1 through %2.")
-                            .arg(trackLimit + 1)
-                            .arg(m_analysis.mappedTracks);
+                text += tr(" The game will mute %1.")
+                            .arg(trackRangeText(trackLimit + 1, m_analysis.mappedTracks));
             }
             m_summary->setText(text);
         } else if (m_analysis.silentTracks > 0) {
-            m_summary->setText(tr("Porydaw will import all %1 tracks, but the game will mute "
-                                  "tracks %2 through %3.")
+            m_summary->setText(tr("Porydaw will import all %1 tracks, but the game will mute %2.")
                                    .arg(m_analysis.mappedTracks)
-                                   .arg(trackLimit + 1)
-                                   .arg(m_analysis.mappedTracks));
+                                   .arg(trackRangeText(trackLimit + 1, m_analysis.mappedTracks)));
+        } else if (m_analysis.mappedTracks == 1) {
+            m_summary->setText(tr("Porydaw will import the file's only track."));
         } else {
             m_summary->setText(
                 tr("Porydaw will import all %1 tracks.").arg(m_analysis.mappedTracks));
         }
-        setNotice(
-            m_polyphony,
-            m_analysis.peakConcurrentNotes > m_analysis.sampleNoteLimit
-                ? tr("%1 notes play at the same time in one part of the song. The Game Boy Advance "
-                     "can mix %2 sample notes at the same time. Square, wave, and noise sounds do "
-                     "not use this limit. The game can stop some sample notes.")
-                      .arg(m_analysis.peakConcurrentNotes)
-                      .arg(m_analysis.sampleNoteLimit)
-                : QString());
+        setNotice(m_polyphony, m_analysis.peakConcurrentNotes > m_analysis.sampleNoteLimit
+                                   ? concurrencyNoticeText(m_analysis.peakConcurrentNotes,
+                                                           m_analysis.sampleNoteLimit)
+                                   : QString());
 
         const bool notesBeforeInstrument = std::any_of(
             m_analysis.tracks.cbegin(), m_analysis.tracks.cend(), [](const ImportTrackInfo &track) {
                 return track.noteCount > 0 && track.notesBeforeProgram;
             });
-        setNotice(m_defaultInstrument, notesBeforeInstrument
-                                           ? tr("Some notes start before the MIDI data selects an "
-                                                "instrument. These notes use instrument 0.")
-                                           : QString());
+        setNotice(m_defaultInstrument,
+                  notesBeforeInstrument ? instrumentFallbackNoticeText() : QString());
         setNotice(m_format, m_smf.wasFormat0
                                 ? tr("This MIDI file contains all channels in one track. Porydaw "
                                      "will put each channel in a different track.")
@@ -477,7 +466,6 @@ class AnalysisPage : public QWizardPage
         setNotice(m_controller, hasSilentController
                                     ? tr("Some CC commands do not change the sound in the game.")
                                     : QString());
-        m_noteLimitHeading->setVisible(m_analysis.peakConcurrentNotes > m_analysis.sampleNoteLimit);
     }
 
     const SmfFile &m_smf;
@@ -490,7 +478,6 @@ class AnalysisPage : public QWizardPage
     QLabel *m_status;
     QLabel *m_trackAction;
     QLabel *m_summary;
-    QLabel *m_noteLimitHeading;
     QLabel *m_polyphony;
     QLabel *m_defaultInstrument;
     QLabel *m_format;

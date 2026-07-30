@@ -50,6 +50,22 @@ struct ImportAnalysis {
 ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget = 16,
                                 const QString &playerName = QString());
 
+// User-facing wording shared by the analysis warnings and the import wizard's
+// notices, so two renderings of the same fact cannot drift apart.
+
+// "Background music"/"Sound effect n" for the music-player symbols every
+// decomp ships; any other symbol comes back unchanged. includeSymbol appends
+// the engine symbol in parentheses.
+QString playerRoleName(const QString &symbol, bool includeSymbol);
+
+// "1 track" / "<n> tracks" — count phrases stay grammatical at one.
+QString trackCountPhrase(int count);
+
+// The sample-note concurrency notice and the notes-before-any-instrument
+// notice, verbatim as the wizard shows them.
+QString concurrencyNoticeText(int peakNotes, int sampleNoteLimit);
+QString instrumentFallbackNoticeText();
+
 // Rescale every event tick (and each track's end-of-track tick) onto a new
 // division, using the same floor arithmetic as mid2agb's event conversion
 // (`24 * clocksPerBeat * time / division`, tools/mid2agb/midi.cpp). With
