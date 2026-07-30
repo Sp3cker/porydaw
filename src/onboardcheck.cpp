@@ -1,8 +1,10 @@
 #include <QAction>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QProcess>
@@ -966,6 +968,45 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         SongSettingsDialog dialog(bare, QStringLiteral("mus_bare"), vgArgs);
         check(dialog.cfg().reverb == SongCfg::kDefaultReverb,
               "song settings: absent -R does not heal to the default reverb");
+
+        // Role-aware analysis: the analysis page's player choice and the
+        // identity page's are one selection, kept in sync from either side,
+        // and the analysis text tracks the chosen player's track budget.
+        auto *analysisCombo = wizard.page(0)->findChild<QComboBox *>();
+        auto *identityCombo = wizard.page(1)->findChild<QComboBox *>();
+        check(analysisCombo && identityCombo, "wizard: player combos not found");
+        if (analysisCombo && identityCombo) {
+            bool synced = analysisCombo->currentData() == identityCombo->currentData();
+            for (int i = analysisCombo->count() - 1; i >= 0; i--) {
+                analysisCombo->setCurrentIndex(i);
+                synced = synced && identityCombo->currentData() == analysisCombo->currentData();
+            }
+            check(synced, "wizard: identity player does not follow the analysis page");
+            identityCombo->setCurrentIndex(identityCombo->count() - 1);
+            check(analysisCombo->currentIndex() == identityCombo->currentIndex(),
+                  "wizard: analysis player does not follow the identity page");
+            identityCombo->setCurrentIndex(0);
+
+            // A 1-track player mutes the external file's second track, and
+            // the page says so in the singular. The selection also decides
+            // what player() hands the song registration.
+            const QVector<MusicPlayer> players = SongRegistry::musicPlayers(projectRoot);
+            int tight = -1;
+            for (int i = 0; i < players.size(); i++)
+                if (players[i].trackCount == 1)
+                    tight = i;
+            if (tight >= 0) {
+                analysisCombo->setCurrentIndex(analysisCombo->findData(players[tight].name));
+                bool sawMute = false;
+                for (const QLabel *label : wizard.page(0)->findChildren<QLabel *>())
+                    if (label->text().contains(QStringLiteral("mute track 2")))
+                        sawMute = true;
+                check(sawMute, "wizard: 1-track player does not warn about muting track 2");
+                check(wizard.player() == players[tight].name,
+                      "wizard: player() does not return the engine symbol");
+                analysisCombo->setCurrentIndex(0);
+            }
+        }
     }
 
     // Same-tick duplicate setters: the import silently keeps only the last of
