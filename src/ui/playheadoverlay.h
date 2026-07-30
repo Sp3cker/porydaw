@@ -49,7 +49,7 @@ private:
     void observeSurfaceGeometry();
     void synchronizeGeometry();
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
-    struct Platform;
+    class Platform;
     struct PlatformDeleter
     {
         void operator()(Platform *platform) const;
