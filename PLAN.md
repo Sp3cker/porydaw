@@ -1,620 +1,343 @@
-# Editor drawer reimplementation plan
-
-## Purpose
-
-This plan turns
-[`docs/EDITOR_DRAWER_REIMPLEMENTATION.md`](docs/EDITOR_DRAWER_REIMPLEMENTATION.md)
-into a reviewed, linear implementation built by task agents in separate Git
-worktrees.
-
-The current `cleanup/psg-velocity-history-20260729` branch contains the
-reference implementation plus the specification and this plan. It is a plan
-source and UX oracle, not the implementation base. Production work starts from
-a freshly fetched `upstream/main`. Only the specification and plan documents
-move to that fresh branch.
-
-The reference oracle is fixed at
-`52fd478f27594ffe410472fb8d4a62e792378f16`. Agents may inspect it with
-read-only Git commands. They must not merge it, cherry-pick it, copy whole
-files from it, or treat its defects as requirements.
-
-## Outcome
-
-The completed integration branch must:
-
-- implement every normative rule and acceptance ID in the specification;
-- apply Fowler-style refactoring with buildable, focused commits;
-- use shared `layout` values for all in-scope static geometry;
-- retain no unrelated source, test, asset, formatting, or build churn;
-- pass the focused gates after every slice and the full final suite; and
-- have review evidence for behavior, UX, code ownership, and comparison with
-  the oracle.
-
-## Roles
-
-### Coordinator
-
-The coordinator owns the integration branch and is the only role that:
-
-- marks a task ready after its blockers are integrated;
-- authorizes a commit;
-- creates reviewed task-local transport commits when a logical slice has two
-  agents;
-- commits an approved slice or synthesizes reviewed subtask work;
-- fast-forwards the integration branch;
-- assigns remediation after review;
-- runs integration-branch checks after each accepted slice; and
-- removes the task worktrees after final acceptance.
-
-The coordinator does not accept a task merely because it builds.
-
-### git-operations-runner
-Task 00 MUST be assigned to `git-operations-runner`, which performs the initial
-Git worktree and branch setup described below.
-
-
-Task 00 creates the clean integration worktree, all task worktree directories,
-the branch map, isolated build and fixture conventions, and the unchanged-base
-record. It makes no production source change.
-
-### Task agent
-
-A task agent works only in its assigned worktree and follows that directory's
-`PLAN.md`. It:
-
-- starts from the exact accepted predecessor SHA;
-- writes tests before or with the behavior they protect;
-- makes the smallest in-scope diff;
-- runs every required focused check;
-- stages the exact candidate tree but leaves it uncommitted;
-- writes a handoff record outside the candidate Git diff; and
-- fixes all review findings in the same worktree.
-
-A task agent must not commit, push, merge, rebase, edit another task worktree,
-or broaden its scope without coordinator approval.
-
-### Review agent
-
-After each task agent hands off, an independent Review agent follows
-[`plans/editor-drawer/review/PLAN.md`](plans/editor-drawer/review/PLAN.md).
-The Review agent reads the candidate diff, the task plan, the full
-specification, the accepted predecessor, and the oracle. It does not edit the
-candidate.
-
-Review approval is required before the coordinator commits or synthesizes the
-slice.
-
-### Final verification agent
-
-Task 11 audits the integrated result, runs the full automated and manual
-acceptance matrix, checks the final history and exclusions, and routes any
-failure back to the owning task. It is not a place to hide unreviewed fixes.
-
-## Runtime worktree layout
-
-Task 00 creates this disposable runtime structure:
-
-```text
-/Users/spencer/dev/cProjects/porydaw/.worktrees/editor-drawer-reimplementation/
-  base/
-  oracle/
-  integration/
-  01-track-remaps/
-  02-note-identity/
-  03-velocity-batch/
-  04-geometry-characterization/
-  05-layout-migration/
-  06-automation-extraction/
-  07-drawer-shell/
-  08a-state-menus/
-  08b-gestures/
-  09a-axis-selection/
-  09b-gestures-status-perf/
-  10a-psg-model/
-  10b-intrinsic-ux/
-  11-final-verification/
-  _coordination/
-  _state/
-```
-
-Recommended branches:
-
-```text
-feature/editor-drawer-reimplementation
-task/editor-drawer/01-track-remaps
-task/editor-drawer/02-note-identity
-task/editor-drawer/03-velocity-batch
-task/editor-drawer/04-geometry-characterization
-task/editor-drawer/05-layout-migration
-task/editor-drawer/06-automation-extraction
-task/editor-drawer/07-drawer-shell
-task/editor-drawer/08a-state-menus
-task/editor-drawer/08b-gestures
-task/editor-drawer/09a-axis-selection
-task/editor-drawer/09b-gestures-status-perf
-task/editor-drawer/10a-psg-model
-task/editor-drawer/10b-intrinsic-ux
-task/editor-drawer/11-final-verification
-```
-
-The committed task packets live under `plans/editor-drawer/`. Every worktree
-therefore contains its agent's plan. The runtime worktree directories above
-contain code, builds, and tests; the committed plan directories do not.
-
-Tasks 08, 09, and 10 are logical specification slices with two task agents
-each. Their parent `PLAN.md` files define the combined slice; each child
-directory contains the plan for one agent and one worktree. The parent plans
-do not receive a runtime worktree.
-
-Task 00 creates all task branches at the reviewed integration seed commit.
-Before a task starts, the coordinator confirms its worktree is clean and
-fast-forwards its untouched branch to the latest accepted integration commit.
-No task may implement against its original seed after a blocker has advanced.
-
-Generated state follows one bounded lifecycle across every child plan:
-
-- Retain exactly one immutable fixture at
-  `_state/base/fixture/canonical-001`.
-- Create an active task's `_state/<task-id>/build` lazily. Reuse one rolling
-  `_state/integration/build`; do not preallocate build or fixture directories
-  for waiting tasks.
-- A mutating check creates one scratch reflink under `/tmp` immediately before
-  its command, records the result, then deletes that reflink immediately.
-  Never keep more than one scratch fixture at once or retain one between
-  commands, reviews, or tasks.
-- Preserve durable text evidence and only selected evidence screenshots under
-  `_coordination/`; raw fixture trees, build products, settings, temporary
-  files, and routine logs are not evidence.
-- Delete the detached-base build immediately after baseline evidence is
-  recorded.
-- After integration, immediately remove the task's candidate build and all
-  transient task state. After an A transport commit is secured, remove A's
-  build before B starts. Remove Task 11's verification build after final
-  evidence is recorded and before final cleanup and push.
-- Remove abandoned-candidate and superseded-remediation builds immediately
-  after their results are recorded.
-- At most two build trees may exist: the active candidate build and the rolling
-  integration build. `_state/` must be at most 8 GiB after every integration
-  before the next task starts.
-
-No generated state lives inside a Git worktree. In every child plan, “fresh
-fixture” or “fresh scratch fixture” means the one-at-a-time ephemeral lifecycle
-above; it never authorizes retained copies.
-
-### One-time bounded-storage adoption gate
-
-Before Task 05 resumes, the coordinator inventories existing `_state/`,
-preserves the canonical fixture and `_coordination/`, removes every
-pre-amendment scratch fixture and obsolete build, and retains only an active
-candidate build and rolling integration build if either is still useful. Record
-the before/after `_state/` size, retained build-directory count, and canonical
-fixture path in `_coordination/INTEGRATION_LOG.md`. This transition is a
-prerequisite for further implementation.
-
-## Coordination records
-
-Task 00 creates these untracked records beneath `_coordination/`:
-
-```text
-BASELINE.md
-BRANCHES.md
-INTEGRATION_LOG.md
-<task-id>/HANDOFF.md
-<task-id>/REVIEW-<NN>.md
-<task-id>/TESTS.md
-```
-
-They must stay outside candidate diffs and commits.
-
-`BASELINE.md` records:
-
-- fetched `upstream/main` SHA;
-- specification SHA;
-- plan SHA;
-- oracle SHA;
-- `hearth-test` fixture HEAD, dirty-state manifest hash, and copied content
-  manifest;
-- primary `mus_lovely` song and secondary `mus_poke_center` song;
-- evidence that the named manual song set supplies tempo, voice, controller,
-  DirectSound, Square, Noise, Wave, and key-split cases;
-- build type and configure command;
-- platform and settings isolation;
-- every unchanged-base command and exit code;
-- named pre-existing failures;
-- screenshot paths; and
-- skipped checks with reasons.
-
-Every `HANDOFF.md` records:
-
-- task and accepted predecessor SHA;
-- changed files and diffstat;
-- behavior delivered;
-- acceptance IDs exercised;
-- exact test commands, exit codes, and result summaries;
-- geometry-gate results when applicable;
-- manual checks and screenshots;
-- known gaps or assumptions; and
-- confirmation that the worktree is staged but uncommitted, with its
-  `git write-tree` ID.
-
-Every `REVIEW-<NN>.md` records findings by severity, oracle comparisons, tests
-run, the reviewed diff SHA or worktree state, and one status:
-
-```text
-CHANGES_REQUESTED
-APPROVED
-BLOCKED
-```
-
-## Dependency graph
-
-The implementation chain is deliberately linear:
-
-```text
-00 Dependencies and baseline
-  -> 01 Track identity remaps
-  -> 02 Exact note identity
-  -> 03 Revision-checked velocity batch
-  -> 04 Static geometry characterization
-  -> 05 Shared layout migration
-  -> 06 Automation characterization and extraction
-  -> 07 Drawer shell and generic saved state
-  -> 08A Automation state, remaps, and menus
-  -> 08B Automation gestures and drawing
-  -> 08 Combined review, synthesis, and integration
-  -> 09A Continuous axis, drawing, and selection
-  -> 09B Velocity gestures, status, and performance
-  -> 09 Combined review, synthesis, and integration
-  -> 10A Intrinsic level and axis metadata
-  -> 10B Intrinsic UX and strict harness
-  -> 10 Combined review, synthesis, and integration
-  -> 11 Final verification and evidence
-```
-
-The linear chain is intentional. The slices share `SongDocument`, `SongView`,
-layout, sidecar, harness, and build-registration seams. Starting code agents
-from stale parallel bases would trade a small scheduling gain for large merge
-and review risk. Agents may research later tasks in parallel, but code starts
-only when the predecessor is reviewed and integrated.
-
-## Fowler-style refactoring discipline
-
-Every task agent must:
-
-- add characterization or regression coverage before changing a risky seam;
-- keep a structural step behavior-preserving and verify it before adding new
-  behavior;
-- make one small named transformation at a time;
-- separate a needed refactor from its feature change when each deserves its
-  own review and rollback boundary;
-- move behavior toward the specification's named owner instead of adding a
-  parallel path;
-- remove only duplication or compatibility code made obsolete by that task;
-  and
-- stop when a refactor expands beyond the task's acceptance contract.
-
-Passing tests do not excuse a weak owner, duplicated model, mixed view/document
-state, or a large unreviewable change.
-
-## Task index
-
-| Task | Plan | Primary result | Acceptance ownership |
-| --- | --- | --- | --- |
-| 00 | [Dependencies](plans/editor-drawer/00-dependencies/PLAN.md) | Fresh base, worktrees, isolated baseline | Preflight |
-| 01 | [Track remaps](plans/editor-drawer/01-track-remaps/PLAN.md) | One complete ordered remap event | CORE-01 |
-| 02 | [Note identity](plans/editor-drawer/02-note-identity/PLAN.md) | Duplicate-safe shared selection | CORE-02 |
-| 03 | [Velocity batch](plans/editor-drawer/03-velocity-batch/PLAN.md) | Revision-checked atomic mutation and Undo | CORE-03 |
-| 04 | [Geometry characterization](plans/editor-drawer/04-geometry-characterization/PLAN.md) | Complete checked geometry inventory | LAY-01 precursor |
-| 05 | [Layout migration](plans/editor-drawer/05-layout-migration/PLAN.md) | Named layout values and executable source gate | LAY-01 |
-| 06 | [Automation extraction](plans/editor-drawer/06-automation-extraction/PLAN.md) | Hostable automation page with parity | AUT baseline |
-| 07 | [Drawer shell](plans/editor-drawer/07-drawer-shell/PLAN.md) | Overlay, tabs, lifecycle, generic persistence | DRW-01...DRW-05 partial |
-| 08 | [Automation deltas](plans/editor-drawer/08-automation-deltas/PLAN.md) | Combined logical slice and synthesis gate | AUT-01...AUT-03 |
-| 08A | [State and menus](plans/editor-drawer/08-automation-deltas/08a-state-menus/PLAN.md) | Typed lane state, remaps, persistence, and menus | AUT-01; DRW-04/05 lane state |
-| 08B | [Gestures and drawing](plans/editor-drawer/08-automation-deltas/08b-gestures/PLAN.md) | Automation interaction, lifecycle, and Undo | AUT-02, AUT-03 |
-| 09 | [Continuous velocity](plans/editor-drawer/09-continuous-velocity/PLAN.md) | Combined logical slice and synthesis gate | VEL-01...VEL-03 |
-| 09A | [Axis and selection](plans/editor-drawer/09-continuous-velocity/09a-axis-selection/PLAN.md) | Continuous axis, drawing, exact selection, and canonicalization model | VEL-01; VEL-03 model |
-| 09B | [Gestures, status, and performance](plans/editor-drawer/09-continuous-velocity/09b-gestures-status-perf/PLAN.md) | Continuous editing, access, lifecycle, and counters | VEL-02; PERF-01 |
-| 10 | [Intrinsic PSG](plans/editor-drawer/10-intrinsic-psg/PLAN.md) | Combined logical slice and synthesis gate | VEL-04 |
-| 10A | [Level and axis metadata](plans/editor-drawer/10-intrinsic-psg/10a-model-context/PLAN.md) | Intrinsic level and selection-axis projection | VEL-04 model |
-| 10B | [UX and harness](plans/editor-drawer/10-intrinsic-psg/10b-ux-harness/PLAN.md) | Intrinsic interaction and strict native proof | VEL-04; A11Y-01 |
-| 11 | [Final verification](plans/editor-drawer/11-final-verification/PLAN.md) | Performance, UX, history, and final evidence | PERF-01 and final matrix |
-
-## Task lifecycle
-
-Each task follows this state machine:
-
-```text
-WAITING
-  -> READY
-  -> IMPLEMENTING
-  -> REVIEW
-  -> CHANGES_REQUESTED -> IMPLEMENTING
-  -> APPROVED
-  -> TRANSPORTED_OR_COMMITTED
-  -> INTEGRATION_VERIFIED
-```
-
-For Tasks 08A, 09A, and 10A, `TRANSPORTED` means the coordinator created an
-approved task-local commit only to give the B agent an exact Git base. A
-transport commit never enters the integration branch and is not part of the
-final history.
-
-### Ready gate
-
-Before assigning an agent, the coordinator:
-
-1. Confirms every blocker is `INTEGRATION_VERIFIED`.
-2. Records the current integration SHA as the task predecessor.
-3. Confirms the task worktree has no changes or commits beyond its old base.
-4. Fast-forwards the untouched task branch to the predecessor with an
-   ancestry check.
-5. Confirms its task plan, the root plan, and the specification are present.
-6. Prepares transient settings under `_state/<task-id>/` and durable evidence
-   paths under `_coordination/<task-id>/` and, when first needed, one candidate
-   build; it creates no persistent fixture copy.
-
-For a B subtask, its predecessor is the reviewed A transport commit and the
-coordinator also records the logical slice's integration predecessor as
-`LOGICAL_START_SHA`. If a fast-forward is not possible, quarantine that
-worktree and create a new clean one; do not merge, rebase, or reset a stale
-task branch. `BASE_SHA` and the integration series remain fixed even if
-`upstream/main` advances during the work.
-
-### Implementation gate
-
-The task agent:
-
-1. Reads the root plan, full specification, and its full task plan.
-2. Repeats the accepted predecessor SHA in its handoff.
-3. Adds characterization or failing checks before changing behavior.
-4. Applies small Fowler-style transformations.
-5. Builds affected targets and runs focused checks at behavior-complete
-   checkpoints, not after every mechanical hunk.
-6. Runs the task-specific acceptance commands required by the candidate
-   cadence below.
-7. From Task 05 onward, runs both fixed-font resolver checks and
-   `python3 tools/check_editor_layout_geometry.py`.
-8. Stages only explicit in-scope paths, with no unstaged tracked changes or
-   untracked source files left behind.
-9. Runs `git diff --cached --check`, inspects the staged file list and
-   exclusions, and records `git write-tree`.
-10. Leaves the exact staged tree uncommitted and writes the handoff.
-
-### Verification cadence
-
-- A first candidate gets one affected-target build plus its focused behavioral
-  checks and required source/layout gates. Do not run a broad native matrix.
-- A remediation reuses that build and reruns checks covering the changed delta,
-  the task contract it can affect, and every previously rejected finding. Do
-  not duplicate a full build, CTest run, native matrix, or diagnostics for
-  successfully compiled files.
-- Exact-tree approval, oracle/source-boundary checks, and focused behavioral
-  tests remain mandatory. Compilation replaces repeated LSP diagnostics only
-  for files that were actually built; diagnose non-built files separately.
-- After integration, reuse the rolling integration build for one full build
-  and one task-focused proof. Run the complete native matrix only after Tasks
-  05, 07, 08, 09, and 10, and once more in Task 11.
-- Every mutating command in any cadence uses a sequential ephemeral reflink and
-  deletes it before the next command starts.
-
-### Review gate
-
-The Review agent:
-
-1. Reviews the complete staged diff against the predecessor and records its
-   tree ID.
-2. Checks the specification before consulting the oracle.
-3. Compares user flow and behavior with oracle commit `52fd478`, while
-   requiring the specified improvements over its defects.
-4. Runs or independently verifies the focused checks.
-5. Checks module ownership, Undo boundaries, view-only behavior, cancellation,
-   focus, active-tab routing, layout ownership, rendering invalidation, and
-   unrelated churn as applicable.
-6. Writes `CHANGES_REQUESTED`, `APPROVED`, or `BLOCKED`.
-
-Any correctness, UX, ownership, lifecycle, Undo, layout, performance, or spec
-finding blocks approval. A low-priority note may remain only when the Review
-agent states why it is outside this specification.
-
-### Remediation loop
-
-For `CHANGES_REQUESTED`:
-
-1. The coordinator returns the exact findings to the same task agent.
-2. The task agent changes only what resolves those findings.
-3. The task agent reruns focused checks covering the remediation delta, its
-   affected contract, and every previously rejected finding.
-4. The Review agent binds approval to the new exact tree and reviews the
-   remediation delta, every previously rejected finding, and any combined-slice
-   boundary directly affected by that delta. Prior approval remains evidence
-   for untouched portions.
-5. The loop continues until `APPROVED` or a real external blocker is recorded.
-
-### Commit and integration gate
-
-This plan uses one final integration commit for each numbered specification
-slice 01 through 10. That is the clearest current use of the user's permission
-to use one or more slices per commit: the strict dependencies stay visible,
-and every accepted tree becomes the next slice's base. Cross-number grouping
-is not planned. If the coordinator later finds a concrete reason to group
-slices, amend this plan before either grouped slice starts and define one
-combined base, worktree, test matrix, and Review gate. Never squash an
-already-integrated predecessor out from under reviewed descendants.
-
-A behavior-preserving preparatory refactor may be a separate commit only when
-the specification calls for it. It gets its own stage, Review, commit, and
-integration-check cycle. One approved staged tree never becomes several
-commits.
-
-The coordinator, not the task agent, creates every commit. Each commit must:
-
-- build and pass its focused checks;
-- contain only reviewed lines;
-- name one behavior or refactor;
-- record the task ID, specification SHA, plan SHA, predecessor SHA, approved
-  tree ID, and checks in its body; and
-- preserve the ordered and reviewable traceability of the implementation
-  slices.
-
-The first implementation commit, Task 01, must also record the original
-`BASE_SHA`, oracle SHA, `hearth-test` HEAD, and fixture manifest hash in its
-body. Its predecessor is the docs seed, so `START_SHA` is not a substitute for
-`BASE_SHA`.
-
-Immediately before commit, the coordinator confirms `git write-tree` still
-equals the approved tree. Immediately after commit, it confirms
-`HEAD^{tree}` equals that tree. Any edit after approval invalidates the review.
-
-For one-agent slices 01 through 07, the coordinator commits the approved tree
-on the task branch and fast-forwards the integration branch.
-
-For split slices 08 through 10:
-
-1. Review A's staged delta and tree against the slice's integration
-   predecessor.
-2. After approval, the coordinator creates an A transport commit whose tree
-   equals the approved A tree.
-3. Fast-forward the untouched B branch to that transport commit.
-4. Review B's staged delta against the transport commit.
-5. Review the full A+B tree against `LOGICAL_START_SHA`, including
-   initialization order, shared ownership, tests, and the proposed one-commit
-   boundary.
-6. After approval, the coordinator creates a B transport commit whose tree is
-   the approved full tree. This leaves the B worktree clean and gives
-   synthesis an immutable source tree.
-7. Materialize that exact approved full tree in the clean integration
-   worktree. If its `git write-tree` differs, stop and review again.
-8. Create one logical-slice integration commit with
-   `LOGICAL_START_SHA` as parent and the approved full tree as its tree.
-
-The integration branch remains linear. Task-local transport commits and their
-branches are disposable evidence, not integration ancestors.
-
-After integration, run the one integration proof defined by the verification
-cadence, using the rolling build and ephemeral fixture lifecycle. A task is not
-complete until that proof passes.
-
-## Spiritual-correctness review
-
-“Spiritual correctness” means the result preserves the intended editing
-experience and improves the implementation boundary rather than cloning the
-oracle's code shape.
-
-Review must ask:
-
-- Does the drawer feel like one editor surface rather than a bolted-on dialog?
-- Do automation and velocity share track, time, selection, focus, playhead,
-  and Undo state in the ways the specification defines?
-- Do view-only actions remain view-only?
-- Does one completed gesture create at most one Undo command?
-- Does cancel or lost capture leave no staged mutation or stale preview?
-- Do active-tab shortcuts and status messages affect only the active song?
-- Does narrow and scaled geometry keep visuals and hit targets aligned?
-- Does the velocity editor preserve exact MIDI values while showing intrinsic
-  hardware levels?
-- Does steady playback move the playhead without rebuilding page content?
-- Are responsibilities kept in `SongDocument`, `SongView`, the page, axis
-  model, drawer, and sidecar owners named by the specification?
-
-The Review agent must not demand parity with an oracle behavior that the
-specification identifies as a defect.
-
-## Acceptance ownership
-
-| Acceptance | Owning task | Required recheck |
+# PSG velocity-history reimplementation DAG
+
+## Authority and supersession
+
+This is the active execution DAG for
+[`docs/EDITOR_DRAWER_REIMPLEMENTATION.md`](docs/EDITOR_DRAWER_REIMPLEMENTATION.md).
+The executable packets are exclusively in
+[`plans/psg-velocity-history/`](plans/psg-velocity-history/).
+
+`plans/editor-drawer/` is historical only. It MUST NOT select work, establish a
+base, assign an agent, set verification cadence, or approve implementation.
+The specification remains normative for behavior, acceptance IDs, manual UX
+checks, and exclusions. The fresh upstream source establishes existing
+interfaces and style; oracle `52fd478f27594ffe410472fb8d4a62e792378f16` is UX
+evidence only and MUST NOT be ported, merged, cherry-picked, or copied.
+
+
+## Bases, prerequisites, and immutable milestones
+
+The coordinator fetches and records
+`UPSTREAM_SHA = 59c80026b3fad9419241f971112e20d1954587ff`. It pins the
+`hearth-test` fixture revision, makes a scratch fixture with isolated settings,
+and runs and records the upstream roll baseline **before any implementation**.
+That retained baseline is the sole attribution reference for later failures.
+
+The integration branch is `feature/psg-velocity-history-upstream`. Plan/spec
+documentation may be ordinarily merged there and recorded as `PLAN_SHA`, but
+that documentation commit MUST NOT replace `UPSTREAM_SHA` as the source
+comparison or source-task base.
+The absolute runtime/worktree root is
+`/Users/spencer/dev/cProjects/porydaw/.worktrees/psg-velocity-history-upstream`.
+Its integration worktree is
+`/Users/spencer/dev/cProjects/porydaw/.worktrees/psg-velocity-history-upstream/integration/`;
+every named relative worktree below is an immediate child of that runtime root.
+No task executes from this documentation checkout.
+
+All worktree creation/reset, branch creation, ref-base verification, and submodule initialization/verification operations are assigned exclusively to `git-operations-runner`. Packet `task` agents enter prepared worktrees and commit implementation. The coordinator performs ordinary merges of approved heads.
+
+| Milestone | Meaning | Permitted use as a base |
 | --- | --- | --- |
-| LAY-01 | 04 inventories; 05 closes | 07, 08A, 08B, 09A, 09B, 10A, 10B, 11 |
-| CORE-01 | 01 | 08, 11 |
-| CORE-02 | 02 | 09, 11 |
-| CORE-03 | 03 | 09, 11 |
-| DRW-01 | 05 geometry; 07 behavior | 11 |
-| DRW-02, DRW-03 | 07 | 11 |
-| DRW-04, DRW-05 | 07 generic state; 08A lane state | 08B, 11 |
-| AUT-01 | 08A | 08B, 11 |
-| AUT-02, AUT-03 | 06 characterizes; 08B closes | 11 |
-| VEL-01 | 09A | 09B, 10, 11 |
-| VEL-02 | 09B | 10, 11 |
-| VEL-03 | 09A model and fallback; 09B gestures and mixed canonicalization | 10A, 10B, 11 |
-| VEL-04 | 10A model; 10B interaction | 11 |
-| A11Y-01 | 09B continuous; 10B intrinsic | 11 |
-| LIFE-01 | 07 shared route; 08B automation; 09B velocity; 10B categorical | 11 |
-| PERF-01 | 07 automation seams; 09B combined test | 10B, 11 |
-| UX-01, UX-02 | 07 | 11 |
-| UX-03 | 08A menus; 08B gesture actions | 11 |
-| UX-04 | 08B | 11 |
-| UX-05 | 09A and 09B | 11 |
-| UX-06 | 09B | 11 |
-| UX-07, UX-08 | 10B | 11 |
-| UX-09 | 07 and 09B | 10B, 11 |
-| UX-10 | 07 generic state; 08A lane state | 11 |
-| UX-11 | 05 scaling; 07, 08B, 09B, and 10B interactions | 11 |
+| `UPSTREAM_SHA` | Fresh fetched upstream commit and retained baseline source. | Packet 05 only. |
+| `PLAN_SHA` | Documentation-only integration commit. | Never a source-task base. |
+| `INFRA_SHA` | Reviewed ordinary merge of packet 05. | Every implementation root starts here. |
+| `NOTE_ID_SHA` | Reviewed ordinary merge of 10A. | 10B and 11 only. |
+| `DOCUMENT_SHA` | Reviewed ordinary merge containing 10B and its `SongDocument`-minted identities. | 10C only. |
+| `CONTRACT_SHA` | Reviewed ordinary integration containing 10C and 11 after `DOCUMENT_SHA`. | 14A and 14B only. |
+| `FOUNDATION_SHA` | Reviewed ordinary merge of 12A, 12B, 13, 14A, and 14B. | Packets 20–23 only. |
+| `PRODUCT_SHA` | Reviewed ordinary merge of packets 20–23. | 30C only. |
+| `RENDERING_SHA` | Reviewed ordinary merge of 30C rendering/playhead from `PRODUCT_SHA`. | 30A only. |
+| `ADAPTER_SHA` | Reviewed ordinary merge of 30A SongView adapter/lifecycle from `RENDERING_SHA`. | 30B only. |
+| `HOST_SHA` | Reviewed ordinary merge of 30B MainWindow routing/persistence from `ADAPTER_SHA`, followed by the aggregate host proof. | Final review candidate. |
 
-## Global constraints for every task
+Packet 05 is an infrastructure prerequisite, not a late host concern. `git-operations-runner` creates its worktree `05-check-registration/` and branch `task/psg-velocity/check-registration` from `UPSTREAM_SHA` and verifies submodules. Its `task` agent enters the prepared worktree and owns exactly:
 
-- The specification wins over this plan, task plans, source, checks, and the
-  oracle.
-- Do not port commits or whole files from the oracle branch.
-- Do not copy the oracle's eight listed defects.
-- Do not touch any path or hunk in the specification's explicit exclusions.
-- Preserve unrelated dirty work and existing style.
-- Do not reformat whole files.
-- Add no feature beyond the specification.
-- Use no feature-local static screen geometry.
-- In Tasks 06 through 10, stop if Task 04 missed a static geometry value.
-  First extend the checked inventory, add its named `layout` enum or accessor,
-  add resolver coverage at both fixed font inputs, and pass the source gate in
-  a separate reviewed preparatory refactor. Resume feature work only after
-  that refactor is integrated.
-- Use one-at-a-time ephemeral scratch reflinks because check harnesses mutate
-  projects; delete each immediately after recording its result.
-- Do not infer UX or rendering parity from a build result.
-- Stop and report a real ambiguity before making a behavior choice not settled
-  by the specification.
+1. `CMakeLists.txt`;
+2. `src/main.cpp`; and
+3. new `src/editorcheckdispatch.h.in`.
 
-## Final acceptance and cleanup
+Packet 05 conditionally registers a new-module command only when that module's
+genuinely new sentinel check/source file exists. It MUST NOT use a complete set
+of paths that already exists in fresh upstream source as a completion
+predicate. A matching sentinel adds its group sources, compile definition, and
+module-specific command while keeping the upstream-only build unchanged.
+Existing-source work extends its existing edit, roll, event-list, or theme
+harness and invokes that existing command; it receives no packet-05
+`EXISTS`-based registration. The coordinator runs packet 05's focused
+registration proof once from the committed packet-05 head, whose source set is
+otherwise upstream-only; `UPSTREAM_SHA` is the comparison base, not the tree
+rebuilt for that proof. The proof configures/builds that head and exercises its
+generated-header no-sentinel fallback: every conditional-manifest spelling is
+recognized but has no enabled conditional runner and returns deterministic
+nonzero `unavailable` without launching the GUI; non-manifest arguments retain
+normal startup. A `reviewer` inspects its committed `UPSTREAM_SHA..HEAD` range,
+and its ordinary merge records `INFRA_SHA`.
 
-Task 11 and the final Review agent must verify:
+`git-operations-runner` prepares and verifies every worktree, branch, ref base, and submodule state. Every implementation task agent (`task`) enters its prepared worktree, owns its listed paths, makes ordinary buildable commits, and hands off its branch head. Implementation agents author code and focused checks but MUST NOT create, reset, or rebase worktrees, and MUST NOT run builds, tests, formatters, or linters. The coordinator alone runs each completed wave's focused command batch once; a reviewer inspects the committed range from the named base to the submitted head. The coordinator merges only approved heads ordinarily: no staged-tree handoff, synthesized candidate, transport commit, cherry-pick, rebase, or rewrite.
 
-1. Every acceptance ID has recorded evidence.
-2. The full required suite ran on the same pinned fixture and settings model as
-   the baseline.
-3. Pre-existing failures were compared with that exact baseline.
-4. All twelve PSG velocity results appeared exactly once and the harness
-   returned the correct status.
-5. Both layout resolver processes and the layout source audit passed.
-6. The manual UX matrix, including second-scale checks, has results.
-7. PERF-01 reports fixture, warmup, update count, branch SHA, and counters.
-8. The final diff contains no excluded or unrelated work.
-9. Every commit is buildable, focused, reviewed, and ordered.
-10. The integration worktree is clean.
+## Accepted DAG
 
-Any final fix returns to the task that owns the failed acceptance ID and goes
-through its Review loop. If a cross-cutting synthesis is needed, it receives a
-new focused plan note and full Review before commit.
+```mermaid
+flowchart TD
+  U[UPSTREAM_SHA\nbaseline recorded] --> R[05 conditional registration]
+  R --> I[INFRA_SHA]
+  I --> A[10A note identity]
+  A --> N[NOTE_ID_SHA]
+  N --> B[10B document mutation]
+  N --> H[11 neutral host seams]
+  B --> J[DOCUMENT_SHA]
+  J --> C[10C view projection]
+  I --> L[12A layout resolver]
+  I --> G[12B geometry gate]
+  I --> M[13 velocity model]
+  C --> K[CONTRACT_SHA]
+  H --> K
+  K --> S[14A shared host state]
+  K --> E[14B event-list remap]
+  L --> F[FOUNDATION_SHA]
+  G --> F
+  M --> F
+  S --> F
+  E --> F
+  F --> D[20 drawer]
+  F --> O[21 automation]
+  F --> V[22 velocity]
+  F --> X[23 sidecar]
+  D --> P[PRODUCT_SHA]
+  O --> P
+  V --> P
+  X --> P
+  P --> C30[30C rendering/playhead]
+  C30 --> R30[RENDERING_SHA]
+  R30 --> A30[30A SongView adapter]
+  A30 --> D30[ADAPTER_SHA]
+  D30 --> B30[30B MainWindow routing]
+  B30 --> T[HOST_SHA]
+  T --> Q[Four final reviewers]
+  Q --> Z[One final proof and UX-01...UX-11 smoke]
+```
 
-After final approval:
+The documented dependency and named base govern execution, not wall-clock
+order. `12A`, `12B`, and `13` may proceed in parallel from `INFRA_SHA` while
+the identity chain proceeds as 10A, then parallel 10B/11, then 10C from
+`DOCUMENT_SHA`. `DOCUMENT_SHA` must contain the real IDs minted by
+`SongDocument` in 10B before 10C can project them into `ViewNote`. Their
+approved heads wait for the foundation assembly gate. No product branch exists
+before `FOUNDATION_SHA`; the host chain then starts only with 30C from
+`PRODUCT_SHA`, followed by 30A from `RENDERING_SHA` and 30B from `ADAPTER_SHA`.
 
-1. Preserve `_coordination/`, including every approved tree ID, transport SHA,
-   integration commit, and final evidence record.
-2. Confirm every A and B candidate is stored in its coordinator-created
-   transport commit and that each combined transport tree equals its
-   integration commit tree.
-3. Confirm every disposable worktree has clean tracked state and no untracked
-   source, and that its task-local generated state was already removed
-   incrementally after integration.
-4. Resolve every removal target from Task 00's recorded branch-to-worktree
-   table and prove it is inside the dedicated runtime root, was created by
-   Task 00, and is neither `integration` nor any pre-existing worktree.
-5. Do not run `git submodule deinit`: this repository shares submodule
-   registration across worktrees. Remove each validated disposable worktree
-   with `git worktree remove --force <exact-created-path>`. The scoped force is
-   permitted only to handle Git's initialized-submodule restriction after
-   steps 1–4 prove that it discards no uncommitted source or unique evidence.
-6. Delete task branches only with non-forced deletion where ancestry permits.
-   Preserve non-ancestor transport branches as review evidence unless the user
-   later asks for their forced deletion.
+## Worktree, branch, and ownership map
 
-Do not run repository-wide worktree pruning. Preserve the integration
-worktree, integration branch, and coordination evidence. After final approval,
-push only `feature/editor-drawer-reimplementation` to `origin` as requested;
-do not push task branches or alter any pre-existing worktree or branch.
+Every implementation packet owns the explicit three-to-five paths below. No
+path is duplicated within a concurrent wave. A sequential descendant may touch
+an ancestor-owned host/harness path only where this plan explicitly assigns the
+later owner.
+
+| Packet | Agent | Worktree / branch | Base | Exclusive paths and contract |
+| --- | --- | --- | --- | --- |
+| 10A note identity transport | `task` | `10a-note-identity/` / `task/psg-velocity/note-identity` | `INFRA_SHA` | `src/core/noteid.h`, `src/core/smf.h`, `src/core/miditimeline.h`, `src/core/miditimeline.cpp`, `src/noteidcheck.cpp` (new sentinel). Mint only opaque transient `NoteId` later in `SongDocument`; carry note-on identity into `TimelineEvent`; do not affect MIDI serialization or equality. |
+| 12A layout resolver | `task` | `12a-layout-resolver/` / `task/psg-velocity/layout-resolver` | `INFRA_SHA` | `src/ui/layout.h`, `src/ui/layout.cpp`, `src/ui/theme/themecheck.h`, `src/ui/theme/themecheck.cpp`, `src/ui/theme/themechecks_main.cpp`. Own semantic resolver values and clean-process base-font 12/16 checks. |
+| 12B geometry gate | `task` | `12b-layout-gate/` / `task/psg-velocity/layout-gate` | `INFRA_SHA` | `tools/check_editor_layout_geometry.py`, `tools/check_editor_layout_geometry_test.py`, `tools/check_editor_layout_geometry_fixtures.py`. Own the repository source audit, its narrow self-test/fixtures, focused file arguments, and a default final target set; do not migrate call sites. |
+| 13 velocity model | `task` | `13-velocity-model/` / `task/psg-velocity/velocity-model` | `INFRA_SHA` | `src/core/psgvelocitymodel.h`, `src/core/psgvelocitymodel.cpp`, `src/ui/velocityaxis.h`, `src/ui/velocityaxis.cpp`, `src/psgvelocitymodelcheck.cpp`. |
+| 10B document mutation | `task` | `10b-document-contracts/` / `task/psg-velocity/document-contracts` | `NOTE_ID_SHA` | `src/core/songdocument.h`, `src/core/songdocument.cpp`, `src/editcheck.cpp` (existing harness). Assign/preserve IDs, find by ID, revision, atomic revision-checked `setNotesVelocities`, and complete `TrackRemap`. |
+| 11 neutral host seams | `task` | `11-host-seams/` / `task/psg-velocity/host-seams` | `NOTE_ID_SHA` | `src/ui/editorviewstate.h`, `src/ui/editorviewstate.cpp`, `src/ui/editorpage.h`, `src/ui/editorpagehost.h` (which contains `EditorPageContext` and the sole static `uint64_t EditorPageContext::drawerContextTick(double)` helper), `src/editorviewstatecheck.cpp` (new sentinel). `EditorPageContext::drawerContextTick(double)` returns `floor(max(0, t) + 0.5)` as a `uint64_t` tick and is covered there. `EditorViewState` is typed persistent cosmetic state only; runtime selection, timeline, voice, and document state remain in context/host. Consume existing `TimelineSurface`; do not edit SongView, TimelineSurface, PlayheadOverlay, AutomationPage, MainWindow, CMake, or main. |
+| 10C view projection | `task` | `10c-note-projection/` / `task/psg-velocity/note-projection` | `DOCUMENT_SHA` | `src/ui/songviewmodel.h`, `src/ui/songviewmodel.cpp`, `src/rollcheck.cpp` (existing harness). Propagate `NoteId` into `ViewNote` and characterize duplicate notes. |
+| 14A shared host selection/remap | `task` | `14a-shared-host-state/` / `task/psg-velocity/shared-host-state` | `CONTRACT_SHA` | `src/ui/songview.h`, `src/ui/songview.cpp`, `src/rollcheck.cpp` (existing harness). Replace tick/key selection with shared opaque `NoteId`; migrate only cosmetic values to `EditorViewState`; retain runtime-derived fields as live SongView state. Preserve `SongView::ViewState` as a compatible capture/apply snapshot DTO, not live authority, so fresh MainWindow/ViewSidecar callers remain buildable. Consume complete `TrackRemap` for selected track, multi-track scope, mute/solo, and other SongView state without changing behavior. |
+| 14B event-list remap | `task` | `14b-event-list-remap/` / `task/psg-velocity/event-list-remap` | `CONTRACT_SHA` | `src/ui/eventlistview.h`, `src/ui/eventlistview.cpp`, `src/eventviewcheck.cpp` (existing harness). Consume complete SMF-chunk remap for anchoring on apply/Undo/Redo and remove the move-only route. |
+| 20 drawer | `task` | `20-drawer/` / `task/psg-velocity/drawer` | `FOUNDATION_SHA` | `src/ui/editordrawer.h`, `src/ui/editordrawer.cpp`, `src/rollcheckdrawer.cpp`. Drawer shell only: overlay, tabs, resize, local page/visibility state, and focus-facing behavior; never edit a song. |
+| 21 automation | `task` | `21-automation/` / `task/psg-velocity/automation` | `FOUNDATION_SHA` | `src/ui/automationpage.h`, `src/ui/automationpage.cpp`, `src/ui/automationarea.h`, `src/ui/automationarea.cpp`, `src/rollcheckautomation.cpp`. Own page/area behavior, gestures, remap consumption, Undo, drawing, and focused proof. |
+| 22 velocity | `task` | `22-velocity/` / `task/psg-velocity/velocity` | `FOUNDATION_SHA` | `src/ui/velocitypage.h`, `src/ui/velocitypage.cpp`, `src/ui/velocityarea.h`, `src/ui/velocityarea.cpp`, `src/rollcheckpsgvelocity.cpp`. Own shared-selection consumption, continuous/intrinsic interaction, gestures, accessibility, lifecycle/content caching, and proof; consume but do not modify the model/axis. |
+| 23 sidecar | `task` | `23-sidecar/` / `task/psg-velocity/sidecar` | `FOUNDATION_SHA` | `src/ui/viewsidecar.h`, `src/ui/viewsidecar.cpp`, `src/viewsidecarcheck.cpp`. Serialize and harden the detached `SongView::ViewState` snapshot DTO plus cosmetic `EditorViewState` with typed validation and unknown-key preservation; neither is live authority. No UI, host, remap, drawing, or gesture work. |
+| 30C rendering/playhead | `task` | `30c-host-rendering/` / `task/psg-velocity/host-rendering` | `PRODUCT_SHA` | `src/ui/timelinesurface.h`, `src/ui/timelinesurface.cpp`, `src/ui/playheadoverlay.h`, `src/ui/playheadoverlay.cpp`, `src/renderingplayheadcheck.cpp` (new sentinel). Dynamic timeline-band API, overlay-only steady playback, and content diagnostics/invalidation boundaries. |
+| 30A SongView adapter/lifecycle | `task` | `30a-host-songview/` / `task/psg-velocity/host-songview` | `RENDERING_SHA` | `src/ui/songview.h`, `src/ui/songview.cpp`, `src/hostcheck.cpp` (new sentinel). Construct modules and shared context/callbacks; forward revisioned velocity updates exactly, including no-op and stale results; route lifecycle/focus/sidecar state and request dynamic bands. This is the permitted sequential descendant of 14A's SongView paths. |
+| 30B MainWindow routing/persistence | `task` | `30b-host-mainwindow/` / `task/psg-velocity/host-mainwindow` | `ADAPTER_SHA` | `src/mainwindow.h`, `src/mainwindow.cpp`, `src/tabcheck.cpp`, `src/sessioncheck.cpp`, `src/mainwindowroutingcheck.cpp` (new sentinel). Active-tab A/V, event-list blocking, close/project/song/app save boundaries, focus, and status. |
+
+## Packet-05 registration and existing-harness map
+
+`EXISTS` predicates are limited to groups with a source-grounded, genuinely new
+sentinel: 10A uses `src/noteidcheck.cpp`; 11 uses
+`src/editorviewstatecheck.cpp`; and 30A, 30B, and 30C use respectively
+`src/hostcheck.cpp`, `src/mainwindowroutingcheck.cpp`, and
+`src/renderingplayheadcheck.cpp`. The 30B and 30C sentinels enable their
+individual registered commands; the aggregate host command is registered only
+when all three host sentinels are present. The other new-module groups likewise
+use their new dedicated source, never a pre-existing production/harness set.
+The exact host commands are:
+
+```text
+<porydaw> --check-host-adapter <scratch-project> <song-label>
+<porydaw> --check-mainwindow-routing <scratch-project> <song-a> <song-b>
+<porydaw> --check-rendering-playhead <scratch-project> <song-label> [screenshot]
+<porydaw> --check-host-integration <scratch-project> <song-a> <song-b> [screenshot]
+```
+The [packet-05 Runner declaration column](plans/psg-velocity-history/05-check-registration.md#conditional-executable-groups)
+is authoritative for every conditional command's exact `int run...` symbol and
+signature; independent module agents MUST implement no alternate declaration.
+Those declarations pass every `QString` as `const QString &` and give an
+optional `screenshotPath` its `QString()` default only at the declaration. The
+aggregate declaration is
+`runHostIntegrationCheck` in 30B's `src/mainwindowroutingcheck.cpp`; it is
+declared/dispatched only with all three host macros and is one integrated
+runner, never sequential aliases of the individual host checks.
+
+10B extends `src/editcheck.cpp`; 10C and 14A extend `src/rollcheck.cpp`; 14B
+extends `src/eventviewcheck.cpp`; and 12A extends the existing theme checks.
+These are existing commands, not packet-05 registrations. At the respective
+completed subwave the coordinator invokes each applicable command once, never
+once per task and again for the same head:
+`<porydaw> --editcheck <scratch-project>`,
+`<porydaw> --rollcheck <scratch-project> mus_lovely <roll-screenshot>`, and
+`<porydaw> --eventviewcheck <scratch-project> mus_lovely <event-screenshot>`,
+plus the existing `porydaw_themechecks` layout commands. The final layout
+commands remain exactly:
+
+```text
+QT_QPA_PLATFORM=offscreen <build>/porydaw_themechecks --editor-layout-check --base-font-px 12
+QT_QPA_PLATFORM=offscreen <build>/porydaw_themechecks --editor-layout-check --base-font-px 16
+```
+
+## Foundation mini-DAG and product/host waves
+
+### Foundation
+
+From `INFRA_SHA`, start 10A, 12A, 12B, and 13 in parallel. The coordinator
+runs each completed subwave's applicable focused command once and reviewers
+inspect their named-base commit ranges. Only an approved ordinary merge of 10A
+records `NOTE_ID_SHA`.
+
+From `NOTE_ID_SHA`, run 10B and 11 in parallel. Merge approved 10B normally
+and record the resulting integration commit containing its real
+`SongDocument`-minted identities as `DOCUMENT_SHA`; 11 may complete in the
+same interval. Run 10C only from `DOCUMENT_SHA`, so its `ViewNote` projection
+receives those real IDs. Once 10C and 11 are approved and normally present on
+integration, record `CONTRACT_SHA`.
+
+From `CONTRACT_SHA`, run 14A and 14B in parallel. After their focused commands
+and parallel review, merge their approved heads together with the already
+reviewed 12A, 12B, and 13 heads. The resulting ordinary integration commit is
+`FOUNDATION_SHA`, the sole foundation assembly point.
+
+### Product wave
+
+Packets 20–23 run independently and concurrently from exactly
+`FOUNDATION_SHA`. Each uses its packet-05 conditional module command and does
+not edit an ancestor contract. After all four commits are ready, the coordinator
+runs those four focused commands once in parallel, dispatches four independent
+`reviewer` agents, ordinarily merges approved heads, and records `PRODUCT_SHA`.
+
+### Serial host integration chain
+
+The host packets retain exclusive paths; CMake and main remain packet 05 paths.
+Their fixed cross-contract is:
+
+- 30C exposes a generic dynamic-band update API.
+- 30A supplies current roll/visible-page bands and never paints playhead
+  content.
+- 30B calls only public SongView drawer/persistence methods.
+
+Creation and verification of host worktrees at their serial exact bases are assigned to `git-operations-runner`. `git-operations-runner` creates and verifies the `30c-host-rendering` worktree and branch from exact `PRODUCT_SHA`, including submodule initialization and verification, before handing off to 30C's implementation agent. 30C's implementation `task` agent authors code and focused checks in that prepared worktree, but does not create, reset, or rebase a worktree. The coordinator builds/checks 30C's enabled individual command once on its committed head from that base; a reviewer then inspects `PRODUCT_SHA..30C_HEAD`. Only after approval does its ordinary merge record `RENDERING_SHA`.
+
+`git-operations-runner` then creates and verifies the `30a-host-songview` worktree and branch from exact `RENDERING_SHA`, including submodule verification, before handing off to 30A's implementation agent. 30A's implementation `task` agent authors code and focused checks in that prepared worktree. The coordinator builds/checks 30A's enabled individual command once on its committed head from that base; a reviewer then inspects `RENDERING_SHA..30A_HEAD`. Only after approval does its ordinary merge record `ADAPTER_SHA`.
+
+`git-operations-runner` then creates and verifies the `30b-host-mainwindow` worktree and branch from exact `ADAPTER_SHA`, including submodule verification, before handing off to 30B's implementation agent. 30B's implementation `task` agent authors code and focused checks in that prepared worktree. The coordinator builds/checks 30B's enabled individual command once on its committed head from that base; a reviewer then inspects `ADAPTER_SHA..30B_HEAD`. Only after approval does its ordinary merge record `HOST_SHA`. The coordinator then runs the single aggregate `porydaw --check-host-integration` proof on that integrated `HOST_SHA`, including the **CORE-03** forwarding recheck, before it is a final review candidate. No implementation task agent creates, resets, or rebases a worktree.
+
+## Review, validation, geometry, and final repair flow
+
+Task agents commit implementation and focused checks; reviewers inspect
+committed ranges and contracts; the coordinator alone runs focused validation
+once after each completed wave. A focused proof is evidence for that wave, not
+a replacement for review or UX inspection. The final native matrix and visible
+smoke run exactly once per approved candidate SHA—including an approved repair
+candidate—and never per module or reviewer.
+
+12A owns resolver checks and 12B owns the checker/self-test. Product and host
+waves exercise only their module's focused geometry/hit-test behavior through
+registered commands. They MUST NOT run a repository-wide geometry source scan.
+Only the final packet runs the two clean-process resolver commands (base fonts
+12 and 16) and the default repository-wide `check_editor_layout_geometry.py`
+audit once on the integrated candidate; this preserves final **LAY-01** proof.
+
+From `HOST_SHA`, dispatch four `reviewer` agents in parallel for: drawer and
+persistence; automation; velocity and accessibility; and rendering and
+ownership. Every report starts with exactly `APPROVED <CANDIDATE_SHA>` or
+`CHANGES_REQUESTED <CANDIDATE_SHA>`. Its traceability body follows: approvals
+list normative IDs and evidence; changes-requested reports additionally state
+the precise observable failure or source location and narrow repair owner. All
+four approvals must name that identical candidate SHA.
+
+A finding starts `repair/psg-velocity/<owner>/<candidate-short>` from the
+rejected candidate. `git-operations-runner` creates and verifies every repair
+branch and worktree from that exact rejected candidate SHA, including submodule
+initialization and verification. The exclusive owner’s `task` implementation
+agent commits implementation code and focused checks in that prepared worktree
+without creating, resetting, or rebasing worktrees; the coordinator runs only
+the affected focused command(s) or direct-file check(s), each once; a focused
+reviewer approves; and the coordinator merges normally. A candidate rejected before four
+same-SHA final approvals receives no final matrix or smoke. A post-approval
+failure during its one proof remains recorded against that candidate, then
+follows this repair route. The replacement integration SHA becomes a new
+candidate and **all four** final reviewers rerun against it. Only after all
+four approve that replacement does it receive its own one final matrix and
+visible smoke. No repair is made directly on the integration branch and no
+transport workflow is used.
+
+For an approved candidate, the coordinator records one final proof containing:
+
+1. every enabled packet-05 new-module command, including individual host
+   commands and exactly one aggregate host row from the same candidate build:
+   `<porydaw> --check-host-integration <scratch-project> <song-a> <song-b> [screenshot]`;
+2. the existing edit, roll, event-list, keymap, session, and tab checks after
+   their owning tasks extend those existing harnesses;
+3. these exact clean-process resolver commands and the final geometry audit:
+
+   ```text
+   QT_QPA_PLATFORM=offscreen <build>/porydaw_themechecks --editor-layout-check --base-font-px 12
+   QT_QPA_PLATFORM=offscreen <build>/porydaw_themechecks --editor-layout-check --base-font-px 16
+   python3 tools/check_editor_layout_geometry.py
+   ```
+
+4. `git diff --check`; and
+5. configured test-runner applicability and result.
+
+The proof records the same candidate SHA for every row, build/configuration,
+pinned fixture, isolated-settings identity, command, exit result, relevant
+output, and baseline attribution. It is followed once by a visible
+**UX-01...UX-11** smoke using the pinned fixture and required representative
+cases. A subsequent repair makes a new candidate, reruns all final reviewers,
+and after approval repeats this same single-proof sequence.
+
+## Acceptance ownership and required rechecks
+
+| Acceptance | Primary accountable owner | Required downstream recheck |
+| --- | --- | --- |
+| CORE-01 | 10A, 10B, 10C | 14A, 14B, 21, 22, 30A, final automation/velocity review |
+| CORE-02 | 10A, 10B | 14A, 22, 30A, final velocity review |
+| CORE-03 | 10B | 22 and **30A host forwarding**, then final velocity review |
+| LAY-01 | 12A, 12B | 20–22 focused geometry behavior; 30A/30C; final resolver and source audit |
+| DRW-01, DRW-02, DRW-03 | 20 | 30A, 30B, final drawer/persistence review |
+| DRW-04, DRW-05 | 11 (editor-page seam) and 23 (snapshot/cosmetic sidecar codec) | 20, 30A, 30B, final drawer/persistence review |
+| AUT-01, AUT-02, AUT-03 | 21 | 30A, final automation review |
+| VEL-01, VEL-02 | 22 | 30A, final velocity review |
+| VEL-03, VEL-04 | 13, 22 | 30A, final velocity review |
+| A11Y-01 | 22 | 30A, final velocity review |
+| LIFE-01 | 11, 14A, 20–22, 30A | final all-domain closure |
+| PERF-01 | 22, 30A, 30C | final rendering/ownership review and visible playback evidence |
+| UX-01, UX-02 | 20, 30A, 30B | final drawer/persistence review and smoke |
+| UX-03, UX-04 | 21 | 30A, final automation review and smoke |
+| UX-05, UX-06 | 22 | 30A, final velocity review and smoke |
+| UX-07, UX-08 | 13, 22 | final velocity review and smoke |
+| UX-09 | 22, 30A, 30C | final rendering review and smoke |
+| UX-10 | 23, 30A, 30B | final drawer/persistence review and smoke |
+| UX-11 | 12A, 20–22, 30A, 30C | final geometry audit and smoke at both scales |
+
+## Delivery constraints
+
+- Preserve every specification exclusion and non-goal in every packet and
+  repair.
+- A task does not expand into another packet's paths. Contract changes return
+  to the named owner; do not create a parallel implementation.
+- Keep commits scoped and buildable. Do not add unrelated refactors,
+  formatting, runtime modes, fallbacks, resources, test frameworks, or
+  registrations.
+- Preserve unrelated work and local style. The oracle informs UX comparison
+  only; the specification decides behavior.

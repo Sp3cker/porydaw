@@ -9,8 +9,8 @@ branch.
 The branch that contains the reference implementation is a UX oracle, not a
 source of commits to port. Its history mixes the requested work with formatting
 churn, experiments, build changes, and unrelated fixes. Reimplement the
-behavior described here from a fresh branch based on the current integration
-tip. Do not cherry-pick or merge the reference branch.
+behavior described here through the fresh `upstream/main` DAG defined in
+[`PLAN.md`](../PLAN.md). Do not cherry-pick or merge the reference branch.
 
 This specification was audited against reference implementation commit
 `52fd478f27594ffe410472fb8d4a62e792378f16` on 2026-07-29. Later commits on
@@ -96,12 +96,13 @@ implementation used these seams:
 
 Apply Fowler-style refactoring principles throughout the rewrite:
 
-- Start from the current integration tip and keep the program working.
+- Start from `UPSTREAM_SHA` and the recorded task base defined in `PLAN.md`,
+  and keep the program working.
 - Make small, named, behavior-preserving structural changes.
 - Add or strengthen a focused check before changing behavior at that seam.
 - Separate refactoring commits from feature commits. A commit that changes
   structure must not also make an unrelated UX change.
-- Compile and run the focused checks after each step.
+- Have the coordinator compile and run focused checks once at each behavior-complete wave after the task commits are available.
 - Prefer a series of safe transformations over a wholesale replacement.
 - Remove duplication only when the next requested behavior needs the shared
   seam.
@@ -111,9 +112,8 @@ Apply Fowler-style refactoring principles throughout the rewrite:
 - If a step stops being behavior-preserving, name the intended behavior change
   in the commit and cover it with a check.
 
-Each commit in the final series must build, pass its focused checks, and be
-safe to review when applied in order. Revert dependent commits in reverse
-order.
+Each module commit must be buildable and safe to review when applied on its
+recorded parent. `git-operations-runner` performs all worktree, branch, ref-base verification, and submodule operations. Task agents enter prepared worktrees and author implementation, focused checks, and ordinary commits; the coordinator alone runs each wave's focused commands after those commits, at the cadence directed by that wave. Revert dependent commits in reverse order.
 
 ## Static geometry contract
 
@@ -186,8 +186,8 @@ Derived measurements must remain derived.
 | Velocity relative-drag activation distance | 1 |
 | Velocity freehand stationary-stamp radius | 6 |
 
-This table is not an allowlist or a complete inventory. The preparatory layout
-commit must also inventory paint extents, text bounds, hover and clipping
+This table is not an allowlist or a complete inventory. The layout-contract
+module must also inventory paint extents, text bounds, hover and clipping
 slop, strokes, and every other static geometry value found while extracting
 the existing automation editor and reading the reference drawer and velocity
 pages. Those values follow the same `layout` rule even when this document does
@@ -201,10 +201,10 @@ own literal.
 
 ### Required geometry gates
 
-The characterization commit must check in the complete set of geometry call
-sites and observed default outcomes as focused characterization cases. The
-layout-migration commit must turn that call-site inventory into the
-standard-library-only gate:
+Packet 12B, the geometry gate, must turn the complete inventory of final
+geometry call sites and observed default outcomes into the standard-library-only
+gate below. Packet 12A owns the resolver characterization; 12B owns this
+checker and its narrowly scoped self-test:
 
 ```text
 python3 tools/check_editor_layout_geometry.py
@@ -245,8 +245,15 @@ remainder. The two runs must check the complete inventory, the audited-default
 table, the declared scaling or invariance of each semantic value, and the
 derived geometry.
 
-Run both resolver commands and the source-audit command after the layout
-migration, after every later feature commit, and in the final suite.
+Packet 12A owns the two clean-process resolver commands. Packet 12B owns the
+checker and any narrowly scoped checker self-test; while product files are
+absent it may use focused file arguments or that self-test, and its default
+target set is the final integrated implementation. At their foundation
+checkpoint, the coordinator runs 12A's resolver commands and 12B's self-test
+once. Product and host waves run only their module command's focused geometry or
+hit-test behavior. In the final suite, the coordinator reruns the two resolver
+commands and runs the repository-wide default source audit once; no module or
+host wave reruns the full repository audit.
 
 ## Global behavior
 
@@ -637,8 +644,9 @@ Hovering empty space previews:
 Do not draw the preview near an existing marker. Existing markers draw over
 the preview label.
 
-While playing, the current voice follows the rounded playhead tick. While
-stopped, it follows the edit cursor.
+While playing, every automation voice-context lookup must consume packet 11's
+sole static `uint64_t EditorPageContext::drawerContextTick(double)` helper.
+While stopped, it follows the edit cursor.
 
 ### Drawing and hover
 
@@ -696,14 +704,16 @@ resolve the current voice at:
 - the rounded playhead tick while playing; or
 - the edit cursor while stopped.
 
-Use one helper for every drawer playhead lookup:
+Every automation or velocity voice-context lookup, and every other drawer
+playhead lookup, must call packet 11's sole static
+`uint64_t EditorPageContext::drawerContextTick(double)` helper:
 
 ```text
 drawerContextTick(t) = floor(max(0, t) + 0.5)
 ```
 
-Return that result as an unsigned tick. Do not let one caller truncate while
-another rounds.
+Return that result as an unsigned tick. No consumer may truncate a drawer
+playhead or define a duplicate rounding helper.
 
 Compatibility requires the same resolved voice type, the same graduation
 count, and the same representative and audible flag for every graduation.
@@ -1045,14 +1055,25 @@ run still exited with three voice-line assertions:
 - reorder drag from voice line requested reveal.
 
 Those three failures were not compared with the same fixture on the current
-integration base, so they are not attributed to this feature. Establish that
-baseline before using the full roll check as an acceptance gate.
+integration base, so they are not attributed to this feature. Before Packet 05
+or any implementation, pin the hearth-test fixture revision and have the
+coordinator run and record the `UPSTREAM_SHA` roll baseline against a scratch
+fixture with isolated settings. Compare later roll results with that recorded
+baseline before assigning a failure to this feature.
 
 ### Focused automated checks
 
 Write or adapt focused checks on the fresh base for:
 
-- **LAY-01** — both fixed-input `--editor-layout-check` processes and
+Packet 05 is the sole registration owner, but it conditionally registers only
+new-module commands with a genuinely new sentinel check/source file. It MUST
+NOT use an `EXISTS` predicate over a complete production/check set already
+present in fresh upstream source. Existing edit, roll, event-list, and theme
+commands remain existing commands after their owning task extends that harness;
+task and host packets do not add late registration.
+
+- **LAY-01** — in the final suite, both fixed-input
+  `--editor-layout-check` processes and
   `python3 tools/check_editor_layout_geometry.py` pass; every inventoried value
   resolves through `layout`, follows its declared scaling or
   `layout::singlePixel()` invariance, and matches its audited default; plot
@@ -1078,8 +1099,9 @@ Write or adapt focused checks on the fresh base for:
 - **DRW-05** — view-only drawer and lane actions change neither MIDI nor Undo;
 - **AUT-01** — row order, hidden lanes, empty lanes, value ranges, and
   track-owner remapping;
-- **AUT-02** — point, sweep, ramp, exact entry, time selection, and safe
-  termination;
+- **AUT-02** — point, sweep, ramp, exact entry, time selection, safe
+  termination, and packet-11 `drawerContextTick(double)` consumption for
+  automation voice context;
 - **AUT-03** — one Undo entry per completed automation edit and none for a
   no-op;
 - **VEL-01** — shared note selection and plain track-header clearing;
@@ -1088,9 +1110,11 @@ Write or adapt focused checks on the fresh base for:
 - **VEL-03** — DirectSound, invalid voice context, and incompatible selections
   use a continuous axis; a mixed PSG/PCM or incompatible PSG drag applies one
   proposed delta, canonicalizes each PSG note through its own voice context,
-  leaves DirectSound exact, and creates one Undo command;
+  leaves DirectSound exact, creates one Undo command, and uses packet-11
+  `drawerContextTick(double)` for continuous-axis playback context;
 - **VEL-04** — intrinsic Square, Noise, and Wave graduations, exact-value
-  restoration, and label layout; and
+  restoration, label layout, and packet-11 `drawerContextTick(double)` for
+  intrinsic playback context;
 - **A11Y-01** — exact continuous and intrinsic velocity accessible
   descriptions, with no node or graduation focus targets;
 - **LIFE-01** — automation point, sweep, ramp, and band gestures and velocity
@@ -1123,11 +1147,18 @@ duplicated, or when the total is not exactly twelve. Printed metrics alone are
 not an acceptance gate, and the excluded `autoresearch.sh` must not be required
 to parse them.
 
-`src/editcheck.cpp` must cover the batch document mutation seam.
-`src/rollcheckautomation.cpp` should cover the drawer and automation page.
-`src/rollcheckpsgvelocity.cpp` should cover continuous and intrinsic velocity
-behavior. Keep each harness focused enough to attribute a failure to this work.
-Use the reference checks as evidence; do not copy their files wholesale.
+The module-specific harnesses remain scoped to their owning contracts:
+`src/noteidcheck.cpp` is the 10A sentinel; `src/editcheck.cpp` covers the
+batch document-mutation seam; 11 keeps `EditorPageContext` in
+`src/ui/editorpagehost.h` and uses `src/editorviewstatecheck.cpp` as its
+sentinel; `src/rollcheckdrawer.cpp` the drawer shell;
+`src/rollcheckautomation.cpp` automation; `src/rollcheckpsgvelocity.cpp`
+continuous and intrinsic velocity behavior; and `src/viewsidecarcheck.cpp` the
+sidecar codec. Packet 05 conditionally exposes only new-sentinel module
+commands, while extended existing edit, roll, event-list, and theme harnesses
+retain their existing commands. The coordinator invokes each applicable command
+once for its completed wave. Use the reference checks as evidence; do not copy
+their files wholesale.
 
 ### Manual UX checks
 
@@ -1157,11 +1188,18 @@ Noise, Wave, and key-split notes:
     velocity note targeting, and ruler-density checks at the second base-font
     scale; confirm that visual geometry and hit testing stay aligned.
 
-Run the full existing roll check after the focused checks. Compare any
-pre-existing failure against the same current-base fixture before assigning it
-to this feature.
+Run the full existing roll check once as part of the final suite, after its
+relevant focused commands. Compare any pre-existing failure against the recorded
+`UPSTREAM_SHA` baseline on the same pinned fixture before assigning it to this
+feature.
 
 ### Required final suite
+
+The coordinator runs exactly one final suite for an approved candidate after all
+four final reviewers approve that same candidate SHA. It includes every enabled
+new-sentinel module command from Packet 05, the aggregate host proof, and the
+existing commands extended by foundation, product, and host work, as well as
+the native commands below.
 
 Build the application, then run at least these native checks from the final
 commit. Use fresh scratch project copies for checks that can mutate a project,
@@ -1186,6 +1224,9 @@ the harness supports them. A skipped command needs a recorded reason. Also run
 `git diff --check` and the project's configured test runner if it covers any
 touched module.
 
+Do not duplicate a native matrix or the default geometry audit outside this one
+final suite.
+
 ### Traceability
 
 | Contract section | Acceptance IDs |
@@ -1201,120 +1242,106 @@ touched module.
 When a normative rule cannot be automated, record its result under the mapped
 manual ID. A bare build result does not satisfy a UX or performance ID.
 
-## Implementation preflight
+## Execution plan
 
-Before the first code change:
+Execute this specification only through the dependency DAG in
+[`PLAN.md`](../PLAN.md) and its `plans/psg-velocity-history/` packets.
+`plans/editor-drawer/` is superseded historical reference and is not an
+execution input. The absolute runtime/worktree root is
+`/Users/spencer/dev/cProjects/porydaw/.worktrees/psg-velocity-history-upstream`;
+its integration worktree is
+`/Users/spencer/dev/cProjects/porydaw/.worktrees/psg-velocity-history-upstream/integration/`.
+Every named relative worktree is a direct child of that runtime root. All worktree, branch, ref-base verification, and submodule operations are assigned exclusively to `git-operations-runner`. Packet `task` agents enter prepared worktrees and author implementation and commits. The coordinator performs ordinary merges.
 
-1. Fetch and prune all remotes.
-2. Create a clean implementation worktree and branch from the fetched
-   `upstream/main`, unless the integrator has named another authoritative ref.
-3. Record the exact base SHA, this specification's commit SHA, and the
-   reference-oracle SHA in the first implementation commit body.
-4. Record the `hearth-test` fixture SHA, make a fresh scratch reflink for each
-   mutating check, and use `mus_lovely` for the roll baseline.
-5. Build the unchanged base and run the entire Required final suite below.
-   Record the exact commands, exit codes, named failures, screenshot paths,
-   platform mode, settings isolation, and any skipped checks.
+The coordinator fetches `upstream/main`, records `UPSTREAM_SHA`, pins
+the fixture, and records the isolated scratch-fixture roll baseline before any
+implementation. `git-operations-runner` creates worktree `05-check-registration` and branch `task/psg-velocity/check-registration` from `UPSTREAM_SHA` and verifies submodules. Packet 05's `task` agent enters the prepared worktree and owns `CMakeLists.txt`, `src/main.cpp`, and new `src/editorcheckdispatch.h.in`; its reviewed ordinary merge records `INFRA_SHA`. Every implementation branch starts from `INFRA_SHA` or a named descendant. Its conditional commands use
+only genuinely new sentinel sources; a pre-existing source set is never an
+`EXISTS` completion predicate.
 
-The roll baseline command has this form:
+From `INFRA_SHA`, run 10A note-identity transport, 12A layout resolver, 12B
+geometry gate, and 13 velocity model in parallel. After 10A is approved and
+normally merged, record `NOTE_ID_SHA`; then run 10B document mutation and 11
+neutral host seams in parallel. Merge approved 10B and record
+`DOCUMENT_SHA`, which contains `SongDocument`-minted IDs. Run 10C view
+projection only from `DOCUMENT_SHA`, so those real IDs reach `ViewNote`. Once
+10C and 11 are approved and normally present on integration, record
+`CONTRACT_SHA`; then run 14A shared host selection/remap migration and 14B
+event-list remap migration in parallel. After the foundation reviews and
+coordinator-focused checks, merge 12A, 12B, 13, 14A, and 14B and record
+`FOUNDATION_SHA`.
+
+The drawer (20, `task`), automation (21, `task`), velocity (22, `task`),
+and sidecar (23, `task`) modules work in parallel from exactly
+`FOUNDATION_SHA`. They consume the foundation contracts and existing
+`TimelineSurface` without editing their ancestors. New-sentinel product groups
+use Packet 05's conditional commands; existing-source work keeps its existing
+harness command. Product packets do not take registration ownership. Merge
+approved heads and record `PRODUCT_SHA`.
+
+Packet 30 is a serial host chain, not a concurrent mini-wave:
+
+- 30C rendering/playhead owns `src/ui/timelinesurface.h`,
+  `src/ui/timelinesurface.cpp`, `src/ui/playheadoverlay.h`,
+  `src/ui/playheadoverlay.cpp`, and new
+  `src/renderingplayheadcheck.cpp`.
+- 30A SongView adapter/lifecycle owns `src/ui/songview.h`,
+  `src/ui/songview.cpp`, and new `src/hostcheck.cpp`.
+- 30B MainWindow routing/persistence owns `src/mainwindow.h`,
+  `src/mainwindow.cpp`, `src/tabcheck.cpp`, `src/sessioncheck.cpp`, and new
+  `src/mainwindowroutingcheck.cpp`.
+
+30C exposes the generic dynamic-band update API; 30A supplies current
+roll/visible-page bands and never paints playhead content; 30B calls only
+public SongView drawer/persistence methods. Packet 05 registers an individual
+host command only from its new 30A/30B/30C sentinel. The new 30B and 30C
+dedicated checks enable their individual registrations and, with
+`src/hostcheck.cpp`, the aggregate host command. Its exact commands are:
 
 ```text
-QT_QPA_PLATFORM=offscreen <porydaw-executable> \
-  --rollcheck <scratch-hearth-project> mus_lovely <screenshot-path>
+<porydaw> --check-rendering-playhead <scratch-project> <song-label> [screenshot]
+<porydaw> --check-host-adapter <scratch-project> <song-label>
+<porydaw> --check-mainwindow-routing <scratch-project> <song-a> <song-b>
+<porydaw> --check-host-integration <scratch-project> <song-a> <song-b> [screenshot]
 ```
 
-Do not start feature work until the base build and baseline record exist. Use
-the same build type, fixture snapshot, platform mode, settings isolation, and
-commands for the final run and when attributing failures.
+30C alone starts from `PRODUCT_SHA`. The coordinator builds/checks its
+individual command once on the committed 30C head; a reviewer inspects
+`PRODUCT_SHA..30C_HEAD`; and only an approved ordinary merge records
+`RENDERING_SHA`. 30A then starts from `RENDERING_SHA`. The coordinator
+builds/checks its individual command once on the committed 30A head; a
+reviewer inspects `RENDERING_SHA..30A_HEAD`; and only an approved ordinary
+merge records `ADAPTER_SHA`. 30B then starts from `ADAPTER_SHA`. The
+coordinator builds/checks its individual command once on the committed 30B
+head; a reviewer inspects `ADAPTER_SHA..30B_HEAD`; and only an approved
+ordinary merge records `HOST_SHA`. The coordinator then runs the aggregate
+focused host proof once on that integrated `HOST_SHA`, including the CORE-03
+forwarding recheck, before it is a final review candidate.
 
-## Required commit series
+Task agents author implementation, checks, and commits but do not build, test,
+format, or lint. At each completed wave, the coordinator runs every applicable
+focused command exactly once (in parallel where independent): packet-05
+new-sentinel commands for new modules, or existing edit, roll, event-list, and
+theme commands after the owner extends that harness. Reviewers inspect the
+committed ranges at the cadence directed by that wave. Ordinary merges only; do
+not use staged-tree, transport, or cherry-pick workflows. A remediation starts
+from the rejected candidate on `repair/psg-velocity/<owner>/<candidate-short>`;
+its task agent commits the repair, the coordinator runs only affected focused
+checks once, and a focused reviewer approves it.
 
-Implement the work as ten ordered commits:
+Four final reviewer domains run in parallel from `HOST_SHA`, and every approval
+names the exact candidate SHA. After a repair, all four rerun against the
+replacement SHA. Only then does the coordinator run the one final native suite,
+the two resolver commands with exact
+`--editor-layout-check --base-font-px 12` and
+`--editor-layout-check --base-font-px 16` flags, the one default
+repository-wide geometry audit, and the visible UX-01...UX-11 smoke for that
+approved candidate.
 
-1. **Publish complete track-identity remaps**
-   - Cover move, insert, duplicate, delete, metadata-only/engine-track
-     transitions, Undo, Redo, no-op, and signal order.
-   - Adapt existing consumers without changing their UX.
-   - Make no drawer or velocity change.
-2. **Use exact note identity in shared selection**
-   - Distinguish duplicate notes through the view model, piano roll selection,
-     and document lookup.
-   - Cover duplicate selection and selection continuity.
-   - Make no drawer or velocity-page change.
-3. **Add revision-checked batch velocity editing**
-   - Add the batch mutation at the document seam.
-   - Cover stale rejection, deduplication, no-op filtering, and one-command
-     Undo.
-   - Make no drawer UI change.
-4. **Characterize editor static geometry**
-   - Add focused characterization cases containing a complete call-site and
-     default-outcome inventory of existing automation, shared header/keyboard,
-     and reference drawer and velocity geometry.
-   - Record the audited defaults, fixed `12` and `16` inputs, rounding rule,
-     derived-value rules, and reasoned non-geometry exceptions.
-   - Add characterization checks without changing production geometry or UX.
-   - Make no drawer or velocity-page change.
-5. **Move shared editor geometry into `layout`**
-   - Add and check named `layout` accessors for the full inventory, including
-     values that later drawer and velocity commits will consume.
-   - Add the scoped no-argument source checker from the characterized call-site
-     inventory; it becomes the sole source-location inventory.
-   - Replace every static geometry literal in the existing automation editor.
-   - Move track-header and piano-keyboard widths to `layout`, update every
-     consumer, derive plot origin from them, and leave no `SongView` constant
-     or alias that can drift.
-   - Make both fixed-input resolver checks and the no-argument source checker
-     pass, preserving visible geometry and interaction at the audit scale.
-   - Make no drawer or velocity-page change.
-6. **Characterize and expose the existing automation page**
-   - Add focused checks for the current point, sweep, ramp, row-resize, range,
-     menu, selection, and Undo behavior on the fresh base.
-   - Make only the structural change needed to host the page in an overlay.
-   - Make no visible UX change.
-7. **Add the editor drawer shell and saved page state**
-   - Add overlay layout, tabs, shortcuts, resize, focus return, cancellation,
-     and sidecar fields.
-   - Consume the predeclared named `layout` values and extend **LAY-01** for
-     every drawer geometry path.
-   - Place the existing automation editor in the drawer without changing its
-     editing rules.
-8. **Complete the automation drawer deltas**
-   - Preserve the base's row resizing, range behavior, and menus.
-   - Add typed row-state persistence and remapping, hidden/show lanes, and only
-     the exact menu and gesture differences named in this document.
-   - Extend the behavior checks and **LAY-01** for every changed geometry path.
-9. **Add the continuous velocity page and shared selection editing**
-   - Keep intrinsic axes disabled.
-   - Consume the predeclared named `layout` values and extend **LAY-01** for
-     every velocity geometry path.
-   - Add continuous gesture, freehand, cancellation, accessibility, status,
-     and Undo checks.
-10. **Add intrinsic PSG graduations and finish velocity UX**
-   - Add Square, Noise, Wave, exact-value, mixer-independence, and native
-     pass/fail checks.
-   - Extend **LAY-01** for any changed drawing or hit-test path.
-
-If a feature commit first needs a structural change, land that change as its
-own behavior-preserving refactor immediately before the feature. Do not hide a
-refactor inside a feature diff. Do not combine this series into one large
-commit, and do not mix optional fixes into it.
-
-Commits 6 through 10 may add no feature-local static geometry. If the
-characterization missed a needed value, first extend the inventory, add its
-named `layout` accessor and resolver checks, and make the source gate pass in a
-separate preparatory refactor.
-
-Before each commit:
-
-1. Build the application.
-2. Run the focused checks added or touched by that commit.
-3. Starting with commit 5, run both fixed-input resolver commands and
-   `python3 tools/check_editor_layout_geometry.py`.
-4. Inspect the staged diff for raw static screen-space literals, whole-file
-   churn, and unrelated files.
-5. Confirm the commit message names one behavior or refactor.
-
-After the tenth commit, run the full relevant check set and manual UX pass.
+The DAG's acceptance map assigns every acceptance ID to a primary module and
+its downstream rechecks. It does not alter any normative behavior, geometry
+rule, explicit exclusion, required final command, or manual UX check in this
+specification.
 
 ## Explicit exclusions from the reference branch
 
@@ -1347,8 +1374,9 @@ The work is complete when:
 
 - every required behavior in this document has recorded evidence under its
   mapped automated or manual acceptance ID;
-- all ten commits, plus any named preparatory refactor, build and pass their
-  focused checks when applied in order;
+- every module commit, plus any named preparatory refactor, is buildable on its
+  recorded parent and has its named focused command run once by the coordinator
+  at its completed wave;
 - all static geometry in the drawer, automation editor, velocity editor, and
   their shared track-header, piano-keyboard, and plot-origin paths resolves
   through shared `layout` enums or values, with **LAY-01** passing at both font
@@ -1361,7 +1389,7 @@ The work is complete when:
 - steady playback does not rebuild drawer content on each UI tick;
 - the full relevant check set has been run with pre-existing failures
   attributed against the same base and fixture; and
-- the staged and final diffs contain no unrelated churn.
+- the implementation and final diffs contain no unrelated churn.
 
 ## Reference sources
 
