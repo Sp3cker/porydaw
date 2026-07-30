@@ -97,7 +97,8 @@ Task 08B owns pointer editing, drawing, gesture cancellation, and gesture Undo.
 
 ## Required verification
 
-Use fresh scratch fixtures for every mutating command. Build the application
+Use one-at-a-time ephemeral scratch reflinks for mutating commands and delete
+each immediately after recording its result. Reuse the active candidate build
 and run the focused automation, edit, session, roll, and remap checks needed to
 prove:
 
@@ -141,8 +142,8 @@ Record in `_coordination/08a-state-menus/HANDOFF.md`:
 - changed files and diffstat;
 - identity codec and validation table;
 - row-order, sidecar, remap, menu, MIDI, revision, and Undo evidence;
-- exact commands, exits, fixture copies, baseline-attributed failures, and
-  geometry outputs; and
+- exact commands, exits, ephemeral fixture identifiers and deletion
+  confirmations, baseline-attributed failures, and geometry outputs; and
 - confirmation that gesture and drawing behavior did not change.
 
 ## Review gate
@@ -154,7 +155,8 @@ view/document ownership.
 
 `APPROVED` requires all owned checks to pass, no Task 08B behavior change, and
 an unchanged staged tree ID. The task agent must resolve every requested change
-and obtain a new full review.
+and obtain the focused exact-tree remediation review defined by the shared
+Review plan.
 
 The task agent never commits. After approval, only the coordinator may
 materialize the exact reviewed tree as the transport commit/base supplied to Task

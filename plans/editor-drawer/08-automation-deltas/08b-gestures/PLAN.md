@@ -93,7 +93,7 @@ codec, lane list, remap path, or menu model.
 
 If a real integration defect requires changing an 08A-owned seam, stop and
 record it for the coordinator. Such a change requires renewed 08A coverage and
-the full combined review below.
+review of the combined boundary affected by that delta.
 
 ## Method
 
@@ -109,8 +109,10 @@ the full combined review below.
 
 ## Required verification
 
-Use fresh scratch fixtures for mutating checks. Build and run focused
-automation, edit, roll, session, drawer-lifecycle, and remap checks that prove:
+Use one-at-a-time ephemeral scratch reflinks for mutating checks, deleting each
+immediately after recording its result. Reuse the active candidate build and
+run focused automation, edit, roll, session, drawer-lifecycle, and remap checks
+that prove:
 
 - every pointer and wheel route above;
 - gap-free fast sweep and ramp behavior;
@@ -154,8 +156,8 @@ Record in `_coordination/08b-gestures/HANDOFF.md`:
 - gesture/Undo and lifecycle matrices;
 - drawing, hover, focus, cursor/grab, MIDI, revision, and snapshot evidence;
 - Task 08A regression results;
-- exact commands, exits, fixtures, baseline attribution, screenshots, and
-  geometry outputs; and
+- exact commands, exits, ephemeral fixture identifiers and deletion
+  confirmations, baseline attribution, screenshots, and geometry outputs; and
 - confirmation that the worktree is staged and uncommitted.
 
 ## Review gates
@@ -173,7 +175,9 @@ The Review agent performs two reviews against the same final staged tree:
 
 The review record must name both base trees and the final staged tree.
 Approval of 08B alone is insufficient. Any change after either review
-invalidates both and requires review of the complete updated tree.
+invalidates both tree bindings. Reissue both verdicts for the new exact tree,
+reviewing the remediation delta, prior findings, and combined boundary it
+affects rather than untouched accepted portions.
 
 The task agent never commits. Only after both reviews return `APPROVED` may the
 coordinator create the clean B transport commit, then synthesize its exact tree

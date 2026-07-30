@@ -26,8 +26,10 @@ the specification requires.
 
 ### Automated matrix
 
-Build the final application and run the required native suite on fresh fixture
-copies:
+Build the final application and run the required native suite sequentially.
+Create one ephemeral scratch reflink immediately before each mutating command,
+capture its result and selected screenshot, then delete it before starting the
+next command:
 
 ```text
 <porydaw> --editcheck <scratch-project>
@@ -48,8 +50,9 @@ harnesses, and the strict twelve-result PSG check.
 
 ### Manual matrix
 
-Record **UX-01...UX-11** on fresh reflinks made from Task 00's pinned fixture
-manifest. Use `mus_lovely` as the primary song and `mus_poke_center` for the
+Record **UX-01...UX-11** using one ephemeral reflink at a time from Task 00's
+pinned fixture manifest, deleting each immediately after its result is
+captured. Use `mus_lovely` as the primary song and `mus_poke_center` for the
 second-tab and mixer-independence cases. Follow Task 00's exact prepared
 scratch recipe and song/track/tick/program/key matrix for tempo, voice,
 controller, DirectSound, Square, Noise, Wave, and key-split contexts. Include:
@@ -94,7 +97,8 @@ If verification fails:
 3. Add a focused regression.
 4. Run the task's full Review loop.
 5. Commit a focused reviewed correction or resynthesize the owning boundary.
-6. Replay all dependent checks and this final matrix.
+6. Replay dependent focused checks, then run the full final matrix once on the
+   accepted integrated correction.
 
 If a cross-cutting correction cannot fit an existing boundary, write a short
 focused plan note and obtain Review approval before editing.
@@ -120,12 +124,14 @@ finding.
 
 ## Completion
 
-After final approval, the coordinator follows the root cleanup sequence:
-archive coordination evidence; prove every candidate is stored in a transport
-or integration commit; clean generated state; validate each exact new path;
-and use scoped `git worktree remove --force <exact-created-path>` only for
-Git's initialized-submodule restriction. Do not deinitialize the shared
-submodule registration. Delete branches only when non-forced deletion
-succeeds. Preserve non-ancestor transport branches, the integration and plan
-branches, and all coordination evidence. Do not push without a separate user
-request.
+After final approval, remove the final verification build, then follow the root
+cleanup sequence: preserve coordination evidence; prove every candidate is
+stored in a transport or integration commit; confirm the one-time adoption
+cleanup and subsequent incremental task cleanup are recorded; validate each
+exact new path; and use scoped
+`git worktree remove --force <exact-created-path>` only for Git's
+initialized-submodule restriction. Do not deinitialize the shared submodule
+registration. Delete branches only when non-forced deletion succeeds. Preserve
+non-ancestor transport branches, the integration and plan branches, and all
+coordination evidence. Push the completed
+`feature/editor-drawer-reimplementation` branch to `origin`.

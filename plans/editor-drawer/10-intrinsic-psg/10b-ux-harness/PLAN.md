@@ -185,8 +185,10 @@ The same staged tree requires two independent Review verdicts:
    specification, oracle, exclusions, ownership boundaries, and focused
    checks.
 
-Any remediation changes the staged tree and invalidates both verdicts. Rerun
-both reviews against the new tree. Only the coordinator may synthesize the
+Any remediation changes the staged tree and invalidates both tree bindings.
+Reissue both verdicts for the new exact tree, reviewing the remediation delta,
+prior findings, and combined boundary it affects rather than untouched
+accepted portions. Only the coordinator may synthesize the
 exact combined-approved tree. It first creates the clean B transport commit,
 then uses its exact tree for the single Task 10 integration commit defined by
 the root plan, with the required tree-identity and integration checks.

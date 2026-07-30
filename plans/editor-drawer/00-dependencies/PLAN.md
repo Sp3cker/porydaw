@@ -58,14 +58,16 @@ paths, and content hashes before copying it.
    01 through 07, 08A, 08B, 09A, 09B, 10A, 10B, and 11. Create the A and B
    agents' directories separately; the 08, 09, and 10 parent plans are logical
    slice packets and do not get worktrees.
-7. Initialize required submodules in each worktree. Give each worktree its own
-   build, settings, scratch-fixture, screenshot, log, and temporary paths
-   beneath runtime `_state/<task-id>/`, outside the Git worktree.
+7. Initialize required submodules in each worktree. Do not preallocate builds
+   or fixture copies. Create transient settings beneath
+   `_state/<task-id>/` only when that task becomes active; create every durable
+   evidence path beneath `_coordination/<task-id>/`.
 8. Create `_coordination/BASELINE.md`, `BRANCHES.md`, and per-task handoff,
    review, and test locations outside every Git index.
 9. Build the unchanged detached base.
-10. Make a fresh scratch reflink of the pinned fixture content for every
-    mutating command. Never reuse a scratch project between commands.
+10. Make one fresh scratch reflink of the pinned fixture immediately before
+    each mutating command, record the result, and delete the copy immediately.
+    Never reuse or retain a scratch project between commands.
 11. Run the complete required baseline suite. Record exact commands, exit
     codes, named failures, screenshots, and skips.
 12. Validate and record the manual fixture matrix:
@@ -78,13 +80,16 @@ paths, and content hashes before copying it.
     - each manual case names its song, track, tick or prepared scratch edit,
       program, note key, and expected context.
 
-    Preparation may edit only a fresh scratch reflink. Record that preparation
-    as a repeatable fixture recipe under `_coordination/`; do not add it to the
+    Preparation may edit only a one-at-a-time scratch reflink, deleted
+    immediately after recipe validation. Record that preparation as a
+    repeatable fixture recipe under `_coordination/`; do not add it to the
     `hearth-test` working copy or this repository.
-13. Confirm every task worktree is clean and points at the seed commit.
+13. Delete the detached-base build after the baseline suite and manual matrix
+    evidence are recorded.
+14. Confirm every task worktree is clean and points at the seed commit.
 
-The check harness mutates projects. Never run two checks against the same
-fixture copy.
+The check harness mutates projects. Run mutating checks sequentially, never
+against the canonical fixture, and never with two scratch copies present.
 
 ## Acceptance
 
@@ -92,10 +97,12 @@ fixture copy.
 - The base and oracle worktrees are detached and treated as read-only.
 - The integration seed changes documentation only.
 - All task-agent branches start at the reviewed seed commit.
-- Each worktree has isolated generated and mutable state.
+- Active worktrees isolate settings and evidence while using the bounded build
+  lifecycle from the root plan.
 - No build, settings, fixture, screenshot, log, or temporary output lives
   inside a Git worktree.
-- Every mutating baseline command used its own scratch reflink.
+- Every mutating baseline command used one ephemeral scratch reflink and
+  deleted it immediately after its result was recorded.
 - The manual matrix has a named and validated song, track, time/key context,
   or repeatable scratch preparation for all eight required content classes.
 - The unchanged base builds.
@@ -107,9 +114,9 @@ fixture copy.
 ## Handoff
 
 Record the branch-to-worktree table, all pinned SHAs, fixture manifest and
-hash, named song/case matrix, seed staged-tree ID, baseline results, reflink
-paths, build path, settings path, and any external blocker. Leave the seed
-staged and uncommitted for review.
+hash, named song/case matrix, seed staged-tree ID, baseline results, ephemeral
+reflink naming template and deletion confirmation, build path, settings path,
+and any external blocker. Leave the seed staged and uncommitted for review.
 
 ## Review gate
 

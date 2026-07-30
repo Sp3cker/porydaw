@@ -169,8 +169,10 @@ The Review agent must issue two explicit verdicts bound to the same staged tree:
    staged tree, reread 09A and 09B evidence, exercise the complete continuous
    page, and check all Task 09 acceptance ownership and oracle improvements.
 
-Any remediation changes the tree and invalidates both verdicts. Rerun the 09B
-delta review and the full combined review after every fix.
+Any remediation changes the tree and invalidates both tree bindings. Reissue
+the 09B and combined verdicts for the new exact tree, reviewing the remediation
+delta, prior findings, and combined boundary it affects rather than untouched
+accepted portions.
 
 Only after both verdicts are `APPROVED` may the coordinator synthesize their
 combined approved tree. It first creates the clean B transport commit, then

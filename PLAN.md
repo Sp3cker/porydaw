@@ -151,17 +151,45 @@ Before a task starts, the coordinator confirms its worktree is clean and
 fast-forwards its untouched branch to the latest accepted integration commit.
 No task may implement against its original seed after a blocker has advanced.
 
-Each worktree uses its own task directory beneath `_state/` for:
+Generated state follows one bounded lifecycle across every child plan:
 
-- build directory;
-- scratch copy of the `hearth-test` fixture;
-- isolated settings directory;
-- screenshots;
-- test logs; and
-- temporary files.
+- Retain exactly one immutable fixture at
+  `_state/base/fixture/canonical-001`.
+- Create an active task's `_state/<task-id>/build` lazily. Reuse one rolling
+  `_state/integration/build`; do not preallocate build or fixture directories
+  for waiting tasks.
+- A mutating check creates one scratch reflink under `/tmp` immediately before
+  its command, records the result, then deletes that reflink immediately.
+  Never keep more than one scratch fixture at once or retain one between
+  commands, reviews, or tasks.
+- Preserve durable text evidence and only selected evidence screenshots under
+  `_coordination/`; raw fixture trees, build products, settings, temporary
+  files, and routine logs are not evidence.
+- Delete the detached-base build immediately after baseline evidence is
+  recorded.
+- After integration, immediately remove the task's candidate build and all
+  transient task state. After an A transport commit is secured, remove A's
+  build before B starts. Remove Task 11's verification build after final
+  evidence is recorded and before final cleanup and push.
+- Remove abandoned-candidate and superseded-remediation builds immediately
+  after their results are recorded.
+- At most two build trees may exist: the active candidate build and the rolling
+  integration build. `_state/` must be at most 8 GiB after every integration
+  before the next task starts.
 
-Build trees, settings, and mutable fixtures are never shared between agents
-and never live inside a Git worktree.
+No generated state lives inside a Git worktree. In every child plan, “fresh
+fixture” or “fresh scratch fixture” means the one-at-a-time ephemeral lifecycle
+above; it never authorizes retained copies.
+
+### One-time bounded-storage adoption gate
+
+Before Task 05 resumes, the coordinator inventories existing `_state/`,
+preserves the canonical fixture and `_coordination/`, removes every
+pre-amendment scratch fixture and obsolete build, and retains only an active
+candidate build and rolling integration build if either is still useful. Record
+the before/after `_state/` size, retained build-directory count, and canonical
+fixture path in `_coordination/INTEGRATION_LOG.md`. This transition is a
+prerequisite for further implementation.
 
 ## Coordination records
 
@@ -321,7 +349,9 @@ Before assigning an agent, the coordinator:
 4. Fast-forwards the untouched task branch to the predecessor with an
    ancestry check.
 5. Confirms its task plan, the root plan, and the specification are present.
-6. Creates fresh build, fixture, settings, screenshot, and log locations.
+6. Prepares transient settings under `_state/<task-id>/` and durable evidence
+   paths under `_coordination/<task-id>/` and, when first needed, one candidate
+   build; it creates no persistent fixture copy.
 
 For a B subtask, its predecessor is the reviewed A transport commit and the
 coordinator also records the logical slice's integration predecessor as
@@ -338,8 +368,10 @@ The task agent:
 2. Repeats the accepted predecessor SHA in its handoff.
 3. Adds characterization or failing checks before changing behavior.
 4. Applies small Fowler-style transformations.
-5. Builds and checks after each meaningful step.
-6. Runs every task-specific acceptance command.
+5. Builds affected targets and runs focused checks at behavior-complete
+   checkpoints, not after every mechanical hunk.
+6. Runs the task-specific acceptance commands required by the candidate
+   cadence below.
 7. From Task 05 onward, runs both fixed-font resolver checks and
    `python3 tools/check_editor_layout_geometry.py`.
 8. Stages only explicit in-scope paths, with no unstaged tracked changes or
@@ -347,6 +379,23 @@ The task agent:
 9. Runs `git diff --cached --check`, inspects the staged file list and
    exclusions, and records `git write-tree`.
 10. Leaves the exact staged tree uncommitted and writes the handoff.
+
+### Verification cadence
+
+- A first candidate gets one affected-target build plus its focused behavioral
+  checks and required source/layout gates. Do not run a broad native matrix.
+- A remediation reuses that build and reruns checks covering the changed delta,
+  the task contract it can affect, and every previously rejected finding. Do
+  not duplicate a full build, CTest run, native matrix, or diagnostics for
+  successfully compiled files.
+- Exact-tree approval, oracle/source-boundary checks, and focused behavioral
+  tests remain mandatory. Compilation replaces repeated LSP diagnostics only
+  for files that were actually built; diagnose non-built files separately.
+- After integration, reuse the rolling integration build for one full build
+  and one task-focused proof. Run the complete native matrix only after Tasks
+  05, 07, 08, 09, and 10, and once more in Task 11.
+- Every mutating command in any cadence uses a sequential ephemeral reflink and
+  deletes it before the next command starts.
 
 ### Review gate
 
@@ -373,8 +422,12 @@ For `CHANGES_REQUESTED`:
 
 1. The coordinator returns the exact findings to the same task agent.
 2. The task agent changes only what resolves those findings.
-3. The task agent reruns all focused checks, not only a new regression.
-4. The Review agent reviews the full updated diff again.
+3. The task agent reruns focused checks covering the remediation delta, its
+   affected contract, and every previously rejected finding.
+4. The Review agent binds approval to the new exact tree and reviews the
+   remediation delta, every previously rejected finding, and any combined-slice
+   boundary directly affected by that delta. Prior approval remains evidence
+   for untouched portions.
 5. The loop continues until `APPROVED` or a real external blocker is recorded.
 
 ### Commit and integration gate
@@ -437,8 +490,9 @@ For split slices 08 through 10:
 The integration branch remains linear. Task-local transport commits and their
 branches are disposable evidence, not integration ancestors.
 
-After integration, rerun the task checks on the integration worktree. A task
-is not complete until those checks pass there.
+After integration, run the one integration proof defined by the verification
+cadence, using the rolling build and ephemeral fixture lifecycle. A task is not
+complete until that proof passes.
 
 ## Spiritual-correctness review
 
@@ -511,7 +565,8 @@ specification identifies as a defect.
   add resolver coverage at both fixed font inputs, and pass the source gate in
   a separate reviewed preparatory refactor. Resume feature work only after
   that refactor is integrated.
-- Use scratch fixtures because check harnesses mutate projects.
+- Use one-at-a-time ephemeral scratch reflinks because check harnesses mutate
+  projects; delete each immediately after recording its result.
 - Do not infer UX or rendering parity from a build result.
 - Stop and report a real ambiguity before making a behavior choice not settled
   by the specification.
@@ -545,7 +600,8 @@ After final approval:
    transport commit and that each combined transport tree equals its
    integration commit tree.
 3. Confirm every disposable worktree has clean tracked state and no untracked
-   source. Remove only its task-local `_state/<task>/` generated data.
+   source, and that its task-local generated state was already removed
+   incrementally after integration.
 4. Resolve every removal target from Task 00's recorded branch-to-worktree
    table and prove it is inside the dedicated runtime root, was created by
    Task 00, and is neither `integration` nor any pre-existing worktree.
@@ -559,5 +615,6 @@ After final approval:
    later asks for their forced deletion.
 
 Do not run repository-wide worktree pruning. Preserve the integration
-worktree, integration branch, and coordination evidence. Do not push or remove
-any pre-existing worktree or branch without a separate user request.
+worktree, integration branch, and coordination evidence. After final approval,
+push only `feature/editor-drawer-reimplementation` to `origin` as requested;
+do not push task branches or alter any pre-existing worktree or branch.

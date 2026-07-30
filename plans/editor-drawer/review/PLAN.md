@@ -142,7 +142,8 @@ QT_QPA_PLATFORM=offscreen <build>/porydaw_themechecks \
 python3 tools/check_editor_layout_geometry.py
 ```
 
-Use fresh scratch fixtures for mutating checks. Compare failures with Task 00's
+Use one-at-a-time ephemeral scratch reflinks for mutating checks. Record each
+result, delete the reflink immediately, then compare failures with Task 00's
 same-fixture baseline before attributing them.
 
 For **PERF-01**, require fixture, warmup, 120 updates, final tick, staged tree
@@ -217,8 +218,10 @@ Non-blocking follow-ups:
 ### CHANGES_REQUESTED
 
 Use when the task agent can fix an in-scope finding. Send exact evidence and
-the violated contract back to the same agent. On return, review the full new
-tree and every prior finding again.
+the violated contract back to the same agent. On return, bind the verdict to
+the full new staged tree while reviewing the remediation delta, every prior
+finding, and any combined-slice boundary directly affected by that delta.
+Prior approval remains evidence for untouched portions.
 
 ### BLOCKED
 
