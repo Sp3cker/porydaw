@@ -11,8 +11,8 @@
 #include <QMessageBox>
 #include <QRegularExpressionValidator>
 #include <QSpinBox>
-#include <QTreeWidget>
 #include <QToolButton>
+#include <QTreeWidget>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -78,8 +78,8 @@ class IdentityPage : public QWizardPage
         m_player = new QComboBox(this);
         for (const MusicPlayer &p : SongRegistry::musicPlayers(project->root()))
             m_player->addItem(playerRoleName(p.name, true), p.name);
-        m_player->setToolTip(
-            tr("Select Background music for a song. Select Sound effect for a sound. Also select it for a fanfare."));
+        m_player->setToolTip(tr("Select Background music for a song. Select Sound effect for a "
+                                "sound. Also select it for a fanfare."));
         form->addRow(tr("&Player:"), m_player);
 
         connect(m_name, &QLineEdit::textChanged, this, [this](const QString &text) {
@@ -282,8 +282,8 @@ class AnalysisPage : public QWizardPage
         m_player = new QComboBox(this);
         for (const MusicPlayer &player : m_players)
             m_player->addItem(playerRoleName(player.name, false), player.name);
-        m_player->setToolTip(
-            tr("Select Background music for a song. Select Sound effect for a sound. Also select it for a fanfare."));
+        m_player->setToolTip(tr("Select Background music for a song. Select Sound effect for a "
+                                "sound. Also select it for a fanfare."));
         roleForm->addRow(tr("The song will be used as:"), m_player);
         layout->addLayout(roleForm);
         layout->addSpacing(::layout::space(::layout::Space::One));
@@ -310,12 +310,11 @@ class AnalysisPage : public QWizardPage
         m_controller = makeNotice(layout);
 
         if (m_smf.division % 24 != 0) {
-            m_rescale =
-                new QCheckBox(tr("Adjust note timing for the Game Boy Advance (recommended)"),
-                              this);
+            m_rescale = new QCheckBox(
+                tr("Adjust note timing for the Game Boy Advance (recommended)"), this);
             m_rescale->setChecked(true);
-            m_rescale->setToolTip(
-                tr("Use this adjustment to make the note timing in Porydaw agree with the note timing in the game."));
+            m_rescale->setToolTip(tr("Use this adjustment to make the note timing in Porydaw agree "
+                                     "with the note timing in the game."));
             layout->addWidget(m_rescale);
         }
 
@@ -405,8 +404,7 @@ class AnalysisPage : public QWizardPage
 
         QStringList status;
         if (m_analysis.droppedTracks > 0) {
-            status.append(tr("Porydaw will not import tracks 17 through %1.")
-                              .arg(sourceTracks));
+            status.append(tr("Porydaw will not import tracks 17 through %1.").arg(sourceTracks));
         }
         if (status.isEmpty() && m_analysis.silentTracks == 0)
             status.append(tr("Porydaw can import this MIDI file."));
@@ -431,11 +429,10 @@ class AnalysisPage : public QWizardPage
         setNotice(m_trackAction, actions.join(QLatin1Char(' ')));
 
         if (m_analysis.droppedTracks > 0) {
-            QString text =
-                tr("Porydaw will import %1 of %2 tracks. It will not import %3 tracks.")
-                    .arg(m_analysis.mappedTracks)
-                    .arg(sourceTracks)
-                    .arg(m_analysis.droppedTracks);
+            QString text = tr("Porydaw will import %1 of %2 tracks. It will not import %3 tracks.")
+                               .arg(m_analysis.mappedTracks)
+                               .arg(sourceTracks)
+                               .arg(m_analysis.droppedTracks);
             if (m_analysis.silentTracks > 0) {
                 text += tr(" The game will mute tracks %1 through %2.")
                             .arg(trackLimit + 1)
@@ -443,11 +440,11 @@ class AnalysisPage : public QWizardPage
             }
             m_summary->setText(text);
         } else if (m_analysis.silentTracks > 0) {
-            m_summary->setText(
-                tr("Porydaw will import all %1 tracks, but the game will mute tracks %2 through %3.")
-                    .arg(m_analysis.mappedTracks)
-                    .arg(trackLimit + 1)
-                    .arg(m_analysis.mappedTracks));
+            m_summary->setText(tr("Porydaw will import all %1 tracks, but the game will mute "
+                                  "tracks %2 through %3.")
+                                   .arg(m_analysis.mappedTracks)
+                                   .arg(trackLimit + 1)
+                                   .arg(m_analysis.mappedTracks));
         } else {
             m_summary->setText(
                 tr("Porydaw will import all %1 tracks.").arg(m_analysis.mappedTracks));
@@ -455,33 +452,32 @@ class AnalysisPage : public QWizardPage
         setNotice(
             m_polyphony,
             m_analysis.peakConcurrentNotes > m_analysis.sampleNoteLimit
-                ? tr("%1 notes play at the same time in one part of the song. The Game Boy Advance can mix %2 sample notes at the same time. Square, wave, and noise sounds do not use this limit. The game can stop some sample notes.")
+                ? tr("%1 notes play at the same time in one part of the song. The Game Boy Advance "
+                     "can mix %2 sample notes at the same time. Square, wave, and noise sounds do "
+                     "not use this limit. The game can stop some sample notes.")
                       .arg(m_analysis.peakConcurrentNotes)
                       .arg(m_analysis.sampleNoteLimit)
                 : QString());
 
-        const bool notesBeforeInstrument =
-            std::any_of(m_analysis.tracks.cbegin(), m_analysis.tracks.cend(),
-                        [](const ImportTrackInfo &track) {
-                            return track.noteCount > 0 && track.notesBeforeProgram;
-                        });
-        setNotice(m_defaultInstrument,
-                  notesBeforeInstrument
-                      ? tr("Some notes start before the MIDI data selects an instrument. These notes use instrument 0.")
-                      : QString());
-        setNotice(m_format,
-                  m_smf.wasFormat0
-                      ? tr("This MIDI file contains all channels in one track. Porydaw will put each channel in a different track.")
-                      : QString());
+        const bool notesBeforeInstrument = std::any_of(
+            m_analysis.tracks.cbegin(), m_analysis.tracks.cend(), [](const ImportTrackInfo &track) {
+                return track.noteCount > 0 && track.notesBeforeProgram;
+            });
+        setNotice(m_defaultInstrument, notesBeforeInstrument
+                                           ? tr("Some notes start before the MIDI data selects an "
+                                                "instrument. These notes use instrument 0.")
+                                           : QString());
+        setNotice(m_format, m_smf.wasFormat0
+                                ? tr("This MIDI file contains all channels in one track. Porydaw "
+                                     "will put each channel in a different track.")
+                                : QString());
         const bool hasSilentController =
             std::any_of(m_analysis.ccs.cbegin(), m_analysis.ccs.cend(),
                         [](const ImportCcUsage &cc) { return !cc.audible; });
-        setNotice(m_controller,
-                  hasSilentController
-                      ? tr("Some CC commands do not change the sound in the game.")
-                      : QString());
-        m_noteLimitHeading->setVisible(
-            m_analysis.peakConcurrentNotes > m_analysis.sampleNoteLimit);
+        setNotice(m_controller, hasSilentController
+                                    ? tr("Some CC commands do not change the sound in the game.")
+                                    : QString());
+        m_noteLimitHeading->setVisible(m_analysis.peakConcurrentNotes > m_analysis.sampleNoteLimit);
     }
 
     const SmfFile &m_smf;
@@ -547,8 +543,7 @@ void NewSongWizard::buildPages(const QString &sourcePath, const QStringList &voi
     m_identity = new IdentityPage(m_project, suggested);
     if (m_importMode) {
         const QVector<MusicPlayer> players = SongRegistry::musicPlayers(m_project->root());
-        m_analysisPage =
-            new AnalysisPage(m_imported, m_analysis, players, sourcePath, m_identity);
+        m_analysisPage = new AnalysisPage(m_imported, m_analysis, players, sourcePath, m_identity);
         addPage(m_analysisPage);
     }
     addPage(m_identity);

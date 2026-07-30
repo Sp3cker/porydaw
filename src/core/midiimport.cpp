@@ -133,7 +133,8 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QStri
 
     if (a.droppedTracks > 0)
         a.warnings.append(
-            QObject::tr("Porydaw will not import %1 tracks. The MIDI file contains more than 16 tracks.")
+            QObject::tr(
+                "Porydaw will not import %1 tracks. The MIDI file contains more than 16 tracks.")
                 .arg(a.droppedTracks));
     if (a.silentTracks > 0) {
         QString displayName = playerName;
@@ -151,13 +152,16 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QStri
                 .arg(a.division));
     if (a.peakConcurrentNotes > kDefaultPcmBudget)
         a.warnings.append(
-            QObject::tr("%1 notes play at the same time. The Game Boy Advance can mix %2 sample notes at the same time. Square, wave, and noise sounds do not use this limit. The game can stop some sample notes.")
+            QObject::tr("%1 notes play at the same time. The Game Boy Advance can mix %2 sample "
+                        "notes at the same time. Square, wave, and noise sounds do not use this "
+                        "limit. The game can stop some sample notes.")
                 .arg(a.peakConcurrentNotes)
                 .arg(kDefaultPcmBudget));
     for (const ImportTrackInfo &t : a.tracks) {
         if (t.noteCount > 0 && t.notesBeforeProgram) {
-            a.warnings.append(QObject::tr("Some notes start before the MIDI data selects an instrument. "
-                                          "These notes use instrument 0."));
+            a.warnings.append(
+                QObject::tr("Some notes start before the MIDI data selects an instrument. "
+                            "These notes use instrument 0."));
             break;
         }
     }
