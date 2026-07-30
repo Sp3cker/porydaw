@@ -1,3 +1,4 @@
 # Commits to skip in git blame (mechanical, no behavior change).
 # GitHub's blame view honors this file automatically; locally run:
 #   git config blame.ignoreRevsFile .git-blame-ignore-revs
+5ca385e49dd681b724455de569ca1e140d1c26b0  # Reformat src/ and tools/ with clang-format
