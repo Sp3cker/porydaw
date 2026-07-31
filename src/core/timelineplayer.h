@@ -46,19 +46,18 @@ class TimelinePlayer
         uint8_t key;
     };
 
-    uint64_t position() const { return m_pos; }
-
-    // Repositions onto (a possibly different) timeline without disturbing the
-    // engine: keeps the sample position and finds the matching event cursor.
-    // Used when an edited document swaps in a rebuilt timeline mid-song.
+    // Repositions for a transport seek. The caller releases the engine's
+    // sounding notes because their note-offs may be behind the new position
+    // or gone entirely.
     void seek(uint64_t pos, const MidiTimeline *timeline);
 
+    // Rebinds playback to a rebuilt timeline at the same position without
+    // disturbing sounding notes or loop gate state.
+    void replaceTimeline(uint64_t pos, const MidiTimeline *timeline);
     // Chases controller state to `pos`: dispatches each track's most recent
     // program/CC/bend/tempo value at or before pos, and the engine's reset
     // default for stateful parameters with no event there — leaving the
-    // engine as if this timeline had played linearly from the start. Pair
-    // with seek() when swapping in an edited timeline (or, later, jumping
-    // the playhead) so deleted or moved automation can't stay latched.
+    // engine as if this timeline had played linearly from the start.
     static void chase(M4AEngine *engine, const MidiTimeline *timeline, uint64_t pos);
 
     // Primes voices for auditioning: each track with no program change at or
@@ -76,6 +75,8 @@ class TimelinePlayer
     // controllers always pass so state stays consistent).
     void render(M4AEngine *engine, const MidiTimeline *timeline, float *outL, float *outR,
                 uint32_t frames, bool looping, uint32_t muteMask);
+
+    uint64_t position() const { return m_pos; }
 
   private:
     static void dispatchEvent(M4AEngine *engine, const TimelineEvent &ev, uint32_t muteMask);

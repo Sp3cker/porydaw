@@ -1065,7 +1065,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
 
 void MainWindow::attachEngine(SongSession &session)
 {
-    m_audio.loadSong(session.timeline.get(), session.voicegroup, songSettingsFor(session));
+    m_audio.loadSong(session.timeline, session.voicegroup, songSettingsFor(session));
     // loadSong resets the engine's masks; the view remembers the tab's.
     m_audio.setMuteMask(session.view->muteMask());
     m_audio.setSoloMask(session.view->soloMask());
@@ -1489,10 +1489,10 @@ void MainWindow::onDocumentChanged(SongSession &session)
         session.appliedReverb = cfg.reverb;
     }
 
-    auto timeline = session.doc.buildTimeline(m_audio.sampleRate());
+    auto timeline =
+        std::shared_ptr<MidiTimeline>(session.doc.buildTimeline(m_audio.sampleRate()));
     if (active && m_audio.songLoaded())
-        m_audio.updateTimeline(timeline.get());
-    // The old timeline is freed here — after the engine let go of it.
+        m_audio.updateTimeline(timeline);
     session.timeline = std::move(timeline);
     session.view->updateSong(session.timeline.get());
     updateTabTitle(session);

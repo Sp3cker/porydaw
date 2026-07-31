@@ -51,7 +51,8 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         loop.exec();
     };
 
-    // 1. First song loads into the first tab; the engine borrows its data.
+    // 1. First song loads into the first tab; the engine shares its timeline
+    // and borrows its voicegroup from the active session.
     loadSongByLabel(songA);
     SongSession *tabA = m_active;
     if (!tabA || tabA->doc.label() != songA) {
@@ -60,7 +61,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     }
     check(m_tabs->count() == 1, "first song did not open exactly one tab");
     check(m_audio.timeline() == tabA->timeline.get() && m_audio.voicegroup() == tabA->voicegroup,
-          "engine is not borrowing the first tab's data");
+          "engine is not using the first tab's data");
     check(m_uiTimer->interval() == 500, "paused UI cadence is not 500 ms");
 
     // 2. Second song in a new tab becomes the active one.
@@ -171,7 +172,8 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
 
     // 7. Closing a tab hands the engine to the survivor.
     closeTab(m_tabs->indexOf(tabB->view));
-    check(m_tabs->count() == 1 && m_active == tabA && m_audio.timeline() == tabA->timeline.get(),
+    check(m_tabs->count() == 1 && m_active == tabA &&
+              m_audio.timeline() == tabA->timeline.get(),
           "closing the active tab did not fall back to the other tab");
     check(sessionForLabel(songB) == nullptr, "closed tab's session lingered");
 

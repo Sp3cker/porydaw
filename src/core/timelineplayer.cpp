@@ -48,9 +48,15 @@ void TimelinePlayer::chase(M4AEngine *engine, const MidiTimeline *timeline, uint
         if (ev.samplePos > pos)
             break;
         switch (ev.type) {
-        case 0xB:
-            cc[ev.track][ev.data0 & 0x7F] = &ev;
+        case 0xB: {
+            const auto controller = uint8_t(ev.data0 & 0x7F);
+            // Note termination commands are actions, not persistent state.
+            // Replaying one would kill notes that began after the command.
+            if (controller == 0x78 || controller == 0x7B)
+                break;
+            cc[ev.track][controller] = &ev;
             break;
+        }
         case 0xC:
             program[ev.track] = &ev;
             break;
@@ -119,10 +125,15 @@ void TimelinePlayer::primeVoices(M4AEngine *engine, const MidiTimeline *timeline
 
 void TimelinePlayer::seek(uint64_t pos, const MidiTimeline *timeline)
 {
-    // Both seek callers release the engine's sounding notes around the seek
+    // Seek callers release the engine's sounding notes around the seek
     // (their note-offs may be behind the new position or gone entirely), so
     // nothing stays keyed on across it.
     clearKeyedOn();
+    replaceTimeline(pos, timeline);
+}
+
+void TimelinePlayer::replaceTimeline(uint64_t pos, const MidiTimeline *timeline)
+{
     m_pos = pos;
     m_cursor = size_t(
         std::lower_bound(timeline->events.begin(), timeline->events.end(), pos,
