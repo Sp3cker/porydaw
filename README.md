@@ -8,6 +8,8 @@ In Porydaw, load your decomp project directory to load the music-related project
 
 Porydaw is designed for both music beginners and power users who are familiar with DAW programs.  If you've used Sappy or Anvil Studio for your musical needs in the past, then Porydaw is for you!  If you're a power user who loves your existing DAW (FL Studio, Reaper, etc.), give Porydaw a try--but if you can't be pulled away, the [poryaaaa CLAP plugin](https://github.com/huderlem/poryaaaa) helps serve that power-user workflow.
 
+View the work-in-progress documentation: https://huderlem.github.io/porydaw
+
 View the [Changelog][changelog] to see what's new.
 
 ## Download
