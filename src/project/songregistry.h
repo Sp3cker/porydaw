@@ -20,7 +20,26 @@ struct RegistrationPlan {
     QString label;    // e.g. "mus_foo"
     QString constant; // e.g. "MUS_FOO"
     QString player;   // e.g. "MUSIC_PLAYER_BGM"
-    int songId = -1;  // proposed ID = current count of song-table entries
+    // Proposed ID: the current count of song-table entries, a freed slot,
+    // or — on regioned layouts (below) — the slot after the region marker.
+    int songId = -1;
+
+    // Region-aware placement for marker-bounded songs.h layouts (END_SE /
+    // START_MUS / END_MUS in alias or value form, sizing ID-indexed arrays
+    // — src/debug.c's pre-#9713 sound-tester names, overworld.c's night
+    // music; scanRegionMarkers in songregistry.cpp). All inactive on
+    // marker-less modern layouts: the table row appends or fills a free
+    // slot, and no other define moves.
+    int tableInsertIndex = -1;  // insert the row at this index, shifting later rows
+    int tableReplaceIndex = -1; // overwrite the placeholder row at this index
+    int migrateFromIndex = -1;  // misplaced existing row to remove first
+    int renumberFrom = -1;      // songs.h defines and charmap values in
+    int renumberBelow = -1;     //   [renumberFrom, renumberBelow) shift up by one
+    bool repointEndMus = false; // END_MUS follows the new constant
+    bool repointEndSe = false;  // END_SE follows the new constant
+    // Region overrides SE_-prefix list routing — only where the split is
+    // functional (pre-#9713 debug.c with separately indexed arrays).
+    bool debugUseBgmList = false;
 
     QString songTableLine; // "\tsong mus_foo, MUSIC_PLAYER_BGM, 0"
     QString songsHLine;    // "#define MUS_FOO 610"
@@ -105,7 +124,11 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label, cons
 // entries that already exist are left byte-identical, except a songs.h
 // define or charmap.txt entry whose ID matches none of the label's table
 // entries (a label can own several — forks alias real songs into filler
-// slots), which is corrected in place. Only the song's own lines change.
+// slots), which is corrected in place. Only the song's own lines change —
+// except on regioned layouts (RegistrationPlan's region fields), where an
+// insertion ahead of the phoneme block also shifts the displaced defines,
+// charmap values, and the END_MUS/END_SE marker, and a registration
+// stranded past the markers migrates into the region.
 // On success *songId carries the song's table index.
 bool registerSong(const QString &projectRoot, const QString &label, const QString &constant,
                   const QString &player, QString *error, int *songId = nullptr);
@@ -124,6 +147,8 @@ RemovalPlan makeRemovalPlan(const QString &projectRoot, const QString &label,
 // marker needed — which keeps every later song's index and stays reusable:
 // makePlan/registerSong fill the lowest free slot before growing the table.
 // Entry 0 itself is never a free slot, and this refuses to delete it.
+// An END_SE/END_MUS marker aliasing the deleted constant re-points to the
+// region's new last song instead of dangling.
 // Byte-conservative and idempotent — a song with no entries anywhere is a
 // no-op success.
 bool unregisterSong(const QString &projectRoot, const QString &label, const QString &constant,

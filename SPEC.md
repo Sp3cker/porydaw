@@ -365,6 +365,30 @@ prefix-matching list at its ID position (rewiring the macro's `\`
 continuations when it lands at a list's end) and removes it on song deletion.
 Projects without those lists (vanilla) skip the file.
 
+Some expansion lines bound the constants into contiguous regions closed by
+`songs.h` markers — `END_SE`, `START_MUS`, `END_MUS` — and size ID-indexed
+arrays from them: pre-#9713 checkouts alias the last constant and size
+`src/debug.c`'s sound-tester arrays (`sBGMNames[END_MUS - START_MUS + 1]`),
+and the night-music feature re-added value-form markers
+(`#define END_MUS 558`) sizing `overworld.c`'s `sNightMusicTable`. Either
+way a song appended past the phoneme block sits outside the region — at
+best the feature cannot address it, at worst its designated initializer
+breaks the build. Whenever an `END_MUS` marker resolves in either form
+(modern checkouts have none — PR #9713 deleted all three), registration
+turns region-aware: new music inserts at `END_MUS + 1` ahead of the phoneme
+block, whose defines and `charmap.txt` values all shift up by one; new
+sound effects fill the placeholder (`dummy_song_header`) slots between the
+SE region and `START_MUS` — bounded by `END_SE`, or by the highest define
+below `START_MUS` on layouts that lost that marker — overflowing into the
+music region only when the gap is exhausted (their debug entry lands in
+`SOUND_LIST_BGM` only on the pre-#9713 shape, where the two lists feed
+separately indexed arrays and routing is functional); each marker follows
+its region's last song — alias
+markers re-point, value markers renumber — through registration, free-slot
+reuse, and deletion alike. A registration stranded past `END_MUS` (left by
+a porydaw predating this) is flagged as mis-registered and migrates into
+the region on re-register.
+
 If registration fails (e.g. an unwritable file), the chosen constant/player
 persist in the sidecar and the song shows a badge in the song browser;
 **File → Register Song** (or right-click → **Register Song** in the browser)

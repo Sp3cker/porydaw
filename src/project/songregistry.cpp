@@ -6,10 +6,12 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QPair>
 #include <QRegularExpression>
 #include <QSet>
 #include <QTextStream>
 #include <algorithm>
+#include <limits>
 
 #include "core/smf.h"
 #include "project/sidecar.h"
@@ -55,6 +57,10 @@ struct SongTableScan {
     QString labelIndent;
     int freeIndex = -1; // lowest free slot
     int freeLine = -1;
+    QVector<int> freeIndices; // every free slot, ascending — region-bounded
+                              // layouts may skip ineligible low ones
+    QVector<int> entryLines;  // line of every entry, by table index
+    QStringList entryLabels;  // label of every entry, by table index
     int lastSongLine = -1;
     QString lastSongLabel; // the final entry's label
     QString indent;        // the last entry's indentation
@@ -80,6 +86,7 @@ SongTableScan scanSongTable(const QStringList &lines, const QString &label)
                 scan.freeIndex = scan.count;
                 scan.freeLine = i;
             }
+            scan.freeIndices.append(scan.count);
         } else if (m.captured(2) == label) {
             scan.labelIndex = scan.count;
             scan.labelLine = i;
@@ -89,9 +96,99 @@ SongTableScan scanSongTable(const QStringList &lines, const QString &label)
         scan.indent = m.captured(1);
         scan.lastSongLine = i;
         scan.lastSongLabel = m.captured(2);
+        scan.entryLines.append(i);
+        scan.entryLabels.append(m.captured(2));
         scan.count++;
     }
     return scan;
+}
+
+// Some pokeemerald-expansion lines keep songs.h's constants in contiguous
+// regions closed by markers — "#define END_SE <last SE>",
+// "#define START_MUS <first music ID>", "#define END_MUS <last MUS>" — and
+// size ID-indexed arrays from them. Pre-#9713 checkouts alias the last
+// constant and size src/debug.c's sound-tester arrays
+// (sBGMNames[END_MUS - START_MUS + 1]); the night-music line re-added
+// value-form markers ("#define END_MUS 558") and sizes overworld.c's
+// sNightMusicTable from them. Either way a song appended past the phoneme
+// block sits outside the region: at best the feature cannot address it, at
+// worst its designated initializer breaks the build ("array index in
+// initializer exceeds array bounds"). Whenever an END_MUS marker resolves
+// — modern checkouts have none, PR #9713 deleted all three — placement is
+// region-aware instead: music inserts at END_MUS + 1 ahead of the phoneme
+// block (whose IDs all shift up by one, in songs.h and charmap.txt alike),
+// sound effects fill the placeholder slots between the SE region and
+// START_MUS (bounded by END_SE, or by the highest define below START_MUS
+// when the layout lost that marker), and the marker follows the new last
+// song (alias markers re-point, value markers renumber). Which sound list
+// a debug.c entry belongs in is only
+// functional in the pre-#9713 shape, whose two lists feed separately
+// indexed arrays — that shape alone (separateDebugArrays) overrides the
+// SE_-prefix routing for songs placed in the music region.
+struct RegionMarker {
+    int line = -1;    // the "#define END_x <name-or-value>" line in songs.h
+    QString referent; // the aliased constant's name; empty in value form
+    int value = -1;   // the marker's resolved numeric value
+    bool valid() const { return line >= 0 && value >= 0; }
+};
+
+struct RegionMarkers {
+    RegionMarker endSe, endMus;
+    int startMus = -1;                // START_MUS's value, -1 when absent
+    bool regioned = false;            // an END_MUS marker resolves (see above)
+    bool separateDebugArrays = false; // debug.c consumes END_MUS (pre-#9713)
+};
+
+RegionMarkers scanRegionMarkers(const QStringList &songsHLines, const QStringList &debugLines)
+{
+    static const QRegularExpression markerRe(
+        QStringLiteral(R"(^\s*#define\s+(END_SE|END_MUS)\s+([A-Za-z_]\w*|\d+)\s*(//.*)?$)"));
+    static const QRegularExpression valueRe(QStringLiteral(R"(^\s*#define\s+(\w+)\s+(\d+)\b)"));
+    RegionMarkers m;
+    QHash<QString, int> values;
+    for (int i = 0; i < songsHLines.size(); i++) {
+        const QString &line = songsHLines.at(i);
+        const QRegularExpressionMatch v = valueRe.match(line);
+        if (v.hasMatch() && !values.contains(v.captured(1)))
+            values.insert(v.captured(1), v.captured(2).toInt());
+        const QRegularExpressionMatch mk = markerRe.match(line);
+        if (!mk.hasMatch())
+            continue;
+        RegionMarker &marker = mk.captured(1) == QStringLiteral("END_SE") ? m.endSe : m.endMus;
+        if (marker.line < 0) {
+            marker.line = i;
+            bool numeric = false;
+            const int value = mk.captured(2).toInt(&numeric);
+            if (numeric)
+                marker.value = value;
+            else
+                marker.referent = mk.captured(2);
+        }
+    }
+    if (m.endSe.line >= 0 && !m.endSe.referent.isEmpty())
+        m.endSe.value = values.value(m.endSe.referent, -1);
+    if (m.endMus.line >= 0 && !m.endMus.referent.isEmpty())
+        m.endMus.value = values.value(m.endMus.referent, -1);
+    m.startMus = values.value(QStringLiteral("START_MUS"), -1);
+    m.regioned = m.endMus.valid();
+    if (m.regioned) {
+        static const QRegularExpression useRe(QStringLiteral(R"(\bEND_MUS\b)"));
+        for (const QString &line : debugLines) {
+            if (useRe.match(line).hasMatch()) {
+                m.separateDebugArrays = true;
+                break;
+            }
+        }
+    }
+    return m;
+}
+
+// The marker names never renumber and never anchor an ID-ordered insertion:
+// a value-form START_MUS mirrors its region's first ID, not a song.
+bool isRegionMarkerName(const QString &name)
+{
+    return name == QStringLiteral("END_SE") || name == QStringLiteral("END_MUS") ||
+           name == QStringLiteral("START_MUS");
 }
 
 // "MUS_DUMMY = 00 00" — a charmap.txt entry whose value is two hex bytes.
@@ -233,11 +330,15 @@ DebugSoundScan scanDebugSoundLists(const QStringList &lines)
 
 // The list a constant belongs in: SE_* under SOUND_LIST_SE, everything
 // else under SOUND_LIST_BGM, whichever exists when the wanted one doesn't.
-const DebugSoundList *debugTargetList(const DebugSoundScan &scan, const QString &constant)
+// On regioned layouts the song's region decides instead of the name — an
+// SE_* song placed in the music region must sit in SOUND_LIST_BGM, whose
+// array is the one indexed by its ID (forceBgm).
+const DebugSoundList *debugTargetList(const DebugSoundScan &scan, const QString &constant,
+                                      bool forceBgm = false)
 {
     if (scan.lists.isEmpty())
         return nullptr;
-    const QString want = constant.startsWith(QStringLiteral("SE_"))
+    const QString want = !forceBgm && constant.startsWith(QStringLiteral("SE_"))
                              ? QStringLiteral("SOUND_LIST_SE")
                              : QStringLiteral("SOUND_LIST_BGM");
     const DebugSoundList *target = &scan.lists.first();
@@ -483,35 +584,133 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label, cons
     plan.songTableLine =
         QStringLiteral("%1song %2, %3, %4").arg(indent, label, player).arg(playerNum);
 
-    // songs.h: the file's value column for padding, and the constant's own
+    // songs.h: the file's value column for padding, the constant's own
     // current value — needed to settle which entry is THE song's when a
-    // label owns several table indices.
+    // label owns several table indices — and the set of used values, which
+    // tells a reusable placeholder slot from one some constant addresses.
     static const QRegularExpression defineRe(
         QStringLiteral(R"(^#define\s+([A-Z0-9_]+)(\s+)(\d+))"));
+    const QStringList songsHLines =
+        readLines(projectRoot + QStringLiteral("/include/constants/songs.h"));
     int valueColumn = 0;
     int ownValue = -1;
-    for (const QString &line :
-         readLines(projectRoot + QStringLiteral("/include/constants/songs.h"))) {
+    QSet<int> usedValues;
+    for (const QString &line : songsHLines) {
         const QRegularExpressionMatch m = defineRe.match(line);
         if (!m.hasMatch())
             continue;
         valueColumn = m.capturedEnd(2);
         if (ownValue < 0 && m.captured(1) == constant)
             ownValue = m.captured(3).toInt();
+        if (!isRegionMarkerName(m.captured(1)))
+            usedValues.insert(m.captured(3).toInt());
     }
+    const QStringList debugLines = readLines(projectRoot + QStringLiteral("/src/debug.c"));
+    const RegionMarkers markers = scanRegionMarkers(songsHLines, debugLines);
 
     // The proposed ID. An existing song keeps its identity: when the label
     // owns several table entries (forks alias real songs into filler slots
     // — pokezelda repeats ten labels), the define picking ANY of them is
     // already correct and stays; a define naming none of them drifted, and
     // heals to the label's first entry. A new song fills the lowest free
-    // slot a deleted song left before growing the table.
+    // slot a deleted song left before growing the table. On a regioned
+    // layout the region bounds all of that: an existing entry past END_MUS
+    // is a mis-registration (an earlier porydaw appended it there, where
+    // the marker-sized arrays cannot reach) and migrates into the region; a
+    // free slot is reused only where the song's region can address it; a
+    // new sound effect fills the placeholder gap between the SE region and
+    // START_MUS; new music inserts at END_MUS + 1, shifting the phoneme
+    // block up by one.
+    const bool seRouted = constant.startsWith(QStringLiteral("SE_"));
+    int settled = -1;
     if (!scan.labelIndices.isEmpty())
-        plan.songId = ownValue >= 0 && scan.labelIndices.contains(ownValue)
-                          ? ownValue
-                          : scan.labelIndices.first();
-    else
-        plan.songId = scan.freeIndex >= 0 ? scan.freeIndex : scan.count;
+        settled = ownValue >= 0 && scan.labelIndices.contains(ownValue) ? ownValue
+                                                                        : scan.labelIndices.first();
+    if (settled >= 0 && !(markers.regioned && settled > markers.endMus.value)) {
+        plan.songId = settled;
+    } else {
+        plan.migrateFromIndex = settled; // -1 for a new song
+        // The SE region's last ID: END_SE when the layout still has the
+        // marker; layouts that lost it but keep the gap (the night-music
+        // line has only START_MUS/END_MUS) derive it as the highest define
+        // below START_MUS — never grouping SE_* constants with MUS_*, and
+        // never running END_MUS onto a sound effect, while the gap lasts.
+        int seLast = markers.endSe.valid() ? markers.endSe.value : -1;
+        if (seLast < 0 && markers.regioned && markers.startMus >= 0) {
+            for (int v : usedValues) {
+                if (v < markers.startMus)
+                    seLast = std::max(seLast, v);
+            }
+        }
+        const bool seRegioned = seRouted && seLast >= 0;
+        const int musFloor = markers.startMus >= 0 ? markers.startMus
+                             : seLast >= 0         ? seLast + 1
+                                                   : 0;
+        int freeAt = -1;
+        bool freeInSeRegion = false;
+        for (int idx : scan.freeIndices) {
+            if (!markers.regioned) {
+                freeAt = idx; // the lowest, as ever
+                break;
+            }
+            if (seRegioned && idx >= 1 && idx <= seLast + 1 &&
+                (markers.startMus < 0 || idx < markers.startMus)) {
+                freeAt = idx;
+                freeInSeRegion = true;
+                break;
+            }
+            if (!seRegioned && idx >= musFloor && idx <= markers.endMus.value + 1) {
+                freeAt = idx;
+                break;
+            }
+        }
+        // A placeholder row: below START_MUS, unaddressed by any constant,
+        // and dummy-looking (vanilla repeats "dummy_song_header" through
+        // the whole END_SE..START_MUS gap).
+        const auto placeholderAt = [&](int idx) {
+            if (idx <= 0 || idx >= scan.entryLabels.size())
+                return false;
+            if (markers.startMus >= 0 && idx >= markers.startMus)
+                return false;
+            if (usedValues.contains(idx))
+                return false;
+            const QString &rowLabel = scan.entryLabels.at(idx);
+            return rowLabel.contains(QStringLiteral("dummy")) ||
+                   (idx + 1 < scan.entryLabels.size() && scan.entryLabels.at(idx + 1) == rowLabel);
+        };
+        bool seRegion = false;
+        if (freeAt >= 0) {
+            plan.songId = freeAt;
+            seRegion = freeInSeRegion;
+        } else if (markers.regioned && seRegioned && placeholderAt(seLast + 1)) {
+            plan.songId = seLast + 1;
+            plan.tableReplaceIndex = plan.songId;
+            seRegion = true;
+        } else if (markers.regioned) {
+            plan.songId = markers.endMus.value + 1;
+            plan.tableInsertIndex = plan.songId;
+        } else {
+            plan.songId = scan.count;
+        }
+        if (markers.regioned) {
+            if (plan.migrateFromIndex == plan.songId) {
+                // The row already sits at the region's next slot — only the
+                // marker went stale. Nothing structural to do.
+                plan.migrateFromIndex = -1;
+                plan.tableInsertIndex = -1;
+                plan.tableReplaceIndex = -1;
+            }
+            plan.repointEndSe =
+                seRegion && markers.endSe.valid() && plan.songId > markers.endSe.value;
+            plan.repointEndMus = !seRegion && plan.songId > markers.endMus.value;
+            plan.debugUseBgmList = seRouted && !seRegion && markers.separateDebugArrays;
+            if (plan.tableInsertIndex >= 0 && plan.tableInsertIndex < scan.count) {
+                plan.renumberFrom = plan.songId;
+                plan.renumberBelow = plan.migrateFromIndex >= 0 ? plan.migrateFromIndex
+                                                                : std::numeric_limits<int>::max();
+            }
+        }
+    }
 
     QString define = QStringLiteral("#define ") + constant;
     const int pad = valueColumn - define.size();
@@ -562,12 +761,11 @@ RegistrationPlan makePlan(const QString &projectRoot, const QString &label, cons
 
     // src/debug.c: the expansion debug menu's sound lists, one X-macro entry
     // per song. Projects without the file or the lists (vanilla) skip it.
-    const DebugSoundScan debugScan =
-        scanDebugSoundLists(readLines(projectRoot + QStringLiteral("/src/debug.c")));
+    const DebugSoundScan debugScan = scanDebugSoundLists(debugLines);
     plan.debugApplicable = debugScan.applicable();
     if (plan.debugApplicable) {
         const DebugSoundList *style =
-            debugStyleList(debugScan, debugTargetList(debugScan, constant));
+            debugStyleList(debugScan, debugTargetList(debugScan, constant, plan.debugUseBgmList));
         plan.debugLine = debugContinuation(debugEntryText(*style, constant), style->slashColumn);
     }
     return plan;
@@ -580,9 +778,13 @@ bool registerSong(const QString &projectRoot, const QString &label, const QStrin
     if (songId)
         *songId = plan.songId;
 
-    // song_table.inc: fill the lowest free slot left by a deleted song, or
-    // insert after the last entry — either way the new entry's index is
-    // exactly plan.songId (makePlan chose the ID from the same scan).
+    // song_table.inc: fill a free slot left by a deleted song, or insert
+    // after the last entry — either way the new entry's index is exactly
+    // plan.songId (makePlan chose the ID from the same scan). On regioned
+    // layouts the plan may instead overwrite a placeholder row, insert
+    // mid-table ahead of the phoneme block, or first remove a misplaced
+    // row it is migrating into the region (always a later index than the
+    // insertion point, so the removal never shifts it).
     {
         const QString path = projectRoot + QStringLiteral("/sound/song_table.inc");
         RawLines f = readRawLines(path);
@@ -592,14 +794,20 @@ bool registerSong(const QString &projectRoot, const QString &label, const QStrin
             return false;
         }
         const SongTableScan scan = scanSongTable(f.texts(), label);
-        if (scan.labelLine < 0) {
+        if (scan.labelLine < 0 || plan.migrateFromIndex >= 0) {
             if (scan.lastSongLine < 0) {
                 if (error)
                     *error = QStringLiteral("%1 has no song entries").arg(path);
                 return false;
             }
-            if (scan.freeLine >= 0)
-                f.replace(scan.freeLine, plan.songTableLine);
+            if (plan.migrateFromIndex >= 0 && plan.migrateFromIndex < scan.entryLines.size())
+                f.removeAt(scan.entryLines.at(plan.migrateFromIndex));
+            if (plan.tableReplaceIndex >= 0)
+                f.replace(scan.entryLines.at(plan.tableReplaceIndex), plan.songTableLine);
+            else if (plan.tableInsertIndex >= 0 && plan.tableInsertIndex < scan.entryLines.size())
+                f.insert(scan.entryLines.at(plan.tableInsertIndex), plan.songTableLine);
+            else if (plan.tableInsertIndex < 0 && plan.songId < scan.entryLines.size())
+                f.replace(scan.entryLines.at(plan.songId), plan.songTableLine); // free slot
             else
                 f.insert(scan.lastSongLine + 1, plan.songTableLine);
         }
@@ -627,7 +835,9 @@ bool registerSong(const QString &projectRoot, const QString &label, const QStrin
         const QRegularExpression ownRe(
             QStringLiteral(R"(^(\s*#define\s+%1\s+)(\d+)(.*)$)").arg(constant));
         static const QRegularExpression anyDefineRe(
-            QStringLiteral(R"(^\s*#define\s+\w+\s+(\d+)\b)"));
+            QStringLiteral(R"(^(\s*#define\s+(\w+)\s+)(\d+)\b(.*)$)"));
+        static const QRegularExpression markerLineRe(
+            QStringLiteral(R"(^(\s*#define\s+(END_SE|END_MUS)\s+)([A-Za-z_]\w*|\d+)(.*)$)"));
         static const QRegularExpression endifRe(QStringLiteral(R"(^\s*#endif\b)"));
         int own = -1, insertAfter = -1, firstDefine = -1, firstEndif = -1;
         QRegularExpressionMatch ownMatch;
@@ -638,28 +848,61 @@ bool registerSong(const QString &projectRoot, const QString &label, const QStrin
                 own = i;
                 ownMatch = m;
             }
-            const QRegularExpressionMatch d = anyDefineRe.match(text);
-            if (d.hasMatch()) {
-                if (firstDefine < 0)
-                    firstDefine = i;
-                if (d.captured(1).toInt() < plan.songId)
-                    insertAfter = i;
+            // The regioned marker whose region the song extends follows it
+            // — in the marker's own form: alias markers name the constant,
+            // value markers take the new ID.
+            const QRegularExpressionMatch mk = markerLineRe.match(text);
+            if (mk.hasMatch() &&
+                ((plan.repointEndSe && mk.captured(2) == QStringLiteral("END_SE")) ||
+                 (plan.repointEndMus && mk.captured(2) == QStringLiteral("END_MUS")))) {
+                bool numeric = false;
+                mk.captured(3).toInt(&numeric);
+                const QString follow = numeric ? QString::number(plan.songId) : constant;
+                if (mk.captured(3) != follow)
+                    f.replace(i, mk.captured(1) + follow + mk.captured(4));
+                continue;
             }
-            if (firstEndif < 0 && endifRe.match(text).hasMatch())
-                firstEndif = i;
+            const QRegularExpressionMatch d = anyDefineRe.match(text);
+            if (!d.hasMatch() || isRegionMarkerName(d.captured(2))) {
+                if (firstEndif < 0 && endifRe.match(text).hasMatch())
+                    firstEndif = i;
+                continue;
+            }
+            if (firstDefine < 0)
+                firstDefine = i;
+            const int value = d.captured(3).toInt();
+            if (value < plan.songId)
+                insertAfter = i;
+            // Regioned insertions displace the phoneme block: every define
+            // in the displaced index range shifts up with its table row.
+            if (plan.renumberFrom >= 0 && i != own && value >= plan.renumberFrom &&
+                value < plan.renumberBelow)
+                f.replace(i, d.captured(1) + QString::number(value + 1) + d.captured(4));
         }
-        if (own >= 0) {
+        // A migrated song's define moves to its ID-order position like a
+        // fresh insert; a merely drifted one is corrected in place.
+        const bool moveOwn =
+            own >= 0 && plan.migrateFromIndex >= 0 && ownMatch.captured(2).toInt() != plan.songId;
+        if (own >= 0 && !moveOwn) {
             if (ownMatch.captured(2).toInt() != plan.songId)
                 f.replace(own, ownMatch.captured(1) + QString::number(plan.songId) +
                                    ownMatch.captured(3));
-        } else if (insertAfter >= 0) {
-            f.insert(insertAfter + 1, plan.songsHLine);
-        } else if (firstDefine >= 0) {
-            f.insert(firstDefine, plan.songsHLine);
-        } else if (firstEndif >= 0) {
-            f.insert(firstEndif, plan.songsHLine);
         } else {
-            f.insert(f.lines.size(), plan.songsHLine);
+            int at;
+            if (insertAfter >= 0)
+                at = insertAfter + 1;
+            else if (firstDefine >= 0)
+                at = firstDefine;
+            else if (firstEndif >= 0)
+                at = firstEndif;
+            else
+                at = int(f.lines.size());
+            if (moveOwn) {
+                f.removeAt(own);
+                if (own < at)
+                    at--;
+            }
+            f.insert(at, plan.songsHLine);
         }
         if (!writeRawLines(path, f, error))
             return false;
@@ -730,20 +973,36 @@ bool registerSong(const QString &projectRoot, const QString &label, const QStrin
                                                                      << 8;
             if (value < plan.songId)
                 insertAfter = i;
+            // The charmap mirrors songs.h: entries displaced by a regioned
+            // insertion shift up with their defines.
+            if (plan.renumberFrom >= 0 && m.captured(1) != constant && value >= plan.renumberFrom &&
+                value < plan.renumberBelow)
+                f.replace(i, text.left(m.capturedStart(3)) + charmapIdBytes(value + 1));
         }
-        if (own >= 0) {
+        // Like the songs.h leg: a migrated song's entry moves to its ID
+        // position, a merely drifted one is corrected in place.
+        const bool moveOwn = own >= 0 && plan.migrateFromIndex >= 0;
+        if (own >= 0 && !moveOwn) {
             const int value = ownMatch.captured(3).toInt(nullptr, 16) |
                               ownMatch.captured(4).toInt(nullptr, 16) << 8;
             if (value != plan.songId)
                 f.replace(own, f.text(own).left(ownMatch.capturedStart(3)) +
                                    charmapIdBytes(plan.songId));
-        } else if (!ownAnyForm) {
+        } else if (moveOwn || !ownAnyForm) {
             // After the last entry with a smaller ID; a song whose ID
             // precedes every existing entry goes before the first one.
+            int at = -1;
             if (insertAfter >= 0)
-                f.insert(insertAfter + 1, plan.charmapLine);
+                at = insertAfter + 1;
             else if (firstEntry >= 0)
-                f.insert(firstEntry, plan.charmapLine);
+                at = firstEntry;
+            if (moveOwn) {
+                f.removeAt(own);
+                if (at > own)
+                    at--;
+            }
+            if (at >= 0)
+                f.insert(at, plan.charmapLine);
         }
         if (!writeRawLines(path, f, error))
             return false;
@@ -768,7 +1027,7 @@ bool registerSong(const QString &projectRoot, const QString &label, const QStrin
         bool present = false;
         for (const DebugSoundList &list : scan.lists)
             present = present || list.entryNames.contains(constant);
-        const DebugSoundList *target = debugTargetList(scan, constant);
+        const DebugSoundList *target = debugTargetList(scan, constant, plan.debugUseBgmList);
         if (!present && target) {
             static const QRegularExpression defineValueRe(
                 QStringLiteral(R"(^\s*#define\s+(\w+)\s+(\d+)\b)"));
@@ -887,17 +1146,65 @@ bool unregisterSong(const QString &projectRoot, const QString &label, const QStr
     }
 
     // songs.h: drop the constant's define, whatever value it drifted to.
+    // An END_SE / END_MUS marker naming the deleted constant (alias form)
+    // or its ID (value form) follows the region's new last song — the
+    // numeric define with the highest value below the deleted one —
+    // instead of dangling (on regioned layouts a dangling or stale marker
+    // breaks the arrays sized from it).
     {
         const QString path = projectRoot + QStringLiteral("/include/constants/songs.h");
         RawLines f = readRawLines(path);
         if (f.loaded) {
             const QRegularExpression ownRe(
-                QStringLiteral(R"(^\s*#define\s+%1\s+\d)").arg(constant));
+                QStringLiteral(R"(^\s*#define\s+%1\s+(\d+)\b)").arg(constant));
+            static const QRegularExpression anyDefineRe(
+                QStringLiteral(R"(^\s*#define\s+(\w+)\s+(\d+)\b)"));
+            static const QRegularExpression markerLineRe(
+                QStringLiteral(R"(^(\s*#define\s+(?:END_SE|END_MUS)\s+)([A-Za-z_]\w*|\d+)(.*)$)"));
+            int own = -1, ownValue = -1;
+            QVector<int> markerLines;
+            QVector<QPair<QString, int>> defines; // name, value — in file order
             for (int i = 0; i < f.lines.size(); i++) {
-                if (ownRe.match(f.text(i)).hasMatch()) {
-                    f.removeAt(i);
-                    break;
+                const QString text = f.text(i);
+                if (own < 0) {
+                    const QRegularExpressionMatch m = ownRe.match(text);
+                    if (m.hasMatch()) {
+                        own = i;
+                        ownValue = m.captured(1).toInt();
+                        continue;
+                    }
                 }
+                if (markerLineRe.match(text).hasMatch()) {
+                    markerLines.append(i);
+                    continue;
+                }
+                const QRegularExpressionMatch d = anyDefineRe.match(text);
+                if (d.hasMatch() && d.captured(1) != constant && !isRegionMarkerName(d.captured(1)))
+                    defines.append({d.captured(1), d.captured(2).toInt()});
+            }
+            if (own >= 0) {
+                QString bestName;
+                int bestValue = -1;
+                for (const auto &d : defines) {
+                    if (d.second < ownValue && d.second > bestValue) {
+                        bestValue = d.second;
+                        bestName = d.first;
+                    }
+                }
+                for (int line : markerLines) {
+                    const QRegularExpressionMatch mk = markerLineRe.match(f.text(line));
+                    bool numeric = false;
+                    const int markerValue = mk.captured(2).toInt(&numeric);
+                    // Only a marker on the deleted song moves, and only
+                    // when something is left below to point at.
+                    if (numeric ? (markerValue != ownValue || bestValue < 0)
+                                : (mk.captured(2) != constant || bestName.isEmpty()))
+                        continue;
+                    f.replace(line, mk.captured(1) +
+                                        (numeric ? QString::number(bestValue) : bestName) +
+                                        mk.captured(3));
+                }
+                f.removeAt(own);
             }
             if (!writeRawLines(path, f, error))
                 return false;
@@ -1066,9 +1373,10 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
 
     // songs.h: name -> first numeric define's value.
     static const QRegularExpression defineRe(QStringLiteral(R"(^\s*#define\s+(\w+)\s+(\d+))"));
+    const QStringList songsHLines =
+        readLines(projectRoot + QStringLiteral("/include/constants/songs.h"));
     QHash<QString, int> defines;
-    for (const QString &line :
-         readLines(projectRoot + QStringLiteral("/include/constants/songs.h"))) {
+    for (const QString &line : songsHLines) {
         const QRegularExpressionMatch m = defineRe.match(line);
         if (m.hasMatch() && !defines.contains(m.captured(1)))
             defines.insert(m.captured(1), m.captured(2).toInt());
@@ -1103,8 +1411,9 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
 
     // src/debug.c: the debug menu's sound lists name songs by constant alone
     // (no ID to drift), so presence is the whole check.
-    const DebugSoundScan debugScan =
-        scanDebugSoundLists(readLines(projectRoot + QStringLiteral("/src/debug.c")));
+    const QStringList debugLines = readLines(projectRoot + QStringLiteral("/src/debug.c"));
+    const DebugSoundScan debugScan = scanDebugSoundLists(debugLines);
+    const RegionMarkers markers = scanRegionMarkers(songsHLines, debugLines);
     QSet<QString> debugNames;
     for (const DebugSoundList &list : debugScan.lists)
         for (const QString &name : list.entryNames)
@@ -1118,10 +1427,17 @@ QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot
         const QVector<int> indices = tableIndices.value(song.label);
         status.inSongTable = !indices.isEmpty();
         // Once a table entry exists, the songs.h define and the charmap
-        // entry must carry one of the label's real indices.
+        // entry must carry one of the label's real indices. On a regioned
+        // layout an ID past END_MUS is a mis-registration even when the
+        // table agrees — src/debug.c's marker-sized arrays cannot hold it
+        // and the build breaks — so the song reads as needing (re-)
+        // registration, which migrates it into the region.
         const auto define = defines.constFind(constant);
-        if (define != defines.constEnd())
+        if (define != defines.constEnd()) {
             status.inSongsH = indices.isEmpty() || indices.contains(define.value());
+            if (markers.regioned && define.value() > markers.endMus.value)
+                status.inSongsH = false;
+        }
         status.ldApplicable = ldApplicable;
         status.inLdScript = ldLabels.contains(song.label);
         status.charmapApplicable = charmapApplicable;
