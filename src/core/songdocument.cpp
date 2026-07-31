@@ -307,33 +307,39 @@ std::vector<DocNote> SongDocument::notesForTrack(int engineTrack) const
         return notes;
     const auto &evs = m_smf.tracks[smfTrack].events;
 
-    for (size_t i = 0; i < evs.size(); i++) {
-        const SmfEvent &on = evs[i];
-        if (!on.isNoteOn())
+    // Pair as mid2agb does: the first same-channel same-key note end after
+    // the note-on (several note-ons may legitimately share one end). One
+    // backward pass keeps that exact rule in linear time: when the walk
+    // reaches a note-on, endAt holds the smallest later end index for its
+    // (channel, key) slot.
+    // 256 key slots, not 128: the parse layer preserves out-of-range data
+    // bytes (mid2agb parity), and pairing compares the raw key byte, so key
+    // 0x83 must never pair with key 0x03.
+    std::vector<size_t> endAt(16 * 256, SIZE_MAX);
+    for (size_t i = evs.size(); i-- > 0;) {
+        const SmfEvent &ev = evs[i];
+        if (!ev.isChannel())
             continue;
-
-        DocNote note;
-        note.engineTrack = engineTrack;
-        note.smfTrack = smfTrack;
-        note.onIndex = i;
-        note.tick = on.tick;
-        note.key = on.data0;
-        note.velocity = on.data1;
-        note.channel = on.channel();
-
-        // Pair as mid2agb does: the first same-channel same-key note end at
-        // or after the note-on.
-        for (size_t j = i + 1; j < evs.size(); j++) {
-            const SmfEvent &end = evs[j];
-            if (end.isChannel() && end.isNoteEnd() && end.channel() == on.channel() &&
-                end.data0 == on.data0) {
-                note.endIndex = j;
-                note.duration = uint32_t(end.tick - on.tick);
-                break;
+        const size_t slot = size_t(ev.channel()) * 256 + ev.data0;
+        if (ev.isNoteEnd()) {
+            endAt[slot] = i;
+        } else if (ev.isNoteOn()) {
+            DocNote note;
+            note.engineTrack = engineTrack;
+            note.smfTrack = smfTrack;
+            note.onIndex = i;
+            note.tick = ev.tick;
+            note.key = ev.data0;
+            note.velocity = ev.data1;
+            note.channel = ev.channel();
+            if (endAt[slot] != SIZE_MAX) {
+                note.endIndex = endAt[slot];
+                note.duration = uint32_t(evs[endAt[slot]].tick - ev.tick);
             }
+            notes.push_back(note);
         }
-        notes.push_back(note);
     }
+    std::reverse(notes.begin(), notes.end()); // restore note-on order
     return notes;
 }
 

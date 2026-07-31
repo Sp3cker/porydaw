@@ -132,6 +132,11 @@ bool parseTrack(Reader &r, size_t end, int trackIndex, SmfTrack *track, QString 
                 if (!r.readByte(&data0))
                     return fail(error,
                                 QStringLiteral("Track %1: truncated event data").arg(trackIndex));
+                // Data bytes are consumed exactly as mid2agb consumes them:
+                // blindly, bit 7 and all. Real exporters emit values like CC
+                // volume 0x80, and those files build fine, so out-of-range
+                // data is preserved here and neutralized where it is
+                // consumed (the engine API rejects programs/keys above 127).
             } else {
                 if (!runningStatus)
                     return fail(error, QStringLiteral("Track %1: data byte with no running status")
@@ -285,7 +290,10 @@ QByteArray SmfFile::write() const
                 body.append(ev.blob);
                 runningStatus = 0;
             } else {
-                if (ev.status != runningStatus) {
+                // A preserved out-of-range data0 (bit 7 set) would read back
+                // as a status byte under running status; an explicit status
+                // byte keeps every reader aligned.
+                if (ev.status != runningStatus || (ev.data0 & 0x80)) {
                     body.append(char(ev.status));
                     runningStatus = ev.status;
                 }

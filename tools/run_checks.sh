@@ -101,6 +101,7 @@ run rollcheck        base --rollcheck SCRATCH mus_abandoned_ship
 run loopcheck        -    --loopcheck
 run ignorecheck      -    --ignorecheck SCRATCH
 run primecheck       -    --primecheck
+run smfcheck         -    --smfcheck
 run transportcheck   -    --transportcheck
 run audiocheck       -    --audiocheck
 run keymapcheck      -    --keymapcheck

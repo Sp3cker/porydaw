@@ -49,6 +49,9 @@ int runLoopCheck();
 int runPolyCheck(const QString &screenshotPath = QString());
 // primecheck.cpp; audition voice-priming check (self-contained, no project needed).
 int runPrimeCheck();
+// smfcheck.cpp; SMF parse-validation + note-pairing check (self-contained,
+// no project needed).
+int runSmfCheck();
 // transportcheck.cpp; playback-start halts ringing auditions (self-contained,
 // no project needed; SKIPs without an audio device).
 int runTransportCheck();
@@ -165,6 +168,8 @@ int main(int argc, char *argv[])
     }
     if (args.contains(QStringLiteral("--primecheck")))
         return runPrimeCheck();
+    if (args.contains(QStringLiteral("--smfcheck")))
+        return runSmfCheck();
     const int ignoreCheck = args.indexOf(QStringLiteral("--ignorecheck"));
     if (ignoreCheck >= 0 && ignoreCheck + 1 < args.size())
         return runIgnoreCheck(args[ignoreCheck + 1]);
