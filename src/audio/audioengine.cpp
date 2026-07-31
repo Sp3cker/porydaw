@@ -3,6 +3,7 @@
 #include <QFile>
 
 #include <algorithm>
+#include <thread>
 
 #include "miniaudio.h"
 
@@ -209,32 +210,41 @@ void AudioEngine::updateTimeline(const MidiTimeline *timeline)
 {
     if (!m_timeline || !timeline)
         return;
-    if (m_deviceStarted)
-        ma_device_stop(m_device);
 
-    // A seek published but not yet applied by the audio thread must survive
-    // the rebuild — dropping it would silently ignore an edit-cursor move
-    // that raced this edit. The device is stopped, so the exchange can't
-    // race applyPendingSeek.
-    const uint64_t pending = m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
+    m_pendingTimeline.store(timeline, std::memory_order_release);
+    if (!m_deviceStarted) {
+        if (applyPendingTimeline())
+            m_pendingTimeline.store(nullptr, std::memory_order_release);
+        return;
+    }
+    // The caller owns both timelines. Wait until the callback adopts the new
+    // one before returning and allowing the caller to free the old one.
+    while (m_pendingTimeline.load(std::memory_order_acquire) != nullptr)
+        std::this_thread::yield();
+}
+
+bool AudioEngine::applyPendingTimeline()
+{
+    const MidiTimeline *timeline =
+        m_pendingTimeline.load(std::memory_order_acquire);
+    if (!timeline)
+        return false;
+
+    // A seek published before the rebuild belongs on the replacement.
+    const uint64_t pending =
+        m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
     const uint64_t pos = pending != kNoPendingSeek ? pending : m_player.position();
     m_timeline = timeline;
     m_player.seek(pos, m_timeline);
     m_playhead.store(pos);
-    // Release sounding notes: their note-offs may have moved or vanished in
-    // the rebuilt timeline. Envelopes fade naturally, so brief edits during
-    // playback don't hard-cut the audio.
     for (int track = 0; track < MAX_TRACKS; track++)
         m4a_engine_all_notes_off(m_engine.get(), track);
+    m_previewTrack = -1;
+    m_previewKey = -1;
     clearTimedPreviews();
-    // Re-latch controller state from the rebuilt timeline: the edit may have
-    // deleted or moved the events behind the engine's current bend/CC values
-    // (e.g. clearing a lane), which would otherwise stay latched until stop.
     TimelinePlayer::chase(m_engine.get(), m_timeline, pos);
     TimelinePlayer::primeVoices(m_engine.get(), m_timeline, pos);
-
-    if (m_deviceStarted)
-        ma_device_start(m_device);
+    return true;
 }
 
 void AudioEngine::seek(uint64_t samplePos)
@@ -654,6 +664,7 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
     // requested after stop() (play-from-cursor) must land on top of the
     // rewind, not under it.
     applyTransportTransition();
+    const bool timelineReplaced = applyPendingTimeline();
     applyPendingSeek();
     applyMuteTransition();
     applyPreviewNote();
@@ -719,4 +730,6 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
     }
     m_activePcm.store(pcm);
     m_activeCgb.store(cgb);
+    if (timelineReplaced)
+        m_pendingTimeline.store(nullptr, std::memory_order_release);
 }

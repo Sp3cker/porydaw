@@ -88,11 +88,11 @@ class AudioEngine
                   const SongSettings &settings);
     void unloadSong();
 
-    // Cold: swaps in a rebuilt timeline after a document edit, preserving
-    // transport state and the playhead position. Sounding notes are released
-    // (their note-offs may have moved or vanished in the new timeline).
-    // Borrowed like loadSong's; the old timeline may be freed once this
-    // returns.
+    // Publishes a rebuilt timeline for adoption at the next audio callback,
+    // preserving transport state and playhead position without stopping the
+    // device. Sounding notes are released because their note-offs may have
+    // moved or vanished. Returns after the audio thread has stopped reading
+    // the old borrowed timeline, so the caller may then free it.
     void updateTimeline(const MidiTimeline *timeline);
     // Hot: requests a jump at the next audio callback. Releases sounding
     // notes and chases controller state at the landing position. Works in
@@ -222,6 +222,7 @@ class AudioEngine
                              uint32_t frameCount);
     void process(float *interleavedOut, uint32_t frameCount);
     void applyPendingSeek();
+    bool applyPendingTimeline();
     void applyTransportTransition();
     void cutAllSound();
     void applyMuteTransition();
@@ -264,6 +265,9 @@ class AudioEngine
     // Avoid stop/start stalls: publish the latest seek for the audio callback.
     static constexpr uint64_t kNoPendingSeek = UINT64_MAX;
     std::atomic<uint64_t> m_pendingSeek{kNoPendingSeek};
+    // UI publishes a borrowed replacement and waits for the audio callback to
+    // clear it after adoption, keeping the outgoing timeline alive meanwhile.
+    std::atomic<const MidiTimeline *> m_pendingTimeline{nullptr};
     // Preview-note command: generation<<24 | track<<16 | key<<8 | velocity.
     // The generation counter makes every request distinct so repeated notes
     // are seen by the audio thread.

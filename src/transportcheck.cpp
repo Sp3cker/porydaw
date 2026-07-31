@@ -259,6 +259,22 @@ int runTransportCheck()
     if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
         fail("reset seek after updateTimeline not applied");
 
+    // A live edit is adopted by an audio callback instead of stopping and
+    // restarting the device. updateTimeline acknowledges only after that
+    // callback renders, so the playhead must advance across the call.
+    engine.play();
+    if (!waitFor([&] { return engine.playheadSamples() > 0; }, 2000)) {
+        fail("playback did not start for live timeline replacement");
+    } else {
+        const uint64_t beforeUpdate = engine.playheadSamples();
+        engine.updateTimeline(timeline.get());
+        if (engine.playheadSamples() <= beforeUpdate)
+            fail("live timeline replacement paused audio callbacks");
+    }
+    engine.stop();
+    if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
+        fail("stop after live timeline replacement did not reset");
+
     // A short audition whose note-off has already gone out, leaving a
     // ringing slow-release tail — the reported symptom. Fails the whole
     // check if the preview never sounds or the tail dies early (the
