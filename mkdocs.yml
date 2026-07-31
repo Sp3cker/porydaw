@@ -1,0 +1,70 @@
+site_name: Porydaw Documentation
+site_url: https://huderlem.github.io/porydaw/
+repo_url: https://github.com/huderlem/porydaw
+repo_name: huderlem/porydaw
+docs_dir: docsrc
+edit_uri: edit/main/docsrc/
+
+theme:
+  name: material
+  logo: img/porydaw.png
+  favicon: img/porydaw.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.footer
+    - content.action.edit
+    - search.suggest
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.keys        # ++ctrl+z++ renders as keyboard keys
+
+nav:
+  - Getting Started:
+      - Introduction: index.md
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quick-start.md
+      - Music & DAW Basics: getting-started/daw-basics.md
+  - User Manual:
+      - The Main Window: manual/main-window.md
+      - Playing Songs: manual/playback.md
+      - Editing Notes in the Piano Roll: manual/piano-roll.md
+      - Working with Tracks: manual/tracks.md
+      - Automation (Volume, Pan, Tempo & More): manual/automation.md
+      - Instruments & Voicegroups: manual/voicegroups.md
+      - Importing Custom Samples: manual/sample-studio.md
+      - Creating a New Song: manual/new-song.md
+      - Importing MIDI Files: manual/midi-import.md
+      - Song Settings: manual/song-settings.md
+      - Polyphony & GBA Sound Limits: manual/polyphony.md
+      - The MIDI Event List: manual/event-list.md
+      - Exporting Audio: manual/export-audio.md
+      - Themes & Appearance: manual/appearance.md
+      - Keyboard Shortcuts: manual/shortcuts.md
+      - Files Porydaw Reads & Writes: manual/project-files.md
+  - Reference:
+      - FAQ & Troubleshooting: reference/faq.md
+      - Related Projects: reference/related-projects.md
+      - Changelog: https://github.com/huderlem/porydaw/blob/main/CHANGELOG.md

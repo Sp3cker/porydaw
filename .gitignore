@@ -5,3 +5,6 @@ compile_commands.json
 CMakeUserPresets.json
 *.user
 .DS_Store
+
+# MkDocs local build output
+site/
