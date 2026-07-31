@@ -12,6 +12,8 @@ View the work-in-progress documentation: https://huderlem.github.io/porydaw
 
 View the [Changelog][changelog] to see what's new.
 
+<img src="docsrc/img/introduction-porydaw-screen.png" width="600" alt="Porydaw main window">
+
 ## Download
 
 Download Porydaw below to start using it immediately. Older versions of Porydaw may be downloaded from the [Releases][releases] page.
