@@ -4,7 +4,7 @@ This page is for users who have never used music software. We'll cover some basi
 
 ## What's a DAW, anyway?
 
-A "Digital Audio Workstation" is a program for arranging music notes and sounds on a timeline. Porydaw is a small, specialized one. DAWs are notoriously complex pieces of software because they are incredibly feature-rich and powerful. In short, DAWs are the ultimate tool for creating music. They are used by anyone from professionals creating top-40 pop hits to hobbyists creating songs for their GBA ROM hacks.  Some examples of popular DAWs are [Pro Tools](https://www.avid.com/pro-tools), [Logic Pro](https://www.apple.com/logic-pro/), [Ableton Lilve](https://www.ableton.com/en/live/), [FL Studio](https://www.image-line.com/), and [Reaper](https://www.reaper.fm/).
+A "Digital Audio Workstation" is a program for arranging music notes and sounds on a timeline. Porydaw is a small, specialized one. DAWs are notoriously complex pieces of software because they are incredibly feature-rich and powerful. In short, DAWs are the ultimate tool for creating music. They are used by anyone from professionals creating top-40 pop hits to hobbyists creating songs for their GBA ROM hacks.  Some examples of popular DAWs are [Pro Tools](https://www.avid.com/pro-tools), [Logic Pro](https://www.apple.com/logic-pro/), [Ableton Live](https://www.ableton.com/en/live/), [FL Studio](https://www.image-line.com/), and [Reaper](https://www.reaper.fm/).
 
 
 ## Notes, pitch, and the piano roll
@@ -13,7 +13,7 @@ In audio, "pitch" is the frequency of a sound--how high or low it sounds. "Keys"
 
 ## Rhythm: beats, bars, and tempo
 
-How fast or slow a song progresses through the timeline is determined by the "tempo". Tempo is measured in "beats per minute", and a "beat" is the thing you tap your foot to while listening to music.  To logically group sections of the music together, music is typically organized into "measures, each of which is subdivided even further into "beats" and sub-beats. These concepts appear as vertical lines in the piano roll view and are how music is organized horizontally over time.
+How fast or slow a song progresses through the timeline is determined by the "tempo". Tempo is measured in "beats per minute", and a "beat" is the thing you tap your foot to while listening to music.  To logically group sections of the music together, music is typically organized into "measures", each of which is subdivided even further into "beats" and sub-beats. These concepts appear as vertical lines in the piano roll view and are how music is organized horizontally over time.
 
 ## Tracks and instruments
 
