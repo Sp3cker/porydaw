@@ -239,13 +239,6 @@ const QColor &trackTextColor(int track)
     return themes::trackIdentityTextColor(trackIdentityIndex(track));
 }
 
-// The stronger of black/white over a backdrop.
-QColor contrastingTextColor(const QColor &backdrop)
-{
-    return themes::contrastRatio(backdrop, Qt::white) >= themes::contrastRatio(backdrop, Qt::black)
-               ? QColor(Qt::white)
-               : QColor(Qt::black);
-}
 
 // Ghost notes (unselected tracks) mix 24% of their track identity into the
 // row background in OKLab. Cap only the lightness offset so bright identities
@@ -2414,16 +2407,15 @@ class PianoRoll : public TimelineSurface
                 painter.fillRect(velBarRect(noteRect, renderedVelocity, devicePixelRatioF()),
                                  mixTowardOklab(identity, Qt::black, 1.0 / 3.0));
             }
-
             if (nameFont)
-                drawNoteName(painter, noteRect, noteBox, displayedNoteKey(note));
+                drawNoteName(painter, noteRect, noteBox, displayedNoteKey(note), note.track);
 
             // While velocity is active, every current-track note shows its
             // value instead of the pitch label.
             if (showVelocityValues && velocityFont) {
                 const QString velocityText = QString::number(renderedVelocity);
                 if (noteRect.width() >= painter.fontMetrics().horizontalAdvance(velocityText) + 4) {
-                    painter.setPen(noteTextColor(note.key));
+                    painter.setPen(noteTextColor(note.track));
                     painter.drawText(noteRect, Qt::AlignCenter, velocityText);
                 }
             }
@@ -2450,14 +2442,11 @@ class PianoRoll : public TimelineSurface
         }
     }
 
-    // Note labels follow the piano keyboard: natural-key labels use the
-    // natural-key white and accidental-key labels use the black-key color.
-    QColor noteTextColor(int key) const
+    // Note labels use the track's paired contrast color, selected once per
+    // track identity rather than from the piano key.
+    const QColor &noteTextColor(int track) const
     {
-        const auto role = isBlackKey(key)
-                              ? themes::Role::song_view_piano_keyboard_black_key
-                              : themes::Role::song_view_piano_keyboard_natural_key;
-        return themes::color(role);
+        return trackTextColor(track);
     }
 
     // The pitch label stays inside the note face. A note that cannot fit the
@@ -2470,7 +2459,8 @@ class PianoRoll : public TimelineSurface
                                        lyt::space(Space::Two);
     }
 
-    void drawNoteName(QPainter &painter, const QRectF &noteRect, const QRectF &noteBox, int key)
+    void drawNoteName(QPainter &painter, const QRectF &noteRect, const QRectF &noteBox, int key,
+                      int track)
     {
         const QString name = keyName(key);
         if (!noteNameFits(noteRect, key, QFontMetricsF(painter.font())))
@@ -2480,7 +2470,7 @@ class PianoRoll : public TimelineSurface
                                noteBox.height() - 2.0 * textInset);
         painter.save();
         painter.setClipRect(noteBox, Qt::IntersectClip);
-        painter.setPen(noteTextColor(key));
+        painter.setPen(noteTextColor(track));
         painter.drawText(labelRect, Qt::AlignLeft | Qt::AlignVCenter, name);
         painter.restore();
     }
@@ -2512,7 +2502,7 @@ class PianoRoll : public TimelineSurface
                 p.setFont(*font);
                 const auto velocityText = QString::number(m_lastVelocity);
                 if (r.width() >= p.fontMetrics().horizontalAdvance(velocityText) + 4) {
-                    p.setPen(noteTextColor(m_drawKey));
+                    p.setPen(noteTextColor(selected));
                     p.drawText(r, Qt::AlignCenter, velocityText);
                 }
             }
@@ -2520,7 +2510,7 @@ class PianoRoll : public TimelineSurface
             if (const auto font =
                     noteNameFont(p.font(), box.height())) {
                 p.setFont(*font);
-                drawNoteName(p, r, box, m_drawKey);
+                drawNoteName(p, r, box, m_drawKey, selected);
             }
         }
     }

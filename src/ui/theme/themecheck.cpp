@@ -116,10 +116,10 @@ bool isComplete(const themes::Theme &theme)
 bool isCompleteTrackIdentityPalette()
 {
     for (std::size_t index = 0; index < themes::trackIdentityColorCount; ++index) {
-        if (!themes::trackIdentityColor(index).isValid() ||
-            themes::trackIdentityColor(index).alpha() != 255 ||
-            !themes::trackIdentityTextColor(index).isValid() ||
-            themes::trackIdentityTextColor(index).alpha() != 255)
+        const auto &fill = themes::trackIdentityColor(index);
+        const auto &text = themes::trackIdentityTextColor(index);
+        if (!fill.isValid() || fill.alpha() != 255 || !text.isValid() || text.alpha() != 255 ||
+            !themes::isValidColorPair(fill, text))
             return false;
     }
     return true;
@@ -189,7 +189,7 @@ void checkDerivedThemes(Reporter &reporter)
                    "a translucent color was accepted");
 
     reporter.check(isCompleteTrackIdentityPalette(),
-                   "the shared track identity palette has an unset or translucent color");
+                   "the shared track identity palette has an unreadable label color");
 
     // Exercise both dark and light Primary directions through the same contract.
     const auto customPairs = std::array{
