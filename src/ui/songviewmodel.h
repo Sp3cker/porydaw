@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "core/noteid.h"
 #include "core/miditimeline.h"
 #include "ui/m4asemantics.h"
 
@@ -13,6 +14,7 @@
 // these buckets — the M1 guarantee that no event is silently invisible.
 
 struct ViewNote {
+    NoteId noteId; // source document identity; unassigned for ordinary timeline notes
     uint32_t startTick;
     uint32_t endTick;
     uint8_t key;

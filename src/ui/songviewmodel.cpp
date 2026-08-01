@@ -34,6 +34,7 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
         switch (ev.type) {
         case 0x9: { // note on
             ViewNote note;
+            note.noteId = ev.noteId;
             note.startTick = ev.tick;
             note.endTick = ev.tick;
             note.key = ev.data0 & 0x7F;
