@@ -2,8 +2,10 @@
 
 #include <QPixmap>
 #include <QRegion>
+#include <QRect>
 #include <QWidget>
 #include <QtGlobal>
+#include <vector>
 
 class QEvent;
 class QPaintEvent;
@@ -27,6 +29,7 @@ QRegion expandRegionToDeviceGrid(const QRegion &region, int grid);
 // pixels paintContent() actually rasterized, plus the cache's estimated
 // footprint. Playhead sweeps must leave these untouched (pure cache blits).
 struct TimelineSurfaceDiagnostics {
+    quint64 contentInvalidationCount = 0;
     quint64 contentPaintCount = 0;
     quint64 contentPaintPixelCount = 0;
     quint64 estimatedContentCacheBytes = 0;
@@ -34,7 +37,8 @@ struct TimelineSurfaceDiagnostics {
     friend bool operator==(const TimelineSurfaceDiagnostics &lhs,
                            const TimelineSurfaceDiagnostics &rhs) noexcept
     {
-        return lhs.contentPaintCount == rhs.contentPaintCount &&
+        return lhs.contentInvalidationCount == rhs.contentInvalidationCount &&
+               lhs.contentPaintCount == rhs.contentPaintCount &&
                lhs.contentPaintPixelCount == rhs.contentPaintPixelCount &&
                lhs.estimatedContentCacheBytes == rhs.estimatedContentCacheBytes;
     }
@@ -70,6 +74,7 @@ class TimelineSurface : public QWidget
     TimelineSurfaceDiagnostics diagnostics() const noexcept;
 
   protected:
+    virtual void contentGeometryChanged() {}
     virtual void paintContent(QPainter &painter) = 0;
 
   private:
@@ -88,16 +93,5 @@ struct TimelineBand {
     int timelineOrigin;
 };
 
-struct CachedTimelineBand {
-    TimelineSurface &widget;
-    int timelineOrigin;
-};
-
-struct TimelineSurfaces {
-    TimelineBand ruler;
-    CachedTimelineBand roll;
-    CachedTimelineBand lanes;
-    CachedTimelineBand strip;
-};
 
 } // namespace songview

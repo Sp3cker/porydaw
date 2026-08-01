@@ -145,6 +145,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songlistpanel.h
     src/ui/songviewmodel.cpp
     src/ui/songviewmodel.h
+    src/ui/selectionreticle.cpp
+    src/ui/selectionreticle.h
     src/ui/timelinesurface.cpp
     src/ui/timelinesurface.h
     src/ui/songview.cpp
@@ -155,6 +157,22 @@ qt_add_library(porydaw_app STATIC
     src/ui/eventlistview.h
     src/ui/viewsidecar.cpp
     src/ui/viewsidecar.h
+    src/core/noteid.h
+    src/core/velocitymodel.cpp
+    src/core/velocitymodel.h
+    src/ui/editorpage.h
+    src/ui/editorviewstate.cpp
+    src/ui/editorviewstate.h
+    src/ui/editordrawer.cpp
+    src/ui/editordrawer.h
+    src/ui/automationarea.cpp
+    src/ui/automationarea.h
+    src/ui/automationpage.cpp
+    src/ui/automationpage.h
+    src/ui/velocityarea.cpp
+    src/ui/velocityarea.h
+    src/ui/velocityaxis.cpp
+    src/ui/velocityaxis.h
 )
 if(APPLE)
     target_sources(porydaw_app PRIVATE

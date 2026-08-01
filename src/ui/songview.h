@@ -9,10 +9,14 @@
 #include <algorithm>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <utility>
 #include <vector>
 
 #include "core/miditimeline.h"
+#include "ui/editorpage.h"
+#include "ui/editorviewstate.h"
+#include "ui/layout.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
 
@@ -22,27 +26,29 @@ extern "C" {
 
 class EventListView;
 class QKeyEvent;
-class QScrollArea;
+class QEvent;
 class QScrollBar;
-class QSplitter;
 class QStackedWidget;
 class QWheelEvent;
+class QPainter;
 class SongDocument;
+class AutomationPage;
+class EditorDrawer;
+class VelocityArea;
+struct NoteVelocity;
+struct TrackRemap;
 
 namespace songview {
 class TimeRuler;
 class PianoRoll;
-class AutomationArea;
 class OtherStrip;
 class PlayheadOverlay;
 class TrackHeaderPanel;
 
-// Fixed gutter geometry shared by every timeline-aligned child: the track
-// header column plus the piano-roll keyboard column. All children put
-// timeline tick 0 at the same global x. Exposed for roll interaction checks.
-constexpr int kHeaderW = 210;
-constexpr int kKeyboardW = 52;
-constexpr int kGutterW = kHeaderW + kKeyboardW;
+// Perceptually mixes a color toward its backdrop. Timeline surfaces use this
+// shared shade for receding track-colored details.
+QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t);
+
 // Velocity bar handle: with at least this much vertical zoom, each note
 // shows a thin horizontal bar at its velocity level (bottom = 0,
 // top = 127), and that bar — grabbable anywhere across the note's
@@ -52,38 +58,40 @@ constexpr int kGutterW = kHeaderW + kKeyboardW;
 // Ableton-style) turns a vertical drag from anywhere on a note into a
 // velocity drag at any zoom. Also the default key height, so the handle
 // is available out of the box.
-constexpr int kVelHandleMinKeyH = 12;
 // Auto snap grid: the zoom-adaptive grid shows the finest subdivision from
 // the feel's ladder whose cells are at least this wide, so lower values
 // mean a busier grid at the same zoom. Exposed so viewcheck derives its
 // expectations from the same knob being tuned.
-constexpr double kAutoGridMinCellPx = 16.0;
 // The velocity bar's rect inside a note rect; painted by the roll and,
-// from kVelHandleMinKeyH up, the grab target for velocity drags. Exposed
+// from the resolved velocity-handle threshold up, the grab target for velocity drags. Exposed
 // for roll interaction checks. The default DPR keeps integer-DIP callers
 // compatible while the roll supplies its actual display scale.
-inline QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr = 1.0)
+inline QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr = layout::singlePixel())
 {
-    const qreal pixel = 1.0 / dpr;
-    const qreal barH = qRound(noteRect.height() / pixel) >= 20 ? 2 * pixel : pixel;
-    const qreal innerH = noteRect.height() - 2 * pixel;
+    const qreal pixel = qreal(layout::singlePixel()) / dpr;
+    const qreal inset = layout::editorGeometry().velocityHandleInset * pixel;
+    const qreal barH = qRound(noteRect.height() / pixel) >=
+                               layout::editorGeometry().velocityHandleTallNoteThreshold
+                           ? layout::editorGeometry().velocityHandleBarThickness * pixel
+                           : pixel;
+    const qreal innerH = noteRect.height() - inset;
     const qreal y = std::min(noteRect.top() + pixel + (127 - velocity) * (innerH - pixel) / 127.0,
                              noteRect.bottom() - pixel - barH);
-    return QRectF(noteRect.left() + pixel, y, std::max(pixel, noteRect.width() - 2 * pixel), barH);
+    return QRectF(noteRect.left() + pixel, y, std::max(pixel, noteRect.width() - inset), barH);
 }
 // Frame weights for note borders and the selection ring, in physical
-// pixels for the given display ratio. Authored in DIPs (border 1, ring
-// 1.5) so a display at 100% scale shows the same visual weight a HiDPI
-// display does; painting still lands on whole physical pixels so
-// fractional scale factors cannot open seams. Exposed so roll checks
-// assert the same math the paint code uses.
+// pixels for the given display ratio. The resolver scales their DIP widths
+// with the editor font; painting still lands on whole physical pixels so
+// fractional scale factors cannot open seams. Exposed so roll checks assert
+// the same math the paint code uses.
 inline int noteBorderPixels(qreal dpr)
 {
-    return std::max(1, qRound(dpr));
+    return std::max(layout::singlePixel(), qRound(dpr));
 }
 inline int selectionRingPixels(qreal dpr)
 {
-    return std::max(1, qRound(1.5 * dpr));
+    return std::max(layout::singlePixel(),
+                    qRound(layout::editorGeometry().selectionRingDipWidth * dpr));
 }
 } // namespace songview
 
@@ -116,32 +124,40 @@ class SongView : public QWidget
     // while the audio engine frees the old one).
     void setVoicegroup(const LoadedVoiceGroup *voicegroup);
 
-    // Per-song sidecar view state (SPEC §4.4): the cosmetic state worth
-    // restoring when the song is reopened. Everything is clamped/validated
-    // on apply, so a stale or hand-edited sidecar can't wedge the view.
+    // Detached camera/grid sidecar snapshot. Drawer and automation cosmetics
+    // live only in EditorViewState.
     struct ViewState {
         bool valid = false;
-        double pxPerBeat = 32.0;                        // horizontal zoom (ticks-per-beat neutral)
-        double keyHeight = songview::kVelHandleMinKeyH; // vertical roll zoom
+        double pxPerBeat = layout::editorGeometry().editorDefaultPixelsPerBeat;
+        double keyHeight = layout::editorGeometry().velocityHandleMinimumKeyHeight;
         double scrollPx = 0.0;
         double scrollY = 0.0;
         int selectedTrack = 0;
         uint64_t editCursorTick = 0;
-        int laneHeight = 48;                             // shared automation row height
-        QHash<QString, int> laneHeights;                 // per-row overrides (AutomationArea keys)
-        QHash<QString, int> laneRanges;                  // per-lane display max (AutomationArea
-                                                         // keys); 0 = auto-fit to the data
-        QList<int> splitterSizes;                        // roll pane, lanes pane
-        std::vector<std::pair<int, uint8_t>> emptyLanes; // (track, cc)
-        int gridMinDenom = 0;                            // drawn-grid floor as a note denominator
-                                                         // (4/8/16/32); 0 = down to the clock grid
-        bool gridTriplet = false;                        // triplet vs straight beat subdivisions
-        bool eventList = false;                          // raw MIDI event list instead of the roll
+        int gridMinDenom = 0;     // drawn-grid floor as a note denominator
+                                  // (4/8/16/32); 0 = down to the clock grid
+        bool gridTriplet = false; // triplet vs straight beat subdivisions
+        bool eventList = false;   // raw MIDI event list instead of the roll
     };
     ViewState viewState() const;
     // Call after setSong (and setDocument); a default-constructed (invalid)
     // state is a no-op.
     void applyViewState(const ViewState &state);
+
+    // Detached typed cosmetic snapshot. Runtime selection, camera, document,
+    // timeline, and voice state deliberately remain live in SongView.
+    EditorViewState editorViewState() const;
+    void applyEditorViewState(const EditorViewState &state);
+    // One-way sink used by the drawer when its cosmetic state changes.
+    void setEditorViewState(const EditorViewState &state);
+
+    void setDrawerPage(EditorDrawerPage page);
+    EditorDrawerPage drawerPage() const;
+    void setDrawerVisible(bool visible);
+    bool drawerVisible() const;
+    void setDrawerHeight(int height);
+    int drawerHeight() const;
+    EditorDrawer *editorDrawer() const noexcept { return m_editorDrawer; }
 
     // User-added automation lanes with no events yet (SPEC §6.1 "addable from
     // the m4a parameter list"). They live in view state — the model derives
@@ -165,7 +181,7 @@ class SongView : public QWidget
     const MidiTimeline *timeline() const { return m_timeline; }
     const SongViewModel &model() const { return m_model; }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
-    songview::TimelineSurfaces timelineSurfaces() noexcept;
+    std::vector<songview::TimelineBand> timelineBands() noexcept;
 
     qreal contentX(double tick) const { return qreal(tick * m_pxPerTick - m_scrollX); }
     double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / m_pxPerTick; }
@@ -259,15 +275,9 @@ class SongView : public QWidget
     // first program change), inserting one at tick 0 if the track has none.
     void editTrackVoice(int track);
 
-    // Track create/duplicate/delete (header-panel entry points; all undoable
-    // through the document). addTrack picks the new track's voice first, then
-    // selects the created track; duplicateTrack selects the copy (a fresh
-    // slot, so no per-track view state moves); deleteTrack shifts the view's
-    // per-track state (mute/solo, empty lanes, selection) over the removed
-    // engine slot; moveTrack (header-row drag; the track's chunk moves —
-    // AGB track order is chunk order) rotates that state along with the
-    // reordered engine slots — in onTrackMoved, off the document's
-    // trackMoved signal, so undo/redo rotate it back too.
+    // Track create/duplicate/delete/reorder entry points. The complete
+    // TrackRemap supplied by SongDocument re-addresses every persistent
+    // track owner on apply, undo, and redo.
     void addTrack();
     void duplicateTrack(int track);
     void deleteTrack(int track);
@@ -333,21 +343,21 @@ class SongView : public QWidget
     uint64_t snapTick(double tick, bool fine = false) const;
     uint64_t snapTickDown(double tick) const;
     uint64_t snapTickUp(double tick) const;
+    EditorPageGridState gridState(uint64_t tick, bool fineMode) const;
+    bool paintGrid(QPainter &, const QRect &, qreal origin) const;
 
-    // Note selection on the selected track, identified by (startTick, key) so
-    // it survives document rebuilds.
-    struct NoteId {
-        uint32_t tick;
-        uint8_t key;
-        bool operator==(const NoteId &other) const
-        {
-            return tick == other.tick && key == other.key;
-        }
-    };
+    // Note selection on the selected track uses the document's opaque
+    // identity. Geometry is never an identity surrogate.
     const std::vector<NoteId> &selection() const { return m_selection; }
     bool isSelected(const ViewNote &note) const;
     void setSelection(std::vector<NoteId> ids);
+    EditorPageVoiceContext voiceContext(uint64_t tick) const;
     void clearSelection();
+    // Concrete endpoint for the velocity editor's live revisioned gesture.
+    uint64_t beginVelocityMutation();
+    std::optional<uint64_t> applyVelocityMutation(uint64_t expectedRevision,
+                                                  const std::vector<NoteVelocity> &velocities,
+                                                  uint64_t gesture = 0);
 
     // Time-range selection: a half-open [startTick, endTick) span with a
     // scope — the header-selected tracks (ruler sweep and Shift+right-drag
@@ -370,10 +380,6 @@ class SongView : public QWidget
     void setTimeSelection(const TimeSelection &sel);
     void clearTimeSelection();
     bool timeSelectionCoversTrack(int track) const;
-    // Whether a lanes-area row (identified as the lane scope encodes it) is
-    // inside the selection; track scopes cover a track's CC/voice rows but
-    // never the global tempo row.
-    bool timeSelectionCoversRow(int track, uint8_t cc) const;
     // "Time selection: 8 beats · 3 tracks" status-bar line; children call it
     // when a selection gesture commits.
     void announceTimeSelection();
@@ -460,6 +466,17 @@ class SongView : public QWidget
 
     // Child-widget entry point for the statusMessage signal.
     void announce(const QString &text) { emit statusMessage(text); }
+    void setEditorHorizontalScroll(double px);
+    void setEditorTimeZoom(double pxPerBeat);
+    void setFollowScrollPaused(bool paused);
+    void showEditorTimeSelectionMenu(const EditorPageTimeSelectionMenuRequest &request);
+    void showEditorNoteStatus(std::optional<EditorPageNoteStatus> status);
+    void presentPianoRollVelocityPreview(std::optional<int> delta);
+    void requestEditorUndo();
+    void requestEditorRedo();
+    void executeEditorCommand(const EditorPageEditCommandRequest &request);
+    EditorPageLiveState editorLiveState() const;
+    void cancelVisiblePageInteraction();
 
     // Interaction from children.
     void zoomAroundContentX(double factor, qreal anchorContentX);
@@ -483,6 +500,9 @@ class SongView : public QWidget
     // row to be fully visible.
     void ensureKeyVisible(int key);
     void refreshTimelineViews();
+    // Refresh both concrete drawer pages from the current live SongView state.
+    // This endpoint does not proactively cancel interaction.
+    void refreshEditorPages();
 
   signals:
     void muteMaskChanged(uint32_t mask);
@@ -510,16 +530,23 @@ class SongView : public QWidget
 
   protected:
     void resizeEvent(QResizeEvent *event) override;
+    bool event(QEvent *event) override;
 
   private:
     uint64_t gridTicksIn(const GridSeg &seg, bool snap = false) const;
-    // Document trackMoved handler: rotates the per-track view state with the
-    // renumbered engine slots on apply, undo, and redo alike.
-    void onTrackMoved(int fromChunk, int toChunk, const QVector<int> &map);
+    // Document remap handler: re-addresses all SongView-owned track state
+    // before the following documentChanged rebuild.
+    void onTracksRemapped(const TrackRemap &remap);
     // A mouse gesture is live in the ruler, roll, or lanes (pan, drag,
     // sweep); playhead follow-scroll pauses while one runs.
     bool userGestureActive() const;
     void syncPlayheadOverlay();
+
+    void notifyDrawerSongChanged();
+    void refreshDrawerPages();
+    void refreshAutomationPage();
+    void refreshVelocityPage();
+    void syncSelectedTracks();
     int viewportWidth() const;
     void setHScroll(double px);
     double maxHScroll() const;
@@ -527,7 +554,6 @@ class SongView : public QWidget
     double maxRollScroll() const;
     void updateScrollbars();
     void rebuildAfterSongChange();
-    void mergeEmptyLanes();
     // Engine tracks a track-scoped time selection resolves to (used and
     // document-mapped), and the copyable lane identities of one track (its
     // model lanes plus the voice changes).
@@ -542,7 +568,7 @@ class SongView : public QWidget
     double m_pxPerTick = 1.0;
     double m_scrollX = 0.0;
     double m_scrollY = 0.0;
-    double m_keyHeight = songview::kVelHandleMinKeyH;
+    double m_keyHeight = layout::editorGeometry().velocityHandleMinimumKeyHeight;
     int m_selectedTrack = 0;
     double m_playheadTick = 0.0;
     uint64_t m_editCursorTick = 0;
@@ -554,20 +580,21 @@ class SongView : public QWidget
     Clip m_clip;
     uint32_t m_trackSelMask = 0; // header multi-selection (see trackSelectionMask)
     GridFeel m_gridFeel = GridFeel::Straight;
-    int m_gridMinDenom = 0;                            // note denominator; 0 = clock-grid floor
-    bool m_velocityColorMode = false;                  // velocityNoteColor fills (View menu)
-    bool m_followPlayhead = true;                      // playback follow-scroll (transport bar)
-    std::vector<std::pair<int, uint8_t>> m_emptyLanes; // (track, cc), unsorted
+    int m_gridMinDenom = 0;           // note denominator; 0 = clock-grid floor
+    bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)
+    bool m_followPlayhead = true;     // playback follow-scroll (transport bar)
+
+    EditorViewState m_editorViewState;
+    EditorDrawer *m_editorDrawer = nullptr;
+    std::vector<int> m_selectedTracks;
+    bool m_followScrollPaused = false;
+    bool m_velocityMutationInFlight = false;
 
     songview::TimeRuler *m_ruler = nullptr;
     songview::TrackHeaderPanel *m_headers = nullptr;
     songview::PianoRoll *m_roll = nullptr;
     QStackedWidget *m_rollStack = nullptr; // page 0: roll (+vbar), page 1: event list
     EventListView *m_events = nullptr;
-    songview::AutomationArea *m_lanes = nullptr;
-    QScrollArea *m_lanesScroll = nullptr;
-    QSplitter *m_splitter = nullptr; // roll above, lanes area below
-    bool m_splitInit = false;        // initial sizes applied on first layout
     songview::OtherStrip *m_strip = nullptr;
     songview::PlayheadOverlay *m_playheadOverlay = nullptr;
     QScrollBar *m_hbar = nullptr;

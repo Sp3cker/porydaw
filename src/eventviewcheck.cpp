@@ -2,6 +2,7 @@
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QMetaObject>
 #include <QFontInfo>
 #include <QImage>
 #include <QItemSelectionModel>
@@ -122,11 +123,10 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
     if (selectedChunk >= 0 && selectedChunk != chunk)
         fail("chunk combo does not follow the selected track");
 
-    const SmfTrack &track = doc.smf().tracks[chunk];
-    if (model->rowCount() != int(track.events.size()) + 1)
+    if (model->rowCount() != int(doc.smf().tracks[chunk].events.size()) + 1)
         fail("row count != chunk events + end-of-track row");
     const QModelIndex eotIdx = model->index(model->rowCount() - 1, 0);
-    if (model->data(eotIdx, Qt::EditRole).toULongLong() != track.endTick)
+    if (model->data(eotIdx, Qt::EditRole).toULongLong() != doc.smf().tracks[chunk].endTick)
         fail("end-of-track row shows the wrong tick");
 
     const auto monoFamily = QFontInfo(typography::bodyMono(table->font())).family();
@@ -150,8 +150,8 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
 
     // Cell edit: bump the first event's tick. The mutation is queued (must
     // not reset the model inside the delegate's commit), so pump the loop.
-    if (!track.events.empty()) {
-        const qulonglong newTick = qulonglong(track.events[0].tick + 3);
+    if (!doc.smf().tracks[chunk].events.empty()) {
+        const qulonglong newTick = qulonglong(doc.smf().tracks[chunk].events[0].tick + 3);
         if (!model->setData(model->index(0, 0), newTick, Qt::EditRole))
             fail("tick cell rejected the edit");
         QCoreApplication::processEvents();
@@ -206,27 +206,289 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
     if (model->rowCount() != int(filterEvents.size()) + 1)
         fail("all-checked filter does not show every event");
 
-    // A track move permutes the chunk numbering at constant count (invisible
-    // to the count-changed re-anchor): the list must follow its anchored
-    // chunk to the new index — and back on undo.
-    if (doc.engineTrackCount() >= 2) {
-        int anchorEngine = -1;
-        for (int e = 0; e < doc.engineTrackCount(); e++) {
-            if (doc.smfTrackFor(e) == chunk)
-                anchorEngine = e;
+    // A complete TrackRemap reaches the list before documentChanged. The
+    // visible SMF owner follows a move and survives changes to another
+    // owner; when its own chunk goes away, undo/redo must leave it
+    // unselected instead of treating the restored chunk as its old anchor.
+    int anchorEngine = -1;
+    for (int engine = 0; engine < doc.engineTrackCount(); engine++) {
+        if (doc.smfTrackFor(engine) == chunk) {
+            anchorEngine = engine;
+            break;
         }
-        if (anchorEngine >= 0) {
+    }
+    if (anchorEngine >= 0) {
+        QStringList notifications;
+        QObject notificationObserver;
+        QObject::connect(&doc, &SongDocument::tracksRemapped, &notificationObserver,
+                         [&notifications](TrackRemap) { notifications.append(QStringLiteral("remap")); });
+        QObject::connect(&doc, &SongDocument::documentChanged, &notificationObserver,
+                         [&notifications] { notifications.append(QStringLiteral("changed")); });
+        const auto expectNotifications = [&](bool remapped, const char *what) {
+            const QStringList expected =
+                remapped ? QStringList{QStringLiteral("remap"), QStringLiteral("changed")}
+                         : QStringList{QStringLiteral("changed")};
+            if (notifications != expected)
+                fail(what);
+        };
+        const auto expectAnchor = [&](int expectedChunk, const char *what) {
+            if (expectedChunk < 0) {
+                if (chunkCombo->currentIndex() >= 0 || model->rowCount() != 0)
+                    fail(what);
+                return;
+            }
+            if (chunkCombo->currentIndex() < 0 || chunkCombo->currentData().toInt() != expectedChunk ||
+                expectedChunk >= int(doc.smf().tracks.size())) {
+                fail(what);
+                return;
+            }
+            if (model->rowCount() != int(doc.smf().tracks[expectedChunk].events.size()) + 1)
+                fail(what);
+        };
+        const int anchorChunk = doc.smfTrackFor(anchorEngine);
+
+        if (doc.engineTrackCount() >= 2) {
             const int target =
                 anchorEngine == doc.engineTrackCount() - 1 ? 0 : doc.engineTrackCount() - 1;
+            notifications.clear();
             view.moveTrack(anchorEngine, target);
+            expectNotifications(true, "track move did not notify remap before documentChanged");
             const int movedChunk = doc.smfTrackFor(target);
-            if (chunkCombo->currentData().toInt() != movedChunk)
-                fail("chunk combo did not follow the moved track");
-            if (model->rowCount() != int(doc.smf().tracks[movedChunk].events.size()) + 1)
-                fail("event table did not follow the moved track");
+            expectAnchor(movedChunk, "chunk combo did not follow the moved track");
+
+            notifications.clear();
             doc.undoStack()->undo();
-            if (chunkCombo->currentData().toInt() != chunk)
-                fail("undoing the move did not re-anchor the chunk combo");
+            expectNotifications(true, "undoing a track move did not notify in order");
+            expectAnchor(anchorChunk, "undoing the move did not re-anchor the chunk combo");
+
+            notifications.clear();
+            doc.undoStack()->redo();
+            expectNotifications(true, "redoing a track move did not notify in order");
+            expectAnchor(movedChunk, "redoing the move did not re-anchor the chunk combo");
+
+            notifications.clear();
+            doc.undoStack()->undo();
+            expectNotifications(true, "restoring a moved track did not notify in order");
+            expectAnchor(anchorChunk, "restoring a moved track lost the chunk anchor");
+        }
+
+        QString renamed = QStringLiteral("eventviewcheck remap");
+        if (doc.trackName(anchorEngine) == renamed)
+            renamed += QStringLiteral(" 2");
+        notifications.clear();
+        doc.renameTrack(anchorEngine, renamed);
+        expectNotifications(false, "metadata-only edit emitted a track remap");
+        expectAnchor(anchorChunk, "metadata-only edit changed the chunk anchor");
+        notifications.clear();
+        doc.undoStack()->undo();
+        expectNotifications(false, "undoing metadata-only edit emitted a track remap");
+        expectAnchor(anchorChunk, "undoing metadata-only edit changed the chunk anchor");
+        notifications.clear();
+        doc.undoStack()->redo();
+        expectNotifications(false, "redoing metadata-only edit emitted a track remap");
+        expectAnchor(anchorChunk, "redoing metadata-only edit changed the chunk anchor");
+        notifications.clear();
+        doc.undoStack()->undo();
+        expectNotifications(false, "restoring metadata-only edit emitted a track remap");
+        expectAnchor(anchorChunk, "restoring metadata-only edit changed the chunk anchor");
+
+        int metadataChunk = -1;
+        for (int candidate = 0; candidate < int(doc.smf().tracks.size()); candidate++) {
+            bool hasEngine = false;
+            for (int engine = 0; engine < doc.engineTrackCount(); engine++) {
+                if (doc.smfTrackFor(engine) == candidate) {
+                    hasEngine = true;
+                    break;
+                }
+            }
+            if (!hasEngine) {
+                metadataChunk = candidate;
+                break;
+            }
+        }
+        int freeChannel = -1;
+        for (int candidate = 0; candidate < 16 && freeChannel < 0; candidate++) {
+            bool used = false;
+            for (int engine = 0; engine < doc.engineTrackCount(); engine++) {
+                if (doc.channelFor(engine) == candidate) {
+                    used = true;
+                    break;
+                }
+            }
+            if (!used)
+                freeChannel = candidate;
+        }
+        if (metadataChunk >= 0 && freeChannel >= 0) {
+            const int metadataComboIndex = chunkCombo->findData(metadataChunk);
+            if (metadataComboIndex < 0) {
+                fail("metadata chunk is absent from the chunk combo");
+            } else {
+                // This chunk has no roll owner, so activate it through the
+                // list itself. Its index survives the edit, but its owner
+                // label changes only when EventListView consumes the remap.
+                chunkCombo->setCurrentIndex(metadataComboIndex);
+                if (!QMetaObject::invokeMethod(chunkCombo, "activated", Qt::DirectConnection,
+                                               Q_ARG(int, metadataComboIndex))) {
+                    fail("could not select the metadata chunk in the event list");
+                }
+                const auto engineForMetadataChunk = [&] {
+                    for (int engine = 0; engine < doc.engineTrackCount(); engine++) {
+                        if (doc.smfTrackFor(engine) == metadataChunk)
+                            return engine;
+                    }
+                    return -1;
+                };
+                const auto expectTransitionState =
+                    [&](int expectedEngineCount, int expectedOwner, bool expectProgram,
+                        const char *what) {
+                        if (doc.engineTrackCount() != expectedEngineCount ||
+                            engineForMetadataChunk() != expectedOwner) {
+                            fail(what);
+                            return;
+                        }
+                        expectAnchor(metadataChunk, what);
+                        const QString expectedLabel =
+                            expectedOwner >= 0
+                                ? QStringLiteral("Chunk %1 — Track %2")
+                                      .arg(metadataChunk)
+                                      .arg(expectedOwner + 1)
+                                : QStringLiteral("Chunk %1 (tempo/meta)").arg(metadataChunk);
+                        if (chunkCombo->currentText() != expectedLabel) {
+                            fail(what);
+                            return;
+                        }
+                        bool programShown = false;
+                        for (int row = 0; row + 1 < model->rowCount(); row++) {
+                            if (model->data(model->index(row, 1), Qt::DisplayRole).toString() ==
+                                    QStringLiteral("Program change") &&
+                                model->data(model->index(row, 2), Qt::DisplayRole).toInt() ==
+                                    freeChannel + 1) {
+                                programShown = true;
+                                break;
+                            }
+                        }
+                        if (programShown != expectProgram)
+                            fail(what);
+                    };
+                const int engineCount = doc.engineTrackCount();
+                expectTransitionState(engineCount, -1, false,
+                                      "metadata chunk was not the active list source");
+                SmfEvent program;
+                program.status = uint8_t(0xc0 | freeChannel);
+                program.data0 = 0;
+                notifications.clear();
+                doc.insertRawEvent(metadataChunk, program);
+                expectNotifications(true,
+                                    "engine-track transition did not notify remap before documentChanged");
+                const int programOwner = engineForMetadataChunk();
+                if (programOwner < 0) {
+                    fail("program event did not create an engine owner");
+                } else {
+                    expectTransitionState(engineCount + 1, programOwner, true,
+                                          "engine-track transition left stale list owner state");
+                }
+                notifications.clear();
+                doc.undoStack()->undo();
+                expectNotifications(true, "undoing engine-track transition did not notify in order");
+                expectTransitionState(engineCount, -1, false,
+                                      "undoing engine-track transition left stale list owner state");
+                notifications.clear();
+                doc.undoStack()->redo();
+                expectNotifications(true, "redoing engine-track transition did not notify in order");
+                if (programOwner >= 0) {
+                    expectTransitionState(engineCount + 1, programOwner, true,
+                                          "redoing engine-track transition left stale list owner state");
+                }
+                notifications.clear();
+                doc.undoStack()->undo();
+                expectNotifications(true, "restoring engine-track transition did not notify in order");
+                expectTransitionState(engineCount, -1, false,
+                                      "restoring engine-track transition left stale list owner state");
+                const int anchorComboIndex = chunkCombo->findData(anchorChunk);
+                if (anchorComboIndex < 0) {
+                    fail("original chunk is absent from the chunk combo");
+                } else {
+                    chunkCombo->setCurrentIndex(anchorComboIndex);
+                    if (!QMetaObject::invokeMethod(chunkCombo, "activated", Qt::DirectConnection,
+                                                   Q_ARG(int, anchorComboIndex))) {
+                        fail("could not restore the original chunk in the event list");
+                    }
+                    expectAnchor(anchorChunk, "could not restore the original chunk anchor");
+                }
+            }
+        }
+
+        if (doc.canAddTrack()) {
+            notifications.clear();
+            const int addedEngine = doc.addTrack(0);
+            if (addedEngine < 0) {
+                fail("addTrack was available but did not add a track");
+            } else {
+                const int addedChunk = doc.smfTrackFor(addedEngine);
+                expectNotifications(true, "track insertion did not notify remap before documentChanged");
+                expectAnchor(anchorChunk, "track insertion changed the existing chunk anchor");
+                view.selectTrack(addedEngine);
+                expectAnchor(addedChunk, "could not anchor the inserted chunk");
+
+                notifications.clear();
+                doc.undoStack()->undo();
+                expectNotifications(true, "undoing track insertion did not notify in order");
+                expectAnchor(-1, "undoing track insertion kept a deleted chunk anchor");
+                notifications.clear();
+                doc.undoStack()->redo();
+                expectNotifications(true, "redoing track insertion did not notify in order");
+                expectAnchor(-1, "redoing track insertion selected the inserted chunk");
+                view.selectTrack(anchorEngine);
+                view.selectTrack(addedEngine);
+                expectAnchor(addedChunk, "could not reselect the inserted chunk");
+
+                notifications.clear();
+                doc.deleteTrack(addedEngine);
+                expectNotifications(true, "track deletion did not notify remap before documentChanged");
+                expectAnchor(-1, "track deletion kept a deleted chunk anchor");
+                notifications.clear();
+                doc.undoStack()->undo();
+                expectNotifications(true, "undoing track deletion did not notify in order");
+                expectAnchor(-1, "undoing track deletion selected the restored chunk");
+                notifications.clear();
+                doc.undoStack()->redo();
+                expectNotifications(true, "redoing track deletion did not notify in order");
+                expectAnchor(-1, "redoing track deletion selected the deleted chunk");
+
+                notifications.clear();
+                doc.undoStack()->undo();
+                expectNotifications(true, "restoring deleted track did not notify in order");
+                expectAnchor(-1, "restoring deleted track selected an inserted chunk");
+                notifications.clear();
+                doc.undoStack()->undo();
+                expectNotifications(true, "removing inserted track did not notify in order");
+                expectAnchor(-1, "removing inserted track selected another chunk");
+                view.selectTrack(anchorEngine);
+                expectAnchor(anchorChunk, "could not restore the original chunk anchor");
+            }
+        }
+
+        if (doc.canAddTrack()) {
+            notifications.clear();
+            const int copyEngine = doc.duplicateTrack(anchorEngine);
+            if (copyEngine < 0) {
+                fail("duplicateTrack was available but did not duplicate a track");
+            } else {
+                expectNotifications(true, "track duplication did not notify remap before documentChanged");
+                expectAnchor(anchorChunk, "track duplication changed the source chunk anchor");
+                notifications.clear();
+                doc.undoStack()->undo();
+                expectNotifications(true, "undoing track duplication did not notify in order");
+                expectAnchor(anchorChunk, "undoing track duplication changed the source chunk anchor");
+                notifications.clear();
+                doc.undoStack()->redo();
+                expectNotifications(true, "redoing track duplication did not notify in order");
+                expectAnchor(anchorChunk, "redoing track duplication changed the source chunk anchor");
+                notifications.clear();
+                doc.undoStack()->undo();
+                expectNotifications(true, "restoring duplicated track did not notify in order");
+                expectAnchor(anchorChunk, "restoring duplicated track changed the source chunk anchor");
+            }
         }
     }
 
@@ -243,28 +505,60 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             return model->data(model->index(row, 0), Qt::BackgroundRole).isValid();
         };
         {
-            const auto &evs = doc.smf().tracks[chunk].events;
-            int expect = int(evs.size() / 2);
-            markerTick = evs[expect].tick;
-            while (expect + 1 < int(evs.size()) && evs[expect + 1].tick <= markerTick)
-                expect++;
+            // A raw playhead push has no focused-row preference. Clear any
+            // current row left by the remap exercise before checking it.
+            table->selectionModel()->clearCurrentIndex();
+            events->setPlayheadTick(-1.0, false);
+            const auto &track = doc.smf().tracks[chunk];
+            const auto &evs = track.events;
+            const auto expectedRowForTick = [&evs, &track, model](uint64_t tick) {
+                if (tick >= track.endTick)
+                    return model->rowCount() - 1;
+                const auto it = std::upper_bound(
+                    evs.begin(), evs.end(), tick,
+                    [](uint64_t tick, const SmfEvent &event) { return tick < event.tick; });
+                return int(it - evs.begin()) - 1;
+            };
+            // Prefer an ordinary event row. When every event coincides with
+            // EOT, rowForTick intentionally selects the EOT row instead.
+            int markerEvent = -1;
+            for (int i = 0; i < int(evs.size()); i++) {
+                if (evs[i].tick < track.endTick)
+                    markerEvent = i;
+            }
+            markerTick = markerEvent >= 0 ? evs[markerEvent].tick : track.endTick;
+            const int expect = expectedRowForTick(markerTick);
+            const int eotRow = model->rowCount() - 1;
             events->setPlayheadTick(double(markerTick), false);
-            if (!tinted(expect))
+            if (expect < 0 || !tinted(expect))
                 fail("playhead row not tinted");
-            if (tinted(expect + 1) || (expect > 0 && tinted(expect - 1)))
+            if ((expect > 0 && tinted(expect - 1)) ||
+                (expect + 1 < model->rowCount() && tinted(expect + 1)))
                 fail("playhead tint on the wrong row");
-            events->setPlayheadTick(double(doc.smf().tracks[chunk].endTick) + 10.0, false);
-            if (!tinted(model->rowCount() - 1))
+            // If the raw marker is EOT, move off it first to keep a stale-tint
+            // assertion without falsely treating an EOT event as ordinary.
+            if (expect == eotRow) {
+                events->setPlayheadTick(-1.0, false);
+                if (tinted(eotRow))
+                    fail("stale playhead tint after the playhead moved");
+            }
+            events->setPlayheadTick(double(track.endTick) + 10.0, false);
+            if (!tinted(eotRow))
                 fail("end-of-track row not tinted past the end");
-            if (tinted(expect))
+            if (expect != eotRow && tinted(expect))
                 fail("stale playhead tint after the playhead moved");
             // The SongView wiring pushes ticks through setPlayheadSample.
-            view.setPlayheadSample(0, false);
+            // Move its sample position first: returning zero to an already
+            // zero-position view must not be the only state transition.
             int zeroRun = 0;
             while (zeroRun < int(evs.size()) && evs[zeroRun].tick == 0)
                 zeroRun++;
-            if (zeroRun > 0 && !tinted(zeroRun - 1))
-                fail("setPlayheadSample did not tint the tick-0 row");
+            if (zeroRun > 0)
+                view.setPlayheadSample(tl->sampleForTick(track.endTick + 1), false);
+            view.setPlayheadSample(0, false);
+            const int zeroRow = expectedRowForTick(0);
+            if (zeroRun > 0 && (zeroRow < 0 || !tinted(zeroRow)))
+                fail("setPlayheadSample did not tint the tick-zero row");
         }
         {
             const auto &evs = doc.smf().tracks[chunk].events;
@@ -302,6 +596,9 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             int runLast = runFirst;
             while (runLast + 1 < int(evs.size()) && evs[runLast + 1].tick == evs[runFirst].tick)
                 runLast++;
+            // Make the raw push below a state transition even when this run
+            // is at tick zero, then focus the intended sibling before it.
+            events->setPlayheadTick(-1.0, false);
             table->setCurrentIndex(model->index(runFirst, 0));
             events->setPlayheadTick(runTick, false);
             if (!tinted(runFirst))
@@ -527,7 +824,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             if (vbar->maximum() <= 0) {
                 fail("event table has no scroll range for the follow check");
             } else {
-                const double pastEnd = double(track.endTick) + 10.0;
+                const double pastEnd = double(doc.smf().tracks[chunk].endTick) + 10.0;
                 events->setPlayheadTick(0.0, false); // park the play row high
                 vbar->setValue(0);
                 events->setPlayheadTick(pastEnd, true);

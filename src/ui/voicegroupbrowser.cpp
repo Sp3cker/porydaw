@@ -178,6 +178,7 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
 
     // ---- editor panel for the selected voice ----
     m_editor = new QWidget(this);
+    m_editor->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     auto *form = new QFormLayout(m_editor);
     form->setContentsMargins(
         ::layout::space(::layout::Space::One), ::layout::space(::layout::Space::Half),

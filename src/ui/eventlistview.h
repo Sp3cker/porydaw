@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <QWidget>
 
 class QComboBox;
@@ -10,6 +12,7 @@ class QToolButton;
 class SongDocument;
 class SongView;
 struct SmfEvent;
+struct TrackRemap;
 
 namespace eventlist {
 class EventTableModel;
@@ -71,10 +74,15 @@ class EventListView : public QWidget
     void jumpCursorToRow(int row);
     int currentChunk() const;
     void selectEventRow(int chunk, const SmfEvent &event);
-    void onTrackMoved(int fromChunk, int toChunk);
+    void onTracksRemapped(const TrackRemap &remap);
 
     SongView *m_sv;
     SongDocument *m_document = nullptr;
+    // The newest document revision whose owner mapping is reflected above.
+    // SongView remaps its selected engine slot before this view receives the
+    // same TrackRemap, so selection notifications from a newer revision
+    // cannot replace the old SMF owner before it is remapped.
+    uint64_t m_documentRevision = 0;
     eventlist::EventTableModel *m_model;
     QTableView *m_table;
     QComboBox *m_chunk;
@@ -84,11 +92,12 @@ class EventListView : public QWidget
     bool m_syncing = false;
     bool m_settingCurrent = false; // programmatic row changes must not
                                    // commit the edit cursor
-    // Where the current chunk landed after track moves (trackMoved remaps
-    // it, chaining while the page is hidden); -1 = no move pending. refresh
-    // consumes it — a reorder keeps the chunk count, so the count heuristic
-    // alone would keep showing the old index's new occupant.
-    int m_pendingChunk = -1;
+    // The selected raw SMF owner, kept independently from the combo while
+    // SongView updates its selected engine slot during a TrackRemap.
+    int m_currentChunk = -1;
+    // A remap has updated m_currentChunk and documentChanged must rebuild the
+    // combo and table from that owner.
+    bool m_chunkRemapped = false;
     double m_playTick = -1.0; // last playhead tick pushed (-1 = none)
     bool m_playing = false;
     bool m_followPlayhead = true; // scroll to the playing row (transport bar)

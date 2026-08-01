@@ -5,7 +5,7 @@
 #include <QRegion>
 #include <QWidget>
 #include <memory>
-
+#include <vector>
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
 #include <QImage>
 #endif
@@ -29,10 +29,11 @@ constexpr qreal kPlayheadPeakPaused = 0.06;
 /// Whether the platform-native playhead renderer is enabled for this process.
 bool platformPlayheadRendererEnabled();
 
+
 class PlayheadOverlay final : public QWidget
 {
   public:
-    explicit PlayheadOverlay(QWidget *owner, TimelineSurfaces surfaces);
+    explicit PlayheadOverlay(QWidget *owner, std::vector<TimelineBand> bands);
     void setPlayhead(qreal timelineX, bool visible, bool playing);
     ~PlayheadOverlay() override;
 
@@ -64,7 +65,7 @@ class PlayheadOverlay final : public QWidget
     QRegion playheadRegion() const;
     void updatePaintRegion();
 
-    TimelineSurfaces m_surfaces;
+    std::vector<TimelineBand> m_bands;
     QColor m_color;
 
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD

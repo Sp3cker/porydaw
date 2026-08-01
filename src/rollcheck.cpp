@@ -32,6 +32,7 @@
 #include "rollcheckplayhead.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songviewmodel.h"
 
 // --rollcheck <projectRoot> <song> [shot.png]: piano-roll gesture check.
 // Drives the roll widget offscreen with synthesized mouse events: the
@@ -40,10 +41,10 @@
 // Reaper-style latch makes the last clicked or
 // velocity-dragged note's velocity the default for the next drawn note,
 // and an edge resize snaps to the ruler's absolute grid even when the
-// note's own edge sits off-grid. A right-drag band auditions each note
-// as it first covers it (Ableton-style; the note's length is the ceiling),
-// releases it when the band leaves it or the drag ends, and selects the
-// covered notes on release. A plain left press on empty space auditions
+// note's own edge sits off-grid. A right-drag band auditions and highlights
+// each covered note (Ableton-style; the note's length is the ceiling), releases
+// it when the band leaves it or the drag ends, and selects the covered notes
+// on release. A plain left press on empty space auditions
 // its row at the latched velocity (glissing across rows while held,
 // released on mouse-up) and still parks the edit cursor on release; a
 // press that grows into a draw does not re-attack the sounding key, and
@@ -240,7 +241,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     };
 
     auto *roll = view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
-    if (!roll || roll->width() <= songview::kKeyboardW || roll->height() <= 0) {
+    if (!roll || roll->width() <= layout::editorGeometry().pianoKeyboardWidth ||
+        roll->height() <= 0) {
         fail("piano roll not found or not laid out");
         return 1;
     }
@@ -248,6 +250,674 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (doc.engineTrackCount() <= track) {
         fail("no engine track to draw on");
         return 1;
+    }
+
+    // Coordinates cannot distinguish duplicate notes; their document IDs must
+    // survive the timeline and view-model projections independently.
+    {
+        SongDocument projectionDoc;
+        QString projectionError;
+        if (!projectionDoc.load(*info, &projectionError)) {
+            fail("could not load note identity projection fixture");
+        } else {
+            const std::vector<DocNote> before = projectionDoc.notesForTrack(track);
+            const SongDocument::NewNote duplicate{480, 60, 24, 100};
+            projectionDoc.addNotes(track, {duplicate, duplicate});
+            const std::vector<DocNote> after = projectionDoc.notesForTrack(track);
+            std::vector<DocNote> duplicates;
+            for (const DocNote &candidate : after) {
+                const bool existed =
+                    std::any_of(before.begin(), before.end(), [&](const DocNote &previous) {
+                        return previous.noteId == candidate.noteId;
+                    });
+                if (!existed)
+                    duplicates.push_back(candidate);
+            }
+            if (duplicates.size() != 2 || !duplicates[0].noteId.isAssigned() ||
+                !duplicates[1].noteId.isAssigned() ||
+                duplicates[0].noteId == duplicates[1].noteId ||
+                duplicates[0].tick != duplicates[1].tick ||
+                duplicates[0].duration != duplicates[1].duration ||
+                duplicates[0].key != duplicates[1].key ||
+                duplicates[0].velocity != duplicates[1].velocity) {
+                fail("document did not mint distinct equal-visible duplicate note IDs");
+            } else {
+                const auto projectionTimeline = projectionDoc.buildTimeline(48000.0);
+                const SongViewModel projection = buildSongViewModel(*projectionTimeline);
+                std::vector<NoteId> projectedIds;
+                for (const ViewNote &note : projection.notes) {
+                    if (note.noteId == duplicates[0].noteId || note.noteId == duplicates[1].noteId)
+                        projectedIds.push_back(note.noteId);
+                }
+                bool idsResolve = projectedIds.size() == 2;
+                for (NoteId id : projectedIds) {
+                    DocNote resolved;
+                    if (!projectionDoc.findNote(id, &resolved) || resolved.noteId != id)
+                        idsResolve = false;
+                }
+                if (!idsResolve || projectedIds[0] == projectedIds[1]) {
+                    fail("duplicate note IDs did not project to their document notes");
+                } else {
+                    auto identityTimeline = projectionDoc.buildTimeline(48000.0);
+                    SongView identityView;
+                    identityView.resize(800, 480);
+                    identityView.setSong(identityTimeline.get(), nullptr);
+                    identityView.setDocument(&projectionDoc);
+                    QObject::connect(&projectionDoc, &SongDocument::documentChanged, &identityView,
+                                     [&] {
+                                         auto rebuilt = projectionDoc.buildTimeline(48000.0);
+                                         identityView.updateSong(rebuilt.get());
+                                         identityTimeline = std::move(rebuilt);
+                                     });
+                    identityView.selectTrack(track);
+                    identityView.setSelection({duplicates[0].noteId, duplicates[1].noteId});
+                    identityView.trackHeaderClicked(track, Qt::NoModifier);
+                    if (!identityView.selection().empty())
+                        fail("plain click on the active track header did not clear note selection");
+
+                    auto *identityRoll =
+                        identityView.findChild<QWidget *>(QStringLiteral("pianoRoll"));
+                    if (!identityRoll) {
+                        fail("duplicate identity fixture could not find the SongView roll");
+                    } else {
+                        const DocNote firstBefore = duplicates[0];
+                        const DocNote secondBefore = duplicates[1];
+                        const auto sameNoteIdentityAndValue = [](const DocNote &lhs,
+                                                                 const DocNote &rhs) {
+                            return lhs.noteId == rhs.noteId && lhs.engineTrack == rhs.engineTrack &&
+                                   lhs.smfTrack == rhs.smfTrack && lhs.tick == rhs.tick &&
+                                   lhs.duration == rhs.duration && lhs.key == rhs.key &&
+                                   lhs.velocity == rhs.velocity && lhs.channel == rhs.channel;
+                        };
+                        identityView.setSelection({firstBefore.noteId});
+                        sendKey(identityRoll, Qt::Key_Up, Qt::ControlModifier);
+                        DocNote firstMoved;
+                        DocNote secondUntouched;
+                        DocNote expectedMoved = firstBefore;
+                        expectedMoved.key++;
+                        const bool firstEdit =
+                            projectionDoc.findNote(firstBefore.noteId, &firstMoved) &&
+                            sameNoteIdentityAndValue(firstMoved, expectedMoved);
+                        const bool secondStable =
+                            projectionDoc.findNote(secondBefore.noteId, &secondUntouched) &&
+                            sameNoteIdentityAndValue(secondUntouched, secondBefore);
+                        const std::vector<NoteId> &editedSelection = identityView.selection();
+                        if (!firstEdit || !secondStable || editedSelection.size() != 1 ||
+                            editedSelection.front() != firstBefore.noteId) {
+                            fail("one-ID SongView edit changed the wrong duplicate");
+                        }
+
+                        projectionDoc.undoStack()->undo();
+                        DocNote firstRestored;
+                        DocNote secondRestored;
+                        const bool undoRestored =
+                            projectionDoc.findNote(firstBefore.noteId, &firstRestored) &&
+                            projectionDoc.findNote(secondBefore.noteId, &secondRestored) &&
+                            sameNoteIdentityAndValue(firstRestored, firstBefore) &&
+                            sameNoteIdentityAndValue(secondRestored, secondBefore);
+                        const std::vector<NoteId> &undoSelection = identityView.selection();
+                        if (!undoRestored || undoSelection.size() != 1 ||
+                            undoSelection.front() != firstBefore.noteId) {
+                            fail("one-ID SongView edit did not restore both duplicates on Undo");
+                        }
+                    }
+
+                    identityView.setSelection({duplicates[0].noteId, duplicates[1].noteId});
+                    const int otherTrack = track == 0 ? 1 : 0;
+                    if (otherTrack < projectionDoc.engineTrackCount()) {
+                        identityView.trackHeaderClicked(otherTrack, Qt::NoModifier);
+                        if (!identityView.selection().empty())
+                            fail("switching track headers did not clear note selection");
+                    }
+                }
+            }
+        }
+    }
+
+    {
+        MidiTimeline ordinaryTimeline;
+        ordinaryTimeline.lengthTicks = 288;
+        ordinaryTimeline.events = {
+            {0, 240, 0x9, 2, 65, 83, NoteId{}},
+            {0, 288, 0x8, 2, 65, 0, NoteId{}},
+        };
+        const SongViewModel ordinary = buildSongViewModel(ordinaryTimeline);
+        if (ordinary.notes.size() != 1) {
+            fail("ordinary unassigned timeline note did not project");
+        } else {
+            const ViewNote &note = ordinary.notes.front();
+            if (note.noteId.isAssigned() || note.startTick != 240 || note.endTick != 288 ||
+                note.key != 65 || note.velocity != 83 || note.track != 2 || note.unterminated) {
+                fail("ordinary unassigned timeline note changed during projection");
+            }
+        }
+    }
+
+    // Camera/grid state and typed drawer cosmetics are detached snapshots.
+    {
+        const SongView::ViewState before = view.viewState();
+        const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, uint8_t(track), 7};
+        EditorViewState cosmetics;
+        cosmetics.laneHeight = 64;
+        cosmetics.laneHeights.emplace(lane, 96);
+        cosmetics.laneRanges.emplace(lane, 91);
+        cosmetics.emptyLanes.emplace(lane);
+        view.applyEditorViewState(cosmetics);
+        if (view.editorViewState() != cosmetics)
+            fail("SongView did not retain typed cosmetic EditorViewState");
+        view.setEditCursorTick(view.snapTick(96.0));
+        const SongView::ViewState snapshot = view.viewState();
+        SongView::ViewState perturbed = snapshot;
+        perturbed.pxPerBeat = snapshot.pxPerBeat < 64.0 ? 64.0 : 16.0;
+        perturbed.keyHeight = snapshot.keyHeight < 16.0 ? 16.0 : 8.0;
+        perturbed.scrollPx = snapshot.scrollPx == 0.0 ? 1.0 : 0.0;
+        perturbed.scrollY = snapshot.scrollY == 0.0 ? 1.0 : 0.0;
+        int alternateTrack = snapshot.selectedTrack;
+        for (int candidate = 0; candidate < 16; ++candidate) {
+            if (candidate != snapshot.selectedTrack && timeline->tracks[candidate].used) {
+                alternateTrack = candidate;
+                break;
+            }
+        }
+        perturbed.selectedTrack = alternateTrack;
+        perturbed.editCursorTick = snapshot.editCursorTick == 0 ? 1 : 0;
+        perturbed.gridMinDenom = snapshot.gridMinDenom == 4 ? 8 : 4;
+        perturbed.gridTriplet = !snapshot.gridTriplet;
+        perturbed.eventList = !snapshot.eventList;
+        SongView::ViewState expected = perturbed;
+        expected.pxPerBeat = std::clamp(perturbed.pxPerBeat, 4.0, 640.0);
+        expected.keyHeight = std::clamp(perturbed.keyHeight, 4.0, 32.0);
+        const double tpb = double(timeline->ticksPerBeat);
+        const double maxHScroll = std::max(
+            0.0,
+            double(timeline->lengthTicks) * expected.pxPerBeat / tpb + 100.0 -
+                double(std::max(50, roll->width() - layout::editorGeometry().pianoKeyboardWidth)));
+        expected.scrollPx = std::clamp(perturbed.scrollPx, 0.0, maxHScroll);
+        const double maxRollScroll =
+            std::max(0.0, 128.0 * expected.keyHeight - double(roll->height()));
+        expected.scrollY = std::clamp(perturbed.scrollY, 0.0, maxRollScroll);
+        expected.selectedTrack = snapshot.selectedTrack;
+        if (perturbed.selectedTrack >= 0 && perturbed.selectedTrack < 16 &&
+            timeline->tracks[perturbed.selectedTrack].used)
+            expected.selectedTrack = perturbed.selectedTrack;
+        expected.editCursorTick = std::min(perturbed.editCursorTick, timeline->lengthTicks);
+        expected.gridMinDenom = perturbed.gridMinDenom == 4 || perturbed.gridMinDenom == 8 ||
+                                        perturbed.gridMinDenom == 16 || perturbed.gridMinDenom == 32
+                                    ? perturbed.gridMinDenom
+                                    : 0;
+        view.applyViewState(perturbed);
+        const SongView::ViewState applied = view.viewState();
+        const auto sameViewState = [](const SongView::ViewState &lhs,
+                                      const SongView::ViewState &rhs) {
+            return lhs.valid == rhs.valid && std::abs(lhs.pxPerBeat - rhs.pxPerBeat) <= 1e-12 &&
+                   std::abs(lhs.keyHeight - rhs.keyHeight) <= 1e-12 &&
+                   std::abs(lhs.scrollPx - rhs.scrollPx) <= 1e-12 &&
+                   std::abs(lhs.scrollY - rhs.scrollY) <= 1e-12 &&
+                   lhs.selectedTrack == rhs.selectedTrack &&
+                   lhs.editCursorTick == rhs.editCursorTick &&
+                   lhs.gridMinDenom == rhs.gridMinDenom && lhs.gridTriplet == rhs.gridTriplet &&
+                   lhs.eventList == rhs.eventList;
+        };
+        const auto differs = [](double lhs, double rhs) { return std::abs(lhs - rhs) > 1e-12; };
+        if (!differs(expected.pxPerBeat, snapshot.pxPerBeat) ||
+            !differs(expected.keyHeight, snapshot.keyHeight) ||
+            !differs(expected.scrollPx, snapshot.scrollPx) ||
+            !differs(expected.scrollY, snapshot.scrollY) ||
+            expected.selectedTrack == snapshot.selectedTrack ||
+            expected.editCursorTick == snapshot.editCursorTick ||
+            expected.gridMinDenom == snapshot.gridMinDenom ||
+            expected.gridTriplet == snapshot.gridTriplet ||
+            expected.eventList == snapshot.eventList) {
+            fail("ViewState perturbation did not change every retained field");
+        }
+        if (!sameViewState(applied, expected))
+            fail("ViewState apply did not retain every normalized perturbed field");
+        view.applyViewState(snapshot);
+        const SongView::ViewState restored = view.viewState();
+        if (view.editorViewState() != cosmetics || !sameViewState(restored, snapshot)) {
+            fail(
+                "ViewState capture/apply did not restore runtime state without changing cosmetics");
+        }
+        view.applyViewState(before);
+    }
+    // Track ownership remaps arrive before documentChanged. Every SongView
+    // owner follows its mapping; removed owners drop state, and inverse
+    // insertions begin with defaults rather than resurrecting it.
+    {
+        SongDocument remapDoc;
+        QString remapError;
+        if (!remapDoc.load(*info, &remapError)) {
+            fail("could not load track-remap fixture");
+        } else if (remapDoc.engineTrackCount() < 2 || !remapDoc.canAddTrack()) {
+            fail("track-remap fixture lacks two tracks and an insertion slot");
+        } else {
+            auto remapTimeline = remapDoc.buildTimeline(48000.0);
+            SongView remapView;
+            remapView.resize(800, 480);
+            remapView.setSong(remapTimeline.get(), nullptr);
+            remapView.setDocument(&remapDoc);
+            std::vector<QString> order;
+            QObject::connect(&remapDoc, &SongDocument::tracksRemapped, &remapView,
+                             [&] { order.push_back(QStringLiteral("remap")); });
+            QObject::connect(&remapDoc, &SongDocument::documentChanged, &remapView, [&] {
+                auto rebuilt = remapDoc.buildTimeline(48000.0);
+                remapView.updateSong(rebuilt.get());
+                remapTimeline = std::move(rebuilt);
+                order.push_back(QStringLiteral("document"));
+            });
+            const auto expectRemapBeforeDocument = [&](const char *what) {
+                if (order.size() != 2 || order[0] != QStringLiteral("remap") ||
+                    order[1] != QStringLiteral("document")) {
+                    fail(what);
+                }
+                order.clear();
+            };
+            const auto hasEmptyLane = [](const EditorViewState &state, int owner, uint8_t cc) {
+                return state.emptyLanes.find(EditorAutomationRowId{
+                           EditorAutomationRowKind::ControlChange, uint8_t(owner), cc}) !=
+                       state.emptyLanes.end();
+            };
+            const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+            const auto voiceRow = [](int owner) {
+                return EditorAutomationRowId{EditorAutomationRowKind::Voice, uint8_t(owner), 0};
+            };
+            const auto controllerRow = [](int owner, uint8_t cc) {
+                return EditorAutomationRowId{EditorAutomationRowKind::ControlChange, uint8_t(owner),
+                                             cc};
+            };
+            const auto hasRowValue = [](const auto &rows, const EditorAutomationRowId &row,
+                                        int value) {
+                const auto found = rows.find(row);
+                return found != rows.end() && int(found->second) == value;
+            };
+            const auto hasNoOwnerCosmetics = [&](const EditorViewState &state, int owner) {
+                const auto owns = [owner](const auto &entry) {
+                    return entry.first.kind != EditorAutomationRowKind::Tempo &&
+                           entry.first.track == owner;
+                };
+                return std::none_of(state.laneHeights.cbegin(), state.laneHeights.cend(), owns) &&
+                       std::none_of(state.laneRanges.cbegin(), state.laneRanges.cend(), owns) &&
+                       !hasEmptyLane(state, owner, 7) && !hasEmptyLane(state, owner, 10);
+            };
+            EditorViewState remapCosmetics;
+            remapCosmetics.laneHeight = 64;
+            remapCosmetics.laneHeights.emplace(tempo, 94);
+            remapCosmetics.laneHeights.emplace(voiceRow(0), 66);
+            remapCosmetics.laneHeights.emplace(controllerRow(0, 7), 67);
+            remapCosmetics.laneHeights.emplace(voiceRow(1), 76);
+            remapCosmetics.laneHeights.emplace(controllerRow(1, 10), 77);
+            remapCosmetics.laneRanges.emplace(tempo, 116);
+            remapCosmetics.laneRanges.emplace(voiceRow(0), 103);
+            remapCosmetics.laneRanges.emplace(controllerRow(0, 7), 102);
+            remapCosmetics.laneRanges.emplace(voiceRow(1), 93);
+            remapCosmetics.laneRanges.emplace(controllerRow(1, 10), 92);
+            remapCosmetics.emptyLanes.emplace(controllerRow(0, 7));
+            remapCosmetics.emptyLanes.emplace(controllerRow(1, 10));
+            remapView.applyEditorViewState(remapCosmetics);
+            const auto hasRemappedCosmetics = [&](const EditorViewState &state, int zeroOwner,
+                                                  int oneOwner) {
+                return state.laneHeight == 64 && state.laneHeights.size() == 5 &&
+                       state.laneRanges.size() == 5 && state.emptyLanes.size() == 2 &&
+                       hasRowValue(state.laneHeights, tempo, 94) &&
+                       hasRowValue(state.laneHeights, voiceRow(zeroOwner), 66) &&
+                       hasRowValue(state.laneHeights, controllerRow(zeroOwner, 7), 67) &&
+                       hasRowValue(state.laneHeights, voiceRow(oneOwner), 76) &&
+                       hasRowValue(state.laneHeights, controllerRow(oneOwner, 10), 77) &&
+                       hasRowValue(state.laneRanges, tempo, 116) &&
+                       hasRowValue(state.laneRanges, voiceRow(zeroOwner), 103) &&
+                       hasRowValue(state.laneRanges, controllerRow(zeroOwner, 7), 102) &&
+                       hasRowValue(state.laneRanges, voiceRow(oneOwner), 93) &&
+                       hasRowValue(state.laneRanges, controllerRow(oneOwner, 10), 92) &&
+                       hasEmptyLane(state, zeroOwner, 7) && hasEmptyLane(state, oneOwner, 10);
+            };
+            const auto hasRawCosmetics = [&](const EditorViewState &state, int owner) {
+                return state.laneHeight == 64 && state.laneHeights.size() == 3 &&
+                       state.laneRanges.size() == 3 && state.emptyLanes.size() == 1 &&
+                       hasRowValue(state.laneHeights, tempo, 94) &&
+                       hasRowValue(state.laneHeights, voiceRow(owner), 66) &&
+                       hasRowValue(state.laneHeights, controllerRow(owner, 7), 67) &&
+                       hasRowValue(state.laneRanges, tempo, 116) &&
+                       hasRowValue(state.laneRanges, voiceRow(owner), 103) &&
+                       hasRowValue(state.laneRanges, controllerRow(owner, 7), 102) &&
+                       hasEmptyLane(state, owner, 7);
+            };
+            const auto hasTimeSelectionLanes =
+                [&](const std::vector<std::pair<int, uint8_t>> &expected) {
+                    const SongView::TimeSelection &selection = remapView.timeSelection();
+                    return selection.scope == SongView::TimeSelection::Lanes &&
+                           selection.startTick == 24 && selection.endTick == 48 &&
+                           selection.lanes == expected;
+                };
+            const auto hasClipboardOwners =
+                [&](const std::vector<int> &expectedTracks,
+                    const std::vector<std::pair<int, uint8_t>> &expectedLanes) {
+                    const SongView::Clip &clip = remapView.clipboard();
+                    if (clip.tracks.size() != expectedTracks.size() ||
+                        clip.lanes.size() != expectedLanes.size())
+                        return false;
+                    for (size_t i = 0; i < expectedTracks.size(); i++)
+                        if (clip.tracks[i].track != expectedTracks[i])
+                            return false;
+                    for (size_t i = 0; i < expectedLanes.size(); i++)
+                        if (clip.lanes[i].track != expectedLanes[i].first ||
+                            clip.lanes[i].cc != expectedLanes[i].second)
+                            return false;
+                    return true;
+                };
+            const auto hasMovedTrackState = [&] {
+                return remapView.selectedTrack() == 0 && remapView.trackSelectionMask() == 0x3 &&
+                       remapView.trackMuted(1) && !remapView.trackMuted(0) &&
+                       remapView.trackSoloed(0) && !remapView.trackSoloed(1) &&
+                       hasRemappedCosmetics(remapView.editorViewState(), 1, 0);
+            };
+            const auto hasOriginalTrackState = [&] {
+                return remapView.selectedTrack() == 1 && remapView.trackSelectionMask() == 0x3 &&
+                       remapView.trackMuted(0) && !remapView.trackMuted(1) &&
+                       remapView.trackSoloed(1) && !remapView.trackSoloed(0) &&
+                       hasRemappedCosmetics(remapView.editorViewState(), 0, 1);
+            };
+            const auto hasMovedOwnerState = [&] {
+                return hasMovedTrackState() && hasTimeSelectionLanes({{1, 7}, {0, 10}}) &&
+                       hasClipboardOwners({1, 0}, {{1, 7}, {0, 10}});
+            };
+            const auto hasOriginalOwnerState = [&] {
+                return hasOriginalTrackState() && hasTimeSelectionLanes({{0, 7}, {1, 10}}) &&
+                       hasClipboardOwners({0, 1}, {{0, 7}, {1, 10}});
+            };
+            // Restore the complete fixture before exercising the main remap matrix.
+            remapView.applyEditorViewState(remapCosmetics);
+            remapView.clearSelection();
+            remapView.clearTimeSelection();
+            remapView.clipboard() = SongView::Clip{};
+            remapView.setTrackMute(0, false);
+            remapView.setTrackMute(1, false);
+            remapView.setTrackSolo(0, false);
+            remapView.setTrackSolo(1, false);
+
+            remapView.selectTrack(1);
+            remapView.trackHeaderClicked(0, Qt::ControlModifier);
+            remapView.setTrackMute(0, true);
+            remapView.setTrackSolo(1, true);
+            SongView::TimeSelection lanes;
+            lanes.scope = SongView::TimeSelection::Lanes;
+            lanes.startTick = 24;
+            lanes.endTick = 48;
+            lanes.lanes = {{0, 7}, {1, 10}};
+            remapView.setTimeSelection(lanes);
+            SongView::Clip clip;
+            clip.tracks = {{0, {}}, {1, {}}};
+            clip.lanes = {{0, 7, {}}, {1, 10, {}}};
+            remapView.clipboard() = clip;
+
+            remapDoc.moveTrack(0, 1);
+            expectRemapBeforeDocument("move did not remap before documentChanged");
+            if (!hasMovedOwnerState())
+                fail("move did not re-address complete SongView track state");
+            remapDoc.undoStack()->undo();
+            expectRemapBeforeDocument("move undo did not remap before documentChanged");
+            if (!hasOriginalOwnerState())
+                fail("move undo did not restore remapped owners");
+            remapDoc.undoStack()->redo();
+            expectRemapBeforeDocument("move redo did not remap before documentChanged");
+            if (!hasMovedOwnerState())
+                fail("move redo did not restore remapped owners");
+
+            // Later track-structure cases start without the move case's
+            // lane-selection and clipboard payload.
+            remapView.clearTimeSelection();
+            remapView.clearSelection();
+            remapView.clipboard() = SongView::Clip{};
+
+            const int inserted = remapDoc.addTrack(0);
+            if (inserted < 0) {
+                fail("track-remap fixture could not insert a track");
+            } else {
+                expectRemapBeforeDocument("insert did not remap before documentChanged");
+                if (remapView.trackMuted(inserted) || remapView.trackSoloed(inserted) ||
+                    (remapView.trackSelectionMask() & (1u << inserted)) || !hasMovedTrackState() ||
+                    !hasNoOwnerCosmetics(remapView.editorViewState(), inserted)) {
+                    fail("inserted track inherited existing SongView state");
+                }
+                remapDoc.undoStack()->undo();
+                expectRemapBeforeDocument("insert undo did not remap before documentChanged");
+                if (!hasMovedTrackState())
+                    fail("insert undo did not restore existing SongView state");
+
+                remapDoc.undoStack()->redo();
+                expectRemapBeforeDocument("insert redo did not remap before documentChanged");
+                if (!hasMovedTrackState())
+                    fail("insert redo did not preserve existing SongView state");
+            }
+
+            const int duplicate = remapDoc.duplicateTrack(0);
+            if (duplicate < 0) {
+                fail("track-remap fixture could not duplicate a track");
+            } else {
+                expectRemapBeforeDocument("duplicate did not remap before documentChanged");
+                if (remapView.trackMuted(duplicate) || remapView.trackSoloed(duplicate) ||
+                    (remapView.trackSelectionMask() & (1u << duplicate)) || !hasMovedTrackState() ||
+                    !hasNoOwnerCosmetics(remapView.editorViewState(), duplicate)) {
+                    fail("duplicated track inherited existing SongView state");
+                }
+                remapDoc.undoStack()->undo();
+                expectRemapBeforeDocument("duplicate undo did not remap before documentChanged");
+                if (!hasMovedTrackState())
+                    fail("duplicate undo did not restore existing SongView state");
+
+                remapDoc.undoStack()->redo();
+                expectRemapBeforeDocument("duplicate redo did not remap before documentChanged");
+                if (!hasMovedTrackState())
+                    fail("duplicate redo did not preserve existing SongView state");
+
+                remapView.selectTrack(duplicate);
+                remapView.setTrackMute(duplicate, true);
+                remapView.setTrackSolo(duplicate, true);
+                remapView.addEmptyLane(duplicate, 74);
+                EditorViewState deletedCosmetics = remapView.editorViewState();
+                deletedCosmetics.laneHeights.emplace(voiceRow(duplicate), 124);
+                deletedCosmetics.laneHeights.emplace(controllerRow(duplicate, 74), 123);
+                deletedCosmetics.laneRanges.emplace(voiceRow(duplicate), 121);
+                deletedCosmetics.laneRanges.emplace(controllerRow(duplicate, 74), 120);
+                remapView.applyEditorViewState(deletedCosmetics);
+
+                SongView::TimeSelection deletedLanes;
+                deletedLanes.scope = SongView::TimeSelection::Lanes;
+                deletedLanes.startTick = 24;
+                deletedLanes.endTick = 48;
+                deletedLanes.lanes = {{duplicate, 74}};
+                remapView.setTimeSelection(deletedLanes);
+                SongView::Clip deletedClip;
+                deletedClip.tracks = {{duplicate, {}}};
+                deletedClip.lanes = {{duplicate, 74, {}}};
+                remapView.clipboard() = deletedClip;
+                const std::vector<DocNote> duplicateNotes = remapDoc.notesForTrack(duplicate);
+                if (!duplicateNotes.empty())
+                    remapView.setSelection({duplicateNotes.front().noteId});
+                remapDoc.deleteTrack(duplicate);
+                expectRemapBeforeDocument("delete did not remap before documentChanged");
+                if (remapView.selectedTrack() == duplicate || !remapView.selection().empty() ||
+                    remapView.timeSelection().active() || !remapView.clipboard().empty() ||
+                    remapView.trackMuted(duplicate) || remapView.trackSoloed(duplicate) ||
+                    hasEmptyLane(remapView.editorViewState(), duplicate, 74)) {
+                    fail("deleted track left SongView-owned state behind");
+                }
+                const int fallback = std::min(duplicate, remapDoc.engineTrackCount() - 1);
+                if (remapView.selectedTrack() != fallback ||
+                    remapView.trackSelectionMask() != (1u << fallback) || remapView.trackMuted(0) ||
+                    !remapView.trackMuted(1) || remapView.trackSoloed(1) ||
+                    !remapView.trackSoloed(0) ||
+                    !hasRemappedCosmetics(remapView.editorViewState(), 1, 0)) {
+                    fail("delete did not drop cosmetic state from its removed owner");
+                }
+
+                remapDoc.undoStack()->undo();
+                expectRemapBeforeDocument("delete undo did not remap before documentChanged");
+                if (!remapView.selection().empty() || remapView.timeSelection().active() ||
+                    !remapView.clipboard().empty() || remapView.trackMuted(duplicate) ||
+                    remapView.trackSoloed(duplicate) ||
+                    hasEmptyLane(remapView.editorViewState(), duplicate, 74)) {
+                    fail("restored track inherited dropped SongView state");
+                }
+                if (remapView.selectedTrack() != duplicate - 1 ||
+                    remapView.trackSelectionMask() != (1u << (duplicate - 1)) ||
+                    remapView.trackMuted(0) || !remapView.trackMuted(1) ||
+                    remapView.trackSoloed(1) || !remapView.trackSoloed(0) ||
+                    !hasRemappedCosmetics(remapView.editorViewState(), 1, 0)) {
+                    fail("delete undo did not restore surviving SongView state");
+                }
+
+                remapDoc.undoStack()->redo();
+                expectRemapBeforeDocument("delete redo did not remap before documentChanged");
+                if (remapView.selectedTrack() != duplicate - 1 ||
+                    remapView.trackSelectionMask() != (1u << (duplicate - 1)) ||
+                    remapView.trackMuted(0) || !remapView.trackMuted(1) ||
+                    remapView.trackSoloed(1) || !remapView.trackSoloed(0) ||
+                    !hasRemappedCosmetics(remapView.editorViewState(), 1, 0)) {
+                    fail("delete redo did not keep dropped SongView state absent");
+                }
+            }
+            const int metadataSelected = remapView.selectedTrack();
+            const uint32_t metadataHeaderMask = remapView.trackSelectionMask();
+            const EditorViewState metadataCosmetics = remapView.editorViewState();
+            const bool metadataMute0 = remapView.trackMuted(0);
+            const bool metadataMute1 = remapView.trackMuted(1);
+            const bool metadataMute2 = remapView.trackMuted(2);
+            const bool metadataSolo0 = remapView.trackSoloed(0);
+            const bool metadataSolo1 = remapView.trackSoloed(1);
+            const bool metadataSolo2 = remapView.trackSoloed(2);
+            const auto metadataStateUnchanged = [&] {
+                return remapView.selectedTrack() == metadataSelected &&
+                       remapView.trackSelectionMask() == metadataHeaderMask &&
+                       remapView.editorViewState() == metadataCosmetics &&
+                       remapView.trackMuted(0) == metadataMute0 &&
+                       remapView.trackMuted(1) == metadataMute1 &&
+                       remapView.trackMuted(2) == metadataMute2 &&
+                       remapView.trackSoloed(0) == metadataSolo0 &&
+                       remapView.trackSoloed(1) == metadataSolo1 &&
+                       remapView.trackSoloed(2) == metadataSolo2;
+            };
+
+            remapDoc.renameTrack(0, QStringLiteral("rollcheck remap metadata"));
+            if (order.size() != 1 || order.front() != QStringLiteral("document") ||
+                !metadataStateUnchanged()) {
+                fail("metadata-only edit changed SongView owner state");
+            }
+            order.clear();
+            remapDoc.undoStack()->undo();
+            if (order.size() != 1 || order.front() != QStringLiteral("document") ||
+                !metadataStateUnchanged()) {
+                fail("metadata-only undo changed SongView owner state");
+            }
+            order.clear();
+            remapDoc.undoStack()->redo();
+            if (order.size() != 1 || order.front() != QStringLiteral("document") ||
+                !metadataStateUnchanged()) {
+                fail("metadata-only redo changed SongView owner state");
+            }
+            QTemporaryDir rawDir;
+            SmfFile rawSmf;
+            rawSmf.tracks.resize(2);
+            rawSmf.tracks[0].endTick = 96;
+            rawSmf.tracks[1].endTick = 96;
+            SmfEvent metadata;
+            metadata.status = 0xFF;
+            metadata.metaType = 0x01;
+            metadata.blob = QByteArrayLiteral("metadata");
+            rawSmf.tracks[0].events.push_back(metadata);
+            SmfEvent originalProgram;
+            originalProgram.status = 0xC1;
+            originalProgram.data0 = 4;
+            rawSmf.tracks[1].events.push_back(originalProgram);
+            SongInfo rawInfo;
+            rawInfo.label = QStringLiteral("rollcheck_raw_remap");
+            rawInfo.midPath = rawDir.filePath(QStringLiteral("raw-remap.mid"));
+            rawInfo.hasMid = true;
+            QString rawError;
+            if (!rawDir.isValid() || !rawSmf.writeFile(rawInfo.midPath, &rawError)) {
+                fail("could not write raw metadata-to-engine remap fixture");
+            } else {
+                SongDocument rawDoc;
+                if (!rawDoc.load(rawInfo, &rawError)) {
+                    fail("could not load raw metadata-to-engine remap fixture");
+                } else if (rawDoc.engineTrackCount() != 1) {
+                    fail("raw metadata-to-engine fixture did not start with one engine owner");
+                } else {
+                    auto rawTimeline = rawDoc.buildTimeline(48000.0);
+                    SongView rawView;
+                    rawView.resize(800, 480);
+                    rawView.setSong(rawTimeline.get(), nullptr);
+                    rawView.setDocument(&rawDoc);
+                    std::vector<QString> rawOrder;
+                    QObject::connect(&rawDoc, &SongDocument::tracksRemapped, &rawView,
+                                     [&] { rawOrder.push_back(QStringLiteral("remap")); });
+                    QObject::connect(&rawDoc, &SongDocument::documentChanged, &rawView, [&] {
+                        auto rebuilt = rawDoc.buildTimeline(48000.0);
+                        rawView.updateSong(rebuilt.get());
+                        rawTimeline = std::move(rebuilt);
+                        rawOrder.push_back(QStringLiteral("document"));
+                    });
+                    const auto expectRawRemapBeforeDocument = [&](const char *what) {
+                        if (rawOrder.size() != 2 || rawOrder[0] != QStringLiteral("remap") ||
+                            rawOrder[1] != QStringLiteral("document")) {
+                            fail(what);
+                        }
+                        rawOrder.clear();
+                    };
+                    EditorViewState rawCosmetics;
+                    rawCosmetics.laneHeight = 64;
+                    rawCosmetics.laneHeights.emplace(tempo, 94);
+                    rawCosmetics.laneHeights.emplace(voiceRow(0), 66);
+                    rawCosmetics.laneHeights.emplace(controllerRow(0, 7), 67);
+                    rawCosmetics.laneRanges.emplace(tempo, 116);
+                    rawCosmetics.laneRanges.emplace(voiceRow(0), 103);
+                    rawCosmetics.laneRanges.emplace(controllerRow(0, 7), 102);
+                    rawCosmetics.emptyLanes.emplace(controllerRow(0, 7));
+                    rawView.applyEditorViewState(rawCosmetics);
+                    rawView.setTrackSolo(0, true);
+                    SongView::TimeSelection rawTracks;
+                    rawTracks.startTick = 24;
+                    rawTracks.endTick = 48;
+                    rawView.setTimeSelection(rawTracks);
+                    SmfEvent promotedProgram;
+                    promotedProgram.status = 0xC0;
+                    promotedProgram.data0 = 3;
+                    rawDoc.insertRawEvent(0, promotedProgram);
+                    expectRawRemapBeforeDocument(
+                        "metadata-to-engine raw edit did not remap before documentChanged");
+                    if (rawView.selectedTrack() != 1 || rawView.trackSelectionMask() != 0x2 ||
+                        rawView.trackMuted(0) || rawView.trackMuted(1) || rawView.trackSoloed(0) ||
+                        !rawView.trackSoloed(1) || !rawView.timeSelection().active() ||
+                        !hasRawCosmetics(rawView.editorViewState(), 1) ||
+                        !hasNoOwnerCosmetics(rawView.editorViewState(), 0)) {
+                        fail("metadata-to-engine raw edit did not remap SongView owners");
+                    }
+                    rawView.selectTrack(0);
+                    rawView.setTrackMute(0, true);
+                    rawView.setTimeSelection(rawTracks);
+                    rawDoc.undoStack()->undo();
+                    expectRawRemapBeforeDocument(
+                        "engine-to-metadata raw undo did not remap before documentChanged");
+                    if (rawView.selectedTrack() != 0 || rawView.trackSelectionMask() != 0x1 ||
+                        rawView.trackMuted(0) || !rawView.trackSoloed(0) ||
+                        rawView.timeSelection().active() ||
+                        !hasRawCosmetics(rawView.editorViewState(), 0) ||
+                        !hasNoOwnerCosmetics(rawView.editorViewState(), 1)) {
+                        fail("engine-to-metadata fallback rebound SongView state to the wrong "
+                             "owner");
+                    }
+                    rawDoc.undoStack()->redo();
+                    expectRawRemapBeforeDocument(
+                        "metadata-to-engine raw redo did not remap before documentChanged");
+                    if (rawView.selectedTrack() != 1 || rawView.trackSelectionMask() != 0x2 ||
+                        rawView.trackMuted(0) || rawView.trackMuted(1) || rawView.trackSoloed(0) ||
+                        !rawView.trackSoloed(1) || rawView.timeSelection().active() ||
+                        !hasRawCosmetics(rawView.editorViewState(), 1) ||
+                        !hasNoOwnerCosmetics(rawView.editorViewState(), 0)) {
+                        fail("metadata-to-engine redo did not preserve remapped SongView owners");
+                    }
+                }
+            }
+        }
     }
 
     // The Y camera is continuous: partial wheel deltas are immediately
@@ -259,7 +929,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         zoom.keyHeight = 8.0;
         zoom.scrollY = 300.0;
         view.applyViewState(zoom);
-        const QPointF anchor(songview::kKeyboardW + 40.0, 200.0);
+        zoom = view.viewState();
+        const QPointF anchor(layout::editorGeometry().pianoKeyboardWidth + 40.0, 200.0);
 
         for (int i = 0; i < 4; ++i)
             sendWheel(roll, anchor, 30);
@@ -291,7 +962,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
         view.applyViewState(zoom);
         const double keyboardScroll = view.scrollY();
-        sendWheel(roll, QPointF(songview::kKeyboardW - 1.0, anchor.y()), 0, 1, Qt::NoModifier);
+        sendWheel(roll, QPointF(layout::editorGeometry().pianoKeyboardWidth - 1.0, anchor.y()), 0,
+                  1, Qt::NoModifier);
         if (std::abs(view.scrollY() - (keyboardScroll - 0.5)) > 1e-12)
             fail("pixel-only wheel over keyboard did not scroll note range");
         view.applyViewState(zoom);
@@ -315,11 +987,13 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         const qreal dpr = roll->devicePixelRatioF();
         const qreal boundary =
             std::round((boundaryRow * view.keyHeight() - view.scrollY()) * dpr) / dpr;
-        sendMouse(roll, QEvent::MouseMove, QPointF(songview::kKeyboardW + 40.0, boundary - 0.25),
+        sendMouse(roll, QEvent::MouseMove,
+                  QPointF(layout::editorGeometry().pianoKeyboardWidth + 40.0, boundary - 0.25),
                   Qt::NoButton, Qt::NoButton);
         if (roll->property("hoverKey").toInt() != 128 - boundaryRow)
             fail("hovering above a snapped pitch boundary chose the wrong key");
-        sendMouse(roll, QEvent::MouseMove, QPointF(songview::kKeyboardW + 40.0, boundary + 0.25),
+        sendMouse(roll, QEvent::MouseMove,
+                  QPointF(layout::editorGeometry().pianoKeyboardWidth + 40.0, boundary + 0.25),
                   Qt::NoButton, Qt::NoButton);
         if (roll->property("hoverKey").toInt() != 127 - boundaryRow)
             fail("hovering below a snapped pitch boundary chose the wrong key");
@@ -345,8 +1019,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         SongView::ViewState zoom = original;
         zoom.pxPerBeat = 500.125;
         zoom.scrollPx = 23.625;
-        const QPointF anchor(songview::kKeyboardW + 73.375, 200.0);
-        const qreal anchorContentX = anchor.x() - songview::kKeyboardW;
+        const QPointF anchor(layout::editorGeometry().pianoKeyboardWidth + 73.375, 200.0);
+        const qreal anchorContentX = anchor.x() - layout::editorGeometry().pianoKeyboardWidth;
 
         view.applyViewState(zoom);
         for (int i = 0; i < 4; ++i)
@@ -435,8 +1109,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             {512.5, 71.3125},
         };
         const qreal origins[] = {
-            qreal(songview::kKeyboardW),
-            qreal(songview::kGutterW) + 0.25,
+            qreal(layout::editorGeometry().pianoKeyboardWidth),
+            qreal(layout::editorGeometry().plotOrigin) + 0.25,
         };
         const qreal dprs[] = {1.0, 2.0};
 
@@ -451,7 +1125,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 std::abs(applied.scrollPx - probe.scrollPx) > 1e-12)
                 fail("fractional projection camera did not apply exactly");
 
-            const qreal visibleWidth = qreal(roll->width() - songview::kKeyboardW);
+            const qreal visibleWidth =
+                qreal(roll->width() - layout::editorGeometry().pianoKeyboardWidth);
             uint64_t tick = view.snapTickUp(std::max(0.0, view.tickAtContentX(0.0)));
             int visibleTicks = 0;
             bool mappingFailed = false;
@@ -503,7 +1178,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     {
         const int y = roll->height() / 2;
         const int expected = rows.keyAt(y);
-        sendMouse(roll, QEvent::MouseMove, QPoint(songview::kKeyboardW + 40, y), Qt::NoButton,
+        sendMouse(roll, QEvent::MouseMove,
+                  QPoint(layout::editorGeometry().pianoKeyboardWidth + 40, y), Qt::NoButton,
                   Qt::NoButton);
         if (roll->property("hoverKey").toInt() != expected)
             fail("hovering the notes area did not mark its key row");
@@ -550,17 +1226,21 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             const qreal bottom = rows.bottom(key);
             if (top < 0 || bottom > roll->height())
                 continue;
-            for (int probe = firstProbe; probe < roll->width() - songview::kKeyboardW - 40;
+            for (int probe = firstProbe;
+                 probe < roll->width() - layout::editorGeometry().pianoKeyboardWidth - 40;
                  probe += 24) {
                 const uint64_t tick = view.snapTickDown(view.tickAtContentX(probe));
                 const uint64_t dur = view.gridTicksAt(tick);
-                const int x0 = songview::kKeyboardW + view.contentX(double(tick));
-                const int x1 = songview::kKeyboardW + view.contentX(double(tick + dur));
-                const int xs =
-                    songview::kKeyboardW + view.contentX(double(tick + view.snapTicksAt(tick)));
+                const int x0 =
+                    layout::editorGeometry().pianoKeyboardWidth + view.contentX(double(tick));
+                const int x1 =
+                    layout::editorGeometry().pianoKeyboardWidth + view.contentX(double(tick + dur));
+                const int xs = layout::editorGeometry().pianoKeyboardWidth +
+                               view.contentX(double(tick + view.snapTicksAt(tick)));
                 // Wide enough that the click target clears the 3px resize
                 // edges once a note fills the cell.
-                if (x0 < songview::kKeyboardW || x1 - x0 < 12 || xs - x0 < 8 || x1 >= roll->width())
+                if (x0 < layout::editorGeometry().pianoKeyboardWidth || x1 - x0 < 12 ||
+                    xs - x0 < 8 || x1 >= roll->width())
                     continue;
                 if (occupied(tick, dur, key, checkAllTracks))
                     continue;
@@ -603,7 +1283,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             int key = -1;
             QPointF center;
         } probe;
-        const qreal origin = qreal(songview::kKeyboardW);
+        const qreal origin = qreal(layout::editorGeometry().pianoKeyboardWidth);
         const qreal dpr = roll->devicePixelRatioF();
         const qreal rightLimit = qreal(roll->width()) - 4.0;
 
@@ -718,9 +1398,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     view.setEditCursorTick(overlayTick);
     const QPixmap rollAfterPixmap = roll->grab();
     const QImage rollAfterDrawing = rollAfterPixmap.toImage();
-    const int noteLeftX = songview::kKeyboardW + view.contentX(double(noteA.tick));
-    const int noteRightX =
-        songview::kKeyboardW + view.contentX(double(noteA.tick + noteA.duration));
+    const int noteLeftX =
+        layout::editorGeometry().pianoKeyboardWidth + view.contentX(double(noteA.tick));
+    const int noteRightX = layout::editorGeometry().pianoKeyboardWidth +
+                           view.contentX(double(noteA.tick + noteA.duration));
     const QRectF noteFrame = rows.noteRect(noteLeftX, noteRightX, noteA.key);
     const QRectF paintedNoteBox = rows.noteBox(noteFrame);
     const int noteLeftPixel = toRasterPixel(noteFrame.left());
@@ -792,8 +1473,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // across the pair — no reserved background column that reads as a rest
     // between them. (findFreeCell guaranteed the adjacent cell is empty.)
     doc.addNote(track, noteA.tick + noteA.duration, noteA.key, noteA.duration, 100);
-    const int abuttingRightX =
-        songview::kKeyboardW + view.contentX(double(noteA.tick + 2 * noteA.duration));
+    const int abuttingRightX = layout::editorGeometry().pianoKeyboardWidth +
+                               view.contentX(double(noteA.tick + 2 * noteA.duration));
     const QImage abuttingImage = roll->grab().toImage();
     const int abuttingMidY = toRasterPixel(rows.centerY(noteA.key));
     const int abuttingRightPixel = toRasterPixel(abuttingRightX);
@@ -804,6 +1485,25 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     }
     if (restGapFound)
         fail("abutting notes left an unpainted rest-like gap column");
+
+    // Clicking a keyboard key selects every matching note of the selected
+    // track, including notes at separate times.
+    {
+        std::vector<NoteId> expected;
+        for (const ViewNote &note : view.model().notes) {
+            if (note.track == track && note.key == noteA.key && note.noteId.isAssigned())
+                expected.push_back(note.noteId);
+        }
+        view.clearSelection();
+        click(roll,
+              QPoint(layout::editorGeometry().pianoKeyboardWidth - 1, rows.centerY(noteA.key)));
+        const std::vector<NoteId> &selected = view.selection();
+        const bool allMatching = std::all_of(expected.begin(), expected.end(), [&](NoteId id) {
+            return std::find(selected.begin(), selected.end(), id) != selected.end();
+        });
+        if (expected.size() < 2 || selected.size() != expected.size() || !allMatching)
+            fail("keyboard key click did not select every matching note");
+    }
 
     // At a key height where only ~3 face pixels remain, the border thins to
     // one pixel instead of vanishing while neighboring larger notes keep
@@ -990,8 +1690,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendMouse(noteMenu, QEvent::MouseButtonRelease, noteMenu->mapFromGlobal(aGlobal),
                   Qt::RightButton, Qt::NoButton);
         QCoreApplication::processEvents();
-        const std::vector<SongView::NoteId> &selection = view.selection();
-        const SongView::NoteId aId{uint32_t(a.tick), uint8_t(a.key)};
+        const std::vector<NoteId> &selection = view.selection();
+        const NoteId aId = noteA.noteId;
         if (!noteMenu->isVisible())
             fail("retargeting hid the open note menu");
         if (selection.size() != 1 || !(selection.front() == aId))
@@ -1092,11 +1792,30 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                                          }
                                      });
         const int preBandCount = doc.undoStack()->count();
-        const QPoint sweepStart(songview::kKeyboardW + 1, 0);
+        const QPoint sweepStart(layout::editorGeometry().pianoKeyboardWidth + 1, 0);
         const QPoint sweepEnd(std::max(a.center.x(), b.center.x()) + 4,
                               std::max(a.center.y(), b.center.y()) + 4);
+        view.clearSelection();
+        // The band is provisional until release, but covered notes should
+        // use the same selection ring as the velocity drawer's live preview.
+        const QRectF previewNoteBox = rows.noteBox(rows.noteRect(
+            layout::editorGeometry().pianoKeyboardWidth + qRound(view.contentX(double(noteA.tick))),
+            layout::editorGeometry().pianoKeyboardWidth +
+                qRound(view.contentX(double(noteA.tick + noteA.duration))),
+            noteA.key));
+
         sendMouse(roll, QEvent::MouseButtonPress, sweepStart, Qt::RightButton, Qt::RightButton);
         sendMouse(roll, QEvent::MouseMove, a.center + QPoint(4, 4), Qt::NoButton, Qt::RightButton);
+        const QPixmap previewPixmap = roll->grab();
+        const QImage previewImage = previewPixmap.toImage();
+        const qreal previewDpr = previewPixmap.devicePixelRatio();
+        const int previewCenterX = qRound(previewNoteBox.center().x() * previewDpr);
+        const int previewBottomY = qRound(previewNoteBox.bottom() * previewDpr) - 1;
+        if (!isSelectionRingColor(previewImage.pixel(previewCenterX, previewBottomY)))
+            fail("band-dragged note did not show a provisional selection ring");
+        if (!view.selection().empty())
+            fail("band drag committed selection before release");
+
         if (std::find(onKeys.begin(), onKeys.end(), a.key) == onKeys.end())
             fail("sweeping the band over a note did not audition it");
         // Retreat to a band covering nothing: the departed notes' previews
@@ -1110,12 +1829,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QObject::disconnect(conn);
         if (std::count(onKeys.begin(), onKeys.end(), a.key) < 2)
             fail("re-covering a note did not re-audition it");
-        const std::vector<SongView::NoteId> &sel = view.selection();
-        if (sel.size() < 2 ||
-            std::find(sel.begin(), sel.end(), SongView::NoteId{uint32_t(a.tick), uint8_t(a.key)}) ==
-                sel.end() ||
-            std::find(sel.begin(), sel.end(), SongView::NoteId{uint32_t(b.tick), uint8_t(b.key)}) ==
-                sel.end())
+        const std::vector<NoteId> &sel = view.selection();
+        if (sel.size() < 2 || std::find(sel.begin(), sel.end(), noteA.noteId) == sel.end() ||
+            std::find(sel.begin(), sel.end(), noteB.noteId) == sel.end())
             fail("band release did not select the swept notes");
         // Every key that auditioned was eventually released (mid-drag or at
         // the drag's end).
@@ -1163,7 +1879,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (doc.undoStack()->count() != preCount)
             fail("a plain empty-space click edited the document");
         if (view.editCursorTick() !=
-            view.snapTick(view.tickAtContentX(e.center.x() - songview::kKeyboardW)))
+            view.snapTick(
+                view.tickAtContentX(e.center.x() - layout::editorGeometry().pianoKeyboardWidth)))
             fail("the press audition broke the click's edit-cursor park");
         // Draw growth: press the still-free cell again and drag right past
         // the drag threshold; the press's preview must carry into the draw
@@ -1234,7 +1951,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (doc.undoStack()->count() != preCount + 1)
             fail("modifier velocity drag did not push exactly one command");
 
-        const SongView::NoteId bId{uint32_t(b.tick), uint8_t(b.key)};
+        const NoteId bId = bMod.noteId;
         sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton, Qt::LeftButton,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton, Qt::NoButton,
@@ -1272,8 +1989,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15), Qt::LeftButton,
                   Qt::NoButton, Qt::ControlModifier);
-        const SongView::NoteId aId{uint32_t(a.tick), uint8_t(a.key)};
-        const std::vector<SongView::NoteId> &joined = view.selection();
+        const NoteId aId = aBefore.noteId;
+        const std::vector<NoteId> &joined = view.selection();
         if (joined.size() != 2 || std::find(joined.begin(), joined.end(), aId) == joined.end() ||
             std::find(joined.begin(), joined.end(), bId) == joined.end())
             fail("a Ctrl+velocity drag replaced the bulk selection");
@@ -1307,10 +2024,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     const int rowY = rows.centerY(d.key);
     // Probe 2.8 DIPs inward at both ends on the velocity bar itself. The
     // resize zones must win over the overlapping velocity hover.
-    const qreal resizeNoteLeftX =
-        view.displayX(double(d.tick), songview::kKeyboardW, roll->devicePixelRatioF());
+    const qreal resizeNoteLeftX = view.displayX(
+        double(d.tick), layout::editorGeometry().pianoKeyboardWidth, roll->devicePixelRatioF());
     const qreal resizeNoteRightX =
-        view.displayX(double(d.tick + offDur), songview::kKeyboardW, roll->devicePixelRatioF());
+        view.displayX(double(d.tick + offDur), layout::editorGeometry().pianoKeyboardWidth,
+                      roll->devicePixelRatioF());
     const int resizeHandleY =
         qRound(songview::velBarRect(rows.noteRect(0, 1, d.key), 100, rows.dpr()).center().y());
     const QPointF leftHandle(resizeNoteLeftX + 2.8, resizeHandleY);
@@ -1328,7 +2046,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (roll->cursor().pixmap().devicePixelRatio() != expectedRightCursor.devicePixelRatio() ||
         roll->cursor().pixmap().toImage() != expectedRightCursor.toImage())
         fail("right note edge did not show its custom cursor");
-    const QPoint pull(songview::kKeyboardW + view.contentX(double(d.tick) + 1.9 * double(d.dur)),
+    const QPoint pull(layout::editorGeometry().pianoKeyboardWidth +
+                          view.contentX(double(d.tick) + 1.9 * double(d.dur)),
                       rowY);
     sendMouse(roll, QEvent::MouseButtonPress, rightHandle, Qt::LeftButton, Qt::LeftButton);
     sendMouse(roll, QEvent::MouseMove, pull, Qt::NoButton, Qt::LeftButton);
@@ -1344,8 +2063,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // stationary Ctrl+edge click just joins, editing nothing.
     {
         const qreal dpr = roll->devicePixelRatioF();
-        const QPointF ctrlEdge(
-            view.displayX(double(d.tick + 2 * d.dur), songview::kKeyboardW, dpr) - 2.8, rowY);
+        const QPointF ctrlEdge(view.displayX(double(d.tick + 2 * d.dur),
+                                             layout::editorGeometry().pianoKeyboardWidth, dpr) -
+                                   2.8,
+                               rowY);
         click(roll, b.center); // selection = {B}
         const int preCount = doc.undoStack()->count();
         DocNote bBefore;
@@ -1355,9 +2076,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, ctrlEdge, Qt::LeftButton, Qt::NoButton,
                   Qt::ControlModifier);
-        const SongView::NoteId bId{uint32_t(b.tick), uint8_t(b.key)};
-        const SongView::NoteId dId{uint32_t(d.tick), uint8_t(d.key)};
-        const std::vector<SongView::NoteId> &sel = view.selection();
+        const NoteId bId = bBefore.noteId;
+        const NoteId dId = resized.noteId;
+        const std::vector<NoteId> &sel = view.selection();
         if (sel.size() != 2 || std::find(sel.begin(), sel.end(), bId) == sel.end() ||
             std::find(sel.begin(), sel.end(), dId) == sel.end())
             fail("a Ctrl+edge click did not join the note to the selection");
@@ -1368,8 +2089,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("a stationary Ctrl+edge click pushed an undo command");
         // Pull the grip one drawn cell further right: both selected notes
         // must grow by that same delta.
-        const qreal cellPx = view.displayX(double(d.tick + 3 * d.dur), songview::kKeyboardW, dpr) -
-                             view.displayX(double(d.tick + 2 * d.dur), songview::kKeyboardW, dpr);
+        const qreal cellPx = view.displayX(double(d.tick + 3 * d.dur),
+                                           layout::editorGeometry().pianoKeyboardWidth, dpr) -
+                             view.displayX(double(d.tick + 2 * d.dur),
+                                           layout::editorGeometry().pianoKeyboardWidth, dpr);
         const QPointF pull2(ctrlEdge.x() + cellPx, rowY);
         sendMouse(roll, QEvent::MouseButtonPress, ctrlEdge, Qt::LeftButton, Qt::LeftButton,
                   Qt::ControlModifier);
@@ -1391,9 +2114,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
     // Overshooting the drag past the note's start must stop at one snap
     // cell, not collapse to the document's 1-tick floor.
-    const QPoint edge2(songview::kKeyboardW + view.contentX(double(d.tick + 2 * d.dur)), rowY);
-    const QPoint overshoot(
-        songview::kKeyboardW + view.contentX(double(d.tick) - 0.5 * double(d.dur)), rowY);
+    const QPoint edge2(layout::editorGeometry().pianoKeyboardWidth +
+                           view.contentX(double(d.tick + 2 * d.dur)),
+                       rowY);
+    const QPoint overshoot(layout::editorGeometry().pianoKeyboardWidth +
+                               view.contentX(double(d.tick) - 0.5 * double(d.dur)),
+                           rowY);
     sendMouse(roll, QEvent::MouseButtonPress, edge2, Qt::LeftButton, Qt::LeftButton);
     sendMouse(roll, QEvent::MouseMove, overshoot, Qt::NoButton, Qt::LeftButton);
     sendMouse(roll, QEvent::MouseButtonRelease, overshoot, Qt::LeftButton, Qt::NoButton);
@@ -1405,7 +2131,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // note that narrow the edge zones shrink to leave a grabbable middle,
     // so 6 DIPs in from the right edge (below the velocity bar) is part of
     // that middle: the hover shows the plain arrow, not a resize cursor.
-    const QPointF narrowMiddle(songview::kKeyboardW +
+    const QPointF narrowMiddle(layout::editorGeometry().pianoKeyboardWidth +
                                    view.contentX(double(d.tick) + double(snapCell)) - 6,
                                rows.bottom(d.key) - 2);
     sendMouse(roll, QEvent::MouseMove, narrowMiddle, Qt::NoButton, Qt::NoButton);
@@ -1424,8 +2150,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         narrowView.scrollPx = std::max(0.0, double(d.tick) * narrowPxPerTick - 100.0);
         view.applyViewState(narrowView);
         const SnappedRows narrowRows{view, *roll};
-        const int narrowLeftX = songview::kKeyboardW + view.contentX(double(d.tick));
-        const int narrowRightX = songview::kKeyboardW + view.contentX(double(d.tick + snapCell));
+        const int narrowLeftX =
+            layout::editorGeometry().pianoKeyboardWidth + view.contentX(double(d.tick));
+        const int narrowRightX =
+            layout::editorGeometry().pianoKeyboardWidth + view.contentX(double(d.tick + snapCell));
         if (narrowRightX - narrowLeftX > 3)
             fail("narrow-zoom fixture note is unexpectedly wide");
         const QRectF narrowBox =
@@ -1445,8 +2173,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // Keyboard transpose/nudge on note D (clicking it selects it):
     // Ctrl+Up is a semitone, Ctrl+Shift+Down an octave, and Ctrl+Right
     // moves one snap cell from an on-grid start.
-    const QPoint dCenter(
-        songview::kKeyboardW + view.contentX(double(d.tick) + 0.5 * double(snapCell)), rowY);
+    const QPoint dCenter(layout::editorGeometry().pianoKeyboardWidth +
+                             view.contentX(double(d.tick) + 0.5 * double(snapCell)),
+                         rowY);
     click(roll, dCenter);
     sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
     DocNote transposed;
@@ -1463,7 +2192,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // (reselecting — the selection keys on the start tick, which moved),
     // and Ctrl+Left must bring it back to the line it left.
     doc.moveNotes({transposed}, int64_t(snapCell / 2), 0);
-    view.setSelection({{uint32_t(d.tick + snapCell + snapCell / 2), uint8_t(d.key - 11)}});
+    view.setSelection({transposed.noteId});
     sendKey(roll, Qt::Key_Left, Qt::ControlModifier);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
         fail("Ctrl+Left did not snap the off-grid note back to the grid");
@@ -1495,7 +2224,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (view.displayX(double(nStart), 0.0, dpr) != 0.0)
         fail("Ctrl+Right off-screen-left did not scroll the start flush to the "
              "left edge");
-    const qreal vw = std::max(50, roll->width() - songview::kKeyboardW);
+    const qreal vw = std::max(50, roll->width() - layout::editorGeometry().pianoKeyboardWidth);
     const qreal cellPx = view.contentX(double(nStart + snapCell)) - view.contentX(double(nStart));
     const int rides = (vw - view.contentX(double(nStart + snapCell))) / cellPx + 2;
     for (int i = 0; i < rides; i++)
@@ -1790,8 +2519,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 reordered = true;
                 if (dragRenamed && doc.trackName(1) != QStringLiteral("Dragged"))
                     fail("the open rename editor's text was lost in the drop");
-                // The document's trackMoved signal re-permutes the view
-                // state on undo and redo too — the mute bit follows.
+                // The complete TrackRemap re-addresses view state on undo
+                // and redo too — the mute bit follows.
                 doc.undoStack()->undo();
                 if (!view.trackMuted(0) || view.trackMuted(1))
                     fail("undoing the move left the mute flag behind");
@@ -1807,7 +2536,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         uint64_t(std::ceil(std::max(0.0, view.tickAtContentX(view.width() / 2))));
     view.setPlayheadSample(timeline->sampleForTick(screenshotTick), false);
     // Park the cursor mid-roll so the shot shows the hover mark + name chip.
-    sendMouse(roll, QEvent::MouseMove, QPoint(songview::kKeyboardW + 60, roll->height() / 3),
+    sendMouse(roll, QEvent::MouseMove,
+              QPoint(layout::editorGeometry().pianoKeyboardWidth + 60, roll->height() / 3),
               Qt::NoButton, Qt::NoButton);
     const QImage image = view.grab().toImage();
     if (image.isNull())
@@ -1831,7 +2561,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             if (view.selectedTrack() != int(target.track))
                 fail("revealNote did not select the track");
             const auto &sel = view.selection();
-            if (sel.size() != 1 || !(sel[0] == SongView::NoteId{target.startTick, target.key}))
+            if (sel.size() != 1 || !(sel[0] == target.noteId))
                 fail("revealNote did not select the note");
 
             // A key the track never plays: no note found, but the track

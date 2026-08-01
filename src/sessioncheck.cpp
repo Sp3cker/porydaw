@@ -9,6 +9,7 @@
 #include <cstdio>
 
 #include "mainwindow.h"
+#include "ui/songlistpanel.h"
 
 // --sessioncheck <projectRoot> <song>: session-persistence check. Verifies
 // that restoreSession() reopens the remembered project (and song), is a
@@ -27,6 +28,7 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         std::fprintf(stderr, "sessioncheck: no temp dir for settings\n");
         return 1;
     }
+    QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
 
@@ -89,8 +91,9 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         MainWindow window;
         window.restoreSession();
         check(window.windowTitle().startsWith(songLabel), "remembered song did not load");
-        // The song list (the app's only QListWidget) tracks the loaded song.
-        auto *list = window.findChild<QListWidget *>();
+        // Resolve the Songs dock's list rather than any drawer-owned list.
+        auto *panel = window.findChild<SongListPanel *>();
+        auto *list = panel ? panel->findChild<QListWidget *>() : nullptr;
         check(list && list->currentItem() && list->currentItem()->text().startsWith(songLabel),
               "restored song is not selected in the song list");
         // Distinctive filter state — search text, A–Z sort, a real

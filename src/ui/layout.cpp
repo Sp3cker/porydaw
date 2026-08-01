@@ -39,6 +39,87 @@ struct FontScaledGeometry {
     int groupBoxTitleBand;
 };
 
+constexpr auto TRACK_HEADER_WIDTH_SCALE = 17.5;
+constexpr auto PIANO_KEYBOARD_WIDTH_SCALE = 13.0 / 3.0;
+constexpr auto AUTOMATION_ROW_DEFAULT_HEIGHT_SCALE = 4.0;
+constexpr auto AUTOMATION_ROW_MINIMUM_HEIGHT_SCALE = 7.0 / 3.0;
+constexpr auto AUTOMATION_ROW_MAXIMUM_HEIGHT_SCALE = 32.0 / 3.0;
+constexpr auto AUTOMATION_ROW_WHEEL_INCREMENT_SCALE = 1.0 / 3.0;
+constexpr auto ADD_AUTOMATION_LANE_STRIP_HEIGHT_SCALE = 5.0 / 3.0;
+constexpr auto EDITOR_DRAWER_RESIZE_HANDLE_HEIGHT_SCALE = 1.0 / 3.0;
+constexpr auto MINIMUM_VISIBLE_PIANO_ROLL_HEIGHT_SCALE = 10.0;
+constexpr auto AUTOMATION_POINT_HIT_RADIUS_SCALE = 7.0 / 12.0;
+constexpr auto AUTOMATION_NEUTRAL_SNAP_RADIUS_SCALE = 2.0 / 3.0;
+constexpr auto AUTOMATION_DELETE_TIME_RADIUS_SCALE = 0.75;
+constexpr auto AUTOMATION_POINT_DETAIL_THRESHOLD_SCALE = 2.0;
+constexpr auto AUTOMATION_HOVER_PAINT_PADDING_SCALE = 1.0 / 6.0;
+constexpr auto VELOCITY_DENSITY_THRESHOLD_D1_SCALE = 6.0;
+constexpr auto VELOCITY_DENSITY_THRESHOLD_D2_SCALE = 25.0 / 3.0;
+constexpr auto VELOCITY_DENSITY_THRESHOLD_D3_SCALE = 12.0;
+constexpr auto VELOCITY_DENSITY_THRESHOLD_D4_SCALE = 24.0;
+constexpr auto VELOCITY_START_NODE_HIT_RADIUS_SCALE = 0.5;
+constexpr auto VELOCITY_NODE_PAINT_RADIUS_SCALE = 7.0 / 24.0;
+constexpr auto VELOCITY_SELECTED_NODE_RING_RADIUS_SCALE = 3.0 / 8.0;
+constexpr auto VELOCITY_NODE_OUTLINE_DIP_WIDTH_SCALE = 1.0 / 12.0;
+constexpr auto VELOCITY_SELECTED_NODE_RING_DIP_WIDTH_SCALE = 1.0 / 6.0;
+constexpr auto VELOCITY_STEM_DIP_WIDTH_SCALE = 1.0 / 6.0;
+constexpr auto VELOCITY_SELECTED_STEM_DIP_WIDTH_SCALE = 1.0 / 4.0;
+constexpr auto VELOCITY_DURATION_LINE_VERTICAL_RADIUS_SCALE = 1.0 / 3.0;
+constexpr auto VELOCITY_DURATION_LINE_HORIZONTAL_SLOP_SCALE = 1.0 / 6.0;
+constexpr auto VELOCITY_RELATIVE_DRAG_ACTIVATION_DISTANCE_SCALE = 1.0 / 12.0;
+constexpr auto EDITOR_DEFAULT_PIXELS_PER_BEAT_SCALE = 8.0 / 3.0;
+constexpr auto VOICE_PICKER_DIALOG_WIDTH_SCALE = 30.0;
+constexpr auto VOICE_PICKER_DIALOG_HEIGHT_SCALE = 110.0 / 3.0;
+constexpr auto TRACK_HEADER_BUTTON_EXTENT_SCALE = 1.5;
+constexpr auto TRACK_HEADER_ROW_HEIGHT_SCALE = 4.0;
+constexpr auto TRACK_HEADER_BUTTON_COLUMN_WIDTH_SCALE = 2.0;
+constexpr auto TRACK_HEADER_VOICE_LINE_LEFT_SCALE = 5.0 / 6.0;
+constexpr auto TRACK_HEADER_VOICE_LINE_TOP_SCALE = 11.0 / 6.0;
+constexpr auto TRACK_HEADER_VOICE_LINE_RIGHT_SCALE = 3.0;
+constexpr auto TRACK_HEADER_VOICE_LINE_HEIGHT_SCALE = 4.0 / 3.0;
+constexpr auto TRACK_HEADER_RENAME_EDITOR_LEFT_SCALE = 0.5;
+constexpr auto TRACK_HEADER_RENAME_EDITOR_TOP_SCALE = 1.0 / 6.0;
+constexpr auto TRACK_HEADER_RENAME_EDITOR_RIGHT_SCALE = 8.0 / 3.0;
+constexpr auto TRACK_HEADER_RENAME_EDITOR_HEIGHT_SCALE = 5.0 / 3.0;
+constexpr auto TIMELINE_MINIMUM_PIXELS_PER_BEAT_SCALE = 1.0 / 3.0;
+constexpr auto TIMELINE_MAXIMUM_PIXELS_PER_BEAT_SCALE = 160.0 / 3.0;
+constexpr auto PIANO_ROLL_MINIMUM_KEY_HEIGHT_SCALE = 1.0 / 3.0;
+constexpr auto PIANO_ROLL_MAXIMUM_KEY_HEIGHT_SCALE = 8.0 / 3.0;
+constexpr auto VELOCITY_HANDLE_MINIMUM_KEY_HEIGHT_SCALE = 1.0;
+constexpr auto AUTOMATION_GRID_MINIMUM_CELL_WIDTH_SCALE = 4.0 / 3.0;
+constexpr auto VELOCITY_HANDLE_TALL_NOTE_THRESHOLD_SCALE = 5.0 / 3.0;
+constexpr auto VELOCITY_HANDLE_BAR_THICKNESS_SCALE = 1.0 / 6.0;
+constexpr auto VELOCITY_HANDLE_INSET_SCALE = 1.0 / 6.0;
+constexpr auto SELECTION_RING_DIP_WIDTH_SCALE = 1.0 / 8.0;
+constexpr auto TIMELINE_DETAIL_MINIMUM_PIXELS_PER_BEAT_SCALE = 5.0 / 6.0;
+constexpr auto GRID_LINE_STROKE_WIDTH_SCALE = 1.0 / 6.0;
+constexpr auto TIME_RULER_MINIMUM_FONT_PIXEL_SIZE_SCALE = 1.0 / 12.0;
+constexpr auto TIME_RULER_LETTER_SPACING_SCALE = -1.0 / 24.0;
+constexpr auto TIME_RULER_BEAT_LABEL_ZOOM_FACTOR = 3.0;
+constexpr auto MIDI_CURSOR_EXTENT_SCALE = 2.0;
+constexpr auto PIANO_ROLL_NOTE_MINIMUM_WIDTH_SCALE = 1.0 / 6.0;
+constexpr auto PIANO_ROLL_NOTE_MINIMUM_HEIGHT_SCALE = 1.0 / 6.0;
+constexpr auto PIANO_ROLL_NOTE_EDGE_GRIP_REACH_SCALE = 0.25;
+constexpr auto PIANO_ROLL_NOTE_MOVE_ZONE_MINIMUM_WIDTH_SCALE = 0.5;
+constexpr auto NOTE_BORDER_DASH_LENGTH_SCALE = 1.0 / 3.0;
+constexpr auto NOTE_BORDER_DASH_GAP_SCALE = 1.0 / 6.0;
+constexpr auto KEYBOARD_HOVER_CHIP_FONT_PIXEL_SIZE_SCALE = 5.0 / 6.0;
+constexpr auto KEYBOARD_HOVER_CHIP_HORIZONTAL_PADDING_SCALE = 2.0 / 3.0;
+constexpr auto KEYBOARD_HOVER_CHIP_VERTICAL_PADDING_SCALE = 1.0 / 6.0;
+constexpr auto KEYBOARD_HOVER_CHIP_RIGHT_INSET_SCALE = 1.0 / 6.0;
+constexpr auto VELOCITY_LABEL_FIT_ALLOWANCE_SCALE = 1.0 / 3.0;
+constexpr auto KEYBOARD_HOVER_CHIP_CORNER_RADIUS_SCALE = 0.25;
+constexpr auto PIANO_KEYBOARD_LABEL_RIGHT_INSET_SCALE = 0.25;
+constexpr auto OTHER_EVENT_HIT_SLOP_SCALE = 1.0 / 3.0;
+constexpr auto OTHER_EVENT_MARKER_HALF_WIDTH_SCALE = 1.0 / 3.0;
+constexpr auto OTHER_EVENT_MARKER_HALF_HEIGHT_SCALE = 5.0 / 12.0;
+constexpr auto TRACK_HEADER_TEXT_LEFT_SCALE = 5.0 / 6.0;
+constexpr auto TRACK_HEADER_REORDER_INDICATOR_HEIGHT_SCALE = 0.25;
+constexpr auto PIANO_ROLL_INITIAL_VIEWPORT_HEIGHT_SCALE = 50.0 / 3.0;
+constexpr auto TIMELINE_REVEAL_VIEWPORT_FRACTION = 1.0 / 3.0;
+constexpr auto TIMELINE_VIEWPORT_MINIMUM_WIDTH_SCALE = 25.0 / 6.0;
+constexpr auto TIMELINE_CONTENT_TAIL_WIDTH_SCALE = 25.0 / 3.0;
+
 // Space tokens use their enum ordinal as the lookup key:
 // token -> font-relative multiplier -> startup-resolved pixel value. Keeping
 // the resolved pixels in ResolvedLayout makes space() a hot-path array lookup.
@@ -62,6 +143,7 @@ struct ResolvedLayout {
     QApplication *application;
     int baseFontPx;
     ResolvedSpaces spaces;
+    EditorGeometry editor;
     QString geometry;
 };
 
@@ -101,6 +183,221 @@ ResolvedSpaces resolveSpaces(int baseFontPx)
 int resolvedSpace(const ResolvedSpaces &spaces, Space token)
 {
     return spaces[spaceIndex(token)];
+}
+
+EditorGeometry resolveEditorGeometry(int baseFontPx)
+{
+    const auto trackHeaderWidth = resolve(baseFontPx, TRACK_HEADER_WIDTH_SCALE);
+    const auto pianoKeyboardWidth = resolve(baseFontPx, PIANO_KEYBOARD_WIDTH_SCALE);
+    const auto automationRowDefaultHeight =
+        resolve(baseFontPx, AUTOMATION_ROW_DEFAULT_HEIGHT_SCALE);
+    const auto automationRowMinimumHeight =
+        resolve(baseFontPx, AUTOMATION_ROW_MINIMUM_HEIGHT_SCALE);
+    const auto automationRowMaximumHeight =
+        resolve(baseFontPx, AUTOMATION_ROW_MAXIMUM_HEIGHT_SCALE);
+    const auto automationRowWheelIncrement =
+        resolve(baseFontPx, AUTOMATION_ROW_WHEEL_INCREMENT_SCALE);
+    const auto addAutomationLaneStripHeight =
+        resolve(baseFontPx, ADD_AUTOMATION_LANE_STRIP_HEIGHT_SCALE);
+    const auto editorDrawerResizeHandleHeight =
+        resolve(baseFontPx, EDITOR_DRAWER_RESIZE_HANDLE_HEIGHT_SCALE);
+    const auto minimumVisiblePianoRollHeight =
+        resolve(baseFontPx, MINIMUM_VISIBLE_PIANO_ROLL_HEIGHT_SCALE);
+    const auto automationPointHitRadius = resolve(baseFontPx, AUTOMATION_POINT_HIT_RADIUS_SCALE);
+    const auto automationNeutralSnapRadius =
+        resolve(baseFontPx, AUTOMATION_NEUTRAL_SNAP_RADIUS_SCALE);
+    const auto automationDeleteTimeRadius =
+        resolve(baseFontPx, AUTOMATION_DELETE_TIME_RADIUS_SCALE);
+    const auto automationPointDetailThreshold =
+        resolve(baseFontPx, AUTOMATION_POINT_DETAIL_THRESHOLD_SCALE);
+    const auto automationHoverPaintPadding =
+        resolve(baseFontPx, AUTOMATION_HOVER_PAINT_PADDING_SCALE);
+    const auto velocityDensityThresholdD1 =
+        resolve(baseFontPx, VELOCITY_DENSITY_THRESHOLD_D1_SCALE);
+    const auto velocityDensityThresholdD2 =
+        resolve(baseFontPx, VELOCITY_DENSITY_THRESHOLD_D2_SCALE);
+    const auto velocityDensityThresholdD3 =
+        resolve(baseFontPx, VELOCITY_DENSITY_THRESHOLD_D3_SCALE);
+    const auto velocityDensityThresholdD4 =
+        resolve(baseFontPx, VELOCITY_DENSITY_THRESHOLD_D4_SCALE);
+    const auto velocityStartNodeHitRadius =
+        resolve(baseFontPx, VELOCITY_START_NODE_HIT_RADIUS_SCALE);
+    const auto velocityNodePaintRadius = baseFontPx * VELOCITY_NODE_PAINT_RADIUS_SCALE;
+    const auto velocitySelectedNodeRingRadius =
+        baseFontPx * VELOCITY_SELECTED_NODE_RING_RADIUS_SCALE;
+    const auto velocityNodeOutlineDipWidth = baseFontPx * VELOCITY_NODE_OUTLINE_DIP_WIDTH_SCALE;
+    const auto velocitySelectedNodeRingDipWidth =
+        baseFontPx * VELOCITY_SELECTED_NODE_RING_DIP_WIDTH_SCALE;
+    const auto velocityStemDipWidth = baseFontPx * VELOCITY_STEM_DIP_WIDTH_SCALE;
+    const auto velocitySelectedStemDipWidth = baseFontPx * VELOCITY_SELECTED_STEM_DIP_WIDTH_SCALE;
+    const auto velocityDurationLineVerticalRadius =
+        resolve(baseFontPx, VELOCITY_DURATION_LINE_VERTICAL_RADIUS_SCALE);
+    const auto velocityDurationLineHorizontalSlop =
+        resolve(baseFontPx, VELOCITY_DURATION_LINE_HORIZONTAL_SLOP_SCALE);
+    const auto velocityRelativeDragActivationDistance =
+        resolve(baseFontPx, VELOCITY_RELATIVE_DRAG_ACTIVATION_DISTANCE_SCALE);
+    const auto editorDefaultPixelsPerBeat =
+        resolve(baseFontPx, EDITOR_DEFAULT_PIXELS_PER_BEAT_SCALE);
+    const auto voicePickerDialogWidth = resolve(baseFontPx, VOICE_PICKER_DIALOG_WIDTH_SCALE);
+    const auto voicePickerDialogHeight = resolve(baseFontPx, VOICE_PICKER_DIALOG_HEIGHT_SCALE);
+    const auto trackHeaderButtonExtent = resolve(baseFontPx, TRACK_HEADER_BUTTON_EXTENT_SCALE);
+    const auto trackHeaderRowHeight = resolve(baseFontPx, TRACK_HEADER_ROW_HEIGHT_SCALE);
+    const auto trackHeaderButtonColumnWidth =
+        resolve(baseFontPx, TRACK_HEADER_BUTTON_COLUMN_WIDTH_SCALE);
+    const auto trackHeaderVoiceLineLeft = resolve(baseFontPx, TRACK_HEADER_VOICE_LINE_LEFT_SCALE);
+    const auto trackHeaderVoiceLineTop = resolve(baseFontPx, TRACK_HEADER_VOICE_LINE_TOP_SCALE);
+    const auto trackHeaderVoiceLineRight = resolve(baseFontPx, TRACK_HEADER_VOICE_LINE_RIGHT_SCALE);
+    const auto trackHeaderVoiceLineHeight =
+        resolve(baseFontPx, TRACK_HEADER_VOICE_LINE_HEIGHT_SCALE);
+    const auto trackHeaderRenameEditorLeft =
+        resolve(baseFontPx, TRACK_HEADER_RENAME_EDITOR_LEFT_SCALE);
+    const auto trackHeaderRenameEditorTop =
+        resolve(baseFontPx, TRACK_HEADER_RENAME_EDITOR_TOP_SCALE);
+    const auto trackHeaderRenameEditorRight =
+        resolve(baseFontPx, TRACK_HEADER_RENAME_EDITOR_RIGHT_SCALE);
+    const auto trackHeaderRenameEditorHeight =
+        resolve(baseFontPx, TRACK_HEADER_RENAME_EDITOR_HEIGHT_SCALE);
+    const auto timelineMinimumPixelsPerBeat =
+        resolve(baseFontPx, TIMELINE_MINIMUM_PIXELS_PER_BEAT_SCALE);
+    const auto timelineMaximumPixelsPerBeat =
+        resolve(baseFontPx, TIMELINE_MAXIMUM_PIXELS_PER_BEAT_SCALE);
+    const auto pianoRollMinimumKeyHeight = resolve(baseFontPx, PIANO_ROLL_MINIMUM_KEY_HEIGHT_SCALE);
+    const auto pianoRollMaximumKeyHeight = resolve(baseFontPx, PIANO_ROLL_MAXIMUM_KEY_HEIGHT_SCALE);
+    const auto velocityHandleMinimumKeyHeight =
+        resolve(baseFontPx, VELOCITY_HANDLE_MINIMUM_KEY_HEIGHT_SCALE);
+    const auto automationGridMinimumCellWidth =
+        resolve(baseFontPx, AUTOMATION_GRID_MINIMUM_CELL_WIDTH_SCALE);
+    const auto velocityHandleTallNoteThreshold =
+        resolve(baseFontPx, VELOCITY_HANDLE_TALL_NOTE_THRESHOLD_SCALE);
+    const auto velocityHandleBarThickness =
+        resolve(baseFontPx, VELOCITY_HANDLE_BAR_THICKNESS_SCALE);
+    const auto velocityHandleInset = resolve(baseFontPx, VELOCITY_HANDLE_INSET_SCALE);
+    const auto selectionRingDipWidth = baseFontPx * SELECTION_RING_DIP_WIDTH_SCALE;
+    const auto timelineDetailMinimumPixelsPerBeat =
+        resolve(baseFontPx, TIMELINE_DETAIL_MINIMUM_PIXELS_PER_BEAT_SCALE);
+    const auto gridLineStrokeWidth = resolve(baseFontPx, GRID_LINE_STROKE_WIDTH_SCALE);
+    const auto timeRulerMinimumFontPixelSize =
+        resolve(baseFontPx, TIME_RULER_MINIMUM_FONT_PIXEL_SIZE_SCALE);
+    const auto timeRulerLetterSpacing = baseFontPx * TIME_RULER_LETTER_SPACING_SCALE;
+    const auto timeRulerBeatLabelZoomFactor = TIME_RULER_BEAT_LABEL_ZOOM_FACTOR;
+    const auto midiCursorExtent = resolve(baseFontPx, MIDI_CURSOR_EXTENT_SCALE);
+    const auto pianoRollNoteMinimumWidth = resolve(baseFontPx, PIANO_ROLL_NOTE_MINIMUM_WIDTH_SCALE);
+    const auto pianoRollNoteMinimumHeight =
+        resolve(baseFontPx, PIANO_ROLL_NOTE_MINIMUM_HEIGHT_SCALE);
+    const auto pianoRollNoteEdgeGripReach = baseFontPx * PIANO_ROLL_NOTE_EDGE_GRIP_REACH_SCALE;
+    const auto pianoRollNoteMoveZoneMinimumWidth =
+        baseFontPx * PIANO_ROLL_NOTE_MOVE_ZONE_MINIMUM_WIDTH_SCALE;
+    const auto noteBorderDashLength = resolve(baseFontPx, NOTE_BORDER_DASH_LENGTH_SCALE);
+    const auto noteBorderDashGap = resolve(baseFontPx, NOTE_BORDER_DASH_GAP_SCALE);
+    const auto keyboardHoverChipFontPixelSize =
+        resolve(baseFontPx, KEYBOARD_HOVER_CHIP_FONT_PIXEL_SIZE_SCALE);
+    const auto keyboardHoverChipHorizontalPadding =
+        resolve(baseFontPx, KEYBOARD_HOVER_CHIP_HORIZONTAL_PADDING_SCALE);
+    const auto keyboardHoverChipVerticalPadding =
+        resolve(baseFontPx, KEYBOARD_HOVER_CHIP_VERTICAL_PADDING_SCALE);
+    const auto keyboardHoverChipRightInset =
+        resolve(baseFontPx, KEYBOARD_HOVER_CHIP_RIGHT_INSET_SCALE);
+    const auto velocityLabelFitAllowance = resolve(baseFontPx, VELOCITY_LABEL_FIT_ALLOWANCE_SCALE);
+    const auto keyboardHoverChipCornerRadius =
+        resolve(baseFontPx, KEYBOARD_HOVER_CHIP_CORNER_RADIUS_SCALE);
+    const auto pianoKeyboardLabelRightInset =
+        resolve(baseFontPx, PIANO_KEYBOARD_LABEL_RIGHT_INSET_SCALE);
+    const auto otherEventHitSlop = resolve(baseFontPx, OTHER_EVENT_HIT_SLOP_SCALE);
+    const auto otherEventMarkerHalfWidth = resolve(baseFontPx, OTHER_EVENT_MARKER_HALF_WIDTH_SCALE);
+    const auto otherEventMarkerHalfHeight =
+        resolve(baseFontPx, OTHER_EVENT_MARKER_HALF_HEIGHT_SCALE);
+    const auto trackHeaderTextLeft = resolve(baseFontPx, TRACK_HEADER_TEXT_LEFT_SCALE);
+    const auto trackHeaderReorderIndicatorHeight =
+        resolve(baseFontPx, TRACK_HEADER_REORDER_INDICATOR_HEIGHT_SCALE);
+    const auto pianoRollInitialViewportHeight =
+        resolve(baseFontPx, PIANO_ROLL_INITIAL_VIEWPORT_HEIGHT_SCALE);
+    const auto timelineRevealViewportFraction = TIMELINE_REVEAL_VIEWPORT_FRACTION;
+    const auto timelineViewportMinimumWidth =
+        resolve(baseFontPx, TIMELINE_VIEWPORT_MINIMUM_WIDTH_SCALE);
+    const auto timelineContentTailWidth = resolve(baseFontPx, TIMELINE_CONTENT_TAIL_WIDTH_SCALE);
+    return {
+        trackHeaderWidth,
+        pianoKeyboardWidth,
+        automationRowDefaultHeight,
+        automationRowMinimumHeight,
+        automationRowMaximumHeight,
+        automationRowWheelIncrement,
+        addAutomationLaneStripHeight,
+        editorDrawerResizeHandleHeight,
+        minimumVisiblePianoRollHeight,
+        automationPointHitRadius,
+        automationNeutralSnapRadius,
+        automationDeleteTimeRadius,
+        automationPointDetailThreshold,
+        automationHoverPaintPadding,
+        velocityDensityThresholdD1,
+        velocityDensityThresholdD2,
+        velocityDensityThresholdD3,
+        velocityDensityThresholdD4,
+        velocityStartNodeHitRadius,
+        velocityNodePaintRadius,
+        velocitySelectedNodeRingRadius,
+        velocityNodeOutlineDipWidth,
+        velocitySelectedNodeRingDipWidth,
+        velocityStemDipWidth,
+        velocitySelectedStemDipWidth,
+        velocityDurationLineVerticalRadius,
+        velocityDurationLineHorizontalSlop,
+        velocityRelativeDragActivationDistance,
+        trackHeaderWidth + pianoKeyboardWidth,
+        editorDefaultPixelsPerBeat,
+        voicePickerDialogWidth,
+        voicePickerDialogHeight,
+        trackHeaderButtonExtent,
+        trackHeaderRowHeight,
+        trackHeaderButtonColumnWidth,
+        trackHeaderVoiceLineLeft,
+        trackHeaderVoiceLineTop,
+        trackHeaderVoiceLineRight,
+        trackHeaderVoiceLineHeight,
+        trackHeaderRenameEditorLeft,
+        trackHeaderRenameEditorTop,
+        trackHeaderRenameEditorRight,
+        trackHeaderRenameEditorHeight,
+        timelineMinimumPixelsPerBeat,
+        timelineMaximumPixelsPerBeat,
+        pianoRollMinimumKeyHeight,
+        pianoRollMaximumKeyHeight,
+        velocityHandleMinimumKeyHeight,
+        automationGridMinimumCellWidth,
+        velocityHandleTallNoteThreshold,
+        velocityHandleBarThickness,
+        velocityHandleInset,
+        selectionRingDipWidth,
+        timelineDetailMinimumPixelsPerBeat,
+        gridLineStrokeWidth,
+        timeRulerMinimumFontPixelSize,
+        timeRulerLetterSpacing,
+        timeRulerBeatLabelZoomFactor,
+        midiCursorExtent,
+        pianoRollNoteMinimumWidth,
+        pianoRollNoteMinimumHeight,
+        pianoRollNoteEdgeGripReach,
+        pianoRollNoteMoveZoneMinimumWidth,
+        noteBorderDashLength,
+        noteBorderDashGap,
+        keyboardHoverChipFontPixelSize,
+        keyboardHoverChipHorizontalPadding,
+        keyboardHoverChipVerticalPadding,
+        keyboardHoverChipRightInset,
+        velocityLabelFitAllowance,
+        keyboardHoverChipCornerRadius,
+        pianoKeyboardLabelRightInset,
+        otherEventHitSlop,
+        otherEventMarkerHalfWidth,
+        otherEventMarkerHalfHeight,
+        trackHeaderTextLeft,
+        trackHeaderReorderIndicatorHeight,
+        pianoRollInitialViewportHeight,
+        timelineRevealViewportFraction,
+        timelineViewportMinimumWidth,
+        timelineContentTailWidth,
+    };
 }
 
 FontScaledGeometry resolveGeometry(int baseFontPx, const ResolvedSpaces &spaces)
@@ -431,7 +728,8 @@ bool initialize(QApplication &application, int baseFontPx)
     // Resolve the complete spacing scale before publishing process-wide state.
     // The stylesheet and later space() calls then consume the same pixel values.
     const auto spaces = resolveSpaces(baseFontPx);
-    resolvedLayout = ResolvedLayout{&application, baseFontPx, spaces,
+    const auto editor = resolveEditorGeometry(baseFontPx);
+    resolvedLayout = ResolvedLayout{&application, baseFontPx, spaces, editor,
                                     buildGeometryStyleSheet(baseFontPx, spaces)};
     application.setStyleSheet(resolvedLayout->geometry);
     // QApplication owns the filter. The initialization guard above ensures only
@@ -455,6 +753,18 @@ int singlePixel()
 {
     return 1;
 }
+
+const EditorGeometry &editorGeometry()
+{
+    return currentLayout().editor;
+}
+qreal velocityHandlePointerHitPadding(qreal noteHeight, qreal physicalPixel)
+{
+    const auto physicalNoteHeight = qRound(noteHeight / physicalPixel);
+    const auto paddingPixels = std::clamp(physicalNoteHeight / 6, 2, 4);
+    return paddingPixels * physicalPixel;
+}
+
 TwoLineTextLayout::TwoLineTextLayout(const QFont &primary, const QFont &alternatePrimary,
                                      const QFont &secondary, Space gap)
     : m_primaryHeight(
