@@ -52,10 +52,11 @@ constexpr int kGutterW = kHeaderW + kKeyboardW;
 // remains the velocity fallback, and the default key height makes the
 // handle available out of the box.
 constexpr int kVelHandleMinKeyH = 12;
-// Note-name labels: with the View toggle on and at least this much vertical
-// zoom, each active-track note carries its pitch name unless the velocity
-// shortcut is held. Below the threshold no legible face fits the row and the
-// labels vanish rather than shrink into noise.
+// Note-name labels: with the View toggle on, each active-track note carries
+// its pitch name unless the velocity shortcut is held. The label face is
+// fixed, and it hides — never shrinks — whenever its padded height misses
+// the row; this floor is only a cheap pre-gate that no padded face ever
+// fits under.
 constexpr int kNoteNameMinKeyH = 12;
 // Auto snap grid: the zoom-adaptive grid shows the finest subdivision from
 // the feel's ladder whose cells are at least this wide, so lower values

@@ -531,7 +531,12 @@ std::optional<QFont> noteNameFont(const QFont &source, qreal noteBoxHeight)
     const auto textHeight = int(std::floor(noteBoxHeight - 2.0 * lyt::space(Space::Half)));
     auto font = typography::noteName(source);
     font.setPixelSize(std::max(lyt::singlePixel(), font.pixelSize() - 2 * lyt::singlePixel()));
-    return typography::fitted(font, textHeight);
+    // The face is fixed: when its padded height misses the row, labels hide
+    // rather than shrink.
+    const QFontMetrics metrics(font);
+    if (metrics.ascent() + metrics.descent() > textHeight)
+        return std::nullopt;
+    return font;
 }
 
 } // namespace

@@ -1000,23 +1000,15 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         view.setNoteNameMode(true);
         view.selectTrack(selectedTrackBeforeGhostProbe);
 
-        // Fixed-size labels must disappear when the padded note face is one
-        // physical pixel too short, rather than shrinking to fit the row.
-        SongView::ViewState shortRows = namedState;
+        // The fixed label face and its padded height, shared with the
+        // short-row probes below (which need a label-wide note in view, so
+        // they run inside the width-probe scene).
         const auto labelPadding = layout::space(layout::Space::Half);
         auto fixedLabelFont = typography::noteName(roll->font());
         fixedLabelFont.setPixelSize(std::max(layout::singlePixel(), fixedLabelFont.pixelSize() -
                                                                         2 * layout::singlePixel()));
         const auto fixedLabelMetrics = QFontMetrics(fixedLabelFont);
         const auto fixedLabelHeight = fixedLabelMetrics.ascent() + fixedLabelMetrics.descent();
-        shortRows.keyHeight = double(fixedLabelHeight + 2 * labelPadding);
-        view.applyViewState(shortRows);
-        const QImage shortRowsNamed = roll->grab().toImage();
-        view.setNoteNameMode(false);
-        if (roll->grab().toImage() != shortRowsNamed)
-            fail("note names shrank to fit a short row");
-        view.setNoteNameMode(true);
-        view.applyViewState(namedState);
 
         // Per-note width probe: an abutting short pair followed by a distant
         // note wide enough for its name. The pair stays unlabeled while the
@@ -1032,7 +1024,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         for (int key = 115; key >= 24 && runKey < 0; --key) {
             if (namedRows.top(key) < 0.0 || namedRows.bottom(key) > roll->height())
                 continue;
-            if (!occupied(a.tick, 2 * closeTicks + farTicks, key))
+            if (!occupied(a.tick, 2 * closeTicks + farTicks + labelTicks, key))
                 runKey = key;
         }
         const int stripW = qRound(12.0 * rasterDpr);
@@ -1076,6 +1068,33 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 if (!wideLabelContrasts)
                     fail("no clearly contrasting label ink on a wide note face");
             }
+
+            // The width probe's last grab left the mode off.
+            view.setNoteNameMode(true);
+
+            // The fixed face labels the wide note at its exact padded fit...
+            const auto centeredOnRun = [&](double keyHeight) {
+                SongView::ViewState state = namedState;
+                state.keyHeight = keyHeight;
+                state.scrollY =
+                    std::max(0.0, (127.5 - double(runKey)) * keyHeight - roll->height() / 2.0);
+                return state;
+            };
+            view.applyViewState(centeredOnRun(double(fixedLabelHeight + 2 * labelPadding + 1)));
+            const QImage fitRowsNamed = roll->grab().toImage();
+            view.setNoteNameMode(false);
+            if (roll->grab().toImage() == fitRowsNamed)
+                fail("no label at the exact padded label fit");
+            view.setNoteNameMode(true);
+
+            // ...and one layout pixel shorter it hides rather than shrinks.
+            view.applyViewState(centeredOnRun(double(fixedLabelHeight + 2 * labelPadding)));
+            const QImage shortRowsNamed = roll->grab().toImage();
+            view.setNoteNameMode(false);
+            if (roll->grab().toImage() != shortRowsNamed)
+                fail("note names shrank to fit a short row");
+            view.setNoteNameMode(true);
+            view.applyViewState(namedState);
 
             while (doc.undoStack()->index() > undoIndexBeforeRun && doc.undoStack()->canUndo())
                 doc.undoStack()->undo();
