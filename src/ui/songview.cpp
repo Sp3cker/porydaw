@@ -239,6 +239,23 @@ const QColor &trackTextColor(int track)
     return themes::trackIdentityTextColor(trackIdentityIndex(track));
 }
 
+// The stronger of black/white over a backdrop.
+QColor contrastingTextColor(const QColor &backdrop)
+{
+    return themes::contrastRatio(backdrop, Qt::white) >= themes::contrastRatio(backdrop, Qt::black)
+               ? QColor(Qt::white)
+               : QColor(Qt::black);
+}
+
+// Ink for text sitting directly on a pitch row's background — the accidental
+// lane on black-key rows, the plain roll background otherwise (both opaque).
+QColor rollRowTextColor(int key)
+{
+    return contrastingTextColor(
+        themes::color(isBlackKey(key) ? themes::Role::song_view_piano_roll_accidental_lane
+                                      : themes::Role::song_view_piano_roll_background));
+}
+
 // Ghost notes (unselected tracks) mix 24% of their track identity into the
 // row background in OKLab. Cap only the lightness offset so bright identities
 // stay equally recessive on light and dark themes.
@@ -2389,7 +2406,7 @@ class PianoRoll : public TimelineSurface
             }
 
             if (nameFont && nameKept[noteIndex])
-                drawNoteName(painter, noteRect, displayedNoteKey(note), fill, note.track);
+                drawNoteName(painter, noteRect, noteBox, displayedNoteKey(note), fill, note.track);
 
             // While a velocity drag is live, every current-track note shows
             // its previewed value.
@@ -2428,21 +2445,34 @@ class PianoRoll : public TimelineSurface
     // track's paired text color.
     QColor noteTextColor(const QColor &fill, int track) const
     {
-        if (!m_sv->velocityColorMode())
-            return trackTextColor(track);
-        return themes::contrastRatio(fill, Qt::white) >= themes::contrastRatio(fill, Qt::black)
-                   ? QColor(Qt::white)
-                   : QColor(Qt::black);
+        return m_sv->velocityColorMode() ? contrastingTextColor(fill) : trackTextColor(track);
     }
 
     // The pitch label, left-anchored in the row and free to overrun a short
     // note's right edge (the painter is already clipped to the grid).
-    void drawNoteName(QPainter &painter, const QRectF &noteRect, int key, const QColor &fill,
-                      int track)
+    // Two-tone, Reaper-style: the part over the note face takes the fill's
+    // paired ink, the overrun takes the row background's, so the whole label
+    // stays legible across both backdrops.
+    void drawNoteName(QPainter &painter, const QRectF &noteRect, const QRectF &noteBox, int key,
+                      const QColor &fill, int track)
     {
+        const QRectF labelRect(noteRect.left() + 2.0, noteRect.top(), 512.0, noteRect.height());
+        const QString name = keyName(key);
+        painter.save();
+        painter.setClipRect(noteBox, Qt::IntersectClip);
         painter.setPen(noteTextColor(fill, track));
-        painter.drawText(QRectF(noteRect.left() + 2.0, noteRect.top(), 512.0, noteRect.height()),
-                         Qt::AlignLeft | Qt::AlignVCenter, keyName(key));
+        painter.drawText(labelRect, Qt::AlignLeft | Qt::AlignVCenter, name);
+        painter.restore();
+        if (QFontMetricsF(painter.font()).horizontalAdvance(name) + labelRect.left() <=
+            noteBox.right())
+            return;
+        painter.save();
+        painter.setClipRect(
+            QRectF(QPointF(noteBox.right(), labelRect.top()), labelRect.bottomRight()),
+            Qt::IntersectClip);
+        painter.setPen(rollRowTextColor(key));
+        painter.drawText(labelRect, Qt::AlignLeft | Qt::AlignVCenter, name);
+        painter.restore();
     }
 
     // Which active-track notes carry a name label: walking each pitch row
@@ -2497,7 +2527,7 @@ class PianoRoll : public TimelineSurface
             if (const auto font =
                     typography::fitted(p.font(), int(std::lround(m_sv->keyHeight())))) {
                 p.setFont(*font);
-                drawNoteName(p, r, m_drawKey, fill, selected);
+                drawNoteName(p, r, box, m_drawKey, fill, selected);
             }
         }
     }

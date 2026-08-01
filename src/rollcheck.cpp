@@ -1,3 +1,4 @@
+#include "ui/theme/color_math.h"
 #include "ui/theme/themeruntime.h"
 #include <QApplication>
 #include <QCoreApplication>
@@ -980,6 +981,18 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (differingPixels(identityRestoredRender, namesOnRender, noteARegion) == 0)
             fail("enabling note names painted no label on the active note");
 
+        // Legibility on the note face: some of the new ink must clearly
+        // contrast with the fill, not merely differ from it.
+        bool faceInkContrasts = false;
+        for (int y = noteARegion.top(); y <= noteARegion.bottom() && !faceInkContrasts; ++y)
+            for (int x = noteARegion.left(); x <= noteARegion.right() && !faceInkContrasts; ++x)
+                faceInkContrasts =
+                    namesOnRender.pixel(x, y) != identityRestoredRender.pixel(x, y) &&
+                    themes::contrastRatio(QColor(namesOnRender.pixel(x, y)), expectedNoteColor) >=
+                        2.5;
+        if (!faceInkContrasts)
+            fail("no clearly contrasting label ink on the note face");
+
         // With the other track selected note A is a ghost, and its face must
         // render identically with the mode on or off.
         view.selectTrack(ghostTrack);
@@ -1044,6 +1057,38 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("a crowded same-pitch run did not label its last note");
             if (differingPixels(runUnnamed, runNamed, labelStrip(runTick3, stripW)) == 0)
                 fail("a distant same-pitch note lost its label");
+
+            // Two-tone overrun: the distant note is only a few pixels wide,
+            // so most of its label sits past the note box on the row
+            // background — where its ink must clearly contrast with the
+            // row, not with the note fill.
+            const auto blackKey = [](int key) {
+                switch (key % 12) {
+                case 1:
+                case 3:
+                case 6:
+                case 8:
+                case 10:
+                    return true;
+                default:
+                    return false;
+                }
+            };
+            const QColor runRowBackdrop =
+                themes::color(blackKey(runKey) ? themes::Role::song_view_piano_roll_accidental_lane
+                                               : themes::Role::song_view_piano_roll_background);
+            const int overrunLeft =
+                toRasterPixel(songview::kKeyboardW + view.contentX(double(runTick3 + closeTicks)));
+            bool overrunInkContrasts = false;
+            for (int y = runRowTop; y <= runRowBottom && !overrunInkContrasts; ++y)
+                for (int x = overrunLeft;
+                     x <= overrunLeft + stripW && x < runNamed.width() && !overrunInkContrasts; ++x)
+                    overrunInkContrasts =
+                        runNamed.pixel(x, y) != runUnnamed.pixel(x, y) &&
+                        themes::contrastRatio(QColor(runNamed.pixel(x, y)), runRowBackdrop) >= 2.5;
+            if (!overrunInkContrasts)
+                fail("label overrun ink does not clearly contrast with the row background");
+
             while (doc.undoStack()->index() > undoIndexBeforeRun && doc.undoStack()->canUndo())
                 doc.undoStack()->undo();
         }
