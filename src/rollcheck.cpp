@@ -957,6 +957,98 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (QColor(identityRestoredRender.pixel(noteInteriorSample)) != expectedNoteColor)
         fail("disabling velocity-color mode did not restore identity fills");
 
+    // Note-name display mode (View menu, app-wide): with rows tall enough
+    // for legible text the active track's notes carry their pitch name;
+    // ghost notes never do; below the key-height floor the labels vanish
+    // entirely; and a run of same-pitch notes packed tighter than the label
+    // keeps only the run's last name.
+    {
+        const auto differingPixels = [](const QImage &before, const QImage &after,
+                                        const QRect &region) {
+            int count = 0;
+            for (int y = region.top(); y <= region.bottom(); ++y)
+                for (int x = region.left(); x <= region.right(); ++x)
+                    count += before.pixel(x, y) != after.pixel(x, y);
+            return count;
+        };
+        const QRect noteARegion(
+            QPoint(toRasterPixel(paintedNoteBox.left()), toRasterPixel(paintedNoteBox.top())),
+            QPoint(toRasterPixel(paintedNoteBox.right()) - 1,
+                   toRasterPixel(paintedNoteBox.bottom()) - 1));
+        view.setNoteNameMode(true);
+        const QImage namesOnRender = roll->grab().toImage();
+        if (differingPixels(identityRestoredRender, namesOnRender, noteARegion) == 0)
+            fail("enabling note names painted no label on the active note");
+
+        // With the other track selected note A is a ghost, and its face must
+        // render identically with the mode on or off.
+        view.selectTrack(ghostTrack);
+        const QImage ghostNamedRender = roll->grab().toImage();
+        view.setNoteNameMode(false);
+        if (differingPixels(roll->grab().toImage(), ghostNamedRender, noteARegion) != 0)
+            fail("note-name mode changed a ghost note's rendering");
+        view.setNoteNameMode(true);
+        view.selectTrack(selectedTrackBeforeGhostProbe);
+
+        // Height floor: at 8px rows no legible face fits.
+        const SongView::ViewState namedState = view.viewState();
+        SongView::ViewState shortRows = namedState;
+        shortRows.keyHeight = 8.0;
+        view.applyViewState(shortRows);
+        const QImage shortRowsNamed = roll->grab().toImage();
+        view.setNoteNameMode(false);
+        if (roll->grab().toImage() != shortRowsNamed)
+            fail("note names painted below the key-height floor");
+        view.setNoteNameMode(true);
+        view.applyViewState(namedState);
+
+        // Same-pitch collapse: an abutting pair label-widths apart plus a
+        // distant third on one free visible row. Only the pair's second
+        // note and the distant note may carry names.
+        const qreal pxPerTick = view.contentX(1.0) - view.contentX(0.0);
+        const auto closeTicks = uint64_t(std::max(1.0, std::ceil(5.0 / pxPerTick)));
+        const auto farTicks = uint64_t(std::ceil(90.0 / pxPerTick));
+        const uint64_t runTick2 = a.tick + closeTicks;
+        const uint64_t runTick3 = runTick2 + farTicks;
+        int runKey = -1;
+        for (int key = 115; key >= 24 && runKey < 0; --key) {
+            if (rows.top(key) < 0.0 || rows.bottom(key) > roll->height())
+                continue;
+            if (!occupied(a.tick, 2 * closeTicks + farTicks, key))
+                runKey = key;
+        }
+        const int stripW = qRound(12.0 * rasterDpr);
+        const QRectF runRowBox = rows.noteBox(rows.noteRect(0.0, 1.0, runKey < 0 ? 60 : runKey));
+        const int runRowTop = toRasterPixel(runRowBox.top());
+        const int runRowBottom = toRasterPixel(runRowBox.bottom()) - 1;
+        const auto labelStrip = [&](uint64_t tick, int width) {
+            const int left = toRasterPixel(songview::kKeyboardW + view.contentX(double(tick)));
+            return QRect(QPoint(left, runRowTop), QPoint(left + width - 1, runRowBottom));
+        };
+        if (runKey < 0 || closeTicks * pxPerTick > 12.0 ||
+            labelStrip(runTick3, stripW).right() >= namesOnRender.width()) {
+            fail("no room for the note-name collapse probe");
+        } else {
+            const int undoIndexBeforeRun = doc.undoStack()->index();
+            doc.addNotes(track, {{a.tick, uint8_t(runKey), uint32_t(closeTicks), 100},
+                                 {runTick2, uint8_t(runKey), uint32_t(closeTicks), 100},
+                                 {runTick3, uint8_t(runKey), uint32_t(closeTicks), 100}});
+            const QImage runNamed = roll->grab().toImage();
+            view.setNoteNameMode(false);
+            const QImage runUnnamed = roll->grab().toImage();
+            const QRect firstStrip(QPoint(labelStrip(a.tick, 1).left(), runRowTop),
+                                   QPoint(labelStrip(runTick2, 1).left() - 1, runRowBottom));
+            if (differingPixels(runUnnamed, runNamed, firstStrip) != 0)
+                fail("a crowded same-pitch run labeled a non-final note");
+            if (differingPixels(runUnnamed, runNamed, labelStrip(runTick2, stripW)) == 0)
+                fail("a crowded same-pitch run did not label its last note");
+            if (differingPixels(runUnnamed, runNamed, labelStrip(runTick3, stripW)) == 0)
+                fail("a distant same-pitch note lost its label");
+            while (doc.undoStack()->index() > undoIndexBeforeRun && doc.undoStack()->canUndo())
+                doc.undoStack()->undo();
+        }
+    }
+
     // Click latch: give note A a distinctive velocity behind the view's
     // back, click it, and the next drawn note must inherit it.
     doc.setNotesVelocity({noteA}, 73);

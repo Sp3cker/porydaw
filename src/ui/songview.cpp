@@ -49,6 +49,7 @@
 #include <climits>
 #include <cmath>
 #include <functional>
+#include <limits>
 #include <map>
 #include <numeric>
 #include <utility>
@@ -2339,7 +2340,22 @@ class PianoRoll : public TimelineSurface
         if (velocityFont)
             painter.setFont(*velocityFont);
 
-        for (const ViewNote &note : model.notes) {
+        // Note-name labels take the same fitted face but with a hard floor:
+        // below kNoteNameMinKeyH they disappear entirely rather than shrink
+        // into noise. During a velocity drag the previewed value owns the
+        // note face instead.
+        const auto nameFont = !drawingGhostNotes && m_sv->noteNameMode() &&
+                                      m_drag != Drag::Velocity && keyHeight >= kNoteNameMinKeyH
+                                  ? typography::fitted(painter.font(), int(std::lround(keyHeight)))
+                                  : std::optional<QFont>{};
+        std::vector<bool> nameKept;
+        if (nameFont) {
+            painter.setFont(*nameFont);
+            nameKept = keptNoteNames(model, selectedTrack, QFontMetricsF(*nameFont));
+        }
+
+        for (size_t noteIndex = 0; noteIndex < model.notes.size(); ++noteIndex) {
+            const ViewNote &note = model.notes[noteIndex];
             const bool isGhostNote = note.track != selectedTrack;
             if (isGhostNote != drawingGhostNotes)
                 continue;
@@ -2372,19 +2388,15 @@ class PianoRoll : public TimelineSurface
                                  mixTowardOklab(identity, Qt::black, 1.0 / 3.0));
             }
 
+            if (nameFont && nameKept[noteIndex])
+                drawNoteName(painter, noteRect, displayedNoteKey(note), fill, note.track);
+
             // While a velocity drag is live, every current-track note shows
             // its previewed value.
             if (m_drag == Drag::Velocity && velocityFont) {
                 const QString velocityText = QString::number(renderedVelocity);
                 if (noteRect.width() >= painter.fontMetrics().horizontalAdvance(velocityText) + 4) {
-                    // Velocity fills span the whole spectrum, so no single
-                    // paired text color works; pick the stronger of b/w.
-                    painter.setPen(m_sv->velocityColorMode()
-                                       ? (themes::contrastRatio(fill, Qt::white) >=
-                                                  themes::contrastRatio(fill, Qt::black)
-                                              ? QColor(Qt::white)
-                                              : QColor(Qt::black))
-                                       : trackTextColor(note.track));
+                    painter.setPen(noteTextColor(fill, note.track));
                     painter.drawText(noteRect, Qt::AlignCenter, velocityText);
                 }
             }
@@ -2411,6 +2423,59 @@ class PianoRoll : public TimelineSurface
         }
     }
 
+    // Velocity fills span the whole spectrum, so no single paired text color
+    // works; pick the stronger of black/white. Identity fills keep the
+    // track's paired text color.
+    QColor noteTextColor(const QColor &fill, int track) const
+    {
+        if (!m_sv->velocityColorMode())
+            return trackTextColor(track);
+        return themes::contrastRatio(fill, Qt::white) >= themes::contrastRatio(fill, Qt::black)
+                   ? QColor(Qt::white)
+                   : QColor(Qt::black);
+    }
+
+    // The pitch label, left-anchored in the row and free to overrun a short
+    // note's right edge (the painter is already clipped to the grid).
+    void drawNoteName(QPainter &painter, const QRectF &noteRect, int key, const QColor &fill,
+                      int track)
+    {
+        painter.setPen(noteTextColor(fill, track));
+        painter.drawText(QRectF(noteRect.left() + 2.0, noteRect.top(), 512.0, noteRect.height()),
+                         Qt::AlignLeft | Qt::AlignVCenter, keyName(key));
+    }
+
+    // Which active-track notes carry a name label: walking each pitch row
+    // right-to-left, a note keeps its label only when the next kept label on
+    // the row starts beyond this label's own width — so a run of same-pitch
+    // notes packed tighter than the text collapses to the run's last note
+    // instead of smearing.
+    std::vector<bool> keptNoteNames(const SongViewModel &model, int selectedTrack,
+                                    const QFontMetricsF &metrics) const
+    {
+        std::vector<bool> kept(model.notes.size(), false);
+        std::array<qreal, 128> labelWidth;
+        labelWidth.fill(-1.0);
+        std::array<qreal, 128> nextKeptX;
+        nextKeptX.fill(std::numeric_limits<qreal>::max());
+        // model.notes is startTick-sorted, so the reverse walk meets each
+        // row's rightmost note first.
+        for (size_t i = model.notes.size(); i-- > 0;) {
+            const ViewNote &note = model.notes[i];
+            if (note.track != selectedTrack)
+                continue;
+            const auto key = size_t(displayedNoteKey(note));
+            const qreal x = displayedNoteRect(note).left();
+            if (labelWidth[key] < 0.0)
+                labelWidth[key] = metrics.horizontalAdvance(keyName(int(key)));
+            if (nextKeptX[key] - x < labelWidth[key] + 4.0)
+                continue;
+            kept[i] = true;
+            nextKeptX[key] = x;
+        }
+        return kept;
+    }
+
     // The pending note of a draw gesture, solid like the real note. (Move and
     // resize gestures need no extra pass: drawNotes paints the selected notes
     // at their dragged geometry via displayedNoteRect.)
@@ -2424,8 +2489,17 @@ class PianoRoll : public TimelineSurface
         const qreal x1 = m_sv->displayX(double(m_drawTick + uint64_t(m_drawDur)), kKeyboardW, dpr);
         const QRectF r = noteRect(x0, x1, m_drawKey);
         const QRectF box = noteBox(r);
-        p.fillRect(box, m_sv->noteFillColor(selected, m_lastVelocity));
+        const QColor fill = m_sv->noteFillColor(selected, m_lastVelocity);
+        p.fillRect(box, fill);
         drawNoteBoxBorder(p, box, false);
+        // The pending note's name, live while the pencil chooses its pitch.
+        if (m_sv->noteNameMode() && m_sv->keyHeight() >= kNoteNameMinKeyH) {
+            if (const auto font =
+                    typography::fitted(p.font(), int(std::lround(m_sv->keyHeight())))) {
+                p.setFont(*font);
+                drawNoteName(p, r, m_drawKey, fill, selected);
+            }
+        }
     }
 
     // Where the note sits on screen right now: its stored geometry, displaced
@@ -2446,11 +2520,22 @@ class PianoRoll : public TimelineSurface
             tick = std::max<int64_t>(0, int64_t(note.startTick) + m_dTick);
             endTick = std::max<int64_t>(tick + 1, int64_t(note.endTick) + m_dTick + m_dDur);
         }
-        const int key = std::clamp(int(note.key) + m_dKey, 0, 127);
+        const int key = displayedNoteKey(note);
         const qreal dpr = devicePixelRatioF();
         const qreal x0 = m_sv->displayX(double(tick), kKeyboardW, dpr);
         const qreal x1 = m_sv->displayX(double(endTick), kKeyboardW, dpr);
         return noteRect(x0, x1, key);
+    }
+
+    // The pitch row the note occupies on screen right now — its stored key,
+    // displaced by the live move delta when it's part of the gesture.
+    int displayedNoteKey(const ViewNote &note) const
+    {
+        const bool dragging =
+            m_drag == Drag::Move || m_drag == Drag::Resize || m_drag == Drag::ResizeLeft;
+        if (!dragging || !m_sv->isSelected(note))
+            return note.key;
+        return std::clamp(int(note.key) + m_dKey, 0, 127);
     }
 
     void showNoteMenu(QPointF localPos)
@@ -6154,6 +6239,14 @@ void SongView::setVelocityColorMode(bool on)
     if (m_velocityColorMode == on)
         return;
     m_velocityColorMode = on;
+    m_roll->invalidateContent();
+}
+
+void SongView::setNoteNameMode(bool on)
+{
+    if (m_noteNameMode == on)
+        return;
+    m_noteNameMode = on;
     m_roll->invalidateContent();
 }
 

@@ -86,6 +86,7 @@ constexpr int kPlaybackUiIntervalMs = 100;
 const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
 const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
+const QString kNoteNamesKey = QStringLiteral("noteNames");
 const QString kSystemFontKey = QStringLiteral("systemFont");
 const QString kFollowPlayheadKey = QStringLiteral("followPlayhead");
 
@@ -732,6 +733,22 @@ void MainWindow::buildUi()
         }
     });
 
+    m_noteNamesAction = viewMenu->addAction(tr("Show Note &Names"));
+    m_noteNamesAction->setCheckable(true);
+    keys.attach(QStringLiteral("view.note_names"), m_noteNamesAction);
+    {
+        QSettings settings;
+        m_noteNamesAction->setChecked(settings.value(kNoteNamesKey, false).toBool());
+    }
+    connect(m_noteNamesAction, &QAction::toggled, this, [this](bool on) {
+        QSettings settings;
+        settings.setValue(kNoteNamesKey, on);
+        for (int i = 0; i < m_tabs->count(); i++) {
+            if (SongSession *s = sessionForWidget(m_tabs->widget(i)))
+                s->view->setNoteNameMode(on);
+        }
+    });
+
     // The transport bar's follow toggle, findable here too: an app-wide
     // persisted preference like the rest of this group.
     viewMenu->addAction(m_followPlayheadAction);
@@ -889,6 +906,7 @@ SongSession *MainWindow::createSession()
     SongSession *s = owned.get();
     s->view = new SongView;
     s->view->setVelocityColorMode(m_velocityColorsAction->isChecked());
+    s->view->setNoteNameMode(m_noteNamesAction->isChecked());
     s->view->setFollowPlayhead(m_followPlayheadAction->isChecked());
     connect(s->view, &SongView::muteMaskChanged, this, [this, s](uint32_t mask) {
         if (s == m_active)

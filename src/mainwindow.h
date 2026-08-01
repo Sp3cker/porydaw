@@ -337,6 +337,7 @@ class MainWindow : public QMainWindow
     QAction *m_settingsAction = nullptr;
     QAction *m_eventListAction = nullptr;
     QAction *m_velocityColorsAction = nullptr;
+    QAction *m_noteNamesAction = nullptr;
     QLabel *m_masterVolCaption = nullptr;
     QSpinBox *m_masterVolSpin = nullptr;
     QLabel *m_timeLabel = nullptr;

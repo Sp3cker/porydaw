@@ -53,6 +53,11 @@ constexpr int kGutterW = kHeaderW + kKeyboardW;
 // velocity drag at any zoom. Also the default key height, so the handle
 // is available out of the box.
 constexpr int kVelHandleMinKeyH = 12;
+// Note-name labels: with the View toggle on and at least this much vertical
+// zoom, each active-track note carries its pitch name. Below the threshold
+// no legible face fits the row and the labels vanish rather than shrink
+// into noise.
+constexpr int kNoteNameMinKeyH = 12;
 // Auto snap grid: the zoom-adaptive grid shows the finest subdivision from
 // the feel's ladder whose cells are at least this wide, so lower values
 // mean a busier grid at the same zoom. Exposed so viewcheck derives its
@@ -226,6 +231,13 @@ class SongView : public QWidget
     static QColor velocityNoteColor(int velocity);
     bool velocityColorMode() const { return m_velocityColorMode; }
     void setVelocityColorMode(bool on);
+    // Note-name display mode (View menu, app-wide): from kNoteNameMinKeyH of
+    // vertical zoom up, active-track notes are labeled with their pitch name,
+    // left-anchored and free to run past a short note's right edge. A run of
+    // same-pitch notes packed tighter than the label keeps only the run's
+    // last name. Ghost notes are never labeled.
+    bool noteNameMode() const { return m_noteNameMode; }
+    void setNoteNameMode(bool on);
     // App-wide Follow Playhead toggle (transport bar / View menu): off, the
     // playback follow-scroll — the roll's and the event list's — is
     // suppressed and the camera stays where the user put it.
@@ -556,6 +568,7 @@ class SongView : public QWidget
     GridFeel m_gridFeel = GridFeel::Straight;
     int m_gridMinDenom = 0;                            // note denominator; 0 = clock-grid floor
     bool m_velocityColorMode = false;                  // velocityNoteColor fills (View menu)
+    bool m_noteNameMode = false;                       // pitch labels on notes (View menu)
     bool m_followPlayhead = true;                      // playback follow-scroll (transport bar)
     std::vector<std::pair<int, uint8_t>> m_emptyLanes; // (track, cc), unsorted
 
