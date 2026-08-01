@@ -239,7 +239,6 @@ const QColor &trackTextColor(int track)
     return themes::trackIdentityTextColor(trackIdentityIndex(track));
 }
 
-
 // Ghost notes (unselected tracks) mix 24% of their track identity into the
 // row background in OKLab. Cap only the lightness offset so bright identities
 // stay equally recessive on light and dark themes.
@@ -524,16 +523,14 @@ std::optional<QFont> velocityLabelFont(const QFont &source, int availableHeight)
 {
     auto font = typography::fitted(source, availableHeight);
     if (font)
-        font->setPixelSize(
-            std::max(lyt::singlePixel(), font->pixelSize() - lyt::singlePixel()));
+        font->setPixelSize(std::max(lyt::singlePixel(), font->pixelSize() - lyt::singlePixel()));
     return font;
 }
 std::optional<QFont> noteNameFont(const QFont &source, qreal noteBoxHeight)
 {
     const auto textHeight = int(std::floor(noteBoxHeight - 2.0 * lyt::space(Space::Half)));
     auto font = typography::noteName(source);
-    font.setPixelSize(
-        std::max(lyt::singlePixel(), font.pixelSize() - 2 * lyt::singlePixel()));
+    font.setPixelSize(std::max(lyt::singlePixel(), font.pixelSize() - 2 * lyt::singlePixel()));
     return typography::fitted(font, textHeight);
 }
 
@@ -1680,8 +1677,7 @@ class PianoRoll : public TimelineSurface
                 setCursor(m_cursors.rightEdge);
             else if (hit && nearLeftEdge(*hit, event->position()))
                 setCursor(m_cursors.leftEdge);
-            else if (hit &&
-                     keys.matchesModifier(hoverMods, QStringLiteral("roll.velocity_drag")))
+            else if (hit && keys.matchesModifier(hoverMods, QStringLiteral("roll.velocity_drag")))
                 setCursor(Qt::SizeVerCursor);
             else if (hit && nearVelocityHandle(*hit, event->position()))
                 setCursor(Qt::SizeVerCursor);
@@ -2357,9 +2353,8 @@ class PianoRoll : public TimelineSurface
         // Velocity values are optional at tight zoom levels; never force a
         // minimum face that can clip vertically.
         const auto velocityFont =
-            showVelocityValues
-                ? velocityLabelFont(painter.font(), int(std::lround(keyHeight)))
-                : std::optional<QFont>{};
+            showVelocityValues ? velocityLabelFont(painter.font(), int(std::lround(keyHeight)))
+                               : std::optional<QFont>{};
         if (velocityFont)
             painter.setFont(*velocityFont);
 
@@ -2367,8 +2362,8 @@ class PianoRoll : public TimelineSurface
         // Each visible active-track note independently shows its label only
         // when its complete name fits with two trailing spaces; the velocity
         // shortcut replaces it with the note's velocity value.
-        const auto nameFont = !drawingGhostNotes && !showVelocityValues &&
-                                      m_sv->noteNameMode() && keyHeight >= kNoteNameMinKeyH
+        const auto nameFont = !drawingGhostNotes && !showVelocityValues && m_sv->noteNameMode() &&
+                                      keyHeight >= kNoteNameMinKeyH
                                   ? noteNameFont(painter.font(), keyHeight - physicalPixel())
                                   : std::optional<QFont>{};
         if (nameFont)
@@ -2444,10 +2439,7 @@ class PianoRoll : public TimelineSurface
 
     // Note labels use the track's paired contrast color, selected once per
     // track identity rather than from the piano key.
-    const QColor &noteTextColor(int track) const
-    {
-        return trackTextColor(track);
-    }
+    const QColor &noteTextColor(int track) const { return trackTextColor(track); }
 
     // The pitch label stays inside the note face. A note that cannot fit the
     // complete name with the shared Space::Two reserve remains unlabeled.
@@ -2455,8 +2447,8 @@ class PianoRoll : public TimelineSurface
     {
         const auto textInset = lyt::space(Space::Half);
         const QString name = keyName(key);
-        return noteRect.width() >= textInset + metrics.horizontalAdvance(name) +
-                                       lyt::space(Space::Two);
+        return noteRect.width() >=
+               textInset + metrics.horizontalAdvance(name) + lyt::space(Space::Two);
     }
 
     void drawNoteName(QPainter &painter, const QRectF &noteRect, const QRectF &noteBox, int key,
@@ -2474,7 +2466,6 @@ class PianoRoll : public TimelineSurface
         painter.drawText(labelRect, Qt::AlignLeft | Qt::AlignVCenter, name);
         painter.restore();
     }
-
 
     // The pending note of a draw gesture, solid like the real note. (Move and
     // resize gestures need no extra pass: drawNotes paints the selected notes
@@ -2507,8 +2498,7 @@ class PianoRoll : public TimelineSurface
                 }
             }
         } else if (m_sv->noteNameMode() && m_sv->keyHeight() >= kNoteNameMinKeyH) {
-            if (const auto font =
-                    noteNameFont(p.font(), box.height())) {
+            if (const auto font = noteNameFont(p.font(), box.height())) {
                 p.setFont(*font);
                 drawNoteName(p, r, box, m_drawKey, selected);
             }

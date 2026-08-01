@@ -167,8 +167,8 @@ bool contextsOverlap(Context a, Context b)
 
 Qt::KeyboardModifiers shortcutModifiers(Qt::KeyboardModifiers modifiers)
 {
-    return modifiers & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier |
-                        Qt::MetaModifier);
+    return modifiers &
+           (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
 }
 
 } // namespace

@@ -173,8 +173,7 @@ QFont bold(const QFont &source)
 
 std::optional<QFont> fitted(const QFont &base, int availableHeight)
 {
-    return fitFont(base,
-                   std::min(resolvedPixelSize(base), resolvedPixelSize(caption(base))),
+    return fitFont(base, std::min(resolvedPixelSize(base), resolvedPixelSize(caption(base))),
                    availableHeight);
 }
 

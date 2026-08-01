@@ -4,8 +4,8 @@
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
-#include <QFontMetrics>
 #include <QElapsedTimer>
+#include <QFontMetrics>
 #include <QIcon>
 #include <QImage>
 #include <QKeyEvent>
@@ -33,8 +33,8 @@
 #include "project/decompproject.h"
 #include "rollcheckplayhead.h"
 #include "ui/layout.h"
-#include "ui/typography.h"
 #include "ui/songview.h"
+#include "ui/typography.h"
 
 // --rollcheck <projectRoot> <song> [shot.png]: piano-roll gesture check.
 // Drives the roll widget offscreen with synthesized mouse events: the
@@ -977,8 +977,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         const SongView::ViewState viewBeforeNames = view.viewState();
         SongView::ViewState namedState = viewBeforeNames;
         namedState.keyHeight = 24.0;
-        namedState.scrollY = std::max(
-            0.0, (127.5 - double(noteA.key)) * namedState.keyHeight - roll->height() / 2.0);
+        namedState.scrollY = std::max(0.0, (127.5 - double(noteA.key)) * namedState.keyHeight -
+                                               roll->height() / 2.0);
         view.applyViewState(namedState);
         const SnappedRows namedRows{view, *roll};
         const QRectF namedNoteBox =
@@ -1005,9 +1005,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         SongView::ViewState shortRows = namedState;
         const auto labelPadding = layout::space(layout::Space::Half);
         auto fixedLabelFont = typography::noteName(roll->font());
-        fixedLabelFont.setPixelSize(std::max(layout::singlePixel(),
-                                              fixedLabelFont.pixelSize() -
-                                                  2 * layout::singlePixel()));
+        fixedLabelFont.setPixelSize(std::max(layout::singlePixel(), fixedLabelFont.pixelSize() -
+                                                                        2 * layout::singlePixel()));
         const auto fixedLabelMetrics = QFontMetrics(fixedLabelFont);
         const auto fixedLabelHeight = fixedLabelMetrics.ascent() + fixedLabelMetrics.descent();
         shortRows.keyHeight = double(fixedLabelHeight + 2 * labelPadding);
@@ -1071,10 +1070,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                      y <= wideLabelRegion.bottom() && !wideLabelContrasts; ++y)
                     for (int x = wideLabelRegion.left();
                          x <= wideLabelRegion.right() && !wideLabelContrasts; ++x)
-                        wideLabelContrasts =
-                            runNamed.pixel(x, y) != runUnnamed.pixel(x, y) &&
-                            themes::contrastRatio(QColor(runNamed.pixel(x, y)),
-                                                  expectedNoteColor) >= 2.5;
+                        wideLabelContrasts = runNamed.pixel(x, y) != runUnnamed.pixel(x, y) &&
+                                             themes::contrastRatio(QColor(runNamed.pixel(x, y)),
+                                                                   expectedNoteColor) >= 2.5;
                 if (!wideLabelContrasts)
                     fail("no clearly contrasting label ink on a wide note face");
             }
