@@ -71,8 +71,7 @@ int checkEvent(const std::vector<SmfEvent> &evs, size_t n, uint8_t status, uint8
     }
     const SmfEvent &ev = evs[n];
     if (ev.status != status || ev.data0 != data0 || ev.data1 != data1) {
-        std::fprintf(stderr,
-                     "smfcheck: FAIL: event %zu = %02x %02x %02x, want %02x %02x %02x\n", n,
+        std::fprintf(stderr, "smfcheck: FAIL: event %zu = %02x %02x %02x, want %02x %02x %02x\n", n,
                      ev.status, ev.data0, ev.data1, status, data0, data1);
         return 1;
     }
@@ -90,8 +89,8 @@ SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data
 }
 
 // Writes smf into dir and loads it back through SongDocument.
-bool loadDocument(const SmfFile &smf, const QTemporaryDir &dir, const char *name,
-                  SongDocument *doc, QString *error)
+bool loadDocument(const SmfFile &smf, const QTemporaryDir &dir, const char *name, SongDocument *doc,
+                  QString *error)
 {
     SongInfo song;
     song.label = QString::fromLatin1(name);
@@ -201,13 +200,13 @@ int runSmfCheck()
         smf.tracks[0].endTick = 40; // conductor
 
         SmfTrack &t = smf.tracks[1];
-        t.events.push_back(channelEvent(0, 0x90, 60, 100)); // 0: on A
-        t.events.push_back(channelEvent(0, 0x90, 62, 80));  // 1: on C
-        t.events.push_back(channelEvent(0, 0x91, 60, 70));  // 2: on E (channel 1)
-        t.events.push_back(channelEvent(5, 0x90, 62, 0));   // 3: ends C (vel-0 form)
-        t.events.push_back(channelEvent(7, 0x81, 60, 0));   // 4: ends E only
-        t.events.push_back(channelEvent(10, 0x90, 60, 90)); // 5: on B, shares A's end
-        t.events.push_back(channelEvent(20, 0x80, 60, 0));  // 6: ends A and B
+        t.events.push_back(channelEvent(0, 0x90, 60, 100));   // 0: on A
+        t.events.push_back(channelEvent(0, 0x90, 62, 80));    // 1: on C
+        t.events.push_back(channelEvent(0, 0x91, 60, 70));    // 2: on E (channel 1)
+        t.events.push_back(channelEvent(5, 0x90, 62, 0));     // 3: ends C (vel-0 form)
+        t.events.push_back(channelEvent(7, 0x81, 60, 0));     // 4: ends E only
+        t.events.push_back(channelEvent(10, 0x90, 60, 90));   // 5: on B, shares A's end
+        t.events.push_back(channelEvent(20, 0x80, 60, 0));    // 6: ends A and B
         t.events.push_back(channelEvent(30, 0x90, 64, 50));   // 7: on D, unterminated
         t.events.push_back(channelEvent(31, 0x90, 0x83, 60)); // 8: on F, out-of-range key
         t.events.push_back(channelEvent(33, 0x80, 0x03, 0));  // 9: F's masked twin, no pair
@@ -217,8 +216,7 @@ int runSmfCheck()
         SongDocument doc;
         QString error;
         if (!loadDocument(smf, dir, "pairing", &doc, &error)) {
-            std::fprintf(stderr, "smfcheck: FAIL: pairing song load: %s\n",
-                         qUtf8Printable(error));
+            std::fprintf(stderr, "smfcheck: FAIL: pairing song load: %s\n", qUtf8Printable(error));
             failures++;
         } else {
             const int engineTrack = engineTrackForChunk(doc, 1);
