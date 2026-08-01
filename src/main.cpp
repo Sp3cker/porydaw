@@ -1,5 +1,7 @@
 #include <cstdio>
 
+#include <QByteArrayView>
+
 #include <QApplication>
 #include <QIcon>
 #include <QStyleHints>
@@ -84,9 +86,65 @@ int runKeymapCheck();
 // the optional song label + path save that song's rendered event list.
 int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong = QString(),
                       const QString &screenshotPath = QString());
+int runNoteIdentityCheck(const QString &scratchProject);
+int runHostSeamsCheck();
+int runVelocityModelCheck();
+int runEditorDrawerCheck(const QString &screenshotPath = QString());
+int runAutomationCheck(const QString &scratchProject, const QString &songLabel,
+                       const QString &screenshotPath = QString());
+int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel,
+                         const QString &screenshotPath = QString());
+int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel);
+int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel);
+int runMainWindowRoutingCheck(const QString &scratchProject, const QString &songA,
+                              const QString &songB);
+int runRenderingPlayheadCheck(const QString &scratchProject, const QString &songLabel,
+                              const QString &screenshotPath = QString());
+int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
+                            const QString &songB, const QString &screenshotPath = QString());
+
+namespace {
+
+int missingCheckArguments(const char *command, const char *arguments)
+{
+    std::fprintf(stderr, "porydaw: %s requires %s\n", command, arguments);
+    return 2;
+}
+
+} // namespace
+namespace {
+QtMessageHandler s_previousCheckMessageHandler = nullptr;
+
+bool isCheckInvocation(int argc, char *argv[])
+{
+    for (int index = 1; index < argc; ++index) {
+        const QByteArrayView argument(argv[index]);
+        if (argument.startsWith("--check-")
+            || (argument.startsWith("--") && argument.endsWith("check")))
+            return true;
+    }
+    return false;
+}
+
+void checkMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message)
+{
+    if (type == QtWarningMsg
+        && (message.startsWith(QStringLiteral("Populating font family aliases took "))
+            || message.startsWith(QStringLiteral("This plugin does not support "))))
+        return;
+    s_previousCheckMessageHandler(type, context, message);
+}
+
+void suppressOffscreenWarningsForChecks(int argc, char *argv[])
+{
+    if (isCheckInvocation(argc, argv))
+        s_previousCheckMessageHandler = qInstallMessageHandler(checkMessageHandler);
+}
+} // namespace
 
 int main(int argc, char *argv[])
 {
+    suppressOffscreenWarningsForChecks(argc, argv);
     QApplication app(argc, argv);
 #if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
     // The Windows dark theme renders badly; force light until the widgets are
@@ -112,7 +170,91 @@ int main(int argc, char *argv[])
     if (!ui::initializeApplication(app))
         return 1;
 
-    const QStringList args = app.arguments();
+    const auto args = app.arguments();
+    const auto noteIdentityCheck = args.indexOf(QStringLiteral("--check-note-identity"));
+    if (noteIdentityCheck >= 0) {
+        if (noteIdentityCheck + 1 >= args.size())
+            return missingCheckArguments("--check-note-identity", "<scratch-project>");
+        return runNoteIdentityCheck(args[noteIdentityCheck + 1]);
+    }
+    if (args.contains(QStringLiteral("--check-host-seams")))
+        return runHostSeamsCheck();
+    if (args.contains(QStringLiteral("--check-velocity-model")))
+        return runVelocityModelCheck();
+    const auto drawerCheck = args.indexOf(QStringLiteral("--check-editor-drawer"));
+    if (drawerCheck >= 0) {
+        const auto screenshotPath =
+            drawerCheck + 1 < args.size() ? args[drawerCheck + 1] : QString();
+        return runEditorDrawerCheck(screenshotPath);
+    }
+    const auto automationCheck = args.indexOf(QStringLiteral("--check-automation"));
+    if (automationCheck >= 0) {
+        if (automationCheck + 2 >= args.size())
+            return missingCheckArguments("--check-automation",
+                                         "<scratch-project> <song-label>");
+        const auto screenshotPath =
+            automationCheck + 3 < args.size() ? args[automationCheck + 3] : QString();
+        return runAutomationCheck(args[automationCheck + 1], args[automationCheck + 2],
+                                  screenshotPath);
+    }
+    const auto velocityPageCheck = args.indexOf(QStringLiteral("--check-velocity-page"));
+    if (velocityPageCheck >= 0) {
+        if (velocityPageCheck + 2 >= args.size())
+            return missingCheckArguments("--check-velocity-page",
+                                         "<scratch-project> <song-label>");
+        const auto screenshotPath =
+            velocityPageCheck + 3 < args.size() ? args[velocityPageCheck + 3] : QString();
+        return runVelocityPageCheck(args[velocityPageCheck + 1], args[velocityPageCheck + 2],
+                                    screenshotPath);
+    }
+    const auto sidecarCheck = args.indexOf(QStringLiteral("--check-sidecar"));
+    if (sidecarCheck >= 0) {
+        if (sidecarCheck + 2 >= args.size())
+            return missingCheckArguments("--check-sidecar", "<scratch-project> <song-label>");
+        return runViewSidecarCheck(args[sidecarCheck + 1], args[sidecarCheck + 2]);
+    }
+    const auto hostAdapterCheck = args.indexOf(QStringLiteral("--check-host-adapter"));
+    if (hostAdapterCheck >= 0) {
+        if (hostAdapterCheck + 2 >= args.size())
+            return missingCheckArguments("--check-host-adapter",
+                                         "<scratch-project> <song-label>");
+        return runHostAdapterCheck(args[hostAdapterCheck + 1], args[hostAdapterCheck + 2]);
+    }
+    const auto mainWindowRoutingCheck =
+        args.indexOf(QStringLiteral("--check-mainwindow-routing"));
+    if (mainWindowRoutingCheck >= 0) {
+        if (mainWindowRoutingCheck + 3 >= args.size())
+            return missingCheckArguments("--check-mainwindow-routing",
+                                         "<scratch-project> <song-a> <song-b>");
+        return runMainWindowRoutingCheck(args[mainWindowRoutingCheck + 1],
+                                         args[mainWindowRoutingCheck + 2],
+                                         args[mainWindowRoutingCheck + 3]);
+    }
+    const auto renderingPlayheadCheck =
+        args.indexOf(QStringLiteral("--check-rendering-playhead"));
+    if (renderingPlayheadCheck >= 0) {
+        if (renderingPlayheadCheck + 2 >= args.size())
+            return missingCheckArguments("--check-rendering-playhead",
+                                         "<scratch-project> <song-label>");
+        const auto screenshotPath = renderingPlayheadCheck + 3 < args.size()
+            ? args[renderingPlayheadCheck + 3]
+            : QString();
+        return runRenderingPlayheadCheck(args[renderingPlayheadCheck + 1],
+                                         args[renderingPlayheadCheck + 2], screenshotPath);
+    }
+    const auto hostIntegrationCheck =
+        args.indexOf(QStringLiteral("--check-host-integration"));
+    if (hostIntegrationCheck >= 0) {
+        if (hostIntegrationCheck + 3 >= args.size())
+            return missingCheckArguments("--check-host-integration",
+                                         "<scratch-project> <song-a> <song-b>");
+        const auto screenshotPath = hostIntegrationCheck + 4 < args.size()
+            ? args[hostIntegrationCheck + 4]
+            : QString();
+        return runHostIntegrationCheck(args[hostIntegrationCheck + 1],
+                                       args[hostIntegrationCheck + 2],
+                                       args[hostIntegrationCheck + 3], screenshotPath);
+    }
     if (args.contains(QStringLiteral("--version"))) {
         std::printf("porydaw %s (Qt %s)\n", PORYDAW_VERSION, qVersion());
         return 0;

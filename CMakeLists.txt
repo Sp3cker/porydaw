@@ -233,6 +233,13 @@ qt_add_executable(porydaw
     src/samplecheck.cpp
     src/sessioncheck.cpp
     src/keymapcheck.cpp
+    src/hostcheck.cpp
+    src/mainwindowroutingcheck.cpp
+    src/noteidcheck.cpp
+    src/renderingplayheadcheck.cpp
+    src/rollcheckautomation.cpp
+    src/rollcheckdrawer.cpp
+    src/rollcheckpsgvelocity.cpp
     resources/fonts.qrc
 )
 if(APPLE)
@@ -298,13 +305,24 @@ if(BUILD_TESTING)
     )
     target_link_libraries(porydaw_themechecks PRIVATE porydaw_app)
 
+    qt_add_executable(porydaw_editorlayoutcheck
+        src/editorlayoutcheck.cpp
+        resources/fonts.qrc
+    )
+    target_link_libraries(porydaw_editorlayoutcheck PRIVATE porydaw_app)
+
     add_test(NAME porydaw_theme_checks
              COMMAND porydaw_themechecks --themecheck)
+    add_test(NAME porydaw_editor_layout_12
+             COMMAND porydaw_editorlayoutcheck --base-font-px 12)
+    add_test(NAME porydaw_editor_layout_16
+             COMMAND porydaw_editorlayoutcheck --base-font-px 16)
     add_test(NAME porydaw_fontcheck
              COMMAND porydaw_themechecks --fontcheck)
     add_test(NAME porydaw_darkbase_check
              COMMAND porydaw_themechecks --darkbasecheck)
-    set_tests_properties(porydaw_theme_checks porydaw_darkbase_check
+    set_tests_properties(porydaw_theme_checks porydaw_darkbase_check porydaw_editor_layout_12
+        porydaw_editor_layout_16
         PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     # fontcheck runs on the native platform on Windows so it exercises the
     # real font stack the TTF hinting targets; everywhere else offscreen

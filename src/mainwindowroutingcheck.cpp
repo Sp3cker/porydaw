@@ -1,0 +1,940 @@
+#include <algorithm>
+#include <cstdint>
+#include <vector>
+
+#include <QAction>
+#include <QApplication>
+#include <QCoreApplication>
+#include <QUndoStack>
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QFile>
+#include <QEvent>
+#include <QKeySequence>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QSettings>
+#include <QStatusBar>
+#include <QTabWidget>
+#include <QTemporaryDir>
+#include <QPixmap>
+#include <QWidget>
+#include <cstdio>
+#include "core/miditimeline.h"
+
+#include "project/sidecar.h"
+#include "core/smf.h"
+#include "mainwindow.h"
+#include "ui/viewsidecar.h"
+#include "ui/automationarea.h"
+#include "ui/playheadoverlay.h"
+#include "ui/songview.h"
+#include "ui/editordrawer.h"
+#include "ui/layout.h"
+#include "ui/velocityarea.h"
+
+namespace {
+
+QByteArray fileContents(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray{};
+}
+
+template <class T> T *descendant(QWidget &owner)
+{
+    for (QWidget *widget : owner.findChildren<QWidget *>()) {
+        if (auto *typed = dynamic_cast<T *>(widget))
+            return typed;
+    }
+    return nullptr;
+}
+
+void sendUnmodifiedKey(QWidget &window, Qt::Key key)
+{
+    QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier);
+    QApplication::sendEvent(&window, &press);
+    QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier);
+    QApplication::sendEvent(&window, &release);
+}
+
+void sendMouse(QWidget &widget, QEvent::Type type, const QPointF &position, Qt::MouseButton button,
+               Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+{
+    QMouseEvent event(type, position, button, buttons, modifiers);
+    QApplication::sendEvent(&widget, &event);
+}
+
+QPointF velocityNodePosition(const SongView &view, const VelocityArea &area,
+                             const MidiTimeline &timeline, const DocNote &note)
+{
+    const double x = double(area.plotOrigin()) + double(note.tick) * view.pxPerBeat()
+        / double(timeline.ticksPerBeat) - view.viewState().scrollPx;
+    return {x, area.axis().velocityToY(note.velocity)};
+}
+
+} // namespace
+
+bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QString &songA,
+                                           const QString &songB)
+{
+    if (!m_audioOk) {
+        std::fprintf(stderr, "mainwindow-routing: no audio device available\n");
+        return false;
+    }
+    if (!openProjectDir(projectRoot, /*interactive=*/false)) {
+        std::fprintf(stderr, "mainwindow-routing: project failed to open\n");
+        return false;
+    }
+
+    int failures = 0;
+    const auto check = [&failures](bool condition, const char *message) {
+        if (!condition) {
+            std::fprintf(stderr, "mainwindow-routing: FAIL: %s\n", message);
+            ++failures;
+        }
+    };
+
+    resize(960, 640);
+    show();
+    QCoreApplication::processEvents();
+    loadSongByLabel(songA);
+    SongSession *tabA = m_active;
+    loadSongByLabel(songB, /*newTab=*/true);
+    SongSession *tabB = m_active;
+    if (!tabA || !tabB || tabA == tabB || m_tabs->count() != 2) {
+        std::fprintf(stderr, "mainwindow-routing: songs did not open in two tabs\n");
+        return false;
+    }
+
+    check(m_automationDrawerAction->shortcut() == QKeySequence(Qt::Key_A)
+              && m_automationDrawerAction->shortcutContext() == Qt::WindowShortcut
+              && m_automationDrawerAction->toolTip()
+                     == QStringLiteral("Show or hide automation lanes (A)"),
+          "automation route is not the required WindowShortcut action");
+    check(m_velocityDrawerAction->shortcut() == QKeySequence(Qt::Key_V)
+              && m_velocityDrawerAction->shortcutContext() == Qt::WindowShortcut
+              && m_velocityDrawerAction->toolTip()
+                     == QStringLiteral("Show or hide note velocities (V)"),
+          "velocity route is not the required WindowShortcut action");
+
+    tabA->view->setDrawerPage(EditorDrawerPage::Automations);
+    tabA->view->setDrawerVisible(false);
+    tabB->view->setDrawerPage(EditorDrawerPage::Automations);
+    tabB->view->setDrawerVisible(false);
+    const EditorDrawerPage inactivePage = tabA->view->drawerPage();
+    const bool inactiveVisible = tabA->view->drawerVisible();
+
+    tabB->view->focusContent();
+    sendUnmodifiedKey(*this, Qt::Key_A);
+    check(tabB->view->drawerVisible()
+              && tabB->view->drawerPage() == EditorDrawerPage::Automations
+              && tabA->view->drawerVisible() == inactiveVisible
+              && tabA->view->drawerPage() == inactivePage
+              && statusBar()->currentMessage() == QStringLiteral("Automation lanes shown"),
+          "automation route did not change and announce only the active tab");
+    sendUnmodifiedKey(*this, Qt::Key_A);
+    check(!tabB->view->drawerVisible()
+              && statusBar()->currentMessage() == QStringLiteral("Automation lanes hidden"),
+          "automation route did not report closing the active drawer");
+    sendUnmodifiedKey(*this, Qt::Key_V);
+    QCoreApplication::processEvents();
+    check(tabB->view->drawerVisible() && tabB->view->drawerPage() == EditorDrawerPage::Velocity
+              && statusBar()->currentMessage() == QStringLiteral("Velocity lane shown"),
+          "velocity route did not open the active velocity drawer");
+    sendUnmodifiedKey(*this, Qt::Key_V);
+    QCoreApplication::processEvents();
+    QWidget *focusAfterClose = QApplication::focusWidget();
+    check(focusAfterClose && (focusAfterClose == tabB->view
+                              || tabB->view->isAncestorOf(focusAfterClose)),
+          "closing a focus-owned drawer did not return focus to active content");
+
+    tabB->view->setDrawerPage(EditorDrawerPage::Velocity);
+    tabB->view->setDrawerHeight(180);
+    const int retainedHeight = tabB->view->drawerHeight();
+    tabB->view->setDrawerVisible(false);
+    check(tabB->view->drawerPage() == EditorDrawerPage::Velocity
+              && tabB->view->drawerHeight() == retainedHeight,
+          "drawer hide did not retain its page and last-open height");
+    m_tabs->setCurrentWidget(tabA->view);
+    m_tabs->setCurrentWidget(tabB->view);
+    QCoreApplication::processEvents();
+    QWidget *focusAfterTabSwitch = QApplication::focusWidget();
+    check(focusAfterTabSwitch && (focusAfterTabSwitch == tabB->view
+                                  || tabB->view->isAncestorOf(focusAfterTabSwitch))
+              && focusAfterTabSwitch->focusPolicy() != Qt::NoFocus,
+          "tab switch did not request active content focus");
+    check(m_active == tabB && tabB->view->drawerPage() == EditorDrawerPage::Velocity
+              && tabB->view->drawerHeight() == retainedHeight,
+          "drawer state did not survive a tab switch");
+
+    tabB->view->setEventListVisible(true);
+    QCoreApplication::processEvents();
+    const bool blockedVisible = tabB->view->drawerVisible();
+    const EditorDrawerPage blockedPage = tabB->view->drawerPage();
+    const QString blockedStatus = statusBar()->currentMessage();
+    check(!m_automationDrawerAction->isEnabled() && !m_velocityDrawerAction->isEnabled(),
+          "event-list mode did not disable drawer routes");
+    sendUnmodifiedKey(*this, Qt::Key_V);
+    check(tabB->view->drawerVisible() == blockedVisible && tabB->view->drawerPage() == blockedPage
+              && statusBar()->currentMessage() == blockedStatus,
+          "event-list mode let a drawer route change or announce");
+    tabB->view->setEventListVisible(false);
+    QCoreApplication::processEvents();
+    check(m_automationDrawerAction->isEnabled() && m_velocityDrawerAction->isEnabled(),
+          "leaving event-list mode did not re-enable drawer routes");
+
+    const EditorAutomationRowId persistedLane{EditorAutomationRowKind::ControlChange, 0, 74};
+    EditorViewState drawerCosmetics = tabB->view->editorViewState();
+    drawerCosmetics.laneHeight = 53;
+    drawerCosmetics.laneHeights[persistedLane] = 61;
+    drawerCosmetics.laneRanges[persistedLane] = 100;
+    drawerCosmetics.emptyLanes.insert(persistedLane);
+    tabB->view->applyEditorViewState(drawerCosmetics);
+
+    const QByteArray sidecarBefore = fileContents(ViewSidecar::pathFor(projectRoot, songB));
+    const QByteArray midiBefore = tabB->doc.smf().write();
+    const uint64_t revisionBefore = tabB->doc.revision();
+    const int undoBefore = tabB->doc.undoStack()->count();
+    tabB->view->setDrawerPage(EditorDrawerPage::Velocity);
+    tabB->view->setDrawerVisible(true);
+    tabB->view->setDrawerHeight(retainedHeight);
+    QCoreApplication::processEvents();
+    const EditorViewState expectedCosmetics = tabB->view->editorViewState();
+    check(tabB->doc.smf().write() == midiBefore && tabB->doc.revision() == revisionBefore
+              && tabB->doc.undoStack()->count() == undoBefore
+              && fileContents(ViewSidecar::pathFor(projectRoot, songB)) == sidecarBefore,
+          "view-only drawer state changed MIDI, Undo, or persisted outside a boundary");
+
+    closeTab(m_tabs->indexOf(tabB->view));
+    ViewSidecar::Snapshot savedSnapshot;
+    check(ViewSidecar::load(projectRoot, songB, &savedSnapshot) && savedSnapshot.view.valid
+              && savedSnapshot.editor == expectedCosmetics,
+          "tab close did not persist drawer cosmetics at its save boundary");
+    loadSongByLabel(songB, true);
+    SongSession *reopened = sessionForLabel(songB);
+    check(reopened && reopened->view->drawerVisible()
+              && reopened->view->drawerPage() == EditorDrawerPage::Velocity
+              && reopened->view->drawerHeight() == retainedHeight
+              && reopened->view->editorViewState() == expectedCosmetics,
+          "reopened song did not apply persisted drawer cosmetics after attachment");
+
+    hide();
+    std::printf("mainwindow-routing: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);
+    return failures == 0;
+}
+
+int runMainWindowRoutingCheck(const QString &projectRoot, const QString &songA, const QString &songB)
+{
+    QTemporaryDir settingsDir;
+    if (!settingsDir.isValid()) {
+        std::fprintf(stderr, "mainwindow-routing: no temporary settings directory\n");
+        return 1;
+    }
+    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
+
+    MainWindow window;
+    return window.runMainWindowRoutingCheck(projectRoot, songA, songB) ? 0 : 1;
+}
+
+int runHostIntegrationCheck(const QString &scratchProject, const QString &songA, const QString &songB,
+                            const QString &screenshotPath)
+{
+    QTemporaryDir settingsDir;
+    if (!settingsDir.isValid()) {
+        std::fprintf(stderr, "host-integration: no temporary settings directory\n");
+        return 1;
+    }
+    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
+
+    int failures = 0;
+    const auto check = [&failures](bool condition, const char *message) {
+        if (!condition) {
+            std::fprintf(stderr, "host-integration: FAIL %s\n", message);
+            ++failures;
+        }
+    };
+    MainWindow window;
+    check(window.runMainWindowRoutingCheck(scratchProject, songA, songB),
+          "MainWindow drawer routing flow failed");
+    window.resize(960, 680);
+    window.show();
+    QCoreApplication::processEvents();
+    SongSession *session = window.m_active;
+    SongView *view = session ? session->view : nullptr;
+    SongDocument *document = view ? view->document() : nullptr;
+    check(view && document && session->timeline,
+          "MainWindow flow did not leave an attached SongView and timeline");
+    if (view && document && session->timeline) {
+        auto noteTrack = -1;
+        auto notes = std::vector<DocNote>{};
+        for (auto track = 0; track < int(document->smf().tracks.size()); ++track) {
+            const auto candidate = document->notesForTrack(track);
+            if (candidate.size() >= 2) {
+                noteTrack = track;
+                notes = candidate;
+                break;
+            }
+        }
+        check(noteTrack >= 0, "active song has no two-note velocity adapter fixture");
+        if (noteTrack >= 0) {
+            view->selectTrack(noteTrack);
+            const DocNote firstNote = notes[0];
+            const DocNote secondNote = notes[1];
+            const std::vector<NoteId> selection{firstNote.noteId, secondNote.noteId};
+            view->setSelection(selection);
+            auto velocities = std::vector<NoteVelocity>{
+                {firstNote.noteId, firstNote.velocity},
+                {secondNote.noteId, secondNote.velocity}};
+            const QByteArray midiBeforeNoOp = document->smf().write();
+            const uint64_t revisionBeforeNoOp = document->revision();
+            const int undoBeforeNoOp = document->undoStack()->count();
+            const auto noOp = view->applyVelocityMutation(revisionBeforeNoOp, velocities);
+            check(noOp && *noOp == revisionBeforeNoOp
+                      && document->smf().write() == midiBeforeNoOp
+                      && document->revision() == revisionBeforeNoOp
+                      && document->undoStack()->count() == undoBeforeNoOp
+                      && view->selection() == selection,
+                  "unchanged NoteId batch changed MIDI, document state, or selection");
+
+            velocities[0].velocity = firstNote.velocity == 127 ? 1 : 127;
+            velocities[1].velocity = secondNote.velocity == 1 ? 127 : 1;
+            const uint64_t revisionBeforeChange = document->revision();
+            const int undoBeforeChange = document->undoStack()->count();
+            const auto accepted = view->applyVelocityMutation(revisionBeforeChange, velocities);
+            check(accepted && *accepted == revisionBeforeChange + 1
+                      && document->revision() == revisionBeforeChange + 1
+                      && document->undoStack()->count() == undoBeforeChange + 1
+                      && view->selection() == selection,
+                  "revisioned NoteId batch was not accepted exactly once");
+            const auto staleVelocities = std::vector<NoteVelocity>{
+                {firstNote.noteId, firstNote.velocity == 127 ? 1 : firstNote.velocity + 1},
+                {secondNote.noteId, secondNote.velocity == 1 ? 127 : secondNote.velocity - 1}};
+            const QByteArray midiBeforeStale = document->smf().write();
+            const uint64_t revisionBeforeStale = document->revision();
+            const int undoBeforeStale = document->undoStack()->count();
+            const auto stale = view->applyVelocityMutation(revisionBeforeChange, staleVelocities);
+            check(!stale
+                      && document->smf().write() == midiBeforeStale
+                      && document->revision() == revisionBeforeStale
+                      && document->undoStack()->count() == undoBeforeStale
+                      && view->selection() == selection,
+                  "stale multi-note NoteId batch was not rejected atomically");
+            document->undoStack()->undo();
+            const auto undoneNotes = document->notesForTrack(noteTrack);
+            const auto restoredFirst = std::find_if(
+                undoneNotes.begin(), undoneNotes.end(), [&firstNote](const DocNote &current) {
+                    return current.noteId == firstNote.noteId;
+                });
+            const auto restoredSecond = std::find_if(
+                undoneNotes.begin(), undoneNotes.end(), [&secondNote](const DocNote &current) {
+                    return current.noteId == secondNote.noteId;
+                });
+            check(restoredFirst != undoneNotes.end() && restoredSecond != undoneNotes.end()
+                      && restoredFirst->velocity == firstNote.velocity
+                      && restoredSecond->velocity == secondNote.velocity
+                      && view->selection() == selection,
+                  "velocity batch undo did not restore each accepted value and selection");
+        }
+
+        view->setDrawerPage(EditorDrawerPage::Velocity);
+        view->setDrawerVisible(true);
+        view->setDrawerHeight(180);
+        view->setDocument(nullptr);
+        view->setDocument(document);
+        view->setDrawerVisible(false);
+        view->setDrawerVisible(true);
+        QCoreApplication::processEvents();
+        auto *automation = descendant<AutomationArea>(*view);
+        auto *velocity = descendant<VelocityArea>(*view);
+        auto *drawer = descendant<EditorDrawer>(*view);
+        check(automation && velocity && drawer, "host flow did not expose drawer and page diagnostics");
+        if (automation && velocity && drawer) {
+            view->setDrawerPage(EditorDrawerPage::Velocity);
+            view->setFollowPlayhead(false);
+            auto firstTick = uint64_t{0};
+            auto finalTick = uint64_t{0};
+            auto foundSteadySamples = false;
+            for (uint64_t candidate = 0; candidate < 4096 && !foundSteadySamples; ++candidate) {
+                const EditorPageVoiceContext context = view->voiceContext(candidate);
+                uint64_t previousSample = 0;
+                auto steady = true;
+                for (uint64_t offset = 0; offset <= 120; ++offset) {
+                    const EditorPageVoiceContext next = view->voiceContext(candidate + offset);
+                    const uint64_t sample = session->timeline->sampleForTick(candidate + offset);
+                    if (next.voice != context.voice || next.voiceSlot != context.voiceSlot
+                        || (offset > 0 && sample <= previousSample)) {
+                        steady = false;
+                        break;
+                    }
+                    previousSample = sample;
+                }
+                if (steady) {
+                    firstTick = candidate;
+                    finalTick = candidate + 120;
+                    foundSteadySamples = true;
+                }
+            }
+            check(foundSteadySamples, "timeline has no steady 120-sample playhead span");
+            if (foundSteadySamples) {
+                view->setPlayheadSample(session->timeline->sampleForTick(firstTick), true);
+                QCoreApplication::processEvents();
+                const auto automationBefore = automation->diagnostics();
+                const auto velocityBefore = velocity->diagnostics();
+                for (uint64_t tick = firstTick + 1; tick <= finalTick; ++tick)
+                    view->setPlayheadSample(session->timeline->sampleForTick(tick), true);
+                QCoreApplication::processEvents();
+                check(uint64_t(view->playheadTick() + 0.5) == finalTick,
+                      "SongView playhead did not reach the final tick");
+                check(velocity->diagnostics().playheadPresentationCount
+                          == velocityBefore.playheadPresentationCount + 120,
+                      "velocity page did not receive all distinct playhead samples");
+                check(automation->diagnostics() == automationBefore
+                          && velocity->diagnostics().contentBuildCount
+                                 == velocityBefore.contentBuildCount,
+                      "steady SongView playhead ticks rebuilt hosted page content");
+            }
+
+            const auto editBefore = velocity->diagnostics();
+            const auto liveNotes = noteTrack >= 0 ? document->notesForTrack(noteTrack)
+                                                   : std::vector<DocNote>{};
+            if (!liveNotes.empty()) {
+                const DocNote editNote = liveNotes.front();
+                const uint8_t editedVelocity = editNote.velocity == 127 ? 1 : editNote.velocity + 1;
+                const std::vector<NoteVelocity> edit{{editNote.noteId, editedVelocity}};
+                const uint64_t editRevision = document->revision();
+                const auto changed = view->applyVelocityMutation(editRevision, edit);
+                QCoreApplication::processEvents();
+                check(changed && *changed == editRevision + 1
+                          && velocity->diagnostics().contentBuildCount
+                                 > editBefore.contentBuildCount,
+                      "document edit did not invalidate affected velocity content");
+                document->undoStack()->undo();
+            } else {
+                check(false, "velocity edit invalidation fixture is unavailable");
+            }
+            const auto selectionBefore = velocity->diagnostics();
+            view->clearSelection();
+            QCoreApplication::processEvents();
+            check(velocity->diagnostics().contentBuildCount > selectionBefore.contentBuildCount,
+                  "selection change did not invalidate affected velocity content");
+            const auto zoomBefore = velocity->diagnostics();
+            view->zoomAroundContentX(1.1, qreal(view->width()) / 2.0);
+            QCoreApplication::processEvents();
+            check(velocity->diagnostics().contentBuildCount > zoomBefore.contentBuildCount,
+                  "zoom did not invalidate affected velocity content");
+            view->setDrawerPage(EditorDrawerPage::Automations);
+            QCoreApplication::processEvents();
+            const auto automationThemeBefore = automation->diagnostics();
+            QEvent automationThemeChange(QEvent::PaletteChange);
+            QApplication::sendEvent(automation, &automationThemeChange);
+            QCoreApplication::processEvents();
+            check(automation->diagnostics().contentInvalidationCount
+                      > automationThemeBefore.contentInvalidationCount,
+                  "theme change did not invalidate affected automation content");
+            view->setDrawerPage(EditorDrawerPage::Velocity);
+
+            if (noteTrack >= 0) {
+                view->addEmptyLane(noteTrack, 74);
+                EditorViewState automationCosmetics = view->editorViewState();
+                automationCosmetics.laneHeight = layout::editorGeometry().automationRowDefaultHeight;
+                view->applyEditorViewState(automationCosmetics);
+                document->addLanePoint(noteTrack, 74, 0, 64);
+                view->setDrawerPage(EditorDrawerPage::Automations);
+                QCoreApplication::processEvents();
+                const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange,
+                                                 uint8_t(noteTrack), 74};
+                const auto laneRow = std::find_if(
+                    automation->rows().begin(), automation->rows().end(),
+                    [&lane](const AutomationRow &row) { return row.id == lane; });
+                check(laneRow != automation->rows().end(),
+                      "automation lifecycle lane is unavailable");
+                if (laneRow != automation->rows().end()) {
+                    const int rowIndex = int(std::distance(automation->rows().begin(), laneRow));
+                    const qreal rowY = qreal(rowIndex * layout::editorGeometry().automationRowDefaultHeight
+                                              + layout::editorGeometry().automationRowDefaultHeight / 2);
+                    const QPointF automationPoint(layout::editorGeometry().plotOrigin, rowY);
+                    const auto beginAutomation = [&](Qt::MouseButton button,
+                                                     Qt::KeyboardModifiers modifiers,
+                                                     qreal xOffset) {
+                        view->setDrawerPage(EditorDrawerPage::Automations);
+                        view->setDrawerVisible(true);
+                        sendMouse(*automation, QEvent::MouseButtonPress,
+                                  automationPoint + QPointF(xOffset, 0.0), button,
+                                  Qt::MouseButtons(button), modifiers);
+                        sendMouse(*automation, QEvent::MouseMove,
+                                  automationPoint + QPointF(xOffset + 32.0, 12.0),
+                                  Qt::NoButton, Qt::MouseButtons(button), modifiers);
+                    };
+                    const auto beginVelocity = [&](Qt::MouseButton button, const QPointF &position) {
+                        view->setDrawerPage(EditorDrawerPage::Velocity);
+                        view->setDrawerVisible(true);
+                        view->selectTrack(noteTrack);
+                        const auto live = document->notesForTrack(noteTrack);
+                        view->setSelection({live[0].noteId, live[1].noteId});
+                        QCoreApplication::processEvents();
+                        sendMouse(*velocity, QEvent::MouseButtonPress, position, button,
+                                  Qt::MouseButtons(button));
+                        sendMouse(*velocity, QEvent::MouseMove, position + QPointF(32.0, -24.0),
+                                  Qt::NoButton, Qt::MouseButtons(button));
+                    };
+                    const auto verifyTermination = [&](QWidget &surface, Qt::MouseButton button,
+                                                       const QPointF &release, auto begin) {
+                        const auto exercise = [&](const char *route, auto cancel,
+                                                  bool clearsSelection) {
+                            const QByteArray midi = document->smf().write();
+                            const uint64_t revision = document->revision();
+                            const int undo = document->undoStack()->count();
+                            begin();
+                            const std::vector<NoteId> selection = view->selection();
+                            const std::vector<NoteId> expectedSelection =
+                                clearsSelection ? std::vector<NoteId>{} : selection;
+                            cancel();
+                            sendMouse(surface, QEvent::MouseButtonRelease, release, button,
+                                      Qt::NoButton);
+                            QCoreApplication::processEvents();
+                            check(document->smf().write() == midi && document->revision() == revision
+                                      && document->undoStack()->count() == undo
+                                      && view->selection() == expectedSelection
+                                      && QWidget::mouseGrabber() != &surface
+                                      && surface.cursor().shape() != Qt::ClosedHandCursor,
+                                  route);
+                            view->setSong(session->timeline.get(), session->voicegroup);
+                            view->setDocument(document);
+                            view->setVoicegroup(session->voicegroup);
+                            view->setDrawerVisible(true);
+                            view->selectTrack(noteTrack);
+                            view->setSelection(selection);
+                        };
+                        exercise("page switch did not terminate the live gesture",
+                                 [&] { view->setDrawerPage(view->drawerPage()
+                                                               == EditorDrawerPage::Velocity
+                                                           ? EditorDrawerPage::Automations
+                                                           : EditorDrawerPage::Velocity); },
+                                 false);
+                        exercise("drawer hide did not terminate the live gesture",
+                                 [&] { view->setDrawerVisible(false); }, false);
+                        exercise("selected-track replacement did not terminate the live gesture",
+                                 [&] { view->selectTrack(noteTrack == 0 ? 1 : 0); }, true);
+                        exercise("song replacement did not terminate the live gesture",
+                                 [&] { view->setSong(nullptr, nullptr); }, true);
+                        exercise("document replacement did not terminate the live gesture",
+                                 [&] { view->setDocument(nullptr); }, true);
+                        LoadedVoiceGroup replacementVoicegroup{};
+                        exercise("voice replacement did not terminate the live gesture",
+                                 [&] { view->setVoicegroup(&replacementVoicegroup); }, false);
+                        exercise("mouse-grab loss did not terminate the live gesture", [&] {
+                            QEvent event(QEvent::UngrabMouse);
+                            QApplication::sendEvent(view, &event);
+                        }, false);
+                        exercise("window deactivation did not terminate the live gesture", [&] {
+                            QEvent event(QEvent::WindowDeactivate);
+                            QApplication::sendEvent(view, &event);
+                        }, false);
+                        exercise("Escape did not terminate the live gesture", [&] {
+                            QKeyEvent event(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+                            QApplication::sendEvent(view, &event);
+                        }, false);
+                    };
+                    verifyTermination(*automation, Qt::LeftButton, automationPoint + QPointF(32, 12),
+                                      [&] { beginAutomation(Qt::LeftButton, Qt::NoModifier, 0.0); });
+                    verifyTermination(*automation, Qt::LeftButton, automationPoint + QPointF(112, 12),
+                                      [&] { beginAutomation(Qt::LeftButton, Qt::NoModifier, 80.0); });
+                    verifyTermination(*automation, Qt::LeftButton, automationPoint + QPointF(192, 12),
+                                      [&] {
+                                          beginAutomation(Qt::LeftButton, Qt::ShiftModifier, 160.0);
+                                      });
+                    verifyTermination(*automation, Qt::RightButton, automationPoint + QPointF(272, 12),
+                                      [&] { beginAutomation(Qt::RightButton, Qt::NoModifier, 240.0); });
+
+                    const auto live = document->notesForTrack(noteTrack);
+                    const QPointF velocityPoint =
+                        velocityNodePosition(*view, *velocity, *session->timeline, live[0]);
+                    verifyTermination(*velocity, Qt::LeftButton, velocityPoint + QPointF(32, -24),
+                                      [&] { beginVelocity(Qt::LeftButton, velocityPoint); });
+                    verifyTermination(
+                        *velocity, Qt::LeftButton,
+                        QPointF(velocity->plotOrigin() + velocity->plotWidth() - 4, 8),
+                        [&] {
+                            beginVelocity(
+                                Qt::LeftButton,
+                                QPointF(velocity->plotOrigin() + velocity->plotWidth() - 36, 8));
+                        });
+                    verifyTermination(*velocity, Qt::RightButton, velocityPoint + QPointF(32, -24),
+                                      [&] { beginVelocity(Qt::RightButton, velocityPoint); });
+                    const auto startVelocityRelative = [&] {
+                        beginVelocity(Qt::LeftButton, velocityPoint);
+                    };
+                    const auto releaseVelocityRelative = [&] {
+                        sendMouse(*velocity, QEvent::MouseButtonRelease,
+                                  velocityPoint + QPointF(32, -24), Qt::LeftButton, Qt::NoButton);
+                        QCoreApplication::processEvents();
+                    };
+                    const std::vector<NoteId> selectionBeforeMutation = view->selection();
+                    const DocNote mutationNote = document->notesForTrack(noteTrack).front();
+                    const uint64_t mutationRevision = document->revision();
+                    const int mutationUndo = document->undoStack()->index();
+                    startVelocityRelative();
+                    document->setNotesVelocity(
+                        {mutationNote}, mutationNote.velocity == 127 ? 1 : mutationNote.velocity + 1);
+                    releaseVelocityRelative();
+                    check(document->revision() == mutationRevision + 1
+                              && document->undoStack()->index() == mutationUndo + 1
+                              && view->selection() == selectionBeforeMutation,
+                          "document mutation did not terminate and restore the staged velocity gesture");
+                    document->undoStack()->undo();
+
+                    const int undoIndex = document->undoStack()->index();
+                    startVelocityRelative();
+                    document->undoStack()->undo();
+                    releaseVelocityRelative();
+                    check(document->undoStack()->index() == undoIndex - 1
+                              && view->selection() == selectionBeforeMutation,
+                          "Undo did not terminate and restore the staged velocity gesture");
+                    document->undoStack()->redo();
+                    document->undoStack()->undo();
+                    const int redoIndex = document->undoStack()->index();
+                    startVelocityRelative();
+                    document->undoStack()->redo();
+                    releaseVelocityRelative();
+                    check(document->undoStack()->index() == redoIndex + 1
+                              && view->selection() == selectionBeforeMutation,
+                          "Redo did not terminate and restore the staged velocity gesture");
+
+                    const SongInfo *reloadSong = nullptr;
+                    for (const SongInfo &song : window.m_project.songs()) {
+                        if (song.label == document->label()) {
+                            reloadSong = &song;
+                            break;
+                        }
+                    }
+                    QString reloadError;
+                    startVelocityRelative();
+                    view->setDocument(nullptr);
+                    const bool reloaded = reloadSong && document->load(*reloadSong, &reloadError);
+                    releaseVelocityRelative();
+                    if (reloaded) {
+                        session->timeline = document->buildTimeline(window.m_audio.sampleRate());
+                        window.attachEngine(*session);
+                        view->setSong(session->timeline.get(), session->voicegroup);
+                        view->setDocument(document);
+                    }
+                    check(reloaded && view->selection().empty(),
+                          "reload did not terminate and clear the staged velocity gesture");
+                }
+                document->undoStack()->undo();
+            }
+        }
+        if (!screenshotPath.isEmpty())
+            check(window.grab().save(screenshotPath), "could not save host integration screenshot");
+    }
+
+    SongSession *songASession = window.sessionForLabel(songA);
+    SongSession *songBSession = window.m_active;
+    check(songASession && songBSession && songASession != songBSession,
+          "routing flow did not retain distinct sessions for persistence boundaries");
+    if (songASession && songBSession && songASession != songBSession) {
+        const EditorAutomationRowId replacementLane{
+            EditorAutomationRowKind::ControlChange, 0, 74};
+        EditorViewState replacementFixture;
+        replacementFixture.drawerVisible = true;
+        replacementFixture.drawerPage = EditorDrawerPage::Velocity;
+        replacementFixture.drawerHeight = 180;
+        replacementFixture.laneHeight = 53;
+        replacementFixture.laneHeights.emplace(replacementLane, 61);
+        replacementFixture.laneRanges.emplace(replacementLane, 100);
+        replacementFixture.emptyLanes.emplace(replacementLane);
+        songBSession->view->applyEditorViewState(replacementFixture);
+        QCoreApplication::processEvents();
+        const EditorViewState replacementState = songBSession->view->editorViewState();
+        const QString replacementMidiPath = songBSession->doc.midPath();
+        const QByteArray replacementMidi = fileContents(replacementMidiPath);
+        window.closeTab(window.m_tabs->indexOf(songASession->view));
+        window.loadSongByLabel(songA);
+        ViewSidecar::Snapshot replacedSnapshot;
+        check(window.m_active && window.m_active->doc.label() == songA
+                  && ViewSidecar::load(scratchProject, songB, &replacedSnapshot)
+                  && replacedSnapshot.editor == replacementState
+                  && fileContents(replacementMidiPath) == replacementMidi,
+              "song replacement did not save the outgoing typed view state");
+
+        SongSession *replacement = window.m_active;
+        if (replacement) {
+            replacement->view->setDrawerPage(EditorDrawerPage::Velocity);
+            replacement->view->setDrawerVisible(true);
+            replacement->view->setDrawerHeight(180);
+            const EditorViewState projectSwitchState = replacement->view->editorViewState();
+            const QString projectSwitchMidiPath = replacement->doc.midPath();
+            const QByteArray projectSwitchMidi = fileContents(projectSwitchMidiPath);
+            check(window.openProjectDir(scratchProject, false), "project switch failed");
+            ViewSidecar::Snapshot projectSwitchSnapshot;
+            check(window.m_sessions.empty()
+                      && ViewSidecar::load(scratchProject, songA, &projectSwitchSnapshot)
+                      && projectSwitchSnapshot.editor == projectSwitchState
+                      && fileContents(projectSwitchMidiPath) == projectSwitchMidi,
+                  "project switch did not save typed view state");
+
+            window.loadSongByLabel(songA);
+            SongSession *closing = window.m_active;
+            check(closing, "project switch did not permit a fresh attached session");
+            if (closing) {
+                closing->view->setDrawerPage(EditorDrawerPage::Velocity);
+                closing->view->setDrawerVisible(true);
+                closing->view->setDrawerHeight(180);
+                const EditorViewState closeState = closing->view->editorViewState();
+                const QByteArray midiBeforeClose = closing->doc.smf().write();
+                const QString closeMidiPath = closing->doc.midPath();
+                const QByteArray closeMidi = fileContents(closeMidiPath);
+                const int undoBeforeClose = closing->doc.undoStack()->count();
+                check(window.close(), "application close boundary was rejected");
+                ViewSidecar::Snapshot closeSnapshot;
+                check(closing->doc.smf().write() == midiBeforeClose
+                          && fileContents(closeMidiPath) == closeMidi
+                          && closing->doc.undoStack()->count() == undoBeforeClose
+                          && ViewSidecar::load(scratchProject, songA, &closeSnapshot)
+                          && closeSnapshot.editor == closeState,
+                      "application close changed MIDI or failed to save typed view state");
+            }
+        }
+    }
+    window.hide();
+    std::printf("host-integration: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);
+    return failures == 0 ? 0 : 1;
+}
+
+
+namespace {
+
+EditorAutomationRowId controllerRow(int track, int controller)
+{
+    return {EditorAutomationRowKind::ControlChange, uint8_t(track), uint8_t(controller)};
+}
+
+QJsonObject laneJson(int track, int controller)
+{
+    QJsonObject lane;
+    lane.insert(QStringLiteral("track"), track);
+    lane.insert(QStringLiteral("cc"), controller);
+    return lane;
+}
+
+bool writeJson(const QString &path, const QJsonObject &root)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        return false;
+    return file.write(QJsonDocument(root).toJson()) >= 0;
+}
+
+QJsonObject readJson(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    return QJsonDocument::fromJson(file.readAll()).object();
+}
+
+} // namespace
+
+int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel)
+{
+    auto failures = 0;
+    const auto check = [&failures](bool condition, const char *what) {
+        if (!condition) {
+            std::fprintf(stderr, "sidecar: FAIL: %s\n", what);
+            failures++;
+        }
+    };
+    if (scratchProject.isEmpty() || songLabel.isEmpty()) {
+        std::fprintf(stderr, "sidecar: scratch project and song label are required\n");
+        return 1;
+    }
+    const QString label = QStringLiteral("sidecar-check-") + songLabel;
+    const QString path = ViewSidecar::pathFor(scratchProject, label);
+    check(Sidecar::ensureDir(scratchProject), "created sidecar directory");
+    QJsonObject originalRoot;
+    originalRoot.insert(QStringLiteral("registration"),
+                        QJsonObject{{QStringLiteral("pending"), true}});
+    QJsonObject originalView;
+    originalView.insert(QStringLiteral("futureState"),
+                        QJsonArray{QJsonObject{{QStringLiteral("version"), 2}}, 7});
+    originalRoot.insert(QStringLiteral("view"), originalView);
+    check(writeJson(path, originalRoot), "seeded unrelated root and view fields");
+
+    ViewSidecar::Snapshot saved;
+    saved.view.valid = true;
+    saved.view.pxPerBeat = 48.0;
+    saved.view.keyHeight = 12.0;
+    saved.view.scrollPx = 21.5;
+    saved.view.scrollY = 7.25;
+    saved.view.selectedTrack = 2;
+    saved.view.editCursorTick = 96;
+    saved.view.gridMinDenom = 16;
+    saved.view.gridTriplet = true;
+    saved.view.eventList = true;
+    saved.editor.drawerVisible = false;
+    saved.editor.drawerPage = EditorDrawerPage::Velocity;
+    saved.editor.drawerHeight = 180;
+    saved.editor.laneHeight = 96;
+    const EditorAutomationRowId volume = controllerRow(2, 7);
+    const EditorAutomationRowId hidden = controllerRow(2, 20);
+    saved.editor.laneHeights.emplace(volume, 112);
+    saved.editor.laneRanges.emplace(volume, 91);
+    saved.editor.emptyLanes.emplace(volume);
+    saved.editor.hideLane(hidden);
+    check(ViewSidecar::save(scratchProject, label, saved), "saved detached snapshot");
+
+    ViewSidecar::Snapshot loaded;
+    loaded.view.valid = false;
+    loaded.editor.hideLane(controllerRow(9, 1));
+    check(ViewSidecar::load(scratchProject, label, &loaded), "loaded detached snapshot");
+    check(loaded.view.valid && loaded.view.pxPerBeat == saved.view.pxPerBeat &&
+              loaded.view.keyHeight == saved.view.keyHeight &&
+              loaded.view.scrollPx == saved.view.scrollPx &&
+              loaded.view.scrollY == saved.view.scrollY &&
+              loaded.view.selectedTrack == saved.view.selectedTrack &&
+              loaded.view.editCursorTick == saved.view.editCursorTick &&
+              loaded.view.gridMinDenom == saved.view.gridMinDenom &&
+              loaded.view.gridTriplet == saved.view.gridTriplet &&
+              loaded.view.eventList == saved.view.eventList,
+          "round trip restores the detached camera/grid snapshot");
+    check(loaded.editor.drawerVisible == saved.editor.drawerVisible &&
+              loaded.editor.drawerPage == saved.editor.drawerPage &&
+              loaded.editor.drawerHeight == saved.editor.drawerHeight &&
+              loaded.editor.laneHeight == saved.editor.laneHeight &&
+              loaded.editor.laneHeights == saved.editor.laneHeights &&
+              loaded.editor.laneRanges == saved.editor.laneRanges &&
+              loaded.editor.emptyLanes == saved.editor.emptyLanes &&
+              loaded.editor.hiddenLanes() == saved.editor.hiddenLanes(),
+          "round trip restores typed cosmetic state");
+    check(!loaded.editor.isLaneHidden(controllerRow(9, 1)),
+          "load replaces rather than merges a caller snapshot");
+    const QJsonObject canonicalRoot = readJson(path);
+    const QJsonObject canonicalView = canonicalRoot.value(QStringLiteral("view")).toObject();
+    const QJsonObject canonicalEditor = canonicalRoot.value(QStringLiteral("editor")).toObject();
+    check(canonicalRoot.value(QStringLiteral("registration")).toObject() ==
+                  originalRoot.value(QStringLiteral("registration")).toObject() &&
+              !canonicalView.contains(QStringLiteral("futureState")),
+          "save preserves unrelated root fields and replaces the view schema");
+    check(canonicalEditor.value(QStringLiteral("drawerVisible")).toBool() == false &&
+              canonicalEditor.value(QStringLiteral("drawerPage")).toString() ==
+                  QStringLiteral("velocity") &&
+              canonicalEditor.value(QStringLiteral("drawerHeight")).toInt() == 180,
+          "editor state uses its canonical root object");
+
+    QJsonObject viewOnly;
+    viewOnly.insert(QStringLiteral("pxPerBeat"), 48.0);
+    check(writeJson(path, QJsonObject{{QStringLiteral("view"), viewOnly}}),
+          "seeded view without canonical editor state");
+    ViewSidecar::Snapshot defaults;
+    check(ViewSidecar::load(scratchProject, label, &defaults) &&
+              defaults.editor == EditorViewState{},
+          "missing editor object uses editor defaults");
+
+    check(writeJson(path, QJsonObject{{QStringLiteral("view"), viewOnly},
+                                      {QStringLiteral("editor"), QStringLiteral("not-an-object")}}),
+          "seeded malformed editor object");
+    ViewSidecar::Snapshot malformedDefaults;
+    check(ViewSidecar::load(scratchProject, label, &malformedDefaults) &&
+              malformedDefaults.editor == EditorViewState{},
+          "malformed editor object uses editor defaults");
+
+    QJsonObject malformedRoot;
+    QJsonObject malformedView;
+    malformedView.insert(QStringLiteral("pxPerBeat"), true);
+    malformedRoot.insert(QStringLiteral("view"), malformedView);
+    QJsonObject malformedEditor;
+    malformedEditor.insert(QStringLiteral("laneHeight"), QStringLiteral("96"));
+    malformedEditor.insert(QStringLiteral("drawerVisible"), QStringLiteral("false"));
+    malformedEditor.insert(QStringLiteral("drawerPage"), QStringLiteral("future-page"));
+    malformedEditor.insert(QStringLiteral("drawerHeight"), QStringLiteral("180"));
+    QJsonObject heights;
+    heights.insert(QStringLiteral("cc:2:7"), 112);
+    heights.insert(QStringLiteral("cc:2:128"), 64);
+    heights.insert(QStringLiteral("cc:2:255"), 64);
+    heights.insert(QStringLiteral("voice:01"), 64);
+    heights.insert(QStringLiteral("tempo"), QStringLiteral("bad"));
+    malformedEditor.insert(QStringLiteral("laneHeights"), heights);
+    QJsonObject ranges;
+    ranges.insert(QStringLiteral("cc:2:7"), 91);
+    ranges.insert(QStringLiteral("cc:2:128"), 91);
+    ranges.insert(QStringLiteral("cc:2:255"), 128);
+    malformedEditor.insert(QStringLiteral("laneRanges"), ranges);
+    QJsonArray emptyLanes;
+    emptyLanes.append(laneJson(2, 7));
+    emptyLanes.append(laneJson(2, 128));
+    emptyLanes.append(
+        QJsonObject{{QStringLiteral("track"), QStringLiteral("2")}, {QStringLiteral("cc"), 7}});
+    malformedEditor.insert(QStringLiteral("emptyLanes"), emptyLanes);
+    QJsonArray hiddenLanes;
+    hiddenLanes.append(laneJson(2, 20));
+    hiddenLanes.append(laneJson(2, 128));
+    malformedEditor.insert(QStringLiteral("hiddenLanes"), hiddenLanes);
+    malformedRoot.insert(QStringLiteral("editor"), malformedEditor);
+    check(writeJson(path, malformedRoot), "seeded malformed known entries");
+    ViewSidecar::Snapshot strict;
+    check(ViewSidecar::load(scratchProject, label, &strict),
+          "loads canonical objects with malformed entries");
+    check(strict.view.pxPerBeat == SongView::ViewState{}.pxPerBeat &&
+              strict.editor.laneHeight == 0 && strict.editor.drawerVisible &&
+              strict.editor.drawerPage == EditorDrawerPage::Automations &&
+              strict.editor.drawerHeight == 0,
+          "invalid known scalars fall back independently");
+    check(strict.editor.laneHeights.size() == 2 &&
+              strict.editor.laneHeights.find(volume) != strict.editor.laneHeights.end() &&
+              strict.editor.laneHeights.find(controllerRow(2, 255)) !=
+                  strict.editor.laneHeights.end() &&
+              strict.editor.laneRanges.size() == 1 && strict.editor.laneRanges.at(volume) == 91,
+          "row keys and range values use canonical strict validation");
+    check(strict.editor.emptyLanes.size() == 1 &&
+              strict.editor.emptyLanes.find(volume) != strict.editor.emptyLanes.end() &&
+              strict.editor.hiddenLanes().size() == 1 && strict.editor.hiddenLanes()[0] == hidden,
+          "lane arrays tolerate bad entries without retaining invalid lanes");
+
+    const int maximumRowHeight = layout::editorGeometry().automationRowMaximumHeight;
+    QJsonObject oversizedHeights;
+    oversizedHeights.insert(QStringLiteral("cc:2:7"), maximumRowHeight + 1);
+    QJsonObject oversizedEditor;
+    oversizedEditor.insert(QStringLiteral("laneHeight"), maximumRowHeight + 1);
+    oversizedEditor.insert(QStringLiteral("laneHeights"), oversizedHeights);
+    check(writeJson(path, QJsonObject{{QStringLiteral("view"), QJsonObject{}},
+                                      {QStringLiteral("editor"), oversizedEditor}}),
+          "seeded oversized row heights");
+    ViewSidecar::Snapshot clamped;
+    check(ViewSidecar::load(scratchProject, label, &clamped), "loads oversized row heights");
+    const auto clampedHeight = clamped.editor.laneHeights.find(volume);
+    check(clamped.editor.laneHeight == maximumRowHeight &&
+              clampedHeight != clamped.editor.laneHeights.end() &&
+              clampedHeight->second == maximumRowHeight,
+          "oversized row heights restore at the resolved maximum");
+    check(ViewSidecar::save(scratchProject, label, clamped), "saves clamped row heights");
+    const QJsonObject clampedEditor = readJson(path).value(QStringLiteral("editor")).toObject();
+    check(clampedEditor.value(QStringLiteral("laneHeight")).toInt() == maximumRowHeight &&
+              clampedEditor.value(QStringLiteral("laneHeights"))
+                      .toObject()
+                      .value(QStringLiteral("cc:2:7"))
+                      .toInt() == maximumRowHeight,
+          "save retains canonical row heights");
+
+    ViewSidecar::Snapshot unchanged;
+    unchanged.view.valid = true;
+    unchanged.editor.drawerVisible = false;
+    check(writeJson(path, QJsonObject{{QStringLiteral("view"),
+                                       QJsonValue(QStringLiteral("not-an-object"))}}),
+          "seeded malformed view root");
+    check(!ViewSidecar::load(scratchProject, label, &unchanged) && unchanged.view.valid &&
+              !unchanged.editor.drawerVisible,
+          "malformed view leaves caller snapshot untouched");
+    check(!ViewSidecar::load(scratchProject, label + QStringLiteral("-missing"), &unchanged),
+          "missing sidecar fails silently");
+    check(!ViewSidecar::save(scratchProject, QString(), saved), "empty song label fails silently");
+
+    QFile::remove(path);
+    std::fprintf(stdout, "sidecar: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);
+    return failures ? 1 : 0;
+}
