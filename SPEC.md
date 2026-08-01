@@ -242,13 +242,15 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   note fills from track-identity color to a velocity hue ramp — purple `#5f44e9`
   (velocity 1) through the spectrum to red `#e90904` (127); ghost notes unchanged.
   View → Show Note Names (app-wide, persisted) labels the selected track's notes
-  with their pitch name, left-anchored. Labels appear only when rows are tall
-  enough for legible text, may overrun a short note's right edge, and a run of
-  same-pitch notes packed tighter than the label shows only the run's last name;
-  ghost notes are never labeled. Ink is two-tone for legibility across both
-  backdrops: over the note face it is the fill's paired text color (strongest of
-  black/white in velocity-color mode), and the overrun over the roll switches to
-  the strongest of black/white against the pitch row's own background.
+  with their pitch name in a fixed face — the bundled Regular two layout pixels
+  below Caption, even with Use System Font on. Each note decides independently:
+  the label draws inside the note face only when the complete name plus a small
+  trailing reserve fits the note's width, and it hides — never shrinks — when
+  the padded row height misses the face; ghost notes are never labeled. Ink is
+  the track's paired label color (strongest of black/white against the fill in
+  velocity-color mode). While the roll.velocity_drag chord is held or a
+  velocity drag is live, notes show their velocity value instead of the pitch
+  name, and velocity bars appear at any zoom.
 - **Bottom — Automation lanes:** per-track, addable from the m4a parameter list (§4.2),
   drawn as line/step editors. Tempo lane always available at the top level. 0-based CC
   lanes have a zoomable value axis (gutter menu → Value range: auto-fit or a fixed
