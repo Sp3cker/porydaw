@@ -239,6 +239,14 @@ const QColor &trackTextColor(int track)
     return themes::trackIdentityTextColor(trackIdentityIndex(track));
 }
 
+// The stronger of black/white over a backdrop.
+QColor contrastingTextColor(const QColor &backdrop)
+{
+    return themes::contrastRatio(backdrop, Qt::white) >= themes::contrastRatio(backdrop, Qt::black)
+               ? QColor(Qt::white)
+               : QColor(Qt::black);
+}
+
 // Ghost notes (unselected tracks) mix 24% of their track identity into the
 // row background in OKLab. Cap only the lightness offset so bright identities
 // stay equally recessive on light and dark themes.
@@ -2408,14 +2416,14 @@ class PianoRoll : public TimelineSurface
                                  mixTowardOklab(identity, Qt::black, 1.0 / 3.0));
             }
             if (nameFont)
-                drawNoteName(painter, noteRect, noteBox, displayedNoteKey(note), note.track);
+                drawNoteName(painter, noteRect, noteBox, displayedNoteKey(note), fill, note.track);
 
             // While velocity is active, every current-track note shows its
             // value instead of the pitch label.
             if (showVelocityValues && velocityFont) {
                 const QString velocityText = QString::number(renderedVelocity);
                 if (noteRect.width() >= painter.fontMetrics().horizontalAdvance(velocityText) + 4) {
-                    painter.setPen(noteTextColor(note.track));
+                    painter.setPen(noteTextColor(fill, note.track));
                     painter.drawText(noteRect, Qt::AlignCenter, velocityText);
                 }
             }
@@ -2442,9 +2450,13 @@ class PianoRoll : public TimelineSurface
         }
     }
 
-    // Note labels use the track's paired contrast color, selected once per
-    // track identity rather than from the piano key.
-    const QColor &noteTextColor(int track) const { return trackTextColor(track); }
+    // Identity fills carry the track's authored label color. Velocity-hue
+    // fills span the whole spectrum, so no single pairing stays readable —
+    // pick the stronger of black/white per fill instead.
+    QColor noteTextColor(const QColor &fill, int track) const
+    {
+        return m_sv->velocityColorMode() ? contrastingTextColor(fill) : trackTextColor(track);
+    }
 
     // The pitch label stays inside the note face. A note that cannot fit the
     // complete name with the shared Space::Two reserve remains unlabeled.
@@ -2457,7 +2469,7 @@ class PianoRoll : public TimelineSurface
     }
 
     void drawNoteName(QPainter &painter, const QRectF &noteRect, const QRectF &noteBox, int key,
-                      int track)
+                      const QColor &fill, int track)
     {
         const QString name = keyName(key);
         if (!noteNameFits(noteRect, key, QFontMetricsF(painter.font())))
@@ -2467,7 +2479,7 @@ class PianoRoll : public TimelineSurface
                                noteBox.height() - 2.0 * textInset);
         painter.save();
         painter.setClipRect(noteBox, Qt::IntersectClip);
-        painter.setPen(noteTextColor(track));
+        painter.setPen(noteTextColor(fill, track));
         painter.drawText(labelRect, Qt::AlignLeft | Qt::AlignVCenter, name);
         painter.restore();
     }
@@ -2498,14 +2510,14 @@ class PianoRoll : public TimelineSurface
                 p.setFont(*font);
                 const auto velocityText = QString::number(m_lastVelocity);
                 if (r.width() >= p.fontMetrics().horizontalAdvance(velocityText) + 4) {
-                    p.setPen(noteTextColor(selected));
+                    p.setPen(noteTextColor(fill, selected));
                     p.drawText(r, Qt::AlignCenter, velocityText);
                 }
             }
         } else if (m_sv->noteNameMode() && m_sv->keyHeight() >= kNoteNameMinKeyH) {
             if (const auto font = noteNameFont(p.font(), box.height())) {
                 p.setFont(*font);
-                drawNoteName(p, r, box, m_drawKey, selected);
+                drawNoteName(p, r, box, m_drawKey, fill, selected);
             }
         }
     }

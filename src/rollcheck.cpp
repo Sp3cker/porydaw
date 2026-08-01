@@ -1020,11 +1020,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         const auto farTicks = uint64_t(std::ceil(90.0 / pxPerTick));
         const uint64_t runTick2 = a.tick + closeTicks;
         const uint64_t runTick3 = runTick2 + farTicks;
+        const uint64_t runTick4 = runTick3 + labelTicks + closeTicks;
         int runKey = -1;
         for (int key = 115; key >= 24 && runKey < 0; --key) {
             if (namedRows.top(key) < 0.0 || namedRows.bottom(key) > roll->height())
                 continue;
-            if (!occupied(a.tick, 2 * closeTicks + farTicks + labelTicks, key))
+            if (!occupied(a.tick, 3 * closeTicks + farTicks + 2 * labelTicks, key))
                 runKey = key;
         }
         const int stripW = qRound(12.0 * rasterDpr);
@@ -1037,13 +1038,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             return QRect(QPoint(left, runRowTop), QPoint(left + width - 1, runRowBottom));
         };
         if (runKey < 0 || closeTicks * pxPerTick > 12.0 ||
-            labelStrip(runTick3, stripW).right() >= namesOnRender.width()) {
+            labelStrip(runTick4, stripW).right() >= namesOnRender.width()) {
             fail("no room for the note-name width probe");
         } else {
             const int undoIndexBeforeRun = doc.undoStack()->index();
             doc.addNotes(track, {{a.tick, uint8_t(runKey), uint32_t(closeTicks), 100},
                                  {runTick2, uint8_t(runKey), uint32_t(closeTicks), 100},
-                                 {runTick3, uint8_t(runKey), uint32_t(labelTicks), 100}});
+                                 {runTick3, uint8_t(runKey), uint32_t(labelTicks), 100},
+                                 {runTick4, uint8_t(runKey), uint32_t(labelTicks), 1}});
             const QImage runNamed = roll->grab().toImage();
             view.setNoteNameMode(false);
             const QImage runUnnamed = roll->grab().toImage();
@@ -1095,6 +1097,32 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("note names shrank to fit a short row");
             view.setNoteNameMode(true);
             view.applyViewState(namedState);
+
+            // Velocity-color fills span the whole spectrum, so label ink must
+            // be picked per fill: both the bright high-velocity note and the
+            // dark low-velocity note need clearly readable ink. The black or
+            // white pick guarantees at least 4:1 across the entire ramp;
+            // either fixed ink drops below it on one of the two fills.
+            view.setVelocityColorMode(true);
+            const QImage velNamed = roll->grab().toImage();
+            view.setNoteNameMode(false);
+            const QImage velUnnamed = roll->grab().toImage();
+            view.setNoteNameMode(true);
+            view.setVelocityColorMode(false);
+            const auto bestInkContrast = [&](const QRect &region, const QColor &fill) {
+                double best = 0.0;
+                for (int y = region.top(); y <= region.bottom(); ++y)
+                    for (int x = region.left(); x <= region.right(); ++x)
+                        if (velNamed.pixel(x, y) != velUnnamed.pixel(x, y))
+                            best = std::max(
+                                best, themes::contrastRatio(QColor(velNamed.pixel(x, y)), fill));
+                return best;
+            };
+            if (bestInkContrast(labelStrip(runTick3, stripW), SongView::velocityNoteColor(100)) <
+                4.0)
+                fail("label ink is not picked against the bright velocity fill");
+            if (bestInkContrast(labelStrip(runTick4, stripW), SongView::velocityNoteColor(1)) < 4.0)
+                fail("label ink is not picked against the dark velocity fill");
 
             while (doc.undoStack()->index() > undoIndexBeforeRun && doc.undoStack()->canUndo())
                 doc.undoStack()->undo();
