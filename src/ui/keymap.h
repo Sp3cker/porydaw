@@ -66,6 +66,10 @@ class Registry : public QObject
     // Sequence bindings() on a modifier command report empty, and vice versa.
     Qt::KeyboardModifiers modifierBinding(const QString &id) const;
     void setModifierBinding(const QString &id, Qt::KeyboardModifiers mods);
+    // Exact match against a modifier command after ignoring non-shortcut
+    // modifiers such as KeypadModifier.
+    bool matchesModifier(Qt::KeyboardModifiers mods, const QString &id) const;
+    static bool isModifierKey(int key);
 
     // Portable storage/display text for a modifier chord ("Ctrl+Shift") and
     // its parse; unknown tokens make the whole parse NoModifier.

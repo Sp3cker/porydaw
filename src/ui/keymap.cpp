@@ -165,6 +165,12 @@ bool contextsOverlap(Context a, Context b)
     return a == b || a == Context::Global || b == Context::Global;
 }
 
+Qt::KeyboardModifiers shortcutModifiers(Qt::KeyboardModifiers modifiers)
+{
+    return modifiers & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier |
+                        Qt::MetaModifier);
+}
+
 } // namespace
 
 Registry::Registry() = default;
@@ -256,6 +262,18 @@ Qt::KeyboardModifiers Registry::modifierBinding(const QString &id) const
     if (mods == Qt::NoModifier) // unparseable hand-edited value: fall back
         return modifierFromText(QLatin1String(def->keys));
     return mods;
+}
+
+bool Registry::matchesModifier(Qt::KeyboardModifiers mods, const QString &id) const
+{
+    const auto binding = modifierBinding(id);
+    return binding != Qt::NoModifier && shortcutModifiers(mods) == binding;
+}
+
+bool Registry::isModifierKey(int key)
+{
+    return key == Qt::Key_Control || key == Qt::Key_Shift || key == Qt::Key_Alt ||
+           key == Qt::Key_Meta;
 }
 
 void Registry::setModifierBinding(const QString &id, Qt::KeyboardModifiers mods)
@@ -361,12 +379,10 @@ QStringList Registry::modifierConflicts(const QString &excludeId, Context contex
 bool Registry::matches(const QKeyEvent *event, const QString &id) const
 {
     const int key = event->key();
-    if (key == 0 || key == Qt::Key_unknown || key == Qt::Key_Control || key == Qt::Key_Shift ||
-        key == Qt::Key_Alt || key == Qt::Key_Meta)
+    if (key == 0 || key == Qt::Key_unknown || isModifierKey(key))
         return false;
     // Keypad arrows arrive with KeypadModifier set; bindings never carry it.
-    const auto mods = event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier |
-                                            Qt::AltModifier | Qt::MetaModifier);
+    const auto mods = shortcutModifiers(event->modifiers());
     const int combined = key | int(mods.toInt());
     for (const QKeySequence &seq : bindings(id)) {
         if (seq.count() == 1 && seq[0].toCombined() == combined)
