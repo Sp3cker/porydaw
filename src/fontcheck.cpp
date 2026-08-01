@@ -106,6 +106,20 @@ int runFontCheck(int expectedBaseFontPx)
         }
     }
     check(!typography::fitted(body, 0), "Fitted text exists without positive available height");
+    const auto noteName = typography::noteName(body);
+    const auto noteNameInfo = QFontInfo(noteName);
+    const auto noteNameMetrics = QFontMetrics(noteName);
+    check(noteNameInfo.family() == QStringLiteral("Atkinson Hyperlegible Next") &&
+              noteNameInfo.styleName() == QStringLiteral("Regular") &&
+              noteNameInfo.pixelSize() == captionInfo.pixelSize() &&
+              noteNameMetrics.ascent() + noteNameMetrics.descent() <= captionHeight,
+          "Note-name font has the wrong face, style, size, or height");
+    auto smallerNoteName = noteName;
+    smallerNoteName.setPixelSize(noteNameInfo.pixelSize() - 2);
+    const auto fittedNoteName = typography::fitted(smallerNoteName, captionHeight);
+    check(fittedNoteName &&
+              QFontInfo(*fittedNoteName).pixelSize() == QFontInfo(smallerNoteName).pixelSize(),
+          "Fitted text expanded beyond its source font size");
     const auto selected = typography::bold(body);
     const auto text = QStringLiteral("1 · Tést g̦");
     const auto referenceBounds = QFontMetricsF(body).tightBoundingRect(text);
@@ -155,6 +169,10 @@ int runFontCheck(int expectedBaseFontPx)
           "System-font Caption is not the platform face a step below Body");
     check(typography::bodyMono(QApplication::font()).family() == typography::systemMonoFamily(),
           "System-font Body Mono is not the platform fixed-pitch face");
+    const auto systemNoteName = typography::noteName(QApplication::font());
+    check(QFontInfo(systemNoteName).family() == QStringLiteral("Atkinson Hyperlegible Next") &&
+              QFontInfo(systemNoteName).styleName() == QStringLiteral("Regular"),
+          "Note-name font did not stay on bundled Regular with system font enabled");
     typography::setUseSystemFont(false);
     themes::apply(*application, themes::vanilla());
     check(QFontInfo(QApplication::font()).family() ==

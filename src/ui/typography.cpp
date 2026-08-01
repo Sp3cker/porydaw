@@ -1,4 +1,5 @@
 #include "typography.h"
+#include <algorithm>
 
 #include <QApplication>
 #include <QFontDatabase>
@@ -56,6 +57,16 @@ int occupiedHeight(const QFont &font)
 {
     const auto metrics = QFontMetrics(font);
     return metrics.ascent() + metrics.descent();
+}
+
+std::optional<QFont> fitFont(QFont font, int maximumPixelSize, int availableHeight)
+{
+    for (auto pixelSize = maximumPixelSize; pixelSize > 0; --pixelSize) {
+        font.setPixelSize(pixelSize);
+        if (occupiedHeight(font) <= availableHeight)
+            return font;
+    }
+    return std::nullopt;
 }
 
 } // namespace
@@ -162,14 +173,16 @@ QFont bold(const QFont &source)
 
 std::optional<QFont> fitted(const QFont &base, int availableHeight)
 {
-    const auto maximum = resolvedPixelSize(caption(base));
-    for (auto pixelSize = maximum; pixelSize > 0; --pixelSize) {
-        auto candidate = base;
-        candidate.setPixelSize(pixelSize);
-        if (occupiedHeight(candidate) <= availableHeight)
-            return candidate;
-    }
-    return std::nullopt;
+    return fitFont(base,
+                   std::min(resolvedPixelSize(base), resolvedPixelSize(caption(base))),
+                   availableHeight);
+}
+
+QFont noteName(const QFont &source)
+{
+    auto font = caption(source);
+    setFace(font, QFont::Normal);
+    return font;
 }
 
 QPointF glyphCenteringOffset(const QFont &reference, const QFont &displayed, QStringView text)

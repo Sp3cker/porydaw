@@ -32,9 +32,11 @@ QString systemMonoFamily();
 QFont bodyMono(const QFont &body);
 QFont caption(const QFont &source);
 QFont bold(const QFont &source);
-/// Finds the largest caption-or-smaller face that fits the available height.
-/// Failure is explicit so callers cannot silently paint clipped text.
+/// Finds the largest caption-or-smaller version of base's face that fits the
+/// available height. The result never exceeds base's current pixel size.
 std::optional<QFont> fitted(const QFont &base, int availableHeight);
+/// Bundled Regular face used exclusively for MIDI note labels.
+QFont noteName(const QFont &source);
 /// Aligns the visible bounds of a substituted glyph with the reference face.
 QPointF glyphCenteringOffset(const QFont &reference, const QFont &displayed, QStringView text);
 
