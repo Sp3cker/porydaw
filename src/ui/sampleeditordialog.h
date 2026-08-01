@@ -18,6 +18,7 @@ class QComboBox;
 class QDoubleSpinBox;
 class QGroupBox;
 class QHBoxLayout;
+class QKeyEvent;
 class QLabel;
 class QLineEdit;
 class QPushButton;
@@ -33,7 +34,10 @@ class WaveformView;
 // enable, a green/amber/red seam badge, pitch-detect prefill, and an
 // engine audition strip (play / key) driven through the audition-slot
 // protocol (PLAN.md §4); one-shot auditions repeat with a half-second
-// gap until stopped. Expert rows live in a collapsed Advanced
+// gap until stopped, and plain Space toggles the audition from anywhere
+// in the dialog (the app-wide "Space is playback" convention — focusable
+// inputs are filtered so they can't swallow the key; nothing here
+// legitimately types a space). Expert rows live in a collapsed Advanced
 // disclosure; the whole control column
 // below the waveform rides a squeeze-then-scroll area. Pure view: the
 // dialog renders and hands out the export bytes; MainWindow does the
@@ -77,6 +81,8 @@ class SampleEditorDialog : public QDialog
 
   protected:
     void done(int result) override; // silence the audition on any close
+    void keyPressEvent(QKeyEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
     void applyParamsFromUi(int mergeKey);
@@ -94,6 +100,7 @@ class SampleEditorDialog : public QDialog
     void refineCurrentLoop();
     void applyChip(int index);
     SampleEditParams analysisParams() const;
+    void toggleAudition();
     void startAudition(bool looped);
     void stopAudition();
     void republishAudition();

@@ -23,9 +23,11 @@
 #include <vector>
 
 #include <QApplication>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QUndoStack>
 
+#include "audio/audioengine.h"
 #include "audio/auditionslots.h"
 #include "audio/sampledoc.h"
 #include "audio/sampledsp.h"
@@ -55,7 +57,9 @@ extern "C" {
 // (item 7), the crossfade bake, the audition-slot protocol's retirement
 // invariants against a bare M4AEngine, and offscreen driving of the editor
 // (waveform handle drags, suggest chips, pitch prefill, the dialog-local
-// undo stack) ending in a commit that re-runs the phase-1 assertions.
+// undo stack) ending in a commit that re-runs the phase-1 assertions,
+// plus the dialog-wide Space audition toggle against a live AudioEngine
+// (skipped when the machine has no audio device).
 // Phase 4: embedded MP3/FLAC/Ogg-Vorbis fixtures decode with expected
 // structure and content, Ogg-Opus/corrupt-stream refusals exact-match, and
 // a compressed source renders through the unchanged pipeline.
@@ -1975,6 +1979,65 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         }
         if (failures == before)
             std::printf("samplecheck: editor phase-3 OK\n");
+    }
+
+    // ---- Space toggles the audition from anywhere in the dialog ----
+    // Needs a live engine (the strip is disabled without one); skips
+    // cleanly on machines with no audio device, like transportcheck.
+    {
+        const int before = failures;
+        AudioEngine engine;
+        QString audioError;
+        if (!engine.init(&audioError)) {
+            std::printf("samplecheck: SKIP space audition (no audio device: %s)\n",
+                        qUtf8Printable(audioError));
+        } else {
+            SampleEditorDialog dialog(
+                hiRes, [](const QString &, QString *) { return true; }, &engine);
+            dialog.resize(900, 640);
+            dialog.show();
+            QApplication::processEvents();
+            auto *play = dialog.findChild<QPushButton *>(QStringLiteral("sampleAuditionPlay"));
+            auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
+            auto *keySpin = dialog.findChild<QSpinBox *>(QStringLiteral("sampleAuditionKey"));
+            expect(play && play->isEnabled() && nameEdit && keySpin,
+                   "audition strip is live with an engine");
+            const auto sendSpace = [](QWidget *target, Qt::KeyboardModifiers mods,
+                                      bool autoRepeat = false) {
+                QKeyEvent press(QEvent::KeyPress, Qt::Key_Space, mods, QStringLiteral(" "),
+                                autoRepeat);
+                QCoreApplication::sendEvent(target, &press);
+                QKeyEvent release(QEvent::KeyRelease, Qt::Key_Space, mods, QStringLiteral(" "),
+                                  autoRepeat);
+                QCoreApplication::sendEvent(target, &release);
+            };
+            if (play && play->isEnabled() && nameEdit && keySpin) {
+                sendSpace(&dialog, Qt::NoModifier);
+                expect(play->text() == QStringLiteral("Stop"), "Space starts the audition");
+                sendSpace(&dialog, Qt::NoModifier);
+                expect(play->text() == QStringLiteral("Play"), "Space again stops it");
+
+                // A focused input can't swallow the key: the toggle fires
+                // and no space lands in the name.
+                const QString nameBefore = nameEdit->text();
+                sendSpace(nameEdit, Qt::NoModifier);
+                expect(play->text() == QStringLiteral("Stop") && nameEdit->text() == nameBefore,
+                       "Space in the name field auditions instead of typing");
+                sendSpace(keySpin, Qt::NoModifier);
+                expect(play->text() == QStringLiteral("Play"),
+                       "Space on the key spin box toggles too");
+
+                // Only plain Space is the toggle: a modified press and a
+                // held-key auto-repeat both leave the audition alone.
+                sendSpace(&dialog, Qt::ControlModifier);
+                expect(play->text() == QStringLiteral("Play"), "Ctrl+Space is not the toggle");
+                sendSpace(&dialog, Qt::NoModifier, true);
+                expect(play->text() == QStringLiteral("Play"),
+                       "auto-repeat Space does not re-toggle");
+            }
+        }
+        if (failures == before)
+            std::printf("samplecheck: space audition OK\n");
     }
 
     // ---- compressed formats (phase 4): dr_mp3 / dr_flac / stb_vorbis ----

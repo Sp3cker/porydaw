@@ -8,6 +8,7 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -400,13 +401,9 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     m_playButton = new QPushButton(tr("Play"), this);
     m_playButton->setObjectName(QStringLiteral("sampleAuditionPlay"));
     m_playButton->setToolTip(tr("Audition the render — looped when the loop is enabled; "
-                                "one-shots repeat with a short gap until stopped."));
-    connect(m_playButton, &QPushButton::clicked, this, [this] {
-        if (m_auditionMode != AuditionMode::None)
-            stopAudition();
-        else
-            startAudition(m_doc.processed().looped);
-    });
+                                "one-shots repeat with a short gap until stopped. "
+                                "Space toggles this from anywhere in the dialog."));
+    connect(m_playButton, &QPushButton::clicked, this, &SampleEditorDialog::toggleAudition);
     m_auditionKey = new MidiKeySpinBox(this);
     m_auditionKey->setObjectName(QStringLiteral("sampleAuditionKey"));
     m_auditionKey->setRange(0, 127);
@@ -530,6 +527,17 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     connect(m_nameEdit, &QLineEdit::textChanged, this, &SampleEditorDialog::validateName);
     validateName();
     refreshOutputs();
+
+    // Plain Space toggles the audition from anywhere in the dialog (the
+    // app-wide "Space is playback" convention). Unhandled keys bubble to
+    // keyPressEvent, but a focused input would consume Space first, so every
+    // focusable child gets a filter that claims it — nothing here
+    // legitimately types one: sample names are C identifiers and every
+    // other field is numeric.
+    for (QWidget *w : findChildren<QWidget *>()) {
+        if (w->focusPolicy() != Qt::NoFocus)
+            w->installEventFilter(this);
+    }
 }
 
 QString SampleEditorDialog::sampleName() const
@@ -557,6 +565,35 @@ void SampleEditorDialog::done(int result)
 {
     stopAudition();
     QDialog::done(result);
+}
+
+// Space play/stop when no input has focus (keys unhandled by the focused
+// child bubble up here).
+void SampleEditorDialog::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Space && event->modifiers() == Qt::NoModifier) {
+        if (!event->isAutoRepeat())
+            toggleAudition();
+        event->accept();
+        return;
+    }
+    QDialog::keyPressEvent(event);
+}
+
+// Space play/stop while an input HAS focus: claim the key before the
+// focused spin box / combo / name field can type or activate with it. The
+// matching release is swallowed too so no widget sees an unmatched one.
+bool SampleEditorDialog::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease) {
+        auto *keyEvent = static_cast<QKeyEvent *>(event);
+        if (keyEvent->key() == Qt::Key_Space && keyEvent->modifiers() == Qt::NoModifier) {
+            if (event->type() == QEvent::KeyPress && !keyEvent->isAutoRepeat())
+                toggleAudition();
+            return true;
+        }
+    }
+    return QDialog::eventFilter(watched, event);
 }
 
 void SampleEditorDialog::applyParamsFromUi(int mergeKey)
@@ -936,6 +973,14 @@ void SampleEditorDialog::refineCurrentLoop()
     p.loopStart = cur.cropStart + qint64(std::llround(double(S) / ratio));
     p.loopEnd = cur.cropStart + qint64(std::llround(double(E) / ratio));
     commitParams(p, -1);
+}
+
+void SampleEditorDialog::toggleAudition()
+{
+    if (m_auditionMode != AuditionMode::None)
+        stopAudition();
+    else
+        startAudition(m_doc.processed().looped);
 }
 
 void SampleEditorDialog::startAudition(bool looped)

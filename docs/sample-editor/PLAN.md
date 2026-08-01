@@ -141,7 +141,8 @@ target-rate combo (presets from `kGbaMixRates`, "keep source rate", free
 entry — doubles allowed; fresh sources DEFAULT to min(source, 13379) —
 `kGbaDefaultRate` — while prepared/gbaReady files keep their source rate
 for byte-faithfulness); audition strip (single play/stop toggle — looped
-iff the loop is on — audition key selector, "use destination voice ADSR"
+iff the loop is on, plain Space toggles it from anywhere in the dialog —
+audition key selector, "use destination voice ADSR"
 when browser-initiated); a one-line friendly summary (duration · ROM cost
 `16 + align4(n)` · seam verdict); a collapsed "Advanced" disclosure
 (format line, crop spins, fine-tune cents, normalize mode + resulting
