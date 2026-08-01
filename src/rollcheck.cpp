@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QFontMetrics>
 #include <QElapsedTimer>
 #include <QIcon>
 #include <QImage>
@@ -32,6 +33,7 @@
 #include "project/decompproject.h"
 #include "rollcheckplayhead.h"
 #include "ui/layout.h"
+#include "ui/typography.h"
 #include "ui/songview.h"
 
 // --rollcheck <projectRoot> <song> [shot.png]: piano-roll gesture check.
@@ -959,10 +961,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         fail("disabling velocity-color mode did not restore identity fills");
 
     // Note-name display mode (View menu, app-wide): with rows tall enough
-    // for legible text the active track's notes carry their pitch name;
-    // ghost notes never do; below the key-height floor the labels vanish
-    // entirely; and a run of same-pitch notes packed tighter than the label
-    // keeps only the run's last name.
+    // for legible text, each visible active-track note independently carries
+    // its pitch name when its face fits the complete name plus two trailing
+    // spaces; ghost notes never do; below the key-height floor, labels vanish
+    // individually.
     {
         const auto differingPixels = [](const QImage &before, const QImage &after,
                                         const QRect &region) {
@@ -972,26 +974,21 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     count += before.pixel(x, y) != after.pixel(x, y);
             return count;
         };
+        const SongView::ViewState viewBeforeNames = view.viewState();
+        SongView::ViewState namedState = viewBeforeNames;
+        namedState.keyHeight = 24.0;
+        namedState.scrollY = std::max(
+            0.0, (127.5 - double(noteA.key)) * namedState.keyHeight - roll->height() / 2.0);
+        view.applyViewState(namedState);
+        const SnappedRows namedRows{view, *roll};
+        const QRectF namedNoteBox =
+            namedRows.noteBox(namedRows.noteRect(noteLeftX, noteRightX, noteA.key));
         const QRect noteARegion(
-            QPoint(toRasterPixel(paintedNoteBox.left()), toRasterPixel(paintedNoteBox.top())),
-            QPoint(toRasterPixel(paintedNoteBox.right()) - 1,
-                   toRasterPixel(paintedNoteBox.bottom()) - 1));
+            QPoint(toRasterPixel(namedNoteBox.left()), toRasterPixel(namedNoteBox.top())),
+            QPoint(toRasterPixel(namedNoteBox.right()) - 1,
+                   toRasterPixel(namedNoteBox.bottom()) - 1));
         view.setNoteNameMode(true);
         const QImage namesOnRender = roll->grab().toImage();
-        if (differingPixels(identityRestoredRender, namesOnRender, noteARegion) == 0)
-            fail("enabling note names painted no label on the active note");
-
-        // Legibility on the note face: some of the new ink must clearly
-        // contrast with the fill, not merely differ from it.
-        bool faceInkContrasts = false;
-        for (int y = noteARegion.top(); y <= noteARegion.bottom() && !faceInkContrasts; ++y)
-            for (int x = noteARegion.left(); x <= noteARegion.right() && !faceInkContrasts; ++x)
-                faceInkContrasts =
-                    namesOnRender.pixel(x, y) != identityRestoredRender.pixel(x, y) &&
-                    themes::contrastRatio(QColor(namesOnRender.pixel(x, y)), expectedNoteColor) >=
-                        2.5;
-        if (!faceInkContrasts)
-            fail("no clearly contrasting label ink on the note face");
 
         // With the other track selected note A is a ghost, and its face must
         // render identically with the mode on or off.
@@ -1003,35 +1000,45 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         view.setNoteNameMode(true);
         view.selectTrack(selectedTrackBeforeGhostProbe);
 
-        // Height floor: at 8px rows no legible face fits.
-        const SongView::ViewState namedState = view.viewState();
+        // Fixed-size labels must disappear when the padded note face is one
+        // physical pixel too short, rather than shrinking to fit the row.
         SongView::ViewState shortRows = namedState;
-        shortRows.keyHeight = 8.0;
+        const auto labelPadding = layout::space(layout::Space::Half);
+        auto fixedLabelFont = typography::noteName(roll->font());
+        fixedLabelFont.setPixelSize(std::max(layout::singlePixel(),
+                                              fixedLabelFont.pixelSize() -
+                                                  2 * layout::singlePixel()));
+        const auto fixedLabelMetrics = QFontMetrics(fixedLabelFont);
+        const auto fixedLabelHeight = fixedLabelMetrics.ascent() + fixedLabelMetrics.descent();
+        shortRows.keyHeight = double(fixedLabelHeight + 2 * labelPadding);
         view.applyViewState(shortRows);
         const QImage shortRowsNamed = roll->grab().toImage();
         view.setNoteNameMode(false);
         if (roll->grab().toImage() != shortRowsNamed)
-            fail("note names painted below the key-height floor");
+            fail("note names shrank to fit a short row");
         view.setNoteNameMode(true);
         view.applyViewState(namedState);
 
-        // Same-pitch collapse: an abutting pair label-widths apart plus a
-        // distant third on one free visible row. Only the pair's second
-        // note and the distant note may carry names.
+        // Per-note width probe: an abutting short pair followed by a distant
+        // note wide enough for its name. The pair stays unlabeled while the
+        // distant wide note keeps its label.
         const qreal pxPerTick = view.contentX(1.0) - view.contentX(0.0);
         const auto closeTicks = uint64_t(std::max(1.0, std::ceil(5.0 / pxPerTick)));
+        const auto labelProbeWidth = 3 * layout::space(layout::Space::Eight);
+        const auto labelTicks = uint64_t(std::ceil(labelProbeWidth / pxPerTick));
         const auto farTicks = uint64_t(std::ceil(90.0 / pxPerTick));
         const uint64_t runTick2 = a.tick + closeTicks;
         const uint64_t runTick3 = runTick2 + farTicks;
         int runKey = -1;
         for (int key = 115; key >= 24 && runKey < 0; --key) {
-            if (rows.top(key) < 0.0 || rows.bottom(key) > roll->height())
+            if (namedRows.top(key) < 0.0 || namedRows.bottom(key) > roll->height())
                 continue;
             if (!occupied(a.tick, 2 * closeTicks + farTicks, key))
                 runKey = key;
         }
         const int stripW = qRound(12.0 * rasterDpr);
-        const QRectF runRowBox = rows.noteBox(rows.noteRect(0.0, 1.0, runKey < 0 ? 60 : runKey));
+        const QRectF runRowBox =
+            namedRows.noteBox(namedRows.noteRect(0.0, 1.0, runKey < 0 ? 60 : runKey));
         const int runRowTop = toRasterPixel(runRowBox.top());
         const int runRowBottom = toRasterPixel(runRowBox.bottom()) - 1;
         const auto labelStrip = [&](uint64_t tick, int width) {
@@ -1040,58 +1047,42 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         };
         if (runKey < 0 || closeTicks * pxPerTick > 12.0 ||
             labelStrip(runTick3, stripW).right() >= namesOnRender.width()) {
-            fail("no room for the note-name collapse probe");
+            fail("no room for the note-name width probe");
         } else {
             const int undoIndexBeforeRun = doc.undoStack()->index();
             doc.addNotes(track, {{a.tick, uint8_t(runKey), uint32_t(closeTicks), 100},
                                  {runTick2, uint8_t(runKey), uint32_t(closeTicks), 100},
-                                 {runTick3, uint8_t(runKey), uint32_t(closeTicks), 100}});
+                                 {runTick3, uint8_t(runKey), uint32_t(labelTicks), 100}});
             const QImage runNamed = roll->grab().toImage();
             view.setNoteNameMode(false);
             const QImage runUnnamed = roll->grab().toImage();
             const QRect firstStrip(QPoint(labelStrip(a.tick, 1).left(), runRowTop),
                                    QPoint(labelStrip(runTick2, 1).left() - 1, runRowBottom));
             if (differingPixels(runUnnamed, runNamed, firstStrip) != 0)
-                fail("a crowded same-pitch run labeled a non-final note");
-            if (differingPixels(runUnnamed, runNamed, labelStrip(runTick2, stripW)) == 0)
-                fail("a crowded same-pitch run did not label its last note");
-            if (differingPixels(runUnnamed, runNamed, labelStrip(runTick3, stripW)) == 0)
-                fail("a distant same-pitch note lost its label");
-
-            // Two-tone overrun: the distant note is only a few pixels wide,
-            // so most of its label sits past the note box on the row
-            // background — where its ink must clearly contrast with the
-            // row, not with the note fill.
-            const auto blackKey = [](int key) {
-                switch (key % 12) {
-                case 1:
-                case 3:
-                case 6:
-                case 8:
-                case 10:
-                    return true;
-                default:
-                    return false;
-                }
-            };
-            const QColor runRowBackdrop =
-                themes::color(blackKey(runKey) ? themes::Role::song_view_piano_roll_accidental_lane
-                                               : themes::Role::song_view_piano_roll_background);
-            const int overrunLeft =
-                toRasterPixel(songview::kKeyboardW + view.contentX(double(runTick3 + closeTicks)));
-            bool overrunInkContrasts = false;
-            for (int y = runRowTop; y <= runRowBottom && !overrunInkContrasts; ++y)
-                for (int x = overrunLeft;
-                     x <= overrunLeft + stripW && x < runNamed.width() && !overrunInkContrasts; ++x)
-                    overrunInkContrasts =
-                        runNamed.pixel(x, y) != runUnnamed.pixel(x, y) &&
-                        themes::contrastRatio(QColor(runNamed.pixel(x, y)), runRowBackdrop) >= 2.5;
-            if (!overrunInkContrasts)
-                fail("label overrun ink does not clearly contrast with the row background");
+                fail("a short same-pitch note was labeled");
+            if (differingPixels(runUnnamed, runNamed, labelStrip(runTick2, stripW)) != 0)
+                fail("a short same-pitch note was labeled");
+            const auto wideLabelRegion = labelStrip(runTick3, stripW);
+            if (differingPixels(runUnnamed, runNamed, wideLabelRegion) == 0) {
+                fail("a distant note with enough label width lost its label");
+            } else {
+                bool wideLabelContrasts = false;
+                for (int y = wideLabelRegion.top();
+                     y <= wideLabelRegion.bottom() && !wideLabelContrasts; ++y)
+                    for (int x = wideLabelRegion.left();
+                         x <= wideLabelRegion.right() && !wideLabelContrasts; ++x)
+                        wideLabelContrasts =
+                            runNamed.pixel(x, y) != runUnnamed.pixel(x, y) &&
+                            themes::contrastRatio(QColor(runNamed.pixel(x, y)),
+                                                  expectedNoteColor) >= 2.5;
+                if (!wideLabelContrasts)
+                    fail("no clearly contrasting label ink on a wide note face");
+            }
 
             while (doc.undoStack()->index() > undoIndexBeforeRun && doc.undoStack()->canUndo())
                 doc.undoStack()->undo();
         }
+        view.applyViewState(viewBeforeNames);
     }
 
     // Click latch: give note A a distinctive velocity behind the view's

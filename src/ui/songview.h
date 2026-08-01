@@ -43,30 +43,30 @@ class TrackHeaderPanel;
 constexpr int kHeaderW = 210;
 constexpr int kKeyboardW = 52;
 constexpr int kGutterW = kHeaderW + kKeyboardW;
-// Velocity bar handle: with at least this much vertical zoom, each note
-// shows a thin horizontal bar at its velocity level (bottom = 0,
-// top = 127), and that bar — grabbable anywhere across the note's
-// width — drags the velocity. Below the threshold there is no bar and
-// notes are all-Move; the right-click menu remains the velocity
-// fallback, and the roll.velocity_drag modifier chord (Ctrl by default,
-// Ableton-style) turns a vertical drag from anywhere on a note into a
-// velocity drag at any zoom. Also the default key height, so the handle
-// is available out of the box.
+// Velocity bar handle: with at least this much vertical zoom, or while the
+// roll.velocity_drag modifier chord (Ctrl by default, Ableton-style) is
+// held, each note shows a thin horizontal bar at its velocity level (bottom
+// = 0, top = 127). The bar — grabbable anywhere across the note's width —
+// drags the velocity at the threshold zoom; below it, the held shortcut
+// starts the same drag from anywhere on the note. The right-click menu
+// remains the velocity fallback, and the default key height makes the
+// handle available out of the box.
 constexpr int kVelHandleMinKeyH = 12;
 // Note-name labels: with the View toggle on and at least this much vertical
-// zoom, each active-track note carries its pitch name. Below the threshold
-// no legible face fits the row and the labels vanish rather than shrink
-// into noise.
+// zoom, each active-track note carries its pitch name unless the velocity
+// shortcut is held. Below the threshold no legible face fits the row and the
+// labels vanish rather than shrink into noise.
 constexpr int kNoteNameMinKeyH = 12;
 // Auto snap grid: the zoom-adaptive grid shows the finest subdivision from
 // the feel's ladder whose cells are at least this wide, so lower values
 // mean a busier grid at the same zoom. Exposed so viewcheck derives its
 // expectations from the same knob being tuned.
 constexpr double kAutoGridMinCellPx = 16.0;
-// The velocity bar's rect inside a note rect; painted by the roll and,
-// from kVelHandleMinKeyH up, the grab target for velocity drags. Exposed
-// for roll interaction checks. The default DPR keeps integer-DIP callers
-// compatible while the roll supplies its actual display scale.
+// The velocity bar's rect inside a note rect; painted by the roll at the
+// threshold zoom or while the velocity shortcut is held. From
+// kVelHandleMinKeyH up, it is also the grab target for velocity drags.
+// Exposed for roll interaction checks. The default DPR keeps integer-DIP
+// callers compatible while the roll supplies its actual display scale.
 inline QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr = 1.0)
 {
     const qreal pixel = 1.0 / dpr;
@@ -232,10 +232,9 @@ class SongView : public QWidget
     bool velocityColorMode() const { return m_velocityColorMode; }
     void setVelocityColorMode(bool on);
     // Note-name display mode (View menu, app-wide): from kNoteNameMinKeyH of
-    // vertical zoom up, active-track notes are labeled with their pitch name,
-    // left-anchored and free to run past a short note's right edge. A run of
-    // same-pitch notes packed tighter than the label keeps only the run's
-    // last name. Ghost notes are never labeled.
+    // vertical zoom up, each visible active-track note independently carries
+    // its pitch name when its face fits the complete name plus two trailing
+    // spaces. Ghost notes are never labeled.
     bool noteNameMode() const { return m_noteNameMode; }
     void setNoteNameMode(bool on);
     // App-wide Follow Playhead toggle (transport bar / View menu): off, the
