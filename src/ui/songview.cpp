@@ -534,6 +534,20 @@ std::optional<QFont> velocityLabelFont(const QFont &source, int availableHeight)
         font->setPixelSize(std::max(lyt::singlePixel(), font->pixelSize() - lyt::singlePixel()));
     return font;
 }
+// Note text sits on a plate of the note's own fill: the velocity bar can
+// cross the text rows, and both the bar and a dark picked ink derive from
+// the fill, so glyphs painted straight over the bar lose their contrast.
+// The plate is a no-op wherever the backdrop is already the plain fill.
+void drawPlatedNoteText(QPainter &painter, const QRectF &rect, int flags, const QString &text,
+                        const QColor &fill, const QColor &ink)
+{
+    const QRectF plate = painter.boundingRect(rect, flags, text);
+    const qreal pad = lyt::singlePixel();
+    painter.fillRect(plate.adjusted(-pad, 0.0, pad, 0.0), fill);
+    painter.setPen(ink);
+    painter.drawText(rect, flags, text);
+}
+
 std::optional<QFont> noteNameFont(const QFont &source, qreal noteBoxHeight)
 {
     const auto textHeight = int(std::floor(noteBoxHeight - 2.0 * lyt::space(Space::Half)));
@@ -2422,10 +2436,9 @@ class PianoRoll : public TimelineSurface
             // value instead of the pitch label.
             if (showVelocityValues && velocityFont) {
                 const QString velocityText = QString::number(renderedVelocity);
-                if (noteRect.width() >= painter.fontMetrics().horizontalAdvance(velocityText) + 4) {
-                    painter.setPen(noteTextColor(fill, note.track));
-                    painter.drawText(noteRect, Qt::AlignCenter, velocityText);
-                }
+                if (noteRect.width() >= painter.fontMetrics().horizontalAdvance(velocityText) + 4)
+                    drawPlatedNoteText(painter, noteRect, Qt::AlignCenter, velocityText, fill,
+                                       noteTextColor(fill, note.track));
             }
 
             if (m_sv->isSelected(note)) {
@@ -2479,8 +2492,8 @@ class PianoRoll : public TimelineSurface
                                noteBox.height() - 2.0 * textInset);
         painter.save();
         painter.setClipRect(noteBox, Qt::IntersectClip);
-        painter.setPen(noteTextColor(fill, track));
-        painter.drawText(labelRect, Qt::AlignLeft | Qt::AlignVCenter, name);
+        drawPlatedNoteText(painter, labelRect, Qt::AlignLeft | Qt::AlignVCenter, name, fill,
+                           noteTextColor(fill, track));
         painter.restore();
     }
 
@@ -2509,10 +2522,9 @@ class PianoRoll : public TimelineSurface
                     velocityLabelFont(p.font(), int(std::lround(m_sv->keyHeight())))) {
                 p.setFont(*font);
                 const auto velocityText = QString::number(m_lastVelocity);
-                if (r.width() >= p.fontMetrics().horizontalAdvance(velocityText) + 4) {
-                    p.setPen(noteTextColor(fill, selected));
-                    p.drawText(r, Qt::AlignCenter, velocityText);
-                }
+                if (r.width() >= p.fontMetrics().horizontalAdvance(velocityText) + 4)
+                    drawPlatedNoteText(p, r, Qt::AlignCenter, velocityText, fill,
+                                       noteTextColor(fill, selected));
             }
         } else if (m_sv->noteNameMode() && m_sv->keyHeight() >= kNoteNameMinKeyH) {
             if (const auto font = noteNameFont(p.font(), box.height())) {

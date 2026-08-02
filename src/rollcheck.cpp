@@ -1085,9 +1085,29 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             view.applyViewState(centeredOnRun(double(fixedLabelHeight + 2 * labelPadding + 1)));
             const QImage fitRowsNamed = roll->grab().toImage();
             view.setNoteNameMode(false);
-            if (roll->grab().toImage() == fitRowsNamed)
+            const QImage fitRowsUnnamed = roll->grab().toImage();
+            if (fitRowsUnnamed == fitRowsNamed)
                 fail("no label at the exact padded label fit");
             view.setNoteNameMode(true);
+
+            // At this height the wide note's velocity bar crosses the label
+            // rows. The label sits on a plate of the plain fill, so inside
+            // the label strip the bar must give way to fill pixels — ink is
+            // never read against the bar.
+            const SnappedRows fitRowsGrid{view, *roll};
+            const QRectF wideRect = fitRowsGrid.noteRect(
+                songview::kKeyboardW + view.contentX(double(runTick3)),
+                songview::kKeyboardW + view.contentX(double(runTick3 + labelTicks)), runKey);
+            const QRectF barRect = songview::velBarRect(wideRect, 100, fitRowsGrid.dpr());
+            const QRect stripX = labelStrip(runTick3, stripW);
+            bool plateUnderText = false;
+            for (int y = toRasterPixel(barRect.top());
+                 y < toRasterPixel(barRect.bottom()) && !plateUnderText; ++y)
+                for (int x = stripX.left(); x <= stripX.right() && !plateUnderText; ++x)
+                    plateUnderText = QColor(fitRowsNamed.pixel(x, y)) == expectedNoteColor &&
+                                     QColor(fitRowsUnnamed.pixel(x, y)) != expectedNoteColor;
+            if (!plateUnderText)
+                fail("no fill plate under the label across the velocity bar");
 
             // ...and one layout pixel shorter it hides rather than shrinks.
             view.applyViewState(centeredOnRun(double(fixedLabelHeight + 2 * labelPadding)));

@@ -248,9 +248,11 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   trailing reserve fits the note's width, and it hides — never shrinks — when
   the padded row height misses the face; ghost notes are never labeled. Ink is
   the track's paired label color (strongest of black/white against the fill in
-  velocity-color mode). While the roll.velocity_drag chord is held or a
-  velocity drag is live, notes show their velocity value instead of the pitch
-  name, and velocity bars appear at any zoom.
+  velocity-color mode), and all note text sits on a plate of the note's own
+  fill so the velocity bar passes behind the glyphs, never through them.
+  While the roll.velocity_drag chord is held or a velocity drag is live,
+  notes show their velocity value instead of the pitch name, and velocity
+  bars appear at any zoom.
 - **Bottom — Automation lanes:** per-track, addable from the m4a parameter list (§4.2),
   drawn as line/step editors. Tempo lane always available at the top level. 0-based CC
   lanes have a zoomable value axis (gutter menu → Value range: auto-fit or a fixed
