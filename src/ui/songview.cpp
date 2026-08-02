@@ -232,19 +232,13 @@ std::size_t trackIdentityIndex(int track)
     return static_cast<std::size_t>(((track % count) + count) % count);
 }
 
-// Saturated fills identify tracks; their paired text colors are used only where
-// labels need contrast against those fills.
-const QColor &trackTextColor(int track)
-{
-    return themes::trackIdentityTextColor(trackIdentityIndex(track));
-}
-
-// The stronger of black/white over a backdrop.
+// The higher-contrast piano-key color over a note fill.
 QColor contrastingTextColor(const QColor &backdrop)
 {
-    return themes::contrastRatio(backdrop, Qt::white) >= themes::contrastRatio(backdrop, Qt::black)
-               ? QColor(Qt::white)
-               : QColor(Qt::black);
+    const auto light = themes::color(themes::Role::song_view_piano_keyboard_natural_key);
+    const auto dark = themes::color(themes::Role::song_view_piano_keyboard_black_key);
+    return themes::contrastRatio(backdrop, light) >= themes::contrastRatio(backdrop, dark) ? light
+                                                                                           : dark;
 }
 
 // Ghost notes (unselected tracks) mix 24% of their track identity into the
@@ -2436,7 +2430,7 @@ class PianoRoll : public TimelineSurface
                                  mixTowardOklab(identity, Qt::black, 1.0 / 3.0));
             }
             if (nameFont)
-                drawNoteName(painter, noteRect, noteBox, displayedNoteKey(note), fill, note.track);
+                drawNoteName(painter, noteRect, noteBox, displayedNoteKey(note), fill);
 
             // While velocity is active, every current-track note shows its
             // value instead of the pitch label.
@@ -2444,7 +2438,7 @@ class PianoRoll : public TimelineSurface
                 const QString velocityText = QString::number(renderedVelocity);
                 if (noteRect.width() >= painter.fontMetrics().horizontalAdvance(velocityText) + 4)
                     drawPlatedNoteText(painter, noteRect, Qt::AlignCenter, velocityText, fill,
-                                       noteTextColor(fill, note.track));
+                                       contrastingTextColor(fill));
             }
 
             if (m_sv->isSelected(note)) {
@@ -2469,14 +2463,6 @@ class PianoRoll : public TimelineSurface
         }
     }
 
-    // Identity fills carry the track's authored label color. Velocity-hue
-    // fills span the whole spectrum, so no single pairing stays readable —
-    // pick the stronger of black/white per fill instead.
-    QColor noteTextColor(const QColor &fill, int track) const
-    {
-        return m_sv->velocityColorMode() ? contrastingTextColor(fill) : trackTextColor(track);
-    }
-
     // The pitch label stays inside the note face. A note that cannot fit the
     // complete name with the shared Space::Two reserve remains unlabeled.
     bool noteNameFits(const QRectF &noteRect, int key, const QFontMetricsF &metrics) const
@@ -2488,7 +2474,7 @@ class PianoRoll : public TimelineSurface
     }
 
     void drawNoteName(QPainter &painter, const QRectF &noteRect, const QRectF &noteBox, int key,
-                      const QColor &fill, int track)
+                      const QColor &fill)
     {
         const QString name = keyName(key);
         if (!noteNameFits(noteRect, key, QFontMetricsF(painter.font())))
@@ -2499,7 +2485,7 @@ class PianoRoll : public TimelineSurface
         painter.save();
         painter.setClipRect(noteBox, Qt::IntersectClip);
         drawPlatedNoteText(painter, labelRect, Qt::AlignLeft | Qt::AlignVCenter, name, fill,
-                           noteTextColor(fill, track));
+                           contrastingTextColor(fill));
         painter.restore();
     }
 
@@ -2530,7 +2516,7 @@ class PianoRoll : public TimelineSurface
                 const auto velocityText = QString::number(m_lastVelocity);
                 if (r.width() >= p.fontMetrics().horizontalAdvance(velocityText) + 4)
                     drawPlatedNoteText(p, r, Qt::AlignCenter, velocityText, fill,
-                                       noteTextColor(fill, selected));
+                                       contrastingTextColor(fill));
             }
         } else if (m_sv->noteNameMode()) {
             // The pencil's live pitch readout: unlike settled labels it must
@@ -2541,7 +2527,7 @@ class PianoRoll : public TimelineSurface
             const QRectF labelRect(box.left() + lyt::space(Space::Half), r.top(), 512.0,
                                    r.height());
             drawPlatedNoteText(p, labelRect, Qt::AlignLeft | Qt::AlignVCenter, keyName(m_drawKey),
-                               fill, noteTextColor(fill, selected));
+                               fill, contrastingTextColor(fill));
         }
     }
 
