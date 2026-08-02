@@ -1374,6 +1374,46 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("the press-grown draw did not commit its note");
     }
 
+    // The pencil's pitch readout: while a draw gesture is live, the pending
+    // note names its pitch even where settled labels hide — painting a note
+    // and dragging it to the right pitch depends on the live name.
+    {
+        const auto readoutPadding = layout::space(layout::Space::Half);
+        auto readoutFont = typography::noteName(roll->font());
+        readoutFont.setPixelSize(
+            std::max(layout::singlePixel(), readoutFont.pixelSize() - 2 * layout::singlePixel()));
+        const auto readoutMetrics = QFontMetrics(readoutFont);
+        const SongView::ViewState viewBeforeReadout = view.viewState();
+        SongView::ViewState readoutShortRows = viewBeforeReadout;
+        // Short rows where the fixed face cannot fit, so any painted name is
+        // the readout, never a settled label.
+        readoutShortRows.keyHeight =
+            double(readoutMetrics.ascent() + readoutMetrics.descent() + 2 * readoutPadding);
+        view.applyViewState(readoutShortRows);
+        view.setNoteNameMode(true);
+        const Cell readoutCell = findFreeCell();
+        if (readoutCell.key < 0) {
+            fail("no free grid cell for the draw readout probe");
+        } else {
+            const int undoIndexBeforeReadout = doc.undoStack()->index();
+            const QPoint readoutEnd =
+                readoutCell.center + QPoint(QApplication::startDragDistance() + 8, 0);
+            sendMouse(roll, QEvent::MouseButtonPress, readoutCell.center, Qt::LeftButton,
+                      Qt::LeftButton);
+            sendMouse(roll, QEvent::MouseMove, readoutEnd, Qt::NoButton, Qt::LeftButton);
+            const QImage readoutOn = roll->grab().toImage();
+            view.setNoteNameMode(false);
+            const QImage readoutOff = roll->grab().toImage();
+            view.setNoteNameMode(true);
+            sendMouse(roll, QEvent::MouseButtonRelease, readoutEnd, Qt::LeftButton, Qt::NoButton);
+            if (readoutOn == readoutOff)
+                fail("no pitch readout on the pending draw note");
+            while (doc.undoStack()->index() > undoIndexBeforeReadout && doc.undoStack()->canUndo())
+                doc.undoStack()->undo();
+        }
+        view.applyViewState(viewBeforeReadout);
+    }
+
     // Drawing begins at a layout Space::One horizontal drag; a shorter
     // gesture remains a click, while one at the threshold creates a
     // one-snap-cell note.

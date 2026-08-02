@@ -249,7 +249,9 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   the padded row height misses the face; ghost notes are never labeled. Ink is
   the track's paired label color (strongest of black/white against the fill in
   velocity-color mode), and all note text sits on a plate of the note's own
-  fill so the velocity bar passes behind the glyphs, never through them.
+  fill so the velocity bar passes behind the glyphs, never through them. The
+  pencil's pending note is exempt from the fit rules: it always shows a live
+  pitch readout while drawing, overrunning the note or the row if it must.
   While the roll.velocity_drag chord is held or a velocity drag is live,
   notes show their velocity value instead of the pitch name, and velocity
   bars appear at any zoom.

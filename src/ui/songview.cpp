@@ -548,11 +548,17 @@ void drawPlatedNoteText(QPainter &painter, const QRectF &rect, int flags, const 
     painter.drawText(rect, flags, text);
 }
 
+QFont fixedNoteNameFont(const QFont &source)
+{
+    auto font = typography::noteName(source);
+    font.setPixelSize(std::max(lyt::singlePixel(), font.pixelSize() - 2 * lyt::singlePixel()));
+    return font;
+}
+
 std::optional<QFont> noteNameFont(const QFont &source, qreal noteBoxHeight)
 {
     const auto textHeight = int(std::floor(noteBoxHeight - 2.0 * lyt::space(Space::Half)));
-    auto font = typography::noteName(source);
-    font.setPixelSize(std::max(lyt::singlePixel(), font.pixelSize() - 2 * lyt::singlePixel()));
+    const auto font = fixedNoteNameFont(source);
     // The face is fixed: when its padded height misses the row, labels hide
     // rather than shrink.
     const QFontMetrics metrics(font);
@@ -2526,11 +2532,16 @@ class PianoRoll : public TimelineSurface
                     drawPlatedNoteText(p, r, Qt::AlignCenter, velocityText, fill,
                                        noteTextColor(fill, selected));
             }
-        } else if (m_sv->noteNameMode() && m_sv->keyHeight() >= kNoteNameMinKeyH) {
-            if (const auto font = noteNameFont(p.font(), box.height())) {
-                p.setFont(*font);
-                drawNoteName(p, r, box, m_drawKey, fill, selected);
-            }
+        } else if (m_sv->noteNameMode()) {
+            // The pencil's live pitch readout: unlike settled labels it must
+            // stay visible while the gesture chooses a pitch, so it skips the
+            // fit rules — the plate keeps it readable where it overruns the
+            // pending note or a short row.
+            p.setFont(fixedNoteNameFont(p.font()));
+            const QRectF labelRect(box.left() + lyt::space(Space::Half), r.top(), 512.0,
+                                   r.height());
+            drawPlatedNoteText(p, labelRect, Qt::AlignLeft | Qt::AlignVCenter, keyName(m_drawKey),
+                               fill, noteTextColor(fill, selected));
         }
     }
 
