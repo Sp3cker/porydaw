@@ -19,19 +19,6 @@ inline constexpr auto fills = std::array{
     std::string_view{"#8154CD"},
 };
 
-/// Authored label colors preserve the former contrast-derived result without
-/// doing color math when the application initializes the shared palette.
-inline constexpr auto texts = std::array{
-    std::string_view{"#000000"}, std::string_view{"#000000"}, std::string_view{"#FFFFFF"},
-    std::string_view{"#000000"}, std::string_view{"#000000"}, std::string_view{"#000000"},
-    std::string_view{"#000000"}, std::string_view{"#FFFFFF"}, std::string_view{"#000000"},
-    std::string_view{"#000000"}, std::string_view{"#000000"}, std::string_view{"#000000"},
-    std::string_view{"#000000"}, std::string_view{"#000000"}, std::string_view{"#000000"},
-    std::string_view{"#FFFFFF"},
-};
-
-static_assert(fills.size() == texts.size());
-
 } // namespace themes::track_identity_colors
 
 namespace themes {
@@ -40,7 +27,5 @@ inline constexpr std::size_t trackIdentityColorCount = track_identity_colors::fi
 
 /// Returns the shared fill for a track identity index.
 const QColor &trackIdentityColor(std::size_t index);
-/// Returns contrasting text for a track identity index.
-const QColor &trackIdentityTextColor(std::size_t index);
 
 } // namespace themes

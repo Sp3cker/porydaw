@@ -35,6 +35,7 @@
 
 #include <cmath>
 
+#include <algorithm>
 #include <array>
 #include <cstdio>
 #include <memory>
@@ -112,14 +113,18 @@ bool isComplete(const themes::Theme &theme)
 }
 
 // Track identity colors are application-wide content identity, not theme
-// state, so validate the single shared palette directly.
+// state, so validate the single shared palette directly. Note labels ink with
+// the stronger piano-key color over the fill, and the keyboard reads the same
+// black-and-white in every theme, so vanilla's keys stand in for all of them.
 bool isCompleteTrackIdentityPalette()
 {
+    const auto theme = themes::vanilla();
+    const auto &light = theme.color(themes::Role::song_view_piano_keyboard_natural_key);
+    const auto &dark = theme.color(themes::Role::song_view_piano_keyboard_black_key);
     for (std::size_t index = 0; index < themes::trackIdentityColorCount; ++index) {
         const auto &fill = themes::trackIdentityColor(index);
-        const auto &text = themes::trackIdentityTextColor(index);
-        if (!fill.isValid() || fill.alpha() != 255 || !text.isValid() || text.alpha() != 255 ||
-            !themes::isValidColorPair(fill, text))
+        if (!fill.isValid() || fill.alpha() != 255 ||
+            std::max(themes::contrastRatio(fill, light), themes::contrastRatio(fill, dark)) < 3.0)
             return false;
     }
     return true;
