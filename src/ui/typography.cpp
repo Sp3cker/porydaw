@@ -179,8 +179,11 @@ std::optional<QFont> fitted(const QFont &base, int availableHeight)
 
 QFont noteName(const QFont &source)
 {
+    // SemiBold, not Regular: the labels rasterize at caption-minus-two pixels,
+    // where Regular's strokes gray out on 1x displays (Retina rendering and
+    // CoreText stem darkening masked this on macOS).
     auto font = caption(source);
-    setFace(font, QFont::Normal);
+    setFace(font, QFont::DemiBold);
     return font;
 }
 
