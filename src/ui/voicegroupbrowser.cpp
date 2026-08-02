@@ -178,6 +178,11 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
 
     // ---- editor panel for the selected voice ----
     m_editor = new QWidget(this);
+    // The editor adapts to whatever dock width the user set; it must never
+    // force the dock wider (a DS voice's three-digit ADSR spins are wider
+    // than a CGB voice's, and used to push the dock open on selection).
+    // Fields shrink or clip instead.
+    m_editor->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     auto *form = new QFormLayout(m_editor);
     form->setContentsMargins(
         ::layout::space(::layout::Space::One), ::layout::space(::layout::Space::Half),
@@ -311,6 +316,9 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
         // mints a shared definition and reloads the voicegroup, so
         // per-keystroke commits would litter the synth data file.
         (*spin)->setKeyboardTracking(false);
+        // A narrow dock narrows all four spins evenly rather than clipping
+        // the last one off the edge.
+        (*spin)->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
         synthLayout->addWidget(*spin);
     }
     m_synthDutySpin->setToolTip(tr("Base duty cycle: the pulse width the wave centers on "
@@ -329,6 +337,9 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
     for (QSpinBox **spin : {&m_attackSpin, &m_decaySpin, &m_sustainSpin, &m_releaseSpin}) {
         *spin = new QSpinBox(m_adsrRow);
         (*spin)->setRange(0, 255); // narrowed per voice family on populate
+        // A narrow dock narrows all four spins evenly rather than clipping
+        // the last one off the edge.
+        (*spin)->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
         adsrLayout->addWidget(*spin);
     }
     m_attackSpin->setToolTip(tr("Attack"));

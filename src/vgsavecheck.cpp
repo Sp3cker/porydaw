@@ -258,6 +258,35 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         }
     }
 
+    // 6b. Selecting voices of different families must not change the dock's
+    // minimum width: the editor adapts to the dock width the user set, never
+    // pushes the dock open (a DS voice's three-digit ADSR spins used to
+    // widen it relative to a CGB voice's one-digit ones).
+    {
+        int cgbSlot = -1;
+        for (int i = 0; i < VOICEGROUP_SIZE && cgbSlot < 0; i++) {
+            const VgVoice *v = tab->vgSource->voiceAt(i);
+            if (v && vgMacroIsCgb(v->macro))
+                cgbSlot = i;
+        }
+        if (cgbSlot >= 0) {
+            // The window must be shown for the measurement: hidden widgets
+            // are empty layout items and contribute no minimum.
+            show();
+            QCoreApplication::processEvents();
+            m_vgBrowser->selectSlot(cgbSlot);
+            QCoreApplication::processEvents();
+            const int cgbMin = m_vgBrowser->minimumSizeHint().width();
+            m_vgBrowser->selectSlot(dsSlot);
+            QCoreApplication::processEvents();
+            check(m_vgBrowser->minimumSizeHint().width() == cgbMin,
+                  "voice selection changed the voicegroup dock's minimum width");
+        } else {
+            std::printf("vgsavecheck: note: no CGB voice found, "
+                        "dock-width check skipped\n");
+        }
+    }
+
     // 7. Golden Sun synth param edits: minted definitions live in memory
     // only (no disk write, not in the definition dropdown) until the
     // voicegroup saves — and the save writes exactly the definitions the
