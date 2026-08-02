@@ -242,14 +242,17 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   note fills from track-identity color to a velocity hue ramp — purple `#5f44e9`
   (velocity 1) through the spectrum to red `#e90904` (127); ghost notes unchanged.
   View → Show Note Names (app-wide, persisted) labels the selected track's notes
-  with their pitch name in a fixed face — the bundled SemiBold two layout pixels
-  below Caption, even with Use System Font on. Each note decides independently:
-  the label draws inside the note face only when the complete name plus a small
-  trailing reserve fits the note's width, and it hides — never shrinks — when
-  the padded row height misses the face; ghost notes are never labeled. Ink is
-  the track's paired label color (strongest of black/white against the fill in
-  velocity-color mode), and all note text sits on a plate of the note's own
-  fill so the velocity bar passes behind the glyphs, never through them. The
+  with their pitch name in a fixed face — the bundled family two layout pixels
+  below Caption (SemiBold for 1x legibility; Regular on macOS, where CoreText
+  keeps it crisp), even with Use System Font on. Each note decides
+  independently: the label draws inside the note face only when the complete
+  name plus a small trailing reserve fits the note's width, and it hides —
+  never shrinks — when the padded row height misses the face; ghost notes are
+  never labeled. Ink is the stronger of the two piano-key colors against the
+  note's own fill — softer than pure black/white, and picked per fill so both
+  identity and velocity-hue fills stay readable — and all note text sits on a
+  plate of that fill so the velocity bar passes behind the glyphs, never
+  through them. The
   pencil's pending note is exempt from the fit rules: it always shows a live
   pitch readout while drawing, overrunning the note or the row if it must.
   While the roll.velocity_drag chord is held or a velocity drag is live,

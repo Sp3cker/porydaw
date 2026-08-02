@@ -1120,9 +1120,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
             // Velocity-color fills span the whole spectrum, so label ink must
             // be picked per fill: both the bright high-velocity note and the
-            // dark low-velocity note need clearly readable ink. The black or
-            // white pick guarantees at least 4:1 across the entire ramp;
-            // either fixed ink drops below it on one of the two fills.
+            // dark low-velocity note need clearly readable ink. The piano-key
+            // ink pick clears 4:1 on both probed fills (its floor across the
+            // whole ramp is ~3.8:1, in the deep reds near velocity 121);
+            // either fixed ink drops below 4:1 on one of the two fills.
             view.setVelocityColorMode(true);
             const QImage velNamed = roll->grab().toImage();
             view.setNoteNameMode(false);
