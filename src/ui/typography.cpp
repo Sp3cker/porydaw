@@ -179,11 +179,14 @@ std::optional<QFont> fitted(const QFont &base, int availableHeight)
 
 QFont noteName(const QFont &source)
 {
-    // SemiBold, not Regular: the labels rasterize at caption-minus-two pixels,
-    // where Regular's strokes gray out on 1x displays (Retina rendering and
-    // CoreText stem darkening masked this on macOS).
     auto font = caption(source);
+#ifdef Q_OS_MACOS
+    // CoreText keeps the bundled Regular face crisp at the reduced label size.
+    setFace(font, QFont::Normal);
+#else
+    // SemiBold keeps labels legible at the reduced size on 1x displays.
     setFace(font, QFont::DemiBold);
+#endif
     return font;
 }
 

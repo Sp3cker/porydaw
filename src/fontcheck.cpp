@@ -109,8 +109,13 @@ int runFontCheck(int expectedBaseFontPx)
     const auto noteName = typography::noteName(body);
     const auto noteNameInfo = QFontInfo(noteName);
     const auto noteNameMetrics = QFontMetrics(noteName);
+#ifdef Q_OS_MACOS
+    const auto expectedNoteNameStyle = QStringLiteral("Regular");
+#else
+    const auto expectedNoteNameStyle = QStringLiteral("SemiBold");
+#endif
     check(noteNameInfo.family() == QStringLiteral("Atkinson Hyperlegible Next") &&
-              noteNameInfo.styleName() == QStringLiteral("SemiBold") &&
+              noteNameInfo.styleName() == expectedNoteNameStyle &&
               noteNameInfo.pixelSize() == captionInfo.pixelSize() &&
               noteNameMetrics.ascent() + noteNameMetrics.descent() <= captionHeight,
           "Note-name font has the wrong face, style, size, or height");
@@ -171,8 +176,8 @@ int runFontCheck(int expectedBaseFontPx)
           "System-font Body Mono is not the platform fixed-pitch face");
     const auto systemNoteName = typography::noteName(QApplication::font());
     check(QFontInfo(systemNoteName).family() == QStringLiteral("Atkinson Hyperlegible Next") &&
-              QFontInfo(systemNoteName).styleName() == QStringLiteral("SemiBold"),
-          "Note-name font did not stay on bundled SemiBold with system font enabled");
+              QFontInfo(systemNoteName).styleName() == expectedNoteNameStyle,
+          "Note-name font did not stay on the bundled face with system font enabled");
     typography::setUseSystemFont(false);
     themes::apply(*application, themes::vanilla());
     check(QFontInfo(QApplication::font()).family() ==
