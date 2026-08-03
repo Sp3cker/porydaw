@@ -604,6 +604,24 @@ std::vector<DocNote> SongDocument::notesForTrack(int engineTrack) const
     std::reverse(notes.begin(), notes.end()); // restore note-on order
     return notes;
 }
+uint64_t SongDocument::noteEndTick(const DocNote &note) const
+{
+    if (!note.unterminated())
+        return note.tick + note.duration;
+    if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
+        return note.tick;
+    return m_smf.tracks[size_t(note.smfTrack)].endTick;
+}
+
+bool SongDocument::containsNoteSpan(int engineTrack, const DocNote &snapshot,
+                                    uint64_t expectedEndTick) const
+{
+    DocNote current;
+    if (!findNote(engineTrack, snapshot.tick, snapshot.key, &current))
+        return false;
+    return current.unterminated() == snapshot.unterminated() &&
+           noteEndTick(current) == expectedEndTick;
+}
 
 bool SongDocument::findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const
 {

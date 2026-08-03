@@ -366,6 +366,9 @@ class SongView : public QWidget
     // The subdivision follows the governing segment's beat at the current
     // feel, floored at the minimum and never finer than the clock base.
     uint64_t gridTicksAt(uint64_t tick) const;
+    // Visible grid at an explicit pixels-per-tick scale, using the
+    // time-signature segment governing tick.
+    uint64_t gridTicksAtScale(uint64_t tick, double pixelsPerTick) const;
     // Snap grid in ticks at a position: one feel-ladder step finer than the
     // visible grid, so edits can land halfway between drawn lines (thirds
     // stepping from beats in triplet feel). The minimum subdivision is a
@@ -523,6 +526,8 @@ class SongView : public QWidget
     // A mouse gesture is live in the ruler, roll, or lanes (pan, drag,
     // sweep); playhead follow-scroll pauses while one runs.
     bool userGestureActive() const;
+    // Child-widget request to toggle transport from a specific song tick.
+    void requestPlayPauseFrom(uint64_t tick) { emit playPauseFromRequested(tick); }
 
     // Interaction from children.
     void zoomTimelineAtWheel(const QWheelEvent *event, qreal anchorContentX);
@@ -572,6 +577,9 @@ class SongView : public QWidget
     // Edit cursor committed to a new position (click released); the main
     // window seeks playback here when not stopped.
     void editCursorMoved(uint64_t tick);
+    // Popup/editor audition: start from tick when stopped or paused, or pause
+    // the currently playing transport.
+    void playPauseFromRequested(uint64_t tick);
     // Roll/event-list swap (user toggle or applyViewState); the main window
     // mirrors it into the View-menu checkbox.
     void eventListVisibilityChanged(bool visible);
@@ -611,7 +619,7 @@ class SongView : public QWidget
     };
 
     void refreshGeometry();
-    uint64_t gridTicksIn(const GridSeg &seg, bool snap = false) const;
+    uint64_t gridTicksIn(const GridSeg &seg, double pixelsPerTick, bool snap = false) const;
     // Document remap handler: re-addresses all SongView-owned track state
     // before the following documentChanged rebuild.
     void onTracksRemapped(const TrackRemap &remap);

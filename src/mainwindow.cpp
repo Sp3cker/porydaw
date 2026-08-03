@@ -824,6 +824,13 @@ SongSession *MainWindow::createSession()
         if (s == m_active)
             statusBar()->showMessage(text, 6000);
     });
+    connect(s->view, &SongView::playPauseFromRequested, this, [this, s](uint64_t tick) {
+        if (s != m_active)
+            return;
+        if (m_audio.transport() != Transport::Playing)
+            s->view->commitEditCursor(tick);
+        m_transportBar->playPauseAction();
+    });
     // Jump-from-context voice navigation (header voice line, event list):
     // raise the dock and select the slot. No keyboard focus moves — Space
     // and the roll's shortcuts keep working.
