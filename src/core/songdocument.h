@@ -112,6 +112,8 @@ class SongDocument : public QObject
     // Lookups. Results go stale on any mutation.
     std::vector<DocNote> notesForTrack(int engineTrack) const;
     bool findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const;
+    uint64_t noteEndTick(const DocNote &note) const;
+    bool containsNoteSpan(int engineTrack, const DocNote &snapshot, uint64_t expectedEndTick) const;
     std::vector<DocLanePoint> lanePoints(int engineTrack, uint8_t cc) const;
     bool findLanePoint(int engineTrack, uint8_t cc, uint64_t tick, DocLanePoint *out) const;
     // Loop markers ('[' / ']' text metas); UINT64_MAX when absent.

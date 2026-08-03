@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "core/songdocument.h"
+#include "pitchbendcheck.hpp"
 #include "project/decompproject.h"
 #include "rollcheckplayhead.h"
 #include "ui/layout.h"
@@ -70,6 +71,9 @@
 // Bare M and S toggle mute/solo over the multi-track scope (mixed state
 // resolving toward on), the header buttons following without a rebuild
 // and the undo stack untouched.
+// B opens a note-local automation popup with pitch-bend and mod-wheel graphs.
+// Pitch scrolling writes a BENDR value restored at note-off; either graph can
+// draw freehand or fine linear ramps. Click-away or Escape dismisses it.
 // The cursor over the roll marks its key row on the keyboard column
 // (with a note-name chip) — held through gestures so a drag's target row
 // stays readable — cleared when the cursor leaves the widget.
@@ -713,6 +717,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     }
     if (noteA.velocity != 100)
         fail("fresh document does not draw at velocity 100");
+
+    failures += runPitchBendCheck(doc, view, roll, track, noteA, a.center, songLabel);
 
     // The painted box runs flush to the note's right interaction edge
     // (consecutive notes abut with no phantom rest column) but stops one

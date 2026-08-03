@@ -5,6 +5,7 @@
 #include "theme/trackidentitycolors.h"
 #include "typography.h"
 #include "ui/layout.h"
+#include "ui/pitchbendeditor.hpp"
 #include "ui/timelinesurface.h"
 
 #include <QApplication>
@@ -15,6 +16,7 @@
 #include <QDialogButtonBox>
 #include <QEvent>
 #include <QFontMetrics>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QInputDialog>
@@ -1358,7 +1360,8 @@ class PianoRoll : public TimelineSurface
     // under the cursor.
     bool gestureActive() const
     {
-        return m_panning || m_drag != Drag::None || m_leftPress || m_rightPress || m_kbdKey >= 0;
+        return m_panning || m_drag != Drag::None || m_leftPress || m_rightPress || m_kbdKey >= 0 ||
+               (m_bendPopup && m_bendPopup->isVisible());
     }
 
   protected:
@@ -1401,7 +1404,6 @@ class PianoRoll : public TimelineSurface
         drawNotes(p, model, selected, true);
         drawNotes(p, model, selected, false);
         drawDragPreview(p, model, selected);
-
         if (m_drag == Drag::Band) {
             const QRectF band = QRectF(m_pressPos, m_curPos).normalized();
             QColor c = themes::color(themes::Role::song_view_selection_edge);
@@ -1976,6 +1978,12 @@ class PianoRoll : public TimelineSurface
             event->accept();
             return;
         }
+        if (doc && keys.matches(event, QStringLiteral("roll.pitch_bend"))) {
+            if (!event->isAutoRepeat())
+                openPitchBendEditor();
+            event->accept();
+            return;
+        }
         if (doc) {
             const int transpose = m_sv->transposeStepFor(event);
             if (transpose != 0) {
@@ -2223,6 +2231,56 @@ class PianoRoll : public TimelineSurface
         const qreal inner = edgeGripInnerReach(r);
         return pos.x() > r.left() + inner && pos.x() < r.right() - inner &&
                pos.y() >= bar.top() - pad && pos.y() < bar.bottom() + pad;
+    }
+
+    void openPitchBendEditor()
+    {
+        const std::vector<DocNote> notes = resolveSelection();
+        if (notes.size() != 1) {
+            m_sv->announce(SongView::tr("Select one note to edit pitch bend."));
+            return;
+        }
+        if (m_bendPopup) {
+            m_bendPopup->deleteLater();
+            m_bendPopup = nullptr;
+        }
+        auto *popup = new PitchBendEditor(
+            m_sv, m_sv->document(), notes.front(), this,
+            [this](QPointF globalPos) { return focusNoteUnderCursor(globalPos); });
+        if (!popup->hasEditableSpan()) {
+            popup->deleteLater();
+            m_sv->announce(SongView::tr("Select one note to edit pitch bend."));
+            return;
+        }
+        const QPoint cursorLocal = mapFromGlobal(QCursor::pos());
+        double noteFraction = -1.0;
+        QRect noteGlobal;
+        for (const ViewNote &viewNote : m_sv->model().notes) {
+            if (viewNote.track != notes.front().engineTrack ||
+                viewNote.startTick != notes.front().tick || viewNote.key != notes.front().key)
+                continue;
+            const QRect noteLocal = noteRect(viewNote).toAlignedRect();
+            noteGlobal =
+                QRect(mapToGlobal(noteLocal.topLeft()), mapToGlobal(noteLocal.bottomRight()));
+            if (noteLocal.contains(cursorLocal)) {
+                noteFraction = double(m_sv->tickAtContentX(cursorLocal.x() - kKeyboardW) -
+                                      double(notes.front().tick)) /
+                               double(popup->endTick() - notes.front().tick);
+                noteFraction = std::clamp(noteFraction, 0.0, 1.0);
+            }
+            break;
+        }
+        if (noteGlobal.isEmpty()) {
+            popup->deleteLater();
+            m_sv->announce(SongView::tr("Select one note to edit pitch bend."));
+            return;
+        }
+        m_bendPopup = popup;
+        connect(popup, &QObject::destroyed, this, [this, popup] {
+            if (m_bendPopup == popup)
+                m_bendPopup = nullptr;
+        });
+        popup->openAt(noteGlobal, noteFraction);
     }
 
     // Resolves the current selection to document notes (skips stale ids).
@@ -2578,10 +2636,10 @@ class PianoRoll : public TimelineSurface
         m_noteMenu->showMenuAt(mapToGlobal(localPos.toPoint()), notes.front().velocity);
     }
 
-    // Retargets the open note menu to the note under an outside right-click.
-    // Returns false when nothing was hit (empty space, the keyboard strip,
-    // another widget) so the caller can dismiss the popup instead.
-    bool moveNoteMenu(QPointF globalPos)
+    // Activates the note under an outside popup click. Returns false when
+    // nothing was hit (empty space, the keyboard strip, another widget) so
+    // the caller can dismiss its popup normally.
+    bool focusNoteUnderCursor(QPointF globalPos)
     {
         const QPointF pos = globalPos - QPointF(mapToGlobal(QPoint(0, 0)));
         const ViewNote *hit = m_sv->document() && pos.x() >= kKeyboardW ? hitNote(pos) : nullptr;
@@ -2589,8 +2647,20 @@ class PianoRoll : public TimelineSurface
             return false;
         if (!m_sv->isSelected(*hit))
             m_sv->setSelection({{hit->startTick, hit->key}});
-        showNoteMenu(pos);
+        setFocus(Qt::MouseFocusReason);
         invalidateContent();
+        return true;
+    }
+
+    // Retargets the open note menu to the note under an outside right-click.
+    // Returns false when nothing was hit (empty space, the keyboard strip,
+    // another widget) so the caller can dismiss the popup instead.
+    bool moveNoteMenu(QPointF globalPos)
+    {
+        if (!focusNoteUnderCursor(globalPos))
+            return false;
+        const QPointF pos = globalPos - QPointF(mapToGlobal(QPoint(0, 0)));
+        showNoteMenu(pos);
         return true;
     }
 
@@ -2795,6 +2865,7 @@ class PianoRoll : public TimelineSurface
     uint8_t m_lastVelocity = 100; // latches to touched/velocity-edited notes
     bool m_panning = false;       // middle-drag pan
     QPointF m_panPos;             // last pan sample, global coords
+    PitchBendEditor *m_bendPopup = nullptr;
     NoteContextMenu *m_noteMenu = nullptr;
 };
 
@@ -5386,17 +5457,24 @@ uint64_t SongView::gridTicksAt(uint64_t tick) const
 {
     if (!m_timeline)
         return 24;
-    return gridTicksIn(gridSegAt(tick));
+    return gridTicksIn(gridSegAt(tick), m_pxPerTick);
+}
+
+uint64_t SongView::gridTicksAtScale(uint64_t tick, double pixelsPerTick) const
+{
+    if (!m_timeline)
+        return 24;
+    return gridTicksIn(gridSegAt(tick), pixelsPerTick);
 }
 
 uint64_t SongView::snapTicksAt(uint64_t tick) const
 {
     if (!m_timeline)
         return 24;
-    return gridTicksIn(gridSegAt(tick), /*snap=*/true);
+    return gridTicksIn(gridSegAt(tick), m_pxPerTick, /*snap=*/true);
 }
 
-uint64_t SongView::gridTicksIn(const GridSeg &seg, bool snap) const
+uint64_t SongView::gridTicksIn(const GridSeg &seg, double pixelsPerTick, bool snap) const
 {
     const uint64_t clock = m_document ? m_document->ticksPerClock() : 1;
     // Finest visible subdivision at least kAutoGridMinCellPx wide from the
@@ -5413,7 +5491,7 @@ uint64_t SongView::gridTicksIn(const GridSeg &seg, bool snap) const
         m_gridMinDenom == 0
             ? UINT64_MAX
             : std::max<uint64_t>(1, uint64_t(m_gridMinDenom) * (triplet ? 3 : 2) / 8);
-    const double pxPerSegBeat = m_pxPerTick * double(seg.beatTicks);
+    const double pxPerSegBeat = pixelsPerTick * double(seg.beatTicks);
     const uint64_t *ladder = triplet ? kTriplet : kStraight;
     constexpr int kSteps = 6;
     int step = kSteps - 1; // whole beats when even one-per-beat cells are
@@ -5453,7 +5531,7 @@ uint64_t SongView::snapTick(double tick, bool fine) const
         return uint64_t(std::round(tick / g) * g);
     }
     const GridSeg seg = gridSegAt(uint64_t(tick));
-    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, /*snap=*/true));
+    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, m_pxPerTick, /*snap=*/true));
     const uint64_t k = uint64_t((tick - double(seg.start)) / double(g));
     const uint64_t lo = seg.start + k * g;
     // The next signature's tick is itself a grid position (the grid
@@ -5466,7 +5544,7 @@ uint64_t SongView::snapTickDown(double tick) const
 {
     tick = std::max(0.0, tick);
     const GridSeg seg = gridSegAt(uint64_t(tick));
-    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, /*snap=*/true));
+    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, m_pxPerTick, /*snap=*/true));
     return seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
 }
 
@@ -5474,7 +5552,7 @@ uint64_t SongView::snapTickUp(double tick) const
 {
     tick = std::max(0.0, tick);
     const GridSeg seg = gridSegAt(uint64_t(tick));
-    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, /*snap=*/true));
+    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, m_pxPerTick, /*snap=*/true));
     const uint64_t lo = seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
     if (double(lo) >= tick)
         return lo;

@@ -331,6 +331,9 @@ class SongView : public QWidget
     // subdivision (1/4 = one beat of that signature) and never finer than
     // the song's mid2agb clock base.
     uint64_t gridTicksAt(uint64_t tick) const;
+    // Visible grid at an explicit pixels-per-tick scale, using the
+    // time-signature segment governing tick.
+    uint64_t gridTicksAtScale(uint64_t tick, double pixelsPerTick) const;
     // Snap grid in ticks at a position: one feel-ladder step finer than the
     // visible grid, so edits can land halfway between drawn lines (thirds
     // stepping from beats in triplet feel). The minimum subdivision is a
@@ -472,6 +475,8 @@ class SongView : public QWidget
 
     // Child-widget entry point for the statusMessage signal.
     void announce(const QString &text) { emit statusMessage(text); }
+    // Child-widget request to toggle transport from a specific song tick.
+    void requestPlayPauseFrom(uint64_t tick) { emit playPauseFromRequested(tick); }
 
     // Interaction from children.
     void zoomAroundContentX(double factor, qreal anchorContentX);
@@ -513,6 +518,9 @@ class SongView : public QWidget
     // Edit cursor committed to a new position (click released); the main
     // window seeks playback here when not stopped.
     void editCursorMoved(uint64_t tick);
+    // Popup/editor audition: start from tick when stopped or paused, or pause
+    // the currently playing transport.
+    void playPauseFromRequested(uint64_t tick);
     // Roll/event-list swap (user toggle or applyViewState); the main window
     // mirrors it into the View-menu checkbox.
     void eventListVisibilityChanged(bool visible);
@@ -524,7 +532,7 @@ class SongView : public QWidget
     void resizeEvent(QResizeEvent *event) override;
 
   private:
-    uint64_t gridTicksIn(const GridSeg &seg, bool snap = false) const;
+    uint64_t gridTicksIn(const GridSeg &seg, double pixelsPerTick, bool snap = false) const;
     // Document trackMoved handler: rotates the per-track view state with the
     // renumbered engine slots on apply, undo, and redo alike.
     void onTrackMoved(int fromChunk, int toChunk, const QVector<int> &map);

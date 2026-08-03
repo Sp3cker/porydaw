@@ -128,6 +128,8 @@ int runKeymapCheck()
               "Ctrl+M must not match mute tracks");
         check(keyMatches(QStringLiteral("roll.solo_tracks"), Qt::Key_S, Qt::NoModifier),
               "S should match solo tracks");
+        check(keyMatches(QStringLiteral("roll.pitch_bend"), Qt::Key_B, Qt::NoModifier),
+              "B should edit the selected note's pitch bend");
         check(keyMatches(QStringLiteral("transport.play_pause"), Qt::Key_Space, Qt::NoModifier),
               "Space should match play/pause");
         check(
