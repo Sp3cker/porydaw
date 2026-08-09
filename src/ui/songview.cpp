@@ -2199,6 +2199,11 @@ class PianoRoll : public TimelineSurface
     // pixel short on the bottom so the row hairline stays visible.
     QRectF noteBox(const QRectF &rect) const { return rect.adjusted(0, 0, 0, -physicalPixel()); }
 
+    // The height a velocity value may occupy: the note box, never the full
+    // row pitch (rounding the pitch up would let digit ink cross the box's
+    // bottom border into the hairline gap).
+    int velocityLabelHeight() const { return int(std::floor(m_sv->keyHeight() - physicalPixel())); }
+
     // Topmost (last-drawn) note of the selected track under pos. The rect is
     // widened a little on both sides so the edge resize handles can be
     // grabbed from just outside the note.
@@ -2399,10 +2404,13 @@ class PianoRoll : public TimelineSurface
         const bool showVelocityValues =
             !drawingGhostNotes && (m_drag == Drag::Velocity || velocityShortcut);
         // Velocity values are optional at tight zoom levels; never force a
-        // minimum face that can clip vertically.
-        const auto velocityFont =
-            showVelocityValues ? velocityLabelFont(painter.font(), int(std::lround(keyHeight)))
-                               : std::optional<QFont>{};
+        // minimum face that can clip vertically. The face fits the note box,
+        // not the row pitch: the row includes the hairline gap under the box,
+        // and a face fitted to the rounded pitch pushes digit ink across the
+        // note's bottom border on 1x displays.
+        const auto velocityFont = showVelocityValues
+                                      ? velocityLabelFont(painter.font(), velocityLabelHeight())
+                                      : std::optional<QFont>{};
         if (velocityFont)
             painter.setFont(*velocityFont);
 
@@ -2457,9 +2465,13 @@ class PianoRoll : public TimelineSurface
             // value instead of the pitch label.
             if (showVelocityValues && velocityFont) {
                 const QString velocityText = QString::number(renderedVelocity);
-                if (noteRect.width() >= painter.fontMetrics().horizontalAdvance(velocityText) + 4)
-                    drawPlatedNoteText(painter, noteRect, Qt::AlignCenter, velocityText, fill,
+                if (noteRect.width() >= painter.fontMetrics().horizontalAdvance(velocityText) + 4) {
+                    painter.save();
+                    painter.setClipRect(noteBox, Qt::IntersectClip);
+                    drawPlatedNoteText(painter, noteBox, Qt::AlignCenter, velocityText, fill,
                                        contrastingTextColor(fill));
+                    painter.restore();
+                }
             }
 
             if (m_sv->isSelected(note)) {
@@ -2531,13 +2543,16 @@ class PianoRoll : public TimelineSurface
         const auto &keys = keymap::Registry::instance();
         if (keys.matchesModifier(QApplication::queryKeyboardModifiers(),
                                  QStringLiteral("roll.velocity_drag"))) {
-            if (const auto font =
-                    velocityLabelFont(p.font(), int(std::lround(m_sv->keyHeight())))) {
+            if (const auto font = velocityLabelFont(p.font(), velocityLabelHeight())) {
                 p.setFont(*font);
                 const auto velocityText = QString::number(m_lastVelocity);
-                if (r.width() >= p.fontMetrics().horizontalAdvance(velocityText) + 4)
-                    drawPlatedNoteText(p, r, Qt::AlignCenter, velocityText, fill,
+                if (r.width() >= p.fontMetrics().horizontalAdvance(velocityText) + 4) {
+                    p.save();
+                    p.setClipRect(box, Qt::IntersectClip);
+                    drawPlatedNoteText(p, box, Qt::AlignCenter, velocityText, fill,
                                        contrastingTextColor(fill));
+                    p.restore();
+                }
             }
         } else if (m_sv->noteNameMode()) {
             // The pencil's live pitch readout: unlike settled labels it must

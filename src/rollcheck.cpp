@@ -1680,6 +1680,157 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         view.clearSelection();
     }
 
+    // A velocity value on a vertically short note stays inside the note box:
+    // the face fits the box rather than the row pitch (which includes the
+    // hairline gap and can round up past it), and the plated text clips to
+    // the box. Probe pitches where a pitch-fitted face pushed digit ink into
+    // the gap row on 1x displays: an integer pitch whose fitted face
+    // occupied the whole rounded height, and a fractional pitch that rounds
+    // up past the row.
+    {
+        const SongView::ViewState originalView = view.viewState();
+        for (const double shortKeyHeight : {8.6, 9.0}) {
+            SongView::ViewState shortView = originalView;
+            shortView.keyHeight = shortKeyHeight;
+            view.applyViewState(shortView);
+            QCoreApplication::processEvents();
+
+            // The probed note stays unselected (values show on every
+            // current-track note during a drag), so its interior carries only
+            // the 1-DIP black border, not the selection ring — the drag runs
+            // on a sacrificial second note, placed FIRST so the isolation
+            // scan below keeps the probed note's guarded rows clear of it.
+            const int undoIndexBefore = doc.undoStack()->index();
+            const Cell dragCell = findFreeCell(8, true);
+            if (dragCell.key < 0) {
+                fail("no free cell for the short-note velocity drag note");
+                continue;
+            }
+            doc.addNote(track, dragCell.tick, uint8_t(dragCell.key), uint32_t(dragCell.dur), 100);
+
+            // An isolated two-cell span: wide enough for a two-digit value,
+            // with the rows above and below empty on every track so the
+            // strips beyond the box compare against static background. The
+            // parked playhead/edit-cursor column and the loop markers paint
+            // identically over background and note, so they must stay a cell
+            // clear of the span (findFreeCell dodges too few of these and
+            // only one cell, hence the dedicated scan).
+            Cell cell;
+            const SnappedRows shortRows{view, *roll};
+            for (int key = 115; key >= 24 && cell.key < 0; --key) {
+                if (shortRows.top(key) < 3.0 || shortRows.bottom(key) > roll->height() - 3.0)
+                    continue;
+                for (int probe = 8; probe < roll->width() - songview::kKeyboardW - 40;
+                     probe += 24) {
+                    const uint64_t tick = view.snapTickDown(view.tickAtContentX(probe));
+                    const uint64_t dur = view.gridTicksAt(tick);
+                    const int x0 = songview::kKeyboardW + view.contentX(double(tick));
+                    const int xs =
+                        songview::kKeyboardW + view.contentX(double(tick + view.snapTicksAt(tick)));
+                    const int x2 = songview::kKeyboardW + view.contentX(double(tick + 2 * dur));
+                    if (x0 < songview::kKeyboardW || xs - x0 < 8 || x2 - x0 < 24 ||
+                        x2 >= roll->width())
+                        continue;
+                    bool blocked = false;
+                    for (int neighborKey = key - 1; neighborKey <= key + 1; ++neighborKey)
+                        blocked = blocked || occupied(tick, 2 * dur, neighborKey, true);
+                    const auto nearSpan = [&](uint64_t overlay) {
+                        return overlay != UINT64_MAX && overlay + dur >= tick &&
+                               overlay <= tick + 3 * dur;
+                    };
+                    if (blocked || nearSpan(timeline->loopStartTick) ||
+                        nearSpan(timeline->loopEndTick) || nearSpan(overlayTick))
+                        continue;
+                    cell.tick = tick;
+                    cell.dur = dur;
+                    cell.key = key;
+                    cell.center = QPoint((x0 + xs) / 2, shortRows.centerY(key));
+                    break;
+                }
+            }
+            if (cell.key < 0) {
+                fail("no isolated cell for the short-note velocity value probe");
+                while (doc.undoStack()->index() > undoIndexBefore && doc.undoStack()->canUndo())
+                    doc.undoStack()->undo();
+                continue;
+            }
+
+            // Velocity 10 parks the probed note's bar at the box bottom,
+            // keeping the upper interior clear for the glyph-ink assertion.
+            doc.addNote(track, cell.tick, uint8_t(cell.key), uint32_t(2 * cell.dur), 10);
+            QCoreApplication::processEvents();
+            const QImage shortIdleImage = roll->grab().toImage();
+
+            sendMouse(roll, QEvent::MouseButtonPress, dragCell.center, Qt::LeftButton,
+                      Qt::LeftButton, Qt::ControlModifier);
+            sendMouse(roll, QEvent::MouseMove, dragCell.center + QPoint(0, 12), Qt::NoButton,
+                      Qt::LeftButton, Qt::ControlModifier);
+            const QImage shortDragImage = roll->grab().toImage();
+            sendMouse(roll, QEvent::MouseButtonRelease, dragCell.center + QPoint(0, 12),
+                      Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+
+            const int shortLeftX = songview::kKeyboardW + view.contentX(double(cell.tick));
+            const int shortRightX =
+                songview::kKeyboardW + view.contentX(double(cell.tick + 2 * cell.dur));
+            const QRectF shortRect = shortRows.noteRect(shortLeftX, shortRightX, cell.key);
+            const QRectF shortBox = shortRows.noteBox(shortRect);
+
+            // The drag must render a value, or the no-bleed comparison below
+            // passes vacuously. Glyph ink is any non-fill pixel in the box
+            // interior above the vertical midline: the velocity bar sits at
+            // the box bottom at 10, and the unselected note's black border is
+            // excluded by margin.
+            const QRgb draggedFill = SongView::noteColor(track, 10).rgb();
+            const int frameMargin = songview::noteBorderPixels(rasterDpr);
+            const int boxTopPixel = toRasterPixel(shortBox.top());
+            const int boxBottomPixel = toRasterPixel(shortBox.bottom());
+            const int inkTop = boxTopPixel + frameMargin;
+            const int inkBottom = (boxTopPixel + boxBottomPixel) / 2;
+            if (inkTop >= inkBottom)
+                fail("short-note velocity probe has no frame-free interior row");
+            bool valueInkFound = false;
+            for (int y = inkTop; y < inkBottom; ++y) {
+                for (int x = toRasterPixel(shortBox.left()) + frameMargin;
+                     x < toRasterPixel(shortBox.right()) - frameMargin; ++x) {
+                    valueInkFound |= shortDragImage.pixel(x, y) != draggedFill;
+                }
+            }
+            if (!valueInkFound)
+                fail("short-note velocity drag rendered no value ink");
+
+            // No ink outside the box: the gap row under the box and the rows
+            // beyond the note rect (below and above) must match the pre-drag
+            // image, on the note's span padded past the plate's side bleed.
+            const QRect imageBounds = shortDragImage.rect();
+            const auto stripsMatch = [&](int firstY, int lastY) {
+                // The left clamp also keeps the strip out of the keyboard,
+                // whose hover mark legitimately repaints during the drag.
+                const int stripLeft = std::max(toRasterPixel(shortBox.left()) - 2,
+                                               toRasterPixel(qreal(songview::kKeyboardW)));
+                for (int y = std::max(firstY, 0); y <= std::min(lastY, imageBounds.bottom()); ++y) {
+                    for (int x = stripLeft;
+                         x <= std::min(toRasterPixel(shortBox.right()) + 2, imageBounds.right());
+                         ++x) {
+                        if (shortDragImage.pixel(x, y) != shortIdleImage.pixel(x, y))
+                            return false;
+                    }
+                }
+                return true;
+            };
+            if (!stripsMatch(boxBottomPixel, toRasterPixel(shortRect.bottom()) + 2))
+                fail("short-note velocity value bled below the note box");
+            if (!stripsMatch(toRasterPixel(shortRect.top()) - 3,
+                             toRasterPixel(shortRect.top()) - 1))
+                fail("short-note velocity value bled above the note rect");
+
+            while (doc.undoStack()->index() > undoIndexBefore && doc.undoStack()->canUndo())
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+        view.applyViewState(originalView);
+        QCoreApplication::processEvents();
+    }
+
     // Edge resize snaps to the ruler's absolute grid, not to grid-sized
     // offsets from the note's own end: give a note an off-grid duration
     // (1.25 cells) behind the view's back, drag its right edge to 1.9
