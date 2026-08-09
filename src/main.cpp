@@ -14,8 +14,6 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong = QSt
 int runRoundTrip(const QString &projectRoot, const QString &mid2agbPath = QString());
 // editcheck.cpp; M2 undo-integrity check over every edit-operation type.
 int runEditCheck(const QString &projectRoot);
-// noteidcheck.cpp; transient note identity and MIDI serialization check.
-int runNoteIdentityCheck(const QString &scratchProject);
 // savecheck.cpp; M2 edited-save check (writes into the project: use a copy).
 int runSaveCheck(const QString &projectRoot, const QString &songLabel,
                  const QString &mid2agbPath = QString());
@@ -86,6 +84,36 @@ int runKeymapCheck();
 // the optional song label + path save that song's rendered event list.
 int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong = QString(),
                       const QString &screenshotPath = QString());
+int runNoteIdentityCheck(const QString &scratchProject);
+int runHostSeamsCheck();
+int runVelocityModelCheck();
+int runEditorDrawerCheck(const QString &screenshotPath = QString());
+int runAutomationCheck(const QString &scratchProject, const QString &songLabel,
+                       const QString &screenshotPath = QString());
+int runAutomationGestureCheck(const QString &scratchProject, const QString &songLabel,
+                              const QString &domain = QString());
+int runAutomationPopupMenuCheck(const QString &scratchProject, const QString &songLabel,
+                                const QString &screenshotPath = QString());
+int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel,
+                         const QString &screenshotPath = QString());
+int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel);
+int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel);
+int runMainWindowRoutingCheck(const QString &scratchProject, const QString &songA,
+                              const QString &songB);
+int runRenderingPlayheadCheck(const QString &scratchProject, const QString &songLabel,
+                              const QString &screenshotPath = QString());
+int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
+                            const QString &songB, const QString &screenshotPath = QString());
+
+namespace {
+
+int missingCheckArguments(const char *command, const char *arguments)
+{
+    std::fprintf(stderr, "porydaw: %s requires %s\n", command, arguments);
+    return 2;
+}
+
+} // namespace
 
 int main(int argc, char *argv[])
 {
@@ -114,7 +142,105 @@ int main(int argc, char *argv[])
     if (!ui::initializeApplication(app))
         return 1;
 
-    const QStringList args = app.arguments();
+    const auto args = app.arguments();
+    const auto noteIdentityCheck = args.indexOf(QStringLiteral("--check-note-identity"));
+    if (noteIdentityCheck >= 0) {
+        if (noteIdentityCheck + 1 >= args.size())
+            return missingCheckArguments("--check-note-identity", "<scratch-project>");
+        return runNoteIdentityCheck(args[noteIdentityCheck + 1]);
+    }
+    if (args.contains(QStringLiteral("--check-host-seams")))
+        return runHostSeamsCheck();
+    if (args.contains(QStringLiteral("--check-velocity-model")))
+        return runVelocityModelCheck();
+    const auto drawerCheck = args.indexOf(QStringLiteral("--check-editor-drawer"));
+    if (drawerCheck >= 0) {
+        const auto screenshotPath =
+            drawerCheck + 1 < args.size() ? args[drawerCheck + 1] : QString();
+        return runEditorDrawerCheck(screenshotPath);
+    }
+    const auto automationGestureCheck = args.indexOf(QStringLiteral("--check-automation-gestures"));
+    if (automationGestureCheck >= 0) {
+        if (automationGestureCheck + 2 >= args.size())
+            return missingCheckArguments("--check-automation-gestures",
+                                         "<scratch-project> <song-label> [domain]");
+        const auto domain =
+            automationGestureCheck + 3 < args.size() ? args[automationGestureCheck + 3] : QString();
+        return runAutomationGestureCheck(args[automationGestureCheck + 1],
+                                         args[automationGestureCheck + 2], domain);
+    }
+    const auto automationPopupMenuCheck =
+        args.indexOf(QStringLiteral("--check-automation-popup-menus"));
+    if (automationPopupMenuCheck >= 0) {
+        if (automationPopupMenuCheck + 2 >= args.size())
+            return missingCheckArguments("--check-automation-popup-menus",
+                                         "<scratch-project> <song-label>");
+        const auto screenshotPath = automationPopupMenuCheck + 3 < args.size()
+                                        ? args[automationPopupMenuCheck + 3]
+                                        : QString();
+        return runAutomationPopupMenuCheck(args[automationPopupMenuCheck + 1],
+                                           args[automationPopupMenuCheck + 2], screenshotPath);
+    }
+    const auto automationCheck = args.indexOf(QStringLiteral("--check-automation"));
+    if (automationCheck >= 0) {
+        if (automationCheck + 2 >= args.size())
+            return missingCheckArguments("--check-automation", "<scratch-project> <song-label>");
+        const auto screenshotPath =
+            automationCheck + 3 < args.size() ? args[automationCheck + 3] : QString();
+        return runAutomationCheck(args[automationCheck + 1], args[automationCheck + 2],
+                                  screenshotPath);
+    }
+    const auto velocityPageCheck = args.indexOf(QStringLiteral("--check-velocity-page"));
+    if (velocityPageCheck >= 0) {
+        if (velocityPageCheck + 2 >= args.size())
+            return missingCheckArguments("--check-velocity-page", "<scratch-project> <song-label>");
+        const auto screenshotPath =
+            velocityPageCheck + 3 < args.size() ? args[velocityPageCheck + 3] : QString();
+        return runVelocityPageCheck(args[velocityPageCheck + 1], args[velocityPageCheck + 2],
+                                    screenshotPath);
+    }
+    const auto sidecarCheck = args.indexOf(QStringLiteral("--check-sidecar"));
+    if (sidecarCheck >= 0) {
+        if (sidecarCheck + 2 >= args.size())
+            return missingCheckArguments("--check-sidecar", "<scratch-project> <song-label>");
+        return runViewSidecarCheck(args[sidecarCheck + 1], args[sidecarCheck + 2]);
+    }
+    const auto hostAdapterCheck = args.indexOf(QStringLiteral("--check-host-adapter"));
+    if (hostAdapterCheck >= 0) {
+        if (hostAdapterCheck + 2 >= args.size())
+            return missingCheckArguments("--check-host-adapter", "<scratch-project> <song-label>");
+        return runHostAdapterCheck(args[hostAdapterCheck + 1], args[hostAdapterCheck + 2]);
+    }
+    const auto mainWindowRoutingCheck = args.indexOf(QStringLiteral("--check-mainwindow-routing"));
+    if (mainWindowRoutingCheck >= 0) {
+        if (mainWindowRoutingCheck + 3 >= args.size())
+            return missingCheckArguments("--check-mainwindow-routing",
+                                         "<scratch-project> <song-a> <song-b>");
+        return runMainWindowRoutingCheck(args[mainWindowRoutingCheck + 1],
+                                         args[mainWindowRoutingCheck + 2],
+                                         args[mainWindowRoutingCheck + 3]);
+    }
+    const auto renderingPlayheadCheck = args.indexOf(QStringLiteral("--check-rendering-playhead"));
+    if (renderingPlayheadCheck >= 0) {
+        if (renderingPlayheadCheck + 2 >= args.size())
+            return missingCheckArguments("--check-rendering-playhead",
+                                         "<scratch-project> <song-label>");
+        const auto screenshotPath =
+            renderingPlayheadCheck + 3 < args.size() ? args[renderingPlayheadCheck + 3] : QString();
+        return runRenderingPlayheadCheck(args[renderingPlayheadCheck + 1],
+                                         args[renderingPlayheadCheck + 2], screenshotPath);
+    }
+    const auto hostIntegrationCheck = args.indexOf(QStringLiteral("--check-host-integration"));
+    if (hostIntegrationCheck >= 0) {
+        if (hostIntegrationCheck + 3 >= args.size())
+            return missingCheckArguments("--check-host-integration",
+                                         "<scratch-project> <song-a> <song-b>");
+        const auto screenshotPath =
+            hostIntegrationCheck + 4 < args.size() ? args[hostIntegrationCheck + 4] : QString();
+        return runHostIntegrationCheck(args[hostIntegrationCheck + 1],
+                                       args[hostIntegrationCheck + 2],
+                                       args[hostIntegrationCheck + 3], screenshotPath);
+    }
     if (args.contains(QStringLiteral("--version"))) {
         std::printf("porydaw %s (Qt %s)\n", PORYDAW_VERSION, qVersion());
         return 0;
@@ -184,9 +310,6 @@ int main(int argc, char *argv[])
     const int editCheck = args.indexOf(QStringLiteral("--editcheck"));
     if (editCheck >= 0 && editCheck + 1 < args.size())
         return runEditCheck(args[editCheck + 1]);
-    const int noteIdentityCheck = args.indexOf(QStringLiteral("--check-note-identity"));
-    if (noteIdentityCheck >= 0 && noteIdentityCheck + 1 < args.size())
-        return runNoteIdentityCheck(args[noteIdentityCheck + 1]);
     const int eventViewCheck = args.indexOf(QStringLiteral("--eventviewcheck"));
     if (eventViewCheck >= 0 && eventViewCheck + 1 < args.size()) {
         const QString song =

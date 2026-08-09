@@ -95,7 +95,6 @@ qt_add_library(porydaw_app STATIC
     src/core/mid2agbtables.h
     src/core/miditimeline.cpp
     src/core/miditimeline.h
-    src/core/noteid.h
     src/core/smf.cpp
     src/core/smf.h
     src/core/songdocument.cpp
@@ -160,13 +159,14 @@ qt_add_library(porydaw_app STATIC
     src/ui/eventlistview.h
     src/ui/viewsidecar.cpp
     src/ui/viewsidecar.h
+    src/core/noteid.h
     src/core/velocitymodel.cpp
     src/core/velocitymodel.h
     src/ui/velocitygesturemodel.cpp
     src/ui/velocitygesturemodel.h
+    src/ui/editordrawer/drawerpage.h
     src/ui/editorviewstate.cpp
     src/ui/editorviewstate.h
-    src/ui/editordrawer/drawerpage.h
     src/ui/editordrawer/editordrawer.cpp
     src/ui/editordrawer/editordrawer.h
     src/ui/editordrawer/drawersections.cpp
@@ -238,7 +238,6 @@ qt_add_executable(porydaw
     src/viewcheck.cpp
     src/roundtrip.cpp
     src/editcheck.cpp
-    src/noteidcheck.cpp
     src/savecheck.cpp
     src/onboardcheck.cpp
     src/vgcheck.cpp
@@ -255,6 +254,20 @@ qt_add_executable(porydaw
     src/samplecheck.cpp
     src/sessioncheck.cpp
     src/keymapcheck.cpp
+    src/hostcheck.cpp
+    src/mainwindowroutingcheck.cpp
+    src/noteidcheck.cpp
+    src/renderingplayheadcheck.cpp
+    src/rollcheckautomation.cpp
+    src/automationgesturecheck/rig.cpp
+    src/automationgesturecheck/runner.cpp
+    src/automationgesturecheck/action.cpp
+    src/automationgesturecheck/mapping.cpp
+    src/automationgesturecheck/stroke.cpp
+    src/automationgesturecheck/ownership.cpp
+    src/automationgesturecheck/transactions.cpp
+    src/rollcheckdrawer.cpp
+    src/rollcheckpsgvelocity.cpp
     resources/fonts.qrc
 )
 if(APPLE)
