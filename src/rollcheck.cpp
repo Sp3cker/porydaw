@@ -2213,6 +2213,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("B did not enable pencil mode");
         if (lanes->cursor().shape() != Qt::BitmapCursor)
             fail("pencil mode did not install the pencil cursor");
+        const QPixmap expectedPencil = QIcon(QStringLiteral(":/cursors/pencil.png"))
+                                           .pixmap(QSize(16, 16), lanes->devicePixelRatioF());
+        if (lanes->cursor().pixmap().devicePixelRatio() != expectedPencil.devicePixelRatio() ||
+            lanes->cursor().pixmap().toImage() != expectedPencil.toImage())
+            fail("pencil mode did not install its DPI-matched cursor asset");
         {
             // A held key's auto-repeat presses must not strobe the mode.
             QKeyEvent repeat(QEvent::KeyPress, Qt::Key_B, Qt::NoModifier, QString(), true);
@@ -2254,8 +2259,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("test-side tempo value mirror drifted from the widget's mapping");
         const qreal xDot = view.displayX(double(t0), songview::kGutterW, dprLanes);
         const int yDot = tempoValueY(clickPt.value);
+        // Only a self-consistency bound on the two lambdas (the widget-drift
+        // coverage is the clickPt.value assert above); yDot is load-bearing
+        // as the dot-press coordinate below.
         if (std::abs(yDot - y0) > 2)
-            fail("test-side tempo row mirror drifted from the widget's mapping");
+            fail("tempo value<->y lambdas disagree on the round-trip");
         const uint64_t g = std::max<uint64_t>(1, view.gridTicksAt(t0));
         const qreal xEnd = view.displayX(double(t0 + 4 * g), songview::kGutterW, dprLanes);
         auto dragStroke = [&](int yFrom, int yTo, Qt::KeyboardModifiers mods) {
@@ -2295,6 +2303,29 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("Shift pencil stroke did not draw the crossed cells");
         doc.undoStack()->undo();
         QCoreApplication::processEvents();
+
+        // Toggling B mid-stroke must not change the in-flight gesture: the
+        // press latched the pencil, so the Shift lock keeps holding even
+        // after the mode flips off underneath it.
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), y1), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        for (int step = 1; step <= 4; step++) {
+            if (step == 3)
+                sendKey(lanes, Qt::Key_B, Qt::NoModifier);
+            const QPoint p(int(xDot + (xEnd - xDot) * step / 4), y1 + (y2 - y1) * step / 4);
+            sendMouse(lanes, QEvent::MouseMove, p, Qt::NoButton, Qt::LeftButton, Qt::ShiftModifier);
+        }
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), y2), Qt::LeftButton,
+                  Qt::NoButton, Qt::ShiftModifier);
+        QCoreApplication::processEvents();
+        if (view.automationPencilMode())
+            fail("mid-drag B press did not toggle the mode itself");
+        for (const DocLanePoint &pt : tempoPoints())
+            if (pt.tick >= t0 && pt.tick <= t0 + 4 * g && pt.value != lockValue)
+                fail("mid-drag B toggle changed the in-flight Shift-locked stroke");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier); // pencil back on
 
         // Without Shift the same stroke follows the cursor.
         dragStroke(y1, y2, Qt::NoModifier);
