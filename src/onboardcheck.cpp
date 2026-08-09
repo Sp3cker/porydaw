@@ -1848,6 +1848,10 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
 bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QString &label)
 {
     m_persistSession = false;
+    // Native-format QSettings use the registry on Windows, so setPath() in
+    // the harness cannot isolate a persisted song filter. Clear it explicitly
+    // before asserting on the fixture's list item.
+    m_songList->restoreFilters(QString(), 0, QString());
     if (!openProjectDir(projectRoot, /*interactive=*/false)) {
         std::fprintf(stderr, "onboardcheck: project failed to open in MainWindow\n");
         return false;

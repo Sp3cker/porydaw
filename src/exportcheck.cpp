@@ -121,8 +121,10 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
 
     QFile f(wavPath);
     QByteArray wav;
-    if (f.open(QIODevice::ReadOnly))
+    if (f.open(QIODevice::ReadOnly)) {
         wav = f.readAll();
+        f.close();
+    }
     const uint64_t dataSize = totals.totalSamples * 4;
     if (uint64_t(wav.size()) != 44 + dataSize)
         fail("file size does not match the rendered length");

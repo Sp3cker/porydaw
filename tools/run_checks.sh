@@ -57,6 +57,13 @@ copy_tree() { # src dst: the working tree minus .git
 copy_tree "$SRC" "$TMPROOT/base"
 [ -n "$FORK" ] && copy_tree "$FORK" "$TMPROOT/forkbase"
 
+# The decomp build names host tools with .exe on Windows. Pass an explicit
+# source-tree path so scratch copies work on either platform.
+MID2AGB="$SRC/tools/mid2agb/mid2agb"
+[ -f "$MID2AGB.exe" ] && MID2AGB="$MID2AGB.exe"
+mid2agb_args=()
+[ -f "$MID2AGB" ] && mid2agb_args=("$MID2AGB")
+
 fails=()
 
 report() { # name exit-status
@@ -84,12 +91,12 @@ run() { # name base|- harness-args... (SCRATCH placeholder = fresh copy of base)
     report "$name" $?
 }
 
-run roundtrip        base --roundtrip SCRATCH
+run roundtrip        base --roundtrip SCRATCH "${mid2agb_args[@]}"
 run editcheck        base --editcheck SCRATCH
 run viewcheck        base --viewcheck SCRATCH
 run selftest         base --selftest SCRATCH mus_littleroot
-run savecheck        base --savecheck SCRATCH mus_abandoned_ship
-run onboardcheck     base --onboardcheck SCRATCH
+run savecheck        base --savecheck SCRATCH mus_abandoned_ship "${mid2agb_args[@]}"
+run onboardcheck     base --onboardcheck SCRATCH "${mid2agb_args[@]}"
 run vgcheck          base --vgcheck SCRATCH mus_b_factory
 run vgsavecheck      base --vgsavecheck SCRATCH mus_abandoned_ship
 run exportcheck-loop base --exportcheck SCRATCH mus_abandoned_ship
