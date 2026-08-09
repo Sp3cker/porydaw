@@ -61,22 +61,22 @@ int runFontCheck(int expectedBaseFontPx)
     const auto body = QApplication::font();
     const auto bodyInfo = QFontInfo(body);
     const auto expectedBodySize = qMax(1, qRound(*baseFontPx * 1.25));
-    check(body.hintingPreference() == QFont::PreferFullHinting,
-          "Body does not prefer fully hinted glyph outlines");
+    check(body.hintingPreference() == QFont::PreferNoHinting,
+          "Body does not prefer unhinted glyph outlines (gasp 10, DirectWrite)");
     check(bodyInfo.family() == QStringLiteral("Atkinson Hyperlegible Next") &&
               bodyInfo.pixelSize() == expectedBodySize && bodyInfo.weight() == QFont::Normal,
           "Body has the wrong face, size, or weight");
     const auto mono = typography::bodyMono(body);
     const auto monoInfo = QFontInfo(mono);
-    check(mono.hintingPreference() == QFont::PreferFullHinting,
-          "Body Mono does not prefer fully hinted glyph outlines");
+    check(mono.hintingPreference() == QFont::PreferNoHinting,
+          "Body Mono does not prefer unhinted glyph outlines");
     check(monoInfo.family() == QStringLiteral("Atkinson Hyperlegible Mono") &&
               monoInfo.pixelSize() == expectedBodySize && monoInfo.weight() == QFont::Normal,
           "Body Mono has the wrong face, size, or weight");
     const auto caption = typography::caption(body);
     const auto captionInfo = QFontInfo(caption);
-    check(caption.hintingPreference() == QFont::PreferFullHinting,
-          "Caption does not prefer fully hinted glyph outlines");
+    check(caption.hintingPreference() == QFont::PreferNoHinting,
+          "Caption does not prefer unhinted glyph outlines");
     check(captionInfo.family() == QStringLiteral("Atkinson Hyperlegible Next") &&
               captionInfo.pixelSize() == *baseFontPx && captionInfo.weight() == QFont::Normal,
           "Caption has the wrong face, size, or weight");

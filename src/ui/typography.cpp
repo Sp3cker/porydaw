@@ -27,7 +27,8 @@ void setFace(QFont &font, QFont::Weight weight)
     font.setStyleName({});
     font.setWeight(weight);
     font.setStyle(QFont::StyleNormal);
-    font.setHintingPreference(QFont::PreferFullHinting);
+    font.setHintingPreference(QFont::PreferNoHinting);
+    font.setStyleStrategy(QFont::StyleStrategy(font.styleStrategy() | QFont::PreferAntialias));
 }
 
 QFont bundledBody()
@@ -82,11 +83,13 @@ bool installBundledFonts(QApplication &application)
     }
     const auto regular = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-Regular.ttf"));
+    const auto light = QFontDatabase::addApplicationFont(
+        QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-Light.ttf"));
     const auto semibold = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf"));
     const auto mono = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleMono-Regular.ttf"));
-    if (regular < 0 || semibold < 0 || mono < 0)
+    if (regular < 0 || light < 0 || semibold < 0 || mono < 0)
         return false;
     if (!capturedBaseFontPx)
         capturedBaseFontPx = baseFontPx;
@@ -128,7 +131,6 @@ QString systemMonoFamily()
 {
     return capturedFixedFamily;
 }
-
 QFont bodyMono(const QFont &body)
 {
     auto font = body;
@@ -144,7 +146,8 @@ QFont bodyMono(const QFont &body)
     font.setStyleName(QStringLiteral("Regular"));
     font.setWeight(QFont::Normal);
     font.setStyle(QFont::StyleNormal);
-    font.setHintingPreference(QFont::PreferFullHinting);
+    font.setHintingPreference(QFont::PreferNoHinting);
+    font.setStyleStrategy(QFont::StyleStrategy(font.styleStrategy() | QFont::PreferAntialias));
     font.setPixelSize(resolvedPixelSize(body));
     return font;
 }

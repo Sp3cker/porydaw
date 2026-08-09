@@ -23,6 +23,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPainter>
+#include <QPointer>
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QRegularExpressionValidator>
@@ -95,6 +96,19 @@ const QString kDrawerVelocityHeightKey = QStringLiteral("editorDrawer/velocityHe
 const QString kDrawerAutomationVisibleKey = QStringLiteral("editorDrawer/automationVisible");
 const QString kDrawerAutomationHeightKey = QStringLiteral("editorDrawer/automationHeight");
 const QString kDrawerActivePageKey = QStringLiteral("editorDrawer/activePage");
+
+void resetInheritedWidgetFonts()
+{
+    QList<QPointer<QWidget>> widgets;
+    widgets.reserve(QApplication::allWidgets().size());
+    for (auto *widget : QApplication::allWidgets())
+        widgets.append(widget);
+
+    for (const auto &widget : widgets) {
+        if (widget && widget->font().resolveMask() == 0)
+            widget->setFont(QFont());
+    }
+}
 
 std::optional<int> loadDrawerHeight(const QSettings &settings, const QString &key)
 {
@@ -765,8 +779,7 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("view.theme"), themeAction);
 
     // The typeface: the bundled Atkinson Hyperlegible scale, or the platform
-    // font other Qt applications use. Reapplying the committed theme
-    // repolishes every widget so the swap lands at once.
+    // font other Qt applications use.
     QAction *systemFontAction = viewMenu->addAction(tr("Use System &Font"));
     systemFontAction->setCheckable(true);
     keys.attach(QStringLiteral("view.system_font"), systemFontAction);
@@ -778,7 +791,14 @@ void MainWindow::buildUi()
         QSettings settings;
         settings.setValue(kSystemFontKey, on);
         typography::setUseSystemFont(on);
-        m_themeController->reapply();
+        if (const auto body = typography::bodyFont()) {
+            QApplication::setFont(*body);
+            // QStyleSheetStyle caches the resolved application font on
+            // already-polished widgets, even when their font resolve mask is
+            // empty. Reassert inheritance without repolishing the stylesheet,
+            // which is unsafe while playback is painting on Windows.
+            resetInheritedWidgetFonts();
+        }
         refreshDerivedFonts();
     });
 
