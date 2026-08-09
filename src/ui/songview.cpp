@@ -72,6 +72,10 @@ namespace {
 // The ruler stacks a marker row (time-signature chips, loop brackets,
 // selection handles) above the bar-number/tick row, so marker text never
 // collides with the bar numbers.
+// Pencil-key releases at or past this hold time (or after a lane gesture
+// during the hold) revert the mode: hold-to-draw instead of a sticky tap.
+constexpr auto kPencilMomentaryHold = std::chrono::milliseconds(500);
+
 constexpr int kLaneH = 48; // default row height; Ctrl+wheel rescales
 constexpr int kMinLaneH = 28;
 constexpr int kMaxLaneH = 128;
@@ -2039,6 +2043,8 @@ class PianoRoll : public TimelineSurface
     {
         if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key()))
             invalidateContent();
+        if (m_sv->handleEditKeyRelease(event))
+            return;
         // End the transpose audition when the shortcut's keys come up.
         // Autorepeat releases are skipped so a held Ctrl+Up keeps sounding
         // the moving pitch; the Drag::None guard keeps a stray key release
@@ -3202,8 +3208,10 @@ class AutomationArea : public TimelineSurface
             return;
         m_dragRow = ri;
         // Latch the tool for the whole gesture: toggling B mid-drag must
-        // not change an in-flight stroke's semantics.
+        // not change an in-flight stroke's semantics. A gesture during a
+        // pencil-key hold also makes that hold momentary.
         m_gesturePencil = m_pencilMode;
+        m_sv->markPencilKeyGesture();
         const bool fine = event->modifiers() & Qt::AltModifier;
         updateDrag(event->position().x(), event->pos().y(), fine,
                    event->modifiers() & Qt::ControlModifier);
@@ -3432,6 +3440,13 @@ class AutomationArea : public TimelineSurface
             return;
         }
         QWidget::keyPressEvent(event);
+    }
+
+    void keyReleaseEvent(QKeyEvent *event) override
+    {
+        if (m_sv->handleEditKeyRelease(event))
+            return;
+        QWidget::keyReleaseEvent(event);
     }
 
     void leaveEvent(QEvent *) override { clearHover(); }
@@ -6077,13 +6092,46 @@ bool SongView::handleEditKey(QKeyEvent *event)
         return true;
     }
     if (keys.matches(event, QStringLiteral("automation.pencil_mode"))) {
-        // A held key auto-repeats; only the real press flips the mode.
-        if (!event->isAutoRepeat())
-            setAutomationPencilMode(!automationPencilMode());
+        // A held key auto-repeats; only the real press flips the mode. The
+        // press state sticks around for handleEditKeyRelease, which decides
+        // sticky tap vs momentary hold.
+        if (!event->isAutoRepeat()) {
+            m_pencilKeyHeld = true;
+            m_pencilKeyGesture = false;
+            m_pencilKeyPrior = automationPencilMode();
+            m_pencilKey = event->key();
+            m_pencilKeyPressedAt = std::chrono::steady_clock::now();
+            setAutomationPencilMode(!m_pencilKeyPrior);
+        }
         event->accept();
         return true;
     }
     return false;
+}
+
+// Ableton-style momentary pencil: a quick tap toggles and stays, while a
+// hold — past the threshold, or with a lane gesture drawn during it —
+// reverts to the pre-press mode on release, so the key works as a
+// hold-to-draw (or, from pencil mode, hold-to-arrow) chord.
+bool SongView::handleEditKeyRelease(QKeyEvent *event)
+{
+    if (!m_pencilKeyHeld || event->key() != m_pencilKey)
+        return false;
+    // A held key's synthesized auto-repeat releases are not the real one.
+    if (!event->isAutoRepeat()) {
+        m_pencilKeyHeld = false;
+        if (m_pencilKeyGesture ||
+            std::chrono::steady_clock::now() - m_pencilKeyPressedAt >= kPencilMomentaryHold)
+            setAutomationPencilMode(m_pencilKeyPrior);
+    }
+    event->accept();
+    return true;
+}
+
+void SongView::markPencilKeyGesture()
+{
+    if (m_pencilKeyHeld)
+        m_pencilKeyGesture = true;
 }
 
 bool SongView::automationPencilMode() const

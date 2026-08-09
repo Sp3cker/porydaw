@@ -7,6 +7,7 @@
 #include <QSet>
 #include <QWidget>
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <utility>
@@ -425,9 +426,14 @@ class SongView : public QWidget
     bool handleEditKey(QKeyEvent *event);
     // Automation-lane pencil mode (automation.pencil_mode, default B): a
     // left drag in the lanes always draws, and Shift locks the stroke to a
-    // horizontal line.
+    // horizontal line. The key is Ableton-style momentary: releases route
+    // through handleEditKeyRelease, which reverts a hold (or a hold that
+    // drew — the lanes report that via markPencilKeyGesture) and keeps a
+    // quick tap as a sticky toggle.
     bool automationPencilMode() const;
     void setAutomationPencilMode(bool on);
+    bool handleEditKeyRelease(QKeyEvent *event);
+    void markPencilKeyGesture();
     // Semitone step for the transpose command the event matches (0 if none);
     // shared by the note- and time-selection key paths.
     int transposeStepFor(const QKeyEvent *event) const;
@@ -590,6 +596,14 @@ class SongView : public QWidget
     EventListView *m_events = nullptr;
     songview::AutomationArea *m_lanes = nullptr;
     QScrollArea *m_lanesScroll = nullptr;
+    // Momentary pencil-key hold: press state kept until the matching
+    // release decides sticky tap vs momentary hold (see handleEditKey /
+    // handleEditKeyRelease).
+    bool m_pencilKeyHeld = false;
+    bool m_pencilKeyGesture = false; // a lane gesture started during the hold
+    bool m_pencilKeyPrior = false;   // mode before the press; momentary restores it
+    int m_pencilKey = 0;             // the pressed key, robust across rebinds
+    std::chrono::steady_clock::time_point m_pencilKeyPressedAt;
     QSplitter *m_splitter = nullptr; // roll above, lanes area below
     bool m_splitInit = false;        // initial sizes applied on first layout
     songview::OtherStrip *m_strip = nullptr;

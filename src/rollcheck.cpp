@@ -20,6 +20,7 @@
 #include <QSettings>
 #include <QString>
 #include <QTemporaryDir>
+#include <QThread>
 #include <QTimer>
 #include <QToolButton>
 #include <QWheelEvent>
@@ -84,7 +85,9 @@
 // press on an existing point's dot sweeps over it instead of grabbing),
 // and holding Shift locks the stroke to a horizontal line at the value
 // where the lock engaged; with the mode off, the dot grab-move and the
-// Shift ramp behave as before.
+// Shift ramp behave as before. The key is a momentary chord besides the
+// tap-toggle: holding it past the threshold, or drawing a lane stroke
+// during the hold, reverts the mode on release (hold-to-draw).
 // Undoing every gesture must restore the original bytes.
 
 namespace {
@@ -2325,6 +2328,40 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("mid-drag B toggle changed the in-flight Shift-locked stroke");
         doc.undoStack()->undo();
         QCoreApplication::processEvents();
+
+        // Momentary hold: pressing and holding the key is a chord, not a
+        // toggle. A stroke drawn during the hold reverts the mode on
+        // release even when the hold was quick...
+        {
+            QKeyEvent press(QEvent::KeyPress, Qt::Key_B, Qt::NoModifier);
+            QCoreApplication::sendEvent(lanes, &press);
+        }
+        if (!view.automationPencilMode())
+            fail("pencil-key press did not enter the momentary mode");
+        dragStroke(y1, y1, Qt::NoModifier);
+        if (pointsInSpan(t0, t0 + 4 * g) < 2)
+            fail("hold-to-draw stroke did not draw");
+        {
+            QKeyEvent release(QEvent::KeyRelease, Qt::Key_B, Qt::NoModifier);
+            QCoreApplication::sendEvent(lanes, &release);
+        }
+        if (view.automationPencilMode())
+            fail("drawing during the hold did not make the toggle momentary");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // ...and so does simply holding past the threshold with no stroke.
+        {
+            QKeyEvent press(QEvent::KeyPress, Qt::Key_B, Qt::NoModifier);
+            QCoreApplication::sendEvent(lanes, &press);
+        }
+        QThread::msleep(520);
+        {
+            QKeyEvent release(QEvent::KeyRelease, Qt::Key_B, Qt::NoModifier);
+            QCoreApplication::sendEvent(lanes, &release);
+        }
+        if (view.automationPencilMode())
+            fail("holding the pencil key past the threshold stayed sticky");
         sendKey(lanes, Qt::Key_B, Qt::NoModifier); // pencil back on
 
         // Without Shift the same stroke follows the cursor.
