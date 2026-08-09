@@ -2888,6 +2888,22 @@ class AutomationArea : public TimelineSurface
         invalidateContent();
     }
 
+    // Pencil mode (automation.pencil_mode, default B): a left drag always
+    // freehand-draws — never a point grab or a Shift ramp — and holding
+    // Shift locks the stroke to a horizontal line. Session view state, not
+    // persisted to the sidecar.
+    bool pencilMode() const { return m_pencilMode; }
+    void setPencilMode(bool enabled)
+    {
+        if (m_pencilMode == enabled)
+            return;
+        m_pencilMode = enabled;
+        clearHover();
+        if (!m_panning)
+            setCursor(enabled ? pencilCursor() : QCursor(Qt::ArrowCursor));
+        m_sv->announce(enabled ? SongView::tr("Pencil mode on") : SongView::tr("Pencil mode off"));
+    }
+
     // A mouse gesture is live (pan, point/sweep/line edit, row resize,
     // right-press sweep); the playhead follow-scroll pauses while one runs
     // so the view doesn't jump under the cursor.
@@ -3175,8 +3191,9 @@ class AutomationArea : public TimelineSurface
         const bool fine = event->modifiers() & Qt::AltModifier;
         updateDrag(event->position().x(), event->pos().y(), fine,
                    event->modifiers() & Qt::ControlModifier);
-        const LanePoint *grab = grabPoint(row, ri, event->position().x(), event->pos().y());
-        if (event->modifiers() & Qt::ShiftModifier) {
+        const LanePoint *grab =
+            m_pencilMode ? nullptr : grabPoint(row, ri, event->position().x(), event->pos().y());
+        if (!m_pencilMode && (event->modifiers() & Qt::ShiftModifier)) {
             // Line ramp: the press anchors one end, release commits the
             // interpolated segment (checked before the point grab so a
             // ramp can start exactly on an existing point).
@@ -3196,9 +3213,13 @@ class AutomationArea : public TimelineSurface
             m_dragValue = grab->value;
         } else {
             // Freehand sweep; a no-motion click degenerates to a single
-            // point (overwriting any point already on that tick).
+            // point (overwriting any point already on that tick). With the
+            // pencil, Shift locks the stroke to a horizontal line at the
+            // pressed value (the arrow tool's Shift means a ramp instead).
             m_gesture = Gesture::Sweep;
             m_dragOrigTick = -1;
+            m_sweepLocked = m_pencilMode && (event->modifiers() & Qt::ShiftModifier);
+            m_sweepLockValue = m_dragValue;
             m_sweep.assign(1, {m_dragTick, m_dragValue});
             m_prevTick = rawTickAt(event->position().x());
             m_prevValue = m_dragValue;
@@ -3237,13 +3258,26 @@ class AutomationArea : public TimelineSurface
             return;
         }
         if (m_dragRow < 0) {
-            setCursor(rowBoundaryAt(event->pos().y()) >= 0 ? Qt::SplitVCursor : Qt::ArrowCursor);
+            if (rowBoundaryAt(event->pos().y()) >= 0)
+                setCursor(Qt::SplitVCursor);
+            else
+                setCursor(m_pencilMode ? pencilCursor() : QCursor(Qt::ArrowCursor));
             updateHover(event->position().x(), event->pos().y());
             return;
         }
         const bool fine = event->modifiers() & Qt::AltModifier;
+        // Pencil horizontal lock: Shift freezes the value at whatever the
+        // stroke held when the lock engaged (the press value when Shift was
+        // already down); releasing Shift resumes following the cursor.
+        const bool lock =
+            m_pencilMode && m_gesture == Gesture::Sweep && (event->modifiers() & Qt::ShiftModifier);
+        if (lock && !m_sweepLocked)
+            m_sweepLockValue = m_dragValue;
+        m_sweepLocked = lock;
         updateDrag(event->position().x(), event->pos().y(), fine,
                    event->modifiers() & Qt::ControlModifier);
+        if (m_sweepLocked)
+            m_dragValue = m_sweepLockValue;
         if (m_gesture == Gesture::Sweep)
             extendSweep(event->position().x(), fine);
         invalidateContent();
@@ -3253,7 +3287,7 @@ class AutomationArea : public TimelineSurface
     {
         if (event->button() == Qt::MiddleButton && m_panning) {
             m_panning = false;
-            setCursor(Qt::ArrowCursor);
+            setCursor(m_pencilMode ? pencilCursor() : QCursor(Qt::ArrowCursor));
             return;
         }
         if (event->button() == Qt::RightButton && m_rightPress) {
@@ -4022,6 +4056,25 @@ class AutomationArea : public TimelineSurface
         invalidateContent(oldRegion);
     }
 
+    // Lazily-built pencil cursor, rebuilt when the device pixel ratio
+    // changes (moving between monitors). The icon engine picks the @2x
+    // asset on high-DPI screens; the hotspot is the pencil's tip in the
+    // bottom-left corner.
+    const QCursor &pencilCursor()
+    {
+        const qreal dpr = devicePixelRatioF();
+        if (m_pencilCursorDpr != dpr) {
+            constexpr int kCursorExtent = 16;
+            const QIcon icon(QStringLiteral(":/cursors/pencil.png"));
+            const QPixmap pixmap = icon.pixmap(QSize(kCursorExtent, kCursorExtent), dpr);
+            const qreal pixmapDpr = std::max<qreal>(1.0, pixmap.devicePixelRatio());
+            const int hotspotY = std::max(0, qRound(pixmap.height() / pixmapDpr) - 1);
+            m_pencilCursor = QCursor(pixmap, 0, hotspotY);
+            m_pencilCursorDpr = dpr;
+        }
+        return m_pencilCursor;
+    }
+
     // Invert paintCurve's valueY mapping; ri indexes the row for geometry.
     int valueAtY(const Row &row, int ri, int yPos) const
     {
@@ -4267,12 +4320,17 @@ class AutomationArea : public TimelineSurface
     uint64_t m_dragTick = 0;
     int m_dragValue = 0;
     std::vector<std::pair<uint64_t, int>> m_sweep; // tick-sorted freehand samples
-    uint64_t m_lineStartTick = 0;                  // Shift-drag anchor
+    bool m_sweepLocked = false;                    // pencil Shift: hold the stroke's value
+    int m_sweepLockValue = 0;
+    uint64_t m_lineStartTick = 0; // Shift-drag anchor
     int m_lineStartValue = 0;
     double m_prevTick = 0.0; // last raw (unsnapped) sweep sample
     int m_prevValue = 0;
     int m_hoverRow = -1;      // row under an idle cursor; -1 = no readout
     double m_hoverTick = 0.0; // raw tick under the idle cursor
+    bool m_pencilMode = false;
+    QCursor m_pencilCursor; // cached per device pixel ratio
+    qreal m_pencilCursorDpr = 0.0;
 };
 
 // ---------------------------------------------------------------- OtherStrip
@@ -5985,7 +6043,25 @@ bool SongView::handleEditKey(QKeyEvent *event)
         event->accept();
         return true;
     }
+    if (keys.matches(event, QStringLiteral("automation.pencil_mode"))) {
+        // A held key auto-repeats; only the real press flips the mode.
+        if (!event->isAutoRepeat())
+            setAutomationPencilMode(!automationPencilMode());
+        event->accept();
+        return true;
+    }
     return false;
+}
+
+bool SongView::automationPencilMode() const
+{
+    return m_lanes && m_lanes->pencilMode();
+}
+
+void SongView::setAutomationPencilMode(bool on)
+{
+    if (m_lanes)
+        m_lanes->setPencilMode(on);
 }
 
 void SongView::showTimeSelectionMenu(const QPoint &globalPos)

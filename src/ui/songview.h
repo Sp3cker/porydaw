@@ -423,6 +423,11 @@ class SongView : public QWidget
     // clips, and transpose/nudge of the selection (keymap commands).
     // Returns true when consumed.
     bool handleEditKey(QKeyEvent *event);
+    // Automation-lane pencil mode (automation.pencil_mode, default B): a
+    // left drag in the lanes always draws, and Shift locks the stroke to a
+    // horizontal line.
+    bool automationPencilMode() const;
+    void setAutomationPencilMode(bool on);
     // Semitone step for the transpose command the event matches (0 if none);
     // shared by the note- and time-selection key paths.
     int transposeStepFor(const QKeyEvent *event) const;

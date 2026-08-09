@@ -79,6 +79,12 @@
 // songs and go-to-start home there) and the ceiling leaves a full
 // viewport of scratch space past the song's end, where a pencil draw
 // lands beyond the old length and grows the rebuilt timeline.
+// Bare B toggles the automation pencil mode (never on auto-repeat): the
+// lanes cursor becomes a pencil, a left press always freehand-draws (a
+// press on an existing point's dot sweeps over it instead of grabbing),
+// and holding Shift locks the stroke to a horizontal line at the value
+// where the lock engaged; with the mode off, the dot grab-move and the
+// Shift ramp behave as before.
 // Undoing every gesture must restore the original bytes.
 
 namespace {
@@ -2161,6 +2167,162 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("playhead follow-scroll did not resume after the pan ended");
         view.setPlayheadSample(0, false);
         view.scrollByPx(view.contentX(0.0) - home); // back where it started
+    }
+
+    // Automation pencil mode (automation.pencil_mode, default B): toggled
+    // from the lanes focus, never on key auto-repeat, with a bitmap pencil
+    // cursor while on. A pencil press always freehand-draws — landing on an
+    // existing point's dot sweeps new points over it instead of grabbing —
+    // and holding Shift locks the stroke to a horizontal line at the value
+    // where the lock engaged. With the mode off, the dot grab-move and the
+    // Shift ramp behave as before.
+    {
+        const int undoIndex = doc.undoStack()->index();
+        const int laneTrack = view.selectedTrack();
+        // Test-side mirror of the tempo row's value<->y mapping (row 0 of
+        // the lanes at the default 48 px height: plot top 5, bottom 43),
+        // like SnappedRows mirrors the roll. The click sanity asserts below
+        // fail loudly if the widget's geometry drifts from this.
+        const int rowTopPad = 5, rowBottom = 48 - 1 - 4;
+        auto tempoMaxV = [&]() {
+            int maxV = 200;
+            for (const LanePoint &pt : view.model().tempoLane)
+                maxV = std::max(maxV, pt.value + 20);
+            return maxV;
+        };
+        auto tempoValueAtY = [&](int y) {
+            const int yc = std::clamp(y, rowTopPad, rowBottom);
+            return (rowBottom - yc) * tempoMaxV() / (rowBottom - rowTopPad);
+        };
+        auto tempoValueY = [&](int v) {
+            return rowBottom - v * (rowBottom - rowTopPad) / std::max(1, tempoMaxV());
+        };
+        auto tempoPoints = [&]() { return doc.lanePoints(laneTrack, DOC_CC_TEMPO); };
+        auto pointsInSpan = [&](uint64_t a, uint64_t b) {
+            size_t n = 0;
+            for (const DocLanePoint &pt : tempoPoints())
+                if (pt.tick > a && pt.tick <= b)
+                    n++;
+            return n;
+        };
+
+        if (view.automationPencilMode())
+            fail("pencil mode should start off");
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
+        if (!view.automationPencilMode())
+            fail("B did not enable pencil mode");
+        if (lanes->cursor().shape() != Qt::BitmapCursor)
+            fail("pencil mode did not install the pencil cursor");
+        {
+            // A held key's auto-repeat presses must not strobe the mode.
+            QKeyEvent repeat(QEvent::KeyPress, Qt::Key_B, Qt::NoModifier, QString(), true);
+            QCoreApplication::sendEvent(lanes, &repeat);
+            if (!view.automationPencilMode())
+                fail("auto-repeat B press toggled pencil mode off");
+            QKeyEvent release(QEvent::KeyRelease, Qt::Key_B, Qt::NoModifier);
+            QCoreApplication::sendEvent(lanes, &release);
+        }
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
+        if (view.automationPencilMode())
+            fail("B did not disable pencil mode");
+        if (lanes->cursor().shape() == Qt::BitmapCursor)
+            fail("leaving pencil mode kept the pencil cursor");
+
+        // Park a tempo point with an arrow-mode click at a spot with clear
+        // air (no existing dot within grab range in x).
+        const qreal dprLanes = lanes->devicePixelRatioF();
+        auto dotNear = [&](qreal x) {
+            for (const LanePoint &pt : view.model().tempoLane)
+                if (std::abs(view.displayX(double(pt.tick), songview::kGutterW, dprLanes) - x) < 24)
+                    return true;
+            return false;
+        };
+        qreal x0 = songview::kGutterW + (lanes->width() - songview::kGutterW) * 0.35;
+        while (dotNear(x0))
+            x0 += 40;
+        const int y0 = 15;
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(x0), y0), Qt::LeftButton,
+                  Qt::LeftButton);
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(x0), y0), Qt::LeftButton,
+                  Qt::NoButton);
+        QCoreApplication::processEvents();
+        const uint64_t t0 = view.snapTick(view.tickAtContentX(x0 - songview::kGutterW));
+        DocLanePoint clickPt;
+        if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &clickPt))
+            fail("arrow-mode click did not write a tempo point");
+        if (clickPt.value != tempoValueAtY(y0))
+            fail("test-side tempo value mirror drifted from the widget's mapping");
+        const qreal xDot = view.displayX(double(t0), songview::kGutterW, dprLanes);
+        const int yDot = tempoValueY(clickPt.value);
+        if (std::abs(yDot - y0) > 2)
+            fail("test-side tempo row mirror drifted from the widget's mapping");
+        const uint64_t g = std::max<uint64_t>(1, view.gridTicksAt(t0));
+        const qreal xEnd = view.displayX(double(t0 + 4 * g), songview::kGutterW, dprLanes);
+        auto dragStroke = [&](int yFrom, int yTo, Qt::KeyboardModifiers mods) {
+            sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yFrom), Qt::LeftButton,
+                      Qt::LeftButton, mods);
+            for (int step = 1; step <= 4; step++) {
+                const QPoint p(int(xDot + (xEnd - xDot) * step / 4),
+                               yFrom + (yTo - yFrom) * step / 4);
+                sendMouse(lanes, QEvent::MouseMove, p, Qt::NoButton, Qt::LeftButton, mods);
+            }
+            sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), yTo), Qt::LeftButton,
+                      Qt::NoButton, mods);
+            QCoreApplication::processEvents();
+        };
+
+        // Pencil over the dot: draws the crossed cells, leaves the pressed
+        // point's tick alone.
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
+        dragStroke(yDot, yDot, Qt::NoModifier);
+        DocLanePoint probe;
+        if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &probe))
+            fail("pencil press on a dot grabbed the point instead of drawing");
+        if (pointsInSpan(t0, t0 + 4 * g) < 2)
+            fail("pencil sweep over the dot did not draw the crossed cells");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // Shift pencil stroke: a horizontal line at the pressed value even
+        // though the cursor climbs.
+        const int y1 = 35, y2 = 15;
+        dragStroke(y1, y2, Qt::ShiftModifier);
+        const int lockValue = tempoValueAtY(y1);
+        for (const DocLanePoint &pt : tempoPoints())
+            if (pt.tick >= t0 && pt.tick <= t0 + 4 * g && pt.value != lockValue)
+                fail("Shift pencil stroke was not a horizontal line at the pressed value");
+        if (pointsInSpan(t0, t0 + 4 * g) < 2)
+            fail("Shift pencil stroke did not draw the crossed cells");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // Without Shift the same stroke follows the cursor.
+        dragStroke(y1, y2, Qt::NoModifier);
+        DocLanePoint first, last;
+        if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &first) ||
+            !doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0 + 4 * g, &last))
+            fail("unlocked pencil stroke did not draw its endpoints");
+        else if (first.value == last.value)
+            fail("unlocked pencil stroke did not follow the cursor");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // Arrow mode untouched: the dot grab-move and the Shift ramp.
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
+        dragStroke(yDot, yDot, Qt::NoModifier);
+        if (doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &probe))
+            fail("arrow-mode press on the dot did not grab-move the point");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+        dragStroke(y1, y2, Qt::ShiftModifier);
+        if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &first) ||
+            !doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0 + 4 * g, &last))
+            fail("arrow-mode Shift ramp did not write its endpoints");
+        else if (first.value == last.value)
+            fail("arrow-mode Shift ramp collapsed to a horizontal line");
+        while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        QCoreApplication::processEvents();
     }
 
     // A stopped playhead is a thin child overlay. Moving it must preserve the

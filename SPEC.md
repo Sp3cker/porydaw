@@ -267,7 +267,11 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   notes show their velocity value instead of the pitch name, and velocity
   bars appear at any zoom.
 - **Bottom — Automation lanes:** per-track, addable from the m4a parameter list (§4.2),
-  drawn as line/step editors. Tempo lane always available at the top level. 0-based CC
+  drawn as line/step editors. A pencil mode (`automation.pencil_mode`, default **B**,
+  dispatched from the roll/lanes focus like M/S) turns every left drag into a freehand
+  draw — point grabs and the Shift ramp are suspended while it is on — and holding
+  Shift locks the stroke to a horizontal line at the value where the lock engaged;
+  the cursor becomes a pencil. Tempo lane always available at the top level. 0-based CC
   lanes have a zoomable value axis (gutter menu → Value range: auto-fit or a fixed
   0–16/32/64/127 display max, persisted in the sidecar §4.4); MOD auto-fits by default
   since its musical range is roughly 0–20. Display only — event values are untouched,
