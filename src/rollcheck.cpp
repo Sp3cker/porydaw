@@ -1983,6 +1983,73 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         view.applyViewState(originalView);
     }
 
+    // Abutting notes: each side of the shared boundary must resize its own
+    // note. The topmost widened hit used to swallow the left note's right
+    // grip — a press just left of the boundary grabbed the right note's
+    // left edge instead, so the left note could never be resized there.
+    {
+        const Cell g = findFreeCell();
+        if (g.key < 0) {
+            fail("no free grid cell for the abutting-notes resize");
+            return failures;
+        }
+        const int undoIndexBefore = doc.undoStack()->index();
+        doc.addNote(track, g.tick, uint8_t(g.key), uint32_t(g.dur), 100);
+        doc.addNote(track, g.tick + g.dur, uint8_t(g.key), uint32_t(g.dur), 100);
+        const qreal gDpr = roll->devicePixelRatioF();
+        const uint64_t gSnap = view.snapTicksAt(g.tick);
+        const qreal boundaryX = view.displayX(double(g.tick + g.dur), songview::kKeyboardW, gDpr);
+        const int gRowY = rows.centerY(g.key);
+        const QPointF leftSide(boundaryX - 2.8, gRowY);
+        const QPointF rightSide(boundaryX + 2.8, gRowY);
+
+        sendMouse(roll, QEvent::MouseMove, leftSide, Qt::NoButton, Qt::NoButton);
+        const QPixmap wantRightGrip =
+            QIcon(QStringLiteral(":/cursors/right-drag.png")).pixmap(QSize(24, 24), gDpr);
+        if (roll->cursor().pixmap().toImage() != wantRightGrip.toImage())
+            fail("left of an abutting boundary is not the left note's right grip");
+        sendMouse(roll, QEvent::MouseMove, rightSide, Qt::NoButton, Qt::NoButton);
+        const QPixmap wantLeftGrip =
+            QIcon(QStringLiteral(":/cursors/left-drag.png")).pixmap(QSize(24, 24), gDpr);
+        if (roll->cursor().pixmap().toImage() != wantLeftGrip.toImage())
+            fail("right of an abutting boundary is not the right note's left grip");
+
+        // Drag from just left of the boundary: the LEFT note's end shrinks
+        // one snap cell; the right note must not move or resize.
+        const QPointF pullLeft(
+            view.displayX(double(g.tick + g.dur - gSnap), songview::kKeyboardW, gDpr), gRowY);
+        sendMouse(roll, QEvent::MouseButtonPress, leftSide, Qt::LeftButton, Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseMove, pullLeft, Qt::NoButton, Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseButtonRelease, pullLeft, Qt::LeftButton, Qt::NoButton);
+        DocNote gLeft, gRight;
+        if (!doc.findNote(track, g.tick, uint8_t(g.key), &gLeft) ||
+            gLeft.duration != g.dur - gSnap)
+            fail("boundary-left drag did not resize the left note's end");
+        if (!doc.findNote(track, g.tick + g.dur, uint8_t(g.key), &gRight) ||
+            gRight.duration != g.dur)
+            fail("boundary-left drag disturbed the right note");
+
+        // Restore the abutment, then drag from just right of the boundary:
+        // the RIGHT note's start moves one snap cell in; the left note must
+        // stay put.
+        doc.undoStack()->undo();
+        view.clearSelection();
+        const QPointF pullRight(
+            view.displayX(double(g.tick + g.dur + gSnap), songview::kKeyboardW, gDpr), gRowY);
+        sendMouse(roll, QEvent::MouseButtonPress, rightSide, Qt::LeftButton, Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseMove, pullRight, Qt::NoButton, Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseButtonRelease, pullRight, Qt::LeftButton, Qt::NoButton);
+        if (!doc.findNote(track, g.tick + g.dur + gSnap, uint8_t(g.key), &gRight) ||
+            gRight.duration != g.dur - gSnap)
+            fail("boundary-right drag did not resize the right note's start");
+        if (!doc.findNote(track, g.tick, uint8_t(g.key), &gLeft) || gLeft.duration != g.dur)
+            fail("boundary-right drag disturbed the left note");
+
+        while (doc.undoStack()->index() > undoIndexBefore && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        view.clearSelection();
+    }
+
     // Keyboard transpose/nudge on note D (clicking it selects it):
     // Ctrl+Up is a semitone, Ctrl+Shift+Down an octave, and Ctrl+Right
     // moves one snap cell from an on-grid start.

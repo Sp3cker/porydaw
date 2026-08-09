@@ -2206,21 +2206,32 @@ class PianoRoll : public TimelineSurface
 
     // Topmost (last-drawn) note of the selected track under pos. The rect is
     // widened a little on both sides so the edge resize handles can be
-    // grabbed from just outside the note.
+    // grabbed from just outside the note. When that outer reach lands inside
+    // a neighboring note that has pos on one of its own edge grips (abutting
+    // notes), the neighbor wins: each side of the shared boundary resizes
+    // its own note.
     const ViewNote *hitNote(QPointF pos) const
     {
         const int selected = m_sv->selectedTrack();
         const ViewNote *hit = nullptr;
+        bool hitInside = false;
+        const ViewNote *gripHit = nullptr; // pos inside the note, on an edge grip
         const qreal reach = kEdgeGripReach;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != selected)
                 continue;
-            const QRectF r = noteRect(note).adjusted(-reach, 0, reach, 0);
-            if (pos.x() >= r.left() && pos.x() < r.right() && pos.y() >= r.top() &&
-                pos.y() < r.bottom())
+            const QRectF r = noteRect(note);
+            if (pos.y() < r.top() || pos.y() >= r.bottom())
+                continue;
+            const bool inside = pos.x() >= r.left() && pos.x() < r.right();
+            if (inside || (pos.x() >= r.left() - reach && pos.x() < r.right() + reach)) {
                 hit = &note;
+                hitInside = inside;
+            }
+            if (inside && (nearRightEdge(note, pos) || nearLeftEdge(note, pos)))
+                gripHit = &note;
         }
-        return hit;
+        return (gripHit && !hitInside) ? gripHit : hit;
     }
 
     bool nearRightEdge(const ViewNote &note, QPointF pos) const
