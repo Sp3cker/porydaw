@@ -36,6 +36,7 @@ TimelineSurface::TimelineSurface(QWidget *parent) : QWidget(parent) {}
 
 void TimelineSurface::invalidateContent()
 {
+    ++m_diagnostics.contentInvalidationCount;
     m_dirtyContentRegion = rect();
     QWidget::update();
 }
@@ -56,6 +57,7 @@ void TimelineSurface::invalidateContent(const QRegion &region)
         return;
     clipped =
         grid == 0 ? QRegion(rect()) : expandRegionToDeviceGrid(clipped, grid).intersected(rect());
+    ++m_diagnostics.contentInvalidationCount;
     m_dirtyContentRegion |= clipped;
     QWidget::update(clipped);
 }
@@ -204,6 +206,7 @@ void TimelineSurface::resizeEvent(QResizeEvent *event)
     m_contentCache = {};
     m_diagnostics.estimatedContentCacheBytes = 0;
     invalidateContent();
+    contentGeometryChanged();
 }
 
 void TimelineSurface::countContentPaint(quint64 pixelCount) noexcept

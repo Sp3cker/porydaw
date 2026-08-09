@@ -146,8 +146,12 @@ qt_add_library(porydaw_app STATIC
     src/ui/songlistpanel.h
     src/ui/songviewmodel.cpp
     src/ui/songviewmodel.h
+    src/ui/selectionreticle.cpp
+    src/ui/selectionreticle.h
     src/ui/timelinesurface.cpp
     src/ui/timelinesurface.h
+    src/ui/contextmenu.cpp
+    src/ui/contextmenu.h
     src/ui/songview.cpp
     src/ui/songview.h
     src/ui/playheadoverlay.cpp
@@ -162,6 +166,34 @@ qt_add_library(porydaw_app STATIC
     src/ui/velocitygesturemodel.h
     src/ui/editorviewstate.cpp
     src/ui/editorviewstate.h
+    src/ui/editordrawer/drawerpage.h
+    src/ui/editordrawer/editordrawer.cpp
+    src/ui/editordrawer/editordrawer.h
+    src/ui/editordrawer/drawersections.cpp
+    src/ui/editordrawer/drawersections.h
+    src/ui/editordrawer/automationarea.cpp
+    src/ui/editordrawer/automationarea.h
+    src/ui/editordrawer/automationgesture.cpp
+    src/ui/editordrawer/automationgesture.h
+    src/ui/editordrawer/automationhover.cpp
+    src/ui/editordrawer/automationhover.h
+    src/ui/editordrawer/automationpaint.cpp
+    src/ui/editordrawer/automationpaint.h
+    src/ui/editordrawer/automationrows.cpp
+    src/ui/editordrawer/automationrows.h
+    src/ui/editordrawer/automationlaneedit.cpp
+    src/ui/editordrawer/automationlaneedit.h
+    src/ui/editordrawer/automationpencilgesture.cpp
+    src/ui/editordrawer/automationpencilgesture.h
+    src/ui/editordrawer/automationprojection.cpp
+    src/ui/editordrawer/automationprojection.h
+    src/ui/editordrawer/automationpage.cpp
+    src/ui/editordrawer/automationpage.h
+    src/ui/editordrawer/velocityarea.cpp
+    src/ui/editordrawer/velocityarea.h
+    src/ui/editordrawer/linearramp.h
+    src/ui/editordrawer/velocityaxis.cpp
+    src/ui/editordrawer/velocityaxis.h
 )
 if(APPLE)
     target_sources(porydaw_app PRIVATE
@@ -239,6 +271,9 @@ qt_add_resources(porydaw "app_icon"
         resources/porydaw-48.png
         resources/porydaw-128.png
         resources/porydaw-256.png
+        resources/velocity.svg
+        resources/velocity_labels.svg
+        resources/automation.svg
 )
 qt_add_resources(porydaw "cursor_images"
     PREFIX "/cursors"
@@ -246,6 +281,8 @@ qt_add_resources(porydaw "cursor_images"
     FILES
         resources/left-drag.png
         resources/left-drag@2x.png
+        resources/pencil.png
+        resources/pencil@2x.png
         resources/right-drag.png
         resources/right-drag@2x.png
 )

@@ -39,6 +39,7 @@
 #include <QChildEvent>
 #include <QCloseEvent>
 #include <QKeyEvent>
+#include <QKeySequence>
 
 #ifdef Q_OS_WIN
 #ifndef WIN32_LEAN_AND_MEAN
@@ -89,6 +90,51 @@ const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
 const QString kNoteNamesKey = QStringLiteral("noteNames");
 const QString kSystemFontKey = QStringLiteral("systemFont");
 const QString kFollowPlayheadKey = QStringLiteral("followPlayhead");
+const QString kDrawerVelocityVisibleKey = QStringLiteral("editorDrawer/velocityVisible");
+const QString kDrawerVelocityHeightKey = QStringLiteral("editorDrawer/velocityHeight");
+const QString kDrawerAutomationVisibleKey = QStringLiteral("editorDrawer/automationVisible");
+const QString kDrawerAutomationHeightKey = QStringLiteral("editorDrawer/automationHeight");
+const QString kDrawerActivePageKey = QStringLiteral("editorDrawer/activePage");
+
+std::optional<int> loadDrawerHeight(const QSettings &settings, const QString &key)
+{
+    if (!settings.contains(key))
+        return std::nullopt;
+    bool ok = false;
+    const int height = settings.value(key).toInt(&ok);
+    return ok && height > 0 ? std::optional<int>(height) : std::nullopt;
+}
+
+EditorDrawerState loadEditorDrawerState(const QSettings &settings)
+{
+    EditorDrawerState state;
+    state.velocity.visible =
+        settings.value(kDrawerVelocityVisibleKey, state.velocity.visible).toBool();
+    state.velocity.height = loadDrawerHeight(settings, kDrawerVelocityHeightKey);
+    state.automation.visible =
+        settings.value(kDrawerAutomationVisibleKey, state.automation.visible).toBool();
+    state.automation.height = loadDrawerHeight(settings, kDrawerAutomationHeightKey);
+    if (settings.value(kDrawerActivePageKey).toString() == QLatin1String("velocity"))
+        state.activePage = EditorDrawerPage::Velocity;
+    return state;
+}
+
+void saveEditorDrawerState(QSettings &settings, const EditorDrawerState &state)
+{
+    settings.setValue(kDrawerVelocityVisibleKey, state.velocity.visible);
+    settings.setValue(kDrawerAutomationVisibleKey, state.automation.visible);
+    if (state.velocity.height)
+        settings.setValue(kDrawerVelocityHeightKey, *state.velocity.height);
+    else
+        settings.remove(kDrawerVelocityHeightKey);
+    if (state.automation.height)
+        settings.setValue(kDrawerAutomationHeightKey, *state.automation.height);
+    else
+        settings.remove(kDrawerAutomationHeightKey);
+    settings.setValue(kDrawerActivePageKey, state.activePage == EditorDrawerPage::Velocity
+                                                ? QLatin1String("velocity")
+                                                : QLatin1String("automations"));
+}
 
 #ifdef Q_OS_WIN
 // These names and values come from the current Windows SDK. The bundled
@@ -219,6 +265,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // system-font preference must already be in force for the first paint.
     typography::setUseSystemFont(m_themeSettings->value(kSystemFontKey, false).toBool());
     m_themeController->restore();
+    m_editorDrawerState = loadEditorDrawerState(*m_themeSettings);
     updateWindowFrameTheme();
     m_themeDialog = std::make_unique<themes::ThemeDialog>(*m_themeController, this);
     buildUi();
@@ -360,6 +407,24 @@ void MainWindow::buildUi()
         if (m_active)
             m_active->view->setEventListVisible(on);
     });
+
+    viewMenu->addSeparator();
+    m_automationDrawerAction = viewMenu->addAction(tr("Automation Lanes"));
+    m_automationDrawerAction->setObjectName(QStringLiteral("automationDrawerWindowAction"));
+    m_automationDrawerAction->setShortcut(QKeySequence(Qt::Key_A));
+    m_automationDrawerAction->setShortcutContext(Qt::WindowShortcut);
+    m_automationDrawerAction->setToolTip(tr("Show or hide automation lanes (A)"));
+    m_automationDrawerAction->setEnabled(false);
+    connect(m_automationDrawerAction, &QAction::triggered, this,
+            [this] { toggleDrawerPage(/*automation=*/true); });
+    m_velocityDrawerAction = viewMenu->addAction(tr("Velocity Lane"));
+    m_velocityDrawerAction->setObjectName(QStringLiteral("velocityDrawerWindowAction"));
+    m_velocityDrawerAction->setShortcut(QKeySequence(Qt::Key_V));
+    m_velocityDrawerAction->setShortcutContext(Qt::WindowShortcut);
+    m_velocityDrawerAction->setToolTip(tr("Show or hide note velocities (V)"));
+    m_velocityDrawerAction->setEnabled(false);
+    connect(m_velocityDrawerAction, &QAction::triggered, this,
+            [this] { toggleDrawerPage(/*automation=*/false); });
 
     // Tools menu: project-level utilities that aren't song-scoped.
     QMenu *toolsMenu = menuBar()->addMenu(tr("&Tools"));
@@ -756,10 +821,12 @@ void MainWindow::buildUi()
     // Song tabs: each open song lives in its own tab with its own view,
     // document, and undo stack.
     m_tabs = new QTabWidget(this);
+    m_tabs->setFocusPolicy(Qt::NoFocus);
     m_tabs->setTabsClosable(true);
     m_tabs->setMovable(true);
     m_tabs->setDocumentMode(true);
     m_tabs->tabBar()->setFixedHeight(chromeHeight);
+    m_tabs->tabBar()->setFocusPolicy(Qt::NoFocus);
     connect(m_tabs, &QTabWidget::currentChanged, this, &MainWindow::tabChanged);
     connect(m_tabs, &QTabWidget::tabCloseRequested, this, &MainWindow::closeTab);
     connect(m_tabs->tabBar(), &QTabBar::tabMoved, this, [this](int, int) { persistOpenTabs(); });
@@ -908,6 +975,9 @@ SongSession *MainWindow::createSession()
     s->view->setVelocityColorMode(m_velocityColorsAction->isChecked());
     s->view->setNoteNameMode(m_noteNamesAction->isChecked());
     s->view->setFollowPlayhead(m_followPlayheadAction->isChecked());
+    s->view->applyEditorDrawerState(m_editorDrawerState);
+    connect(s->view, &SongView::editorDrawerStateChanged, this,
+            [this](const EditorDrawerState &state) { setEditorDrawerState(state); });
     connect(s->view, &SongView::muteMaskChanged, this, [this, s](uint32_t mask) {
         if (s == m_active)
             m_audio.setMuteMask(mask);
@@ -930,8 +1000,10 @@ SongSession *MainWindow::createSession()
         if (s == m_active && m_audioOk)
             m_audio.previewVoice(uint8_t(voice), uint8_t(key), uint8_t(velocity));
     });
-    connect(s->view, &SongView::statusMessage, this,
-            [this](const QString &text) { statusBar()->showMessage(text, 6000); });
+    connect(s->view, &SongView::statusMessage, this, [this, s](const QString &text) {
+        if (s == m_active)
+            statusBar()->showMessage(text, 6000);
+    });
     // Jump-from-context voice navigation (header voice line, event list):
     // raise the dock and select the slot. No keyboard focus moves — Space
     // and the roll's shortcuts keep working.
@@ -947,6 +1019,7 @@ SongSession *MainWindow::createSession()
         if (s == m_active) {
             QSignalBlocker blocker(m_eventListAction);
             m_eventListAction->setChecked(on);
+            updateDrawerActions();
         }
     });
     // Moving the edit cursor while playing (or paused) seeks playback there,
@@ -1034,6 +1107,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
         QSignalBlocker blocker(m_eventListAction);
         m_eventListAction->setChecked(session && session->view->eventListVisible());
     }
+    updateDrawerActions();
 
     if (!session) {
         if (m_audioOk)
@@ -1078,6 +1152,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
     m_songList->setCurrentSong(session->songId);
     updateWindowTitle();
     updateTransportActions();
+    session->view->focusActiveSurface();
     persistOpenTabs();
 }
 
@@ -1199,6 +1274,39 @@ void MainWindow::updateTabTitle(SongSession &session)
         return;
     m_tabs->setTabText(index, session.isDirty() ? session.doc.label() + QLatin1Char('*')
                                                 : session.doc.label());
+}
+
+void MainWindow::toggleDrawerPage(bool automation)
+{
+    if (!m_active || m_active->view->eventListVisible())
+        return;
+    SongView *view = m_active->view;
+    const EditorDrawerPage page =
+        automation ? EditorDrawerPage::Automations : EditorDrawerPage::Velocity;
+    const bool hiding = view->drawerSectionVisible(page);
+    view->toggleDrawerSection(page);
+    statusBar()->showMessage(automation ? (hiding ? QStringLiteral("Automation lanes hidden")
+                                                  : QStringLiteral("Automation lanes shown"))
+                                        : (hiding ? QStringLiteral("Velocity lane hidden")
+                                                  : QStringLiteral("Velocity lane shown")),
+                             6000);
+}
+
+void MainWindow::setEditorDrawerState(const EditorDrawerState &state)
+{
+    if (m_editorDrawerState == state)
+        return;
+    m_editorDrawerState = state;
+    saveEditorDrawerState(*m_themeSettings, state);
+    for (const auto &session : m_sessions)
+        session->view->applyEditorDrawerState(state);
+}
+
+void MainWindow::updateDrawerActions()
+{
+    const bool enabled = m_active && !m_active->view->eventListVisible();
+    m_automationDrawerAction->setEnabled(enabled);
+    m_velocityDrawerAction->setEnabled(enabled);
 }
 
 void MainWindow::tabChanged(int index)
@@ -1425,9 +1533,13 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
 
     session->view->setSong(session->timeline.get(), session->voicegroup);
     session->view->setDocument(&session->doc);
-    SongView::ViewState viewState;
-    if (ViewSidecar::load(m_project.root(), song.label, &viewState))
-        session->view->applyViewState(viewState);
+    ViewSidecar::Snapshot viewSnapshot;
+    if (ViewSidecar::load(m_project.root(), song.label, &viewSnapshot)) {
+        session->view->applyViewState(viewSnapshot.view);
+        viewSnapshot.editor.setDrawerState(m_editorDrawerState);
+        session->view->applyEditorViewState(viewSnapshot.editor);
+    }
+    session->view->applyEditorDrawerState(m_editorDrawerState);
 
     if (created) {
         const int index = m_tabs->addTab(session->view, song.label);
@@ -2847,7 +2959,8 @@ void MainWindow::saveViewState(SongSession &session)
 {
     if (session.doc.label().isEmpty())
         return;
-    ViewSidecar::save(m_project.root(), session.doc.label(), session.view->viewState());
+    ViewSidecar::save(m_project.root(), session.doc.label(),
+                      {session.view->viewState(), session.view->editorViewState()});
 }
 
 void MainWindow::updateWindowTitle()
@@ -3141,7 +3254,11 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             QByteArray fileBefore;
             {
                 QFile in(tab->vgSource->filePath());
-                in.open(QIODevice::ReadOnly);
+                if (!in.open(QIODevice::ReadOnly)) {
+                    qWarning("selftest: cannot read voicegroup source %s",
+                             qUtf8Printable(tab->vgSource->filePath()));
+                    return false;
+                }
                 fileBefore = in.readAll();
             }
             const VgVoice original = *tab->vgSource->voiceAt(dsSlot);
@@ -3168,7 +3285,11 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             QByteArray fileAfter;
             {
                 QFile in(tab->vgSource->filePath());
-                in.open(QIODevice::ReadOnly);
+                if (!in.open(QIODevice::ReadOnly)) {
+                    qWarning("selftest: cannot read voicegroup source %s",
+                             qUtf8Printable(tab->vgSource->filePath()));
+                    return false;
+                }
                 fileAfter = in.readAll();
             }
             vgEditOk = vgEditOk && !tab->vgSource->dirty() && !tab->doc.isDirty() &&
@@ -3363,27 +3484,29 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         tab->view->setGridMinDenom(8); // non-default grid must round-trip too
         tab->view->setGridFeel(SongView::GridFeel::Triplet);
         tab->view->setLaneDisplayRange(0, 0x01, 16); // MOD axis zoom, ditto
-        const SongView::ViewState saved = tab->view->viewState();
+        const ViewSidecar::Snapshot saved{tab->view->viewState(), tab->view->editorViewState()};
         ok = ViewSidecar::save(m_project.root(), target->label, saved);
         tab->view->zoomAroundContentX(2.0, 0); // knock the view off the state
         tab->view->setGridMinDenom(0);
         tab->view->setGridFeel(SongView::GridFeel::Straight);
         tab->view->setLaneDisplayRange(0, 0x01, 0); // back to the MOD default
-        SongView::ViewState loaded;
+        ViewSidecar::Snapshot loaded;
         ok = ok && ViewSidecar::load(m_project.root(), target->label, &loaded);
         if (ok) {
-            tab->view->applyViewState(loaded);
-            const SongView::ViewState restored = tab->view->viewState();
+            tab->view->applyViewState(loaded.view);
+            loaded.editor.setDrawerState(m_editorDrawerState);
+            tab->view->applyEditorViewState(loaded.editor);
+            const ViewSidecar::Snapshot restored{tab->view->viewState(),
+                                                 tab->view->editorViewState()};
             QString constant, player;
-            ok = std::abs(restored.pxPerBeat - saved.pxPerBeat) < 0.001 &&
-                 std::abs(restored.keyHeight - saved.keyHeight) < 0.001 &&
-                 std::abs(restored.scrollPx - saved.scrollPx) < 0.001 &&
-                 std::abs(restored.scrollY - saved.scrollY) < 0.001 &&
-                 restored.selectedTrack == saved.selectedTrack &&
-                 restored.editCursorTick == saved.editCursorTick &&
-                 restored.laneHeight == saved.laneHeight && restored.gridMinDenom == 8 &&
-                 restored.gridTriplet &&
-                 restored.laneRanges.value(QStringLiteral("cc:0:1"), -1) == 16 &&
+            ok = std::abs(restored.view.pxPerBeat - saved.view.pxPerBeat) < 0.001 &&
+                 std::abs(restored.view.keyHeight - saved.view.keyHeight) < 0.001 &&
+                 std::abs(restored.view.scrollPx - saved.view.scrollPx) < 0.001 &&
+                 std::abs(restored.view.scrollY - saved.view.scrollY) < 0.001 &&
+                 restored.view.selectedTrack == saved.view.selectedTrack &&
+                 restored.view.editCursorTick == saved.view.editCursorTick &&
+                 restored.view.gridMinDenom == 8 && restored.view.gridTriplet &&
+                 restored.editor == saved.editor &&
                  SongRegistry::loadRegistrationMeta(m_project.root(), target->label, &constant,
                                                     &player) &&
                  constant == QLatin1String("MUS_SELFTEST");

@@ -6,6 +6,7 @@
 
 #include "core/miditimeline.h"
 #include "project/decompproject.h"
+#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songviewmodel.h"
 
@@ -99,12 +100,12 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
             // Snap-grid semantics on the first song governed by a /4
             // signature at tick 0: the grid must follow the feel's
             // subdivision ladder — a cell earns its place at
-            // kAutoGridMinCellPx and not one pixel sooner — and the
+            // automationGridMinimumCellWidth() and not one pixel sooner — and the
             // minimum-subdivision floor. Zooms are derived from the
             // threshold so tuning the knob doesn't invalidate the check.
             // No document is attached, so the clock floor is 1 tick.
             gridChecked = true;
-            const double cellPx = songview::kAutoGridMinCellPx;
+            const double cellPx = layout::fontPx(4.0 / 3.0);
             SongView::ViewState zoom;
             zoom.valid = true;
             const auto expectGrid = [&](const char *what, uint64_t expected) {

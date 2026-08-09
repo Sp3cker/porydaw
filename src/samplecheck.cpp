@@ -2626,19 +2626,25 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         // A symbol registered without a .wav source (a .bin-only legacy
         // sample) refuses too. Appended after the byte-identity assertions
         // above so it can't disturb them.
+        constexpr char binOnlyFixture[] = "\n\t.align 2\nDirectSoundWaveData_binonly::\n"
+                                          "\t.incbin \"sound/direct_sound_samples/binonly.bin\"\n";
+        bool appendedBinOnlyFixture = false;
         {
             QFile inc(incPath);
-            inc.open(QIODevice::Append);
-            inc.write("\n\t.align 2\nDirectSoundWaveData_binonly::\n"
-                      "\t.incbin \"sound/direct_sound_samples/binonly.bin\"\n");
+            appendedBinOnlyFixture =
+                inc.open(QIODevice::Append) &&
+                inc.write(binOnlyFixture) == qint64(sizeof(binOnlyFixture) - 1);
         }
-        expect(!SampleRegistrar::updateSample(root, QStringLiteral("binonly"), updated, &error),
-               "updating a .wav-less symbol refuses");
-        expectError(error,
-                    QStringLiteral("binonly.wav does not exist in "
-                                   "sound/direct_sound_samples — only samples with a "
-                                   ".wav source can be updated."),
-                    "wav-less-update refusal text");
+        expect(appendedBinOnlyFixture, "append .bin-only sample fixture");
+        if (appendedBinOnlyFixture) {
+            expect(!SampleRegistrar::updateSample(root, QStringLiteral("binonly"), updated, &error),
+                   "updating a .wav-less symbol refuses");
+            expectError(error,
+                        QStringLiteral("binonly.wav does not exist in "
+                                       "sound/direct_sound_samples — only samples with a "
+                                       ".wav source can be updated."),
+                        "wav-less-update refusal text");
+        }
 
         // The dialog in edit mode: locked name, "Save Sample" commit, and
         // sidecar params applied as the baseline (not an undo entry).

@@ -3,7 +3,6 @@
 #include <QObject>
 #include <QString>
 #include <QUndoStack>
-#include <QVector>
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -187,10 +186,6 @@ class SongDocument : public QObject
         int newValue = 0;
     };
     void moveLanePoints(const std::vector<LanePointMove> &moves);
-    // Transitional single-point entry point for the existing editor. The
-    // drawer integration migrates these callers to the batch contract.
-    void moveLanePoint(int engineTrack, uint8_t cc, const DocLanePoint &point,
-                       uint64_t newTick, int newValue);
 
     void deleteLanePoints(int engineTrack, uint8_t cc, const std::vector<DocLanePoint> &points);
 
@@ -335,9 +330,6 @@ class SongDocument : public QObject
     // Emitted after the track map is rebuilt, but before documentChanged,
     // whenever a change alters chunk or engine-track ownership.
     void tracksRemapped(TrackRemap remap);
-    // Transitional compatibility for the existing editor consumers. The
-    // drawer integration migrates them to tracksRemapped and removes this.
-    void trackMoved(int fromChunk, int toChunk, QVector<int> engineMap);
 
   private:
     friend class SongEditCommand;

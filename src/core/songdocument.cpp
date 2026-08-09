@@ -58,24 +58,6 @@ void moveChunk(std::vector<SmfTrack> &tracks, int from, int to)
         std::rotate(begin + to, begin + from, begin + from + 1);
 }
 
-QVector<int> engineRotationMap(int from, int to)
-{
-    QVector<int> map(16);
-    for (int track = 0; track < 16; track++)
-        map[track] = track;
-    if (from < 0 || to < 0 || from == to)
-        return map;
-    for (int track = 0; track < 16; track++) {
-        if (track == from)
-            map[track] = to;
-        else if (from < to && track > from && track <= to)
-            map[track] = track - 1;
-        else if (to < from && track >= to && track < from)
-            map[track] = track + 1;
-    }
-    return map;
-}
-
 TrackRemap inverseTrackRemap(const TrackRemap &remap)
 {
     TrackRemap inverse;
@@ -1350,12 +1332,6 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
     pushEdit(text, std::move(ops));
 }
 
-void SongDocument::moveLanePoint(int engineTrack, uint8_t cc, const DocLanePoint &point,
-                                 uint64_t newTick, int newValue)
-{
-    moveLanePoints({LanePointMove{engineTrack, cc, point, newTick, newValue}});
-}
-
 void SongDocument::deleteLanePoints(int engineTrack, uint8_t cc,
                                     const std::vector<DocLanePoint> &points)
 {
@@ -2283,9 +2259,6 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
             break;
         }
         case EditOp::MoveTrack:
-            emit trackMoved(op.smfTrack, op.smfTrackTo,
-                            engineRotationMap(engineTrackForChunk(op.smfTrack),
-                                              engineTrackForChunk(op.smfTrackTo)));
             moveChunk(m_smf.tracks, op.smfTrack, op.smfTrackTo);
             break;
         }
@@ -2328,9 +2301,6 @@ void SongDocument::revertOps(std::vector<EditOp> &ops)
             m_smf.tracks[op.smfTrack].endTick = op.oldEndTick;
             break;
         case EditOp::MoveTrack:
-            emit trackMoved(op.smfTrackTo, op.smfTrack,
-                            engineRotationMap(engineTrackForChunk(op.smfTrackTo),
-                                              engineTrackForChunk(op.smfTrack)));
             moveChunk(m_smf.tracks, op.smfTrackTo, op.smfTrack);
             break;
         }

@@ -87,12 +87,13 @@ bool platformPlayheadRendererEnabled()
 #endif
 }
 
-PlayheadOverlay::PlayheadOverlay(QWidget *owner, TimelineSurfaces surfaces)
+PlayheadOverlay::PlayheadOverlay(QWidget *owner, std::vector<TimelineBand> bands)
     : QWidget(owner)
-    , m_surfaces(surfaces)
+    , m_bands(std::move(bands))
     , m_color(themes::color(themes::Role::song_view_playhead))
 {
     Q_ASSERT(owner);
+    Q_ASSERT(!m_bands.empty());
 
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setAttribute(Qt::WA_NoSystemBackground);
@@ -140,10 +141,8 @@ void PlayheadOverlay::observeSurfaceGeometry()
             }
         }
     };
-    observe(&m_surfaces.ruler.widget);
-    observe(&m_surfaces.roll.widget);
-    observe(&m_surfaces.lanes.widget);
-    observe(&m_surfaces.strip.widget);
+    for (const TimelineBand &band : m_bands)
+        observe(&band.widget);
 }
 
 bool PlayheadOverlay::eventFilter(QObject *, QEvent *event)
@@ -227,6 +226,8 @@ void PlayheadOverlay::paintEvent(QPaintEvent *event)
 
 QRect PlayheadOverlay::visibleSurfaceRect(const QWidget *surface, QWidget *owner, int origin) const
 {
+    if (!surface->isVisibleTo(owner))
+        return {};
     if (origin >= surface->width())
         return {};
     QPoint offset = surface->mapTo(owner, QPoint(0, 0));
@@ -248,24 +249,25 @@ void PlayheadOverlay::synchronizeGeometry()
     Q_ASSERT(ownerWidget);
     QWidget &owner = *ownerWidget;
 
-    const QRect rulerGeometry(m_surfaces.ruler.widget.mapTo(&owner, QPoint(0, 0)),
-                              m_surfaces.ruler.widget.size());
+    const TimelineBand &rulerBand = m_bands.front();
+    const QRect rulerGeometry(rulerBand.widget.mapTo(&owner, QPoint(0, 0)),
+                              rulerBand.widget.size());
     const int playheadTop = rulerGeometry.bottom() + 1;
     const QRect playheadGeometry(0, playheadTop, owner.width(),
                                  std::max(0, owner.height() - playheadTop));
     const QRect rulerVisible =
-        visibleSurfaceRect(&m_surfaces.ruler.widget, &owner, m_surfaces.ruler.timelineOrigin);
+        visibleSurfaceRect(&rulerBand.widget, &owner, rulerBand.timelineOrigin);
     const QRect triangleClip(rulerVisible.left(), playheadTop, rulerVisible.width(),
                              kPlayheadTriangleHeight + 1);
 
-    const QRegion visibleSurfaces =
-        QRegion(
-            visibleSurfaceRect(&m_surfaces.roll.widget, &owner, m_surfaces.roll.timelineOrigin)) +
-        visibleSurfaceRect(&m_surfaces.lanes.widget, &owner, m_surfaces.lanes.timelineOrigin) +
-        visibleSurfaceRect(&m_surfaces.strip.widget, &owner, m_surfaces.strip.timelineOrigin);
+    QRegion visibleSurfaces;
+    for (size_t i = 1; i < m_bands.size(); ++i) {
+        const TimelineBand &band = m_bands[i];
+        visibleSurfaces += visibleSurfaceRect(&band.widget, &owner, band.timelineOrigin);
+    }
 
     const int timelineOrigin =
-        m_surfaces.ruler.widget.mapTo(&owner, QPoint(m_surfaces.ruler.timelineOrigin, 0)).x();
+        rulerBand.widget.mapTo(&owner, QPoint(rulerBand.timelineOrigin, 0)).x();
 
     const bool overlayGeometryChanged = geometry() != owner.rect();
     if (overlayGeometryChanged)
@@ -275,7 +277,7 @@ void PlayheadOverlay::synchronizeGeometry()
     m_playheadGeometry = playheadGeometry;
     m_triangleClip = triangleClip;
     m_timelineOrigin = timelineOrigin;
-    m_trianglePointsUp = !m_surfaces.roll.widget.isVisible();
+    m_trianglePointsUp = m_bands.size() < 2 || !m_bands[1].widget.isVisibleTo(&owner);
     m_devicePixelRatio = owner.devicePixelRatioF();
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     bool platformCreated = false;
@@ -437,7 +439,6 @@ void PlayheadOverlay::updatePaintRegion()
     const auto snapped = [grid, this](const QRegion &region) {
         return grid == 0 ? QRegion(rect()) : expandRegionToDeviceGrid(region, grid);
     };
-
     if (m_platformApplied) {
         if (!m_lastPaintedRegion.isEmpty()) {
             update(snapped(m_lastPaintedRegion));

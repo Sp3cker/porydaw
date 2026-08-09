@@ -10,6 +10,7 @@
 #include "project/decompproject.h"
 #include "project/voicegroupsource.h"
 #include "songsession.h"
+#include "ui/editorviewstate.h"
 #include "ui/enginesettingsdialog.h"
 
 class QAction;
@@ -39,6 +40,8 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
     friend class VoiceEditCommand; // calls applyVoiceEdit from undo/redo
+    friend int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
+                                       const QString &songB, const QString &screenshotPath);
 
   public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -60,6 +63,11 @@ class MainWindow : public QMainWindow
     // stacks, playback stopping on tab switches, tab close/replace, and
     // multi-tab session persistence. QSettings must be redirected.
     bool runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB);
+
+    // Focused MainWindow-to-SongView drawer routing check
+    // (--check-mainwindow-routing; mainwindowroutingcheck.cpp).
+    bool runMainWindowRoutingCheck(const QString &projectRoot, const QString &songA,
+                                   const QString &songB);
 
     // Register Song action wiring (part of --onboardcheck; onboardcheck.cpp):
     // a partially registered song keeps the action enabled, and running it
@@ -193,6 +201,9 @@ class MainWindow : public QMainWindow
     // Re-resolves each session's songId by label after a project reload.
     void refreshSessionSongIds();
     void updateTabTitle(SongSession &session);
+    void toggleDrawerPage(bool automation);
+    void updateDrawerActions();
+    void setEditorDrawerState(const EditorDrawerState &state);
 
     void updateVoicegroupBrowser();
     void onDocumentChanged(SongSession &session);
@@ -301,6 +312,7 @@ class MainWindow : public QMainWindow
     bool m_persistSession = true;
     EngineSettings m_engineSettings;
     DecompProject m_project;
+    EditorDrawerState m_editorDrawerState;
     std::vector<std::unique_ptr<SongSession>> m_sessions;
     SongSession *m_active = nullptr;
     // Suppress currentChanged handling (and tab persistence) while tabs are
@@ -336,6 +348,8 @@ class MainWindow : public QMainWindow
     QAction *m_exportWavAction = nullptr;
     QAction *m_settingsAction = nullptr;
     QAction *m_eventListAction = nullptr;
+    QAction *m_automationDrawerAction = nullptr;
+    QAction *m_velocityDrawerAction = nullptr;
     QAction *m_velocityColorsAction = nullptr;
     QAction *m_noteNamesAction = nullptr;
     QLabel *m_masterVolCaption = nullptr;
