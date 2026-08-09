@@ -2022,8 +2022,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendMouse(roll, QEvent::MouseMove, pullLeft, Qt::NoButton, Qt::LeftButton);
         sendMouse(roll, QEvent::MouseButtonRelease, pullLeft, Qt::LeftButton, Qt::NoButton);
         DocNote gLeft, gRight;
-        if (!doc.findNote(track, g.tick, uint8_t(g.key), &gLeft) ||
-            gLeft.duration != g.dur - gSnap)
+        if (!doc.findNote(track, g.tick, uint8_t(g.key), &gLeft) || gLeft.duration != g.dur - gSnap)
             fail("boundary-left drag did not resize the left note's end");
         if (!doc.findNote(track, g.tick + g.dur, uint8_t(g.key), &gRight) ||
             gRight.duration != g.dur)
