@@ -1446,6 +1446,7 @@ class PianoRoll : public TimelineSurface
         m_drag = Drag::None;
         m_dVel = 0;
         m_velModPress = false;
+        m_modifierVelocityDrag = false;
         m_velModMods = Qt::NoModifier;
         m_velAnchor = {};
         m_velAudEff = -1;
@@ -1512,8 +1513,14 @@ class PianoRoll : public TimelineSurface
 
     bool event(QEvent *event) override
     {
-        if ((event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate ||
-             event->type() == QEvent::UngrabMouse) &&
+        const auto type = event->type();
+        const bool losesFocus =
+            type == QEvent::Hide || type == QEvent::WindowDeactivate || type == QEvent::FocusOut;
+        if (losesFocus) {
+            m_suppressNextVelocitySelectionAdd = false;
+            m_lastModifierVelocityDragNote = {};
+        }
+        if ((losesFocus || type == QEvent::UngrabMouse) &&
             (m_drag == Drag::Velocity || m_velModPress))
             cancelVelocityInteraction();
         const bool handled = TimelineSurface::event(event);
@@ -1611,6 +1618,7 @@ class PianoRoll : public TimelineSurface
         m_dKey = 0;
         m_dDur = 0;
         m_dVel = 0;
+        m_modifierVelocityDrag = false;
 
         if (hit) {
             const bool rightEdge = nearRightEdge(*hit, event->position());
@@ -1788,8 +1796,16 @@ class PianoRoll : public TimelineSurface
                 QApplication::startDragDistance())
                 return;
             m_velModPress = false;
-            if (!m_sv->isSelected(m_velAnchor)) {
-                const NoteId id = m_velAnchor.noteId;
+            const NoteId id = m_velAnchor.noteId;
+            const bool switchesNotes =
+                m_suppressNextVelocitySelectionAdd && id != m_lastModifierVelocityDragNote;
+            if (switchesNotes) {
+                m_suppressNextVelocitySelectionAdd = false;
+                // A completed modifier velocity edit makes the next such
+                // drag on another note switch instead of growing the old
+                // selection.
+                m_sv->setSelection({id});
+            } else if (!m_sv->isSelected(m_velAnchor)) {
                 if (m_velModMods & Qt::ControlModifier) {
                     // Ctrl in the chord: like the Ctrl+edge grab, the
                     // gesture joins the note to the bulk selection built
@@ -1802,6 +1818,7 @@ class PianoRoll : public TimelineSurface
                     m_sv->setSelection({id});
                 }
             }
+            m_modifierVelocityDrag = true;
             m_drag = Drag::Velocity;
             if (!m_sv->beginVelocityGesture(resolveSelection()))
                 cancelVelocityInteraction();
@@ -2017,6 +2034,8 @@ class PianoRoll : public TimelineSurface
         }
 
         const Drag drag = m_drag;
+        const bool modifierVelocityDrag = m_modifierVelocityDrag;
+        m_modifierVelocityDrag = false;
         m_drag = Drag::None;
         SongView::VelocityCommitResult velocityResult = SongView::VelocityCommitResult::NoGesture;
         if (drag == Drag::Velocity)
@@ -2024,6 +2043,12 @@ class PianoRoll : public TimelineSurface
         const bool velocityCommitted =
             velocityResult == SongView::VelocityCommitResult::Committed ||
             velocityResult == SongView::VelocityCommitResult::Unchanged;
+        if (modifierVelocityDrag && velocityResult == SongView::VelocityCommitResult::Committed &&
+            keymap::Registry::instance().matchesModifier(event->modifiers(),
+                                                         QStringLiteral("roll.velocity_drag"))) {
+            m_suppressNextVelocitySelectionAdd = true;
+            m_lastModifierVelocityDragNote = m_velAnchor.noteId;
+        }
 
         if (doc && drag == Drag::Draw) {
             const std::vector<DocNote> before = doc->notesForTrack(m_sv->selectedTrack());
@@ -2123,8 +2148,11 @@ class PianoRoll : public TimelineSurface
 
     void keyReleaseEvent(QKeyEvent *event) override
     {
-        if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key()))
+        if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key())) {
+            m_suppressNextVelocitySelectionAdd = false;
+            m_lastModifierVelocityDragNote = {};
             invalidateContent();
+        }
         // End the transpose audition when the shortcut's keys come up.
         // Autorepeat releases are skipped so a held Ctrl+Up keeps sounding
         // the moving pitch; the Drag::None guard keeps a stray key release
@@ -2957,13 +2985,16 @@ class PianoRoll : public TimelineSurface
     bool m_velModPress = false;      // velocity-modifier press on a note; click
                                      // vs. vertical velocity drag undecided
     Qt::KeyboardModifiers m_velModMods = Qt::NoModifier; // that press's chord
-    int m_kbdKey = -1;            // key sounding from a keyboard-column press
-    int m_soundingKey = -1;       // auditioned key highlighted on the keyboard
-    int m_hoverKey = -1;          // key row under the cursor; -1 = no mark
-    bool m_auditioned = false;    // a drag/draw preview note is sounding
-    uint8_t m_lastVelocity = 100; // latches to touched/velocity-edited notes
-    bool m_panning = false;       // middle-drag pan
-    QPointF m_panPos;             // last pan sample, global coords
+    bool m_modifierVelocityDrag = false;             // active drag began with the modifier chord
+    bool m_suppressNextVelocitySelectionAdd = false; // one-shot after a committed drag
+    NoteId m_lastModifierVelocityDragNote{};         // anchor that armed the one-shot
+    int m_kbdKey = -1;                               // key sounding from a keyboard-column press
+    int m_soundingKey = -1;                          // auditioned key highlighted on the keyboard
+    int m_hoverKey = -1;                             // key row under the cursor; -1 = no mark
+    bool m_auditioned = false;                       // a drag/draw preview note is sounding
+    uint8_t m_lastVelocity = 100;                    // latches to touched/velocity-edited notes
+    bool m_panning = false;                          // middle-drag pan
+    QPointF m_panPos;                                // last pan sample, global coords
     NoteContextMenu *m_noteMenu = nullptr;
 };
 
