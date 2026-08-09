@@ -175,6 +175,11 @@ class SongView : public QWidget
 
     qreal contentX(double tick) const { return qreal(tick * m_pxPerTick - m_scrollX); }
     double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / m_pxPerTick; }
+    // Camera dead space before tick 0: the horizontal scroll floor is
+    // -leadPadPx(), so the song start can rest inside the viewport instead
+    // of pinned to its left edge (zooming near the start clamps here, which
+    // keeps tick 0 on screen).
+    double leadPadPx() const;
     qreal displayX(double tick, qreal origin, qreal dpr) const;
     double pxPerTick() const { return m_pxPerTick; }
     double pxPerBeat() const;
@@ -534,6 +539,7 @@ class SongView : public QWidget
     void syncPlayheadOverlay();
     int viewportWidth() const;
     void setHScroll(double px);
+    double minHScroll() const;
     double maxHScroll() const;
     void setVScroll(double y);
     double maxRollScroll() const;

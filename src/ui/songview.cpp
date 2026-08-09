@@ -90,7 +90,9 @@ qreal logicalPhysicalPixel(qreal dpr)
 
 int scrollUnits(double dip)
 {
-    const double units = std::clamp(dip * kScrollUnitsPerDip, 0.0, double(INT_MAX));
+    // Negative units carry the pre-roll pad (scroll positions left of
+    // tick 0) into the scrollbar's range.
+    const double units = std::clamp(dip * kScrollUnitsPerDip, double(INT_MIN), double(INT_MAX));
     return int(std::lround(units));
 }
 
@@ -367,6 +369,22 @@ QColor gridLineColor(int alpha = 255)
     auto color = themes::color(themes::Role::song_view_grid);
     color.setAlpha((color.alpha() * alpha + 127) / 255);
     return color;
+}
+
+// Flat fill over the camera's pre-roll pad (the scrollable dead space left
+// of tick 0). Opaque and stripe-free so it reads as "outside the song";
+// blending the surface's own background toward the grid ink dims it in
+// light themes and lifts it in dark ones. Painted before drawGrid so the
+// tick-0 bar line stays a crisp boundary on top.
+void drawPreRoll(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
+                 const QColor &background)
+{
+    const qreal dpr = p.device()->devicePixelRatioF();
+    const qreal x0 = sv->displayX(0.0, origin, dpr);
+    if (x0 <= rect.left())
+        return;
+    p.fillRect(QRectF(rect.left(), rect.top(), x0 - rect.left(), rect.height()),
+               mixTowardOklab(background, gridLineColor(), 0.15));
 }
 
 // Vertical bar/beat grid lines inside rect, with zoom-adaptive sub-beat
@@ -660,6 +678,7 @@ class TimeRuler : public QWidget
 
         const QRect area(kGutterW, 0, width() - kGutterW, height());
         p.setClipRect(area);
+        drawPreRoll(p, m_sv, area, kGutterW, chrome);
 
         // Loop band across the whole ruler height.
         drawOverlays(p, m_sv, area, kGutterW, true);
@@ -1393,6 +1412,8 @@ class PianoRoll : public TimelineSurface
             p.drawLine(QLineF(grid.left(), row.bottom(), grid.right(), row.bottom()));
         }
 
+        drawPreRoll(p, m_sv, grid, kKeyboardW,
+                    themes::color(themes::Role::song_view_piano_roll_background));
         drawGrid(p, m_sv, grid, kKeyboardW);
 
         // Notes: ghost pass (unselected tracks), then the selected track.
@@ -4109,6 +4130,8 @@ class AutomationArea : public TimelineSurface
         }
 
         p.setClipRect(plot, Qt::IntersectClip);
+        drawPreRoll(p, m_sv, plot, kGutterW,
+                    themes::color(themes::Role::song_view_piano_roll_background));
         drawGrid(p, m_sv, plot, kGutterW);
 
         if (row.kind == Row::Voice)
@@ -4255,6 +4278,8 @@ class OtherStrip : public TimelineSurface
 
         const QRect area(kGutterW, 0, width() - kGutterW, height());
         p.setClipRect(area, Qt::IntersectClip);
+        drawPreRoll(p, m_sv, area, kGutterW,
+                    themes::color(themes::Role::song_view_timeline_chrome_background));
         drawOverlays(p, m_sv, area, kGutterW, false);
 
         const int cy = height() / 2;
@@ -5093,7 +5118,8 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_playheadTick = 0.0;
     m_editCursorTick = 0;
     m_playing = false;
-    m_scrollX = 0.0;
+    // Fresh songs open at the camera's home position, pre-roll pad showing.
+    m_scrollX = minHScroll();
     m_events->setPlayheadTick(-1.0, false); // another song's ticks are stale
     // Lane heights/value ranges and the snap grid are per-song view state;
     // back to defaults until a sidecar (applyViewState) says otherwise.
@@ -5328,7 +5354,7 @@ void SongView::applyViewState(const ViewState &state)
     }
     m_lanes->rebuildRows();
     updateScrollbars();
-    setHScroll(std::max(0.0, state.scrollPx));
+    setHScroll(state.scrollPx); // setHScroll clamps to the camera's range
     setVScroll(state.scrollY);
     setEventListVisible(state.eventList);
     refreshTimelineViews();
@@ -6052,7 +6078,9 @@ void SongView::commitEditCursor(uint64_t tick)
 
 void SongView::goToStart()
 {
-    setHScroll(0);
+    // Home shows the pre-roll pad so tick 0 sits inside the viewport, not
+    // flush against its edge.
+    setHScroll(minHScroll());
     commitEditCursor(0);
 }
 
@@ -6588,8 +6616,8 @@ void SongView::zoomAroundContentX(double factor, qreal anchorContentX)
     const double oldPxPerTick = m_pxPerTick;
     m_pxPerTick = std::clamp(oldPxPerTick * factor, kMinPxPerBeat / tpb, kMaxPxPerBeat / tpb);
     m_scrollX = std::clamp(
-        cursorAnchoredScroll(double(anchorContentX), oldPxPerTick, m_scrollX, m_pxPerTick), 0.0,
-        maxHScroll());
+        cursorAnchoredScroll(double(anchorContentX), oldPxPerTick, m_scrollX, m_pxPerTick),
+        minHScroll(), maxHScroll());
     updateScrollbars();
     refreshTimelineViews();
 }
@@ -6629,7 +6657,7 @@ void SongView::scrollRollBy(double dy)
 
 void SongView::setHScroll(double px)
 {
-    const double newX = std::clamp(px, 0.0, maxHScroll());
+    const double newX = std::clamp(px, minHScroll(), maxHScroll());
     const bool cameraChanged = newX != m_scrollX;
     m_scrollX = newX;
     const int scrollbarValue = scrollUnits(m_scrollX);
@@ -6691,11 +6719,25 @@ int SongView::viewportWidth() const
     return std::max(50, m_roll->width() - kKeyboardW);
 }
 
+double SongView::leadPadPx() const
+{
+    // Whole DIPs: the pad is a camera resting position (fresh songs and
+    // "go to start" home here), and an integral camera keeps note edges
+    // on the same raster seams as the classic scroll-0 home.
+    return std::clamp(std::round(double(viewportWidth()) * 0.10), 48.0, 256.0);
+}
+
+double SongView::minHScroll() const
+{
+    return m_timeline ? -leadPadPx() : 0.0;
+}
+
 double SongView::maxHScroll() const
 {
-    const double contentWidth =
-        m_timeline ? double(m_timeline->lengthTicks) * m_pxPerTick + 100.0 : 0.0;
-    return std::max(0.0, contentWidth - double(viewportWidth()));
+    // A full viewport of scratch space past the song: max scroll rests the
+    // song's end at the content area's left edge. Notes pasted out there
+    // grow lengthTicks on the next timeline rebuild, renewing the space.
+    return m_timeline ? double(m_timeline->lengthTicks) * m_pxPerTick : 0.0;
 }
 
 double SongView::maxRollScroll() const
@@ -6721,7 +6763,7 @@ void SongView::setVScroll(double y)
 void SongView::updateScrollbars()
 {
     m_hbar->blockSignals(true);
-    m_hbar->setRange(0, scrollUnits(maxHScroll()));
+    m_hbar->setRange(scrollUnits(minHScroll()), scrollUnits(maxHScroll()));
     m_hbar->setPageStep(scrollUnits(double(viewportWidth())));
     m_hbar->blockSignals(false);
     setHScroll(m_scrollX);

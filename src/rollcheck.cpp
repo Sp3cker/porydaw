@@ -73,6 +73,12 @@
 // The cursor over the roll marks its key row on the keyboard column
 // (with a note-name chip) — held through gestures so a drag's target row
 // stays readable — cleared when the cursor leaves the widget.
+// The horizontal camera overshoots the song on both sides: the scroll
+// floor is a lead pad of flat-shaded dead space before tick 0 (zooming
+// near the song start clamps there with tick 0 still on screen; fresh
+// songs and go-to-start home there) and the ceiling leaves a full
+// viewport of scratch space past the song's end, where a pencil draw
+// lands beyond the old length and grows the rebuilt timeline.
 // Undoing every gesture must restore the original bytes.
 
 namespace {
@@ -500,6 +506,145 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     }
     const SnappedRows rows{view, *roll};
 
+    // The horizontal camera range: a lead pad of dead space before tick 0
+    // (the scroll floor, where zooming near the song start comes to rest
+    // with tick 0 still on screen) and a full viewport of scratch space
+    // past the song's end (the ceiling rests the end at the content area's
+    // left edge). The pad region paints as a flat shade distinct from the
+    // roll background, and a negative camera round-trips through the
+    // sidecar view state.
+    {
+        const SongView::ViewState original = view.viewState();
+        const double pad = view.leadPadPx();
+        if (pad <= 0.0)
+            fail("lead pad is not positive");
+
+        SongView::ViewState state = original;
+        state.scrollPx = -1.0e9;
+        view.applyViewState(state);
+        if (std::abs(view.viewState().scrollPx + pad) > 1e-9)
+            fail("horizontal scroll floor is not the lead pad");
+
+        // Zooming in anchored inside the pad clamps at the floor instead of
+        // pushing tick 0 off the left edge.
+        sendWheel(roll, QPointF(songview::kKeyboardW + 2.0, 200.0), 120, 0, Qt::NoModifier);
+        if (std::abs(view.viewState().scrollPx + pad) > 1e-9)
+            fail("zoom near the song start left the lead-pad floor");
+        view.applyViewState(state);
+
+        state.scrollPx = 1.0e9;
+        view.applyViewState(state);
+        const double ceiling = double(timeline->lengthTicks) * view.pxPerTick();
+        if (std::abs(view.viewState().scrollPx - ceiling) > 1e-9)
+            fail("scroll ceiling is not a full viewport past the song end");
+
+        view.goToStart();
+        if (std::abs(view.viewState().scrollPx + pad) > 1e-9 || view.editCursorTick() != 0)
+            fail("go-to-start did not home the camera to the lead pad");
+
+        // A pixel wheel pans left into the pad from the classic origin.
+        state.scrollPx = 0.0;
+        view.applyViewState(state);
+        sendWheel(roll, QPointF(songview::kKeyboardW + 40.0, 200.0), 0, 0, Qt::NoModifier, 8);
+        if (std::abs(view.viewState().scrollPx + 8.0) > 1e-12)
+            fail("wheel pan could not enter the lead pad");
+
+        state.scrollPx = -pad / 2.0;
+        view.applyViewState(state);
+        if (std::abs(view.viewState().scrollPx + pad / 2.0) > 1e-12)
+            fail("negative scroll did not round-trip through view state");
+
+        // The pre-roll shade: flat (same color on natural and accidental
+        // rows, hiding the row stripes) and distinct from the plain roll
+        // background right of tick 0.
+        state.scrollPx = -pad;
+        view.applyViewState(state);
+        const auto isBlackKey = [](int key) {
+            switch (key % 12) {
+            case 1:
+            case 3:
+            case 6:
+            case 8:
+            case 10:
+                return true;
+            default:
+                return false;
+            }
+        };
+        int naturalKey = -1, accidentalKey = -1;
+        const int midKey = rows.keyAt(roll->height() / 2.0);
+        for (int key = midKey - 4; key <= midKey + 4; ++key) {
+            if (key < 0 || key > 127 || rows.top(key) < 0 || rows.bottom(key) > roll->height())
+                continue;
+            (isBlackKey(key) ? accidentalKey : naturalKey) = key;
+        }
+        if (naturalKey < 0 || accidentalKey < 0) {
+            fail("no visible natural/accidental row pair for the pre-roll probe");
+        } else {
+            const QPixmap padPixmap = roll->grab();
+            const QImage padImage = padPixmap.toImage();
+            const qreal padDpr = padPixmap.devicePixelRatio();
+            const auto raster = [padDpr](qreal position) { return qRound(position * padDpr); };
+            const qreal inPadX = songview::kKeyboardW + pad / 2.0;
+            // Mid snap-cell right of tick 0, clear of the 2px grid lines.
+            const qreal outPadX = songview::kKeyboardW + pad + 20.0;
+            const QRgb padNatural =
+                padImage.pixel(raster(inPadX), raster(rows.centerY(naturalKey)));
+            const QRgb padAccidental =
+                padImage.pixel(raster(inPadX), raster(rows.centerY(accidentalKey)));
+            const QRgb plainNatural =
+                padImage.pixel(raster(outPadX), raster(rows.centerY(naturalKey)));
+            if (padNatural != padAccidental)
+                fail("pre-roll shade is not flat across row stripes");
+            if (padNatural == plainNatural)
+                fail("pre-roll shade does not differ from the roll background");
+        }
+
+        view.applyViewState(original);
+        (void)view.grab();
+        QCoreApplication::processEvents();
+    }
+
+    // The scratch space past the song's end is editable: from the ceiling
+    // camera a pencil draw lands beyond the pre-edit song length, and the
+    // rebuilt timeline grows to include it (renewing the overshoot range).
+    {
+        const SongView::ViewState original = view.viewState();
+        const uint64_t lengthBefore = timeline->lengthTicks;
+        const QByteArray beforeProbe = doc.smf().write();
+        const int undoIndex = doc.undoStack()->index();
+
+        SongView::ViewState state = original;
+        state.scrollPx = 1.0e9;
+        view.applyViewState(state);
+
+        // Mid-viewport at the ceiling is all past the song end.
+        const double probeX = songview::kKeyboardW + (roll->width() - songview::kKeyboardW) / 2.0;
+        const uint64_t tick = view.snapTickDown(view.tickAtContentX(probeX - songview::kKeyboardW));
+        const int key = rows.keyAt(roll->height() / 2.0);
+        const qreal x0 = songview::kKeyboardW + view.contentX(double(tick));
+        const qreal xs =
+            songview::kKeyboardW + view.contentX(double(tick + view.snapTicksAt(tick)));
+        drawNote(roll, QPoint(int((x0 + xs) / 2.0), int(rows.centerY(key))));
+
+        DocNote scratch;
+        if (tick < lengthBefore)
+            fail("ceiling-camera probe cell is not past the song end");
+        else if (!doc.findNote(track, tick, uint8_t(key), &scratch))
+            fail("pencil draw in the scratch space produced no note");
+        else if (timeline->lengthTicks <= lengthBefore)
+            fail("scratch-space note did not grow the rebuilt timeline");
+
+        while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        if (doc.smf().write() != beforeProbe)
+            fail("undo did not restore the document after the scratch-space draw");
+
+        view.applyViewState(original);
+        (void)view.grab();
+        QCoreApplication::processEvents();
+    }
+
     // Hover readout: the cursor anywhere over the roll marks its key row
     // on the keyboard column (mirrored in the hoverKey property); leaving
     // the widget clears the mark.
@@ -566,6 +711,17 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 if (x0 < songview::kKeyboardW || x1 - x0 < 12 || xs - x0 < 8 || x1 >= roll->width())
                     continue;
                 if (occupied(tick, dur, key, checkAllTracks))
+                    continue;
+                // Like the parked playhead/edit cursor, the loop markers'
+                // opaque lines must stay outside the probed span (which can
+                // cover this cell plus an abutting one): an overlay line
+                // paints the same color over background and note, reading
+                // as an unpainted column to the before/after comparisons.
+                const auto markerInSpan = [&](uint64_t markerTick) {
+                    return markerTick != UINT64_MAX && markerTick >= tick &&
+                           markerTick <= tick + 2 * dur;
+                };
+                if (markerInSpan(timeline->loopStartTick) || markerInSpan(timeline->loopEndTick))
                     continue;
                 cell.tick = tick;
                 cell.dur = dur;
