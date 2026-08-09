@@ -128,6 +128,8 @@ int runKeymapCheck()
               "Ctrl+M must not match mute tracks");
         check(keyMatches(QStringLiteral("roll.solo_tracks"), Qt::Key_S, Qt::NoModifier),
               "S should match solo tracks");
+        check(keyMatches(QStringLiteral("automation.pencil_mode"), Qt::Key_B, Qt::NoModifier),
+              "B should toggle automation pencil mode");
         check(keyMatches(QStringLiteral("transport.play_pause"), Qt::Key_Space, Qt::NoModifier),
               "Space should match play/pause");
         check(
@@ -261,6 +263,43 @@ int runKeymapCheck()
               "a non-modifier token parsed as a chord");
     }
 
+    // The Velocity modifier uses the same portable Ctrl default, but its
+    // editor-only context does not conflict with the piano-roll gesture.
+    {
+        const QString id = QStringLiteral("velocity.detent_unlock");
+        check(registry.command(id).modifier, "detent unlock is not a modifier command");
+        check(registry.command(id).context == keymap::Context::Velocity,
+              "detent unlock does not use the Velocity context");
+        check(registry.modifierBinding(id) == Qt::ControlModifier &&
+                  keymap::Registry::modifierText(registry.modifierBinding(id)) ==
+                      QStringLiteral("Ctrl"),
+              "detent unlock does not default to portable Ctrl");
+        check(registry.bindings(id).isEmpty(), "detent unlock reports key-sequence bindings");
+        check(!keyMatches(id, Qt::Key_C, Qt::ControlModifier), "a key event matched detent unlock");
+        check(!registry.modifierConflicts(id, keymap::Context::Velocity, Qt::ControlModifier)
+                   .contains(QStringLiteral("roll.velocity_drag")),
+              "Velocity detent unlock incorrectly conflicts with piano-roll velocity drag");
+        check(registry.modifierConflicts(id, keymap::Context::Global, Qt::ControlModifier)
+                  .contains(QStringLiteral("roll.velocity_drag")),
+              "Global modifier context missed the piano-roll velocity conflict");
+
+        registry.setModifierBinding(id, Qt::AltModifier);
+        check(registry.modifierBinding(id) == Qt::AltModifier,
+              "detent unlock modifier override did not apply");
+        check(QSettings().value(QStringLiteral("keymap/velocity.detent_unlock")).toString() ==
+                  QStringLiteral("Alt"),
+              "detent unlock modifier override not persisted as portable text");
+        registry.setModifierBinding(id, Qt::ControlModifier);
+        check(!registry.isOverridden(id),
+              "re-assigning the detent unlock default should store no delta");
+        registry.setModifierBinding(id, Qt::NoModifier);
+        check(registry.modifierBinding(id) == Qt::NoModifier && registry.isOverridden(id),
+              "detent unlock unbind did not persist as an empty delta");
+        registry.resetBinding(id);
+        check(registry.modifierBinding(id) == Qt::ControlModifier,
+              "detent unlock reset did not restore Ctrl");
+    }
+
     // 9. Dialog: filter narrows rows, assigning through the capture widget
     // steals from the conflicting command, and per-row Reset restores it.
     // Modifier commands swap the key capture for the chord picker.
@@ -342,14 +381,52 @@ int runKeymapCheck()
         // through the registry, and per-row Reset restores the default.
         auto *modCapture = dialog.findChild<QComboBox *>();
         if (check(modCapture != nullptr, "modifier chord picker missing")) {
+            const QString detentId = QStringLiteral("velocity.detent_unlock");
+            QTreeWidgetItem *detentItem = findCommandItem(tree, detentId);
+            check(detentItem && detentItem->parent() &&
+                      detentItem->parent()->text(0) == QStringLiteral("Velocity") &&
+                      detentItem->text(0) == QStringLiteral("Unlock Detents (Hold)"),
+                  "detent unlock row is missing its Velocity label");
+#ifdef Q_OS_MACOS
+            const QString detentDefaultText = QStringLiteral("⌘");
+#else
+            const QString detentDefaultText = QStringLiteral("Ctrl");
+#endif
+            check(detentItem && detentItem->text(1) == detentDefaultText,
+                  "detent unlock row is missing its default modifier");
+            tree->setCurrentItem(detentItem);
+            check(modCapture->isVisible() && !capture->isVisible(),
+                  "detent unlock row did not swap in the chord picker");
+            const int ctrlIndex = modCapture->findData(int(Qt::ControlModifier));
+            check(ctrlIndex >= 0 && modCapture->currentIndex() == ctrlIndex &&
+                      modCapture->itemText(ctrlIndex) == detentDefaultText,
+                  "detent unlock picker does not expose the Command/Ctrl default");
+            const int detentAltIndex = modCapture->findData(int(Qt::AltModifier));
+            const int detentCtrlAltIndex =
+                modCapture->findData(int((Qt::ControlModifier | Qt::AltModifier).toInt()));
+            check(modCapture->count() == 3 && detentAltIndex >= 0 && detentCtrlAltIndex >= 0 &&
+                      modCapture->findData(int(Qt::ShiftModifier)) < 0 &&
+                      modCapture->findData(int((Qt::ControlModifier | Qt::ShiftModifier).toInt())) <
+                          0 &&
+                      modCapture->findData(int((Qt::ShiftModifier | Qt::AltModifier).toInt())) < 0,
+                  "detent unlock picker did not filter Shift-bearing choices");
+
             tree->setCurrentItem(findCommandItem(tree, QStringLiteral("roll.velocity_drag")));
             check(modCapture->isVisible() && !capture->isVisible(),
                   "modifier row did not swap in the chord picker");
             const int altIndex = modCapture->findData(int(Qt::AltModifier));
             check(altIndex >= 0, "chord picker offers no Alt");
-#ifdef Q_OS_MACOS
+            const int shiftIndex = modCapture->findData(int(Qt::ShiftModifier));
             const int ctrlShiftIndex =
                 modCapture->findData(int((Qt::ControlModifier | Qt::ShiftModifier).toInt()));
+            const int ctrlAltIndex =
+                modCapture->findData(int((Qt::ControlModifier | Qt::AltModifier).toInt()));
+            const int shiftAltIndex =
+                modCapture->findData(int((Qt::ShiftModifier | Qt::AltModifier).toInt()));
+            check(modCapture->count() == 6 && shiftIndex >= 0 && ctrlShiftIndex >= 0 &&
+                      ctrlAltIndex >= 0 && shiftAltIndex >= 0,
+                  "chord picker did not restore all modifier choices");
+#ifdef Q_OS_MACOS
             check(modCapture->itemText(modCapture->findData(int(Qt::ControlModifier))) ==
                           QStringLiteral("⌘") &&
                       modCapture->itemText(altIndex) == QStringLiteral("⌥") &&

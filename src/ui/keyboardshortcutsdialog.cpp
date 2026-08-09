@@ -92,14 +92,8 @@ KeyboardShortcutsDialog::KeyboardShortcutsDialog(QWidget *parent) : QDialog(pare
             &KeyboardShortcutsDialog::captureChanged);
 
     // QKeySequenceEdit cannot record a bare modifier chord, so modifier
-    // commands pick theirs from a fixed list instead.
+    // commands populate their choices when selected.
     m_modCapture = new QComboBox(this);
-    for (const auto mods :
-         {Qt::KeyboardModifiers(Qt::ControlModifier), Qt::KeyboardModifiers(Qt::ShiftModifier),
-          Qt::KeyboardModifiers(Qt::AltModifier), Qt::ControlModifier | Qt::ShiftModifier,
-          Qt::ControlModifier | Qt::AltModifier, Qt::ShiftModifier | Qt::AltModifier}) {
-        m_modCapture->addItem(modifierDisplayText(mods), int(mods.toInt()));
-    }
     m_modCapture->hide();
     connect(m_modCapture, &QComboBox::activated, this, &KeyboardShortcutsDialog::captureChanged);
 
@@ -234,6 +228,15 @@ void KeyboardShortcutsDialog::currentRowChanged()
     m_capture->setVisible(!modifier);
     m_modCapture->setVisible(modifier);
     if (modifier) {
+        m_modCapture->clear();
+        for (const auto mods :
+             {Qt::KeyboardModifiers(Qt::ControlModifier), Qt::KeyboardModifiers(Qt::ShiftModifier),
+              Qt::KeyboardModifiers(Qt::AltModifier), Qt::ControlModifier | Qt::ShiftModifier,
+              Qt::ControlModifier | Qt::AltModifier, Qt::ShiftModifier | Qt::AltModifier}) {
+            if (id == QStringLiteral("velocity.detent_unlock") && mods.testFlag(Qt::ShiftModifier))
+                continue;
+            m_modCapture->addItem(modifierDisplayText(mods), int(mods.toInt()));
+        }
         const int index = m_modCapture->findData(int(registry.modifierBinding(id).toInt()));
         const QSignalBlocker blocker(m_modCapture);
         m_modCapture->setCurrentIndex(std::max(0, index));

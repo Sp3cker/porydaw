@@ -176,6 +176,7 @@ enum class Role {
     song_view_automation_tempo_curve,
     song_view_file_event_marker,
     song_view_add_automation_lane_action,
+    song_view_psg_velocity_levels,
 
     // Sample Editor waveform trace, painted on the item surface behind it.
     sample_waveform_ink,

@@ -17,6 +17,8 @@ namespace keymap {
 enum class Context {
     Global,
     PianoRoll,
+    Velocity,
+    Automation,
     EventList,
 };
 

@@ -119,6 +119,14 @@ const Def kDefs[] = {
     // note to adjust its velocity. Qt maps Ctrl to Cmd on macOS.
     {"roll.velocity_drag", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Adjust Velocity (Hold + Drag Note)"), QKeySequence::UnknownKey, "Ctrl", true},
+    // Velocity editor: hold the modifier to unlock continuous velocity detents.
+    {"velocity.detent_unlock", Context::Velocity, QT_TR_NOOP("Velocity"),
+     QT_TR_NOOP("Unlock Detents (Hold)"), QKeySequence::UnknownKey, "Ctrl", true},
+    // Ableton-style envelope drawing: drag draws the automation shape through
+    // the cursor as grid steps, a click places a single snapped point, and
+    // Delete or Backspace removes the hovered point.
+    {"automation.pencil_mode", Context::Automation, QT_TR_NOOP("Automation"),
+     QT_TR_NOOP("Toggle Pencil Mode"), QKeySequence::UnknownKey, "B"},
     // MIDI event list: same-tick reorder nudges (the keyboard face of the
     // row drag).
     {"eventlist.move_up", Context::EventList, QT_TR_NOOP("MIDI Event List"),

@@ -414,6 +414,7 @@ void checkThemeWorkflow(Reporter &reporter, QApplication &application)
     table.setItem(0, 0, new QTableWidgetItem);
     table.setItem(1, 0, new QTableWidgetItem);
     table.resize(80, 80);
+    table.setFocusPolicy(Qt::NoFocus);
     table.show();
     application.processEvents();
     const auto cellColor = [&](int row) {

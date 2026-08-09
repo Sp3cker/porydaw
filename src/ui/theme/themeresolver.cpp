@@ -563,7 +563,11 @@ Theme derive(const QColor &primary, const QColor &accent)
     theme.color(Role::song_view_piano_roll_background) = windowBackground;
     theme.color(Role::song_view_piano_roll_accidental_lane) =
         shiftOklabLightness(windowBackground, -0.05);
-    // The playhead keeps its identity red in every theme, like the Mute and
+    // PSG quantization levels: always darker than the roll background (light
+    // and dark themes). Outline/grid lighten on dark themes (surface +d),
+    // which washed PSG lines out; this darkens unconditionally.
+    theme.color(Role::song_view_psg_velocity_levels) =
+        shiftOklabLightness(theme.color(Role::song_view_piano_roll_background), -0.08);
     // Solo domain colors; its glow keeps it visible on any surface. The piano
     // keyboard likewise always reads black-and-white.
     theme.color(Role::song_view_playhead) = QColor::fromRgb(226, 66, 66);

@@ -3,6 +3,7 @@
 #include <QFont>
 #include <QString>
 #include <QtCore/QRect>
+#include <QtGlobal>
 
 class QApplication;
 class QScrollBar;
@@ -68,6 +69,8 @@ bool initialize(QApplication &application, int baseFontPx);
 int space(Space token);
 /// Resolves a dimensionless multiplier after successful initialization.
 int fontPx(double multiplier);
+/// Resolves an unrounded font-relative factor after successful initialization.
+qreal fontPxF(double multiplier);
 /// Returns the initialization-independent logical-pixel application hairline.
 int singlePixel();
 /// Computes the shared dock-title and tab-row outer height.

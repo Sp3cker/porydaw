@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "core/miditimeline.h"
+#include "core/noteid.h"
 #include "ui/m4asemantics.h"
 
 // Presentation model derived from a MidiTimeline: notes paired from on/off
@@ -13,6 +14,7 @@
 // these buckets — the M1 guarantee that no event is silently invisible.
 
 struct ViewNote {
+    NoteId noteId; // source document identity; unassigned for ordinary timeline notes
     uint32_t startTick;
     uint32_t endTick;
     uint8_t key;

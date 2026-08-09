@@ -450,11 +450,16 @@ int fontPx(double multiplier)
 {
     return resolve(currentLayout().baseFontPx, multiplier);
 }
+qreal fontPxF(double multiplier)
+{
+    return currentLayout().baseFontPx * multiplier;
+}
 
 int singlePixel()
 {
     return 1;
 }
+
 TwoLineTextLayout::TwoLineTextLayout(const QFont &primary, const QFont &alternatePrimary,
                                      const QFont &secondary, Space gap)
     : m_primaryHeight(
