@@ -12,6 +12,7 @@ struct RawEvent {
     uint8_t type;
     uint8_t data0;
     uint8_t data1;
+    NoteId noteId;
     int origIndex; // insertion order: stable-sort tiebreaker so setup events
                    // (program change, CC) stay ahead of note-ons at the same tick
 };
@@ -120,6 +121,7 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
                     ev.type = playType;
                     ev.data0 = sev.data0;
                     ev.data1 = sev.data1;
+                    ev.noteId = playType == 0x9 ? sev.noteId : NoteId{};
                     ev.origIndex = static_cast<int>(rawEvents.size());
                     rawEvents.push_back(ev);
                     trackHasChannelEvents[t] = true;
@@ -252,6 +254,7 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
         ev.track = static_cast<uint8_t>(engineTrack);
         ev.data0 = re.data0;
         ev.data1 = re.data1;
+        ev.noteId = re.noteId;
         noteEvents.push_back(ev);
 
         TimelineTrack &ti = timeline->tracks[engineTrack];

@@ -95,6 +95,7 @@ qt_add_library(porydaw_app STATIC
     src/core/mid2agbtables.h
     src/core/miditimeline.cpp
     src/core/miditimeline.h
+    src/core/noteid.h
     src/core/smf.cpp
     src/core/smf.h
     src/core/songdocument.cpp
@@ -199,6 +200,7 @@ qt_add_executable(porydaw
     src/viewcheck.cpp
     src/roundtrip.cpp
     src/editcheck.cpp
+    src/noteidcheck.cpp
     src/savecheck.cpp
     src/onboardcheck.cpp
     src/vgcheck.cpp

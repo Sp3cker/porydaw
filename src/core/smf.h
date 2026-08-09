@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "noteid.h"
+
 // Full-fidelity Standard MIDI File model. Unlike MidiTimeline (a lossy,
 // playback-oriented view), this preserves every event and its in-file order
 // so that a load -> save with no edits is semantically identical through
@@ -23,6 +25,7 @@ struct SmfEvent {
     uint8_t data0 = 0;    // channel-voice data bytes
     uint8_t data1 = 0;
     QByteArray blob; // meta/sysex payload
+    NoteId noteId;   // transient document identity; not serialized as MIDI data
 
     bool isMeta() const { return status == 0xFF; }
     bool isSysEx() const { return status == 0xF0 || status == 0xF7; }

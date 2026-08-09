@@ -189,9 +189,10 @@ int runSmfCheck()
     }
 
     // 3. Note pairing keeps mid2agb's rule through the linear-time pass:
-    // shared ends, a vel-0 note-on as an end, cross-channel isolation within
-    // one chunk, an unterminated note-on, and raw 8-bit key equality (a
-    // preserved out-of-range key must not pair with its masked twin).
+    // shared ends, a vel-0 note-on as an end, engine-channel ownership within
+    // a mixed-channel chunk, an unterminated note-on, and raw 8-bit key
+    // equality (a preserved out-of-range key must not pair with its masked
+    // twin).
     {
         SmfFile smf;
         smf.format = 1;
@@ -221,16 +222,15 @@ int runSmfCheck()
         } else {
             const int engineTrack = engineTrackForChunk(doc, 1);
             const std::vector<DocNote> notes = doc.notesForTrack(engineTrack);
-            if (notes.size() != 6) {
-                std::fprintf(stderr, "smfcheck: FAIL: %zu notes, want 6\n", notes.size());
+            if (notes.size() != 5) {
+                std::fprintf(stderr, "smfcheck: FAIL: %zu notes, want 5\n", notes.size());
                 failures++;
             }
             failures += checkNote(notes, 0, 0, 6, 20, 60, 100, 0);      // A
             failures += checkNote(notes, 1, 1, 3, 5, 62, 80, 0);        // C
-            failures += checkNote(notes, 2, 2, 4, 7, 60, 70, 1);        // E
-            failures += checkNote(notes, 3, 5, 6, 10, 60, 90, 0);       // B
-            failures += checkNote(notes, 4, 7, SIZE_MAX, 0, 64, 50, 0); // D
-            failures += checkNote(notes, 5, 8, 10, 8, 0x83, 60, 0);     // F
+            failures += checkNote(notes, 2, 5, 6, 10, 60, 90, 0);       // B
+            failures += checkNote(notes, 3, 7, SIZE_MAX, 0, 64, 50, 0); // D
+            failures += checkNote(notes, 4, 8, 10, 8, 0x83, 60, 0);     // F
         }
     }
 

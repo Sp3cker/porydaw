@@ -5,6 +5,8 @@
 #include <QFileInfo>
 #include <algorithm>
 #include <map>
+#include <numeric>
+#include <set>
 
 #include "core/miditimeline.h"
 #include "project/songregistry.h"
@@ -17,6 +19,22 @@ bool metaIsLoopMarker(const SmfEvent &ev, char marker)
     const int len = std::min<int>(ev.blob.size(), 32);
     const QString text = QString::fromLatin1(ev.blob.constData(), len).trimmed();
     return text.size() == 1 && text[0] == QLatin1Char(marker);
+}
+
+bool TrackRemap::isIdentity() const
+{
+    if (smfTrackMap.size() != static_cast<size_t>(newSmfTrackCount) ||
+        engineTrackMap.size() != static_cast<size_t>(newEngineTrackCount))
+        return false;
+    for (int i = 0; i < int(smfTrackMap.size()); i++) {
+        if (smfTrackMap[i] != i)
+            return false;
+    }
+    for (int i = 0; i < int(engineTrackMap.size()); i++) {
+        if (engineTrackMap[i] != i)
+            return false;
+    }
+    return true;
 }
 
 namespace {
@@ -40,25 +58,42 @@ void moveChunk(std::vector<SmfTrack> &tracks, int from, int to)
         std::rotate(begin + to, begin + from, begin + from + 1);
 }
 
-// trackMoved's engine permutation for a format-1 chunk move: the contiguous
-// rotation between the engine endpoints (identity when either chunk has no
-// engine slot).
 QVector<int> engineRotationMap(int from, int to)
 {
     QVector<int> map(16);
-    for (int t = 0; t < 16; t++)
-        map[t] = t;
+    for (int track = 0; track < 16; track++)
+        map[track] = track;
     if (from < 0 || to < 0 || from == to)
         return map;
-    for (int t = 0; t < 16; t++) {
-        if (t == from)
-            map[t] = to;
-        else if (from < to && t > from && t <= to)
-            map[t] = t - 1;
-        else if (to < from && t >= to && t < from)
-            map[t] = t + 1;
+    for (int track = 0; track < 16; track++) {
+        if (track == from)
+            map[track] = to;
+        else if (from < to && track > from && track <= to)
+            map[track] = track - 1;
+        else if (to < from && track >= to && track < from)
+            map[track] = track + 1;
     }
     return map;
+}
+
+TrackRemap inverseTrackRemap(const TrackRemap &remap)
+{
+    TrackRemap inverse;
+    inverse.smfTrackMap.assign(size_t(remap.newSmfTrackCount), -1);
+    inverse.engineTrackMap.assign(size_t(remap.newEngineTrackCount), -1);
+    inverse.newSmfTrackCount = int(remap.smfTrackMap.size());
+    inverse.newEngineTrackCount = int(remap.engineTrackMap.size());
+    for (int old = 0; old < int(remap.smfTrackMap.size()); old++) {
+        const int current = remap.smfTrackMap[old];
+        if (current >= 0)
+            inverse.smfTrackMap[current] = old;
+    }
+    for (int old = 0; old < int(remap.engineTrackMap.size()); old++) {
+        const int current = remap.engineTrackMap[old];
+        if (current >= 0)
+            inverse.engineTrackMap[current] = old;
+    }
+    return inverse;
 }
 
 bool cfgSemanticEqual(const SongCfg &a, const SongCfg &b)
@@ -85,19 +120,24 @@ class SongEditCommand : public QUndoCommand
 
     void redo() override
     {
+        const auto before = m_doc->trackMapState();
         m_doc->applyOps(m_ops);
-        emit m_doc->documentChanged();
+        m_doc->rebuildTrackMap();
+        m_remap = m_doc->trackRemap(before, m_ops);
+        m_doc->publishMutation(m_remap);
     }
 
     void undo() override
     {
         m_doc->revertOps(m_ops);
-        emit m_doc->documentChanged();
+        m_doc->rebuildTrackMap();
+        m_doc->publishMutation(inverseTrackRemap(m_remap));
     }
 
   private:
     SongDocument *m_doc;
     std::vector<SongDocument::EditOp> m_ops;
+    TrackRemap m_remap;
 };
 
 class SongCfgCommand : public QUndoCommand
@@ -113,13 +153,15 @@ class SongCfgCommand : public QUndoCommand
     void redo() override
     {
         m_doc->m_cfg = m_new;
-        emit m_doc->documentChanged();
+        m_doc->rebuildTrackMap();
+        m_doc->publishMutation(m_doc->currentTrackRemap());
     }
 
     void undo() override
     {
         m_doc->m_cfg = m_old;
-        emit m_doc->documentChanged();
+        m_doc->rebuildTrackMap();
+        m_doc->publishMutation(m_doc->currentTrackRemap());
     }
 
   private:
@@ -153,14 +195,22 @@ class MoveNotesCommand : public QUndoCommand
 
     void redo() override
     {
+        const auto before = m_doc->trackMapState();
         m_doc->applyOps(m_ops);
-        emit m_doc->documentChanged();
+        m_doc->rebuildTrackMap();
+        m_remap = m_doc->trackRemap(before, m_ops);
+        if (m_initialRedo) {
+            m_initialRedo = false;
+            return;
+        }
+        m_doc->publishMutation(m_remap);
     }
 
     void undo() override
     {
         m_doc->revertOps(m_ops);
-        emit m_doc->documentChanged();
+        m_doc->rebuildTrackMap();
+        m_doc->publishMutation(inverseTrackRemap(m_remap));
     }
 
     bool mergeWith(const QUndoCommand *command) override
@@ -179,8 +229,13 @@ class MoveNotesCommand : public QUndoCommand
         m_dTick += other->m_dTick;
         m_dKey += other->m_dKey;
         m_ops = m_doc->buildMoveNotesOps(m_notes, m_dTick, m_dKey);
+        if (movesMyOutputs(m_notes)) {
+            setObsolete(true);
+            return true;
+        }
         m_doc->applyOps(m_ops);
-        emit m_doc->documentChanged();
+        m_doc->rebuildTrackMap();
+        m_remap = m_doc->currentTrackRemap();
         return true;
     }
 
@@ -192,18 +247,22 @@ class MoveNotesCommand : public QUndoCommand
     {
         if (next.size() != m_notes.size())
             return false;
-        using Pos = std::tuple<int, uint64_t, int, uint32_t, uint8_t, uint8_t>;
-        std::vector<Pos> mine, theirs;
-        for (const DocNote &n : m_notes)
-            mine.push_back(
-                {n.engineTrack, uint64_t(std::max<int64_t>(0, int64_t(n.tick) + m_dTick)),
-                 std::clamp(int(n.key) + m_dKey, 0, 127), n.duration, n.velocity, n.channel});
-        for (const DocNote &n : next)
-            theirs.push_back(
-                {n.engineTrack, n.tick, int(n.key), n.duration, n.velocity, n.channel});
-        std::sort(mine.begin(), mine.end());
-        std::sort(theirs.begin(), theirs.end());
-        return mine == theirs;
+        for (const DocNote &note : m_notes) {
+            const uint64_t outputTick =
+                uint64_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
+            const uint8_t outputKey = uint8_t(std::clamp(int(note.key) + m_dKey, 0, 127));
+            const auto output =
+                std::find_if(next.begin(), next.end(), [&](const DocNote &candidate) {
+                    return candidate.noteId == note.noteId &&
+                           candidate.engineTrack == note.engineTrack &&
+                           candidate.tick == outputTick && candidate.key == outputKey &&
+                           candidate.duration == note.duration &&
+                           candidate.velocity == note.velocity && candidate.channel == note.channel;
+                });
+            if (output == next.end())
+                return false;
+        }
+        return true;
     }
 
     SongDocument *m_doc;
@@ -211,7 +270,9 @@ class MoveNotesCommand : public QUndoCommand
     int64_t m_dTick;
     int m_dKey;
     bool m_mergeable;
+    bool m_initialRedo = true;
     std::vector<SongDocument::EditOp> m_ops;
+    TrackRemap m_remap;
 };
 
 SongDocument::SongDocument(QObject *parent) : QObject(parent) {}
@@ -226,6 +287,7 @@ bool SongDocument::load(const SongInfo &song, QString *error)
     if (!SmfFile::readFile(song.midPath, &smf, error))
         return false;
 
+    const auto before = trackMapState();
     m_smf = std::move(smf);
     m_cfg = song.cfg;
     m_savedCfg = song.cfg;
@@ -233,7 +295,14 @@ bool SongDocument::load(const SongInfo &song, QString *error)
     m_label = song.label;
     m_hadCfgLine = song.hasCfg;
     m_undoStack.clear();
+    mintUnassignedNoteIds();
     rebuildTrackMap();
+    TrackRemap remap;
+    remap.smfTrackMap.assign(size_t(before.smfTrackCount), -1);
+    remap.engineTrackMap.assign(size_t(before.engineToSmf.size()), -1);
+    remap.newSmfTrackCount = int(m_smf.tracks.size());
+    remap.newEngineTrackCount = engineTrackCount();
+    publishMutation(remap);
     return true;
 }
 
@@ -276,6 +345,93 @@ void SongDocument::rebuildTrackMap()
     }
 }
 
+SongDocument::TrackMapState SongDocument::trackMapState() const
+{
+    return {int(m_smf.tracks.size()), m_engineToSmf};
+}
+
+TrackRemap SongDocument::currentTrackRemap() const
+{
+    TrackRemap remap;
+    remap.smfTrackMap.resize(m_smf.tracks.size());
+    remap.engineTrackMap.resize(size_t(engineTrackCount()));
+    std::iota(remap.smfTrackMap.begin(), remap.smfTrackMap.end(), 0);
+    std::iota(remap.engineTrackMap.begin(), remap.engineTrackMap.end(), 0);
+    remap.newSmfTrackCount = int(m_smf.tracks.size());
+    remap.newEngineTrackCount = engineTrackCount();
+    return remap;
+}
+
+TrackRemap SongDocument::trackRemap(const TrackMapState &before,
+                                    const std::vector<EditOp> &ops) const
+{
+    std::vector<int> chunkOrigins(size_t(before.smfTrackCount));
+    std::iota(chunkOrigins.begin(), chunkOrigins.end(), 0);
+    for (const EditOp &op : ops) {
+        if (op.type == EditOp::InsertTrack) {
+            chunkOrigins.insert(chunkOrigins.begin() + op.smfTrack, -1);
+        } else if (op.type == EditOp::RemoveTrack) {
+            chunkOrigins.erase(chunkOrigins.begin() + op.smfTrack);
+        } else if (op.type == EditOp::MoveTrack) {
+            if (op.smfTrack < op.smfTrackTo) {
+                std::rotate(chunkOrigins.begin() + op.smfTrack,
+                            chunkOrigins.begin() + op.smfTrack + 1,
+                            chunkOrigins.begin() + op.smfTrackTo + 1);
+            } else {
+                std::rotate(chunkOrigins.begin() + op.smfTrackTo,
+                            chunkOrigins.begin() + op.smfTrack,
+                            chunkOrigins.begin() + op.smfTrack + 1);
+            }
+        }
+    }
+    TrackRemap remap;
+    remap.smfTrackMap.assign(static_cast<std::size_t>(before.smfTrackCount), -1);
+    remap.engineTrackMap.assign(static_cast<std::size_t>(before.engineToSmf.size()), -1);
+    remap.newSmfTrackCount = int(m_smf.tracks.size());
+    remap.newEngineTrackCount = engineTrackCount();
+    for (int current = 0; current < int(chunkOrigins.size()); current++) {
+        const int old = chunkOrigins[size_t(current)];
+        if (old >= 0)
+            remap.smfTrackMap[old] = current;
+    }
+    for (int oldEngine = 0; oldEngine < int(before.engineToSmf.size()); oldEngine++) {
+        const int oldChunk = before.engineToSmf[size_t(oldEngine)];
+        const int newChunk = remap.smfTrackMap[oldChunk];
+        for (int newEngine = 0; newEngine < engineTrackCount(); newEngine++) {
+            if (m_engineToSmf[size_t(newEngine)] == newChunk) {
+                remap.engineTrackMap[oldEngine] = newEngine;
+                break;
+            }
+        }
+    }
+    return remap;
+}
+
+void SongDocument::publishMutation(TrackRemap remap)
+{
+    m_revision++;
+    if (!remap.isIdentity())
+        emit tracksRemapped(std::move(remap));
+    emit documentChanged();
+}
+
+void SongDocument::mintNoteId(SmfEvent *event)
+{
+    if (!event->isNoteOn() || event->noteId.isAssigned())
+        return;
+    event->noteId = NoteId{m_nextNoteId++};
+    if (m_nextNoteId == 0)
+        m_nextNoteId++;
+}
+
+void SongDocument::mintUnassignedNoteIds()
+{
+    for (SmfTrack &track : m_smf.tracks) {
+        for (SmfEvent &event : track.events)
+            mintNoteId(&event);
+    }
+}
+
 int SongDocument::smfTrackFor(int engineTrack) const
 {
     if (engineTrack < 0 || engineTrack >= int(m_engineToSmf.size()))
@@ -299,13 +455,47 @@ int SongDocument::engineTrackForChunk(int chunk) const
     return -1;
 }
 
+bool SongDocument::noteAt(int engineTrack, size_t onIndex, DocNote *out) const
+{
+    const int smfTrack = smfTrackFor(engineTrack);
+    if (smfTrack < 0)
+        return false;
+    const auto &events = m_smf.tracks[size_t(smfTrack)].events;
+    const uint8_t channel = channelFor(engineTrack);
+    if (onIndex >= events.size() || !events[onIndex].isNoteOn() ||
+        events[onIndex].channel() != channel)
+        return false;
+    const SmfEvent &on = events[onIndex];
+    DocNote note;
+    note.noteId = on.noteId;
+    note.engineTrack = engineTrack;
+    note.smfTrack = smfTrack;
+    note.onIndex = onIndex;
+    note.tick = on.tick;
+    note.key = on.data0;
+    note.velocity = on.data1;
+    note.channel = on.channel();
+    for (size_t index = onIndex + 1; index < events.size(); index++) {
+        const SmfEvent &end = events[index];
+        if (end.isChannel() && end.isNoteEnd() && end.channel() == channel &&
+            end.data0 == on.data0) {
+            note.endIndex = index;
+            note.duration = uint32_t(end.tick - on.tick);
+            break;
+        }
+    }
+    *out = note;
+    return true;
+}
+
 std::vector<DocNote> SongDocument::notesForTrack(int engineTrack) const
 {
     std::vector<DocNote> notes;
     const int smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0)
         return notes;
-    const auto &evs = m_smf.tracks[smfTrack].events;
+    const auto &events = m_smf.tracks[size_t(smfTrack)].events;
+    const uint8_t channel = channelFor(engineTrack);
 
     // Pair as mid2agb does: the first same-channel same-key note end after
     // the note-on (several note-ons may legitimately share one end). One
@@ -316,25 +506,26 @@ std::vector<DocNote> SongDocument::notesForTrack(int engineTrack) const
     // bytes (mid2agb parity), and pairing compares the raw key byte, so key
     // 0x83 must never pair with key 0x03.
     std::vector<size_t> endAt(16 * 256, SIZE_MAX);
-    for (size_t i = evs.size(); i-- > 0;) {
-        const SmfEvent &ev = evs[i];
-        if (!ev.isChannel())
+    for (size_t index = events.size(); index-- > 0;) {
+        const SmfEvent &event = events[index];
+        if (!event.isChannel())
             continue;
-        const size_t slot = size_t(ev.channel()) * 256 + ev.data0;
-        if (ev.isNoteEnd()) {
-            endAt[slot] = i;
-        } else if (ev.isNoteOn()) {
+        const size_t slot = size_t(event.channel()) * 256 + event.data0;
+        if (event.isNoteEnd()) {
+            endAt[slot] = index;
+        } else if (event.isNoteOn() && event.channel() == channel) {
             DocNote note;
+            note.noteId = event.noteId;
             note.engineTrack = engineTrack;
             note.smfTrack = smfTrack;
-            note.onIndex = i;
-            note.tick = ev.tick;
-            note.key = ev.data0;
-            note.velocity = ev.data1;
-            note.channel = ev.channel();
+            note.onIndex = index;
+            note.tick = event.tick;
+            note.key = event.data0;
+            note.velocity = event.data1;
+            note.channel = event.channel();
             if (endAt[slot] != SIZE_MAX) {
                 note.endIndex = endAt[slot];
-                note.duration = uint32_t(evs[endAt[slot]].tick - ev.tick);
+                note.duration = uint32_t(events[endAt[slot]].tick - event.tick);
             }
             notes.push_back(note);
         }
@@ -349,6 +540,23 @@ bool SongDocument::findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote
         if (note.tick == tick && note.key == key) {
             *out = note;
             return true;
+        }
+    }
+    return false;
+}
+
+bool SongDocument::findNote(NoteId id, DocNote *out) const
+{
+    if (!id.isAssigned())
+        return false;
+    for (int smfTrack = 0; smfTrack < int(m_smf.tracks.size()); smfTrack++) {
+        const int engineTrack = engineTrackForChunk(smfTrack);
+        if (engineTrack < 0)
+            continue;
+        const auto &events = m_smf.tracks[size_t(smfTrack)].events;
+        for (size_t index = 0; index < events.size(); index++) {
+            if (events[index].isNoteOn() && events[index].noteId == id)
+                return noteAt(engineTrack, index, out);
         }
     }
     return false;
@@ -416,7 +624,8 @@ bool SongDocument::findLanePoint(int engineTrack, uint8_t cc, uint64_t tick,
         if (pt.tick > tick)
             break;
         if (pt.tick == tick) {
-            *out = pt;
+            if (out)
+                *out = pt;
             found = true;
         }
     }
@@ -531,13 +740,17 @@ void SongDocument::appendRemoveOps(std::vector<EditOp> &ops, int smfTrack,
 void SongDocument::appendEventEditOps(std::vector<EditOp> &ops, int smfTrack, size_t index,
                                       const SmfEvent &event) const
 {
-    if (event.tick == m_smf.tracks[smfTrack].events[index].tick) {
+    const SmfEvent &old = m_smf.tracks[smfTrack].events[index];
+    SmfEvent replacement = event;
+    if (old.isNoteOn() && replacement.isNoteOn())
+        replacement.noteId = old.noteId;
+    if (replacement.tick == old.tick) {
         EditOp op;
         op.type = EditOp::ModifyEvent;
         op.smfTrack = smfTrack;
         op.index = index;
-        op.event = event;
-        ops.push_back(op);
+        op.event = std::move(replacement);
+        ops.push_back(std::move(op));
         return;
     }
     EditOp remove;
@@ -549,8 +762,9 @@ void SongDocument::appendEventEditOps(std::vector<EditOp> &ops, int smfTrack, si
     EditOp insert;
     insert.type = EditOp::InsertEvent;
     insert.smfTrack = smfTrack;
-    insert.event = event;
-    ops.push_back(insert);
+    insert.event = std::move(replacement);
+    insert.preservesNoteId = insert.event.isNoteOn() && old.isNoteOn();
+    ops.push_back(std::move(insert));
 }
 
 void SongDocument::resolveNoteOverlaps(const std::vector<PlannedNote> &written,
@@ -615,6 +829,7 @@ void SongDocument::resolveNoteOverlaps(const std::vector<PlannedNote> &written,
                 op.smfTrack = s.smfTrack;
                 op.event = m_smf.tracks[size_t(s.smfTrack)].events[s.onIndex];
                 op.event.tick = sTick;
+                op.preservesNoteId = true;
                 trims.push_back(op);
             }
             if (trimEnd) {
@@ -697,7 +912,19 @@ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, i
 {
     if (notes.empty() || (dTick == 0 && dKey == 0))
         return;
+    const bool changes =
+        std::any_of(notes.begin(), notes.end(), [dTick, dKey](const DocNote &note) {
+            return uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick)) != note.tick ||
+                   uint8_t(std::clamp(int(note.key) + dKey, 0, 127)) != note.key;
+        });
+    if (!changes)
+        return;
     m_undoStack.push(new MoveNotesCommand(this, notes, dTick, dKey, mergeable));
+    // The command suppresses publication from its initial redo because a
+    // merge can replace that provisional state. Publish the public move call
+    // after the stack settles: an inverse merge may remove the command but
+    // has still restored live state.
+    publishMutation(currentTrackRemap());
 }
 
 std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vector<DocNote> &notes,
@@ -723,16 +950,23 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
         appendRemoveOps(ops, int(t), std::move(removals[t]));
     for (const DocNote &note : notes) {
         const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
-        const int newKey = std::clamp(int(note.key) + dKey, 0, 127);
-        if (note.unterminated()) {
-            EditOp on;
-            on.type = EditOp::InsertEvent;
-            on.smfTrack = note.smfTrack;
-            on.event = makeChannelEvent(0x9, note.channel, newTick, uint8_t(newKey), note.velocity);
-            ops.push_back(on);
-        } else {
-            appendNoteInsertOps(ops, note.smfTrack, note.channel, newTick, uint8_t(newKey),
-                                note.duration, note.velocity);
+        const uint8_t newKey = uint8_t(std::clamp(int(note.key) + dKey, 0, 127));
+        EditOp on;
+        on.type = EditOp::InsertEvent;
+        on.smfTrack = note.smfTrack;
+        on.event = m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+        on.event.tick = newTick;
+        on.event.data0 = newKey;
+        on.preservesNoteId = true;
+        ops.push_back(std::move(on));
+        if (!note.unterminated()) {
+            EditOp end;
+            end.type = EditOp::InsertEvent;
+            end.smfTrack = note.smfTrack;
+            end.event = m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
+            end.event.tick = newTick + note.duration;
+            end.event.data0 = newKey;
+            ops.push_back(std::move(end));
         }
     }
     ops.insert(ops.end(), trims.begin(), trims.end());
@@ -742,6 +976,12 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
 void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration)
 {
     if (notes.empty() || dDuration == 0)
+        return;
+    const bool changes = std::any_of(notes.begin(), notes.end(), [dDuration](const DocNote &note) {
+        return note.unterminated() ||
+               uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration)) != note.duration;
+    });
+    if (!changes)
         return;
     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<PlannedNote> written;
@@ -775,6 +1015,13 @@ void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dT
 {
     if (notes.empty() || dTick == 0)
         return;
+    const bool changes = std::any_of(notes.begin(), notes.end(), [dTick](const DocNote &note) {
+        const int64_t maxTick =
+            note.unterminated() ? INT64_MAX : int64_t(note.tick + note.duration) - 1;
+        return uint64_t(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick)) != note.tick;
+    });
+    if (!changes)
+        return;
     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<PlannedNote> written;
     for (const DocNote &note : notes) {
@@ -802,8 +1049,10 @@ void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dT
         EditOp on;
         on.type = EditOp::InsertEvent;
         on.smfTrack = note.smfTrack;
-        on.event = makeChannelEvent(0x9, note.channel, newTick, note.key, note.velocity);
-        ops.push_back(on);
+        on.event = m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
+        on.event.tick = newTick;
+        on.preservesNoteId = true;
+        ops.push_back(std::move(on));
     }
     ops.insert(ops.end(), trims.begin(), trims.end());
     pushEdit(tr("resize %n note(s)", nullptr, int(notes.size())), std::move(ops));
@@ -813,31 +1062,82 @@ void SongDocument::setNotesVelocity(const std::vector<DocNote> &notes, uint8_t v
 {
     if (notes.empty())
         return;
+    const uint8_t target = std::clamp<uint8_t>(velocity, 1, 127);
     std::vector<EditOp> ops;
     for (const DocNote &note : notes) {
+        if (note.velocity == target)
+            continue;
         EditOp op;
         op.type = EditOp::ModifyEvent;
         op.smfTrack = note.smfTrack;
         op.index = note.onIndex;
-        op.event = makeChannelEvent(0x9, note.channel, note.tick, note.key,
-                                    std::clamp<uint8_t>(velocity, 1, 127));
+        op.event = makeChannelEvent(0x9, note.channel, note.tick, note.key, target);
         ops.push_back(op);
     }
     pushEdit(tr("set velocity"), std::move(ops));
+}
+
+std::optional<uint64_t>
+SongDocument::setNotesVelocities(uint64_t expectedRevision,
+                                 const std::vector<NoteVelocity> &velocities)
+{
+    if (expectedRevision != m_revision)
+        return std::nullopt;
+    struct ResolvedVelocity {
+        DocNote note;
+        int velocity = 1;
+    };
+    std::vector<ResolvedVelocity> resolved;
+    resolved.reserve(velocities.size());
+    for (const NoteVelocity &velocity : velocities) {
+        DocNote note;
+        if (!findNote(velocity.noteId, &note))
+            return std::nullopt;
+        const auto it = std::find_if(resolved.begin(), resolved.end(),
+                                     [&note](const ResolvedVelocity &candidate) {
+                                         return candidate.note.noteId == note.noteId;
+                                     });
+        if (it == resolved.end())
+            resolved.push_back({note, velocity.velocity});
+        else
+            it->velocity = velocity.velocity;
+    }
+    std::vector<EditOp> ops;
+    for (const ResolvedVelocity &item : resolved) {
+        const uint8_t target = uint8_t(std::clamp(item.velocity, 1, 127));
+        if (item.note.velocity == target)
+            continue;
+        SmfEvent event = m_smf.tracks[size_t(item.note.smfTrack)].events[item.note.onIndex];
+        event.data1 = target;
+        EditOp op;
+        op.type = EditOp::ModifyEvent;
+        op.smfTrack = item.note.smfTrack;
+        op.index = item.note.onIndex;
+        op.event = std::move(event);
+        ops.push_back(std::move(op));
+    }
+    if (ops.empty())
+        return expectedRevision;
+    pushEdit(tr("paint note velocities"), std::move(ops));
+    return m_revision;
 }
 
 void SongDocument::nudgeNotesVelocity(const std::vector<DocNote> &notes, int delta)
 {
     if (notes.empty() || delta == 0)
         return;
+    const auto velocityFor = [delta](const DocNote &note) {
+        return uint8_t(std::clamp(int(note.velocity) + delta, 1, 127));
+    };
     std::vector<EditOp> ops;
     for (const DocNote &note : notes) {
+        if (velocityFor(note) == note.velocity)
+            continue;
         EditOp op;
         op.type = EditOp::ModifyEvent;
         op.smfTrack = note.smfTrack;
         op.index = note.onIndex;
-        op.event = makeChannelEvent(0x9, note.channel, note.tick, note.key,
-                                    uint8_t(std::clamp(int(note.velocity) + delta, 1, 127)));
+        op.event = makeChannelEvent(0x9, note.channel, note.tick, note.key, velocityFor(note));
         ops.push_back(op);
     }
     pushEdit(tr("adjust velocity"), std::move(ops));
@@ -895,7 +1195,7 @@ void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBeg
                                    uint64_t tickEnd, const std::vector<LanePointValue> &points)
 {
     const int smfTrack = cc == DOC_CC_TEMPO ? 0 : smfTrackFor(engineTrack);
-    if (smfTrack < 0 || m_smf.tracks.empty() || points.empty())
+    if (smfTrack < 0 || m_smf.tracks.empty())
         return;
     std::vector<EditOp> ops;
     // Points already inside the swept range are overwritten by the gesture.
@@ -904,6 +1204,8 @@ void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBeg
         if (pt.tick >= tickBegin && pt.tick <= tickEnd)
             overwritten.push_back(pt.index);
     }
+    if (overwritten.empty() && points.empty())
+        return;
     appendRemoveOps(ops, smfTrack, std::move(overwritten));
     const uint8_t channel = channelFor(engineTrack);
     for (const LanePointValue &pt : points) {
@@ -916,36 +1218,142 @@ void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBeg
     pushEdit(tr("draw automation points"), std::move(ops));
 }
 
+void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
+{
+    if (moves.empty() || m_smf.tracks.empty())
+        return;
+    struct LaneGroup {
+        int smfTrack = -1;
+        uint8_t cc = 0;
+        std::map<uint64_t, std::vector<size_t>> pointsByTick;
+    };
+    struct PlannedMove {
+        int engineTrack = -1;
+        uint8_t cc = 0;
+        DocLanePoint point;
+        uint64_t newTick = 0;
+        SmfEvent sourceEvent;
+        SmfEvent event;
+        size_t groupIndex = 0;
+    };
+    std::vector<LaneGroup> groups;
+    std::map<std::pair<int, uint8_t>, size_t> groupByLane;
+    std::set<std::pair<int, size_t>> sourceIndices;
+    std::vector<PlannedMove> planned;
+    planned.reserve(moves.size());
+    for (const LanePointMove &move : moves) {
+        const int smfTrack = move.cc == DOC_CC_TEMPO ? 0 : smfTrackFor(move.engineTrack);
+        if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()) ||
+            move.point.smfTrack != smfTrack ||
+            move.point.index >= m_smf.tracks[size_t(smfTrack)].events.size())
+            continue;
+        const SmfEvent &source = m_smf.tracks[size_t(smfTrack)].events[move.point.index];
+        if (move.cc == DOC_CC_TEMPO) {
+            if (!source.isMeta() || source.metaType != 0x51 || source.blob.size() != 3)
+                continue;
+        } else if (!laneEventMatches(source, move.cc)) {
+            continue;
+        }
+        if (source.tick != move.point.tick || laneValue(source, move.cc) != move.point.value ||
+            !sourceIndices.emplace(smfTrack, move.point.index).second)
+            continue;
+        const auto key = std::make_pair(smfTrack, move.cc);
+        auto [groupIt, inserted] = groupByLane.emplace(key, groups.size());
+        if (inserted)
+            groups.push_back({smfTrack, move.cc});
+        const size_t groupIndex = groupIt->second;
+        const uint8_t channel = move.cc == DOC_CC_TEMPO ? uint8_t(0) : channelFor(move.engineTrack);
+        planned.push_back({move.engineTrack, move.cc, move.point, move.newTick, source,
+                           makeLaneEvent(move.cc, channel, move.newTick, move.newValue),
+                           groupIndex});
+    }
+    if (planned.empty())
+        return;
+    for (LaneGroup &group : groups) {
+        const auto &events = m_smf.tracks[size_t(group.smfTrack)].events;
+        for (size_t index = 0; index < events.size(); index++) {
+            const SmfEvent &event = events[index];
+            const bool matches =
+                group.cc == DOC_CC_TEMPO
+                    ? event.isMeta() && event.metaType == 0x51 && event.blob.size() == 3
+                    : laneEventMatches(event, group.cc);
+            if (matches)
+                group.pointsByTick[event.tick].push_back(index);
+        }
+    }
+    std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+    std::vector<EditOp> modifications;
+    std::vector<EditOp> insertions;
+    std::map<std::pair<size_t, uint64_t>, size_t> winners;
+    for (size_t i = 0; i < planned.size(); ++i)
+        winners[{planned[i].groupIndex, planned[i].newTick}] = i;
+    std::vector<std::set<size_t>> winningSources(groups.size());
+    for (const auto &entry : winners) {
+        const size_t winner = entry.second;
+        winningSources[planned[winner].groupIndex].insert(planned[winner].point.index);
+    }
+    for (size_t i = 0; i < planned.size(); ++i) {
+        const PlannedMove &move = planned[i];
+        if (winners[{move.groupIndex, move.newTick}] != i)
+            removals[size_t(groups[move.groupIndex].smfTrack)].push_back(move.point.index);
+    }
+    for (size_t i = 0; i < planned.size(); ++i) {
+        const PlannedMove &move = planned[i];
+        const LaneGroup &group = groups[move.groupIndex];
+        if (winners[{move.groupIndex, move.newTick}] != i)
+            continue;
+        bool shadowed = false;
+        const auto occupied = group.pointsByTick.find(move.newTick);
+        if (occupied != group.pointsByTick.end()) {
+            for (const size_t index : occupied->second) {
+                if (!winningSources[move.groupIndex].count(index)) {
+                    removals[size_t(group.smfTrack)].push_back(index);
+                    shadowed = true;
+                }
+            }
+        }
+        if (move.newTick == move.point.tick) {
+            if (!shadowed && move.event == move.sourceEvent)
+                continue;
+            EditOp modify;
+            modify.type = EditOp::ModifyEvent;
+            modify.smfTrack = group.smfTrack;
+            modify.index = move.point.index;
+            modify.event = move.event;
+            modifications.push_back(std::move(modify));
+        } else {
+            removals[size_t(group.smfTrack)].push_back(move.point.index);
+            EditOp insert;
+            insert.type = EditOp::InsertEvent;
+            insert.smfTrack = group.smfTrack;
+            insert.event = move.event;
+            insertions.push_back(std::move(insert));
+        }
+    }
+    const bool hasRemovals =
+        std::any_of(removals.begin(), removals.end(),
+                    [](const std::vector<size_t> &indices) { return !indices.empty(); });
+    if (modifications.empty() && insertions.empty() && !hasRemovals)
+        return;
+    std::vector<EditOp> ops;
+    ops.reserve(modifications.size() + insertions.size() + moves.size());
+    for (EditOp &modify : modifications)
+        ops.push_back(std::move(modify));
+    for (size_t track = 0; track < m_smf.tracks.size(); track++)
+        appendRemoveOps(ops, int(track), std::move(removals[track]));
+    for (EditOp &insert : insertions)
+        ops.push_back(std::move(insert));
+    const bool singular = planned.size() == 1;
+    const QString text = singular && planned.front().cc == DOC_CC_VOICE ? tr("change voice")
+                         : singular ? tr("edit automation point")
+                                    : tr("edit automation points");
+    pushEdit(text, std::move(ops));
+}
+
 void SongDocument::moveLanePoint(int engineTrack, uint8_t cc, const DocLanePoint &point,
                                  uint64_t newTick, int newValue)
 {
-    const QString text = cc == DOC_CC_VOICE ? tr("change voice") : tr("edit automation point");
-    std::vector<EditOp> ops;
-    // Landing on an occupied tick replaces what sits there (see addLanePoint);
-    // for a same-tick value edit this also heals shadowed duplicates under
-    // the edited point.
-    std::vector<size_t> shadowed;
-    for (const DocLanePoint &pt : lanePoints(engineTrack, cc)) {
-        if (pt.tick == newTick && pt.index != point.index)
-            shadowed.push_back(pt.index);
-    }
-    const SmfEvent event = makeLaneEvent(cc, channelFor(engineTrack), newTick, newValue);
-    if (newTick == point.tick) {
-        // ModifyEvent first so a value edit keeps the point's position within
-        // its tick group; a modify shifts no indices, so the shadowed
-        // removals stay valid after it.
-        appendEventEditOps(ops, point.smfTrack, point.index, event);
-        appendRemoveOps(ops, point.smfTrack, std::move(shadowed));
-    } else {
-        shadowed.push_back(point.index);
-        appendRemoveOps(ops, point.smfTrack, std::move(shadowed));
-        EditOp insert;
-        insert.type = EditOp::InsertEvent;
-        insert.smfTrack = point.smfTrack;
-        insert.event = event;
-        ops.push_back(insert);
-    }
-    pushEdit(text, std::move(ops));
+    moveLanePoints({LanePointMove{engineTrack, cc, point, newTick, newValue}});
 }
 
 void SongDocument::deleteLanePoints(int engineTrack, uint8_t cc,
@@ -1070,6 +1478,7 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
             op.smfTrack = int(t);
             op.event = m_smf.tracks[t].events[index];
             op.event.tick = uint64_t(std::max<int64_t>(0, int64_t(op.event.tick) + dTick));
+            op.preservesNoteId = op.event.isNoteOn();
             ops.push_back(op);
         }
     }
@@ -1118,6 +1527,7 @@ bool SongDocument::removeTimeRange(uint64_t startTick, uint64_t endTick, const R
         op.smfTrack = smfTrack;
         op.event = ev;
         op.event.tick = newTick;
+        op.preservesNoteId = op.event.isNoteOn();
         inserts.push_back(op);
     };
 
@@ -1538,6 +1948,7 @@ int SongDocument::duplicateTrack(int engineTrack)
     if (smfTrack < 0 || !canAddTrack())
         return -1;
     const int channel = freeChannel();
+    const uint8_t sourceChannel = channelFor(engineTrack);
     const SmfTrack &src = m_smf.tracks[smfTrack];
     std::vector<EditOp> ops;
     const int newSmfTrack = int(m_smf.tracks.size());
@@ -1546,11 +1957,13 @@ int SongDocument::duplicateTrack(int engineTrack)
     insert.smfTrack = newSmfTrack;
     insert.trackData.endTick = src.endTick;
     for (const SmfEvent &ev : src.events) {
-        if (!ev.isChannel())
-            continue;
-        SmfEvent copy = ev;
-        copy.status = uint8_t((ev.status & 0xF0) | channel);
-        insert.trackData.events.push_back(copy);
+        if (ev.isChannel()) {
+            if (ev.channel() != sourceChannel)
+                continue;
+            SmfEvent copy = ev;
+            copy.status = uint8_t((ev.status & 0xF0) | channel);
+            insert.trackData.events.push_back(copy);
+        }
     }
     if (insert.trackData.events.empty())
         return -1;
@@ -1786,66 +2199,77 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
         switch (op.type) {
         case EditOp::InsertEvent: {
             SmfTrack &track = m_smf.tracks[op.smfTrack];
-            auto &evs = track.events;
-            // End of the tick group, so unedited same-tick data keeps its
-            // original relative order (mid2agb stable-sorts by time+type, so
-            // same-type order within a tick is significant).
-            auto it = std::upper_bound(evs.begin(), evs.end(), op.event.tick,
-                                       [](uint64_t t, const SmfEvent &e) { return t < e.tick; });
-            // Setup events (program change, CC, bend) must precede same-tick
-            // notes or the note plays with the stale value — both here and in
-            // mid2agb, which keeps file order within a tick.
+            auto &events = track.events;
+            if (op.event.isNoteOn() && !op.preservesNoteId) {
+                op.event.noteId = NoteId{};
+                mintNoteId(&op.event);
+                op.preservesNoteId = true;
+            }
+            auto it = std::upper_bound(
+                events.begin(), events.end(), op.event.tick,
+                [](uint64_t tick, const SmfEvent &event) { return tick < event.tick; });
             if (op.event.isChannel() && op.event.typeNibble() >= 0xB) {
-                while (it != evs.begin()) {
-                    const SmfEvent &prev = *std::prev(it);
-                    if (prev.tick != op.event.tick || !prev.isChannel() || prev.typeNibble() > 0x9)
+                while (it != events.begin()) {
+                    const SmfEvent &previous = *std::prev(it);
+                    if (previous.tick != op.event.tick || !previous.isChannel() ||
+                        previous.typeNibble() > 0x9)
                         break;
                     --it;
                 }
             }
-            // A note end must precede same-tick note-ons: pairing (here and
-            // in mid2agb) gives every note-on the first same-key end that
-            // follows it, so an end landing after an on at the same tick
-            // gets claimed by that later note — the earlier note swallows
-            // its neighbors and the real end goes orphaned. Canonical
-            // intra-tick order is setup events, note ends, note-ons.
             if (op.event.isChannel() && op.event.isNoteEnd()) {
-                while (it != evs.begin()) {
-                    const SmfEvent &prev = *std::prev(it);
-                    if (prev.tick != op.event.tick || !prev.isNoteOn())
+                while (it != events.begin()) {
+                    const SmfEvent &previous = *std::prev(it);
+                    if (previous.tick != op.event.tick || !previous.isNoteOn())
                         break;
                     --it;
                 }
             }
-            op.index = size_t(it - evs.begin());
-            evs.insert(it, op.event);
+            op.index = size_t(it - events.begin());
+            events.insert(it, op.event);
             op.oldEndTick = track.endTick;
             if (op.event.tick > track.endTick)
                 track.endTick = op.event.tick;
             break;
         }
         case EditOp::RemoveEvent: {
-            auto &evs = m_smf.tracks[op.smfTrack].events;
-            op.oldEvent = evs[op.index];
-            evs.erase(evs.begin() + long(op.index));
+            auto &events = m_smf.tracks[op.smfTrack].events;
+            op.oldEvent = events[op.index];
+            events.erase(events.begin() + long(op.index));
             break;
         }
         case EditOp::ModifyEvent: {
-            auto &evs = m_smf.tracks[op.smfTrack].events;
-            op.oldEvent = evs[op.index];
-            evs[op.index] = op.event;
+            auto &events = m_smf.tracks[op.smfTrack].events;
+            op.oldEvent = events[op.index];
+            if (op.event.isNoteOn()) {
+                if (op.oldEvent.isNoteOn()) {
+                    op.event.noteId = op.oldEvent.noteId;
+                } else if (!op.preservesNoteId) {
+                    op.event.noteId = NoteId{};
+                    mintNoteId(&op.event);
+                    op.preservesNoteId = true;
+                }
+            } else {
+                op.event.noteId = NoteId{};
+            }
+            events[op.index] = op.event;
             break;
         }
         case EditOp::MoveEvent: {
-            // Both indices sit inside one tick group (moveRawEvent clamps),
-            // so tick order is untouched by construction.
-            auto &evs = m_smf.tracks[op.smfTrack].events;
-            const SmfEvent ev = evs[op.index];
-            evs.erase(evs.begin() + long(op.index));
-            evs.insert(evs.begin() + long(op.indexTo), ev);
+            auto &events = m_smf.tracks[op.smfTrack].events;
+            const SmfEvent event = events[op.index];
+            events.erase(events.begin() + long(op.index));
+            events.insert(events.begin() + long(op.indexTo), event);
             break;
         }
         case EditOp::InsertTrack:
+            if (!op.preservesNoteId) {
+                for (SmfEvent &event : op.trackData.events) {
+                    event.noteId = NoteId{};
+                    mintNoteId(&event);
+                }
+                op.preservesNoteId = true;
+            }
             m_smf.tracks.insert(m_smf.tracks.begin() + long(op.smfTrack), op.trackData);
             break;
         case EditOp::RemoveTrack:
@@ -1859,9 +2283,6 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
             break;
         }
         case EditOp::MoveTrack:
-            // The engine mapping is still pre-move here (rebuildTrackMap
-            // runs after the loop), so receivers get the numbering their
-            // state is keyed by.
             emit trackMoved(op.smfTrack, op.smfTrackTo,
                             engineRotationMap(engineTrackForChunk(op.smfTrack),
                                               engineTrackForChunk(op.smfTrackTo)));
@@ -1869,7 +2290,6 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
             break;
         }
     }
-    rebuildTrackMap();
 }
 
 void SongDocument::revertOps(std::vector<EditOp> &ops)
@@ -1884,18 +2304,18 @@ void SongDocument::revertOps(std::vector<EditOp> &ops)
             break;
         }
         case EditOp::RemoveEvent: {
-            auto &evs = m_smf.tracks[op.smfTrack].events;
-            evs.insert(evs.begin() + long(op.index), op.oldEvent);
+            auto &events = m_smf.tracks[op.smfTrack].events;
+            events.insert(events.begin() + long(op.index), op.oldEvent);
             break;
         }
         case EditOp::ModifyEvent:
             m_smf.tracks[op.smfTrack].events[op.index] = op.oldEvent;
             break;
         case EditOp::MoveEvent: {
-            auto &evs = m_smf.tracks[op.smfTrack].events;
-            const SmfEvent ev = evs[op.indexTo];
-            evs.erase(evs.begin() + long(op.indexTo));
-            evs.insert(evs.begin() + long(op.index), ev);
+            auto &events = m_smf.tracks[op.smfTrack].events;
+            const SmfEvent event = events[op.indexTo];
+            events.erase(events.begin() + long(op.indexTo));
+            events.insert(events.begin() + long(op.index), event);
             break;
         }
         case EditOp::InsertTrack:
@@ -1915,7 +2335,6 @@ void SongDocument::revertOps(std::vector<EditOp> &ops)
             break;
         }
     }
-    rebuildTrackMap();
 }
 
 void SongDocument::pushEdit(const QString &text, std::vector<EditOp> ops)

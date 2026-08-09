@@ -5,6 +5,8 @@
 #include <memory>
 #include <vector>
 
+#include "noteid.h"
+
 // Event type codes: MIDI status nibbles 0x8 (note off), 0x9 (note on),
 // 0xB (CC), 0xC (program change), 0xE (pitch bend), plus a synthetic tempo
 // change. Real channel-voice events use nibbles 0x8..0xE, so 0x1 is free.
@@ -19,6 +21,7 @@ struct TimelineEvent {
     uint8_t track; // engine track index (0-15), already mapped from SMF track/channel
     uint8_t data0;
     uint8_t data1;
+    NoteId noteId; // transient source note identity; invalid for non-note-ons
 };
 
 struct TimelineTrack {

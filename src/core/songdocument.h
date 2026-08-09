@@ -7,8 +7,10 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
+#include "core/noteid.h"
 #include "core/smf.h"
 #include "project/decompproject.h"
 
@@ -34,11 +36,23 @@ bool metaIsLoopMarker(const SmfEvent &ev, char marker);
 // in the seq chunk whose whole text is one of these.
 bool nameIsLoopMarker(const QString &name);
 
+// Maps every pre-mutation SMF chunk and engine slot to its post-mutation
+// owner. A value of -1 means the old owner was deleted or stopped being an
+// engine track. The post-mutation counts identify inserted owners.
+struct TrackRemap {
+    std::vector<int> smfTrackMap;
+    std::vector<int> engineTrackMap;
+    int newSmfTrackCount = 0;
+    int newEngineTrackCount = 0;
+
+    bool isIdentity() const;
+};
+
 // A note located in the SMF model: the note-on event plus the event that ends
 // it, paired exactly as mid2agb pairs them (first same-channel same-key
-// note-off or velocity-0 note-on after the note-on). Indices are valid only
-// until the next document mutation; re-resolve after documentChanged().
+// note-off or velocity-0 note-on after the note-on).
 struct DocNote {
+    NoteId noteId;
     int engineTrack = -1;
     int smfTrack = -1;
     size_t onIndex = 0;
@@ -91,6 +105,7 @@ class SongDocument : public QObject
     const SongCfg &cfg() const { return m_cfg; }
     QUndoStack *undoStack() { return &m_undoStack; }
     bool isDirty() const { return !m_undoStack.isClean(); }
+    uint64_t revision() const { return m_revision; }
 
     // The song's clock base for snapping: ticks per mid2agb clock. mid2agb
     // rescales everything to 24 (or 48 with -X) clocks/beat; finer positions
@@ -109,9 +124,11 @@ class SongDocument : public QObject
     int trackBudget() const { return m_trackBudget; }
     void setTrackBudget(int budget) { m_trackBudget = std::clamp(budget, 0, 16); }
 
-    // Lookups. Results go stale on any mutation.
+    // Lookups. NoteId is the stable identity for note selection and velocity
+    // mutation; physical event locations remain document-owned details.
     std::vector<DocNote> notesForTrack(int engineTrack) const;
     bool findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const;
+    bool findNote(NoteId id, DocNote *out) const;
     std::vector<DocLanePoint> lanePoints(int engineTrack, uint8_t cc) const;
     bool findLanePoint(int engineTrack, uint8_t cc, uint64_t tick, DocLanePoint *out) const;
     // Loop markers ('[' / ']' text metas); UINT64_MAX when absent.
@@ -120,7 +137,7 @@ class SongDocument : public QObject
     // the last one is the one the bar grid honors.
     std::vector<DocTimeSig> timeSigs() const;
 
-    // Edits. Each call pushes one undoable command and emits documentChanged.
+    // Edits that change document state each push one undoable command and emit documentChanged.
     void addNote(int engineTrack, uint64_t tick, uint8_t key, uint32_t duration, uint8_t velocity);
     // Batch insert (clipboard paste): all notes land in one undoable command.
     struct NewNote {
@@ -135,8 +152,10 @@ class SongDocument : public QObject
     // keyboard transpose/nudge press: consecutive mergeable moves of the
     // same notes collapse into one undo command that re-lands from the
     // gesture's start, so a neighbor trimmed by a merely-passed-through
-    // overlap comes back (only the final resting position trims). Mouse
-    // gestures stay one command per drag.
+    // overlap comes back (only the final resting position trims). An inverse
+    // merged press restores the start and removes that command, but still
+    // publishes the current-state mutation. Mouse gestures stay one command
+    // per drag.
     void moveNotes(const std::vector<DocNote> &notes, int64_t dTick, int dKey,
                    bool mergeable = false);
     void resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration);
@@ -144,6 +163,9 @@ class SongDocument : public QObject
     // (tick and duration adjust together, at least 1 tick of note remains).
     void resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dTick);
     void setNotesVelocity(const std::vector<DocNote> &notes, uint8_t velocity);
+    std::optional<uint64_t> setNotesVelocities(uint64_t expectedRevision,
+                                               const std::vector<NoteVelocity> &velocities);
+
     // Relative velocity change, clamped to 1-127 per note.
     void nudgeNotesVelocity(const std::vector<DocNote> &notes, int delta);
 
@@ -157,8 +179,19 @@ class SongDocument : public QObject
     };
     void writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin, uint64_t tickEnd,
                          const std::vector<LanePointValue> &points);
-    void moveLanePoint(int engineTrack, uint8_t cc, const DocLanePoint &point, uint64_t newTick,
-                       int newValue);
+    struct LanePointMove {
+        int engineTrack = -1;
+        uint8_t cc = 0;
+        DocLanePoint point;
+        uint64_t newTick = 0;
+        int newValue = 0;
+    };
+    void moveLanePoints(const std::vector<LanePointMove> &moves);
+    // Transitional single-point entry point for the existing editor. The
+    // drawer integration migrates these callers to the batch contract.
+    void moveLanePoint(int engineTrack, uint8_t cc, const DocLanePoint &point,
+                       uint64_t newTick, int newValue);
+
     void deleteLanePoints(int engineTrack, uint8_t cc, const std::vector<DocLanePoint> &points);
 
     // Multi-track range edit (time-selection delete/paste): removals and
@@ -265,11 +298,9 @@ class SongDocument : public QObject
     // if none is free.
     bool canAddTrack() const;
     int addTrack(int voice);
-    // Copy a track onto a fresh engine slot: its channel events land in a
-    // new appended chunk on a free MIDI channel. Metas are not copied — a
-    // duplicated tempo, time signature, or loop marker would double up as a
-    // global event. Returns the copy's engine track, -1 when no slot is
-    // free.
+    // Copy a track's owned channel events onto a fresh engine slot. The
+    // end-of-track tick is preserved; metadata is never copied. Returns the
+    // copy's engine track, -1 when no slot is free.
     int duplicateTrack(int engineTrack);
     // Removes the track's chunk — except chunk 0 (the seq chunk mid2agb
     // reads tempo/timesig/loop from), which only has its channel events
@@ -301,14 +332,11 @@ class SongDocument : public QObject
   signals:
     // Emitted after every mutation, undo, and redo.
     void documentChanged();
-    // Emitted while a track-reorder MoveTrack op applies or reverts, before
-    // the documentChanged that follows. fromChunk/toChunk are the chunk
-    // endpoints. engineMap has 16 entries: engineMap[t] is where the track
-    // at engine slot t (pre-move numbering) lands — a contiguous rotation
-    // between the endpoints, identity elsewhere. Undo emits the inverse, so
-    // receivers holding per-track or per-chunk state remap it here and stay
-    // right across undo/redo. The document is mid-mutation when this fires:
-    // remap state only, don't read back.
+    // Emitted after the track map is rebuilt, but before documentChanged,
+    // whenever a change alters chunk or engine-track ownership.
+    void tracksRemapped(TrackRemap remap);
+    // Transitional compatibility for the existing editor consumers. The
+    // drawer integration migrates them to tracksRemapped and removes this.
     void trackMoved(int fromChunk, int toChunk, QVector<int> engineMap);
 
   private:
@@ -328,19 +356,32 @@ class SongDocument : public QObject
             MoveTrack    // move chunk smfTrack so it lands at index smfTrackTo
         } type;
         int smfTrack = 0;
-        int smfTrackTo = 0;      // MoveTrack: the chunk's index after the move
-        size_t index = 0;        // Remove/Modify/Move: target; Insert: recorded on apply
-        size_t indexTo = 0;      // MoveEvent: the event's index after the move
-        SmfEvent event;          // Insert: new event; Modify: new content (same tick)
-        SmfEvent oldEvent;       // recorded on apply (Remove/Modify)
-        uint64_t oldEndTick = 0; // recorded on apply (Insert past track end)
-        SmfTrack trackData;      // InsertTrack: content; RemoveTrack: recorded on apply
+        int smfTrackTo = 0;           // MoveTrack: the chunk's index after the move
+        size_t index = 0;             // Remove/Modify/Move: target; Insert: recorded on apply
+        size_t indexTo = 0;           // MoveEvent: the event's index after the move
+        SmfEvent event;               // Insert: new event; Modify: new content (same tick)
+        SmfEvent oldEvent;            // recorded on apply (Remove/Modify)
+        uint64_t oldEndTick = 0;      // recorded on apply (Insert past track end)
+        bool preservesNoteId = false; // true once this op owns a minted ID
+        SmfTrack trackData;           // InsertTrack: content; RemoveTrack: recorded on apply
+    };
+    struct TrackMapState {
+        int smfTrackCount = 0;
+        std::vector<int> engineToSmf;
     };
 
     void applyOps(std::vector<EditOp> &ops);
     void revertOps(std::vector<EditOp> &ops);
     void pushEdit(const QString &text, std::vector<EditOp> ops);
     void rebuildTrackMap();
+    TrackMapState trackMapState() const;
+    TrackRemap currentTrackRemap() const;
+    TrackRemap trackRemap(const TrackMapState &before, const std::vector<EditOp> &ops) const;
+    void publishMutation(TrackRemap remap);
+    void mintNoteId(SmfEvent *event);
+    bool noteAt(int engineTrack, size_t onIndex, DocNote *out) const;
+    void mintUnassignedNoteIds();
+
     int engineTrackForChunk(int chunk) const; // -1 = no engine slot
     // Lowest MIDI channel no existing engine track uses; -1 when all 16 are
     // taken.
@@ -400,6 +441,8 @@ class SongDocument : public QObject
     QString m_projectRoot;
     bool m_hadCfgLine = false;
     QUndoStack m_undoStack;
+    uint64_t m_revision = 0;
+    uint64_t m_nextNoteId = 1;
 
     std::vector<int> m_engineToSmf;       // engine track -> SMF track
     std::vector<uint8_t> m_engineChannel; // engine track -> MIDI channel
