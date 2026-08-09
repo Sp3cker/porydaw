@@ -153,6 +153,11 @@ bool AutomationPage::eventFilter(QObject *watched, QEvent *event)
         return QWidget::eventFilter(watched, event);
 
     const auto *keyEvent = static_cast<QKeyEvent *>(event);
+    const QWidget *focus = QApplication::focusWidget();
+    // Native window events reach this application filter before the focused
+    // editor can claim printable keys through ShortcutOverride.
+    if (!m_pencilShortcutHeld && focus && focus->testAttribute(Qt::WA_InputMethodEnabled))
+        return QWidget::eventFilter(watched, event);
     if (type == QEvent::ShortcutOverride) {
         if (!handlesPencilShortcut(keyEvent))
             return QWidget::eventFilter(watched, event);

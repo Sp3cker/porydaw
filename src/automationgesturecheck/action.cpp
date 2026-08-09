@@ -1,13 +1,17 @@
 #include "domains.h"
 
 #include <QAction>
+#include <QCoreApplication>
 #include <QCursor>
 #include <QEvent>
+#include <QKeyEvent>
 #include <QKeySequence>
+#include <QLineEdit>
 #include <QPixmap>
 
 #include "rig.h"
 #include "ui/editordrawer/automationarea.h"
+#include "ui/songview.h"
 
 void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
                                  const AutomationGestureCheck &check)
@@ -28,6 +32,17 @@ void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
               pencilActionToggledOn && pencilCursorInstalled && pencilActionToggledOff,
           QStringLiteral("Pencil Mode action must be checkable, initially disabled, and toggle "
                          "on with a bitmap cursor then off"));
+    QLineEdit editor(&rig.view());
+    editor.show();
+    editor.setFocus();
+    rig.pump();
+    QKeyEvent typedB(QEvent::KeyPress, Qt::Key_B, Qt::NoModifier, QStringLiteral("b"));
+    QCoreApplication::sendEvent(&editor, &typedB);
+    check(editor.text() == QStringLiteral("b") && !pencilModeAction->isChecked(),
+          QStringLiteral("Pencil shortcut consumed B from a focused text input"));
+    editor.hide();
+    rig.view().setFocus();
+    rig.pump();
     const QKeySequence originalPencilShortcut = pencilModeAction->shortcut();
     constexpr int configuredPencilKey = Qt::Key_P;
     pencilModeAction->setShortcut(QKeySequence(configuredPencilKey));
