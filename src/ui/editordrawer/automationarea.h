@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <QColor>
+#include <QCursor>
 #include <QFont>
 #include <QPointF>
 #include <QRect>
@@ -85,6 +86,7 @@ class AutomationArea final : public songview::TimelineSurface
                         DocLanePoint *point) const;
     bool pencilPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
                         const AutomationProjection &proj, DocLanePoint *point) const;
+    const QCursor &pencilCursor();
     void updateAxisLockCursor(AxisLock lock);
     ValuePoint mappedForRow(int row, QPointF pos, bool fine, bool snapValue,
                             const AutomationProjection &proj) const;
@@ -126,6 +128,8 @@ class AutomationArea final : public songview::TimelineSurface
     } m_band;
     std::vector<ValuePoint> m_clipboard;
     bool m_pencilMode = false;
+    qreal m_pencilCursorDpr = 0.0;
+    QCursor m_pencilCursor;
     std::optional<ActiveGesture> m_activeGesture;
     AutomationHoverState m_hoverState;
 };

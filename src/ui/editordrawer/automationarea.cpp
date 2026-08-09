@@ -11,6 +11,7 @@
 #include <QCursor>
 #include <QEvent>
 #include <QFontMetrics>
+#include <QIcon>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QMenu>
@@ -66,11 +67,6 @@ std::vector<AutomationLaneEdit::Point> toLaneEditPoints(const std::vector<T> &po
     return result;
 }
 
-const QCursor &pencilCursor()
-{
-    static const QCursor cursor(QPixmap(QStringLiteral(":/cursors/pencil.png")), 0, 15);
-    return cursor;
-}
 } // namespace
 
 void AutomationArea::refreshGeometry()
@@ -172,6 +168,21 @@ void AutomationArea::setPencilMode(bool enabled)
 bool AutomationArea::isPanning() const noexcept
 {
     return m_pan.active;
+}
+
+const QCursor &AutomationArea::pencilCursor()
+{
+    const qreal dpr = devicePixelRatioF();
+    if (m_pencilCursorDpr != dpr) {
+        constexpr int cursorExtent = 16;
+        const QIcon icon(QStringLiteral(":/cursors/pencil.png"));
+        const QPixmap pixmap = icon.pixmap(QSize(cursorExtent, cursorExtent), dpr);
+        const qreal pixmapDpr = std::max<qreal>(1.0, pixmap.devicePixelRatio());
+        const int hotspotY = std::max(0, qRound(pixmap.height() / pixmapDpr) - 1);
+        m_pencilCursor = QCursor(pixmap, 0, hotspotY);
+        m_pencilCursorDpr = dpr;
+    }
+    return m_pencilCursor;
 }
 
 bool AutomationArea::event(QEvent *event)

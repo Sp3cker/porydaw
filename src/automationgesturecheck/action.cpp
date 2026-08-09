@@ -1,10 +1,13 @@
 #include "domains.h"
 
 #include <QAction>
+#include <QCursor>
 #include <QEvent>
 #include <QKeySequence>
+#include <QPixmap>
 
 #include "rig.h"
+#include "ui/editordrawer/automationarea.h"
 
 void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
                                  const AutomationGestureCheck &check)
@@ -17,12 +20,14 @@ void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
     const bool pencilActionInitiallyDisabled = !pencilModeAction->isChecked();
     pencilModeAction->trigger();
     const bool pencilActionToggledOn = pencilModeAction->isChecked();
+    const QPixmap pencilCursorPixmap = rig.area().cursor().pixmap();
+    const bool pencilCursorInstalled = !pencilCursorPixmap.isNull();
     pencilModeAction->trigger();
     const bool pencilActionToggledOff = !pencilModeAction->isChecked();
     check(pencilModeAction->isCheckable() && pencilActionInitiallyDisabled &&
-              pencilActionToggledOn && pencilActionToggledOff,
+              pencilActionToggledOn && pencilCursorInstalled && pencilActionToggledOff,
           QStringLiteral("Pencil Mode action must be checkable, initially disabled, and toggle "
-                         "on then off"));
+                         "on with a bitmap cursor then off"));
     const QKeySequence originalPencilShortcut = pencilModeAction->shortcut();
     constexpr int configuredPencilKey = Qt::Key_P;
     pencilModeAction->setShortcut(QKeySequence(configuredPencilKey));
