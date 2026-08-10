@@ -631,6 +631,8 @@ void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationAre
                 continue;
             const bool selected = rows.pointInTimeSelection(rowIndex, point.tick) ||
                                   area.bandPreviewContains(rowIndex, point.tick);
+            if (selected != selectedPass)
+                continue;
             const qreal x = page.displayX(point.tick, geometry.plotOrigin, dpr);
             const qreal y = valueY(point.value);
             if (!nodeClip.intersects(
