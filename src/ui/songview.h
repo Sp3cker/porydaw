@@ -353,18 +353,20 @@ class SongView : public QWidget
     uint64_t snapTickUp(double tick) const;
 
     // Note selection on the selected track, identified by (startTick, key) so
-    // it survives document rebuilds.
-    struct NoteId {
+    // it survives document rebuilds. Distinct from the document's ::NoteId
+    // (core/noteid.h) — named apart so an unqualified mention can never
+    // silently bind to the wrong identity type.
+    struct NoteKey {
         uint32_t tick;
         uint8_t key;
-        bool operator==(const NoteId &other) const
+        bool operator==(const NoteKey &other) const
         {
             return tick == other.tick && key == other.key;
         }
     };
-    const std::vector<NoteId> &selection() const { return m_selection; }
+    const std::vector<NoteKey> &selection() const { return m_selection; }
     bool isSelected(const ViewNote &note) const;
-    void setSelection(std::vector<NoteId> ids);
+    void setSelection(std::vector<NoteKey> ids);
     void clearSelection();
 
     // Time-range selection: a half-open [startTick, endTick) span with a
@@ -578,7 +580,7 @@ class SongView : public QWidget
     bool m_playing = false;
     uint32_t m_muteMask = 0;
     uint32_t m_soloMask = 0;
-    std::vector<NoteId> m_selection;
+    std::vector<NoteKey> m_selection;
     TimeSelection m_timeSel;
     Clip m_clip;
     uint32_t m_trackSelMask = 0; // header multi-selection (see trackSelectionMask)

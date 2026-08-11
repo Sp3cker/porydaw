@@ -1557,8 +1557,8 @@ class PianoRoll : public TimelineSurface
                 invalidateContent();
                 return;
             }
-            std::vector<SongView::NoteId> ids = m_sv->selection();
-            const SongView::NoteId id{hit->startTick, hit->key};
+            std::vector<SongView::NoteKey> ids = m_sv->selection();
+            const SongView::NoteKey id{hit->startTick, hit->key};
             if ((event->modifiers() & Qt::ControlModifier) && !rightEdge && !leftEdge) {
                 const auto it = std::find(ids.begin(), ids.end(), id);
                 if (it != ids.end())
@@ -1706,13 +1706,13 @@ class PianoRoll : public TimelineSurface
                 return;
             m_velModPress = false;
             if (!m_sv->isSelected(m_velAnchor)) {
-                const SongView::NoteId id{m_velAnchor.startTick, m_velAnchor.key};
+                const SongView::NoteKey id{m_velAnchor.startTick, m_velAnchor.key};
                 if (m_velModMods & Qt::ControlModifier) {
                     // Ctrl in the chord: like the Ctrl+edge grab, the
                     // gesture joins the note to the bulk selection built
                     // with the same modifier instead of replacing it, and
                     // the drag then nudges the whole selection.
-                    std::vector<SongView::NoteId> ids = m_sv->selection();
+                    std::vector<SongView::NoteKey> ids = m_sv->selection();
                     ids.push_back(id);
                     m_sv->setSelection(std::move(ids));
                 } else {
@@ -1878,7 +1878,7 @@ class PianoRoll : public TimelineSurface
                 selectBand(QRectF(m_pressPos, m_curPos).normalized(),
                            event->modifiers() & Qt::ControlModifier);
             } else if (doc && m_rightHit) {
-                const std::vector<SongView::NoteId> &sel = m_sv->selection();
+                const std::vector<SongView::NoteKey> &sel = m_sv->selection();
                 if (std::find(sel.begin(), sel.end(), m_rightHitId) == sel.end())
                     m_sv->setSelection({m_rightHitId});
                 showNoteMenu(event->position());
@@ -1906,9 +1906,9 @@ class PianoRoll : public TimelineSurface
             // click its undeferred meaning — Ctrl in the chord keeps its
             // selection toggle, any other chord selects like a plain click.
             m_velModPress = false;
-            const SongView::NoteId id{m_velAnchor.startTick, m_velAnchor.key};
+            const SongView::NoteKey id{m_velAnchor.startTick, m_velAnchor.key};
             if (m_velModMods & Qt::ControlModifier) {
-                std::vector<SongView::NoteId> ids = m_sv->selection();
+                std::vector<SongView::NoteKey> ids = m_sv->selection();
                 const auto it = std::find(ids.begin(), ids.end(), id);
                 if (it != ids.end())
                     ids.erase(it);
@@ -1935,7 +1935,7 @@ class PianoRoll : public TimelineSurface
             const std::vector<DocNote> notes = resolveSelection();
             doc->moveNotes(notes, m_dTick, m_dKey);
             // Follow the notes with the selection.
-            std::vector<SongView::NoteId> ids;
+            std::vector<SongView::NoteKey> ids;
             for (const DocNote &note : notes)
                 ids.push_back({uint32_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick)),
                                uint8_t(std::clamp(int(note.key) + m_dKey, 0, 127))});
@@ -1947,7 +1947,7 @@ class PianoRoll : public TimelineSurface
             doc->resizeNotesLeft(notes, m_dTick);
             // Selection ids key on the start tick, which just moved; follow
             // it (same clamp as the document: the note-off pins the drag).
-            std::vector<SongView::NoteId> ids;
+            std::vector<SongView::NoteKey> ids;
             for (const DocNote &note : notes) {
                 const int64_t maxTick =
                     note.unterminated() ? INT64_MAX : int64_t(note.tick + note.duration) - 1;
@@ -2285,7 +2285,7 @@ class PianoRoll : public TimelineSurface
         SongDocument *doc = m_sv->document();
         if (!doc)
             return notes;
-        for (const SongView::NoteId &id : m_sv->selection()) {
+        for (const SongView::NoteKey &id : m_sv->selection()) {
             DocNote note;
             if (doc->findNote(m_sv->selectedTrack(), id.tick, id.key, &note))
                 notes.push_back(note);
@@ -2310,7 +2310,7 @@ class PianoRoll : public TimelineSurface
         }
         doc->moveNotes(notes, 0, dKey, /*mergeable=*/true);
         // Follow the notes with the selection.
-        std::vector<SongView::NoteId> ids;
+        std::vector<SongView::NoteKey> ids;
         for (const DocNote &note : notes)
             ids.push_back({uint32_t(note.tick), uint8_t(int(note.key) + dKey)});
         m_sv->setSelection(std::move(ids));
@@ -2347,7 +2347,7 @@ class PianoRoll : public TimelineSurface
             return;
         doc->moveNotes(notes, dTick, 0, /*mergeable=*/true);
         // Follow the notes with the selection.
-        std::vector<SongView::NoteId> ids;
+        std::vector<SongView::NoteKey> ids;
         for (const DocNote &note : notes)
             ids.push_back({uint32_t(int64_t(note.tick) + dTick), note.key});
         m_sv->setSelection(std::move(ids));
@@ -2392,7 +2392,7 @@ class PianoRoll : public TimelineSurface
             return;
         const uint64_t base = m_sv->snapTick(double(m_sv->editCursorTick()));
         std::vector<SongDocument::NewNote> notes;
-        std::vector<SongView::NoteId> ids;
+        std::vector<SongView::NoteKey> ids;
         uint64_t end = base;
         for (const SongView::ClipNote &cn : clip.tracks.front().notes) {
             const uint64_t tick = base + cn.relTick;
@@ -2412,7 +2412,7 @@ class PianoRoll : public TimelineSurface
 
     void selectAllNotes()
     {
-        std::vector<SongView::NoteId> ids;
+        std::vector<SongView::NoteKey> ids;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track == m_sv->selectedTrack())
                 ids.push_back({note.startTick, note.key});
@@ -2767,24 +2767,24 @@ class PianoRoll : public TimelineSurface
     // re-auditions.
     void auditionBandEntrants(const QRectF &band)
     {
-        std::vector<SongView::NoteId> inBand;
+        std::vector<SongView::NoteKey> inBand;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != m_sv->selectedTrack() || !noteRect(note).intersects(band))
                 continue;
-            const SongView::NoteId id{note.startTick, note.key};
+            const SongView::NoteKey id{note.startTick, note.key};
             if (std::find(m_bandAud.begin(), m_bandAud.end(), id) == m_bandAud.end())
                 m_sv->auditionTimed(note.track, note.key, note.velocity, note.startTick,
                                     note.endTick);
             inBand.push_back(id);
         }
-        for (const SongView::NoteId &old : m_bandAud) {
+        for (const SongView::NoteKey &old : m_bandAud) {
             if (std::find(inBand.begin(), inBand.end(), old) != inBand.end())
                 continue;
             // Previews are one-per-key: keep the key sounding while the band
             // still covers another note of the same pitch.
             const bool keyCovered =
                 std::any_of(inBand.begin(), inBand.end(),
-                            [&](const SongView::NoteId &id) { return id.key == old.key; });
+                            [&](const SongView::NoteKey &id) { return id.key == old.key; });
             if (!keyCovered)
                 m_sv->auditionTimedOff(m_sv->selectedTrack(), old.key);
         }
@@ -2794,21 +2794,21 @@ class PianoRoll : public TimelineSurface
     // Release every preview the band still covers (drag ended or cancelled).
     void stopBandAuditions()
     {
-        for (const SongView::NoteId &id : m_bandAud)
+        for (const SongView::NoteKey &id : m_bandAud)
             m_sv->auditionTimedOff(m_sv->selectedTrack(), id.key);
         m_bandAud.clear();
     }
 
     void selectBand(const QRectF &band, bool additive)
     {
-        std::vector<SongView::NoteId> ids =
-            additive ? m_sv->selection() : std::vector<SongView::NoteId>();
+        std::vector<SongView::NoteKey> ids =
+            additive ? m_sv->selection() : std::vector<SongView::NoteKey>();
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != m_sv->selectedTrack())
                 continue;
             if (!noteRect(note).intersects(band))
                 continue;
-            const SongView::NoteId id{note.startTick, note.key};
+            const SongView::NoteKey id{note.startTick, note.key};
             if (std::find(ids.begin(), ids.end(), id) == ids.end())
                 ids.push_back(id);
         }
@@ -2835,21 +2835,21 @@ class PianoRoll : public TimelineSurface
     int m_dVel = 0;
     uint64_t m_drawTick = 0; // pending note of a draw gesture
     int64_t m_drawDur = 0;
-    int m_drawKey = 0;                       // follows the cursor vertically mid-draw
-    uint64_t m_drawAnchor = 0;               // grid cell pressed; drags pivot around it
-    bool m_leftPress = false;                // left button held on empty space; cursor
-                                             // move vs. draw undecided
-    bool m_rightPress = false;               // right button held; band vs. menu undecided
-    bool m_rightShift = false;               // …with Shift: drag sweeps a time selection
-    uint64_t m_rightAnchorTick = 0;          // snapped tick of the right press
-    bool m_rightHit = false;                 // that press landed on a note…
-    SongView::NoteId m_rightHitId{};         // …this one
-    std::vector<SongView::NoteId> m_bandAud; // notes the band currently
-                                             // covers; entrants audition
-    ViewNote m_velAnchor{};                  // pressed note of a velocity drag (a copy)
-    int m_velAudEff = -1;                    // last effective velocity auditioned mid-drag
-    bool m_velModPress = false;              // velocity-modifier press on a note; click
-                                             // vs. vertical velocity drag undecided
+    int m_drawKey = 0;                        // follows the cursor vertically mid-draw
+    uint64_t m_drawAnchor = 0;                // grid cell pressed; drags pivot around it
+    bool m_leftPress = false;                 // left button held on empty space; cursor
+                                              // move vs. draw undecided
+    bool m_rightPress = false;                // right button held; band vs. menu undecided
+    bool m_rightShift = false;                // …with Shift: drag sweeps a time selection
+    uint64_t m_rightAnchorTick = 0;           // snapped tick of the right press
+    bool m_rightHit = false;                  // that press landed on a note…
+    SongView::NoteKey m_rightHitId{};         // …this one
+    std::vector<SongView::NoteKey> m_bandAud; // notes the band currently
+                                              // covers; entrants audition
+    ViewNote m_velAnchor{};                   // pressed note of a velocity drag (a copy)
+    int m_velAudEff = -1;                     // last effective velocity auditioned mid-drag
+    bool m_velModPress = false;               // velocity-modifier press on a note; click
+                                              // vs. vertical velocity drag undecided
     Qt::KeyboardModifiers m_velModMods = Qt::NoModifier; // that press's chord
     int m_kbdKey = -1;            // key sounding from a keyboard-column press
     int m_soundingKey = -1;       // auditioned key highlighted on the keyboard
@@ -5315,8 +5315,8 @@ void SongView::updateSong(const MidiTimeline *timeline)
     }
 
     // Keep only selection ids that still resolve to a note.
-    std::vector<NoteId> keep;
-    for (const NoteId &id : m_selection) {
+    std::vector<NoteKey> keep;
+    for (const NoteKey &id : m_selection) {
         for (const ViewNote &note : m_model.notes) {
             if (note.track == m_selectedTrack && note.startTick == id.tick && note.key == id.key) {
                 keep.push_back(id);
@@ -5645,11 +5645,11 @@ bool SongView::isSelected(const ViewNote &note) const
 {
     if (note.track != m_selectedTrack)
         return false;
-    const NoteId id{note.startTick, note.key};
+    const NoteKey id{note.startTick, note.key};
     return std::find(m_selection.begin(), m_selection.end(), id) != m_selection.end();
 }
 
-void SongView::setSelection(std::vector<NoteId> ids)
+void SongView::setSelection(std::vector<NoteKey> ids)
 {
     m_selection = std::move(ids);
     // The two selection kinds are mutually exclusive, so Ctrl+C is never
@@ -6315,7 +6315,7 @@ bool SongView::revealNote(int track, uint8_t key, uint64_t tick)
     }
     if (!found)
         return false;
-    setSelection({NoteId{found->startTick, found->key}});
+    setSelection({NoteKey{found->startTick, found->key}});
     ensureKeyVisible(key);
     return true;
 }

@@ -326,6 +326,53 @@ int documentContractFailures()
             leftResized = fidelityDoc.findNote(id, &note) && note.tick == 18;
         }
         expect(leftResized, "a left resize rebuilt the note-on instead of re-inserting it");
+        bool resized = leftResized;
+        if (resized) {
+            fidelityDoc.resizeNotes({note}, 6);
+            resized =
+                fidelityDoc.findNote(id, &note) && note.duration == 12 && !note.unterminated();
+        }
+        expect(resized && endEvent(note).status == 0x80 && endEvent(note).data1 == 64,
+               "a right resize rebuilt the note-off instead of re-inserting it");
+    }
+
+    // A net-zero merged move must leave the TRACK MAP rebuilt, not just the
+    // bytes: reverting a move can change which event is a mixed-channel
+    // chunk's first channel event — the one channelFor() derives from — and
+    // later edits would land on another track's channel.
+    if (ok) {
+        SmfFile mixed;
+        mixed.format = 1;
+        mixed.division = 24;
+        SmfTrack mixedTrack;
+        mixedTrack.events.push_back(chEvent(0x91, 0, 60, 100)); // ch1 note-on first
+        mixedTrack.events.push_back(chEvent(0xB0, 0, 7, 64));   // ch0 CC, same tick
+        mixedTrack.endTick = 8;
+        mixed.tracks.push_back(mixedTrack);
+        const QString mixedPath = tmp.path() + QStringLiteral("/mixed-map.mid");
+        SongInfo mixedInfo = info;
+        mixedInfo.label = QStringLiteral("mixed map");
+        mixedInfo.midPath = mixedPath;
+        SongDocument mixedDoc;
+        const bool loaded = mixed.writeFile(mixedPath, &error) && mixedDoc.load(mixedInfo, &error);
+        expect(loaded, "could not load the mixed-map fixture");
+        if (!loaded)
+            return failures;
+        DocNote note;
+        expect(mixedDoc.channelFor(0) == 1 && mixedDoc.findNote(0, 0, 60, &note),
+               "mixed-map fixture did not map its first channel event");
+        if (ok) {
+            mixedDoc.moveNotes({note}, 1, 0, true);
+            // The moved note-on lands after the CC, which becomes the
+            // chunk's first channel event.
+            expect(mixedDoc.channelFor(0) == 0 && mixedDoc.findNote(0, 1, 60, &note),
+                   "moving past the CC did not remap the track's channel");
+        }
+        if (ok) {
+            mixedDoc.moveNotes({note}, -1, 0, true); // net zero: command removed
+            expect(mixedDoc.undoStack()->count() == 0 && mixedDoc.channelFor(0) == 1,
+                   "a net-zero merged move left a stale track map");
+        }
     }
 
     // duplicateTrack mints FRESH identities for the copies, and redo after

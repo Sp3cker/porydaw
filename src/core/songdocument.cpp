@@ -46,6 +46,13 @@ bool metaIsTimeSig(const SmfEvent &ev)
     return ev.isMeta() && ev.metaType == 0x58 && ev.blob.size() >= 2;
 }
 
+// Tempo metas as the tempo lane reads them (lanePoints): the three-byte
+// microseconds-per-beat payload must be present.
+bool metaIsTempo(const SmfEvent &ev)
+{
+    return ev.isMeta() && ev.metaType == 0x51 && ev.blob.size() == 3;
+}
+
 // Move the chunk at `from` to index `to`, the chunks between shifting by one
 // toward the vacated slot. applyOps and revertOps share it with the endpoints
 // swapped — the mirror lives here, not in two hand-maintained rotates — and
@@ -100,6 +107,34 @@ TrackRemap inverseTrackRemap(const TrackRemap &remap)
             inverse.engineTrackMap[remap.engineTrackMap[old]] = old;
     }
     return inverse;
+}
+
+// The clamped landing position of a moved/resized note — the ONE definition
+// per axis, shared by the no-op guards, the op builders, and the merge
+// obsolete test. These must agree exactly: a drifted copy either refuses a
+// real edit as a no-op or drops a merged command while the document is not
+// actually back at its origin.
+uint64_t movedNoteTick(const DocNote &note, int64_t dTick)
+{
+    return uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+}
+
+uint8_t movedNoteKey(const DocNote &note, int dKey)
+{
+    return uint8_t(std::clamp(int(note.key) + dKey, 0, 127));
+}
+
+uint32_t resizedNoteDuration(const DocNote &note, int64_t dDuration)
+{
+    return uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration));
+}
+
+// An unterminated note has no note-off to pin; its note-on just moves.
+uint64_t leftResizedNoteTick(const DocNote &note, int64_t dTick)
+{
+    const int64_t maxTick =
+        note.unterminated() ? INT64_MAX : int64_t(note.tick + note.duration) - 1;
+    return uint64_t(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick));
 }
 
 bool cfgSemanticEqual(const SongCfg &a, const SongCfg &b)
@@ -239,8 +274,11 @@ class MoveNotesCommand : public QUndoCommand
         // The accumulated move may return every note to the gesture's
         // start (clamping included); the document already sits there after
         // the rewind, so leave it and let the stack drop this command —
-        // moving away and back leaves no undo entry.
+        // moving away and back leaves no undo entry. The rewind can still
+        // have reordered a mixed-channel chunk's first channel event, so
+        // the map must rebuild like every other apply/revert path.
         if (movesMyOutputs(m_notes)) {
+            m_doc->rebuildTrackMap();
             setObsolete(true);
             return true;
         }
@@ -260,15 +298,17 @@ class MoveNotesCommand : public QUndoCommand
     {
         if (next.size() != m_notes.size())
             return false;
+        std::map<NoteId, const DocNote *> byId;
+        for (const DocNote &n : next)
+            byId.emplace(n.noteId, &n);
         for (const DocNote &n : m_notes) {
-            const uint64_t outTick = uint64_t(std::max<int64_t>(0, int64_t(n.tick) + m_dTick));
-            const uint8_t outKey = uint8_t(std::clamp(int(n.key) + m_dKey, 0, 127));
-            const auto match = std::find_if(next.begin(), next.end(), [&](const DocNote &cand) {
-                return cand.noteId == n.noteId && cand.engineTrack == n.engineTrack &&
-                       cand.tick == outTick && cand.key == outKey && cand.duration == n.duration &&
-                       cand.velocity == n.velocity && cand.channel == n.channel;
-            });
-            if (match == next.end())
+            const auto match = byId.find(n.noteId);
+            if (match == byId.end())
+                return false;
+            const DocNote &cand = *match->second;
+            if (cand.engineTrack != n.engineTrack || cand.tick != movedNoteTick(n, m_dTick) ||
+                cand.key != movedNoteKey(n, m_dKey) || cand.duration != n.duration ||
+                cand.velocity != n.velocity || cand.channel != n.channel)
                 return false;
         }
         return true;
@@ -558,7 +598,7 @@ std::vector<DocLanePoint> SongDocument::lanePoints(int engineTrack, uint8_t cc) 
             return points;
         const auto &evs = m_smf.tracks[0].events;
         for (size_t i = 0; i < evs.size(); i++) {
-            if (evs[i].isMeta() && evs[i].metaType == 0x51 && evs[i].blob.size() == 3)
+            if (metaIsTempo(evs[i]))
                 points.push_back({0, i, evs[i].tick, laneValue(evs[i], cc)});
         }
         return points;
@@ -879,8 +919,7 @@ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, i
     // A delta the clamps swallow entirely (every note pinned at tick 0 or a
     // key rail) changes nothing; don't pollute the undo stack with it.
     const bool changes = std::any_of(notes.begin(), notes.end(), [&](const DocNote &n) {
-        return uint64_t(std::max<int64_t>(0, int64_t(n.tick) + dTick)) != n.tick ||
-               uint8_t(std::clamp(int(n.key) + dKey, 0, 127)) != n.key;
+        return movedNoteTick(n, dTick) != n.tick || movedNoteKey(n, dKey) != n.key;
     });
     if (!changes)
         return;
@@ -904,9 +943,9 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
         if (note.unterminated())
             continue;
         removals[size_t(note.smfTrack)].push_back(note.endIndex);
-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
-        const uint8_t newKey = uint8_t(std::clamp(int(note.key) + dKey, 0, 127));
-        written.push_back({note.engineTrack, newKey, newTick, newTick + note.duration});
+        const uint64_t newTick = movedNoteTick(note, dTick);
+        written.push_back(
+            {note.engineTrack, movedNoteKey(note, dKey), newTick, newTick + note.duration});
     }
     std::vector<EditOp> trims;
     resolveNoteOverlaps(written, notes, removals, trims);
@@ -914,8 +953,10 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
     for (size_t t = 0; t < m_smf.tracks.size(); t++)
         appendRemoveOps(ops, int(t), std::move(removals[t]));
     for (const DocNote &note : notes) {
-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
-        const uint8_t newKey = uint8_t(std::clamp(int(note.key) + dKey, 0, 127));
+        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
+            continue;
+        const uint64_t newTick = movedNoteTick(note, dTick);
+        const uint8_t newKey = movedNoteKey(note, dKey);
         // Re-insert the note's OWN events with the tick/key adjusted, not
         // synthesized replacements: every other byte (status form, an end's
         // release velocity, the NoteId) survives the move.
@@ -947,8 +988,7 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
         return;
     // All durations already pinned at the 1-tick floor: nothing to undo.
     const bool changes = std::any_of(notes.begin(), notes.end(), [dDuration](const DocNote &n) {
-        return n.unterminated() ||
-               uint32_t(std::max<int64_t>(1, int64_t(n.duration) + dDuration)) != n.duration;
+        return n.unterminated() || resizedNoteDuration(n, dDuration) != n.duration;
     });
     if (!changes)
         return;
@@ -958,9 +998,8 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
         if (note.unterminated() || note.smfTrack < 0 || note.smfTrack >= int(removals.size()))
             continue;
         removals[size_t(note.smfTrack)].push_back(note.endIndex);
-        const uint32_t newDuration =
-            uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration));
-        written.push_back({note.engineTrack, note.key, note.tick, note.tick + newDuration});
+        written.push_back({note.engineTrack, note.key, note.tick,
+                           note.tick + resizedNoteDuration(note, dDuration)});
     }
     std::vector<EditOp> trims;
     resolveNoteOverlaps(written, notes, removals, trims);
@@ -968,13 +1007,22 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
     for (size_t t = 0; t < m_smf.tracks.size(); t++)
         appendRemoveOps(ops, int(t), std::move(removals[t]));
     for (const DocNote &note : notes) {
-        const uint32_t newDuration =
-            uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration));
+        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
+            continue;
+        const uint32_t newDuration = resizedNoteDuration(note, dDuration);
         EditOp end;
         end.type = EditOp::InsertEvent;
         end.smfTrack = note.smfTrack;
-        end.event = makeChannelEvent(0x9, note.channel, note.tick + newDuration, note.key, 0);
-        ops.push_back(end);
+        if (note.unterminated()) {
+            // Growing an unterminated note gives it a real end.
+            end.event = makeChannelEvent(0x9, note.channel, note.tick + newDuration, note.key, 0);
+        } else {
+            // The note's own end event, moved (see buildMoveNotesOps): its
+            // status form and release velocity survive the resize.
+            end.event = m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
+            end.event.tick = note.tick + newDuration;
+        }
+        ops.push_back(std::move(end));
     }
     ops.insert(ops.end(), trims.begin(), trims.end());
     pushEdit(tr("resize %n note(s)", nullptr, int(notes.size())), std::move(ops));
@@ -987,8 +1035,7 @@ void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dT
     // Every note-on already pinned by its clamp (tick 0, or one tick short
     // of its end): nothing to undo.
     const bool changes = std::any_of(notes.begin(), notes.end(), [dTick](const DocNote &n) {
-        const int64_t maxTick = n.unterminated() ? INT64_MAX : int64_t(n.tick + n.duration) - 1;
-        return uint64_t(std::clamp<int64_t>(int64_t(n.tick) + dTick, 0, maxTick)) != n.tick;
+        return leftResizedNoteTick(n, dTick) != n.tick;
     });
     if (!changes)
         return;
@@ -1000,10 +1047,8 @@ void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dT
         removals[size_t(note.smfTrack)].push_back(note.onIndex);
         if (note.unterminated())
             continue;
-        const uint64_t endTick = note.tick + note.duration;
-        const uint64_t newTick =
-            uint64_t(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, int64_t(endTick) - 1));
-        written.push_back({note.engineTrack, note.key, newTick, endTick});
+        written.push_back({note.engineTrack, note.key, leftResizedNoteTick(note, dTick),
+                           note.tick + note.duration});
     }
     std::vector<EditOp> trims;
     resolveNoteOverlaps(written, notes, removals, trims);
@@ -1011,11 +1056,9 @@ void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dT
     for (size_t t = 0; t < m_smf.tracks.size(); t++)
         appendRemoveOps(ops, int(t), std::move(removals[t]));
     for (const DocNote &note : notes) {
-        // An unterminated note has no note-off to pin; its note-on just moves.
-        const int64_t maxTick =
-            note.unterminated() ? INT64_MAX : int64_t(note.tick + note.duration) - 1;
-        const uint64_t newTick =
-            uint64_t(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick));
+        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()))
+            continue;
+        const uint64_t newTick = leftResizedNoteTick(note, dTick);
         // The note's own note-on, moved — not a synthesized twin — so its
         // other bytes and its NoteId survive (see buildMoveNotesOps).
         EditOp on;
@@ -1057,40 +1100,36 @@ SongDocument::setNotesVelocities(uint64_t expectedRevision,
 {
     if (expectedRevision != m_revision)
         return std::nullopt;
-    // Resolve every id up front so the batch is all-or-nothing: one stale
-    // id refuses the whole write. A later entry for a note overrides an
-    // earlier one (a paint gesture reports its latest value last).
-    struct Resolved {
-        DocNote note;
-        int velocity = 1;
-    };
-    std::vector<Resolved> resolved;
-    resolved.reserve(velocities.size());
+    // One document sweep resolves the whole batch (findNote per entry would
+    // rescan every chunk per note — this is the velocity paint's commit
+    // path). All-or-nothing: one unresolvable id refuses the whole write; a
+    // later entry for a note overrides an earlier one (a paint gesture
+    // reports its latest value last).
+    std::map<NoteId, DocNote> notesById;
+    for (int t = 0; t < engineTrackCount(); t++) {
+        for (const DocNote &note : notesForTrack(t))
+            notesById.emplace(note.noteId, note);
+    }
+    std::map<NoteId, int> targets;
     for (const NoteVelocity &nv : velocities) {
-        DocNote note;
-        if (!findNote(nv.noteId, &note))
+        if (!notesById.count(nv.noteId))
             return std::nullopt;
-        const auto it = std::find_if(resolved.begin(), resolved.end(), [&](const Resolved &r) {
-            return r.note.noteId == note.noteId;
-        });
-        if (it == resolved.end())
-            resolved.push_back({note, nv.velocity});
-        else
-            it->velocity = nv.velocity;
+        targets[nv.noteId] = nv.velocity;
     }
     std::vector<EditOp> ops;
-    for (const Resolved &r : resolved) {
-        const uint8_t target = uint8_t(std::clamp(r.velocity, 1, 127));
-        if (r.note.velocity == target)
+    for (const auto &entry : targets) {
+        const DocNote &note = notesById[entry.first];
+        const uint8_t target = uint8_t(std::clamp(entry.second, 1, 127));
+        if (note.velocity == target)
             continue;
         // The note's own note-on with just the velocity byte changed, so a
         // foreign event's other bytes survive.
-        SmfEvent event = m_smf.tracks[size_t(r.note.smfTrack)].events[r.note.onIndex];
+        SmfEvent event = m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
         event.data1 = target;
         EditOp op;
         op.type = EditOp::ModifyEvent;
-        op.smfTrack = r.note.smfTrack;
-        op.index = r.note.onIndex;
+        op.smfTrack = note.smfTrack;
+        op.index = note.onIndex;
         op.event = std::move(event);
         ops.push_back(std::move(op));
     }
@@ -1204,6 +1243,7 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
     // resolution below are per-lane concerns.
     struct LaneGroup {
         int smfTrack = -1;
+        int engineTrack = -1;
         uint8_t cc = 0;
         std::map<uint64_t, std::vector<size_t>> pointsByTick;
     };
@@ -1231,19 +1271,15 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
             move.point.index >= m_smf.tracks[size_t(smfTrack)].events.size())
             continue;
         const SmfEvent &source = m_smf.tracks[size_t(smfTrack)].events[move.point.index];
-        if (move.cc == DOC_CC_TEMPO) {
-            if (!source.isMeta() || source.metaType != 0x51 || source.blob.size() != 3)
-                continue;
-        } else if (!laneEventMatches(source, move.cc)) {
+        if (move.cc == DOC_CC_TEMPO ? !metaIsTempo(source) : !laneEventMatches(source, move.cc))
             continue;
-        }
         if (source.tick != move.point.tick || laneValue(source, move.cc) != move.point.value ||
             !sourceIndices.emplace(smfTrack, move.point.index).second)
             continue;
         const auto key = std::make_pair(smfTrack, move.cc);
         const auto [groupIt, inserted] = groupByLane.emplace(key, groups.size());
         if (inserted)
-            groups.push_back({smfTrack, move.cc});
+            groups.push_back({smfTrack, move.engineTrack, move.cc});
         const uint8_t channel = move.cc == DOC_CC_TEMPO ? uint8_t(0) : channelFor(move.engineTrack);
         planned.push_back({move.point, move.newTick, source,
                            makeLaneEvent(move.cc, channel, move.newTick, move.newValue),
@@ -1251,16 +1287,11 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
     }
     if (planned.empty())
         return;
+    // The occupancy map is exactly the lane view: what lanePoints returns
+    // for the group is what a landing point may replace.
     for (LaneGroup &group : groups) {
-        const auto &evs = m_smf.tracks[size_t(group.smfTrack)].events;
-        for (size_t i = 0; i < evs.size(); i++) {
-            const bool matches =
-                group.cc == DOC_CC_TEMPO
-                    ? evs[i].isMeta() && evs[i].metaType == 0x51 && evs[i].blob.size() == 3
-                    : laneEventMatches(evs[i], group.cc);
-            if (matches)
-                group.pointsByTick[evs[i].tick].push_back(i);
-        }
+        for (const DocLanePoint &pt : lanePoints(group.engineTrack, group.cc))
+            group.pointsByTick[pt.tick].push_back(pt.index);
     }
     // Two moved points converging on one destination tick resolve
     // last-input-wins (only the last of same-tick duplicates is audible, so
@@ -2136,9 +2167,7 @@ bool SongDocument::moveTrack(int engineTrack, int targetEngine)
                     nameSeen = true;
                 continue;
             }
-            const bool tempo = ev.metaType == 0x51 && ev.blob.size() == 3;
-            const bool marker = smfMetaIsMarker(ev);
-            if (tempo || metaIsTimeSig(ev) || marker) {
+            if (metaIsTempo(ev) || metaIsTimeSig(ev) || smfMetaIsMarker(ev)) {
                 indices.push_back(i);
                 rescued.push_back(ev);
             }

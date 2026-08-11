@@ -1349,8 +1349,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendMouse(noteMenu, QEvent::MouseButtonRelease, noteMenu->mapFromGlobal(aGlobal),
                   Qt::RightButton, Qt::NoButton);
         QCoreApplication::processEvents();
-        const std::vector<SongView::NoteId> &selection = view.selection();
-        const SongView::NoteId aId{uint32_t(a.tick), uint8_t(a.key)};
+        const std::vector<SongView::NoteKey> &selection = view.selection();
+        const SongView::NoteKey aId{uint32_t(a.tick), uint8_t(a.key)};
         if (!noteMenu->isVisible())
             fail("retargeting hid the open note menu");
         if (selection.size() != 1 || !(selection.front() == aId))
@@ -1469,12 +1469,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QObject::disconnect(conn);
         if (std::count(onKeys.begin(), onKeys.end(), a.key) < 2)
             fail("re-covering a note did not re-audition it");
-        const std::vector<SongView::NoteId> &sel = view.selection();
+        const std::vector<SongView::NoteKey> &sel = view.selection();
         if (sel.size() < 2 ||
-            std::find(sel.begin(), sel.end(), SongView::NoteId{uint32_t(a.tick), uint8_t(a.key)}) ==
-                sel.end() ||
-            std::find(sel.begin(), sel.end(), SongView::NoteId{uint32_t(b.tick), uint8_t(b.key)}) ==
-                sel.end())
+            std::find(sel.begin(), sel.end(),
+                      SongView::NoteKey{uint32_t(a.tick), uint8_t(a.key)}) == sel.end() ||
+            std::find(sel.begin(), sel.end(),
+                      SongView::NoteKey{uint32_t(b.tick), uint8_t(b.key)}) == sel.end())
             fail("band release did not select the swept notes");
         // Every key that auditioned was eventually released (mid-drag or at
         // the drag's end).
@@ -1633,7 +1633,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (doc.undoStack()->count() != preCount + 1)
             fail("modifier velocity drag did not push exactly one command");
 
-        const SongView::NoteId bId{uint32_t(b.tick), uint8_t(b.key)};
+        const SongView::NoteKey bId{uint32_t(b.tick), uint8_t(b.key)};
         sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton, Qt::LeftButton,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton, Qt::NoButton,
@@ -1671,8 +1671,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15), Qt::LeftButton,
                   Qt::NoButton, Qt::ControlModifier);
-        const SongView::NoteId aId{uint32_t(a.tick), uint8_t(a.key)};
-        const std::vector<SongView::NoteId> &joined = view.selection();
+        const SongView::NoteKey aId{uint32_t(a.tick), uint8_t(a.key)};
+        const std::vector<SongView::NoteKey> &joined = view.selection();
         if (joined.size() != 2 || std::find(joined.begin(), joined.end(), aId) == joined.end() ||
             std::find(joined.begin(), joined.end(), bId) == joined.end())
             fail("a Ctrl+velocity drag replaced the bulk selection");
@@ -1905,9 +1905,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, ctrlEdge, Qt::LeftButton, Qt::NoButton,
                   Qt::ControlModifier);
-        const SongView::NoteId bId{uint32_t(b.tick), uint8_t(b.key)};
-        const SongView::NoteId dId{uint32_t(d.tick), uint8_t(d.key)};
-        const std::vector<SongView::NoteId> &sel = view.selection();
+        const SongView::NoteKey bId{uint32_t(b.tick), uint8_t(b.key)};
+        const SongView::NoteKey dId{uint32_t(d.tick), uint8_t(d.key)};
+        const std::vector<SongView::NoteKey> &sel = view.selection();
         if (sel.size() != 2 || std::find(sel.begin(), sel.end(), bId) == sel.end() ||
             std::find(sel.begin(), sel.end(), dId) == sel.end())
             fail("a Ctrl+edge click did not join the note to the selection");
@@ -2668,7 +2668,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             if (view.selectedTrack() != int(target.track))
                 fail("revealNote did not select the track");
             const auto &sel = view.selection();
-            if (sel.size() != 1 || !(sel[0] == SongView::NoteId{target.startTick, target.key}))
+            if (sel.size() != 1 || !(sel[0] == SongView::NoteKey{target.startTick, target.key}))
                 fail("revealNote did not select the note");
 
             // A key the track never plays: no note found, but the track
