@@ -15,6 +15,7 @@
 class QAction;
 class QChildEvent;
 class QDockWidget;
+class QComboBox;
 class QLabel;
 class QTabWidget;
 class QSettings;
@@ -256,6 +257,9 @@ class MainWindow : public QMainWindow
     // Points the transport toolbar's master-volume spinbox at the active
     // tab's cfg (disabled with no tab). Never emits valueChanged.
     void syncMasterVolumeControl();
+    // Points the transport scale controls at the active tab's transient
+    // runtime state. Never writes song or sidecar data.
+    void syncScaleControls(SongSession *session);
     void synchronizePlayhead();
     void updateTimeLabel();
     void updatePolyStatus();
@@ -340,6 +344,9 @@ class MainWindow : public QMainWindow
     QAction *m_noteNamesAction = nullptr;
     QLabel *m_masterVolCaption = nullptr;
     QSpinBox *m_masterVolSpin = nullptr;
+    QComboBox *m_rootCombo = nullptr;
+    QComboBox *m_scaleCombo = nullptr;
+    QComboBox *m_modeCombo = nullptr;
     QLabel *m_timeLabel = nullptr;
     QLabel *m_songLabel = nullptr;
     QWidget *m_polyMeter = nullptr;

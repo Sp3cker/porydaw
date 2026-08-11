@@ -148,6 +148,23 @@ bool isBlackKey(int key)
     }
 }
 
+bool resolveFoldDestinations(porydaw_scale::ScaleId scaleId, int scaleRoot,
+                             std::vector<DocNote> &notes, int degreeDelta,
+                             std::vector<uint8_t> &destinations)
+{
+    if (notes.empty() || degreeDelta == 0)
+        return false;
+    std::sort(notes.begin(), notes.end(),
+              [](const DocNote &a, const DocNote &b) { return a.key < b.key; });
+    std::vector<uint8_t> sources(notes.size());
+    std::vector<int> degrees(notes.size(), degreeDelta);
+    for (size_t i = 0; i < notes.size(); i++)
+        sources[i] = notes[i].key;
+    destinations.resize(notes.size());
+    return porydaw_scale::resolveDiatonicDestinations(
+        scaleId, scaleRoot, sources.data(), degrees.data(), int(notes.size()), destinations.data());
+}
+
 QString keyName(int key)
 {
     static const char *const names[] = {"C",  "C#", "D",  "D#", "E",  "F",
@@ -1402,14 +1419,28 @@ class PianoRoll : public TimelineSurface
         const QColor octaveLine = themes::color(themes::Role::song_view_piano_keyboard_separator);
         const QPen keyLinePen(gridLineColor(50), 0);
         const QPen octavePen(octaveLine, 0);
-        for (int key = 0; key < 128; key++) {
-            const QRectF row = keyRect(key, grid.left(), grid.width());
-            if (row.bottom() <= 0 || row.top() >= height())
+        const PitchProjection &projection = m_sv->pitchProjection();
+        const std::array<qreal, PitchProjection::cMaxRows + 1> &edges = rowEdges();
+        for (int row = 0; row < projection.visibleRowCount(); ++row) {
+            const int key = projection.visiblePitchAt(row);
+            const QRectF rowRect(grid.left(), edges[row], grid.width(), edges[row + 1] - edges[row]);
+            if (rowRect.bottom() <= 0 || rowRect.top() >= height())
                 continue;
             if (isBlackKey(key))
-                p.fillRect(row, accidentalRow);
+                p.fillRect(rowRect, accidentalRow);
             p.setPen(key % 12 == 0 ? octavePen : keyLinePen);
-            p.drawLine(QLineF(grid.left(), row.bottom(), grid.right(), row.bottom()));
+            p.drawLine(QLineF(grid.left(), rowRect.bottom(), grid.right(), rowRect.bottom()));
+        }
+
+        if (m_sv->scaleMode() == SongView::ScaleMode::Highlight) {
+            const QColor tint(0xb5, 0x95, 0xfc, 127);
+            for (int row = 0; row < projection.visibleRowCount(); ++row) {
+                if (porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(),
+                                                 projection.visiblePitchAt(row))) {
+                    p.fillRect(QRectF(grid.left(), edges[row], grid.width(),
+                                      edges[row + 1] - edges[row]), tint);
+                }
+            }
         }
 
         drawPreRoll(p, m_sv, grid, kKeyboardW,
@@ -1469,6 +1500,7 @@ class PianoRoll : public TimelineSurface
         setFocus();
         if (!m_sv->timeline())
             return;
+        m_sv->setProjectionLocked(true);
 
         if (event->button() == Qt::MiddleButton) {
             // Reaper-style pan: drag scrolls the roll on both axes.
@@ -1519,6 +1551,11 @@ class PianoRoll : public TimelineSurface
         m_dDur = 0;
         m_dVel = 0;
 
+        if (!hit && doc && m_sv->scaleMode() == SongView::ScaleMode::Fold &&
+            (m_pressKey < 0 ||
+             !porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), m_pressKey))) {
+            return;
+        }
         if (hit) {
             const bool rightEdge = nearRightEdge(*hit, event->position());
             const bool leftEdge = nearLeftEdge(*hit, event->position());
@@ -1613,6 +1650,7 @@ class PianoRoll : public TimelineSurface
         // presses — Qt replaces the second press with this event.
         SongDocument *doc = m_sv->document();
         if (event->button() == Qt::LeftButton && doc && event->position().x() >= kKeyboardW) {
+            m_sv->setProjectionLocked(true);
             setFocus();
             if (const ViewNote *hit = hitNote(event->position())) {
                 DocNote note;
@@ -1739,7 +1777,9 @@ class PianoRoll : public TimelineSurface
         const int64_t snappedD = int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
 
         if (m_drag == Drag::Move) {
-            const int dKey = yToKey(event->position().y()) - m_pressKey;
+            const int dKey = m_sv->scaleMode() == SongView::ScaleMode::Fold
+                                 ? foldDegreeDeltaForPointer(event->position().y())
+                                 : yToKey(event->position().y()) - m_pressKey;
             if (snappedD != m_dTick || dKey != m_dKey) {
                 m_dTick = snappedD;
                 if (dKey != m_dKey) {
@@ -1747,9 +1787,15 @@ class PianoRoll : public TimelineSurface
                     // Audition the new pitch while dragging vertically.
                     const std::vector<DocNote> notes = resolveSelection();
                     if (!notes.empty()) {
-                        const int key = std::clamp(int(notes.front().key) + m_dKey, 0, 127);
-                        auditionKey(key, notes.front().velocity);
-                        m_auditioned = true;
+                        const int key = m_sv->scaleMode() == SongView::ScaleMode::Fold
+                                            ? porydaw_scale::nextScalePitch(
+                                                  m_sv->scaleId(), m_sv->scaleRoot(),
+                                                  notes.front().key, m_dKey)
+                                            : std::clamp(int(notes.front().key) + m_dKey, 0, 127);
+                        if (key >= 0) {
+                            auditionKey(key, notes.front().velocity);
+                            m_auditioned = true;
+                        }
                     }
                 }
                 invalidateContent();
@@ -1808,10 +1854,14 @@ class PianoRoll : public TimelineSurface
                 dur = int64_t(anchor + uint64_t(grid) - start);
             }
             const int key = yToKey(event->position().y());
-            if (start != m_drawTick || dur != m_drawDur || key != m_drawKey) {
+            const bool isScaleKey =
+                m_sv->scaleMode() != SongView::ScaleMode::Fold ||
+                (key >= 0 &&
+                 porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), key));
+            if (start != m_drawTick || dur != m_drawDur || (isScaleKey && key != m_drawKey)) {
                 m_drawTick = start;
                 m_drawDur = dur;
-                if (key != m_drawKey) {
+                if (isScaleKey && key != m_drawKey) {
                     m_drawKey = key;
                     auditionKey(m_drawKey, m_lastVelocity);
                     m_auditioned = true;
@@ -1836,9 +1886,14 @@ class PianoRoll : public TimelineSurface
 
     void mouseReleaseEvent(QMouseEvent *event) override
     {
+        const auto completeProjectionGesture = [this] {
+            m_sv->setProjectionLocked(false);
+            m_sv->flushProjectionIfDirty();
+        };
         if (event->button() == Qt::MiddleButton && m_panning) {
             m_panning = false;
             setCursor(Qt::ArrowCursor);
+            completeProjectionGesture();
             return;
         }
         if (m_kbdKey >= 0) {
@@ -1875,6 +1930,7 @@ class PianoRoll : public TimelineSurface
                 m_sv->clearTimeSelection();
             }
             invalidateContent();
+            completeProjectionGesture();
             return;
         }
         if (event->button() == Qt::LeftButton && m_leftPress) {
@@ -1884,6 +1940,7 @@ class PianoRoll : public TimelineSurface
                 // like the ruler; playback follows when running.
                 m_sv->commitEditCursor(m_sv->snapTick(m_pressTick));
                 invalidateContent();
+                completeProjectionGesture();
                 return;
             }
         }
@@ -1905,10 +1962,13 @@ class PianoRoll : public TimelineSurface
                 m_sv->setSelection({id});
             }
             invalidateContent();
+            completeProjectionGesture();
             return;
         }
-        if (event->button() != Qt::LeftButton || m_drag == Drag::None)
+        if (event->button() != Qt::LeftButton || m_drag == Drag::None) {
+            completeProjectionGesture();
             return;
+        }
 
         const Drag drag = m_drag;
         m_drag = Drag::None;
@@ -1918,14 +1978,31 @@ class PianoRoll : public TimelineSurface
                          m_lastVelocity);
             m_sv->setSelection({{uint32_t(m_drawTick), uint8_t(m_drawKey)}});
         } else if (doc && drag == Drag::Move && (m_dTick != 0 || m_dKey != 0)) {
-            const std::vector<DocNote> notes = resolveSelection();
-            doc->moveNotes(notes, m_dTick, m_dKey);
-            // Follow the notes with the selection.
-            std::vector<SongView::NoteId> ids;
-            for (const DocNote &note : notes)
-                ids.push_back({uint32_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick)),
-                               uint8_t(std::clamp(int(note.key) + m_dKey, 0, 127))});
-            m_sv->setSelection(std::move(ids));
+            std::vector<DocNote> notes = resolveSelection();
+            if (notes.empty()) {
+                m_sv->clearSelection();
+            } else if (m_sv->scaleMode() == SongView::ScaleMode::Fold && m_dKey != 0) {
+                std::vector<uint8_t> destinations;
+                if (resolveFoldDestinations(m_sv->scaleId(), m_sv->scaleRoot(), notes, m_dKey,
+                                            destinations) &&
+                    doc->moveNotesToPitches(notes, destinations, m_dTick)) {
+                    std::vector<SongView::NoteId> ids;
+                    for (size_t i = 0; i < notes.size(); i++) {
+                        ids.push_back({uint32_t(std::max<int64_t>(0, int64_t(notes[i].tick) + m_dTick)),
+                                       destinations[i]});
+                    }
+                    m_sv->setSelection(std::move(ids));
+                }
+            } else {
+                doc->moveNotes(notes, m_dTick, m_dKey);
+                // Follow the notes with the selection.
+                std::vector<SongView::NoteId> ids;
+                for (const DocNote &note : notes) {
+                    ids.push_back({uint32_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick)),
+                                   uint8_t(std::clamp(int(note.key) + m_dKey, 0, 127))});
+                }
+                m_sv->setSelection(std::move(ids));
+            }
         } else if (doc && drag == Drag::Resize && m_dDur != 0) {
             doc->resizeNotes(resolveSelection(), m_dDur);
         } else if (doc && drag == Drag::ResizeLeft && m_dTick != 0) {
@@ -1952,6 +2029,7 @@ class PianoRoll : public TimelineSurface
         m_dDur = 0;
         m_dVel = 0;
         invalidateContent();
+        completeProjectionGesture();
     }
 
     void keyPressEvent(QKeyEvent *event) override
@@ -2000,7 +2078,12 @@ class PianoRoll : public TimelineSurface
         if (doc) {
             const int transpose = m_sv->transposeStepFor(event);
             if (transpose != 0) {
-                transposeSelection(transpose);
+                if (m_sv->scaleMode() == SongView::ScaleMode::Fold &&
+                    (transpose == 1 || transpose == -1)) {
+                    m_sv->foldTransposeSelection(transpose);
+                } else {
+                    transposeSelection(transpose);
+                }
                 event->accept();
                 return;
             }
@@ -2059,27 +2142,35 @@ class PianoRoll : public TimelineSurface
     // The roll has one vertical projection. Every row edge is independently
     // snapped from the continuous camera, so adjacent rows meet exactly at
     // fractional display scales without accumulated rounding error.
-    const std::array<qreal, 129> &rowEdges() const
+    const std::array<qreal, PitchProjection::cMaxRows + 1> &rowEdges() const
     {
         const qreal dpr = devicePixelRatioF();
         const qreal keyHeight = m_sv->keyHeight();
         const qreal scrollY = m_sv->scrollY();
+        const PitchProjection &projection = m_sv->pitchProjection();
         if (!m_rowEdgesValid || m_rowEdgesDpr != dpr || m_rowEdgesKeyHeight != keyHeight ||
-            m_rowEdgesScrollY != scrollY) {
-            for (int row = 0; row <= 128; ++row) {
-                const qreal ideal = row * keyHeight - scrollY;
-                m_rowEdges[row] = std::round(ideal * dpr) / dpr;
-            }
+            m_rowEdgesScrollY != scrollY || m_rowEdgesProjectionRevision != projection.revision()) {
+            projection.buildRowEdges(m_rowEdges, m_rowEdgeCount, keyHeight, scrollY, dpr);
             m_rowEdgesDpr = dpr;
             m_rowEdgesKeyHeight = keyHeight;
             m_rowEdgesScrollY = scrollY;
+            m_rowEdgesProjectionRevision = projection.revision();
             m_rowEdgesValid = true;
         }
         return m_rowEdges;
     }
 
-    qreal keyTop(int key) const { return rowEdges()[127 - key]; }
-    qreal keyBottom(int key) const { return rowEdges()[128 - key]; }
+    qreal keyTop(int key) const
+    {
+        const int row = m_sv->pitchProjection().rowForPitch(key);
+        return row == PitchProjection::cHiddenRow ? rowEdges()[0] : rowEdges()[row];
+    }
+
+    qreal keyBottom(int key) const
+    {
+        const int row = m_sv->pitchProjection().rowForPitch(key);
+        return row == PitchProjection::cHiddenRow ? rowEdges()[0] : rowEdges()[row + 1];
+    }
 
     QRectF keyRect(int key, qreal x, qreal width) const
     {
@@ -2089,10 +2180,31 @@ class PianoRoll : public TimelineSurface
 
     int yToKey(qreal y) const
     {
-        const std::array<qreal, 129> &edges = rowEdges();
-        const auto edge = std::upper_bound(edges.begin(), edges.end(), y);
-        const int row = std::clamp(int(edge - edges.begin()) - 1, 0, 127);
-        return 127 - row;
+        return m_sv->pitchProjection().yToPitch(y, m_sv->keyHeight(), m_sv->scrollY(),
+                                                 devicePixelRatioF());
+    }
+
+    int foldDegreeDeltaForPointer(qreal y) const
+    {
+        const PitchProjection &projection = m_sv->pitchProjection();
+        const int pointerRow =
+            projection.yToRow(y, m_sv->keyHeight(), m_sv->scrollY(), devicePixelRatioF());
+        const int grabRow = projection.rowForPitch(m_pressKey);
+        if (pointerRow == PitchProjection::cHiddenRow || grabRow == PitchProjection::cHiddenRow)
+            return 0;
+        int degreeDelta = 0;
+        if (pointerRow < grabRow) {
+            for (int row = pointerRow; row < grabRow; row++) {
+                if (projection.isScalePitchRow(row))
+                    degreeDelta++;
+            }
+        } else {
+            for (int row = grabRow + 1; row <= pointerRow; row++) {
+                if (projection.isScalePitchRow(row))
+                    degreeDelta--;
+            }
+        }
+        return degreeDelta;
     }
 
     qreal physicalPixel() const { return logicalPhysicalPixel(devicePixelRatioF()); }
@@ -2107,7 +2219,7 @@ class PianoRoll : public TimelineSurface
 
     std::optional<KeyboardHoverGeometry> keyboardHoverGeometry(int key) const
     {
-        if (key < 0 || key > 127)
+        if (m_sv->pitchProjection().rowForPitch(key) == PitchProjection::cHiddenRow)
             return std::nullopt;
 
         const QRectF highlight = keyRect(key, 0, kKeyboardW);
@@ -2160,6 +2272,11 @@ class PianoRoll : public TimelineSurface
     // committed on release (one undo entry).
     void beginDraw()
     {
+        if (m_sv->scaleMode() == SongView::ScaleMode::Fold &&
+            (m_pressKey < 0 ||
+             !porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), m_pressKey))) {
+            return;
+        }
         m_drawAnchor = m_sv->snapTickDown(m_pressTick);
         m_drawTick = m_drawAnchor;
         m_drawDur = int64_t(m_sv->gridTicksAt(m_drawAnchor));
@@ -2182,9 +2299,13 @@ class PianoRoll : public TimelineSurface
 
     QRectF noteRect(qreal x0, qreal x1, int key) const
     {
+        const int row = m_sv->pitchProjection().rowForPitch(key);
+        if (row == PitchProjection::cHiddenRow)
+            return QRectF(x0, rowEdges()[0], std::max<qreal>(2.0, x1 - x0), 0.0);
         const qreal pixel = physicalPixel();
-        return QRectF(x0, keyTop(key) + pixel, std::max<qreal>(2.0, x1 - x0),
-                      std::max(2.0 * pixel, keyBottom(key) - keyTop(key) - pixel));
+        const std::array<qreal, PitchProjection::cMaxRows + 1> &edges = rowEdges();
+        return QRectF(x0, edges[row] + pixel, std::max<qreal>(2.0, x1 - x0),
+                      std::max(2.0 * pixel, edges[row + 1] - edges[row] - pixel));
     }
 
     QRectF noteRect(const ViewNote &note) const
@@ -2441,6 +2562,10 @@ class PianoRoll : public TimelineSurface
             const bool isGhostNote = note.track != selectedTrack;
             if (isGhostNote != drawingGhostNotes)
                 continue;
+            if (isGhostNote && m_sv->scaleMode() == SongView::ScaleMode::Fold &&
+                m_sv->pitchProjection().rowForPitch(note.key) == PitchProjection::cHiddenRow) {
+                continue;
+            }
             const QRectF noteRect = displayedNoteRect(note);
             if (noteRect.right() < kKeyboardW || noteRect.left() > width())
                 continue;
@@ -2611,6 +2736,11 @@ class PianoRoll : public TimelineSurface
             m_drag == Drag::Move || m_drag == Drag::Resize || m_drag == Drag::ResizeLeft;
         if (!dragging || !m_sv->isSelected(note))
             return note.key;
+        if (m_sv->scaleMode() == SongView::ScaleMode::Fold) {
+            const int destination = porydaw_scale::nextScalePitch(
+                m_sv->scaleId(), m_sv->scaleRoot(), note.key, m_dKey);
+            return destination >= 0 ? destination : note.key;
+        }
         return std::clamp(int(note.key) + m_dKey, 0, 127);
     }
 
@@ -2681,8 +2811,13 @@ class PianoRoll : public TimelineSurface
     void drawKeyboard(QPainter &p)
     {
         const int keyH = int(std::lround(m_sv->keyHeight()));
-        p.fillRect(QRect(0, 0, kKeyboardW, height()),
-                   themes::color(themes::Role::song_view_piano_keyboard_natural_key));
+        const PitchProjection &projection = m_sv->pitchProjection();
+        const std::array<qreal, PitchProjection::cMaxRows + 1> &edges = rowEdges();
+        if (projection.visibleRowCount() > 0) {
+            p.fillRect(QRectF(0, edges[0], kKeyboardW,
+                              edges[projection.visibleRowCount()] - edges[0]),
+                       themes::color(themes::Role::song_view_piano_keyboard_natural_key));
+        }
         // Natural-key labels disappear when no real font face fits the lane.
         const auto labelFont = typography::fitted(p.font(), keyH);
         if (labelFont)
@@ -2690,31 +2825,32 @@ class PianoRoll : public TimelineSurface
         const int hovered = m_hoverKey;
         const QPen separatorPen(themes::color(themes::Role::song_view_piano_keyboard_separator), 0);
         const auto hoverGeometry = keyboardHoverGeometry(hovered);
-        for (int key = 0; key < 128; key++) {
-            const QRectF keyRect = this->keyRect(key, 0, kKeyboardW);
-            if (keyRect.bottom() <= 0 || keyRect.top() >= height())
+        for (int row = 0; row < projection.visibleRowCount(); ++row) {
+            const int key = projection.visiblePitchAt(row);
+            const QRectF rowRect(0, edges[row], kKeyboardW, edges[row + 1] - edges[row]);
+            if (rowRect.bottom() <= 0 || rowRect.top() >= height())
                 continue;
             const bool sounding = key == m_soundingKey;
             if (isBlackKey(key)) {
-                p.fillRect(keyRect,
+                p.fillRect(rowRect,
                            sounding
                                ? themes::color(themes::Role::song_view_piano_keyboard_active_key)
                                : themes::color(themes::Role::song_view_piano_keyboard_black_key));
             } else {
                 if (sounding) {
-                    p.fillRect(keyRect,
+                    p.fillRect(rowRect,
                                themes::color(themes::Role::song_view_piano_keyboard_active_key));
                 }
                 // B/C and E/F are the only spots where two natural
                 // keys touch, so those bottom edges get a separator.
                 if (key % 12 == 0 || key % 12 == 5) {
                     p.setPen(separatorPen);
-                    p.drawLine(QLineF(0, keyRect.bottom(), kKeyboardW, keyRect.bottom()));
+                    p.drawLine(QLineF(0, rowRect.bottom(), kKeyboardW, rowRect.bottom()));
                 }
                 if (key % 12 == 0) {
                     p.setPen(themes::color(themes::Role::song_view_piano_keyboard_label));
                     if (labelFont) {
-                        p.drawText(QRectF(0, keyRect.top(), kKeyboardW - 3, keyRect.height()),
+                        p.drawText(QRectF(0, rowRect.top(), kKeyboardW - 3, rowRect.height()),
                                    Qt::AlignRight | Qt::AlignVCenter, keyName(key));
                     }
                 }
@@ -2801,10 +2937,12 @@ class PianoRoll : public TimelineSurface
 
     SongView *m_sv;
     MidiCursors m_cursors;
-    mutable std::array<qreal, 129> m_rowEdges{};
+    mutable std::array<qreal, PitchProjection::cMaxRows + 1> m_rowEdges{};
+    mutable int m_rowEdgeCount = 0;
     mutable qreal m_rowEdgesDpr = 0.0;
     mutable qreal m_rowEdgesKeyHeight = 0.0;
     mutable qreal m_rowEdgesScrollY = 0.0;
+    mutable uint64_t m_rowEdgesProjectionRevision = 0;
     mutable bool m_rowEdgesValid = false;
     Drag m_drag = Drag::None;
     QPointF m_pressPos;
@@ -2814,7 +2952,7 @@ class PianoRoll : public TimelineSurface
     uint64_t m_gripTick = 0;     // edge tick grabbed by a resize drag
     uint64_t m_gripOpposite = 0; // the note's other edge (the pivot)
     int64_t m_dTick = 0;
-    int m_dKey = 0;
+    int m_dKey = 0; // semitones, or scale degrees during a Fold move
     int64_t m_dDur = 0;
     int m_dVel = 0;
     uint64_t m_drawTick = 0; // pending note of a draw gesture
@@ -5165,6 +5303,7 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
         }
     }
     m_trackSelMask = 1u << m_selectedTrack;
+    updateScaleProjection();
 
     rebuildAfterSongChange();
 }
@@ -5179,8 +5318,12 @@ void SongView::rebuildAfterSongChange()
         const int midKey = m_model.minNoteKey <= m_model.maxNoteKey
                                ? (m_model.minNoteKey + m_model.maxNoteKey) / 2
                                : 60;
-        initialScrollY =
-            std::max(0.0, (127 - midKey) * m_keyHeight - std::max(200, m_roll->height()) / 2.0);
+        const int centerPitch = m_projection.nearestVisiblePitch(midKey);
+        const int centerRow = m_projection.rowForPitch(centerPitch);
+        if (centerRow != songview::PitchProjection::cHiddenRow) {
+            initialScrollY =
+                std::max(0.0, centerRow * m_keyHeight - std::max(200, m_roll->height()) / 2.0);
+        }
     } else {
         m_pxPerTick = 1.0;
     }
@@ -5199,13 +5342,14 @@ void SongView::updateSong(const MidiTimeline *timeline)
 
     if (timeline && !timeline->tracks[m_selectedTrack].used) {
         // The edited track disappeared (e.g. undo of its only events).
-        m_selectedTrack = 0;
+        int fallback = 0;
         for (int t = 0; t < 16; t++) {
             if (timeline->tracks[t].used) {
-                m_selectedTrack = t;
+                fallback = t;
                 break;
             }
         }
+        transitionSelectedTrack(fallback);
     }
 
     // Keep only selection ids that still resolve to a note.
@@ -5222,7 +5366,14 @@ void SongView::updateSong(const MidiTimeline *timeline)
 
     m_headers->rebuild();
     m_lanes->rebuildRows();
-    updateScrollbars();
+    if (m_scaleMode == ScaleMode::Fold) {
+        if (m_projectionLocked)
+            m_projectionDirty = true;
+        else
+            rebuildProjectionWithAnchoring();
+    } else {
+        updateScrollbars();
+    }
     refreshTimelineViews();
 }
 
@@ -5766,6 +5917,32 @@ void SongView::transposeTimeSelection(int dKey)
                  .arg(dKey > 0 ? QStringLiteral("+%1").arg(dKey) : QString::number(dKey)));
 }
 
+void SongView::foldTransposeSelection(int degreeDelta)
+{
+    if (!m_document || degreeDelta == 0)
+        return;
+    std::vector<DocNote> notes;
+    for (const DocNote &note : m_document->notesForTrack(m_selectedTrack)) {
+        const NoteId id{uint32_t(note.tick), note.key};
+        if (std::find(m_selection.begin(), m_selection.end(), id) != m_selection.end())
+            notes.push_back(note);
+    }
+    std::vector<uint8_t> destinations;
+    if (!resolveFoldDestinations(m_scaleId, m_scaleRoot, notes, degreeDelta, destinations) ||
+        !m_document->moveNotesToPitches(notes, destinations, 0, /*mergeable=*/true)) {
+        return;
+    }
+    std::vector<NoteId> ids;
+    for (size_t i = 0; i < notes.size(); i++)
+        ids.push_back({uint32_t(notes[i].tick), destinations[i]});
+    setSelection(std::move(ids));
+    int edge = destinations.front();
+    for (uint8_t destination : destinations)
+        edge = degreeDelta > 0 ? std::max(edge, int(destination))
+                               : std::min(edge, int(destination));
+    ensureKeyVisible(edge);
+}
+
 void SongView::nudgeTimeSelection(bool right)
 {
     if (!m_document || !m_timeSel.active())
@@ -6121,14 +6298,143 @@ double SongView::pxPerBeat() const
     return m_timeline ? m_pxPerTick * m_timeline->ticksPerBeat : m_pxPerTick * 24.0;
 }
 
+void SongView::setProjectionLocked(bool locked)
+{
+    m_projectionLocked = locked;
+}
+
+void SongView::flushProjectionIfDirty()
+{
+    if (!m_projectionLocked && m_projectionDirty) {
+        m_projectionDirty = false;
+        rebuildProjectionWithAnchoring();
+    }
+}
+
+void SongView::buildOccupancySet(bool out[128]) const
+{
+    std::fill_n(out, 128, false);
+    for (const ViewNote &note : m_model.notes) {
+        if (note.track == m_selectedTrack)
+            out[note.key] = true;
+    }
+}
+
+void SongView::rebuildProjectionWithAnchoring()
+{
+    m_projectionDirty = false;
+    if (!m_timeline)
+        return;
+
+    const double centerY = m_roll->height() / 2.0;
+    const int centerPitch =
+        m_projection.yToPitch(centerY, m_keyHeight, m_scrollY, m_roll->devicePixelRatioF());
+    updateScaleProjection();
+
+    double newScrollY = m_scrollY;
+    if (centerPitch != PitchProjection::cHiddenRow) {
+        const int anchorPitch = m_projection.nearestVisiblePitch(centerPitch);
+        const int anchorRow = m_projection.rowForPitch(anchorPitch);
+        if (anchorRow != PitchProjection::cHiddenRow)
+            newScrollY = anchorRow * m_keyHeight - centerY;
+    }
+    m_scrollY = std::clamp(newScrollY, 0.0, maxRollScroll());
+    updateScrollbars();
+    m_roll->invalidateContent();
+}
+
+void SongView::setScaleMode(ScaleMode mode)
+{
+    if (mode == m_scaleMode)
+        return;
+    const bool projectionChanged = mode == ScaleMode::Fold || m_scaleMode == ScaleMode::Fold;
+    m_scaleMode = mode;
+    if (projectionChanged) {
+        rebuildProjectionWithAnchoring();
+    } else {
+        updateScaleProjection();
+        m_roll->invalidateContent();
+    }
+    emit scaleModeChanged();
+}
+
+void SongView::setScaleRoot(int root)
+{
+    root = std::clamp(root, 0, 11);
+    if (root == m_scaleRoot)
+        return;
+    m_scaleRoot = root;
+    if (m_scaleMode == ScaleMode::Fold) {
+        rebuildProjectionWithAnchoring();
+    } else if (m_scaleMode != ScaleMode::Off) {
+        updateScaleProjection();
+        m_roll->invalidateContent();
+    }
+    emit scaleRootChanged();
+}
+
+void SongView::setScaleId(porydaw_scale::ScaleId id)
+{
+    if (id == m_scaleId)
+        return;
+    m_scaleId = id;
+    if (m_scaleMode == ScaleMode::Fold) {
+        rebuildProjectionWithAnchoring();
+    } else if (m_scaleMode != ScaleMode::Off) {
+        updateScaleProjection();
+        m_roll->invalidateContent();
+    }
+    emit scaleIdChanged();
+}
+
+void SongView::updateScaleProjection()
+{
+    if (m_scaleMode == ScaleMode::Fold) {
+        bool isScaleClass[128] = {};
+        for (int pitch = 0; pitch < 128; pitch++)
+            isScaleClass[pitch] = porydaw_scale::isScalePitch(m_scaleId, m_scaleRoot, pitch);
+
+        bool occupancy[128] = {};
+        buildOccupancySet(occupancy);
+
+        uint8_t visiblePitches[128];
+        int count = 0;
+        for (int pitch = 0; pitch < 128; pitch++) {
+            if (isScaleClass[pitch] || occupancy[pitch])
+                visiblePitches[count++] = static_cast<uint8_t>(pitch);
+        }
+        m_projection.buildFromPitches(visiblePitches, count);
+
+        m_projection.setScalePitchClassification(isScaleClass);
+    } else {
+        m_projection.buildChromatic();
+    }
+}
+
 void SongView::selectTrack(int track)
 {
-    if (track == m_selectedTrack || track < 0 || track > 15)
+    transitionSelectedTrack(track);
+}
+
+void SongView::transitionSelectedTrack(int newTrack)
+{
+    transitionSelectedTrack(newTrack, newTrack != m_selectedTrack);
+}
+
+void SongView::transitionSelectedTrack(int newTrack, bool trackIdentityChanged)
+{
+    if (newTrack < 0 || newTrack > 15)
         return;
-    m_selectedTrack = track;
+    if (!trackIdentityChanged) {
+        m_selectedTrack = newTrack;
+        return;
+    }
+    if (m_scaleMode == ScaleMode::Fold)
+        setScaleMode(ScaleMode::Highlight);
+    m_selectedTrack = newTrack;
     // Programmatic selection collapses the multi-track scope;
     // trackHeaderClicked restores it for modifier clicks.
-    m_trackSelMask = 1u << track;
+    m_trackSelMask = 1u << newTrack;
     m_selection.clear();
     // A track-scoped time selection would keep rendering only in the ruler
     // once the shown track leaves its scope; drop it on any track switch.
@@ -6139,7 +6445,7 @@ void SongView::selectTrack(int track)
     // one track, click another's header, paste), wherever focus was.
     m_roll->setFocus();
     m_roll->invalidateContent();
-    emit selectedTrackChanged(track);
+    emit selectedTrackChanged(newTrack);
 }
 
 bool SongView::revealNote(int track, uint8_t key, uint64_t tick)
@@ -6525,8 +6831,8 @@ void SongView::deleteTrack(int track)
             ++it;
         }
     }
-    if (m_selectedTrack > track)
-        m_selectedTrack--;
+    const int newSelectedTrack = m_selectedTrack > track ? m_selectedTrack - 1 : m_selectedTrack;
+    transitionSelectedTrack(newSelectedTrack, track == m_selectedTrack);
     // Track slots shift; collapse the multi-track scope and drop the time
     // selection rather than remap them.
     m_trackSelMask = 1u << m_selectedTrack;
@@ -6578,7 +6884,7 @@ void SongView::onTrackMoved(int, int, const QVector<int> &map)
     }
     for (auto &lane : m_emptyLanes)
         lane.first = newIndex(lane.first);
-    m_selectedTrack = newIndex(m_selectedTrack);
+    transitionSelectedTrack(newIndex(m_selectedTrack), false);
     // The multi-track scope and time selection are track-addressed;
     // collapse them like deleteTrack does rather than remap.
     m_trackSelMask = 1u << m_selectedTrack;
@@ -6731,7 +7037,10 @@ void SongView::ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool pre
 
 void SongView::ensureKeyVisible(int key)
 {
-    const double y0 = (127 - key) * m_keyHeight - m_scrollY;
+    const int row = m_projection.rowForPitch(key);
+    if (row == songview::PitchProjection::cHiddenRow)
+        return;
+    const double y0 = row * m_keyHeight - m_scrollY;
     const double y1 = y0 + m_keyHeight;
     const int vh = m_roll->height();
     if (y0 < 0)
@@ -6768,7 +7077,7 @@ double SongView::maxHScroll() const
 
 double SongView::maxRollScroll() const
 {
-    return std::max(0.0, 128.0 * m_keyHeight - m_roll->height());
+    return std::max(0.0, m_projection.totalHeight(m_keyHeight) - m_roll->height());
 }
 
 void SongView::setVScroll(double y)

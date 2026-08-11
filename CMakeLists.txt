@@ -99,6 +99,8 @@ qt_add_library(porydaw_app STATIC
     src/core/smf.h
     src/core/songdocument.cpp
     src/core/songdocument.h
+    src/porydaw_scale.cpp
+    src/porydaw_scale.h
     src/core/timelineplayer.cpp
     src/core/timelineplayer.h
     src/core/midiimport.cpp
@@ -147,6 +149,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songviewmodel.h
     src/ui/timelinesurface.cpp
     src/ui/timelinesurface.h
+    src/ui/pitchprojection.cpp
+    src/ui/pitchprojection.h
     src/ui/songview.cpp
     src/ui/songview.h
     src/ui/playheadoverlay.cpp
@@ -199,6 +203,7 @@ qt_add_executable(porydaw
     src/viewcheck.cpp
     src/roundtrip.cpp
     src/editcheck.cpp
+    src/scalecheck.cpp
     src/savecheck.cpp
     src/onboardcheck.cpp
     src/vgcheck.cpp

@@ -86,6 +86,7 @@ run() { # name base|- harness-args... (SCRATCH placeholder = fresh copy of base)
 
 run roundtrip        base --roundtrip SCRATCH
 run editcheck        base --editcheck SCRATCH
+run scalecheck        base --scalecheck SCRATCH
 run viewcheck        base --viewcheck SCRATCH
 run selftest         base --selftest SCRATCH mus_littleroot
 run savecheck        base --savecheck SCRATCH mus_abandoned_ship

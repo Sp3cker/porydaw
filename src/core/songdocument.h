@@ -139,6 +139,14 @@ class SongDocument : public QObject
     // gestures stay one command per drag.
     void moveNotes(const std::vector<DocNote> &notes, int64_t dTick, int dKey,
                    bool mergeable = false);
+    // Batch move with per-note destination pitches. Each note moves from its
+    // current key to the corresponding destKey (destPitches[i] for notes[i]).
+    // dTick is the common time delta (0 for pitch-only moves). mergeable works
+    // identically to moveNotes. All notes must belong to the same engine track.
+    // Returns false and pushes nothing if any destKey is outside 0-127.
+    bool moveNotesToPitches(const std::vector<DocNote> &notes,
+                            const std::vector<uint8_t> &destPitches, int64_t dTick,
+                            bool mergeable = false);
     void resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration);
     // Left-edge resize: move the note-on by dTick with the note-off pinned
     // (tick and duration adjust together, at least 1 tick of note remains).
@@ -315,6 +323,7 @@ class SongDocument : public QObject
     friend class SongEditCommand;
     friend class SongCfgCommand;
     friend class MoveNotesCommand;
+    friend class MoveNotesToPitchesCommand;
 
     struct EditOp {
         enum Type {
@@ -379,6 +388,11 @@ class SongDocument : public QObject
     // move with an accumulated delta when merging keyboard presses.
     std::vector<EditOp> buildMoveNotesOps(const std::vector<DocNote> &notes, int64_t dTick,
                                           int dKey) const;
+    // moveNotesToPitches' op builder, split out so its command can rebuild
+    // the move from the original notes when merging keyboard presses.
+    std::vector<EditOp> buildMoveNotesToPitchesOps(const std::vector<DocNote> &notes,
+                                                   const std::vector<uint8_t> &destPitches,
+                                                   int64_t dTick) const;
     // Replace one event: modify in place when the tick is unchanged (the
     // event keeps its position within its tick group — mid2agb stable-sorts,
     // so same-tick order is significant), else remove + re-insert so ticks

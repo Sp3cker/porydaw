@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QEventLoop>
 #include <QFile>
+#include <QComboBox>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QSettings>
@@ -13,6 +14,8 @@
 #include <cstdio>
 
 #include "mainwindow.h"
+#include "porydaw_scale.h"
+#include "ui/songview.h"
 
 // --tabcheck <projectRoot> <songA> <songB>: multi-tab check. Two songs open
 // in tabs with fully separate documents and undo stacks; switching tabs
@@ -51,6 +54,19 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         loop.exec();
     };
 
+    auto *rootCombo = findChild<QComboBox *>(QStringLiteral("transportScaleRoot"));
+    auto *scaleCombo = findChild<QComboBox *>(QStringLiteral("transportScaleType"));
+    auto *modeCombo = findChild<QComboBox *>(QStringLiteral("transportScaleMode"));
+    const bool haveScaleControls =
+        check(rootCombo && scaleCombo && modeCombo, "transport scale controls not found");
+    if (haveScaleControls) {
+        check(!rootCombo->isEnabled() && !scaleCombo->isEnabled() && !modeCombo->isEnabled(),
+              "scale controls are enabled without a tab");
+        check(rootCombo->focusPolicy() == Qt::NoFocus && scaleCombo->focusPolicy() == Qt::NoFocus &&
+                  modeCombo->focusPolicy() == Qt::NoFocus,
+              "transport scale controls accept keyboard focus");
+    }
+
     // 1. First song loads into the first tab; the engine borrows its data.
     loadSongByLabel(songA);
     SongSession *tabA = m_active;
@@ -77,6 +93,21 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
           "undo group is not on the new tab's stack");
     check(sessionForLabel(songA) == tabA && !tabA->doc.isDirty(),
           "first tab did not survive the second one opening");
+
+    if (haveScaleControls) {
+        check(tabA->view->scaleMode() == SongView::ScaleMode::Off &&
+                  tabA->view->scaleRoot() == 0 &&
+                  tabA->view->scaleId() == porydaw_scale::ScaleId::major,
+              "first tab does not start at C Major Off");
+        check(tabB->view->scaleMode() == SongView::ScaleMode::Off &&
+                  tabB->view->scaleRoot() == 0 &&
+                  tabB->view->scaleId() == porydaw_scale::ScaleId::major &&
+                  rootCombo->currentData().toInt() == 0 &&
+                  scaleCombo->currentData().toInt() ==
+                      static_cast<int>(porydaw_scale::ScaleId::major) &&
+                  modeCombo->currentData().toInt() == static_cast<int>(SongView::ScaleMode::Off),
+              "second tab or its controls do not start at C Major Off");
+    }
 
     // 3. Separate documents and undo stacks: an edit in one tab dirties
     // only that tab.
@@ -164,6 +195,123 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         }
     }
 
+    // 5c. Scale controls route only to the active tab. Fold is transient and
+    // leaves Fold only when the selected logical track actually changes.
+    if (haveScaleControls) {
+        const auto chooseComboData = [&check](QComboBox *combo, int value, const char *what) {
+            const int index = combo->findData(value);
+            if (!check(index >= 0, what))
+                return false;
+            combo->setCurrentIndex(index);
+            return true;
+        };
+        constexpr int rootA = 9;
+        constexpr int rootB = 2;
+        constexpr auto scaleA = porydaw_scale::ScaleId::dorian;
+        constexpr auto scaleB = porydaw_scale::ScaleId::minor_pentatonic;
+
+        m_tabs->setCurrentWidget(tabA->view);
+        chooseComboData(rootCombo, rootA, "A root is missing from the transport control");
+        chooseComboData(scaleCombo, static_cast<int>(scaleA),
+                        "A scale is missing from the transport control");
+        chooseComboData(modeCombo, static_cast<int>(SongView::ScaleMode::Highlight),
+                        "Highlight is missing from the transport control");
+        check(tabA->view->scaleRoot() == rootA && tabA->view->scaleId() == scaleA &&
+                  tabA->view->scaleMode() == SongView::ScaleMode::Highlight,
+              "scale controls did not update the first tab");
+
+        m_tabs->setCurrentWidget(tabB->view);
+        chooseComboData(rootCombo, rootB, "B root is missing from the transport control");
+        chooseComboData(scaleCombo, static_cast<int>(scaleB),
+                        "B scale is missing from the transport control");
+        SongView *bView = tabB->view;
+        const int originalTrack = bView->selectedTrack();
+        bool addedTrack = false;
+        int differentTrack = -1;
+        if (tabB->doc.engineTrackCount() < 2) {
+            differentTrack = tabB->doc.addTrack(0);
+            addedTrack = differentTrack >= 0;
+        } else {
+            for (int track = 0; track < tabB->doc.engineTrackCount(); track++) {
+                if (track != originalTrack) {
+                    differentTrack = track;
+                    break;
+                }
+            }
+        }
+        if (check(differentTrack >= 0, "could not create a second routing-check track")) {
+            bView->selectTrack(originalTrack);
+            chooseComboData(modeCombo, static_cast<int>(SongView::ScaleMode::Fold),
+                            "Fold is missing from the transport control");
+            check(bView->scaleRoot() == rootB && bView->scaleId() == scaleB &&
+                      bView->scaleMode() == SongView::ScaleMode::Fold &&
+                      rootCombo->currentData().toInt() == rootB &&
+                      scaleCombo->currentData().toInt() == static_cast<int>(scaleB) &&
+                      modeCombo->currentData().toInt() == static_cast<int>(SongView::ScaleMode::Fold),
+                  "second tab did not retain its scale control values");
+
+            m_tabs->setCurrentWidget(tabA->view);
+            check(rootCombo->currentData().toInt() == rootA &&
+                      scaleCombo->currentData().toInt() == static_cast<int>(scaleA) &&
+                      modeCombo->currentData().toInt() ==
+                          static_cast<int>(SongView::ScaleMode::Highlight),
+                  "scale controls did not follow the first tab");
+            m_tabs->setCurrentWidget(tabB->view);
+            check(rootCombo->currentData().toInt() == rootB &&
+                      scaleCombo->currentData().toInt() == static_cast<int>(scaleB) &&
+                      modeCombo->currentData().toInt() == static_cast<int>(SongView::ScaleMode::Fold),
+                  "scale controls did not return to the second tab");
+
+            bView->selectTrack(differentTrack);
+            check(bView->scaleMode() == SongView::ScaleMode::Highlight &&
+                      modeCombo->currentData().toInt() ==
+                          static_cast<int>(SongView::ScaleMode::Highlight),
+                  "a real selected-track change did not leave Fold");
+            bView->selectTrack(originalTrack);
+            check(bView->scaleMode() == SongView::ScaleMode::Highlight,
+                  "returning to the previous track restored Fold");
+
+            bView->setScaleMode(SongView::ScaleMode::Off);
+            bView->selectTrack(differentTrack);
+
+            bView->selectTrack(originalTrack);
+            check(bView->scaleMode() == SongView::ScaleMode::Off,
+                  "track change altered Off scale mode");
+            bView->setScaleMode(SongView::ScaleMode::Highlight);
+            bView->selectTrack(originalTrack);
+            check(bView->scaleMode() == SongView::ScaleMode::Highlight,
+                  "track change altered Highlight scale mode");
+            bView->selectTrack(0);
+            bView->setScaleMode(SongView::ScaleMode::Fold);
+            bView->deleteTrack(0);
+            check(bView->scaleMode() == SongView::ScaleMode::Highlight,
+                  "deleting the selected track did not leave Fold");
+            tabB->doc.undoStack()->undo();
+
+            const int remappedTrack = std::max(originalTrack, differentTrack);
+            bView->selectTrack(remappedTrack);
+            bView->setScaleMode(SongView::ScaleMode::Fold);
+            bView->deleteTrack(0);
+            check(bView->scaleMode() == SongView::ScaleMode::Fold,
+                  "deleting a lower track altered Fold during an index remap");
+            tabB->doc.undoStack()->undo();
+            check(bView->scaleMode() == SongView::ScaleMode::Fold,
+                  "undoing a lower-track deletion altered Fold during an index remap");
+            if (addedTrack)
+                tabB->doc.undoStack()->undo();
+            check(!tabB->doc.isDirty(), "scale routing check left the second tab dirty");
+
+            m_tabs->setCurrentWidget(tabA->view);
+            check(tabA->view->scaleRoot() == rootA && tabA->view->scaleId() == scaleA &&
+                      tabA->view->scaleMode() == SongView::ScaleMode::Highlight,
+                  "inactive first-tab scale state was not preserved");
+            m_tabs->setCurrentWidget(tabB->view);
+            check(tabB->view->scaleRoot() == rootB && tabB->view->scaleId() == scaleB &&
+                      tabB->view->scaleMode() == SongView::ScaleMode::Fold,
+                  "inactive second-tab scale state was not preserved");
+        }
+    }
+
     // 6. Re-opening an already open song focuses its tab, no duplicates.
     loadSongByLabel(songB, /*newTab=*/true);
     check(m_tabs->count() == 2 && m_active == tabB,
@@ -207,6 +355,10 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     closeTab(m_tabs->indexOf(tabB->view));
     check(m_tabs->count() == 0 && m_active == nullptr && m_uiTimer->interval() == 500,
           "closing final playing tab did not restore 500 ms UI cadence");
+    if (haveScaleControls) {
+        check(!rootCombo->isEnabled() && !scaleCombo->isEnabled() && !modeCombo->isEnabled(),
+              "scale controls remained enabled after closing the final tab");
+    }
 
     // Reopen through the normal lifecycle so the restoration contract below
     // still persists both tabs with song A active.

@@ -15,6 +15,8 @@
 #include "core/miditimeline.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
+#include "ui/pitchprojection.h"
+#include "porydaw_scale.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -185,6 +187,12 @@ class SongView : public QWidget
     double pxPerBeat() const;
     double scrollY() const { return m_scrollY; }
     double keyHeight() const { return m_keyHeight; }
+    const songview::PitchProjection &pitchProjection() const { return m_projection; }
+
+    // Fold projection updates wait for a pointer gesture to commit, so the
+    // row geometry remains stable while its note edit is in progress.
+    void setProjectionLocked(bool locked);
+    void flushProjectionIfDirty();
     double playheadTick() const { return m_playheadTick; }
 
     // Edit cursor (Reaper-style): placed by clicking the ruler or empty
@@ -201,6 +209,17 @@ class SongView : public QWidget
 
     int selectedTrack() const { return m_selectedTrack; }
     void selectTrack(int track);
+
+    // Scale mode is per-tab runtime state; it is deliberately never persisted
+    // with the song or its view sidecar.
+    enum class ScaleMode { Off, Highlight, Fold };
+    ScaleMode scaleMode() const { return m_scaleMode; }
+    void setScaleMode(ScaleMode mode);
+    int scaleRoot() const { return m_scaleRoot; } // 0-11 (C=0)
+    void setScaleRoot(int root);
+    porydaw_scale::ScaleId scaleId() const { return m_scaleId; }
+    void setScaleId(porydaw_scale::ScaleId id);
+    void foldTransposeSelection(int degreeDelta);
     // Reveal a polyphony-overflow event's note: select its track, select the
     // last note on (track, key) starting at or before tick — the lost note (a
     // dropped note starts exactly there, a stolen one spans it, a cut tail
@@ -505,6 +524,9 @@ class SongView : public QWidget
     void muteMaskChanged(uint32_t mask);
     void soloMaskChanged(uint32_t mask);
     void selectedTrackChanged(int track);
+    void scaleModeChanged();
+    void scaleRootChanged();
+    void scaleIdChanged();
     // Audition request (velocity 0 releases); forwarded to the audio engine.
     void auditionNote(int track, int key, int velocity);
     // Self-releasing audition (band-sweep chord preview); forwarded to
@@ -533,6 +555,13 @@ class SongView : public QWidget
     // Document trackMoved handler: rotates the per-track view state with the
     // renumbered engine slots on apply, undo, and redo alike.
     void onTrackMoved(int fromChunk, int toChunk, const QVector<int> &map);
+    // One path for all selection changes. Remapping an engine slot while it
+    // still represents the same logical track is not a track transition.
+    void transitionSelectedTrack(int newTrack);
+    void transitionSelectedTrack(int newTrack, bool trackIdentityChanged);
+    void updateScaleProjection();
+    void buildOccupancySet(bool out[128]) const;
+    void rebuildProjectionWithAnchoring();
     // A mouse gesture is live in the ruler, roll, or lanes (pan, drag,
     // sweep); playhead follow-scroll pauses while one runs.
     bool userGestureActive() const;
@@ -556,12 +585,18 @@ class SongView : public QWidget
     const LoadedVoiceGroup *m_voicegroup = nullptr;
     SongDocument *m_document = nullptr;
     SongViewModel m_model;
+    songview::PitchProjection m_projection;
+    bool m_projectionDirty = false;
+    bool m_projectionLocked = false;
 
     double m_pxPerTick = 1.0;
     double m_scrollX = 0.0;
     double m_scrollY = 0.0;
     double m_keyHeight = songview::kVelHandleMinKeyH;
     int m_selectedTrack = 0;
+    ScaleMode m_scaleMode = ScaleMode::Off;
+    int m_scaleRoot = 0; // C
+    porydaw_scale::ScaleId m_scaleId = porydaw_scale::ScaleId::major;
     double m_playheadTick = 0.0;
     uint64_t m_editCursorTick = 0;
     bool m_playing = false;

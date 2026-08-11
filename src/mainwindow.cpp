@@ -57,6 +57,7 @@
 #include "audio/wavexport.h"
 #include "core/miditimeline.h"
 #include "project/samplereg.h"
+#include "porydaw_scale.h"
 #include "project/sidecar.h"
 #include "project/songregistry.h"
 #include "ui/keyboardshortcutsdialog.h"
@@ -531,6 +532,55 @@ void MainWindow::buildUi()
     });
     transport->addWidget(m_masterVolSpin);
 
+    m_rootCombo = new QComboBox(this);
+    m_rootCombo->setObjectName(QStringLiteral("transportScaleRoot"));
+    for (int root = 0; root < porydaw_scale::cRootCount; root++)
+        m_rootCombo->addItem(QString::fromLatin1(porydaw_scale::rootDisplayName(root)), root);
+    m_rootCombo->setCurrentIndex(0);
+    m_rootCombo->setToolTip(tr("Scale root note"));
+    m_rootCombo->setFocusPolicy(Qt::NoFocus);
+    connect(m_rootCombo, &QComboBox::currentIndexChanged, this, [this](int index) {
+        if (!m_active || index < 0)
+            return;
+        m_active->view->setScaleRoot(m_rootCombo->itemData(index).toInt());
+    });
+    transport->addWidget(m_rootCombo);
+
+    m_scaleCombo = new QComboBox(this);
+    m_scaleCombo->setObjectName(QStringLiteral("transportScaleType"));
+    const porydaw_scale::ScaleId *scaleOrder = porydaw_scale::displayOrder();
+    for (int i = 0; i < porydaw_scale::cScaleCount; i++) {
+        const porydaw_scale::ScaleId id = scaleOrder[i];
+        m_scaleCombo->addItem(QString::fromLatin1(porydaw_scale::scaleDisplayName(id)),
+                              static_cast<int>(id));
+    }
+    m_scaleCombo->setCurrentIndex(0);
+    m_scaleCombo->setToolTip(tr("Scale type"));
+    m_scaleCombo->setFocusPolicy(Qt::NoFocus);
+    connect(m_scaleCombo, &QComboBox::currentIndexChanged, this, [this](int index) {
+        if (!m_active || index < 0)
+            return;
+        const auto id = static_cast<porydaw_scale::ScaleId>(m_scaleCombo->itemData(index).toInt());
+        m_active->view->setScaleId(id);
+    });
+    transport->addWidget(m_scaleCombo);
+
+    m_modeCombo = new QComboBox(this);
+    m_modeCombo->setObjectName(QStringLiteral("transportScaleMode"));
+    m_modeCombo->addItem(tr("Off"), static_cast<int>(SongView::ScaleMode::Off));
+    m_modeCombo->addItem(tr("Highlight"), static_cast<int>(SongView::ScaleMode::Highlight));
+    m_modeCombo->addItem(tr("Fold"), static_cast<int>(SongView::ScaleMode::Fold));
+    m_modeCombo->setCurrentIndex(0);
+    m_modeCombo->setToolTip(tr("Scale display mode"));
+    m_modeCombo->setFocusPolicy(Qt::NoFocus);
+    connect(m_modeCombo, &QComboBox::currentIndexChanged, this, [this](int index) {
+        if (!m_active || index < 0)
+            return;
+        const auto mode = static_cast<SongView::ScaleMode>(m_modeCombo->itemData(index).toInt());
+        m_active->view->setScaleMode(mode);
+    });
+    transport->addWidget(m_modeCombo);
+
     // Dock titles and the tab strip share this metric-derived outer height so
     // neither clips when the platform font or small-icon metric changes.
     const auto chromeHeight =
@@ -949,6 +999,10 @@ SongSession *MainWindow::createSession()
             m_eventListAction->setChecked(on);
         }
     });
+    const auto syncScale = [this, s] { syncScaleControls(s); };
+    connect(s->view, &SongView::scaleModeChanged, this, syncScale);
+    connect(s->view, &SongView::scaleRootChanged, this, syncScale);
+    connect(s->view, &SongView::scaleIdChanged, this, syncScale);
     // Moving the edit cursor while playing (or paused) seeks playback there,
     // chasing controller state to the landing position.
     connect(s->view, &SongView::editCursorMoved, this, [this, s](uint64_t tick) {
@@ -1021,6 +1075,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
     m_active = session;
     m_undoGroup->setActiveStack(session ? session->doc.undoStack() : nullptr);
     syncMasterVolumeControl();
+    syncScaleControls(session);
 
     const bool loaded = session != nullptr;
     m_saveAction->setEnabled(loaded);
@@ -1205,7 +1260,9 @@ void MainWindow::tabChanged(int index)
 {
     if (m_tearingDown || m_restoringSession)
         return;
-    activateSession(index >= 0 ? sessionForWidget(m_tabs->widget(index)) : nullptr);
+    SongSession *session = index >= 0 ? sessionForWidget(m_tabs->widget(index)) : nullptr;
+    activateSession(session);
+    syncScaleControls(session);
 }
 
 void MainWindow::closeTab(int index)
@@ -3021,6 +3078,10 @@ void MainWindow::updateTransportActions()
     m_playAction->setEnabled(loaded && t != Transport::Playing);
     m_playPauseAction->setEnabled(loaded);
     m_pauseAction->setEnabled(loaded && t == Transport::Playing);
+    const bool hasActiveSession = m_active != nullptr;
+    m_rootCombo->setEnabled(hasActiveSession);
+    m_scaleCombo->setEnabled(hasActiveSession);
+    m_modeCombo->setEnabled(hasActiveSession);
     m_stopAction->setEnabled(loaded && t != Transport::Stopped);
     m_loopAction->setEnabled(loaded);
 }
@@ -3043,6 +3104,24 @@ void MainWindow::syncMasterVolumeControl()
     m_masterVolSpin->setEnabled(loaded);
     QSignalBlocker blocker(m_masterVolSpin);
     m_masterVolSpin->setValue(loaded ? m_active->doc.cfg().masterVolume : SongCfg().masterVolume);
+}
+
+void MainWindow::syncScaleControls(SongSession *session)
+{
+    if (session != m_active)
+        return;
+    SongView *view = session ? session->view : nullptr;
+    m_rootCombo->blockSignals(true);
+    m_scaleCombo->blockSignals(true);
+    m_modeCombo->blockSignals(true);
+    m_rootCombo->setCurrentIndex(view ? m_rootCombo->findData(view->scaleRoot()) : 0);
+    m_scaleCombo->setCurrentIndex(
+        view ? m_scaleCombo->findData(static_cast<int>(view->scaleId())) : 0);
+    m_modeCombo->setCurrentIndex(
+        view ? m_modeCombo->findData(static_cast<int>(view->scaleMode())) : 0);
+    m_rootCombo->blockSignals(false);
+    m_scaleCombo->blockSignals(false);
+    m_modeCombo->blockSignals(false);
 }
 
 bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabel)

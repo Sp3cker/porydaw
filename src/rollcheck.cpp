@@ -2531,6 +2531,706 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (doc.smf().write() != baseline)
         fail("undoing every gesture did not restore the original bytes");
 
+    // ------------------------------------------------------------------
+    // Scale Mode scenarios. Every block drives the SongView's scale-mode
+    // API and asserts against its PitchProjection, then undoes every doc
+    // edit it pushed so the trailing (fully-undone) stack stays clean for
+    // the blocks that follow. All queries are model-level (no gestures
+    // except the ones that genuinely need the widget event system), which
+    // keeps the checks deterministic across the loader's song set.
+    const auto scaleMajor = porydaw_scale::ScaleId::major;
+    const auto projHidden = songview::PitchProjection::cHiddenRow;
+    // Fold occupancy and editing key off m_selectedTrack, and the earlier
+    // revealNote scenario may have switched it; re-bind to the live scaleTrack.
+    const int scaleTrack = view.selectedTrack();
+    if (scaleTrack < 0 || doc.engineTrackCount() <= scaleTrack)
+        fail("scale scenario bound an invalid selected track");
+    // Fold-aware row center: SnappedRows mirrors the CHROMATIC layout, but
+    // Fold collapses rows, so gesture Ys must come from the projection.
+    const auto foldCenterY = [&](int pitch) -> int {
+        const int r = view.pitchProjection().rowForPitch(pitch);
+        if (r == songview::PitchProjection::cHiddenRow)
+            return -1;
+        const qreal dpr = roll->devicePixelRatioF();
+        const qreal top = std::round((double(r) * view.keyHeight() - view.scrollY()) * dpr) /
+                          dpr;
+        const qreal bot = std::round((double(r + 1) * view.keyHeight() - view.scrollY()) * dpr) /
+                          dpr;
+        return int(std::floor((top + bot) / 2.0));
+    };
+
+    // Block A — Projection invariants (Wave 3): pure queries, no gestures.
+    {
+        const auto &proj = view.pitchProjection();
+        view.setScaleMode(SongView::ScaleMode::Off);
+        view.setScaleRoot(0);
+        view.setScaleId(scaleMajor);
+
+        // A1. Off is full chromatic whatever the root/scale.
+        if (proj.visibleRowCount() != 128)
+            fail("Off projection does not expose 128 rows");
+        bool anyHidden = false;
+        for (int p = 0; p < 128; p++)
+            if (proj.rowForPitch(p) == projHidden)
+                anyHidden = true;
+        if (anyHidden)
+            fail("Off projection hides a pitch");
+        // A2. Drift the root/scale; Off must stay chromatic.
+        view.setScaleRoot(2);
+        view.setScaleId(porydaw_scale::ScaleId::dorian);
+        if (proj.visibleRowCount() != 128)
+            fail("Off mode root/scale change altered the row count");
+        view.setScaleRoot(0);
+        view.setScaleId(scaleMajor);
+
+        // A3. Fold geometry: strictly increasing, unique visible pitches,
+        // and every scale pitch present.
+        view.setScaleMode(SongView::ScaleMode::Fold);
+        int prevPitch = 128; // above the highest MIDI pitch; rows descend
+        bool increasing = true;
+        for (int r = 0; r < proj.visibleRowCount(); r++) {
+            const int p = proj.visiblePitchAt(r);
+            if (p >= prevPitch) { // row 0 is the HIGHEST pitch: descending
+                increasing = false;
+                break;
+            }
+            prevPitch = p;
+        }
+        if (!increasing)
+            fail("Fold visible pitches are not strictly descending (row 0 = highest)");
+        bool scaleHidden = false;
+        for (int p = 0; p < 128; p++) {
+            if (porydaw_scale::isScalePitch(scaleMajor, 0, p) &&
+                proj.rowForPitch(p) == projHidden)
+                scaleHidden = true;
+        }
+        if (scaleHidden)
+            fail("Fold hides a scale pitch");
+
+        // A4. Inverses: the row<->pitch maps round-trip.
+        for (int r = 0; r < proj.visibleRowCount(); r++) {
+            if (proj.rowForPitch(proj.visiblePitchAt(r)) != r) {
+                fail("Fold visible row does not map back to itself");
+                break;
+            }
+        }
+        for (int p = 0; p < 128; p++) {
+            const int r = proj.rowForPitch(p);
+            if (r != projHidden && proj.visiblePitchAt(r) != p) {
+                fail("Fold visible pitch does not map back to itself");
+                break;
+            }
+        }
+
+        // A5-A7. Occupancy exception: an off-scale note adds only its own
+        // octave; an unused off-scale pitch stays hidden.
+        bool noteOnSelected[128] = {};
+        for (const DocNote &n : doc.notesForTrack(scaleTrack))
+            noteOnSelected[n.key] = true;
+        const uint64_t aTick = uint64_t(timeline->lengthTicks) +
+                               uint64_t(doc.ticksPerClock()) * 8;
+        int exceptBase = -1;
+        for (int k = 1; k + 12 < 128; k += 12) { // C#/Db classes
+            if (!noteOnSelected[k] && !noteOnSelected[k + 12]) {
+                exceptBase = k;
+                break;
+            }
+        }
+        if (exceptBase < 0) {
+            fail("no free C#-class octave pair for the Fold occupancy exception");
+        } else {
+            const int cmd0 = doc.undoStack()->index();
+            doc.addNote(scaleTrack, aTick, uint8_t(exceptBase), doc.ticksPerClock(), 100);
+            if (proj.rowForPitch(exceptBase) == projHidden)
+                fail("Fold did not expose an occupied off-scale pitch");
+            if (proj.rowForPitch(exceptBase + 12) != projHidden)
+                fail("Fold exposed an unoccupied off-scale octave");
+            int freePitch = -1;
+            for (int p = 1; p < 128; p += 12) {
+                if (porydaw_scale::isScalePitch(scaleMajor, 0, p))
+                    continue;
+                if (!noteOnSelected[p] && proj.rowForPitch(p) == projHidden) {
+                    freePitch = p;
+                    break;
+                }
+            }
+            if (freePitch >= 0 && proj.rowForPitch(freePitch) != projHidden)
+                fail("Fold revealed an off-scale unused pitch");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+        }
+
+        // A8. nearestVisiblePitch: the lower pitch wins a tie (a hidden
+        // midpoint of two adjacent visible scale pitches).
+        {
+            bool tieOk = false;
+            for (int r = 1; r < proj.visibleRowCount() && !tieOk; r++) {
+                const int high = proj.visiblePitchAt(r - 1);
+                const int low = proj.visiblePitchAt(r);
+                if (high - low == 2 && proj.rowForPitch(high - 1) == projHidden) {
+                    if (proj.nearestVisiblePitch(high - 1) != low)
+                        fail("nearestVisiblePitch tie did not pick the lower pitch");
+                    tieOk = true;
+                }
+            }
+            if (!tieOk)
+                fail("no clean scale midpoint to test the nearestVisiblePitch tie");
+        }
+
+        // A9. Fold vertical scroll is bounded by the folded content height.
+        {
+            SongView::ViewState big = view.viewState();
+            big.valid = true;
+            big.scrollY = 1.0e9;
+            view.applyViewState(big);
+            double maxScroll = proj.totalHeight(view.keyHeight()) - double(roll->height());
+            if (maxScroll < 0.0)
+                maxScroll = 0.0;
+            if (view.scrollY() < -1e-9 || view.scrollY() > maxScroll + 1e-9)
+                fail("Fold scroll Y is not bounded by the folded content height");
+        }
+
+        view.setScaleMode(SongView::ScaleMode::Off);
+        view.setScaleRoot(0);
+        view.setScaleId(scaleMajor);
+    }
+
+    // Block B — Highlight pixel checks (Wave 5): the tint lands on scale
+    // rows only, and never on the keyboard or a painted note face.
+    {
+        const auto pixelAt = [&](const QPixmap &pm, int x, int y) -> QRgb {
+            const qreal dpr = pm.devicePixelRatio();
+            return pm.toImage().pixel(qRound(x * dpr), qRound(y * dpr));
+        };
+        const int laneX =
+            songview::kKeyboardW + qRound(view.leadPadPx()) + 20; // off the gridlines
+        const int kbdX = songview::kKeyboardW - 10;
+
+        view.setScaleMode(SongView::ScaleMode::Off);
+        view.setScaleRoot(0);
+        view.setScaleId(scaleMajor);
+
+        bool noteOnSelected[128] = {};
+        for (const DocNote &n : doc.notesForTrack(scaleTrack))
+            noteOnSelected[n.key] = true;
+
+        // Pick an octave whose C, C# and D are all empty on the selected
+        // scaleTrack, then center its rows in the viewport.
+        int rootKey = -1, scaleKey = -1, nonScaleKey = -1;
+        for (int base = 0; base + 2 <= 127 && rootKey < 0; base += 12) {
+            if (!noteOnSelected[base] && !noteOnSelected[base + 1] &&
+                !noteOnSelected[base + 2]) {
+                rootKey = base;
+                scaleKey = base + 2;
+                nonScaleKey = base + 1;
+            }
+        }
+        if (rootKey < 0) {
+            fail("no empty octave for the Highlight pixel probe");
+        } else {
+            const double kh = songview::kVelHandleMinKeyH;
+            const double scrollY =
+                (127 - nonScaleKey) * kh + kh / 2.0 - double(roll->height()) / 2.0;
+            SongView::ViewState st = view.viewState();
+            st.valid = true;
+            st.keyHeight = kh;
+            st.scrollY = scrollY;
+            view.applyViewState(st);
+            (void)view.grab();
+            QCoreApplication::processEvents();
+
+            const QPixmap offPm = roll->grab();
+            const QRgb offScale = pixelAt(offPm, laneX, rows.centerY(scaleKey));
+            const QRgb offNon = pixelAt(offPm, laneX, rows.centerY(nonScaleKey));
+            const QRgb offKbd = pixelAt(offPm, kbdX, rows.centerY(scaleKey));
+
+            view.setScaleMode(SongView::ScaleMode::Highlight);
+            const QPixmap hlPm = roll->grab();
+            const QRgb hlScale = pixelAt(hlPm, laneX, rows.centerY(scaleKey));
+            const QRgb hlNon = pixelAt(hlPm, laneX, rows.centerY(nonScaleKey));
+            const QRgb hlKbd = pixelAt(hlPm, kbdX, rows.centerY(scaleKey));
+            const QRgb hlRoot = pixelAt(hlPm, laneX, rows.centerY(rootKey));
+
+            if (hlScale == offScale)
+                fail("Highlight did not tint the scale row");
+            if (hlNon != offNon)
+                fail("Highlight tinted a non-scale row");
+            if (hlKbd != offKbd)
+                fail("Highlight repainted the keyboard column");
+            if (hlRoot != hlScale)
+                fail("Highlight emphasized the root degree differently");
+        }
+
+        // Note face is untouched: paint the same note in Off and Highlight
+        // and compare the pixels inside its rect.
+        if (scaleKey >= 0) {
+            view.setScaleMode(SongView::ScaleMode::Off);
+            const QPoint notePos(laneX, rows.centerY(scaleKey));
+            const int cmd0 = doc.undoStack()->index();
+            drawNote(roll, notePos); // commits a C-major-scale note (empty row)
+            const QPixmap offPm = roll->grab();
+            const QRgb offFace = pixelAt(offPm, notePos.x(), notePos.y());
+            view.setScaleMode(SongView::ScaleMode::Highlight);
+            const QPixmap hlPm = roll->grab();
+            const QRgb hlFace = pixelAt(hlPm, notePos.x(), notePos.y());
+            view.setScaleMode(SongView::ScaleMode::Off);
+            if (hlFace != offFace)
+                fail("Highlight changed the painted note face");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+        view.setScaleRoot(0);
+        view.setScaleId(scaleMajor);
+    }
+
+    // Block C — Fold occupancy and geometry (Wave 6) over a full timeline.
+    {
+        const auto &proj = view.pitchProjection();
+        const int other = doc.engineTrackCount() > 1 ? (scaleTrack == 0 ? 1 : 0) : -1;
+        const uint64_t cTick = uint64_t(timeline->lengthTicks) +
+                               uint64_t(doc.ticksPerClock()) * 8;
+        const auto firstFreeOffScale = [&](const bool occ[128]) {
+            for (int k = 1; k < 128; k += 12)
+                if (!occ[k])
+                    return k;
+            return -1;
+        };
+
+        view.setScaleMode(SongView::ScaleMode::Fold);
+        view.setScaleRoot(0);
+        view.setScaleId(scaleMajor);
+
+        // C1. Occupancy is timeline-wide: an off-scale note at a distant
+        // tick still creates its row.
+        {
+            bool occ[128] = {};
+            for (const DocNote &n : doc.notesForTrack(scaleTrack))
+                occ[n.key] = true;
+            const int base = firstFreeOffScale(occ);
+            if (base < 0) {
+                fail("no free off-scale pitch for the Fold occupancy probe");
+            } else {
+                const int cmd0 = doc.undoStack()->index();
+                doc.addNote(scaleTrack, cTick, uint8_t(base), doc.ticksPerClock(), 100);
+                if (proj.rowForPitch(base) == projHidden)
+                    fail("Fold occupancy ignored a far-tick off-scale note");
+                while (doc.undoStack()->index() > cmd0)
+                    doc.undoStack()->undo();
+            }
+        }
+
+        // C2. Only the selected scaleTrack's notes create rows.
+        if (other >= 0) {
+            bool occ[128] = {};
+            for (const DocNote &n : doc.notesForTrack(scaleTrack))
+                occ[n.key] = true;
+            int base = -1;
+            for (int k = 1; k < 128; k += 12)
+                if (!occ[k] && (k + 12 >= 128 || !occ[k + 12])) {
+                    base = k; // leave the next octave free for the follow-up
+                    break;
+                }
+            if (base < 0)
+                base = firstFreeOffScale(occ);
+            if (base < 0) {
+                fail("no off-scale pitch for the cross-scaleTrack Fold probe");
+            } else {
+                const int cmd0 = doc.undoStack()->index();
+                doc.addNote(other, cTick, uint8_t(base), doc.ticksPerClock(), 100);
+                if (proj.rowForPitch(base) != projHidden)
+                    fail("Fold created a row from another scaleTrack's note");
+                doc.undoStack()->undo();
+                doc.addNote(scaleTrack, cTick, uint8_t(base), doc.ticksPerClock(), 100);
+                if (proj.rowForPitch(base) == projHidden)
+                    fail("Fold did not add the selected scaleTrack's occupied pitch");
+                if (base + 12 < 128) {
+                    doc.addNote(other, cTick, uint8_t(base + 12), doc.ticksPerClock(), 100);
+                    if (proj.rowForPitch(base + 12) != projHidden)
+                        fail("Fold added a same-class octave from another scaleTrack");
+                    doc.undoStack()->undo();
+                }
+                while (doc.undoStack()->index() > cmd0)
+                    doc.undoStack()->undo();
+            }
+        }
+
+        // C3. A held pointer gesture (projection locked) keeps the row set
+        // stable until release, then rebuilds.
+        {
+            bool occ[128] = {};
+            for (const DocNote &n : doc.notesForTrack(scaleTrack))
+                occ[n.key] = true;
+            const int base = firstFreeOffScale(occ);
+            if (base >= 0) {
+                const int cmd0 = doc.undoStack()->index();
+                doc.addNote(scaleTrack, cTick, uint8_t(base), doc.ticksPerClock(), 100);
+                const int withNote = proj.visibleRowCount();
+                DocNote n;
+                if (doc.findNote(scaleTrack, cTick, uint8_t(base), &n)) {
+                    view.setProjectionLocked(true);
+                    doc.deleteNotes({n}); // rebuild deferred by the lock
+                    if (proj.visibleRowCount() != withNote)
+                        fail("Fold rebuilt its layout mid-gesture");
+                    view.setProjectionLocked(false);
+                    view.flushProjectionIfDirty();
+                    if (proj.visibleRowCount() >= withNote)
+                        fail("Fold did not rebuild its layout on gesture release");
+                }
+                while (doc.undoStack()->index() > cmd0)
+                    doc.undoStack()->undo();
+            }
+        }
+
+        // C4. Layout rebuilds after add, delete/undo, and redo.
+        {
+            bool occ[128] = {};
+            for (const DocNote &n : doc.notesForTrack(scaleTrack))
+                occ[n.key] = true;
+            const int base = firstFreeOffScale(occ);
+            if (base >= 0) {
+                const int cmd0 = doc.undoStack()->index();
+                doc.addNote(scaleTrack, cTick, uint8_t(base), doc.ticksPerClock(), 100);
+                const int withNote = proj.visibleRowCount();
+                if (proj.rowForPitch(base) == projHidden)
+                    fail("Fold occupancy did not appear after add");
+                doc.undoStack()->undo(); // delete
+                if (proj.visibleRowCount() != withNote - 1)
+                    fail("Fold layout did not shrink after delete/undo");
+                doc.undoStack()->redo(); // re-add
+                if (proj.rowForPitch(base) == projHidden)
+                    fail("Fold layout did not restore after redo");
+                while (doc.undoStack()->index() > cmd0)
+                    doc.undoStack()->undo();
+            }
+        }
+
+        // C5. Center-pitch anchoring: changing the root keeps the nearest
+        // visible pitch at the viewport center.
+        {
+            SongView::ViewState st = view.viewState();
+            st.valid = true;
+            st.keyHeight = songview::kVelHandleMinKeyH;
+            st.scrollY = 300.0;
+            view.applyViewState(st);
+            (void)view.grab();
+            QCoreApplication::processEvents();
+            const qreal dpr = roll->devicePixelRatioF();
+            const double cy = roll->height() / 2.0;
+            const int centerPitch =
+                proj.yToPitch(cy, view.keyHeight(), view.scrollY(), dpr);
+            if (centerPitch == projHidden) {
+                fail("Fold center probe landed on a hidden pitch");
+            } else {
+                // Changing the root re-anchors: the nearest visible pitch to
+                // the previous center land on the center line.
+                view.setScaleRoot(11); // B; the fold re-anchors the center
+                const int expected = proj.nearestVisiblePitch(centerPitch);
+                const int atCenter = proj.yToPitch(cy, view.keyHeight(), view.scrollY(), dpr);
+                if (atCenter != expected || atCenter == projHidden)
+                    fail("Fold root change did not anchor the center to the nearest visible pitch");
+                view.setScaleRoot(0);
+            }
+        }
+
+        view.setScaleMode(SongView::ScaleMode::Off);
+    }
+
+    // Block D — Fold editing (Wave 7): diatonic degree nudges, chromatic
+    // fallbacks, exception-row rules, and atomic out-of-range rejection.
+    {
+        const auto &proj = view.pitchProjection();
+        const uint64_t tBase = uint64_t(timeline->lengthTicks) +
+                               uint64_t(doc.ticksPerClock()) * 8;
+        const uint32_t dur = uint32_t(doc.ticksPerClock());
+
+        view.setScaleMode(SongView::ScaleMode::Off);
+        view.setScaleRoot(0);
+        view.setScaleId(scaleMajor);
+
+        // D1. Fold Ctrl+Up moves one scale degree (C60 -> D62).
+        {
+            const int cmd0 = doc.undoStack()->index();
+            doc.addNote(scaleTrack, tBase, 60, dur, 100);
+            view.setSelection({SongView::NoteId{uint32_t(tBase), 60}});
+            view.setScaleMode(SongView::ScaleMode::Fold);
+            sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+            DocNote moved;
+            if (!doc.findNote(scaleTrack, tBase, 62, &moved))
+                fail("Fold Ctrl+Up did not move C up one scale degree to D");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+
+        // D2. Fold Ctrl+Shift+Up moves a chromatic octave (C60 -> 72).
+        {
+            const int cmd0 = doc.undoStack()->index();
+            doc.addNote(scaleTrack, tBase, 60, dur, 100);
+            view.setSelection({SongView::NoteId{uint32_t(tBase), 60}});
+            view.setScaleMode(SongView::ScaleMode::Fold);
+            sendKey(roll, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier);
+            DocNote moved;
+            if (!doc.findNote(scaleTrack, tBase, 72, &moved))
+                fail("Fold Ctrl+Shift+Up did not move C up an octave");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+
+        // D3. Off Ctrl+Up stays chromatic (C60 -> 61).
+        {
+            const int cmd0 = doc.undoStack()->index();
+            doc.addNote(scaleTrack, tBase, 60, dur, 100);
+            view.setSelection({SongView::NoteId{uint32_t(tBase), 60}});
+            view.setScaleMode(SongView::ScaleMode::Off);
+            sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+            DocNote moved;
+            if (!doc.findNote(scaleTrack, tBase, 61, &moved))
+                fail("Off Ctrl+Up did not move C up a semitone");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+
+        // D4. Multi-note selection maps to distinct degrees (60,61 -> 62,64).
+        {
+            const int cmd0 = doc.undoStack()->index();
+            doc.addNote(scaleTrack, tBase, 60, dur, 100);
+            doc.addNote(scaleTrack, tBase, 61, dur, 100);
+            view.setSelection({SongView::NoteId{uint32_t(tBase), 60},
+                               SongView::NoteId{uint32_t(tBase), 61}});
+            view.setScaleMode(SongView::ScaleMode::Fold);
+            sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+            DocNote moved;
+            const bool okA = doc.findNote(scaleTrack, tBase, 62, &moved);
+            const bool okB = doc.findNote(scaleTrack, tBase, 64, &moved);
+            if (!okA || !okB)
+                fail("Fold Ctrl+Up did not map selected notes to distinct degrees");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+
+        // D5. Repeated source pitch: two C60 notes both go to D62.
+        {
+            const int cmd0 = doc.undoStack()->index();
+            const uint64_t tA = tBase, tB = tBase + uint64_t(doc.ticksPerClock());
+            doc.addNote(scaleTrack, tA, 60, dur, 100);
+            doc.addNote(scaleTrack, tB, 60, dur, 100);
+            view.setSelection({SongView::NoteId{uint32_t(tA), 60},
+                               SongView::NoteId{uint32_t(tB), 60}});
+            view.setScaleMode(SongView::ScaleMode::Fold);
+            sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+            DocNote moved;
+            const bool okA = doc.findNote(scaleTrack, tA, 62, &moved);
+            const bool okB = doc.findNote(scaleTrack, tB, 62, &moved);
+            if (!okA || !okB)
+                fail("Repeated Fold source pitch did not share the destination");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+
+        // D6. Off-scale source entry (exception) nudges to the first scale
+        // pitch above (61 -> 62).
+        {
+            const int cmd0 = doc.undoStack()->index();
+            doc.addNote(scaleTrack, tBase, 61, dur, 100);
+            view.setSelection({SongView::NoteId{uint32_t(tBase), 61}});
+            view.setScaleMode(SongView::ScaleMode::Fold);
+            sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+            DocNote moved;
+            if (!doc.findNote(scaleTrack, tBase, 62, &moved))
+                fail("Fold Ctrl+Up did not move an off-scale exception to the next degree");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+
+        // D7. Fold rejects drawing into an off-scale exception row.
+        {
+            const int cmd0 = doc.undoStack()->index();
+            doc.addNote(scaleTrack, tBase, 61, dur, 100);
+            view.setScaleMode(SongView::ScaleMode::Fold);
+            const int r61 = proj.rowForPitch(61);
+            SongView::ViewState d7 = view.viewState();
+            d7.valid = true;
+            d7.keyHeight = songview::kVelHandleMinKeyH;
+            d7.scrollY = double(std::max(0, r61 * songview::kVelHandleMinKeyH -
+                                               4 * songview::kVelHandleMinKeyH));
+            view.applyViewState(d7);
+            (void)view.grab();
+            QCoreApplication::processEvents();
+            const size_t before = doc.notesForTrack(scaleTrack).size();
+            drawNote(roll, QPoint(songview::kKeyboardW + 40, foldCenterY(61)));
+            QCoreApplication::processEvents();
+            if (doc.notesForTrack(scaleTrack).size() != before)
+                fail("Fold accepted a draw into an off-scale exception row");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+
+        // D8. The exception row's piano key still auditions its pitch.
+        {
+            const int cmd0 = doc.undoStack()->index();
+            doc.addNote(scaleTrack, tBase, 61, dur, 100);
+            view.setScaleMode(SongView::ScaleMode::Fold);
+            const int r61 = proj.rowForPitch(61);
+            SongView::ViewState d8 = view.viewState();
+            d8.valid = true;
+            d8.keyHeight = songview::kVelHandleMinKeyH;
+            d8.scrollY = double(std::max(0, r61 * songview::kVelHandleMinKeyH -
+                                               4 * songview::kVelHandleMinKeyH));
+            view.applyViewState(d8);
+            (void)view.grab();
+            QCoreApplication::processEvents();
+            int audKey = -1;
+            auto conn = QObject::connect(&view, &SongView::auditionNote, &view,
+                                         [&](int, int key, int velocity) {
+                                             if (velocity > 0)
+                                                 audKey = key;
+                                         });
+            sendMouse(roll, QEvent::MouseButtonPress,
+                      QPoint(songview::kKeyboardW / 2, foldCenterY(61)),
+                      Qt::LeftButton, Qt::LeftButton);
+            QObject::disconnect(conn);
+            if (audKey != 61)
+                fail("Fold exception-row piano key did not audition pitch 61");
+            sendMouse(roll, QEvent::MouseButtonRelease,
+                      QPoint(songview::kKeyboardW / 2, foldCenterY(61)),
+                      Qt::LeftButton, Qt::NoButton);
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+        }
+
+        // D9+D12. A vertical pointer drag previews and commits the fold
+        // degree; the layout only rebuilds once the gesture commits. The
+        // source pitch is an off-scale exception NOT present anywhere in the
+        // track: adding it adds exactly one fold row, and committing the
+        // drag away collapses it — deterministic regardless of the song.
+        {
+            const int cmd0 = doc.undoStack()->index();
+            view.setScaleMode(SongView::ScaleMode::Fold);
+            view.setScaleRoot(0);
+            view.setScaleId(scaleMajor);
+            (void)view.grab();
+            QCoreApplication::processEvents();
+            const int rowsNoNote = proj.visibleRowCount();
+            bool occ[128] = {};
+            for (const DocNote &dn : doc.notesForTrack(scaleTrack))
+                occ[dn.key] = true;
+            // The lowest off-scale (non-diatonic) pitch the track never uses.
+            int src = -1, dst = -1;
+            for (int k = 48; k < 96; k++) {
+                if (porydaw_scale::isScalePitch(scaleMajor, 0, k) || occ[k])
+                    continue;
+                src = k;
+                dst = porydaw_scale::nextScalePitch(scaleMajor, 0, k, 1);
+                break;
+            }
+            if (src < 0 || dst < 0 || dst == src)
+                fail("Fold drag could not pick a free off-scale pitch");
+            doc.addNote(scaleTrack, tBase, uint8_t(src), uint32_t(doc.ticksPerClock()) * 4, 100);
+            QCoreApplication::processEvents();
+            const int rowsWithNote = proj.visibleRowCount();
+            if (rowsWithNote != rowsNoNote + 1)
+                fail("Fold drag did not gain the exception row for an unoccupied off-scale pitch");
+            view.ensureTickVisible(tBase);
+            const int rSrc = proj.rowForPitch(src);
+            SongView::ViewState d9 = view.viewState();
+            d9.valid = true;
+            d9.keyHeight = songview::kVelHandleMinKeyH;
+            d9.scrollY = double(std::max(0, rSrc * songview::kVelHandleMinKeyH -
+                                               4 * songview::kVelHandleMinKeyH));
+            view.applyViewState(d9);
+            (void)view.grab();
+            QCoreApplication::processEvents();
+            // The press must land in the note's Move zone: horizontally the
+            // center (a 5px 4-tick note's inner reach is 0, so 1px inside the
+            // left edge is still the 3px edge-grip zone and starts a resize),
+            // and vertically 3px below the row center (keyHeight ==
+            // kVelHandleMinKeyH activates the velocity-handle grab on the
+            // velocity-100 bar near the row top, so the gesture must stay
+            // below it — but still inside the 12px note) — a Move drag.
+            const int x = int((view.contentX(double(tBase)) +
+                               view.contentX(double(tBase) + doc.ticksPerClock() * 4)) /
+                                  2.0 +
+                              songview::kKeyboardW);
+            const QPoint press(x, foldCenterY(src) + 3);
+            int dragAud = -1;
+            auto dconn = QObject::connect(&view, &SongView::auditionNote, &view,
+                                          [&](int, int key, int velocity) {
+                                              if (velocity > 0)
+                                                  dragAud = key;
+                                          });
+            sendMouse(roll, QEvent::MouseButtonPress, press, Qt::LeftButton, Qt::LeftButton);
+            if (view.selection().size() != 1)
+                fail("Fold drag press did not grab the off-scale note");
+            if (proj.visibleRowCount() != rowsWithNote)
+                fail("Fold rebuilt its layout during a pointer drag");
+            const int rDst = proj.rowForPitch(dst);
+            if (rDst == projHidden)
+                fail("Fold drag target row is hidden");
+            const QPoint target(x, foldCenterY(dst));
+            sendMouse(roll, QEvent::MouseMove, target, Qt::NoButton, Qt::LeftButton);
+            if (proj.visibleRowCount() != rowsWithNote)
+                fail("Fold rebuilt its layout mid-drag");
+            sendMouse(roll, QEvent::MouseButtonRelease, target, Qt::LeftButton, Qt::NoButton);
+            QObject::disconnect(dconn);
+            QCoreApplication::processEvents();
+            DocNote moved;
+            if (!doc.findNote(scaleTrack, tBase, uint8_t(dst), &moved))
+                fail("Fold drag did not commit the note to its scale degree");
+            if (proj.visibleRowCount() != rowsNoNote)
+                fail("Fold did not rebuild its layout after the drag commit");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+
+        // D10. A horizontal-only move preserves an off-scale exception pitch.
+        {
+            const int cmd0 = doc.undoStack()->index();
+            doc.addNote(scaleTrack, tBase, 61, dur, 100);
+            view.setScaleMode(SongView::ScaleMode::Fold);
+            DocNote n;
+            if (doc.findNote(scaleTrack, tBase, 61, &n)) {
+                const uint64_t next = tBase + uint64_t(doc.ticksPerClock()) * 4;
+                doc.moveNotes({n}, int64_t(next) - int64_t(tBase), 0, /*mergeable=*/true);
+                DocNote moved;
+                if (!doc.findNote(scaleTrack, next, 61, &moved))
+                    fail("Fold horizontal move changed the exception pitch");
+            }
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+
+        // D11. Out-of-range diatonic nudge is atomic: no move, no command.
+        {
+            const int cmd0 = doc.undoStack()->index();
+            doc.addNote(scaleTrack, tBase, 127, dur, 100); // B = top C-major pitch
+            view.setSelection({SongView::NoteId{uint32_t(tBase), 127}});
+            view.setScaleMode(SongView::ScaleMode::Fold);
+            const int cmdsBefore = doc.undoStack()->count();
+            sendKey(roll, Qt::Key_Up, Qt::ControlModifier); // out of range
+            if (doc.undoStack()->count() != cmdsBefore)
+                fail("Fold out-of-range nudge pushed an undo command");
+            DocNote still;
+            if (!doc.findNote(scaleTrack, tBase, 127, &still))
+                fail("Fold out-of-range nudge moved the top pitch");
+            while (doc.undoStack()->index() > cmd0)
+                doc.undoStack()->undo();
+            view.clearSelection();
+        }
+
+        view.setScaleMode(SongView::ScaleMode::Off);
+        view.setScaleRoot(0);
+        view.setScaleId(scaleMajor);
+    }
+
     view.setDocument(nullptr);
     view.setSong(nullptr, nullptr);
 
