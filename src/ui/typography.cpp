@@ -23,19 +23,24 @@ std::optional<QFont> capturedPlatformFont;
 QString capturedFixedFamily;
 bool systemFontPreferred = false;
 
+// Unhinted, antialiased outlines. The bundled faces' gasp tables request
+// grid-fitting at every size, and DirectWrite honors that under full
+// hinting — distorting the letterforms at 100% scale on Windows, where
+// hinting actually runs. Overriding the fonts' own request keeps the
+// designed outlines on every backend.
+void applyRenderPolicy(QFont &font)
+{
+    font.setHintingPreference(QFont::PreferNoHinting);
+    font.setStyleStrategy(QFont::StyleStrategy(font.styleStrategy() | QFont::PreferAntialias));
+}
+
 void setFace(QFont &font, QFont::Weight weight)
 {
     font.setFamily(QString::fromLatin1(proportionalFamily));
     font.setStyleName({});
     font.setWeight(weight);
     font.setStyle(QFont::StyleNormal);
-    // Unhinted, antialiased outlines. The bundled faces' gasp table requests
-    // grid-fitting at every size, and DirectWrite honors that under full
-    // hinting — distorting the letterforms at 100% scale on Windows, where
-    // hinting actually runs. Overriding the font's own request keeps the
-    // designed outlines on every backend.
-    font.setHintingPreference(QFont::PreferNoHinting);
-    font.setStyleStrategy(QFont::StyleStrategy(font.styleStrategy() | QFont::PreferAntialias));
+    applyRenderPolicy(font);
 }
 
 QFont bundledBody()
@@ -75,6 +80,26 @@ std::optional<QFont> fitFont(QFont font, int maximumPixelSize, int availableHeig
             return font;
     }
     return std::nullopt;
+}
+
+// Re-asserts font inheritance on every widget that does not set its own
+// font, so an application-font change reaches widgets already polished by
+// the stylesheet (QStyleSheetStyle caches their resolved font even when
+// the resolve mask is empty).
+void resetInheritedWidgetFonts()
+{
+    // Snapshot behind QPointers first: re-asserting a font can synthesize
+    // events that create or destroy widgets mid-walk.
+    const auto all = QApplication::allWidgets();
+    QList<QPointer<QWidget>> widgets;
+    widgets.reserve(all.size());
+    for (auto *widget : all)
+        widgets.append(widget);
+
+    for (const auto &widget : widgets) {
+        if (widget && widget->font().resolveMask() == 0)
+            widget->setFont(QFont());
+    }
 }
 
 } // namespace
@@ -127,18 +152,12 @@ void setUseSystemFont(bool preferred)
         installedBodyFont = preferred ? systemBody() : bundledBody();
 }
 
-void resetInheritedWidgetFonts()
+void applyUseSystemFont(bool preferred)
 {
-    // Snapshot behind QPointers first: re-asserting a font can synthesize
-    // events that create or destroy widgets mid-walk.
-    QList<QPointer<QWidget>> widgets;
-    widgets.reserve(QApplication::allWidgets().size());
-    for (auto *widget : QApplication::allWidgets())
-        widgets.append(widget);
-
-    for (const auto &widget : widgets) {
-        if (widget && widget->font().resolveMask() == 0)
-            widget->setFont(QFont());
+    setUseSystemFont(preferred);
+    if (installedBodyFont) {
+        QApplication::setFont(*installedBodyFont);
+        resetInheritedWidgetFonts();
     }
 }
 
@@ -167,10 +186,7 @@ QFont bodyMono(const QFont &body)
     font.setStyleName(QStringLiteral("Regular"));
     font.setWeight(QFont::Normal);
     font.setStyle(QFont::StyleNormal);
-    // Same unhinted policy as setFace — the mono face's gasp table makes the
-    // same grid-fitting request.
-    font.setHintingPreference(QFont::PreferNoHinting);
-    font.setStyleStrategy(QFont::StyleStrategy(font.styleStrategy() | QFont::PreferAntialias));
+    applyRenderPolicy(font);
     font.setPixelSize(resolvedPixelSize(body));
     return font;
 }

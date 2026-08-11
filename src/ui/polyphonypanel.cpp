@@ -20,6 +20,7 @@
 #include "core/miditimeline.h"
 #include "ui/m4asemantics.h"
 #include "ui/theme/themeruntime.h"
+#include "ui/typography.h"
 
 namespace {
 
@@ -250,7 +251,7 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     usageLayout->setContentsMargins(0, 0, 0, 0);
     usageLayout->setSpacing(6);
     auto *usageLabel = new QLabel(tr("Channel usage"), m_usageBox);
-    usageLabel->setStyleSheet(QStringLiteral("font-weight: bold;"));
+    m_sectionLabels.append(usageLabel);
     usageLayout->addWidget(usageLabel);
     m_grid = new PolyChannelGrid(m_usageBox);
     usageLayout->addWidget(m_grid);
@@ -262,7 +263,7 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     overflowLayout->setSpacing(6);
     auto *tableHeader = new QHBoxLayout;
     auto *tableLabel = new QLabel(tr("Overflow by track"), m_overflowBox);
-    tableLabel->setStyleSheet(QStringLiteral("font-weight: bold;"));
+    m_sectionLabels.append(tableLabel);
     tableHeader->addWidget(tableLabel);
     tableHeader->addStretch();
     m_reset = new QPushButton(tr("Reset"), m_overflowBox);
@@ -313,7 +314,7 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     setWideLayout(false);
 
     auto *logLabel = new QLabel(tr("Recent events"), content);
-    logLabel->setStyleSheet(QStringLiteral("font-weight: bold;"));
+    m_sectionLabels.append(logLabel);
     layout->addWidget(logLabel);
     m_log = new QListWidget(content);
     m_log->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -322,7 +323,19 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
             [this](QListWidgetItem *item) { activateLogRow(m_log->row(item)); });
     layout->addWidget(m_log, 2);
 
+    applySectionFonts();
     m_scroll->setWidget(content);
+}
+
+// Section headers carry the derived emphasis face. A per-widget font-weight
+// stylesheet rule would leave them behind on a typeface swap: QStyleSheetStyle
+// installs the rule font with a nonzero resolve mask, so the system-font
+// toggle's inheritance reassert skips them.
+void PolyphonyPanel::applySectionFonts()
+{
+    const auto sectionFont = typography::bold(font());
+    for (auto *label : m_sectionLabels)
+        label->setFont(sectionFont);
 }
 
 void PolyphonyPanel::resizeEvent(QResizeEvent *event)
@@ -524,6 +537,11 @@ void PolyphonyPanel::changeEvent(QEvent *event)
         for (int i = 0; i < m_log->count(); i++)
             applyLogItemInk(m_log->item(i));
     }
+    // The section fonts derive from the panel's own font: re-derive when it
+    // lands (the system-font toggle's inheritance reassert) or when a
+    // repolish carries it.
+    if (event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange)
+        applySectionFonts();
 }
 
 void PolyphonyPanel::refreshTable(const AudioEngine::PolySnapshot &snap)

@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QFontInfo>
+#include <QHeaderView>
 #include <QImage>
 #include <QItemSelectionModel>
 #include <QKeyEvent>
@@ -235,6 +236,25 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
     // once the playhead passes the end. Row focus commits the edit cursor at
     // the row's tick, but programmatic restores after document edits do not.
     auto *events = view.findChild<EventListView *>();
+
+    // The row-index header holds an explicitly derived Body Mono face, so the
+    // system-font toggle's inheritance reassert skips it; the re-derive rides
+    // the table's own font change and must land whatever the walk order.
+    if (events) {
+        auto *table = events->findChild<QTableView *>();
+        if (!table) {
+            fail("event table not found for the system-font probe");
+        } else {
+            const QFont headerBefore = table->verticalHeader()->font();
+            typography::applyUseSystemFont(true);
+            if (table->verticalHeader()->font().family() != typography::systemMonoFamily())
+                fail("system-font toggle did not re-derive the row-index header");
+            typography::applyUseSystemFont(false);
+            if (table->verticalHeader()->font() != headerBefore)
+                fail("system-font round trip drifted the row-index header font");
+        }
+    }
+
     uint64_t markerTick = 0; // left on-screen for the screenshot
     if (!events) {
         fail("EventListView child not found");

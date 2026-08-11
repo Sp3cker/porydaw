@@ -320,8 +320,8 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   1.25 step below, Body Mono on the platform's fixed-pitch face — so porydaw
   matches the machine's other Qt applications; toggling re-installs the
   application font and re-asserts inheritance on every polished widget
-  directly, never through a stylesheet repolish (unsafe while playback is
-  painting on Windows), so the swap is safe mid-playback.
+  directly, never through a stylesheet repolish (a repaint hazard while
+  playback is painting on Windows — theme changes still repolish).
 
 ### 6.2 Editing behaviors
 

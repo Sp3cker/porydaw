@@ -1271,9 +1271,11 @@ void EventListView::jumpCursorToRow(int row)
 }
 
 // The row-index header carries an explicitly derived Body Mono face, so it
-// does not follow application font changes on its own. Re-derive whenever
-// the typeface preference lands (font change) or the repolish that carries
-// it finishes (style change) — the source font is only current after both.
+// does not follow application font changes on its own. Re-derive when the
+// table's own font lands — the system-font toggle re-asserts inheritance
+// widget by widget in no particular order, so the table's font change (seen
+// by the eventFilter) is the only signal that the source is current — or
+// when a repolish carries it (style change).
 void EventListView::applyRowIndexFont()
 {
     auto rowIndexFont = typography::bodyMono(m_table->font());
@@ -1284,7 +1286,7 @@ void EventListView::applyRowIndexFont()
 void EventListView::changeEvent(QEvent *event)
 {
     QWidget::changeEvent(event);
-    if (event->type() == QEvent::ApplicationFontChange || event->type() == QEvent::StyleChange)
+    if (event->type() == QEvent::StyleChange)
         applyRowIndexFont();
 }
 
@@ -1367,6 +1369,8 @@ void EventListView::moveCurrentRow(int delta)
 bool EventListView::eventFilter(QObject *watched, QEvent *event)
 {
     if (watched == m_table) {
+        if (event->type() == QEvent::FontChange)
+            applyRowIndexFont();
         // Leave plain Space unaccepted so the window-level play/pause
         // shortcut fires (same idiom as the song list).
         if (event->type() == QEvent::ShortcutOverride) {

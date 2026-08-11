@@ -712,14 +712,9 @@ void MainWindow::buildUi()
     connect(systemFontAction, &QAction::toggled, this, [this](bool on) {
         QSettings settings;
         settings.setValue(kSystemFontKey, on);
-        typography::setUseSystemFont(on);
-        if (const auto body = typography::bodyFont()) {
-            QApplication::setFont(*body);
-            // Not a theme reapply: repolishing the stylesheet is unsafe
-            // while playback is painting on Windows. Re-asserting
-            // inheritance lands the swap on already-polished widgets.
-            typography::resetInheritedWidgetFonts();
-        }
+        // Never a theme reapply: repolishing the stylesheet is unsafe while
+        // playback is painting on Windows.
+        typography::applyUseSystemFont(on);
         refreshDerivedFonts();
     });
 

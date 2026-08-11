@@ -21,17 +21,16 @@ std::optional<int> baseFontPx();
 /// application font behind Qt's back.
 std::optional<QFont> bodyFont();
 /// Swaps the semantic font scale between the bundled typeface and the
-/// platform font captured before installation. Callers land the change on
-/// already-polished widgets by re-installing bodyFont() as the application
-/// font and calling resetInheritedWidgetFonts(); a theme apply does the
-/// same as a side effect of its Body reassert.
+/// platform font captured before installation without touching widgets —
+/// startup calls it before the first theme apply installs Body. On a
+/// running UI use applyUseSystemFont instead.
 void setUseSystemFont(bool preferred);
-/// Re-asserts font inheritance on every widget that does not set its own
-/// font, so an application-font change reaches widgets already polished by
-/// the stylesheet (QStyleSheetStyle caches their resolved font even when
-/// the resolve mask is empty). Unlike a theme apply this does not repolish
-/// the stylesheet, which is unsafe while playback is painting on Windows.
-void resetInheritedWidgetFonts();
+/// setUseSystemFont plus landing the swap: re-installs Body as the
+/// application font and re-asserts inheritance on already-polished widgets
+/// (QStyleSheetStyle caches their resolved font even when the resolve mask
+/// is empty). Unlike a theme apply this never repolishes the stylesheet,
+/// which is unsafe while playback is painting on Windows.
+void applyUseSystemFont(bool preferred);
 /// Resolved family of the platform font captured before the bundled install.
 QString systemFontFamily();
 /// Family of the platform's fixed-pitch font, used for Body Mono when the

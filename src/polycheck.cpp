@@ -1,7 +1,9 @@
 #include <QCoreApplication>
 #include <QDockWidget>
 #include <QFileInfo>
+#include <QFontInfo>
 #include <QImage>
+#include <QLabel>
 #include <QSettings>
 #include <QString>
 #include <QStringList>
@@ -16,6 +18,7 @@
 #include "core/timelineplayer.h"
 #include "mainwindow.h"
 #include "ui/polyphonypanel.h"
+#include "ui/typography.h"
 
 extern "C" {
 #include "m4a_engine.h"
@@ -404,6 +407,27 @@ int runWidgetStage(const QString &screenshotPath)
         voiceNames.append(QString());
     voiceNames[5] = QStringLiteral("voice_piano");
     panel.setVoiceNames(voiceNames);
+
+    // The section headers hold explicitly derived emphasis fonts (a stylesheet
+    // font rule would be skipped by the system-font toggle's inheritance
+    // reassert), so the toggle must re-derive them and round-trip cleanly.
+    {
+        QLabel *header = nullptr;
+        for (auto *label : panel.findChildren<QLabel *>()) {
+            if (label->text() == QStringLiteral("Channel usage"))
+                header = label;
+        }
+        check(header != nullptr, "channel-usage section header not found");
+        if (header) {
+            const QFont headerBefore = header->font();
+            typography::applyUseSystemFont(true);
+            check(QFontInfo(header->font()).family() == typography::systemFontFamily(),
+                  "system-font toggle did not reach the section headers");
+            typography::applyUseSystemFont(false);
+            check(header->font() == headerBefore,
+                  "system-font round trip drifted the section header font");
+        }
+    }
 
     uint64_t jumpedTo = UINT64_MAX;
     int jumpTrack = -1, jumpKey = -1, jumps = 0;

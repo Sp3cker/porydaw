@@ -192,24 +192,19 @@ int runFontCheck(int expectedBaseFontPx)
           "Disabling the system-font preference did not restore Body");
     check(QFontInfo(probe.font()).family() == QStringLiteral("Atkinson Hyperlegible Next"),
           "A polished widget did not return to the bundled face");
-    // The View-menu toggle lands the swap without a theme apply — repolishing
-    // the stylesheet is unsafe while playback is painting on Windows — by
-    // re-installing Body and re-asserting inheritance on polished widgets,
-    // whose fonts QStyleSheetStyle otherwise keeps frozen.
+    // The View-menu toggle lands the swap through applyUseSystemFont, without
+    // a theme apply — repolishing the stylesheet is unsafe while playback is
+    // painting on Windows — by re-installing Body and re-asserting
+    // inheritance on polished widgets, whose fonts QStyleSheetStyle
+    // otherwise keeps frozen.
     const auto fontBeforeDirectToggle = QApplication::font();
     const auto probeFontBeforeDirectToggle = probe.font();
-    const auto directToggle = [](bool on) {
-        typography::setUseSystemFont(on);
-        if (const auto body = typography::bodyFont())
-            QApplication::setFont(*body);
-        typography::resetInheritedWidgetFonts();
-    };
-    directToggle(true);
+    typography::applyUseSystemFont(true);
     check(QFontInfo(QApplication::font()).family() == platformFamily,
           "Direct toggle did not install the system Body");
     check(QFontInfo(probe.font()).family() == platformFamily,
           "Direct toggle left a polished widget on the bundled face");
-    directToggle(false);
+    typography::applyUseSystemFont(false);
     check(QApplication::font() == fontBeforeDirectToggle,
           "Direct toggle round trip drifted the application font");
     check(probe.font() == probeFontBeforeDirectToggle,

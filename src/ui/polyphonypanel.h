@@ -70,6 +70,7 @@ class PolyphonyPanel : public QWidget
   private:
     void appendEvent(const M4APolyEvent &ev);
     void applyLogItemInk(QListWidgetItem *item);
+    void applySectionFonts();
     void refreshTable(const AudioEngine::PolySnapshot &snap);
     void clearRuntimeState();
     // Stacked sections when narrow, overflow table beside the channel grid
@@ -85,6 +86,7 @@ class PolyphonyPanel : public QWidget
     bool m_wideLayout = false;
     QTableWidget *m_table = nullptr;
     QLabel *m_tableEmpty = nullptr;
+    QList<QLabel *> m_sectionLabels;
     QPushButton *m_reset = nullptr;
     QListWidget *m_log = nullptr;
 
