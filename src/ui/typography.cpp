@@ -23,11 +23,10 @@ std::optional<QFont> capturedPlatformFont;
 QString capturedFixedFamily;
 bool systemFontPreferred = false;
 
-// Unhinted, antialiased outlines. The bundled faces' gasp tables request
-// grid-fitting at every size, and DirectWrite honors that under full
-// hinting — distorting the letterforms at 100% scale on Windows, where
-// hinting actually runs. Overriding the fonts' own request keeps the
-// designed outlines on every backend.
+// Unhinted, antialiased outlines. Grid-fitting distorts the letterforms at
+// 100% scale on Windows, where hinting actually runs, so the bundled faces'
+// gasp tables ask renderers for smoothing without it; the explicit policy
+// keeps backends that never consult gasp on the same rendering.
 void applyRenderPolicy(QFont &font)
 {
     font.setHintingPreference(QFont::PreferNoHinting);

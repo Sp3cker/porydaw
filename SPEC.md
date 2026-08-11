@@ -313,8 +313,9 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   (the Tick cell retimes) and never unpin the canonical class order.
 - **Typeface preference:** the UI ships with the bundled Atkinson Hyperlegible
   scale (Body 1.25× the platform's base font size, Caption at the base size),
-  rendered unhinted and antialiased — hinting (which the faces' own gasp
-  tables request) distorts the letterforms on Windows at 100% scale.
+  rendered unhinted and antialiased — hinting distorts the letterforms on
+  Windows at 100% scale, and the faces' gasp tables ask for the same
+  smoothing from renderers that consult the font.
   View → Use System Font (app-wide, persisted) swaps the whole scale onto the
   platform font at its native size — Body at the platform size, Caption one
   1.25 step below, Body Mono on the platform's fixed-pitch face — so porydaw
