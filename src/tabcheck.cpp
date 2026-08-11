@@ -1,6 +1,8 @@
+#include <QAction>
 #include <QApplication>
 #include <QEventLoop>
 #include <QFile>
+#include <QFontInfo>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QSettings>
@@ -13,6 +15,7 @@
 #include <cstdio>
 
 #include "mainwindow.h"
+#include "ui/typography.h"
 
 // --tabcheck <projectRoot> <songA> <songB>: multi-tab check. Two songs open
 // in tabs with fully separate documents and undo stacks; switching tabs
@@ -105,6 +108,30 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     check(m_audio.transport() == Transport::Playing, "playback did not start");
     synchronizePlayhead();
     check(m_uiTimer->interval() == 100, "playback UI cadence is not 100 ms");
+
+    // 4b. Use System Font round-trips while the engine is playing. The toggle
+    // lands the swap by re-installing the application font and re-asserting
+    // inheritance — never by repolishing the stylesheet, which is unsafe
+    // while playback is painting on Windows — so playback survives the round
+    // trip and the fonts come back without drift.
+    auto *systemFontAction = findChild<QAction *>(QStringLiteral("viewSystemFontAction"));
+    if (check(systemFontAction != nullptr, "Use System Font menu action not found")) {
+        const QFont appFontBefore = QApplication::font();
+        const QFont tabsFontBefore = m_tabs->font();
+        systemFontAction->setChecked(true);
+        check(QFontInfo(QApplication::font()).family() == typography::systemFontFamily(),
+              "system-font toggle during playback did not install the platform face");
+        check(QFontInfo(m_tabs->font()).family() == typography::systemFontFamily(),
+              "system-font toggle during playback did not reach a polished widget");
+        check(m_audio.transport() == Transport::Playing, "system-font toggle interrupted playback");
+        systemFontAction->setChecked(false);
+        check(QApplication::font() == appFontBefore,
+              "system-font round trip during playback drifted the application font");
+        check(m_tabs->font() == tabsFontBefore,
+              "system-font round trip during playback drifted a polished widget's font");
+        check(m_audio.transport() == Transport::Playing, "system-font round trip stopped playback");
+    }
+
     m_tabs->setCurrentWidget(tabB->view);
     check(m_audio.transport() == Transport::Stopped, "switching tabs did not stop playback");
     check(m_uiTimer->interval() == 500, "stopped UI cadence is not 500 ms");

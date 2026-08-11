@@ -700,10 +700,10 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("view.theme"), themeAction);
 
     // The typeface: the bundled Atkinson Hyperlegible scale, or the platform
-    // font other Qt applications use. Reapplying the committed theme
-    // repolishes every widget so the swap lands at once.
+    // font other Qt applications use.
     QAction *systemFontAction = viewMenu->addAction(tr("Use System &Font"));
     systemFontAction->setCheckable(true);
+    systemFontAction->setObjectName(QStringLiteral("viewSystemFontAction"));
     keys.attach(QStringLiteral("view.system_font"), systemFontAction);
     {
         QSettings settings;
@@ -713,7 +713,13 @@ void MainWindow::buildUi()
         QSettings settings;
         settings.setValue(kSystemFontKey, on);
         typography::setUseSystemFont(on);
-        m_themeController->reapply();
+        if (const auto body = typography::bodyFont()) {
+            QApplication::setFont(*body);
+            // Not a theme reapply: repolishing the stylesheet is unsafe
+            // while playback is painting on Windows. Re-asserting
+            // inheritance lands the swap on already-polished widgets.
+            typography::resetInheritedWidgetFonts();
+        }
         refreshDerivedFonts();
     });
 

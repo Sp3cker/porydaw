@@ -6,6 +6,8 @@
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QFontMetricsF>
+#include <QPointer>
+#include <QWidget>
 
 namespace typography {
 namespace {
@@ -123,6 +125,21 @@ void setUseSystemFont(bool preferred)
     systemFontPreferred = preferred;
     if (installedBodyFont)
         installedBodyFont = preferred ? systemBody() : bundledBody();
+}
+
+void resetInheritedWidgetFonts()
+{
+    // Snapshot behind QPointers first: re-asserting a font can synthesize
+    // events that create or destroy widgets mid-walk.
+    QList<QPointer<QWidget>> widgets;
+    widgets.reserve(QApplication::allWidgets().size());
+    for (auto *widget : QApplication::allWidgets())
+        widgets.append(widget);
+
+    for (const auto &widget : widgets) {
+        if (widget && widget->font().resolveMask() == 0)
+            widget->setFont(QFont());
+    }
 }
 
 QString systemFontFamily()
