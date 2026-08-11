@@ -82,6 +82,19 @@ long long indexOf(const SmfTrack &track, const SmfEvent &target)
     return it == track.events.end() ? -1 : (long long)(it - track.events.begin());
 }
 
+// A user-style combo pick: programmatic setCurrentIndex alone must not
+// re-target (it is how syncs restore), so drive the activated signal the
+// way a real pick does.
+bool pickChunkInCombo(QComboBox *combo, int target)
+{
+    const int comboIndex = combo->findData(target);
+    if (comboIndex < 0)
+        return false;
+    combo->setCurrentIndex(comboIndex);
+    QMetaObject::invokeMethod(combo, "activated", Q_ARG(int, comboIndex));
+    return combo->currentData().toInt() == target;
+}
+
 int runUiPass(const SongInfo &song, const QString &screenshotPath)
 {
     QString error;
@@ -580,17 +593,6 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             const int undoBase = doc.undoStack()->index();
             const int originalTrack = view.selectedTrack();
             const int selectionChunk = doc.smfTrackFor(originalTrack);
-            // A user-style combo pick: programmatic setCurrentIndex alone
-            // must not re-target (it is how syncs restore), so drive the
-            // activated signal the way a real pick does.
-            const auto pickChunkInCombo = [&](int target) {
-                const int comboIndex = chunkCombo->findData(target);
-                if (comboIndex < 0)
-                    return false;
-                chunkCombo->setCurrentIndex(comboIndex);
-                QMetaObject::invokeMethod(chunkCombo, "activated", Q_ARG(int, comboIndex));
-                return chunkCombo->currentData().toInt() == target;
-            };
             int unowned = -1;
             for (int t = 0; t < int(doc.smf().tracks.size()) && unowned < 0; t++) {
                 bool owned = false;
@@ -599,9 +601,10 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 if (!owned)
                     unowned = t;
             }
-            const int added = unowned >= 0 && selectionChunk >= 0 && pickChunkInCombo(unowned)
-                                  ? doc.addTrack(0)
-                                  : -1;
+            const int added =
+                unowned >= 0 && selectionChunk >= 0 && pickChunkInCombo(chunkCombo, unowned)
+                    ? doc.addTrack(0)
+                    : -1;
             if (added < 0) {
                 fail("remap-follow probes found no unowned chunk to anchor on");
             } else {
@@ -622,21 +625,36 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 marker.data1 = 42;
                 doc.insertRawEvent(addedChunk, marker);
                 if (addedChunk != int(doc.smf().tracks.size()) - 1 ||
-                    !pickChunkInCombo(addedChunk)) {
+                    !pickChunkInCombo(chunkCombo, addedChunk)) {
                     fail("remap-follow probes could not anchor on the added chunk");
                 } else {
-                    doc.deleteTrack(0);
-                    if (chunkCombo->currentData().toInt() != addedChunk - 1)
-                        fail("deleting an earlier track did not shift the anchored chunk");
-                    if (countMatching(doc.smf().tracks[addedChunk - 1], marker) != 1)
-                        fail("the followed chunk does not hold the anchored events");
-                    if (model->rowCount() !=
-                        int(doc.smf().tracks[addedChunk - 1].events.size()) + 1)
-                        fail("the table does not show the followed chunk's events");
-                    doc.undoStack()->undo();
-                    if (chunkCombo->currentData().toInt() != addedChunk ||
-                        countMatching(doc.smf().tracks[addedChunk], marker) != 1)
-                        fail("undoing the delete did not follow the chunk back");
+                    // The victim must own a chunk strictly between 0 and
+                    // the anchor: an engine track living in chunk 0 is
+                    // stripped in place by deleteTrack (no chunk removed,
+                    // identity remap), which would not shift the anchor
+                    // even when everything works.
+                    int victim = -1;
+                    for (int e = 0; e < doc.engineTrackCount() && victim < 0; e++) {
+                        const int c = doc.smfTrackFor(e);
+                        if (c > 0 && c < addedChunk)
+                            victim = e;
+                    }
+                    if (victim < 0) {
+                        fail("no deletable chunk below the anchor for the shift probe");
+                    } else {
+                        doc.deleteTrack(victim);
+                        if (chunkCombo->currentData().toInt() != addedChunk - 1)
+                            fail("deleting an earlier track did not shift the anchored chunk");
+                        if (countMatching(doc.smf().tracks[addedChunk - 1], marker) != 1)
+                            fail("the followed chunk does not hold the anchored events");
+                        if (model->rowCount() !=
+                            int(doc.smf().tracks[addedChunk - 1].events.size()) + 1)
+                            fail("the table does not show the followed chunk's events");
+                        doc.undoStack()->undo();
+                        if (chunkCombo->currentData().toInt() != addedChunk ||
+                            countMatching(doc.smf().tracks[addedChunk], marker) != 1)
+                            fail("undoing the delete did not follow the chunk back");
+                    }
 
                     // Deleting the viewed chunk's own track: the anchor is
                     // gone; the list must land on a valid chunk (no crash,
@@ -675,7 +693,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                         break;
                     }
                 }
-                if (other >= 0 && pickChunkInCombo(unowned)) {
+                if (other >= 0 && pickChunkInCombo(chunkCombo, unowned)) {
                     auto conn = std::make_shared<QMetaObject::Connection>();
                     *conn = QObject::connect(&doc, &SongDocument::tracksRemapped, &view,
                                              [conn, &view, other](const TrackRemap &) {
@@ -695,7 +713,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             while (doc.undoStack()->index() > undoBase && doc.undoStack()->canUndo())
                 doc.undoStack()->undo();
             view.selectTrack(originalTrack);
-            if (selectionChunk >= 0 && !pickChunkInCombo(selectionChunk))
+            if (selectionChunk >= 0 && !pickChunkInCombo(chunkCombo, selectionChunk))
                 fail("could not restore the pre-probe chunk anchor");
         }
         // For the screenshot: playing, so the follow-scroll brings the
@@ -767,14 +785,7 @@ int runStaleChunkPass(const SongInfo &bigSong, const SongInfo &smallSong)
     }
 
     const int lastChunk = int(doc.smf().tracks.size()) - 1;
-    const int comboIndex = chunkCombo->findData(lastChunk);
-    if (comboIndex < 0) {
-        fail("last chunk missing from the combo");
-        return failures;
-    }
-    chunkCombo->setCurrentIndex(comboIndex);
-    QMetaObject::invokeMethod(chunkCombo, "activated", Q_ARG(int, comboIndex));
-    if (chunkCombo->currentData().toInt() != lastChunk) {
+    if (!pickChunkInCombo(chunkCombo, lastChunk)) {
         fail("could not anchor on the last chunk");
         return failures;
     }

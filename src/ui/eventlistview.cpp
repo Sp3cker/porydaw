@@ -1074,7 +1074,6 @@ void EventListView::setDocument(SongDocument *document)
         if (m_document)
             disconnect(m_document, nullptr, this, nullptr);
         m_document = document;
-        m_documentRevision = m_document ? m_document->revision() : 0;
         m_currentChunk = -1;
         m_chunkRemapped = false;
         if (m_document) {
@@ -1083,6 +1082,9 @@ void EventListView::setDocument(SongDocument *document)
                     &EventListView::onTracksRemapped);
         }
     }
+    // Outside the pointer check: a same-pointer reattach after an in-place
+    // reload must adopt the reload's revision or the sync below is refused.
+    m_documentRevision = m_document ? m_document->revision() : 0;
     rebuildChunkCombo();
     syncTrackSelection();
 }
@@ -1101,29 +1103,30 @@ void EventListView::refresh()
     // flags/setData bounds-check against the live event vector).
     if (isHidden())
         return;
+    // This refresh reads post-mutation state, so adopt its revision up
+    // front — the guard in syncTrackSelection only exists to refuse syncs
+    // between the revision bump and this refresh, and must not refuse the
+    // fallback re-anchors below.
+    m_documentRevision = m_document->revision();
     if (m_chunkRemapped) {
         m_chunkRemapped = false;
         if (m_currentChunk >= 0) {
             // The remap already translated the anchored chunk to its new
             // index (add/delete/move, chaining while hidden): rebuild the
             // combo's stale entries and land on the followed chunk.
-            m_settingCurrent = true;
             rebuildChunkCombo(); // restores m_currentChunk by its data value
-            m_settingCurrent = false;
         } else {
-            // The viewed chunk's track was deleted; fall back to the roll's
-            // selected track (this refresh reads post-mutation state, so
-            // accept the new revision for the sync).
-            m_documentRevision = m_document->revision();
-            m_settingCurrent = true;
+            // The viewed chunk's track was deleted; fall back to the
+            // roll's selected track.
             rebuildChunkCombo();
-            m_settingCurrent = false;
             syncTrackSelection();
         }
     } else if (m_chunk->count() != int(m_document->smf().tracks.size())) {
         // The chunk numbering shifted without a remap notification (an
         // unpublished reload): re-anchor on the roll's selected track
-        // rather than trust the raw index.
+        // rather than trust the raw index. (An equal-count reload is
+        // invisible to this heuristic; callers detach and reattach for
+        // those.)
         rebuildChunkCombo();
         syncTrackSelection();
     } else {
@@ -1157,7 +1160,6 @@ void EventListView::refresh()
     }
     updateCountLabel();
     updatePlayRow();
-    m_documentRevision = m_document->revision();
 }
 
 void EventListView::syncTrackSelection()
@@ -1255,7 +1257,7 @@ void EventListView::updatePlayRow()
 void EventListView::jumpCursorToRow(int row)
 {
     const int chunk = m_model->chunk();
-    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
+    if (!validChunk(chunk))
         return;
     const SmfTrack &track = m_document->smf().tracks[chunk];
     uint64_t tick = 0;
@@ -1302,7 +1304,7 @@ void EventListView::changeEvent(QEvent *event)
 void EventListView::reorderEvent(size_t from, size_t dest)
 {
     const int chunk = m_model->chunk();
-    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
+    if (!validChunk(chunk))
         return;
     size_t first, last;
     if (!m_document->rawEventMoveBounds(chunk, from, &first, &last))
@@ -1329,7 +1331,7 @@ void EventListView::reorderEvent(size_t from, size_t dest)
 long long EventListView::moveDestForRow(int row, int delta, QString *why) const
 {
     const int chunk = m_model->chunk();
-    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
+    if (!validChunk(chunk))
         return -1;
     const long long src = m_model->eventIndexForRow(row);
     const long long target = m_model->eventIndexForRow(row + delta);
@@ -1502,15 +1504,10 @@ void EventListView::updateFilterText()
     m_filter->setText(text);
 }
 
-// The chunk range checks here and below (insertCopyOfRow, showContextMenu,
-// deleteSelected, updateCountLabel, selectEventRow): the anchored chunk can
-// outlive the tracks vector it indexes when the document shrinks without a
-// remap notification (an unpublished in-place reload), so every raw
-// tracks[chunk] read re-validates against the live size.
 void EventListView::addEvent()
 {
     const int chunk = currentChunk();
-    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
+    if (!validChunk(chunk))
         return;
     const auto &events = m_document->smf().tracks[chunk].events;
     SmfEvent ev;
@@ -1530,7 +1527,7 @@ void EventListView::addEvent()
 void EventListView::insertCopyOfRow(int row)
 {
     const int chunk = currentChunk();
-    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
+    if (!validChunk(chunk))
         return;
     const auto &events = m_document->smf().tracks[chunk].events;
     const long long src = m_model->eventIndexForRow(row);
@@ -1544,7 +1541,7 @@ void EventListView::insertCopyOfRow(int row)
 void EventListView::showContextMenu(const QPoint &pos)
 {
     const int chunk = currentChunk();
-    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
+    if (!validChunk(chunk))
         return;
     const QModelIndex idx = m_table->indexAt(pos);
     // Right-clicking outside the selection focuses that row first, exactly
@@ -1624,8 +1621,7 @@ void EventListView::showContextMenu(const QPoint &pos)
 void EventListView::deleteSelected()
 {
     const int chunk = currentChunk();
-    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()) ||
-        !m_table->selectionModel())
+    if (!validChunk(chunk) || !m_table->selectionModel())
         return;
     std::vector<size_t> indices;
     const QModelIndexList rows = m_table->selectionModel()->selectedRows();
@@ -1650,7 +1646,7 @@ void EventListView::deleteSelected()
 void EventListView::updateCountLabel()
 {
     const int chunk = currentChunk();
-    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size())) {
+    if (!validChunk(chunk)) {
         m_count->clear();
         return;
     }
@@ -1667,10 +1663,18 @@ int EventListView::currentChunk() const
     return m_currentChunk;
 }
 
+bool EventListView::validChunk(int chunk) const
+{
+    // The anchored chunk can outlive the tracks vector it indexes when the
+    // document shrinks without a remap notification (an unpublished
+    // in-place reload), so every raw tracks[chunk] read re-validates
+    // against the live size.
+    return m_document && chunk >= 0 && chunk < int(m_document->smf().tracks.size());
+}
+
 void EventListView::selectEventRow(int chunk, const SmfEvent &target)
 {
-    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()) ||
-        m_model->chunk() != chunk)
+    if (!validChunk(chunk) || m_model->chunk() != chunk)
         return;
     const auto &events = m_document->smf().tracks[chunk].events;
     for (size_t i = 0; i < events.size(); i++) {

@@ -72,6 +72,7 @@ class EventListView : public QWidget
     void updatePlayRow();
     void jumpCursorToRow(int row);
     int currentChunk() const;
+    bool validChunk(int chunk) const;
     void selectEventRow(int chunk, const SmfEvent &event);
     void onTracksRemapped(const TrackRemap &remap);
 
@@ -81,7 +82,10 @@ class EventListView : public QWidget
     // m_currentChunk. SongView adjusts its selected engine slot around the
     // same mutations, so a selection notification arriving between the
     // revision bump and this view's refresh must not replace the anchored
-    // SMF owner before the remap has translated it.
+    // SMF owner before the remap has translated it. (The window opens at
+    // publishMutation's bump; the transitional trackMoved signal fires
+    // before it, so a handler emitting a selection change from there would
+    // slip past this guard — none does today.)
     uint64_t m_documentRevision = 0;
     eventlist::EventTableModel *m_model;
     QTableView *m_table;
