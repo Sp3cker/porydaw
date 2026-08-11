@@ -1909,6 +1909,10 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
 bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString &label)
 {
     m_persistSession = false;
+    // Same registry-persisted-filter hole as runRegisterActionCheck above —
+    // worse here, because a filter that hides the fixture makes the negative
+    // !listed probe pass vacuously instead of flaking.
+    m_songList->restoreFilters(QString(), 0, QString());
     if (!openProjectDir(projectRoot, /*interactive=*/false)) {
         std::fprintf(stderr, "onboardcheck: project failed to open in MainWindow\n");
         return false;

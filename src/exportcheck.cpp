@@ -123,6 +123,8 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
     QByteArray wav;
     if (f.open(QIODevice::ReadOnly)) {
         wav = f.readAll();
+        // Not redundant: f stays in scope past the remove() and re-export of
+        // the same path below, and an open handle blocks both on Windows.
         f.close();
     }
     const uint64_t dataSize = totals.totalSamples * 4;

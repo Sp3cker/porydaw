@@ -58,9 +58,14 @@ copy_tree "$SRC" "$TMPROOT/base"
 [ -n "$FORK" ] && copy_tree "$FORK" "$TMPROOT/forkbase"
 
 # The decomp build names host tools with .exe on Windows. Pass an explicit
-# source-tree path so scratch copies work on either platform.
+# source-tree path so scratch copies work on either platform. The .exe probe
+# only runs under a Windows shell: a POSIX host cannot execute a PE binary,
+# so a stray .exe there must fall through to the not-found skip below rather
+# than shadow (or masquerade as) a native build.
 MID2AGB="$SRC/tools/mid2agb/mid2agb"
-[ -f "$MID2AGB.exe" ] && MID2AGB="$MID2AGB.exe"
+case "$(uname -s)" in
+MINGW* | MSYS* | CYGWIN*) [ -f "$MID2AGB.exe" ] && MID2AGB="$MID2AGB.exe" ;;
+esac
 mid2agb_args=()
 [ -f "$MID2AGB" ] && mid2agb_args=("$MID2AGB")
 
@@ -91,12 +96,12 @@ run() { # name base|- harness-args... (SCRATCH placeholder = fresh copy of base)
     report "$name" $?
 }
 
-run roundtrip        base --roundtrip SCRATCH "${mid2agb_args[@]}"
+run roundtrip        base --roundtrip SCRATCH ${mid2agb_args[@]+"${mid2agb_args[@]}"}
 run editcheck        base --editcheck SCRATCH
 run viewcheck        base --viewcheck SCRATCH
 run selftest         base --selftest SCRATCH mus_littleroot
-run savecheck        base --savecheck SCRATCH mus_abandoned_ship "${mid2agb_args[@]}"
-run onboardcheck     base --onboardcheck SCRATCH "${mid2agb_args[@]}"
+run savecheck        base --savecheck SCRATCH mus_abandoned_ship ${mid2agb_args[@]+"${mid2agb_args[@]}"}
+run onboardcheck     base --onboardcheck SCRATCH ${mid2agb_args[@]+"${mid2agb_args[@]}"}
 run vgcheck          base --vgcheck SCRATCH mus_b_factory
 run vgsavecheck      base --vgsavecheck SCRATCH mus_abandoned_ship
 run exportcheck-loop base --exportcheck SCRATCH mus_abandoned_ship
