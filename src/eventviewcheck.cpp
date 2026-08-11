@@ -651,7 +651,8 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                     } else {
                         doc.deleteTrack(addedSlot);
                         const int landed = chunkCombo->currentData().toInt();
-                        if (landed < 0 || landed >= int(doc.smf().tracks.size()))
+                        if (chunkCombo->currentIndex() < 0 || landed < 0 ||
+                            landed >= int(doc.smf().tracks.size()))
                             fail("deleting the viewed chunk left no valid chunk");
                         else if (model->rowCount() !=
                                  int(doc.smf().tracks[landed].events.size()) + 1)
