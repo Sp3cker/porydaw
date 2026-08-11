@@ -310,7 +310,11 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   row between same-tick siblings (the drop indicator only appears where the
   drop is legal), nudge with Alt+Up/Down (rebindable), or use the context
   menu's "Move up/down within tick". Reorders never cross a tick boundary
-  (the Tick cell retimes) and never unpin the canonical class order.
+  (the Tick cell retimes) and never unpin the canonical class order. The
+  list is anchored to its chunk, not to a chunk number: track adds, deletes,
+  and moves (interactive or via undo/redo) re-index the chunks and the list
+  follows its chunk to the new index; deleting the viewed chunk's own track
+  falls back to the selected track's chunk.
 - **Typeface preference:** the UI ships with the bundled Atkinson Hyperlegible
   scale (Body 1.25× the platform's base font size, Caption at the base size),
   rendered unhinted and antialiased — hinting distorts the letterforms on

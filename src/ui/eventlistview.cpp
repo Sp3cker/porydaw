@@ -1074,10 +1074,13 @@ void EventListView::setDocument(SongDocument *document)
         if (m_document)
             disconnect(m_document, nullptr, this, nullptr);
         m_document = document;
-        m_pendingChunk = -1;
+        m_documentRevision = m_document ? m_document->revision() : 0;
+        m_currentChunk = -1;
+        m_chunkRemapped = false;
         if (m_document) {
             connect(m_document, &SongDocument::documentChanged, this, &EventListView::refresh);
-            connect(m_document, &SongDocument::trackMoved, this, &EventListView::onTrackMoved);
+            connect(m_document, &SongDocument::tracksRemapped, this,
+                    &EventListView::onTracksRemapped);
         }
     }
     rebuildChunkCombo();
@@ -1087,6 +1090,7 @@ void EventListView::setDocument(SongDocument *document)
 void EventListView::refresh()
 {
     if (!m_document) {
+        m_documentRevision = 0;
         m_model->setSource(nullptr, -1);
         m_chunk->clear();
         updateCountLabel();
@@ -1097,27 +1101,31 @@ void EventListView::refresh()
     // flags/setData bounds-check against the live event vector).
     if (isHidden())
         return;
-    if (m_chunk->count() != int(m_document->smf().tracks.size())) {
-        // A track add/delete (or file reload) shifted the chunk numbering,
-        // so the old combo index may now name a different chunk; re-anchor
-        // on the roll's selected track rather than trust the raw index.
-        m_pendingChunk = -1;
+    if (m_chunkRemapped) {
+        m_chunkRemapped = false;
+        if (m_currentChunk >= 0) {
+            // The remap already translated the anchored chunk to its new
+            // index (add/delete/move, chaining while hidden): rebuild the
+            // combo's stale entries and land on the followed chunk.
+            m_settingCurrent = true;
+            rebuildChunkCombo(); // restores m_currentChunk by its data value
+            m_settingCurrent = false;
+        } else {
+            // The viewed chunk's track was deleted; fall back to the roll's
+            // selected track (this refresh reads post-mutation state, so
+            // accept the new revision for the sync).
+            m_documentRevision = m_document->revision();
+            m_settingCurrent = true;
+            rebuildChunkCombo();
+            m_settingCurrent = false;
+            syncTrackSelection();
+        }
+    } else if (m_chunk->count() != int(m_document->smf().tracks.size())) {
+        // The chunk numbering shifted without a remap notification (an
+        // unpublished reload): re-anchor on the roll's selected track
+        // rather than trust the raw index.
         rebuildChunkCombo();
         syncTrackSelection();
-    } else if (m_pendingChunk >= 0) {
-        // A track move permuted the chunk numbering at constant count (the
-        // count check can't see it): follow the anchored chunk to its new
-        // index and refresh the combo's stale Track labels.
-        const int target = m_pendingChunk;
-        m_pendingChunk = -1;
-        rebuildChunkCombo();
-        const int idx = m_chunk->findData(target);
-        if (idx >= 0) {
-            m_syncing = true;
-            m_chunk->setCurrentIndex(idx);
-            m_syncing = false;
-            m_model->setSource(m_document, target);
-        }
     } else {
         const QModelIndex current = m_table->currentIndex();
         QList<int> selectedRows;
@@ -1149,11 +1157,16 @@ void EventListView::refresh()
     }
     updateCountLabel();
     updatePlayRow();
+    m_documentRevision = m_document->revision();
 }
 
 void EventListView::syncTrackSelection()
 {
-    if (m_syncing || !m_document || isHidden())
+    // The revision guard: between a mutation and this view's refresh, the
+    // selection may already speak the new chunk numbering while
+    // m_currentChunk still holds the old owner awaiting its remap — a sync
+    // in that window would clobber the anchor with the wrong chunk.
+    if (m_syncing || !m_document || isHidden() || m_document->revision() != m_documentRevision)
         return;
     const int chunk = m_document->smfTrackFor(m_sv->selectedTrack());
     if (chunk < 0 || chunk == currentChunk())
@@ -1164,31 +1177,23 @@ void EventListView::syncTrackSelection()
     m_syncing = true;
     m_chunk->setCurrentIndex(comboIndex);
     m_syncing = false;
+    m_currentChunk = chunk;
     m_model->setSource(m_document, chunk);
     updateCountLabel();
     updatePlayRow();
 }
 
-void EventListView::onTrackMoved(int fromChunk, int toChunk)
+void EventListView::onTracksRemapped(const TrackRemap &remap)
 {
-    // Remap the anchored chunk through the rotation, into m_pendingChunk
-    // for the documentChanged refresh that follows (the document is
-    // mid-mutation here — no reads, no rebuild yet). Starts from a prior
-    // pending value so moves chain while the page is hidden and refreshes
-    // are skipped.
-    const int cur = m_pendingChunk >= 0 ? m_pendingChunk : currentChunk();
-    if (cur < 0)
-        return;
-    int next = cur;
-    if (cur == fromChunk)
-        next = toChunk;
-    else if (fromChunk < toChunk && cur > fromChunk && cur <= toChunk)
-        next = cur - 1;
-    else if (toChunk < fromChunk && cur >= toChunk && cur < fromChunk)
-        next = cur + 1;
-    // Set even when the index is unchanged: chunks elsewhere in the rotation
-    // swapped occupants, so the combo's Track labels need the rebuild.
-    m_pendingChunk = next;
+    // Translate the anchored chunk to its post-mutation index — a table
+    // lookup, so adds and deletes follow as well as moves. The document is
+    // mid-publication here (no reads, no rebuild yet); the documentChanged
+    // refresh consumes the flag. Remaps chain while the page is hidden and
+    // refreshes are skipped.
+    m_currentChunk = m_currentChunk >= 0 && size_t(m_currentChunk) < remap.smfTrackMap.size()
+                         ? remap.smfTrackMap[size_t(m_currentChunk)]
+                         : -1;
+    m_chunkRemapped = true;
 }
 
 void EventListView::setPlayheadTick(double tick, bool playing)
@@ -1425,16 +1430,18 @@ void EventListView::rebuildChunkCombo()
         const int restore = m_chunk->findData(previous);
         m_chunk->setCurrentIndex(restore >= 0 ? restore : 0);
     }
+    m_currentChunk = m_chunk->currentIndex() >= 0 ? m_chunk->currentData().toInt() : -1;
     m_syncing = false;
     m_model->setSource(m_document, currentChunk());
     updateCountLabel();
     updatePlayRow();
 }
 
-void EventListView::chunkPicked(int)
+void EventListView::chunkPicked(int comboIndex)
 {
     if (m_syncing)
         return;
+    m_currentChunk = comboIndex >= 0 ? m_chunk->itemData(comboIndex).toInt() : -1;
     m_model->setSource(m_document, currentChunk());
     updateCountLabel();
     updatePlayRow();
@@ -1495,10 +1502,15 @@ void EventListView::updateFilterText()
     m_filter->setText(text);
 }
 
+// The chunk range checks here and below (insertCopyOfRow, showContextMenu,
+// deleteSelected, updateCountLabel, selectEventRow): the anchored chunk can
+// outlive the tracks vector it indexes when the document shrinks without a
+// remap notification (an unpublished in-place reload), so every raw
+// tracks[chunk] read re-validates against the live size.
 void EventListView::addEvent()
 {
     const int chunk = currentChunk();
-    if (!m_document || chunk < 0)
+    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
         return;
     const auto &events = m_document->smf().tracks[chunk].events;
     SmfEvent ev;
@@ -1518,7 +1530,7 @@ void EventListView::addEvent()
 void EventListView::insertCopyOfRow(int row)
 {
     const int chunk = currentChunk();
-    if (!m_document || chunk < 0)
+    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
         return;
     const auto &events = m_document->smf().tracks[chunk].events;
     const long long src = m_model->eventIndexForRow(row);
@@ -1532,7 +1544,7 @@ void EventListView::insertCopyOfRow(int row)
 void EventListView::showContextMenu(const QPoint &pos)
 {
     const int chunk = currentChunk();
-    if (!m_document || chunk < 0)
+    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()))
         return;
     const QModelIndex idx = m_table->indexAt(pos);
     // Right-clicking outside the selection focuses that row first, exactly
@@ -1612,7 +1624,8 @@ void EventListView::showContextMenu(const QPoint &pos)
 void EventListView::deleteSelected()
 {
     const int chunk = currentChunk();
-    if (!m_document || chunk < 0 || !m_table->selectionModel())
+    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()) ||
+        !m_table->selectionModel())
         return;
     std::vector<size_t> indices;
     const QModelIndexList rows = m_table->selectionModel()->selectedRows();
@@ -1637,7 +1650,7 @@ void EventListView::deleteSelected()
 void EventListView::updateCountLabel()
 {
     const int chunk = currentChunk();
-    if (!m_document || chunk < 0) {
+    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size())) {
         m_count->clear();
         return;
     }
@@ -1649,12 +1662,15 @@ void EventListView::updateCountLabel()
 
 int EventListView::currentChunk() const
 {
-    return m_chunk->count() > 0 ? m_chunk->currentData().toInt() : -1;
+    // The tracked member, not the combo's currentData: the combo's entries
+    // go stale between a mutation and the refresh that rebuilds them.
+    return m_currentChunk;
 }
 
 void EventListView::selectEventRow(int chunk, const SmfEvent &target)
 {
-    if (!m_document || m_model->chunk() != chunk)
+    if (!m_document || chunk < 0 || chunk >= int(m_document->smf().tracks.size()) ||
+        m_model->chunk() != chunk)
         return;
     const auto &events = m_document->smf().tracks[chunk].events;
     for (size_t i = 0; i < events.size(); i++) {

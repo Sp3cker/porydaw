@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QWidget>
+#include <cstdint>
 
 class QComboBox;
 class QLabel;
@@ -10,6 +11,7 @@ class QToolButton;
 class SongDocument;
 class SongView;
 struct SmfEvent;
+struct TrackRemap;
 
 namespace eventlist {
 class EventTableModel;
@@ -71,10 +73,16 @@ class EventListView : public QWidget
     void jumpCursorToRow(int row);
     int currentChunk() const;
     void selectEventRow(int chunk, const SmfEvent &event);
-    void onTrackMoved(int fromChunk, int toChunk);
+    void onTracksRemapped(const TrackRemap &remap);
 
     SongView *m_sv;
     SongDocument *m_document = nullptr;
+    // The newest document revision whose owner mapping is reflected in
+    // m_currentChunk. SongView adjusts its selected engine slot around the
+    // same mutations, so a selection notification arriving between the
+    // revision bump and this view's refresh must not replace the anchored
+    // SMF owner before the remap has translated it.
+    uint64_t m_documentRevision = 0;
     eventlist::EventTableModel *m_model;
     QTableView *m_table;
     QComboBox *m_chunk;
@@ -84,11 +92,15 @@ class EventListView : public QWidget
     bool m_syncing = false;
     bool m_settingCurrent = false; // programmatic row changes must not
                                    // commit the edit cursor
-    // Where the current chunk landed after track moves (trackMoved remaps
-    // it, chaining while the page is hidden); -1 = no move pending. refresh
-    // consumes it — a reorder keeps the chunk count, so the count heuristic
-    // alone would keep showing the old index's new occupant.
-    int m_pendingChunk = -1;
+    // The selected raw SMF owner, tracked independently of the combo (whose
+    // entries go stale between a mutation and the refresh that rebuilds
+    // them). tracksRemapped translates it through every add/delete/move —
+    // chaining while the page is hidden — so it always names the same
+    // chunk's events; -1 = the owner was deleted.
+    int m_currentChunk = -1;
+    // A remap has updated m_currentChunk and the documentChanged refresh
+    // must rebuild the combo and table from that owner.
+    bool m_chunkRemapped = false;
     double m_playTick = -1.0; // last playhead tick pushed (-1 = none)
     bool m_playing = false;
     bool m_followPlayhead = true; // scroll to the playing row (transport bar)

@@ -16,6 +16,7 @@
 #include <QStyleOptionViewItem>
 #include <QTableView>
 #include <QTemporaryDir>
+#include <QToolButton>
 #include <algorithm>
 #include <cstdio>
 #include <memory>
@@ -40,7 +41,10 @@
 // clears the highlight instead of restoring it onto the surviving rows;
 // a single-row delete keeps its current row so Delete can be spammed.
 // The app-wide Follow Playhead toggle stops the running scrollTo while
-// the tint keeps tracking.
+// the tint keeps tracking. The list follows its anchored chunk across
+// track adds, deletes, and moves (and refuses mid-mutation selection
+// clobbers); a final pass drives the guarded entry points at a chunk
+// index gone stale through an unpublished in-place reload.
 
 namespace {
 
@@ -567,6 +571,132 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
             for (int i = 0; i < padded && doc.undoStack()->canUndo(); i++)
                 doc.undoStack()->undo();
         }
+        {
+            // Remap-following across track add and delete: the list keeps
+            // showing the SAME chunk's events, not the old numeric index's
+            // new occupant and not the roll's selection. Anchoring on a
+            // chunk the selection does not own (the tempo/meta chunk) is
+            // what separates the two.
+            const int undoBase = doc.undoStack()->index();
+            const int originalTrack = view.selectedTrack();
+            const int selectionChunk = doc.smfTrackFor(originalTrack);
+            // A user-style combo pick: programmatic setCurrentIndex alone
+            // must not re-target (it is how syncs restore), so drive the
+            // activated signal the way a real pick does.
+            const auto pickChunkInCombo = [&](int target) {
+                const int comboIndex = chunkCombo->findData(target);
+                if (comboIndex < 0)
+                    return false;
+                chunkCombo->setCurrentIndex(comboIndex);
+                QMetaObject::invokeMethod(chunkCombo, "activated", Q_ARG(int, comboIndex));
+                return chunkCombo->currentData().toInt() == target;
+            };
+            int unowned = -1;
+            for (int t = 0; t < int(doc.smf().tracks.size()) && unowned < 0; t++) {
+                bool owned = false;
+                for (int e = 0; e < doc.engineTrackCount(); e++)
+                    owned = owned || doc.smfTrackFor(e) == t;
+                if (!owned)
+                    unowned = t;
+            }
+            const int added = unowned >= 0 && selectionChunk >= 0 && pickChunkInCombo(unowned)
+                                  ? doc.addTrack(0)
+                                  : -1;
+            if (added < 0) {
+                fail("remap-follow probes found no unowned chunk to anchor on");
+            } else {
+                // Adding a track (a new chunk, a new combo entry) must not
+                // move the list off its anchored chunk.
+                if (chunkCombo->currentData().toInt() != unowned)
+                    fail("adding a track moved the list off its anchored chunk");
+
+                // The added chunk sits last, so deleting an earlier track
+                // shifts its index down by one: the list must follow the
+                // chunk to its new index (and back on undo). A marker CC
+                // identifies the chunk by content, not by number.
+                const int addedChunk = doc.smfTrackFor(added);
+                SmfEvent marker;
+                marker.tick = 0;
+                marker.status = uint8_t(0xB0 | doc.channelFor(added));
+                marker.data0 = 7;
+                marker.data1 = 42;
+                doc.insertRawEvent(addedChunk, marker);
+                if (addedChunk != int(doc.smf().tracks.size()) - 1 ||
+                    !pickChunkInCombo(addedChunk)) {
+                    fail("remap-follow probes could not anchor on the added chunk");
+                } else {
+                    doc.deleteTrack(0);
+                    if (chunkCombo->currentData().toInt() != addedChunk - 1)
+                        fail("deleting an earlier track did not shift the anchored chunk");
+                    if (countMatching(doc.smf().tracks[addedChunk - 1], marker) != 1)
+                        fail("the followed chunk does not hold the anchored events");
+                    if (model->rowCount() !=
+                        int(doc.smf().tracks[addedChunk - 1].events.size()) + 1)
+                        fail("the table does not show the followed chunk's events");
+                    doc.undoStack()->undo();
+                    if (chunkCombo->currentData().toInt() != addedChunk ||
+                        countMatching(doc.smf().tracks[addedChunk], marker) != 1)
+                        fail("undoing the delete did not follow the chunk back");
+
+                    // Deleting the viewed chunk's own track: the anchor is
+                    // gone; the list must land on a valid chunk (no crash,
+                    // no dangling index).
+                    int addedSlot = -1;
+                    for (int e = 0; e < doc.engineTrackCount(); e++) {
+                        if (doc.smfTrackFor(e) == addedChunk)
+                            addedSlot = e;
+                    }
+                    if (addedSlot < 0) {
+                        fail("the added chunk lost its engine slot");
+                    } else {
+                        doc.deleteTrack(addedSlot);
+                        const int landed = chunkCombo->currentData().toInt();
+                        if (landed < 0 || landed >= int(doc.smf().tracks.size()))
+                            fail("deleting the viewed chunk left no valid chunk");
+                        else if (model->rowCount() !=
+                                 int(doc.smf().tracks[landed].events.size()) + 1)
+                            fail("the fallback chunk's events are not shown");
+                        doc.undoStack()->undo();
+                    }
+                }
+
+                // The revision guard: a selection change arriving between
+                // the remap notification and this view's refresh speaks the
+                // new numbering and must not replace the anchor. Fire one
+                // from the remap itself (this connection runs after the
+                // view's — it was connected later). The target must differ
+                // from the current selection or selectTrack no-ops and the
+                // probe proves nothing.
+                int other = -1;
+                for (int e = 0; e < doc.engineTrackCount(); e++) {
+                    if (e != view.selectedTrack() && doc.smfTrackFor(e) >= 0) {
+                        other = e;
+                        break;
+                    }
+                }
+                if (other >= 0 && pickChunkInCombo(unowned)) {
+                    auto conn = std::make_shared<QMetaObject::Connection>();
+                    *conn = QObject::connect(&doc, &SongDocument::tracksRemapped, &view,
+                                             [conn, &view, other](const TrackRemap &) {
+                                                 QObject::disconnect(*conn);
+                                                 view.selectTrack(other);
+                                             });
+                    doc.addTrack(0);
+                    QObject::disconnect(*conn);
+                    if (chunkCombo->currentData().toInt() != unowned)
+                        fail("a mid-mutation selection change clobbered the anchored chunk");
+                    doc.undoStack()->undo();
+                } else {
+                    fail("revision-guard probe found no second track to select");
+                }
+            }
+            // Leave the song — and the view's anchor — as found.
+            while (doc.undoStack()->index() > undoBase && doc.undoStack()->canUndo())
+                doc.undoStack()->undo();
+            view.selectTrack(originalTrack);
+            if (selectionChunk >= 0 && !pickChunkInCombo(selectionChunk))
+                fail("could not restore the pre-probe chunk anchor");
+        }
         // For the screenshot: playing, so the follow-scroll brings the
         // tinted row into view (also exercises the scrollTo path).
         events->setPlayheadTick(double(markerTick), true);
@@ -588,6 +718,98 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
     view.applyViewState(state);
     if (view.eventListVisible())
         fail("applyViewState did not restore the roll");
+
+    view.setDocument(nullptr);
+    view.setSong(nullptr, nullptr);
+    return failures;
+}
+
+// An unpublished in-place reload (SongDocument::load emits nothing) leaves
+// the view's anchored chunk — and the combo and model behind it — indexing
+// a tracks vector that may have shrunk. Every guarded entry point must bail
+// instead of reading tracks[] out of range; the guard is the observable
+// (ASAN turns a miss into an abort), plus the document coming through
+// byte-identical. Anchors on the big song's last chunk, then loads the
+// small song into the same document.
+int runStaleChunkPass(const SongInfo &bigSong, const SongInfo &smallSong)
+{
+    QString error;
+    SongDocument doc;
+    if (!doc.load(bigSong, &error)) {
+        std::fprintf(stderr, "eventviewcheck: FAIL stale %s: %s\n", qUtf8Printable(bigSong.label),
+                     qUtf8Printable(error));
+        return 1;
+    }
+    auto tl = doc.buildTimeline(48000.0);
+
+    SongView view;
+    view.resize(1280, 800);
+    view.setSong(tl.get(), nullptr);
+    view.setDocument(&doc);
+    view.setEventListVisible(true);
+
+    int failures = 0;
+    auto fail = [&](const char *what) {
+        std::fprintf(stderr, "eventviewcheck: FAIL stale %s: %s\n", qUtf8Printable(bigSong.label),
+                     what);
+        failures++;
+    };
+
+    auto *table = view.findChild<QTableView *>(QStringLiteral("eventListTable"));
+    auto *chunkCombo = view.findChild<QComboBox *>(QStringLiteral("eventListChunk"));
+    auto *filterMenu = view.findChild<QMenu *>(QStringLiteral("eventListFilterMenu"));
+    auto *addButton = view.findChild<QToolButton *>(QStringLiteral("eventListAdd"));
+    auto *events = view.findChild<EventListView *>();
+    if (!table || !chunkCombo || !filterMenu || !addButton || !events) {
+        fail("event list widgets not found");
+        return failures;
+    }
+
+    const int lastChunk = int(doc.smf().tracks.size()) - 1;
+    const int comboIndex = chunkCombo->findData(lastChunk);
+    if (comboIndex < 0) {
+        fail("last chunk missing from the combo");
+        return failures;
+    }
+    chunkCombo->setCurrentIndex(comboIndex);
+    QMetaObject::invokeMethod(chunkCombo, "activated", Q_ARG(int, comboIndex));
+    if (chunkCombo->currentData().toInt() != lastChunk) {
+        fail("could not anchor on the last chunk");
+        return failures;
+    }
+
+    if (!doc.load(smallSong, &error)) {
+        std::fprintf(stderr, "eventviewcheck: FAIL stale %s: %s\n", qUtf8Printable(smallSong.label),
+                     qUtf8Printable(error));
+        return failures + 1;
+    }
+    if (lastChunk < int(doc.smf().tracks.size())) {
+        fail("small song not smaller than the anchored chunk index");
+        return failures;
+    }
+    const QByteArray baseline = doc.smf().write();
+
+    // Each guarded path once, at the stale anchor. insertCopyOfRow directly
+    // (public); addEvent through its toolbar button; deleteSelected through
+    // the Delete key; showContextMenu through the table's context-menu
+    // signal (the guard returns before the menu's blocking exec);
+    // updateCountLabel through a filter toggle.
+    events->insertCopyOfRow(0);
+    addButton->click();
+    QKeyEvent del(QEvent::KeyPress, Qt::Key_Delete, Qt::NoModifier);
+    QCoreApplication::sendEvent(table, &del);
+    QMetaObject::invokeMethod(table, "customContextMenuRequested", Q_ARG(QPoint, QPoint(4, 4)));
+    const QList<QAction *> filterActions = filterMenu->actions();
+    if (!filterActions.isEmpty()) {
+        filterActions.first()->setChecked(false);
+        filterActions.first()->setChecked(true);
+    }
+    QCoreApplication::processEvents(); // any queued mutation would land here
+
+    if (doc.smf().write() != baseline)
+        fail("a guarded path mutated the shrunken document");
+    if (doc.undoStack()->canUndo())
+        fail("a guarded path pushed an undo entry");
 
     view.setDocument(nullptr);
     view.setSong(nullptr, nullptr);
@@ -620,6 +842,10 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
 
     int checked = 0, failures = 0;
     bool uiChecked = false;
+    // The stale-chunk pass needs two songs with differing chunk counts;
+    // pick the extremes while the model pass loads everything anyway.
+    SongInfo bigSong, smallSong;
+    size_t bigChunks = 0, smallChunks = SIZE_MAX;
     for (const SongInfo &song : project.songs()) {
         if (!song.isPlayable())
             continue;
@@ -630,6 +856,14 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
                          qUtf8Printable(error));
             failures++;
             continue;
+        }
+        if (doc.smf().tracks.size() > bigChunks) {
+            bigChunks = doc.smf().tracks.size();
+            bigSong = song;
+        }
+        if (doc.smf().tracks.size() < smallChunks) {
+            smallChunks = doc.smf().tracks.size();
+            smallSong = song;
         }
         const QByteArray baseline = doc.smf().write();
         const int chunk = pickChunk(doc);
@@ -840,6 +1074,16 @@ int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong,
             failures += runUiPass(song, QString());
         }
         checked++;
+    }
+
+    if (bigChunks > smallChunks) {
+        failures += runStaleChunkPass(bigSong, smallSong);
+    } else {
+        // A silent skip would read as coverage; the fixture set must
+        // provide the differing chunk counts.
+        std::fprintf(stderr, "eventviewcheck: FAIL stale-chunk pass needs two songs "
+                             "with differing chunk counts\n");
+        failures++;
     }
 
     std::printf("eventviewcheck: %d songs in %lld ms\n", checked, (long long)timer.elapsed());
