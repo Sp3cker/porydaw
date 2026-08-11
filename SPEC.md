@@ -332,6 +332,20 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
 - Undo/redo across all document mutations, including `midi.cfg` property
   changes and voicegroup voice edits — song and voicegroup share one undo
   stack and one dirty/save state (they are one document to the user).
+- Undo-stack hygiene: an edit whose clamped result changes nothing (a move
+  pinned at tick 0 or a key rail, a velocity already at its target or clamp)
+  pushes no command, and a merged keyboard move gesture that returns every
+  note to its origin removes its command entirely — Ctrl+Z never replays
+  no-ops. Moves and resizes re-insert the note's own events (every unmodeled
+  byte survives); Duplicate Track copies only the source engine track's own
+  channel from a mixed-channel chunk.
+- Document contracts under the editing surfaces: every note-on carries a
+  transient `NoteId` (stable across move/resize/velocity/undo — never
+  serialized), the document exposes a `revision()` counter bumped once per
+  published mutation, batch APIs (`setNotesVelocities` — revision-checked and
+  all-or-nothing — and `moveLanePoints`) land as single undo entries, and a
+  `tracksRemapped` signal reports every chunk/engine ownership change with
+  its old→new map. `--editcheck` and `--noteidcheck` harnesses cover them.
 - MIDI file import: open an arbitrary external `.mid`, get a guided analysis pass —
   channels → tracks (warn > 16 or > polyphony budget), unmapped CCs flagged — then
   saved into the project as a new song file. Import silently drops same-tick

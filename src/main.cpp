@@ -14,6 +14,8 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong = QSt
 int runRoundTrip(const QString &projectRoot, const QString &mid2agbPath = QString());
 // editcheck.cpp; M2 undo-integrity check over every edit-operation type.
 int runEditCheck(const QString &projectRoot);
+// noteidcheck.cpp; NoteId parse/serialize/projection boundary check.
+int runNoteIdCheck(const QString &scratchDir);
 // savecheck.cpp; M2 edited-save check (writes into the project: use a copy).
 int runSaveCheck(const QString &projectRoot, const QString &songLabel,
                  const QString &mid2agbPath = QString());
@@ -182,6 +184,9 @@ int main(int argc, char *argv[])
     const int editCheck = args.indexOf(QStringLiteral("--editcheck"));
     if (editCheck >= 0 && editCheck + 1 < args.size())
         return runEditCheck(args[editCheck + 1]);
+    const int noteIdCheck = args.indexOf(QStringLiteral("--noteidcheck"));
+    if (noteIdCheck >= 0 && noteIdCheck + 1 < args.size())
+        return runNoteIdCheck(args[noteIdCheck + 1]);
     const int eventViewCheck = args.indexOf(QStringLiteral("--eventviewcheck"));
     if (eventViewCheck >= 0 && eventViewCheck + 1 < args.size()) {
         const QString song =

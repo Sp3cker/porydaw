@@ -28,6 +28,873 @@ bool tracksSorted(const SmfFile &smf)
     return true;
 }
 
+// The document contracts on synthetic fixtures: NoteId minting/preservation,
+// the revision counter, publication order (tracksRemapped before
+// documentChanged, exactly once per mutation), the batch APIs, and the
+// merged-move undo-entry rules.
+int documentContractFailures()
+{
+    int failures = 0;
+    auto fail = [&failures](const char *what) {
+        std::fprintf(stderr, "editcheck: FAIL document-contracts: %s\n", what);
+        failures++;
+    };
+    auto chEvent = [](uint8_t status, uint64_t tick, uint8_t d0, uint8_t d1) {
+        SmfEvent ev;
+        ev.tick = tick;
+        ev.status = status;
+        ev.data0 = d0;
+        ev.data1 = d1;
+        return ev;
+    };
+    auto meta = [](uint64_t tick, uint8_t type, QByteArray blob) {
+        SmfEvent ev;
+        ev.tick = tick;
+        ev.status = 0xFF;
+        ev.metaType = type;
+        ev.blob = std::move(blob);
+        return ev;
+    };
+
+    // Conductor + a channel-0 chunk whose two note-ons are byte-identical
+    // apart from velocity and share pairing territory (both end candidates
+    // on one key) + a channel-1 chunk, so the fixture has two engine tracks.
+    SmfFile smf;
+    smf.format = 1;
+    smf.division = 24;
+    SmfTrack conductor;
+    conductor.events.push_back(meta(0, 0x01, QByteArrayLiteral("contract fixture")));
+    conductor.endTick = 48;
+    smf.tracks.push_back(conductor);
+    SmfTrack first;
+    first.events.push_back(chEvent(0xC0, 0, 1, 0));
+    first.events.push_back(chEvent(0x90, 0, 60, 100));
+    first.events.push_back(chEvent(0x90, 0, 60, 90));
+    first.events.push_back(chEvent(0x80, 12, 60, 0));
+    first.events.push_back(chEvent(0x80, 24, 60, 0));
+    first.endTick = 48;
+    smf.tracks.push_back(first);
+    SmfTrack second;
+    second.events.push_back(chEvent(0xC1, 0, 2, 0));
+    second.endTick = 48;
+    smf.tracks.push_back(second);
+
+    QTemporaryDir tmp;
+    const QString midPath = tmp.path() + QStringLiteral("/contracts.mid");
+    QString error;
+    SongInfo info;
+    info.label = QStringLiteral("contracts");
+    info.midPath = midPath;
+    info.hasMid = true;
+    SongDocument doc;
+    std::vector<QString> order;
+    std::vector<TrackRemap> remaps;
+    QObject::connect(&doc, &SongDocument::tracksRemapped, [&order, &remaps](TrackRemap remap) {
+        order.push_back(QStringLiteral("remap"));
+        remaps.push_back(std::move(remap));
+    });
+    QObject::connect(&doc, &SongDocument::documentChanged,
+                     [&order] { order.push_back(QStringLiteral("changed")); });
+    bool ok = tmp.isValid() && smf.writeFile(midPath, &error) && doc.load(info, &error);
+    if (!ok) {
+        fail("could not write/load the synthetic file");
+        return failures;
+    }
+    // Load replaces the document without publishing (the owner re-attaches
+    // views itself — publishing mid-load would re-enter them), but it must
+    // still land on a fresh revision so pre-load state can never match.
+    if (doc.revision() != 1 || !order.empty()) {
+        fail("load did not bump the revision exactly once without publishing");
+        return failures;
+    }
+
+    auto clearSignals = [&order, &remaps] {
+        order.clear();
+        remaps.clear();
+    };
+    auto expect = [&](bool condition, const char *what) {
+        if (!condition) {
+            fail(what);
+            ok = false;
+        }
+    };
+    auto expectRemap = [&](const char *what, const std::vector<int> &smfMap,
+                           const std::vector<int> &engineMap, int newSmfCount, int newEngineCount) {
+        expect(remaps.size() == 1 && remaps.front().smfTrackMap == smfMap &&
+                   remaps.front().engineTrackMap == engineMap &&
+                   remaps.front().newSmfTrackCount == newSmfCount &&
+                   remaps.front().newEngineTrackCount == newEngineCount &&
+                   order ==
+                       std::vector<QString>{QStringLiteral("remap"), QStringLiteral("changed")},
+               what);
+    };
+
+    // Byte-identical-key duplicate note-ons get distinct identities, and
+    // findNote(NoteId) resolves each exactly.
+    const auto notes = doc.notesForTrack(0);
+    expect(notes.size() == 2 && notes[0].noteId.isAssigned() && notes[1].noteId.isAssigned() &&
+               notes[0].noteId != notes[1].noteId,
+           "duplicate note-ons did not receive distinct identities");
+    if (ok) {
+        DocNote byId, bySecondId;
+        expect(doc.findNote(notes[0].noteId, &byId) && doc.findNote(notes[1].noteId, &bySecondId) &&
+                   byId.onIndex == notes[0].onIndex && bySecondId.noteId == notes[1].noteId,
+               "identity lookup did not resolve exact duplicate notes");
+    }
+
+    // setNotesVelocities: last entry per note wins, values clamp, ONE undo
+    // entry, one publication, and identity survives the write and its
+    // undo/redo. Every published step bumps the revision exactly once.
+    if (ok) {
+        clearSignals();
+        const uint64_t before = doc.revision();
+        const int undoCount = doc.undoStack()->count();
+        const auto result = doc.setNotesVelocities(
+            before, {{notes[0].noteId, 0}, {notes[1].noteId, 200}, {notes[0].noteId, 99}});
+        DocNote firstNow, secondNow;
+        expect(result && *result == before + 1 && doc.revision() == before + 1 &&
+                   doc.undoStack()->count() == undoCount + 1 &&
+                   doc.findNote(notes[0].noteId, &firstNow) &&
+                   doc.findNote(notes[1].noteId, &secondNow) && firstNow.velocity == 99 &&
+                   secondNow.velocity == 127 &&
+                   order == std::vector<QString>{QStringLiteral("changed")},
+               "velocity batch did not last-write, clamp, and commit atomically");
+        const uint64_t applied = doc.revision();
+        clearSignals();
+        doc.undoStack()->undo();
+        expect(doc.revision() == applied + 1 && doc.findNote(notes[0].noteId, &firstNow) &&
+                   doc.findNote(notes[1].noteId, &secondNow) && firstNow.velocity == 100 &&
+                   secondNow.velocity == 90 &&
+                   order == std::vector<QString>{QStringLiteral("changed")},
+               "velocity batch undo did not restore exact values");
+        const uint64_t undone = doc.revision();
+        clearSignals();
+        doc.undoStack()->redo();
+        expect(doc.revision() == undone + 1 && doc.findNote(notes[0].noteId, &firstNow) &&
+                   doc.findNote(notes[1].noteId, &secondNow) && firstNow.velocity == 99 &&
+                   secondNow.velocity == 127 &&
+                   order == std::vector<QString>{QStringLiteral("changed")},
+               "velocity batch redo did not preserve duplicate identities");
+        if (ok) {
+            // The lower clamp rail.
+            clearSignals();
+            const uint64_t lowerBefore = doc.revision();
+            const int lowerUndoCount = doc.undoStack()->count();
+            const auto lowerResult = doc.setNotesVelocities(lowerBefore, {{notes[0].noteId, 0}});
+            expect(lowerResult && *lowerResult == lowerBefore + 1 &&
+                       doc.revision() == lowerBefore + 1 &&
+                       doc.undoStack()->count() == lowerUndoCount + 1 &&
+                       doc.findNote(notes[0].noteId, &firstNow) && firstNow.velocity == 1 &&
+                       order == std::vector<QString>{QStringLiteral("changed")},
+                   "velocity batch did not clamp to one");
+            clearSignals();
+            const uint64_t lowerApplied = doc.revision();
+            doc.undoStack()->undo();
+            expect(doc.revision() == lowerApplied + 1 &&
+                       doc.undoStack()->count() == lowerUndoCount + 1 &&
+                       doc.findNote(notes[0].noteId, &firstNow) && firstNow.velocity == 99 &&
+                       order == std::vector<QString>{QStringLiteral("changed")},
+                   "lower-clamped velocity batch undo did not restore the exact value");
+        }
+    }
+
+    // setNotesVelocities refusal paths: a stale revision, an unresolvable
+    // id anywhere in the batch, and an accepted all-no-op batch must all
+    // leave the document byte-identical with nothing pushed or published.
+    if (ok) {
+        DocNote current;
+        doc.findNote(notes[0].noteId, &current);
+        const QByteArray unchanged = doc.smf().write();
+        const uint64_t before = doc.revision();
+        const int undoCount = doc.undoStack()->count();
+        clearSignals();
+        const auto staleResult = doc.setNotesVelocities(before - 1, {{current.noteId, 42}});
+        expect(!staleResult && doc.smf().write() == unchanged && doc.revision() == before &&
+                   doc.undoStack()->count() == undoCount && order.empty(),
+               "stale expected revision did not refuse the write");
+        const auto staleBatch =
+            doc.setNotesVelocities(before - 1, {{current.noteId, 42}, {notes[1].noteId, 77}});
+        expect(!staleBatch && doc.smf().write() == unchanged && doc.revision() == before &&
+                   doc.undoStack()->count() == undoCount && order.empty(),
+               "stale velocity batch was not rejected atomically");
+        const NoteId invalidId;
+        const auto invalidBatch =
+            doc.setNotesVelocities(before, {{current.noteId, 42}, {invalidId, 77}});
+        expect(!invalidBatch && doc.smf().write() == unchanged && doc.revision() == before &&
+                   doc.undoStack()->count() == undoCount && order.empty(),
+               "an unresolvable NoteId partially mutated the batch");
+        DocNote secondCurrent;
+        doc.findNote(notes[1].noteId, &secondCurrent);
+        const auto noOp =
+            doc.setNotesVelocities(before, {{current.noteId, current.velocity},
+                                            {secondCurrent.noteId, secondCurrent.velocity}});
+        expect(noOp && *noOp == before && doc.smf().write() == unchanged &&
+                   doc.revision() == before && doc.undoStack()->count() == undoCount &&
+                   order.empty(),
+               "no-op velocity batch changed document state");
+    }
+
+    // Undo-stack hygiene: an edit whose clamped result changes nothing must
+    // push no command and publish nothing — for moves, velocity writes,
+    // velocity nudges, and both resize directions.
+    if (ok) {
+        DocNote n0;
+        doc.findNote(notes[0].noteId, &n0);
+        const QByteArray unchanged = doc.smf().write();
+        const uint64_t before = doc.revision();
+        const int undoCount = doc.undoStack()->count();
+        clearSignals();
+        doc.moveNotes({n0}, -100, 0); // tick 0: fully absorbed by the clamp
+        expect(doc.undoStack()->count() == undoCount && doc.revision() == before && order.empty(),
+               "a fully clamped move pushed a command or published");
+        doc.setNotesVelocity({n0}, n0.velocity);
+        expect(doc.undoStack()->count() == undoCount && doc.revision() == before && order.empty(),
+               "an at-target velocity write pushed a command or published");
+        doc.resizeNotesLeft({n0}, -100); // tick 0 again
+        expect(doc.undoStack()->count() == undoCount && doc.revision() == before && order.empty(),
+               "a fully clamped left resize pushed a command or published");
+        expect(doc.smf().write() == unchanged, "a no-op edit changed document bytes");
+        // The nudge clamp rail and the resize duration floor need notes
+        // parked there first; those setup edits undo themselves away.
+        doc.setNotesVelocity({n0}, 127);
+        DocNote pinned;
+        doc.findNote(n0.noteId, &pinned);
+        const uint64_t pinnedRevision = doc.revision();
+        const int pinnedCount = doc.undoStack()->count();
+        clearSignals();
+        doc.nudgeNotesVelocity({pinned}, 5); // 127 + 5 clamps to 127
+        expect(doc.undoStack()->count() == pinnedCount && doc.revision() == pinnedRevision &&
+                   order.empty(),
+               "a clamp-pinned velocity nudge pushed a command or published");
+        doc.undoStack()->undo();
+        doc.findNote(n0.noteId, &pinned);
+        doc.resizeNotes({pinned}, -int64_t(pinned.duration)); // to the 1-tick floor
+        doc.findNote(n0.noteId, &pinned);
+        const uint64_t floorRevision = doc.revision();
+        const int floorCount = doc.undoStack()->count();
+        clearSignals();
+        doc.resizeNotes({pinned}, -100); // already at the floor
+        expect(pinned.duration == 1 && doc.undoStack()->count() == floorCount &&
+                   doc.revision() == floorRevision && order.empty(),
+               "a floor-pinned resize pushed a command or published");
+        doc.undoStack()->undo();
+        expect(doc.smf().write() == unchanged, "the hygiene probes did not restore their state");
+    }
+
+    // Moves re-insert the note's own events: a real note-off (0x80) keeps
+    // its form and its release velocity across a move, where a synthesized
+    // replacement would write a velocity-0 note-on.
+    if (ok) {
+        SmfFile fidelity;
+        fidelity.format = 1;
+        fidelity.division = 24;
+        SmfTrack fidelityTrack;
+        fidelityTrack.events.push_back(chEvent(0xC0, 0, 1, 0));
+        fidelityTrack.events.push_back(chEvent(0x90, 0, 60, 100));
+        fidelityTrack.events.push_back(chEvent(0x80, 12, 60, 64)); // release velocity 64
+        fidelityTrack.endTick = 48;
+        fidelity.tracks.push_back(fidelityTrack);
+        const QString fidelityPath = tmp.path() + QStringLiteral("/clone-fidelity.mid");
+        SongInfo fidelityInfo = info;
+        fidelityInfo.label = QStringLiteral("clone fidelity");
+        fidelityInfo.midPath = fidelityPath;
+        SongDocument fidelityDoc;
+        const bool loaded =
+            fidelity.writeFile(fidelityPath, &error) && fidelityDoc.load(fidelityInfo, &error);
+        expect(loaded, "could not load the clone-fidelity fixture");
+        if (!loaded)
+            return failures;
+        DocNote note;
+        auto endEvent = [&fidelityDoc](const DocNote &n) {
+            return fidelityDoc.smf().tracks[size_t(n.smfTrack)].events[n.endIndex];
+        };
+        const bool resolved = fidelityDoc.findNote(0, 0, 60, &note);
+        expect(resolved, "clone-fidelity fixture did not resolve its note");
+        const NoteId id = note.noteId;
+        bool moved = resolved;
+        if (moved) {
+            fidelityDoc.moveNotes({note}, 12, 0);
+            moved = fidelityDoc.findNote(id, &note) && note.tick == 12 && !note.unterminated();
+        }
+        expect(moved && endEvent(note).status == 0x80 && endEvent(note).data1 == 64,
+               "a move rebuilt the note-off instead of re-inserting it");
+        bool leftResized = moved;
+        if (leftResized) {
+            fidelityDoc.resizeNotesLeft({note}, 6);
+            // Re-resolved by IDENTITY: a left resize that synthesized a new
+            // note-on would mint a new id here.
+            leftResized = fidelityDoc.findNote(id, &note) && note.tick == 18;
+        }
+        expect(leftResized, "a left resize rebuilt the note-on instead of re-inserting it");
+    }
+
+    // duplicateTrack mints FRESH identities for the copies, and redo after
+    // undo replays those same identities.
+    if (ok) {
+        const auto source = doc.notesForTrack(0);
+        clearSignals();
+        const int copy = doc.duplicateTrack(0);
+        expect(copy >= 0, "track duplication rejected a duplicable source");
+        if (copy >= 0) {
+            const auto copied = doc.notesForTrack(copy);
+            bool matches = copied.size() == source.size();
+            for (size_t i = 0; matches && i < copied.size(); i++) {
+                matches = copied[i].tick == source[i].tick && copied[i].key == source[i].key &&
+                          copied[i].duration == source[i].duration &&
+                          copied[i].velocity == source[i].velocity && copied[i].noteId.isAssigned();
+                for (size_t j = 0; matches && j < source.size(); j++)
+                    matches = copied[i].noteId != source[j].noteId;
+                for (size_t j = 0; matches && j < i; j++)
+                    matches = copied[i].noteId != copied[j].noteId;
+            }
+            expect(matches, "track duplication did not copy notes with fresh identities");
+            doc.undoStack()->undo();
+            doc.undoStack()->redo();
+            const auto redone = doc.notesForTrack(copy);
+            bool idsPreserved = redone.size() == copied.size();
+            for (size_t i = 0; idsPreserved && i < redone.size(); i++)
+                idsPreserved = redone[i].noteId == copied[i].noteId;
+            expect(idsPreserved, "track duplication redo did not preserve minted identities");
+            doc.undoStack()->undo();
+        }
+    }
+
+    // tracksRemapped for every ownership change, exactly once per
+    // publication, remap before changed, with the undo publishing the
+    // inverse map. Chunk layout here: 0 conductor, 1 ch0 (engine 0),
+    // 2 ch1 (engine 1).
+    if (ok) {
+        clearSignals();
+        const uint64_t before = doc.revision();
+        expect(doc.moveTrack(0, 1) && doc.revision() == before + 1,
+               "track move did not increment the revision exactly once");
+        expectRemap("track move remap/order was incomplete", {0, 2, 1}, {1, 0}, 3, 2);
+        clearSignals();
+        doc.undoStack()->undo();
+        expectRemap("track move undo remap was incomplete", {0, 2, 1}, {1, 0}, 3, 2);
+        clearSignals();
+        doc.undoStack()->redo();
+        expectRemap("track move redo remap was incomplete", {0, 2, 1}, {1, 0}, 3, 2);
+        clearSignals();
+        doc.undoStack()->undo(); // back to the original order for the rest
+        clearSignals();
+    }
+    if (ok) {
+        clearSignals();
+        const int added = doc.addTrack(3);
+        expect(added == 2, "track insertion did not produce its new engine slot");
+        expectRemap("track insertion remap/order was incomplete", {0, 1, 2}, {0, 1}, 4, 3);
+        clearSignals();
+        doc.undoStack()->undo();
+        expectRemap("track insertion undo remap was incomplete", {0, 1, 2, -1}, {0, 1, -1}, 3, 2);
+        clearSignals();
+        doc.undoStack()->redo();
+        expectRemap("track insertion redo remap was incomplete", {0, 1, 2}, {0, 1}, 4, 3);
+        clearSignals();
+        doc.deleteTrack(added);
+        expectRemap("track deletion remap did not mark deleted owners", {0, 1, 2, -1}, {0, 1, -1},
+                    3, 2);
+        clearSignals();
+        doc.undoStack()->undo();
+        expectRemap("track deletion undo remap was incomplete", {0, 1, 2}, {0, 1}, 4, 3);
+        clearSignals();
+        doc.undoStack()->redo();
+        expectRemap("track deletion redo remap was incomplete", {0, 1, 2, -1}, {0, 1, -1}, 3, 2);
+    }
+    if (ok) {
+        clearSignals();
+        const int copy = doc.duplicateTrack(0);
+        expect(copy == 2, "track duplication did not create its engine slot");
+        expectRemap("track duplication remap/order was incomplete", {0, 1, 2}, {0, 1}, 4, 3);
+        clearSignals();
+        doc.undoStack()->undo();
+        expectRemap("track duplication undo remap was incomplete", {0, 1, 2, -1}, {0, 1, -1}, 3, 2);
+        clearSignals();
+        doc.undoStack()->redo();
+        expectRemap("track duplication redo remap was incomplete", {0, 1, 2}, {0, 1}, 4, 3);
+    }
+
+    // No remap for edits that leave ownership alone — and no publication at
+    // all for a refused no-op.
+    if (ok) {
+        clearSignals();
+        doc.insertRawEvent(0, meta(12, 0x01, QByteArrayLiteral("metadata")));
+        expect(remaps.empty() && order == std::vector<QString>{QStringLiteral("changed")},
+               "identity raw-metadata edit published a remap");
+        clearSignals();
+        doc.undoStack()->undo();
+        expect(remaps.empty() && order == std::vector<QString>{QStringLiteral("changed")},
+               "identity raw-metadata undo published a remap");
+        clearSignals();
+        const uint64_t before = doc.revision();
+        expect(!doc.moveTrack(0, 0) && doc.revision() == before && order.empty(),
+               "track move no-op changed state");
+    }
+
+    // A raw edit can flip a chunk's ENGINE status without touching chunk
+    // structure: chunk 0 gaining its first channel event becomes engine
+    // track 0 and every existing engine slot shifts (and back on undo).
+    // Chunk layout at this point: 0 conductor, 1 ch0, 2 ch1, 3 the
+    // duplicate from above.
+    if (ok) {
+        clearSignals();
+        doc.insertRawEvent(0, chEvent(0xC2, 0, 4, 0));
+        expectRemap("metadata-to-engine remap was incomplete", {0, 1, 2, 3}, {1, 2, 3}, 4, 4);
+        clearSignals();
+        doc.undoStack()->undo();
+        expectRemap("metadata-to-engine undo remap was incomplete", {0, 1, 2, 3}, {-1, 0, 1, 2}, 4,
+                    3);
+        clearSignals();
+        doc.undoStack()->redo();
+        expectRemap("metadata-to-engine redo remap was incomplete", {0, 1, 2, 3}, {1, 2, 3}, 4, 4);
+        size_t programIndex = SIZE_MAX;
+        for (size_t i = 0; i < doc.smf().tracks[0].events.size(); i++) {
+            const SmfEvent &ev = doc.smf().tracks[0].events[i];
+            if (ev.isChannel() && ev.typeNibble() == 0xC && ev.channel() == 2)
+                programIndex = i;
+        }
+        if (programIndex == SIZE_MAX) {
+            fail("metadata-to-engine fixture lost its inserted program");
+            return failures;
+        }
+        clearSignals();
+        doc.deleteRawEvents(0, {programIndex});
+        expectRemap("engine-to-metadata remap was incomplete", {0, 1, 2, 3}, {-1, 0, 1, 2}, 4, 3);
+        clearSignals();
+        doc.undoStack()->undo();
+        expectRemap("engine-to-metadata undo remap was incomplete", {0, 1, 2, 3}, {1, 2, 3}, 4, 4);
+        clearSignals();
+        doc.undoStack()->redo();
+        expectRemap("engine-to-metadata redo remap was incomplete", {0, 1, 2, 3}, {-1, 0, 1, 2}, 4,
+                    3);
+    }
+
+    // duplicateTrack on a mixed-channel chunk: a foreign file may interleave
+    // several channels in one chunk; the duplicate must copy only the
+    // source engine track's own channel. (The other channel's notes remain
+    // visible on the chunk's engine track, each with its own identity.)
+    if (ok) {
+        SmfFile collision;
+        collision.format = 1;
+        collision.division = 24;
+        collision.tracks.push_back(conductor);
+        SmfTrack sourceTrack;
+        sourceTrack.events.push_back(meta(0, 0x03, QByteArrayLiteral("owned channel")));
+        sourceTrack.events.push_back(chEvent(0xC1, 0, 7, 0));
+        sourceTrack.events.push_back(chEvent(0x91, 0, 60, 100));
+        sourceTrack.events.push_back(chEvent(0x90, 24, 60, 90));
+        sourceTrack.events.push_back(chEvent(0x81, 24, 60, 0));
+        sourceTrack.events.push_back(chEvent(0x80, 48, 60, 0));
+        sourceTrack.endTick = 48;
+        collision.tracks.push_back(sourceTrack);
+        // Fill channels 2-15 so the duplicate must land on the interleaved
+        // channel 0 — the collision-prone choice.
+        for (int ch = 2; ch < 16; ch++) {
+            SmfTrack tr;
+            tr.events.push_back(chEvent(uint8_t(0xC0 | ch), 0, uint8_t(ch), 0));
+            tr.endTick = 48;
+            collision.tracks.push_back(std::move(tr));
+        }
+        const QString collisionPath = tmp.path() + QStringLiteral("/channel-collision.mid");
+        SongInfo collisionInfo = info;
+        collisionInfo.label = QStringLiteral("channel collision");
+        collisionInfo.midPath = collisionPath;
+        SongDocument collisionDoc;
+        std::vector<TrackRemap> collisionRemaps;
+        QObject::connect(
+            &collisionDoc, &SongDocument::tracksRemapped,
+            [&collisionRemaps](TrackRemap remap) { collisionRemaps.push_back(std::move(remap)); });
+        const bool loaded =
+            collision.writeFile(collisionPath, &error) && collisionDoc.load(collisionInfo, &error);
+        expect(loaded, "could not load the channel-collision fixture");
+        if (!loaded)
+            return failures;
+        // Engine track 0 is the mixed chunk on channel 1; both channels'
+        // notes project onto it, each with its own identity.
+        const auto source = collisionDoc.notesForTrack(0);
+        DocNote owned, foreign;
+        expect(collisionDoc.channelFor(0) == 1 && source.size() == 2 && source[0].tick == 0 &&
+                   source[0].channel == 1 && source[0].duration == 24 && source[1].tick == 24 &&
+                   source[1].channel == 0 && source[1].duration == 24 &&
+                   source[0].noteId.isAssigned() && source[1].noteId.isAssigned() &&
+                   source[0].noteId != source[1].noteId &&
+                   collisionDoc.findNote(source[0].noteId, &owned) &&
+                   collisionDoc.findNote(source[1].noteId, &foreign) &&
+                   owned.onIndex == source[0].onIndex && foreign.onIndex == source[1].onIndex,
+               "mixed-channel chunk did not project both channels with distinct identities");
+        const int copy = collisionDoc.duplicateTrack(0);
+        const auto copied = copy >= 0 ? collisionDoc.notesForTrack(copy) : std::vector<DocNote>();
+        const int copiedSmfTrack = collisionDoc.smfTrackFor(copy);
+        bool copiedEvents = false;
+        if (copiedSmfTrack >= 0) {
+            // Only the owned channel's three events, rewritten to the free
+            // channel 0, with the end-of-track tick preserved.
+            const SmfTrack &copiedTrack = collisionDoc.smf().tracks[size_t(copiedSmfTrack)];
+            copiedEvents = copiedTrack.endTick == sourceTrack.endTick &&
+                           copiedTrack.events.size() == 3 &&
+                           copiedTrack.events[0] == chEvent(0xC0, 0, 7, 0) &&
+                           copiedTrack.events[1] == chEvent(0x90, 0, 60, 100) &&
+                           copiedTrack.events[2] == chEvent(0x80, 24, 60, 0);
+        }
+        bool visibleMatch = copied.size() == 1;
+        if (visibleMatch) {
+            visibleMatch = copied[0].tick == source[0].tick && copied[0].key == source[0].key &&
+                           copied[0].duration == source[0].duration &&
+                           copied[0].velocity == source[0].velocity &&
+                           copied[0].noteId.isAssigned() && copied[0].noteId != source[0].noteId &&
+                           copied[0].noteId != source[1].noteId;
+        }
+        bool completeRemap = collisionRemaps.size() == 1 &&
+                             collisionRemaps.front().smfTrackMap.size() == 16 &&
+                             collisionRemaps.front().engineTrackMap.size() == 15 &&
+                             collisionRemaps.front().newSmfTrackCount == 17 &&
+                             collisionRemaps.front().newEngineTrackCount == 16;
+        for (int i = 0; completeRemap && i < 16; i++)
+            completeRemap = collisionRemaps.front().smfTrackMap[i] == i;
+        for (int i = 0; completeRemap && i < 15; i++)
+            completeRemap = collisionRemaps.front().engineTrackMap[i] == i;
+        expect(copy >= 0 && collisionDoc.channelFor(copy) == 0 && copiedEvents && visibleMatch &&
+                   completeRemap,
+               "track duplication did not isolate the owned channel");
+        if (copy >= 0 && !copied.empty()) {
+            const NoteId copiedId = copied[0].noteId;
+            collisionDoc.undoStack()->undo();
+            collisionDoc.undoStack()->redo();
+            DocNote redone;
+            expect(collisionDoc.findNote(copiedId, &redone) && redone.tick == source[0].tick &&
+                       redone.key == source[0].key && redone.duration == source[0].duration &&
+                       redone.velocity == source[0].velocity,
+                   "channel-isolated duplicate redo did not preserve its identity");
+        }
+    }
+
+    // duplicateTrack must never copy sequencer globals (tempo, time
+    // signature, loop/label markers) even when the source chunk is the seq
+    // chunk carrying them — and moving or deleting the duplicate must not
+    // disturb the originals, through undo and redo.
+    if (ok) {
+        SmfFile globals;
+        globals.format = 1;
+        globals.division = 24;
+        SmfTrack globalSource;
+        globalSource.events.push_back(meta(0, 0x03, QByteArrayLiteral("lead")));
+        globalSource.events.push_back(meta(0, 0x51, QByteArray("\x07\xA1\x20", 3))); // 120 BPM
+        globalSource.events.push_back(meta(0, 0x58, QByteArray("\x04\x02\x18\x08", 4)));
+        globalSource.events.push_back(chEvent(0xC0, 0, 6, 0));
+        globalSource.events.push_back(chEvent(0x90, 0, 60, 100));
+        globalSource.events.push_back(meta(4, 0x01, QByteArrayLiteral("global annotation")));
+        globalSource.events.push_back(meta(12, 0x06, QByteArrayLiteral("[")));
+        globalSource.events.push_back(meta(16, 0x06, QByteArrayLiteral(":")));
+        globalSource.events.push_back(chEvent(0x80, 24, 60, 0));
+        globalSource.endTick = 48;
+        globals.tracks.push_back(globalSource);
+        SmfTrack backing;
+        backing.events.push_back(chEvent(0xC1, 0, 7, 0));
+        backing.endTick = 48;
+        globals.tracks.push_back(backing);
+        const QString globalsPath = tmp.path() + QStringLiteral("/duplicate-globals.mid");
+        SongInfo globalsInfo = info;
+        globalsInfo.label = QStringLiteral("duplicate globals");
+        globalsInfo.midPath = globalsPath;
+        SongDocument globalsDoc;
+        const bool loaded =
+            globals.writeFile(globalsPath, &error) && globalsDoc.load(globalsInfo, &error);
+        expect(loaded, "could not load the duplicate-globals fixture");
+        if (!loaded)
+            return failures;
+        auto activeGlobalsAreOriginal = [&globalsDoc] {
+            const auto tempos = globalsDoc.lanePoints(-1, DOC_CC_TEMPO);
+            const auto signatures = globalsDoc.timeSigs();
+            int tempoEvents = 0, signatureEvents = 0, starts = 0, labels = 0;
+            for (const SmfTrack &track : globalsDoc.smf().tracks) {
+                for (const SmfEvent &ev : track.events) {
+                    if (!ev.isMeta())
+                        continue;
+                    if (ev.metaType == 0x51 && ev.blob.size() == 3)
+                        tempoEvents++;
+                    if (ev.metaType == 0x58 && ev.blob.size() >= 2)
+                        signatureEvents++;
+                    if (ev.metaType == 0x06 && ev.blob == QByteArrayLiteral("["))
+                        starts++;
+                    if (ev.metaType == 0x06 && ev.blob == QByteArrayLiteral(":"))
+                        labels++;
+                }
+            }
+            return tempos.size() == 1 && tempos.front().tick == 0 && tempos.front().value == 120 &&
+                   signatures.size() == 1 && signatures.front().tick == 0 &&
+                   signatures.front().numerator == 4 && signatures.front().denomPow2 == 2 &&
+                   globalsDoc.loopTick(false) == 12 && globalsDoc.loopTick(true) == UINT64_MAX &&
+                   tempoEvents == 1 && signatureEvents == 1 && starts == 1 && labels == 1;
+        };
+        expect(activeGlobalsAreOriginal(), "duplicate-globals fixture did not load canonically");
+        const int copy = globalsDoc.duplicateTrack(0);
+        bool copiedOnlyOwned = copy >= 0 && globalsDoc.channelFor(copy) == 2;
+        if (copiedOnlyOwned) {
+            const SmfTrack &copiedTrack = globalsDoc.smf().tracks[globalsDoc.smfTrackFor(copy)];
+            copiedOnlyOwned = copiedTrack.endTick == globalSource.endTick &&
+                              copiedTrack.events.size() == 3 &&
+                              copiedTrack.events[0] == chEvent(0xC2, 0, 6, 0) &&
+                              copiedTrack.events[1] == chEvent(0x92, 0, 60, 100) &&
+                              copiedTrack.events[2] == chEvent(0x82, 24, 60, 0);
+        }
+        expect(copiedOnlyOwned && activeGlobalsAreOriginal(),
+               "track duplication copied sequencer-global metadata");
+        if (copy >= 0) {
+            const bool moved = globalsDoc.moveTrack(copy, 0);
+            expect(moved && activeGlobalsAreOriginal(),
+                   "moving a duplicate activated copied global metadata");
+            if (moved) {
+                globalsDoc.deleteTrack(0);
+                expect(activeGlobalsAreOriginal(),
+                       "deleting a moved duplicate changed sequencer-global metadata");
+                globalsDoc.undoStack()->undo();
+                expect(activeGlobalsAreOriginal(),
+                       "undoing duplicate deletion changed sequencer-global metadata");
+                globalsDoc.undoStack()->undo();
+                expect(activeGlobalsAreOriginal(),
+                       "undoing duplicate move changed sequencer-global metadata");
+                globalsDoc.undoStack()->undo();
+                expect(activeGlobalsAreOriginal(),
+                       "undoing track duplication changed sequencer-global metadata");
+                globalsDoc.undoStack()->redo();
+                expect(activeGlobalsAreOriginal(),
+                       "redoing track duplication changed sequencer-global metadata");
+                globalsDoc.undoStack()->redo();
+                expect(activeGlobalsAreOriginal(),
+                       "redoing duplicate move changed sequencer-global metadata");
+                globalsDoc.undoStack()->redo();
+                expect(activeGlobalsAreOriginal(),
+                       "redoing duplicate deletion changed sequencer-global metadata");
+            }
+        }
+    }
+
+    // Two indistinguishable unterminated notes crossing each other: the
+    // merge test is keyed by noteId, so B moving onto A's old spot is a NEW
+    // gesture, never merged into A's command.
+    if (ok) {
+        SmfFile crossing;
+        crossing.format = 1;
+        crossing.division = 24;
+        SmfTrack crossTrack;
+        crossTrack.events.push_back(chEvent(0xC0, 0, 1, 0));
+        crossTrack.events.push_back(chEvent(0x90, 0, 60, 100)); // A
+        crossTrack.events.push_back(chEvent(0x90, 0, 61, 100)); // B
+        crossTrack.endTick = 8;
+        crossing.tracks.push_back(crossTrack);
+        const QString crossingPath = tmp.path() + QStringLiteral("/move-collisions.mid");
+        SongInfo crossingInfo = info;
+        crossingInfo.label = QStringLiteral("move collisions");
+        crossingInfo.midPath = crossingPath;
+        SongDocument crossingDoc;
+        const bool loaded =
+            crossing.writeFile(crossingPath, &error) && crossingDoc.load(crossingInfo, &error);
+        expect(loaded, "could not load the move-collision fixture");
+        if (!loaded)
+            return failures;
+        DocNote a, b;
+        const bool resolved =
+            crossingDoc.findNote(0, 0, 60, &a) && crossingDoc.findNote(0, 0, 61, &b);
+        const bool ready = resolved && a.unterminated() && b.unterminated() &&
+                           a.velocity == b.velocity && a.noteId.isAssigned() &&
+                           b.noteId.isAssigned() && a.noteId != b.noteId;
+        expect(ready, "move-collision fixture did not assign distinct identities");
+        if (ready) {
+            const NoteId aId = a.noteId;
+            const NoteId bId = b.noteId;
+            auto hasState = [&crossingDoc, aId, bId](uint8_t aKey, uint8_t bKey) {
+                DocNote aNow, bNow;
+                return crossingDoc.findNote(aId, &aNow) && crossingDoc.findNote(bId, &bNow) &&
+                       aNow.key == aKey && bNow.key == bKey;
+            };
+            const int countBefore = crossingDoc.undoStack()->count();
+            const uint64_t beforeFirst = crossingDoc.revision();
+            crossingDoc.moveNotes({a}, 0, 1, true); // A onto B's key
+            expect(crossingDoc.undoStack()->count() == countBefore + 1 &&
+                       crossingDoc.revision() == beforeFirst + 1 && hasState(61, 61),
+                   "first move-collision transpose did not preserve A's identity");
+            DocNote bNow;
+            const bool bResolved = crossingDoc.findNote(bId, &bNow);
+            expect(bResolved && bNow.key == 61, "B did not re-resolve by identity");
+            if (bResolved) {
+                const uint64_t beforeSecond = crossingDoc.revision();
+                crossingDoc.moveNotes({bNow}, 0, -1, true); // B away: NOT a merge
+                expect(crossingDoc.undoStack()->count() == countBefore + 2 &&
+                           crossingDoc.revision() == beforeSecond + 1 && hasState(61, 60),
+                       "crossing mergeable moves merged distinct note identities");
+                const uint64_t beforeUndo = crossingDoc.revision();
+                crossingDoc.undoStack()->undo();
+                expect(crossingDoc.revision() == beforeUndo + 1 && hasState(61, 61),
+                       "crossing move undo did not restore exact identities");
+                const uint64_t beforeSecondUndo = crossingDoc.revision();
+                crossingDoc.undoStack()->undo();
+                expect(crossingDoc.revision() == beforeSecondUndo + 1 && hasState(60, 61),
+                       "first crossing move undo did not restore exact identities");
+                const uint64_t beforeRedo = crossingDoc.revision();
+                crossingDoc.undoStack()->redo();
+                expect(crossingDoc.revision() == beforeRedo + 1 && hasState(61, 61),
+                       "first crossing move redo did not preserve exact identities");
+                const uint64_t beforeSecondRedo = crossingDoc.revision();
+                crossingDoc.undoStack()->redo();
+                expect(crossingDoc.revision() == beforeSecondRedo + 1 && hasState(61, 60),
+                       "crossing move redo did not preserve exact identities");
+            }
+        }
+    }
+
+    // Merged-move publication and the away-and-back rule: every public
+    // moveNotes call and every undo/redo publishes exactly once (no remap —
+    // note moves never change ownership), a merge never publishes its
+    // provisional pre-merge state, and a merged move that returns every
+    // note to its origin removes the command and restores the exact bytes.
+    if (ok) {
+        SmfFile moves;
+        moves.format = 1;
+        moves.division = 24;
+        SmfTrack moveTrack;
+        moveTrack.events.push_back(chEvent(0xC0, 0, 1, 0));
+        moveTrack.events.push_back(chEvent(0x90, 0, 70, 100)); // S 0..4
+        moveTrack.events.push_back(chEvent(0x90, 0, 69, 100)); // M 0..2
+        moveTrack.events.push_back(chEvent(0x80, 2, 69, 0));
+        moveTrack.events.push_back(chEvent(0x80, 4, 70, 0));
+        moveTrack.endTick = 8;
+        moves.tracks.push_back(moveTrack);
+        const QString movesPath = tmp.path() + QStringLiteral("/merge-publication.mid");
+        SongInfo movesInfo = info;
+        movesInfo.label = QStringLiteral("merge publication");
+        movesInfo.midPath = movesPath;
+        SongDocument movesDoc;
+        const bool loaded = moves.writeFile(movesPath, &error) && movesDoc.load(movesInfo, &error);
+        expect(loaded, "could not load the merged-move fixture");
+        if (!loaded)
+            return failures;
+        std::vector<QString> moveOrder;
+        std::vector<TrackRemap> moveRemaps;
+        QObject::connect(&movesDoc, &SongDocument::tracksRemapped,
+                         [&moveOrder, &moveRemaps](TrackRemap remap) {
+                             moveOrder.push_back(QStringLiteral("remap"));
+                             moveRemaps.push_back(std::move(remap));
+                         });
+        QObject::connect(&movesDoc, &SongDocument::documentChanged,
+                         [&moveOrder] { moveOrder.push_back(QStringLiteral("changed")); });
+        auto clearMoveSignals = [&moveOrder, &moveRemaps] {
+            moveOrder.clear();
+            moveRemaps.clear();
+        };
+        auto expectOnePublication = [&](uint64_t before, const char *what) {
+            expect(movesDoc.revision() == before + 1 && moveRemaps.empty() &&
+                       moveOrder == std::vector<QString>{QStringLiteral("changed")},
+                   what);
+        };
+        const int countBefore = movesDoc.undoStack()->count();
+        const QByteArray reversalBaseline = movesDoc.smf().write();
+        DocNote moved, survivor;
+        if (!movesDoc.findNote(0, 0, 69, &moved)) {
+            fail("merged-move fixture did not resolve the moved note");
+            ok = false;
+        }
+        if (ok) {
+            clearMoveSignals();
+            const uint64_t before = movesDoc.revision();
+            movesDoc.moveNotes({moved}, 0, 1, true); // M onto S: S trimmed
+            expect(movesDoc.undoStack()->count() == countBefore + 1,
+                   "initial mergeable move did not push its command");
+            expectOnePublication(before, "initial mergeable move did not publish exactly once");
+            if (!movesDoc.findNote(0, 0, 70, &moved)) {
+                fail("initial mergeable move did not resolve its output");
+                ok = false;
+            }
+        }
+        if (ok) {
+            clearMoveSignals();
+            const uint64_t before = movesDoc.revision();
+            movesDoc.moveNotes({moved}, 0, -1, true); // back home: net zero
+            expectOnePublication(before,
+                                 "inverse net-zero mergeable move did not publish exactly once");
+            expect(movesDoc.undoStack()->count() == countBefore &&
+                       !movesDoc.undoStack()->canUndo() && !movesDoc.undoStack()->canRedo() &&
+                       movesDoc.smf().write() == reversalBaseline,
+                   "net-zero merged move kept an undo entry or did not restore its original MIDI");
+            clearMoveSignals();
+            const uint64_t afterInverse = movesDoc.revision();
+            movesDoc.undoStack()->undo();
+            movesDoc.undoStack()->redo();
+            expect(movesDoc.smf().write() == reversalBaseline &&
+                       movesDoc.revision() == afterInverse && moveOrder.empty(),
+                   "undo or redo after a net-zero merged move mutated the document");
+        }
+        if (ok && !movesDoc.findNote(0, 0, 69, &moved)) {
+            fail("net-zero merged move did not restore its original note");
+            ok = false;
+        }
+        if (ok) {
+            clearMoveSignals();
+            const uint64_t before = movesDoc.revision();
+            movesDoc.moveNotes({moved}, 0, 1, true); // M onto S again
+            expectOnePublication(before, "restarted mergeable move did not publish exactly once");
+            expect(movesDoc.findNote(0, 0, 70, &moved) && movesDoc.findNote(0, 2, 70, &survivor) &&
+                       survivor.duration == 2,
+                   "restarted mergeable move did not create its overlap state");
+        }
+        if (ok) {
+            clearMoveSignals();
+            const uint64_t before = movesDoc.revision();
+            movesDoc.moveNotes({moved}, 0, 1, true); // merged: re-lands from origin
+            expect(movesDoc.undoStack()->count() == countBefore + 1,
+                   "second mergeable move did not merge");
+            expectOnePublication(before,
+                                 "second mergeable move published its provisional overlap state");
+            expect(movesDoc.findNote(0, 0, 71, &moved) && movesDoc.findNote(0, 0, 70, &survivor) &&
+                       survivor.duration == 4,
+                   "second mergeable move did not publish its final combined state");
+        }
+        if (ok) {
+            clearMoveSignals();
+            const uint64_t before = movesDoc.revision();
+            movesDoc.moveNotes({moved}, 0, 1, true);
+            expect(movesDoc.undoStack()->count() == countBefore + 1,
+                   "later mergeable move did not merge");
+            expectOnePublication(before,
+                                 "later mergeable move published its provisional overlap state");
+            expect(movesDoc.findNote(0, 0, 72, &moved) && movesDoc.findNote(0, 0, 70, &survivor) &&
+                       survivor.duration == 4,
+                   "later mergeable move did not publish its final combined state");
+        }
+        if (ok) {
+            clearMoveSignals();
+            const uint64_t before = movesDoc.revision();
+            movesDoc.undoStack()->undo();
+            expectOnePublication(before, "merged move undo did not publish exactly once");
+            expect(movesDoc.findNote(0, 0, 69, &moved) && movesDoc.findNote(0, 0, 70, &survivor) &&
+                       survivor.duration == 4,
+                   "merged move undo did not restore its start");
+        }
+        if (ok) {
+            clearMoveSignals();
+            const uint64_t before = movesDoc.revision();
+            movesDoc.undoStack()->redo();
+            expectOnePublication(before, "merged move redo did not publish exactly once");
+            expect(movesDoc.findNote(0, 0, 72, &moved),
+                   "merged move redo did not restore its final state");
+        }
+        if (ok) {
+            clearMoveSignals();
+            const uint64_t before = movesDoc.revision();
+            movesDoc.moveNotes({moved}, 0, 1); // not mergeable
+            expectOnePublication(before, "ordinary move did not publish exactly once");
+            clearMoveSignals();
+            const uint64_t undoBefore = movesDoc.revision();
+            movesDoc.undoStack()->undo();
+            expectOnePublication(undoBefore, "ordinary move undo did not publish exactly once");
+            clearMoveSignals();
+            const uint64_t redoBefore = movesDoc.revision();
+            movesDoc.undoStack()->redo();
+            expectOnePublication(redoBefore, "ordinary move redo did not publish exactly once");
+        }
+    }
+    return failures;
+}
+
 } // namespace
 
 int runEditCheck(const QString &projectRoot)
@@ -304,6 +1171,87 @@ int runEditCheck(const QString &projectRoot)
                         ok = false;
                     } else {
                         doc.undoStack()->redo();
+                    }
+                }
+            }
+
+            // Bulk lane-point move: several automation points shift by
+            // independent tick/value deltas as ONE undoable command, and two
+            // points converging on one tick resolve last-input-wins.
+            if (ok) {
+                doc.addLanePoint(track, 7, base + step * 90, 20);
+                doc.addLanePoint(track, 7, base + step * 91, 40);
+                doc.addLanePoint(track, 7, base + step * 92, 60);
+                std::vector<SongDocument::LanePointMove> moves;
+                for (const DocLanePoint &p : doc.lanePoints(track, 7)) {
+                    if (p.tick == base + step * 90)
+                        moves.push_back({track, 7, p, base + step * 93, 25});
+                    else if (p.tick == base + step * 91)
+                        moves.push_back({track, 7, p, base + step * 94, 45});
+                }
+                const int undoBefore = doc.undoStack()->count();
+                doc.moveLanePoints(moves);
+                mutateAndCheck("events unsorted after moveLanePoints");
+                DocLanePoint p;
+                if (doc.findLanePoint(track, 7, base + step * 90, &p) ||
+                    doc.findLanePoint(track, 7, base + step * 91, &p) ||
+                    !doc.findLanePoint(track, 7, base + step * 93, &p) || p.value != 25 ||
+                    !doc.findLanePoint(track, 7, base + step * 94, &p) || p.value != 45 ||
+                    !doc.findLanePoint(track, 7, base + step * 92, &p) || p.value != 60 ||
+                    doc.undoStack()->count() != undoBefore + 1) {
+                    fail("moveLanePoints produced wrong content or undo count");
+                    ok = false;
+                } else {
+                    doc.undoStack()->undo();
+                    if (!doc.findLanePoint(track, 7, base + step * 90, &p) || p.value != 20 ||
+                        !doc.findLanePoint(track, 7, base + step * 91, &p) || p.value != 40 ||
+                        doc.findLanePoint(track, 7, base + step * 93, &p)) {
+                        fail("moveLanePoints was not a single undo command");
+                        ok = false;
+                    } else {
+                        doc.undoStack()->redo();
+                    }
+                }
+                if (ok) {
+                    doc.addLanePoint(track, 7, base + step * 95, 70);
+                    doc.addLanePoint(track, 7, base + step * 96, 80);
+                    DocLanePoint first, second;
+                    if (!doc.findLanePoint(track, 7, base + step * 95, &first) ||
+                        !doc.findLanePoint(track, 7, base + step * 96, &second)) {
+                        fail("converging move fixture was not created");
+                        ok = false;
+                    } else {
+                        const uint64_t destination = base + step * 97;
+                        const int convergeBefore = doc.undoStack()->count();
+                        doc.moveLanePoints({{track, 7, first, destination, 71},
+                                            {track, 7, second, destination, 72}});
+                        mutateAndCheck("events unsorted after converging moveLanePoints");
+                        int destinationCount = 0;
+                        int destinationValue = -1;
+                        for (const DocLanePoint &point : doc.lanePoints(track, 7)) {
+                            if (point.tick == destination) {
+                                destinationCount++;
+                                destinationValue = point.value;
+                            }
+                        }
+                        if (doc.findLanePoint(track, 7, base + step * 95, &p) ||
+                            doc.findLanePoint(track, 7, base + step * 96, &p) ||
+                            destinationCount != 1 || destinationValue != 72 ||
+                            doc.undoStack()->count() != convergeBefore + 1) {
+                            fail("converging move was not last-input-wins");
+                            ok = false;
+                        } else {
+                            doc.undoStack()->undo();
+                            if (!doc.findLanePoint(track, 7, base + step * 95, &p) ||
+                                p.value != 70 ||
+                                !doc.findLanePoint(track, 7, base + step * 96, &p) ||
+                                p.value != 80 || doc.findLanePoint(track, 7, destination, &p)) {
+                                fail("converging move undo did not restore both points");
+                                ok = false;
+                            } else {
+                                doc.undoStack()->redo();
+                            }
+                        }
                     }
                 }
             }
@@ -1259,6 +2207,9 @@ int runEditCheck(const QString &projectRoot)
         bool ok = tmp.isValid() && smf.writeFile(midPath, &werror) && doc.load(info, &werror);
         if (!ok)
             failD("could not write/load the synthetic file");
+        int changedSignals = 0;
+        QObject::connect(&doc, &SongDocument::documentChanged,
+                         [&changedSignals] { changedSignals++; });
         const QByteArray baseline = ok ? doc.smf().write() : QByteArray();
         const auto ccPointsAt = [&doc](uint8_t cc, uint64_t tick) {
             std::vector<DocLanePoint> at;
@@ -1286,20 +2237,33 @@ int runEditCheck(const QString &projectRoot)
             ok = false;
         }
         if (ok) {
-            // A value edit targets the winner AND heals the shadowed
-            // duplicate under it, in one undoable edit.
+            // Resubmitting the audible value still heals the same-tick
+            // shadow under it, so this is a real, exactly-once-published,
+            // exactly undoable edit.
             doc.findLanePoint(0, 7, 0, &pt);
-            doc.moveLanePoint(0, 7, pt, 0, 60);
+            const QByteArray before = doc.smf().write();
+            const uint64_t beforeRevision = doc.revision();
+            const int beforeUndoCount = doc.undoStack()->count();
+            const int beforeUndoIndex = doc.undoStack()->index();
+            changedSignals = 0;
+            doc.moveLanePoints({{0, 7, pt, pt.tick, pt.value}});
             const auto after = ccPointsAt(7, 0);
-            if (after.size() != 1 || after[0].value != 60) {
-                failD("a value edit left the shadowed duplicate behind");
+            if (after.size() != 1 || after[0].value != 80 || doc.revision() != beforeRevision + 1 ||
+                doc.undoStack()->count() != beforeUndoCount + 1 ||
+                doc.undoStack()->index() != beforeUndoIndex + 1 || changedSignals != 1) {
+                failD("an exact duplicate resubmission did not canonicalize as one edit");
                 ok = false;
             }
+            const uint64_t canonicalRevision = doc.revision();
+            changedSignals = 0;
             doc.undoStack()->undo();
             const auto restored = ccPointsAt(7, 0);
             if (ok &&
-                (restored.size() != 2 || restored[0].value != 100 || restored[1].value != 80)) {
-                failD("undo did not restore the shadowed duplicate");
+                (restored.size() != 2 || restored[0].value != 100 || restored[1].value != 80 ||
+                 doc.smf().write() != before || doc.revision() != canonicalRevision + 1 ||
+                 doc.undoStack()->count() != beforeUndoCount + 1 ||
+                 doc.undoStack()->index() != beforeUndoIndex || changedSignals != 1)) {
+                failD("undo did not exactly restore the shadowed duplicate");
                 ok = false;
             }
         }
@@ -1313,14 +2277,56 @@ int runEditCheck(const QString &projectRoot)
             doc.undoStack()->undo();
         }
         if (ok) {
-            // A cross-tick move landing on an occupied tick replaces the
-            // run there too.
+            // A shadow-free point resubmitted unchanged is a no-op: no
+            // command, no publication.
             doc.addLanePoint(0, 7, 48, 55);
-            doc.findLanePoint(0, 7, 48, &pt);
-            doc.moveLanePoint(0, 7, pt, 0, 55);
-            if (ccPointsAt(7, 0).size() != 1 || !ccPointsAt(7, 48).empty()) {
-                failD("a cross-tick move did not replace the destination run");
+            if (!doc.findLanePoint(0, 7, 48, &pt) || ccPointsAt(7, 48).size() != 1) {
+                failD("controller no-op fixture did not create one point");
                 ok = false;
+            } else {
+                const QByteArray before = doc.smf().write();
+                const uint64_t beforeRevision = doc.revision();
+                const int beforeUndoCount = doc.undoStack()->count();
+                const int beforeUndoIndex = doc.undoStack()->index();
+                changedSignals = 0;
+                doc.moveLanePoints({{0, 7, pt, pt.tick, pt.value}});
+                if (doc.smf().write() != before || doc.revision() != beforeRevision ||
+                    doc.undoStack()->count() != beforeUndoCount ||
+                    doc.undoStack()->index() != beforeUndoIndex || changedSignals != 0) {
+                    failD("an unchanged controller point mutated the document");
+                    ok = false;
+                }
+            }
+            if (ok) {
+                // A cross-tick move landing on an occupied tick replaces
+                // the run there too.
+                doc.moveLanePoint(0, 7, pt, 0, 55);
+                if (ccPointsAt(7, 0).size() != 1 || !ccPointsAt(7, 48).empty()) {
+                    failD("a cross-tick move did not replace the destination run");
+                    ok = false;
+                }
+            }
+        }
+        if (ok) {
+            // The same no-op rule holds for the tempo lane's global metas.
+            doc.addLanePoint(0, DOC_CC_TEMPO, 48, 120);
+            if (!doc.findLanePoint(0, DOC_CC_TEMPO, 48, &pt) ||
+                ccPointsAt(DOC_CC_TEMPO, 48).size() != 1) {
+                failD("tempo no-op fixture did not create one point");
+                ok = false;
+            } else {
+                const QByteArray before = doc.smf().write();
+                const uint64_t beforeRevision = doc.revision();
+                const int beforeUndoCount = doc.undoStack()->count();
+                const int beforeUndoIndex = doc.undoStack()->index();
+                changedSignals = 0;
+                doc.moveLanePoints({{0, DOC_CC_TEMPO, pt, pt.tick, pt.value}});
+                if (doc.smf().write() != before || doc.revision() != beforeRevision ||
+                    doc.undoStack()->count() != beforeUndoCount ||
+                    doc.undoStack()->index() != beforeUndoIndex || changedSignals != 0) {
+                    failD("an unchanged global tempo point mutated the document");
+                    ok = false;
+                }
             }
         }
         if (ok) {
@@ -1330,6 +2336,8 @@ int runEditCheck(const QString &projectRoot)
                 failD("undo-all did not restore the duplicated file byte-for-byte");
         }
     }
+
+    failures += documentContractFailures();
 
     std::printf("editcheck: %d songs in %lld ms\n", checked, (long long)timer.elapsed());
     std::printf("editcheck: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);

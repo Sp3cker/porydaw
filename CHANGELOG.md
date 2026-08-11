@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI text now renders unhinted and antialiased. Hinting distorted the bundled typeface on Windows at 100% scale, where it was rendered jagged instead of with its designed letterforms. The bundled fonts' own rendering hints (gasp tables) were corrected to request the same smooth rendering from renderers that consult the font.
 - Toggling View → Use System Font no longer restyles the whole window through the theme engine — a repaint hazard on Windows while playback was painting. The font swap now lands directly.
 - Fixed bug where the right edge of a note couldn't be grabbed for resizing when two notes were adjacent.
+- Edits that change nothing (a move fully absorbed by the tick/key clamps, a velocity write already at its target) no longer push undo entries, and a keyboard move gesture that lands back where it started leaves no undo entry at all.
+- Fixed bug where duplicating a track copied every channel's events from its chunk; on imported files that interleave several channels in one chunk, other tracks' notes were duplicated too.
+- Moving or resizing notes now re-inserts the original MIDI events instead of rebuilding them, so unmodeled bytes (like a note-off's release velocity) survive those edits.
 - Fixed bug where velocity values could visually bleed out of the note box.
 
 ## [1.0.0] - 2026-08-01
