@@ -27,7 +27,13 @@ void setFace(QFont &font, QFont::Weight weight)
     font.setStyleName({});
     font.setWeight(weight);
     font.setStyle(QFont::StyleNormal);
-    font.setHintingPreference(QFont::PreferFullHinting);
+    // Unhinted, antialiased outlines. The bundled faces' gasp table requests
+    // grid-fitting at every size, and DirectWrite honors that under full
+    // hinting — distorting the letterforms at 100% scale on Windows, where
+    // hinting actually runs. Overriding the font's own request keeps the
+    // designed outlines on every backend.
+    font.setHintingPreference(QFont::PreferNoHinting);
+    font.setStyleStrategy(QFont::StyleStrategy(font.styleStrategy() | QFont::PreferAntialias));
 }
 
 QFont bundledBody()
@@ -144,7 +150,10 @@ QFont bodyMono(const QFont &body)
     font.setStyleName(QStringLiteral("Regular"));
     font.setWeight(QFont::Normal);
     font.setStyle(QFont::StyleNormal);
-    font.setHintingPreference(QFont::PreferFullHinting);
+    // Same unhinted policy as setFace — the mono face's gasp table makes the
+    // same grid-fitting request.
+    font.setHintingPreference(QFont::PreferNoHinting);
+    font.setStyleStrategy(QFont::StyleStrategy(font.styleStrategy() | QFont::PreferAntialias));
     font.setPixelSize(resolvedPixelSize(body));
     return font;
 }

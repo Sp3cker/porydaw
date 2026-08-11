@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Fixed CGB channels' volume envelope emulation.
    - Improved CGB noise channel is now band-limited, which is more accurate to hardware's sound quality.
    - m4a's master volume is now set to 12 instead of 15, which matches the Pokemon games. This fixes the loudness imbalance between directsound and CGB channels.
+- UI text now renders unhinted and antialiased. Hinting distorted the bundled typeface on Windows at 100% scale, where it was rendered jagged instead of with its designed letterforms.
 - Fixed bug where the right edge of a note couldn't be grabbed for resizing when two notes were adjacent.
 - Fixed bug where velocity values could visually bleed out of the note box.
 
