@@ -12,6 +12,7 @@ namespace {
 
 constexpr auto proportionalFamily = "Atkinson Hyperlegible Next";
 constexpr auto monoFamily = "Atkinson Hyperlegible Mono";
+constexpr auto bodyScale = 1.125;
 
 std::optional<int> capturedBaseFontPx;
 std::optional<QFont> installedBodyFont;
@@ -34,13 +35,12 @@ QFont bundledBody()
 {
     auto font = *capturedPlatformFont;
     setFace(font, QFont::Normal);
-    font.setPixelSize(qMax(1, qRound(*capturedBaseFontPx * 1.25)));
+    font.setPixelSize(qMax(1, qRound(*capturedBaseFontPx * bodyScale)));
     return font;
 }
 
 // The platform face at its native size: what every other Qt application on
-// the machine shows for body text. Caption keeps the bundled scale's 1.25
-// ratio below it so the hierarchy survives the swap.
+// the machine shows for body text.
 QFont systemBody()
 {
     auto font = *capturedPlatformFont;
@@ -92,11 +92,11 @@ bool installBundledFonts(QApplication &application)
         capturedBaseFontPx = baseFontPx;
     auto font = application.font();
     setFace(font, QFont::Normal);
-    font.setPixelSize(qMax(1, qRound(*capturedBaseFontPx * 1.25)));
+    font.setPixelSize(qMax(1, qRound(*capturedBaseFontPx * bodyScale)));
     application.setFont(font);
     const auto resolved = QFontInfo(application.font());
     const auto installed = resolved.family() == QString::fromLatin1(proportionalFamily) &&
-                           resolved.pixelSize() == qMax(1, qRound(*capturedBaseFontPx * 1.25));
+                           resolved.pixelSize() == qMax(1, qRound(*capturedBaseFontPx * bodyScale));
     if (installed)
         installedBodyFont = systemFontPreferred ? systemBody() : font;
     return installed;

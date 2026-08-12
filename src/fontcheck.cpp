@@ -60,7 +60,7 @@ int runFontCheck(int expectedBaseFontPx)
           "Typography did not preserve the pre-install application font size");
     const auto body = QApplication::font();
     const auto bodyInfo = QFontInfo(body);
-    const auto expectedBodySize = qMax(1, qRound(*baseFontPx * 1.25));
+    const auto expectedBodySize = qMax(1, qRound(*baseFontPx * 1.125));
     check(body.hintingPreference() == QFont::PreferFullHinting,
           "Body does not prefer fully hinted glyph outlines");
     check(bodyInfo.family() == QStringLiteral("Atkinson Hyperlegible Next") &&
