@@ -2486,7 +2486,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             uint64_t sigTick = 0;
             for (uint64_t bar = 16; bar <= 28 && !sigTick; bar += 4) {
                 const uint64_t candidate = bar * tpb + (scenario == 1 ? tpb / 2 : 0);
-                if (clearAir(candidate - 2 * tpb, ySweep))
+                // Vet the press tick itself: the sweep starts two beats
+                // before the bar line the signature hangs off of.
+                if (clearAir((bar - 2) * tpb, ySweep))
                     sigTick = candidate;
             }
             if (!sigTick) {
@@ -2610,9 +2612,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             // unwind exactly what the tap pushed (a grab that moved nothing
             // pushes no undo entry, so a blind undo could eat older edits).
             auto tapAndRead = [&](qreal x, int y, Qt::KeyboardModifiers mods) {
+                // Truncate once: the tap presses at int(x), so the read-back
+                // tick must come from the same pixel or a sub-pixel skew
+                // could snap to a neighboring cell.
+                const int xPress = int(x);
                 const int before = doc.undoStack()->index();
-                ctrlTap(x, y, mods);
-                const uint64_t tick = view.snapTick(view.tickAtContentX(x - songview::kGutterW));
+                ctrlTap(xPress, y, mods);
+                const uint64_t tick =
+                    view.snapTick(view.tickAtContentX(xPress - songview::kGutterW));
                 DocLanePoint pt;
                 int value = INT_MIN;
                 if (doc.findLanePoint(laneTrack, 0x0A, tick, &pt))

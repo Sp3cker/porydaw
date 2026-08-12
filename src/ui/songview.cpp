@@ -4151,8 +4151,10 @@ class AutomationArea : public TimelineSurface
         // Ctrl detent: magnetize to the lane's neutral value, so dead-center
         // doesn't require pixel-perfect aim. The window is a font-scaled
         // pixel radius (fontPx(2/3) — the old hard-coded 8 px at the
-        // reference font) converted to value units through the row's
-        // height, so resized lanes keep the same on-screen magnet.
+        // reference font) over the full row height, the source branch's
+        // formula: the realized magnet runs slightly inside the nominal
+        // radius (the plot insets the row by 10 px) but stays near-constant
+        // across lane heights and scales with the user's font size.
         int neutral;
         if (detent && rowDetent(row, &neutral)) {
             int minV, maxV;
