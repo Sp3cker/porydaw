@@ -2382,7 +2382,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QCoreApplication::processEvents();
 
         // Arrow mode untouched: the dot grab-move and the off-dot Shift
-        // ramp (y1/y2 sit well outside the dot's 7 px grab slop).
+        // ramp (only the press position matters to grabPoint, and the
+        // press at y1 sits well outside the dot's 7 px grab slop).
         sendKey(lanes, Qt::Key_B, Qt::NoModifier);
         dragStroke(yDot, yDot, Qt::NoModifier);
         if (doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &probe))
@@ -2521,10 +2522,15 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
         // Sticky time lock: arm horizontally, then pull the total travel
         // back near the origin and well past 45° vertical — the value must
-        // stay pinned anyway. The end x sits inside half a snap cell of the
-        // origin (the snap grid is one ladder step finer than the drawn
-        // grid), so the commit is a no-op unless a broken (re-resolving)
-        // lock changed the value.
+        // stay pinned anyway. The 5 px pull-back must sit inside half a
+        // snap cell (the snap grid runs one ladder step finer than the
+        // drawn grid) so the release lands back on t0 and a correct lock
+        // commits nothing at all; assert the geometry instead of assuming
+        // it.
+        const qreal xSnapCell =
+            view.displayX(double(t0 + view.snapTicksAt(t0)), songview::kGutterW, dprLanes);
+        if ((xSnapCell - xDot) / 2 <= 5.0)
+            fail("axis-lock probe setup: the pull-back is not inside half a snap cell");
         sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
                   Qt::LeftButton, Qt::ShiftModifier);
         sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + arm, yDot + 1), Qt::NoButton,
@@ -2536,8 +2542,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QCoreApplication::processEvents();
         if (!tempoPointAt(t0, &probe) || probe.value != parked.value)
             fail("time lock flipped to a value lock after crossing 45 degrees");
-        while (doc.undoStack()->index() > undoIndex + 1 && doc.undoStack()->canUndo())
-            doc.undoStack()->undo(); // normally a no-op commit left nothing to undo
+        if (doc.undoStack()->index() != undoIndex + 1)
+            fail("sticky locked drag back to its origin was not a no-op commit");
         QCoreApplication::processEvents();
 
         // Releasing Shift mid-drag frees the drag: the value follows the
@@ -2578,6 +2584,87 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (!tempoPointAt(t0, &probe) || probe.value != tempoValueAtY(yDot + arm + 4))
             fail("re-pressed Shift lock did not pin the tick back to the origin");
         doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // Stationary Shift release mid-drag: no mouse move follows the key
+        // event, which alone must free the drag (un-pinning the value) and
+        // its cursor.
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xEnd), yDot + 9), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        if (lanes->cursor().shape() != Qt::SizeHorCursor)
+            fail("stationary-release setup: time lock did not engage");
+        {
+            QKeyEvent shiftUp(QEvent::KeyRelease, Qt::Key_Shift, Qt::NoModifier);
+            QCoreApplication::sendEvent(lanes, &shiftUp);
+        }
+        if (lanes->cursor().shape() != Qt::ArrowCursor)
+            fail("stationary Shift release mid-drag kept the lock cursor");
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), yDot + 9), Qt::LeftButton,
+                  Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::processEvents();
+        if (!tempoPointAt(tEnd, &probe) || probe.value != tempoValueAtY(yDot + 9))
+            fail("stationary Shift release mid-drag did not free the pinned value");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // ...and a stationary Shift press locks instantly from the total
+        // travel, re-pinning the value to the point's original.
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                  Qt::LeftButton);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xEnd), yDot + 7), Qt::NoButton,
+                  Qt::LeftButton);
+        {
+            QKeyEvent shiftDown(QEvent::KeyPress, Qt::Key_Shift, Qt::ShiftModifier);
+            QCoreApplication::sendEvent(lanes, &shiftDown);
+        }
+        if (lanes->cursor().shape() != Qt::SizeHorCursor)
+            fail("stationary Shift press mid-drag did not engage the lock");
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), yDot + 7), Qt::LeftButton,
+                  Qt::NoButton, Qt::ShiftModifier);
+        QCoreApplication::processEvents();
+        if (!tempoPointAt(tEnd, &probe) || probe.value != parked.value)
+            fail("stationary Shift press mid-drag did not re-pin the value");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // A middle-button pan interrupting a locked drag hands the cursor
+        // back to the lock when it ends, not to the idle tool.
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xEnd), yDot + 5), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xEnd), yDot + 5), Qt::MiddleButton,
+                  Qt::LeftButton | Qt::MiddleButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), yDot + 5), Qt::MiddleButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        if (lanes->cursor().shape() != Qt::SizeHorCursor)
+            fail("middle pan mid-drag stranded the lock cursor");
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), yDot + 5), Qt::LeftButton,
+                  Qt::NoButton, Qt::ShiftModifier);
+        QCoreApplication::processEvents();
+        if (!tempoPointAt(tEnd, &probe) || probe.value != parked.value)
+            fail("middle pan mid-drag broke the locked commit");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // A document change mid-drag aborts the gesture through
+        // rebuildRows, which must not strand the lock cursor either.
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xEnd), yDot + 5), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        if (lanes->cursor().shape() != Qt::SizeHorCursor)
+            fail("rebuild-abort setup: time lock did not engage");
+        doc.undoStack()->undo(); // takes the parked point away mid-drag
+        QCoreApplication::processEvents();
+        if (lanes->cursor().shape() != Qt::ArrowCursor)
+            fail("document change mid-drag stranded the lock cursor");
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), yDot + 5), Qt::LeftButton,
+                  Qt::NoButton, Qt::ShiftModifier);
+        QCoreApplication::processEvents();
+        doc.undoStack()->redo(); // park the point again for the probes below
         QCoreApplication::processEvents();
 
         // Off the dot Shift still starts the ramp — and a true ramp: the

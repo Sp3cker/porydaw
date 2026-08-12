@@ -2979,7 +2979,7 @@ class AutomationArea : public TimelineSurface
         m_dragRow = -1;
         m_resizeRow = -1;
         m_gesture = Gesture::None;
-        m_axisLock = AxisLock::None;
+        clearAxisLock();
         m_sweep.clear();
         m_rightPress = false;
         m_selSweep = false;
@@ -3240,6 +3240,7 @@ class AutomationArea : public TimelineSurface
         if (event->button() != Qt::LeftButton)
             return;
         m_dragRow = ri;
+        m_dragPos = event->position();
         // Latch the tool for the whole gesture: toggling B mid-drag must
         // not change an in-flight stroke's semantics. A gesture during a
         // pencil-key hold also makes that hold momentary.
@@ -3328,6 +3329,7 @@ class AutomationArea : public TimelineSurface
             updateHover(event->position().x(), event->pos().y());
             return;
         }
+        m_dragPos = event->position();
         const bool fine = event->modifiers() & Qt::AltModifier;
         // Pencil horizontal lock: while Shift is held the value stays
         // whatever the stroke held when the lock engaged (the press value
@@ -3352,7 +3354,7 @@ class AutomationArea : public TimelineSurface
     {
         if (event->button() == Qt::MiddleButton && m_panning) {
             m_panning = false;
-            setCursor(modeCursor());
+            setCursor(dragCursor());
             return;
         }
         if (event->button() == Qt::RightButton && m_rightPress) {
@@ -3378,10 +3380,7 @@ class AutomationArea : public TimelineSurface
         const Gesture gesture = m_gesture;
         m_gesture = Gesture::None;
         m_dragRow = -1;
-        if (m_axisLock != AxisLock::None) {
-            m_axisLock = AxisLock::None;
-            setCursor(modeCursor());
-        }
+        clearAxisLock();
         invalidateContent();
 
         SongDocument *doc = m_sv->document();
@@ -3481,6 +3480,12 @@ class AutomationArea : public TimelineSurface
     {
         if (m_sv->handleEditKey(event))
             return;
+        if (event->key() == Qt::Key_Shift && m_gesture == Gesture::Point &&
+            !event->isAutoRepeat()) {
+            pointDragShiftChanged(true, event->modifiers());
+            event->accept();
+            return;
+        }
         if (event->key() == Qt::Key_Escape) {
             m_rightPress = false;
             m_selSweep = false;
@@ -3495,6 +3500,12 @@ class AutomationArea : public TimelineSurface
     {
         if (m_sv->handleEditKeyRelease(event))
             return;
+        if (event->key() == Qt::Key_Shift && m_gesture == Gesture::Point &&
+            !event->isAutoRepeat()) {
+            pointDragShiftChanged(false, event->modifiers());
+            event->accept();
+            return;
+        }
         QWidget::keyReleaseEvent(event);
     }
 
@@ -4230,14 +4241,44 @@ class AutomationArea : public TimelineSurface
             applyAxisLock(m_axisLock, uint64_t(m_dragOrigTick), m_dragOrigValue, &m_dragTick,
                           &m_dragValue);
         }
-        if (m_axisLock == previous)
-            return;
+        if (m_axisLock != previous)
+            setCursor(dragCursor());
+    }
+
+    // The cursor the live gesture wants right now: the axis-lock shape
+    // while a locked point drag runs, the tool cursor otherwise. Gestures
+    // that interrupt a drag (a middle-button pan) restore through this so
+    // they can't strand the wrong cursor on a still-locked drag.
+    QCursor dragCursor()
+    {
         if (m_axisLock == AxisLock::Time)
-            setCursor(Qt::SizeHorCursor);
-        else if (m_axisLock == AxisLock::Value)
-            setCursor(Qt::SizeVerCursor);
-        else
-            setCursor(modeCursor());
+            return QCursor(Qt::SizeHorCursor);
+        if (m_axisLock == AxisLock::Value)
+            return QCursor(Qt::SizeVerCursor);
+        return modeCursor();
+    }
+
+    // Drop the axis lock and hand the cursor back to the tool. Every path
+    // that ends or aborts a point drag (the release, rebuildRows) funnels
+    // through here so an aborted gesture can't strand the lock cursor.
+    void clearAxisLock()
+    {
+        if (m_axisLock == AxisLock::None)
+            return;
+        m_axisLock = AxisLock::None;
+        setCursor(modeCursor());
+    }
+
+    // Shift pressed or released while the pointer is parked mid point-drag:
+    // no mouse move will run the lock update, so re-derive the drag from
+    // the last cursor sample under the new Shift state (freeing must also
+    // un-pin the coordinates the lock overwrote).
+    void pointDragShiftChanged(bool shiftHeld, Qt::KeyboardModifiers mods)
+    {
+        updateDrag(m_dragPos.x(), qRound(m_dragPos.y()), mods & Qt::AltModifier,
+                   mods & Qt::ControlModifier);
+        updatePointAxisLock(m_dragPos, shiftHeld);
+        invalidateContent();
     }
 
     // One meter-aware grid step: the next drawn-grid position after tick,
@@ -4473,6 +4514,8 @@ class AutomationArea : public TimelineSurface
     int64_t m_dragOrigTick = -1;          // existing point being moved, -1 = new point
     int m_dragOrigValue = 0;              // that point's original value, the axis-lock pin
     QPointF m_pointPressPos;              // point-drag press, the axis-lock travel origin
+    QPointF m_dragPos;                    // last cursor sample of the live left drag, for
+                                          // re-running it on a stationary Shift change
     AxisLock m_axisLock = AxisLock::None; // Shift lock on the live point drag
     uint64_t m_dragTick = 0;
     int m_dragValue = 0;
