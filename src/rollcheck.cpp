@@ -2546,6 +2546,127 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QCoreApplication::processEvents();
     }
 
+    // Ctrl neutral detent: the magnet window is a font-scaled pixel radius
+    // (layout::fontPx(2/3), the old hard-coded 8 px at the reference font)
+    // converted to value units through the row's height — span * radius /
+    // rowHeight — so a resized lane keeps the same on-screen magnet.
+    // Probed on a PAN lane (neutral 64) at the default and a doubled row
+    // height, from both sides of the neutral, just inside and just outside
+    // the window.
+    {
+        const int undoIndex = doc.undoStack()->index();
+        const int laneTrack = view.selectedTrack();
+        view.addEmptyLane(laneTrack, 0x0A); // PAN; a no-op if the song has one
+        QCoreApplication::processEvents();
+        // Row order mirror: tempo, voice (always present with a document),
+        // then the selected track's lanes by ascending CC; rows above the
+        // PAN row keep the default 48 px height throughout.
+        int panRowTop = 2 * 48;
+        for (const AutoLane &lane : view.model().lanes)
+            if (lane.track == laneTrack && lane.cc < 0x0A)
+                panRowTop += 48;
+        auto panPoints = [&]() { return doc.lanePoints(laneTrack, 0x0A); };
+        const qreal dprLanes = lanes->devicePixelRatioF();
+        auto ctrlTap = [&](qreal x, int y, Qt::KeyboardModifiers mods) {
+            sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(x), y), Qt::LeftButton,
+                      Qt::LeftButton, mods);
+            sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(x), y), Qt::LeftButton,
+                      Qt::NoButton, mods);
+            QCoreApplication::processEvents();
+        };
+        for (const int rowH : {48, 96}) {
+            // The per-row height override travels through the sidecar view
+            // state, like a divider drag would set it.
+            SongView::ViewState st = view.viewState();
+            const QString panKey = QStringLiteral("cc:%1:%2").arg(laneTrack).arg(0x0A);
+            if (rowH != 48) {
+                st.laneHeights.insert(panKey, rowH);
+                view.applyViewState(st);
+                QCoreApplication::processEvents();
+            }
+            const int top = panRowTop + 5, bottom = panRowTop + rowH - 1 - 4;
+            auto panValueAtY = [&](int y) {
+                const int yc = std::clamp(y, top, bottom);
+                return (bottom - yc) * 127 / (bottom - top);
+            };
+            auto panValueY = [&](int v) { return bottom - v * (bottom - top) / 127; };
+            const int window = 127 * layout::fontPx(2.0 / 3.0) / rowH;
+            // A press in clear air of any existing dots (grab slop 7 px).
+            auto clearX = [&](int y) {
+                qreal x = songview::kGutterW + (lanes->width() - songview::kGutterW) * 0.45;
+                auto nearDot = [&](qreal probe) {
+                    for (const DocLanePoint &pt : panPoints())
+                        if (std::abs(view.displayX(double(pt.tick), songview::kGutterW, dprLanes) -
+                                     probe) <= 12 &&
+                            std::abs(panValueY(pt.value) - y) <= 12)
+                            return true;
+                    return false;
+                };
+                while (nearDot(x))
+                    x += 40;
+                return x;
+            };
+            // Tap, read back the committed value at the snapped tick, and
+            // unwind exactly what the tap pushed (a grab that moved nothing
+            // pushes no undo entry, so a blind undo could eat older edits).
+            auto tapAndRead = [&](qreal x, int y, Qt::KeyboardModifiers mods) {
+                const int before = doc.undoStack()->index();
+                ctrlTap(x, y, mods);
+                const uint64_t tick = view.snapTick(view.tickAtContentX(x - songview::kGutterW));
+                DocLanePoint pt;
+                int value = INT_MIN;
+                if (doc.findLanePoint(laneTrack, 0x0A, tick, &pt))
+                    value = pt.value;
+                else
+                    fail("Ctrl detent probe press did not write a PAN point");
+                while (doc.undoStack()->index() > before && doc.undoStack()->canUndo())
+                    doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+                return value;
+            };
+            // Mirror sanity, like the tempo mirror above: a plain tap must
+            // write exactly the mirrored value.
+            {
+                const int y = panValueY(100);
+                const qreal x = clearX(y);
+                if (tapAndRead(x, y, Qt::NoModifier) != panValueAtY(y))
+                    fail("test-side PAN value mirror drifted from the widget's mapping");
+            }
+            for (const int sign : {1, -1}) {
+                // Just inside: the largest offset within the window that a
+                // pixel row actually hits; just outside: the smallest
+                // beyond it.
+                int yIn = -1, yOut = -1;
+                for (int y = top; y <= bottom; y++) {
+                    const int d = (panValueAtY(y) - 64) * sign;
+                    if (d > 0 && d <= window && (yIn < 0 || d > (panValueAtY(yIn) - 64) * sign))
+                        yIn = y;
+                    if (d > window && (yOut < 0 || d < (panValueAtY(yOut) - 64) * sign))
+                        yOut = y;
+                }
+                if (yIn < 0 || yOut < 0) {
+                    fail("Ctrl detent probe found no suitable pixel rows");
+                    continue;
+                }
+                if (tapAndRead(clearX(yIn), yIn, Qt::ControlModifier) != 64)
+                    fail(rowH == 48 ? "Ctrl press inside the detent window did not snap to center"
+                                    : "Ctrl press inside the window did not snap on a tall lane");
+                if (tapAndRead(clearX(yOut), yOut, Qt::ControlModifier) != panValueAtY(yOut))
+                    fail(rowH == 48 ? "Ctrl press outside the detent window snapped to center"
+                                    : "Ctrl press outside the window snapped on a tall lane");
+            }
+            if (rowH != 48) {
+                st.laneHeights.remove(panKey);
+                view.applyViewState(st);
+                QCoreApplication::processEvents();
+            }
+        }
+        view.removeEmptyLane(laneTrack, 0x0A);
+        while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+    }
+
     // A stopped playhead is a thin child overlay. Moving it must preserve the
     // timeline parents' backing stores instead of repainting their contents.
     for (const QString &error : playheadOverlayCheckFailures(view, *timeline))

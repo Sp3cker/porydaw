@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where velocity values could visually bleed out of the note box.
 - The MIDI event list now stays on the chunk it is showing when tracks are added, deleted, or reordered (including through undo/redo); previously it could silently jump to a different chunk. Deleting the viewed chunk's own track falls back to the selected track's chunk.
 - Freehand sweeps and Shift line ramps in the automation lanes now follow the grid across a mid-song time-signature change; previously points past the change kept the old meter's grid spacing and could land off the new grid.
+- The Ctrl center-snap in the automation lanes (pan/tune center, zero bend) now derives its magnet window from the UI font size and the lane's height instead of a hard-coded 8 pixels, so it stays proportionate at any font scale and lane size.
 
 ## [1.0.0] - 2026-08-01
 Initial release.

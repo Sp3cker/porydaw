@@ -4148,14 +4148,17 @@ class AutomationArea : public TimelineSurface
         m_dragValue = valueAtY(row, m_dragRow, y);
         if (row.kind == Row::Tempo)
             m_dragValue = std::max(1, m_dragValue);
-        // Ctrl detent: magnetize to the lane's neutral value within ~8 px,
-        // so dead-center doesn't require pixel-perfect aim.
+        // Ctrl detent: magnetize to the lane's neutral value, so dead-center
+        // doesn't require pixel-perfect aim. The window is a font-scaled
+        // pixel radius (fontPx(2/3) — the old hard-coded 8 px at the
+        // reference font) converted to value units through the row's
+        // height, so resized lanes keep the same on-screen magnet.
         int neutral;
         if (detent && rowDetent(row, &neutral)) {
             int minV, maxV;
             rowRange(row, &minV, &maxV);
-            const int plotH = std::max(1, rowHeight(row) - 10); // bottom - top
-            if (std::abs(m_dragValue - neutral) <= (maxV - minV) * 8 / plotH)
+            if (std::abs(m_dragValue - neutral) <=
+                (maxV - minV) * lyt::fontPx(2.0 / 3.0) / std::max(1, rowHeight(row)))
                 m_dragValue = neutral;
         }
         m_dragTick = m_sv->snapTick(rawTickAt(x), fine);

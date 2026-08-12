@@ -267,7 +267,11 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   notes show their velocity value instead of the pitch name, and velocity
   bars appear at any zoom.
 - **Bottom — Automation lanes:** per-track, addable from the m4a parameter list (§4.2),
-  drawn as line/step editors. A pencil mode (`automation.pencil_mode`, default **B**,
+  drawn as line/step editors. Ctrl while dragging magnetizes lanes with a meaningful
+  center (pan/tune 64, bend 0) to that neutral inside a font-scaled pixel window
+  (`layout::fontPx(2/3)` mapped through the row height into value units), so
+  dead-center never needs pixel-perfect aim at any lane height or font scale.
+  A pencil mode (`automation.pencil_mode`, default **B**,
   dispatched from the roll/lanes focus like M/S) turns every left drag into a freehand
   draw — point grabs and the Shift ramp are suspended while it is on — and holding
   Shift locks the stroke to a horizontal line at the value where the lock engaged;
