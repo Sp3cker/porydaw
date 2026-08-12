@@ -2895,6 +2895,15 @@ static void applyAxisLock(AxisLock lock, uint64_t originalTick, int originalValu
         *tick = originalTick;
 }
 
+// Display name of a CC/bend lane derived from its identity, for the sites
+// with no live model lane to carry one (empty-lane merge, lane menus).
+static QString laneDisplayName(uint8_t cc)
+{
+    if (cc == LANE_CC_BEND)
+        return m4aLaneName(M4aLane::PitchBend);
+    return QString::fromLatin1(m4aClassifyCc(cc).display);
+}
+
 class AutomationArea : public TimelineSurface
 {
   public:
@@ -2939,12 +2948,12 @@ class AutomationArea : public TimelineSurface
     // Hidden CC lanes (laneKey strings): the rows drop out of rebuildRows,
     // the lane data untouched. Same sidecar plumbing as the row heights,
     // including their track-move policy — a moved track's keys go stale and
-    // sit harmlessly rather than follow the track. Callers rebuild rows.
+    // sit harmlessly rather than follow the track.
     const QSet<QString> &hiddenLaneKeys() const { return m_hiddenLanes; }
     void setHiddenLanes(const QSet<QString> &keys)
     {
         m_hiddenLanes = keys;
-        invalidateContent();
+        rebuildRows(); // the rows leave/return now, not on a later rebuild
     }
 
     // Pencil mode (automation.pencil_mode, default B): a left drag always
@@ -3671,6 +3680,9 @@ class AutomationArea : public TimelineSurface
 
     // Inverse of laneKey, for walking the hidden set (a key that fails to
     // parse — hand-edited sidecar — is simply never listed or matched).
+    // Canonical spellings only: toInt also accepts "01"/"+1", but such a
+    // key would never equal the laneKey the rest of the code compares and
+    // removes, so it must not surface as an undismissable menu entry.
     static bool parseLaneKey(const QString &key, int *track, uint8_t *cc)
     {
         const QStringList parts = key.split(QLatin1Char(':'));
@@ -3679,7 +3691,8 @@ class AutomationArea : public TimelineSurface
         bool trackOk = false, ccOk = false;
         const int t = parts[1].toInt(&trackOk);
         const int c = parts[2].toInt(&ccOk);
-        if (!trackOk || !ccOk || t < 0 || t > 15 || c < 0 || c > 255)
+        if (!trackOk || !ccOk || t < 0 || t > 15 || c < 0 || c > 255 ||
+            key != laneKey(t, uint8_t(c)))
             return false;
         *track = t;
         *cc = uint8_t(c);
@@ -3769,10 +3782,9 @@ class AutomationArea : public TimelineSurface
     // The add-lane / hidden-lane menu label for a CC (or bend) lane.
     static QString ccLaneLabel(uint8_t cc)
     {
-        if (cc == LANE_CC_BEND)
-            return SongView::tr("Pitch bend (BEND)");
-        const M4aCcInfo info = m4aClassifyCc(cc);
-        return QStringLiteral("%1 (%2)").arg(QLatin1String(info.display), QLatin1String(info.name));
+        return QStringLiteral("%1 (%2)").arg(
+            laneDisplayName(cc),
+            cc == LANE_CC_BEND ? QStringLiteral("BEND") : QLatin1String(m4aClassifyCc(cc).name));
     }
 
     // Menu of §4.2 audible parameters without a lane on the selected track,
@@ -3789,8 +3801,6 @@ class AutomationArea : public TimelineSurface
                 continue;
             menu.addAction(ccLaneLabel(cc))->setData(int(cc));
         }
-        if (menu.isEmpty())
-            menu.addAction(SongView::tr("All parameters already have lanes"))->setEnabled(false);
         // Any CC can be hidden (imported songs carry lanes beyond the
         // addable list), so walk the hidden set itself, sorted for a stable
         // menu order. Show actions are keyed past the CC range.
@@ -3802,8 +3812,13 @@ class AutomationArea : public TimelineSurface
                 hidden.push_back(keyCc);
         }
         std::sort(hidden.begin(), hidden.end());
+        // The placeholder would be a lie right above a "Show: …" entry, so
+        // it only stands in when both sections are empty.
+        if (menu.isEmpty() && hidden.empty())
+            menu.addAction(SongView::tr("All parameters already have lanes"))->setEnabled(false);
         if (!hidden.empty()) {
-            menu.addSeparator();
+            if (!menu.isEmpty())
+                menu.addSeparator();
             menu.addAction(SongView::tr("Hidden lanes"))->setEnabled(false);
             for (const uint8_t cc : hidden)
                 menu.addAction(SongView::tr("Show: %1 (hidden)").arg(ccLaneLabel(cc)))
@@ -3816,7 +3831,13 @@ class AutomationArea : public TimelineSurface
         if (value >= 256) {
             const uint8_t cc = uint8_t(value - 256);
             m_hiddenLanes.remove(laneKey(track, cc));
-            rebuildRows();
+            if (!m_sv->model().findLane(track, cc)) {
+                // The data vanished while hidden (event-list delete, undo of
+                // its insertion): come back as an empty lane, not as nothing.
+                m_sv->addEmptyLane(track, cc); // rebuilds the rows
+            } else {
+                rebuildRows();
+            }
             m_sv->announce(SongView::tr("Showed the %1 lane").arg(ccLaneLabel(cc)));
         } else {
             m_sv->addEmptyLane(track, uint8_t(value));
@@ -3835,9 +3856,7 @@ class AutomationArea : public TimelineSurface
         const int track = row.track;
         const uint8_t cc = row.cc;
         const AutoLane *lane = rowLane(row);
-        const QString name = lane                 ? lane->name
-                             : cc == LANE_CC_BEND ? m4aLaneName(M4aLane::PitchBend)
-                                                  : QString::fromLatin1(m4aClassifyCc(cc).display);
+        const QString name = lane ? lane->name : laneDisplayName(cc);
         const bool empty = !lane || lane->points.empty();
 
         QMenu menu;
@@ -3937,7 +3956,11 @@ class AutomationArea : public TimelineSurface
         } else if (chosen == hide) {
             // View-only: the row leaves the lanes area, its points stay in
             // the document (no undo entry). The add-lane menu's "Hidden
-            // lanes" section restores it.
+            // lanes" section restores it. A time selection covering the
+            // lane is dropped (collapsed, like deleteTrack's) — a range
+            // Delete must never edit an invisible row's events.
+            if (m_sv->timeSelectionCoversRow(track, cc))
+                m_sv->clearTimeSelection();
             m_hiddenLanes.insert(laneKey(track, cc));
             rebuildRows();
             m_sv->announce(SongView::tr("Hid the %1 lane").arg(name));
@@ -5644,14 +5667,9 @@ void SongView::mergeEmptyLanes()
         AutoLane lane;
         lane.track = uint8_t(key.first);
         lane.cc = key.second;
-        if (key.second == LANE_CC_BEND) {
-            lane.lane = M4aLane::PitchBend;
-            lane.name = m4aLaneName(M4aLane::PitchBend);
-        } else {
-            const M4aCcInfo info = m4aClassifyCc(key.second);
-            lane.lane = info.lane;
-            lane.name = QString::fromLatin1(info.display);
-        }
+        lane.lane =
+            key.second == LANE_CC_BEND ? M4aLane::PitchBend : m4aClassifyCc(key.second).lane;
+        lane.name = laneDisplayName(key.second);
         m_model.lanes.push_back(std::move(lane));
         added = true;
     }
