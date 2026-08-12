@@ -6,13 +6,16 @@ Confirmed product specification. This file is normative. `scale-mode-research.md
 
 ## Purpose
 
-Scale Mode gives the piano roll three explicit views of a selected musical key:
+Scale Mode provides two independent piano-roll toggles for a selected musical key:
 
-- **Off** — the existing chromatic piano roll.
-- **Highlight** — the chromatic piano roll with scale-member lanes tinted purple.
-- **Fold** — a compact piano roll containing scale pitches and occupied exception pitches from the selected track.
+| Highlight | Fold | Piano-roll layout | Editing behavior |
+|---|---|---|---|
+| Disabled | Disabled | Existing 128-row chromatic piano roll | Existing chromatic behavior |
+| Enabled | Disabled | 128-row chromatic piano roll with scale-member lanes tinted purple | Existing chromatic behavior |
+| Disabled | Enabled | Compact piano roll containing only pitches used by the selected track | Fold's diatonic behavior |
+| Enabled | Enabled | Compact occupied-pitch piano roll with visible scale-member lanes tinted purple | Fold's diatonic behavior |
 
-Highlight and Fold affect editing presentation and pitch navigation only. They never rewrite MIDI merely because the mode, root, scale, or selected track changes.
+Highlight and Fold affect editing presentation and pitch navigation only. They never rewrite MIDI merely because a toggle, root, scale, or selected track changes.
 
 ## Non-goals
 
@@ -31,6 +34,7 @@ Highlight and Fold affect editing presentation and pitch navigation only. They n
 - **Scale** — a stable porydaw scale identity and a root-relative set of pitch classes.
 - **Scale pitch** — a MIDI pitch whose root-relative pitch class belongs to the selected scale.
 - **Exception pitch** — an exact off-scale MIDI pitch occupied by at least one note in the selected track.
+- **Occupied pitch** — an exact MIDI pitch occupied by at least one note in the selected track. Occupied pitches are the only rows Fold shows.
 - **Visible pitch** — a pitch represented by a row in the current piano-roll layout.
 - **Diatonic move** — a vertical note move measured in scale degrees rather than semitones.
 - **Selected track** — the active editable track. Notes from other tracks can appear as ghosts but do not affect Fold occupancy.
@@ -41,13 +45,15 @@ Each open song tab owns:
 
 - Root
 - Scale
-- Mode: Off, Highlight, or Fold
+- Highlight enabled
+- Fold enabled
 
 The initial state of a new tab is:
 
 - Root: C
 - Scale: Major
-- Mode: Off
+- Highlight: disabled
+- Fold: disabled
 
 State lives only for the lifetime of the open tab:
 
@@ -55,19 +61,13 @@ State lives only for the lifetime of the open tab:
 - Closing and reopening a tab returns to the defaults.
 - No Scale Mode state is serialized.
 
-Changing the selected track has mode-dependent behavior:
-
-- Off remains Off.
-- Highlight remains Highlight.
-- Fold changes to Highlight.
-- Returning to the previous track does not restore Fold.
-- Root and Scale do not change.
+Changing the selected track preserves both toggle states; Root and Scale also remain unchanged. While Fold is enabled, the layout immediately rebuilds from the incoming selected track's occupied pitches.
 
 Changing Root or Scale:
 
-- Has no visible effect while Off.
-- Repaints Highlight immediately.
-- Rebuilds the Fold layout immediately while keeping Fold active.
+- Has no visible effect when both toggles are disabled.
+- Repaints Highlight immediately when Highlight is enabled.
+- Reclassifies Fold editing destinations immediately when Fold is enabled without changing its occupied-pitch layout.
 
 ## Root names
 
@@ -118,24 +118,24 @@ is one of its intervals.
 | 27 | `iwato` | Iwato | `0, 1, 5, 6, 10` |
 | 28 | `kumoi` | Kumoi | `0, 2, 3, 7, 9` |
 
-There is no Chromatic catalog entry. Off mode supplies the unmodified chromatic view. Pelog and Messiaen scales are not included.
+There is no Chromatic catalog entry. With Fold disabled, the unmodified chromatic view is used. Pelog and Messiaen scales are not included.
 
-## Off mode
+## Neither toggle enabled
 
-Off preserves existing piano-roll behavior exactly:
+With both Highlight and Fold disabled, the piano roll preserves existing behavior exactly:
 
 - 128 chromatic rows
 - Existing natural and accidental lane colors
 - Existing piano-key rendering
 - Existing chromatic drawing, dragging, and transpose behavior
 
-Selecting a Root or Scale while Off updates runtime state but does not alter the roll.
+Selecting a Root or Scale updates runtime state but does not alter the roll while both toggles are disabled.
 
-## Highlight mode
+## Highlight toggle
 
-Highlight retains all 128 chromatic rows.
+Enabling Highlight applies its tint to every visible scale-pitch lane. With Fold disabled, Highlight retains all 128 chromatic rows. With Fold enabled, it tints only the visible scale-pitch lanes in the occupied-pitch layout.
 
-For each scale-pitch lane, composite `#b595fc` over the existing lane background at 50% opacity. The source purple and opacity are identical in all three built-in themes and custom themes.
+For each tinted lane, composite `#b595fc` over the existing lane background at 20% opacity (alpha 51). The source purple and opacity are identical in all three built-in themes and custom themes.
 
 Highlight rules:
 
@@ -146,16 +146,13 @@ Highlight rules:
 - Do not tint piano-keyboard keys.
 - Do not change normal, ghost, selected, velocity-colored, or sounding note semantics.
 
-## Fold mode
+## Fold toggle
 
 ### Visible pitches
 
-Fold uses a sorted, uniform-height sequence containing:
+When Fold is enabled, it uses a sorted, uniform-height sequence containing every exact MIDI pitch occupied anywhere in the selected track.
 
-1. Every scale pitch in the MIDI range 0–127.
-2. Every exact exception pitch occupied anywhere in the selected track.
-
-An exception is per MIDI pitch, not pitch class. For example, an off-scale C#4 reveals only C#4, not C# in every octave.
+Occupancy is per MIDI pitch, not pitch class. For example, a C#4 note reveals only C#4, not C# in every octave. Scale membership does not add rows: an unoccupied scale pitch remains hidden.
 
 Selected-track occupancy includes every note in the complete timeline regardless of:
 
@@ -164,22 +161,22 @@ Selected-track occupancy includes every note in the complete timeline regardless
 - Selection
 - Current playback position
 
-Notes from other tracks do not add exception rows. Their ghost notes are visible only when the selected track's Fold layout already contains their exact pitch.
+Notes from other tracks do not add rows. Their ghost notes are visible only when the selected track's Fold layout already contains their exact pitch.
 
-Fold does not crop to the selected track's minimum and maximum notes. All scale pitches from 0 through 127 remain available even when the selected track is empty.
+An empty selected track has no Fold rows.
 
 ### Fold rendering
 
 - All visible rows retain the existing uniform row height.
 - Rows remain ordered by ascending MIDI pitch with hidden gaps removed.
-- Scale rows and exception rows use ordinary natural/accidental styling.
-- Fold does not apply the purple Highlight tint.
+- Scale rows and exception rows use ordinary natural/accidental styling beneath any Highlight tint.
+- When Highlight is enabled, composite `#b595fc` at 20% opacity (alpha 51) over each visible scale-pitch lane; exception lanes remain untinted.
 - The piano keyboard contains exactly the visible pitches and uses existing key styling.
 - Existing C labels appear only when their C row is visible; Fold adds no new root labels.
 
 ### Exception lifecycle
 
-An exception row remains until the selected track no longer contains a note at that pitch.
+An occupied row remains until the selected track no longer contains a note at that pitch.
 
 - During a pointer edit, keep the current layout stable.
 - Rebuild after the edit gesture commits.
@@ -195,15 +192,15 @@ Every Fold-layout rebuild preserves the MIDI pitch nearest the vertical center o
 - Clamp only when required by the new scroll extent.
 - Do not preserve proportional scrollbar position.
 
-This rule applies when entering or leaving Fold, changing Root or Scale, and adding or removing exception rows.
+This rule applies when enabling or disabling Fold, changing the selected track, and adding or removing occupied rows. Root or Scale changes do not rebuild Fold geometry.
 
 ## Editing behavior
 
 ### Unchanged paths
 
-Off and Highlight retain existing chromatic editing behavior.
+With Fold disabled, existing chromatic editing behavior is retained whether Highlight is enabled or disabled.
 
-Fold does not alter pitch during:
+When Fold is enabled, it does not alter pitch during:
 
 - Horizontal note movement
 - Resize
@@ -211,31 +208,31 @@ Fold does not alter pitch during:
 - Selection
 - Time movement
 
-Paste, undo, redo, explicit chromatic time-range transposition, and other completed note insertions may introduce off-scale notes. Fold reveals their exception rows according to the lifecycle rules above.
+Paste, undo, redo, explicit chromatic time-range transposition, and other completed note insertions may introduce off-scale notes. When Fold is enabled, it reveals their exception rows according to the lifecycle rules above.
 
 ### Exception-row interaction
 
 An existing exception note can be selected, auditioned, moved in time, resized, deleted, or moved vertically into the scale.
 
-Exception rows do not participate as destinations for ordinary Fold drawing, scale-degree dragging, or scale-degree nudging:
+Exception rows do not participate as destinations for ordinary Fold drawing, scale-degree dragging, or scale-degree nudging while Fold is enabled:
 
 - Drawing in empty time on an exception row does nothing.
 - Vertical note dragging skips exception rows.
-- Fold-mode scale-degree nudging skips exception rows.
+- Fold scale-degree nudging skips exception rows.
 - Clicking its piano key can still audition the exception pitch.
 
 Chromatic operations remain exempt: paste and other note insertion, ±12 octave commands, and multi-track time-range transposition may land off-scale. Their completed edits create or retain the corresponding exception rows.
 
 ### Keyboard pitch commands
 
-For an ordinary note selection on the selected track while folded:
+For an ordinary note selection on the selected track while Fold is enabled:
 
 - Up moves one scale degree.
 - Down moves one scale degree.
 - Octave Up remains exactly +12 semitones.
 - Octave Down remains exactly -12 semitones.
 
-Off and Highlight keep semitone Up/Down behavior. Multi-track time-range transposition remains chromatic in every mode.
+With Fold disabled, Up/Down remain semitone commands whether Highlight is enabled or disabled. Multi-track time-range transposition remains chromatic regardless of either toggle.
 
 ### Scale-degree stepping
 
@@ -253,7 +250,7 @@ Exception pitches never count as scale-degree steps.
 
 ### Multi-note diatonic movement
 
-Fold moves each distinct selected source pitch to a distinct scale destination. Notes sharing the same source pitch share the same destination, regardless of time.
+When Fold is enabled, it moves each distinct selected source pitch to a distinct scale destination. Notes sharing the same source pitch share the same destination, regardless of time.
 
 For an upward move:
 
@@ -281,7 +278,7 @@ Collisions with unselected notes retain porydaw's existing overlap-resolution be
 
 ### Mouse dragging
 
-Mouse dragging and keyboard scale-degree nudging use the same multi-note transformation.
+When Fold is enabled, mouse dragging and keyboard scale-degree nudging use the same multi-note transformation.
 
 - Scale rows define the legal destination sequence.
 - Exception rows remain visible but do not count as movement steps or destinations.
@@ -293,18 +290,20 @@ The Fold layout stays fixed for the duration of the drag and rebuilds after comm
 
 ## Controls
 
-The transport toolbar contains three adjacent controls:
+The transport toolbar contains four adjacent controls:
 
 1. Root
 2. Scale
-3. Mode: Off, Highlight, Fold
+3. Highlight toggle button
+4. Fold toggle button
 
 Requirements:
 
 - The controls target the active tab only.
-- Switching tabs synchronizes all three controls without emitting changes into the incoming tab.
-- All three controls are disabled when no tab is active.
-- Root and Scale remain enabled while Mode is Off.
+- Switching tabs synchronizes all four controls without emitting changes into the incoming tab.
+- All four controls are disabled when no tab is active.
+- Root, Scale, Highlight, and Fold remain independently available while a tab is active.
+- Clicking Highlight changes only Highlight; clicking Fold changes only Fold. Neither click disables or enables the other toggle.
 - Scale identities come from combo item data, never from combo indices.
 - Scale Mode adds no duplicate View-menu actions.
 
@@ -317,35 +316,43 @@ Requirements:
 - Combo reordering cannot change a selected scale's identity.
 - Every catalog scale contains interval 0 and no interval outside 0–11.
 
-### State
+### State and controls
 
-- A new tab starts at C Major and Off.
-- Tabs retain independent runtime states while open.
+- A new tab starts at C Major with Highlight and Fold both disabled.
+- Tabs retain independent Root, Scale, Highlight, and Fold runtime states while open.
 - Closing and reopening returns to defaults.
 - No Scale Mode field is written to any persistence path.
-- A selected-track change performs Fold → Highlight and leaves other modes unchanged.
+- A selected-track change preserves both toggle states, Root, and Scale; when Fold is enabled, it rebuilds from the incoming track's occupied pitches.
+- Highlight and Fold buttons toggle independently and can be enabled together.
+
+### Toggle combinations
+
+- With both toggles disabled, the roll is pixel-equivalent to the existing chromatic rendering and uses chromatic editing.
+- With only Highlight enabled, all 128 chromatic rows remain and only scale-member lanes receive the tint.
+- With only Fold enabled, exactly the selected track's occupied rows remain visible without purple tint and Fold editing is diatonic.
+- With both toggles enabled, exactly the selected track's occupied rows remain visible, visible scale-member lanes receive the tint, and Fold editing remains diatonic.
 
 ### Highlight
 
-- C Major highlights C, D, E, F, G, A, and B lanes in every octave.
-- The tint is `#b595fc` at 50% over each lane's existing background.
+- C Major highlights C, D, E, F, G, A, and B lanes in every octave when those lanes are visible.
+- The tint is `#b595fc` at 20% over each lane's existing background.
 - Piano keys and note fills do not acquire the tint.
-- Off is pixel-equivalent to the existing chromatic rendering.
 
 ### Fold geometry
 
-- C Major Fold contains every C-major pitch in 0–127.
-- A selected-track C#4 note adds exactly the C#4 exception row.
-- Another track's C#4 ghost does not create that row.
-- The final selected-track C#4 note keeps the row until its edit commits, then the row disappears.
+- Fold contains exactly the MIDI pitches occupied anywhere in the selected track.
+- Scale pitches are hidden when the selected track does not use them.
+- An empty selected track has no Fold rows.
+- Another track's notes do not create rows.
+- The final selected-track note at a pitch keeps its row until its edit commits, then the row disappears.
 - Key-to-row and row-to-key mappings are inverses for every visible pitch.
 - Hidden pitches have no row and cannot be targeted by drawing.
 - Camera anchoring follows the center-pitch rule on every layout rebuild.
 
 ### Editing
 
-- Fold Up/Down moves by scale degree; octave commands remain ±12.
-- Off and Highlight retain chromatic Up/Down.
+- With Fold enabled, Up/Down moves by scale degree; octave commands remain ±12.
+- With Fold disabled, Up/Down remains chromatic whether Highlight is enabled or disabled.
 - Multi-track time-range transpose remains chromatic.
 - Ordinary Fold drawing, scale-degree dragging, and scale-degree nudging cannot target exception rows; chromatic octave, time-range, paste, and insertion paths may create or retain them.
 - C and C# selected together in C Major move upward to D and E.
@@ -356,12 +363,14 @@ Requirements:
 
 ### Visual smoke scenario
 
-1. Open two tabs and confirm both start at C Major and Off.
-2. Set the first tab to G Dorian and Highlight; confirm only lanes receive the fixed purple tint.
-3. Switch tabs and confirm their states remain independent.
-4. In the first tab, select a track containing an off-scale note and enter Fold.
-5. Confirm scale rows plus the exact exception row remain visible.
-6. Move the exception note into the scale and confirm the row disappears only after release.
+1. Open two tabs and confirm both start at C Major with Highlight and Fold disabled.
+2. Set the first tab to G Dorian and enable Highlight; confirm all 128 rows remain and only scale-member lanes receive the fixed purple tint.
+3. Switch tabs and confirm their Root, Scale, Highlight, and Fold states remain independent.
+4. In the first tab, select a track containing both in-scale and off-scale notes and enable Fold without disabling Highlight.
+5. Confirm that only the selected track's exact occupied pitches remain visible, visible scale-member lanes are tinted, and exception rows remain untinted.
+6. Move the final note away from one occupied pitch and confirm its row disappears only after release.
 7. Nudge a mixed in-scale/off-scale selection and confirm collision-free diatonic destinations.
-8. Change the selected track and confirm Fold becomes Highlight.
-9. Close and reopen the tab and confirm C Major and Off are restored.
+8. Change the selected track and confirm both toggles remain enabled and Fold rebuilds with the incoming track's occupied rows.
+9. Disable Highlight and confirm Fold remains enabled, the occupied rows remain, and their purple tint is removed.
+10. Disable Fold and confirm Highlight remains disabled and the full chromatic layout returns.
+11. Close and reopen the tab and confirm C Major with both toggles disabled is restored.

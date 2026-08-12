@@ -18,13 +18,13 @@ The implementation must not add Scale Mode fields to `ViewState`, `ViewSidecar`,
 
 The feature is complete when:
 
-- New tabs start at C Major and Off.
-- Off preserves the current chromatic piano roll.
-- Highlight applies the specified lane-only purple tint.
-- Fold displays scale pitches plus selected-track exception pitches.
-- Fold editing follows the specified diatonic destination rules.
-- Root, Scale, and Mode remain independent per open tab.
-- Selecting another track performs Fold → Highlight.
+- New tabs start at C Major with Highlight and Fold both disabled.
+- With both toggles disabled, the current chromatic piano roll is preserved.
+- Highlight independently applies the specified lane-only purple tint.
+- Fold independently displays exactly the pitches occupied by the selected track and applies the specified diatonic editing rules.
+- Highlight and Fold can be active simultaneously.
+- Root, Scale, Highlight, and Fold remain independent per open tab.
+- Selecting another track preserves both toggle states and rebuilds Fold from the incoming track when Fold is enabled.
 - No Scale Mode state is persisted.
 - Catalog, document editing, pitch geometry, tab routing, and visual behavior have focused verification.
 
@@ -65,27 +65,32 @@ Put every pitch-to-row and row-to-pitch decision behind one pure pitch-layout in
 
 The maximum remains 128 pitches, so the implementation should use fixed-size storage and rebuild in bounded time without heap allocation.
 
-In Off and Highlight, the layout is the complete chromatic 0–127 sequence. In Fold, it is the union of:
-
-- Every scale pitch in 0–127
-- Every exact pitch occupied by the selected track
-
+With Fold disabled, the layout is the complete chromatic 0–127 sequence whether Highlight is enabled or disabled. With Fold enabled, it contains exactly every pitch occupied by the selected track. Scale membership classifies those visible pitches for editing and determines Highlight tinting, but does not add rows.
 Piano-roll painting, piano-key painting, note rectangles, hit testing, hover, drawing, drag previews, scrolling, zoom anchoring, and key visibility must all consume this interface. Do not leave a second 128-row coordinate convention beside it.
 
 ### Per-tab runtime state
 
-`SongView` owns the transient Root, Scale, and Mode state. Keep it separate from the detached/persisted `ViewState`.
+`SongView` owns the transient Root, Scale, Highlight, and Fold state. Keep it separate from the detached/persisted `ViewState`.
+
+Implement every Boolean combination explicitly:
+
+| Highlight | Fold | Required behavior |
+|---|---|---|
+| Disabled | Disabled | 128-row chromatic layout and chromatic editing |
+| Enabled | Disabled | 128-row chromatic layout with 20% scale-lane tint and chromatic editing |
+| Disabled | Enabled | Occupied-pitch layout without tint and diatonic Fold editing |
+| Enabled | Enabled | Occupied-pitch layout with `#b595fc` at 20% opacity (alpha 51) on visible scale lanes and diatonic Fold editing |
 
 State changes have four effects:
 
-1. Reclassify scale membership whenever Root or Scale changes, even when the visible sequence remains chromatic.
-2. Rebuild the visible pitch sequence when Mode, Root, Scale, or selected-track occupancy changes it.
+1. Reclassify scale membership whenever Root or Scale changes, even when the visible sequence remains chromatic or occupied-pitch Fold geometry stays fixed.
+2. Rebuild the visible pitch sequence when Fold changes, when the selected track changes while Fold is enabled, or when selected-track occupancy changes while Fold is enabled.
 3. Invalidate the cached roll rendering.
 4. Notify the active MainWindow controls when required.
 
-Run viewport anchoring only when the visible pitch sequence changes. A Highlight Root or Scale change needs reclassification and repaint, not a Fold-style geometry rebuild.
+Run viewport anchoring only when the visible pitch sequence changes. A Root or Scale change needs reclassification and repaint, not a Fold geometry rebuild.
 
-The source currently has several routes that replace the active editable track. Centralize that transition and route explicit selection, selected-track deletion/remapping, and model fallback through it. Change Fold to Highlight only when the selected track's identity changes; a pure index remap of the same track is not a selection change.
+The source currently has several routes that replace the active editable track. Centralize that transition and route explicit selection, selected-track deletion/remapping, and model fallback through it. Preserve both toggle states on identity changes and pure index remaps alike; while Fold is enabled, rebuild the projection for the incoming track after changing the selected-track identity.
 
 ### Generic document pitch-destination edit
 
@@ -113,7 +118,7 @@ Keep the existing uniform-delta path for chromatic moves and multi-track time-ra
 
 ### Fixed highlight tint
 
-Define the Highlight source color once as `#b595fc` with 50% paint opacity.
+Define the Highlight source color once as `#b595fc` with 20% paint opacity.
 
 This is a fixed Scale Mode visual constant, not a theme-derived color. Do not add the previous three scale theme roles. Theme roles are required to be opaque, whereas this contract requires a source-over tint.
 
@@ -186,25 +191,25 @@ Keep the current row height. Only the number and identity of rows vary.
 
 Extend `--rollcheck` with projection-level checks:
 
-- Off/Highlight contain 128 rows and preserve current mapping.
+- With Fold disabled, both Highlight states contain 128 rows and preserve the current mapping.
 - Fold keys are sorted and unique.
-- Every scale pitch is present.
-- Exact occupied exception pitches are present.
-- Hidden pitches have no row.
+- Every selected-track occupied pitch is present.
+- Unoccupied pitches, including scale pitches, are hidden.
+- An empty selected track has zero rows.
 - Row-to-pitch and pitch-to-row are inverses.
 - Nearest-visible anchoring uses the lower pitch on a tie.
 - Scroll and zoom remain bounded at the top and bottom.
 
 ### Wave 4 — Runtime state and toolbar routing
 
-Add Root, Scale, and Mode to `SongView` as transient runtime state.
+Add Root, Scale, Highlight, and Fold to `SongView` as transient runtime state.
 
-Add adjacent Root, Scale, and Mode combos to the transport toolbar:
+Add adjacent Root and Scale combos plus independent Highlight and Fold toggle buttons to the transport toolbar:
 
 - Root uses the existing sharp-only pitch names.
 - Scale items store stable `ScaleId` values as item data.
-- Mode contains Off, Highlight, and Fold.
-- All controls remain enabled while a tab is active, including while Mode is Off.
+- Each button controls only its corresponding Boolean; clicking one must not change the other.
+- All controls remain enabled while a tab is active, regardless of either toggle's state.
 - All controls are disabled when no tab is active.
 
 Synchronize the controls from the active tab without feeding signals back into it. Changes target only the active tab.
@@ -213,21 +218,20 @@ Route every active-editable-track replacement through the centralized selected-t
 
 On a real selected-track change:
 
-- Fold becomes Highlight.
+- Highlight and Fold states remain unchanged.
 - Root and Scale remain unchanged.
-- Off and Highlight remain unchanged.
-- Returning to a previous track does not restore Fold.
+- If Fold is enabled, rebuild from the incoming selected track's occupied pitches.
 
-Extend `--check-mainwindow-routing` to cover two tabs with different Root, Scale, and Mode values, selected-track replacement through both direct selection and deletion/fallback, Fold → Highlight, pure index remapping, and preservation of an inactive tab's state.
+Extend `--check-mainwindow-routing` to cover two tabs with different Root, Scale, Highlight, and Fold values; independently toggled buttons; selected-track replacement through both direct selection and deletion/fallback; incoming-track Fold projection; pure index remapping; and preservation of an inactive tab's state.
 
 Do not touch any persistence codec or load/save path.
 
 ### Wave 5 — Highlight rendering
 
-Render Highlight through the chromatic pitch layout:
+Render Highlight through the active pitch layout:
 
 1. Paint the existing lane background.
-2. Apply `#b595fc` at 50% over every scale-pitch lane.
+2. When Highlight is enabled, apply `#b595fc` at 20% opacity (alpha 51) over every visible scale-pitch lane.
 3. Paint grid and octave lines.
 4. Paint ghost notes, active notes, previews, and overlays as today.
 
@@ -240,24 +244,25 @@ Do not tint:
 
 Extend `--rollcheck` with pixel and behavior checks proving:
 
-- C Major tints the correct pitch classes in every octave.
+- C Major tints the correct visible pitch classes in every octave.
 - Natural and accidental base differences remain visible below the tint.
 - Root lanes receive no extra emphasis.
 - Keyboard pixels remain unchanged.
 - Ghost-note and active-note face pixels remain unchanged.
-- Off remains equivalent to the existing rendering.
+- With Fold disabled, Highlight disabled remains equivalent to the existing rendering.
+- With Fold enabled, Highlight tints visible scale rows and leaves exception rows untinted.
 
 ### Wave 6 — Fold occupancy and geometry
 
 Derive a fixed 128-pitch occupancy set from every note in `SongViewModel` whose track is the selected track. Do not filter by viewport, mute, solo, selection, or playback state.
 
-When folded:
+When Fold is enabled:
 
 - Iterate visible pitches rather than 0–127 in row and keyboard painting.
 - Suppress notes whose pitch has no visible row.
 - Keep ghost notes only when the selected-track layout exposes their pitch.
-- Retain ordinary natural/accidental styling for every visible row.
-- Show all scale pitches even when the selected track has no notes.
+- Retain ordinary natural/accidental styling beneath any Highlight tint for every visible row.
+- Show exactly the selected track's occupied pitches, with zero rows for an empty track.
 
 Centralize layout replacement in one operation that:
 
@@ -272,30 +277,33 @@ If a layout-affecting model change arrives during a pointer gesture, mark the la
 Extend `--rollcheck` to cover:
 
 - Selected-track occupancy across the complete timeline
-- Exact-pitch exception rows
+- Exact occupied-pitch rows regardless of scale membership
+- Unoccupied scale pitches remaining hidden
+- Empty-track zero-row geometry
 - Other-track ghosts not creating rows
-- Exception rows remaining during a held gesture
-- Rebuild after move, draw, paste, delete, undo, and redo
-- Center-pitch anchoring when entering/leaving Fold, changing scale, and adding/removing exceptions
+- Occupied rows remaining during a held gesture
+- Rebuild after move, draw, paste, delete, undo, redo, and selected-track changes
+- Center-pitch anchoring when enabling/disabling Fold and adding/removing occupied rows
+- Both-on geometry: only occupied rows are visible, with tint only on visible scale rows
 
 ### Wave 7 — Fold editing
 
-Route ordinary selected-track pitch editing through the pure diatonic resolver.
+When Fold is enabled, route ordinary selected-track pitch editing through the pure diatonic resolver.
 
-Keyboard behavior:
+Keyboard behavior while Fold is enabled:
 
-- Fold Up/Down requests ±1 scale degree.
-- Fold octave commands remain ±12 semitones.
-- Off and Highlight keep ±1-semitone Up/Down.
+- Up/Down requests ±1 scale degree.
+- Octave commands remain ±12 semitones.
+- With Fold disabled, Up/Down keep ±1-semitone behavior regardless of Highlight.
 - Multi-track time-range transpose stays chromatic.
 
-Drawing behavior:
+Drawing behavior while Fold is enabled:
 
 - Drawing on a scale row behaves normally.
 - Empty drawing on an exception row does nothing.
 - Piano-key audition on an exception row remains available.
 
-Drag behavior:
+Drag behavior while Fold is enabled:
 
 - The grabbed visible source pitch and pointer scale row determine the degree displacement.
 - Zero vertical displacement retains an off-scale source pitch.
@@ -310,9 +318,9 @@ Horizontal-only movement, resize, velocity editing, and selection remain pitch-n
 
 Extend `--rollcheck` to cover:
 
-- Single-note scale-degree nudging
+- Single-note scale-degree nudging with Fold enabled
 - Octave nudging
-- Off/Highlight chromatic nudging
+- Chromatic nudging with Fold disabled in both Highlight states
 - Multi-note collision-free examples
 - Repeated source pitches
 - Off-scale source entry into the scale
@@ -331,7 +339,7 @@ Extend `--rollcheck` to cover:
 | Pure visible-pitch projection | New small pitch-layout module under `src/ui/` |
 | Generic per-note destination edit | `src/core/songdocument.h/.cpp` |
 | Runtime state, painting, geometry, gestures | `src/ui/songview.h/.cpp` |
-| Root/Scale/Mode controls and tab synchronization | `src/mainwindow.h/.cpp` |
+| Root/Scale controls, Highlight/Fold toggles, and tab synchronization | `src/mainwindow.h/.cpp` |
 | Pure scale verification | New `src/scalecheck.cpp`, `src/main.cpp`, `tools/run_checks.sh` |
 | Document edit verification | `src/editcheck.cpp` |
 | Piano-roll verification | `src/rollcheck.cpp` |
@@ -363,14 +371,15 @@ Then:
 
 The visual smoke must observe:
 
-- Fixed 50% purple lane tint in Highlight
+- Fixed 20% purple lane tint whenever Highlight is enabled, including with Fold enabled
 - No keyboard or note-face tint
-- Scale plus exception rows in Fold
-- Deferred exception-row removal after drag release
-- Collision-free diatonic movement
-- Fold → Highlight on selected-track change
+- Exactly selected-track occupied rows whenever Fold is enabled
+- Both toggles can be enabled together without either disabling the other
+- Deferred occupied-row removal after drag release
+- Collision-free diatonic movement with Fold enabled
+- Both toggle states preserved with incoming-track Fold rows on selected-track change
 - Independent open-tab state
-- C Major and Off after closing and reopening
+- C Major with both toggles disabled after closing and reopening
 
 ## Completion checks
 
@@ -380,7 +389,7 @@ Before declaring the implementation complete, confirm:
 - No Ableton pitch-remapping table remains in the implementation.
 - No Scale Mode field enters a persistence path.
 - No piano-roll geometry path retains an independent fixed-128-row formula.
-- Off behavior remains unchanged.
+- With both toggles disabled, chromatic behavior remains unchanged.
 - All new document edits are undoable and deterministic.
 - The feature matches every acceptance criterion in `scale-mode-spec.md`.
 
