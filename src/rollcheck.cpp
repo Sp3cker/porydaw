@@ -91,7 +91,9 @@
 // A lane sweep or Shift ramp crossing a time-signature change steps each
 // side on its own segment's grid (the drawn grid restarts, and can change
 // spacing, at the signature), the ramp's endpoint exact at the release
-// tick.
+// tick. Shift on a point's dot grabs it into an axis-locked drag (first
+// travel picks the axis, sticky until Shift releases); the ramp starts
+// off-dot.
 // Undoing every gesture must restore the original bytes.
 
 namespace {
@@ -2182,7 +2184,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // existing point's dot sweeps new points over it instead of grabbing —
     // and holding Shift locks the stroke to a horizontal line at the value
     // where the lock engaged. With the mode off, the dot grab-move and the
-    // Shift ramp behave as before.
+    // off-dot Shift ramp behave as before.
     {
         const int undoIndex = doc.undoStack()->index();
         const int laneTrack = view.selectedTrack();
@@ -2379,7 +2381,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         doc.undoStack()->undo();
         QCoreApplication::processEvents();
 
-        // Arrow mode untouched: the dot grab-move and the Shift ramp.
+        // Arrow mode untouched: the dot grab-move and the off-dot Shift
+        // ramp (y1/y2 sit well outside the dot's 7 px grab slop).
         sendKey(lanes, Qt::Key_B, Qt::NoModifier);
         dragStroke(yDot, yDot, Qt::NoModifier);
         if (doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &probe))
@@ -2392,6 +2395,240 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("arrow-mode Shift ramp did not write its endpoints");
         else if (first.value == last.value)
             fail("arrow-mode Shift ramp collapsed to a horizontal line");
+        while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+    }
+
+    // Shift axis lock on a point drag: Shift+press on a point's dot grabs
+    // the point — the ramp now starts only off-dot — and once the travel
+    // passes the activation distance (layout::fontPx(5/12)) the dominant
+    // direction locks the drag to one axis. Mostly-horizontal keeps the
+    // value exact while the tick follows (SizeHor cursor); mostly-vertical
+    // keeps the tick while the value follows (SizeVer). The lock is sticky
+    // across a later 45° cross, releasing Shift mid-drag frees the drag,
+    // re-pressing re-resolves from the total travel since the press, and
+    // the release restores the tool cursor.
+    {
+        const int undoIndex = doc.undoStack()->index();
+        const int laneTrack = view.selectedTrack();
+        // Test-side mirror of the tempo row's value<->y mapping, as in the
+        // pencil section above (row 0, default 48 px height). All vertical
+        // motion here goes downward (values shrink) so no commit disturbs
+        // the auto-fit ceiling the mirror bakes in.
+        const int rowTopPad = 5, rowBottom = 48 - 1 - 4;
+        auto tempoMaxV = [&]() {
+            int maxV = 200;
+            for (const LanePoint &pt : view.model().tempoLane)
+                maxV = std::max(maxV, pt.value + 20);
+            return maxV;
+        };
+        auto tempoValueAtY = [&](int y) {
+            const int yc = std::clamp(y, rowTopPad, rowBottom);
+            return (rowBottom - yc) * tempoMaxV() / (rowBottom - rowTopPad);
+        };
+        auto tempoValueY = [&](int v) {
+            return rowBottom - v * (rowBottom - rowTopPad) / std::max(1, tempoMaxV());
+        };
+        auto tempoPointAt = [&](uint64_t tick, DocLanePoint *pt) {
+            return doc.findLanePoint(laneTrack, DOC_CC_TEMPO, tick, pt);
+        };
+        auto pointsInSpan = [&](uint64_t a, uint64_t b) {
+            size_t n = 0;
+            for (const DocLanePoint &pt : doc.lanePoints(laneTrack, DOC_CC_TEMPO))
+                if (pt.tick > a && pt.tick <= b)
+                    n++;
+            return n;
+        };
+
+        // Park a tempo point with an arrow-mode click in clear air.
+        const qreal dprLanes = lanes->devicePixelRatioF();
+        auto dotNear = [&](qreal x) {
+            for (const LanePoint &pt : view.model().tempoLane)
+                if (std::abs(view.displayX(double(pt.tick), songview::kGutterW, dprLanes) - x) < 24)
+                    return true;
+            return false;
+        };
+        qreal x0 = songview::kGutterW + (lanes->width() - songview::kGutterW) * 0.35;
+        while (dotNear(x0))
+            x0 += 40;
+        const int y0 = 20;
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(x0), y0), Qt::LeftButton,
+                  Qt::LeftButton);
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(x0), y0), Qt::LeftButton,
+                  Qt::NoButton);
+        QCoreApplication::processEvents();
+        const uint64_t t0 = view.snapTick(view.tickAtContentX(x0 - songview::kGutterW));
+        DocLanePoint parked;
+        if (!tempoPointAt(t0, &parked))
+            fail("axis-lock setup: arrow click did not write a tempo point");
+        if (parked.value != tempoValueAtY(y0))
+            fail("test-side tempo value mirror drifted from the widget's mapping");
+        const qreal xDot = view.displayX(double(t0), songview::kGutterW, dprLanes);
+        const int yDot = tempoValueY(parked.value);
+        const uint64_t g = std::max<uint64_t>(1, view.gridTicksAt(t0));
+        const uint64_t tEnd = t0 + 4 * g;
+        const qreal xEnd = view.displayX(double(tEnd), songview::kGutterW, dprLanes);
+        // Comfortably past the lock's activation travel.
+        const int arm = layout::fontPx(5.0 / 12.0) + 8;
+        DocLanePoint probe;
+
+        // Time lock: Shift+press on the dot, mostly-horizontal first
+        // travel. The y wobble on the way must not touch the value.
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + arm, yDot + 2), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        if (lanes->cursor().shape() != Qt::SizeHorCursor)
+            fail("time lock did not show the horizontal drag cursor");
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xEnd), yDot + 6), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), yDot + 6), Qt::LeftButton,
+                  Qt::NoButton, Qt::ShiftModifier);
+        QCoreApplication::processEvents();
+        if (tempoPointAt(t0, &probe))
+            fail("Shift press on the dot did not grab the point (ramp or copy left at t0)");
+        if (!tempoPointAt(tEnd, &probe))
+            fail("time lock did not move the point's tick to the cursor");
+        else if (probe.value != parked.value)
+            fail("time lock did not keep the point's value exact");
+        if (lanes->cursor().shape() != Qt::ArrowCursor)
+            fail("releasing the locked drag did not restore the arrow cursor");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // Value lock: mostly-vertical first travel freezes the tick; a
+        // full grid cell of later horizontal travel stays pinned (sticky).
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + 1, yDot + arm), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        if (lanes->cursor().shape() != Qt::SizeVerCursor)
+            fail("value lock did not show the vertical drag cursor");
+        const int yValEnd = yDot + arm + 4;
+        const qreal xCell = view.displayX(double(t0 + g), songview::kGutterW, dprLanes);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xCell), yValEnd), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xCell), yValEnd), Qt::LeftButton,
+                  Qt::NoButton, Qt::ShiftModifier);
+        QCoreApplication::processEvents();
+        if (!tempoPointAt(t0, &probe))
+            fail("value lock did not keep the point's tick frozen");
+        else if (probe.value != tempoValueAtY(yValEnd))
+            fail("value lock did not follow the cursor's value");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // Sticky time lock: arm horizontally, then pull the total travel
+        // back near the origin and well past 45° vertical — the value must
+        // stay pinned anyway. The end x sits inside half a snap cell of the
+        // origin (the snap grid is one ladder step finer than the drawn
+        // grid), so the commit is a no-op unless a broken (re-resolving)
+        // lock changed the value.
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + arm, yDot + 1), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + 5, yDot + arm + 4), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xDot) + 5, yDot + arm + 4),
+                  Qt::LeftButton, Qt::NoButton, Qt::ShiftModifier);
+        QCoreApplication::processEvents();
+        if (!tempoPointAt(t0, &probe) || probe.value != parked.value)
+            fail("time lock flipped to a value lock after crossing 45 degrees");
+        while (doc.undoStack()->index() > undoIndex + 1 && doc.undoStack()->canUndo())
+            doc.undoStack()->undo(); // normally a no-op commit left nothing to undo
+        QCoreApplication::processEvents();
+
+        // Releasing Shift mid-drag frees the drag: the value follows the
+        // cursor again and the lock cursor yields to the tool cursor.
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + arm, yDot + 2), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xEnd), yDot + 8), Qt::NoButton,
+                  Qt::LeftButton, Qt::NoModifier);
+        if (lanes->cursor().shape() != Qt::ArrowCursor)
+            fail("releasing Shift mid-drag kept the lock cursor");
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), yDot + 8), Qt::LeftButton,
+                  Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::processEvents();
+        if (!tempoPointAt(tEnd, &probe))
+            fail("freed drag did not move the point's tick to the cursor");
+        else if (probe.value != tempoValueAtY(yDot + 8))
+            fail("releasing Shift mid-drag did not free the value axis");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // Re-pressing Shift re-resolves from the total travel since the
+        // press: net-vertical by then, so the tick pins back to the origin.
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + arm, yDot), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + 2, yDot + arm + 3), Qt::NoButton,
+                  Qt::LeftButton, Qt::NoModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + 2, yDot + arm + 4), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        if (lanes->cursor().shape() != Qt::SizeVerCursor)
+            fail("re-pressed Shift did not re-resolve to a value lock");
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xDot) + 2, yDot + arm + 4),
+                  Qt::LeftButton, Qt::NoButton, Qt::ShiftModifier);
+        QCoreApplication::processEvents();
+        if (!tempoPointAt(t0, &probe) || probe.value != tempoValueAtY(yDot + arm + 4))
+            fail("re-pressed Shift lock did not pin the tick back to the origin");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // Off the dot Shift still starts the ramp — and a true ramp: the
+        // committed midpoint interpolates the press/release anchors,
+        // ignoring the dipped mid-drag sample a sweep would have followed.
+        const int yRampFrom = yDot + 12, yRampTo = yDot + 4;
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yRampFrom), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        const qreal xMid = view.displayX(double(t0 + 2 * g), songview::kGutterW, dprLanes);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xMid), rowBottom), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xEnd), yRampTo), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), yRampTo), Qt::LeftButton,
+                  Qt::NoButton, Qt::ShiftModifier);
+        QCoreApplication::processEvents();
+        const int vRampFrom = tempoValueAtY(yRampFrom);
+        const int vRampTo = tempoValueAtY(yRampTo);
+        const int vRampMid =
+            vRampFrom +
+            int(std::llround(double(vRampTo - vRampFrom) * double(2 * g) / double(tEnd - t0)));
+        if (!tempoPointAt(t0, &probe) || probe.value != vRampFrom)
+            fail("off-dot Shift press did not anchor a ramp at the press value");
+        if (!tempoPointAt(t0 + 2 * g, &probe) || probe.value != vRampMid)
+            fail("off-dot Shift drag did not commit an interpolated ramp");
+        if (!tempoPointAt(tEnd, &probe) || probe.value != vRampTo)
+            fail("off-dot Shift ramp endpoint drifted from the release position");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // Pencil mode is a different code path: Shift+press on the dot
+        // sweeps with the horizontal stroke lock, never a point grab.
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
+        sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xCell), yDot + 6), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseMove, QPoint(int(xEnd), yDot + 10), Qt::NoButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xEnd), yDot + 10), Qt::LeftButton,
+                  Qt::NoButton, Qt::ShiftModifier);
+        QCoreApplication::processEvents();
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
+        if (!tempoPointAt(t0, &probe))
+            fail("pencil-mode Shift press on the dot grabbed the point instead of drawing");
+        if (pointsInSpan(t0, tEnd) < 2)
+            fail("pencil-mode Shift stroke over the dot did not draw the crossed cells");
+        for (const DocLanePoint &pt : doc.lanePoints(laneTrack, DOC_CC_TEMPO))
+            if (pt.tick >= t0 && pt.tick <= tEnd && pt.value != tempoValueAtY(yDot))
+                fail("pencil-mode Shift stroke lost its horizontal lock");
+
         while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
             doc.undoStack()->undo();
         QCoreApplication::processEvents();

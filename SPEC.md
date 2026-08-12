@@ -271,6 +271,15 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   center (pan/tune 64, bend 0) to that neutral inside a font-scaled pixel window
   (`layout::fontPx(2/3)` mapped through the row height into value units), so
   dead-center never needs pixel-perfect aim at any lane height or font scale.
+  Dragging an existing point with **Shift** held locks the drag to one axis, picked
+  by the dominant direction once the travel passes a font-scaled activation distance
+  (`layout::fontPx(5/12)`): mostly-horizontal keeps the value exact while the tick
+  follows the cursor (SizeHor cursor), mostly-vertical keeps the tick (SizeVer).
+  The lock is sticky once resolved — wobbling past 45° later doesn't flip it;
+  releasing Shift mid-drag frees the drag, re-pressing re-resolves from the total
+  travel, and the release restores the tool cursor. Shift+press **on** a point's dot
+  starts this locked drag; the Shift line ramp starts anywhere off-dot (a constrained
+  nudge of a dot is common, a ramp anchored exactly on one is not).
   A pencil mode (`automation.pencil_mode`, default **B**,
   dispatched from the roll/lanes focus like M/S) turns every left drag into a freehand
   draw — point grabs and the Shift ramp are suspended while it is on — and holding

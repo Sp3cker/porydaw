@@ -2863,6 +2863,38 @@ class PianoRoll : public TimelineSurface
 
 // ----------------------------------------------------------- AutomationArea
 
+// Shift axis lock for dragging an existing point, ported from the source
+// branch's automationgesture.cpp (resolveAxisLock/applyAxisLock). The first
+// travel past the activation distance picks the axis by dominant direction:
+// Time freezes the value and lets the tick follow the cursor, Value the
+// reverse. Sticky once resolved — wobbling past 45° later doesn't flip it;
+// releasing Shift frees the drag, and re-pressing re-resolves from the
+// total travel since the press.
+enum class AxisLock { None, Time, Value };
+
+static AxisLock resolveAxisLock(AxisLock current, bool shiftHeld, const QPointF &origin,
+                                const QPointF &position, int activationDistance)
+{
+    if (!shiftHeld)
+        return AxisLock::None;
+    if (current != AxisLock::None)
+        return current;
+    const qreal dx = position.x() - origin.x();
+    const qreal dy = position.y() - origin.y();
+    if (std::abs(dx) + std::abs(dy) < qreal(activationDistance))
+        return AxisLock::None;
+    return std::abs(dx) >= std::abs(dy) ? AxisLock::Time : AxisLock::Value;
+}
+
+static void applyAxisLock(AxisLock lock, uint64_t originalTick, int originalValue, uint64_t *tick,
+                          int *value)
+{
+    if (lock == AxisLock::Time)
+        *value = originalValue;
+    else if (lock == AxisLock::Value)
+        *tick = originalTick;
+}
+
 class AutomationArea : public TimelineSurface
 {
   public:
@@ -2947,6 +2979,7 @@ class AutomationArea : public TimelineSurface
         m_dragRow = -1;
         m_resizeRow = -1;
         m_gesture = Gesture::None;
+        m_axisLock = AxisLock::None;
         m_sweep.clear();
         m_rightPress = false;
         m_selSweep = false;
@@ -3217,24 +3250,29 @@ class AutomationArea : public TimelineSurface
                    event->modifiers() & Qt::ControlModifier);
         const LanePoint *grab =
             m_pencilMode ? nullptr : grabPoint(row, ri, event->position().x(), event->pos().y());
-        if (!m_pencilMode && (event->modifiers() & Qt::ShiftModifier)) {
-            // Line ramp: the press anchors one end, release commits the
-            // interpolated segment (checked before the point grab so a
-            // ramp can start exactly on an existing point).
-            m_gesture = Gesture::Line;
-            m_lineStartTick = m_dragTick;
-            m_lineStartValue = m_dragValue;
-        } else if (grab) {
+        if (grab) {
             // Grabbing requires hitting the point's dot (x and y), so a
             // freehand redraw over a dense curve isn't captured by every
-            // cell's point — sweeping overwrites them instead.
+            // cell's point — sweeping overwrites them instead. Checked
+            // before the Shift ramp: on a dot, Shift means an axis-locked
+            // drag (a constrained nudge of a dot is common; a ramp anchored
+            // exactly on one is not — it can start anywhere off-dot).
             m_gesture = Gesture::Point;
             m_dragOrigTick = int64_t(grab->tick);
+            m_dragOrigValue = grab->value;
+            m_pointPressPos = event->position();
+            m_axisLock = AxisLock::None;
             // Start from the point's exact position, not the pixel-derived
             // one: a no-motion click (or the first half of a double-click)
             // must not quantize the value to the pixel grid.
             m_dragTick = grab->tick;
             m_dragValue = grab->value;
+        } else if (!m_pencilMode && (event->modifiers() & Qt::ShiftModifier)) {
+            // Line ramp: the press anchors one end, release commits the
+            // interpolated segment.
+            m_gesture = Gesture::Line;
+            m_lineStartTick = m_dragTick;
+            m_lineStartValue = m_dragValue;
         } else {
             // Freehand sweep; a no-motion click degenerates to a single
             // point (overwriting any point already on that tick). With the
@@ -3303,6 +3341,8 @@ class AutomationArea : public TimelineSurface
                    event->modifiers() & Qt::ControlModifier);
         if (lock)
             m_dragValue = heldValue;
+        if (m_gesture == Gesture::Point)
+            updatePointAxisLock(event->position(), event->modifiers() & Qt::ShiftModifier);
         if (m_gesture == Gesture::Sweep)
             extendSweep(event->position().x(), fine);
         invalidateContent();
@@ -3338,6 +3378,10 @@ class AutomationArea : public TimelineSurface
         const Gesture gesture = m_gesture;
         m_gesture = Gesture::None;
         m_dragRow = -1;
+        if (m_axisLock != AxisLock::None) {
+            m_axisLock = AxisLock::None;
+            setCursor(modeCursor());
+        }
         invalidateContent();
 
         SongDocument *doc = m_sv->document();
@@ -4166,6 +4210,36 @@ class AutomationArea : public TimelineSurface
         m_dragTick = m_sv->snapTick(rawTickAt(x), fine);
     }
 
+    // Shift axis lock on a live point drag, applied after updateDrag mapped
+    // the cursor. While Shift is down but the travel hasn't resolved an axis
+    // yet the point holds still (no jump before the lock lands); once it
+    // has, the off-axis coordinate pins to the point's original position.
+    // The activation distance is the source branch's font-scaled radius
+    // (fontPx(5/12) — 5 px at the reference font). The cursor mirrors the
+    // state: SizeHor moving in time, SizeVer moving in value, the tool
+    // cursor for a free drag.
+    void updatePointAxisLock(const QPointF &position, bool shiftHeld)
+    {
+        const AxisLock previous = m_axisLock;
+        m_axisLock = resolveAxisLock(m_axisLock, shiftHeld, m_pointPressPos, position,
+                                     lyt::fontPx(5.0 / 12.0));
+        if (shiftHeld && m_axisLock == AxisLock::None) {
+            m_dragTick = uint64_t(m_dragOrigTick);
+            m_dragValue = m_dragOrigValue;
+        } else {
+            applyAxisLock(m_axisLock, uint64_t(m_dragOrigTick), m_dragOrigValue, &m_dragTick,
+                          &m_dragValue);
+        }
+        if (m_axisLock == previous)
+            return;
+        if (m_axisLock == AxisLock::Time)
+            setCursor(Qt::SizeHorCursor);
+        else if (m_axisLock == AxisLock::Value)
+            setCursor(Qt::SizeVerCursor);
+        else
+            setCursor(modeCursor());
+    }
+
     // One meter-aware grid step: the next drawn-grid position after tick,
     // clamped to limit (which is always emitted as the final step). The
     // drawn grid restarts at every time-signature change (gridSegAt), so a
@@ -4367,8 +4441,9 @@ class AutomationArea : public TimelineSurface
         }
     }
 
-    // Left-drag gestures: Point moves an existing point (press landed near
-    // one), Sweep freehand-draws a stream of points, Line (Shift) commits an
+    // Left-drag gestures: Point moves an existing point (press landed on
+    // its dot; Shift locks the drag to the axis of first travel), Sweep
+    // freehand-draws a stream of points, Line (Shift off-dot) commits an
     // interpolated ramp between press and release. Alt snaps to the clock
     // grid instead of the visible grid throughout; Ctrl magnetizes the value
     // to the lane's neutral (pan/tune center, zero bend); double-click opens
@@ -4395,7 +4470,10 @@ class AutomationArea : public TimelineSurface
     uint64_t m_selAnchorTick = 0;
     Gesture m_gesture = Gesture::None;
     int m_dragRow = -1;
-    int64_t m_dragOrigTick = -1; // existing point being moved, -1 = new point
+    int64_t m_dragOrigTick = -1;          // existing point being moved, -1 = new point
+    int m_dragOrigValue = 0;              // that point's original value, the axis-lock pin
+    QPointF m_pointPressPos;              // point-drag press, the axis-lock travel origin
+    AxisLock m_axisLock = AxisLock::None; // Shift lock on the live point drag
     uint64_t m_dragTick = 0;
     int m_dragValue = 0;
     std::vector<std::pair<uint64_t, int>> m_sweep; // tick-sorted freehand samples
