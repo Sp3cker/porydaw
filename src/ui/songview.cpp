@@ -3373,13 +3373,18 @@ class AutomationArea : public TimelineSurface
                 doc->writeLanePoints(track, cc, a, a, {{a, vb}});
                 return;
             }
-            const uint64_t g =
-                std::max<uint64_t>(1, fine ? m_sv->fineGridTicks() : m_sv->gridTicksAt(a));
+            // Meter-aware walk (nextGridTick): each point lands on its own
+            // segment's grid across a signature change, and the last
+            // iteration is exactly t == b, where the interpolation yields
+            // vb — the endpoint stays exact at the release tick.
             std::vector<SongDocument::LanePointValue> pts;
-            for (uint64_t t = a; t < b; t += g)
+            for (uint64_t t = a;;) {
                 pts.push_back(
                     {t, va + int(std::llround(double(vb - va) * double(t - a) / double(b - a)))});
-            pts.push_back({b, vb});
+                if (t >= b)
+                    break;
+                t = nextGridTick(t, fine, b);
+            }
             doc->writeLanePoints(track, cc, a, b, pts);
         }
     }
@@ -4156,6 +4161,25 @@ class AutomationArea : public TimelineSurface
         m_dragTick = m_sv->snapTick(rawTickAt(x), fine);
     }
 
+    // One meter-aware grid step: the next drawn-grid position after tick,
+    // clamped to limit (which is always emitted as the final step). The
+    // drawn grid restarts at every time-signature change (gridSegAt), so a
+    // fixed-spacing walk would keep the old meter's spacing and phase past
+    // the boundary and land points off the new grid; landing on seg.next
+    // re-anchors the walk there. Fine mode is exempt: the clock grid is
+    // absolute and doesn't restart at signature changes.
+    uint64_t nextGridTick(uint64_t tick, bool fine, uint64_t limit) const
+    {
+        if (tick >= limit)
+            return limit;
+        const uint64_t g =
+            std::max<uint64_t>(1, fine ? m_sv->fineGridTicks() : m_sv->gridTicksAt(tick));
+        uint64_t next = g < limit - tick ? tick + g : limit;
+        if (!fine)
+            next = std::min(next, m_sv->gridSegAt(tick).next);
+        return next; // > tick: g >= 1 and both limit and seg.next exceed tick
+    }
+
     // Freehand sweep bookkeeping: fills every grid cell crossed since the
     // last mouse sample (linear interpolation, so a fast drag leaves no
     // gaps), overwriting cells swept more than once.
@@ -4166,15 +4190,16 @@ class AutomationArea : public TimelineSurface
         const double to = rawTick;
         const uint64_t t0 = m_sv->snapTick(std::min(from, to), fine);
         const uint64_t t1 = m_sv->snapTick(std::max(from, to), fine);
-        const uint64_t g =
-            std::max<uint64_t>(1, fine ? m_sv->fineGridTicks() : m_sv->gridTicksAt(t0));
-        for (uint64_t t = t0; t <= t1; t += g) {
+        for (uint64_t t = t0;;) {
             int v = m_dragValue;
             if (to != from) {
                 const double f = std::clamp((double(t) - from) / (to - from), 0.0, 1.0);
                 v = m_prevValue + int(std::llround(f * (m_dragValue - m_prevValue)));
             }
             sweepUpsert(t, v);
+            if (t >= t1)
+                break;
+            t = nextGridTick(t, fine, t1);
         }
         m_prevTick = rawTick;
         m_prevValue = m_dragValue;

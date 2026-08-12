@@ -274,7 +274,10 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   the cursor becomes a pencil. The key is Ableton-style momentary besides the tap
   toggle: a quick tap sticks, while holding it past 500 ms — or drawing a lane
   stroke during the hold — reverts the mode on release, making it a hold-to-draw
-  (or, from pencil mode, hold-to-arrow) chord. Tempo lane always available at the top level. 0-based CC
+  (or, from pencil mode, hold-to-arrow) chord. Sweeps and Shift ramps step on the
+  drawn grid per time-signature segment — the grid restarts (and can change spacing)
+  at a signature change, and generated points follow it — with the ramp's endpoint
+  exact at the release tick. Tempo lane always available at the top level. 0-based CC
   lanes have a zoomable value axis (gutter menu → Value range: auto-fit or a fixed
   0–16/32/64/127 display max, persisted in the sidecar §4.4); MOD auto-fits by default
   since its musical range is roughly 0–20. Display only — event values are untouched,

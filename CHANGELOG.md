@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moving or resizing notes now re-inserts the original MIDI events instead of rebuilding them, so unmodeled bytes (like a note-off's release velocity) survive those edits.
 - Fixed bug where velocity values could visually bleed out of the note box.
 - The MIDI event list now stays on the chunk it is showing when tracks are added, deleted, or reordered (including through undo/redo); previously it could silently jump to a different chunk. Deleting the viewed chunk's own track falls back to the selected track's chunk.
+- Freehand sweeps and Shift line ramps in the automation lanes now follow the grid across a mid-song time-signature change; previously points past the change kept the old meter's grid spacing and could land off the new grid.
 
 ## [1.0.0] - 2026-08-01
 Initial release.

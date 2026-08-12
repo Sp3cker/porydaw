@@ -88,6 +88,10 @@
 // Shift ramp behave as before. The key is a momentary chord besides the
 // tap-toggle: holding it past the threshold, or drawing a lane stroke
 // during the hold, reverts the mode on release (hold-to-draw).
+// A lane sweep or Shift ramp crossing a time-signature change steps each
+// side on its own segment's grid (the drawn grid restarts, and can change
+// spacing, at the signature), the ramp's endpoint exact at the release
+// tick.
 // Undoing every gesture must restore the original bytes.
 
 namespace {
@@ -2388,6 +2392,155 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("arrow-mode Shift ramp did not write its endpoints");
         else if (first.value == last.value)
             fail("arrow-mode Shift ramp collapsed to a horizontal line");
+        while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+    }
+
+    // Meter-aware lane stepping: a freehand sweep or a Shift line ramp
+    // crossing a time-signature change lands every generated point on the
+    // grid of the segment governing it — the drawn grid restarts (and can
+    // change spacing) at the signature — instead of carrying the press-time
+    // spacing and phase across the boundary. The ramp's final point stays
+    // exactly at the release tick. Probed on the tempo row against 4/4->3/2
+    // (spacing doubles at the boundary) and against a mid-cell 4/4->4/4
+    // change (equal spacing, restarted phase).
+    {
+        const int undoIndex = doc.undoStack()->index();
+        const int laneTrack = view.selectedTrack();
+        const qreal dprLanes = lanes->devicePixelRatioF();
+        const uint64_t tpb = timeline->ticksPerBeat;
+        // Test-side mirror of the tempo row's value<->y mapping, as in the
+        // pencil section above (row 0, default 48 px height).
+        const int rowTopPad = 5, rowBottom = 48 - 1 - 4;
+        auto tempoMaxV = [&]() {
+            int maxV = 200;
+            for (const LanePoint &pt : view.model().tempoLane)
+                maxV = std::max(maxV, pt.value + 20);
+            return maxV;
+        };
+        auto tempoValueAtY = [&](int y) {
+            const int yc = std::clamp(y, rowTopPad, rowBottom);
+            return (rowBottom - yc) * tempoMaxV() / (rowBottom - rowTopPad);
+        };
+        auto tempoValueY = [&](int v) {
+            return rowBottom - v * (rowBottom - rowTopPad) / std::max(1, tempoMaxV());
+        };
+        auto tempoPoints = [&]() { return doc.lanePoints(laneTrack, DOC_CC_TEMPO); };
+        auto laneX = [&](uint64_t tick) {
+            return view.displayX(double(tick), songview::kGutterW, dprLanes);
+        };
+        // The press must land in clear air (the grab slop is 7 px in x and
+        // y); dodge the song's own tempo dots by sliding the probe window.
+        auto clearAir = [&](uint64_t tick, int y) {
+            for (const LanePoint &pt : view.model().tempoLane)
+                if (std::abs(laneX(pt.tick) - laneX(tick)) <= 12 &&
+                    std::abs(tempoValueY(pt.value) - y) <= 12)
+                    return false;
+            return true;
+        };
+        const int ySweep = 40; // low tempo values, away from typical dots
+        // Drag from tA to tB, passing exactly through the given grid ticks
+        // so every mouse sample's snapped seed sits on the drawn grid (the
+        // per-sample seed phase is part of the sweep contract under test).
+        auto dragAcross = [&](uint64_t tA, uint64_t tB, std::vector<uint64_t> via, int yFrom,
+                              int yTo, Qt::KeyboardModifiers mods) {
+            sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(laneX(tA)), yFrom),
+                      Qt::LeftButton, Qt::LeftButton, mods);
+            via.push_back(tB);
+            for (size_t i = 0; i < via.size(); i++) {
+                const int y = yFrom + (yTo - yFrom) * int(i + 1) / int(via.size());
+                sendMouse(lanes, QEvent::MouseMove, QPoint(int(laneX(via[i])), y), Qt::NoButton,
+                          Qt::LeftButton, mods);
+            }
+            sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(laneX(tB)), yTo),
+                      Qt::LeftButton, Qt::NoButton, mods);
+            QCoreApplication::processEvents();
+        };
+        // Every committed point in [tA, tB] on its side's grid, and the
+        // count proves full cell coverage on both sides (a fixed-spacing
+        // walk either misfires the phase or skips cells).
+        auto checkSpan = [&](uint64_t sigTick, uint64_t tA, uint64_t tB, const char *what) {
+            const uint64_t gLeft = std::max<uint64_t>(1, view.gridTicksAt(tA));
+            const uint64_t gRight = std::max<uint64_t>(1, view.gridTicksAt(sigTick));
+            size_t n = 0;
+            bool aligned = true;
+            for (const DocLanePoint &pt : tempoPoints()) {
+                if (pt.tick < tA || pt.tick > tB)
+                    continue;
+                n++;
+                aligned = aligned && (pt.tick < sigTick ? (pt.tick - tA) % gLeft == 0
+                                                        : (pt.tick - sigTick) % gRight == 0);
+            }
+            const size_t expected =
+                size_t((sigTick - tA + gLeft - 1) / gLeft + (tB - sigTick) / gRight + 1);
+            if (!aligned || n != expected)
+                fail(what);
+        };
+
+        for (int scenario = 0; scenario < 2; scenario++) {
+            // Scenario 0: 3/2 at a bar line — the beat (and the quarter-note
+            // grid floor set above) doubles the spacing at the boundary.
+            // Scenario 1: 4/4 half a beat past a bar line — same spacing on
+            // both sides, but the grid re-anchors at the signature's tick.
+            uint64_t sigTick = 0;
+            for (uint64_t bar = 16; bar <= 28 && !sigTick; bar += 4) {
+                const uint64_t candidate = bar * tpb + (scenario == 1 ? tpb / 2 : 0);
+                if (clearAir(candidate - 2 * tpb, ySweep))
+                    sigTick = candidate;
+            }
+            if (!sigTick) {
+                fail("no clear air found for the meter-stepping probes");
+                break;
+            }
+            if (scenario == 0)
+                doc.setTimeSig(sigTick, 3, 1);
+            else
+                doc.setTimeSig(sigTick, 4, 2);
+            QCoreApplication::processEvents();
+            const uint64_t gLeft = std::max<uint64_t>(1, view.gridTicksAt(0));
+            const uint64_t gRight = std::max<uint64_t>(1, view.gridTicksAt(sigTick));
+            if (gLeft != tpb || gRight != (scenario == 0 ? 2 * tpb : tpb)) {
+                fail("meter-stepping probe setup: unexpected grid spacing");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+                continue;
+            }
+            const uint64_t tA = sigTick - (scenario == 1 ? tpb / 2 : 0) - 2 * gLeft;
+            const uint64_t tB = sigTick + 2 * gRight;
+
+            // Freehand sweep across the boundary in one fast move, so the
+            // interpolated cell walk itself crosses the signature (samples
+            // parked on the boundary would keep every per-sample walk
+            // inside a single segment and mask a fixed-spacing regression).
+            dragAcross(tA, tB, {}, ySweep, ySweep, Qt::NoModifier);
+            checkSpan(sigTick, tA, tB,
+                      scenario == 0 ? "sweep across a meter change left points off the new grid"
+                                    : "sweep across a re-anchored grid ignored the new phase");
+            doc.undoStack()->undo();
+            QCoreApplication::processEvents();
+
+            // Shift line ramp across the same boundary: stepped on each
+            // side's grid, endpoint exactly at the release tick and value.
+            const int yFrom = 40, yTo = 25;
+            dragAcross(tA, tB, {tA + gLeft, sigTick, sigTick + gRight}, yFrom, yTo,
+                       Qt::ShiftModifier);
+            checkSpan(sigTick, tA, tB, "line ramp across a meter change stepped off-grid");
+            const std::vector<DocLanePoint> committed = tempoPoints();
+            const DocLanePoint *last = nullptr;
+            for (const DocLanePoint &pt : committed)
+                if (pt.tick >= tA && pt.tick <= tB)
+                    last = &pt;
+            if (!last || last->tick != tB)
+                fail("line ramp endpoint is not exactly at the release tick");
+            else if (last->value != tempoValueAtY(yTo))
+                fail("line ramp endpoint value drifted from the release position");
+            doc.undoStack()->undo();
+            QCoreApplication::processEvents();
+
+            doc.undoStack()->undo(); // the signature change itself
+            QCoreApplication::processEvents();
+        }
         while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
             doc.undoStack()->undo();
         QCoreApplication::processEvents();
