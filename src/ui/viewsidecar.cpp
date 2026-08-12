@@ -47,6 +47,10 @@ bool load(const QString &projectRoot, const QString &songLabel, SongView::ViewSt
     const QJsonObject ranges = obj.value(QLatin1String("laneRanges")).toObject();
     for (auto it = ranges.begin(); it != ranges.end(); ++it)
         loaded.laneRanges.insert(it.key(), it.value().toInt());
+    // Additive key: files predating it load with nothing hidden.
+    for (const QJsonValue &v : obj.value(QLatin1String("hiddenLanes")).toArray())
+        if (!v.toString().isEmpty())
+            loaded.hiddenLanes.insert(v.toString());
     for (const QJsonValue &v : obj.value(QLatin1String("splitter")).toArray())
         loaded.splitterSizes.push_back(v.toInt());
     for (const QJsonValue &v : obj.value(QLatin1String("emptyLanes")).toArray()) {
@@ -95,6 +99,16 @@ bool save(const QString &projectRoot, const QString &songLabel, const SongView::
         for (auto it = state.laneRanges.begin(); it != state.laneRanges.end(); ++it)
             ranges.insert(it.key(), it.value());
         obj.insert(QLatin1String("laneRanges"), ranges);
+    }
+    if (!state.hiddenLanes.isEmpty()) {
+        // Sorted: a set's iteration order varies per run, and the sidecar
+        // should not churn under version control for an unchanged view.
+        QStringList keys(state.hiddenLanes.begin(), state.hiddenLanes.end());
+        keys.sort();
+        QJsonArray hidden;
+        for (const QString &key : keys)
+            hidden.append(key);
+        obj.insert(QLatin1String("hiddenLanes"), hidden);
     }
     QJsonArray splitter;
     for (int size : state.splitterSizes)

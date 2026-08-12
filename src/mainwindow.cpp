@@ -3364,12 +3364,23 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         tab->view->setGridMinDenom(8); // non-default grid must round-trip too
         tab->view->setGridFeel(SongView::GridFeel::Triplet);
         tab->view->setLaneDisplayRange(0, 0x01, 16); // MOD axis zoom, ditto
+        {
+            // A hidden lane, ditto (applyViewState is its only setter here).
+            SongView::ViewState hide = tab->view->viewState();
+            hide.hiddenLanes.insert(QStringLiteral("cc:0:1"));
+            tab->view->applyViewState(hide);
+        }
         const SongView::ViewState saved = tab->view->viewState();
         ok = ViewSidecar::save(m_project.root(), target->label, saved);
         tab->view->zoomAroundContentX(2.0, 0); // knock the view off the state
         tab->view->setGridMinDenom(0);
         tab->view->setGridFeel(SongView::GridFeel::Straight);
         tab->view->setLaneDisplayRange(0, 0x01, 0); // back to the MOD default
+        {
+            SongView::ViewState unhide = tab->view->viewState();
+            unhide.hiddenLanes.clear();
+            tab->view->applyViewState(unhide);
+        }
         SongView::ViewState loaded;
         ok = ok && ViewSidecar::load(m_project.root(), target->label, &loaded);
         if (ok) {
@@ -3385,14 +3396,34 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                  restored.laneHeight == saved.laneHeight && restored.gridMinDenom == 8 &&
                  restored.gridTriplet &&
                  restored.laneRanges.value(QStringLiteral("cc:0:1"), -1) == 16 &&
+                 restored.hiddenLanes.contains(QStringLiteral("cc:0:1")) &&
                  SongRegistry::loadRegistrationMeta(m_project.root(), target->label, &constant,
                                                     &player) &&
                  constant == QLatin1String("MUS_SELFTEST");
+        }
+        // Legacy sidecar shape: with nothing hidden the key is omitted —
+        // byte-wise the file an older build writes — and loading such a
+        // file must come back with nothing hidden.
+        if (ok) {
+            SongView::ViewState legacy = saved;
+            legacy.hiddenLanes.clear();
+            ok = ViewSidecar::save(m_project.root(), target->label, legacy);
+            QFile sidecar(ViewSidecar::pathFor(m_project.root(), target->label));
+            ok = ok && sidecar.open(QIODevice::ReadOnly) &&
+                 !sidecar.readAll().contains("hiddenLanes");
+            SongView::ViewState reloaded;
+            ok = ok && ViewSidecar::load(m_project.root(), target->label, &reloaded) &&
+                 reloaded.hiddenLanes.isEmpty();
         }
         QFile::remove(ViewSidecar::pathFor(m_project.root(), target->label));
         tab->view->setGridMinDenom(0);                        // don't leak the test grid into a
         tab->view->setGridFeel(SongView::GridFeel::Straight); // shutdown save
         tab->view->setLaneDisplayRange(0, 0x01, 0);           // nor the MOD axis zoom
+        {
+            SongView::ViewState reset = tab->view->viewState(); // nor the hidden lane
+            reset.hiddenLanes.clear();
+            tab->view->applyViewState(reset);
+        }
         if (ok)
             qInfo("selftest: sidecar view-state round trip OK");
         else

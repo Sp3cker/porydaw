@@ -138,6 +138,7 @@ class SongView : public QWidget
         QHash<QString, int> laneHeights;                 // per-row overrides (AutomationArea keys)
         QHash<QString, int> laneRanges;                  // per-lane display max (AutomationArea
                                                          // keys); 0 = auto-fit to the data
+        QSet<QString> hiddenLanes;                       // hidden CC lanes (AutomationArea keys)
         QList<int> splitterSizes;                        // roll pane, lanes pane
         std::vector<std::pair<int, uint8_t>> emptyLanes; // (track, cc)
         int gridMinDenom = 0;                            // drawn-grid floor as a note denominator

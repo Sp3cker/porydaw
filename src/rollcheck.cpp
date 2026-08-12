@@ -2998,6 +2998,183 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QCoreApplication::processEvents();
     }
 
+    // Lane hiding (gutter menu → Hide lane): the row drops out of the lanes
+    // area while its document data and the undo stack stay untouched, and
+    // the add-lane menu grows a "Hidden lanes" section whose Show entry
+    // restores the row. A hidden CC is never re-offered as a plain add
+    // candidate (even a stale hidden key without a model lane). The add-lane
+    // strip opens on right-click as well as left, and an added-but-empty
+    // lane's gutter opens the same menu. The menus are driven for real: the
+    // press blocks in QMenu::exec(), so a zero-delay timer scheduled first
+    // fires inside that loop and activates an entry by keyboard.
+    {
+        const int undoIndex = doc.undoStack()->index();
+        const int laneTrack = view.selectedTrack();
+        view.addEmptyLane(laneTrack, 0x0A);        // PAN; a no-op if the song has one
+        doc.addLanePoint(laneTrack, 0x0A, 0, 100); // hidden data must survive
+        QCoreApplication::processEvents();
+        const std::vector<DocLanePoint> panBefore = doc.lanePoints(laneTrack, 0x0A);
+        const int undoAfterSetup = doc.undoStack()->index();
+        const QString panKey = QStringLiteral("cc:%1:%2").arg(laneTrack).arg(0x0A);
+        auto samePanPoints = [&]() {
+            const std::vector<DocLanePoint> now = doc.lanePoints(laneTrack, 0x0A);
+            if (now.size() != panBefore.size())
+                return false;
+            for (size_t i = 0; i < now.size(); i++)
+                if (now[i].tick != panBefore[i].tick || now[i].value != panBefore[i].value)
+                    return false;
+            return true;
+        };
+        auto isHidden = [&](int track, int cc) {
+            return view.viewState().hiddenLanes.contains(
+                QStringLiteral("cc:%1:%2").arg(track).arg(cc));
+        };
+        // Row order mirror, like the detent probe: tempo, voice, then the
+        // selected track's visible lanes by ascending CC, all 48 px here.
+        auto laneRowTop = [&](uint8_t cc) {
+            int top = 2 * 48;
+            for (const AutoLane &lane : view.model().lanes)
+                if (lane.track == laneTrack && lane.cc < cc && !isHidden(lane.track, lane.cc))
+                    top += 48;
+            return top;
+        };
+        auto addStripTop = [&]() {
+            int rows = 2;
+            for (const AutoLane &lane : view.model().lanes)
+                if (lane.track == laneTrack && !isHidden(lane.track, lane.cc))
+                    rows++;
+            return rows * 48;
+        };
+        QString menuError;
+        auto driveMenu = [&](const std::function<void(QMenu *)> &act) {
+            menuError = QStringLiteral("menu did not open");
+            QTimer::singleShot(0, [&, act]() {
+                QMenu *menu = nullptr;
+                for (QWidget *w : QApplication::topLevelWidgets())
+                    if (auto *m = qobject_cast<QMenu *>(w); m && m->isVisible())
+                        menu = m;
+                if (!menu)
+                    return;
+                menuError.clear();
+                act(menu);
+                if (menu->isVisible()) // don't wedge exec() on a failed pick
+                    sendKey(menu, Qt::Key_Escape, Qt::NoModifier);
+            });
+        };
+        auto chooseAction = [&](QMenu *menu, const std::function<bool(QAction *)> &match,
+                                const char *what) {
+            for (QAction *action : menu->actions()) {
+                if (match(action)) {
+                    menu->setActiveAction(action);
+                    sendKey(menu, Qt::Key_Return, Qt::NoModifier);
+                    return;
+                }
+            }
+            menuError = QStringLiteral("menu is missing %1").arg(QLatin1String(what));
+        };
+        auto clickGutter = [&](uint8_t cc) {
+            const QPoint pos(8, laneRowTop(cc) + 10); // before the menu mutates row order
+            sendMouse(lanes, QEvent::MouseButtonPress, pos, Qt::LeftButton, Qt::LeftButton);
+            sendMouse(lanes, QEvent::MouseButtonRelease, pos, Qt::LeftButton, Qt::NoButton);
+            QCoreApplication::processEvents();
+        };
+
+        // Hide the PAN lane through its gutter menu.
+        const int hBefore = lanes->minimumHeight();
+        driveMenu([&](QMenu *menu) {
+            chooseAction(
+                menu, [](QAction *a) { return a->text() == QStringLiteral("Hide lane"); },
+                "Hide lane");
+        });
+        clickGutter(0x0A);
+        if (!menuError.isEmpty())
+            fail(qUtf8Printable(QStringLiteral("gutter lane %1").arg(menuError)));
+        if (!isHidden(laneTrack, 0x0A))
+            fail("Hide lane did not record the hidden lane in the view state");
+        if (lanes->minimumHeight() != hBefore - 48)
+            fail("hiding a lane did not remove its row from the lanes area");
+        if (!samePanPoints())
+            fail("hiding a lane touched its document data");
+        if (doc.undoStack()->index() != undoAfterSetup)
+            fail("hiding a lane pushed an undo entry");
+
+        // A stale hidden key — its lane has no data and no model row — must
+        // still keep its CC out of the plain add candidates (it is restored
+        // through Show, not re-added as a second empty lane).
+        uint8_t staleCc = 0;
+        for (const int cc : {0x14, 0x15, 0x01, 0x07})
+            if (!view.model().findLane(laneTrack, uint8_t(cc))) {
+                staleCc = uint8_t(cc);
+                break;
+            }
+        if (staleCc == 0) {
+            fail("no free audible CC for the stale hidden-key probe");
+        } else {
+            SongView::ViewState st = view.viewState();
+            st.hiddenLanes.insert(QStringLiteral("cc:%1:%2").arg(laneTrack).arg(staleCc));
+            view.applyViewState(st);
+            QCoreApplication::processEvents();
+        }
+
+        // Restore PAN from the add-lane menu, opened with a right-click on
+        // the strip; the hidden entries must be Show actions (data 256+cc),
+        // never plain add candidates (data cc).
+        bool hiddenOfferedAsAdd = false;
+        driveMenu([&](QMenu *menu) {
+            for (QAction *action : menu->actions())
+                if (action->data().isValid() &&
+                    (action->data().toInt() == 0x0A || action->data().toInt() == int(staleCc)))
+                    hiddenOfferedAsAdd = true;
+            chooseAction(
+                menu,
+                [](QAction *a) { return a->data().isValid() && a->data().toInt() == 256 + 0x0A; },
+                "the hidden lane's Show entry");
+        });
+        {
+            const QPoint strip(songview::kGutterW + 40, addStripTop() + 4);
+            sendMouse(lanes, QEvent::MouseButtonPress, strip, Qt::RightButton, Qt::RightButton);
+            sendMouse(lanes, QEvent::MouseButtonRelease, strip, Qt::RightButton, Qt::NoButton);
+            QCoreApplication::processEvents();
+        }
+        if (!menuError.isEmpty())
+            fail(qUtf8Printable(QStringLiteral("right-click add-lane %1").arg(menuError)));
+        if (hiddenOfferedAsAdd)
+            fail("a hidden lane was still offered as a plain add candidate");
+        if (isHidden(laneTrack, 0x0A))
+            fail("Show did not clear the hidden lane from the view state");
+        if (lanes->minimumHeight() != hBefore)
+            fail("Show did not restore the hidden lane's row");
+        if (!samePanPoints())
+            fail("the hide/show round trip touched the lane data");
+
+        // An added-but-empty lane's gutter opens the same menu.
+        if (staleCc != 0) {
+            SongView::ViewState st = view.viewState(); // retire the stale key
+            st.hiddenLanes.clear();
+            view.applyViewState(st);
+            view.addEmptyLane(laneTrack, staleCc);
+            QCoreApplication::processEvents();
+            bool sawRemoveEmpty = false, sawHide = false;
+            driveMenu([&](QMenu *menu) {
+                for (QAction *action : menu->actions()) {
+                    sawRemoveEmpty |= action->text() == QStringLiteral("Remove empty lane");
+                    sawHide |= action->text() == QStringLiteral("Hide lane");
+                }
+            });
+            clickGutter(staleCc);
+            if (!menuError.isEmpty())
+                fail(qUtf8Printable(QStringLiteral("empty lane's gutter %1").arg(menuError)));
+            else if (!sawRemoveEmpty || !sawHide)
+                fail("empty lane's gutter menu is missing its lane actions");
+            view.removeEmptyLane(laneTrack, staleCc);
+        }
+
+        view.removeEmptyLane(laneTrack, 0x0A);
+        while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+    }
+
     // A stopped playhead is a thin child overlay. Moving it must preserve the
     // timeline parents' backing stores instead of repainting their contents.
     for (const QString &error : playheadOverlayCheckFailures(view, *timeline))

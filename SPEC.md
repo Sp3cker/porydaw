@@ -295,6 +295,13 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   0–16/32/64/127 display max, persisted in the sidecar §4.4); MOD auto-fits by default
   since its musical range is roughly 0–20. Display only — event values are untouched,
   and data beyond the chosen range grows the axis rather than clipping.
+  CC lanes can also be hidden (gutter menu → Hide lane; Tempo/Voice rows cannot):
+  the row leaves the lanes area with its events untouched — a view-only op, no undo
+  entry — and comes back through the add-lane menu's "Hidden lanes" section
+  ("Show: … (hidden)"). A hidden CC is never re-offered as a plain add candidate.
+  The hidden set persists in the sidecar (§4.4) keyed like the row heights, so like
+  them it goes harmlessly stale when tracks move. The add-lane strip opens on
+  right-click as well as left, and the gutter menu works on an added-but-empty lane.
 - **Transport bar:** play/pause/stop, loop toggle, a follow-playhead toggle (also in
   the View menu; off, playback stops scrolling the roll and event list — the camera
   stays where the user put it; app-wide, persisted), position, tempo display, master

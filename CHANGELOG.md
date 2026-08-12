@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - There is now buffer space before the start of the song in the piano roll to make it easier to scroll and focus the start of the song. Similarly, there is now much bigger buffer after the end of the song.
 - Added a Pencil Mode for the automation lanes, toggled with the B key. While it's on, dragging always draws freehand, and holding Shift locks the stroke to a horizontal line. A quick tap of the key toggles the mode; holding it (or drawing while it's held) makes the switch momentary, reverting when the key is released.
 - Holding Shift while dragging an automation point now locks the drag to one axis, chosen by the initial drag direction: horizontal keeps the value exact while moving in time, vertical keeps the tick while changing the value. Releasing Shift mid-drag returns to a free drag. Shift+click directly on a point now starts this constrained drag; the Shift line ramp still starts anywhere else in the lane.
+- Automation lanes can now be hidden from their gutter menu ("Hide lane"). The lane's events are kept — only the row disappears — and the "+ Add lane" menu gains a "Hidden lanes" section that restores it. Hidden lanes are remembered per song. The "+ Add lane" strip also opens on right-click now, and a lane added without any events now has a working gutter menu.
 
 ## Fixed
 - Improved fidelity of CGB channels
