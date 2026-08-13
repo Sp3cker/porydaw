@@ -302,6 +302,23 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   The hidden set persists in the sidecar (§4.4) keyed like the row heights, so like
   them it goes harmlessly stale when tracks move. The add-lane strip opens on
   right-click as well as left, and the gutter menu works on an added-but-empty lane.
+  A lane-scoped time selection (the right-drag band) derives a **node selection**:
+  a point is selected iff its lane is one of the selection's lanes and
+  `startTick <= tick < endTick` (half-open) — nothing is stored, so the set can
+  never go stale, and nodes highlight live while the band is still sweeping.
+  Selected nodes draw a ring in the palette highlight; with two or more selected,
+  nodes in unselected lanes dim toward the palette mid color. Dragging a selected
+  node moves **every** selected node (cross-lane) by one shared tick/value delta
+  from the grabbed node — the shift clamped so the earliest node can't go below
+  tick 0, each value clamped to its own row's display range (tempo floored at 1) —
+  as a single undo entry, with a live preview of each affected row's pending curve;
+  the selection band shifts with the move and republishes. Pressing a node outside
+  the selection stays a plain single-point move. Delete/Backspace precedence: with
+  a **Lanes**-scope selection the range delete *is* the node delete — it removes
+  exactly the covered lane points (voice markers of a covered Voice row included)
+  as one undo entry, leaving out-of-range points untouched; with a Tracks-scope
+  selection the same shortcut keeps deleting the range contents across notes and
+  lanes via the shared `roll.delete` dispatch.
 - **Transport bar:** play/pause/stop, loop toggle, a follow-playhead toggle (also in
   the View menu; off, playback stops scrolling the roll and event list — the camera
   stays where the user put it; app-wide, persisted), position, tempo display, master

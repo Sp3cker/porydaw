@@ -3000,6 +3000,7 @@ class AutomationArea : public TimelineSurface
         m_resizeRow = -1;
         m_gesture = Gesture::None;
         clearAxisLock();
+        m_group.clear();
         m_sweep.clear();
         m_rightPress = false;
         m_selSweep = false;
@@ -3035,10 +3036,14 @@ class AutomationArea : public TimelineSurface
         if (!m_sv->timeline())
             return;
 
+        // With two or more nodes selected the edit clearly spans lanes, so
+        // the unselected lanes' nodes recede; a lone selected node keeps
+        // every lane at full strength (its ring is emphasis enough).
+        const bool dimUnselected = selectedNodeCount(2) >= 2;
         int rowY = 0;
         for (size_t i = 0; i < m_rows.size(); i++) {
             const int h = rowHeight(m_rows[i]);
-            paintRow(p, m_rows[i], QRect(0, rowY, width(), h));
+            paintRow(p, m_rows[i], QRect(0, rowY, width(), h), dimUnselected);
             rowY += h;
         }
 
@@ -3047,6 +3052,57 @@ class AutomationArea : public TimelineSurface
             p.setPen(themes::color(themes::Role::song_view_add_automation_lane_action));
             p.drawText(strip.adjusted(8, 0, -8, 0), Qt::AlignLeft | Qt::AlignVCenter,
                        SongView::tr("+ Add lane"));
+        }
+
+        // Group drag preview: every affected row's curve redrawn with the
+        // selected nodes at their pending positions, so a cross-lane move
+        // is visible in full before it commits.
+        if (m_gesture == Gesture::Point && !m_group.empty() && m_dragRow >= 0) {
+            const int64_t dTick = int64_t(m_dragTick) - m_dragOrigTick;
+            const int dValue = m_dragValue - m_dragOrigValue;
+            p.save();
+            p.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
+            p.setBrush(Qt::NoBrush);
+            auto tickX = [&](uint64_t t) { return m_sv->displayX(double(t), kGutterW, dpr); };
+            for (int ri = 0; ri < int(m_rows.size()); ri++) {
+                const auto affects = [ri](const GroupNode &n) { return n.row == ri; };
+                if (std::none_of(m_group.begin(), m_group.end(), affects))
+                    continue;
+                const std::vector<std::pair<uint64_t, int>> pts =
+                    previewRowPoints(ri, dTick, dValue);
+                if (pts.empty())
+                    continue;
+                int minV, maxV;
+                rowRange(m_rows[ri], &minV, &maxV);
+                const int top = rowTop(ri) + 5;
+                const int bottom = rowBottom(ri) - 1 - 4;
+                auto valueY = [&](int v) {
+                    return bottom - (v - minV) * (bottom - top) / std::max(1, maxV - minV);
+                };
+                p.save();
+                p.setClipRect(
+                    QRect(kGutterW, rowTop(ri), width() - kGutterW, rowHeight(m_rows[ri])),
+                    Qt::IntersectClip);
+                for (size_t i = 0; i < pts.size(); i++) {
+                    const int y = valueY(pts[i].second);
+                    const qreal xNext =
+                        i + 1 < pts.size() ? tickX(pts[i + 1].first) : qreal(width());
+                    p.drawLine(QLineF(tickX(pts[i].first), y, xNext, y));
+                    if (i + 1 < pts.size())
+                        p.drawLine(QLineF(xNext, y, xNext, valueY(pts[i + 1].second)));
+                }
+                // Mark each mover's destination, like the grabbed marker.
+                for (const GroupNode &n : m_group) {
+                    if (n.row != ri)
+                        continue;
+                    p.drawEllipse(
+                        QPointF(tickX(uint64_t(int64_t(n.point.tick) + dTick)),
+                                valueY(clampGroupValue(m_rows[ri], n.point.value + dValue))),
+                        3, 3);
+                }
+                p.restore();
+            }
+            p.restore();
         }
 
         // Drag preview: the pending stream (sweep) or ramp (line), plus a
@@ -3264,6 +3320,7 @@ class AutomationArea : public TimelineSurface
             return;
         m_dragRow = ri;
         m_dragPos = event->position();
+        m_group.clear(); // every press starts single until the grab proves otherwise
         // Latch the tool for the whole gesture: toggling B mid-drag must
         // not change an in-flight stroke's semantics. A gesture during a
         // pencil-key hold also makes that hold momentary.
@@ -3291,6 +3348,11 @@ class AutomationArea : public TimelineSurface
             // must not quantize the value to the pixel grid.
             m_dragTick = grab->tick;
             m_dragValue = grab->value;
+            // Grabbing a node inside the derived selection drags the whole
+            // selection: one shared dTick/dValue for every selected node,
+            // taken from this one. Outside it, a single-point move as ever.
+            if (pointSelected(row, grab->tick))
+                m_group = collectSelectedNodes();
         } else if (!m_pencilMode && (event->modifiers() & Qt::ShiftModifier)) {
             // Line ramp: the press anchors one end, release commits the
             // interpolated segment.
@@ -3404,6 +3466,8 @@ class AutomationArea : public TimelineSurface
         m_gesture = Gesture::None;
         m_dragRow = -1;
         clearAxisLock();
+        std::vector<GroupNode> group = std::move(m_group);
+        m_group.clear();
         invalidateContent();
 
         SongDocument *doc = m_sv->document();
@@ -3414,6 +3478,31 @@ class AutomationArea : public TimelineSurface
         if (gesture == Gesture::Point) {
             if (m_dragOrigTick < 0)
                 return;
+            if (!group.empty()) {
+                // Group commit: one undoable batch move by the shared
+                // deltas (m_dragTick already carries the earliest-node
+                // clamp; a batch that changes nothing pushes nothing).
+                const int64_t dTick = int64_t(m_dragTick) - m_dragOrigTick;
+                const int dValue = m_dragValue - m_dragOrigValue;
+                std::vector<SongDocument::LanePointMove> moves;
+                moves.reserve(group.size());
+                for (const GroupNode &n : group)
+                    moves.push_back({n.track, n.cc, n.point,
+                                     uint64_t(int64_t(n.point.tick) + dTick),
+                                     clampGroupValue(m_rows[n.row], n.point.value + dValue)});
+                doc->moveLanePoints(moves);
+                // The selection follows the moved nodes and republishes, so
+                // a follow-up drag or Delete finds them at their new home.
+                if (dTick != 0 && m_sv->timeSelection().active()) {
+                    SongView::TimeSelection moved = m_sv->timeSelection();
+                    moved.startTick =
+                        uint64_t(std::max<int64_t>(0, int64_t(moved.startTick) + dTick));
+                    moved.endTick = uint64_t(std::max<int64_t>(0, int64_t(moved.endTick) + dTick));
+                    if (moved.startTick < moved.endTick)
+                        m_sv->setTimeSelection(moved);
+                }
+                return;
+            }
             DocLanePoint pt;
             // Skip the no-op commit: a plain click on a point (including the
             // first half of a double-click) must not touch the document.
@@ -3477,6 +3566,7 @@ class AutomationArea : public TimelineSurface
         // half-open gesture so its release is a no-op.
         m_gesture = Gesture::None;
         m_dragRow = -1;
+        m_group.clear();
         m_sweep.clear();
         invalidateContent();
 
@@ -3546,6 +3636,17 @@ class AutomationArea : public TimelineSurface
         uint8_t cc = 0;
     };
 
+    // One node of a live group drag: a press on a node inside the derived
+    // selection moves every selected node by the grabbed node's delta.
+    // Resolved at the press and safe for the gesture's lifetime — any
+    // document change aborts the drag through rebuildRows.
+    struct GroupNode {
+        int row;   // index into m_rows, for the row's value clamp
+        int track; // rowTarget's engine track (tempo: the selected track)
+        uint8_t cc;
+        DocLanePoint point;
+    };
+
     const AutoLane *rowLane(const Row &row) const
     {
         if (row.kind != Row::Lane)
@@ -3571,6 +3672,121 @@ class AutomationArea : public TimelineSurface
             return {row.track, row.cc};
         }
         return {-1, 0};
+    }
+
+    // Derived node selection: a lane point is "selected" iff its row's
+    // identity is one of a lane-scoped time selection's lanes and its tick
+    // is inside the half-open [startTick, endTick). Never stored, so it can
+    // never go stale against the document — and the right-drag band
+    // publishes the selection live, so nodes light up while the sweep is
+    // still running through this same predicate.
+    bool rowInLaneSelection(const Row &row) const
+    {
+        const SongView::TimeSelection &sel = m_sv->timeSelection();
+        if (!sel.active() || sel.scope != SongView::TimeSelection::Lanes)
+            return false;
+        return std::find(sel.lanes.begin(), sel.lanes.end(), rowIdentity(row)) != sel.lanes.end();
+    }
+
+    bool pointSelected(const Row &row, uint64_t tick) const
+    {
+        const SongView::TimeSelection &sel = m_sv->timeSelection();
+        return rowInLaneSelection(row) && tick >= sel.startTick && tick < sel.endTick;
+    }
+
+    // Selected-node count, stopping at limit (the callers only distinguish
+    // "none", "one", and "two or more").
+    int selectedNodeCount(int limit) const
+    {
+        const SongView::TimeSelection &sel = m_sv->timeSelection();
+        int n = 0;
+        for (const Row &row : m_rows) {
+            if (!rowInLaneSelection(row))
+                continue;
+            const std::vector<LanePoint> *points = rowPoints(row);
+            if (!points)
+                continue; // the voice row has markers, not value nodes
+            for (const LanePoint &pt : *points) {
+                if (pt.tick >= sel.endTick)
+                    break; // sorted by tick
+                if (pt.tick >= sel.startTick && ++n >= limit)
+                    return n;
+            }
+        }
+        return n;
+    }
+
+    // The derived selection as document points, with the row each node came
+    // from. Skips the voice row: its markers are voice identities, not value
+    // nodes, and have no drag editing.
+    std::vector<GroupNode> collectSelectedNodes() const
+    {
+        std::vector<GroupNode> nodes;
+        SongDocument *doc = m_sv->document();
+        if (!doc)
+            return nodes;
+        const SongView::TimeSelection &sel = m_sv->timeSelection();
+        for (size_t i = 0; i < m_rows.size(); i++) {
+            uint8_t cc;
+            int track;
+            if (!rowInLaneSelection(m_rows[i]) || !rowTarget(m_rows[i], &cc, &track))
+                continue;
+            for (const DocLanePoint &pt : doc->lanePoints(track, cc))
+                if (pt.tick >= sel.startTick && pt.tick < sel.endTick)
+                    nodes.push_back({int(i), track, cc, pt});
+        }
+        return nodes;
+    }
+
+    // Per-row value clamp for a group-dragged node: the row's display range
+    // (what a direct drag of that row can reach), with tempo floored at 1
+    // like updateDrag floors it (the document clamps BPM to 1 as well; the
+    // floor here keeps the preview from ever showing a 0-BPM curve).
+    int clampGroupValue(const Row &row, int value) const
+    {
+        int minV, maxV;
+        rowRange(row, &minV, &maxV);
+        value = std::clamp(value, minV, maxV);
+        if (row.kind == Row::Tempo)
+            value = std::max(1, value);
+        return value;
+    }
+
+    // The row's curve as it would look if the live group drag committed
+    // now: unmoved points merged with the moved ones, a mover replacing
+    // whatever sits on its landing tick and converging movers resolving
+    // last-input-wins (moveLanePoints' rules).
+    std::vector<std::pair<uint64_t, int>> previewRowPoints(int ri, int64_t dTick, int dValue) const
+    {
+        const Row &row = m_rows[ri];
+        std::vector<std::pair<uint64_t, int>> moved;
+        for (const GroupNode &n : m_group) {
+            if (n.row != ri)
+                continue;
+            const uint64_t t = uint64_t(int64_t(n.point.tick) + dTick);
+            const int v = clampGroupValue(row, n.point.value + dValue);
+            if (!moved.empty() && moved.back().first == t)
+                moved.back().second = v;
+            else
+                moved.push_back({t, v});
+        }
+        std::vector<std::pair<uint64_t, int>> out;
+        size_t m = 0;
+        if (const std::vector<LanePoint> *points = rowPoints(row)) {
+            out.reserve(points->size());
+            for (const LanePoint &pt : *points) {
+                if (pointSelected(row, pt.tick))
+                    continue; // one of the movers, drawn at its destination
+                while (m < moved.size() && moved[m].first < pt.tick)
+                    out.push_back(moved[m++]);
+                if (m < moved.size() && moved[m].first == pt.tick)
+                    continue; // the landing mover replaces this point
+                out.push_back({pt.tick, pt.value});
+            }
+        }
+        while (m < moved.size())
+            out.push_back(moved[m++]);
+        return out;
     }
 
     // Live update of a right-drag selection sweep: the tick span between the
@@ -4340,6 +4556,17 @@ class AutomationArea : public TimelineSurface
             applyAxisLock(m_axisLock, uint64_t(m_dragOrigTick), m_dragOrigValue, &m_dragTick,
                           &m_dragValue);
         }
+        // Group drag: clamp the shared dTick so the earliest selected node
+        // can't go below tick 0, and land the clamp back on the grabbed
+        // marker so the preview and the commit agree.
+        if (!m_group.empty()) {
+            int64_t dTick = int64_t(m_dragTick) - m_dragOrigTick;
+            uint64_t earliest = m_group.front().point.tick;
+            for (const GroupNode &n : m_group)
+                earliest = std::min(earliest, n.point.tick);
+            dTick = std::max(dTick, -int64_t(earliest));
+            m_dragTick = uint64_t(m_dragOrigTick + dTick);
+        }
         if (m_axisLock != previous)
             setCursor(dragCursor());
     }
@@ -4444,7 +4671,7 @@ class AutomationArea : public TimelineSurface
         return pts;
     }
 
-    void paintRow(QPainter &p, const Row &row, const QRect &r)
+    void paintRow(QPainter &p, const Row &row, const QRect &r, bool dimUnselected)
     {
         const QRect plot(kGutterW, r.top(), width() - kGutterW, r.height());
         p.save();
@@ -4509,16 +4736,17 @@ class AutomationArea : public TimelineSurface
         if (row.kind == Row::Voice)
             paintVoiceRow(p, plot);
         else if (points)
-            paintCurve(p, plot, *points, minV, maxV, curve,
-                       row.kind == Row::Lane && row.cc == LANE_CC_BEND);
+            paintCurve(p, plot, row, *points, minV, maxV, curve,
+                       row.kind == Row::Lane && row.cc == LANE_CC_BEND, dimUnselected);
 
         const std::pair<int, uint8_t> id = rowIdentity(row);
         drawOverlays(p, m_sv, plot, kGutterW, m_sv->timeSelectionCoversRow(id.first, id.second));
         p.restore();
     }
 
-    void paintCurve(QPainter &p, const QRect &plot, const std::vector<LanePoint> &points, int minV,
-                    int maxV, const QColor &color, bool centerLine)
+    void paintCurve(QPainter &p, const QRect &plot, const Row &row,
+                    const std::vector<LanePoint> &points, int minV, int maxV, const QColor &color,
+                    bool centerLine, bool dimUnselected)
     {
         const int top = plot.top() + 5;
         const int bottom = plot.bottom() - 4;
@@ -4530,6 +4758,10 @@ class AutomationArea : public TimelineSurface
             p.setPen(QPen(themes::color(themes::Role::song_view_separator), 1, Qt::DashLine));
             p.drawLine(plot.left(), valueY(0), plot.right(), valueY(0));
         }
+        const SongView::TimeSelection &sel = m_sv->timeSelection();
+        const bool laneSelected = rowInLaneSelection(row);
+        const QColor dimColor = palette().mid().color();
+        const QColor ringColor = palette().highlight().color();
         p.setPen(QPen(color, 2));
         for (size_t i = 0; i < points.size(); i++) {
             const qreal x0 = m_sv->displayX(double(points[i].tick), kGutterW, dpr);
@@ -4542,8 +4774,24 @@ class AutomationArea : public TimelineSurface
             p.drawLine(QLineF(x0, y, x1, y)); // hold value until the next point
             if (i + 1 < points.size())
                 p.drawLine(QLineF(x1, y, x1, valueY(points[i + 1].value)));
-            if (m_sv->pxPerBeat() >= 24.0)
-                p.fillRect(QRectF(x0 - 1, y - 1, 3, 3), color);
+            if (m_sv->pxPerBeat() >= 24.0) {
+                // Each node draws in exactly one style: a highlight ring
+                // when it is in the derived selection, dimmed when a multi-
+                // node selection is elsewhere, its curve color otherwise.
+                const bool selected =
+                    laneSelected && points[i].tick >= sel.startTick && points[i].tick < sel.endTick;
+                p.fillRect(QRectF(x0 - 1, y - 1, 3, 3),
+                           dimUnselected && !laneSelected ? dimColor : color);
+                if (selected) {
+                    // Aliased like the rest of the lane painting (and exact
+                    // pixels keep it probeable in rollcheck).
+                    p.save();
+                    p.setPen(QPen(ringColor, 2));
+                    p.setBrush(Qt::NoBrush);
+                    p.drawEllipse(QPointF(x0, y), 4.5, 4.5);
+                    p.restore();
+                }
+            }
         }
     }
 
@@ -4620,6 +4868,8 @@ class AutomationArea : public TimelineSurface
     AxisLock m_axisLock = AxisLock::None; // Shift lock on the live point drag
     uint64_t m_dragTick = 0;
     int m_dragValue = 0;
+    std::vector<GroupNode> m_group;                // the live Point drag moves these together
+                                                   // (empty = plain single-point move)
     std::vector<std::pair<uint64_t, int>> m_sweep; // tick-sorted freehand samples
     bool m_gesturePencil = false;                  // tool latched at the press for the gesture
     uint64_t m_lineStartTick = 0;                  // Shift-drag anchor

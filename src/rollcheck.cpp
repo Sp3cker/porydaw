@@ -13,6 +13,7 @@
 #include <QListWidget>
 #include <QMenu>
 #include <QMouseEvent>
+#include <QPainter>
 #include <QPixmap>
 #include <QPoint>
 #include <QPushButton>
@@ -2719,6 +2720,497 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
             doc.undoStack()->undo();
         QCoreApplication::processEvents();
+    }
+
+    // Automation node selection: a lane-scoped time selection derives a
+    // node selection — a point is selected iff its row's lane is one of the
+    // selection's lanes and startTick <= tick < endTick (half-open).
+    // Selected nodes paint a highlight ring (and already do so while the
+    // right-drag band is still sweeping, since the band publishes live);
+    // with two or more selected, nodes in unselected lanes dim toward
+    // palette().mid(). Dragging a selected node moves every selected node
+    // (cross-lane) by one shared dTick/dValue as a single undo entry — the
+    // shared shift clamped so the earliest node can't go below tick 0, each
+    // value clamped to its own row's display range — with a live preview
+    // of every affected row and the selection band following the commit. A
+    // press outside the selection stays a single-point move, and
+    // Delete/Backspace on the lane-scoped selection removes exactly the
+    // selected nodes as one entry.
+    {
+        const int undoIndex = doc.undoStack()->index();
+        const int laneTrack = view.selectedTrack();
+        const QByteArray sectionBytes = doc.smf().write();
+        view.clearTimeSelection();
+        // A CC lane with no song data, so every point in it is the probe's
+        // own (mus_abandoned_ship's selected track carries PAN data). Every
+        // candidate keeps the fixed 0..127 axis the mirrors below assume —
+        // MOD's auto-fit axis is deliberately not on the list.
+        uint8_t freeCc = 0;
+        for (uint8_t cc : {uint8_t(0x14), uint8_t(0x15), uint8_t(0x07), uint8_t(0x0A)}) {
+            if (doc.lanePoints(laneTrack, cc).empty()) {
+                freeCc = cc;
+                break;
+            }
+        }
+        if (!freeCc)
+            fail("node-selection setup: no data-free CC lane available");
+        if (freeCc) {
+            view.addEmptyLane(laneTrack, freeCc);
+            QCoreApplication::processEvents();
+            // Row geometry mirrors, like the pencil/detent sections: tempo
+            // row 0, voice row, then the track's lanes by ascending CC, all
+            // at the default 48 px height.
+            int ccRowTop = 2 * 48;
+            for (const AutoLane &lane : view.model().lanes)
+                if (lane.track == laneTrack && lane.cc < freeCc)
+                    ccRowTop += 48;
+            const int ccTop = ccRowTop + 5, ccBottom = ccRowTop + 48 - 1 - 4;
+            auto ccValueAtY = [&](int y) {
+                const int yc = std::clamp(y, ccTop, ccBottom);
+                return (ccBottom - yc) * 127 / (ccBottom - ccTop);
+            };
+            auto ccValueY = [&](int v) { return ccBottom - v * (ccBottom - ccTop) / 127; };
+            const int tempoTopPad = 5, tempoBottom = 48 - 1 - 4;
+            auto tempoMaxV = [&]() {
+                int maxV = 200;
+                for (const LanePoint &pt : view.model().tempoLane)
+                    maxV = std::max(maxV, pt.value + 20);
+                return maxV;
+            };
+            auto tempoValueY = [&](int v) {
+                return tempoBottom - v * (tempoBottom - tempoTopPad) / std::max(1, tempoMaxV());
+            };
+
+            const qreal dprLanes = lanes->devicePixelRatioF();
+            auto dotX = [&](uint64_t t) {
+                return view.displayX(double(t), songview::kGutterW, dprLanes);
+            };
+            auto tempoPointIn = [&](uint64_t a, uint64_t b) {
+                for (const DocLanePoint &pt : doc.lanePoints(laneTrack, DOC_CC_TEMPO))
+                    if (pt.tick >= a && pt.tick <= b)
+                        return true;
+                return false;
+            };
+            // Overlay verticals paint over the dots (drawOverlays runs
+            // after paintCurve): keep every sampled dot clear of the edit
+            // cursor's dashed line and the loop markers' edge/glow bands.
+            auto contestedX = [&](qreal x) {
+                const qreal cursorX =
+                    view.displayX(double(view.editCursorTick()), songview::kGutterW, dprLanes);
+                if (std::abs(cursorX - x) < 12)
+                    return true;
+                const MidiTimeline *tl = view.timeline();
+                for (const uint64_t loopTick : {tl->loopStartTick, tl->loopEndTick}) {
+                    if (loopTick == UINT64_MAX)
+                        continue;
+                    const qreal loopX =
+                        view.displayX(double(loopTick), songview::kGutterW, dprLanes);
+                    if (x > loopX - 52 && x < loopX + 52)
+                        return true;
+                }
+                return false;
+            };
+            // Clear air: no song tempo point (and no overlay vertical) may
+            // sit anywhere on the probe span.
+            qreal xSeek = songview::kGutterW + (lanes->width() - songview::kGutterW) * 0.35;
+            uint64_t t0 = view.snapTick(view.tickAtContentX(xSeek - songview::kGutterW));
+            uint64_t g = std::max<uint64_t>(1, view.gridTicksAt(t0));
+            auto spanContested = [&]() {
+                if (tempoPointIn(t0 - std::min(t0, g), t0 + 5 * g))
+                    return true;
+                for (int k = 0; k <= 4; k++)
+                    if (contestedX(dotX(t0 + uint64_t(k) * g)))
+                        return true;
+                return false;
+            };
+            while (spanContested()) {
+                xSeek += 40;
+                t0 = view.snapTick(view.tickAtContentX(xSeek - songview::kGutterW));
+                g = std::max<uint64_t>(1, view.gridTicksAt(t0));
+            }
+            const uint64_t snap = std::max<uint64_t>(1, view.snapTicksAt(t0));
+            const uint64_t tA = t0, tB = t0 + 2 * g, tC = t0 + 4 * g, tE = t0 + g;
+            constexpr int vA = 40, vB = 80, vC = 55, vE = 150;
+            doc.writeLanePoints(laneTrack, freeCc, tA, tC, {{tA, vA}, {tB, vB}, {tC, vC}});
+            doc.writeLanePoints(laneTrack, DOC_CC_TEMPO, tE, tE, {{tE, vE}});
+            QCoreApplication::processEvents();
+
+            auto lanesImage = [&]() { return lanes->grab().toImage(); };
+            auto pixelAt = [&](const QImage &img, qreal x, int y) {
+                return img.pixelColor(int((x + 0.5) * dprLanes), int((y + 0.5) * dprLanes));
+            };
+            const QColor ringColor = lanes->palette().highlight().color();
+            const QColor dimColor = lanes->palette().mid().color();
+            const QColor ccColor = SongView::trackColor(laneTrack);
+            const QColor tempoColor = themes::color(themes::Role::song_view_automation_tempo_curve);
+            // The ring is aliased, so its pixels are exact — either the raw
+            // highlight, or, inside the band, the highlight under the
+            // selection overlay's alpha-30 tint. Let QPainter compute that
+            // blend rather than mirroring its rounding.
+            const QColor ringTinted = [&] {
+                QImage one(1, 1, QImage::Format_ARGB32_Premultiplied);
+                one.fill(ringColor);
+                QPainter tp(&one);
+                QColor f = themes::color(themes::Role::song_view_selection_fill);
+                f.setAlpha(30);
+                tp.fillRect(0, 0, 1, 1, f);
+                tp.end();
+                return one.pixelColor(0, 0);
+            }();
+            auto ringNear = [&](const QImage &img, qreal x, int y) {
+                const int cx = int((x + 0.5) * dprLanes), cy = int((y + 0.5) * dprLanes);
+                const int r = int(std::ceil(7 * dprLanes));
+                for (int dy = -r; dy <= r; dy++)
+                    for (int dx = -r; dx <= r; dx++) {
+                        const int px = cx + dx, py = cy + dy;
+                        if (px < 0 || py < 0 || px >= img.width() || py >= img.height())
+                            continue;
+                        const QColor c = img.pixelColor(px, py);
+                        if (c == ringColor || c == ringTinted)
+                            return true;
+                    }
+                return false;
+            };
+
+            // Mirror + clear-air sanity: with no selection, every probe dot
+            // must show its exact curve color and nothing highlight-like.
+            {
+                const QImage base = lanesImage();
+                if (pixelAt(base, dotX(tA), ccValueY(vA)) != ccColor ||
+                    pixelAt(base, dotX(tC), ccValueY(vC)) != ccColor)
+                    fail("node probe setup: CC dot color mirror drifted");
+                if (pixelAt(base, dotX(tE), tempoValueY(vE)) != tempoColor)
+                    fail("node probe setup: tempo dot color mirror drifted");
+                if (ringNear(base, dotX(tA), ccValueY(vA)) ||
+                    ringNear(base, dotX(tE), tempoValueY(vE)))
+                    fail("node probe setup: highlight-like pixels near an unselected node");
+            }
+
+            // Ring + dim: sweep the band over A and B on the CC row. Nodes
+            // ring while the sweep is still live (the band publishes the
+            // selection live), C stays full-color and unringed (in range's
+            // lane but outside its ticks), and the tempo node — two nodes
+            // selected, its lane not covered — dims to palette().mid().
+            const int yCcRow = ccRowTop + 24;
+            sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tA - snap)), yCcRow),
+                      Qt::RightButton, Qt::RightButton);
+            sendMouse(lanes, QEvent::MouseMove, QPoint(int(dotX(tB + snap)), yCcRow), Qt::NoButton,
+                      Qt::RightButton);
+            {
+                const QImage live = lanesImage();
+                if (!view.timeSelection().active() ||
+                    view.timeSelection().scope != SongView::TimeSelection::Lanes)
+                    fail("right-drag band did not publish a live lane selection");
+                if (!ringNear(live, dotX(tA), ccValueY(vA)) ||
+                    !ringNear(live, dotX(tB), ccValueY(vB)))
+                    fail("nodes under the live band did not paint the provisional ring");
+            }
+            sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(dotX(tB + snap)), yCcRow),
+                      Qt::RightButton, Qt::NoButton);
+            QCoreApplication::processEvents();
+            {
+                const QImage img = lanesImage();
+                if (!ringNear(img, dotX(tA), ccValueY(vA)) ||
+                    !ringNear(img, dotX(tB), ccValueY(vB)))
+                    fail("selected nodes did not paint the highlight ring");
+                if (ringNear(img, dotX(tC), ccValueY(vC)))
+                    fail("a node outside the selected tick range painted a ring");
+                if (pixelAt(img, dotX(tC), ccValueY(vC)) != ccColor)
+                    fail("an unselected node in a selected lane lost its full color");
+                if (pixelAt(img, dotX(tE), tempoValueY(vE)) != dimColor)
+                    fail("multi-node selection did not dim the unselected lane's node");
+            }
+
+            // A single selected node dims nothing: rings alone are enough
+            // emphasis, and the other lanes keep their strength.
+            {
+                SongView::TimeSelection one;
+                one.startTick = tA;
+                one.endTick = tA + 1;
+                one.scope = SongView::TimeSelection::Lanes;
+                one.lanes = {{laneTrack, freeCc}};
+                view.setTimeSelection(one);
+                QCoreApplication::processEvents();
+                const QImage img = lanesImage();
+                if (!ringNear(img, dotX(tA), ccValueY(vA)))
+                    fail("a single selected node did not ring");
+                if (pixelAt(img, dotX(tE), tempoValueY(vE)) != tempoColor)
+                    fail("a single-node selection dimmed another lane's node");
+                if (ringNear(img, dotX(tB), ccValueY(vB)))
+                    fail("a node outside a single-node selection painted a ring");
+            }
+
+            // Group drag: press A inside the selection, drag right and up —
+            // A and B move by one shared dTick/dValue as ONE undo entry, C
+            // stays, the selection band follows, and undo restores the
+            // exact pre-drag bytes.
+            SongView::TimeSelection groupSel;
+            groupSel.startTick = tA;
+            groupSel.endTick = tB + 1;
+            groupSel.scope = SongView::TimeSelection::Lanes;
+            groupSel.lanes = {{laneTrack, freeCc}};
+            const QByteArray preDrag = doc.smf().write();
+            {
+                view.setTimeSelection(groupSel);
+                QCoreApplication::processEvents();
+                const int undoBefore = doc.undoStack()->index();
+                const int yEnd = ccValueY(60);
+                sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tA)), ccValueY(vA)),
+                          Qt::LeftButton, Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseMove, QPoint(int(dotX(tA + 2 * snap)), yEnd),
+                          Qt::NoButton, Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(dotX(tA + 2 * snap)), yEnd),
+                          Qt::LeftButton, Qt::NoButton);
+                QCoreApplication::processEvents();
+                const int dValue = ccValueAtY(yEnd) - vA;
+                if (doc.undoStack()->index() != undoBefore + 1)
+                    fail("group drag was not one undo entry");
+                DocLanePoint pt;
+                if (doc.findLanePoint(laneTrack, freeCc, tA, nullptr) ||
+                    doc.findLanePoint(laneTrack, freeCc, tB, nullptr))
+                    fail("group drag left the selected nodes at their old ticks");
+                if (!doc.findLanePoint(laneTrack, freeCc, tA + 2 * snap, &pt) ||
+                    pt.value != vA + dValue)
+                    fail("group drag did not move the grabbed node by the drag delta");
+                if (!doc.findLanePoint(laneTrack, freeCc, tB + 2 * snap, &pt) ||
+                    pt.value != vB + dValue)
+                    fail("group drag did not move the sibling node by the shared delta");
+                if (!doc.findLanePoint(laneTrack, freeCc, tC, &pt) || pt.value != vC)
+                    fail("group drag disturbed a node outside the selection");
+                if (!view.timeSelection().active() ||
+                    view.timeSelection().startTick != tA + 2 * snap ||
+                    view.timeSelection().endTick != tB + 1 + 2 * snap)
+                    fail("the selection band did not follow the group drag");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+                if (doc.smf().write() != preDrag)
+                    fail("undo did not restore the exact pre-group-drag bytes");
+            }
+
+            // Cross-lane group drag, straight up: the tempo node moves with
+            // the CC nodes and every value clamps per row — the tempo node
+            // stops at its row's display cap (~200) even though the
+            // document itself would accept up to 999, so the row clamp is
+            // observable. No tick moves, and the selection stays put.
+            // Mid-drag, the tempo row (not the grabbed row) shows the live
+            // preview of its pending clamped curve.
+            {
+                SongView::TimeSelection cross = groupSel;
+                cross.lanes = {{laneTrack, freeCc}, {-1, DOC_CC_TEMPO}};
+                view.setTimeSelection(cross);
+                QCoreApplication::processEvents();
+                const int undoBefore = doc.undoStack()->index();
+                // The commit clamps against the pre-move display range;
+                // capture it now (the landed value itself would raise it).
+                const int tempoCap = tempoMaxV();
+                sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tA)), ccValueY(vA)),
+                          Qt::LeftButton, Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseMove, QPoint(int(dotX(tA)), ccTop), Qt::NoButton,
+                          Qt::LeftButton);
+                {
+                    const QImage midDrag = lanesImage();
+                    const QColor previewColor =
+                        themes::color(themes::Role::song_view_edit_preview_outline);
+                    // A width-1 logical line lands on different device rows
+                    // at fractional scale factors; scan the short column.
+                    const int px = int((dotX(tE) + 5 + 0.5) * dprLanes);
+                    const int py = int((tempoValueY(tempoCap) + 0.5) * dprLanes);
+                    const int reach = int(std::ceil(dprLanes)) + 1;
+                    bool found = false;
+                    for (int dy = -reach; dy <= reach && !found; dy++)
+                        found = py + dy >= 0 && py + dy < midDrag.height() &&
+                                midDrag.pixelColor(px, py + dy) == previewColor;
+                    if (!found)
+                        fail("group drag did not preview the affected tempo row's curve");
+                }
+                sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(dotX(tA)), ccTop),
+                          Qt::LeftButton, Qt::NoButton);
+                QCoreApplication::processEvents();
+                DocLanePoint pt;
+                if (doc.undoStack()->index() != undoBefore + 1)
+                    fail("cross-lane group drag was not one undo entry");
+                if (!doc.findLanePoint(laneTrack, freeCc, tA, &pt) || pt.value != 127)
+                    fail("vertical group drag did not cap the grabbed node at 127");
+                if (!doc.findLanePoint(laneTrack, freeCc, tB, &pt) || pt.value != 127)
+                    fail("vertical group drag did not cap the sibling node at 127");
+                if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, tE, &pt) || pt.value != tempoCap)
+                    fail("group drag did not clamp the tempo node to its row's display cap");
+                if (!view.timeSelection().active() || view.timeSelection().startTick != tA ||
+                    view.timeSelection().endTick != tB + 1)
+                    fail("a value-only group drag moved the selection band");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+                if (doc.smf().write() != preDrag)
+                    fail("undo did not restore the cross-lane group drag");
+            }
+
+            // Earliest-node clamp: with a node parked near tick 0 in the
+            // selection, dragging the group far left stops where that node
+            // reaches 0 — everyone still shares the one clamped delta.
+            {
+                const uint64_t tZ = 2 * snap;
+                constexpr int vZ = 20;
+                doc.writeLanePoints(laneTrack, freeCc, tZ, tZ, {{tZ, vZ}});
+                QCoreApplication::processEvents();
+                const QByteArray preClamp = doc.smf().write();
+                SongView::TimeSelection wide = groupSel;
+                wide.startTick = tZ;
+                view.setTimeSelection(wide);
+                QCoreApplication::processEvents();
+                const int undoBefore = doc.undoStack()->index();
+                const int yGrab = ccValueY(vA);
+                sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tA)), yGrab),
+                          Qt::LeftButton, Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseMove, QPoint(songview::kGutterW + 1, yGrab),
+                          Qt::NoButton, Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(songview::kGutterW + 1, yGrab),
+                          Qt::LeftButton, Qt::NoButton);
+                QCoreApplication::processEvents();
+                const int dValue = ccValueAtY(yGrab) - vA; // pixel re-quantization
+                DocLanePoint pt;
+                if (doc.undoStack()->index() != undoBefore + 1)
+                    fail("clamped group drag was not one undo entry");
+                if (!doc.findLanePoint(laneTrack, freeCc, 0, &pt) || pt.value != vZ + dValue)
+                    fail("group drag's earliest node did not stop exactly at tick 0");
+                if (!doc.findLanePoint(laneTrack, freeCc, tA - tZ, &pt) || pt.value != vA + dValue)
+                    fail("earliest-node clamp did not hold the grabbed node to the shared delta");
+                if (!doc.findLanePoint(laneTrack, freeCc, tB - tZ, &pt) || pt.value != vB + dValue)
+                    fail("earliest-node clamp did not hold the sibling to the shared delta");
+                if (!view.timeSelection().active() || view.timeSelection().startTick != 0 ||
+                    view.timeSelection().endTick != tB + 1 - tZ)
+                    fail("the selection band did not follow the clamped group drag");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+                if (doc.smf().write() != preClamp)
+                    fail("undo did not restore the clamped group drag");
+                doc.undoStack()->undo(); // the parked tick-0 neighbor itself
+                QCoreApplication::processEvents();
+            }
+
+            // A press outside the selection stays a single-point move: only
+            // C moves, the selected nodes hold still, and the band stays.
+            {
+                view.setTimeSelection(groupSel);
+                QCoreApplication::processEvents();
+                const int undoBefore = doc.undoStack()->index();
+                const int yFrom = ccValueY(vC);
+                sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tC)), yFrom),
+                          Qt::LeftButton, Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseMove, QPoint(int(dotX(tC)), yFrom + 8), Qt::NoButton,
+                          Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(dotX(tC)), yFrom + 8),
+                          Qt::LeftButton, Qt::NoButton);
+                QCoreApplication::processEvents();
+                DocLanePoint pt;
+                if (doc.undoStack()->index() != undoBefore + 1)
+                    fail("single-point move outside the selection was not one undo entry");
+                if (!doc.findLanePoint(laneTrack, freeCc, tC, &pt) ||
+                    pt.value != ccValueAtY(yFrom + 8))
+                    fail("press outside the selection did not move the pressed node");
+                if (!doc.findLanePoint(laneTrack, freeCc, tA, &pt) || pt.value != vA)
+                    fail("press outside the selection dragged the selected nodes along");
+                if (!view.timeSelection().active() || view.timeSelection().startTick != tA)
+                    fail("a single-point move outside the selection moved the band");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+            }
+
+            // Half-open boundary: with the selection ending exactly at B's
+            // tick, B is not selected — pressing it moves it alone.
+            {
+                SongView::TimeSelection edge = groupSel;
+                edge.endTick = tB;
+                view.setTimeSelection(edge);
+                QCoreApplication::processEvents();
+                {
+                    // The paint side honors the same half-open rule: A
+                    // rings, B — exactly at endTick — does not.
+                    const QImage img = lanesImage();
+                    if (!ringNear(img, dotX(tA), ccValueY(vA)))
+                        fail("boundary selection did not ring its covered node");
+                    if (ringNear(img, dotX(tB), ccValueY(vB)))
+                        fail("a node exactly at endTick painted a ring (half-open broken)");
+                }
+                const int undoBefore = doc.undoStack()->index();
+                const int yFrom = ccValueY(vB);
+                sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tB)), yFrom),
+                          Qt::LeftButton, Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseMove, QPoint(int(dotX(tB)), yFrom + 8), Qt::NoButton,
+                          Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(dotX(tB)), yFrom + 8),
+                          Qt::LeftButton, Qt::NoButton);
+                QCoreApplication::processEvents();
+                DocLanePoint pt;
+                if (doc.undoStack()->index() != undoBefore + 1)
+                    fail("boundary-node move was not one undo entry");
+                if (!doc.findLanePoint(laneTrack, freeCc, tB, &pt) ||
+                    pt.value != ccValueAtY(yFrom + 8))
+                    fail("a node exactly at endTick did not move as a single point");
+                if (!doc.findLanePoint(laneTrack, freeCc, tA, &pt) || pt.value != vA)
+                    fail("a node exactly at endTick counted as selected (half-open broken)");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+            }
+
+            // Delete/Backspace on the lane-scoped selection removes exactly
+            // the selected nodes — cross-lane, one undo entry, out-of-range
+            // survivors untouched (main's roll.delete range path already IS
+            // the node delete when the scope is Lanes; see SPEC).
+            for (const int key : {int(Qt::Key_Delete), int(Qt::Key_Backspace)}) {
+                SongView::TimeSelection cross = groupSel;
+                cross.lanes = {{laneTrack, freeCc}, {-1, DOC_CC_TEMPO}};
+                view.setTimeSelection(cross);
+                QCoreApplication::processEvents();
+                const QByteArray preDelete = doc.smf().write();
+                const int undoBefore = doc.undoStack()->index();
+                sendKey(lanes, key, Qt::NoModifier);
+                QCoreApplication::processEvents();
+                DocLanePoint pt;
+                if (doc.undoStack()->index() != undoBefore + 1)
+                    fail(key == Qt::Key_Delete ? "Delete on selected nodes was not one undo entry"
+                                               : "Backspace on selected nodes was not one entry");
+                if (doc.findLanePoint(laneTrack, freeCc, tA, nullptr) ||
+                    doc.findLanePoint(laneTrack, freeCc, tB, nullptr) ||
+                    doc.findLanePoint(laneTrack, DOC_CC_TEMPO, tE, nullptr))
+                    fail("Delete did not remove the selected nodes across lanes");
+                if (!doc.findLanePoint(laneTrack, freeCc, tC, &pt) || pt.value != vC)
+                    fail("Delete removed a node outside the selected tick range");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+                if (doc.smf().write() != preDelete)
+                    fail("undo did not restore the deleted nodes");
+            }
+
+            // Delete honors the half-open boundary too: ending exactly at
+            // B's tick leaves B alive.
+            {
+                SongView::TimeSelection edge = groupSel;
+                edge.endTick = tB;
+                view.setTimeSelection(edge);
+                QCoreApplication::processEvents();
+                const int undoBefore = doc.undoStack()->index();
+                sendKey(lanes, Qt::Key_Delete, Qt::NoModifier);
+                QCoreApplication::processEvents();
+                DocLanePoint pt;
+                if (doc.undoStack()->index() != undoBefore + 1)
+                    fail("boundary Delete was not one undo entry");
+                if (doc.findLanePoint(laneTrack, freeCc, tA, nullptr))
+                    fail("boundary Delete did not remove the selected node");
+                if (!doc.findLanePoint(laneTrack, freeCc, tB, &pt) || pt.value != vB)
+                    fail("Delete removed the node exactly at endTick (half-open broken)");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+            }
+
+            view.clearTimeSelection();
+            while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
+                doc.undoStack()->undo();
+            QCoreApplication::processEvents();
+            view.removeEmptyLane(laneTrack, freeCc);
+            QCoreApplication::processEvents();
+            if (doc.smf().write() != sectionBytes)
+                fail("node-selection section did not restore the document bytes");
+        }
     }
 
     // Meter-aware lane stepping: a freehand sweep or a Shift line ramp
