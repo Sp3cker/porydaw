@@ -4238,6 +4238,286 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QCoreApplication::processEvents();
     }
 
+    // Automation hover & gesture value chips: hovering a point's dot rings
+    // it in the edit-preview color at the point's exact position (the ring
+    // uses the left-press grab box, so ring and grab can never disagree —
+    // and the pencil never rings, since it never grabs; the tick is
+    // mirrored in the hoverNodeTick property). Hovering the Voice row
+    // reads out the voice in effect at the cursor's tick, suppressed
+    // within the marker hit radius. During any left drag the committed
+    // value rides a filled chip clamped inside the row's plot, even
+    // dragged to the row's edge. Hover repaints are region-exact: leaving
+    // the area restores the pre-hover pixels bit-for-bit.
+    {
+        const int undoIndex = doc.undoStack()->index();
+        const int laneTrack = view.selectedTrack();
+        const QByteArray sectionBytes = doc.smf().write();
+        view.clearTimeSelection();
+        if (!view.viewState().hiddenLanes.isEmpty())
+            fail("hover section setup: expected no hidden lanes");
+
+        // A data-free CC lane for the dot probes. PAN is excluded (its c_v
+        // text would complicate the chip mirror); every candidate keeps the
+        // fixed 0..127 axis the mirrors assume.
+        uint8_t freeCc = 0;
+        for (uint8_t cc : {uint8_t(0x14), uint8_t(0x15), uint8_t(0x07)}) {
+            if (doc.lanePoints(laneTrack, cc).empty()) {
+                freeCc = cc;
+                break;
+            }
+        }
+        if (!freeCc)
+            fail("hover section setup: no data-free CC lane available");
+        view.addEmptyLane(laneTrack, freeCc);
+        QCoreApplication::processEvents();
+        // Row-geometry mirrors, like the pencil and node-selection
+        // sections: tempo row 0, voice row, then the track's lanes by
+        // ascending CC, all at the default 48 px height.
+        int ccRowTop = 2 * 48;
+        for (const AutoLane &lane : view.model().lanes)
+            if (lane.track == laneTrack && lane.cc < freeCc)
+                ccRowTop += 48;
+        const int ccTop = ccRowTop + 5, ccBottom = ccRowTop + 48 - 1 - 4;
+        auto ccValueAtY = [&](int y) {
+            const int yc = std::clamp(y, ccTop, ccBottom);
+            return (ccBottom - yc) * 127 / (ccBottom - ccTop);
+        };
+        auto ccValueY = [&](int v) { return ccBottom - v * (ccBottom - ccTop) / 127; };
+
+        const qreal dprLanes = lanes->devicePixelRatioF();
+        auto dotX = [&](uint64_t t) {
+            return view.displayX(double(t), songview::kGutterW, dprLanes);
+        };
+        auto contestedX = [&](qreal x) { return overlayContestedX(view, dprLanes, x); };
+        auto voiceMarkerNear = [&](qreal x, qreal within) {
+            for (const DocLanePoint &pt : doc.lanePoints(laneTrack, DOC_CC_VOICE))
+                if (std::abs(dotX(pt.tick) - x) < within)
+                    return true;
+            return false;
+        };
+        auto lanesImage = [&]() { return lanes->grab().toImage(); };
+        auto pixelAt = [&](const QImage &img, qreal x, int y) {
+            return img.pixelColor(int((x + 0.5) * dprLanes), int((y + 0.5) * dprLanes));
+        };
+        auto hoverAt = [&](QPoint p) {
+            sendMouse(lanes, QEvent::MouseMove, p, Qt::NoButton, Qt::NoButton);
+        };
+        auto leaveLanes = [&] {
+            QEvent leave(QEvent::Leave);
+            QCoreApplication::sendEvent(lanes, &leave);
+        };
+        auto hoverNodeTick = [&]() { return lanes->property("hoverNodeTick").toLongLong(); };
+
+        // Clear air for the probe dot: no overlay vertical at the dot or
+        // any of the hover/drag spots to its right.
+        qreal xSeek = songview::kGutterW + (lanes->width() - songview::kGutterW) * 0.35;
+        uint64_t tA = view.snapTick(view.tickAtContentX(xSeek - songview::kGutterW));
+        auto dotContested = [&]() {
+            for (qreal off : {0.0, 20.0, 40.0, 60.0})
+                if (contestedX(dotX(tA) + off))
+                    return true;
+            return false;
+        };
+        while (dotContested()) {
+            xSeek += 40;
+            tA = view.snapTick(view.tickAtContentX(xSeek - songview::kGutterW));
+        }
+        constexpr int vA = 64;
+        doc.writeLanePoints(laneTrack, freeCc, tA, tA, {{tA, vA}});
+        QCoreApplication::processEvents();
+        const qreal xDot = dotX(tA);
+        const int yDot = ccValueY(vA);
+        if (yDot - 7 <= ccRowTop || yDot + 7 >= ccRowTop + 48)
+            fail("hover section setup: probe dot too close to the row edge");
+
+        const QColor previewColor = themes::color(themes::Role::song_view_edit_preview_outline);
+        // The ring (radius 4.5, pen 2) and the idle marker (radius 3, pen
+        // 1) are aliased: a pixel inks iff its center falls inside the
+        // stroke, so the ring reliably covers every center in radial
+        // (3.5, 5.5) device-scaled and the marker never inks past 3.5.
+        // Scanning [4.0, 5.4] bands (width 1.4 — always at least one pixel
+        // center at any scale) therefore sees the ring and never the
+        // marker. The band right of the dot is skipped: the readout text
+        // starts at x + 6 in the same color.
+        auto previewInkIn = [&](const QImage &img, qreal lx0, qreal lx1, qreal ly0, qreal ly1) {
+            for (int py = int(std::ceil(ly0 * dprLanes)); py <= int(std::floor(ly1 * dprLanes));
+                 py++)
+                for (int px = int(std::ceil(lx0 * dprLanes)); px <= int(std::floor(lx1 * dprLanes));
+                     px++) {
+                    if (px < 0 || py < 0 || px >= img.width() || py >= img.height())
+                        continue;
+                    if (img.pixelColor(px, py) == previewColor)
+                        return true;
+                }
+            return false;
+        };
+        auto ringInkAtDot = [&](const QImage &img) {
+            const bool left = previewInkIn(img, xDot - 5.4, xDot - 4.0, yDot - 1, yDot + 1);
+            const bool top = previewInkIn(img, xDot - 1, xDot + 1, yDot - 5.4, yDot - 4.0);
+            const bool bottom = previewInkIn(img, xDot - 1, xDot + 1, yDot + 4.0, yDot + 5.4);
+            return left && top && bottom;
+        };
+
+        // On the dot: the readout rings the point and mirrors its tick.
+        leaveLanes();
+        if (hoverNodeTick() != -1)
+            fail("hover node property not cleared at rest");
+        hoverAt(QPoint(int(xDot), yDot));
+        if (hoverNodeTick() != qlonglong(tA))
+            fail("hovering a dot did not register the node hover");
+        if (!ringInkAtDot(lanesImage()))
+            fail("hover ring not painted at the dot");
+        // Anywhere inside the grab box rings the dot itself, not the cursor.
+        hoverAt(QPoint(int(xDot) + 5, yDot - 5));
+        if (hoverNodeTick() != qlonglong(tA))
+            fail("hover inside the grab box did not register the node");
+        if (!ringInkAtDot(lanesImage()))
+            fail("grab-box hover did not ring the dot itself");
+        // Off the dot: back to the curve readout, no ring.
+        hoverAt(QPoint(int(xDot) + 40, yDot));
+        if (hoverNodeTick() != -1)
+            fail("off-dot hover still registered a node");
+        if (ringInkAtDot(lanesImage()))
+            fail("off-dot hover left ring ink at the dot");
+        // The pencil never grabs, so it must not promise a grab with a ring.
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
+        hoverAt(QPoint(int(xDot), yDot));
+        if (hoverNodeTick() != -1)
+            fail("pencil-mode hover registered a node");
+        if (ringInkAtDot(lanesImage()))
+            fail("pencil-mode hover painted the grab ring");
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
+
+        // Voice row: a marker of our own in clear air (no other marker
+        // within 60 px of it or of the hover spot, both overlay-free).
+        const int yVoice = 48 + 24;
+        qreal xvSeek = songview::kGutterW + (lanes->width() - songview::kGutterW) * 0.5;
+        uint64_t tM = view.snapTick(view.tickAtContentX(xvSeek - songview::kGutterW));
+        auto voiceSpotContested = [&]() {
+            const qreal xm = dotX(tM);
+            return contestedX(xm) || contestedX(xm + 20) || voiceMarkerNear(xm, 60) ||
+                   voiceMarkerNear(xm + 20, 60);
+        };
+        while (voiceSpotContested()) {
+            xvSeek += 40;
+            tM = view.snapTick(view.tickAtContentX(xvSeek - songview::kGutterW));
+        }
+        doc.addLanePoint(laneTrack, DOC_CC_VOICE, tM, 0);
+        QCoreApplication::processEvents();
+        const qreal xM = dotX(tM);
+        leaveLanes();
+        const QImage voiceBase = lanesImage();
+        hoverAt(QPoint(int(xM) + 20, yVoice));
+        if (lanesImage() == voiceBase)
+            fail("voice-row hover painted no readout");
+        // Directly over the marker the readout is suppressed — and moving
+        // there must restore the previous readout's pixels exactly.
+        hoverAt(QPoint(int(xM), yVoice));
+        if (lanesImage() != voiceBase)
+            fail("voice-row hover over a marker was not suppressed");
+
+        // Region hygiene: a hover walk across rows, then leaving, restores
+        // the resting pixels bit-for-bit — no readout trails — and clears
+        // the node-hover mirror. Each step grabs (and discards) an image so
+        // every transition repaints incrementally; batching the moves would
+        // let their accumulated dirty regions mask a missing invalidation.
+        leaveLanes();
+        const QImage resting = lanesImage();
+        hoverAt(QPoint(int(xDot), yDot));
+        (void)lanesImage();
+        hoverAt(QPoint(int(xDot) + 40, yDot));
+        (void)lanesImage();
+        hoverAt(QPoint(int(xM) + 20, yVoice));
+        (void)lanesImage();
+        hoverAt(QPoint(int(xDot), yDot));
+        (void)lanesImage();
+        leaveLanes();
+        if (hoverNodeTick() != -1)
+            fail("leaving the lanes did not clear the node hover");
+        if (lanesImage() != resting)
+            fail("hover moves left readout trails behind");
+
+        // Gesture chip: mirror of the widget's chip layout (caption font,
+        // text anchored right of and above the pending marker, clamped
+        // into the row's plot). The backdrop fill ring at the chip's
+        // corner is glyph-free, so it probes as the exact backdrop color.
+        const QColor chipColor = themes::color(themes::Role::song_view_piano_roll_accidental_lane);
+        const QFont chipFont = typography::caption(lanes->font());
+        const QFontMetrics chipFm(chipFont);
+        const QRect ccPlot(songview::kGutterW, ccRowTop, lanes->width() - songview::kGutterW, 48);
+        auto chipRect = [&](qreal x, int yMark, const QString &text) {
+            QRect chip(int(std::ceil(x)) + 6, yMark - 4 - chipFm.height(),
+                       chipFm.horizontalAdvance(text), chipFm.height());
+            if (chip.right() > ccPlot.right())
+                chip.moveRight(ccPlot.right());
+            if (chip.left() < ccPlot.left())
+                chip.moveLeft(ccPlot.left());
+            if (chip.top() < ccPlot.top())
+                chip.moveTop(ccPlot.top());
+            if (chip.bottom() > ccPlot.bottom())
+                chip.moveBottom(ccPlot.bottom());
+            return chip;
+        };
+
+        // Freehand sweep mid-row: the chip follows the pending value.
+        {
+            sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot) + 40, ccRowTop + 30),
+                      Qt::LeftButton, Qt::LeftButton);
+            sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + 60, ccRowTop + 35), Qt::NoButton,
+                      Qt::LeftButton);
+            const uint64_t tDrag =
+                view.snapTick(view.tickAtContentX(int(xDot) + 60 - songview::kGutterW));
+            const QRect chip = chipRect(dotX(tDrag), ccValueY(ccValueAtY(ccRowTop + 35)),
+                                        QString::number(ccValueAtY(ccRowTop + 35)));
+            const QImage img = lanesImage();
+            if (pixelAt(img, chip.left() - 1, chip.top() + 1) != chipColor ||
+                pixelAt(img, chip.left() - 1, chip.bottom() + 1) != chipColor)
+                fail("sweep drag did not paint the value chip");
+            sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xDot) + 60, ccRowTop + 35),
+                      Qt::LeftButton, Qt::NoButton);
+            QCoreApplication::processEvents();
+        }
+
+        // Point drag to the row's top edge: the unclamped chip would sit
+        // above the row; clamping pins it to the plot's top, still fully
+        // painted — and nothing chip-colored leaks into the row above.
+        {
+            sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot), yDot), Qt::LeftButton,
+                      Qt::LeftButton);
+            sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot), ccRowTop + 1), Qt::NoButton,
+                      Qt::LeftButton);
+            // The move re-snaps the drag tick from the cursor's x, so the
+            // mirror derives it the same way instead of assuming tA.
+            const uint64_t tDrag =
+                view.snapTick(view.tickAtContentX(int(xDot) - songview::kGutterW));
+            const QString text = QString::number(ccValueAtY(ccRowTop + 1));
+            const QRect chip = chipRect(dotX(tDrag), ccValueY(ccValueAtY(ccRowTop + 1)), text);
+            if (chip.top() != ccRowTop)
+                fail("hover section setup: top-edge drag did not engage the chip clamp");
+            const QImage img = lanesImage();
+            if (pixelAt(img, chip.left() - 1, chip.top() + 1) != chipColor ||
+                pixelAt(img, chip.left() - 1, chip.bottom() + 1) != chipColor)
+                fail("top-edge point drag did not paint the clamped chip");
+            bool leaked = false;
+            for (int y = ccRowTop - 6; y < ccRowTop && !leaked; y++)
+                for (int x = chip.left() - 2; x <= chip.right() + 2 && !leaked; x++)
+                    leaked = pixelAt(img, x, y) == chipColor;
+            if (leaked)
+                fail("chip pixels leaked above the row plot");
+            sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xDot), ccRowTop + 1),
+                      Qt::LeftButton, Qt::NoButton);
+            QCoreApplication::processEvents();
+        }
+
+        while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+        view.removeEmptyLane(laneTrack, freeCc);
+        QCoreApplication::processEvents();
+        if (doc.smf().write() != sectionBytes)
+            fail("hover section did not restore the document bytes");
+    }
+
     // A stopped playhead is a thin child overlay. Moving it must preserve the
     // timeline parents' backing stores instead of repainting their contents.
     for (const QString &error : playheadOverlayCheckFailures(view, *timeline))

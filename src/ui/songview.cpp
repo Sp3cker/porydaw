@@ -2870,6 +2870,7 @@ class AutomationArea : public TimelineSurface
         , m_scroll(scroll) // parented by the scroll area
     {
         setObjectName(QStringLiteral("automationArea")); // findChild for tests
+        setProperty("hoverNodeTick", qlonglong(-1));     // test mirror, like hoverKey
         setMinimumHeight(kLaneH);
         setMouseTracking(true); // divider hover cursor
         // Range shortcuts (copy/cut/delete/paste on the time selection) work
@@ -3073,10 +3074,10 @@ class AutomationArea : public TimelineSurface
             rowRange(m_rows[m_dragRow], &minV, &maxV);
             auto valueY = [&](int v) { return valueYFor(m_dragRow, v, minV, maxV); };
             auto tickX = [&](uint64_t t) { return m_sv->displayX(double(t), kGutterW, dpr); };
+            const QRect plot(kGutterW, rowTop(m_dragRow), width() - kGutterW,
+                             rowHeight(m_rows[m_dragRow]));
             p.save();
-            p.setClipRect(QRect(kGutterW, rowTop(m_dragRow), width() - kGutterW,
-                                rowHeight(m_rows[m_dragRow])),
-                          Qt::IntersectClip);
+            p.setClipRect(plot, Qt::IntersectClip);
             p.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
             p.setBrush(Qt::NoBrush);
             if (m_gesture == Gesture::Sweep && m_sweep.size() > 1) {
@@ -3094,7 +3095,28 @@ class AutomationArea : public TimelineSurface
             const qreal x = tickX(m_dragTick);
             const int y = valueY(m_dragValue);
             p.drawEllipse(QPointF(x, y), 3, 3);
-            p.drawText(QPointF(x + 6, y - 4), formatRowValue(m_rows[m_dragRow], m_dragValue));
+            // The committed value rides on a filled chip (backdrop + text)
+            // clamped inside the row's plot, so it stays legible over the
+            // curve and never leaves the row at its edges. In a group drag
+            // the marker above is the grabbed node, so the chip follows it.
+            const QString chipText = formatRowValue(m_rows[m_dragRow], m_dragValue);
+            const QFont chipFont = typography::caption(font());
+            const QFontMetrics chipMetrics(chipFont);
+            QRect chip(qCeil(x) + 6, y - 4 - chipMetrics.height(),
+                       chipMetrics.horizontalAdvance(chipText), chipMetrics.height());
+            if (chip.right() > plot.right())
+                chip.moveRight(plot.right());
+            if (chip.left() < plot.left())
+                chip.moveLeft(plot.left());
+            if (chip.top() < plot.top())
+                chip.moveTop(plot.top());
+            if (chip.bottom() > plot.bottom())
+                chip.moveBottom(plot.bottom());
+            p.setFont(chipFont);
+            p.fillRect(chip.adjusted(-1, -1, 1, 1),
+                       themes::color(themes::Role::song_view_piano_roll_accidental_lane));
+            p.setPen(themes::color(themes::Role::song_view_primary_text));
+            p.drawText(chip, Qt::AlignHCenter | Qt::AlignVCenter, chipText);
             p.restore();
         }
 
@@ -3109,29 +3131,45 @@ class AutomationArea : public TimelineSurface
         QString text;
         QRect clipRect;
         QRegion paintRegion;
+        qint64 onPointTick = -1; // >= 0: the cursor is on this point's dot,
+                                 // so the marker is a ring on the dot itself
+        bool voiceRow = false;   // text-only readout (no curve to mark)
     };
 
-    std::optional<HoverReadoutGeometry> hoverReadoutGeometry(int rowIndex, double tick) const
+    std::optional<HoverReadoutGeometry> hoverReadoutGeometry(int rowIndex, double tick, int y) const
     {
         if (rowIndex < 0 || rowIndex >= int(m_rows.size()))
             return std::nullopt;
         const Row &row = m_rows[rowIndex];
+        if (row.kind == Row::Voice)
+            return voiceHoverGeometry(rowIndex, tick);
         const std::vector<LanePoint> *points = rowPoints(row);
         if (!points || points->empty())
             return std::nullopt;
-        const auto it =
-            std::upper_bound(points->begin(), points->end(), tick,
-                             [](double t, const LanePoint &pt) { return t < double(pt.tick); });
-        if (it == points->begin())
-            return std::nullopt;
-
-        const int value = (it - 1)->value;
         int minV, maxV;
         rowRange(row, &minV, &maxV);
-        const int top = rowTop(rowIndex) + 5;
-        const int bottom = rowBottom(rowIndex) - 1 - 4;
-        const QPointF marker(m_sv->displayX(tick, kGutterW, devicePixelRatioF()),
-                             bottom - (value - minV) * (bottom - top) / std::max(1, maxV - minV));
+        // On a point's dot (the left-press grab test, so ring and grab can
+        // never disagree) the readout marks the point itself — a ring at
+        // its exact position and value, saying "this press moves this
+        // point" before the press. The pencil never grabs, so it never
+        // rings. Off-dot, the marker rides the curve at the cursor's tick.
+        const qreal cursorX = m_sv->displayX(tick, kGutterW, devicePixelRatioF());
+        const LanePoint *on = m_pencilMode ? nullptr : grabPoint(row, rowIndex, cursorX, y);
+        QPointF marker;
+        int value;
+        if (on) {
+            value = on->value;
+            marker = QPointF(m_sv->displayX(double(on->tick), kGutterW, devicePixelRatioF()),
+                             valueYFor(rowIndex, value, minV, maxV));
+        } else {
+            const auto it =
+                std::upper_bound(points->begin(), points->end(), tick,
+                                 [](double t, const LanePoint &pt) { return t < double(pt.tick); });
+            if (it == points->begin())
+                return std::nullopt;
+            value = (it - 1)->value;
+            marker = QPointF(cursorX, valueYFor(rowIndex, value, minV, maxV));
+        }
         const QString text = formatRowValue(row, value);
         const QFont readoutFont = typography::caption(font());
         const QFontMetrics metrics(readoutFont);
@@ -3142,8 +3180,11 @@ class AutomationArea : public TimelineSurface
             textX, std::max(marker.y() - 4, qreal(rowTop(rowIndex) + metrics.ascent() + 2)));
         const QRect clip(kGutterW, rowTop(rowIndex), width() - kGutterW, rowHeight(row));
         // A one-pixel antialiased ellipse stroke can cover the pixel just
-        // outside its nominal three-pixel radii.
-        const QRect markerBounds = QRectF(marker.x() - 4, marker.y() - 4, 9, 9).toAlignedRect();
+        // outside its nominal three-pixel radii; the ring (radius 4.5 at
+        // pen width 2) inks out to 5.5 and gets the same safety margin.
+        const QRect markerBounds =
+            on ? QRectF(marker.x() - 7, marker.y() - 7, 15, 15).toAlignedRect()
+               : QRectF(marker.x() - 4, marker.y() - 4, 9, 9).toAlignedRect();
         // boundingRect is the FONT's idea of the ink extents; the platform
         // raster can exceed it (DirectWrite/ClearType glyphs bleed a pixel
         // or two past GDI-style metrics on Windows), and any painted pixel
@@ -3156,25 +3197,81 @@ class AutomationArea : public TimelineSurface
         const QRegion paintRegion = (QRegion(markerBounds) | QRegion(textBounds)) & QRegion(clip);
         if (paintRegion.isEmpty())
             return std::nullopt;
-        return HoverReadoutGeometry{marker, baseline, readoutFont, text, clip, paintRegion};
+        return HoverReadoutGeometry{
+            marker, baseline, readoutFont, text, clip, paintRegion, on ? qint64(on->tick) : -1};
+    }
+
+    // Voice-row hover readout: "→ NNN name" for the voice in effect at the
+    // cursor's tick (the last change at or before it). Suppressed within
+    // the marker hit radius — a press there edits that marker, whose own
+    // label already names it — and absent before the first change, where
+    // no voice is in effect yet.
+    std::optional<HoverReadoutGeometry> voiceHoverGeometry(int rowIndex, double tick) const
+    {
+        const qreal x = m_sv->displayX(tick, kGutterW, devicePixelRatioF());
+        DocLanePoint marker;
+        if (voiceChangeNear(x, &marker))
+            return std::nullopt;
+        const int track = m_sv->selectedTrack();
+        const VoiceChange *current = nullptr;
+        for (const VoiceChange &vc : m_sv->model().voices) {
+            if (double(vc.tick) > tick)
+                break; // sorted by tick
+            if (vc.track == track)
+                current = &vc;
+        }
+        if (!current)
+            return std::nullopt;
+        const QString text = QStringLiteral("→ %1 %2")
+                                 .arg(int(current->program), 3, 10, QLatin1Char('0'))
+                                 .arg(m_sv->voiceShortName(current->program));
+        const QFont readoutFont = typography::caption(font());
+        const QFontMetrics metrics(readoutFont);
+        const int textWidth = metrics.horizontalAdvance(text);
+        const qreal textX = x + 6 + textWidth > width() ? x - 6 - textWidth : x + 6;
+        const Row &row = m_rows[rowIndex];
+        const int top = rowTop(rowIndex);
+        const int h = rowHeight(row);
+        const QPointF baseline(textX, top + (h + metrics.ascent() - metrics.descent()) / 2);
+        const QRect clip(kGutterW, top, width() - kGutterW, h);
+        // Same raster-overdraw padding as the curve readout above.
+        const QRect textBounds = QRectF(metrics.boundingRect(text))
+                                     .translated(baseline)
+                                     .toAlignedRect()
+                                     .adjusted(-3, -3, 3, 3);
+        const QRegion paintRegion = QRegion(textBounds) & QRegion(clip);
+        if (paintRegion.isEmpty())
+            return std::nullopt;
+        return HoverReadoutGeometry{
+            QPointF(x, top + h / 2.0), baseline, readoutFont, text, clip, paintRegion, -1, true};
     }
 
     // Idle-hover readout: a marker on the curve with the value in effect at
     // the cursor's tick (the last point at or before it — lanes hold their
-    // value until the next point, so this matches what the curve shows).
+    // value until the next point, so this matches what the curve shows), a
+    // ring on the dot when the cursor is on one, and the voice in effect on
+    // the voice row.
     void paintHoverReadout(QPainter &p)
     {
         if (m_dragRow >= 0 || m_selSweep)
             return;
-        const auto geometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
+        const auto geometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverY);
         if (!geometry)
             return;
         p.save();
         p.setFont(geometry->font);
         p.setClipRect(geometry->clipRect, Qt::IntersectClip);
-        p.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
+        p.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline),
+                      geometry->onPointTick >= 0 ? 2 : 1));
         p.setBrush(Qt::NoBrush);
-        p.drawEllipse(geometry->markerCenter, 3, 3);
+        if (geometry->onPointTick >= 0) {
+            // Same shape and weight as the selection ring (aliased — exact
+            // pixels keep it probeable in rollcheck), in the preview color
+            // so the two rings stay tellable apart.
+            p.drawEllipse(geometry->markerCenter, 4.5, 4.5);
+        } else if (!geometry->voiceRow) {
+            p.drawEllipse(geometry->markerCenter, 3, 3);
+        }
         p.drawText(geometry->textBaseline, geometry->text);
         p.restore();
     }
@@ -4573,24 +4670,29 @@ class AutomationArea : public TimelineSurface
     }
 
     // Idle cursor position for the hover readout: raw (unsnapped) tick, so
-    // the readout tracks the pixel, not the grid. Rows without a value curve
-    // (the voice row, the gutter) clear it.
+    // the readout tracks the pixel, not the grid. The gutter (and a stale
+    // lane row) clears it. The cursor's y rides along for the on-dot ring —
+    // same tick, different y can mean on versus off the dot.
     void updateHover(qreal x, int y)
     {
         const int ri = x >= kGutterW ? rowIndexAt(y) : -1;
-        if (ri < 0 || !rowPoints(m_rows[ri])) {
+        if (ri < 0 || (m_rows[ri].kind != Row::Voice && !rowPoints(m_rows[ri]))) {
             clearHover();
             return;
         }
         const double tick = rawTickAt(x);
-        if (ri == m_hoverRow && tick == m_hoverTick)
+        if (ri == m_hoverRow && tick == m_hoverTick && y == m_hoverY)
             return;
-        const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
+        const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverY);
         const QRegion oldRegion = oldGeometry ? oldGeometry->paintRegion : QRegion();
         m_hoverRow = ri;
         m_hoverTick = tick;
-        const auto newGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
+        m_hoverY = y;
+        const auto newGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverY);
         const QRegion newRegion = newGeometry ? newGeometry->paintRegion : QRegion();
+        // Mirrored for the test harness, like the roll's hoverKey.
+        setProperty("hoverNodeTick",
+                    newGeometry ? qlonglong(newGeometry->onPointTick) : qlonglong(-1));
         invalidateContent(oldRegion | newRegion);
     }
 
@@ -4598,9 +4700,10 @@ class AutomationArea : public TimelineSurface
     {
         if (m_hoverRow < 0)
             return;
-        const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick);
+        const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverY);
         const QRegion oldRegion = oldGeometry ? oldGeometry->paintRegion : QRegion();
         m_hoverRow = -1;
+        setProperty("hoverNodeTick", qlonglong(-1));
         invalidateContent(oldRegion);
     }
 
@@ -5022,6 +5125,7 @@ class AutomationArea : public TimelineSurface
     int m_prevValue = 0;
     int m_hoverRow = -1;      // row under an idle cursor; -1 = no readout
     double m_hoverTick = 0.0; // raw tick under the idle cursor
+    int m_hoverY = 0;         // cursor y of the idle hover, for the dot hit
     // The point the context menu is aimed at. The row is copied by value
     // (its identity, not an index) so a row rebuild can't dangle it — the
     // action re-derives the document target from it — and the document
