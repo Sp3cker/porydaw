@@ -3002,7 +3002,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 const int undoBefore = doc.undoStack()->index();
                 // The commit clamps against the pre-move display range;
                 // capture it now (the landed value itself would raise it).
-                const int tempoCap = tempoMaxV();
+                // On a song whose own tempos push the cap past the drag's
+                // reach (vE + 87), the clamp never engages — expect the
+                // uncapped landing instead of failing spuriously.
+                const int tempoCap = std::min(tempoMaxV(), vE + (127 - vA));
                 sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tA)), ccValueY(vA)),
                           Qt::LeftButton, Qt::LeftButton);
                 sendMouse(lanes, QEvent::MouseMove, QPoint(int(dotX(tA)), ccTop), Qt::NoButton,
@@ -3150,6 +3153,95 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     fail("a node exactly at endTick counted as selected (half-open broken)");
                 doc.undoStack()->undo();
                 QCoreApplication::processEvents();
+            }
+
+            // A zero-motion click on a selected node must not touch the
+            // document — even when a selected event is stored in
+            // non-canonical bytes that moveLanePoints' byte-based no-op
+            // detection would "heal" into a rewrite. Park a fractional-BPM
+            // tempo meta (120.5 BPM; the canonical form of its 121 lane
+            // value encodes differently) inside the selection and click.
+            {
+                SmfEvent frac;
+                frac.tick = tA;
+                frac.status = 0xFF;
+                frac.metaType = 0x51;
+                frac.blob.resize(3); // 497925 us/beat = 120.5 BPM
+                frac.blob[0] = char(0x07);
+                frac.blob[1] = char(0x99);
+                frac.blob[2] = char(0x05);
+                doc.insertRawEvent(0, frac);
+                QCoreApplication::processEvents();
+                SongView::TimeSelection cross = groupSel;
+                cross.lanes = {{laneTrack, freeCc}, {-1, DOC_CC_TEMPO}};
+                view.setTimeSelection(cross);
+                QCoreApplication::processEvents();
+                const QByteArray preClick = doc.smf().write();
+                const int undoBefore = doc.undoStack()->index();
+                sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tA)), ccValueY(vA)),
+                          Qt::LeftButton, Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(dotX(tA)), ccValueY(vA)),
+                          Qt::LeftButton, Qt::NoButton);
+                QCoreApplication::processEvents();
+                if (doc.undoStack()->index() != undoBefore || doc.smf().write() != preClick)
+                    fail("a zero-motion click on a selected node touched the document");
+                doc.undoStack()->undo(); // the raw fractional-tempo insert
+                QCoreApplication::processEvents();
+            }
+
+            // Escape mid-drag cancels a group drag with its selection: the
+            // release after it must commit nothing.
+            {
+                view.setTimeSelection(groupSel);
+                QCoreApplication::processEvents();
+                const QByteArray preCancel = doc.smf().write();
+                const int undoBefore = doc.undoStack()->index();
+                sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tA)), ccValueY(vA)),
+                          Qt::LeftButton, Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseMove, QPoint(int(dotX(tA + 2 * snap)), ccValueY(vA)),
+                          Qt::NoButton, Qt::LeftButton);
+                sendKey(lanes, Qt::Key_Escape, Qt::NoModifier);
+                sendMouse(lanes, QEvent::MouseButtonRelease,
+                          QPoint(int(dotX(tA + 2 * snap)), ccValueY(vA)), Qt::LeftButton,
+                          Qt::NoButton);
+                QCoreApplication::processEvents();
+                if (view.timeSelection().active())
+                    fail("Escape mid-group-drag did not clear the selection");
+                if (doc.undoStack()->index() != undoBefore || doc.smf().write() != preCancel)
+                    fail("release after Escape still committed the cancelled group drag");
+            }
+
+            // A band re-swept mid-drag is not the gesture's to shift: the
+            // latched group still commits, but the new band stays put.
+            {
+                view.setTimeSelection(groupSel);
+                QCoreApplication::processEvents();
+                const QByteArray preSwap = doc.smf().write();
+                const int undoBefore = doc.undoStack()->index();
+                sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tA)), ccValueY(vA)),
+                          Qt::LeftButton, Qt::LeftButton);
+                sendMouse(lanes, QEvent::MouseMove, QPoint(int(dotX(tA + 2 * snap)), ccValueY(vA)),
+                          Qt::NoButton, Qt::LeftButton);
+                SongView::TimeSelection other = groupSel;
+                other.startTick = tC;
+                other.endTick = tC + snap;
+                view.setTimeSelection(other); // as a mid-drag right sweep would
+                QCoreApplication::processEvents();
+                sendMouse(lanes, QEvent::MouseButtonRelease,
+                          QPoint(int(dotX(tA + 2 * snap)), ccValueY(vA)), Qt::LeftButton,
+                          Qt::NoButton);
+                QCoreApplication::processEvents();
+                if (doc.undoStack()->index() != undoBefore + 1 ||
+                    !doc.findLanePoint(laneTrack, freeCc, tA + 2 * snap, nullptr) ||
+                    !doc.findLanePoint(laneTrack, freeCc, tB + 2 * snap, nullptr))
+                    fail("mid-drag band replacement kept the latched group from committing");
+                if (!view.timeSelection().active() || view.timeSelection().startTick != tC ||
+                    view.timeSelection().endTick != tC + snap)
+                    fail("the group commit shifted a band re-swept mid-drag");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+                if (doc.smf().write() != preSwap)
+                    fail("undo did not restore the mid-drag band-replacement move");
             }
 
             // Delete/Backspace on the lane-scoped selection removes exactly
