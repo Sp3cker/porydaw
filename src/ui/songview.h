@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "core/miditimeline.h"
+#include "ui/activity/trackactivity.h"
 #include "ui/editordrawer/drawerpage.h"
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
@@ -49,6 +50,7 @@ class PianoRoll;
 class OtherStrip;
 class PlayheadOverlay;
 class TrackHeaderPanel;
+class TrackHeaderRow;
 
 // Perceptually mixes a color toward its backdrop. Timeline surfaces use this
 // shared shade for receding track-colored details.
@@ -94,6 +96,8 @@ class SongView : public QWidget
     // selection, mute/solo, and re-resolves the note selection.
     void updateSong(const MidiTimeline *timeline);
     void setPlayheadSample(uint64_t samplePos, bool playing);
+    void advanceTrackActivity(const std::array<uint8_t, MAX_TRACKS> &levels, float elapsedSeconds);
+    void resetTrackActivity();
 
     // Editing is enabled while a document is attached (may be null).
     void setDocument(SongDocument *document);
@@ -549,6 +553,7 @@ class SongView : public QWidget
 
   private:
     friend class EditorDrawer;
+    friend class songview::TrackHeaderRow;
     struct Geometry {
         int trackHeaderWidth;
         int pianoKeyboardWidth;
@@ -621,6 +626,7 @@ class SongView : public QWidget
     bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)
     bool m_noteNameMode = false;      // pitch labels on notes (View menu)
     bool m_followPlayhead = true;     // playback follow-scroll (transport bar)
+    TrackActivity m_trackActivity;
 
     EditorViewState m_editorViewState;
     EditorDrawer *m_editorDrawer = nullptr;

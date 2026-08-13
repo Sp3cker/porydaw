@@ -111,6 +111,7 @@ run primecheck       -    --primecheck
 run smfcheck         -    --smfcheck
 run transportcheck   -    --transportcheck
 run audiocheck       -    --audiocheck
+run trackactivitycheck -    --trackactivitycheck
 run keymapcheck      -    --keymapcheck
 run polycheck        -    --polycheck
 

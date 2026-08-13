@@ -58,6 +58,8 @@ int runTransportCheck();
 // audiocheck.cpp; prints the resolved audio backend and whether the silent
 // null-device fallback is in effect (self-contained, no project needed).
 int runAudioCheck();
+// trackactivitycheck.cpp; deterministic activity-envelope state-model check.
+int runTrackActivityCheck();
 // samplecheck.cpp; Sample Editor check (phases 1-6): registrar/import
 // refusals, the headless pipeline (decode, resample, quantize, normalize,
 // write, engine-loader parity), the phase-3 editor (pitch detection,
@@ -305,6 +307,8 @@ int main(int argc, char *argv[])
         return runTransportCheck();
     if (args.contains(QStringLiteral("--audiocheck")))
         return runAudioCheck();
+    if (args.contains(QStringLiteral("--trackactivitycheck")))
+        return runTrackActivityCheck();
     if (args.contains(QStringLiteral("--keymapcheck")))
         return runKeymapCheck();
     const int editCheck = args.indexOf(QStringLiteral("--editcheck"));

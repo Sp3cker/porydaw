@@ -7,7 +7,6 @@
 #include "ui/contextmenu.h"
 #include "ui/layout.h"
 #include "ui/selectionreticle.h"
-#include "ui/timelinesurface.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -225,6 +224,7 @@ QColor mixTowardOklabImpl(const QColor &color, const QColor &backdrop, double t)
     return themes::colorFromOklab({from.lightness + (to.lightness - from.lightness) * t,
                                    from.a + (to.a - from.a) * t, from.b + (to.b - from.b) * t});
 }
+
 std::size_t trackIdentityIndex(int track)
 {
     const auto count = static_cast<int>(themes::trackIdentityColorCount);
@@ -3344,6 +3344,14 @@ class TrackHeaderRow : public QWidget
     }
 
     int track() const { return m_track; }
+    void setActivity(float intensity)
+    {
+        const auto bounded = std::clamp(intensity, 0.0f, 1.0f);
+        if (std::abs(m_activity - bounded) < 1.0f / 512.0f)
+            return;
+        m_activity = bounded;
+        update();
+    }
 
     // True when the song's music player never starts this track in-game
     // (track index at or beyond SongDocument::trackBudget).
@@ -3367,9 +3375,11 @@ class TrackHeaderRow : public QWidget
             // the primary selection.
             p.fillRect(rect(), trackHeaderAlsoSelectedColor());
         }
-        p.fillRect(QRect(lyt::space(Space::Zero), lyt::space(Space::Zero), lyt::space(Space::One),
-                         height()),
-                   SongView::trackColor(m_track));
+        const bool silentInGame = isSilentInGame();
+        const QRectF barRect(lyt::space(Space::Zero), lyt::space(Space::Zero),
+                             lyt::space(Space::One), height() - lyt::singlePixel());
+        m_sv->m_trackActivity.paintLight(p, m_track, barRect, SongView::trackColor(m_track),
+                                         silentInGame ? 0.15f : 1.0f);
         p.setPen(QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
         p.drawLine(lyt::space(Space::Zero), height() - lyt::singlePixel(), width(),
                    height() - lyt::singlePixel());
@@ -3378,22 +3388,21 @@ class TrackHeaderRow : public QWidget
         QString name = tl ? tl->tracks[m_track].name : QString();
         if (name.isEmpty())
             name = SongView::tr("Track %1").arg(m_track + 1);
-        const auto textInset = lyt::space(Space::Two);
-        const auto textW = width() - m_geometry.trackHeaderButtonColumnWidth - textInset;
+        const auto textW = width() - m_geometry.trackHeaderButtonColumnWidth -
+                           m_geometry.trackHeaderTextLeft - lyt::space(Space::One);
         const auto title = QStringLiteral("%1 · %2").arg(m_track + 1).arg(name);
         const auto normalTitleFont = p.font();
         const auto titleFont = selected ? typography::bold(normalTitleFont) : normalTitleFont;
         const auto titleMetrics = QFontMetrics(titleFont);
         const auto visibleTitle = titleMetrics.elidedText(title, Qt::ElideRight, textW);
-        // The song's music player never starts this track in-game
-        // (MPlayStart), so playback mutes it; the header must read as inert
-        // at a glance: text recedes most of the way into the backdrop and a
-        // faint cross spans the row, under the text so labels stay legible.
-        const bool silentInGame = isSilentInGame();
         const QColor backdrop =
             selected ? themes::color(themes::Role::song_view_track_header_selection)
             : (m_sv->trackSelectionMask() & (1u << m_track)) ? trackHeaderAlsoSelectedColor()
                                                              : palette().color(QPalette::Window);
+        // The song's music player never starts this track in-game
+        // (MPlayStart), so playback mutes it; the header must read as inert
+        // at a glance: text recedes most of the way into the backdrop and a
+        // faint cross spans the row, under the text so labels stay legible.
         QColor titleColor = selected
                                 ? themes::color(themes::Role::song_view_track_header_selection_text)
                                 : themes::color(themes::Role::song_view_primary_text);
@@ -3655,6 +3664,7 @@ class TrackHeaderRow : public QWidget
     QToolButton *m_mute;
     QToolButton *m_solo;
     QLineEdit *m_editor = nullptr;
+    float m_activity = 0.0f;
     bool m_finishing = false;
     // Program painted on the voice line, for syncVoice's changed check
     // (-2 = never painted; distinct from -1, "no voice set").
@@ -3777,6 +3787,11 @@ class TrackHeaderPanel : public QWidget
     {
         for (const auto &entry : m_rowByTrack)
             entry.second->syncVoice();
+    }
+    void syncActivity(const TrackActivity &activity)
+    {
+        for (const auto &entry : m_rowByTrack)
+            entry.second->setActivity(activity.intensity(entry.first));
     }
 
     // --- header-row reorder drag (driven by TrackHeaderRow's mouse events;
@@ -4047,10 +4062,23 @@ SongView::SongView(QWidget *parent)
     connect(m_vbar, &QScrollBar::valueChanged, this,
             [this](int value) { setVScroll(scrollDips(value)); });
 }
+void SongView::advanceTrackActivity(const std::array<uint8_t, MAX_TRACKS> &levels,
+                                    float elapsedSeconds)
+{
+    m_trackActivity.advance(levels, elapsedSeconds);
+    m_headers->syncActivity(m_trackActivity);
+}
+
+void SongView::resetTrackActivity()
+{
+    m_trackActivity.reset();
+    m_headers->syncActivity(m_trackActivity);
+}
 
 void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup)
 {
     cancelActiveInteractions();
+    resetTrackActivity();
     m_timeline = timeline;
     m_voicegroup = voicegroup;
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();

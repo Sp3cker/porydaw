@@ -149,6 +149,9 @@ void AudioEngine::shutdown()
     m_audition.reset();
     m_timeline = nullptr;
     m_voicegroup = nullptr;
+    m_activePcm.store(0);
+    m_activeCgb.store(0);
+    clearTrackActivityLevels();
     if (m_context) {
         if (m_hasContext)
             ma_context_uninit(m_context);
@@ -200,7 +203,7 @@ void AudioEngine::loadSong(const MidiTimeline *timeline, LoadedVoiceGroup *voice
     m_playhead.store(0);
     m_activePcm.store(0);
     m_activeCgb.store(0);
-
+    clearTrackActivityLevels();
     if (m_deviceStarted)
         ma_device_start(m_device);
 }
@@ -368,6 +371,10 @@ void AudioEngine::unloadSong()
     m_appliedTransport = static_cast<int>(Transport::Stopped);
     m_player.reset();
     m_playhead.store(0);
+    m_activePcm.store(0);
+    m_activeCgb.store(0);
+    clearTrackActivityLevels();
+
     if (m_deviceStarted)
         ma_device_start(m_device);
 }
@@ -407,6 +414,21 @@ uint64_t AudioEngine::polyLostTotal() const
         total += m_engine->polyStealCount[t];
     }
     return total;
+}
+
+std::array<uint8_t, MAX_TRACKS> AudioEngine::consumeTrackActivityLevels()
+{
+    std::array<uint8_t, MAX_TRACKS> levels{};
+    for (int track = 0; track < MAX_TRACKS; track++)
+        levels[track] =
+            uint8_t(m_pendingTrackActivityLevels[track].exchange(0, std::memory_order_relaxed));
+    return levels;
+}
+
+void AudioEngine::clearTrackActivityLevels()
+{
+    for (auto &level : m_pendingTrackActivityLevels)
+        level.store(0, std::memory_order_relaxed);
 }
 
 void AudioEngine::polySnapshot(PolySnapshot *out) const
@@ -707,16 +729,40 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
 
     m_playhead.store(m_player.position());
 
+    std::array<uint8_t, MAX_TRACKS> callbackActivity{};
     int pcm = 0;
     for (int i = 0; i < engine->maxPcmChannels; i++) {
-        if (engine->pcmChannels[i].status & CHN_ON)
-            pcm++;
+        if (!(engine->pcmChannels[i].status & CHN_ON))
+            continue;
+        pcm++;
+        const int track = engine->pcmChannels[i].trackIndex;
+        if (track >= 0 && track < MAX_TRACKS)
+            callbackActivity[track] =
+                std::max(callbackActivity[track], engine->pcmChannels[i].envelopeVolume);
     }
     int cgb = 0;
     for (int i = 0; i < MAX_CGB_CHANNELS; i++) {
-        if (engine->cgbChannels[i].status & CHN_ON)
-            cgb++;
+        if (!(engine->cgbChannels[i].status & CHN_ON))
+            continue;
+        cgb++;
+        const int track = engine->cgbChannels[i].trackIndex;
+        if (track >= 0 && track < MAX_TRACKS) {
+            // Envelope volume is the channel's current loudness proxy. Clamp
+            // its CGB-scale value to 0..15, then expand it to 0..255.
+            const uint8_t activityLevel =
+                std::min(engine->cgbChannels[i].envelopeVolume, uint8_t{15});
+            callbackActivity[track] =
+                std::max(callbackActivity[track], uint8_t(activityLevel * 17));
+        }
     }
     m_activePcm.store(pcm);
     m_activeCgb.store(cgb);
+    for (int track = 0; track < MAX_TRACKS; track++) {
+        const uint32_t level = callbackActivity[track];
+        auto &pending = m_pendingTrackActivityLevels[track];
+        auto observed = pending.load(std::memory_order_relaxed);
+        while (level > observed &&
+               !pending.compare_exchange_weak(observed, level, std::memory_order_relaxed)) {
+        }
+    }
 }

@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -188,6 +189,8 @@ class AudioEngine
     uint64_t playheadSamples() const { return m_playhead.load(); }
     int activePcmChannels() const { return m_activePcm.load(); }
     int activeCgbChannels() const { return m_activeCgb.load(); }
+    std::array<uint8_t, MAX_TRACKS> consumeTrackActivityLevels();
+
     int maxPcmChannels() const { return m_settings.maxPcmChannels; }
     int trackBudget() const { return m_settings.trackBudget; }
     uint64_t polyLostTotal() const; // dropped + stolen, all tracks (no tail cuts)
@@ -233,6 +236,7 @@ class AudioEngine
     void resetPreviewEngine();
     ToneData *previewVoices() const;
     uint32_t effectiveMuteMask() const;
+    void clearTrackActivityLevels();
 
     // Device / engine (audio thread reads; cold ops swap while stopped)
     ma_context *m_context = nullptr;
@@ -297,6 +301,8 @@ class AudioEngine
     std::atomic<uint64_t> m_playhead{0};
     std::atomic<int> m_activePcm{0};
     std::atomic<int> m_activeCgb{0};
+    std::array<std::atomic<uint32_t>, MAX_TRACKS> m_pendingTrackActivityLevels{};
+    static_assert(std::atomic<uint32_t>::is_always_lock_free);
 
     // Audio-thread-only sequencer state
     int m_appliedTransport = static_cast<int>(Transport::Stopped);
