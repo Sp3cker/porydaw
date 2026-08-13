@@ -179,6 +179,26 @@ void sendKey(QWidget *w, int key, Qt::KeyboardModifiers mods)
     QCoreApplication::sendEvent(w, &release);
 }
 
+// Overlay verticals paint over the lane dots (drawOverlays runs after
+// paintCurve): a probe dot must stay clear of the edit cursor's dashed
+// line and the loop markers' edge/glow bands. The clearances mirror
+// SongView's overlay paint geometry, so they live in one place.
+bool overlayContestedX(SongView &view, qreal dpr, qreal x)
+{
+    const qreal cursorX = view.displayX(double(view.editCursorTick()), songview::kGutterW, dpr);
+    if (std::abs(cursorX - x) < 12)
+        return true;
+    const MidiTimeline *tl = view.timeline();
+    for (const uint64_t loopTick : {tl->loopStartTick, tl->loopEndTick}) {
+        if (loopTick == UINT64_MAX)
+            continue;
+        const qreal loopX = view.displayX(double(loopTick), songview::kGutterW, dpr);
+        if (x > loopX - 52 && x < loopX + 52)
+            return true;
+    }
+    return false;
+}
+
 } // namespace
 
 int runRollCheck(const QString &projectRoot, const QString &songLabel,
@@ -2792,25 +2812,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                         return true;
                 return false;
             };
-            // Overlay verticals paint over the dots (drawOverlays runs
-            // after paintCurve): keep every sampled dot clear of the edit
-            // cursor's dashed line and the loop markers' edge/glow bands.
-            auto contestedX = [&](qreal x) {
-                const qreal cursorX =
-                    view.displayX(double(view.editCursorTick()), songview::kGutterW, dprLanes);
-                if (std::abs(cursorX - x) < 12)
-                    return true;
-                const MidiTimeline *tl = view.timeline();
-                for (const uint64_t loopTick : {tl->loopStartTick, tl->loopEndTick}) {
-                    if (loopTick == UINT64_MAX)
-                        continue;
-                    const qreal loopX =
-                        view.displayX(double(loopTick), songview::kGutterW, dprLanes);
-                    if (x > loopX - 52 && x < loopX + 52)
-                        return true;
-                }
-                return false;
-            };
+            auto contestedX = [&](qreal x) { return overlayContestedX(view, dprLanes, x); };
             // Clear air: no song tempo point (and no overlay vertical) may
             // sit anywhere on the probe span.
             qreal xSeek = songview::kGutterW + (lanes->width() - songview::kGutterW) * 0.35;
@@ -3349,24 +3351,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             auto dotX = [&](uint64_t t) {
                 return view.displayX(double(t), songview::kGutterW, dprLanes);
             };
-            // Keep every probe dot clear of the edit cursor's dashed line
-            // and the loop markers' bands, which paint over the dots.
-            auto contestedX = [&](qreal x) {
-                const qreal cursorX =
-                    view.displayX(double(view.editCursorTick()), songview::kGutterW, dprLanes);
-                if (std::abs(cursorX - x) < 12)
-                    return true;
-                const MidiTimeline *tl = view.timeline();
-                for (const uint64_t loopTick : {tl->loopStartTick, tl->loopEndTick}) {
-                    if (loopTick == UINT64_MAX)
-                        continue;
-                    const qreal loopX =
-                        view.displayX(double(loopTick), songview::kGutterW, dprLanes);
-                    if (x > loopX - 52 && x < loopX + 52)
-                        return true;
-                }
-                return false;
-            };
+            auto contestedX = [&](qreal x) { return overlayContestedX(view, dprLanes, x); };
             qreal xSeek = songview::kGutterW + (lanes->width() - songview::kGutterW) * 0.3;
             uint64_t t0 = view.snapTick(view.tickAtContentX(xSeek - songview::kGutterW));
             uint64_t g = std::max<uint64_t>(1, view.gridTicksAt(t0));
@@ -3566,6 +3551,46 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 QCoreApplication::processEvents();
             }
 
+            // Set value on a same-tick duplicate: the dialog is seeded with
+            // the aimed point's value (the y pick), and committing heals
+            // the tick like every value edit does — one point, the typed
+            // value, one undo entry (moveLanePoints' shadow-healing rule).
+            {
+                const std::vector<DocLanePoint> dups = duplicatesAt(tD);
+                const int preUndo = doc.undoStack()->index();
+                rightClick(QPoint(int(dotX(tD)), ccValueY(dups.front().value)));
+                if (!pointMenu->isVisible())
+                    fail("duplicate Set value probe: the menu did not open");
+                const int aimedShown =
+                    freeCc == 0x0A ? dups.front().value - 64 : dups.front().value;
+                const int typedShown = 20;
+                const int typedStored = freeCc == 0x0A ? typedShown + 64 : typedShown;
+                QTimer poll;
+                poll.setInterval(0);
+                bool seededWithAim = false;
+                QObject::connect(&poll, &QTimer::timeout, [&] {
+                    if (auto *dlg = lanes->findChild<QInputDialog *>()) {
+                        seededWithAim = dlg->intValue() == aimedShown;
+                        dlg->setIntValue(typedShown);
+                        dlg->accept();
+                    }
+                });
+                poll.start();
+                activate(menuAction("Set value…"));
+                poll.stop();
+                if (!seededWithAim)
+                    fail("duplicate Set value was not seeded with the aimed point's value");
+                const std::vector<DocLanePoint> after = duplicatesAt(tD);
+                if (after.size() != 1 || after.front().value != typedStored ||
+                    doc.undoStack()->index() != preUndo + 1)
+                    fail("Set value on a same-tick duplicate did not heal the tick to the typed "
+                         "value");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+                if (duplicatesAt(tD).size() != 2)
+                    fail("undo did not restore the healed same-tick duplicate");
+            }
+
             // Retarget: with the menu open on B, a right-click on A re-aims
             // it — the popup never closes, the ring jumps to A, and Delete
             // then removes A only. (A sits left of the popup, which opens
@@ -3592,6 +3617,38 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     doc.undoStack()->index() != preUndo + 1)
                     fail("retargeted Delete did not remove the retargeted point only");
                 doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+            }
+
+            // The lanes' right-click precedence holds while the popup is
+            // open: a retarget onto a point inside a covering time
+            // selection declines (that click belongs to the range menu),
+            // so the popup dismisses instead of re-aiming.
+            {
+                SongView::TimeSelection cover;
+                cover.startTick = tA + g; // B covered, A (the open aim) not
+                cover.endTick = tD;
+                cover.scope = SongView::TimeSelection::Lanes;
+                cover.lanes = {{laneTrack, freeCc}};
+                view.setTimeSelection(cover);
+                QCoreApplication::processEvents();
+                const uint64_t preRevision = doc.revision();
+                rightClick(pointA);
+                if (!pointMenu->isVisible())
+                    fail("precedence probe: the menu did not open on the uncovered point");
+                const QPoint bGlobal = lanes->mapToGlobal(pointB);
+                sendMouse(pointMenu, QEvent::MouseButtonPress, pointMenu->mapFromGlobal(bGlobal),
+                          Qt::RightButton, Qt::RightButton);
+                sendMouse(pointMenu, QEvent::MouseButtonRelease, pointMenu->mapFromGlobal(bGlobal),
+                          Qt::RightButton, Qt::NoButton);
+                QCoreApplication::processEvents();
+                if (pointMenu->isVisible()) {
+                    fail("retarget onto a selection-covered point did not decline and dismiss");
+                    dismissMenu();
+                }
+                if (doc.revision() != preRevision)
+                    fail("the declined covered-point retarget edited the document");
+                view.clearTimeSelection();
                 QCoreApplication::processEvents();
             }
 

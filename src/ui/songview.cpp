@@ -3874,42 +3874,48 @@ class AutomationArea : public TimelineSurface
                 doc->deleteLanePoints(m_sv->selectedTrack(), DOC_CC_VOICE, {hit});
             return;
         }
-        uint8_t cc;
-        int track;
-        if (!rowTarget(row, &cc, &track))
+        // A menu instead of the old instant delete: Delete is one click
+        // away inside it, Set value covers the other common point edit,
+        // and the Delete key on a node selection stays the fast path. The
+        // open gesture shares the retarget path's aiming wholesale, so the
+        // two can never disagree about which point a click means.
+        if (movePointMenu(event->globalPosition()))
             return;
-        DocLanePoint hit;
-        if (pointMenuHit(row, m_rightRow, event->position(), &hit)) {
-            // A menu instead of the old instant delete: Delete is one click
-            // away inside it, Set value covers the other common point edit,
-            // and the Delete key on a node selection stays the fast path.
-            m_pointMenuTarget = {row, track, cc, hit, doc->revision()};
-            invalidateContent(); // the aimed node's ring
-            m_pointMenu->popup(event->globalPosition().toPoint());
-            return;
-        }
         m_sv->clearTimeSelection();
     }
 
-    // Retargets the open point menu to the point under an outside
-    // right-click, mirroring the roll's note-menu gesture. Returns false
-    // when nothing was hit (empty lane space, the gutter, another widget)
-    // so ui::ContextMenu dismisses the popup instead.
+    // Aims and pops the point menu at the point under a right-click —
+    // both the opening click and, mirroring the roll's note-menu gesture,
+    // an outside right-click retargeting the open popup. Returns false
+    // when the click is not the point menu's to take (empty lane space,
+    // the gutter, a covering time selection, another widget), so the
+    // callers fall through: ui::ContextMenu dismisses the popup,
+    // rightClickInPlace clears the selection.
     bool movePointMenu(QPointF globalPos)
     {
         SongDocument *doc = m_sv->document();
         const QPointF pos = globalPos - QPointF(mapToGlobal(QPoint(0, 0)));
-        const int ri = doc ? rowIndexAt(int(pos.y())) : -1;
+        // floor, not int(): truncation toward zero would fold the fringe
+        // just above the widget onto row 0.
+        const int ri = doc ? rowIndexAt(int(std::floor(pos.y()))) : -1;
         if (ri < 0)
             return false;
         const Row &row = m_rows[ri];
-        uint8_t cc;
-        int track;
-        DocLanePoint hit;
-        if (!rowTarget(row, &cc, &track) || !pointMenuHit(row, ri, pos, &hit))
+        // The lanes' right-click precedence holds while the popup is open
+        // too: inside a covering time selection the range menu owns the
+        // click, so a retarget onto a covered point declines.
+        const std::pair<int, uint8_t> id = rowIdentity(row);
+        const SongView::TimeSelection &sel = m_sv->timeSelection();
+        const qreal dpr = devicePixelRatioF();
+        if (sel.active() && m_sv->timeSelectionCoversRow(id.first, id.second) &&
+            pos.x() >= m_sv->displayX(double(sel.startTick), kGutterW, dpr) &&
+            pos.x() < m_sv->displayX(double(sel.endTick), kGutterW, dpr))
             return false;
-        m_pointMenuTarget = {row, track, cc, hit, doc->revision()};
-        invalidateContent();
+        DocLanePoint hit;
+        if (!pointMenuHit(row, ri, pos, &hit))
+            return false;
+        m_pointMenuTarget = {row, hit, doc->revision()};
+        invalidateContent(); // the aimed node's ring
         m_pointMenu->popup(globalPos.toPoint());
         return true;
     }
@@ -3926,18 +3932,29 @@ class AutomationArea : public TimelineSurface
             return;
         const PointMenuTarget target = *m_pointMenuTarget;
         m_pointMenuTarget.reset();
+        uint8_t cc;
+        int track;
+        if (!rowTarget(target.row, &cc, &track))
+            return;
         if (action == m_pointSetValue) {
             int value = target.point.value;
             // The same type-in the lanes' double-click opens (per-row
             // BPM/bend/c_v semantics live in that one implementation).
             if (!editValue(target.row, &value) || value == target.point.value)
                 return;
-            // An in-place value change on the exact point: same-tick
-            // duplicates keep their identity, where a whole-tick overwrite
-            // would collapse them.
-            doc->moveLanePoint(target.track, target.cc, target.point, target.point.tick, value);
+            // The dialog's modal loop can let a queued edit land; the aim
+            // is stale then, so void the action rather than edit through
+            // it (moveLanePoints would drop the move as a silent no-op).
+            if (doc->revision() != target.revision)
+                return;
+            // A value edit on the aimed point. Like every value edit on a
+            // tick — drags, the double-click write — moveLanePoints heals
+            // shadowed same-tick duplicates: the tick ends up holding one
+            // point with the typed value. The aim picks which point seeds
+            // the dialog, not a surviving sibling.
+            doc->moveLanePoint(track, cc, target.point, target.point.tick, value);
         } else if (action == m_pointDelete) {
-            doc->deleteLanePoints(target.track, target.cc, {target.point});
+            doc->deleteLanePoints(track, cc, {target.point});
         }
     }
 
@@ -5006,13 +5023,12 @@ class AutomationArea : public TimelineSurface
     int m_hoverRow = -1;      // row under an idle cursor; -1 = no readout
     double m_hoverTick = 0.0; // raw tick under the idle cursor
     // The point the context menu is aimed at. The row is copied by value
-    // (its identity, not an index) so a row rebuild can't dangle it; the
-    // document revision pins the DocLanePoint, whose index goes stale the
-    // moment any edit lands.
+    // (its identity, not an index) so a row rebuild can't dangle it — the
+    // action re-derives the document target from it — and the document
+    // revision pins the DocLanePoint, whose index goes stale the moment
+    // any edit lands.
     struct PointMenuTarget {
         Row row;
-        int track = 0;
-        uint8_t cc = 0;
         DocLanePoint point;
         uint64_t revision = 0;
     };

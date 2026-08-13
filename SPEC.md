@@ -322,17 +322,24 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   A right release in place on a lane point opens its context menu — **Set value…**
   and **Delete** — instead of deleting outright (fast removal stays on the Delete
   key via the node selection). Set value… is the same per-row type-in the
-  double-click opens (BPM for tempo, signed bend, c_v for pan/tune) and commits an
-  in-place value change on that exact point; Delete removes it. The menu is aimed
-  by a circular nearest-wins hit test against the document (9 px, the old x-only
-  right-click radius; the ±7 px dot box stays the left-drag grab rule), so of
-  same-tick duplicates the cursor's y picks the point, and the aimed node paints
-  the highlight ring while the popup is open. Right-clicking another point while
-  it is open re-aims the menu in one gesture — the roll's note-menu retarget,
-  shared through `ui::ContextMenu` — and a right-click on nothing falls through
-  and dismisses it. Inside a covering time selection right-click keeps opening
-  the range menu, a voice-row right release still deletes the marker directly,
-  and empty lane space still clears the selection.
+  double-click opens (BPM for tempo, signed bend, c_v for pan/tune), seeded with
+  the aimed point's value; committing retypes that point and, like every value
+  edit on a tick (drags, the double-click write), heals shadowed same-tick
+  duplicates — the tick ends up holding one point at the typed value. Delete
+  removes exactly the aimed point: of same-tick duplicates, only the one under
+  the cursor's y. The menu is aimed by a circular nearest-wins hit test against
+  the document (9 px, the old x-only right-click radius; the ±7 px dot box stays
+  the left-drag grab rule), so the cursor's y picks among same-tick duplicates,
+  and the aimed node paints the highlight ring while the popup is open (at zooms
+  where the node dots draw, sharing the selection rings' gate). Right-clicking
+  another point while it is open re-aims the menu in one gesture — the roll's
+  note-menu retarget, shared through `ui::ContextMenu` — and a right-click on
+  nothing falls through and dismisses it. The lanes' right-click precedence
+  holds while the popup is open: a retarget onto a selection-covered point
+  declines (the range menu owns that click, so the popup just dismisses).
+  Inside a covering time selection a fresh right-click keeps opening the range
+  menu, a voice-row right release still deletes the marker directly, and empty
+  lane space still clears the selection.
 - **Transport bar:** play/pause/stop, loop toggle, a follow-playhead toggle (also in
   the View menu; off, playback stops scrolling the roll and event list — the camera
   stays where the user put it; app-wide, persisted), position, tempo display, master
