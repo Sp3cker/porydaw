@@ -8,6 +8,7 @@
 #include <QFontMetrics>
 #include <QIcon>
 #include <QImage>
+#include <QInputDialog>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QListWidget>
@@ -3302,6 +3303,357 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             QCoreApplication::processEvents();
             if (doc.smf().write() != sectionBytes)
                 fail("node-selection section did not restore the document bytes");
+        }
+    }
+
+    // Automation point context menu: a right release in place on a point
+    // opens a two-action popup (Set value…, Delete) instead of the old
+    // instant delete, aimed by a circular nearest-wins hit test against the
+    // document — so of same-tick duplicates, the cursor's y picks the point.
+    // The aimed node paints the highlight ring while the popup is open; a
+    // right-click on another point re-aims the open menu in one gesture
+    // (never dismiss-then-reopen), a right-click on nothing falls through
+    // and dismisses it. Empty lane space keeps its selection-clear meaning,
+    // and a voice-row right release still deletes the marker directly.
+    {
+        const int undoIndex = doc.undoStack()->index();
+        const int laneTrack = view.selectedTrack();
+        const QByteArray sectionBytes = doc.smf().write();
+        view.clearTimeSelection();
+        auto *pointMenu = lanes->findChild<QMenu *>(QStringLiteral("automationPointMenu"));
+        if (!pointMenu)
+            fail("automation point menu not found");
+        // A CC lane with no song data, exactly like the node-selection
+        // setup: fixed 0..127 axis, every point in it the probe's own.
+        uint8_t freeCc = 0;
+        for (uint8_t cc : {uint8_t(0x14), uint8_t(0x15), uint8_t(0x07), uint8_t(0x0A)}) {
+            if (doc.lanePoints(laneTrack, cc).empty()) {
+                freeCc = cc;
+                break;
+            }
+        }
+        if (!freeCc)
+            fail("point-menu setup: no data-free CC lane available");
+        if (freeCc && pointMenu) {
+            view.addEmptyLane(laneTrack, freeCc);
+            QCoreApplication::processEvents();
+            // Row geometry mirror: tempo row 0, voice row, then the track's
+            // lanes by ascending CC, all at the default 48 px height.
+            int ccRowTop = 2 * 48;
+            for (const AutoLane &lane : view.model().lanes)
+                if (lane.track == laneTrack && lane.cc < freeCc)
+                    ccRowTop += 48;
+            const int ccTop = ccRowTop + 5, ccBottom = ccRowTop + 48 - 1 - 4;
+            auto ccValueY = [&](int v) { return ccBottom - v * (ccBottom - ccTop) / 127; };
+            const qreal dprLanes = lanes->devicePixelRatioF();
+            auto dotX = [&](uint64_t t) {
+                return view.displayX(double(t), songview::kGutterW, dprLanes);
+            };
+            // Keep every probe dot clear of the edit cursor's dashed line
+            // and the loop markers' bands, which paint over the dots.
+            auto contestedX = [&](qreal x) {
+                const qreal cursorX =
+                    view.displayX(double(view.editCursorTick()), songview::kGutterW, dprLanes);
+                if (std::abs(cursorX - x) < 12)
+                    return true;
+                const MidiTimeline *tl = view.timeline();
+                for (const uint64_t loopTick : {tl->loopStartTick, tl->loopEndTick}) {
+                    if (loopTick == UINT64_MAX)
+                        continue;
+                    const qreal loopX =
+                        view.displayX(double(loopTick), songview::kGutterW, dprLanes);
+                    if (x > loopX - 52 && x < loopX + 52)
+                        return true;
+                }
+                return false;
+            };
+            qreal xSeek = songview::kGutterW + (lanes->width() - songview::kGutterW) * 0.3;
+            uint64_t t0 = view.snapTick(view.tickAtContentX(xSeek - songview::kGutterW));
+            uint64_t g = std::max<uint64_t>(1, view.gridTicksAt(t0));
+            auto spanContested = [&]() {
+                for (int k = 0; k <= 5; k++)
+                    if (contestedX(dotX(t0 + uint64_t(k) * g)))
+                        return true;
+                return false;
+            };
+            while (spanContested()) {
+                xSeek += 40;
+                t0 = view.snapTick(view.tickAtContentX(xSeek - songview::kGutterW));
+                g = std::max<uint64_t>(1, view.gridTicksAt(t0));
+            }
+            const uint64_t tA = t0, tB = t0 + 2 * g, tD = t0 + 4 * g;
+            constexpr int vA = 40, vB = 80, vHigh = 100, vLow = 30;
+            doc.writeLanePoints(laneTrack, freeCc, tA, tB, {{tA, vA}, {tB, vB}});
+            doc.writeLanePoints(laneTrack, freeCc, tD, tD, {{tD, vHigh}});
+            {
+                // The same-tick duplicate porydaw's own editing never
+                // produces but imported files carry: a raw CC event on the
+                // duplicate tick with a different value.
+                SmfEvent dup;
+                dup.tick = tD;
+                dup.status = char(0xB0 | doc.channelFor(laneTrack));
+                dup.data0 = char(freeCc);
+                dup.data1 = char(vLow);
+                doc.insertRawEvent(doc.smfTrackFor(laneTrack), dup);
+            }
+            QCoreApplication::processEvents();
+            auto duplicatesAt = [&](uint64_t tick) {
+                std::vector<DocLanePoint> out;
+                for (const DocLanePoint &pt : doc.lanePoints(laneTrack, freeCc))
+                    if (pt.tick == tick)
+                        out.push_back(pt);
+                return out;
+            };
+            if (duplicatesAt(tD).size() != 2 ||
+                duplicatesAt(tD).front().value == duplicatesAt(tD).back().value)
+                fail("point-menu setup: the same-tick duplicate did not land");
+
+            auto rightClick = [&](QPoint pos) {
+                sendMouse(lanes, QEvent::MouseButtonPress, pos, Qt::RightButton, Qt::RightButton);
+                sendMouse(lanes, QEvent::MouseButtonRelease, pos, Qt::RightButton, Qt::NoButton);
+                QCoreApplication::processEvents();
+            };
+            auto menuAction = [&](const char *text) -> QAction * {
+                for (QAction *action : pointMenu->actions())
+                    if (action->text() == QString::fromUtf8(text))
+                        return action;
+                return nullptr;
+            };
+            // Keyboard activation: synthetic clicks hit QMenu's
+            // accidental-release guards; Return on the active action does
+            // what a real pick does.
+            auto activate = [&](QAction *action) {
+                if (!action)
+                    return;
+                pointMenu->setActiveAction(action);
+                sendKey(pointMenu, Qt::Key_Return, Qt::NoModifier);
+                QCoreApplication::processEvents();
+            };
+            auto dismissMenu = [&]() {
+                if (pointMenu->isVisible()) {
+                    sendKey(pointMenu, Qt::Key_Escape, Qt::NoModifier);
+                    QCoreApplication::processEvents();
+                }
+            };
+            const QColor ringColor = lanes->palette().highlight().color();
+            // The ring is aliased so its pixels are exact (no selection
+            // band here, so no tinted variant to blend).
+            auto ringNear = [&](const QImage &img, qreal x, int y) {
+                const int cx = int((x + 0.5) * dprLanes), cy = int((y + 0.5) * dprLanes);
+                const int r = int(std::ceil(7 * dprLanes));
+                for (int dy = -r; dy <= r; dy++)
+                    for (int dx = -r; dx <= r; dx++) {
+                        const int px = cx + dx, py = cy + dy;
+                        if (px < 0 || py < 0 || px >= img.width() || py >= img.height())
+                            continue;
+                        if (img.pixelColor(px, py) == ringColor)
+                            return true;
+                    }
+                return false;
+            };
+            const QPoint pointA(int(dotX(tA)), ccValueY(vA));
+            const QPoint pointB(int(dotX(tB)), ccValueY(vB));
+
+            // Mirror + clear-air sanity: the dots show their exact curve
+            // color and nothing highlight-like before any menu opens.
+            {
+                const QImage base = lanes->grab().toImage();
+                const QColor ccColor = SongView::trackColor(laneTrack);
+                if (base.pixelColor(int((dotX(tA) + 0.5) * dprLanes),
+                                    int((ccValueY(vA) + 0.5) * dprLanes)) != ccColor)
+                    fail("point-menu setup: CC dot color mirror drifted");
+                if (ringNear(base, dotX(tA), ccValueY(vA)))
+                    fail("point-menu setup: highlight-like pixels near an idle node");
+            }
+
+            // Empty lane space keeps its old meaning: no menu, no edit.
+            // (Same x as point A, but far above its dot: an x-only test
+            // would treat this as a point click.)
+            {
+                const uint64_t preRevision = doc.revision();
+                rightClick(QPoint(int(dotX(tA)), ccTop + 1));
+                if (pointMenu->isVisible()) {
+                    fail("empty-space right-click opened the point menu");
+                    dismissMenu();
+                }
+                if (doc.revision() != preRevision)
+                    fail("empty-space right-click edited the document");
+            }
+
+            // Right release in place on a point: the two-action menu opens,
+            // the aimed node rings, and nothing is edited by the click —
+            // the old instant delete is gone.
+            {
+                const uint64_t preRevision = doc.revision();
+                const int preUndo = doc.undoStack()->index();
+                rightClick(pointA);
+                if (!pointMenu->isVisible())
+                    fail("right-click on a point did not open the point menu");
+                QStringList labels;
+                for (QAction *action : pointMenu->actions())
+                    labels.push_back(action->text());
+                if (labels !=
+                    QStringList{QString::fromUtf8("Set value…"), QStringLiteral("Delete")})
+                    fail("point menu actions are not exactly Set value…, Delete");
+                if (!doc.findLanePoint(laneTrack, freeCc, tA, nullptr) ||
+                    doc.revision() != preRevision || doc.undoStack()->index() != preUndo)
+                    fail("opening the point menu edited the document");
+                if (!ringNear(lanes->grab().toImage(), dotX(tA), ccValueY(vA)))
+                    fail("the aimed point did not ring while the menu is open");
+
+                // Delete removes exactly the aimed point as one undo entry.
+                activate(menuAction("Delete"));
+                DocLanePoint pt;
+                if (pointMenu->isVisible() || doc.findLanePoint(laneTrack, freeCc, tA, nullptr) ||
+                    !doc.findLanePoint(laneTrack, freeCc, tB, &pt) || pt.value != vB ||
+                    duplicatesAt(tD).size() != 2 || doc.undoStack()->index() != preUndo + 1 ||
+                    doc.revision() != preRevision + 1)
+                    fail("point menu Delete did not remove exactly the aimed point");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+            }
+
+            // Same-tick duplicates resolve by the cursor's y: aiming at the
+            // first duplicate's dot deletes that one, not the later-in-file
+            // one an x-only tie rule would pick.
+            {
+                const std::vector<DocLanePoint> dups = duplicatesAt(tD);
+                const int preUndo = doc.undoStack()->index();
+                rightClick(QPoint(int(dotX(tD)), ccValueY(dups.front().value)));
+                if (!pointMenu->isVisible())
+                    fail("right-click on a same-tick duplicate did not open the menu");
+                activate(menuAction("Delete"));
+                const std::vector<DocLanePoint> after = duplicatesAt(tD);
+                if (after.size() != 1 || after.front().value != dups.back().value ||
+                    doc.undoStack()->index() != preUndo + 1)
+                    fail("Delete did not remove the same-tick duplicate under the cursor's y");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+            }
+
+            // Set value commits the typed value on the aimed point, in
+            // place, through the same type-in the double-click opens.
+            {
+                const int preUndo = doc.undoStack()->index();
+                const uint64_t preRevision = doc.revision();
+                rightClick(pointB);
+                if (!pointMenu->isVisible())
+                    fail("Set value probe: the menu did not open");
+                const int typedShown = 10;
+                // PAN stores c_v + 64; the free-CC pick can land on 0x0A.
+                const int typedStored = freeCc == 0x0A ? typedShown + 64 : typedShown;
+                QTimer poll;
+                poll.setInterval(0);
+                bool inputSeen = false;
+                QObject::connect(&poll, &QTimer::timeout, [&] {
+                    if (auto *dlg = lanes->findChild<QInputDialog *>()) {
+                        inputSeen = true;
+                        dlg->setIntValue(typedShown);
+                        dlg->accept();
+                    }
+                });
+                poll.start();
+                activate(menuAction("Set value…"));
+                poll.stop();
+                if (!inputSeen)
+                    fail("Set value did not open the numeric type-in");
+                DocLanePoint edited;
+                if (!doc.findLanePoint(laneTrack, freeCc, tB, &edited) ||
+                    edited.value != typedStored || duplicatesAt(tD).size() != 2 ||
+                    doc.undoStack()->index() != preUndo + 1 || doc.revision() != preRevision + 1)
+                    fail("Set value did not commit the typed value in place");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+            }
+
+            // Retarget: with the menu open on B, a right-click on A re-aims
+            // it — the popup never closes, the ring jumps to A, and Delete
+            // then removes A only. (A sits left of the popup, which opens
+            // at B and extends right, so the click is outside its rect.)
+            {
+                const int preUndo = doc.undoStack()->index();
+                rightClick(pointB);
+                if (!pointMenu->isVisible())
+                    fail("retarget probe: the menu did not open");
+                const QPoint aGlobal = lanes->mapToGlobal(pointA);
+                sendMouse(pointMenu, QEvent::MouseButtonPress, pointMenu->mapFromGlobal(aGlobal),
+                          Qt::RightButton, Qt::RightButton);
+                sendMouse(pointMenu, QEvent::MouseButtonRelease, pointMenu->mapFromGlobal(aGlobal),
+                          Qt::RightButton, Qt::NoButton);
+                QCoreApplication::processEvents();
+                if (!pointMenu->isVisible())
+                    fail("retargeting dismissed the open point menu");
+                const QImage img = lanes->grab().toImage();
+                if (!ringNear(img, dotX(tA), ccValueY(vA)) || ringNear(img, dotX(tB), ccValueY(vB)))
+                    fail("retargeting did not move the aimed node's ring");
+                activate(menuAction("Delete"));
+                if (doc.findLanePoint(laneTrack, freeCc, tA, nullptr) ||
+                    !doc.findLanePoint(laneTrack, freeCc, tB, nullptr) ||
+                    doc.undoStack()->index() != preUndo + 1)
+                    fail("retargeted Delete did not remove the retargeted point only");
+                doc.undoStack()->undo();
+                QCoreApplication::processEvents();
+            }
+
+            // A right-click that hits no point falls through to QMenu and
+            // dismisses the popup (nothing edited), and the ring lifts with
+            // it. The empty spot sits up-left of the popup's corner.
+            {
+                rightClick(pointA);
+                if (!pointMenu->isVisible())
+                    fail("dismiss probe: the menu did not open");
+                const uint64_t preRevision = doc.revision();
+                const QPoint emptyGlobal =
+                    lanes->mapToGlobal(QPoint(int(dotX(tA)) - 20, ccTop + 1));
+                sendMouse(pointMenu, QEvent::MouseButtonPress,
+                          pointMenu->mapFromGlobal(emptyGlobal), Qt::RightButton, Qt::RightButton);
+                sendMouse(pointMenu, QEvent::MouseButtonRelease,
+                          pointMenu->mapFromGlobal(emptyGlobal), Qt::RightButton, Qt::NoButton);
+                QCoreApplication::processEvents();
+                if (pointMenu->isVisible()) {
+                    fail("outside right-click on nothing did not dismiss the point menu");
+                    dismissMenu();
+                }
+                if (doc.revision() != preRevision)
+                    fail("dismissing the point menu edited the document");
+                if (ringNear(lanes->grab().toImage(), dotX(tA), ccValueY(vA)))
+                    fail("the aim ring survived the menu's dismissal");
+            }
+
+            // Voice-row right release in place still deletes the marker
+            // directly — the point menu never aims at voice identities.
+            {
+                uint64_t tV = tB;
+                auto voiceContested = [&]() {
+                    for (const DocLanePoint &pt : doc.lanePoints(laneTrack, DOC_CC_VOICE))
+                        if (std::abs(dotX(pt.tick) - dotX(tV)) < 12)
+                            return true;
+                    return false;
+                };
+                while (voiceContested())
+                    tV += g;
+                doc.addLanePoint(laneTrack, DOC_CC_VOICE, tV, 3);
+                QCoreApplication::processEvents();
+                const int preUndo = doc.undoStack()->index();
+                rightClick(QPoint(int(dotX(tV)), 48 + 24));
+                if (pointMenu->isVisible()) {
+                    fail("voice-row right-click opened the point menu");
+                    dismissMenu();
+                }
+                if (doc.findLanePoint(laneTrack, DOC_CC_VOICE, tV, nullptr) ||
+                    doc.undoStack()->index() != preUndo + 1)
+                    fail("voice-marker right-click delete no longer works");
+            }
+
+            dismissMenu();
+            view.clearTimeSelection();
+            while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
+                doc.undoStack()->undo();
+            QCoreApplication::processEvents();
+            view.removeEmptyLane(laneTrack, freeCc);
+            QCoreApplication::processEvents();
+            if (doc.smf().write() != sectionBytes)
+                fail("point-menu section did not restore the document bytes");
         }
     }
 

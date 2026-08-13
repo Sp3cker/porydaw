@@ -4,6 +4,7 @@
 #include "theme/themeruntime.h"
 #include "theme/trackidentitycolors.h"
 #include "typography.h"
+#include "ui/contextmenu.h"
 #include "ui/layout.h"
 #include "ui/timelinesurface.h"
 
@@ -32,7 +33,6 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
-#include <QProxyStyle>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QScrollArea>
@@ -431,30 +431,6 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin)
     }
 }
 
-// macOS flashes a triggered menu item for 80 ms before hiding the menu;
-// suppress the flash so picking an action feels instant.
-class NoteMenuStyle final : public QProxyStyle
-{
-  public:
-    // Base the proxy on Fusion explicitly, matching the application style set
-    // in main(). QApplication::style()->name() looks like it would mirror the
-    // app style, but once the theme installs a stylesheet the app style is a
-    // QStyleSheetStyle whose name() is empty — and QProxyStyle(QString())
-    // silently falls back to the NATIVE desktop style (QWindows11Style on
-    // Windows). Polishing this menu under that style calls setWindowFlags for
-    // the native rounded popup, which reentrantly crashes in Qt 6.9. Naming
-    // Fusion keeps the menu on the same style as the rest of the app.
-    NoteMenuStyle() : QProxyStyle(QStringLiteral("Fusion")) {}
-
-    int styleHint(StyleHint hint, const QStyleOption *option, const QWidget *widget,
-                  QStyleHintReturn *returnData) const override
-    {
-        if (hint == SH_Menu_FlashTriggeredItem)
-            return 0;
-        return QProxyStyle::styleHint(hint, option, widget, returnData);
-    }
-};
-
 enum class NoteMenuChoice {
     None,
     Velocity,
@@ -463,19 +439,14 @@ enum class NoteMenuChoice {
     Delete,
 };
 // Kept alive by PianoRoll so opening it does not reconstruct its actions.
-class NoteContextMenu final : public QMenu
+// The outside-right-click retarget gesture and the popup style live in the
+// shared ui::ContextMenu base.
+class NoteContextMenu final : public ui::ContextMenu
 {
   public:
-    // Called when an outside right-click may move the menu to another note;
-    // returns false when the click hit nothing, so the press falls through
-    // to QMenu (which dismisses the popup like any outside click).
     explicit NoteContextMenu(QWidget *parent, std::function<bool(QPointF)> onOutsideRightClick)
-        : QMenu(parent)
-        , m_onOutsideRightClick(std::move(onOutsideRightClick))
+        : ui::ContextMenu(parent, std::move(onOutsideRightClick))
     {
-        auto *menuStyle = new NoteMenuStyle;
-        menuStyle->setParent(this);
-        setStyle(menuStyle);
         m_velocityAction = addAction(QString());
         addSeparator();
         // Display-only hints (the real bindings live in keyPressEvent):
@@ -507,21 +478,7 @@ class NoteContextMenu final : public QMenu
         return NoteMenuChoice::None;
     }
 
-  protected:
-    // A right-click on another note while the popup is open retargets the
-    // menu in one gesture instead of spending the click on dismissal.
-    void mousePressEvent(QMouseEvent *event) override
-    {
-        if (event->button() == Qt::RightButton && !QRectF(rect()).contains(event->position()) &&
-            m_onOutsideRightClick(event->globalPosition())) {
-            event->accept();
-            return;
-        }
-        QMenu::mousePressEvent(event);
-    }
-
   private:
-    std::function<bool(QPointF)> m_onOutsideRightClick;
     QAction *m_velocityAction = nullptr;
     QAction *m_copyAction = nullptr;
     QAction *m_cutAction = nullptr;
@@ -2918,6 +2875,16 @@ class AutomationArea : public TimelineSurface
         // Range shortcuts (copy/cut/delete/paste on the time selection) work
         // from the lanes area too; a click focuses it, like the roll.
         setFocusPolicy(Qt::ClickFocus);
+        m_pointMenu = new ui::ContextMenu(
+            this, [this](QPointF globalPos) { return movePointMenu(globalPos); });
+        m_pointMenu->setObjectName(QStringLiteral("automationPointMenu")); // findChild for tests
+        m_pointSetValue = m_pointMenu->addAction(SongView::tr("Set value…"));
+        m_pointDelete = m_pointMenu->addAction(SongView::tr("Delete"));
+        connect(m_pointMenu, &QMenu::triggered, this,
+                [this](QAction *action) { handlePointMenuAction(action); });
+        // The aimed node's ring lifts with the popup (the aim itself must
+        // survive the hide: QMenu hides before it emits triggered).
+        connect(m_pointMenu, &QMenu::aboutToHide, this, [this] { invalidateContent(); });
     }
 
     // View-state plumbing for the .porydaw sidecar: the shared row height
@@ -3005,6 +2972,12 @@ class AutomationArea : public TimelineSurface
         m_rightPress = false;
         m_selSweep = false;
         m_hoverRow = -1;
+        // A rebuild means the rows (or the document behind them) changed:
+        // the open point menu's aim is stale, so it closes like every other
+        // live interaction here.
+        if (m_pointMenu && m_pointMenu->isVisible())
+            m_pointMenu->hide();
+        m_pointMenuTarget.reset();
         if (m_sv->timeline()) {
             m_rows.push_back({Row::Tempo});
             const SongViewModel &model = m_sv->model();
@@ -3720,6 +3693,20 @@ class AutomationArea : public TimelineSurface
         return rowInLaneSelection(row) && tickSelected(m_sv->timeSelection(), tick);
     }
 
+    // The open point menu's aim rings like a selected node, so the
+    // retarget gesture reads — the ring jumps to whichever node the menu
+    // re-aims at. The value is part of the match: of same-tick duplicates,
+    // only the aimed one rings. Gated on the popup's visibility, not the
+    // stored aim — QMenu hides before it emits triggered, so the aim
+    // itself must outlive the popup.
+    bool pointMenuAimedAt(const Row &row, const LanePoint &pt) const
+    {
+        return m_pointMenuTarget && m_pointMenu->isVisible() &&
+               rowIdentity(row) == rowIdentity(m_pointMenuTarget->row) &&
+               pt.tick == m_pointMenuTarget->point.tick &&
+               pt.value == m_pointMenuTarget->point.value;
+    }
+
     // Selected-node count, stopping at limit (the callers only distinguish
     // "none", "one", and "two or more").
     int selectedNodeCount(int limit) const
@@ -3862,8 +3849,8 @@ class AutomationArea : public TimelineSurface
     }
 
     // Right release without a drag: menu inside the time selection, voice-
-    // marker or point delete elsewhere, and clearing the selection over
-    // empty space (mirroring the roll).
+    // marker delete or the point context menu elsewhere, and clearing the
+    // selection over empty space (mirroring the roll).
     void rightClickInPlace(QMouseEvent *event)
     {
         SongDocument *doc = m_sv->document();
@@ -3891,13 +3878,67 @@ class AutomationArea : public TimelineSurface
         int track;
         if (!rowTarget(row, &cc, &track))
             return;
-        if (const LanePoint *nearPt = nearestPoint(row, event->position().x())) {
-            DocLanePoint pt;
-            if (doc->findLanePoint(track, cc, nearPt->tick, &pt))
-                doc->deleteLanePoints(track, cc, {pt});
+        DocLanePoint hit;
+        if (pointMenuHit(row, m_rightRow, event->position(), &hit)) {
+            // A menu instead of the old instant delete: Delete is one click
+            // away inside it, Set value covers the other common point edit,
+            // and the Delete key on a node selection stays the fast path.
+            m_pointMenuTarget = {row, track, cc, hit, doc->revision()};
+            invalidateContent(); // the aimed node's ring
+            m_pointMenu->popup(event->globalPosition().toPoint());
             return;
         }
         m_sv->clearTimeSelection();
+    }
+
+    // Retargets the open point menu to the point under an outside
+    // right-click, mirroring the roll's note-menu gesture. Returns false
+    // when nothing was hit (empty lane space, the gutter, another widget)
+    // so ui::ContextMenu dismisses the popup instead.
+    bool movePointMenu(QPointF globalPos)
+    {
+        SongDocument *doc = m_sv->document();
+        const QPointF pos = globalPos - QPointF(mapToGlobal(QPoint(0, 0)));
+        const int ri = doc ? rowIndexAt(int(pos.y())) : -1;
+        if (ri < 0)
+            return false;
+        const Row &row = m_rows[ri];
+        uint8_t cc;
+        int track;
+        DocLanePoint hit;
+        if (!rowTarget(row, &cc, &track) || !pointMenuHit(row, ri, pos, &hit))
+            return false;
+        m_pointMenuTarget = {row, track, cc, hit, doc->revision()};
+        invalidateContent();
+        m_pointMenu->popup(globalPos.toPoint());
+        return true;
+    }
+
+    // The chosen action runs against the point the popup was aimed at when
+    // it opened (or last retargeted). The revision pins that aim: an edit
+    // landing while the popup is open would leave the captured DocLanePoint
+    // pointing at reshuffled events, so a stale aim voids the action rather
+    // than editing through it.
+    void handlePointMenuAction(QAction *action)
+    {
+        SongDocument *doc = m_sv->document();
+        if (!m_pointMenuTarget || !doc || doc->revision() != m_pointMenuTarget->revision)
+            return;
+        const PointMenuTarget target = *m_pointMenuTarget;
+        m_pointMenuTarget.reset();
+        if (action == m_pointSetValue) {
+            int value = target.point.value;
+            // The same type-in the lanes' double-click opens (per-row
+            // BPM/bend/c_v semantics live in that one implementation).
+            if (!editValue(target.row, &value) || value == target.point.value)
+                return;
+            // An in-place value change on the exact point: same-tick
+            // duplicates keep their identity, where a whole-tick overwrite
+            // would collapse them.
+            doc->moveLanePoint(target.track, target.cc, target.point, target.point.tick, value);
+        } else if (action == m_pointDelete) {
+            doc->deleteLanePoints(target.track, target.cc, {target.point});
+        }
     }
 
     // Voice change within the marker hit radius of x, if any.
@@ -4441,10 +4482,44 @@ class AutomationArea : public TimelineSurface
         return best;
     }
 
+    // Right-click aim test: a circular radius around each dot, nearest one
+    // wins. Resolved against the document, not the view lane, so same-tick
+    // duplicates keep their identity — x alone can only ever say "the later
+    // one"; the cursor's y is what tells duplicates apart. The 9 px reach is
+    // the old x-only right-click radius (nearestPoint, still the
+    // double-click rule); grabPoint's ±7 box stays the left-drag rule.
+    bool pointMenuHit(const Row &row, int ri, QPointF pos, DocLanePoint *hit) const
+    {
+        SongDocument *doc = m_sv->document();
+        uint8_t cc;
+        int track;
+        if (!doc || pos.x() < kGutterW || !rowTarget(row, &cc, &track))
+            return false;
+        int minV, maxV;
+        rowRange(row, &minV, &maxV);
+        const qreal dpr = devicePixelRatioF();
+        constexpr qreal kRadius = 9.0;
+        qreal bestDist = kRadius * kRadius;
+        bool found = false;
+        for (const DocLanePoint &pt : doc->lanePoints(track, cc)) {
+            const qreal dx = m_sv->displayX(double(pt.tick), kGutterW, dpr) - pos.x();
+            const qreal dy = valueYFor(ri, pt.value, minV, maxV) - pos.y();
+            const qreal dist = dx * dx + dy * dy;
+            // Ties go to the later point: of same-tick duplicates it is the
+            // audible winner.
+            if (dist < bestDist || (found && dist == bestDist)) {
+                bestDist = dist;
+                *hit = pt;
+                found = true;
+            }
+        }
+        return found;
+    }
+
     // Left-press grab test: near the point's dot in BOTH x and y. A dense
     // freehand curve has a point on every grid cell, so an x-only radius
-    // (nearestPoint, kept for right-click delete) would capture every press
-    // and make redrawing impossible; grab the dot itself to move a point.
+    // (nearestPoint, kept for the double-click type-in) would capture every
+    // press and make redrawing impossible; grab the dot itself to move a point.
     const LanePoint *grabPoint(const Row &row, int ri, qreal x, int y) const
     {
         const std::vector<LanePoint> *points = rowPoints(row);
@@ -4825,9 +4900,11 @@ class AutomationArea : public TimelineSurface
                 p.drawLine(QLineF(x1, y, x1, valueY(points[i + 1].value)));
             if (m_sv->pxPerBeat() >= 24.0) {
                 // Each node draws in exactly one style: a highlight ring
-                // when it is in the derived selection, dimmed when a multi-
-                // node selection is elsewhere, its curve color otherwise.
-                const bool selected = laneSelected && tickSelected(sel, points[i].tick);
+                // when it is in the derived selection (or under the open
+                // point menu's aim), dimmed when a multi-node selection is
+                // elsewhere, its curve color otherwise.
+                const bool selected = (laneSelected && tickSelected(sel, points[i].tick)) ||
+                                      pointMenuAimedAt(row, points[i]);
                 p.fillRect(QRectF(x0 - 1, y - 1, 3, 3),
                            dimUnselected && !laneSelected ? dimColor : color);
                 if (selected) {
@@ -4928,6 +5005,21 @@ class AutomationArea : public TimelineSurface
     int m_prevValue = 0;
     int m_hoverRow = -1;      // row under an idle cursor; -1 = no readout
     double m_hoverTick = 0.0; // raw tick under the idle cursor
+    // The point the context menu is aimed at. The row is copied by value
+    // (its identity, not an index) so a row rebuild can't dangle it; the
+    // document revision pins the DocLanePoint, whose index goes stale the
+    // moment any edit lands.
+    struct PointMenuTarget {
+        Row row;
+        int track = 0;
+        uint8_t cc = 0;
+        DocLanePoint point;
+        uint64_t revision = 0;
+    };
+    ui::ContextMenu *m_pointMenu = nullptr; // kept alive like the roll's note menu
+    QAction *m_pointSetValue = nullptr;
+    QAction *m_pointDelete = nullptr;
+    std::optional<PointMenuTarget> m_pointMenuTarget;
     bool m_pencilMode = false;
     QCursor m_pencilCursor; // cached per device pixel ratio
     qreal m_pencilCursorDpr = 0.0;
