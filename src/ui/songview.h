@@ -202,6 +202,9 @@ class SongView : public QWidget
     // a note instead), distinct from the moving playback cursor. Playback
     // starts here, and paste anchors here.
     uint64_t editCursorTick() const { return m_editCursorTick; }
+    // The tick the view is "at" for readouts that follow the song rather
+    // than a note: the playhead while playing, the edit cursor otherwise.
+    uint64_t displayTick() const;
     // Visual placement only (ruler drag preview); commit emits
     // editCursorMoved so playback can follow.
     void setEditCursorTick(uint64_t tick);
@@ -269,6 +272,17 @@ class SongView : public QWidget
     // the edit cursor otherwise — so the header label follows the song's
     // voice changes.
     int currentProgram(int track) const;
+    // The selected track's voice at a tick, resolved through the loaded
+    // voicegroup, plus the tick its voice change ends at (UINT64_MAX past
+    // the last one). The velocity lane needs both: the voice decides whether
+    // velocities have PSG detents at all, and the span says how far across
+    // the plot that voice's level lines reach.
+    struct VoiceContext {
+        const ToneData *voice = nullptr;
+        int program = -1;
+        uint64_t endTick = UINT64_MAX;
+    };
+    VoiceContext voiceContext(uint64_t tick) const;
     QString instrumentLabel(int track) const; // "042 name (type)" from the voicegroup
     QString voiceShortName(uint8_t program) const;
     QString voiceLabel(uint8_t program) const; // "042 name", the marker/header format

@@ -574,6 +574,10 @@ Theme derive(const QColor &primary, const QColor &accent)
     theme.color(Role::song_view_piano_keyboard_label) = QColor::fromRgb(0x1A, 0x1A, 0x1A);
     theme.color(Role::song_view_track_header_selection) = trackSelected;
     theme.color(Role::song_view_track_header_selection_text) = trackSelectedText;
+    // The velocity lane's PSG level boundaries: a grid behind the nodes, not
+    // a readout, so it stays a shade off the plot background in every theme
+    // rather than borrowing an ink that would compete with the stems.
+    theme.color(Role::song_view_psg_velocity_levels) = shiftOklabLightness(windowBackground, -0.08);
     theme.color(Role::song_view_automation_default_curve) = selectionBackground;
     theme.color(Role::song_view_automation_tempo_curve) = accent;
     theme.color(Role::song_view_file_event_marker) = outline;

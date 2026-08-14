@@ -17,6 +17,10 @@ namespace keymap {
 enum class Context {
     Global,
     PianoRoll,
+    // The velocity lane's own gestures. Its own context, not the roll's, so
+    // the lane and the roll may bind the same modifier chord to their own
+    // drags — the pointer is only ever in one of the two surfaces.
+    Velocity,
     EventList,
 };
 

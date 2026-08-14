@@ -23,6 +23,7 @@
 #include "core/songdocument.h"
 #include "core/velocitymodel.h"
 #include "project/decompproject.h"
+#include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songviewmodel.h"
@@ -31,6 +32,10 @@
 #include "ui/typography.h"
 #include "ui/velocityaxis.h"
 #include "ui/velocitygesturemodel.h"
+
+extern "C" {
+#include "voicegroup_loader.h"
+}
 
 // --velmodelcheck: PSG velocity model check (self-contained, no project
 // needed). VelocityMap is the engine-behavior half of the velocity lane: it
@@ -354,6 +359,26 @@ double laneVelocityY(const QWidget *lane, int velocity)
     return bottom - double(std::clamp(velocity, 1, 127) - 1) * (bottom - top) / 126.0;
 }
 
+// The y a PSG level's row centers on, stated independently of VelocityAxis:
+// the boundaries sit halfway between the adjacent levels' own velocities,
+// and the outermost levels run to the ruler's ends.
+double laneLevelBoundaryY(const QWidget *lane, const VelocityMap &map, int lowerLevel)
+{
+    return (laneVelocityY(lane, map.levelRange(lowerLevel).last) +
+            laneVelocityY(lane, map.levelRange(lowerLevel + 1).first)) /
+           2.0;
+}
+
+double laneLevelCenterY(const QWidget *lane, const VelocityMap &map, int level)
+{
+    const double bottom = lane->property("velocityAxisBottom").toDouble();
+    const double top = lane->property("velocityAxisTop").toDouble();
+    const double lower = level == 0 ? bottom : laneLevelBoundaryY(lane, map, level - 1);
+    const double upper =
+        level + 1 == int(map.levelCount()) ? top : laneLevelBoundaryY(lane, map, level);
+    return (lower + upper) / 2.0;
+}
+
 // Its inverse — the velocity a pointer y asks for, which a gesture writes.
 int laneVelocityAt(const QWidget *lane, double y)
 {
@@ -412,6 +437,62 @@ int runVelocityAxisBandCheck(const std::function<void(bool, const char *)> &chec
     check(marked.rulerVelocityAt(marked.velocityToY(62), geometry.labelHeight) == 62 &&
               marked.rulerVelocityAt(marked.velocityToY(64), geometry.labelHeight) == -1,
           "a marker must own its row and take the label it covers out of reach");
+
+    // The intrinsic ruler: one row per level of the voice, every row a click
+    // target, and the rows in the order the velocities are. Both level
+    // tables are probed — the pulse channels' 16 steps and the wave
+    // channel's 5 — since the ruler is built from whichever one the voice
+    // has.
+    geometry.height = 400.0;
+    ToneData squareTone{};
+    squareTone.type = VOICE_SQUARE_1;
+    ToneData waveTone{};
+    waveTone.type = VOICE_PROGRAMMABLE_WAVE;
+    const std::array<VelocityMap, 2> voiceProbes = {VelocityMap::resolve(&squareTone, 60),
+                                                    VelocityMap::resolve(&waveTone, 60)};
+    const VelocityAxis continuous(VelocityMap::resolve(nullptr, std::nullopt), geometry);
+    check(continuous.mode() == VelocityAxis::Mode::Continuous && continuous.graduationCount() == 0,
+          "a voice with no levels must leave the ruler continuous");
+    bool rowsOrdered = true;
+    bool rowsClickable = true;
+    bool rowsRoundTrip = true;
+    for (const VelocityMap &voice : voiceProbes) {
+        const VelocityAxis axis(voice, geometry);
+        rowsOrdered = rowsOrdered && axis.mode() == VelocityAxis::Mode::Intrinsic &&
+                      axis.graduationCount() == voice.levelCount();
+        for (std::size_t level = 0; level + 1 < axis.graduationCount(); level++) {
+            // Higher levels are higher up the ruler, and each row's own
+            // velocity really belongs to it.
+            rowsOrdered =
+                rowsOrdered && axis.graduations()[level + 1].y < axis.graduations()[level].y;
+            rowsRoundTrip = rowsRoundTrip && axis.yToLevel(axis.levelToY(int(level))) == int(level);
+            const double boundary = axis.levelBoundaryToY(int(level));
+            rowsOrdered = rowsOrdered && boundary < axis.graduations()[level].y &&
+                          boundary > axis.graduations()[level + 1].y;
+        }
+        for (std::size_t level = 0; level < axis.graduationCount(); level++) {
+            // Anywhere in the row asks for that level's value — there is no
+            // gap between two rows to miss.
+            const double y = axis.levelToY(int(level));
+            const uint8_t expected = voice.representative(int(level));
+            rowsClickable = rowsClickable &&
+                            axis.rulerVelocityAt(y, geometry.labelHeight) == expected &&
+                            axis.rulerVelocityAt(y + 1.0, geometry.labelHeight) == expected;
+        }
+    }
+    check(rowsOrdered, "the intrinsic rows must run bottom-up with a boundary between each pair");
+    check(rowsRoundTrip, "an intrinsic row's own y must resolve back to its level");
+    check(rowsClickable, "every y inside an intrinsic row must ask for that level's value");
+    // A lane too short to name every row keeps all of them graduated and
+    // drops labels instead.
+    geometry.height = 90.0;
+    const VelocityAxis crowded(voiceProbes[0], geometry);
+    std::size_t labeledRows = 0;
+    for (std::size_t index = 0; index < crowded.graduationCount(); index++)
+        labeledRows += crowded.graduations()[index].labelVisible ? 1 : 0;
+    check(crowded.graduationCount() == voiceProbes[0].levelCount() &&
+              labeledRows < crowded.graduationCount(),
+          "a short lane must keep every intrinsic row and thin out their labels");
 
     check(everyLabelOnATick, "every ruler label must land on a graduation");
     check(countsInRange && widestTicks == VelocityAxis::MaximumTicks,
@@ -1158,6 +1239,291 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
               view.selection().size() == 2,
           "clicking a ruler value must set the whole selection to it in one undo entry");
     doc.undoStack()->undo();
+    view.clearSelection();
+    (void)view.grab();
+
+    // --- PSG detents: a CGB voice's real loudness levels drive the ruler,
+    // the nodes, and every edit
+    const QByteArray rootUtf8 = projectRoot.toLocal8Bit();
+    LoadedVoiceGroup *voicegroup = nullptr;
+    for (const QString &name : DecompProject::voicegroupCandidates(info->cfg)) {
+        voicegroup = voicegroup_load(rootUtf8.constData(), name.toLocal8Bit().constData(), nullptr);
+        if (voicegroup)
+            break;
+    }
+    if (!voicegroup) {
+        fail("the song's voicegroup must load: the detents are its voices'");
+        return 1;
+    }
+    // The lane reads voices straight out of the loaded group, so it must
+    // outlive the view here; the checks below all run before it is freed.
+    struct VoicegroupGuard {
+        LoadedVoiceGroup *group;
+        ~VoicegroupGuard() { voicegroup_free(group); }
+    } voicegroupGuard{voicegroup};
+    view.setVoicegroup(voicegroup);
+    view.clearSelection();
+    (void)view.grab();
+
+    // The first track that plays on a CGB channel, and one that does not:
+    // the lane's context is the selected track's voice.
+    int psgTrack = -1;
+    int continuousTrack = -1;
+    VelocityMap psgMap;
+    for (int candidate = 0; candidate < 16; candidate++) {
+        const ViewNote *first = nullptr;
+        for (const ViewNote &note : view.model().notes) {
+            if (note.track == candidate)
+                first = &note;
+            if (first)
+                break;
+        }
+        if (!first)
+            continue;
+        view.selectTrack(candidate);
+        const VelocityMap map =
+            VelocityMap::resolve(view.voiceContext(first->startTick).voice, first->key);
+        if (map.isPsg() && psgTrack < 0) {
+            psgTrack = candidate;
+            psgMap = map;
+        } else if (!map.isPsg() && continuousTrack < 0) {
+            continuousTrack = candidate;
+        }
+    }
+    if (psgTrack < 0 || continuousTrack < 0) {
+        fail("the song must have both a PSG track and a continuous one to compare");
+        return failures == 0 ? 0 : 1;
+    }
+    view.selectTrack(continuousTrack);
+    (void)view.grab();
+    check(!lane->property("velocityIntrinsic").toBool() &&
+              lane->property("velocityDetents").toInt() == -1,
+          "a DirectSound track must keep the plain velocity ruler and offer no detent toggle");
+    view.selectTrack(psgTrack);
+    (void)view.grab();
+    check(lane->property("velocityIntrinsic").toBool() &&
+              lane->property("velocityLevelCount").toInt() == int(psgMap.levelCount()) &&
+              lane->property("velocityDetents").toInt() == 1,
+          "a PSG track must put the lane on that channel's own volume levels");
+
+    // A note to edit: isolated under the camera, off the overlays' verticals,
+    // with a level either side of its own to move into, and a stored velocity
+    // that is neither its level's representative nor near its row's center —
+    // so "snapped to the level" and "left where it was" cannot look alike.
+    const ViewNote *psgProbe = nullptr;
+    for (const ViewNote &note : view.model().notes) {
+        if (note.track != psgTrack || !note.noteId.isAssigned())
+            continue;
+        const std::optional<std::size_t> level = psgMap.levelOf(note.velocity);
+        if (!level || *level == 0 || *level + 1 >= psgMap.levelCount())
+            continue;
+        if (note.velocity == psgMap.representative(int(*level)))
+            continue;
+        const qreal x = view.displayX(double(note.startTick), songview::kGutterW, dpr);
+        if (x < songview::kGutterW + 60 || x > lane->width() - 60 || overlayContested(x))
+            continue;
+        if (std::abs(laneLevelCenterY(lane, psgMap, int(*level)) -
+                     laneVelocityY(lane, note.velocity)) < 6.0)
+            continue;
+        bool crowded = false;
+        for (const ViewNote &other : view.model().notes) {
+            if (&other == &note || other.track != psgTrack)
+                continue;
+            const qreal otherX = view.displayX(double(other.startTick), songview::kGutterW, dpr);
+            if (std::abs(otherX - x) < 16)
+                crowded = true;
+        }
+        if (!crowded)
+            psgProbe = &note;
+        if (psgProbe)
+            break;
+    }
+    if (!psgProbe) {
+        fail("no PSG note off its level's center to probe");
+        return failures == 0 ? 0 : 1;
+    }
+    const ViewNote psgNote = *psgProbe;
+    const SongView::NoteKey psgId{psgNote.startTick, psgNote.key};
+    // The earlier lookup is bound to the track the check opened on; these
+    // edits land on the PSG track instead.
+    const auto psgNoteAt = [&]() -> const ViewNote * {
+        for (const ViewNote &note : view.model().notes) {
+            if (note.track == psgTrack && note.startTick == psgNote.startTick &&
+                note.key == psgNote.key)
+                return &note;
+        }
+        return nullptr;
+    };
+    const int psgLevel = int(*psgMap.levelOf(psgNote.velocity));
+    const double psgX = view.displayX(double(psgNote.startTick), songview::kGutterW, dpr);
+    const double psgCenterY = laneLevelCenterY(lane, psgMap, psgLevel);
+    const QPixmap psgPixmap = lane->grab();
+    const QImage psgImage = psgPixmap.toImage();
+    const QColor psgColor = SongView::trackColor(psgTrack);
+    const int psgProbeRadius = int(std::ceil(2 * rasterDpr));
+    check(hasColorNear(psgImage, QPointF(psgX * rasterDpr, psgCenterY * rasterDpr), psgProbeRadius,
+                       psgColor, 24) &&
+              !hasColorNear(
+                  psgImage,
+                  QPointF(psgX * rasterDpr, laneVelocityY(lane, psgNote.velocity) * rasterDpr),
+                  psgProbeRadius, psgColor, 24),
+          "a PSG note's node must sit on its level's row, not on its stored velocity");
+    // The level boundaries paint across the plot: one under the probe's row,
+    // and nothing on the row itself.
+    const QColor levelInk = themes::color(themes::Role::song_view_psg_velocity_levels);
+    const double boundaryY = laneLevelBoundaryY(lane, psgMap, psgLevel);
+    const double clearX = psgX + 20.0;
+    check(hasColorNear(psgImage, QPointF(clearX * rasterDpr, boundaryY * rasterDpr),
+                       int(std::ceil(rasterDpr)), levelInk, 6) &&
+              !hasColorNear(psgImage, QPointF(clearX * rasterDpr, psgCenterY * rasterDpr),
+                            int(std::ceil(rasterDpr)), levelInk, 6),
+          "the PSG level boundaries must paint across the plot, between the rows");
+
+    // The ruler's rows are the whole column: a click anywhere inside one
+    // sets the selection to that level's representative.
+    view.setSelection({psgId});
+    (void)view.grab();
+    const int rulerLevel = psgLevel >= 3 ? psgLevel - 3 : psgLevel + 3;
+    const QPointF psgRulerPoint(songview::kHeaderW + songview::kKeyboardW / 2.0,
+                                laneLevelCenterY(lane, psgMap, rulerLevel) + 2.0);
+    const int undoBeforePsgRuler = doc.undoStack()->index();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, psgRulerPoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, psgRulerPoint, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    const ViewNote *psgRulerNote = psgNoteAt();
+    check(psgRulerNote && psgRulerNote->velocity == psgMap.representative(rulerLevel) &&
+              doc.undoStack()->index() == undoBeforePsgRuler + 1,
+          "an intrinsic ruler click must set the selection to that level's own value");
+    doc.undoStack()->undo();
+    (void)view.grab();
+
+    // A drag moves whole levels, and a drag that comes back to the level it
+    // started in restores the exact velocity it found there.
+    const QPointF psgFrom(psgX, psgCenterY);
+    const QPointF psgUp(psgX, laneLevelCenterY(lane, psgMap, psgLevel + 1));
+    const int undoBeforePsgDrag = doc.undoStack()->index();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, psgFrom, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, psgUp, Qt::NoButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, psgUp, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    const ViewNote *psgDragged = psgNoteAt();
+    check(psgDragged && psgDragged->velocity == psgMap.representative(psgLevel + 1) &&
+              doc.undoStack()->index() == undoBeforePsgDrag + 1,
+          "a PSG drag must land on the next level's representative");
+    doc.undoStack()->undo();
+    (void)view.grab();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, psgFrom, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, psgUp, Qt::NoButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, psgFrom, Qt::NoButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, psgFrom, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    const ViewNote *psgReturned = psgNoteAt();
+    check(psgReturned && psgReturned->velocity == psgNote.velocity &&
+              doc.undoStack()->index() == undoBeforePsgDrag,
+          "a PSG drag back to its own level must restore the exact velocity it started from");
+
+    // The unlock chord, read at the press, writes exact values instead. The
+    // press is on the node where the detents put it, so the drag's travel is
+    // measured from that row: five velocity units of pointer movement move
+    // the note by exactly five.
+    const int unlockDelta = psgNote.velocity > 64 ? -5 : 5;
+    const QPointF psgExact(psgX, laneVelocityY(lane, psgNote.velocity + unlockDelta));
+    const QPointF psgUnlockTo(psgX,
+                              laneVelocityY(lane, laneVelocityAt(lane, psgCenterY) + unlockDelta));
+    const int unlockTarget = psgNote.velocity + unlockDelta;
+    if (unlockTarget == psgMap.canonicalize(unlockTarget)) {
+        fail("the unlock fixture must ask for a value the detents would not allow");
+        return failures == 0 ? 0 : 1;
+    }
+    const Qt::KeyboardModifiers unlockMods =
+        keymap::Registry::instance().modifierBinding(QStringLiteral("velocity.detent_unlock"));
+    const int undoBeforeUnlock = doc.undoStack()->index();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, psgFrom, Qt::LeftButton, Qt::LeftButton,
+                  unlockMods);
+    sendLaneMouse(lane, QEvent::MouseMove, psgUnlockTo, Qt::NoButton, Qt::LeftButton, unlockMods);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, psgUnlockTo, Qt::LeftButton, Qt::NoButton,
+                  unlockMods);
+    (void)view.grab();
+    const ViewNote *unlocked = psgNoteAt();
+    check(unlocked && unlocked->velocity == unlockTarget &&
+              doc.undoStack()->index() == undoBeforeUnlock + 1,
+          "the unlock chord must write the exact velocity the pointer asks for");
+    doc.undoStack()->undo();
+    (void)view.grab();
+
+    // The header's Detents chip turns the whole thing off for the track.
+    const QRect detentChip = lane->property("velocityDetentChip").toRect();
+    if (detentChip.isEmpty()) {
+        fail("a PSG context must offer the detent toggle");
+        return failures == 0 ? 0 : 1;
+    }
+    const QPointF chipPoint(detentChip.center());
+    sendLaneMouse(lane, QEvent::MouseButtonPress, chipPoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, chipPoint, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    check(lane->property("velocityDetents").toInt() == 0 &&
+              !lane->property("velocityIntrinsic").toBool(),
+          "the Detents chip must put the plain ruler back");
+    const int undoBeforeChipDrag = doc.undoStack()->index();
+    const QPointF chipFrom(psgX, laneVelocityY(lane, psgNote.velocity));
+    sendLaneMouse(lane, QEvent::MouseButtonPress, chipFrom, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, psgExact, Qt::NoButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, psgExact, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    const ViewNote *chipDragged = psgNoteAt();
+    check(chipDragged && chipDragged->velocity == unlockTarget &&
+              doc.undoStack()->index() == undoBeforeChipDrag + 1,
+          "with the detents off a drag must write exact velocities");
+    doc.undoStack()->undo();
+    (void)view.grab();
+    // Leaving the PSG context rearms them: the chip is a choice about a
+    // voice, not a mode the lane keeps.
+    view.selectTrack(continuousTrack);
+    (void)view.grab();
+    check(lane->property("velocityDetents").toInt() == -1,
+          "a continuous track must not carry the detent toggle");
+    view.selectTrack(psgTrack);
+    (void)view.grab();
+    check(lane->property("velocityDetents").toInt() == 1 &&
+              lane->property("velocityIntrinsic").toBool(),
+          "coming back to a PSG voice must rearm its detents");
+
+    // Hover: the node under the idle pointer is what the ruler describes,
+    // ahead of the selection.
+    view.clearSelection();
+    (void)view.grab();
+    check(lane->property("velocityMarkerCount").toInt() == 0,
+          "an idle lane with nothing selected must mark nothing");
+    sendLaneMouse(lane, QEvent::MouseMove, psgFrom, Qt::NoButton, Qt::NoButton);
+    (void)view.grab();
+    check(lane->property("velocityMarkerCount").toInt() == 1,
+          "hovering a node must mark its value on the ruler");
+    const ViewNote *hoverPartner = nullptr;
+    for (const ViewNote &note : view.model().notes) {
+        if (note.track == psgTrack && note.noteId.isAssigned() &&
+            note.startTick != psgNote.startTick && note.velocity != psgNote.velocity)
+            hoverPartner = &note;
+        if (hoverPartner)
+            break;
+    }
+    if (hoverPartner) {
+        view.setSelection({psgId, {hoverPartner->startTick, hoverPartner->key}});
+        sendLaneMouse(lane, QEvent::MouseMove, QPointF(psgX + 200.0, 4.0), Qt::NoButton,
+                      Qt::NoButton);
+        (void)view.grab();
+        const int selectionMarkers = lane->property("velocityMarkerCount").toInt();
+        sendLaneMouse(lane, QEvent::MouseMove, psgFrom, Qt::NoButton, Qt::NoButton);
+        (void)view.grab();
+        check(selectionMarkers == 2 && lane->property("velocityMarkerCount").toInt() == 1,
+              "the hovered node must describe the ruler ahead of the selection");
+    }
+    QEvent leave(QEvent::Leave);
+    QCoreApplication::sendEvent(lane, &leave);
+    view.clearSelection();
+    (void)view.grab();
+    check(lane->property("velocityMarkerCount").toInt() == 0,
+          "leaving the lane must drop the hover's mark");
+    view.selectTrack(track);
     view.clearSelection();
     (void)view.grab();
 

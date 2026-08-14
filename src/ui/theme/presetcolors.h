@@ -282,6 +282,9 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::piano_keyboard_label,
     PresetColor::selection_background,
     PresetColor::window_text,
+    // The velocity lane's PSG level lines want exactly what the accidental
+    // lane wants — one authored shade under the plot background.
+    PresetColor::piano_roll_accidental_lane,
     PresetColor::selection_background,
     PresetColor::accent,
     PresetColor::outline,

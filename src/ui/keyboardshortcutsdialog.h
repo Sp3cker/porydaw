@@ -23,6 +23,7 @@ class KeyboardShortcutsDialog : public QDialog
   private:
     void rebuildTree();
     void applyFilter();
+    void fillModifierChoices(const QString &id);
     void currentRowChanged();
     void captureChanged();
     void assign();

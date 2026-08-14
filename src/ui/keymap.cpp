@@ -129,6 +129,12 @@ const Def kDefs[] = {
     // note to adjust its velocity. Qt maps Ctrl to Cmd on macOS.
     {"roll.velocity_drag", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Adjust Velocity (Hold + Drag Note)"), QKeySequence::UnknownKey, "Ctrl", true},
+    // Velocity lane: hold the modifier while starting a gesture to write
+    // exact velocities on a PSG track instead of the voice's own detents.
+    // Captured at the press, so the values a drag lands on cannot change
+    // under it; a Shift ramp adds its Shift to whatever this is bound to.
+    {"velocity.detent_unlock", Context::Velocity, QT_TR_NOOP("Velocity Lane"),
+     QT_TR_NOOP("Unlock Detents (Hold)"), QKeySequence::UnknownKey, "Ctrl", true},
     // MIDI event list: same-tick reorder nudges (the keyboard face of the
     // row drag).
     {"eventlist.move_up", Context::EventList, QT_TR_NOOP("MIDI Event List"),

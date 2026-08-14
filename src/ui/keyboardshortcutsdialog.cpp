@@ -92,14 +92,9 @@ KeyboardShortcutsDialog::KeyboardShortcutsDialog(QWidget *parent) : QDialog(pare
             &KeyboardShortcutsDialog::captureChanged);
 
     // QKeySequenceEdit cannot record a bare modifier chord, so modifier
-    // commands pick theirs from a fixed list instead.
+    // commands pick theirs from a list instead (filled per command, since
+    // not every chord is offerable everywhere — see fillModifierChoices).
     m_modCapture = new QComboBox(this);
-    for (const auto mods :
-         {Qt::KeyboardModifiers(Qt::ControlModifier), Qt::KeyboardModifiers(Qt::ShiftModifier),
-          Qt::KeyboardModifiers(Qt::AltModifier), Qt::ControlModifier | Qt::ShiftModifier,
-          Qt::ControlModifier | Qt::AltModifier, Qt::ShiftModifier | Qt::AltModifier}) {
-        m_modCapture->addItem(modifierDisplayText(mods), int(mods.toInt()));
-    }
     m_modCapture->hide();
     connect(m_modCapture, &QComboBox::activated, this, &KeyboardShortcutsDialog::captureChanged);
 
@@ -216,6 +211,23 @@ void KeyboardShortcutsDialog::applyFilter()
     }
 }
 
+// The chords a modifier command may be bound to. The velocity lane's detent
+// unlock is the one command that cannot take Shift: Shift is its surface's
+// ramp gesture, and the unlock is read from the same press.
+void KeyboardShortcutsDialog::fillModifierChoices(const QString &id)
+{
+    const QSignalBlocker blocker(m_modCapture);
+    m_modCapture->clear();
+    for (const auto mods :
+         {Qt::KeyboardModifiers(Qt::ControlModifier), Qt::KeyboardModifiers(Qt::ShiftModifier),
+          Qt::KeyboardModifiers(Qt::AltModifier), Qt::ControlModifier | Qt::ShiftModifier,
+          Qt::ControlModifier | Qt::AltModifier, Qt::ShiftModifier | Qt::AltModifier}) {
+        if (id == QStringLiteral("velocity.detent_unlock") && mods.testFlag(Qt::ShiftModifier))
+            continue;
+        m_modCapture->addItem(modifierDisplayText(mods), int(mods.toInt()));
+    }
+}
+
 void KeyboardShortcutsDialog::currentRowChanged()
 {
     const QString id = currentCommandId();
@@ -234,6 +246,7 @@ void KeyboardShortcutsDialog::currentRowChanged()
     m_capture->setVisible(!modifier);
     m_modCapture->setVisible(modifier);
     if (modifier) {
+        fillModifierChoices(id);
         const int index = m_modCapture->findData(int(registry.modifierBinding(id).toInt()));
         const QSignalBlocker blocker(m_modCapture);
         m_modCapture->setCurrentIndex(std::max(0, index));

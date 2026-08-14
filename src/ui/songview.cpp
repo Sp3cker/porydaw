@@ -5416,6 +5416,21 @@ constexpr double kVelNodeGrabRadius = 6.0;
 constexpr double kVelStemGrabRadius = 4.0;
 constexpr double kVelStemGrabSlop = 2.0;
 
+// Whether a press's modifiers ask for exact velocities instead of the PSG
+// voice's detents. allowShift lets the Shift a ramp is already holding ride
+// along with the bound chord, so a ramp can be unlocked too; the dialog
+// refuses to bind this command to a Shift-bearing chord for the same reason.
+bool velDetentUnlockHeld(Qt::KeyboardModifiers modifiers, bool allowShift)
+{
+    const Qt::KeyboardModifiers binding =
+        keymap::Registry::instance().modifierBinding(QStringLiteral("velocity.detent_unlock"));
+    if (binding == Qt::NoModifier)
+        return false;
+    const Qt::KeyboardModifiers held =
+        modifiers & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
+    return held == binding || (allowShift && held == (binding | Qt::ShiftModifier));
+}
+
 } // namespace
 
 // Velocity lane (View → Velocity Lane, default V): the selected track's
@@ -5431,7 +5446,15 @@ constexpr double kVelStemGrabSlop = 2.0;
 // crosses, Shift ramps them along a line, and a click on a printed ruler
 // value sets them all to it. Every gesture is deferred — the pointer only
 // moves a preview, and the document mutates once, as one undo entry, when the
-// button comes up. Still to come: the marquee and the PSG detents.
+// button comes up.
+//
+// On a PSG voice the lane switches to that channel's real loudness detents
+// (VelocityMap): the ruler becomes one labeled row per level, nodes sit at
+// their level's center, the level boundaries paint across the plot for as
+// far as the voice lasts, and edits move whole levels instead of stored
+// values. The header's Detents chip turns that off for the track, and the
+// velocity.detent_unlock chord (Ctrl by default, read at the press) unlocks
+// exact values for one gesture. Still to come: the marquee.
 class VelocityLane : public TimelineSurface
 {
   public:
@@ -5481,8 +5504,16 @@ class VelocityLane : public TimelineSurface
         if (!m_sv->timeline())
             return;
 
-        const std::vector<uint8_t> active = selectedVelocities();
-        const VelocityAxis axis(axisGeometry(), active.data(), active.size());
+        const VelocityMap context = currentContext();
+        // Leaving PSG rearms the detents: the chip is a per-context choice
+        // about a voice, not a mode the lane keeps once that voice is gone.
+        // Doing it here is safe because a continuous context paints the same
+        // either way, so nothing needs repainting.
+        if (!context.isPsg())
+            m_useDetents = true;
+        paintDetentChip(p, context);
+        const std::vector<uint8_t> active = activeVelocities();
+        const VelocityAxis axis(axisMap(context), axisGeometry(), active.data(), active.size());
         // Test mirrors of the ruler being painted, like the lanes' own
         // hoverNodeTick: the checks read node placement off the same axis.
         setProperty("velocityAxisTop", axis.top());
@@ -5490,6 +5521,13 @@ class VelocityLane : public TimelineSurface
         setProperty("velocityTickCount", int(axis.tickCount()));
         setProperty("velocityDimmed", dimUnselectedNodes());
         setProperty("velocityMarkerCount", int(axis.markerCount()));
+        setProperty("velocityIntrinsic", axis.mode() == VelocityAxis::Mode::Intrinsic);
+        setProperty("velocityLevelCount", int(axis.map().levelCount()));
+        // -1 where the chip is not offered at all, so a check can tell "no
+        // detents to switch here" from "detents turned off"; read off the
+        // chip itself, so the mirror cannot disagree with what is on screen.
+        setProperty("velocityDetents",
+                    detentChipRect(context).isEmpty() ? -1 : (m_useDetents ? 1 : 0));
         VelocityAxisPaintStyle style;
         style.labelColor = themes::color(themes::Role::song_view_secondary_text);
         style.accentColor = themes::color(themes::Role::song_view_selection_edge);
@@ -5512,6 +5550,7 @@ class VelocityLane : public TimelineSurface
         drawPreRoll(p, m_sv, plot, kGutterW,
                     themes::color(themes::Role::song_view_piano_roll_background));
         drawGrid(p, m_sv, plot, kGutterW);
+        paintLevelLines(p, plot, axis, dpr);
         paintNodes(p, plot, axis, dpr);
         if (m_gesture == Gesture::Ramp) {
             // The line the ramp is reading its values off, drawn in the
@@ -5577,9 +5616,28 @@ class VelocityLane : public TimelineSurface
         m_pressPos = m_prevPos = pos;
         m_selBeforePress = m_sv->selection();
         m_pressed.reset();
+        m_hovered = NoteId(); // the gesture speaks for itself from here
         m_ctrlPress = event->modifiers() & Qt::ControlModifier;
+        // Read the unlock chord once, at the press: the values a gesture
+        // lands on must not change because the chord arrived mid-drag. Only
+        // a press in the plot may bring its own Shift (the ramp's).
+        m_detentUnlock = detentsUnlocked(event->modifiers(), pos.x() >= kGutterW);
         if (pos.x() < kHeaderW) {
-            // The track header column is not the lane's; leave it alone.
+            // The track header column is not the lane's, save for its own
+            // Detents chip.
+            const VelocityMap context = currentContext();
+            const QRect chip = detentChipRect(context);
+            if (!chip.isEmpty() && chip.contains(pos.toPoint())) {
+                m_useDetents = !m_useDetents;
+                m_sv->announce(m_useDetents
+                                   ? SongView::tr("Velocity detents on — %1 has %2 volume levels.")
+                                         .arg(QString::fromLatin1(context.voiceName()))
+                                         .arg(context.levelCount())
+                                   : SongView::tr("Velocity detents off — exact velocities."));
+                invalidateContent();
+                event->accept();
+                return;
+            }
             event->ignore();
             return;
         }
@@ -5641,6 +5699,8 @@ class VelocityLane : public TimelineSurface
             return;
         }
         if (m_gesture == Gesture::None) {
+            // Idle pointer: the node under it is what the ruler describes.
+            setHovered(pos.x() >= kGutterW ? noteAt(pos) : nullptr);
             event->ignore();
             return;
         }
@@ -5707,6 +5767,12 @@ class VelocityLane : public TimelineSurface
         TimelineSurface::focusOutEvent(event);
     }
 
+    void leaveEvent(QEvent *event) override
+    {
+        setHovered(nullptr);
+        TimelineSurface::leaveEvent(event);
+    }
+
     bool event(QEvent *event) override
     {
         // Losing the grab (a modal opening, a drag leaving the window) ends
@@ -5734,10 +5800,136 @@ class VelocityLane : public TimelineSurface
     // click in either surface tolerates the same hand jitter.
     static int dragActivationDistance() { return lyt::fontPx(5.0 / 12.0); }
 
-    // The value ruler's mapping. It only needs the geometry — the markers
-    // the painted axis also carries move no graduation — so a gesture can
-    // build one without knowing the selection.
-    VelocityAxis plotAxis() const { return VelocityAxis(axisGeometry()); }
+    // The value ruler's mapping. It only needs the geometry and the voice
+    // context — the markers the painted axis also carries move no graduation
+    // — so a gesture can build one without knowing the selection.
+    VelocityAxis plotAxis() const
+    {
+        return VelocityAxis(axisMap(currentContext()), axisGeometry());
+    }
+
+    // The voice whose detents the lane is editing in, or a continuous map
+    // when there is none to agree on. The pointer's own note wins (it is the
+    // note being asked about), then the selection — which must resolve to
+    // one compatible PSG channel, since the channels' level tables differ —
+    // and with neither, the voice in effect at the display position.
+    VelocityMap currentContext() const
+    {
+        if (const ViewNote *hovered = hoveredNote())
+            return contextForNote(*hovered);
+        std::optional<VelocityMap> shared;
+        for (const ViewNote &note : m_sv->model().notes) {
+            if (note.track != m_sv->selectedTrack() || !m_sv->isSelected(note))
+                continue;
+            const VelocityMap map = contextForNote(note);
+            if (!map.isPsg() || (shared && !shared->compatibleWith(map)))
+                return VelocityMap();
+            shared = map;
+        }
+        if (shared)
+            return *shared;
+        return VelocityMap::resolve(m_sv->voiceContext(m_sv->displayTick()).voice, std::nullopt);
+    }
+
+    // A note's own voice, resolved with its key so a keysplit answers for
+    // the sound this note actually makes.
+    VelocityMap contextForNote(const ViewNote &note) const
+    {
+        return VelocityMap::resolve(m_sv->voiceContext(note.startTick).voice, note.key);
+    }
+
+    // The map the ruler is built from: the context, unless the track's
+    // detents are switched off, which puts the plain 1-127 ruler back.
+    VelocityMap axisMap(const VelocityMap &context) const
+    {
+        return m_useDetents ? context : VelocityMap();
+    }
+
+    // Whether this gesture writes exact stored velocities instead of the
+    // voice's representatives — the chip switched off, or the unlock chord
+    // held at the press.
+    bool detentsUnlocked(Qt::KeyboardModifiers modifiers, bool allowShift) const
+    {
+        return !m_useDetents || velDetentUnlockHeld(modifiers, allowShift);
+    }
+
+    // Where a note's node sits: on a PSG voice the center of its level's
+    // row, since every stored value in that row sounds the same, and its
+    // exact velocity otherwise (or while this gesture is writing exact
+    // values, so an unlocked drag can be seen moving between the detents).
+    double yForNote(const VelocityAxis &axis, const ViewNote &note) const
+    {
+        const uint8_t velocity = displayVelocity(note);
+        const std::optional<VelocityMap> frozen = frozenMap(note.noteId);
+        if (!m_useDetents || (frozen && m_detentUnlock))
+            return axis.velocityToY(velocity);
+        const VelocityMap map = frozen.value_or(contextForNote(note));
+        if (const std::optional<std::size_t> level = map.levelOf(velocity))
+            return levelCenterY(axis, map, int(*level));
+        return axis.velocityToY(velocity);
+    }
+
+    // The y where two of a map's levels meet, and the center of the band a
+    // level owns. Stated for any map, not just the axis's own: the plot
+    // paints the boundaries of whichever voice each section of the song
+    // plays on.
+    static double levelBoundaryY(const VelocityAxis &axis, const VelocityMap &map, int lowerLevel)
+    {
+        return (axis.velocityToY(map.levelRange(lowerLevel).last) +
+                axis.velocityToY(map.levelRange(lowerLevel + 1).first)) /
+               2.0;
+    }
+
+    static double levelCenterY(const VelocityAxis &axis, const VelocityMap &map, int level)
+    {
+        const double lower = level == 0 ? axis.bottom() : levelBoundaryY(axis, map, level - 1);
+        const double upper =
+            level + 1 == int(map.levelCount()) ? axis.top() : levelBoundaryY(axis, map, level);
+        return (lower + upper) / 2.0;
+    }
+
+    // The velocity a preview writes for one note under this gesture: the
+    // exact value while unlocked, the note's own representative otherwise
+    // (which is why a mixed selection still detents each PSG note it holds).
+    uint8_t resolveVelocity(const VelocityMap &map, int proposed) const
+    {
+        if (m_detentUnlock)
+            return uint8_t(std::clamp(proposed, 1, 127));
+        return map.canonicalize(proposed);
+    }
+
+    // The note under the idle pointer. A live gesture speaks for itself, so
+    // the hover stops answering until it ends.
+    const ViewNote *hoveredNote() const
+    {
+        if (m_gesture != Gesture::None || !m_hovered.isAssigned())
+            return nullptr;
+        for (const ViewNote &note : m_sv->model().notes) {
+            if (note.track == m_sv->selectedTrack() && note.noteId == m_hovered)
+                return &note;
+        }
+        return nullptr;
+    }
+
+    void setHovered(const ViewNote *note)
+    {
+        const NoteId id = note ? note->noteId : NoteId();
+        if (id == m_hovered)
+            return;
+        m_hovered = id;
+        invalidateContent();
+    }
+
+    // The map a gesture froze for a note, so its edits keep answering to the
+    // voice the press found even if the document moves underneath.
+    std::optional<VelocityMap> frozenMap(NoteId noteId) const
+    {
+        for (const Frozen &frozen : m_frozen) {
+            if (frozen.note.noteId == noteId)
+                return frozen.map;
+        }
+        return std::nullopt;
+    }
 
     // The note a press at pos grabs, or null for empty space. A node's
     // circle outranks a bare stem, a selected note outranks an unselected
@@ -5756,7 +5948,7 @@ class VelocityLane : public TimelineSurface
             if (note.track != track)
                 continue;
             const double x = m_sv->displayX(double(note.startTick), kGutterW, dpr);
-            const double y = axis.velocityToY(displayVelocity(note));
+            const double y = yForNote(axis, note);
             const double dx = x - pos.x();
             const double dy = y - pos.y();
             const double distance = dx * dx + dy * dy;
@@ -5806,7 +5998,10 @@ class VelocityLane : public TimelineSurface
             if (note.track != m_sv->selectedTrack() || !m_sv->isSelected(note) ||
                 !note.noteId.isAssigned())
                 continue;
-            m_frozen.push_back(note);
+            // Each note's own voice comes along: a selection can straddle a
+            // voice change, and a level move means different values either
+            // side of it.
+            m_frozen.push_back({note, contextForNote(note)});
             targets.push_back({note.noteId, int(note.velocity)});
         }
         if (!m_gestureModel.begin(doc->revision(), std::move(targets))) {
@@ -5827,7 +6022,9 @@ class VelocityLane : public TimelineSurface
         const qreal dpr = devicePixelRatioF();
         const VelocityAxis axis = plotAxis();
         const double travel = last.x() - first.x();
-        std::vector<NoteVelocity> updates;
+        // Collected first, written after the session opens: the values a
+        // note takes depend on the voice the session froze for it.
+        std::vector<std::pair<const ViewNote *, double>> brushed;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != m_sv->selectedTrack() || !m_sv->isSelected(note) ||
                 !note.noteId.isAssigned())
@@ -5845,14 +6042,25 @@ class VelocityLane : public TimelineSurface
                 y = first.y() +
                     std::clamp((x - first.x()) / travel, 0.0, 1.0) * (last.y() - first.y());
             }
-            updates.push_back({note.noteId, axis.yToVelocity(y)});
+            brushed.push_back({&note, y});
         }
-        if (updates.empty())
+        if (brushed.empty())
             return;
         // The session opens on the first note the stroke actually reaches:
         // until then the press is still a click, and a click commits nothing.
         if (m_frozen.empty() && !openSession())
             return;
+        std::vector<NoteVelocity> updates;
+        updates.reserve(brushed.size());
+        for (const auto &[note, y] : brushed) {
+            const VelocityMap map = frozenMap(note->noteId).value_or(contextForNote(*note));
+            // An intrinsic stroke reads the row it passes through, not the
+            // value under it: between two detents there is nothing to write.
+            const int proposed = intrinsic(axis) && !m_detentUnlock
+                                     ? map.representative(axis.yToLevel(y))
+                                     : axis.yToVelocity(y);
+            updates.push_back({note->noteId, resolveVelocity(map, proposed)});
+        }
         m_announced = updates.front().noteId;
         m_previewed |= m_gestureModel.update(updates);
         announcePreview();
@@ -5875,7 +6083,8 @@ class VelocityLane : public TimelineSurface
         const double last = std::max(m_pressPos.x(), pos.x()) + kVelNodeGrabRadius;
         std::vector<NoteVelocity> updates;
         updates.reserve(m_frozen.size());
-        for (const ViewNote &note : m_frozen) {
+        for (const Frozen &frozen : m_frozen) {
+            const ViewNote &note = frozen.note;
             const double x = m_sv->displayX(double(note.startTick), kGutterW, dpr);
             int velocity = note.velocity;
             if (x >= first && x <= last) {
@@ -5885,7 +6094,9 @@ class VelocityLane : public TimelineSurface
                         ? pos.y()
                         : m_pressPos.y() + std::clamp((x - m_pressPos.x()) / span, 0.0, 1.0) *
                                                (pos.y() - m_pressPos.y());
-                velocity = axis.yToVelocity(y);
+                velocity = intrinsic(axis) && !m_detentUnlock
+                               ? frozen.map.representative(axis.yToLevel(y))
+                               : resolveVelocity(frozen.map, axis.yToVelocity(y));
                 m_announced = note.noteId;
             }
             updates.push_back({note.noteId, velocity});
@@ -5903,9 +6114,15 @@ class VelocityLane : public TimelineSurface
         const VelocityAxisGeometry geometry = axisGeometry();
         // Built from the selection, like the painted ruler: the markers are
         // printed values too, and they hide the fixed labels they cover.
-        const std::vector<uint8_t> active = selectedVelocities();
-        const int velocity = VelocityAxis(geometry, active.data(), active.size())
-                                 .rulerVelocityAt(pos.y(), geometry.labelHeight);
+        const std::vector<uint8_t> active = activeVelocities();
+        const VelocityAxis axis(axisMap(currentContext()), geometry, active.data(), active.size());
+        // The unlock chord turns an intrinsic ruler back into the continuous
+        // scale it is drawn over, so a click can still ask for a value
+        // between two detents. The continuous ruler keeps its printed-value
+        // rule either way — there is nothing else on it to aim at.
+        const int velocity = m_detentUnlock && intrinsic(axis)
+                                 ? axis.yToVelocity(pos.y())
+                                 : axis.rulerVelocityAt(pos.y(), geometry.labelHeight);
         if (velocity < 1)
             return;
         m_gesture = Gesture::Relative;
@@ -5916,8 +6133,12 @@ class VelocityLane : public TimelineSurface
         }
         std::vector<NoteVelocity> updates;
         updates.reserve(m_frozen.size());
-        for (const ViewNote &note : m_frozen)
-            updates.push_back({note.noteId, velocity});
+        for (const Frozen &frozen : m_frozen) {
+            // The ruler names one value; each note still answers to its own
+            // voice, so a selection across a voice change lands on the level
+            // that value means on each side.
+            updates.push_back({frozen.note.noteId, resolveVelocity(frozen.map, velocity)});
+        }
         m_gestureModel.update(updates);
         finishGesture(true);
     }
@@ -5926,20 +6147,46 @@ class VelocityLane : public TimelineSurface
     {
         if (m_frozen.empty())
             return;
+        const VelocityAxis axis = plotAxis();
+        const bool levels = intrinsic(axis) && !m_detentUnlock;
         if (!m_activated) {
             // Measured on y alone: the gesture only moves velocities, so a
             // sideways wobble must stay a click rather than arming a drag
-            // that would then commit nothing and select nothing.
-            if (std::abs(pos.y() - m_pressPos.y()) < dragActivationDistance())
+            // that would then commit nothing and select nothing. A pointer
+            // that has already crossed into another level is past arguing
+            // about, however short the travel: that is a whole step.
+            const bool crossed = levels && axis.yToLevel(pos.y()) != axis.yToLevel(m_pressPos.y());
+            if (!crossed && std::abs(pos.y() - m_pressPos.y()) < dragActivationDistance())
                 return;
             m_activated = true;
         }
-        // The drag's own travel in velocity units, applied to every frozen
-        // origin: a selection keeps its internal shape, and notes that clamp
-        // at 1 or 127 come back when the pointer does.
-        const VelocityAxis axis = plotAxis();
-        m_previewed |= m_gestureModel.updateByDelta(axis.yToVelocity(pos.y()) -
-                                                    axis.yToVelocity(m_pressPos.y()));
+        if (levels) {
+            // Whole levels, from each note's own starting value: a drag that
+            // comes back to the level it started in restores the exact
+            // velocity it found there instead of snapping to the detent.
+            const int delta = axis.yToLevel(pos.y()) - axis.yToLevel(m_pressPos.y());
+            std::vector<NoteVelocity> updates;
+            updates.reserve(m_frozen.size());
+            for (const Frozen &frozen : m_frozen) {
+                updates.push_back(
+                    {frozen.note.noteId, frozen.map.moveLevels(frozen.note.velocity, delta)});
+            }
+            m_previewed |= m_gestureModel.update(updates);
+        } else {
+            // The drag's own travel in velocity units, applied to every
+            // frozen origin: a selection keeps its internal shape, and notes
+            // that clamp at 1 or 127 come back when the pointer does. Unless
+            // unlocked, each note still answers to its own voice, so a PSG
+            // note in a mixed selection lands on a real detent.
+            const int delta = axis.yToVelocity(pos.y()) - axis.yToVelocity(m_pressPos.y());
+            std::vector<NoteVelocity> updates;
+            updates.reserve(m_frozen.size());
+            for (const Frozen &frozen : m_frozen) {
+                updates.push_back({frozen.note.noteId,
+                                   resolveVelocity(frozen.map, int(frozen.note.velocity) + delta)});
+            }
+            m_previewed |= m_gestureModel.update(updates);
+        }
         announcePreview();
         invalidateContent();
     }
@@ -5981,6 +6228,7 @@ class VelocityLane : public TimelineSurface
         m_selBeforePress.clear();
         m_frozen.clear();
         m_announced = NoteId();
+        m_detentUnlock = false;
         const std::optional<VelocityGestureModel::Completion> completion =
             m_gestureModel.takeCompletion();
         if (!completion || !commit) {
@@ -6028,6 +6276,7 @@ class VelocityLane : public TimelineSurface
         m_selBeforePress.clear();
         m_frozen.clear();
         m_announced = NoteId();
+        m_detentUnlock = false;
         m_gestureModel.cancel();
         m_sv->setSelection(std::move(restore));
         invalidateContent();
@@ -6038,7 +6287,8 @@ class VelocityLane : public TimelineSurface
     // engine will actually play, and the note's length.
     void announcePreview() const
     {
-        for (const ViewNote &note : m_frozen) {
+        for (const Frozen &frozen : m_frozen) {
+            const ViewNote &note = frozen.note;
             if (note.noteId != m_announced)
                 continue;
             ViewNote shown = note;
@@ -6075,16 +6325,95 @@ class VelocityLane : public TimelineSurface
         return selected > 1;
     }
 
-    // The velocities the ruler's markers describe: the selected notes', or
-    // nothing while the selection is empty.
-    std::vector<uint8_t> selectedVelocities() const
+    // The velocities the ruler describes: the hovered note's on its own —
+    // the pointer is asking about that note — else the selected notes', and
+    // nothing at all with neither.
+    std::vector<uint8_t> activeVelocities() const
     {
+        if (const ViewNote *hovered = hoveredNote())
+            return {displayVelocity(*hovered)};
         std::vector<uint8_t> values;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track == m_sv->selectedTrack() && m_sv->isSelected(note))
                 values.push_back(displayVelocity(note));
         }
         return values;
+    }
+
+    static bool intrinsic(const VelocityAxis &axis)
+    {
+        return axis.mode() == VelocityAxis::Mode::Intrinsic;
+    }
+
+    // The PSG level boundaries, drawn per voice section across the plot: the
+    // lines say which stored velocities the channel cannot tell apart, and a
+    // voice change mid-song moves them (or takes them away entirely).
+    void paintLevelLines(QPainter &p, const QRect &plot, const VelocityAxis &axis, qreal dpr)
+    {
+        if (!m_useDetents)
+            return;
+        const double firstTick = std::max(0.0, m_sv->tickAtContentX(plot.left() - kGutterW));
+        const double lastTick = m_sv->tickAtContentX(plot.right() - kGutterW);
+        if (lastTick <= firstTick)
+            return;
+        p.setPen(
+            QPen(themes::color(themes::Role::song_view_psg_velocity_levels), lyt::singlePixel()));
+        uint64_t sectionTick = uint64_t(firstTick);
+        while (double(sectionTick) < lastTick) {
+            const SongView::VoiceContext context = m_sv->voiceContext(sectionTick);
+            const uint64_t sectionEnd = std::min(uint64_t(std::ceil(lastTick)), context.endTick);
+            if (sectionEnd <= sectionTick)
+                break;
+            const VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt);
+            if (map.isPsg()) {
+                const double left = std::max<double>(
+                    plot.left(), m_sv->displayX(double(sectionTick), kGutterW, dpr));
+                const double right = std::min<double>(
+                    plot.right(), m_sv->displayX(double(sectionEnd), kGutterW, dpr));
+                for (std::size_t level = 0; level + 1 < map.levelCount(); level++) {
+                    const double y = levelBoundaryY(axis, map, int(level));
+                    p.drawLine(QPointF(left, y), QPointF(right, y));
+                }
+            }
+            sectionTick = sectionEnd;
+        }
+    }
+
+    // The header column's Detents chip: offered only where there are
+    // detents to switch off, and drawn filled while they are on. Empty when
+    // the voice has none, or when the lane is too short to hold both the
+    // chip and its own label — the label is the one that stays.
+    QRect detentChipRect(const VelocityMap &context) const
+    {
+        if (!context.isPsg())
+            return {};
+        const int inset = lyt::space(Space::Two);
+        const int chipHeight = QFontMetrics(typography::caption(font())).height() + inset;
+        const QRect chip(inset, height() - chipHeight - inset, lyt::fontPx(5.0), chipHeight);
+        if (chip.top() < QFontMetrics(font()).height())
+            return {};
+        return chip;
+    }
+
+    void paintDetentChip(QPainter &p, const VelocityMap &context)
+    {
+        const QRect chip = detentChipRect(context);
+        setProperty("velocityDetentChip", chip); // test mirror, like the ruler's
+        if (chip.isEmpty())
+            return;
+        const QColor accent = palette().highlight().color();
+        p.save();
+        p.setRenderHint(QPainter::Antialiasing, true);
+        p.setPen(QPen(accent, lyt::singlePixel()));
+        p.setBrush(m_useDetents ? QBrush(accent) : Qt::NoBrush);
+        const double radius = chip.height() / 2.0;
+        p.drawRoundedRect(QRectF(chip).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
+        p.setRenderHint(QPainter::Antialiasing, false);
+        p.setFont(typography::caption(font()));
+        p.setPen(m_useDetents ? palette().highlightedText().color()
+                              : themes::color(themes::Role::song_view_secondary_text));
+        p.drawText(chip, Qt::AlignCenter, SongView::tr("Detents"));
+        p.restore();
     }
 
     void paintNodes(QPainter &p, const QRect &plot, const VelocityAxis &axis, qreal dpr)
@@ -6121,7 +6450,7 @@ class VelocityLane : public TimelineSurface
             for (const ViewNote *note : visible) {
                 if (m_sv->isSelected(*note) != selectedPass)
                     continue;
-                const qreal y = axis.velocityToY(displayVelocity(*note));
+                const qreal y = yForNote(axis, *note);
                 const qreal x = m_sv->displayX(double(note->startTick), kGutterW, dpr);
                 const qreal end = std::max(x + physicalPixel,
                                            m_sv->displayX(double(note->endTick), kGutterW, dpr));
@@ -6135,7 +6464,7 @@ class VelocityLane : public TimelineSurface
                 if (m_sv->isSelected(*note) != selectedPass)
                     continue;
                 const QPointF center(m_sv->displayX(double(note->startTick), kGutterW, dpr),
-                                     axis.velocityToY(displayVelocity(*note)));
+                                     yForNote(axis, *note));
                 if (selectedPass) {
                     p.setPen(QPen(selectedColor, weight(kVelSelRingWidth)));
                     p.setBrush(Qt::NoBrush);
@@ -6160,9 +6489,18 @@ class VelocityLane : public TimelineSurface
     // pointer does reaches the document before the release.
     VelocityGestureModel m_gestureModel;
     Gesture m_gesture = Gesture::None;
-    std::vector<ViewNote> m_frozen;    // the gesture's targets as the press found them
+    // A gesture's target as the press found it: the note, and the voice its
+    // velocities answer to.
+    struct Frozen {
+        ViewNote note;
+        VelocityMap map;
+    };
+    std::vector<Frozen> m_frozen;
     std::optional<ViewNote> m_pressed; // the note under the press, if any
     NoteId m_announced;                // the frozen note the status line describes
+    NoteId m_hovered;                  // the node under the idle pointer, if any
+    bool m_useDetents = true;          // the header chip; rearms off a PSG context
+    bool m_detentUnlock = false;       // this gesture writes exact values (press-time)
     std::vector<SongView::NoteKey> m_selBeforePress; // restored by a cancel
     QPointF m_pressPos;
     QPointF m_prevPos;
@@ -8359,9 +8697,31 @@ int SongView::programAtTick(int track, uint64_t tick) const
     return prog;
 }
 
+uint64_t SongView::displayTick() const
+{
+    return m_playing ? uint64_t(std::max(0.0, m_playheadTick)) : m_editCursorTick;
+}
+
 int SongView::currentProgram(int track) const
 {
-    return programAtTick(track, m_playing ? uint64_t(m_playheadTick) : m_editCursorTick);
+    return programAtTick(track, displayTick());
+}
+
+SongView::VoiceContext SongView::voiceContext(uint64_t tick) const
+{
+    if (!m_timeline || !m_voicegroup || m_selectedTrack < 0 || m_selectedTrack >= 16)
+        return {};
+    const int program = programAtTick(m_selectedTrack, tick);
+    uint64_t endTick = UINT64_MAX;
+    for (const VoiceChange &change : m_model.voices) {
+        if (change.track == m_selectedTrack && change.tick > tick) {
+            endTick = change.tick; // sorted by tick: the first one past it
+            break;
+        }
+    }
+    if (program < 0 || program >= VOICEGROUP_SIZE)
+        return {nullptr, -1, endTick};
+    return {&m_voicegroup->voices[program], program, endTick};
 }
 
 void SongView::revealVoice(int program)

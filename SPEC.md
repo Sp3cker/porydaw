@@ -393,8 +393,23 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   losing the mouse grab abandons the gesture and restores the selection the press
   found. While a gesture runs the status bar reads out the aimed note (key, stored
   velocity, the velocity the engine will really play, length) and playback
-  follow-scroll pauses. Marquee selection and the PSG detents
-  (`core/velocitymodel.h`) are not implemented yet.
+  follow-scroll pauses. Hovering a node makes *that* note what the ruler describes
+  — its value is marked, and its own voice decides the context below — ahead of the
+  selection. **PSG detents** (`core/velocitymodel.h`): when the lane's context is one
+  CGB channel — the hovered note's voice, else the selected notes' if they agree on
+  one channel, else the voice in effect at the playhead/edit cursor — the ruler
+  becomes one labeled row per real loudness level ("Vol 1…N", the active levels
+  accented), nodes sit at their level's row rather than their stored velocity, the
+  level boundaries paint across the plot for as long as that voice lasts
+  (`song_view_psg_velocity_levels`), and every edit lands on a level: drags move
+  whole levels (returning to the level it started in restores the exact velocity it
+  found there), ruler clicks and strokes take the level's representative, and each
+  note answers to its own voice, so a selection across a voice change still lands
+  correctly on both sides. The header's **Detents** chip (shown only where there are
+  detents, and rearmed whenever the context leaves PSG) puts the plain ruler and
+  exact values back for the track, and holding `velocity.detent_unlock` (**Ctrl** by
+  default, read at the press) does the same for one gesture. Marquee selection is not
+  implemented yet.
 - **Transport bar:** play/pause/stop, loop toggle, a follow-playhead toggle (also in
   the View menu; off, playback stops scrolling the roll and event list — the camera
   stays where the user put it; app-wide, persisted), position, tempo display, master

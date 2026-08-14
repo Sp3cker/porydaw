@@ -26,7 +26,13 @@ uint8_t clampVelocity(int velocity)
 
 VelocityAxis::VelocityAxis(const VelocityAxisGeometry &geometry, const uint8_t *activeValues,
                            std::size_t activeValueCount)
-    : m_geometry(geometry)
+    : VelocityAxis(VelocityMap(), geometry, activeValues, activeValueCount)
+{}
+
+VelocityAxis::VelocityAxis(const VelocityMap &map, const VelocityAxisGeometry &geometry,
+                           const uint8_t *activeValues, std::size_t activeValueCount)
+    : m_map(map)
+    , m_geometry(geometry)
 {
     const double height = nonNegative(m_geometry.height);
     const double inset = nonNegative(m_geometry.verticalInset);
@@ -36,6 +42,38 @@ VelocityAxis::VelocityAxis(const VelocityAxisGeometry &geometry, const uint8_t *
     m_bottom = std::max(m_top, height - inset);
     buildTicks();
     buildMarkers(activeValues, activeValueCount);
+    // After the markers: a level's row reads as active when a marked value
+    // lands in it.
+    if (mode() == Mode::Intrinsic)
+        buildIntrinsicRows();
+}
+
+VelocityAxis::Mode VelocityAxis::mode() const
+{
+    return m_map.levelCount() == 0 ? Mode::Continuous : Mode::Intrinsic;
+}
+
+double VelocityAxis::levelToY(int level) const
+{
+    const int highest = std::max(0, int(m_map.levelCount()) - 1);
+    return m_levelCenters[std::size_t(std::clamp(level, 0, highest))];
+}
+
+int VelocityAxis::yToLevel(double y) const
+{
+    // Walking down from the top: the boundaries are in descending y, so the
+    // first one the pointer is below ends the search.
+    const int highest = std::max(0, int(m_map.levelCount()) - 1);
+    int level = highest;
+    while (level > 0 && y > m_levelBoundaries[std::size_t(level - 1)])
+        --level;
+    return level;
+}
+
+double VelocityAxis::levelBoundaryToY(int lowerLevel) const
+{
+    const int highest = std::max(0, int(m_map.levelCount()) - 2);
+    return m_levelBoundaries[std::size_t(std::clamp(lowerLevel, 0, highest))];
 }
 
 double VelocityAxis::velocityToY(int velocity) const
@@ -61,6 +99,10 @@ int VelocityAxis::yToVelocity(double y) const
 
 int VelocityAxis::rulerVelocityAt(double y, double labelHeight) const
 {
+    // Every intrinsic row prints the level it stands for, so the column has
+    // no gaps to miss: the y picks a level and the level names its value.
+    if (mode() == Mode::Intrinsic)
+        return m_map.representative(yToLevel(y));
     const double reach = labelHeight / 2.0;
     // Exactly what paintRuler prints, and nothing else: a selection marker
     // owns its own value's row, and the fixed label it suppressed there is
@@ -79,6 +121,33 @@ int VelocityAxis::rulerVelocityAt(double y, double labelHeight) const
 void VelocityAxis::paintRuler(QPainter &painter, const VelocityAxisPaintStyle &style) const
 {
     painter.save();
+    if (mode() == Mode::Intrinsic) {
+        // One graduation per real loudness level, named for the volume step
+        // it is rather than the stored velocity that happens to reach it.
+        // The levels holding an active value take the accent, which is what
+        // the continuous ruler's markers say in the same place.
+        for (std::size_t index = 0; index < m_graduationCount; ++index) {
+            const VelocityAxisGraduation &graduation = m_graduations[index];
+            painter.setPen(QPen(graduation.active ? style.accentColor : style.labelColor,
+                                graduation.active ? style.markerWidth : style.tickWidth));
+            painter.drawLine(QPointF(style.separatorX - style.majorTickLength, graduation.y),
+                             QPointF(style.separatorX, graduation.y));
+            // An active row always names itself; a fixed label that close
+            // yields rather than overprinting it, exactly as the continuous
+            // ruler's labels yield to a marker.
+            if (!graduation.active &&
+                (!graduation.labelVisible || activeNear(graduation.y, style.labelHeight)))
+                continue;
+            painter.setFont(graduation.active ? style.emphasizedFont : style.labelFont);
+            painter.setPen(graduation.active ? style.accentColor : style.labelColor);
+            painter.drawText(QRectF(style.labelLeft, graduation.y - style.labelHeight / 2.0,
+                                    style.labelWidth, style.labelHeight),
+                             Qt::AlignRight | Qt::AlignVCenter,
+                             tr("Vol %1").arg(unsigned(graduation.level) + 1));
+        }
+        painter.restore();
+        return;
+    }
     painter.setPen(QPen(style.labelColor, style.tickWidth));
     for (std::size_t index = 0; index < m_tickCount; ++index) {
         const VelocityAxisTick &tick = m_ticks[index];
@@ -165,6 +234,55 @@ void VelocityAxis::buildTicks()
     for (int velocity = 120; velocity >= 8; velocity -= 8)
         addLabel(uint8_t(velocity));
     addLabel(1);
+}
+
+// One row per level, centered in the velocity band that level owns, with the
+// boundaries halfway between the levels' adjacent stored velocities. A lane
+// too short to name every row drops labels by a power-of-two stride rather
+// than dropping graduations: the rows are where edits land, so they all stay
+// on screen.
+void VelocityAxis::buildIntrinsicRows()
+{
+    const std::size_t levelCount = std::min(m_map.levelCount(), MaximumGraduations);
+    if (levelCount == 0)
+        return;
+    const double span = m_bottom - m_top;
+    std::size_t labelStride = 1;
+    while (labelStride < levelCount &&
+           span / double(levelCount) * double(labelStride) < nonNegative(m_geometry.labelHeight))
+        labelStride *= 2;
+    for (std::size_t level = 0; level + 1 < levelCount; ++level) {
+        const VelocityLevelRange lower = m_map.levelRange(int(level));
+        const VelocityLevelRange upper = m_map.levelRange(int(level + 1));
+        m_levelBoundaries[level] = (velocityToY(lower.last) + velocityToY(upper.first)) / 2.0;
+    }
+    for (std::size_t level = 0; level < levelCount; ++level) {
+        // The outermost levels run to the ruler's own ends, so their rows
+        // center on the band they really cover rather than on a boundary
+        // they do not have.
+        const double lower = level == 0 ? m_bottom : m_levelBoundaries[level - 1];
+        const double upper = level + 1 == levelCount ? m_top : m_levelBoundaries[level];
+        m_levelCenters[level] = (lower + upper) / 2.0;
+        VelocityAxisGraduation &graduation = m_graduations[m_graduationCount++];
+        graduation.level = uint8_t(level);
+        graduation.velocity = m_map.representative(int(level));
+        graduation.labelVisible = (level + 1) % labelStride == 0;
+        graduation.y = m_levelCenters[level];
+        for (std::size_t index = 0; index < m_markerCount; ++index) {
+            const std::optional<std::size_t> marked = m_map.levelOf(m_markers[index].velocity);
+            if (marked && *marked == level)
+                graduation.active = true;
+        }
+    }
+}
+
+bool VelocityAxis::activeNear(double y, double labelHeight) const
+{
+    for (std::size_t index = 0; index < m_graduationCount; ++index) {
+        if (m_graduations[index].active && std::abs(m_graduations[index].y - y) < labelHeight)
+            return true;
+    }
+    return false;
 }
 
 void VelocityAxis::buildMarkers(const uint8_t *activeValues, std::size_t activeValueCount)
