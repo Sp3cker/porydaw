@@ -37,6 +37,9 @@ class VelocityMap
     // key resolves keysplit voices; without one a keysplit stays unresolved
     // rather than guessing a child voice.
     static VelocityMap resolve(const ToneData *tone, std::optional<uint8_t> key);
+    // A keysplit asked about without a key: the section plays on whichever
+    // channel each key resolves to, so it has no one level table of its own.
+    bool isKeyless() const;
     // True only for the four CGB channels, the voices with real detents.
     bool isPsg() const;
     bool operator==(const VelocityMap &other) const;

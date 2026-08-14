@@ -359,6 +359,10 @@ double laneVelocityY(const QWidget *lane, int velocity)
     return bottom - double(std::clamp(velocity, 1, 127) - 1) * (bottom - top) / 126.0;
 }
 
+// How near a node's center the lane lets a press land, in DIPs (its own
+// kVelNodeGrabRadius): a probe that must miss has to aim further than this.
+constexpr double kVelNodeGrabReach = 6.0;
+
 // The y a PSG level's row centers on, stated independently of VelocityAxis:
 // the boundaries sit halfway between the adjacent levels' own velocities,
 // and the outermost levels run to the ruler's ends.
@@ -1275,6 +1279,19 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     (void)view.grab();
     check(view.selection().size() == 1 && view.selection()[0] == dragId,
           "a band must replace the selection with the nodes it covered");
+    // A band swept along a row is flat: on an intrinsic ruler a run of
+    // nodes shares one y exactly, and a flat rectangle must still catch
+    // them.
+    view.setSelection({partnerId});
+    (void)view.grab();
+    const QPointF flatFrom(bandNodePoint.x() - 12.0, bandNodePoint.y());
+    const QPointF flatTo(bandNodePoint.x() + 12.0, bandNodePoint.y());
+    sendLaneMouse(lane, QEvent::MouseButtonPress, flatFrom, Qt::RightButton, Qt::RightButton);
+    sendLaneMouse(lane, QEvent::MouseMove, flatTo, Qt::NoButton, Qt::RightButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, flatTo, Qt::RightButton, Qt::NoButton);
+    (void)view.grab();
+    check(view.selection().size() == 1 && view.selection()[0] == dragId,
+          "a flat band must still take the nodes it runs along");
     // Ctrl unions with what the press found instead.
     view.setSelection({partnerId});
     (void)view.grab();
@@ -1334,12 +1351,17 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
         fail("the song's voicegroup must load: the detents are its voices'");
         return 1;
     }
-    // The lane reads voices straight out of the loaded group, so it must
-    // outlive the view here; the checks below all run before it is freed.
+    // The lane reads voices straight out of the loaded group, so the view
+    // must let go of it before it is freed — the view outlives this scope.
     struct VoicegroupGuard {
+        SongView *view;
         LoadedVoiceGroup *group;
-        ~VoicegroupGuard() { voicegroup_free(group); }
-    } voicegroupGuard{voicegroup};
+        ~VoicegroupGuard()
+        {
+            view->setVoicegroup(nullptr);
+            voicegroup_free(group);
+        }
+    } voicegroupGuard{&view, voicegroup};
     view.setVoicegroup(voicegroup);
     view.clearSelection();
     (void)view.grab();
@@ -1401,8 +1423,12 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
         const qreal x = view.displayX(double(note.startTick), songview::kGutterW, dpr);
         if (x < songview::kGutterW + 60 || x > lane->width() - 60 || overlayContested(x))
             continue;
+        // Far enough off its own row that a press aimed at the row would
+        // MISS the node if the lane were drawing it at its stored velocity:
+        // that is what tells "the detents placed this node" apart from "it
+        // happened to land near here".
         if (std::abs(laneLevelCenterY(lane, psgMap, int(*level)) -
-                     laneVelocityY(lane, note.velocity)) < 6.0)
+                     laneVelocityY(lane, note.velocity)) <= kVelNodeGrabReach)
             continue;
         bool crowded = false;
         for (const ViewNote &other : view.model().notes) {
@@ -1602,6 +1628,103 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     (void)view.grab();
     check(lane->property("velocityMarkerCount").toInt() == 0,
           "leaving the lane must drop the hover's mark");
+    // A track can change voice mid-song, so "is this PSG?" is a question
+    // about a note, not about a track. This one has both kinds.
+    const ViewNote *mixedProbe = nullptr;
+    for (const ViewNote &note : view.model().notes) {
+        if (note.track != psgTrack || !note.noteId.isAssigned())
+            continue;
+        if (!VelocityMap::resolve(view.voiceContext(note.startTick).voice, note.key).isPsg())
+            mixedProbe = &note;
+        if (mixedProbe)
+            break;
+    }
+    if (!mixedProbe) {
+        fail("the mixed-voice fixture must find a note off the track's PSG voice");
+        return failures == 0 ? 0 : 1;
+    }
+    const ViewNote mixedNote = *mixedProbe;
+    // With the display position inside the sampled section the ruler is
+    // continuous — until the pointer asks about a PSG note, which moves that
+    // node onto its level's row. The press that follows must hit it there:
+    // the hover is still what the lane is drawing.
+    view.commitEditCursor(mixedNote.startTick);
+    view.clearSelection();
+    (void)view.grab();
+    check(!lane->property("velocityIntrinsic").toBool(),
+          "a display position on a sampled voice must keep the plain ruler");
+    // A selection straddling both kinds of voice agrees on nothing, so the
+    // ruler is continuous — and the hover is then the only thing that can
+    // put it on levels, which is what makes the gesture below a question
+    // about the hover alone.
+    const SongView::NoteKey mixedId{mixedNote.startTick, mixedNote.key};
+    view.setSelection({psgId, mixedId});
+    (void)view.grab();
+    check(!lane->property("velocityIntrinsic").toBool(),
+          "a selection across two kinds of voice must keep the plain ruler");
+    const int undoBeforeHoverDrag = doc.undoStack()->index();
+    sendLaneMouse(lane, QEvent::MouseMove, psgFrom, Qt::NoButton, Qt::NoButton);
+    (void)view.grab();
+    check(lane->property("velocityIntrinsic").toBool() &&
+              std::abs(laneLevelCenterY(lane, psgMap, psgLevel) - psgFrom.y()) < 0.5,
+          "hovering a PSG node must put the ruler on that voice's levels");
+    // And the gesture that starts there must mean what that ruler says: a
+    // drag inside the hovered note's own level moves it by no levels at all,
+    // and so leaves its exact velocity alone. Read continuously instead — as
+    // the track's own context would — the same drag would canonicalize it
+    // onto the level's representative and push an undo entry.
+    sendLaneMouse(lane, QEvent::MouseButtonPress, psgFrom, Qt::LeftButton, Qt::LeftButton);
+    const QPointF withinLevel(psgFrom.x(), psgFrom.y() + dragActivation + 2.0);
+    if (laneVelocityAt(lane, withinLevel.y()) == psgNote.velocity ||
+        psgMap.levelOf(laneVelocityAt(lane, withinLevel.y())) != psgMap.levelOf(psgNote.velocity)) {
+        fail("the within-level fixture must move the value without leaving the level");
+        return failures == 0 ? 0 : 1;
+    }
+    sendLaneMouse(lane, QEvent::MouseMove, withinLevel, Qt::NoButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, withinLevel, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    const ViewNote *hoverDragged = psgNoteAt();
+    check(hoverDragged && hoverDragged->velocity == psgNote.velocity &&
+              doc.undoStack()->index() == undoBeforeHoverDrag,
+          "a gesture must keep the detents the hovered node's ruler was showing");
+    view.commitEditCursor(0);
+    view.clearSelection();
+    (void)view.grab();
+
+    // The detent choice is the track's, and the pointer is not the track:
+    // passing over a note that plays on a sampled voice must not switch the
+    // detents back on behind the user's back. The sampled section is off
+    // screen, so bring it in and put the camera back after.
+    const double mixedScroll = view.displayX(double(mixedNote.startTick), songview::kGutterW, dpr) -
+                               double(songview::kGutterW + 200);
+    view.scrollByPx(mixedScroll);
+    (void)view.grab();
+    const QPointF mixedPoint(view.displayX(double(mixedNote.startTick), songview::kGutterW, dpr),
+                             laneVelocityY(lane, mixedNote.velocity));
+    if (mixedPoint.x() < songview::kGutterW + 20 || mixedPoint.x() > lane->width() - 20) {
+        fail("the mixed-voice fixture must be brought on screen");
+        return failures == 0 ? 0 : 1;
+    }
+    const QRect rearmChip = lane->property("velocityDetentChip").toRect();
+    const QPointF rearmPoint(rearmChip.center());
+    sendLaneMouse(lane, QEvent::MouseButtonPress, rearmPoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, rearmPoint, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    check(lane->property("velocityDetents").toInt() == 0,
+          "the rearm fixture must start with the detents switched off");
+    sendLaneMouse(lane, QEvent::MouseMove, mixedPoint, Qt::NoButton, Qt::NoButton);
+    (void)view.grab();
+    QEvent hoverLeave(QEvent::Leave);
+    QCoreApplication::sendEvent(lane, &hoverLeave);
+    (void)view.grab();
+    check(lane->property("velocityDetents").toInt() == 0,
+          "hovering a note off the detents' voice must not switch them back on");
+    sendLaneMouse(lane, QEvent::MouseButtonPress, rearmPoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, rearmPoint, Qt::LeftButton, Qt::NoButton);
+    view.scrollByPx(-mixedScroll);
+    view.clearSelection();
+    (void)view.grab();
+
     view.selectTrack(track);
     view.clearSelection();
     (void)view.grab();
@@ -1629,6 +1752,8 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
           "a pre-lane sidecar must open a visible lane at its default height");
 
     if (!screenshotPath.isEmpty()) {
+        // The PSG track, so the shot shows the detents the lane exists for.
+        view.selectTrack(psgTrack);
         view.setVelocityLaneVisible(true);
         (void)view.grab();
         if (!view.grab().save(screenshotPath))

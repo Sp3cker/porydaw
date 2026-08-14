@@ -96,6 +96,11 @@ VelocityMap VelocityMap::resolve(const ToneData *tone, std::optional<uint8_t> ke
     return VelocityMap(velocityVoiceForType(resolved->type));
 }
 
+bool VelocityMap::isKeyless() const
+{
+    return m_voice == VelocityVoice::Keyless;
+}
+
 bool VelocityMap::isPsg() const
 {
     return m_voice == VelocityVoice::Square1 || m_voice == VelocityVoice::Square2 ||

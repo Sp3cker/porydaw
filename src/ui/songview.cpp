@@ -5505,11 +5505,13 @@ class VelocityLane : public TimelineSurface
             return;
 
         const VelocityMap context = currentContext();
-        // Leaving PSG rearms the detents: the chip is a per-context choice
+        // Leaving PSG rearms the detents: the chip is a per-track choice
         // about a voice, not a mode the lane keeps once that voice is gone.
-        // Doing it here is safe because a continuous context paints the same
-        // either way, so nothing needs repainting.
-        if (!context.isPsg())
+        // Read off the track's own context, never the hover — passing the
+        // pointer over a DirectSound node must not undo the choice. Doing it
+        // here is safe because a continuous context paints the same either
+        // way, so nothing needs repainting.
+        if (!trackContext().isPsg())
             m_useDetents = true;
         paintDetentChip(p, context);
         const std::vector<uint8_t> active = activeVelocities();
@@ -5615,7 +5617,6 @@ class VelocityLane : public TimelineSurface
             m_pressPos = m_prevPos = pos;
             m_bandRect = QRectF(pos, pos);
             m_selBeforePress = m_sv->selection();
-            m_hovered = NoteId();
             m_ctrlPress = event->modifiers() & Qt::ControlModifier;
             const ViewNote *hit = noteAt(pos);
             m_pressed = hit ? std::optional<ViewNote>(*hit) : std::nullopt;
@@ -5654,7 +5655,6 @@ class VelocityLane : public TimelineSurface
         m_pressPos = m_prevPos = pos;
         m_selBeforePress = m_sv->selection();
         m_pressed.reset();
-        m_hovered = NoteId(); // the gesture speaks for itself from here
         m_ctrlPress = event->modifiers() & Qt::ControlModifier;
         // Read the unlock chord once, at the press: the values a gesture
         // lands on must not change because the chord arrived mid-drag. Only
@@ -5898,6 +5898,14 @@ class VelocityLane : public TimelineSurface
     {
         if (const ViewNote *hovered = hoveredNote())
             return contextForNote(*hovered);
+        return trackContext();
+    }
+
+    // The context without the pointer in it: what the lane is editing when
+    // nothing is hovered. The Detents chip is a choice about this, not about
+    // wherever the pointer happens to rest.
+    VelocityMap trackContext() const
+    {
         std::optional<VelocityMap> shared;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != m_sv->selectedTrack() || !m_sv->isSelected(note))
@@ -5979,11 +5987,15 @@ class VelocityLane : public TimelineSurface
         return map.canonicalize(proposed);
     }
 
-    // The note under the idle pointer. A live gesture speaks for itself, so
-    // the hover stops answering until it ends.
+    // The note under the pointer. It keeps answering through the press and
+    // the whole gesture that follows — the hover decides the context, and
+    // the context decides whether an edit moves levels or values, so a
+    // gesture must go on meaning what the ruler said when it started. Moves
+    // stop updating it while a gesture runs, and its end drops it (the
+    // pointer having travelled unwatched meanwhile).
     const ViewNote *hoveredNote() const
     {
-        if (m_gesture != Gesture::None || !m_hovered.isAssigned())
+        if (!m_hovered.isAssigned())
             return nullptr;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track == m_sv->selectedTrack() && note.noteId == m_hovered)
@@ -6104,8 +6116,15 @@ class VelocityLane : public TimelineSurface
         const VelocityAxis axis = plotAxis();
         const double travel = last.x() - first.x();
         // Collected first, written after the session opens: the values a
-        // note takes depend on the voice the session froze for it.
-        std::vector<std::pair<const ViewNote *, double>> brushed;
+        // note takes depend on the voice it plays on, so each note carries
+        // its own map (the frozen one once a session holds it) rather than
+        // a pointer into a model that an edit may rebuild.
+        struct Brushed {
+            NoteId noteId;
+            VelocityMap map;
+            double y = 0.0;
+        };
+        std::vector<Brushed> brushed;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != m_sv->selectedTrack() || !m_sv->isSelected(note) ||
                 !note.noteId.isAssigned())
@@ -6123,7 +6142,8 @@ class VelocityLane : public TimelineSurface
                 y = first.y() +
                     std::clamp((x - first.x()) / travel, 0.0, 1.0) * (last.y() - first.y());
             }
-            brushed.push_back({&note, y});
+            brushed.push_back(
+                {note.noteId, frozenMap(note.noteId).value_or(contextForNote(note)), y});
         }
         if (brushed.empty())
             return;
@@ -6133,14 +6153,13 @@ class VelocityLane : public TimelineSurface
             return;
         std::vector<NoteVelocity> updates;
         updates.reserve(brushed.size());
-        for (const auto &[note, y] : brushed) {
-            const VelocityMap map = frozenMap(note->noteId).value_or(contextForNote(*note));
+        for (const Brushed &brush : brushed) {
             // An intrinsic stroke reads the row it passes through, not the
             // value under it: between two detents there is nothing to write.
             const int proposed = intrinsic(axis) && !m_detentUnlock
-                                     ? map.representative(axis.yToLevel(y))
-                                     : axis.yToVelocity(y);
-            updates.push_back({note->noteId, resolveVelocity(map, proposed)});
+                                     ? brush.map.representative(axis.yToLevel(brush.y))
+                                     : axis.yToVelocity(brush.y);
+            updates.push_back({brush.noteId, resolveVelocity(brush.map, proposed)});
         }
         m_announced = updates.front().noteId;
         m_previewed |= m_gestureModel.update(updates);
@@ -6281,15 +6300,20 @@ class VelocityLane : public TimelineSurface
         const qreal dpr = devicePixelRatioF();
         const VelocityAxis axis = plotAxis();
         m_bandRect = QRectF(m_pressPos, pos).normalized();
+        // A band swept along one axis is flat, and an empty rectangle
+        // intersects nothing at all in Qt — yet sweeping a row of nodes on
+        // an intrinsic ruler, where a run of them shares one y exactly, is
+        // the obvious gesture. Give the hit test a hair of thickness.
+        const QRectF reach = m_bandRect.adjusted(-0.5, -0.5, 0.5, 0.5);
         m_bandPreview.clear();
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != m_sv->selectedTrack())
                 continue;
             const QPointF center(m_sv->displayX(double(note.startTick), kGutterW, dpr),
                                  yForNote(axis, note));
-            if (m_bandRect.intersects(QRectF(center.x() - kVelNodeGrabRadius,
-                                             center.y() - kVelNodeGrabRadius,
-                                             2 * kVelNodeGrabRadius, 2 * kVelNodeGrabRadius)))
+            if (reach.intersects(QRectF(center.x() - kVelNodeGrabRadius,
+                                        center.y() - kVelNodeGrabRadius, 2 * kVelNodeGrabRadius,
+                                        2 * kVelNodeGrabRadius)))
                 m_bandPreview.push_back({note.startTick, note.key});
         }
         invalidateContent();
@@ -6343,6 +6367,7 @@ class VelocityLane : public TimelineSurface
         m_frozen.clear();
         m_announced = NoteId();
         m_detentUnlock = false;
+        m_hovered = NoteId();
         m_bandPreview.clear();
         m_bandRect = QRectF();
         const std::optional<VelocityGestureModel::Completion> completion =
@@ -6393,6 +6418,7 @@ class VelocityLane : public TimelineSurface
         m_frozen.clear();
         m_announced = NoteId();
         m_detentUnlock = false;
+        m_hovered = NoteId();
         m_bandPreview.clear();
         m_bandRect = QRectF();
         m_gestureModel.cancel();
@@ -6482,7 +6508,13 @@ class VelocityLane : public TimelineSurface
             const uint64_t sectionEnd = std::min(uint64_t(std::ceil(lastTick)), context.endTick);
             if (sectionEnd <= sectionTick)
                 break;
-            const VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt);
+            VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt);
+            // A keysplit answers per key, so its section has no single level
+            // table to draw — but its notes resolved with their own keys are
+            // what put the ruler on levels, so the ruler's map is the one
+            // they snapped to and the one the lines belong to.
+            if (map.isKeyless() && intrinsic(axis))
+                map = axis.map();
             if (map.isPsg()) {
                 const double left = std::max<double>(
                     plot.left(), m_sv->displayX(double(sectionTick), kGutterW, dpr));
@@ -6506,8 +6538,12 @@ class VelocityLane : public TimelineSurface
         if (!context.isPsg())
             return {};
         const int inset = lyt::space(Space::Two);
-        const int chipHeight = QFontMetrics(typography::caption(font())).height() + inset;
-        const QRect chip(inset, height() - chipHeight - inset, lyt::fontPx(5.0), chipHeight);
+        const QFontMetrics metrics(typography::caption(font()));
+        const int chipHeight = metrics.height() + inset;
+        // Sized from its own label, so a longer translation still fits.
+        const QRect chip(inset, height() - chipHeight - inset,
+                         metrics.horizontalAdvance(SongView::tr("Detents")) + 2 * chipHeight,
+                         chipHeight);
         if (chip.top() < QFontMetrics(font()).height())
             return {};
         return chip;
