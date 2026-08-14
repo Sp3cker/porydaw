@@ -5393,9 +5393,8 @@ class AutomationArea : public TimelineSurface
 
 namespace {
 
-// Node and stem weights in DIPs, so the lane keeps its designed look at any
-// display scale; painting converts through the device pixel ratio like the
-// roll's note frames do.
+// Node geometry and line weights in DIPs, so the lane keeps its designed
+// look at any display scale (Qt scales the logical units it paints in).
 constexpr double kVelNodeRadius = 3.5;
 constexpr double kVelNodeOutline = 1.0;
 constexpr double kVelSelRingRadius = 5.0;
@@ -5463,6 +5462,7 @@ class VelocityLane : public TimelineSurface
         setProperty("velocityAxisTop", axis.top());
         setProperty("velocityAxisBottom", axis.bottom());
         setProperty("velocityTickCount", int(axis.tickCount()));
+        setProperty("velocityDimmed", dimUnselectedNodes());
         setProperty("velocityMarkerCount", int(axis.markerCount()));
         VelocityAxisPaintStyle style;
         style.labelColor = themes::color(themes::Role::song_view_secondary_text);
@@ -5584,6 +5584,18 @@ class VelocityLane : public TimelineSurface
         return geometry;
     }
 
+    // Whether unselected nodes recede: true once the selection is something a
+    // bulk edit would act on, counted over the whole track (see paintNodes).
+    bool dimUnselectedNodes() const
+    {
+        int selected = 0;
+        for (const ViewNote &note : m_sv->model().notes) {
+            if (note.track == m_sv->selectedTrack() && m_sv->isSelected(note))
+                selected++;
+        }
+        return selected > 1;
+    }
+
     // The velocities the ruler's markers describe: the selected notes', or
     // nothing while the selection is empty.
     std::vector<uint8_t> selectedVelocities() const
@@ -5600,7 +5612,6 @@ class VelocityLane : public TimelineSurface
     {
         const int track = m_sv->selectedTrack();
         std::vector<const ViewNote *> visible;
-        int selectedCount = 0;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != track)
                 continue;
@@ -5609,24 +5620,25 @@ class VelocityLane : public TimelineSurface
             if (end < plot.left() - kVelSelRingRadius || x > plot.right() + kVelSelRingRadius)
                 continue;
             visible.push_back(&note);
-            if (m_sv->isSelected(note))
-                selectedCount++;
         }
-        // A single selected node is a cursor, not a set: the others only
-        // recede once the selection is something a bulk edit would act on.
-        const bool dimUnselected = selectedCount > 1;
+        // Counted over the whole track, never the visible slice: scrolling
+        // must not change how the nodes on screen are colored.
+        const bool dimUnselected = dimUnselectedNodes();
         const QColor trackColor = SongView::trackColor(track);
         const QColor stemColor = mixTowardOklab(trackColor, Qt::black, 1.0 / 3.0);
         const QColor selectedColor = palette().highlight().color();
         const QColor nodeColor = dimUnselected ? palette().mid().color() : trackColor;
+        // A DIP weight can still fall under one device pixel on a downscaled
+        // display; never let a stem or a ring vanish.
         const qreal physicalPixel = logicalPhysicalPixel(dpr);
+        const auto weight = [physicalPixel](double dips) { return std::max(dips, physicalPixel); };
 
         // Stems first, so a node always sits on top of its neighbor's line.
         for (int pass = 0; pass < 2; pass++) {
             const bool selectedPass = pass == 1;
             p.setPen(QPen(selectedPass ? selectedColor : stemColor,
-                          (selectedPass ? kVelSelStemWidth : kVelStemWidth) * physicalPixel,
-                          Qt::SolidLine, Qt::FlatCap));
+                          weight(selectedPass ? kVelSelStemWidth : kVelStemWidth), Qt::SolidLine,
+                          Qt::FlatCap));
             for (const ViewNote *note : visible) {
                 if (m_sv->isSelected(*note) != selectedPass)
                     continue;
@@ -5646,14 +5658,14 @@ class VelocityLane : public TimelineSurface
                 const QPointF center(m_sv->displayX(double(note->startTick), kGutterW, dpr),
                                      axis.velocityToY(note->velocity));
                 if (selectedPass) {
-                    p.setPen(QPen(selectedColor, kVelSelRingWidth * physicalPixel));
+                    p.setPen(QPen(selectedColor, weight(kVelSelRingWidth)));
                     p.setBrush(Qt::NoBrush);
                     p.drawEllipse(center, kVelSelRingRadius, kVelSelRingRadius);
                 }
                 p.setPen(dimUnselected && !selectedPass
                              ? QPen(Qt::NoPen)
                              : QPen(themes::color(themes::Role::song_view_grid),
-                                    kVelNodeOutline * physicalPixel));
+                                    weight(kVelNodeOutline)));
                 p.setBrush(selectedPass ? trackColor : nodeColor);
                 p.drawEllipse(center, kVelNodeRadius, kVelNodeRadius);
             }
@@ -6433,10 +6445,8 @@ using namespace songview;
 songview::TimelineSurfaces SongView::timelineSurfaces() noexcept
 {
     return {
-        {*m_ruler, kGutterW},
-        {*m_roll, kKeyboardW},
-        {*m_lanes, kGutterW},
-        {*m_strip, kGutterW},
+        {*m_ruler, kGutterW}, {*m_roll, kKeyboardW}, {*m_velocityLane, kGutterW},
+        {*m_lanes, kGutterW}, {*m_strip, kGutterW},
     };
 }
 
@@ -6672,7 +6682,14 @@ void SongView::setVelocityLaneVisible(bool visible)
 {
     if (!m_velocityLane || velocityLaneVisible() == visible)
         return;
+    // Every timeline surface is ClickFocus, so Qt has nowhere to send the
+    // focus a hidden lane was holding — and the next V (or M/S/B) would land
+    // outside the view entirely. Hand it back to the editing surface.
+    const QWidget *const focused = window() ? window()->focusWidget() : nullptr;
+    const bool laneHadFocus = focused == m_velocityLane;
     m_velocityLane->setVisible(visible);
+    if (!visible && laneHadFocus)
+        focusContent();
     if (visible) {
         // The splitter hands a freshly shown pane only its minimum (and a
         // sidecar that predates the lane restores it at zero), so open it at
@@ -6801,8 +6818,11 @@ void SongView::applyViewState(const ViewState &state)
     // the lane's pane opens at zero there and setVelocityLaneVisible borrows
     // its height when the user asks for it.
     QList<int> splitterSizes = state.splitterSizes;
-    if (splitterSizes.size() == 2)
-        splitterSizes = {splitterSizes[0], 0, splitterSizes[1]};
+    if (splitterSizes.size() == 2) {
+        const int velocityH = velocityLaneVisible() ? kVelLaneH : 0;
+        splitterSizes = {std::max(kVelLaneMinH, splitterSizes[0] - velocityH), velocityH,
+                         splitterSizes[1]};
+    }
     if (splitterSizes.size() == m_splitter->count() && splitterSizes.first() > 0 &&
         splitterSizes.last() > 0) {
         // Real sizes exist; skip resizeEvent's default split.

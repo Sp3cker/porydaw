@@ -3,11 +3,13 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <optional>
 #include <vector>
 
 #include <QApplication>
 #include <QColor>
+#include <QFontMetrics>
 #include <QImage>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -20,9 +22,13 @@
 #include "core/songdocument.h"
 #include "core/velocitymodel.h"
 #include "project/decompproject.h"
+#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songviewmodel.h"
 #include "ui/theme/color_math.h"
+#include "ui/theme/themeruntime.h"
+#include "ui/typography.h"
+#include "ui/velocityaxis.h"
 
 // --velmodelcheck: PSG velocity model check (self-contained, no project
 // needed). VelocityMap is the engine-behavior half of the velocity lane: it
@@ -310,6 +316,43 @@ double laneVelocityY(const QWidget *lane, int velocity)
 
 } // namespace
 
+// Every printed ruler value must sit on a real graduation: the labels are a
+// subset of the ticks in each density band, and neither run may overrun its
+// fixed array.
+int runVelocityAxisBandCheck(const std::function<void(bool, const char *)> &check)
+{
+    VelocityAxisGeometry geometry;
+    geometry.verticalInset = 6.0;
+    geometry.labelHeight = 12.0;
+    geometry.densityD1 = 84.0;
+    geometry.densityD2 = 112.0;
+    geometry.densityD3 = 156.0;
+    geometry.densityD4 = 300.0;
+    bool everyLabelOnATick = true;
+    bool countsInRange = true;
+    std::size_t widestTicks = 0;
+    for (const double height :
+         {40.0, 83.0, 84.0, 111.0, 112.0, 155.0, 156.0, 299.0, 300.0, 900.0}) {
+        geometry.height = height;
+        const VelocityAxis axis(geometry);
+        countsInRange = countsInRange && axis.tickCount() <= VelocityAxis::MaximumTicks &&
+                        axis.labelCount() <= VelocityAxis::MaximumLabels;
+        widestTicks = std::max(widestTicks, axis.tickCount());
+        for (std::size_t label = 0; label < axis.labelCount(); label++) {
+            bool onTick = false;
+            for (std::size_t tick = 0; tick < axis.tickCount(); tick++) {
+                if (axis.ticks()[tick].velocity == axis.labels()[label].velocity)
+                    onTick = true;
+            }
+            everyLabelOnATick = everyLabelOnATick && onTick;
+        }
+    }
+    check(everyLabelOnATick, "every ruler label must land on a graduation");
+    check(countsInRange && widestTicks == VelocityAxis::MaximumTicks,
+          "the densest band must fill the tick array without overrunning it");
+    return 0;
+}
+
 int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
                          const QString &screenshotPath)
 {
@@ -393,6 +436,25 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     check(view.velocityLaneVisible() && visibilitySignals == 3,
           "the lane's own focus must reach the same toggle");
 
+    runVelocityAxisBandCheck(check);
+
+    // The playhead overlay clips its line to the registered bands' visible
+    // rects; without the lane among them it would break across the pane.
+    const songview::TimelineSurfaces surfaces = view.timelineSurfaces();
+    check(&surfaces.velocity.widget == lane &&
+              surfaces.velocity.timelineOrigin == songview::kGutterW,
+          "the lane must be registered as a timeline band at the shared origin");
+
+    lane->setFocus(Qt::OtherFocusReason);
+    sendLaneKey(lane, Qt::Key_V);
+    (void)view.grab();
+    // The harness never shows the window, so ask the view which child holds
+    // the focus rather than the activation-sensitive hasFocus().
+    check(!view.velocityLaneVisible() && view.focusWidget() == roll,
+          "closing the focused lane must hand the keyboard back to the roll");
+    sendLaneKey(roll, Qt::Key_V);
+    (void)view.grab();
+
     // --- node and stem placement
     const int track = view.selectedTrack();
     const qreal dpr = lane->devicePixelRatioF();
@@ -465,6 +527,24 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
               "a stem must run from the node across the note's duration");
     }
 
+    // The stem's weight is authored in DIPs, so its painted thickness must
+    // grow with the display scale rather than staying a fixed pixel count.
+    if (stemEndX - nodeCenter.x() > 8 * rasterDpr) {
+        const QColor stemColor = stemInk(trackColor);
+        int thickness = 0;
+        for (int dy = -6; dy <= 6; dy++) {
+            const QColor actual = laneImage.pixelColor(int((nodeCenter.x() + stemEndX) / 2.0),
+                                                       int(nodeCenter.y()) + dy);
+            if (std::abs(actual.red() - stemColor.red()) <= 28 &&
+                std::abs(actual.green() - stemColor.green()) <= 28 &&
+                std::abs(actual.blue() - stemColor.blue()) <= 28) {
+                thickness++;
+            }
+        }
+        check(thickness >= int(std::floor(1.5 * rasterDpr)),
+              "the stem's weight must scale with the display, not stay a device pixel");
+    }
+
     // --- the roll's selection rings its nodes and marks the ruler
     check(lane->property("velocityMarkerCount").toInt() == 0,
           "an empty selection must leave the ruler unmarked");
@@ -493,6 +573,60 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
         (void)view.grab();
         check(lane->property("velocityMarkerCount").toInt() == 2,
               "two selected velocities must mark the ruler's extremes");
+    }
+    if (second) {
+        // Dimming reads the selection, not what happens to be on screen.
+        check(lane->property("velocityDimmed").toBool(),
+              "two selected notes must dim the rest of the track");
+        const double before = view.tickAtContentX(0);
+        view.scrollByPx(4000.0);
+        (void)view.grab();
+        check(view.tickAtContentX(0) != before && lane->property("velocityDimmed").toBool(),
+              "scrolling away from the selection must not undim the lane");
+        view.scrollByPx(-4000.0);
+        (void)view.grab();
+    }
+
+    // A selected velocity's marker prints its own value in the label column;
+    // any fixed ruler label that close must yield instead of overprinting.
+    const QColor labelColor = themes::color(themes::Role::song_view_secondary_text);
+    const int labelHeight = QFontMetrics(typography::caption(lane->font())).height();
+    // Text only: the ruler's tick marks are drawn in the same ink and reach
+    // into the right edge of this column.
+    const int labelInset = layout::space(layout::Space::Two);
+    const QRect labelColumn(songview::kHeaderW, 0, songview::kKeyboardW - 2 * labelInset,
+                            lane->height());
+    const auto labelInkAt = [&](const QImage &image, double y) {
+        const int top = int((y - labelHeight / 2.0) * rasterDpr);
+        const int bottom = int((y + labelHeight / 2.0) * rasterDpr);
+        for (int py = std::max(0, top); py <= std::min(image.height() - 1, bottom); py++) {
+            for (int px = int(labelColumn.left() * rasterDpr);
+                 px <= std::min(image.width() - 1, int(labelColumn.right() * rasterDpr)); px++) {
+                const QColor actual = image.pixelColor(px, py);
+                if (std::abs(actual.red() - labelColor.red()) <= 12 &&
+                    std::abs(actual.green() - labelColor.green()) <= 12 &&
+                    std::abs(actual.blue() - labelColor.blue()) <= 12) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    view.clearSelection();
+    (void)view.grab();
+    const QImage unselectedRuler = lane->grab().toImage();
+    const ViewNote *onLabel = nullptr;
+    for (const ViewNote &note : view.model().notes) {
+        if (note.track == track && labelInkAt(unselectedRuler, laneVelocityY(lane, note.velocity)))
+            onLabel = &note;
+        if (onLabel)
+            break;
+    }
+    if (onLabel) {
+        view.setSelection({{onLabel->startTick, onLabel->key}});
+        (void)view.grab();
+        check(!labelInkAt(lane->grab().toImage(), laneVelocityY(lane, onLabel->velocity)),
+              "a fixed ruler label must yield to the selection's own marker label");
     }
     view.clearSelection();
     (void)view.grab();
@@ -553,6 +687,13 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     // stretchy one, absorbs the splitter's remaining height.
     check(restored.size() == 3 && restored[1] == 0 && restored[2] == 150 && restored[0] > 0,
           "a sidecar written before the lane must still restore its two panes");
+    // With the app-wide preference on, the same sidecar must still open the
+    // lane at a usable height instead of clamping it to its minimum.
+    view.setVelocityLaneVisible(true);
+    view.applyViewState(legacy);
+    (void)view.grab();
+    check(lane->height() > lane->minimumHeight() && splitter->sizes()[2] == 150,
+          "a pre-lane sidecar must open a visible lane at its default height");
 
     if (!screenshotPath.isEmpty()) {
         view.setVelocityLaneVisible(true);

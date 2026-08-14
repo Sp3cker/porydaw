@@ -142,6 +142,7 @@ void PlayheadOverlay::observeSurfaceGeometry()
     };
     observe(&m_surfaces.ruler.widget);
     observe(&m_surfaces.roll.widget);
+    observe(&m_surfaces.velocity.widget);
     observe(&m_surfaces.lanes.widget);
     observe(&m_surfaces.strip.widget);
 }
@@ -261,6 +262,8 @@ void PlayheadOverlay::synchronizeGeometry()
     const QRegion visibleSurfaces =
         QRegion(
             visibleSurfaceRect(&m_surfaces.roll.widget, &owner, m_surfaces.roll.timelineOrigin)) +
+        visibleSurfaceRect(&m_surfaces.velocity.widget, &owner,
+                           m_surfaces.velocity.timelineOrigin) +
         visibleSurfaceRect(&m_surfaces.lanes.widget, &owner, m_surfaces.lanes.timelineOrigin) +
         visibleSurfaceRect(&m_surfaces.strip.widget, &owner, m_surfaces.strip.timelineOrigin);
 

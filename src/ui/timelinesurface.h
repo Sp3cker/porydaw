@@ -96,6 +96,9 @@ struct CachedTimelineBand {
 struct TimelineSurfaces {
     TimelineBand ruler;
     CachedTimelineBand roll;
+    // Hidden until the View toggle opens it; a hidden band contributes no
+    // visible rect, so the playhead simply skips it.
+    CachedTimelineBand velocity;
     CachedTimelineBand lanes;
     CachedTimelineBand strip;
 };

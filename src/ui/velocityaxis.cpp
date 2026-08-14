@@ -62,6 +62,10 @@ void VelocityAxis::paintRuler(QPainter &painter, const VelocityAxisPaintStyle &s
     painter.setFont(style.labelFont);
     for (std::size_t index = 0; index < m_labelCount; ++index) {
         const VelocityAxisLabel &label = m_labels[index];
+        // A marker's own value is printed in this column below; the fixed
+        // label yields rather than letting the two strings overprint.
+        if (markerNear(label.y, style.labelHeight))
+            continue;
         painter.drawText(QRectF(style.labelLeft, label.y - style.labelHeight / 2.0,
                                 style.labelWidth, style.labelHeight),
                          Qt::AlignRight | Qt::AlignVCenter, QString::number(label.velocity));
@@ -89,8 +93,8 @@ void VelocityAxis::buildTicks()
 {
     const double span = nonNegative(m_geometry.height);
     if (span < m_geometry.densityD1) {
-        for (const uint8_t velocity : {uint8_t{127}, uint8_t{96}, uint8_t{64}, uint8_t{32},
-                                       uint8_t{1}})
+        for (const uint8_t velocity :
+             {uint8_t{127}, uint8_t{96}, uint8_t{64}, uint8_t{32}, uint8_t{1}})
             addTick(velocity);
         for (const uint8_t velocity : {uint8_t{127}, uint8_t{64}, uint8_t{1}})
             addLabel(velocity);
@@ -105,8 +109,8 @@ void VelocityAxis::buildTicks()
             for (const uint8_t velocity : {uint8_t{127}, uint8_t{64}, uint8_t{1}})
                 addLabel(velocity);
         } else {
-            for (const uint8_t velocity : {uint8_t{127}, uint8_t{96}, uint8_t{64}, uint8_t{32},
-                                           uint8_t{1}})
+            for (const uint8_t velocity :
+                 {uint8_t{127}, uint8_t{96}, uint8_t{64}, uint8_t{32}, uint8_t{1}})
                 addLabel(velocity);
         }
         return;
@@ -122,8 +126,11 @@ void VelocityAxis::buildTicks()
         addLabel(1);
         return;
     }
+    // Stepping from 124 (not 123) keeps every label below on a tick, so the
+    // labeled graduations stay the long ones; the run lands exactly on
+    // MaximumTicks.
     addTick(127);
-    for (int velocity = 123; velocity >= 7; velocity -= 4)
+    for (int velocity = 124; velocity >= 8; velocity -= 4)
         addTick(uint8_t(velocity));
     addTick(1);
     addLabel(127);
@@ -150,6 +157,8 @@ void VelocityAxis::buildMarkers(const uint8_t *activeValues, std::size_t activeV
 
 void VelocityAxis::addTick(uint8_t velocity)
 {
+    if (m_tickCount == MaximumTicks)
+        return;
     VelocityAxisTick &tick = m_ticks[m_tickCount++];
     tick.velocity = velocity;
     tick.y = velocityToY(velocity);
@@ -157,9 +166,20 @@ void VelocityAxis::addTick(uint8_t velocity)
 
 void VelocityAxis::addLabel(uint8_t velocity)
 {
+    if (m_labelCount == MaximumLabels)
+        return;
     VelocityAxisLabel &label = m_labels[m_labelCount++];
     label.velocity = velocity;
     label.y = velocityToY(velocity);
+}
+
+bool VelocityAxis::markerNear(double y, double labelHeight) const
+{
+    for (std::size_t index = 0; index < m_markerCount; ++index) {
+        if (std::abs(m_markers[index].y - y) < labelHeight)
+            return true;
+    }
+    return false;
 }
 
 bool VelocityAxis::isLabeled(uint8_t velocity) const

@@ -92,6 +92,8 @@ class VelocityAxis
     void addTick(uint8_t velocity);
     void addLabel(uint8_t velocity);
     bool isLabeled(uint8_t velocity) const;
+    // Whether a selection marker's label would collide with a fixed one.
+    bool markerNear(double y, double labelHeight) const;
 
     VelocityAxisGeometry m_geometry;
     std::array<VelocityAxisTick, MaximumTicks> m_ticks{};
