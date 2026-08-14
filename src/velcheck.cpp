@@ -1242,6 +1242,85 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     view.clearSelection();
     (void)view.grab();
 
+    // --- the marquee: the right button bands nodes instead of editing them
+    // The gestures above left the probe notes wherever their last committed
+    // edit put them, so the band aims at where the node is now.
+    const ViewNote *bandNote = noteAt(dragNote.startTick, dragNote.key);
+    const double bandEmptyY = emptyRowY(nodePoint.x());
+    if (!bandNote || bandEmptyY < 0.0) {
+        fail("the marquee fixture must find its node and an empty row at its tick");
+        return failures == 0 ? 0 : 1;
+    }
+    const QPointF bandNodePoint(nodePoint.x(), laneVelocityY(lane, bandNote->velocity));
+    const QPointF bandEmptyPoint(nodePoint.x(), bandEmptyY);
+    const uint64_t revisionBeforeBand = doc.revision();
+    const QPointF bandFrom(bandNodePoint.x() - 12.0, bandNodePoint.y() - 25.0);
+    const QPointF bandTo(bandNodePoint.x() + 12.0, bandNodePoint.y() + 25.0);
+    view.setSelection({partnerId});
+    (void)view.grab();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, bandFrom, Qt::RightButton, Qt::RightButton);
+    check(view.selection().size() == 1 && view.selection()[0] == partnerId,
+          "a right press on empty plot must leave the selection alone until the release");
+    sendLaneMouse(lane, QEvent::MouseMove, bandTo, Qt::NoButton, Qt::RightButton);
+    const QImage bandImage = lane->grab().toImage();
+    // The band previews what it would take: the covered node rings while the
+    // selection itself has not moved yet.
+    check(
+        hasColorNear(bandImage,
+                     QPointF(bandNodePoint.x() * rasterDpr, (bandNodePoint.y() - 5.0) * rasterDpr),
+                     ringProbeRadius, ringColor, 24) &&
+            view.selection().size() == 1 && view.selection()[0] == partnerId,
+        "a swept band must ring the nodes it covers before the release lands them");
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, bandTo, Qt::RightButton, Qt::NoButton);
+    (void)view.grab();
+    check(view.selection().size() == 1 && view.selection()[0] == dragId,
+          "a band must replace the selection with the nodes it covered");
+    // Ctrl unions with what the press found instead.
+    view.setSelection({partnerId});
+    (void)view.grab();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, bandFrom, Qt::RightButton, Qt::RightButton,
+                  Qt::ControlModifier);
+    sendLaneMouse(lane, QEvent::MouseMove, bandTo, Qt::NoButton, Qt::RightButton,
+                  Qt::ControlModifier);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, bandTo, Qt::RightButton, Qt::NoButton,
+                  Qt::ControlModifier);
+    (void)view.grab();
+    check(view.selection().size() == 2 &&
+              std::find(view.selection().begin(), view.selection().end(), dragId) !=
+                  view.selection().end() &&
+              std::find(view.selection().begin(), view.selection().end(), partnerId) !=
+                  view.selection().end(),
+          "Ctrl must add a band's nodes to the selection instead of replacing it");
+    // Escape abandons a band exactly as it abandons an edit.
+    view.setSelection({partnerId});
+    (void)view.grab();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, bandFrom, Qt::RightButton, Qt::RightButton);
+    sendLaneMouse(lane, QEvent::MouseMove, bandTo, Qt::NoButton, Qt::RightButton);
+    sendLaneKey(lane, Qt::Key_Escape);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, bandTo, Qt::RightButton, Qt::NoButton);
+    (void)view.grab();
+    check(view.selection().size() == 1 && view.selection()[0] == partnerId,
+          "Escape must abandon a band and put the pre-press selection back");
+    // A right-click in place is a click: on a node it selects it, Ctrl
+    // toggles it, and on empty plot it clears.
+    sendLaneMouse(lane, QEvent::MouseButtonPress, bandNodePoint, Qt::RightButton, Qt::RightButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, bandNodePoint, Qt::RightButton, Qt::NoButton);
+    check(view.selection().size() == 1 && view.selection()[0] == dragId,
+          "a right-click on an unselected node must select it");
+    sendLaneMouse(lane, QEvent::MouseButtonPress, bandNodePoint, Qt::RightButton, Qt::RightButton,
+                  Qt::ControlModifier);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, bandNodePoint, Qt::RightButton, Qt::NoButton,
+                  Qt::ControlModifier);
+    check(view.selection().empty(), "Ctrl+right-click must drop a selected node again");
+    view.setSelection({dragId});
+    (void)view.grab();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, bandEmptyPoint, Qt::RightButton, Qt::RightButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, bandEmptyPoint, Qt::RightButton, Qt::NoButton);
+    check(view.selection().empty(), "a right-click on empty plot must clear the selection");
+    check(doc.revision() == revisionBeforeBand, "the marquee must never touch a velocity");
+    view.clearSelection();
+    (void)view.grab();
+
     // --- PSG detents: a CGB voice's real loudness levels drive the ruler,
     // the nodes, and every edit
     const QByteArray rootUtf8 = projectRoot.toLocal8Bit();

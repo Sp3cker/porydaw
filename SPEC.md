@@ -408,8 +408,12 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   correctly on both sides. The header's **Detents** chip (shown only where there are
   detents, and rearmed whenever the context leaves PSG) puts the plain ruler and
   exact values back for the track, and holding `velocity.detent_unlock` (**Ctrl** by
-  default, read at the press) does the same for one gesture. Marquee selection is not
-  implemented yet.
+  default, read at the press) does the same for one gesture. The **right button** is
+  the lane's marquee: a right drag bands the nodes it covers (previewed as selected
+  while it is swept) and replaces the selection with them, Ctrl unions instead;
+  released in place it is a click — on a node it selects it, Ctrl toggles its
+  membership, and on empty plot it clears the selection. It never touches a velocity,
+  and the lane has no context menu.
 - **Transport bar:** play/pause/stop, loop toggle, a follow-playhead toggle (also in
   the View menu; off, playback stops scrolling the roll and event list — the camera
   stays where the user put it; app-wide, persisted), position, tempo display, master

@@ -5560,6 +5560,16 @@ class VelocityLane : public TimelineSurface
             p.setBrush(Qt::NoBrush);
             p.drawLine(m_pressPos, m_prevPos);
         }
+        if (m_gesture == Gesture::Band) {
+            // The roll's own band: a dashed selection edge over a wash of
+            // the same color.
+            QColor band = themes::color(themes::Role::song_view_selection_edge);
+            p.setPen(QPen(band, lyt::singlePixel(), Qt::DashLine));
+            band.setAlpha(30);
+            p.setBrush(Qt::NoBrush);
+            p.fillRect(m_bandRect, band);
+            p.drawRect(m_bandRect);
+        }
         drawOverlays(p, m_sv, plot, kGutterW,
                      m_sv->timeSelectionCoversTrack(m_sv->selectedTrack()));
         p.restore();
@@ -5591,6 +5601,33 @@ class VelocityLane : public TimelineSurface
 
     void mousePressEvent(QMouseEvent *event) override
     {
+        if (event->button() == Qt::RightButton) {
+            // The marquee, deferred like the roll's: a drag bands the nodes
+            // it covers, and a release in place is a click on whatever was
+            // under the press. Never over a live edit, and never in the
+            // ruler or header columns — there are no nodes to band there.
+            const QPointF pos = event->position();
+            if (m_gesture != Gesture::None || m_panning || !m_sv->document() || !m_sv->timeline() ||
+                pos.x() < kGutterW) {
+                event->ignore();
+                return;
+            }
+            m_pressPos = m_prevPos = pos;
+            m_bandRect = QRectF(pos, pos);
+            m_selBeforePress = m_sv->selection();
+            m_hovered = NoteId();
+            m_ctrlPress = event->modifiers() & Qt::ControlModifier;
+            const ViewNote *hit = noteAt(pos);
+            m_pressed = hit ? std::optional<ViewNote>(*hit) : std::nullopt;
+            // The roll's rule: a press on an unselected node takes the
+            // selection over at once, so the band that may follow starts
+            // from what the user just pointed at.
+            if (hit && !m_ctrlPress && !m_sv->isSelected(*hit))
+                m_sv->setSelection({{hit->startTick, hit->key}});
+            m_gesture = Gesture::PendingBand;
+            event->accept();
+            return;
+        }
         if (event->button() == Qt::MiddleButton) {
             // Reaper-style pan, tracked in global coordinates like the lanes'.
             // Never while an edit is live: panning moves the ticks the
@@ -5605,10 +5642,11 @@ class VelocityLane : public TimelineSurface
             event->accept();
             return;
         }
-        if (event->button() != Qt::LeftButton || m_panning || !m_sv->document() ||
-            !m_sv->timeline()) {
-            // Nothing here edits without a document; leave the press to the
-            // parent rather than swallowing it.
+        if (event->button() != Qt::LeftButton || m_panning || m_gesture != Gesture::None ||
+            !m_sv->document() || !m_sv->timeline()) {
+            // Nothing here edits without a document, and a live marquee owns
+            // the pointer; leave the press to the parent rather than
+            // swallowing it.
             event->ignore();
             return;
         }
@@ -5704,12 +5742,20 @@ class VelocityLane : public TimelineSurface
             event->ignore();
             return;
         }
+        if (m_gesture == Gesture::PendingBand &&
+            (pos - m_pressPos).manhattanLength() >= QApplication::startDragDistance()) {
+            // Two dimensions of travel here, so the platform's own drag
+            // distance decides — unlike the edits, which only move on y.
+            m_gesture = Gesture::Band;
+        }
         if (m_gesture == Gesture::Relative)
             updateRelative(pos);
         else if (m_gesture == Gesture::Paint)
             paintBetween(m_prevPos, pos);
         else if (m_gesture == Gesture::Ramp)
             updateRamp(pos);
+        else if (m_gesture == Gesture::Band)
+            updateBand(pos);
         m_prevPos = pos;
         event->accept();
     }
@@ -5722,7 +5768,33 @@ class VelocityLane : public TimelineSurface
             event->accept();
             return;
         }
-        if (event->button() != Qt::LeftButton || m_gesture == Gesture::None) {
+        if (event->button() == Qt::RightButton &&
+            (m_gesture == Gesture::Band || m_gesture == Gesture::PendingBand)) {
+            if (m_gesture == Gesture::Band) {
+                // The band replaces the selection; Ctrl adds to what the
+                // press found instead.
+                std::vector<SongView::NoteKey> selection =
+                    m_ctrlPress ? m_selBeforePress : std::vector<SongView::NoteKey>();
+                for (const SongView::NoteKey &id : m_bandPreview) {
+                    if (std::find(selection.begin(), selection.end(), id) == selection.end())
+                        selection.push_back(id);
+                }
+                m_sv->setSelection(std::move(selection));
+            } else {
+                // A right-click in place: Ctrl toggles the node under it,
+                // and a bare click on empty plot clears the selection. A
+                // plain click on a node has already selected it.
+                if (m_ctrlPress && m_pressed)
+                    clickSelect();
+                else if (!m_ctrlPress && !m_pressed)
+                    m_sv->setSelection({});
+            }
+            finishGesture(false);
+            event->accept();
+            return;
+        }
+        if (event->button() != Qt::LeftButton || m_gesture == Gesture::None ||
+            m_gesture == Gesture::Band || m_gesture == Gesture::PendingBand) {
             event->ignore();
             return;
         }
@@ -5789,12 +5861,21 @@ class VelocityLane : public TimelineSurface
     }
 
   private:
+    void contextMenuEvent(QContextMenuEvent *event) override
+    {
+        // The right button is the marquee's here; there is no lane menu for
+        // it to fight with, and the press must not raise one from a parent.
+        event->accept();
+    }
+
     // Left-drag gestures. Relative moves every selected note's velocity by
     // the drag's own vertical distance (and is what a ruler click commits
     // through); Paint is the empty-space stroke that brushes the selected
     // notes it crosses, and whose bare click clears the selection; Ramp is
-    // the Shift drag, a straight line laid across the selection.
-    enum class Gesture { None, Relative, Paint, Ramp };
+    // the Shift drag, a straight line laid across the selection. The right
+    // button's marquee waits as PendingBand until the pointer travels, since
+    // a right-click in place means something else.
+    enum class Gesture { None, Relative, Paint, Ramp, PendingBand, Band };
 
     // Travel that turns a press into a drag; the lanes' own figure, so a
     // click in either surface tolerates the same hand jitter.
@@ -6191,6 +6272,39 @@ class VelocityLane : public TimelineSurface
         invalidateContent();
     }
 
+    // The marquee: the nodes the band covers, previewed as selected while it
+    // is swept so the release holds no surprises. Nodes only — a stem is
+    // where a note is, not what its velocity is, and the band is a statement
+    // about velocities.
+    void updateBand(const QPointF &pos)
+    {
+        const qreal dpr = devicePixelRatioF();
+        const VelocityAxis axis = plotAxis();
+        m_bandRect = QRectF(m_pressPos, pos).normalized();
+        m_bandPreview.clear();
+        for (const ViewNote &note : m_sv->model().notes) {
+            if (note.track != m_sv->selectedTrack())
+                continue;
+            const QPointF center(m_sv->displayX(double(note.startTick), kGutterW, dpr),
+                                 yForNote(axis, note));
+            if (m_bandRect.intersects(QRectF(center.x() - kVelNodeGrabRadius,
+                                             center.y() - kVelNodeGrabRadius,
+                                             2 * kVelNodeGrabRadius, 2 * kVelNodeGrabRadius)))
+                m_bandPreview.push_back({note.startTick, note.key});
+        }
+        invalidateContent();
+    }
+
+    // Whether a note reads as selected on screen: the selection, plus what a
+    // band being swept right now is about to add to it.
+    bool showsSelected(const ViewNote &note) const
+    {
+        if (m_sv->isSelected(note))
+            return true;
+        const SongView::NoteKey id{note.startTick, note.key};
+        return std::find(m_bandPreview.begin(), m_bandPreview.end(), id) != m_bandPreview.end();
+    }
+
     // Release inside the activation slop: the press was a click.
     void clickSelect()
     {
@@ -6229,6 +6343,8 @@ class VelocityLane : public TimelineSurface
         m_frozen.clear();
         m_announced = NoteId();
         m_detentUnlock = false;
+        m_bandPreview.clear();
+        m_bandRect = QRectF();
         const std::optional<VelocityGestureModel::Completion> completion =
             m_gestureModel.takeCompletion();
         if (!completion || !commit) {
@@ -6277,6 +6393,8 @@ class VelocityLane : public TimelineSurface
         m_frozen.clear();
         m_announced = NoteId();
         m_detentUnlock = false;
+        m_bandPreview.clear();
+        m_bandRect = QRectF();
         m_gestureModel.cancel();
         m_sv->setSelection(std::move(restore));
         invalidateContent();
@@ -6319,7 +6437,7 @@ class VelocityLane : public TimelineSurface
     {
         int selected = 0;
         for (const ViewNote &note : m_sv->model().notes) {
-            if (note.track == m_sv->selectedTrack() && m_sv->isSelected(note))
+            if (note.track == m_sv->selectedTrack() && showsSelected(note))
                 selected++;
         }
         return selected > 1;
@@ -6448,7 +6566,7 @@ class VelocityLane : public TimelineSurface
                           weight(selectedPass ? kVelSelStemWidth : kVelStemWidth), Qt::SolidLine,
                           Qt::FlatCap));
             for (const ViewNote *note : visible) {
-                if (m_sv->isSelected(*note) != selectedPass)
+                if (showsSelected(*note) != selectedPass)
                     continue;
                 const qreal y = yForNote(axis, *note);
                 const qreal x = m_sv->displayX(double(note->startTick), kGutterW, dpr);
@@ -6461,7 +6579,7 @@ class VelocityLane : public TimelineSurface
         for (int pass = 0; pass < 2; pass++) {
             const bool selectedPass = pass == 1;
             for (const ViewNote *note : visible) {
-                if (m_sv->isSelected(*note) != selectedPass)
+                if (showsSelected(*note) != selectedPass)
                     continue;
                 const QPointF center(m_sv->displayX(double(note->startTick), kGutterW, dpr),
                                      yForNote(axis, *note));
@@ -6502,6 +6620,8 @@ class VelocityLane : public TimelineSurface
     bool m_useDetents = true;          // the header chip; rearms off a PSG context
     bool m_detentUnlock = false;       // this gesture writes exact values (press-time)
     std::vector<SongView::NoteKey> m_selBeforePress; // restored by a cancel
+    std::vector<SongView::NoteKey> m_bandPreview;    // what a live marquee would select
+    QRectF m_bandRect;
     QPointF m_pressPos;
     QPointF m_prevPos;
     bool m_activated = false; // the drag cleared the activation slop
