@@ -115,6 +115,11 @@ const Def kDefs[] = {
      QT_TR_NOOP("Mute Selected Tracks"), QKeySequence::UnknownKey, "M"},
     {"roll.solo_tracks", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Solo Selected Tracks"), QKeySequence::UnknownKey, "S"},
+    // The velocity lane's pane toggle. A bare letter, so it dispatches
+    // through handleEditKey from the focused roll/lanes surface like M/S/B
+    // — never as a window shortcut, which would eat the key in text fields.
+    {"view.velocity_lane", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Toggle Velocity Lane"), QKeySequence::UnknownKey, "V"},
     // Ableton-style pencil for the automation lanes ("B is for Bencil" —
     // reachable without taking the right hand off the mouse). Dispatched
     // through handleEditKey like M/S, so text inputs keep the letter.

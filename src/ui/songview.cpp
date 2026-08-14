@@ -7,6 +7,7 @@
 #include "ui/contextmenu.h"
 #include "ui/layout.h"
 #include "ui/timelinesurface.h"
+#include "ui/velocityaxis.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -81,6 +82,8 @@ constexpr int kMinLaneH = 28;
 constexpr int kMaxLaneH = 128;
 constexpr int kAddLaneH = 20;
 constexpr int kLanesAreaH = 150;
+constexpr int kVelLaneH = 120;   // initial velocity-lane pane height
+constexpr int kVelLaneMinH = 56; // enough for the sparsest ruler band
 constexpr double kMinPxPerBeat = 4.0;
 constexpr double kMaxPxPerBeat = 640.0;
 constexpr double kMinKeyHeight = 4.0;
@@ -5386,6 +5389,284 @@ class AutomationArea : public TimelineSurface
     qreal m_pencilCursorDpr = 0.0;
 };
 
+// --------------------------------------------------------------- VelocityLane
+
+namespace {
+
+// Node and stem weights in DIPs, so the lane keeps its designed look at any
+// display scale; painting converts through the device pixel ratio like the
+// roll's note frames do.
+constexpr double kVelNodeRadius = 3.5;
+constexpr double kVelNodeOutline = 1.0;
+constexpr double kVelSelRingRadius = 5.0;
+constexpr double kVelSelRingWidth = 1.5;
+constexpr double kVelStemWidth = 1.5;
+constexpr double kVelSelStemWidth = 2.5;
+// Ruler density steps, as multiples of the base font size: the taller the
+// lane, the finer the graduations (VelocityAxis picks the band).
+constexpr double kVelDensityD1 = 6.0;
+constexpr double kVelDensityD2 = 25.0 / 3.0;
+constexpr double kVelDensityD3 = 12.0;
+constexpr double kVelDensityD4 = 24.0;
+
+} // namespace
+
+// Velocity lane (View → Velocity Lane, default V): the selected track's
+// notes as nodes on the shared timeline — a filled circle at (start tick,
+// velocity) with a stem spanning the note's duration — beside a value ruler
+// over the whole 1-127 velocity domain. There is no vertical zoom; the lane's
+// height only decides how densely the ruler is graduated.
+//
+// Read-only so far: the lane mirrors the roll's note selection (selected
+// nodes ring, and the rest dim once more than one is selected) and shares the
+// timeline's camera, but only pans and zooms. The editing gestures — relative
+// drag, paint, ramp, marquee, and the PSG detents — land in later milestones.
+class VelocityLane : public TimelineSurface
+{
+  public:
+    explicit VelocityLane(SongView *sv) : TimelineSurface(nullptr), m_sv(sv)
+    {
+        setObjectName(QStringLiteral("velocityLane")); // findChild for tests
+        setMinimumHeight(kVelLaneMinH);
+        setMouseTracking(true);
+        // Range shortcuts (and the lane's own V toggle) work from here too,
+        // so a click focuses the lane like the roll and the lanes area.
+        setFocusPolicy(Qt::ClickFocus);
+    }
+
+    // A mouse gesture is live (the middle-button pan); follow-scroll pauses.
+    bool gestureActive() const { return m_panning; }
+
+  protected:
+    void paintContent(QPainter &p) override
+    {
+        const qreal dpr = p.device()->devicePixelRatioF();
+        p.fillRect(rect(), themes::color(themes::Role::song_view_piano_roll_background));
+        p.fillRect(QRect(0, 0, std::min(kGutterW, width()), height()),
+                   themes::color(themes::Role::song_view_timeline_chrome_background));
+        p.setPen(themes::color(themes::Role::song_view_separator));
+        p.drawLine(0, 0, width(), 0);
+        p.drawLine(kGutterW - 1, 0, kGutterW - 1, height());
+
+        const int textInset = lyt::space(Space::Two);
+        p.setFont(font());
+        p.setPen(themes::color(themes::Role::song_view_primary_text));
+        p.drawText(QRect(textInset, 0, kHeaderW - 2 * textInset, height()), Qt::AlignVCenter,
+                   SongView::tr("Velocity"));
+        if (!m_sv->timeline())
+            return;
+
+        const std::vector<uint8_t> active = selectedVelocities();
+        const VelocityAxis axis(axisGeometry(), active.data(), active.size());
+        // Test mirrors of the ruler being painted, like the lanes' own
+        // hoverNodeTick: the checks read node placement off the same axis.
+        setProperty("velocityAxisTop", axis.top());
+        setProperty("velocityAxisBottom", axis.bottom());
+        setProperty("velocityTickCount", int(axis.tickCount()));
+        setProperty("velocityMarkerCount", int(axis.markerCount()));
+        VelocityAxisPaintStyle style;
+        style.labelColor = themes::color(themes::Role::song_view_secondary_text);
+        style.accentColor = themes::color(themes::Role::song_view_selection_edge);
+        style.labelFont = typography::caption(font());
+        style.emphasizedFont = typography::bold(style.labelFont);
+        style.separatorX = kGutterW - 1;
+        style.labelLeft = kHeaderW + textInset;
+        style.labelWidth = std::max(0, kKeyboardW - 2 * textInset);
+        style.labelHeight = QFontMetrics(style.labelFont).height();
+        style.tickWidth = lyt::singlePixel();
+        style.markerWidth = 1.5;
+        style.minorTickLength = lyt::space(Space::One);
+        style.majorTickLength = lyt::space(Space::Two);
+        style.markerTickLength = lyt::space(Space::Two);
+        axis.paintRuler(p, style);
+
+        const QRect plot(kGutterW, 0, width() - kGutterW, height());
+        p.save();
+        p.setClipRect(plot, Qt::IntersectClip);
+        drawPreRoll(p, m_sv, plot, kGutterW,
+                    themes::color(themes::Role::song_view_piano_roll_background));
+        drawGrid(p, m_sv, plot, kGutterW);
+        paintNodes(p, plot, axis, dpr);
+        drawOverlays(p, m_sv, plot, kGutterW,
+                     m_sv->timeSelectionCoversTrack(m_sv->selectedTrack()));
+        p.restore();
+    }
+
+    void wheelEvent(QWheelEvent *event) override
+    {
+        // The roll's bindings: plain wheel over the plot zooms the timeline
+        // at the cursor, Shift (or a trackpad's horizontal delta) scrolls.
+        // The lane has no vertical zoom, so the ruler column swallows
+        // nothing and simply passes the wheel on.
+        const QPoint delta = wheelDelta(event);
+        const int d = delta.y() ? delta.y() : delta.x();
+        if (event->modifiers() & Qt::ShiftModifier) {
+            m_sv->scrollByPx(-d);
+        } else if (delta.x() && !delta.y()) {
+            m_sv->scrollByPx(-delta.x());
+        } else if (event->position().x() < kGutterW) {
+            event->ignore();
+            return;
+        } else {
+            const double zoomDelta = wheelAngleUnits(event);
+            if (zoomDelta != 0.0)
+                m_sv->zoomAroundContentX(std::pow(1.0015, zoomDelta),
+                                         event->position().x() - kGutterW);
+        }
+        event->accept();
+    }
+
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        if (event->button() != Qt::MiddleButton) {
+            // Nothing else edits here yet; leave the press to the parent
+            // rather than swallowing it.
+            event->ignore();
+            return;
+        }
+        // Reaper-style pan, tracked in global coordinates like the lanes'.
+        m_panning = true;
+        m_panPos = event->globalPosition();
+        setCursor(Qt::ClosedHandCursor);
+        event->accept();
+    }
+
+    void mouseMoveEvent(QMouseEvent *event) override
+    {
+        if (!m_panning) {
+            event->ignore();
+            return;
+        }
+        const QPointF d = event->globalPosition() - m_panPos;
+        m_panPos = event->globalPosition();
+        m_sv->scrollByPx(-d.x());
+        event->accept();
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        if (event->button() != Qt::MiddleButton || !m_panning) {
+            event->ignore();
+            return;
+        }
+        m_panning = false;
+        unsetCursor();
+        event->accept();
+    }
+
+    void keyPressEvent(QKeyEvent *event) override
+    {
+        // Shared roll/lanes shortcuts (the V toggle included) reach the
+        // focused surface first, exactly like the lanes area.
+        if (!m_sv->handleEditKey(event))
+            QWidget::keyPressEvent(event);
+    }
+
+    void keyReleaseEvent(QKeyEvent *event) override
+    {
+        if (!m_sv->handleEditKeyRelease(event))
+            QWidget::keyReleaseEvent(event);
+    }
+
+  private:
+    VelocityAxisGeometry axisGeometry() const
+    {
+        VelocityAxisGeometry geometry;
+        geometry.height = height();
+        // Half a node plus its ring, so the 1 and 127 nodes still paint
+        // whole inside the lane.
+        geometry.verticalInset = std::ceil(kVelSelRingRadius) + lyt::singlePixel();
+        geometry.labelHeight = QFontMetrics(typography::caption(font())).height();
+        geometry.densityD1 = lyt::fontPx(kVelDensityD1);
+        geometry.densityD2 = lyt::fontPx(kVelDensityD2);
+        geometry.densityD3 = lyt::fontPx(kVelDensityD3);
+        geometry.densityD4 = lyt::fontPx(kVelDensityD4);
+        return geometry;
+    }
+
+    // The velocities the ruler's markers describe: the selected notes', or
+    // nothing while the selection is empty.
+    std::vector<uint8_t> selectedVelocities() const
+    {
+        std::vector<uint8_t> values;
+        for (const ViewNote &note : m_sv->model().notes) {
+            if (note.track == m_sv->selectedTrack() && m_sv->isSelected(note))
+                values.push_back(note.velocity);
+        }
+        return values;
+    }
+
+    void paintNodes(QPainter &p, const QRect &plot, const VelocityAxis &axis, qreal dpr)
+    {
+        const int track = m_sv->selectedTrack();
+        std::vector<const ViewNote *> visible;
+        int selectedCount = 0;
+        for (const ViewNote &note : m_sv->model().notes) {
+            if (note.track != track)
+                continue;
+            const qreal x = m_sv->displayX(double(note.startTick), kGutterW, dpr);
+            const qreal end = m_sv->displayX(double(note.endTick), kGutterW, dpr);
+            if (end < plot.left() - kVelSelRingRadius || x > plot.right() + kVelSelRingRadius)
+                continue;
+            visible.push_back(&note);
+            if (m_sv->isSelected(note))
+                selectedCount++;
+        }
+        // A single selected node is a cursor, not a set: the others only
+        // recede once the selection is something a bulk edit would act on.
+        const bool dimUnselected = selectedCount > 1;
+        const QColor trackColor = SongView::trackColor(track);
+        const QColor stemColor = mixTowardOklab(trackColor, Qt::black, 1.0 / 3.0);
+        const QColor selectedColor = palette().highlight().color();
+        const QColor nodeColor = dimUnselected ? palette().mid().color() : trackColor;
+        const qreal physicalPixel = logicalPhysicalPixel(dpr);
+
+        // Stems first, so a node always sits on top of its neighbor's line.
+        for (int pass = 0; pass < 2; pass++) {
+            const bool selectedPass = pass == 1;
+            p.setPen(QPen(selectedPass ? selectedColor : stemColor,
+                          (selectedPass ? kVelSelStemWidth : kVelStemWidth) * physicalPixel,
+                          Qt::SolidLine, Qt::FlatCap));
+            for (const ViewNote *note : visible) {
+                if (m_sv->isSelected(*note) != selectedPass)
+                    continue;
+                const qreal y = axis.velocityToY(note->velocity);
+                const qreal x = m_sv->displayX(double(note->startTick), kGutterW, dpr);
+                const qreal end = std::max(x + physicalPixel,
+                                           m_sv->displayX(double(note->endTick), kGutterW, dpr));
+                p.drawLine(QPointF(x, y), QPointF(end, y));
+            }
+        }
+        p.setRenderHint(QPainter::Antialiasing, true);
+        for (int pass = 0; pass < 2; pass++) {
+            const bool selectedPass = pass == 1;
+            for (const ViewNote *note : visible) {
+                if (m_sv->isSelected(*note) != selectedPass)
+                    continue;
+                const QPointF center(m_sv->displayX(double(note->startTick), kGutterW, dpr),
+                                     axis.velocityToY(note->velocity));
+                if (selectedPass) {
+                    p.setPen(QPen(selectedColor, kVelSelRingWidth * physicalPixel));
+                    p.setBrush(Qt::NoBrush);
+                    p.drawEllipse(center, kVelSelRingRadius, kVelSelRingRadius);
+                }
+                p.setPen(dimUnselected && !selectedPass
+                             ? QPen(Qt::NoPen)
+                             : QPen(themes::color(themes::Role::song_view_grid),
+                                    kVelNodeOutline * physicalPixel));
+                p.setBrush(selectedPass ? trackColor : nodeColor);
+                p.drawEllipse(center, kVelNodeRadius, kVelNodeRadius);
+            }
+        }
+        p.setRenderHint(QPainter::Antialiasing, false);
+        p.setBrush(Qt::NoBrush);
+    }
+
+    SongView *m_sv;
+    bool m_panning = false;
+    QPointF m_panPos;
+};
+
 // ---------------------------------------------------------------- OtherStrip
 
 class OtherStrip : public TimelineSurface
@@ -6207,6 +6488,13 @@ SongView::SongView(QWidget *parent) : QWidget(parent)
     mid->addWidget(m_rollStack, 1);
     m_splitter->addWidget(rollPane);
 
+    // The velocity lane sits directly under the roll — it addresses the same
+    // notes — and above the automation lanes, which keep their own pane.
+    // Hidden until the View toggle asks for it.
+    m_velocityLane = new VelocityLane(this);
+    m_velocityLane->hide();
+    m_splitter->addWidget(m_velocityLane);
+
     m_lanesScroll = new QScrollArea(this);
     m_lanesScroll->setMinimumHeight(kLaneH + kAddLaneH);
     m_lanesScroll->setFrameShape(QFrame::NoFrame);
@@ -6218,6 +6506,7 @@ SongView::SongView(QWidget *parent) : QWidget(parent)
     m_splitter->addWidget(m_lanesScroll);
     m_splitter->setStretchFactor(0, 1);
     m_splitter->setStretchFactor(1, 0);
+    m_splitter->setStretchFactor(2, 0);
     vbox->addWidget(m_splitter, 1);
 
     m_strip = new OtherStrip(this);
@@ -6226,6 +6515,7 @@ SongView::SongView(QWidget *parent) : QWidget(parent)
     themes::registerGridLineRefreshTarget(surfaces.ruler.widget);
     themes::registerGridLineRefreshTarget(surfaces.roll.widget);
     themes::registerGridLineRefreshTarget(surfaces.lanes.widget);
+    themes::registerGridLineRefreshTarget(*m_velocityLane);
     m_playheadOverlay = new PlayheadOverlay(this, surfaces);
 
     m_hbar = new QScrollBar(Qt::Horizontal, this);
@@ -6373,6 +6663,31 @@ void SongView::setEventListVisible(bool visible)
     emit eventListVisibilityChanged(visible);
 }
 
+bool SongView::velocityLaneVisible() const
+{
+    return m_velocityLane && !m_velocityLane->isHidden();
+}
+
+void SongView::setVelocityLaneVisible(bool visible)
+{
+    if (!m_velocityLane || velocityLaneVisible() == visible)
+        return;
+    m_velocityLane->setVisible(visible);
+    if (visible) {
+        // The splitter hands a freshly shown pane only its minimum (and a
+        // sidecar that predates the lane restores it at zero), so open it at
+        // the default height, borrowed from the roll pane above it.
+        QList<int> sizes = m_splitter->sizes();
+        const int borrow = kVelLaneH - sizes[1];
+        if (borrow > 0 && sizes[0] - borrow >= kVelLaneMinH) {
+            sizes[0] -= borrow;
+            sizes[1] += borrow;
+            m_splitter->setSizes(sizes);
+        }
+    }
+    emit velocityLaneVisibilityChanged(visible);
+}
+
 void SongView::focusContent()
 {
     if (eventListVisible())
@@ -6482,11 +6797,17 @@ void SongView::applyViewState(const ViewState &state)
     if (state.selectedTrack >= 0 && state.selectedTrack < 16 &&
         m_timeline->tracks[state.selectedTrack].used)
         selectTrack(state.selectedTrack);
-    if (state.splitterSizes.size() == 2 && state.splitterSizes[0] > 0 &&
-        state.splitterSizes[1] > 0) {
+    // Sidecars written before the velocity lane hold two sizes (roll, lanes);
+    // the lane's pane opens at zero there and setVelocityLaneVisible borrows
+    // its height when the user asks for it.
+    QList<int> splitterSizes = state.splitterSizes;
+    if (splitterSizes.size() == 2)
+        splitterSizes = {splitterSizes[0], 0, splitterSizes[1]};
+    if (splitterSizes.size() == m_splitter->count() && splitterSizes.first() > 0 &&
+        splitterSizes.last() > 0) {
         // Real sizes exist; skip resizeEvent's default split.
         m_splitInit = true;
-        m_splitter->setSizes(state.splitterSizes);
+        m_splitter->setSizes(splitterSizes);
     }
     m_lanes->rebuildRows();
     updateScrollbars();
@@ -6661,6 +6982,7 @@ void SongView::setSelection(std::vector<NoteKey> ids)
     if (!m_selection.empty() && m_timeSel.active())
         clearTimeSelection();
     m_roll->invalidateContent();
+    m_velocityLane->invalidateContent();
 }
 
 void SongView::clearSelection()
@@ -6668,6 +6990,7 @@ void SongView::clearSelection()
     if (!m_selection.empty()) {
         m_selection.clear();
         m_roll->invalidateContent();
+        m_velocityLane->invalidateContent();
     }
 }
 
@@ -7095,6 +7418,13 @@ bool SongView::handleEditKey(QKeyEvent *event)
         event->accept();
         return true;
     }
+    if (keys.matches(event, QStringLiteral("view.velocity_lane"))) {
+        // A held key auto-repeats; only the real press flips the pane.
+        if (!event->isAutoRepeat())
+            setVelocityLaneVisible(!velocityLaneVisible());
+        event->accept();
+        return true;
+    }
     if (keys.matches(event, QStringLiteral("automation.pencil_mode"))) {
         // A held key auto-repeats; only the real press flips the mode. The
         // press state sticks around for handleEditKeyRelease, which decides
@@ -7238,7 +7568,8 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
 bool SongView::userGestureActive() const
 {
     return (m_ruler && m_ruler->gestureActive()) || (m_roll && m_roll->gestureActive()) ||
-           (m_lanes && m_lanes->gestureActive());
+           (m_lanes && m_lanes->gestureActive()) ||
+           (m_velocityLane && m_velocityLane->gestureActive());
 }
 
 void SongView::syncPlayheadOverlay()
@@ -7977,6 +8308,7 @@ void SongView::refreshTimelineViews()
     m_ruler->update();
     m_roll->invalidateContent();
     m_lanes->invalidateContent();
+    m_velocityLane->invalidateContent();
     m_strip->invalidateContent();
     syncPlayheadOverlay();
 }
@@ -7988,7 +8320,9 @@ void SongView::resizeEvent(QResizeEvent *event)
     // sizes can only be applied once real geometry exists.
     if (!m_splitInit && m_splitter->height() > 0) {
         m_splitInit = true;
-        m_splitter->setSizes({std::max(120, m_splitter->height() - kLanesAreaH), kLanesAreaH});
+        const int velocityH = velocityLaneVisible() ? kVelLaneH : 0;
+        m_splitter->setSizes({std::max(120, m_splitter->height() - kLanesAreaH - velocityH),
+                              velocityH, kLanesAreaH});
     }
     updateScrollbars();
     syncPlayheadOverlay();

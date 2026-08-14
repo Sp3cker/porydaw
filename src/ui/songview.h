@@ -34,6 +34,7 @@ namespace songview {
 class TimeRuler;
 class PianoRoll;
 class AutomationArea;
+class VelocityLane;
 class OtherStrip;
 class PlayheadOverlay;
 class TrackHeaderPanel;
@@ -162,6 +163,13 @@ class SongView : public QWidget
     // menu's "Value range" choice, exposed for the harnesses. View state
     // only — lane values themselves are untouched.
     void setLaneDisplayRange(int track, uint8_t cc, int maxValue);
+
+    // Velocity lane: a hidden-by-default pane between the roll and the
+    // automation lanes showing the selected track's note velocities. App-wide
+    // preference (View menu / view.velocity_lane, default V), like Follow
+    // Playhead; the pane's height is per-song view state (the splitter's).
+    bool velocityLaneVisible() const;
+    void setVelocityLaneVisible(bool visible);
 
     // Raw MIDI event list: an alternative to the piano roll in the same
     // screen space (the ruler, headers, and automation lanes stay). Per-song
@@ -541,6 +549,9 @@ class SongView : public QWidget
     // Roll/event-list swap (user toggle or applyViewState); the main window
     // mirrors it into the View-menu checkbox.
     void eventListVisibilityChanged(bool visible);
+    // Velocity-lane toggle from the keyboard; the main window mirrors it into
+    // the View-menu checkbox, which owns the persisted preference.
+    void velocityLaneVisibilityChanged(bool visible);
     // Jump-from-context voice navigation: the main window raises the
     // voicegroup dock and selects this slot.
     void revealVoiceRequested(int program);
@@ -605,6 +616,7 @@ class SongView : public QWidget
     EventListView *m_events = nullptr;
     songview::AutomationArea *m_lanes = nullptr;
     QScrollArea *m_lanesScroll = nullptr;
+    songview::VelocityLane *m_velocityLane = nullptr;
     // Momentary pencil-key hold: press state kept until the matching
     // release decides sticky tap vs momentary hold (see handleEditKey /
     // handleEditKeyRelease).

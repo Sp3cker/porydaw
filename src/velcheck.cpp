@@ -1,9 +1,28 @@
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <optional>
+#include <vector>
 
+#include <QApplication>
+#include <QColor>
+#include <QImage>
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QPixmap>
+#include <QSettings>
+#include <QSplitter>
+#include <QTemporaryDir>
+#include <QWheelEvent>
+
+#include "core/songdocument.h"
 #include "core/velocitymodel.h"
+#include "project/decompproject.h"
+#include "ui/songview.h"
+#include "ui/songviewmodel.h"
+#include "ui/theme/color_math.h"
 
 // --velmodelcheck: PSG velocity model check (self-contained, no project
 // needed). VelocityMap is the engine-behavior half of the velocity lane: it
@@ -211,5 +230,341 @@ int runVelocityModelCheck()
         return 1;
     }
     std::printf("velmodelcheck: PASS (velocity model)\n");
+    return 0;
+}
+
+// --velcheck <projectRoot> <song> [shot.png]: velocity-lane check. Drives the lane
+// widget offscreen: the pane is hidden until the view.velocity_lane command
+// (V, dispatched from the focused roll like M/S/B) opens it, the selected
+// track's notes paint as nodes at (start tick, velocity) with a stem across
+// their duration, the roll's selection rings its nodes and marks their
+// velocities on the ruler, the ruler graduates more finely as the pane
+// grows, and the lane pans and zooms the shared timeline camera (with the
+// ruler column passing the wheel through instead of zooming).
+
+namespace {
+
+void sendLaneMouse(QWidget *widget, QEvent::Type type, QPointF position, Qt::MouseButton button,
+                   Qt::MouseButtons buttons)
+{
+    QMouseEvent event(type, position, QPointF(widget->mapToGlobal(position.toPoint())), button,
+                      buttons, Qt::NoModifier);
+    QCoreApplication::sendEvent(widget, &event);
+}
+
+void sendLaneKey(QWidget *widget, int key)
+{
+    QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier);
+    QCoreApplication::sendEvent(widget, &press);
+    QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier);
+    QCoreApplication::sendEvent(widget, &release);
+}
+
+void sendLaneWheel(QWidget *widget, QPointF position, int angleDeltaY,
+                   Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+{
+    QWheelEvent event(position, widget->mapToGlobal(position), QPoint(), QPoint(0, angleDeltaY),
+                      Qt::NoButton, modifiers, Qt::NoScrollPhase, false);
+    QCoreApplication::sendEvent(widget, &event);
+}
+
+// The stem's ink: the track color a third of the way to black in OKLab,
+// stated here independently of the paint path's own helper.
+QColor stemInk(const QColor &trackColor)
+{
+    const themes::Oklab from = themes::oklabFromColor(trackColor);
+    const themes::Oklab to = themes::oklabFromColor(QColor(Qt::black));
+    return themes::colorFromOklab({from.lightness + (to.lightness - from.lightness) / 3.0,
+                                   from.a + (to.a - from.a) / 3.0, from.b + (to.b - from.b) / 3.0});
+}
+
+// Whether any pixel within radius of center is within tolerance of expected.
+bool hasColorNear(const QImage &image, QPointF center, int radius, const QColor &expected,
+                  int tolerance)
+{
+    const int left = std::max(0, int(std::floor(center.x())) - radius);
+    const int right = std::min(image.width() - 1, int(std::ceil(center.x())) + radius);
+    const int top = std::max(0, int(std::floor(center.y())) - radius);
+    const int bottom = std::min(image.height() - 1, int(std::ceil(center.y())) + radius);
+    for (int y = top; y <= bottom; y++) {
+        for (int x = left; x <= right; x++) {
+            const QColor actual = image.pixelColor(x, y);
+            if (std::abs(actual.red() - expected.red()) <= tolerance &&
+                std::abs(actual.green() - expected.green()) <= tolerance &&
+                std::abs(actual.blue() - expected.blue()) <= tolerance) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// The lane's ruler mapping, stated independently of VelocityAxis: velocity 1
+// sits on the bottom inset, 127 on the top one, linear in between.
+double laneVelocityY(const QWidget *lane, int velocity)
+{
+    const double top = lane->property("velocityAxisTop").toDouble();
+    const double bottom = lane->property("velocityAxisBottom").toDouble();
+    return bottom - double(std::clamp(velocity, 1, 127) - 1) * (bottom - top) / 126.0;
+}
+
+} // namespace
+
+int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
+                         const QString &screenshotPath)
+{
+    // The lane's V toggle goes through keymap::Registry, so redirect QSettings
+    // into a temp dir first: a user's rebind must not reach these assertions.
+    QTemporaryDir settingsDir;
+    if (settingsDir.isValid()) {
+        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+    }
+
+    DecompProject project;
+    QString error;
+    if (!project.open(projectRoot, &error)) {
+        std::fprintf(stderr, "velcheck: %s\n", qUtf8Printable(error));
+        return 1;
+    }
+    const SongInfo *info = nullptr;
+    for (const SongInfo &song : project.songs()) {
+        if (song.label == songLabel && song.isPlayable())
+            info = &song;
+    }
+    if (!info) {
+        std::fprintf(stderr, "velcheck: no playable song %s\n", qUtf8Printable(songLabel));
+        return 1;
+    }
+    SongDocument doc;
+    if (!doc.load(*info, &error)) {
+        std::fprintf(stderr, "velcheck: %s\n", qUtf8Printable(error));
+        return 1;
+    }
+    auto timeline = doc.buildTimeline(48000.0);
+    SongView view;
+    view.resize(1280, 800);
+    view.setSong(timeline.get(), nullptr);
+    view.setDocument(&doc);
+    view.setGridMinDenom(4); // a comfortable 32px grid, as in rollcheck
+    (void)view.grab();       // force layout so child geometry is real
+
+    int failures = 0;
+    const auto fail = [&](const char *what) {
+        std::fprintf(stderr, "velcheck: FAIL %s: %s\n", qUtf8Printable(songLabel), what);
+        failures++;
+    };
+    const auto check = [&](bool condition, const char *what) {
+        if (!condition)
+            fail(what);
+    };
+
+    auto *roll = view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
+    auto *lane = view.findChild<QWidget *>(QStringLiteral("velocityLane"));
+    if (!roll || !lane) {
+        fail("piano roll or velocity lane not found");
+        return 1;
+    }
+
+    // --- the pane and its toggle
+    int visibilitySignals = 0;
+    bool lastVisibility = false;
+    QObject::connect(&view, &SongView::velocityLaneVisibilityChanged, &view, [&](bool on) {
+        visibilitySignals++;
+        lastVisibility = on;
+    });
+    // The harness never shows the window, so isHidden() — the explicit hide
+    // flag — is the honest question here, not isVisible().
+    check(!view.velocityLaneVisible() && lane->isHidden(), "the velocity lane must start hidden");
+    sendLaneKey(roll, Qt::Key_V);
+    (void)view.grab();
+    check(view.velocityLaneVisible() && !lane->isHidden() && visibilitySignals == 1 &&
+              lastVisibility,
+          "V from the roll must open the lane and report it");
+    check(lane->height() > lane->minimumHeight() && lane->width() > songview::kGutterW,
+          "the opened lane must borrow a working height, not just its minimum");
+    sendLaneKey(roll, Qt::Key_V);
+    (void)view.grab();
+    check(!view.velocityLaneVisible() && visibilitySignals == 2 && !lastVisibility,
+          "V again must close the lane");
+    sendLaneKey(lane, Qt::Key_V);
+    (void)view.grab();
+    check(view.velocityLaneVisible() && visibilitySignals == 3,
+          "the lane's own focus must reach the same toggle");
+
+    // --- node and stem placement
+    const int track = view.selectedTrack();
+    const qreal dpr = lane->devicePixelRatioF();
+    // A note whose node stands alone: far enough into the plot to be clear of
+    // the ruler column, away from the overlays' verticals, and with no other
+    // node of the track within a ring's reach.
+    // The overlays paint verticals over the nodes (edit cursor, loop markers,
+    // playhead), and their ink is close enough to the selection color to fool
+    // a pixel probe; keep the probed node clear of all of them.
+    const auto overlayContested = [&](qreal x) {
+        const qreal cursorX = view.displayX(double(view.editCursorTick()), songview::kGutterW, dpr);
+        if (std::abs(x - cursorX) < 16)
+            return true;
+        if (std::abs(x - view.displayX(view.playheadTick(), songview::kGutterW, dpr)) < 16)
+            return true;
+        for (const uint64_t loopTick : {timeline->loopStartTick, timeline->loopEndTick}) {
+            if (loopTick == UINT64_MAX)
+                continue;
+            if (std::abs(x - view.displayX(double(loopTick), songview::kGutterW, dpr)) < 52)
+                return true;
+        }
+        return false;
+    };
+    const ViewNote *probe = nullptr;
+    for (const ViewNote &note : view.model().notes) {
+        if (note.track != track || note.velocity < 8 || note.velocity > 120)
+            continue;
+        const qreal x = view.displayX(double(note.startTick), songview::kGutterW, dpr);
+        if (x < songview::kGutterW + 60 || x > lane->width() - 60 || overlayContested(x))
+            continue;
+        bool crowded = false;
+        for (const ViewNote &other : view.model().notes) {
+            if (&other == &note || other.track != track)
+                continue;
+            const qreal otherX = view.displayX(double(other.startTick), songview::kGutterW, dpr);
+            if (std::abs(otherX - x) < 16)
+                crowded = true;
+        }
+        if (!crowded)
+            probe = &note;
+        if (probe)
+            break;
+    }
+    if (!probe) {
+        fail("no isolated note to probe in the visible span");
+        return failures == 0 ? 0 : 1;
+    }
+    const QPixmap lanePixmap = lane->grab();
+    const QImage laneImage = lanePixmap.toImage();
+    const qreal rasterDpr = lanePixmap.devicePixelRatio();
+    const QColor trackColor = SongView::trackColor(track);
+    const QPointF nodeCenter(view.displayX(double(probe->startTick), songview::kGutterW, dpr) *
+                                 rasterDpr,
+                             laneVelocityY(lane, probe->velocity) * rasterDpr);
+    check(hasColorNear(laneImage, nodeCenter, int(std::ceil(2 * rasterDpr)), trackColor, 24),
+          "a node must paint in the track color at its tick and velocity");
+    // The same x at another velocity's row carries no node: placement is the
+    // velocity's, not just "somewhere in the lane".
+    const int otherVelocity = probe->velocity > 64 ? probe->velocity - 40 : probe->velocity + 40;
+    const QPointF elsewhere(nodeCenter.x(), laneVelocityY(lane, otherVelocity) * rasterDpr);
+    check(!hasColorNear(laneImage, elsewhere, int(std::ceil(2 * rasterDpr)), trackColor, 24),
+          "no node may paint at a velocity the note does not have");
+    // The stem spans the note's duration at the node's height.
+    const qreal stemEndX =
+        view.displayX(double(probe->endTick), songview::kGutterW, dpr) * rasterDpr;
+    if (stemEndX - nodeCenter.x() > 8 * rasterDpr) {
+        const QPointF stemMid((nodeCenter.x() + stemEndX) / 2.0, nodeCenter.y());
+        const QColor stemColor = stemInk(trackColor);
+        check(hasColorNear(laneImage, stemMid, int(std::ceil(2 * rasterDpr)), stemColor, 28),
+              "a stem must run from the node across the note's duration");
+    }
+
+    // --- the roll's selection rings its nodes and marks the ruler
+    check(lane->property("velocityMarkerCount").toInt() == 0,
+          "an empty selection must leave the ruler unmarked");
+    view.setSelection({{probe->startTick, probe->key}});
+    (void)view.grab();
+    const QImage selectedImage = lane->grab().toImage();
+    const QColor ringColor = lane->palette().highlight().color();
+    // Probe above the node, not across it: a selected note's stem carries the
+    // same color through the center, so only the ring can put it up here.
+    const QPointF ringTop(nodeCenter.x(), nodeCenter.y() - 5.0 * rasterDpr);
+    const int ringProbe = int(std::ceil(2 * rasterDpr));
+    check(!hasColorNear(laneImage, ringTop, ringProbe, ringColor, 24) &&
+              hasColorNear(selectedImage, ringTop, ringProbe, ringColor, 24),
+          "a selected note's node must gain a ring in the selection color");
+    check(lane->property("velocityMarkerCount").toInt() == 1,
+          "one selected velocity must mark the ruler once");
+    const ViewNote *second = nullptr;
+    for (const ViewNote &note : view.model().notes) {
+        if (note.track == track && note.velocity != probe->velocity)
+            second = &note;
+        if (second)
+            break;
+    }
+    if (second) {
+        view.setSelection({{probe->startTick, probe->key}, {second->startTick, second->key}});
+        (void)view.grab();
+        check(lane->property("velocityMarkerCount").toInt() == 2,
+              "two selected velocities must mark the ruler's extremes");
+    }
+    view.clearSelection();
+    (void)view.grab();
+
+    // --- ruler density follows the pane's height
+    const int shortTicks = lane->property("velocityTickCount").toInt();
+    const int shortHeight = lane->height();
+    auto *splitter = view.findChild<QSplitter *>();
+    if (!splitter) {
+        fail("the roll/lanes splitter is missing");
+        return failures == 0 ? 0 : 1;
+    }
+    QList<int> sizes = splitter->sizes();
+    sizes[0] -= 220;
+    sizes[1] += 220;
+    splitter->setSizes(sizes);
+    (void)view.grab();
+    check(lane->height() > shortHeight && lane->property("velocityTickCount").toInt() > shortTicks,
+          "a taller lane must graduate its ruler more finely");
+
+    // --- camera: the plot zooms at the cursor, the ruler column does not
+    const double beforeZoom = view.pxPerBeat();
+    const QPointF overRuler(songview::kGutterW / 2.0, lane->height() / 2.0);
+    sendLaneWheel(lane, overRuler, 120);
+    check(view.pxPerBeat() == beforeZoom, "the wheel over the ruler column must not zoom");
+    const QPointF overPlot(songview::kGutterW + 200.0, lane->height() / 2.0);
+    const double anchoredTick = view.tickAtContentX(overPlot.x() - songview::kGutterW);
+    sendLaneWheel(lane, overPlot, 120);
+    check(view.pxPerBeat() > beforeZoom, "the wheel over the plot must zoom the timeline in");
+    check(std::abs(view.tickAtContentX(overPlot.x() - songview::kGutterW) - anchoredTick) < 0.5,
+          "zooming must keep the tick under the cursor in place");
+    const double beforeScroll = view.tickAtContentX(0);
+    const double zoomedPxPerBeat = view.pxPerBeat();
+    sendLaneWheel(lane, overPlot, 120, Qt::ShiftModifier);
+    check(view.pxPerBeat() == zoomedPxPerBeat && view.tickAtContentX(0) != beforeScroll,
+          "Shift+wheel must scroll instead of zoom");
+
+    // --- middle-button pan
+    const double beforePan = view.tickAtContentX(0);
+    sendLaneMouse(lane, QEvent::MouseButtonPress, overPlot, Qt::MiddleButton, Qt::MiddleButton);
+    sendLaneMouse(lane, QEvent::MouseMove, overPlot - QPointF(40.0, 0.0), Qt::NoButton,
+                  Qt::MiddleButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, overPlot - QPointF(40.0, 0.0), Qt::MiddleButton,
+                  Qt::NoButton);
+    check(view.tickAtContentX(0) > beforePan, "a middle drag must pan the timeline");
+
+    // --- the pane's height is per-song view state, and pre-lane sidecars load
+    SongView::ViewState state = view.viewState();
+    check(state.splitterSizes.size() == 3 && state.splitterSizes[1] == lane->height(),
+          "view state must carry the lane's own pane size");
+    SongView::ViewState legacy = state;
+    legacy.splitterSizes = {400, 150};
+    view.setVelocityLaneVisible(false); // as an old sidecar's song would open
+    view.applyViewState(legacy);
+    (void)view.grab();
+    const QList<int> restored = splitter->sizes();
+    // The lanes pane keeps the size the sidecar saved; the roll pane, the
+    // stretchy one, absorbs the splitter's remaining height.
+    check(restored.size() == 3 && restored[1] == 0 && restored[2] == 150 && restored[0] > 0,
+          "a sidecar written before the lane must still restore its two panes");
+
+    if (!screenshotPath.isEmpty()) {
+        view.setVelocityLaneVisible(true);
+        (void)view.grab();
+        if (!view.grab().save(screenshotPath))
+            fail("could not write the screenshot");
+    }
+
+    if (failures != 0) {
+        std::fprintf(stderr, "velcheck: %d failure(s)\n", failures);
+        return 1;
+    }
+    std::printf("velcheck: PASS (velocity lane)\n");
     return 0;
 }

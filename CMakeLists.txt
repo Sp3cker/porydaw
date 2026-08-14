@@ -150,6 +150,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songviewmodel.h
     src/ui/timelinesurface.cpp
     src/ui/timelinesurface.h
+    src/ui/velocityaxis.cpp
+    src/ui/velocityaxis.h
     src/ui/contextmenu.cpp
     src/ui/contextmenu.h
     src/ui/songview.cpp

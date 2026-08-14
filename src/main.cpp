@@ -85,6 +85,10 @@ int runKeymapCheck();
 // velcheck.cpp; PSG velocity model check: voice classification and the CGB
 // channels' loudness detents (self-contained, no project needed).
 int runVelocityModelCheck();
+// velcheck.cpp; velocity-lane check (offscreen UI driving); the scratch
+// project is read only, so a copy is not strictly required.
+int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
+                         const QString &screenshotPath = QString());
 // eventviewcheck.cpp; raw MIDI event list check (model API + offscreen UI);
 // the optional song label + path save that song's rendered event list.
 int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong = QString(),
@@ -186,6 +190,11 @@ int main(int argc, char *argv[])
         return runKeymapCheck();
     if (args.contains(QStringLiteral("--velmodelcheck")))
         return runVelocityModelCheck();
+    const int velCheck = args.indexOf(QStringLiteral("--velcheck"));
+    if (velCheck >= 0 && velCheck + 2 < args.size()) {
+        const QString shot = velCheck + 3 < args.size() ? args[velCheck + 3] : QString();
+        return runVelocityLaneCheck(args[velCheck + 1], args[velCheck + 2], shot);
+    }
     const int editCheck = args.indexOf(QStringLiteral("--editcheck"));
     if (editCheck >= 0 && editCheck + 1 < args.size())
         return runEditCheck(args[editCheck + 1]);

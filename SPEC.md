@@ -355,6 +355,22 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   Inside a covering time selection a fresh right-click keeps opening the range
   menu, a voice-row right release still deletes the marker directly, and empty
   lane space still clears the selection.
+- **Between them — Velocity lane** (View → Velocity Lane, or `view.velocity_lane`,
+  default **V**, dispatched from the roll/lanes focus like M/S/B): a hidden-by-default
+  pane in the same splitter, above the automation lanes, showing the selected track's
+  notes on the shared timeline. Each note is a node — a filled circle at (start tick,
+  velocity) with a stem across its duration, in the track identity color, the stems a
+  third of the way to black. The value ruler covers the whole editable domain 1–127
+  and there is no vertical zoom: the pane's height only sets how densely the ruler is
+  graduated (five density bands), and dragging the splitter resizes it. The lane
+  mirrors the roll's note selection — selected nodes gain a ring and their extreme
+  velocities are marked on the ruler; with more than one selected, the rest dim toward
+  the palette mid color — and shares the timeline camera: middle-drag pans, the plain
+  wheel zooms time at the cursor, Shift (or a horizontal wheel) scrolls, and the wheel
+  over the ruler column is left alone. Visibility is an app-wide preference (QSettings,
+  like Follow Playhead); the pane's height is per-song sidecar state (§4.4). Editing
+  gestures — the multi-note drag, painting, ramps, marquee selection, and the PSG
+  detents (`core/velocitymodel.h`) — are not implemented yet.
 - **Transport bar:** play/pause/stop, loop toggle, a follow-playhead toggle (also in
   the View menu; off, playback stops scrolling the roll and event list — the camera
   stays where the user put it; app-wide, persisted), position, tempo display, master

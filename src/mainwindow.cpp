@@ -87,6 +87,7 @@ const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
 const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
 const QString kNoteNamesKey = QStringLiteral("noteNames");
+const QString kVelocityLaneKey = QStringLiteral("velocityLane");
 const QString kSystemFontKey = QStringLiteral("systemFont");
 const QString kFollowPlayheadKey = QStringLiteral("followPlayhead");
 
@@ -750,6 +751,26 @@ void MainWindow::buildUi()
         }
     });
 
+    // The velocity lane's pane. The V shortcut lives in the keymap registry
+    // and is dispatched from the focused roll/lanes surface (a bare letter
+    // must not become a window shortcut), so this action carries no key of
+    // its own; toggling either way mirrors into the other.
+    m_velocityLaneAction = viewMenu->addAction(tr("&Velocity Lane"));
+    m_velocityLaneAction->setCheckable(true);
+    m_velocityLaneAction->setObjectName(QStringLiteral("viewVelocityLaneAction"));
+    {
+        QSettings settings;
+        m_velocityLaneAction->setChecked(settings.value(kVelocityLaneKey, false).toBool());
+    }
+    connect(m_velocityLaneAction, &QAction::toggled, this, [this](bool on) {
+        QSettings settings;
+        settings.setValue(kVelocityLaneKey, on);
+        for (int i = 0; i < m_tabs->count(); i++) {
+            if (SongSession *s = sessionForWidget(m_tabs->widget(i)))
+                s->view->setVelocityLaneVisible(on);
+        }
+    });
+
     // The transport bar's follow toggle, findable here too: an app-wide
     // persisted preference like the rest of this group.
     viewMenu->addAction(m_followPlayheadAction);
@@ -909,6 +930,7 @@ SongSession *MainWindow::createSession()
     s->view->setVelocityColorMode(m_velocityColorsAction->isChecked());
     s->view->setNoteNameMode(m_noteNamesAction->isChecked());
     s->view->setFollowPlayhead(m_followPlayheadAction->isChecked());
+    s->view->setVelocityLaneVisible(m_velocityLaneAction->isChecked());
     connect(s->view, &SongView::muteMaskChanged, this, [this, s](uint32_t mask) {
         if (s == m_active)
             m_audio.setMuteMask(mask);
@@ -944,6 +966,10 @@ SongSession *MainWindow::createSession()
         m_vgBrowser->revealSlot(program);
     });
     // A sidecar restore (applyViewState) can flip the view under the menu.
+    // The V shortcut toggles the lane in the focused view; the menu action
+    // owns the persisted preference, so route the change back through it.
+    connect(s->view, &SongView::velocityLaneVisibilityChanged, this,
+            [this](bool on) { m_velocityLaneAction->setChecked(on); });
     connect(s->view, &SongView::eventListVisibilityChanged, this, [this, s](bool on) {
         if (s == m_active) {
             QSignalBlocker blocker(m_eventListAction);
