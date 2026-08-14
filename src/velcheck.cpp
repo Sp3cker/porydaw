@@ -354,6 +354,17 @@ double laneVelocityY(const QWidget *lane, int velocity)
     return bottom - double(std::clamp(velocity, 1, 127) - 1) * (bottom - top) / 126.0;
 }
 
+// Its inverse — the velocity a pointer y asks for, which a gesture writes.
+int laneVelocityAt(const QWidget *lane, double y)
+{
+    const double top = lane->property("velocityAxisTop").toDouble();
+    const double bottom = lane->property("velocityAxisBottom").toDouble();
+    if (bottom <= top)
+        return 1;
+    const double clamped = std::clamp(y, top, bottom);
+    return std::clamp(1 + int(std::lround((bottom - clamped) * 126.0 / (bottom - top))), 1, 127);
+}
+
 } // namespace
 
 // Every printed ruler value must sit on a real graduation: the labels are a
@@ -738,7 +749,8 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     // it stands now: clear of the ruler, the overlays, and any neighbor's
     // node, with room either side of its velocity for a drag that never
     // clamps.
-    const auto isolated = [&](const ViewNote *avoid) -> const ViewNote * {
+    const auto isolated = [&](const ViewNote *avoid, bool farthest) -> const ViewNote * {
+        const ViewNote *found = nullptr;
         for (const ViewNote &note : view.model().notes) {
             if (note.track != track || !note.noteId.isAssigned())
                 continue;
@@ -760,13 +772,18 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
                 if (std::abs(otherX - x) < 16)
                     crowded = true;
             }
-            if (!crowded)
-                return &note;
+            if (!crowded) {
+                found = &note;
+                if (!farthest)
+                    break;
+            }
         }
-        return nullptr;
+        return found;
     };
-    const ViewNote *dragProbe = isolated(nullptr);
-    const ViewNote *partnerProbe = dragProbe ? isolated(dragProbe) : nullptr;
+    // The partner is the farthest such note, so the paint stroke between the
+    // two spans other notes it must not touch.
+    const ViewNote *dragProbe = isolated(nullptr, false);
+    const ViewNote *partnerProbe = dragProbe ? isolated(dragProbe, true) : nullptr;
     if (!dragProbe || !partnerProbe) {
         fail("no pair of drag-safe notes in the visible span");
         return failures == 0 ? 0 : 1;
@@ -784,13 +801,17 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     // exactly this one whatever the pane's height and display scale are. It
     // heads away from the note's own end of the ruler, so nothing clamps.
     const int dragDelta = dragNote.velocity > 64 ? -20 : 20;
+    const QPointF partnerPoint(view.displayX(double(partner.startTick), songview::kGutterW, dpr),
+                               laneVelocityY(lane, partner.velocity));
     const QPointF dragPoint(nodePoint.x(), laneVelocityY(lane, dragNote.velocity + dragDelta));
     const uint64_t revisionBeforeDrag = doc.revision();
-    const int undoBeforeDrag = doc.undoStack()->count();
+    // The undo INDEX, not the stack's size: these probes undo as they go, and
+    // the next commit discards the redo branch instead of growing the stack.
+    const int undoBeforeDrag = doc.undoStack()->index();
     sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton);
     sendLaneMouse(lane, QEvent::MouseMove, dragPoint, Qt::NoButton, Qt::LeftButton);
     const QImage draggingImage = lane->grab().toImage();
-    check(doc.revision() == revisionBeforeDrag && doc.undoStack()->count() == undoBeforeDrag,
+    check(doc.revision() == revisionBeforeDrag && doc.undoStack()->index() == undoBeforeDrag,
           "a velocity drag must leave the document alone until the release");
     // The ring rides the preview: probe above the node, where only the ring
     // can put the selection color.
@@ -802,7 +823,7 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     (void)view.grab();
     const ViewNote *draggedNote = noteAt(dragNote.startTick, dragNote.key);
     const ViewNote *draggedPartner = noteAt(partner.startTick, partner.key);
-    check(doc.revision() != revisionBeforeDrag && doc.undoStack()->count() == undoBeforeDrag + 1 &&
+    check(doc.revision() != revisionBeforeDrag && doc.undoStack()->index() == undoBeforeDrag + 1 &&
               draggedNote && draggedPartner &&
               draggedNote->velocity == dragNote.velocity + dragDelta &&
               draggedPartner->velocity == partner.velocity + dragDelta &&
@@ -858,15 +879,20 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     const double emptyY = emptyRowY(nodePoint.x());
     if (emptyY < 0.0) {
         fail("no empty plot row at the probe's tick");
-    } else {
-        const QPointF emptyPoint(nodePoint.x(), emptyY);
-        sendLaneMouse(lane, QEvent::MouseButtonPress, emptyPoint, Qt::LeftButton, Qt::LeftButton);
-        check(view.selection().size() == 1,
-              "a press on empty plot must leave the selection alone until the release");
-        sendLaneMouse(lane, QEvent::MouseButtonRelease, emptyPoint, Qt::LeftButton, Qt::NoButton);
-        check(view.selection().empty() && doc.revision() == revisionBeforeClick,
-              "a click on empty plot must clear the selection on the release");
+        return failures == 0 ? 0 : 1;
     }
+    // A stroke only reaches notes that are selected AND under it, so with
+    // only the far note selected this press crosses nothing and stays a
+    // click.
+    const QPointF emptyPoint(nodePoint.x(), emptyY);
+    view.setSelection({partnerId});
+    (void)view.grab();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, emptyPoint, Qt::LeftButton, Qt::LeftButton);
+    check(view.selection().size() == 1,
+          "a press on empty plot must leave the selection alone until the release");
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, emptyPoint, Qt::LeftButton, Qt::NoButton);
+    check(view.selection().empty() && doc.revision() == revisionBeforeClick,
+          "a click on empty plot must clear the selection on the release");
 
     // --- the stem grabs its own note, and Escape abandons a live drag
     const double stemX =
@@ -894,6 +920,138 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     check(doc.revision() == revisionBeforeEscape && escapedNote &&
               escapedNote->velocity == dragNote.velocity,
           "the release after an Escape must not commit the abandoned drag");
+    view.clearSelection();
+    (void)view.grab();
+
+    // --- painting, ramps, and the ruler's own click
+    const double partnerEmptyY = emptyRowY(partnerPoint.x());
+    if (partnerEmptyY < 0.0) {
+        fail("no empty plot row at the partner's tick");
+        return failures == 0 ? 0 : 1;
+    }
+    // The stroke starts on an empty row above the near note and runs off to
+    // the right past the far one, so it crosses unselected notes on the way.
+    const QPointF paintStart(nodePoint.x(), emptyY);
+    const QPointF paintEnd(lane->width() - 20.0, partnerEmptyY);
+    const double paintSpan = paintEnd.x() - paintStart.x();
+    const auto paintedVelocity = [&](double x) {
+        const double t = std::clamp((x - paintStart.x()) / paintSpan, 0.0, 1.0);
+        return laneVelocityAt(lane, paintStart.y() + t * (paintEnd.y() - paintStart.y()));
+    };
+    const int paintTarget = paintedVelocity(nodePoint.x());
+    const int paintPartnerTarget = paintedVelocity(partnerPoint.x());
+    // A note the stroke passes over but never selects: paint must leave it
+    // exactly where it was, and it must have somewhere to move to.
+    const ViewNote *bystanderProbe = nullptr;
+    for (const ViewNote &note : view.model().notes) {
+        const double x = view.displayX(double(note.startTick), songview::kGutterW, dpr);
+        if (note.track == track && x > paintStart.x() && x < paintEnd.x() &&
+            note.startTick != dragNote.startTick && note.startTick != partner.startTick &&
+            paintedVelocity(x) != note.velocity)
+            bystanderProbe = &note;
+        if (bystanderProbe)
+            break;
+    }
+    if (paintSpan <= 0.0 || paintTarget == dragNote.velocity ||
+        paintPartnerTarget == partner.velocity || !bystanderProbe) {
+        fail("the paint stroke's fixture must ask for new velocities and cross a bystander");
+        return failures == 0 ? 0 : 1;
+    }
+    const ViewNote bystander = *bystanderProbe;
+    view.setSelection({dragId, partnerId});
+    (void)view.grab();
+    const uint64_t revisionBeforePaint = doc.revision();
+    const int undoBeforePaint = doc.undoStack()->index();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, paintStart, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, paintEnd, Qt::NoButton, Qt::LeftButton);
+    check(doc.revision() == revisionBeforePaint,
+          "a paint stroke must leave the document alone until the release");
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, paintEnd, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    const ViewNote *paintedNote = noteAt(dragNote.startTick, dragNote.key);
+    const ViewNote *paintedPartner = noteAt(partner.startTick, partner.key);
+    check(paintedNote && paintedPartner && paintedNote->velocity == paintTarget &&
+              paintedPartner->velocity == paintPartnerTarget &&
+              doc.undoStack()->index() == undoBeforePaint + 1 && view.selection().size() == 2,
+          "a paint stroke must write each selected note it crosses in one undo entry");
+    const ViewNote *untouched = noteAt(bystander.startTick, bystander.key);
+    check(untouched && untouched->velocity == bystander.velocity,
+          "a paint stroke must not touch an unselected note under it");
+    doc.undoStack()->undo();
+    (void)view.grab();
+
+    // A click on empty plot straight below a selected node is how one note
+    // is set on its own.
+    view.setSelection({dragId});
+    (void)view.grab();
+    const int spotTarget = laneVelocityAt(lane, emptyY);
+    const QPointF spotPoint(nodePoint.x(), emptyY);
+    const int undoBeforeSpot = doc.undoStack()->index();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, spotPoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, spotPoint, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    const ViewNote *spotNote = noteAt(dragNote.startTick, dragNote.key);
+    const ViewNote *spotPartner = noteAt(partner.startTick, partner.key);
+    check(spotNote && spotPartner && spotNote->velocity == spotTarget &&
+              spotPartner->velocity == partner.velocity &&
+              doc.undoStack()->index() == undoBeforeSpot + 1 && view.selection().size() == 1,
+          "clicking below a selected node must set that note alone");
+    doc.undoStack()->undo();
+    (void)view.grab();
+
+    // Shift is a ramp: the straight line from the press to the pointer, laid
+    // across the selection. Pressing on a node proves it — a relative drag
+    // would have moved that node too.
+    view.setSelection({dragId, partnerId});
+    (void)view.grab();
+    const int rampTarget = laneVelocityAt(lane, emptyY);
+    const QPointF rampStart(partnerPoint.x(), laneVelocityY(lane, partner.velocity));
+    const QPointF rampEnd(nodePoint.x(), emptyY);
+    const int undoBeforeRamp = doc.undoStack()->index();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, rampStart, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ShiftModifier);
+    sendLaneMouse(lane, QEvent::MouseMove, rampEnd, Qt::NoButton, Qt::LeftButton,
+                  Qt::ShiftModifier);
+    const QImage rampImage = lane->grab().toImage();
+    const QPointF rampQuarter = rampStart + 0.25 * (rampEnd - rampStart);
+    check(hasColorNear(rampImage, QPointF(rampQuarter.x() * rasterDpr, rampQuarter.y() * rasterDpr),
+                       int(std::ceil(2 * rasterDpr)),
+                       themes::color(themes::Role::song_view_edit_preview_outline), 24),
+          "a ramp must draw the line it is reading its values off");
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, rampEnd, Qt::LeftButton, Qt::NoButton,
+                  Qt::ShiftModifier);
+    (void)view.grab();
+    const ViewNote *rampedNote = noteAt(dragNote.startTick, dragNote.key);
+    const ViewNote *rampedPartner = noteAt(partner.startTick, partner.key);
+    check(rampedNote && rampedPartner && rampedNote->velocity == rampTarget &&
+              rampedPartner->velocity == partner.velocity &&
+              doc.undoStack()->index() == undoBeforeRamp + 1,
+          "a Shift drag must ramp the selection between its ends instead of moving it");
+    doc.undoStack()->undo();
+    (void)view.grab();
+
+    // The ruler's printed values are click targets for the whole selection;
+    // 127 is labeled in every density band.
+    view.setSelection({dragId, partnerId});
+    (void)view.grab();
+    const int undoBeforeRuler = doc.undoStack()->index();
+    const QPointF headerPoint(songview::kHeaderW / 2.0, laneVelocityY(lane, 127));
+    sendLaneMouse(lane, QEvent::MouseButtonPress, headerPoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, headerPoint, Qt::LeftButton, Qt::NoButton);
+    check(doc.undoStack()->index() == undoBeforeRuler,
+          "a press in the track-header column must not edit velocities");
+    const QPointF rulerPoint(songview::kHeaderW + songview::kKeyboardW / 2.0,
+                             laneVelocityY(lane, 127));
+    sendLaneMouse(lane, QEvent::MouseButtonPress, rulerPoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, rulerPoint, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    const ViewNote *rulerNote = noteAt(dragNote.startTick, dragNote.key);
+    const ViewNote *rulerPartner = noteAt(partner.startTick, partner.key);
+    check(rulerNote && rulerPartner && rulerNote->velocity == 127 &&
+              rulerPartner->velocity == 127 && doc.undoStack()->index() == undoBeforeRuler + 1 &&
+              view.selection().size() == 2,
+          "clicking a ruler value must set the whole selection to it in one undo entry");
+    doc.undoStack()->undo();
     view.clearSelection();
     (void)view.grab();
 

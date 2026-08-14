@@ -5511,6 +5511,14 @@ class VelocityLane : public TimelineSurface
                     themes::color(themes::Role::song_view_piano_roll_background));
         drawGrid(p, m_sv, plot, kGutterW);
         paintNodes(p, plot, axis, dpr);
+        if (m_gesture == Gesture::Ramp) {
+            // The line the ramp is reading its values off, drawn in the
+            // lanes' preview ink so the gesture is legible over the nodes.
+            p.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline),
+                          lyt::singlePixel()));
+            p.setBrush(Qt::NoBrush);
+            p.drawLine(m_pressPos, m_prevPos);
+        }
         drawOverlays(p, m_sv, plot, kGutterW,
                      m_sv->timeSelectionCoversTrack(m_sv->selectedTrack()));
         p.restore();
@@ -5561,18 +5569,38 @@ class VelocityLane : public TimelineSurface
         m_selBeforePress = m_sv->selection();
         m_pressed.reset();
         m_ctrlPress = event->modifiers() & Qt::ControlModifier;
-        if (pos.x() < kGutterW) {
-            // The gutter is the track header and the value ruler; neither is
-            // plot space (the ruler's own click lands in a later milestone).
+        if (pos.x() < kHeaderW) {
+            // The track header column is not the lane's; leave it alone.
             event->ignore();
+            return;
+        }
+        if (pos.x() < kGutterW) {
+            // The ruler: a click on one of its printed values sets the whole
+            // selection to it outright — press to release, one edit.
+            rulerClick(pos);
+            event->accept();
+            return;
+        }
+        if (event->modifiers() & Qt::ShiftModifier) {
+            // Ramp: the press anchors one end of a line, the pointer is the
+            // other, and every selected note under it takes the line's value.
+            m_gesture = Gesture::Ramp;
+            m_activated = false;
+            openSession();
+            updateRamp(pos);
+            event->accept();
             return;
         }
         const ViewNote *hit = noteAt(pos);
         if (!hit) {
-            // Empty plot. The press changes nothing — a click here clears the
-            // selection, but only when the release proves it was a click.
+            // Empty plot: a paint stroke, brushing the selected notes it
+            // crosses. It starts painting at the press — a click straight
+            // below a selected node is how you set that one note — and a
+            // stroke that touches nothing is a click, which clears the
+            // selection on the release.
             m_gesture = Gesture::Paint;
             m_activated = false;
+            paintBetween(pos, pos);
             event->accept();
             return;
         }
@@ -5587,7 +5615,9 @@ class VelocityLane : public TimelineSurface
         } else if (!m_sv->isSelected(*hit)) {
             m_sv->setSelection({{hit->startTick, hit->key}});
         }
-        beginGesture(Gesture::Relative);
+        m_gesture = Gesture::Relative;
+        m_activated = false;
+        openSession();
         event->accept();
     }
 
@@ -5607,6 +5637,10 @@ class VelocityLane : public TimelineSurface
         }
         if (m_gesture == Gesture::Relative)
             updateRelative(pos);
+        else if (m_gesture == Gesture::Paint)
+            paintBetween(m_prevPos, pos);
+        else if (m_gesture == Gesture::Ramp)
+            updateRamp(pos);
         m_prevPos = pos;
         event->accept();
     }
@@ -5624,12 +5658,15 @@ class VelocityLane : public TimelineSurface
             return;
         }
         if (m_gesture == Gesture::Paint) {
-            // A press on empty space that painted nothing is a click, and a
+            // A stroke that never reached a selected node is a click, and a
             // click on empty space clears the selection.
             const bool painted = !m_frozen.empty();
             if (!painted)
                 m_sv->setSelection({});
             finishGesture(painted);
+        } else if (m_gesture == Gesture::Ramp) {
+            // A ramp with no length asked for nothing.
+            finishGesture(m_prevPos != m_pressPos);
         } else {
             // Under the activation slop the press was a click: Ctrl toggles
             // this node's membership, a plain click collapses onto it.
@@ -5677,10 +5714,11 @@ class VelocityLane : public TimelineSurface
 
   private:
     // Left-drag gestures. Relative moves every selected note's velocity by
-    // the drag's own vertical distance; Paint is the empty-space press whose
-    // stroke brushes the selection (milestone 4) and whose bare click clears
-    // the selection.
-    enum class Gesture { None, Relative, Paint };
+    // the drag's own vertical distance (and is what a ruler click commits
+    // through); Paint is the empty-space stroke that brushes the selected
+    // notes it crosses, and whose bare click clears the selection; Ramp is
+    // the Shift drag, a straight line laid across the selection.
+    enum class Gesture { None, Relative, Paint, Ramp };
 
     // Travel that turns a press into a drag; the lanes' own figure, so a
     // click in either surface tolerates the same hand jitter.
@@ -5747,14 +5785,12 @@ class VelocityLane : public TimelineSurface
     // are the notes as the press found them — the model rebuilds under an
     // edit, and a gesture measures from where it started, never from the
     // last preview.
-    void beginGesture(Gesture gesture)
+    bool openSession()
     {
         SongDocument *doc = m_sv->document();
-        m_gesture = gesture;
-        m_activated = false;
         m_frozen.clear();
         if (!doc)
-            return;
+            return false;
         std::vector<NoteVelocity> targets;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track != m_sv->selectedTrack() || !m_sv->isSelected(note) ||
@@ -5763,10 +5799,111 @@ class VelocityLane : public TimelineSurface
             m_frozen.push_back(note);
             targets.push_back({note.noteId, int(note.velocity)});
         }
-        if (!m_gestureModel.begin(doc->revision(), std::move(targets)))
+        if (!m_gestureModel.begin(doc->revision(), std::move(targets))) {
             m_frozen.clear();
-        else if (m_pressed)
+            return false;
+        }
+        if (m_pressed)
             m_announced = m_pressed->noteId;
+        return true;
+    }
+
+    // The paint stroke: only notes already selected are brushed, and only
+    // where the segment from first to last crosses their tick. A note's new
+    // velocity is the segment's own height there, so one sweep can shape a
+    // whole phrase without touching anything outside the selection.
+    void paintBetween(const QPointF &first, const QPointF &last)
+    {
+        const qreal dpr = devicePixelRatioF();
+        const VelocityAxis axis = plotAxis();
+        const double travel = last.x() - first.x();
+        std::vector<NoteVelocity> updates;
+        for (const ViewNote &note : m_sv->model().notes) {
+            if (note.track != m_sv->selectedTrack() || !m_sv->isSelected(note) ||
+                !note.noteId.isAssigned())
+                continue;
+            const double x = m_sv->displayX(double(note.startTick), kGutterW, dpr);
+            double y = last.y();
+            if (travel == 0.0) {
+                // A stationary sample only reaches what it is standing on.
+                if (std::abs(x - last.x()) > kVelNodeGrabRadius)
+                    continue;
+            } else {
+                if (x < std::min(first.x(), last.x()) - kVelNodeGrabRadius ||
+                    x > std::max(first.x(), last.x()) + kVelNodeGrabRadius)
+                    continue;
+                y = first.y() +
+                    std::clamp((x - first.x()) / travel, 0.0, 1.0) * (last.y() - first.y());
+            }
+            updates.push_back({note.noteId, axis.yToVelocity(y)});
+        }
+        if (updates.empty())
+            return;
+        // The session opens on the first note the stroke actually reaches:
+        // until then the press is still a click, and a click commits nothing.
+        if (m_frozen.empty() && !openSession())
+            return;
+        m_announced = updates.front().noteId;
+        m_gestureModel.update(updates);
+        announcePreview();
+        invalidateContent();
+    }
+
+    // The ramp: a straight line from the press to the pointer, read as the
+    // velocity for every selected note whose tick it spans. Notes outside it
+    // keep the values the press froze.
+    void updateRamp(const QPointF &pos)
+    {
+        if (m_frozen.empty())
+            return;
+        const qreal dpr = devicePixelRatioF();
+        const VelocityAxis axis = plotAxis();
+        const double first = std::min(m_pressPos.x(), pos.x()) - kVelNodeGrabRadius;
+        const double last = std::max(m_pressPos.x(), pos.x()) + kVelNodeGrabRadius;
+        std::vector<NoteVelocity> updates;
+        updates.reserve(m_frozen.size());
+        for (const ViewNote &note : m_frozen) {
+            const double x = m_sv->displayX(double(note.startTick), kGutterW, dpr);
+            int velocity = note.velocity;
+            if (x >= first && x <= last) {
+                const double span = pos.x() - m_pressPos.x();
+                const double y =
+                    span == 0.0
+                        ? pos.y()
+                        : m_pressPos.y() + std::clamp((x - m_pressPos.x()) / span, 0.0, 1.0) *
+                                               (pos.y() - m_pressPos.y());
+                velocity = axis.yToVelocity(y);
+                m_announced = note.noteId;
+            }
+            updates.push_back({note.noteId, velocity});
+        }
+        m_gestureModel.update(updates);
+        announcePreview();
+        invalidateContent();
+    }
+
+    // A click on a printed ruler value: the whole selection goes there at
+    // once. Only the labels are targets — the bare graduations between them
+    // have no value on screen to aim at — and the click is the whole
+    // gesture, so it commits without waiting for the release.
+    void rulerClick(const QPointF &pos)
+    {
+        const VelocityAxisGeometry geometry = axisGeometry();
+        const int velocity = VelocityAxis(geometry).rulerVelocityAt(pos.y(), geometry.labelHeight);
+        if (velocity < 1)
+            return;
+        m_gesture = Gesture::Relative;
+        m_activated = false;
+        if (!openSession()) {
+            m_gesture = Gesture::None;
+            return;
+        }
+        std::vector<NoteVelocity> updates;
+        updates.reserve(m_frozen.size());
+        for (const ViewNote &note : m_frozen)
+            updates.push_back({note.noteId, velocity});
+        m_gestureModel.update(updates);
+        finishGesture(true);
     }
 
     void updateRelative(const QPointF &pos)

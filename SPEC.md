@@ -379,12 +379,21 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   vertical distance, each from its own starting value, so the selection keeps its
   shape and notes that clamp at 1 or 127 come back when the pointer does. Under the
   activation slop the press is a click instead: plain collapses the selection onto
-  that note, Ctrl toggles its membership, and a click on empty plot clears the
-  selection — on the release, never on the press. Escape, focus loss, or losing the
-  mouse grab abandons the gesture and restores the selection the press found. While
-  a gesture runs the status bar reads out the aimed note (key, stored velocity, the
-  velocity the engine will really play, length) and playback follow-scroll pauses.
-  Painting, ramps, marquee selection, and the PSG detents
+  that note, Ctrl toggles its membership. A drag from empty plot **paints**: it
+  brushes the selected notes whose ticks the stroke crosses — and only those,
+  never an unselected neighbor under it — taking each note's new velocity from the
+  stroke's own height there, starting at the press, so a click straight below a
+  selected node sets that one note. A stroke that reaches nothing is a click, and a
+  click on empty plot clears the selection (on the release, never on the press).
+  **Shift** anywhere in the plot is a **ramp** instead: the straight line from the
+  press to the pointer, drawn in the lanes' preview ink, read as the velocity for
+  every selected note whose tick it spans. A click on one of the **ruler's printed
+  values** sets the whole selection to it in one edit (only the labels are targets,
+  and the track-header column beside them is not the lane's). Escape, focus loss, or
+  losing the mouse grab abandons the gesture and restores the selection the press
+  found. While a gesture runs the status bar reads out the aimed note (key, stored
+  velocity, the velocity the engine will really play, length) and playback
+  follow-scroll pauses. Marquee selection and the PSG detents
   (`core/velocitymodel.h`) are not implemented yet.
 - **Transport bar:** play/pause/stop, loop toggle, a follow-playhead toggle (also in
   the View menu; off, playback stops scrolling the roll and event list — the camera
