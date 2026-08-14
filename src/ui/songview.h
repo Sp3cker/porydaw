@@ -251,13 +251,19 @@ class SongView : public QWidget
     void setFollowPlayhead(bool on);
     // The active-track note fill under the current display mode.
     QColor noteFillColor(int track, int velocity) const;
-    // The track's program at the display position — the playhead while
-    // playing, the edit cursor otherwise — so the header label follows the
-    // song's voice changes. Before the first change it stays firstProgram
-    // (which is what primes the engine), -1 if the track has none.
+    // The track's program at a tick: the last voice change at or before
+    // it. Before the first change it stays firstProgram (which is what
+    // primes the engine), -1 if the track has none. The one statement of
+    // "voice in effect", shared by the header label and the lanes' voice
+    // hover so they can never disagree on screen.
+    int programAtTick(int track, uint64_t tick) const;
+    // programAtTick at the display position — the playhead while playing,
+    // the edit cursor otherwise — so the header label follows the song's
+    // voice changes.
     int currentProgram(int track) const;
     QString instrumentLabel(int track) const; // "042 name (type)" from the voicegroup
     QString voiceShortName(uint8_t program) const;
+    QString voiceLabel(uint8_t program) const; // "042 name", the marker/header format
 
     // Jump-from-context: surface the program in the voicegroup dock (the
     // main window raises it and selects the slot via revealVoiceRequested).

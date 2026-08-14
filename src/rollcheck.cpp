@@ -4351,12 +4351,21 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 }
             return false;
         };
-        auto ringInkAtDot = [&](const QImage &img) {
-            const bool left = previewInkIn(img, xDot - 5.4, xDot - 4.0, yDot - 1, yDot + 1);
-            const bool top = previewInkIn(img, xDot - 1, xDot + 1, yDot - 5.4, yDot - 4.0);
-            const bool bottom = previewInkIn(img, xDot - 1, xDot + 1, yDot + 4.0, yDot + 5.4);
-            return left && top && bottom;
+        // full = all three bands ink (a ring is painted); trace = any band
+        // inks. Absence probes assert on trace, so a partially-erased ring
+        // (an under-sized invalidation leaves arcs outside the stale
+        // region) still trips them.
+        struct RingInk {
+            bool full;
+            bool trace;
         };
+        auto ringInkAt = [&](const QImage &img, qreal cx, int cy) {
+            const bool left = previewInkIn(img, cx - 5.4, cx - 4.0, cy - 1, cy + 1);
+            const bool top = previewInkIn(img, cx - 1, cx + 1, cy - 5.4, cy - 4.0);
+            const bool bottom = previewInkIn(img, cx - 1, cx + 1, cy + 4.0, cy + 5.4);
+            return RingInk{left && top && bottom, left || top || bottom};
+        };
+        auto ringInkAtDot = [&](const QImage &img) { return ringInkAt(img, xDot, yDot); };
 
         // On the dot: the readout rings the point and mirrors its tick.
         leaveLanes();
@@ -4365,26 +4374,36 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         hoverAt(QPoint(int(xDot), yDot));
         if (hoverNodeTick() != qlonglong(tA))
             fail("hovering a dot did not register the node hover");
-        if (!ringInkAtDot(lanesImage()))
+        if (!ringInkAtDot(lanesImage()).full)
             fail("hover ring not painted at the dot");
         // Anywhere inside the grab box rings the dot itself, not the cursor.
         hoverAt(QPoint(int(xDot) + 5, yDot - 5));
         if (hoverNodeTick() != qlonglong(tA))
             fail("hover inside the grab box did not register the node");
-        if (!ringInkAtDot(lanesImage()))
+        if (!ringInkAtDot(lanesImage()).full)
             fail("grab-box hover did not ring the dot itself");
         // Off the dot: back to the curve readout, no ring.
         hoverAt(QPoint(int(xDot) + 40, yDot));
         if (hoverNodeTick() != -1)
             fail("off-dot hover still registered a node");
-        if (ringInkAtDot(lanesImage()))
+        if (ringInkAtDot(lanesImage()).trace)
             fail("off-dot hover left ring ink at the dot");
-        // The pencil never grabs, so it must not promise a grab with a ring.
+        // The pencil never grabs, so it must not promise a grab with a
+        // ring — including the moment the mode turns on while a ring is
+        // showing: the toggle must erase it, not strand it in the content
+        // cache (the intermediate grab bakes the ring in first, so the
+        // toggle's own invalidation is what's exercised).
+        hoverAt(QPoint(int(xDot), yDot));
+        (void)lanesImage();
         sendKey(lanes, Qt::Key_B, Qt::NoModifier);
+        if (hoverNodeTick() != -1)
+            fail("pencil toggle kept the node hover registered");
+        if (ringInkAtDot(lanesImage()).trace)
+            fail("pencil toggle stranded the hover ring");
         hoverAt(QPoint(int(xDot), yDot));
         if (hoverNodeTick() != -1)
             fail("pencil-mode hover registered a node");
-        if (ringInkAtDot(lanesImage()))
+        if (ringInkAtDot(lanesImage()).trace)
             fail("pencil-mode hover painted the grab ring");
         sendKey(lanes, Qt::Key_B, Qt::NoModifier);
 
@@ -4436,6 +4455,57 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("leaving the lanes did not clear the node hover");
         if (lanesImage() != resting)
             fail("hover moves left readout trails behind");
+
+        // Over the pre-roll pad every x clamps to tick 0, so a hit test
+        // run on an x reconstructed from the tick would land exactly on a
+        // tick-0 dot and promise a grab the press won't perform (the press
+        // uses the raw x). With the raw cursor x threaded through, the pad
+        // never rings.
+        {
+            const SongView::ViewState savedView = view.viewState();
+            SongView::ViewState homeView = savedView;
+            homeView.scrollPx = -1e9; // clamped to the camera's minimum
+            view.applyViewState(homeView);
+            doc.writeLanePoints(laneTrack, freeCc, 0, 0, {{0, 50}});
+            QCoreApplication::processEvents();
+            const qreal xZero = dotX(0);
+            if (xZero - songview::kGutterW < 20)
+                fail("hover section setup: no pre-roll pad at home scroll");
+            const int yZero = ccValueY(50);
+            hoverAt(QPoint(int((songview::kGutterW + xZero) / 2), yZero));
+            if (hoverNodeTick() != -1)
+                fail("pre-roll pad hover promised a grab on the tick-0 point");
+            if (ringInkAt(lanesImage(), xZero, yZero).trace)
+                fail("pre-roll pad hover ringed the tick-0 dot");
+            leaveLanes();
+            doc.undoStack()->undo();
+            view.applyViewState(savedView);
+            QCoreApplication::processEvents();
+        }
+
+        // Scroll under a stationary cursor clears the hover instead of
+        // letting the ring ride the content away from the pointer.
+        hoverAt(QPoint(int(xDot), yDot));
+        if (hoverNodeTick() != qlonglong(tA))
+            fail("hover section setup: re-hover before the wheel probe failed");
+        sendWheel(lanes, QPointF(xDot, yDot), 120, 0, Qt::ShiftModifier);
+        if (hoverNodeTick() != -1)
+            fail("wheel scroll kept the node hover");
+        sendWheel(lanes, QPointF(xDot, yDot), -120, 0, Qt::ShiftModifier);
+        leaveLanes();
+
+        // A row rebuild (track switch, lane hide, any document edit)
+        // resets the node-hover mirror even though no mouse move follows.
+        hoverAt(QPoint(int(xDot), yDot));
+        if (hoverNodeTick() != qlonglong(tA))
+            fail("hover section setup: re-hover before the rebuild probe failed");
+        view.addEmptyLane(laneTrack, 0x5B); // sorts below freeCc: rows above keep their tops
+        QCoreApplication::processEvents();
+        if (hoverNodeTick() != -1)
+            fail("row rebuild kept the node hover mirror");
+        view.removeEmptyLane(laneTrack, 0x5B);
+        QCoreApplication::processEvents();
+        leaveLanes();
 
         // Gesture chip: mirror of the widget's chip layout (caption font,
         // text anchored right of and above the pending marker, clamped

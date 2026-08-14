@@ -2933,8 +2933,12 @@ class AutomationArea : public TimelineSurface
     {
         if (m_pencilMode == enabled)
             return;
-        m_pencilMode = enabled;
+        // The hover geometry depends on the mode (the ring is arrow-only),
+        // so the hover clears while the flag still matches what was
+        // painted: the erase region is re-derived, and deriving it under
+        // the new mode strands ghost ring pixels in the content cache.
         clearHover();
+        m_pencilMode = enabled;
         // A live gesture owns the cursor (split/closed-hand/drag); the next
         // idle move re-derives it. Mid-gesture semantics are untouched too:
         // the press latched the tool into m_gesturePencil.
@@ -2973,6 +2977,10 @@ class AutomationArea : public TimelineSurface
         m_rightPress = false;
         m_selSweep = false;
         m_hoverRow = -1;
+        // The hover reset bypasses clearHover (the rows repaint wholesale
+        // anyway), so the test mirror resets here too — otherwise it would
+        // advertise a phantom node hover until the next mouse move.
+        setProperty("hoverNodeTick", qlonglong(-1));
         // A rebuild means the rows (or the document behind them) changed:
         // the open point menu's aim is stale, so it closes like every other
         // live interaction here.
@@ -3125,7 +3133,7 @@ class AutomationArea : public TimelineSurface
 
   private:
     struct HoverReadoutGeometry {
-        QPointF markerCenter;
+        std::optional<QPointF> marker; // absent on the voice row: text-only
         QPointF textBaseline;
         QFont font;
         QString text;
@@ -3133,28 +3141,59 @@ class AutomationArea : public TimelineSurface
         QRegion paintRegion;
         qint64 onPointTick = -1; // >= 0: the cursor is on this point's dot,
                                  // so the marker is a ring on the dot itself
-        bool voiceRow = false;   // text-only readout (no curve to mark)
     };
 
-    std::optional<HoverReadoutGeometry> hoverReadoutGeometry(int rowIndex, double tick, int y) const
+    // Shared tail of the curve and voice readouts — the caption font, the
+    // side-flip that keeps the text on-screen at the right edge, and the
+    // padded ink bounds — one home, so the two readouts' repaint rules
+    // can't drift apart. boundingRect is the FONT's idea of the ink
+    // extents; the platform raster can exceed it (DirectWrite/ClearType
+    // glyphs bleed a pixel or two past GDI-style metrics on Windows), and
+    // any painted pixel outside the bounds becomes a permanent trail
+    // behind the moving readout. Pad generously — the bounds only size a
+    // repaint.
+    struct ReadoutText {
+        QFont font;
+        QPointF baseline;
+        QRect paddedBounds;
+    };
+    template <typename BaselineY> // qreal(const QFontMetrics &)
+    ReadoutText readoutText(const QString &text, qreal anchorX, BaselineY baselineY) const
+    {
+        const QFont readoutFont = typography::caption(font());
+        const QFontMetrics metrics(readoutFont);
+        const int textWidth = metrics.horizontalAdvance(text);
+        const qreal textX =
+            anchorX + 6 + textWidth > width() ? anchorX - 6 - textWidth : anchorX + 6;
+        const QPointF baseline(textX, baselineY(metrics));
+        const QRect paddedBounds = QRectF(metrics.boundingRect(text))
+                                       .translated(baseline)
+                                       .toAlignedRect()
+                                       .adjusted(-3, -3, 3, 3);
+        return {readoutFont, baseline, paddedBounds};
+    }
+
+    std::optional<HoverReadoutGeometry> hoverReadoutGeometry(int rowIndex, double tick, qreal x,
+                                                             int y) const
     {
         if (rowIndex < 0 || rowIndex >= int(m_rows.size()))
             return std::nullopt;
         const Row &row = m_rows[rowIndex];
         if (row.kind == Row::Voice)
-            return voiceHoverGeometry(rowIndex, tick);
+            return voiceHoverGeometry(rowIndex, tick, x);
         const std::vector<LanePoint> *points = rowPoints(row);
         if (!points || points->empty())
             return std::nullopt;
         int minV, maxV;
         rowRange(row, &minV, &maxV);
-        // On a point's dot (the left-press grab test, so ring and grab can
-        // never disagree) the readout marks the point itself — a ring at
+        // On a point's dot the readout marks the point itself — a ring at
         // its exact position and value, saying "this press moves this
-        // point" before the press. The pencil never grabs, so it never
-        // rings. Off-dot, the marker rides the curve at the cursor's tick.
-        const qreal cursorX = m_sv->displayX(tick, kGutterW, devicePixelRatioF());
-        const LanePoint *on = m_pencilMode ? nullptr : grabPoint(row, rowIndex, cursorX, y);
+        // point" before the press. The hit is the left-press grab test on
+        // the RAW cursor x — never one reconstructed from the tick, whose
+        // pre-roll clamp (and device-pixel rounding) would let ring and
+        // grab disagree. The pencil never grabs, so it never rings.
+        // Off-dot, the marker rides the curve at the cursor's tick.
+        const LanePoint *on = m_pencilMode ? nullptr : grabPoint(row, rowIndex, x, y);
         QPointF marker;
         int value;
         if (on) {
@@ -3168,16 +3207,13 @@ class AutomationArea : public TimelineSurface
             if (it == points->begin())
                 return std::nullopt;
             value = (it - 1)->value;
-            marker = QPointF(cursorX, valueYFor(rowIndex, value, minV, maxV));
+            marker = QPointF(m_sv->displayX(tick, kGutterW, devicePixelRatioF()),
+                             valueYFor(rowIndex, value, minV, maxV));
         }
         const QString text = formatRowValue(row, value);
-        const QFont readoutFont = typography::caption(font());
-        const QFontMetrics metrics(readoutFont);
-        const int textWidth = metrics.horizontalAdvance(text);
-        const qreal textX =
-            marker.x() + 6 + textWidth > width() ? marker.x() - 6 - textWidth : marker.x() + 6;
-        const QPointF baseline(
-            textX, std::max(marker.y() - 4, qreal(rowTop(rowIndex) + metrics.ascent() + 2)));
+        const ReadoutText readout = readoutText(text, marker.x(), [&](const QFontMetrics &metrics) {
+            return std::max(marker.y() - 4, qreal(rowTop(rowIndex) + metrics.ascent() + 2));
+        });
         const QRect clip(kGutterW, rowTop(rowIndex), width() - kGutterW, rowHeight(row));
         // A one-pixel antialiased ellipse stroke can cover the pixel just
         // outside its nominal three-pixel radii; the ring (radius 4.5 at
@@ -3185,65 +3221,51 @@ class AutomationArea : public TimelineSurface
         const QRect markerBounds =
             on ? QRectF(marker.x() - 7, marker.y() - 7, 15, 15).toAlignedRect()
                : QRectF(marker.x() - 4, marker.y() - 4, 9, 9).toAlignedRect();
-        // boundingRect is the FONT's idea of the ink extents; the platform
-        // raster can exceed it (DirectWrite/ClearType glyphs bleed a pixel
-        // or two past GDI-style metrics on Windows), and any painted pixel
-        // outside this region becomes a permanent trail behind the moving
-        // readout. Pad generously — the region only sizes a repaint.
-        const QRect textBounds = QRectF(metrics.boundingRect(text))
-                                     .translated(baseline)
-                                     .toAlignedRect()
-                                     .adjusted(-3, -3, 3, 3);
-        const QRegion paintRegion = (QRegion(markerBounds) | QRegion(textBounds)) & QRegion(clip);
+        const QRegion paintRegion =
+            (QRegion(markerBounds) | QRegion(readout.paddedBounds)) & QRegion(clip);
         if (paintRegion.isEmpty())
             return std::nullopt;
         return HoverReadoutGeometry{
-            marker, baseline, readoutFont, text, clip, paintRegion, on ? qint64(on->tick) : -1};
+            marker,      readout.baseline,          readout.font, text, clip,
+            paintRegion, on ? qint64(on->tick) : -1};
     }
 
     // Voice-row hover readout: "→ NNN name" for the voice in effect at the
-    // cursor's tick (the last change at or before it). Suppressed within
-    // the marker hit radius — a press there edits that marker, whose own
-    // label already names it — and absent before the first change, where
-    // no voice is in effect yet.
-    std::optional<HoverReadoutGeometry> voiceHoverGeometry(int rowIndex, double tick) const
+    // cursor's tick — programAtTick, so before the first change it shows
+    // the track's priming firstProgram, agreeing with the header label and
+    // the engine. Suppressed within the marker hit radius: a press there
+    // edits that marker, whose own label already names it.
+    std::optional<HoverReadoutGeometry> voiceHoverGeometry(int rowIndex, double tick, qreal x) const
     {
-        const qreal x = m_sv->displayX(tick, kGutterW, devicePixelRatioF());
-        DocLanePoint marker;
-        if (voiceChangeNear(x, &marker))
-            return std::nullopt;
+        // The nearness test runs against the model's voice list —
+        // voiceChangeNear resolves the same events from the document, but
+        // re-scans the raw SMF track (allocating a vector) on every call,
+        // too hot for a per-mouse-move path.
         const int track = m_sv->selectedTrack();
-        const VoiceChange *current = nullptr;
+        const qreal dpr = devicePixelRatioF();
         for (const VoiceChange &vc : m_sv->model().voices) {
-            if (double(vc.tick) > tick)
-                break; // sorted by tick
-            if (vc.track == track)
-                current = &vc;
+            if (vc.track != track)
+                continue;
+            // voiceChangeNear's marker hit radius.
+            if (std::abs(m_sv->displayX(double(vc.tick), kGutterW, dpr) - x) < 9.0)
+                return std::nullopt;
         }
-        if (!current)
+        const int prog = m_sv->programAtTick(track, uint64_t(tick));
+        if (prog < 0)
             return std::nullopt;
-        const QString text = QStringLiteral("→ %1 %2")
-                                 .arg(int(current->program), 3, 10, QLatin1Char('0'))
-                                 .arg(m_sv->voiceShortName(current->program));
-        const QFont readoutFont = typography::caption(font());
-        const QFontMetrics metrics(readoutFont);
-        const int textWidth = metrics.horizontalAdvance(text);
-        const qreal textX = x + 6 + textWidth > width() ? x - 6 - textWidth : x + 6;
+        const QString text = QStringLiteral("→ ") + m_sv->voiceLabel(uint8_t(prog));
         const Row &row = m_rows[rowIndex];
         const int top = rowTop(rowIndex);
         const int h = rowHeight(row);
-        const QPointF baseline(textX, top + (h + metrics.ascent() - metrics.descent()) / 2);
+        const ReadoutText readout = readoutText(text, x, [&](const QFontMetrics &metrics) {
+            return qreal(top + (h + metrics.ascent() - metrics.descent()) / 2);
+        });
         const QRect clip(kGutterW, top, width() - kGutterW, h);
-        // Same raster-overdraw padding as the curve readout above.
-        const QRect textBounds = QRectF(metrics.boundingRect(text))
-                                     .translated(baseline)
-                                     .toAlignedRect()
-                                     .adjusted(-3, -3, 3, 3);
-        const QRegion paintRegion = QRegion(textBounds) & QRegion(clip);
+        const QRegion paintRegion = QRegion(readout.paddedBounds) & QRegion(clip);
         if (paintRegion.isEmpty())
             return std::nullopt;
-        return HoverReadoutGeometry{
-            QPointF(x, top + h / 2.0), baseline, readoutFont, text, clip, paintRegion, -1, true};
+        return HoverReadoutGeometry{std::nullopt, readout.baseline, readout.font, text,
+                                    clip,         paintRegion};
     }
 
     // Idle-hover readout: a marker on the curve with the value in effect at
@@ -3255,7 +3277,7 @@ class AutomationArea : public TimelineSurface
     {
         if (m_dragRow >= 0 || m_selSweep)
             return;
-        const auto geometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverY);
+        const auto geometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverX, m_hoverY);
         if (!geometry)
             return;
         p.save();
@@ -3264,13 +3286,15 @@ class AutomationArea : public TimelineSurface
         p.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline),
                       geometry->onPointTick >= 0 ? 2 : 1));
         p.setBrush(Qt::NoBrush);
-        if (geometry->onPointTick >= 0) {
-            // Same shape and weight as the selection ring (aliased — exact
-            // pixels keep it probeable in rollcheck), in the preview color
-            // so the two rings stay tellable apart.
-            p.drawEllipse(geometry->markerCenter, 4.5, 4.5);
-        } else if (!geometry->voiceRow) {
-            p.drawEllipse(geometry->markerCenter, 3, 3);
+        if (geometry->marker) {
+            if (geometry->onPointTick >= 0) {
+                // Same shape and weight as the selection ring (aliased —
+                // exact pixels keep it probeable in rollcheck), in the
+                // preview color so the two rings stay tellable apart.
+                p.drawEllipse(*geometry->marker, 4.5, 4.5);
+            } else {
+                p.drawEllipse(*geometry->marker, 3, 3);
+            }
         }
         p.drawText(geometry->textBaseline, geometry->text);
         p.restore();
@@ -3279,6 +3303,11 @@ class AutomationArea : public TimelineSurface
   protected:
     void wheelEvent(QWheelEvent *event) override
     {
+        // Scroll/zoom moves the content under a stationary cursor, so the
+        // stored hover (a content-space tick, a widget-space x) goes stale
+        // both ways; the readout clears like on a press, and the next idle
+        // move re-derives it.
+        clearHover();
         // Same bindings as the roll's notes area: plain wheel over the plot
         // zooms the timeline; Ctrl+wheel resizes the lane rows (the roll's
         // key-height analog); Shift (or a trackpad's horizontal delta)
@@ -4671,8 +4700,9 @@ class AutomationArea : public TimelineSurface
 
     // Idle cursor position for the hover readout: raw (unsnapped) tick, so
     // the readout tracks the pixel, not the grid. The gutter (and a stale
-    // lane row) clears it. The cursor's y rides along for the on-dot ring —
-    // same tick, different y can mean on versus off the dot.
+    // lane row) clears it. The cursor's raw x and y ride along: the on-dot
+    // ring's grab test needs the true pixel (the tick round-trips through
+    // the pre-roll clamp), and the voice readout anchors to the cursor.
     void updateHover(qreal x, int y)
     {
         const int ri = x >= kGutterW ? rowIndexAt(y) : -1;
@@ -4680,15 +4710,15 @@ class AutomationArea : public TimelineSurface
             clearHover();
             return;
         }
-        const double tick = rawTickAt(x);
-        if (ri == m_hoverRow && tick == m_hoverTick && y == m_hoverY)
+        if (ri == m_hoverRow && x == m_hoverX && y == m_hoverY)
             return;
-        const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverY);
+        const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverX, m_hoverY);
         const QRegion oldRegion = oldGeometry ? oldGeometry->paintRegion : QRegion();
         m_hoverRow = ri;
-        m_hoverTick = tick;
+        m_hoverTick = rawTickAt(x);
+        m_hoverX = x;
         m_hoverY = y;
-        const auto newGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverY);
+        const auto newGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverX, m_hoverY);
         const QRegion newRegion = newGeometry ? newGeometry->paintRegion : QRegion();
         // Mirrored for the test harness, like the roll's hoverKey.
         setProperty("hoverNodeTick",
@@ -4700,7 +4730,7 @@ class AutomationArea : public TimelineSurface
     {
         if (m_hoverRow < 0)
             return;
-        const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverY);
+        const auto oldGeometry = hoverReadoutGeometry(m_hoverRow, m_hoverTick, m_hoverX, m_hoverY);
         const QRegion oldRegion = oldGeometry ? oldGeometry->paintRegion : QRegion();
         m_hoverRow = -1;
         setProperty("hoverNodeTick", qlonglong(-1));
@@ -5061,9 +5091,7 @@ class AutomationArea : public TimelineSurface
             p.setPen(QPen(color, 2));
             p.drawLine(QLineF(x, plot.top() + 4, x, plot.bottom() - 4));
             p.setPen(themes::color(themes::Role::song_view_primary_text));
-            const QString text = QStringLiteral("%1 %2")
-                                     .arg(int(changes[i]->program), 3, 10, QLatin1Char('0'))
-                                     .arg(m_sv->voiceShortName(changes[i]->program));
+            const QString text = m_sv->voiceLabel(changes[i]->program);
             // Keep the label readable while its voice region is scrolled
             // partially off the left edge.
             const qreal textX = std::max<qreal>(x + 4, plot.left() + 4);
@@ -5125,6 +5153,8 @@ class AutomationArea : public TimelineSurface
     int m_prevValue = 0;
     int m_hoverRow = -1;      // row under an idle cursor; -1 = no readout
     double m_hoverTick = 0.0; // raw tick under the idle cursor
+    qreal m_hoverX = 0.0;     // raw cursor x of the idle hover — the dot hit
+                              // and the voice anchor need the true pixel
     int m_hoverY = 0;         // cursor y of the idle hover, for the dot hit
     // The point the context menu is aimed at. The row is copied by value
     // (its identity, not an index) so a row rebuild can't dangle it — the
@@ -7258,19 +7288,23 @@ QColor SongView::noteFillColor(int track, int velocity) const
     return m_velocityColorMode ? velocityNoteColor(velocity) : noteColor(track, velocity);
 }
 
-int SongView::currentProgram(int track) const
+int SongView::programAtTick(int track, uint64_t tick) const
 {
     if (!m_timeline)
         return -1;
     int prog = m_timeline->tracks[track].firstProgram;
-    const uint64_t tick = m_playing ? uint64_t(m_playheadTick) : m_editCursorTick;
     for (const VoiceChange &vc : m_model.voices) {
         if (vc.tick > tick)
-            break;
+            break; // sorted by tick
         if (vc.track == track)
             prog = vc.program;
     }
     return prog;
+}
+
+int SongView::currentProgram(int track) const
+{
+    return programAtTick(track, m_playing ? uint64_t(m_playheadTick) : m_editCursorTick);
 }
 
 void SongView::revealVoice(int program)
@@ -7305,6 +7339,13 @@ QSet<int> SongView::usedVoices() const
     return used;
 }
 
+QString SongView::voiceLabel(uint8_t program) const
+{
+    return QStringLiteral("%1 %2")
+        .arg(int(program), 3, 10, QLatin1Char('0'))
+        .arg(voiceShortName(program));
+}
+
 QString SongView::instrumentLabel(int track) const
 {
     if (!m_timeline)
@@ -7312,8 +7353,7 @@ QString SongView::instrumentLabel(int track) const
     const int prog = currentProgram(track);
     if (prog < 0)
         return tr("(no voice set)");
-    QString name = voiceShortName(uint8_t(prog));
-    return QStringLiteral("%1 %2").arg(prog, 3, 10, QLatin1Char('0')).arg(name);
+    return voiceLabel(uint8_t(prog));
 }
 
 QString SongView::voiceShortName(uint8_t program) const
