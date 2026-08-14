@@ -393,6 +393,16 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
 
 - Note draw/move/resize/velocity with snapping to the song's clock base; the effective
   quantized velocity/length shown inline (§4.3).
+- Modifier velocity drag (`roll.velocity_drag` chord, Ctrl by default): a
+  vertical drag from anywhere on a note adjusts its velocity (1 px = 1 step);
+  the chord's click without the drag keeps Ctrl's selection toggle. On an
+  unselected note the Ctrl-chord drag joins it to the bulk selection and
+  nudges the whole selection — except that once a modifier velocity drag has
+  committed, the next one during the same uninterrupted chord hold replaces
+  the selection with its note instead (one-shot, re-armed by each committed
+  drag). Repeating the drag on the same note keeps a deliberate bulk
+  selection; releasing any modifier key, or losing focus or the window,
+  restores the join behavior.
 - Live audition: notes sound (through the correct voice) while being drawn or dragged.
 - Undo/redo across all document mutations, including `midi.cfg` property
   changes and voicegroup voice edits — song and voicegroup share one undo

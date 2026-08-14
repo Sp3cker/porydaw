@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automation lanes can now be hidden from their gutter menu ("Hide lane"). The lane's events are kept — only the row disappears — and the "+ Add lane" menu gains a "Hidden lanes" section that restores it. Hidden lanes are remembered per song. The "+ Add lane" strip also opens on right-click now, and a lane added without any events now has a working gutter menu.
 
 ## Fixed
+- With the velocity-drag chord held (Ctrl by default), adjusting one note's velocity and then dragging on a different note no longer nudges both: the second drag switches the selection to the new note and adjusts it alone. Repeating the drag on the same note still nudges the whole bulk selection, and releasing the modifier (or leaving the window) restores the join-and-nudge behavior.
 - Improved fidelity of CGB channels
    - Fixed CGB channels' volume envelope emulation.
    - Improved CGB noise channel is now band-limited, which is more accurate to hardware's sound quality.

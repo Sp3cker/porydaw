@@ -60,10 +60,12 @@
 // on release. The edge resize grips stay live under Ctrl, but a
 // bulk-select click landing on one joins the note to the selection
 // instead of replacing it, and the drag resizes the whole selection;
-// a Ctrl+velocity drag on an unselected note likewise joins it and
-// nudges the whole selection. Ctrl+arrows transpose (Shift: octave)
-// and nudge the selection along the same absolute grid — both the roll's
-// note selection and a multi-track time selection — and the view follows
+// a Ctrl+velocity drag on an unselected note likewise joins it and nudges
+// the whole selection, except that the first such drag after a completed
+// modifier velocity edit in the same uninterrupted chord hold switches to
+// its note instead of accumulating it. Ctrl+arrows transpose (Shift:
+// octave) and nudge the selection along the same absolute grid — both the
+// roll's note selection and a multi-track time selection — and the view follows
 // notes moved out of sight with a minimal scroll (flush at the edge, not
 // re-centered). The playhead follow-scroll pauses while a mouse gesture
 // is held (pan, drag, sweep) and resumes on release. Dragging a track
@@ -1640,10 +1642,13 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // Modifier velocity gesture (Ableton-style): with the roll.velocity_drag
     // chord held (Ctrl by default), a vertical drag from anywhere on note B
     // adjusts its velocity — 1px = 1 step, 15px down lands 93 -> 78 — with
-    // the hover mark pinned to the note's row. Without the drag the
-    // Ctrl+click keeps its selection-toggle meaning (deferred to release),
-    // and a vertical jitter under the drag threshold is still that click:
-    // it toggles, changes no velocity, and pushes no undo command.
+    // the hover mark pinned to the note's row. Keeping the chord held, a
+    // velocity drag on the next note replaces the prior selection instead
+    // of accumulating it (one-shot, re-armed by each committed drag).
+    // Without a preceding drag, Ctrl+click keeps its selection-toggle
+    // meaning (deferred to release), and a vertical jitter under the drag
+    // threshold is still that click: it toggles, changes no velocity, and
+    // pushes no undo command.
     {
         click(roll, b.center); // plain click: select B (velocity 93)
         const int preCount = doc.undoStack()->count();
@@ -1661,7 +1666,52 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (doc.undoStack()->count() != preCount + 1)
             fail("modifier velocity drag did not push exactly one command");
 
+        // Clicks keep their ordinary meaning and do not spend the one-shot
+        // armed for the next modifier velocity drag.
         const SongView::NoteKey bId{uint32_t(b.tick), uint8_t(b.key)};
+        const SongView::NoteKey aId{uint32_t(a.tick), uint8_t(a.key)};
+        sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton, Qt::NoButton,
+                  Qt::ControlModifier);
+        if (std::find(view.selection().begin(), view.selection().end(), bId) !=
+            view.selection().end())
+            fail("Ctrl+click after a velocity drag did not keep its toggle meaning");
+        click(roll, b.center);
+        if (view.selection().size() != 1 || !(view.selection().front() == bId))
+            fail("a plain click after a velocity drag did not select its note");
+
+        // The same uninterrupted chord hold on another note is a request to
+        // edit that note, not to grow a bulk selection and edit both.
+        DocNote aCarryBefore;
+        if (!doc.findNote(track, a.tick, uint8_t(a.key), &aCarryBefore))
+            fail("note A went missing before the carried modifier velocity drag");
+        const int carryCount = doc.undoStack()->count();
+        sendMouse(roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, a.center + QPoint(0, 15), Qt::NoButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, a.center + QPoint(0, 15), Qt::LeftButton,
+                  Qt::NoButton, Qt::ControlModifier);
+        const std::vector<SongView::NoteKey> &carried = view.selection();
+        if (carried.size() != 1 || !(carried.front() == aId))
+            fail("a held modifier accumulated the note after a velocity drag");
+        DocNote aCarryAfter, bCarryAfter;
+        if (!doc.findNote(track, a.tick, uint8_t(a.key), &aCarryAfter) ||
+            int(aCarryAfter.velocity) != int(aCarryBefore.velocity) - 15)
+            fail("the carried modifier velocity drag did not adjust the next note");
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bCarryAfter) ||
+            bCarryAfter.velocity != 78)
+            fail("the carried modifier velocity drag also adjusted the prior note");
+        if (doc.undoStack()->count() != carryCount + 1)
+            fail("the carried modifier velocity drag did not push exactly one command");
+
+        // Releasing the modifier ends the one-shot; the toggle click and the
+        // sub-threshold jitter behave the same on either side of it.
+        QKeyEvent modifierRelease(QEvent::KeyRelease, Qt::Key_Control, Qt::NoModifier);
+        QCoreApplication::sendEvent(roll, &modifierRelease);
+        click(roll, b.center); // selection = {B}
+        const int postCarryCount = doc.undoStack()->count();
         sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton, Qt::LeftButton,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton, Qt::NoButton,
@@ -1680,13 +1730,15 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("a sub-threshold Ctrl-jitter did not act as the toggle click");
         if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) || bMod.velocity != 78)
             fail("a sub-threshold Ctrl-jitter changed the velocity");
-        if (doc.undoStack()->count() != preCount + 1)
+        if (doc.undoStack()->count() != postCarryCount)
             fail("a Ctrl-click or jitter pushed an undo command");
 
         // Bulk-selection preservation, mirroring the Ctrl+edge grab: with
         // note A selected, a Ctrl+velocity drag on unselected note B joins
         // B to the selection instead of replacing it, and the nudge lands
-        // on BOTH notes in one command.
+        // on BOTH notes in one command. Coming after the carried drag and
+        // the modifier release, this also proves the release restored the
+        // join semantics.
         click(roll, a.center); // selection = {A}
         DocNote aBefore, bBefore;
         if (!doc.findNote(track, a.tick, uint8_t(a.key), &aBefore) ||
@@ -1699,7 +1751,6 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15), Qt::LeftButton,
                   Qt::NoButton, Qt::ControlModifier);
-        const SongView::NoteKey aId{uint32_t(a.tick), uint8_t(a.key)};
         const std::vector<SongView::NoteKey> &joined = view.selection();
         if (joined.size() != 2 || std::find(joined.begin(), joined.end(), aId) == joined.end() ||
             std::find(joined.begin(), joined.end(), bId) == joined.end())
@@ -1713,7 +1764,88 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("the joined Ctrl+velocity drag did not nudge the grabbed note");
         if (doc.undoStack()->count() != joinCount + 1)
             fail("the joined velocity drag did not push exactly one command");
-        doc.undoStack()->undo(); // restore both velocities for later checks
+
+        // Repeating the modifier drag on the same anchor keeps the
+        // deliberate bulk selection; the one-shot only suppresses adding
+        // another note.
+        const int repeatCount = doc.undoStack()->count();
+        sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, b.center - QPoint(0, 15), Qt::NoButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, b.center - QPoint(0, 15), Qt::LeftButton,
+                  Qt::NoButton, Qt::ControlModifier);
+        const std::vector<SongView::NoteKey> &repeated = view.selection();
+        if (repeated.size() != 2 ||
+            std::find(repeated.begin(), repeated.end(), aId) == repeated.end() ||
+            std::find(repeated.begin(), repeated.end(), bId) == repeated.end())
+            fail("repeating a modifier velocity drag on its anchor collapsed the bulk selection");
+        DocNote aRepeated, bRepeated;
+        if (!doc.findNote(track, a.tick, uint8_t(a.key), &aRepeated) ||
+            aRepeated.velocity != aAfter.velocity + 15 ||
+            !doc.findNote(track, b.tick, uint8_t(b.key), &bRepeated) ||
+            bRepeated.velocity != bAfter.velocity + 15)
+            fail("repeating a modifier velocity drag did not nudge the whole selection");
+        if (doc.undoStack()->count() != repeatCount + 1)
+            fail("the repeated velocity drag did not push exactly one command");
+
+        // A different anchor replaces the prior selection even when that
+        // anchor was already part of the bulk selection.
+        const int switchCount = doc.undoStack()->count();
+        sendMouse(roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, a.center + QPoint(0, 15), Qt::NoButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, a.center + QPoint(0, 15), Qt::LeftButton,
+                  Qt::NoButton, Qt::ControlModifier);
+        DocNote aSwitched, bSwitched;
+        if (view.selection().size() != 1 || !(view.selection().front() == aId))
+            fail("a carried modifier drag kept the prior note selected");
+        if (!doc.findNote(track, a.tick, uint8_t(a.key), &aSwitched) ||
+            aSwitched.velocity != aRepeated.velocity - 15)
+            fail("the carried modifier drag did not adjust its new anchor");
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bSwitched) ||
+            bSwitched.velocity != bRepeated.velocity)
+            fail("the carried modifier drag adjusted the prior selected note");
+        if (doc.undoStack()->count() != switchCount + 1)
+            fail("the switched velocity drag did not push exactly one command");
+
+        // Focus loss is as much an interruption as releasing the chord:
+        // the next modifier drag joins again.
+        QFocusEvent focusOut(QEvent::FocusOut);
+        QCoreApplication::sendEvent(roll, &focusOut);
+        const int focusCount = doc.undoStack()->count();
+        sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, b.center + QPoint(0, 15), Qt::NoButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15), Qt::LeftButton,
+                  Qt::NoButton, Qt::ControlModifier);
+        const std::vector<SongView::NoteKey> &refocused = view.selection();
+        if (refocused.size() != 2 ||
+            std::find(refocused.begin(), refocused.end(), aId) == refocused.end() ||
+            std::find(refocused.begin(), refocused.end(), bId) == refocused.end())
+            fail("focus loss did not disarm the one-shot selection replace");
+        DocNote aFocus, bFocus;
+        if (!doc.findNote(track, a.tick, uint8_t(a.key), &aFocus) ||
+            aFocus.velocity != aSwitched.velocity - 15 ||
+            !doc.findNote(track, b.tick, uint8_t(b.key), &bFocus) ||
+            bFocus.velocity != bSwitched.velocity - 15)
+            fail("the post-focus-loss drag did not nudge the joined selection");
+        if (doc.undoStack()->count() != focusCount + 1)
+            fail("the post-focus-loss velocity drag did not push exactly one command");
+
+        // The last drag re-armed the one-shot; release the chord so no
+        // hidden state leaks into the sections below.
+        QKeyEvent finalRelease(QEvent::KeyRelease, Qt::Key_Control, Qt::NoModifier);
+        QCoreApplication::sendEvent(roll, &finalRelease);
+
+        // Restore both velocities for later checks: undo the focus-loss,
+        // switched, repeated, joined, and carried drags. The first modifier
+        // drag stays committed, exactly as before this section grew, so the
+        // gesture tally at the end of the run is unchanged.
+        for (int i = 0; i < 5; ++i)
+            doc.undoStack()->undo();
         view.clearSelection();
     }
 

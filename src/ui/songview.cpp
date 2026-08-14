@@ -1489,6 +1489,7 @@ class PianoRoll : public TimelineSurface
         m_dKey = 0;
         m_dDur = 0;
         m_dVel = 0;
+        m_velModDrag = false;
 
         if (hit) {
             const bool rightEdge = nearRightEdge(*hit, event->position());
@@ -1662,8 +1663,17 @@ class PianoRoll : public TimelineSurface
                 QApplication::startDragDistance())
                 return;
             m_velModPress = false;
-            if (!m_sv->isSelected(m_velAnchor)) {
-                const SongView::NoteKey id{m_velAnchor.startTick, m_velAnchor.key};
+            const SongView::NoteKey id{m_velAnchor.startTick, m_velAnchor.key};
+            if (m_velReplaceArmed && !(id == m_velReplaceNote)) {
+                // A modifier velocity edit already committed during this
+                // uninterrupted chord hold: a second drag on a DIFFERENT
+                // note is a request to edit that note, so it replaces the
+                // selection instead of joining and nudging both. Same
+                // anchor falls through, so a deliberate bulk selection
+                // survives repeated drags on its own anchor.
+                m_velReplaceArmed = false;
+                m_sv->setSelection({id});
+            } else if (!m_sv->isSelected(m_velAnchor)) {
                 if (m_velModMods & Qt::ControlModifier) {
                     // Ctrl in the chord: like the Ctrl+edge grab, the
                     // gesture joins the note to the bulk selection built
@@ -1676,6 +1686,7 @@ class PianoRoll : public TimelineSurface
                     m_sv->setSelection({id});
                 }
             }
+            m_velModDrag = true;
             m_drag = Drag::Velocity;
             // The pass at the top of this event ran before the drag
             // existed; re-pin the mark to the note's row now.
@@ -1883,6 +1894,8 @@ class PianoRoll : public TimelineSurface
 
         const Drag drag = m_drag;
         m_drag = Drag::None;
+        const bool velModDrag = m_velModDrag;
+        m_velModDrag = false;
 
         if (doc && drag == Drag::Draw) {
             doc->addNote(m_sv->selectedTrack(), m_drawTick, uint8_t(m_drawKey), uint32_t(m_drawDur),
@@ -1917,6 +1930,15 @@ class PianoRoll : public TimelineSurface
             doc->nudgeNotesVelocity(resolveSelection(), m_dVel);
             // Latch the dragged note's final velocity for the next draw.
             m_lastVelocity = uint8_t(std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127));
+            // A modifier drag that committed, released with the chord still
+            // held, arms the one-shot: the next modifier drag on a different
+            // note replaces the selection instead of joining (see the
+            // promotion in mouseMoveEvent).
+            if (velModDrag && keymap::Registry::instance().matchesModifier(
+                                  event->modifiers(), QStringLiteral("roll.velocity_drag"))) {
+                m_velReplaceArmed = true;
+                m_velReplaceNote = {m_velAnchor.startTick, m_velAnchor.key};
+            }
         }
         m_dTick = 0;
         m_dKey = 0;
@@ -1984,6 +2006,7 @@ class PianoRoll : public TimelineSurface
         }
         if (event->key() == Qt::Key_Escape) {
             m_drag = Drag::None;
+            m_velModDrag = false;
             m_leftPress = false;
             m_rightPress = false;
             stopBandAuditions();
@@ -1998,8 +2021,14 @@ class PianoRoll : public TimelineSurface
 
     void keyReleaseEvent(QKeyEvent *event) override
     {
-        if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key()))
+        if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key())) {
+            // Any modifier coming up ends the "uninterrupted hold" the
+            // one-shot selection replace is scoped to; the next modifier
+            // velocity drag joins again.
+            m_velReplaceArmed = false;
+            m_velReplaceNote = {};
             invalidateContent();
+        }
         if (m_sv->handleEditKeyRelease(event))
             return;
         // End the transpose audition when the shortcut's keys come up.
@@ -2011,6 +2040,19 @@ class PianoRoll : public TimelineSurface
             m_auditioned = false;
         }
         QWidget::keyReleaseEvent(event);
+    }
+
+    bool event(QEvent *event) override
+    {
+        // Losing focus (or the window) is as much an interruption as
+        // releasing the chord: the one-shot selection replace must not
+        // survive an Alt+Tab and fire on a drag minutes later.
+        const QEvent::Type type = event->type();
+        if (type == QEvent::FocusOut || type == QEvent::Hide || type == QEvent::WindowDeactivate) {
+            m_velReplaceArmed = false;
+            m_velReplaceNote = {};
+        }
+        return TimelineSurface::event(event);
     }
 
   private:
@@ -2808,6 +2850,11 @@ class PianoRoll : public TimelineSurface
     bool m_velModPress = false;               // velocity-modifier press on a note; click
                                               // vs. vertical velocity drag undecided
     Qt::KeyboardModifiers m_velModMods = Qt::NoModifier; // that press's chord
+    bool m_velModDrag = false;                           // the live drag grew from that press
+    bool m_velReplaceArmed = false;                      // one-shot: a modifier drag committed
+                                                         // during the still-held chord…
+    SongView::NoteKey m_velReplaceNote{};                // …on this note; the next drag on a
+                                                         // different note replaces the selection
     int m_kbdKey = -1;            // key sounding from a keyboard-column press
     int m_soundingKey = -1;       // auditioned key highlighted on the keyboard
     int m_hoverKey = -1;          // key row under the cursor; -1 = no mark
