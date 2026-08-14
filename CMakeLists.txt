@@ -102,6 +102,8 @@ qt_add_library(porydaw_app STATIC
     src/core/songdocument.h
     src/core/timelineplayer.cpp
     src/core/timelineplayer.h
+    src/core/velocitymodel.cpp
+    src/core/velocitymodel.h
     src/core/midiimport.cpp
     src/core/midiimport.h
     src/project/decompproject.cpp
@@ -219,6 +221,7 @@ qt_add_executable(porydaw
     src/samplecheck.cpp
     src/sessioncheck.cpp
     src/keymapcheck.cpp
+    src/velcheck.cpp
     resources/fonts.qrc
 )
 if(APPLE)

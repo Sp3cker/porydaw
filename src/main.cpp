@@ -82,6 +82,9 @@ int runIgnoreCheck(const QString &scratchDir);
 // persistence + offscreen shortcuts-dialog driving (self-contained, no
 // project needed; redirects QSettings itself).
 int runKeymapCheck();
+// velcheck.cpp; PSG velocity model check: voice classification and the CGB
+// channels' loudness detents (self-contained, no project needed).
+int runVelocityModelCheck();
 // eventviewcheck.cpp; raw MIDI event list check (model API + offscreen UI);
 // the optional song label + path save that song's rendered event list.
 int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong = QString(),
@@ -181,6 +184,8 @@ int main(int argc, char *argv[])
         return runAudioCheck();
     if (args.contains(QStringLiteral("--keymapcheck")))
         return runKeymapCheck();
+    if (args.contains(QStringLiteral("--velmodelcheck")))
+        return runVelocityModelCheck();
     const int editCheck = args.indexOf(QStringLiteral("--editcheck"));
     if (editCheck >= 0 && editCheck + 1 < args.size())
         return runEditCheck(args[editCheck + 1]);
