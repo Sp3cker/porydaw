@@ -6,13 +6,13 @@
 #include <QRectF>
 #include <QSet>
 #include <QWidget>
-#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <optional>
 #include <utility>
 #include <vector>
 
+#include "audio/trackactivitylevel.h"
 #include "core/miditimeline.h"
 #include "ui/activity/trackactivity.h"
 #include "ui/editordrawer/drawerpage.h"
@@ -96,8 +96,7 @@ class SongView : public QWidget
     // selection, mute/solo, and re-resolves the note selection.
     void updateSong(const MidiTimeline *timeline);
     void setPlayheadSample(uint64_t samplePos, bool playing);
-    void advanceTrackActivity(const std::array<uint8_t, MAX_TRACKS> &levels, float elapsedSeconds);
-    void resetTrackActivity();
+    bool advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds, bool playing);
 
     // Editing is enabled while a document is attached (may be null).
     void setDocument(SongDocument *document);

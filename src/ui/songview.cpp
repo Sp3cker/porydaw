@@ -1,4 +1,5 @@
 #include "songview.h"
+#include "ui/activity/trackactivitymeter.h"
 #include "layout.h"
 #include "theme/color_math.h"
 #include "theme/themeruntime.h"
@@ -76,6 +77,7 @@ namespace songview {
 namespace {
 
 constexpr int kScrollUnitsPerDip = 16;
+
 
 qreal logicalPhysicalPixel(qreal dpr)
 {
@@ -3264,6 +3266,8 @@ class TrackHeaderRow : public QWidget
     {
         m_geometry = Geometry::resolve();
         setFixedHeight(m_geometry.trackHeaderRowHeight);
+        if (m_activityMeter)
+            m_activityMeter->setGeometry(activityMeterRect());
         if (m_mute)
             m_mute->setFixedSize(m_geometry.trackHeaderButtonExtent,
                                  m_geometry.trackHeaderButtonExtent);
@@ -3284,6 +3288,9 @@ class TrackHeaderRow : public QWidget
     {
         const auto buttonExtent = m_geometry.trackHeaderButtonExtent;
         setFixedHeight(m_geometry.trackHeaderRowHeight);
+        m_activityMeter = new TrackActivityMeter(SongView::trackColor(m_track), this);
+        m_activityMeter->setGeometry(activityMeterRect());
+        setActivity(m_sv->m_trackActivity.intensity(m_track), m_sv->m_playing);
         auto *layout = new QHBoxLayout(this);
         layout->setContentsMargins(::layout::space(::layout::Space::Zero),
                                    ::layout::space(::layout::Space::Zero),
@@ -3344,13 +3351,9 @@ class TrackHeaderRow : public QWidget
     }
 
     int track() const { return m_track; }
-    void setActivity(float intensity)
+    void setActivity(TrackActivityIntensity intensity, bool playing)
     {
-        const auto bounded = std::clamp(intensity, 0.0f, 1.0f);
-        if (std::abs(m_activity - bounded) < 1.0f / 512.0f)
-            return;
-        m_activity = bounded;
-        update();
+        m_activityMeter->setState({intensity, playing, activityMaximumIntensity()});
     }
 
     // True when the song's music player never starts this track in-game
@@ -3376,10 +3379,6 @@ class TrackHeaderRow : public QWidget
             p.fillRect(rect(), trackHeaderAlsoSelectedColor());
         }
         const bool silentInGame = isSilentInGame();
-        const QRectF barRect(lyt::space(Space::Zero), lyt::space(Space::Zero),
-                             lyt::space(Space::One), height() - lyt::singlePixel());
-        m_sv->m_trackActivity.paintLight(p, m_track, barRect, SongView::trackColor(m_track),
-                                         silentInGame ? 0.15f : 1.0f);
         p.setPen(QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
         p.drawLine(lyt::space(Space::Zero), height() - lyt::singlePixel(), width(),
                    height() - lyt::singlePixel());
@@ -3628,11 +3627,21 @@ class TrackHeaderRow : public QWidget
     {
         // Rows are born 100px wide and only get their real width on the
         // deferred layout pass; an open editor must follow.
+        if (m_activityMeter)
+            m_activityMeter->setGeometry(activityMeterRect());
         if (m_editor)
             m_editor->setGeometry(editorRect());
     }
 
   private:
+    QRect activityMeterRect() const
+    {
+        return QRect(lyt::space(Space::Zero), lyt::space(Space::Zero), lyt::space(Space::One),
+                     height() - lyt::singlePixel());
+    }
+
+    float activityMaximumIntensity() const { return isSilentInGame() ? 0.15f : 1.0f; }
+
     // The row's name line, clear of the color strip and the M/S column.
     QRect editorRect() const
     {
@@ -3664,7 +3673,7 @@ class TrackHeaderRow : public QWidget
     QToolButton *m_mute;
     QToolButton *m_solo;
     QLineEdit *m_editor = nullptr;
-    float m_activity = 0.0f;
+    TrackActivityMeter *m_activityMeter = nullptr;
     bool m_finishing = false;
     // Program painted on the voice line, for syncVoice's changed check
     // (-2 = never painted; distinct from -1, "no voice set").
@@ -3788,10 +3797,10 @@ class TrackHeaderPanel : public QWidget
         for (const auto &entry : m_rowByTrack)
             entry.second->syncVoice();
     }
-    void syncActivity(const TrackActivity &activity)
+    void syncActivity(const TrackActivity &activity, bool playing)
     {
         for (const auto &entry : m_rowByTrack)
-            entry.second->setActivity(activity.intensity(entry.first));
+            entry.second->setActivity(activity.intensity(entry.first), playing);
     }
 
     // --- header-row reorder drag (driven by TrackHeaderRow's mouse events;
@@ -4062,23 +4071,21 @@ SongView::SongView(QWidget *parent)
     connect(m_vbar, &QScrollBar::valueChanged, this,
             [this](int value) { setVScroll(scrollDips(value)); });
 }
-void SongView::advanceTrackActivity(const std::array<uint8_t, MAX_TRACKS> &levels,
-                                    float elapsedSeconds)
+bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,
+                                    bool playing)
 {
-    m_trackActivity.advance(levels, elapsedSeconds);
-    m_headers->syncActivity(m_trackActivity);
-}
-
-void SongView::resetTrackActivity()
-{
-    m_trackActivity.reset();
-    m_headers->syncActivity(m_trackActivity);
+    const bool activityAnimating = m_trackActivity.advance(levels, elapsedSeconds, playing);
+    m_headers->syncActivity(m_trackActivity, playing);
+    return activityAnimating;
 }
 
 void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup)
 {
     cancelActiveInteractions();
-    resetTrackActivity();
+    if (timeline)
+        m_trackActivity.resetPaused();
+    else
+        m_trackActivity.reset();
     m_timeline = timeline;
     m_voicegroup = voicegroup;
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
@@ -4115,6 +4122,7 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
         m_editorDrawer->setViewState(m_editorViewState);
 
     rebuildAfterSongChange();
+    m_headers->syncActivity(m_trackActivity, false);
 }
 
 void SongView::rebuildAfterSongChange()

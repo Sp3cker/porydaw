@@ -100,6 +100,8 @@ qt_add_library(porydaw_app STATIC
     src/audio/sf2reader.h
     src/ui/activity/trackactivity.cpp
     src/ui/activity/trackactivity.h
+    src/ui/activity/trackactivitymeter.cpp
+    src/ui/activity/trackactivitymeter.h
     src/core/mid2agbtables.cpp
     src/core/mid2agbtables.h
     src/core/miditimeline.cpp
@@ -259,6 +261,7 @@ qt_add_executable(porydaw
     src/smfcheck.cpp
     src/transportcheck.cpp
     src/trackactivitycheck.cpp
+    src/trackactivitymetercheck.cpp
     src/audiocheck.cpp
     src/mkcheck.cpp
     src/ignorecheck.cpp
@@ -354,6 +357,17 @@ if(BUILD_TESTING)
         resources/fonts.qrc
     )
     target_link_libraries(porydaw_editorlayoutcheck PRIVATE porydaw_app)
+
+    add_test(NAME porydaw_track_activity_model
+             COMMAND porydaw --trackactivitycheck)
+    add_test(NAME porydaw_track_activity_meter_1x
+             COMMAND porydaw --trackactivitymetercheck)
+    add_test(NAME porydaw_track_activity_meter_fractional_dpr
+             COMMAND porydaw --trackactivitymetercheck)
+    set_tests_properties(porydaw_track_activity_model porydaw_track_activity_meter_1x
+        PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    set_tests_properties(porydaw_track_activity_meter_fractional_dpr
+        PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_SCALE_FACTOR=1.5")
 
     add_test(NAME porydaw_theme_checks
              COMMAND porydaw_themechecks --themecheck)

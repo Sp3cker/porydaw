@@ -62,6 +62,8 @@ int runTransportCheck();
 int runAudioCheck();
 // trackactivitycheck.cpp; deterministic activity-envelope state-model check.
 int runTrackActivityCheck();
+// trackactivitymetercheck.cpp; offscreen activity-meter widget contract check.
+int runTrackActivityMeterCheck();
 // samplecheck.cpp; Sample Editor check (phases 1-6): registrar/import
 // refusals, the headless pipeline (decode, resample, quantize, normalize,
 // write, engine-loader parity), the phase-3 editor (pitch detection,
@@ -313,6 +315,8 @@ int main(int argc, char *argv[])
         return runAudioCheck();
     if (args.contains(QStringLiteral("--trackactivitycheck")))
         return runTrackActivityCheck();
+    if (args.contains(QStringLiteral("--trackactivitymetercheck")))
+        return runTrackActivityMeterCheck();
     if (args.contains(QStringLiteral("--keymapcheck")))
         return runKeymapCheck();
     const int editCheck = args.indexOf(QStringLiteral("--editcheck"));

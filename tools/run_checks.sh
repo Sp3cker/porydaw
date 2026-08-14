@@ -112,6 +112,7 @@ run smfcheck         -    --smfcheck
 run transportcheck   -    --transportcheck
 run audiocheck       -    --audiocheck
 run trackactivitycheck -    --trackactivitycheck
+run trackactivitymetercheck -    --trackactivitymetercheck
 run keymapcheck      -    --keymapcheck
 run polycheck        -    --polycheck
 

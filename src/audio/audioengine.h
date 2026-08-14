@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "audio/auditionslots.h"
+#include "audio/trackactivitylevel.h"
 #include "core/miditimeline.h"
 #include "core/timelineplayer.h"
 
@@ -15,6 +16,8 @@ extern "C" {
 #include "m4a_engine.h"
 #include "voicegroup_loader.h"
 }
+
+static_assert(kMaxTracks == MAX_TRACKS, "track count mismatch");
 
 struct ma_device;
 struct ma_context;
@@ -189,7 +192,7 @@ class AudioEngine
     uint64_t playheadSamples() const { return m_playhead.load(); }
     int activePcmChannels() const { return m_activePcm.load(); }
     int activeCgbChannels() const { return m_activeCgb.load(); }
-    std::array<uint8_t, MAX_TRACKS> consumeTrackActivityLevels();
+    TrackActivityLevels consumeTrackActivityLevels();
 
     int maxPcmChannels() const { return m_settings.maxPcmChannels; }
     int trackBudget() const { return m_settings.trackBudget; }
@@ -301,7 +304,7 @@ class AudioEngine
     std::atomic<uint64_t> m_playhead{0};
     std::atomic<int> m_activePcm{0};
     std::atomic<int> m_activeCgb{0};
-    std::array<std::atomic<uint32_t>, MAX_TRACKS> m_pendingTrackActivityLevels{};
+    std::array<std::atomic<uint32_t>, kMaxTracks> m_pendingTrackActivityLevels{};
     static_assert(std::atomic<uint32_t>::is_always_lock_free);
 
     // Audio-thread-only sequencer state

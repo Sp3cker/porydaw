@@ -3102,15 +3102,12 @@ void MainWindow::synchronizePlayhead()
     }
 
     const bool playheadTimerWasActive = m_playheadTimer->isActive();
+    const float activityElapsed = float(m_playheadTimer->interval()) / 1000.0f;
     const auto trackActivityLevels = m_audio.consumeTrackActivityLevels();
-    if (playing) {
-        m_active->view->advanceTrackActivity(trackActivityLevels,
-                                             float(m_playheadTimer->interval()) / 1000.0f);
-    } else {
-        m_active->view->resetTrackActivity();
-    }
+    const bool activityAnimating =
+        m_active->view->advanceTrackActivity(trackActivityLevels, activityElapsed, playing);
     m_active->view->setPlayheadSample(m_audio.playheadSamples(), playing);
-    if (playing) {
+    if (activityAnimating) {
         if (!m_playheadTimer->isActive())
             m_playheadTimer->start();
     } else {

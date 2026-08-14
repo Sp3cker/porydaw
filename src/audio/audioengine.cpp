@@ -1,4 +1,5 @@
 #include "audioengine.h"
+#include "audio/trackactivitylevel.h"
 
 #include <QFile>
 
@@ -45,6 +46,17 @@ bool runningUnderWsl()
 namespace {
 // Silence to render after the last event before auto-stopping (no loop).
 constexpr double kTailSeconds = 3.0;
+
+void publishMaximum(std::atomic<uint32_t> &pending, TrackActivityLevel level)
+{
+    auto observed = pending.load(std::memory_order_relaxed);
+    for (;;) {
+        const auto desired = packedActivity(maxLevel(unpackedActivity(observed), level));
+        if (desired == observed ||
+            pending.compare_exchange_weak(observed, desired, std::memory_order_relaxed))
+            return;
+    }
+}
 } // namespace
 
 AudioEngine::AudioEngine() = default;
@@ -416,12 +428,13 @@ uint64_t AudioEngine::polyLostTotal() const
     return total;
 }
 
-std::array<uint8_t, MAX_TRACKS> AudioEngine::consumeTrackActivityLevels()
+TrackActivityLevels AudioEngine::consumeTrackActivityLevels()
 {
-    std::array<uint8_t, MAX_TRACKS> levels{};
-    for (int track = 0; track < MAX_TRACKS; track++)
-        levels[track] =
-            uint8_t(m_pendingTrackActivityLevels[track].exchange(0, std::memory_order_relaxed));
+    TrackActivityLevels levels{};
+    for (std::size_t track = 0; track < kMaxTracks; track++) {
+        levels[track] = unpackedActivity(
+            m_pendingTrackActivityLevels[track].exchange(0, std::memory_order_relaxed));
+    }
     return levels;
 }
 
@@ -729,40 +742,42 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
 
     m_playhead.store(m_player.position());
 
-    std::array<uint8_t, MAX_TRACKS> callbackActivity{};
+    TrackActivityLevels callbackActivity{};
     int pcm = 0;
     for (int i = 0; i < engine->maxPcmChannels; i++) {
-        if (!(engine->pcmChannels[i].status & CHN_ON))
+        const auto &channel = engine->pcmChannels[i];
+        if (!(channel.status & CHN_ON))
             continue;
         pcm++;
-        const int track = engine->pcmChannels[i].trackIndex;
-        if (track >= 0 && track < MAX_TRACKS)
-            callbackActivity[track] =
-                std::max(callbackActivity[track], engine->pcmChannels[i].envelopeVolume);
+        const int track = channel.trackIndex;
+        if (track >= 0 && track < static_cast<int>(kMaxTracks)) {
+            // Preserve the original envelope scale; left/right channel volume
+            // contributes only the balance ratio, not a second gain reduction.
+            callbackActivity[track] = maxLevel(
+                callbackActivity[track],
+                pcmActivityLevel(channel.envelopeVolume, channel.leftVolume, channel.rightVolume));
+        }
     }
     int cgb = 0;
     for (int i = 0; i < MAX_CGB_CHANNELS; i++) {
-        if (!(engine->cgbChannels[i].status & CHN_ON))
+        const auto &channel = engine->cgbChannels[i];
+        if (!(channel.status & CHN_ON))
             continue;
         cgb++;
-        const int track = engine->cgbChannels[i].trackIndex;
-        if (track >= 0 && track < MAX_TRACKS) {
-            // Envelope volume is the channel's current loudness proxy. Clamp
-            // its CGB-scale value to 0..15, then expand it to 0..255.
-            const uint8_t activityLevel =
-                std::min(engine->cgbChannels[i].envelopeVolume, uint8_t{15});
-            callbackActivity[track] =
-                std::max(callbackActivity[track], uint8_t(activityLevel * 17));
+        const int track = channel.trackIndex;
+        if (track >= 0 && track < static_cast<int>(kMaxTracks)) {
+            // CGB output routing is binary per side. Scale its 0..15 envelope
+            // to the PCM meter range, then apply the same pan bits as the mixer.
+            const auto envelope =
+                uint8_t(std::min(channel.envelopeVolume, uint8_t{15}) * 17);
+            callbackActivity[track] = maxLevel(
+                callbackActivity[track],
+                {channel.pan & 0xF0 ? envelope : uint8_t{0},
+                 channel.pan & 0x0F ? envelope : uint8_t{0}});
         }
     }
     m_activePcm.store(pcm);
     m_activeCgb.store(cgb);
-    for (int track = 0; track < MAX_TRACKS; track++) {
-        const uint32_t level = callbackActivity[track];
-        auto &pending = m_pendingTrackActivityLevels[track];
-        auto observed = pending.load(std::memory_order_relaxed);
-        while (level > observed &&
-               !pending.compare_exchange_weak(observed, level, std::memory_order_relaxed)) {
-        }
-    }
+    for (std::size_t track = 0; track < kMaxTracks; track++)
+        publishMaximum(m_pendingTrackActivityLevels[track], callbackActivity[track]);
 }
