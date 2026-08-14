@@ -1835,17 +1835,67 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (doc.undoStack()->count() != focusCount + 1)
             fail("the post-focus-loss velocity drag did not push exactly one command");
 
+        // The one-shot recognizes its anchor by NoteId, not by {tick,key}:
+        // a Ctrl+Down transpose mid-hold re-keys the whole selection, and
+        // the next drag on the SAME (moved) anchor must still keep the
+        // bulk selection.
+        if (occupied(a.tick, a.dur, a.key - 1) || occupied(b.tick, b.dur, b.key - 1))
+            fail("no free rows below notes A/B for the transpose probe");
+        const int transposeCount = doc.undoStack()->count();
+        sendKey(roll, Qt::Key_Down, Qt::ControlModifier);
+        const SongView::NoteKey aMoved{uint32_t(a.tick), uint8_t(a.key - 1)};
+        const SongView::NoteKey bMoved{uint32_t(b.tick), uint8_t(b.key - 1)};
+        const QPoint bMovedCenter(b.center.x(), rows.centerY(b.key - 1));
+        sendMouse(roll, QEvent::MouseButtonPress, bMovedCenter, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, bMovedCenter + QPoint(0, 15), Qt::NoButton,
+                  Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, bMovedCenter + QPoint(0, 15), Qt::LeftButton,
+                  Qt::NoButton, Qt::ControlModifier);
+        const std::vector<SongView::NoteKey> &transposed = view.selection();
+        if (transposed.size() != 2 ||
+            std::find(transposed.begin(), transposed.end(), aMoved) == transposed.end() ||
+            std::find(transposed.begin(), transposed.end(), bMoved) == transposed.end())
+            fail("a mid-hold transpose disguised the anchor and collapsed the bulk selection");
+        DocNote aTransposed, bTransposed;
+        if (!doc.findNote(track, a.tick, uint8_t(a.key - 1), &aTransposed) ||
+            aTransposed.velocity != aFocus.velocity - 15 ||
+            !doc.findNote(track, b.tick, uint8_t(b.key - 1), &bTransposed) ||
+            bTransposed.velocity != bFocus.velocity - 15)
+            fail("the post-transpose anchor drag did not nudge the whole selection");
+        if (doc.undoStack()->count() != transposeCount + 2)
+            fail("the transpose and its anchor drag did not push exactly two commands");
+
         // The last drag re-armed the one-shot; release the chord so no
         // hidden state leaks into the sections below.
         QKeyEvent finalRelease(QEvent::KeyRelease, Qt::Key_Control, Qt::NoModifier);
         QCoreApplication::sendEvent(roll, &finalRelease);
 
-        // Restore both velocities for later checks: undo the focus-loss,
-        // switched, repeated, joined, and carried drags. The first modifier
-        // drag stays committed, exactly as before this section grew, so the
-        // gesture tally at the end of the run is unchanged.
-        for (int i = 0; i < 5; ++i)
+        // Restore both velocities and positions for later checks: undo the
+        // post-transpose, transpose, focus-loss, switched, repeated,
+        // joined, and carried edits. The first modifier drag stays
+        // committed, exactly as before this section grew, so the gesture
+        // tally at the end of the run is unchanged.
+        for (int i = 0; i < 7; ++i)
             doc.undoStack()->undo();
+
+        // Escape while the modifier press is still undecided cancels it:
+        // no promotion on further movement, no toggle on release, no edit.
+        const int escapeCount = doc.undoStack()->count();
+        sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendKey(roll, Qt::Key_Escape, Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseMove, b.center + QPoint(0, 15), Qt::NoButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15), Qt::LeftButton,
+                  Qt::NoButton, Qt::ControlModifier);
+        DocNote bEscaped;
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bEscaped) || bEscaped.velocity != 78)
+            fail("an Escaped modifier press still adjusted the velocity");
+        if (!view.selection().empty())
+            fail("an Escaped modifier press still changed the selection");
+        if (doc.undoStack()->count() != escapeCount)
+            fail("an Escaped modifier press pushed an undo command");
         view.clearSelection();
     }
 
@@ -1996,6 +2046,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 doc.undoStack()->undo();
             view.clearSelection();
         }
+        // The Ctrl+velocity drags above re-armed the one-shot selection
+        // replace; release the chord so no hidden state leaks into the
+        // sections below.
+        QKeyEvent shortNoteRelease(QEvent::KeyRelease, Qt::Key_Control, Qt::NoModifier);
+        QCoreApplication::sendEvent(roll, &shortNoteRelease);
         view.applyViewState(originalView);
         QCoreApplication::processEvents();
     }

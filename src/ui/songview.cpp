@@ -1664,14 +1664,16 @@ class PianoRoll : public TimelineSurface
                 return;
             m_velModPress = false;
             const SongView::NoteKey id{m_velAnchor.startTick, m_velAnchor.key};
-            if (m_velReplaceArmed && !(id == m_velReplaceNote)) {
+            if (m_velReplaceNote.isAssigned() && m_velAnchor.noteId != m_velReplaceNote) {
                 // A modifier velocity edit already committed during this
                 // uninterrupted chord hold: a second drag on a DIFFERENT
                 // note is a request to edit that note, so it replaces the
                 // selection instead of joining and nudging both. Same
                 // anchor falls through, so a deliberate bulk selection
-                // survives repeated drags on its own anchor.
-                m_velReplaceArmed = false;
+                // survives repeated drags on its own anchor — compared by
+                // NoteId, so a mid-hold Ctrl+arrow transpose/nudge that
+                // re-keys the selection can't disguise the anchor.
+                m_velReplaceNote = {};
                 m_sv->setSelection({id});
             } else if (!m_sv->isSelected(m_velAnchor)) {
                 if (m_velModMods & Qt::ControlModifier) {
@@ -1935,10 +1937,8 @@ class PianoRoll : public TimelineSurface
             // note replaces the selection instead of joining (see the
             // promotion in mouseMoveEvent).
             if (velModDrag && keymap::Registry::instance().matchesModifier(
-                                  event->modifiers(), QStringLiteral("roll.velocity_drag"))) {
-                m_velReplaceArmed = true;
-                m_velReplaceNote = {m_velAnchor.startTick, m_velAnchor.key};
-            }
+                                  event->modifiers(), QStringLiteral("roll.velocity_drag")))
+                m_velReplaceNote = m_velAnchor.noteId;
         }
         m_dTick = 0;
         m_dKey = 0;
@@ -2007,6 +2007,10 @@ class PianoRoll : public TimelineSurface
         if (event->key() == Qt::Key_Escape) {
             m_drag = Drag::None;
             m_velModDrag = false;
+            // An undecided modifier press dies too — without this the
+            // "cancelled" press still promotes to a drag or toggles the
+            // selection Escape just cleared on its release.
+            m_velModPress = false;
             m_leftPress = false;
             m_rightPress = false;
             stopBandAuditions();
@@ -2025,7 +2029,6 @@ class PianoRoll : public TimelineSurface
             // Any modifier coming up ends the "uninterrupted hold" the
             // one-shot selection replace is scoped to; the next modifier
             // velocity drag joins again.
-            m_velReplaceArmed = false;
             m_velReplaceNote = {};
             invalidateContent();
         }
@@ -2048,10 +2051,8 @@ class PianoRoll : public TimelineSurface
         // releasing the chord: the one-shot selection replace must not
         // survive an Alt+Tab and fire on a drag minutes later.
         const QEvent::Type type = event->type();
-        if (type == QEvent::FocusOut || type == QEvent::Hide || type == QEvent::WindowDeactivate) {
-            m_velReplaceArmed = false;
+        if (type == QEvent::FocusOut || type == QEvent::Hide || type == QEvent::WindowDeactivate)
             m_velReplaceNote = {};
-        }
         return TimelineSurface::event(event);
     }
 
@@ -2851,10 +2852,14 @@ class PianoRoll : public TimelineSurface
                                               // vs. vertical velocity drag undecided
     Qt::KeyboardModifiers m_velModMods = Qt::NoModifier; // that press's chord
     bool m_velModDrag = false;                           // the live drag grew from that press
-    bool m_velReplaceArmed = false;                      // one-shot: a modifier drag committed
-                                                         // during the still-held chord…
-    SongView::NoteKey m_velReplaceNote{};                // …on this note; the next drag on a
-                                                         // different note replaces the selection
+    NoteId m_velReplaceNote{};                           // one-shot (unassigned = disarmed): a
+                                                         // modifier drag committed during the
+                                                         // still-held chord on this note; the
+                                                         // next such drag on a different note
+                                                         // replaces the selection. NoteId, not
+                                                         // {tick,key}: the anchor must stay
+                                                         // recognizable after a mid-hold
+                                                         // transpose/nudge re-keys the selection
     int m_kbdKey = -1;            // key sounding from a keyboard-column press
     int m_soundingKey = -1;       // auditioned key highlighted on the keyboard
     int m_hoverKey = -1;          // key row under the cursor; -1 = no mark
