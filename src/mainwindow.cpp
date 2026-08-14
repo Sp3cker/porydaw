@@ -200,7 +200,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     QSettings settings;
     restoreGeometry(settings.value(QStringLiteral("windowGeometry")).toByteArray());
     restoreState(settings.value(QStringLiteral("windowState")).toByteArray());
-    updateDockTabFonts();
     m_songList->restoreFilters(settings.value(QStringLiteral("songFilterText")).toString(),
                                settings.value(QStringLiteral("songFilterSort")).toInt(),
                                settings.value(QStringLiteral("songFilterCategory")).toString());
@@ -618,7 +617,6 @@ void MainWindow::buildUi()
         settings.setValue(kSystemFontKey, on);
         typography::setUseSystemFont(on);
         m_themeController->reapply();
-        refreshDerivedFonts();
     });
 
     m_velocityColorsAction = viewMenu->addAction(tr("Color Notes by &Velocity"));
@@ -707,37 +705,18 @@ void MainWindow::buildUi()
     polyLayout->addWidget(m_polyLostSeparator);
     polyLayout->addWidget(m_polyLostLabel);
     polyLayout->addWidget(m_polyLostCaption);
+    statusBar()->addPermanentWidget(m_polyMeter);
     m_polyMeter->hide();
-    refreshDerivedFonts();
+    const auto valueFont = typography::bodyMono(font());
+    m_pcmValueLabel->setFixedWidth(
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("15/15")) + 2 * fieldInset);
+    m_cgbValueLabel->setFixedWidth(
+        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("4/4")) + 2 * fieldInset);
 
     // Initial focus goes to the song list (via the panel's focus proxy), not
     // its filter box — first in tab order, which otherwise wins on show and
     // swallowed the first keystrokes into the search field.
     m_songList->setFocus();
-}
-
-// Fonts derived from typography at build time (not inherited from the
-// application font) need explicit re-derivation when the typeface preference
-// changes; the value labels also size themselves from the derived metrics.
-void MainWindow::refreshDerivedFonts()
-{
-    const auto fieldInset = ::layout::space(::layout::Space::Half);
-    const auto valueFont = typography::bodyMono(font());
-    m_pcmValueLabel->setFont(valueFont);
-    m_pcmValueLabel->setFixedWidth(
-        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("15/15")) + 2 * fieldInset);
-    m_cgbValueLabel->setFont(valueFont);
-    m_cgbValueLabel->setFixedWidth(
-        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("4/4")) + 2 * fieldInset);
-    m_polyLostLabel->setFont(valueFont);
-    updateDockTabFonts();
-}
-
-void MainWindow::updateDockTabFonts()
-{
-    const auto dockTabFont = typography::bold(font());
-    for (auto *tabBar : findChildren<QTabBar *>(QString(), Qt::FindDirectChildrenOnly))
-        tabBar->setFont(dockTabFont);
 }
 
 
@@ -757,12 +736,6 @@ void MainWindow::updateWindowFrameTheme()
 #endif
 }
 
-void MainWindow::childEvent(QChildEvent *event)
-{
-    QMainWindow::childEvent(event);
-    if (event->added())
-        QTimer::singleShot(0, this, &MainWindow::updateDockTabFonts);
-}
 
 void MainWindow::changeEvent(QEvent *event)
 {

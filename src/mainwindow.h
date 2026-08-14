@@ -87,7 +87,6 @@ class MainWindow : public QMainWindow
   protected:
     void closeEvent(QCloseEvent *event) override;
     void changeEvent(QEvent *event) override;
-    void childEvent(QChildEvent *event) override;
 
   private slots:
     void openProject();
@@ -124,7 +123,6 @@ class MainWindow : public QMainWindow
   private:
     void buildUi();
     void updateWindowFrameTheme();
-    void updateDockTabFonts();
     // The dialog-less half of openProject; also the session-restore entry.
     // On failure warns via dialog (interactive) or status bar (restore).
     bool openProjectDir(const QString &dir, bool interactive = true);
@@ -245,7 +243,6 @@ class MainWindow : public QMainWindow
     // The session's cfg (volume/reverb) merged with the global engine knobs
     // — everything AudioEngine::updateSettings applies.
     SongSettings songSettingsFor(const SongSession &session) const;
-    void refreshDerivedFonts();
     void updateTransportActions();
     // Synchronizes active-session state into the transport presentation.
     void syncMasterVolumeControl();

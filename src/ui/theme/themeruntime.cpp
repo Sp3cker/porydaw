@@ -79,12 +79,13 @@ QString trackHeaderStyleSheet(const Theme &theme)
                           "border-color:%3;}"
                           "QLabel#polyphonyPcmValue,QLabel#polyphonyCgbValue,"
                           "QLabel#polyphonyLostValue{"
-                          "background-color:%4;color:%5;}")
+                          "background-color:%4;color:%5;font-family:\"%6\";}")
         .arg(colorName(theme, Role::track_header_panel_background))
         .arg(colorName(theme, Role::track_header_panel_text))
         .arg(colorName(theme, Role::track_header_panel_outline))
         .arg(colorName(theme, Role::polyphony_value_background))
-        .arg(colorName(theme, Role::polyphony_value_text));
+        .arg(colorName(theme, Role::polyphony_value_text))
+        .arg(typography::bodyMono(QFont()).family());
 }
 
 QString toolbarStyleSheet(const Theme &theme)
@@ -94,23 +95,27 @@ QString toolbarStyleSheet(const Theme &theme)
     // so the click lands visibly without changing the icon's surface (the
     // hovered icon tint stays readable). Checked state, ordered last, wins
     // over hover and press so an engaged Loop never loses its fill.
-    return QStringLiteral("QToolBar{background-color:%1;color:%2;border-color:%3;}"
-                          "QToolBar#transportToolbar "
-                          "QToolButton{background-color:transparent;"
-                          "border-color:transparent;color:%4;}"
-                          "QToolBar#transportToolbar QToolButton:hover{"
-                          "background-color:%5;border-color:transparent;color:%6;}"
-                          "QToolBar#transportToolbar QToolButton:pressed{"
-                          "background-color:%5;border-color:%7;color:%6;}"
-                          "QToolBar#transportToolbar QToolButton:checked{"
-                          "background-color:%8;border-color:transparent;color:%9;}"
-                          // A disabled-but-checked control (Loop before a song loads)
-                          // trades the accent fill for the muted indicator fill, like a
-                          // disabled checked checkbox; ordered after checked so it wins.
-                          "QToolBar#transportToolbar QToolButton:checked:disabled{"
-                          "background-color:%10;}"
-                          "QToolBar#transportToolbar QLabel{background-color:transparent;"
-                          "color:%4;}")
+    const auto monoFamily = typography::bodyMono(QFont()).family();
+    return (QStringLiteral("QToolBar{background-color:%1;color:%2;border-color:%3;}"
+                           "QToolBar#transportToolbar "
+                           "QToolButton{background-color:transparent;"
+                           "border-color:transparent;color:%4;}"
+                           "QToolBar#transportToolbar QToolButton:hover{"
+                           "background-color:%5;border-color:transparent;color:%6;}"
+                           "QToolBar#transportToolbar QToolButton:pressed{"
+                           "background-color:%5;border-color:%7;color:%6;}"
+                           "QToolBar#transportToolbar QToolButton:checked{"
+                           "background-color:%8;border-color:transparent;color:%9;}"
+                           // A disabled-but-checked control (Loop before a song loads)
+                           // trades the accent fill for the muted indicator fill, like a
+                           // disabled checked checkbox; ordered after checked so it wins.
+                           "QToolBar#transportToolbar QToolButton:checked:disabled{"
+                           "background-color:%10;}"
+                           "QToolBar#transportToolbar QLabel{background-color:transparent;"
+                           "color:%4;}"
+                           "QToolBar#transportToolbar QLabel#transportTimeLabel{"
+                           "font-family:\"") +
+            monoFamily + QStringLiteral("\";}"))
         .arg(colorName(theme, Role::toolbar_background))
         .arg(colorName(theme, Role::toolbar_text))
         .arg(colorName(theme, Role::toolbar_outline))
@@ -126,7 +131,7 @@ QString toolbarStyleSheet(const Theme &theme)
 QString tabStyleSheet(const Theme &theme)
 {
     return QStringLiteral("QTabWidget::pane{background-color:%1;border-color:%2;}"
-                          "QTabBar::tab{background-color:%3;color:%4;border-color:%2;}"
+                          "QTabBar::tab{background-color:%3;color:%4;border-color:%2;font-weight:600;}"
                           "QTabBar::tab:hover{background-color:%5;color:%6;"
                           "border-color:%2;}"
                           "QTabBar::tab:selected{background-color:%7;color:%8;"
