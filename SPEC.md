@@ -267,7 +267,20 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   notes show their velocity value instead of the pitch name, and velocity
   bars appear at any zoom.
 - **Bottom — Automation lanes:** per-track, addable from the m4a parameter list (§4.2),
-  drawn as line/step editors. Ctrl while dragging magnetizes lanes with a meaningful
+  drawn as line/step editors. With the pencil mode below owning freehand drawing, the
+  **arrow tool never creates data on a click**: a left click on empty lane space parks
+  the edit cursor at the snapped tick and writes nothing, and a left click on a point's
+  dot **deletes** that point as one undo entry (of a node selection, only the clicked
+  node). Shift+click spares it — that chord starts the axis-locked drag below, and a
+  modifier slip must not destroy a node. A freehand sweep therefore starts only once
+  the drag clears a font-scaled activation distance (`layout::fontPx(5/12)`, the axis
+  lock's), and the slop is subtracted from the stroke so crossing the threshold is not
+  itself movement: sub-threshold hand jitter leaves the document byte-identical. The
+  click spends the pair, so a double-click **on a node** is a no-op; the double-click
+  type-in stays on empty lane space, and a node's exact value is typed through the
+  point menu's Set value… below. None of this touches the pencil: it draws from the
+  first pixel, and a pencil click still leaves a single point.
+  Ctrl while dragging magnetizes lanes with a meaningful
   center (pan/tune 64, bend 0) to that neutral inside a font-scaled pixel window
   (`layout::fontPx(2/3)` mapped through the row height into value units), so
   dead-center never needs pixel-perfect aim at any lane height or font scale.

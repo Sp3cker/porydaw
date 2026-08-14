@@ -2451,8 +2451,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (lanes->cursor().shape() == Qt::BitmapCursor)
             fail("leaving pencil mode kept the pencil cursor");
 
-        // Park a tempo point with an arrow-mode click at a spot with clear
-        // air (no existing dot within grab range in x).
+        // Park a tempo point with a pencil-mode click at a spot with clear
+        // air (no existing dot within grab range in x). The arrow tool's
+        // click writes nothing at all now; the pencil's still leaves the
+        // single point these fixtures need.
         const qreal dprLanes = lanes->devicePixelRatioF();
         auto dotNear = [&](qreal x) {
             for (const LanePoint &pt : view.model().tempoLane)
@@ -2464,15 +2466,17 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         while (dotNear(x0))
             x0 += 40;
         const int y0 = 15;
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
         sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(x0), y0), Qt::LeftButton,
                   Qt::LeftButton);
         sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(x0), y0), Qt::LeftButton,
                   Qt::NoButton);
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
         QCoreApplication::processEvents();
         const uint64_t t0 = view.snapTick(view.tickAtContentX(x0 - songview::kGutterW));
         DocLanePoint clickPt;
         if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &clickPt))
-            fail("arrow-mode click did not write a tempo point");
+            fail("pencil-mode click did not write a tempo point");
         if (clickPt.value != tempoValueAtY(y0))
             fail("test-side tempo value mirror drifted from the widget's mapping");
         const qreal xDot = view.displayX(double(t0), songview::kGutterW, dprLanes);
@@ -2610,6 +2614,186 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QCoreApplication::processEvents();
     }
 
+    // Arrow-tool click semantics in the lanes: with the pencil owning
+    // freehand drawing, a left click never creates data. On empty lane
+    // space it parks the edit cursor and writes nothing; a freehand sweep
+    // only starts once the travel clears the activation slop
+    // (layout::fontPx(5/12)), and that slop is subtracted so crossing the
+    // threshold is not itself motion. On a node the click deletes it in one
+    // undo entry (Shift, which means an axis-locked drag, spares it), which
+    // spends the pair: the double-click that follows is a no-op. Empty-
+    // space double-click still opens the value type-in.
+    {
+        const int undoIndex = doc.undoStack()->index();
+        const int laneTrack = view.selectedTrack();
+        const int slop = layout::fontPx(5.0 / 12.0);
+        // Test-side mirror of the tempo row's value<->y mapping, as in the
+        // pencil section above (row 0, default 48 px height).
+        const int rowTopPad = 5, rowBottom = 48 - 1 - 4;
+        auto tempoMaxV = [&]() {
+            int maxV = 200;
+            for (const LanePoint &pt : view.model().tempoLane)
+                maxV = std::max(maxV, pt.value + 20);
+            return maxV;
+        };
+        auto tempoValueAtY = [&](int y) {
+            const int yc = std::clamp(y, rowTopPad, rowBottom);
+            return (rowBottom - yc) * tempoMaxV() / (rowBottom - rowTopPad);
+        };
+        auto tempoValueY = [&](int v) {
+            return rowBottom - v * (rowBottom - rowTopPad) / std::max(1, tempoMaxV());
+        };
+        auto tempoPoints = [&]() { return doc.lanePoints(laneTrack, DOC_CC_TEMPO); };
+        // Any value type-in that opens gets rejected: an unattended modal
+        // would wedge the harness, and every probe here asserts on whether
+        // one appeared at all.
+        bool typeInSeen = false;
+        QTimer typeInPoll;
+        typeInPoll.setInterval(0);
+        QObject::connect(&typeInPoll, &QTimer::timeout, [&] {
+            if (auto *dlg = lanes->findChild<QInputDialog *>()) {
+                typeInSeen = true;
+                dlg->reject();
+            }
+        });
+
+        const qreal dprLanes = lanes->devicePixelRatioF();
+        auto dotNear = [&](qreal x) {
+            for (const LanePoint &pt : view.model().tempoLane)
+                if (std::abs(view.displayX(double(pt.tick), songview::kGutterW, dprLanes) - x) < 24)
+                    return true;
+            return false;
+        };
+        qreal xClick = songview::kGutterW + (lanes->width() - songview::kGutterW) * 0.55;
+        while (dotNear(xClick))
+            xClick += 40;
+        const int yClick = 20;
+        const QPoint clickPos(int(xClick), yClick);
+        const uint64_t tClick =
+            view.snapTick(view.tickAtContentX(int(xClick) - songview::kGutterW));
+        auto press = [&](QPoint pos, Qt::KeyboardModifiers mods = Qt::NoModifier) {
+            sendMouse(lanes, QEvent::MouseButtonPress, pos, Qt::LeftButton, Qt::LeftButton, mods);
+        };
+        auto move = [&](QPoint pos, Qt::KeyboardModifiers mods = Qt::NoModifier) {
+            sendMouse(lanes, QEvent::MouseMove, pos, Qt::NoButton, Qt::LeftButton, mods);
+        };
+        auto release = [&](QPoint pos, Qt::KeyboardModifiers mods = Qt::NoModifier) {
+            sendMouse(lanes, QEvent::MouseButtonRelease, pos, Qt::LeftButton, Qt::NoButton, mods);
+            QCoreApplication::processEvents();
+        };
+
+        // A plain click on empty lane space: nothing written, edit cursor
+        // parked at the click's snapped tick (which the setup moves away
+        // from first, so the assert can't pass by accident).
+        view.commitEditCursor(0);
+        QCoreApplication::processEvents();
+        QByteArray before = doc.smf().write();
+        int undoBefore = doc.undoStack()->index();
+        uint64_t revisionBefore = doc.revision();
+        press(clickPos);
+        release(clickPos);
+        if (doc.smf().write() != before || doc.undoStack()->index() != undoBefore ||
+            doc.revision() != revisionBefore)
+            fail("an arrow-tool click on empty lane space wrote to the document");
+        if (tClick == 0)
+            fail("arrow-click probe landed on tick 0, where the cursor already sat");
+        else if (view.editCursorTick() != tClick)
+            fail("an arrow-tool click on empty lane space did not park the edit cursor");
+
+        // Hand jitter below the activation distance, and a drag of exactly
+        // the activation distance: both are still clicks, so the document
+        // stays byte-identical.
+        for (const int travel : {std::max(0, slop - 1), slop}) {
+            press(clickPos);
+            move(clickPos + QPoint(0, travel));
+            release(clickPos + QPoint(0, travel));
+            if (doc.smf().write() != before || doc.undoStack()->index() != undoBefore ||
+                doc.revision() != revisionBefore)
+                fail(travel < slop ? "sub-slop jitter changed the document"
+                                   : "the sweep's activation slop counted as motion");
+        }
+
+        // One pixel past the slop draws — and only that one pixel of it:
+        // the slop offset is subtracted, so the stroke sits at the press's
+        // tick with the value one pixel below the press, not slop + 1.
+        const size_t pointsBefore = tempoPoints().size();
+        const int sweptValue = tempoValueAtY(yClick + 1);
+        press(clickPos);
+        move(clickPos + QPoint(0, slop));
+        move(clickPos + QPoint(0, slop + 1));
+        release(clickPos + QPoint(0, slop + 1));
+        DocLanePoint swept;
+        if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, tClick, &swept) ||
+            tempoPoints().size() != pointsBefore + 1 ||
+            doc.undoStack()->index() != undoBefore + 1 || doc.revision() != revisionBefore + 1)
+            fail("a sweep one pixel past the activation slop did not draw exactly one point");
+        else if (swept.value != sweptValue)
+            fail("the sweep drew the activation slop as movement");
+
+        // A click on that node deletes it: one undo entry, no type-in.
+        const QPoint dotPos(int(view.displayX(double(tClick), songview::kGutterW, dprLanes)),
+                            tempoValueY(swept.value));
+        before = doc.smf().write();
+        undoBefore = doc.undoStack()->index();
+        revisionBefore = doc.revision();
+        typeInSeen = false;
+        typeInPoll.start();
+        press(dotPos);
+        release(dotPos);
+        typeInPoll.stop();
+        DocLanePoint gone;
+        if (doc.findLanePoint(laneTrack, DOC_CC_TEMPO, tClick, &gone) ||
+            tempoPoints().size() != pointsBefore || doc.undoStack()->index() != undoBefore + 1 ||
+            doc.revision() != revisionBefore + 1)
+            fail("an arrow-tool click on a node did not delete it as one undo entry");
+        if (typeInSeen)
+            fail("the node click opened a value type-in");
+
+        // The pair is spent: the double-click that completes it must not
+        // type a value into the empty space the delete just made.
+        const QByteArray afterDelete = doc.smf().write();
+        typeInSeen = false;
+        typeInPoll.start();
+        sendMouse(lanes, QEvent::MouseButtonDblClick, dotPos, Qt::LeftButton, Qt::LeftButton);
+        release(dotPos);
+        typeInPoll.stop();
+        if (typeInSeen || doc.smf().write() != afterDelete)
+            fail("the double-click after a node click-delete was not a no-op");
+        doc.undoStack()->undo(); // the click-delete
+        QCoreApplication::processEvents();
+
+        // Shift means an axis-locked drag, so a Shift click spares the node
+        // — and its double-click still opens no type-in.
+        before = doc.smf().write();
+        undoBefore = doc.undoStack()->index();
+        typeInSeen = false;
+        typeInPoll.start();
+        press(dotPos, Qt::ShiftModifier);
+        release(dotPos, Qt::ShiftModifier);
+        sendMouse(lanes, QEvent::MouseButtonDblClick, dotPos, Qt::LeftButton, Qt::LeftButton);
+        release(dotPos);
+        typeInPoll.stop();
+        if (doc.smf().write() != before || doc.undoStack()->index() != undoBefore)
+            fail("a Shift click on a node changed the document");
+        if (typeInSeen)
+            fail("a double-click on a surviving node opened a value type-in");
+
+        // Empty space keeps the double-click type-in — the way a node's
+        // exact value is now typed is the point menu's Set value…
+        typeInSeen = false;
+        typeInPoll.start();
+        sendMouse(lanes, QEvent::MouseButtonDblClick, clickPos + QPoint(0, 12), Qt::LeftButton,
+                  Qt::LeftButton);
+        release(clickPos + QPoint(0, 12));
+        typeInPoll.stop();
+        if (!typeInSeen)
+            fail("a double-click on empty lane space did not open the value type-in");
+
+        while (doc.undoStack()->index() > undoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+    }
+
     // Shift axis lock on a point drag: Shift+press on a point's dot grabs
     // the point — the ramp now starts only off-dot — and once the travel
     // passes the activation distance (layout::fontPx(5/12)) the dominant
@@ -2651,7 +2835,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             return n;
         };
 
-        // Park a tempo point with an arrow-mode click in clear air.
+        // Park a tempo point with a pencil-mode click in clear air (the
+        // arrow tool's click writes nothing, as the section above proves).
         const qreal dprLanes = lanes->devicePixelRatioF();
         auto dotNear = [&](qreal x) {
             for (const LanePoint &pt : view.model().tempoLane)
@@ -2663,15 +2848,17 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         while (dotNear(x0))
             x0 += 40;
         const int y0 = 20;
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
         sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(x0), y0), Qt::LeftButton,
                   Qt::LeftButton);
         sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(x0), y0), Qt::LeftButton,
                   Qt::NoButton);
+        sendKey(lanes, Qt::Key_B, Qt::NoModifier);
         QCoreApplication::processEvents();
         const uint64_t t0 = view.snapTick(view.tickAtContentX(x0 - songview::kGutterW));
         DocLanePoint parked;
         if (!tempoPointAt(t0, &parked))
-            fail("axis-lock setup: arrow click did not write a tempo point");
+            fail("axis-lock setup: pencil click did not write a tempo point");
         if (parked.value != tempoValueAtY(y0))
             fail("test-side tempo value mirror drifted from the widget's mapping");
         const qreal xDot = view.displayX(double(t0), songview::kGutterW, dprLanes);
@@ -3345,12 +3532,13 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 QCoreApplication::processEvents();
             }
 
-            // A zero-motion click on a selected node must not touch the
-            // document — even when a selected event is stored in
-            // non-canonical bytes that moveLanePoints' byte-based no-op
-            // detection would "heal" into a rewrite. Park a fractional-BPM
-            // tempo meta (120.5 BPM; the canonical form of its 121 lane
-            // value encodes differently) inside the selection and click.
+            // A zero-motion click on a selected node deletes exactly that
+            // node — one undo entry — and leaves the rest of the selection
+            // alone, including events stored in non-canonical bytes that a
+            // group move's byte-based no-op detection would "heal" into a
+            // rewrite. Park a fractional-BPM tempo meta (120.5 BPM; the
+            // canonical form of its 121 lane value encodes differently)
+            // inside the selection and click.
             {
                 SmfEvent frac;
                 frac.tick = tA;
@@ -3368,13 +3556,30 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 QCoreApplication::processEvents();
                 const QByteArray preClick = doc.smf().write();
                 const int undoBefore = doc.undoStack()->index();
+                const size_t selectedBefore = doc.lanePoints(laneTrack, freeCc).size();
+                auto fractionalTempoIntact = [&] {
+                    for (const SmfEvent &ev : doc.smf().tracks[0].events)
+                        if (ev.tick == tA && ev.status == 0xFF && ev.metaType == 0x51 &&
+                            ev.blob == frac.blob)
+                            return true;
+                    return false;
+                };
                 sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tA)), ccValueY(vA)),
                           Qt::LeftButton, Qt::LeftButton);
                 sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(dotX(tA)), ccValueY(vA)),
                           Qt::LeftButton, Qt::NoButton);
                 QCoreApplication::processEvents();
-                if (doc.undoStack()->index() != undoBefore || doc.smf().write() != preClick)
-                    fail("a zero-motion click on a selected node touched the document");
+                DocLanePoint gone;
+                if (doc.undoStack()->index() != undoBefore + 1 ||
+                    doc.lanePoints(laneTrack, freeCc).size() + 1 != selectedBefore ||
+                    doc.findLanePoint(laneTrack, freeCc, tA, &gone))
+                    fail("a zero-motion click on a selected node did not delete just that node");
+                if (!fractionalTempoIntact())
+                    fail("the click-delete rewrote another selected lane's non-canonical event");
+                doc.undoStack()->undo(); // the click-delete
+                QCoreApplication::processEvents();
+                if (doc.smf().write() != preClick)
+                    fail("undoing the click-delete did not restore the document");
                 doc.undoStack()->undo(); // the raw fractional-tempo insert
                 QCoreApplication::processEvents();
             }
@@ -3951,6 +4156,16 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                               int yTo, Qt::KeyboardModifiers mods) {
             sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(laneX(tA)), yFrom),
                       Qt::LeftButton, Qt::LeftButton, mods);
+            // A freehand sweep only starts once it clears its activation
+            // slop, so arm it straight up: the stroke's x — all these
+            // probes assert on — is untouched, and the subtracted slop
+            // just shifts every sampled value down by the same few pixels.
+            // A Shift ramp has no slop (and commits from its anchors), so
+            // it needs no arming.
+            if (!(mods & Qt::ShiftModifier))
+                sendMouse(lanes, QEvent::MouseMove,
+                          QPoint(int(laneX(tA)), yFrom - layout::fontPx(5.0 / 12.0)), Qt::NoButton,
+                          Qt::LeftButton, mods);
             via.push_back(tB);
             for (size_t i = 0; i < via.size(); i++) {
                 const int y = yFrom + (yTo - yFrom) * int(i + 1) / int(via.size());
@@ -4073,11 +4288,16 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 panRowTop += 48;
         auto panPoints = [&]() { return doc.lanePoints(laneTrack, 0x0A); };
         const qreal dprLanes = lanes->devicePixelRatioF();
+        // A pencil tap: the arrow tool's click writes nothing now, and the
+        // detent lives in the shared press-time value mapping, so the
+        // pencil's single-point click probes it just as directly.
         auto ctrlTap = [&](qreal x, int y, Qt::KeyboardModifiers mods) {
+            sendKey(lanes, Qt::Key_B, Qt::NoModifier);
             sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(x), y), Qt::LeftButton,
                       Qt::LeftButton, mods);
             sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(x), y), Qt::LeftButton,
                       Qt::NoButton, mods);
+            sendKey(lanes, Qt::Key_B, Qt::NoModifier);
             QCoreApplication::processEvents();
         };
         for (const int rowH : {48, 96}) {
@@ -4716,16 +4936,22 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             return chip;
         };
 
-        // Freehand sweep mid-row: the chip follows the pending value.
+        // Freehand sweep mid-row: the chip follows the pending value. The
+        // arming move clears the sweep's activation slop straight down, so
+        // the stroke's x is untouched and every later sample's value is the
+        // one that many pixels above the cursor.
         {
+            const int slop = layout::fontPx(5.0 / 12.0);
             sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xDot) + 40, ccRowTop + 30),
                       Qt::LeftButton, Qt::LeftButton);
+            sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + 40, ccRowTop + 30 + slop),
+                      Qt::NoButton, Qt::LeftButton);
             sendMouse(lanes, QEvent::MouseMove, QPoint(int(xDot) + 60, ccRowTop + 35), Qt::NoButton,
                       Qt::LeftButton);
             const uint64_t tDrag =
                 view.snapTick(view.tickAtContentX(int(xDot) + 60 - songview::kGutterW));
-            const QRect chip = chipRect(dotX(tDrag), ccValueY(ccValueAtY(ccRowTop + 35)),
-                                        QString::number(ccValueAtY(ccRowTop + 35)));
+            const QRect chip = chipRect(dotX(tDrag), ccValueY(ccValueAtY(ccRowTop + 35 - slop)),
+                                        QString::number(ccValueAtY(ccRowTop + 35 - slop)));
             const QImage img = lanesImage();
             if (pixelAt(img, chip.left() - 1, chip.top() + 1) != chipColor ||
                 pixelAt(img, chip.left() - 1, chip.bottom() + 1) != chipColor)
