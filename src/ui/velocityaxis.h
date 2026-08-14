@@ -87,10 +87,13 @@ class VelocityAxis
     const std::array<VelocityAxisMarker, MaximumMarkers> &markers() const { return m_markers; }
     std::size_t markerCount() const { return m_markerCount; }
 
-    // The velocity a click in the ruler column asks for: a printed label
-    // within half its own height of y, so the ruler reads as a row of
-    // clickable values rather than a continuous slider (the un-labeled
-    // graduations between them are not targets). -1 when y hits nothing.
+    // The velocity a click in the ruler column asks for: a printed value
+    // within half a label's height of y — a selection marker's or a fixed
+    // label's — so the ruler reads as a row of clickable values rather than a
+    // continuous slider (the un-labeled graduations between them are not
+    // targets, and neither is a label a marker is covering). Build the axis
+    // with the same active values the painted one has, or the markers it
+    // must honor are missing. -1 when y hits nothing.
     int rulerVelocityAt(double y, double labelHeight) const;
 
     void paintRuler(QPainter &painter, const VelocityAxisPaintStyle &style) const;

@@ -62,8 +62,15 @@ int VelocityAxis::yToVelocity(double y) const
 int VelocityAxis::rulerVelocityAt(double y, double labelHeight) const
 {
     const double reach = labelHeight / 2.0;
+    // Exactly what paintRuler prints, and nothing else: a selection marker
+    // owns its own value's row, and the fixed label it suppressed there is
+    // not on screen to be aimed at.
+    for (std::size_t index = 0; index < m_markerCount; index++) {
+        if (std::abs(y - m_markers[index].y) <= reach)
+            return m_markers[index].velocity;
+    }
     for (std::size_t index = 0; index < m_labelCount; index++) {
-        if (std::abs(y - m_labels[index].y) <= reach)
+        if (std::abs(y - m_labels[index].y) <= reach && !markerNear(m_labels[index].y, labelHeight))
             return m_labels[index].velocity;
     }
     return -1;

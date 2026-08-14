@@ -5427,9 +5427,11 @@ constexpr double kVelStemGrabSlop = 2.0;
 // The lane mirrors the roll's note selection (selected nodes ring, and the
 // rest dim once more than one is selected) and shares the timeline's camera.
 // A left drag on a node or its stem moves the whole selection's velocities
-// together; every gesture is deferred — the pointer only moves a preview, and
-// the document mutates once, as one undo entry, when the button comes up.
-// Still to come: paint, ramp, marquee, and the PSG detents.
+// together, a drag from empty plot paints across the selected notes it
+// crosses, Shift ramps them along a line, and a click on a printed ruler
+// value sets them all to it. Every gesture is deferred — the pointer only
+// moves a preview, and the document mutates once, as one undo entry, when the
+// button comes up. Still to come: the marquee and the PSG detents.
 class VelocityLane : public TimelineSurface
 {
   public:
@@ -5454,7 +5456,7 @@ class VelocityLane : public TimelineSurface
     {
         if (m_gesture == Gesture::None)
             return;
-        const bool hadPreview = !m_frozen.empty();
+        const bool hadPreview = m_previewed;
         cancelGesture();
         if (hadPreview)
             m_sv->announce(SongView::tr("Velocity edit cancelled because notes changed."));
@@ -5552,13 +5554,20 @@ class VelocityLane : public TimelineSurface
     {
         if (event->button() == Qt::MiddleButton) {
             // Reaper-style pan, tracked in global coordinates like the lanes'.
+            // Never while an edit is live: panning moves the ticks the
+            // gesture's press coordinates were measured against.
+            if (m_gesture != Gesture::None) {
+                event->ignore();
+                return;
+            }
             m_panning = true;
             m_panPos = event->globalPosition();
             setCursor(Qt::ClosedHandCursor);
             event->accept();
             return;
         }
-        if (event->button() != Qt::LeftButton || !m_sv->document() || !m_sv->timeline()) {
+        if (event->button() != Qt::LeftButton || m_panning || !m_sv->document() ||
+            !m_sv->timeline()) {
             // Nothing here edits without a document; leave the press to the
             // parent rather than swallowing it.
             event->ignore();
@@ -5665,8 +5674,9 @@ class VelocityLane : public TimelineSurface
                 m_sv->setSelection({});
             finishGesture(painted);
         } else if (m_gesture == Gesture::Ramp) {
-            // A ramp with no length asked for nothing.
-            finishGesture(m_prevPos != m_pressPos);
+            // A Shift click is still a click: without the activation travel
+            // the ramp asked for nothing.
+            finishGesture((m_prevPos - m_pressPos).manhattanLength() >= dragActivationDistance());
         } else {
             // Under the activation slop the press was a click: Ctrl toggles
             // this node's membership, a plain click collapses onto it.
@@ -5844,7 +5854,7 @@ class VelocityLane : public TimelineSurface
         if (m_frozen.empty() && !openSession())
             return;
         m_announced = updates.front().noteId;
-        m_gestureModel.update(updates);
+        m_previewed |= m_gestureModel.update(updates);
         announcePreview();
         invalidateContent();
     }
@@ -5854,6 +5864,9 @@ class VelocityLane : public TimelineSurface
     // keep the values the press froze.
     void updateRamp(const QPointF &pos)
     {
+        // The guide line follows the pointer even when there is no selection
+        // to lay values on, so it never freezes mid-drag.
+        invalidateContent();
         if (m_frozen.empty())
             return;
         const qreal dpr = devicePixelRatioF();
@@ -5877,9 +5890,8 @@ class VelocityLane : public TimelineSurface
             }
             updates.push_back({note.noteId, velocity});
         }
-        m_gestureModel.update(updates);
+        m_previewed |= m_gestureModel.update(updates);
         announcePreview();
-        invalidateContent();
     }
 
     // A click on a printed ruler value: the whole selection goes there at
@@ -5889,7 +5901,11 @@ class VelocityLane : public TimelineSurface
     void rulerClick(const QPointF &pos)
     {
         const VelocityAxisGeometry geometry = axisGeometry();
-        const int velocity = VelocityAxis(geometry).rulerVelocityAt(pos.y(), geometry.labelHeight);
+        // Built from the selection, like the painted ruler: the markers are
+        // printed values too, and they hide the fixed labels they cover.
+        const std::vector<uint8_t> active = selectedVelocities();
+        const int velocity = VelocityAxis(geometry, active.data(), active.size())
+                                 .rulerVelocityAt(pos.y(), geometry.labelHeight);
         if (velocity < 1)
             return;
         m_gesture = Gesture::Relative;
@@ -5911,7 +5927,10 @@ class VelocityLane : public TimelineSurface
         if (m_frozen.empty())
             return;
         if (!m_activated) {
-            if ((pos - m_pressPos).manhattanLength() < dragActivationDistance())
+            // Measured on y alone: the gesture only moves velocities, so a
+            // sideways wobble must stay a click rather than arming a drag
+            // that would then commit nothing and select nothing.
+            if (std::abs(pos.y() - m_pressPos.y()) < dragActivationDistance())
                 return;
             m_activated = true;
         }
@@ -5919,7 +5938,8 @@ class VelocityLane : public TimelineSurface
         // origin: a selection keeps its internal shape, and notes that clamp
         // at 1 or 127 come back when the pointer does.
         const VelocityAxis axis = plotAxis();
-        m_gestureModel.updateByDelta(axis.yToVelocity(pos.y()) - axis.yToVelocity(m_pressPos.y()));
+        m_previewed |= m_gestureModel.updateByDelta(axis.yToVelocity(pos.y()) -
+                                                    axis.yToVelocity(m_pressPos.y()));
         announcePreview();
         invalidateContent();
     }
@@ -5953,8 +5973,10 @@ class VelocityLane : public TimelineSurface
     {
         if (m_gesture == Gesture::None)
             return;
+        const Gesture kind = m_gesture;
         m_gesture = Gesture::None;
         m_activated = false;
+        m_previewed = false;
         m_pressed.reset();
         m_selBeforePress.clear();
         m_frozen.clear();
@@ -5969,10 +5991,16 @@ class VelocityLane : public TimelineSurface
         const std::optional<uint64_t> revision =
             doc ? doc->setNotesVelocities(completion->expectedRevision, completion->targets)
                 : std::nullopt;
-        if (!revision)
-            m_sv->announce(SongView::tr("Velocity edit cancelled because notes changed."));
-        else if (*revision != completion->expectedRevision)
-            m_sv->announce(SongView::tr("Painted note velocities."));
+        if (!revision) {
+            // Only the document refusing the batch means the notes moved; a
+            // song closed mid-gesture simply has nothing to write to.
+            if (doc)
+                m_sv->announce(SongView::tr("Velocity edit cancelled because notes changed."));
+        } else if (*revision != completion->expectedRevision) {
+            m_sv->announce(kind == Gesture::Paint  ? SongView::tr("Painted note velocities.")
+                           : kind == Gesture::Ramp ? SongView::tr("Ramped note velocities.")
+                                                   : SongView::tr("Set note velocities."));
+        }
         invalidateContent();
     }
 
@@ -5995,6 +6023,7 @@ class VelocityLane : public TimelineSurface
         }
         m_gesture = Gesture::None;
         m_activated = false;
+        m_previewed = false;
         m_pressed.reset();
         m_selBeforePress.clear();
         m_frozen.clear();
@@ -6138,6 +6167,7 @@ class VelocityLane : public TimelineSurface
     QPointF m_pressPos;
     QPointF m_prevPos;
     bool m_activated = false; // the drag cleared the activation slop
+    bool m_previewed = false; // an update actually moved a preview value
     bool m_ctrlPress = false; // Ctrl at the press; the click adds instead of collapsing
 };
 

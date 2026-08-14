@@ -398,6 +398,21 @@ int runVelocityAxisBandCheck(const std::function<void(bool, const char *)> &chec
             everyLabelOnATick = everyLabelOnATick && onTick;
         }
     }
+    // The ruler's click targets are exactly the values it prints. In the
+    // densest band the labels step by 8, so at this height 64 is printed and
+    // 68 is only a graduation; a selection marker at 62 covers the 64 label
+    // and takes its row.
+    geometry.height = 400.0;
+    const VelocityAxis plain(geometry);
+    const uint8_t marked62 = 62;
+    const VelocityAxis marked(geometry, &marked62, 1);
+    check(plain.rulerVelocityAt(plain.velocityToY(64), geometry.labelHeight) == 64 &&
+              plain.rulerVelocityAt(plain.velocityToY(68), geometry.labelHeight) == -1,
+          "only printed ruler values may be click targets");
+    check(marked.rulerVelocityAt(marked.velocityToY(62), geometry.labelHeight) == 62 &&
+              marked.rulerVelocityAt(marked.velocityToY(64), geometry.labelHeight) == -1,
+          "a marker must own its row and take the label it covers out of reach");
+
     check(everyLabelOnATick, "every ruler label must land on a graduation");
     check(countsInRange && widestTicks == VelocityAxis::MaximumTicks,
           "the densest band must fill the tick array without overrunning it");
@@ -793,6 +808,15 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     const SongView::NoteKey dragId{dragNote.startTick, dragNote.key};
     const SongView::NoteKey partnerId{partner.startTick, partner.key};
     const int ringProbeRadius = int(std::ceil(2 * rasterDpr));
+    // The status line the gestures write; the readout and the wording of each
+    // commit are part of what the lane promises.
+    QString lastStatus;
+    QObject::connect(&view, &SongView::statusMessage, &view,
+                     [&lastStatus](const QString &text) { lastStatus = text; });
+    const QString cancelText = QStringLiteral("Velocity edit cancelled because notes changed.");
+    // The travel that turns a press into a drag, resolved the way the lane
+    // resolves it.
+    const double dragActivation = layout::fontPx(5.0 / 12.0);
     view.setSelection({dragId, partnerId});
     (void)view.grab();
     const QPointF nodePoint(view.displayX(double(dragNote.startTick), songview::kGutterW, dpr),
@@ -819,8 +843,24 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
                        QPointF(dragPoint.x() * rasterDpr, (dragPoint.y() - 5.0) * rasterDpr),
                        ringProbeRadius, ringColor, 24),
           "a velocity drag must preview its node at the pointer's velocity");
+    check(lastStatus.contains(QStringLiteral("velocity")) &&
+              lastStatus.contains(QStringLiteral("plays")),
+          "a live velocity gesture must read its aimed note out to the status bar");
+    // The camera must hold still under a live edit: the gesture's press was
+    // measured in ticks that panning would move.
+    const double tickBeforePanAttempt = view.tickAtContentX(0);
+    sendLaneMouse(lane, QEvent::MouseButtonPress, dragPoint, Qt::MiddleButton,
+                  Qt::MiddleButton | Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, dragPoint - QPointF(60.0, 0.0), Qt::NoButton,
+                  Qt::MiddleButton | Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, dragPoint - QPointF(60.0, 0.0),
+                  Qt::MiddleButton, Qt::LeftButton);
+    check(view.tickAtContentX(0) == tickBeforePanAttempt,
+          "a middle drag must not pan while a velocity edit is live");
     sendLaneMouse(lane, QEvent::MouseButtonRelease, dragPoint, Qt::LeftButton, Qt::NoButton);
     (void)view.grab();
+    check(lastStatus == QStringLiteral("Set note velocities."),
+          "a committed velocity drag must say what it did");
     const ViewNote *draggedNote = noteAt(dragNote.startTick, dragNote.key);
     const ViewNote *draggedPartner = noteAt(partner.startTick, partner.key);
     check(doc.revision() != revisionBeforeDrag && doc.undoStack()->index() == undoBeforeDrag + 1 &&
@@ -844,6 +884,17 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     check(view.selection().size() == 1 && view.selection()[0] == dragId &&
               doc.revision() == revisionBeforeClick,
           "a click on a node must collapse the selection onto it and edit nothing");
+    // Only vertical travel means a drag here: velocity has no horizontal
+    // axis, so a sideways wobble must still resolve as that click.
+    view.setSelection({dragId, partnerId});
+    (void)view.grab();
+    const QPointF wobble = nodePoint + QPointF(3.0 * dragActivation, 0.0);
+    sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, wobble, Qt::NoButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, wobble, Qt::LeftButton, Qt::NoButton);
+    check(view.selection().size() == 1 && view.selection()[0] == dragId &&
+              doc.revision() == revisionBeforeClick,
+          "a sideways wobble on a node must still be a click");
     sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton,
                   Qt::ControlModifier);
     sendLaneMouse(lane, QEvent::MouseButtonRelease, nodePoint, Qt::LeftButton, Qt::NoButton,
@@ -920,6 +971,43 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     check(doc.revision() == revisionBeforeEscape && escapedNote &&
               escapedNote->velocity == dragNote.velocity,
           "the release after an Escape must not commit the abandoned drag");
+    // A document edit from elsewhere kills a live preview — but a press that
+    // has not previewed anything yet had nothing to cancel.
+    DocNote outsideNote;
+    if (!doc.findNote(track, partner.startTick, partner.key, &outsideNote)) {
+        fail("the outside-edit fixture must resolve its note");
+        return failures == 0 ? 0 : 1;
+    }
+    view.setSelection({dragId});
+    (void)view.grab();
+    lastStatus.clear();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton);
+    doc.setNotesVelocity({outsideNote}, uint8_t(partner.velocity > 64 ? 20 : 110));
+    (void)view.grab();
+    check(lastStatus != cancelText,
+          "a press that previewed nothing must not report a cancelled edit");
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, nodePoint, Qt::LeftButton, Qt::NoButton);
+    doc.undoStack()->undo();
+    (void)view.grab();
+    view.setSelection({dragId});
+    (void)view.grab();
+    if (!doc.findNote(track, partner.startTick, partner.key, &outsideNote)) {
+        fail("the outside-edit fixture must resolve its note after the undo");
+        return failures == 0 ? 0 : 1;
+    }
+    sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, dragPoint, Qt::NoButton, Qt::LeftButton);
+    const uint64_t revisionBeforeOutside = doc.revision();
+    doc.setNotesVelocity({outsideNote}, uint8_t(partner.velocity > 64 ? 20 : 110));
+    (void)view.grab();
+    check(lastStatus == cancelText,
+          "an outside edit under a live preview must cancel it and say so");
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, dragPoint, Qt::LeftButton, Qt::NoButton);
+    const ViewNote *survivor = noteAt(dragNote.startTick, dragNote.key);
+    check(survivor && survivor->velocity == dragNote.velocity &&
+              doc.revision() == revisionBeforeOutside + 1,
+          "the release after an outside edit must not land the abandoned preview");
+    doc.undoStack()->undo();
     view.clearSelection();
     (void)view.grab();
 
@@ -970,6 +1058,8 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     (void)view.grab();
     const ViewNote *paintedNote = noteAt(dragNote.startTick, dragNote.key);
     const ViewNote *paintedPartner = noteAt(partner.startTick, partner.key);
+    check(lastStatus == QStringLiteral("Painted note velocities."),
+          "a committed paint stroke must say what it did");
     check(paintedNote && paintedPartner && paintedNote->velocity == paintTarget &&
               paintedPartner->velocity == paintPartnerTarget &&
               doc.undoStack()->index() == undoBeforePaint + 1 && view.selection().size() == 2,
@@ -1023,12 +1113,28 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     (void)view.grab();
     const ViewNote *rampedNote = noteAt(dragNote.startTick, dragNote.key);
     const ViewNote *rampedPartner = noteAt(partner.startTick, partner.key);
+    check(lastStatus == QStringLiteral("Ramped note velocities."),
+          "a committed ramp must say what it did");
     check(rampedNote && rampedPartner && rampedNote->velocity == rampTarget &&
               rampedPartner->velocity == partner.velocity &&
               doc.undoStack()->index() == undoBeforeRamp + 1,
           "a Shift drag must ramp the selection between its ends instead of moving it");
-    doc.undoStack()->undo();
-    (void)view.grab();
+    // A Shift press inside the activation travel is a click too: hand jitter
+    // must not commit a ramp, even though the value under it has moved.
+    const QPointF shiftJitter = rampStart - QPointF(0.0, dragActivation - 1.0);
+    if (laneVelocityAt(lane, shiftJitter.y()) == partner.velocity) {
+        fail("the Shift-click fixture must sit within a velocity of its jitter");
+        return failures == 0 ? 0 : 1;
+    }
+    const int undoBeforeShiftClick = doc.undoStack()->index();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, rampStart, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ShiftModifier);
+    sendLaneMouse(lane, QEvent::MouseMove, shiftJitter, Qt::NoButton, Qt::LeftButton,
+                  Qt::ShiftModifier);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, shiftJitter, Qt::LeftButton, Qt::NoButton,
+                  Qt::ShiftModifier);
+    check(doc.undoStack()->index() == undoBeforeShiftClick,
+          "a Shift click that never travels must not commit a ramp");
 
     // The ruler's printed values are click targets for the whole selection;
     // 127 is labeled in every density band.
