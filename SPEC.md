@@ -268,11 +268,13 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   bars appear at any zoom.
 - **Bottom — Automation lanes:** per-track, addable from the m4a parameter list (§4.2),
   drawn as line/step editors. With the pencil mode below owning freehand drawing, the
-  **arrow tool never creates data on a click**: a left click on empty lane space parks
-  the edit cursor at the snapped tick and writes nothing, and a left click on a point's
-  dot **deletes** that point as one undo entry (of a node selection, only the clicked
-  node). Shift+click spares it — that chord starts the axis-locked drag below, and a
-  modifier slip must not destroy a node. A freehand sweep therefore starts only once
+  **arrow tool never creates data on a plain click**: a left click on empty lane space
+  parks the edit cursor at the snapped tick and writes nothing, and a left click on a
+  point's dot **deletes** that point as one undo entry (of a node selection, only the
+  clicked node; of same-tick duplicates, the one the press grabbed). Shift+click on a
+  dot spares it — that chord starts the axis-locked drag below, and a modifier slip
+  must not destroy a node — and off-dot it is still a line ramp, which commits its
+  degenerate single point as it always has. A freehand sweep therefore starts only once
   the drag clears a font-scaled activation distance (`layout::fontPx(5/12)`, the axis
   lock's), and the slop is subtracted from the stroke so crossing the threshold is not
   itself movement: sub-threshold hand jitter leaves the document byte-identical. The

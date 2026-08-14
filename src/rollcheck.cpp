@@ -2702,8 +2702,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
         // Hand jitter below the activation distance, and a drag of exactly
         // the activation distance: both are still clicks, so the document
-        // stays byte-identical.
+        // stays byte-identical and the edit cursor still parks — the click
+        // boundary is continuous.
         for (const int travel : {std::max(0, slop - 1), slop}) {
+            view.commitEditCursor(0);
+            QCoreApplication::processEvents();
             press(clickPos);
             move(clickPos + QPoint(0, travel));
             release(clickPos + QPoint(0, travel));
@@ -2711,7 +2714,32 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 doc.revision() != revisionBefore)
                 fail(travel < slop ? "sub-slop jitter changed the document"
                                    : "the sweep's activation slop counted as motion");
+            if (view.editCursorTick() != tClick)
+                fail("a sweep that committed nothing did not park the edit cursor");
         }
+
+        // The slop offset is the slop itself, never the whole first sample:
+        // mouse moves arrive coalesced, so a fast flick's first event can
+        // land far past the threshold, and subtracting all of it would
+        // strand the stroke that far from the cursor for its whole length.
+        constexpr int kFlick = 20;
+        const int flickValue = tempoValueAtY(yClick + kFlick - slop);
+        press(clickPos);
+        move(clickPos + QPoint(0, kFlick));
+        move(clickPos + QPoint(0, kFlick));
+        release(clickPos + QPoint(0, kFlick));
+        DocLanePoint flicked;
+        if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, tClick, &flicked))
+            fail("the flicked sweep did not draw");
+        else if (flicked.value != flickValue)
+            fail("the sweep subtracted more than its activation slop");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // The flick's undo restored the bytes but not the revision counter.
+        before = doc.smf().write();
+        undoBefore = doc.undoStack()->index();
+        revisionBefore = doc.revision();
 
         // One pixel past the slop draws — and only that one pixel of it:
         // the slop offset is subtracted, so the stroke sits at the press's
@@ -2778,10 +2806,97 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (typeInSeen)
             fail("a double-click on a surviving node opened a value type-in");
 
+        // A drag that cleared the activation slop is a drag for good, even
+        // if it wanders back onto the node's own tick and value: it commits
+        // nothing rather than reading as a click and deleting the node.
+        // The return has to land on a y that maps back to the node's own
+        // value, or the drag commits a legitimate one-value nudge and the
+        // probe would pass without testing anything.
+        int yRound = -1;
+        for (int y = rowTopPad; y <= rowBottom && yRound < 0; y++)
+            if (tempoValueAtY(y) == swept.value)
+                yRound = y;
+        const QPoint origin(dotPos.x(), yRound);
+        before = doc.smf().write();
+        undoBefore = doc.undoStack()->index();
+        if (yRound < 0)
+            fail("no pixel row maps back to the parked node's value");
+        press(dotPos);
+        move(origin + QPoint(slop + 20, 0));
+        move(origin);
+        release(origin);
+        if (doc.smf().write() != before || doc.undoStack()->index() != undoBefore)
+            fail("a point drag that returned to its origin was treated as a click");
+
+        // Shift usually lands after the button, and a parked Shift press
+        // alone pins the drag back to the node's original position — which
+        // must not read as a click either.
+        before = doc.smf().write();
+        undoBefore = doc.undoStack()->index();
+        press(dotPos);
+        {
+            // Press only: releasing Shift mid-drag deliberately frees the
+            // drag again (the axis lock's own contract), which would
+            // re-derive the value from the pixel and commit a real move.
+            QKeyEvent shiftDown(QEvent::KeyPress, Qt::Key_Shift, Qt::ShiftModifier);
+            QCoreApplication::sendEvent(lanes, &shiftDown);
+        }
+        release(dotPos, Qt::ShiftModifier);
+        if (doc.smf().write() != before || doc.undoStack()->index() != undoBefore)
+            fail("Shift pressed after the button on a node did not spare it");
+
+        // Same-tick duplicates: the click deletes the dot it grabbed, not
+        // whichever event the tick resolves to. A raw fractional-BPM meta
+        // (120.5) parked after a written point at the same tick is the
+        // audible one, so a tick-only aim would delete it instead.
+        {
+            const uint64_t tDup = tClick;
+            constexpr int vGrab = 40;
+            doc.writeLanePoints(laneTrack, DOC_CC_TEMPO, tDup, tDup, {{tDup, vGrab}});
+            SmfEvent frac;
+            frac.tick = tDup;
+            frac.status = 0xFF;
+            frac.metaType = 0x51;
+            frac.blob.resize(3); // 497925 us/beat = 120.5 BPM
+            frac.blob[0] = char(0x07);
+            frac.blob[1] = char(0x99);
+            frac.blob[2] = char(0x05);
+            doc.insertRawEvent(0, frac);
+            QCoreApplication::processEvents();
+            size_t atTick = 0;
+            for (const DocLanePoint &pt : tempoPoints())
+                if (pt.tick == tDup)
+                    atTick++;
+            DocLanePoint audible;
+            if (atTick != 2 || !doc.findLanePoint(laneTrack, DOC_CC_TEMPO, tDup, &audible) ||
+                audible.value == vGrab)
+                fail("duplicate-aim setup: the tick does not resolve to the other point");
+            const int dupUndo = doc.undoStack()->index();
+            press(QPoint(dotPos.x(), tempoValueY(vGrab)));
+            release(QPoint(dotPos.x(), tempoValueY(vGrab)));
+            DocLanePoint survivor;
+            bool grabbedGone = true;
+            for (const DocLanePoint &pt : tempoPoints())
+                if (pt.tick == tDup && pt.value == vGrab)
+                    grabbedGone = false;
+            if (!grabbedGone || doc.undoStack()->index() != dupUndo + 1 ||
+                !doc.findLanePoint(laneTrack, DOC_CC_TEMPO, tDup, &survivor) ||
+                survivor.value != audible.value)
+                fail("the click deleted a same-tick sibling instead of the grabbed dot");
+            doc.undoStack()->undo(); // the click-delete
+            doc.undoStack()->undo(); // the raw fractional-tempo insert
+            doc.undoStack()->undo(); // the written point
+            QCoreApplication::processEvents();
+        }
+
         // Empty space keeps the double-click type-in — the way a node's
         // exact value is now typed is the point menu's Set value…
         typeInSeen = false;
         typeInPoll.start();
+        // The whole pair, since the first click is what clears the spent
+        // flag a preceding click-delete left behind.
+        press(clickPos + QPoint(0, 12));
+        release(clickPos + QPoint(0, 12));
         sendMouse(lanes, QEvent::MouseButtonDblClick, clickPos + QPoint(0, 12), Qt::LeftButton,
                   Qt::LeftButton);
         release(clickPos + QPoint(0, 12));

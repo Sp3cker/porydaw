@@ -3027,7 +3027,8 @@ class AutomationArea : public TimelineSurface
         m_group.clear();
         m_sweep.clear();
         m_sweepArmed = false;
-        m_pointShiftArmed = false;
+        m_pointShiftSeen = false;
+        m_pointTraveled = false;
         m_rightPress = false;
         m_selSweep = false;
         m_hoverRow = -1;
@@ -3130,8 +3131,11 @@ class AutomationArea : public TimelineSurface
         }
 
         // Drag preview: the pending stream (sweep) or ramp (line), plus a
-        // marker with the value the gesture will commit at the cursor.
-        if (m_dragRow >= 0 && m_dragRow < int(m_rows.size())) {
+        // marker with the value the gesture will commit at the cursor. A
+        // sweep still inside its activation slop is a click until proven
+        // otherwise, and a click commits nothing — so it shows nothing.
+        if (m_dragRow >= 0 && m_dragRow < int(m_rows.size()) &&
+            (m_gesture != Gesture::Sweep || m_sweepArmed)) {
             int minV, maxV;
             rowRange(m_rows[m_dragRow], &minV, &maxV);
             auto valueY = [&](int v) { return valueYFor(m_dragRow, v, minV, maxV); };
@@ -3483,10 +3487,15 @@ class AutomationArea : public TimelineSurface
             m_dragOrigValue = grab->value;
             m_pointPressPos = event->position();
             m_axisLock = AxisLock::None;
-            // Shift here means an axis-locked drag, so it also disarms the
-            // click-delete on the release: a modifier slip must not destroy
-            // the node it was aiming to constrain.
-            m_pointShiftArmed = event->modifiers() & Qt::ShiftModifier;
+            // Shift means an axis-locked drag, so it disarms the click-
+            // delete on the release: a modifier slip must not destroy the
+            // node it was aiming to constrain. Tracked for the whole
+            // gesture, not just the press — Shift often lands after the
+            // button, and a parked Shift press alone pins the drag back to
+            // the node's original position, which would otherwise read as
+            // a click.
+            m_pointShiftSeen = event->modifiers() & Qt::ShiftModifier;
+            m_pointTraveled = false;
             // Start from the point's exact position, not the pixel-derived
             // one: a no-motion click (or the first half of a double-click)
             // must not quantize the value to the pixel grid.
@@ -3585,11 +3594,16 @@ class AutomationArea : public TimelineSurface
         if (m_gesture == Gesture::Sweep) {
             if (!m_sweepArmed) {
                 const QPointF travel = event->position() - m_sweepPressPos;
-                if (std::abs(travel.x()) + std::abs(travel.y()) <
-                    qreal(nodeDragActivationDistance()))
+                const qreal distance = std::abs(travel.x()) + std::abs(travel.y());
+                const qreal slop = qreal(nodeDragActivationDistance());
+                if (distance < slop)
                     return;
                 m_sweepArmed = true;
-                m_sweepSlopOrigin = event->position();
+                // Subtract only the slop itself, never the whole first
+                // sample: mouse moves arrive coalesced, so a fast flick's
+                // first event can be tens of pixels past the threshold and
+                // that offset would follow the stroke for its whole length.
+                m_sweepSlopOrigin = m_sweepPressPos + travel * (slop / distance);
                 return;
             }
             posX += m_sweepPressPos.x() - m_sweepSlopOrigin.x();
@@ -3607,8 +3621,11 @@ class AutomationArea : public TimelineSurface
         updateDrag(posX, posY, fine, event->modifiers() & Qt::ControlModifier);
         if (lock)
             m_dragValue = heldValue;
-        if (m_gesture == Gesture::Point)
+        if (m_gesture == Gesture::Point) {
+            noteShift(event->modifiers());
+            noteTravel(event->position());
             updatePointAxisLock(event->position(), event->modifiers() & Qt::ShiftModifier);
+        }
         if (m_gesture == Gesture::Sweep)
             extendSweep(posX, fine);
         invalidateContent();
@@ -3642,8 +3659,6 @@ class AutomationArea : public TimelineSurface
             return;
         const Row &row = m_rows[m_dragRow];
         const Gesture gesture = m_gesture;
-        const bool shiftArmed = m_pointShiftArmed;
-        m_pointShiftArmed = false;
         m_gesture = Gesture::None;
         m_dragRow = -1;
         clearAxisLock();
@@ -3672,7 +3687,7 @@ class AutomationArea : public TimelineSurface
                 // fractional-BPM tempo blob, would otherwise be silently
                 // rewritten with a spurious undo entry.)
                 if (dTick == 0 && dValue == 0) {
-                    clickDeleteNode(track, cc, shiftArmed);
+                    clickDeleteNode(track, cc);
                     return;
                 }
                 std::vector<SongDocument::LanePointMove> moves;
@@ -3706,29 +3721,30 @@ class AutomationArea : public TimelineSurface
                 return;
             }
             DocLanePoint pt;
-            if (!doc->findLanePoint(track, cc, uint64_t(m_dragOrigTick), &pt))
+            if (!grabbedPoint(track, cc, &pt))
                 return;
             // A drag that landed nowhere is a click: it deletes the node.
             if (pt.tick == m_dragTick && pt.value == m_dragValue)
-                clickDeleteNode(track, cc, shiftArmed);
+                clickDeleteNode(track, cc);
             else
                 doc->moveLanePoint(track, cc, pt, m_dragTick, m_dragValue);
         } else if (gesture == Gesture::Sweep) {
-            if (!m_sweepArmed) {
-                m_sweep.clear();
+            if (m_sweep.empty()) {
                 // The arrow tool's plain click on empty lane space writes
                 // nothing; like the roll's, it parks the edit cursor at the
-                // click instead. (A pencil sweep is armed at the press, so
-                // it never reaches here.)
+                // click instead. A drag that armed the stroke but sampled
+                // nothing after it (exactly the activation distance, then
+                // released) commits nothing either, so it parks too — the
+                // click boundary stays continuous. (A pencil sweep seeds a
+                // sample at the press, so it never reaches here.)
                 m_sv->commitEditCursor(m_sv->snapTick(rawTickAt(m_sweepPressPos.x())));
                 return;
             }
             // writeLanePoints even for a one-sample stroke: it overwrites
             // any point already sitting on the tick instead of duplicating
             // it.
-            if (!m_sweep.empty())
-                doc->writeLanePoints(track, cc, m_sweep.front().first, m_sweep.back().first,
-                                     sweepPoints());
+            doc->writeLanePoints(track, cc, m_sweep.front().first, m_sweep.back().first,
+                                 sweepPoints());
             m_sweep.clear();
         } else if (gesture == Gesture::Line) {
             const bool fine = event->modifiers() & Qt::AltModifier;
@@ -4935,22 +4951,64 @@ class AutomationArea : public TimelineSurface
     // it a press is a click, and a click never draws.
     static int nodeDragActivationDistance() { return lyt::fontPx(5.0 / 12.0); }
 
+    // Shift anywhere in a point drag (press modifiers, a move's, or a key
+    // press while the pointer is parked) means the axis lock, not a click.
+    void noteShift(Qt::KeyboardModifiers mods)
+    {
+        if (mods & Qt::ShiftModifier)
+            m_pointShiftSeen = true;
+    }
+
+    // Travel past the activation distance makes a point gesture a drag for
+    // good, however it ends up landing: a drag that wanders back to the
+    // node's own tick and value — easy inside one snap cell, and the
+    // group drag's tick-0 clamp produces it outright — must commit nothing
+    // rather than read as a click and delete the node.
+    void noteTravel(const QPointF &position)
+    {
+        if (m_pointTraveled)
+            return;
+        const QPointF d = position - m_pointPressPos;
+        m_pointTraveled = std::abs(d.x()) + std::abs(d.y()) >= qreal(nodeDragActivationDistance());
+    }
+
     // Arrow-tool click on a node: the click deletes it, one undo entry —
     // the redesign's replacement for the right-click instant delete the
-    // point menu took over. Shift+press means an axis-locked drag, so a
-    // Shift click leaves the node alone: a modifier slip must not destroy
-    // the node it was aiming to constrain. The flag makes the pair's
-    // double-click a no-op; without it the type-in would fire on the empty
-    // space the delete just made.
-    void clickDeleteNode(int track, uint8_t cc, bool shiftArmed)
+    // point menu took over. The flag makes the pair's double-click a
+    // no-op; without it the type-in would fire on the empty space the
+    // delete just made.
+    // The document point the press grabbed. Aimed the way grabPoint aimed
+    // it — by tick AND value — because findLanePoint resolves a tick to
+    // its last point, so on same-tick duplicates (the case the point menu
+    // exists to disambiguate) it would answer with the sibling the cursor
+    // was nowhere near. Falls back to that rule when no value matches.
+    bool grabbedPoint(int track, uint8_t cc, DocLanePoint *out) const
     {
         SongDocument *doc = m_sv->document();
-        DocLanePoint pt;
-        if (shiftArmed || !doc || !doc->findLanePoint(track, cc, uint64_t(m_dragOrigTick), &pt))
+        if (!doc || m_dragOrigTick < 0)
+            return false;
+        bool found = false, exact = false;
+        for (const DocLanePoint &pt : doc->lanePoints(track, cc)) {
+            if (pt.tick > uint64_t(m_dragOrigTick))
+                break;
+            if (pt.tick != uint64_t(m_dragOrigTick) || exact)
+                continue;
+            *out = pt;
+            found = true;
+            exact = pt.value == m_dragOrigValue;
+        }
+        return found;
+    }
+
+    void clickDeleteNode(int track, uint8_t cc)
+    {
+        SongDocument *doc = m_sv->document();
+        DocLanePoint victim;
+        if (m_pointShiftSeen || m_pointTraveled || !doc || !grabbedPoint(track, cc, &victim))
             return;
         clearHover();
         m_clickDeleted = true;
-        doc->deleteLanePoints(track, cc, {pt});
+        doc->deleteLanePoints(track, cc, {victim});
     }
 
     // Shift axis lock on a live point drag, applied after updateDrag mapped
@@ -5018,6 +5076,8 @@ class AutomationArea : public TimelineSurface
     // un-pin the coordinates the lock overwrote).
     void pointDragShiftChanged(bool shiftHeld, Qt::KeyboardModifiers mods)
     {
+        if (shiftHeld)
+            m_pointShiftSeen = true;
         updateDrag(m_dragPos.x(), qRound(m_dragPos.y()), mods & Qt::AltModifier,
                    mods & Qt::ControlModifier);
         updatePointAxisLock(m_dragPos, shiftHeld);
@@ -5293,11 +5353,12 @@ class AutomationArea : public TimelineSurface
     QPointF m_sweepPressPos;                       // sweep press, the activation-slop origin
     QPointF m_sweepSlopOrigin;                     // where the slop was cleared; the offset from
                                                    // m_sweepPressPos is subtracted from the stroke
-    bool m_sweepArmed = false;      // the sweep cleared its slop (always, for a pencil)
-    bool m_pointShiftArmed = false; // Shift at the point press: no click-delete
-    bool m_clickDeleted = false;    // the last click deleted a node (the pair's
-                                    // double-click is spent)
-    uint64_t m_lineStartTick = 0;   // Shift-drag anchor
+    bool m_sweepArmed = false;     // the sweep cleared its slop (always, for a pencil)
+    bool m_pointShiftSeen = false; // Shift during the point drag: no click-delete
+    bool m_pointTraveled = false;  // the point drag cleared the activation slop
+    bool m_clickDeleted = false;   // the last click deleted a node (the pair's
+                                   // double-click is spent)
+    uint64_t m_lineStartTick = 0;  // Shift-drag anchor
     int m_lineStartValue = 0;
     double m_prevTick = 0.0; // last raw (unsnapped) sweep sample
     int m_prevValue = 0;
