@@ -165,6 +165,7 @@ enum class Role {
     song_view_grid,
     song_view_piano_roll_background,
     song_view_piano_roll_accidental_lane,
+    song_view_scale_highlight,
     song_view_piano_keyboard_natural_key,
     song_view_piano_keyboard_black_key,
     song_view_piano_keyboard_active_key,

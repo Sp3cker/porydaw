@@ -230,6 +230,12 @@ QColor pianoRollAccidentalLaneColor()
 {
     return themes::color(themes::Role::song_view_piano_roll_accidental_lane);
 }
+QColor pianoRollScaleHighlightColor()
+{
+    auto color = themes::color(themes::Role::song_view_scale_highlight);
+    color.setAlpha(51);
+    return color;
+}
 QColor trackHeaderAlsoSelectedColor()
 {
     auto color = themes::color(themes::Role::song_view_track_header_selection);
@@ -1423,7 +1429,7 @@ class PianoRoll : public TimelineSurface
         const std::array<qreal, PitchProjection::cMaxRows + 1> &edges = rowEdges();
         for (int row = 0; row < projection.visibleRowCount(); ++row) {
             const int key = projection.visiblePitchAt(row);
-            const QRectF rowRect(grid.left(), edges[row], grid.width(), edges[row + 1] - edges[row]);
+            const QRectF rowRect = pitchRowRect(row, grid.left(), grid.width());
             if (rowRect.bottom() <= 0 || rowRect.top() >= height())
                 continue;
             if (isBlackKey(key))
@@ -1432,13 +1438,13 @@ class PianoRoll : public TimelineSurface
             p.drawLine(QLineF(grid.left(), rowRect.bottom(), grid.right(), rowRect.bottom()));
         }
 
-        if (m_sv->scaleMode() == SongView::ScaleMode::Highlight) {
-            const QColor tint(0xb5, 0x95, 0xfc, 127);
+        if (m_sv->scaleHighlight()) {
+            const QColor tint = pianoRollScaleHighlightColor();
             for (int row = 0; row < projection.visibleRowCount(); ++row) {
-                if (porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(),
-                                                 projection.visiblePitchAt(row))) {
-                    p.fillRect(QRectF(grid.left(), edges[row], grid.width(),
-                                      edges[row + 1] - edges[row]), tint);
+                if (projection.isScalePitchRow(row)) {
+                    p.fillRect(
+                        QRectF(grid.left(), edges[row], grid.width(), edges[row + 1] - edges[row]),
+                        tint);
                 }
             }
         }
@@ -1551,7 +1557,7 @@ class PianoRoll : public TimelineSurface
         m_dDur = 0;
         m_dVel = 0;
 
-        if (!hit && doc && m_sv->scaleMode() == SongView::ScaleMode::Fold &&
+        if (!hit && doc && m_sv->scaleFold() &&
             (m_pressKey < 0 ||
              !porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), m_pressKey))) {
             return;
@@ -1777,9 +1783,8 @@ class PianoRoll : public TimelineSurface
         const int64_t snappedD = int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
 
         if (m_drag == Drag::Move) {
-            const int dKey = m_sv->scaleMode() == SongView::ScaleMode::Fold
-                                 ? foldDegreeDeltaForPointer(event->position().y())
-                                 : yToKey(event->position().y()) - m_pressKey;
+            const int dKey = m_sv->scaleFold() ? foldDegreeDeltaForPointer(event->position().y())
+                                               : yToKey(event->position().y()) - m_pressKey;
             if (snappedD != m_dTick || dKey != m_dKey) {
                 m_dTick = snappedD;
                 if (dKey != m_dKey) {
@@ -1787,11 +1792,11 @@ class PianoRoll : public TimelineSurface
                     // Audition the new pitch while dragging vertically.
                     const std::vector<DocNote> notes = resolveSelection();
                     if (!notes.empty()) {
-                        const int key = m_sv->scaleMode() == SongView::ScaleMode::Fold
-                                            ? porydaw_scale::nextScalePitch(
-                                                  m_sv->scaleId(), m_sv->scaleRoot(),
-                                                  notes.front().key, m_dKey)
-                                            : std::clamp(int(notes.front().key) + m_dKey, 0, 127);
+                        const int key =
+                            m_sv->scaleFold()
+                                ? porydaw_scale::nextScalePitch(m_sv->scaleId(), m_sv->scaleRoot(),
+                                                                notes.front().key, m_dKey)
+                                : std::clamp(int(notes.front().key) + m_dKey, 0, 127);
                         if (key >= 0) {
                             auditionKey(key, notes.front().velocity);
                             m_auditioned = true;
@@ -1855,9 +1860,8 @@ class PianoRoll : public TimelineSurface
             }
             const int key = yToKey(event->position().y());
             const bool isScaleKey =
-                m_sv->scaleMode() != SongView::ScaleMode::Fold ||
-                (key >= 0 &&
-                 porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), key));
+                !m_sv->scaleFold() ||
+                (key >= 0 && porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), key));
             if (start != m_drawTick || dur != m_drawDur || (isScaleKey && key != m_drawKey)) {
                 m_drawTick = start;
                 m_drawDur = dur;
@@ -1981,15 +1985,16 @@ class PianoRoll : public TimelineSurface
             std::vector<DocNote> notes = resolveSelection();
             if (notes.empty()) {
                 m_sv->clearSelection();
-            } else if (m_sv->scaleMode() == SongView::ScaleMode::Fold && m_dKey != 0) {
+            } else if (m_sv->scaleFold() && m_dKey != 0) {
                 std::vector<uint8_t> destinations;
                 if (resolveFoldDestinations(m_sv->scaleId(), m_sv->scaleRoot(), notes, m_dKey,
                                             destinations) &&
                     doc->moveNotesToPitches(notes, destinations, m_dTick)) {
                     std::vector<SongView::NoteId> ids;
                     for (size_t i = 0; i < notes.size(); i++) {
-                        ids.push_back({uint32_t(std::max<int64_t>(0, int64_t(notes[i].tick) + m_dTick)),
-                                       destinations[i]});
+                        ids.push_back(
+                            {uint32_t(std::max<int64_t>(0, int64_t(notes[i].tick) + m_dTick)),
+                             destinations[i]});
                     }
                     m_sv->setSelection(std::move(ids));
                 }
@@ -2078,8 +2083,7 @@ class PianoRoll : public TimelineSurface
         if (doc) {
             const int transpose = m_sv->transposeStepFor(event);
             if (transpose != 0) {
-                if (m_sv->scaleMode() == SongView::ScaleMode::Fold &&
-                    (transpose == 1 || transpose == -1)) {
+                if (m_sv->scaleFold() && (transpose == 1 || transpose == -1)) {
                     m_sv->foldTransposeSelection(transpose);
                 } else {
                     transposeSelection(transpose);
@@ -2158,6 +2162,14 @@ class PianoRoll : public TimelineSurface
             m_rowEdgesValid = true;
         }
         return m_rowEdges;
+    }
+
+    // Keyboard keys and note lanes must use this exact rectangle so Fold
+    // cannot collapse one side without collapsing the other.
+    QRectF pitchRowRect(int row, qreal x, qreal width) const
+    {
+        const auto &edges = rowEdges();
+        return QRectF(x, edges[row], width, edges[row + 1] - edges[row]);
     }
 
     qreal keyTop(int key) const
@@ -2272,7 +2284,7 @@ class PianoRoll : public TimelineSurface
     // committed on release (one undo entry).
     void beginDraw()
     {
-        if (m_sv->scaleMode() == SongView::ScaleMode::Fold &&
+        if (m_sv->scaleFold() &&
             (m_pressKey < 0 ||
              !porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), m_pressKey))) {
             return;
@@ -2562,7 +2574,7 @@ class PianoRoll : public TimelineSurface
             const bool isGhostNote = note.track != selectedTrack;
             if (isGhostNote != drawingGhostNotes)
                 continue;
-            if (isGhostNote && m_sv->scaleMode() == SongView::ScaleMode::Fold &&
+            if (isGhostNote && m_sv->scaleFold() &&
                 m_sv->pitchProjection().rowForPitch(note.key) == PitchProjection::cHiddenRow) {
                 continue;
             }
@@ -2736,9 +2748,9 @@ class PianoRoll : public TimelineSurface
             m_drag == Drag::Move || m_drag == Drag::Resize || m_drag == Drag::ResizeLeft;
         if (!dragging || !m_sv->isSelected(note))
             return note.key;
-        if (m_sv->scaleMode() == SongView::ScaleMode::Fold) {
-            const int destination = porydaw_scale::nextScalePitch(
-                m_sv->scaleId(), m_sv->scaleRoot(), note.key, m_dKey);
+        if (m_sv->scaleFold()) {
+            const int destination =
+                porydaw_scale::nextScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), note.key, m_dKey);
             return destination >= 0 ? destination : note.key;
         }
         return std::clamp(int(note.key) + m_dKey, 0, 127);
@@ -2814,9 +2826,9 @@ class PianoRoll : public TimelineSurface
         const PitchProjection &projection = m_sv->pitchProjection();
         const std::array<qreal, PitchProjection::cMaxRows + 1> &edges = rowEdges();
         if (projection.visibleRowCount() > 0) {
-            p.fillRect(QRectF(0, edges[0], kKeyboardW,
-                              edges[projection.visibleRowCount()] - edges[0]),
-                       themes::color(themes::Role::song_view_piano_keyboard_natural_key));
+            p.fillRect(
+                QRectF(0, edges[0], kKeyboardW, edges[projection.visibleRowCount()] - edges[0]),
+                themes::color(themes::Role::song_view_piano_keyboard_natural_key));
         }
         // Natural-key labels disappear when no real font face fits the lane.
         const auto labelFont = typography::fitted(p.font(), keyH);
@@ -2827,7 +2839,7 @@ class PianoRoll : public TimelineSurface
         const auto hoverGeometry = keyboardHoverGeometry(hovered);
         for (int row = 0; row < projection.visibleRowCount(); ++row) {
             const int key = projection.visiblePitchAt(row);
-            const QRectF rowRect(0, edges[row], kKeyboardW, edges[row + 1] - edges[row]);
+            const QRectF rowRect = pitchRowRect(row, 0, kKeyboardW);
             if (rowRect.bottom() <= 0 || rowRect.top() >= height())
                 continue;
             const bool sounding = key == m_soundingKey;
@@ -5366,7 +5378,7 @@ void SongView::updateSong(const MidiTimeline *timeline)
 
     m_headers->rebuild();
     m_lanes->rebuildRows();
-    if (m_scaleMode == ScaleMode::Fold) {
+    if (m_scaleFold) {
         if (m_projectionLocked)
             m_projectionDirty = true;
         else
@@ -5938,8 +5950,8 @@ void SongView::foldTransposeSelection(int degreeDelta)
     setSelection(std::move(ids));
     int edge = destinations.front();
     for (uint8_t destination : destinations)
-        edge = degreeDelta > 0 ? std::max(edge, int(destination))
-                               : std::min(edge, int(destination));
+        edge =
+            degreeDelta > 0 ? std::max(edge, int(destination)) : std::min(edge, int(destination));
     ensureKeyVisible(edge);
 }
 
@@ -6343,19 +6355,22 @@ void SongView::rebuildProjectionWithAnchoring()
     m_roll->invalidateContent();
 }
 
-void SongView::setScaleMode(ScaleMode mode)
+void SongView::setScaleHighlight(bool enabled)
 {
-    if (mode == m_scaleMode)
+    if (enabled == m_scaleHighlight)
         return;
-    const bool projectionChanged = mode == ScaleMode::Fold || m_scaleMode == ScaleMode::Fold;
-    m_scaleMode = mode;
-    if (projectionChanged) {
-        rebuildProjectionWithAnchoring();
-    } else {
-        updateScaleProjection();
-        m_roll->invalidateContent();
-    }
-    emit scaleModeChanged();
+    m_scaleHighlight = enabled;
+    m_roll->invalidateContent();
+    emit scaleHighlightChanged();
+}
+
+void SongView::setScaleFold(bool enabled)
+{
+    if (enabled == m_scaleFold)
+        return;
+    m_scaleFold = enabled;
+    rebuildProjectionWithAnchoring();
+    emit scaleFoldChanged();
 }
 
 void SongView::setScaleRoot(int root)
@@ -6364,12 +6379,9 @@ void SongView::setScaleRoot(int root)
     if (root == m_scaleRoot)
         return;
     m_scaleRoot = root;
-    if (m_scaleMode == ScaleMode::Fold) {
-        rebuildProjectionWithAnchoring();
-    } else if (m_scaleMode != ScaleMode::Off) {
-        updateScaleProjection();
+    updateScaleMembership();
+    if (m_scaleHighlight || m_scaleFold)
         m_roll->invalidateContent();
-    }
     emit scaleRootChanged();
 }
 
@@ -6378,37 +6390,36 @@ void SongView::setScaleId(porydaw_scale::ScaleId id)
     if (id == m_scaleId)
         return;
     m_scaleId = id;
-    if (m_scaleMode == ScaleMode::Fold) {
-        rebuildProjectionWithAnchoring();
-    } else if (m_scaleMode != ScaleMode::Off) {
-        updateScaleProjection();
+    updateScaleMembership();
+    if (m_scaleHighlight || m_scaleFold)
         m_roll->invalidateContent();
-    }
     emit scaleIdChanged();
 }
 
 void SongView::updateScaleProjection()
 {
-    if (m_scaleMode == ScaleMode::Fold) {
-        bool isScaleClass[128] = {};
-        for (int pitch = 0; pitch < 128; pitch++)
-            isScaleClass[pitch] = porydaw_scale::isScalePitch(m_scaleId, m_scaleRoot, pitch);
-
+    if (m_scaleFold) {
         bool occupancy[128] = {};
         buildOccupancySet(occupancy);
-
         uint8_t visiblePitches[128];
         int count = 0;
         for (int pitch = 0; pitch < 128; pitch++) {
-            if (isScaleClass[pitch] || occupancy[pitch])
+            if (occupancy[pitch])
                 visiblePitches[count++] = static_cast<uint8_t>(pitch);
         }
         m_projection.buildFromPitches(visiblePitches, count);
-
-        m_projection.setScalePitchClassification(isScaleClass);
     } else {
         m_projection.buildChromatic();
     }
+    updateScaleMembership();
+}
+
+void SongView::updateScaleMembership()
+{
+    bool isScalePitch[128] = {};
+    for (int pitch = 0; pitch < 128; pitch++)
+        isScalePitch[pitch] = porydaw_scale::isScalePitch(m_scaleId, m_scaleRoot, pitch);
+    m_projection.setScalePitchClassification(isScalePitch);
 }
 
 void SongView::selectTrack(int track)
@@ -6429,8 +6440,6 @@ void SongView::transitionSelectedTrack(int newTrack, bool trackIdentityChanged)
         m_selectedTrack = newTrack;
         return;
     }
-    if (m_scaleMode == ScaleMode::Fold)
-        setScaleMode(ScaleMode::Highlight);
     m_selectedTrack = newTrack;
     // Programmatic selection collapses the multi-track scope;
     // trackHeaderClicked restores it for modifier clicks.
@@ -6444,7 +6453,10 @@ void SongView::transitionSelectedTrack(int newTrack, bool trackIdentityChanged)
     // Switching tracks readies the roll for keyboard editing (e.g. copy on
     // one track, click another's header, paste), wherever focus was.
     m_roll->setFocus();
-    m_roll->invalidateContent();
+    if (m_scaleFold)
+        rebuildProjectionWithAnchoring();
+    else
+        m_roll->invalidateContent();
     emit selectedTrackChanged(newTrack);
 }
 

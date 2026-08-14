@@ -2,7 +2,6 @@
 
 #include <QApplication>
 #include <QCheckBox>
-#include <QColor>
 #include <QComboBox>
 #include <QDebug>
 #include <QDialog>
@@ -22,7 +21,6 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QPainter>
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QRegularExpressionValidator>
@@ -33,12 +31,10 @@
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTimer>
-#include <QToolBar>
 #include <QUndoGroup>
 
 #include <QChildEvent>
 #include <QCloseEvent>
-#include <QKeyEvent>
 
 #ifdef Q_OS_WIN
 #ifndef WIN32_LEAN_AND_MEAN
@@ -56,8 +52,8 @@
 #include "audio/sf2reader.h"
 #include "audio/wavexport.h"
 #include "core/miditimeline.h"
-#include "project/samplereg.h"
 #include "porydaw_scale.h"
+#include "project/samplereg.h"
 #include "project/sidecar.h"
 #include "project/songregistry.h"
 #include "ui/keyboardshortcutsdialog.h"
@@ -73,6 +69,7 @@
 #include "ui/theme/themecontroller.h"
 #include "ui/theme/themedialog.h"
 #include "ui/theme/themeruntime.h"
+#include "ui/transportbar.h"
 #include "ui/typography.h"
 #include "ui/viewsidecar.h"
 #include "ui/voicegroupbrowser.h"
@@ -103,30 +100,6 @@ enum class DwmWindowAttribute : DWORD {
 };
 #endif
 
-QIcon tintedStandardIcon(QWidget &widget, QStyle::StandardPixmap icon, const QSize &size)
-{
-    const auto tinted = [&](themes::Role role) {
-        auto pixmap = widget.style()->standardIcon(icon).pixmap(size, widget.devicePixelRatioF());
-        QPainter painter(&pixmap);
-        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        painter.fillRect(pixmap.rect(), themes::color(role));
-        painter.end();
-        return pixmap;
-    };
-    // Transport glyphs use their own role so toolbar-label changes cannot
-    // silently retint playback controls. The hover (Active) and checked (On)
-    // variants follow the button ramp's paired text colors, so the glyph
-    // stays readable on the hover and checked fills the theme sheet paints.
-    // Disabled gets an explicit theme tint: Qt's generated gray-out barely
-    // shifts a light glyph on a dark toolbar.
-    QIcon result(tinted(themes::Role::transport_text));
-    result.addPixmap(tinted(themes::Role::button_hover_text), QIcon::Active, QIcon::Off);
-    result.addPixmap(tinted(themes::Role::button_pressed_text), QIcon::Normal, QIcon::On);
-    result.addPixmap(tinted(themes::Role::button_pressed_text), QIcon::Active, QIcon::On);
-    result.addPixmap(tinted(themes::Role::disabled_text), QIcon::Disabled, QIcon::Off);
-    result.addPixmap(tinted(themes::Role::disabled_text), QIcon::Disabled, QIcon::On);
-    return result;
-}
 } // namespace
 
 // A voicegroup voice edit, on its tab's undo stack: song and voicegroup
@@ -404,182 +377,63 @@ void MainWindow::buildUi()
     aboutAction->setMenuRole(QAction::AboutRole);
     keys.attach(QStringLiteral("help.about"), aboutAction);
 
-    // Transport toolbar
-    QToolBar *transport = m_transportToolbar = addToolBar(tr("Transport"));
-    // saveState() persists dock/toolbar layout by objectName only.
-    transport->setObjectName(QStringLiteral("transportToolbar"));
-    transport->setMovable(false);
-    transport->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    transport->setIconSize(transport->iconSize());
-
-    m_goToStartAction = new QAction(tr("Go to Start"), this);
-    keys.attach(QStringLiteral("transport.go_to_start"), m_goToStartAction);
-    connect(m_goToStartAction, &QAction::triggered, this, [this] {
+    // Transport toolbar. The bar owns its presentation; this window keeps
+    // session and audio orchestration behind the emitted user intents.
+    m_transportBar = new TransportBar(this);
+    {
+        QSettings settings;
+        m_transportBar->setFollowPlayhead(settings.value(kFollowPlayheadKey, true).toBool());
+    }
+    addToolBar(m_transportBar);
+    // Space is window-scoped so play/pause works regardless of focus.
+    addAction(m_transportBar->playPauseAction());
+    connect(m_transportBar, &TransportBar::goToStartRequested, this, [this] {
         if (m_active)
             m_active->view->goToStart();
     });
-    transport->addAction(m_goToStartAction);
-
-    m_playAction = new QAction(tr("Play"), this);
-    keys.attach(QStringLiteral("transport.play"), m_playAction);
-    connect(m_playAction, &QAction::triggered, this, [this] { startPlayback(); });
-    transport->addAction(m_playAction);
-
-    // Space toggles play/pause (Reaper-style); a window-level action so it
-    // works wherever focus is, like the old Space=Play binding did. Starting
-    // (or unpausing) with Space always restarts from the edit cursor; the
-    // Play button is the resume-from-pause path.
-    m_playPauseAction = new QAction(tr("Play/Pause"), this);
-    keys.attach(QStringLiteral("transport.play_pause"), m_playPauseAction);
-    connect(m_playPauseAction, &QAction::triggered, this, [this] {
+    connect(m_transportBar, &TransportBar::playRequested, this, [this] { startPlayback(); });
+    connect(m_transportBar, &TransportBar::playPauseRequested, this, [this] {
         if (m_audio.transport() == Transport::Playing)
             pausePlayback();
         else
             startPlayback(/*fromEditCursor=*/true);
     });
-    addAction(m_playPauseAction);
-
-    m_pauseAction = new QAction(tr("Pause"), this);
-    keys.attach(QStringLiteral("transport.pause"), m_pauseAction);
-    connect(m_pauseAction, &QAction::triggered, this, [this] { pausePlayback(); });
-    transport->addAction(m_pauseAction);
-
-    m_stopAction = new QAction(tr("Stop"), this);
-    keys.attach(QStringLiteral("transport.stop"), m_stopAction);
-    connect(m_stopAction, &QAction::triggered, this, [this] { stopPlayback(); });
-    transport->addAction(m_stopAction);
-
-    m_loopAction = new QAction(tr("Loop"), this);
-    keys.attach(QStringLiteral("transport.loop"), m_loopAction);
-    m_loopAction->setCheckable(true);
-    m_loopAction->setChecked(true);
-    connect(m_loopAction, &QAction::toggled, this, [this](bool on) { m_audio.setLoopEnabled(on); });
-    transport->addAction(m_loopAction);
-
-    // Whether playback drags the view along. Off, the playhead runs
-    // offscreen and the camera stays where the user put it — zoomed in on a
-    // phrase, playback must not yank the view away. App-wide and persisted;
-    // the checked state restores before the connect so the toggle handler
-    // (which walks m_tabs, not built yet) never runs during setup.
-    m_followPlayheadAction = new QAction(tr("&Follow Playhead"), this);
-    keys.attach(QStringLiteral("transport.follow_playhead"), m_followPlayheadAction);
-    m_followPlayheadAction->setCheckable(true);
-    // The toolbar glyph must not leak into the View menu: a checkable
-    // action with a visible icon renders the icon INSTEAD of the check
-    // indicator there, hiding the on/off state.
-    m_followPlayheadAction->setIconVisibleInMenu(false);
-    m_followPlayheadAction->setToolTip(
-        tr("Scroll the view to keep the playhead visible during playback"));
-    {
+    connect(m_transportBar, &TransportBar::pauseRequested, this, [this] { pausePlayback(); });
+    connect(m_transportBar, &TransportBar::stopRequested, this, [this] { stopPlayback(); });
+    connect(m_transportBar, &TransportBar::loopEnabledChanged, this,
+            [this](bool enabled) { m_audio.setLoopEnabled(enabled); });
+    connect(m_transportBar, &TransportBar::followPlayheadChanged, this, [this](bool enabled) {
         QSettings settings;
-        m_followPlayheadAction->setChecked(settings.value(kFollowPlayheadKey, true).toBool());
-    }
-    connect(m_followPlayheadAction, &QAction::toggled, this, [this](bool on) {
-        QSettings settings;
-        settings.setValue(kFollowPlayheadKey, on);
+        settings.setValue(kFollowPlayheadKey, enabled);
         for (int i = 0; i < m_tabs->count(); i++) {
-            if (SongSession *s = sessionForWidget(m_tabs->widget(i)))
-                s->view->setFollowPlayhead(on);
+            if (SongSession *session = sessionForWidget(m_tabs->widget(i)))
+                session->view->setFollowPlayhead(enabled);
         }
     });
-    transport->addAction(m_followPlayheadAction);
-    refreshTransportIcons();
-
-    m_timeLabel = new QLabel(QStringLiteral("--:--.- / --:--.-"), this);
-    m_timeLabel->setContentsMargins(::layout::space(::layout::Space::Three), 0,
-                                    ::layout::space(::layout::Space::Three), 0);
-    transport->addWidget(m_timeLabel);
-    m_songLabel = new QLabel(this);
-    transport->addWidget(m_songLabel);
-
-    // The song's master volume (mid2agb -V), also in Song Settings — close
-    // at hand because it's the knob reached for while auditioning. The
-    // spinbox drives the same undoable cfg edit as the dialog, so it marks
-    // the song dirty, applies to playback live, and follows undo/redo.
-    transport->addSeparator();
-    const QString volTip = tr("Master volume (mid2agb -V): scales every track "
-                              "volume (VOL × master ÷ 128). Saved with the "
-                              "song's settings.");
-    m_masterVolCaption = new QLabel(tr("Volume"), this);
-    m_masterVolCaption->setContentsMargins(::layout::space(::layout::Space::Two), 0,
-                                           ::layout::space(::layout::Space::One), 0);
-    m_masterVolCaption->setToolTip(volTip);
-    m_masterVolCaption->setEnabled(false);
-    transport->addWidget(m_masterVolCaption);
-    m_masterVolSpin = new QSpinBox(this);
-    m_masterVolSpin->setObjectName(QStringLiteral("transportMasterVolume"));
-    m_masterVolSpin->setRange(0, 127);
-    m_masterVolSpin->setValue(SongCfg().masterVolume);
-    m_masterVolSpin->setToolTip(volTip);
-    m_masterVolSpin->setEnabled(false);
-    // Typed values land once on commit (Enter/focus-out), not per keystroke,
-    // so a typed "100" is one undo entry — arrow steps are one each.
-    m_masterVolSpin->setKeyboardTracking(false);
-    // Focused, the spinbox's line edit claims every typable key's
-    // ShortcutOverride — including Space, which is transport play/pause.
-    // A space can never be part of a number, so refuse it (eventFilter)
-    // and the window shortcut keeps working mid-tweak. The line edit is
-    // the focus proxy that actually sees the key events.
-    m_masterVolSpin->installEventFilter(this);
-    if (auto *volEdit = m_masterVolSpin->findChild<QLineEdit *>())
-        volEdit->installEventFilter(this);
-    connect(m_masterVolSpin, &QSpinBox::valueChanged, this, [this](int value) {
+    connect(m_transportBar, &TransportBar::masterVolumeChanged, this, [this](int value) {
         if (!m_active || m_active->doc.cfg().masterVolume == value)
             return;
         SongCfg cfg = m_active->doc.cfg();
         cfg.masterVolume = value;
         m_active->doc.setCfg(cfg);
     });
-    transport->addWidget(m_masterVolSpin);
-
-    m_rootCombo = new QComboBox(this);
-    m_rootCombo->setObjectName(QStringLiteral("transportScaleRoot"));
-    for (int root = 0; root < porydaw_scale::cRootCount; root++)
-        m_rootCombo->addItem(QString::fromLatin1(porydaw_scale::rootDisplayName(root)), root);
-    m_rootCombo->setCurrentIndex(0);
-    m_rootCombo->setToolTip(tr("Scale root note"));
-    m_rootCombo->setFocusPolicy(Qt::NoFocus);
-    connect(m_rootCombo, &QComboBox::currentIndexChanged, this, [this](int index) {
-        if (!m_active || index < 0)
-            return;
-        m_active->view->setScaleRoot(m_rootCombo->itemData(index).toInt());
+    connect(m_transportBar, &TransportBar::scaleRootChanged, this, [this](int root) {
+        if (m_active)
+            m_active->view->setScaleRoot(root);
     });
-    transport->addWidget(m_rootCombo);
-
-    m_scaleCombo = new QComboBox(this);
-    m_scaleCombo->setObjectName(QStringLiteral("transportScaleType"));
-    const porydaw_scale::ScaleId *scaleOrder = porydaw_scale::displayOrder();
-    for (int i = 0; i < porydaw_scale::cScaleCount; i++) {
-        const porydaw_scale::ScaleId id = scaleOrder[i];
-        m_scaleCombo->addItem(QString::fromLatin1(porydaw_scale::scaleDisplayName(id)),
-                              static_cast<int>(id));
-    }
-    m_scaleCombo->setCurrentIndex(0);
-    m_scaleCombo->setToolTip(tr("Scale type"));
-    m_scaleCombo->setFocusPolicy(Qt::NoFocus);
-    connect(m_scaleCombo, &QComboBox::currentIndexChanged, this, [this](int index) {
-        if (!m_active || index < 0)
-            return;
-        const auto id = static_cast<porydaw_scale::ScaleId>(m_scaleCombo->itemData(index).toInt());
-        m_active->view->setScaleId(id);
+    connect(m_transportBar, &TransportBar::scaleIdChanged, this,
+            [this](porydaw_scale::ScaleId scale) {
+                if (m_active)
+                    m_active->view->setScaleId(scale);
+            });
+    connect(m_transportBar, &TransportBar::scaleHighlightChanged, this, [this](bool enabled) {
+        if (m_active)
+            m_active->view->setScaleHighlight(enabled);
     });
-    transport->addWidget(m_scaleCombo);
-
-    m_modeCombo = new QComboBox(this);
-    m_modeCombo->setObjectName(QStringLiteral("transportScaleMode"));
-    m_modeCombo->addItem(tr("Off"), static_cast<int>(SongView::ScaleMode::Off));
-    m_modeCombo->addItem(tr("Highlight"), static_cast<int>(SongView::ScaleMode::Highlight));
-    m_modeCombo->addItem(tr("Fold"), static_cast<int>(SongView::ScaleMode::Fold));
-    m_modeCombo->setCurrentIndex(0);
-    m_modeCombo->setToolTip(tr("Scale display mode"));
-    m_modeCombo->setFocusPolicy(Qt::NoFocus);
-    connect(m_modeCombo, &QComboBox::currentIndexChanged, this, [this](int index) {
-        if (!m_active || index < 0)
-            return;
-        const auto mode = static_cast<SongView::ScaleMode>(m_modeCombo->itemData(index).toInt());
-        m_active->view->setScaleMode(mode);
+    connect(m_transportBar, &TransportBar::scaleFoldChanged, this, [this](bool enabled) {
+        if (m_active)
+            m_active->view->setScaleFold(enabled);
     });
-    transport->addWidget(m_modeCombo);
 
     // Dock titles and the tab strip share this metric-derived outer height so
     // neither clips when the platform font or small-icon metric changes.
@@ -801,7 +655,7 @@ void MainWindow::buildUi()
 
     // The transport bar's follow toggle, findable here too: an app-wide
     // persisted preference like the rest of this group.
-    viewMenu->addAction(m_followPlayheadAction);
+    viewMenu->addAction(m_transportBar->followPlayheadAction());
 
     // Song tabs: each open song lives in its own tab with its own view,
     // document, and undo stack.
@@ -853,7 +707,6 @@ void MainWindow::buildUi()
     polyLayout->addWidget(m_polyLostSeparator);
     polyLayout->addWidget(m_polyLostLabel);
     polyLayout->addWidget(m_polyLostCaption);
-    statusBar()->addPermanentWidget(m_polyMeter);
     m_polyMeter->hide();
     refreshDerivedFonts();
 
@@ -870,7 +723,6 @@ void MainWindow::refreshDerivedFonts()
 {
     const auto fieldInset = ::layout::space(::layout::Space::Half);
     const auto valueFont = typography::bodyMono(font());
-    m_timeLabel->setFont(valueFont);
     m_pcmValueLabel->setFont(valueFont);
     m_pcmValueLabel->setFixedWidth(
         QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("15/15")) + 2 * fieldInset);
@@ -881,23 +733,13 @@ void MainWindow::refreshDerivedFonts()
     updateDockTabFonts();
 }
 
-void MainWindow::refreshTransportIcons()
-{
-    const auto size = m_transportToolbar->iconSize();
-    m_goToStartAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaSkipBackward, size));
-    m_playAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaPlay, size));
-    m_pauseAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaPause, size));
-    m_stopAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaStop, size));
-    m_loopAction->setIcon(tintedStandardIcon(*this, QStyle::SP_BrowserReload, size));
-    m_followPlayheadAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaSeekForward, size));
-}
-
 void MainWindow::updateDockTabFonts()
 {
     const auto dockTabFont = typography::bold(font());
     for (auto *tabBar : findChildren<QTabBar *>(QString(), Qt::FindDirectChildrenOnly))
         tabBar->setFont(dockTabFont);
 }
+
 
 void MainWindow::updateWindowFrameTheme()
 {
@@ -927,8 +769,6 @@ void MainWindow::changeEvent(QEvent *event)
     QMainWindow::changeEvent(event);
     if (event->type() == QEvent::ApplicationPaletteChange || event->type() == QEvent::StyleChange) {
         updateWindowFrameTheme();
-        if (m_goToStartAction)
-            refreshTransportIcons();
     }
 }
 
@@ -957,7 +797,7 @@ SongSession *MainWindow::createSession()
     s->view = new SongView;
     s->view->setVelocityColorMode(m_velocityColorsAction->isChecked());
     s->view->setNoteNameMode(m_noteNamesAction->isChecked());
-    s->view->setFollowPlayhead(m_followPlayheadAction->isChecked());
+    s->view->setFollowPlayhead(m_transportBar->followPlayhead());
     connect(s->view, &SongView::muteMaskChanged, this, [this, s](uint32_t mask) {
         if (s == m_active)
             m_audio.setMuteMask(mask);
@@ -1000,7 +840,8 @@ SongSession *MainWindow::createSession()
         }
     });
     const auto syncScale = [this, s] { syncScaleControls(s); };
-    connect(s->view, &SongView::scaleModeChanged, this, syncScale);
+    connect(s->view, &SongView::scaleHighlightChanged, this, syncScale);
+    connect(s->view, &SongView::scaleFoldChanged, this, syncScale);
     connect(s->view, &SongView::scaleRootChanged, this, syncScale);
     connect(s->view, &SongView::scaleIdChanged, this, syncScale);
     // Moving the edit cursor while playing (or paused) seeks playback there,
@@ -1097,7 +938,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
         m_vgBrowser->setVoicegroup(nullptr);
         updateVgDockTitle();
         m_registerAction->setEnabled(false);
-        m_songLabel->clear();
+        m_transportBar->setSongName(QString());
         updateTimeLabel();
         updatePolyStatus();
         m_songList->setCurrentSong(-1);
@@ -1129,7 +970,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
     if (session->songId >= 0 && session->songId < m_project.songs().size())
         complete = m_project.songs().at(session->songId).registrationGaps.isEmpty();
     m_registerAction->setEnabled(!complete);
-    m_songLabel->setText(QStringLiteral("  %1").arg(session->doc.label()));
+    m_transportBar->setSongName(session->doc.label());
     m_songList->setCurrentSong(session->songId);
     updateWindowTitle();
     updateTransportActions();
@@ -2954,10 +2795,7 @@ void MainWindow::updateTimeLabel()
         loaded ? QStringLiteral("%1 / %2").arg(formatTime(m_audio.playheadSamples()),
                                                formatTime(m_audio.timeline()->lengthSamples))
                : QStringLiteral("--:--.- / --:--.-");
-    if (text == m_lastTimeText)
-        return;
-    m_lastTimeText = text;
-    m_timeLabel->setText(text);
+    m_transportBar->setTimeText(text);
 }
 
 void MainWindow::updatePolyStatus()
@@ -3073,37 +2911,29 @@ void MainWindow::stopPlayback()
 void MainWindow::updateTransportActions()
 {
     const bool loaded = m_audioOk && m_audio.songLoaded();
-    const Transport t = m_audio.transport();
-    m_goToStartAction->setEnabled(loaded);
-    m_playAction->setEnabled(loaded && t != Transport::Playing);
-    m_playPauseAction->setEnabled(loaded);
-    m_pauseAction->setEnabled(loaded && t == Transport::Playing);
-    const bool hasActiveSession = m_active != nullptr;
-    m_rootCombo->setEnabled(hasActiveSession);
-    m_scaleCombo->setEnabled(hasActiveSession);
-    m_modeCombo->setEnabled(hasActiveSession);
-    m_stopAction->setEnabled(loaded && t != Transport::Stopped);
-    m_loopAction->setEnabled(loaded);
-}
-
-bool MainWindow::eventFilter(QObject *watched, QEvent *event)
-{
-    if ((watched == m_masterVolSpin || watched->parent() == m_masterVolSpin) &&
-        event->type() == QEvent::ShortcutOverride &&
-        static_cast<QKeyEvent *>(event)->key() == Qt::Key_Space) {
-        event->ignore();
-        return true;
+    auto state = TransportBar::PlaybackState::Unavailable;
+    if (loaded) {
+        switch (m_audio.transport()) {
+        case Transport::Stopped:
+            state = TransportBar::PlaybackState::Stopped;
+            break;
+        case Transport::Paused:
+            state = TransportBar::PlaybackState::Paused;
+            break;
+        case Transport::Playing:
+            state = TransportBar::PlaybackState::Playing;
+            break;
+        }
     }
-    return QMainWindow::eventFilter(watched, event);
+    m_transportBar->setPlaybackState(state);
+    m_transportBar->setSessionAvailable(m_active != nullptr);
 }
 
 void MainWindow::syncMasterVolumeControl()
 {
     const bool loaded = m_active != nullptr;
-    m_masterVolCaption->setEnabled(loaded);
-    m_masterVolSpin->setEnabled(loaded);
-    QSignalBlocker blocker(m_masterVolSpin);
-    m_masterVolSpin->setValue(loaded ? m_active->doc.cfg().masterVolume : SongCfg().masterVolume);
+    m_transportBar->setMasterVolume(
+        loaded ? m_active->doc.cfg().masterVolume : SongCfg().masterVolume, loaded);
 }
 
 void MainWindow::syncScaleControls(SongSession *session)
@@ -3111,17 +2941,9 @@ void MainWindow::syncScaleControls(SongSession *session)
     if (session != m_active)
         return;
     SongView *view = session ? session->view : nullptr;
-    m_rootCombo->blockSignals(true);
-    m_scaleCombo->blockSignals(true);
-    m_modeCombo->blockSignals(true);
-    m_rootCombo->setCurrentIndex(view ? m_rootCombo->findData(view->scaleRoot()) : 0);
-    m_scaleCombo->setCurrentIndex(
-        view ? m_scaleCombo->findData(static_cast<int>(view->scaleId())) : 0);
-    m_modeCombo->setCurrentIndex(
-        view ? m_modeCombo->findData(static_cast<int>(view->scaleMode())) : 0);
-    m_rootCombo->blockSignals(false);
-    m_scaleCombo->blockSignals(false);
-    m_modeCombo->blockSignals(false);
+    m_transportBar->setScaleState(view ? view->scaleRoot() : 0,
+                                  view ? view->scaleId() : porydaw_scale::displayOrder()[0],
+                                  view && view->scaleHighlight(), view && view->scaleFold());
 }
 
 bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabel)

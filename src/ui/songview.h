@@ -13,10 +13,10 @@
 #include <vector>
 
 #include "core/miditimeline.h"
+#include "porydaw_scale.h"
+#include "ui/pitchprojection.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
-#include "ui/pitchprojection.h"
-#include "porydaw_scale.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -210,11 +210,12 @@ class SongView : public QWidget
     int selectedTrack() const { return m_selectedTrack; }
     void selectTrack(int track);
 
-    // Scale mode is per-tab runtime state; it is deliberately never persisted
-    // with the song or its view sidecar.
-    enum class ScaleMode { Off, Highlight, Fold };
-    ScaleMode scaleMode() const { return m_scaleMode; }
-    void setScaleMode(ScaleMode mode);
+    // Scale controls are independent per-tab runtime toggles; neither is
+    // persisted with the song or its view sidecar.
+    bool scaleHighlight() const { return m_scaleHighlight; }
+    void setScaleHighlight(bool enabled);
+    bool scaleFold() const { return m_scaleFold; }
+    void setScaleFold(bool enabled);
     int scaleRoot() const { return m_scaleRoot; } // 0-11 (C=0)
     void setScaleRoot(int root);
     porydaw_scale::ScaleId scaleId() const { return m_scaleId; }
@@ -524,7 +525,8 @@ class SongView : public QWidget
     void muteMaskChanged(uint32_t mask);
     void soloMaskChanged(uint32_t mask);
     void selectedTrackChanged(int track);
-    void scaleModeChanged();
+    void scaleHighlightChanged();
+    void scaleFoldChanged();
     void scaleRootChanged();
     void scaleIdChanged();
     // Audition request (velocity 0 releases); forwarded to the audio engine.
@@ -560,6 +562,7 @@ class SongView : public QWidget
     void transitionSelectedTrack(int newTrack);
     void transitionSelectedTrack(int newTrack, bool trackIdentityChanged);
     void updateScaleProjection();
+    void updateScaleMembership();
     void buildOccupancySet(bool out[128]) const;
     void rebuildProjectionWithAnchoring();
     // A mouse gesture is live in the ruler, roll, or lanes (pan, drag,
@@ -594,7 +597,8 @@ class SongView : public QWidget
     double m_scrollY = 0.0;
     double m_keyHeight = songview::kVelHandleMinKeyH;
     int m_selectedTrack = 0;
-    ScaleMode m_scaleMode = ScaleMode::Off;
+    bool m_scaleHighlight = false;
+    bool m_scaleFold = false;
     int m_scaleRoot = 0; // C
     porydaw_scale::ScaleId m_scaleId = porydaw_scale::ScaleId::major;
     double m_playheadTick = 0.0;

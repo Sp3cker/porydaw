@@ -563,6 +563,7 @@ Theme derive(const QColor &primary, const QColor &accent)
     theme.color(Role::song_view_piano_roll_background) = windowBackground;
     theme.color(Role::song_view_piano_roll_accidental_lane) =
         shiftOklabLightness(windowBackground, -0.05);
+    theme.color(Role::song_view_scale_highlight) = QColor::fromRgb(0xb5, 0x95, 0xfc);
     // The playhead keeps its identity red in every theme, like the Mute and
     // Solo domain colors; its glow keeps it visible on any surface. The piano
     // keyboard likewise always reads black-and-white.

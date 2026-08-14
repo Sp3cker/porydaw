@@ -1,14 +1,18 @@
 #include <QApplication>
+#include <QComboBox>
 #include <QEventLoop>
 #include <QFile>
-#include <QComboBox>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QSettings>
+#include <QSizePolicy>
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QToolBar>
+#include <QToolButton>
 #include <QUndoGroup>
 #include <algorithm>
 #include <cstdio>
@@ -56,14 +60,17 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
 
     auto *rootCombo = findChild<QComboBox *>(QStringLiteral("transportScaleRoot"));
     auto *scaleCombo = findChild<QComboBox *>(QStringLiteral("transportScaleType"));
-    auto *modeCombo = findChild<QComboBox *>(QStringLiteral("transportScaleMode"));
-    const bool haveScaleControls =
-        check(rootCombo && scaleCombo && modeCombo, "transport scale controls not found");
+    auto *highlightButton = findChild<QToolButton *>(QStringLiteral("transportScaleHighlight"));
+    auto *foldButton = findChild<QToolButton *>(QStringLiteral("transportScaleFold"));
+    const bool haveScaleControls = check(rootCombo && scaleCombo && highlightButton && foldButton,
+                                         "transport scale controls not found");
     if (haveScaleControls) {
-        check(!rootCombo->isEnabled() && !scaleCombo->isEnabled() && !modeCombo->isEnabled(),
+        check(!rootCombo->isEnabled() && !scaleCombo->isEnabled() &&
+                  !highlightButton->isEnabled() && !foldButton->isEnabled(),
               "scale controls are enabled without a tab");
         check(rootCombo->focusPolicy() == Qt::NoFocus && scaleCombo->focusPolicy() == Qt::NoFocus &&
-                  modeCombo->focusPolicy() == Qt::NoFocus,
+                  highlightButton->focusPolicy() == Qt::NoFocus &&
+                  foldButton->focusPolicy() == Qt::NoFocus,
               "transport scale controls accept keyboard focus");
     }
 
@@ -95,18 +102,18 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
           "first tab did not survive the second one opening");
 
     if (haveScaleControls) {
-        check(tabA->view->scaleMode() == SongView::ScaleMode::Off &&
+        check(!tabA->view->scaleHighlight() && !tabA->view->scaleFold() &&
                   tabA->view->scaleRoot() == 0 &&
                   tabA->view->scaleId() == porydaw_scale::ScaleId::major,
-              "first tab does not start at C Major Off");
-        check(tabB->view->scaleMode() == SongView::ScaleMode::Off &&
+              "first tab does not start at C Major with both scale features disabled");
+        check(!tabB->view->scaleHighlight() && !tabB->view->scaleFold() &&
                   tabB->view->scaleRoot() == 0 &&
                   tabB->view->scaleId() == porydaw_scale::ScaleId::major &&
                   rootCombo->currentData().toInt() == 0 &&
                   scaleCombo->currentData().toInt() ==
                       static_cast<int>(porydaw_scale::ScaleId::major) &&
-                  modeCombo->currentData().toInt() == static_cast<int>(SongView::ScaleMode::Off),
-              "second tab or its controls do not start at C Major Off");
+                  !highlightButton->isChecked() && !foldButton->isChecked(),
+              "second tab or its controls do not start with both scale features disabled");
     }
 
     // 3. Separate documents and undo stacks: an edit in one tab dirties
@@ -152,8 +159,30 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     // 5b. The transport master-volume spinbox mirrors the active tab's cfg,
     // follows tab switches, and drives the same undoable cfg edit as Song
     // Settings (so undo reverts both the cfg and the spinbox).
+    auto *transport = findChild<QToolBar *>(QStringLiteral("transportToolbar"));
+    auto *transportSpacer = findChild<QWidget *>(QStringLiteral("transportVolumeSpacer"));
+    auto *volCaption = findChild<QLabel *>(QStringLiteral("transportMasterVolumeCaption"));
     auto *volSpin = findChild<QSpinBox *>(QStringLiteral("transportMasterVolume"));
-    if (check(volSpin != nullptr, "transport master-volume spinbox not found")) {
+    if (check(volSpin && volCaption && transport && transportSpacer,
+              "transport master-volume control, spacer, or toolbar not found")) {
+        const QList<QAction *> actions = transport->actions();
+        int spacerActionIndex = -1;
+        int captionActionIndex = -1;
+        int volumeActionIndex = -1;
+        for (int i = 0; i < actions.size(); i++) {
+            QWidget *widget = transport->widgetForAction(actions.at(i));
+            if (widget == transportSpacer)
+                spacerActionIndex = i;
+            else if (widget == volCaption)
+                captionActionIndex = i;
+            else if (widget == volSpin)
+                volumeActionIndex = i;
+        }
+        check(spacerActionIndex >= 0 && spacerActionIndex < captionActionIndex &&
+                  captionActionIndex + 1 == volumeActionIndex &&
+                  transportSpacer->sizePolicy().horizontalPolicy() == QSizePolicy::Expanding &&
+                  volumeActionIndex == actions.size() - 1,
+              "master-volume control is not held at the transport bar's right edge");
         check(volSpin->isEnabled() && volSpin->value() == tabA->doc.cfg().masterVolume,
               "spinbox does not show the active tab's master volume");
         const int volBefore = tabA->doc.cfg().masterVolume;
@@ -195,8 +224,8 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         }
     }
 
-    // 5c. Scale controls route only to the active tab. Fold is transient and
-    // leaves Fold only when the selected logical track actually changes.
+    // 5c. Scale controls route only to the active tab. Highlight and Fold
+    // remain independent across selected logical-track changes.
     if (haveScaleControls) {
         const auto chooseComboData = [&check](QComboBox *combo, int value, const char *what) {
             const int index = combo->findData(value);
@@ -214,12 +243,16 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         chooseComboData(rootCombo, rootA, "A root is missing from the transport control");
         chooseComboData(scaleCombo, static_cast<int>(scaleA),
                         "A scale is missing from the transport control");
-        chooseComboData(modeCombo, static_cast<int>(SongView::ScaleMode::Highlight),
-                        "Highlight is missing from the transport control");
+        highlightButton->click();
         check(tabA->view->scaleRoot() == rootA && tabA->view->scaleId() == scaleA &&
-                  tabA->view->scaleMode() == SongView::ScaleMode::Highlight,
-              "scale controls did not update the first tab");
-
+                  tabA->view->scaleHighlight() && !tabA->view->scaleFold() &&
+                  highlightButton->isChecked() && !foldButton->isChecked(),
+              "scale controls did not enable Highlight for the first tab");
+        highlightButton->click();
+        check(!tabA->view->scaleHighlight() && !tabA->view->scaleFold() &&
+                  !highlightButton->isChecked() && !foldButton->isChecked(),
+              "clicking active Highlight did not disable Highlight");
+        highlightButton->click();
         m_tabs->setCurrentWidget(tabB->view);
         chooseComboData(rootCombo, rootB, "B root is missing from the transport control");
         chooseComboData(scaleCombo, static_cast<int>(scaleB),
@@ -241,73 +274,91 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         }
         if (check(differentTrack >= 0, "could not create a second routing-check track")) {
             bView->selectTrack(originalTrack);
-            chooseComboData(modeCombo, static_cast<int>(SongView::ScaleMode::Fold),
-                            "Fold is missing from the transport control");
+            foldButton->click();
             check(bView->scaleRoot() == rootB && bView->scaleId() == scaleB &&
-                      bView->scaleMode() == SongView::ScaleMode::Fold &&
+                      !bView->scaleHighlight() && bView->scaleFold() &&
                       rootCombo->currentData().toInt() == rootB &&
                       scaleCombo->currentData().toInt() == static_cast<int>(scaleB) &&
-                      modeCombo->currentData().toInt() == static_cast<int>(SongView::ScaleMode::Fold),
-                  "second tab did not retain its scale control values");
+                      !highlightButton->isChecked() && foldButton->isChecked(),
+                  "second tab did not retain its Fold scale control values");
+
+            highlightButton->click();
+            check(bView->scaleHighlight() && bView->scaleFold() && highlightButton->isChecked() &&
+                      foldButton->isChecked(),
+                  "Highlight and Fold could not be active together");
+            highlightButton->click();
+            check(!bView->scaleHighlight() && bView->scaleFold() && !highlightButton->isChecked() &&
+                      foldButton->isChecked(),
+                  "clicking active Highlight altered Fold");
+            highlightButton->click();
+            foldButton->click();
+            check(bView->scaleHighlight() && !bView->scaleFold() && highlightButton->isChecked() &&
+                      !foldButton->isChecked(),
+                  "clicking active Fold altered Highlight");
+            foldButton->click();
+            check(bView->scaleHighlight() && bView->scaleFold() && highlightButton->isChecked() &&
+                      foldButton->isChecked(),
+                  "re-enabling Fold did not preserve Highlight");
 
             m_tabs->setCurrentWidget(tabA->view);
             check(rootCombo->currentData().toInt() == rootA &&
                       scaleCombo->currentData().toInt() == static_cast<int>(scaleA) &&
-                      modeCombo->currentData().toInt() ==
-                          static_cast<int>(SongView::ScaleMode::Highlight),
+                      highlightButton->isChecked() && !foldButton->isChecked(),
                   "scale controls did not follow the first tab");
             m_tabs->setCurrentWidget(tabB->view);
             check(rootCombo->currentData().toInt() == rootB &&
                       scaleCombo->currentData().toInt() == static_cast<int>(scaleB) &&
-                      modeCombo->currentData().toInt() == static_cast<int>(SongView::ScaleMode::Fold),
+                      highlightButton->isChecked() && foldButton->isChecked(),
                   "scale controls did not return to the second tab");
 
             bView->selectTrack(differentTrack);
-            check(bView->scaleMode() == SongView::ScaleMode::Highlight &&
-                      modeCombo->currentData().toInt() ==
-                          static_cast<int>(SongView::ScaleMode::Highlight),
-                  "a real selected-track change did not leave Fold");
+            check(bView->scaleHighlight() && bView->scaleFold() && highlightButton->isChecked() &&
+                      foldButton->isChecked(),
+                  "a selected-track change altered active Highlight or Fold");
             bView->selectTrack(originalTrack);
-            check(bView->scaleMode() == SongView::ScaleMode::Highlight,
-                  "returning to the previous track restored Fold");
+            check(bView->scaleHighlight() && bView->scaleFold(),
+                  "returning to the previous track altered active Highlight or Fold");
 
-            bView->setScaleMode(SongView::ScaleMode::Off);
+            bView->setScaleHighlight(false);
+            bView->setScaleFold(false);
             bView->selectTrack(differentTrack);
-
             bView->selectTrack(originalTrack);
-            check(bView->scaleMode() == SongView::ScaleMode::Off,
-                  "track change altered Off scale mode");
-            bView->setScaleMode(SongView::ScaleMode::Highlight);
+            check(!bView->scaleHighlight() && !bView->scaleFold(),
+                  "track change enabled a disabled scale feature");
+            bView->setScaleHighlight(true);
+            bView->selectTrack(differentTrack);
+            check(bView->scaleHighlight() && !bView->scaleFold(),
+                  "track change altered independent Highlight");
             bView->selectTrack(originalTrack);
-            check(bView->scaleMode() == SongView::ScaleMode::Highlight,
-                  "track change altered Highlight scale mode");
+            bView->setScaleFold(true);
             bView->selectTrack(0);
-            bView->setScaleMode(SongView::ScaleMode::Fold);
             bView->deleteTrack(0);
-            check(bView->scaleMode() == SongView::ScaleMode::Highlight,
-                  "deleting the selected track did not leave Fold");
+            check(bView->scaleHighlight() && bView->scaleFold(),
+                  "deleting the selected track altered active Highlight or Fold");
             tabB->doc.undoStack()->undo();
 
             const int remappedTrack = std::max(originalTrack, differentTrack);
             bView->selectTrack(remappedTrack);
-            bView->setScaleMode(SongView::ScaleMode::Fold);
+            bView->setScaleHighlight(true);
+            bView->setScaleFold(true);
             bView->deleteTrack(0);
-            check(bView->scaleMode() == SongView::ScaleMode::Fold,
-                  "deleting a lower track altered Fold during an index remap");
+            check(bView->scaleHighlight() && bView->scaleFold(),
+                  "deleting a lower track altered active Highlight or Fold during an index remap");
             tabB->doc.undoStack()->undo();
-            check(bView->scaleMode() == SongView::ScaleMode::Fold,
-                  "undoing a lower-track deletion altered Fold during an index remap");
+            check(bView->scaleHighlight() && bView->scaleFold(),
+                  "undoing a lower-track deletion altered active Highlight or Fold during an index "
+                  "remap");
             if (addedTrack)
                 tabB->doc.undoStack()->undo();
             check(!tabB->doc.isDirty(), "scale routing check left the second tab dirty");
 
             m_tabs->setCurrentWidget(tabA->view);
             check(tabA->view->scaleRoot() == rootA && tabA->view->scaleId() == scaleA &&
-                      tabA->view->scaleMode() == SongView::ScaleMode::Highlight,
+                      tabA->view->scaleHighlight() && !tabA->view->scaleFold(),
                   "inactive first-tab scale state was not preserved");
             m_tabs->setCurrentWidget(tabB->view);
             check(tabB->view->scaleRoot() == rootB && tabB->view->scaleId() == scaleB &&
-                      tabB->view->scaleMode() == SongView::ScaleMode::Fold,
+                      tabB->view->scaleHighlight() && tabB->view->scaleFold(),
                   "inactive second-tab scale state was not preserved");
         }
     }
@@ -356,7 +407,8 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     check(m_tabs->count() == 0 && m_active == nullptr && m_uiTimer->interval() == 500,
           "closing final playing tab did not restore 500 ms UI cadence");
     if (haveScaleControls) {
-        check(!rootCombo->isEnabled() && !scaleCombo->isEnabled() && !modeCombo->isEnabled(),
+        check(!rootCombo->isEnabled() && !scaleCombo->isEnabled() &&
+                  !highlightButton->isEnabled() && !foldButton->isEnabled(),
               "scale controls remained enabled after closing the final tab");
     }
 

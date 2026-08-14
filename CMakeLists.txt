@@ -27,7 +27,7 @@ if(PORYDAW_ASAN)
     add_link_options(-fsanitize=address)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Svg Widgets)
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa)
@@ -147,6 +147,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songlistpanel.h
     src/ui/songviewmodel.cpp
     src/ui/songviewmodel.h
+    src/ui/transportbar.cpp
+    src/ui/transportbar.h
     src/ui/timelinesurface.cpp
     src/ui/timelinesurface.h
     src/ui/pitchprojection.cpp
@@ -182,7 +184,7 @@ target_include_directories(porydaw_app PUBLIC
 # release CI refuses a tag that doesn't match it.
 target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
-target_link_libraries(porydaw_app PUBLIC Qt6::Widgets poryaaaa_engine)
+target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
 if(WIN32)
     target_sources(porydaw_app PRIVATE src/ui/playheadrenderer_dcomp.cpp)
     target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_DIRECT_PLAYHEAD)
@@ -231,6 +233,7 @@ qt_add_resources(porydaw "app_icon"
     PREFIX "/icons"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
     FILES
+        resources/flat-music.svg
         resources/porydaw-16.png
         resources/porydaw-32.png
         resources/porydaw-48.png
