@@ -368,9 +368,24 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   the palette mid color — and shares the timeline camera: middle-drag pans, the plain
   wheel zooms time at the cursor, Shift (or a horizontal wheel) scrolls, and the wheel
   over the ruler column is left alone. Visibility is an app-wide preference (QSettings,
-  like Follow Playhead); the pane's height is per-song sidecar state (§4.4). Editing
-  gestures — the multi-note drag, painting, ramps, marquee selection, and the PSG
-  detents (`core/velocitymodel.h`) — are not implemented yet.
+  like Follow Playhead); the pane's height is per-song sidecar state (§4.4).
+  Editing is deferred throughout: the pointer only moves a preview, and the
+  document mutates once — one undo entry — when the button comes up, refusing the
+  write outright if the notes changed underneath ("Velocity edit cancelled because
+  notes changed."). A left press grabs the note under it (its node's circle, or
+  anywhere along its stem; a node outranks a stem, and a selected note outranks an
+  unselected one) — an unselected note's press takes the selection over, Ctrl adds
+  to it — and dragging moves the velocity of *every* selected note by the drag's own
+  vertical distance, each from its own starting value, so the selection keeps its
+  shape and notes that clamp at 1 or 127 come back when the pointer does. Under the
+  activation slop the press is a click instead: plain collapses the selection onto
+  that note, Ctrl toggles its membership, and a click on empty plot clears the
+  selection — on the release, never on the press. Escape, focus loss, or losing the
+  mouse grab abandons the gesture and restores the selection the press found. While
+  a gesture runs the status bar reads out the aimed note (key, stored velocity, the
+  velocity the engine will really play, length) and playback follow-scroll pauses.
+  Painting, ramps, marquee selection, and the PSG detents
+  (`core/velocitymodel.h`) are not implemented yet.
 - **Transport bar:** play/pause/stop, loop toggle, a follow-playhead toggle (also in
   the View menu; off, playback stops scrolling the roll and event list — the camera
   stays where the user put it; app-wide, persisted), position, tempo display, master

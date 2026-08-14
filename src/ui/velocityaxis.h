@@ -76,6 +76,9 @@ class VelocityAxis
     double top() const { return m_top; }
     double bottom() const { return m_bottom; }
     double velocityToY(int velocity) const;
+    // The inverse: the velocity a y in the plot stands for, clamped to the
+    // drawable band so a drag past either inset simply pins at 1 or 127.
+    int yToVelocity(double y) const;
 
     const std::array<VelocityAxisTick, MaximumTicks> &ticks() const { return m_ticks; }
     std::size_t tickCount() const { return m_tickCount; }
@@ -83,6 +86,12 @@ class VelocityAxis
     std::size_t labelCount() const { return m_labelCount; }
     const std::array<VelocityAxisMarker, MaximumMarkers> &markers() const { return m_markers; }
     std::size_t markerCount() const { return m_markerCount; }
+
+    // The velocity a click in the ruler column asks for: a printed label
+    // within half its own height of y, so the ruler reads as a row of
+    // clickable values rather than a continuous slider (the un-labeled
+    // graduations between them are not targets). -1 when y hits nothing.
+    int rulerVelocityAt(double y, double labelHeight) const;
 
     void paintRuler(QPainter &painter, const VelocityAxisPaintStyle &style) const;
 

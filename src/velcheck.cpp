@@ -19,6 +19,7 @@
 #include <QTemporaryDir>
 #include <QWheelEvent>
 
+#include "core/noteid.h"
 #include "core/songdocument.h"
 #include "core/velocitymodel.h"
 #include "project/decompproject.h"
@@ -29,6 +30,7 @@
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 #include "ui/velocityaxis.h"
+#include "ui/velocitygesturemodel.h"
 
 // --velmodelcheck: PSG velocity model check (self-contained, no project
 // needed). VelocityMap is the engine-behavior half of the velocity lane: it
@@ -231,6 +233,44 @@ int runVelocityModelCheck()
     check(square.moveLevels(square.moveLevels(65, 1), -1) == 68,
           "stepping off a level and back should land on that level's representative");
 
+    // The deferred-gesture bookkeeping behind every lane edit: it holds
+    // identities and preview values, and hands back one all-or-nothing batch
+    // plus the revision the gesture began at.
+    const NoteId first(1);
+    const NoteId second(2);
+    const NoteId absent(3);
+    VelocityGestureModel gesture;
+    check(!gesture.active() && !gesture.update({{first, 60}}) && !gesture.updateByDelta(4) &&
+              !gesture.previewVelocity(first) && !gesture.takeCompletion() && !gesture.cancel(),
+          "an inactive gesture must reject updates, previews, completion, and cancellation");
+    check(!gesture.begin(7, {}) && !gesture.begin(7, {{NoteId(), 60}}) &&
+              !gesture.begin(7, {{first, 0}}) && !gesture.begin(7, {{first, 60}, {first, 61}}) &&
+              !gesture.active(),
+          "empty, unassigned, out-of-range, or duplicated targets must not open a gesture");
+    check(gesture.begin(7, {{second, 100}, {first, 40}}) && gesture.active() &&
+              gesture.previewVelocity(first) == std::optional<uint8_t>(40) &&
+              gesture.previewVelocity(second) == std::optional<uint8_t>(100) &&
+              !gesture.previewVelocity(absent) && !gesture.previewVelocity(NoteId()),
+          "a gesture must capture its targets whatever order they arrive in");
+    check(!gesture.begin(9, {{first, 50}}) && gesture.previewVelocity(first) == 40,
+          "a live gesture must not be replaced by another one");
+    check(!gesture.update({{absent, 50}}) && !gesture.update({{first, 50}, {first, 51}}) &&
+              !gesture.update({}) && gesture.previewVelocity(first) == 40,
+          "an update naming an unknown or repeated note must change nothing at all");
+    check(gesture.update({{first, 200}, {second, -5}}) && gesture.previewVelocity(first) == 127 &&
+              gesture.previewVelocity(second) == 1,
+          "updates must clamp into the MIDI velocity domain");
+    check(gesture.updateByDelta(-20) && gesture.previewVelocity(first) == 20 &&
+              gesture.previewVelocity(second) == 80 && gesture.updateByDelta(0) &&
+              gesture.previewVelocity(first) == 40 && gesture.previewVelocity(second) == 100,
+          "relative updates must measure from each note's own origin, clamps included");
+    const std::optional<VelocityGestureModel::Completion> completion = gesture.takeCompletion();
+    check(completion && completion->expectedRevision == 7 && completion->targets.size() == 2 &&
+              !gesture.active() && !gesture.previewVelocity(first),
+          "taking the completion must hand over the batch and leave the model inactive");
+    check(gesture.begin(11, {{first, 40}}) && gesture.cancel() && !gesture.active(),
+          "cancelling must discard the session");
+
     if (failures != 0) {
         std::fprintf(stderr, "velmodelcheck: %d failure(s)\n", failures);
         return 1;
@@ -251,10 +291,10 @@ int runVelocityModelCheck()
 namespace {
 
 void sendLaneMouse(QWidget *widget, QEvent::Type type, QPointF position, Qt::MouseButton button,
-                   Qt::MouseButtons buttons)
+                   Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
 {
     QMouseEvent event(type, position, QPointF(widget->mapToGlobal(position.toPoint())), button,
-                      buttons, Qt::NoModifier);
+                      buttons, modifiers);
     QCoreApplication::sendEvent(widget, &event);
 }
 
@@ -390,6 +430,14 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     view.resize(1280, 800);
     view.setSong(timeline.get(), nullptr);
     view.setDocument(&doc);
+    // The app rebuilds the timeline after every edit
+    // (MainWindow::onDocumentChanged); the lane hit-tests against the view
+    // model, so the check must keep it fresh the same way.
+    QObject::connect(&doc, &SongDocument::documentChanged, &view, [&] {
+        auto rebuilt = doc.buildTimeline(48000.0);
+        view.updateSong(rebuilt.get());
+        timeline = std::move(rebuilt); // frees the old one after the swap
+    });
     view.setGridMinDenom(4); // a comfortable 32px grid, as in rollcheck
     (void)view.grab();       // force layout so child geometry is real
 
@@ -672,6 +720,182 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     sendLaneMouse(lane, QEvent::MouseButtonRelease, overPlot - QPointF(40.0, 0.0), Qt::MiddleButton,
                   Qt::NoButton);
     check(view.tickAtContentX(0) > beforePan, "a middle drag must pan the timeline");
+
+    // --- editing: a node drag moves the whole selection, deferred to the release
+    // The camera checks above left the view zoomed in and scrolled away from
+    // the notes; put it back where the placement probes were taken.
+    view.zoomAroundContentX(beforeZoom / view.pxPerBeat(), 0.0);
+    view.scrollByPx(-1e6);
+    (void)view.grab();
+    const auto noteAt = [&](uint32_t startTick, uint8_t key) -> const ViewNote * {
+        for (const ViewNote &note : view.model().notes) {
+            if (note.track == track && note.startTick == startTick && note.key == key)
+                return &note;
+        }
+        return nullptr;
+    };
+    // A note whose node can be pressed without ambiguity under the camera as
+    // it stands now: clear of the ruler, the overlays, and any neighbor's
+    // node, with room either side of its velocity for a drag that never
+    // clamps.
+    const auto isolated = [&](const ViewNote *avoid) -> const ViewNote * {
+        for (const ViewNote &note : view.model().notes) {
+            if (note.track != track || !note.noteId.isAssigned())
+                continue;
+            if (note.velocity < 25 || note.velocity > 103)
+                continue;
+            const qreal x = view.displayX(double(note.startTick), songview::kGutterW, dpr);
+            if (x < songview::kGutterW + 60 || x > lane->width() - 60 || overlayContested(x))
+                continue;
+            if (avoid && std::abs(view.displayX(double(avoid->startTick), songview::kGutterW, dpr) -
+                                  x) < 24) {
+                continue;
+            }
+            bool crowded = false;
+            for (const ViewNote &other : view.model().notes) {
+                if (&other == &note || other.track != track)
+                    continue;
+                const qreal otherX =
+                    view.displayX(double(other.startTick), songview::kGutterW, dpr);
+                if (std::abs(otherX - x) < 16)
+                    crowded = true;
+            }
+            if (!crowded)
+                return &note;
+        }
+        return nullptr;
+    };
+    const ViewNote *dragProbe = isolated(nullptr);
+    const ViewNote *partnerProbe = dragProbe ? isolated(dragProbe) : nullptr;
+    if (!dragProbe || !partnerProbe) {
+        fail("no pair of drag-safe notes in the visible span");
+        return failures == 0 ? 0 : 1;
+    }
+    const ViewNote dragNote = *dragProbe;
+    const ViewNote partner = *partnerProbe;
+    const SongView::NoteKey dragId{dragNote.startTick, dragNote.key};
+    const SongView::NoteKey partnerId{partner.startTick, partner.key};
+    const int ringProbeRadius = int(std::ceil(2 * rasterDpr));
+    view.setSelection({dragId, partnerId});
+    (void)view.grab();
+    const QPointF nodePoint(view.displayX(double(dragNote.startTick), songview::kGutterW, dpr),
+                            laneVelocityY(lane, dragNote.velocity));
+    // The drag's y is the y of a real velocity, so the delta it asks for is
+    // exactly this one whatever the pane's height and display scale are. It
+    // heads away from the note's own end of the ruler, so nothing clamps.
+    const int dragDelta = dragNote.velocity > 64 ? -20 : 20;
+    const QPointF dragPoint(nodePoint.x(), laneVelocityY(lane, dragNote.velocity + dragDelta));
+    const uint64_t revisionBeforeDrag = doc.revision();
+    const int undoBeforeDrag = doc.undoStack()->count();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, dragPoint, Qt::NoButton, Qt::LeftButton);
+    const QImage draggingImage = lane->grab().toImage();
+    check(doc.revision() == revisionBeforeDrag && doc.undoStack()->count() == undoBeforeDrag,
+          "a velocity drag must leave the document alone until the release");
+    // The ring rides the preview: probe above the node, where only the ring
+    // can put the selection color.
+    check(hasColorNear(draggingImage,
+                       QPointF(dragPoint.x() * rasterDpr, (dragPoint.y() - 5.0) * rasterDpr),
+                       ringProbeRadius, ringColor, 24),
+          "a velocity drag must preview its node at the pointer's velocity");
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, dragPoint, Qt::LeftButton, Qt::NoButton);
+    (void)view.grab();
+    const ViewNote *draggedNote = noteAt(dragNote.startTick, dragNote.key);
+    const ViewNote *draggedPartner = noteAt(partner.startTick, partner.key);
+    check(doc.revision() != revisionBeforeDrag && doc.undoStack()->count() == undoBeforeDrag + 1 &&
+              draggedNote && draggedPartner &&
+              draggedNote->velocity == dragNote.velocity + dragDelta &&
+              draggedPartner->velocity == partner.velocity + dragDelta &&
+              view.selection().size() == 2,
+          "the release must move every selected note by the drag's delta as one undo entry");
+    doc.undoStack()->undo();
+    (void)view.grab();
+
+    // --- click semantics: press, no travel, release
+    view.setSelection({dragId, partnerId});
+    (void)view.grab();
+    const uint64_t revisionBeforeClick = doc.revision();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, nodePoint + QPointF(1.0, 0.0), Qt::NoButton,
+                  Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, nodePoint + QPointF(1.0, 0.0), Qt::LeftButton,
+                  Qt::NoButton);
+    check(view.selection().size() == 1 && view.selection()[0] == dragId &&
+              doc.revision() == revisionBeforeClick,
+          "a click on a node must collapse the selection onto it and edit nothing");
+    sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, nodePoint, Qt::LeftButton, Qt::NoButton,
+                  Qt::ControlModifier);
+    check(view.selection().empty(), "Ctrl+click must drop a selected node from the selection");
+    sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, nodePoint, Qt::LeftButton, Qt::NoButton,
+                  Qt::ControlModifier);
+    check(view.selection().size() == 1 && view.selection()[0] == dragId,
+          "Ctrl+click must add an unselected node without dropping the rest");
+
+    // A velocity row at the probe's tick with no node or stem near it.
+    const auto emptyRowY = [&](double x) {
+        for (int velocity = 120; velocity >= 8; velocity -= 4) {
+            const double y = laneVelocityY(lane, velocity);
+            bool clear = true;
+            for (const ViewNote &note : view.model().notes) {
+                if (note.track != track)
+                    continue;
+                const double start = view.displayX(double(note.startTick), songview::kGutterW, dpr);
+                const double end = view.displayX(double(note.endTick), songview::kGutterW, dpr);
+                if (x < start - 12.0 || x > end + 12.0)
+                    continue;
+                if (std::abs(laneVelocityY(lane, note.velocity) - y) < 12.0)
+                    clear = false;
+            }
+            if (clear)
+                return y;
+        }
+        return -1.0;
+    };
+    const double emptyY = emptyRowY(nodePoint.x());
+    if (emptyY < 0.0) {
+        fail("no empty plot row at the probe's tick");
+    } else {
+        const QPointF emptyPoint(nodePoint.x(), emptyY);
+        sendLaneMouse(lane, QEvent::MouseButtonPress, emptyPoint, Qt::LeftButton, Qt::LeftButton);
+        check(view.selection().size() == 1,
+              "a press on empty plot must leave the selection alone until the release");
+        sendLaneMouse(lane, QEvent::MouseButtonRelease, emptyPoint, Qt::LeftButton, Qt::NoButton);
+        check(view.selection().empty() && doc.revision() == revisionBeforeClick,
+              "a click on empty plot must clear the selection on the release");
+    }
+
+    // --- the stem grabs its own note, and Escape abandons a live drag
+    const double stemX =
+        (nodePoint.x() + view.displayX(double(dragNote.endTick), songview::kGutterW, dpr)) / 2.0;
+    if (stemX - nodePoint.x() > 8.0) {
+        const QPointF stemPoint(stemX, nodePoint.y());
+        sendLaneMouse(lane, QEvent::MouseButtonPress, stemPoint, Qt::LeftButton, Qt::LeftButton);
+        sendLaneMouse(lane, QEvent::MouseButtonRelease, stemPoint, Qt::LeftButton, Qt::NoButton);
+        check(view.selection().size() == 1 && view.selection()[0] == dragId,
+              "a press on a note's stem must grab that note");
+    }
+    view.setSelection({partnerId});
+    (void)view.grab();
+    const uint64_t revisionBeforeEscape = doc.revision();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton);
+    check(view.selection().size() == 1 && view.selection()[0] == dragId,
+          "pressing an unselected node must take the selection over");
+    sendLaneMouse(lane, QEvent::MouseMove, dragPoint, Qt::NoButton, Qt::LeftButton);
+    sendLaneKey(lane, Qt::Key_Escape);
+    check(view.selection().size() == 1 && view.selection()[0] == partnerId &&
+              doc.revision() == revisionBeforeEscape,
+          "Escape must abandon the drag and put the pre-press selection back");
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, dragPoint, Qt::LeftButton, Qt::NoButton);
+    const ViewNote *escapedNote = noteAt(dragNote.startTick, dragNote.key);
+    check(doc.revision() == revisionBeforeEscape && escapedNote &&
+              escapedNote->velocity == dragNote.velocity,
+          "the release after an Escape must not commit the abandoned drag");
+    view.clearSelection();
+    (void)view.grab();
 
     // --- the pane's height is per-song view state, and pre-lane sidecars load
     SongView::ViewState state = view.viewState();

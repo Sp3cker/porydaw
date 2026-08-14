@@ -48,6 +48,27 @@ double VelocityAxis::velocityToY(int velocity) const
            double(clamped - kMinimumVelocity) * span / double(kMaximumVelocity - kMinimumVelocity);
 }
 
+int VelocityAxis::yToVelocity(double y) const
+{
+    const double span = m_bottom - m_top;
+    if (span == 0.0)
+        return kMinimumVelocity;
+    const double clamped = std::clamp(y, m_top, m_bottom);
+    const double scaled = (m_bottom - clamped) * double(kMaximumVelocity - kMinimumVelocity) / span;
+    return std::clamp(kMinimumVelocity + int(std::lround(scaled)), kMinimumVelocity,
+                      kMaximumVelocity);
+}
+
+int VelocityAxis::rulerVelocityAt(double y, double labelHeight) const
+{
+    const double reach = labelHeight / 2.0;
+    for (std::size_t index = 0; index < m_labelCount; index++) {
+        if (std::abs(y - m_labels[index].y) <= reach)
+            return m_labels[index].velocity;
+    }
+    return -1;
+}
+
 void VelocityAxis::paintRuler(QPainter &painter, const VelocityAxisPaintStyle &style) const
 {
     painter.save();

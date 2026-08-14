@@ -8,6 +8,7 @@
 #include "ui/layout.h"
 #include "ui/timelinesurface.h"
 #include "ui/velocityaxis.h"
+#include "ui/velocitygesturemodel.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -5407,6 +5408,13 @@ constexpr double kVelDensityD1 = 6.0;
 constexpr double kVelDensityD2 = 25.0 / 3.0;
 constexpr double kVelDensityD3 = 12.0;
 constexpr double kVelDensityD4 = 24.0;
+// Pointer targets, in DIPs: how near a node's center counts as grabbing it,
+// and how far above/below (and past either end of) a stem still grabs the
+// stem. The node's reach is wider than the painted circle so a small target
+// stays clickable; the stem's is thin so a node behind it still wins.
+constexpr double kVelNodeGrabRadius = 6.0;
+constexpr double kVelStemGrabRadius = 4.0;
+constexpr double kVelStemGrabSlop = 2.0;
 
 } // namespace
 
@@ -5416,10 +5424,12 @@ constexpr double kVelDensityD4 = 24.0;
 // over the whole 1-127 velocity domain. There is no vertical zoom; the lane's
 // height only decides how densely the ruler is graduated.
 //
-// Read-only so far: the lane mirrors the roll's note selection (selected
-// nodes ring, and the rest dim once more than one is selected) and shares the
-// timeline's camera, but only pans and zooms. The editing gestures — relative
-// drag, paint, ramp, marquee, and the PSG detents — land in later milestones.
+// The lane mirrors the roll's note selection (selected nodes ring, and the
+// rest dim once more than one is selected) and shares the timeline's camera.
+// A left drag on a node or its stem moves the whole selection's velocities
+// together; every gesture is deferred — the pointer only moves a preview, and
+// the document mutates once, as one undo entry, when the button comes up.
+// Still to come: paint, ramp, marquee, and the PSG detents.
 class VelocityLane : public TimelineSurface
 {
   public:
@@ -5433,8 +5443,22 @@ class VelocityLane : public TimelineSurface
         setFocusPolicy(Qt::ClickFocus);
     }
 
-    // A mouse gesture is live (the middle-button pan); follow-scroll pauses.
-    bool gestureActive() const { return m_panning; }
+    // A mouse gesture is live (the pan or a velocity edit); follow-scroll
+    // pauses so the camera cannot slide out from under the pointer.
+    bool gestureActive() const { return m_panning || m_gesture != Gesture::None; }
+
+    // The document changed under a live gesture (an edit from elsewhere, or
+    // undo/redo): the preview describes notes that may no longer be there,
+    // so it dies rather than committing blind.
+    void documentChanged()
+    {
+        if (m_gesture == Gesture::None)
+            return;
+        const bool hadPreview = !m_frozen.empty();
+        cancelGesture();
+        if (hadPreview)
+            m_sv->announce(SongView::tr("Velocity edit cancelled because notes changed."));
+    }
 
   protected:
     void paintContent(QPainter &p) override
@@ -5518,48 +5542,131 @@ class VelocityLane : public TimelineSurface
 
     void mousePressEvent(QMouseEvent *event) override
     {
-        if (event->button() != Qt::MiddleButton) {
-            // Nothing else edits here yet; leave the press to the parent
-            // rather than swallowing it.
+        if (event->button() == Qt::MiddleButton) {
+            // Reaper-style pan, tracked in global coordinates like the lanes'.
+            m_panning = true;
+            m_panPos = event->globalPosition();
+            setCursor(Qt::ClosedHandCursor);
+            event->accept();
+            return;
+        }
+        if (event->button() != Qt::LeftButton || !m_sv->document() || !m_sv->timeline()) {
+            // Nothing here edits without a document; leave the press to the
+            // parent rather than swallowing it.
             event->ignore();
             return;
         }
-        // Reaper-style pan, tracked in global coordinates like the lanes'.
-        m_panning = true;
-        m_panPos = event->globalPosition();
-        setCursor(Qt::ClosedHandCursor);
+        const QPointF pos = event->position();
+        m_pressPos = m_prevPos = pos;
+        m_selBeforePress = m_sv->selection();
+        m_pressed.reset();
+        m_ctrlPress = event->modifiers() & Qt::ControlModifier;
+        if (pos.x() < kGutterW) {
+            // The gutter is the track header and the value ruler; neither is
+            // plot space (the ruler's own click lands in a later milestone).
+            event->ignore();
+            return;
+        }
+        const ViewNote *hit = noteAt(pos);
+        if (!hit) {
+            // Empty plot. The press changes nothing — a click here clears the
+            // selection, but only when the release proves it was a click.
+            m_gesture = Gesture::Paint;
+            m_activated = false;
+            event->accept();
+            return;
+        }
+        m_pressed = *hit;
+        // An unselected node's press takes the selection over; Ctrl adds to
+        // it. Either way the drag that may follow moves everything selected.
+        if (m_ctrlPress) {
+            std::vector<SongView::NoteKey> selection = m_selBeforePress;
+            if (!m_sv->isSelected(*hit))
+                selection.push_back({hit->startTick, hit->key});
+            m_sv->setSelection(std::move(selection));
+        } else if (!m_sv->isSelected(*hit)) {
+            m_sv->setSelection({{hit->startTick, hit->key}});
+        }
+        beginGesture(Gesture::Relative);
         event->accept();
     }
 
     void mouseMoveEvent(QMouseEvent *event) override
     {
-        if (!m_panning) {
+        const QPointF pos = event->position();
+        if (m_panning) {
+            const QPointF d = event->globalPosition() - m_panPos;
+            m_panPos = event->globalPosition();
+            m_sv->scrollByPx(-d.x());
+            event->accept();
+            return;
+        }
+        if (m_gesture == Gesture::None) {
             event->ignore();
             return;
         }
-        const QPointF d = event->globalPosition() - m_panPos;
-        m_panPos = event->globalPosition();
-        m_sv->scrollByPx(-d.x());
+        if (m_gesture == Gesture::Relative)
+            updateRelative(pos);
+        m_prevPos = pos;
         event->accept();
     }
 
     void mouseReleaseEvent(QMouseEvent *event) override
     {
-        if (event->button() != Qt::MiddleButton || !m_panning) {
+        if (event->button() == Qt::MiddleButton && m_panning) {
+            m_panning = false;
+            unsetCursor();
+            event->accept();
+            return;
+        }
+        if (event->button() != Qt::LeftButton || m_gesture == Gesture::None) {
             event->ignore();
             return;
         }
-        m_panning = false;
-        unsetCursor();
+        if (m_gesture == Gesture::Paint) {
+            // A press on empty space that painted nothing is a click, and a
+            // click on empty space clears the selection.
+            const bool painted = !m_frozen.empty();
+            if (!painted)
+                m_sv->setSelection({});
+            finishGesture(painted);
+        } else {
+            // Under the activation slop the press was a click: Ctrl toggles
+            // this node's membership, a plain click collapses onto it.
+            if (!m_activated)
+                clickSelect();
+            finishGesture(m_activated);
+        }
         event->accept();
     }
 
     void keyPressEvent(QKeyEvent *event) override
     {
+        if (event->key() == Qt::Key_Escape && m_gesture != Gesture::None) {
+            // Abandon the preview and put back the selection the press found.
+            cancelGesture();
+            event->accept();
+            return;
+        }
         // Shared roll/lanes shortcuts (the V toggle included) reach the
         // focused surface first, exactly like the lanes area.
         if (!m_sv->handleEditKey(event))
             QWidget::keyPressEvent(event);
+    }
+
+    void focusOutEvent(QFocusEvent *event) override
+    {
+        cancelGesture();
+        TimelineSurface::focusOutEvent(event);
+    }
+
+    bool event(QEvent *event) override
+    {
+        // Losing the grab (a modal opening, a drag leaving the window) ends
+        // the gesture without a release ever arriving.
+        if (event->type() == QEvent::UngrabMouse)
+            cancelGesture();
+        return TimelineSurface::event(event);
     }
 
     void keyReleaseEvent(QKeyEvent *event) override
@@ -5569,6 +5676,212 @@ class VelocityLane : public TimelineSurface
     }
 
   private:
+    // Left-drag gestures. Relative moves every selected note's velocity by
+    // the drag's own vertical distance; Paint is the empty-space press whose
+    // stroke brushes the selection (milestone 4) and whose bare click clears
+    // the selection.
+    enum class Gesture { None, Relative, Paint };
+
+    // Travel that turns a press into a drag; the lanes' own figure, so a
+    // click in either surface tolerates the same hand jitter.
+    static int dragActivationDistance() { return lyt::fontPx(5.0 / 12.0); }
+
+    // The value ruler's mapping. It only needs the geometry — the markers
+    // the painted axis also carries move no graduation — so a gesture can
+    // build one without knowing the selection.
+    VelocityAxis plotAxis() const { return VelocityAxis(axisGeometry()); }
+
+    // The note a press at pos grabs, or null for empty space. A node's
+    // circle outranks a bare stem, a selected note outranks an unselected
+    // one (so a group drag survives a stacked node), then the nearest wins
+    // and, tied, the later-painted one.
+    const ViewNote *noteAt(const QPointF &pos) const
+    {
+        const qreal dpr = devicePixelRatioF();
+        const VelocityAxis axis = plotAxis();
+        const int track = m_sv->selectedTrack();
+        const ViewNote *best = nullptr;
+        bool bestCircle = false;
+        bool bestSelected = false;
+        double bestDistance = 0.0;
+        for (const ViewNote &note : m_sv->model().notes) {
+            if (note.track != track)
+                continue;
+            const double x = m_sv->displayX(double(note.startTick), kGutterW, dpr);
+            const double y = axis.velocityToY(displayVelocity(note));
+            const double dx = x - pos.x();
+            const double dy = y - pos.y();
+            const double distance = dx * dx + dy * dy;
+            const bool circle = distance <= kVelNodeGrabRadius * kVelNodeGrabRadius;
+            const double end = m_sv->displayX(double(note.endTick), kGutterW, dpr);
+            const bool stem = pos.x() >= x - kVelStemGrabSlop &&
+                              pos.x() <= end + kVelStemGrabSlop &&
+                              std::abs(dy) <= kVelStemGrabRadius;
+            if (!circle && !stem)
+                continue;
+            const bool selected = m_sv->isSelected(note);
+            const bool better =
+                !best || (circle && !bestCircle) ||
+                (circle == bestCircle && selected && !bestSelected) ||
+                (circle == bestCircle && selected == bestSelected && distance <= bestDistance);
+            if (better) {
+                best = &note;
+                bestCircle = circle;
+                bestSelected = selected;
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
+    // The velocity a note is drawn at: its preview while a gesture holds it,
+    // its stored value otherwise.
+    uint8_t displayVelocity(const ViewNote &note) const
+    {
+        if (const std::optional<uint8_t> preview = m_gestureModel.previewVelocity(note.noteId))
+            return *preview;
+        return note.velocity;
+    }
+
+    // Opens a deferred edit over the current selection. The frozen copies
+    // are the notes as the press found them — the model rebuilds under an
+    // edit, and a gesture measures from where it started, never from the
+    // last preview.
+    void beginGesture(Gesture gesture)
+    {
+        SongDocument *doc = m_sv->document();
+        m_gesture = gesture;
+        m_activated = false;
+        m_frozen.clear();
+        if (!doc)
+            return;
+        std::vector<NoteVelocity> targets;
+        for (const ViewNote &note : m_sv->model().notes) {
+            if (note.track != m_sv->selectedTrack() || !m_sv->isSelected(note) ||
+                !note.noteId.isAssigned())
+                continue;
+            m_frozen.push_back(note);
+            targets.push_back({note.noteId, int(note.velocity)});
+        }
+        if (!m_gestureModel.begin(doc->revision(), std::move(targets)))
+            m_frozen.clear();
+        else if (m_pressed)
+            m_announced = m_pressed->noteId;
+    }
+
+    void updateRelative(const QPointF &pos)
+    {
+        if (m_frozen.empty())
+            return;
+        if (!m_activated) {
+            if ((pos - m_pressPos).manhattanLength() < dragActivationDistance())
+                return;
+            m_activated = true;
+        }
+        // The drag's own travel in velocity units, applied to every frozen
+        // origin: a selection keeps its internal shape, and notes that clamp
+        // at 1 or 127 come back when the pointer does.
+        const VelocityAxis axis = plotAxis();
+        m_gestureModel.updateByDelta(axis.yToVelocity(pos.y()) - axis.yToVelocity(m_pressPos.y()));
+        announcePreview();
+        invalidateContent();
+    }
+
+    // Release inside the activation slop: the press was a click.
+    void clickSelect()
+    {
+        if (!m_pressed) {
+            m_sv->setSelection({});
+            return;
+        }
+        const SongView::NoteKey id{m_pressed->startTick, m_pressed->key};
+        if (!m_ctrlPress) {
+            m_sv->setSelection({id});
+            return;
+        }
+        std::vector<SongView::NoteKey> selection = m_selBeforePress;
+        const auto existing = std::find(selection.begin(), selection.end(), id);
+        if (existing == selection.end())
+            selection.push_back(id);
+        else
+            selection.erase(existing);
+        m_sv->setSelection(std::move(selection));
+    }
+
+    // Ends the gesture. The document mutates exactly here, once, and only
+    // when the preview is still describing the revision it started from —
+    // setNotesVelocities refuses anything else rather than landing values on
+    // notes that moved.
+    void finishGesture(bool commit)
+    {
+        if (m_gesture == Gesture::None)
+            return;
+        m_gesture = Gesture::None;
+        m_activated = false;
+        m_pressed.reset();
+        m_selBeforePress.clear();
+        m_frozen.clear();
+        m_announced = NoteId();
+        const std::optional<VelocityGestureModel::Completion> completion =
+            m_gestureModel.takeCompletion();
+        if (!completion || !commit) {
+            invalidateContent();
+            return;
+        }
+        SongDocument *doc = m_sv->document();
+        const std::optional<uint64_t> revision =
+            doc ? doc->setNotesVelocities(completion->expectedRevision, completion->targets)
+                : std::nullopt;
+        if (!revision)
+            m_sv->announce(SongView::tr("Velocity edit cancelled because notes changed."));
+        else if (*revision != completion->expectedRevision)
+            m_sv->announce(SongView::tr("Painted note velocities."));
+        invalidateContent();
+    }
+
+    // Abandons the gesture: the preview never reaches the document, and the
+    // selection the press took over goes back the way it was (minus any note
+    // that stopped existing meanwhile).
+    void cancelGesture()
+    {
+        if (m_gesture == Gesture::None)
+            return;
+        std::vector<SongView::NoteKey> restore;
+        for (const SongView::NoteKey &id : m_selBeforePress) {
+            for (const ViewNote &note : m_sv->model().notes) {
+                if (note.track == m_sv->selectedTrack() && note.startTick == id.tick &&
+                    note.key == id.key) {
+                    restore.push_back(id);
+                    break;
+                }
+            }
+        }
+        m_gesture = Gesture::None;
+        m_activated = false;
+        m_pressed.reset();
+        m_selBeforePress.clear();
+        m_frozen.clear();
+        m_announced = NoteId();
+        m_gestureModel.cancel();
+        m_sv->setSelection(std::move(restore));
+        invalidateContent();
+    }
+
+    // Status line for the note the gesture is aimed at, in the roll's own
+    // wording: key, the stored velocity the release will write, what the
+    // engine will actually play, and the note's length.
+    void announcePreview() const
+    {
+        for (const ViewNote &note : m_frozen) {
+            if (note.noteId != m_announced)
+                continue;
+            ViewNote shown = note;
+            shown.velocity = displayVelocity(note);
+            m_sv->announceNote(shown);
+            return;
+        }
+    }
+
     VelocityAxisGeometry axisGeometry() const
     {
         VelocityAxisGeometry geometry;
@@ -5603,7 +5916,7 @@ class VelocityLane : public TimelineSurface
         std::vector<uint8_t> values;
         for (const ViewNote &note : m_sv->model().notes) {
             if (note.track == m_sv->selectedTrack() && m_sv->isSelected(note))
-                values.push_back(note.velocity);
+                values.push_back(displayVelocity(note));
         }
         return values;
     }
@@ -5642,7 +5955,7 @@ class VelocityLane : public TimelineSurface
             for (const ViewNote *note : visible) {
                 if (m_sv->isSelected(*note) != selectedPass)
                     continue;
-                const qreal y = axis.velocityToY(note->velocity);
+                const qreal y = axis.velocityToY(displayVelocity(*note));
                 const qreal x = m_sv->displayX(double(note->startTick), kGutterW, dpr);
                 const qreal end = std::max(x + physicalPixel,
                                            m_sv->displayX(double(note->endTick), kGutterW, dpr));
@@ -5656,7 +5969,7 @@ class VelocityLane : public TimelineSurface
                 if (m_sv->isSelected(*note) != selectedPass)
                     continue;
                 const QPointF center(m_sv->displayX(double(note->startTick), kGutterW, dpr),
-                                     axis.velocityToY(note->velocity));
+                                     axis.velocityToY(displayVelocity(*note)));
                 if (selectedPass) {
                     p.setPen(QPen(selectedColor, weight(kVelSelRingWidth)));
                     p.setBrush(Qt::NoBrush);
@@ -5677,6 +5990,18 @@ class VelocityLane : public TimelineSurface
     SongView *m_sv;
     bool m_panning = false;
     QPointF m_panPos;
+    // The deferred edit: identities and preview values only, so nothing the
+    // pointer does reaches the document before the release.
+    VelocityGestureModel m_gestureModel;
+    Gesture m_gesture = Gesture::None;
+    std::vector<ViewNote> m_frozen;    // the gesture's targets as the press found them
+    std::optional<ViewNote> m_pressed; // the note under the press, if any
+    NoteId m_announced;                // the frozen note the status line describes
+    std::vector<SongView::NoteKey> m_selBeforePress; // restored by a cancel
+    QPointF m_pressPos;
+    QPointF m_prevPos;
+    bool m_activated = false; // the drag cleared the activation slop
+    bool m_ctrlPress = false; // Ctrl at the press; the click adds instead of collapsing
 };
 
 // ---------------------------------------------------------------- OtherStrip
@@ -6635,6 +6960,9 @@ void SongView::updateSong(const MidiTimeline *timeline)
 
     m_headers->rebuild();
     m_lanes->rebuildRows();
+    // A rebuilt model retires the notes a live velocity preview was holding
+    // (the lane's own commit has already ended its gesture by this point).
+    m_velocityLane->documentChanged();
     updateScrollbars();
     refreshTimelineViews();
 }
