@@ -255,6 +255,7 @@ qt_add_executable(porydaw
     src/loopcheck.cpp
     src/polycheck.cpp
     src/primecheck.cpp
+    src/xcmdcheck.cpp
     src/smfcheck.cpp
     src/transportcheck.cpp
     src/trackactivitycheck.cpp

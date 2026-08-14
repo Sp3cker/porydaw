@@ -38,21 +38,35 @@ void TimelinePlayer::dispatchEvent(M4AEngine *engine, const TimelineEvent &ev, u
 
 void TimelinePlayer::chase(M4AEngine *engine, const MidiTimeline *timeline, uint64_t pos)
 {
-    // Most recent state-bearing event per slot at or before pos.
+    // Most recent independent state-bearing event per slot at or before pos.
+    // Programs and XCMD form ordered protocols, so replay them during the
+    // scan instead of coalescing them by event or controller number.
     const TimelineEvent *cc[16][128] = {};
     const TimelineEvent *bend[16] = {};
-    const TimelineEvent *program[16] = {};
     const TimelineEvent *tempo = nullptr;
+    // IECV/IECL are track state, but unlike ordinary CCs they can only be
+    // changed through the ordered XCMD protocol. Clear them before replay so
+    // a backward seek cannot retain pseudo-echo settings from the old position.
+    for (int track = 0; track < timeline->usedTrackCount; track++) {
+        m4a_engine_cc(engine, track, 0x1E, 0x08);
+        m4a_engine_cc(engine, track, 0x1D, 0);
+        m4a_engine_cc(engine, track, 0x1E, 0x09);
+        m4a_engine_cc(engine, track, 0x1D, 0);
+        m4a_engine_cc(engine, track, 0x1E, 0);
+    }
 
     for (const TimelineEvent &ev : timeline->events) {
         if (ev.samplePos > pos)
             break;
         switch (ev.type) {
         case 0xB:
-            cc[ev.track][ev.data0 & 0x7F] = &ev;
+            if (ev.data0 >= 0x1D && ev.data0 <= 0x1F)
+                dispatchEvent(engine, ev, 0);
+            else
+                cc[ev.track][ev.data0 & 0x7F] = &ev;
             break;
         case 0xC:
-            program[ev.track] = &ev;
+            dispatchEvent(engine, ev, 0);
             break;
         case 0xE:
             bend[ev.track] = &ev;
@@ -81,8 +95,6 @@ void TimelinePlayer::chase(M4AEngine *engine, const MidiTimeline *timeline, uint
     };
 
     for (int track = 0; track < 16; track++) {
-        if (program[track])
-            dispatchEvent(engine, *program[track], 0);
         for (int n = 0; n < 128; n++)
             if (cc[track][n])
                 dispatchEvent(engine, *cc[track][n], 0);
