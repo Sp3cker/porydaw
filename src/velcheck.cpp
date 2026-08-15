@@ -1092,11 +1092,12 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
         int track;
         int key;
         int velocity;
+        int rawVolume;
     };
     std::vector<AuditionEvent> auditions;
     QObject::connect(&view, &SongView::auditionNote, &view,
-                     [&auditions](int track, int key, int velocity) {
-                         auditions.push_back({track, key, velocity});
+                     [&auditions](int track, int key, int velocity, int rawVolume) {
+                         auditions.push_back({track, key, velocity, rawVolume});
                      });
     // Velocity hues make the roll's fill a statement about the value alone,
     // so the probe reads a color the preview velocity names outright.
@@ -1175,6 +1176,34 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     view.setVelocityColorMode(velocityInkBefore);
     view.scrollRollBy(rollScrollBefore - view.scrollY());
     (void)view.grab();
+
+    // --- the audition's loudness belongs to the note, not to the cursor: a
+    // VOL change dropped between the two must not reach the preview. The
+    // change sits past the probed note, so its own levels — and its node's
+    // place in the plot — are exactly where they were.
+    {
+        const int undoBeforeVolume = doc.undoStack()->index();
+        const uint64_t cursorBeforeVolume = view.editCursorTick();
+        const int volumeAtNote = view.trackRawVolumeAt(track, dragNote.startTick);
+        const int volumeLater = volumeAtNote > 63 ? 30 : 120;
+        const uint64_t volumeChangeTick = dragNote.startTick + 1;
+        doc.addLanePoint(track, 7, volumeChangeTick, volumeLater);
+        view.commitEditCursor(volumeChangeTick);
+        (void)view.grab();
+        auditions.clear();
+        sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton);
+        sendLaneMouse(lane, QEvent::MouseButtonRelease, nodePoint, Qt::LeftButton, Qt::NoButton);
+        check(view.trackRawVolumeAt(track, volumeChangeTick) == volumeLater &&
+                  volumeLater != volumeAtNote,
+              "the probe's VOL change must really move the track volume past the note");
+        check(!auditions.empty() && auditions.front().velocity == dragNote.velocity &&
+                  auditions.front().rawVolume == volumeAtNote,
+              "a node press must sound at the VOL in force at its own note, not the cursor's");
+        while (doc.undoStack()->index() > undoBeforeVolume)
+            doc.undoStack()->undo();
+        view.commitEditCursor(cursorBeforeVolume);
+        (void)view.grab();
+    }
 
     // --- click semantics: press, no travel, release
     view.setSelection({dragId, partnerId});

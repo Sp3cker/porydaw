@@ -940,15 +940,16 @@ SongSession *MainWindow::createSession()
         if (s == m_active)
             m_audio.setSoloMask(mask);
     });
-    connect(s->view, &SongView::auditionNote, this, [this, s](int track, int key, int velocity) {
-        if (s == m_active && m_audioOk && m_audio.songLoaded())
-            m_audio.previewNote(uint8_t(track), uint8_t(key), uint8_t(velocity));
-    });
+    connect(s->view, &SongView::auditionNote, this,
+            [this, s](int track, int key, int velocity, int rawVolume) {
+                if (s == m_active && m_audioOk && m_audio.songLoaded())
+                    m_audio.previewNote(uint8_t(track), uint8_t(key), uint8_t(velocity), rawVolume);
+            });
     connect(s->view, &SongView::auditionNoteTimed, this,
-            [this, s](int track, int key, int velocity, quint32 durationSamples) {
+            [this, s](int track, int key, int velocity, quint32 durationSamples, int rawVolume) {
                 if (s == m_active && m_audioOk && m_audio.songLoaded())
                     m_audio.previewNoteTimed(uint8_t(track), uint8_t(key), uint8_t(velocity),
-                                             durationSamples);
+                                             durationSamples, rawVolume);
             });
     connect(s->view, &SongView::auditionVoice, this, [this, s](int voice, int key, int velocity) {
         if (s == m_active && m_audioOk)

@@ -34,6 +34,11 @@ constexpr uint8_t kProgLater = 9;  // engine track 0, tick 96
 constexpr uint8_t kProgTrack1 = 7; // engine track 1, tick 48 (its first)
 constexpr uint64_t kLaterTick = 96;
 
+// A VOL ramp on engine track 0, quiet from kLaterTick on: an audition of an
+// early note taken while the cursor sits late must still sound at kVolEarly.
+constexpr uint8_t kVolEarly = 127;
+constexpr uint8_t kVolLate = 32;
+
 SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
 {
     SmfEvent ev;
@@ -69,9 +74,11 @@ SmfFile buildPrimeSong()
     // priming.
     SmfTrack &t0 = smf.tracks[1];
     t0.events.push_back(channelEvent(0, 0xC0, kProgAtZero, 0));
+    t0.events.push_back(channelEvent(0, 0xB0, 7, kVolEarly));
     t0.events.push_back(channelEvent(0, 0x90, 60, 100));
     t0.events.push_back(channelEvent(24, 0x80, 60, 0));
     t0.events.push_back(channelEvent(kLaterTick, 0xC0, kProgLater, 0));
+    t0.events.push_back(channelEvent(kLaterTick, 0xB0, 7, kVolLate));
     t0.endTick = 192;
 
     // Engine track 1: first voice only at tick 48 — the priming case.
@@ -100,6 +107,9 @@ struct TestVoicegroup {
     int8_t sample[65];
     WaveData wave;
     ToneData voices[128];
+    // The same programs as square-1 voices: a PSG part is where the audition
+    // volume matters most, and its levels are quantized differently.
+    ToneData cgbVoices[128];
 
     TestVoicegroup()
     {
@@ -122,10 +132,19 @@ struct TestVoicegroup {
             v.sustain = 255; // hold until note-off
             v.release = 165;
         }
+        std::memset(cgbVoices, 0, sizeof(cgbVoices));
+        for (ToneData &v : cgbVoices) {
+            v.type = VOICE_SQUARE_1;
+            v.key = 60;
+            v.attack = 0;   // instant, in CGB envelope units
+            v.decay = 0;    // straight to sustain
+            v.sustain = 15; // hold until note-off
+            v.release = 0;
+        }
     }
 };
 
-bool rendersAudibly(M4AEngine *engine)
+float renderPeak(M4AEngine *engine)
 {
     constexpr uint32_t kFrames = 512;
     float bufL[kFrames], bufR[kFrames];
@@ -133,7 +152,12 @@ bool rendersAudibly(M4AEngine *engine)
     float peak = 0.0f;
     for (uint32_t i = 0; i < kFrames; i++)
         peak = std::max(peak, std::max(std::fabs(bufL[i]), std::fabs(bufR[i])));
-    return peak > 0.0f;
+    return peak;
+}
+
+bool rendersAudibly(M4AEngine *engine)
+{
+    return renderPeak(engine) > 0.0f;
 }
 
 int checkTrackProgram(const M4AEngine &engine, int track, uint8_t program, const char *what)
@@ -216,6 +240,112 @@ int runPrimeCheck()
 
         failures += checkTrackProgram(engine, 0, kProgLater, "mid-song chase wins");
         failures += checkTrackProgram(engine, 1, kProgTrack1, "mid-song chase supplies track 1");
+        m4a_engine_destroy(&engine);
+    }
+
+    // An audition belongs to the note, not to the cursor: with the engine
+    // chased past the VOL drop, keying at the early note's own VOL must sound
+    // exactly as it would have back there — and must leave the track's real
+    // VOL, and every note already sounding on it, alone.
+    //
+    // Held for many frames and with the track's LFO running, because a
+    // vibrato lead (the ordinary shape of a PSG square part) recomputes every
+    // sounding channel's volume from the track on each LFO tick. An audition
+    // that merely *starts* at the right volume is pulled onto the track's
+    // current VOL a few milliseconds later — audibly, and the reason the
+    // channel carries its audition volume rather than the track borrowing it
+    // across the note-on.
+    {
+        const uint64_t late = (kLaterTick + 4) * kSamplesPerTick;
+        const uint64_t early = 4 * kSamplesPerTick;
+
+        struct VoiceKind {
+            const char *name;
+            const ToneData *voices;
+        };
+        const VoiceKind kinds[] = {{"directsound", vg.voices}, {"square", vg.cgbVoices}};
+
+        // The note's settled level, not its onset: a peak taken across the
+        // whole render would still pass on an audition that starts right and
+        // sinks. The voices sustain flat, so the last block is the level the
+        // note holds.
+        const auto settledPeak = [&](const ToneData *voices, uint64_t pos, int rawVolume,
+                                     bool lfo) {
+            M4AEngine engine;
+            m4a_engine_init(&engine, float(kSampleRate));
+            m4a_engine_set_voicegroup(&engine, const_cast<ToneData *>(voices));
+            TimelinePlayer::chase(&engine, timeline.get(), pos);
+            if (lfo) {
+                m4a_engine_cc(&engine, 0, 0x01, 40); // MOD depth: the LFO runs
+                m4a_engine_cc(&engine, 0, 0x15, 60); // LFO speed
+            }
+            TimelinePlayer::auditionNoteOn(&engine, 0, 60, 127, rawVolume);
+            float peak = 0.0f;
+            for (int i = 0; i < 40; i++)
+                peak = renderPeak(&engine);
+            m4a_engine_destroy(&engine);
+            return peak;
+        };
+
+        for (const VoiceKind &kind : kinds) {
+            for (const bool lfo : {false, true}) {
+                const float earlyPeak = settledPeak(kind.voices, early, -1, lfo);
+                const float latePeak = settledPeak(kind.voices, late, -1, lfo);
+                if (!(earlyPeak > latePeak && latePeak > 0.0f)) {
+                    std::fprintf(stderr,
+                                 "primecheck: FAIL: the fixture's VOL drop is not audible on a %s "
+                                 "voice%s (control expectation changed?)\n",
+                                 kind.name, lfo ? " with its LFO running" : "");
+                    failures++;
+                    continue;
+                }
+                const float auditionPeak = settledPeak(kind.voices, late, kVolEarly, lfo);
+                if (std::fabs(auditionPeak - earlyPeak) > 1e-6f) {
+                    std::fprintf(stderr,
+                                 "primecheck: FAIL: a %s audition%s at the note's own VOL settled "
+                                 "at %.6f; the note there settles at %.6f (the quiet side is "
+                                 "%.6f)\n",
+                                 kind.name, lfo ? " with its LFO running" : "",
+                                 double(auditionPeak), double(earlyPeak), double(latePeak));
+                    failures++;
+                }
+            }
+        }
+
+        // The track itself is untouched: its VOL still reads the one chased to
+        // the cursor, and a note already sounding on it keeps its own level.
+        M4AEngine engine;
+        m4a_engine_init(&engine, float(kSampleRate));
+        m4a_engine_set_voicegroup(&engine, vg.voices);
+        TimelinePlayer::chase(&engine, timeline.get(), late);
+        m4a_engine_note_on(&engine, 0, 48, 127);
+        uint8_t heldRight = 0, heldLeft = 0;
+        for (int i = 0; i < MAX_PCM_CHANNELS; i++) {
+            if ((engine.pcmChannels[i].status & CHN_ON) && engine.pcmChannels[i].midiKey == 48) {
+                heldRight = engine.pcmChannels[i].rightVolume;
+                heldLeft = engine.pcmChannels[i].leftVolume;
+            }
+        }
+        TimelinePlayer::auditionNoteOn(&engine, 0, 60, 127, kVolEarly);
+        (void)renderPeak(&engine); // let the track's own refreshes run
+        if (engine.tracks[0].rawVolume != kVolLate ||
+            engine.tracks[0].volume !=
+                uint8_t(int(kVolLate) * engine.songMasterVolume / MAX_SONG_VOLUME)) {
+            std::fprintf(stderr, "primecheck: FAIL: the audition moved the track's own VOL\n");
+            failures++;
+        }
+        bool heldMoved = false;
+        for (int i = 0; i < MAX_PCM_CHANNELS; i++) {
+            if ((engine.pcmChannels[i].status & CHN_ON) && engine.pcmChannels[i].midiKey == 48 &&
+                (engine.pcmChannels[i].rightVolume != heldRight ||
+                 engine.pcmChannels[i].leftVolume != heldLeft))
+                heldMoved = true;
+        }
+        if (heldMoved) {
+            std::fprintf(stderr, "primecheck: FAIL: the audition moved a note already sounding "
+                                 "on the track\n");
+            failures++;
+        }
         m4a_engine_destroy(&engine);
     }
 

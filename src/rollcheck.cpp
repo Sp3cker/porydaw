@@ -1570,6 +1570,101 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("the press-grown draw did not commit its note");
     }
 
+    // An audition sounds at the track volume in force where the NOTE is, not
+    // wherever the edit cursor happens to sit: park the cursor past a VOL
+    // change and the preview must still carry the volume its own side of the
+    // change compiles to.
+    {
+        const Cell g = findFreeCell();
+        if (g.key < 0) {
+            fail("no free grid cell for the audition-volume probe");
+            return failures;
+        }
+        constexpr int kVolBefore = 100;
+        constexpr int kVolAfter = 40;
+        const uint64_t changeTick = g.tick + g.dur;
+        const int undoBefore = doc.undoStack()->index();
+        doc.addLanePoint(track, 7, 0, kVolBefore);
+        doc.addLanePoint(track, 7, changeTick, kVolAfter);
+        (void)view.grab();
+        if (view.trackRawVolumeAt(track, g.tick) != kVolBefore ||
+            view.trackRawVolumeAt(track, changeTick) != kVolAfter)
+            fail("the probe's VOL ramp did not take");
+        // The cursor sits on the quiet side; the probed row is on the loud one.
+        view.commitEditCursor(changeTick);
+        std::vector<int> auditionVolumes;
+        auto conn = QObject::connect(&view, &SongView::auditionNote, &view,
+                                     [&](int, int, int velocity, int rawVolume) {
+                                         if (velocity > 0)
+                                             auditionVolumes.push_back(rawVolume);
+                                     });
+        sendMouse(roll, QEvent::MouseButtonPress, g.center, Qt::LeftButton, Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseButtonRelease, g.center, Qt::LeftButton, Qt::NoButton);
+        QObject::disconnect(conn);
+        if (auditionVolumes != std::vector<int>{kVolBefore})
+            fail("the press audition did not sound at the VOL in force at the note it draws");
+        while (doc.undoStack()->index() > undoBefore)
+            doc.undoStack()->undo();
+        (void)view.grab();
+    }
+
+    // ...and it follows the note as the note moves: a purely horizontal drag
+    // out of a loud passage into a quiet one must re-attack at the volume it
+    // now sits under, not hold the origin's for the rest of the gesture.
+    {
+        const int undoBefore = doc.undoStack()->index();
+        Cell g;
+        for (int probe = 8; probe < roll->width() - songview::kKeyboardW - 64; probe += 24) {
+            const Cell c = findFreeCell(probe, true);
+            if (c.key < 0)
+                break;
+            // The cell the drag lands on must be free and on screen too.
+            const int x2 = songview::kKeyboardW + view.contentX(double(c.tick + 2 * c.dur));
+            if (x2 < roll->width() && !occupied(c.tick + c.dur, c.dur, c.key, true)) {
+                g = c;
+                break;
+            }
+        }
+        if (g.key < 0) {
+            fail("no free cell pair for the drag-across-VOL audition probe");
+            return failures;
+        }
+        constexpr int kVolLoud = 100;
+        constexpr int kVolQuiet = 40;
+        const uint64_t changeTick = g.tick + g.dur;
+        // Velocity 1 parks the note's velocity bar at its bottom edge, so a
+        // press near the row top grabs the note to MOVE it instead of
+        // starting a velocity drag.
+        doc.addNote(track, g.tick, uint8_t(g.key), uint32_t(g.dur), 1);
+        doc.addLanePoint(track, 7, 0, kVolLoud);
+        doc.addLanePoint(track, 7, changeTick, kVolQuiet);
+        (void)view.grab();
+        const int volBefore = view.trackRawVolumeAt(track, g.tick);
+        if (volBefore == kVolQuiet || view.trackRawVolumeAt(track, changeTick) != kVolQuiet) {
+            fail("the drag probe's VOL change did not take");
+            return failures;
+        }
+        g.center.setY(int(std::lround((rows.top(g.key) + rows.centerY(g.key)) / 2.0)));
+        std::vector<int> auditionVolumes;
+        auto conn = QObject::connect(&view, &SongView::auditionNote, &view,
+                                     [&](int, int, int velocity, int rawVolume) {
+                                         if (velocity > 0)
+                                             auditionVolumes.push_back(rawVolume);
+                                     });
+        const int dx = view.contentX(double(changeTick)) - view.contentX(double(g.tick));
+        const QPoint dropped = g.center + QPoint(dx, 0);
+        sendMouse(roll, QEvent::MouseButtonPress, g.center, Qt::LeftButton, Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseMove, dropped, Qt::NoButton, Qt::LeftButton);
+        sendMouse(roll, QEvent::MouseButtonRelease, dropped, Qt::LeftButton, Qt::NoButton);
+        QObject::disconnect(conn);
+        if (auditionVolumes.size() < 2 || auditionVolumes.front() != volBefore ||
+            auditionVolumes.back() != kVolQuiet)
+            fail("a horizontal move across a VOL change did not re-audition at the new volume");
+        while (doc.undoStack()->index() > undoBefore)
+            doc.undoStack()->undo();
+        (void)view.grab();
+    }
+
     // The pencil's pitch readout: while a draw gesture is live, the pending
     // note names its pitch even where settled labels hide — painting a note
     // and dragging it to the right pitch depends on the live name.

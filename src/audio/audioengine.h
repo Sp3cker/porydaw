@@ -110,14 +110,22 @@ class AudioEngine
     // Hot: audition a single note outside the timeline (piano-key click,
     // note-draw preview). velocity 0 releases. A new preview releases the
     // previous one, so at most one preview note sounds at a time.
-    void previewNote(uint8_t track, uint8_t key, uint8_t velocity);
+    // rawVolume is the track's VOL byte (0-127, before the song's master
+    // volume) the note should sound at; -1 uses whatever VOL the engine's
+    // track currently holds — i.e. the one chased to the playhead.
+    void previewNote(uint8_t track, uint8_t key, uint8_t velocity, int rawVolume = kPreviewVolNone);
 
     // Hot: audition a note for a fixed length (band-sweep chord preview).
     // Unlike previewNote, timed previews stack polyphonically; the audio
     // thread sends each note-off itself once the duration elapses. velocity
     // 0 releases that track+key's preview early instead (durationSamples
-    // ignored).
-    void previewNoteTimed(uint8_t track, uint8_t key, uint8_t velocity, uint32_t durationSamples);
+    // ignored). rawVolume as in previewNote.
+    void previewNoteTimed(uint8_t track, uint8_t key, uint8_t velocity, uint32_t durationSamples,
+                          int rawVolume = kPreviewVolNone);
+
+    // "Sound this preview at the track's current VOL" — the caller has no
+    // particular volume in mind.
+    static constexpr int kPreviewVolNone = -1;
 
     // Hot: audition a voicegroup entry by program number (SPEC §6.1 voicegroup
     // browser). Runs on a second engine instance (SPEC §3) so the program
@@ -227,6 +235,9 @@ class AudioEngine
     void applyMuteTransition();
     void applyPreviewNote();
     void applyTimedPreviews(uint32_t frameCount);
+    // Audio thread: key an audition note at a specific track VOL (0xFF = the
+    // track's current one), through TimelinePlayer::auditionNoteOn.
+    void previewNoteOn(uint8_t track, uint8_t key, uint8_t velocity, uint8_t volume);
     void clearTimedPreviews();
     void applyPreviewVoice();
     void applyPolyDebug();
@@ -264,10 +275,11 @@ class AudioEngine
     // Avoid stop/start stalls: publish the latest seek for the audio callback.
     static constexpr uint64_t kNoPendingSeek = UINT64_MAX;
     std::atomic<uint64_t> m_pendingSeek{kNoPendingSeek};
-    // Preview-note command: generation<<24 | track<<16 | key<<8 | velocity.
-    // The generation counter makes every request distinct so repeated notes
-    // are seen by the audio thread.
-    std::atomic<uint32_t> m_previewCmd{0};
+    // Preview-note command:
+    // generation<<32 | volume<<24 | track<<16 | key<<8 | velocity, where the
+    // volume byte is 0xFF for kPreviewVolNone. The generation counter makes
+    // every request distinct so repeated notes are seen by the audio thread.
+    std::atomic<uint64_t> m_previewCmd{0};
     uint8_t m_previewGen = 0; // UI thread only
     // Timed-preview commands (band-sweep chord audition): a fixed SPSC ring.
     // The UI thread produces at m_timedWrite; the audio thread consumes at
@@ -277,6 +289,7 @@ class AudioEngine
         uint8_t track;
         uint8_t key;
         uint8_t velocity;
+        uint8_t volume; // track VOL byte, 0xFF for kPreviewVolNone
         uint32_t durationSamples;
     };
     static constexpr uint32_t kTimedRingSize = 64;
@@ -301,7 +314,7 @@ class AudioEngine
     // Audio-thread-only sequencer state
     int m_appliedTransport = static_cast<int>(Transport::Stopped);
     uint32_t m_appliedMute = 0;
-    uint32_t m_appliedPreview = 0;
+    uint64_t m_appliedPreview = 0;
     int m_previewTrack = -1; // sounding preview note, -1 when none
     int m_previewKey = -1;
     // Sounding timed previews, counting down to their note-offs.

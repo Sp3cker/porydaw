@@ -300,6 +300,18 @@ class SongView : public QWidget
     // master volume folded in. When nextChangeTick is given it is lowered to
     // the next VOL point past the tick, if that comes first.
     uint8_t trackVolumeAt(int track, uint64_t tick, uint64_t *nextChangeTick = nullptr) const;
+    // The same lookup without the master volume folded in: the raw VOL byte
+    // the track's CC7 automation puts in force at the tick. Auditions want
+    // this one — the engine applies the master volume itself.
+    int trackRawVolumeAt(int track, uint64_t tick, uint64_t *nextChangeTick = nullptr) const;
+    // The VOL byte an audition aimed at atTick should sound at, or -1 for
+    // "whatever the engine's track holds" (kAuditionAtCursor, or no song).
+    int auditionVolume(int track, uint64_t atTick) const
+    {
+        if (atTick == kAuditionAtCursor || track < 0 || track >= 16)
+            return -1;
+        return trackRawVolumeAt(track, atTick);
+    }
     QString instrumentLabel(int track) const; // "042 name (type)" from the voicegroup
     QString voiceShortName(uint8_t program) const;
     QString voiceLabel(uint8_t program) const; // "042 name", the marker/header format
@@ -521,8 +533,17 @@ class SongView : public QWidget
     // "velocity 93 → plays 96 · length 25 → 24 clocks" for the status bar.
     void announceNote(const ViewNote &note);
 
-    // Child-widget entry point for the auditionNote signal.
-    void audition(int track, int key, int velocity) { emit auditionNote(track, key, velocity); }
+    // Child-widget entry point for the auditionNote signal. atTick is the
+    // tick whose track VOL the note should sound at — the start of the note
+    // being auditioned, not wherever the edit cursor happens to sit, so a
+    // note under a volume ramp previews at its own loudness. kAuditionAtCursor
+    // (the default) leaves the engine on the VOL chased to the playhead,
+    // which is what a bare keyboard-column click wants.
+    static constexpr uint64_t kAuditionAtCursor = UINT64_MAX;
+    void audition(int track, int key, int velocity, uint64_t atTick = kAuditionAtCursor)
+    {
+        emit auditionNote(track, key, velocity, auditionVolume(track, atTick));
+    }
 
     // Fixed-length audition for the band-sweep chord preview: the note's tick
     // span converts to samples through the display timeline, so the preview
@@ -532,7 +553,7 @@ class SongView : public QWidget
 
     // Early release for a timed audition (the band no longer covers the
     // note); the velocity-0 form of the same signal.
-    void auditionTimedOff(int track, int key) { emit auditionNoteTimed(track, key, 0, 0); }
+    void auditionTimedOff(int track, int key) { emit auditionNoteTimed(track, key, 0, 0, -1); }
 
     // Child-widget entry point for the statusMessage signal.
     void announce(const QString &text) { emit statusMessage(text); }
@@ -565,11 +586,14 @@ class SongView : public QWidget
     void soloMaskChanged(uint32_t mask);
     void selectedTrackChanged(int track);
     // Audition request (velocity 0 releases); forwarded to the audio engine.
-    void auditionNote(int track, int key, int velocity);
+    // rawVolume is the track VOL byte to sound it at, or -1 for the track's
+    // current one (AudioEngine::kPreviewVolNone).
+    void auditionNote(int track, int key, int velocity, int rawVolume);
     // Self-releasing audition (band-sweep chord preview); forwarded to
     // AudioEngine::previewNoteTimed, which sends the note-off itself.
-    // velocity 0 releases the track+key's preview early.
-    void auditionNoteTimed(int track, int key, int velocity, quint32 durationSamples);
+    // velocity 0 releases the track+key's preview early. rawVolume as above.
+    void auditionNoteTimed(int track, int key, int velocity, quint32 durationSamples,
+                           int rawVolume);
     // Voicegroup-entry audition from the voice picker; routed to
     // AudioEngine::previewVoice like the voicegroup browser's signal.
     void auditionVoice(int voice, int key, int velocity);

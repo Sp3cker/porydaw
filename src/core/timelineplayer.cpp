@@ -117,6 +117,17 @@ void TimelinePlayer::primeVoices(M4AEngine *engine, const MidiTimeline *timeline
             m4a_engine_program_change(engine, track, first[track]->data0);
 }
 
+void TimelinePlayer::auditionNoteOn(M4AEngine *engine, int track, uint8_t key, uint8_t velocity,
+                                    int rawVolume)
+{
+    engine->auditionVolume = rawVolume < 0 ? uint8_t(M4A_AUDITION_VOL_NONE)
+                                           : uint8_t(std::min(rawVolume, MAX_SONG_VOLUME));
+    m4a_engine_note_on(engine, track, key, velocity);
+    // One-shot, like polyEventClock: the note-on latched it into the channel
+    // it started, and nothing else on this engine should inherit it.
+    engine->auditionVolume = M4A_AUDITION_VOL_NONE;
+}
+
 void TimelinePlayer::seek(uint64_t pos, const MidiTimeline *timeline)
 {
     // Both seek callers release the engine's sounding notes around the seek
