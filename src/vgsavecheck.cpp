@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMouseEvent>
 #include <QPointer>
@@ -14,6 +15,7 @@
 #include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QToolButton>
 #include <QTreeWidgetItemIterator>
 #include <cstdio>
 
@@ -290,6 +292,109 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             check(!tab->doc.isDirty() && !tab->vgSource->dirty() &&
                       releaseSpin->value() == original.release,
                   "undo did not refresh the Release spin box");
+            if (releaseSpin && releaseEdit) {
+                releaseSpin->setValue(100);
+                dragVertically(releaseEdit, 12);
+                check(releaseSpin->value() == 106 && tab->vgSource->voiceAt(dsSlot) &&
+                          tab->vgSource->voiceAt(dsSlot)->release == 106,
+                      "dragging the Release input up did not increase its value");
+                tab->doc.undoStack()->undo();
+                check(!tab->doc.isDirty() && !tab->vgSource->dirty() &&
+                          releaseSpin->value() == original.release,
+                      "undo did not restore the upward ADSR drag");
+
+                releaseSpin->setValue(100);
+                dragVertically(releaseEdit, -12);
+                check(releaseSpin->value() == 94 && tab->vgSource->voiceAt(dsSlot) &&
+                          tab->vgSource->voiceAt(dsSlot)->release == 94,
+                      "dragging the Release input down did not decrease its value");
+                tab->doc.undoStack()->undo();
+                check(!tab->doc.isDirty() && !tab->vgSource->dirty() &&
+                          releaseSpin->value() == original.release,
+                      "undo did not restore the downward ADSR drag");
+
+                releaseSpin->setValue(100);
+                releaseEdit->clearFocus();
+                dragVertically(releaseEdit, 20, Qt::ShiftModifier);
+                check(releaseSpin->value() == 104 && tab->vgSource->voiceAt(dsSlot) &&
+                          tab->vgSource->voiceAt(dsSlot)->release == 104,
+                      "Shift-dragging the Release input did not use the precision rate");
+                tab->doc.undoStack()->undo();
+                check(!tab->doc.isDirty() && !tab->vgSource->dirty() &&
+                          releaseSpin->value() == original.release,
+                      "undo did not restore the precise ADSR drag");
+            }
+        }
+    }
+
+    // 6a. A source-undefined row stays visibly blank, but selecting its
+    // DirectSound template and choosing another type creates an undoable
+    // structural voice at that exact slot.
+    {
+        int blankSlot = -1;
+        for (int i = 0; i < VOICEGROUP_SIZE && blankSlot < 0; i++) {
+            if (tab->vgSource->kindAt(i) == VgLineKind::None)
+                blankSlot = i;
+        }
+        QTreeWidget *tree = m_vgBrowser->findChild<QTreeWidget *>();
+        if (check(blankSlot >= 0, "voicegroup has no undefined slot") &&
+            check(tree != nullptr, "voicegroup browser has no tree")) {
+            QTreeWidgetItem *item = tree->topLevelItem(blankSlot);
+            check(item &&
+                      item->text(0) == QStringLiteral("%1  %2")
+                                           .arg(blankSlot, 3, 10, QLatin1Char('0'))
+                                           .arg(tr("[Blank]")) &&
+                      item->text(1).isEmpty() && item->text(2).isEmpty(),
+                  "undefined voice row does not show [Blank] in the Voice column");
+            m_vgBrowser->selectSlot(blankSlot);
+            QLabel *notice =
+                m_vgBrowser->findChild<QLabel *>(QStringLiteral("voicegroupEditorNotice"));
+            check(notice && notice->text().isEmpty() && notice->isHidden(),
+                  "empty slot editor still shows its instructional caption");
+            QToolButton *newSampleButton =
+                m_vgBrowser->findChild<QToolButton *>(QStringLiteral("vgNewSampleButton"));
+            QToolButton *editSampleButton =
+                m_vgBrowser->findChild<QToolButton *>(QStringLiteral("vgEditSampleButton"));
+            check(newSampleButton && editSampleButton &&
+                      newSampleButton->size() == editSampleButton->size() &&
+                      newSampleButton->minimumSize() == newSampleButton->maximumSize() &&
+                      editSampleButton->minimumSize() == editSampleButton->maximumSize(),
+                  "sample action buttons do not have matching fixed dimensions");
+            QComboBox *typeCombo = nullptr;
+            for (QComboBox *combo : m_vgBrowser->findChildren<QComboBox *>()) {
+                if (!combo->isHidden() && combo->findData(int(VgMacro::Square1)) >= 0) {
+                    typeCombo = combo;
+                    break;
+                }
+            }
+            if (check(typeCombo != nullptr, "empty slot did not show the type template")) {
+                check(typeCombo->currentData().toInt() == int(VgMacro::DirectSound),
+                      "empty slot template is not DirectSound");
+                const int square = typeCombo->findData(int(VgMacro::Square1));
+                typeCombo->setCurrentIndex(square);
+                QMetaObject::invokeMethod(typeCombo, "activated", Qt::DirectConnection,
+                                          Q_ARG(int, square));
+                const VgVoice *created = tab->vgSource->voiceAt(blankSlot);
+                check(created && created->macro == VgMacro::Square1 && tab->doc.isDirty() &&
+                          tab->vgSource->dirty() &&
+                          m_audio.voicegroup()->voices[blankSlot].type == VOICE_SQUARE_1,
+                      "type choice did not create and reload the blank slot");
+                tab->doc.undoStack()->undo();
+                item = tree->topLevelItem(blankSlot);
+                check(tab->vgSource->kindAt(blankSlot) == VgLineKind::None && !tab->doc.isDirty() &&
+                          !tab->vgSource->dirty() && item &&
+                          item->text(0) == QStringLiteral("%1  %2")
+                                               .arg(blankSlot, 3, 10, QLatin1Char('0'))
+                                               .arg(tr("[Blank]")) &&
+                          item->text(1).isEmpty() && item->text(2).isEmpty(),
+                      "undo did not restore the blank slot cleanly");
+                tab->doc.undoStack()->redo();
+                created = tab->vgSource->voiceAt(blankSlot);
+                check(created && created->macro == VgMacro::Square1 &&
+                          m_audio.voicegroup()->voices[blankSlot].type == VOICE_SQUARE_1,
+                      "redo did not restore the created slot");
+                tab->doc.undoStack()->undo();
+            }
         }
     }
 
@@ -723,9 +828,9 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                           "could not save the dock screenshot");
                 }
 
-                // Pick a different plain sample by typing its full symbol:
-                // the filter narrows onto it, highlighting auditions it, and
-                // Return commits it as an undoable voice edit.
+                // Filtering highlights and auditions a different plain sample.
+                // The first mouse click only selects it; clicking that same
+                // row again commits the undoable voice edit.
                 QString target;
                 for (QTreeWidgetItemIterator it(list); *it && target.isEmpty(); ++it) {
                     const QString s = (*it)->data(0, Qt::UserRole).toString();
@@ -737,9 +842,16 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                     search->setText(target);
                     check(auditioned.contains(target),
                           "filtering onto a sample did not audition it");
-                    QKeyEvent ret(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-                    QCoreApplication::sendEvent(search, &ret);
-                    check(!picker->popupVisible(), "committing a pick did not close the popup");
+                    QTreeWidgetItem *targetItem = list->currentItem();
+                    if (check(targetItem && targetItem->data(0, Qt::UserRole).toString() == target,
+                              "filter did not select the target sample")) {
+                        list->itemClicked(targetItem, 0);
+                        check(picker->popupVisible() && tab->vgSource->voiceAt(dsSlot) &&
+                                  tab->vgSource->voiceAt(dsSlot)->symbol == before.symbol,
+                              "first sample click committed instead of selecting");
+                        list->itemClicked(targetItem, 0);
+                    }
+                    check(!picker->popupVisible(), "second sample click did not close the popup");
                     check(stops > 0, "closing the popup did not stop audition");
                     check(tab->vgSource->voiceAt(dsSlot) &&
                               tab->vgSource->voiceAt(dsSlot)->symbol == target,

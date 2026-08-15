@@ -6,6 +6,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include <optional>
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -62,6 +63,13 @@ struct VgVoice {
                sustain == o.sustain && release == o.release;
     }
     bool operator!=(const VgVoice &o) const { return !(*this == o); }
+};
+
+// A value draft for editing a slot. None slots use the caller's blank
+// template and are marked so callers can preserve materialization semantics.
+struct VgVoiceDraft {
+    VgVoice voice;
+    bool materializesBlank = false;
 };
 
 // One ADSR envelope, in the raw macro-argument scale of its voice family
@@ -200,10 +208,18 @@ class VoicegroupSource
     VgLineKind kindAt(int slot) const;
     bool isEditable(int slot) const { return kindAt(slot) == VgLineKind::Editable; }
     const VgVoice *voiceAt(int slot) const;
-    // Rewrites the slot's line (preserving indentation, per-argument spacing,
-    // and any trailing comment; a macro change falls back to canonical form).
+    // Returns the existing editable voice or the supplied template for an
+    // undefined slot. Invalid, read-only, and broken slots have no draft.
+    std::optional<VgVoiceDraft> voiceDraft(int slot, const VgVoice &blankTemplate) const;
+    // Rewrites an existing voice, or materializes a previously undefined
+    // slot. New sparse entries use the voice_group starting-note convention
+    // and silent square-wave padding so existing voice slots stay fixed.
     bool setVoice(int slot, const VgVoice &voice);
-    bool dirty() const;
+    // Full in-memory source state for structural undo. Restoring bytes leaves
+    // the current save baseline unchanged, so dirty() still reflects disk.
+    QByteArray sourceBytes() const;
+    bool restoreSourceBytes(const QByteArray &bytes);
+    bool dirty() const { return m_dirty; }
 
     // Writes the whole file back; only edited voice lines differ from the
     // bytes read at open/reload time.
@@ -274,18 +290,39 @@ class VoicegroupSource
         VgLineKind kind = VgLineKind::Other;
         int slot = -1;
         VgVoice voice; // valid when kind == Editable
-        // raw as of open/reload or the last save; a line is dirty while raw
-        // differs, so an edit undone back to the on-disk value counts clean.
-        QByteArray pristine;
         // Editable-line formatting, captured for faithful re-rendering:
         QByteArray indent;             // leading whitespace
         QByteArray macroText;          // macro word incl. any trailing space
         QVector<QByteArray> argPieces; // between-comma pieces, whitespace kept
         QByteArray tail;               // trailing whitespace + comment
     };
+    struct SlotSpan {
+        int first = VOICEGROUP_SIZE;
+        int last = -1;
+
+        bool empty() const { return last < 0; }
+    };
+    struct BlankSlotInsertion {
+        int insertionIndex = -1;
+        int headerIndex = -1;
+        int headerStartingSlot = -1;
+        QVector<Line> additions;
+    };
+
+    SlotSpan discoverSlotSpan() const;
+    int discoverHeaderIndex() const;
+    Line generatedVoiceLine(int slot, const VgVoice &voice) const;
+    static VgVoice silentPaddingVoice();
+    void rewriteHeaderStartingSlot(int headerIndex, int startingSlot);
+    bool buildBlankSlotInsertion(int slot, const VgVoice &voice,
+                                 BlankSlotInsertion *insertion) const;
+    void applyBlankSlotInsertion(const BlankSlotInsertion &insertion);
 
     bool parse(const QByteArray &content, QString *error);
+    void rebuildSlotToLine();
+    QByteArray lineEnding() const;
     void renderLine(Line &line) const;
+    bool matchesPristineSource() const;
 
     QString m_projectRoot;
     QString m_arg;
@@ -297,4 +334,8 @@ class VoicegroupSource
     int m_sectionBegin = 0; // line index of the label line (0 for per-file)
     int m_sectionEnd = 0;   // exclusive
     bool m_endsWithNewline = true;
+    // Full-file bytes at open/reload or the last save. A source insertion can
+    // add/remove lines, so per-line pristine state is not sufficient.
+    QByteArray m_pristineSource;
+    bool m_dirty = false;
 };

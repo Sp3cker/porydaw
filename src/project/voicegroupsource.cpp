@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <cstring>
 
 // Line classification and slot accounting mirror parse_voicegroup_file in
 // external/poryaaaa/plugin/voicegroup_loader.c (:1671-2058) exactly:
@@ -803,7 +804,13 @@ bool VoicegroupSource::reload(QString *error)
             *error = QStringLiteral("Cannot read %1").arg(m_filePath);
         return false;
     }
-    return parse(content, error);
+    if (!parse(content, error)) {
+        m_dirty = !matchesPristineSource();
+        return false;
+    }
+    m_pristineSource = content;
+    m_dirty = false;
+    return true;
 }
 
 bool VoicegroupSource::parse(const QByteArray &content, QString *error)
@@ -961,8 +968,7 @@ bool VoicegroupSource::parse(const QByteArray &content, QString *error)
             *error = QStringLiteral("Label %1:: not found in %2").arg(m_sectionLabel, m_filePath);
         return false;
     }
-    for (Line &line : m_lines)
-        line.pristine = line.raw;
+    rebuildSlotToLine();
     Q_UNUSED(error);
     return true;
 }
@@ -981,14 +987,189 @@ const VgVoice *VoicegroupSource::voiceAt(int slot) const
     return &m_lines.at(m_slotToLine[slot]).voice;
 }
 
+std::optional<VgVoiceDraft> VoicegroupSource::voiceDraft(int slot,
+                                                         const VgVoice &blankTemplate) const
+{
+    if (slot < 0 || slot >= VOICEGROUP_SIZE)
+        return std::nullopt;
+    const VgLineKind kind = kindAt(slot);
+    if (kind == VgLineKind::Editable)
+        return VgVoiceDraft{m_lines.at(m_slotToLine[slot]).voice, false};
+    if (kind == VgLineKind::None)
+        return VgVoiceDraft{blankTemplate, true};
+    return std::nullopt;
+}
+
 bool VoicegroupSource::setVoice(int slot, const VgVoice &voice)
 {
-    if (kindAt(slot) != VgLineKind::Editable)
+    if (slot < 0 || slot >= VOICEGROUP_SIZE)
         return false;
-    Line &line = m_lines[m_slotToLine[slot]];
-    line.voice = voice;
-    renderLine(line);
+    if (kindAt(slot) == VgLineKind::Editable) {
+        Line &line = m_lines[m_slotToLine[slot]];
+        line.voice = voice;
+        renderLine(line);
+        m_dirty = !matchesPristineSource();
+        return true;
+    }
+    if (kindAt(slot) != VgLineKind::None)
+        return false;
+    BlankSlotInsertion insertion;
+    if (!buildBlankSlotInsertion(slot, voice, &insertion))
+        return false;
+    applyBlankSlotInsertion(insertion);
+    m_dirty = !matchesPristineSource();
     return true;
+}
+
+VoicegroupSource::SlotSpan VoicegroupSource::discoverSlotSpan() const
+{
+    SlotSpan span;
+    for (int slot = 0; slot < VOICEGROUP_SIZE; slot++) {
+        if (m_slotToLine[slot] < 0)
+            continue;
+        span.first = std::min(span.first, slot);
+        span.last = std::max(span.last, slot);
+    }
+    return span;
+}
+
+int VoicegroupSource::discoverHeaderIndex() const
+{
+    const int sectionBegin = m_sectionLabel.isEmpty() ? 0 : m_sectionBegin;
+    const int sectionEnd = m_sectionLabel.isEmpty() ? m_lines.size() : m_sectionEnd;
+    for (int index = sectionBegin; index < sectionEnd; index++) {
+        if (m_lines.at(index).kind == VgLineKind::Header)
+            return index;
+    }
+    return -1;
+}
+
+VoicegroupSource::Line VoicegroupSource::generatedVoiceLine(int slot, const VgVoice &voice) const
+{
+    Line line;
+    line.kind = VgLineKind::Editable;
+    line.slot = slot;
+    line.voice = voice;
+    line.indent = QByteArrayLiteral("\t");
+    line.tail = lineEnding();
+    renderLine(line);
+    return line;
+}
+
+VgVoice VoicegroupSource::silentPaddingVoice()
+{
+    VgVoice padding;
+    padding.macro = VgMacro::Square1;
+    padding.sustain = 15;
+    padding.release = 0;
+    return padding;
+}
+
+void VoicegroupSource::rewriteHeaderStartingSlot(int headerIndex, int startingSlot)
+{
+    Line &line = m_lines[headerIndex];
+    int contentStart = 0, contentEnd = 0;
+    contentBounds(line.raw, &contentStart, &contentEnd);
+    const QByteArray text = line.raw.mid(contentStart, contentEnd - contentStart);
+    const int comma = text.indexOf(',');
+    const QByteArray declaration = text.left(comma < 0 ? text.size() : comma);
+    const QByteArray replacement =
+        startingSlot > 0 ? declaration + ", " + QByteArray::number(startingSlot) : declaration;
+    line.raw = line.raw.left(contentStart) + replacement + line.raw.mid(contentEnd);
+}
+
+bool VoicegroupSource::buildBlankSlotInsertion(int slot, const VgVoice &voice,
+                                               BlankSlotInsertion *plan) const
+{
+    if (!plan)
+        return false;
+    *plan = {};
+    const SlotSpan span = discoverSlotSpan();
+    const int header = discoverHeaderIndex();
+    const int sectionBegin = m_sectionLabel.isEmpty() ? 0 : m_sectionBegin;
+    const VgVoice padding = silentPaddingVoice();
+    if (span.empty()) {
+        plan->insertionIndex = header >= 0 ? header + 1 : sectionBegin + 1;
+        if (header >= 0) {
+            plan->headerIndex = header;
+            plan->headerStartingSlot = slot;
+        } else {
+            for (int current = 0; current < slot; current++)
+                plan->additions.append(generatedVoiceLine(current, padding));
+        }
+        plan->additions.append(generatedVoiceLine(slot, voice));
+        return true;
+    }
+    if (slot < span.first) {
+        if (header < 0)
+            return false;
+        plan->insertionIndex = m_slotToLine[span.first];
+        plan->headerIndex = header;
+        plan->headerStartingSlot = slot;
+        plan->additions.append(generatedVoiceLine(slot, voice));
+        for (int current = slot + 1; current < span.first; current++)
+            plan->additions.append(generatedVoiceLine(current, padding));
+        return true;
+    }
+    if (slot > span.last) {
+        plan->insertionIndex = m_slotToLine[span.last] + 1;
+        for (int current = span.last + 1; current < slot; current++)
+            plan->additions.append(generatedVoiceLine(current, padding));
+        plan->additions.append(generatedVoiceLine(slot, voice));
+        return true;
+    }
+    return false; // valid voice_group source is contiguous between its ends
+}
+
+void VoicegroupSource::applyBlankSlotInsertion(const BlankSlotInsertion &plan)
+{
+    if (plan.headerIndex >= 0)
+        rewriteHeaderStartingSlot(plan.headerIndex, plan.headerStartingSlot);
+    int insertionIndex = plan.insertionIndex;
+    for (const Line &line : plan.additions)
+        m_lines.insert(insertionIndex++, line);
+    m_sectionEnd += plan.additions.size();
+    rebuildSlotToLine();
+}
+
+QByteArray VoicegroupSource::sourceBytes() const
+{
+    QByteArray joined;
+    for (int i = 0; i < m_lines.size(); i++) {
+        if (i > 0)
+            joined += '\n';
+        joined += m_lines.at(i).raw;
+    }
+    if (m_endsWithNewline && !m_lines.isEmpty())
+        joined += '\n';
+    return joined;
+}
+
+bool VoicegroupSource::restoreSourceBytes(const QByteArray &bytes)
+{
+    QString error;
+    const bool ok = parse(bytes, &error);
+    m_dirty = !matchesPristineSource();
+    return ok;
+}
+
+void VoicegroupSource::rebuildSlotToLine()
+{
+    std::fill(std::begin(m_slotToLine), std::end(m_slotToLine), -1);
+    for (int i = 0; i < m_lines.size(); i++) {
+        const int slot = m_lines.at(i).slot;
+        if (slot >= 0 && slot < VOICEGROUP_SIZE)
+            m_slotToLine[slot] = i;
+    }
+}
+
+QByteArray VoicegroupSource::lineEnding() const
+{
+    for (const Line &line : m_lines) {
+        if (line.raw.endsWith('\r'))
+            return QByteArrayLiteral("\r");
+    }
+    return QByteArray();
 }
 
 void VoicegroupSource::renderLine(Line &line) const
@@ -1040,13 +1221,28 @@ void VoicegroupSource::renderLine(Line &line) const
     line.raw = line.indent + line.macroText + args + line.tail;
 }
 
-bool VoicegroupSource::dirty() const
+bool VoicegroupSource::matchesPristineSource() const
 {
-    for (const Line &line : m_lines) {
-        if (line.raw != line.pristine)
-            return true;
+    qsizetype offset = 0;
+    const auto matches = [&](const char *data, qsizetype length) {
+        if (offset > m_pristineSource.size() || length > m_pristineSource.size() - offset)
+            return false;
+        if (length > 0 &&
+            std::memcmp(m_pristineSource.constData() + offset, data, size_t(length)) != 0)
+            return false;
+        offset += length;
+        return true;
+    };
+    for (int i = 0; i < m_lines.size(); i++) {
+        if (i > 0 && !matches("\n", 1))
+            return false;
+        const QByteArray &raw = m_lines.at(i).raw;
+        if (!matches(raw.constData(), raw.size()))
+            return false;
     }
-    return false;
+    if (m_endsWithNewline && !m_lines.isEmpty() && !matches("\n", 1))
+        return false;
+    return offset == m_pristineSource.size();
 }
 
 bool VoicegroupSource::save(QString *error)
@@ -1057,22 +1253,15 @@ bool VoicegroupSource::save(QString *error)
             *error = QStringLiteral("Cannot write %1").arg(m_filePath);
         return false;
     }
-    QByteArray joined;
-    for (int i = 0; i < m_lines.size(); i++) {
-        if (i > 0)
-            joined += '\n';
-        joined += m_lines.at(i).raw;
-    }
-    if (m_endsWithNewline && !m_lines.isEmpty())
-        joined += '\n';
+    const QByteArray joined = sourceBytes();
     if (out.write(joined) != joined.size()) {
         if (error)
             *error = QStringLiteral("Short write to %1").arg(m_filePath);
         return false;
     }
     out.close();
-    for (Line &line : m_lines)
-        line.pristine = line.raw;
+    m_pristineSource = joined;
+    m_dirty = false;
     return true;
 }
 

@@ -200,6 +200,81 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         return 1;
     }
 
+    // ---- source-only blank-slot creation/restore ----
+    int blankSlot = -1;
+    for (int i = 0; i < VOICEGROUP_SIZE && blankSlot < 0; i++) {
+        if (src.kindAt(i) == VgLineKind::None)
+            blankSlot = i;
+    }
+    if (blankSlot >= 0) {
+        const QByteArray sourceBefore = src.sourceBytes();
+        VgVoice created;
+        created.macro = VgMacro::Square1;
+        created.sustain = 15;
+        const auto blankDraft = src.voiceDraft(blankSlot, created);
+        if (!blankDraft || !blankDraft->materializesBlank || blankDraft->voice != created ||
+            !src.setVoice(blankSlot, created) || !src.voiceAt(blankSlot) ||
+            *src.voiceAt(blankSlot) != created || !src.dirty() ||
+            !src.restoreSourceBytes(sourceBefore) || src.kindAt(blankSlot) != VgLineKind::None ||
+            src.sourceBytes() != sourceBefore || src.dirty()) {
+            std::fprintf(stderr, "vgcheck: FAIL: blank-slot create/restore\n");
+            voicegroup_free(baseline);
+            return 1;
+        }
+        std::printf("vgcheck: blank slot %d create/restore OK\n", blankSlot);
+    } else {
+        std::printf("vgcheck: skipping blank-slot check (all 128 slots defined)\n");
+    }
+
+    // A sparse starting-note declaration exercises both directions without
+    // depending on the selected song's source layout.
+    {
+        const QString sparseRoot = projectRoot + QStringLiteral("/.porydaw/vgblankcheck");
+        QDir(sparseRoot).removeRecursively();
+        QDir().mkpath(sparseRoot + QStringLiteral("/sound/voicegroups"));
+        QFile sparseFile(sparseRoot + QStringLiteral("/sound/voicegroups/sparse.inc"));
+        const bool written = sparseFile.open(QIODevice::WriteOnly) &&
+                             sparseFile.write("voice_group sparse, 36\n"
+                                              "\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 0\n") >= 0;
+        sparseFile.close();
+        VoicegroupSource sparse;
+        bool sparseOk = written && sparse.open(sparseRoot, QStringLiteral("_sparse"), &error);
+        const QByteArray sparseBefore = sparseOk ? sparse.sourceBytes() : QByteArray();
+        VgVoice beforeFirst;
+        beforeFirst.macro = VgMacro::Square2;
+        beforeFirst.sustain = 15;
+        VgVoice afterLast;
+        afterLast.macro = VgMacro::Noise;
+        afterLast.sustain = 15;
+        afterLast.release = 3;
+        sparseOk = sparseOk && sparse.kindAt(12) == VgLineKind::None &&
+                   sparse.kindAt(80) == VgLineKind::None && sparse.setVoice(12, beforeFirst) &&
+                   sparse.voiceAt(12) && *sparse.voiceAt(12) == beforeFirst && sparse.voiceAt(36) &&
+                   sparse.voiceAt(36)->macro == VgMacro::Square1;
+        sparseOk = sparseOk && sparse.restoreSourceBytes(sparseBefore) &&
+                   sparse.sourceBytes() == sparseBefore && !sparse.dirty() && !sparse.dirty() &&
+                   sparse.setVoice(80, afterLast) && sparse.save(&error);
+        VoicegroupSource sparseReloaded;
+        sparseOk = sparseOk && sparseReloaded.open(sparseRoot, QStringLiteral("_sparse"), &error) &&
+                   sparseReloaded.voiceAt(36) && sparseReloaded.voiceAt(80) &&
+                   sparseReloaded.voiceAt(36)->macro == VgMacro::Square1 &&
+                   *sparseReloaded.voiceAt(80) == afterLast;
+        const QByteArray sparseRootUtf8 = sparseRoot.toLocal8Bit();
+        LoadedVoiceGroup *sparseLoaded =
+            sparseOk ? voicegroup_load(sparseRootUtf8.constData(), "sparse", nullptr) : nullptr;
+        sparseOk = sparseOk && sparseLoaded && sparseLoaded->voices[36].type == VOICE_SQUARE_1 &&
+                   sparseLoaded->voices[80].type == VOICE_NOISE;
+        if (sparseLoaded)
+            voicegroup_free(sparseLoaded);
+        QDir(sparseRoot).removeRecursively();
+        if (!sparseOk) {
+            std::fprintf(stderr, "vgcheck: FAIL: sparse blank-slot insertion\n");
+            voicegroup_free(baseline);
+            return 1;
+        }
+        std::printf("vgcheck: sparse before-first/after-last insertion OK\n");
+    }
+
     // ---- edits ----
     int editedLines = 0;
     QVector<int> editedSlots;
@@ -329,12 +404,11 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         std::printf("vgcheck: converted slot %d to Drumkit (%s)\n", dkConvSlot,
                     qUtf8Printable(drumkits.first()));
     }
-    if (!src.dirty()) {
+    if (!src.dirty() || !src.dirty() || !src.dirty()) {
         std::fprintf(stderr, "vgcheck: FAIL: source not dirty after edits\n");
         voicegroup_free(baseline);
         return 1;
     }
-
     int failures = 0;
 
     // ---- pre-save preview: temp file shadows the real one via config ----
@@ -376,7 +450,7 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         voicegroup_free(baseline);
         return 1;
     }
-    if (src.dirty()) {
+    if (src.dirty() || src.dirty()) {
         std::fprintf(stderr, "vgcheck: FAIL: still dirty after save\n");
         failures++;
     }

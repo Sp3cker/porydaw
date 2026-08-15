@@ -39,7 +39,6 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
-    friend class VoiceEditCommand; // calls applyVoiceEdit from undo/redo
     friend int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                        const QString &songB, const QString &screenshotPath);
 
@@ -217,16 +216,6 @@ class MainWindow : public QMainWindow
     // Locates + parses the source behind the session's voicegroup (nullptr
     // on exotic layouts — the editor degrades to read-only).
     void openVoicegroupSource(SongSession &session, const SongCfg &cfg);
-    // Applies a voice-edit undo command: pokes the edit into the session's
-    // open source and refreshes audio + views. No-op when the command's
-    // voicegroup isn't the session's loaded one (stale target;
-    // replayVoiceEdits re-syncs it later).
-    void applyVoiceEdit(SongSession &session, const QString &loadName, int slot,
-                        const VgVoice &voice, bool structural);
-    // After a voicegroup switch reopens a source from disk, reapplies every
-    // applied (below the undo index) voice-edit command targeting it, so
-    // undoing back across a -G change restores unsaved voice edits too.
-    void replayVoiceEdits(SongSession &session);
     void onVoiceEdited(SongSession &session, int slot, bool structural);
     // Auditions unsaved structural edits: renders the edited source into
     // .porydaw/vgpreview/ and reloads through the loader's config override,

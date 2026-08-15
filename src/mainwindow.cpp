@@ -53,6 +53,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <utility>
 
 #include "audio/sampleimport.h"
 #include "audio/sf2reader.h"
@@ -61,6 +62,7 @@
 #include "project/samplereg.h"
 #include "project/sidecar.h"
 #include "project/songregistry.h"
+#include "project/voicegroupeditcommand.h"
 #include "ui/keyboardshortcutsdialog.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
@@ -78,10 +80,7 @@
 #include "ui/viewsidecar.h"
 #include "ui/voicegroupbrowser.h"
 
-#include <QUndoCommand>
-
 namespace {
-constexpr int kVoiceEditCommandId = 0x7661; // 'va': voice-edit merge id
 constexpr int kIdleUiIntervalMs = 500;
 constexpr int kPlaybackUiIntervalMs = 100;
 
@@ -187,86 +186,6 @@ QIcon tintedStandardIcon(QWidget &widget, QStyle::StandardPixmap icon, const QSi
     return result;
 }
 } // namespace
-
-// A voicegroup voice edit, on its tab's undo stack: song and voicegroup
-// share one undo/save pipeline, so Ctrl+Z walks both kinds of edit in order.
-// Value-based (before/after per slot): it applies through whichever source
-// the session has open, which keeps undo/redo correct even after a -G
-// voicegroup switch reopened the file from disk (see
-// MainWindow::replayVoiceEdits). The session pointer is safe to hold: the
-// command lives in that session's own undo stack, so they die together.
-class VoiceEditCommand : public QUndoCommand
-{
-  public:
-    VoiceEditCommand(MainWindow *window, SongSession *session, const QString &loadName, int slot,
-                     const VgVoice &before, const VgVoice &after, bool structural)
-        : QUndoCommand(QObject::tr("edit voice %1").arg(slot))
-        , m_window(window)
-        , m_session(session)
-        , m_loadName(loadName)
-        , m_slot(slot)
-        , m_before(before)
-        , m_after(after)
-        , m_structural(structural)
-    {}
-
-    const QString &loadName() const { return m_loadName; }
-    int slot() const { return m_slot; }
-    const VgVoice &after() const { return m_after; }
-
-    int id() const override { return kVoiceEditCommandId; }
-
-    // Spin boxes commit every step of a click-and-hold gesture; steps that
-    // keep changing the same fields of the same voice collapse into one undo
-    // entry. A run that lands back on its starting value vanishes entirely.
-    bool mergeWith(const QUndoCommand *other) override
-    {
-        auto *o = static_cast<const VoiceEditCommand *>(other);
-        if (o->m_loadName != m_loadName || o->m_slot != m_slot || m_structural || o->m_structural ||
-            changedFields(o->m_before, o->m_after) != changedFields(m_before, m_after))
-            return false;
-        m_after = o->m_after;
-        if (m_after == m_before)
-            setObsolete(true);
-        return true;
-    }
-
-    void redo() override
-    {
-        m_window->applyVoiceEdit(*m_session, m_loadName, m_slot, m_after, m_structural);
-    }
-    void undo() override
-    {
-        m_window->applyVoiceEdit(*m_session, m_loadName, m_slot, m_before, m_structural);
-    }
-
-  private:
-    static uint changedFields(const VgVoice &a, const VgVoice &b)
-    {
-        uint mask = 0;
-        mask |= uint(a.macro != b.macro) << 0;
-        mask |= uint(a.key != b.key) << 1;
-        mask |= uint(a.pan != b.pan) << 2;
-        mask |= uint(a.symbol != b.symbol) << 3;
-        mask |= uint(a.keysplitTable != b.keysplitTable) << 4;
-        mask |= uint(a.sweep != b.sweep) << 5;
-        mask |= uint(a.duty != b.duty) << 6;
-        mask |= uint(a.period != b.period) << 7;
-        mask |= uint(a.attack != b.attack) << 8;
-        mask |= uint(a.decay != b.decay) << 9;
-        mask |= uint(a.sustain != b.sustain) << 10;
-        mask |= uint(a.release != b.release) << 11;
-        return mask;
-    }
-
-    MainWindow *m_window;
-    SongSession *m_session;
-    QString m_loadName;
-    int m_slot;
-    VgVoice m_before;
-    VgVoice m_after;
-    bool m_structural;
-};
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -1601,9 +1520,8 @@ void MainWindow::onDocumentChanged(SongSession &session)
     const SongCfg &cfg = session.doc.cfg();
     if (cfg.voicegroupArg != session.appliedVoicegroupArg) {
         // The -G switch (or its undo/redo) swaps the voicegroup. Unsaved
-        // voice edits need no prompt: they live in the undo history, and
-        // replayVoiceEdits restores them whenever their voicegroup is the
-        // open one again.
+        // voice edits need no prompt: they live in the undo history and are
+        // reapplied whenever their voicegroup source is reopened.
         cleanupVgPreview();
         QString tried;
         if (LoadedVoiceGroup *vg = loadVoicegroupFor(cfg, &tried)) {
@@ -1616,7 +1534,7 @@ void MainWindow::onDocumentChanged(SongSession &session)
                 voicegroup_free(session.voicegroup);
             session.voicegroup = vg;
             openVoicegroupSource(session, cfg);
-            replayVoiceEdits(session);
+            reapplyVoicegroupEditsToReopenedSource(session);
             session.view->setVoicegroup(session.voicegroup);
             if (active)
                 updateVoicegroupBrowser();
@@ -2678,47 +2596,20 @@ void MainWindow::openVoicegroupSource(SongSession &session, const SongCfg &cfg)
 void MainWindow::onVoiceEditRequested(int slot, const VgVoice &voice, bool structural)
 {
     SongSession *session = m_active;
-    if (!session || !session->vgSource)
+    if (!session)
         return;
-    const VgVoice *before = session->vgSource->voiceAt(slot);
-    if (!before || *before == voice)
-        return;
-    // push() applies the edit (redo) via applyVoiceEdit.
-    session->doc.undoStack()->push(new VoiceEditCommand(
-        this, session, session->vgSource->loadName(), slot, *before, voice, structural));
-}
-
-void MainWindow::applyVoiceEdit(SongSession &session, const QString &loadName, int slot,
-                                const VgVoice &voice, bool structural)
-{
-    if (!session.vgSource || session.vgSource->loadName() != loadName)
-        return; // stale target; replayVoiceEdits re-syncs when it reopens
-    session.vgSource->setVoice(slot, voice);
-    onVoiceEdited(session, slot, structural);
-    if (!structural && &session == m_active)
-        m_vgBrowser->voiceChanged(slot);
-    updateTabTitle(session);
-    if (&session == m_active)
-        updateWindowTitle();
-}
-
-void MainWindow::replayVoiceEdits(SongSession &session)
-{
-    if (!session.vgSource)
-        return;
-    // Every command below the current index is applied; poke the ones that
-    // target the just-reopened voicegroup back into it. Called from inside a
-    // cfg command's undo()/redo(), where QUndoStack::index() still counts
-    // that cfg command as applied — it isn't a voice edit, so it's skipped.
-    const QUndoStack *stack = session.doc.undoStack();
-    for (int i = 0; i < stack->index(); i++) {
-        const QUndoCommand *cmd = stack->command(i);
-        if (cmd->id() != kVoiceEditCommandId)
-            continue;
-        auto *edit = static_cast<const VoiceEditCommand *>(cmd);
-        if (edit->loadName() == session.vgSource->loadName())
-            session.vgSource->setVoice(edit->slot(), edit->after());
-    }
+    auto applied = [this](SongSession &session, int slot, bool structural) {
+        onVoiceEdited(session, slot, structural);
+        if (!structural && &session == m_active)
+            m_vgBrowser->voiceChanged(slot);
+        updateTabTitle(session);
+        if (&session == m_active)
+            updateWindowTitle();
+    };
+    auto command =
+        makeUndoableVoicegroupEdit(*session, slot, voice, structural, std::move(applied));
+    if (command)
+        session->doc.undoStack()->push(command.release());
 }
 
 void MainWindow::onVoiceEdited(SongSession &session, int slot, bool structural)
