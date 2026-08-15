@@ -90,6 +90,7 @@ const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
 const QString kNoteNamesKey = QStringLiteral("noteNames");
 const QString kSystemFontKey = QStringLiteral("systemFont");
 const QString kFollowPlayheadKey = QStringLiteral("followPlayhead");
+const QString kOutputVolumeKey = QStringLiteral("outputVolume");
 const QString kDrawerVelocityVisibleKey = QStringLiteral("editorDrawer/velocityVisible");
 const QString kDrawerVelocityHeightKey = QStringLiteral("editorDrawer/velocityHeight");
 const QString kDrawerAutomationVisibleKey = QStringLiteral("editorDrawer/automationVisible");
@@ -284,7 +285,6 @@ void MainWindow::buildUi()
     QAction *quitAction = fileMenu->addAction(tr("&Quit"), this, &QWidget::close);
     keys.attach(QStringLiteral("file.quit"), quitAction);
 
-    // Edit menu: undo/redo route to the active tab's stack.
     QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
     m_undoGroup = new QUndoGroup(this);
     QAction *undoAction = m_undoGroup->createUndoAction(this, tr("&Undo"));
@@ -382,6 +382,8 @@ void MainWindow::buildUi()
     {
         QSettings settings;
         m_transportBar->setFollowPlayhead(settings.value(kFollowPlayheadKey, true).toBool());
+        m_audio.setOutputVolume(settings.value(kOutputVolumeKey, 68).toInt());
+        m_transportBar->setOutputVolume(m_audio.outputVolume());
     }
     addToolBar(m_transportBar);
     // Space is window-scoped so play/pause works regardless of focus.
@@ -408,6 +410,11 @@ void MainWindow::buildUi()
             if (SongSession *session = sessionForWidget(m_tabs->widget(i)))
                 session->view->setFollowPlayhead(enabled);
         }
+    });
+    connect(m_transportBar, &TransportBar::outputVolumeChanged, this, [this](int value) {
+        m_audio.setOutputVolume(value);
+        QSettings settings;
+        settings.setValue(kOutputVolumeKey, m_audio.outputVolume());
     });
     connect(m_transportBar, &TransportBar::masterVolumeChanged, this, [this](int value) {
         if (!m_active || m_active->doc.cfg().masterVolume == value)

@@ -7,6 +7,7 @@
 
 class QAction;
 class QComboBox;
+class QDial;
 class QEvent;
 class QLabel;
 class QToolButton;
@@ -31,6 +32,7 @@ class TransportBar final : public QToolBar
     void setTimeText(const QString &text);
     void setSongName(const QString &name);
     void setMasterVolume(int value, bool enabled);
+    void setOutputVolume(int value);
     void setScaleState(int root, porydaw_scale::ScaleId scale, bool highlight, bool fold);
 
   signals:
@@ -42,6 +44,7 @@ class TransportBar final : public QToolBar
     void loopEnabledChanged(bool enabled);
     void followPlayheadChanged(bool enabled);
     void masterVolumeChanged(int value);
+    void outputVolumeChanged(int value);
     void scaleRootChanged(int root);
     void scaleIdChanged(porydaw_scale::ScaleId scale);
     void scaleHighlightChanged(bool enabled);
@@ -69,5 +72,7 @@ class TransportBar final : public QToolBar
     QToolButton *m_foldButton = nullptr;
     QLabel *m_masterVolCaption = nullptr;
     QSpinBox *m_masterVolSpin = nullptr;
+    QLabel *m_outputVolumeCaption = nullptr;
+    QDial *m_outputVolumeDial = nullptr;
     QString m_lastTimeText;
 };

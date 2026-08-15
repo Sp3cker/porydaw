@@ -1,10 +1,13 @@
 #include <QApplication>
 #include <QComboBox>
+#include <QDial>
 #include <QEventLoop>
 #include <QFile>
+#include <QImage>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMouseEvent>
 #include <QSettings>
 #include <QSizePolicy>
 #include <QSpinBox>
@@ -14,12 +17,18 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QUndoGroup>
+#include <QUndoStack>
+#include <QtMath>
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 #include "mainwindow.h"
 #include "porydaw_scale.h"
+#include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/theme/themeruntime.h"
+#include "ui/transportbar.h"
 
 // --tabcheck <projectRoot> <songA> <songB>: multi-tab check. Two songs open
 // in tabs with fully separate documents and undo stacks; switching tabs
@@ -163,12 +172,64 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     auto *transportSpacer = findChild<QWidget *>(QStringLiteral("transportVolumeSpacer"));
     auto *volCaption = findChild<QLabel *>(QStringLiteral("transportMasterVolumeCaption"));
     auto *volSpin = findChild<QSpinBox *>(QStringLiteral("transportMasterVolume"));
-    if (check(volSpin && volCaption && transport && transportSpacer,
-              "transport master-volume control, spacer, or toolbar not found")) {
+    auto *outputCaption = findChild<QLabel *>(QStringLiteral("transportOutputVolumeCaption"));
+    auto *outputDial = findChild<QDial *>(QStringLiteral("transportOutputVolume"));
+    TransportBar defaultTransport;
+    auto *defaultOutputDial =
+        defaultTransport.findChild<QDial *>(QStringLiteral("transportOutputVolume"));
+    check(defaultOutputDial && defaultOutputDial->value() == 68,
+          "application-output dial does not default to 68 percent");
+    if (defaultOutputDial) {
+        QImage outputDialImage(defaultOutputDial->size(), QImage::Format_ARGB32_Premultiplied);
+        outputDialImage.fill(Qt::transparent);
+        defaultOutputDial->render(&outputDialImage);
+        const int outputTickInset = layout::space(layout::Space::One);
+        const QRect outputDialRect = defaultOutputDial->rect().adjusted(
+            outputTickInset, outputTickInset, -outputTickInset, -outputTickInset);
+        const int outputDialCenterX = outputDialRect.left() + outputDialRect.width() / 2;
+        const int outputDialCenterY = outputDialRect.top() + outputDialRect.height() / 2;
+        const QPointF outputDialCenter(outputDialCenterX + 0.5, outputDialCenterY + 0.5);
+        const qreal outputDialHorizontalRadius = std::min(
+            outputDialCenter.x(), qreal(defaultOutputDial->width() - 1) - outputDialCenter.x());
+        const qreal outputDialVerticalRadius = std::min(
+            outputDialCenter.y(), qreal(defaultOutputDial->height() - 1) - outputDialCenter.y());
+        const qreal outputDialOuterRadius =
+            std::min(outputDialHorizontalRadius, outputDialVerticalRadius) - layout::singlePixel();
+        const qreal outputTickRadius =
+            outputDialOuterRadius - qreal(layout::space(layout::Space::Half)) / 2.0;
+        const QColor outputTickColor = themes::color(themes::Role::toolbar_outline);
+        const auto hasOutputTickAt = [&](qreal degrees) {
+            const qreal radians = qDegreesToRadians(degrees);
+            const QPoint probe =
+                (outputDialCenter + QPointF(qCos(radians), -qSin(radians)) * outputTickRadius)
+                    .toPoint();
+            for (int y = probe.y() - 2; y <= probe.y() + 2; ++y) {
+                for (int x = probe.x() - 2; x <= probe.x() + 2; ++x) {
+                    if (!outputDialImage.valid(x, y))
+                        continue;
+                    const QColor pixel = outputDialImage.pixelColor(x, y);
+                    if (std::abs(pixel.red() - outputTickColor.red()) <= 8 &&
+                        std::abs(pixel.green() - outputTickColor.green()) <= 8 &&
+                        std::abs(pixel.blue() - outputTickColor.blue()) <= 8) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        check(hasOutputTickAt(240.0) && hasOutputTickAt(-60.0),
+              "application-output dial ticks do not align to 0 and 100 percent");
+        check(!hasOutputTickAt(270.0),
+              "application-output dial renders a tick in its unreachable lower arc");
+    }
+    if (check(volSpin && volCaption && outputDial && outputCaption && transport && transportSpacer,
+              "transport volume controls, spacer, or toolbar not found")) {
         const QList<QAction *> actions = transport->actions();
         int spacerActionIndex = -1;
         int captionActionIndex = -1;
         int volumeActionIndex = -1;
+        int outputCaptionActionIndex = -1;
+        int outputActionIndex = -1;
         for (int i = 0; i < actions.size(); i++) {
             QWidget *widget = transport->widgetForAction(actions.at(i));
             if (widget == transportSpacer)
@@ -177,24 +238,112 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
                 captionActionIndex = i;
             else if (widget == volSpin)
                 volumeActionIndex = i;
+            else if (widget == outputCaption)
+                outputCaptionActionIndex = i;
+            else if (widget == outputDial)
+                outputActionIndex = i;
         }
         check(spacerActionIndex >= 0 && spacerActionIndex < captionActionIndex &&
                   captionActionIndex + 1 == volumeActionIndex &&
+                  volumeActionIndex < outputCaptionActionIndex &&
+                  outputCaptionActionIndex < outputActionIndex &&
                   transportSpacer->sizePolicy().horizontalPolicy() == QSizePolicy::Expanding &&
-                  volumeActionIndex == actions.size() - 1,
-              "master-volume control is not held at the transport bar's right edge");
+                  outputActionIndex == actions.size() - 1,
+              "application-output dial is not at the transport bar's right edge");
         check(volSpin->isEnabled() && volSpin->value() == tabA->doc.cfg().masterVolume,
               "spinbox does not show the active tab's master volume");
+        const int songVolumeBeforeOutputEdit = tabA->doc.cfg().masterVolume;
+        const int documentUndoCountBeforeOutputEdit = tabA->doc.undoStack()->count();
+        outputDial->setValue(37);
+        QSettings outputSettings;
+        check(outputDial->minimum() == 0 && outputDial->maximum() == 100,
+              "application-output dial range changed");
+        check(outputDial->toolTip().contains(QStringLiteral("Does not change the song volume")),
+              "application-output dial lost its explanatory tooltip");
+        check(m_audio.outputVolume() == 37 &&
+                  outputSettings.value(QStringLiteral("outputVolume")).toInt() == 37,
+              "application-output dial did not reach the audio engine or settings");
+        check(tabA->doc.cfg().masterVolume == songVolumeBeforeOutputEdit &&
+                  tabA->doc.undoStack()->count() == documentUndoCountBeforeOutputEdit &&
+                  m_undoGroup->activeStack() == tabA->doc.undoStack() && !tabA->doc.isDirty(),
+              "application-output dial changed song state or document undo state");
+        outputDial->setValue(68);
+
+        const auto sendOutputMouse = [outputDial](QEvent::Type type, const QPointF &position,
+                                                  Qt::MouseButton button, Qt::MouseButtons buttons,
+                                                  Qt::KeyboardModifiers modifiers) {
+            QMouseEvent event(type, position, QPointF(outputDial->mapToGlobal(position.toPoint())),
+                              button, buttons, modifiers);
+            QApplication::sendEvent(outputDial, &event);
+        };
+        const QPointF outputCenter(outputDial->rect().center());
+        const qreal outputRadius =
+            qreal(std::min(outputDial->width(), outputDial->height())) / 2.0 -
+            layout::singlePixel();
+        const QPointF rotaryPress = outputCenter + QPointF(0.0, -outputRadius * 0.75);
+        const int documentUndoCount = tabA->doc.undoStack()->count();
+        sendOutputMouse(QEvent::MouseButtonPress, rotaryPress, Qt::LeftButton, Qt::LeftButton,
+                        Qt::NoModifier);
+        check(outputDial->value() == 68,
+              "application-output dial jumped to the rotary press position");
+        sendOutputMouse(QEvent::MouseButtonRelease, rotaryPress, Qt::LeftButton, Qt::NoButton,
+                        Qt::NoModifier);
+        check(outputDial->value() == 68 && tabA->doc.undoStack()->count() == documentUndoCount &&
+                  m_undoGroup->activeStack() == tabA->doc.undoStack(),
+              "application-output dial treated a plain click as an edit");
+
+        const QPointF rotaryMove =
+            outputCenter + QPointF(outputRadius * 0.53, -outputRadius * 0.53);
+        sendOutputMouse(QEvent::MouseButtonPress, rotaryPress, Qt::LeftButton, Qt::LeftButton,
+                        Qt::NoModifier);
+        sendOutputMouse(QEvent::MouseMove, rotaryMove, Qt::NoButton, Qt::LeftButton,
+                        Qt::NoModifier);
+        const int rotaryValue = outputDial->value();
+        sendOutputMouse(QEvent::MouseButtonRelease, rotaryMove, Qt::LeftButton, Qt::NoButton,
+                        Qt::NoModifier);
+        check(rotaryValue > 68 && rotaryValue < 90 &&
+                  tabA->doc.undoStack()->count() == documentUndoCount &&
+                  m_undoGroup->activeStack() == tabA->doc.undoStack(),
+              "application-output rotary drag changed document undo history");
+        outputDial->setValue(68);
+
+        sendOutputMouse(QEvent::MouseButtonPress, outputCenter, Qt::LeftButton, Qt::LeftButton,
+                        Qt::NoModifier);
+        sendOutputMouse(QEvent::MouseMove, outputCenter + QPointF(0.0, -2.0), Qt::NoButton,
+                        Qt::LeftButton, Qt::NoModifier);
+        check(outputDial->value() == 68,
+              "application-output linear drag ignored its press dead zone");
+        sendOutputMouse(QEvent::MouseMove, outputCenter + QPointF(0.0, -11.0), Qt::NoButton,
+                        Qt::LeftButton, Qt::NoModifier);
+        sendOutputMouse(QEvent::MouseButtonRelease, outputCenter + QPointF(0.0, -11.0),
+                        Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        check(outputDial->value() == 72 && tabA->doc.undoStack()->count() == documentUndoCount &&
+                  m_undoGroup->activeStack() == tabA->doc.undoStack(),
+              "application-output linear drag changed document undo history");
+        outputDial->setValue(68);
+        outputDial->setValue(42);
+        check(outputDial->value() == 42 && m_audio.outputVolume() == 42 &&
+                  outputSettings.value(QStringLiteral("outputVolume")).toInt() == 42,
+              "application-output edit did not reach the audio engine or settings");
+        check(tabA->doc.undoStack()->count() == documentUndoCount &&
+                  m_undoGroup->activeStack() == tabA->doc.undoStack() && !tabA->doc.isDirty(),
+              "application-output edit entered or stole document undo history");
+        outputDial->setValue(37);
         const int volBefore = tabA->doc.cfg().masterVolume;
         const int volEdited = volBefore == 100 ? 101 : 100;
         volSpin->setValue(volEdited);
         check(tabA->doc.cfg().masterVolume == volEdited && tabA->doc.isDirty(),
               "spinbox edit did not land as an undoable cfg change");
+        check(m_undoGroup->activeStack() == tabA->doc.undoStack(),
+              "a song edit did not restore the document undo stack");
         check(tabA->appliedVolume == volEdited,
               "spinbox edit did not reach the engine-applied volume");
         m_tabs->setCurrentWidget(tabB->view);
         check(volSpin->value() == tabB->doc.cfg().masterVolume,
               "spinbox did not follow the tab switch");
+        check(outputDial->value() == 37, "application-output dial changed with the active tab");
+        check(m_audio.outputVolume() == 37,
+              "application-output engine volume changed with the active tab");
         check(!tabB->doc.isDirty(), "tab switch leaked a volume edit into the other tab");
         m_tabs->setCurrentWidget(tabA->view);
         check(volSpin->value() == volEdited,
@@ -505,7 +654,6 @@ int runTabCheck(const QString &projectRoot, const QString &songA, const QString 
     }
     QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
-
     {
         MainWindow window;
         if (!window.runTabCheck(projectRoot, songA, songB))
@@ -533,6 +681,9 @@ int runTabCheck(const QString &projectRoot, const QString &songA, const QString 
         }
         check(window.windowTitle().startsWith(songB),
               "relaunch did not re-activate the last active tab");
+        auto *outputDial = window.findChild<QDial *>(QStringLiteral("transportOutputVolume"));
+        check(outputDial && outputDial->value() == 37,
+              "relaunch did not restore application-output volume");
     }
     if (failures == 0)
         std::printf("tabcheck: restore PASS\n");

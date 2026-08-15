@@ -2,24 +2,230 @@
 
 #include <QAction>
 #include <QComboBox>
+#include <QDial>
 #include <QEvent>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMouseEvent>
 #include <QPainter>
+#include <QPen>
 #include <QSignalBlocker>
 #include <QSizePolicy>
 #include <QSpinBox>
 #include <QStyle>
+#include <QStyleOptionSlider>
+#include <QStylePainter>
 #include <QToolButton>
+#include <QtMath>
+#include <array>
 
 #include "core/songdocument.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
-#include "ui/typography.h"
 
 namespace {
+constexpr int kDefaultOutputVolume = 68;
+
+class OutputVolumeDial final : public QDial
+{
+  public:
+    explicit OutputVolumeDial(QWidget *parent)
+        : QDial(parent)
+        , m_tickPen(themes::color(themes::Role::toolbar_outline), layout::singlePixel())
+    {
+        m_tickPen.setCapStyle(Qt::RoundCap);
+    }
+
+  protected:
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        if (event->button() != Qt::LeftButton) {
+            QDial::mousePressEvent(event);
+            return;
+        }
+        m_dragMode = isNearArc(event->position()) ? DragMode::Rotary : DragMode::LinearPending;
+        m_pressPosition = event->position();
+        m_lastGlobalY = event->globalPosition().y();
+        m_lastAngle = angleAt(event->position());
+        m_dialRadius = dialRadius();
+        m_stepAccumulator = 0.0;
+        setFocus(Qt::MouseFocusReason);
+        setSliderDown(true);
+        event->accept();
+    }
+
+    void mouseMoveEvent(QMouseEvent *event) override
+    {
+        if (m_dragMode == DragMode::None) {
+            QDial::mouseMoveEvent(event);
+            return;
+        }
+        if (!(event->buttons() & Qt::LeftButton)) {
+            finishDrag();
+            event->accept();
+            return;
+        }
+        if (m_dragMode == DragMode::Rotary) {
+            const QPointF offset = event->position() - rect().center();
+            if (QPointF::dotProduct(offset, offset) > m_dialRadius * m_dialRadius) {
+                m_dragMode = DragMode::Linear;
+                m_lastGlobalY = event->globalPosition().y();
+                event->accept();
+                return;
+            }
+            const qreal angle = angleAt(event->position());
+            qreal delta = angle - m_lastAngle;
+            if (delta > 180.0)
+                delta -= 360.0;
+            else if (delta < -180.0)
+                delta += 360.0;
+            m_lastAngle = angle;
+            const qreal valuePerDegree = qreal(maximum() - minimum()) / qreal(kDialSweepDegrees);
+            const qreal sensitivity =
+                event->modifiers() & Qt::ShiftModifier ? kFineSensitivity : 1.0;
+            applyValueDelta(delta * valuePerDegree * sensitivity);
+            event->accept();
+            return;
+        }
+        const qreal currentY = event->globalPosition().y();
+        if (m_dragMode == DragMode::LinearPending) {
+            const QPointF distance = event->position() - m_pressPosition;
+            if (qAbs(distance.x()) < kDragThreshold && qAbs(distance.y()) < kDragThreshold) {
+                event->accept();
+                return;
+            }
+            m_dragMode = DragMode::Linear;
+            if (qAbs(distance.y()) >= kDragThreshold)
+                m_lastGlobalY += distance.y() > 0 ? kDragThreshold : -kDragThreshold;
+            else
+                m_lastGlobalY = currentY;
+        }
+        const qreal rate =
+            event->modifiers() & Qt::ShiftModifier ? kFineStepsPerPixel : kNormalStepsPerPixel;
+        applyValueDelta((m_lastGlobalY - currentY) * rate);
+        m_lastGlobalY = currentY;
+        event->accept();
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        if (event->button() == Qt::LeftButton && m_dragMode != DragMode::None) {
+            finishDrag();
+            event->accept();
+            return;
+        }
+        QDial::mouseReleaseEvent(event);
+    }
+
+    void paintEvent(QPaintEvent *) override
+    {
+        const int tickInset = layout::space(layout::Space::One);
+        QStyleOptionSlider option;
+        initStyleOption(&option);
+        option.rect = rect().adjusted(tickInset, tickInset, -tickInset, -tickInset);
+
+        QStylePainter painter(this);
+        painter.drawComplexControl(QStyle::CC_Dial, option);
+        painter.setRenderHint(QPainter::Antialiasing);
+        const auto &tickColor = themes::color(themes::Role::toolbar_outline);
+        const int tickWidth = layout::singlePixel();
+        if (m_tickPen.color() != tickColor)
+            m_tickPen.setColor(tickColor);
+        if (m_tickPen.width() != tickWidth)
+            m_tickPen.setWidth(tickWidth);
+        painter.setPen(m_tickPen);
+
+        constexpr int kTickIntervalCount = 10;
+        constexpr qreal kMinimumDegrees = 240.0;
+        const int dialCenterX = option.rect.left() + option.rect.width() / 2;
+        static const auto tickDirections = [] {
+            auto directions = std::array<QPointF, kTickIntervalCount + 1>{};
+            for (int tick = 0; tick <= kTickIntervalCount; ++tick) {
+                const qreal degrees = kMinimumDegrees - qreal(tick) * qreal(kDialSweepDegrees) /
+                                                            qreal(kTickIntervalCount);
+                const qreal radians = qDegreesToRadians(degrees);
+                directions[tick] = QPointF(qCos(radians), -qSin(radians));
+            }
+            return directions;
+        }();
+        const int dialCenterY = option.rect.top() + option.rect.height() / 2;
+        const QPointF center(dialCenterX + 0.5, dialCenterY + 0.5);
+        const qreal horizontalRadius = std::min(center.x(), qreal(width() - 1) - center.x());
+        const qreal verticalRadius = std::min(center.y(), qreal(height() - 1) - center.y());
+        const qreal outerRadius =
+            std::min(horizontalRadius, verticalRadius) - layout::singlePixel();
+        for (int tick = 0; tick <= kTickIntervalCount; ++tick) {
+            const bool endpoint = tick == 0 || tick == kTickIntervalCount;
+            const QPointF &direction = tickDirections[tick];
+            const qreal tickLength =
+                endpoint ? layout::space(layout::Space::One) : layout::space(layout::Space::Half);
+            const qreal innerRadius = outerRadius - tickLength;
+            painter.drawLine(center + direction * innerRadius, center + direction * outerRadius);
+        }
+    }
+
+  private:
+    enum class DragMode {
+        None,
+        Rotary,
+        LinearPending,
+        Linear,
+    };
+
+    static constexpr int kDialSweepDegrees = 300;
+    static constexpr qreal kDragThreshold = 3.0;
+    static constexpr qreal kNormalStepsPerPixel = 0.5;
+    static constexpr qreal kFineStepsPerPixel = 0.2;
+    static constexpr qreal kFineSensitivity = kFineStepsPerPixel / kNormalStepsPerPixel;
+    static constexpr qreal kArcInnerRadiusFraction = 0.6;
+
+    void applyValueDelta(qreal delta)
+    {
+        m_stepAccumulator += delta;
+        const int steps = int(m_stepAccumulator);
+        if (steps == 0)
+            return;
+        m_stepAccumulator -= steps;
+        setValue(value() + steps);
+    }
+
+    void finishDrag()
+    {
+        m_dragMode = DragMode::None;
+        m_stepAccumulator = 0.0;
+        setSliderDown(false);
+    }
+
+    qreal angleAt(const QPointF &position) const
+    {
+        const QPointF offset = position - rect().center();
+        return qRadiansToDegrees(qAtan2(offset.x(), -offset.y()));
+    }
+
+    qreal dialRadius() const
+    {
+        return qreal(std::min(width(), height())) / 2.0 - layout::singlePixel();
+    }
+
+    bool isNearArc(const QPointF &position) const
+    {
+        const QPointF offset = position - rect().center();
+        const qreal radius = dialRadius();
+        const qreal innerRadius = radius * kArcInnerRadiusFraction;
+        const qreal distanceSquared = QPointF::dotProduct(offset, offset);
+        return distanceSquared >= innerRadius * innerRadius && distanceSquared <= radius * radius;
+    }
+
+    DragMode m_dragMode = DragMode::None;
+    QPointF m_pressPosition;
+    qreal m_lastGlobalY = 0.0;
+    qreal m_lastAngle = 0.0;
+    qreal m_dialRadius = 0.0;
+    qreal m_stepAccumulator = 0.0;
+    QPen m_tickPen;
+};
 
 QIcon tintedIcon(QWidget &widget, const QIcon &source, const QSize &size)
 {
@@ -187,6 +393,28 @@ TransportBar::TransportBar(QWidget *parent) : QToolBar(tr("Transport"), parent)
         edit->installEventFilter(this);
     connect(m_masterVolSpin, &QSpinBox::valueChanged, this, &TransportBar::masterVolumeChanged);
     addWidget(m_masterVolSpin);
+    addSeparator();
+    const auto outputVolumeTip =
+        tr("Application output volume. Does not change the song volume or saved song settings.");
+    m_outputVolumeCaption = new QLabel(tr("Output"), this);
+    m_outputVolumeCaption->setObjectName(QStringLiteral("transportOutputVolumeCaption"));
+    m_outputVolumeCaption->setContentsMargins(::layout::space(::layout::Space::Two), 0,
+                                              ::layout::space(::layout::Space::One), 0);
+    m_outputVolumeCaption->setToolTip(outputVolumeTip);
+    addWidget(m_outputVolumeCaption);
+
+    m_outputVolumeDial = new OutputVolumeDial(this);
+    m_outputVolumeDial->setObjectName(QStringLiteral("transportOutputVolume"));
+    m_outputVolumeDial->setRange(0, 100);
+    m_outputVolumeDial->setValue(kDefaultOutputVolume);
+    m_outputVolumeDial->setPageStep(10);
+    const auto dialExtent = ::layout::fontPx(5.0 / 3.0) + 2 * ::layout::space(::layout::Space::One);
+    m_outputVolumeDial->setFixedSize(dialExtent, dialExtent);
+    m_outputVolumeDial->setToolTip(outputVolumeTip);
+    m_outputVolumeDial->setAccessibleName(tr("Application output volume"));
+    m_outputVolumeDial->setAccessibleDescription(outputVolumeTip);
+    connect(m_outputVolumeDial, &QDial::valueChanged, this, &TransportBar::outputVolumeChanged);
+    addWidget(m_outputVolumeDial);
     refreshIcons();
 }
 
@@ -240,6 +468,12 @@ void TransportBar::setMasterVolume(int value, bool enabled)
     m_masterVolSpin->setValue(value);
 }
 
+void TransportBar::setOutputVolume(int value)
+{
+    const QSignalBlocker blocker(m_outputVolumeDial);
+    m_outputVolumeDial->setValue(value);
+}
+
 void TransportBar::setScaleState(int root, porydaw_scale::ScaleId scale, bool highlight, bool fold)
 {
     const QSignalBlocker rootBlocker(m_rootCombo);
@@ -251,7 +485,6 @@ void TransportBar::setScaleState(int root, porydaw_scale::ScaleId scale, bool hi
     m_highlightButton->setChecked(highlight);
     m_foldButton->setChecked(fold);
 }
-
 
 void TransportBar::changeEvent(QEvent *event)
 {
