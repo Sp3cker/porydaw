@@ -257,6 +257,95 @@ class MoveNotesCommand : public QUndoCommand
     TrackRemap m_remap;
 };
 
+class MoveNotesToPitchesCommand : public QUndoCommand
+{
+  public:
+    MoveNotesToPitchesCommand(SongDocument *doc, std::vector<DocNote> notes,
+                              std::vector<uint8_t> destPitches, int64_t dTick, bool mergeable)
+        : QUndoCommand(SongDocument::tr("move %n note(s)", nullptr, int(notes.size())))
+        , m_doc(doc)
+        , m_notes(std::move(notes))
+        , m_destPitches(std::move(destPitches))
+        , m_dTick(dTick)
+        , m_mergeable(mergeable)
+        , m_ops(doc->buildMoveNotesToPitchesOps(m_notes, m_destPitches, dTick))
+    {}
+
+    int id() const override { return m_mergeable ? 0x4d50 : -1; } // 'MP'
+
+    void redo() override
+    {
+        m_doc->applyOps(m_ops);
+        emit m_doc->documentChanged();
+    }
+
+    void undo() override
+    {
+        m_doc->revertOps(m_ops);
+        emit m_doc->documentChanged();
+    }
+
+    bool mergeWith(const QUndoCommand *command) override
+    {
+        auto *other = const_cast<MoveNotesToPitchesCommand *>(
+            static_cast<const MoveNotesToPitchesCommand *>(command));
+        if (!other->m_mergeable || !movesMyOutputs(other->m_notes))
+            return false;
+        m_doc->revertOps(other->m_ops);
+        m_doc->revertOps(m_ops);
+        m_destPitches = other->m_destPitches;
+        m_dTick += other->m_dTick;
+        m_ops = m_doc->buildMoveNotesToPitchesOps(m_notes, m_destPitches, m_dTick);
+        m_doc->applyOps(m_ops);
+        emit m_doc->documentChanged();
+        return true;
+    }
+
+  private:
+    static bool allOnSameEngineTrack(const std::vector<DocNote> &notes)
+    {
+        if (notes.empty())
+            return false;
+        const int engineTrack = notes.front().engineTrack;
+        return std::all_of(notes.begin(), notes.end(),
+                           [engineTrack](const DocNote &note) {
+                               return note.engineTrack == engineTrack;
+                           });
+    }
+
+    bool movesMyOutputs(const std::vector<DocNote> &next) const
+    {
+        if (next.size() != m_notes.size() || !allOnSameEngineTrack(m_notes) ||
+            !allOnSameEngineTrack(next) ||
+            m_notes.front().engineTrack != next.front().engineTrack)
+            return false;
+        using Pos = std::tuple<int, uint64_t, int, uint32_t, uint8_t, uint8_t>;
+        std::vector<Pos> mine, theirs;
+        for (size_t i = 0; i < m_notes.size(); i++) {
+            const DocNote &note = m_notes[i];
+            const uint64_t tick =
+                note.unterminated()
+                    ? note.tick
+                    : uint64_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
+            const int key = note.unterminated() ? note.key : m_destPitches[i];
+            mine.push_back({note.engineTrack, tick, key, note.duration, note.velocity, note.channel});
+        }
+        for (const DocNote &note : next)
+            theirs.push_back(
+                {note.engineTrack, note.tick, int(note.key), note.duration, note.velocity, note.channel});
+        std::sort(mine.begin(), mine.end());
+        std::sort(theirs.begin(), theirs.end());
+        return mine == theirs;
+    }
+
+    SongDocument *m_doc;
+    std::vector<DocNote> m_notes;
+    std::vector<uint8_t> m_destPitches;
+    int64_t m_dTick;
+    bool m_mergeable;
+    std::vector<SongDocument::EditOp> m_ops;
+};
+
 SongDocument::SongDocument(QObject *parent) : QObject(parent) {}
 
 bool SongDocument::load(const SongInfo &song, QString *error)
@@ -909,6 +998,30 @@ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, i
     publishMutation(currentTrackRemap());
 }
 
+bool SongDocument::moveNotesToPitches(const std::vector<DocNote> &notes,
+                                      const std::vector<uint8_t> &destPitches, int64_t dTick,
+                                      bool mergeable)
+{
+    if (notes.empty() || notes.size() != destPitches.size())
+        return false;
+    for (uint8_t destKey : destPitches) {
+        if (destKey > 127)
+            return false;
+    }
+    bool anyMove = false;
+    for (size_t i = 0; i < notes.size(); i++) {
+        if (notes[i].key != destPitches[i] || dTick != 0) {
+            anyMove = true;
+            break;
+        }
+    }
+    if (!anyMove)
+        return true;
+    m_undoStack.push(
+        new MoveNotesToPitchesCommand(this, notes, destPitches, dTick, mergeable));
+    return true;
+}
+
 std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vector<DocNote> &notes,
                                                                   int64_t dTick, int dKey) const
 {
@@ -950,6 +1063,43 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
             end.event.data0 = newKey;
             ops.push_back(std::move(end));
         }
+    }
+    ops.insert(ops.end(), trims.begin(), trims.end());
+    return ops;
+}
+
+std::vector<SongDocument::EditOp>
+SongDocument::buildMoveNotesToPitchesOps(const std::vector<DocNote> &notes,
+                                         const std::vector<uint8_t> &destPitches,
+                                         int64_t dTick) const
+{
+    std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+    std::vector<PlannedNote> written;
+    for (size_t i = 0; i < notes.size(); i++) {
+        const DocNote &note = notes[i];
+        const uint8_t destKey = destPitches[i];
+        if (note.unterminated() || note.smfTrack < 0 ||
+            note.smfTrack >= int(removals.size()) || (destKey == note.key && dTick == 0))
+            continue;
+        removals[size_t(note.smfTrack)].push_back(note.onIndex);
+        removals[size_t(note.smfTrack)].push_back(note.endIndex);
+        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+        written.push_back({note.engineTrack, destKey, newTick, newTick + note.duration});
+    }
+    std::vector<EditOp> trims;
+    resolveNoteOverlaps(written, notes, removals, trims);
+    std::vector<EditOp> ops;
+    for (size_t t = 0; t < m_smf.tracks.size(); t++)
+        appendRemoveOps(ops, int(t), std::move(removals[t]));
+    for (size_t i = 0; i < notes.size(); i++) {
+        const DocNote &note = notes[i];
+        const uint8_t destKey = destPitches[i];
+        if (note.unterminated() || note.smfTrack < 0 ||
+            note.smfTrack >= int(m_smf.tracks.size()) || (destKey == note.key && dTick == 0))
+            continue;
+        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+        appendNoteInsertOps(ops, note.smfTrack, note.channel, newTick, destKey, note.duration,
+                            note.velocity);
     }
     ops.insert(ops.end(), trims.begin(), trims.end());
     return ops;

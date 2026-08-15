@@ -14,10 +14,12 @@
 
 #include "audio/trackactivitylevel.h"
 #include "core/miditimeline.h"
+#include "porydaw_scale.h"
 #include "ui/activity/trackactivity.h"
 #include "ui/editordrawer/drawerpage.h"
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
+#include "ui/pitchprojection.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
 #include "ui/velocitygesturemodel.h"
@@ -96,7 +98,8 @@ class SongView : public QWidget
     // selection, mute/solo, and re-resolves the note selection.
     void updateSong(const MidiTimeline *timeline);
     void setPlayheadSample(uint64_t samplePos, bool playing);
-    bool advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds, bool playing);
+    bool advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,
+                              bool playing);
 
     // Editing is enabled while a document is attached (may be null).
     void setDocument(SongDocument *document);
@@ -172,11 +175,22 @@ class SongView : public QWidget
 
     qreal contentX(double tick) const { return qreal(tick * m_pxPerTick - m_scrollX); }
     double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / m_pxPerTick; }
+    // Camera dead space before tick 0: the horizontal scroll floor is
+    // -leadPadPx(), so the song start can rest inside the viewport instead
+    // of pinned to its left edge (zooming near the start clamps here, which
+    // keeps tick 0 on screen).
+    double leadPadPx() const;
     qreal displayX(double tick, qreal origin, qreal dpr) const;
     double pxPerTick() const { return m_pxPerTick; }
     double pxPerBeat() const;
     double scrollY() const { return m_scrollY; }
     double keyHeight() const { return m_keyHeight; }
+    const songview::PitchProjection &pitchProjection() const { return m_projection; }
+
+    // Fold projection updates wait for a pointer gesture to commit, so the
+    // row geometry remains stable while its note edit is in progress.
+    void setProjectionLocked(bool locked);
+    void flushProjectionIfDirty();
     double playheadTick() const { return m_playheadTick; }
 
     // Edit cursor (Reaper-style): placed by clicking the ruler or empty
@@ -193,6 +207,18 @@ class SongView : public QWidget
 
     int selectedTrack() const { return m_selectedTrack; }
     void selectTrack(int track);
+
+    // Scale controls are independent per-tab runtime toggles; neither is
+    // persisted with the song or its view sidecar.
+    bool scaleHighlight() const { return m_scaleHighlight; }
+    void setScaleHighlight(bool enabled);
+    bool scaleFold() const { return m_scaleFold; }
+    void setScaleFold(bool enabled);
+    int scaleRoot() const { return m_scaleRoot; } // 0-11 (C=0)
+    void setScaleRoot(int root);
+    porydaw_scale::ScaleId scaleId() const { return m_scaleId; }
+    void setScaleId(porydaw_scale::ScaleId id);
+    void foldTransposeSelection(int degreeDelta);
     // Reveal a polyphony-overflow event's note: select its track, select the
     // last note on (track, key) starting at or before tick — the lost note (a
     // dropped note starts exactly there, a stolen one spans it, a cut tail
@@ -524,6 +550,10 @@ class SongView : public QWidget
     void muteMaskChanged(uint32_t mask);
     void soloMaskChanged(uint32_t mask);
     void selectedTrackChanged(int track);
+    void scaleHighlightChanged();
+    void scaleFoldChanged();
+    void scaleRootChanged();
+    void scaleIdChanged();
     // Audition request (velocity 0 releases); forwarded to the audio engine.
     void auditionNote(int track, int key, int velocity);
     // Self-releasing audition (band-sweep chord preview); forwarded to
@@ -579,6 +609,14 @@ class SongView : public QWidget
     // Document remap handler: re-addresses all SongView-owned track state
     // before the following documentChanged rebuild.
     void onTracksRemapped(const TrackRemap &remap);
+    // One path for all selection changes. Remapping an engine slot while it
+    // still represents the same logical track is not a track transition.
+    void transitionSelectedTrack(int newTrack);
+    void transitionSelectedTrack(int newTrack, bool trackIdentityChanged);
+    void updateScaleProjection();
+    void updateScaleMembership();
+    void buildOccupancySet(bool out[128]) const;
+    void rebuildProjectionWithAnchoring();
     void syncPlayheadOverlay();
 
     void notifyDrawerSongChanged();
@@ -589,6 +627,7 @@ class SongView : public QWidget
     int viewportWidth() const;
     int rollViewportHeight() const;
     void setHScroll(double px);
+    double minHScroll() const;
     double maxHScroll() const;
     void setVScroll(double y);
     double maxRollScroll() const;
@@ -605,12 +644,19 @@ class SongView : public QWidget
     SongDocument *m_document = nullptr;
     SongViewModel m_model;
     Geometry m_geometry;
+    songview::PitchProjection m_projection;
+    bool m_projectionDirty = false;
+    bool m_projectionLocked = false;
 
     double m_pxPerTick = 1.0;
     double m_scrollX = 0.0;
     double m_scrollY = 0.0;
     double m_keyHeight = 0.0;
     int m_selectedTrack = 0;
+    bool m_scaleHighlight = false;
+    bool m_scaleFold = false;
+    int m_scaleRoot = 0; // C
+    porydaw_scale::ScaleId m_scaleId = porydaw_scale::ScaleId::major;
     double m_playheadTick = 0.0;
     uint64_t m_editCursorTick = 0;
     bool m_playing = false;

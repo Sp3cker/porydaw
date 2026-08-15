@@ -64,7 +64,7 @@ int runFontCheck(int expectedBaseFontPx)
     };
     const auto body = QApplication::font();
     const auto bodyInfo = QFontInfo(body);
-    const auto expectedBodySize = qMax(1, qRound(*baseFontPx * 1.25));
+    const auto expectedBodySize = qMax(1, qRound(*baseFontPx * 1.125));
     check(body.hintingPreference() == QFont::PreferNoHinting,
           "Body does not prefer unhinted glyph outlines (gasp 10, DirectWrite)");
     check(bodyInfo.family() == QStringLiteral("Atkinson Hyperlegible Next") &&

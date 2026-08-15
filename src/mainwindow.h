@@ -19,8 +19,6 @@ class QDockWidget;
 class QLabel;
 class QTabWidget;
 class QSettings;
-class QSpinBox;
-class QToolBar;
 class QTimer;
 class QWidget;
 class QUndoGroup;
@@ -29,6 +27,7 @@ class SmfFile;
 class SongListPanel;
 class SongView;
 class VoicegroupBrowser;
+class TransportBar;
 
 namespace themes {
 class ThemeController;
@@ -95,11 +94,6 @@ class MainWindow : public QMainWindow
   protected:
     void closeEvent(QCloseEvent *event) override;
     void changeEvent(QEvent *event) override;
-    void childEvent(QChildEvent *event) override;
-    // Installed on the master-volume spinbox (and its line edit): refuses
-    // the Space ShortcutOverride so play/pause keeps working while the
-    // field is focused.
-    bool eventFilter(QObject *watched, QEvent *event) override;
 
   private slots:
     void openProject();
@@ -136,7 +130,6 @@ class MainWindow : public QMainWindow
   private:
     void buildUi();
     void updateWindowFrameTheme();
-    void updateDockTabFonts();
     // The dialog-less half of openProject; also the session-restore entry.
     // On failure warns via dialog (interactive) or status bar (restore).
     bool openProjectDir(const QString &dir, bool interactive = true);
@@ -250,12 +243,10 @@ class MainWindow : public QMainWindow
     // The session's cfg (volume/reverb) merged with the global engine knobs
     // — everything AudioEngine::updateSettings applies.
     SongSettings songSettingsFor(const SongSession &session) const;
-    void refreshDerivedFonts();
-    void refreshTransportIcons();
     void updateTransportActions();
-    // Points the transport toolbar's master-volume spinbox at the active
-    // tab's cfg (disabled with no tab). Never emits valueChanged.
+    // Synchronizes active-session state into the transport presentation.
     void syncMasterVolumeControl();
+    void syncScaleControls(SongSession *session);
     void synchronizePlayhead();
     void updateTimeLabel();
     void updatePolyStatus();
@@ -317,7 +308,7 @@ class MainWindow : public QMainWindow
     QDockWidget *m_vgDock = nullptr;
     PolyphonyPanel *m_polyPanel = nullptr;
     QDockWidget *m_polyDock = nullptr;
-    QToolBar *m_transportToolbar = nullptr;
+    TransportBar *m_transportBar = nullptr;
     std::unique_ptr<QSettings> m_themeSettings;
     std::unique_ptr<themes::ThemeController> m_themeController;
     std::unique_ptr<themes::ThemeDialog> m_themeDialog;
@@ -326,13 +317,6 @@ class MainWindow : public QMainWindow
     QAction *m_importSampleAction = nullptr;
     QAction *m_registerAction = nullptr;
     QAction *m_closeTabAction = nullptr;
-    QAction *m_goToStartAction = nullptr;
-    QAction *m_playAction = nullptr;
-    QAction *m_playPauseAction = nullptr;
-    QAction *m_pauseAction = nullptr;
-    QAction *m_stopAction = nullptr;
-    QAction *m_loopAction = nullptr;
-    QAction *m_followPlayheadAction = nullptr;
     QAction *m_saveAction = nullptr;
     QAction *m_exportWavAction = nullptr;
     QAction *m_settingsAction = nullptr;
@@ -341,10 +325,6 @@ class MainWindow : public QMainWindow
     QAction *m_velocityDrawerAction = nullptr;
     QAction *m_velocityColorsAction = nullptr;
     QAction *m_noteNamesAction = nullptr;
-    QLabel *m_masterVolCaption = nullptr;
-    QSpinBox *m_masterVolSpin = nullptr;
-    QLabel *m_timeLabel = nullptr;
-    QLabel *m_songLabel = nullptr;
     QWidget *m_polyMeter = nullptr;
     QLabel *m_pcmValueLabel = nullptr;
     QLabel *m_cgbValueLabel = nullptr;
@@ -369,6 +349,5 @@ class MainWindow : public QMainWindow
                    lostTotal == other.lostTotal;
         }
     };
-    QString m_lastTimeText;
     std::optional<PolyStatusSnapshot> m_lastPolyStatus;
 };

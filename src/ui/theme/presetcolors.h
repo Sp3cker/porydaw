@@ -61,6 +61,8 @@ enum class PresetColor {
     piano_roll_background,
     /// SongView piano-roll accidental-note lane background.
     piano_roll_accidental_lane,
+    /// SongView scale highlight: a fixed lavender (#B595FC) shared by every theme.
+    scale_highlight,
     /// SongView playhead: a fixed identity red shared by every theme, like
     /// the Mute and Solo domain colors (rollcheck pixel-scans for it).
     playhead,
@@ -108,7 +110,7 @@ enum class PresetColor {
 };
 
 inline constexpr auto presetColorCount = static_cast<std::size_t>(PresetColor::count);
-static_assert(presetColorCount == 36);
+static_assert(presetColorCount == 37);
 
 constexpr PresetColor presetColorFor(Role role);
 
@@ -275,6 +277,7 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::grid_line,
     PresetColor::piano_roll_background,
     PresetColor::piano_roll_accidental_lane,
+    PresetColor::scale_highlight,
     PresetColor::piano_natural_key,
     PresetColor::piano_black_key,
     PresetColor::selection_background,
@@ -324,6 +327,7 @@ constexpr PresetColors makeVanilla()
     colors.color(PresetColor::grid_line) = "#3F040000";
     colors.color(PresetColor::piano_roll_background) = "#D4CCC7";
     colors.color(PresetColor::piano_roll_accidental_lane) = "#B7AFA9";
+    colors.color(PresetColor::scale_highlight) = "#B595FC";
     colors.color(PresetColor::playhead) = "#E24242";
     colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
     colors.color(PresetColor::piano_black_key) = "#202224";
@@ -380,6 +384,7 @@ constexpr PresetColors makeDarkNeutralHigh()
     colors.color(PresetColor::grid_line) = "#54030303";
     colors.color(PresetColor::piano_roll_background) = "#454545";
     colors.color(PresetColor::piano_roll_accidental_lane) = "#363636";
+    colors.color(PresetColor::scale_highlight) = "#B595FC";
     colors.color(PresetColor::playhead) = "#E24242";
     colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
     colors.color(PresetColor::piano_black_key) = "#202224";
@@ -432,6 +437,7 @@ constexpr PresetColors makeImmaterial()
     colors.color(PresetColor::grid_line) = "#54030606";
     colors.color(PresetColor::piano_roll_background) = "#3C3F46";
     colors.color(PresetColor::piano_roll_accidental_lane) = "#2F3239";
+    colors.color(PresetColor::scale_highlight) = "#B595FC";
     colors.color(PresetColor::playhead) = "#E24242";
     colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
     colors.color(PresetColor::piano_black_key) = "#202224";

@@ -238,6 +238,14 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   track is editable; other tracks ghosted. `M`/`S` (rebindable) toggle mute/solo over
   the selected track(s) — the whole Ctrl/Shift header scope, mixed state resolving
   toward on. Loop region rendered from `[`/`]` markers.
+  The horizontal camera overshoots the song on both sides: a lead pad of dead
+  space before tick 0 (10% of the viewport, 48–256 DIPs, drawn as a flat
+  dimmed shade with no grid) is the scroll floor, so zooming near the song
+  start comes to rest with tick 0 still on screen and the start never pins to
+  the viewport edge — fresh songs and transport "go to start" home there; and
+  a full viewport of scratch space past the song's end is scrollable at any
+  zoom (grid continues), so notes can be pasted or drawn beyond the current
+  bounds — edits out there grow the song, renewing the scratch space.
   View → Color Notes by Velocity (app-wide, persisted) swaps the selected track's
   note fills from track-identity color to a velocity hue ramp — purple `#5f44e9`
   (velocity 1) through the spectrum to red `#e90904` (127); ghost notes unchanged.
