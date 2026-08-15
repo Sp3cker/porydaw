@@ -498,8 +498,9 @@ void MainWindow::buildUi()
     // the song dirty, applies to playback live, and follows undo/redo.
     transport->addSeparator();
     const QString volTip = tr("Master volume (mid2agb -V): scales every track "
-                              "volume (VOL × master ÷ 128). Saved with the "
-                              "song's settings.");
+                              "volume (VOL × master ÷ 127). Saved with the "
+                              "song's settings, and part of what the velocity "
+                              "lane's PSG detents are computed from.");
     m_masterVolCaption = new QLabel(tr("Volume"), this);
     m_masterVolCaption->setContentsMargins(::layout::space(::layout::Space::Two), 0,
                                            ::layout::space(::layout::Space::One), 0);

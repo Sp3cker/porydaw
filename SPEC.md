@@ -397,15 +397,21 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   — its value is marked, and its own voice decides the context below — ahead of the
   selection. **PSG detents** (`core/velocitymodel.h`): when the lane's context is one
   CGB channel — the hovered note's voice, else the selected notes' if they agree on
-  one channel, else the voice in effect at the playhead/edit cursor — the ruler
-  becomes one labeled row per real loudness level ("Vol 1…N", the active levels
-  accented), nodes sit at their level's row rather than their stored velocity, the
-  level boundaries paint across the plot for as long as that voice lasts
-  (`song_view_psg_velocity_levels`), and every edit lands on a level: drags move
+  one channel *and one volume*, else the voice in effect at the playhead/edit cursor
+  — the ruler becomes one labeled row per real loudness level ("Vol 1…N", the active
+  levels accented), nodes sit at their level's row rather than their stored velocity,
+  the level boundaries paint across the plot for as long as that voice and volume
+  last (`song_view_psg_velocity_levels`), and every edit lands on a level: drags move
   whole levels (returning to the level it started in restores the exact velocity it
   found there), ruler clicks and strokes take the level's representative, and each
   note answers to its own voice, so a selection across a voice change still lands
-  correctly on both sides. The header's **Detents** chip (shown only where there are
+  correctly on both sides. The levels are the engine's, derived per note from
+  velocity *and* the compiled VOL byte together (`ChnVolSetAsm` then `CgbModVol`):
+  mid2agb folds the song's master volume into every VOL (`vol*mvl/mxv`), so a
+  quieter song genuinely has fewer detents rather than the same ones played softer —
+  a square channel has 16 levels at full volume, 8 at volume 64, and none below
+  about 16, where it is silent whatever the velocity says and the lane keeps the
+  plain ruler. The header's **Detents** chip (shown only where there are
   detents, and rearmed whenever the context leaves PSG) puts the plain ruler and
   exact values back for the track, and holding `velocity.detent_unlock` (**Ctrl** by
   default, read at the press) does the same for one gesture. The **right button** is

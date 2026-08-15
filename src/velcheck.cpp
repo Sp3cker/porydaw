@@ -43,7 +43,11 @@ extern "C" {
 // cannot tell apart. The numbers here are the engine's, not a design choice —
 // the effective-velocity rounding is m4a's, the 16 envelope steps are the CGB
 // channels', and the wave channel's five loudness classes are gCgb3Vol's
-// distinct outputs (external/poryaaaa/plugin/m4a_tables.c).
+// distinct outputs (external/poryaaaa/plugin/m4a_tables.c). Volume is part of
+// the question: the engine derives a CGB note's loudness from velocity and
+// the track's compiled VOL byte together, and mid2agb has already folded the
+// song's master volume into that byte, so a quieter song genuinely has fewer
+// detents rather than the same ones played softer.
 // Ported from specker/cleanup/psg-velocity-history-pr's velocity-model check.
 
 namespace {
@@ -52,6 +56,11 @@ bool equals(const std::optional<std::size_t> &value, std::size_t expected)
 {
     return value && *value == expected;
 }
+
+// A track at full volume in a song at full master volume: the level tables
+// most of this check describes are that case, which is also the only one the
+// detents used to model.
+constexpr uint8_t kFullVolume = uint8_t(kM4aMaxVolume);
 
 } // namespace
 
@@ -75,12 +84,12 @@ int runVelocityModelCheck()
     waveTone.type = VOICE_PROGRAMMABLE_WAVE;
     ToneData directSoundTone{};
     directSoundTone.type = VOICE_DIRECTSOUND;
-    const VelocityMap square = VelocityMap::resolve(&squareTone, 60);
-    const VelocityMap squareTwo = VelocityMap::resolve(&squareTwoTone, 60);
-    const VelocityMap noise = VelocityMap::resolve(&noiseTone, 60);
-    const VelocityMap wave = VelocityMap::resolve(&waveTone, 60);
-    const VelocityMap directSound = VelocityMap::resolve(&directSoundTone, 60);
-    const VelocityMap unresolved = VelocityMap::resolve(nullptr, std::nullopt);
+    const VelocityMap square = VelocityMap::resolve(&squareTone, 60, kFullVolume);
+    const VelocityMap squareTwo = VelocityMap::resolve(&squareTwoTone, 60, kFullVolume);
+    const VelocityMap noise = VelocityMap::resolve(&noiseTone, 60, kFullVolume);
+    const VelocityMap wave = VelocityMap::resolve(&waveTone, 60, kFullVolume);
+    const VelocityMap directSound = VelocityMap::resolve(&directSoundTone, 60, kFullVolume);
+    const VelocityMap unresolved = VelocityMap::resolve(nullptr, std::nullopt, kFullVolume);
 
     check(square.isPsg() && std::strcmp(square.voiceName(), "Square 1") == 0,
           "Square 1 should resolve intrinsically");
@@ -100,15 +109,15 @@ int runVelocityModelCheck()
     squareAltTone.type = VOICE_SQUARE_1_ALT;
     ToneData directSoundAltTone{};
     directSoundAltTone.type = VOICE_DIRECTSOUND_ALT;
-    check(VelocityMap::resolve(&squareAltTone, 60) == square,
+    check(VelocityMap::resolve(&squareAltTone, 60, kFullVolume) == square,
           "the alternate Square 1 type should map to the same voice");
-    check(!VelocityMap::resolve(&directSoundAltTone, 60).isPsg() &&
-              VelocityMap::resolve(&directSoundAltTone, 60) == directSound,
+    check(!VelocityMap::resolve(&directSoundAltTone, 60, kFullVolume).isPsg() &&
+              VelocityMap::resolve(&directSoundAltTone, 60, kFullVolume) == directSound,
           "the alternate DirectSound type should stay continuous");
 
     ToneData invalidTone{};
     invalidTone.type = VOICE_CRY;
-    const VelocityMap invalid = VelocityMap::resolve(&invalidTone, 60);
+    const VelocityMap invalid = VelocityMap::resolve(&invalidTone, 60, kFullVolume);
     check(!invalid.isPsg() && invalid != directSound,
           "a cry voice masks to no CGB channel and is not DirectSound either");
     // The nested child's CGB bits would classify as Square 1 if the second
@@ -118,7 +127,8 @@ int runVelocityModelCheck()
     ToneData nestedSplit{};
     nestedSplit.type = VOICE_KEYSPLIT_ALL;
     nestedSplit.subGroup = nestedChildren.data();
-    check(!VelocityMap::resolve(&nestedSplit, 60).isPsg(), "nested keysplit should be invalid");
+    check(!VelocityMap::resolve(&nestedSplit, 60, kFullVolume).isPsg(),
+          "nested keysplit should be invalid");
     // The children here are PSG, so only refusing to guess a key keeps this
     // keysplit continuous.
     std::array<ToneData, 128> psgChildren{};
@@ -126,12 +136,12 @@ int runVelocityModelCheck()
     ToneData keylessSplit{};
     keylessSplit.type = VOICE_KEYSPLIT_ALL;
     keylessSplit.subGroup = psgChildren.data();
-    check(!VelocityMap::resolve(&keylessSplit, std::nullopt).isPsg() &&
-              VelocityMap::resolve(&keylessSplit, 60).isPsg(),
+    check(!VelocityMap::resolve(&keylessSplit, std::nullopt, kFullVolume).isPsg() &&
+              VelocityMap::resolve(&keylessSplit, 60, kFullVolume).isPsg(),
           "keyless keysplit should remain continuous");
     ToneData subgroupLessSplit{};
     subgroupLessSplit.type = VOICE_KEYSPLIT_ALL;
-    check(!VelocityMap::resolve(&subgroupLessSplit, 60).isPsg(),
+    check(!VelocityMap::resolve(&subgroupLessSplit, 60, kFullVolume).isPsg(),
           "a keysplit without a subgroup must not be dereferenced");
     std::array<ToneData, 128> splitChildren{};
     std::array<uint8_t, 128> splitTable{};
@@ -141,13 +151,13 @@ int runVelocityModelCheck()
     splitTone.type = VOICE_KEYSPLIT;
     splitTone.subGroup = splitChildren.data();
     splitTone.keySplitTable = splitTable.data();
-    const VelocityMap keyedSplit = VelocityMap::resolve(&splitTone, 60);
+    const VelocityMap keyedSplit = VelocityMap::resolve(&splitTone, 60, kFullVolume);
     check(keyedSplit.isPsg() && std::strcmp(keyedSplit.voiceName(), "Programmable Wave") == 0,
           "keyed keysplit should resolve its selected voice");
     ToneData tableLessSplit{};
     tableLessSplit.type = VOICE_KEYSPLIT;
     tableLessSplit.subGroup = splitChildren.data();
-    check(!VelocityMap::resolve(&tableLessSplit, 60).isPsg(),
+    check(!VelocityMap::resolve(&tableLessSplit, 60, kFullVolume).isPsg(),
           "a table-less VOICE_KEYSPLIT must not be indexed");
 
     const std::array<uint8_t, 16> squareNoiseRepresentatives = {
@@ -237,6 +247,84 @@ int runVelocityModelCheck()
     // its own level; stepping away and back lands on the representative.
     check(square.moveLevels(square.moveLevels(65, 1), -1) == 68,
           "stepping off a level and back should land on that level's representative");
+
+    // --- the track volume is half of what a CGB channel can be heard doing.
+    // A note's loudness is a 4-bit envelope goal the engine derives from
+    // velocity and volume TOGETHER, so a quieter song has fewer detents to
+    // snap between, not the same detents played quieter.
+    check(m4aEffectiveTrackVolume(127, 127) == 127 && m4aEffectiveTrackVolume(127, 64) == 64 &&
+              m4aEffectiveTrackVolume(64, 127) == 64 && m4aEffectiveTrackVolume(100, 90) == 70 &&
+              m4aEffectiveTrackVolume(127, 0) == 0,
+          "the compiled VOL byte should be mid2agb's own vol*mvl/mxv");
+    check(m4aEffectiveTrackVolume(-5, 200) == 0 && m4aEffectiveTrackVolume(200, -5) == 0 &&
+              m4aEffectiveTrackVolume(200, 200) == 127,
+          "the compiled VOL byte should clamp both of its inputs");
+
+    // Level counts across the volume range, each one the engine's own answer
+    // (ChnVolSetAsm then CgbModVol) for how many distinct goals velocity 1-127
+    // can still reach at that volume.
+    const std::array<std::pair<uint8_t, std::size_t>, 7> squareCounts = {
+        std::pair<uint8_t, std::size_t>{127, 16},
+        {112, 14},
+        {96, 12},
+        {64, 8},
+        {32, 4},
+        {16, 2},
+        {8, 1},
+    };
+    bool squareCountsMatch = true;
+    for (const auto &[volume, expected] : squareCounts) {
+        squareCountsMatch = squareCountsMatch &&
+                            VelocityMap::resolve(&squareTone, 60, volume).levelCount() == expected;
+    }
+    check(squareCountsMatch, "a square channel should lose levels as the track volume falls");
+    const std::array<std::pair<uint8_t, std::size_t>, 4> waveCounts = {
+        std::pair<uint8_t, std::size_t>{127, 5},
+        {96, 4},
+        {64, 3},
+        {16, 1},
+    };
+    bool waveCountsMatch = true;
+    for (const auto &[volume, expected] : waveCounts) {
+        waveCountsMatch =
+            waveCountsMatch && VelocityMap::resolve(&waveTone, 60, volume).levelCount() == expected;
+    }
+    check(waveCountsMatch, "the wave channel's five classes should thin out with the volume too");
+
+    // At exactly half volume the square channel's eight surviving levels are
+    // sixteen velocities wide apiece — the full-volume table with every
+    // second boundary gone.
+    const VelocityMap halfSquare = VelocityMap::resolve(&squareTone, 60, 64);
+    check(rangesTile(halfSquare), "a reduced-volume level table should still tile 1-127");
+    check(halfSquare.levelRange(0).last == 16 && halfSquare.levelRange(1).first == 17 &&
+              halfSquare.levelRange(7).first == 113 && halfSquare.levelRange(7).last == 127 &&
+              halfSquare.representative(0) == 1 && halfSquare.representative(1) == 24 &&
+              halfSquare.representative(7) == 127,
+          "half volume should halve the square channel's levels and widen each one");
+    const VelocityMap halfWave = VelocityMap::resolve(&waveTone, 60, 64);
+    check(rangesTile(halfWave) && halfWave.levelRange(0).last == 32 &&
+              halfWave.levelRange(1).last == 96 && halfWave.levelRange(2).first == 97,
+          "half volume should leave the wave channel three of its five classes");
+
+    // Quiet enough and the channel is simply inaudible whatever the velocity
+    // says. There is nothing to snap between there, so the lane must not
+    // offer detents that would rewrite every velocity it touched to 1.
+    const VelocityMap silentSquare = VelocityMap::resolve(&squareTone, 60, 8);
+    check(silentSquare.isPsg() && silentSquare.levelCount() == 1 && !silentSquare.hasDetents() &&
+              equals(silentSquare.levelOf(127), 0),
+          "a volume too low to reach the first envelope step should leave no detents");
+    check(square.hasDetents() && wave.hasDetents() && !directSound.hasDetents() &&
+              VelocityMap::resolve(&squareTone, 60, 16).hasDetents() &&
+              !VelocityMap::resolve(&waveTone, 60, 16).hasDetents(),
+          "two or more reachable levels is what makes a channel detented");
+
+    // Volume is part of the ruler's identity: notes under different volumes
+    // are on different level tables and cannot share one intrinsic context.
+    check(square == VelocityMap::resolve(&squareTone, 60, kFullVolume) && square != halfSquare &&
+              !square.compatibleWith(halfSquare) && halfSquare.compatibleWith(halfSquare),
+          "maps under different track volumes must not be mistaken for each other");
+    check(directSound == VelocityMap::resolve(&directSoundTone, 60, 64),
+          "a continuous voice is the same map at any volume");
 
     // The deferred-gesture bookkeeping behind every lane edit: it holds
     // identities and preview values, and hands back one all-or-nothing batch
@@ -452,9 +540,11 @@ int runVelocityAxisBandCheck(const std::function<void(bool, const char *)> &chec
     squareTone.type = VOICE_SQUARE_1;
     ToneData waveTone{};
     waveTone.type = VOICE_PROGRAMMABLE_WAVE;
-    const std::array<VelocityMap, 2> voiceProbes = {VelocityMap::resolve(&squareTone, 60),
-                                                    VelocityMap::resolve(&waveTone, 60)};
-    const VelocityAxis continuous(VelocityMap::resolve(nullptr, std::nullopt), geometry);
+    const std::array<VelocityMap, 2> voiceProbes = {
+        VelocityMap::resolve(&squareTone, 60, kFullVolume),
+        VelocityMap::resolve(&waveTone, 60, kFullVolume)};
+    const VelocityAxis continuous(VelocityMap::resolve(nullptr, std::nullopt, kFullVolume),
+                                  geometry);
     check(continuous.mode() == VelocityAxis::Mode::Continuous && continuous.graduationCount() == 0,
           "a voice with no levels must leave the ruler continuous");
     bool rowsOrdered = true;
@@ -1407,6 +1497,7 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     int psgTrack = -1;
     int continuousTrack = -1;
     VelocityMap psgMap;
+    VelocityMap psgMapAtFullVolume;
     for (int candidate = 0; candidate < 16; candidate++) {
         const ViewNote *first = nullptr;
         for (const ViewNote &note : view.model().notes) {
@@ -1418,11 +1509,16 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
         if (!first)
             continue;
         view.selectTrack(candidate);
+        const SongView::VoiceContext context = view.voiceContext(first->startTick);
         const VelocityMap map =
-            VelocityMap::resolve(view.voiceContext(first->startTick).voice, first->key);
+            VelocityMap::resolve(context.voice, first->key, context.trackVolume);
         if (map.isPsg() && psgTrack < 0) {
             psgTrack = candidate;
             psgMap = map;
+            // The same voice as the song would sound with nothing turned
+            // down: the yardstick for "the master volume really moved the
+            // ruler" below.
+            psgMapAtFullVolume = VelocityMap::resolve(context.voice, first->key, kFullVolume);
         } else if (!map.isPsg() && continuousTrack < 0) {
             continuousTrack = candidate;
         }
@@ -1442,6 +1538,77 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
               lane->property("velocityLevelCount").toInt() == int(psgMap.levelCount()) &&
               lane->property("velocityDetents").toInt() == 1,
           "a PSG track must put the lane on that channel's own volume levels");
+
+    // --- the ruler is the song's, not a full-volume idealization. The
+    // fixture is mastered below mxv, and mid2agb folds that into every VOL
+    // byte, so the channel reaches fewer of its envelope steps than the
+    // sixteen a song at full volume would.
+    check(doc.cfg().masterVolume < kM4aMaxVolume &&
+              psgMap.levelCount() < psgMapAtFullVolume.levelCount(),
+          "the fixture's reduced master volume must cost the channel levels");
+    const int levelsAtSongVolume = lane->property("velocityLevelCount").toInt();
+    const int undoBeforeVolume = doc.undoStack()->index();
+    SongCfg loudCfg = doc.cfg();
+    loudCfg.masterVolume = kM4aMaxVolume;
+    doc.setCfg(loudCfg);
+    view.updateSong(view.timeline());
+    (void)view.grab();
+    check(lane->property("velocityLevelCount").toInt() == int(psgMapAtFullVolume.levelCount()) &&
+              lane->property("velocityLevelCount").toInt() > levelsAtSongVolume,
+          "turning the master volume up must give the ruler its missing levels back");
+    doc.undoStack()->undo();
+    view.updateSong(view.timeline());
+    (void)view.grab();
+    check(doc.cfg().masterVolume < kM4aMaxVolume && doc.undoStack()->index() == undoBeforeVolume &&
+              lane->property("velocityLevelCount").toInt() == levelsAtSongVolume,
+          "undoing the master volume must put the song's own ruler back");
+
+    // --- the track's own VOL is the other half of that byte. A volume change
+    // mid-song ends the level table exactly as a voice change does: past it
+    // the same channel reaches a different set of steps, so the plot's level
+    // lines must stop there rather than run on across the change.
+    const AutoLane *volumeLane = nullptr;
+    const LanePoint *volumeChange = nullptr;
+    for (const AutoLane &candidate : view.model().lanes) {
+        if (candidate.cc != 7 || candidate.points.size() < 2)
+            continue;
+        for (std::size_t index = 1; index < candidate.points.size(); index++) {
+            // A change the master volume does not quantize away, so the
+            // level table really differs on the two sides of it.
+            if (m4aEffectiveTrackVolume(candidate.points[index].value, doc.cfg().masterVolume) !=
+                m4aEffectiveTrackVolume(candidate.points[index - 1].value,
+                                        doc.cfg().masterVolume)) {
+                volumeLane = &candidate;
+                volumeChange = &candidate.points[index];
+                break;
+            }
+        }
+        if (volumeLane)
+            break;
+    }
+    if (!volumeLane) {
+        fail("the fixture must have a track whose VOL really changes mid-song");
+        return failures == 0 ? 0 : 1;
+    }
+    view.selectTrack(volumeLane->track);
+    const uint64_t changeTick = volumeChange->tick;
+    const SongView::VoiceContext beforeChange = view.voiceContext(changeTick - 1);
+    const SongView::VoiceContext atChange = view.voiceContext(changeTick);
+    check(beforeChange.trackVolume != atChange.trackVolume &&
+              atChange.trackVolume ==
+                  m4aEffectiveTrackVolume(volumeChange->value, doc.cfg().masterVolume),
+          "a VOL point must move the compiled volume the levels are derived from");
+    check(beforeChange.endTick <= changeTick,
+          "a voice context must end where the track's volume changes");
+    check(view.trackVolumeAt(volumeLane->track, changeTick) == atChange.trackVolume &&
+              view.trackVolumeAt(volumeLane->track, 0) ==
+                  m4aEffectiveTrackVolume(volumeLane->points.front().tick == 0
+                                              ? volumeLane->points.front().value
+                                              : kM4aMaxVolume,
+                                          doc.cfg().masterVolume),
+          "the track volume before the first VOL point is mid2agb's priming 127");
+    view.selectTrack(psgTrack);
+    (void)view.grab();
 
     // A note to edit: isolated under the camera, off the overlays' verticals,
     // with a level either side of its own to move into, and a stored velocity
@@ -1670,7 +1837,8 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     for (const ViewNote &note : view.model().notes) {
         if (note.track != psgTrack || !note.noteId.isAssigned())
             continue;
-        if (!VelocityMap::resolve(view.voiceContext(note.startTick).voice, note.key).isPsg())
+        const SongView::VoiceContext context = view.voiceContext(note.startTick);
+        if (!VelocityMap::resolve(context.voice, note.key, context.trackVolume).isPsg())
             mixedProbe = &note;
         if (mixedProbe)
             break;

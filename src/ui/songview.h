@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "core/miditimeline.h"
+#include "core/velocitymodel.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
 
@@ -273,16 +274,25 @@ class SongView : public QWidget
     // voice changes.
     int currentProgram(int track) const;
     // The selected track's voice at a tick, resolved through the loaded
-    // voicegroup, plus the tick its voice change ends at (UINT64_MAX past
-    // the last one). The velocity lane needs both: the voice decides whether
-    // velocities have PSG detents at all, and the span says how far across
-    // the plot that voice's level lines reach.
+    // voicegroup, with the track volume in force there and the tick where
+    // either of them next changes (UINT64_MAX past the last change). The
+    // velocity lane needs all three: on a CGB channel the voice and the
+    // volume together decide what loudness levels exist, and endTick says how
+    // far across the plot that one set of level lines reaches.
     struct VoiceContext {
         const ToneData *voice = nullptr;
         int program = -1;
         uint64_t endTick = UINT64_MAX;
+        // The compiled VOL byte: the track's own volume with the song's
+        // master volume already folded in (m4aEffectiveTrackVolume).
+        uint8_t trackVolume = uint8_t(kM4aMaxVolume);
     };
     VoiceContext voiceContext(uint64_t tick) const;
+    // The compiled VOL byte in force on a track at a tick: its CC7 automation
+    // (127 before the first point, as mid2agb primes it) with the song's
+    // master volume folded in. When nextChangeTick is given it is lowered to
+    // the next VOL point past the tick, if that comes first.
+    uint8_t trackVolumeAt(int track, uint64_t tick, uint64_t *nextChangeTick = nullptr) const;
     QString instrumentLabel(int track) const; // "042 name (type)" from the voicegroup
     QString voiceShortName(uint8_t program) const;
     QString voiceLabel(uint8_t program) const; // "042 name", the marker/header format

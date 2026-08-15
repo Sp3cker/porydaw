@@ -3,29 +3,52 @@
 #include <algorithm>
 #include <array>
 
+#include "core/mid2agbtables.h"
+
 namespace {
 
 constexpr int kMinimumVelocity = 1;
 constexpr int kMaximumVelocity = 127;
-// The engine drives a CGB channel's envelope from the top 4 bits of the
-// effective velocity, so the 127 stored values collapse onto 16 levels. Each
-// representative is the value the UI writes for its level; the endpoints keep
-// 1 and 127 so a canonicalized velocity never leaves the MIDI range.
-constexpr std::array<uint8_t, 16> kPsgRepresentatives = {
-    1, 12, 20, 28, 36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 127,
-};
-// The wave channel's NR32 has only five distinct output levels, so gCgb3Vol
-// maps groups of the 16 envelope steps onto the same loudness (see
-// m4a_tables.c: steps 0-1 mute, 2-5, 6-9, 10-13, then 14-15).
-constexpr std::array<uint8_t, 5> kWaveRepresentatives = {1, 32, 64, 96, 127};
-constexpr std::array<VelocityLevelRange, 5> kWaveRanges = {
-    VelocityLevelRange{1, 16},   VelocityLevelRange{17, 48},   VelocityLevelRange{49, 80},
-    VelocityLevelRange{81, 112}, VelocityLevelRange{113, 127},
+// The engine's own default for a track's volume multiplier (m4a_engine.c
+// sets volX = 64 when a track is initialized). Nothing in a .mid can change
+// it — only MPlayVolumeControl, which songs do not carry — so the detents
+// take it as fixed.
+constexpr int kDefaultVolX = 64;
+// gCgb3Vol (m4a_tables.c): the wave channel's NR32 has only five distinct
+// output levels, so groups of envelope steps share one loudness — steps 0-1
+// mute, 2-5 at 25%, 6-9 at 50%, 10-13 at 75%, then 14-15 at 100%.
+constexpr std::array<uint8_t, 16> kWaveClassOfEnvelopeGoal = {
+    0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4,
 };
 
 uint8_t clampVelocity(int velocity)
 {
     return uint8_t(std::clamp(velocity, kMinimumVelocity, kMaximumVelocity));
+}
+
+// The 4-bit envelope goal a CGB channel is started at — the number NRx2's
+// initial-volume nibble receives, and so the only thing about a note the
+// hardware actually hears. This is the engine's chain verbatim
+// (external/poryaaaa/plugin/m4a_engine.c and m4a_channel.c):
+//
+//   mid2agb rounds the stored velocity up to a multiple of 4,
+//   TrkVolPitSet   x = (volume * volX) >> 5, then volMR/volML from the pan,
+//   ChnVolSetAsm   right/left = (pan * velocity * volMR/volML) >> 14, cap 255,
+//   CgbModVol      goal = (left + right) / 16.
+//
+// Pan is taken as centered. It is not an omission: hard-panning doubles one
+// side and zeroes the other, so CgbModVol's sum — and therefore the goal —
+// comes out the same to within a step. Volume is the term that really moves
+// the levels, and it is the one this takes.
+int cgbEnvelopeGoal(int storedVelocity, int trackVolume)
+{
+    const int velocity = mid2agbEffectiveVelocity(clampVelocity(storedVelocity));
+    const int x = (trackVolume * kDefaultVolX) >> 5;
+    const int volMR = (128 * x) >> 8; // centered pan: y = 0
+    const int volML = (127 * x) >> 8;
+    const int right = std::min(255, (128 * velocity * volMR) >> 14);
+    const int left = std::min(255, (127 * velocity * volML) >> 14);
+    return (left + right) / 16;
 }
 
 bool isDirectSoundVoiceType(uint8_t voiceType)
@@ -87,13 +110,21 @@ const ToneData *resolveVoice(const ToneData *tone, std::optional<uint8_t> key,
 
 } // namespace
 
-VelocityMap VelocityMap::resolve(const ToneData *tone, std::optional<uint8_t> key)
+uint8_t m4aEffectiveTrackVolume(int volumeEvent, int masterVolume)
+{
+    const int volume = std::clamp(volumeEvent, 0, kM4aMaxVolume);
+    const int master = std::clamp(masterVolume, 0, kM4aMaxVolume);
+    return uint8_t(volume * master / kM4aMaxVolume);
+}
+
+VelocityMap VelocityMap::resolve(const ToneData *tone, std::optional<uint8_t> key,
+                                 uint8_t trackVolume)
 {
     VelocityVoice failure = VelocityVoice::Invalid;
     const ToneData *resolved = resolveVoice(tone, key, &failure);
     if (!resolved)
-        return VelocityMap(failure);
-    return VelocityMap(velocityVoiceForType(resolved->type));
+        return VelocityMap(failure, trackVolume);
+    return VelocityMap(velocityVoiceForType(resolved->type), trackVolume);
 }
 
 bool VelocityMap::isKeyless() const
@@ -107,9 +138,16 @@ bool VelocityMap::isPsg() const
            m_voice == VelocityVoice::Wave || m_voice == VelocityVoice::Noise;
 }
 
+bool VelocityMap::hasDetents() const
+{
+    return levelCount() > 1;
+}
+
 bool VelocityMap::operator==(const VelocityMap &other) const
 {
-    return m_voice == other.m_voice;
+    // Two CGB maps under different volumes describe different level tables,
+    // so they are not the same ruler even on the same channel.
+    return m_voice == other.m_voice && (!isPsg() || m_trackVolume == other.m_trackVolume);
 }
 
 bool VelocityMap::operator!=(const VelocityMap &other) const
@@ -119,7 +157,8 @@ bool VelocityMap::operator!=(const VelocityMap &other) const
 
 bool VelocityMap::compatibleWith(const VelocityMap &other) const
 {
-    return isPsg() && other.isPsg() && m_voice == other.m_voice;
+    return isPsg() && other.isPsg() && m_voice == other.m_voice &&
+           m_trackVolume == other.m_trackVolume;
 }
 
 const char *VelocityMap::voiceName() const
@@ -138,12 +177,21 @@ const char *VelocityMap::voiceName() const
     }
 }
 
+std::size_t VelocityMap::levelAt(int storedVelocity) const
+{
+    const int goal = cgbEnvelopeGoal(storedVelocity, m_trackVolume);
+    return m_voice == VelocityVoice::Wave ? kWaveClassOfEnvelopeGoal[std::size_t(goal)]
+                                          : std::size_t(goal);
+}
+
 std::size_t VelocityMap::levelCount() const
 {
     if (!isPsg())
         return 0;
-    return m_voice == VelocityVoice::Wave ? kWaveRepresentatives.size()
-                                          : kPsgRepresentatives.size();
+    // The levels run from 0 (silence) up to whatever velocity 127 reaches,
+    // with none skipped: one step of effective velocity moves CgbModVol's sum
+    // by at most 8, so it can never jump a whole 16-wide goal.
+    return levelAt(kMaximumVelocity) + 1;
 }
 
 VelocityLevelRange VelocityMap::levelRange(int requestedLevel) const
@@ -153,50 +201,49 @@ VelocityLevelRange VelocityMap::levelRange(int requestedLevel) const
         const uint8_t velocity = clampVelocity(requestedLevel);
         return {velocity, velocity};
     }
-    const int highestLevel = int(levelCount()) - 1;
-    const int level = std::clamp(requestedLevel, 0, highestLevel);
-    if (m_voice == VelocityVoice::Wave)
-        return kWaveRanges[std::size_t(level)];
-    return {
-        uint8_t(level == 0 ? kMinimumVelocity : level * 8 + 1),
-        uint8_t(level == highestLevel ? kMaximumVelocity : (level + 1) * 8),
+    const std::size_t level = std::size_t(std::clamp(requestedLevel, 0, int(levelCount()) - 1));
+    // levelAt is non-decreasing in the stored velocity, so each level owns one
+    // contiguous run and its ends are two binary searches. This is on the
+    // per-note paint path, so it is worth not walking all 127 values.
+    const auto firstReaching = [this](std::size_t wanted) {
+        int low = kMinimumVelocity;
+        int high = kMaximumVelocity;
+        while (low < high) {
+            const int mid = low + (high - low) / 2;
+            if (levelAt(mid) < wanted)
+                low = mid + 1;
+            else
+                high = mid;
+        }
+        return low;
     };
+    const int first = firstReaching(level);
+    const int last = level + 1 == levelCount() ? kMaximumVelocity : firstReaching(level + 1) - 1;
+    return {uint8_t(first), uint8_t(last)};
 }
 
 std::optional<std::size_t> VelocityMap::levelOf(int storedVelocity) const
 {
     if (!isPsg())
         return std::nullopt;
-    const int stored = clampVelocity(storedVelocity);
-    // The engine's effective velocity: quantized up to a multiple of 4 and
-    // capped at 127 before the envelope takes its top 4 bits.
-    const int effective = std::min(((stored + 3) / 4) * 4, kMaximumVelocity);
-    const int hardwareLevel = (effective - 1) / 8;
-    if (m_voice != VelocityVoice::Wave)
-        return std::size_t(hardwareLevel);
-    if (hardwareLevel <= 1)
-        return std::size_t{0};
-    if (hardwareLevel <= 5)
-        return std::size_t{1};
-    if (hardwareLevel <= 9)
-        return std::size_t{2};
-    if (hardwareLevel <= 13)
-        return std::size_t{3};
-    return std::size_t{4};
+    return levelAt(storedVelocity);
 }
 
 uint8_t VelocityMap::representative(int requestedLevel) const
 {
     if (!isPsg())
         return clampVelocity(requestedLevel);
-    if (m_voice == VelocityVoice::Wave) {
-        const int highestLevel = int(kWaveRepresentatives.size()) - 1;
-        const std::size_t level = std::size_t(std::clamp(requestedLevel, 0, highestLevel));
-        return kWaveRepresentatives[level];
-    }
-    const int highestLevel = int(kPsgRepresentatives.size()) - 1;
-    const std::size_t level = std::size_t(std::clamp(requestedLevel, 0, highestLevel));
-    return kPsgRepresentatives[level];
+    const int level = std::clamp(requestedLevel, 0, int(levelCount()) - 1);
+    const VelocityLevelRange range = levelRange(level);
+    // The value the UI writes for the level. The outermost levels keep 1 and
+    // 127 so a canonicalized velocity still spans the whole MIDI range; the
+    // rest take the middle of their band, as far from either neighbour as the
+    // level's own width allows.
+    if (level == 0)
+        return range.first;
+    if (level + 1 == int(levelCount()))
+        return range.last;
+    return uint8_t((int(range.first) + int(range.last)) / 2);
 }
 
 uint8_t VelocityMap::canonicalize(int proposedVelocity) const

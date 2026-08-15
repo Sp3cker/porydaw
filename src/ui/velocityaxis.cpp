@@ -50,7 +50,10 @@ VelocityAxis::VelocityAxis(const VelocityMap &map, const VelocityAxisGeometry &g
 
 VelocityAxis::Mode VelocityAxis::mode() const
 {
-    return m_map.levelCount() == 0 ? Mode::Continuous : Mode::Intrinsic;
+    // A channel whose volume has left it a single (silent) step has no rows
+    // to snap between, so it reads as continuous rather than as a one-row
+    // ruler that would rewrite every velocity it touched to 1.
+    return m_map.hasDetents() ? Mode::Intrinsic : Mode::Continuous;
 }
 
 double VelocityAxis::levelToY(int level) const

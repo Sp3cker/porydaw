@@ -5471,9 +5471,13 @@ bool velDetentUnlockHeld(Qt::KeyboardModifiers modifiers, bool allowShift)
 // (VelocityMap): the ruler becomes one labeled row per level, nodes sit at
 // their level's center, the level boundaries paint across the plot for as
 // far as the voice lasts, and edits move whole levels instead of stored
-// values. The header's Detents chip turns that off for the track, and the
-// velocity.detent_unlock chord (Ctrl by default, read at the press) unlocks
-// exact values for one gesture. Still to come: the marquee.
+// values. Those levels are computed from the track's compiled VOL byte as
+// well as the velocity — the song's master volume is folded into it — so a
+// quiet song has fewer of them, and a section too quiet to reach the first
+// envelope step has none at all and keeps the plain ruler. The header's
+// Detents chip turns that off for the track, and the velocity.detent_unlock
+// chord (Ctrl by default, read at the press) unlocks exact values for one
+// gesture. Still to come: the marquee.
 class VelocityLane : public TimelineSurface
 {
   public:
@@ -5525,12 +5529,13 @@ class VelocityLane : public TimelineSurface
 
         const VelocityMap context = currentContext();
         // Leaving PSG rearms the detents: the chip is a per-track choice
-        // about a voice, not a mode the lane keeps once that voice is gone.
+        // about a voice, not a mode the lane keeps once that voice is gone
+        // (or once the volume has left it nothing to snap between).
         // Read off the track's own context, never the hover — passing the
         // pointer over a DirectSound node must not undo the choice. Doing it
         // here is safe because a continuous context paints the same either
         // way, so nothing needs repainting.
-        if (!trackContext().isPsg())
+        if (!trackContext().hasDetents())
             m_useDetents = true;
         paintDetentChip(p, context);
         const std::vector<uint8_t> active = activeVelocities();
@@ -5943,20 +5948,23 @@ class VelocityLane : public TimelineSurface
             if (note.track != m_sv->selectedTrack() || !m_sv->isSelected(note))
                 continue;
             const VelocityMap map = contextForNote(note);
-            if (!map.isPsg() || (shared && !shared->compatibleWith(map)))
+            if (!map.hasDetents() || (shared && !shared->compatibleWith(map)))
                 return VelocityMap();
             shared = map;
         }
         if (shared)
             return *shared;
-        return VelocityMap::resolve(m_sv->voiceContext(m_sv->displayTick()).voice, std::nullopt);
+        const SongView::VoiceContext context = m_sv->voiceContext(m_sv->displayTick());
+        return VelocityMap::resolve(context.voice, std::nullopt, context.trackVolume);
     }
 
     // A note's own voice, resolved with its key so a keysplit answers for
-    // the sound this note actually makes.
+    // the sound this note actually makes — and at the volume in force where
+    // it starts, since that is half of what its channel can be heard doing.
     VelocityMap contextForNote(const ViewNote &note) const
     {
-        return VelocityMap::resolve(m_sv->voiceContext(note.startTick).voice, note.key);
+        const SongView::VoiceContext context = m_sv->voiceContext(note.startTick);
+        return VelocityMap::resolve(context.voice, note.key, context.trackVolume);
     }
 
     // The map the ruler is built from: the context, unless the track's
@@ -6540,14 +6548,15 @@ class VelocityLane : public TimelineSurface
             const uint64_t sectionEnd = std::min(uint64_t(std::ceil(lastTick)), context.endTick);
             if (sectionEnd <= sectionTick)
                 break;
-            VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt);
+            VelocityMap map =
+                VelocityMap::resolve(context.voice, std::nullopt, context.trackVolume);
             // A keysplit answers per key, so its section has no single level
             // table to draw — but its notes resolved with their own keys are
             // what put the ruler on levels, so the ruler's map is the one
             // they snapped to and the one the lines belong to.
             if (map.isKeyless() && intrinsic(axis))
                 map = axis.map();
-            if (map.isPsg()) {
+            if (map.hasDetents()) {
                 const double left = std::max<double>(
                     plot.left(), m_sv->displayX(double(sectionTick), kGutterW, dpr));
                 const double right = std::min<double>(
@@ -6567,7 +6576,7 @@ class VelocityLane : public TimelineSurface
     // chip and its own label — the label is the one that stays.
     QRect detentChipRect(const VelocityMap &context) const
     {
-        if (!context.isPsg())
+        if (!context.hasDetents())
             return {};
         const int inset = lyt::space(Space::Two);
         const QFontMetrics metrics(typography::caption(font()));
@@ -8916,6 +8925,30 @@ int SongView::currentProgram(int track) const
     return programAtTick(track, displayTick());
 }
 
+uint8_t SongView::trackVolumeAt(int track, uint64_t tick, uint64_t *nextChangeTick) const
+{
+    // mid2agb primes every track with VOL 127 before its first event
+    // (agb.cpp PrintTrackHeader), so a track that never sets a volume still
+    // plays at full track volume — scaled by the song's master volume.
+    int volume = kM4aMaxVolume;
+    for (const AutoLane &lane : m_model.lanes) {
+        if (lane.track != track || lane.cc != 7)
+            continue;
+        for (const LanePoint &point : lane.points) { // sorted by tick
+            if (point.tick <= tick) {
+                volume = point.value;
+                continue;
+            }
+            if (nextChangeTick)
+                *nextChangeTick = std::min(*nextChangeTick, uint64_t(point.tick));
+            break;
+        }
+        break;
+    }
+    const int master = m_document ? m_document->cfg().masterVolume : kM4aMaxVolume;
+    return m4aEffectiveTrackVolume(volume, master);
+}
+
 SongView::VoiceContext SongView::voiceContext(uint64_t tick) const
 {
     if (!m_timeline || !m_voicegroup || m_selectedTrack < 0 || m_selectedTrack >= 16)
@@ -8928,9 +8961,13 @@ SongView::VoiceContext SongView::voiceContext(uint64_t tick) const
             break;
         }
     }
+    // The track's VOL scales the CGB envelope just as the voice choice does,
+    // so a volume change ends this context too: past it the same channel has
+    // a different set of loudness levels.
+    const uint8_t volume = trackVolumeAt(m_selectedTrack, tick, &endTick);
     if (program < 0 || program >= VOICEGROUP_SIZE)
-        return {nullptr, -1, endTick};
-    return {&m_voicegroup->voices[program], program, endTick};
+        return {nullptr, -1, endTick, volume};
+    return {&m_voicegroup->voices[program], program, endTick, volume};
 }
 
 void SongView::revealVoice(int program)
