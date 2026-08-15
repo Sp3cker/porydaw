@@ -5416,6 +5416,23 @@ constexpr double kVelNodeGrabRadius = 6.0;
 constexpr double kVelStemGrabRadius = 4.0;
 constexpr double kVelStemGrabSlop = 2.0;
 
+// A node outline that survives any theme and any fill: whichever of black or
+// white holds up better against both the plot background and the fill it
+// rings. The grid ink a node is normally outlined with can be dialed away
+// entirely (View → Grid Line Contrast), which a flat track color survives on
+// its own — the velocity ramp does not, since its midrange sits at 1.0:1
+// against a light roll background and both its ends near 2:1 against a dark
+// one. A 7-DIP dot needs the edge more than the roll's note blocks do.
+QColor velNodeOutlineInk(const QColor &fill, const QColor &background)
+{
+    const auto worst = [&fill, &background](const QColor &ink) {
+        return std::min(themes::contrastRatio(ink, fill), themes::contrastRatio(ink, background));
+    };
+    const QColor white(Qt::white);
+    const QColor black(Qt::black);
+    return worst(white) > worst(black) ? white : black;
+}
+
 // Whether a press's modifiers ask for exact velocities instead of the PSG
 // voice's detents. allowShift lets the Shift a ramp is already holding ride
 // along with the bound chord, so a ramp can be unlocked too; the dialog
@@ -5441,6 +5458,8 @@ bool velDetentUnlockHeld(Qt::KeyboardModifiers modifiers, bool allowShift)
 //
 // The lane mirrors the roll's note selection (selected nodes ring, and the
 // rest dim once more than one is selected) and shares the timeline's camera.
+// Nodes carry the track's color, or the roll's velocity ramp under View →
+// Color Notes by Velocity — see paintNodes for what that costs in contrast.
 // A left drag on a node or its stem moves the whole selection's velocities
 // together, a drag from empty plot paints across the selected notes it
 // crosses, Shift ramps them along a line, and a click on a printed ruler
@@ -6587,9 +6606,25 @@ class VelocityLane : public TimelineSurface
         // must not change how the nodes on screen are colored.
         const bool dimUnselected = dimUnselectedNodes();
         const QColor trackColor = SongView::trackColor(track);
+        // Stems stay on the track's ink even under velocity colors: darkening
+        // the ramp by a third takes its low end to 1.05:1 on a dark theme,
+        // and the stem is the note's identity and duration, not its value.
         const QColor stemColor = mixTowardOklab(trackColor, Qt::black, 1.0 / 3.0);
         const QColor selectedColor = palette().highlight().color();
         const QColor nodeColor = dimUnselected ? palette().mid().color() : trackColor;
+        // View → Color Notes by Velocity, the same ramp the roll fills notes
+        // with, so a node and its note read as the same thing. Dimming still
+        // wins: an unselected node that has receded keeps the recessive ink,
+        // or the ramp would talk over the selection the lane is about to edit.
+        const bool velocityInk = m_sv->velocityColorMode();
+        const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
+        const auto nodeFill = [&](const ViewNote &note, bool selectedPass) {
+            if (dimUnselected && !selectedPass)
+                return nodeColor;
+            if (velocityInk)
+                return SongView::velocityNoteColor(displayVelocity(note));
+            return trackColor;
+        };
         // A DIP weight can still fall under one device pixel on a downscaled
         // display; never let a stem or a ring vanish.
         const qreal physicalPixel = logicalPhysicalPixel(dpr);
@@ -6624,11 +6659,13 @@ class VelocityLane : public TimelineSurface
                     p.setBrush(Qt::NoBrush);
                     p.drawEllipse(center, kVelSelRingRadius, kVelSelRingRadius);
                 }
+                const QColor fill = nodeFill(*note, selectedPass);
                 p.setPen(dimUnselected && !selectedPass
                              ? QPen(Qt::NoPen)
-                             : QPen(themes::color(themes::Role::song_view_grid),
+                             : QPen(velocityInk ? velNodeOutlineInk(fill, background)
+                                                : themes::color(themes::Role::song_view_grid),
                                     weight(kVelNodeOutline)));
-                p.setBrush(selectedPass ? trackColor : nodeColor);
+                p.setBrush(fill);
                 p.drawEllipse(center, kVelNodeRadius, kVelNodeRadius);
             }
         }
@@ -8824,6 +8861,9 @@ void SongView::setVelocityColorMode(bool on)
         return;
     m_velocityColorMode = on;
     m_roll->invalidateContent();
+    // The lane's nodes take the same ramp, so they turn over with the roll.
+    if (m_velocityLane)
+        m_velocityLane->invalidateContent();
 }
 
 void SongView::setNoteNameMode(bool on)

@@ -704,6 +704,28 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
               "the stem's weight must scale with the display, not stay a device pixel");
     }
 
+    // --- View → Color Notes by Velocity reaches the lane's nodes
+    {
+        view.setVelocityColorMode(true);
+        (void)view.grab();
+        const QImage rampImage = lane->grab().toImage();
+        const int probeRadius = int(std::ceil(2 * rasterDpr));
+        check(hasColorNear(rampImage, nodeCenter, probeRadius,
+                           SongView::velocityNoteColor(probe->velocity), 24),
+              "velocity colors must fill a node with the roll's ramp for its velocity");
+        // The stem keeps the track's ink: darkening the ramp's low end would
+        // sink it into a dark theme's background.
+        if (stemEndX - nodeCenter.x() > 8 * rasterDpr) {
+            const QPointF stemMid((nodeCenter.x() + stemEndX) / 2.0, nodeCenter.y());
+            check(hasColorNear(rampImage, stemMid, probeRadius, stemInk(trackColor), 28),
+                  "velocity colors must leave the stem on the track's ink");
+        }
+        view.setVelocityColorMode(false);
+        (void)view.grab();
+        check(hasColorNear(lane->grab().toImage(), nodeCenter, probeRadius, trackColor, 24),
+              "turning velocity colors off must return the node to the track color");
+    }
+
     // --- the roll's selection rings its nodes and marks the ruler
     check(lane->property("velocityMarkerCount").toInt() == 0,
           "an empty selection must leave the ruler unmarked");
