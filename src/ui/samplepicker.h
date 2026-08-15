@@ -77,6 +77,7 @@ class SamplePickerButton : public QPushButton
     QStringList m_keysplits, m_samples, m_phonemes;
     QString m_currentSymbol;
     bool m_fullNames = false;
+    QString m_clickedSymbol; // first click selects; clicking it again commits
     std::function<SamplePickInfo(const QString &)> m_info;
 
     QWidget *m_popup = nullptr; // created on first open

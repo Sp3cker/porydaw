@@ -137,10 +137,23 @@ void SamplePickerButton::openPopup()
         connect(m_search, &QLineEdit::textChanged, this, [this] { applyFilter(); });
         connect(m_search, &QLineEdit::returnPressed, this,
                 [this] { commitItem(m_list->currentItem()); });
-        connect(m_list, &QTreeWidget::itemClicked, this,
-                [this](QTreeWidgetItem *item) { commitItem(item); });
+        connect(m_list, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem *item) {
+            const QString symbol = item ? item->data(0, kSymbolRole).toString() : QString();
+            if (symbol.isEmpty()) {
+                m_clickedSymbol.clear();
+                return;
+            }
+            if (symbol == m_clickedSymbol) {
+                m_clickedSymbol.clear();
+                commitItem(item);
+                return;
+            }
+            m_clickedSymbol = symbol;
+        });
         connect(m_list, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem *item) {
             updateDetail();
+            if (!item || item->data(0, kSymbolRole).toString() != m_clickedSymbol)
+                m_clickedSymbol.clear();
             if (m_positioning || !item)
                 return;
             const QString symbol = item->data(0, kSymbolRole).toString();
@@ -154,6 +167,7 @@ void SamplePickerButton::openPopup()
         m_popup = frame;
     }
 
+    m_clickedSymbol.clear();
     rebuildList();
 
     // Below the button, clamped to the screen; above when it won't fit.
