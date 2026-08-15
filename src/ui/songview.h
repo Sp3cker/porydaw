@@ -270,6 +270,12 @@ class SongView : public QWidget
     std::optional<uint8_t> velocityLanePreview(const ViewNote &note) const;
     // A lane preview moved (or ended): the roll reads those previews too.
     void velocityPreviewChanged();
+    // The mirror of velocityLanePreview: the velocity a roll velocity drag
+    // is currently holding a note at, so the lane's node rides the drag
+    // instead of sitting at the stored value until the release commits.
+    std::optional<uint8_t> rollVelocityPreview(const ViewNote &note) const;
+    // A roll velocity drag moved (or ended): the lane reads those previews.
+    void rollVelocityPreviewChanged();
     // The track's program at a tick: the last voice change at or before
     // it. Before the first change it stays firstProgram (which is what
     // primes the engine), -1 if the track has none. The one statement of

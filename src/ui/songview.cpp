@@ -1355,6 +1355,16 @@ class PianoRoll : public TimelineSurface
         return m_panning || m_drag != Drag::None || m_leftPress || m_rightPress || m_kbdKey >= 0;
     }
 
+    // The value a live velocity drag is holding a note at, if it holds this
+    // one: the same rule drawNotes paints by, so the velocity lane's node
+    // and the roll's fill can never disagree mid-drag.
+    std::optional<uint8_t> velocityDragPreview(const ViewNote &note) const
+    {
+        if (m_drag != Drag::Velocity || m_dVel == 0 || !m_sv->isSelected(note))
+            return std::nullopt;
+        return uint8_t(std::clamp(int(note.velocity) + m_dVel, 1, 127));
+    }
+
   protected:
     void paintContent(QPainter &p) override
     {
@@ -1782,6 +1792,8 @@ class PianoRoll : public TimelineSurface
                     m_auditioned = true;
                 }
                 invalidateContent();
+                // The lane plots the same notes: move its nodes with the drag.
+                m_sv->rollVelocityPreviewChanged();
             }
         } else if (m_drag == Drag::Draw) {
             // The edge under the cursor follows it: right of the anchor cell
@@ -1957,6 +1969,11 @@ class PianoRoll : public TimelineSurface
         m_dDur = 0;
         m_dVel = 0;
         invalidateContent();
+        // A committed drag reaches the lane through the document rebuild, but
+        // one that ended on no change (or was abandoned) has to drop its
+        // preview here or the lane keeps drawing the last dragged value.
+        if (drag == Drag::Velocity)
+            m_sv->rollVelocityPreviewChanged();
     }
 
     void keyPressEvent(QKeyEvent *event) override
@@ -2029,6 +2046,8 @@ class PianoRoll : public TimelineSurface
             m_sv->clearSelection();
             m_sv->clearTimeSelection();
             invalidateContent();
+            // An abandoned velocity drag takes its lane preview with it.
+            m_sv->rollVelocityPreviewChanged();
             event->accept();
             return;
         }
@@ -6153,6 +6172,9 @@ class VelocityLane : public TimelineSurface
     {
         if (const std::optional<uint8_t> preview = m_gestureModel.previewVelocity(note.noteId))
             return *preview;
+        // No lane gesture: a roll velocity drag may still be holding it.
+        if (const std::optional<uint8_t> preview = m_sv->rollVelocityPreview(note))
+            return *preview;
         return note.velocity;
     }
 
@@ -9020,6 +9042,20 @@ void SongView::velocityPreviewChanged()
 {
     // The lane repaints itself; this is the roll's half of the same preview.
     m_roll->invalidateContent();
+}
+
+std::optional<uint8_t> SongView::rollVelocityPreview(const ViewNote &note) const
+{
+    if (!m_roll)
+        return std::nullopt;
+    return m_roll->velocityDragPreview(note);
+}
+
+void SongView::rollVelocityPreviewChanged()
+{
+    // The roll repaints itself; this is the lane's half of the same preview.
+    if (m_velocityLane)
+        m_velocityLane->invalidateContent();
 }
 
 int SongView::programAtTick(int track, uint64_t tick) const

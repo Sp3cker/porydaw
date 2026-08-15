@@ -1177,6 +1177,67 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     view.scrollRollBy(rollScrollBefore - view.scrollY());
     (void)view.grab();
 
+    // --- and the same link the other way: the lane plots the roll's own
+    // notes, so a velocity drag in the ROLL is an edit to the node. It rides
+    // the drag rather than sitting on the stored value until the release.
+    view.setVelocityColorMode(true);
+    const double rollScrollBeforeMirror = view.scrollY();
+    view.scrollRollBy((127 - dragNote.key) * view.keyHeight() - view.scrollY() -
+                      roll->height() / 2.0);
+    view.setSelection({dragId});
+    (void)view.grab();
+    // Up is louder, and the roll measures the drag in pixels from the press,
+    // so the travel IS the velocity delta. It heads away from the note's own
+    // end of the ruler, so nothing clamps.
+    const int rollDragDelta = dragNote.velocity > 64 ? -20 : 20;
+    const int rollPreviewVelocity = dragNote.velocity + rollDragDelta;
+    const QPointF rollPressPoint(
+        (view.displayX(double(dragNote.startTick), songview::kKeyboardW, dpr) +
+         view.displayX(double(dragNote.endTick), songview::kKeyboardW, dpr)) /
+            2.0,
+        (127 - dragNote.key) * view.keyHeight() - view.scrollY() + view.keyHeight() / 2.0);
+    const QPointF rollDragPoint(rollPressPoint.x(), rollPressPoint.y() - rollDragDelta);
+    const QPointF laneNodeBefore(
+        view.displayX(double(dragNote.startTick), songview::kGutterW, dpr) * rasterDpr,
+        laneVelocityY(lane, dragNote.velocity) * rasterDpr);
+    const QPointF laneNodeDuring(laneNodeBefore.x(),
+                                 laneVelocityY(lane, rollPreviewVelocity) * rasterDpr);
+    const int laneProbeRadius = int(std::ceil(2 * rasterDpr));
+    check(hasColorNear(lane->grab().toImage(), laneNodeBefore, laneProbeRadius,
+                       SongView::velocityNoteColor(dragNote.velocity), 24),
+          "the lane's node must start on the stored velocity's row and hue");
+    // The modifier chord the roll's velocity drag is bound to, asked of the
+    // registry so a rebind moves the probe with it.
+    const Qt::KeyboardModifiers velMods =
+        keymap::Registry::instance().modifierBinding(QStringLiteral("roll.velocity_drag"));
+    sendLaneMouse(roll, QEvent::MouseButtonPress, rollPressPoint, Qt::LeftButton, Qt::LeftButton,
+                  velMods);
+    sendLaneMouse(roll, QEvent::MouseMove, rollDragPoint, Qt::NoButton, Qt::LeftButton, velMods);
+    const QImage laneDuringRollDrag = lane->grab().toImage();
+    check(hasColorNear(laneDuringRollDrag, laneNodeDuring, laneProbeRadius,
+                       SongView::velocityNoteColor(rollPreviewVelocity), 24),
+          "a roll velocity drag must move the lane's node to the value its release will write");
+    check(!hasColorNear(laneDuringRollDrag, laneNodeBefore, laneProbeRadius,
+                        SongView::velocityNoteColor(dragNote.velocity), 8),
+          "the lane must not leave the node behind on the stored velocity mid-drag");
+    sendLaneMouse(roll, QEvent::MouseButtonRelease, rollDragPoint, Qt::LeftButton, Qt::NoButton,
+                  velMods);
+    (void)view.grab();
+    const ViewNote *rollDragged = noteAt(dragNote.startTick, dragNote.key);
+    check(rollDragged && rollDragged->velocity == rollPreviewVelocity,
+          "the roll drag's release must commit the velocity the lane was previewing");
+    check(hasColorNear(lane->grab().toImage(), laneNodeDuring, laneProbeRadius,
+                       SongView::velocityNoteColor(rollPreviewVelocity), 24),
+          "the committed velocity must keep the lane's node where the drag left it");
+    doc.undoStack()->undo();
+    (void)view.grab();
+    check(hasColorNear(lane->grab().toImage(), laneNodeBefore, laneProbeRadius,
+                       SongView::velocityNoteColor(dragNote.velocity), 24),
+          "undo must take the lane's node back to the stored velocity with the roll");
+    view.setVelocityColorMode(velocityInkBefore);
+    view.scrollRollBy(rollScrollBeforeMirror - view.scrollY());
+    (void)view.grab();
+
     // --- the audition's loudness belongs to the note, not to the cursor: a
     // VOL change dropped between the two must not reach the preview. The
     // change sits past the probed note, so its own levels — and its node's
