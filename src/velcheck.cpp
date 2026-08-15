@@ -438,6 +438,22 @@ bool hasColorNear(const QImage &image, QPointF center, int radius, const QColor 
     return false;
 }
 
+// The longest unbroken horizontal run of a color along one row of the lane.
+// A level line spans its whole section, so its row carries a long run broken
+// only where nodes and stems cross it, while a row it does not touch carries
+// at most the stray pixel or two where some other paint lands near the ink.
+int longestColorRun(const QImage &image, double y, double fromX, double toX, const QColor &expected,
+                    int tolerance)
+{
+    int longest = 0;
+    int run = 0;
+    for (int x = int(fromX); x <= int(toX); x++) {
+        run = hasColorNear(image, QPointF(x, y), 0, expected, tolerance) ? run + 1 : 0;
+        longest = std::max(longest, run);
+    }
+    return longest;
+}
+
 // The lane's ruler mapping, stated independently of VelocityAxis: velocity 1
 // sits on the bottom inset, 127 on the top one, linear in between.
 double laneVelocityY(const QWidget *lane, int velocity)
@@ -1676,16 +1692,22 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
                   QPointF(psgX * rasterDpr, laneVelocityY(lane, psgNote.velocity) * rasterDpr),
                   psgProbeRadius, psgColor, 24),
           "a PSG note's node must sit on its level's row, not on its stored velocity");
-    // The level boundaries paint across the plot: one under the probe's row,
-    // and nothing on the row itself.
+    // The level lines paint across the plot along the rows themselves — where
+    // the nodes sit and a drag lets go — and not in the gaps between them, so
+    // a line reads as the rail a node is on rather than a fence beside it.
     const QColor levelInk = themes::color(themes::Role::song_view_psg_velocity_levels);
-    const double boundaryY = laneLevelBoundaryY(lane, psgMap, psgLevel);
-    const double clearX = psgX + 20.0;
-    check(hasColorNear(psgImage, QPointF(clearX * rasterDpr, boundaryY * rasterDpr),
-                       int(std::ceil(rasterDpr)), levelInk, 6) &&
-              !hasColorNear(psgImage, QPointF(clearX * rasterDpr, psgCenterY * rasterDpr),
-                            int(std::ceil(rasterDpr)), levelInk, 6),
-          "the PSG level boundaries must paint across the plot, between the rows");
+    const double gapY = laneLevelBoundaryY(lane, psgMap, psgLevel);
+    const double plotLeft = songview::kGutterW * rasterDpr;
+    const double plotRight = lane->width() * rasterDpr - 1.0;
+    // A line, not a stray pixel: several nodes' widths of unbroken ink on the
+    // row, and nothing that reads as a line in the gap beside it.
+    constexpr int kLineRun = 16;
+    constexpr int kStrayRun = 4;
+    check(longestColorRun(psgImage, psgCenterY * rasterDpr, plotLeft, plotRight, levelInk, 6) >=
+                  kLineRun &&
+              longestColorRun(psgImage, gapY * rasterDpr, plotLeft, plotRight, levelInk, 6) <=
+                  kStrayRun,
+          "the PSG level lines must paint along the rows the nodes snap to, not between them");
 
     // The ruler's rows are the whole column: a click anywhere inside one
     // sets the selection to that level's representative.

@@ -400,8 +400,9 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   one channel *and one volume*, else the voice in effect at the playhead/edit cursor
   — the ruler becomes one labeled row per real loudness level ("Vol 1…N", the active
   levels accented), nodes sit at their level's row rather than their stored velocity,
-  the level boundaries paint across the plot for as long as that voice and volume
-  last (`song_view_psg_velocity_levels`), and every edit lands on a level: drags move
+  the levels paint as lines along those same rows for as long as that voice and
+  volume last (`song_view_psg_velocity_levels`) — a line is the rail its nodes sit
+  on, not a fence between two of them — and every edit lands on a level: drags move
   whole levels (returning to the level it started in restores the exact velocity it
   found there), ruler clicks and strokes take the level's representative, and each
   note answers to its own voice, so a selection across a voice change still lands

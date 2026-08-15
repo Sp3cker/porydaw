@@ -6529,9 +6529,12 @@ class VelocityLane : public TimelineSurface
         return axis.mode() == VelocityAxis::Mode::Intrinsic;
     }
 
-    // The PSG level boundaries, drawn per voice section across the plot: the
-    // lines say which stored velocities the channel cannot tell apart, and a
-    // voice change mid-song moves them (or takes them away entirely).
+    // The PSG levels themselves, drawn per section across the plot: one line
+    // along each level's own row, which is where that level's nodes sit and
+    // where a drag lets go — so a line is a rail a node can be read against
+    // rather than a fence between two of them. They are the same rows the
+    // ruler graduates, and a voice or volume change mid-song moves them (or
+    // takes them away entirely).
     void paintLevelLines(QPainter &p, const QRect &plot, const VelocityAxis &axis, qreal dpr)
     {
         if (!m_useDetents)
@@ -6561,8 +6564,8 @@ class VelocityLane : public TimelineSurface
                     plot.left(), m_sv->displayX(double(sectionTick), kGutterW, dpr));
                 const double right = std::min<double>(
                     plot.right(), m_sv->displayX(double(sectionEnd), kGutterW, dpr));
-                for (std::size_t level = 0; level + 1 < map.levelCount(); level++) {
-                    const double y = levelBoundaryY(axis, map, int(level));
+                for (std::size_t level = 0; level < map.levelCount(); level++) {
+                    const double y = levelCenterY(axis, map, int(level));
                     p.drawLine(QPointF(left, y), QPointF(right, y));
                 }
             }
