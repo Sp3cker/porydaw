@@ -5819,10 +5819,14 @@ class VelocityLane : public TimelineSurface
         }
         if (m_gesture == Gesture::Paint) {
             // A stroke that never reached a selected node is a click, and a
-            // click on empty space clears the selection.
+            // click on empty space clears the selection and parks the edit
+            // cursor at the press, exactly like the roll's.
             const bool painted = !m_frozen.empty();
-            if (!painted)
+            if (!painted) {
                 m_sv->setSelection({});
+                m_sv->commitEditCursor(m_sv->snapTick(
+                    m_sv->tickAtContentX(std::max(qreal(kGutterW), m_pressPos.x()) - kGutterW)));
+            }
             finishGesture(painted);
         } else if (m_gesture == Gesture::Ramp) {
             // A Shift click is still a click: without the activation travel
@@ -5848,8 +5852,17 @@ class VelocityLane : public TimelineSurface
         }
         // Shared roll/lanes shortcuts (the V toggle included) reach the
         // focused surface first, exactly like the lanes area.
-        if (!m_sv->handleEditKey(event))
-            QWidget::keyPressEvent(event);
+        if (m_sv->handleEditKey(event))
+            return;
+        if (event->key() == Qt::Key_Escape) {
+            // Nothing live: Escape drops the selections, like the roll's.
+            m_sv->clearSelection();
+            m_sv->clearTimeSelection();
+            invalidateContent();
+            event->accept();
+            return;
+        }
+        QWidget::keyPressEvent(event);
     }
 
     void focusOutEvent(QFocusEvent *event) override

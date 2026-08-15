@@ -1044,6 +1044,7 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     // click.
     const QPointF emptyPoint(nodePoint.x(), emptyY);
     view.setSelection({partnerId});
+    view.commitEditCursor(0);
     (void)view.grab();
     sendLaneMouse(lane, QEvent::MouseButtonPress, emptyPoint, Qt::LeftButton, Qt::LeftButton);
     check(view.selection().size() == 1,
@@ -1051,6 +1052,19 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     sendLaneMouse(lane, QEvent::MouseButtonRelease, emptyPoint, Qt::LeftButton, Qt::NoButton);
     check(view.selection().empty() && doc.revision() == revisionBeforeClick,
           "a click on empty plot must clear the selection on the release");
+    // The roll's rule, shared: that same click parks the edit cursor.
+    const uint64_t clickCursor =
+        view.snapTick(view.tickAtContentX(emptyPoint.x() - songview::kGutterW));
+    check(clickCursor > 0 && view.editCursorTick() == clickCursor,
+          "a click on empty plot must park the edit cursor at the click");
+
+    // Escape with nothing live drops the selection, like the roll's.
+    view.setSelection({partnerId});
+    (void)view.grab();
+    const uint64_t revisionBeforeIdleEscape = doc.revision();
+    sendLaneKey(lane, Qt::Key_Escape);
+    check(view.selection().empty() && doc.revision() == revisionBeforeIdleEscape,
+          "Escape outside a gesture must clear the selection");
 
     // --- the stem grabs its own note, and Escape abandons a live drag
     const double stemX =
