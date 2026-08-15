@@ -51,6 +51,14 @@ int runAudioCheck()
           "silent PCM pan must report no activity");
 
     AudioEngine engine;
+    check(engine.outputVolume() == 100, "application output volume must default to 100 percent");
+    engine.setOutputVolume(42);
+    check(engine.outputVolume() == 42, "application output volume must accept ordinary values");
+    engine.setOutputVolume(-1);
+    check(engine.outputVolume() == 0, "application output volume must clamp below zero");
+    engine.setOutputVolume(101);
+    check(engine.outputVolume() == 100, "application output volume must clamp above 100");
+
     const TrackActivityLevels consumed = engine.consumeTrackActivityLevels();
     for (const TrackActivityLevel level : consumed)
         check(sameLevel(level, {}), "new activity consumption must be zero-initialized");

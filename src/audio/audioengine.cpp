@@ -111,6 +111,14 @@ bool AudioEngine::init(QString *error)
         return false;
     }
     m_sampleRate = double(m_device->sampleRate);
+    m_outputGainRampSamples =
+        std::max<uint32_t>(1, uint32_t(m_sampleRate * kOutputGainRampSeconds));
+    const int targetOutputVolume = m_targetOutputVolume.load();
+    m_outputGainTargetVolume = targetOutputVolume;
+    m_outputGainTarget = float(targetOutputVolume) / 100.0f;
+    m_appliedOutputGain = m_outputGainTarget;
+    m_outputGainStep = 0.0f;
+    m_outputGainRampRemaining = 0;
     // When every real backend fails (headless CI, WSL without libpulse),
     // miniaudio's default context falls back to its null device: playback
     // runs but is silent. Record which backend won so the UI can warn.
@@ -707,6 +715,14 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
 
     M4AEngine *engine = m_engine.get();
     uint32_t done = 0;
+    const int targetOutputVolume = m_targetOutputVolume.load();
+    if (targetOutputVolume != m_outputGainTargetVolume) {
+        m_outputGainTargetVolume = targetOutputVolume;
+        m_outputGainTarget = float(targetOutputVolume) / 100.0f;
+        m_outputGainRampRemaining = m_outputGainRampSamples;
+        m_outputGainStep =
+            (m_outputGainTarget - m_appliedOutputGain) / float(m_outputGainRampSamples);
+    }
 
     while (done < frameCount) {
         const uint32_t n = std::min(frameCount - done, m_bufCapacity);
@@ -733,9 +749,17 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
         // as they would sound in the song, without touching playback state.
         m4a_engine_process(m_previewEngine.get(), m_pvL.get(), m_pvR.get(), int(n));
 
-        for (uint32_t i = 0; i < n; i++) {
-            interleavedOut[(done + i) * 2] = m_bufL[i] + m_pvL[i];
-            interleavedOut[(done + i) * 2 + 1] = m_bufR[i] + m_pvR[i];
+        for (uint32_t i = 0; i < n; ++i) {
+            if (m_outputGainRampRemaining > 0) {
+                --m_outputGainRampRemaining;
+                if (m_outputGainRampRemaining == 0)
+                    m_appliedOutputGain = m_outputGainTarget;
+                else
+                    m_appliedOutputGain += m_outputGainStep;
+            }
+            const float outputGain = m_appliedOutputGain;
+            interleavedOut[(done + i) * 2] = (m_bufL[i] + m_pvL[i]) * outputGain;
+            interleavedOut[(done + i) * 2 + 1] = (m_bufR[i] + m_pvR[i]) * outputGain;
         }
         done += n;
     }
