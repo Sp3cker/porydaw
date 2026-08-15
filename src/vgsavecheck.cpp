@@ -17,6 +17,7 @@
 #include <QTreeWidgetItemIterator>
 #include <cstdio>
 
+#include "ui/dragspinbox.h"
 #include "ui/songview.h"
 #include "ui/theme/themeruntime.h"
 
@@ -240,12 +241,46 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     // the box back to the original value.
     {
         m_vgBrowser->selectSlot(dsSlot);
-        QSpinBox *releaseSpin = nullptr;
-        for (QSpinBox *spin : m_vgBrowser->findChildren<QSpinBox *>()) {
+        DragSpinBox *releaseSpin = nullptr;
+        for (DragSpinBox *spin : m_vgBrowser->findChildren<DragSpinBox *>()) {
             if (spin->toolTip() == tr("Release"))
                 releaseSpin = spin;
         }
         if (check(releaseSpin != nullptr, "no Release spin box in the editor")) {
+            QLineEdit *releaseEdit = releaseSpin->findChild<QLineEdit *>();
+            check(releaseEdit != nullptr, "Release input has no line edit");
+            const auto dragVertically = [&](QWidget *field, int pixelsUp,
+                                            Qt::KeyboardModifiers modifiers = Qt::NoModifier) {
+                const QPoint start = field->rect().center();
+                const int direction = pixelsUp > 0 ? 1 : -1;
+                const QPoint activated = start - QPoint(0, direction * 3);
+                const QPoint finish = activated - QPoint(0, pixelsUp);
+                field->clearFocus();
+                const QRect fieldGeometry = field->geometry();
+                const QRect rowGeometry = field->parentWidget()->geometry();
+                const QSize browserMinimumSize = m_vgBrowser->minimumSizeHint();
+                QMouseEvent press(QEvent::MouseButtonPress, QPointF(start),
+                                  QPointF(field->mapToGlobal(start)), Qt::LeftButton,
+                                  Qt::LeftButton, modifiers);
+                QCoreApplication::sendEvent(field, &press);
+                check(!field->hasFocus(), "pressing an ADSR input moved focus before dragging");
+                QMouseEvent activateMove(QEvent::MouseMove, QPointF(activated),
+                                         QPointF(field->mapToGlobal(activated)), Qt::NoButton,
+                                         Qt::LeftButton, modifiers);
+                QCoreApplication::sendEvent(field, &activateMove);
+                QMouseEvent move(QEvent::MouseMove, QPointF(finish),
+                                 QPointF(field->mapToGlobal(finish)), Qt::NoButton, Qt::LeftButton,
+                                 modifiers);
+                QCoreApplication::sendEvent(field, &move);
+                check(field->geometry() == fieldGeometry &&
+                          field->parentWidget()->geometry() == rowGeometry &&
+                          m_vgBrowser->minimumSizeHint() == browserMinimumSize,
+                      "ADSR input geometry shifted when dragging began");
+                QMouseEvent release(QEvent::MouseButtonRelease, QPointF(finish),
+                                    QPointF(field->mapToGlobal(finish)), Qt::LeftButton,
+                                    Qt::NoButton, modifiers);
+                QCoreApplication::sendEvent(field, &release);
+            };
             const int uiValue = original.release == 25 ? 26 : 25;
             releaseSpin->setValue(uiValue);
             check(tab->doc.isDirty() && tab->vgSource->dirty() &&

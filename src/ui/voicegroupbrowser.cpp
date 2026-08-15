@@ -15,6 +15,7 @@
 
 #include <algorithm>
 
+#include "ui/dragspinbox.h"
 #include "ui/layout.h"
 
 #include "ui/m4asemantics.h"
@@ -334,8 +335,8 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
     auto *adsrLayout = new QHBoxLayout(m_adsrRow);
     adsrLayout->setContentsMargins(0, 0, 0, 0);
     adsrLayout->setSpacing(::layout::space(::layout::Space::Half));
-    for (QSpinBox **spin : {&m_attackSpin, &m_decaySpin, &m_sustainSpin, &m_releaseSpin}) {
-        *spin = new QSpinBox(m_adsrRow);
+    for (DragSpinBox **spin : {&m_attackSpin, &m_decaySpin, &m_sustainSpin, &m_releaseSpin}) {
+        *spin = new DragSpinBox(m_adsrRow);
         (*spin)->setRange(0, 255); // narrowed per voice family on populate
         // A narrow dock narrows all four spins evenly rather than clipping
         // the last one off the edge.
@@ -390,9 +391,9 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
     connect(m_periodCombo, &QComboBox::activated, this, commit);
     connect(m_sweepDirCombo, &QComboBox::activated, this, commit);
     connect(m_synthWaveCombo, &QComboBox::activated, this, commit);
-    for (QSpinBox *spin :
-         {m_sweepTimeSpin, m_sweepShiftSpin, m_synthDutySpin, m_synthStepSpin, m_synthDepthSpin,
-          m_synthPhaseSpin, m_attackSpin, m_decaySpin, m_sustainSpin, m_releaseSpin})
+    for (QSpinBox *spin : std::initializer_list<QSpinBox *>{
+             m_sweepTimeSpin, m_sweepShiftSpin, m_synthDutySpin, m_synthStepSpin, m_synthDepthSpin,
+             m_synthPhaseSpin, m_attackSpin, m_decaySpin, m_sustainSpin, m_releaseSpin})
         connect(spin, &QSpinBox::valueChanged, this, commit);
 
     populateEditor();

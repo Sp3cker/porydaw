@@ -14,6 +14,7 @@ extern "C" {
 #include "project/voicegroupsource.h"
 #include "ui/samplepicker.h"
 
+class DragSpinBox;
 class QComboBox;
 class QLabel;
 class QPushButton;
@@ -180,10 +181,10 @@ class VoicegroupBrowser : public QWidget
     QSpinBox *m_synthStepSpin = nullptr;
     QSpinBox *m_synthDepthSpin = nullptr;
     QSpinBox *m_synthPhaseSpin = nullptr;
-    QSpinBox *m_attackSpin = nullptr;
-    QSpinBox *m_decaySpin = nullptr;
-    QSpinBox *m_sustainSpin = nullptr;
-    QSpinBox *m_releaseSpin = nullptr;
+    DragSpinBox *m_attackSpin = nullptr;
+    DragSpinBox *m_decaySpin = nullptr;
+    DragSpinBox *m_sustainSpin = nullptr;
+    DragSpinBox *m_releaseSpin = nullptr;
     QLabel *m_typeLabel = nullptr;
     QLabel *m_symbolLabel = nullptr;
     QLabel *m_sweepLabel = nullptr;
