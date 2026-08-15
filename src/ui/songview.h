@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -263,6 +264,12 @@ class SongView : public QWidget
     void setFollowPlayhead(bool on);
     // The active-track note fill under the current display mode.
     QColor noteFillColor(int track, int velocity) const;
+    // The velocity a velocity-lane gesture is currently holding a note at,
+    // if one is: the roll draws its notes at the value the lane's release
+    // will write, so a lane edit recolors (and relabels) the roll live.
+    std::optional<uint8_t> velocityLanePreview(const ViewNote &note) const;
+    // A lane preview moved (or ended): the roll reads those previews too.
+    void velocityPreviewChanged();
     // The track's program at a tick: the last voice change at or before
     // it. Before the first change it stays firstProgram (which is what
     // primes the engine), -1 if the track has none. The one statement of

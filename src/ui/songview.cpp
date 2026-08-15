@@ -2476,6 +2476,11 @@ class PianoRoll : public TimelineSurface
             int renderedVelocity = note.velocity;
             if (m_drag == Drag::Velocity && m_sv->isSelected(note)) {
                 renderedVelocity = std::clamp(int(note.velocity) + m_dVel, 1, 127);
+            } else if (const std::optional<uint8_t> preview = m_sv->velocityLanePreview(note)) {
+                // A velocity-lane gesture is holding this note: the roll shows
+                // the value its release will write, so fill, handle and label
+                // follow the lane as it is dragged.
+                renderedVelocity = *preview;
             }
             const QColor fill = m_sv->noteFillColor(note.track, renderedVelocity);
             painter.fillRect(noteBox, fill);
@@ -5495,6 +5500,13 @@ class VelocityLane : public TimelineSurface
     // pauses so the camera cannot slide out from under the pointer.
     bool gestureActive() const { return m_panning || m_gesture != Gesture::None; }
 
+    // The preview a live gesture holds a note at, for the roll: nothing when
+    // no gesture holds this note, so the roll falls back on the stored value.
+    std::optional<uint8_t> previewVelocity(NoteId noteId) const
+    {
+        return m_gestureModel.previewVelocity(noteId);
+    }
+
     // The document changed under a live gesture (an edit from elsewhere, or
     // undo/redo): the preview describes notes that may no longer be there,
     // so it dies rather than committing blind.
@@ -5747,6 +5759,9 @@ class VelocityLane : public TimelineSurface
         m_gesture = Gesture::Relative;
         m_activated = false;
         openSession();
+        // Sound the grabbed node so a press gives the same feedback the roll's
+        // does; the drag re-auditions from here as the value moves.
+        auditionNote(hit->key, hit->velocity);
         event->accept();
     }
 
@@ -5792,6 +5807,9 @@ class VelocityLane : public TimelineSurface
             event->accept();
             return;
         }
+        // Whatever the release turns out to mean, the gesture stops sounding
+        // with the button, exactly like the roll's.
+        stopAudition();
         if (event->button() == Qt::RightButton &&
             (m_gesture == Gesture::Band || m_gesture == Gesture::PendingBand)) {
             if (m_gesture == Gesture::Band) {
@@ -6204,7 +6222,8 @@ class VelocityLane : public TimelineSurface
         m_announced = updates.front().noteId;
         m_previewed |= m_gestureModel.update(updates);
         announcePreview();
-        invalidateContent();
+        auditionPreview();
+        invalidatePreview();
     }
 
     // The ramp: a straight line from the press to the pointer, read as the
@@ -6243,6 +6262,8 @@ class VelocityLane : public TimelineSurface
         }
         m_previewed |= m_gestureModel.update(updates);
         announcePreview();
+        auditionPreview();
+        m_sv->velocityPreviewChanged();
     }
 
     // A click on a printed ruler value: the whole selection goes there at
@@ -6280,6 +6301,10 @@ class VelocityLane : public TimelineSurface
             updates.push_back({frozen.note.noteId, resolveVelocity(frozen.map, velocity)});
         }
         m_gestureModel.update(updates);
+        // The click is the whole edit, so it sounds here; the release that
+        // follows stops it, like the press-and-drag gestures'.
+        if (!m_frozen.empty())
+            auditionNote(m_frozen.front().note.key, updates.front().velocity);
         finishGesture(true);
     }
 
@@ -6328,7 +6353,8 @@ class VelocityLane : public TimelineSurface
             m_previewed |= m_gestureModel.update(updates);
         }
         announcePreview();
-        invalidateContent();
+        auditionPreview();
+        invalidatePreview();
     }
 
     // The marquee: the nodes the band covers, previewed as selected while it
@@ -6413,7 +6439,7 @@ class VelocityLane : public TimelineSurface
         const std::optional<VelocityGestureModel::Completion> completion =
             m_gestureModel.takeCompletion();
         if (!completion || !commit) {
-            invalidateContent();
+            invalidatePreview();
             return;
         }
         SongDocument *doc = m_sv->document();
@@ -6430,7 +6456,7 @@ class VelocityLane : public TimelineSurface
                            : kind == Gesture::Ramp ? SongView::tr("Ramped note velocities.")
                                                    : SongView::tr("Set note velocities."));
         }
-        invalidateContent();
+        invalidatePreview();
     }
 
     // Abandons the gesture: the preview never reaches the document, and the
@@ -6462,8 +6488,9 @@ class VelocityLane : public TimelineSurface
         m_bandPreview.clear();
         m_bandRect = QRectF();
         m_gestureModel.cancel();
+        stopAudition();
         m_sv->setSelection(std::move(restore));
-        invalidateContent();
+        invalidatePreview();
     }
 
     // Status line for the note the gesture is aimed at, in the roll's own
@@ -6480,6 +6507,49 @@ class VelocityLane : public TimelineSurface
             m_sv->announceNote(shown);
             return;
         }
+    }
+
+    // A preview moved: the lane redraws its nodes, and so does the roll —
+    // its notes are drawn at the lane's preview while a gesture holds them.
+    void invalidatePreview()
+    {
+        invalidateContent();
+        m_sv->velocityPreviewChanged();
+    }
+
+    // Sounds the note the gesture is aimed at, at the velocity the release
+    // would write. The roll's velocity-drag rule exactly: re-audition only
+    // when the value the engine will actually play moves to the next mid2agb
+    // step, since nothing about the sound changes in between.
+    void auditionPreview()
+    {
+        for (const Frozen &frozen : m_frozen) {
+            if (frozen.note.noteId != m_announced)
+                continue;
+            auditionNote(frozen.note.key, displayVelocity(frozen.note));
+            return;
+        }
+    }
+
+    void auditionNote(int key, int velocity)
+    {
+        const int effective = mid2agbEffectiveVelocity(velocity);
+        if (key == m_audKey && effective == m_audEff)
+            return;
+        m_audKey = key;
+        m_audEff = effective;
+        m_sv->audition(m_sv->selectedTrack(), key, velocity);
+    }
+
+    // Releases whatever the gesture is sounding. The engine's preview slot
+    // holds one note, so the velocity-0 form is all it takes.
+    void stopAudition()
+    {
+        if (m_audKey < 0)
+            return;
+        m_audKey = -1;
+        m_audEff = -1;
+        m_sv->audition(m_sv->selectedTrack(), 0, 0);
     }
 
     VelocityAxisGeometry axisGeometry() const
@@ -6725,6 +6795,8 @@ class VelocityLane : public TimelineSurface
     bool m_activated = false; // the drag cleared the activation slop
     bool m_previewed = false; // an update actually moved a preview value
     bool m_ctrlPress = false; // Ctrl at the press; the click adds instead of collapsing
+    int m_audKey = -1;        // key the gesture is sounding; -1 = silent
+    int m_audEff = -1;        // effective velocity it was last sounded at
 };
 
 // ---------------------------------------------------------------- OtherStrip
@@ -8902,6 +8974,19 @@ void SongView::setNoteNameMode(bool on)
 QColor SongView::noteFillColor(int track, int velocity) const
 {
     return m_velocityColorMode ? velocityNoteColor(velocity) : noteColor(track, velocity);
+}
+
+std::optional<uint8_t> SongView::velocityLanePreview(const ViewNote &note) const
+{
+    if (!m_velocityLane || !note.noteId.isAssigned())
+        return std::nullopt;
+    return m_velocityLane->previewVelocity(note.noteId);
+}
+
+void SongView::velocityPreviewChanged()
+{
+    // The lane repaints itself; this is the roll's half of the same preview.
+    m_roll->invalidateContent();
 }
 
 int SongView::programAtTick(int track, uint64_t tick) const

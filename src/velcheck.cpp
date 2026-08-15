@@ -1085,6 +1085,97 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     doc.undoStack()->undo();
     (void)view.grab();
 
+    // --- the edit is heard and seen: the gesture auditions its aimed note as
+    // the roll's own velocity drag does, and the roll draws the note at the
+    // preview while the lane holds it.
+    struct AuditionEvent {
+        int track;
+        int key;
+        int velocity;
+    };
+    std::vector<AuditionEvent> auditions;
+    QObject::connect(&view, &SongView::auditionNote, &view,
+                     [&auditions](int track, int key, int velocity) {
+                         auditions.push_back({track, key, velocity});
+                     });
+    // Velocity hues make the roll's fill a statement about the value alone,
+    // so the probe reads a color the preview velocity names outright.
+    const bool velocityInkBefore = view.velocityColorMode();
+    view.setVelocityColorMode(true);
+    // The roll scrolls vertically on its own; bring the probed note's row to
+    // the middle of the pane so its face is really painted.
+    const double rollScrollBefore = view.scrollY();
+    view.scrollRollBy((127 - dragNote.key) * view.keyHeight() - view.scrollY() -
+                      roll->height() / 2.0);
+    view.setSelection({dragId});
+    (void)view.grab();
+    const QPointF rollNoteCenter(
+        (view.displayX(double(dragNote.startTick), songview::kKeyboardW, dpr) +
+         view.displayX(double(dragNote.endTick), songview::kKeyboardW, dpr)) /
+            2.0,
+        (127 - dragNote.key) * view.keyHeight() - view.scrollY() + view.keyHeight() / 2.0);
+    const int previewVelocity = dragNote.velocity + dragDelta;
+    const QImage rollBefore = roll->grab().toImage();
+    const qreal rollDpr = rollBefore.devicePixelRatio();
+    const QPointF rollProbe(rollNoteCenter.x() * rollDpr, rollNoteCenter.y() * rollDpr);
+    const int rollProbeRadius = int(std::ceil(2 * rollDpr));
+    check(hasColorNear(rollBefore, rollProbe, rollProbeRadius,
+                       SongView::velocityNoteColor(dragNote.velocity), 24),
+          "the probed note must be drawn at its stored velocity's hue before the edit");
+    auditions.clear();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, nodePoint, Qt::LeftButton, Qt::LeftButton);
+    check(auditions.size() == 1 && auditions.back().track == track &&
+              auditions.back().key == dragNote.key &&
+              auditions.back().velocity == dragNote.velocity,
+          "a press on a node must sound that note at its own velocity");
+    sendLaneMouse(lane, QEvent::MouseMove, dragPoint, Qt::NoButton, Qt::LeftButton);
+    check(auditions.size() == 2 && auditions.back().key == dragNote.key &&
+              auditions.back().velocity == previewVelocity,
+          "a drag must re-sound the note at the velocity the release would write");
+    const QImage rollDuring = roll->grab().toImage();
+    check(hasColorNear(rollDuring, rollProbe, rollProbeRadius,
+                       SongView::velocityNoteColor(previewVelocity), 24),
+          "the roll must draw the note at the lane's preview while the gesture holds it");
+    check(!hasColorNear(rollDuring, rollProbe, rollProbeRadius,
+                        SongView::velocityNoteColor(dragNote.velocity), 8),
+          "the roll must not still show the stored velocity's hue under a live preview");
+    // A move that asks for the same velocity again asks for the same sound:
+    // the engine's preview slot restarts the note, so nothing may be sent.
+    sendLaneMouse(lane, QEvent::MouseMove, dragPoint + QPointF(3.0, 0.0), Qt::NoButton,
+                  Qt::LeftButton);
+    check(auditions.size() == 2, "a drag must not re-sound a velocity it is already sounding");
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, dragPoint + QPointF(3.0, 0.0), Qt::LeftButton,
+                  Qt::NoButton);
+    check(auditions.size() == 3 && auditions.back().velocity == 0,
+          "the release must stop the audition it started");
+    (void)view.grab();
+    const ViewNote *heardNote = noteAt(dragNote.startTick, dragNote.key);
+    check(heardNote && heardNote->velocity == previewVelocity,
+          "the audition probe's own drag must still have committed its edit");
+    // Nothing holds the note now, so the roll is back on the stored value —
+    // which the commit just moved to where the preview was.
+    const QImage rollAfter = roll->grab().toImage();
+    check(hasColorNear(rollAfter, rollProbe, rollProbeRadius,
+                       SongView::velocityNoteColor(previewVelocity), 24),
+          "the committed velocity must stay on the roll after the release");
+    // An abandoned edit takes its preview and its sound with it.
+    auditions.clear();
+    sendLaneMouse(lane, QEvent::MouseButtonPress, dragPoint + QPointF(3.0, 0.0), Qt::LeftButton,
+                  Qt::LeftButton);
+    sendLaneMouse(lane, QEvent::MouseMove, nodePoint, Qt::NoButton, Qt::LeftButton);
+    sendLaneKey(lane, Qt::Key_Escape);
+    check(!auditions.empty() && auditions.back().velocity == 0,
+          "Escape must stop the sound along with the preview");
+    (void)view.grab();
+    check(hasColorNear(roll->grab().toImage(), rollProbe, rollProbeRadius,
+                       SongView::velocityNoteColor(previewVelocity), 24),
+          "an abandoned lane edit must leave the roll on the stored velocity");
+    sendLaneMouse(lane, QEvent::MouseButtonRelease, nodePoint, Qt::LeftButton, Qt::NoButton);
+    doc.undoStack()->undo();
+    view.setVelocityColorMode(velocityInkBefore);
+    view.scrollRollBy(rollScrollBefore - view.scrollY());
+    (void)view.grab();
+
     // --- click semantics: press, no travel, release
     view.setSelection({dragId, partnerId});
     (void)view.grab();
@@ -1277,11 +1368,15 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     (void)view.grab();
     const uint64_t revisionBeforePaint = doc.revision();
     const int undoBeforePaint = doc.undoStack()->index();
+    auditions.clear();
     sendLaneMouse(lane, QEvent::MouseButtonPress, paintStart, Qt::LeftButton, Qt::LeftButton);
     sendLaneMouse(lane, QEvent::MouseMove, paintEnd, Qt::NoButton, Qt::LeftButton);
     check(doc.revision() == revisionBeforePaint,
           "a paint stroke must leave the document alone until the release");
+    check(!auditions.empty() && auditions.back().velocity > 0,
+          "a paint stroke must sound the note it is brushing");
     sendLaneMouse(lane, QEvent::MouseButtonRelease, paintEnd, Qt::LeftButton, Qt::NoButton);
+    check(auditions.back().velocity == 0, "the release must stop what a paint stroke was sounding");
     (void)view.grab();
     const ViewNote *paintedNote = noteAt(dragNote.startTick, dragNote.key);
     const ViewNote *paintedPartner = noteAt(partner.startTick, partner.key);
@@ -1325,6 +1420,7 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     const QPointF rampStart(partnerPoint.x(), laneVelocityY(lane, partner.velocity));
     const QPointF rampEnd(nodePoint.x(), emptyY);
     const int undoBeforeRamp = doc.undoStack()->index();
+    auditions.clear();
     sendLaneMouse(lane, QEvent::MouseButtonPress, rampStart, Qt::LeftButton, Qt::LeftButton,
                   Qt::ShiftModifier);
     sendLaneMouse(lane, QEvent::MouseMove, rampEnd, Qt::NoButton, Qt::LeftButton,
@@ -1335,8 +1431,16 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
                        int(std::ceil(2 * rasterDpr)),
                        themes::color(themes::Role::song_view_edit_preview_outline), 24),
           "a ramp must draw the line it is reading its values off");
+    // The ramp lays a value on every selected note it spans and reads one of
+    // them out; the sound follows that same note, whichever it is.
+    check(!auditions.empty() &&
+              ((auditions.back().key == dragNote.key && auditions.back().velocity == rampTarget) ||
+               (auditions.back().key == partner.key &&
+                auditions.back().velocity == partner.velocity)),
+          "a ramp must sound the note it is reading out");
     sendLaneMouse(lane, QEvent::MouseButtonRelease, rampEnd, Qt::LeftButton, Qt::NoButton,
                   Qt::ShiftModifier);
+    check(auditions.back().velocity == 0, "the release must stop what a ramp was sounding");
     (void)view.grab();
     const ViewNote *rampedNote = noteAt(dragNote.startTick, dragNote.key);
     const ViewNote *rampedPartner = noteAt(partner.startTick, partner.key);
