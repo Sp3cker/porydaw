@@ -58,6 +58,10 @@ int runFontCheck(int expectedBaseFontPx)
     checkSpaces();
     check(expectedBaseFontPx > 0 && *baseFontPx == expectedBaseFontPx,
           "Typography did not preserve the pre-install application font size");
+    const auto hasTabularNumbers = [](const QFont &font) {
+        constexpr QFont::Tag tag{"tnum"};
+        return font.isFeatureSet(tag) && font.featureValue(tag) == 1;
+    };
     const auto body = QApplication::font();
     const auto bodyInfo = QFontInfo(body);
     const auto expectedBodySize = qMax(1, qRound(*baseFontPx * 1.25));
@@ -66,6 +70,7 @@ int runFontCheck(int expectedBaseFontPx)
     check(bodyInfo.family() == QStringLiteral("Atkinson Hyperlegible Next") &&
               bodyInfo.pixelSize() == expectedBodySize && bodyInfo.weight() == QFont::Normal,
           "Body has the wrong face, size, or weight");
+    check(hasTabularNumbers(body), "Body does not enable tabular numbers");
     const auto mono = typography::bodyMono(body);
     const auto monoInfo = QFontInfo(mono);
     check(mono.hintingPreference() == QFont::PreferNoHinting,
@@ -73,6 +78,7 @@ int runFontCheck(int expectedBaseFontPx)
     check(monoInfo.family() == QStringLiteral("Atkinson Hyperlegible Mono") &&
               monoInfo.pixelSize() == expectedBodySize && monoInfo.weight() == QFont::Normal,
           "Body Mono has the wrong face, size, or weight");
+    check(hasTabularNumbers(mono), "Body Mono does not preserve tabular numbers");
     const auto caption = typography::caption(body);
     const auto captionInfo = QFontInfo(caption);
     check(caption.hintingPreference() == QFont::PreferNoHinting,
@@ -80,6 +86,7 @@ int runFontCheck(int expectedBaseFontPx)
     check(captionInfo.family() == QStringLiteral("Atkinson Hyperlegible Next") &&
               captionInfo.pixelSize() == *baseFontPx && captionInfo.weight() == QFont::Normal,
           "Caption has the wrong face, size, or weight");
+    check(hasTabularNumbers(caption), "Caption does not preserve tabular numbers");
     const auto bodyBoldInfo = QFontInfo(typography::bold(body));
     check(bodyBoldInfo.pixelSize() == bodyInfo.pixelSize() &&
               bodyBoldInfo.weight() == QFont::DemiBold,
@@ -172,6 +179,9 @@ int runFontCheck(int expectedBaseFontPx)
     check(QFontInfo(systemCaption).family() == platformFamily &&
               QFontInfo(systemCaption).pixelSize() == qMax(1, qRound(*baseFontPx / 1.25)),
           "System-font Caption is not the platform face a step below Body");
+    check(systemBody && hasTabularNumbers(*systemBody) && hasTabularNumbers(systemCaption) &&
+              hasTabularNumbers(typography::bodyMono(QApplication::font())),
+          "System-font scale does not preserve tabular numbers");
     check(typography::bodyMono(QApplication::font()).family() == typography::systemMonoFamily(),
           "System-font Body Mono is not the platform fixed-pitch face");
     const auto systemNoteName = typography::noteName(QApplication::font());

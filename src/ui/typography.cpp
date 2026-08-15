@@ -20,6 +20,12 @@ std::optional<QFont> installedBodyFont;
 std::optional<QFont> capturedPlatformFont;
 QString capturedFixedFamily;
 bool systemFontPreferred = false;
+constexpr QFont::Tag tabularNumbersTag{"tnum"};
+
+void enableTabularNumbers(QFont &font)
+{
+    font.setFeature(tabularNumbersTag, 1);
+}
 
 void setFace(QFont &font, QFont::Weight weight)
 {
@@ -29,6 +35,7 @@ void setFace(QFont &font, QFont::Weight weight)
     font.setStyle(QFont::StyleNormal);
     font.setHintingPreference(QFont::PreferNoHinting);
     font.setStyleStrategy(QFont::StyleStrategy(font.styleStrategy() | QFont::PreferAntialias));
+    enableTabularNumbers(font);
 }
 
 QFont bundledBody()
@@ -46,6 +53,7 @@ QFont systemBody()
 {
     auto font = *capturedPlatformFont;
     font.setPixelSize(*capturedBaseFontPx);
+    enableTabularNumbers(font);
     return font;
 }
 
@@ -140,6 +148,7 @@ QFont bodyMono(const QFont &body)
         font.setWeight(QFont::Normal);
         font.setStyle(QFont::StyleNormal);
         font.setPixelSize(resolvedPixelSize(body));
+        enableTabularNumbers(font);
         return font;
     }
     font.setFamily(QString::fromLatin1(monoFamily));
@@ -148,6 +157,7 @@ QFont bodyMono(const QFont &body)
     font.setStyle(QFont::StyleNormal);
     font.setHintingPreference(QFont::PreferNoHinting);
     font.setStyleStrategy(QFont::StyleStrategy(font.styleStrategy() | QFont::PreferAntialias));
+    enableTabularNumbers(font);
     font.setPixelSize(resolvedPixelSize(body));
     return font;
 }
@@ -157,6 +167,7 @@ QFont caption(const QFont &source)
     if (systemFontPreferred && capturedPlatformFont && capturedBaseFontPx) {
         auto font = *capturedPlatformFont;
         font.setPixelSize(qMax(1, qRound(*capturedBaseFontPx / 1.25)));
+        enableTabularNumbers(font);
         return font;
     }
     auto font = source;
