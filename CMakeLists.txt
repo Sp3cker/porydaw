@@ -17,6 +17,15 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# Optimize through the static porydaw/poryaaaa library boundaries in Release builds.
+include(CheckIPOSupported)
+check_ipo_supported(RESULT PORYDAW_IPO_SUPPORTED OUTPUT PORYDAW_IPO_ERROR)
+if(PORYDAW_IPO_SUPPORTED)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+else()
+    message(WARNING "Release IPO/LTO disabled: ${PORYDAW_IPO_ERROR}")
+endif()
+
 # AddressSanitizer build for the harness sweep (tools/run_checks.sh): memory
 # bugs abort with a stack trace instead of corrupting silently. GCC/Clang
 # only. Use a separate build dir, e.g.:
