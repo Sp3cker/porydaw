@@ -9,8 +9,8 @@
 #include "ui/layout.h"
 
 #include <cmath>
-#include <cstdlib>
 #include <cstdio>
+#include <cstdlib>
 
 namespace {
 
@@ -147,8 +147,7 @@ int runTrackActivityMeterCheck()
     drainPaintEvents();
     check(meterPaints.paints == 0,
           "a state change within one physical pixel must not repaint the meter");
-    check(parentPaints.paints == 0,
-          "a sub-pixel state change must not repaint the parent row");
+    check(parentPaints.paints == 0, "a sub-pixel state change must not repaint the parent row");
 
     TrackActivityMeter::State acrossPixel = active;
     acrossPixel.intensity.left += 0.7f / physicalHeight;
@@ -166,8 +165,7 @@ int runTrackActivityMeterCheck()
     drainPaintEvents();
     check(meterPaints.paints > 0,
           "a playing/paused mode change must repaint even when the bar heights agree");
-    check(parentPaints.paints == 0,
-          "a mode change must not repaint the parent row");
+    check(parentPaints.paints == 0, "a mode change must not repaint the parent row");
 
     TrackActivityMeter::State capped{{1.0f, 1.0f}, true, 0.15f};
     meter.setState(capped);
@@ -207,8 +205,7 @@ int runTrackActivityMeterCheck()
     const int stereoRightX = stereoImage.width() * 3 / 4;
     const int topY = stereoImage.height() / 4;
     const int bottomY = stereoImage.height() - 1;
-    check(stereoImage.pixelColor(stereoLeftX, topY) !=
-              stereoImage.pixelColor(stereoRightX, topY),
+    check(stereoImage.pixelColor(stereoLeftX, topY) != stereoImage.pixelColor(stereoRightX, topY),
           "left and right stereo levels must paint independently");
     check(stereoImage.pixelColor(stereoLeftX, bottomY) ==
               stereoImage.pixelColor(stereoRightX, bottomY),

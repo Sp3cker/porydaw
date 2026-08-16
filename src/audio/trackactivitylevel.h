@@ -33,7 +33,7 @@ inline constexpr TrackActivityLevel maxLevel(TrackActivityLevel a, TrackActivity
 }
 
 inline constexpr TrackActivityLevel pcmActivityLevel(uint8_t envelope, uint8_t leftVolume,
-                                                      uint8_t rightVolume)
+                                                     uint8_t rightVolume)
 {
     const auto dominantVolume = std::max(leftVolume, rightVolume);
     if (dominantVolume == 0)
@@ -77,8 +77,7 @@ static_assert(pcmActivityLevel(255, 0, 127).left == 0 &&
 static_assert(pcmActivityLevel(128, 32, 64).left == 64 &&
               pcmActivityLevel(128, 32, 64).right == 128);
 
-static_assert(levelToIntensity({0, 255}).left == 0.0f &&
-              levelToIntensity({0, 255}).right == 1.0f);
+static_assert(levelToIntensity({0, 255}).left == 0.0f && levelToIntensity({0, 255}).right == 1.0f);
 static_assert(levelToIntensity({1, 0}).left > 0.0f && levelToIntensity({1, 0}).left < 1.0f);
 static_assert(intensityToLevel({0.0f, 1.0f}).left == 0 &&
               intensityToLevel({0.0f, 1.0f}).right == 255);

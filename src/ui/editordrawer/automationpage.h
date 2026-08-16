@@ -20,7 +20,7 @@ class QPainter;
 class QRect;
 class AutomationArea;
 class AutomationRows;
-class AutomationHoverState;
+struct AutomationHoverState;
 class MidiTimeline;
 class SongDocument;
 class SongView;

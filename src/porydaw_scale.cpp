@@ -208,8 +208,7 @@ int nextScalePitch(ScaleId id, int root, int midiPitch, int steps)
 }
 
 bool resolveDiatonicDestinations(ScaleId id, int root, const uint8_t *sourcePitches,
-                                 const int *degreeDisplacements, int count,
-                                 uint8_t *destsOut)
+                                 const int *degreeDisplacements, int count, uint8_t *destsOut)
 {
     if (count < 0 || (count > 0 && (!sourcePitches || !degreeDisplacements || !destsOut)))
         return false;
@@ -268,8 +267,7 @@ bool resolveDiatonicDestinations(ScaleId id, int root, const uint8_t *sourcePitc
             return false;
         }
         int lastDuplicate = i;
-        while (lastDuplicate + 1 < count &&
-               sourcePitches[lastDuplicate + 1] == sourcePitches[i]) {
+        while (lastDuplicate + 1 < count && sourcePitches[lastDuplicate + 1] == sourcePitches[i]) {
             lastDuplicate++;
         }
         for (int duplicate = i; duplicate <= lastDuplicate; duplicate++)

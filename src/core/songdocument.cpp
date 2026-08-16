@@ -307,32 +307,30 @@ class MoveNotesToPitchesCommand : public QUndoCommand
         if (notes.empty())
             return false;
         const int engineTrack = notes.front().engineTrack;
-        return std::all_of(notes.begin(), notes.end(),
-                           [engineTrack](const DocNote &note) {
-                               return note.engineTrack == engineTrack;
-                           });
+        return std::all_of(notes.begin(), notes.end(), [engineTrack](const DocNote &note) {
+            return note.engineTrack == engineTrack;
+        });
     }
 
     bool movesMyOutputs(const std::vector<DocNote> &next) const
     {
         if (next.size() != m_notes.size() || !allOnSameEngineTrack(m_notes) ||
-            !allOnSameEngineTrack(next) ||
-            m_notes.front().engineTrack != next.front().engineTrack)
+            !allOnSameEngineTrack(next) || m_notes.front().engineTrack != next.front().engineTrack)
             return false;
         using Pos = std::tuple<int, uint64_t, int, uint32_t, uint8_t, uint8_t>;
         std::vector<Pos> mine, theirs;
         for (size_t i = 0; i < m_notes.size(); i++) {
             const DocNote &note = m_notes[i];
             const uint64_t tick =
-                note.unterminated()
-                    ? note.tick
-                    : uint64_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
+                note.unterminated() ? note.tick
+                                    : uint64_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
             const int key = note.unterminated() ? note.key : m_destPitches[i];
-            mine.push_back({note.engineTrack, tick, key, note.duration, note.velocity, note.channel});
+            mine.push_back(
+                {note.engineTrack, tick, key, note.duration, note.velocity, note.channel});
         }
         for (const DocNote &note : next)
-            theirs.push_back(
-                {note.engineTrack, note.tick, int(note.key), note.duration, note.velocity, note.channel});
+            theirs.push_back({note.engineTrack, note.tick, int(note.key), note.duration,
+                              note.velocity, note.channel});
         std::sort(mine.begin(), mine.end());
         std::sort(theirs.begin(), theirs.end());
         return mine == theirs;
@@ -1036,8 +1034,7 @@ bool SongDocument::moveNotesToPitches(const std::vector<DocNote> &notes,
     }
     if (!anyMove)
         return true;
-    m_undoStack.push(
-        new MoveNotesToPitchesCommand(this, notes, destPitches, dTick, mergeable));
+    m_undoStack.push(new MoveNotesToPitchesCommand(this, notes, destPitches, dTick, mergeable));
     return true;
 }
 
@@ -1087,18 +1084,16 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
     return ops;
 }
 
-std::vector<SongDocument::EditOp>
-SongDocument::buildMoveNotesToPitchesOps(const std::vector<DocNote> &notes,
-                                         const std::vector<uint8_t> &destPitches,
-                                         int64_t dTick) const
+std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesToPitchesOps(
+    const std::vector<DocNote> &notes, const std::vector<uint8_t> &destPitches, int64_t dTick) const
 {
     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<PlannedNote> written;
     for (size_t i = 0; i < notes.size(); i++) {
         const DocNote &note = notes[i];
         const uint8_t destKey = destPitches[i];
-        if (note.unterminated() || note.smfTrack < 0 ||
-            note.smfTrack >= int(removals.size()) || (destKey == note.key && dTick == 0))
+        if (note.unterminated() || note.smfTrack < 0 || note.smfTrack >= int(removals.size()) ||
+            (destKey == note.key && dTick == 0))
             continue;
         removals[size_t(note.smfTrack)].push_back(note.onIndex);
         removals[size_t(note.smfTrack)].push_back(note.endIndex);
@@ -1113,8 +1108,8 @@ SongDocument::buildMoveNotesToPitchesOps(const std::vector<DocNote> &notes,
     for (size_t i = 0; i < notes.size(); i++) {
         const DocNote &note = notes[i];
         const uint8_t destKey = destPitches[i];
-        if (note.unterminated() || note.smfTrack < 0 ||
-            note.smfTrack >= int(m_smf.tracks.size()) || (destKey == note.key && dTick == 0))
+        if (note.unterminated() || note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
+            (destKey == note.key && dTick == 0))
             continue;
         const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
         appendNoteInsertOps(ops, note.smfTrack, note.channel, newTick, destKey, note.duration,

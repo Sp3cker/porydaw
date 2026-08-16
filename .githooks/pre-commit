@@ -1,0 +1,13 @@
+#!/bin/sh
+
+repo_root=$(git rev-parse --show-toplevel) || {
+    echo "pre-commit: not inside a Git repository" >&2
+    exit 1
+}
+
+cd "$repo_root" || exit 1
+
+if ! tools/format.sh --check; then
+    echo "pre-commit: formatting check failed; run tools/format.sh to reformat, then retry the commit." >&2
+    exit 1
+fi

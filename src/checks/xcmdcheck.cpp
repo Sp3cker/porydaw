@@ -92,8 +92,7 @@ int runXcmdCheck()
         TimelinePlayer player;
         float left[2001], right[2001];
         player.render(&engine, timeline.get(), left, right, 2001, false, 0);
-        failures +=
-            checkEchoState(engine, kPseudoEchoVolume, kPseudoEchoLength, "linear playback");
+        failures += checkEchoState(engine, kPseudoEchoVolume, kPseudoEchoLength, "linear playback");
         failures += checkAltVoiceEcho(engine);
         m4a_engine_destroy(&engine);
     }
@@ -101,8 +100,7 @@ int runXcmdCheck()
         M4AEngine engine;
         m4a_engine_init(&engine, float(kSampleRate));
         TimelinePlayer::chase(&engine, timeline.get(), 1001);
-        failures +=
-            checkEchoState(engine, kPseudoEchoVolume, kPseudoEchoLength, "mid-song chase");
+        failures += checkEchoState(engine, kPseudoEchoVolume, kPseudoEchoLength, "mid-song chase");
         TimelinePlayer::chase(&engine, timeline.get(), 0);
         failures += checkEchoState(engine, 0, 0, "backward chase");
         m4a_engine_destroy(&engine);

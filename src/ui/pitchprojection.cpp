@@ -103,7 +103,7 @@ int PitchProjection::nearestVisiblePitch(int midiPitch) const
 }
 
 void PitchProjection::buildRowEdges(std::array<qreal, cMaxRows + 1> &edges, int &edgeCount,
-                                     double keyHeight, double scrollY, qreal dpr) const
+                                    double keyHeight, double scrollY, qreal dpr) const
 {
     edgeCount = m_visibleRowCount + 1;
     for (int row = 0; row < edgeCount; ++row)

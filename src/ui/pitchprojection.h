@@ -25,7 +25,7 @@ class PitchProjection
     void buildFromPitches(const uint8_t *pitches, int count);
 
     int visibleRowCount() const { return m_visibleRowCount; }
-    int visiblePitchAt(int row) const; // 0-based row index (top = row 0 = highest pitch)
+    int visiblePitchAt(int row) const;    // 0-based row index (top = row 0 = highest pitch)
     int rowForPitch(int midiPitch) const; // cHiddenRow if not visible
 
     // Set which pitches are scale pitches. By default all are scale pitches
@@ -41,15 +41,16 @@ class PitchProjection
 
     // Row-edge generation equivalent to the current rowEdges().
     // edges[0..visibleRowCount] at the given keyHeight and scrollY, DPR-snapped.
-    void buildRowEdges(std::array<qreal, cMaxRows + 1> &edges, int &edgeCount,
-                       double keyHeight, double scrollY, qreal dpr) const;
+    void buildRowEdges(std::array<qreal, cMaxRows + 1> &edges, int &edgeCount, double keyHeight,
+                       double scrollY, qreal dpr) const;
 
     // Top-edge position of a visible row (0-indexed).
     qreal rowTop(int row, double keyHeight, double scrollY, qreal dpr) const;
     qreal rowBottom(int row, double keyHeight, double scrollY, qreal dpr) const;
 
     // Row rect (keyboard column width).
-    QRectF rowRect(int row, qreal x, qreal width, double keyHeight, double scrollY, qreal dpr) const;
+    QRectF rowRect(int row, qreal x, qreal width, double keyHeight, double scrollY,
+                   qreal dpr) const;
 
     // Hit test: which visible row contains this y, or -1.
     int yToRow(qreal y, double keyHeight, double scrollY, qreal dpr) const;

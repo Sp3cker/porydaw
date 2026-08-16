@@ -76,8 +76,7 @@ int runScaleCheck(const QString &projectRoot)
         expect(std::strcmp(porydaw_scale::rootDisplayName(root), cRootNames[root]) == 0,
                "wrong root display name");
 
-    expect(porydaw_scale::defaultScale() == porydaw_scale::ScaleId::major,
-           "wrong default scale");
+    expect(porydaw_scale::defaultScale() == porydaw_scale::ScaleId::major, "wrong default scale");
     expect(porydaw_scale::defaultRoot() == 0, "wrong default root");
     expect(porydaw_scale::isScalePitch(porydaw_scale::ScaleId::major, 0, 60),
            "C is missing from C Major");
@@ -110,8 +109,7 @@ int runScaleCheck(const QString &projectRoot)
     const int upwardDegrees[] = {1, 1};
     uint8_t upwardDests[] = {0, 0};
     expect(porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
-                                                        upwardSources, upwardDegrees, 2,
-                                                        upwardDests),
+                                                      upwardSources, upwardDegrees, 2, upwardDests),
            "C and C# upward move rejected");
     expect(upwardDests[0] == 62 && upwardDests[1] == 64,
            "C and C# upward move did not separate destinations");
@@ -120,8 +118,8 @@ int runScaleCheck(const QString &projectRoot)
     const int downwardDegrees[] = {-1, -1};
     uint8_t downwardDests[] = {0, 0};
     expect(porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
-                                                        downwardSources, downwardDegrees, 2,
-                                                        downwardDests),
+                                                      downwardSources, downwardDegrees, 2,
+                                                      downwardDests),
            "C# and D downward move rejected");
     expect(downwardDests[0] == 59 && downwardDests[1] == 60,
            "C# and D downward move did not separate destinations");
@@ -130,8 +128,8 @@ int runScaleCheck(const QString &projectRoot)
     const int repeatedDegrees[] = {1, 4, 1};
     uint8_t repeatedDests[] = {0, 0, 0};
     expect(porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
-                                                        repeatedSources, repeatedDegrees, 3,
-                                                        repeatedDests),
+                                                      repeatedSources, repeatedDegrees, 3,
+                                                      repeatedDests),
            "repeated-source move rejected");
     expect(repeatedDests[0] == 62 && repeatedDests[1] == 62,
            "repeated source pitches did not share a destination");
@@ -140,9 +138,8 @@ int runScaleCheck(const QString &projectRoot)
     const uint8_t orderedSources[] = {60, 61, 62};
     const int orderedDegrees[] = {1, 1, 1};
     uint8_t orderedDests[] = {0, 0, 0};
-    expect(porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
-                                                        orderedSources, orderedDegrees, 3,
-                                                        orderedDests),
+    expect(porydaw_scale::resolveDiatonicDestinations(
+               porydaw_scale::ScaleId::major, 0, orderedSources, orderedDegrees, 3, orderedDests),
            "ordered move rejected");
     expect(orderedDests[0] == 62 && orderedDests[1] == 64 && orderedDests[2] == 65,
            "ordered move did not preserve destination order");
@@ -152,16 +149,16 @@ int runScaleCheck(const QString &projectRoot)
     const uint8_t highSource[] = {127};
     const int highDegree[] = {1};
     uint8_t highDest[] = {0};
-    expect(!porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
-                                                         highSource, highDegree, 1, highDest),
+    expect(!porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0, highSource,
+                                                       highDegree, 1, highDest),
            "upper MIDI boundary was not rejected");
     expect(highDest[0] == static_cast<uint8_t>(-1), "upper MIDI boundary did not clear output");
 
     const uint8_t lowSource[] = {0};
     const int lowDegree[] = {-1};
     uint8_t lowDest[] = {42};
-    expect(!porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
-                                                         lowSource, lowDegree, 1, lowDest),
+    expect(!porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0, lowSource,
+                                                       lowDegree, 1, lowDest),
            "lower MIDI boundary was not rejected");
 
     if (failures == 0) {

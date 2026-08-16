@@ -11,7 +11,7 @@
 #include "ui/editordrawer/automationprojection.h"
 
 class AutomationArea;
-class AutomationHoverState;
+struct AutomationHoverState;
 class AutomationPage;
 class PencilGesture;
 class AutomationRows;
