@@ -127,6 +127,9 @@ void VelocityAxis::paintRuler(QPainter &painter, const VelocityAxisPaintStyle &s
     if (mode() == Mode::Intrinsic) {
         // One graduation per real loudness level, named for the volume step
         // it is rather than the stored velocity that happens to reach it.
+        // The level index IS that step — the CGB envelope goal (the wave
+        // channel's NR32 class) — so the naming is zero-based: the bottom
+        // row is Vol 0, the step the hardware plays silently.
         // The levels holding an active value take the accent, which is what
         // the continuous ruler's markers say in the same place.
         for (std::size_t index = 0; index < m_graduationCount; ++index) {
@@ -146,7 +149,7 @@ void VelocityAxis::paintRuler(QPainter &painter, const VelocityAxisPaintStyle &s
             painter.drawText(QRectF(style.labelLeft, graduation.y - style.labelHeight / 2.0,
                                     style.labelWidth, style.labelHeight),
                              Qt::AlignRight | Qt::AlignVCenter,
-                             tr("Vol %1").arg(unsigned(graduation.level) + 1));
+                             tr("Vol %1").arg(unsigned(graduation.level)));
         }
         painter.restore();
         return;
