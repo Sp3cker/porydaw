@@ -99,6 +99,8 @@ const Def kDefs[] = {
      QT_TR_NOOP("Select All Notes"), QKeySequence::SelectAll, ""},
     {"roll.delete", Context::PianoRoll, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Delete Selection"),
      QKeySequence::UnknownKey, "Delete;Backspace"},
+    {"roll.pitch_bend", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Edit Note Pitch Bend"), QKeySequence::UnknownKey, "G"},
     {"roll.transpose_up", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Transpose Up (Semitone)"), QKeySequence::UnknownKey, "Ctrl+Up"},
     {"roll.transpose_down", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),

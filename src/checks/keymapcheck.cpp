@@ -130,6 +130,8 @@ int runKeymapCheck()
               "S should match solo tracks");
         check(keyMatches(QStringLiteral("automation.pencil_mode"), Qt::Key_B, Qt::NoModifier),
               "B should toggle automation pencil mode");
+        check(keyMatches(QStringLiteral("roll.pitch_bend"), Qt::Key_G, Qt::NoModifier),
+              "G should edit the selected note's pitch bend");
         check(keyMatches(QStringLiteral("transport.play_pause"), Qt::Key_Space, Qt::NoModifier),
               "Space should match play/pause");
         check(
