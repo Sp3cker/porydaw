@@ -139,7 +139,6 @@ ResonanceParams bandParams(float globalDepth)
     ResonanceParams params;
     params.gDb = globalDepth;
     params.guardDb = 6.0f;
-    params.tilt = 0.0f;
     // Full 1 kHz-16 kHz test curve: the product default is narrower (§6), but
     // the harness exercises the DSP across the whole covered band.
     for (int i = 5; i <= 11; ++i)
@@ -392,7 +391,7 @@ int runResonanceCheck()
                 break;
             }
         }
-        check(t63 >= 0.25 && t63 <= 0.75, "500 ms attack t63 must be within +/- 50 percent");
+        check(t63 >= 0.075 && t63 <= 0.225, "150 ms attack t63 must be within +/- 50 percent");
     }
 
     {

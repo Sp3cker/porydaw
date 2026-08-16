@@ -9,8 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Added
 - There is now buffer space before the start of the song in the piano roll to make it easier to scroll and focus the start of the song. Similarly, there is now much bigger buffer after the end of the song.
 
+## Changed
+- Resonance suppression now uses a 150 ms default attack for faster response to ringing and whistles.
+
 ## Fixed
 - Fixed audible click on transport transitions (pause/stop/play): the output now fades down, cuts, and fades back instead of hard-cutting sounding channels at full amplitude.
+- Fixed WAV export bypassing resonance suppression when the transport action was enabled.
 - Improved fidelity of CGB channels
    - Fixed CGB channels' volume envelope emulation.
    - Improved CGB noise channel is now band-limited, which is more accurate to hardware's sound quality.

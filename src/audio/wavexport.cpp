@@ -1,4 +1,5 @@
 #include "audio/wavexport.h"
+#include "audio/resonance_suppressor.h"
 
 #include <QCoreApplication>
 #include <QFile>
@@ -104,6 +105,13 @@ bool exportWav(const QString &path, const MidiTimeline &timeline,
 
     constexpr uint32_t kChunk = 4096;
     std::vector<float> bufL(kChunk), bufR(kChunk);
+    std::vector<float> resonanceBuffer;
+    ResonanceSuppressor resonance;
+    if (opts.resonanceSuppression) {
+        resonanceBuffer.resize(2 * kChunk);
+        resonance.init(float(opts.sampleRate));
+        resonance.setEnabled(true);
+    }
     QByteArray pcm;
     pcm.reserve(kChunk * 4);
 
@@ -111,10 +119,42 @@ bool exportWav(const QString &path, const MidiTimeline &timeline,
     bool cancelled = false;
     TimelinePlayer player;
     player.reset();
+    if (progress && !progress(0.0))
+        cancelled = true;
+    uint64_t sourcePos = 0;
+    const auto renderSuppressed = [&](uint32_t frames) {
+        const auto sourceFrames =
+            uint32_t(std::min<uint64_t>(frames, totals.totalSamples - sourcePos));
+        if (sourceFrames > 0) {
+            player.render(&engine, &timeline, bufL.data(), bufR.data(), sourceFrames,
+                          timeline.hasLoop(), 0);
+        }
+        std::fill(bufL.begin() + sourceFrames, bufL.begin() + frames, 0.0f);
+        std::fill(bufR.begin() + sourceFrames, bufR.begin() + frames, 0.0f);
+        for (uint32_t i = 0; i < frames; ++i) {
+            resonanceBuffer[2 * i] = bufL[i];
+            resonanceBuffer[2 * i + 1] = bufR[i];
+        }
+        resonance.process(resonanceBuffer.data(), frames);
+        sourcePos += sourceFrames;
+    };
+    if (opts.resonanceSuppression && !cancelled) {
+        auto remaining = uint32_t(ResonanceSuppressor::kLatency);
+        while (remaining > 0) {
+            const auto frames = std::min(remaining, kChunk);
+            renderSuppressed(frames);
+            remaining -= frames;
+        }
+    }
+
     uint64_t pos = 0;
-    while (ok && pos < totals.totalSamples) {
+    while (ok && !cancelled && pos < totals.totalSamples) {
         const uint32_t n = uint32_t(std::min<uint64_t>(kChunk, totals.totalSamples - pos));
-        player.render(&engine, &timeline, bufL.data(), bufR.data(), n, timeline.hasLoop(), 0);
+        if (opts.resonanceSuppression) {
+            renderSuppressed(n);
+        } else {
+            player.render(&engine, &timeline, bufL.data(), bufR.data(), n, timeline.hasLoop(), 0);
+        }
 
         pcm.resize(int(n) * 4);
         char *out = pcm.data();
@@ -123,8 +163,10 @@ bool exportWav(const QString &path, const MidiTimeline &timeline,
             float gain = 1.0f;
             if (pos + i >= totals.fadeStartSample)
                 gain = 1.0f - float(pos + i - totals.fadeStartSample) / float(fadeLength);
-            const int16_t l = toPcm16(bufL[i] * gain);
-            const int16_t r = toPcm16(bufR[i] * gain);
+            const auto left = opts.resonanceSuppression ? resonanceBuffer[2 * i] : bufL[i];
+            const auto right = opts.resonanceSuppression ? resonanceBuffer[2 * i + 1] : bufR[i];
+            const int16_t l = toPcm16(left * gain);
+            const int16_t r = toPcm16(right * gain);
             out[i * 4 + 0] = char(uint16_t(l) & 0xFF);
             out[i * 4 + 1] = char(uint16_t(l) >> 8);
             out[i * 4 + 2] = char(uint16_t(r) & 0xFF);

@@ -193,6 +193,7 @@ void AudioEngine::loadSong(const MidiTimeline *timeline, LoadedVoiceGroup *voice
     if (m_deviceStarted)
         ma_device_stop(m_device);
     resetOutputCut();
+    m_resonance.reset();
     m_pendingSeek.store(kNoPendingSeek, std::memory_order_release);
 
     m_timeline = timeline;
@@ -278,6 +279,7 @@ void AudioEngine::applyPendingSeek()
     const uint64_t samplePos = m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
     if (samplePos == kNoPendingSeek || !m_timeline)
         return;
+    m_resonance.reset();
 
     for (int track = 0; track < MAX_TRACKS; track++)
         m4a_engine_all_notes_off(m_engine.get(), track);
@@ -382,6 +384,7 @@ void AudioEngine::unloadSong()
     if (m_deviceStarted)
         ma_device_stop(m_device);
     resetOutputCut();
+    m_resonance.reset();
     // Hard-cut sounding channels while the device is parked. Both transport
     // fields are assigned below, so the callback's Playing→Stopped transition
     // never fires and no transport cut-fade would ever run — leaving mid-note
@@ -580,6 +583,7 @@ void AudioEngine::finishOutputCut()
     switch (static_cast<Transport>(target)) {
     case Transport::Stopped:
         m_player.reset();
+        m_resonance.reset();
         break;
     case Transport::Paused:
         break;

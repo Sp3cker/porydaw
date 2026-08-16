@@ -7,8 +7,8 @@
 namespace {
 
 constexpr double kPi = 3.1415926535897932384626433832795;
-constexpr double kKnotFrequencies[] = {63.0,   125.0,  250.0,  400.0,  630.0,   1000.0,
-                                       1600.0, 2500.0, 4000.0, 6300.0, 10000.0, 16000.0};
+constexpr double kKnotFrequencies[] = {65.0,   125.0,  250.0,  400.0,  630.0,   1000.0,
+                                       1600.0, 2100.0, 4000.0, 6300.0, 10000.0, 16000.0};
 
 } // namespace
 
@@ -67,6 +67,11 @@ void ResonanceSuppressor::init(float sampleRate)
     resetState();
     m_appliedEnabled = false;
     m_appliedGeneration = 0;
+}
+
+void ResonanceSuppressor::reset()
+{
+    resetState();
 }
 
 void ResonanceSuppressor::setEnabled(bool on)
@@ -298,7 +303,6 @@ void ResonanceSuppressor::rebuildDepthEnvelope()
         const auto nyquist = 0.5 * m_sampleRate;
         const auto active = m_params.knotActive[i] && kKnotFrequencies[i] < nyquist;
         double depth = active ? double(m_params.gDb) * double(m_params.knotDepthDb[i]) / 10.0 : 0.0;
-        depth += double(m_params.tilt) * std::log2(kKnotFrequencies[i] / 1000.0);
         effectiveDepth[i] = std::clamp(depth, 0.0, 10.0);
     }
 

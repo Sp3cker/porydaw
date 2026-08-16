@@ -1612,6 +1612,7 @@ void MainWindow::exportWav()
     auto currentOptions = [&] {
         WavExportOptions opts;
         opts.sampleRate = rateBox->currentData().toInt();
+        opts.resonanceSuppression = m_audio.resonanceSuppression();
         if (loopCountBox)
             opts.loopCount = loopCountBox->value();
         if (fadeoutBox)

@@ -304,7 +304,7 @@ TransportBar::TransportBar(QWidget *parent) : QToolBar(tr("Transport"), parent)
     m_resonanceAction = new QAction(tr("&Suppress Resonances"), this);
     m_resonanceAction->setCheckable(true);
     m_resonanceAction->setIconVisibleInMenu(false);
-    m_resonanceAction->setToolTip(tr("Suppress ringing/whistles (resonances)"));
+    m_resonanceAction->setToolTip(tr("Suppress harsh resonances"));
     connect(m_resonanceAction, &QAction::toggled, this, &TransportBar::resonanceSuppressionChanged);
     addAction(m_resonanceAction);
 

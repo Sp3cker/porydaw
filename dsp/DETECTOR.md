@@ -3,9 +3,8 @@
 Status: **plan v7** — implemented under review (see §17).
 Scope: stereo bus effect, real-time, deterministic; fixed latency while enabled and
 zero latency while disabled.
-References: none external; all constants are grounded in black-box
-measurements of a commercial dynamic resonance suppressor ("the reference
-plugin" below), 2026-08-15, 48 kHz.
+Design basis: constants and response laws are defined by the deterministic
+probes, listening targets, and implementation decisions recorded below.
 
 ---
 
@@ -15,8 +14,7 @@ Automatically reduce *steady narrowband (resonant) content* — ringing, whistle
 feedback, tonal hum, room modes — while leaving broadband/transient program
 material untouched. Behavior is **per-bin and level-gated**: each FFT bin is
 attenuated only when its level exceeds the silence baseline by a
-knob-controlled margin (the Guard), up to a depth-controlled amount, with
-slow attack/release (§9). Depth is shaped across frequency by the knot curve
+knob-controlled margin (the Guard) Depth is shaped across frequency by the knot curve
 of §6; guard and timing are global. When the effect is disabled, the audio
 path must be bit-exact pass-through.
 
@@ -38,8 +36,8 @@ inverse-transformed through weighted overlap-add. The detector never replaces
 the spectra; it only supplies their shared mask.
 
 The mask is purely per-bin: no cross-bin smoothing. A sink is therefore as
-narrow as one FFT bin — at N=2048 a bin is 21.5 Hz @44.1k / 23.4 Hz @48k,
-comparable to the reference plugin's measured sink locality of ±10–15 Hz at N=4096.
+narrow as one FFT bin — at N=2048 a bin is 21.5 Hz @44.1k / 23.4 Hz @48k.
+The one-bin locality is intentional (§10).
 
 ## 4. Frame and latency
 
@@ -115,9 +113,8 @@ whistle range and the global depth lowered (below).
 
 Each knot has: `freq[b]` (strictly ascending, 20 Hz..min(20 kHz, Nyquist)),
 `depthDb[b]` (0..10 dB), and `active[b]` (bool). Frequencies at or above Nyquist
-are inactive at that sample rate. (The reference plugin's shipping default curve is 12
-arbitrary "auto" positions, mostly ≥ 790 Hz — our grid is a deliberate
-simplification.) Parameter editing is outside the v1 DSP landing; the check
+are inactive at that sample rate. Our fixed grid is a deliberate
+simplification. Parameter editing is outside the v1 DSP landing; the check
 harness supplies explicit values. The only v1 product control is
 enable/disable, using the shipping defaults above.
 A **global depth** `g_depthDb` (0..10 dB, default **3**) scales the
@@ -130,14 +127,6 @@ on the active bands → steady plateau ≈ kDepth·3 = **≈ −7.5 dB** over
 2.5–10 kHz for a full-strength resonance; very resonant bins (≥ 20 dB
 excess) get ×1.25 → **−9.4 dB**, small ones follow the §7 ramp (gentler
 default, 2026-08-16).
-
-A **tilt** knob (in dB/octave, range ±3) rotates the knot depths about the
-1 kHz reference:
-
-```
-effDb[b] += tilt * (log2(freq[b]/1000))
-effDb[b] = clamp(effDb[b], 0, 10)
-```
 
 Interpolation: for any frequency f, the knot curve is **piecewise linear in
 (log f, dB)**; outside the knot span, hold the outermost knot value.
@@ -159,11 +148,9 @@ and the per-bin level is `L[k] = 10*log10(P[k] + 1e-24)` dB. Detection is
 entirely per-bin. DC and Nyquist never contribute to the detector.
 
 The baseline is the **fixed silence threshold** `SilenceDb = −120 dBFS`;
-there is no adaptive floor. Measured reference behaviour: a steady tone is
-suppressed at a constant plateau for the full 90 s probe (< 0.01 dB drift,
-two factory presets), and a −63 dBFS tone engages on first appearance.
-Any upward floor pursuit would lighten the suppression as the floor caught
-up; none is observed, so the baseline never rises. A bin at or below
+there is no adaptive floor. The 60 s sustained-tone check requires a constant
+plateau after attack (< 0.1 dB drift), and the level staircase verifies that a
+−63 dBFS tone engages. The baseline therefore never rises. A bin at or below
 `SilenceDb` is silent and its target gain is 0 dB.
 
 The detector is therefore **stateless**; all memory lives in the §9 gain
@@ -223,10 +210,8 @@ Example: with `L[k]=-40 dBFS`, silent neighbourhood, `Gdb=6 dB`:
 targetGb[k] = −kDepth · depthEnv[k] · excessLaw(excess[k])
 ```
 
-`kDepth = 2.5` is the plateau/depth ratio. The reference plugin's steady-state plateau
-measures **1.9–3.8× the active knot's depth value** (three factory presets:
-8.0 → −18.7 dB, 6.3 → −19.4 dB, 5.0 → −18.9 dB; shape/retilt-dependent) —
-we fix 2.5, so a knot depth of 10 dB saturates at −25 dB.
+`kDepth = 2.5` is the plateau/depth ratio. This gives a practical maximum
+attenuation of −25 dB when a knot depth reaches 10 dB.
 
 `excessLaw(e)` is a soft knee so deep resonances saturate at the depth
 instead of over-cancelling. The response curve is the §7 progressive law:
@@ -245,10 +230,8 @@ progressively to the full `kDepth·depthEnv[k]` at 20 dB excess, and to
 ## 9. Smoothing & per-frame step limit (Timing law)
 
 All smoothing is applied **in the dB (gain) domain**, per bin, as a per-hop
-one-pole. The exponential-in-dB shape is what the reference plugin's attack traces show
-(our measured attack fits are log-linear in dB over 0.7–3 s), so this is the
-same curve class, discretized per hop with `dt = H/fs` (23.2/21.3 ms
-@44.1/48k):
+one-pole. The exponential-in-dB shape produces a log-linear attack trajectory,
+discretized per hop with `dt = H/fs` (23.2/21.3 ms @44.1/48k):
 
 ```
 if targetGb < curGb:   τ = τAttack   (engage)
@@ -258,12 +241,11 @@ step  = (targetGb − curGb) · alpha
 curGb += clamp(step, −cap, +cap)
 ```
 
-- `τ_attack  = MainTiming`        (default 500 ms; one-pole t63 = τA)
-- `τ_release = MainTiming · 4`    (default 2.0 s at timing 500 ms; ours —
-  the reference plugin's release was only measured as <1 s partial rebound + memory)
+- `τ_attack  = timingMs`        (default 150 ms; one-pole t63 = τA)
+- `τ_release = timingMs · 4`    (default 600 ms at timing 150 ms)
 
-The reference plugin's measured attack is t63 ≈ 0.7–3.3× its Timing knob (0.05–0.87 s
-across T=94–500 ms), never T/8-fast — hence τA = T here.
+The attack follows the timing control directly; the frame-step cap below
+bounds the onset at very short settings.
 
 **Frame-step cap:** per bin, per hop, the change of `curGb` must not exceed
 `ΔGmax = 1 dB per 10 ms` (100 dB/s) = **100·H/fs dB/hop** (2.32/2.13 dB/hop
@@ -271,17 +253,16 @@ across T=94–500 ms), never T/8-fast — hence τA = T here.
 one-pole step is computed first, then clamped (`clamp` above). This bounds
 “pumping” and keeps gain motion inaudible. At short timings the cap dominates
 the attack (τA = 94 ms and a 25 dB plateau give t63 ≈ 158 ms ≈ 1.7·T),
-reproducing the reference plugin's slower-than-τ onset at small Timing values.
+giving a slower-than-τ onset at small timing values.
 
 ## 10. Mask synthesis
 
 Per frame:
 
 1. Per-bin: `M[k] = curGb[k]` (dB) directly — no band reconciliation and
-   **no cross-bin smoothing**. The reference plugin's measured locality is bin-scale
-   (±10–15 Hz at N=4096/48k); smoothing would smear the sink over
-   neighbouring bins. A Hann-windowed tone still spans ±2 bins, so the
-   effective sink follows the window naturally.
+   **no cross-bin smoothing**. This keeps each sink at bin scale. A
+   Hann-windowed tone still spans ±2 bins, so the effective sink follows the
+   window naturally.
 2. Bins 0 and N/2 are masked to 1 (0 dB) always — DC and Nyquist untouched.
 3. Convert: `m[k] = 10^(M[k]/20)`.
 
@@ -315,10 +296,10 @@ unit test).
 
 - Insert: `AudioEngine::process()` — right after the mix sum, before the
   master/output gain multiply, at the live engine rate (§4). Both channels.
-  The render loop is chunked; the suppressor accumulates its 1024-sample
-  hop across chunks. **Live-audio path only** — `wavexport.cpp` renders
-  through a private M4AEngine and is deliberately NOT touched in v1
-  (exported WAVs do not carry the effect).
+  The live render loop is chunked; the suppressor accumulates its 1024-sample
+  hop across chunks. When the product action is enabled, `wavexport.cpp`
+  applies the same suppressor at the selected export rate and compensates
+  its 2047-sample latency so the WAV duration and alignment do not change.
 - Enable: atomic bool `mResonanceSuppression` (default off), read by the
   engine each frame; when off, skip analysis+synthesis entirely (bit-exact
   path, no CPU).
@@ -327,7 +308,7 @@ unit test).
   harness following the pattern of the existing `*check.cpp` checks
   (render fixed probes, assert passive bypass + mask-depth invariants).
   The `ResonanceParams` struct is fully wired as **test entry points**
-  (harness flags / debug inputs): gDb, guardDb, timingMs, tilt, curve[12].
+  (harness flags / debug inputs): gDb, guardDb, timingMs, curve[12].
   The product action uses the shipping defaults of §6/§9/§15.
 
 ## 14. Verification plan (deterministic, no external tools)
@@ -339,12 +320,12 @@ unit test).
 | below threshold | 1 kHz @ −118 dBFS, guard 6 | excess < 0 → change ≤ 0.1 dB |
 | above guard | 1 kHz @ −30 dBFS from silence, knot@1k depth 10, global depth 3, guard 6, ≥2 s dwell | plateau ≈ −9.4 ± 1 dB |
 | saturation | same probe at −10 dBFS | same −9.4 dB plateau, never < −10.5 |
-| level independence | 1 kHz staircase −63..−3 dBFS, 1.5 s dwell, global depth 8 | plateau ≈ −25 dB, drift ≈ 0 (reference: < 3 dB) |
-| sustained hold | 1 kHz @ −15 dBFS, 60 s | gain plateau constant to < 0.1 dB after attack (measured on the gain state — a signal-level probe is smeared by the tone's own unmasked Hann skirt; reference: 90 s, < 0.01) |
-| attack | gate on 1 kHz, timing 500 ms | t63 ≈ 0.5 s ± 50% (reference: 0.62 s) |
+| level independence | 1 kHz staircase −63..−3 dBFS, 1.5 s dwell, global depth 8 | plateau ≈ −25 dB, drift ≈ 0 |
+| sustained hold | 1 kHz @ −15 dBFS, 60 s | gain plateau constant to < 0.1 dB after attack (measured on the gain state — a signal-level probe is smeared by the tone's own unmasked Hann skirt) |
+| attack | gate on 1 kHz, timing 150 ms | t63 ≈ 0.15 s ± 50% |
 | release | gate off 1 kHz | gains recover ≥90% within 4·τR (measured on the gain state — §9; a signal-level re-gate probe is smeared by the STFT hop lookahead) |
 | step cap | gate on 1 kHz | per-bin |Δg| ≤ 100·H/fs dB/hop (2.13 dB/hop @48k), measured hop-exact on the gain state |
-| two-tone engagement | 1 kHz @ −15 + 12 kHz witness @ −40 (spectrally separated), steady 20 s, global depth 8 | both components at ≈ −25 ± 1 dB (reference: both −19.5; level-independent, per-component) |
+| two-tone engagement | 1 kHz @ −15 + 12 kHz witness @ −40 (spectrally separated), steady 20 s, global depth 8 | both components at ≈ −25 ± 1 dB (level-independent, per-component) |
 | bypass | full scale sine, enabled→disabled | disabled == original exactly |
 | low band exemption | 300 Hz @ −15 dBFS, steady | change ≤ 0.1 dB (knots 0-4 inactive) |
 | program protection | white noise @ −15 dBFS RMS, 5 s, global depth 8 | broadband RMS within 0.5 dB (blanket detector would dim ~13 dB; mean-vs-median regression measured 1.4 dB) |
@@ -357,12 +338,11 @@ unit test).
 
 - [x] FFT size 2048 at the live engine rate (latency 2047 ≈ 46/43 ms
   @48/44.1k) — chosen vs other sizes: the only hard constraint is the
-  latency budget. Per-bin masks at 23.4/21.5 Hz @48/44.1k give sink widths
-  comparable to the reference plugin's measured ±10–15 Hz at N=4096.
+  latency budget. Per-bin masks at 23.4/21.5 Hz @48/44.1k keep suppression
+  localized while meeting that budget.
 - [x] DC/Nyquist guard: bins 0 and N/2 left untouched (mask=1) always.
-- [x] Depth scale: plateau = `kDepth·depth` with `kDepth = 2.5`, grounded in
-  reference-plugin plateau/knot ratios (1.9–3.8, shape/retilt-dependent).
-- [x] Guard default 6.0 dB — raised from the reference's 3.0 when the gate
+- [x] Depth scale: plateau = `kDepth·depth` with `kDepth = 2.5`.
+- [x] Guard default 6.0 dB — raised from the earlier 3.0 when the gate
   became contrast-relative (2026-08-16); with the mean reference this keeps
   broadband program under 0.3 dB of dimming (median measured 1.4 dB).
 - [x] Spectral contrast detector (user decision 2026-08-16 — "it's
@@ -386,15 +366,14 @@ unit test).
   ≈2047 samples silent, gains attack up), discard the delayed tail on
   disable; audible jump and temporary audio loss accepted — user decision
   2026-08-15.
-- [x] Live-audio path only; `wavexport.cpp` untouched in v1 (exported WAVs
-  carry no effect) — user decision 2026-08-15.
+- [x] Original v1 integration was live-only; WAV export now follows the
+  product enable state and compensates the fixed suppressor latency.
 - [x] `ResonanceParams` wired as test entry points (harness flags/debug
   inputs).
-- [x] Shipping curve — **Option A** (user decision 2026-08-15): knots
-  1000–16000 Hz active at 10.0, knots 63–630 Hz inactive; g_depthDb = 8 →
-  effDb 8 → plateau ≈ −20 dB (mirrors the reference: its default bands ≥ 790 Hz
-  at ≈8, plateau −18.7 dB). tilt = 0, guardDb = 3.0, timingMs = 500 are
-  the product defaults behind the enable/disable action.
+- [x] Earlier shipping curve — **Option A** (user decision 2026-08-15):
+  knots 1000–16000 Hz active at 10.0, knots 63–630 Hz inactive;
+  g_depthDb = 8 → effDb 8 → plateau ≈ −20 dB. guardDb = 3.0 and
+  timingMs = 500 were the product defaults behind the enable/disable action.
 - [x] No latency reporting: playhead position comes from m4a tick position,
   so the 2047-sample delay has no visual indicator — user decision
   2026-08-15.
@@ -402,14 +381,12 @@ unit test).
   mask = 1 (double-internal FFT round trip is far below this; the bound is
   generous to absorb window/overlap float32 I/O noise).
 - [x] Smoothing law: per-hop one-pole in dB with `alpha = 1 − exp(−dt/τ)`,
-  cap applied to the one-pole step (3.125 dB/hop); exponential-in-dB form
-  matches the reference plugin's measured attack fits (log-linear over
-  0.7–3 s).
-- [x] Attack/release: τA = MainTiming, τR = 4·MainTiming (ratio 1:4); the
-  1 dB/10 ms cap dominates at short timings, reproducing the reference plugin's
-  t63 ≈ 0.7–3.3·T onset.
+  cap applied to the one-pole step (3.125 dB/hop); the exponential-in-dB
+  form gives log-linear gain trajectories.
+- [x] Attack/release: τA = timingMs, τR = 4·timingMs (ratio 1:4); the
+  1 dB/10 ms cap bounds the onset at short timings.
 - [x] Fixed threshold, no adaptive floor — user decision 2026-08-15 after the
-  90 s hold measurement (plateau drift < 0.01 dB, both presets). Consequence:
+  sustained-hold probe. Consequence:
   guard and the §8 knee bind only below ≈ −93 dBFS; the detector is
   stateless. Rejected alternatives: post-suppression floor (keeps the guard
   meaningful, behaviourally near-identical); spectral-neighbourhood excess
@@ -425,33 +402,30 @@ unit test).
   no dependencies outside <cmath>, <cstdint>, <vector>.
 - Unit test `src/resonancecheck.cpp` (existing harness convention).
 - The engine owns the instance; parameter struct shared via
-  `ResonanceParams { gDb, guardDb, timingMs, tilt, curve[12] }`.
+  `ResonanceParams { gDb, guardDb, timingMs, curve[12] }`.
 
 ## 17. Revision history
 
-- v0 draft: architecture + laws as specified above. No external references
-  by design.
-- v2 (2026-08-15): validated against black-box measurements of the
-  reference plugin. Detector moved from band-level to per-bin; dropped
-  cross-bin mask smoothing; depth re-scaled ×2.5 (measured plateau/knot
-  1.9–3.8); τA = Timing (measured t63 ≈ 0.7–3.3·T); guard default 3.0 dB;
-  floor init −120 dBFS; DC/Nyquist mask=1 decided.
-- v3 (2026-08-15): 90 s sustained-tone measurement (two presets: −19.43 dB
-  at t=8 s and t=89 s; −18.67 dB; drift < 0.01 dB) falsified the upward
-  floor pursuit → detector reduced to a fixed −120 dBFS threshold, stateless.
-  Steady two-tone probes: quiet witnesses at 700–1100 Hz all sink to the
-  same plateau as a −15 dBFS 1 kHz tone (level-independent, per-component).
+- v0 draft: architecture + laws as specified above.
+- v2 (2026-08-15): probe calibration moved the detector from band-level to
+  per-bin, dropped cross-bin mask smoothing, set the depth scale to ×2.5,
+  chose τA = timingMs and a 3.0 dB guard default, initialized the floor at
+  −120 dBFS, and left DC/Nyquist at unity.
+- v3 (2026-08-15): a 90 s sustained-tone probe showed no meaningful plateau
+  drift, so the detector was reduced to a fixed −120 dBFS threshold and made
+  stateless. Steady two-tone probes showed that spectrally separated
+  components settle independently.
 - v4 (2026-08-15): integration decisions — fs fixed at 32768 (engine grid;
   device upsampling downstream); latency 2047 ≈ 62.5 ms; bin 16 Hz; hop
   31.25 ms; cap 3.125 dB/hop. Hard enable/disable switch (prime from
   silence, discard tail on disable). Live-audio path only (wavexport
   untouched). ResonanceParams wired as test entry points. No latency
-  reporting (playhead from m4a ticks). Smoothing pinned as per-hop one-pole
-  in dB (reference-plugin attack fits are log-linear); cap applied to the one-pole
-  step. Reconstruction tolerance ≤ −120 dB RMS (mask = 1).
+  reporting (playhead from m4a ticks). Smoothing pinned as a per-hop one-pole
+  in dB for log-linear gain trajectories; cap applied to the one-pole step.
+  Reconstruction tolerance ≤ −120 dB RMS (mask = 1).
 - v4.1 (2026-08-15): shipping curve decided — Option A: active knots
-  1000–16000 Hz at 10.0, lower five inactive, g_depthDb = 8, tilt 0
-  (plateau ≈ −20 dB; mirrors the reference's ≥ 790 Hz @ ≈8 default).
+  1000–16000 Hz at 10.0, lower five inactive, g_depthDb = 8
+  (plateau ≈ −20 dB).
 - v5 (2026-08-15): rate correction — the plan's fixed 32768 Hz grid was
   falsified by a code-path audit (miniaudio `sampleRate = 0` native device,
   `m4a_engine_init(deviceRate)`, no interposer upsampler; samplecheck's
@@ -490,3 +464,8 @@ unit test).
   deactivation (knots ≥ fs/2 forced inactive), hop-exact gain-state step
   cap check, 44.1 kHz device-rate case, DC/Nyquist guard case, tighter
   program bounds (0.5 dB pure program). Harness: 24 cases.
+- Post-v7 (2026-08-16): WAV export now follows the persisted product action.
+  Offline processing uses the selected export rate, discards the initial
+  2047 delayed samples, and flushes the same-length tail so file duration
+  and musical alignment remain unchanged. `--exportcheck` covers enabled
+  processing and duration preservation.

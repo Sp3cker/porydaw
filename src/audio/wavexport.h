@@ -12,16 +12,17 @@ extern "C" {
 }
 
 // Offline WAV export (SPEC §7): renders a timeline through a private
-// M4AEngine faster than realtime and writes 16-bit stereo PCM. Length
-// semantics match poryaaaa_render: a looping song plays its intro plus
-// loopCount loop bodies and then fades out linearly over fadeoutSeconds;
-// a song without loop markers plays once with tailSeconds of ring-out
-// after its last event.
+// M4AEngine, optionally applies resonance suppression, and writes 16-bit
+// stereo PCM faster than realtime. Length semantics match poryaaaa_render:
+// a looping song plays its intro plus loopCount loop bodies and then fades
+// out linearly over fadeoutSeconds; a song without loop markers plays once
+// with tailSeconds of ring-out after its last event.
 struct WavExportOptions {
     int sampleRate = 48000;
     int loopCount = 2;           // loop-body playthroughs before the fadeout
     double fadeoutSeconds = 5.0; // looping songs only
     double tailSeconds = 3.0;    // non-looping songs only
+    bool resonanceSuppression = false;
 };
 
 struct WavExportTotals {

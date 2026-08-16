@@ -10,8 +10,7 @@
 struct ResonanceParams {
     float gDb = 3.0f;        // global depth 0..10 dB (gentler shipping default, §6)
     float guardDb = 6.0f;    // guard 0..12 dB above the spectral contrast reference (§7)
-    float timingMs = 500.0f; // attack tau; release = 4x
-    float tilt = 0.0f;       // dB/oct, +-3
+    float timingMs = 150.0f; // attack tau; release = 4x
     float knotDepthDb[12] = {0, 0, 0, 0, 0, 10, 10, 10, 10, 10, 10, 10};
     // Shipping default: only knots 7-10 (2.5-10 kHz) active — plateau
     // 2.5*gDb = -7.5 dB over the whistle band instead of the full high end.
@@ -39,6 +38,9 @@ class ResonanceSuppressor
 
     // Cold (device stopped): rebuild rate-dependent tables, reset all state.
     void init(float sampleRate);
+    // Audio thread or cold: discard delayed audio and gain history without
+    // changing the requested enable state.
+    void reset();
     // Hot: request enable/disable. Applied at the next process() entry on the
     // audio thread; enabling resets the pipeline (fresh prime from silence).
     void setEnabled(bool on);

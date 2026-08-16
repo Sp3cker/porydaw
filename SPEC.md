@@ -538,7 +538,9 @@ end-to-end.
 File → Export WAV renders the loaded song (including unsaved edits) offline
 through a private engine instance with §7 semantics — loop count + fadeout
 for looping songs, ring-out tail otherwise, selectable sample rate, streamed
-16-bit stereo output with progress/cancel; `--exportcheck` harness.
+16-bit stereo output with progress/cancel. When resonance suppression is
+enabled, export applies it with its fixed processing latency compensated;
+`--exportcheck` covers both paths.
 
 **Sample Editor (shipped after M4):**
 Custom DirectSound sample creation end to end — import → crop / retune /

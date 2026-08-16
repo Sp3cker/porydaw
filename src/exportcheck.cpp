@@ -157,6 +157,24 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
     }
     QFile::remove(wavPath);
 
+    // The product's resonance switch must reach offline export without
+    // changing the rendered duration.
+    opts.resonanceSuppression = true;
+    const QString suppressedPath = projectRoot + QStringLiteral("/exportcheck-suppressed.wav");
+    if (!exportWav(suppressedPath, *timeline, vg, settings, opts, {}, &error)) {
+        fail("resonance-suppressed export failed");
+    } else {
+        QFile suppressedFile(suppressedPath);
+        QByteArray suppressedWav;
+        if (suppressedFile.open(QIODevice::ReadOnly))
+            suppressedWav = suppressedFile.readAll();
+        if (suppressedWav.size() != wav.size())
+            fail("resonance suppression changed the export length");
+        else if (suppressedWav == wav)
+            fail("resonance suppression did not reach offline export");
+    }
+    QFile::remove(suppressedPath);
+
     // Cancelled exports must clean up after themselves.
     if (exportWav(wavPath, *timeline, vg, settings, opts, [](double) { return false; }, &error))
         fail("cancelled export reported success");
