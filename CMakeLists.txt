@@ -90,6 +90,8 @@ qt_add_library(porydaw_app STATIC
 
     src/audio/audioengine.cpp
     src/audio/audioengine.h
+    src/audio/resonance_suppressor.cpp
+    src/audio/resonance_suppressor.h
     src/audio/auditionslots.cpp
     src/audio/auditionslots.h
     src/audio/miniaudio_impl.c
@@ -283,6 +285,7 @@ qt_add_executable(porydaw
     src/trackactivitycheck.cpp
     src/trackactivitymetercheck.cpp
     src/audiocheck.cpp
+    src/resonancecheck.cpp
     src/mkcheck.cpp
     src/ignorecheck.cpp
     src/samplecheck.cpp
