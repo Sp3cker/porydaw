@@ -573,9 +573,10 @@ void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationArea &ar
     };
     const qreal dpr = painter.device()->devicePixelRatioF();
     const qreal curveStrokeWidth = layout::singlePixel() + layout::singlePixel();
-    const auto &timeSelection = rows.timeSelection();
-    const bool selectedLane = std::find(timeSelection.lanes.cbegin(), timeSelection.lanes.cend(),
-                                        rows.rowIdentity(row)) != timeSelection.lanes.cend();
+    const auto &timeSelection = page.timeSelection();
+    const auto lane = rows.rowIdentity(row);
+    const bool selectedLane =
+        timeSelection.active() && page.timeSelectionCoversLane(lane.first, lane.second);
     const QColor curveColor =
         ctx.multipleSelectedNodes && !selectedLane ? area.palette().mid().color() : color;
     painter.setPen(QPen(curveColor, curveStrokeWidth));
@@ -616,11 +617,13 @@ void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationAre
     const QRectF nodeClip = painter.clipBoundingRect().intersected(QRectF(plot));
     const qreal nodeExtent =
         std::max(geometry.nodePaintRadius, geometry.selectedNodeRingRadius) + layout::singlePixel();
-    const auto &timeSelection = rows.timeSelection();
-    const bool committedLane = std::find(timeSelection.lanes.cbegin(), timeSelection.lanes.cend(),
-                                         rows.rowIdentity(row)) != timeSelection.lanes.cend();
+    const auto lane = rows.rowIdentity(row);
+    const auto &ownerSelection = page.timeSelection();
+    const SongDocument::TimeRange timeRange{ownerSelection.startTick, ownerSelection.endTick};
+    const bool committedRange =
+        ownerSelection.active() && page.timeSelectionCoversLane(lane.first, lane.second);
     const bool provisionalLane = area.bandPreviewContainsRow(rowIndex);
-    const bool selectedLane = committedLane || provisionalLane;
+    const bool selectedLane = committedRange || provisionalLane;
     const bool dimLane = ctx.multipleSelectedNodes && !selectedLane;
     const QColor selectedColor = area.palette().highlight().color();
     const QColor dimmedColor = area.palette().mid().color();
@@ -629,7 +632,7 @@ void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationAre
         for (const auto &point : points) {
             if (omitted && point.tick == omitted->tick && point.value == omitted->value)
                 continue;
-            const bool selected = rows.pointInTimeSelection(rowIndex, point.tick) ||
+            const bool selected = (committedRange && timeRange.contains(point.tick)) ||
                                   area.bandPreviewContains(rowIndex, point.tick);
             if (selected != selectedPass)
                 continue;

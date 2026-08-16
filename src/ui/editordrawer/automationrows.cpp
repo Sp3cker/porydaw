@@ -101,18 +101,17 @@ void AutomationRows::syncTimeSelection()
     const auto &selection = m_page->timeSelection();
     if (!selection.active() || selection.scope != SongView::TimeSelection::Lanes)
         return;
-    m_timeSelection.startTick = selection.startTick;
-    m_timeSelection.endTick = selection.endTick;
+    m_timeSelection.range = {selection.startTick, selection.endTick};
     for (const auto &lane : selection.lanes) {
         const auto row = std::find_if(m_rows.cbegin(), m_rows.cend(),
                                       [this, &lane](const AutomationRow &candidate) {
                                           return rowIdentity(candidate) == lane;
                                       });
         if (row == m_rows.cend() ||
-            std::find(m_timeSelection.lanes.cbegin(), m_timeSelection.lanes.cend(), lane) !=
-                m_timeSelection.lanes.cend())
+            std::find(m_timeSelection.scope.lanes.cbegin(), m_timeSelection.scope.lanes.cend(),
+                      lane) != m_timeSelection.scope.lanes.cend())
             continue;
-        m_timeSelection.lanes.push_back(lane);
+        m_timeSelection.scope.lanes.push_back(lane);
         const int rowIndex = int(row - m_rows.cbegin());
         if (m_timeSelection.firstRow < 0)
             m_timeSelection.firstRow = rowIndex;
@@ -233,24 +232,25 @@ std::pair<int, uint8_t> AutomationRows::rowIdentity(const AutomationRow &row) co
 bool AutomationRows::selectionContains(int rowIndex, qreal x, const AutomationGeometry &geometry,
                                        qreal devicePixelRatio) const
 {
-    if (!m_timeSelection.active() || rowIndex < 0 || rowIndex >= int(m_rows.size()) ||
-        std::find(m_timeSelection.lanes.cbegin(), m_timeSelection.lanes.cend(),
-                  rowIdentity(m_rows[rowIndex])) == m_timeSelection.lanes.cend())
+    if (!m_timeSelection.active() || rowIndex < 0 || rowIndex >= int(m_rows.size()))
+        return false;
+    const auto lane = rowIdentity(m_rows[rowIndex]);
+    if (!m_timeSelection.scope.coversLane(lane.first, lane.second))
         return false;
     const qreal first =
-        m_page->displayX(m_timeSelection.startTick, geometry.plotOrigin, devicePixelRatio);
+        m_page->displayX(m_timeSelection.range.startTick, geometry.plotOrigin, devicePixelRatio);
     const qreal last =
-        m_page->displayX(m_timeSelection.endTick, geometry.plotOrigin, devicePixelRatio);
+        m_page->displayX(m_timeSelection.range.endTick, geometry.plotOrigin, devicePixelRatio);
     return x >= first && x < last;
 }
 
 bool AutomationRows::pointInTimeSelection(int rowIndex, uint64_t tick) const
 {
-    if (!m_timeSelection.active() || rowIndex < 0 || rowIndex >= int(m_rows.size()) ||
-        std::find(m_timeSelection.lanes.cbegin(), m_timeSelection.lanes.cend(),
-                  rowIdentity(m_rows[rowIndex])) == m_timeSelection.lanes.cend())
+    if (!m_timeSelection.active() || rowIndex < 0 || rowIndex >= int(m_rows.size()))
         return false;
-    return tick >= m_timeSelection.startTick && tick < m_timeSelection.endTick;
+    const auto lane = rowIdentity(m_rows[rowIndex]);
+    return m_timeSelection.scope.coversLane(lane.first, lane.second) &&
+           m_timeSelection.range.contains(tick);
 }
 
 bool AutomationRows::selectionHasMultipleNodes() const
@@ -259,8 +259,8 @@ bool AutomationRows::selectionHasMultipleNodes() const
         return false;
     int count = 0;
     for (int rowIndex = 0; rowIndex < int(m_rows.size()); ++rowIndex) {
-        if (std::find(m_timeSelection.lanes.cbegin(), m_timeSelection.lanes.cend(),
-                      rowIdentity(m_rows[rowIndex])) == m_timeSelection.lanes.cend())
+        const auto lane = rowIdentity(m_rows[rowIndex]);
+        if (!m_timeSelection.scope.coversLane(lane.first, lane.second))
             continue;
         int track = -1;
         uint8_t controller = 0;
@@ -268,7 +268,7 @@ bool AutomationRows::selectionHasMultipleNodes() const
             continue;
         const auto points = m_page->document()->lanePoints(track, controller);
         for (const auto &point : points) {
-            if (point.tick < m_timeSelection.startTick || point.tick >= m_timeSelection.endTick)
+            if (!m_timeSelection.range.contains(point.tick))
                 continue;
             if (++count > 1)
                 return true;
@@ -283,8 +283,8 @@ std::vector<NodeDrag> AutomationRows::collectSelectedNodeDrags() const
     if (!m_timeSelection.active() || !m_page || !m_page->document())
         return points;
     for (int rowIndex = 0; rowIndex < int(m_rows.size()); ++rowIndex) {
-        if (std::find(m_timeSelection.lanes.cbegin(), m_timeSelection.lanes.cend(),
-                      rowIdentity(m_rows[rowIndex])) == m_timeSelection.lanes.cend())
+        const auto lane = rowIdentity(m_rows[rowIndex]);
+        if (!m_timeSelection.scope.coversLane(lane.first, lane.second))
             continue;
         int track = -1;
         uint8_t controller = 0;
@@ -292,7 +292,7 @@ std::vector<NodeDrag> AutomationRows::collectSelectedNodeDrags() const
             continue;
         const auto docPoints = m_page->document()->lanePoints(track, controller);
         for (const auto &point : docPoints) {
-            if (point.tick < m_timeSelection.startTick || point.tick >= m_timeSelection.endTick)
+            if (!m_timeSelection.range.contains(point.tick))
                 continue;
             const DocLanePoint documentPoint{point.smfTrack, point.index, point.tick, point.value};
             points.push_back({rowIndex,

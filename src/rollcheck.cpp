@@ -3001,6 +3001,22 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     band.startTick = d.tick + snapCell;
     band.endTick = d.tick + 2 * snapCell;
     view.setTimeSelection(band);
+    {
+        const QRectF selectedByTimeBox = rows.noteBox(
+            rows.noteRect(view.displayX(double(transposed.tick), pianoKeyboardWidth, rows.dpr()),
+                          view.displayX(double(transposed.tick + transposed.duration),
+                                        pianoKeyboardWidth, rows.dpr()),
+                          transposed.key));
+        const QPixmap selectedByTimePixmap = roll->grab();
+        const QImage selectedByTimeImage = selectedByTimePixmap.toImage();
+        const qreal selectedByTimeDpr = selectedByTimePixmap.devicePixelRatio();
+        const int centerX = qRound(selectedByTimeBox.center().x() * selectedByTimeDpr);
+        const int bottomY = qRound(selectedByTimeBox.bottom() * selectedByTimeDpr) - 1;
+        if (!isSelectionRingColor(selectedByTimeImage.pixel(centerX, bottomY)))
+            fail("time-selected note did not show the normal selection ring");
+        if (!view.selection().empty())
+            fail("time-selected note leaked into the explicit note selection");
+    }
     sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 10), &transposed))
         fail("time-selection Ctrl+Up did not transpose the covered note");
@@ -3009,6 +3025,150 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         fail("time-selection Ctrl+Right did not nudge the covered note");
     if (view.timeSelection().startTick != d.tick + 2 * snapCell)
         fail("time-selection band did not follow the nudge");
+
+    // Duplicate Time uses the active range as its source, advances the band
+    // and edit cursor to the newly-created copy, and repeats from that copy.
+    {
+        const SongView::TimeSelection duplicateSource = view.timeSelection();
+        const uint64_t duplicateSpan = duplicateSource.endTick - duplicateSource.startTick;
+        const int duplicateUndoIndex = doc.undoStack()->index();
+        const uint8_t duplicateKey = transposed.key;
+        const auto hasNoteAt = [&](uint64_t tick) {
+            DocNote note;
+            return doc.findNote(track, tick, duplicateKey, &note);
+        };
+        sendKey(roll, Qt::Key_D, Qt::ControlModifier);
+        const uint64_t firstStart = duplicateSource.endTick;
+        const uint64_t firstEnd = firstStart + duplicateSpan;
+        const SongView::TimeSelection firstSelection = view.timeSelection();
+        if (doc.undoStack()->index() != duplicateUndoIndex + 1 || !firstSelection.active() ||
+            firstSelection.startTick != firstStart || firstSelection.endTick != firstEnd ||
+            view.editCursorTick() != firstEnd || !hasNoteAt(firstStart)) {
+            fail("Ctrl+D did not duplicate once and advance the time selection");
+        }
+        const qreal duplicateDpr = roll->devicePixelRatioF();
+        const qreal duplicateViewport = std::max(50, roll->width() - pianoKeyboardWidth);
+        if (view.displayX(double(firstStart), 0.0, duplicateDpr) < 0.0 ||
+            view.displayX(double(firstEnd), 0.0, duplicateDpr) > duplicateViewport) {
+            fail("first duplicated range was not made visible");
+        }
+        sendKey(roll, Qt::Key_D, Qt::ControlModifier);
+        const uint64_t secondStart = firstEnd;
+        const uint64_t secondEnd = secondStart + duplicateSpan;
+        const SongView::TimeSelection secondSelection = view.timeSelection();
+        if (doc.undoStack()->index() != duplicateUndoIndex + 2 || !secondSelection.active() ||
+            secondSelection.startTick != secondStart || secondSelection.endTick != secondEnd ||
+            view.editCursorTick() != secondEnd || !hasNoteAt(secondStart)) {
+            fail("repeating Ctrl+D did not duplicate the newest copy");
+        }
+        while (doc.undoStack()->index() > duplicateUndoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        view.clearTimeSelection();
+    }
+
+    // Insert Blank Time keeps a track-scoped band and cursor while leaving a
+    // note on an unselected track untouched.
+    const uint64_t insertStart = d.tick + 2 * snapCell;
+    const uint64_t insertEnd = insertStart + snapCell;
+    if (doc.engineTrackCount() >= 2) {
+        const int fixtureUndoIndex = doc.undoStack()->index();
+        const int otherTrack = track == 0 ? 1 : 0;
+        int otherKey = 12;
+        while (otherKey < 128) {
+            DocNote existing;
+            if (!doc.findNote(otherTrack, insertStart, uint8_t(otherKey), &existing))
+                break;
+            otherKey++;
+        }
+        if (otherKey >= 128) {
+            fail("could not reserve an unselected-track insert fixture");
+        } else {
+            const uint8_t otherPitch = uint8_t(otherKey);
+            doc.addNote(otherTrack, insertStart, otherPitch, uint32_t(snapCell), 91);
+            DocNote otherBefore;
+            if (!doc.findNote(otherTrack, insertStart, otherPitch, &otherBefore)) {
+                fail("could not create the unselected-track insert fixture");
+            } else {
+                view.selectTrack(track);
+                SongView::TimeSelection trackSelection;
+                trackSelection.startTick = insertStart;
+                trackSelection.endTick = insertEnd;
+                view.setTimeSelection(trackSelection);
+                const int insertUndoIndex = doc.undoStack()->index();
+                view.insertBlankTime();
+                DocNote otherAfter;
+                DocNote selectedAfter;
+                const bool otherStable =
+                    doc.findNote(otherTrack, insertStart, otherPitch, &otherAfter) &&
+                    otherAfter.tick == otherBefore.tick &&
+                    otherAfter.duration == otherBefore.duration &&
+                    otherAfter.key == otherBefore.key &&
+                    otherAfter.velocity == otherBefore.velocity;
+                const bool selectedShifted =
+                    doc.findNote(track, insertEnd, transposed.key, &selectedAfter);
+                const SongView::TimeSelection insertedSelection = view.timeSelection();
+                if (doc.undoStack()->index() != insertUndoIndex + 1 || !otherStable ||
+                    !selectedShifted || !insertedSelection.active() ||
+                    insertedSelection.startTick != insertStart ||
+                    insertedSelection.endTick != insertEnd ||
+                    insertedSelection.scope != SongView::TimeSelection::Tracks ||
+                    view.editCursorTick() != insertStart) {
+                    fail("Insert Blank Time changed scope, cursor, or an unselected track");
+                }
+                doc.undoStack()->undo();
+                view.clearTimeSelection();
+            }
+        }
+        while (doc.undoStack()->index() > fixtureUndoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+    }
+
+    // A lane-scoped insertion shifts only the selected lane; notes on the
+    // same track stay fixed, proving the resolver does not widen lane scope.
+    {
+        const int fixtureUndoIndex = doc.undoStack()->index();
+        const uint8_t laneCc = 7;
+        const uint64_t lanePointTick = insertStart + snapCell / 2;
+        doc.addLanePoint(track, laneCc, lanePointTick, 80);
+        DocLanePoint laneBefore;
+        DocNote laneNoteBefore;
+        if (!doc.findLanePoint(track, laneCc, lanePointTick, &laneBefore) ||
+            !doc.findNote(track, insertStart, transposed.key, &laneNoteBefore)) {
+            fail("could not create the lane-scoped insert fixture");
+        } else {
+            SongView::TimeSelection laneSelection;
+            laneSelection.startTick = insertStart;
+            laneSelection.endTick = insertEnd;
+            laneSelection.scope = SongView::TimeSelection::Lanes;
+            laneSelection.lanes = {{track, laneCc}};
+            view.setTimeSelection(laneSelection);
+            const int insertUndoIndex = doc.undoStack()->index();
+            view.insertBlankTime();
+            DocLanePoint shiftedLanePoint;
+            DocNote laneNoteAfter;
+            const bool laneShifted =
+                doc.findLanePoint(track, laneCc, lanePointTick + snapCell, &shiftedLanePoint);
+            const bool noteStable =
+                doc.findNote(track, insertStart, transposed.key, &laneNoteAfter) &&
+                laneNoteAfter.tick == laneNoteBefore.tick &&
+                laneNoteAfter.duration == laneNoteBefore.duration &&
+                laneNoteAfter.key == laneNoteBefore.key &&
+                laneNoteAfter.velocity == laneNoteBefore.velocity;
+            const SongView::TimeSelection insertedSelection = view.timeSelection();
+            if (doc.undoStack()->index() != insertUndoIndex + 1 || !laneShifted || !noteStable ||
+                !insertedSelection.active() ||
+                insertedSelection.scope != SongView::TimeSelection::Lanes ||
+                insertedSelection.lanes != laneSelection.lanes ||
+                insertedSelection.startTick != insertStart ||
+                insertedSelection.endTick != insertEnd || view.editCursorTick() != insertStart) {
+                fail("lane-scoped Insert Blank Time widened its scope or moved the band");
+            }
+            doc.undoStack()->undo();
+            view.clearTimeSelection();
+        }
+        while (doc.undoStack()->index() > fixtureUndoIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+    }
 
     // Playhead follow-scroll pauses while a mouse gesture is live: with a
     // middle-button pan held in the roll (or the lanes), a playing playhead

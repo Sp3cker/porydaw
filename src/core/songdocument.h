@@ -232,24 +232,59 @@ class SongDocument : public QObject
     void moveRange(const std::vector<DocNote> &notes, const std::vector<DocLanePoint> &points,
                    int64_t dTick);
 
-    // Ripple delete (time-selection "Remove contents"): erases [startTick,
-    // endTick) on the scoped streams and closes the gap — everything at or
-    // after endTick moves left by the span. Value streams (CC, bend, voice,
-    // tempo, time signatures) keep the state the shifted content was
-    // authored under: the last in-range point moves to startTick instead of
-    // vanishing (unless a point shifts onto that seam from endTick anyway).
+    // Ripple delete (time-selection "Remove contents"): erases the half-open
+    // range on the scoped streams and closes the gap — everything at or after
+    // endTick moves left by the span. Value streams (CC, bend, voice, tempo,
+    // time signatures) keep the state the shifted content was authored under:
+    // the last in-range point moves to startTick instead of vanishing (unless
+    // a point shifts onto that seam from endTick anyway).
     // tracks ripple notes plus every non-note channel event of the track;
-    // wholeSong — the all-tracks cut — ignores tracks/lanes and ripples
-    // every engine track plus the global rows: tempo, time signatures, loop
-    // markers and other metas (moved to the seam, never deleted), and each
-    // chunk's end-of-track tick, so the song itself gets shorter. One
-    // undoable command; returns false when nothing would change.
-    struct RippleScope {
+    // wholeSong — the all-tracks cut — ignores tracks/lanes and ripples every
+    // engine track plus the global rows: tempo, time signatures, loop markers
+    // and other metas (moved to the seam, never deleted), and each chunk's
+    // end-of-track tick, so the song itself gets shorter. One undoable command;
+    // returns false when nothing would change.
+    struct TimeRange {
+        uint64_t startTick = 0;
+        uint64_t endTick = 0;
+
+        bool empty() const { return endTick <= startTick; }
+        uint64_t span() const { return empty() ? 0 : endTick - startTick; }
+        bool contains(uint64_t tick) const { return tick >= startTick && tick < endTick; }
+        bool overlaps(uint64_t start, uint64_t end) const
+        {
+            return startTick < endTick && start < end && startTick < end && start < endTick;
+        }
+    };
+    struct TimeScope {
         std::vector<int> tracks;                    // engine tracks (ignored when wholeSong)
         std::vector<std::pair<int, uint8_t>> lanes; // (engineTrack, cc); -1 = tempo
         bool wholeSong = false;
+
+        bool coversTrack(int engineTrack) const
+        {
+            return wholeSong ||
+                   std::find(tracks.begin(), tracks.end(), engineTrack) != tracks.end();
+        }
+        bool coversLane(int engineTrack, uint8_t cc) const
+        {
+            if (wholeSong)
+                return true;
+            if (std::find(lanes.begin(), lanes.end(), std::pair{engineTrack, cc}) != lanes.end())
+                return true;
+            return engineTrack >= 0 &&
+                   std::find(tracks.begin(), tracks.end(), engineTrack) != tracks.end();
+        }
     };
-    bool removeTimeRange(uint64_t startTick, uint64_t endTick, const RippleScope &scope);
+    bool rippleDeleteTimeRange(const TimeRange &range, const TimeScope &scope);
+    // Insert a silent [startTick, endTick) gap on the scoped streams. Events
+    // at or after startTick shift right; notes crossing the seam split so the
+    // inserted interval remains silent. One undoable command.
+    bool insertBlankTime(const TimeRange &range, const TimeScope &scope);
+    // Duplicate [startTick, endTick) at endTick, shifting later scoped
+    // content right by the span. Value streams seed their effective state at
+    // the destination seam. One undoable command.
+    bool duplicateTimeRange(const TimeRange &range, const TimeScope &scope);
 
     // Raw SMF edits (the MIDI event list view): direct event-level operations
     // on one chunk, indices being current positions in its event vector.
@@ -366,6 +401,7 @@ class SongDocument : public QObject
         bool preservesNoteId = false; // true once this op owns a minted ID
         SmfTrack trackData;           // InsertTrack: content; RemoveTrack: recorded on apply
     };
+    class TimeEditor;
     struct TrackMapState {
         int smfTrackCount = 0;
         std::vector<int> engineToSmf;

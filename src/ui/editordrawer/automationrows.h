@@ -30,15 +30,14 @@ class AutomationRows final
 {
   public:
     struct TimeSelection {
-        uint64_t startTick = 0;
-        uint64_t endTick = 0;
+        SongDocument::TimeRange range;
+        SongDocument::TimeScope scope;
         int firstRow = -1;
         int lastRow = -1;
-        std::vector<std::pair<int, uint8_t>> lanes;
 
         bool active() const noexcept
         {
-            return startTick < endTick && firstRow >= 0 && !lanes.empty();
+            return !range.empty() && firstRow >= 0 && !scope.lanes.empty();
         }
     };
 

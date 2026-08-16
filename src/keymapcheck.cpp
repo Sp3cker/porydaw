@@ -135,6 +135,31 @@ int runKeymapCheck()
         check(
             !keyMatches(QStringLiteral("transport.play_pause"), Qt::Key_Space, Qt::ControlModifier),
             "Ctrl+Space must not match play/pause");
+        const QString duplicateId = QStringLiteral("roll.duplicate_time");
+        const keymap::CommandInfo duplicate = registry.command(duplicateId);
+        check(duplicate.context == keymap::Context::PianoRoll &&
+                  duplicate.category == QStringLiteral("Piano Roll") &&
+                  duplicate.name == QStringLiteral("Duplicate time"),
+              "duplicate time command metadata is wrong");
+        check(duplicate.defaults == QList<QKeySequence>{QKeySequence(QStringLiteral("Ctrl+D"))},
+              "duplicate time does not register Ctrl+D as its default");
+        check(keyMatches(duplicateId, Qt::Key_D, Qt::ControlModifier),
+              "Ctrl+D should match duplicate time");
+        check(registry
+                  .conflicts(duplicateId, duplicate.context, QKeySequence(QStringLiteral("Ctrl+D")))
+                  .isEmpty(),
+              "Ctrl+D conflicts with another command");
+        registry.setBinding(duplicateId, QKeySequence(QStringLiteral("Alt+D")));
+        check(registry.bindings(duplicateId) ==
+                  QList<QKeySequence>{QKeySequence(QStringLiteral("Alt+D"))},
+              "duplicate time override did not apply");
+        check(QSettings().value(QStringLiteral("keymap/") + duplicateId).toString() ==
+                  QStringLiteral("Alt+D"),
+              "duplicate time override did not persist");
+        registry.resetBinding(duplicateId);
+        check(!registry.isOverridden(duplicateId) &&
+                  keyMatches(duplicateId, Qt::Key_D, Qt::ControlModifier),
+              "duplicate time reset did not restore Ctrl+D");
     }
 
     // 3. Override: the new key matches, the default stops matching, and the

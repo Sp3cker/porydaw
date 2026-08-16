@@ -105,6 +105,7 @@ class AutomationPage final : public QWidget
     const LoadedVoiceGroup *voicegroup() const noexcept;
     int selectedTrack() const noexcept;
     const SongView::TimeSelection &timeSelection() const noexcept;
+    bool timeSelectionCoversLane(int track, uint8_t controller) const;
     uint64_t snapTick(double tick, bool fineMode) const noexcept;
     uint64_t snapTickDown(double tick, bool fineMode) const noexcept;
     DrawerPageGridState gridState(uint64_t tick, bool fineMode) const noexcept;

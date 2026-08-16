@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "core/mid2agbtables.h"
+#include "core/timedefaults.h"
 
 void TimelinePlayer::dispatchEvent(M4AEngine *engine, const TimelineEvent &ev, uint32_t muteMask)
 {
@@ -77,28 +78,14 @@ void TimelinePlayer::chase(M4AEngine *engine, const MidiTimeline *timeline, uint
         }
     }
 
-    // Engine reset defaults for the stateful controllers (the track-init
-    // values in m4a_engine.c). The opt-in ones — portamento, PWM — are
-    // no-ops in the engine while their feature is disabled.
-    static constexpr struct {
-        uint8_t cc;
-        uint8_t value;
-    } kCcDefaults[] = {
-        {0x01, 0},   // MOD
-        {0x05, 0},   // PORTAMENTO
-        {0x07, 127}, // VOL
-        {0x0A, 64},  // PAN (center)
-        {0x14, 2},   // BENDR
-        {0x15, 22},  // LFOS
-        {0x17, 0},   // PWMC
-        {0x19, 0},   // PWMS
-    };
-
+    // Shared playback defaults for stateful controllers. The opt-in ones —
+    // portamento and PWM — are no-ops in the engine while their feature is
+    // disabled.
     for (int track = 0; track < 16; track++) {
         for (int n = 0; n < 128; n++)
             if (cc[track][n])
                 dispatchEvent(engine, *cc[track][n], 0);
-        for (const auto &d : kCcDefaults)
+        for (const CoreTimeDefaults::ControllerDefault &d : CoreTimeDefaults::kControllerDefaults)
             if (!cc[track][d.cc])
                 m4a_engine_cc(engine, track, d.cc, d.value);
         if (bend[track])
@@ -109,7 +96,7 @@ void TimelinePlayer::chase(M4AEngine *engine, const MidiTimeline *timeline, uint
     if (tempo)
         dispatchEvent(engine, *tempo, 0);
     else
-        m4a_engine_set_tempo_bpm(engine, 150); // engine reset default
+        m4a_engine_set_tempo_bpm(engine, CoreTimeDefaults::kTempoBpm);
 }
 
 void TimelinePlayer::primeVoices(M4AEngine *engine, const MidiTimeline *timeline, uint64_t pos)

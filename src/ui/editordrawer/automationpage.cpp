@@ -294,6 +294,11 @@ const SongView::TimeSelection &AutomationPage::timeSelection() const noexcept
     return m_owner.timeSelection();
 }
 
+bool AutomationPage::timeSelectionCoversLane(int track, uint8_t controller) const
+{
+    return m_owner.timeSelectionCoversLane(track, controller);
+}
+
 uint64_t AutomationPage::snapTick(double tick, bool fineMode) const noexcept
 {
     return m_owner.snapTick(tick, fineMode);

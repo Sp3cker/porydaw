@@ -14,6 +14,7 @@
 
 #include "audio/trackactivitylevel.h"
 #include "core/miditimeline.h"
+#include "core/songdocument.h"
 #include "porydaw_scale.h"
 #include "ui/activity/trackactivity.h"
 #include "ui/editordrawer/drawerpage.h"
@@ -420,6 +421,7 @@ class SongView : public QWidget
     void setTimeSelection(const TimeSelection &sel);
     void clearTimeSelection();
     bool timeSelectionCoversTrack(int track) const;
+    bool timeSelectionCoversLane(int track, uint8_t controller) const;
     // "Time selection: 8 beats · 3 tracks" status-bar line; children call it
     // when a selection gesture commits.
     void announceTimeSelection();
@@ -438,6 +440,9 @@ class SongView : public QWidget
     // track ends ripple too); a partial scope shifts only its own tracks or
     // lanes so the rest of the song keeps its alignment.
     void removeTimeSelectionContents();
+    // Insert and duplicate operate only on an active half-open time selection.
+    void insertBlankTime();
+    void duplicateTimeSelection();
     void pasteRangeAtEditCursor();
     // Ctrl+Up/Down on the selection: transpose every covered note (all
     // scoped tracks at once). Same all-or-nothing rule as the roll's note
@@ -582,6 +587,7 @@ class SongView : public QWidget
 
   private:
     friend class EditorDrawer;
+    friend class songview::PianoRoll;
     friend class songview::TrackHeaderRow;
     struct Geometry {
         int trackHeaderWidth;
@@ -633,6 +639,11 @@ class SongView : public QWidget
     double maxRollScroll() const;
     void updateScrollbars();
     void rebuildAfterSongChange();
+    struct TimeScopeResolution {
+        SongDocument::TimeScope scope;
+        QString label;
+    };
+    std::optional<TimeScopeResolution> resolveTimeSelectionScope() const;
     // Engine tracks a track-scoped time selection resolves to (used and
     // document-mapped), and the copyable lane identities of one track (its
     // model lanes plus the voice changes).

@@ -365,12 +365,13 @@ ValuePoint AutomationArea::mappedForRow(int row, QPointF pos, bool fine, bool sn
 
 void AutomationArea::showTimeSelectionMenu(const QPoint &globalPosition)
 {
-    if (m_rowData.timeSelection().active()) {
+    const auto &selection = m_rowData.timeSelection();
+    if (selection.active()) {
         DrawerPageTimeSelectionMenuRequest request;
-        request.startTick = m_rowData.timeSelection().startTick;
-        request.endTick = m_rowData.timeSelection().endTick;
+        request.startTick = selection.range.startTick;
+        request.endTick = selection.range.endTick;
         request.globalPosition = globalPosition;
-        request.lanes = m_rowData.timeSelection().lanes;
+        request.lanes = selection.scope.lanes;
         m_page->showTimeSelectionMenu(request);
         return;
     }
@@ -637,14 +638,17 @@ void AutomationArea::mouseReleaseEvent(QMouseEvent *event)
             const uint64_t last = std::max(m_band.startTick, m_band.endTick);
             if (first < last && rowIndex >= 0 && m_band.endRow >= 0) {
                 auto &timeSelection = m_rowData.timeSelection();
-                timeSelection = {first, last, std::min(rowIndex, m_band.endRow),
-                                 std::max(rowIndex, m_band.endRow)};
-                std::vector<std::pair<int, uint8_t>> lanes;
+                timeSelection.range = {first, last};
+                timeSelection.scope = {};
+                timeSelection.firstRow = std::min(rowIndex, m_band.endRow);
+                timeSelection.lastRow = std::max(rowIndex, m_band.endRow);
+                timeSelection.scope.lanes.reserve(
+                    std::size_t(timeSelection.lastRow - timeSelection.firstRow + 1));
                 for (int row = timeSelection.firstRow;
                      row <= timeSelection.lastRow && row < int(m_rowData.rows().size()); ++row)
-                    lanes.push_back(m_rowData.rowIdentity(m_rowData.rows()[row]));
-                timeSelection.lanes = lanes;
-                m_page->publishTimeSelection(first, last, lanes);
+                    timeSelection.scope.lanes.push_back(
+                        m_rowData.rowIdentity(m_rowData.rows()[row]));
+                m_page->publishTimeSelection(first, last, timeSelection.scope.lanes);
                 m_page->announce(tr("Automation range [%1, %2)").arg(first).arg(last));
             } else {
                 m_rowData.clearTimeSelection();
@@ -952,29 +956,32 @@ void AutomationArea::finishActiveGesture(bool fineMode)
                 }},
         *m_activeGesture);
     const bool changed = std::visit(
-        Visitor{
-            [](std::monostate) { return false; },
-            [this, rowIndex](const AutomationLaneEdit::Completion &completion) {
-                return commitLaneEdit(rowIndex, completion);
-            },
-            [this, document](const NodeDeleteCommit &del) {
-                document->deleteLanePoints(del.track, del.controller, {del.point});
-                m_hoverState.hover.nodeDeleted = true;
-                return true;
-            },
-            [this, document](const NodeMoveCommit &move) {
-                document->moveLanePoints(move.moves);
-                if (move.dTick != 0 && move.selectionDrag && m_rowData.timeSelection().active()) {
-                    SongView::TimeSelection moved = m_page->timeSelection();
-                    moved.startTick =
-                        uint64_t(std::max<int64_t>(0, int64_t(moved.startTick) + move.dTick));
-                    moved.endTick =
-                        uint64_t(std::max<int64_t>(0, int64_t(moved.endTick) + move.dTick));
-                    if (moved.startTick < moved.endTick)
-                        m_page->publishTimeSelection(moved.startTick, moved.endTick, moved.lanes);
-                }
-                return true;
-            }},
+        Visitor{[](std::monostate) { return false; },
+                [this, rowIndex](const AutomationLaneEdit::Completion &completion) {
+                    return commitLaneEdit(rowIndex, completion);
+                },
+                [this, document](const NodeDeleteCommit &del) {
+                    document->deleteLanePoints(del.track, del.controller, {del.point});
+                    m_hoverState.hover.nodeDeleted = true;
+                    return true;
+                },
+                [this, document](const NodeMoveCommit &move) {
+                    document->moveLanePoints(move.moves);
+                    if (move.dTick != 0 && move.selectionDrag) {
+                        const auto &selection = m_rowData.timeSelection();
+                        if (selection.active()) {
+                            auto moved = selection.range;
+                            moved.startTick = uint64_t(
+                                std::max<int64_t>(0, int64_t(moved.startTick) + move.dTick));
+                            moved.endTick =
+                                uint64_t(std::max<int64_t>(0, int64_t(moved.endTick) + move.dTick));
+                            if (!moved.empty())
+                                m_page->publishTimeSelection(moved.startTick, moved.endTick,
+                                                             selection.scope.lanes);
+                        }
+                    }
+                    return true;
+                }},
         commit);
     if (changed)
         m_page->requestRefresh();
@@ -1241,17 +1248,16 @@ void AutomationArea::paintContent(QPainter &painter)
                 painter, QRectF(std::min(x0, x1), top, std::abs(x1 - x0), bottom - top));
         }
     } else if (m_rowData.timeSelection().active()) {
-        first = m_rowData.timeSelection().startTick;
-        last = m_rowData.timeSelection().endTick;
-        if (first < last) {
+        const auto &selection = m_rowData.timeSelection();
+        first = selection.range.startTick;
+        last = selection.range.endTick;
+        if (!selection.range.empty()) {
             const qreal dpr = painter.device()->devicePixelRatioF();
             const qreal x0 = m_page->displayX(first, m_geometry.plotOrigin, dpr);
             const qreal x1 = m_page->displayX(last, m_geometry.plotOrigin, dpr);
             for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
-                if (std::find(m_rowData.timeSelection().lanes.cbegin(),
-                              m_rowData.timeSelection().lanes.cend(),
-                              m_rowData.rowIdentity(rows[rowIndex])) ==
-                    m_rowData.timeSelection().lanes.cend())
+                const auto lane = m_rowData.rowIdentity(rows[rowIndex]);
+                if (!selection.scope.coversLane(lane.first, lane.second))
                     continue;
                 const int top = proj.rowTop(rowIndex);
                 songview::paintSelectionReticle(painter,

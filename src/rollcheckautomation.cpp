@@ -1176,6 +1176,50 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const QPoint groupAPoint = groupPointAt(groupA, groupAValue);
         const QPoint groupBPoint = groupPointAt(groupB, groupBValue);
         const QPoint groupCPoint = groupPointAt(groupC, groupCValue);
+        const auto trackRangeImage = [&](uint64_t endTick) {
+            SongView::TimeSelection selection;
+            selection.startTick = groupA;
+            selection.endTick = endTick;
+            view.setTimeSelection(selection);
+            live.horizontalScroll = 0.0;
+            view.setEditorHorizontalScroll(live.horizontalScroll);
+            page.refreshLiveState(live);
+            QCoreApplication::processEvents();
+            return page.area()->grab().toImage();
+        };
+        const QImage rangeExcludedImage = trackRangeImage(groupB);
+        const QImage rangeIncludedImage = trackRangeImage(groupB + 1);
+        const int bendTop = automationRowTop(page, bend);
+        const QPoint bendPoint(qRound(view.displayX(double(groupB), expected.plotOrigin, dpr)),
+                               bendTop + expected.valuePlotPadding);
+        const auto bendRingChanged = [&] {
+            const qreal imageDpr = rangeIncludedImage.devicePixelRatio();
+            const QPointF pixelCenter = QPointF(bendPoint) * imageDpr;
+            const qreal inner = expected.velocityNodePaintRadius * imageDpr;
+            const qreal outer =
+                (expected.velocitySelectedNodeRingRadius + layout::singlePixel()) * imageDpr;
+            const int left = std::max(0, int(std::floor(pixelCenter.x() - outer)));
+            const int right =
+                std::min(rangeIncludedImage.width() - 1, int(std::ceil(pixelCenter.x() + outer)));
+            const int top = std::max(0, int(std::floor(pixelCenter.y() - outer)));
+            const int bottom =
+                std::min(rangeIncludedImage.height() - 1, int(std::ceil(pixelCenter.y() + outer)));
+            for (int y = top; y <= bottom; ++y) {
+                for (int x = left; x <= right; ++x) {
+                    const qreal dx = qreal(x) - pixelCenter.x();
+                    const qreal dy = qreal(y) - pixelCenter.y();
+                    const qreal distanceSquared = dx * dx + dy * dy;
+                    if (distanceSquared <= inner * inner || distanceSquared > outer * outer)
+                        continue;
+                    if (rangeExcludedImage.pixel(x, y) != rangeIncludedImage.pixel(x, y))
+                        return true;
+                }
+            }
+            return false;
+        };
+        check(bendRingChanged(),
+              QStringLiteral("track time selection did not half-open-highlight automation nodes"));
+
         SongView::TimeSelection groupSelection;
         groupSelection.startTick = groupA;
         groupSelection.endTick = groupB + 1;

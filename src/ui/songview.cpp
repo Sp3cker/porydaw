@@ -52,7 +52,6 @@
 #include <climits>
 #include <cmath>
 #include <functional>
-#include <limits>
 #include <map>
 #include <numeric>
 #include <utility>
@@ -116,6 +115,18 @@ double cursorAnchoredScroll(double anchor, double oldScale, double oldScroll, do
     return content * newScale - anchor;
 }
 constexpr int kVoiceAuditionKey = 60; // middle C, matching the voicegroup browser
+uint32_t usedTrackMask(const MidiTimeline *timeline) noexcept
+{
+    if (!timeline)
+        return 0;
+    uint32_t mask = 0;
+    for (int track = 0; track < 16; ++track) {
+        if (timeline->tracks[track].used)
+            mask |= 1u << track;
+    }
+    return mask;
+}
+
 constexpr int kVoiceAuditionVel = 112;
 // Resize hit-zone reach at a note's left/right edges (rollcheck probes
 // 2.8 DIPs inside the ends, so the zone must reach past that). Outside the
@@ -1209,13 +1220,20 @@ class TimeRuler : public QWidget
         QAction *remove = menu.addAction(SongView::tr("Remove loop markers"));
         remove->setEnabled(tl->loopStartTick != UINT64_MAX || tl->loopEndTick != UINT64_MAX);
         QAction *loopFromSel = nullptr;
+        QAction *insertBlank = nullptr;
+        QAction *duplicate = nullptr;
         QAction *removeContents = nullptr;
         QAction *clearSel = nullptr;
         const SongView::TimeSelection sel = m_sv->timeSelection();
         if (sel.active()) {
             menu.addSeparator();
             loopFromSel = menu.addAction(SongView::tr("Set loop to selection"));
-            removeContents = menu.addAction(SongView::tr("Remove selection contents (shift left)"));
+            insertBlank = menu.addAction(SongView::tr("Insert blank time"));
+            duplicate = menu.addAction(SongView::tr("Duplicate time"));
+            duplicate->setShortcut(keymap::Registry::instance()
+                                       .bindings(QStringLiteral("roll.duplicate_time"))
+                                       .value(0));
+            removeContents = menu.addAction(SongView::tr("Remove contents (shift left)"));
             clearSel = menu.addAction(SongView::tr("Clear time selection"));
         }
         menu.addSeparator();
@@ -1245,6 +1263,10 @@ class TimeRuler : public QWidget
             // Same two-command shape as "Remove loop markers".
             doc->setLoopTick(false, int64_t(sel.startTick));
             doc->setLoopTick(true, int64_t(sel.endTick));
+        } else if (chosen && chosen == insertBlank) {
+            m_sv->insertBlankTime();
+        } else if (chosen && chosen == duplicate) {
+            m_sv->duplicateTimeSelection();
         } else if (chosen && chosen == removeContents) {
             m_sv->removeTimeSelectionContents();
         } else if (chosen && chosen == clearSel) {
@@ -1555,8 +1577,15 @@ class PianoRoll : public TimelineSurface
         // Notes: ghost pass (unselected tracks), then the selected track.
         const SongViewModel &model = m_sv->model();
         const int selected = m_sv->selectedTrack();
-        drawNotes(p, model, selected, true);
-        drawNotes(p, model, selected, false);
+        const auto &timeSelection = m_sv->timeSelection();
+        const SongDocument::TimeRange timeRange{timeSelection.startTick, timeSelection.endTick};
+        const uint32_t usedTracks = usedTrackMask(m_sv->timeline());
+        const uint32_t timeSelectedTracks =
+            timeSelection.active() && timeSelection.scope == SongView::TimeSelection::Tracks
+                ? m_sv->trackSelectionMask() & usedTracks
+                : 0;
+        drawNotes(p, model, selected, timeRange, timeSelectedTracks, true);
+        drawNotes(p, model, selected, timeRange, timeSelectedTracks, false);
         drawDragPreview(p, model, selected);
 
         if (m_drag == Drag::Band) {
@@ -2713,6 +2742,7 @@ class PianoRoll : public TimelineSurface
     }
 
     void drawNotes(QPainter &painter, const SongViewModel &model, int selectedTrack,
+                   const SongDocument::TimeRange &timeRange, uint32_t timeSelectedTracks,
                    bool drawingGhostNotes)
     {
         const double keyHeight = m_sv->keyHeight();
@@ -2744,6 +2774,26 @@ class PianoRoll : public TimelineSurface
         if (nameFont)
             painter.setFont(*nameFont);
 
+        const auto drawSelectionRing = [&](const QRectF &noteBox, const ViewNote &note) {
+            const QColor selectionColor = themes::color(themes::Role::item_selected_background);
+            // The ring thins before it disappears; the black border insets by
+            // whatever ring actually fit. Insets are physical pixels too, so
+            // fractional display scale cannot change either thickness.
+            const int ringThickness =
+                drawRectFrame(painter, noteBox, selectionColor,
+                              std::max(lyt::singlePixel(), qRound(m_geometry.selectionRingDipWidth *
+                                                                  devicePixelRatioF())));
+            if (ringThickness > 0) {
+                drawNoteBoxBorder(painter, noteBox, note.unterminated,
+                                  m_geometry.noteBorderDashLength, m_geometry.noteBorderDashGap,
+                                  ringThickness);
+            } else {
+                // At extreme zoom there is no room for a frame plus a face.
+                // Keep the note visible as a solid selection mark.
+                painter.fillRect(noteBox, selectionColor);
+            }
+        };
+
         for (size_t noteIndex = 0; noteIndex < model.notes.size(); ++noteIndex) {
             const ViewNote &note = model.notes[noteIndex];
             const bool isGhostNote = note.track != selectedTrack;
@@ -2761,8 +2811,12 @@ class PianoRoll : public TimelineSurface
                 continue;
 
             const QRectF noteBox = this->noteBox(noteRect);
+            const bool timeSelected = (timeSelectedTracks & (1u << note.track)) &&
+                                      timeRange.overlaps(note.startTick, note.endTick);
             if (isGhostNote) {
                 painter.fillRect(noteBox, ghostNoteColor(note.track, isBlackKey(note.key)));
+                if (timeSelected)
+                    drawSelectionRing(noteBox, note);
                 continue;
             }
 
@@ -2797,30 +2851,13 @@ class PianoRoll : public TimelineSurface
             }
 
             const bool selected =
-                m_sv->isSelected(note) ||
+                timeSelected || m_sv->isSelected(note) ||
                 (m_drag == Drag::Band &&
                  std::any_of(m_bandAud.begin(), m_bandAud.end(), [&note](const ViewNote &covered) {
                      return covered.noteId == note.noteId;
                  }));
             if (selected) {
-                const QColor selectionColor = themes::color(themes::Role::item_selected_background);
-                // The ring thins before it disappears; the black border
-                // insets by whatever ring actually fit. Insets are physical
-                // pixels too, so fractional display scale cannot change the
-                // ring or inner border thickness.
-                const int ringThickness = drawRectFrame(
-                    painter, noteBox, selectionColor,
-                    std::max(lyt::singlePixel(),
-                             qRound(m_geometry.selectionRingDipWidth * devicePixelRatioF())));
-                if (ringThickness > 0) {
-                    drawNoteBoxBorder(painter, noteBox, note.unterminated,
-                                      m_geometry.noteBorderDashLength, m_geometry.noteBorderDashGap,
-                                      ringThickness);
-                } else {
-                    // At extreme zoom there is no room for a frame plus a
-                    // face. Keep the note visible as a solid selection mark.
-                    painter.fillRect(noteBox, selectionColor);
-                }
+                drawSelectionRing(noteBox, note);
             } else {
                 drawNoteBoxBorder(painter, noteBox, note.unterminated,
                                   m_geometry.noteBorderDashLength, m_geometry.noteBorderDashGap);
@@ -4952,12 +4989,26 @@ void SongView::clearTimeSelection()
 
 bool SongView::timeSelectionCoversTrack(int track) const
 {
-    if (!m_timeSel.active() || track < 0 || track > 15)
+    if (!m_timeSel.active() || m_timeSel.scope == TimeSelection::Lanes || track < 0 || track > 15)
         return false;
-    if (m_timeSel.scope == TimeSelection::Lanes)
+    const uint32_t usedTracks = usedTrackMask(m_timeline);
+    return (trackSelectionMask() & usedTracks & (1u << track)) != 0;
+}
+
+bool SongView::timeSelectionCoversLane(int track, uint8_t controller) const
+{
+    if (!m_timeSel.active())
         return false;
-    // Track scope is live: it always mirrors the header selection.
-    return trackSelectionMask() & (1u << track);
+    if (m_timeSel.scope == TimeSelection::Lanes) {
+        return std::find(m_timeSel.lanes.cbegin(), m_timeSel.lanes.cend(),
+                         std::pair{track, controller}) != m_timeSel.lanes.cend();
+    }
+    const uint32_t usedTracks = usedTrackMask(m_timeline);
+    const uint32_t selectedTracks = trackSelectionMask() & usedTracks;
+    if (track >= 0 && track < 16)
+        return (selectedTracks & (1u << track)) != 0;
+    return track == -1 && controller == DOC_CC_TEMPO && usedTracks != 0 &&
+           selectedTracks == usedTracks;
 }
 
 void SongView::announceTimeSelection()
@@ -4980,6 +5031,33 @@ void SongView::announceTimeSelection()
                           "Del clears, Ctrl+V pastes at the edit cursor")
                            .arg(beats, 0, 'g', 4)
                            .arg(scope));
+}
+
+std::optional<SongView::TimeScopeResolution> SongView::resolveTimeSelectionScope() const
+{
+    if (!m_document || !m_timeline || !m_timeSel.active())
+        return std::nullopt;
+    TimeScopeResolution resolved;
+    if (m_timeSel.scope == TimeSelection::Lanes) {
+        if (m_timeSel.lanes.empty())
+            return std::nullopt;
+        resolved.scope.lanes = m_timeSel.lanes;
+        resolved.label = tr("%n lane(s)", nullptr, int(resolved.scope.lanes.size()));
+        return resolved;
+    }
+    resolved.scope.tracks = timeSelectionTracks();
+    if (resolved.scope.tracks.empty())
+        return std::nullopt;
+    uint32_t usedMask = 0;
+    for (int track = 0; track < 16; ++track) {
+        if (m_timeline->tracks[track].used)
+            usedMask |= 1u << track;
+    }
+    resolved.scope.wholeSong = usedMask != 0 && (trackSelectionMask() & usedMask) == usedMask;
+    resolved.label = resolved.scope.wholeSong
+                         ? tr("all tracks")
+                         : tr("%n track(s)", nullptr, int(resolved.scope.tracks.size()));
+    return resolved;
 }
 
 std::vector<int> SongView::timeSelectionTracks() const
@@ -5199,38 +5277,64 @@ void SongView::nudgeTimeSelection(bool right)
 
 void SongView::removeTimeSelectionContents()
 {
-    if (!m_document || !m_timeline || !m_timeSel.active())
+    const auto resolved = resolveTimeSelectionScope();
+    if (!resolved)
         return;
-    const uint64_t s = m_timeSel.startTick;
-    const uint64_t e = m_timeSel.endTick;
-    SongDocument::RippleScope scope;
-    QString scopeText;
-    if (m_timeSel.scope == TimeSelection::Lanes) {
-        scope.lanes = m_timeSel.lanes;
-        scopeText = tr("%n lane(s)", nullptr, int(scope.lanes.size()));
-    } else {
-        scope.tracks = timeSelectionTracks();
-        if (scope.tracks.empty())
-            return;
-        int used = 0;
-        for (int t = 0; t < 16; t++)
-            used += m_timeline->tracks[t].used ? 1 : 0;
-        scope.wholeSong = int(scope.tracks.size()) == used;
-        scopeText = scope.wholeSong ? tr("all tracks")
-                                    : tr("%n track(s)", nullptr, int(scope.tracks.size()));
-    }
-    if (!m_document->removeTimeRange(s, e, scope)) {
+    const SongDocument::TimeRange range{m_timeSel.startTick, m_timeSel.endTick};
+    if (!m_document->rippleDeleteTimeRange(range, resolved->scope)) {
         announce(tr("Nothing to remove in the time selection"));
         return;
     }
     // The span is gone and later content now sits under where the selection
     // was; clear it and park the edit cursor at the seam.
     clearTimeSelection();
-    commitEditCursor(s);
-    const double beats = double(e - s) / double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
+    commitEditCursor(range.startTick);
+    const double beats =
+        double(range.span()) / double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
     announce(tr("Removed %1 beats on %2 — later events shifted left")
                  .arg(beats, 0, 'g', 4)
-                 .arg(scopeText));
+                 .arg(resolved->label));
+}
+
+void SongView::insertBlankTime()
+{
+    const auto resolved = resolveTimeSelectionScope();
+    if (!resolved)
+        return;
+    const TimeSelection selection = m_timeSel;
+    const SongDocument::TimeRange range{selection.startTick, selection.endTick};
+    if (!m_document->insertBlankTime(range, resolved->scope)) {
+        announce(tr("Nothing to insert in the time selection"));
+        return;
+    }
+    setTimeSelection(selection);
+    commitEditCursor(range.startTick);
+    const double beats =
+        double(range.span()) / double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
+    announce(
+        tr("Inserted %1 beats of blank time on %2").arg(beats, 0, 'g', 4).arg(resolved->label));
+}
+
+void SongView::duplicateTimeSelection()
+{
+    const auto resolved = resolveTimeSelectionScope();
+    if (!resolved)
+        return;
+    const SongDocument::TimeRange range{m_timeSel.startTick, m_timeSel.endTick};
+    if (!m_document->duplicateTimeRange(range, resolved->scope)) {
+        announce(tr("Nothing to duplicate in the time selection"));
+        return;
+    }
+    const uint64_t destinationEnd = range.endTick + range.span();
+    TimeSelection moved = m_timeSel;
+    moved.startTick = range.endTick;
+    moved.endTick = destinationEnd;
+    setTimeSelection(moved);
+    commitEditCursor(destinationEnd);
+    ensureRangeVisible(moved.startTick, moved.endTick, true);
+    const double beats =
+        double(range.span()) / double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
+    announce(tr("Duplicated %1 beats on %2").arg(beats, 0, 'g', 4).arg(resolved->label));
 }
 
 void SongView::pasteRangeAtEditCursor()
@@ -5340,6 +5444,11 @@ bool SongView::handleEditKey(QKeyEvent *event)
         event->accept();
         return true;
     }
+    if (sel && keys.matches(event, QStringLiteral("roll.duplicate_time"))) {
+        duplicateTimeSelection();
+        event->accept();
+        return true;
+    }
     if (sel && keys.matches(event, QStringLiteral("roll.delete"))) {
         deleteTimeSelection();
         event->accept();
@@ -5389,6 +5498,9 @@ void SongView::showTimeSelectionMenu(const QPoint &globalPos)
     QAction *cut = menu.addAction(tr("Cut range"));
     cut->setShortcut(keys.bindings(QStringLiteral("roll.cut")).value(0));
     QAction *del = menu.addAction(tr("Delete range"));
+    QAction *insertBlank = menu.addAction(tr("Insert blank time"));
+    QAction *duplicate = menu.addAction(tr("Duplicate time"));
+    duplicate->setShortcut(keys.bindings(QStringLiteral("roll.duplicate_time")).value(0));
     QAction *removeContents = menu.addAction(tr("Remove contents (shift left)"));
     QAction *paste = menu.addAction(tr("Paste at edit cursor"));
     paste->setShortcut(keys.bindings(QStringLiteral("roll.paste")).value(0));
@@ -5403,6 +5515,10 @@ void SongView::showTimeSelectionMenu(const QPoint &globalPos)
         deleteTimeSelection();
     } else if (chosen == del) {
         deleteTimeSelection();
+    } else if (chosen == insertBlank) {
+        insertBlankTime();
+    } else if (chosen == duplicate) {
+        duplicateTimeSelection();
     } else if (chosen == removeContents) {
         removeTimeSelectionContents();
     } else if (chosen == paste) {

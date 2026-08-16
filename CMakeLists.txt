@@ -120,6 +120,7 @@ qt_add_library(porydaw_app STATIC
     src/core/smf.cpp
     src/core/smf.h
     src/core/songdocument.cpp
+    src/core/songdocument_time.cpp
     src/core/songdocument.h
     src/porydaw_scale.cpp
     src/porydaw_scale.h

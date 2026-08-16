@@ -91,6 +91,8 @@ const Def kDefs[] = {
      QKeySequence::Copy, ""},
     {"roll.cut", Context::PianoRoll, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Cut Selection"),
      QKeySequence::Cut, ""},
+    {"roll.duplicate_time", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Duplicate time"), QKeySequence::UnknownKey, "Ctrl+D"},
     {"roll.paste", Context::PianoRoll, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Paste at Edit Cursor"),
      QKeySequence::Paste, ""},
     {"roll.select_all", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
