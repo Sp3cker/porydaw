@@ -1750,7 +1750,8 @@ class PianoRoll : public TimelineSurface
                     const int key = std::clamp(int(notes.front().key) + m_dKey, 0, 127);
                     const uint64_t at =
                         uint64_t(std::max<int64_t>(0, int64_t(notes.front().tick) + m_dTick));
-                    if (keyMoved || auditionVolumeAt(at) != m_soundingVol) {
+                    if (keyMoved || auditionVolumeAt(at) != m_soundingVol ||
+                        auditionPanAt(at) != m_soundingPan) {
                         auditionKey(key, notes.front().velocity, at);
                         m_auditioned = true;
                     }
@@ -1820,7 +1821,8 @@ class PianoRoll : public TimelineSurface
                 m_drawKey = key;
                 // Dragging the start back past a VOL change moves the pending
                 // note under a new volume; re-attack so the preview follows.
-                if (keyMoved || auditionVolumeAt(m_drawTick) != m_soundingVol) {
+                if (keyMoved || auditionVolumeAt(m_drawTick) != m_soundingVol ||
+                    auditionPanAt(m_drawTick) != m_soundingPan) {
                     auditionKey(m_drawKey, m_lastVelocity, m_drawTick);
                     m_auditioned = true;
                 }
@@ -2198,6 +2200,7 @@ class PianoRoll : public TimelineSurface
     void auditionKey(int key, int velocity, uint64_t atTick = SongView::kAuditionAtCursor)
     {
         m_soundingVol = auditionVolumeAt(atTick);
+        m_soundingPan = auditionPanAt(atTick);
         m_sv->audition(m_sv->selectedTrack(), key, velocity, atTick);
         const int sounding = velocity > 0 ? key : -1;
         if (sounding != m_soundingKey) {
@@ -2213,6 +2216,14 @@ class PianoRoll : public TimelineSurface
     int auditionVolumeAt(uint64_t atTick) const
     {
         return m_sv->auditionVolume(m_sv->selectedTrack(), atTick);
+    }
+
+    // The same for PAN, compared alongside it: a note dragged across a PAN
+    // point moves to the other side of the stereo field (and, on a CGB
+    // channel, to a different level), so it re-attacks there too.
+    int auditionPanAt(uint64_t atTick) const
+    {
+        return m_sv->auditionPan(m_sv->selectedTrack(), atTick);
     }
 
     // Begin the pencil gesture: a pending grid-cell note at the press
@@ -2909,14 +2920,15 @@ class PianoRoll : public TimelineSurface
                                                          // {tick,key}: the anchor must stay
                                                          // recognizable after a mid-hold
                                                          // transpose/nudge re-keys the selection
-    int m_kbdKey = -1;            // key sounding from a keyboard-column press
-    int m_soundingKey = -1;       // auditioned key highlighted on the keyboard
-    int m_soundingVol = -1;       // VOL byte it was sounded under (-1 = track's)
-    int m_hoverKey = -1;          // key row under the cursor; -1 = no mark
-    bool m_auditioned = false;    // a drag/draw preview note is sounding
-    uint8_t m_lastVelocity = 100; // latches to touched/velocity-edited notes
-    bool m_panning = false;       // middle-drag pan
-    QPointF m_panPos;             // last pan sample, global coords
+    int m_kbdKey = -1;                         // key sounding from a keyboard-column press
+    int m_soundingKey = -1;                    // auditioned key highlighted on the keyboard
+    int m_soundingVol = -1;                    // VOL byte it was sounded under (-1 = track's)
+    int m_soundingPan = M4A_AUDITION_PAN_NONE; // PAN it was sounded under
+    int m_hoverKey = -1;                       // key row under the cursor; -1 = no mark
+    bool m_auditioned = false;                 // a drag/draw preview note is sounding
+    uint8_t m_lastVelocity = 100;              // latches to touched/velocity-edited notes
+    bool m_panning = false;                    // middle-drag pan
+    QPointF m_panPos;                          // last pan sample, global coords
     NoteContextMenu *m_noteMenu = nullptr;
 };
 
@@ -6583,15 +6595,18 @@ class VelocityLane : public TimelineSurface
     void auditionNote(int key, int velocity, uint64_t atTick)
     {
         const int effective = mid2agbEffectiveVelocity(velocity);
-        // The VOL in force at atTick is part of what the preview sounds like,
-        // so it belongs in the dedupe: two notes at the same pitch and step
-        // under different CC7 values are different sounds.
+        // The VOL and PAN in force at atTick are part of what the preview
+        // sounds like, so they belong in the dedupe: two notes at the same
+        // pitch and step under different CC7 or CC10 values are different
+        // sounds.
         const int vol = m_sv->auditionVolume(m_sv->selectedTrack(), atTick);
-        if (key == m_audKey && effective == m_audEff && vol == m_audVol)
+        const int pan = m_sv->auditionPan(m_sv->selectedTrack(), atTick);
+        if (key == m_audKey && effective == m_audEff && vol == m_audVol && pan == m_audPan)
             return;
         m_audKey = key;
         m_audEff = effective;
         m_audVol = vol;
+        m_audPan = pan;
         m_sv->audition(m_sv->selectedTrack(), key, velocity, atTick);
     }
 
@@ -6604,6 +6619,7 @@ class VelocityLane : public TimelineSurface
         m_audKey = -1;
         m_audEff = -1;
         m_audVol = -1;
+        m_audPan = M4A_AUDITION_PAN_NONE;
         m_sv->audition(m_sv->selectedTrack(), 0, 0);
     }
 
@@ -6847,12 +6863,13 @@ class VelocityLane : public TimelineSurface
     QRectF m_bandRect;
     QPointF m_pressPos;
     QPointF m_prevPos;
-    bool m_activated = false; // the drag cleared the activation slop
-    bool m_previewed = false; // an update actually moved a preview value
-    bool m_ctrlPress = false; // Ctrl at the press; the click adds instead of collapsing
-    int m_audKey = -1;        // key the gesture is sounding; -1 = silent
-    int m_audEff = -1;        // effective velocity it was last sounded at
-    int m_audVol = -1;        // VOL byte it was last sounded under (-1 = track's)
+    bool m_activated = false;             // the drag cleared the activation slop
+    bool m_previewed = false;             // an update actually moved a preview value
+    bool m_ctrlPress = false;             // Ctrl at the press; the click adds instead of collapsing
+    int m_audKey = -1;                    // key the gesture is sounding; -1 = silent
+    int m_audEff = -1;                    // effective velocity it was last sounded at
+    int m_audVol = -1;                    // VOL byte it was last sounded under (-1 = track's)
+    int m_audPan = M4A_AUDITION_PAN_NONE; // PAN it was last sounded under
 };
 
 // ---------------------------------------------------------------- OtherStrip
@@ -8741,7 +8758,7 @@ void SongView::auditionTimed(int track, int key, int velocity, uint64_t startTic
         dur = std::min(dur, cap);
     if (dur > 0)
         emit auditionNoteTimed(track, key, velocity, quint32(std::min<uint64_t>(dur, UINT32_MAX)),
-                               auditionVolume(track, startTick));
+                               auditionVolume(track, startTick), auditionPan(track, startTick));
 }
 
 void SongView::setPlayheadSample(uint64_t samplePos, bool playing)

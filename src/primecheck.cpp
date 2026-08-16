@@ -38,6 +38,13 @@ constexpr uint64_t kLaterTick = 96;
 // early note taken while the cursor sits late must still sound at kVolEarly.
 constexpr uint8_t kVolEarly = 127;
 constexpr uint8_t kVolLate = 32;
+// A PAN move on the same track, hard right early and centered from kLaterTick
+// on. PAN places the sound and (on a CGB channel) moves the envelope goal, so
+// an audition owes the note's pan for the same reason it owes its volume.
+constexpr uint8_t kPanEarlyByte = 127; // CC10 byte
+constexpr uint8_t kPanLateByte = 64;
+constexpr int kPanEarly = int(kPanEarlyByte) - 64; // engine units
+constexpr int kPanLate = int(kPanLateByte) - 64;
 
 SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
 {
@@ -75,10 +82,12 @@ SmfFile buildPrimeSong()
     SmfTrack &t0 = smf.tracks[1];
     t0.events.push_back(channelEvent(0, 0xC0, kProgAtZero, 0));
     t0.events.push_back(channelEvent(0, 0xB0, 7, kVolEarly));
+    t0.events.push_back(channelEvent(0, 0xB0, 10, kPanEarlyByte));
     t0.events.push_back(channelEvent(0, 0x90, 60, 100));
     t0.events.push_back(channelEvent(24, 0x80, 60, 0));
     t0.events.push_back(channelEvent(kLaterTick, 0xC0, kProgLater, 0));
     t0.events.push_back(channelEvent(kLaterTick, 0xB0, 7, kVolLate));
+    t0.events.push_back(channelEvent(kLaterTick, 0xB0, 10, kPanLateByte));
     t0.endTick = 192;
 
     // Engine track 1: first voice only at tick 48 — the priming case.
@@ -144,15 +153,34 @@ struct TestVoicegroup {
     }
 };
 
-float renderPeak(M4AEngine *engine)
+// Per-side peaks: pan is half of what an audition owes the note, and a mono
+// peak cannot see it move.
+struct StereoPeak {
+    float l = 0.0f;
+    float r = 0.0f;
+    float total() const { return l + r; }
+    bool sameAs(const StereoPeak &other) const
+    {
+        return std::fabs(l - other.l) <= 1e-6f && std::fabs(r - other.r) <= 1e-6f;
+    }
+};
+
+StereoPeak renderPeaks(M4AEngine *engine)
 {
     constexpr uint32_t kFrames = 512;
     float bufL[kFrames], bufR[kFrames];
     m4a_engine_process(engine, bufL, bufR, int(kFrames));
-    float peak = 0.0f;
-    for (uint32_t i = 0; i < kFrames; i++)
-        peak = std::max(peak, std::max(std::fabs(bufL[i]), std::fabs(bufR[i])));
+    StereoPeak peak;
+    for (uint32_t i = 0; i < kFrames; i++) {
+        peak.l = std::max(peak.l, std::fabs(bufL[i]));
+        peak.r = std::max(peak.r, std::fabs(bufR[i]));
+    }
     return peak;
+}
+
+float renderPeak(M4AEngine *engine)
+{
+    return renderPeaks(engine).total();
 }
 
 bool rendersAudibly(M4AEngine *engine)
@@ -269,7 +297,7 @@ int runPrimeCheck()
         // whole render would still pass on an audition that starts right and
         // sinks. The voices sustain flat, so the last block is the level the
         // note holds.
-        const auto settledPeak = [&](const ToneData *voices, uint64_t pos, int rawVolume,
+        const auto settledPeak = [&](const ToneData *voices, uint64_t pos, int rawVolume, int pan,
                                      bool lfo) {
             M4AEngine engine;
             m4a_engine_init(&engine, float(kSampleRate));
@@ -279,19 +307,21 @@ int runPrimeCheck()
                 m4a_engine_cc(&engine, 0, 0x01, 40); // MOD depth: the LFO runs
                 m4a_engine_cc(&engine, 0, 0x15, 60); // LFO speed
             }
-            TimelinePlayer::auditionNoteOn(&engine, 0, 60, 127, rawVolume);
-            float peak = 0.0f;
+            TimelinePlayer::auditionNoteOn(&engine, 0, 60, 127, rawVolume, pan);
+            StereoPeak peak;
             for (int i = 0; i < 40; i++)
-                peak = renderPeak(&engine);
+                peak = renderPeaks(&engine);
             m4a_engine_destroy(&engine);
             return peak;
         };
 
         for (const VoiceKind &kind : kinds) {
             for (const bool lfo : {false, true}) {
-                const float earlyPeak = settledPeak(kind.voices, early, -1, lfo);
-                const float latePeak = settledPeak(kind.voices, late, -1, lfo);
-                if (!(earlyPeak > latePeak && latePeak > 0.0f)) {
+                const StereoPeak earlyPeak =
+                    settledPeak(kind.voices, early, -1, M4A_AUDITION_PAN_NONE, lfo);
+                const StereoPeak latePeak =
+                    settledPeak(kind.voices, late, -1, M4A_AUDITION_PAN_NONE, lfo);
+                if (!(earlyPeak.total() > latePeak.total() && latePeak.total() > 0.0f)) {
                     std::fprintf(stderr,
                                  "primecheck: FAIL: the fixture's VOL drop is not audible on a %s "
                                  "voice%s (control expectation changed?)\n",
@@ -299,14 +329,29 @@ int runPrimeCheck()
                     failures++;
                     continue;
                 }
-                const float auditionPeak = settledPeak(kind.voices, late, kVolEarly, lfo);
-                if (std::fabs(auditionPeak - earlyPeak) > 1e-6f) {
+                const StereoPeak auditionPeak =
+                    settledPeak(kind.voices, late, kVolEarly, kPanEarly, lfo);
+                if (!auditionPeak.sameAs(earlyPeak)) {
                     std::fprintf(stderr,
-                                 "primecheck: FAIL: a %s audition%s at the note's own VOL settled "
-                                 "at %.6f; the note there settles at %.6f (the quiet side is "
-                                 "%.6f)\n",
+                                 "primecheck: FAIL: a %s audition%s at the note's own VOL and PAN "
+                                 "settled at %.6f/%.6f; the note there settles at %.6f/%.6f (the "
+                                 "quiet side is %.6f/%.6f)\n",
                                  kind.name, lfo ? " with its LFO running" : "",
-                                 double(auditionPeak), double(earlyPeak), double(latePeak));
+                                 double(auditionPeak.l), double(auditionPeak.r),
+                                 double(earlyPeak.l), double(earlyPeak.r), double(latePeak.l),
+                                 double(latePeak.r));
+                    failures++;
+                }
+                // The pan is doing real work in that match: keyed at the
+                // note's VOL but left on the cursor's PAN, the same audition
+                // lands somewhere else entirely.
+                const StereoPeak volumeOnlyPeak =
+                    settledPeak(kind.voices, late, kVolEarly, M4A_AUDITION_PAN_NONE, lfo);
+                if (volumeOnlyPeak.sameAs(earlyPeak)) {
+                    std::fprintf(stderr,
+                                 "primecheck: FAIL: a %s audition%s ignoring the note's PAN still "
+                                 "matched it (control expectation changed?)\n",
+                                 kind.name, lfo ? " with its LFO running" : "");
                     failures++;
                 }
             }
@@ -326,12 +371,16 @@ int runPrimeCheck()
                 heldLeft = engine.pcmChannels[i].leftVolume;
             }
         }
-        TimelinePlayer::auditionNoteOn(&engine, 0, 60, 127, kVolEarly);
+        TimelinePlayer::auditionNoteOn(&engine, 0, 60, 127, kVolEarly, kPanEarly);
         (void)renderPeak(&engine); // let the track's own refreshes run
         if (engine.tracks[0].rawVolume != kVolLate ||
             engine.tracks[0].volume !=
                 uint8_t(int(kVolLate) * engine.songMasterVolume / MAX_SONG_VOLUME)) {
             std::fprintf(stderr, "primecheck: FAIL: the audition moved the track's own VOL\n");
+            failures++;
+        }
+        if (engine.tracks[0].pan != kPanLate) {
+            std::fprintf(stderr, "primecheck: FAIL: the audition moved the track's own PAN\n");
             failures++;
         }
         bool heldMoved = false;
@@ -344,6 +393,38 @@ int runPrimeCheck()
         if (heldMoved) {
             std::fprintf(stderr, "primecheck: FAIL: the audition moved a note already sounding "
                                  "on the track\n");
+            failures++;
+        }
+
+        // ...and the audition itself stays where it was keyed. A PAN event
+        // arriving while it sounds — the playhead running past one, or the
+        // track's LFO recalculating — must not drag it onto the track's new
+        // pan, exactly as a VOL event must not drag its volume.
+        uint8_t audRight = 0, audLeft = 0;
+        for (int i = 0; i < MAX_PCM_CHANNELS; i++) {
+            if ((engine.pcmChannels[i].status & CHN_ON) && engine.pcmChannels[i].midiKey == 60) {
+                audRight = engine.pcmChannels[i].rightVolume;
+                audLeft = engine.pcmChannels[i].leftVolume;
+            }
+        }
+        m4a_engine_cc(&engine, 0, 10, 0); // hard left, the other end from kPanEarly
+        m4a_engine_cc(&engine, 0, 7, kVolLate);
+        (void)renderPeak(&engine);
+        bool auditionMoved = false;
+        for (int i = 0; i < MAX_PCM_CHANNELS; i++) {
+            if ((engine.pcmChannels[i].status & CHN_ON) && engine.pcmChannels[i].midiKey == 60 &&
+                (engine.pcmChannels[i].rightVolume != audRight ||
+                 engine.pcmChannels[i].leftVolume != audLeft))
+                auditionMoved = true;
+        }
+        if (!(audRight || audLeft)) {
+            std::fprintf(stderr, "primecheck: FAIL: the audition note is not sounding "
+                                 "(control expectation changed?)\n");
+            failures++;
+        }
+        if (auditionMoved) {
+            std::fprintf(stderr, "primecheck: FAIL: a later PAN/VOL event dragged the sounding "
+                                 "audition off the values it was keyed at\n");
             failures++;
         }
         m4a_engine_destroy(&engine);

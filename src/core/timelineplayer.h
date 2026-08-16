@@ -71,14 +71,17 @@ class TimelinePlayer
     // uninitialized-track silence.
     static void primeVoices(M4AEngine *engine, const MidiTimeline *timeline, uint64_t pos);
 
-    // Keys an audition note at a chosen track VOL. The engine's track holds
-    // the VOL chased to the playhead, but an auditioned note belongs where it
-    // sits in the song, not where the cursor does: rawVolume (0-127, before
-    // the song's master volume; negative leaves the track's own VOL alone)
-    // rides on the channel the note-on starts, so the audition keeps it for
-    // its whole life while every other note on the track is unaffected.
+    // Keys an audition note at a chosen track VOL and PAN. The engine's track
+    // holds the values chased to the playhead, but an auditioned note belongs
+    // where it sits in the song, not where the cursor does: rawVolume (0-127,
+    // before the song's master volume; negative leaves the track's own VOL
+    // alone) and pan (-64..63; anything outside leaves the track's own PAN
+    // alone) ride on the channel the note-on starts, so the audition keeps
+    // them for its whole life while every other note on the track is
+    // unaffected. Both matter to what is heard: PAN places the sound and, on
+    // a CGB channel, moves the envelope goal the note sounds at.
     static void auditionNoteOn(M4AEngine *engine, int track, uint8_t key, uint8_t velocity,
-                               int rawVolume);
+                               int rawVolume, int pan);
 
     // Renders exactly `frames` samples into outL/outR, dispatching every due
     // event. Note-ons for tracks set in muteMask are skipped (note-offs and

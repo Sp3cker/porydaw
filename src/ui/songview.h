@@ -325,6 +325,14 @@ class SongView : public QWidget
             return -1;
         return trackRawVolumeAt(track, atTick);
     }
+    // The PAN an audition aimed at atTick should sound at, or the engine's
+    // no-override sentinel for "whatever the engine's track holds".
+    int auditionPan(int track, uint64_t atTick) const
+    {
+        if (atTick == kAuditionAtCursor || track < 0 || track >= 16)
+            return M4A_AUDITION_PAN_NONE;
+        return trackPanAt(track, atTick);
+    }
     QString instrumentLabel(int track) const; // "042 name (type)" from the voicegroup
     QString voiceShortName(uint8_t program) const;
     QString voiceLabel(uint8_t program) const; // "042 name", the marker/header format
@@ -547,15 +555,17 @@ class SongView : public QWidget
     void announceNote(const ViewNote &note);
 
     // Child-widget entry point for the auditionNote signal. atTick is the
-    // tick whose track VOL the note should sound at — the start of the note
-    // being auditioned, not wherever the edit cursor happens to sit, so a
-    // note under a volume ramp previews at its own loudness. kAuditionAtCursor
-    // (the default) leaves the engine on the VOL chased to the playhead,
-    // which is what a bare keyboard-column click wants.
+    // tick whose track VOL and PAN the note should sound at — the start of
+    // the note being auditioned, not wherever the edit cursor happens to sit,
+    // so a note under a volume ramp previews at its own loudness and one in a
+    // panned passage previews where it really sits. kAuditionAtCursor (the
+    // default) leaves the engine on the state chased to the playhead, which
+    // is what a bare keyboard-column click wants.
     static constexpr uint64_t kAuditionAtCursor = UINT64_MAX;
     void audition(int track, int key, int velocity, uint64_t atTick = kAuditionAtCursor)
     {
-        emit auditionNote(track, key, velocity, auditionVolume(track, atTick));
+        emit auditionNote(track, key, velocity, auditionVolume(track, atTick),
+                          auditionPan(track, atTick));
     }
 
     // Fixed-length audition for the band-sweep chord preview: the note's tick
@@ -566,7 +576,10 @@ class SongView : public QWidget
 
     // Early release for a timed audition (the band no longer covers the
     // note); the velocity-0 form of the same signal.
-    void auditionTimedOff(int track, int key) { emit auditionNoteTimed(track, key, 0, 0, -1); }
+    void auditionTimedOff(int track, int key)
+    {
+        emit auditionNoteTimed(track, key, 0, 0, -1, M4A_AUDITION_PAN_NONE);
+    }
 
     // Child-widget entry point for the statusMessage signal.
     void announce(const QString &text) { emit statusMessage(text); }
@@ -600,13 +613,15 @@ class SongView : public QWidget
     void selectedTrackChanged(int track);
     // Audition request (velocity 0 releases); forwarded to the audio engine.
     // rawVolume is the track VOL byte to sound it at, or -1 for the track's
-    // current one (AudioEngine::kPreviewVolNone).
-    void auditionNote(int track, int key, int velocity, int rawVolume);
+    // current one (AudioEngine::kPreviewVolNone); pan is the track PAN to
+    // sound it at, or M4A_AUDITION_PAN_NONE for the track's current one.
+    void auditionNote(int track, int key, int velocity, int rawVolume, int pan);
     // Self-releasing audition (band-sweep chord preview); forwarded to
     // AudioEngine::previewNoteTimed, which sends the note-off itself.
-    // velocity 0 releases the track+key's preview early. rawVolume as above.
-    void auditionNoteTimed(int track, int key, int velocity, quint32 durationSamples,
-                           int rawVolume);
+    // velocity 0 releases the track+key's preview early. rawVolume and pan as
+    // above.
+    void auditionNoteTimed(int track, int key, int velocity, quint32 durationSamples, int rawVolume,
+                           int pan);
     // Voicegroup-entry audition from the voice picker; routed to
     // AudioEngine::previewVoice like the voicegroup browser's signal.
     void auditionVoice(int voice, int key, int velocity);

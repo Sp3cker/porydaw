@@ -328,24 +328,34 @@ static uint8_t previewVolumeByte(int rawVolume)
     return uint8_t(std::min(rawVolume, MAX_SONG_VOLUME));
 }
 
-void AudioEngine::previewNote(uint8_t track, uint8_t key, uint8_t velocity, int rawVolume)
+// The pan byte carried by a preview command: 0xFF means "leave the track's
+// PAN alone", any other value is the engine's pan biased into 0-127.
+static uint8_t previewPanByte(int pan)
+{
+    if (pan < -64 || pan > 63)
+        return 0xFF;
+    return uint8_t(pan + 64);
+}
+
+void AudioEngine::previewNote(uint8_t track, uint8_t key, uint8_t velocity, int rawVolume, int pan)
 {
     m_previewGen++;
-    m_previewCmd.store((uint64_t(m_previewGen) << 32) |
+    m_previewCmd.store((uint64_t(previewPanByte(pan)) << 40) | (uint64_t(m_previewGen) << 32) |
                        (uint64_t(previewVolumeByte(rawVolume)) << 24) |
                        (uint64_t(track & 0x0F) << 16) | (uint64_t(key & 0x7F) << 8) | velocity);
 }
 
 void AudioEngine::previewNoteTimed(uint8_t track, uint8_t key, uint8_t velocity,
-                                   uint32_t durationSamples, int rawVolume)
+                                   uint32_t durationSamples, int rawVolume, int pan)
 {
     if (velocity > 0 && durationSamples == 0)
         return;
     const uint32_t w = m_timedWrite.load(std::memory_order_relaxed);
     if (w - m_timedRead.load(std::memory_order_acquire) >= kTimedRingSize)
         return;
-    m_timedRing[w % kTimedRingSize] = {uint8_t(track & 0x0F), uint8_t(key & 0x7F), velocity,
-                                       previewVolumeByte(rawVolume), durationSamples};
+    m_timedRing[w % kTimedRingSize] = {
+        uint8_t(track & 0x0F),        uint8_t(key & 0x7F), velocity,
+        previewVolumeByte(rawVolume), previewPanByte(pan), durationSamples};
     m_timedWrite.store(w + 1, std::memory_order_release);
 }
 
@@ -536,21 +546,24 @@ void AudioEngine::applyPreviewNote()
     const uint8_t key = (cmd >> 8) & 0x7F;
     const uint8_t velocity = cmd & 0xFF;
     const uint8_t volume = (cmd >> 24) & 0xFF;
+    const uint8_t pan = (cmd >> 40) & 0xFF;
     if (velocity > 0) {
         // Live note: no timeline position for any overflow event it causes,
         // and it stays audible in the solo-overflow invert mode.
         m_engine->polyEventClock = M4A_POLY_TICK_NONE;
         m_engine->auditionNote = true;
-        previewNoteOn(track, key, velocity, volume);
+        previewNoteOn(track, key, velocity, volume, pan);
         m_previewTrack = track;
         m_previewKey = key;
     }
 }
 
-void AudioEngine::previewNoteOn(uint8_t track, uint8_t key, uint8_t velocity, uint8_t volume)
+void AudioEngine::previewNoteOn(uint8_t track, uint8_t key, uint8_t velocity, uint8_t volume,
+                                uint8_t pan)
 {
     TimelinePlayer::auditionNoteOn(m_engine.get(), track, key, velocity,
-                                   volume == 0xFF ? -1 : int(volume));
+                                   volume == 0xFF ? -1 : int(volume),
+                                   pan == 0xFF ? M4A_AUDITION_PAN_NONE : int(pan) - 64);
 }
 
 void AudioEngine::applyTimedPreviews(uint32_t frameCount)
@@ -599,7 +612,7 @@ void AudioEngine::applyTimedPreviews(uint32_t frameCount)
             }
             m4a_engine_note_off(m_engine.get(), m_timedActive[slot].track, m_timedActive[slot].key);
         }
-        previewNoteOn(cmd.track, cmd.key, cmd.velocity, cmd.volume);
+        previewNoteOn(cmd.track, cmd.key, cmd.velocity, cmd.volume, cmd.pan);
         m_timedActive[slot] = {cmd.track, cmd.key, int64_t(cmd.durationSamples)};
     }
     m_timedRead.store(r, std::memory_order_release);

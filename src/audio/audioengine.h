@@ -112,20 +112,27 @@ class AudioEngine
     // previous one, so at most one preview note sounds at a time.
     // rawVolume is the track's VOL byte (0-127, before the song's master
     // volume) the note should sound at; -1 uses whatever VOL the engine's
-    // track currently holds — i.e. the one chased to the playhead.
-    void previewNote(uint8_t track, uint8_t key, uint8_t velocity, int rawVolume = kPreviewVolNone);
+    // track currently holds — i.e. the one chased to the playhead. pan is the
+    // track's PAN (-64..63) the note should sound at, with the same fallback
+    // for kPreviewPanNone: it places the sound and, on a CGB channel, moves
+    // the envelope goal the note is heard at.
+    void previewNote(uint8_t track, uint8_t key, uint8_t velocity, int rawVolume = kPreviewVolNone,
+                     int pan = kPreviewPanNone);
 
     // Hot: audition a note for a fixed length (band-sweep chord preview).
     // Unlike previewNote, timed previews stack polyphonically; the audio
     // thread sends each note-off itself once the duration elapses. velocity
     // 0 releases that track+key's preview early instead (durationSamples
-    // ignored). rawVolume as in previewNote.
+    // ignored). rawVolume and pan as in previewNote.
     void previewNoteTimed(uint8_t track, uint8_t key, uint8_t velocity, uint32_t durationSamples,
-                          int rawVolume = kPreviewVolNone);
+                          int rawVolume = kPreviewVolNone, int pan = kPreviewPanNone);
 
     // "Sound this preview at the track's current VOL" — the caller has no
     // particular volume in mind.
     static constexpr int kPreviewVolNone = -1;
+    // The same for PAN. Every value in -64..63 is a real pan, so the
+    // no-override marker is the engine's own out-of-range sentinel.
+    static constexpr int kPreviewPanNone = M4A_AUDITION_PAN_NONE;
 
     // Hot: audition a voicegroup entry by program number (SPEC §6.1 voicegroup
     // browser). Runs on a second engine instance (SPEC §3) so the program
@@ -237,7 +244,7 @@ class AudioEngine
     void applyTimedPreviews(uint32_t frameCount);
     // Audio thread: key an audition note at a specific track VOL (0xFF = the
     // track's current one), through TimelinePlayer::auditionNoteOn.
-    void previewNoteOn(uint8_t track, uint8_t key, uint8_t velocity, uint8_t volume);
+    void previewNoteOn(uint8_t track, uint8_t key, uint8_t velocity, uint8_t volume, uint8_t pan);
     void clearTimedPreviews();
     void applyPreviewVoice();
     void applyPolyDebug();
@@ -276,9 +283,11 @@ class AudioEngine
     static constexpr uint64_t kNoPendingSeek = UINT64_MAX;
     std::atomic<uint64_t> m_pendingSeek{kNoPendingSeek};
     // Preview-note command:
-    // generation<<32 | volume<<24 | track<<16 | key<<8 | velocity, where the
-    // volume byte is 0xFF for kPreviewVolNone. The generation counter makes
-    // every request distinct so repeated notes are seen by the audio thread.
+    // pan<<40 | generation<<32 | volume<<24 | track<<16 | key<<8 | velocity,
+    // where the volume byte is 0xFF for kPreviewVolNone and the pan byte is
+    // the PAN plus 64 (0-127), 0xFF for kPreviewPanNone. The generation
+    // counter makes every request distinct so repeated notes are seen by the
+    // audio thread.
     std::atomic<uint64_t> m_previewCmd{0};
     uint8_t m_previewGen = 0; // UI thread only
     // Timed-preview commands (band-sweep chord audition): a fixed SPSC ring.
@@ -290,6 +299,7 @@ class AudioEngine
         uint8_t key;
         uint8_t velocity;
         uint8_t volume; // track VOL byte, 0xFF for kPreviewVolNone
+        uint8_t pan;    // PAN + 64, 0xFF for kPreviewPanNone
         uint32_t durationSamples;
     };
     static constexpr uint32_t kTimedRingSize = 64;
