@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QColor>
 #include <QFontMetrics>
 #include <QImage>
@@ -2057,19 +2058,25 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     doc.undoStack()->undo();
     (void)view.grab();
 
-    // The header's Detents chip turns the whole thing off for the track.
-    const QRect detentChip = lane->property("velocityDetentChip").toRect();
-    if (detentChip.isEmpty()) {
+    // The header's Detents checkbox turns the whole thing off for the track.
+    // A real child widget now, so the clicks go to it, not to the lane.
+    auto *detentCheck = lane->findChild<QCheckBox *>(QStringLiteral("velocityDetentCheck"));
+    if (!detentCheck || detentCheck->isHidden()) {
         fail("a PSG context must offer the detent toggle");
         return failures == 0 ? 0 : 1;
     }
-    const QPointF chipPoint(detentChip.center());
-    sendLaneMouse(lane, QEvent::MouseButtonPress, chipPoint, Qt::LeftButton, Qt::LeftButton);
-    sendLaneMouse(lane, QEvent::MouseButtonRelease, chipPoint, Qt::LeftButton, Qt::NoButton);
+    const auto clickDetentCheck = [&] {
+        const QPointF center(detentCheck->rect().center());
+        sendLaneMouse(detentCheck, QEvent::MouseButtonPress, center, Qt::LeftButton,
+                      Qt::LeftButton);
+        sendLaneMouse(detentCheck, QEvent::MouseButtonRelease, center, Qt::LeftButton,
+                      Qt::NoButton);
+    };
+    clickDetentCheck();
     (void)view.grab();
     check(lane->property("velocityDetents").toInt() == 0 &&
               !lane->property("velocityIntrinsic").toBool(),
-          "the Detents chip must put the plain ruler back");
+          "the Detents checkbox must put the plain ruler back");
     const int undoBeforeChipDrag = doc.undoStack()->index();
     const QPointF chipFrom(psgX, laneVelocityY(lane, psgNote.velocity));
     sendLaneMouse(lane, QEvent::MouseButtonPress, chipFrom, Qt::LeftButton, Qt::LeftButton);
@@ -2207,10 +2214,7 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
         fail("the mixed-voice fixture must be brought on screen");
         return failures == 0 ? 0 : 1;
     }
-    const QRect rearmChip = lane->property("velocityDetentChip").toRect();
-    const QPointF rearmPoint(rearmChip.center());
-    sendLaneMouse(lane, QEvent::MouseButtonPress, rearmPoint, Qt::LeftButton, Qt::LeftButton);
-    sendLaneMouse(lane, QEvent::MouseButtonRelease, rearmPoint, Qt::LeftButton, Qt::NoButton);
+    clickDetentCheck();
     (void)view.grab();
     check(lane->property("velocityDetents").toInt() == 0,
           "the rearm fixture must start with the detents switched off");
@@ -2221,8 +2225,7 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     (void)view.grab();
     check(lane->property("velocityDetents").toInt() == 0,
           "hovering a note off the detents' voice must not switch them back on");
-    sendLaneMouse(lane, QEvent::MouseButtonPress, rearmPoint, Qt::LeftButton, Qt::LeftButton);
-    sendLaneMouse(lane, QEvent::MouseButtonRelease, rearmPoint, Qt::LeftButton, Qt::NoButton);
+    clickDetentCheck();
     view.scrollByPx(-mixedScroll);
     view.clearSelection();
     (void)view.grab();

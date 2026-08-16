@@ -412,7 +412,7 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   quieter song genuinely has fewer detents rather than the same ones played softer —
   a square channel has 16 levels at full volume, 8 at volume 64, and none below
   about 16, where it is silent whatever the velocity says and the lane keeps the
-  plain ruler. The header's **Detents** chip (shown only where there are
+  plain ruler. The header's **Detents** checkbox (shown only where there are
   detents, and rearmed whenever the context leaves PSG) puts the plain ruler and
   exact values back for the track, and holding `velocity.detent_unlock` (**Ctrl** by
   default, read at the press) does the same for one gesture. The **right button** is

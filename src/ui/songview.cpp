@@ -11,6 +11,7 @@
 #include "ui/velocitygesturemodel.h"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QContextMenuEvent>
 #include <QCursor>
@@ -5533,7 +5534,7 @@ bool velDetentUnlockHeld(Qt::KeyboardModifiers modifiers, bool allowShift)
 // well as the velocity — the song's master volume is folded into it — so a
 // quiet song has fewer of them, and a section too quiet to reach the first
 // envelope step has none at all and keeps the plain ruler. The header's
-// Detents chip turns that off for the track, and the velocity.detent_unlock
+// Detents checkbox turns that off for the track, and the velocity.detent_unlock
 // chord (Ctrl by default, read at the press) unlocks exact values for one
 // gesture. Still to come: the marquee.
 class VelocityLane : public TimelineSurface
@@ -5547,6 +5548,30 @@ class VelocityLane : public TimelineSurface
         // Range shortcuts (and the lane's own V toggle) work from here too,
         // so a click focuses the lane like the roll and the lanes area.
         setFocusPolicy(Qt::ClickFocus);
+        // A real checkbox rather than a painted chip: detents are a plain
+        // per-track on/off, and a checkbox is what says so — hover, press,
+        // focus ring, keyboard and screen-reader name all come from the
+        // style. It lives in the header column, laid out by syncDetentCheck.
+        m_detentCheck = new QCheckBox(SongView::tr("Detents"), this);
+        m_detentCheck->setObjectName(QStringLiteral("velocityDetentCheck")); // findChild for tests
+        m_detentCheck->setFont(typography::caption(font()));
+        // Tab reaches it, a click does not take focus — like the track
+        // headers' M/S buttons, so clicking it never quietly moves the
+        // lane's keyboard shortcuts off the lane.
+        m_detentCheck->setFocusPolicy(Qt::TabFocus);
+        m_detentCheck->setChecked(m_useDetents);
+        m_detentCheck->setToolTip(
+            SongView::tr("Snap velocities to the voice's own volume levels."));
+        m_detentCheck->hide(); // shown once a context with detents is painted
+        connect(m_detentCheck, &QCheckBox::toggled, this, [this](bool on) {
+            m_useDetents = on;
+            const VelocityMap context = currentContext();
+            m_sv->announce(on ? SongView::tr("Velocity detents on — %1 has %2 volume levels.")
+                                    .arg(QString::fromLatin1(context.voiceName()))
+                                    .arg(context.levelCount())
+                              : SongView::tr("Velocity detents off — exact velocities."));
+            invalidateContent();
+        });
     }
 
     // A mouse gesture is live (the pan or a velocity edit); follow-scroll
@@ -5593,7 +5618,7 @@ class VelocityLane : public TimelineSurface
             return;
 
         const VelocityMap context = currentContext();
-        // Leaving PSG rearms the detents: the chip is a per-track choice
+        // Leaving PSG rearms the detents: the checkbox is a per-track choice
         // about a voice, not a mode the lane keeps once that voice is gone
         // (or once the volume has left it nothing to snap between).
         // Read off the track's own context, never the hover — passing the
@@ -5602,7 +5627,7 @@ class VelocityLane : public TimelineSurface
         // way, so nothing needs repainting.
         if (!trackContext().hasDetents())
             m_useDetents = true;
-        paintDetentChip(p, context);
+        syncDetentCheck(context);
         const std::vector<uint8_t> active = activeVelocities();
         const VelocityAxis axis(axisMap(context), axisGeometry(), active.data(), active.size());
         // Test mirrors of the ruler being painted, like the lanes' own
@@ -5614,11 +5639,11 @@ class VelocityLane : public TimelineSurface
         setProperty("velocityMarkerCount", int(axis.markerCount()));
         setProperty("velocityIntrinsic", axis.mode() == VelocityAxis::Mode::Intrinsic);
         setProperty("velocityLevelCount", int(axis.map().levelCount()));
-        // -1 where the chip is not offered at all, so a check can tell "no
-        // detents to switch here" from "detents turned off"; read off the
-        // chip itself, so the mirror cannot disagree with what is on screen.
+        // -1 where the checkbox is not offered at all, so a check can tell
+        // "no detents to switch here" from "detents turned off"; read off the
+        // widget itself, so the mirror cannot disagree with what is on screen.
         setProperty("velocityDetents",
-                    detentChipRect(context).isEmpty() ? -1 : (m_useDetents ? 1 : 0));
+                    m_detentCheck->isHidden() ? -1 : (m_detentCheck->isChecked() ? 1 : 0));
         VelocityAxisPaintStyle style;
         style.labelColor = themes::color(themes::Role::song_view_secondary_text);
         style.accentColor = themes::color(themes::Role::song_view_selection_edge);
@@ -5750,21 +5775,8 @@ class VelocityLane : public TimelineSurface
         // a press in the plot may bring its own Shift (the ramp's).
         m_detentUnlock = detentsUnlocked(event->modifiers(), pos.x() >= kGutterW);
         if (pos.x() < kHeaderW) {
-            // The track header column is not the lane's, save for its own
-            // Detents chip.
-            const VelocityMap context = currentContext();
-            const QRect chip = detentChipRect(context);
-            if (!chip.isEmpty() && chip.contains(pos.toPoint())) {
-                m_useDetents = !m_useDetents;
-                m_sv->announce(m_useDetents
-                                   ? SongView::tr("Velocity detents on — %1 has %2 volume levels.")
-                                         .arg(QString::fromLatin1(context.voiceName()))
-                                         .arg(context.levelCount())
-                                   : SongView::tr("Velocity detents off — exact velocities."));
-                invalidateContent();
-                event->accept();
-                return;
-            }
+            // The track header column is not the lane's. Its one control, the
+            // Detents checkbox, is a child widget and took the press itself.
             event->ignore();
             return;
         }
@@ -6010,7 +6022,7 @@ class VelocityLane : public TimelineSurface
     }
 
     // The context without the pointer in it: what the lane is editing when
-    // nothing is hovered. The Detents chip is a choice about this, not about
+    // nothing is hovered. The Detents checkbox is a choice about this, not about
     // wherever the pointer happens to rest.
     VelocityMap trackContext() const
     {
@@ -6714,45 +6726,45 @@ class VelocityLane : public TimelineSurface
         }
     }
 
-    // The header column's Detents chip: offered only where there are
-    // detents to switch off, and drawn filled while they are on. Empty when
-    // the voice has none, or when the lane is too short to hold both the
-    // chip and its own label — the label is the one that stays.
-    QRect detentChipRect(const VelocityMap &context) const
+    // The header column's Detents checkbox: offered only where there are
+    // detents to switch off. Empty when the voice has none, or when the lane
+    // is too short to hold both the checkbox and its own label — the label is
+    // the one that stays. Sized from the style's own hint, so a longer
+    // translation and a bigger indicator both still fit; clamped to the
+    // header column rather than hidden, so it never silently disappears.
+    QRect detentCheckRect(const VelocityMap &context) const
     {
         if (!context.hasDetents())
             return {};
         const int inset = lyt::space(Space::Two);
-        const QFontMetrics metrics(typography::caption(font()));
-        const int chipHeight = metrics.height() + inset;
-        // Sized from its own label, so a longer translation still fits.
-        const QRect chip(inset, height() - chipHeight - inset,
-                         metrics.horizontalAdvance(SongView::tr("Detents")) + 2 * chipHeight,
-                         chipHeight);
-        if (chip.top() < QFontMetrics(font()).height())
+        const QSize hint = m_detentCheck->sizeHint();
+        const QRect box(inset, height() - hint.height() - inset,
+                        std::min(hint.width(), kHeaderW - 2 * inset), hint.height());
+        if (box.top() < QFontMetrics(font()).height())
             return {};
-        return chip;
+        return box;
     }
 
-    void paintDetentChip(QPainter &p, const VelocityMap &context)
+    // Called from the paint, where the context is already resolved: the
+    // widget follows the same recomputation as everything else the lane
+    // draws. Nothing here repaints synchronously, so it is safe under a live
+    // painter — geometry and visibility only post updates.
+    void syncDetentCheck(const VelocityMap &context)
     {
-        const QRect chip = detentChipRect(context);
-        setProperty("velocityDetentChip", chip); // test mirror, like the ruler's
-        if (chip.isEmpty())
+        const QRect box = detentCheckRect(context);
+        if (box.isEmpty()) {
+            m_detentCheck->hide();
             return;
-        const QColor accent = palette().highlight().color();
-        p.save();
-        p.setRenderHint(QPainter::Antialiasing, true);
-        p.setPen(QPen(accent, lyt::singlePixel()));
-        p.setBrush(m_useDetents ? QBrush(accent) : Qt::NoBrush);
-        const double radius = chip.height() / 2.0;
-        p.drawRoundedRect(QRectF(chip).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
-        p.setRenderHint(QPainter::Antialiasing, false);
-        p.setFont(typography::caption(font()));
-        p.setPen(m_useDetents ? palette().highlightedText().color()
-                              : themes::color(themes::Role::song_view_secondary_text));
-        p.drawText(chip, Qt::AlignCenter, SongView::tr("Detents"));
-        p.restore();
+        }
+        m_detentCheck->setGeometry(box);
+        // Programmatic: following m_useDetents (the rearm off a non-PSG
+        // voice, above) must not announce, nor re-enter invalidateContent
+        // from inside a paint.
+        {
+            const QSignalBlocker block(m_detentCheck);
+            m_detentCheck->setChecked(m_useDetents);
+        }
+        m_detentCheck->show();
     }
 
     void paintNodes(QPainter &p, const QRect &plot, const VelocityAxis &axis, qreal dpr)
@@ -6853,11 +6865,12 @@ class VelocityLane : public TimelineSurface
         VelocityMap map;
     };
     std::vector<Frozen> m_frozen;
-    std::optional<ViewNote> m_pressed; // the note under the press, if any
-    NoteId m_announced;                // the frozen note the status line describes
-    NoteId m_hovered;                  // the node under the idle pointer, if any
-    bool m_useDetents = true;          // the header chip; rearms off a PSG context
-    bool m_detentUnlock = false;       // this gesture writes exact values (press-time)
+    std::optional<ViewNote> m_pressed;  // the note under the press, if any
+    NoteId m_announced;                 // the frozen note the status line describes
+    NoteId m_hovered;                   // the node under the idle pointer, if any
+    QCheckBox *m_detentCheck = nullptr; // the header column's Detents checkbox
+    bool m_useDetents = true;           // that checkbox; rearms off a PSG context
+    bool m_detentUnlock = false;        // this gesture writes exact values (press-time)
     std::vector<SongView::NoteKey> m_selBeforePress; // restored by a cancel
     std::vector<SongView::NoteKey> m_bandPreview;    // what a live marquee would select
     QRectF m_bandRect;
