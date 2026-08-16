@@ -672,12 +672,12 @@ class TimeRuler : public QWidget
         m_feelCombo->setCurrentIndex(m_sv->gridFeel() == SongView::GridFeel::Triplet ? 1 : 0);
     }
 
-    // A mouse gesture is live (marker/time-sig/selection-edge drag, cursor
-    // scrub, right-press sweep); the playhead follow-scroll pauses while
-    // one runs so the view doesn't jump under the cursor.
+    // A mouse gesture is live (marker/time-sig/selection-edge drag or a
+    // pending ruler press); the playhead follow-scroll pauses while one runs
+    // so the view doesn't jump under the cursor.
     bool gestureActive() const
     {
-        return m_dragMarker >= 0 || m_dragTimeSig || m_placingCursor || m_rightPress ||
+        return m_dragMarker >= 0 || m_dragTimeSig || m_leftPress || m_rightPress ||
                m_dragSelEdge >= 0;
     }
 
@@ -894,9 +894,8 @@ class TimeRuler : public QWidget
             m_sv->snapTick(m_sv->tickAtContentX(event->position().x() - m_geometry.plotOrigin));
 
         if (event->button() == Qt::RightButton) {
-            // Deferred: a drag from here sweeps out a time selection;
-            // releasing in place opens the loop/selection menu. Resolved in
-            // mouseReleaseEvent.
+            // Deferred until release so the loop/selection menu opens at the
+            // original click tick.
             if (!doc)
                 return;
             m_rightPress = true;
@@ -928,10 +927,11 @@ class TimeRuler : public QWidget
         m_dragSelEdge = doc ? hitSelEdge(event->position()) : -1;
         if (m_dragSelEdge >= 0)
             return;
-        // Elsewhere on the ruler: place the edit cursor (drag scrubs it;
-        // playback follows on release).
-        m_placingCursor = true;
-        m_sv->setEditCursorTick(clickTick);
+        // Elsewhere on the ruler: defer until movement distinguishes a click
+        // (place the edit cursor) from a drag (sweep a time selection).
+        m_leftPress = true;
+        m_leftPressPos = event->position();
+        m_selAnchor = clickTick;
     }
 
     void mouseMoveEvent(QMouseEvent *event) override
@@ -941,9 +941,11 @@ class TimeRuler : public QWidget
                 m_sv->tickAtContentX(std::max(qreal(m_geometry.plotOrigin), event->position().x()) -
                                      m_geometry.plotOrigin));
         };
-        if (m_rightPress) {
+        if (m_rightPress)
+            return;
+        if (m_leftPress) {
             if (!m_selSweep &&
-                (event->position().toPoint() - m_rightPressPos.toPoint()).manhattanLength() >=
+                (event->position().toPoint() - m_leftPressPos.toPoint()).manhattanLength() >=
                     QApplication::startDragDistance())
                 m_selSweep = true;
             if (m_selSweep) {
@@ -976,10 +978,6 @@ class TimeRuler : public QWidget
             m_sv->setTimeSelection(sel);
             return;
         }
-        if (m_placingCursor) {
-            m_sv->setEditCursorTick(dragTick());
-            return;
-        }
         uint64_t sigTick;
         int sigNum, sigDen;
         bool sigImplicit;
@@ -995,6 +993,11 @@ class TimeRuler : public QWidget
     {
         if (event->button() == Qt::RightButton && m_rightPress) {
             m_rightPress = false;
+            showRulerMenu(m_selAnchor, event->globalPosition().toPoint());
+            return;
+        }
+        if (event->button() == Qt::LeftButton && m_leftPress) {
+            m_leftPress = false;
             if (m_selSweep) {
                 m_selSweep = false;
                 if (m_sv->timeSelection().active())
@@ -1002,17 +1005,13 @@ class TimeRuler : public QWidget
                 else
                     m_sv->clearTimeSelection();
             } else {
-                showRulerMenu(m_selAnchor, event->globalPosition().toPoint());
+                m_sv->setEditCursorTick(m_selAnchor);
+                m_sv->commitEditCursor(m_selAnchor);
             }
             return;
         }
         if (event->button() != Qt::LeftButton)
             return;
-        if (m_placingCursor) {
-            m_placingCursor = false;
-            m_sv->commitEditCursor(m_sv->editCursorTick());
-            return;
-        }
         if (m_dragSelEdge >= 0) {
             m_dragSelEdge = -1;
             if (m_sv->timeSelection().active())
@@ -1046,10 +1045,9 @@ class TimeRuler : public QWidget
         if (event->button() != Qt::LeftButton || !doc ||
             !hitTimeSigChip(event->position(), &sigTick, &numerator, &denomPow2, &implicit))
             return;
-        // The first press of the double-click armed a chip drag or cursor
-        // placement; cancel it before the modal editor swallows the release.
+        // The first press of the double-click armed a chip drag; cancel it
+        // before the modal editor swallows the release.
         m_dragTimeSig = false;
-        m_placingCursor = false;
         if (askTimeSignature(this, &numerator, &denomPow2))
             doc->setTimeSig(sigTick, numerator, denomPow2);
         update();
@@ -1286,11 +1284,12 @@ class TimeRuler : public QWidget
     uint64_t m_dragTick = 0;
     bool m_dragTimeSig = false;     // chip drag is live; commits moveTimeSig
     uint64_t m_dragTimeSigFrom = 0; // the dragged signature's original tick
-    bool m_placingCursor = false;
-    bool m_rightPress = false; // right button held; sweep vs. menu undecided
-    bool m_selSweep = false;   // right-drag time-selection sweep is live
+    bool m_leftPress = false;       // plain click vs. time-selection sweep undecided
+    bool m_rightPress = false;      // right click held until the ruler menu opens
+    bool m_selSweep = false;        // left-drag time-selection sweep is live
+    QPointF m_leftPressPos;
     QPointF m_rightPressPos;
-    uint64_t m_selAnchor = 0;         // snapped tick of the right press
+    uint64_t m_selAnchor = 0;         // snapped tick of the pending press
     int m_dragSelEdge = -1;           // selection edge being left-dragged (0/1)
     QComboBox *m_divCombo = nullptr;  // minimum snap subdivision (gutter)
     QComboBox *m_feelCombo = nullptr; // straight / triplet
@@ -2111,6 +2110,8 @@ class PianoRoll : public TimelineSurface
         if (event->button() == Qt::LeftButton && m_leftPress) {
             m_leftPress = false;
             if (m_drag == Drag::None) {
+                if (insideTimeSelection(event->position().x()))
+                    m_sv->clearTimeSelection();
                 // Click without a drag: park the edit cursor at the click,
                 // like the ruler; playback follows when running.
                 m_sv->commitEditCursor(m_sv->snapTick(m_pressTick));

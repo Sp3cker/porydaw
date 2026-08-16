@@ -2993,6 +2993,37 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // command; mark a save point so the time-selection presses below get
     // their own commands (merges never cross the stack's clean index).
     doc.undoStack()->setClean();
+    {
+        const songview::TimelineBand rulerBand = view.timelineBands().front();
+        QWidget *ruler = &rulerBand.widget;
+        const qreal rulerDpr = ruler->devicePixelRatioF();
+        const uint64_t startTick = d.tick + snapCell;
+        const uint64_t endTick = d.tick + 2 * snapCell;
+        const QPoint start(
+            qRound(view.displayX(double(startTick), rulerBand.timelineOrigin, rulerDpr)),
+            ruler->height() - 2);
+        const QPoint end(qRound(view.displayX(double(endTick), rulerBand.timelineOrigin, rulerDpr)),
+                         ruler->height() - 2);
+
+        view.clearTimeSelection();
+        sendMouse(ruler, QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton);
+        sendMouse(ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton);
+        sendMouse(ruler, QEvent::MouseButtonRelease, end, Qt::LeftButton, Qt::NoButton);
+        if (!view.timeSelection().active() || view.timeSelection().startTick != startTick ||
+            view.timeSelection().endTick != endTick)
+            fail("left-dragging the timeline ruler did not create the time selection");
+
+        view.clearTimeSelection();
+        sendMouse(ruler, QEvent::MouseButtonPress, start, Qt::RightButton, Qt::RightButton);
+        sendMouse(ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::RightButton);
+        if (view.timeSelection().active())
+            fail("right-dragging the timeline ruler still created a time selection");
+        QTimer::singleShot(0, [] {
+            if (QWidget *menu = QApplication::activeModalWidget())
+                menu->close();
+        });
+        sendMouse(ruler, QEvent::MouseButtonRelease, end, Qt::RightButton, Qt::NoButton);
+    }
 
     // The same shortcuts on a time selection (no notes selected): the band
     // over the note's cell transposes every covered note of the scoped
@@ -3016,6 +3047,34 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("time-selected note did not show the normal selection ring");
         if (!view.selection().empty())
             fail("time-selected note leaked into the explicit note selection");
+    }
+    {
+        const uint64_t emptyTick = band.startTick + (band.endTick - band.startTick) / 2;
+        int emptyKey = -1;
+        for (int key = 0; key < 128 && emptyKey < 0; ++key) {
+            const int y = rows.centerY(key);
+            if (y < 0 || y >= roll->height())
+                continue;
+            const bool occupied =
+                std::any_of(view.model().notes.cbegin(), view.model().notes.cend(),
+                            [track, key, emptyTick](const ViewNote &note) {
+                                return note.track == track && note.key == key &&
+                                       note.startTick <= emptyTick && emptyTick < note.endTick;
+                            });
+            if (!occupied)
+                emptyKey = key;
+        }
+        if (emptyKey < 0) {
+            fail("could not find empty roll space inside the time selection");
+        } else {
+            const QPoint emptyInside(
+                qRound(view.displayX(double(emptyTick), pianoKeyboardWidth, rows.dpr())),
+                rows.centerY(emptyKey));
+            click(roll, emptyInside);
+            if (view.timeSelection().active())
+                fail("left-clicking empty space inside the time selection did not clear it");
+            view.setTimeSelection(band);
+        }
     }
     sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 10), &transposed))
