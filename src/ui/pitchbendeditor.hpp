@@ -29,6 +29,7 @@ class PitchBendEditor final : public QFrame
                     QWidget *parent, std::function<bool(QPointF)> focusNoteUnderCursor);
 
     void openAt(const QRect &noteGlobal, double noteFraction);
+    void cancelAndClose();
 
     bool hasEditableSpan() const;
     uint64_t endTick() const;

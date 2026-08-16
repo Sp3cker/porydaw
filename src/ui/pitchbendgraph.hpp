@@ -1,13 +1,11 @@
 #pragma once
 
 #include "core/songdocument.h"
-#include "songview.h"
 
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPaintEvent>
-#include <QPainter>
 #include <QPointF>
 #include <QRect>
 #include <QString>
@@ -18,6 +16,8 @@
 #include <map>
 #include <optional>
 #include <vector>
+class QPainter;
+class SongView;
 
 namespace songview {
 

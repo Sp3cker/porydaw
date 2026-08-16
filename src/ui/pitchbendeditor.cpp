@@ -101,6 +101,15 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
         updateDescription();
         update();
     });
+    connect(m_document, &SongDocument::documentChanged, this, [this] {
+        if (!noteSpanStillPresent())
+            close(CloseState::Cancel);
+    });
+}
+
+void PitchBendEditor::cancelAndClose()
+{
+    close(CloseState::Cancel);
 }
 
 void PitchBendEditor::openAt(const QRect &noteGlobal, double noteFraction)
@@ -291,6 +300,8 @@ void PitchBendEditor::resetCurve(PitchBendGraph *graph)
 
 void PitchBendEditor::snapshotCurves()
 {
+    if (m_pitchGraph->hasGesture() || m_modGraph->hasGesture())
+        return;
     const auto snapshotController = [this](uint8_t cc, int defaultValue, int *startValue,
                                            int *endValue) {
         *startValue = defaultValue;
@@ -361,9 +372,10 @@ void PitchBendEditor::commitCurve()
 {
     if (m_pending != PendingEdit::Curve || !m_pendingGraph)
         return;
-    writeCurve(m_pendingGraph);
+    PitchBendGraph *graph = m_pendingGraph;
     m_pendingGraph = nullptr;
     m_pending = PendingEdit::None;
+    writeCurve(graph);
 }
 
 void PitchBendEditor::cancelCurve()

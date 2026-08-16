@@ -617,9 +617,10 @@ bool SongDocument::containsNoteSpan(int engineTrack, const DocNote &snapshot,
                                     uint64_t expectedEndTick) const
 {
     DocNote current;
-    if (!findNote(engineTrack, snapshot.tick, snapshot.key, &current))
+    if (!snapshot.noteId.isAssigned() || !findNote(snapshot.noteId, &current))
         return false;
-    return current.unterminated() == snapshot.unterminated() &&
+    return current.engineTrack == engineTrack &&
+           current.unterminated() == snapshot.unterminated() &&
            noteEndTick(current) == expectedEndTick;
 }
 

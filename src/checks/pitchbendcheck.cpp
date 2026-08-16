@@ -19,6 +19,7 @@
 #include <QRect>
 #include <QScreen>
 #include <QSpinBox>
+#include <QUndoCommand>
 #include <QWheelEvent>
 #include <QWidget>
 #include <algorithm>
@@ -101,6 +102,9 @@ class PitchBendCheckContext final
             if (point.tick <= m_endTick)
                 m_bendAtEnd = point.value;
         }
+        runDuplicateAnchor();
+        runSnapshotDuringGesture();
+        runLifecycleCancellation();
         runRangeFreehandAndUndo();
         runModWheelEditing();
         runControllerButtons();
@@ -139,11 +143,11 @@ class PitchBendCheckContext final
     {
         const QPoint noteGlobal = m_roll->mapToGlobal(m_noteCenter);
         QCursor::setPos(noteGlobal + QPoint(300, 0));
-        sendKey(m_roll, Qt::Key_B, Qt::NoModifier);
+        sendKey(m_roll, Qt::Key_G, Qt::NoModifier);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         auto *bendPopup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
         if (!bendPopup || !bendPopup->isVisible()) {
-            fail("B did not open the selected note's pitch-bend popup");
+            fail("G did not open the selected note's pitch-bend popup");
             return {};
         }
         const QPoint popupCenter = bendPopup->mapToGlobal(bendPopup->rect().center());
@@ -393,6 +397,144 @@ class PitchBendCheckContext final
             fail("undo did not restore the document after pitch-bend drawing");
     }
 
+    void runDuplicateAnchor()
+    {
+        const MidiTimeline *originalTimeline = m_view.timeline();
+        if (!originalTimeline) {
+            fail("duplicate-anchor check had no timeline");
+            return;
+        }
+        auto duplicateTimeline = m_document.buildTimeline(48000.0);
+        if (!duplicateTimeline) {
+            fail("duplicate-anchor check could not build a timeline");
+            return;
+        }
+        TimelineEvent duplicateOn{};
+        duplicateOn.tick = uint32_t(m_note.tick);
+        duplicateOn.type = 0x9;
+        duplicateOn.track = uint8_t(m_engineTrack);
+        duplicateOn.data0 = m_note.key;
+        duplicateOn.data1 = m_note.velocity;
+        duplicateOn.noteId = NoteId{UINT64_MAX};
+        TimelineEvent duplicateOff = duplicateOn;
+        duplicateOff.tick = uint32_t(m_note.tick + 1);
+        duplicateOff.type = 0x8;
+        duplicateOff.data1 = 0;
+        duplicateOff.noteId = {};
+        duplicateTimeline->events.insert(duplicateTimeline->events.begin(), duplicateOff);
+        duplicateTimeline->events.insert(duplicateTimeline->events.begin(), duplicateOn);
+        m_view.updateSong(duplicateTimeline.get());
+        m_view.setSelection({m_note.noteId});
+        const RangePopupState range = openRangePopup();
+        if (range.popup) {
+            sendKey(range.popup, Qt::Key_Escape, Qt::NoModifier);
+            drainPopupDeletes();
+        }
+        m_view.updateSong(originalTimeline);
+        m_view.setSelection({m_note.noteId});
+        const QByteArray beforeIdentity = m_document.smf().write();
+        const int identityUndoIndex = m_document.undoStack()->index();
+        m_document.deleteNotes({m_note});
+        m_document.addNote(m_engineTrack, m_note.tick, m_note.key, m_note.duration,
+                           m_note.velocity);
+        DocNote replacement;
+        if (!m_document.findNote(m_engineTrack, m_note.tick, m_note.key, &replacement) ||
+            replacement.noteId == m_note.noteId ||
+            m_document.containsNoteSpan(m_engineTrack, m_note, m_endTick))
+            fail("same-tick replacement note satisfied the original pitch-bend span");
+        while (m_document.undoStack()->index() > identityUndoIndex &&
+               m_document.undoStack()->canUndo())
+            m_document.undoStack()->undo();
+        if (m_document.undoStack()->index() != identityUndoIndex ||
+            m_document.smf().write() != beforeIdentity)
+            fail("duplicate-anchor identity check did not restore the document");
+        m_view.setSelection({m_note.noteId});
+    }
+
+    void runSnapshotDuringGesture()
+    {
+        const RangePopupState range = openRangePopup();
+        if (!range.popup || !range.graphWidget)
+            return;
+        auto *graph = dynamic_cast<songview::PitchBendGraph *>(range.graphWidget);
+        if (!graph) {
+            fail("pitch-bend graph child had the wrong type");
+            sendKey(range.popup, Qt::Key_Escape, Qt::NoModifier);
+            drainPopupDeletes();
+            return;
+        }
+        const int beforeUndoIndex = m_document.undoStack()->index();
+        const QByteArray before = m_document.smf().write();
+        const QPoint start(range.graph.left() + range.graph.width() / 3, range.graph.center().y());
+        const QPoint finish(range.graph.left() + 2 * range.graph.width() / 3,
+                            range.graph.top() + range.graph.height() / 3);
+        sendMouse(range.graphWidget, QEvent::MouseButtonPress,
+                  range.graphWidget->mapFrom(range.popup, start), Qt::LeftButton, Qt::LeftButton);
+        sendMouse(range.graphWidget, QEvent::MouseMove,
+                  range.graphWidget->mapFrom(range.popup, finish), Qt::NoButton, Qt::LeftButton);
+        if (!graph->hasGesture())
+            fail("pitch-bend graph did not retain its active gesture");
+        const std::vector<SongDocument::LanePointValue> preview = graph->curvePoints();
+        m_document.undoStack()->push(new QUndoCommand(QStringLiteral("snapshot check")));
+        if (m_document.undoStack()->index() != beforeUndoIndex + 1)
+            fail("snapshot check did not advance the undo-stack index");
+        const std::vector<SongDocument::LanePointValue> after = graph->curvePoints();
+        const bool previewPreserved =
+            after.size() == preview.size() &&
+            std::equal(after.begin(), after.end(), preview.begin(),
+                       [](const SongDocument::LanePointValue &lhs,
+                          const SongDocument::LanePointValue &rhs) {
+                           return lhs.tick == rhs.tick && lhs.value == rhs.value;
+                       });
+        if (!previewPreserved)
+            fail("undo-stack index change replaced an active pitch-bend preview");
+        sendKey(range.popup, Qt::Key_Escape, Qt::NoModifier);
+        drainPopupDeletes();
+        if (m_document.undoStack()->index() != beforeUndoIndex)
+            m_document.undoStack()->undo();
+        if (m_document.undoStack()->index() != beforeUndoIndex ||
+            m_document.smf().write() != before)
+            fail("snapshot gesture check did not restore the document state");
+    }
+
+    void runLifecycleCancellation()
+    {
+        const RangePopupState range = openRangePopup();
+        if (!range.popup)
+            return;
+        QPointer<songview::PitchBendEditor> popup = range.popup;
+        auto *bendSpin = popup->findChild<QSpinBox *>(QStringLiteral("bendRangeSpin"));
+        if (!bendSpin) {
+            fail("pitch-bend lifecycle check had no BENDR control");
+            sendKey(popup, Qt::Key_Escape, Qt::NoModifier);
+            drainPopupDeletes();
+            return;
+        }
+        const int lifecycleUndoIndex = m_document.undoStack()->index();
+        const int bendStep = bendSpin->value() < 127 ? 1 : -1;
+        bendStep > 0 ? bendSpin->stepUp() : bendSpin->stepDown();
+        if (!popup || !popup->isVisible())
+            fail("valid popup-originated edit closed the pitch-bend popup");
+        m_view.updateSong(m_view.timeline());
+        if (!popup || !popup->isVisible())
+            fail("valid document refresh closed the pitch-bend popup");
+
+        m_document.moveNotes({m_note}, 1, 0);
+        if (popup && popup->isVisible())
+            fail("external note retiming did not hide the pitch-bend popup");
+        drainPopupDeletes();
+        if (popup)
+            fail("external note retiming left a stale pitch-bend popup");
+
+        while (m_document.undoStack()->index() > lifecycleUndoIndex &&
+               m_document.undoStack()->canUndo())
+            m_document.undoStack()->undo();
+        if (m_document.undoStack()->index() != lifecycleUndoIndex)
+            fail("pitch-bend lifecycle check did not restore its document edits");
+        m_view.updateSong(m_view.timeline());
+        m_view.setSelection({m_note.noteId});
+    }
+
     void runRangeFreehandAndUndo()
     {
         const RangePopupState range = openRangePopup();
@@ -423,11 +565,11 @@ class PitchBendCheckContext final
         sendKey(range.popup, Qt::Key_Escape, Qt::NoModifier);
         drainPopupDeletes();
         QCursor::setPos(m_roll->mapToGlobal(m_noteCenter));
-        sendKey(m_roll, Qt::Key_B, Qt::NoModifier);
+        sendKey(m_roll, Qt::Key_G, Qt::NoModifier);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         auto *resyncedPopup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
         if (!resyncedPopup || !resyncedPopup->isVisible())
-            fail("B did not reopen the pitch-bend popup after stacked undo");
+            fail("G did not reopen the pitch-bend popup after stacked undo");
     }
 
     void runModWheelEditing()
@@ -616,11 +758,11 @@ class PitchBendCheckContext final
     bool reopenPersistedAltPopup(PersistedAltPopupState *state)
     {
         QCursor::setPos(m_roll->mapToGlobal(m_noteCenter));
-        sendKey(m_roll, Qt::Key_B, Qt::NoModifier);
+        sendKey(m_roll, Qt::Key_G, Qt::NoModifier);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         auto *popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
         if (!popup || !popup->isVisible()) {
-            fail("B did not reopen the pitch-bend popup after the Alt line");
+            fail("G did not reopen the pitch-bend popup after the Alt line");
             return false;
         }
         state->popup = popup;
@@ -708,11 +850,11 @@ class PitchBendCheckContext final
     {
         drainPopupDeletes();
         QCursor::setPos(m_roll->mapToGlobal(m_noteCenter));
-        sendKey(m_roll, Qt::Key_B, Qt::NoModifier);
+        sendKey(m_roll, Qt::Key_G, Qt::NoModifier);
         QWidget *resetWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         auto *resetPopup = dynamic_cast<songview::PitchBendEditor *>(resetWidget);
         if (!resetPopup || !resetPopup->isVisible()) {
-            fail("B did not reopen the pitch-bend popup");
+            fail("G did not reopen the pitch-bend popup");
             return;
         }
         auto *resetButton = resetPopup->findChild<QPushButton *>(QStringLiteral("pitchBendReset"));
@@ -760,8 +902,7 @@ class PitchBendCheckContext final
         }
         sendKey(resetPopup, Qt::Key_Escape, Qt::NoModifier);
         if (resetPopup->isVisible() || m_document.smf().write() != m_beforeCurve ||
-            m_view.selection().size() != 1 ||
-            m_view.selection().front() != m_note.noteId)
+            m_view.selection().size() != 1 || m_view.selection().front() != m_note.noteId)
             fail("Escape did not dismiss the pitch-bend popup while retaining the note");
         drainPopupDeletes();
     }
@@ -770,12 +911,12 @@ class PitchBendCheckContext final
     {
         drainPopupDeletes();
         QCursor::setPos(m_roll->mapToGlobal(m_noteCenter));
-        sendKey(m_roll, Qt::Key_B, Qt::NoModifier);
+        sendKey(m_roll, Qt::Key_G, Qt::NoModifier);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         QPointer<songview::PitchBendEditor> popup =
             dynamic_cast<songview::PitchBendEditor *>(popupWidget);
         if (!popup || !popup->isVisible()) {
-            fail("B did not reopen the pitch-bend popup for focus handoff");
+            fail("G did not reopen the pitch-bend popup for focus handoff");
             return;
         }
         sendMouse(popup, QEvent::MouseButtonPress, popup->mapFrom(m_roll, m_noteCenter),
@@ -783,8 +924,7 @@ class PitchBendCheckContext final
         QCoreApplication::processEvents();
         if (popup && popup->isVisible())
             fail("clicking the selected note did not dismiss the pitch-bend popup");
-        if (m_view.selection().size() != 1 ||
-            m_view.selection().front() != m_note.noteId)
+        if (m_view.selection().size() != 1 || m_view.selection().front() != m_note.noteId)
             fail("clicking the selected note did not preserve note focus");
         drainPopupDeletes();
     }
@@ -906,7 +1046,7 @@ class PitchBendCheckContext final
         m_view.selectTrack(m_engineTrack);
         m_view.setSelection({fixture.fixtureNote.noteId});
         QCursor::setPos(m_roll->mapToGlobal(m_noteCenter));
-        sendKey(m_roll, Qt::Key_B, Qt::NoModifier);
+        sendKey(m_roll, Qt::Key_G, Qt::NoModifier);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         auto *popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
         if (!popup || !popup->isVisible()) {

@@ -1,4 +1,5 @@
 #include "pitchbendgraph.hpp"
+#include "songview.h"
 
 #include "theme/themeruntime.h"
 #include "typography.h"
@@ -408,18 +409,7 @@ void PitchBendGraph::replaceSegment(uint64_t tick0, int value0, uint64_t tick1, 
     const auto eraseBegin = m_points.lower_bound(low);
     const auto eraseEnd = m_points.upper_bound(high);
     m_points.erase(eraseBegin, eraseEnd);
-    std::vector<uint64_t> ticks{low};
-    uint64_t tick = low;
-    while (tick < high) {
-        const uint64_t next = nextSampleTick(tick, sampling);
-        if (next <= tick || next >= high)
-            break;
-        ticks.push_back(next);
-        tick = next;
-    }
-    if (high != low)
-        ticks.push_back(high);
-    for (const uint64_t sampleTick : ticks) {
+    const auto writeSample = [&](uint64_t sampleTick) {
         const double fraction =
             tick1 == tick0
                 ? 1.0
@@ -427,7 +417,18 @@ void PitchBendGraph::replaceSegment(uint64_t tick0, int value0, uint64_t tick1, 
                              0.0, 1.0);
         m_points[sampleTick] = std::clamp(value0 + qRound(fraction * double(value1 - value0)),
                                           minimumValue(), maximumValue());
+    };
+    writeSample(low);
+    uint64_t tick = low;
+    while (tick < high) {
+        const uint64_t next = nextSampleTick(tick, sampling);
+        if (next <= tick || next >= high)
+            break;
+        writeSample(next);
+        tick = next;
     }
+    if (high != low)
+        writeSample(high);
     m_points[m_endTick] = m_endValue;
 }
 

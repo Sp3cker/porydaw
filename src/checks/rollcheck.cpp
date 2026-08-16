@@ -74,7 +74,7 @@
 // Bare M and S toggle mute/solo over the multi-track scope (mixed state
 // resolving toward on), the header buttons following without a rebuild
 // and the undo stack untouched.
-// B opens a note-local automation popup with pitch-bend and mod-wheel graphs.
+// G opens a note-local automation popup with pitch-bend and mod-wheel graphs.
 // Pitch scrolling writes a BENDR value restored at note-off; either graph can
 // draw freehand or fine linear ramps. Click-away or Escape dismisses it.
 // The cursor over the roll marks its key row on the keyboard column

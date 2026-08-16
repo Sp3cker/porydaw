@@ -829,7 +829,7 @@ SongSession *MainWindow::createSession()
             return;
         if (m_audio.transport() != Transport::Playing)
             s->view->commitEditCursor(tick);
-        m_transportBar->playPauseAction();
+        m_transportBar->playPauseAction()->trigger();
     });
     // Jump-from-context voice navigation (header voice line, event list):
     // raise the dock and select the slot. No keyboard focus moves — Space

@@ -7,8 +7,8 @@
 #include "ui/activity/trackactivitymeter.h"
 #include "ui/contextmenu.h"
 #include "ui/layout.h"
-#include "ui/selectionreticle.h"
 #include "ui/pitchbendeditor.hpp"
+#include "ui/selectionreticle.h"
 #include "ui/timelinesurface.h"
 
 #include <QApplication>
@@ -1507,6 +1507,12 @@ class PianoRoll : public TimelineSurface
         return m_panning || m_drag != Drag::None || m_leftPress || m_rightPress || m_kbdKey >= 0 ||
                (m_bendPopup && m_bendPopup->isVisible());
     }
+    void cancelPitchBendPopup()
+    {
+        if (m_bendPopup && m_bendPopup->isVisible())
+            m_bendPopup->cancelAndClose();
+    }
+
     void cancelVelocityInteraction()
     {
         if (m_drag != Drag::Velocity && !m_velModPress)
@@ -2626,8 +2632,7 @@ class PianoRoll : public TimelineSurface
         double noteFraction = -1.0;
         QRect noteGlobal;
         for (const ViewNote &viewNote : m_sv->model().notes) {
-            if (viewNote.track != notes.front().engineTrack ||
-                viewNote.startTick != notes.front().tick || viewNote.key != notes.front().key)
+            if (viewNote.noteId != notes.front().noteId)
                 continue;
             const QRect noteLocal = noteRect(viewNote).toAlignedRect();
             noteGlobal =
@@ -4390,6 +4395,8 @@ bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float ela
 
 void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup)
 {
+    if (m_roll)
+        m_roll->cancelPitchBendPopup();
     cancelActiveInteractions();
     if (timeline)
         m_trackActivity.resetPaused();
@@ -4512,6 +4519,8 @@ void SongView::updateSong(const MidiTimeline *timeline)
 void SongView::setDocument(SongDocument *document)
 {
     if (m_document != document) {
+        if (m_roll)
+            m_roll->cancelPitchBendPopup();
         cancelActiveInteractions();
         if (m_document) {
             disconnect(m_document, &SongDocument::tracksRemapped, this, nullptr);
@@ -6416,6 +6425,8 @@ void SongView::moveTrack(int from, int to)
 
 void SongView::onTracksRemapped(const TrackRemap &remap)
 {
+    if (m_roll)
+        m_roll->cancelPitchBendPopup();
     if (m_editorViewState.remapEngineTracks(remap.engineTrackMap))
         setEditorViewState(m_editorViewState);
     m_editorDrawer->velocityArea()->tracksRemapped(remap);
