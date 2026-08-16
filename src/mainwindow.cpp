@@ -91,6 +91,7 @@ const QString kNoteNamesKey = QStringLiteral("noteNames");
 const QString kSystemFontKey = QStringLiteral("systemFont");
 const QString kFollowPlayheadKey = QStringLiteral("followPlayhead");
 const QString kOutputVolumeKey = QStringLiteral("outputVolume");
+const QString kResonanceSuppressionKey = QStringLiteral("dsp/resonanceSuppression");
 const QString kDrawerVelocityVisibleKey = QStringLiteral("editorDrawer/velocityVisible");
 const QString kDrawerVelocityHeightKey = QStringLiteral("editorDrawer/velocityHeight");
 const QString kDrawerAutomationVisibleKey = QStringLiteral("editorDrawer/automationVisible");
@@ -384,6 +385,9 @@ void MainWindow::buildUi()
         m_transportBar->setFollowPlayhead(settings.value(kFollowPlayheadKey, true).toBool());
         m_audio.setOutputVolume(settings.value(kOutputVolumeKey, 68).toInt());
         m_transportBar->setOutputVolume(m_audio.outputVolume());
+        const bool resonanceSuppression = settings.value(kResonanceSuppressionKey, false).toBool();
+        m_audio.setResonanceSuppression(resonanceSuppression);
+        m_transportBar->resonanceAction()->setChecked(resonanceSuppression);
     }
     addToolBar(m_transportBar);
     // Space is window-scoped so play/pause works regardless of focus.
@@ -410,6 +414,11 @@ void MainWindow::buildUi()
             if (SongSession *session = sessionForWidget(m_tabs->widget(i)))
                 session->view->setFollowPlayhead(enabled);
         }
+    });
+    connect(m_transportBar, &TransportBar::resonanceSuppressionChanged, this, [this](bool enabled) {
+        QSettings settings;
+        settings.setValue(kResonanceSuppressionKey, enabled);
+        m_audio.setResonanceSuppression(enabled);
     });
     connect(m_transportBar, &TransportBar::outputVolumeChanged, this, [this](int value) {
         m_audio.setOutputVolume(value);

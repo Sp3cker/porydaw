@@ -66,6 +66,7 @@ int runTransportCheck();
 // audiocheck.cpp; prints the resolved audio backend and whether the silent
 // null-device fallback is in effect (self-contained, no project needed).
 int runAudioCheck();
+int runResonanceCheck();
 // trackactivitycheck.cpp; deterministic activity-envelope state-model check.
 int runTrackActivityCheck();
 // trackactivitymetercheck.cpp; offscreen activity-meter widget contract check.
@@ -323,6 +324,8 @@ int main(int argc, char *argv[])
         return runTransportCheck();
     if (args.contains(QStringLiteral("--audiocheck")))
         return runAudioCheck();
+    if (args.contains(QStringLiteral("--resonancecheck")))
+        return runResonanceCheck();
     if (args.contains(QStringLiteral("--trackactivitycheck")))
         return runTrackActivityCheck();
     if (args.contains(QStringLiteral("--trackactivitymetercheck")))

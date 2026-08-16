@@ -134,6 +134,8 @@ bool AudioEngine::init(QString *error)
     m_bufR = std::make_unique<float[]>(m_bufCapacity);
     m_pvL = std::make_unique<float[]>(m_bufCapacity);
     m_pvR = std::make_unique<float[]>(m_bufCapacity);
+    // Suppressor uses live device rate (DETECTOR.md v4 decision); device restart re-init resets it.
+    m_resonance.init(float(m_sampleRate));
 
     m_engine = std::make_unique<M4AEngine>();
     m4a_engine_init(m_engine.get(), float(m_sampleRate));
@@ -808,6 +810,11 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
         m4a_engine_process(m_previewEngine.get(), m_pvL.get(), m_pvR.get(), int(n));
 
         for (uint32_t i = 0; i < n; ++i) {
+            interleavedOut[(done + i) * 2] = m_bufL[i] + m_pvL[i];
+            interleavedOut[(done + i) * 2 + 1] = m_bufR[i] + m_pvR[i];
+        }
+        m_resonance.process(interleavedOut + done * 2, n);
+        for (uint32_t i = 0; i < n; ++i) {
             if (m_outputGainRampRemaining > 0) {
                 --m_outputGainRampRemaining;
                 if (m_outputGainRampRemaining == 0)
@@ -839,10 +846,8 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
                         // from here on are stale pre-cut audio. Drop them so
                         // the fade-up can only amplify real silence.
                         for (uint32_t j = i; j < n; ++j) {
-                            m_bufL[j] = 0.0f;
-                            m_bufR[j] = 0.0f;
-                            m_pvL[j] = 0.0f;
-                            m_pvR[j] = 0.0f;
+                            interleavedOut[(done + j) * 2] = 0.0f;
+                            interleavedOut[(done + j) * 2 + 1] = 0.0f;
                         }
                     }
                 } else {
@@ -851,9 +856,10 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
                 }
             }
             const float outputGain = m_appliedOutputGain * m_cutFadeGain;
-            interleavedOut[(done + i) * 2] = (m_bufL[i] + m_pvL[i]) * outputGain;
-            interleavedOut[(done + i) * 2 + 1] = (m_bufR[i] + m_pvR[i]) * outputGain;
+            interleavedOut[(done + i) * 2] *= outputGain;
+            interleavedOut[(done + i) * 2 + 1] *= outputGain;
         }
+
         done += n;
     }
 

@@ -8,7 +8,9 @@
 #include <memory>
 
 #include "audio/auditionslots.h"
+#include "audio/resonance_suppressor.h"
 #include "audio/trackactivitylevel.h"
+
 #include "core/miditimeline.h"
 #include "core/timelineplayer.h"
 
@@ -178,6 +180,8 @@ class AudioEngine
 
     void setOutputVolume(int percent) { m_targetOutputVolume.store(std::clamp(percent, 0, 100)); }
     int outputVolume() const { return m_targetOutputVolume.load(); }
+    void setResonanceSuppression(bool on) { m_resonance.setEnabled(on); }
+    bool resonanceSuppression() const { return m_resonance.enabled(); }
 
     // Hot: polyphony-overflow debug mode — mutes normal playback and plays
     // only the sounds lost to the polyphony limit (SPEC §6.1 Polyphony dock).
@@ -368,5 +372,7 @@ class AudioEngine
     std::unique_ptr<float[]> m_bufR;
     std::unique_ptr<float[]> m_pvL; // voice-preview engine mix
     std::unique_ptr<float[]> m_pvR;
+    ResonanceSuppressor m_resonance;
+
     uint32_t m_bufCapacity = 0;
 };
