@@ -108,7 +108,7 @@ Interpolation: for any frequency f, the knot curve is **piecewise linear in
 This gives the curve the “shoulder” behavior we validated in prototype
 measurements: deep-but-smooth midregion, gentle roll-off outside.
 
-## 6. Detector — floor tracking (the Guard law)
+## 7. Detector — floor tracking (the Guard law)
 
 Per knot band, the band level is
 
@@ -139,7 +139,7 @@ If `excess[b] ≤ 0` → no suppression in this band (below guard). This is the
 Guard knob (0–12 dB, default 6): how far above the local floor a resonance
 must climb before it is touched.
 
-## 9. Depth law (per band, static)
+## 8. Depth law (per band, static)
 
 ```
 targetGb[b] = −effDb[b] · excessLaw(excess[b])
@@ -159,7 +159,7 @@ with KneeDb = 3, MaxExcess = 24 dB.
 Result: 0 dB when the band sits near the floor, growing to the full knot depth
 when the band is clearly isolated, hard-capped at `depthDb[b]`.
 
-## 10. Smoothing & per-frame step limit (Timing law)
+## 9. Smoothing & per-frame step limit (Timing law)
 
 All smoothing is applied **in the dB (gain) domain**, per band:
 
@@ -177,7 +177,7 @@ must not exceed `ΔGmax = 1 dB per 10 ms of audio` (i.e. ≤ 0.1·1024/fs·1 dB/
 ≈ 0.2 dB/hop @48k). This bounds “pumping” and keeps gain motion inaudible.
 Implemented by clamping the one-pole increment when `|Δ| > cap`.
 
-## 11. Mask synthesis
+## 10. Mask synthesis
 
 Per frame:
 
@@ -204,7 +204,7 @@ init.
 Bypass: `m[k] ≡ 1` → output equals delayed input exactly (check bit-exact
 unit test).
 
-## 7. Latency compensation & dry path
+## 12. Latency compensation & dry path
 
 - The engine keeps a `mLatency = N−1` internal ring; the audible output = the
   *processed* path but the *dry* path is delayed by the same amount so that a
@@ -212,7 +212,7 @@ unit test).
 - Stereo: both channels share the same mask computed from `(L+R)/2` (linked
   = stable image; M/S variant noted for future).
 
-## 11. Integration point (porydaw)
+## 13. Integration point (porydaw)
 
 - Insert: `AudioEngine::process()` — right after the mix sum, before the
   master/output gain multiply. Both channels.
@@ -224,7 +224,7 @@ unit test).
   harness following the pattern of the existing `*check.cpp` checks
   (render fixed probes, assert passive bypass + mask-depth invariants).
 
-## 12. Verification plan (deterministic, no external tools)
+## 14. Verification plan (deterministic, no external tools)
 
 | case | probe | expected |
 |------|-------|----------|
@@ -239,7 +239,7 @@ unit test).
 | stereo | same mono both ch | identical outs |
 | bypass | full scale sine, enabled→disabled | disabled == original exactly |
 
-## 5. OPEN/decided notes
+## 15. OPEN/decided notes
 
 - [x] FFT size 2048 (latency 2047 ≈ 46 ms) — chosen vs other sizes: the only
   hard constraint is the latency budget; this is the smallest power-of-two
@@ -251,7 +251,7 @@ unit test).
 - [ ] Attack/release: MainTiming tracks the *release* feel (4×) and the attack
   is a fraction (1/8); ratio 32:1 keeps pumping inaudible on Program.
 
-## 12. File/landing plan (dsp/)
+## 16. File/landing plan (dsp/)
 
 - `src/audio/resonance_suppressor.h/.cpp` — the DSP core (single file each),
   no dependencies outside <cmath>, <cstdint>, <vector>.
@@ -259,7 +259,7 @@ unit test).
 - The engine owns the instance; parameter struct shared via
   `ResonanceParams { gDb, guardDb, timingMs, tilt, curve[12] }`.
 
-## Revision history
+## 17. evision history
 
 - v0 draft: architecture + laws as specified above. No external references
   by design.
