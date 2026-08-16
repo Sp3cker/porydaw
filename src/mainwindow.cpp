@@ -88,6 +88,7 @@ const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
 const QString kNoteNamesKey = QStringLiteral("noteNames");
 const QString kVelocityLaneKey = QStringLiteral("velocityLane");
+const QString kAutomationLanesKey = QStringLiteral("automationLanes");
 const QString kSystemFontKey = QStringLiteral("systemFont");
 const QString kFollowPlayheadKey = QStringLiteral("followPlayhead");
 
@@ -772,6 +773,26 @@ void MainWindow::buildUi()
         }
     });
 
+    // The automation lanes' pane, V's sibling on A. Same arrangement: the
+    // key lives in the keymap registry and dispatches from the focused
+    // surface, so this action carries no shortcut of its own. Shown by
+    // default — the lanes predate the toggle.
+    m_automationLanesAction = viewMenu->addAction(tr("&Automation Lanes"));
+    m_automationLanesAction->setCheckable(true);
+    m_automationLanesAction->setObjectName(QStringLiteral("viewAutomationLanesAction"));
+    {
+        QSettings settings;
+        m_automationLanesAction->setChecked(settings.value(kAutomationLanesKey, true).toBool());
+    }
+    connect(m_automationLanesAction, &QAction::toggled, this, [this](bool on) {
+        QSettings settings;
+        settings.setValue(kAutomationLanesKey, on);
+        for (int i = 0; i < m_tabs->count(); i++) {
+            if (SongSession *s = sessionForWidget(m_tabs->widget(i)))
+                s->view->setAutomationLanesVisible(on);
+        }
+    });
+
     // The transport bar's follow toggle, findable here too: an app-wide
     // persisted preference like the rest of this group.
     viewMenu->addAction(m_followPlayheadAction);
@@ -932,6 +953,7 @@ SongSession *MainWindow::createSession()
     s->view->setNoteNameMode(m_noteNamesAction->isChecked());
     s->view->setFollowPlayhead(m_followPlayheadAction->isChecked());
     s->view->setVelocityLaneVisible(m_velocityLaneAction->isChecked());
+    s->view->setAutomationLanesVisible(m_automationLanesAction->isChecked());
     connect(s->view, &SongView::muteMaskChanged, this, [this, s](uint32_t mask) {
         if (s == m_active)
             m_audio.setMuteMask(mask);
@@ -974,6 +996,8 @@ SongSession *MainWindow::createSession()
     // owns the persisted preference, so route the change back through it.
     connect(s->view, &SongView::velocityLaneVisibilityChanged, this,
             [this](bool on) { m_velocityLaneAction->setChecked(on); });
+    connect(s->view, &SongView::automationLanesVisibilityChanged, this,
+            [this](bool on) { m_automationLanesAction->setChecked(on); });
     connect(s->view, &SongView::eventListVisibilityChanged, this, [this, s](bool on) {
         if (s == m_active) {
             QSignalBlocker blocker(m_eventListAction);

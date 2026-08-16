@@ -37,6 +37,7 @@ class TimeRuler;
 class PianoRoll;
 class AutomationArea;
 class VelocityLane;
+class LaneToggleBar;
 class OtherStrip;
 class PlayheadOverlay;
 class TrackHeaderPanel;
@@ -172,6 +173,14 @@ class SongView : public QWidget
     // Playhead; the pane's height is per-song view state (the splitter's).
     bool velocityLaneVisible() const;
     void setVelocityLaneVisible(bool visible);
+
+    // The automation lanes' pane. App-wide preference like the velocity
+    // lane's (View menu / view.automation_lanes, default A), except it
+    // starts shown — the lanes have always been part of the editor. Hiding
+    // is view-only: the rows, their heights, and their points are untouched,
+    // and per-lane "Hide lane" stays a separate, per-song thing.
+    bool automationLanesVisible() const;
+    void setAutomationLanesVisible(bool visible);
 
     // Raw MIDI event list: an alternative to the piano roll in the same
     // screen space (the ruler, headers, and automation lanes stay). Per-song
@@ -635,6 +644,10 @@ class SongView : public QWidget
     // Velocity-lane toggle from the keyboard; the main window mirrors it into
     // the View-menu checkbox, which owns the persisted preference.
     void velocityLaneVisibilityChanged(bool visible);
+    // Automation-lanes toggle from the keyboard or the lane toggle bar; the
+    // main window mirrors it into the View-menu checkbox, which owns the
+    // persisted preference.
+    void automationLanesVisibilityChanged(bool visible);
     // Jump-from-context voice navigation: the main window raises the
     // voicegroup dock and selects this slot.
     void revealVoiceRequested(int program);
@@ -700,6 +713,7 @@ class SongView : public QWidget
     songview::AutomationArea *m_lanes = nullptr;
     QScrollArea *m_lanesScroll = nullptr;
     songview::VelocityLane *m_velocityLane = nullptr;
+    songview::LaneToggleBar *m_laneToggles = nullptr; // pinned under the lanes area
     // Momentary pencil-key hold: press state kept until the matching
     // release decides sticky tap vs momentary hold (see handleEditKey /
     // handleEditKeyRelease).

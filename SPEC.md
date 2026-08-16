@@ -266,8 +266,15 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   While the roll.velocity_drag chord is held or a velocity drag is live,
   notes show their velocity value instead of the pitch name, and velocity
   bars appear at any zoom.
-- **Bottom — Automation lanes:** per-track, addable from the m4a parameter list (§4.2),
-  drawn as line/step editors. With the pencil mode below owning freehand drawing, the
+- **Bottom — Automation lanes** (View → Automation Lanes, or `view.automation_lanes`,
+  default **A**, dispatched from the roll/lanes focus like V and M/S/B): per-track,
+  addable from the m4a parameter list (§4.2),
+  drawn as line/step editors. Visibility is an app-wide preference (QSettings, like
+  the velocity lane's and Follow Playhead), shown by default; closing the pane is
+  view-only, leaving the rows, their heights, and their points untouched, and it is a
+  separate thing from a single lane's "Hide lane" (§6.1), which is per-song. A pane
+  reopened after the splitter has sized it comes back where it was; one that was never
+  sized — the preference persisted off — borrows its classic height from the roll. With the pencil mode below owning freehand drawing, the
   **arrow tool never creates data on a plain click**: a left click on empty lane space
   parks the edit cursor at the snapped tick and writes nothing, and a left click on a
   point's dot **deletes** that point as one undo entry (of a node selection, only the
@@ -369,6 +376,14 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   wheel zooms time at the cursor, Shift (or a horizontal wheel) scrolls, and the wheel
   over the ruler column is left alone. Visibility is an app-wide preference (QSettings,
   like Follow Playhead); the pane's height is per-song sidecar state (§4.4).
+- **Under both — Lane toggle bar:** a fixed strip pinned below the splitter, above the
+  "other events" strip, carrying two checkable icon buttons — an envelope-with-node
+  glyph for the automation lanes and velocity stems for the velocity lane. It sits
+  outside the splitter and is never hidden, so with both panes closed it is still the
+  way back without the View menu. The buttons, the View menu items, and the A/V keys
+  are three faces of the same two preferences and stay in sync in every direction.
+  The glyphs are painted (no SVG module is linked) and tinted from the button role
+  ramp, so they follow the theme and the checked/hover fills.
   Editing is deferred throughout: the pointer only moves a preview, and the
   document mutates once — one undo entry — when the button comes up, refusing the
   write outright if the notes changed underneath ("Velocity edit cancelled because

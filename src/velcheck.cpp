@@ -18,6 +18,7 @@
 #include <QSettings>
 #include <QSplitter>
 #include <QTemporaryDir>
+#include <QToolButton>
 #include <QWheelEvent>
 
 #include "core/noteid.h"
@@ -742,6 +743,145 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     check(view.velocityLaneVisible() && visibilitySignals == 3,
           "the lane's own focus must reach the same toggle");
 
+    // --- the automation lanes' pane and the toggle bar
+    // The bar is pinned outside the splitter, so both panes can close without
+    // it moving: its geometry is the anchor the toggles keep.
+    auto *toggleBar = view.findChild<QWidget *>(QStringLiteral("laneToggleBar"));
+    auto *automationToggle = view.findChild<QToolButton *>(QStringLiteral("automationLanesToggle"));
+    auto *velocityToggle = view.findChild<QToolButton *>(QStringLiteral("velocityLaneToggle"));
+    auto *lanes = view.findChild<QWidget *>(QStringLiteral("automationArea"));
+    // The pane is the scroll area the splitter sizes; `lanes` inside it sizes
+    // to its own rows, so only the pane can answer "did it reopen at a
+    // working height".
+    auto *lanesPane = view.findChild<QWidget *>(QStringLiteral("automationLanesPane"));
+    if (!toggleBar || !automationToggle || !velocityToggle || !lanes || !lanesPane) {
+        fail("lane toggle bar, its buttons, or the automation area not found");
+        return 1;
+    }
+    int lanesSignals = 0;
+    bool lastLanesVisibility = false;
+    QObject::connect(&view, &SongView::automationLanesVisibilityChanged, &view, [&](bool on) {
+        lanesSignals++;
+        lastLanesVisibility = on;
+    });
+    check(view.automationLanesVisible() && automationToggle->isChecked(),
+          "the automation lanes must start shown, with their toggle checked");
+    // The bar's whole job is to stay put and stay reachable, so ask where it
+    // is in the view's own coordinates, not its parent's.
+    // Also the pane-size checks' splitter, further down.
+    auto *splitter = view.findChild<QSplitter *>();
+    if (!splitter) {
+        fail("the roll/lanes splitter is missing");
+        return 1;
+    }
+    const auto barTopInView = [&] { return toggleBar->mapTo(&view, QPoint(0, 0)).y(); };
+    const auto splitterBottomInView = [&] {
+        return splitter->mapTo(&view, QPoint(0, splitter->height())).y();
+    };
+    check(!toggleBar->isHidden() && barTopInView() >= splitterBottomInView(),
+          "the toggle bar must sit below the lanes area, not inside it");
+    const int paneHeightOpen = lanesPane->height();
+    // Hiding the pane is view-only, so the lane data has to come through it
+    // untouched — count the rows and their points before and after.
+    const auto lanePointTotal = [&] {
+        size_t total = 0;
+        for (const AutoLane &laneRow : view.model().lanes)
+            total += laneRow.points.size();
+        return total;
+    };
+    const size_t laneRowsOpen = view.model().lanes.size();
+    const size_t lanePointsOpen = lanePointTotal();
+    const int laneHeightOpen = view.viewState().laneHeight;
+    sendLaneKey(roll, Qt::Key_A);
+    (void)view.grab();
+    check(!view.automationLanesVisible() && lanesSignals == 1 && !lastLanesVisibility &&
+              !automationToggle->isChecked(),
+          "A from the roll must close the lanes, report it, and uncheck the toggle");
+    check(!toggleBar->isHidden() && barTopInView() >= splitterBottomInView(),
+          "the toggle bar must stay put and stay below the lanes area once they close");
+    check(view.model().lanes.size() == laneRowsOpen && lanePointTotal() == lanePointsOpen &&
+              view.viewState().laneHeight == laneHeightOpen,
+          "closing the pane must leave the lane rows, their points, and their height alone");
+    sendLaneKey(roll, Qt::Key_A);
+    (void)view.grab();
+    check(view.automationLanesVisible() && lanesSignals == 2 && automationToggle->isChecked(),
+          "A again must reopen the lanes");
+    // Reopening a pane the splitter has already sized is the splitter's own
+    // doing — it remembers the handle. The height borrow is for the other
+    // path: the preference persists off, so the pane is hidden before the
+    // first layout and has no remembered size at all. That needs its own
+    // view, hidden the way MainWindow::createSession hides it.
+    {
+        SongView fresh;
+        fresh.resize(1280, 800);
+        fresh.setSong(timeline.get(), nullptr);
+        fresh.setAutomationLanesVisible(false); // before any layout, as the app does
+        (void)fresh.grab();
+        auto *freshPane = fresh.findChild<QWidget *>(QStringLiteral("automationLanesPane"));
+        if (!freshPane) {
+            fail("the fresh view has no automation lanes pane");
+        } else {
+            check(freshPane->isHidden(), "a view built with the preference off must start closed");
+            fresh.setAutomationLanesVisible(true);
+            (void)fresh.grab();
+            check(freshPane->height() > freshPane->minimumHeight(),
+                  "a never-sized pane must borrow a working height, not open at its minimum");
+        }
+    }
+    check(lanesPane->height() >= paneHeightOpen,
+          "the reopened pane must come back at the height it had");
+
+    // The buttons are children of the bar, so a click aimed at a surface
+    // never reaches them; drive each one directly.
+    const auto clickButton = [](QToolButton *button) {
+        const QPointF center(button->rect().center());
+        sendLaneMouse(button, QEvent::MouseButtonPress, center, Qt::LeftButton, Qt::LeftButton);
+        sendLaneMouse(button, QEvent::MouseButtonRelease, center, Qt::LeftButton, Qt::NoButton);
+    };
+    clickButton(automationToggle);
+    (void)view.grab();
+    check(!view.automationLanesVisible() && lanesSignals == 3,
+          "the automation toggle button must close the lanes");
+    clickButton(automationToggle);
+    (void)view.grab();
+    check(view.automationLanesVisible() && lanesSignals == 4,
+          "the automation toggle button must reopen the lanes");
+    const int velocitySignalsBeforeClick = visibilitySignals;
+    const bool velocityOpenBeforeClick = view.velocityLaneVisible();
+    clickButton(velocityToggle);
+    (void)view.grab();
+    check(view.velocityLaneVisible() == !velocityOpenBeforeClick &&
+              visibilitySignals == velocitySignalsBeforeClick + 1,
+          "the velocity toggle button must flip the velocity pane");
+    // The keyboard and the buttons are two faces of one state, so a key press
+    // has to leave the button showing the truth.
+    sendLaneKey(roll, Qt::Key_V);
+    (void)view.grab();
+    check(velocityToggle->isChecked() == view.velocityLaneVisible() &&
+              view.velocityLaneVisible() == velocityOpenBeforeClick,
+          "V must flip the pane back and re-sync the toggle button");
+
+    // Closing the focused lanes must hand the keyboard back, or the next
+    // bare-letter command would land outside the view entirely.
+    lanes->setFocus(Qt::OtherFocusReason);
+    sendLaneKey(lanes, Qt::Key_A);
+    (void)view.grab();
+    check(!view.automationLanesVisible() && view.focusWidget() == roll,
+          "closing the focused lanes must hand the keyboard back to the roll");
+    // The extreme case the bar exists for: with both panes shut there is no
+    // lanes chrome left, so the bar is the only way back without the menu.
+    const bool velocityOpenBeforeShut = view.velocityLaneVisible();
+    view.setVelocityLaneVisible(false);
+    (void)view.grab();
+    check(!toggleBar->isHidden() && barTopInView() >= splitterBottomInView() &&
+              !automationToggle->isChecked() && !velocityToggle->isChecked(),
+          "with both panes shut the bar must still be there, showing both toggles off");
+    sendLaneKey(roll, Qt::Key_A);
+    view.setVelocityLaneVisible(velocityOpenBeforeShut);
+    (void)view.grab();
+    check(view.automationLanesVisible() && view.velocityLaneVisible() == velocityOpenBeforeShut,
+          "both panes must go back as they were for the rest of the check");
+
     runVelocityAxisBandCheck(check);
 
     // The playhead overlay clips its line to the registered bands' visible
@@ -962,7 +1102,6 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     // --- ruler density follows the pane's height
     const int shortTicks = lane->property("velocityTickCount").toInt();
     const int shortHeight = lane->height();
-    auto *splitter = view.findChild<QSplitter *>();
     if (!splitter) {
         fail("the roll/lanes splitter is missing");
         return failures == 0 ? 0 : 1;

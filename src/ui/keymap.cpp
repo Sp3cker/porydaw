@@ -120,6 +120,11 @@ const Def kDefs[] = {
     // — never as a window shortcut, which would eat the key in text fields.
     {"view.velocity_lane", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Toggle Velocity Lane"), QKeySequence::UnknownKey, "V"},
+    // The automation lanes' pane toggle, V's sibling. Bare A is free —
+    // "select all" is Ctrl+A — and it dispatches the same way, never as a
+    // window shortcut.
+    {"view.automation_lanes", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Toggle Automation Lanes"), QKeySequence::UnknownKey, "A"},
     // Ableton-style pencil for the automation lanes ("B is for Bencil" —
     // reachable without taking the right hand off the mouse). Dispatched
     // through handleEditKey like M/S, so text inputs keep the letter.

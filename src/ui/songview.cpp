@@ -7188,6 +7188,185 @@ class VelocityLane : public TimelineSurface
     int m_audPan = M4A_AUDITION_PAN_NONE; // PAN it was last sounded under
 };
 
+// -------------------------------------------------------------- LaneToggleBar
+
+// Glyphs for the lane toggles, drawn rather than shipped: main links no SVG
+// module, and a painted mask tints from the theme for free (the transport
+// icons take the same route through tintedStandardIcon). Each draws white on
+// transparent at `extent` square; the caller recolors with SourceIn.
+QPixmap laneToggleMask(int extent, qreal dpr, bool automation)
+{
+    QPixmap mask(QSize(extent, extent) * dpr);
+    mask.setDevicePixelRatio(dpr);
+    mask.fill(Qt::transparent);
+    QPainter p(&mask);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    const qreal inset = extent / 8.0;
+    const qreal left = inset;
+    const qreal right = extent - inset;
+    const qreal top = inset;
+    const qreal bottom = extent - inset;
+    const qreal stroke = std::max(1.0, extent / 10.0);
+    if (automation) {
+        // A breakpoint envelope: a rise into a held node and a fall away
+        // from it, which is what an automation row draws.
+        const qreal radius = extent / 6.0;
+        const QPointF a(left, bottom);
+        const QPointF b(extent / 2.0, top + radius);
+        const QPointF c(right, extent * 0.66);
+        p.setPen(QPen(Qt::white, stroke, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        p.drawPolyline(QPolygonF({a, b, c}));
+        // The node the line bends around, hollow like the lanes' own rings.
+        // The line runs under it, so clear its disc first — at icon sizes a
+        // ring stroked straight over the join just reads as a blob.
+        p.setCompositionMode(QPainter::CompositionMode_Clear);
+        p.setPen(Qt::NoPen);
+        p.setBrush(Qt::white);
+        p.drawEllipse(b, radius + stroke / 2.0, radius + stroke / 2.0);
+        p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        p.setPen(QPen(Qt::white, stroke));
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(b, radius, radius);
+    } else {
+        // Velocity stems on a baseline: the lane's own picture of a note's
+        // velocity, at three different heights so it reads as data.
+        const qreal span = right - left;
+        const qreal barW = std::max(1.0, span / 5.0);
+        const qreal gap = (span - 3 * barW) / 2.0;
+        const qreal heights[3] = {0.45, 1.0, 0.7};
+        for (int i = 0; i < 3; i++) {
+            const qreal x = left + i * (barW + gap);
+            const qreal h = (bottom - top) * heights[i];
+            p.fillRect(QRectF(x, bottom - h, barW, h), Qt::white);
+        }
+    }
+    return mask;
+}
+
+// The bar pinned under the lanes area: two checkable toggles for the
+// automation lanes and the velocity lane, always present so the toggles stay
+// where the user left them even with both panes hidden.
+class LaneToggleBar : public QWidget
+{
+  public:
+    explicit LaneToggleBar(SongView *sv) : QWidget(nullptr)
+    {
+        setObjectName(QStringLiteral("laneToggleBar")); // findChild for tests
+        const int extent = lyt::fontPx(1.5);
+        setFixedHeight(extent + 2 * lyt::space(Space::One));
+        auto *row = new QHBoxLayout(this);
+        row->setContentsMargins(lyt::space(Space::Two), lyt::space(Space::One),
+                                lyt::space(Space::Two), lyt::space(Space::One));
+        row->setSpacing(lyt::space(Space::One));
+        const auto makeToggle = [&](const QString &objectName) {
+            auto *button = new QToolButton(this);
+            button->setObjectName(objectName);
+            button->setAutoRaise(false);
+            button->setCheckable(true);
+            button->setFixedSize(extent, extent);
+            // Tab reaches them, a click does not take focus: the roll and
+            // lanes own the bare-letter shortcuts, and moving focus onto the
+            // bar would quietly stop A/V/M/S/B from working.
+            button->setFocusPolicy(Qt::TabFocus);
+            row->addWidget(button);
+            return button;
+        };
+        m_automation = makeToggle(QStringLiteral("automationLanesToggle"));
+        m_velocity = makeToggle(QStringLiteral("velocityLaneToggle"));
+        row->addStretch();
+        refreshIcons();
+        m_automation->setChecked(sv->automationLanesVisible());
+        m_velocity->setChecked(sv->velocityLaneVisible());
+        connect(m_automation, &QToolButton::toggled, sv,
+                [sv](bool on) { sv->setAutomationLanesVisible(on); });
+        connect(m_velocity, &QToolButton::toggled, sv,
+                [sv](bool on) { sv->setVelocityLaneVisible(on); });
+        // The View menu and the keyboard flip the same panes; follow them.
+        // Re-entry through toggled is harmless — the setters no-op when the
+        // pane already matches.
+        connect(sv, &SongView::automationLanesVisibilityChanged, this,
+                [this](bool on) { m_automation->setChecked(on); });
+        connect(sv, &SongView::velocityLaneVisibilityChanged, this,
+                [this](bool on) { m_velocity->setChecked(on); });
+        // Display-only binding hints like the track headers': live, so the
+        // shortcuts dialog can rebind without rebuilding the bar.
+        const auto retip = [this] {
+            const auto &keys = keymap::Registry::instance();
+            const auto hint = [&keys](const QString &id, const QString &name) {
+                const QKeySequence seq = keys.bindings(id).value(0);
+                return seq.isEmpty() ? name
+                                     : QStringLiteral("%1 (%2)").arg(
+                                           name, seq.toString(QKeySequence::NativeText));
+            };
+            m_automation->setToolTip(hint(QStringLiteral("view.automation_lanes"),
+                                          SongView::tr("Show or hide the automation lanes")));
+            m_velocity->setToolTip(hint(QStringLiteral("view.velocity_lane"),
+                                        SongView::tr("Show or hide the velocity lane")));
+        };
+        retip();
+        connect(&keymap::Registry::instance(), &keymap::Registry::bindingsChanged, this, retip);
+        m_automation->setAccessibleName(SongView::tr("Automation lanes"));
+        m_velocity->setAccessibleName(SongView::tr("Velocity lane"));
+    }
+
+  protected:
+    void paintEvent(QPaintEvent *event) override
+    {
+        QPainter p(this);
+        p.fillRect(event->rect(),
+                   themes::color(themes::Role::song_view_timeline_chrome_background));
+        // The lanes area's closing edge, matching the strip's own top rule.
+        p.setPen(themes::color(themes::Role::song_view_separator));
+        p.drawLine(0, 0, width(), 0);
+    }
+
+    void changeEvent(QEvent *event) override
+    {
+        QWidget::changeEvent(event);
+        switch (event->type()) {
+        case QEvent::ApplicationPaletteChange:
+        case QEvent::PaletteChange:
+        case QEvent::StyleChange:
+        case QEvent::ThemeChange:
+            refreshIcons();
+            break;
+        default:
+            break;
+        }
+    }
+
+  private:
+    // Tinted the same way as the transport glyphs: the hover (Active) and
+    // checked (On) variants follow the button ramp's paired text colors, so
+    // the glyph stays readable on whatever fill the theme sheet paints.
+    void refreshIcons()
+    {
+        const int extent = std::max(1, int(m_automation->height() * 0.8));
+        const qreal dpr = devicePixelRatioF();
+        for (bool automation : {true, false}) {
+            const QPixmap mask = laneToggleMask(extent, dpr, automation);
+            const auto tinted = [&mask](themes::Role role) {
+                QPixmap pixmap = mask;
+                QPainter painter(&pixmap);
+                painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+                painter.fillRect(pixmap.rect(), themes::color(role));
+                painter.end();
+                return pixmap;
+            };
+            QIcon icon(tinted(themes::Role::button_text));
+            icon.addPixmap(tinted(themes::Role::button_hover_text), QIcon::Active, QIcon::Off);
+            icon.addPixmap(tinted(themes::Role::button_pressed_text), QIcon::Normal, QIcon::On);
+            icon.addPixmap(tinted(themes::Role::button_pressed_text), QIcon::Active, QIcon::On);
+            QToolButton *button = automation ? m_automation : m_velocity;
+            button->setIcon(icon);
+            button->setIconSize(QSize(extent, extent));
+        }
+    }
+
+    QToolButton *m_automation = nullptr;
+    QToolButton *m_velocity = nullptr;
+};
+
 // ---------------------------------------------------------------- OtherStrip
 
 class OtherStrip : public TimelineSurface
@@ -8015,6 +8194,7 @@ SongView::SongView(QWidget *parent) : QWidget(parent)
     m_splitter->addWidget(m_velocityLane);
 
     m_lanesScroll = new QScrollArea(this);
+    m_lanesScroll->setObjectName(QStringLiteral("automationLanesPane")); // findChild for tests
     m_lanesScroll->setMinimumHeight(kLaneH + kAddLaneH);
     m_lanesScroll->setFrameShape(QFrame::NoFrame);
     m_lanesScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -8027,6 +8207,11 @@ SongView::SongView(QWidget *parent) : QWidget(parent)
     m_splitter->setStretchFactor(1, 0);
     m_splitter->setStretchFactor(2, 0);
     vbox->addWidget(m_splitter, 1);
+
+    // Pinned right under the lanes area, outside the splitter, so the pane
+    // toggles hold still whether or not either pane is showing.
+    m_laneToggles = new LaneToggleBar(this);
+    vbox->addWidget(m_laneToggles);
 
     m_strip = new OtherStrip(this);
     vbox->addWidget(m_strip);
@@ -8217,6 +8402,37 @@ void SongView::setVelocityLaneVisible(bool visible)
     emit velocityLaneVisibilityChanged(visible);
 }
 
+bool SongView::automationLanesVisible() const
+{
+    return m_lanesScroll && !m_lanesScroll->isHidden();
+}
+
+void SongView::setAutomationLanesVisible(bool visible)
+{
+    if (!m_lanesScroll || automationLanesVisible() == visible)
+        return;
+    // The lanes area is ClickFocus like every other surface; hiding it while
+    // it holds the focus would strand the bare-letter shortcuts outside the
+    // view. Hand the focus back to the editing surface first.
+    const QWidget *const focused = window() ? window()->focusWidget() : nullptr;
+    const bool lanesHadFocus = focused == m_lanes;
+    m_lanesScroll->setVisible(visible);
+    if (!visible && lanesHadFocus)
+        focusContent();
+    if (visible) {
+        // A freshly shown splitter pane gets only its minimum, so reopen it
+        // at the classic lanes height, borrowed from the roll pane above.
+        QList<int> sizes = m_splitter->sizes();
+        const int borrow = kLanesAreaH - sizes[2];
+        if (borrow > 0 && sizes[0] - borrow >= kVelLaneMinH) {
+            sizes[0] -= borrow;
+            sizes[2] += borrow;
+            m_splitter->setSizes(sizes);
+        }
+    }
+    emit automationLanesVisibilityChanged(visible);
+}
+
 void SongView::focusContent()
 {
     if (eventListVisible())
@@ -8335,8 +8551,10 @@ void SongView::applyViewState(const ViewState &state)
         splitterSizes = {std::max(kVelLaneMinH, splitterSizes[0] - velocityH), velocityH,
                          splitterSizes[1]};
     }
+    // A hidden pane reports (and restores at) zero, so only require a real
+    // height from the panes that are actually showing.
     if (splitterSizes.size() == m_splitter->count() && splitterSizes.first() > 0 &&
-        splitterSizes.last() > 0) {
+        (splitterSizes.last() > 0 || !automationLanesVisible())) {
         // Real sizes exist; skip resizeEvent's default split.
         m_splitInit = true;
         m_splitter->setSizes(splitterSizes);
@@ -8954,6 +9172,13 @@ bool SongView::handleEditKey(QKeyEvent *event)
         // A held key auto-repeats; only the real press flips the pane.
         if (!event->isAutoRepeat())
             setVelocityLaneVisible(!velocityLaneVisible());
+        event->accept();
+        return true;
+    }
+    if (keys.matches(event, QStringLiteral("view.automation_lanes"))) {
+        // A held key auto-repeats; only the real press flips the pane.
+        if (!event->isAutoRepeat())
+            setAutomationLanesVisible(!automationLanesVisible());
         event->accept();
         return true;
     }
@@ -9961,8 +10186,9 @@ void SongView::resizeEvent(QResizeEvent *event)
     if (!m_splitInit && m_splitter->height() > 0) {
         m_splitInit = true;
         const int velocityH = velocityLaneVisible() ? kVelLaneH : 0;
-        m_splitter->setSizes({std::max(120, m_splitter->height() - kLanesAreaH - velocityH),
-                              velocityH, kLanesAreaH});
+        const int lanesH = automationLanesVisible() ? kLanesAreaH : 0;
+        m_splitter->setSizes(
+            {std::max(120, m_splitter->height() - lanesH - velocityH), velocityH, lanesH});
     }
     updateScrollbars();
     syncPlayheadOverlay();
