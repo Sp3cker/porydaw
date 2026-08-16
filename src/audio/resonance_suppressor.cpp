@@ -36,15 +36,17 @@ ResonanceSuppressor::~ResonanceSuppressor() = default;
 void ResonanceSuppressor::init(float sampleRate)
 {
     m_sampleRate = sampleRate;
-    m_calibration = 0.5 * kPi * kPi / (double(kN) * double(kN));
+    // Peak convention: a bin-centred full-scale sine (|X| = N/pi for the
+    // unit-sum Hann family) must read 0 dBFS in m_binLevel.
+    m_calibration = kPi * kPi / (double(kN) * double(kN));
 
     for (int n = 0; n < kN; ++n) {
-        const double phase = 2.0 * kPi * double(n) / double(kN);
+        const auto phase = 2.0 * kPi * double(n) / double(kN);
         m_window[static_cast<size_t>(n)] = std::sqrt(0.5 - 0.5 * std::cos(phase));
     }
 
     for (int k = 0; k < kN / 2; ++k) {
-        const double phase = -2.0 * kPi * double(k) / double(kN);
+        const auto phase = -2.0 * kPi * double(k) / double(kN);
         m_twiddleReal[static_cast<size_t>(k)] = std::cos(phase);
         m_twiddleImag[static_cast<size_t>(k)] = std::sin(phase);
     }
@@ -229,32 +231,26 @@ void ResonanceSuppressor::processHop(uint64_t start)
             // the plain threshold law. The mean is used over the median: a
             // median under-estimates a noise floor by ~1.6 dB, which would
             // let half the bins of broadband program engage every hop.
-            double referenceSum = 0.0;
-            int count = 0;
-            for (int offset = -6; offset <= -3; ++offset) {
-                const int n = k + offset;
-                if (n >= 1) {
+            static constexpr int kOffsets[8] = {-6, -5, -4, -3, 3, 4, 5, 6};
+            auto referenceSum = 0.0;
+            auto count = 0;
+            for (const auto offset : kOffsets) {
+                const auto n = k + offset;
+                if (n >= 1 && n <= kNyquist - 1) {
                     referenceSum += m_binLevel[static_cast<size_t>(n)];
                     ++count;
                 }
             }
-            for (int offset = 3; offset <= 6; ++offset) {
-                const int n = k + offset;
-                if (n <= kNyquist - 1) {
-                    referenceSum += m_binLevel[static_cast<size_t>(n)];
-                    ++count;
-                }
-            }
-            const double reference = std::max(kSilenceDb, referenceSum / count);
-            const double excess =
+            const auto reference = std::max(kSilenceDb, referenceSum / count);
+            const auto excess =
                 m_binLevel[static_cast<size_t>(k)] - (reference + double(m_params.guardDb));
 
             // Progressive response (§7): nothing below the knee, then a
             // smoothstep to the 1.25 ceiling at 20 dB excess — small
             // resonances barely dim, very resonant ones get extra depth.
-            double excessLaw = 0.0;
+            auto excessLaw = 0.0;
             if (excess > kKneeDb) {
-                const double t = std::min(1.0, (excess - kKneeDb) / (kCeilExcessDb - kKneeDb));
+                const auto t = std::min(1.0, (excess - kKneeDb) / (kCeilExcessDb - kKneeDb));
                 excessLaw = kLawCeiling * t * t * (3.0 - 2.0 * t);
             }
             target = -kDepth * m_depthEnv[static_cast<size_t>(k)] * excessLaw;
@@ -299,9 +295,9 @@ void ResonanceSuppressor::rebuildDepthEnvelope()
 {
     double effectiveDepth[12] = {};
     for (int i = 0; i < 12; ++i) {
-        double depth = m_params.knotActive[i]
-                           ? double(m_params.gDb) * double(m_params.knotDepthDb[i]) / 10.0
-                           : 0.0;
+        const auto nyquist = 0.5 * m_sampleRate;
+        const auto active = m_params.knotActive[i] && kKnotFrequencies[i] < nyquist;
+        double depth = active ? double(m_params.gDb) * double(m_params.knotDepthDb[i]) / 10.0 : 0.0;
         depth += double(m_params.tilt) * std::log2(kKnotFrequencies[i] / 1000.0);
         effectiveDepth[i] = std::clamp(depth, 0.0, 10.0);
     }
