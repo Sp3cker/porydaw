@@ -47,7 +47,7 @@ bool TrackActivity::advance(const TrackActivityLevels &levels, float elapsedSeco
     const auto releaseAmount = 1.0f - std::exp(-elapsed / kReleaseSeconds);
     const auto descendingAmount = m_phase == Phase::Resuming ? attackAmount : releaseAmount;
     const auto advanceSide = [elapsed, attackAmount, descendingAmount](float &intensity,
-                                                                        float target) {
+                                                                       float target) {
         const auto amount = target > intensity ? attackAmount : descendingAmount;
         intensity += (target - intensity) * amount;
         if (elapsed > 0.0f && target == 0.0f && intensity < kVisibleFloor)

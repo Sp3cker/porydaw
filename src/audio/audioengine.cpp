@@ -792,12 +792,10 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
         if (track >= 0 && track < static_cast<int>(kMaxTracks)) {
             // CGB output routing is binary per side. Scale its 0..15 envelope
             // to the PCM meter range, then apply the same pan bits as the mixer.
-            const auto envelope =
-                uint8_t(std::min(channel.envelopeVolume, uint8_t{15}) * 17);
-            callbackActivity[track] = maxLevel(
-                callbackActivity[track],
-                {channel.pan & 0xF0 ? envelope : uint8_t{0},
-                 channel.pan & 0x0F ? envelope : uint8_t{0}});
+            const auto envelope = uint8_t(std::min(channel.envelopeVolume, uint8_t{15}) * 17);
+            callbackActivity[track] =
+                maxLevel(callbackActivity[track], {channel.pan & 0xF0 ? envelope : uint8_t{0},
+                                                   channel.pan & 0x0F ? envelope : uint8_t{0}});
         }
     }
     m_activePcm.store(pcm);

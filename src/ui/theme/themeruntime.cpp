@@ -130,12 +130,13 @@ QString toolbarStyleSheet(const Theme &theme)
 
 QString tabStyleSheet(const Theme &theme)
 {
-    return QStringLiteral("QTabWidget::pane{background-color:%1;border-color:%2;}"
-                          "QTabBar::tab{background-color:%3;color:%4;border-color:%2;font-weight:600;}"
-                          "QTabBar::tab:hover{background-color:%5;color:%6;"
-                          "border-color:%2;}"
-                          "QTabBar::tab:selected{background-color:%7;color:%8;"
-                          "border-color:%2;}")
+    return QStringLiteral(
+               "QTabWidget::pane{background-color:%1;border-color:%2;}"
+               "QTabBar::tab{background-color:%3;color:%4;border-color:%2;font-weight:600;}"
+               "QTabBar::tab:hover{background-color:%5;color:%6;"
+               "border-color:%2;}"
+               "QTabBar::tab:selected{background-color:%7;color:%8;"
+               "border-color:%2;}")
         .arg(colorName(theme, Role::tab_pane_background))
         .arg(colorName(theme, Role::tab_outline))
         .arg(colorName(theme, Role::tab_background))

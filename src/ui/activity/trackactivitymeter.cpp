@@ -32,12 +32,11 @@ QColor gamutMappedOklch(themes::Oklch color, int alpha = 255)
     return themes::colorFromOklab({color.lightness, 0.0, 0.0}, alpha);
 }
 
-int physicalHeight(const TrackActivityMeter::State &state, float channelIntensity,
-                   int widgetHeight, qreal devicePixelRatio)
+int physicalHeight(const TrackActivityMeter::State &state, float channelIntensity, int widgetHeight,
+                   qreal devicePixelRatio)
 {
-    const float paintedIntensity = state.playing
-                                       ? std::min(channelIntensity, state.maximumIntensity)
-                                       : channelIntensity;
+    const float paintedIntensity =
+        state.playing ? std::min(channelIntensity, state.maximumIntensity) : channelIntensity;
     return qRound(double(paintedIntensity) * widgetHeight * devicePixelRatio);
 }
 
@@ -55,8 +54,8 @@ RenderKey renderKey(const TrackActivityMeter::State &state, int widgetHeight,
             state.playing};
 }
 
-void paintActivityLight(QPainter &p, const TrackActivityMeter::State &state,
-                        const QRectF &barRect, const QColor &identityColor)
+void paintActivityLight(QPainter &p, const TrackActivityMeter::State &state, const QRectF &barRect,
+                        const QColor &identityColor)
 {
     const auto identity = themes::oklchFromColor(identityColor);
     auto dimmedIdentity = identity;
@@ -64,13 +63,12 @@ void paintActivityLight(QPainter &p, const TrackActivityMeter::State &state,
     p.fillRect(barRect, gamutMappedOklch(dimmedIdentity));
 
     const auto split = barRect.left() + barRect.width() * 0.5;
-    const QRectF leftRect(barRect.left(), barRect.top(), split - barRect.left(),
-                          barRect.height());
+    const QRectF leftRect(barRect.left(), barRect.top(), split - barRect.left(), barRect.height());
     const QRectF rightRect(split, barRect.top(), barRect.right() - split, barRect.height());
     const auto paintMeter = [&](QRectF meterRect, float channelIntensity) {
         const auto current = double(channelIntensity);
-        const auto activity = state.playing ? std::min(current, double(state.maximumIntensity))
-                                            : current;
+        const auto activity =
+            state.playing ? std::min(current, double(state.maximumIntensity)) : current;
         if (activity <= 0.0)
             return;
         meterRect.setTop(barRect.bottom() - barRect.height() * activity);

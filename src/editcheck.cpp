@@ -1297,9 +1297,8 @@ int runEditCheck(const QString &projectRoot)
                     if (ok &&
                         (!doc.findNote(track, tA, 118, &a) || a.duration != step * 4 ||
                          a.velocity != 100 || doc.findNote(track, tA, 115, &a) ||
-                         !doc.findNote(track, tA + step * 20, 114, &b) ||
-                         b.duration != step * 2 || b.velocity != 90 ||
-                         doc.findNote(track, tA + step * 20, 117, &b))) {
+                         !doc.findNote(track, tA + step * 20, 114, &b) || b.duration != step * 2 ||
+                         b.velocity != 90 || doc.findNote(track, tA + step * 20, 117, &b))) {
                         fail("batch pitch move did not land both destinations");
                         ok = false;
                     }
@@ -1314,10 +1313,9 @@ int runEditCheck(const QString &projectRoot)
                     if (doc.smf().write() != preMove) {
                         fail("moveNotesToPitches undo did not restore the original bytes");
                         ok = false;
-                    }
-                    else if (!doc.findNote(track, tA, 115, &a) || a.duration != step * 4 ||
-                             a.velocity != 100 || !doc.findNote(track, tA + step * 20, 117, &b) ||
-                             b.duration != step * 2 || b.velocity != 90) {
+                    } else if (!doc.findNote(track, tA, 115, &a) || a.duration != step * 4 ||
+                               a.velocity != 100 || !doc.findNote(track, tA + step * 20, 117, &b) ||
+                               b.duration != step * 2 || b.velocity != 90) {
                         fail("moveNotesToPitches undo did not restore bytes and identities");
                         ok = false;
                     } else {
@@ -1513,8 +1511,7 @@ int runEditCheck(const QString &projectRoot)
                         fail("rejected move pushed an undo command");
                         ok = false;
                     }
-                    if (ok && (doc.smf().write() != before ||
-                               !doc.findNote(track, tA, 118, &x) ||
+                    if (ok && (doc.smf().write() != before || !doc.findNote(track, tA, 118, &x) ||
                                !doc.findNote(track, tA + step * 20, 114, &y))) {
                         fail("rejected move changed the SMF");
                         ok = false;

@@ -54,7 +54,6 @@ int nextScalePitch(ScaleId id, int root, int midiPitch, int steps);
 // selected for their first occurrence. On boundary failure, destsOut is filled
 // with uint8_t(-1).
 bool resolveDiatonicDestinations(ScaleId id, int root, const uint8_t *sourcePitches,
-                                 const int *degreeDisplacements, int count,
-                                 uint8_t *destsOut);
+                                 const int *degreeDisplacements, int count, uint8_t *destsOut);
 
 } // namespace porydaw_scale

@@ -1325,8 +1325,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
             vol1LabelBounds.translated(areaOrigin.x(), areaOrigin.y());
         const QRect trackHeaderBounds(0, 0, areaOrigin.x(), drawer->height());
         check(detentToggle && detentToggle->isVisible() && detentToggle->isEnabled() &&
-                  detentToggle->isChecked() &&
-                  detentBounds.left() == areaOrigin.x() &&
+                  detentToggle->isChecked() && detentBounds.left() == areaOrigin.x() &&
                   detentBounds.right() < areaOrigin.x() + area.plotOrigin(),
               "velocity detent toggle must stay inside the PSG label gutter");
         check(detentBounds.bottom() == areaOrigin.y() + area.height() - 1,

@@ -147,7 +147,8 @@ int runTrackActivityCheck()
 
     activity.reset();
     levels[isolatedTrack] = {255, 255};
-    check(activity.advance(levels, -1.0f, true), "playing must require ticks with negative elapsed");
+    check(activity.advance(levels, -1.0f, true),
+          "playing must require ticks with negative elapsed");
     check(dark(activity.intensity(isolatedTrack)), "negative elapsed must not move activity");
     activity.advance(levels, 0.0f, true);
     check(dark(activity.intensity(isolatedTrack)), "zero elapsed must not move activity");
