@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-// Resonance suppressor from dsp/DETECTOR.md (plan v6). The device-rate
+// Resonance suppressor from dsp/DETECTOR.md (plan v7). The device-rate
 // decision is intentional: this runs at the live engine sample rate, not a
 // fixed 32768 Hz.
 struct ResonanceParams {
@@ -28,8 +28,9 @@ class ResonanceSuppressor
     static constexpr int kLatency = kN - 1; // 2047 samples while enabled
     static constexpr double kDepth = 2.5;   // plateau = kDepth * depthEnv
     static constexpr double kSilenceDb = -120.0;
-    static constexpr double kKneeDb = 3.0;
-    static constexpr double kMaxExcessDb = 24.0;
+    static constexpr double kKneeDb = 6.0;        // response knee start (below: no damping)
+    static constexpr double kCeilExcessDb = 20.0; // excess where the law ceiling is reached
+    static constexpr double kLawCeiling = 1.25;   // extra depth for very resonant bins
 
     ResonanceSuppressor();
     ~ResonanceSuppressor();

@@ -249,17 +249,13 @@ void ResonanceSuppressor::processHop(uint64_t start)
             const double excess =
                 m_binLevel[static_cast<size_t>(k)] - (reference + double(m_params.guardDb));
 
+            // Progressive response (§7): nothing below the knee, then a
+            // smoothstep to the 1.25 ceiling at 20 dB excess — small
+            // resonances barely dim, very resonant ones get extra depth.
             double excessLaw = 0.0;
-            if (excess > 0.0) {
-                if (excess < kKneeDb) {
-                    const double ratio = excess / kKneeDb;
-                    excessLaw = 0.5 * ratio * ratio;
-                } else if (excess < kMaxExcessDb) {
-                    const double ratio = (excess - kKneeDb) / (kMaxExcessDb - kKneeDb);
-                    excessLaw = 1.0 - 0.5 * (1.0 - ratio) * (1.0 - ratio);
-                } else {
-                    excessLaw = 1.0;
-                }
+            if (excess > kKneeDb) {
+                const double t = std::min(1.0, (excess - kKneeDb) / (kCeilExcessDb - kKneeDb));
+                excessLaw = kLawCeiling * t * t * (3.0 - 2.0 * t);
             }
             target = -kDepth * m_depthEnv[static_cast<size_t>(k)] * excessLaw;
         }
