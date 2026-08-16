@@ -3800,6 +3800,102 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 QCoreApplication::processEvents();
             }
 
+            // A lone node previews live while it is dragged, and the preview
+            // is the whole row as it will stand once the mouse comes up — not
+            // the committed curve with a stroke laid over it. The two probes
+            // below are the ways that distinction shows: the position the
+            // node leaves must close up behind it, and the pair it lands
+            // between must give up their old connecting line.
+            {
+                view.clearTimeSelection();
+                QCoreApplication::processEvents();
+                const QColor previewColor =
+                    themes::color(themes::Role::song_view_edit_preview_outline);
+                // A width-2 logical line lands on different device rows at
+                // fractional scale factors; scan the short column.
+                const int reach = int(std::ceil(dprLanes)) + 1;
+                auto inkAt = [&](const QImage &img, qreal x, int y, const QColor &want) {
+                    const int px = int((x + 0.5) * dprLanes);
+                    const int py = int((y + 0.5) * dprLanes);
+                    for (int dy = -reach; dy <= reach; dy++)
+                        if (px >= 0 && px < img.width() && py + dy >= 0 && py + dy < img.height() &&
+                            img.pixelColor(px, py + dy) == want)
+                            return true;
+                    return false;
+                };
+                // The drag's own value chip paints at the node's right, so
+                // every probe below stays left of where the node is held.
+                // The gesture sees the integer mouse position, so the
+                // landing mirror must round the probe's x down the same way.
+                auto landingTick = [&](int x) {
+                    return view.snapTick(view.tickAtContentX(qreal(x) - songview::kGutterW));
+                };
+
+                // Vacated position: drag B off to the right of C and A must
+                // hold straight across to C — the lane's own color, all the
+                // way over the two segments B used to own.
+                {
+                    const int xTo = int(dotX(tC + 2 * snap));
+                    const uint64_t landed = landingTick(xTo);
+                    // Pressing at the node's own row still re-derives the
+                    // value from the pixel, so the held value is the row's,
+                    // not the node's stored one.
+                    const int held = ccValueAtY(ccValueY(vB));
+                    const qreal probeX = (dotX(tB) + dotX(tC)) / 2;
+                    if (landed <= tC || contestedX(probeX))
+                        fail("node drag preview setup: no clear column past the dragged node");
+                    sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tB)), ccValueY(vB)),
+                              Qt::LeftButton, Qt::LeftButton);
+                    sendMouse(lanes, QEvent::MouseMove, QPoint(xTo, ccValueY(vB)), Qt::NoButton,
+                              Qt::LeftButton);
+                    const QImage midDrag = lanesImage();
+                    if (!inkAt(midDrag, probeX, ccValueY(vA), ccColor))
+                        fail("a dragged node left a gap where it was picked up");
+                    if (inkAt(midDrag, probeX, ccValueY(held), ccColor))
+                        fail("a dragged node's committed hold stayed painted behind it");
+                    sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(xTo, ccValueY(vB)),
+                              Qt::LeftButton, Qt::NoButton);
+                    QCoreApplication::processEvents();
+                    DocLanePoint pt;
+                    if (doc.findLanePoint(laneTrack, freeCc, tB, nullptr) ||
+                        !doc.findLanePoint(laneTrack, freeCc, landed, &pt) || pt.value != held)
+                        fail("the previewed node did not land where the drag left it");
+                    doc.undoStack()->undo();
+                    QCoreApplication::processEvents();
+                }
+
+                // Landing between two nodes: drop C between A and B and the
+                // stretch from it to B must show its pending hold — in the
+                // edit-preview color — and nothing of A's old hold across to
+                // B, which the release replaces.
+                {
+                    const int xTo = int((dotX(tA) + dotX(tB)) / 2);
+                    const uint64_t landed = landingTick(xTo);
+                    const int held = ccValueAtY(ccValueY(vC));
+                    const qreal probeX = (qreal(xTo) + dotX(tB)) / 2;
+                    if (landed <= tA || landed >= tB || contestedX(probeX))
+                        fail("node drag preview setup: no clear column between A and B");
+                    sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(dotX(tC)), ccValueY(vC)),
+                              Qt::LeftButton, Qt::LeftButton);
+                    sendMouse(lanes, QEvent::MouseMove, QPoint(xTo, ccValueY(vC)), Qt::NoButton,
+                              Qt::LeftButton);
+                    const QImage midDrag = lanesImage();
+                    if (!inkAt(midDrag, probeX, ccValueY(held), previewColor))
+                        fail("a dragged node did not preview its pending hold");
+                    if (inkAt(midDrag, probeX, ccValueY(vA), ccColor))
+                        fail("a node dragged between two others left their old line painted");
+                    sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(xTo, ccValueY(vC)),
+                              Qt::LeftButton, Qt::NoButton);
+                    QCoreApplication::processEvents();
+                    DocLanePoint pt;
+                    if (doc.findLanePoint(laneTrack, freeCc, tC, nullptr) ||
+                        !doc.findLanePoint(laneTrack, freeCc, landed, &pt) || pt.value != held)
+                        fail("the node dropped between two others did not land there");
+                    doc.undoStack()->undo();
+                    QCoreApplication::processEvents();
+                }
+            }
+
             // Half-open boundary: with the selection ending exactly at B's
             // tick, B is not selected — pressing it moves it alone.
             {

@@ -5285,7 +5285,8 @@ class AutomationArea : public TimelineSurface
             if (pencilStrokeOnRow(rowIndex))
                 paintPencilPreview(p, plot, row, *points, minV, maxV, curve, centerLine);
             else
-                paintCurve(p, plot, row, *points, minV, maxV, curve, centerLine, dimUnselected);
+                paintCurve(p, plot, row, *points, minV, maxV, curve, centerLine, dimUnselected,
+                           nodeDragOnRow(rowIndex));
         }
 
         const std::pair<int, uint8_t> id = rowIdentity(row);
@@ -5337,6 +5338,26 @@ class AutomationArea : public TimelineSurface
         }
         p.drawEllipse(center, nodeRadius(), nodeRadius());
         p.restore();
+    }
+
+    // A lone node being dragged: where the document still has it, and where
+    // the gesture currently holds it.
+    struct NodeDragPreview {
+        uint64_t origTick = 0;
+        int origValue = 0;
+        uint64_t curTick = 0;
+        int curValue = 0;
+    };
+
+    // The single-node Point drag in flight on this row, if any. A group drag
+    // has its own whole-row preview (see paintContent), so it stays out of
+    // this one — the two would otherwise draw the same move twice.
+    std::optional<NodeDragPreview> nodeDragOnRow(int rowIndex) const
+    {
+        if (m_gesture != Gesture::Point || !m_group.empty() || rowIndex != m_dragRow ||
+            m_dragOrigTick < 0)
+            return std::nullopt;
+        return NodeDragPreview{uint64_t(m_dragOrigTick), m_dragOrigValue, m_dragTick, m_dragValue};
     }
 
     // True while a live pencil stroke owns this row, so the row paints its
@@ -5462,7 +5483,8 @@ class AutomationArea : public TimelineSurface
 
     void paintCurve(QPainter &p, const QRect &plot, const Row &row,
                     const std::vector<LanePoint> &points, int minV, int maxV, const QColor &color,
-                    bool centerLine, bool dimUnselected)
+                    bool centerLine, bool dimUnselected,
+                    const std::optional<NodeDragPreview> &drag = std::nullopt)
     {
         const int top = plot.top() + 5;
         const int bottom = plot.bottom() - 4;
@@ -5470,6 +5492,39 @@ class AutomationArea : public TimelineSurface
             return bottom - (v - minV) * (bottom - top) / std::max(1, maxV - minV);
         };
         const qreal dpr = p.device()->devicePixelRatioF();
+        auto tickX = [&](uint64_t t) { return m_sv->displayX(double(t), kGutterW, dpr); };
+        // A drag paints the row's PENDING points, not its committed ones: the
+        // curve has to read exactly as it will the instant the mouse comes up,
+        // so the node's old position closes up behind it (its neighbors join
+        // across the gap) and its new neighbors are the ones it connects to.
+        // The point it lands on top of drops out — the release overwrites
+        // that one, so drawing it would advertise a node already gone.
+        std::vector<LanePoint> pending;
+        size_t movedIndex = 0; // where the dragged node sits in `pending`
+        if (drag) {
+            pending.reserve(points.size() + 1);
+            for (const LanePoint &point : points) {
+                if (point.tick == drag->origTick && point.value == drag->origValue)
+                    continue;
+                if (point.tick == drag->curTick)
+                    continue;
+                pending.push_back(point);
+            }
+            const LanePoint moved{uint32_t(drag->curTick), drag->curValue};
+            const auto at = std::lower_bound(
+                pending.begin(), pending.end(), moved,
+                [](const LanePoint &a, const LanePoint &b) { return a.tick < b.tick; });
+            movedIndex = size_t(at - pending.begin());
+            pending.insert(at, moved);
+        }
+        const std::vector<LanePoint> &curve = drag ? pending : points;
+        // The dragged node and the segments it owns — the neighbor's hold
+        // carried into it and its own hold out again — carry the edit-preview
+        // color, so the pending edit still reads as pending. Its marker and
+        // value chip ride on top from paintContent.
+        const QColor previewColor = themes::color(themes::Role::song_view_edit_preview_outline);
+        auto movedHere = [&](size_t i) { return drag && i == movedIndex; };
+
         if (centerLine) {
             p.setPen(QPen(themes::color(themes::Role::song_view_separator), 1, Qt::DashLine));
             p.drawLine(plot.left(), valueY(0), plot.right(), valueY(0));
@@ -5477,27 +5532,30 @@ class AutomationArea : public TimelineSurface
         const SongView::TimeSelection &sel = m_sv->timeSelection();
         const bool laneSelected = rowInLaneSelection(row);
         const QColor dimColor = palette().mid().color();
-        p.setPen(QPen(color, 2));
-        for (size_t i = 0; i < points.size(); i++) {
-            const qreal x0 = m_sv->displayX(double(points[i].tick), kGutterW, dpr);
-            const qreal x1 = i + 1 < points.size()
-                                 ? m_sv->displayX(double(points[i + 1].tick), kGutterW, dpr)
-                                 : plot.right();
+        for (size_t i = 0; i < curve.size(); i++) {
+            const qreal x0 = tickX(curve[i].tick);
+            const qreal x1 = i + 1 < curve.size() ? tickX(curve[i + 1].tick) : qreal(plot.right());
             if (x1 < plot.left() || x0 > plot.right())
                 continue;
-            const int y = valueY(points[i].value);
+            // The hold into the dragged node belongs to the edit as much as
+            // the hold out of it: both change with every mouse move.
+            p.setPen(QPen(movedHere(i) || movedHere(i + 1) ? previewColor : color, 2));
+            const int y = valueY(curve[i].value);
             p.drawLine(QLineF(x0, y, x1, y)); // hold value until the next point
-            if (i + 1 < points.size())
-                p.drawLine(QLineF(x1, y, x1, valueY(points[i + 1].value)));
+            if (i + 1 < curve.size())
+                p.drawLine(QLineF(x1, y, x1, valueY(curve[i + 1].value)));
         }
+
         if (!nodeMarkersVisible())
             return;
         // Nodes come after the whole curve, and selected ones after the
         // rest, so a later segment can never paint over an earlier node and
         // rings always sit on top of their neighbors' markers.
         for (int selectedPass = 0; selectedPass < 2; selectedPass++) {
-            for (const LanePoint &point : points) {
-                // Each node draws in exactly one style: a highlight ring
+            for (size_t i = 0; i < curve.size(); i++) {
+                const LanePoint &point = curve[i];
+                // Each node draws in exactly one style: the edit-preview
+                // color while it is the one being dragged, a highlight ring
                 // when it is in the derived selection (or under the open
                 // point menu's aim), dimmed when a multi-node selection is
                 // elsewhere, its curve color otherwise.
@@ -5505,11 +5563,11 @@ class AutomationArea : public TimelineSurface
                     (laneSelected && tickSelected(sel, point.tick)) || pointMenuAimedAt(row, point);
                 if (selected != bool(selectedPass))
                     continue;
-                const qreal x = m_sv->displayX(double(point.tick), kGutterW, dpr);
+                const qreal x = tickX(point.tick);
                 if (!nodeVisible(plot, x))
                     continue;
-                paintNode(p, color, QPointF(x, valueY(point.value)), selected,
-                          dimUnselected && !laneSelected ? dimColor : QColor());
+                paintNode(p, movedHere(i) ? previewColor : color, QPointF(x, valueY(point.value)),
+                          selected, dimUnselected && !laneSelected ? dimColor : QColor());
             }
         }
     }
