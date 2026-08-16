@@ -24,6 +24,7 @@ ResonanceSuppressor::ResonanceSuppressor()
     , m_fftRealR(kN)
     , m_fftImagR(kN)
     , m_depthEnv(kN / 2 + 1)
+    , m_binLevel(kN / 2 + 1)
     , m_curGb(kN / 2 + 1)
     , m_mask(kN / 2 + 1, 1.0)
 {
@@ -203,7 +204,7 @@ void ResonanceSuppressor::processHop(uint64_t start)
 
     constexpr int kNyquist = kN / 2;
     for (int k = 0; k <= kNyquist; ++k) {
-        double target = 0.0;
+        double level = kSilenceDb;
         if (k != 0 && k != kNyquist) {
             const double leftPower =
                 m_fftRealL[static_cast<size_t>(k)] * m_fftRealL[static_cast<size_t>(k)] +
@@ -212,8 +213,41 @@ void ResonanceSuppressor::processHop(uint64_t start)
                 m_fftRealR[static_cast<size_t>(k)] * m_fftRealR[static_cast<size_t>(k)] +
                 m_fftImagR[static_cast<size_t>(k)] * m_fftImagR[static_cast<size_t>(k)];
             const double power = 0.5 * (leftPower + rightPower);
-            const double level = 10.0 * std::log10(power * m_calibration + 1e-24);
-            const double excess = level - (kSilenceDb + double(m_params.guardDb));
+            level = 10.0 * std::log10(power * m_calibration + 1e-24);
+        }
+        m_binLevel[static_cast<size_t>(k)] = level;
+    }
+
+    for (int k = 0; k <= kNyquist; ++k) {
+        double target = 0.0;
+        if (k != 0 && k != kNyquist) {
+            // Spectral contrast (§7): a bin engages only when it stands out
+            // above its neighbourhood. The reference is the mean of the four
+            // bins k±3..k±6 on each side (the Hann peak spread of a tone
+            // covers k±2, excluded), floored at the silence baseline — for an
+            // isolated tone the neighbourhood is silent and this reduces to
+            // the plain threshold law. The mean is used over the median: a
+            // median under-estimates a noise floor by ~1.6 dB, which would
+            // let half the bins of broadband program engage every hop.
+            double referenceSum = 0.0;
+            int count = 0;
+            for (int offset = -6; offset <= -3; ++offset) {
+                const int n = k + offset;
+                if (n >= 1) {
+                    referenceSum += m_binLevel[static_cast<size_t>(n)];
+                    ++count;
+                }
+            }
+            for (int offset = 3; offset <= 6; ++offset) {
+                const int n = k + offset;
+                if (n <= kNyquist - 1) {
+                    referenceSum += m_binLevel[static_cast<size_t>(n)];
+                    ++count;
+                }
+            }
+            const double reference = std::max(kSilenceDb, referenceSum / count);
+            const double excess =
+                m_binLevel[static_cast<size_t>(k)] - (reference + double(m_params.guardDb));
 
             double excessLaw = 0.0;
             if (excess > 0.0) {

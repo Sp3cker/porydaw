@@ -138,10 +138,27 @@ ResonanceParams bandParams(float globalDepth)
 {
     ResonanceParams params;
     params.gDb = globalDepth;
-    params.guardDb = 3.0f;
-    params.timingMs = 500.0f;
+    params.guardDb = 6.0f;
     params.tilt = 0.0f;
+    // Full 1 kHz-16 kHz test curve: the product default is narrower (§6), but
+    // the harness exercises the DSP across the whole covered band.
+    for (int i = 5; i <= 11; ++i)
+        params.knotActive[i] = true;
     return params;
+}
+
+double rmsDb(const std::vector<float> &signal, std::size_t source, std::size_t window)
+{
+    double sum = 0.0;
+    const auto frames = signal.size() / kChannels;
+    for (auto frame = source; frame < source + window && frame < frames; ++frame) {
+        for (auto channel = std::size_t{0}; channel < kChannels; ++channel) {
+            const auto sample = static_cast<double>(signal[frame * kChannels + channel]);
+            sum += sample * sample;
+        }
+    }
+    const auto count = double(std::min(window, frames - source)) * kChannels;
+    return 10.0 * std::log10(std::max(sum / count, 1.0e-300));
 }
 
 bool exactSamples(const std::vector<float> &left, const std::vector<float> &right,
@@ -222,6 +239,19 @@ int runResonanceCheck()
         const auto reduction = inputDb - outputDb;
         check(std::abs(reduction - 7.5) <= 1.0,
               "above-guard 1 kHz tone plateau must be -7.5 dB +/- 1 dB");
+    }
+
+    {
+        // §6: low knots are inactive, so content below the 1 kHz shoulder
+        // must pass through — bass/kick/fundamentals are never pulled down.
+        const auto inputFrames = frameCount(4.0);
+        auto input = makeSine(inputFrames, 300.0, -15.0, frameCount(1.0));
+        const auto output = render(input, bandParams(8.0f), true);
+        const auto inputDb = -15.0;
+        const auto outputDb =
+            amplitudeDb(output, frameCount(3.0) + kLatency, frameCount(0.1), 300.0);
+        check(std::abs(inputDb - outputDb) <= 0.1,
+              "low-band 300 Hz tone must stay within 0.1 dB (knots 0-4 inactive)");
     }
 
     {
@@ -370,14 +400,44 @@ int runResonanceCheck()
 
     {
         auto input = makeSine(frameCount(20.0), 1000.0, -15.0);
-        addSine(input, 0, input.size() / kChannels, 1060.0, -40.0);
+        addSine(input, 0, input.size() / kChannels, 3000.0, -40.0);
         const auto output = render(input, bandParams(8.0f), true);
         const auto firstReduction =
             -15.0 - amplitudeDb(output, frameCount(19.0) + kLatency, frameCount(0.1), 1000.0);
         const auto secondReduction =
-            -40.0 - amplitudeDb(output, frameCount(19.0) + kLatency, frameCount(0.1), 1060.0);
+            -40.0 - amplitudeDb(output, frameCount(19.0) + kLatency, frameCount(0.1), 3000.0);
         check(std::abs(firstReduction - 20.0) <= 1.0 && std::abs(secondReduction - 20.0) <= 1.0,
-              "two-tone components must both engage near the -20 dB plateau");
+              "two spectrally separated tones must both engage near the -20 dB plateau");
+    }
+
+    {
+        // §7 spectral contrast: broadband program in the covered band must
+        // not engage — a blanket detector would pull it down ~13 dB.
+        const auto inputFrames = frameCount(5.0);
+        auto input = makeNoise(inputFrames, 0.3f, 0x0badcafeu);
+        const auto output = render(input, bandParams(8.0f), true);
+        const auto source = frameCount(4.0);
+        const auto inDb = rmsDb(input, source, frameCount(0.5));
+        const auto outDb = rmsDb(output, source + kLatency, frameCount(0.5));
+        check(std::abs(inDb - outDb) <= 1.0,
+              "broadband program must pass with at most 1 dB of suppression");
+    }
+
+    {
+        // A narrow tone embedded in broadband program must still engage
+        // while the program itself survives.
+        const auto inputFrames = frameCount(5.0);
+        auto input = makeNoise(inputFrames, 0.3f, 0x0badcafeu);
+        addSine(input, frameCount(1.0), inputFrames, 3000.0, -15.0);
+        const auto output = render(input, bandParams(8.0f), true);
+        const auto source = frameCount(4.0);
+        const auto reduction =
+            -15.0 - amplitudeDb(output, source + kLatency, frameCount(0.1), 3000.0);
+        const auto inDb = rmsDb(input, source, frameCount(0.5));
+        const auto outDb = rmsDb(output, source + kLatency, frameCount(0.5));
+        check(reduction >= 10.0, "embedded 3 kHz tone must engage at least 10 dB");
+        check(std::abs(inDb - outDb) <= 3.5,
+              "broadband program must survive an embedded tone's suppression");
     }
 
     {
