@@ -770,16 +770,29 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     // is in the view's own coordinates, not its parent's.
     // Also the pane-size checks' splitter, further down.
     auto *splitter = view.findChild<QSplitter *>();
-    if (!splitter) {
-        fail("the roll/lanes splitter is missing");
+    auto *strip = view.findChild<QWidget *>(QStringLiteral("otherEventsStrip"));
+    if (!splitter || !strip) {
+        fail("the roll/lanes splitter or the other-events strip is missing");
         return 1;
     }
     const auto barTopInView = [&] { return toggleBar->mapTo(&view, QPoint(0, 0)).y(); };
     const auto splitterBottomInView = [&] {
         return splitter->mapTo(&view, QPoint(0, splitter->height())).y();
     };
-    check(!toggleBar->isHidden() && barTopInView() >= splitterBottomInView(),
-          "the toggle bar must sit below the lanes area, not inside it");
+    // The bar is the view's last row: below the lanes area and below the
+    // "other events" strip, with nothing but the scrollbar under it.
+    const auto barBelowEverything = [&] {
+        if (toggleBar->isHidden() || barTopInView() < splitterBottomInView())
+            return false;
+        for (const QWidget *sibling :
+             {static_cast<const QWidget *>(splitter), static_cast<const QWidget *>(strip)}) {
+            if (barTopInView() < sibling->mapTo(&view, QPoint(0, sibling->height())).y())
+                return false;
+        }
+        return true;
+    };
+    check(barBelowEverything(),
+          "the toggle bar must be the last row, under the lanes and the strip");
     const int paneHeightOpen = lanesPane->height();
     // Hiding the pane is view-only, so the lane data has to come through it
     // untouched — count the rows and their points before and after.
@@ -797,8 +810,7 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     check(!view.automationLanesVisible() && lanesSignals == 1 && !lastLanesVisibility &&
               !automationToggle->isChecked(),
           "A from the roll must close the lanes, report it, and uncheck the toggle");
-    check(!toggleBar->isHidden() && barTopInView() >= splitterBottomInView(),
-          "the toggle bar must stay put and stay below the lanes area once they close");
+    check(barBelowEverything(), "the toggle bar must stay the last row once the lanes close");
     check(view.model().lanes.size() == laneRowsOpen && lanePointTotal() == lanePointsOpen &&
               view.viewState().laneHeight == laneHeightOpen,
           "closing the pane must leave the lane rows, their points, and their height alone");
@@ -873,8 +885,7 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
     const bool velocityOpenBeforeShut = view.velocityLaneVisible();
     view.setVelocityLaneVisible(false);
     (void)view.grab();
-    check(!toggleBar->isHidden() && barTopInView() >= splitterBottomInView() &&
-              !automationToggle->isChecked() && !velocityToggle->isChecked(),
+    check(barBelowEverything() && !automationToggle->isChecked() && !velocityToggle->isChecked(),
           "with both panes shut the bar must still be there, showing both toggles off");
     sendLaneKey(roll, Qt::Key_A);
     view.setVelocityLaneVisible(velocityOpenBeforeShut);

@@ -9,10 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Added
 - Added a new Velocity lane, which allows viewing/editing note velocities. This is generally more flexible/powerful than vertically dragging on notes in the piano roll. Toggle the Velocity lane's visibility with `V` or `View -> Velocity Lane`.
    - PSG channels (square 1 & 2, programmable wave, noise) have a special detented view which makes it simply to see and know what final hardware volumes are used for the note's velocity.
+- Added a toggle bar along the bottom of the song view with buttons for showing/hiding the Automation lanes and the Velocity lane. The buttons stay put whether or not either lane is open, so both can be closed and reopened without going back to the View menu.
 - Added buffer area before and after the song's boundaries so that scrolling and snapping to the start or end of the song is easy.
 - Added a bunch of general improvements to general Automation lane behavior.
-- Added a toggle bar pinned under the Automation lanes with buttons for showing/hiding the Automation lanes and the Velocity lane. The buttons stay put whether or not either lane is open, so both can be closed and reopened without going back to the View menu.
-- Added `A` (and `View -> Automation Lanes`) for toggling the Automation lanes' visibility, matching `V` for the Velocity lane. Hiding the lanes is view-only — the lanes, their heights, and their points are untouched — and is separate from a single lane's "Hide lane".
 
 ## Changed
 - Editing values in the Automation Lanes is now split into two modes: Pointer and Pencil modes. Toggle between the modes with `B`. If you *hold* `B` -> draw in pencil mode -> then release `B`, it will automatically revert back to Pointer mode.

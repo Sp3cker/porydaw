@@ -7374,6 +7374,7 @@ class OtherStrip : public TimelineSurface
   public:
     explicit OtherStrip(SongView *sv) : TimelineSurface(sv), m_sv(sv)
     {
+        setObjectName(QStringLiteral("otherEventsStrip")); // findChild for tests
         setFixedHeight(QFontMetrics(font()).height() + lyt::space(Space::Two));
         setMouseTracking(true);
     }
@@ -8208,13 +8209,13 @@ SongView::SongView(QWidget *parent) : QWidget(parent)
     m_splitter->setStretchFactor(2, 0);
     vbox->addWidget(m_splitter, 1);
 
-    // Pinned right under the lanes area, outside the splitter, so the pane
-    // toggles hold still whether or not either pane is showing.
-    m_laneToggles = new LaneToggleBar(this);
-    vbox->addWidget(m_laneToggles);
-
     m_strip = new OtherStrip(this);
     vbox->addWidget(m_strip);
+
+    // The view's last row, outside the splitter: the pane toggles hold still
+    // whether or not either pane is showing.
+    m_laneToggles = new LaneToggleBar(this);
+    vbox->addWidget(m_laneToggles);
     const auto surfaces = timelineSurfaces();
     themes::registerGridLineRefreshTarget(surfaces.ruler.widget);
     themes::registerGridLineRefreshTarget(surfaces.roll.widget);
