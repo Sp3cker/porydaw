@@ -3143,7 +3143,7 @@ class AutomationArea : public TimelineSurface
         int rowY = 0;
         for (size_t i = 0; i < m_rows.size(); i++) {
             const int h = rowHeight(m_rows[i]);
-            paintRow(p, m_rows[i], QRect(0, rowY, width(), h), dimUnselected);
+            paintRow(p, m_rows[i], int(i), QRect(0, rowY, width(), h), dimUnselected);
             rowY += h;
         }
 
@@ -3187,7 +3187,8 @@ class AutomationArea : public TimelineSurface
                 }
                 // Mark each mover's destination, like the grabbed marker.
                 for (const std::pair<uint64_t, int> &moved : preview.moved)
-                    p.drawEllipse(QPointF(tickX(moved.first), valueY(moved.second)), 3, 3);
+                    paintNode(p, themes::color(themes::Role::song_view_edit_preview_outline),
+                              QPointF(tickX(moved.first), valueY(moved.second)));
                 p.restore();
             }
             p.restore();
@@ -3209,7 +3210,10 @@ class AutomationArea : public TimelineSurface
             p.setClipRect(plot, Qt::IntersectClip);
             p.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
             p.setBrush(Qt::NoBrush);
-            if (m_gesture == Gesture::Sweep && m_sweep.size() > 1) {
+            // A pencil stroke's own row already painted the whole rewrite
+            // (see paintPencilPreview), so only the arrow tool's sweep needs
+            // its stream traced here.
+            if (m_gesture == Gesture::Sweep && !m_gesturePencil && m_sweep.size() > 1) {
                 // Hold-value steps, like paintCurve draws committed points.
                 for (size_t i = 0; i + 1 < m_sweep.size(); i++) {
                     const int y = valueY(m_sweep[i].second);
@@ -3223,7 +3227,8 @@ class AutomationArea : public TimelineSurface
             }
             const qreal x = tickX(m_dragTick);
             const int y = valueY(m_dragValue);
-            p.drawEllipse(QPointF(x, y), 3, 3);
+            paintNode(p, themes::color(themes::Role::song_view_edit_preview_outline),
+                      QPointF(x, y));
             // The committed value rides on a filled chip (backdrop + text)
             // clamped inside the row's plot, so it stays legible over the
             // curve and never leaves the row at its edges. In a group drag
@@ -5211,7 +5216,7 @@ class AutomationArea : public TimelineSurface
         return pts;
     }
 
-    void paintRow(QPainter &p, const Row &row, const QRect &r, bool dimUnselected)
+    void paintRow(QPainter &p, const Row &row, int rowIndex, const QRect &r, bool dimUnselected)
     {
         const QRect plot(kGutterW, r.top(), width() - kGutterW, r.height());
         p.save();
@@ -5273,15 +5278,186 @@ class AutomationArea : public TimelineSurface
                     themes::color(themes::Role::song_view_piano_roll_background));
         drawGrid(p, m_sv, plot, kGutterW);
 
-        if (row.kind == Row::Voice)
+        if (row.kind == Row::Voice) {
             paintVoiceRow(p, plot);
-        else if (points)
-            paintCurve(p, plot, row, *points, minV, maxV, curve,
-                       row.kind == Row::Lane && row.cc == LANE_CC_BEND, dimUnselected);
+        } else if (points) {
+            const bool centerLine = row.kind == Row::Lane && row.cc == LANE_CC_BEND;
+            if (pencilStrokeOnRow(rowIndex))
+                paintPencilPreview(p, plot, row, *points, minV, maxV, curve, centerLine);
+            else
+                paintCurve(p, plot, row, *points, minV, maxV, curve, centerLine, dimUnselected);
+        }
 
         const std::pair<int, uint8_t> id = rowIdentity(row);
         drawOverlays(p, m_sv, plot, kGutterW, m_sv->timeSelectionCoversRow(id.first, id.second));
         p.restore();
+    }
+
+    // Node markers only earn their space once the curve is wide enough for
+    // them to read as separate points rather than as beading on the line.
+    bool nodeMarkersVisible() const { return m_sv->pxPerBeat() >= 24.0; }
+
+    // Node geometry, font-relative so the marker keeps its weight against
+    // the curve at any font scale: a ring of nodeRadius drawn with a stroke
+    // of twice nodeOutlineWidth, so its outer edge lands just inside the
+    // selection ring.
+    static qreal nodeRadius() { return ::layout::fontPxF(3.0 / 16.0); }
+    static qreal nodeOutlineWidth() { return ::layout::fontPxF(1.0 / 12.0); }
+    static qreal nodeExtent() { return std::max(nodeRadius() + nodeOutlineWidth(), 4.5) + 1.0; }
+
+    bool nodeVisible(const QRect &plot, qreal x) const
+    {
+        return x + nodeExtent() >= plot.left() && x - nodeExtent() <= plot.right();
+    }
+
+    // A node is a hollow ring — the curve's color over the row background —
+    // not a filled dot: the ring reads as a grabbable point at a glance,
+    // where a dot on a same-colored line reads as a thickening of it. Drawn
+    // antialiased, since a circle this small is mostly corners without it.
+    // A dimmed node fills solid instead: it is receding, so it wants less
+    // structure, not more.
+    void paintNode(QPainter &p, const QColor &color, const QPointF &center, bool selected = false,
+                   const QColor &dimmed = QColor())
+    {
+        p.save();
+        if (selected) {
+            // Aliased like the rest of the lane painting (and exact pixels
+            // keep it probeable in rollcheck).
+            p.setPen(QPen(palette().highlight().color(), 2));
+            p.setBrush(Qt::NoBrush);
+            p.drawEllipse(center, 4.5, 4.5);
+        }
+        p.setRenderHint(QPainter::Antialiasing, true);
+        if (dimmed.isValid()) {
+            p.setPen(Qt::NoPen);
+            p.setBrush(dimmed);
+        } else {
+            p.setPen(QPen(color, nodeOutlineWidth() * 2.0));
+            p.setBrush(themes::color(themes::Role::song_view_piano_roll_background));
+        }
+        p.drawEllipse(center, nodeRadius(), nodeRadius());
+        p.restore();
+    }
+
+    // True while a live pencil stroke owns this row, so the row paints its
+    // in-progress rewrite instead of the committed curve.
+    bool pencilStrokeOnRow(int rowIndex) const
+    {
+        return m_gesture == Gesture::Sweep && m_gesturePencil && m_sweepArmed &&
+               rowIndex == m_dragRow && !m_sweep.empty();
+    }
+
+    // A live pencil stroke splits the row's curve in two. The ticks the
+    // stroke will overwrite — the span it has covered so far, plus the hold
+    // that carries its last value to the next surviving point — paint in the
+    // edit-preview color, segments, joins and nodes alike; everything
+    // outside keeps the lane's own. The committed nodes inside the span are
+    // left out entirely: they are what the release is about to replace, so
+    // showing them would advertise points that are already gone. The result
+    // is that the whole affected stretch lights up while the gesture runs.
+    void paintPencilPreview(QPainter &p, const QRect &plot, const Row &row,
+                            const std::vector<LanePoint> &points, int minV, int maxV,
+                            const QColor &color, bool centerLine)
+    {
+        const int top = plot.top() + 5;
+        const int bottom = plot.bottom() - 4;
+        auto valueY = [&](int v) {
+            return bottom - (v - minV) * (bottom - top) / std::max(1, maxV - minV);
+        };
+        const qreal dpr = p.device()->devicePixelRatioF();
+        auto tickX = [&](uint64_t t) { return m_sv->displayX(double(t), kGutterW, dpr); };
+        if (centerLine) {
+            p.setPen(QPen(themes::color(themes::Role::song_view_separator), 1, Qt::DashLine));
+            p.drawLine(plot.left(), valueY(0), plot.right(), valueY(0));
+        }
+
+        // The stroke overwrites exactly the ticks it has sampled, which is
+        // the range writeLanePoints gets on release.
+        const uint64_t begin = m_sweep.front().first;
+        const uint64_t end = m_sweep.back().first;
+        const QColor previewColor = themes::color(themes::Role::song_view_edit_preview_outline);
+        auto drawHeld = [&](uint64_t first, uint64_t last, int value, const QColor &stroke) {
+            if (first >= last)
+                return;
+            p.setPen(QPen(stroke, 2));
+            p.drawLine(QLineF(tickX(first), valueY(value), tickX(last), valueY(value)));
+        };
+
+        // The value held into the span and the first point that survives
+        // past it: the preview has to join up with both.
+        std::optional<int> heldBefore;
+        const LanePoint *nextAfter = nullptr;
+        for (const LanePoint &point : points) {
+            if (point.tick < begin)
+                heldBefore = point.value;
+            if (point.tick > end) {
+                nextAfter = &point;
+                break;
+            }
+        }
+
+        // Surviving committed steps, clipped at the span's edges.
+        for (size_t i = 0; i < points.size(); i++) {
+            const uint64_t tick = points[i].tick;
+            const uint64_t nextTick = i + 1 < points.size() ? points[i + 1].tick : begin;
+            if (tick < begin) {
+                drawHeld(tick, std::min(nextTick, begin), points[i].value, color);
+                if (nextTick < begin)
+                    p.drawLine(QLineF(tickX(nextTick), valueY(points[i].value), tickX(nextTick),
+                                      valueY(points[i + 1].value)));
+            } else if (tick > end) {
+                if (i + 1 < points.size()) {
+                    drawHeld(tick, nextTick, points[i].value, color);
+                    p.drawLine(QLineF(tickX(nextTick), valueY(points[i].value), tickX(nextTick),
+                                      valueY(points[i + 1].value)));
+                } else {
+                    p.setPen(QPen(color, 2));
+                    p.drawLine(QLineF(tickX(tick), valueY(points[i].value), plot.right(),
+                                      valueY(points[i].value)));
+                }
+            }
+        }
+
+        // The stroke itself, held-value steps like the committed curve's.
+        std::optional<int> value = heldBefore;
+        uint64_t cursor = begin;
+        for (const std::pair<uint64_t, int> &sample : m_sweep) {
+            if (value) {
+                drawHeld(cursor, sample.first, *value, previewColor);
+                if (*value != sample.second)
+                    p.drawLine(QLineF(tickX(sample.first), valueY(*value), tickX(sample.first),
+                                      valueY(sample.second)));
+            }
+            value = sample.second;
+            cursor = sample.first;
+        }
+        if (value) {
+            drawHeld(cursor, end, *value, previewColor);
+            if (nextAfter) {
+                drawHeld(end, nextAfter->tick, *value, previewColor);
+                if (*value != nextAfter->value)
+                    p.drawLine(QLineF(tickX(nextAfter->tick), valueY(*value),
+                                      tickX(nextAfter->tick), valueY(nextAfter->value)));
+            } else {
+                p.setPen(QPen(previewColor, 2));
+                p.drawLine(QLineF(tickX(end), valueY(*value), plot.right(), valueY(*value)));
+            }
+        }
+
+        if (!nodeMarkersVisible())
+            return;
+        for (const LanePoint &point : points) {
+            if (point.tick >= begin && point.tick <= end)
+                continue;
+            const qreal x = tickX(point.tick);
+            if (nodeVisible(plot, x))
+                paintNode(p, color, QPointF(x, valueY(point.value)));
+        }
+        for (const std::pair<uint64_t, int> &sample : m_sweep) {
+            const qreal x = tickX(sample.first);
+            if (nodeVisible(plot, x))
+                paintNode(p, previewColor, QPointF(x, valueY(sample.second)));
+        }
     }
 
     void paintCurve(QPainter &p, const QRect &plot, const Row &row,
@@ -5301,7 +5477,6 @@ class AutomationArea : public TimelineSurface
         const SongView::TimeSelection &sel = m_sv->timeSelection();
         const bool laneSelected = rowInLaneSelection(row);
         const QColor dimColor = palette().mid().color();
-        const QColor ringColor = palette().highlight().color();
         p.setPen(QPen(color, 2));
         for (size_t i = 0; i < points.size(); i++) {
             const qreal x0 = m_sv->displayX(double(points[i].tick), kGutterW, dpr);
@@ -5314,24 +5489,27 @@ class AutomationArea : public TimelineSurface
             p.drawLine(QLineF(x0, y, x1, y)); // hold value until the next point
             if (i + 1 < points.size())
                 p.drawLine(QLineF(x1, y, x1, valueY(points[i + 1].value)));
-            if (m_sv->pxPerBeat() >= 24.0) {
+        }
+        if (!nodeMarkersVisible())
+            return;
+        // Nodes come after the whole curve, and selected ones after the
+        // rest, so a later segment can never paint over an earlier node and
+        // rings always sit on top of their neighbors' markers.
+        for (int selectedPass = 0; selectedPass < 2; selectedPass++) {
+            for (const LanePoint &point : points) {
                 // Each node draws in exactly one style: a highlight ring
                 // when it is in the derived selection (or under the open
                 // point menu's aim), dimmed when a multi-node selection is
                 // elsewhere, its curve color otherwise.
-                const bool selected = (laneSelected && tickSelected(sel, points[i].tick)) ||
-                                      pointMenuAimedAt(row, points[i]);
-                p.fillRect(QRectF(x0 - 1, y - 1, 3, 3),
-                           dimUnselected && !laneSelected ? dimColor : color);
-                if (selected) {
-                    // Aliased like the rest of the lane painting (and exact
-                    // pixels keep it probeable in rollcheck).
-                    p.save();
-                    p.setPen(QPen(ringColor, 2));
-                    p.setBrush(Qt::NoBrush);
-                    p.drawEllipse(QPointF(x0, y), 4.5, 4.5);
-                    p.restore();
-                }
+                const bool selected =
+                    (laneSelected && tickSelected(sel, point.tick)) || pointMenuAimedAt(row, point);
+                if (selected != bool(selectedPass))
+                    continue;
+                const qreal x = m_sv->displayX(double(point.tick), kGutterW, dpr);
+                if (!nodeVisible(plot, x))
+                    continue;
+                paintNode(p, color, QPointF(x, valueY(point.value)), selected,
+                          dimUnselected && !laneSelected ? dimColor : QColor());
             }
         }
     }

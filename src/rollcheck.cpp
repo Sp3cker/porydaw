@@ -2608,6 +2608,78 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         doc.undoStack()->undo();
         QCoreApplication::processEvents();
 
+        // A live pencil stroke recolors exactly what it is about to
+        // overwrite: the span it has covered so far paints in the
+        // edit-preview color, the committed points inside that span stop
+        // painting at all, and the curve outside it keeps the lane's own
+        // color. Probed mid-stroke, before any release commits anything.
+        {
+            const QColor tempoColor = themes::color(themes::Role::song_view_automation_tempo_curve);
+            const QColor previewColor = themes::color(themes::Role::song_view_edit_preview_outline);
+            const int yDoomed = 40, yStroke = 28;
+            // The stroke samples a value from the cursor's y, and the curve
+            // paints that value's own row back — which the pixel probes want,
+            // not the raw cursor row.
+            const int yStrokeInk = tempoValueY(tempoValueAtY(yStroke));
+            const uint64_t tDoomed = t0 + 4 * g;
+            doc.writeLanePoints(laneTrack, DOC_CC_TEMPO, tDoomed, tDoomed,
+                                {{tDoomed, tempoValueAtY(yDoomed)}});
+            QCoreApplication::processEvents();
+            const qreal xFrom = view.displayX(double(t0 + 2 * g), songview::kGutterW, dprLanes);
+            const qreal xTo = view.displayX(double(t0 + 6 * g), songview::kGutterW, dprLanes);
+            auto laneColorAt = [&](const QImage &img, qreal x, int y) {
+                return img.pixelColor(int((x + 0.5) * dprLanes), int((y + 0.5) * dprLanes));
+            };
+            // Probe columns: the surviving hold between the parked point and
+            // the stroke, the stroke's own span, and the doomed point's hold
+            // just past its tick. All clear of the overlays' verticals.
+            const qreal xSurvives = (xDot + xFrom) / 2;
+            const qreal xInside = (xFrom + xTo) / 2;
+            const qreal xDoomedHold =
+                (view.displayX(double(tDoomed), songview::kGutterW, dprLanes) + xTo) / 2;
+            if (overlayContestedX(view, dprLanes, xSurvives) ||
+                overlayContestedX(view, dprLanes, xInside) ||
+                overlayContestedX(view, dprLanes, xDoomedHold))
+                fail("pencil preview setup: an overlay vertical crosses a probe column");
+            if (laneColorAt(lanes->grab().toImage(), xDoomedHold, yDoomed) != tempoColor)
+                fail("pencil preview setup: the doomed point's hold is not on the probe row");
+
+            sendMouse(lanes, QEvent::MouseButtonPress, QPoint(int(xFrom), yStroke), Qt::LeftButton,
+                      Qt::LeftButton);
+            for (int step = 1; step <= 4; step++)
+                sendMouse(lanes, QEvent::MouseMove,
+                          QPoint(int(xFrom + (xTo - xFrom) * step / 4), yStroke), Qt::NoButton,
+                          Qt::LeftButton);
+            QCoreApplication::processEvents();
+            {
+                const QImage live = lanes->grab().toImage();
+                // The stroke's own samples ring the span, so the preview
+                // color is looked for around the held row rather than
+                // exactly on it — a column that lands on a node shows the
+                // ring, not the line.
+                auto inColumn = [&](qreal x, int y, const QColor &want) {
+                    for (int dy = -4; dy <= 4; dy++)
+                        if (laneColorAt(live, x, y + dy) == want)
+                            return true;
+                    return false;
+                };
+                if (!inColumn(xInside, yStrokeInk, previewColor))
+                    fail("the live pencil span did not paint in the preview color");
+                if (inColumn(xInside, yStrokeInk, tempoColor))
+                    fail("the live pencil span kept painting the lane's own color");
+                if (laneColorAt(live, xSurvives, yDot) != tempoColor)
+                    fail("the curve outside the live pencil span lost the lane's color");
+                if (laneColorAt(live, xDoomedHold, yDoomed) == tempoColor)
+                    fail("a point the live pencil span will overwrite still painted its hold");
+            }
+            sendMouse(lanes, QEvent::MouseButtonRelease, QPoint(int(xTo), yStroke), Qt::LeftButton,
+                      Qt::NoButton);
+            QCoreApplication::processEvents();
+            doc.undoStack()->undo(); // the stroke
+            doc.undoStack()->undo(); // the doomed point
+            QCoreApplication::processEvents();
+        }
+
         // Shift pencil stroke: a horizontal line at the pressed value even
         // though the cursor climbs.
         const int y1 = 35, y2 = 15;
@@ -3458,16 +3530,39 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     }
                 return false;
             };
+            // A node's marker stands clear of its curve above the hold line,
+            // so ink just up and to the right of the center is ink no curve
+            // alone would put there — off the hold line's own rows, and off
+            // the grid line the node's tick sits on. The marker is
+            // antialiased, so the probe asks whether anything painted, not
+            // for an exact color; the curve color is mirrored on the hold
+            // lines instead.
+            const QColor rowBackground =
+                themes::color(themes::Role::song_view_piano_roll_background);
+            auto nodePresent = [&](const QImage &img, qreal x, int y) {
+                return pixelAt(img, x + 1, y - 2) != rowBackground;
+            };
+            // A dimmed node fills solid, so its center is exactly the dim
+            // color; any node at full strength is a ring around background.
+            auto nodeDimmed = [&](const QImage &img, qreal x, int y) {
+                return pixelAt(img, x, y) == dimColor;
+            };
 
             // Mirror + clear-air sanity: with no selection, every probe dot
             // must show its exact curve color and nothing highlight-like.
             {
                 const QImage base = lanesImage();
-                if (pixelAt(base, dotX(tA), ccValueY(vA)) != ccColor ||
-                    pixelAt(base, dotX(tC), ccValueY(vC)) != ccColor)
+                // The hold line each node sits on carries the lane's color,
+                // so it is what the color mirror is checked against; the
+                // node centers show the background through their rings.
+                if (pixelAt(base, dotX(tA + g), ccValueY(vA)) != ccColor)
                     fail("node probe setup: CC dot color mirror drifted");
-                if (pixelAt(base, dotX(tE), tempoValueY(vE)) != tempoColor)
+                if (pixelAt(base, dotX(tE + g), tempoValueY(vE)) != tempoColor)
                     fail("node probe setup: tempo dot color mirror drifted");
+                if (!nodePresent(base, dotX(tA), ccValueY(vA)) ||
+                    !nodePresent(base, dotX(tC), ccValueY(vC)) ||
+                    !nodePresent(base, dotX(tE), tempoValueY(vE)))
+                    fail("node probe setup: a node did not paint its marker");
                 if (ringNear(base, dotX(tA), ccValueY(vA)) ||
                     ringNear(base, dotX(tE), tempoValueY(vE)))
                     fail("node probe setup: highlight-like pixels near an unselected node");
@@ -3502,9 +3597,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     fail("selected nodes did not paint the highlight ring");
                 if (ringNear(img, dotX(tC), ccValueY(vC)))
                     fail("a node outside the selected tick range painted a ring");
-                if (pixelAt(img, dotX(tC), ccValueY(vC)) != ccColor)
+                if (nodeDimmed(img, dotX(tC), ccValueY(vC)))
                     fail("an unselected node in a selected lane lost its full color");
-                if (pixelAt(img, dotX(tE), tempoValueY(vE)) != dimColor)
+                if (!nodeDimmed(img, dotX(tE), tempoValueY(vE)))
                     fail("multi-node selection did not dim the unselected lane's node");
             }
 
@@ -3521,7 +3616,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 const QImage img = lanesImage();
                 if (!ringNear(img, dotX(tA), ccValueY(vA)))
                     fail("a single selected node did not ring");
-                if (pixelAt(img, dotX(tE), tempoValueY(vE)) != tempoColor)
+                if (nodeDimmed(img, dotX(tE), tempoValueY(vE)))
                     fail("a single-node selection dimmed another lane's node");
                 if (ringNear(img, dotX(tB), ccValueY(vB)))
                     fail("a node outside a single-node selection painted a ring");
@@ -4046,9 +4141,16 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             {
                 const QImage base = lanes->grab().toImage();
                 const QColor ccColor = SongView::trackColor(laneTrack);
-                if (base.pixelColor(int((dotX(tA) + 0.5) * dprLanes),
-                                    int((ccValueY(vA) + 0.5) * dprLanes)) != ccColor)
+                // The lane's color lives on the hold line the node sits on;
+                // the node itself is a hollow ring showing the row
+                // background through its center.
+                const int cx = int((dotX(tA + g) + 0.5) * dprLanes);
+                if (base.pixelColor(cx, int((ccValueY(vA) + 0.5) * dprLanes)) != ccColor)
                     fail("point-menu setup: CC dot color mirror drifted");
+                if (base.pixelColor(int((dotX(tA) + 1.5) * dprLanes),
+                                    int((ccValueY(vA) + 0.5) * dprLanes) - 2) ==
+                    themes::color(themes::Role::song_view_piano_roll_background))
+                    fail("point-menu setup: the CC node did not paint its marker");
                 if (ringNear(base, dotX(tA), ccValueY(vA)))
                     fail("point-menu setup: highlight-like pixels near an idle node");
             }

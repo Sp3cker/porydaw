@@ -451,6 +451,11 @@ int fontPx(double multiplier)
     return resolve(currentLayout().baseFontPx, multiplier);
 }
 
+qreal fontPxF(double multiplier)
+{
+    return currentLayout().baseFontPx * multiplier;
+}
+
 int singlePixel()
 {
     return 1;
