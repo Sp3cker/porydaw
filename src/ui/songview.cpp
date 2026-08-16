@@ -6014,16 +6014,18 @@ class VelocityLane : public TimelineSurface
         if (shared)
             return *shared;
         const SongView::VoiceContext context = m_sv->voiceContext(m_sv->displayTick());
-        return VelocityMap::resolve(context.voice, std::nullopt, context.trackVolume);
+        return VelocityMap::resolve(context.voice, std::nullopt, context.trackVolume,
+                                    context.trackPan);
     }
 
     // A note's own voice, resolved with its key so a keysplit answers for
-    // the sound this note actually makes — and at the volume in force where
-    // it starts, since that is half of what its channel can be heard doing.
+    // the sound this note actually makes — and at the volume and pan in force
+    // where it starts, since those are half of what its channel can be heard
+    // doing.
     VelocityMap contextForNote(const ViewNote &note) const
     {
         const SongView::VoiceContext context = m_sv->voiceContext(note.startTick);
-        return VelocityMap::resolve(context.voice, note.key, context.trackVolume);
+        return VelocityMap::resolve(context.voice, note.key, context.trackVolume, context.trackPan);
     }
 
     // The map the ruler is built from: the context, unless the track's
@@ -6674,8 +6676,8 @@ class VelocityLane : public TimelineSurface
             const uint64_t sectionEnd = std::min(uint64_t(std::ceil(lastTick)), context.endTick);
             if (sectionEnd <= sectionTick)
                 break;
-            VelocityMap map =
-                VelocityMap::resolve(context.voice, std::nullopt, context.trackVolume);
+            VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt, context.trackVolume,
+                                                   context.trackPan);
             // A keysplit answers per key, so its section has no single level
             // table to draw — but its notes resolved with their own keys are
             // what put the ruler on levels, so the ruler's map is the one
@@ -9088,18 +9090,21 @@ uint8_t SongView::trackVolumeAt(int track, uint64_t tick, uint64_t *nextChangeTi
     return m4aEffectiveTrackVolume(trackRawVolumeAt(track, tick, nextChangeTick), master);
 }
 
-int SongView::trackRawVolumeAt(int track, uint64_t tick, uint64_t *nextChangeTick) const
+namespace {
+
+// The value a track's CC automation holds at a tick, starting from the value
+// the engine primes the controller with. When nextChangeTick is given it is
+// lowered to the next point on that lane past the tick, if that comes first.
+int ccValueAt(const SongViewModel &model, int track, uint8_t cc, int primed, uint64_t tick,
+              uint64_t *nextChangeTick)
 {
-    // mid2agb primes every track with VOL 127 before its first event
-    // (agb.cpp PrintTrackHeader), so a track that never sets a volume still
-    // plays at full track volume — scaled by the song's master volume.
-    int volume = kM4aMaxVolume;
-    for (const AutoLane &lane : m_model.lanes) {
-        if (lane.track != track || lane.cc != 7)
+    int value = primed;
+    for (const AutoLane &lane : model.lanes) {
+        if (lane.track != track || lane.cc != cc)
             continue;
         for (const LanePoint &point : lane.points) { // sorted by tick
             if (point.tick <= tick) {
-                volume = point.value;
+                value = point.value;
                 continue;
             }
             if (nextChangeTick)
@@ -9108,7 +9113,25 @@ int SongView::trackRawVolumeAt(int track, uint64_t tick, uint64_t *nextChangeTic
         }
         break;
     }
-    return volume;
+    return value;
+}
+
+} // namespace
+
+int SongView::trackRawVolumeAt(int track, uint64_t tick, uint64_t *nextChangeTick) const
+{
+    // mid2agb primes every track with VOL 127 before its first event
+    // (agb.cpp PrintTrackHeader), so a track that never sets a volume still
+    // plays at full track volume — scaled by the song's master volume.
+    return ccValueAt(m_model, track, 7, kM4aMaxVolume, tick, nextChangeTick);
+}
+
+int8_t SongView::trackPanAt(int track, uint64_t tick, uint64_t *nextChangeTick) const
+{
+    // PAN is primed centered (c_v = 64), and the engine stores it as the byte
+    // less 64 (m4a_engine_cc case 0xA).
+    const int value = ccValueAt(m_model, track, 10, 64, tick, nextChangeTick);
+    return int8_t(std::clamp(value, 0, 127) - 64);
 }
 
 SongView::VoiceContext SongView::voiceContext(uint64_t tick) const
@@ -9123,13 +9146,14 @@ SongView::VoiceContext SongView::voiceContext(uint64_t tick) const
             break;
         }
     }
-    // The track's VOL scales the CGB envelope just as the voice choice does,
-    // so a volume change ends this context too: past it the same channel has
-    // a different set of loudness levels.
+    // The track's VOL and PAN both move the CGB envelope goal just as the
+    // voice choice does, so a change to either ends this context too: past it
+    // the same channel has a different set of loudness levels.
     const uint8_t volume = trackVolumeAt(m_selectedTrack, tick, &endTick);
+    const int8_t pan = trackPanAt(m_selectedTrack, tick, &endTick);
     if (program < 0 || program >= VOICEGROUP_SIZE)
-        return {nullptr, -1, endTick, volume};
-    return {&m_voicegroup->voices[program], program, endTick, volume};
+        return {nullptr, -1, endTick, volume, pan};
+    return {&m_voicegroup->voices[program], program, endTick, volume, pan};
 }
 
 void SongView::revealVoice(int program)

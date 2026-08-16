@@ -11,8 +11,9 @@ extern "C" {
 // How a track's velocities reach the hardware. A note's stored MIDI velocity
 // is continuous (1-127) on DirectSound voices, but the CGB channels have only
 // a handful of real loudness steps, so several stored values sound identical.
-// VelocityMap answers, for one resolved voice at one track volume, which
-// stored values collapse together and which value best represents each step.
+// VelocityMap answers, for one resolved voice at one track volume and pan,
+// which stored values collapse together and which value best represents each
+// step.
 //
 // The track volume is part of the question, not a trim applied after it. A
 // CGB channel's loudness is a 4-bit envelope goal the engine derives from
@@ -55,9 +56,12 @@ class VelocityMap
     // rather than guessing a child voice. trackVolume is the effective VOL
     // byte in force where the question is being asked (m4aEffectiveTrackVolume
     // of the track's VOL and the song's master volume) — it decides how many
-    // of the channel's levels velocity can still reach.
+    // of the channel's levels velocity can still reach. trackPan is the PAN in
+    // force there in engine units (-64..63, i.e. the CC10 byte less 64): it
+    // moves the boundaries between those levels, so a panned track detents at
+    // different velocities than a centered one.
     static VelocityMap resolve(const ToneData *tone, std::optional<uint8_t> key,
-                               uint8_t trackVolume);
+                               uint8_t trackVolume, int8_t trackPan = 0);
     // A keysplit asked about without a key: the section plays on whichever
     // channel each key resolves to, so it has no one level table of its own.
     bool isKeyless() const;
@@ -68,11 +72,12 @@ class VelocityMap
     // nothing to detent, so the lane keeps the plain velocity ruler there.
     bool hasDetents() const;
     uint8_t trackVolume() const { return m_trackVolume; }
+    int8_t trackPan() const { return m_trackPan; }
     bool operator==(const VelocityMap &other) const;
     bool operator!=(const VelocityMap &other) const;
     // Whether two notes can share one intrinsic (detent) editing context:
-    // both PSG, the same channel, and under the same track volume, since all
-    // three change the level table.
+    // both PSG, the same channel, and under the same track volume and pan,
+    // since all of those change the level table.
     bool compatibleWith(const VelocityMap &other) const;
     const char *voiceName() const;
     // 0 on non-PSG voices — a continuous voice has no levels to count. On a
@@ -90,13 +95,15 @@ class VelocityMap
     uint8_t moveLevels(uint8_t exactOrigin, int delta) const;
 
   private:
-    VelocityMap(VelocityVoice voice, uint8_t trackVolume)
+    VelocityMap(VelocityVoice voice, uint8_t trackVolume, int8_t trackPan)
         : m_voice(voice)
         , m_trackVolume(trackVolume)
+        , m_trackPan(trackPan)
     {}
     // The level a stored velocity reaches, without the isPsg guard.
     std::size_t levelAt(int storedVelocity) const;
 
     VelocityVoice m_voice = VelocityVoice::Unresolved;
     uint8_t m_trackVolume = uint8_t(kM4aMaxVolume);
+    int8_t m_trackPan = 0;
 };

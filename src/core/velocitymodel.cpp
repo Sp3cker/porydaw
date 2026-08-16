@@ -34,21 +34,29 @@ uint8_t clampVelocity(int velocity)
 //   mid2agb rounds the stored velocity up to a multiple of 4,
 //   TrkVolPitSet   x = (volume * volX) >> 5, then volMR/volML from the pan,
 //   ChnVolSetAsm   right/left = (pan * velocity * volMR/volML) >> 14, cap 255,
-//   CgbModVol      goal = (left + right) / 16.
+//   CgbModVol      goal = (left + right) / 16, clamped to 15 when hard-panned.
 //
-// Pan is taken as centered. It is not an omission: hard-panning doubles one
-// side and zeroes the other, so CgbModVol's sum — and therefore the goal —
-// comes out the same to within a step. Volume is the term that really moves
-// the levels, and it is the one this takes.
-int cgbEnvelopeGoal(int storedVelocity, int trackVolume)
+// Pan belongs in the chain: it does not merely trade one side for the other.
+// A pan of ±64 leaves (y+128) or (127-y) at ~254 instead of 128/127, so the
+// surviving side's software volume nearly doubles while the other reaches 0,
+// and the two do not cancel — the sum lands a level or so away from where the
+// centered chain puts it, which is exactly the difference a detent shows.
+int cgbEnvelopeGoal(int storedVelocity, int trackVolume, int trackPan)
 {
     const int velocity = mid2agbEffectiveVelocity(clampVelocity(storedVelocity));
     const int x = (trackVolume * kDefaultVolX) >> 5;
-    const int volMR = (128 * x) >> 8; // centered pan: y = 0
-    const int volML = (127 * x) >> 8;
+    const int y = std::clamp(2 * trackPan, -128, 127);
+    const int volMR = uint8_t(unsigned((y + 128) * x) >> 8);
+    const int volML = uint8_t(unsigned((127 - y) * x) >> 8);
+    // The note's own rhythmPan is 0: only keysplit_all (drumkit) voices carry
+    // one, and those never reach here as a single resolved CGB level table.
     const int right = std::min(255, (128 * velocity * volMR) >> 14);
     const int left = std::min(255, (127 * velocity * volML) >> 14);
-    return (left + right) / 16;
+    const int goal = (left + right) / 16;
+    // CgbModVol's hard-panned branch (one side at least twice the other) is
+    // the only one that clamps to the hardware's 4 bits.
+    const bool hardPanned = right >= left ? right / 2 >= left : left / 2 >= right;
+    return hardPanned ? std::min(goal, 15) : goal;
 }
 
 bool isDirectSoundVoiceType(uint8_t voiceType)
@@ -118,13 +126,13 @@ uint8_t m4aEffectiveTrackVolume(int volumeEvent, int masterVolume)
 }
 
 VelocityMap VelocityMap::resolve(const ToneData *tone, std::optional<uint8_t> key,
-                                 uint8_t trackVolume)
+                                 uint8_t trackVolume, int8_t trackPan)
 {
     VelocityVoice failure = VelocityVoice::Invalid;
     const ToneData *resolved = resolveVoice(tone, key, &failure);
     if (!resolved)
-        return VelocityMap(failure, trackVolume);
-    return VelocityMap(velocityVoiceForType(resolved->type), trackVolume);
+        return VelocityMap(failure, trackVolume, trackPan);
+    return VelocityMap(velocityVoiceForType(resolved->type), trackVolume, trackPan);
 }
 
 bool VelocityMap::isKeyless() const
@@ -145,9 +153,10 @@ bool VelocityMap::hasDetents() const
 
 bool VelocityMap::operator==(const VelocityMap &other) const
 {
-    // Two CGB maps under different volumes describe different level tables,
-    // so they are not the same ruler even on the same channel.
-    return m_voice == other.m_voice && (!isPsg() || m_trackVolume == other.m_trackVolume);
+    // Two CGB maps under different volumes (or pans) describe different level
+    // tables, so they are not the same ruler even on the same channel.
+    return m_voice == other.m_voice &&
+           (!isPsg() || (m_trackVolume == other.m_trackVolume && m_trackPan == other.m_trackPan));
 }
 
 bool VelocityMap::operator!=(const VelocityMap &other) const
@@ -158,7 +167,7 @@ bool VelocityMap::operator!=(const VelocityMap &other) const
 bool VelocityMap::compatibleWith(const VelocityMap &other) const
 {
     return isPsg() && other.isPsg() && m_voice == other.m_voice &&
-           m_trackVolume == other.m_trackVolume;
+           m_trackVolume == other.m_trackVolume && m_trackPan == other.m_trackPan;
 }
 
 const char *VelocityMap::voiceName() const
@@ -179,9 +188,10 @@ const char *VelocityMap::voiceName() const
 
 std::size_t VelocityMap::levelAt(int storedVelocity) const
 {
-    const int goal = cgbEnvelopeGoal(storedVelocity, m_trackVolume);
-    return m_voice == VelocityVoice::Wave ? kWaveClassOfEnvelopeGoal[std::size_t(goal)]
-                                          : std::size_t(goal);
+    const int goal = cgbEnvelopeGoal(storedVelocity, m_trackVolume, m_trackPan);
+    return m_voice == VelocityVoice::Wave
+               ? kWaveClassOfEnvelopeGoal[std::size_t(std::min(goal, 15))]
+               : std::size_t(goal);
 }
 
 std::size_t VelocityMap::levelCount() const

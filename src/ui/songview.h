@@ -287,11 +287,11 @@ class SongView : public QWidget
     // voice changes.
     int currentProgram(int track) const;
     // The selected track's voice at a tick, resolved through the loaded
-    // voicegroup, with the track volume in force there and the tick where
-    // either of them next changes (UINT64_MAX past the last change). The
-    // velocity lane needs all three: on a CGB channel the voice and the
-    // volume together decide what loudness levels exist, and endTick says how
-    // far across the plot that one set of level lines reaches.
+    // voicegroup, with the track volume and pan in force there and the tick
+    // where any of them next changes (UINT64_MAX past the last change). The
+    // velocity lane needs all of it: on a CGB channel the voice, the volume
+    // and the pan together decide what loudness levels exist, and endTick says
+    // how far across the plot that one set of level lines reaches.
     struct VoiceContext {
         const ToneData *voice = nullptr;
         int program = -1;
@@ -299,6 +299,8 @@ class SongView : public QWidget
         // The compiled VOL byte: the track's own volume with the song's
         // master volume already folded in (m4aEffectiveTrackVolume).
         uint8_t trackVolume = uint8_t(kM4aMaxVolume);
+        // The PAN in engine units (-64..63): the CC10 byte less 64.
+        int8_t trackPan = 0;
     };
     VoiceContext voiceContext(uint64_t tick) const;
     // The compiled VOL byte in force on a track at a tick: its CC7 automation
@@ -310,6 +312,11 @@ class SongView : public QWidget
     // the track's CC7 automation puts in force at the tick. Auditions want
     // this one — the engine applies the master volume itself.
     int trackRawVolumeAt(int track, uint64_t tick, uint64_t *nextChangeTick = nullptr) const;
+    // The PAN in force on a track at a tick, in engine units (-64..63): its
+    // CC10 automation less 64, centered before the first point as mid2agb
+    // primes it. When nextChangeTick is given it is lowered to the next PAN
+    // point past the tick, if that comes first.
+    int8_t trackPanAt(int track, uint64_t tick, uint64_t *nextChangeTick = nullptr) const;
     // The VOL byte an audition aimed at atTick should sound at, or -1 for
     // "whatever the engine's track holds" (kAuditionAtCursor, or no song).
     int auditionVolume(int track, uint64_t atTick) const

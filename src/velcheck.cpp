@@ -326,6 +326,46 @@ int runVelocityModelCheck()
     check(directSound == VelocityMap::resolve(&directSoundTone, 60, 64),
           "a continuous voice is the same map at any volume");
 
+    // PAN moves the level boundaries as well. TrkVolPitSet scales one side by
+    // (y+128) and the other by (127-y), so panning does not simply trade one
+    // for the other: hard right leaves the right side at nearly double the
+    // centered value and the left at zero, and CgbModVol's sum of the two
+    // lands a level away from where the centered chain puts it.
+    //
+    // The expected levels are the engine's own, read back from
+    // M4ACGBChannel::envelopeGoal after m4a_engine_note_on on a square voice
+    // at song volume 82 / VOL 127 / PAN c_v+63 — the case that exposed the
+    // centered-pan assumption (16 quarter notes up the velocity range).
+    const std::array<uint8_t, 16> panVelocities = {1,  12, 20, 28, 36,  44,  52,  60,
+                                                   68, 76, 84, 92, 100, 108, 116, 127};
+    const std::array<std::size_t, 16> centeredLevels = {0, 0, 1, 2, 2, 3, 4, 4,
+                                                        5, 5, 6, 7, 7, 8, 9, 10};
+    const std::array<std::size_t, 16> hardRightLevels = {0, 0, 1, 2, 2, 3, 4, 4,
+                                                         5, 6, 6, 7, 7, 8, 9, 10};
+    const VelocityMap centered = VelocityMap::resolve(&squareTone, 60, 82, 0);
+    const VelocityMap hardRight = VelocityMap::resolve(&squareTone, 60, 82, 63);
+    bool centeredLevelsMatch = true;
+    bool hardRightLevelsMatch = true;
+    for (std::size_t i = 0; i < panVelocities.size(); i++) {
+        centeredLevelsMatch =
+            centeredLevelsMatch && equals(centered.levelOf(panVelocities[i]), centeredLevels[i]);
+        hardRightLevelsMatch =
+            hardRightLevelsMatch && equals(hardRight.levelOf(panVelocities[i]), hardRightLevels[i]);
+    }
+    check(centeredLevelsMatch, "a centered track's levels should be the engine's own");
+    check(hardRightLevelsMatch,
+          "a hard-panned track's levels should follow the engine's, not the centered chain's");
+    check(rangesTile(hardRight) && hardRight.levelCount() == 11,
+          "a panned level table should still tile 1-127");
+    const VelocityMap hardLeft = VelocityMap::resolve(&squareTone, 60, 82, -64);
+    check(hardLeft.levelCount() == 11 && rangesTile(hardLeft),
+          "panning the other way should reach the same count of levels");
+    // Pan is part of the ruler's identity, just as volume is.
+    check(centered != hardRight && !centered.compatibleWith(hardRight) &&
+              hardRight == VelocityMap::resolve(&squareTone, 60, 82, 63) &&
+              directSound == VelocityMap::resolve(&directSoundTone, 60, kFullVolume, 63),
+          "maps under different pans must not be mistaken for each other");
+
     // The deferred-gesture bookkeeping behind every lane edit: it holds
     // identities and preview values, and hands back one all-or-nothing batch
     // plus the revision the gesture began at.
@@ -1721,14 +1761,15 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
         view.selectTrack(candidate);
         const SongView::VoiceContext context = view.voiceContext(first->startTick);
         const VelocityMap map =
-            VelocityMap::resolve(context.voice, first->key, context.trackVolume);
+            VelocityMap::resolve(context.voice, first->key, context.trackVolume, context.trackPan);
         if (map.isPsg() && psgTrack < 0) {
             psgTrack = candidate;
             psgMap = map;
             // The same voice as the song would sound with nothing turned
             // down: the yardstick for "the master volume really moved the
             // ruler" below.
-            psgMapAtFullVolume = VelocityMap::resolve(context.voice, first->key, kFullVolume);
+            psgMapAtFullVolume =
+                VelocityMap::resolve(context.voice, first->key, kFullVolume, context.trackPan);
         } else if (!map.isPsg() && continuousTrack < 0) {
             continuousTrack = candidate;
         }
@@ -1817,6 +1858,47 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
                                               : kM4aMaxVolume,
                                           doc.cfg().masterVolume),
           "the track volume before the first VOL point is mid2agb's priming 127");
+
+    // --- PAN is the third term in the same byte-for-byte chain. TrkVolPitSet
+    // scales the two sides by (y+128) and (127-y), so a pan does not merely
+    // trade one side for the other: it moves the boundaries between the
+    // channel's levels, and a note can sit a whole level away from where the
+    // centered chain would draw it. A PAN point therefore ends the context
+    // just as a VOL point does.
+    const AutoLane *panLane = nullptr;
+    const LanePoint *panChange = nullptr;
+    for (const AutoLane &candidate : view.model().lanes) {
+        if (candidate.cc != 10 || candidate.points.size() < 2)
+            continue;
+        for (std::size_t index = 1; index < candidate.points.size(); index++) {
+            if (candidate.points[index].value != candidate.points[index - 1].value) {
+                panLane = &candidate;
+                panChange = &candidate.points[index];
+                break;
+            }
+        }
+        if (panLane)
+            break;
+    }
+    if (!panLane) {
+        fail("the fixture must have a track whose PAN really changes mid-song");
+        return failures == 0 ? 0 : 1;
+    }
+    view.selectTrack(panLane->track);
+    const uint64_t panTick = panChange->tick;
+    const SongView::VoiceContext beforePanChange = view.voiceContext(panTick - 1);
+    const SongView::VoiceContext atPan = view.voiceContext(panTick);
+    check(beforePanChange.trackPan != atPan.trackPan &&
+              atPan.trackPan == int8_t(int(panChange->value) - 64),
+          "a PAN point must move the pan the levels are derived from");
+    check(beforePanChange.endTick <= panTick,
+          "a voice context must end where the track's pan changes");
+    check(
+        view.trackPanAt(panLane->track, panTick) == atPan.trackPan &&
+            view.trackPanAt(panLane->track, 0) ==
+                int8_t(int(panLane->points.front().tick == 0 ? panLane->points.front().value : 64) -
+                       64),
+        "the pan before the first PAN point is mid2agb's priming c_v+0");
     view.selectTrack(psgTrack);
     (void)view.grab();
 
