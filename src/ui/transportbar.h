@@ -24,6 +24,7 @@ class TransportBar final : public QToolBar
 
     QAction *playPauseAction() const { return m_playPauseAction; }
     QAction *followPlayheadAction() const { return m_followPlayheadAction; }
+    QAction *resonanceAction() const { return m_resonanceAction; }
     bool followPlayhead() const;
 
     void setPlaybackState(PlaybackState state);
@@ -43,6 +44,7 @@ class TransportBar final : public QToolBar
     void stopRequested();
     void loopEnabledChanged(bool enabled);
     void followPlayheadChanged(bool enabled);
+    void resonanceSuppressionChanged(bool enabled);
     void masterVolumeChanged(int value);
     void outputVolumeChanged(int value);
     void scaleRootChanged(int root);
@@ -64,6 +66,7 @@ class TransportBar final : public QToolBar
     QAction *m_stopAction = nullptr;
     QAction *m_loopAction = nullptr;
     QAction *m_followPlayheadAction = nullptr;
+    QAction *m_resonanceAction = nullptr;
     QLabel *m_timeLabel = nullptr;
     QLabel *m_songLabel = nullptr;
     QComboBox *m_rootCombo = nullptr;

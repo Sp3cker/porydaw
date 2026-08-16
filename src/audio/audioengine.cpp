@@ -132,6 +132,8 @@ bool AudioEngine::init(QString *error)
     m_bufR = std::make_unique<float[]>(m_bufCapacity);
     m_pvL = std::make_unique<float[]>(m_bufCapacity);
     m_pvR = std::make_unique<float[]>(m_bufCapacity);
+    // Suppressor uses live device rate (DETECTOR.md v4 decision); device restart re-init resets it.
+    m_resonance.init(float(m_sampleRate));
 
     m_engine = std::make_unique<M4AEngine>();
     m4a_engine_init(m_engine.get(), float(m_sampleRate));
@@ -750,6 +752,11 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
         m4a_engine_process(m_previewEngine.get(), m_pvL.get(), m_pvR.get(), int(n));
 
         for (uint32_t i = 0; i < n; ++i) {
+            interleavedOut[(done + i) * 2] = m_bufL[i] + m_pvL[i];
+            interleavedOut[(done + i) * 2 + 1] = m_bufR[i] + m_pvR[i];
+        }
+        m_resonance.process(interleavedOut + done * 2, n);
+        for (uint32_t i = 0; i < n; ++i) {
             if (m_outputGainRampRemaining > 0) {
                 --m_outputGainRampRemaining;
                 if (m_outputGainRampRemaining == 0)
@@ -758,9 +765,10 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
                     m_appliedOutputGain += m_outputGainStep;
             }
             const float outputGain = m_appliedOutputGain;
-            interleavedOut[(done + i) * 2] = (m_bufL[i] + m_pvL[i]) * outputGain;
-            interleavedOut[(done + i) * 2 + 1] = (m_bufR[i] + m_pvR[i]) * outputGain;
+            interleavedOut[(done + i) * 2] *= outputGain;
+            interleavedOut[(done + i) * 2 + 1] *= outputGain;
         }
+
         done += n;
     }
 
@@ -792,12 +800,10 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
         if (track >= 0 && track < static_cast<int>(kMaxTracks)) {
             // CGB output routing is binary per side. Scale its 0..15 envelope
             // to the PCM meter range, then apply the same pan bits as the mixer.
-            const auto envelope =
-                uint8_t(std::min(channel.envelopeVolume, uint8_t{15}) * 17);
-            callbackActivity[track] = maxLevel(
-                callbackActivity[track],
-                {channel.pan & 0xF0 ? envelope : uint8_t{0},
-                 channel.pan & 0x0F ? envelope : uint8_t{0}});
+            const auto envelope = uint8_t(std::min(channel.envelopeVolume, uint8_t{15}) * 17);
+            callbackActivity[track] =
+                maxLevel(callbackActivity[track], {channel.pan & 0xF0 ? envelope : uint8_t{0},
+                                                   channel.pan & 0x0F ? envelope : uint8_t{0}});
         }
     }
     m_activePcm.store(pcm);

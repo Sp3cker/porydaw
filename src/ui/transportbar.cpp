@@ -301,6 +301,12 @@ TransportBar::TransportBar(QWidget *parent) : QToolBar(tr("Transport"), parent)
         tr("Scroll the view to keep the playhead visible during playback"));
     connect(m_followPlayheadAction, &QAction::toggled, this, &TransportBar::followPlayheadChanged);
     addAction(m_followPlayheadAction);
+    m_resonanceAction = new QAction(tr("&Suppress Resonances"), this);
+    m_resonanceAction->setCheckable(true);
+    m_resonanceAction->setIconVisibleInMenu(false);
+    m_resonanceAction->setToolTip(tr("Suppress ringing/whistles (resonances)"));
+    connect(m_resonanceAction, &QAction::toggled, this, &TransportBar::resonanceSuppressionChanged);
+    addAction(m_resonanceAction);
 
     m_timeLabel = new QLabel(QStringLiteral("--:--.- / --:--.-"), this);
     m_timeLabel->setObjectName(QStringLiteral("transportTimeLabel"));
@@ -513,6 +519,8 @@ void TransportBar::refreshIcons()
     m_stopAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaStop, size));
     m_loopAction->setIcon(tintedStandardIcon(*this, QStyle::SP_BrowserReload, size));
     m_followPlayheadAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaSeekForward, size));
+    m_resonanceAction->setIcon(tintedStandardIcon(*this, QStyle::SP_MediaVolume, size));
+
     m_highlightButton->setIcon(
         tintedIcon(*this, QIcon(QStringLiteral(":/icons/flat-music.svg")), size));
 }
