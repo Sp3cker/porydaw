@@ -231,6 +231,7 @@ class AudioEngine
     void polySnapshot(PolySnapshot *out) const;
 
   private:
+    friend int runTransportCheck();
     static void dataCallback(ma_device *device, void *output, const void *input,
                              uint32_t frameCount);
     void process(float *interleavedOut, uint32_t frameCount);

@@ -1,13 +1,16 @@
 #include <QByteArray>
 #include <QElapsedTimer>
 #include <QThread>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <functional>
+#include <vector>
 
 #include "audio/audioengine.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
+#include "miniaudio.h"
 
 // --transportcheck: transport transitions halt ringing sound (self-contained,
 // needs a working audio output device — SKIPs cleanly without one). A
@@ -352,6 +355,117 @@ int runTransportCheck()
     // reads the freed WaveData (ASAN reports it even when the count above
     // somehow reached zero).
     QThread::msleep(300);
+
+    // Park the real device and drive AudioEngine synchronously so the
+    // suppressor's delayed output can be checked sample-for-sample.
+    if (ma_device_stop(engine.m_device) != MA_SUCCESS) {
+        fail("could not stop the audio device for deterministic suppressor checks");
+    } else {
+        engine.m_deviceStarted = false;
+        engine.loadSong(noteTimeline.get(), &tvg.vg, SongSettings{});
+        engine.setResonanceSuppression(true);
+        const auto renderFrames = [&](uint32_t frames) {
+            auto output = std::vector<float>(static_cast<std::size_t>(frames) * 2);
+            auto done = uint32_t{0};
+            while (done < frames) {
+                const auto chunk = std::min(uint32_t{512}, frames - done);
+                engine.process(output.data() + static_cast<std::size_t>(done) * 2, chunk);
+                done += chunk;
+            }
+            return output;
+        };
+        const auto peak = [](const std::vector<float> &audio) {
+            auto value = 0.0f;
+            for (const auto sample : audio)
+                value = std::max(value, std::abs(sample));
+            return value;
+        };
+        const auto deepestResonanceGain = [&] {
+            auto gain = 0.0;
+            for (auto bin = 1; bin < ResonanceSuppressor::kN / 2; ++bin)
+                gain = std::min(gain, engine.m_resonance.binGainDb(bin));
+            return gain;
+        };
+        engine.play();
+        const auto playingAudio = renderFrames(uint32_t(3.0 * engine.sampleRate()));
+        const auto engagedGain = deepestResonanceGain();
+        if (peak(playingAudio) < 0.01f || engagedGain >= -0.1)
+            fail("active suppressor control signal did not play or engage");
+
+        // Pause preserves the suppressor's adaptation state; it must not
+        // re-prime from 0 dB when playback resumes.
+        engine.pause();
+        renderFrames(engine.m_outputGainRampSamples + 512);
+        if (engine.m_appliedTransport != static_cast<int>(Transport::Paused))
+            fail("pause was not applied during active suppressor check");
+        if (deepestResonanceGain() >= -0.1)
+            fail("pause reset active suppressor gain state");
+        auto pauseDrainFrames = uint32_t{0};
+        while (engine.m_cutFadeActive && pauseDrainFrames < uint32_t(engine.sampleRate())) {
+            renderFrames(512);
+            pauseDrainFrames += 512;
+        }
+        engine.play();
+        auto resumeFrames = uint32_t{0};
+        while (engine.m_appliedTransport != static_cast<int>(Transport::Playing) &&
+               resumeFrames < uint32_t(engine.sampleRate())) {
+            renderFrames(512);
+            resumeFrames += 512;
+        }
+        if (engine.m_appliedTransport != static_cast<int>(Transport::Playing))
+            fail("resume was not applied during active suppressor check");
+        if (deepestResonanceGain() >= -0.1)
+            fail("resume re-primed active suppressor gain state");
+
+        // Stop is a discontinuity: once the zero-gain cut is applied, no
+        // delayed pre-stop samples may escape during the hold or fade-up.
+        renderFrames(uint32_t(0.5 * engine.sampleRate()));
+        engine.stop();
+        auto transitionFrames = uint32_t{0};
+        while (engine.m_appliedTransport != static_cast<int>(Transport::Stopped) &&
+               transitionFrames < uint32_t(engine.sampleRate())) {
+            renderFrames(1);
+            ++transitionFrames;
+        }
+        if (engine.m_appliedTransport != static_cast<int>(Transport::Stopped)) {
+            fail("stop was not applied during active suppressor check");
+        } else {
+            const auto stoppedAudio =
+                renderFrames(engine.m_cutFadeSettleSamples + engine.m_outputGainRampSamples +
+                             ResonanceSuppressor::kLatency);
+            if (peak(stoppedAudio) > 1.0e-7f)
+                fail("stopped transport leaked delayed suppressor audio");
+        }
+
+        // Restarting with suppression still enabled must produce the song
+        // again after the transport transition.
+        engine.play();
+        transitionFrames = 0;
+        while (engine.m_appliedTransport != static_cast<int>(Transport::Playing) &&
+               transitionFrames < uint32_t(engine.sampleRate())) {
+            renderFrames(1);
+            ++transitionFrames;
+        }
+        if (engine.m_appliedTransport != static_cast<int>(Transport::Playing)) {
+            fail("restart was not applied during active suppressor check");
+        } else {
+            const auto restartedAudio = renderFrames(2 * ResonanceSuppressor::kN);
+            if (peak(restartedAudio) < 0.01f)
+                fail("restart did not produce audio with suppression active");
+        }
+
+        // A cold song replacement is another playback boundary. Starting a
+        // silent song must not reveal delayed samples from the outgoing song.
+        renderFrames(uint32_t(0.5 * engine.sampleRate()));
+        engine.loadSong(timeline.get(), &tvg.vg, SongSettings{});
+        engine.play();
+        const auto silentStart =
+            renderFrames(engine.m_cutFadeSettleSamples + 2 * engine.m_outputGainRampSamples +
+                         2 * ResonanceSuppressor::kN);
+        if (peak(silentStart) > 1.0e-7f)
+            fail("new playback leaked delayed suppressor audio from the prior song");
+        engine.unloadSong();
+    }
 
     if (failures == 0)
         std::printf("transportcheck: PASS\n");
