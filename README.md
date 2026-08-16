@@ -34,6 +34,12 @@ tools/format.sh          # reformat src/ and tools/ in place
 tools/format.sh --check  # what CI runs
 ```
 
+Enable the repository-managed pre-commit formatting check once per checkout:
+
+```bash
+tools/install-hooks.sh
+```
+
 ## License
 
 Porydaw is licensed under [GPL-3.0](LICENSE). The embedded poryaaaa engine is
