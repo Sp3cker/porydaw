@@ -1,6 +1,6 @@
 # Resonance Suppressor — Detector & Gain-Computer Implementation Plan
 
-Status: **plan v5** — implemented under review (see §17).
+Status: **plan v6** — implemented under review (see §17).
 Scope: stereo bus effect, real-time, deterministic; fixed latency while enabled and
 zero latency while disabled.
 References: none external; all constants are grounded in black-box
@@ -105,11 +105,13 @@ the numerical tolerance in §14, not bit-for-bit.
 | 10| 10000| 10.0 |
 | 11| 16000| 10.0 |
 
-**Shipping default (Option A, decided 2026-08-15):** knots 5–11 (1000 Hz –
-16 kHz) active, knots 0–4 inactive. The low bands never participate, so
-bass/kick/fundamentals are untouched; only ringing/whistles in the presence
-zone are pulled down. This mirrors the reference plugin's measured shipping default (its
-auto bands all sit ≥ 790 Hz at ≈8, plateau −18.7 dB).
+**Shipping default (Option B, decided 2026-08-16):** knots 7–10
+(2500 Hz – 10 kHz) active, knots 0–6 and 11 inactive. The low bands never
+participate, so bass/kick/fundamentals are untouched; only ringing/whistles
+in the presence zone are pulled down. The full 1–16 kHz curve proved too
+aggressive in listening (2026-08-16): with per-bin gating it dims all
+steady high-band program material, so the default band is narrowed to the
+whistle range and the global depth lowered (below).
 
 Each knot has: `freq[b]` (strictly ascending, 20 Hz..min(20 kHz, Nyquist)),
 `depthDb[b]` (0..10 dB), and `active[b]` (bool). Frequencies at or above Nyquist
@@ -118,14 +120,14 @@ arbitrary "auto" positions, mostly ≥ 790 Hz — our grid is a deliberate
 simplification.) Parameter editing is outside the v1 DSP landing; the check
 harness supplies explicit values. The only v1 product control is
 enable/disable, using the shipping defaults above.
-A **global depth** `g_depthDb` (0..10 dB, default **8**) scales the
+A **global depth** `g_depthDb` (0..10 dB, default **3**) scales the
 per-knot envelope:
 ```
 effDb[b] = active[b] ? g_depthDb * depthDb[b] / 10 : 0
 ```
-With the shipping default (g_depthDb = 8, active knots at 10.0): effDb = 8
-on the active bands → steady plateau ≈ kDepth·8 = **≈ −20 dB**, matching
-the reference plugin's default plateau (−18.7 dB at depth 8).
+With the shipping default (g_depthDb = 3, active knots at 10.0): effDb = 3
+on the active bands → steady plateau ≈ kDepth·3 = **≈ −7.5 dB** over
+2.5–10 kHz (gentler default, 2026-08-16).
 
 A **tilt** knob (in dB/octave, range ±3) rotates the knot depths about the
 1 kHz reference:
@@ -143,7 +145,7 @@ design; guard and timing stay global (§7, §9).
 This gives the curve the “shoulder” behavior we validated in prototype
 measurements: deep-but-smooth midregion, gentle roll-off outside.
 
-## 7. Detector — per-bin threshold (the Guard law)
+## 7. Detector — spectral contrast (the Guard law)
 
 For each FFT bin, linked stereo power is
 
@@ -165,25 +167,40 @@ up; none is observed, so the baseline never rises. A bin at or below
 The detector is therefore **stateless**; all memory lives in the §9 gain
 smoothers.
 
-**Excess** (the gate metric):
+**Excess** (the gate metric) is a *spectral contrast*, not an absolute
+threshold (changed 2026-08-16 — a pure absolute gate engages every tonal
+bin of a full mix and reads as "suppressing everything"):
 
 ```
-excess[k] = L[k] − (SilenceDb + Gdb)          // dB above silence+guard
+ref[k]  = max(mean(L[k±3..k±6]), SilenceDb)   // neighbours at 3..6 bins
+excess[k] = L[k] − (ref[k] + Gdb)
 ```
 
-If `excess[k] ≤ 0` → no suppression in this bin (below guard). This is the
-Guard knob (0–12 dB, **default 3.0 dB**; the reference plugin's default, law `12·n`):
-the margin above the silence baseline a resonance must exceed to engage.
-Consequence: for audible content (≥ −90 dBFS) the guard and the §8 knee
-bind only below ≈ −93 dBFS, so in practice every tonal bin in a covered
-band engages at full depth — exactly the reference plugin's measured level independence
-(−63..−3 dBFS plateau, two-tone probes: quiet witnesses at 700–1100 Hz all
-sink to the same plateau as a −15 dBFS 1 kHz tone). Protection of program
-material comes from the depth-curve shape and the slow timing law, not from
-the gate.
+The reference is the **mean** of the four bins 3–6 positions away on each
+side. The Hann peak spread of a tone covers ±2 bins, so the tone's own
+energy is excluded; a **median** was measured to under-estimate a noise
+floor by ~1.6 dB (half the bins of broadband program engage every hop —
+measured 1.4 dB of accumulated dimming), so the mean is used. The floor at
+`SilenceDb` makes an isolated tone behave exactly like the old absolute
+law: a silent neighbourhood reads −120 dBFS and the tone engages on level
+alone.
 
-Example: with `L[k]=-40 dBFS`, `Gdb=3 dB`: `excess=77 dB`, `excessLaw ≈ 1`,
-and the target gain is the full `−kDepth·depthEnv[k]`.
+If `excess[k] ≤ 0` → no suppression in this bin (not a local peak). This is
+the Guard knob (0–12 dB, **default 6.0 dB**; raised from 3.0 when the law
+became contrast-relative, 2026-08-16): the margin a bin must exceed above
+its spectral neighbourhood to engage. Consequence: narrow resonances
+(ringing, whistles, isolated tones) engage at full depth — the measured
+level independence of isolated tones is preserved (−63..−3 dBFS plateau,
+spectrally separated two-tone probes: quiet witnesses sink to the same
+plateau as a −15 dBFS 1 kHz tone) — while broadband program (noise,
+drums, full mixes) sits at or below its own neighbourhood mean and passes
+with < 0.3 dB measured dimming. Protection of program material now comes
+from the contrast law itself, plus the depth-curve shape and the slow
+timing law.
+
+Example: with `L[k]=-40 dBFS`, silent neighbourhood, `Gdb=6 dB`:
+`excess=74 dB`, `excessLaw ≈ 1`, and the target gain is the full
+`−kDepth·depthEnv[k]`.
 
 ## 8. Depth law (per bin, static shape)
 
@@ -304,17 +321,20 @@ unit test).
 |------|-------|----------|
 | bypass | any noise burst | output == input bit-exact |
 | passthrough | mask forced to 1 | reconstruction error ≤ −120 dB RMS relative to input |
-| below threshold | 1 kHz @ −118 dBFS, guard 3 | excess < 0 → change ≤ 0.1 dB |
-| above guard | 1 kHz @ −30 dBFS from silence, knot@1k depth 10, global depth 3, guard 3, ≥2 s dwell | plateau ≈ −7.5 ± 1 dB |
+| below threshold | 1 kHz @ −118 dBFS, guard 6 | excess < 0 → change ≤ 0.1 dB |
+| above guard | 1 kHz @ −30 dBFS from silence, knot@1k depth 10, global depth 3, guard 6, ≥2 s dwell | plateau ≈ −7.5 ± 1 dB |
 | saturation | same probe at −10 dBFS | same −7.5 dB plateau, never < −8.5 |
 | level independence | 1 kHz staircase −63..−3 dBFS, 1.5 s dwell, global depth 8 | plateau ≈ −20 dB, drift ≈ 0 (reference: < 3 dB) |
 | sustained hold | 1 kHz @ −15 dBFS, 60 s | plateau constant to < 0.1 dB after attack (reference: 90 s, < 0.01) |
 | attack | gate on 1 kHz, timing 500 ms | t63 ≈ 0.5 s ± 50% (reference: 0.62 s) |
 | release | gate off 1 kHz | gains recover ≥90% within 4·τR (measured on the gain state — §9; a signal-level re-gate probe is smeared by the STFT hop lookahead) |
 | step cap | impulse/stepy source | per-bin |Δg| ≤ 100·H/fs dB/hop (2.13 dB/hop @48k; 1 dB per 10 ms) |
-| two-tone engagement | 1 kHz @ −15 + 1.06 kHz witness @ −40, steady 20 s, global depth 8 | both components at ≈ −20 ± 1 dB (reference: both −19.5; no bystander exemption) |
+| two-tone engagement | 1 kHz @ −15 + 3 kHz witness @ −40 (spectrally separated), steady 20 s, global depth 8 | both components at ≈ −20 ± 1 dB (reference: both −19.5; level-independent, per-component) |
 | stereo | same mono both ch | identical outs |
 | bypass | full scale sine, enabled→disabled | disabled == original exactly |
+| low band exemption | 300 Hz @ −15 dBFS, steady | change ≤ 0.1 dB (knots 0-4 inactive) |
+| program protection | white noise @ −15 dBFS RMS, 5 s, global depth 8 | broadband RMS within 1 dB (blanket detector would dim ~13 dB) |
+| resonance in program | same noise + 3 kHz tone @ −15 dBFS | tone engages ≥ 10 dB; broadband RMS within 3.5 dB |
 
 ## 15. OPEN/decided notes
 
@@ -325,7 +345,17 @@ unit test).
 - [x] DC/Nyquist guard: bins 0 and N/2 left untouched (mask=1) always.
 - [x] Depth scale: plateau = `kDepth·depth` with `kDepth = 2.5`, grounded in
   reference-plugin plateau/knot ratios (1.9–3.8, shape/retilt-dependent).
-- [x] Guard default 3.0 dB (reference-plugin default; law 12·n over 0–12 dB).
+- [x] Guard default 6.0 dB — raised from the reference's 3.0 when the gate
+  became contrast-relative (2026-08-16); with the mean reference this keeps
+  broadband program under 0.3 dB of dimming (median measured 1.4 dB).
+- [x] Spectral contrast detector (user decision 2026-08-16 — "it's
+  suppressing everything"): excess = L[k] − (mean(L[k±3..k±6]) + guard),
+  floored at −120 dBFS. Isolated tones behave as before (level
+  independence preserved); broadband program is exempt; a narrow tone in a
+  mix still engages.
+- [x] Gentler shipping default (user decision 2026-08-16): knots 7–10
+  (2.5–10 kHz) active, g_depthDb 3 → plateau −7.5 dB; the full 1–16 kHz
+  @ depth 8 curve dims the whole high band.
 - [x] fs = the live engine rate (device native; no 32768 Hz grid exists in
   the live path — code-path audit 2026-08-15, user approved live-rate) —
   the suppressor initializes from `m_sampleRate` at device init.
@@ -407,3 +437,15 @@ unit test).
   2047 ≈ 46.4/42.7 ms, hop 23.2/21.3 ms, cap 2.32/2.13 dB/hop. All laws are
   rate-parameterized at init. Implementation: `resonance_suppressor.{h,cpp}`
   + `--resonancecheck` harness (plan v5 = v4.1 + this correction).
+- v6 (2026-08-16): listening feedback ("it's suppressing everything") →
+  detector law changed from an absolute per-bin gate to **spectral
+  contrast**: `excess[k] = L[k] − (mean(L[k±3..k±6]) + guard)`, reference
+  floored at −120 dBFS so isolated tones behave exactly as before (level
+  independence preserved, all original checks pass unchanged). Mean
+  estimator over median (median under-estimates a noise floor ~1.6 dB →
+  measured 1.4 dB broadband dimming; mean → 0.24 dB). Guard default raised
+  3.0 → 6.0 dB (now contrast-relative). Shipping default gentled: knots
+  7–10 (2.5–10 kHz) active, g_depthDb 8 → 3 → plateau −7.5 dB. New checks:
+  low-band exemption, program protection (≤ 1 dB on noise), resonance in
+  program (tone ≥ 10 dB, program ≤ 3.5 dB); two-tone witness moved to
+  3 kHz (spectrally separated). Harness: 18 cases.

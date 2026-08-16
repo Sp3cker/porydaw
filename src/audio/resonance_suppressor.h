@@ -4,17 +4,19 @@
 #include <cstdint>
 #include <vector>
 
-// Resonance suppressor from dsp/DETECTOR.md (plan v5). The device-rate
+// Resonance suppressor from dsp/DETECTOR.md (plan v6). The device-rate
 // decision is intentional: this runs at the live engine sample rate, not a
 // fixed 32768 Hz.
 struct ResonanceParams {
-    float gDb = 8.0f;        // global depth 0..10 dB
-    float guardDb = 3.0f;    // guard 0..12 dB
+    float gDb = 3.0f;        // global depth 0..10 dB (gentler shipping default, §6)
+    float guardDb = 6.0f;    // guard 0..12 dB above the spectral contrast reference (§7)
     float timingMs = 500.0f; // attack tau; release = 4x
     float tilt = 0.0f;       // dB/oct, +-3
     float knotDepthDb[12] = {0, 0, 0, 0, 0, 10, 10, 10, 10, 10, 10, 10};
-    bool knotActive[12] = {false, false, false, false, false, true,
-                           true,  true,  true,  true,  true,  true};
+    // Shipping default: only knots 7-10 (2.5-10 kHz) active — plateau
+    // 2.5*gDb = -7.5 dB over the whistle band instead of the full high end.
+    bool knotActive[12] = {false, false, false, false, false, false,
+                           false, true,  true,  true,  true,  false};
     bool forceMaskOne = false; // verification hook (DETECTOR.md §14 passthrough): mask forced to 1
 };
 
@@ -84,6 +86,7 @@ class ResonanceSuppressor
     std::vector<double> m_fftRealR;
     std::vector<double> m_fftImagR;
     std::vector<double> m_depthEnv;
+    std::vector<double> m_binLevel;
     std::vector<double> m_curGb;
     std::vector<double> m_mask;
 };
