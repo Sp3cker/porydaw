@@ -13,8 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a bunch of general improvements to general Automation lane behavior.
 
 ## Changed
-- Automation lane nodes are now drawn as clearly-visible circles instead of tiny dots.
-- Drawing in an Automation lane with the Pencil now highlights the stretch of the curve the stroke is about to overwrite, so it's obvious which nodes the gesture will replace before releasing the mouse.
 - Editing values in the Automation Lanes is now split into two modes: Pointer and Pencil modes. Toggle between the modes with `B`. If you *hold* `B` -> draw in pencil mode -> then release `B`, it will automatically revert back to Pointer mode.
    - Pointer mode is the default mode and shows the regular mouse cursor when active. It allows more selection-based editing. Hold down `shift` and draw to create a linear ramp of values.
    - Pencil mode is activated with keyboard shortcut `B`. It's used for freehand drawing values. Hold down `shift` to lock the drawing to a horizontal or vertical axis.

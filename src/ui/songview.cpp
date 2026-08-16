@@ -3602,6 +3602,8 @@ class AutomationArea : public TimelineSurface
             // first sample is seeded here only for the pencil; the arrow's
             // stroke seeds itself from m_prevTick once it arms.
             m_sweepArmed = m_gesturePencil;
+            m_pencilSlopOrigin = event->position();
+            m_pencilSlopExceeded = false;
             m_sweep.clear();
             if (m_sweepArmed)
                 m_sweep.assign(1, {m_dragTick, m_dragValue});
@@ -3685,10 +3687,22 @@ class AutomationArea : public TimelineSurface
         // the press-latched tool, so toggling B mid-drag changes nothing.
         const bool lock = m_gesturePencil && m_gesture == Gesture::Sweep &&
                           (event->modifiers() & Qt::ShiftModifier);
+        // Pencil vertical slop: a stroke meant to be horizontal shouldn't
+        // pick up the hand's vertical wobble, so the value stays pinned at
+        // the press until the stroke commits to going somewhere vertically.
+        // Once it breaks out it follows the cursor for the rest of the
+        // stroke — the resistance is a starting behavior, not a filter.
+        // Shift already pins the value, so it skips the gate (and keeps the
+        // origin under the cursor, so releasing Shift doesn't hand the gate
+        // a stale, far-away origin that reads as an instant breakout).
+        const bool slopHold = m_gesturePencil && m_gesture == Gesture::Sweep && !lock &&
+                              pencilSlopHolds(event->position());
         const int heldValue = m_dragValue;
         updateDrag(posX, posY, fine, event->modifiers() & Qt::ControlModifier);
-        if (lock)
+        if (lock || slopHold)
             m_dragValue = heldValue;
+        if (lock && !m_pencilSlopExceeded)
+            m_pencilSlopOrigin = event->position();
         if (m_gesture == Gesture::Point) {
             noteShift(event->modifiers());
             noteTravel(event->position());
@@ -3812,7 +3826,7 @@ class AutomationArea : public TimelineSurface
             // any point already sitting on the tick instead of duplicating
             // it.
             doc->writeLanePoints(track, cc, m_sweep.front().first, m_sweep.back().first,
-                                 sweepPoints());
+                                 sweepPoints(strokeSamples()));
             m_sweep.clear();
         } else if (gesture == Gesture::Line) {
             const bool fine = event->modifiers() & Qt::AltModifier;
@@ -5019,6 +5033,30 @@ class AutomationArea : public TimelineSurface
     // it a press is a click, and a click never draws.
     static int nodeDragActivationDistance() { return lyt::fontPx(5.0 / 12.0); }
 
+    // How much wider than tall a pencil stroke has to be for its vertical
+    // travel to still read as slop once it has passed the activation
+    // distance: a 4:1 wedge, so a deliberate diagonal breaks out promptly
+    // while a long horizontal drag tolerates a quarter of its length in
+    // wobble.
+    static constexpr qreal kPencilSlopAspect = 4.0;
+
+    // True while the pencil stroke's value should stay pinned at the press.
+    // The hold ends — permanently, for this stroke — the first time the
+    // travel from the slop origin looks like real vertical intent.
+    bool pencilSlopHolds(const QPointF &pos)
+    {
+        if (m_pencilSlopExceeded)
+            return false;
+        const qreal dx = std::abs(pos.x() - m_pencilSlopOrigin.x());
+        const qreal dy = std::abs(pos.y() - m_pencilSlopOrigin.y());
+        const qreal threshold = qreal(nodeDragActivationDistance());
+        if (dy < threshold && (dx + dy < threshold || dy == 0.0 || dx > dy * kPencilSlopAspect))
+            return true;
+        m_pencilSlopExceeded = true;
+        m_pencilSlopOrigin = pos;
+        return false;
+    }
+
     // Shift anywhere in a point drag (press modifiers, a move's, or a key
     // press while the pointer is parked) means the axis lock, not a click.
     void noteShift(Qt::KeyboardModifiers mods)
@@ -5207,11 +5245,35 @@ class AutomationArea : public TimelineSurface
             m_sweep.insert(it, {tick, value});
     }
 
-    std::vector<SongDocument::LanePointValue> sweepPoints() const
+    // The samples a pencil stroke actually writes: a run of cells at one
+    // value is one node, because the lane holds its value between points
+    // and the rest are inert duplicates — a horizontal line leaves a single
+    // point, not one per grid cell it crossed. The stroke's own first
+    // sample is always kept, even when the lane already holds that value:
+    // a pencil press is meant to leave a point (its click contract), and a
+    // stroke that starts by restating the level is still an edit the user
+    // can see and grab. The arrow tool's sweep keeps every sample, matching
+    // the source branch, where only the pencil's stroke is canonicalized.
+    std::vector<std::pair<uint64_t, int>> strokeSamples() const
+    {
+        if (!m_gesturePencil)
+            return m_sweep;
+        std::vector<std::pair<uint64_t, int>> kept;
+        kept.reserve(m_sweep.size());
+        for (const std::pair<uint64_t, int> &s : m_sweep) {
+            if (!kept.empty() && kept.back().second == s.second)
+                continue;
+            kept.push_back(s);
+        }
+        return kept;
+    }
+
+    std::vector<SongDocument::LanePointValue>
+    sweepPoints(const std::vector<std::pair<uint64_t, int>> &samples) const
     {
         std::vector<SongDocument::LanePointValue> pts;
-        pts.reserve(m_sweep.size());
-        for (const std::pair<uint64_t, int> &s : m_sweep)
+        pts.reserve(samples.size());
+        for (const std::pair<uint64_t, int> &s : samples)
             pts.push_back({s.first, s.second});
         return pts;
     }
@@ -5440,9 +5502,12 @@ class AutomationArea : public TimelineSurface
         }
 
         // The stroke itself, held-value steps like the committed curve's.
+        // Painted from the samples the release will write, duplicates
+        // already dropped, so the preview's nodes are the nodes that land.
+        const std::vector<std::pair<uint64_t, int>> samples = strokeSamples();
         std::optional<int> value = heldBefore;
         uint64_t cursor = begin;
-        for (const std::pair<uint64_t, int> &sample : m_sweep) {
+        for (const std::pair<uint64_t, int> &sample : samples) {
             if (value) {
                 drawHeld(cursor, sample.first, *value, previewColor);
                 if (*value != sample.second)
@@ -5474,7 +5539,7 @@ class AutomationArea : public TimelineSurface
             if (nodeVisible(plot, x))
                 paintNode(p, color, QPointF(x, valueY(point.value)));
         }
-        for (const std::pair<uint64_t, int> &sample : m_sweep) {
+        for (const std::pair<uint64_t, int> &sample : samples) {
             const qreal x = tickX(sample.first);
             if (nodeVisible(plot, x))
                 paintNode(p, previewColor, QPointF(x, valueY(sample.second)));
@@ -5652,12 +5717,14 @@ class AutomationArea : public TimelineSurface
     QPointF m_sweepPressPos;                       // sweep press, the activation-slop origin
     QPointF m_sweepSlopOrigin;                     // where the slop was cleared; the offset from
                                                    // m_sweepPressPos is subtracted from the stroke
-    bool m_sweepArmed = false;     // the sweep cleared its slop (always, for a pencil)
-    bool m_pointShiftSeen = false; // Shift during the point drag: no click-delete
-    bool m_pointTraveled = false;  // the point drag cleared the activation slop
-    bool m_clickDeleted = false;   // the last click deleted a node (the pair's
-                                   // double-click is spent)
-    uint64_t m_lineStartTick = 0;  // Shift-drag anchor
+    bool m_sweepArmed = false;         // the sweep cleared its slop (always, for a pencil)
+    QPointF m_pencilSlopOrigin;        // where the pencil's vertical slop wedge is measured from
+    bool m_pencilSlopExceeded = false; // the stroke broke out of the wedge (latched)
+    bool m_pointShiftSeen = false;     // Shift during the point drag: no click-delete
+    bool m_pointTraveled = false;      // the point drag cleared the activation slop
+    bool m_clickDeleted = false;       // the last click deleted a node (the pair's
+                                       // double-click is spent)
+    uint64_t m_lineStartTick = 0;      // Shift-drag anchor
     int m_lineStartValue = 0;
     double m_prevTick = 0.0; // last raw (unsnapped) sweep sample
     int m_prevValue = 0;

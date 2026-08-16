@@ -2597,14 +2597,30 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         };
 
         // Pencil over the dot: draws the crossed cells, leaves the pressed
-        // point's tick alone.
+        // point's tick alone. A stroke that climbs writes a node per cell
+        // it crossed.
         sendKey(lanes, Qt::Key_B, Qt::NoModifier);
-        dragStroke(yDot, yDot, Qt::NoModifier);
+        dragStroke(yDot, yDot + 20, Qt::NoModifier);
         DocLanePoint probe;
         if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &probe))
             fail("pencil press on a dot grabbed the point instead of drawing");
         if (pointsInSpan(t0, t0 + 4 * g) < 2)
             fail("pencil sweep over the dot did not draw the crossed cells");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // A flat stroke is ONE node, not one per grid cell: the lane holds
+        // its value between points, so the cells after the first restate a
+        // value that is already in force. The press's own node stays (a
+        // pencil press always leaves a point), and the span it swept is
+        // still cleared of whatever was there.
+        dragStroke(yDot, yDot, Qt::NoModifier);
+        if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &probe))
+            fail("flat pencil stroke did not leave its press node");
+        if (probe.value != tempoValueAtY(yDot))
+            fail("flat pencil stroke's node did not take the stroke's value");
+        if (pointsInSpan(t0, t0 + 4 * g) != 0)
+            fail("flat pencil stroke wrote duplicate nodes across the span");
         doc.undoStack()->undo();
         QCoreApplication::processEvents();
 
@@ -2688,8 +2704,39 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         for (const DocLanePoint &pt : tempoPoints())
             if (pt.tick >= t0 && pt.tick <= t0 + 4 * g && pt.value != lockValue)
                 fail("Shift pencil stroke was not a horizontal line at the pressed value");
-        if (pointsInSpan(t0, t0 + 4 * g) < 2)
-            fail("Shift pencil stroke did not draw the crossed cells");
+        if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &probe) || probe.value != lockValue)
+            fail("Shift pencil stroke did not leave its press node at the locked value");
+        if (pointsInSpan(t0, t0 + 4 * g) != 0)
+            fail("Shift pencil stroke wrote duplicate nodes along its horizontal line");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // Vertical slop: a stroke meant to be horizontal shouldn't pick up
+        // the hand's wobble, so a drift shallower than the activation
+        // distance (over travel far wider than it is tall) draws the same
+        // flat line Shift would have — no lock held, no key pressed.
+        const int slop = layout::fontPx(5.0 / 12.0);
+        const int yDrift = std::max(1, slop - 2);
+        dragStroke(yDot, yDot + yDrift, Qt::NoModifier);
+        const int slopValue = tempoValueAtY(yDot);
+        for (const DocLanePoint &pt : tempoPoints())
+            if (pt.tick >= t0 && pt.tick <= t0 + 4 * g && pt.value != slopValue)
+                fail("a sub-slop vertical drift bent the pencil stroke");
+        if (pointsInSpan(t0, t0 + 4 * g) != 0)
+            fail("a slop-held stroke still wrote a node per cell");
+        doc.undoStack()->undo();
+        QCoreApplication::processEvents();
+
+        // ...and the resistance is a starting behavior, not a filter: once
+        // the stroke commits to real vertical travel it follows the cursor
+        // for the rest of its length.
+        dragStroke(yDot, yDot + 8 * slop, Qt::NoModifier);
+        bool bent = false;
+        for (const DocLanePoint &pt : tempoPoints())
+            if (pt.tick > t0 && pt.tick <= t0 + 4 * g && pt.value != slopValue)
+                bent = true;
+        if (!bent)
+            fail("the pencil never broke out of its vertical slop");
         doc.undoStack()->undo();
         QCoreApplication::processEvents();
 
@@ -2725,7 +2772,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (!view.automationPencilMode())
             fail("pencil-key press did not enter the momentary mode");
         dragStroke(y1, y1, Qt::NoModifier);
-        if (pointsInSpan(t0, t0 + 4 * g) < 2)
+        if (!doc.findLanePoint(laneTrack, DOC_CC_TEMPO, t0, &probe) ||
+            probe.value != tempoValueAtY(y1))
             fail("hold-to-draw stroke did not draw");
         {
             QKeyEvent release(QEvent::KeyRelease, Qt::Key_B, Qt::NoModifier);
@@ -3388,8 +3436,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendKey(lanes, Qt::Key_B, Qt::NoModifier);
         if (!tempoPointAt(t0, &probe))
             fail("pencil-mode Shift press on the dot grabbed the point instead of drawing");
-        if (pointsInSpan(t0, tEnd) < 2)
-            fail("pencil-mode Shift stroke over the dot did not draw the crossed cells");
+        if (probe.value != tempoValueAtY(yDot))
+            fail("pencil-mode Shift stroke did not draw at the locked press value");
         for (const DocLanePoint &pt : doc.lanePoints(laneTrack, DOC_CC_TEMPO))
             if (pt.tick >= t0 && pt.tick <= tEnd && pt.value != tempoValueAtY(yDot))
                 fail("pencil-mode Shift stroke lost its horizontal lock");
