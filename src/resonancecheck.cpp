@@ -237,8 +237,8 @@ int runResonanceCheck()
         const auto outputDb =
             amplitudeDb(output, frameCount(3.0) + kLatency, frameCount(0.1), 1000.0);
         const auto reduction = inputDb - outputDb;
-        check(std::abs(reduction - 7.5) <= 1.0,
-              "above-guard 1 kHz tone plateau must be -7.5 dB +/- 1 dB");
+        check(std::abs(reduction - 9.375) <= 1.0,
+              "above-guard 1 kHz tone plateau must be -9.4 dB +/- 1 dB");
     }
 
     {
@@ -268,8 +268,8 @@ int runResonanceCheck()
         const auto finalDb =
             amplitudeDb(output, frameCount(3.0) + kLatency, frameCount(0.1), 1000.0);
         const auto finalReduction = inputDb - finalDb;
-        check(std::abs(finalReduction - 7.5) <= 1.0 && deepestReduction <= 8.5,
-              "saturation must plateau near -7.5 dB and never exceed -8.5 dB suppression");
+        check(std::abs(finalReduction - 9.375) <= 1.0 && deepestReduction <= 10.5,
+              "saturation must plateau near -9.4 dB and never exceed -10.5 dB suppression");
     }
 
     {
@@ -296,10 +296,10 @@ int runResonanceCheck()
             const auto reduction = levels[index] - outputDb;
             minimumReduction = std::min(minimumReduction, reduction);
             maximumReduction = std::max(maximumReduction, reduction);
-            allNearPlateau = allNearPlateau && std::abs(reduction - 20.0) <= 1.0;
+            allNearPlateau = allNearPlateau && std::abs(reduction - 25.0) <= 1.0;
         }
         check(allNearPlateau && maximumReduction - minimumReduction < 0.5,
-              "level staircase must hold a -20 dB plateau with less than 0.5 dB drift");
+              "level staircase must hold a -25 dB plateau with less than 0.5 dB drift");
     }
 
     {
@@ -349,12 +349,28 @@ int runResonanceCheck()
     }
 
     {
-        const auto input = makeSine(frameCount(60.0), 1000.0, -15.0);
-        const auto output = render(input, bandParams(8.0f), true);
-        const auto early =
-            -15.0 - amplitudeDb(output, frameCount(8.0) + kLatency, frameCount(0.1), 1000.0);
-        const auto late =
-            -15.0 - amplitudeDb(output, frameCount(59.0) + kLatency, frameCount(0.1), 1000.0);
+        // §14: a steady tone must hold a constant plateau — measured on the
+        // gain state. A signal-level probe is smeared by the tone's own
+        // unmasked Hann skirt, whose 3-hop window-phase wobble dominates the
+        // residual once the peak bin is deep.
+        const auto inputFrames = frameCount(60.0);
+        auto input = makeSine(inputFrames, 1000.0, -15.0);
+        ResonanceSuppressor suppressor;
+        suppressor.init(kSampleRate);
+        suppressor.setParams(bandParams(8.0f));
+        suppressor.setEnabled(true);
+        auto fed = std::size_t{0};
+        const auto feedTo = [&](std::size_t target) {
+            while (fed < target) {
+                const auto chunk = std::min(kChunkFrames, target - fed);
+                suppressor.process(input.data() + fed * kChannels, static_cast<uint32_t>(chunk));
+                fed += chunk;
+            }
+        };
+        feedTo(frameCount(8.0));
+        const auto early = suppressor.binGainDb(43);
+        feedTo(frameCount(59.0));
+        const auto late = suppressor.binGainDb(43);
         check(std::abs(early - late) <= 0.1,
               "sustained 60-second tone plateau must hold within 0.1 dB");
     }
@@ -400,14 +416,14 @@ int runResonanceCheck()
 
     {
         auto input = makeSine(frameCount(20.0), 1000.0, -15.0);
-        addSine(input, 0, input.size() / kChannels, 3000.0, -40.0);
+        addSine(input, 0, input.size() / kChannels, 12000.0, -40.0);
         const auto output = render(input, bandParams(8.0f), true);
         const auto firstReduction =
             -15.0 - amplitudeDb(output, frameCount(19.0) + kLatency, frameCount(0.1), 1000.0);
         const auto secondReduction =
-            -40.0 - amplitudeDb(output, frameCount(19.0) + kLatency, frameCount(0.1), 3000.0);
-        check(std::abs(firstReduction - 20.0) <= 1.0 && std::abs(secondReduction - 20.0) <= 1.0,
-              "two spectrally separated tones must both engage near the -20 dB plateau");
+            -40.0 - amplitudeDb(output, frameCount(19.0) + kLatency, frameCount(0.1), 12000.0);
+        check(std::abs(firstReduction - 25.0) <= 1.0 && std::abs(secondReduction - 25.0) <= 1.0,
+              "two spectrally separated tones must both engage near the -25 dB plateau");
     }
 
     {
@@ -438,6 +454,25 @@ int runResonanceCheck()
         check(reduction >= 10.0, "embedded 3 kHz tone must engage at least 10 dB");
         check(std::abs(inDb - outDb) <= 3.5,
               "broadband program must survive an embedded tone's suppression");
+    }
+
+    {
+        // §7 progressive law: a modest resonance above the program floor
+        // must engage GENTLY — far below the full ceiling — while the
+        // program itself survives.
+        const auto inputFrames = frameCount(5.0);
+        auto input = makeNoise(inputFrames, 0.3f, 0x0badcafeu);
+        addSine(input, frameCount(1.0), inputFrames, 3000.0, -25.0);
+        const auto output = render(input, bandParams(8.0f), true);
+        const auto source = frameCount(4.0);
+        const auto reduction =
+            -25.0 - amplitudeDb(output, source + kLatency, frameCount(0.1), 3000.0);
+        const auto inDb = rmsDb(input, source, frameCount(0.5));
+        const auto outDb = rmsDb(output, source + kLatency, frameCount(0.5));
+        check(reduction >= 1.5 && reduction <= 8.5,
+              "modest resonance in program must engage gently, far below the full plateau");
+        check(std::abs(inDb - outDb) <= 3.5,
+              "broadband program must survive a modest resonance's suppression");
     }
 
     {

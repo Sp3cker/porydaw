@@ -1,6 +1,6 @@
 # Resonance Suppressor — Detector & Gain-Computer Implementation Plan
 
-Status: **plan v6** — implemented under review (see §17).
+Status: **plan v7** — implemented under review (see §17).
 Scope: stereo bus effect, real-time, deterministic; fixed latency while enabled and
 zero latency while disabled.
 References: none external; all constants are grounded in black-box
@@ -127,7 +127,9 @@ effDb[b] = active[b] ? g_depthDb * depthDb[b] / 10 : 0
 ```
 With the shipping default (g_depthDb = 3, active knots at 10.0): effDb = 3
 on the active bands → steady plateau ≈ kDepth·3 = **≈ −7.5 dB** over
-2.5–10 kHz (gentler default, 2026-08-16).
+2.5–10 kHz for a full-strength resonance; very resonant bins (≥ 20 dB
+excess) get ×1.25 → **−9.4 dB**, small ones follow the §7 ramp (gentler
+default, 2026-08-16).
 
 A **tilt** knob (in dB/octave, range ±3) rotates the knot depths about the
 1 kHz reference:
@@ -188,19 +190,32 @@ alone.
 If `excess[k] ≤ 0` → no suppression in this bin (not a local peak). This is
 the Guard knob (0–12 dB, **default 6.0 dB**; raised from 3.0 when the law
 became contrast-relative, 2026-08-16): the margin a bin must exceed above
-its spectral neighbourhood to engage. Consequence: narrow resonances
-(ringing, whistles, isolated tones) engage at full depth — the measured
-level independence of isolated tones is preserved (−63..−3 dBFS plateau,
-spectrally separated two-tone probes: quiet witnesses sink to the same
-plateau as a −15 dBFS 1 kHz tone) — while broadband program (noise,
-drums, full mixes) sits at or below its own neighbourhood mean and passes
-with < 0.3 dB measured dimming. Protection of program material now comes
+its spectral neighbourhood to engage. Protection of program material comes
 from the contrast law itself, plus the depth-curve shape and the slow
 timing law.
 
+The response is **progressive** (user decision 2026-08-16 — "dampen very
+resonant resonances a bit more but dampen small resonances less"): nothing
+below the 6 dB knee, then a smoothstep to the **1.25× ceiling** at 20 dB
+excess:
+
+```
+excessLaw[k] = 1.25 * smoothstep((excess[k] - 6 dB) / 14 dB)   // 6..20 dB
+excessLaw[k] = 0        for excess ≤ 6 dB
+excessLaw[k] = 1.25     for excess ≥ 20 dB
+```
+
+A resonance 26 dB or more above its local floor gets the full 1.25× depth
+(default plateau **−9.4 dB**), a modest one (12 dB above the floor) gets
+about a quarter of full depth, and broadband program (noise, drums, full
+mixes) sits below the knee and passes with < 0.3 dB measured dimming.
+Isolated tones reach the ceiling (their contrast is capped near 36 dB by
+their own Hann skirt, which also excludes them from their reference
+neighbourhood, so the measured excess is level-independent).
+
 Example: with `L[k]=-40 dBFS`, silent neighbourhood, `Gdb=6 dB`:
-`excess=74 dB`, `excessLaw ≈ 1`, and the target gain is the full
-`−kDepth·depthEnv[k]`.
+`excess=74 dB`, `excessLaw = 1.25`, and the target gain is
+`−kDepth·depthEnv[k]·1.25`.
 
 ## 8. Depth law (per bin, static shape)
 
@@ -322,19 +337,20 @@ unit test).
 | bypass | any noise burst | output == input bit-exact |
 | passthrough | mask forced to 1 | reconstruction error ≤ −120 dB RMS relative to input |
 | below threshold | 1 kHz @ −118 dBFS, guard 6 | excess < 0 → change ≤ 0.1 dB |
-| above guard | 1 kHz @ −30 dBFS from silence, knot@1k depth 10, global depth 3, guard 6, ≥2 s dwell | plateau ≈ −7.5 ± 1 dB |
-| saturation | same probe at −10 dBFS | same −7.5 dB plateau, never < −8.5 |
-| level independence | 1 kHz staircase −63..−3 dBFS, 1.5 s dwell, global depth 8 | plateau ≈ −20 dB, drift ≈ 0 (reference: < 3 dB) |
-| sustained hold | 1 kHz @ −15 dBFS, 60 s | plateau constant to < 0.1 dB after attack (reference: 90 s, < 0.01) |
+| above guard | 1 kHz @ −30 dBFS from silence, knot@1k depth 10, global depth 3, guard 6, ≥2 s dwell | plateau ≈ −9.4 ± 1 dB |
+| saturation | same probe at −10 dBFS | same −9.4 dB plateau, never < −10.5 |
+| level independence | 1 kHz staircase −63..−3 dBFS, 1.5 s dwell, global depth 8 | plateau ≈ −25 dB, drift ≈ 0 (reference: < 3 dB) |
+| sustained hold | 1 kHz @ −15 dBFS, 60 s | gain plateau constant to < 0.1 dB after attack (measured on the gain state — a signal-level probe is smeared by the tone's own unmasked Hann skirt; reference: 90 s, < 0.01) |
 | attack | gate on 1 kHz, timing 500 ms | t63 ≈ 0.5 s ± 50% (reference: 0.62 s) |
 | release | gate off 1 kHz | gains recover ≥90% within 4·τR (measured on the gain state — §9; a signal-level re-gate probe is smeared by the STFT hop lookahead) |
 | step cap | impulse/stepy source | per-bin |Δg| ≤ 100·H/fs dB/hop (2.13 dB/hop @48k; 1 dB per 10 ms) |
-| two-tone engagement | 1 kHz @ −15 + 3 kHz witness @ −40 (spectrally separated), steady 20 s, global depth 8 | both components at ≈ −20 ± 1 dB (reference: both −19.5; level-independent, per-component) |
+| two-tone engagement | 1 kHz @ −15 + 12 kHz witness @ −40 (spectrally separated), steady 20 s, global depth 8 | both components at ≈ −25 ± 1 dB (reference: both −19.5; level-independent, per-component) |
 | stereo | same mono both ch | identical outs |
 | bypass | full scale sine, enabled→disabled | disabled == original exactly |
 | low band exemption | 300 Hz @ −15 dBFS, steady | change ≤ 0.1 dB (knots 0-4 inactive) |
 | program protection | white noise @ −15 dBFS RMS, 5 s, global depth 8 | broadband RMS within 1 dB (blanket detector would dim ~13 dB) |
 | resonance in program | same noise + 3 kHz tone @ −15 dBFS | tone engages ≥ 10 dB; broadband RMS within 3.5 dB |
+| small resonance in program | same noise + 3 kHz tone @ −25 dBFS | tone engages gently (1.5–8.5 dB, far below the −25 full plateau); broadband RMS within 3.5 dB |
 
 ## 15. OPEN/decided notes
 
@@ -356,6 +372,12 @@ unit test).
 - [x] Gentler shipping default (user decision 2026-08-16): knots 7–10
   (2.5–10 kHz) active, g_depthDb 3 → plateau −7.5 dB; the full 1–16 kHz
   @ depth 8 curve dims the whole high band.
+- [x] Progressive response (user decision 2026-08-16 — "dampen very
+  resonant resonances a bit more but dampen small resonances less"):
+  smoothstep knee 6 dB → 1.25× ceiling at 20 dB excess (ceiling lowered
+  from 24 when measurements showed isolated tones' contrast is capped near
+  36 dB by their own Hann skirt, and the flat ceiling kills the skirt-phase
+  ripple a mid-ramp law picks up).
 - [x] fs = the live engine rate (device native; no 32768 Hz grid exists in
   the live path — code-path audit 2026-08-15, user approved live-rate) —
   the suppressor initializes from `m_sampleRate` at device init.
@@ -449,3 +471,17 @@ unit test).
   low-band exemption, program protection (≤ 1 dB on noise), resonance in
   program (tone ≥ 10 dB, program ≤ 3.5 dB); two-tone witness moved to
   3 kHz (spectrally separated). Harness: 18 cases.
+
+- v7 (2026-08-16): user feedback ("dampen very resonant resonances a bit
+  more but dampen small resonances less") → **progressive response**: the
+  flat 1.0 law became a smoothstep from a 6 dB knee to a **1.25× ceiling**
+  at 20 dB excess — below the knee nothing engages; a modest resonance gets
+  a fraction of full depth; a strong one gets 1.25× (−9.4 dB default
+  plateau). Measurements drove the ceiling: an isolated tone's contrast is
+  capped near 36 dB by its own Hann skirt, and a law riding mid-ramp picks
+  up the 3-hop window-phase ripple (±0.2 dB plateau wobble); the flat
+  ceiling kills it. The sustained-hold check moved to the gain state (a
+  signal-level probe is smeared by the tone's unmasked skirt). New check:
+  small resonance in program (engages gently, far below the ceiling).
+  Two-tone witness moved to 12 kHz (fully separated, reaches the ceiling
+  cleanly). Harness: 20 cases.
