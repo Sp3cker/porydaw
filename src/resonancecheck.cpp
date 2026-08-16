@@ -396,18 +396,24 @@ int runResonanceCheck()
     }
 
     {
-        const auto onset = frameCount(1.0);
-        const auto input = makeSine(frameCount(4.0), 1000.0, -15.0, onset);
-        const auto output = render(input, bandParams(8.0f), true);
-        const auto window = frameCount(0.01);
-        double previousReduction = 0.0;
-        bool havePrevious = false;
-        double largestStep = 0.0;
-        for (auto source = onset + 2 * kHop; source + window < frameCount(3.5); source += kHop) {
-            const auto reduction = -15.0 - amplitudeDb(output, source + kLatency, window, 1000.0);
+        // §9 step cap, measured hop-exact on the gain state (a signal-level
+        // probe averages the per-bin step over the tone's spread).
+        const auto inputFrames = frameCount(4.0);
+        auto input = makeSine(inputFrames, 1000.0, -15.0, frameCount(1.0));
+        ResonanceSuppressor suppressor;
+        suppressor.init(kSampleRate);
+        suppressor.setParams(bandParams(8.0f));
+        suppressor.setEnabled(true);
+        auto previous = 0.0;
+        auto havePrevious = false;
+        auto largestStep = 0.0;
+        for (auto fed = std::size_t{0}; fed < inputFrames; fed += kChunkFrames) {
+            const auto chunk = std::min(kChunkFrames, inputFrames - fed);
+            suppressor.process(input.data() + fed * kChannels, static_cast<uint32_t>(chunk));
+            const auto current = suppressor.binGainDb(43);
             if (havePrevious)
-                largestStep = std::max(largestStep, std::abs(reduction - previousReduction));
-            previousReduction = reduction;
+                largestStep = std::max(largestStep, std::abs(current - previous));
+            previous = current;
             havePrevious = true;
         }
         check(largestStep <= (102400.0 / 48000.0) + 1.0e-3,
@@ -435,10 +441,9 @@ int runResonanceCheck()
         const auto source = frameCount(4.0);
         const auto inDb = rmsDb(input, source, frameCount(0.5));
         const auto outDb = rmsDb(output, source + kLatency, frameCount(0.5));
-        check(std::abs(inDb - outDb) <= 1.0,
-              "broadband program must pass with at most 1 dB of suppression");
+        check(std::abs(inDb - outDb) <= 0.5,
+              "broadband program must pass with at most 0.5 dB of suppression");
     }
-
     {
         // A narrow tone embedded in broadband program must still engage
         // while the program itself survives.
@@ -452,6 +457,10 @@ int runResonanceCheck()
         const auto inDb = rmsDb(input, source, frameCount(0.5));
         const auto outDb = rmsDb(output, source + kLatency, frameCount(0.5));
         check(reduction >= 10.0, "embedded 3 kHz tone must engage at least 10 dB");
+        // The bound includes the legitimate removal of the tone's own
+        // energy (the tone rides at the noise RMS level; fully removing it
+        // alone accounts for ~3.1 dB). The pure-program case above gates
+        // detector regressions at 0.5 dB.
         check(std::abs(inDb - outDb) <= 3.5,
               "broadband program must survive an embedded tone's suppression");
     }
@@ -471,8 +480,72 @@ int runResonanceCheck()
         const auto outDb = rmsDb(output, source + kLatency, frameCount(0.5));
         check(reduction >= 1.5 && reduction <= 8.5,
               "modest resonance in program must engage gently, far below the full plateau");
-        check(std::abs(inDb - outDb) <= 3.5,
+        check(std::abs(inDb - outDb) <= 1.5,
               "broadband program must survive a modest resonance's suppression");
+    }
+
+    {
+        // §5 rate independence: the timing law and step cap are
+        // rate-parameterized; verify the 44.1 kHz numbers hold (48 kHz is
+        const auto rate = 44100.0f;
+        const auto inputFrames = static_cast<std::size_t>(rate * 4);
+        auto input = std::vector<float>(inputFrames * kChannels, 0.0f);
+        const auto omega = 2.0 * kPi * 1000.0 / rate;
+        for (auto frame = std::size_t{0}; frame < inputFrames; ++frame) {
+            const auto value = static_cast<float>(amplitudeForDb(-15.0) * std::sin(omega * frame));
+            input[frame * kChannels] = value;
+            input[frame * kChannels + 1] = value;
+        }
+        ResonanceSuppressor suppressor;
+        suppressor.init(rate);
+        suppressor.setParams(bandParams(8.0f));
+        suppressor.setEnabled(true);
+        auto previous = 0.0;
+        auto havePrevious = false;
+        auto largestStep = 0.0;
+        for (auto fed = std::size_t{0}; fed < inputFrames; fed += kChunkFrames) {
+            const auto chunk = std::min(kChunkFrames, inputFrames - fed);
+            suppressor.process(input.data() + fed * kChannels, static_cast<uint32_t>(chunk));
+            const auto current = suppressor.binGainDb(46);
+            if (havePrevious)
+                largestStep = std::max(largestStep, std::abs(current - previous));
+            previous = current;
+            havePrevious = true;
+        }
+        // 1 kHz @ 44.1 kHz lands in bin 46.4; the plateau must be the full
+        // ceiling and the per-hop cap must be 100*H/44100 = 2.322 dB.
+        check(std::abs(suppressor.binGainDb(46) - (-25.0)) <= 1.0,
+              "44.1 kHz plateau must reach the -25 dB ceiling");
+        check(largestStep <= (102400.0 / 44100.0) + 1.0e-3,
+              "44.1 kHz per-hop gain change must not exceed the 2.322 dB step cap");
+    }
+    {
+        // §5 DC/Nyquist guard: bins 0 and N/2 are never masked, even with
+        // the full curve active. Checked on the gain state (a signal-level
+        // probe is degenerate: the Goertzel reference at exactly Nyquist
+        // reads zero).
+        const auto inputFrames = frameCount(2.0);
+        auto input = std::vector<float>(inputFrames * kChannels, 0.0f);
+        const auto nyquistOmega = 2.0 * kPi * 12000.0 / double(kSampleRate);
+        const auto nearNyquistOmega = 2.0 * kPi * 23500.0 / double(kSampleRate);
+        for (auto frame = std::size_t{0}; frame < inputFrames; ++frame) {
+            const auto value =
+                static_cast<float>(0.5 + 0.5 * std::sin(nyquistOmega * static_cast<double>(frame)) +
+                                   0.178 * std::sin(nearNyquistOmega * static_cast<double>(frame)));
+            input[frame * kChannels] = value;
+            input[frame * kChannels + 1] = value;
+        }
+        ResonanceSuppressor suppressor;
+        suppressor.init(kSampleRate);
+        suppressor.setParams(bandParams(8.0f));
+        suppressor.setEnabled(true);
+        for (auto fed = std::size_t{0}; fed < inputFrames; fed += kChunkFrames) {
+            const auto chunk = std::min(kChunkFrames, inputFrames - fed);
+            suppressor.process(input.data() + fed * kChannels, static_cast<uint32_t>(chunk));
+        }
+        check(suppressor.binGainDb(0) == 0.0, "DC bin must never be masked");
+        check(suppressor.binGainDb(1003) < -1.0,
+              "a real bin near the Nyquist guard must still engage");
     }
 
     {

@@ -229,18 +229,18 @@ measures **1.9–3.8× the active knot's depth value** (three factory presets:
 we fix 2.5, so a knot depth of 10 dB saturates at −25 dB.
 
 `excessLaw(e)` is a soft knee so deep resonances saturate at the depth
-instead of over-cancelling:
+instead of over-cancelling. The response curve is the §7 progressive law:
 
 ```
-excessLaw(e) = e ≤ 0        ? 0
-             : e < KneeDb   ? 0.5·(e/KneeDb)·(e/KneeDb)      // quadratic onset
-             : 1 − 0.5·(1 − (e−KneeDb)/(MaxExcess−KneeDb))²  // saturating tail
-             : 1
-with KneeDb = 3, MaxExcess = 24 dB.
+excessLaw(e) = e ≤ 6 dB        ? 0
+             : 6 < e < 20 dB   ? 1.25 · smoothstep((e − 6 dB) / 14 dB)
+             : e ≥ 20 dB       ? 1.25
 ```
 
-Result: 0 dB when the bin sits near the floor, growing to the full
-`kDepth·depthEnv[k]` when the bin is clearly isolated, hard-capped there.
+Result: 0 dB when the bin sits at or below the guard, growing
+progressively to the full `kDepth·depthEnv[k]` at 20 dB excess, and to
+`1.25 · kDepth · depthEnv[k]` for very resonant bins (user decision
+2026-08-16 — see §7).
 
 ## 9. Smoothing & per-frame step limit (Timing law)
 
@@ -314,7 +314,7 @@ unit test).
 ## 13. Integration point (porydaw)
 
 - Insert: `AudioEngine::process()` — right after the mix sum, before the
-  master/output gain multiply, on the 32768 Hz grid (§4). Both channels.
+  master/output gain multiply, at the live engine rate (§4). Both channels.
   The render loop is chunked; the suppressor accumulates its 1024-sample
   hop across chunks. **Live-audio path only** — `wavexport.cpp` renders
   through a private M4AEngine and is deliberately NOT touched in v1
@@ -343,14 +343,15 @@ unit test).
 | sustained hold | 1 kHz @ −15 dBFS, 60 s | gain plateau constant to < 0.1 dB after attack (measured on the gain state — a signal-level probe is smeared by the tone's own unmasked Hann skirt; reference: 90 s, < 0.01) |
 | attack | gate on 1 kHz, timing 500 ms | t63 ≈ 0.5 s ± 50% (reference: 0.62 s) |
 | release | gate off 1 kHz | gains recover ≥90% within 4·τR (measured on the gain state — §9; a signal-level re-gate probe is smeared by the STFT hop lookahead) |
-| step cap | impulse/stepy source | per-bin |Δg| ≤ 100·H/fs dB/hop (2.13 dB/hop @48k; 1 dB per 10 ms) |
+| step cap | gate on 1 kHz | per-bin |Δg| ≤ 100·H/fs dB/hop (2.13 dB/hop @48k), measured hop-exact on the gain state |
 | two-tone engagement | 1 kHz @ −15 + 12 kHz witness @ −40 (spectrally separated), steady 20 s, global depth 8 | both components at ≈ −25 ± 1 dB (reference: both −19.5; level-independent, per-component) |
-| stereo | same mono both ch | identical outs |
 | bypass | full scale sine, enabled→disabled | disabled == original exactly |
 | low band exemption | 300 Hz @ −15 dBFS, steady | change ≤ 0.1 dB (knots 0-4 inactive) |
-| program protection | white noise @ −15 dBFS RMS, 5 s, global depth 8 | broadband RMS within 1 dB (blanket detector would dim ~13 dB) |
-| resonance in program | same noise + 3 kHz tone @ −15 dBFS | tone engages ≥ 10 dB; broadband RMS within 3.5 dB |
-| small resonance in program | same noise + 3 kHz tone @ −25 dBFS | tone engages gently (1.5–8.5 dB, far below the −25 full plateau); broadband RMS within 3.5 dB |
+| program protection | white noise @ −15 dBFS RMS, 5 s, global depth 8 | broadband RMS within 0.5 dB (blanket detector would dim ~13 dB; mean-vs-median regression measured 1.4 dB) |
+| resonance in program | same noise + 3 kHz tone @ −15 dBFS | tone engages ≥ 10 dB; broadband RMS within 3.5 dB (up to ~3.1 dB is the legitimate removal of the tone's own energy) |
+| small resonance in program | same noise + 3 kHz tone @ −25 dBFS | tone engages gently (1.5–8.5 dB, far below the −25 full plateau); broadband RMS within 1.5 dB |
+| device rate 44.1 kHz | 1 kHz @ −15 dBFS, fs = 44100 | plateau ≈ −25 ± 1 dB; per-hop cap 2.32 dB (100·H/44100) |
+| DC/Nyquist guard | 0.5 DC + Nyquist sine + 23.5 kHz @ −15 dBFS, full curve | gain stays 0 on bins 0 and N/2; bin 1003 engages (checked on the gain state — the Goertzel at exactly Nyquist is degenerate) |
 
 ## 15. OPEN/decided notes
 
@@ -483,5 +484,9 @@ unit test).
   ceiling kills it. The sustained-hold check moved to the gain state (a
   signal-level probe is smeared by the tone's unmasked skirt). New check:
   small resonance in program (engages gently, far below the ceiling).
-  Two-tone witness moved to 12 kHz (fully separated, reaches the ceiling
   cleanly). Harness: 20 cases.
+  Independent review pass (2026-08-16) added: peak-convention calibration
+  (π²/N²; a bin-centred full-scale sine reads 0 dBFS), Nyquist-knot
+  deactivation (knots ≥ fs/2 forced inactive), hop-exact gain-state step
+  cap check, 44.1 kHz device-rate case, DC/Nyquist guard case, tighter
+  program bounds (0.5 dB pure program). Harness: 24 cases.
