@@ -17,13 +17,13 @@ src/
     ui/theme/                     # color roles, resolver, runtime, picker
     ui/activity/                  # track activity meters
     ui/*.cpp                      # other widgets (transportbar, voicegroupbrowser, etc.)
-  *check.cpp + automationgesturecheck/  # in-binary harnesses — NOT prod code
+  checks/     — in-binary harnesses (42 files: *check.cpp + automationgesturecheck/)
 tools/        — run_checks.sh, format.sh, porydaw_render_cli
 external/     — poryaaaa (submodule), dr_libs, stb
 docs/ docsrc/ — spec, plans, manual
 ```
 
-Planned move (next): `*check.cpp → src/checks/` — when it lands, update `path` args below.
+Harness root is `src/checks/` — never add a new `*check.cpp` to `src/` top-level.
 
 ## Search discipline — REQUIRED
 
@@ -52,7 +52,7 @@ Scopes by concern:
 - Voicegroup / samples: `src/project; src/ui/voicegroupbrowser.cpp; src/ui/samplepicker.cpp`
 - Playback / engine: `src/audio; src/core/timelineplayer.cpp; src/core/miditimeline.cpp`
 - Theme / layout: `src/ui/theme; src/ui/layout.cpp; src/ui/typography.cpp`
-- Harnesses: `src/*check.cpp` (or `src/checks` after move) — only when touching a harness.
+- Harnesses: `src/checks` — only when touching a harness (e.g. `grep pattern="editcheck" path="src/checks"`).
 
 Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_edit` renames when `lsp rename` exists.
 

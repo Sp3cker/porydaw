@@ -263,55 +263,55 @@ endif()
 
 qt_add_executable(porydaw
     src/main.cpp
-    src/tabcheck.cpp
-    src/eventviewcheck.cpp
-    src/rollcheck.cpp
-    src/rollcheckplayhead.cpp
-    src/rollcheckplayhead.h
-    src/viewcheck.cpp
-    src/roundtrip.cpp
-    src/editcheck.cpp
-    src/scalecheck.cpp
-    src/savecheck.cpp
-    src/onboardcheck.cpp
-    src/vgcheck.cpp
-    src/vgsavecheck.cpp
-    src/exportcheck.cpp
-    src/loopcheck.cpp
-    src/clickcheck.cpp
-    src/polycheck.cpp
-    src/primecheck.cpp
-    src/xcmdcheck.cpp
-    src/smfcheck.cpp
-    src/transportcheck.cpp
-    src/trackactivitycheck.cpp
-    src/trackactivitymetercheck.cpp
-    src/audiocheck.cpp
-    src/resonancecheck.cpp
-    src/mkcheck.cpp
-    src/ignorecheck.cpp
-    src/samplecheck.cpp
-    src/sessioncheck.cpp
-    src/keymapcheck.cpp
-    src/hostcheck.cpp
-    src/mainwindowroutingcheck.cpp
-    src/noteidcheck.cpp
-    src/renderingplayheadcheck.cpp
-    src/rollcheckautomation.cpp
-    src/automationgesturecheck/rig.cpp
-    src/automationgesturecheck/runner.cpp
-    src/automationgesturecheck/action.cpp
-    src/automationgesturecheck/mapping.cpp
-    src/automationgesturecheck/stroke.cpp
-    src/automationgesturecheck/ownership.cpp
-    src/automationgesturecheck/transactions.cpp
-    src/rollcheckdrawer.cpp
-    src/rollcheckpsgvelocity.cpp
+    src/checks/tabcheck.cpp
+    src/checks/eventviewcheck.cpp
+    src/checks/rollcheck.cpp
+    src/checks/rollcheckplayhead.cpp
+    src/checks/rollcheckplayhead.h
+    src/checks/viewcheck.cpp
+    src/checks/roundtrip.cpp
+    src/checks/editcheck.cpp
+    src/checks/scalecheck.cpp
+    src/checks/savecheck.cpp
+    src/checks/onboardcheck.cpp
+    src/checks/vgcheck.cpp
+    src/checks/vgsavecheck.cpp
+    src/checks/exportcheck.cpp
+    src/checks/loopcheck.cpp
+    src/checks/clickcheck.cpp
+    src/checks/polycheck.cpp
+    src/checks/primecheck.cpp
+    src/checks/xcmdcheck.cpp
+    src/checks/smfcheck.cpp
+    src/checks/transportcheck.cpp
+    src/checks/trackactivitycheck.cpp
+    src/checks/trackactivitymetercheck.cpp
+    src/checks/audiocheck.cpp
+    src/checks/resonancecheck.cpp
+    src/checks/mkcheck.cpp
+    src/checks/ignorecheck.cpp
+    src/checks/samplecheck.cpp
+    src/checks/sessioncheck.cpp
+    src/checks/keymapcheck.cpp
+    src/checks/hostcheck.cpp
+    src/checks/mainwindowroutingcheck.cpp
+    src/checks/noteidcheck.cpp
+    src/checks/renderingplayheadcheck.cpp
+    src/checks/rollcheckautomation.cpp
+    src/checks/automationgesturecheck/rig.cpp
+    src/checks/automationgesturecheck/runner.cpp
+    src/checks/automationgesturecheck/action.cpp
+    src/checks/automationgesturecheck/mapping.cpp
+    src/checks/automationgesturecheck/stroke.cpp
+    src/checks/automationgesturecheck/ownership.cpp
+    src/checks/automationgesturecheck/transactions.cpp
+    src/checks/rollcheckdrawer.cpp
+    src/checks/rollcheckpsgvelocity.cpp
     resources/fonts.qrc
 )
 if(APPLE)
     target_sources(porydaw PRIVATE
-        src/rollcheckplayhead_macos.mm
+        src/checks/rollcheckplayhead_macos.mm
     )
 endif()
 qt_add_resources(porydaw "app_icon"
@@ -371,7 +371,7 @@ if(BUILD_TESTING)
     # the shipping executable and its command-line surface.
     qt_add_executable(porydaw_themechecks
         src/ui/theme/themechecks_main.cpp
-        src/fontcheck.cpp
+        src/checks/fontcheck.cpp
         src/ui/theme/themecheck.cpp
         src/ui/theme/themecheck.h
         resources/fonts.qrc
@@ -379,7 +379,7 @@ if(BUILD_TESTING)
     target_link_libraries(porydaw_themechecks PRIVATE porydaw_app)
 
     qt_add_executable(porydaw_editorlayoutcheck
-        src/editorlayoutcheck.cpp
+        src/checks/editorlayoutcheck.cpp
         resources/fonts.qrc
     )
     target_link_libraries(porydaw_editorlayoutcheck PRIVATE porydaw_app)

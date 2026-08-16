@@ -5,7 +5,7 @@ condition: "grep|ast_grep|glob.*pattern|\\bsearch"
 scope: tool
 ---
 
-Always scope searches. Porydaw has 34 harness files (`*check.cpp`), `external/poryaaaa`, and `build-*/`, that drown root scans.
+Always scope searches. Porydaw has 42 harness files in `src/checks/` (`*check.cpp` + `automationgesturecheck/`), plus `external/poryaaaa` and `build-*/`, that drown root scans.
 
 - NEVER call `grep`/`ast_grep`/`glob` without `path`. `path="."` or omitted is a bug.
 - NEVER use `path="src"` or `path="."` — use `src/core`, `src/project`, `src/audio`, `src/ui/editordrawer`, `src/ui/theme`, `src/ui/songview.cpp`, or `src/checks` for harnesses.
