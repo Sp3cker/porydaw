@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - There is now buffer space before the start of the song in the piano roll to make it easier to scroll and focus the start of the song. Similarly, there is now much bigger buffer after the end of the song.
 
 ## Fixed
+- Fixed audible click on transport transitions (pause/stop/play): the output now fades down, cuts, and fades back instead of hard-cutting sounding channels at full amplitude.
 - Improved fidelity of CGB channels
    - Fixed CGB channels' volume envelope emulation.
    - Improved CGB noise channel is now band-limited, which is more accurate to hardware's sound quality.

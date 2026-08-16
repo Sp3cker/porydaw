@@ -232,7 +232,14 @@ class AudioEngine
     void process(float *interleavedOut, uint32_t frameCount);
     void applyPendingSeek();
     void applyTransportTransition();
-    void cutAllSound();
+    // Transport cut-fade: the requested state is applied at the exact
+    // zero-gain sample. Until then the currently applied transport keeps
+    // rendering, so a Playing transition cannot cut its first note.
+    void beginOutputCut(int transport);
+    // Cold: clears interrupted transport cut-fade state while the device is
+    // stopped. Scalar-only; safe for cold init/load/unload boundaries.
+    void resetOutputCut();
+    void finishOutputCut();
     void applyMuteTransition();
     void applyPreviewNote();
     void applyTimedPreviews(uint32_t frameCount);
@@ -320,6 +327,21 @@ class AudioEngine
     float m_appliedOutputGain = 1.0f;
     float m_outputGainStep = 0.0f;
     uint32_t m_outputGainRampRemaining = 0;
+
+    // Audio-thread-only transport cut-fade state (see beginOutputCut).
+    // The settle hold covers the engine's output-queue drain after the
+    // deferred cut: the driver still emits up to one DMA buffer (2 VBlank
+    // periods) of already-mixed pre-cut audio; the fade must sit at zero
+    // through that transit or the return ramp amplifies the queued audio.
+    static constexpr double kCutFadeSettleSeconds = 2.0 / 59.7275;
+    uint32_t m_cutFadeSettleSamples = 1;
+    bool m_cutFadeActive = false;
+    bool m_cutFadeRising = false;
+    int m_cutFadeTargetTransport = static_cast<int>(Transport::Stopped);
+    float m_cutFadeGain = 1.0f;
+    float m_cutFadeStep = 0.0f;
+    uint32_t m_cutFadeRemaining = 0;
+    uint32_t m_cutFadeHold = 0;
 
     // Audio-thread-only sequencer state
     int m_appliedTransport = static_cast<int>(Transport::Stopped);

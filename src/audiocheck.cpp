@@ -30,8 +30,7 @@ int runAudioCheck()
 
     check(packedActivity({0, 0}) == 0x0000u, "silent activity must pack to zero");
     check(packedActivity({255, 255}) == 0xffffu, "maximum activity must pack to both bytes");
-    check(packedActivity({0x5A, 0xA5}) == 0xa55au,
-          "asymmetric activity must preserve byte order");
+    check(packedActivity({0x5A, 0xA5}) == 0xa55au, "asymmetric activity must preserve byte order");
     checkRoundTrip({0, 0}, "silent activity must unpack exactly");
     checkRoundTrip({255, 255}, "maximum activity must unpack exactly");
     checkRoundTrip({0x5A, 0xA5}, "asymmetric activity must unpack exactly");
@@ -47,8 +46,7 @@ int runAudioCheck()
           "right PCM pan must retain the envelope on the right side");
     check(sameLevel(pcmActivityLevel(128, 32, 64), {64, 128}),
           "asymmetric PCM pan must preserve its normalized balance");
-    check(sameLevel(pcmActivityLevel(255, 0, 0), {}),
-          "silent PCM pan must report no activity");
+    check(sameLevel(pcmActivityLevel(255, 0, 0), {}), "silent PCM pan must report no activity");
 
     AudioEngine engine;
     check(engine.outputVolume() == 100, "application output volume must default to 100 percent");

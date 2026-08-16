@@ -112,6 +112,7 @@ run primecheck       -    --primecheck
 run smfcheck         -    --smfcheck
 run transportcheck   -    --transportcheck
 run audiocheck       -    --audiocheck
+run clickcheck       -    --clickcheck
 run trackactivitycheck -    --trackactivitycheck
 run trackactivitymetercheck -    --trackactivitymetercheck
 run keymapcheck      -    --keymapcheck

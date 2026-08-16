@@ -324,10 +324,11 @@ int runTransportCheck()
 
     // Unload with the song still playing — the song-switch path. unloadSong
     // assigns both transport fields itself, so the callback never sees a
-    // Playing→Stopped transition and cutAllSound never runs there; the cut
-    // must happen inside unloadSong. MainWindow::loadSong frees the outgoing
-    // voicegroup right after unloadSong returns, so freeAll + the sleep below
-    // give ASAN a window to catch any channel still rendering it.
+    // Playing→Stopped transition and no transport cut-fade ever runs there;
+    // the cut must happen inside unloadSong. MainWindow::loadSong frees the
+    // outgoing voicegroup right after unloadSong returns, so freeAll + the
+    // sleep below give ASAN a window to catch any channel still rendering
+    // it.
     const SmfFile noteSmf = buildNoteSong();
     auto noteTimeline = MidiTimeline::build(noteSmf, engine.sampleRate());
     HeapVoicegroup hvg;

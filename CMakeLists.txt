@@ -275,6 +275,7 @@ qt_add_executable(porydaw
     src/vgsavecheck.cpp
     src/exportcheck.cpp
     src/loopcheck.cpp
+    src/clickcheck.cpp
     src/polycheck.cpp
     src/primecheck.cpp
     src/xcmdcheck.cpp

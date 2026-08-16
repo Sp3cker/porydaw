@@ -113,6 +113,8 @@ bool AudioEngine::init(QString *error)
     m_sampleRate = double(m_device->sampleRate);
     m_outputGainRampSamples =
         std::max<uint32_t>(1, uint32_t(m_sampleRate * kOutputGainRampSeconds));
+    m_cutFadeSettleSamples = std::max<uint32_t>(1, uint32_t(m_sampleRate * kCutFadeSettleSeconds));
+    resetOutputCut();
     const int targetOutputVolume = m_targetOutputVolume.load();
     m_outputGainTargetVolume = targetOutputVolume;
     m_outputGainTarget = float(targetOutputVolume) / 100.0f;
@@ -158,6 +160,7 @@ void AudioEngine::shutdown()
         m_device = nullptr;
         m_deviceStarted = false;
     }
+    resetOutputCut();
     if (m_engine) {
         m4a_engine_destroy(m_engine.get());
         m_engine.reset();
@@ -187,6 +190,7 @@ void AudioEngine::loadSong(const MidiTimeline *timeline, LoadedVoiceGroup *voice
     // Cold swap: the audio thread must not be running while pointers change.
     if (m_deviceStarted)
         ma_device_stop(m_device);
+    resetOutputCut();
     m_pendingSeek.store(kNoPendingSeek, std::memory_order_release);
 
     m_timeline = timeline;
@@ -234,7 +238,7 @@ void AudioEngine::updateTimeline(const MidiTimeline *timeline)
         return;
     if (m_deviceStarted)
         ma_device_stop(m_device);
-
+    resetOutputCut();
     // A seek published but not yet applied by the audio thread must survive
     // the rebuild — dropping it would silently ignore an edit-cursor move
     // that raced this edit. The device is stopped, so the exchange can't
@@ -286,6 +290,7 @@ void AudioEngine::updateSettings(const SongSettings &settings)
 {
     if (m_deviceStarted)
         ma_device_stop(m_device);
+    resetOutputCut();
     const bool mixRateChanged = settings.pcmMixRate != m_settings.pcmMixRate;
     m_settings = settings;
     m4a_engine_set_song_volume(m_engine.get(), m_settings.songVolume);
@@ -303,6 +308,7 @@ void AudioEngine::updateVoicegroup(LoadedVoiceGroup *voicegroup)
 {
     if (m_deviceStarted)
         ma_device_stop(m_device);
+    resetOutputCut();
     m4a_engine_all_sound_off(m_engine.get());
     clearTimedPreviews();
     m_voicegroup = voicegroup;
@@ -373,13 +379,14 @@ void AudioEngine::unloadSong()
 {
     if (m_deviceStarted)
         ma_device_stop(m_device);
+    resetOutputCut();
     // Hard-cut sounding channels while the device is parked. Both transport
     // fields are assigned below, so the callback's Playing→Stopped transition
-    // never fires and cutAllSound would never run — leaving mid-note channels
-    // CHN_ON (with no note-offs coming after the player reset) still reading
-    // WaveData owned by the voicegroup the caller frees right after this
-    // returns. loadSong is exempt only because its engine reinit zeroes the
-    // channels.
+    // never fires and no transport cut-fade would ever run — leaving mid-note
+    // channels CHN_ON (with no note-offs coming after the player reset) still
+    // reading WaveData owned by the voicegroup the caller frees right after
+    // this returns. loadSong is exempt only because its engine reinit zeroes
+    // the channels.
     m4a_engine_all_sound_off(m_engine.get());
     m_pendingSeek.store(kNoPendingSeek, std::memory_order_release);
     m_timeline = nullptr;
@@ -499,44 +506,89 @@ uint32_t AudioEngine::effectiveMuteMask() const
 
 void AudioEngine::applyTransportTransition()
 {
-    const int t = m_transport.load();
-    if (t == m_appliedTransport)
+    const int requested = m_transport.load();
+    if (m_cutFadeActive) {
+        // The applied transport remains unchanged until the zero sample. A
+        // request change during fade-down only retargets that pending cut;
+        // unchanged requests must not restart the ramp every callback.
+        if (!m_cutFadeRising)
+            m_cutFadeTargetTransport = requested;
         return;
+    }
+    if (requested == m_appliedTransport)
+        return;
+    beginOutputCut(requested);
+}
 
-    // Every transition cuts hard. Pause and Stop must fall silent — a
-    // note-off alone leaves a slow-release voice ringing for seconds — and
-    // entering Playing must halt auditions before the song sounds (Space
-    // toggles pause, so playback usually starts from Paused, where a
-    // preview can ring or still be counting down). Preview bookkeeping is
-    // dropped with the sound (queued-but-unstarted previews too) so no
-    // stale note-off can later cut a playback note on the same track and
-    // key.
-    cutAllSound();
-    switch (static_cast<Transport>(t)) {
+// Cold: clears interrupted transport cut-fade state while the device is
+// stopped. This only resets scalar state; it does not allocate or lock.
+void AudioEngine::resetOutputCut()
+{
+    m_cutFadeActive = false;
+    m_cutFadeRising = false;
+    m_cutFadeTargetTransport = m_appliedTransport;
+    m_cutFadeGain = 1.0f;
+    m_cutFadeStep = 0.0f;
+    m_cutFadeRemaining = 0;
+    m_cutFadeHold = 0;
+}
+
+// Audio-thread: starts a transport cut-fade. The output gain ramps from its
+// current value down to 0, both engines are cut at zero, and the pending
+// transport is applied before the settle hold and return ramp.
+void AudioEngine::beginOutputCut(int transport)
+{
+    if (m_cutFadeActive) {
+        if (!m_cutFadeRising)
+            m_cutFadeTargetTransport = transport;
+        return;
+    }
+
+    // Drop all main-engine preview bookkeeping before the deferred cut. A
+    // timed preview note-off must not reach a sequenced note started under
+    // this transition's fade on the same track and key.
+    m_timedActiveCount = 0;
+    m_timedRead.store(m_timedWrite.load(std::memory_order_acquire), std::memory_order_release);
+    m_previewTrack = -1;
+    m_previewKey = -1;
+
+    m_cutFadeActive = true;
+    m_cutFadeRising = false;
+    m_cutFadeTargetTransport = transport;
+    m_cutFadeGain = std::clamp(m_cutFadeGain, 0.0f, 1.0f);
+    m_cutFadeRemaining = std::max<uint32_t>(1, m_outputGainRampSamples);
+    m_cutFadeStep = m_cutFadeGain / float(m_cutFadeRemaining);
+    m_cutFadeHold = 0;
+}
+
+// Audio-thread: the exact zero-gain engine cut and deferred transport apply.
+void AudioEngine::finishOutputCut()
+{
+    m_cutFadeTargetTransport = m_transport.load();
+    m4a_engine_all_sound_off(m_engine.get());
+    m4a_engine_all_sound_off(m_previewEngine.get());
+    m_timedActiveCount = 0;
+    m_previewTrack = -1;
+    m_previewKey = -1;
+    m_previewVoiceKey = -1;
+    m_audition.reset();
+
+    const int prior = m_appliedTransport;
+    const int target = m_cutFadeTargetTransport;
+    switch (static_cast<Transport>(target)) {
     case Transport::Stopped:
         m_player.reset();
         break;
     case Transport::Paused:
         break;
     case Transport::Playing:
-        // No player reset here: the Stopped transition already rewound to 0,
-        // and a seek() between stop and play deliberately moves the start.
-        if (m_appliedTransport == static_cast<int>(Transport::Stopped))
+        // Preserve the cursor for every non-Stopped transition. Starting
+        // from Stopped only clears the accumulated overflow diagnostics.
+        if (prior == static_cast<int>(Transport::Stopped))
             m4a_engine_reset_poly_stats(m_engine.get());
         break;
     }
-    m_appliedTransport = t;
-}
-
-// Audio-thread: silence everything at once and drop preview bookkeeping,
-// queued and active.
-void AudioEngine::cutAllSound()
-{
-    m4a_engine_all_sound_off(m_engine.get());
-    m_timedActiveCount = 0;
-    m_timedRead.store(m_timedWrite.load(std::memory_order_acquire), std::memory_order_release);
-    m_previewTrack = -1;
-    m_previewKey = -1;
+    m_appliedTransport = target;
 }
 
 void AudioEngine::applyMuteTransition()
@@ -581,6 +633,12 @@ void AudioEngine::applyPreviewNote()
 
 void AudioEngine::applyTimedPreviews(uint32_t frameCount)
 {
+    // Do not start or expire timed previews while a transport cut is in
+    // flight. Commands published after beginOutputCut stay queued for the
+    // first callback after the deferred cut has completed.
+    if (m_cutFadeActive)
+        return;
+
     const uint32_t w = m_timedWrite.load(std::memory_order_acquire);
     uint32_t r = m_timedRead.load(std::memory_order_relaxed);
     // Auditions are live notes: no timeline position for overflow events,
@@ -757,7 +815,42 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
                 else
                     m_appliedOutputGain += m_outputGainStep;
             }
-            const float outputGain = m_appliedOutputGain;
+            // Transport cut-fade: ramp the final gain down, fire the deferred
+            // engine cut at the zero sample (finishOutputCut), hold at 0
+            // through the engine's output-queue drain, then ramp back to 1.
+            if (m_cutFadeActive) {
+                if (m_cutFadeHold > 0) {
+                    --m_cutFadeHold;
+                    m_cutFadeGain = 0.0f;
+                } else if (m_cutFadeRemaining > 0) {
+                    --m_cutFadeRemaining;
+                    if (m_cutFadeRising)
+                        m_cutFadeGain = std::min(1.0f, m_cutFadeGain + m_cutFadeStep);
+                    else
+                        m_cutFadeGain = std::max(0.0f, m_cutFadeGain - m_cutFadeStep);
+                    if (!m_cutFadeRising && m_cutFadeRemaining == 0) {
+                        m_cutFadeGain = 0.0f;
+                        m_cutFadeRising = true;
+                        m_cutFadeRemaining = m_outputGainRampSamples;
+                        m_cutFadeStep = 1.0f / float(m_cutFadeRemaining);
+                        m_cutFadeHold = m_cutFadeSettleSamples;
+                        finishOutputCut();
+                        // This chunk was rendered before the cut: the samples
+                        // from here on are stale pre-cut audio. Drop them so
+                        // the fade-up can only amplify real silence.
+                        for (uint32_t j = i; j < n; ++j) {
+                            m_bufL[j] = 0.0f;
+                            m_bufR[j] = 0.0f;
+                            m_pvL[j] = 0.0f;
+                            m_pvR[j] = 0.0f;
+                        }
+                    }
+                } else {
+                    m_cutFadeActive = false;
+                    m_cutFadeGain = 1.0f;
+                }
+            }
+            const float outputGain = m_appliedOutputGain * m_cutFadeGain;
             interleavedOut[(done + i) * 2] = (m_bufL[i] + m_pvL[i]) * outputGain;
             interleavedOut[(done + i) * 2 + 1] = (m_bufR[i] + m_pvR[i]) * outputGain;
         }
@@ -792,12 +885,10 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
         if (track >= 0 && track < static_cast<int>(kMaxTracks)) {
             // CGB output routing is binary per side. Scale its 0..15 envelope
             // to the PCM meter range, then apply the same pan bits as the mixer.
-            const auto envelope =
-                uint8_t(std::min(channel.envelopeVolume, uint8_t{15}) * 17);
-            callbackActivity[track] = maxLevel(
-                callbackActivity[track],
-                {channel.pan & 0xF0 ? envelope : uint8_t{0},
-                 channel.pan & 0x0F ? envelope : uint8_t{0}});
+            const auto envelope = uint8_t(std::min(channel.envelopeVolume, uint8_t{15}) * 17);
+            callbackActivity[track] =
+                maxLevel(callbackActivity[track], {channel.pan & 0xF0 ? envelope : uint8_t{0},
+                                                   channel.pan & 0x0F ? envelope : uint8_t{0}});
         }
     }
     m_activePcm.store(pcm);

@@ -45,6 +45,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                  const QString &screenshotPath = QString());
 // loopcheck.cpp; loop-wrap playback check (self-contained, no project needed).
 int runLoopCheck();
+// clickcheck.cpp; transport-cut click check: pause/stop/play must fade into
+// silence instead of stepping the waveform (self-contained, no project
+// needed; --clickcheck-hardcut re-runs it against the pre-fade interface).
+int runClickCheck(bool hardCut);
 // polycheck.cpp; polyphony-overflow debugger check: engine counters/tick
 // stamps/invert audibility + offscreen PolyphonyPanel (self-contained, no
 // project needed); the optional path saves the rendered panel.
@@ -291,6 +295,10 @@ int main(int argc, char *argv[])
         return runTabCheck(args[tabCheck + 1], args[tabCheck + 2], args[tabCheck + 3]);
     if (args.contains(QStringLiteral("--loopcheck")))
         return runLoopCheck();
+    if (args.contains(QStringLiteral("--clickcheck-hardcut")))
+        return runClickCheck(true);
+    if (args.contains(QStringLiteral("--clickcheck")))
+        return runClickCheck(false);
     const int polyCheck = args.indexOf(QStringLiteral("--polycheck"));
     if (polyCheck >= 0) {
         const QString path = polyCheck + 1 < args.size() ? args[polyCheck + 1] : QString();
