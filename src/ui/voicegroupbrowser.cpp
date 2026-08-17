@@ -27,17 +27,38 @@ namespace {
 constexpr int kAuditionKey = 60; // middle C; drumkits play that key's percussion
 constexpr int kAuditionVelocity = 112;
 
-// The Type dropdown offers each voice family once: the _alt CGB variants are
-// engine-identical duplicates, so they parse and display but are never
-// offered as a choice. Keysplit isn't offered either — keysplit instruments
-// share the Sample dropdown with plain samples, and the chosen symbol alone
-// decides which macro the line gets (see commitEdit).
+// The Type dropdown offers every voice family the engine treats as its own,
+// each right after the plain variant it detunes. The one omission among the
+// _alt macros is voice_noise_alt: CgbSound guards the FIX bit with `ch < 4`,
+// so it is inert on the noise channel and the macro is an exact duplicate of
+// voice_noise (it still parses and displays — populateEditor appends the
+// current macro when it isn't offered). Keysplit isn't offered either —
+// keysplit instruments share the Sample dropdown with plain samples, and the
+// chosen symbol alone decides which macro the line gets (see commitEdit).
 const VgMacro kSelectableMacros[] = {
     VgMacro::DirectSound,    VgMacro::DirectSoundNoResample,
     VgMacro::DirectSoundAlt, VgMacro::KeysplitAll,
-    VgMacro::Square1,        VgMacro::Square2,
-    VgMacro::ProgWave,       VgMacro::Noise,
+    VgMacro::Square1,        VgMacro::Square1Alt,
+    VgMacro::Square2,        VgMacro::Square2Alt,
+    VgMacro::ProgWave,       VgMacro::ProgWaveAlt,
+    VgMacro::Noise,
 };
+
+// Shown on the _alt PSG entries: the FIX bit rounds the 11-bit frequency
+// register to an even value so the oscillator period divides the DAC's PWM
+// period, trading a slight detune for less PWM beating.
+QString typeItemTip(VgMacro macro)
+{
+    switch (macro) {
+    case VgMacro::Square1Alt:
+    case VgMacro::Square2Alt:
+    case VgMacro::ProgWaveAlt:
+        return QObject::tr("Same as %1, with the pitch slightly detuned.")
+            .arg(vgMacroDisplayName(VgMacro(vgAdsrFamily(macro))));
+    default:
+        return QString();
+    }
+}
 
 // The macro the Type dropdown shows for a voice: keysplit voices read as
 // plain "Sample" there.
@@ -702,6 +723,9 @@ void VoicegroupBrowser::populateEditor()
     m_typeCombo->clear();
     for (VgMacro macro : kSelectableMacros) {
         m_typeCombo->addItem(vgMacroDisplayName(macro), int(macro));
+        const QString tip = typeItemTip(macro);
+        if (!tip.isEmpty())
+            m_typeCombo->setItemData(m_typeCombo->count() - 1, tip, Qt::ToolTipRole);
         if (macro == VgMacro::DirectSoundAlt && (m_synths.available() || synth))
             m_typeCombo->addItem(tr("Synth (Golden Sun)"), kSynthTypeData);
     }

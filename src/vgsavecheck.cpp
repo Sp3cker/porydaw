@@ -810,6 +810,67 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         }
     }
 
+    // 10b. The _alt PSG types are real choices: poryaaaa honors the FIX bit
+    // on the square and wave channels, so each one is offered next to its
+    // plain sibling, picking it writes the _alt macro word, and the shared
+    // ADSR family carries the envelope digits across untouched. voice_noise_alt
+    // stays out of the list — the engine ignores FIX on the noise channel.
+    {
+        m_vgBrowser->revealSlot(dsSlot);
+        QCoreApplication::processEvents();
+        QComboBox *typeCombo = nullptr;
+        for (QComboBox *combo : m_vgBrowser->findChildren<QComboBox *>()) {
+            if (combo->findData(int(VgMacro::Square1)) >= 0)
+                typeCombo = combo;
+        }
+        if (check(typeCombo != nullptr, "no Type combo")) {
+            const VgVoice before = *tab->vgSource->voiceAt(dsSlot);
+            const VgMacro alts[] = {VgMacro::Square1Alt, VgMacro::Square2Alt, VgMacro::ProgWaveAlt};
+            for (VgMacro alt : alts) {
+                const int idx = typeCombo->findData(int(alt));
+                if (check(idx >= 0, "the Type dropdown does not offer an _alt PSG type"))
+                    check(typeCombo->itemText(idx) == vgMacroDisplayName(alt),
+                          "an _alt Type entry is mislabeled");
+            }
+            check(typeCombo->findData(int(VgMacro::NoiseAlt)) < 0,
+                  "the Type dropdown offers voice_noise_alt");
+
+            // Sample -> Square 1 -> Square 1 (alt): the envelope the CGB
+            // family adopts survives the second hop (same vgAdsrFamily), and
+            // the rendered .inc carries the _alt macro word.
+            int undos = 0;
+            const auto pickType = [&](VgMacro macro) {
+                const int idx = typeCombo->findData(int(macro));
+                typeCombo->setCurrentIndex(idx);
+                QMetaObject::invokeMethod(typeCombo, "activated", Qt::DirectConnection,
+                                          Q_ARG(int, idx));
+                undos++;
+            };
+            pickType(VgMacro::Square1);
+            const VgVoice plain = *tab->vgSource->voiceAt(dsSlot);
+            if (check(plain.macro == VgMacro::Square1, "type switch to Square 1 did not take")) {
+                pickType(VgMacro::Square1Alt);
+                const VgVoice *altVoice = tab->vgSource->voiceAt(dsSlot);
+                if (check(altVoice && altVoice->macro == VgMacro::Square1Alt,
+                          "type switch to Square 1 (alt) did not take")) {
+                    check(altVoice->attack == plain.attack && altVoice->decay == plain.decay &&
+                              altVoice->sustain == plain.sustain &&
+                              altVoice->release == plain.release,
+                          "the _alt hop did not keep the CGB envelope");
+                    check(altVoice->symbol.isEmpty(), "a square voice kept an instrument symbol");
+                    check(tab->vgSource->renderPreview().contains(
+                              vgMacroName(VgMacro::Square1Alt).toUtf8()),
+                          "the rendered .inc is missing the voice_square_1_alt macro");
+                }
+            }
+            while (undos-- > 0)
+                tab->doc.undoStack()->undo();
+            const VgVoice *restored = tab->vgSource->voiceAt(dsSlot);
+            check(restored && *restored == before,
+                  "undo did not restore the sample voice after the _alt round trip");
+        }
+    }
+
     // 11. New… creates the voicegroup file AND assigns it to the current
     // song — the same undoable cfg edit the selector makes, so undo returns
     // to the previous voicegroup. The modal dialog is filled and accepted
