@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added buttons for showing/hiding the Automation lanes and the Velocity lane.
 - Added buffer area before and after the song's boundaries so that scrolling and snapping to the start or end of the song is easy.
 - Added a bunch of general improvements to general Automation lane behavior.
+- Added the ability to select the "alt" square and programmable wave voices. In general, the "alt" voice are slightly detuned to help avoid aliasing, or provide a thicker sound. Note that the noise voice's "alt" variant is identical in the m4a engine, so porydaw hides it.
 
 ## Changed
 - Editing values in the Automation Lanes is now split into two modes: Pointer and Pencil modes. Toggle between the modes with `B`. If you *hold* `B` -> draw in pencil mode -> then release `B`, it will automatically revert back to Pointer mode.
