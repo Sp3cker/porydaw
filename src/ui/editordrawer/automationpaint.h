@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -27,6 +28,7 @@ struct RowPaintParams {
     QRect plot;
     const std::vector<LanePoint> &points;
     QColor color;
+    uint32_t usedTrackMask = 0;
     const ValuePoint *omitted = nullptr;
     const ValuePoint *replacement = nullptr;
     bool multipleSelectedNodes = false;

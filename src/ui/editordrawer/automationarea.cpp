@@ -991,7 +991,7 @@ void AutomationArea::showAddLaneMenu(const QPoint &globalPosition)
 {
     if (!m_page)
         return;
-    const int track = m_page->selectedTrack();
+    const int track = m_page->m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
     static constexpr uint8_t candidates[] = {1, 7, 10, 20, 21, automation::kBendController};
@@ -1140,7 +1140,7 @@ void AutomationArea::showVoiceMenu(const AutomationRow &row, const QPoint &globa
     Q_UNUSED(row);
     if (!m_page || !m_page->document())
         return;
-    const int track = m_page->selectedTrack();
+    const int track = m_page->m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
     const qreal x = mapFromGlobal(globalPosition).x();
@@ -1201,6 +1201,11 @@ void AutomationArea::paintContent(QPainter &painter)
     const auto textLayout =
         layout::twoLineText(titleFont, titleFont, captionFont, layout::Space::Zero);
     const auto &rows = m_rowData.rows();
+    uint32_t usedTrackMask = 0;
+    for (int track = 0; track < 16; ++track) {
+        if (m_page->timeline()->tracks[track].used)
+            usedTrackMask |= uint32_t{1} << track;
+    }
     for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
         const AutomationRow &row = rows[rowIndex];
         const int height = proj.rowHeight(row);
@@ -1216,7 +1221,8 @@ void AutomationArea::paintContent(QPainter &painter)
                 ? themes::color(themes::Role::song_view_automation_tempo_curve)
                 : themes::trackIdentityColor(row.id.track % themes::trackIdentityColorCount);
         const automation::paint::RowPaintParams ctx{
-            proj, row, rowIndex, plot, points, color, nullptr, nullptr, multipleSelectedNodes};
+            proj,  row,           rowIndex, plot,    points,
+            color, usedTrackMask, nullptr,  nullptr, multipleSelectedNodes};
         automation::paint::paintRow(painter, ctx, bounds, titleFont, captionFont, textBoxes.primary,
                                     textBoxes.secondary, *this, *m_page, m_geometry, m_rowData,
                                     m_hoverState, m_activeGesture, m_pencilMode);

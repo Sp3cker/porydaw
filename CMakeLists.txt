@@ -186,6 +186,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/pitchprojection.h
     src/ui/songview.cpp
     src/ui/songview.h
+    src/ui/songview/editorselectionmodel.cpp
+    src/ui/songview/editorselectionmodel.hpp
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
     src/ui/pitchbendgraph.cpp
@@ -292,6 +294,7 @@ qt_add_executable(porydaw
     src/checks/transportcheck.cpp
     src/checks/trackactivitycheck.cpp
     src/checks/trackactivitymetercheck.cpp
+    src/checks/selectioncheck.cpp
     src/checks/audiocheck.cpp
     src/checks/resonancecheck.cpp
     src/checks/mkcheck.cpp

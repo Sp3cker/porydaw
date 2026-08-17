@@ -59,7 +59,7 @@ void AutomationRows::rebuildRows()
         return;
     }
     appendRow(tempoRow());
-    const int track = m_page->selectedTrack();
+    const int track = m_page->m_owner.selectionModel().primaryTrack();
     if (track < 0) {
         syncTimeSelection();
         return;
@@ -98,8 +98,8 @@ void AutomationRows::syncTimeSelection()
     m_timeSelection = {};
     if (!m_page)
         return;
-    const auto &selection = m_page->timeSelection();
-    if (!selection.active() || selection.scope != SongView::TimeSelection::Lanes)
+    const auto &selection = m_page->m_owner.selectionModel().timeSelection();
+    if (!selection.active() || selection.scope != songview::TimeSelection::Lanes)
         return;
     m_timeSelection.range = {selection.startTick, selection.endTick};
     for (const auto &lane : selection.lanes) {
@@ -134,8 +134,8 @@ bool AutomationRows::clearTimeSelection()
 {
     const bool wasActive = m_timeSelection.active();
     m_timeSelection = {};
-    if (m_page && m_page->timeSelection().active()) {
-        m_page->m_owner.clearTimeSelection();
+    if (m_page && m_page->m_owner.selectionModel().timeSelection().active()) {
+        m_page->m_owner.selectionModel().clearTimeSelection();
         return true;
     }
     return wasActive;
@@ -214,8 +214,9 @@ bool AutomationRows::rowTarget(const AutomationRow &row, int *track, uint8_t *co
         return false;
     if (row.id.kind == EditorAutomationRowKind::Voice)
         return false;
-    *track =
-        row.id.kind == EditorAutomationRowKind::Tempo ? m_page->selectedTrack() : int(row.id.track);
+    *track = row.id.kind == EditorAutomationRowKind::Tempo
+                 ? m_page->m_owner.selectionModel().primaryTrack()
+                 : int(row.id.track);
     *controller = row.id.kind == EditorAutomationRowKind::Tempo ? DOC_CC_TEMPO : row.id.controller;
     return *track >= 0;
 }
@@ -225,7 +226,7 @@ std::pair<int, uint8_t> AutomationRows::rowIdentity(const AutomationRow &row) co
     if (row.id.kind == EditorAutomationRowKind::Tempo)
         return {-1, DOC_CC_TEMPO};
     if (row.id.kind == EditorAutomationRowKind::Voice)
-        return {m_page ? m_page->selectedTrack() : -1, DOC_CC_VOICE};
+        return {m_page ? m_page->m_owner.selectionModel().primaryTrack() : -1, DOC_CC_VOICE};
     return {int(row.id.track), row.id.controller};
 }
 

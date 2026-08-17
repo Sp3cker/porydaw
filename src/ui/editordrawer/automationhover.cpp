@@ -80,7 +80,7 @@ QString AutomationHoverState::hoverTextFor(const AutomationArea &area, const Aut
     if (!page.ready())
         return {};
     if (row.id.kind == EditorAutomationRowKind::Voice) {
-        const int track = page.selectedTrack();
+        const int track = page.m_owner.selectionModel().primaryTrack();
         if (track < 0)
             return {};
         if (const auto *document = page.document(); document)

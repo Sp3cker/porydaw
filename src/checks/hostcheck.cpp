@@ -169,7 +169,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         QCoreApplication::processEvents();
         fixtureView.selectTrack(fixtureNote->engineTrack);
         const std::vector<NoteId> fixtureSelection{fixtureNote->noteId};
-        fixtureView.setSelection(fixtureSelection);
+        fixtureView.selectionModel().setNoteSelection(fixtureSelection);
         fixtureView.setEditCursorTick(fixtureNote->tick);
         fixtureView.setDrawerActivePage(EditorDrawerPage::Velocity);
         fixtureView.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
@@ -179,8 +179,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         check(fixtureDocument.label() == songLabel &&
                   fixtureView.timeline() == fixtureTimeline.get() && fixtureDrawer &&
                   fixtureDrawer->isVisible() && fixtureArea &&
-                  fixtureView.selectedTrack() == fixtureNote->engineTrack &&
-                  fixtureView.selection() == fixtureSelection &&
+                  fixtureView.selectionModel().primaryTrack() == fixtureNote->engineTrack &&
+                  fixtureView.selectionModel().noteSelection() == fixtureSelection &&
                   fixtureArea->axis().markerCount() == 1 &&
                   fixtureArea->axis().markers()[0].velocity == fixtureNote->velocity,
               "adapter should attach supplied fixture note data to the hosted velocity page");
@@ -325,14 +325,14 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     auto *automation = automationArea(view);
     check(automation != nullptr, "host should construct the automation page");
     if (automation) {
-        const int selectedTrack = view.selectedTrack();
+        const int selectedTrack = view.selectionModel().primaryTrack();
         view.setTrackSolo(selectedTrack, false);
         sendKey(*area, Qt::Key_S);
         check(view.trackSoloed(selectedTrack),
               "S from the velocity drawer did not solo the selected track");
         view.setTrackSolo(selectedTrack, false);
 
-        view.clearSelection();
+        view.selectionModel().clearNoteSelection();
         view.setEditCursorTick(0);
         QCoreApplication::processEvents();
         check(QString::fromLatin1(area->axis().map().voiceName()) == QStringLiteral("Square 1"),
@@ -413,12 +413,12 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                 menu->close();
         });
         sendMouse(*automation, QEvent::MouseButtonRelease, menuPoint, Qt::RightButton);
-        const SongView::TimeSelection &menuSelection = view.timeSelection();
-        check(menuSelection.active() && menuSelection.scope == SongView::TimeSelection::Lanes &&
+        const songview::TimeSelection &menuSelection = view.selectionModel().timeSelection();
+        check(menuSelection.active() && menuSelection.scope == songview::TimeSelection::Lanes &&
                   menuSelection.lanes.size() == 1 && menuSelection.lanes.front().first == -1 &&
                   menuSelection.lanes.front().second == DOC_CC_TEMPO,
               "automation range menu should delegate its lane scope to the host");
-        view.clearTimeSelection();
+        view.selectionModel().clearTimeSelection();
     }
 
     check(document.moveTrack(0, 1), "fixture track move should succeed");
@@ -429,7 +429,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     view.updateSong(remappedTimeline.get());
     timeline = std::move(remappedTimeline);
 
-    std::vector<DocNote> notes = document.notesForTrack(view.selectedTrack());
+    std::vector<DocNote> notes = document.notesForTrack(view.selectionModel().primaryTrack());
     check(notes.size() == 2, "remapped selected track should retain duplicate-note identities");
     if (notes.size() != 2)
         return 1;
@@ -437,12 +437,12 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     view.setDrawerSectionHeight(EditorDrawerPage::Velocity, 200);
-    view.setSelection({notes[0].noteId, notes[1].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
     view.setEditCursorTick(1);
     QCoreApplication::processEvents();
 
     const QPointF firstNode = nodePosition(view, *area, *timeline, notes[0]);
-    const std::vector<NoteId> selected = view.selection();
+    const std::vector<NoteId> selected = view.selectionModel().noteSelection();
     std::vector<NoteVelocity> unchangedVelocities;
     unchangedVelocities.reserve(notes.size());
     for (const DocNote &note : notes)
@@ -452,7 +452,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const bool beganNoChange = view.beginVelocityGesture(notes);
     const bool updatedNoChange = view.updateVelocityGesture(unchangedVelocities);
     const auto committedNoChange = view.commitVelocityGesture();
-    const std::vector<DocNote> notesAfterNoChange = document.notesForTrack(view.selectedTrack());
+    const std::vector<DocNote> notesAfterNoChange =
+        document.notesForTrack(view.selectionModel().primaryTrack());
     check(beganNoChange && !updatedNoChange &&
               committedNoChange == SongView::VelocityCommitResult::Unchanged &&
               !view.previewVelocity(notes[0].noteId) && !view.previewVelocity(notes[1].noteId) &&
@@ -460,7 +461,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               document.undoStack()->count() == undoBeforeNoChange &&
               notesAfterNoChange.size() == notes.size() &&
               notesAfterNoChange[0].velocity == notes[0].velocity &&
-              notesAfterNoChange[1].velocity == notes[1].velocity && view.selection() == selected,
+              notesAfterNoChange[1].velocity == notes[1].velocity &&
+              view.selectionModel().noteSelection() == selected,
           "host no-op gesture should preserve preview, revision, MIDI, Undo, and selection");
     const int undoBeforeChange = document.undoStack()->count();
     const uint64_t revisionBeforeChange = document.revision();
@@ -490,17 +492,18 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               heldSecondPreview && committedFirst.velocity == *heldFirstPreview &&
               committedSecond.velocity == *heldSecondPreview &&
               !view.previewVelocity(notes[0].noteId) && !view.previewVelocity(notes[1].noteId) &&
-              view.selection() == selected,
+              view.selectionModel().noteSelection() == selected,
           "velocity host release should commit one exact batch, clear preview, and preserve "
           "selection");
 
     document.undoStack()->undo();
-    check(view.selection() == selected && document.undoStack()->count() == undoBeforeChange + 1,
+    check(view.selectionModel().noteSelection() == selected &&
+              document.undoStack()->count() == undoBeforeChange + 1,
           "undo should preserve shared selection while retaining the exact velocity history entry");
     document.undoStack()->redo();
 
-    notes = document.notesForTrack(view.selectedTrack());
-    view.setSelection({notes[0].noteId, notes[1].noteId});
+    notes = document.notesForTrack(view.selectionModel().primaryTrack());
+    view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
     view.setEditCursorTick(2);
     QCoreApplication::processEvents();
     const QPointF unchangedNode = nodePosition(view, *area, *timeline, notes[0]);
@@ -509,13 +512,14 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     sendMouse(*area, QEvent::MouseButtonPress, unchangedNode, Qt::LeftButton, Qt::LeftButton);
     sendMouse(*area, QEvent::MouseButtonRelease, unchangedNode, Qt::LeftButton);
     check(document.revision() == revisionBeforeNoOp &&
-              document.undoStack()->count() == undoBeforeNoOp && view.selection().size() == 1 &&
-              std::find(selected.cbegin(), selected.cend(), view.selection().front()) !=
-                  selected.cend(),
+              document.undoStack()->count() == undoBeforeNoOp &&
+              view.selectionModel().noteSelection().size() == 1 &&
+              std::find(selected.cbegin(), selected.cend(),
+                        view.selectionModel().noteSelection().front()) != selected.cend(),
           "unchanged stacked-node click should leave history untouched and collapse selection");
 
-    notes = document.notesForTrack(view.selectedTrack());
-    view.setSelection(selected);
+    notes = document.notesForTrack(view.selectionModel().primaryTrack());
+    view.selectionModel().setNoteSelection(selected);
     view.setEditCursorTick(3);
     QCoreApplication::processEvents();
     const QPointF staleNode = nodePosition(view, *area, *timeline, notes[0]);
@@ -529,18 +533,20 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               Qt::NoButton, Qt::LeftButton);
     sendMouse(*area, QEvent::MouseButtonRelease, staleNode + QPointF(0.0, -double(area->height())),
               Qt::LeftButton);
-    const std::vector<DocNote> staleNotes = document.notesForTrack(view.selectedTrack());
+    const std::vector<DocNote> staleNotes =
+        document.notesForTrack(view.selectionModel().primaryTrack());
     check(document.revision() == revisionBeforeExternalChange + 1 && staleNotes.size() == 2 &&
               staleNotes[1].velocity == secondVelocity && !view.previewVelocity(notes[0].noteId) &&
-              !view.previewVelocity(notes[1].noteId) && view.selection() == selected,
+              !view.previewVelocity(notes[1].noteId) &&
+              view.selectionModel().noteSelection() == selected,
           "stale velocity batch should apply none of its frozen request, clear preview, and cancel "
           "its gesture");
 
     std::unique_ptr<MidiTimeline> staleTimeline = document.buildTimeline(44100.0);
     view.updateSong(staleTimeline.get());
     timeline = std::move(staleTimeline);
-    notes = document.notesForTrack(view.selectedTrack());
-    view.setSelection({notes[0].noteId});
+    notes = document.notesForTrack(view.selectionModel().primaryTrack());
+    view.selectionModel().setNoteSelection({notes[0].noteId});
     view.setEditCursorTick(4);
     QCoreApplication::processEvents();
     const QPointF lifecycleNode = nodePosition(view, *area, *timeline, notes[0]);
@@ -549,7 +555,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         const uint64_t revision = document.revision();
         const int undo = document.undoStack()->count();
         DocNote pressedNote;
-        const std::vector<NoteId> selectionBeforeGesture = view.selection();
+        const std::vector<NoteId> selectionBeforeGesture = view.selectionModel().noteSelection();
         const bool pressedNoteResolved =
             !selectionBeforeGesture.empty() &&
             document.findNote(selectionBeforeGesture.front(), &pressedNote);
@@ -557,7 +563,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
             node + QPointF(0.0, pressedNoteResolved && pressedNote.velocity == 127 ? 40.0 : -40.0);
         sendMouse(*area, QEvent::MouseButtonPress, node, Qt::LeftButton, Qt::LeftButton);
         sendMouse(*area, QEvent::MouseMove, dragPosition, Qt::NoButton, Qt::LeftButton);
-        const std::vector<NoteId> gestureSelection = view.selection();
+        const std::vector<NoteId> gestureSelection = view.selectionModel().noteSelection();
         const std::vector<NoteId> expectedSelection =
             clearsSelection ? std::vector<NoteId>{} : gestureSelection;
         bool previewStaged = !gestureSelection.empty();
@@ -580,7 +586,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         for (const NoteId id : gestureSelection)
             previewCleared = previewCleared && !view.previewVelocity(id);
         check(document.revision() == revision && document.undoStack()->count() == undo &&
-                  previewCleared && view.selection() == expectedSelection,
+                  previewCleared && view.selectionModel().noteSelection() == expectedSelection,
               message);
     };
     cancelGesture(
@@ -628,15 +634,16 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     view.selectTrack(1);
-    notes = document.notesForTrack(view.selectedTrack());
-    view.setSelection({notes[0].noteId});
+    notes = document.notesForTrack(view.selectionModel().primaryTrack());
+    view.selectionModel().setNoteSelection({notes[0].noteId});
     view.setEditCursorTick(7);
     QCoreApplication::processEvents();
 
     const QPointF documentNode = nodePosition(view, *area, *timeline, notes[0]);
     const uint64_t revisionBeforeDocumentReplacement = document.revision();
     const int undoBeforeDocumentReplacement = document.undoStack()->count();
-    const std::vector<NoteId> selectionBeforeDocumentReplacement = view.selection();
+    const std::vector<NoteId> selectionBeforeDocumentReplacement =
+        view.selectionModel().noteSelection();
     sendMouse(*area, QEvent::MouseButtonPress, documentNode, Qt::LeftButton, Qt::LeftButton);
     sendMouse(*area, QEvent::MouseMove, documentNode + QPointF(0.0, -40.0), Qt::NoButton,
               Qt::LeftButton);
@@ -654,16 +661,17 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
           "document replacement should not change document history");
     check(!view.previewVelocity(notes[0].noteId),
           "document replacement should clear the visible velocity preview");
-    check(view.selection().empty(), "document replacement should clear the note selection");
+    check(view.selectionModel().noteSelection().empty(),
+          "document replacement should clear the note selection");
     view.setDocument(&document);
-    view.setSelection({notes[0].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId});
     view.setEditCursorTick(8);
     QCoreApplication::processEvents();
 
     const int replacementVelocity = notes[0].velocity == 127 ? 1 : 127;
     const int undoBeforeMutation = document.undoStack()->count();
     const uint64_t revisionBeforeMutation = document.revision();
-    const std::vector<NoteId> selectionBeforeMutation = view.selection();
+    const std::vector<NoteId> selectionBeforeMutation = view.selectionModel().noteSelection();
     sendMouse(*area, QEvent::MouseButtonPress, documentNode, Qt::LeftButton, Qt::LeftButton);
     sendMouse(*area, QEvent::MouseMove, documentNode + QPointF(0.0, -40.0), Qt::NoButton,
               Qt::LeftButton);
@@ -676,7 +684,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               Qt::LeftButton);
     check(document.revision() == revisionBeforeMutation + 1 &&
               document.undoStack()->count() == undoBeforeMutation + 1 &&
-              !view.previewVelocity(notes[0].noteId) && view.selection() == selectionBeforeMutation,
+              !view.previewVelocity(notes[0].noteId) &&
+              view.selectionModel().noteSelection() == selectionBeforeMutation,
           "document mutation should cancel the visible preview without applying its staged batch");
 
     DocNote undoNote = notes[0];
@@ -685,7 +694,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const QPointF undoNode = nodePosition(view, *area, *timeline, undoNote);
     const uint64_t revisionBeforeUndo = document.revision();
     const int undoBeforeUndo = document.undoStack()->count();
-    const std::vector<NoteId> selectionBeforeUndo = view.selection();
+    const std::vector<NoteId> selectionBeforeUndo = view.selectionModel().noteSelection();
     sendMouse(*area, QEvent::MouseButtonPress, undoNode, Qt::LeftButton, Qt::LeftButton);
     sendMouse(*area, QEvent::MouseMove, undoNode + QPointF(0.0, -40.0), Qt::NoButton,
               Qt::LeftButton);
@@ -697,7 +706,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     sendMouse(*area, QEvent::MouseButtonRelease, undoNode + QPointF(0.0, -40.0), Qt::LeftButton);
     check(document.revision() == revisionBeforeUndo + 1 &&
               document.undoStack()->count() == undoBeforeUndo &&
-              !view.previewVelocity(notes[0].noteId) && view.selection() == selectionBeforeUndo,
+              !view.previewVelocity(notes[0].noteId) &&
+              view.selectionModel().noteSelection() == selectionBeforeUndo,
           "Undo should terminate the visible page gesture");
 
     DocNote redoNote = notes[0];
@@ -706,7 +716,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const QPointF redoNode = nodePosition(view, *area, *timeline, redoNote);
     const uint64_t revisionBeforeRedo = document.revision();
     const int undoBeforeRedo = document.undoStack()->count();
-    const std::vector<NoteId> selectionBeforeRedo = view.selection();
+    const std::vector<NoteId> selectionBeforeRedo = view.selectionModel().noteSelection();
     sendMouse(*area, QEvent::MouseButtonPress, redoNode, Qt::LeftButton, Qt::LeftButton);
     sendMouse(*area, QEvent::MouseMove, redoNode + QPointF(0.0, -40.0), Qt::NoButton,
               Qt::LeftButton);
@@ -718,7 +728,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     sendMouse(*area, QEvent::MouseButtonRelease, redoNode + QPointF(0.0, -40.0), Qt::LeftButton);
     check(document.revision() == revisionBeforeRedo + 1 &&
               document.undoStack()->count() == undoBeforeRedo &&
-              !view.previewVelocity(notes[0].noteId) && view.selection() == selectionBeforeRedo,
+              !view.previewVelocity(notes[0].noteId) &&
+              view.selectionModel().noteSelection() == selectionBeforeRedo,
           "Redo should terminate the visible page gesture");
 
     DocNote reloadNote = notes[0];
@@ -861,7 +872,7 @@ int runHostSeamsCheck()
     check(notes.size() == 1, "concrete fixture should retain its note identity");
     if (notes.empty())
         return 1;
-    view.setSelection({notes.front().noteId});
+    view.selectionModel().setNoteSelection({notes.front().noteId});
     const std::vector<NoteVelocity> velocities{{notes.front().noteId, 96}};
     const uint64_t revisionBeforeStale = document.revision();
     const int undoBeforeStale = document.undoStack()->count();
@@ -899,7 +910,7 @@ int runHostSeamsCheck()
           "matching SongView velocity gesture should commit exactly once and clear its preview");
 
     if (!notes.empty()) {
-        view.setSelection({notes.front().noteId});
+        view.selectionModel().setNoteSelection({notes.front().noteId});
         live.documentRevision = document.revision();
         live.playback.playing = false;
         velocity->refreshLiveState(live);
@@ -908,7 +919,7 @@ int runHostSeamsCheck()
                            velocity->axis().velocityToY(acceptedNote.velocity));
         const uint64_t beforePageSwitch = document.revision();
         const int undoBeforePageSwitch = document.undoStack()->count();
-        const std::vector<NoteId> selectionBeforePageSwitch = view.selection();
+        const std::vector<NoteId> selectionBeforePageSwitch = view.selectionModel().noteSelection();
         sendMouse(*velocity, QEvent::MouseButtonPress, node, Qt::LeftButton, Qt::LeftButton);
         sendMouse(*velocity, QEvent::MouseMove, node + QPointF(0.0, -40.0), Qt::NoButton,
                   Qt::LeftButton);
@@ -922,14 +933,15 @@ int runHostSeamsCheck()
         check(document.revision() == beforePageSwitch &&
                   document.undoStack()->count() == undoBeforePageSwitch &&
                   !view.previewVelocity(notes.front().noteId) &&
-                  view.selection() == selectionBeforePageSwitch,
+                  view.selectionModel().noteSelection() == selectionBeforePageSwitch,
               "drawer page replacement must cancel the concrete velocity preview first");
 
         view.setDrawerActivePage(EditorDrawerPage::Velocity);
         velocity->refreshLiveState(live);
         const uint64_t beforeDocumentSwap = document.revision();
         const int undoBeforeDocumentSwap = document.undoStack()->count();
-        const std::vector<NoteId> selectionBeforeDocumentSwap = view.selection();
+        const std::vector<NoteId> selectionBeforeDocumentSwap =
+            view.selectionModel().noteSelection();
         sendMouse(*velocity, QEvent::MouseButtonPress, node, Qt::LeftButton, Qt::LeftButton);
         sendMouse(*velocity, QEvent::MouseMove, node + QPointF(0.0, -40.0), Qt::NoButton,
                   Qt::LeftButton);
@@ -943,7 +955,8 @@ int runHostSeamsCheck()
                   Qt::LeftButton);
         check(document.revision() == beforeDocumentSwap &&
                   document.undoStack()->count() == undoBeforeDocumentSwap &&
-                  !view.previewVelocity(notes.front().noteId) && view.selection().empty(),
+                  !view.previewVelocity(notes.front().noteId) &&
+                  view.selectionModel().noteSelection().empty(),
               "document replacement must cancel the concrete velocity preview first");
         view.setDocument(&document);
         view.updateSong(timeline.get());

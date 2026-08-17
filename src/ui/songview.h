@@ -21,6 +21,7 @@
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
 #include "ui/pitchprojection.h"
+#include "ui/songview/editorselectionmodel.hpp"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
 #include "ui/velocitygesturemodel.h"
@@ -172,6 +173,11 @@ class SongView : public QWidget
     const MidiTimeline *timeline() const { return m_timeline; }
     const SongViewModel &model() const { return m_model; }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
+    songview::EditorSelectionModel &selectionModel() noexcept { return m_selectionModel; }
+    const songview::EditorSelectionModel &selectionModel() const noexcept
+    {
+        return m_selectionModel;
+    }
     std::vector<songview::TimelineBand> timelineBands() noexcept;
 
     qreal contentX(double tick) const { return qreal(tick * m_pxPerTick - m_scrollX); }
@@ -206,7 +212,6 @@ class SongView : public QWidget
     // Transport "go to start": edit cursor to tick 0 and scroll home.
     void goToStart();
 
-    int selectedTrack() const { return m_selectedTrack; }
     void selectTrack(int track);
 
     // Scale controls are independent per-tab runtime toggles; neither is
@@ -226,10 +231,6 @@ class SongView : public QWidget
     // ended just before) — and scroll the key into view. Returns whether a
     // note was found and selected (the track selection sticks either way).
     bool revealNote(int track, uint8_t key, uint64_t tick);
-    // Multi-track scope for time-range operations: the selected track plus
-    // any Ctrl/Shift-clicked header rows (always contains the selected
-    // track, intersected with used tracks).
-    uint32_t trackSelectionMask() const;
     // Header-row click with modifiers: plain = select (collapses the multi-
     // selection), Ctrl = toggle the track in the scope, Shift = contiguous
     // range from the selected track.
@@ -386,13 +387,7 @@ class SongView : public QWidget
     DrawerPageGridState gridState(uint64_t tick, bool fineMode) const;
     bool paintGrid(QPainter &, const QRect &, qreal origin) const;
 
-    // Note selection on the selected track uses the document's opaque
-    // identity. Geometry is never an identity surrogate.
-    const std::vector<NoteId> &selection() const { return m_selection; }
-    bool isSelected(const ViewNote &note) const;
-    void setSelection(std::vector<NoteId> ids);
     DrawerPageVoiceContext voiceContext(uint64_t tick) const;
-    void clearSelection();
     // Shared deferred velocity gesture; document mutation happens only when
     // commitVelocityGesture() accepts the captured revision.
     enum class VelocityCommitResult { NoGesture, Unchanged, Committed, Rejected };
@@ -403,28 +398,6 @@ class SongView : public QWidget
     VelocityCommitResult commitVelocityGesture();
     std::optional<uint8_t> previewVelocity(NoteId noteId) const;
 
-    // Time-range selection: a half-open [startTick, endTick) span with a
-    // scope — the header-selected tracks (ruler sweep and Shift+right-drag
-    // in the roll behave identically; the scope resolves LIVE from
-    // trackSelectionMask(), so Ctrl/Shift-clicking headers re-scopes an
-    // active selection) or individual automation lanes (right-drag in the
-    // lanes area). Mutually exclusive with the note selection; survives
-    // document rebuilds (it is tick-addressed), cleared on song swap and
-    // plain track switches.
-    struct TimeSelection {
-        enum Scope { Tracks, Lanes };
-        uint64_t startTick = 0;
-        uint64_t endTick = 0; // <= startTick means no selection
-        Scope scope = Tracks;
-        std::vector<std::pair<int, uint8_t>> lanes; // Scope::Lanes: (track, cc);
-                                                    // track -1 = the tempo row
-        bool active() const { return endTick > startTick; }
-    };
-    const TimeSelection &timeSelection() const { return m_timeSel; }
-    void setTimeSelection(const TimeSelection &sel);
-    void clearTimeSelection();
-    bool timeSelectionCoversTrack(int track) const;
-    bool timeSelectionCoversLane(int track, uint8_t controller) const;
     // "Time selection: 8 beats · 3 tracks" status-bar line; children call it
     // when a selection gesture commits.
     void announceTimeSelection();
@@ -551,7 +524,7 @@ class SongView : public QWidget
     // Vertical counterpart: scrolls the roll just enough for the key's
     // row to be fully visible.
     void ensureKeyVisible(int key);
-    void refreshTimelineViews();
+    void refreshTimelineViews(bool refreshRoll = true);
     // Refresh both concrete drawer pages from the current live SongView state.
     // This endpoint does not proactively cancel interaction.
     void refreshAllDrawerPages();
@@ -619,6 +592,7 @@ class SongView : public QWidget
     };
 
     void refreshGeometry();
+    void onSelectionModelChanged(songview::EditorSelectionModel::Change changes);
     uint64_t gridTicksIn(const GridSeg &seg, double pixelsPerTick, bool snap = false) const;
     // Document remap handler: re-addresses all SongView-owned track state
     // before the following documentChanged rebuild.
@@ -661,6 +635,7 @@ class SongView : public QWidget
     const MidiTimeline *m_timeline = nullptr;
     const LoadedVoiceGroup *m_voicegroup = nullptr;
     SongDocument *m_document = nullptr;
+    songview::EditorSelectionModel m_selectionModel;
     SongViewModel m_model;
     Geometry m_geometry;
     songview::PitchProjection m_projection;
@@ -671,7 +646,6 @@ class SongView : public QWidget
     double m_scrollX = 0.0;
     double m_scrollY = 0.0;
     double m_keyHeight = 0.0;
-    int m_selectedTrack = 0;
     bool m_scaleHighlight = false;
     bool m_scaleFold = false;
     int m_scaleRoot = 0; // C
@@ -681,10 +655,7 @@ class SongView : public QWidget
     bool m_playing = false;
     uint32_t m_muteMask = 0;
     uint32_t m_soloMask = 0;
-    std::vector<NoteId> m_selection;
-    TimeSelection m_timeSel;
     Clip m_clip;
-    uint32_t m_trackSelMask = 0; // header multi-selection (see trackSelectionMask)
     GridFeel m_gridFeel = GridFeel::Straight;
     int m_gridMinDenom = 0;           // note denominator; 0 = clock-grid floor
     bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)

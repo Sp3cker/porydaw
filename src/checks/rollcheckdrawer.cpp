@@ -313,7 +313,7 @@ int runEditorDrawerCheck(const QString &screenshotPath)
                 sendMouse(hit, QEvent::MouseButtonPress, hitPoint, Qt::LeftButton, Qt::LeftButton);
                 sendMouse(hit, QEvent::MouseButtonRelease, hitPoint, Qt::LeftButton, Qt::NoButton);
                 QCoreApplication::processEvents();
-                alignedHeaderClicked = view.selectedTrack() == track;
+                alignedHeaderClicked = view.selectionModel().primaryTrack() == track;
                 break;
             }
         }

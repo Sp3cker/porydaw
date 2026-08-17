@@ -314,7 +314,7 @@ void drawOverlays(QPainter &p, const SongView *sv, const QRect &rect, qreal orig
         return;
 
     const qreal dpr = p.device()->devicePixelRatioF();
-    const SongView::TimeSelection &tsel = sv->timeSelection();
+    const TimeSelection &tsel = sv->selectionModel().timeSelection();
     if (timeSelCovered && tsel.active()) {
         const qreal x0 = sv->displayX(double(tsel.startTick), origin, dpr);
         const qreal x1 = sv->displayX(double(tsel.endTick), origin, dpr);
@@ -855,7 +855,7 @@ class TimeRuler : public QWidget
         // Time-selection edge handles (the 1px band edges come from
         // drawOverlays); the marker row is their grab zone, while the tick
         // row stays scrub territory.
-        const SongView::TimeSelection &tsel = m_sv->timeSelection();
+        const TimeSelection &tsel = m_sv->selectionModel().timeSelection();
         if (tsel.active()) {
             p.setPen(QPen(themes::color(themes::Role::song_view_selection_edge), markerStroke));
             const qreal sx0 = m_sv->displayX(double(tsel.startTick), m_geometry.plotOrigin, dpr);
@@ -953,10 +953,10 @@ class TimeRuler : public QWidget
                 m_selSweep = true;
             if (m_selSweep) {
                 const uint64_t tick = dragTick();
-                SongView::TimeSelection sel;
+                TimeSelection sel;
                 sel.startTick = std::min(m_selAnchor, tick);
                 sel.endTick = std::max(m_selAnchor, tick);
-                m_sv->setTimeSelection(sel); // scope: the selected tracks
+                m_sv->selectionModel().setTimeSelection(sel); // scope: the selected tracks
             }
             return;
         }
@@ -968,7 +968,7 @@ class TimeRuler : public QWidget
         if (m_dragSelEdge >= 0) {
             // Selection edges move live (view state, unlike the loop
             // markers' commit-on-release document edit).
-            SongView::TimeSelection sel = m_sv->timeSelection();
+            TimeSelection sel = m_sv->selectionModel().timeSelection();
             const uint64_t tick = dragTick();
             if (m_dragSelEdge == 0)
                 sel.startTick = tick;
@@ -978,7 +978,7 @@ class TimeRuler : public QWidget
                 std::swap(sel.startTick, sel.endTick);
                 m_dragSelEdge ^= 1;
             }
-            m_sv->setTimeSelection(sel);
+            m_sv->selectionModel().setTimeSelection(sel);
             return;
         }
         uint64_t sigTick;
@@ -1003,10 +1003,10 @@ class TimeRuler : public QWidget
             m_leftPress = false;
             if (m_selSweep) {
                 m_selSweep = false;
-                if (m_sv->timeSelection().active())
+                if (m_sv->selectionModel().timeSelection().active())
                     m_sv->announceTimeSelection();
                 else
-                    m_sv->clearTimeSelection();
+                    m_sv->selectionModel().clearTimeSelection();
             } else {
                 m_sv->setEditCursorTick(m_selAnchor);
                 m_sv->commitEditCursor(m_selAnchor);
@@ -1017,10 +1017,10 @@ class TimeRuler : public QWidget
             return;
         if (m_dragSelEdge >= 0) {
             m_dragSelEdge = -1;
-            if (m_sv->timeSelection().active())
+            if (m_sv->selectionModel().timeSelection().active())
                 m_sv->announceTimeSelection();
             else
-                m_sv->clearTimeSelection(); // edges dragged together
+                m_sv->selectionModel().clearTimeSelection(); // edges dragged together
             return;
         }
         if (m_dragTimeSig) {
@@ -1195,7 +1195,7 @@ class TimeRuler : public QWidget
     // 0 = selection start edge, 1 = end edge, -1 = neither near pos.
     int hitSelEdge(QPointF pos) const
     {
-        const SongView::TimeSelection &sel = m_sv->timeSelection();
+        const TimeSelection &sel = m_sv->selectionModel().timeSelection();
         if (!sel.active() || !QRectF(markerRow()).contains(pos))
             return -1;
         const auto markerHitHalfWidth = lyt::space(Space::Two);
@@ -1225,7 +1225,7 @@ class TimeRuler : public QWidget
         QAction *duplicate = nullptr;
         QAction *removeContents = nullptr;
         QAction *clearSel = nullptr;
-        const SongView::TimeSelection sel = m_sv->timeSelection();
+        const TimeSelection sel = m_sv->selectionModel().timeSelection();
         if (sel.active()) {
             menu.addSeparator();
             loopFromSel = menu.addAction(SongView::tr("Set loop to selection"));
@@ -1271,7 +1271,7 @@ class TimeRuler : public QWidget
         } else if (chosen && chosen == removeContents) {
             m_sv->removeTimeSelectionContents();
         } else if (chosen && chosen == clearSel) {
-            m_sv->clearTimeSelection();
+            m_sv->selectionModel().clearTimeSelection();
         } else if (chosen == editSig) {
             if (askTimeSignature(this, &sigNum, &sigDen))
                 doc->setTimeSig(sigTick, sigNum, sigDen);
@@ -1585,13 +1585,13 @@ class PianoRoll : public TimelineSurface
 
         // Notes: ghost pass (unselected tracks), then the selected track.
         const SongViewModel &model = m_sv->model();
-        const int selected = m_sv->selectedTrack();
-        const auto &timeSelection = m_sv->timeSelection();
+        const int selected = m_sv->selectionModel().primaryTrack();
+        const auto &timeSelection = m_sv->selectionModel().timeSelection();
         const SongDocument::TimeRange timeRange{timeSelection.startTick, timeSelection.endTick};
         const uint32_t usedTracks = usedTrackMask(m_sv->timeline());
         const uint32_t timeSelectedTracks =
-            timeSelection.active() && timeSelection.scope == SongView::TimeSelection::Tracks
-                ? m_sv->trackSelectionMask() & usedTracks
+            timeSelection.active() && timeSelection.scope == TimeSelection::Tracks
+                ? m_sv->selectionModel().resolvedTrackScope(usedTracks)
                 : 0;
         drawNotes(p, model, selected, timeRange, timeSelectedTracks, true);
         drawNotes(p, model, selected, timeRange, timeSelectedTracks, false);
@@ -1601,7 +1601,7 @@ class PianoRoll : public TimelineSurface
         }
 
         drawOverlays(p, m_sv, grid, m_geometry.pianoKeyboardWidth,
-                     m_sv->timeSelectionCoversTrack(m_sv->selectedTrack()));
+                     m_sv->selectionModel().timeSelectionCoversTrack(selected, usedTracks));
 
         p.restore();
         drawKeyboard(p);
@@ -1674,11 +1674,11 @@ class PianoRoll : public TimelineSurface
                 m_kbdKey = yToKey(event->position().y());
                 std::vector<NoteId> ids;
                 for (const ViewNote &note : m_sv->model().notes) {
-                    if (note.track == m_sv->selectedTrack() && note.key == m_kbdKey &&
-                        note.noteId.isAssigned())
+                    if (note.track == m_sv->selectionModel().primaryTrack() &&
+                        note.key == m_kbdKey && note.noteId.isAssigned())
                         ids.push_back(note.noteId);
                 }
-                m_sv->setSelection(std::move(ids));
+                m_sv->selectionModel().setNoteSelection(std::move(ids));
                 auditionKey(m_kbdKey, 100);
             }
             return;
@@ -1746,7 +1746,7 @@ class PianoRoll : public TimelineSurface
                 invalidateContent();
                 return;
             }
-            std::vector<NoteId> ids = m_sv->selection();
+            std::vector<NoteId> ids = m_sv->selectionModel().noteSelection();
             const NoteId id = hit->noteId;
             if ((event->modifiers() & Qt::ControlModifier) && !rightEdge && !leftEdge) {
                 const auto it = std::find(ids.begin(), ids.end(), id);
@@ -1754,17 +1754,17 @@ class PianoRoll : public TimelineSurface
                     ids.erase(it);
                 else
                     ids.push_back(id);
-                m_sv->setSelection(std::move(ids));
+                m_sv->selectionModel().setNoteSelection(std::move(ids));
             } else if (event->modifiers() & Qt::ControlModifier) {
                 // Ctrl+edge grab: the grip still starts a resize of the
                 // whole selection, so a bulk-select click landing on an
                 // edge must join the note to the selection, not replace it.
                 if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
                     ids.push_back(id);
-                    m_sv->setSelection(std::move(ids));
+                    m_sv->selectionModel().setNoteSelection(std::move(ids));
                 }
-            } else if (!m_sv->isSelected(*hit)) {
-                m_sv->setSelection({id});
+            } else if (!m_sv->selectionModel().isNoteSelected(hit->noteId)) {
+                m_sv->selectionModel().setNoteSelection({id});
             }
             m_sv->announceNote(*hit);
             // Reaper-style velocity latch: touching a note makes its velocity
@@ -1797,7 +1797,7 @@ class PianoRoll : public TimelineSurface
             // place parks the edit cursor at the click instead. A
             // double-click draws immediately (mouseDoubleClickEvent).
             m_leftPress = true;
-            m_sv->clearSelection();
+            m_sv->selectionModel().clearNoteSelection();
             // Sound the clicked row at the latched velocity so a plain
             // press gives the same pitch feedback a draw already does.
             auditionKey(m_pressKey, m_lastVelocity);
@@ -1825,7 +1825,7 @@ class PianoRoll : public TimelineSurface
                 DocNote note;
                 if (doc->findNote(hit->noteId, &note)) {
                     doc->deleteNotes({note});
-                    m_sv->clearSelection();
+                    m_sv->selectionModel().clearNoteSelection();
                 }
                 return;
             }
@@ -1907,18 +1907,18 @@ class PianoRoll : public TimelineSurface
                 // A completed modifier velocity edit makes the next such
                 // drag on another note switch instead of growing the old
                 // selection.
-                m_sv->setSelection({id});
-            } else if (!m_sv->isSelected(m_velAnchor)) {
+                m_sv->selectionModel().setNoteSelection({id});
+            } else if (!m_sv->selectionModel().isNoteSelected(id)) {
                 if (m_velModMods & Qt::ControlModifier) {
                     // Ctrl in the chord: like the Ctrl+edge grab, the
                     // gesture joins the note to the bulk selection built
                     // with the same modifier instead of replacing it, and
                     // the drag then nudges the whole selection.
-                    std::vector<NoteId> ids = m_sv->selection();
+                    std::vector<NoteId> ids = m_sv->selectionModel().noteSelection();
                     ids.push_back(id);
-                    m_sv->setSelection(std::move(ids));
+                    m_sv->selectionModel().setNoteSelection(std::move(ids));
                 } else {
-                    m_sv->setSelection({id});
+                    m_sv->selectionModel().setNoteSelection({id});
                 }
             }
             m_modifierVelocityDrag = true;
@@ -2055,10 +2055,10 @@ class PianoRoll : public TimelineSurface
             // Full-height sweep: a time selection over the selected tracks
             // (notes and automation together), same scope as a ruler sweep.
             const uint64_t t = m_sv->snapTick(tick);
-            SongView::TimeSelection sel;
+            TimeSelection sel;
             sel.startTick = std::min(m_rightAnchorTick, t);
             sel.endTick = std::max(m_rightAnchorTick, t);
-            m_sv->setTimeSelection(sel);
+            m_sv->selectionModel().setTimeSelection(sel);
         } else if (m_drag == Drag::Band) {
             auditionBandEntrants(QRectF(m_pressPos, m_curPos).normalized());
             invalidateContent();
@@ -2093,24 +2093,24 @@ class PianoRoll : public TimelineSurface
             m_rightPress = false;
             m_drag = Drag::None;
             if (drag == Drag::TimeSel) {
-                if (m_sv->timeSelection().active())
+                if (m_sv->selectionModel().timeSelection().active())
                     m_sv->announceTimeSelection();
                 else
-                    m_sv->clearTimeSelection();
+                    m_sv->selectionModel().clearTimeSelection();
             } else if (drag == Drag::Band) {
                 stopBandAuditions();
                 selectBand(QRectF(m_pressPos, m_curPos).normalized(),
                            event->modifiers() & Qt::ControlModifier);
             } else if (doc && m_rightHit) {
-                const std::vector<NoteId> &sel = m_sv->selection();
+                const std::vector<NoteId> &sel = m_sv->selectionModel().noteSelection();
                 if (std::find(sel.begin(), sel.end(), m_rightHitId) == sel.end())
-                    m_sv->setSelection({m_rightHitId});
+                    m_sv->selectionModel().setNoteSelection({m_rightHitId});
                 showNoteMenu(event->position());
             } else if (insideTimeSelection(event->position().x())) {
                 m_sv->showTimeSelectionMenu(event->globalPosition().toPoint());
             } else {
-                m_sv->clearSelection();
-                m_sv->clearTimeSelection();
+                m_sv->selectionModel().clearNoteSelection();
+                m_sv->selectionModel().clearTimeSelection();
             }
             invalidateContent();
             completeProjectionGesture();
@@ -2120,7 +2120,7 @@ class PianoRoll : public TimelineSurface
             m_leftPress = false;
             if (m_drag == Drag::None) {
                 if (insideTimeSelection(event->position().x()))
-                    m_sv->clearTimeSelection();
+                    m_sv->selectionModel().clearTimeSelection();
                 // Click without a drag: park the edit cursor at the click,
                 // like the ruler; playback follows when running.
                 m_sv->commitEditCursor(m_sv->snapTick(m_pressTick));
@@ -2136,15 +2136,15 @@ class PianoRoll : public TimelineSurface
             m_velModPress = false;
             const NoteId id = m_velAnchor.noteId;
             if (m_velModMods & Qt::ControlModifier) {
-                std::vector<NoteId> ids = m_sv->selection();
+                std::vector<NoteId> ids = m_sv->selectionModel().noteSelection();
                 const auto it = std::find(ids.begin(), ids.end(), id);
                 if (it != ids.end())
                     ids.erase(it);
                 else
                     ids.push_back(id);
-                m_sv->setSelection(std::move(ids));
-            } else if (!m_sv->isSelected(m_velAnchor)) {
-                m_sv->setSelection({id});
+                m_sv->selectionModel().setNoteSelection(std::move(ids));
+            } else if (!m_sv->selectionModel().isNoteSelected(id)) {
+                m_sv->selectionModel().setNoteSelection({id});
             }
             invalidateContent();
             completeProjectionGesture();
@@ -2175,14 +2175,16 @@ class PianoRoll : public TimelineSurface
         }
 
         if (doc && drag == Drag::Draw) {
-            const std::vector<DocNote> before = doc->notesForTrack(m_sv->selectedTrack());
-            doc->addNote(m_sv->selectedTrack(), m_drawTick, uint8_t(m_drawKey), uint32_t(m_drawDur),
-                         m_lastVelocity);
-            m_sv->setSelection(insertedNoteIds(m_sv->selectedTrack(), before));
+            const std::vector<DocNote> before =
+                doc->notesForTrack(m_sv->selectionModel().primaryTrack());
+            doc->addNote(m_sv->selectionModel().primaryTrack(), m_drawTick, uint8_t(m_drawKey),
+                         uint32_t(m_drawDur), m_lastVelocity);
+            m_sv->selectionModel().setNoteSelection(
+                insertedNoteIds(m_sv->selectionModel().primaryTrack(), before));
         } else if (doc && drag == Drag::Move && (m_dTick != 0 || m_dKey != 0)) {
             std::vector<DocNote> notes = resolveSelection();
             if (notes.empty()) {
-                m_sv->clearSelection();
+                m_sv->selectionModel().clearNoteSelection();
             } else if (m_sv->scaleFold() && m_dKey != 0) {
                 std::vector<uint8_t> destinations;
                 if (resolveFoldDestinations(m_sv->scaleId(), m_sv->scaleRoot(), notes, m_dKey,
@@ -2192,7 +2194,7 @@ class PianoRoll : public TimelineSurface
                     ids.reserve(notes.size());
                     for (const DocNote &note : notes)
                         ids.push_back(note.noteId);
-                    m_sv->setSelection(std::move(ids));
+                    m_sv->selectionModel().setNoteSelection(std::move(ids));
                 }
             } else {
                 doc->moveNotes(notes, m_dTick, m_dKey);
@@ -2201,7 +2203,7 @@ class PianoRoll : public TimelineSurface
                 ids.reserve(notes.size());
                 for (const DocNote &note : notes)
                     ids.push_back(note.noteId);
-                m_sv->setSelection(std::move(ids));
+                m_sv->selectionModel().setNoteSelection(std::move(ids));
             }
         } else if (doc && drag == Drag::Resize && m_dDur != 0) {
             doc->resizeNotes(resolveSelection(), m_dDur);
@@ -2238,7 +2240,7 @@ class PianoRoll : public TimelineSurface
                 copyNotes(notes);
                 if (cut) {
                     doc->deleteNotes(notes);
-                    m_sv->clearSelection();
+                    m_sv->selectionModel().clearNoteSelection();
                 }
             }
             event->accept();
@@ -2258,7 +2260,7 @@ class PianoRoll : public TimelineSurface
             const std::vector<DocNote> notes = resolveSelection();
             if (!notes.empty()) {
                 doc->deleteNotes(notes);
-                m_sv->clearSelection();
+                m_sv->selectionModel().clearNoteSelection();
             }
             event->accept();
             return;
@@ -2293,8 +2295,8 @@ class PianoRoll : public TimelineSurface
             m_leftPress = false;
             m_rightPress = false;
             stopBandAuditions();
-            m_sv->clearSelection();
-            m_sv->clearTimeSelection();
+            m_sv->selectionModel().clearNoteSelection();
+            m_sv->selectionModel().clearTimeSelection();
             invalidateContent();
             event->accept();
             return;
@@ -2327,8 +2329,10 @@ class PianoRoll : public TimelineSurface
     // widget draws it (the selection must cover the shown track).
     bool insideTimeSelection(qreal x) const
     {
-        const SongView::TimeSelection &sel = m_sv->timeSelection();
-        if (!sel.active() || !m_sv->timeSelectionCoversTrack(m_sv->selectedTrack()))
+        const TimeSelection &sel = m_sv->selectionModel().timeSelection();
+        if (!sel.active() ||
+            !m_sv->selectionModel().timeSelectionCoversTrack(m_sv->selectionModel().primaryTrack(),
+                                                             usedTrackMask(m_sv->timeline())))
             return false;
         const qreal dpr = devicePixelRatioF();
         const qreal startX =
@@ -2471,7 +2475,7 @@ class PianoRoll : public TimelineSurface
     // sounding key (velocity 0 releases and clears the mark).
     void auditionKey(int key, int velocity)
     {
-        m_sv->audition(m_sv->selectedTrack(), key, velocity);
+        m_sv->audition(m_sv->selectionModel().primaryTrack(), key, velocity);
         const int sounding = velocity > 0 ? key : -1;
         if (sounding != m_soundingKey) {
             m_soundingKey = sounding;
@@ -2495,13 +2499,13 @@ class PianoRoll : public TimelineSurface
         m_drawDur = int64_t(m_sv->gridTicksAt(m_drawAnchor));
         m_drawKey = m_pressKey;
         m_drag = Drag::Draw;
-        m_sv->clearSelection();
+        m_sv->selectionModel().clearNoteSelection();
         ViewNote pending{};
         pending.startTick = uint32_t(m_drawTick);
         pending.endTick = uint32_t(m_drawTick + uint64_t(m_drawDur));
         pending.key = uint8_t(m_drawKey);
         pending.velocity = m_lastVelocity;
-        pending.track = uint8_t(m_sv->selectedTrack());
+        pending.track = uint8_t(m_sv->selectionModel().primaryTrack());
         m_sv->announceNote(pending);
         // The empty-space press already sounds this row; don't re-attack it.
         if (m_soundingKey != m_drawKey)
@@ -2554,7 +2558,7 @@ class PianoRoll : public TimelineSurface
     // its own note.
     const ViewNote *hitNote(QPointF pos) const
     {
-        const int selected = m_sv->selectedTrack();
+        const int selected = m_sv->selectionModel().primaryTrack();
         const ViewNote *hit = nullptr;
         bool hitInside = false;
         const ViewNote *gripHit = nullptr; // pos inside the note, on an edge grip
@@ -2666,9 +2670,10 @@ class PianoRoll : public TimelineSurface
         SongDocument *doc = m_sv->document();
         if (!doc)
             return notes;
-        for (NoteId id : m_sv->selection()) {
+        for (NoteId id : m_sv->selectionModel().noteSelection()) {
             DocNote note;
-            if (doc->findNote(id, &note) && note.engineTrack == m_sv->selectedTrack())
+            if (doc->findNote(id, &note) &&
+                note.engineTrack == m_sv->selectionModel().primaryTrack())
                 notes.push_back(note);
         }
         return notes;
@@ -2758,7 +2763,7 @@ class PianoRoll : public TimelineSurface
         for (const DocNote &note : notes)
             base = std::min(base, note.tick);
         SongView::Clip clip;
-        SongView::ClipTrack ct{m_sv->selectedTrack(), {}};
+        SongView::ClipTrack ct{m_sv->selectionModel().primaryTrack(), {}};
         for (const DocNote &note : notes)
             ct.notes.push_back(
                 {uint32_t(note.tick - base), note.key,
@@ -2779,7 +2784,8 @@ class PianoRoll : public TimelineSurface
         if (!doc || clip.span != 0 || clip.tracks.empty() || clip.tracks.front().notes.empty())
             return;
         const uint64_t base = m_sv->snapTick(double(m_sv->editCursorTick()));
-        const std::vector<DocNote> before = doc->notesForTrack(m_sv->selectedTrack());
+        const std::vector<DocNote> before =
+            doc->notesForTrack(m_sv->selectionModel().primaryTrack());
         std::vector<SongDocument::NewNote> notes;
         uint64_t end = base;
         for (const SongView::ClipNote &cn : clip.tracks.front().notes) {
@@ -2787,8 +2793,9 @@ class PianoRoll : public TimelineSurface
             notes.push_back({tick, cn.key, cn.duration, cn.velocity});
             end = std::max(end, tick + cn.duration);
         }
-        doc->addNotes(m_sv->selectedTrack(), notes);
-        m_sv->setSelection(insertedNoteIds(m_sv->selectedTrack(), before));
+        doc->addNotes(m_sv->selectionModel().primaryTrack(), notes);
+        m_sv->selectionModel().setNoteSelection(
+            insertedNoteIds(m_sv->selectionModel().primaryTrack(), before));
         // Like pasteRangeAtEditCursor: advance the edit cursor past the pasted
         // notes so repeated Ctrl+V lays copies back-to-back, but keep the view
         // anchored on the content that just landed.
@@ -2801,10 +2808,10 @@ class PianoRoll : public TimelineSurface
     {
         std::vector<NoteId> ids;
         for (const ViewNote &note : m_sv->model().notes) {
-            if (note.track == m_sv->selectedTrack() && note.noteId.isAssigned())
+            if (note.track == m_sv->selectionModel().primaryTrack() && note.noteId.isAssigned())
                 ids.push_back(note.noteId);
         }
-        m_sv->setSelection(std::move(ids));
+        m_sv->selectionModel().setNoteSelection(std::move(ids));
     }
 
     void drawNotes(QPainter &painter, const SongViewModel &model, int selectedTrack,
@@ -2917,7 +2924,7 @@ class PianoRoll : public TimelineSurface
             }
 
             const bool selected =
-                timeSelected || m_sv->isSelected(note) ||
+                timeSelected || m_sv->selectionModel().isNoteSelected(note.noteId) ||
                 (m_drag == Drag::Band &&
                  std::any_of(m_bandAud.begin(), m_bandAud.end(), [&note](const ViewNote &covered) {
                      return covered.noteId == note.noteId;
@@ -3011,7 +3018,7 @@ class PianoRoll : public TimelineSurface
     {
         const bool dragging =
             m_drag == Drag::Move || m_drag == Drag::Resize || m_drag == Drag::ResizeLeft;
-        if (!dragging || !m_sv->isSelected(note))
+        if (!dragging || !m_sv->selectionModel().isNoteSelected(note.noteId))
             return noteRect(note);
         int64_t tick, endTick;
         if (m_drag == Drag::ResizeLeft) {
@@ -3035,7 +3042,7 @@ class PianoRoll : public TimelineSurface
     {
         const bool dragging =
             m_drag == Drag::Move || m_drag == Drag::Resize || m_drag == Drag::ResizeLeft;
-        if (!dragging || !m_sv->isSelected(note))
+        if (!dragging || !m_sv->selectionModel().isNoteSelected(note.noteId))
             return note.key;
         if (m_sv->scaleFold()) {
             const int destination =
@@ -3068,8 +3075,8 @@ class PianoRoll : public TimelineSurface
             m_sv->document() && pos.x() >= m_geometry.pianoKeyboardWidth ? hitNote(pos) : nullptr;
         if (!hit)
             return false;
-        if (!m_sv->isSelected(*hit))
-            m_sv->setSelection({hit->noteId});
+        if (!m_sv->selectionModel().isNoteSelected(hit->noteId))
+            m_sv->selectionModel().setNoteSelection({hit->noteId});
         setFocus(Qt::MouseFocusReason);
         invalidateContent();
         return true;
@@ -3102,7 +3109,7 @@ class PianoRoll : public TimelineSurface
         case NoteMenuChoice::Cut:
             copyNotes(notes);
             doc->deleteNotes(notes);
-            m_sv->clearSelection();
+            m_sv->selectionModel().clearNoteSelection();
             break;
         case NoteMenuChoice::Velocity: {
             bool ok = false;
@@ -3117,7 +3124,7 @@ class PianoRoll : public TimelineSurface
         }
         case NoteMenuChoice::Delete:
             doc->deleteNotes(notes);
-            m_sv->clearSelection();
+            m_sv->selectionModel().clearNoteSelection();
             break;
         case NoteMenuChoice::None:
             break;
@@ -3212,7 +3219,8 @@ class PianoRoll : public TimelineSurface
     {
         std::vector<ViewNote> inBand;
         for (const ViewNote &note : m_sv->model().notes) {
-            if (note.track != m_sv->selectedTrack() || !noteRect(note).intersects(band))
+            if (note.track != m_sv->selectionModel().primaryTrack() ||
+                !noteRect(note).intersects(band))
                 continue;
             const auto found =
                 std::find_if(m_bandAud.begin(), m_bandAud.end(),
@@ -3234,7 +3242,7 @@ class PianoRoll : public TimelineSurface
                 std::any_of(inBand.begin(), inBand.end(),
                             [&](const ViewNote &note) { return note.key == old.key; });
             if (!keyCovered)
-                m_sv->auditionTimedOff(m_sv->selectedTrack(), old.key);
+                m_sv->auditionTimedOff(m_sv->selectionModel().primaryTrack(), old.key);
         }
         m_bandAud = std::move(inBand);
     }
@@ -3243,21 +3251,22 @@ class PianoRoll : public TimelineSurface
     void stopBandAuditions()
     {
         for (const ViewNote &note : m_bandAud)
-            m_sv->auditionTimedOff(m_sv->selectedTrack(), note.key);
+            m_sv->auditionTimedOff(m_sv->selectionModel().primaryTrack(), note.key);
         m_bandAud.clear();
     }
 
     void selectBand(const QRectF &band, bool additive)
     {
-        std::vector<NoteId> ids = additive ? m_sv->selection() : std::vector<NoteId>();
+        std::vector<NoteId> ids =
+            additive ? m_sv->selectionModel().noteSelection() : std::vector<NoteId>();
         for (const ViewNote &note : m_sv->model().notes) {
-            if (note.track != m_sv->selectedTrack() || !noteRect(note).intersects(band) ||
-                !note.noteId.isAssigned())
+            if (note.track != m_sv->selectionModel().primaryTrack() ||
+                !noteRect(note).intersects(band) || !note.noteId.isAssigned())
                 continue;
             if (std::find(ids.begin(), ids.end(), note.noteId) == ids.end())
                 ids.push_back(note.noteId);
         }
-        m_sv->setSelection(std::move(ids));
+        m_sv->selectionModel().setNoteSelection(std::move(ids));
     }
 
     SongView *m_sv;
@@ -3682,12 +3691,13 @@ class TrackHeaderRow : public QWidget
     void paintEvent(QPaintEvent *) override
     {
         QPainter p(this);
-        const bool selected = m_sv->selectedTrack() == m_track;
+        const bool selected = m_sv->selectionModel().primaryTrack() == m_track;
         if (selected) {
             // The derived selection fill has the required lightness gap. Keep
             // it opaque so the visible header reaches that target.
             p.fillRect(rect(), themes::color(themes::Role::song_view_track_header_selection));
-        } else if (m_sv->trackSelectionMask() & (1u << m_track)) {
+        } else if (m_sv->selectionModel().resolvedTrackScope(usedTrackMask(m_sv->timeline())) &
+                   (1u << m_track)) {
             // Part of the multi-track scope (Ctrl/Shift+click), lighter than
             // the primary selection.
             p.fillRect(rect(), trackHeaderAlsoSelectedColor());
@@ -3710,8 +3720,10 @@ class TrackHeaderRow : public QWidget
         const auto visibleTitle = titleMetrics.elidedText(title, Qt::ElideRight, textW);
         const QColor backdrop =
             selected ? themes::color(themes::Role::song_view_track_header_selection)
-            : (m_sv->trackSelectionMask() & (1u << m_track)) ? trackHeaderAlsoSelectedColor()
-                                                             : palette().color(QPalette::Window);
+            : (m_sv->selectionModel().resolvedTrackScope(usedTrackMask(m_sv->timeline())) &
+               (1u << m_track))
+                ? trackHeaderAlsoSelectedColor()
+                : palette().color(QPalette::Window);
         // The song's music player never starts this track in-game
         // (MPlayStart), so playback mutes it; the header must read as inert
         // at a glance: text recedes most of the way into the backdrop and a
@@ -4384,6 +4396,9 @@ SongView::SongView(QWidget *parent)
             [this](int value) { setHScroll(scrollDips(value)); });
     connect(m_vbar, &QScrollBar::valueChanged, this,
             [this](int value) { setVScroll(scrollDips(value)); });
+    m_selectionModel.setChangeCallback([this](songview::EditorSelectionModel::Change changes) {
+        onSelectionModelChanged(changes);
+    });
 }
 bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,
                                     bool playing)
@@ -4406,8 +4421,6 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_voicegroup = voicegroup;
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
     m_editorViewState = {};
-    m_selection.clear();
-    m_timeSel = TimeSelection();
     m_clip = Clip();
     m_muteMask = 0;
     m_soloMask = 0;
@@ -4424,21 +4437,10 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_gridFeel = GridFeel::Straight;
     m_gridMinDenom = 0;
     m_ruler->syncGridControls();
-
-    m_selectedTrack = 0;
-    if (timeline) {
-        for (int t = 0; t < 16; t++) {
-            if (timeline->tracks[t].used) {
-                m_selectedTrack = t;
-                break;
-            }
-        }
-    }
-    m_trackSelMask = 1u << m_selectedTrack;
     if (m_editorDrawer)
         m_editorDrawer->setViewState(m_editorViewState);
     updateScaleProjection();
-
+    m_selectionModel.resetForSong(usedTrackMask(timeline));
     rebuildAfterSongChange();
     m_headers->syncActivity(m_trackActivity, false);
 }
@@ -4478,31 +4480,30 @@ void SongView::updateSong(const MidiTimeline *timeline)
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
     // The concrete automation page owns cosmetic empty lanes; the projection
     // remains solely the timeline model.
-
-    if (timeline && !timeline->tracks[m_selectedTrack].used) {
+    if (timeline && !timeline->tracks[m_selectionModel.primaryTrack()].used) {
         // The edited track disappeared (e.g. undo of its only events).
         int fallback = 0;
-        for (int t = 0; t < 16; t++) {
-            if (timeline->tracks[t].used) {
-                fallback = t;
+        for (int track = 0; track < 16; ++track) {
+            if (timeline->tracks[track].used) {
+                fallback = track;
                 break;
             }
         }
         transitionSelectedTrack(fallback);
     }
-
-    // Keep only opaque identities still projected on the selected track.
-    std::vector<NoteId> keep;
-    for (NoteId id : m_selection) {
-        const auto found = std::find_if(
-            m_model.notes.begin(), m_model.notes.end(), [this, id](const ViewNote &note) {
-                return note.track == m_selectedTrack && note.noteId == id;
-            });
-        if (found != m_model.notes.end())
-            keep.push_back(id);
+    std::vector<NoteId> validIds;
+    for (const ViewNote &note : m_model.notes) {
+        if (note.track == m_selectionModel.primaryTrack() && note.noteId.isAssigned())
+            validIds.push_back(note.noteId);
     }
-    m_selection = std::move(keep);
-
+    const auto &selectedNotes = m_selectionModel.noteSelection();
+    const bool selectionChanges =
+        std::any_of(selectedNotes.cbegin(), selectedNotes.cend(), [&validIds](NoteId id) {
+            return std::find(validIds.cbegin(), validIds.cend(), id) == validIds.cend();
+        });
+    if (selectionChanges && m_roll)
+        m_roll->cancelPitchBendPopup();
+    m_selectionModel.reconcileNoteSelection(validIds);
     m_headers->rebuild();
     notifyDrawerSongChanged();
     if (m_scaleFold) {
@@ -4518,10 +4519,13 @@ void SongView::updateSong(const MidiTimeline *timeline)
 
 void SongView::setDocument(SongDocument *document)
 {
-    if (m_document != document) {
+    const bool documentChanged = m_document != document;
+    if (documentChanged || !m_selectionModel.noteSelection().empty()) {
         if (m_roll)
             m_roll->cancelPitchBendPopup();
         cancelActiveInteractions();
+    }
+    if (documentChanged) {
         if (m_document) {
             disconnect(m_document, &SongDocument::tracksRemapped, this, nullptr);
             disconnect(m_document, &SongDocument::documentChanged, this, nullptr);
@@ -4539,7 +4543,7 @@ void SongView::setDocument(SongDocument *document)
         }
     }
     m_document = document;
-    m_selection.clear();
+    m_selectionModel.clearNoteSelectionForDocument();
     m_headers->rebuild();
     m_events->setDocument(document);
     notifyDrawerSongChanged();
@@ -4729,7 +4733,7 @@ void SongView::showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenu
     selection.endTick = request.endTick;
     selection.scope = TimeSelection::Lanes;
     selection.lanes = request.lanes;
-    setTimeSelection(selection);
+    m_selectionModel.setTimeSelection(selection);
     showTimeSelectionMenu(request.globalPosition);
 }
 
@@ -4780,7 +4784,7 @@ SongView::ViewState SongView::viewState() const
     state.keyHeight = m_keyHeight;
     state.scrollPx = m_scrollX;
     state.scrollY = m_scrollY;
-    state.selectedTrack = m_selectedTrack;
+    state.selectedTrack = m_selectionModel.primaryTrack();
     state.editCursorTick = m_editCursorTick;
     state.gridMinDenom = m_gridMinDenom;
     state.gridTriplet = m_gridFeel == GridFeel::Triplet;
@@ -5027,91 +5031,54 @@ bool SongView::paintGrid(QPainter &painter, const QRect &rect, qreal origin) con
     return true;
 }
 
-bool SongView::isSelected(const ViewNote &note) const
+void SongView::onSelectionModelChanged(songview::EditorSelectionModel::Change changes)
 {
-    return note.track == m_selectedTrack && note.noteId.isAssigned() &&
-           std::find(m_selection.begin(), m_selection.end(), note.noteId) != m_selection.end();
-}
-
-void SongView::setSelection(std::vector<NoteId> ids)
-{
-    ids.erase(std::remove_if(ids.begin(), ids.end(), [](NoteId id) { return !id.isAssigned(); }),
-              ids.end());
-    std::vector<NoteId> unique;
-    unique.reserve(ids.size());
-    for (NoteId id : ids) {
-        if (std::find(unique.begin(), unique.end(), id) == unique.end())
-            unique.push_back(id);
+    const bool primaryChanged =
+        songview::hasChange(changes, songview::EditorSelectionModel::Change::PrimaryTrack);
+    const bool scopeChanged =
+        songview::hasChange(changes, songview::EditorSelectionModel::Change::TrackScope);
+    const bool notesChanged =
+        songview::hasChange(changes, songview::EditorSelectionModel::Change::NoteSelection);
+    const bool timeChanged =
+        songview::hasChange(changes, songview::EditorSelectionModel::Change::TimeSelection);
+    if (primaryChanged || scopeChanged)
+        m_headers->syncSelection();
+    if (primaryChanged) {
+        refreshDrawerPages();
+        m_roll->setFocus();
+        if (m_scaleFold)
+            rebuildProjectionWithAnchoring();
+        emit selectedTrackChanged(m_selectionModel.primaryTrack());
     }
-    m_selection = std::move(unique);
-    // The two selection kinds are mutually exclusive, so Ctrl+C is never
-    // ambiguous.
-    if (!m_selection.empty() && m_timeSel.active())
-        clearTimeSelection();
-    m_roll->invalidateContent();
-    refreshVelocityPage();
-}
-
-void SongView::clearSelection()
-{
-    if (!m_selection.empty()) {
-        m_selection.clear();
+    if (scopeChanged && !primaryChanged)
+        refreshDrawerPages();
+    const bool timelineRefreshed = scopeChanged || timeChanged;
+    if (timelineRefreshed)
+        refreshTimelineViews(!(primaryChanged && m_scaleFold));
+    if ((primaryChanged || notesChanged) && !timelineRefreshed && !(primaryChanged && m_scaleFold))
         m_roll->invalidateContent();
+    const bool velocityRefreshed =
+        scopeChanged && m_editorDrawer && m_editorDrawer->pageVisible(EditorDrawerPage::Velocity);
+    if (notesChanged && !primaryChanged && !velocityRefreshed)
         refreshVelocityPage();
-    }
-}
-
-void SongView::setTimeSelection(const TimeSelection &sel)
-{
-    m_timeSel = sel;
-    if (m_timeSel.active() && !m_selection.empty())
-        m_selection.clear();
-    refreshTimelineViews();
-    refreshAutomationPage();
-}
-
-void SongView::clearTimeSelection()
-{
-    m_timeSel = TimeSelection();
-    refreshTimelineViews();
-    refreshAutomationPage();
-}
-
-bool SongView::timeSelectionCoversTrack(int track) const
-{
-    if (!m_timeSel.active() || m_timeSel.scope == TimeSelection::Lanes || track < 0 || track > 15)
-        return false;
-    const uint32_t usedTracks = usedTrackMask(m_timeline);
-    return (trackSelectionMask() & usedTracks & (1u << track)) != 0;
-}
-
-bool SongView::timeSelectionCoversLane(int track, uint8_t controller) const
-{
-    if (!m_timeSel.active())
-        return false;
-    if (m_timeSel.scope == TimeSelection::Lanes) {
-        return std::find(m_timeSel.lanes.cbegin(), m_timeSel.lanes.cend(),
-                         std::pair{track, controller}) != m_timeSel.lanes.cend();
-    }
-    const uint32_t usedTracks = usedTrackMask(m_timeline);
-    const uint32_t selectedTracks = trackSelectionMask() & usedTracks;
-    if (track >= 0 && track < 16)
-        return (selectedTracks & (1u << track)) != 0;
-    return track == -1 && controller == DOC_CC_TEMPO && usedTracks != 0 &&
-           selectedTracks == usedTracks;
+    const bool automationRefreshed = (primaryChanged || scopeChanged) && m_editorDrawer &&
+                                     m_editorDrawer->pageVisible(EditorDrawerPage::Automations);
+    if (timeChanged && !automationRefreshed)
+        refreshAutomationPage();
 }
 
 void SongView::announceTimeSelection()
 {
-    if (!m_timeSel.active() || !m_timeline)
+    if (!m_selectionModel.timeSelection().active() || !m_timeline)
         return;
-    const double beats = double(m_timeSel.endTick - m_timeSel.startTick) /
+    const double beats = double(m_selectionModel.timeSelection().endTick -
+                                m_selectionModel.timeSelection().startTick) /
                          double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
     QString scope;
-    if (m_timeSel.scope == TimeSelection::Lanes) {
-        scope = tr("%n lane(s)", nullptr, int(m_timeSel.lanes.size()));
+    if (m_selectionModel.timeSelection().scope == TimeSelection::Lanes) {
+        scope = tr("%n lane(s)", nullptr, int(m_selectionModel.timeSelection().lanes.size()));
     } else {
-        const uint32_t mask = trackSelectionMask();
+        const uint32_t mask = m_selectionModel.resolvedTrackScope(usedTrackMask(m_timeline));
         int n = 0;
         for (int t = 0; t < 16; t++)
             n += (mask >> t) & 1;
@@ -5125,13 +5092,13 @@ void SongView::announceTimeSelection()
 
 std::optional<SongView::TimeScopeResolution> SongView::resolveTimeSelectionScope() const
 {
-    if (!m_document || !m_timeline || !m_timeSel.active())
+    if (!m_document || !m_timeline || !m_selectionModel.timeSelection().active())
         return std::nullopt;
     TimeScopeResolution resolved;
-    if (m_timeSel.scope == TimeSelection::Lanes) {
-        if (m_timeSel.lanes.empty())
+    if (m_selectionModel.timeSelection().scope == TimeSelection::Lanes) {
+        if (m_selectionModel.timeSelection().lanes.empty())
             return std::nullopt;
-        resolved.scope.lanes = m_timeSel.lanes;
+        resolved.scope.lanes = m_selectionModel.timeSelection().lanes;
         resolved.label = tr("%n lane(s)", nullptr, int(resolved.scope.lanes.size()));
         return resolved;
     }
@@ -5143,7 +5110,8 @@ std::optional<SongView::TimeScopeResolution> SongView::resolveTimeSelectionScope
         if (m_timeline->tracks[track].used)
             usedMask |= 1u << track;
     }
-    resolved.scope.wholeSong = usedMask != 0 && (trackSelectionMask() & usedMask) == usedMask;
+    resolved.scope.wholeSong =
+        usedMask != 0 && m_selectionModel.resolvedTrackScope(usedMask) == usedMask;
     resolved.label = resolved.scope.wholeSong
                          ? tr("all tracks")
                          : tr("%n track(s)", nullptr, int(resolved.scope.tracks.size()));
@@ -5155,7 +5123,7 @@ std::vector<int> SongView::timeSelectionTracks() const
     std::vector<int> tracks;
     if (!m_timeline || !m_document)
         return tracks;
-    const uint32_t mask = trackSelectionMask();
+    const uint32_t mask = m_selectionModel.resolvedTrackScope(usedTrackMask(m_timeline));
     for (int t = 0; t < 16; t++) {
         if (!m_timeline->tracks[t].used || !(mask & (1u << t)))
             continue;
@@ -5178,17 +5146,17 @@ std::vector<uint8_t> SongView::trackCcs(int track) const
 
 void SongView::copyTimeSelection()
 {
-    if (!m_document || !m_timeSel.active())
+    if (!m_document || !m_selectionModel.timeSelection().active())
         return;
-    const uint64_t s = m_timeSel.startTick;
-    const uint64_t e = m_timeSel.endTick;
+    const uint64_t s = m_selectionModel.timeSelection().startTick;
+    const uint64_t e = m_selectionModel.timeSelection().endTick;
     Clip clip;
     clip.span = e - s;
     int noteCount = 0;
     int pointCount = 0;
     const auto copyLanePoints = [&](int track, uint8_t cc) {
         ClipLane lane{track, cc, {}};
-        const int query = track < 0 ? m_selectedTrack : track;
+        const int query = track < 0 ? m_selectionModel.primaryTrack() : track;
         for (const DocLanePoint &pt : m_document->lanePoints(query, cc)) {
             if (pt.tick >= s && pt.tick < e)
                 lane.points.push_back({uint32_t(pt.tick - s), pt.value});
@@ -5198,8 +5166,8 @@ void SongView::copyTimeSelection()
         // clears the destination range.
         clip.lanes.push_back(std::move(lane));
     };
-    if (m_timeSel.scope == TimeSelection::Lanes) {
-        for (const std::pair<int, uint8_t> &id : m_timeSel.lanes)
+    if (m_selectionModel.timeSelection().scope == TimeSelection::Lanes) {
+        for (const std::pair<int, uint8_t> &id : m_selectionModel.timeSelection().lanes)
             copyLanePoints(id.first, id.second);
     } else {
         for (int t : timeSelectionTracks()) {
@@ -5224,20 +5192,20 @@ void SongView::copyTimeSelection()
 
 void SongView::deleteTimeSelection()
 {
-    if (!m_document || !m_timeSel.active())
+    if (!m_document || !m_selectionModel.timeSelection().active())
         return;
-    const uint64_t s = m_timeSel.startTick;
-    const uint64_t e = m_timeSel.endTick;
+    const uint64_t s = m_selectionModel.timeSelection().startTick;
+    const uint64_t e = m_selectionModel.timeSelection().endTick;
     SongDocument::RangeEdit edit;
     const auto removeLanePoints = [&](int track, uint8_t cc) {
-        const int query = track < 0 ? m_selectedTrack : track;
+        const int query = track < 0 ? m_selectionModel.primaryTrack() : track;
         for (const DocLanePoint &pt : m_document->lanePoints(query, cc)) {
             if (pt.tick >= s && pt.tick < e)
                 edit.removePoints.push_back(pt);
         }
     };
-    if (m_timeSel.scope == TimeSelection::Lanes) {
-        for (const std::pair<int, uint8_t> &id : m_timeSel.lanes)
+    if (m_selectionModel.timeSelection().scope == TimeSelection::Lanes) {
+        for (const std::pair<int, uint8_t> &id : m_selectionModel.timeSelection().lanes)
             removeLanePoints(id.first, id.second);
     } else {
         for (int t : timeSelectionTracks()) {
@@ -5261,10 +5229,11 @@ void SongView::deleteTimeSelection()
 
 void SongView::transposeTimeSelection(int dKey)
 {
-    if (!m_document || !m_timeSel.active() || dKey == 0 || m_timeSel.scope == TimeSelection::Lanes)
+    if (!m_document || !m_selectionModel.timeSelection().active() || dKey == 0 ||
+        m_selectionModel.timeSelection().scope == TimeSelection::Lanes)
         return;
-    const uint64_t s = m_timeSel.startTick;
-    const uint64_t e = m_timeSel.endTick;
+    const uint64_t s = m_selectionModel.timeSelection().startTick;
+    const uint64_t e = m_selectionModel.timeSelection().endTick;
     std::vector<DocNote> notes;
     for (int t : timeSelectionTracks()) {
         for (const DocNote &note : m_document->notesForTrack(t)) {
@@ -5301,9 +5270,9 @@ void SongView::foldTransposeSelection(int degreeDelta)
     if (!m_document || degreeDelta == 0)
         return;
     std::vector<DocNote> notes;
-    for (const DocNote &note : m_document->notesForTrack(m_selectedTrack)) {
+    for (const DocNote &note : m_document->notesForTrack(m_selectionModel.primaryTrack())) {
         const NoteId id = note.noteId;
-        if (std::find(m_selection.begin(), m_selection.end(), id) != m_selection.end())
+        if (m_selectionModel.isNoteSelected(id))
             notes.push_back(note);
     }
     std::vector<uint8_t> destinations;
@@ -5315,7 +5284,7 @@ void SongView::foldTransposeSelection(int degreeDelta)
     ids.reserve(notes.size());
     for (const DocNote &note : notes)
         ids.push_back(note.noteId);
-    setSelection(std::move(ids));
+    m_selectionModel.setNoteSelection(std::move(ids));
     int edge = destinations.front();
     for (uint8_t destination : destinations)
         edge =
@@ -5325,10 +5294,10 @@ void SongView::foldTransposeSelection(int degreeDelta)
 
 void SongView::nudgeTimeSelection(bool right)
 {
-    if (!m_document || !m_timeSel.active())
+    if (!m_document || !m_selectionModel.timeSelection().active())
         return;
-    const uint64_t s = m_timeSel.startTick;
-    const uint64_t e = m_timeSel.endTick;
+    const uint64_t s = m_selectionModel.timeSelection().startTick;
+    const uint64_t e = m_selectionModel.timeSelection().endTick;
     const uint64_t snapped = right ? snapTickUp(double(s) + 1.0) : snapTickDown(double(s) - 1.0);
     const int64_t dTick = int64_t(snapped) - int64_t(s);
     if (dTick == 0)
@@ -5336,14 +5305,14 @@ void SongView::nudgeTimeSelection(bool right)
     std::vector<DocNote> notes;
     std::vector<DocLanePoint> points;
     const auto gatherLanePoints = [&](int track, uint8_t cc) {
-        const int query = track < 0 ? m_selectedTrack : track;
+        const int query = track < 0 ? m_selectionModel.primaryTrack() : track;
         for (const DocLanePoint &pt : m_document->lanePoints(query, cc)) {
             if (pt.tick >= s && pt.tick < e)
                 points.push_back(pt);
         }
     };
-    if (m_timeSel.scope == TimeSelection::Lanes) {
-        for (const std::pair<int, uint8_t> &id : m_timeSel.lanes)
+    if (m_selectionModel.timeSelection().scope == TimeSelection::Lanes) {
+        for (const std::pair<int, uint8_t> &id : m_selectionModel.timeSelection().lanes)
             gatherLanePoints(id.first, id.second);
     } else {
         for (int t : timeSelectionTracks()) {
@@ -5358,10 +5327,10 @@ void SongView::nudgeTimeSelection(bool right)
     m_document->moveRange(notes, points, dTick);
     // The band follows even over empty content, so repeated nudges keep
     // aiming at the same region.
-    TimeSelection moved = m_timeSel;
+    TimeSelection moved = m_selectionModel.timeSelection();
     moved.startTick = uint64_t(int64_t(s) + dTick);
     moved.endTick = uint64_t(int64_t(e) + dTick);
-    setTimeSelection(moved);
+    m_selectionModel.setTimeSelection(moved);
     ensureRangeVisible(moved.startTick, moved.endTick, right);
 }
 
@@ -5370,14 +5339,15 @@ void SongView::removeTimeSelectionContents()
     const auto resolved = resolveTimeSelectionScope();
     if (!resolved)
         return;
-    const SongDocument::TimeRange range{m_timeSel.startTick, m_timeSel.endTick};
+    const SongDocument::TimeRange range{m_selectionModel.timeSelection().startTick,
+                                        m_selectionModel.timeSelection().endTick};
     if (!m_document->rippleDeleteTimeRange(range, resolved->scope)) {
         announce(tr("Nothing to remove in the time selection"));
         return;
     }
     // The span is gone and later content now sits under where the selection
     // was; clear it and park the edit cursor at the seam.
-    clearTimeSelection();
+    m_selectionModel.clearTimeSelection();
     commitEditCursor(range.startTick);
     const double beats =
         double(range.span()) / double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
@@ -5391,13 +5361,13 @@ void SongView::insertBlankTime()
     const auto resolved = resolveTimeSelectionScope();
     if (!resolved)
         return;
-    const TimeSelection selection = m_timeSel;
+    const TimeSelection selection = m_selectionModel.timeSelection();
     const SongDocument::TimeRange range{selection.startTick, selection.endTick};
     if (!m_document->insertBlankTime(range, resolved->scope)) {
         announce(tr("Nothing to insert in the time selection"));
         return;
     }
-    setTimeSelection(selection);
+    m_selectionModel.setTimeSelection(selection);
     commitEditCursor(range.startTick);
     const double beats =
         double(range.span()) / double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
@@ -5410,16 +5380,17 @@ void SongView::duplicateTimeSelection()
     const auto resolved = resolveTimeSelectionScope();
     if (!resolved)
         return;
-    const SongDocument::TimeRange range{m_timeSel.startTick, m_timeSel.endTick};
+    const SongDocument::TimeRange range{m_selectionModel.timeSelection().startTick,
+                                        m_selectionModel.timeSelection().endTick};
     if (!m_document->duplicateTimeRange(range, resolved->scope)) {
         announce(tr("Nothing to duplicate in the time selection"));
         return;
     }
     const uint64_t destinationEnd = range.endTick + range.span();
-    TimeSelection moved = m_timeSel;
+    TimeSelection moved = m_selectionModel.timeSelection();
     moved.startTick = range.endTick;
     moved.endTick = destinationEnd;
-    setTimeSelection(moved);
+    m_selectionModel.setTimeSelection(moved);
     commitEditCursor(destinationEnd);
     ensureRangeVisible(moved.startTick, moved.endTick, true);
     const double beats =
@@ -5451,7 +5422,7 @@ void SongView::pasteRangeAtEditCursor()
     for (const ClipLane &cl : m_clip.lanes)
         consider(cl.track);
     const auto mapTrack = [&](int track) {
-        return track < 0 ? -1 : (multi ? track : m_selectedTrack);
+        return track < 0 ? -1 : (multi ? track : m_selectionModel.primaryTrack());
     };
 
     SongDocument::RangeEdit edit;
@@ -5475,7 +5446,7 @@ void SongView::pasteRangeAtEditCursor()
         const int t = mapTrack(cl.track);
         if (t >= 0 && m_document->smfTrackFor(t) < 0)
             continue;
-        const int query = t < 0 ? m_selectedTrack : t;
+        const int query = t < 0 ? m_selectionModel.primaryTrack() : t;
         for (const DocLanePoint &pt : m_document->lanePoints(query, cl.cc)) {
             if (pt.tick >= s && pt.tick < e)
                 edit.removePoints.push_back(pt);
@@ -5492,7 +5463,7 @@ void SongView::pasteRangeAtEditCursor()
     // Set up for tiling: the edit cursor advances to the end of the pasted
     // span so repeated Ctrl+V lays copies back-to-back, and the selection is
     // cleared so its band doesn't sit in the way of the next ruler click.
-    clearTimeSelection();
+    m_selectionModel.clearTimeSelection();
     commitEditCursor(e);
     // Anchor on the start of the pasted span, not the advanced cursor:
     // seeing the content that just landed is what confirms the paste.
@@ -5522,7 +5493,7 @@ bool SongView::handleEditKey(QKeyEvent *event)
     if (!m_document)
         return false;
     const auto &keys = keymap::Registry::instance();
-    const bool sel = m_timeSel.active();
+    const bool sel = m_selectionModel.timeSelection().active();
     if (sel && keys.matches(event, QStringLiteral("roll.copy"))) {
         copyTimeSelection();
         event->accept();
@@ -5578,7 +5549,7 @@ bool SongView::handleEditKey(QKeyEvent *event)
 
 void SongView::showTimeSelectionMenu(const QPoint &globalPos)
 {
-    if (!m_document || !m_timeSel.active())
+    if (!m_document || !m_selectionModel.timeSelection().active())
         return;
     QMenu menu(this);
     // Display-only hints mirroring the keymap, like the note context menu.
@@ -5614,7 +5585,7 @@ void SongView::showTimeSelectionMenu(const QPoint &globalPos)
     } else if (chosen == paste) {
         pasteRangeAtEditCursor();
     } else if (chosen == clear) {
-        clearTimeSelection();
+        m_selectionModel.clearTimeSelection();
     }
 }
 
@@ -5655,7 +5626,7 @@ DrawerPageLiveState SongView::drawerPageLiveState() const
         pxPerBeat(),
         m_scrollX,
         m_editCursorTick,
-        trackColor(m_selectedTrack),
+        trackColor(m_selectionModel.primaryTrack()),
         {m_playheadTick, m_playing},
     };
 }
@@ -5894,7 +5865,7 @@ void SongView::buildOccupancySet(bool out[128]) const
 {
     std::fill_n(out, 128, false);
     for (const ViewNote &note : m_model.notes) {
-        if (note.track == m_selectedTrack)
+        if (note.track == m_selectionModel.primaryTrack())
             out[note.key] = true;
     }
 }
@@ -5996,38 +5967,28 @@ void SongView::selectTrack(int track)
 
 void SongView::transitionSelectedTrack(int newTrack)
 {
-    transitionSelectedTrack(newTrack, newTrack != m_selectedTrack);
+    transitionSelectedTrack(newTrack, newTrack != m_selectionModel.primaryTrack());
 }
 
 void SongView::transitionSelectedTrack(int newTrack, bool trackIdentityChanged)
 {
-    if (newTrack < 0 || newTrack > 15)
+    if (newTrack < 0 || newTrack >= 16 || !trackIdentityChanged)
         return;
-    if (!trackIdentityChanged) {
-        m_selectedTrack = newTrack;
-        return;
-    }
     cancelActiveInteractions();
-    m_selectedTrack = newTrack;
-    // Programmatic selection collapses the multi-track scope;
-    // trackHeaderClicked restores it for modifier clicks.
-    m_trackSelMask = 1u << newTrack;
-    m_selection.clear();
-    clearTimeSelection();
-    m_headers->syncSelection();
-    refreshDrawerPages();
-    m_roll->setFocus();
-    if (m_scaleFold)
-        rebuildProjectionWithAnchoring();
-    else
-        m_roll->invalidateContent();
-    emit selectedTrackChanged(newTrack);
+    if (m_roll)
+        m_roll->cancelPitchBendPopup();
+    m_selectionModel.transitionPrimaryTrack(newTrack);
 }
 
 bool SongView::revealNote(int track, uint8_t key, uint64_t tick)
 {
     if (track < 0 || track > 15)
         return false;
+    if (track == m_selectionModel.primaryTrack()) {
+        cancelActiveInteractions();
+        if (m_roll)
+            m_roll->cancelPitchBendPopup();
+    }
     selectTrack(track);
     // Notes are sorted by startTick, so the last match is the note that was
     // sounding (or had just finished fading) at the event's position.
@@ -6040,64 +6001,23 @@ bool SongView::revealNote(int track, uint8_t key, uint64_t tick)
     }
     if (!found)
         return false;
-    setSelection({found->noteId});
+    m_selectionModel.setNoteSelection({found->noteId});
     ensureKeyVisible(key);
     return true;
 }
 
-uint32_t SongView::trackSelectionMask() const
-{
-    uint32_t used = 0;
-    if (m_timeline) {
-        for (int t = 0; t < 16; t++)
-            if (m_timeline->tracks[t].used)
-                used |= 1u << t;
-    }
-    const uint32_t mask = (m_trackSelMask | (1u << m_selectedTrack)) & used;
-    return mask ? mask : (1u << m_selectedTrack);
-}
-
 void SongView::trackHeaderClicked(int track, Qt::KeyboardModifiers modifiers)
 {
-    if (track < 0 || track > 15)
+    if (track < 0 || track >= 16)
         return;
-    if (modifiers & Qt::ControlModifier) {
-        uint32_t mask = trackSelectionMask() ^ (1u << track);
-        if (mask == 0)
-            return; // the scope can't go empty
-        if (!(mask & (1u << m_selectedTrack))) {
-            // The primary track was toggled out; hand primary to the lowest
-            // remaining scoped track. This is a scope adjustment, not a
-            // track switch, so the time selection survives (selectTrack
-            // clears it and collapses the mask — restore both after).
-            int next = 0;
-            while (!(mask & (1u << next)))
-                next++;
-            const TimeSelection keep = m_timeSel;
-            selectTrack(next);
-            m_timeSel = keep;
-        }
-        m_trackSelMask = mask;
-    } else if (modifiers & Qt::ShiftModifier) {
-        const int lo = std::min(track, m_selectedTrack);
-        const int hi = std::max(track, m_selectedTrack);
-        uint32_t mask = 0;
-        for (int t = lo; t <= hi; t++) {
-            if (m_timeline && m_timeline->tracks[t].used)
-                mask |= 1u << t;
-        }
-        m_trackSelMask = mask | (1u << m_selectedTrack);
-    } else {
-        if (track == m_selectedTrack)
-            clearSelection();
-        else
-            selectTrack(track);
-        m_trackSelMask = 1u << track; // collapse even when already primary
-    }
-    m_headers->syncSelection();
-    // The time selection's track scope is live; repaint its bands.
-    refreshTimelineViews();
-    refreshDrawerPages();
+    cancelActiveInteractions();
+    if (m_roll)
+        m_roll->cancelPitchBendPopup();
+    const uint32_t usedTracks = usedTrackMask(m_timeline);
+    const auto action = modifiers & Qt::ControlModifier   ? songview::TrackScopeAction::Toggle
+                        : (modifiers & Qt::ShiftModifier) ? songview::TrackScopeAction::Range
+                                                          : songview::TrackScopeAction::Plain;
+    m_selectionModel.adjustTrackScope(track, usedTracks, action);
 }
 
 void SongView::setTrackMute(int track, bool on)
@@ -6134,7 +6054,7 @@ static QString scopedTracksText(uint32_t mask)
 
 void SongView::toggleMuteOnSelectedTracks()
 {
-    const uint32_t scope = trackSelectionMask();
+    const uint32_t scope = m_selectionModel.resolvedTrackScope(usedTrackMask(m_timeline));
     const bool allOn = (m_muteMask & scope) == scope;
     const uint32_t mask = allOn ? (m_muteMask & ~scope) : (m_muteMask | scope);
     if (mask == m_muteMask)
@@ -6147,7 +6067,7 @@ void SongView::toggleMuteOnSelectedTracks()
 
 void SongView::toggleSoloOnSelectedTracks()
 {
-    const uint32_t scope = trackSelectionMask();
+    const uint32_t scope = m_selectionModel.resolvedTrackScope(usedTrackMask(m_timeline));
     const bool allOn = (m_soloMask & scope) == scope;
     const uint32_t mask = allOn ? (m_soloMask & ~scope) : (m_soloMask | scope);
     if (mask == m_soloMask)
@@ -6244,12 +6164,13 @@ int SongView::currentProgram(int track) const
 
 DrawerPageVoiceContext SongView::voiceContext(uint64_t tick) const
 {
-    if (!m_timeline || !m_voicegroup || m_selectedTrack < 0 || m_selectedTrack >= 16)
+    if (!m_timeline || !m_voicegroup || m_selectionModel.primaryTrack() < 0 ||
+        m_selectionModel.primaryTrack() >= 16)
         return {};
-    int program = m_timeline->tracks[m_selectedTrack].firstProgram;
+    int program = m_timeline->tracks[m_selectionModel.primaryTrack()].firstProgram;
     uint64_t endTick = UINT64_MAX;
     for (const VoiceChange &change : m_model.voices) {
-        if (change.track != m_selectedTrack)
+        if (change.track != m_selectionModel.primaryTrack())
             continue;
         if (change.tick > tick) {
             endTick = change.tick;
@@ -6427,80 +6348,67 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
 {
     if (m_roll)
         m_roll->cancelPitchBendPopup();
-    if (m_editorViewState.remapEngineTracks(remap.engineTrackMap))
-        setEditorViewState(m_editorViewState);
-    m_editorDrawer->velocityArea()->tracksRemapped(remap);
+    cancelActiveInteractions();
     const auto remapTrack = [&remap](int track) {
-        return track >= 0 && static_cast<std::size_t>(track) < remap.engineTrackMap.size()
-                   ? remap.engineTrackMap[static_cast<std::size_t>(track)]
+        if (track < 0 || static_cast<std::size_t>(track) >= remap.engineTrackMap.size())
+            return -1;
+        const int destination = remap.engineTrackMap[static_cast<std::size_t>(track)];
+        return destination >= 0 && destination < remap.newEngineTrackCount && destination < 16
+                   ? destination
                    : -1;
     };
-    const auto remapMask = [&remap, &remapTrack](uint32_t mask) {
+    const auto remapMask = [&remapTrack](uint32_t mask) {
         uint32_t mapped = 0;
         for (int track = 0; track < 16; ++track) {
-            if (!(mask & (1u << track)))
+            if (!(mask & (uint32_t{1} << track)))
                 continue;
             const int destination = remapTrack(track);
-            if (destination >= 0 && destination < remap.newEngineTrackCount)
-                mapped |= 1u << destination;
+            if (destination >= 0)
+                mapped |= uint32_t{1} << destination;
         }
         return mapped;
     };
-    const int oldSelectedTrack = m_selectedTrack;
-    const int mappedSelectedTrack = remapTrack(oldSelectedTrack);
-    m_selectedTrack = mappedSelectedTrack >= 0
-                          ? mappedSelectedTrack
-                          : std::min(oldSelectedTrack, std::max(0, remap.newEngineTrackCount - 1));
-    if (mappedSelectedTrack < 0 && m_timeSel.scope == TimeSelection::Tracks)
-        clearTimeSelection();
-
-    m_trackSelMask = remapMask(m_trackSelMask) | (1u << m_selectedTrack);
-    const uint32_t mute = remapMask(m_muteMask);
-    const uint32_t solo = remapMask(m_soloMask);
-
-    if (m_timeSel.scope == TimeSelection::Lanes) {
-        std::vector<std::pair<int, uint8_t>> lanes;
-        lanes.reserve(m_timeSel.lanes.size());
-        for (const std::pair<int, uint8_t> &lane : m_timeSel.lanes) {
-            const int track = lane.first < 0 ? lane.first : remapTrack(lane.first);
-            if (track >= 0 || lane.first < 0)
-                lanes.emplace_back(track, lane.second);
-        }
-        m_timeSel.lanes = std::move(lanes);
-        if (m_timeSel.lanes.empty())
-            m_timeSel = TimeSelection();
+    EditorViewState remappedEditorViewState = m_editorViewState;
+    const bool editorViewChanged = remappedEditorViewState.remapEngineTracks(remap.engineTrackMap);
+    const EditorDrawerState oldDrawerState = m_editorViewState.drawerState();
+    const uint32_t oldMute = m_muteMask;
+    const uint32_t oldSolo = m_soloMask;
+    const uint32_t mute = remapMask(oldMute);
+    const uint32_t solo = remapMask(oldSolo);
+    std::vector<ClipTrack> remappedTracks;
+    remappedTracks.reserve(m_clip.tracks.size());
+    for (const ClipTrack &source : m_clip.tracks) {
+        const int destination = remapTrack(source.track);
+        if (destination < 0)
+            continue;
+        ClipTrack track = source;
+        track.track = destination;
+        remappedTracks.push_back(std::move(track));
     }
-    std::vector<ClipTrack> tracks;
-    tracks.reserve(m_clip.tracks.size());
-    for (ClipTrack &track : m_clip.tracks) {
-        const int destination = remapTrack(track.track);
-        if (destination >= 0) {
-            track.track = destination;
-            tracks.push_back(std::move(track));
-        }
+    std::vector<ClipLane> remappedLanes;
+    remappedLanes.reserve(m_clip.lanes.size());
+    for (const ClipLane &source : m_clip.lanes) {
+        const int destination = source.track < 0 ? source.track : remapTrack(source.track);
+        if (destination < 0 && source.track >= 0)
+            continue;
+        ClipLane lane = source;
+        lane.track = destination;
+        remappedLanes.push_back(std::move(lane));
     }
-    m_clip.tracks = std::move(tracks);
-    std::vector<ClipLane> clipLanes;
-    clipLanes.reserve(m_clip.lanes.size());
-    for (ClipLane &lane : m_clip.lanes) {
-        const int destination = lane.track < 0 ? lane.track : remapTrack(lane.track);
-        if (destination >= 0 || lane.track < 0) {
-            lane.track = destination;
-            clipLanes.push_back(std::move(lane));
-        }
-    }
-    m_clip.lanes = std::move(clipLanes);
-    if (mute != m_muteMask) {
-        m_muteMask = mute;
+    m_clip.tracks = std::move(remappedTracks);
+    m_clip.lanes = std::move(remappedLanes);
+    m_muteMask = mute;
+    m_soloMask = solo;
+    if (editorViewChanged)
+        m_editorViewState = std::move(remappedEditorViewState);
+    m_selectionModel.applyTrackRemap(remap);
+    m_editorDrawer->velocityArea()->tracksRemapped(remap);
+    if (mute != oldMute)
         emit muteMaskChanged(mute);
-    }
-    if (solo != m_soloMask) {
-        m_soloMask = solo;
+    if (solo != oldSolo)
         emit soloMaskChanged(solo);
-    }
-    if (m_selectedTrack != oldSelectedTrack)
-        emit selectedTrackChanged(m_selectedTrack);
-    refreshDrawerPages();
+    if (oldDrawerState != m_editorViewState.drawerState())
+        emit editorDrawerStateChanged(m_editorViewState.drawerState());
 }
 
 void SongView::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
@@ -6743,10 +6651,11 @@ void SongView::updateScrollbars()
     setVScroll(m_scrollY);
 }
 
-void SongView::refreshTimelineViews()
+void SongView::refreshTimelineViews(bool refreshRoll)
 {
     m_ruler->update();
-    m_roll->invalidateContent();
+    if (refreshRoll)
+        m_roll->invalidateContent();
     m_strip->invalidateContent();
     syncPlayheadOverlay();
 }

@@ -681,7 +681,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         int otherTrack = -1;
         const MidiTimeline *tl = tab->view->timeline();
         for (int t = 0; t < 16 && otherTrack < 0 && tl; t++) {
-            if (t != tab->view->selectedTrack() && tl->tracks[t].used)
+            if (t != tab->view->selectionModel().primaryTrack() && tl->tracks[t].used)
                 otherTrack = t;
         }
         if (check(vgCombo && otherTrack >= 0,
@@ -700,7 +700,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                                       Qt::LeftButton, Qt::NoModifier);
                     QCoreApplication::sendEvent(row, &press);
                     check(!row.isNull(), "header rebuild freed the row inside its own press");
-                    check(tab->view->selectedTrack() == otherTrack,
+                    check(tab->view->selectionModel().primaryTrack() == otherTrack,
                           "the header click did not select its track");
                     check(tab->doc.cfg().voicegroupArg == otherArg,
                           "the mid-press -G edit did not commit");
@@ -725,7 +725,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                                         Qt::NoButton, Qt::NoModifier);
                     QCoreApplication::sendEvent(fresh, &release);
                     QCoreApplication::processEvents();
-                    check(tab->view->selectedTrack() == track,
+                    check(tab->view->selectionModel().primaryTrack() == track,
                           "a rebuilt header row did not select its track");
                 }
                 tab->doc.undoStack()->undo(); // the mid-press -G switch

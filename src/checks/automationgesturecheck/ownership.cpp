@@ -29,7 +29,7 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
             rig.document().deleteLanePoints(rig.pan.track, rig.pan.controller, pan.lanePoints);
             rig.documentChanged();
         }
-        rig.view().clearTimeSelection();
+        rig.view().selectionModel().clearTimeSelection();
         rig.pump();
     };
     const auto geometry = rig.geometry();
@@ -81,12 +81,12 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
     const auto normalGrab =
         rig.pointAt(rig.pan, normalSource.mapped.point.tick, normalSource.mapped.point.value);
     const auto normalTarget = rig.pointAt(rig.pan, normalGrab.mapped.cell.tickEnd + 96, 96);
-    SongView::TimeSelection normalSelection;
+    songview::TimeSelection normalSelection;
     normalSelection.startTick = normalGrab.mapped.point.tick;
     normalSelection.endTick = normalGrab.mapped.cell.tickEnd;
-    normalSelection.scope = SongView::TimeSelection::Lanes;
+    normalSelection.scope = songview::TimeSelection::Lanes;
     normalSelection.lanes = {{rig.pan.track, rig.pan.controller}};
-    rig.view().setTimeSelection(normalSelection);
+    rig.view().selectionModel().setTimeSelection(normalSelection);
     const qreal armDistance = qreal(geometry.nodeDragActivationDistance + 2);
     const QPointF normalArm = normalGrab.position + QPointF(armDistance, 0.0);
     const QPointF normalEnd = normalTarget.position + QPointF(armDistance, 0.0);
@@ -103,7 +103,7 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
         rig.pan.track, rig.pan.controller, normalTarget.mapped.point.tick, &normalMoved);
     const bool normalSourceGone = !rig.document().findLanePoint(
         rig.pan.track, rig.pan.controller, normalGrab.mapped.point.tick, &normalOriginal);
-    const auto normalSelectionAfter = rig.view().timeSelection();
+    const auto normalSelectionAfter = rig.view().selectionModel().timeSelection();
     const int64_t normalDelta =
         int64_t(normalTarget.mapped.point.tick) - int64_t(normalGrab.mapped.point.tick);
     const bool normalSelectionMoved =
@@ -120,19 +120,19 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
 
     resetPan();
     rig.setPersistentPencil(true);
-    SongView::TimeSelection pencilSelection;
+    songview::TimeSelection pencilSelection;
     pencilSelection.startTick = 24;
     pencilSelection.endTick = 72;
-    pencilSelection.scope = SongView::TimeSelection::Lanes;
+    pencilSelection.scope = songview::TimeSelection::Lanes;
     pencilSelection.lanes = {{rig.pan.track, rig.pan.controller}};
-    rig.view().setTimeSelection(pencilSelection);
+    rig.view().selectionModel().setTimeSelection(pencilSelection);
     const auto selectionStart = rig.pointAt(rig.pan, 144, 32);
     const auto selectionEnd = rig.pointAt(rig.pan, 216, 96);
     rig.mousePress(selectionStart.position);
     rig.mouseMove(selectionEnd.position);
     rig.mouseRelease(selectionEnd.position);
     rig.pump();
-    const auto selectionAfterPencil = rig.view().timeSelection();
+    const auto selectionAfterPencil = rig.view().selectionModel().timeSelection();
     check(selectionAfterPencil.startTick == pencilSelection.startTick &&
               selectionAfterPencil.endTick == pencilSelection.endTick &&
               selectionAfterPencil.scope == pencilSelection.scope &&

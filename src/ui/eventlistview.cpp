@@ -1158,7 +1158,7 @@ void EventListView::syncTrackSelection()
 {
     if (m_syncing || !m_document || isHidden() || m_document->revision() != m_documentRevision)
         return;
-    const int chunk = m_document->smfTrackFor(m_sv->selectedTrack());
+    const int chunk = m_document->smfTrackFor(m_sv->selectionModel().primaryTrack());
     if (chunk < 0 || chunk == currentChunk())
         return;
     const int comboIndex = m_chunk->findData(chunk);
@@ -1433,7 +1433,7 @@ void EventListView::chunkPicked(int comboIndex)
     // mirroring how the roll's selection steers this combo.
     for (int e = 0; e < m_document->engineTrackCount(); e++) {
         if (m_document->smfTrackFor(e) == currentChunk()) {
-            if (e != m_sv->selectedTrack()) {
+            if (e != m_sv->selectionModel().primaryTrack()) {
                 m_syncing = true;
                 m_sv->selectTrack(e);
                 m_syncing = false;

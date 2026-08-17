@@ -424,14 +424,14 @@ class PitchBendCheckContext final
         duplicateTimeline->events.insert(duplicateTimeline->events.begin(), duplicateOff);
         duplicateTimeline->events.insert(duplicateTimeline->events.begin(), duplicateOn);
         m_view.updateSong(duplicateTimeline.get());
-        m_view.setSelection({m_note.noteId});
+        m_view.selectionModel().setNoteSelection({m_note.noteId});
         const RangePopupState range = openRangePopup();
         if (range.popup) {
             sendKey(range.popup, Qt::Key_Escape, Qt::NoModifier);
             drainPopupDeletes();
         }
         m_view.updateSong(originalTimeline);
-        m_view.setSelection({m_note.noteId});
+        m_view.selectionModel().setNoteSelection({m_note.noteId});
         const QByteArray beforeIdentity = m_document.smf().write();
         const int identityUndoIndex = m_document.undoStack()->index();
         m_document.deleteNotes({m_note});
@@ -448,7 +448,7 @@ class PitchBendCheckContext final
         if (m_document.undoStack()->index() != identityUndoIndex ||
             m_document.smf().write() != beforeIdentity)
             fail("duplicate-anchor identity check did not restore the document");
-        m_view.setSelection({m_note.noteId});
+        m_view.selectionModel().setNoteSelection({m_note.noteId});
     }
 
     void runSnapshotDuringGesture()
@@ -532,7 +532,7 @@ class PitchBendCheckContext final
         if (m_document.undoStack()->index() != lifecycleUndoIndex)
             fail("pitch-bend lifecycle check did not restore its document edits");
         m_view.updateSong(m_view.timeline());
-        m_view.setSelection({m_note.noteId});
+        m_view.selectionModel().setNoteSelection({m_note.noteId});
     }
 
     void runRangeFreehandAndUndo()
@@ -902,7 +902,8 @@ class PitchBendCheckContext final
         }
         sendKey(resetPopup, Qt::Key_Escape, Qt::NoModifier);
         if (resetPopup->isVisible() || m_document.smf().write() != m_beforeCurve ||
-            m_view.selection().size() != 1 || m_view.selection().front() != m_note.noteId)
+            m_view.selectionModel().noteSelection().size() != 1 ||
+            m_view.selectionModel().noteSelection().front() != m_note.noteId)
             fail("Escape did not dismiss the pitch-bend popup while retaining the note");
         drainPopupDeletes();
     }
@@ -924,7 +925,8 @@ class PitchBendCheckContext final
         QCoreApplication::processEvents();
         if (popup && popup->isVisible())
             fail("clicking the selected note did not dismiss the pitch-bend popup");
-        if (m_view.selection().size() != 1 || m_view.selection().front() != m_note.noteId)
+        if (m_view.selectionModel().noteSelection().size() != 1 ||
+            m_view.selectionModel().noteSelection().front() != m_note.noteId)
             fail("clicking the selected note did not preserve note focus");
         drainPopupDeletes();
     }
@@ -994,13 +996,13 @@ class PitchBendCheckContext final
             m_document.smf().write() != fixture.beforeSmf)
             fail("active-grid fixture did not restore exact SMF bytes and undo index");
         m_view.applyViewState(fixture.beforeViewState);
-        m_view.setSelection(fixture.beforeSelection);
+        m_view.selectionModel().setNoteSelection(fixture.beforeSelection);
         QCoreApplication::processEvents();
         if (m_view.gridFeel() != (fixture.beforeViewState.gridTriplet
                                       ? SongView::GridFeel::Triplet
                                       : SongView::GridFeel::Straight) ||
             m_view.gridMinDenom() != fixture.beforeViewState.gridMinDenom ||
-            m_view.selection() != fixture.beforeSelection)
+            m_view.selectionModel().noteSelection() != fixture.beforeSelection)
             fail("active-grid fixture did not restore view grid settings and selection");
         if (!m_document.containsNoteSpan(m_engineTrack, m_note, m_endTick))
             fail("active-grid fixture changed the original note span");
@@ -1010,7 +1012,7 @@ class PitchBendCheckContext final
     {
         fixture->beforeSmf = m_document.smf().write();
         fixture->beforeUndoIndex = m_document.undoStack()->index();
-        fixture->beforeSelection = m_view.selection();
+        fixture->beforeSelection = m_view.selectionModel().noteSelection();
         fixture->beforeViewState = m_view.viewState();
         fixture->clock = std::max<uint64_t>(1, m_document.ticksPerClock());
         uint64_t fixtureEnd = 0;
@@ -1044,7 +1046,7 @@ class PitchBendCheckContext final
                                                  const char *failure)
     {
         m_view.selectTrack(m_engineTrack);
-        m_view.setSelection({fixture.fixtureNote.noteId});
+        m_view.selectionModel().setNoteSelection({fixture.fixtureNote.noteId});
         QCursor::setPos(m_roll->mapToGlobal(m_noteCenter));
         sendKey(m_roll, Qt::Key_G, Qt::NoModifier);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));

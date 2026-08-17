@@ -107,9 +107,11 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
         painter.setPen(themes::color(themes::Role::song_view_secondary_text));
         painter.drawText(secondaryTextBox, Qt::AlignLeft | Qt::AlignVCenter, rowText.secondary);
     } else if (row.id.kind == EditorAutomationRowKind::Voice && page.document()) {
-        const int changeCount = int(std::count_if(
-            page.model().voices.cbegin(), page.model().voices.cend(),
-            [&page](const VoiceChange &change) { return change.track == page.selectedTrack(); }));
+        const int changeCount = int(
+            std::count_if(page.model().voices.cbegin(), page.model().voices.cend(),
+                          [&page](const VoiceChange &change) {
+                              return change.track == page.m_owner.selectionModel().primaryTrack();
+                          }));
         if (rowText.summaryKind != AutomationRows::SummaryKind::VoiceChanges ||
             rowText.changeCount != changeCount) {
             rowText.secondary = changeCount ? AutomationArea::tr("%n change(s) · click to edit",
@@ -185,6 +187,7 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
                                                               plot,
                                                               gesture.previewPoints[rowIndex],
                                                               color,
+                                                              ctx.usedTrackMask,
                                                               nullptr,
                                                               nullptr,
                                                               multipleSelectedNodes};
@@ -200,6 +203,7 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
                                                        plot,
                                                        points,
                                                        color,
+                                                       ctx.usedTrackMask,
                                                        &original,
                                                        &point.current,
                                                        multipleSelectedNodes};
@@ -573,10 +577,11 @@ void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationArea &ar
     };
     const qreal dpr = painter.device()->devicePixelRatioF();
     const qreal curveStrokeWidth = layout::singlePixel() + layout::singlePixel();
-    const auto &timeSelection = page.timeSelection();
+    const auto &timeSelection = page.m_owner.selectionModel().timeSelection();
     const auto lane = rows.rowIdentity(row);
     const bool selectedLane =
-        timeSelection.active() && page.timeSelectionCoversLane(lane.first, lane.second);
+        timeSelection.active() && page.m_owner.selectionModel().timeSelectionCoversLane(
+                                      lane.first, lane.second, ctx.usedTrackMask);
     const QColor curveColor =
         ctx.multipleSelectedNodes && !selectedLane ? area.palette().mid().color() : color;
     painter.setPen(QPen(curveColor, curveStrokeWidth));
@@ -618,10 +623,11 @@ void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationAre
     const qreal nodeExtent =
         std::max(geometry.nodePaintRadius, geometry.selectedNodeRingRadius) + layout::singlePixel();
     const auto lane = rows.rowIdentity(row);
-    const auto &ownerSelection = page.timeSelection();
+    const auto &ownerSelection = page.m_owner.selectionModel().timeSelection();
     const SongDocument::TimeRange timeRange{ownerSelection.startTick, ownerSelection.endTick};
     const bool committedRange =
-        ownerSelection.active() && page.timeSelectionCoversLane(lane.first, lane.second);
+        ownerSelection.active() && page.m_owner.selectionModel().timeSelectionCoversLane(
+                                       lane.first, lane.second, ctx.usedTrackMask);
     const bool provisionalLane = area.bandPreviewContainsRow(rowIndex);
     const bool selectedLane = committedRange || provisionalLane;
     const bool dimLane = ctx.multipleSelectedNodes && !selectedLane;
@@ -699,7 +705,7 @@ std::vector<VoiceLabelLayout> layoutVoiceLabels(const QRect &plot, const SongVie
 void paintVoiceRow(QPainter &painter, const QRect &plot, AutomationPage &page,
                    const AutomationGeometry &geometry, AutomationRows &rows)
 {
-    const int track = page.selectedTrack();
+    const int track = page.m_owner.selectionModel().primaryTrack();
     const auto &live = page.liveState();
     const double contextTick =
         live.playback.playing ? live.playback.playheadTick : double(live.editCursorTick);

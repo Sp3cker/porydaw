@@ -257,14 +257,15 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         return 1;
     }
     fixtureView.selectTrack(fixtureTrack);
-    fixtureView.setSelection({fixtureNote.noteId});
+    fixtureView.selectionModel().setNoteSelection({fixtureNote.noteId});
     ++fixtureLive.editCursorTick;
     fixtureArea->refreshLiveState(fixtureLive);
     DocNote resolvedFixtureNote;
     const auto &fixtureMarkers = fixtureArea->axis().markers();
     check(fixtureView.document() == &fixtureDocument &&
-              fixtureView.selectedTrack() == fixtureTrack &&
-              fixtureView.selection() == std::vector<NoteId>{fixtureNote.noteId} &&
+              fixtureView.selectionModel().primaryTrack() == fixtureTrack &&
+              fixtureView.selectionModel().noteSelection() ==
+                  std::vector<NoteId>{fixtureNote.noteId} &&
               fixtureDocument.findNote(fixtureNote.noteId, &resolvedFixtureNote) &&
               resolvedFixtureNote.noteId == fixtureNote.noteId &&
               resolvedFixtureNote.velocity == fixtureNote.velocity &&
@@ -449,7 +450,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                 expected.densityThresholdD4 + layout::space(layout::Space::Six));
     QApplication::processEvents();
 
-    view.setSelection({notes[0].noteId, notes[1].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
     live.editCursorTick++;
     area.refreshLiveState(live);
     voicegroup.voices[0] = square;
@@ -482,7 +483,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                   QStringLiteral("Velocity. Noise has 16 volume levels."),
           "Noise selection should publish all intrinsic graduations");
 
-    view.setSelection({notes[0].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId});
     ++live.editCursorTick;
     area.refreshLiveState(live);
     area.resize(
@@ -506,7 +507,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     hoverSplit.subGroup = hoverSplitChildren.data();
     voicegroup.voices[0] = hoverSplit;
     view.setVoicegroup(&voicegroup);
-    view.setSelection({notes[2].noteId});
+    view.selectionModel().setNoteSelection({notes[2].noteId});
     area.songChanged();
     ++live.editCursorTick;
     area.refreshLiveState(live);
@@ -530,7 +531,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     QApplication::sendEvent(&area, &mismatchedContextLeave);
     voicegroup.voices[0] = noise;
     view.setVoicegroup(&voicegroup);
-    view.setSelection({notes[0].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId});
     area.songChanged();
     ++live.editCursorTick;
     area.refreshLiveState(live);
@@ -609,7 +610,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         pixelRect(QRectF(paintNodeX - 3.0, unselectedY - 3.0, 6.0, 6.0));
     check(hasColorNear(velocityImage, unselectedNodeFillBounds, live.trackColor, 4),
           "a single-node selection must preserve unselected velocity node colors");
-    view.setSelection({notes[0].noteId, notes[2].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId, notes[2].noteId});
     ++live.editCursorTick;
     area.refreshLiveState(live);
     QApplication::processEvents();
@@ -623,7 +624,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
           "nodes outside a multi-node velocity selection must omit their outlines");
     view.cancelVelocityGesture();
     QApplication::processEvents();
-    view.setSelection({notes[0].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId});
     ++live.editCursorTick;
     area.refreshLiveState(live);
     const QRect rulerAccentBounds =
@@ -649,7 +650,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
           "velocity lane must paint the shared edit cursor");
 
     area.clearTrackHeaderSelection();
-    check(view.selection().empty(),
+    check(view.selectionModel().noteSelection().empty(),
           "plain track-header clearing must clear shared NoteId selection");
     live.playback.playing = true;
     const std::array<double, 4> contextInputs = {-1.0, 0.49, 0.5, 0.51};
@@ -685,7 +686,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
             timeline = std::move(rebuilt);
             view.updateSong(timeline.get());
         });
-    view.setSelection({notes[0].noteId, notes[1].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
     live.playback.playing = false;
     live.editCursorTick++;
     area.refreshLiveState(live);
@@ -708,7 +709,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const QPointF drag = stem + QPointF(0.0, -double(area.height()));
     sendMouse(area, QEvent::MouseButtonPress, stem, Qt::LeftButton, Qt::LeftButton);
     sendMouse(area, QEvent::MouseMove, firstDrag, Qt::NoButton, Qt::LeftButton);
-    check(view.selection() == std::vector<NoteId>({notes[0].noteId, notes[1].noteId}),
+    check(view.selectionModel().noteSelection() ==
+              std::vector<NoteId>({notes[0].noteId, notes[1].noteId}),
           "dragging selected velocity nodes must preserve their shared selection");
     const auto firstPreviewFirst = view.previewVelocity(notes[0].noteId);
     const auto firstPreviewSecond = view.previewVelocity(notes[1].noteId);
@@ -752,15 +754,16 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
               document.findNote(notes[1].noteId, &committedSecond) &&
               committedFirst.velocity == *finalPreviewFirst &&
               committedSecond.velocity == *finalPreviewSecond &&
-              view.selection() == std::vector<NoteId>({notes[0].noteId, notes[1].noteId}),
+              view.selectionModel().noteSelection() ==
+                  std::vector<NoteId>({notes[0].noteId, notes[1].noteId}),
           "relative drag must commit both final previews in one batch and preserve selection");
-    const std::vector<NoteId> selectedBeforeUndo = view.selection();
+    const std::vector<NoteId> selectedBeforeUndo = view.selectionModel().noteSelection();
     document.undoStack()->undo();
     area.documentChanged();
     live.documentRevision = document.revision();
     area.refreshLiveState(live);
     QApplication::processEvents();
-    check(view.selection() == selectedBeforeUndo,
+    check(view.selectionModel().noteSelection() == selectedBeforeUndo,
           "Undo must preserve the shared selection identities of surviving notes");
     DocNote restoredFirst;
     check(document.findNote(notes[0].noteId, &restoredFirst),
@@ -771,10 +774,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                                           : area.axis().velocityToY(restoredFirst.velocity));
     sendMouse(area, QEvent::MouseButtonPress, restoredNode, Qt::LeftButton, Qt::LeftButton);
     sendMouse(area, QEvent::MouseButtonRelease, restoredNode, Qt::LeftButton);
-    check(view.selection() == std::vector<NoteId>{notes[0].noteId},
+    check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId},
           "clicking one selected velocity node must collapse the other selected nodes");
 
-    view.setSelection({notes[0].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId});
     ++live.editCursorTick;
     area.refreshLiveState(live);
     const std::optional<std::size_t> secondLevel = map.levelOf(notes[1].velocity);
@@ -784,7 +787,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     sendMouse(area, QEvent::MouseButtonPress, secondNode, Qt::LeftButton, Qt::LeftButton);
     QEvent ungrabMouse(QEvent::UngrabMouse);
     QApplication::sendEvent(&area, &ungrabMouse);
-    check(view.selection() == std::vector<NoteId>{notes[0].noteId} &&
+    check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId} &&
               document.undoStack()->count() == undoDepthBeforeUngrab,
           "mouse ungrab must cancel a provisional selection without history residue");
 
@@ -854,7 +857,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     check(samePixels(bandBaseline, grabSelectorProbe()),
           "completed drag-select must clear its selector overlay");
 
-    view.setSelection({notes[0].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId});
     ++live.editCursorTick;
     area.refreshLiveState(live);
     QApplication::processEvents();
@@ -865,7 +868,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     QEvent cancelBand(QEvent::UngrabMouse);
     QApplication::sendEvent(&area, &cancelBand);
     QApplication::processEvents();
-    check(view.selection() == std::vector<NoteId>{notes[0].noteId} &&
+    check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId} &&
               samePixels(cancelledBandBaseline, grabSelectorProbe()),
           "cancelled drag-select must clear its selector overlay and restore selection");
     live.documentRevision = document.revision();
@@ -890,7 +893,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                                            : area.axis().velocityToY(currentFirst.velocity));
     sendMouse(area, QEvent::MouseButtonPress, currentNode, Qt::LeftButton, Qt::LeftButton);
     sendMouse(area, QEvent::MouseButtonRelease, currentNode, Qt::LeftButton);
-    check(view.selection() == std::vector<NoteId>{notes[0].noteId},
+    check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId},
           "selected velocity node must win a stacked-node click");
     document.addNote(0, currentFirst.tick + 8, currentFirst.key, currentFirst.duration,
                      currentFirst.velocity);
@@ -918,30 +921,30 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                                                 : area.axis().velocityToY(note.velocity);
             return QPointF(x, y);
         };
-        view.setSelection({});
+        view.selectionModel().setNoteSelection({});
         ++live.editCursorTick;
         area.refreshLiveState(live);
         QApplication::processEvents();
         const QPointF stackedNode = velocityNode(currentFirst);
         sendMouse(area, QEvent::MouseButtonPress, stackedNode, Qt::LeftButton, Qt::LeftButton);
-        check(view.selection() == std::vector<NoteId>{notes[1].noteId},
+        check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[1].noteId},
               "overlapping circles must resolve to one later-painted target");
         sendMouse(area, QEvent::MouseButtonRelease, stackedNode, Qt::LeftButton);
-        check(view.selection() == std::vector<NoteId>{notes[1].noteId},
+        check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[1].noteId},
               "overlapping-circle release must retain its frozen target");
         ++live.editCursorTick;
-        view.setSelection({notes[0].noteId});
+        view.selectionModel().setNoteSelection({notes[0].noteId});
         area.refreshLiveState(live);
         QApplication::processEvents();
         const QPointF selectedStackedNode = velocityNode(currentFirst);
         sendMouse(area, QEvent::MouseButtonPress, selectedStackedNode, Qt::LeftButton,
                   Qt::LeftButton);
-        check(view.selection() == std::vector<NoteId>{notes[0].noteId},
+        check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId},
               "selected overlapping velocity nodes must outrank unselected candidates");
         sendMouse(area, QEvent::MouseButtonRelease, selectedStackedNode, Qt::LeftButton);
-        check(view.selection() == std::vector<NoteId>{notes[0].noteId},
+        check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId},
               "selected-layer velocity click must keep its selected target");
-        view.setSelection({});
+        view.selectionModel().setNoteSelection({});
         ++live.editCursorTick;
         area.refreshLiveState(live);
         QApplication::processEvents();
@@ -952,18 +955,18 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         const QRect circleRingBounds =
             pixelRect(QRectF(circleNode.x() - 6.0, circleNode.y() - 6.0, 4.0, 12.0));
         check(
-            view.selection() == std::vector<NoteId>{overlapNote.noteId} &&
+            view.selectionModel().noteSelection() == std::vector<NoteId>{overlapNote.noteId} &&
                 hasColorNear(circleHeld, circleRingBounds, area.palette().highlight().color(), 16),
             "a circle hit must outrank stem-only overlap and paint one selected ring");
         const QPointF movedRelease = velocityNode(currentFirst);
         sendMouse(area, QEvent::MouseMove, movedRelease, Qt::NoButton, Qt::LeftButton);
-        check(view.selection() == std::vector<NoteId>{overlapNote.noteId},
+        check(view.selectionModel().noteSelection() == std::vector<NoteId>{overlapNote.noteId},
               "a velocity gesture must retain its frozen target while the cursor moves");
         sendMouse(area, QEvent::MouseButtonRelease, movedRelease, Qt::LeftButton);
-        check(view.selection() == std::vector<NoteId>{overlapNote.noteId},
+        check(view.selectionModel().noteSelection() == std::vector<NoteId>{overlapNote.noteId},
               "moving release away from a velocity node must not click through to another target");
         const DocNote rightTarget = notes[2];
-        view.setSelection({notes[0].noteId});
+        view.selectionModel().setNoteSelection({notes[0].noteId});
         ++live.editCursorTick;
         area.refreshLiveState(live);
         QApplication::processEvents();
@@ -975,18 +978,18 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         const QRect rightNodeRingBounds =
             pixelRect(QRectF(rightTargetNode.x() - 6.0, rightTargetNode.y() - 6.0, 4.0, 12.0));
         check(
-            view.selection() == std::vector<NoteId>{rightTarget.noteId} &&
+            view.selectionModel().noteSelection() == std::vector<NoteId>{rightTarget.noteId} &&
                 hasColorNear(rightNodeHeld, rightNodeRingBounds, area.palette().highlight().color(),
                              16),
             "plain right press on an unselected velocity node must select and ring it immediately");
         sendMouse(area, QEvent::MouseButtonRelease, rightTargetNode, Qt::RightButton);
         QApplication::processEvents();
         const QImage rightNodeReleased = area.grab().toImage();
-        check(view.selection() == std::vector<NoteId>{rightTarget.noteId} &&
+        check(view.selectionModel().noteSelection() == std::vector<NoteId>{rightTarget.noteId} &&
                   hasColorNear(rightNodeReleased, rightNodeRingBounds,
                                area.palette().highlight().color(), 16),
               "plain right release must retain its selected velocity node and ring");
-        view.setSelection({notes[0].noteId, rightTarget.noteId});
+        view.selectionModel().setNoteSelection({notes[0].noteId, rightTarget.noteId});
         ++live.editCursorTick;
         area.refreshLiveState(live);
         QApplication::processEvents();
@@ -997,14 +1000,16 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         const QImage selectedRightHeld = area.grab().toImage();
         const QRect selectedRightRingBounds =
             pixelRect(QRectF(selectedRightNode.x() - 6.0, selectedRightNode.y() - 6.0, 4.0, 12.0));
-        check(view.selection() == std::vector<NoteId>({notes[0].noteId, rightTarget.noteId}) &&
+        check(view.selectionModel().noteSelection() ==
+                      std::vector<NoteId>({notes[0].noteId, rightTarget.noteId}) &&
                   hasColorNear(selectedRightHeld, selectedRightRingBounds,
                                area.palette().highlight().color(), 16),
               "plain right press on a selected velocity node must retain its visual group");
         sendMouse(area, QEvent::MouseButtonRelease, selectedRightNode, Qt::RightButton);
         QApplication::processEvents();
         const QImage selectedRightReleased = area.grab().toImage();
-        check(view.selection() == std::vector<NoteId>({notes[0].noteId, rightTarget.noteId}) &&
+        check(view.selectionModel().noteSelection() ==
+                      std::vector<NoteId>({notes[0].noteId, rightTarget.noteId}) &&
                   hasColorNear(selectedRightReleased, selectedRightRingBounds,
                                area.palette().highlight().color(), 16),
               "plain right release on a selected velocity node must retain its group ring");
@@ -1013,7 +1018,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         area.refreshLiveState(live);
         QApplication::processEvents();
     }
-    view.setSelection({notes[0].noteId, notes[2].noteId});
+    live.horizontalScroll = view.viewState().scrollPx;
+    area.refreshLiveState(live);
     DocNote paintFirstBefore;
     DocNote paintThirdBefore;
     document.findNote(notes[0].noteId, &paintFirstBefore);
@@ -1031,7 +1037,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     sendMouse(area, QEvent::MouseMove, paintEnd, Qt::NoButton, Qt::LeftButton);
     const auto paintPreviewFirst = view.previewVelocity(notes[0].noteId);
     const auto paintPreviewThird = view.previewVelocity(notes[2].noteId);
-    check(view.selection() == std::vector<NoteId>({notes[0].noteId, notes[2].noteId}) &&
+    check(view.selectionModel().noteSelection() ==
+                  std::vector<NoteId>({notes[0].noteId, notes[2].noteId}) &&
               document.revision() == revisionBeforePaint &&
               document.undoStack()->index() == undoIndexBeforePaint && paintPreviewFirst &&
               paintPreviewThird && *paintPreviewFirst == currentMap.representative(0) &&
@@ -1059,7 +1066,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         const DocNote rampMiddleBefore = *rampMiddleIt;
         live.documentRevision = document.revision();
         area.refreshLiveState(live);
-        view.setSelection({notes[0].noteId, rampMiddleBefore.noteId, notes[2].noteId});
+        view.selectionModel().setNoteSelection(
+            {notes[0].noteId, rampMiddleBefore.noteId, notes[2].noteId});
         const QPointF rampStart(paintGestureX(paintFirstBefore), area.axis().levelToY(0));
         const QPointF rampEnd(paintGestureX(paintThirdBefore), area.axis().levelToY(4));
         const uint64_t revisionBeforeRamp = document.revision();
@@ -1095,8 +1103,9 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                   !view.previewVelocity(notes[0].noteId) &&
                   !view.previewVelocity(rampMiddleBefore.noteId) &&
                   !view.previewVelocity(notes[2].noteId) &&
-                  view.selection() == std::vector<NoteId>({notes[0].noteId, rampMiddleBefore.noteId,
-                                                           notes[2].noteId}) &&
+                  view.selectionModel().noteSelection() ==
+                      std::vector<NoteId>(
+                          {notes[0].noteId, rampMiddleBefore.noteId, notes[2].noteId}) &&
                   document.findNote(notes[0].noteId, &rampedFirst) &&
                   document.findNote(rampMiddleBefore.noteId, &rampedMiddle) &&
                   document.findNote(notes[2].noteId, &rampedThird) &&
@@ -1107,7 +1116,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         document.deleteNotes({rampMiddleBefore});
         live.documentRevision = document.revision();
         area.refreshLiveState(live);
-        view.setSelection({notes[0].noteId, notes[2].noteId});
+        view.selectionModel().setNoteSelection({notes[0].noteId, notes[2].noteId});
     }
 
     const QPointF blankPoint(double(area.plotOrigin() + area.plotWidth() - 4),
@@ -1115,21 +1124,24 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const uint64_t revisionBeforeBlankClick = document.revision();
     const int undoDepthBeforeBlankClick = document.undoStack()->count();
     sendMouse(area, QEvent::MouseButtonPress, blankPoint, Qt::LeftButton, Qt::LeftButton);
-    check(view.selection() == std::vector<NoteId>({notes[0].noteId, notes[2].noteId}),
+    check(view.selectionModel().noteSelection() ==
+              std::vector<NoteId>({notes[0].noteId, notes[2].noteId}),
           "blank velocity press must retain selection until mouse-up");
     sendMouse(area, QEvent::MouseButtonRelease, blankPoint, Qt::LeftButton);
-    check(view.selection().empty() && document.revision() == revisionBeforeBlankClick &&
+    check(view.selectionModel().noteSelection().empty() &&
+              document.revision() == revisionBeforeBlankClick &&
               document.undoStack()->count() == undoDepthBeforeBlankClick,
           "blank velocity click must deselect only on mouse-up");
 
-    view.setSelection({notes[0].noteId, notes[1].noteId});
+    view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
     const VelocityAxisGraduation graduation = area.axis().graduations()[2];
     const QPointF graduationPoint(graduation.x + graduation.width / 2.0, graduation.y);
     sendMouse(area, QEvent::MouseButtonPress, graduationPoint, Qt::LeftButton, Qt::LeftButton);
     sendMouse(area, QEvent::MouseButtonRelease, graduationPoint, Qt::LeftButton);
     DocNote graduatedFirst;
     DocNote graduatedSecond;
-    check(view.selection() == std::vector<NoteId>({notes[0].noteId, notes[1].noteId}) &&
+    check(view.selectionModel().noteSelection() ==
+                  std::vector<NoteId>({notes[0].noteId, notes[1].noteId}) &&
               document.findNote(notes[0].noteId, &graduatedFirst) &&
               document.findNote(notes[1].noteId, &graduatedSecond) &&
               graduatedFirst.velocity == graduation.velocity &&
@@ -1238,7 +1250,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         live.documentRevision = document.revision();
     }
 
-    view.setSelection({notes[1].noteId});
+    view.selectionModel().setNoteSelection({notes[1].noteId});
     voicegroup.voices[0] = directSound;
     view.setVoicegroup(&voicegroup);
     area.songChanged();
@@ -1267,7 +1279,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     DocNote axisFirstAfter;
     DocNote axisSecondAfter;
     check(area.axis().mode() == VelocityAxis::Mode::Continuous &&
-              view.selection() == std::vector<NoteId>{notes[1].noteId} &&
+              view.selectionModel().noteSelection() == std::vector<NoteId>{notes[1].noteId} &&
               document.revision() == axisRevision + 1 &&
               document.undoStack()->count() == axisUndoDepth + 1 &&
               document.findNote(notes[0].noteId, &axisFirstAfter) &&
@@ -1337,7 +1349,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
               "PSG detent toggle must not overlap the Vol 1 label");
         if (detentToggle) {
             voicegroup.voices[0] = directSound;
-            view.setSelection({notes[0].noteId, notes[2].noteId});
+            view.selectionModel().setNoteSelection({notes[0].noteId, notes[2].noteId});
             check(!detentToggle->isVisible() && !detentToggle->isEnabled() &&
                       !detentToggle->isChecked(),
                   "velocity detent toggle must hide and turn off for a DirectSound selection");
@@ -1348,7 +1360,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
             QApplication::processEvents();
             const QImage directSoundRuler = area.grab().toImage();
             voicegroup.voices[0] = wave;
-            view.setSelection({notes[0].noteId, notes[2].noteId});
+            area.songChanged();
+            area.refreshLiveState(live);
             check(detentToggle->isVisible() && detentToggle->isEnabled(),
                   "velocity detent toggle must reappear immediately for a PSG selection");
             detentToggle->click();
@@ -1393,7 +1406,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                   "velocity detent toggle must restore snapped PSG editing");
         }
 
-        view.setSelection({notes[0].noteId, notes[2].noteId});
+        view.selectionModel().setNoteSelection({notes[0].noteId, notes[2].noteId});
         check(setVelocity(notes[0].noteId, 1) && setVelocity(notes[2].noteId, 127),
               "unlocked wave fixture must reset its ruler values");
         live.documentRevision = document.revision();
@@ -1416,7 +1429,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                   lockedPaintThird.velocity == unlockedMap.canonicalize(lockedPaintVelocity) &&
                   isOffDetent(lockedPaintVelocity),
               "no-modifier velocity paint must retain snapped PSG semantics");
-        view.setSelection({notes[0].noteId, notes[2].noteId});
+        view.selectionModel().setNoteSelection({notes[0].noteId, notes[2].noteId});
         check(setVelocity(notes[0].noteId, 1) && setVelocity(notes[2].noteId, 127),
               "unlocked wave fixture must reset its ruler values");
         live.documentRevision = document.revision();
@@ -1436,7 +1449,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                   isOffDetent(unlockedRulerVelocity),
               "unlocked intrinsic ruler clicks must write exact off-detent values");
 
-        view.setSelection({notes[0].noteId, notes[2].noteId});
+        view.selectionModel().setNoteSelection({notes[0].noteId, notes[2].noteId});
         check(setVelocity(notes[0].noteId, 1) && setVelocity(notes[2].noteId, 127),
               "unlocked wave paint fixture must reset its endpoints");
         live.documentRevision = document.revision();
@@ -1478,7 +1491,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                   isOffDetent(unlockedPaintThirdVelocity),
               "unlocked paint must commit exact off-detent wave values");
 
-        view.setSelection({notes[0].noteId, notes[2].noteId});
+        view.selectionModel().setNoteSelection({notes[0].noteId, notes[2].noteId});
         check(setVelocity(notes[0].noteId, 33) && setVelocity(notes[2].noteId, 87),
               "unlocked wave relative fixture must reset its origins");
         live.documentRevision = document.revision();
@@ -1516,7 +1529,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                   lockedRelativeLevelDelta != 0 && isOffDetent(lockedProposedFirst) &&
                   isOffDetent(lockedProposedThird),
               "unlock added after a gesture starts must not bypass snapped PSG semantics");
-        view.setSelection({notes[0].noteId, notes[2].noteId});
+        view.selectionModel().setNoteSelection({notes[0].noteId, notes[2].noteId});
         check(setVelocity(notes[0].noteId, lockedRelativeOriginFirst) &&
                   setVelocity(notes[2].noteId, lockedRelativeOriginThird),
               "unlocked wave relative fixture must reset its origins");
@@ -1556,7 +1569,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
               "unlocked wave ramp fixture must create its midpoint note");
         if (unlockedRampMiddleIt != unlockedRampNotes.cend()) {
             const DocNote unlockedRampMiddleBefore = *unlockedRampMiddleIt;
-            view.setSelection({notes[0].noteId, unlockedRampMiddleBefore.noteId, notes[2].noteId});
+            view.selectionModel().setNoteSelection(
+                {notes[0].noteId, unlockedRampMiddleBefore.noteId, notes[2].noteId});
             live.documentRevision = document.revision();
             area.refreshLiveState(live);
             const DocNote unlockedRampFirst = relativeUnlockedFirstAfter;
@@ -1618,8 +1632,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
               area.diagnostics().playheadPresentationCount == warm.playheadPresentationCount + 120,
           "120 playhead presentations must not rebuild velocity content");
 
-    view.setSelection({notes[0].noteId, notes[2].noteId});
-    const std::vector<NoteId> selectedBeforeKeyboard = view.selection();
+    view.selectionModel().setNoteSelection({notes[0].noteId, notes[2].noteId});
+    const std::vector<NoteId> selectedBeforeKeyboard = view.selectionModel().noteSelection();
     DocNote firstBeforeKeyboard;
     DocNote thirdBeforeKeyboard;
     check(document.findNote(notes[0].noteId, &firstBeforeKeyboard) &&
@@ -1632,7 +1646,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     DocNote firstAfterKeyboard;
     DocNote thirdAfterKeyboard;
     check(document.revision() == revisionBeforeKeyboard &&
-              view.selection() == selectedBeforeKeyboard &&
+              view.selectionModel().noteSelection() == selectedBeforeKeyboard &&
               document.findNote(notes[0].noteId, &firstAfterKeyboard) &&
               document.findNote(notes[2].noteId, &thirdAfterKeyboard) &&
               firstAfterKeyboard.key == firstBeforeKeyboard.key &&

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 #include <QAction>
 #include <QApplication>
@@ -284,21 +285,6 @@ void AutomationPage::documentChanged()
     rebuildModel();
 }
 
-int AutomationPage::selectedTrack() const noexcept
-{
-    return m_owner.selectedTrack();
-}
-
-const SongView::TimeSelection &AutomationPage::timeSelection() const noexcept
-{
-    return m_owner.timeSelection();
-}
-
-bool AutomationPage::timeSelectionCoversLane(int track, uint8_t controller) const
-{
-    return m_owner.timeSelectionCoversLane(track, controller);
-}
-
 uint64_t AutomationPage::snapTick(double tick, bool fineMode) const noexcept
 {
     return m_owner.snapTick(tick, fineMode);
@@ -423,12 +409,12 @@ void AutomationPage::setLaneRange(const EditorAutomationRowId &row, uint8_t rang
 void AutomationPage::publishTimeSelection(uint64_t startTick, uint64_t endTick,
                                           const std::vector<std::pair<int, uint8_t>> &lanes) const
 {
-    SongView::TimeSelection selection;
+    songview::TimeSelection selection;
     selection.startTick = startTick;
     selection.endTick = endTick;
-    selection.scope = SongView::TimeSelection::Lanes;
+    selection.scope = songview::TimeSelection::Lanes;
     selection.lanes = lanes;
-    m_owner.setTimeSelection(selection);
+    m_owner.selectionModel().setTimeSelection(std::move(selection));
 }
 
 DrawerPageVoiceContext AutomationPage::voiceContext(uint64_t tick) const
