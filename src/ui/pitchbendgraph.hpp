@@ -15,6 +15,7 @@
 #include <functional>
 #include <map>
 #include <optional>
+#include <utility>
 #include <vector>
 class QPainter;
 class SongView;
@@ -39,6 +40,11 @@ class PitchBendGraph final : public QWidget
     void setBendRange(int range);
     void setCurve(const std::map<uint64_t, int> &points, int endValue);
     void resetCurve();
+    std::optional<uint64_t> selectedTick() const;
+    void setSelectedTick(std::optional<uint64_t> tick);
+    std::optional<std::pair<uint64_t, int>> hitTest(const QPointF &position) const;
+    bool removeSelectedVertex();
+    QPoint vertexPosition(uint64_t tick, int value) const;
     void setKeyboardFraction(double fraction);
     void cancelGesture();
     bool handleKeyPress(QKeyEvent *event);
@@ -60,15 +66,21 @@ class PitchBendGraph final : public QWidget
     void focusOutEvent(QFocusEvent *event) override;
 
   private:
-    enum class Gesture { Idle, Freehand, AngledLine };
+    enum class StrokeMode { Freehand, AngledLine };
     enum class Sampling { Normal, Fine };
 
-    struct GestureState {
+    struct StrokeState {
+        StrokeMode mode = StrokeMode::Freehand;
         std::map<uint64_t, int> snapshot;
         uint64_t anchorTick = 0;
         int anchorValue = 0;
         uint64_t previousTick = 0;
         int previousValue = 0;
+    };
+
+    struct VertexDragState {
+        std::map<uint64_t, int> snapshot;
+        uint64_t originalTick = 0;
     };
 
     static constexpr int kAxisGutter = 52;
@@ -78,6 +90,9 @@ class PitchBendGraph final : public QWidget
     static constexpr int kAxisLabelHeight = 20;
     static constexpr int kZeroDetentPixels = 8;
     static constexpr int kBendStep = 128;
+    static constexpr int kNodeHitRadius = 8;
+    static constexpr int kNodePaintRadius = 3;
+    static constexpr int kSelectedNodeRingRadius = 6;
 
     void paintGrid(QPainter &painter);
     void paintCurve(QPainter &painter);
@@ -88,7 +103,8 @@ class PitchBendGraph final : public QWidget
     void notifyCommitRequested();
     void notifyCancelRequested();
     void notifyAuditionRequested();
-    void updateGesture(const QPointF &position);
+    void updateStroke(const QPointF &position);
+    void updateVertexDrag(const QPointF &position, Qt::KeyboardModifiers modifiers = {});
     void finishGesture();
     void replaceSegment(uint64_t tick0, int value0, uint64_t tick1, int value1, Sampling sampling);
     bool isLineGesture() const;
@@ -122,8 +138,9 @@ class PitchBendGraph final : public QWidget
     uint64_t m_keyboardTick = 0;
     int m_liveValue = 0;
     double m_rangeWheelRemainder = 0.0;
-    Gesture m_gesture = Gesture::Idle;
-    std::optional<GestureState> m_gestureState;
+    std::optional<StrokeState> m_strokeState;
+    std::optional<VertexDragState> m_vertexDragState;
+    std::optional<uint64_t> m_selectedTick;
     Callbacks m_callbacks;
 };
 } // namespace songview

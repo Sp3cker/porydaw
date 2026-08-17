@@ -9,10 +9,10 @@
 #include <QFrame>
 #include <QHideEvent>
 #include <QKeyEvent>
-#include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPoint>
 #include <QPointF>
+#include <QPointer>
 #include <QPushButton>
 #include <QRect>
 #include <QSpinBox>
@@ -26,10 +26,12 @@ class PitchBendEditor final : public QFrame
 {
   public:
     PitchBendEditor(::SongView *songView, SongDocument *document, const DocNote &note,
-                    QWidget *parent, std::function<bool(QPointF)> focusNoteUnderCursor);
+                    QPointer<QWidget> focusTarget,
+                    std::function<bool(QPointF)> focusNoteUnderCursor);
 
     void openAt(const QRect &noteGlobal, double noteFraction);
     void cancelAndClose();
+    void cancelAndCloseWithoutFocus();
 
     bool hasEditableSpan() const;
     uint64_t endTick() const;
@@ -40,7 +42,6 @@ class PitchBendEditor final : public QFrame
     bool event(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void focusInEvent(QFocusEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
@@ -49,17 +50,17 @@ class PitchBendEditor final : public QFrame
   private:
     enum class PendingEdit { None, Curve };
     enum class CloseState { Open, Cancel, Closed };
+    enum class CloseFocus { Restore, Discard };
 
     static constexpr int kPopupWidth = 340;
     static constexpr int kPopupHeight = 432;
     static constexpr int kOuterInset = 8;
-    static constexpr int kNoteGap = 8;
-    static constexpr int kScreenInset = 8;
     static constexpr int kResetWidth = 60;
     static constexpr int kResetHeight = 26;
     static constexpr int kHeaderHeight = 64;
     static constexpr int kGraphHeight = 184;
 
+    bool tryDeleteSelectedVertex(PitchBendGraph *graph, QKeyEvent *event);
     PitchBendGraph *focusedGraph() const;
     uint8_t ccForGraph(const PitchBendGraph *graph) const;
     void undoCurve();
@@ -74,13 +75,14 @@ class PitchBendEditor final : public QFrame
     void updateRange(int steps);
     void setBendRange(int range);
     void setLfoSpeed(int speed);
-    void close(CloseState state);
+    void close(CloseState state, CloseFocus focus);
     void updateDescription();
 
     bool noteSpanStillPresent() const;
 
     ::SongView *m_songView = nullptr;
     SongDocument *m_document = nullptr;
+    QPointer<QWidget> m_focusTarget;
     DocNote m_noteSnapshot;
     int m_engineTrack = -1;
     uint64_t m_startTick = 0;
@@ -99,6 +101,6 @@ class PitchBendEditor final : public QFrame
     PitchBendGraph *m_pendingGraph = nullptr;
     PendingEdit m_pending = PendingEdit::None;
     CloseState m_closeState = CloseState::Open;
-    std::function<bool(QPointF)> m_focusNoteUnderCursor;
+    CloseFocus m_closeFocus = CloseFocus::Restore;
 };
 } // namespace songview

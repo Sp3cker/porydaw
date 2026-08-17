@@ -8,3 +8,4 @@ CMakeUserPresets.json
 
 # MkDocs local build output
 site/
+.worktrees

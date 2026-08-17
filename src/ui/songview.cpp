@@ -1931,27 +1931,7 @@ class PianoRoll : public TimelineSurface
                 setHoverKey(m_velAnchor.key);
         }
         if (m_drag == Drag::None) {
-            // Hover cursor: resize handle at note left/right edges, velocity
-            // handle along the note's velocity bar (when zoomed in enough).
-            if (m_cursors.dpr != devicePixelRatioF())
-                m_cursors = loadMidiCursors(devicePixelRatioF(), m_geometry.midiCursorExtent);
-            const ViewNote *hit =
-                m_sv->document() && event->position().x() >= m_geometry.pianoKeyboardWidth
-                    ? hitNote(event->position())
-                    : nullptr;
-            // Resize edges win over both velocity-hover paths.
-            const auto &keys = keymap::Registry::instance();
-            const auto hoverMods = event->modifiers();
-            if (hit && nearRightEdge(*hit, event->position()))
-                setCursor(m_cursors.rightEdge);
-            else if (hit && nearLeftEdge(*hit, event->position()))
-                setCursor(m_cursors.leftEdge);
-            else if (hit && keys.matchesModifier(hoverMods, QStringLiteral("roll.velocity_drag")))
-                setCursor(Qt::SizeVerCursor);
-            else if (hit && nearVelocityHandle(*hit, event->position()))
-                setCursor(Qt::SizeVerCursor);
-            else
-                setCursor(Qt::ArrowCursor);
+            refreshHoverCursor(event->position(), event->modifiers());
             return;
         }
 
@@ -2609,6 +2589,33 @@ class PianoRoll : public TimelineSurface
                pos.y() >= bar.top() - pad && pos.y() < bar.bottom() + pad;
     }
 
+    void refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers)
+    {
+        if (m_cursors.dpr != devicePixelRatioF())
+            m_cursors = loadMidiCursors(devicePixelRatioF(), m_geometry.midiCursorExtent);
+        const ViewNote *hit =
+            m_sv->document() && pos.x() >= m_geometry.pianoKeyboardWidth ? hitNote(pos) : nullptr;
+        // Resize edges win over both velocity-hover paths.
+        const auto &keys = keymap::Registry::instance();
+        if (hit && nearRightEdge(*hit, pos))
+            setCursor(m_cursors.rightEdge);
+        else if (hit && nearLeftEdge(*hit, pos))
+            setCursor(m_cursors.leftEdge);
+        else if (hit && keys.matchesModifier(modifiers, QStringLiteral("roll.velocity_drag")))
+            setCursor(Qt::SizeVerCursor);
+        else if (hit && nearVelocityHandle(*hit, pos))
+            setCursor(Qt::SizeVerCursor);
+        else
+            setCursor(Qt::ArrowCursor);
+    }
+
+    void refreshHoverAtCursor()
+    {
+        const QPoint local = mapFromGlobal(QCursor::pos());
+        if (rect().contains(local))
+            refreshHoverCursor(local, QApplication::keyboardModifiers());
+    }
+
     void openPitchBendEditor()
     {
         const std::vector<DocNote> notes = resolveSelection();
@@ -2617,11 +2624,11 @@ class PianoRoll : public TimelineSurface
             return;
         }
         if (m_bendPopup) {
-            m_bendPopup->deleteLater();
+            m_bendPopup->cancelAndCloseWithoutFocus();
             m_bendPopup = nullptr;
         }
         auto *popup = new PitchBendEditor(
-            m_sv, m_sv->document(), notes.front(), this,
+            m_sv, m_sv->document(), notes.front(), QPointer<QWidget>(this),
             [this](QPointF globalPos) { return focusNoteUnderCursor(globalPos); });
         if (!popup->hasEditableSpan()) {
             popup->deleteLater();
@@ -2655,6 +2662,10 @@ class PianoRoll : public TimelineSurface
         connect(popup, &QObject::destroyed, this, [this, popup] {
             if (m_bendPopup == popup)
                 m_bendPopup = nullptr;
+            // The pointer can be stationary when the overlay disappears.
+            // Recompute after the platform has applied any pending cursor warp.
+            QMetaObject::invokeMethod(
+                this, [this] { refreshHoverAtCursor(); }, Qt::QueuedConnection);
         });
         popup->openAt(noteGlobal, noteFraction);
     }

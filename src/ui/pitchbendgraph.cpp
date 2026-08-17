@@ -48,6 +48,9 @@ void PitchBendGraph::setCurve(const std::map<uint64_t, int> &points, int endValu
     m_points = points;
     m_endValue = std::clamp(endValue, minimumValue(), maximumValue());
     m_points[m_endTick] = m_endValue;
+    if (m_selectedTick && m_points.find(*m_selectedTick) == m_points.end())
+        m_selectedTick.reset();
+    cancelGesture();
     m_keyboardTick = m_startTick;
     m_liveValue = valueAtTick(m_keyboardTick);
     update();
@@ -58,11 +61,67 @@ void PitchBendGraph::resetCurve()
     m_points.clear();
     m_points[m_startTick] = defaultValue();
     m_points[m_endTick] = m_endValue;
+    m_selectedTick.reset();
+    cancelGesture();
     m_keyboardTick = m_startTick;
     m_liveValue = defaultValue();
     notifyPreviewChanged();
     setFocus(Qt::MouseFocusReason);
     update();
+}
+
+std::optional<uint64_t> PitchBendGraph::selectedTick() const
+{
+    return m_selectedTick;
+}
+
+void PitchBendGraph::setSelectedTick(std::optional<uint64_t> tick)
+{
+    if (tick && m_points.find(*tick) == m_points.end())
+        tick.reset();
+    if (m_selectedTick == tick)
+        return;
+    m_selectedTick = tick;
+    update();
+}
+
+std::optional<std::pair<uint64_t, int>> PitchBendGraph::hitTest(const QPointF &position) const
+{
+    const qreal radius = kNodeHitRadius * std::max<qreal>(devicePixelRatioF(), 1.0);
+    const qreal radiusSquared = radius * radius;
+    qreal nearestDistanceSquared = radiusSquared;
+    std::optional<std::pair<uint64_t, int>> nearest;
+    for (const auto &[tick, value] : m_points) {
+        const QPoint center = vertexPosition(tick, value);
+        const qreal dx = position.x() - center.x();
+        const qreal dy = position.y() - center.y();
+        const qreal distanceSquared = dx * dx + dy * dy;
+        if (distanceSquared > radiusSquared)
+            continue;
+        if (!nearest || distanceSquared < nearestDistanceSquared ||
+            (qFuzzyCompare(distanceSquared, nearestDistanceSquared) && tick < nearest->first)) {
+            nearestDistanceSquared = distanceSquared;
+            nearest = std::pair{tick, value};
+        }
+    }
+    return nearest;
+}
+
+bool PitchBendGraph::removeSelectedVertex()
+{
+    if (!m_selectedTick || *m_selectedTick == m_startTick || *m_selectedTick == m_endTick)
+        return false;
+    if (m_points.erase(*m_selectedTick) == 0)
+        return false;
+    setSelectedTick(std::nullopt);
+    notifyPreviewChanged();
+    notifyCommitRequested();
+    return true;
+}
+
+QPoint PitchBendGraph::vertexPosition(uint64_t tick, int value) const
+{
+    return {xAtTick(tick), yAtValue(value)};
 }
 
 void PitchBendGraph::setKeyboardFraction(double fraction)
@@ -74,8 +133,8 @@ void PitchBendGraph::setKeyboardFraction(double fraction)
 
 void PitchBendGraph::cancelGesture()
 {
-    m_gesture = Gesture::Idle;
-    m_gestureState.reset();
+    m_strokeState.reset();
+    m_vertexDragState.reset();
 }
 
 bool PitchBendGraph::handleKeyPress(QKeyEvent *event)
@@ -83,6 +142,11 @@ bool PitchBendGraph::handleKeyPress(QKeyEvent *event)
     if (event->key() == Qt::Key_Escape) {
         cancelGesture();
         notifyCancelRequested();
+        event->accept();
+        return true;
+    }
+    if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) && m_selectedTick) {
+        removeSelectedVertex();
         event->accept();
         return true;
     }
@@ -110,7 +174,7 @@ QRect PitchBendGraph::canvasRect() const
 
 bool PitchBendGraph::hasGesture() const
 {
-    return m_gesture != Gesture::Idle;
+    return m_strokeState || m_vertexDragState;
 }
 
 int PitchBendGraph::liveValue() const
@@ -165,14 +229,27 @@ void PitchBendGraph::mousePressEvent(QMouseEvent *event)
         event->ignore();
         return;
     }
+    if (const auto hit = hitTest(event->position())) {
+        setFocus(Qt::MouseFocusReason);
+        setSelectedTick(hit->first);
+        m_vertexDragState.emplace();
+        auto &state = *m_vertexDragState;
+        state.snapshot = m_points;
+        state.originalTick = hit->first;
+        m_keyboardTick = hit->first;
+        m_liveValue = hit->second;
+        notifyPreviewChanged();
+        update();
+        event->accept();
+        return;
+    }
+    setSelectedTick(std::nullopt);
     setFocus(Qt::MouseFocusReason);
-    const Qt::KeyboardModifiers modifiers = event->modifiers();
-    if (modifiers & (Qt::ShiftModifier | Qt::AltModifier))
-        m_gesture = Gesture::AngledLine;
-    else
-        m_gesture = Gesture::Freehand;
-    m_gestureState.emplace();
-    auto &state = *m_gestureState;
+    m_strokeState.emplace();
+    auto &state = *m_strokeState;
+    state.mode = (event->modifiers() & (Qt::ShiftModifier | Qt::AltModifier))
+                     ? StrokeMode::AngledLine
+                     : StrokeMode::Freehand;
     if (isLineGesture())
         state.snapshot = m_points;
     state.previousTick = tickAtX(event->position().x(), gestureSampling());
@@ -190,21 +267,27 @@ void PitchBendGraph::mousePressEvent(QMouseEvent *event)
 
 void PitchBendGraph::mouseMoveEvent(QMouseEvent *event)
 {
-    if (m_gesture == Gesture::Idle) {
+    if (!m_strokeState && !m_vertexDragState) {
         event->ignore();
         return;
     }
-    updateGesture(event->position());
+    if (m_vertexDragState)
+        updateVertexDrag(event->position(), event->modifiers());
+    else
+        updateStroke(event->position());
     event->accept();
 }
 
 void PitchBendGraph::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (event->button() != Qt::LeftButton || m_gesture == Gesture::Idle) {
+    if (event->button() != Qt::LeftButton || (!m_strokeState && !m_vertexDragState)) {
         event->ignore();
         return;
     }
-    updateGesture(event->position());
+    if (m_vertexDragState)
+        updateVertexDrag(event->position(), event->modifiers());
+    else
+        updateStroke(event->position());
     finishGesture();
     event->accept();
 }
@@ -281,9 +364,12 @@ void PitchBendGraph::paintGrid(QPainter &painter)
 void PitchBendGraph::paintCurve(QPainter &painter)
 {
     const QColor curveColor = SongView::trackColor(m_engineTrack);
+    const QColor endpointColor = themes::color(themes::Role::song_view_secondary_text);
+    const QColor selectedRing = themes::color(themes::Role::focus_outline);
+    painter.save();
+    painter.setClipRect(canvasRect(), Qt::IntersectClip);
     painter.setPen(QPen(curveColor, 2));
     const uint64_t fineTick = m_songView ? m_songView->fineGridTicks() : 1;
-    bool previousAngled = false;
     for (auto it = m_points.cbegin(); it != m_points.cend(); ++it) {
         const auto next = std::next(it);
         const int x0 = xAtTick(it->first);
@@ -298,23 +384,43 @@ void PitchBendGraph::paintCurve(QPainter &painter)
             if (next != m_points.cend())
                 painter.drawLine(x1, y, x1, yAtValue(next->second));
         }
-        if (!angled && !previousAngled)
-            painter.fillRect(QRect(x0 - 1, y - 1, 3, 3), curveColor);
-        previousAngled = angled;
     }
+    const bool antialiasing = painter.testRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    for (const auto &[tick, value] : m_points) {
+        const QPointF center(vertexPosition(tick, value));
+        const bool selected = m_selectedTick && *m_selectedTick == tick;
+        if (selected) {
+            painter.setPen(QPen(selectedRing, 1.5));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawEllipse(center, kSelectedNodeRingRadius, kSelectedNodeRingRadius);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(curveColor);
+            painter.drawEllipse(center, kNodePaintRadius, kNodePaintRadius);
+            continue;
+        }
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(tick == m_startTick || tick == m_endTick ? endpointColor : curveColor);
+        const qreal radius = tick == m_startTick || tick == m_endTick
+                                 ? std::max(1, kNodePaintRadius - 1)
+                                 : kNodePaintRadius;
+        painter.drawEllipse(center, radius, radius);
+    }
+    painter.setRenderHint(QPainter::Antialiasing, antialiasing);
     painter.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
     painter.setBrush(Qt::NoBrush);
-    painter.drawEllipse(QPoint(xAtTick(m_keyboardTick), yAtValue(m_liveValue)), 3, 3);
+    painter.drawEllipse(vertexPosition(m_keyboardTick, m_liveValue), 3, 3);
+    painter.restore();
 }
 
 void PitchBendGraph::paintLinePreview(QPainter &painter)
 {
-    if (!isLineGesture() || !m_gestureState)
+    if (!m_strokeState || !isLineGesture())
         return;
-    const GestureState &state = *m_gestureState;
+    const StrokeState &state = *m_strokeState;
     painter.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
-    painter.drawLine(QPointF(xAtTick(state.anchorTick), yAtValue(state.anchorValue)),
-                     QPointF(xAtTick(state.previousTick), yAtValue(state.previousValue)));
+    painter.drawLine(QPointF(vertexPosition(state.anchorTick, state.anchorValue)),
+                     QPointF(vertexPosition(state.previousTick, state.previousValue)));
 }
 
 void PitchBendGraph::paintAxes(QPainter &painter)
@@ -374,11 +480,11 @@ void PitchBendGraph::notifyAuditionRequested()
         m_callbacks.auditionRequested();
 }
 
-void PitchBendGraph::updateGesture(const QPointF &position)
+void PitchBendGraph::updateStroke(const QPointF &position)
 {
-    if (m_gesture == Gesture::Idle || !m_gestureState)
+    if (!m_strokeState)
         return;
-    auto &state = *m_gestureState;
+    auto &state = *m_strokeState;
     const uint64_t tick = tickAtX(position.x(), gestureSampling());
     const int value = valueAtY(position.y());
     if (isLineGesture()) {
@@ -391,6 +497,56 @@ void PitchBendGraph::updateGesture(const QPointF &position)
     state.previousValue = value;
     m_keyboardTick = tick;
     m_liveValue = value;
+    notifyPreviewChanged();
+    update();
+}
+
+void PitchBendGraph::updateVertexDrag(const QPointF &position, Qt::KeyboardModifiers modifiers)
+{
+    if (!m_vertexDragState)
+        return;
+    auto &state = *m_vertexDragState;
+    m_points = state.snapshot;
+    const int value = valueAtY(position.y());
+    uint64_t tick = state.originalTick;
+    const bool endpoint = tick == m_startTick || tick == m_endTick;
+    if (!endpoint && m_endTick > m_startTick + 1) {
+        const Sampling sampling = modifiers & Qt::AltModifier ? Sampling::Fine : Sampling::Normal;
+        const uint64_t minimumTick = m_startTick + 1;
+        const uint64_t maximumTick = m_endTick - 1;
+        tick = std::clamp(tickAtX(position.x(), sampling), minimumTick, maximumTick);
+        if (tick != state.originalTick && m_points.find(tick) != m_points.end()) {
+            const int direction = tick > state.originalTick ? 1 : -1;
+            uint64_t candidate = tick;
+            bool found = false;
+            while (true) {
+                if (direction > 0) {
+                    if (candidate >= maximumTick)
+                        break;
+                    ++candidate;
+                } else {
+                    if (candidate <= minimumTick)
+                        break;
+                    --candidate;
+                }
+                if (m_points.find(candidate) == m_points.end()) {
+                    tick = candidate;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+                tick = state.originalTick;
+        }
+    }
+    if (tick != state.originalTick)
+        m_points.erase(state.originalTick);
+    const int storedValue = state.originalTick == m_endTick ? m_endValue : value;
+    m_points[tick] = storedValue;
+    m_points[m_endTick] = m_endValue;
+    m_selectedTick = tick;
+    m_keyboardTick = tick;
+    m_liveValue = storedValue;
     notifyPreviewChanged();
     update();
 }
@@ -434,12 +590,12 @@ void PitchBendGraph::replaceSegment(uint64_t tick0, int value0, uint64_t tick1, 
 
 bool PitchBendGraph::isLineGesture() const
 {
-    return m_gesture == Gesture::AngledLine;
+    return m_strokeState && m_strokeState->mode == StrokeMode::AngledLine;
 }
 
 PitchBendGraph::Sampling PitchBendGraph::gestureSampling() const
 {
-    return m_gesture == Gesture::AngledLine ? Sampling::Fine : Sampling::Normal;
+    return isLineGesture() ? Sampling::Fine : Sampling::Normal;
 }
 
 uint64_t PitchBendGraph::normalCellTicksAt(uint64_t tick) const

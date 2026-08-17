@@ -17,7 +17,6 @@
 #include <QPointer>
 #include <QPushButton>
 #include <QRect>
-#include <QScreen>
 #include <QSpinBox>
 #include <QUndoCommand>
 #include <QWheelEvent>
@@ -94,6 +93,11 @@ class PitchBendCheckContext final
 
     int run()
     {
+        const bool viewWasVisible = m_view.isVisible();
+        if (!viewWasVisible) {
+            m_view.show();
+            QCoreApplication::processEvents();
+        }
         m_endTick = m_document.noteEndTick(m_note);
         installRangeFixture();
         m_beforeBend = m_document.smf().write();
@@ -106,13 +110,15 @@ class PitchBendCheckContext final
         runSnapshotDuringGesture();
         runLifecycleCancellation();
         runRangeFreehandAndUndo();
+        runVertexEditing();
         runModWheelEditing();
-        runControllerButtons();
         runPersistedAltRendering();
         runResetAndAudition();
         runFocusHandoff();
         cleanupBaseFixture();
         runActiveGridBoundary();
+        if (!viewWasVisible)
+            m_view.hide();
         return m_failures;
     }
 
@@ -150,19 +156,18 @@ class PitchBendCheckContext final
             fail("G did not open the selected note's pitch-bend popup");
             return {};
         }
+        if (bendPopup->isWindow() || QApplication::activePopupWidget() == bendPopup)
+            fail("pitch-bend editor used a native popup window");
         const QPoint popupCenter = bendPopup->mapToGlobal(bendPopup->rect().center());
-        QScreen *screen = QApplication::screenAt(noteGlobal);
-        if (!screen)
-            screen = m_roll->screen();
-        if (screen) {
-            const QRect available = screen->availableGeometry().adjusted(8, 8, -8, -8);
-            const int expectedLeft =
-                std::clamp(noteGlobal.x() - bendPopup->width() / 2, available.left(),
-                           available.right() - bendPopup->width() + 1);
-            const int expectedCenter = expectedLeft + bendPopup->rect().center().x();
-            if (std::abs(popupCenter.x() - expectedCenter) > 12)
-                fail("pitch-bend popup followed the mouse instead of the selected note");
-        }
+        QWidget *host = bendPopup->parentWidget();
+        const QRect hostGlobal(host->mapToGlobal(host->rect().topLeft()), host->rect().size());
+        const QRect available = hostGlobal.adjusted(8, 8, -8, -8);
+        const int maxLeft = std::max(available.left(), available.right() - bendPopup->width() + 1);
+        const int expectedLeft =
+            std::clamp(noteGlobal.x() - bendPopup->width() / 2, available.left(), maxLeft);
+        const int expectedCenter = expectedLeft + bendPopup->rect().center().x();
+        if (std::abs(popupCenter.x() - expectedCenter) > 12)
+            fail("pitch-bend popup followed the mouse instead of the selected note");
         if (!bendPopup->accessibleDescription().contains(QStringLiteral("12 semitones")))
             fail("pitch-bend popup did not present the active BENDR value");
         const QRect graph = bendPopup->graphRect();
@@ -571,6 +576,196 @@ class PitchBendCheckContext final
         if (!resyncedPopup || !resyncedPopup->isVisible())
             fail("G did not reopen the pitch-bend popup after stacked undo");
     }
+    void runVertexEditing()
+    {
+        QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
+        auto *popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
+        if (!popup || !popup->isVisible()) {
+            fail("pitch-bend popup was not visible for vertex editing");
+            return;
+        }
+        auto *bendGraph = dynamic_cast<songview::PitchBendGraph *>(
+            popup->findChild<QWidget *>(QStringLiteral("pitchBendGraph")));
+        auto *modGraph = dynamic_cast<songview::PitchBendGraph *>(
+            popup->findChild<QWidget *>(QStringLiteral("modWheelGraph")));
+        if (!bendGraph)
+            fail("pitch-bend popup had no pitch-bend graph for vertex editing");
+        else
+            runVertexEditingGraph(bendGraph, DOC_CC_BEND);
+        if (!modGraph)
+            fail("pitch-bend popup had no mod-wheel graph for vertex editing");
+        else
+            runVertexEditingGraph(modGraph, 1);
+    }
+
+    void runVertexEditingGraph(songview::PitchBendGraph *graph, uint8_t cc)
+    {
+        const int baselineUndo = m_document.undoStack()->index();
+        const QByteArray baselineSmf = m_document.smf().write();
+        const QRect canvas = graph->canvasRect();
+        const auto sameLanePoints = [](const std::vector<DocLanePoint> &lhs,
+                                       const std::vector<DocLanePoint> &rhs) {
+            return lhs.size() == rhs.size() &&
+                   std::equal(lhs.begin(), lhs.end(), rhs.begin(),
+                              [](const DocLanePoint &left, const DocLanePoint &right) {
+                                  return left.tick == right.tick && left.value == right.value;
+                              });
+        };
+        const auto restoreBaseline = [this, graph, baselineUndo] {
+            graph->cancelGesture();
+            while (m_document.undoStack()->index() > baselineUndo &&
+                   m_document.undoStack()->canUndo()) {
+                m_document.undoStack()->undo();
+                QCoreApplication::processEvents();
+            }
+        };
+        const QPoint strokeStart(canvas.left() + canvas.width() / 5,
+                                 graph->lane() == songview::PitchBendGraph::Lane::ModWheel
+                                     ? canvas.bottom() - canvas.height() / 4
+                                     : canvas.center().y() + canvas.height() / 4);
+        const QPoint strokeFinish(canvas.left() + 4 * canvas.width() / 5,
+                                  graph->lane() == songview::PitchBendGraph::Lane::ModWheel
+                                      ? canvas.top() + canvas.height() / 4
+                                      : canvas.center().y() - canvas.height() / 4);
+        sendMouse(graph, QEvent::MouseButtonPress, strokeStart, Qt::LeftButton, Qt::LeftButton);
+        sendMouse(graph, QEvent::MouseMove, strokeFinish, Qt::NoButton, Qt::LeftButton);
+        sendMouse(graph, QEvent::MouseButtonRelease, strokeFinish, Qt::LeftButton, Qt::NoButton);
+        QCoreApplication::processEvents();
+        if (m_document.undoStack()->index() != baselineUndo + 1) {
+            fail("vertex fixture stroke did not push one automation command");
+            restoreBaseline();
+            return;
+        }
+        const std::vector<DocLanePoint> written = m_document.lanePoints(m_engineTrack, cc);
+        std::vector<DocLanePoint> interior;
+        for (const DocLanePoint &point : written) {
+            if (point.tick > m_note.tick && point.tick < m_endTick)
+                interior.push_back(point);
+        }
+        if (interior.empty()) {
+            fail("vertex fixture stroke produced no interior automation node");
+            restoreBaseline();
+            return;
+        }
+        const DocLanePoint target = interior[interior.size() / 2];
+        const QPoint targetPos = graph->vertexPosition(target.tick, target.value);
+        const auto hit = graph->hitTest(QPointF(targetPos));
+        if (!hit || hit->first != target.tick) {
+            fail("automation vertex center did not hit the expected node");
+            restoreBaseline();
+            return;
+        }
+        sendMouse(graph, QEvent::MouseButtonPress, targetPos, Qt::LeftButton, Qt::LeftButton);
+        QCoreApplication::processEvents();
+        if (!graph->selectedTick() || *graph->selectedTick() != target.tick) {
+            fail("automation vertex click did not select the expected node");
+            restoreBaseline();
+            return;
+        }
+        QPoint movedPos = targetPos + QPoint(20, -10);
+        movedPos.setX(std::clamp(movedPos.x(), canvas.left() + 2, canvas.right() - 2));
+        movedPos.setY(std::clamp(movedPos.y(), canvas.top() + 2, canvas.bottom() - 2));
+        if (movedPos == targetPos) {
+            fail("automation vertex had no usable drag destination");
+            restoreBaseline();
+            return;
+        }
+        const int dragUndo = m_document.undoStack()->index();
+        sendMouse(graph, QEvent::MouseMove, movedPos, Qt::NoButton, Qt::LeftButton,
+                  Qt::AltModifier);
+        sendMouse(graph, QEvent::MouseButtonRelease, movedPos, Qt::LeftButton, Qt::NoButton,
+                  Qt::AltModifier);
+        QCoreApplication::processEvents();
+        if (m_document.undoStack()->index() != dragUndo + 1) {
+            fail("automation vertex drag did not push one undo command");
+            restoreBaseline();
+            return;
+        }
+        const auto movedHit = graph->hitTest(QPointF(movedPos));
+        DocLanePoint movedPoint;
+        if (!movedHit || movedHit->first == target.tick ||
+            !m_document.findLanePoint(m_engineTrack, cc, movedHit->first, &movedPoint) ||
+            movedPoint.value != movedHit->second ||
+            m_document.findLanePoint(m_engineTrack, cc, target.tick, nullptr) ||
+            !graph->isVisible()) {
+            fail("automation vertex drag did not move the document node");
+            restoreBaseline();
+            return;
+        }
+        m_document.undoStack()->undo();
+        QCoreApplication::processEvents();
+        const std::vector<DocLanePoint> restoredAfterDrag =
+            m_document.lanePoints(m_engineTrack, cc);
+        if (m_document.undoStack()->index() != dragUndo ||
+            !sameLanePoints(restoredAfterDrag, written)) {
+            fail("undo did not restore the automation vertex after dragging");
+            restoreBaseline();
+            return;
+        }
+        DocLanePoint restoredTarget;
+        if (!m_document.findLanePoint(m_engineTrack, cc, target.tick, &restoredTarget)) {
+            fail("drag undo did not restore the original automation node");
+            restoreBaseline();
+            return;
+        }
+        const QPoint restoredPos = graph->vertexPosition(target.tick, restoredTarget.value);
+        sendMouse(graph, QEvent::MouseButtonPress, restoredPos, Qt::LeftButton, Qt::LeftButton);
+        QCoreApplication::processEvents();
+        if (!graph->selectedTick() || *graph->selectedTick() != target.tick) {
+            fail("automation vertex could not be reselected for deletion");
+            restoreBaseline();
+            return;
+        }
+        graph->cancelGesture();
+        const int deleteUndo = m_document.undoStack()->index();
+        const std::vector<DocLanePoint> beforeDelete = m_document.lanePoints(m_engineTrack, cc);
+        sendKey(graph, Qt::Key_Delete, Qt::NoModifier);
+        QCoreApplication::processEvents();
+        const std::vector<DocLanePoint> afterDelete = m_document.lanePoints(m_engineTrack, cc);
+        DocLanePoint startPoint;
+        DocLanePoint endPoint;
+        if (m_document.undoStack()->index() != deleteUndo + 1 ||
+            afterDelete.size() + 1 != beforeDelete.size() ||
+            m_document.findLanePoint(m_engineTrack, cc, target.tick, nullptr) ||
+            !m_document.findLanePoint(m_engineTrack, cc, m_note.tick, &startPoint) ||
+            !m_document.findLanePoint(m_engineTrack, cc, m_endTick, &endPoint)) {
+            fail("automation vertex delete did not remove only the interior node");
+            restoreBaseline();
+            return;
+        }
+        m_document.undoStack()->undo();
+        QCoreApplication::processEvents();
+        if (m_document.undoStack()->index() != deleteUndo ||
+            !sameLanePoints(m_document.lanePoints(m_engineTrack, cc), beforeDelete)) {
+            fail("undo did not restore the deleted automation vertex");
+            restoreBaseline();
+            return;
+        }
+        const auto endpointDelete = [this, graph, cc, &sameLanePoints](uint64_t tick, int value) {
+            const int beforeUndo = m_document.undoStack()->index();
+            const std::vector<DocLanePoint> before = m_document.lanePoints(m_engineTrack, cc);
+            const QPoint position = graph->vertexPosition(tick, value);
+            sendMouse(graph, QEvent::MouseButtonPress, position, Qt::LeftButton, Qt::LeftButton);
+            QCoreApplication::processEvents();
+            if (!graph->selectedTick() || *graph->selectedTick() != tick) {
+                fail("automation endpoint click did not select its node");
+                graph->cancelGesture();
+                return;
+            }
+            graph->cancelGesture();
+            sendKey(graph, Qt::Key_Delete, Qt::NoModifier);
+            QCoreApplication::processEvents();
+            if (m_document.undoStack()->index() != beforeUndo ||
+                !sameLanePoints(m_document.lanePoints(m_engineTrack, cc), before))
+                fail("automation endpoint deletion changed the document");
+        };
+        endpointDelete(m_note.tick, startPoint.value);
+        endpointDelete(m_endTick, endPoint.value);
+        restoreBaseline();
+        if (m_document.undoStack()->index() != baselineUndo ||
+            m_document.smf().write() != baselineSmf)
+            fail("vertex checks did not restore the document");
+    }
 
     void runModWheelEditing()
     {
@@ -919,14 +1114,58 @@ class PitchBendCheckContext final
             fail("G did not reopen the pitch-bend popup for focus handoff");
             return;
         }
-        sendMouse(popup, QEvent::MouseButtonPress, popup->mapFrom(m_roll, m_noteCenter),
-                  Qt::LeftButton, Qt::LeftButton);
+        sendMouse(m_roll, QEvent::MouseButtonPress, m_noteCenter, Qt::LeftButton, Qt::LeftButton);
         QCoreApplication::processEvents();
         if (popup && popup->isVisible())
             fail("clicking the selected note did not dismiss the pitch-bend popup");
         if (m_view.selection().size() != 1 || m_view.selection().front() != m_note.noteId)
             fail("clicking the selected note did not preserve note focus");
         drainPopupDeletes();
+        QPoint edgeHandle;
+        bool foundEdge = false;
+        for (int x = 0; x < m_roll->width(); ++x) {
+            const QPoint candidate(x, m_noteCenter.y());
+            sendMouse(m_roll, QEvent::MouseMove, candidate, Qt::NoButton, Qt::NoButton);
+            if (!m_roll->cursor().pixmap().isNull()) {
+                edgeHandle = candidate;
+                foundEdge = true;
+                break;
+            }
+        }
+        if (!foundEdge) {
+            fail("cursor handoff fixture did not find a note edge");
+            return;
+        }
+        sendMouse(m_roll, QEvent::MouseMove, QPoint(1, m_noteCenter.y()), Qt::NoButton,
+                  Qt::NoButton);
+        if (m_roll->cursor().shape() != Qt::ArrowCursor)
+            fail("piano-roll cursor stopped tracking after pitch-bend click-away dismissal");
+        sendKey(m_roll, Qt::Key_G, Qt::NoModifier);
+        popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
+        popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
+        if (!popup || !popup->isVisible()) {
+            fail("G did not reopen the pitch-bend popup for cursor handoff");
+            return;
+        }
+        sendKey(m_roll, Qt::Key_G, Qt::NoModifier);
+        drainPopupDeletes();
+        popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
+        popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
+        QWidget *replacementGraph =
+            popup ? popup->findChild<QWidget *>(QStringLiteral("pitchBendGraph")) : nullptr;
+        if (!popup || !popup->isVisible() || !replacementGraph || !replacementGraph->hasFocus()) {
+            fail("replacing the pitch-bend popup did not retain graph focus");
+            return;
+        }
+        const QPoint edgeGlobal = m_roll->mapToGlobal(edgeHandle);
+        QCursor::setPos(edgeGlobal);
+        QCoreApplication::processEvents();
+        const bool cursorWarped = QCursor::pos() == edgeGlobal;
+        sendKey(popup, Qt::Key_Escape, Qt::NoModifier);
+        drainPopupDeletes();
+        QCoreApplication::processEvents();
+        if (cursorWarped && m_roll->cursor().pixmap().isNull())
+            fail("dismissing the pitch-bend popup did not restore the note-edge cursor");
     }
 
     void cleanupBaseFixture()

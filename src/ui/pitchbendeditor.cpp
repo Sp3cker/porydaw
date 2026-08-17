@@ -5,8 +5,9 @@
 
 #include <QApplication>
 #include <QKeySequence>
+#include <QMetaObject>
+#include <QMouseEvent>
 #include <QPainter>
-#include <QScreen>
 #include <QSignalBlocker>
 #include <QUndoStack>
 #include <algorithm>
@@ -14,18 +15,88 @@
 #include <map>
 #include <utility>
 
+namespace {
+constexpr int kHostInset = 8;
+constexpr int kNoteGap = 8;
+
+QPoint hostClippedPopupPosition(const QRect &noteHost, const QRect &hostRect,
+                                const QSize &popupSize)
+{
+    const QRect available = hostRect.adjusted(kHostInset, kHostInset, -kHostInset, -kHostInset);
+    QPoint popupPos(noteHost.center().x() - popupSize.width() / 2,
+                    noteHost.bottom() + 1 + kNoteGap);
+    const int maxX = std::max(available.left(), available.right() - popupSize.width() + 1);
+    const int maxY = std::max(available.top(), available.bottom() - popupSize.height() + 1);
+    popupPos.setX(std::clamp(popupPos.x(), available.left(), maxX));
+    if (popupPos.y() + popupSize.height() > available.bottom() + 1)
+        popupPos.setY(noteHost.top() - kNoteGap - popupSize.height());
+    popupPos.setY(std::clamp(popupPos.y(), available.top(), maxY));
+    return popupPos;
+}
+
+class PitchBendCloseController final : public QObject
+{
+  public:
+    PitchBendCloseController(QWidget *popup, std::function<bool(QPointF)> focusNoteUnderCursor,
+                             std::function<void()> restoreFocus, std::function<void()> dismiss)
+        : QObject(popup)
+        , m_popup(popup)
+        , m_focusNoteUnderCursor(std::move(focusNoteUnderCursor))
+        , m_restoreFocus(std::move(restoreFocus))
+        , m_dismiss(std::move(dismiss))
+    {
+        qApp->installEventFilter(this);
+    }
+
+    ~PitchBendCloseController() override { qApp->removeEventFilter(this); }
+
+  protected:
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (!m_popup || !m_popup->isVisible())
+            return false;
+        if (event->type() == QEvent::MouseButtonPress) {
+            QWidget *target = qobject_cast<QWidget *>(watched);
+            if (!target || target == m_popup || m_popup->isAncestorOf(target))
+                return false;
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (m_focusNoteUnderCursor && m_focusNoteUnderCursor(mouseEvent->globalPosition())) {
+                m_restoreFocus();
+                event->accept();
+                return true;
+            }
+            m_dismiss();
+            return false;
+        }
+        if (event->type() == QEvent::ApplicationDeactivate ||
+            (event->type() == QEvent::WindowDeactivate && watched == m_popup->window())) {
+            m_dismiss();
+            return false;
+        }
+        return false;
+    }
+
+  private:
+    QPointer<QWidget> m_popup;
+    std::function<bool(QPointF)> m_focusNoteUnderCursor;
+    std::function<void()> m_restoreFocus;
+    std::function<void()> m_dismiss;
+};
+} // namespace
+
 namespace songview {
 
 PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, const DocNote &note,
-                                 QWidget *parent, std::function<bool(QPointF)> focusNoteUnderCursor)
-    : QFrame(parent, Qt::Popup)
+                                 QPointer<QWidget> focusTarget,
+                                 std::function<bool(QPointF)> focusNoteUnderCursor)
+    : QFrame(songView->window())
     , m_songView(songView)
     , m_document(document)
+    , m_focusTarget(focusTarget)
     , m_noteSnapshot(note)
     , m_engineTrack(note.engineTrack)
     , m_startTick(note.tick)
     , m_unterminated(note.unterminated())
-    , m_focusNoteUnderCursor(std::move(focusNoteUnderCursor))
 {
     setObjectName(QStringLiteral("pitchBendPopup"));
     setFixedSize(kPopupWidth, kPopupHeight);
@@ -48,7 +119,7 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
             update();
         };
         callbacks.commitRequested = [this] { commitCurve(); };
-        callbacks.cancelRequested = [this] { close(CloseState::Cancel); };
+        callbacks.cancelRequested = [this] { close(CloseState::Cancel, CloseFocus::Restore); };
         callbacks.auditionRequested = [this] {
             commitCurve();
             m_songView->requestPlayPauseFrom(m_startTick);
@@ -103,30 +174,30 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
     });
     connect(m_document, &SongDocument::documentChanged, this, [this] {
         if (!noteSpanStillPresent())
-            close(CloseState::Cancel);
+            close(CloseState::Cancel, CloseFocus::Restore);
     });
+    new PitchBendCloseController(
+        this, std::move(focusNoteUnderCursor),
+        [this] { close(CloseState::Open, CloseFocus::Restore); },
+        [this] { close(CloseState::Open, CloseFocus::Discard); });
 }
 
 void PitchBendEditor::cancelAndClose()
 {
-    close(CloseState::Cancel);
+    close(CloseState::Cancel, CloseFocus::Restore);
+}
+void PitchBendEditor::cancelAndCloseWithoutFocus()
+{
+    close(CloseState::Cancel, CloseFocus::Discard);
 }
 
 void PitchBendEditor::openAt(const QRect &noteGlobal, double noteFraction)
 {
     const double fraction = noteFraction >= 0.0 && noteFraction <= 1.0 ? noteFraction : 0.5;
-    QPoint popupPos(noteGlobal.center().x() - width() / 2, noteGlobal.bottom() + 1 + kNoteGap);
-    QScreen *screen = QApplication::screenAt(noteGlobal.center());
-    if (!screen)
-        screen = this->screen();
-    if (screen) {
-        const QRect available = screen->availableGeometry().adjusted(kScreenInset, kScreenInset,
-                                                                     -kScreenInset, -kScreenInset);
-        popupPos.setX(std::clamp(popupPos.x(), available.left(), available.right() - width() + 1));
-        if (popupPos.y() + height() > available.bottom() + 1)
-            popupPos.setY(noteGlobal.top() - kNoteGap - height());
-        popupPos.setY(std::clamp(popupPos.y(), available.top(), available.bottom() - height() + 1));
-    }
+    QWidget *host = parentWidget();
+    const QRect noteHost(host->mapFromGlobal(noteGlobal.topLeft()),
+                         host->mapFromGlobal(noteGlobal.bottomRight()));
+    const QPoint popupPos = hostClippedPopupPosition(noteHost, host->rect(), size());
     m_pitchGraph->setKeyboardFraction(fraction);
     m_modGraph->setKeyboardFraction(fraction);
     move(popupPos);
@@ -179,17 +250,6 @@ void PitchBendEditor::paintEvent(QPaintEvent *)
                      SongView::tr("LFO speed"));
 }
 
-void PitchBendEditor::mousePressEvent(QMouseEvent *event)
-{
-    if (!QRectF(rect()).contains(event->position()) && m_focusNoteUnderCursor &&
-        m_focusNoteUnderCursor(event->globalPosition())) {
-        close(CloseState::Open);
-        event->accept();
-        return;
-    }
-    QFrame::mousePressEvent(event);
-}
-
 bool PitchBendEditor::event(QEvent *event)
 {
     if (event->type() == QEvent::ShortcutOverride) {
@@ -201,39 +261,41 @@ bool PitchBendEditor::event(QEvent *event)
     }
     return QFrame::event(event);
 }
-
 bool PitchBendEditor::eventFilter(QObject *watched, QEvent *event)
 {
-    bool handlesUndo = false;
-    for (QObject *source = watched; source; source = source->parent()) {
-        if (source == m_pitchGraph || source == m_modGraph || source == m_bendRangeSpin ||
-            source == m_lfoSpeedSpin) {
-            handlesUndo = true;
-            break;
-        }
-        if (source == this)
-            break;
+    PitchBendGraph *watchedGraph = nullptr;
+    if (watched == m_pitchGraph)
+        watchedGraph = m_pitchGraph;
+    else if (watched == m_modGraph)
+        watchedGraph = m_modGraph;
+    if (event->type() != QEvent::ShortcutOverride && event->type() != QEvent::KeyPress)
+        return QFrame::eventFilter(watched, event);
+    auto *keyEvent = static_cast<QKeyEvent *>(event);
+    if (keyEvent->matches(QKeySequence::Undo)) {
+        if (event->type() == QEvent::KeyPress)
+            undoCurve();
+        event->accept();
+        return true;
     }
-    if (handlesUndo &&
-        (event->type() == QEvent::ShortcutOverride || event->type() == QEvent::KeyPress)) {
-        auto *keyEvent = static_cast<QKeyEvent *>(event);
-        if (keyEvent->matches(QKeySequence::Undo)) {
-            if (event->type() == QEvent::KeyPress)
-                undoCurve();
-            event->accept();
-            return true;
-        }
-    }
+    if (event->type() == QEvent::KeyPress && tryDeleteSelectedVertex(watchedGraph, keyEvent))
+        return true;
     return QFrame::eventFilter(watched, event);
 }
 
 void PitchBendEditor::keyPressEvent(QKeyEvent *event)
 {
+    if (event->key() == Qt::Key_Escape) {
+        close(CloseState::Cancel, CloseFocus::Restore);
+        event->accept();
+        return;
+    }
     if (event->matches(QKeySequence::Undo)) {
         undoCurve();
         event->accept();
         return;
     }
+    if (tryDeleteSelectedVertex(focusedGraph(), event))
+        return;
     if (PitchBendGraph *graph = focusedGraph(); graph && graph->handleKeyPress(event))
         return;
     QFrame::keyPressEvent(event);
@@ -267,12 +329,33 @@ void PitchBendEditor::hideEvent(QHideEvent *event)
     else
         commitCurve();
     m_closeState = CloseState::Closed;
+    if (m_closeFocus == CloseFocus::Restore && m_focusTarget) {
+        const QPointer<QWidget> focusTarget = m_focusTarget;
+        QMetaObject::invokeMethod(
+            focusTarget,
+            [focusTarget] {
+                if (focusTarget)
+                    focusTarget->setFocus(Qt::PopupFocusReason);
+            },
+            Qt::QueuedConnection);
+    }
     deleteLater();
 }
 
 PitchBendGraph *PitchBendEditor::focusedGraph() const
 {
     return m_modGraph && m_modGraph->hasFocus() ? m_modGraph : m_pitchGraph;
+}
+
+bool PitchBendEditor::tryDeleteSelectedVertex(PitchBendGraph *graph, QKeyEvent *event)
+{
+    const bool deleting = event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace;
+    if (!deleting || !graph || !graph->selectedTick())
+        return false;
+    if (noteSpanStillPresent())
+        graph->removeSelectedVertex();
+    event->accept();
+    return true;
 }
 
 uint8_t PitchBendEditor::ccForGraph(const PitchBendGraph *graph) const
@@ -420,16 +503,15 @@ void PitchBendEditor::setLfoSpeed(int speed)
     update();
 }
 
-void PitchBendEditor::close(CloseState state)
+void PitchBendEditor::close(CloseState state, CloseFocus focus)
 {
     if (m_closeState == CloseState::Closed)
         return;
     m_pitchGraph->cancelGesture();
     m_modGraph->cancelGesture();
     m_closeState = state;
+    m_closeFocus = focus;
     hide();
-    if (parentWidget())
-        parentWidget()->setFocus(Qt::OtherFocusReason);
 }
 
 void PitchBendEditor::updateDescription()
