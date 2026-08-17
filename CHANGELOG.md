@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved fidelity of CGB channels
    - Fixed CGB channels' volume envelope emulation.
    - Improved CGB noise channel is now band-limited, which is more accurate to hardware's sound quality.
+   - Square and programmable wave channels no longer restart their waveform on every note.
    - m4a's master volume is now set to 12 instead of 15, which matches the Pokemon games. This fixes the loudness imbalance between directsound and CGB channels.
 - Fixed some font-rendering smoothness issues.
 - Fixed bug where the right edge of a note couldn't be grabbed for resizing when two notes were adjacent.
