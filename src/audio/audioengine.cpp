@@ -567,6 +567,7 @@ void AudioEngine::beginOutputCut(int transport)
 }
 
 // Audio-thread: the exact zero-gain engine cut and deferred transport apply.
+// A start at song position zero remains deferred until the settle hold ends.
 void AudioEngine::finishOutputCut()
 {
     m_cutFadeTargetTransport = m_transport.load();
@@ -580,6 +581,8 @@ void AudioEngine::finishOutputCut()
 
     const int prior = m_appliedTransport;
     const int target = m_cutFadeTargetTransport;
+    const bool fullAttackStart =
+        target == static_cast<int>(Transport::Playing) && m_player.position() == 0;
     switch (static_cast<Transport>(target)) {
     case Transport::Stopped:
         m_player.reset();
@@ -594,7 +597,13 @@ void AudioEngine::finishOutputCut()
             m4a_engine_reset_poly_stats(m_engine.get());
         break;
     }
-    m_appliedTransport = target;
+    if (fullAttackStart) {
+        // Skip the return ramp and keep the player stopped through the settle
+        // hold. The first rendered note then starts at unity gain.
+        m_cutFadeRemaining = 0;
+    } else {
+        m_appliedTransport = target;
+    }
 }
 
 void AudioEngine::applyMuteTransition()
@@ -827,12 +836,21 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
                     m_appliedOutputGain += m_outputGainStep;
             }
             // Transport cut-fade: ramp the final gain down, fire the deferred
-            // engine cut at the zero sample (finishOutputCut), hold at 0
-            // through the engine's output-queue drain, then ramp back to 1.
+            // engine cut at the zero sample (finishOutputCut), and hold at 0
+            // through the output-queue drain. Other transitions then ramp up;
+            // a song-start note begins at full gain after the hold.
             if (m_cutFadeActive) {
                 if (m_cutFadeHold > 0) {
                     --m_cutFadeHold;
                     m_cutFadeGain = 0.0f;
+                    if (m_cutFadeHold == 0 && m_cutFadeRemaining == 0 &&
+                        m_cutFadeTargetTransport == static_cast<int>(Transport::Playing) &&
+                        m_appliedTransport != m_cutFadeTargetTransport) {
+                        m_cutFadeActive = false;
+                        m_cutFadeRising = false;
+                        m_cutFadeGain = 1.0f;
+                        m_appliedTransport = m_cutFadeTargetTransport;
+                    }
                 } else if (m_cutFadeRemaining > 0) {
                     --m_cutFadeRemaining;
                     if (m_cutFadeRising)

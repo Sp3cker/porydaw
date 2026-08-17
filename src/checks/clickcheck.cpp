@@ -126,9 +126,9 @@ struct TestVoicegroup {
     }
 };
 
-// The transport cut's output fade, replicating AudioEngine::process's
-// cut-fade state: ramp the final gain to 0, fire the deferred engine cut at
-// the zero sample, then ramp back to 1.
+// The normal transport cut's output fade: ramp the final gain to 0, fire the
+// deferred engine cut at the zero sample, then ramp back to 1. AudioEngine's
+// full-gain song-start exception is covered directly by transportcheck.
 struct CutFader {
     bool active = false;
     bool rising = false;

@@ -387,6 +387,20 @@ int runTransportCheck()
             return gain;
         };
         engine.play();
+        auto startTransitionFrames = uint32_t{0};
+        while (engine.m_appliedTransport != static_cast<int>(Transport::Playing) &&
+               startTransitionFrames < uint32_t(engine.sampleRate())) {
+            renderFrames(1);
+            ++startTransitionFrames;
+        }
+        if (engine.m_appliedTransport != static_cast<int>(Transport::Playing)) {
+            fail("initial play was not applied");
+        } else {
+            if (engine.m_cutFadeGain < 0.999f)
+                fail("initial play began below full output gain");
+            if (engine.m_player.position() != 0)
+                fail("initial play advanced before reaching full output gain");
+        }
         const auto playingAudio = renderFrames(uint32_t(3.0 * engine.sampleRate()));
         const auto engagedGain = deepestResonanceGain();
         if (peak(playingAudio) < 0.01f || engagedGain >= -0.1)
@@ -452,6 +466,33 @@ int runTransportCheck()
             const auto restartedAudio = renderFrames(2 * ResonanceSuppressor::kN);
             if (peak(restartedAudio) < 0.01f)
                 fail("restart did not produce audio with suppression active");
+        }
+        // Starting again from position zero after a prior playback must not
+        // reuse the normal resume fade and soften the first note.
+        engine.pause();
+        auto secondPauseFrames = uint32_t{0};
+        while ((engine.m_appliedTransport != static_cast<int>(Transport::Paused) ||
+                engine.m_cutFadeActive) &&
+               secondPauseFrames < uint32_t(engine.sampleRate())) {
+            renderFrames(512);
+            secondPauseFrames += 512;
+        }
+        engine.seek(0);
+        renderFrames(1);
+        engine.play();
+        auto secondStartFrames = uint32_t{0};
+        while (engine.m_appliedTransport != static_cast<int>(Transport::Playing) &&
+               secondStartFrames < uint32_t(engine.sampleRate())) {
+            renderFrames(1);
+            ++secondStartFrames;
+        }
+        if (engine.m_appliedTransport != static_cast<int>(Transport::Playing)) {
+            fail("second song-start play was not applied");
+        } else {
+            if (engine.m_cutFadeGain < 0.999f)
+                fail("second song-start play began below full output gain");
+            if (engine.m_player.position() != 0)
+                fail("second song-start play advanced before reaching full output gain");
         }
 
         // A cold song replacement is another playback boundary. Starting a

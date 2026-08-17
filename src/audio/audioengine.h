@@ -237,9 +237,9 @@ class AudioEngine
     void process(float *interleavedOut, uint32_t frameCount);
     void applyPendingSeek();
     void applyTransportTransition();
-    // Transport cut-fade: the requested state is applied at the exact
-    // zero-gain sample. Until then the currently applied transport keeps
-    // rendering, so a Playing transition cannot cut its first note.
+    // Transport cut-fade: the requested state is normally applied at the
+    // exact zero-gain sample. A start at song position zero is deferred until
+    // the settle hold ends so its first note begins at full output gain.
     void beginOutputCut(int transport);
     // Cold: clears interrupted transport cut-fade state while the device is
     // stopped. Scalar-only; safe for cold init/load/unload boundaries.
