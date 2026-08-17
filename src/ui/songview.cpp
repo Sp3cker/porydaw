@@ -7201,62 +7201,63 @@ QPixmap laneToggleMask(int extent, qreal dpr, bool automation)
     mask.fill(Qt::transparent);
     QPainter p(&mask);
     p.setRenderHint(QPainter::Antialiasing, true);
-    const qreal inset = extent / 8.0;
-    const qreal left = inset;
-    const qreal right = extent - inset;
-    const qreal top = inset;
-    const qreal bottom = extent - inset;
-    const qreal stroke = std::max(1.0, extent / 10.0);
     if (automation) {
-        // A breakpoint envelope: a rise into a held node and a fall away
-        // from it, which is what an automation row draws.
-        const qreal radius = extent / 6.0;
-        const QPointF a(left, bottom);
-        const QPointF b(extent / 2.0, top + radius);
-        const QPointF c(right, extent * 0.66);
-        p.setPen(QPen(Qt::white, stroke, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        p.drawPolyline(QPolygonF({a, b, c}));
-        // The node the line bends around, hollow like the lanes' own rings.
-        // The line runs under it, so clear its disc first — at icon sizes a
-        // ring stroked straight over the join just reads as a blob.
-        p.setCompositionMode(QPainter::CompositionMode_Clear);
+        // automation.svg traced in its own 512 viewBox: two hollow nodes on a
+        // step — a run into the low node, a rise, and a run off the right
+        // edge. Outer radius 80 with a 48 hole is a ring of stroke 32 at
+        // radius 64, and the connectors are bands of about the same width.
+        p.scale(extent / 512.0, extent / 512.0);
+        const qreal stroke = 32.0;
+        const qreal radius = 64.0;
+        const QPointF low(88.0, 368.0);
+        const QPointF high(280.0, 144.0);
+        p.setPen(QPen(Qt::white, stroke, Qt::SolidLine, Qt::FlatCap, Qt::MiterJoin));
+        p.drawPolyline(
+            QPolygonF({low, QPointF(high.x(), low.y()), high, QPointF(504.0, high.y())}));
+        // The connectors run under both nodes, so clear each node's disc
+        // before stroking its ring — otherwise the hole fills in and the
+        // glyph reads as two blobs.
+        for (const QPointF &node : {low, high}) {
+            p.setCompositionMode(QPainter::CompositionMode_Clear);
+            p.setPen(Qt::NoPen);
+            p.setBrush(Qt::white);
+            p.drawEllipse(node, radius + stroke / 2.0, radius + stroke / 2.0);
+            p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+            p.setPen(QPen(Qt::white, stroke));
+            p.setBrush(Qt::NoBrush);
+            p.drawEllipse(node, radius, radius);
+        }
+    } else {
+        // velocity.svg traced in its own 360 viewBox: a filled handle sitting
+        // at the left end of a rail that runs off the right edge, the way a
+        // velocity value rides its lane.
+        p.scale(extent / 360.0, extent / 360.0);
+        const QPointF handle(79.8, 180.0);
+        const qreal radius = 79.8;
         p.setPen(Qt::NoPen);
         p.setBrush(Qt::white);
-        p.drawEllipse(b, radius + stroke / 2.0, radius + stroke / 2.0);
-        p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        p.setPen(QPen(Qt::white, stroke));
-        p.setBrush(Qt::NoBrush);
-        p.drawEllipse(b, radius, radius);
-    } else {
-        // Velocity stems on a baseline: the lane's own picture of a note's
-        // velocity, at three different heights so it reads as data.
-        const qreal span = right - left;
-        const qreal barW = std::max(1.0, span / 5.0);
-        const qreal gap = (span - 3 * barW) / 2.0;
-        const qreal heights[3] = {0.45, 1.0, 0.7};
-        for (int i = 0; i < 3; i++) {
-            const qreal x = left + i * (barW + gap);
-            const qreal h = (bottom - top) * heights[i];
-            p.fillRect(QRectF(x, bottom - h, barW, h), Qt::white);
-        }
+        p.drawRect(QRectF(handle.x(), 167.5, 360.0 - handle.x(), 25.0));
+        p.drawEllipse(handle, radius, radius);
     }
     return mask;
 }
 
-// The bar pinned under the lanes area: two checkable toggles for the
-// automation lanes and the velocity lane, always present so the toggles stay
-// where the user left them even with both panes hidden.
+// Two checkable toggles for the automation lanes and the velocity lane. It
+// rides in the "other events" strip's gutter, leading the strip's row, and is
+// never hidden, so the toggles stay where the user left them even with both
+// panes shut. Sized and placed by its host (OtherStrip::paintContent) —
+// TimelineSurface::resizeEvent is final, so a surface's children cannot be
+// laid out from a resize override.
 class LaneToggleBar : public QWidget
 {
   public:
-    explicit LaneToggleBar(SongView *sv) : QWidget(nullptr)
+    explicit LaneToggleBar(SongView *sv, QWidget *parent) : QWidget(parent)
     {
         setObjectName(QStringLiteral("laneToggleBar")); // findChild for tests
         const int extent = lyt::fontPx(1.5);
-        setFixedHeight(extent + 2 * lyt::space(Space::One));
         auto *row = new QHBoxLayout(this);
-        row->setContentsMargins(lyt::space(Space::Two), lyt::space(Space::One),
-                                lyt::space(Space::Two), lyt::space(Space::One));
+        row->setContentsMargins(lyt::space(Space::Two), lyt::space(Space::Half),
+                                lyt::space(Space::Two), lyt::space(Space::Half));
         row->setSpacing(lyt::space(Space::One));
         const auto makeToggle = [&](const QString &objectName) {
             auto *button = new QToolButton(this);
@@ -7310,15 +7311,8 @@ class LaneToggleBar : public QWidget
     }
 
   protected:
-    void paintEvent(QPaintEvent *event) override
-    {
-        QPainter p(this);
-        p.fillRect(event->rect(),
-                   themes::color(themes::Role::song_view_timeline_chrome_background));
-        // The lanes area's closing edge, matching the strip's own top rule.
-        p.setPen(themes::color(themes::Role::song_view_separator));
-        p.drawLine(0, 0, width(), 0);
-    }
+    // No paintEvent: the strip underneath paints the chrome background and the
+    // row's top rule, and the buttons draw their own fills over it.
 
     void changeEvent(QEvent *event) override
     {
@@ -7375,9 +7369,15 @@ class OtherStrip : public TimelineSurface
     explicit OtherStrip(SongView *sv) : TimelineSurface(sv), m_sv(sv)
     {
         setObjectName(QStringLiteral("otherEventsStrip")); // findChild for tests
-        setFixedHeight(QFontMetrics(font()).height() + lyt::space(Space::Two));
+        // The strip's gutter carries the lane toggles, so the row has to clear
+        // the buttons as well as its own label.
+        m_toggles = new LaneToggleBar(sv, this);
+        setFixedHeight(std::max(QFontMetrics(font()).height() + lyt::space(Space::Two),
+                                m_toggles->sizeHint().height()));
         setMouseTracking(true);
     }
+
+    LaneToggleBar *laneToggles() const { return m_toggles; }
 
   protected:
     void paintContent(QPainter &p) override
@@ -7387,10 +7387,19 @@ class OtherStrip : public TimelineSurface
         p.setPen(themes::color(themes::Role::song_view_separator));
         p.drawLine(0, 0, width(), 0);
 
+        // The toggles lead the row; laying them out here rather than from a
+        // resize override is forced (TimelineSurface::resizeEvent is final)
+        // and safe — setGeometry only posts an update for the child.
+        m_toggles->setGeometry(0, 0, m_toggles->sizeHint().width(), height());
+
         const SongViewModel &model = m_sv->model();
         p.setPen(themes::color(themes::Role::song_view_primary_text));
         const auto textInset = lyt::space(Space::Two);
-        p.drawText(QRect(textInset, 0, kGutterW - 2 * textInset, height()), Qt::AlignVCenter,
+        // The label closes the gutter from the right, so the buttons and the
+        // text read as one row instead of crowding the same corner.
+        const int labelLeft = m_toggles->geometry().right() + textInset;
+        p.drawText(QRect(labelLeft, 0, kGutterW - textInset - labelLeft, height()),
+                   Qt::AlignVCenter | Qt::AlignRight,
                    SongView::tr("Other events (%1)").arg(model.strip.size()));
         if (!m_sv->timeline())
             return;
@@ -7451,6 +7460,7 @@ class OtherStrip : public TimelineSurface
 
   private:
     SongView *m_sv;
+    LaneToggleBar *m_toggles = nullptr;
 };
 
 // ---------------------------------------------------------- VoicePickerDialog
@@ -8209,13 +8219,11 @@ SongView::SongView(QWidget *parent) : QWidget(parent)
     m_splitter->setStretchFactor(2, 0);
     vbox->addWidget(m_splitter, 1);
 
+    // The view's last row, outside the splitter, and the host of the pane
+    // toggles: they hold still whether or not either pane is showing.
     m_strip = new OtherStrip(this);
     vbox->addWidget(m_strip);
-
-    // The view's last row, outside the splitter: the pane toggles hold still
-    // whether or not either pane is showing.
-    m_laneToggles = new LaneToggleBar(this);
-    vbox->addWidget(m_laneToggles);
+    m_laneToggles = m_strip->laneToggles();
     const auto surfaces = timelineSurfaces();
     themes::registerGridLineRefreshTarget(surfaces.ruler.widget);
     themes::registerGridLineRefreshTarget(surfaces.roll.widget);

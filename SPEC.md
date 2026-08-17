@@ -376,11 +376,11 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   wheel zooms time at the cursor, Shift (or a horizontal wheel) scrolls, and the wheel
   over the ruler column is left alone. Visibility is an app-wide preference (QSettings,
   like Follow Playhead); the pane's height is per-song sidecar state (§4.4).
-- **Under everything — Lane toggle bar:** a fixed strip that is the view's last row,
-  below the splitter and below the "other events" strip, carrying two checkable icon
-  buttons — an envelope-with-node
-  glyph for the automation lanes and velocity stems for the velocity lane. It sits
-  outside the splitter and is never hidden, so with both panes closed it is still the
+- **Lane toggles:** two checkable icon buttons — a two-node step glyph for the
+  automation lanes and a handle-on-a-rail glyph for the velocity lane, traced from
+  specker's SVG icons. They lead the "other events" strip's gutter, which pushes that
+  row's label to the gutter's right edge; the strip is the view's last row, below the
+  splitter. The toggles are never hidden, so with both panes closed they are still the
   way back without the View menu. The buttons, the View menu items, and the A/V keys
   are three faces of the same two preferences and stay in sync in every direction.
   The glyphs are painted (no SVG module is linked) and tinted from the button role

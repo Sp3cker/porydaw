@@ -713,7 +713,7 @@ class SongView : public QWidget
     songview::AutomationArea *m_lanes = nullptr;
     QScrollArea *m_lanesScroll = nullptr;
     songview::VelocityLane *m_velocityLane = nullptr;
-    songview::LaneToggleBar *m_laneToggles = nullptr; // pinned under the lanes area
+    songview::LaneToggleBar *m_laneToggles = nullptr; // owned by m_strip's gutter
     // Momentary pencil-key hold: press state kept until the matching
     // release decides sticky tap vs momentary hold (see handleEditKey /
     // handleEditKeyRelease).
