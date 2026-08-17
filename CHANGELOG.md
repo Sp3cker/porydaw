@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Fixed
 - Fixed bug where auditioning a note didn't factor in the track's Volume or Pan at that note's position in the song.
+- Fixed the `voice_directsound_alt` voice type, which was mislabeled "Sample (fixed pitch)" and played like a plain sample. It is now "Sample (reversed)" and plays the sample backwards like the m4a engine does (loops are ignored in reverse). DPCM-compressed samples (the `cry`/`cry_reverse` voices) are now decoded properly, too.
 - Improved fidelity of CGB channels
    - Fixed CGB channels' volume envelope emulation.
    - Improved CGB noise channel is now band-limited, which is more accurate to hardware's sound quality.
