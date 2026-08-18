@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "audio/audioengine.h"
+#include "audio/timeline_handoff.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "miniaudio.h"
@@ -215,11 +216,40 @@ int runTransportCheck()
         std::fprintf(stderr, "transportcheck: FAIL: %s\n", what);
         failures++;
     };
+    {
+        TimelineHandoff handoff;
+        auto first = std::make_shared<MidiTimeline>();
+        handoff.reset(first);
+        auto active = std::make_shared<MidiTimeline>();
+        std::weak_ptr<const MidiTimeline> activeLifetime = active;
+        handoff.publish(active);
+        handoff.acquirePending();
+        active.reset();
+
+        auto superseded = std::make_shared<MidiTimeline>();
+        std::weak_ptr<const MidiTimeline> supersededLifetime = superseded;
+        handoff.publish(superseded);
+        superseded.reset();
+        auto latest = std::make_shared<MidiTimeline>();
+        handoff.publish(latest);
+        if (activeLifetime.expired())
+            fail("rapid timeline publications released the audio thread's active snapshot");
+        if (!supersededLifetime.expired())
+            fail("superseded pending timeline remained retained");
+
+        handoff.acquirePending();
+        auto replacement = std::make_shared<MidiTimeline>();
+        handoff.publish(replacement);
+        if (!activeLifetime.expired())
+            fail("replaced active timeline remained retained");
+    }
     TestVoicegroup tvg;
     std::shared_ptr<MidiTimeline> timeline;
     AudioEngine engine;
     QString error;
     if (!engine.init(&error)) {
+        if (failures)
+            return 1;
         std::printf("transportcheck: SKIP (no audio device: %s)\n", qUtf8Printable(error));
         return 0;
     }
@@ -258,8 +288,8 @@ int runTransportCheck()
             fail("Stop did not cancel a pending seek");
     }
     // An edit rebuild must carry a pending seek onto a distinct replacement
-    // timeline. The old owner retires only after the callback acknowledges
-    // this publication.
+    // timeline. The old owner retires only after the callback acquires its
+    // replacement.
     auto seekReplacementSmf = smf;
     seekReplacementSmf.tracks[1].events[0].data0 = 1;
     auto seekReplacement =

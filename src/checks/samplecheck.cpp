@@ -2459,60 +2459,65 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             std::fprintf(stderr, "samplecheck: FAIL: engineloop voicegroup_load\n");
             failures++;
         } else {
-            // Render at the sample's effective rate with the PCM mix
-            // following the host rate: the channel steps ~1 source sample
-            // per output sample and the only smoothing is m4a_channel's own
-            // linear interpolation, including its wrap across the loop seam.
+            // The hardware frontend requires an integral host rate. Use the
+            // nearest rate to the sample's effective frequency, then let the
+            // PCM mixer follow it.
             auto *engine = new M4AEngine();
-            m4a_engine_init(engine, float(out.freq) / 1024.0f);
-            m4a_engine_set_pcm_mix_rate(engine, 0.0f);
-            m4a_engine_set_voicegroup(engine, vg->voices);
-            m4a_engine_program_change(engine, 0, 0);
-            m4a_engine_note_on(engine, 0, 60, 127);
-            const M4APCMChannel *ch = nullptr;
-            for (int i = 0; i < MAX_PCM_CHANNELS; i++) {
-                if (engine->pcmChannels[i].status & CHN_ON)
-                    ch = &engine->pcmChannels[i];
-            }
-            expect(ch != nullptr, "engine-loop note keys a channel");
-            double maxRenderedStep = 0.0, peak = 0.0;
-            if (ch) {
-                const quint64 loopLength = quint64(out.size) - out.loopStart;
-                const quint64 measurementStart = quint64(out.size) + 4 * loopLength;
-                const quint64 renderFrames = measurementStart + loopLength;
-                constexpr quint64 kMaxRenderFrames = 400000;
-                expect(renderFrames <= kMaxRenderFrames, "engine-loop fixture fits render window");
-                if (renderFrames <= kMaxRenderFrames) {
-                    float l = 0.0f, r = 0.0f;
-                    double prev = 0.0;
-                    for (quint64 i = 0; i < renderFrames; i++) {
-                        m4a_engine_process(engine, &l, &r, 1);
-                        const double v = double(l);
-                        if (i >= measurementStart) {
-                            maxRenderedStep = qMax(maxRenderedStep, std::abs(v - prev));
-                            peak = qMax(peak, std::abs(v));
-                        }
-                        prev = v;
-                    }
-                    expect((ch->status & CHN_ON) && peak > 0.0,
-                           "at least 4 full loop wraps rendered");
+            const float hostRate = float(std::round(double(out.freq) / 1024.0));
+            const bool initialized = m4a_engine_init(engine, hostRate);
+            expect(initialized, "engine-loop initializes at an integral host rate");
+            if (initialized) {
+                m4a_engine_set_pcm_mix_rate(engine, 0.0f);
+                m4a_engine_set_voicegroup(engine, vg->voices);
+                m4a_engine_program_change(engine, 0, 0);
+                m4a_engine_note_on(engine, 0, 60, 127);
+                const M4APCMChannel *ch = nullptr;
+                for (int i = 0; i < MAX_PCM_CHANNELS; i++) {
+                    if (engine->pcmChannels[i].status & CHN_ON)
+                        ch = &engine->pcmChannels[i];
                 }
+                expect(ch != nullptr, "engine-loop note keys a channel");
+                double maxRenderedStep = 0.0, peak = 0.0;
+                if (ch) {
+                    const quint64 loopLength = quint64(out.size) - out.loopStart;
+                    const quint64 measurementStart = quint64(out.size) + 4 * loopLength;
+                    const quint64 renderFrames = measurementStart + loopLength;
+                    constexpr quint64 kMaxRenderFrames = 400000;
+                    expect(renderFrames <= kMaxRenderFrames,
+                           "engine-loop fixture fits render window");
+                    if (renderFrames <= kMaxRenderFrames) {
+                        float l = 0.0f, r = 0.0f;
+                        double prev = 0.0;
+                        for (quint64 i = 0; i < renderFrames; i++) {
+                            m4a_engine_process(engine, &l, &r, 1);
+                            const double v = double(l);
+                            if (i >= measurementStart) {
+                                maxRenderedStep = qMax(maxRenderedStep, std::abs(v - prev));
+                                peak = qMax(peak, std::abs(v));
+                            }
+                            prev = v;
+                        }
+                        expect((ch->status & CHN_ON) && peak > 0.0,
+                               "at least 4 full loop wraps rendered");
+                    }
+                }
+                // Compare the rendered loop's largest step against the source
+                // loop, including its seam. One LSB in output units is derived
+                // from the loop region's peak s8 value.
+                int maxS8 = 1;
+                int maxSourceStep = 0;
+                for (quint32 i = out.loopStart; i < out.size; i++) {
+                    const int sample = int(qint8(out.s8.at(qsizetype(i))));
+                    const quint32 nextIndex = i + 1 < out.size ? i + 1 : out.loopStart;
+                    const int next = int(qint8(out.s8.at(qsizetype(nextIndex))));
+                    maxS8 = qMax(maxS8, std::abs(sample));
+                    maxSourceStep = qMax(maxSourceStep, std::abs(next - sample));
+                }
+                const double lsb = peak / double(maxS8);
+                expect(peak > 0.0 &&
+                           maxRenderedStep <= double(maxSourceStep) * lsb + 2.0 * lsb + 1e-9,
+                       "loop-wrap steps stay within source steps + 2 LSB");
             }
-            // Compare the rendered loop's largest step against the source
-            // loop, including its seam. One LSB in output units is derived
-            // from the loop region's peak s8 value.
-            int maxS8 = 1;
-            int maxSourceStep = 0;
-            for (quint32 i = out.loopStart; i < out.size; i++) {
-                const int sample = int(qint8(out.s8.at(qsizetype(i))));
-                const quint32 nextIndex = i + 1 < out.size ? i + 1 : out.loopStart;
-                const int next = int(qint8(out.s8.at(qsizetype(nextIndex))));
-                maxS8 = qMax(maxS8, std::abs(sample));
-                maxSourceStep = qMax(maxSourceStep, std::abs(next - sample));
-            }
-            const double lsb = peak / double(maxS8);
-            expect(peak > 0.0 && maxRenderedStep <= double(maxSourceStep) * lsb + 2.0 * lsb + 1e-9,
-                   "loop-wrap steps stay within source steps + 2 LSB");
             m4a_engine_destroy(engine);
             delete engine;
             voicegroup_free(vg);

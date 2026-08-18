@@ -1,44 +1,102 @@
 #!/usr/bin/env bash
-# Run every porydaw --*check harness against fresh scratch trees of a decomp
-# project, using clone-on-write when the host supports it. Each harness gets
-# isolated paths; unsupported hosts fall back to an ordinary recursive copy.
-# Point it at an ASAN build (-DPORYDAW_ASAN=ON) to turn
-# silent memory bugs into aborts with stack traces.
+# Run every porydaw --*check harness against a private complete copy of its
+# checked-in fixture project. Point this at an ASAN build
+# (-DPORYDAW_ASAN=ON) to turn silent memory bugs into aborts with stack traces.
 #
-# usage: tools/run_checks.sh <porydaw-binary> <decomp-checkout> [songsmk-fork]
+# usage: tools/run_checks.sh <porydaw-binary>
 #
-#   <decomp-checkout>  a pokeemerald checkout; savecheck/onboardcheck/
-#                      roundtrip also want tools/mid2agb/mid2agb built in it
-#   [songsmk-fork]     a songs.mk-only (pre-midi.cfg) fork checkout for
-#                      --mkcheck, which refuses midi.cfg projects by design;
-#                      omitted -> mkcheck is skipped (and says so)
-#
-# env: PORYDAW_SAMPLE_CORPUS  a BUILT decomp tree (with generated sample
-#      .bin files) for samplecheck's corpus pass; omitted -> self-contained
-#      samplecheck only. ASAN_OPTIONS defaults to detect_leaks=0 (Qt's
-#      process-lifetime allocations drown real leaks in noise).
+# env: PORYDAW_SAMPLE_CORPUS  optional built project for samplecheck's corpus
+#      PORYDAW_SMF_STRESS    nonempty: run bounded SMF automation stress checks
+#      ASAN_OPTIONS defaults to detect_leaks=0 (Qt's process-lifetime
+#      allocations drown real leaks in noise).
 set -u
 
+SCRIPT_PATH=${BASH_SOURCE[0]}
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR=$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)
+    SCRIPT_PATH=$(readlink "$SCRIPT_PATH")
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR=$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd -P)
+DECOMP_FIXTURE="$REPO_ROOT/src/checks/fixtures/decompproject"
+SONGSMK_FIXTURE="$REPO_ROOT/src/checks/fixtures/songsmkproject"
+
 usage() {
-    echo "usage: tools/run_checks.sh <porydaw-binary> <decomp-checkout> [songsmk-fork]" >&2
+    echo "usage: tools/run_checks.sh <porydaw-binary>" >&2
     exit 2
 }
-[ $# -ge 2 ] || usage
-BIN=$(readlink -f "$1")
-SRC=$(readlink -f "$2")
-FORK=""
-[ $# -ge 3 ] && FORK=$(readlink -f "$3")
-[ -x "$BIN" ] || { echo "run_checks: not executable: $BIN" >&2; exit 2; }
-[ -f "$SRC/sound/song_table.inc" ] || {
-    echo "run_checks: not a decomp project (no sound/song_table.inc): $SRC" >&2
+[ $# -eq 1 ] || usage
+[ -x "$1" ] || { echo "run_checks: not executable: $1" >&2; exit 2; }
+
+resolve_path() { # path
+    local path="$1" directory
+    while [ -L "$path" ]; do
+        directory=$(cd -P "$(dirname "$path")" && pwd)
+        path=$(readlink "$path")
+        [[ "$path" != /* ]] && path="$directory/$path"
+    done
+    directory=$(cd -P "$(dirname "$path")" && pwd)
+    printf '%s/%s\n' "$directory" "$(basename "$path")"
+}
+
+BIN=$(resolve_path "$1")
+case "$BIN" in
+    *.app/Contents/MacOS/*)
+        BUILD_ROOT=$(cd -P "$(dirname "$BIN")/../../.." && pwd)
+        ;;
+    *)
+        BUILD_ROOT=$(cd -P "$(dirname "$BIN")" && pwd)
+        ;;
+esac
+MID2AGB="$BUILD_ROOT/mid2agb"
+[ -x "$MID2AGB.exe" ] && MID2AGB="$MID2AGB.exe"
+[ -x "$MID2AGB" ] || {
+    echo "run_checks: missing in-tree mid2agb beside the build: $MID2AGB" >&2
     exit 2
 }
-if [ -n "$FORK" ] && [ ! -f "$FORK/sound/song_table.inc" ]; then
-    echo "run_checks: fork is not a decomp project: $FORK" >&2
+
+[ -f "$DECOMP_FIXTURE/sound/song_table.inc" ] || {
+    echo "run_checks: missing decomp fixture song table: $DECOMP_FIXTURE/sound/song_table.inc" >&2
     exit 2
-fi
+}
+[ -f "$DECOMP_FIXTURE/sound/songs/midi/midi.cfg" ] || {
+    echo "run_checks: missing decomp fixture midi.cfg: $DECOMP_FIXTURE/sound/songs/midi/midi.cfg" >&2
+    exit 2
+}
+[ -f "$SONGSMK_FIXTURE/sound/song_table.inc" ] || {
+    echo "run_checks: missing songs.mk fixture song table: $SONGSMK_FIXTURE/sound/song_table.inc" >&2
+    exit 2
+}
+[ -f "$SONGSMK_FIXTURE/songs.mk" ] || {
+    echo "run_checks: missing songs.mk fixture: $SONGSMK_FIXTURE/songs.mk" >&2
+    exit 2
+}
+[ ! -e "$SONGSMK_FIXTURE/sound/songs/midi/midi.cfg" ] || {
+    echo "run_checks: songs.mk fixture must not contain midi.cfg" >&2
+    exit 2
+}
 
 export QT_QPA_PLATFORM=offscreen
+
+CHECK_TIMEOUT_SECONDS=90
+TIMEOUT_BIN=""
+for candidate in gtimeout timeout; do
+    if ! command -v "$candidate" >/dev/null 2>&1; then
+        continue
+    fi
+    timeout_version=$("$candidate" --version 2>/dev/null || true)
+    case "$timeout_version" in
+        *"GNU coreutils"*)
+            TIMEOUT_BIN=$(command -v "$candidate")
+            break
+            ;;
+    esac
+done
+if [ -z "$TIMEOUT_BIN" ]; then
+    echo "run_checks: GNU timeout (or gtimeout) is required" >&2
+    exit 2
+fi
 export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
 
 TMPROOT=$(mktemp -d)
@@ -59,33 +117,13 @@ case "$(uname -s)" in
 esac
 rm -f "$PROBE_SOURCE" "$PROBE_DEST"
 
-copy_path() { # src dst
+copy_path() { # source destination
     case "$COPY_MODE" in
         clone) cp -cR "$1" "$2" ;;
         reflink) cp -a --reflink=auto "$1" "$2" ;;
         *) cp -R "$1" "$2" ;;
     esac
 }
-
-copy_tree() { # src dst: the working tree minus .git
-    mkdir -p "$2"
-    local entry
-    for entry in "$1"/* "$1"/.[!.]*; do
-        [ -e "$entry" ] || continue
-        [ "$(basename "$entry")" = ".git" ] && continue
-        copy_path "$entry" "$2/"
-    done
-}
-
-copy_tree "$SRC" "$TMPROOT/base"
-[ -n "$FORK" ] && copy_tree "$FORK" "$TMPROOT/forkbase"
-
-# The decomp build names host tools with .exe on Windows. Pass an explicit
-# source-tree path so scratch copies work on either platform.
-MID2AGB="$SRC/tools/mid2agb/mid2agb"
-[ -f "$MID2AGB.exe" ] && MID2AGB="$MID2AGB.exe"
-mid2agb_args=()
-[ -f "$MID2AGB" ] && mid2agb_args=("$MID2AGB")
 
 fails=()
 
@@ -99,61 +137,67 @@ report() { # name exit-status
     fi
 }
 
-run() { # name base|- harness-args... (SCRATCH placeholder = fresh copy of base)
-    local name="$1" base="$2"
+run() { # name fixture|- harness-args... (SCRATCH = fresh path)
+    local name="$1" fixture="$2"
     shift 2
-    local scratch="$TMPROOT/scratch"
+    local scratch="$TMPROOT/$name"
     rm -rf "$scratch"
-    [ "$base" != "-" ] && copy_path "$TMPROOT/$base" "$scratch"
-    local args=() a
-    for a in "$@"; do
-        [ "$a" = "SCRATCH" ] && a="$scratch"
-        args+=("$a")
+    if [ "$fixture" != "-" ]; then
+        copy_path "$fixture" "$scratch"
+    fi
+
+    local args=() arg
+    for arg in "$@"; do
+        [ "$arg" = "SCRATCH" ] && arg="$scratch"
+        args+=("$arg")
     done
-    "$BIN" "${args[@]}" >"$LOG" 2>&1
-    report "$name" $?
+    "$TIMEOUT_BIN" -k 5s "${CHECK_TIMEOUT_SECONDS}s" \
+        "$BIN" "${args[@]}" >"$LOG" 2>&1
+    local status=$?
+    if [ "$status" -eq 124 ]; then
+        echo "run_checks: $name exceeded ${CHECK_TIMEOUT_SECONDS}s" >>"$LOG"
+    fi
+    report "$name" "$status"
 }
 
-run roundtrip        base --roundtrip SCRATCH "${mid2agb_args[@]}"
-run editcheck        base --editcheck SCRATCH
-run scalecheck        base --scalecheck SCRATCH
-run viewcheck        base --viewcheck SCRATCH
-run selftest         base --selftest SCRATCH mus_littleroot
-run savecheck        base --savecheck SCRATCH mus_abandoned_ship "${mid2agb_args[@]}"
-run onboardcheck     base --onboardcheck SCRATCH "${mid2agb_args[@]}"
-run vgcheck          base --vgcheck SCRATCH mus_b_factory
-run vgsavecheck      base --vgsavecheck SCRATCH mus_abandoned_ship
-run exportcheck-loop base --exportcheck SCRATCH mus_abandoned_ship
-run exportcheck-tail base --exportcheck SCRATCH mus_obtain_item
-run sessioncheck     base --sessioncheck SCRATCH mus_abandoned_ship
-run tabcheck         base --tabcheck SCRATCH mus_abandoned_ship mus_petalburg
-run eventviewcheck   base --eventviewcheck SCRATCH
-run rollcheck        base --rollcheck SCRATCH mus_abandoned_ship
-run loopcheck        -    --loopcheck
-run ignorecheck      -    --ignorecheck SCRATCH
-run primecheck       -    --primecheck
-run smfcheck         -    --smfcheck
-run transportcheck   -    --transportcheck
-run audiocheck       -    --audiocheck
-run clickcheck       -    --clickcheck
-run resonancecheck - --resonancecheck
-run trackactivitycheck -    --trackactivitycheck
-run trackactivitymetercheck -    --trackactivitymetercheck
-run keymapcheck      -    --keymapcheck
-run polycheck        -    --polycheck
-
-# samplecheck builds its own fake projects and requires a scratch dir that
-# does NOT exist yet.
-rm -rf "$TMPROOT/scratch"
-"$BIN" --samplecheck "$TMPROOT/scratch" \
-    ${PORYDAW_SAMPLE_CORPUS:+"$PORYDAW_SAMPLE_CORPUS"} >"$LOG" 2>&1
-report samplecheck $?
-
-if [ -n "$FORK" ]; then
-    run mkcheck forkbase --mkcheck SCRATCH mus_aqua_magma_hideout
-else
-    echo "skip: mkcheck (pass a songs.mk-only fork checkout as the 3rd argument)"
+run roundtrip        "$DECOMP_FIXTURE" --roundtrip SCRATCH "$MID2AGB"
+run editcheck        "$DECOMP_FIXTURE" --editcheck SCRATCH
+run scalecheck       "$DECOMP_FIXTURE" --scalecheck SCRATCH
+run viewcheck        "$DECOMP_FIXTURE" --viewcheck SCRATCH
+run selftest         "$DECOMP_FIXTURE" --selftest SCRATCH mus_littleroot_test
+run savecheck        "$DECOMP_FIXTURE" --savecheck SCRATCH mus_route101 "$MID2AGB"
+run onboardcheck     "$DECOMP_FIXTURE" --onboardcheck SCRATCH "$MID2AGB"
+run vgcheck          "$DECOMP_FIXTURE" --vgcheck SCRATCH mus_gym
+run vgsavecheck      "$DECOMP_FIXTURE" --vgsavecheck SCRATCH mus_route101
+run exportcheck-loop "$DECOMP_FIXTURE" --exportcheck SCRATCH mus_route101
+run exportcheck-tail "$DECOMP_FIXTURE" --exportcheck SCRATCH mus_route102
+run sessioncheck     "$DECOMP_FIXTURE" --sessioncheck SCRATCH mus_route101
+run tabcheck         "$DECOMP_FIXTURE" --tabcheck SCRATCH mus_route101 mus_petalburg
+run eventviewcheck   "$DECOMP_FIXTURE" --eventviewcheck SCRATCH
+run rollcheck        "$DECOMP_FIXTURE" --rollcheck SCRATCH mus_route101
+run mkcheck          "$SONGSMK_FIXTURE" --mkcheck SCRATCH mus_aqua_magma_hideout
+run loopcheck        - --loopcheck
+run ignorecheck      - --ignorecheck SCRATCH
+run primecheck       - --primecheck
+run smfcheck         - --smfcheck
+if [ -n "${PORYDAW_SMF_STRESS:-}" ]; then
+    run smfstresscheck - --smfstresscheck
 fi
+run transportcheck   - --transportcheck
+run audiocheck       - --audiocheck
+run clickcheck       - --clickcheck
+run resonancecheck   - --resonancecheck
+run trackactivitycheck - --trackactivitycheck
+run trackactivitymetercheck - --trackactivitymetercheck
+run keymapcheck      - --keymapcheck
+run polycheck        - --polycheck
+
+# samplecheck creates its own project and requires a path that does not exist.
+samplecheck_args=(--samplecheck SCRATCH)
+if [ -n "${PORYDAW_SAMPLE_CORPUS:-}" ]; then
+    samplecheck_args+=("$PORYDAW_SAMPLE_CORPUS")
+fi
+run samplecheck - "${samplecheck_args[@]}"
 
 echo
 if [ ${#fails[@]} -ne 0 ]; then

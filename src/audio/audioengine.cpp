@@ -122,7 +122,11 @@ bool AudioEngine::init(QString *error)
     m_sampleRate = double(m_device->sampleRate);
     m_outputGainRampSamples =
         std::max<uint32_t>(1, uint32_t(m_sampleRate * kOutputGainRampSeconds));
-    m_cutFadeSettleSamples = std::max<uint32_t>(1, uint32_t(m_sampleRate * kCutFadeSettleSeconds));
+    const uint32_t driverQueueSamples =
+        std::max<uint32_t>(1, uint32_t(m_sampleRate * kDriverQueueSettleSeconds));
+    const uint32_t currentRenderBlockSamples =
+        std::max<uint32_t>(1, m_device->playback.internalPeriodSizeInFrames);
+    m_cutFadeSettleSamples = currentRenderBlockSamples + driverQueueSamples + kFrontendQueueFrames;
     resetOutputCut();
     const int targetOutputVolume = m_targetOutputVolume.load();
     m_outputGainTargetVolume = targetOutputVolume;
@@ -772,9 +776,8 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
     // requested after stop() (play-from-cursor) must land on top of the
     // rewind, not under it.
     applyTransportTransition();
-    const auto adoption = m_timelineHandoff.acquirePending();
-    if (adoption.raw)
-        applyTimelineAdoption(adoption.raw);
+    if (const MidiTimeline *timeline = m_timelineHandoff.acquirePending())
+        applyTimelineAdoption(timeline);
     applyPendingSeek();
     applyMuteTransition();
     applyPreviewNote();
@@ -928,6 +931,4 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
     m_activeCgb.store(cgb);
     for (std::size_t track = 0; track < kMaxTracks; track++)
         publishMaximum(m_pendingTrackActivityLevels[track], callbackActivity[track]);
-    if (adoption.raw)
-        m_timelineHandoff.acknowledge(adoption.generation);
 }

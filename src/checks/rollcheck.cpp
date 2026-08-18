@@ -3037,8 +3037,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (view.timeSelection().active())
             fail("right-dragging the timeline ruler still created a time selection");
         QTimer::singleShot(0, [] {
-            if (QWidget *menu = QApplication::activeModalWidget())
+            if (QWidget *menu = QApplication::activePopupWidget()) {
                 menu->close();
+            } else if (QWidget *menu = QApplication::activeModalWidget()) {
+                menu->close();
+            }
         });
         sendMouse(ruler, QEvent::MouseButtonRelease, end, Qt::RightButton, Qt::NoButton);
     }

@@ -338,11 +338,11 @@ class AudioEngine
     uint32_t m_outputGainRampRemaining = 0;
 
     // Audio-thread-only transport cut-fade state (see beginOutputCut).
-    // The settle hold covers the engine's output-queue drain after the
-    // deferred cut: the driver still emits up to one DMA buffer (2 VBlank
-    // periods) of already-mixed pre-cut audio; the fade must sit at zero
-    // through that transit or the return ramp amplifies the queued audio.
-    static constexpr double kCutFadeSettleSeconds = 2.0 / 59.7275;
+    // The settle hold covers all already-rendered pre-cut audio: the current
+    // device render block, the driver's two-VBlank DMA buffer, and poryaaaa's
+    // fixed hardware-frontend queue. The fade remains at zero through them.
+    static constexpr double kDriverQueueSettleSeconds = 2.0 / 59.7275;
+    static constexpr uint32_t kFrontendQueueFrames = 1536;
     uint32_t m_cutFadeSettleSamples = 1;
     bool m_cutFadeActive = false;
     bool m_cutFadeRising = false;

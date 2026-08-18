@@ -1,0 +1,7 @@
+    .include "sound/voicegroups/dummy.inc"
+    .include "sound/voicegroups/fixture_rich.inc"
+    .include "sound/voicegroups/fixture_alt.inc"
+    .include "sound/voicegroups/fixture_keys.inc"
+    .include "sound/voicegroups/fixture_bass.inc"
+    .include "sound/voicegroups/fixture_drums_a.inc"
+    .include "sound/voicegroups/fixture_drums_b.inc"

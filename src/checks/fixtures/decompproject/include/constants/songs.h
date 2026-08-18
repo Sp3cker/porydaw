@@ -1,0 +1,20 @@
+#ifndef GUARD_CONSTANTS_SONGS_H
+#define GUARD_CONSTANTS_SONGS_H
+
+#define MUS_DUMMY 0
+#define MUS_LITTLEROOT_TEST 1
+#define MUS_ROUTE101 2
+#define MUS_ROUTE102 3
+#define MUS_GSC_ROUTE38 4
+#define MUS_CAUGHT 5
+#define MUS_PETALBURG 6
+#define MUS_OLDALE 7
+#define MUS_GYM 8
+#define MUS_SURF 9
+#define MUS_VICTORY_WILD 10
+#define SE_USE_ITEM 11
+#define SE_PC_LOGIN 12
+#define SE_FANFARE_1TRK 13
+#define MUS_NONE 0xFFFF
+
+#endif

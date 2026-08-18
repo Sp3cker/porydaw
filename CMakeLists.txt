@@ -53,6 +53,29 @@ add_subdirectory(
     "${PORYAAAA_DIR}/plugin/porydaw"
     "${CMAKE_CURRENT_BINARY_DIR}/poryaaaa-engine")
 
+# ---- In-tree m4a converter required by the harness sweep ----
+set(MID2AGB_SOURCE_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/ccomidi/mid2agb")
+# The preserved upstream source includes these otherwise-unused expansion
+# configuration headers. Keep their empty declarations in the build tree rather
+# than adding a stale expansion dependency to this repository.
+set(MID2AGB_LEGACY_INCLUDE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/mid2agb-include")
+file(MAKE_DIRECTORY "${MID2AGB_LEGACY_INCLUDE_ROOT}/a/b"
+                    "${MID2AGB_LEGACY_INCLUDE_ROOT}/include/config")
+file(WRITE "${MID2AGB_LEGACY_INCLUDE_ROOT}/include/config/battle.h"
+     "#pragma once\n#define B_NUM_LOW_HEALTH_BEEPS 4\n")
+file(WRITE "${MID2AGB_LEGACY_INCLUDE_ROOT}/include/config/general.h" "#pragma once\n")
+add_executable(mid2agb
+    "${MID2AGB_SOURCE_DIR}/main.cpp"
+    "${MID2AGB_SOURCE_DIR}/error.cpp"
+    "${MID2AGB_SOURCE_DIR}/midi.cpp"
+    "${MID2AGB_SOURCE_DIR}/agb.cpp"
+    "${MID2AGB_SOURCE_DIR}/tables.cpp"
+)
+target_include_directories(mid2agb PRIVATE
+    "${MID2AGB_SOURCE_DIR}"
+    "${MID2AGB_LEGACY_INCLUDE_ROOT}/a/b")
+
 # ---- porydaw application ----
 qt_add_library(porydaw_app STATIC
     src/mainwindow.cpp
@@ -276,6 +299,12 @@ qt_add_executable(porydaw
     src/checks/scalecheck.cpp
     src/checks/savecheck.cpp
     src/checks/onboardcheck.cpp
+    src/checks/onboardcheck/context.h
+    src/checks/onboardcheck/registration.cpp
+    src/checks/onboardcheck/debuglayout.cpp
+    src/checks/onboardcheck/regionedlayout.cpp
+    src/checks/onboardcheck/import.cpp
+    src/checks/onboardcheck/deletion.cpp
     src/checks/vgcheck.cpp
     src/checks/vgsavecheck.cpp
     src/checks/exportcheck.cpp
@@ -285,6 +314,8 @@ qt_add_executable(porydaw
     src/checks/primecheck.cpp
     src/checks/xcmdcheck.cpp
     src/checks/smfcheck.cpp
+    src/checks/smfcheckfixtures.cpp
+    src/checks/smfcheckfixtures.h
     src/checks/transportcheck.cpp
     src/checks/trackactivitycheck.cpp
     src/checks/trackactivitymetercheck.cpp
@@ -340,6 +371,16 @@ qt_add_resources(porydaw "cursor_images"
         resources/pencil@2x.png
         resources/right-drag.png
         resources/right-drag@2x.png
+)
+qt_add_resources(porydaw "smf_check_fixtures"
+    PREFIX "/checks"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/checks/fixtures/decompproject"
+    FILES
+        src/checks/fixtures/decompproject/test_midis/smf/valid/opaque_sysex.mid
+        src/checks/fixtures/decompproject/test_midis/smf/valid/vlq_running_status.mid
+        src/checks/fixtures/decompproject/test_midis/smf/valid/note_lifecycle.mid
+        src/checks/fixtures/decompproject/test_midis/smf/malformed/duplicate_eot.mid
+        src/checks/fixtures/decompproject/test_midis/smf/stress/automation_burst.mid
 )
 target_link_libraries(porydaw PRIVATE porydaw_app)
 if(WIN32)

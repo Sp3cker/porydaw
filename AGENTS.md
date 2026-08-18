@@ -66,12 +66,13 @@ Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_
 
 ```bash
 cmake --build build -j"$(nproc)"          # fast incremental
-QT_QPA_PLATFORM=offscreen ./build/porydaw --vgcheck /tmp/scratch mus_abandoned_ship  # single harness
-tools/run_checks.sh build/porydaw "$DECOMP_PROJECT"  # full sweep (needs decomp checkout)
+tools/run_checks.sh build/porydaw          # self-contained full harness sweep
+build/porydaw --smfstresscheck           # direct opt-in bounded SMF stress check
 tools/format.sh --check                   # CI format gate (clang-format 22)
 ```
 
-Harnesses need a fresh decomp scratch copy — they write into the project. See `.claude/skills/verify/SKILL.md` and `tools/run_checks.sh`.
+Project-backed harnesses use checked-in fixtures. `tools/run_checks.sh` gives each
+harness a fresh private copy because several checks write into the project.
 
 ## Conventions
 
