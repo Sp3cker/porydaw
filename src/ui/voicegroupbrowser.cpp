@@ -44,22 +44,15 @@ const VgMacro kSelectableMacros[] = {
     VgMacro::Noise,
 };
 
-// Shown on the sample variants and the _alt PSG entries. Sample variants:
-// voice_directsound_no_resample (FIX) mixes one source sample per output
-// sample regardless of the note; voice_directsound_alt (REV) plays the
-// sample from its last sample to its first, ignoring any loop. The _alt PSG
-// entries: the FIX bit rounds the 11-bit frequency register to an even value
-// so the oscillator period divides the DAC's PWM period, trading a slight
-// detune for less PWM beating.
+// Shown on the sample variants and the _alt PSG entries.
 QString typeItemTip(VgMacro macro)
 {
     switch (macro) {
     case VgMacro::DirectSoundNoResample:
-        return QObject::tr("Same as Sample, but the note's pitch is ignored: the sample "
-                           "always plays at the engine's mixing rate.");
+        return QObject::tr("Same as Sample, but the note's pitch is ignored. Typically used for "
+                           "percussion instruments.");
     case VgMacro::DirectSoundAlt:
-        return QObject::tr("Same as Sample, but played backwards (last sample first). "
-                           "The sample's loop, if any, is ignored.");
+        return QObject::tr("Same as Sample, but played backwards.");
     case VgMacro::Square1Alt:
     case VgMacro::Square2Alt:
     case VgMacro::ProgWaveAlt:
