@@ -1722,25 +1722,26 @@ void MainWindow::openSettings(SettingsDialog::Tab initialTab)
         song = SongTarget{m_active->doc.cfg(), m_active->doc.label()};
     const QStringList vgArgs = vgCatalog().groupArgs;
     SettingsDialog dialog(m_engineSettings, song, vgArgs, initialTab, this);
-    if (dialog.exec() != QDialog::Accepted)
-        return;
-
-    const EngineSettings newEngine = dialog.engineSettings();
-    if (newEngine.pcmMixer != m_engineSettings.pcmMixer ||
-        newEngine.maxPcmChannels != m_engineSettings.maxPcmChannels ||
-        newEngine.pcmMixRate != m_engineSettings.pcmMixRate ||
-        newEngine.analogFilter != m_engineSettings.analogFilter) {
-        m_engineSettings = newEngine;
-        m_engineSettings.save();
-        if (m_audioOk && m_active && m_audio.songLoaded())
-            m_audio.updateSettings(songSettingsFor(*m_active));
-    }
-
-    if (m_active) {
-        const auto songCfg = dialog.songCfg();
-        if (songCfg)
-            m_active->doc.setCfg(*songCfg);
-    }
+    const auto apply = [this, &dialog] {
+        const EngineSettings newEngine = dialog.engineSettings();
+        if (newEngine.pcmMixer != m_engineSettings.pcmMixer ||
+            newEngine.maxPcmChannels != m_engineSettings.maxPcmChannels ||
+            newEngine.pcmMixRate != m_engineSettings.pcmMixRate ||
+            newEngine.analogFilter != m_engineSettings.analogFilter) {
+            m_engineSettings = newEngine;
+            m_engineSettings.save();
+            if (m_audioOk && m_active && m_audio.songLoaded())
+                m_audio.updateSettings(songSettingsFor(*m_active));
+        }
+        if (m_active) {
+            const auto songCfg = dialog.songCfg();
+            if (songCfg)
+                m_active->doc.setCfg(*songCfg);
+        }
+    };
+    connect(&dialog, &SettingsDialog::applyRequested, this, apply);
+    if (dialog.exec() == QDialog::Accepted)
+        apply();
 }
 
 void MainWindow::openSongSettings()

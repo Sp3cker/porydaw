@@ -20,20 +20,6 @@
 #include "ui/keymap.h"
 #include "ui/settingsdialog.h"
 
-// --keymapcheck: user-configurable keyboard shortcuts check (self-contained,
-// no project needed). Verifies the registry's shipped table (unique ids,
-// non-empty names, no default conflicts), event matching (exact modifiers,
-// keypad tolerance, alternate defaults), override/unbind/reset with
-// delta-only QSettings persistence, live re-application to attached
-// QActions, cross-context conflict detection, modifier commands (mouse
-// gestures bound to a bare modifier chord, with the same delta-only
-// override/unbind/reset and text round-trip), and the shortcuts dialog
-// (filter, keypad-stripped capture, assign with steal-on-conflict, per-row
-// reset, scroll-position retention, and the modifier chord picker swapping
-// in for the key capture) driven offscreen.
-// QSettings is redirected into a temp dir first, so the user's real keymap
-// is never read or written.
-
 namespace {
 
 bool keyMatches(const QString &id, int key, Qt::KeyboardModifiers mods)
@@ -514,8 +500,6 @@ int runKeymapCheck()
                   "leaving the modifier row did not restore the key capture");
         }
     }
-    // 10. SettingsDialog: unified window embeds Engine, Song, and Keyboard
-    // tabs and exposes edit.preferences shortcut (Cmd+, / Ctrl+,).
     {
         const auto prefCmd = registry.command(QStringLiteral("edit.preferences"));
         check(!prefCmd.defaults.isEmpty() &&
@@ -531,8 +515,10 @@ int runKeymapCheck()
         const QStringList vgArgs = {QStringLiteral("_abandoned_ship"), QStringLiteral("_route101")};
         const auto originalBinding = QKeySequence(QStringLiteral("Ctrl+Alt+Left"));
         registry.setBinding(QStringLiteral("roll.nudge_left"), originalBinding);
-
         SettingsDialog dialog(engineSettings, songTarget, vgArgs, SettingsDialog::Tab::Engine);
+        bool applyRequested = false;
+        QObject::connect(&dialog, &SettingsDialog::applyRequested,
+                         [&applyRequested] { applyRequested = true; });
         auto *tabs = dialog.findChild<QTabWidget *>();
         check(tabs != nullptr && tabs->count() == 3, "SettingsDialog does not have 3 tabs");
         if (tabs && tabs->count() == 3) {
@@ -541,8 +527,7 @@ int runKeymapCheck()
                   "tab 1 does not name the song");
             check(tabs->tabText(2) == QStringLiteral("Keyboard"), "tab 2 is not Keyboard");
         }
-        check(dialog.currentTab() == SettingsDialog::Tab::Engine,
-              "SettingsDialog did not open on initial Engine tab");
+        check(dialog.currentTab() == SettingsDialog::Tab::Engine, "Wrong initial Settings tab");
         auto *mixer = dialog.findChild<QComboBox *>(QStringLiteral("pcmMixerCombo"));
         check(mixer && mixer->count() == 2 && mixer->findData(int(M4A_PCM_MIXER_IPATIX)) >= 0 &&
                   mixer->findData(int(M4A_PCM_MIXER_SAPPY)) >= 0,
@@ -565,18 +550,26 @@ int runKeymapCheck()
               "SettingsDialog failed to switch to Keyboard tab");
         auto *tree = dialog.findChild<QTreeWidget *>();
         check(tree != nullptr, "SettingsDialog does not contain keyboard shortcut tree");
-
-        registry.setBinding(QStringLiteral("roll.nudge_left"),
-                            QKeySequence(QStringLiteral("Alt+Left")));
         auto *buttons = dialog.findChild<QDialogButtonBox *>();
-        check(buttons && buttons->button(QDialogButtonBox::Cancel),
-              "SettingsDialog does not expose a Cancel button");
+        auto *applyButton = findButton(&dialog, QStringLiteral("Apply"));
+        check(applyButton, "SettingsDialog does not expose an Apply button");
+        const auto appliedBinding = QKeySequence(QStringLiteral("Alt+Left"));
+        registry.setBinding(QStringLiteral("roll.nudge_left"), appliedBinding);
+        dialog.show();
+        if (applyButton)
+            applyButton->click();
+        const int applyGap =
+            buttons && applyButton ? buttons->x() - applyButton->geometry().right() - 1 : -1;
+        check(applyRequested && dialog.isVisible() && applyGap >= 0 &&
+                  applyGap <= dialog.layout()->spacing(),
+              "SettingsDialog Apply is not next to the other buttons");
+        registry.setBinding(QStringLiteral("roll.nudge_left"),
+                            QKeySequence(QStringLiteral("Shift+Left")));
         if (buttons && buttons->button(QDialogButtonBox::Cancel))
             buttons->button(QDialogButtonBox::Cancel)->click();
-        check(registry.bindings(QStringLiteral("roll.nudge_left")).contains(originalBinding),
-              "SettingsDialog Cancel did not restore shortcut overrides");
+        check(registry.bindings(QStringLiteral("roll.nudge_left")).contains(appliedBinding),
+              "SettingsDialog Cancel reverted an already applied shortcut");
         registry.resetBinding(QStringLiteral("roll.nudge_left"));
-
         SettingsDialog noSongDialog(engineSettings, std::nullopt, vgArgs,
                                     SettingsDialog::Tab::Song);
         auto *noSongTabs = noSongDialog.findChild<QTabWidget *>();
@@ -586,7 +579,6 @@ int runKeymapCheck()
               "SettingsDialog selected an unavailable Song tab");
         check(!noSongDialog.songCfg().has_value(),
               "SettingsDialog produced song settings without a song target");
-
         EngineSettings persisted = engineSettings;
         persisted.pcmMixer = M4A_PCM_MIXER_SAPPY;
         persisted.save();

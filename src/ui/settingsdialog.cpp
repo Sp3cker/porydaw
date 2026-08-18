@@ -1,6 +1,8 @@
 #include "settingsdialog.h"
 
 #include <QDialogButtonBox>
+#include <QHBoxLayout>
+#include <QPushButton>
 #include <QTabWidget>
 #include <QVBoxLayout>
 
@@ -32,11 +34,17 @@ SettingsDialog::SettingsDialog(const EngineSettings &engineSettings,
     m_tabs->addTab(m_keyboardWidget, tr("Keyboard"));
     setCurrentTab(initialTab);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    auto *applyButton = new QPushButton(tr("Apply"), this);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &SettingsDialog::reject);
+    connect(applyButton, &QPushButton::clicked, this, &SettingsDialog::apply);
     auto *layout = new QVBoxLayout(this);
     layout->addWidget(m_tabs);
-    layout->addWidget(buttons);
+    auto *buttonRow = new QHBoxLayout;
+    buttonRow->addStretch();
+    buttonRow->addWidget(applyButton);
+    buttonRow->addWidget(buttons);
+    layout->addLayout(buttonRow);
     resize(560, 580);
 }
 
@@ -77,6 +85,12 @@ void SettingsDialog::setCurrentTab(Tab tab)
         m_tabs->setCurrentWidget(m_keyboardWidget);
         break;
     }
+}
+
+void SettingsDialog::apply()
+{
+    m_keymapSnapshot = keymap::Registry::instance().snapshotOverrides();
+    emit applyRequested();
 }
 
 void SettingsDialog::reject()

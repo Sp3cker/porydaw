@@ -39,10 +39,14 @@ class SettingsDialog : public QDialog
     Tab currentTab() const;
     void setCurrentTab(Tab tab);
 
+  signals:
+    void applyRequested();
+
   protected:
     void reject() override;
 
   private:
+    void apply();
     QTabWidget *m_tabs = nullptr;
     EngineSettingsWidget *m_engineWidget = nullptr;
     QWidget *m_songTab = nullptr;
