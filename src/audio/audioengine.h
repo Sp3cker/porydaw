@@ -7,8 +7,8 @@
 #include <memory>
 #include <utility>
 #include <vector>
-
 #include "audio/auditionslots.h"
+#include "audio/timeline_handoff.h"
 #include "core/miditimeline.h"
 #include "core/timelineplayer.h"
 
@@ -91,7 +91,7 @@ class AudioEngine
     void unloadSong();
 
     // Publishes the latest rebuilt timeline for the next audio callback.
-    // Ownership handoff and deferred reclamation stay inside AudioEngine;
+    // Ownership handoff and deferred reclamation stay inside TimelineHandoff;
     // this call never waits for the callback.
     void updateTimeline(std::shared_ptr<const MidiTimeline> timeline);
     // Hot: requests a jump at the next audio callback. Releases sounding
@@ -147,10 +147,10 @@ class AudioEngine
     // from the next note on (applied at the next callback boundary).
     void refreshVoices() { m_refreshVoicesCmd.fetch_add(1); }
 
-    bool songLoaded() const { return m_timeline.load(std::memory_order_acquire) != nullptr; }
+    bool songLoaded() const { return m_timelineHandoff.active() != nullptr; }
     // Borrowed snapshot for immediate GUI-thread reads. The engine retains
     // replaced timelines until the audio callback finishes with them.
-    const MidiTimeline *timeline() const { return m_timeline.load(std::memory_order_acquire); }
+    const MidiTimeline *timeline() const { return m_timelineHandoff.active(); }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
 
     // Hot-safe for scalar field pokes only (byte-sized stores the audio
@@ -224,10 +224,7 @@ class AudioEngine
                              uint32_t frameCount);
     void process(float *interleavedOut, uint32_t frameCount);
     void applyPendingSeek();
-    struct TimelinePublication;
-    TimelinePublication *applyPendingTimeline();
-    void reapTimelinePublications();
-    void resetTimelinePublication(std::shared_ptr<const MidiTimeline> timeline = nullptr);
+    void applyTimelineAdoption(const MidiTimeline *timeline);
     void applyTransportTransition();
     void cutAllSound();
     void applyMuteTransition();
@@ -240,17 +237,6 @@ class AudioEngine
     ToneData *previewVoices() const;
     uint32_t effectiveMuteMask() const;
 
-    struct TimelinePublication {
-        std::shared_ptr<const MidiTimeline> m_timeline;
-        uint64_t m_generation = 0;
-    };
-    struct RetiredTimeline {
-        std::shared_ptr<const MidiTimeline> m_timeline;
-        uint64_t m_releaseGeneration = 0;
-    };
-    static_assert(std::atomic<TimelinePublication *>::is_always_lock_free);
-    static_assert(std::atomic<uint64_t>::is_always_lock_free);
-
     // Device / engine (audio thread reads; cold ops swap while stopped)
     ma_context *m_context = nullptr;
     bool m_hasContext = false;
@@ -262,12 +248,7 @@ class AudioEngine
     int m_periodFrames = 0;
     int m_periodCount = 0;
     std::unique_ptr<M4AEngine> m_engine;
-    // The callback reads only this raw pointer. UI-thread ownership below
-    // keeps every active or retired timeline alive until callback ack.
-    std::atomic<const MidiTimeline *> m_timeline{nullptr};
-    std::shared_ptr<const MidiTimeline> m_uiTimeline;
-    std::vector<std::unique_ptr<TimelinePublication>> m_timelinePublications;
-    std::vector<RetiredTimeline> m_retiredTimelines;
+    TimelineHandoff m_timelineHandoff;
     LoadedVoiceGroup *m_voicegroup = nullptr; // not owned (the active song tab's)
     SongSettings m_settings;
     // Audition instance: voice previews and sample auditions, mixed on top
@@ -286,11 +267,6 @@ class AudioEngine
     // Avoid stop/start stalls: publish the latest seek for the audio callback.
     static constexpr uint64_t kNoPendingSeek = UINT64_MAX;
     std::atomic<uint64_t> m_pendingSeek{kNoPendingSeek};
-    // UI publishes stable records; the callback exchanges a raw pointer and
-    // acknowledges its generation only after rendering the callback.
-    std::atomic<TimelinePublication *> m_pendingTimeline{nullptr};
-    std::atomic<uint64_t> m_appliedTimelineGeneration{0};
-    uint64_t m_nextTimelineGeneration = 0; // UI thread only
     // Preview-note command: generation<<24 | track<<16 | key<<8 | velocity.
     // The generation counter makes every request distinct so repeated notes
     // are seen by the audio thread.
