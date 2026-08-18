@@ -230,6 +230,17 @@ int runResonanceCheck()
 
     {
         const auto inputFrames = frameCount(4.0);
+        auto input = makeSine(inputFrames, 3000.0, -30.0, frameCount(1.0));
+        const auto output = render(input, ResonanceParams{}, true);
+        const auto outputDb =
+            amplitudeDb(output, frameCount(3.0) + kLatency, frameCount(0.1), 3000.0);
+        const auto reduction = -30.0 - outputDb;
+        check(std::abs(reduction - 5.9375) <= 1.0,
+              "shipping default must limit a saturated resonance to about -5.9 dB");
+    }
+
+    {
+        const auto inputFrames = frameCount(4.0);
         auto input = makeSine(inputFrames, 1000.0, -30.0, frameCount(1.0));
         const auto output = render(input, bandParams(3.0f), true);
         const auto inputDb = -30.0;

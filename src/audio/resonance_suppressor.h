@@ -8,12 +8,12 @@
 // decision is intentional: this runs at the live engine sample rate, not a
 // fixed 32768 Hz.
 struct ResonanceParams {
-    float gDb = 3.0f;        // global depth 0..10 dB (gentler shipping default, §6)
+    float gDb = 1.9f;        // global depth 0..10 dB (shipping max ≈ 5.9 dB, §6)
     float guardDb = 6.0f;    // guard 0..12 dB above the spectral contrast reference (§7)
     float timingMs = 150.0f; // attack tau; release = 4x
     float knotDepthDb[12] = {0, 0, 0, 0, 0, 10, 10, 10, 10, 10, 10, 10};
-    // Shipping default: only knots 7-10 (2.5-10 kHz) active — plateau
-    // 2.5*gDb = -7.5 dB over the whistle band instead of the full high end.
+    // Shipping default: only knots 7-10 (2.5-10 kHz) active — very
+    // resonant bins reach the progressive law's -5.9 dB ceiling.
     bool knotActive[12] = {false, false, false, false, false, false,
                            false, true,  true,  true,  true,  false};
     bool forceMaskOne = false; // verification hook (DETECTOR.md §14 passthrough): mask forced to 1

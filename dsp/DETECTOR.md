@@ -117,16 +117,16 @@ are inactive at that sample rate. Our fixed grid is a deliberate
 simplification. Parameter editing is outside the v1 DSP landing; the check
 harness supplies explicit values. The only v1 product control is
 enable/disable, using the shipping defaults above.
-A **global depth** `g_depthDb` (0..10 dB, default **3**) scales the
+A **global depth** `g_depthDb` (0..10 dB, default **1.9**) scales the
 per-knot envelope:
 ```
 effDb[b] = active[b] ? g_depthDb * depthDb[b] / 10 : 0
 ```
-With the shipping default (g_depthDb = 3, active knots at 10.0): effDb = 3
-on the active bands → steady plateau ≈ kDepth·3 = **≈ −7.5 dB** over
+With the shipping default (g_depthDb = 1.9, active knots at 10.0): effDb =
+1.9 on the active bands → steady plateau ≈ kDepth·1.9 = **≈ −4.8 dB** over
 2.5–10 kHz for a full-strength resonance; very resonant bins (≥ 20 dB
-excess) get ×1.25 → **−9.4 dB**, small ones follow the §7 ramp (gentler
-default, 2026-08-16).
+excess) get ×1.25 → **−5.9 dB**, small ones follow the §7 ramp (gentler
+default, 2026-08-17).
 
 Interpolation: for any frequency f, the knot curve is **piecewise linear in
 (log f, dB)**; outside the knot span, hold the outermost knot value.
@@ -193,7 +193,7 @@ excessLaw[k] = 1.25     for excess ≥ 20 dB
 ```
 
 A resonance 26 dB or more above its local floor gets the full 1.25× depth
-(default plateau **−9.4 dB**), a modest one (12 dB above the floor) gets
+(default plateau **−5.9 dB**), a modest one (12 dB above the floor) gets
 about a quarter of full depth, and broadband program (noise, drums, full
 mixes) sits below the knee and passes with < 0.3 dB measured dimming.
 Isolated tones reach the ceiling (their contrast is capped near 36 dB by
