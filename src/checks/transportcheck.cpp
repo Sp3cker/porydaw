@@ -262,18 +262,20 @@ int runTransportCheck()
     // this publication.
     auto seekReplacementSmf = smf;
     seekReplacementSmf.tracks[1].events[0].data0 = 1;
-    auto seekReplacement = std::shared_ptr<MidiTimeline>(
-        MidiTimeline::build(seekReplacementSmf, engine.sampleRate()));
+    auto seekReplacement =
+        std::shared_ptr<MidiTimeline>(MidiTimeline::build(seekReplacementSmf, engine.sampleRate()));
     if (!seekReplacement) {
         fail("seek replacement timeline built wrong");
     } else {
         engine.seek(midSong);
         engine.updateTimeline(seekReplacement);
         timeline = std::move(seekReplacement);
-        if (!waitFor([&] {
-                return engine.timeline() == timeline.get() &&
-                       engine.playheadSamples() == midSong;
-            }, 2000)) {
+        if (!waitFor(
+                [&] {
+                    return engine.timeline() == timeline.get() &&
+                           engine.playheadSamples() == midSong;
+                },
+                2000)) {
             fail("updateTimeline dropped a pending seek or retained old data");
         }
     }
@@ -284,8 +286,8 @@ int runTransportCheck()
     // different event layout and becomes the active data source during play.
     auto liveReplacementSmf = smf;
     liveReplacementSmf.tracks[1].events[1].tick = 4700;
-    auto liveReplacement = std::shared_ptr<MidiTimeline>(
-        MidiTimeline::build(liveReplacementSmf, engine.sampleRate()));
+    auto liveReplacement =
+        std::shared_ptr<MidiTimeline>(MidiTimeline::build(liveReplacementSmf, engine.sampleRate()));
     engine.play();
     if (!liveReplacement) {
         fail("live replacement timeline built wrong");
@@ -300,10 +302,12 @@ int runTransportCheck()
         const auto updateNs = updateTimer.nsecsElapsed();
         if (updateNs > 20'000'000)
             fail("timeline replacement blocked instead of publishing to the audio thread");
-        if (!waitFor([&] {
-                return engine.timeline() == timeline.get() &&
-                       engine.playheadSamples() > beforeUpdate;
-            }, 2000)) {
+        if (!waitFor(
+                [&] {
+                    return engine.timeline() == timeline.get() &&
+                           engine.playheadSamples() > beforeUpdate;
+                },
+                2000)) {
             fail("live timeline replacement did not adopt its data source");
         }
     }
@@ -327,8 +331,7 @@ int runTransportCheck()
         } else {
             auto cgbReplacementSmf = cgbSmf;
             cgbReplacementSmf.tracks[1].events.insert(
-                cgbReplacementSmf.tracks[1].events.begin() + 1,
-                channelEvent(0, 0xB0, 0x78, 0));
+                cgbReplacementSmf.tracks[1].events.begin() + 1, channelEvent(0, 0xB0, 0x78, 0));
             cgbReplacementSmf.tracks[1].events[3].tick = 4700;
             auto cgbReplacement = std::shared_ptr<MidiTimeline>(
                 MidiTimeline::build(cgbReplacementSmf, engine.sampleRate()));
@@ -337,9 +340,7 @@ int runTransportCheck()
             } else {
                 engine.updateTimeline(cgbReplacement);
                 cgbTimeline = std::move(cgbReplacement);
-                if (!waitFor([&] {
-                        return engine.timeline() == cgbTimeline.get();
-                    }, 2000)) {
+                if (!waitFor([&] { return engine.timeline() == cgbTimeline.get(); }, 2000)) {
                     fail("CGB timeline replacement retained the old data source");
                 } else if (activeCgb() < 1) {
                     fail("timeline replacement released a sounding CGB song note");
@@ -355,8 +356,7 @@ int runTransportCheck()
         } else {
             auto previewReplacementSmf = cgbSmf;
             previewReplacementSmf.tracks[1].events.insert(
-                previewReplacementSmf.tracks[1].events.begin() + 1,
-                channelEvent(0, 0xB0, 0x78, 0));
+                previewReplacementSmf.tracks[1].events.begin() + 1, channelEvent(0, 0xB0, 0x78, 0));
             previewReplacementSmf.tracks[1].events[3].tick = 4600;
             auto previewReplacement = std::shared_ptr<MidiTimeline>(
                 MidiTimeline::build(previewReplacementSmf, engine.sampleRate()));
@@ -365,9 +365,7 @@ int runTransportCheck()
             } else {
                 engine.updateTimeline(previewReplacement);
                 cgbTimeline = std::move(previewReplacement);
-                if (!waitFor([&] {
-                        return engine.timeline() == cgbTimeline.get();
-                    }, 2000)) {
+                if (!waitFor([&] { return engine.timeline() == cgbTimeline.get(); }, 2000)) {
                     fail("CGB preview replacement retained the old data source");
                 } else if (activeCgb() < 1) {
                     fail("timeline replacement released a CGB note preview");

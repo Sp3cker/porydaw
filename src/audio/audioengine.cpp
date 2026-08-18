@@ -249,8 +249,7 @@ void AudioEngine::updateTimeline(std::shared_ptr<const MidiTimeline> timeline)
 void AudioEngine::applyTimelineAdoption(const MidiTimeline *timeline)
 {
     // A seek published before the rebuild belongs on the replacement.
-    const uint64_t pending =
-        m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
+    const uint64_t pending = m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
     const bool seeking = pending != kNoPendingSeek;
     const uint64_t pos = seeking ? pending : m_player.position();
     if (seeking) {

@@ -1,5 +1,11 @@
 #pragma once
 
+#include "audio/auditionslots.h"
+#include "audio/resonance_suppressor.h"
+#include "audio/timeline_handoff.h"
+#include "audio/trackactivitylevel.h"
+#include "core/miditimeline.h"
+#include "core/timelineplayer.h"
 #include <QString>
 #include <algorithm>
 #include <array>
@@ -8,12 +14,6 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "audio/auditionslots.h"
-#include "audio/resonance_suppressor.h"
-#include "audio/timeline_handoff.h"
-#include "audio/trackactivitylevel.h"
-#include "core/miditimeline.h"
-#include "core/timelineplayer.h"
 
 extern "C" {
 #include "m4a_engine.h"
