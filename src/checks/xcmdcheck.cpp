@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <span>
 
 #include "core/miditimeline.h"
 #include "core/smf.h"
@@ -91,7 +92,7 @@ int runXcmdCheck()
         m4a_engine_set_voicegroup(&engine, voices);
         TimelinePlayer player;
         float left[2001], right[2001];
-        player.render(&engine, timeline.get(), left, right, 2001, false, 0);
+        player.render(&engine, timeline.get(), std::span(left), std::span(right), false, 0);
         failures += checkEchoState(engine, kPseudoEchoVolume, kPseudoEchoLength, "linear playback");
         failures += checkAltVoiceEcho(engine);
         m4a_engine_destroy(&engine);

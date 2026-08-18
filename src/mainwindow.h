@@ -342,12 +342,7 @@ class MainWindow : public QMainWindow
         int activeCgb = 0;
         uint64_t lostTotal = 0;
 
-        bool operator==(const PolyStatusSnapshot &other) const
-        {
-            return loaded == other.loaded && activePcm == other.activePcm &&
-                   maxPcm == other.maxPcm && activeCgb == other.activeCgb &&
-                   lostTotal == other.lostTotal;
-        }
+        bool operator==(const PolyStatusSnapshot &) const = default;
     };
     std::optional<PolyStatusSnapshot> m_lastPolyStatus;
 };

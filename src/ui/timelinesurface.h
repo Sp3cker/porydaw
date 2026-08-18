@@ -34,20 +34,8 @@ struct TimelineSurfaceDiagnostics {
     quint64 contentPaintPixelCount = 0;
     quint64 estimatedContentCacheBytes = 0;
 
-    friend bool operator==(const TimelineSurfaceDiagnostics &lhs,
-                           const TimelineSurfaceDiagnostics &rhs) noexcept
-    {
-        return lhs.contentInvalidationCount == rhs.contentInvalidationCount &&
-               lhs.contentPaintCount == rhs.contentPaintCount &&
-               lhs.contentPaintPixelCount == rhs.contentPaintPixelCount &&
-               lhs.estimatedContentCacheBytes == rhs.estimatedContentCacheBytes;
-    }
-
-    friend bool operator!=(const TimelineSurfaceDiagnostics &lhs,
-                           const TimelineSurfaceDiagnostics &rhs) noexcept
-    {
-        return !(lhs == rhs);
-    }
+    friend bool operator==(const TimelineSurfaceDiagnostics &,
+                           const TimelineSurfaceDiagnostics &) noexcept = default;
 };
 
 // Pixmap-backed paint cache for timeline-aligned widgets. Subclasses render

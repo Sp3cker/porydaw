@@ -1,6 +1,7 @@
 #include "ui/polyphonypanel.h"
 
 #include <algorithm>
+#include <span>
 
 #include <QCheckBox>
 #include <QEvent>
@@ -133,14 +134,23 @@ class PolyChannelGrid : public QWidget
     {
         QPainter p(this);
         int y = 0;
-        paintGroup(&p, y, tr("PCM"), m_snap.pcm, m_snap.maxPcmChannels, false, false);
-        paintGroup(&p, y, tr("CGB"), m_snap.cgb, MAX_CGB_CHANNELS, true, false);
+        paintGroup(
+            &p, y, tr("PCM"),
+            std::span<const AudioEngine::PolyChannel>(m_snap.pcm).first(m_snap.maxPcmChannels),
+            false, false);
+        paintGroup(&p, y, tr("CGB"),
+                   std::span<const AudioEngine::PolyChannel>(m_snap.cgb).first(MAX_CGB_CHANNELS),
+                   true, false);
         if (m_snap.invert) {
             paintCaption(&p, y, tr("Lost sounds currently playing (solo overflow):"));
-            paintGroup(&p, y, tr("PCM"), m_snap.pcm + MAX_PCM_CHANNELS, MAX_PCM_CHANNELS, false,
-                       true);
-            paintGroup(&p, y, tr("CGB"), m_snap.cgb + MAX_CGB_CHANNELS, MAX_CGB_CHANNELS, true,
-                       true);
+            paintGroup(&p, y, tr("PCM"),
+                       std::span<const AudioEngine::PolyChannel>(m_snap.pcm)
+                           .subspan(MAX_PCM_CHANNELS, MAX_PCM_CHANNELS),
+                       false, true);
+            paintGroup(&p, y, tr("CGB"),
+                       std::span<const AudioEngine::PolyChannel>(m_snap.cgb)
+                           .subspan(MAX_CGB_CHANNELS, MAX_CGB_CHANNELS),
+                       true, true);
         }
     }
 
@@ -177,8 +187,9 @@ class PolyChannelGrid : public QWidget
     }
 
     void paintGroup(QPainter *p, int &y, const QString &caption,
-                    const AudioEngine::PolyChannel *channels, int count, bool isCgb, bool shadow)
+                    std::span<const AudioEngine::PolyChannel> channels, bool isCgb, bool shadow)
     {
+        const int count = static_cast<int>(channels.size());
         static const char *cgbNames[MAX_CGB_CHANNELS] = {"Sq1", "Sq2", "Wave", "Noise"};
         paintCaption(p, y, caption);
         const int perRow = cellsPerRow(width());

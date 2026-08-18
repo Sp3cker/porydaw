@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <span>
 #include <vector>
 
 #include "core/miditimeline.h"
@@ -144,7 +145,8 @@ int main(int argc, char *argv[])
     uint64_t pos = 0;
     while (pos < totalSamples) {
         const uint32_t n = uint32_t(std::min<uint64_t>(kChunk, totalSamples - pos));
-        player.render(&engine, timeline.get(), outL.data() + pos, outR.data() + pos, n, loop, 0);
+        player.render(&engine, timeline.get(), std::span(outL).subspan(size_t(pos), n),
+                      std::span(outR).subspan(size_t(pos), n), loop, 0);
         pos += n;
     }
 

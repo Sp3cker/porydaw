@@ -1,6 +1,7 @@
 #include "core/timelineplayer.h"
 
 #include <algorithm>
+#include <cassert>
 
 #include "core/mid2agbtables.h"
 #include "core/timedefaults.h"
@@ -140,9 +141,11 @@ void TimelinePlayer::replaceTimeline(uint64_t pos, const MidiTimeline *timeline)
         timeline->events.begin());
 }
 
-void TimelinePlayer::render(M4AEngine *engine, const MidiTimeline *timeline, float *outL,
-                            float *outR, uint32_t frames, bool looping, uint32_t muteMask)
+void TimelinePlayer::render(M4AEngine *engine, const MidiTimeline *timeline, std::span<float> outL,
+                            std::span<float> outR, bool looping, uint32_t muteMask)
 {
+    assert(outL.size() == outR.size());
+    const uint32_t frames = uint32_t(outL.size());
     const bool loop = looping && timeline->hasLoop();
     uint32_t done = 0;
 
@@ -210,7 +213,8 @@ void TimelinePlayer::render(M4AEngine *engine, const MidiTimeline *timeline, flo
         if (n == 0)
             n = 1; // defensive; boundaries at m_pos were handled above
 
-        m4a_engine_process(engine, outL + done, outR + done, int(n));
+        m4a_engine_process(engine, outL.subspan(done, n).data(), outR.subspan(done, n).data(),
+                           int(n));
         m_pos += n;
         done += n;
     }

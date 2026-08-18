@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <span>
 #include <vector>
 
 #include "core/miditimeline.h"
@@ -168,7 +169,8 @@ int runProbes(const MidiTimeline &timeline, bool looping, std::vector<Probe> pro
     const uint64_t total = probes.back().samplePos + kChunk;
     while (rendered < total && next < probes.size()) {
         const uint32_t n = uint32_t(std::min<uint64_t>(kChunk, probes[next].samplePos - rendered));
-        player.render(&engine, &timeline, bufL, bufR, n, looping, 0);
+        player.render(&engine, &timeline, std::span(bufL).first(n), std::span(bufR).first(n),
+                      looping, 0);
         rendered += n;
         if (rendered != probes[next].samplePos)
             continue;

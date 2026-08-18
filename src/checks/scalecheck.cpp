@@ -109,7 +109,7 @@ int runScaleCheck(const QString &projectRoot)
     const int upwardDegrees[] = {1, 1};
     uint8_t upwardDests[] = {0, 0};
     expect(porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
-                                                      upwardSources, upwardDegrees, 2, upwardDests),
+                                                      upwardSources, upwardDegrees, upwardDests),
            "C and C# upward move rejected");
     expect(upwardDests[0] == 62 && upwardDests[1] == 64,
            "C and C# upward move did not separate destinations");
@@ -117,9 +117,8 @@ int runScaleCheck(const QString &projectRoot)
     const uint8_t downwardSources[] = {61, 62};
     const int downwardDegrees[] = {-1, -1};
     uint8_t downwardDests[] = {0, 0};
-    expect(porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
-                                                      downwardSources, downwardDegrees, 2,
-                                                      downwardDests),
+    expect(porydaw_scale::resolveDiatonicDestinations(
+               porydaw_scale::ScaleId::major, 0, downwardSources, downwardDegrees, downwardDests),
            "C# and D downward move rejected");
     expect(downwardDests[0] == 59 && downwardDests[1] == 60,
            "C# and D downward move did not separate destinations");
@@ -127,9 +126,8 @@ int runScaleCheck(const QString &projectRoot)
     const uint8_t repeatedSources[] = {60, 60, 61};
     const int repeatedDegrees[] = {1, 4, 1};
     uint8_t repeatedDests[] = {0, 0, 0};
-    expect(porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
-                                                      repeatedSources, repeatedDegrees, 3,
-                                                      repeatedDests),
+    expect(porydaw_scale::resolveDiatonicDestinations(
+               porydaw_scale::ScaleId::major, 0, repeatedSources, repeatedDegrees, repeatedDests),
            "repeated-source move rejected");
     expect(repeatedDests[0] == 62 && repeatedDests[1] == 62,
            "repeated source pitches did not share a destination");
@@ -138,8 +136,8 @@ int runScaleCheck(const QString &projectRoot)
     const uint8_t orderedSources[] = {60, 61, 62};
     const int orderedDegrees[] = {1, 1, 1};
     uint8_t orderedDests[] = {0, 0, 0};
-    expect(porydaw_scale::resolveDiatonicDestinations(
-               porydaw_scale::ScaleId::major, 0, orderedSources, orderedDegrees, 3, orderedDests),
+    expect(porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
+                                                      orderedSources, orderedDegrees, orderedDests),
            "ordered move rejected");
     expect(orderedDests[0] == 62 && orderedDests[1] == 64 && orderedDests[2] == 65,
            "ordered move did not preserve destination order");
@@ -150,7 +148,7 @@ int runScaleCheck(const QString &projectRoot)
     const int highDegree[] = {1};
     uint8_t highDest[] = {0};
     expect(!porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0, highSource,
-                                                       highDegree, 1, highDest),
+                                                       highDegree, highDest),
            "upper MIDI boundary was not rejected");
     expect(highDest[0] == static_cast<uint8_t>(-1), "upper MIDI boundary did not clear output");
 
@@ -158,8 +156,17 @@ int runScaleCheck(const QString &projectRoot)
     const int lowDegree[] = {-1};
     uint8_t lowDest[] = {42};
     expect(!porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0, lowSource,
-                                                       lowDegree, 1, lowDest),
+                                                       lowDegree, lowDest),
            "lower MIDI boundary was not rejected");
+
+    const uint8_t mismatchedSources[] = {60};
+    const int mismatchedDegrees[] = {1, 1};
+    uint8_t mismatchedDests[] = {42};
+    expect(!porydaw_scale::resolveDiatonicDestinations(porydaw_scale::ScaleId::major, 0,
+                                                       mismatchedSources, mismatchedDegrees,
+                                                       mismatchedDests),
+           "mismatched spans were accepted");
+    expect(mismatchedDests[0] == 42, "mismatched spans changed output");
 
     if (failures == 0) {
         std::printf("scalecheck: PASS\n");

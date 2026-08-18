@@ -84,16 +84,7 @@ struct SampleEditParams {
     // untouched (identity rate, source key); 0 = compute from FORMATS.md §3.
     quint32 exactPitchOverride = 0;
 
-    bool operator==(const SampleEditParams &o) const
-    {
-        return cropStart == o.cropStart && cropEnd == o.cropEnd && loopOn == o.loopOn &&
-               loopStart == o.loopStart && loopEnd == o.loopEnd && baseKey == o.baseKey &&
-               fineTuneCents == o.fineTuneCents && targetRate == o.targetRate &&
-               normalizeMode == o.normalizeMode && dcRemove == o.dcRemove && fadeIn == o.fadeIn &&
-               fadeOut == o.fadeOut && crossfadeOn == o.crossfadeOn && ditherOn == o.ditherOn &&
-               exactPitchOverride == o.exactPitchOverride;
-    }
-    bool operator!=(const SampleEditParams &o) const { return !(*this == o); }
+    bool operator==(const SampleEditParams &) const = default;
 };
 
 // Post-quantize loop-seam click metrics (DSP.md §6), in signed-8 LSB.

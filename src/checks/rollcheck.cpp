@@ -3779,7 +3779,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         {
             songview::PitchProjection tieProjection;
             const uint8_t tiePitches[] = {60, 62};
-            tieProjection.buildFromPitches(tiePitches, 2);
+            tieProjection.buildFromPitches(tiePitches);
             if (tieProjection.nearestVisiblePitch(61) != 60)
                 fail("nearestVisiblePitch tie did not pick the lower pitch");
         }

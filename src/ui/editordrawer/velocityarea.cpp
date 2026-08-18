@@ -314,7 +314,7 @@ void VelocityArea::rebuildAxis()
         double(m_geometry.densityThresholdD4),
     };
     const bool contextChanged = context != m_axis.map();
-    m_axis = VelocityAxis(context, geometry, activeValues.data(), activeValues.size());
+    m_axis = VelocityAxis(context, geometry, activeValues);
     publishAccessibleDescription();
     if (contextChanged && m_contextChanged)
         m_contextChanged();

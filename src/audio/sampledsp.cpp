@@ -51,14 +51,17 @@ double kaiserFromArg(double arg)
 
 } // namespace
 
-std::vector<float> resampleSinc(const float *x, qint64 n, double ratio, qint64 outCount,
+std::vector<float> resampleSinc(std::span<const float> x, double ratio, qint64 outCount,
                                 qint64 loopWrapStart, qint64 loopWrapExcl)
 {
+    const qint64 n = qint64(x.size());
     std::vector<float> y(size_t(outCount > 0 ? outCount : 0), 0.0f);
-    if (n <= 0 || outCount <= 0 || ratio <= 0.0)
+    if (x.empty() || outCount <= 0 || ratio <= 0.0)
         return y;
 
-    const qint64 loopLen = loopWrapExcl > loopWrapStart ? loopWrapExcl - loopWrapStart : 0;
+    const qint64 loopLen = loopWrapStart >= 0 && loopWrapExcl <= n && loopWrapExcl > loopWrapStart
+                               ? loopWrapExcl - loopWrapStart
+                               : 0;
     const auto sample = [&](qint64 k) -> double {
         if (k < 0)
             return 0.0; // silence-before-attack is truth
@@ -138,8 +141,9 @@ QByteArray quantizeBuffer(const std::vector<float> &x, bool dither)
     return out;
 }
 
-qint64 nearestZeroCrossing(const float *x, qint64 n, qint64 idx)
+qint64 nearestZeroCrossing(std::span<const float> x, qint64 idx)
 {
+    const qint64 n = qint64(x.size());
     if (n < 2)
         return idx;
     idx = qBound(qint64(0), idx, n - 1);
@@ -157,11 +161,12 @@ qint64 nearestZeroCrossing(const float *x, qint64 n, qint64 idx)
     return idx;
 }
 
-double normalizeGain(const float *x, qint64 n, bool loopedMode, qint64 loopStart, QString *warning)
+double normalizeGain(std::span<const float> x, bool loopedMode, qint64 loopStart, QString *warning)
 {
+    const qint64 n = qint64(x.size());
     if (warning)
         warning->clear();
-    if (n <= 0)
+    if (x.empty())
         return 1.0;
     double peak = 0.0;
     for (qint64 i = 0; i < n; i++)
@@ -207,7 +212,7 @@ namespace {
 // at high f₀ (small τ) that alone costs tens of cents, so the minimum is
 // re-sought on this continuous function (DSP.md §4's parabolic-interpolation
 // step, made exact enough for the ±5-cent acceptance bound).
-double yinDifferenceFrac(const float *x, qint64 window, double tau)
+double yinDifferenceFrac(std::span<const float> x, qint64 window, double tau)
 {
     const qint64 t0 = qint64(std::floor(tau));
     const double f = tau - double(t0);
@@ -223,8 +228,9 @@ double yinDifferenceFrac(const float *x, qint64 window, double tau)
 // Windowed seam NCC in the float domain: window a leads out of the loop end
 // (real tail samples), window b leads out of the loop start. Shared by the
 // suggestion scorer, the refine pass, and the crossfade-law pick.
-double floatSeamNcc(const float *x, qint64 n, qint64 S, qint64 E, qint64 W)
+double floatSeamNcc(std::span<const float> x, qint64 S, qint64 E, qint64 W)
 {
+    const qint64 n = qint64(x.size());
     W = std::min({W, S, n - 1 - E});
     if (W < 2)
         return 0.0;
@@ -241,16 +247,16 @@ double floatSeamNcc(const float *x, qint64 n, qint64 S, qint64 E, qint64 W)
 
 } // namespace
 
-PitchResult detectPitchYin(const float *x, qint64 n, double rate)
+PitchResult detectPitchYin(std::span<const float> x, double rate)
 {
     PitchResult result;
     constexpr qint64 kFrame = 4096;
     constexpr qint64 kWindow = kFrame / 2;
     constexpr double kThreshold = 0.10;
     constexpr double kConfidentCmnd = 0.20;
+    const qint64 n = qint64(x.size());
     if (rate <= 0.0 || n < kFrame)
         return result;
-
     const qint64 tauMin = std::max<qint64>(2, qint64(std::floor(rate / 2000.0)));
     const qint64 tauMax = std::min<qint64>(kWindow - 2, qint64(std::ceil(rate / 40.0)));
     if (tauMax <= tauMin)
@@ -266,7 +272,7 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
     std::vector<Frame> frames;
 
     for (qint64 at = 0; at + kFrame <= n; at += kFrame / 2) {
-        const float *frame = x + at;
+        const std::span<const float> frame = x.subspan(size_t(at), size_t(kFrame));
         for (qint64 tau = 1; tau <= tauMax; tau++) {
             double sum = 0.0;
             for (qint64 j = 0; j < kWindow; j++) {
@@ -400,11 +406,12 @@ PitchResult detectPitchYin(const float *x, qint64 n, double rate)
     return result;
 }
 
-std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate, double period,
+std::vector<LoopCandidate> suggestLoop(std::span<const float> x, double rate, double period,
                                        qint64 regionA, qint64 regionB)
 {
     std::vector<LoopCandidate> out;
-    if (!x || n < 256 || rate <= 0.0)
+    const qint64 n = qint64(x.size());
+    if (x.empty() || n < 256 || rate <= 0.0)
         return out;
 
     const bool pitched = period > 0.0;
@@ -533,7 +540,7 @@ std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate, do
             const qint64 S = E + 1 - c.L;
             if (S < W || E > n - 1 - W || E < S + 15)
                 continue;
-            const double ncc = floatSeamNcc(x, n, S, E, W);
+            const double ncc = floatSeamNcc(x, S, E, W);
             if (ncc > bestNcc) {
                 bestNcc = ncc;
                 bestE = E;
@@ -590,9 +597,10 @@ std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate, do
     return out;
 }
 
-void refineLoop(const float *x, qint64 n, double period, qint64 *loopStart, qint64 *loopEnd)
+void refineLoop(std::span<const float> x, double period, qint64 *loopStart, qint64 *loopEnd)
 {
-    if (!x || !loopStart || !loopEnd || n < 32)
+    const qint64 n = qint64(x.size());
+    if (x.empty() || !loopStart || !loopEnd || n < 32)
         return;
     const qint64 W =
         period > 0.0 ? qBound<qint64>(qint64(128), qint64(std::llround(2.0 * period)), qint64(512))
@@ -605,7 +613,7 @@ void refineLoop(const float *x, qint64 n, double period, qint64 *loopStart, qint
             const qint64 E = *loopEnd + dE;
             if (S < 1 || E > n - 2 || E < S + 15)
                 continue;
-            const double ncc = floatSeamNcc(x, n, S, E, W);
+            const double ncc = floatSeamNcc(x, S, E, W);
             if (ncc > bestNcc) {
                 bestNcc = ncc;
                 bestS = S;
@@ -619,12 +627,13 @@ void refineLoop(const float *x, qint64 n, double period, qint64 *loopStart, qint
     }
 }
 
-SeamMetrics seamMetricsAt(const qint8 *s8, qint64 n, qint64 loopStart, qint64 loopEnd)
+SeamMetrics seamMetricsAt(std::span<const qint8> s8, qint64 loopStart, qint64 loopEnd)
 {
+    const qint64 n = qint64(s8.size());
     SeamMetrics seam;
     const qint64 S = loopStart, E = loopEnd;
     const qint64 loopLen = E + 1 - S;
-    if (!s8 || loopLen < 2 || S < 0 || E >= n || S + 1 > E)
+    if (s8.empty() || loopLen < 2 || S < 0 || E >= n || S + 1 > E)
         return seam;
     // Playback order across the wrap is … s[E−1], s[E], s[S], s[S+1] …
     // Indices past E read real tail samples when the buffer has them
@@ -657,11 +666,12 @@ SeamMetrics seamMetricsAt(const qint8 *s8, qint64 n, qint64 loopStart, qint64 lo
     return seam;
 }
 
-void PeakPyramid::build(const float *x, qint64 n)
+void PeakPyramid::build(std::span<const float> x)
 {
+    const qint64 n = qint64(x.size());
     levels.clear();
     frameCount = n;
-    if (!x || n <= 0)
+    if (x.empty())
         return;
     qint64 block = kBlock;
     while (true) {
@@ -698,11 +708,12 @@ void PeakPyramid::build(const float *x, qint64 n)
     }
 }
 
-PeakPyramid::MinMax PeakPyramid::query(const float *x, qint64 from, qint64 to) const
+PeakPyramid::MinMax PeakPyramid::query(std::span<const float> x, qint64 from, qint64 to) const
 {
+    const qint64 n = std::min(frameCount, qint64(x.size()));
     from = std::max<qint64>(0, from);
-    to = std::min(to, frameCount);
-    if (!x || from >= to)
+    to = std::min(to, n);
+    if (x.empty() || from >= to)
         return {};
     // Pick the deepest level whose block still subdivides the span, then
     // stitch the partial blocks at the edges from raw samples.

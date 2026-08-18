@@ -1,5 +1,6 @@
 #pragma once
 
+#include <compare>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -26,21 +27,7 @@ struct EditorAutomationRowId {
     uint8_t track = 0;
     uint8_t controller = 0;
 
-    bool operator==(const EditorAutomationRowId &other) const noexcept
-    {
-        return kind == other.kind && track == other.track && controller == other.controller;
-    }
-
-    bool operator!=(const EditorAutomationRowId &other) const noexcept { return !(*this == other); }
-
-    bool operator<(const EditorAutomationRowId &other) const noexcept
-    {
-        if (kind != other.kind)
-            return kind < other.kind;
-        if (track != other.track)
-            return track < other.track;
-        return controller < other.controller;
-    }
+    auto operator<=>(const EditorAutomationRowId &) const noexcept = default;
 };
 
 // Value-only drawer chrome. MainWindow persists this application-wide; runtime
@@ -51,8 +38,7 @@ struct DrawerSectionState {
 
     int effectiveHeight(int fallback) const { return height.value_or(fallback); }
 
-    bool operator==(const DrawerSectionState &other) const noexcept;
-    bool operator!=(const DrawerSectionState &other) const noexcept;
+    bool operator==(const DrawerSectionState &) const noexcept = default;
 };
 
 struct EditorDrawerState {
@@ -60,8 +46,7 @@ struct EditorDrawerState {
     DrawerSectionState automation{true, std::nullopt};
     EditorDrawerPage activePage = EditorDrawerPage::Automations;
 
-    bool operator==(const EditorDrawerState &other) const noexcept;
-    bool operator!=(const EditorDrawerState &other) const noexcept;
+    bool operator==(const EditorDrawerState &) const noexcept = default;
 };
 
 struct EditorViewState {
@@ -87,8 +72,7 @@ struct EditorViewState {
 
     const std::vector<EditorAutomationRowId> &hiddenLanes() const noexcept { return m_hiddenLanes; }
 
-    bool operator==(const EditorViewState &other) const noexcept;
-    bool operator!=(const EditorViewState &other) const noexcept;
+    bool operator==(const EditorViewState &) const noexcept = default;
 
   private:
     std::vector<EditorAutomationRowId> m_hiddenLanes;

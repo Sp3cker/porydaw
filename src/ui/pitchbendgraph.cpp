@@ -48,7 +48,7 @@ void PitchBendGraph::setCurve(const std::map<uint64_t, int> &points, int endValu
     m_points = points;
     m_endValue = std::clamp(endValue, minimumValue(), maximumValue());
     m_points[m_endTick] = m_endValue;
-    if (m_selectedTick && m_points.find(*m_selectedTick) == m_points.end())
+    if (m_selectedTick && !m_points.contains(*m_selectedTick))
         m_selectedTick.reset();
     cancelGesture();
     m_keyboardTick = m_startTick;
@@ -77,7 +77,7 @@ std::optional<uint64_t> PitchBendGraph::selectedTick() const
 
 void PitchBendGraph::setSelectedTick(std::optional<uint64_t> tick)
 {
-    if (tick && m_points.find(*tick) == m_points.end())
+    if (tick && !m_points.contains(*tick))
         tick.reset();
     if (m_selectedTick == tick)
         return;
@@ -515,7 +515,7 @@ void PitchBendGraph::updateVertexDrag(const QPointF &position, Qt::KeyboardModif
         const uint64_t minimumTick = m_startTick + 1;
         const uint64_t maximumTick = m_endTick - 1;
         tick = std::clamp(tickAtX(position.x(), sampling), minimumTick, maximumTick);
-        if (tick != state.originalTick && m_points.find(tick) != m_points.end()) {
+        if (tick != state.originalTick && m_points.contains(tick)) {
             const int direction = tick > state.originalTick ? 1 : -1;
             uint64_t candidate = tick;
             bool found = false;
@@ -529,7 +529,7 @@ void PitchBendGraph::updateVertexDrag(const QPointF &position, Qt::KeyboardModif
                         break;
                     --candidate;
                 }
-                if (m_points.find(candidate) == m_points.end()) {
+                if (!m_points.contains(candidate)) {
                     tick = candidate;
                     found = true;
                     break;

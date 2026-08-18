@@ -1,5 +1,6 @@
 #pragma once
 
+#include <compare>
 #include <cstdint>
 
 // A NoteId identifies each note-on record in one document.
@@ -12,9 +13,7 @@ class NoteId
     constexpr NoteId() = default;
     explicit constexpr NoteId(uint64_t token) : m_token(token) {}
 
-    friend constexpr bool operator==(NoteId a, NoteId b) { return a.m_token == b.m_token; }
-    friend constexpr bool operator!=(NoteId a, NoteId b) { return !(a == b); }
-    friend constexpr bool operator<(NoteId a, NoteId b) { return a.m_token < b.m_token; }
+    friend constexpr auto operator<=>(NoteId, NoteId) = default;
 
     constexpr bool isAssigned() const { return m_token != 0; }
 

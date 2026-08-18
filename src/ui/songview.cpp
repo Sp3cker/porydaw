@@ -174,8 +174,8 @@ bool resolveFoldDestinations(porydaw_scale::ScaleId scaleId, int scaleRoot,
     for (size_t i = 0; i < notes.size(); i++)
         sources[i] = notes[i].key;
     destinations.resize(notes.size());
-    return porydaw_scale::resolveDiatonicDestinations(
-        scaleId, scaleRoot, sources.data(), degrees.data(), int(notes.size()), destinations.data());
+    return porydaw_scale::resolveDiatonicDestinations(scaleId, scaleRoot, std::span(sources),
+                                                      std::span(degrees), std::span(destinations));
 }
 
 QString keyName(int key)
@@ -379,9 +379,9 @@ int subGridLevel(uint64_t relTick, uint64_t beatTicks, bool triplet)
 // Walks time-signature segments so the positions stay snappable and match
 // the beat lines. No callbacks in segments whose grid is at (or coarser
 // than) whole beats.
+template <typename F>
 void forEachSubGridLine(const SongView *sv, double t0, double t1,
-                        int timelineDetailMinimumPixelsPerBeat,
-                        const std::function<void(uint64_t, int)> &fn)
+                        int timelineDetailMinimumPixelsPerBeat, F &&fn)
 {
     const bool triplet = sv->gridFeel() == SongView::GridFeel::Triplet;
     uint64_t at = uint64_t(std::max(0.0, t0));
@@ -1749,10 +1749,7 @@ class PianoRoll : public TimelineSurface
             std::vector<NoteId> ids = m_sv->selection();
             const NoteId id = hit->noteId;
             if ((event->modifiers() & Qt::ControlModifier) && !rightEdge && !leftEdge) {
-                const auto it = std::find(ids.begin(), ids.end(), id);
-                if (it != ids.end())
-                    ids.erase(it);
-                else
+                if (std::erase(ids, id) == 0)
                     ids.push_back(id);
                 m_sv->setSelection(std::move(ids));
             } else if (event->modifiers() & Qt::ControlModifier) {
@@ -2114,10 +2111,7 @@ class PianoRoll : public TimelineSurface
             const NoteId id = m_velAnchor.noteId;
             if (m_velModMods & Qt::ControlModifier) {
                 std::vector<NoteId> ids = m_sv->selection();
-                const auto it = std::find(ids.begin(), ids.end(), id);
-                if (it != ids.end())
-                    ids.erase(it);
-                else
+                if (std::erase(ids, id) == 0)
                     ids.push_back(id);
                 m_sv->setSelection(std::move(ids));
             } else if (!m_sv->isSelected(m_velAnchor)) {
@@ -5052,8 +5046,7 @@ bool SongView::isSelected(const ViewNote &note) const
 
 void SongView::setSelection(std::vector<NoteId> ids)
 {
-    ids.erase(std::remove_if(ids.begin(), ids.end(), [](NoteId id) { return !id.isAssigned(); }),
-              ids.end());
+    std::erase_if(ids, [](NoteId id) { return !id.isAssigned(); });
     std::vector<NoteId> unique;
     unique.reserve(ids.size());
     for (NoteId id : ids) {
@@ -5907,9 +5900,9 @@ void SongView::flushProjectionIfDirty()
     }
 }
 
-void SongView::buildOccupancySet(bool out[128]) const
+void SongView::buildOccupancySet(std::span<bool, 128> out) const
 {
-    std::fill_n(out, 128, false);
+    std::ranges::fill(out, false);
     for (const ViewNote &note : m_model.notes) {
         if (note.track == m_selectedTrack)
             out[note.key] = true;
@@ -5983,15 +5976,15 @@ void SongView::setScaleId(porydaw_scale::ScaleId id)
 void SongView::updateScaleProjection()
 {
     if (m_scaleFold) {
-        bool occupancy[128] = {};
-        buildOccupancySet(occupancy);
-        uint8_t visiblePitches[128];
+        std::array<bool, 128> occupancy{};
+        buildOccupancySet(std::span<bool, 128>(occupancy));
+        std::array<uint8_t, 128> visiblePitches;
         int count = 0;
         for (int pitch = 0; pitch < 128; pitch++) {
             if (occupancy[pitch])
                 visiblePitches[count++] = static_cast<uint8_t>(pitch);
         }
-        m_projection.buildFromPitches(visiblePitches, count);
+        m_projection.buildFromPitches(std::span(visiblePitches).first(count));
     } else {
         m_projection.buildChromatic();
     }
@@ -6000,10 +5993,10 @@ void SongView::updateScaleProjection()
 
 void SongView::updateScaleMembership()
 {
-    bool isScalePitch[128] = {};
+    std::array<bool, 128> isScalePitch{};
     for (int pitch = 0; pitch < 128; pitch++)
         isScalePitch[pitch] = porydaw_scale::isScalePitch(m_scaleId, m_scaleRoot, pitch);
-    m_projection.setScalePitchClassification(isScalePitch);
+    m_projection.setScalePitchClassification(std::span<const bool, 128>(isScalePitch));
 }
 
 void SongView::selectTrack(int track)

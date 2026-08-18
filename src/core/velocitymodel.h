@@ -30,8 +30,7 @@ class VelocityMap
     VelocityMap() = default;
     static VelocityMap resolve(const ToneData *tone, std::optional<uint8_t> key);
     bool isPsg() const;
-    bool operator==(const VelocityMap &other) const;
-    bool operator!=(const VelocityMap &other) const;
+    bool operator==(const VelocityMap &other) const = default;
     bool compatibleWith(const VelocityMap &other) const;
     const char *voiceName() const;
     std::size_t levelCount() const;

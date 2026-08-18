@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <span>
 
 #include "sampledsp.h"
 
@@ -132,11 +133,11 @@ ProcessedSample SampleDocument::render() const
         outputRate = srcRate * ratio;
         loopStartOut = qint64(std::llround(double(loopStartC) * ratio));
         nOut = loopStartOut + lout;
-        grid = SampleDsp::resampleSinc(buf.data(), len, ratio, nOut, loopStartC, loopEndC + 1);
+        grid = SampleDsp::resampleSinc(buf, ratio, nOut, loopStartC, loopEndC + 1);
     } else {
         outputRate = targetRate;
         nOut = qMax<qint64>(1, qint64(std::llround(double(len) * r0)));
-        grid = SampleDsp::resampleSinc(buf.data(), len, r0, nOut);
+        grid = SampleDsp::resampleSinc(buf, r0, nOut);
     }
 
     // [4] pitch detection and [5] loop search are analysis stages (phase 3);
@@ -149,8 +150,8 @@ ProcessedSample SampleDocument::render() const
     double gain = 1.0;
     if (p.normalizeMode != SampleEditParams::NormalizeOff) {
         QString warning;
-        gain = SampleDsp::normalizeGain(
-            grid.data(), nOut, mode == SampleEditParams::NormalizeLooped, loopStartOut, &warning);
+        gain = SampleDsp::normalizeGain(grid, mode == SampleEditParams::NormalizeLooped,
+                                        loopStartOut, &warning);
         if (!warning.isEmpty())
             out.warnings += warning;
         if (gain != 1.0) {
@@ -242,8 +243,10 @@ ProcessedSample SampleDocument::render() const
     out.pitchFraction = quint32(qMin<qint64>(qint64(std::llround(fracScaled)), 4294967295LL));
     out.normalizeGain = gain;
     if (loopOn)
-        out.seam = SampleDsp::seamMetricsAt(reinterpret_cast<const qint8 *>(out.s8.constData()),
-                                            nOut, loopStartOut, nOut - 1);
+        out.seam = SampleDsp::seamMetricsAt(
+            std::span<const qint8>(reinterpret_cast<const qint8 *>(out.s8.constData()),
+                                   size_t(out.s8.size())),
+            loopStartOut, nOut - 1);
     out.preview = std::move(grid);
     return out;
 }

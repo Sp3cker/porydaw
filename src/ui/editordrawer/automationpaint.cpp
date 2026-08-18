@@ -7,7 +7,6 @@
 #include <QLineF>
 #include <QPainter>
 #include <QPen>
-#include <functional>
 #include <limits>
 
 #include "ui/editordrawer/automationarea.h"
@@ -656,11 +655,11 @@ struct VoiceLabelLayout {
     bool offscreen = true;
 };
 
-std::vector<VoiceLabelLayout> layoutVoiceLabels(const QRect &plot, const SongViewModel &model,
-                                                int track, const AutomationRows &rows,
-                                                const QFontMetricsF &fm, qreal pad, qreal gap,
-                                                qreal stairStep, bool canStair, qreal centerY,
-                                                std::function<qreal(uint32_t)> displayX)
+template <typename DisplayX>
+std::vector<VoiceLabelLayout>
+layoutVoiceLabels(const QRect &plot, const SongViewModel &model, int track,
+                  const AutomationRows &rows, const QFontMetricsF &fm, qreal pad, qreal gap,
+                  qreal stairStep, bool canStair, qreal centerY, DisplayX &&displayX)
 {
     std::vector<VoiceLabelLayout> out;
     out.reserve(model.voices.size());

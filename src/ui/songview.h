@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <span>
 #include <utility>
 #include <vector>
 
@@ -629,7 +630,7 @@ class SongView : public QWidget
     void transitionSelectedTrack(int newTrack, bool trackIdentityChanged);
     void updateScaleProjection();
     void updateScaleMembership();
-    void buildOccupancySet(bool out[128]) const;
+    void buildOccupancySet(std::span<bool, 128> out) const;
     void rebuildProjectionWithAnchoring();
     void syncPlayheadOverlay();
 

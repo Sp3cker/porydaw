@@ -4,6 +4,7 @@
 #include <QFile>
 
 #include <algorithm>
+#include <span>
 
 #include "miniaudio.h"
 
@@ -810,7 +811,8 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
 
         if (playing) {
             const bool looping = m_loopEnabled.load();
-            m_player.render(engine, tl, m_bufL.get(), m_bufR.get(), n, looping, m_appliedMute);
+            m_player.render(engine, tl, std::span(m_bufL.get(), n), std::span(m_bufR.get(), n),
+                            looping, m_appliedMute);
 
             // Auto-stop a non-looping song after the tail rings out.
             if (!(looping && tl->hasLoop()) &&

@@ -55,14 +55,7 @@ struct VgVoice {
     int sustain = 0;
     int release = 0;
 
-    bool operator==(const VgVoice &o) const
-    {
-        return macro == o.macro && key == o.key && pan == o.pan && symbol == o.symbol &&
-               keysplitTable == o.keysplitTable && sweep == o.sweep && duty == o.duty &&
-               period == o.period && attack == o.attack && decay == o.decay &&
-               sustain == o.sustain && release == o.release;
-    }
-    bool operator!=(const VgVoice &o) const { return !(*this == o); }
+    bool operator==(const VgVoice &) const = default;
 };
 
 // A value draft for editing a slot. None slots use the caller's blank
@@ -80,12 +73,7 @@ struct VgAdsr {
     int sustain = 0;
     int release = 0;
 
-    bool operator==(const VgAdsr &o) const
-    {
-        return attack == o.attack && decay == o.decay && sustain == o.sustain &&
-               release == o.release;
-    }
-    bool operator!=(const VgAdsr &o) const { return !(*this == o); }
+    bool operator==(const VgAdsr &) const = default;
 };
 
 // The envelope family a macro's ADSR values belong to: the _alt/no_resample

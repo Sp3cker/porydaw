@@ -34,10 +34,10 @@ void PitchProjection::buildChromatic()
     ++m_revision;
 }
 
-void PitchProjection::buildFromPitches(const uint8_t *pitches, int count)
+void PitchProjection::buildFromPitches(std::span<const uint8_t> pitches)
 {
-    assert(count >= 0 && count <= cMaxRows);
-    assert(pitches != nullptr || count == 0);
+    assert(pitches.size() <= cMaxRows);
+    const int count = static_cast<int>(pitches.size());
     for (int index = 0; index < count; ++index) {
         assert(pitches[index] < 128);
         assert(index == 0 || pitches[index] > pitches[index - 1]);
@@ -67,9 +67,8 @@ int PitchProjection::rowForPitch(int midiPitch) const
     return m_pitchToRow[midiPitch];
 }
 
-void PitchProjection::setScalePitchClassification(const bool *isScalePitch)
+void PitchProjection::setScalePitchClassification(std::span<const bool, cMaxRows> isScalePitch)
 {
-    assert(isScalePitch != nullptr);
     for (int row = 0; row < m_visibleRowCount; ++row)
         m_scalePitchRow[row] = isScalePitch[m_visiblePitches[row]];
 }

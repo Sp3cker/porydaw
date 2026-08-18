@@ -1868,7 +1868,7 @@ int runVelocityModelCheck()
           "level movement should clamp at both velocity endpoints");
 
     const VelocityAxis continuous(VelocityMap::resolve(nullptr, std::nullopt), axisGeometry(200.0),
-                                  std::array<uint8_t, 3>{12, 64, 100}.data(), 3);
+                                  std::array<uint8_t, 3>{12, 64, 100});
     check(continuous.mode() == VelocityAxis::Mode::Continuous && continuous.top() == 6.0 &&
               continuous.bottom() == 194.0 && continuous.velocityToY(127) == 6.0 &&
               continuous.velocityToY(1) == 194.0 && continuous.velocityToY(64) == 100.0,
@@ -1964,8 +1964,8 @@ int runVelocityModelCheck()
     check(narrowAxis.intrinsicColumnWidth() == 0.0 && narrowAxis.graduations()[0].width == 0.0 &&
               narrowAxis.graduations()[0].x >= 0.0 && narrowAxis.graduations()[1].x >= 0.0,
           "narrow label geometry should remain non-negative");
-    const uint8_t selectedValue = 73;
-    const VelocityAxis selectedAxis(unresolved, axisGeometry(300.0), &selectedValue, 1);
+    const std::array<uint8_t, 1> selectedValue = {73};
+    const VelocityAxis selectedAxis(unresolved, axisGeometry(300.0), selectedValue);
     VelocityAxisPaintStyle selectedLabelStyle;
     selectedLabelStyle.labelColor = Qt::black;
     selectedLabelStyle.accentColor = Qt::blue;

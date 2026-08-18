@@ -44,6 +44,8 @@ struct RenderKey {
     int leftHeight;
     int rightHeight;
     bool playing;
+
+    bool operator==(const RenderKey &) const = default;
 };
 
 RenderKey renderKey(const TrackActivityMeter::State &state, int widgetHeight,
@@ -98,8 +100,7 @@ void TrackActivityMeter::setState(State state)
     const RenderKey newKey = renderKey(state, widgetHeight, devicePixelRatio);
 
     m_state = state;
-    if (oldKey.leftHeight != newKey.leftHeight || oldKey.rightHeight != newKey.rightHeight ||
-        oldKey.playing != newKey.playing) {
+    if (oldKey != newKey) {
         update();
     }
 }

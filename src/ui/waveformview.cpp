@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <span>
 
 namespace {
 
@@ -44,7 +45,7 @@ void WaveformView::setSample(const ImportedSample *sample)
 {
     m_sample = sample;
     if (sample && sample->frameCount() > 0) {
-        m_pyramid.build(sample->buffer.data(), sample->frameCount());
+        m_pyramid.build(sample->buffer);
         m_spp = double(sample->frameCount()) / std::max(1, width() - 2);
         m_scroll = 0.0;
     } else {
@@ -287,8 +288,8 @@ void WaveformView::paintEvent(QPaintEvent *event)
     p.fillRect(r, palette().base());
     if (!m_sample || m_sample->frameCount() <= 0)
         return;
-    const float *x = m_sample->buffer.data();
-    const qint64 n = m_sample->frameCount();
+    const std::span<const float> samples(m_sample->buffer);
+    const qint64 n = qint64(samples.size());
     const int h = r.height();
     const int mid = h / 2;
     const double yScale = double(h) * 0.48;
@@ -313,7 +314,7 @@ void WaveformView::paintEvent(QPaintEvent *event)
             std::max<qint64>(from + 1, qint64(std::ceil(m_scroll + (px + 1) * m_spp)));
         if (to <= 0 || from >= n)
             continue;
-        const SampleDsp::PeakPyramid::MinMax mm = m_pyramid.query(x, from, to);
+        const SampleDsp::PeakPyramid::MinMax mm = m_pyramid.query(samples, from, to);
         const int y0 = mid - int(std::lround(qBound(-1.0, double(mm.hi) * m_gain, 1.0) * yScale));
         const int y1 = mid - int(std::lround(qBound(-1.0, double(mm.lo) * m_gain, 1.0) * yScale));
         p.drawLine(px, y0, px, std::max(y1, y0 + 1));

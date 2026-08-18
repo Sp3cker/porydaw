@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <climits>
 #include <cmath>
+#include <span>
 
 #include "audio/audioengine.h"
 #include "audio/samplewav.h"
@@ -775,7 +776,7 @@ void SampleEditorDialog::ensurePitchDetected()
     // region if set, else the middle 50% of the crop (DSP.md §4).
     const ImportedSample &src = m_doc.source();
     const SampleEditParams &p = m_doc.params();
-    const float *x = src.buffer.data();
+    const std::span<const float> samples(src.buffer);
     qint64 from, len;
     if (p.loopOn && p.loopEnd > p.loopStart) {
         from = qBound<qint64>(0, p.loopStart, src.frameCount());
@@ -789,7 +790,10 @@ void SampleEditorDialog::ensurePitchDetected()
         from = 0;
         len = src.frameCount();
     }
-    m_pitch = SampleDsp::detectPitchYin(x + from, len, src.sampleRate);
+    const qint64 first = qBound<qint64>(0, from, qint64(samples.size()));
+    const qint64 count = qBound<qint64>(0, len, qint64(samples.size()) - first);
+    m_pitch =
+        SampleDsp::detectPitchYin(samples.subspan(size_t(first), size_t(count)), src.sampleRate);
 }
 
 // The detect chrome shows only when the detection disagrees with the
@@ -874,19 +878,19 @@ void SampleEditorDialog::computeChips()
         return;
     }
     const double period = m_pitch.pitched ? ana.outputRate / m_pitch.f0 : 0.0;
-    const std::vector<SampleDsp::LoopCandidate> cands =
-        SampleDsp::suggestLoop(ana.preview.data(), n, ana.outputRate, period,
-                               qint64(std::llround(0.40 * double(n))), n - 1);
+    const std::vector<SampleDsp::LoopCandidate> cands = SampleDsp::suggestLoop(
+        ana.preview, ana.outputRate, period, qint64(std::llround(0.40 * double(n))), n - 1);
     if (cands.empty()) {
         m_suggestStatus->setText(tr("no loop candidates found — drag the markers."));
         return;
     }
 
-    const qint8 *s8 = reinterpret_cast<const qint8 *>(ana.s8.constData());
+    const std::span<const qint8> s8(reinterpret_cast<const qint8 *>(ana.s8.constData()),
+                                    size_t(ana.s8.size()));
     for (const SampleDsp::LoopCandidate &cand : cands) {
         Chip chip;
         chip.cand = cand;
-        chip.metrics = SampleDsp::seamMetricsAt(s8, n, cand.loopStart, cand.loopEnd);
+        chip.metrics = SampleDsp::seamMetricsAt(s8, cand.loopStart, cand.loopEnd);
         chip.srcStart = cur.cropStart + qint64(std::llround(double(cand.loopStart) / ratio));
         chip.srcEnd = cur.cropStart + qint64(std::llround(double(cand.loopEnd) / ratio));
         m_chips.push_back(chip);
@@ -968,7 +972,7 @@ void SampleEditorDialog::refineCurrentLoop()
     qint64 E = qBound<qint64>(
         S + 1, qint64(std::llround(double(cur.loopEnd - cur.cropStart) * ratio)), n - 1);
     const double period = m_pitch.pitched ? ana.outputRate / m_pitch.f0 : 0.0;
-    SampleDsp::refineLoop(ana.preview.data(), n, period, &S, &E);
+    SampleDsp::refineLoop(ana.preview, period, &S, &E);
     SampleEditParams p = cur;
     p.loopStart = cur.cropStart + qint64(std::llround(double(S) / ratio));
     p.loopEnd = cur.cropStart + qint64(std::llround(double(E) / ratio));

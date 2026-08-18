@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <span>
 
 namespace porydaw_scale {
 
@@ -53,7 +54,8 @@ int nextScalePitch(ScaleId id, int root, int midiPitch, int steps);
 // sourcePitches must be sorted. Repeated source pitches share the destination
 // selected for their first occurrence. On boundary failure, destsOut is filled
 // with uint8_t(-1).
-bool resolveDiatonicDestinations(ScaleId id, int root, const uint8_t *sourcePitches,
-                                 const int *degreeDisplacements, int count, uint8_t *destsOut);
+bool resolveDiatonicDestinations(ScaleId id, int root, std::span<const uint8_t> sourcePitches,
+                                 std::span<const int> degreeDisplacements,
+                                 std::span<uint8_t> destsOut);
 
 } // namespace porydaw_scale

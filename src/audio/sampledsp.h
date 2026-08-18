@@ -4,6 +4,7 @@
 #include <QString>
 
 #include <cmath>
+#include <span>
 #include <vector>
 
 #include "sampledata.h"
@@ -25,8 +26,8 @@ inline constexpr double kMaxAutoGain = 15.848931924611133; // +24 dB
 // normalization. ratio = outputRate / inputRate. Reads zeros before sample 0.
 // When loopWrapExcl > 0 the input wraps past that index back into
 // [loopWrapStart, loopWrapExcl) — the continuation the GBA actually plays;
-// otherwise it zero-pads past n. |ratio − 1| < 1e-9 is a bit-exact bypass.
-std::vector<float> resampleSinc(const float *x, qint64 n, double ratio, qint64 outCount,
+// otherwise it zero-pads past the input. |ratio − 1| < 1e-9 is a bit-exact bypass.
+std::vector<float> resampleSinc(std::span<const float> x, double ratio, qint64 outCount,
                                 qint64 loopWrapStart = 0, qint64 loopWrapExcl = 0);
 
 // The wav2agb-bit-matched quantizer: clamp(floor(x·128), −128, 127), in
@@ -47,7 +48,7 @@ QByteArray quantizeBuffer(const std::vector<float> &x, bool dither);
 
 // Nearest index to idx where the signal crosses zero (sign change between
 // consecutive samples); returns idx when the buffer never crosses.
-qint64 nearestZeroCrossing(const float *x, qint64 n, qint64 idx);
+qint64 nearestZeroCrossing(std::span<const float> x, qint64 idx);
 
 // Marker bookkeeping (DSP.md §1): a source-domain position through the crop
 // then the resample ratio, rounded (never load-bearing — phase 3's refine
@@ -58,10 +59,10 @@ inline qint64 mapMarker(qint64 srcPos, qint64 cropStart, double ratio)
 }
 
 // Normalization gain (DSP.md §5.2). loopedMode: g = kTargetLoopRms / RMS of
-// [loopStart, n), capped so post-gain peak ≤ kPeakCeiling. One-shot: pure
+// [loopStart, size), capped so post-gain peak ≤ kPeakCeiling. One-shot: pure
 // peak normalize to kPeakCeiling. Guards: near-silent input refuses
 // auto-normalize (g = 1 + warning), automatic gain caps at +24 dB.
-double normalizeGain(const float *x, qint64 n, bool loopedMode, qint64 loopStart, QString *warning);
+double normalizeGain(std::span<const float> x, bool loopedMode, qint64 loopStart, QString *warning);
 
 // YIN pitch detection (DSP.md §4): difference function → CMND → absolute
 // threshold 0.10 → fractional-lag refinement. Frames of 4096 samples at 50%
@@ -74,7 +75,7 @@ struct PitchResult {
     double f0 = 0.0;         // Hz
     double confidence = 0.0; // median per-frame 1 − CMND(τ)
 };
-PitchResult detectPitchYin(const float *x, qint64 n, double rate);
+PitchResult detectPitchYin(std::span<const float> x, double rate);
 
 // Loop-point suggestion (DSP.md §6) on the FINAL sample grid. Candidates are
 // (S, E) pairs where S is the loop start and E the new final sample index
@@ -94,20 +95,20 @@ struct LoopCandidate {
     double score = 0.0;
     bool passedGates = false;
 };
-std::vector<LoopCandidate> suggestLoop(const float *x, qint64 n, double rate, double period,
+std::vector<LoopCandidate> suggestLoop(std::span<const float> x, double rate, double period,
                                        qint64 regionA, qint64 regionB);
 
 // Refine pass (shared with DSP.md §3's preserve-imported-loop mode): local
 // full-window NCC search over ±8 samples around S and E to re-seat the seam
 // on the current grid. Adjusts *loopStart/*loopEnd in place.
-void refineLoop(const float *x, qint64 n, double period, qint64 *loopStart, qint64 *loopEnd);
+void refineLoop(std::span<const float> x, double period, qint64 *loopStart, qint64 *loopEnd);
 
 // Post-quantize seam click metrics at loop (S, E) in the signed-8 domain
 // (DSP.md §6), against the engine's linear-interpolated wrap s[E] → s[S].
 // The NCC comparison window past E reads real samples when the buffer still
 // has them (candidate evaluation on an untrimmed tail) and wraps into the
 // loop otherwise (E == n−1, the exported shape).
-SeamMetrics seamMetricsAt(const qint8 *s8, qint64 n, qint64 loopStart, qint64 loopEnd);
+SeamMetrics seamMetricsAt(std::span<const qint8> s8, qint64 loopStart, qint64 loopEnd);
 
 // Min/max peak pyramid for the waveform view: level k summarizes blocks of
 // 16^(k+1) samples, so a paint pass reads O(width) buckets at any zoom.
@@ -120,9 +121,9 @@ struct PeakPyramid {
     std::vector<std::vector<MinMax>> levels;
     qint64 frameCount = 0;
 
-    void build(const float *x, qint64 n);
+    void build(std::span<const float> x);
     // Extremes over [from, to) — x must be the buffer build() saw.
-    MinMax query(const float *x, qint64 from, qint64 to) const;
+    MinMax query(std::span<const float> x, qint64 from, qint64 to) const;
 };
 
 } // namespace SampleDsp

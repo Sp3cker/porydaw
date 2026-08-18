@@ -5,6 +5,7 @@
 #include <QFile>
 
 #include <algorithm>
+#include <span>
 #include <vector>
 
 #include "core/timelineplayer.h"
@@ -127,8 +128,8 @@ bool exportWav(const QString &path, const MidiTimeline &timeline,
         const auto sourceFrames =
             uint32_t(std::min<uint64_t>(frames, totals.totalSamples - sourcePos));
         if (sourceFrames > 0) {
-            player.render(&engine, &timeline, bufL.data(), bufR.data(), sourceFrames,
-                          timeline.hasLoop(), 0);
+            player.render(&engine, &timeline, std::span(bufL).first(sourceFrames),
+                          std::span(bufR).first(sourceFrames), timeline.hasLoop(), 0);
         }
         std::fill(bufL.begin() + sourceFrames, bufL.begin() + frames, 0.0f);
         std::fill(bufR.begin() + sourceFrames, bufR.begin() + frames, 0.0f);
@@ -154,7 +155,8 @@ bool exportWav(const QString &path, const MidiTimeline &timeline,
         if (opts.resonanceSuppression) {
             renderSuppressed(n);
         } else {
-            player.render(&engine, &timeline, bufL.data(), bufR.data(), n, timeline.hasLoop(), 0);
+            player.render(&engine, &timeline, std::span(bufL).first(n), std::span(bufR).first(n),
+                          timeline.hasLoop(), 0);
         }
 
         pcm.resize(int(n) * 4);

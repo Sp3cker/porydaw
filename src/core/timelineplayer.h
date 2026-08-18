@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <span>
 
 #include "core/miditimeline.h"
 
@@ -70,11 +71,12 @@ class TimelinePlayer
     // uninitialized-track silence.
     static void primeVoices(M4AEngine *engine, const MidiTimeline *timeline, uint64_t pos);
 
-    // Renders exactly `frames` samples into outL/outR, dispatching every due
-    // event. Note-ons for tracks set in muteMask are skipped (note-offs and
-    // controllers always pass so state stays consistent).
-    void render(M4AEngine *engine, const MidiTimeline *timeline, float *outL, float *outR,
-                uint32_t frames, bool looping, uint32_t muteMask);
+    // Renders exactly outL.size() samples into outL/outR, dispatching every
+    // due event. Both spans must have equal sizes. Note-ons for tracks set in
+    // muteMask are skipped (note-offs and controllers always pass so state
+    // stays consistent).
+    void render(M4AEngine *engine, const MidiTimeline *timeline, std::span<float> outL,
+                std::span<float> outR, bool looping, uint32_t muteMask);
 
     uint64_t position() const { return m_pos; }
 

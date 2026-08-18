@@ -114,10 +114,10 @@ int pitchClass(int pitch)
     return result;
 }
 
-void fillRejectedDests(int count, uint8_t *destsOut)
+void fillRejectedDests(std::span<uint8_t> destsOut)
 {
-    for (int i = 0; i < count; i++)
-        destsOut[i] = static_cast<uint8_t>(-1);
+    for (uint8_t &dest : destsOut)
+        dest = static_cast<uint8_t>(-1);
 }
 
 } // namespace
@@ -207,20 +207,24 @@ int nextScalePitch(ScaleId id, int root, int midiPitch, int steps)
     return pitch;
 }
 
-bool resolveDiatonicDestinations(ScaleId id, int root, const uint8_t *sourcePitches,
-                                 const int *degreeDisplacements, int count, uint8_t *destsOut)
+bool resolveDiatonicDestinations(ScaleId id, int root, std::span<const uint8_t> sourcePitches,
+                                 std::span<const int> degreeDisplacements,
+                                 std::span<uint8_t> destsOut)
 {
-    if (count < 0 || (count > 0 && (!sourcePitches || !degreeDisplacements || !destsOut)))
+    if (sourcePitches.size() != degreeDisplacements.size() ||
+        sourcePitches.size() != destsOut.size()) {
         return false;
+    }
+    const auto count = sourcePitches.size();
     if (count == 0)
         return true;
     if (!isValidScaleId(id)) {
-        fillRejectedDests(count, destsOut);
+        fillRejectedDests(destsOut);
         return false;
     }
 
     bool movingDown = true;
-    for (int i = 0; i < count; i++) {
+    for (std::span<const uint8_t>::size_type i = 0; i < count; i++) {
         if (degreeDisplacements[i] > 0) {
             movingDown = false;
             break;
@@ -229,20 +233,20 @@ bool resolveDiatonicDestinations(ScaleId id, int root, const uint8_t *sourcePitc
 
     if (!movingDown) {
         int previousDestination = -1;
-        for (int i = 0; i < count; i++) {
+        for (std::span<const uint8_t>::size_type i = 0; i < count; i++) {
             if (i > 0 && sourcePitches[i] == sourcePitches[i - 1]) {
                 destsOut[i] = destsOut[i - 1];
                 continue;
             }
             int destination = nextScalePitch(id, root, sourcePitches[i], degreeDisplacements[i]);
             if (destination < 0) {
-                fillRejectedDests(count, destsOut);
+                fillRejectedDests(destsOut);
                 return false;
             }
             if (previousDestination >= 0 && destination <= previousDestination)
                 destination = firstScalePitchAbove(id, root, previousDestination);
             if (destination < 0) {
-                fillRejectedDests(count, destsOut);
+                fillRejectedDests(destsOut);
                 return false;
             }
             destsOut[i] = static_cast<uint8_t>(destination);
@@ -252,25 +256,24 @@ bool resolveDiatonicDestinations(ScaleId id, int root, const uint8_t *sourcePitc
     }
 
     int previousDestination = 128;
-    for (int i = count - 1; i >= 0; i--) {
+    for (auto i = count; i-- > 0;) {
         if (i > 0 && sourcePitches[i] == sourcePitches[i - 1])
             continue;
         int destination = nextScalePitch(id, root, sourcePitches[i], degreeDisplacements[i]);
         if (destination < 0) {
-            fillRejectedDests(count, destsOut);
+            fillRejectedDests(destsOut);
             return false;
         }
         if (destination >= previousDestination)
             destination = firstScalePitchBelow(id, root, previousDestination);
         if (destination < 0) {
-            fillRejectedDests(count, destsOut);
+            fillRejectedDests(destsOut);
             return false;
         }
-        int lastDuplicate = i;
-        while (lastDuplicate + 1 < count && sourcePitches[lastDuplicate + 1] == sourcePitches[i]) {
+        auto lastDuplicate = i;
+        while (lastDuplicate + 1 < count && sourcePitches[lastDuplicate + 1] == sourcePitches[i])
             lastDuplicate++;
-        }
-        for (int duplicate = i; duplicate <= lastDuplicate; duplicate++)
+        for (auto duplicate = i; duplicate <= lastDuplicate; duplicate++)
             destsOut[duplicate] = static_cast<uint8_t>(destination);
         previousDestination = destination;
     }

@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string_view>
 
 #include <QColor>
@@ -103,7 +104,7 @@ class VelocityAxis
     static constexpr std::size_t MAXIMUM_MARKERS = 2;
 
     VelocityAxis(const VelocityMap &map, const VelocityAxisGeometry &geometry,
-                 const uint8_t *activeValues = nullptr, std::size_t activeValueCount = 0);
+                 std::span<const uint8_t> activeValues = {});
 
     Mode mode() const;
     const VelocityMap &map() const;
@@ -141,7 +142,7 @@ class VelocityAxis
   private:
     void buildContinuousTicks();
     void buildIntrinsicRows();
-    void buildContinuousMarkers(const uint8_t *activeValues, std::size_t activeValueCount);
+    void buildContinuousMarkers(std::span<const uint8_t> activeValues);
     void addTick(uint8_t velocity);
     void addLabel(uint8_t velocity);
     void setAccessibleDescription();

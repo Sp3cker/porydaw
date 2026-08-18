@@ -92,16 +92,6 @@ bool VelocityMap::isPsg() const
            m_voice == VelocityVoice::Wave || m_voice == VelocityVoice::Noise;
 }
 
-bool VelocityMap::operator==(const VelocityMap &other) const
-{
-    return m_voice == other.m_voice;
-}
-
-bool VelocityMap::operator!=(const VelocityMap &other) const
-{
-    return !(*this == other);
-}
-
 bool VelocityMap::compatibleWith(const VelocityMap &other) const
 {
     return isPsg() && other.isPsg() && m_voice == other.m_voice;

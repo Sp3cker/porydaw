@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <span>
 
 namespace songview {
 
@@ -22,7 +23,7 @@ class PitchProjection
 
     // Build from an explicit ascending set of visible pitches (Fold mode from
     // another wave). Pitches must be sorted unique; max 128.
-    void buildFromPitches(const uint8_t *pitches, int count);
+    void buildFromPitches(std::span<const uint8_t> pitches);
 
     int visibleRowCount() const { return m_visibleRowCount; }
     int visiblePitchAt(int row) const;    // 0-based row index (top = row 0 = highest pitch)
@@ -30,7 +31,7 @@ class PitchProjection
 
     // Set which pitches are scale pitches. By default all are scale pitches
     // (meaningful in Off/Highlight where every row is a scale row).
-    void setScalePitchClassification(const bool *isScalePitch /* 128 entries */);
+    void setScalePitchClassification(std::span<const bool, cMaxRows> isScalePitch);
     bool isScalePitchRow(int row) const;
 
     // Nearest visible pitch for anchoring; lower pitch wins on tie.

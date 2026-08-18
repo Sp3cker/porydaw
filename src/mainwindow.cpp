@@ -892,12 +892,9 @@ void MainWindow::destroySession(SongSession *session)
     // engine) through currentChanged; this only fires if that didn't happen.
     if (m_active == session)
         activateSession(nullptr);
-    for (auto it = m_sessions.begin(); it != m_sessions.end(); ++it) {
-        if (it->get() == session) {
-            m_sessions.erase(it);
-            break;
-        }
-    }
+    std::erase_if(m_sessions, [session](const std::unique_ptr<SongSession> &candidate) {
+        return candidate.get() == session;
+    });
 }
 
 bool MainWindow::promptToSaveAllSessions()

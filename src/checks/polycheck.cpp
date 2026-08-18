@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <span>
 
 #include "core/miditimeline.h"
 #include "core/smf.h"
@@ -161,7 +162,7 @@ RenderResult renderSong(M4AEngine *engine, const MidiTimeline &timeline)
     const uint64_t total = 220000;
     uint64_t rendered = 0;
     while (rendered < total) {
-        player.render(engine, &timeline, bufL, bufR, kChunk, false, 0);
+        player.render(engine, &timeline, std::span(bufL), std::span(bufR), false, 0);
         float peak = 0.0f;
         for (uint32_t i = 0; i < kChunk; i++)
             peak = std::max({peak, std::fabs(bufL[i]), std::fabs(bufR[i])});
@@ -323,7 +324,7 @@ int runEngineStage()
         float bufL[kChunk], bufR[kChunk], peak = 0.0f;
         bool foreignChannelOwner = false;
         for (uint64_t rendered = 0; rendered < 220000; rendered += kChunk) {
-            player.render(&engine, timeline.get(), bufL, bufR, kChunk, false,
+            player.render(&engine, timeline.get(), std::span(bufL), std::span(bufR), false,
                           trackBudgetMuteMask(1));
             for (uint32_t i = 0; i < kChunk; i++)
                 peak = std::max({peak, std::fabs(bufL[i]), std::fabs(bufR[i])});

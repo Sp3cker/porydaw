@@ -44,11 +44,6 @@ inline bool operator==(const SmfEvent &a, const SmfEvent &b)
            a.data0 == b.data0 && a.data1 == b.data1 && a.blob == b.blob;
 }
 
-inline bool operator!=(const SmfEvent &a, const SmfEvent &b)
-{
-    return !(a == b);
-}
-
 struct SmfTrack {
     std::vector<SmfEvent> events; // non-decreasing ticks, original in-file order
     uint64_t endTick = 0;         // tick of the End-of-track meta

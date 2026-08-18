@@ -45,7 +45,7 @@ std::string_view VelocityAxisGraduation::labelText() const
 }
 
 VelocityAxis::VelocityAxis(const VelocityMap &map, const VelocityAxisGeometry &geometry,
-                           const uint8_t *activeValues, std::size_t activeValueCount)
+                           std::span<const uint8_t> activeValues)
     : m_map(map)
     , m_geometry(geometry)
 {
@@ -55,7 +55,7 @@ VelocityAxis::VelocityAxis(const VelocityMap &map, const VelocityAxisGeometry &g
     m_bottom = std::max(m_top, height - inset);
     setAccessibleDescription();
     buildContinuousTicks();
-    buildContinuousMarkers(activeValues, activeValueCount);
+    buildContinuousMarkers(activeValues);
     if (mode() == Mode::Intrinsic)
         buildIntrinsicRows();
 }
@@ -352,13 +352,13 @@ void VelocityAxis::buildIntrinsicRows()
     }
 }
 
-void VelocityAxis::buildContinuousMarkers(const uint8_t *activeValues, std::size_t activeValueCount)
+void VelocityAxis::buildContinuousMarkers(std::span<const uint8_t> activeValues)
 {
-    if (activeValueCount == 0)
+    if (activeValues.empty())
         return;
-    uint8_t minimum = clampVelocity(activeValues[0]);
+    uint8_t minimum = clampVelocity(activeValues.front());
     uint8_t maximum = minimum;
-    for (std::size_t index = 1; index < activeValueCount; ++index) {
+    for (std::size_t index = 1; index < activeValues.size(); ++index) {
         const uint8_t value = clampVelocity(activeValues[index]);
         minimum = std::min(minimum, value);
         maximum = std::max(maximum, value);

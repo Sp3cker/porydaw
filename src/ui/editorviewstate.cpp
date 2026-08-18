@@ -3,27 +3,6 @@
 #include <algorithm>
 #include <utility>
 
-bool DrawerSectionState::operator==(const DrawerSectionState &other) const noexcept
-{
-    return visible == other.visible && height == other.height;
-}
-
-bool DrawerSectionState::operator!=(const DrawerSectionState &other) const noexcept
-{
-    return !(*this == other);
-}
-
-bool EditorDrawerState::operator==(const EditorDrawerState &other) const noexcept
-{
-    return velocity == other.velocity && automation == other.automation &&
-           activePage == other.activePage;
-}
-
-bool EditorDrawerState::operator!=(const EditorDrawerState &other) const noexcept
-{
-    return !(*this == other);
-}
-
 EditorDrawerState EditorViewState::drawerState() const noexcept
 {
     return {velocity, automation, activePage};
@@ -46,11 +25,7 @@ bool EditorViewState::hideLane(EditorAutomationRowId lane)
 
 bool EditorViewState::unhideLane(const EditorAutomationRowId &lane)
 {
-    const auto it = std::find(m_hiddenLanes.begin(), m_hiddenLanes.end(), lane);
-    if (it == m_hiddenLanes.end())
-        return false;
-    m_hiddenLanes.erase(it);
-    return true;
+    return std::erase(m_hiddenLanes, lane) != 0;
 }
 
 bool EditorViewState::isLaneHidden(const EditorAutomationRowId &lane) const noexcept
@@ -113,17 +88,4 @@ bool EditorViewState::remapEngineTracks(const std::vector<int> &engineTrackMap)
 
     *this = std::move(remapped);
     return true;
-}
-
-bool EditorViewState::operator==(const EditorViewState &other) const noexcept
-{
-    return velocity == other.velocity && automation == other.automation &&
-           activePage == other.activePage && laneHeight == other.laneHeight &&
-           laneHeights == other.laneHeights && laneRanges == other.laneRanges &&
-           emptyLanes == other.emptyLanes && m_hiddenLanes == other.m_hiddenLanes;
-}
-
-bool EditorViewState::operator!=(const EditorViewState &other) const noexcept
-{
-    return !(*this == other);
 }

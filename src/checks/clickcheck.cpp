@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <span>
 #include <vector>
 
 #include "core/miditimeline.h"
@@ -394,7 +395,8 @@ struct Driver {
         applyTimedPreviews(n);
         const bool playing = appliedTransport == kPlaying && tl != nullptr;
         if (playing)
-            player.render(&engine, tl.get(), bufL, bufR, n, false, 0);
+            player.render(&engine, tl.get(), std::span(bufL).first(n), std::span(bufR).first(n),
+                          false, 0);
         else
             m4a_engine_process(&engine, bufL, bufR, int(n));
         m4a_engine_process(&previewEngine, pvL, pvR, int(n));

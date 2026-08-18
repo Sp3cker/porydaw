@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <span>
 #include <vector>
 
 #include <QApplication>
@@ -879,8 +880,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         for (const double f : {100.0, 500.0, 1000.0, 2000.0, 4000.0, 5000.0, 5500.0, 6000.0}) {
             const std::vector<float> in = genSine(srcRate, f, 0.3, 0.5);
             const qint64 nOut = qint64(std::llround(double(in.size()) * r));
-            const std::vector<float> out =
-                SampleDsp::resampleSinc(in.data(), qint64(in.size()), r, nOut);
+            const std::vector<float> out = SampleDsp::resampleSinc(in, r, nOut);
             const double amp = toneAmp(out, dstRate, f, size_t(nOut / 5), size_t(nOut * 4 / 5));
             const double db = 20.0 * std::log10(amp / 0.5);
             if (std::abs(db) > 0.1) {
@@ -896,8 +896,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         for (const double f : {8000.0, 10000.0, 14000.0}) {
             const std::vector<float> in = genSine(srcRate, f, 0.3, 0.5);
             const qint64 nOut = qint64(std::llround(double(in.size()) * r));
-            const std::vector<float> out =
-                SampleDsp::resampleSinc(in.data(), qint64(in.size()), r, nOut);
+            const std::vector<float> out = SampleDsp::resampleSinc(in, r, nOut);
             const double rms = rmsOf(out, size_t(nOut / 5), size_t(nOut * 4 / 5));
             const double inRms = 0.5 / std::sqrt(2.0);
             if (rms > inRms * 1e-4) {
@@ -911,8 +910,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         {
             std::vector<float> in(size_t(srcRate * 0.2), 0.25f);
             const qint64 nOut = qint64(std::llround(double(in.size()) * r));
-            const std::vector<float> out =
-                SampleDsp::resampleSinc(in.data(), qint64(in.size()), r, nOut);
+            const std::vector<float> out = SampleDsp::resampleSinc(in, r, nOut);
             bool flat = true;
             for (qint64 i = 100; i < nOut - 100; i++)
                 flat = flat && std::abs(double(out[size_t(i)]) - 0.25) <= 1e-4;
@@ -923,7 +921,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         {
             std::vector<float> in(4000, 0.0f);
             in[2000] = 1.0f;
-            const std::vector<float> out = SampleDsp::resampleSinc(in.data(), 4000, 0.5, 2000);
+            const std::vector<float> out = SampleDsp::resampleSinc(in, 0.5, 2000);
             bool symmetric = true;
             for (int d = 1; d <= 500; d++)
                 symmetric = symmetric && std::abs(double(out[size_t(1000 + d)]) -
@@ -935,8 +933,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         {
             const std::vector<float> in = genSine(srcRate, 1000.0, 1.2, 0.5);
             const qint64 nOut = qint64(std::llround(double(in.size()) * r));
-            const std::vector<float> out =
-                SampleDsp::resampleSinc(in.data(), qint64(in.size()), r, nOut);
+            const std::vector<float> out = SampleDsp::resampleSinc(in, r, nOut);
             double bestF = 0.0, bestAmp = -1.0;
             for (double f = 998.0; f <= 1002.0; f += 0.05) {
                 const double amp = toneAmp(out, dstRate, f, 0, size_t(nOut));
@@ -956,8 +953,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
                 rng = rng * 1664525u + 1013904223u;
                 v = float(double(rng) / 4294967296.0 - 0.5);
             }
-            const std::vector<float> out =
-                SampleDsp::resampleSinc(in.data(), qint64(in.size()), 1.0, qint64(in.size()));
+            const std::vector<float> out = SampleDsp::resampleSinc(in, 1.0, qint64(in.size()));
             expect(std::memcmp(in.data(), out.data(), in.size() * sizeof(float)) == 0,
                    "identity ratio is a bit-exact passthrough");
         }
@@ -1008,9 +1004,9 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         // Zero-crossing snap: sign changes at 4 and 8.
         const float zx[] = {0.5f,  0.5f,  0.5f, 0.5f, -0.5f, -0.5f,
                             -0.5f, -0.5f, 0.5f, 0.5f, 0.5f,  0.5f};
-        expect(SampleDsp::nearestZeroCrossing(zx, 12, 5) == 4 &&
-                   SampleDsp::nearestZeroCrossing(zx, 12, 7) == 8 &&
-                   SampleDsp::nearestZeroCrossing(zx, 12, 0) == 4,
+        expect(SampleDsp::nearestZeroCrossing(std::span<const float>(zx), 5) == 4 &&
+                   SampleDsp::nearestZeroCrossing(std::span<const float>(zx), 7) == 8 &&
+                   SampleDsp::nearestZeroCrossing(std::span<const float>(zx), 0) == 4,
                "nearest zero crossing snaps to the closest sign change");
         // Marker mapping: crop offset then ratio, rounded.
         expect(SampleDsp::mapMarker(2000, 500, 0.5) == 750 &&
@@ -1027,7 +1023,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
 
         // Looped tone with a comfortable crest: RMS lands on target.
         std::vector<float> tone = genSine(13379.0, 440.0, 0.5, 0.11);
-        double gain = SampleDsp::normalizeGain(tone.data(), qint64(tone.size()), true, 0, &warning);
+        double gain = SampleDsp::normalizeGain(tone, true, 0, &warning);
         for (auto &v : tone)
             v = float(double(v) * gain);
         const double rms = rmsOf(tone, 0, tone.size());
@@ -1038,7 +1034,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         // High crest: the peak cap engages and is never exceeded.
         std::vector<float> crest = genSine(13379.0, 440.0, 0.5, 0.05);
         crest[100] = 0.9f;
-        gain = SampleDsp::normalizeGain(crest.data(), qint64(crest.size()), true, 0, &warning);
+        gain = SampleDsp::normalizeGain(crest, true, 0, &warning);
         double peak = 0.0;
         for (const auto &v : crest)
             peak = std::max(peak, std::abs(double(v) * gain));
@@ -1048,7 +1044,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
 
         // One-shot: pure peak normalize.
         std::vector<float> hit = genSine(13379.0, 200.0, 0.1, 0.4);
-        gain = SampleDsp::normalizeGain(hit.data(), qint64(hit.size()), false, 0, &warning);
+        gain = SampleDsp::normalizeGain(hit, false, 0, &warning);
         peak = 0.0;
         for (const auto &v : hit)
             peak = std::max(peak, std::abs(double(v) * gain));
@@ -1057,7 +1053,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
 
         // Near-silent input refuses auto-normalize.
         std::vector<float> quiet(1000, 0.01f);
-        gain = SampleDsp::normalizeGain(quiet.data(), 1000, false, 0, &warning);
+        gain = SampleDsp::normalizeGain(quiet, false, 0, &warning);
         expect(gain == 1.0 && warning == QStringLiteral("silent sample — auto-normalize skipped."),
                "silent sample refuses auto-normalize");
         if (failures == before)
@@ -1453,8 +1449,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             for (const int key : {33, 45, 57, 69, 81, 93}) { // A1..A6
                 const double f0 = 440.0 * std::pow(2.0, (key - 69) / 12.0);
                 const std::vector<float> sine = genSine(rate, f0, 1.5, 0.4);
-                SampleDsp::PitchResult p =
-                    SampleDsp::detectPitchYin(sine.data(), qint64(sine.size()), rate);
+                SampleDsp::PitchResult p = SampleDsp::detectPitchYin(sine, rate);
                 if (!p.pitched || std::abs(centsOff(p.f0, f0)) > 5.0) {
                     std::fprintf(stderr,
                                  "samplecheck: FAIL: sine A%d @%g Hz rate "
@@ -1464,7 +1459,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
                     failures++;
                 }
                 const std::vector<float> saw = genSaw(rate, f0, 1.5, 0.4);
-                p = SampleDsp::detectPitchYin(saw.data(), qint64(saw.size()), rate);
+                p = SampleDsp::detectPitchYin(saw, rate);
                 if (!p.pitched || std::abs(centsOff(p.f0, f0)) > 5.0) {
                     std::fprintf(stderr,
                                  "samplecheck: FAIL: saw A%d @%g Hz rate "
@@ -1481,13 +1476,13 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             rng = rng * 1664525u + 1013904223u;
             v = float(double(rng) / 4294967296.0 - 0.5) * 0.8f;
         }
-        expect(!SampleDsp::detectPitchYin(noise.data(), qint64(noise.size()), 13379.0).pitched,
-               "white noise reports unpitched");
+        expect(!SampleDsp::detectPitchYin(noise, 13379.0).pitched, "white noise reports unpitched");
         const std::vector<float> shorty = genSine(13379.0, 440.0, 0.4, 0.4);
-        expect(!SampleDsp::detectPitchYin(shorty.data(), qint64(shorty.size()), 13379.0).pitched ||
+        expect(!SampleDsp::detectPitchYin(shorty, 13379.0).pitched ||
                    true, // < 3 frames must not crash; result is unpitched
                "short-buffer detection is safe");
-        expect(!SampleDsp::detectPitchYin(shorty.data(), 4000, 13379.0).pitched,
+        const std::span<const float> shortFrame = std::span<const float>(shorty).first(4000);
+        expect(!SampleDsp::detectPitchYin(shortFrame, 13379.0).pitched,
                "fewer than 3 frames reports unpitched");
         if (failures == before)
             std::printf("samplecheck: pitch detection OK\n");
@@ -1507,12 +1502,12 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             tone[size_t(i)] = float(
                 0.35 * env * std::sin(2.0 * kPi * 440.0 * t + 0.5 * std::sin(2.0 * kPi * 5.0 * t)));
         }
-        const SampleDsp::PitchResult pitch = SampleDsp::detectPitchYin(tone.data(), n, rate);
+        const SampleDsp::PitchResult pitch = SampleDsp::detectPitchYin(tone, rate);
         expect(pitch.pitched && std::abs(centsOff(pitch.f0, 440.0)) < 20.0,
                "vibrato tone detects near 440 Hz");
         const double period = rate / (pitch.pitched ? pitch.f0 : 440.0);
         const std::vector<SampleDsp::LoopCandidate> cands = SampleDsp::suggestLoop(
-            tone.data(), n, rate, period, qint64(std::llround(0.4 * double(n))), n - 1);
+            tone, rate, period, qint64(std::llround(0.4 * double(n))), n - 1);
         expect(!cands.empty(), "vibrato tone yields loop candidates");
         if (!cands.empty()) {
             const SampleDsp::LoopCandidate &top = cands[0];
@@ -1520,7 +1515,9 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             expect(top.ncc >= 0.95, "top candidate NCC >= 0.95");
             const QByteArray s8 = SampleDsp::quantizeBuffer(tone, false);
             const SeamMetrics seam = SampleDsp::seamMetricsAt(
-                reinterpret_cast<const qint8 *>(s8.constData()), n, top.loopStart, top.loopEnd);
+                std::span<const qint8>(reinterpret_cast<const qint8 *>(s8.constData()),
+                                       size_t(s8.size())),
+                top.loopStart, top.loopEnd);
             expect(seam.valid && seam.ampLsb <= 2 && seam.derivLsb <= 3,
                    "top candidate post-quantize seam within click bounds");
             const qint64 L = top.loopEnd + 1 - top.loopStart;
@@ -1536,8 +1533,8 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             rng = rng * 1664525u + 1013904223u;
             v = float(double(rng) / 4294967296.0 - 0.5) * 0.8f;
         }
-        const std::vector<SampleDsp::LoopCandidate> ncands = SampleDsp::suggestLoop(
-            noise.data(), n, rate, 0.0, qint64(std::llround(0.4 * double(n))), n - 1);
+        const std::vector<SampleDsp::LoopCandidate> ncands =
+            SampleDsp::suggestLoop(noise, rate, 0.0, qint64(std::llround(0.4 * double(n))), n - 1);
         expect(!ncands.empty() && ncands[0].ncc < 0.5, "white noise yields no clean loop");
 
         // Amplitude step: NCC is scale-invariant, so a loop spanning the
@@ -1550,7 +1547,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             step[size_t(i)] = float(amp * std::sin(2.0 * kPi * 440.0 * double(i) / rate));
         }
         const std::vector<SampleDsp::LoopCandidate> scands = SampleDsp::suggestLoop(
-            step.data(), n, rate, rate / 440.0, qint64(std::llround(0.4 * double(n))), n - 1);
+            step, rate, rate / 440.0, qint64(std::llround(0.4 * double(n))), n - 1);
         expect(!scands.empty() && scands[0].passedGates,
                "amplitude-step tone still finds a clean same-level loop");
         bool gatesHonest = true;
@@ -1564,15 +1561,19 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         // local search recovers a seam at least as correlated.
         if (!cands.empty()) {
             qint64 S = cands[0].loopStart + 3, E = cands[0].loopEnd - 2;
+            const QByteArray beforeS8 = SampleDsp::quantizeBuffer(tone, false);
             const double nccBefore =
-                SampleDsp::seamMetricsAt(reinterpret_cast<const qint8 *>(
-                                             SampleDsp::quantizeBuffer(tone, false).constData()),
-                                         n, S, E)
+                SampleDsp::seamMetricsAt(
+                    std::span<const qint8>(reinterpret_cast<const qint8 *>(beforeS8.constData()),
+                                           size_t(beforeS8.size())),
+                    S, E)
                     .ncc;
-            SampleDsp::refineLoop(tone.data(), n, period, &S, &E);
+            SampleDsp::refineLoop(tone, period, &S, &E);
             const QByteArray s8 = SampleDsp::quantizeBuffer(tone, false);
-            const SeamMetrics refined =
-                SampleDsp::seamMetricsAt(reinterpret_cast<const qint8 *>(s8.constData()), n, S, E);
+            const SeamMetrics refined = SampleDsp::seamMetricsAt(
+                std::span<const qint8>(reinterpret_cast<const qint8 *>(s8.constData()),
+                                       size_t(s8.size())),
+                S, E);
             expect(refined.ncc >= nccBefore - 1e-9, "refine never worsens the seam correlation");
         }
 
@@ -1580,9 +1581,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         // pitched seam windows (2·period ≥ length): no candidates, and no
         // qBound(min > max) on the region clamp.
         const std::vector<float> stub = genSine(rate, 440.0, 300.0 / rate, 0.4);
-        expect(SampleDsp::suggestLoop(stub.data(), qint64(stub.size()), rate, 200.0, 0,
-                                      qint64(stub.size()) - 1)
-                   .empty(),
+        expect(SampleDsp::suggestLoop(stub, rate, 200.0, 0, qint64(stub.size()) - 1).empty(),
                "window-starved pitched buffer returns no candidates");
         if (failures == before)
             std::printf("samplecheck: loop suggestion OK\n");

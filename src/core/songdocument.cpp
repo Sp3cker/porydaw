@@ -1656,9 +1656,7 @@ void SongDocument::deleteRawEvents(int smfTrack, std::vector<size_t> indices)
     if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()))
         return;
     const size_t count = m_smf.tracks[smfTrack].events.size();
-    indices.erase(
-        std::remove_if(indices.begin(), indices.end(), [count](size_t i) { return i >= count; }),
-        indices.end());
+    std::erase_if(indices, [count](size_t i) { return i >= count; });
     if (indices.empty())
         return;
     std::vector<EditOp> ops;

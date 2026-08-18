@@ -1,6 +1,7 @@
 #include "songdocument.h"
 
 #include <algorithm>
+#include <compare>
 #include <map>
 #include <set>
 #include <utility>
@@ -55,12 +56,7 @@ class SongDocument::TimeEditor
         int engineTrack = -1;
         uint8_t cc = 0;
 
-        bool operator<(const LaneIdentity &other) const
-        {
-            if (engineTrack != other.engineTrack)
-                return engineTrack < other.engineTrack;
-            return cc < other.cc;
-        }
+        auto operator<=>(const LaneIdentity &) const = default;
     };
     struct StreamIdentity {
         StreamKind kind = StreamKind::Channel;
@@ -68,16 +64,7 @@ class SongDocument::TimeEditor
         uint8_t status = 0;
         uint8_t data0 = 0;
 
-        bool operator<(const StreamIdentity &other) const
-        {
-            if (kind != other.kind)
-                return static_cast<int>(kind) < static_cast<int>(other.kind);
-            if (smfTrack != other.smfTrack)
-                return smfTrack < other.smfTrack;
-            if (status != other.status)
-                return status < other.status;
-            return data0 < other.data0;
-        }
+        auto operator<=>(const StreamIdentity &) const = default;
     };
     struct TimeEventRef {
         int smfTrack = -1;
