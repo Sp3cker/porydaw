@@ -2276,15 +2276,27 @@ int runEditCheck(const QString &projectRoot)
         // Track rename: set, no-op guard (trimmed match pushes nothing),
         // clear, and undo back through the chunk's Track Name meta (0x03).
         if (ok && track >= 0) {
+            auto chunkNameCount = [&doc, track] {
+                const int smfTrack = doc.smfTrackFor(track);
+                int count = 0;
+                SmfChannelPrefix prefix;
+                for (const SmfEvent &event : doc.smf().tracks[smfTrack].events) {
+                    prefix.observe(event);
+                    if (event.isMeta() && event.metaType == 0x03 && prefix.channel < 0)
+                        count++;
+                }
+                return count;
+            };
             doc.renameTrack(track, QStringLiteral("editcheck name"));
             mutateAndCheck("events unsorted after renameTrack");
-            if (ok && doc.trackName(track) != QStringLiteral("editcheck name")) {
-                fail("rename not applied");
+            if (ok && (doc.trackName(track) != QStringLiteral("editcheck name") ||
+                       chunkNameCount() != 1)) {
+                fail("rename did not produce one authoritative track name");
                 ok = false;
             }
             // The header paints from the playable projection, not the raw
-            // SMF — the new meta must land where MidiTimeline's reader
-            // (first 0x03 in the chunk) finds it.
+            // SMF — the authoritative meta must land where MidiTimeline's
+            // reader finds it.
             if (ok) {
                 const auto timeline = doc.buildTimeline(48000.0);
                 if (!timeline || timeline->tracks[track].name != QStringLiteral("editcheck name")) {
@@ -2314,8 +2326,8 @@ int runEditCheck(const QString &projectRoot)
             }
             if (ok) {
                 doc.renameTrack(track, QString());
-                if (!doc.trackName(track).isEmpty()) {
-                    fail("empty rename did not clear the name");
+                if (!doc.trackName(track).isEmpty() || chunkNameCount() != 0) {
+                    fail("empty rename did not clear all track names");
                     ok = false;
                 }
             }

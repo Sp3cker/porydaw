@@ -2023,6 +2023,19 @@ size_t trackNameLoc(const SmfTrack &track)
     return SIZE_MAX;
 }
 
+std::vector<size_t> trackNameLocs(const SmfTrack &track)
+{
+    std::vector<size_t> locations;
+    SmfChannelPrefix prefix;
+    for (size_t i = 0; i < track.events.size(); i++) {
+        const SmfEvent &ev = track.events[i];
+        prefix.observe(ev);
+        if (ev.isMeta() && ev.metaType == 0x03 && prefix.channel < 0)
+            locations.push_back(i);
+    }
+    return locations;
+}
+
 } // namespace
 
 QString SongDocument::trackName(int engineTrack) const
@@ -2044,22 +2057,25 @@ void SongDocument::renameTrack(int engineTrack, const QString &name)
     if (nameIsLoopMarker(trimmed))
         return;
     const SmfTrack &track = m_smf.tracks[smfTrack];
-    const size_t nameIndex = trackNameLoc(track);
+    std::vector<size_t> nameIndices = trackNameLocs(track);
 
     std::vector<EditOp> ops;
-    if (nameIndex != SIZE_MAX) {
+    if (!nameIndices.empty()) {
+        const size_t first = nameIndices.front();
         if (trimmed.isEmpty()) {
-            appendRemoveOps(ops, smfTrack, {nameIndex});
+            appendRemoveOps(ops, smfTrack, std::move(nameIndices));
         } else {
-            if (trackNameText(track.events[nameIndex]) == trimmed)
-                return;
-            EditOp op;
-            op.type = EditOp::ModifyEvent;
-            op.smfTrack = smfTrack;
-            op.index = nameIndex;
-            op.event = track.events[nameIndex];
-            op.event.blob = trimmed.toLatin1();
-            ops.push_back(op);
+            nameIndices.erase(nameIndices.begin());
+            appendRemoveOps(ops, smfTrack, std::move(nameIndices));
+            if (trackNameText(track.events[first]) != trimmed) {
+                EditOp op;
+                op.type = EditOp::ModifyEvent;
+                op.smfTrack = smfTrack;
+                op.index = first;
+                op.event = track.events[first];
+                op.event.blob = trimmed.toLatin1();
+                ops.push_back(op);
+            }
         }
     } else {
         if (trimmed.isEmpty())
@@ -2073,6 +2089,8 @@ void SongDocument::renameTrack(int engineTrack, const QString &name)
         op.event.blob = trimmed.toLatin1();
         ops.push_back(op);
     }
+    if (ops.empty())
+        return;
     pushEdit(tr("rename track"), std::move(ops));
 }
 
