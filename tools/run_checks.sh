@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Run every porydaw --*check harness against fresh APFS clone-on-write
-# scratch trees of a decomp project (the harnesses write into the project, so
-# each one gets isolated paths without duplicating unchanged file data). Point
-# it at an ASAN build (-DPORYDAW_ASAN=ON) to turn
+# Run every porydaw --*check harness against fresh scratch trees of a decomp
+# project, using clone-on-write when the host supports it. Each harness gets
+# isolated paths; unsupported hosts fall back to an ordinary recursive copy.
+# Point it at an ASAN build (-DPORYDAW_ASAN=ON) to turn
 # silent memory bugs into aborts with stack traces.
 #
 # usage: tools/run_checks.sh <porydaw-binary> <decomp-checkout> [songsmk-fork]
@@ -45,13 +45,35 @@ TMPROOT=$(mktemp -d)
 trap 'rm -rf "$TMPROOT"' EXIT
 LOG="$TMPROOT/log"
 
+COPY_MODE=plain
+PROBE_SOURCE="$TMPROOT/copy-probe-source"
+PROBE_DEST="$TMPROOT/copy-probe-dest"
+touch "$PROBE_SOURCE"
+case "$(uname -s)" in
+    Darwin)
+        cp -c "$PROBE_SOURCE" "$PROBE_DEST" 2>/dev/null && COPY_MODE=clone
+        ;;
+    Linux)
+        cp --reflink=auto "$PROBE_SOURCE" "$PROBE_DEST" 2>/dev/null && COPY_MODE=reflink
+        ;;
+esac
+rm -f "$PROBE_SOURCE" "$PROBE_DEST"
+
+copy_path() { # src dst
+    case "$COPY_MODE" in
+        clone) cp -cR "$1" "$2" ;;
+        reflink) cp -a --reflink=auto "$1" "$2" ;;
+        *) cp -R "$1" "$2" ;;
+    esac
+}
+
 copy_tree() { # src dst: the working tree minus .git
     mkdir -p "$2"
     local entry
     for entry in "$1"/* "$1"/.[!.]*; do
         [ -e "$entry" ] || continue
         [ "$(basename "$entry")" = ".git" ] && continue
-        cp -cR "$entry" "$2/"
+        copy_path "$entry" "$2/"
     done
 }
 
@@ -82,7 +104,7 @@ run() { # name base|- harness-args... (SCRATCH placeholder = fresh copy of base)
     shift 2
     local scratch="$TMPROOT/scratch"
     rm -rf "$scratch"
-    [ "$base" != "-" ] && cp -cR "$TMPROOT/$base" "$scratch"
+    [ "$base" != "-" ] && copy_path "$TMPROOT/$base" "$scratch"
     local args=() a
     for a in "$@"; do
         [ "$a" = "SCRATCH" ] && a="$scratch"
