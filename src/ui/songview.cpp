@@ -2063,10 +2063,6 @@ class PianoRoll : public TimelineSurface
             auditionKey(m_kbdKey, 0);
             m_kbdKey = -1;
         }
-        if (m_auditioned) {
-            auditionKey(0, 0);
-            m_auditioned = false;
-        }
         SongDocument *doc = m_sv->document();
         if (event->button() == Qt::RightButton && m_rightPress) {
             const Drag drag = m_drag;
@@ -2106,6 +2102,7 @@ class PianoRoll : public TimelineSurface
                 m_sv->commitEditCursor(m_sv->snapTick(m_pressTick));
                 invalidateContent();
                 completeProjectionGesture();
+                stopNoteAudition();
                 return;
             }
         }
@@ -2128,12 +2125,14 @@ class PianoRoll : public TimelineSurface
             }
             invalidateContent();
             completeProjectionGesture();
+            stopNoteAudition();
             return;
         }
         if (event->button() != Qt::LeftButton || m_drag == Drag::None) {
             if (event->button() != Qt::LeftButton && m_drag == Drag::Velocity)
                 cancelVelocityInteraction();
             completeProjectionGesture();
+            stopNoteAudition();
             return;
         }
 
@@ -2192,6 +2191,7 @@ class PianoRoll : public TimelineSurface
             // Latch the dragged note's final velocity for the next draw.
             m_lastVelocity = uint8_t(std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127));
         }
+        stopNoteAudition();
         m_dTick = 0;
         m_dKey = 0;
         m_dDur = 0;
@@ -2293,10 +2293,8 @@ class PianoRoll : public TimelineSurface
         // Autorepeat releases are skipped so a held Ctrl+Up keeps sounding
         // the moving pitch; the Drag::None guard keeps a stray key release
         // from cutting a mouse gesture's preview short.
-        if (!event->isAutoRepeat() && m_auditioned && m_drag == Drag::None) {
-            auditionKey(0, 0);
-            m_auditioned = false;
-        }
+        if (!event->isAutoRepeat() && m_drag == Drag::None)
+            stopNoteAudition();
         QWidget::keyReleaseEvent(event);
     }
 
@@ -2445,6 +2443,14 @@ class PianoRoll : public TimelineSurface
         const auto newGeometry = keyboardHoverGeometry(m_hoverKey);
         const QRegion newRegion = newGeometry ? newGeometry->paintRegion : QRegion();
         invalidateContent(oldRegion | newRegion);
+    }
+
+    void stopNoteAudition()
+    {
+        if (!m_auditioned)
+            return;
+        auditionKey(0, 0);
+        m_auditioned = false;
     }
 
     // All roll auditions go through here so the keyboard column can mark the

@@ -1,10 +1,12 @@
 #include <QByteArray>
 #include <QElapsedTimer>
 #include <QThread>
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <functional>
+#include <memory>
 #include <vector>
 
 #include "audio/audioengine.h"
@@ -74,7 +76,7 @@ SmfFile buildSilentSong()
 
 // One track holding a note for the whole song: the unload scenario needs the
 // PLAYER, not a preview, to be the source of the sounding channel.
-SmfFile buildNoteSong()
+SmfFile buildNoteSong(uint8_t program = 0)
 {
     SmfFile smf;
     smf.format = 1;
@@ -91,7 +93,7 @@ SmfFile buildNoteSong()
     conductor.endTick = 4800;
 
     SmfTrack &t0 = smf.tracks[1];
-    t0.events.push_back(channelEvent(0, 0xC0, 0, 0));
+    t0.events.push_back(channelEvent(0, 0xC0, program, 0));
     t0.events.push_back(channelEvent(0, 0x90, 60, 127));
     t0.events.push_back(channelEvent(4800, 0x80, 60, 0));
     t0.endTick = 4800;
@@ -130,6 +132,14 @@ struct TestVoicegroup {
             v.sustain = 255;
             v.release = 254; // slow: (env * 254) >> 8 per frame, ~12 s ring
         }
+        auto &square = vg.voices[2];
+        square.type = VOICE_SQUARE_2;
+        square.key = 60;
+        square.wavePointer = reinterpret_cast<uint32_t *>(uintptr_t{2});
+        square.attack = 7;
+        square.decay = 0;
+        square.sustain = 15;
+        square.release = 7;
     }
 };
 
@@ -200,32 +210,30 @@ bool waitFor(const std::function<bool()> &cond, int timeoutMs)
 
 int runTransportCheck()
 {
-    int failures = 0;
+    auto failures = 0;
     auto fail = [&](const char *what) {
         std::fprintf(stderr, "transportcheck: FAIL: %s\n", what);
         failures++;
     };
-
     TestVoicegroup tvg;
-    std::unique_ptr<MidiTimeline> timeline;
+    std::shared_ptr<MidiTimeline> timeline;
     AudioEngine engine;
     QString error;
     if (!engine.init(&error)) {
         std::printf("transportcheck: SKIP (no audio device: %s)\n", qUtf8Printable(error));
         return 0;
     }
-
-    const SmfFile smf = buildSilentSong();
-    timeline = MidiTimeline::build(smf, engine.sampleRate());
+    const auto smf = buildSilentSong();
+    timeline = std::shared_ptr<MidiTimeline>(MidiTimeline::build(smf, engine.sampleRate()));
     if (!timeline || timeline->usedTrackCount != 2) {
         std::fprintf(stderr, "transportcheck: synthesized song built wrong\n");
         return 1;
     }
-    engine.loadSong(timeline.get(), &tvg.vg, SongSettings{});
+    engine.loadSong(timeline, &tvg.vg, SongSettings{});
     // Hot seek must only publish a request; restarting the Core Audio device
     // here used to block the UI thread for tens of milliseconds.
-    qint64 slowestSeekNs = 0;
-    const uint64_t midSong = timeline->lengthSamples / 2;
+    auto slowestSeekNs = qint64{0};
+    const auto midSong = timeline->lengthSamples / 2;
     for (int i = 0; i < 5; i++) {
         QElapsedTimer seekTimer;
         seekTimer.start();
@@ -239,7 +247,6 @@ int runTransportCheck()
     engine.seek(0);
     if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
         fail("audio thread did not apply the reset seek");
-
     const auto active = [&] { return engine.activePcmChannels(); };
     engine.play();
     if (!waitFor([&] { return engine.playheadSamples() > 0; }, 2000)) {
@@ -250,18 +257,126 @@ int runTransportCheck()
         if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
             fail("Stop did not cancel a pending seek");
     }
-
-    // An edit that rebuilds the timeline must not drop a just-published
-    // seek: updateTimeline folds the pending target into its rebuild
-    // position instead of clearing it.
-    engine.seek(midSong);
-    engine.updateTimeline(timeline.get());
-    if (!waitFor([&] { return engine.playheadSamples() == midSong; }, 2000))
-        fail("updateTimeline dropped a pending seek");
+    // An edit rebuild must carry a pending seek onto a distinct replacement
+    // timeline. The old owner retires only after the callback acknowledges
+    // this publication.
+    auto seekReplacementSmf = smf;
+    seekReplacementSmf.tracks[1].events[0].data0 = 1;
+    auto seekReplacement = std::shared_ptr<MidiTimeline>(
+        MidiTimeline::build(seekReplacementSmf, engine.sampleRate()));
+    if (!seekReplacement) {
+        fail("seek replacement timeline built wrong");
+    } else {
+        engine.seek(midSong);
+        engine.updateTimeline(seekReplacement);
+        timeline = std::move(seekReplacement);
+        if (!waitFor([&] {
+                return engine.timeline() == timeline.get() &&
+                       engine.playheadSamples() == midSong;
+            }, 2000)) {
+            fail("updateTimeline dropped a pending seek or retained old data");
+        }
+    }
     engine.seek(0);
     if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
         fail("reset seek after updateTimeline not applied");
-
+    // Publishing an edit must not wait for a callback. The replacement has a
+    // different event layout and becomes the active data source during play.
+    auto liveReplacementSmf = smf;
+    liveReplacementSmf.tracks[1].events[1].tick = 4700;
+    auto liveReplacement = std::shared_ptr<MidiTimeline>(
+        MidiTimeline::build(liveReplacementSmf, engine.sampleRate()));
+    engine.play();
+    if (!liveReplacement) {
+        fail("live replacement timeline built wrong");
+    } else if (!waitFor([&] { return engine.playheadSamples() > 0; }, 2000)) {
+        fail("playback did not start for live timeline replacement");
+    } else {
+        const auto beforeUpdate = engine.playheadSamples();
+        QElapsedTimer updateTimer;
+        updateTimer.start();
+        engine.updateTimeline(liveReplacement);
+        timeline = std::move(liveReplacement);
+        const auto updateNs = updateTimer.nsecsElapsed();
+        if (updateNs > 20'000'000)
+            fail("timeline replacement blocked instead of publishing to the audio thread");
+        if (!waitFor([&] {
+                return engine.timeline() == timeline.get() &&
+                       engine.playheadSamples() > beforeUpdate;
+            }, 2000)) {
+            fail("live timeline replacement did not adopt its data source");
+        }
+    }
+    engine.stop();
+    if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
+        fail("stop after live timeline replacement did not reset");
+    // A timeline rebuild is only a data-source swap. It must not release
+    // hardware voices already sounding, including the PSG channel used here,
+    // nor a PSG note being previewed during a note-drag interaction.
+    const auto cgbSmf = buildNoteSong(2);
+    auto cgbTimeline =
+        std::shared_ptr<MidiTimeline>(MidiTimeline::build(cgbSmf, engine.sampleRate()));
+    const auto activeCgb = [&] { return engine.activeCgbChannels(); };
+    if (!cgbTimeline || cgbTimeline->usedTrackCount != 1) {
+        fail("CGB note song built wrong");
+    } else {
+        engine.loadSong(cgbTimeline, &tvg.vg, SongSettings{});
+        engine.play();
+        if (!waitFor([&] { return activeCgb() >= 1; }, 2000)) {
+            fail("CGB song note never sounded before timeline replacement");
+        } else {
+            auto cgbReplacementSmf = cgbSmf;
+            cgbReplacementSmf.tracks[1].events.insert(
+                cgbReplacementSmf.tracks[1].events.begin() + 1,
+                channelEvent(0, 0xB0, 0x78, 0));
+            cgbReplacementSmf.tracks[1].events[3].tick = 4700;
+            auto cgbReplacement = std::shared_ptr<MidiTimeline>(
+                MidiTimeline::build(cgbReplacementSmf, engine.sampleRate()));
+            if (!cgbReplacement) {
+                fail("CGB replacement timeline built wrong");
+            } else {
+                engine.updateTimeline(cgbReplacement);
+                cgbTimeline = std::move(cgbReplacement);
+                if (!waitFor([&] {
+                        return engine.timeline() == cgbTimeline.get();
+                    }, 2000)) {
+                    fail("CGB timeline replacement retained the old data source");
+                } else if (activeCgb() < 1) {
+                    fail("timeline replacement released a sounding CGB song note");
+                }
+            }
+        }
+        engine.stop();
+        if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
+            fail("stop after CGB timeline replacement did not reset");
+        engine.previewNote(0, 60, 127);
+        if (!waitFor([&] { return activeCgb() >= 1; }, 2000)) {
+            fail("CGB preview never sounded before timeline replacement");
+        } else {
+            auto previewReplacementSmf = cgbSmf;
+            previewReplacementSmf.tracks[1].events.insert(
+                previewReplacementSmf.tracks[1].events.begin() + 1,
+                channelEvent(0, 0xB0, 0x78, 0));
+            previewReplacementSmf.tracks[1].events[3].tick = 4600;
+            auto previewReplacement = std::shared_ptr<MidiTimeline>(
+                MidiTimeline::build(previewReplacementSmf, engine.sampleRate()));
+            if (!previewReplacement) {
+                fail("CGB preview replacement timeline built wrong");
+            } else {
+                engine.updateTimeline(previewReplacement);
+                cgbTimeline = std::move(previewReplacement);
+                if (!waitFor([&] {
+                        return engine.timeline() == cgbTimeline.get();
+                    }, 2000)) {
+                    fail("CGB preview replacement retained the old data source");
+                } else if (activeCgb() < 1) {
+                    fail("timeline replacement released a CGB note preview");
+                }
+                engine.previewNote(0, 60, 0);
+            }
+        }
+    }
+    engine.loadSong(timeline, &tvg.vg, SongSettings{});
     // A short audition whose note-off has already gone out, leaving a
     // ringing slow-release tail — the reported symptom. Fails the whole
     // check if the preview never sounds or the tail dies early (the
@@ -279,14 +394,12 @@ int runTransportCheck()
         }
         return true;
     };
-
     // Stopped → Playing: the ringing tail must be cut when playback starts.
     if (ringingTail(0)) {
         engine.play();
         if (!waitFor([&] { return active() == 0; }, 2000))
             fail("audition tail persisted after playback started from stop");
     }
-
     // Playing → Paused: pausing silences like Stop — a preview sounding
     // when pause hits must not ring through it.
     engine.previewNoteTimed(0, 60, 127, uint32_t(60.0 * engine.sampleRate()));
@@ -297,7 +410,6 @@ int runTransportCheck()
         if (!waitFor([&] { return active() == 0; }, 2000))
             fail("pause left the preview ringing");
     }
-
     // Paused → Playing, the Space path (pause, audition, seek + play):
     // Space toggles pause and restarts from the edit cursor, so this is how
     // playback usually starts — the tail must be cut here too.
@@ -308,7 +420,6 @@ int runTransportCheck()
         if (!waitFor([&] { return active() == 0; }, 2000))
             fail("audition tail persisted after Space-style seek + play from pause");
     }
-
     // Paused → Playing with the preview still counting down: resuming must
     // cut it rather than let it sound over the song for the full duration.
     engine.pause();
@@ -321,10 +432,8 @@ int runTransportCheck()
         if (!waitFor([&] { return active() == 0; }, 2000))
             fail("counting-down preview persisted after resuming playback");
     }
-
     engine.stop();
     engine.unloadSong();
-
     // Unload with the song still playing — the song-switch path. unloadSong
     // assigns both transport fields itself, so the callback never sees a
     // Playing→Stopped transition and no transport cut-fade ever runs there;
@@ -332,13 +441,14 @@ int runTransportCheck()
     // outgoing voicegroup right after unloadSong returns, so freeAll + the
     // sleep below give ASAN a window to catch any channel still rendering
     // it.
-    const SmfFile noteSmf = buildNoteSong();
-    auto noteTimeline = MidiTimeline::build(noteSmf, engine.sampleRate());
+    const auto noteSmf = buildNoteSong();
+    auto noteTimeline =
+        std::shared_ptr<MidiTimeline>(MidiTimeline::build(noteSmf, engine.sampleRate()));
     HeapVoicegroup hvg;
     if (!noteTimeline || noteTimeline->usedTrackCount != 1) {
         fail("note song built wrong");
     } else {
-        engine.loadSong(noteTimeline.get(), hvg.vg, SongSettings{});
+        engine.loadSong(noteTimeline, hvg.vg, SongSettings{});
         engine.play();
         if (!waitFor([&] { return active() >= 1; }, 2000)) {
             fail("song note never sounded before unload");
@@ -355,14 +465,13 @@ int runTransportCheck()
     // reads the freed WaveData (ASAN reports it even when the count above
     // somehow reached zero).
     QThread::msleep(300);
-
     // Park the real device and drive AudioEngine synchronously so the
     // suppressor's delayed output can be checked sample-for-sample.
     if (ma_device_stop(engine.m_device) != MA_SUCCESS) {
         fail("could not stop the audio device for deterministic suppressor checks");
     } else {
         engine.m_deviceStarted = false;
-        engine.loadSong(noteTimeline.get(), &tvg.vg, SongSettings{});
+        engine.loadSong(noteTimeline, &tvg.vg, SongSettings{});
         engine.setResonanceSuppression(true);
         const auto renderFrames = [&](uint32_t frames) {
             auto output = std::vector<float>(static_cast<std::size_t>(frames) * 2);
@@ -498,7 +607,7 @@ int runTransportCheck()
         // A cold song replacement is another playback boundary. Starting a
         // silent song must not reveal delayed samples from the outgoing song.
         renderFrames(uint32_t(0.5 * engine.sampleRate()));
-        engine.loadSong(timeline.get(), &tvg.vg, SongSettings{});
+        engine.loadSong(timeline, &tvg.vg, SongSettings{});
         engine.play();
         const auto silentStart =
             renderFrames(engine.m_cutFadeSettleSamples + 2 * engine.m_outputGainRampSamples +
@@ -507,7 +616,6 @@ int runTransportCheck()
             fail("new playback leaked delayed suppressor audio from the prior song");
         engine.unloadSong();
     }
-
     if (failures == 0)
         std::printf("transportcheck: PASS\n");
     return failures ? 1 : 0;

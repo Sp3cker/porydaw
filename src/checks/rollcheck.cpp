@@ -2175,10 +2175,22 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     if (doc.findNote(track, b.tick, uint8_t(b.key), &bNow)) {
         doc.setNotesVelocity({bNow}, 20);
         const QPoint bTop(b.center.x(), rows.noteTopProbeY(b.key));
+        std::vector<int> releaseOrder;
+        const auto documentConn =
+            QObject::connect(&doc, &SongDocument::documentChanged, &view,
+                             [&] { releaseOrder.push_back(1); });
+        const auto auditionConn = QObject::connect(
+            &view, &SongView::auditionNote, &view,
+            [&](int, int, int velocity) { releaseOrder.push_back(velocity == 0 ? 2 : 3); });
         sendMouse(roll, QEvent::MouseButtonPress, bTop, Qt::LeftButton, Qt::LeftButton);
         const QPoint movedTop(bTop.x(), rows.noteTopProbeY(b.key + 2));
         sendMouse(roll, QEvent::MouseMove, movedTop, Qt::NoButton, Qt::LeftButton);
+        releaseOrder.clear();
         sendMouse(roll, QEvent::MouseButtonRelease, movedTop, Qt::LeftButton, Qt::NoButton);
+        QObject::disconnect(documentConn);
+        QObject::disconnect(auditionConn);
+        if (releaseOrder != std::vector<int>{1, 2})
+            fail("move release did not commit before ending its audition");
         if (doc.findNote(track, b.tick, uint8_t(b.key), &bNow))
             fail("top-of-note drag on a low-velocity note did not move the "
                  "note (velocity handle still on the top strip?)");

@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QString>
 
+#include <cstdint>
 #include <map>
 #include <memory>
 
@@ -17,10 +18,8 @@ extern "C" {
 
 // One open song tab. Each tab is a complete, independent editing session:
 // its own document (with its own undo stack — voicegroup edits ride it too),
-// its own parse of the voicegroup source, and its own view. The session owns
-// the built timeline and the loaded voicegroup; the audio engine only
-// borrows the active tab's, so switching tabs never invalidates what an
-// inactive tab's view is drawing.
+// built timeline, loaded voicegroup, and view. AudioEngine shares ownership
+// of the active timeline so callback handoff remains internal to audio.
 //
 // Two tabs sharing a -G voicegroup are deliberately independent copies:
 // unsaved voice edits stay inside their tab, and a clean tab whose .inc was
@@ -38,7 +37,7 @@ struct SynthToneBuf {
 struct SongSession {
     SongDocument doc;
     std::unique_ptr<VoicegroupSource> vgSource;
-    std::unique_ptr<MidiTimeline> timeline;
+    std::shared_ptr<MidiTimeline> timeline;
     LoadedVoiceGroup *voicegroup = nullptr;
     // Keyed by slot; entries outlive any one LoadedVoiceGroup (engine track
     // caches hold ToneData copies pointing here) and are re-installed into a

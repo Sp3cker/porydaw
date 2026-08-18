@@ -172,7 +172,7 @@ void AudioEngine::shutdown()
         m_previewEngine.reset();
     }
     m_audition.reset();
-    m_timeline = nullptr;
+    m_timelineHandoff.reset();
     m_voicegroup = nullptr;
     m_activePcm.store(0);
     m_activeCgb.store(0);
@@ -186,8 +186,8 @@ void AudioEngine::shutdown()
     }
 }
 
-void AudioEngine::loadSong(const MidiTimeline *timeline, LoadedVoiceGroup *voicegroup,
-                           const SongSettings &settings)
+void AudioEngine::loadSong(std::shared_ptr<const MidiTimeline> timeline,
+                           LoadedVoiceGroup *voicegroup, const SongSettings &settings)
 {
     // Cold swap: the audio thread must not be running while pointers change.
     if (m_deviceStarted)
@@ -195,8 +195,7 @@ void AudioEngine::loadSong(const MidiTimeline *timeline, LoadedVoiceGroup *voice
     resetOutputCut();
     m_resonance.reset();
     m_pendingSeek.store(kNoPendingSeek, std::memory_order_release);
-
-    m_timeline = timeline;
+    m_timelineHandoff.reset(std::move(timeline));
     m_voicegroup = voicegroup;
     m_settings = settings;
 
@@ -214,9 +213,10 @@ void AudioEngine::loadSong(const MidiTimeline *timeline, LoadedVoiceGroup *voice
     // so auditioned notes (previewNote) sound as they would in the song
     // before playback has ever dispatched the track's events. Playback
     // re-dispatches the real events, so this changes nothing it plays.
-    if (m_timeline) {
-        TimelinePlayer::chase(m_engine.get(), m_timeline, 0);
-        TimelinePlayer::primeVoices(m_engine.get(), m_timeline, 0);
+    const MidiTimeline *activeTimeline = m_timelineHandoff.active();
+    if (activeTimeline) {
+        TimelinePlayer::chase(m_engine.get(), activeTimeline, 0);
+        TimelinePlayer::primeVoices(m_engine.get(), activeTimeline, 0);
     }
     resetPreviewEngine();
     clearTimedPreviews();
@@ -235,41 +235,42 @@ void AudioEngine::loadSong(const MidiTimeline *timeline, LoadedVoiceGroup *voice
         ma_device_start(m_device);
 }
 
-void AudioEngine::updateTimeline(const MidiTimeline *timeline)
+void AudioEngine::updateTimeline(std::shared_ptr<const MidiTimeline> timeline)
 {
-    if (!m_timeline || !timeline)
+    if (!timeline || !songLoaded())
         return;
-    if (m_deviceStarted)
-        ma_device_stop(m_device);
-    resetOutputCut();
-    // A seek published but not yet applied by the audio thread must survive
-    // the rebuild — dropping it would silently ignore an edit-cursor move
-    // that raced this edit. The device is stopped, so the exchange can't
-    // race applyPendingSeek.
-    const uint64_t pending = m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
-    const uint64_t pos = pending != kNoPendingSeek ? pending : m_player.position();
-    m_timeline = timeline;
-    m_player.seek(pos, m_timeline);
-    m_playhead.store(pos);
-    // Release sounding notes: their note-offs may have moved or vanished in
-    // the rebuilt timeline. Envelopes fade naturally, so brief edits during
-    // playback don't hard-cut the audio.
-    for (int track = 0; track < MAX_TRACKS; track++)
-        m4a_engine_all_notes_off(m_engine.get(), track);
-    clearTimedPreviews();
-    // Re-latch controller state from the rebuilt timeline: the edit may have
-    // deleted or moved the events behind the engine's current bend/CC values
-    // (e.g. clearing a lane), which would otherwise stay latched until stop.
-    TimelinePlayer::chase(m_engine.get(), m_timeline, pos);
-    TimelinePlayer::primeVoices(m_engine.get(), m_timeline, pos);
+    m_timelineHandoff.publish(std::move(timeline));
+    if (!m_deviceStarted) {
+        applyTimelineAdoption(m_timelineHandoff.current());
+        m_timelineHandoff.adoptImmediately();
+    }
+}
 
-    if (m_deviceStarted)
-        ma_device_start(m_device);
+void AudioEngine::applyTimelineAdoption(const MidiTimeline *timeline)
+{
+    // A seek published before the rebuild belongs on the replacement.
+    const uint64_t pending =
+        m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
+    const bool seeking = pending != kNoPendingSeek;
+    const uint64_t pos = seeking ? pending : m_player.position();
+    if (seeking) {
+        for (int track = 0; track < MAX_TRACKS; track++)
+            m4a_engine_all_notes_off(m_engine.get(), track);
+        m_previewTrack = -1;
+        m_previewKey = -1;
+        clearTimedPreviews();
+        m_player.seek(pos, timeline);
+    } else {
+        m_player.replaceTimeline(pos, timeline);
+    }
+    m_playhead.store(pos);
+    TimelinePlayer::chase(m_engine.get(), timeline, pos);
+    TimelinePlayer::primeVoices(m_engine.get(), timeline, pos);
 }
 
 void AudioEngine::seek(uint64_t samplePos)
 {
-    if (!m_timeline)
+    if (!songLoaded())
         return;
     m_pendingSeek.store(samplePos, std::memory_order_release);
 }
@@ -277,16 +278,17 @@ void AudioEngine::seek(uint64_t samplePos)
 void AudioEngine::applyPendingSeek()
 {
     const uint64_t samplePos = m_pendingSeek.exchange(kNoPendingSeek, std::memory_order_acq_rel);
-    if (samplePos == kNoPendingSeek || !m_timeline)
+    const MidiTimeline *timeline = m_timelineHandoff.active();
+    if (samplePos == kNoPendingSeek || !timeline)
         return;
     m_resonance.reset();
 
     for (int track = 0; track < MAX_TRACKS; track++)
         m4a_engine_all_notes_off(m_engine.get(), track);
     clearTimedPreviews();
-    m_player.seek(samplePos, m_timeline);
-    TimelinePlayer::chase(m_engine.get(), m_timeline, samplePos);
-    TimelinePlayer::primeVoices(m_engine.get(), m_timeline, samplePos);
+    m_player.seek(samplePos, timeline);
+    TimelinePlayer::chase(m_engine.get(), timeline, samplePos);
+    TimelinePlayer::primeVoices(m_engine.get(), timeline, samplePos);
     m_playhead.store(samplePos);
 }
 
@@ -319,9 +321,10 @@ void AudioEngine::updateVoicegroup(LoadedVoiceGroup *voicegroup)
     m4a_engine_set_voicegroup(m_engine.get(), m_voicegroup ? m_voicegroup->voices : nullptr);
     // Re-latch program changes: the tracks' instrument state still points
     // into the old voices array until the chase reapplies it.
-    if (m_timeline) {
-        TimelinePlayer::chase(m_engine.get(), m_timeline, m_playhead.load());
-        TimelinePlayer::primeVoices(m_engine.get(), m_timeline, m_playhead.load());
+    const MidiTimeline *timeline = m_timelineHandoff.active();
+    if (timeline) {
+        TimelinePlayer::chase(m_engine.get(), timeline, m_playhead.load());
+        TimelinePlayer::primeVoices(m_engine.get(), timeline, m_playhead.load());
     }
     resetPreviewEngine();
     if (m_deviceStarted)
@@ -394,7 +397,7 @@ void AudioEngine::unloadSong()
     // the channels.
     m4a_engine_all_sound_off(m_engine.get());
     m_pendingSeek.store(kNoPendingSeek, std::memory_order_release);
-    m_timeline = nullptr;
+    m_timelineHandoff.reset();
     m_voicegroup = nullptr;
     m4a_engine_set_voicegroup(m_engine.get(), nullptr);
     resetPreviewEngine();
@@ -770,6 +773,9 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
     // requested after stop() (play-from-cursor) must land on top of the
     // rewind, not under it.
     applyTransportTransition();
+    const auto adoption = m_timelineHandoff.acquirePending();
+    if (adoption.raw)
+        applyTimelineAdoption(adoption.raw);
     applyPendingSeek();
     applyMuteTransition();
     applyPreviewNote();
@@ -799,7 +805,7 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
 
     while (done < frameCount) {
         const uint32_t n = std::min(frameCount - done, m_bufCapacity);
-        const MidiTimeline *tl = m_timeline;
+        const MidiTimeline *tl = m_timelineHandoff.active();
         const bool playing =
             m_appliedTransport == static_cast<int>(Transport::Playing) && tl != nullptr;
 
@@ -923,4 +929,6 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
     m_activeCgb.store(cgb);
     for (std::size_t track = 0; track < kMaxTracks; track++)
         publishMaximum(m_pendingTrackActivityLevels[track], callbackActivity[track]);
+    if (adoption.raw)
+        m_timelineHandoff.acknowledge(adoption.generation);
 }

@@ -6,11 +6,12 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
-
+#include <utility>
+#include <vector>
 #include "audio/auditionslots.h"
 #include "audio/resonance_suppressor.h"
+#include "audio/timeline_handoff.h"
 #include "audio/trackactivitylevel.h"
-
 #include "core/miditimeline.h"
 #include "core/timelineplayer.h"
 
@@ -87,19 +88,17 @@ class AudioEngine
     int periodSizeFrames() const { return m_periodFrames; }
     int periodCount() const { return m_periodCount; }
 
-    // Cold: swaps song data with the device stopped. Borrows both pointers —
-    // the caller (the owning song tab) keeps ownership and must detach the
-    // engine (another load call, or unloadSong) before freeing them.
-    void loadSong(const MidiTimeline *timeline, LoadedVoiceGroup *voicegroup,
+    // Cold: swaps song data with the device stopped. Takes shared ownership
+    // of the timeline; the voicegroup remains borrowed from the active song
+    // session.
+    void loadSong(std::shared_ptr<const MidiTimeline> timeline, LoadedVoiceGroup *voicegroup,
                   const SongSettings &settings);
     void unloadSong();
 
-    // Cold: swaps in a rebuilt timeline after a document edit, preserving
-    // transport state and the playhead position. Sounding notes are released
-    // (their note-offs may have moved or vanished in the new timeline).
-    // Borrowed like loadSong's; the old timeline may be freed once this
-    // returns.
-    void updateTimeline(const MidiTimeline *timeline);
+    // Publishes the latest rebuilt timeline for the next audio callback.
+    // Ownership handoff and deferred reclamation stay inside TimelineHandoff;
+    // this call never waits for the callback.
+    void updateTimeline(std::shared_ptr<const MidiTimeline> timeline);
     // Hot: requests a jump at the next audio callback. Releases sounding
     // notes and chases controller state at the landing position. Works in
     // any transport state; playing from Stopped starts wherever the last
@@ -153,8 +152,10 @@ class AudioEngine
     // from the next note on (applied at the next callback boundary).
     void refreshVoices() { m_refreshVoicesCmd.fetch_add(1); }
 
-    bool songLoaded() const { return m_timeline != nullptr; }
-    const MidiTimeline *timeline() const { return m_timeline; }
+    bool songLoaded() const { return m_timelineHandoff.active() != nullptr; }
+    // Borrowed snapshot for immediate GUI-thread reads. The engine retains
+    // replaced timelines until the audio callback finishes with them.
+    const MidiTimeline *timeline() const { return m_timelineHandoff.active(); }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
 
     // Hot-safe for scalar field pokes only (byte-sized stores the audio
@@ -236,6 +237,7 @@ class AudioEngine
                              uint32_t frameCount);
     void process(float *interleavedOut, uint32_t frameCount);
     void applyPendingSeek();
+    void applyTimelineAdoption(const MidiTimeline *timeline);
     void applyTransportTransition();
     // Transport cut-fade: the requested state is normally applied at the
     // exact zero-gain sample. A start at song position zero is deferred until
@@ -267,7 +269,7 @@ class AudioEngine
     int m_periodFrames = 0;
     int m_periodCount = 0;
     std::unique_ptr<M4AEngine> m_engine;
-    const MidiTimeline *m_timeline = nullptr; // not owned (the active song tab's)
+    TimelineHandoff m_timelineHandoff;
     LoadedVoiceGroup *m_voicegroup = nullptr; // not owned (the active song tab's)
     SongSettings m_settings;
     // Audition instance: voice previews and sample auditions, mixed on top
