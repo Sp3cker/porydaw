@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Run every porydaw --*check harness against fresh scratch copies of a
-# decomp project (the harnesses write into the project, so each one gets a
-# brand-new copy). Point it at an ASAN build (-DPORYDAW_ASAN=ON) to turn
+# Run every porydaw --*check harness against fresh APFS clone-on-write
+# scratch trees of a decomp project (the harnesses write into the project, so
+# each one gets isolated paths without duplicating unchanged file data). Point
+# it at an ASAN build (-DPORYDAW_ASAN=ON) to turn
 # silent memory bugs into aborts with stack traces.
 #
 # usage: tools/run_checks.sh <porydaw-binary> <decomp-checkout> [songsmk-fork]
@@ -50,7 +51,7 @@ copy_tree() { # src dst: the working tree minus .git
     for entry in "$1"/* "$1"/.[!.]*; do
         [ -e "$entry" ] || continue
         [ "$(basename "$entry")" = ".git" ] && continue
-        cp -r "$entry" "$2/"
+        cp -cR "$entry" "$2/"
     done
 }
 
@@ -81,7 +82,7 @@ run() { # name base|- harness-args... (SCRATCH placeholder = fresh copy of base)
     shift 2
     local scratch="$TMPROOT/scratch"
     rm -rf "$scratch"
-    [ "$base" != "-" ] && cp -r "$TMPROOT/$base" "$scratch"
+    [ "$base" != "-" ] && cp -cR "$TMPROOT/$base" "$scratch"
     local args=() a
     for a in "$@"; do
         [ "$a" = "SCRATCH" ] && a="$scratch"
