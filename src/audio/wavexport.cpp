@@ -98,10 +98,11 @@ bool exportWav(const QString &path, const MidiTimeline &timeline,
     m4a_engine_init(&engine, float(opts.sampleRate));
     m4a_engine_set_voicegroup(&engine, const_cast<ToneData *>(voicegroup->voices));
     m4a_engine_set_song_volume(&engine, settings.songVolume);
-    m4a_reverb_set_amount(&engine.reverb, settings.reverb);
-    engine.maxPcmChannels = settings.maxPcmChannels;
+    m4a_engine_set_reverb_amount(&engine, settings.reverb);
+    m4a_engine_set_max_pcm_channels(&engine, settings.maxPcmChannels);
+    m4a_engine_set_pcm_mixer_mode(&engine, settings.pcmMixer);
     m4a_engine_set_pcm_mix_rate(&engine, settings.pcmMixRate);
-    engine.analogFilter = settings.analogFilter;
+    m4a_engine_set_analog_filter(&engine, settings.analogFilter);
 
     constexpr uint32_t kChunk = 4096;
     std::vector<float> bufL(kChunk), bufR(kChunk);

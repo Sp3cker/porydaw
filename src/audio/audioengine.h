@@ -26,6 +26,7 @@ struct ma_device;
 struct ma_context;
 
 struct SongSettings {
+    M4APcmMixerMode pcmMixer = M4A_PCM_MIXER_IPATIX;
     uint8_t songVolume = 127;    // mid2agb -V (0-127)
     uint8_t reverb = 0;          // mid2agb -R (0-127)
     uint8_t maxPcmChannels = 5;  // pokeemerald m4aSoundInit default
@@ -202,6 +203,7 @@ class AudioEngine
     int activeCgbChannels() const { return m_activeCgb.load(); }
     TrackActivityLevels consumeTrackActivityLevels();
 
+    M4APcmMixerMode pcmMixerMode() const { return m_settings.pcmMixer; }
     int maxPcmChannels() const { return m_settings.maxPcmChannels; }
     int trackBudget() const { return m_settings.trackBudget; }
     uint64_t polyLostTotal() const; // dropped + stolen, all tracks (no tail cuts)

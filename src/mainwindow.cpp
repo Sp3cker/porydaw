@@ -1726,7 +1726,8 @@ void MainWindow::openSettings(SettingsDialog::Tab initialTab)
         return;
 
     const EngineSettings newEngine = dialog.engineSettings();
-    if (newEngine.maxPcmChannels != m_engineSettings.maxPcmChannels ||
+    if (newEngine.pcmMixer != m_engineSettings.pcmMixer ||
+        newEngine.maxPcmChannels != m_engineSettings.maxPcmChannels ||
         newEngine.pcmMixRate != m_engineSettings.pcmMixRate ||
         newEngine.analogFilter != m_engineSettings.analogFilter) {
         m_engineSettings = newEngine;
@@ -1763,6 +1764,7 @@ SongSettings MainWindow::songSettingsFor(const SongSession &session) const
     SongSettings settings;
     settings.songVolume = uint8_t(cfg.masterVolume);
     settings.reverb = uint8_t(cfg.reverb >= 0 ? cfg.reverb : SongCfg::kDefaultReverb);
+    settings.pcmMixer = m_engineSettings.pcmMixer;
     settings.maxPcmChannels = uint8_t(m_engineSettings.maxPcmChannels);
     settings.trackBudget = uint8_t(session.doc.trackBudget());
     settings.pcmMixRate = m_engineSettings.pcmMixRate;
@@ -3144,10 +3146,13 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     }
 
     // App settings: the global engine knobs (SPEC §7) re-applied mid-playback
-    // through updateSettings — polyphony clamp, mix-rate rebuild (reverb delay
-    // line resize), analog filter — must keep the transport running.
+    // through updateSettings — mixer, polyphony clamp, mix-rate rebuild
+    // (reverb delay line resize), and analog filter — must keep the transport
+    // running.
     {
         SongSettings tweaked = songSettingsFor(*tab);
+        tweaked.pcmMixer =
+            tweaked.pcmMixer == M4A_PCM_MIXER_IPATIX ? M4A_PCM_MIXER_SAPPY : M4A_PCM_MIXER_IPATIX;
         tweaked.maxPcmChannels = 8;
         tweaked.pcmMixRate = 21024.0f;
         tweaked.analogFilter = !tweaked.analogFilter;
@@ -3155,14 +3160,15 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         const uint64_t before = m_audio.playheadSamples();
         QTimer::singleShot(300, &loop, &QEventLoop::quit);
         loop.exec();
-        const bool engineOk = m_audio.maxPcmChannels() == 8 &&
-                              m_audio.playheadSamples() != before &&
-                              m_audio.transport() == Transport::Playing;
+        const bool engineOk =
+            m_audio.pcmMixerMode() == tweaked.pcmMixer && m_audio.maxPcmChannels() == 8 &&
+            m_audio.playheadSamples() != before && m_audio.transport() == Transport::Playing;
         m_audio.updateSettings(songSettingsFor(*tab));
         if (!engineOk) {
             qWarning("selftest: engine-settings update mid-playback FAILED "
-                     "(maxPcm %d, transport %d)",
-                     m_audio.maxPcmChannels(), int(m_audio.transport()));
+                     "(mixer %d, maxPcm %d, transport %d)",
+                     int(m_audio.pcmMixerMode()), m_audio.maxPcmChannels(),
+                     int(m_audio.transport()));
             return false;
         }
         qInfo("selftest: engine-settings update mid-playback OK");

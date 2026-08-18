@@ -523,6 +523,7 @@ int runKeymapCheck()
               "edit.preferences command is not bound to QKeySequence::Preferences");
 
         EngineSettings engineSettings;
+        engineSettings.pcmMixer = M4A_PCM_MIXER_SAPPY;
         engineSettings.maxPcmChannels = 8;
         SongCfg songCfg;
         songCfg.masterVolume = 110;
@@ -542,12 +543,23 @@ int runKeymapCheck()
         }
         check(dialog.currentTab() == SettingsDialog::Tab::Engine,
               "SettingsDialog did not open on initial Engine tab");
+        auto *mixer = dialog.findChild<QComboBox *>(QStringLiteral("pcmMixerCombo"));
+        check(mixer && mixer->count() == 2 && mixer->findData(int(M4A_PCM_MIXER_IPATIX)) >= 0 &&
+                  mixer->findData(int(M4A_PCM_MIXER_SAPPY)) >= 0,
+              "SettingsDialog does not expose both PCM mixers");
+        if (mixer) {
+            check(mixer->currentData().toInt() == int(M4A_PCM_MIXER_SAPPY),
+                  "SettingsDialog did not show the configured PCM mixer");
+            mixer->setCurrentIndex(mixer->findData(int(M4A_PCM_MIXER_IPATIX)));
+            check(dialog.engineSettings().pcmMixer == M4A_PCM_MIXER_IPATIX,
+                  "SettingsDialog did not return the selected PCM mixer");
+        }
         dialog.setCurrentTab(SettingsDialog::Tab::Song);
         check(dialog.currentTab() == SettingsDialog::Tab::Song,
               "SettingsDialog failed to switch to Song tab");
         const auto editedSong = dialog.songCfg();
-        check(editedSong && editedSong->masterVolume == 110,
-              "SettingsDialog does not reflect initial song cfg");
+        check(editedSong && editedSong->masterVolume == 110 && editedSong->reverb == songCfg.reverb,
+              "SettingsDialog changed the initial song cfg without an edit");
         dialog.setCurrentTab(SettingsDialog::Tab::Keyboard);
         check(dialog.currentTab() == SettingsDialog::Tab::Keyboard,
               "SettingsDialog failed to switch to Keyboard tab");
@@ -574,6 +586,16 @@ int runKeymapCheck()
               "SettingsDialog selected an unavailable Song tab");
         check(!noSongDialog.songCfg().has_value(),
               "SettingsDialog produced song settings without a song target");
+
+        EngineSettings persisted = engineSettings;
+        persisted.pcmMixer = M4A_PCM_MIXER_SAPPY;
+        persisted.save();
+        check(EngineSettings::load().pcmMixer == M4A_PCM_MIXER_SAPPY,
+              "EngineSettings did not persist the PCM mixer");
+        QSettings().setValue(QStringLiteral("engine/pcmMixer"), QStringLiteral("invalid"));
+        check(EngineSettings::load().pcmMixer == M4A_PCM_MIXER_IPATIX,
+              "EngineSettings did not reject an invalid PCM mixer");
+        persisted.save();
     }
 
     registry.resetAll();

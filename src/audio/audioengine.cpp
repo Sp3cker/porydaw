@@ -47,6 +47,15 @@ namespace {
 // Silence to render after the last event before auto-stopping (no loop).
 constexpr double kTailSeconds = 3.0;
 
+void applyEngineSettings(M4AEngine *engine, const SongSettings &settings)
+{
+    m4a_engine_set_song_volume(engine, settings.songVolume);
+    m4a_engine_set_reverb_amount(engine, settings.reverb);
+    m4a_engine_set_max_pcm_channels(engine, settings.maxPcmChannels);
+    m4a_engine_set_analog_filter(engine, settings.analogFilter);
+    m4a_engine_set_pcm_mixer_mode(engine, settings.pcmMixer);
+}
+
 void publishMaximum(std::atomic<uint32_t> &pending, TrackActivityLevel level)
 {
     auto observed = pending.load(std::memory_order_relaxed);
@@ -204,10 +213,7 @@ void AudioEngine::loadSong(std::shared_ptr<const MidiTimeline> timeline,
     m4a_engine_destroy(m_engine.get());
     m4a_engine_init(m_engine.get(), float(m_sampleRate));
     m4a_engine_set_voicegroup(m_engine.get(), m_voicegroup ? m_voicegroup->voices : nullptr);
-    m4a_engine_set_song_volume(m_engine.get(), m_settings.songVolume);
-    m4a_reverb_set_amount(&m_engine->reverb, m_settings.reverb);
-    m_engine->maxPcmChannels = m_settings.maxPcmChannels;
-    m_engine->analogFilter = m_settings.analogFilter;
+    applyEngineSettings(m_engine.get(), m_settings);
     m4a_engine_set_pcm_mix_rate(m_engine.get(), m_settings.pcmMixRate);
     // Latch the song's initial controller state and prime each track's voice
     // so auditioned notes (previewNote) sound as they would in the song
@@ -298,10 +304,7 @@ void AudioEngine::updateSettings(const SongSettings &settings)
     resetOutputCut();
     const bool mixRateChanged = settings.pcmMixRate != m_settings.pcmMixRate;
     m_settings = settings;
-    m4a_engine_set_song_volume(m_engine.get(), m_settings.songVolume);
-    m4a_reverb_set_amount(&m_engine->reverb, m_settings.reverb);
-    m_engine->maxPcmChannels = m_settings.maxPcmChannels;
-    m_engine->analogFilter = m_settings.analogFilter;
+    applyEngineSettings(m_engine.get(), m_settings);
     if (mixRateChanged)
         m4a_engine_set_pcm_mix_rate(m_engine.get(), m_settings.pcmMixRate);
     resetPreviewEngine();
@@ -344,10 +347,7 @@ void AudioEngine::resetPreviewEngine()
     m4a_engine_destroy(m_previewEngine.get());
     m4a_engine_init(m_previewEngine.get(), float(m_sampleRate));
     m4a_engine_set_voicegroup(m_previewEngine.get(), previewVoices());
-    m4a_engine_set_song_volume(m_previewEngine.get(), m_settings.songVolume);
-    m4a_reverb_set_amount(&m_previewEngine->reverb, m_settings.reverb);
-    m_previewEngine->maxPcmChannels = m_settings.maxPcmChannels;
-    m_previewEngine->analogFilter = m_settings.analogFilter;
+    applyEngineSettings(m_previewEngine.get(), m_settings);
     m4a_engine_set_pcm_mix_rate(m_previewEngine.get(), m_settings.pcmMixRate);
     m_previewVoiceKey = -1;
     // The reinit destroyed every channel, so all audition slots retire.

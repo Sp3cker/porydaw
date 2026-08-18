@@ -2,6 +2,10 @@
 
 #include <QWidget>
 
+extern "C" {
+#include "m4a/m4a_driver.h"
+}
+
 class QCheckBox;
 class QComboBox;
 class QSpinBox;
@@ -14,6 +18,7 @@ extern const int kGbaMixRates[12];
 // QSettings. Unlike Song Settings these never touch the project; reverb
 // stays per-song (midi.cfg -R).
 struct EngineSettings {
+    M4APcmMixerMode pcmMixer = M4A_PCM_MIXER_IPATIX;
     int maxPcmChannels = 5;      // pokeemerald m4aSoundInit default
     float pcmMixRate = 13379.0f; // GBA DirectSound rate; 0 = follow host rate
     bool analogFilter = false;   // GBA analog output low-pass; niche, off by default
@@ -34,6 +39,7 @@ class EngineSettingsWidget : public QWidget
 
   private:
     QSpinBox *m_polyphony = nullptr;
+    QComboBox *m_mixer = nullptr;
     QComboBox *m_mixRate = nullptr;
     QCheckBox *m_analogFilter = nullptr;
 };

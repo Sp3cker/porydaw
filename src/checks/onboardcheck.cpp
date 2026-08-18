@@ -1345,12 +1345,13 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         check(wizard.cfg().rawFlags.contains(QStringLiteral("-R50")),
               "wizard: default reverb not written as an explicit -R flag");
 
-        // Song Settings likewise: a cfg whose flags lack -R comes back healed
-        // to the default rather than staying absent.
+        // Opening Song Settings without editing must preserve a missing -R;
+        // otherwise accepting another settings tab dirties the song by
+        // silently replacing the inherited default with an explicit flag.
         SongCfg bare;
         SongSettingsWidget widget(bare, vgArgs);
-        check(widget.cfg().reverb == SongCfg::kDefaultReverb,
-              "song settings: absent -R does not heal to the default reverb");
+        check(widget.cfg().reverb == bare.reverb,
+              "song settings: absent -R changed without a user edit");
 
         // Role-aware analysis: the analysis page's player choice and the
         // identity page's are one selection, kept in sync from either side,

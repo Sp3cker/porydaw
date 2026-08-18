@@ -9,6 +9,7 @@
 #include <QVBoxLayout>
 
 extern "C" {
+#include "m4a/m4a_pcm_mixer_mode.h"
 #include "m4a_engine.h"
 }
 
@@ -19,6 +20,7 @@ namespace {
 
 constexpr int kGbaDefaultRate = 13379;
 
+const QString kKeyMixer = QStringLiteral("engine/pcmMixer");
 const QString kKeyPolyphony = QStringLiteral("engine/maxPcmChannels");
 const QString kKeyMixRate = QStringLiteral("engine/pcmMixRate");
 const QString kKeyAnalogFilter = QStringLiteral("engine/analogFilter");
@@ -30,6 +32,10 @@ EngineSettings EngineSettings::load()
     const EngineSettings defaults;
     QSettings qs;
     EngineSettings s;
+    const QByteArray mixerName =
+        qs.value(kKeyMixer, QLatin1String(m4a_pcm_mixer_name(defaults.pcmMixer))).toByteArray();
+    if (!m4a_pcm_mixer_parse(mixerName.constData(), &s.pcmMixer))
+        s.pcmMixer = defaults.pcmMixer;
     s.maxPcmChannels =
         qBound(1, qs.value(kKeyPolyphony, defaults.maxPcmChannels).toInt(), int(MAX_PCM_CHANNELS));
     s.pcmMixRate = qs.value(kKeyMixRate, double(defaults.pcmMixRate)).toFloat();
@@ -42,6 +48,7 @@ EngineSettings EngineSettings::load()
 void EngineSettings::save() const
 {
     QSettings qs;
+    qs.setValue(kKeyMixer, QLatin1String(m4a_pcm_mixer_name(pcmMixer)));
     qs.setValue(kKeyPolyphony, maxPcmChannels);
     qs.setValue(kKeyMixRate, double(pcmMixRate));
     qs.setValue(kKeyAnalogFilter, analogFilter);
@@ -60,6 +67,14 @@ EngineSettingsWidget::EngineSettingsWidget(const EngineSettings &settings, QWidg
                                "supports up to %1.")
                                 .arg(MAX_PCM_CHANNELS));
     form->addRow(tr("&PCM polyphony:"), m_polyphony);
+
+    m_mixer = new QComboBox(this);
+    m_mixer->setObjectName(QStringLiteral("pcmMixerCombo"));
+    m_mixer->addItem(tr("Ipatix"), int(M4A_PCM_MIXER_IPATIX));
+    m_mixer->addItem(tr("Sappy"), int(M4A_PCM_MIXER_SAPPY));
+    m_mixer->setToolTip(tr("Selects the DirectSound mixer implementation. Ipatix is the improved "
+                           "high-quality mixer; Sappy matches the standard Nintendo mixer."));
+    form->addRow(tr("PCM &mixer:"), m_mixer);
 
     m_mixRate = new QComboBox(this);
     for (int rate : kGbaMixRates) {
@@ -94,6 +109,8 @@ EngineSettingsWidget::EngineSettingsWidget(const EngineSettings &settings, QWidg
 
 void EngineSettingsWidget::applyToWidgets(const EngineSettings &settings)
 {
+    const int mixerIndex = m_mixer->findData(int(settings.pcmMixer));
+    m_mixer->setCurrentIndex(mixerIndex >= 0 ? mixerIndex : 0);
     m_polyphony->setValue(settings.maxPcmChannels);
     const int rate = int(settings.pcmMixRate + 0.5f);
     int idx = m_mixRate->findData(rate);
@@ -108,6 +125,7 @@ void EngineSettingsWidget::applyToWidgets(const EngineSettings &settings)
 EngineSettings EngineSettingsWidget::settings() const
 {
     EngineSettings s;
+    s.pcmMixer = static_cast<M4APcmMixerMode>(m_mixer->currentData().toInt());
     s.maxPcmChannels = m_polyphony->value();
     s.pcmMixRate = float(m_mixRate->currentData().toInt());
     s.analogFilter = m_analogFilter->isChecked();

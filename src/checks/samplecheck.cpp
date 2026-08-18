@@ -2475,50 +2475,44 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
                     ch = &engine->pcmChannels[i];
             }
             expect(ch != nullptr, "engine-loop note keys a channel");
-            int wraps = 0;
-            double maxBodyStep = 0.0, maxWrapStep = 0.0, peak = 0.0;
+            double maxRenderedStep = 0.0, peak = 0.0;
             if (ch) {
-                float l = 0.0f, r = 0.0f;
-                double prev = 0.0;
-                bool prevValid = false;
-                qint32 prevCount = ch->count;
-                // A wrap influences the interpolated output for a couple of
-                // samples (seam interpolation, then the mix upsampler's
-                // one-sample memory) — classify that whole window as wrap.
-                int wrapWindow = 0;
-                for (int i = 0; i < 400000 && wraps < 5; i++) {
-                    m4a_engine_process(engine, &l, &r, 1);
-                    if (ch->count > prevCount) {
-                        wraps++;
-                        wrapWindow = 2;
-                    }
-                    prevCount = ch->count;
-                    const double v = double(l);
-                    if (wraps >= 1) { // fully inside the loop region
-                        if (prevValid) {
-                            const double step = std::abs(v - prev);
-                            if (wrapWindow > 0)
-                                maxWrapStep = qMax(maxWrapStep, step);
-                            else
-                                maxBodyStep = qMax(maxBodyStep, step);
+                const quint64 loopLength = quint64(out.size) - out.loopStart;
+                const quint64 measurementStart = quint64(out.size) + 4 * loopLength;
+                const quint64 renderFrames = measurementStart + loopLength;
+                constexpr quint64 kMaxRenderFrames = 400000;
+                expect(renderFrames <= kMaxRenderFrames, "engine-loop fixture fits render window");
+                if (renderFrames <= kMaxRenderFrames) {
+                    float l = 0.0f, r = 0.0f;
+                    double prev = 0.0;
+                    for (quint64 i = 0; i < renderFrames; i++) {
+                        m4a_engine_process(engine, &l, &r, 1);
+                        const double v = double(l);
+                        if (i >= measurementStart) {
+                            maxRenderedStep = qMax(maxRenderedStep, std::abs(v - prev));
+                            peak = qMax(peak, std::abs(v));
                         }
-                        peak = qMax(peak, std::abs(v));
-                        prevValid = true;
+                        prev = v;
                     }
-                    if (wrapWindow > 0)
-                        wrapWindow--;
-                    prev = v;
+                    expect((ch->status & CHN_ON) && peak > 0.0,
+                           "at least 4 full loop wraps rendered");
                 }
             }
-            expect(wraps >= 5, "at least 4 full loop wraps rendered");
-            // 1 LSB in output units: the loop region's peak s8 value maps to
-            // the rendered peak (the envelope is constant at full sustain).
+            // Compare the rendered loop's largest step against the source
+            // loop, including its seam. One LSB in output units is derived
+            // from the loop region's peak s8 value.
             int maxS8 = 1;
-            for (quint32 i = out.loopStart; i < out.size; i++)
-                maxS8 = qMax(maxS8, std::abs(int(qint8(out.s8.at(qsizetype(i))))));
+            int maxSourceStep = 0;
+            for (quint32 i = out.loopStart; i < out.size; i++) {
+                const int sample = int(qint8(out.s8.at(qsizetype(i))));
+                const quint32 nextIndex = i + 1 < out.size ? i + 1 : out.loopStart;
+                const int next = int(qint8(out.s8.at(qsizetype(nextIndex))));
+                maxS8 = qMax(maxS8, std::abs(sample));
+                maxSourceStep = qMax(maxSourceStep, std::abs(next - sample));
+            }
             const double lsb = peak / double(maxS8);
-            expect(peak > 0.0 && maxWrapStep <= maxBodyStep + 2.0 * lsb + 1e-9,
-                   "loop-wrap steps stay within body steps + 2 LSB");
+            expect(peak > 0.0 && maxRenderedStep <= double(maxSourceStep) * lsb + 2.0 * lsb + 1e-9,
+                   "loop-wrap steps stay within source steps + 2 LSB");
             m4a_engine_destroy(engine);
             delete engine;
             voicegroup_free(vg);

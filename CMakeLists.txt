@@ -39,25 +39,19 @@ endif()
 find_package(Qt6 REQUIRED COMPONENTS Svg Widgets)
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
-set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa"
-    CACHE PATH "Path to the poryaaaa source tree")
-if(EXISTS "${PORYAAAA_DIR}/plugin/porydaw/CMakeLists.txt")
-    add_subdirectory(
-        "${PORYAAAA_DIR}/plugin/porydaw"
-        "${CMAKE_CURRENT_BINARY_DIR}/poryaaaa-engine")
-else()
-    add_library(poryaaaa_engine STATIC
-        ${PORYAAAA_DIR}/plugin/m4a_engine.c
-        ${PORYAAAA_DIR}/plugin/m4a_channel.c
-        ${PORYAAAA_DIR}/plugin/m4a_tables.c
-        ${PORYAAAA_DIR}/plugin/m4a_reverb.c
-        ${PORYAAAA_DIR}/plugin/voicegroup_loader.c
-    )
-    target_include_directories(poryaaaa_engine PUBLIC ${PORYAAAA_DIR}/plugin)
-    if(UNIX)
-        target_link_libraries(poryaaaa_engine PUBLIC m)
-    endif()
+set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
+    CACHE PATH "Path to the poryaaaa package source tree")
+if(NOT EXISTS "${PORYAAAA_DIR}/plugin/porydaw/CMakeLists.txt"
+   AND EXISTS "${PORYAAAA_DIR}/packages/poryaaaa/plugin/porydaw/CMakeLists.txt")
+    set(PORYAAAA_DIR "${PORYAAAA_DIR}/packages/poryaaaa"
+        CACHE PATH "Path to the poryaaaa package source tree" FORCE)
 endif()
+if(NOT EXISTS "${PORYAAAA_DIR}/plugin/porydaw/CMakeLists.txt")
+    message(FATAL_ERROR "PORYAAAA_DIR must point to the poryaaaa package source tree")
+endif()
+add_subdirectory(
+    "${PORYAAAA_DIR}/plugin/porydaw"
+    "${CMAKE_CURRENT_BINARY_DIR}/poryaaaa-engine")
 
 # ---- porydaw application ----
 qt_add_library(porydaw_app STATIC

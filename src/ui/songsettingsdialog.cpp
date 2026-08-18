@@ -36,9 +36,11 @@ SongSettingsWidget::SongSettingsWidget(const SongCfg &cfg, const QStringList &vo
     form->addRow(tr("&Master volume (-V):"), m_volume);
 
     m_reverb = new QSpinBox(this);
-    m_reverb->setRange(0, 127);
-    m_reverb->setValue(cfg.reverb >= 0 ? cfg.reverb : SongCfg::kDefaultReverb);
-    m_reverb->setToolTip(tr("mid2agb -R: song reverb level (vanilla default 50)."));
+    m_reverb->setRange(-1, 127);
+    m_reverb->setSpecialValueText(tr("Default (%1)").arg(SongCfg::kDefaultReverb));
+    m_reverb->setValue(cfg.reverb);
+    m_reverb->setToolTip(tr("mid2agb -R: song reverb level. Default leaves -R unspecified (%1).")
+                             .arg(SongCfg::kDefaultReverb));
     form->addRow(tr("&Reverb (-R):"), m_reverb);
 
     m_priority = new QSpinBox(this);
