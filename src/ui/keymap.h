@@ -2,6 +2,7 @@
 
 #include <QKeySequence>
 #include <QList>
+#include <QMap>
 #include <QObject>
 #include <QPointer>
 #include <QString>
@@ -45,7 +46,18 @@ class Registry : public QObject
 {
     Q_OBJECT
   public:
+    class OverrideSnapshot
+    {
+        friend class Registry;
+        QMap<QString, QString> m_overrides;
+    };
+
     static Registry &instance();
+
+    // Raw persisted override state, including empty explicit-unbind values.
+    // Restoring also reapplies all attached actions.
+    OverrideSnapshot snapshotOverrides() const;
+    void restoreOverrides(const OverrideSnapshot &snapshot);
 
     // All commands in stable table order (the settings UI's display order).
     QList<CommandInfo> commands() const;

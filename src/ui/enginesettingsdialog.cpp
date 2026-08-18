@@ -2,7 +2,6 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QPushButton>
 #include <QSettings>
@@ -48,11 +47,9 @@ void EngineSettings::save() const
     qs.setValue(kKeyAnalogFilter, analogFilter);
 }
 
-EngineSettingsDialog::EngineSettingsDialog(const EngineSettings &settings, QWidget *parent)
-    : QDialog(parent)
+EngineSettingsWidget::EngineSettingsWidget(const EngineSettings &settings, QWidget *parent)
+    : QWidget(parent)
 {
-    setWindowTitle(tr("Engine Settings"));
-
     auto *form = new QFormLayout;
 
     m_polyphony = new QSpinBox(this);
@@ -82,23 +79,20 @@ EngineSettingsDialog::EngineSettingsDialog(const EngineSettings &settings, QWidg
                                   "circuit (mGBA's low-pass filter). On sounds like "
                                   "hardware; off is the raw mixer output."));
 
+    auto *defaultsButton = new QPushButton(tr("Restore Defaults"), this);
+    connect(defaultsButton, &QPushButton::clicked, this,
+            [this] { applyToWidgets(EngineSettings()); });
+
     auto *layout = new QVBoxLayout(this);
     layout->addLayout(form);
     layout->addWidget(m_analogFilter);
-
-    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    QPushButton *defaultsButton =
-        buttons->addButton(tr("Restore Defaults"), QDialogButtonBox::ResetRole);
-    connect(defaultsButton, &QPushButton::clicked, this,
-            [this] { applyToWidgets(EngineSettings()); });
-    connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    layout->addWidget(buttons);
+    layout->addWidget(defaultsButton, 0, Qt::AlignLeft);
+    layout->addStretch(1);
 
     applyToWidgets(settings);
 }
 
-void EngineSettingsDialog::applyToWidgets(const EngineSettings &settings)
+void EngineSettingsWidget::applyToWidgets(const EngineSettings &settings)
 {
     m_polyphony->setValue(settings.maxPcmChannels);
     const int rate = int(settings.pcmMixRate + 0.5f);
@@ -111,7 +105,7 @@ void EngineSettingsDialog::applyToWidgets(const EngineSettings &settings)
     m_analogFilter->setChecked(settings.analogFilter);
 }
 
-EngineSettings EngineSettingsDialog::settings() const
+EngineSettings EngineSettingsWidget::settings() const
 {
     EngineSettings s;
     s.maxPcmChannels = m_polyphony->value();

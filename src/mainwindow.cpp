@@ -62,15 +62,14 @@
 #include "project/sidecar.h"
 #include "project/songregistry.h"
 #include "project/voicegroupeditcommand.h"
-#include "ui/keyboardshortcutsdialog.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/newsongwizard.h"
 #include "ui/polyphonypanel.h"
 #include "ui/sampleeditordialog.h"
+#include "ui/settingsdialog.h"
 #include "ui/sf2zonepicker.h"
 #include "ui/songlistpanel.h"
-#include "ui/songsettingsdialog.h"
 #include "ui/songview.h"
 #include "ui/theme/themecontroller.h"
 #include "ui/theme/themedialog.h"
@@ -295,6 +294,12 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("edit.redo"), redoAction);
     editMenu->addAction(redoAction);
     editMenu->addSeparator();
+    QAction *preferencesAction = editMenu->addAction(tr("Prefere&nces..."), this, [this] {
+        openSettings(m_active ? SettingsDialog::Tab::Song : SettingsDialog::Tab::Engine);
+    });
+    preferencesAction->setMenuRole(QAction::PreferencesRole);
+    keys.attach(QStringLiteral("edit.preferences"), preferencesAction);
+
     m_settingsAction =
         editMenu->addAction(tr("Song Se&ttings..."), this, &MainWindow::openSongSettings);
     keys.attach(QStringLiteral("edit.song_settings"), m_settingsAction);
@@ -1453,8 +1458,7 @@ void MainWindow::onDocumentChanged(SongSession &session)
         session.appliedReverb = cfg.reverb;
     }
 
-    auto timeline =
-        std::shared_ptr<MidiTimeline>(session.doc.buildTimeline(m_audio.sampleRate()));
+    auto timeline = std::shared_ptr<MidiTimeline>(session.doc.buildTimeline(m_audio.sampleRate()));
     if (active && m_audio.songLoaded())
         m_audio.updateTimeline(timeline);
     session.timeline = std::move(timeline);
@@ -1711,31 +1715,46 @@ void MainWindow::exportWav()
                              8000);
 }
 
+void MainWindow::openSettings(SettingsDialog::Tab initialTab)
+{
+    auto song = std::optional<SongTarget>();
+    if (m_active)
+        song = SongTarget{m_active->doc.cfg(), m_active->doc.label()};
+    const QStringList vgArgs = vgCatalog().groupArgs;
+    SettingsDialog dialog(m_engineSettings, song, vgArgs, initialTab, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    const EngineSettings newEngine = dialog.engineSettings();
+    if (newEngine.maxPcmChannels != m_engineSettings.maxPcmChannels ||
+        newEngine.pcmMixRate != m_engineSettings.pcmMixRate ||
+        newEngine.analogFilter != m_engineSettings.analogFilter) {
+        m_engineSettings = newEngine;
+        m_engineSettings.save();
+        if (m_audioOk && m_active && m_audio.songLoaded())
+            m_audio.updateSettings(songSettingsFor(*m_active));
+    }
+
+    if (m_active) {
+        const auto songCfg = dialog.songCfg();
+        if (songCfg)
+            m_active->doc.setCfg(*songCfg);
+    }
+}
+
 void MainWindow::openSongSettings()
 {
-    if (!m_active)
-        return;
-    SongSettingsDialog dialog(m_active->doc.cfg(), m_active->doc.label(), vgCatalog().groupArgs,
-                              this);
-    if (dialog.exec() == QDialog::Accepted)
-        m_active->doc.setCfg(dialog.cfg());
+    openSettings(SettingsDialog::Tab::Song);
 }
 
 void MainWindow::openKeyboardShortcuts()
 {
-    KeyboardShortcutsDialog dialog(this);
-    dialog.exec();
+    openSettings(SettingsDialog::Tab::Keyboard);
 }
 
 void MainWindow::openEngineSettings()
 {
-    EngineSettingsDialog dialog(m_engineSettings, this);
-    if (dialog.exec() != QDialog::Accepted)
-        return;
-    m_engineSettings = dialog.settings();
-    m_engineSettings.save();
-    if (m_audioOk && m_active && m_audio.songLoaded())
-        m_audio.updateSettings(songSettingsFor(*m_active));
+    openSettings(SettingsDialog::Tab::Engine);
 }
 
 SongSettings MainWindow::songSettingsFor(const SongSession &session) const
@@ -3154,8 +3173,10 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     // write-through now, exercised by --onboardcheck against a scratch copy.
     {
         NewSongWizard wizard(&m_project, vgCatalog().groupArgs, this);
-        EngineSettingsDialog engineDialog(m_engineSettings, this);
-        qInfo("selftest: New Song wizard + engine settings dialog constructed");
+        const auto songTarget = SongTarget{tab->doc.cfg(), tab->doc.label()};
+        SettingsDialog settingsDialog(m_engineSettings, songTarget, vgCatalog().groupArgs,
+                                      SettingsDialog::Tab::Engine, this);
+        qInfo("selftest: New Song wizard + unified settings dialog constructed");
     }
 
     const double playedSeconds = double(m_audio.playheadSamples()) / m_audio.sampleRate();

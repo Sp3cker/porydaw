@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QDialog>
+#include <QWidget>
 
 class QComboBox;
 class QKeySequenceEdit;
@@ -10,15 +10,15 @@ class QPushButton;
 class QTreeWidget;
 class QTreeWidgetItem;
 
-// Edit-menu dialog over keymap::Registry. Changes apply immediately (the
-// registry persists and re-applies them); there is no OK/Cancel staging —
-// per-command Reset and Reset All are the undo story.
-class KeyboardShortcutsDialog : public QDialog
+// Edit-menu widget over keymap::Registry. Assign and Reset actions mutate the
+// registry immediately; an owning dialog can provide transactional Cancel
+// behavior by snapshotting and restoring registry overrides.
+class KeyboardShortcutsWidget : public QWidget
 {
     Q_OBJECT
 
   public:
-    explicit KeyboardShortcutsDialog(QWidget *parent = nullptr);
+    explicit KeyboardShortcutsWidget(QWidget *parent = nullptr);
 
   private:
     void rebuildTree();
@@ -41,6 +41,7 @@ class KeyboardShortcutsDialog : public QDialog
     QPushButton *m_clearButton = nullptr;
     QPushButton *m_resetButton = nullptr;
     QLabel *m_conflictLabel = nullptr;
+    QPushButton *m_resetAllButton = nullptr;
     // Guards the tree-refresh feedback loop while an assignment is applied.
     bool m_applying = false;
 };

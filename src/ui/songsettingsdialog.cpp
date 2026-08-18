@@ -4,26 +4,24 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QSpinBox>
 #include <QVBoxLayout>
 
-SongSettingsDialog::SongSettingsDialog(const SongCfg &cfg, const QString &songLabel,
-                                       const QStringList &voicegroupArgs, QWidget *parent)
-    : QDialog(parent)
+SongSettingsWidget::SongSettingsWidget(const SongCfg &cfg, const QStringList &voicegroupArgs,
+                                       QWidget *parent)
+    : QWidget(parent)
     , m_original(cfg)
     , m_voicegroupArgs(voicegroupArgs)
 {
-    setWindowTitle(tr("Song Settings — %1").arg(songLabel));
-
+    auto *layout = new QVBoxLayout(this);
     auto *form = new QFormLayout;
 
     m_voicegroup = new QComboBox(this);
     m_voicegroup->setEditable(true);
-    for (const QString &arg : voicegroupArgs)
+    for (const QString &arg : m_voicegroupArgs)
         m_voicegroup->addItem(SongRegistry::voicegroupDisplayName(arg));
     m_voicegroup->setCurrentText(SongRegistry::voicegroupDisplayName(cfg.voicegroupArg));
     m_voicegroup->lineEdit()->setPlaceholderText(QStringLiteral("dummy"));
@@ -62,7 +60,6 @@ SongSettingsDialog::SongSettingsDialog(const SongCfg &cfg, const QString &songLa
     m_noCompression->setChecked(cfg.noCompression);
     m_noCompression->setToolTip(tr("Skip mid2agb's repeated-pattern compression."));
 
-    auto *layout = new QVBoxLayout(this);
     layout->addLayout(form);
     layout->addWidget(m_exactGate);
     layout->addWidget(m_extendedClocks);
@@ -71,14 +68,10 @@ SongSettingsDialog::SongSettingsDialog(const SongCfg &cfg, const QString &songLa
     auto *note = new QLabel(tr("Saved to this song's mid2agb flags (midi.cfg or songs.mk)."), this);
     note->setStyleSheet(QStringLiteral("color: gray;"));
     layout->addWidget(note);
-
-    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    layout->addWidget(buttons);
+    layout->addStretch(1);
 }
 
-SongCfg SongSettingsDialog::cfg() const
+SongCfg SongSettingsWidget::cfg() const
 {
     SongCfg cfg = m_original; // keeps rawFlags and unknown options
     cfg.voicegroupArg = SongRegistry::voicegroupArgFromDisplay(

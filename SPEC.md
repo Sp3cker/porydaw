@@ -289,7 +289,7 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   log where each event carries its bar:beat song position — double-click jumps the
   edit cursor/playhead there and selects the losing track and the lost note in the
   roll; live preview notes read "live" instead.
-- **Song Settings dialog:** the `midi.cfg` flags presented as friendly controls
+- **Song Settings tab:** the `midi.cfg` flags presented as friendly controls
   (voicegroup dropdown, reverb slider, master volume, priority, exact-gate toggle).
 - **MIDI event list** (View → MIDI Event List; swaps in for the piano roll):
   every event of one SMF chunk as an editable table row — tick, type, channel,

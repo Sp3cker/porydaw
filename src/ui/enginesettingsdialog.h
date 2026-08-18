@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QDialog>
+#include <QWidget>
 
 class QCheckBox;
 class QComboBox;
@@ -22,18 +22,17 @@ struct EngineSettings {
     void save() const;
 };
 
-class EngineSettingsDialog : public QDialog
+class EngineSettingsWidget : public QWidget
 {
     Q_OBJECT
 
   public:
-    explicit EngineSettingsDialog(const EngineSettings &settings, QWidget *parent = nullptr);
+    explicit EngineSettingsWidget(const EngineSettings &settings, QWidget *parent = nullptr);
 
     EngineSettings settings() const;
-
-  private:
     void applyToWidgets(const EngineSettings &settings);
 
+  private:
     QSpinBox *m_polyphony = nullptr;
     QComboBox *m_mixRate = nullptr;
     QCheckBox *m_analogFilter = nullptr;

@@ -43,6 +43,8 @@ const Def kDefs[] = {
     // Edit
     {"edit.undo", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Undo"), QKeySequence::Undo, ""},
     {"edit.redo", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Redo"), QKeySequence::Redo, ""},
+    {"edit.preferences", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Preferences"),
+     QKeySequence::Preferences, ""},
     {"edit.song_settings", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Song Settings"),
      QKeySequence::UnknownKey, ""},
     {"edit.engine_settings", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Engine Settings"),
@@ -191,6 +193,27 @@ Registry &Registry::instance()
 {
     static Registry registry;
     return registry;
+}
+
+Registry::OverrideSnapshot Registry::snapshotOverrides() const
+{
+    OverrideSnapshot snapshot;
+    QSettings settings;
+    settings.beginGroup(QStringLiteral("keymap"));
+    for (const QString &key : settings.allKeys())
+        snapshot.m_overrides.insert(key, settings.value(key).toString());
+    settings.endGroup();
+    return snapshot;
+}
+
+void Registry::restoreOverrides(const OverrideSnapshot &snapshot)
+{
+    QSettings settings;
+    settings.remove(QStringLiteral("keymap"));
+    for (auto it = snapshot.m_overrides.cbegin(); it != snapshot.m_overrides.cend(); ++it)
+        settings.setValue(settingsKey(it.key()), it.value());
+    applyToActions();
+    emit bindingsChanged();
 }
 
 QList<CommandInfo> Registry::commands() const

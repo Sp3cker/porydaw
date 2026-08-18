@@ -11,8 +11,7 @@
 #include "project/voicegroupsource.h"
 #include "songsession.h"
 #include "ui/editorviewstate.h"
-#include "ui/enginesettingsdialog.h"
-
+#include "ui/settingsdialog.h"
 class QAction;
 class QChildEvent;
 class QDockWidget;
@@ -101,6 +100,7 @@ class MainWindow : public QMainWindow
     void songOpenInNewTab(int songId);
     void saveSong();
     void exportWav();
+    void openSettings(SettingsDialog::Tab initialTab = SettingsDialog::Tab::Engine);
     void openSongSettings();
     void openEngineSettings();
     void openKeyboardShortcuts();

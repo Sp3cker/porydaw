@@ -1348,8 +1348,8 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         // Song Settings likewise: a cfg whose flags lack -R comes back healed
         // to the default rather than staying absent.
         SongCfg bare;
-        SongSettingsDialog dialog(bare, QStringLiteral("mus_bare"), vgArgs);
-        check(dialog.cfg().reverb == SongCfg::kDefaultReverb,
+        SongSettingsWidget widget(bare, vgArgs);
+        check(widget.cfg().reverb == SongCfg::kDefaultReverb,
               "song settings: absent -R does not heal to the default reverb");
 
         // Role-aware analysis: the analysis page's player choice and the
