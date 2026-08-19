@@ -9,9 +9,6 @@ permissions:
   contents: read
   packages: read
 
-env:
-  LINUX_CI_IMAGE: ghcr.io/sp3cker/porydaw-linux-ci@sha256:b06597cf22deb258d78691634d81ff16b99999f7e58263305fd08e456082c6b2
-
 jobs:
   # Formatting gate: src/ and tools/ must match the repo .clang-format.
   # Pinned to clang-format major 22 — output differs across major
@@ -31,7 +28,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.LINUX_CI_IMAGE }}
+      image: ghcr.io/sp3cker/porydaw-linux-ci@sha256:b06597cf22deb258d78691634d81ff16b99999f7e58263305fd08e456082c6b2
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -99,7 +96,7 @@ jobs:
   asan-checks:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.LINUX_CI_IMAGE }}
+      image: ghcr.io/sp3cker/porydaw-linux-ci@sha256:b06597cf22deb258d78691634d81ff16b99999f7e58263305fd08e456082c6b2
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
