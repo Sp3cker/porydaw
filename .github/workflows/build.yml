@@ -24,42 +24,10 @@ jobs:
       - name: Check formatting
         run: deno task format:check
 
-  # Build once per workflow; dependent jobs pull this exact resulting digest.
-  build-linux-image:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      image: ${{ steps.image.outputs.image }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - id: build
-        name: Build and publish Linux CI image
-        uses: docker/build-push-action@v6
-        with:
-          context: .github/ci/linux
-          push: true
-          tags: ghcr.io/sp3cker/porydaw-linux-ci:ci-${{ github.sha }}
-
-      - id: image
-        name: Publish image digest
-        run: |
-          echo "image=ghcr.io/sp3cker/porydaw-linux-ci@${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
-
   build-linux:
     runs-on: ubuntu-latest
-    needs: build-linux-image
     container:
-      image: ${{ needs.build-linux-image.outputs.image }}
+      image: ghcr.io/sp3cker/porydaw-linux-ci:qt6.9.3-deno2.9.5-v1
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -126,9 +94,8 @@ jobs:
   # optional corpus pass.
   asan-checks:
     runs-on: ubuntu-latest
-    needs: build-linux-image
     container:
-      image: ${{ needs.build-linux-image.outputs.image }}
+      image: ghcr.io/sp3cker/porydaw-linux-ci:qt6.9.3-deno2.9.5-v1
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
