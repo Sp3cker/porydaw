@@ -16,9 +16,11 @@
 #include <QStringList>
 
 #include <algorithm>
+#include <array>
 #include <climits>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -135,13 +137,27 @@ QColor SongView::trackColor(int track)
 }
 QColor SongView::noteColor(int track, int velocity)
 {
-    if (velocity <= 0)
-        return themes::color(themes::Role::song_view_note_velocity_zero);
-    if (velocity >= 127)
-        return trackColor(track);
-    const double t = 1.0 - (double(velocity) / 127.0);
-    return mixTowardOklab(trackColor(track),
-                          themes::color(themes::Role::song_view_note_velocity_zero), t);
+    // 16 identities × 128 velocities; rebuilt when the theme zero-velocity
+    // color changes. Steady-state paint is a table load.
+    static std::array<std::array<QColor, 128>, themes::trackIdentityColorCount> table{};
+    static std::optional<QRgb> zeroColorKey{};
+
+    const auto zeroColor = themes::color(themes::Role::song_view_note_velocity_zero);
+    if (!zeroColorKey || *zeroColorKey != zeroColor.rgba()) {
+        zeroColorKey = zeroColor.rgba();
+        for (std::size_t i = 0; i < table.size(); ++i) {
+            const auto identity = themes::trackIdentityColor(i);
+            table[i][0] = zeroColor;
+            table[i][127] = identity;
+            for (int velocityIndex = 1; velocityIndex < 127; ++velocityIndex) {
+                const double t = 1.0 - (double(velocityIndex) / 127.0);
+                table[i][static_cast<std::size_t>(velocityIndex)] =
+                    mixTowardOklab(identity, zeroColor, t);
+            }
+        }
+    }
+    const auto clampedVelocity = std::clamp(velocity, 0, 127);
+    return table[trackIdentityIndex(track)][static_cast<std::size_t>(clampedVelocity)];
 }
 QColor SongView::velocityNoteColor(int velocity)
 {

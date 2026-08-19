@@ -184,14 +184,14 @@ void PianoRoll::drawNotes(QPainter &painter, const SongViewModel &model, int sel
         painter.fillRect(noteBox, fill);
 
         // Mixing one-third toward black in OKLab keeps the bar distinct
-        // without rotating the identity hue. In velocity-color mode the
-        // full-strength fill already is the identity.
+        // without rotating the identity hue. The fixed identity shades are
+        // cached; velocity-color mode still follows the rendered fill.
         if (showVelocityHandles) {
-            const QColor identity =
-                m_sv->velocityColorMode() ? fill : SongView::trackColor(note.track);
+            const QColor stem = m_sv->velocityColorMode()
+                                    ? mixTowardOklab(fill, Qt::black, 1.0 / 3.0)
+                                    : trackStemColor(note.track);
             painter.fillRect(
-                velocityBarRect(noteRect, renderedVelocity, devicePixelRatioF(), m_geometry),
-                mixTowardOklab(identity, Qt::black, 1.0 / 3.0));
+                velocityBarRect(noteRect, renderedVelocity, devicePixelRatioF(), m_geometry), stem);
         }
         if (nameFont)
             drawNoteName(painter, noteRect, noteBox, displayedNoteKey(note), fill);

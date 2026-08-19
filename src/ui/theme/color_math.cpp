@@ -75,8 +75,8 @@ double linearChannel(int channel)
             result[index] = srgbToLinear(static_cast<double>(index) / (result.size() - 1));
         return result;
     }();
-    Q_ASSERT(channel >= 0 && channel < static_cast<int>(channels.size()));
-    return channels[static_cast<std::size_t>(channel)];
+    const auto clamped = std::clamp(channel, 0, static_cast<int>(channels.size() - 1));
+    return channels[static_cast<std::size_t>(clamped)];
 }
 
 SrgbSample encodedSample(const LinearRgb &rgb)
@@ -100,9 +100,9 @@ bool inUnitInterval(double value)
 Oklab oklabFromColor(const QColor &color)
 {
     const auto rgb = color.toRgb();
-    const auto red = srgbToLinear(rgb.redF());
-    const auto green = srgbToLinear(rgb.greenF());
-    const auto blue = srgbToLinear(rgb.blueF());
+    const auto red = linearChannel(rgb.red());
+    const auto green = linearChannel(rgb.green());
+    const auto blue = linearChannel(rgb.blue());
     const auto l = std::cbrt(0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue);
     const auto m = std::cbrt(0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue);
     const auto s = std::cbrt(0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue);
@@ -173,8 +173,8 @@ QColor shiftOklabLightness(const QColor &color, double distance)
 double relativeLuminance(const QColor &color)
 {
     const auto rgb = color.toRgb();
-    return 0.2126 * srgbToLinear(rgb.redF()) + 0.7152 * srgbToLinear(rgb.greenF()) +
-           0.0722 * srgbToLinear(rgb.blueF());
+    return 0.2126 * linearChannel(rgb.red()) + 0.7152 * linearChannel(rgb.green()) +
+           0.0722 * linearChannel(rgb.blue());
 }
 
 double relativeLuminance(const SrgbSample &sample)

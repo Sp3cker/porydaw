@@ -19,6 +19,7 @@
 #include <array>
 #include <climits>
 #include <cmath>
+#include <optional>
 
 namespace lyt = ::layout;
 using Space = lyt::Space;
@@ -214,6 +215,18 @@ std::size_t trackIdentityIndex(int track)
     return static_cast<std::size_t>(((track % count) + count) % count);
 }
 
+// Velocity-bar / stem shade: fixed mix of each identity toward black (once).
+QColor trackStemColor(int track)
+{
+    static const auto stems = [] {
+        std::array<QColor, themes::trackIdentityColorCount> result{};
+        for (std::size_t i = 0; i < result.size(); ++i)
+            result[i] = mixTowardOklabImpl(themes::trackIdentityColor(i), Qt::black, 1.0 / 3.0);
+        return result;
+    }();
+    return stems[trackIdentityIndex(track)];
+}
+
 // The higher-contrast piano-key color over a note fill.
 QColor contrastingTextColor(const QColor &backdrop)
 {
@@ -228,21 +241,37 @@ QColor contrastingTextColor(const QColor &backdrop)
 // stay equally recessive on light and dark themes.
 QColor ghostNoteColor(int track, bool accidentalRow)
 {
-    const auto &identity = themes::trackIdentityColor(trackIdentityIndex(track));
-    const auto background =
-        themes::color(accidentalRow ? themes::Role::song_view_piano_roll_accidental_lane
-                                    : themes::Role::song_view_piano_roll_background);
-    const auto identityLab = themes::oklabFromColor(identity);
-    const auto backgroundLab = themes::oklabFromColor(background);
-    constexpr auto kIdentityWeight = 60.0 / 255.0;
-    constexpr auto kMaxLightnessOffset = 0.055;
-    const auto lightnessOffset =
-        std::clamp((identityLab.lightness - backgroundLab.lightness) * kIdentityWeight,
-                   -kMaxLightnessOffset, kMaxLightnessOffset);
-    return themes::colorFromOklab(
-        {backgroundLab.lightness + lightnessOffset,
-         backgroundLab.a + (identityLab.a - backgroundLab.a) * kIdentityWeight,
-         backgroundLab.b + (identityLab.b - backgroundLab.b) * kIdentityWeight});
+    static std::array<std::array<QColor, 2>, themes::trackIdentityColorCount> colors{};
+    static std::optional<QRgb> backgroundKeys[2]{};
+
+    const auto &naturalBackground = themes::color(themes::Role::song_view_piano_roll_background);
+    const auto &accidentalBackground =
+        themes::color(themes::Role::song_view_piano_roll_accidental_lane);
+    if (!backgroundKeys[0] || !backgroundKeys[1] ||
+        *backgroundKeys[0] != naturalBackground.rgba() ||
+        *backgroundKeys[1] != accidentalBackground.rgba()) {
+        backgroundKeys[0] = naturalBackground.rgba();
+        backgroundKeys[1] = accidentalBackground.rgba();
+        const themes::Oklab backgrounds[2] = {themes::oklabFromColor(naturalBackground),
+                                              themes::oklabFromColor(accidentalBackground)};
+        constexpr double kIdentityWeight = 60.0 / 255.0;
+        constexpr double kMaxLightnessOffset = 0.055;
+        for (std::size_t i = 0; i < colors.size(); ++i) {
+            const auto identity = themes::oklabFromColor(themes::trackIdentityColor(i));
+            for (int background = 0; background < 2; ++background) {
+                const double lightnessOffset = std::clamp(
+                    (identity.lightness - backgrounds[background].lightness) * kIdentityWeight,
+                    -kMaxLightnessOffset, kMaxLightnessOffset);
+                colors[i][background] = themes::colorFromOklab(
+                    {backgrounds[background].lightness + lightnessOffset,
+                     backgrounds[background].a +
+                         (identity.a - backgrounds[background].a) * kIdentityWeight,
+                     backgrounds[background].b +
+                         (identity.b - backgrounds[background].b) * kIdentityWeight});
+            }
+        }
+    }
+    return colors[trackIdentityIndex(track)][accidentalRow ? 1 : 0];
 }
 
 // Draw the loop-region band across rect. x positions are

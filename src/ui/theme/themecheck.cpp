@@ -325,6 +325,49 @@ void checkDerivedThemes(Reporter &reporter)
     waveformLegible(themes::derive(QColor("#F2F2F2"), QColor("#0055AA")),
                     "a light derived Sample Editor ink is unreadable");
 }
+void checkColorMath(Reporter &reporter)
+{
+    const auto srgbToLinearRef = [](double c) {
+        return c <= 0.04045 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4);
+    };
+
+    const auto oklabFromColorRef = [&](const QColor &color) -> themes::Oklab {
+        const auto rgb = color.toRgb();
+        const auto r = srgbToLinearRef(static_cast<double>(rgb.red()) / 255.0);
+        const auto g = srgbToLinearRef(static_cast<double>(rgb.green()) / 255.0);
+        const auto b = srgbToLinearRef(static_cast<double>(rgb.blue()) / 255.0);
+        const auto l = std::cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+        const auto m = std::cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+        const auto s = std::cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+        return {0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+                1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+                0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s};
+    };
+
+    const auto colorsToTest = {
+        QColor(0, 0, 0),     QColor(255, 255, 255), QColor(128, 128, 128),
+        QColor(255, 0, 0),   QColor(0, 255, 0),     QColor(0, 0, 255),
+        QColor(24, 88, 192), QColor(200, 150, 50),  QColor(33, 33, 33),
+    };
+    for (const auto &c : colorsToTest) {
+        const auto got = themes::oklabFromColor(c);
+        const auto want = oklabFromColorRef(c);
+        constexpr double eps = 1e-12;
+        reporter.check(std::abs(got.lightness - want.lightness) < eps &&
+                           std::abs(got.a - want.a) < eps && std::abs(got.b - want.b) < eps,
+                       "oklabFromColor drifted from reference math");
+    }
+
+    for (const auto &c : colorsToTest) {
+        const auto rgb = c.toRgb();
+        const auto want = 0.2126 * srgbToLinearRef(static_cast<double>(rgb.red()) / 255.0) +
+                          0.7152 * srgbToLinearRef(static_cast<double>(rgb.green()) / 255.0) +
+                          0.0722 * srgbToLinearRef(static_cast<double>(rgb.blue()) / 255.0);
+        const auto got = themes::relativeLuminance(c);
+        constexpr double eps = 1e-12;
+        reporter.check(std::abs(got - want) < eps, "relativeLuminance drifted from reference math");
+    }
+}
 
 void checkThemeWorkflow(Reporter &reporter, QApplication &application)
 {
@@ -615,6 +658,7 @@ int runThemeCheck()
 {
     Reporter reporter;
     checkDerivedThemes(reporter);
+    checkColorMath(reporter);
     auto *application = qobject_cast<QApplication *>(QApplication::instance());
     reporter.check(application != nullptr, "themecheck requires QApplication");
     if (application)

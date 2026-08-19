@@ -45,6 +45,7 @@ QColor pianoRollScaleHighlightColor();
 QColor trackHeaderAlsoSelectedColor();
 QColor mixTowardOklabImpl(const QColor &color, const QColor &backdrop, double t);
 std::size_t trackIdentityIndex(int track);
+QColor trackStemColor(int track);
 QColor contrastingTextColor(const QColor &backdrop);
 QColor ghostNoteColor(int track, bool accidentalRow);
 void drawOverlays(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,

@@ -279,10 +279,12 @@ async function runProcess(
   environment: Readonly<Record<string, string>>,
 ): Promise<CheckResult> {
   const startedAt = performance.now();
+  const profileFile = Deno.env.get("LLVM_PROFILE_FILE");
   const child = new Deno.Command(binary, {
     args,
     env: {
       ASAN_OPTIONS: Deno.env.get("ASAN_OPTIONS") ?? "detect_leaks=0",
+      ...(profileFile ? { LLVM_PROFILE_FILE: profileFile } : {}),
       ...environment,
     },
     stdout: "piped",
