@@ -5,6 +5,13 @@ on:
     branches: [fork-main]
   pull_request:
 
+permissions:
+  contents: read
+  packages: read
+
+env:
+  LINUX_CI_IMAGE: ghcr.io/sp3cker/porydaw-linux-ci@sha256:b06597cf22deb258d78691634d81ff16b99999f7e58263305fd08e456082c6b2
+
 jobs:
   # Formatting gate: src/ and tools/ must match the repo .clang-format.
   # Pinned to clang-format major 22 — output differs across major
@@ -21,12 +28,32 @@ jobs:
       - name: Check formatting
         run: tools/format.sh --check
 
-  build:
+  build-linux:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ env.LINUX_CI_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+  build-native:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      SCCACHE_GHA_ENABLED: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,16 +65,25 @@ jobs:
           version: '6.9.*'
           cache: true
 
-      - name: Configure (Windows)
+      - name: Set up MSVC environment
         if: runner.os == 'Windows'
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Configure (Unix)
-        if: runner.os != 'Windows'
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Set up sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Configure
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build build
+
+      - name: Report sccache statistics
+        run: sccache --show-stats
 
       - name: Verify Windows SVG deployment
         if: runner.os == 'Windows'
@@ -62,29 +98,21 @@ jobs:
   # optional corpus pass.
   asan-checks:
     runs-on: ubuntu-latest
+    container:
+      image: ${{ env.LINUX_CI_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.9.*'
-          cache: true
-
-      - name: Install Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.9.5
 
       - name: Start a dummy audio server
         # The engine prefers PulseAudio; a headless daemon with a null sink
         # keeps every audio-dependent harness happy. Best-effort: without
         # it, miniaudio's own null backend is the fallback.
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pulseaudio
           pulseaudio -D --exit-idle-time=-1 || true
           pactl load-module module-null-sink sink_name=ci || true
       - name: Configure
