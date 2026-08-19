@@ -242,7 +242,7 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
     for (const QString &error : eventListPlayheadCheckFailures(view, *timeline))
         fail(qUtf8Printable(error));
 
-    const int track = view.selectedTrack();
+    const int track = view.selectionModel().primaryTrack();
     auto *row = view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));
     if (!row) {
         fail("track header row for the selected track was not found");
