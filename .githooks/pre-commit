@@ -7,7 +7,7 @@ repo_root=$(git rev-parse --show-toplevel) || {
 
 cd "$repo_root" || exit 1
 
-if ! tools/format.sh --check; then
-    echo "pre-commit: formatting check failed; run tools/format.sh to reformat, then retry the commit." >&2
+if ! deno task format:check; then
+    echo "pre-commit: formatting check failed; run deno task format, then retry the commit." >&2
     exit 1
 fi
