@@ -38,7 +38,12 @@ jobs:
           version: '6.9.*'
           cache: true
 
-      - name: Configure
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
