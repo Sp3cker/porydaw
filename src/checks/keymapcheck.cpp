@@ -502,9 +502,11 @@ int runKeymapCheck()
     }
     {
         const auto prefCmd = registry.command(QStringLiteral("edit.preferences"));
-        check(!prefCmd.defaults.isEmpty() &&
-                  prefCmd.defaults.first() == QKeySequence(QKeySequence::Preferences),
-              "edit.preferences command is not bound to QKeySequence::Preferences");
+        auto expectedPreferences = QKeySequence::keyBindings(QKeySequence::Preferences);
+        if (expectedPreferences.isEmpty())
+            expectedPreferences.append(QKeySequence(QStringLiteral("Ctrl+,")));
+        check(prefCmd.defaults == expectedPreferences,
+              "edit.preferences does not match the platform Preferences binding");
 
         EngineSettings engineSettings;
         engineSettings.pcmMixer = M4A_PCM_MIXER_SAPPY;

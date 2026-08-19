@@ -14,7 +14,8 @@ struct Def {
     const char *name;
     // Platform-adaptive default; UnknownKey means use `keys` instead.
     QKeySequence::StandardKey standard;
-    // Portable-text alternates separated by ';' ("Delete;Backspace"). For a
+    // Portable-text alternates separated by ';' ("Delete;Backspace"), also
+    // used as a fallback when a standard key has no platform binding. For a
     // modifier command this holds the default modifier chord ("Ctrl").
     const char *keys;
     // Mouse-gesture modifier command ("hold X and drag"): bound to a bare
@@ -44,7 +45,7 @@ const Def kDefs[] = {
     {"edit.undo", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Undo"), QKeySequence::Undo, ""},
     {"edit.redo", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Redo"), QKeySequence::Redo, ""},
     {"edit.preferences", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Preferences"),
-     QKeySequence::Preferences, ""},
+     QKeySequence::Preferences, "Ctrl+,"},
     {"edit.song_settings", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Song Settings"),
      QKeySequence::UnknownKey, ""},
     {"edit.engine_settings", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Engine Settings"),
@@ -154,8 +155,11 @@ QList<QKeySequence> defaultBindings(const Def &def)
 {
     if (def.modifier) // modifier chords are not key sequences
         return {};
-    if (def.standard != QKeySequence::UnknownKey)
-        return QKeySequence::keyBindings(def.standard);
+    if (def.standard != QKeySequence::UnknownKey) {
+        auto bindings = QKeySequence::keyBindings(def.standard);
+        if (!bindings.isEmpty() || def.keys[0] == '\0')
+            return bindings;
+    }
     QList<QKeySequence> out;
     const QString keys = QLatin1String(def.keys);
     // ';' separates alternates; QKeySequence's own multi-stroke separator is
