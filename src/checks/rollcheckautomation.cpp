@@ -1088,8 +1088,9 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     sendMouse(page.area(), QEvent::MouseMove, selectionEnd, Qt::NoButton, Qt::RightButton);
     sendMouse(page.area(), QEvent::MouseButtonRelease, selectionContractedEnd, Qt::RightButton,
               Qt::NoButton);
-    const auto timeSelection = view.timeSelection();
-    check(timeSelection.active() && timeSelection.scope == SongView::TimeSelection::Lanes &&
+    const auto timeSelection = view.selectionModel().timeSelection();
+    check(timeSelection.active() &&
+              timeSelection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
               timeSelection.lanes.size() == 1,
           QStringLiteral("right drag did not commit a half-open automation selection"));
     if (popupMenus) {
@@ -1113,14 +1114,14 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const QPoint selectionOutside(expected.plotOrigin + 260, sharedHeight / 2);
     sendMouse(page.area(), QEvent::MouseButtonPress, selectionOutside, Qt::LeftButton,
               Qt::LeftButton);
-    check(!view.timeSelection().active(),
+    check(!view.selectionModel().timeSelection().active(),
           QStringLiteral("left click outside a time selection did not clear it"));
     sendMouse(page.area(), QEvent::MouseButtonRelease, selectionOutside, Qt::LeftButton,
               Qt::NoButton);
-    view.setTimeSelection(timeSelection);
+    view.selectionModel().setTimeSelection(timeSelection);
     sendMouse(page.area(), QEvent::MouseButtonPress, selectionOutside, Qt::RightButton,
               Qt::RightButton);
-    check(!view.timeSelection().active(),
+    check(!view.selectionModel().timeSelection().active(),
           QStringLiteral("right click outside a time selection did not clear it"));
     QTimer::singleShot(0, [] {
         if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget()))
@@ -1128,47 +1129,51 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     });
     sendMouse(page.area(), QEvent::MouseButtonRelease, selectionOutside, Qt::RightButton,
               Qt::NoButton);
-    view.setTimeSelection(timeSelection);
+    view.selectionModel().setTimeSelection(timeSelection);
     const QPoint laneHeader(expected.plotOrigin - layout::space(layout::Space::One),
                             sharedHeight / 2);
     sendMouse(page.area(), QEvent::MouseButtonPress, laneHeader, Qt::LeftButton, Qt::LeftButton);
     sendMouse(page.area(), QEvent::MouseButtonRelease, laneHeader, Qt::LeftButton, Qt::NoButton);
-    check(!view.timeSelection().active(),
+    check(!view.selectionModel().timeSelection().active(),
           QStringLiteral("left click in a lane header did not clear the time selection"));
-    view.setTimeSelection(timeSelection);
+    view.selectionModel().setTimeSelection(timeSelection);
     QKeyEvent escapeSelection(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
     QCoreApplication::sendEvent(page.area(), &escapeSelection);
     QCoreApplication::processEvents();
-    check(!view.timeSelection().active() &&
-              view.timeSelection().scope == SongView::TimeSelection::Tracks &&
-              view.timeSelection().startTick == 0 && view.timeSelection().endTick == 0 &&
-              view.timeSelection().lanes.empty(),
+    check(!view.selectionModel().timeSelection().active() &&
+              view.selectionModel().timeSelection().scope ==
+                  songview::EditorSelectionModel::TimeSelection::Tracks &&
+              view.selectionModel().timeSelection().startTick == 0 &&
+              view.selectionModel().timeSelection().endTick == 0 &&
+              view.selectionModel().timeSelection().lanes.empty(),
           QStringLiteral("AutomationArea clear did not clear SongView's canonical selection"));
     page.area()->rebuildRows();
     page.refreshLiveState(live);
     QCoreApplication::processEvents();
-    check(!view.timeSelection().active() && view.timeSelection().lanes.empty(),
+    check(!view.selectionModel().timeSelection().active() &&
+              view.selectionModel().timeSelection().lanes.empty(),
           QStringLiteral("cleared automation selection was resurrected by row rebuild"));
 
-    SongView::TimeSelection noncontiguous;
+    songview::EditorSelectionModel::TimeSelection noncontiguous;
     noncontiguous.startTick = 24;
     noncontiguous.endTick = 72;
-    noncontiguous.scope = SongView::TimeSelection::Lanes;
+    noncontiguous.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
     noncontiguous.lanes = {{int(pan.track), pan.controller}, {int(bend.track), bend.controller}};
-    view.setTimeSelection(noncontiguous);
+    view.selectionModel().setTimeSelection(noncontiguous);
     page.refreshLiveState(live);
     QCoreApplication::processEvents();
-    check(view.timeSelection().lanes == noncontiguous.lanes,
+    check(view.selectionModel().timeSelection().lanes == noncontiguous.lanes,
           QStringLiteral("canonical lane selection replacement was not retained"));
 
     noncontiguous.lanes = {{int(lfo.track), lfo.controller}};
-    view.setTimeSelection(noncontiguous);
+    view.selectionModel().setTimeSelection(noncontiguous);
     page.refreshLiveState(live);
     QCoreApplication::processEvents();
     QKeyEvent clearCanonicalSelection(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
     QCoreApplication::sendEvent(page.area(), &clearCanonicalSelection);
     QCoreApplication::processEvents();
-    check(!view.timeSelection().active() && view.timeSelection().lanes.empty(),
+    check(!view.selectionModel().timeSelection().active() &&
+              view.selectionModel().timeSelection().lanes.empty(),
           QStringLiteral("AutomationArea lane replacement clear did not reach SongView"));
 
     // Multi-node time selection highlights nodes like velocity, and dragging
@@ -1204,10 +1209,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const QPoint groupBPoint = groupPointAt(groupB, groupBValue);
         const QPoint groupCPoint = groupPointAt(groupC, groupCValue);
         const auto trackRangeImage = [&](uint64_t endTick) {
-            SongView::TimeSelection selection;
+            songview::EditorSelectionModel::TimeSelection selection;
             selection.startTick = groupA;
             selection.endTick = endTick;
-            view.setTimeSelection(selection);
+            view.selectionModel().setTimeSelection(selection);
             live.horizontalScroll = 0.0;
             view.setEditorHorizontalScroll(live.horizontalScroll);
             page.refreshLiveState(live);
@@ -1247,18 +1252,18 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         check(bendRingChanged(),
               QStringLiteral("track time selection did not half-open-highlight automation nodes"));
 
-        SongView::TimeSelection groupSelection;
+        songview::EditorSelectionModel::TimeSelection groupSelection;
         groupSelection.startTick = groupA;
         groupSelection.endTick = groupB + 1;
-        groupSelection.scope = SongView::TimeSelection::Lanes;
+        groupSelection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
         groupSelection.lanes = {{int(pan.track), pan.controller}};
-        view.setTimeSelection(groupSelection);
+        view.selectionModel().setTimeSelection(groupSelection);
         page.refreshLiveState(live);
         QCoreApplication::processEvents();
-        const auto &selectedGroup = view.timeSelection();
+        const auto &selectedGroup = view.selectionModel().timeSelection();
         check(selectedGroup.active() && selectedGroup.startTick == groupA &&
                   selectedGroup.endTick == groupB + 1 &&
-                  selectedGroup.scope == SongView::TimeSelection::Lanes &&
+                  selectedGroup.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
                   selectedGroup.lanes == groupSelection.lanes,
               QStringLiteral("automation node selection did not retain its canonical lane range"));
         const uint64_t beforeGroupMove = document.revision();
@@ -1278,11 +1283,11 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const bool foundB = document.findLanePoint(0, pan.controller, groupB, nullptr);
         const bool foundC = document.findLanePoint(0, pan.controller, groupC, &stayedC) &&
                             stayedC.value == groupCValue;
-        const auto &afterSelection = view.timeSelection();
+        const auto &afterSelection = view.selectionModel().timeSelection();
         check(document.revision() == beforeGroupMove + 1 &&
                   document.undoStack()->index() == undoBeforeGroupMove + 1 && !foundA && !foundB &&
                   foundC && afterSelection.active() &&
-                  afterSelection.scope == SongView::TimeSelection::Lanes,
+                  afterSelection.scope == songview::EditorSelectionModel::TimeSelection::Lanes,
               QStringLiteral("group-dragging selected automation nodes did not move as one edit"));
         std::vector<DocLanePoint> survivors;
         for (const DocLanePoint &point : document.lanePoints(0, pan.controller)) {
@@ -1335,7 +1340,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                   document.undoStack()->index() == undoBeforeGroupMove,
               QStringLiteral("undo did not restore the automation group move"));
         for (const int key : {Qt::Key_Delete, Qt::Key_Backspace}) {
-            view.setTimeSelection(groupSelection);
+            view.selectionModel().setTimeSelection(groupSelection);
             page.refreshLiveState(live);
             QCoreApplication::processEvents();
             const uint64_t beforeDelete = document.revision();
@@ -1358,7 +1363,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             page.refreshLiveState(live);
             QCoreApplication::processEvents();
         }
-        view.clearTimeSelection();
+        view.selectionModel().clearTimeSelection();
         page.refreshLiveState(live);
         QCoreApplication::processEvents();
     }
@@ -1390,12 +1395,12 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                           lockPlotBottom - value * (lockPlotBottom - lockPlotTop) / 127);
         };
         const QPoint lockAPoint = lockPointAt(lockA, lockAValue);
-        SongView::TimeSelection lockSelection;
+        songview::EditorSelectionModel::TimeSelection lockSelection;
         lockSelection.startTick = lockA;
         lockSelection.endTick = lockB + 1;
-        lockSelection.scope = SongView::TimeSelection::Lanes;
+        lockSelection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
         lockSelection.lanes = {{int(pan.track), pan.controller}};
-        view.setTimeSelection(lockSelection);
+        view.selectionModel().setTimeSelection(lockSelection);
         page.refreshLiveState(live);
         QCoreApplication::processEvents();
         const int dragThreshold = expected.nodeDragActivationDistance + 8;
@@ -1431,7 +1436,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         live.documentRevision = document.revision();
         page.refreshLiveState(live);
         QCoreApplication::processEvents();
-        view.setTimeSelection(lockSelection);
+        view.selectionModel().setTimeSelection(lockSelection);
         page.refreshLiveState(live);
         QCoreApplication::processEvents();
         const QPoint verticalArm = lockAPoint + QPoint(0, -dragThreshold);
@@ -1457,7 +1462,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         document.undoStack()->undo();
         page.documentChanged();
         live.documentRevision = document.revision();
-        view.clearTimeSelection();
+        view.selectionModel().clearTimeSelection();
         page.refreshLiveState(live);
         QCoreApplication::processEvents();
     }

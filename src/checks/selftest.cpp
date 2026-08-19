@@ -61,8 +61,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     // M2: edit during playback — exercises the documentChanged plumbing
     // (timeline rebuild, playhead-preserving audio swap, view refresh).
     const uint64_t posBeforeEdit = m_audio.playheadSamples();
-    tab->doc.addNote(tab->view->selectedTrack(), 0, 60, 24, 100);
-    tab->doc.addLanePoint(tab->view->selectedTrack(), 7, 0, 100);
+    tab->doc.addNote(tab->view->selectionModel().primaryTrack(), 0, 60, 24, 100);
+    tab->doc.addLanePoint(tab->view->selectionModel().primaryTrack(), 7, 0, 100);
     if (!tab->doc.isDirty()) {
         qWarning("selftest: document not dirty after edits");
         return false;

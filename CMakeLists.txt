@@ -357,6 +357,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/fixturecatalog.cpp
         src/checks/fixturecatalog.hpp
         src/checks/fwd.hpp
+        src/checks/selectioncheck.cpp
         src/checks/selftest.cpp
         src/checks/tabcheck.cpp
         src/checks/eventviewcheck.cpp

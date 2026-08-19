@@ -266,7 +266,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         fail("piano roll not found or not laid out");
         return 1;
     }
-    const int track = view.selectedTrack();
+    const int track = view.selectionModel().primaryTrack();
     if (doc.engineTrackCount() <= track) {
         fail("no engine track to draw on");
         return 1;
@@ -330,9 +330,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                                          identityTimeline = std::move(rebuilt);
                                      });
                     identityView.selectTrack(track);
-                    identityView.setSelection({duplicates[0].noteId, duplicates[1].noteId});
+                    identityView.selectionModel().setNoteSelection(
+                        {duplicates[0].noteId, duplicates[1].noteId});
                     identityView.trackHeaderClicked(track, Qt::NoModifier);
-                    if (!identityView.selection().empty())
+                    if (!identityView.selectionModel().noteSelection().empty())
                         fail("plain click on the active track header did not clear note selection");
 
                     auto *identityRoll =
@@ -349,7 +350,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                                    lhs.duration == rhs.duration && lhs.key == rhs.key &&
                                    lhs.velocity == rhs.velocity && lhs.channel == rhs.channel;
                         };
-                        identityView.setSelection({firstBefore.noteId});
+                        identityView.selectionModel().setNoteSelection({firstBefore.noteId});
                         projectionDoc.moveNotes({firstBefore}, 0, 1);
                         DocNote firstMoved;
                         DocNote secondUntouched;
@@ -361,7 +362,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                         const bool secondStable =
                             projectionDoc.findNote(secondBefore.noteId, &secondUntouched) &&
                             sameNoteIdentityAndValue(secondUntouched, secondBefore);
-                        const std::vector<NoteId> &editedSelection = identityView.selection();
+                        const std::vector<NoteId> &editedSelection =
+                            identityView.selectionModel().noteSelection();
                         if (!firstEdit || !secondStable || editedSelection.size() != 1 ||
                             editedSelection.front() != firstBefore.noteId) {
                             fail("one-ID edit changed the wrong duplicate");
@@ -375,18 +377,20 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                             projectionDoc.findNote(secondBefore.noteId, &secondRestored) &&
                             sameNoteIdentityAndValue(firstRestored, firstBefore) &&
                             sameNoteIdentityAndValue(secondRestored, secondBefore);
-                        const std::vector<NoteId> &undoSelection = identityView.selection();
+                        const std::vector<NoteId> &undoSelection =
+                            identityView.selectionModel().noteSelection();
                         if (!undoRestored || undoSelection.size() != 1 ||
                             undoSelection.front() != firstBefore.noteId) {
                             fail("one-ID SongView edit did not restore both duplicates on Undo");
                         }
                     }
 
-                    identityView.setSelection({duplicates[0].noteId, duplicates[1].noteId});
+                    identityView.selectionModel().setNoteSelection(
+                        {duplicates[0].noteId, duplicates[1].noteId});
                     const int otherTrack = track == 0 ? 1 : 0;
                     if (otherTrack < projectionDoc.engineTrackCount()) {
                         identityView.trackHeaderClicked(otherTrack, Qt::NoModifier);
-                        if (!identityView.selection().empty())
+                        if (!identityView.selectionModel().noteSelection().empty())
                             fail("switching track headers did not clear note selection");
                     }
                 }
@@ -602,8 +606,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             };
             const auto hasTimeSelectionLanes =
                 [&](const std::vector<std::pair<int, uint8_t>> &expected) {
-                    const SongView::TimeSelection &selection = remapView.timeSelection();
-                    return selection.scope == SongView::TimeSelection::Lanes &&
+                    const songview::EditorSelectionModel::TimeSelection &selection =
+                        remapView.selectionModel().timeSelection();
+                    return selection.scope ==
+                               songview::EditorSelectionModel::TimeSelection::Lanes &&
                            selection.startTick == 24 && selection.endTick == 48 &&
                            selection.lanes == expected;
                 };
@@ -624,13 +630,15 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     return true;
                 };
             const auto hasMovedTrackState = [&] {
-                return remapView.selectedTrack() == 0 && remapView.trackSelectionMask() == 0x3 &&
+                return remapView.selectionModel().primaryTrack() == 0 &&
+                       remapView.selectionModel().storedTrackScope() == 0x3 &&
                        remapView.trackMuted(1) && !remapView.trackMuted(0) &&
                        remapView.trackSoloed(0) && !remapView.trackSoloed(1) &&
                        hasRemappedCosmetics(remapView.editorViewState(), 1, 0);
             };
             const auto hasOriginalTrackState = [&] {
-                return remapView.selectedTrack() == 1 && remapView.trackSelectionMask() == 0x3 &&
+                return remapView.selectionModel().primaryTrack() == 1 &&
+                       remapView.selectionModel().storedTrackScope() == 0x3 &&
                        remapView.trackMuted(0) && !remapView.trackMuted(1) &&
                        remapView.trackSoloed(1) && !remapView.trackSoloed(0) &&
                        hasRemappedCosmetics(remapView.editorViewState(), 0, 1);
@@ -645,8 +653,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             };
             // Restore the complete fixture before exercising the main remap matrix.
             remapView.applyEditorViewState(remapCosmetics);
-            remapView.clearSelection();
-            remapView.clearTimeSelection();
+            remapView.selectionModel().clearNoteSelection();
+            remapView.selectionModel().clearTimeSelection();
             remapView.clipboard() = SongView::Clip{};
             remapView.setTrackMute(0, false);
             remapView.setTrackMute(1, false);
@@ -657,12 +665,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             remapView.trackHeaderClicked(0, Qt::ControlModifier);
             remapView.setTrackMute(0, true);
             remapView.setTrackSolo(1, true);
-            SongView::TimeSelection lanes;
-            lanes.scope = SongView::TimeSelection::Lanes;
+            songview::EditorSelectionModel::TimeSelection lanes;
+            lanes.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
             lanes.startTick = 24;
             lanes.endTick = 48;
             lanes.lanes = {{0, 7}, {1, 10}};
-            remapView.setTimeSelection(lanes);
+            remapView.selectionModel().setTimeSelection(lanes);
             SongView::Clip clip;
             clip.tracks = {{0, {}}, {1, {}}};
             clip.lanes = {{0, 7, {}}, {1, 10, {}}};
@@ -683,8 +691,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
             // Later track-structure cases start without the move case's
             // lane-selection and clipboard payload.
-            remapView.clearTimeSelection();
-            remapView.clearSelection();
+            remapView.selectionModel().clearTimeSelection();
+            remapView.selectionModel().clearNoteSelection();
             remapView.clipboard() = SongView::Clip{};
 
             const int inserted = remapDoc.addTrack(0);
@@ -693,7 +701,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             } else {
                 expectRemapBeforeDocument("insert did not remap before documentChanged");
                 if (remapView.trackMuted(inserted) || remapView.trackSoloed(inserted) ||
-                    (remapView.trackSelectionMask() & (1u << inserted)) || !hasMovedTrackState() ||
+                    (remapView.selectionModel().storedTrackScope() & (1u << inserted)) ||
+                    !hasMovedTrackState() ||
                     !hasNoOwnerCosmetics(remapView.editorViewState(), inserted)) {
                     fail("inserted track inherited existing SongView state");
                 }
@@ -714,7 +723,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             } else {
                 expectRemapBeforeDocument("duplicate did not remap before documentChanged");
                 if (remapView.trackMuted(duplicate) || remapView.trackSoloed(duplicate) ||
-                    (remapView.trackSelectionMask() & (1u << duplicate)) || !hasMovedTrackState() ||
+                    (remapView.selectionModel().storedTrackScope() & (1u << duplicate)) ||
+                    !hasMovedTrackState() ||
                     !hasNoOwnerCosmetics(remapView.editorViewState(), duplicate)) {
                     fail("duplicated track inherited existing SongView state");
                 }
@@ -739,46 +749,49 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 deletedCosmetics.laneRanges.emplace(controllerRow(duplicate, 74), 120);
                 remapView.applyEditorViewState(deletedCosmetics);
 
-                SongView::TimeSelection deletedLanes;
-                deletedLanes.scope = SongView::TimeSelection::Lanes;
+                songview::EditorSelectionModel::TimeSelection deletedLanes;
+                deletedLanes.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
                 deletedLanes.startTick = 24;
                 deletedLanes.endTick = 48;
                 deletedLanes.lanes = {{duplicate, 74}};
-                remapView.setTimeSelection(deletedLanes);
+                remapView.selectionModel().setTimeSelection(deletedLanes);
                 SongView::Clip deletedClip;
                 deletedClip.tracks = {{duplicate, {}}};
                 deletedClip.lanes = {{duplicate, 74, {}}};
                 remapView.clipboard() = deletedClip;
                 const std::vector<DocNote> duplicateNotes = remapDoc.notesForTrack(duplicate);
                 if (!duplicateNotes.empty())
-                    remapView.setSelection({duplicateNotes.front().noteId});
+                    remapView.selectionModel().setNoteSelection({duplicateNotes.front().noteId});
                 remapDoc.deleteTrack(duplicate);
                 expectRemapBeforeDocument("delete did not remap before documentChanged");
-                if (remapView.selectedTrack() == duplicate || !remapView.selection().empty() ||
-                    remapView.timeSelection().active() || !remapView.clipboard().empty() ||
-                    remapView.trackMuted(duplicate) || remapView.trackSoloed(duplicate) ||
+                if (remapView.selectionModel().primaryTrack() == duplicate ||
+                    !remapView.selectionModel().noteSelection().empty() ||
+                    remapView.selectionModel().timeSelection().active() ||
+                    !remapView.clipboard().empty() || remapView.trackMuted(duplicate) ||
+                    remapView.trackSoloed(duplicate) ||
                     hasEmptyLane(remapView.editorViewState(), duplicate, 74)) {
                     fail("deleted track left SongView-owned state behind");
                 }
                 const int fallback = std::min(duplicate, remapDoc.engineTrackCount() - 1);
-                if (remapView.selectedTrack() != fallback ||
-                    remapView.trackSelectionMask() != (1u << fallback) || remapView.trackMuted(0) ||
-                    !remapView.trackMuted(1) || remapView.trackSoloed(1) ||
-                    !remapView.trackSoloed(0) ||
+                if (remapView.selectionModel().primaryTrack() != fallback ||
+                    remapView.selectionModel().storedTrackScope() != (1u << fallback) ||
+                    remapView.trackMuted(0) || !remapView.trackMuted(1) ||
+                    remapView.trackSoloed(1) || !remapView.trackSoloed(0) ||
                     !hasRemappedCosmetics(remapView.editorViewState(), 1, 0)) {
                     fail("delete did not drop cosmetic state from its removed owner");
                 }
 
                 remapDoc.undoStack()->undo();
                 expectRemapBeforeDocument("delete undo did not remap before documentChanged");
-                if (!remapView.selection().empty() || remapView.timeSelection().active() ||
+                if (!remapView.selectionModel().noteSelection().empty() ||
+                    remapView.selectionModel().timeSelection().active() ||
                     !remapView.clipboard().empty() || remapView.trackMuted(duplicate) ||
                     remapView.trackSoloed(duplicate) ||
                     hasEmptyLane(remapView.editorViewState(), duplicate, 74)) {
                     fail("restored track inherited dropped SongView state");
                 }
-                if (remapView.selectedTrack() != duplicate - 1 ||
-                    remapView.trackSelectionMask() != (1u << (duplicate - 1)) ||
+                if (remapView.selectionModel().primaryTrack() != duplicate - 1 ||
+                    remapView.selectionModel().storedTrackScope() != (1u << (duplicate - 1)) ||
                     remapView.trackMuted(0) || !remapView.trackMuted(1) ||
                     remapView.trackSoloed(1) || !remapView.trackSoloed(0) ||
                     !hasRemappedCosmetics(remapView.editorViewState(), 1, 0)) {
@@ -787,16 +800,16 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
                 remapDoc.undoStack()->redo();
                 expectRemapBeforeDocument("delete redo did not remap before documentChanged");
-                if (remapView.selectedTrack() != duplicate - 1 ||
-                    remapView.trackSelectionMask() != (1u << (duplicate - 1)) ||
+                if (remapView.selectionModel().primaryTrack() != duplicate - 1 ||
+                    remapView.selectionModel().storedTrackScope() != (1u << (duplicate - 1)) ||
                     remapView.trackMuted(0) || !remapView.trackMuted(1) ||
                     remapView.trackSoloed(1) || !remapView.trackSoloed(0) ||
                     !hasRemappedCosmetics(remapView.editorViewState(), 1, 0)) {
                     fail("delete redo did not keep dropped SongView state absent");
                 }
             }
-            const int metadataSelected = remapView.selectedTrack();
-            const uint32_t metadataHeaderMask = remapView.trackSelectionMask();
+            const int metadataSelected = remapView.selectionModel().primaryTrack();
+            const uint32_t metadataHeaderMask = remapView.selectionModel().storedTrackScope();
             const EditorViewState metadataCosmetics = remapView.editorViewState();
             const bool metadataMute0 = remapView.trackMuted(0);
             const bool metadataMute1 = remapView.trackMuted(1);
@@ -805,8 +818,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             const bool metadataSolo1 = remapView.trackSoloed(1);
             const bool metadataSolo2 = remapView.trackSoloed(2);
             const auto metadataStateUnchanged = [&] {
-                return remapView.selectedTrack() == metadataSelected &&
-                       remapView.trackSelectionMask() == metadataHeaderMask &&
+                return remapView.selectionModel().primaryTrack() == metadataSelected &&
+                       remapView.selectionModel().storedTrackScope() == metadataHeaderMask &&
                        remapView.editorViewState() == metadataCosmetics &&
                        remapView.trackMuted(0) == metadataMute0 &&
                        remapView.trackMuted(1) == metadataMute1 &&
@@ -893,32 +906,35 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     rawCosmetics.emptyLanes.emplace(controllerRow(0, 7));
                     rawView.applyEditorViewState(rawCosmetics);
                     rawView.setTrackSolo(0, true);
-                    SongView::TimeSelection rawTracks;
+                    songview::EditorSelectionModel::TimeSelection rawTracks;
                     rawTracks.startTick = 24;
                     rawTracks.endTick = 48;
-                    rawView.setTimeSelection(rawTracks);
+                    rawView.selectionModel().setTimeSelection(rawTracks);
                     SmfEvent promotedProgram;
                     promotedProgram.status = 0xC0;
                     promotedProgram.data0 = 3;
                     rawDoc.insertRawEvent(0, promotedProgram);
                     expectRawRemapBeforeDocument(
                         "metadata-to-engine raw edit did not remap before documentChanged");
-                    if (rawView.selectedTrack() != 1 || rawView.trackSelectionMask() != 0x2 ||
+                    if (rawView.selectionModel().primaryTrack() != 1 ||
+                        rawView.selectionModel().storedTrackScope() != 0x2 ||
                         rawView.trackMuted(0) || rawView.trackMuted(1) || rawView.trackSoloed(0) ||
-                        !rawView.trackSoloed(1) || !rawView.timeSelection().active() ||
+                        !rawView.trackSoloed(1) ||
+                        !rawView.selectionModel().timeSelection().active() ||
                         !hasRawCosmetics(rawView.editorViewState(), 1) ||
                         !hasNoOwnerCosmetics(rawView.editorViewState(), 0)) {
                         fail("metadata-to-engine raw edit did not remap SongView owners");
                     }
                     rawView.selectTrack(0);
                     rawView.setTrackMute(0, true);
-                    rawView.setTimeSelection(rawTracks);
+                    rawView.selectionModel().setTimeSelection(rawTracks);
                     rawDoc.undoStack()->undo();
                     expectRawRemapBeforeDocument(
                         "engine-to-metadata raw undo did not remap before documentChanged");
-                    if (rawView.selectedTrack() != 0 || rawView.trackSelectionMask() != 0x1 ||
+                    if (rawView.selectionModel().primaryTrack() != 0 ||
+                        rawView.selectionModel().storedTrackScope() != 0x1 ||
                         rawView.trackMuted(0) || !rawView.trackSoloed(0) ||
-                        rawView.timeSelection().active() ||
+                        rawView.selectionModel().timeSelection().active() ||
                         !hasRawCosmetics(rawView.editorViewState(), 0) ||
                         !hasNoOwnerCosmetics(rawView.editorViewState(), 1)) {
                         fail("engine-to-metadata fallback rebound SongView state to the wrong "
@@ -927,9 +943,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     rawDoc.undoStack()->redo();
                     expectRawRemapBeforeDocument(
                         "metadata-to-engine raw redo did not remap before documentChanged");
-                    if (rawView.selectedTrack() != 1 || rawView.trackSelectionMask() != 0x2 ||
+                    if (rawView.selectionModel().primaryTrack() != 1 ||
+                        rawView.selectionModel().storedTrackScope() != 0x2 ||
                         rawView.trackMuted(0) || rawView.trackMuted(1) || rawView.trackSoloed(0) ||
-                        !rawView.trackSoloed(1) || rawView.timeSelection().active() ||
+                        !rawView.trackSoloed(1) ||
+                        rawView.selectionModel().timeSelection().active() ||
                         !hasRawCosmetics(rawView.editorViewState(), 1) ||
                         !hasNoOwnerCosmetics(rawView.editorViewState(), 0)) {
                         fail("metadata-to-engine redo did not preserve remapped SongView owners");
@@ -1654,9 +1672,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             if (note.track == track && note.key == noteA.key && note.noteId.isAssigned())
                 expected.push_back(note.noteId);
         }
-        view.clearSelection();
+        view.selectionModel().clearNoteSelection();
         click(roll, QPoint(pianoKeyboardWidth - 1, rows.centerY(noteA.key)));
-        const std::vector<NoteId> &selected = view.selection();
+        const std::vector<NoteId> &selected = view.selectionModel().noteSelection();
         const bool allMatching = std::all_of(expected.begin(), expected.end(), [&](NoteId id) {
             return std::find(selected.begin(), selected.end(), id) != selected.end();
         });
@@ -1669,8 +1687,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // theirs.
     {
         const SongView::ViewState originalView = view.viewState();
-        const std::vector<NoteId> selectedNotes = view.selection();
-        view.clearSelection();
+        const std::vector<NoteId> selectedNotes = view.selectionModel().noteSelection();
+        view.selectionModel().clearNoteSelection();
         SongView::ViewState tinyView = originalView;
         tinyView.keyHeight = 5.0;
         tinyView.scrollY =
@@ -1687,7 +1705,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("tiny note lost its border instead of thinning it");
         if (isBlackBorder(tinyImage.pixel(tinyCenterX, qRound(tinyBox.top()) + 1)))
             fail("tiny note border swallowed the note face");
-        view.setSelection(selectedNotes);
+        view.selectionModel().setNoteSelection(selectedNotes);
         view.applyViewState(originalView);
     }
 
@@ -1746,7 +1764,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (isSelectionRingColor(selectedNoteImage.pixel(centerPixelX, topPixel + ringPixels)))
             fail("selection ring is thicker than its display-scaled weight");
 
-        view.clearSelection();
+        view.selectionModel().clearNoteSelection();
         const QImage unselectedNoteImage = roll->grab().toImage();
         for (int borderPixel = 0; borderPixel < borderPixels; ++borderPixel) {
             if (!isBlackBorder(
@@ -1761,7 +1779,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QCoreApplication::processEvents();
     }
 
-    const int selectedTrackBeforeGhostProbe = view.selectedTrack();
+    const int selectedTrackBeforeGhostProbe = view.selectionModel().primaryTrack();
     const int ghostTrack = (selectedTrackBeforeGhostProbe + 1) % doc.engineTrackCount();
     view.selectTrack(ghostTrack);
     const QImage ghostNoteRender = roll->grab().toImage();
@@ -2045,7 +2063,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendMouse(noteMenu, QEvent::MouseButtonRelease, noteMenu->mapFromGlobal(aGlobal),
                   Qt::RightButton, Qt::NoButton);
         QCoreApplication::processEvents();
-        const std::vector<NoteId> &selection = view.selection();
+        const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
         const NoteId aId = noteA.noteId;
         if (!noteMenu->isVisible())
             fail("retargeting hid the open note menu");
@@ -2223,7 +2241,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         const QPoint sweepStart(pianoKeyboardWidth + 1, 0);
         const QPoint sweepEnd(std::max(a.center.x(), b.center.x()) + 4,
                               std::max(a.center.y(), b.center.y()) + 4);
-        view.clearSelection();
+        view.selectionModel().clearNoteSelection();
         // The band is provisional until release, but covered notes should
         // use the same selection ring as the velocity drawer's live preview.
         const QRectF previewNoteBox = rows.noteBox(rows.noteRect(
@@ -2240,7 +2258,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         const int previewBottomY = qRound(previewNoteBox.bottom() * previewDpr) - 1;
         if (!isSelectionRingColor(previewImage.pixel(previewCenterX, previewBottomY)))
             fail("band-dragged note did not show a provisional selection ring");
-        if (!view.selection().empty())
+        if (!view.selectionModel().noteSelection().empty())
             fail("band drag committed selection before release");
 
         if (std::find(onKeys.begin(), onKeys.end(), a.key) == onKeys.end())
@@ -2256,7 +2274,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         QObject::disconnect(conn);
         if (std::count(onKeys.begin(), onKeys.end(), a.key) < 2)
             fail("re-covering a note did not re-audition it");
-        const std::vector<NoteId> &sel = view.selection();
+        const std::vector<NoteId> &sel = view.selectionModel().noteSelection();
         if (sel.size() < 2 || std::find(sel.begin(), sel.end(), noteA.noteId) == sel.end() ||
             std::find(sel.begin(), sel.end(), noteB.noteId) == sel.end())
             fail("band release did not select the swept notes");
@@ -2273,7 +2291,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             fail("band sweep auditioned a zero-length note");
         if (doc.undoStack()->count() != preBandCount)
             fail("band sweep pushed an undo command");
-        view.clearSelection(); // the sections below manage their own
+        view.selectionModel().clearNoteSelection(); // the sections below manage their own
     }
 
     // Empty-space press audition: a plain left press sounds its row at the
@@ -2426,11 +2444,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton, Qt::NoButton,
                   Qt::ControlModifier);
-        if (std::find(view.selection().begin(), view.selection().end(), bId) !=
-            view.selection().end())
+        if (std::find(view.selectionModel().noteSelection().begin(),
+                      view.selectionModel().noteSelection().end(),
+                      bId) != view.selectionModel().noteSelection().end())
             fail("Ctrl+click after a velocity drag did not keep its toggle meaning");
         click(roll, b.center);
-        if (view.selection() != std::vector<NoteId>{bId})
+        if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
             fail("plain click after a velocity drag did not restore the single-note selection");
 
         // The same uninterrupted modifier hold on another note is a request
@@ -2446,7 +2465,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendMouse(roll, QEvent::MouseButtonRelease, a.center + QPoint(0, 15), Qt::LeftButton,
                   Qt::NoButton, Qt::ControlModifier);
         DocNote aCarryAfter, bAfterCarry;
-        const std::vector<NoteId> &carriedSelection = view.selection();
+        const std::vector<NoteId> &carriedSelection = view.selectionModel().noteSelection();
         if (carriedSelection.size() != 1 || !(carriedSelection.front() == aCarryBefore.noteId))
             fail("a held modifier accumulated the note after a velocity drag");
         if (!doc.findNote(track, a.tick, uint8_t(a.key), &aCarryAfter) ||
@@ -2469,8 +2488,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton, Qt::NoButton,
                   Qt::ControlModifier);
-        if (std::find(view.selection().begin(), view.selection().end(), bId) !=
-            view.selection().end())
+        if (std::find(view.selectionModel().noteSelection().begin(),
+                      view.selectionModel().noteSelection().end(),
+                      bId) != view.selectionModel().noteSelection().end())
             fail("Ctrl+click did not toggle the note out of the selection");
 
         sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton, Qt::LeftButton,
@@ -2479,7 +2499,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 3), Qt::LeftButton,
                   Qt::NoButton, Qt::ControlModifier);
-        if (view.selection().size() != 1 || !(view.selection().front() == bId))
+        if (view.selectionModel().noteSelection().size() != 1 ||
+            !(view.selectionModel().noteSelection().front() == bId))
             fail("a sub-threshold Ctrl-jitter did not act as the toggle click");
         if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) || bMod.velocity != 78)
             fail("a sub-threshold Ctrl-jitter changed the velocity");
@@ -2503,7 +2524,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendMouse(roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15), Qt::LeftButton,
                   Qt::NoButton, Qt::ControlModifier);
         const NoteId aId = aBefore.noteId;
-        const std::vector<NoteId> &joined = view.selection();
+        const std::vector<NoteId> &joined = view.selectionModel().noteSelection();
         if (joined.size() != 2 || std::find(joined.begin(), joined.end(), aId) == joined.end() ||
             std::find(joined.begin(), joined.end(), bId) == joined.end())
             fail("a Ctrl+velocity drag replaced the bulk selection");
@@ -2526,7 +2547,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::ControlModifier);
         sendMouse(roll, QEvent::MouseButtonRelease, b.center - QPoint(0, 15), Qt::LeftButton,
                   Qt::NoButton, Qt::ControlModifier);
-        const std::vector<NoteId> &repeatedSelection = view.selection();
+        const std::vector<NoteId> &repeatedSelection = view.selectionModel().noteSelection();
         DocNote aRepeated, bRepeated;
         if (repeatedSelection.size() != 2 ||
             std::find(repeatedSelection.begin(), repeatedSelection.end(), aId) ==
@@ -2552,7 +2573,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendMouse(roll, QEvent::MouseButtonRelease, a.center + QPoint(0, 15), Qt::LeftButton,
                   Qt::NoButton, Qt::ControlModifier);
         DocNote aSwitched, bAfterSwitch;
-        if (view.selection() != std::vector<NoteId>{aId})
+        if (view.selectionModel().noteSelection() != std::vector<NoteId>{aId})
             fail("a carried modifier drag kept the prior note selected");
         if (!doc.findNote(track, a.tick, uint8_t(a.key), &aSwitched) ||
             aSwitched.velocity != aRepeated.velocity - 15)
@@ -2565,7 +2586,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         doc.undoStack()->undo();
         doc.undoStack()->undo();
         doc.undoStack()->undo(); // restore both velocities for later checks
-        view.clearSelection();
+        view.selectionModel().clearNoteSelection();
     }
 
     // A velocity value on a vertically short note stays inside the note box:
@@ -2712,7 +2733,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
             while (doc.undoStack()->index() > undoIndexBefore && doc.undoStack()->canUndo())
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
         view.applyViewState(originalView);
         QCoreApplication::processEvents();
@@ -2785,7 +2806,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::ControlModifier);
         const NoteId bId = bBefore.noteId;
         const NoteId dId = resized.noteId;
-        const std::vector<NoteId> &sel = view.selection();
+        const std::vector<NoteId> &sel = view.selectionModel().noteSelection();
         if (sel.size() != 2 || std::find(sel.begin(), sel.end(), bId) == sel.end() ||
             std::find(sel.begin(), sel.end(), dId) == sel.end())
             fail("a Ctrl+edge click did not join the note to the selection");
@@ -2814,7 +2835,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (doc.undoStack()->count() != preCount + 1)
             fail("Ctrl+edge drag did not push exactly one command");
         doc.undoStack()->undo(); // restore both durations for later checks
-        view.clearSelection();
+        view.selectionModel().clearNoteSelection();
     }
 
     // Overshooting the drag past the note's start must stop at one snap
@@ -2845,7 +2866,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // same border its wide neighbors have instead of shedding it.
     {
         const SongView::ViewState originalView = view.viewState();
-        view.clearSelection(); // the resize press selected note d
+        view.selectionModel().clearNoteSelection(); // the resize press selected note d
         SongView::ViewState narrowView = originalView;
         narrowView.pxPerBeat = 4.0;
         const double narrowPxPerTick = 4.0 / double(timeline->ticksPerBeat);
@@ -2919,7 +2940,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         // the RIGHT note's start moves one snap cell in; the left note must
         // stay put.
         doc.undoStack()->undo();
-        view.clearSelection();
+        view.selectionModel().clearNoteSelection();
         const QPointF pullRight(
             view.displayX(double(g.tick + g.dur + gSnap), pianoKeyboardWidth, gDpr), gRowY);
         sendMouse(roll, QEvent::MouseButtonPress, rightSide, Qt::LeftButton, Qt::LeftButton);
@@ -2933,7 +2954,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
         while (doc.undoStack()->index() > undoIndexBefore && doc.undoStack()->canUndo())
             doc.undoStack()->undo();
-        view.clearSelection();
+        view.selectionModel().clearNoteSelection();
     }
 
     // Keyboard transpose/nudge on note D (clicking it selects it):
@@ -2957,7 +2978,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // (reselecting — the selection keys on the start tick, which moved),
     // and Ctrl+Left must bring it back to the line it left.
     doc.moveNotes({transposed}, int64_t(snapCell / 2), 0);
-    view.setSelection({transposed.noteId});
+    view.selectionModel().setNoteSelection({transposed.noteId});
     sendKey(roll, Qt::Key_Left, Qt::ControlModifier);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
         fail("Ctrl+Left did not snap the off-grid note back to the grid");
@@ -3020,12 +3041,13 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         const QPoint end(qRound(view.displayX(double(endTick), rulerBand.timelineOrigin, rulerDpr)),
                          ruler->height() - 2);
 
-        view.clearTimeSelection();
+        view.selectionModel().clearTimeSelection();
         sendMouse(ruler, QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton);
         sendMouse(ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton);
         sendMouse(ruler, QEvent::MouseButtonRelease, end, Qt::LeftButton, Qt::NoButton);
-        if (!view.timeSelection().active() || view.timeSelection().startTick != startTick ||
-            view.timeSelection().endTick != endTick)
+        if (!view.selectionModel().timeSelection().active() ||
+            view.selectionModel().timeSelection().startTick != startTick ||
+            view.selectionModel().timeSelection().endTick != endTick)
             fail("left-dragging the timeline ruler did not create the time selection");
         const QPoint outsideSelection(
             qRound(view.displayX(double(endTick + snapCell), rulerBand.timelineOrigin, rulerDpr)),
@@ -3034,13 +3056,13 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                   Qt::LeftButton);
         sendMouse(ruler, QEvent::MouseButtonRelease, outsideSelection, Qt::LeftButton,
                   Qt::NoButton);
-        if (!view.timeSelection().active())
+        if (!view.selectionModel().timeSelection().active())
             fail("left-clicking the timeline ruler outside the time selection cleared it");
 
-        view.clearTimeSelection();
+        view.selectionModel().clearTimeSelection();
         sendMouse(ruler, QEvent::MouseButtonPress, start, Qt::RightButton, Qt::RightButton);
         sendMouse(ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::RightButton);
-        if (view.timeSelection().active())
+        if (view.selectionModel().timeSelection().active())
             fail("right-dragging the timeline ruler still created a time selection");
         QTimer::singleShot(0, [] {
             if (QWidget *menu = QApplication::activePopupWidget()) {
@@ -3055,10 +3077,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // The same shortcuts on a time selection (no notes selected): the band
     // over the note's cell transposes every covered note of the scoped
     // tracks, and a nudge moves the contents with the band following.
-    SongView::TimeSelection band;
+    songview::EditorSelectionModel::TimeSelection band;
     band.startTick = d.tick + snapCell;
     band.endTick = d.tick + 2 * snapCell;
-    view.setTimeSelection(band);
+    view.selectionModel().setTimeSelection(band);
     {
         const QRectF selectedByTimeBox = rows.noteBox(
             rows.noteRect(view.displayX(double(transposed.tick), pianoKeyboardWidth, rows.dpr()),
@@ -3072,7 +3094,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         const int bottomY = qRound(selectedByTimeBox.bottom() * selectedByTimeDpr) - 1;
         if (!isSelectionRingColor(selectedByTimeImage.pixel(centerX, bottomY)))
             fail("time-selected note did not show the normal selection ring");
-        if (!view.selection().empty())
+        if (!view.selectionModel().noteSelection().empty())
             fail("time-selected note leaked into the explicit note selection");
     }
     {
@@ -3098,9 +3120,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 qRound(view.displayX(double(emptyTick), pianoKeyboardWidth, rows.dpr())),
                 rows.centerY(emptyKey));
             click(roll, emptyInside);
-            if (view.timeSelection().active())
+            if (view.selectionModel().timeSelection().active())
                 fail("left-clicking empty space inside the time selection did not clear it");
-            view.setTimeSelection(band);
+            view.selectionModel().setTimeSelection(band);
         }
     }
     sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
@@ -3109,13 +3131,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
     if (!doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed))
         fail("time-selection Ctrl+Right did not nudge the covered note");
-    if (view.timeSelection().startTick != d.tick + 2 * snapCell)
+    if (view.selectionModel().timeSelection().startTick != d.tick + 2 * snapCell)
         fail("time-selection band did not follow the nudge");
 
     // Duplicate Time uses the active range as its source, advances the band
     // and edit cursor to the newly-created copy, and repeats from that copy.
     {
-        const SongView::TimeSelection duplicateSource = view.timeSelection();
+        const songview::EditorSelectionModel::TimeSelection duplicateSource =
+            view.selectionModel().timeSelection();
         const uint64_t duplicateSpan = duplicateSource.endTick - duplicateSource.startTick;
         const int duplicateUndoIndex = doc.undoStack()->index();
         const uint8_t duplicateKey = transposed.key;
@@ -3126,7 +3149,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendKey(roll, Qt::Key_D, Qt::ControlModifier);
         const uint64_t firstStart = duplicateSource.endTick;
         const uint64_t firstEnd = firstStart + duplicateSpan;
-        const SongView::TimeSelection firstSelection = view.timeSelection();
+        const songview::EditorSelectionModel::TimeSelection firstSelection =
+            view.selectionModel().timeSelection();
         if (doc.undoStack()->index() != duplicateUndoIndex + 1 || !firstSelection.active() ||
             firstSelection.startTick != firstStart || firstSelection.endTick != firstEnd ||
             view.editCursorTick() != firstEnd || !hasNoteAt(firstStart)) {
@@ -3141,7 +3165,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         sendKey(roll, Qt::Key_D, Qt::ControlModifier);
         const uint64_t secondStart = firstEnd;
         const uint64_t secondEnd = secondStart + duplicateSpan;
-        const SongView::TimeSelection secondSelection = view.timeSelection();
+        const songview::EditorSelectionModel::TimeSelection secondSelection =
+            view.selectionModel().timeSelection();
         if (doc.undoStack()->index() != duplicateUndoIndex + 2 || !secondSelection.active() ||
             secondSelection.startTick != secondStart || secondSelection.endTick != secondEnd ||
             view.editCursorTick() != secondEnd || !hasNoteAt(secondStart)) {
@@ -3149,7 +3174,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         }
         while (doc.undoStack()->index() > duplicateUndoIndex && doc.undoStack()->canUndo())
             doc.undoStack()->undo();
-        view.clearTimeSelection();
+        view.selectionModel().clearTimeSelection();
     }
 
     // Insert Blank Time keeps a track-scoped band and cursor while leaving a
@@ -3176,10 +3201,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("could not create the unselected-track insert fixture");
             } else {
                 view.selectTrack(track);
-                SongView::TimeSelection trackSelection;
+                songview::EditorSelectionModel::TimeSelection trackSelection;
                 trackSelection.startTick = insertStart;
                 trackSelection.endTick = insertEnd;
-                view.setTimeSelection(trackSelection);
+                view.selectionModel().setTimeSelection(trackSelection);
                 const int insertUndoIndex = doc.undoStack()->index();
                 view.insertBlankTime();
                 DocNote otherAfter;
@@ -3192,17 +3217,19 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     otherAfter.velocity == otherBefore.velocity;
                 const bool selectedShifted =
                     doc.findNote(track, insertEnd, transposed.key, &selectedAfter);
-                const SongView::TimeSelection insertedSelection = view.timeSelection();
+                const songview::EditorSelectionModel::TimeSelection insertedSelection =
+                    view.selectionModel().timeSelection();
                 if (doc.undoStack()->index() != insertUndoIndex + 1 || !otherStable ||
                     !selectedShifted || !insertedSelection.active() ||
                     insertedSelection.startTick != insertStart ||
                     insertedSelection.endTick != insertEnd ||
-                    insertedSelection.scope != SongView::TimeSelection::Tracks ||
+                    insertedSelection.scope !=
+                        songview::EditorSelectionModel::TimeSelection::Tracks ||
                     view.editCursorTick() != insertStart) {
                     fail("Insert Blank Time changed scope, cursor, or an unselected track");
                 }
                 doc.undoStack()->undo();
-                view.clearTimeSelection();
+                view.selectionModel().clearTimeSelection();
             }
         }
         while (doc.undoStack()->index() > fixtureUndoIndex && doc.undoStack()->canUndo())
@@ -3222,12 +3249,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             !doc.findNote(track, insertStart, transposed.key, &laneNoteBefore)) {
             fail("could not create the lane-scoped insert fixture");
         } else {
-            SongView::TimeSelection laneSelection;
+            songview::EditorSelectionModel::TimeSelection laneSelection;
             laneSelection.startTick = insertStart;
             laneSelection.endTick = insertEnd;
-            laneSelection.scope = SongView::TimeSelection::Lanes;
+            laneSelection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
             laneSelection.lanes = {{track, laneCc}};
-            view.setTimeSelection(laneSelection);
+            view.selectionModel().setTimeSelection(laneSelection);
             const int insertUndoIndex = doc.undoStack()->index();
             view.insertBlankTime();
             DocLanePoint shiftedLanePoint;
@@ -3240,17 +3267,18 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 laneNoteAfter.duration == laneNoteBefore.duration &&
                 laneNoteAfter.key == laneNoteBefore.key &&
                 laneNoteAfter.velocity == laneNoteBefore.velocity;
-            const SongView::TimeSelection insertedSelection = view.timeSelection();
+            const songview::EditorSelectionModel::TimeSelection insertedSelection =
+                view.selectionModel().timeSelection();
             if (doc.undoStack()->index() != insertUndoIndex + 1 || !laneShifted || !noteStable ||
                 !insertedSelection.active() ||
-                insertedSelection.scope != SongView::TimeSelection::Lanes ||
+                insertedSelection.scope != songview::EditorSelectionModel::TimeSelection::Lanes ||
                 insertedSelection.lanes != laneSelection.lanes ||
                 insertedSelection.startTick != insertStart ||
                 insertedSelection.endTick != insertEnd || view.editCursorTick() != insertStart) {
                 fail("lane-scoped Insert Blank Time widened its scope or moved the band");
             }
             doc.undoStack()->undo();
-            view.clearTimeSelection();
+            view.selectionModel().clearTimeSelection();
         }
         while (doc.undoStack()->index() > fixtureUndoIndex && doc.undoStack()->canUndo())
             doc.undoStack()->undo();
@@ -3509,9 +3537,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             const ViewNote target = notes[notes.size() / 2];
             if (!view.revealNote(target.track, target.key, target.startTick))
                 fail("revealNote did not find the note");
-            if (view.selectedTrack() != int(target.track))
+            if (view.selectionModel().primaryTrack() != int(target.track))
                 fail("revealNote did not select the track");
-            const auto &sel = view.selection();
+            const auto &sel = view.selectionModel().noteSelection();
             if (sel.size() != 1 || !(sel[0] == target.noteId))
                 fail("revealNote did not select the note");
 
@@ -3530,7 +3558,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             if (freeKey >= 0) {
                 if (view.revealNote(target.track, uint8_t(freeKey), target.startTick))
                     fail("revealNote found a note on an unused key");
-                if (view.selectedTrack() != int(target.track))
+                if (view.selectionModel().primaryTrack() != int(target.track))
                     fail("revealNote miss dropped the track selection");
             }
         }
@@ -3543,7 +3571,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // without a panel rebuild.
     {
         const int preCount = doc.undoStack()->count();
-        const int track = view.selectedTrack();
+        const int track = view.selectionModel().primaryTrack();
         if (view.muteMask() != 0 || view.soloMask() != 0)
             fail("mute/solo masks not clean before the keyboard toggles");
         sendKey(roll, Qt::Key_M, Qt::NoModifier);
@@ -3616,7 +3644,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     const auto projHidden = songview::PitchProjection::cHiddenRow;
     // Fold occupancy and editing key off m_selectedTrack, and the earlier
     // revealNote scenario may have switched it; re-bind to the live scaleTrack.
-    const int scaleTrack = view.selectedTrack();
+    const int scaleTrack = view.selectionModel().primaryTrack();
     if (scaleTrack < 0 || doc.engineTrackCount() <= scaleTrack)
         fail("scale scenario bound an invalid selected track");
     // Fold-aware row center: SnappedRows mirrors the CHROMATIC layout, but
@@ -3940,7 +3968,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("Highlight changed the painted note face");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
         view.setScaleRoot(0);
         view.setScaleId(scaleMajor);
@@ -4138,7 +4166,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 60, dur, 100);
-            view.setSelection({noteIdAt(tBase, 60)});
+            view.selectionModel().setNoteSelection({noteIdAt(tBase, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
             sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
@@ -4147,14 +4175,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("Fold Ctrl+Up did not move C up one scale degree to D");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
 
         // D2. Fold Ctrl+Shift+Up moves a chromatic octave (C60 -> 72).
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 60, dur, 100);
-            view.setSelection({noteIdAt(tBase, 60)});
+            view.selectionModel().setNoteSelection({noteIdAt(tBase, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
             sendKey(roll, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier);
@@ -4163,14 +4191,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("Fold Ctrl+Shift+Up did not move C up an octave");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
 
         // D3. Off Ctrl+Up stays chromatic (C60 -> 61).
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 60, dur, 100);
-            view.setSelection({noteIdAt(tBase, 60)});
+            view.selectionModel().setNoteSelection({noteIdAt(tBase, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(false);
             sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
@@ -4179,7 +4207,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("Off Ctrl+Up did not move C up a semitone");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
 
         // D4. Multi-note selection maps to distinct degrees (60,61 -> 62,64).
@@ -4187,7 +4215,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 60, dur, 100);
             doc.addNote(scaleTrack, tBase, 61, dur, 100);
-            view.setSelection({noteIdAt(tBase, 60), noteIdAt(tBase, 61)});
+            view.selectionModel().setNoteSelection({noteIdAt(tBase, 60), noteIdAt(tBase, 61)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
             sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
@@ -4198,7 +4226,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("Fold Ctrl+Up did not map selected notes to distinct degrees");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
 
         // D5. Repeated source pitch: two C60 notes both go to D62.
@@ -4207,7 +4235,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             const uint64_t tA = tBase, tB = tBase + uint64_t(doc.ticksPerClock());
             doc.addNote(scaleTrack, tA, 60, dur, 100);
             doc.addNote(scaleTrack, tB, 60, dur, 100);
-            view.setSelection({noteIdAt(tA, 60), noteIdAt(tB, 60)});
+            view.selectionModel().setNoteSelection({noteIdAt(tA, 60), noteIdAt(tB, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
             sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
@@ -4218,7 +4246,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("Repeated Fold source pitch did not share the destination");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
 
         // D6. Off-scale source entry (exception) nudges to the first scale
@@ -4226,7 +4254,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 61, dur, 100);
-            view.setSelection({noteIdAt(tBase, 61)});
+            view.selectionModel().setNoteSelection({noteIdAt(tBase, 61)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
             sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
@@ -4235,7 +4263,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("Fold Ctrl+Up did not move an off-scale exception to the next degree");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
 
         // D7. Fold rejects drawing into an off-scale exception row.
@@ -4260,7 +4288,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("Fold accepted a draw into an off-scale exception row");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
 
         // D8. The exception row's piano key still auditions its pitch.
@@ -4365,7 +4393,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                                                   dragAud = key;
                                           });
             sendMouse(roll, QEvent::MouseButtonPress, press, Qt::LeftButton, Qt::LeftButton);
-            if (view.selection().size() != 1)
+            if (view.selectionModel().noteSelection().size() != 1)
                 fail("Fold drag press did not grab the off-scale note");
             if (proj.visibleRowCount() != rowsWithNote)
                 fail("Fold rebuilt its layout during a pointer drag");
@@ -4386,7 +4414,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("Fold did not rebuild its occupied rows after the drag commit");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
 
         // D10. A horizontal-only move preserves an off-scale exception pitch.
@@ -4405,14 +4433,14 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             }
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
 
         // D11. Out-of-range diatonic nudge is atomic: no move, no command.
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 127, dur, 100); // B = top C-major pitch
-            view.setSelection({noteIdAt(tBase, 127)});
+            view.selectionModel().setNoteSelection({noteIdAt(tBase, 127)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
             const int cmdsBefore = doc.undoStack()->count();
@@ -4424,7 +4452,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("Fold out-of-range nudge moved the top pitch");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
-            view.clearSelection();
+            view.selectionModel().clearNoteSelection();
         }
 
         view.setScaleHighlight(false);

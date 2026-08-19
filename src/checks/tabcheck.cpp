@@ -407,7 +407,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         chooseComboData(scaleCombo, static_cast<int>(scaleB),
                         "B scale is missing from the transport control");
         SongView *bView = tabB->view;
-        const int originalTrack = bView->selectedTrack();
+        const int originalTrack = bView->selectionModel().primaryTrack();
         bool addedTrack = false;
         int differentTrack = -1;
         if (tabB->doc.engineTrackCount() < 2) {

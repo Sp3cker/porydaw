@@ -362,7 +362,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
         if (noteTrack >= 0) {
             view->selectTrack(noteTrack);
             const std::vector<NoteId> selection{notes[0].noteId, notes[1].noteId};
-            view->setSelection(selection);
+            view->selectionModel().setNoteSelection(selection);
         }
 
         view->setDrawerActivePage(EditorDrawerPage::Velocity);
@@ -460,7 +460,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                 check(false, "velocity edit invalidation fixture is unavailable");
             }
             const auto selectionBefore = velocity->diagnostics();
-            view->clearSelection();
+            view->selectionModel().clearNoteSelection();
             QCoreApplication::processEvents();
             check(velocity->diagnostics().contentBuildCount > selectionBefore.contentBuildCount,
                   "selection change did not invalidate affected velocity content");
@@ -519,7 +519,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                         view->setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
                         view->selectTrack(noteTrack);
                         const auto live = document->notesForTrack(noteTrack);
-                        view->setSelection({live[0].noteId, live[1].noteId});
+                        view->selectionModel().setNoteSelection({live[0].noteId, live[1].noteId});
                         QCoreApplication::processEvents();
                         sendMouse(*velocity, QEvent::MouseButtonPress, position, button,
                                   Qt::MouseButtons(button));
@@ -537,7 +537,8 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                   "lifecycle check must begin without an active gesture");
                             begin();
                             const bool interactionStarted = view->userGestureActive();
-                            const std::vector<NoteId> selection = view->selection();
+                            const std::vector<NoteId> selection =
+                                view->selectionModel().noteSelection();
                             const std::vector<NoteId> expectedSelection =
                                 clearsSelection ? std::vector<NoteId>{} : selection;
                             cancel();
@@ -554,7 +555,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                       document->smf().write() == midi &&
                                       document->revision() == revision &&
                                       document->undoStack()->count() == undo && previewCleared &&
-                                      view->selection() == expectedSelection &&
+                                      view->selectionModel().noteSelection() == expectedSelection &&
                                       QWidget::mouseGrabber() != &surface &&
                                       surface.cursor().shape() != Qt::ClosedHandCursor,
                                   route);
@@ -564,7 +565,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                             view->applyEditorViewState(lifecycleViewState);
                             view->setDrawerSectionVisible(EditorDrawerPage::Automations, true);
                             view->selectTrack(noteTrack);
-                            view->setSelection(selection);
+                            view->selectionModel().setNoteSelection(selection);
                         };
                         exercise(
                             "page switch did not terminate the live gesture",
@@ -649,7 +650,8 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                   velocityPoint + QPointF(32, -24), Qt::LeftButton, Qt::NoButton);
                         QCoreApplication::processEvents();
                     };
-                    const std::vector<NoteId> selectionBeforeMutation = view->selection();
+                    const std::vector<NoteId> selectionBeforeMutation =
+                        view->selectionModel().noteSelection();
                     const DocNote mutationNote = document->notesForTrack(noteTrack).front();
                     const uint64_t mutationRevision = document->revision();
                     const int mutationUndo = document->undoStack()->index();
@@ -661,7 +663,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                     check(document->revision() == mutationRevision + 1 &&
                               document->undoStack()->index() == mutationUndo + 1 &&
                               !view->previewVelocity(mutationNote.noteId) &&
-                              view->selection() == selectionBeforeMutation,
+                              view->selectionModel().noteSelection() == selectionBeforeMutation,
                           "document mutation did not terminate and clear the staged velocity "
                           "preview");
                     document->undoStack()->undo();
@@ -671,7 +673,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                     document->undoStack()->undo();
                     check(document->undoStack()->index() == undoIndex - 1 &&
                               !view->previewVelocity(mutationNote.noteId) &&
-                              view->selection() == selectionBeforeMutation,
+                              view->selectionModel().noteSelection() == selectionBeforeMutation,
                           "Undo did not terminate and clear the staged velocity preview");
                     document->undoStack()->redo();
                     document->undoStack()->undo();
@@ -681,7 +683,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                     releaseVelocityRelative();
                     check(document->undoStack()->index() == redoIndex + 1 &&
                               !view->previewVelocity(mutationNote.noteId) &&
-                              view->selection() == selectionBeforeMutation,
+                              view->selectionModel().noteSelection() == selectionBeforeMutation,
                           "Redo did not terminate and clear the staged velocity preview");
 
                     const SongInfo *reloadSong = nullptr;
@@ -703,7 +705,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                         view->setDocument(document);
                     }
                     check(reloaded && !view->previewVelocity(mutationNote.noteId) &&
-                              view->selection().empty(),
+                              view->selectionModel().noteSelection().empty(),
                           "reload did not terminate and clear the staged velocity preview");
                 }
                 document->undoStack()->undo();

@@ -121,7 +121,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
         fail("no chunk selected");
         return failures;
     }
-    const int selectedChunk = doc.smfTrackFor(view.selectedTrack());
+    const int selectedChunk = doc.smfTrackFor(view.selectionModel().primaryTrack());
     if (selectedChunk >= 0 && selectedChunk != chunk)
         fail("chunk combo does not follow the selected track");
 
@@ -474,7 +474,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 doc.undoStack()->undo();
                 expectNotifications(true, "removing inserted track did not notify in order");
                 expectAnchor(-1, "removing inserted track selected another chunk");
-                if (view.selectedTrack() == anchorEngine) {
+                if (view.selectionModel().primaryTrack() == anchorEngine) {
                     view.setEventListVisible(false);
                     view.setEventListVisible(true);
                 } else {
