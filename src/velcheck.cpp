@@ -13,6 +13,7 @@
 #include <QFontMetrics>
 #include <QImage>
 #include <QKeyEvent>
+#include <QLineEdit>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QSettings>
@@ -911,6 +912,72 @@ int runVelocityLaneCheck(const QString &projectRoot, const QString &songLabel,
           "closing the focused lane must hand the keyboard back to the roll");
     sendLaneKey(roll, Qt::Key_V);
     (void)view.grab();
+
+    // --- a press on a focus-less part of the view hands the keyboard back
+    // The bare-letter shortcuts dispatch from the focused surface, so a press
+    // on the header panel, the strip, or an M/S button (none of which takes
+    // the focus itself) must bring the keyboard back from wherever it was —
+    // a dock's search field, say — or the next A/V would go nowhere. With a
+    // surface already focused, the same press must leave the focus alone.
+    {
+        auto *headers = view.findChild<QWidget *>(QStringLiteral("trackHeaderPanel"));
+        auto *mute = view.findChild<QToolButton *>(QStringLiteral("trackMuteButton"));
+        check(headers && mute, "the header panel and a mute button must be findable");
+        // Delivered to the deepest child under the point, as a real press is.
+        const auto pressAt = [&](QWidget *surface, QPoint pos) {
+            QWidget *target = surface->childAt(pos);
+            if (!target)
+                target = surface;
+            const QPointF local(target->mapFrom(surface, pos));
+            sendLaneMouse(target, QEvent::MouseButtonPress, local, Qt::LeftButton, Qt::LeftButton);
+            sendLaneMouse(target, QEvent::MouseButtonRelease, local, Qt::LeftButton, Qt::NoButton);
+        };
+        QLineEdit sink(&view); // stands in for a focused input elsewhere
+        sink.setFocus(Qt::OtherFocusReason);
+        check(view.focusWidget() == &sink, "the stand-in input must take the focus");
+        if (headers) {
+            pressAt(headers, QPoint(headers->width() / 2, headers->height() - 2));
+            check(view.focusWidget() == roll,
+                  "a press on the header panel must hand the focus to the roll");
+            const bool lanesOpen = view.automationLanesVisible();
+            sendLaneKey(view.focusWidget(), Qt::Key_A);
+            check(view.automationLanesVisible() != lanesOpen,
+                  "A must work right after a press on the header panel");
+            if (view.automationLanesVisible() != lanesOpen)
+                sendLaneKey(roll, Qt::Key_A); // back as it was, pass or fail
+            (void)view.grab();
+        }
+        if (strip) {
+            sink.setFocus(Qt::OtherFocusReason);
+            pressAt(strip, QPoint(strip->width() / 2, strip->height() / 2));
+            check(view.focusWidget() == roll,
+                  "a press on the strip must hand the focus to the roll");
+        }
+        if (mute) {
+            sink.setFocus(Qt::OtherFocusReason);
+            pressAt(mute, mute->rect().center());
+            pressAt(mute, mute->rect().center()); // and back off again
+            check(view.focusWidget() == roll,
+                  "a press on a header's mute button must hand the focus to the roll");
+            // With the lanes focused, the same press keeps the keyboard on
+            // the lanes: the buttons are TabFocus precisely so a click never
+            // moves the shortcuts off a surface.
+            lanes->setFocus(Qt::OtherFocusReason);
+            pressAt(mute, mute->rect().center());
+            pressAt(mute, mute->rect().center());
+            check(view.focusWidget() == lanes,
+                  "a press on a mute button with the lanes focused must leave them focused");
+        }
+        // A press on a surface is Qt's to focus (ClickFocus, on the real,
+        // spontaneous press this harness cannot fake): the view must not
+        // second-guess it by dragging the focus to the roll.
+        sink.setFocus(Qt::OtherFocusReason);
+        pressAt(lane, QPoint(lane->width() / 2, lane->height() / 2));
+        check(view.focusWidget() != roll,
+              "a press on the velocity lane must not hand the focus to the roll");
+        roll->setFocus(Qt::OtherFocusReason);
+        (void)view.grab();
+    }
 
     // --- node and stem placement
     const int track = view.selectedTrack();

@@ -8240,6 +8240,37 @@ SongView::SongView(QWidget *parent) : QWidget(parent)
 
     connect(m_hbar, &QScrollBar::valueChanged, this, [this](int v) { setHScroll(scrollDips(v)); });
     connect(m_vbar, &QScrollBar::valueChanged, this, [this](int v) { setVScroll(scrollDips(v)); });
+
+    // Mouse presses go to the widget under the pointer, never to this view,
+    // so catching the ones on focus-less children takes an application
+    // filter (refocusAfterDeadClick). Qt drops the filter with the view.
+    qApp->installEventFilter(this);
+}
+
+bool SongView::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::MouseButtonPress)
+        refocusAfterDeadClick(qobject_cast<QWidget *>(watched));
+    return QWidget::eventFilter(watched, event);
+}
+
+void SongView::refocusAfterDeadClick(QWidget *clicked)
+{
+    if (!clicked || !isAncestorOf(clicked))
+        return;
+    // Qt has already walked this chain (before the filter saw the press) and
+    // focused the nearest click-focusable widget on it; if there is one,
+    // the press was on an input and the focus is right where it belongs.
+    for (QWidget *w = clicked; w && w != this; w = w->parentWidget()) {
+        if (w->isEnabled() && (w->focusPolicy() & Qt::ClickFocus))
+            return;
+    }
+    if (QWidget *const focused = window() ? window()->focusWidget() : nullptr) {
+        if (focused == m_roll || focused == m_lanes || focused == m_velocityLane ||
+            focused == m_events || m_events->isAncestorOf(focused))
+            return;
+    }
+    focusContent();
 }
 
 void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup)

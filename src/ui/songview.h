@@ -654,9 +654,23 @@ class SongView : public QWidget
 
   protected:
     void resizeEvent(QResizeEvent *event) override;
+    // Application-wide filter, watching only for mouse presses inside this
+    // view: see refocusAfterDeadClick.
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
     uint64_t gridTicksIn(const GridSeg &seg, bool snap = false) const;
+    // The bare-letter shortcuts (A, V, B, M, S, …) dispatch from whichever
+    // editing surface holds the keyboard focus, so a press on a part of the
+    // view that takes no focus of its own — a track header, the ruler, the
+    // toggle strip, a scrollbar — used to leave them stranded wherever the
+    // focus was (the song list, a dock's search field). Such a press now
+    // hands the focus to the editing surface, unless one of the view's
+    // surfaces already holds it: clicking a header's M/S button with the
+    // lanes focused keeps the lanes' shortcuts on the lanes. Presses that
+    // land on a click-focusable widget (the surfaces, an inline editor, the
+    // event table) are Qt's to focus and are left alone.
+    void refocusAfterDeadClick(QWidget *clicked);
     // Document trackMoved handler: rotates the per-track view state with the
     // renumbered engine slots on apply, undo, and redo alike.
     void onTrackMoved(int fromChunk, int toChunk, const QVector<int> &map);
