@@ -12,7 +12,7 @@
 #include "core/smf.h"
 #include "core/songdocument.h"
 
-namespace {
+namespace SmfCheck {
 
 bool loadDocument(const SmfFile &smf, const QTemporaryDir &dir, const char *name, SongDocument *doc,
                   QString *error)
@@ -52,6 +52,10 @@ int checkNote(const std::vector<DocNote> &notes, size_t n, size_t onIndex, size_
     }
     return 0;
 }
+
+} // namespace SmfCheck
+
+namespace {
 
 bool require(bool condition, int *failures, const char *fixture, const char *property)
 {
@@ -266,19 +270,19 @@ void checkNoteLifecycleFixture(const QTemporaryDir &dir, int *failures)
 
         SongDocument doc;
         QString error;
-        if (!loadDocument(smf, dir, "note_lifecycle", &doc, &error)) {
+        if (!SmfCheck::loadDocument(smf, dir, "note_lifecycle", &doc, &error)) {
             std::fprintf(stderr, "smfcheck: FAIL: fixture %s: document load: %s\n", fixture,
                          qUtf8Printable(error));
             ++*failures;
         } else {
-            const int engineTrack = engineTrackForChunk(doc, 1);
+            const int engineTrack = SmfCheck::engineTrackForChunk(doc, 1);
             const std::vector<DocNote> notes = doc.notesForTrack(engineTrack);
             require(notes.size() == 4, failures, fixture, "note pairing count changed");
             if (notes.size() == 4) {
-                *failures += checkNote(notes, 0, 2, 3, 24, 0x3c, 0x64, 0);
-                *failures += checkNote(notes, 1, 4, 5, 24, 0x3c, 0x6e, 0);
-                *failures += checkNote(notes, 2, 6, 7, 0, 0x3e, 0x50, 0);
-                *failures += checkNote(notes, 3, 8, 9, 24, 0x40, 0x60, 0);
+                *failures += SmfCheck::checkNote(notes, 0, 2, 3, 24, 0x3c, 0x64, 0);
+                *failures += SmfCheck::checkNote(notes, 1, 4, 5, 24, 0x3c, 0x6e, 0);
+                *failures += SmfCheck::checkNote(notes, 2, 6, 7, 0, 0x3e, 0x50, 0);
+                *failures += SmfCheck::checkNote(notes, 3, 8, 9, 24, 0x40, 0x60, 0);
             }
         }
     }

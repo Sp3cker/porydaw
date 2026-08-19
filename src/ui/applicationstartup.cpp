@@ -7,9 +7,28 @@
 
 #include <QApplication>
 #include <QEventLoop>
+#include <QIcon>
+#include <QStyleHints>
 #include <QWidget>
 
 namespace ui {
+bool initializePorydawApplication(QApplication &application)
+{
+#if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    application.styleHints()->setColorScheme(Qt::ColorScheme::Light);
+#endif
+    QApplication::setStyle(QStringLiteral("fusion"));
+    QApplication::setApplicationName(QStringLiteral("porydaw"));
+    QApplication::setApplicationVersion(QStringLiteral(PORYDAW_VERSION));
+    QApplication::setOrganizationName(QStringLiteral("huderlem"));
+    auto appIcon = QIcon{};
+    for (const auto size : {16, 32, 48, 128, 256})
+        appIcon.addFile(QStringLiteral(":/icons/porydaw-%1.png").arg(size));
+    QApplication::setWindowIcon(appIcon);
+    QGuiApplication::setDesktopFileName(QStringLiteral("porydaw"));
+    return initializeApplication(application);
+}
+
 // Kept separate so startup ordering can be tested.
 bool initializeApplication(QApplication &application)
 {

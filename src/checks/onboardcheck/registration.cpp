@@ -7,20 +7,18 @@
 #include <QTemporaryDir>
 #include <cstdio>
 
-#include "context.h"
 #include "core/songdocument.h"
 #include "mainwindow.h"
+#include "pipeline.h"
 #include "ui/songlistpanel.h"
 
 namespace OnboardCheck {
 
-RegisteredSongFixture runRegistrationChecks(Context &context)
+RegisteredSongFixture runRegistrationChecks(const QString &projectRoot, const QString &midiDir,
+                                            int registeredCount, DecompProject &project,
+                                            const SongCfg &cfg, CheckReporter &reporter)
 {
-    const QString &projectRoot = context.projectRoot;
-    const QString &midiDir = context.midiDir;
-    const int registeredCount = context.registeredCount;
-    DecompProject &project = context.project;
-    const SongCfg &cfg = context.cfg;
+    const auto check = [&](bool ok, const char *what) { reporter.check(ok, what); };
     QString error;
     // ---- New Song flow ------------------------------------------------------
     const QString label = QStringLiteral("mus_onboardcheck");
@@ -360,13 +358,11 @@ RegisteredSongFixture runRegistrationChecks(Context &context)
     return {label, constant, plan};
 }
 
-void runRegisterActionChecks(Context &context, const RegisteredSongFixture &fixture)
+void runRegisterActionChecks(const QString &projectRoot, const QString &midiDir,
+                             const QString &mid2agb, bool haveMid2agb, const SongCfg &cfg,
+                             const RegisteredSongFixture &fixture, CheckReporter &reporter)
 {
-    const QString &projectRoot = context.projectRoot;
-    const QString &midiDir = context.midiDir;
-    const QString &mid2agb = context.mid2agb;
-    const bool haveMid2agb = context.haveMid2agb;
-    const SongCfg &cfg = context.cfg;
+    const auto check = [&](bool ok, const char *what) { reporter.check(ok, what); };
     const QString &label = fixture.label;
     const RegistrationPlan &plan = fixture.plan;
     const QString midPath = midiDir + QStringLiteral("/%1.mid").arg(label);

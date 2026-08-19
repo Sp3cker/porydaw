@@ -140,17 +140,7 @@ int runCheck(QApplication &application, int baseFontPx)
 
 } // namespace
 
-int main(int argc, char *argv[])
+int runEditorLayoutCheck(QApplication &application, int baseFontPx)
 {
-    QApplication application(argc, argv);
-    const auto arguments = application.arguments();
-    if (arguments.size() != 3 || arguments.at(1) != QStringLiteral("--base-font-px"))
-        return 2;
-    if (arguments.at(2) == QStringLiteral("12"))
-        return runCheck(application, 12);
-    if (arguments.at(2) == QStringLiteral("16"))
-        return runCheck(application, 16);
-    if (arguments.at(2) == QStringLiteral("18"))
-        return runCheck(application, 18);
-    return 2;
+    return runCheck(application, baseFontPx);
 }

@@ -69,45 +69,6 @@ SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data
     return event;
 }
 
-bool loadDocument(const SmfFile &smf, const QTemporaryDir &dir, const char *name, SongDocument *doc,
-                  QString *error)
-{
-    SongInfo song;
-    song.label = QString::fromLatin1(name);
-    song.midPath = dir.filePath(QString::fromLatin1(name) + QStringLiteral(".mid"));
-    song.hasMid = true;
-    return smf.writeFile(song.midPath, error) && doc->load(song, error);
-}
-
-int engineTrackForChunk(const SongDocument &doc, int chunk)
-{
-    for (int track = 0; track < doc.engineTrackCount(); track++) {
-        if (doc.smfTrackFor(track) == chunk)
-            return track;
-    }
-    return -1;
-}
-
-int checkNote(const std::vector<DocNote> &notes, size_t n, size_t onIndex, size_t endIndex,
-              uint32_t duration, uint8_t key, uint8_t velocity, uint8_t channel)
-{
-    if (n >= notes.size()) {
-        std::fprintf(stderr, "smfcheck: FAIL: note %zu missing\n", n);
-        return 1;
-    }
-    const DocNote &note = notes[n];
-    if (note.onIndex != onIndex || note.endIndex != endIndex || note.duration != duration ||
-        note.key != key || note.velocity != velocity || note.channel != channel) {
-        std::fprintf(stderr,
-                     "smfcheck: FAIL: note %zu = on %zu end %zu dur %u key %u vel %u ch %u, "
-                     "want on %zu end %zu dur %u key %u vel %u ch %u\n",
-                     n, note.onIndex, note.endIndex, note.duration, note.key, note.velocity,
-                     note.channel, onIndex, endIndex, duration, key, velocity, channel);
-        return 1;
-    }
-    return 0;
-}
-
 } // namespace
 
 int runSmfCheck(bool includeStress)
@@ -179,20 +140,21 @@ int runSmfCheck(bool includeStress)
 
         SongDocument doc;
         QString error;
-        if (!loadDocument(smf, dir, "pairing", &doc, &error)) {
+        if (!SmfCheck::loadDocument(smf, dir, "pairing", &doc, &error)) {
             std::fprintf(stderr, "smfcheck: FAIL: pairing song load: %s\n", qUtf8Printable(error));
             ++failures;
         } else {
-            const std::vector<DocNote> notes = doc.notesForTrack(engineTrackForChunk(doc, 1));
+            const std::vector<DocNote> notes =
+                doc.notesForTrack(SmfCheck::engineTrackForChunk(doc, 1));
             if (notes.size() != 5) {
                 std::fprintf(stderr, "smfcheck: FAIL: %zu notes, want 5\n", notes.size());
                 ++failures;
             }
-            failures += checkNote(notes, 0, 0, 6, 20, 60, 100, 0);
-            failures += checkNote(notes, 1, 1, 3, 5, 62, 80, 0);
-            failures += checkNote(notes, 2, 5, 6, 10, 60, 90, 0);
-            failures += checkNote(notes, 3, 7, SIZE_MAX, 0, 64, 50, 0);
-            failures += checkNote(notes, 4, 8, 10, 8, 0x83, 60, 0);
+            failures += SmfCheck::checkNote(notes, 0, 0, 6, 20, 60, 100, 0);
+            failures += SmfCheck::checkNote(notes, 1, 1, 3, 5, 62, 80, 0);
+            failures += SmfCheck::checkNote(notes, 2, 5, 6, 10, 60, 90, 0);
+            failures += SmfCheck::checkNote(notes, 3, 7, SIZE_MAX, 0, 64, 50, 0);
+            failures += SmfCheck::checkNote(notes, 4, 8, 10, 8, 0x83, 60, 0);
         }
     }
 
@@ -212,14 +174,15 @@ int runSmfCheck(bool includeStress)
 
         SongDocument doc;
         QString error;
-        if (!loadDocument(smf, dir, "unterminated", &doc, &error)) {
+        if (!SmfCheck::loadDocument(smf, dir, "unterminated", &doc, &error)) {
             std::fprintf(stderr, "smfcheck: FAIL: unterminated song load: %s\n",
                          qUtf8Printable(error));
             ++failures;
         } else {
             QElapsedTimer timer;
             timer.start();
-            const std::vector<DocNote> notes = doc.notesForTrack(engineTrackForChunk(doc, 1));
+            const std::vector<DocNote> notes =
+                doc.notesForTrack(SmfCheck::engineTrackForChunk(doc, 1));
             const qint64 ms = timer.elapsed();
             if (notes.size() != kNoteOns) {
                 std::fprintf(stderr, "smfcheck: FAIL: %zu notes, want %d\n", notes.size(),

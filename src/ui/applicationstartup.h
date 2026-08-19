@@ -7,6 +7,10 @@ class QWidget;
 
 namespace ui {
 
+/// Applies Porydaw's application identity and presentation, then initializes
+/// the shared UI modules used by both production and check executables.
+bool initializePorydawApplication(QApplication &application);
+
 /// Installs bundled typography and initializes the shared UI modules.
 bool initializeApplication(QApplication &application);
 

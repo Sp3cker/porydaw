@@ -8,7 +8,7 @@
 #include <QTemporaryDir>
 #include <cstdio>
 
-#include "checks/onboardcheck/context.h"
+#include "checks/onboardcheck/pipeline.h"
 #include "mainwindow.h"
 #include "ui/songlistpanel.h"
 
@@ -19,24 +19,22 @@
 // charmap.txt / src/debug.c directly), verifies idempotency and stale-ID
 // correction, and runs an external-MIDI import (analysis + division rescale),
 // compiling both songs through the project's real mid2agb.
-
 namespace OnboardCheck {
 
-namespace {
-int g_failures = 0;
-} // namespace
-
-void check(bool ok, const char *what)
+void CheckReporter::check(bool ok, const char *what)
 {
     if (!ok) {
         std::fprintf(stderr, "onboardcheck: FAIL: %s\n", what);
-        g_failures++;
+        ++m_failures;
     }
 }
 
-int failureCount()
+void CheckReporter::check(bool ok, const QString &what)
 {
-    return g_failures;
+    if (!ok) {
+        std::fprintf(stderr, "onboardcheck: FAIL: %s\n", qUtf8Printable(what));
+        ++m_failures;
+    }
 }
 
 QByteArray readAllBytes(const QString &path)
@@ -47,7 +45,8 @@ QByteArray readAllBytes(const QString &path)
     return f.readAll();
 }
 
-bool readMidiFixture(const QString &projectRoot, const QString &fileName, SmfFile *smf)
+bool readMidiFixture(const QString &projectRoot, const QString &fileName, SmfFile *smf,
+                     CheckReporter &reporter)
 {
     const QString path = projectRoot + QStringLiteral("/test_midis/") + fileName;
     QString error;
@@ -60,7 +59,7 @@ bool readMidiFixture(const QString &projectRoot, const QString &fileName, SmfFil
     std::fprintf(stderr, "onboardcheck: MIDI fixture '%s': %s\n", qUtf8Printable(path),
                  qUtf8Printable(error));
     const QString failure = QStringLiteral("could not read MIDI fixture %1").arg(fileName);
-    check(false, qUtf8Printable(failure));
+    reporter.check(false, failure);
     return false;
 }
 
@@ -83,41 +82,44 @@ bool compilesThroughMid2agb(const QString &mid2agb, const QString &midPath,
 
 int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
 {
-    OnboardCheck::Context context;
-    context.projectRoot = projectRoot;
+    OnboardCheck::CheckReporter reporter;
+    const auto check = [&](bool ok, const char *what) { reporter.check(ok, what); };
 
+    DecompProject project;
     QString error;
-    if (!context.project.open(projectRoot, &error)) {
+    if (!project.open(projectRoot, &error)) {
         std::fprintf(stderr, "onboardcheck: %s\n", qUtf8Printable(error));
         return 1;
     }
+    SmfFile externalImport;
+    SmfFile duplicateSetters;
     const bool externalLoaded = OnboardCheck::readMidiFixture(
-        projectRoot, QStringLiteral("external_import.mid"), &context.externalImport);
+        projectRoot, QStringLiteral("external_import.mid"), &externalImport, reporter);
     const bool duplicateSettersLoaded = OnboardCheck::readMidiFixture(
-        projectRoot, QStringLiteral("duplicate_setters.mid"), &context.duplicateSetters);
+        projectRoot, QStringLiteral("duplicate_setters.mid"), &duplicateSetters, reporter);
     if (!externalLoaded || !duplicateSettersLoaded)
         return 1;
     // Only song_table entries count toward the proposed ID; the project may
     // already contain stray unregistered .mid files.
-    for (const SongInfo &s : context.project.songs())
-        context.registeredCount += s.registered ? 1 : 0;
-    context.midiDir = projectRoot + QStringLiteral("/sound/songs/midi");
+    int registeredCount = 0;
+    for (const SongInfo &s : project.songs())
+        registeredCount += s.registered ? 1 : 0;
+    const QString midiDir = projectRoot + QStringLiteral("/sound/songs/midi");
 
-    context.mid2agb = mid2agbPath;
-    if (context.mid2agb.isEmpty())
-        context.mid2agb = projectRoot + QStringLiteral("/tools/mid2agb/mid2agb");
-    context.haveMid2agb = QFileInfo::exists(context.mid2agb);
-    if (!context.haveMid2agb)
+    QString mid2agb = mid2agbPath;
+    if (mid2agb.isEmpty())
+        mid2agb = projectRoot + QStringLiteral("/tools/mid2agb/mid2agb");
+    const bool haveMid2agb = QFileInfo::exists(mid2agb);
+    if (!haveMid2agb)
         std::printf("onboardcheck: note: mid2agb not found, compile checks skipped\n");
 
     // ---- Project enumeration ------------------------------------------------
-    context.voicegroupArgs = SongRegistry::voicegroupArgs(projectRoot);
-    OnboardCheck::check(!context.voicegroupArgs.isEmpty(), "no voicegroups enumerated");
-    std::printf("onboardcheck: %d voicegroups, e.g. %s\n", int(context.voicegroupArgs.size()),
-                context.voicegroupArgs.isEmpty() ? "-"
-                                                 : qUtf8Printable(context.voicegroupArgs.first()));
+    const QStringList voicegroupArgs = SongRegistry::voicegroupArgs(projectRoot);
+    check(!voicegroupArgs.isEmpty(), "no voicegroups enumerated");
+    std::printf("onboardcheck: %d voicegroups, e.g. %s\n", int(voicegroupArgs.size()),
+                voicegroupArgs.isEmpty() ? "-" : qUtf8Printable(voicegroupArgs.first()));
     const QVector<MusicPlayer> players = SongRegistry::musicPlayers(projectRoot);
-    OnboardCheck::check(!players.isEmpty(), "no music players parsed from song_table.inc");
+    check(!players.isEmpty(), "no music players parsed from song_table.inc");
 
     // ---- Music-player track budgets -----------------------------------------
     // Deterministic fixture regardless of the checkout: swap in a known
@@ -126,8 +128,8 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         const QString tablePath = projectRoot + QStringLiteral("/sound/music_player_table.inc");
         const QByteArray original = OnboardCheck::readAllBytes(tablePath);
         QFile table(tablePath);
-        OnboardCheck::check(table.open(QIODevice::WriteOnly | QIODevice::Truncate),
-                            "rewrite music_player_table.inc fixture");
+        check(table.open(QIODevice::WriteOnly | QIODevice::Truncate),
+              "rewrite music_player_table.inc fixture");
         // BGM overridden to 12 via equiv, SE1 literal, SE2 clamped from a
         // NUM_TRACKS beyond the engine's 16, SE3 via an unknown symbol.
         table.write("\t.equiv NUM_TRACKS_BGM, 12\n"
@@ -147,58 +149,69 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
             }
             return -2;
         };
-        OnboardCheck::check(countFor(QStringLiteral("MUSIC_PLAYER_BGM")) == 12,
-                            "BGM budget follows the project's NUM_TRACKS override");
-        OnboardCheck::check(countFor(QStringLiteral("MUSIC_PLAYER_SE1")) == 3,
-                            "literal track count parsed");
-        OnboardCheck::check(countFor(QStringLiteral("MUSIC_PLAYER_SE2")) == 16,
-                            "budget clamped to the engine's 16 like MPlayOpen");
-        OnboardCheck::check(countFor(QStringLiteral("MUSIC_PLAYER_SE3")) == -1,
-                            "unresolvable count stays unknown");
+        check(countFor(QStringLiteral("MUSIC_PLAYER_BGM")) == 12,
+              "BGM budget follows the project's NUM_TRACKS override");
+        check(countFor(QStringLiteral("MUSIC_PLAYER_SE1")) == 3, "literal track count parsed");
+        check(countFor(QStringLiteral("MUSIC_PLAYER_SE2")) == 16,
+              "budget clamped to the engine's 16 like MPlayOpen");
+        check(countFor(QStringLiteral("MUSIC_PLAYER_SE3")) == -1,
+              "unresolvable count stays unknown");
 
         DecompProject budgetProject;
-        OnboardCheck::check(budgetProject.open(projectRoot, &error), "reopen for budgets");
+        check(budgetProject.open(projectRoot, &error), "reopen for budgets");
         SongInfo bgmSong;
         bgmSong.player = QStringLiteral("MUSIC_PLAYER_BGM");
-        OnboardCheck::check(budgetProject.trackBudgetFor(bgmSong) == 12,
-                            "trackBudgetFor resolves the song's player");
+        check(budgetProject.trackBudgetFor(bgmSong) == 12,
+              "trackBudgetFor resolves the song's player");
         bgmSong.player = QStringLiteral("MUSIC_PLAYER_SE3");
-        OnboardCheck::check(budgetProject.trackBudgetFor(bgmSong) == 16,
-                            "unknown budget falls back to the engine ceiling");
+        check(budgetProject.trackBudgetFor(bgmSong) == 16,
+              "unknown budget falls back to the engine ceiling");
 
         if (original.isEmpty()) {
             QFile::remove(tablePath);
         } else {
-            OnboardCheck::check(table.open(QIODevice::WriteOnly | QIODevice::Truncate),
-                                "restore music_player_table.inc");
+            check(table.open(QIODevice::WriteOnly | QIODevice::Truncate),
+                  "restore music_player_table.inc");
             table.write(original);
             table.close();
         }
     }
 
-    context.cfg.exactGate = true;
-    context.cfg.reverb = 50;
-    context.cfg.masterVolume = 100;
-    context.cfg.voicegroupArg = context.voicegroupArgs.isEmpty() ? QStringLiteral("_dummy")
-                                                                 : context.voicegroupArgs.first();
-    context.cfg.rawFlags = SongRegistry::mergeCfgFlags(context.cfg);
+    SongCfg cfg;
+    cfg.exactGate = true;
+    cfg.reverb = 50;
+    cfg.masterVolume = 100;
+    cfg.voicegroupArg =
+        voicegroupArgs.isEmpty() ? QStringLiteral("_dummy") : voicegroupArgs.first();
+    cfg.rawFlags = SongRegistry::mergeCfgFlags(cfg);
 
-    const OnboardCheck::RegisteredSongFixture fixture =
-        OnboardCheck::runRegistrationChecks(context);
-    OnboardCheck::runDebugLayoutChecks(context, fixture);
-    OnboardCheck::runRegionedLayoutChecks(context);
-    OnboardCheck::runRegisterActionChecks(context, fixture);
-    OnboardCheck::runImportChecks(context);
-    OnboardCheck::runDeletionChecks(context);
+    const OnboardCheck::RegisteredSongFixture fixture = OnboardCheck::runRegistrationChecks(
+        projectRoot, midiDir, registeredCount, project, cfg, reporter);
+    OnboardCheck::runDebugLayoutChecks(projectRoot, project, fixture, reporter);
+    OnboardCheck::runRegionedLayoutChecks(projectRoot, reporter);
+    OnboardCheck::runRegisterActionChecks(projectRoot, midiDir, mid2agb, haveMid2agb, cfg, fixture,
+                                          reporter);
+    OnboardCheck::runImportChecks(projectRoot, midiDir, mid2agb, haveMid2agb, voicegroupArgs,
+                                  project, cfg, externalImport, duplicateSetters, reporter);
+    OnboardCheck::runDeletionChecks(projectRoot, midiDir, project, cfg,
+                                    fixture.plan.charmapApplicable, reporter);
 
-    std::printf("onboardcheck: %s (%d failures)\n", OnboardCheck::failureCount() ? "FAIL" : "PASS",
-                OnboardCheck::failureCount());
-    return OnboardCheck::failureCount() ? 1 : 0;
+    std::printf("onboardcheck: %s (%d failures)\n", reporter.hasFailures() ? "FAIL" : "PASS",
+                reporter.failureCount());
+    return reporter.hasFailures() ? 1 : 0;
 }
 
 bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QString &label)
 {
     m_persistSession = false;
+    bool pass = true;
+    const auto check = [&pass](bool condition, const char *what) {
+        if (!condition) {
+            std::fprintf(stderr, "onboardcheck: FAIL: %s\n", what);
+            pass = false;
+        }
+    };
+
     // Native-format QSettings use the registry on Windows, so setPath() in
     // the harness cannot isolate a persisted song filter. Clear it explicitly
     // before asserting on the fixture's list item.
@@ -213,8 +226,8 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
                      qUtf8Printable(label));
         return false;
     }
-    OnboardCheck::check(m_registerAction->isEnabled(),
-                        "Register Song disabled for a song missing its charmap entry");
+    check(m_registerAction->isEnabled(),
+          "Register Song disabled for a song missing its charmap entry");
 
     // The model carries the gap and the song browser badges it.
     const auto findSong = [this](const QString &wanted) -> const SongInfo * {
@@ -225,11 +238,10 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
         return nullptr;
     };
     const SongInfo *info = findSong(label);
-    OnboardCheck::check(info && info->registered,
-                        "partially registered song no longer counts as table-registered");
-    OnboardCheck::check(info &&
-                            info->registrationGaps == QStringList{QStringLiteral("charmap.txt")},
-                        "registrationGaps does not name the stripped charmap entry");
+    check(info && info->registered,
+          "partially registered song no longer counts as table-registered");
+    check(info && info->registrationGaps == QStringList{QStringLiteral("charmap.txt")},
+          "registrationGaps does not name the stripped charmap entry");
     auto *list = m_songList->findChild<QListWidget *>();
     const auto itemFor = [list](int id) -> QListWidgetItem * {
         for (int i = 0; list && i < list->count(); i++) {
@@ -239,29 +251,36 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
         return nullptr;
     };
     QListWidgetItem *item = info ? itemFor(info->id) : nullptr;
-    OnboardCheck::check(item && item->text().contains(QStringLiteral("not fully registered")),
-                        "song list shows no badge for a partial registration");
+    check(item && item->text().contains(QStringLiteral("not fully registered")),
+          "song list shows no badge for a partial registration");
 
     // The context menu's Register Song path heals the registration.
     if (info)
         registerSongById(info->id);
-    OnboardCheck::check(!m_registerAction->isEnabled(),
-                        "Register Song still enabled after backfill");
+    check(!m_registerAction->isEnabled(), "Register Song still enabled after backfill");
     info = findSong(label);
-    OnboardCheck::check(info && info->registrationGaps.isEmpty(),
-                        "registration gaps not cleared by the backfill");
+    check(info && info->registrationGaps.isEmpty(),
+          "registration gaps not cleared by the backfill");
     item = info ? itemFor(info->id) : nullptr;
-    OnboardCheck::check(item && item->text() == label, "badge not cleared after the backfill");
+    check(item && item->text() == label, "badge not cleared after the backfill");
     // A fresh activation recomputes the enable state from the reloaded songs.
     activateSession(m_active, /*force=*/true);
-    OnboardCheck::check(!m_registerAction->isEnabled(),
-                        "re-activation re-enabled Register Song for a complete registration");
-    return true;
+    check(!m_registerAction->isEnabled(),
+          "re-activation re-enabled Register Song for a complete registration");
+    return pass;
 }
 
 bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString &label)
 {
     m_persistSession = false;
+    bool pass = true;
+    const auto check = [&pass](bool condition, const char *what) {
+        if (!condition) {
+            std::fprintf(stderr, "onboardcheck: FAIL: %s\n", what);
+            pass = false;
+        }
+    };
+
     if (!openProjectDir(projectRoot, /*interactive=*/false)) {
         std::fprintf(stderr, "onboardcheck: project failed to open in MainWindow\n");
         return false;
@@ -285,25 +304,23 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
     const SongInfo song = *info; // survives the reload inside the deletion
 
     QString error;
-    OnboardCheck::check(performSongDeletion(song, QString(), &error), "performSongDeletion failed");
+    check(performSongDeletion(song, QString(), &error), "performSongDeletion failed");
     if (!error.isEmpty())
         std::fprintf(stderr, "onboardcheck: delete: %s\n", qUtf8Printable(error));
-    OnboardCheck::check(!sessionForLabel(label), "deleted song's tab still open");
+    check(!sessionForLabel(label), "deleted song's tab still open");
     bool inModel = false;
     for (const SongInfo &s : m_project.songs())
         inModel = inModel || s.label == label;
-    OnboardCheck::check(!inModel, "deleted song still in the project model");
+    check(!inModel, "deleted song still in the project model");
     auto *list = m_songList->findChild<QListWidget *>();
     bool listed = false;
     for (int i = 0; list && i < list->count(); i++)
         listed = listed || list->item(i)->text().startsWith(label);
-    OnboardCheck::check(!listed, "deleted song still listed in the browser");
-    OnboardCheck::check(
-        !QFile::exists(projectRoot + QStringLiteral("/sound/songs/midi/%1.mid").arg(label)),
-        "deleted song's .mid still in sound/songs/midi");
-    OnboardCheck::check(
-        QFile::exists(projectRoot + QStringLiteral("/.porydaw/trash/%1.mid").arg(label)),
-        "deleted song's .mid not moved to .porydaw/trash");
+    check(!listed, "deleted song still listed in the browser");
+    check(!QFile::exists(projectRoot + QStringLiteral("/sound/songs/midi/%1.mid").arg(label)),
+          "deleted song's .mid still in sound/songs/midi");
+    check(QFile::exists(projectRoot + QStringLiteral("/.porydaw/trash/%1.mid").arg(label)),
+          "deleted song's .mid not moved to .porydaw/trash");
 
     // The fallback song refuses deletion end to end, before any file edit.
     const SongInfo *fallback = nullptr;
@@ -318,15 +335,12 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
             projectRoot + QStringLiteral("/sound/songs/midi/%1.mid").arg(fallback->label);
         const bool hadMid = QFile::exists(fallbackMid);
         QString refuse;
-        OnboardCheck::check(!performSongDeletion(*fallback, QString(), &refuse) &&
-                                !refuse.isEmpty(),
-                            "performSongDeletion deleted the fallback song");
-        OnboardCheck::check(
-            OnboardCheck::readAllBytes(projectRoot + QStringLiteral("/sound/song_table.inc")) ==
-                tableBefore,
-            "refused fallback delete still edited song_table.inc");
-        OnboardCheck::check(QFile::exists(fallbackMid) == hadMid,
-                            "refused fallback delete still moved the .mid");
+        check(!performSongDeletion(*fallback, QString(), &refuse) && !refuse.isEmpty(),
+              "performSongDeletion deleted the fallback song");
+        check(OnboardCheck::readAllBytes(projectRoot + QStringLiteral("/sound/song_table.inc")) ==
+                  tableBefore,
+              "refused fallback delete still edited song_table.inc");
+        check(QFile::exists(fallbackMid) == hadMid, "refused fallback delete still moved the .mid");
     }
-    return true;
+    return pass;
 }

@@ -4,22 +4,21 @@
 #include <QTemporaryDir>
 #include <cstdio>
 
-#include "context.h"
 #include "core/smf.h"
 #include "mainwindow.h"
+#include "pipeline.h"
 #include "project/voicegroupsource.h"
 
 namespace OnboardCheck {
 
-void runDeletionChecks(Context &context)
+void runDeletionChecks(const QString &projectRoot, const QString &midiDir, DecompProject &project,
+                       const SongCfg &cfg, bool charmapApplicable, CheckReporter &reporter)
 {
-    const QString &projectRoot = context.projectRoot;
-    const QString &midiDir = context.midiDir;
-    const SongCfg &cfg = context.cfg;
+    const auto check = [&](bool ok, const char *what) { reporter.check(ok, what); };
     const RegistrationPlan plan = SongRegistry::makePlan(
         projectRoot, QStringLiteral("mus_onboardcheck"), QStringLiteral("MUS_ONBOARDCHECK"),
         QStringLiteral("MUSIC_PLAYER_BGM"));
-    DecompProject &project = context.project;
+    Q_UNUSED(charmapApplicable);
     const QString tablePath = projectRoot + QStringLiteral("/sound/song_table.inc");
     const QString songsHPath = projectRoot + QStringLiteral("/include/constants/songs.h");
     const QString ldPath = projectRoot + QStringLiteral("/ld_script.ld");

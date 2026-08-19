@@ -39,10 +39,18 @@ jobs:
           cache: true
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build --config Release
+
+      - name: Verify Windows SVG deployment
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path build/Qt6Svg.dll)) { throw "Qt6Svg.dll was not deployed" }
+          if (-not (Test-Path build/imageformats/qsvg.dll)) { throw "qsvg.dll was not deployed" }
+          if (-not (Test-Path build/iconengines/qsvgicon.dll)) { throw "qsvgicon.dll was not deployed" }
 
   # The harness sweep on an AddressSanitizer build stages each check's declared
   # fixture files in a private scratch directory. Samplecheck runs without its
@@ -74,19 +82,11 @@ jobs:
           sudo apt-get install -y pulseaudio
           pulseaudio -D --exit-idle-time=-1 || true
           pactl load-module module-null-sink sink_name=ci || true
-
-
       - name: Configure
-        run: cmake -B build-asan -DPORYDAW_ASAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        run: cmake -S . -B build-asan -G Ninja -DPORYDAW_ASAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
       - name: Build
         run: cmake --build build-asan -j"$(nproc)"
 
       - name: Run harnesses
-        run: deno task checks build-asan/porydaw
-
-      # The Deno runner covers the main binary's --*check flags only; the theme
-      # and font checks live in a separate ctest binary and were previously
-      # not gated anywhere in CI.
-      - name: Run theme and font checks
-        run: ctest --test-dir build-asan --output-on-failure
+        run: deno task checks build-asan/porydaw_checks

@@ -1,6 +1,32 @@
 cmake_minimum_required(VERSION 3.21)
 project(porydaw VERSION 1.0.0 LANGUAGES C CXX)
 
+find_package(Git QUIET)
+if(Git_FOUND)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_CURRENT_SOURCE_DIR}"
+                rev-parse --is-inside-work-tree
+        OUTPUT_VARIABLE PORYDAW_IS_GIT_WORKTREE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(PORYDAW_IS_GIT_WORKTREE STREQUAL "true")
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_CURRENT_SOURCE_DIR}"
+                    config --local core.hooksPath .githooks
+            RESULT_VARIABLE PORYDAW_HOOK_CONFIG_RESULT
+            ERROR_VARIABLE PORYDAW_HOOK_CONFIG_ERROR
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_STRIP_TRAILING_WHITESPACE
+        )
+        if(PORYDAW_HOOK_CONFIG_RESULT)
+            message(WARNING "Could not configure repository Git hooks: ${PORYDAW_HOOK_CONFIG_ERROR}")
+        else()
+            message(STATUS "Configured repository Git hooks from .githooks")
+        endif()
+    endif()
+endif()
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,6 +57,7 @@ endif()
 # only. Use a separate build dir, e.g.:
 #   cmake -B build-asan -DPORYDAW_ASAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 option(PORYDAW_ASAN "Build with AddressSanitizer" OFF)
+option(PORYDAW_BUILD_CHECKS "Build the porydaw check executable" ON)
 if(PORYDAW_ASAN)
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address)
@@ -54,27 +81,29 @@ add_subdirectory(
     "${CMAKE_CURRENT_BINARY_DIR}/poryaaaa-engine")
 
 # ---- In-tree m4a converter required by the harness sweep ----
-set(MID2AGB_SOURCE_DIR
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/ccomidi/mid2agb")
-# The preserved upstream source includes these otherwise-unused expansion
-# configuration headers. Keep their empty declarations in the build tree rather
-# than adding a stale expansion dependency to this repository.
-set(MID2AGB_LEGACY_INCLUDE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/mid2agb-include")
-file(MAKE_DIRECTORY "${MID2AGB_LEGACY_INCLUDE_ROOT}/a/b"
-                    "${MID2AGB_LEGACY_INCLUDE_ROOT}/include/config")
-file(WRITE "${MID2AGB_LEGACY_INCLUDE_ROOT}/include/config/battle.h"
-     "#pragma once\n#define B_NUM_LOW_HEALTH_BEEPS 4\n")
-file(WRITE "${MID2AGB_LEGACY_INCLUDE_ROOT}/include/config/general.h" "#pragma once\n")
-add_executable(mid2agb
-    "${MID2AGB_SOURCE_DIR}/main.cpp"
-    "${MID2AGB_SOURCE_DIR}/error.cpp"
-    "${MID2AGB_SOURCE_DIR}/midi.cpp"
-    "${MID2AGB_SOURCE_DIR}/agb.cpp"
-    "${MID2AGB_SOURCE_DIR}/tables.cpp"
-)
-target_include_directories(mid2agb PRIVATE
-    "${MID2AGB_SOURCE_DIR}"
-    "${MID2AGB_LEGACY_INCLUDE_ROOT}/a/b")
+if(PORYDAW_BUILD_CHECKS)
+    set(MID2AGB_SOURCE_DIR
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/ccomidi/mid2agb")
+    # The preserved upstream source includes these otherwise-unused expansion
+    # configuration headers. Keep their empty declarations in the build tree rather
+    # than adding a stale expansion dependency to this repository.
+    set(MID2AGB_LEGACY_INCLUDE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/mid2agb-include")
+    file(MAKE_DIRECTORY "${MID2AGB_LEGACY_INCLUDE_ROOT}/a/b"
+                        "${MID2AGB_LEGACY_INCLUDE_ROOT}/include/config")
+    file(WRITE "${MID2AGB_LEGACY_INCLUDE_ROOT}/include/config/battle.h"
+         "#pragma once\n#define B_NUM_LOW_HEALTH_BEEPS 4\n")
+    file(WRITE "${MID2AGB_LEGACY_INCLUDE_ROOT}/include/config/general.h" "#pragma once\n")
+    add_executable(mid2agb
+        "${MID2AGB_SOURCE_DIR}/main.cpp"
+        "${MID2AGB_SOURCE_DIR}/error.cpp"
+        "${MID2AGB_SOURCE_DIR}/midi.cpp"
+        "${MID2AGB_SOURCE_DIR}/agb.cpp"
+        "${MID2AGB_SOURCE_DIR}/tables.cpp"
+    )
+    target_include_directories(mid2agb PRIVATE
+        "${MID2AGB_SOURCE_DIR}"
+        "${MID2AGB_LEGACY_INCLUDE_ROOT}/a/b")
+endif()
 
 # ---- porydaw application ----
 qt_add_library(porydaw_app STATIC
@@ -286,66 +315,86 @@ endif()
 
 qt_add_executable(porydaw
     src/main.cpp
-    src/checks/tabcheck.cpp
-    src/checks/eventviewcheck.cpp
-    src/checks/pitchbendcheck.cpp
-    src/checks/pitchbendcheck.hpp
-    src/checks/rollcheck.cpp
-    src/checks/rollcheckplayhead.cpp
-    src/checks/rollcheckplayhead.h
-    src/checks/viewcheck.cpp
-    src/checks/roundtrip.cpp
-    src/checks/editcheck.cpp
-    src/checks/scalecheck.cpp
-    src/checks/savecheck.cpp
-    src/checks/onboardcheck.cpp
-    src/checks/onboardcheck/context.h
-    src/checks/onboardcheck/registration.cpp
-    src/checks/onboardcheck/debuglayout.cpp
-    src/checks/onboardcheck/regionedlayout.cpp
-    src/checks/onboardcheck/import.cpp
-    src/checks/onboardcheck/deletion.cpp
-    src/checks/vgcheck.cpp
-    src/checks/vgsavecheck.cpp
-    src/checks/exportcheck.cpp
-    src/checks/loopcheck.cpp
-    src/checks/clickcheck.cpp
-    src/checks/polycheck.cpp
-    src/checks/primecheck.cpp
-    src/checks/xcmdcheck.cpp
-    src/checks/smfcheck.cpp
-    src/checks/smfcheckfixtures.cpp
-    src/checks/smfcheckfixtures.h
-    src/checks/transportcheck.cpp
-    src/checks/trackactivitycheck.cpp
-    src/checks/trackactivitymetercheck.cpp
-    src/checks/audiocheck.cpp
-    src/checks/resonancecheck.cpp
-    src/checks/mkcheck.cpp
-    src/checks/ignorecheck.cpp
-    src/checks/samplecheck.cpp
-    src/checks/sessioncheck.cpp
-    src/checks/keymapcheck.cpp
-    src/checks/hostcheck.cpp
-    src/checks/mainwindowroutingcheck.cpp
-    src/checks/noteidcheck.cpp
-    src/checks/renderingplayheadcheck.cpp
-    src/checks/rollcheckautomation.cpp
-    src/checks/automationgesturecheck/rig.cpp
-    src/checks/automationgesturecheck/runner.cpp
-    src/checks/automationgesturecheck/action.cpp
-    src/checks/automationgesturecheck/mapping.cpp
-    src/checks/automationgesturecheck/stroke.cpp
-    src/checks/automationgesturecheck/ownership.cpp
-    src/checks/automationgesturecheck/transactions.cpp
-    src/checks/rollcheckdrawer.cpp
-    src/checks/rollcheckpsgvelocity.cpp
     resources/fonts.qrc
 )
-if(APPLE)
-    target_sources(porydaw PRIVATE
-        src/checks/rollcheckplayhead_macos.mm
+target_link_libraries(porydaw PRIVATE porydaw_app)
+
+if(PORYDAW_BUILD_CHECKS)
+    qt_add_executable(porydaw_checks
+        src/checks/checks_main.cpp
+        src/checks/checkregistry.cpp
+        src/checks/checkregistry.hpp
+        src/checks/fixturecatalog.cpp
+        src/checks/fixturecatalog.hpp
+        src/checks/fwd.hpp
+        src/checks/selftest.cpp
+        src/checks/tabcheck.cpp
+        src/checks/eventviewcheck.cpp
+        src/checks/pitchbendcheck.cpp
+        src/checks/pitchbendcheck.hpp
+        src/checks/rollcheck.cpp
+        src/checks/rollcheckplayhead.cpp
+        src/checks/rollcheckplayhead.h
+        src/checks/viewcheck.cpp
+        src/checks/roundtrip.cpp
+        src/checks/editcheck.cpp
+        src/checks/scalecheck.cpp
+        src/checks/savecheck.cpp
+        src/checks/onboardcheck.cpp
+        src/checks/onboardcheck/pipeline.h
+        src/checks/onboardcheck/registration.cpp
+        src/checks/onboardcheck/debuglayout.cpp
+        src/checks/onboardcheck/regionedlayout.cpp
+        src/checks/onboardcheck/import.cpp
+        src/checks/onboardcheck/deletion.cpp
+        src/checks/vgcheck.cpp
+        src/checks/vgsavecheck.cpp
+        src/checks/exportcheck.cpp
+        src/checks/loopcheck.cpp
+        src/checks/clickcheck.cpp
+        src/checks/polycheck.cpp
+        src/checks/primecheck.cpp
+        src/checks/xcmdcheck.cpp
+        src/checks/smfcheck.cpp
+        src/checks/smfcheckfixtures.cpp
+        src/checks/smfcheckfixtures.h
+        src/checks/transportcheck.cpp
+        src/checks/trackactivitycheck.cpp
+        src/checks/trackactivitymetercheck.cpp
+        src/checks/audiocheck.cpp
+        src/checks/resonancecheck.cpp
+        src/checks/mkcheck.cpp
+        src/checks/ignorecheck.cpp
+        src/checks/samplecheck.cpp
+        src/checks/sessioncheck.cpp
+        src/checks/keymapcheck.cpp
+        src/checks/hostcheck.cpp
+        src/checks/mainwindowroutingcheck.cpp
+        src/checks/noteidcheck.cpp
+        src/checks/renderingplayheadcheck.cpp
+        src/checks/rollcheckautomation.cpp
+        src/checks/automationgesturecheck/rig.cpp
+        src/checks/automationgesturecheck/runner.cpp
+        src/checks/automationgesturecheck/action.cpp
+        src/checks/automationgesturecheck/mapping.cpp
+        src/checks/automationgesturecheck/stroke.cpp
+        src/checks/automationgesturecheck/ownership.cpp
+        src/checks/automationgesturecheck/transactions.cpp
+        src/checks/rollcheckdrawer.cpp
+        src/checks/rollcheckpsgvelocity.cpp
+        src/checks/themechecks.cpp
+        src/checks/fontcheck.cpp
+        src/ui/theme/themecheck.cpp
+        src/ui/theme/themecheck.h
+        src/checks/editorlayoutcheck.cpp
+        resources/fonts.qrc
     )
+    if(APPLE)
+        target_sources(porydaw_checks PRIVATE
+            src/checks/rollcheckplayhead_macos.mm
+        )
+    endif()
+    target_link_libraries(porydaw_checks PRIVATE porydaw_app)
 endif()
 qt_add_resources(porydaw "app_icon"
     PREFIX "/icons"
@@ -372,17 +421,43 @@ qt_add_resources(porydaw "cursor_images"
         resources/right-drag.png
         resources/right-drag@2x.png
 )
-qt_add_resources(porydaw "smf_check_fixtures"
-    PREFIX "/checks"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/checks/fixtures/decompproject"
-    FILES
-        src/checks/fixtures/decompproject/test_midis/smf/valid/opaque_sysex.mid
-        src/checks/fixtures/decompproject/test_midis/smf/valid/vlq_running_status.mid
-        src/checks/fixtures/decompproject/test_midis/smf/valid/note_lifecycle.mid
-        src/checks/fixtures/decompproject/test_midis/smf/malformed/duplicate_eot.mid
-        src/checks/fixtures/decompproject/test_midis/smf/stress/automation_burst.mid
-)
-target_link_libraries(porydaw PRIVATE porydaw_app)
+if(PORYDAW_BUILD_CHECKS)
+    qt_add_resources(porydaw_checks "checks_app_icon"
+        PREFIX "/icons"
+        BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+        FILES
+            resources/flat-music.svg
+            resources/porydaw-16.png
+            resources/porydaw-32.png
+            resources/porydaw-48.png
+            resources/porydaw-128.png
+            resources/porydaw-256.png
+            resources/velocity.svg
+            resources/velocity_labels.svg
+            resources/automation.svg
+    )
+    qt_add_resources(porydaw_checks "checks_cursor_images"
+        PREFIX "/cursors"
+        BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+        FILES
+            resources/left-drag.png
+            resources/left-drag@2x.png
+            resources/pencil.png
+            resources/pencil@2x.png
+            resources/right-drag.png
+            resources/right-drag@2x.png
+    )
+    qt_add_resources(porydaw_checks "smf_check_fixtures"
+        PREFIX "/checks"
+        BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/checks/fixtures/decompproject"
+        FILES
+            src/checks/fixtures/decompproject/test_midis/smf/valid/opaque_sysex.mid
+            src/checks/fixtures/decompproject/test_midis/smf/valid/vlq_running_status.mid
+            src/checks/fixtures/decompproject/test_midis/smf/valid/note_lifecycle.mid
+            src/checks/fixtures/decompproject/test_midis/smf/malformed/duplicate_eot.mid
+            src/checks/fixtures/decompproject/test_midis/smf/stress/automation_burst.mid
+    )
+endif()
 if(WIN32)
     # Stage the Qt DLLs beside porydaw.exe so the build tree runs directly.
     # Static Qt links everything into the exe, leaving windeployqt nothing
@@ -396,6 +471,9 @@ if(WIN32)
     elseif(TARGET Qt6::windeployqt)
         add_custom_command(TARGET porydaw POST_BUILD
             COMMAND Qt6::windeployqt
+                    # SVG image/icon plugins are soft dependencies, so force
+                    # their deployment rather than relying on executable scanning.
+                    --include-plugins qsvg,qsvgicon
                     --no-translations
                     --no-opengl-sw
                     --no-system-d3d-compiler
@@ -405,60 +483,6 @@ if(WIN32)
     else()
         message(WARNING "Qt6::windeployqt not available (needs Qt >= 6.3); "
                         "porydaw.exe will need the Qt DLLs on PATH")
-    endif()
-endif()
-
-include(CTest)
-if(BUILD_TESTING)
-    # Font and theme checks link the real application library but stay out of
-    # the shipping executable and its command-line surface.
-    qt_add_executable(porydaw_themechecks
-        src/ui/theme/themechecks_main.cpp
-        src/checks/fontcheck.cpp
-        src/ui/theme/themecheck.cpp
-        src/ui/theme/themecheck.h
-        resources/fonts.qrc
-    )
-    target_link_libraries(porydaw_themechecks PRIVATE porydaw_app)
-
-    qt_add_executable(porydaw_editorlayoutcheck
-        src/checks/editorlayoutcheck.cpp
-        resources/fonts.qrc
-    )
-    target_link_libraries(porydaw_editorlayoutcheck PRIVATE porydaw_app)
-
-    add_test(NAME porydaw_track_activity_model
-             COMMAND porydaw --trackactivitycheck)
-    add_test(NAME porydaw_track_activity_meter_1x
-             COMMAND porydaw --trackactivitymetercheck)
-    add_test(NAME porydaw_track_activity_meter_fractional_dpr
-             COMMAND porydaw --trackactivitymetercheck)
-    set_tests_properties(porydaw_track_activity_model porydaw_track_activity_meter_1x
-        PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
-    set_tests_properties(porydaw_track_activity_meter_fractional_dpr
-        PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_SCALE_FACTOR=1.5")
-
-    add_test(NAME porydaw_theme_checks
-             COMMAND porydaw_themechecks --themecheck)
-    add_test(NAME porydaw_editor_layout_12
-             COMMAND porydaw_editorlayoutcheck --base-font-px 12)
-    add_test(NAME porydaw_editor_layout_16
-             COMMAND porydaw_editorlayoutcheck --base-font-px 16)
-    add_test(NAME porydaw_editor_layout_18
-             COMMAND porydaw_editorlayoutcheck --base-font-px 18)
-    add_test(NAME porydaw_fontcheck
-             COMMAND porydaw_themechecks --fontcheck)
-    add_test(NAME porydaw_darkbase_check
-             COMMAND porydaw_themechecks --darkbasecheck)
-    set_tests_properties(porydaw_theme_checks porydaw_darkbase_check porydaw_editor_layout_12
-        porydaw_editor_layout_16 porydaw_editor_layout_18
-        PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
-    # fontcheck runs on the native platform on Windows so it exercises the
-    # real font stack the TTF hinting targets; everywhere else offscreen
-    # keeps headless runs (CI, WSL) working.
-    if(NOT WIN32)
-        set_tests_properties(porydaw_fontcheck
-            PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     endif()
 endif()
 

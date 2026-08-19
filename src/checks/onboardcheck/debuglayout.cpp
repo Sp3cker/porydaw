@@ -1,16 +1,16 @@
 #include <QFile>
 
-#include "context.h"
+#include "pipeline.h"
 
 namespace OnboardCheck {
 
-void runDebugLayoutChecks(Context &context, const RegisteredSongFixture &fixture)
+void runDebugLayoutChecks(const QString &projectRoot, DecompProject &project,
+                          const RegisteredSongFixture &fixture, CheckReporter &reporter)
 {
-    const QString &projectRoot = context.projectRoot;
+    const auto check = [&](bool ok, const char *what) { reporter.check(ok, what); };
     const QString &label = fixture.label;
     const QString &constant = fixture.constant;
     const RegistrationPlan &plan = fixture.plan;
-    DecompProject &project = context.project;
     const QString tablePath = projectRoot + QStringLiteral("/sound/song_table.inc");
     const QString songsHPath = projectRoot + QStringLiteral("/include/constants/songs.h");
     const QString ldPath = projectRoot + QStringLiteral("/ld_script.ld");

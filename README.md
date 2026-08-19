@@ -34,16 +34,10 @@ tools/format.sh          # reformat src/ and tools/ in place
 tools/format.sh --check  # what CI runs
 ```
 
-Enable the repository-managed pre-commit formatting check once per checkout:
-
-```bash
-tools/install-hooks.sh
-```
-
 Run the complete application check sweep against an existing build with Deno:
 
 ```bash
-deno task checks build/porydaw
+deno task checks build/porydaw_checks
 ```
 
 ## License

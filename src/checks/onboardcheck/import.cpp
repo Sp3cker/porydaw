@@ -3,26 +3,23 @@
 #include <QLabel>
 #include <QLineEdit>
 
-#include "context.h"
 #include "core/midiimport.h"
 #include "core/songdocument.h"
+#include "pipeline.h"
 #include "ui/newsongwizard.h"
 #include "ui/songsettingsdialog.h"
 
 namespace OnboardCheck {
 
-void runImportChecks(Context &context)
+void runImportChecks(const QString &projectRoot, const QString &midiDir, const QString &mid2agb,
+                     bool haveMid2agb, const QStringList &voicegroupArgs, DecompProject &project,
+                     const SongCfg &cfg, const SmfFile &externalImport,
+                     const SmfFile &duplicateSetters, CheckReporter &reporter)
 {
-    const QString &projectRoot = context.projectRoot;
-    const QString &midiDir = context.midiDir;
-    const QString &mid2agb = context.mid2agb;
-    const bool haveMid2agb = context.haveMid2agb;
-    const QStringList &vgArgs = context.voicegroupArgs;
-    DecompProject &project = context.project;
-    const SongCfg &cfg = context.cfg;
+    const auto check = [&](bool ok, const char *what) { reporter.check(ok, what); };
+    const QStringList &vgArgs = voicegroupArgs;
+    const SmfFile &external = externalImport;
     QString error;
-
-    const SmfFile &external = context.externalImport;
     SmfFile imported;
     ImportAnalysis analysis = analyzeForImport(external);
     check(analysis.mappedTracks == 2, "import: mapped track count");
@@ -181,7 +178,7 @@ void runImportChecks(Context &context)
     // while events whose every occurrence acts — notes, text metas, MEMACC
     // plumbing, the loop Label — survive untouched and in order.
     {
-        const SmfFile &duplicateSetters = context.duplicateSetters;
+        // duplicateSetters
         SmfFile direct = duplicateSetters;
         // A tempo, 2 programs, CC7, bend, CC101, and polyAT(60) at tick 0,
         // plus the CC7 at 96.

@@ -28,19 +28,21 @@ mode=format
 [ "${1:-}" = "--check" ] && mode=check
 
 # git ls-files keeps the list to tracked sources (build dirs, scratch
-# files, and external/ never appear in it).
-files=$(git ls-files 'src/*.cpp' 'src/*.h' 'tools/*.cpp' 'tools/*.h')
-[ -n "$files" ] || { echo "format.sh: no sources found" >&2; exit 2; }
+# files, and external/ never appear in it). Skip tracked files deleted in
+# the working tree so the format gate also works during refactors.
+files=()
+while IFS= read -r file; do
+    [ -f "$file" ] && files+=("$file")
+done < <(git ls-files 'src/*.cpp' 'src/*.h' 'tools/*.cpp' 'tools/*.h')
+[ "${#files[@]}" -gt 0 ] || { echo "format.sh: no sources found" >&2; exit 2; }
 
 if [ "$mode" = check ]; then
-    # shellcheck disable=SC2086
-    "$CLANG_FORMAT" --dry-run --Werror $files || {
+    "$CLANG_FORMAT" --dry-run --Werror "${files[@]}" || {
         echo "format.sh: formatting differences found — run tools/format.sh" >&2
         exit 1
     }
-    echo "format.sh: all $(echo "$files" | wc -l) files formatted"
+    echo "format.sh: all ${#files[@]} files formatted"
 else
-    # shellcheck disable=SC2086
-    "$CLANG_FORMAT" -i $files
-    echo "format.sh: formatted $(echo "$files" | wc -l) files"
+    "$CLANG_FORMAT" -i "${files[@]}"
+    echo "format.sh: formatted ${#files[@]} files"
 fi

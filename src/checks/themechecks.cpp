@@ -10,9 +10,8 @@
 
 int runFontCheck(int expectedBaseFontPx);
 
-int main(int argc, char *argv[])
+int runThemeHarness(QApplication &application, const QString &command)
 {
-    QApplication application(argc, argv);
     QTemporaryDir settingsDirectory;
     if (!settingsDirectory.isValid())
         return 1;
@@ -22,7 +21,7 @@ int main(int argc, char *argv[])
     QApplication::setApplicationVersion(QStringLiteral("0.1.0"));
     QApplication::setOrganizationName(QStringLiteral("huderlem"));
     const auto expectedBaseFontPx = QFontInfo(application.font()).pixelSize();
-    const bool darkBaseline = application.arguments().contains(QStringLiteral("--darkbasecheck"));
+    const bool darkBaseline = command == QStringLiteral("--darkbasecheck");
     if (darkBaseline) {
         // Model a dark-platform boot exactly: Fusion (as porydaw's main forces
         // everywhere), then a hostile platform palette, then normal startup —
@@ -42,9 +41,9 @@ int main(int argc, char *argv[])
         return 1;
     if (darkBaseline)
         return runDarkBaselineCheck();
-    if (application.arguments().contains(QStringLiteral("--fontcheck")))
+    if (command == QStringLiteral("--fontcheck"))
         return runFontCheck(expectedBaseFontPx);
-    if (application.arguments().contains(QStringLiteral("--themecheck")))
+    if (command == QStringLiteral("--themecheck"))
         return runThemeCheck();
     return 2;
 }

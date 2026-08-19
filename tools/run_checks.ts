@@ -2,7 +2,7 @@
 // Point this at an ASAN build (-DPORYDAW_ASAN=ON) to turn silent memory bugs
 // into aborts with stack traces.
 //
-// usage: deno task checks <porydaw-binary>
+// usage: deno task checks <porydaw-checks-binary>
 //
 // env: PORYDAW_SAMPLE_CORPUS  optional built project for samplecheck's corpus
 //      PORYDAW_SMF_STRESS    nonempty: run bounded SMF automation stress checks
@@ -10,19 +10,35 @@
 
 import { dirname, join } from "node:path";
 
-import {
-  CHECK_MANIFEST,
-  type CheckManifestEntry,
-  type FixtureRootKind,
-  OPTIONAL_ARG_ENV,
-} from "./check_manifest.ts";
+type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
+type FixtureRootKind = "decomp-project" | "songs-mk-project" | "none";
+
+interface CheckManifestEntry {
+  readonly name: string;
+  readonly argv: readonly string[];
+  readonly binary: "application" | "checks";
+  readonly environment?: Readonly<Record<string, string>>;
+  readonly optionalArgumentEnvironment?: Readonly<Record<string, string>>;
+  readonly environmentArguments?: Readonly<Record<string, string>>;
+  readonly exclusive?: boolean;
+  readonly scratchKind: ScratchKind;
+  readonly fixtureRootKind: FixtureRootKind;
+  readonly fixtureFiles: readonly string[];
+  readonly suite: "regression" | "specialized" | "negative";
+}
 
 const CHECK_TIMEOUT_MS = 90_000;
 const TERMINATE_GRACE_MS = 5_000;
+const MAX_PARALLEL_CHECKS = Math.max(
+  1,
+  Math.min(4, navigator.hardwareConcurrency),
+);
 const decoder = new TextDecoder();
 
 function usage(): never {
-  console.error("usage: deno task checks <porydaw-binary>");
+  console.error(
+    "usage: deno task checks <porydaw-checks-binary> [--all|--specialized|--negative]",
+  );
   Deno.exit(2);
 }
 
@@ -66,6 +82,63 @@ async function findMid2Agb(buildRoot: string): Promise<string> {
     `run_checks: missing in-tree mid2agb beside the build: ${buildRoot}`,
   );
   Deno.exit(2);
+}
+
+async function findApplication(buildRoot: string): Promise<string> {
+  const candidates = [
+    join(buildRoot, "porydaw"),
+    join(buildRoot, "porydaw.exe"),
+    join(buildRoot, "porydaw.app", "Contents", "MacOS", "porydaw"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      if ((await Deno.stat(candidate)).isFile) {
+        return await Deno.realPath(candidate);
+      }
+    } catch {
+      // Try the next platform path.
+    }
+  }
+  console.error(
+    `run_checks: missing production porydaw binary beside the build: ${buildRoot}`,
+  );
+  Deno.exit(2);
+}
+
+async function loadManifest(
+  checksBinary: string,
+): Promise<readonly CheckManifestEntry[]> {
+  const result = await new Deno.Command(checksBinary, {
+    args: ["--manifest"],
+    env: { QT_QPA_PLATFORM: "offscreen" },
+    stdout: "piped",
+    stderr: "piped",
+  }).output();
+  if (!result.success) {
+    console.error("run_checks: porydaw_checks --manifest failed");
+    console.error(decoder.decode(result.stderr));
+    Deno.exit(2);
+  }
+  let document: unknown;
+  try {
+    document = JSON.parse(decoder.decode(result.stdout));
+  } catch (error) {
+    console.error(
+      `run_checks: invalid check manifest JSON: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    Deno.exit(2);
+  }
+  if (
+    typeof document !== "object" || document === null ||
+    !("version" in document) || document.version !== 1 ||
+    !("checks" in document) || !Array.isArray(document.checks)
+  ) {
+    console.error("run_checks: unsupported check manifest");
+    Deno.exit(2);
+  }
+  return document.checks as readonly CheckManifestEntry[];
 }
 
 function fixtureRoot(
@@ -121,7 +194,7 @@ function expandArguments(
       result.push(mid2agb);
       continue;
     }
-    const optionalEnvironment = OPTIONAL_ARG_ENV[argument];
+    const optionalEnvironment = check.optionalArgumentEnvironment?.[argument];
     if (optionalEnvironment !== undefined) {
       const value = Deno.env.get(optionalEnvironment);
       if (value) {
@@ -131,12 +204,22 @@ function expandArguments(
     }
     result.push(argument);
   }
+  for (
+    const [environment, argument] of Object.entries(
+      check.environmentArguments ?? {},
+    )
+  ) {
+    if (Deno.env.get(environment)) {
+      result.push(argument);
+    }
+  }
   return result;
 }
 
 interface CheckResult {
   readonly code: number;
   readonly output: string;
+  readonly signal: string | null;
   readonly timedOut: boolean;
   readonly durationMs: number;
 }
@@ -144,6 +227,7 @@ interface CheckResult {
 async function runProcess(
   binary: string,
   args: string[],
+  environment: Readonly<Record<string, string>>,
 ): Promise<CheckResult> {
   const startedAt = performance.now();
   const child = new Deno.Command(binary, {
@@ -151,6 +235,7 @@ async function runProcess(
     env: {
       ASAN_OPTIONS: Deno.env.get("ASAN_OPTIONS") ?? "detect_leaks=0",
       QT_QPA_PLATFORM: "offscreen",
+      ...environment,
     },
     stdout: "piped",
     stderr: "piped",
@@ -185,6 +270,7 @@ async function runProcess(
   return {
     code: result.code,
     output,
+    signal: result.signal,
     timedOut,
     durationMs: performance.now() - startedAt,
   };
@@ -197,6 +283,8 @@ function lastNonemptyLine(output: string): string | undefined {
 function printFailure(name: string, result: CheckResult): void {
   const reason = result.timedOut
     ? `exceeded ${CHECK_TIMEOUT_MS / 1000}s`
+    : result.signal !== null
+    ? `crashed with ${result.signal}`
     : `exit ${result.code}`;
   console.log(
     `FAIL: ${name} (${reason}, ${(result.durationMs / 1000).toFixed(2)}s)`,
@@ -205,17 +293,24 @@ function printFailure(name: string, result: CheckResult): void {
   console.log(lines.slice(-40).join("\n"));
 }
 
-if (Deno.args.length !== 1) {
+if (Deno.args.length < 1 || Deno.args.length > 2) {
+  usage();
+}
+const selection = Deno.args[1] ?? "--regression";
+if (
+  !["--regression", "--all", "--specialized", "--negative"].includes(selection)
+) {
   usage();
 }
 
 const repoRoot = await Deno.realPath(new URL("..", import.meta.url));
-const binary = await resolveRequiredFile(Deno.args[0], "porydaw binary");
-
-const appMarker = `${join(".app", "Contents", "MacOS")}`;
-const buildRoot = binary.includes(appMarker)
-  ? await Deno.realPath(join(dirname(binary), "..", "..", ".."))
-  : await Deno.realPath(dirname(binary));
+const checksBinary = await resolveRequiredFile(
+  Deno.args[0],
+  "porydaw checks binary",
+);
+const checkManifest = await loadManifest(checksBinary);
+const buildRoot = await Deno.realPath(dirname(checksBinary));
+const applicationBinary = await findApplication(buildRoot);
 const mid2agb = await findMid2Agb(buildRoot);
 const decompFixture = join(
   repoRoot,
@@ -235,45 +330,87 @@ const tempRoot = await Deno.makeTempDir({ prefix: "porydaw-checks-" });
 const failures: string[] = [];
 const suiteStartedAt = performance.now();
 
+async function runCheck(check: CheckManifestEntry): Promise<void> {
+  const scratch = join(tempRoot, check.name);
+  let result: CheckResult;
+  try {
+    if (check.scratchKind === "existing-directory") {
+      await Deno.mkdir(scratch, { recursive: true });
+    }
+    await stageFixtureFiles(
+      check,
+      fixtureRoot(check.fixtureRootKind, decompFixture, songsMkFixture),
+      scratch,
+    );
+    const binary = check.binary === "application"
+      ? applicationBinary
+      : checksBinary;
+    result = await runProcess(
+      binary,
+      expandArguments(check, scratch, mid2agb),
+      check.environment ?? {},
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    result = {
+      code: 1,
+      output: message,
+      signal: null,
+      timedOut: false,
+      durationMs: 0,
+    };
+  }
+  if (result.code !== 0 || result.signal !== null || result.timedOut) {
+    failures.push(check.name);
+    printFailure(check.name, result);
+    return;
+  }
+  const detail = lastNonemptyLine(result.output);
+  const duration = `${(result.durationMs / 1000).toFixed(2)}s`;
+  console.log(
+    detail
+      ? `ok: ${check.name} (${duration}) — ${detail}`
+      : `ok: ${check.name} (${duration})`,
+  );
+}
+
+async function runParallel(
+  checks: readonly CheckManifestEntry[],
+): Promise<void> {
+  // Each worker claims its next index before awaiting, so Deno's single
+  // JavaScript event loop cannot assign one check to two workers.
+  let nextCheck = 0;
+  const workerCount = Math.min(MAX_PARALLEL_CHECKS, checks.length);
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextCheck < checks.length) {
+        const check = checks[nextCheck++];
+        await runCheck(check);
+      }
+    }),
+  );
+}
+
+const runnableChecks = checkManifest.filter(
+  (check) => {
+    if (selection === "--all") {
+      return check.suite !== "negative";
+    }
+    return check.suite === selection.slice(2);
+  },
+);
 try {
-  for (const check of CHECK_MANIFEST) {
-    if (check.envGate !== undefined && !Deno.env.get(check.envGate)) {
+  let parallelBatch: CheckManifestEntry[] = [];
+  for (const check of runnableChecks) {
+    if (!check.exclusive) {
+      parallelBatch.push(check);
       continue;
     }
-
-    const scratch = join(tempRoot, check.name);
-    let result: CheckResult;
-    try {
-      if (check.scratchKind === "existing-directory") {
-        await Deno.mkdir(scratch, { recursive: true });
-      }
-      await stageFixtureFiles(
-        check,
-        fixtureRoot(check.fixtureRootKind, decompFixture, songsMkFixture),
-        scratch,
-      );
-      result = await runProcess(
-        binary,
-        expandArguments(check, scratch, mid2agb),
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      result = { code: 1, output: message, timedOut: false, durationMs: 0 };
-    }
-
-    if (result.code !== 0 || result.timedOut) {
-      failures.push(check.name);
-      printFailure(check.name, result);
-    } else {
-      const detail = lastNonemptyLine(result.output);
-      const duration = `${(result.durationMs / 1000).toFixed(2)}s`;
-      console.log(
-        detail
-          ? `ok: ${check.name} (${duration}) — ${detail}`
-          : `ok: ${check.name} (${duration})`,
-      );
-    }
+    await runParallel(parallelBatch);
+    parallelBatch = [];
+    await runCheck(check);
   }
+  await runParallel(parallelBatch);
 } finally {
   await Deno.remove(tempRoot, { recursive: true });
 }
