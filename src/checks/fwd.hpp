@@ -23,11 +23,11 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                  const QString &screenshotPath = QString());
 int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel);
 int runLoopCheck();
-int runClickCheck(bool hardCut);
+int runClickCheck();
 int runPolyCheck(const QString &screenshotPath = QString());
 int runPrimeCheck();
 int runXcmdCheck();
-int runSmfCheck(bool includeStress);
+int runSmfCheck();
 int runTransportCheck();
 int runAudioCheck();
 int runResonanceCheck();

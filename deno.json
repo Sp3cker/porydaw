@@ -8,13 +8,26 @@
         "ASAN_OPTIONS",
         "DISPLAY",
         "LLVM_PROFILE_FILE",
-        "PORYDAW_SAMPLE_CORPUS",
-        "PORYDAW_SMF_STRESS"
+        "PORYDAW_SAMPLE_CORPUS"
       ]
+    },
+    "coverage": {
+      "read": true,
+      "write": true,
+      "run": true,
+      "env": ["CI", "PORYDAW_COVERAGE_IN_CI"]
+    },
+    "format": {
+      "read": true,
+      "run": true,
+      "env": ["CLANG_FORMAT"]
     }
   },
   "tasks": {
-    "checks": "deno run -P=checks tools/run_checks.ts"
+    "checks": "deno run -P=checks tools/run_checks.ts",
+    "format": "deno fmt && deno run -P=format tools/format.ts",
+    "format:check": "deno fmt --check && deno run -P=format tools/format.ts --check",
+    "coverage": "deno run -P=coverage tools/coverage.ts"
   },
   "fmt": {
     "include": ["tools/**/*.ts"]

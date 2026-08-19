@@ -504,9 +504,10 @@ double maxStepIn(const std::vector<float> &x, size_t from, size_t to)
 // signal amplitude in one sample; the fade keeps every step at or below the
 // natural floor, plus ~1/ramp of the amplitude per sample.
 
-int checkTransition(const char *what, const Driver &d, size_t at)
+enum class TransitionExpectation { Smooth, DetectableClick };
+
+int checkTransition(const char *what, const Driver &d, size_t at, TransitionExpectation expectation)
 {
-    int failures = 0;
     const double amp =
         std::max(maxAbsIn(d.outL, at - 2048, at - 512), maxAbsIn(d.outR, at - 2048, at - 512));
     const double naturalStep =
@@ -518,15 +519,29 @@ int checkTransition(const char *what, const Driver &d, size_t at)
     if (amp < kMeasurableSignalFloor) {
         std::fprintf(stderr, "clickcheck: FAIL: %s: sustain amplitude %.4f too low to measure\n",
                      what, amp);
-        failures++;
-    } else if (step > allowed) {
+        return 1;
+    }
+
+    const bool clickDetected = step > allowed;
+    if (expectation == TransitionExpectation::DetectableClick) {
+        if (!clickDetected) {
+            std::fprintf(stderr,
+                         "clickcheck: FAIL: %s hard-cut control produced no detectable click "
+                         "(step %.4f, sustain %.4f, natural step %.5f, threshold %.6f)\n",
+                         what, step, amp, naturalStep, allowed);
+            return 1;
+        }
+        return 0;
+    }
+
+    if (clickDetected) {
         std::fprintf(stderr,
                      "clickcheck: FAIL: %s: output stepped %.4f in one sample at the "
                      "transition (sustain %.4f, natural step %.5f, allowed %.6f)\n",
                      what, step, amp, naturalStep, allowed);
-        failures++;
+        return 1;
     }
-    return failures;
+    return 0;
 }
 
 // Mirrors AudioEngine::process's transport order: a transition into Playing
@@ -545,12 +560,14 @@ int scenarioPause(bool hardCut, bool square, const MidiTimeline &tl)
         d.render(3 * kRampSamples + 2048);
     else
         d.render(steadyStart - at + steadySamples);
-    int failures = checkTransition(square ? "square pause" : "DC pause", d, at);
+    int failures = checkTransition(square ? "square pause" : "DC pause", d, at,
+                                   hardCut ? TransitionExpectation::DetectableClick
+                                           : TransitionExpectation::Smooth);
     // Pause must fall silent: after the cut (well inside the tail window)
     // nothing but silence remains.
     const double tail = std::max(maxAbsIn(d.outL, at + 2 * kRampSamples, d.outL.size()),
                                  maxAbsIn(d.outR, at + 2 * kRampSamples, d.outR.size()));
-    if (tail > 0.01) {
+    if (!hardCut && tail > 0.01) {
         std::fprintf(stderr,
                      "clickcheck: FAIL: %s: pause did not fall silent "
                      "(tail level %.4f)\n",
@@ -616,10 +633,12 @@ int scenarioStop(bool hardCut, const MidiTimeline &tl)
     const size_t at = d.outL.size();
     d.transitionTo(kStopped, hardCut);
     d.render(3 * kRampSamples + 2048);
-    int failures = checkTransition("DC stop", d, at);
+    int failures = checkTransition("DC stop", d, at,
+                                   hardCut ? TransitionExpectation::DetectableClick
+                                           : TransitionExpectation::Smooth);
     const double tail = std::max(maxAbsIn(d.outL, at + 2 * kRampSamples, d.outL.size()),
                                  maxAbsIn(d.outR, at + 2 * kRampSamples, d.outR.size()));
-    if (tail > 0.01) {
+    if (!hardCut && tail > 0.01) {
         std::fprintf(stderr,
                      "clickcheck: FAIL: DC stop did not fall silent "
                      "(tail level %.4f)\n",
@@ -643,7 +662,9 @@ int scenarioPlayStopsAudition(bool hardCut, const MidiTimeline &tl)
     const size_t at = d.outL.size();
     d.transitionTo(kPlaying, hardCut);
     d.render(3 * kRampSamples + 4096);
-    int failures = checkTransition("DC play-over-audition", d, at);
+    int failures = checkTransition("DC play-over-audition", d, at,
+                                   hardCut ? TransitionExpectation::DetectableClick
+                                           : TransitionExpectation::Smooth);
     // The ringing audition must be cut (not left sounding under playback).
     if (d.sounding(62)) {
         std::fprintf(stderr, "clickcheck: FAIL: play did not halt the ringing audition\n");
@@ -775,7 +796,7 @@ int scenarioReloadAfterInterruptedFade(const MidiTimeline &tl)
 
 } // namespace
 
-int runClickCheck(bool hardCut)
+int runClickCheck()
 {
     const SmfFile smf = buildSustainSong();
     const auto timeline = MidiTimeline::build(smf, kSampleRate);
@@ -785,18 +806,23 @@ int runClickCheck(bool hardCut)
     }
 
     int failures = 0;
-    failures += scenarioPause(hardCut, false, *timeline);
-    failures += scenarioPause(hardCut, true, *timeline);
-    failures += scenarioStop(hardCut, *timeline);
-    failures += scenarioPlayStopsAudition(hardCut, *timeline);
-    if (!hardCut) {
-        failures += scenarioPlayingStartsFirstNote(*timeline);
-        failures += scenarioRapidRetarget(*timeline);
-        failures += scenarioTimedPreviewPlayingCut(*timeline);
-        failures += scenarioReloadAfterInterruptedFade(*timeline);
-    }
+    failures += scenarioPause(false, false, *timeline);
+    failures += scenarioPause(false, true, *timeline);
+    failures += scenarioStop(false, *timeline);
+    failures += scenarioPlayStopsAudition(false, *timeline);
+    failures += scenarioPlayingStartsFirstNote(*timeline);
+    failures += scenarioRapidRetarget(*timeline);
+    failures += scenarioTimedPreviewPlayingCut(*timeline);
+    failures += scenarioReloadAfterInterruptedFade(*timeline);
 
-    std::printf("clickcheck: %s (%s interface)\n", failures == 0 ? "PASS" : "FAIL",
-                hardCut ? "pre-fade hard cut" : "faded cut");
+    // Calibrate the transition detector against the deliberately abrupt
+    // pre-fade interface. Each DC transition must independently register a
+    // click; square waves are unsuitable controls because their natural edges
+    // exceed a hard cut's sample step.
+    failures += scenarioPause(true, false, *timeline);
+    failures += scenarioStop(true, *timeline);
+    failures += scenarioPlayStopsAudition(true, *timeline);
+
+    std::printf("clickcheck: %s\n", failures == 0 ? "PASS" : "FAIL");
     return failures == 0 ? 0 : 1;
 }

@@ -350,7 +350,7 @@ Required checks:
 
 After focused checks pass, run the actual application, open an eligible track, toggle the header button, draw and edit an envelope, audition it, save/reload, and observe the same curve and playback. This UI smoke test is required; offscreen widget construction alone is insufficient.
 
-Finally run the applicable incremental build, focused harness, full check sweep when a writable decomp fixture is available, and `tools/format.sh --check` once after all implementation waves.
+Finally run the applicable incremental build, focused harness, full check sweep when a writable decomp fixture is available, and `deno task format:check` once after all implementation waves.
 
 ## Definition of done
 

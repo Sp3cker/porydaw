@@ -27,11 +27,11 @@ Read [INSTALL.md](INSTALL.md) for instructions on how to compile Porydaw from so
 
 ## Contributing
 
-Code formatting is enforced with clang-format (major version 22 — output differs between major versions) using the repo's [.clang-format](.clang-format). Before opening a pull request, run:
+Code formatting is enforced with Deno and clang-format (major version 22 — output differs between major versions). Before opening a pull request, run:
 
 ```bash
-tools/format.sh          # reformat src/ and tools/ in place
-tools/format.sh --check  # what CI runs
+deno task format          # reformat TypeScript and C/C++ sources in place
+deno task format:check    # what CI runs
 ```
 
 Run the complete application check sweep against an existing build with Deno:

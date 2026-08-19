@@ -19,7 +19,6 @@ namespace checks {
 namespace {
 using detail::BinaryKind;
 using detail::CheckDefinition;
-using detail::CheckSuite;
 using detail::FixtureRootKind;
 using detail::ScratchKind;
 using detail::StartupKind;
@@ -70,19 +69,6 @@ QString jsonName(BinaryKind kind)
     Q_UNREACHABLE();
 }
 
-QString jsonName(CheckSuite suite)
-{
-    switch (suite) {
-    case CheckSuite::Regression:
-        return QStringLiteral("regression");
-    case CheckSuite::Specialized:
-        return QStringLiteral("specialized");
-    case CheckSuite::Negative:
-        return QStringLiteral("negative");
-    }
-    Q_UNREACHABLE();
-}
-
 QString jsonName(Windowing windowing)
 {
     switch (windowing) {
@@ -104,16 +90,12 @@ QJsonObject manifestEntry(const CheckDefinition &definition)
         {QStringLiteral("fixtureFiles"), QJsonArray::fromStringList(definition.fixtureFiles)},
         {QStringLiteral("binary"), jsonName(definition.binary)},
         {QStringLiteral("windowing"), jsonName(definition.windowing)},
-        {QStringLiteral("suite"), jsonName(definition.suite)},
     };
     if (!definition.environment.isEmpty())
         entry.insert(QStringLiteral("environment"), jsonObject(definition.environment));
     if (!definition.optionalArgumentEnvironment.isEmpty())
         entry.insert(QStringLiteral("optionalArgumentEnvironment"),
                      jsonObject(definition.optionalArgumentEnvironment));
-    if (!definition.environmentArguments.isEmpty())
-        entry.insert(QStringLiteral("environmentArguments"),
-                     jsonObject(definition.environmentArguments));
     if (definition.exclusive)
         entry.insert(QStringLiteral("exclusive"), true);
     return entry;

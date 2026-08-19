@@ -10,20 +10,19 @@ permissions:
   packages: read
 
 jobs:
-  # Formatting gate: src/ and tools/ must match the repo .clang-format.
-  # Pinned to clang-format major 22 — output differs across major
-  # versions, so contributors should format with the same major
-  # (tools/format.sh warns on a mismatch).
   format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
 
       - name: Install clang-format
         run: pip install 'clang-format==22.*'
 
       - name: Check formatting
-        run: tools/format.sh --check
+        run: deno task format:check
 
   # Build once per workflow; dependent jobs pull this exact resulting digest.
   build-linux-image:
@@ -139,9 +138,6 @@ jobs:
           submodules: recursive
 
       - name: Start a dummy audio server
-        # The engine prefers PulseAudio; a headless daemon with a null sink
-        # keeps every audio-dependent harness happy. Best-effort: without
-        # it, miniaudio's own null backend is the fallback.
         run: |
           pulseaudio -D --exit-idle-time=-1 || true
           pactl load-module module-null-sink sink_name=ci || true

@@ -18,7 +18,7 @@ src/
     ui/activity/                  # track activity meters
     ui/*.cpp                      # other widgets (transportbar, voicegroupbrowser, etc.)
   checks/     — test-only harnesses and their C++ registry
-tools/        — Deno check runner, format.sh, porydaw_render_cli
+tools/        — Deno check/format runners, porydaw_render_cli
 external/     — poryaaaa (submodule), dr_libs, stb
 docs/ docsrc/ — spec, plans, manual
 ```
@@ -61,15 +61,13 @@ Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_
 - Target 200–400L per file, 600L ceiling. The current outliers (`songview.cpp:6676`, `mainwindow.cpp:3351`, `songdocument.cpp:2289`) are tech debt — see `BACKLOG.md`.
 - One concept per file. `ui/editordrawer/` is the model.
 - Don't create 80L fragments — 40 tiny files in one feature is also undiscoverable.
+- See `rule://keep-files-small` for enforcement.
 
 ## Build & verify
-
 ```bash
 cmake --build build -j"$(nproc)"                           # fast incremental
-deno task checks build/porydaw_checks                       # regression sweep
-deno task checks build/porydaw_checks --all                 # include specialized checks
-PORYDAW_SMF_STRESS=1 deno task checks build/porydaw_checks # include bounded SMF stress
-tools/format.sh --check                                     # CI format gate (clang-format 22)
+deno task checks build/porydaw_checks                       # Tests
+deno task format                                           # format TypeScript and C/C++
 ```
 
 Project-backed harnesses use checked-in fixtures. The Deno runner gives each
@@ -78,6 +76,5 @@ the test-only C++ registry exposed by `porydaw_checks --manifest`.
 
 ## Conventions
 
-- C++20, Qt6, `clang-format` is law. No speculative abstractions.
-- Follow `~/.claude/CLAUDE.md` (Think Before Coding, Simplicity First, Surgical Changes).
-- Don't copy `../../hearth-test` to `/tmp` — see `.omp/rules/no-temporary-hearth-test-copies.md`.
+- C++20, Qt6, `clang-format`
+- Checks use fixture files locally from repo. All copying and setup is handled by `tools/run_checks.ts`

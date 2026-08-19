@@ -144,7 +144,7 @@ Run in order; a failure stops the wave.
 2. **Build** — `cmake --build build --target porydaw porydaw_checks` succeeds.
 3. **Selection check** — run `QT_QPA_PLATFORM=offscreen ./build/porydaw_checks --selectioncheck`.
 4. **Acceptance matrix** — run every check family named by `docs/selection-model-spec.md` §"Acceptance matrix" using the spec's explicit dispatch map (for example `rollcheckautomation` → `--check-automation`, `rollcheckpsgvelocity` → `--check-velocity-page`, `hostcheck` → `--check-host-adapter`/`--check-host-seams`, `mainwindowroutingcheck` → `--check-mainwindow-routing`/`--check-host-integration`).
-5. **Formatting** — `tools/format.sh --check` passes.
+5. **Formatting** — `deno task format:check` passes.
 6. **Obsolete references gone** — `lsp references`/`grep` on the migrated `SongView` selection symbols returns no remaining callers.
 
 `tools/run_checks.ts` (`deno task checks`) provides necessary broad regression evidence across the test suite but does not run every specialized acceptance harness; it cannot substitute for the explicit `--check-*` runs in gate 4.

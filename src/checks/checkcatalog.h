@@ -15,7 +15,6 @@ enum class StartupKind { Porydaw, HandlerOwned };
 enum class ScratchKind { Unused, ExistingDirectory, MustNotExistPath };
 enum class FixtureRootKind { None, DecompProject, SongsMkProject };
 enum class BinaryKind { Checks, Application };
-enum class CheckSuite { Regression, Specialized, Negative };
 enum class Windowing { Offscreen, WindowSystem };
 
 struct CheckDefinition {
@@ -27,11 +26,9 @@ struct CheckDefinition {
     QStringList fixtureFiles;
     QMap<QString, QString> environment;
     QMap<QString, QString> optionalArgumentEnvironment;
-    QMap<QString, QString> environmentArguments;
     bool exclusive = false;
     BinaryKind binary = BinaryKind::Checks;
     StartupKind startup = StartupKind::Porydaw;
-    CheckSuite suite = CheckSuite::Regression;
     Windowing windowing = Windowing::Offscreen;
 };
 

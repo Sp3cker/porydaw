@@ -5,7 +5,6 @@
 // usage: deno task checks <porydaw-checks-binary>
 //
 // env: PORYDAW_SAMPLE_CORPUS  optional built project for samplecheck's corpus
-//      PORYDAW_SMF_STRESS    nonempty: run bounded SMF automation stress checks
 //      ASAN_OPTIONS defaults to detect_leaks=0
 
 import { dirname, join } from "node:path";
@@ -22,14 +21,11 @@ interface CheckManifestEntry {
 
   readonly environment?: Readonly<Record<string, string>>;
   readonly optionalArgumentEnvironment?: Readonly<Record<string, string>>;
-  readonly environmentArguments?: Readonly<Record<string, string>>;
   readonly exclusive?: boolean;
   readonly scratchKind: ScratchKind;
   readonly fixtureRootKind: FixtureRootKind;
   readonly fixtureFiles: readonly string[];
-  readonly suite: "regression" | "specialized" | "negative";
 }
-
 const CHECK_TIMEOUT_MS = 90_000;
 const TERMINATE_GRACE_MS = 5_000;
 const MAX_PARALLEL_CHECKS = Math.max(
@@ -40,7 +36,11 @@ const decoder = new TextDecoder();
 
 function usage(): never {
   console.error(
-    "usage: deno task checks <porydaw-checks-binary> [--all|--specialized|--negative]",
+    "usage: deno task checks <porydaw-checks-binary> [--all|--no-windowing-checks]",
+  );
+  console.error("  --all (default): all checks");
+  console.error(
+    "  --no-windowing-checks: skip checks that require a window system",
   );
   Deno.exit(2);
 }
@@ -217,15 +217,6 @@ function expandArguments(
     }
     result.push(argument);
   }
-  for (
-    const [environment, argument] of Object.entries(
-      check.environmentArguments ?? {},
-    )
-  ) {
-    if (Deno.env.get(environment)) {
-      result.push(argument);
-    }
-  }
   return result;
 }
 
@@ -346,10 +337,12 @@ function printFailure(name: string, result: CheckResult): void {
 if (Deno.args.length < 1 || Deno.args.length > 2) {
   usage();
 }
-const selection = Deno.args[1] ?? "--regression";
-if (
-  !["--regression", "--all", "--specialized", "--negative"].includes(selection)
-) {
+const selection = Deno.args[1] ?? "--all";
+const validSelections = [
+  "--all",
+  "--no-windowing-checks",
+];
+if (!validSelections.includes(selection)) {
   usage();
 }
 
@@ -457,13 +450,9 @@ async function runScheduled(
   await runParallel(parallelBatch);
 }
 
+const skipWindowSystem = selection === "--no-windowing-checks";
 const runnableChecks = checkManifest.filter(
-  (check) => {
-    if (selection === "--all") {
-      return check.suite !== "negative";
-    }
-    return check.suite === selection.slice(2);
-  },
+  (check) => !skipWindowSystem || check.windowing !== "window-system",
 );
 try {
   const offscreenChecks = runnableChecks.filter(
