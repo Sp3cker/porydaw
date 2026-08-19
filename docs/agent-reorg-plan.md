@@ -1,14 +1,14 @@
 # Agent-Driven Reorganization Plan — Porydaw
 
-*Status: partially authoritative. The **EditorSelectionModel cutover (§5)** is the approved next implementation wave and is normative for execution. Every later wave (§6, §7, §8) is **directional only** — each requires its own reviewed detailed plan before any implementation begins.*
+*Status: partially authoritative. The **EditorSelectionModel cutover (§5)** and the **SongView surface extraction (§6)** are implemented. `docs/selection-model-spec.md` remains the normative behavior contract. Later waves (§7, §8) remain **directional only** — each requires its own reviewed detailed plan before any implementation begins.*
 
-*Branch: planning worktree `songview-selection-spec` created from `fork-main`@`6dfa10c` (`6dfa10cdbdda067833bbda9b3cc746cb7dcfbab4`). Implementation begins from the commit that lands these authoritative docs on `fork-main`, not directly from the temporary planning branch.*
+*History: the planning worktree `songview-selection-spec` was created from `fork-main`@`6dfa10c` (`6dfa10cdbdda067833bbda9b3cc746cb7dcfbab4`). The implemented architecture now lives in the `fork-main` working tree.*
 
 ## 1. Authority and status
 
-Only the selection-model wave is authoritative today. `docs/selection-model-spec.md` is the normative behavioral contract for the complete `EditorSelectionModel` cutover. If current code or checks conflict with that spec, implementation must stop and resolve the discrepancy explicitly rather than silently changing the specification or behavior.
+The selection-model cutover (§5) and SongView surface extraction (§6) are implemented in the working tree. `docs/selection-model-spec.md` remains the normative behavioral contract for `EditorSelectionModel`. If current code or checks conflict with that spec, implementation must stop and resolve the discrepancy explicitly rather than silently changing the specification or behavior.
 
-Later SongView surface extractions, the shell split, and the document split remain directional in this file. They are not approved execution plans and must not be treated as such until each receives its own concrete reviewed plan.
+Later waves — the pitch-bend folder move (§7), the shell split (§8), and the document split (§8) — remain directional in this file. They are not approved execution plans and must not be treated as such until each receives its own concrete reviewed plan.
 
 ## 2. Motivation — why this pays for agents
 
@@ -25,7 +25,7 @@ Later SongView surface extractions, the shell split, and the document split rema
 
 **Pitch-bend proves the pattern:** new UI went to *new files* `pitchbendeditor.cpp:453` + `pitchbendgraph.cpp:623` instead of +1k to `songview`. `songview` only grew +121 for the seam. Check landed correctly in `src/checks/pitchbendcheck.cpp`. That is the vertical slice the SongView work wants — but `pitchbendgraph:623` is already over ceiling and flat in `src/ui/` wants a folder.
 
-**Payoff of finishing:** an agent fixing `velocity` touches `src/ui/songview/velocity/` (2 files) + `src/core`, not `grep` inside 6767L. `git diff` is reviewable. `lsp references` is cheap. `run_checks.sh` stays green.
+**Payoff of finishing:** an agent fixing `velocity` touches `src/ui/songview/` + `src/core`, not `grep` inside 6767L. `git diff` is reviewable. `lsp references` is cheap. `deno task checks` / `tools/run_checks.ts` stays green.
 
 ## 3. Current state (measured 2026-08-16)
 
@@ -114,13 +114,13 @@ A retained method that degenerates into a bare model call is removed, not kept.
 
 ### Build surfaces
 
-Expected files and wiring:
+Implemented files and wiring:
 
 - **Model** — a concrete source/header pair at `src/ui/songview/editorselectionmodel.{h,cpp}` (200–400L target, 600L ceiling). It may use `NoteId` (`src/core/noteid.h`) and `TrackRemap` but must not retain a `SongDocument`, `MidiTimeline`, `SongViewModel`, or widget pointer (spec §"Ownership and seam").
 - **Focused check** — `src/checks/selectioncheck.cpp`, testing the model through its public interface (never private fields or source text).
-- **CLI dispatch** — `src/main.cpp`: forward-declare `runSelectionCheck(...)` near the other `run*Check` declarations and add a `--selectioncheck` branch in `main()` alongside the existing `--rollcheck`-style dispatch. `--selectioncheck` is the approved new flag: an intentional standalone check name, consistent with the existing `--rollcheck`/`--editcheck` style.
-- **Build** — `CMakeLists.txt`: add `src/ui/songview/editorselectionmodel.{h,cpp}` to the `porydaw_app` library block and `src/checks/selectioncheck.cpp` to the `porydaw` executable block.
-- **Every production caller** — SongView's nested surfaces (`src/ui/songview.cpp`: ruler, piano roll, overlays, context menus), `EventListView` (`src/ui/eventlistview.cpp`), `AutomationPage`/`AutomationRows`/`AutomationArea`/`AutomationPaint`/`AutomationHover` and `VelocityArea` (`src/ui/editordrawer/`), and application-facing callers (`src/mainwindow.cpp` self-test).
+- **Check harness and CLI dispatch** — wired via `porydaw_checks`: forward-declared in `src/checks/fwd.hpp`, registered with its handler and `--selectioncheck` flag in `src/checks/checkregistry.cpp`, and executed through `src/checks/checks_main.cpp`.
+- **Build** — `CMakeLists.txt`: `src/ui/songview/editorselectionmodel.{h,cpp}` is added to the `porydaw_app` library target, and `src/checks/selectioncheck.cpp` is built into the `porydaw_checks` executable target (which links `porydaw_app`).
+- **Every production caller** — SongView's extracted surfaces under `src/ui/songview/` (PianoRoll, TimeRuler, TrackHeaders), `EventListView` (`src/ui/eventlistview.cpp`), `AutomationPage`/`AutomationRows`/`AutomationArea`/`AutomationPaint`/`AutomationHover` and `VelocityArea` (`src/ui/editordrawer/`), and application-facing callers (`src/mainwindow.cpp` self-test).
 - **Every direct check caller** — `hostcheck`, `eventviewcheck`, `rollcheck`, `rollcheckautomation`, `rollcheckdrawer`, `rollcheckpsgvelocity`, `pitchbendcheck`, `viewcheck`, `mainwindowroutingcheck`, `tabcheck`, `vgsavecheck`, and `automationgesturecheck` under `src/checks/`. These caller lists are baseline routing aids, not exhaustive proof: run `lsp references` on each migrated symbol plus scoped `src/ui` and `src/checks` searches as the actual completeness gate.
 
 `src/ui/editordrawer/` and `EventListView` are already separate modules: migrate only their selection access, do not reorganize them as part of this wave.
@@ -141,13 +141,13 @@ Expected files and wiring:
 Run in order; a failure stops the wave.
 
 1. **Baseline capture** — before edits, run the existing checks named by the spec's acceptance matrix and record pass/fail, so the cutover can be proven behavior-preserving.
-2. **Build** — `cmake --build --target porydaw` (or the equivalent configured build) succeeds.
-3. **Selection check** — run `--selectioncheck`.
+2. **Build** — `cmake --build build --target porydaw porydaw_checks` succeeds.
+3. **Selection check** — run `QT_QPA_PLATFORM=offscreen ./build/porydaw_checks --selectioncheck`.
 4. **Acceptance matrix** — run every check family named by `docs/selection-model-spec.md` §"Acceptance matrix" using the spec's explicit dispatch map (for example `rollcheckautomation` → `--check-automation`, `rollcheckpsgvelocity` → `--check-velocity-page`, `hostcheck` → `--check-host-adapter`/`--check-host-seams`, `mainwindowroutingcheck` → `--check-mainwindow-routing`/`--check-host-integration`).
 5. **Formatting** — `tools/format.sh --check` passes.
 6. **Obsolete references gone** — `lsp references`/`grep` on the migrated `SongView` selection symbols returns no remaining callers.
 
-`tools/run_checks.sh` is necessary broad regression evidence but does not run every specialized acceptance harness; it cannot substitute for the explicit `--check-*` runs in gate 4.
+`tools/run_checks.ts` (`deno task checks`) provides necessary broad regression evidence across the test suite but does not run every specialized acceptance harness; it cannot substitute for the explicit `--check-*` runs in gate 4.
 
 Any discrepancy between current code/checks and the normative spec stops the wave for explicit resolution — never silently change the spec or the observed behavior.
 
@@ -155,19 +155,40 @@ Any discrepancy between current code/checks and the normative spec stops the wav
 
 One implementation owner controls `src/ui/songview.h`, `src/ui/songview.cpp`, and the model seam. No one else edits those files during the cutover. Parallel work starts only after the model interface is fixed, and only on independent callers or checks (e.g. a second agent migrating `EventListView` or a focused check once the header is stable).
 
-## 6. Directional SongView surface extraction (not yet approved)
+## 6. Implemented SongView surface extraction
 
-The selection model is the prerequisite seam. The vertical surface slices below are an ordering proposal only; each slice needs its own reviewed detailed plan before implementation.
+The SongView surface extraction has been fully implemented under `src/ui/songview/` and `src/ui/songview.{h,cpp}`. `SongView` is reduced from a 6767L god file to a ~580L coordinating facade handling widget composition, lifecycle/view-state coordination, and application-facing signals.
 
-1. **PianoRoll** — the first vertical surface slice; establishes the extraction pattern.
-2. **Ruler** — timeline ruler next.
-3. **Track headers.**
-4. **Playhead / OtherStrip / remaining cohesive surfaces.**
-5. **SongView shell cleanup** — reduce `SongView` to composition, lifecycle/view-state coordination, and application-facing signals.
+### Implemented layout and files under `src/ui/songview/`
 
-**Shared camera/grid:** extract shared timeline camera/grid modules only after at least two concrete consumers prove the seam. They are not a prerequisite to the PianoRoll slice.
+The extraction splits SongView into per-surface modules, shared data/geometry helpers, and dedicated coordination files:
 
-**Per-surface module pattern:** the adapter / layout / painter / interaction split is conditional on cohesive file sizes. Split a surface only when it genuinely exceeds the 200–400L target, and never into tiny mandatory fragments. Global `songview_painting.cpp` / `songview_interaction.cpp` god files are prohibited — a replacement god file is not a split.
+1. **Per-surface modules**:
+   - **PianoRoll surface** (`pianoroll.h`, `pianoroll.cpp`, `pianoroll_geometry.cpp`, `pianoroll_paint.cpp`, `pianoroll_interaction.cpp`, `pianoroll_commands.cpp`): Split vertically into layout/geometry, note rendering, gesture interaction, and note command execution because PianoRoll is complex and each aspect warrants its own focused 200–500L file.
+   - **TimeRuler surface** (`timeruler.h`, `timeruler.cpp`, `timeruler_paint.cpp`, `timeruler_interaction.cpp`): Split into the ruler widget shell, timeline ruler painting (markers, loop region, time signatures), and scrubber/loop interaction.
+   - **TrackHeaders surface** (`trackheaderpanel.h`, `trackheaderpanel.cpp`, `trackheaderrow.h`, `trackheaderrow.cpp`): Split into the panel container and individual track row widgets (track selection, mute/solo, activity meter, layout, and interaction).
+   - **OtherStrip surface** (`otherstrip.h`, `otherstrip.cpp`): Dedicated strip widget for bottom timeline lane and automation items.
+   - **VoicePicker surface** (`voicepicker.h`, `voicepicker.cpp`): Dedicated popup/dropdown widget for track voice selection.
+
+   *Cohesion rationale:* `OtherStrip`, `VoicePicker`, and `TrackHeaders` rows/panel stay cohesive in their respective files rather than splitting further into separate geometry/paint/interaction files because finer splits would produce tiny fragments under 100–200 lines, violating the 200–400L file size principle.
+
+2. **Data, geometry, timeline state, and editing helpers**:
+   - `camera.cpp`: Viewport coordinate transforms, zoom scaling, scrolling, and cursor anchoring.
+   - `grid.cpp`: Beat-grid calculations, subdivision intervals, painting support, and tick snapping.
+   - `viewstate.cpp`: Scale projection, editor view state, lane display state, and velocity-gesture coordination.
+   - `detail.h`, `detail.cpp`: Shared layout and metric helpers (pixel scaling, wheel deltas, hit-padding, used-track masks, scale-folding logic, and key names).
+   - `rangeedit.cpp`: Multi-track range edit operations (cut, copy, paste, delete, transpose, and time insertion).
+   - `editorselectionmodel.h`, `editorselectionmodel.cpp`: Canonical selection model (track scope, note selection, time selection, and primary track).
+
+3. **SongView responsibility files**:
+   - `src/ui/songview.h`, `src/ui/songview.cpp`: Coordinating shell handling widget composition, lifecycle updates, event routing, playhead state, and application-facing Qt signals.
+   - `trackvoiceops.cpp`: Track selection and remapping, mute/solo state, voice operations, and audition routing.
+   - `drawercoordination.cpp`: Coordination between SongView and the velocity and automation editor-drawer pages.
+
+### Structural rules maintained
+
+- **No global replacement god files:** Global `songview_painting.cpp` / `songview_interaction.cpp` files remain strictly prohibited — a replacement god file is not a modular split.
+- **File size discipline:** Each file targets 200–400 lines (with a 600L ceiling), keeping concepts cleanly separated and agent-navigable without gratuitous fragmentation.
 
 ## 7. Deferred waves — pitch-bend folder and docs cleanup
 
@@ -211,4 +232,4 @@ Root routing to add (a future docs commit, not part of the selection wave):
 * The selection wave is a behavior-preserving cutover only: no new gestures, shortcuts, colors, undo changes, camera/grid/painting refactors, or `src/ui/editordrawer/` reorganization.
 
 ---
-*Next implementer: execute only §5 (EditorSelectionModel cutover) against `docs/selection-model-spec.md`. §6–§9 remain directional until individually planned and reviewed.*
+*Next implementer: §5 (EditorSelectionModel cutover) and §6 (SongView surface extraction) are implemented. Remaining waves (§7 pitch-bend folder, §8 shell/document splits, §9 AGENTS.md routing) remain directional until individually planned and reviewed.*
