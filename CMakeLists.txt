@@ -234,6 +234,34 @@ qt_add_library(porydaw_app STATIC
     src/ui/pitchprojection.h
     src/ui/songview.cpp
     src/ui/songview.h
+    src/ui/songview/otherstrip.cpp
+    src/ui/songview/otherstrip.h
+    src/ui/songview/voicepicker.cpp
+    src/ui/songview/voicepicker.h
+    src/ui/songview/trackheaderrow.cpp
+    src/ui/songview/trackheaderrow.h
+    src/ui/songview/trackheaderpanel.cpp
+    src/ui/songview/trackheaderpanel.h
+    src/ui/songview/editorselectionmodel.cpp
+    src/ui/songview/editorselectionmodel.h
+    src/ui/songview/detail.cpp
+    src/ui/songview/detail.h
+    src/ui/songview/camera.cpp
+    src/ui/songview/grid.cpp
+    src/ui/songview/rangeedit.cpp
+    src/ui/songview/trackvoiceops.cpp
+    src/ui/songview/viewstate.cpp
+    src/ui/songview/drawercoordination.cpp
+    src/ui/songview/timeruler.cpp
+    src/ui/songview/timeruler.h
+    src/ui/songview/timeruler_paint.cpp
+    src/ui/songview/timeruler_interaction.cpp
+    src/ui/songview/pianoroll.cpp
+    src/ui/songview/pianoroll.h
+    src/ui/songview/pianoroll_geometry.cpp
+    src/ui/songview/pianoroll_paint.cpp
+    src/ui/songview/pianoroll_interaction.cpp
+    src/ui/songview/pianoroll_commands.cpp
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
     src/ui/pitchbendgraph.cpp

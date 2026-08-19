@@ -188,7 +188,7 @@ void VelocityArea::cancelInteraction()
         hadVelocityGesture && document && m_live.documentRevision != document->revision();
     const std::vector<NoteId> selectionBeforePress = m_selectionBeforePress;
     pauseFollowScroll(false);
-    m_owner.setSelection(selectionBeforePress);
+    m_owner.selectionModel().setNoteSelection(selectionBeforePress);
     m_interaction = Interaction::None;
     m_relativeActivated = false;
     m_suppressContextMenu = false;
@@ -385,7 +385,7 @@ std::vector<DocNote> VelocityArea::selectedNotes() const
     const SongDocument *document = m_owner.document();
     if (!document)
         return notes;
-    for (const NoteId noteId : m_owner.selection()) {
+    for (const NoteId noteId : m_owner.selectionModel().noteSelection()) {
         DocNote note;
         if (document->findNote(noteId, &note))
             notes.push_back(note);
@@ -398,12 +398,12 @@ std::vector<DocNote> VelocityArea::primaryTrackNotes() const
     const SongDocument *document = m_owner.document();
     if (!document)
         return {};
-    return document->notesForTrack(m_owner.selectedTrack());
+    return document->notesForTrack(m_owner.selectionModel().primaryTrack());
 }
 
 std::optional<DocNote> VelocityArea::notesAt(const QPointF &position, bool includeStems) const
 {
-    const std::vector<NoteId> &selection = m_owner.selection();
+    const std::vector<NoteId> &selection = m_owner.selectionModel().noteSelection();
     const double radius = double(m_geometry.startNodeHitRadius);
     const double radiusSquared = radius * radius;
     std::optional<DocNote> primary;
@@ -529,7 +529,7 @@ int VelocityArea::rulerVelocityAt(const QPointF &position) const
 
 void VelocityArea::setSelection(const std::vector<NoteId> &selection)
 {
-    m_owner.setSelection(selection);
+    m_owner.selectionModel().setNoteSelection(selection);
     rebuildVisualState();
 }
 
@@ -849,8 +849,9 @@ void VelocityArea::paintContent(QPainter &painter)
         if (document && document->findNote(*m_hoveredNote, &note))
             hoveredNote = note;
     }
-    axisStyle.relativeGesture =
-        m_relativeActivated || m_owner.selection().size() > 1 || hoveredNote.has_value();
+    axisStyle.relativeGesture = m_relativeActivated ||
+                                m_owner.selectionModel().noteSelection().size() > 1 ||
+                                hoveredNote.has_value();
     m_axis.paintRuler(painter, axisStyle);
     painter.save();
     painter.setClipRect(axisStyle.contentClip, Qt::IntersectClip);
@@ -886,7 +887,7 @@ void VelocityArea::paintContent(QPainter &painter)
             sectionTick = sectionEnd;
         }
     }
-    const std::vector<NoteId> selection = m_owner.selection();
+    const std::vector<NoteId> &selection = m_owner.selectionModel().noteSelection();
     const std::vector<DocNote> notes = primaryTrackNotes();
     const auto selected = [&selection, this](const DocNote &note) {
         return contains(selection, note.noteId) || contains(m_bandPreview, note.noteId);
@@ -965,7 +966,7 @@ void VelocityArea::mousePressEvent(QMouseEvent *event)
     const QPointF position = event->position();
     m_pressPosition = position;
     m_previousPosition = position;
-    m_selectionBeforePress = m_owner.selection();
+    m_selectionBeforePress = m_owner.selectionModel().noteSelection();
     m_pressedNote.reset();
     if (event->button() == Qt::MiddleButton) {
         m_interaction = Interaction::Pan;
@@ -1092,7 +1093,7 @@ void VelocityArea::mouseReleaseEvent(QMouseEvent *event)
             }
             setSelection(selection);
         } else if (m_controlPress && m_pressedNote) {
-            std::vector<NoteId> selection = m_owner.selection();
+            std::vector<NoteId> selection = m_owner.selectionModel().noteSelection();
             const auto it = std::find(selection.begin(), selection.end(), *m_pressedNote);
             if (it == selection.end())
                 selection.push_back(*m_pressedNote);

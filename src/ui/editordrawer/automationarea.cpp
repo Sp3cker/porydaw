@@ -1000,7 +1000,7 @@ void AutomationArea::showAddLaneMenu(const QPoint &globalPosition)
 {
     if (!m_page)
         return;
-    const int track = m_page->selectedTrack();
+    const int track = m_page->m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
     static constexpr uint8_t candidates[] = {1, 7, 10, 20, 21, automation::kBendController};
@@ -1149,7 +1149,7 @@ void AutomationArea::showVoiceMenu(const AutomationRow &row, const QPoint &globa
     Q_UNUSED(row);
     if (!m_page || !m_page->document())
         return;
-    const int track = m_page->selectedTrack();
+    const int track = m_page->m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
     const qreal x = mapFromGlobal(globalPosition).x();

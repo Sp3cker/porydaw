@@ -101,11 +101,9 @@ class AutomationPage final : public QWidget
     bool ready() const noexcept;
     const DrawerPageLiveState &liveState() const noexcept { return m_liveState; }
     const MidiTimeline *timeline() const noexcept;
+    uint32_t usedTrackMask() const noexcept;
     SongDocument *document() const noexcept;
     const LoadedVoiceGroup *voicegroup() const noexcept;
-    int selectedTrack() const noexcept;
-    const SongView::TimeSelection &timeSelection() const noexcept;
-    bool timeSelectionCoversLane(int track, uint8_t controller) const;
     uint64_t snapTick(double tick, bool fineMode) const noexcept;
     uint64_t snapTickDown(double tick, bool fineMode) const noexcept;
     DrawerPageGridState gridState(uint64_t tick, bool fineMode) const noexcept;

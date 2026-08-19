@@ -240,6 +240,18 @@ const MidiTimeline *AutomationPage::timeline() const noexcept
     return m_owner.timeline();
 }
 
+uint32_t AutomationPage::usedTrackMask() const noexcept
+{
+    const MidiTimeline *songTimeline = timeline();
+    if (!songTimeline)
+        return 0;
+    uint32_t mask = 0;
+    for (int track = 0; track < 16; ++track)
+        if (songTimeline->tracks[track].used)
+            mask |= 1u << track;
+    return mask;
+}
+
 SongDocument *AutomationPage::document() const noexcept
 {
     return m_owner.document();
@@ -282,21 +294,6 @@ void AutomationPage::documentChanged()
     cancelInteraction();
     m_viewState = m_owner.editorViewState();
     rebuildModel();
-}
-
-int AutomationPage::selectedTrack() const noexcept
-{
-    return m_owner.selectedTrack();
-}
-
-const SongView::TimeSelection &AutomationPage::timeSelection() const noexcept
-{
-    return m_owner.timeSelection();
-}
-
-bool AutomationPage::timeSelectionCoversLane(int track, uint8_t controller) const
-{
-    return m_owner.timeSelectionCoversLane(track, controller);
 }
 
 uint64_t AutomationPage::snapTick(double tick, bool fineMode) const noexcept
@@ -423,12 +420,12 @@ void AutomationPage::setLaneRange(const EditorAutomationRowId &row, uint8_t rang
 void AutomationPage::publishTimeSelection(uint64_t startTick, uint64_t endTick,
                                           const std::vector<std::pair<int, uint8_t>> &lanes) const
 {
-    SongView::TimeSelection selection;
+    songview::EditorSelectionModel::TimeSelection selection;
     selection.startTick = startTick;
     selection.endTick = endTick;
-    selection.scope = SongView::TimeSelection::Lanes;
+    selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
     selection.lanes = lanes;
-    m_owner.setTimeSelection(selection);
+    m_owner.selectionModel().setTimeSelection(selection);
 }
 
 DrawerPageVoiceContext AutomationPage::voiceContext(uint64_t tick) const
