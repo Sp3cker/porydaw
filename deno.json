@@ -1,0 +1,11 @@
+{
+  "tasks": {
+    "checks": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,PORYDAW_SAMPLE_CORPUS,PORYDAW_SMF_STRESS,QT_QPA_PLATFORM tools/run_checks.ts"
+  },
+  "fmt": {
+    "include": ["tools/**/*.ts"]
+  },
+  "lint": {
+    "include": ["tools/**/*.ts"]
+  }
+}

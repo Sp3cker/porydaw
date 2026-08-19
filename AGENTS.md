@@ -18,7 +18,7 @@ src/
     ui/activity/                  # track activity meters
     ui/*.cpp                      # other widgets (transportbar, voicegroupbrowser, etc.)
   checks/     — in-binary harnesses (42 files: *check.cpp + automationgesturecheck/)
-tools/        — run_checks.sh, format.sh, porydaw_render_cli
+tools/        — Deno check runner/manifest, format.sh, porydaw_render_cli
 external/     — poryaaaa (submodule), dr_libs, stb
 docs/ docsrc/ — spec, plans, manual
 ```
@@ -65,14 +65,15 @@ Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_
 ## Build & verify
 
 ```bash
-cmake --build build -j"$(nproc)"          # fast incremental
-tools/run_checks.sh build/porydaw          # self-contained full harness sweep
-build/porydaw --smfstresscheck           # direct opt-in bounded SMF stress check
-tools/format.sh --check                   # CI format gate (clang-format 22)
+cmake --build build -j"$(nproc)"                    # fast incremental
+deno task checks build/porydaw                       # full harness sweep
+PORYDAW_SMF_STRESS=1 deno task checks build/porydaw # include bounded SMF stress
+tools/format.sh --check                              # CI format gate (clang-format 22)
 ```
 
-Project-backed harnesses use checked-in fixtures. `tools/run_checks.sh` gives each
-harness a fresh private copy because several checks write into the project.
+Project-backed harnesses use checked-in fixtures. The Deno runner gives each
+harness a private scratch path and stages only the files declared in
+`tools/check_manifest.ts`.
 
 ## Conventions
 

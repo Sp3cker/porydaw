@@ -40,6 +40,12 @@ Enable the repository-managed pre-commit formatting check once per checkout:
 tools/install-hooks.sh
 ```
 
+Run the complete application check sweep against an existing build with Deno:
+
+```bash
+deno task checks build/porydaw
+```
+
 ## License
 
 Porydaw is licensed under [GPL-3.0](LICENSE). The embedded poryaaaa engine is

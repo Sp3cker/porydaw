@@ -44,9 +44,9 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-  # The harness sweep on an AddressSanitizer build uses complete checked-in
-  # fixtures. Every project-backed check gets a private copy, and samplecheck
-  # runs without its optional corpus pass.
+  # The harness sweep on an AddressSanitizer build stages each check's declared
+  # fixture files in a private scratch directory. Samplecheck runs without its
+  # optional corpus pass.
   asan-checks:
     runs-on: ubuntu-latest
     steps:
@@ -59,6 +59,11 @@ jobs:
         with:
           version: '6.9.*'
           cache: true
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.5
 
       - name: Start a dummy audio server
         # The engine prefers PulseAudio; a headless daemon with a null sink
@@ -78,9 +83,9 @@ jobs:
         run: cmake --build build-asan -j"$(nproc)"
 
       - name: Run harnesses
-        run: tools/run_checks.sh build-asan/porydaw
+        run: deno task checks build-asan/porydaw
 
-      # run_checks.sh covers the main binary's --*check flags only; the theme
+      # The Deno runner covers the main binary's --*check flags only; the theme
       # and font checks live in a separate ctest binary and were previously
       # not gated anywhere in CI.
       - name: Run theme and font checks

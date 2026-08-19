@@ -26,7 +26,7 @@ else()
     message(WARNING "Release IPO/LTO disabled: ${PORYDAW_IPO_ERROR}")
 endif()
 
-# AddressSanitizer build for the harness sweep (tools/run_checks.sh): memory
+# AddressSanitizer build for the harness sweep (deno task checks): memory
 # bugs abort with a stack trace instead of corrupting silently. GCC/Clang
 # only. Use a separate build dir, e.g.:
 #   cmake -B build-asan -DPORYDAW_ASAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
