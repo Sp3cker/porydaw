@@ -1,0 +1,38 @@
+name: Linux CI image
+
+on:
+  push:
+    branches: [fork-main]
+    paths:
+      - .github/ci/linux/Dockerfile
+      - .github/workflows/linux-ci-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/sp3cker/porydaw-linux-ci
+  TAG: ubuntu24.04-qt6.9.3-deno2.9.5-v1
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .github/ci/linux
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.TAG }}
