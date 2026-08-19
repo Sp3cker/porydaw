@@ -7,11 +7,30 @@
 
 #include <QApplication>
 #include <QEventLoop>
+#include <QFont>
+#include <QGuiApplication>
 #include <QIcon>
 #include <QStyleHints>
 #include <QWidget>
 
 namespace ui {
+
+void installOffscreenSystemFont(QApplication &application)
+{
+#if defined(Q_OS_MACOS)
+    // QOffscreen's generic family is absent from CoreText's family list. Do
+    // not resolve application.font(): resolving its "Sans Serif" family is
+    // exactly the expensive alias lookup this avoids.
+    if (QGuiApplication::platformName() == QStringLiteral("offscreen")) {
+        auto font = QFont{};
+        font.setFamily(QStringLiteral(".AppleSystemUIFont"));
+        application.setFont(font);
+    }
+#else
+    Q_UNUSED(application);
+#endif
+}
+
 bool initializePorydawApplication(QApplication &application)
 {
 #if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)

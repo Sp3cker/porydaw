@@ -6,6 +6,9 @@ class QApplication;
 class QWidget;
 
 namespace ui {
+/// Replaces QOffscreen's macOS generic default with CoreText's system font.
+/// Call before a font is resolved.
+void installOffscreenSystemFont(QApplication &application);
 
 /// Applies Porydaw's application identity and presentation, then initializes
 /// the shared UI modules used by both production and check executables.

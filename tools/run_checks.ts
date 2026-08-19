@@ -12,11 +12,14 @@ import { dirname, join } from "node:path";
 
 type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
 type FixtureRootKind = "decomp-project" | "songs-mk-project" | "none";
+type Windowing = "offscreen" | "window-system";
 
 interface CheckManifestEntry {
   readonly name: string;
   readonly argv: readonly string[];
   readonly binary: "application" | "checks";
+  readonly windowing: Windowing;
+
   readonly environment?: Readonly<Record<string, string>>;
   readonly optionalArgumentEnvironment?: Readonly<Record<string, string>>;
   readonly environmentArguments?: Readonly<Record<string, string>>;
@@ -132,13 +135,23 @@ async function loadManifest(
   }
   if (
     typeof document !== "object" || document === null ||
-    !("version" in document) || document.version !== 1 ||
     !("checks" in document) || !Array.isArray(document.checks)
   ) {
     console.error("run_checks: unsupported check manifest");
     Deno.exit(2);
   }
-  return document.checks as readonly CheckManifestEntry[];
+  const checks = document.checks as readonly CheckManifestEntry[];
+  if (
+    checks.some(
+      (check) =>
+        check.windowing !== "offscreen" &&
+        check.windowing !== "window-system",
+    )
+  ) {
+    console.error("run_checks: manifest has an unsupported windowing mode");
+    Deno.exit(2);
+  }
+  return checks;
 }
 
 function fixtureRoot(
@@ -216,6 +229,42 @@ function expandArguments(
   return result;
 }
 
+function platformFor(check: CheckManifestEntry): string {
+  if (check.windowing === "offscreen") {
+    return "offscreen";
+  }
+
+  switch (Deno.build.os) {
+    case "darwin":
+      return "cocoa";
+    case "windows":
+      return "windows";
+    case "linux":
+      if (!Deno.env.get("DISPLAY")) {
+        throw new Error(
+          `${check.name} requires a window system, but DISPLAY is unset`,
+        );
+      }
+      return "xcb";
+    default:
+      throw new Error(
+        `${check.name} requires a window system unsupported on ${Deno.build.os}`,
+      );
+  }
+}
+
+function executionEnvironment(
+  check: CheckManifestEntry,
+): Readonly<Record<string, string>> {
+  const environment = check.environment ?? {};
+  if (environment.QT_QPA_PLATFORM !== undefined) {
+    throw new Error(
+      `${check.name} sets QT_QPA_PLATFORM; declare its windowing mode instead`,
+    );
+  }
+  return { ...environment, QT_QPA_PLATFORM: platformFor(check) };
+}
+
 interface CheckResult {
   readonly code: number;
   readonly output: string;
@@ -234,7 +283,6 @@ async function runProcess(
     args,
     env: {
       ASAN_OPTIONS: Deno.env.get("ASAN_OPTIONS") ?? "detect_leaks=0",
-      QT_QPA_PLATFORM: "offscreen",
       ...environment,
     },
     stdout: "piped",
@@ -348,7 +396,7 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
     result = await runProcess(
       binary,
       expandArguments(check, scratch, mid2agb),
-      check.environment ?? {},
+      executionEnvironment(check),
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -391,17 +439,11 @@ async function runParallel(
   );
 }
 
-const runnableChecks = checkManifest.filter(
-  (check) => {
-    if (selection === "--all") {
-      return check.suite !== "negative";
-    }
-    return check.suite === selection.slice(2);
-  },
-);
-try {
+async function runScheduled(
+  checks: readonly CheckManifestEntry[],
+): Promise<void> {
   let parallelBatch: CheckManifestEntry[] = [];
-  for (const check of runnableChecks) {
+  for (const check of checks) {
     if (!check.exclusive) {
       parallelBatch.push(check);
       continue;
@@ -411,6 +453,29 @@ try {
     await runCheck(check);
   }
   await runParallel(parallelBatch);
+}
+
+const runnableChecks = checkManifest.filter(
+  (check) => {
+    if (selection === "--all") {
+      return check.suite !== "negative";
+    }
+    return check.suite === selection.slice(2);
+  },
+);
+try {
+  const offscreenChecks = runnableChecks.filter(
+    (check) => check.windowing === "offscreen",
+  );
+  const windowSystemChecks = runnableChecks.filter(
+    (check) => check.windowing === "window-system",
+  );
+  await runScheduled(offscreenChecks);
+  // A window system has shared focus and popup state. Run these after the
+  // offscreen work, one process at a time.
+  for (const check of windowSystemChecks) {
+    await runCheck(check);
+  }
 } finally {
   await Deno.remove(tempRoot, { recursive: true });
 }

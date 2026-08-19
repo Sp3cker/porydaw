@@ -324,6 +324,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/checks_main.cpp
         src/checks/checkregistry.cpp
         src/checks/checkregistry.hpp
+        src/checks/checkcatalog.cpp
+        src/checks/checkcatalog.h
         src/checks/fixturecatalog.cpp
         src/checks/fixturecatalog.hpp
         src/checks/fwd.hpp
@@ -333,8 +335,11 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/pitchbendcheck.cpp
         src/checks/pitchbendcheck.hpp
         src/checks/rollcheck.cpp
+        src/checks/rollcheckwindowing.cpp
         src/checks/rollcheckplayhead.cpp
         src/checks/rollcheckplayhead.h
+        src/checks/rollcheckrendering.cpp
+        src/checks/rollcheckrendering.h
         src/checks/viewcheck.cpp
         src/checks/roundtrip.cpp
         src/checks/editcheck.cpp

@@ -38,6 +38,8 @@ RUN apt-get update \
         pulseaudio \
         python3 \
         python3-venv \
+        xauth \
+        xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m venv /opt/aqt \

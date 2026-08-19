@@ -2,15 +2,12 @@
 #include "ui/theme/themeruntime.h"
 #include <QApplication>
 #include <QCoreApplication>
-#include <QDialog>
-#include <QDialogButtonBox>
 #include <QElapsedTimer>
 #include <QFontMetrics>
 #include <QIcon>
 #include <QImage>
 #include <QKeyEvent>
 #include <QLineEdit>
-#include <QListWidget>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPixmap>
@@ -3392,54 +3389,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             QCoreApplication::processEvents();
             if (reveals != 1)
                 fail("a reorder drag from the voice line requested a reveal");
-            // Double-click routing: on the voice line it opens the modal
-            // voice picker (rejected here by a zero-timer poll so exec
-            // returns), NOT the inline rename; on the name line it still
-            // renames. Neither canceled dialog is an edit.
-            QTimer poll;
-            poll.setInterval(0);
-            bool pickerSeen = false;
-            bool searchFilteredList = false;
-            QObject::connect(&poll, &QTimer::timeout, [&] {
-                if (QDialog *dlg = view.findChild<QDialog *>()) {
-                    pickerSeen = true;
-                    auto *searchField = dlg->findChild<QLineEdit *>();
-                    auto *voiceList = dlg->findChild<QListWidget *>();
-                    auto *dialogButtons = dlg->findChild<QDialogButtonBox *>();
-                    if (searchField && voiceList && dialogButtons) {
-                        searchField->setText(QStringLiteral("127  "));
-                        searchFilteredList =
-                            voiceList->item(0)->isHidden() && !voiceList->item(127)->isHidden();
-                        searchField->clear();
-                        searchFilteredList &= !voiceList->item(0)->isHidden();
-                        voiceList->setCurrentRow(127);
-                        searchField->setText(QStringLiteral("1"));
-                        searchFilteredList &=
-                            voiceList->currentRow() == 1 && !voiceList->item(1)->isHidden() &&
-                            !voiceList->item(127)->isHidden() &&
-                            dialogButtons->button(QDialogButtonBox::Ok)->isEnabled();
-                        searchField->clear();
-                        searchFilteredList &= voiceList->currentRow() == 0;
-                    }
-                    dlg->reject();
-                }
-            });
-            poll.start();
-            sendMouse(row, QEvent::MouseButtonDblClick, voicePos, Qt::LeftButton, Qt::LeftButton);
-            sendMouse(row, QEvent::MouseButtonRelease, voicePos, Qt::LeftButton, Qt::NoButton);
-            QCoreApplication::processEvents(); // the queued picker runs here
-            poll.stop();
-            if (!pickerSeen)
-                fail("voice-line double-click did not open the voice picker");
-            if (!searchFilteredList)
-                fail("voice picker search did not select and restore its first match");
-            auto *renameEditor = view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
-            if (renameEditor && !renameEditor->isHidden())
-                fail("voice-line double-click opened the rename editor");
             const QPoint namePos(row->width() / 2, 10);
             sendMouse(row, QEvent::MouseButtonDblClick, namePos, Qt::LeftButton, Qt::LeftButton);
             sendMouse(row, QEvent::MouseButtonRelease, namePos, Qt::LeftButton, Qt::NoButton);
-            renameEditor = view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
+            auto *renameEditor = view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
             if (!renameEditor || renameEditor->isHidden())
                 fail("name-line double-click no longer opens the rename editor");
             else

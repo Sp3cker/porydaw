@@ -1,4 +1,5 @@
 #include "rollcheckplayhead.h"
+#include "rollcheckrendering.h"
 
 #include <QCoreApplication>
 #include <QEvent>
@@ -7,25 +8,20 @@
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPixmap>
-#include <QRegion>
 #include <QWidget>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <vector>
 
-#ifdef __APPLE__
-#include <QGuiApplication>
-#endif
-
 #include "core/miditimeline.h"
-#include "ui/eventlistview.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
 #include "ui/timelinesurface.h"
 
 namespace {
+using namespace rollcheck::rendering;
 struct ExpectedTimelineGeometry {
     int pianoKeyboardWidth;
     int plotOrigin;
@@ -35,27 +31,6 @@ ExpectedTimelineGeometry expectedTimelineGeometry()
 {
     const int pianoKeyboardWidth = layout::fontPx(13.0 / 3.0);
     return {pianoKeyboardWidth, layout::fontPx(17.5 + 13.0 / 3.0)};
-}
-
-#ifdef __APPLE__
-bool usesNativeMacPlayheadRenderer()
-{
-    return QGuiApplication::platformName() == QLatin1String("cocoa") &&
-           songview::platformPlayheadRendererEnabled();
-}
-#endif
-
-QPixmap grabPlayheadOverlay(SongView &view, songview::PlayheadOverlay &marker,
-                            QStringList &failures)
-{
-#ifdef __APPLE__
-    if (usesNativeMacPlayheadRenderer())
-        return renderMacPlayheadOverlay(view, failures);
-#else
-    (void)view;
-    (void)failures;
-#endif
-    return marker.grab();
 }
 
 QPixmap grabSongViewWithPlayhead(SongView &view, songview::PlayheadOverlay &marker,
@@ -129,92 +104,6 @@ class PaintRegionProbe : public QObject
 
     std::vector<DirtyRegion> m_regions;
 };
-
-songview::PlayheadOverlay *findPlayheadOverlay(SongView &view)
-{
-    for (QWidget *widget : view.findChildren<QWidget *>()) {
-        if (auto *overlay = dynamic_cast<songview::PlayheadOverlay *>(widget))
-            return overlay;
-    }
-    return nullptr;
-}
-
-bool isPlayheadRed(const QColor &pixel, const QColor &playheadColor)
-{
-    const int colorDistance = std::abs(pixel.red() - playheadColor.red()) +
-                              std::abs(pixel.green() - playheadColor.green()) +
-                              std::abs(pixel.blue() - playheadColor.blue());
-    return colorDistance <= 12 && pixel.alpha() > 0;
-}
-
-bool isCompositedPlayheadRed(const QColor &pixel, const QColor &playheadColor)
-{
-    return isPlayheadRed(pixel, playheadColor) ||
-           (pixel.red() - pixel.green() >= 24 && pixel.red() - pixel.blue() >= 24);
-}
-
-qreal playheadCenter(const QPixmap &pixmap, const QColor &playheadColor)
-{
-    const QImage image = pixmap.toImage();
-    const qreal devicePixelRatio = pixmap.devicePixelRatio();
-    qreal weightedX = 0.0;
-    qreal totalWeight = 0.0;
-    for (int x = 0; x < image.width(); ++x) {
-        for (int y = 0; y < image.height(); ++y) {
-            const QColor pixel = image.pixelColor(x, y);
-            if (isPlayheadRed(pixel, playheadColor) && pixel.alpha() > 80) {
-                weightedX += qreal(x) * pixel.alpha();
-                totalWeight += pixel.alpha();
-            }
-        }
-    }
-    return totalWeight > 0.0 ? weightedX / totalWeight / devicePixelRatio : -1.0;
-}
-
-bool hasPlayheadRedLine(const QImage &image, qreal devicePixelRatio, qreal logicalX,
-                        const QRect &logicalArea, const QColor &playheadColor)
-{
-    if (logicalArea.isEmpty())
-        return false;
-
-    const int left = std::max(0, qFloor((logicalX - 1.0) * devicePixelRatio));
-    const int right = std::min(image.width() - 1, qCeil((logicalX + 1.0) * devicePixelRatio));
-    const int top = std::max(0, qFloor(logicalArea.top() * devicePixelRatio));
-    const int bottom =
-        std::min(image.height() - 1, qCeil((logicalArea.bottom() + 1) * devicePixelRatio) - 1);
-    for (int x = left; x <= right; ++x) {
-        int consecutivePixels = 0;
-        for (int y = top; y <= bottom; ++y) {
-            if (isCompositedPlayheadRed(image.pixelColor(x, y), playheadColor)) {
-                if (++consecutivePixels >= 3)
-                    return true;
-            } else {
-                consecutivePixels = 0;
-            }
-        }
-    }
-    return false;
-}
-
-int playheadRedWidth(const QImage &image, qreal devicePixelRatio, qreal logicalX, int logicalY,
-                     const QColor &playheadColor)
-{
-    const int left = std::max(0, qFloor((logicalX - 4.0) * devicePixelRatio));
-    const int right = std::min(image.width() - 1, qCeil((logicalX + 4.0) * devicePixelRatio));
-    const int y = std::clamp(qRound(logicalY * devicePixelRatio), 0, image.height() - 1);
-    int width = 0;
-    for (int x = left; x <= right; ++x) {
-        if (isCompositedPlayheadRed(image.pixelColor(x, y), playheadColor))
-            ++width;
-    }
-    return width;
-}
-
-void processPaints()
-{
-    QCoreApplication::sendPostedEvents(nullptr, QEvent::UpdateRequest);
-    QCoreApplication::processEvents();
-}
 
 void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
                                        PaintRegionProbe &paintProbe, QStringList &failures)
@@ -592,96 +481,6 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes, PaintRegi
     processPaints();
 }
 
-QRect visibleTimelineBandRect(const songview::TimelineBand &band, QWidget &owner)
-{
-    const QWidget *surface = &band.widget;
-    if (!surface->isVisibleTo(&owner) || band.timelineOrigin >= surface->width())
-        return {};
-    QRect visible(surface->mapTo(&owner, QPoint(band.timelineOrigin, 0)),
-                  QSize(surface->width() - band.timelineOrigin, surface->height()));
-    for (const QWidget *widget = surface; widget; widget = widget->parentWidget()) {
-        if (!widget->isVisible())
-            return {};
-        visible &= QRect(widget->mapTo(&owner, QPoint()), widget->size());
-        if (widget == &owner)
-            break;
-    }
-    return visible;
-}
-
-void checkEventListRendering(SongView &view, songview::PlayheadOverlay &marker,
-                             qreal stoppedMarkerCenter, const QRect &rulerArea,
-                             const QColor &playheadColor, QStringList &failures)
-{
-    auto *events = view.findChild<EventListView *>();
-    if (!events) {
-        failures.append("EventListView child not found");
-        return;
-    }
-    const QPoint markerOffset = marker.mapTo(&view, QPoint());
-    const qreal playheadXInView = markerOffset.x() + stoppedMarkerCenter;
-    view.setEventListVisible(true);
-    processPaints();
-    const QRect eventListArea =
-        QRect(events->mapTo(&view, QPoint()), events->size()).intersected(view.rect());
-    const QPixmap overlayPixmap = grabPlayheadOverlay(view, marker, failures);
-    if (overlayPixmap.isNull())
-        return;
-    const QImage overlayImage = overlayPixmap.toImage();
-    const qreal overlayDpr = overlayPixmap.devicePixelRatio();
-    if (!events->isVisible() || eventListArea.isEmpty()) {
-        failures.append("event list is not visible for the playhead check");
-        return;
-    }
-    if (playheadXInView < eventListArea.left() || playheadXInView > eventListArea.right()) {
-        failures.append("could not map playhead into the event list");
-        return;
-    }
-    const QRect eventListOverlayArea = eventListArea.translated(-markerOffset);
-    const int triangleHeight =
-        std::min(songview::kPlayheadTriangleHeight + 1, eventListOverlayArea.height());
-    const QRect triangleArea(eventListOverlayArea.left(), eventListOverlayArea.top(),
-                             eventListOverlayArea.width(), triangleHeight);
-    const auto hasLine = [&](const QRect &area) {
-        return hasPlayheadRedLine(overlayImage, overlayDpr, stoppedMarkerCenter, area,
-                                  playheadColor);
-    };
-    const auto redWidth = [&](int y) {
-        return playheadRedWidth(overlayImage, overlayDpr, stoppedMarkerCenter, y, playheadColor);
-    };
-    if (!hasLine(triangleArea))
-        failures.append("playhead triangle did not render below the time ruler");
-    if (redWidth(triangleArea.bottom() - 1) <= redWidth(triangleArea.top()))
-        failures.append("playhead triangle did not point up in the event list");
-    const QRect eventListBodyArea(eventListArea.left(), eventListArea.top() + triangleHeight,
-                                  eventListArea.width(), eventListArea.height() - triangleHeight);
-    QRegion visibleEventListBody(eventListBodyArea);
-    for (const songview::TimelineBand &band : view.timelineBands())
-        visibleEventListBody -= visibleTimelineBandRect(band, view);
-    bool lineOverpainted = false;
-    for (const QRect &visibleArea : visibleEventListBody) {
-        const QRect overlayArea = visibleArea.translated(-markerOffset);
-        if (stoppedMarkerCenter >= overlayArea.left() &&
-            stoppedMarkerCenter <= overlayArea.right() && hasLine(overlayArea)) {
-            lineOverpainted = true;
-            break;
-        }
-    }
-    if (lineOverpainted)
-        failures.append("playhead line overpainted the event list");
-    if (hasLine(rulerArea.translated(-markerOffset)))
-        failures.append("playhead rendered in the event-list time ruler");
-    const QRect upperTimelineArea =
-        QRect(0, 0, view.width(), eventListArea.top()).translated(-markerOffset);
-    const QRect lowerTimelineArea = QRect(0, eventListArea.bottom() + 1, view.width(),
-                                          view.height() - eventListArea.bottom() - 1)
-                                        .translated(-markerOffset);
-    if (!hasLine(upperTimelineArea) && !hasLine(lowerTimelineArea)) {
-        failures.append("playhead overlay did not render on visible timeline "
-                        "surfaces");
-    }
-}
-
 // A full invalidation of the automation lanes — every drag move does one —
 // must rasterize only the rows the scroll viewport exposes; off-viewport
 // dirt stays pending until scrolled in. Shrinks the view so the lanes are
@@ -977,9 +776,6 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
     checkCenter(stoppedMarkerCenter, secondSample, QStringLiteral("stopped"));
     if (playingPixmap.toImage() == stoppedPixmap.toImage())
         failures.append("playing and stopped playheads rendered identically");
-    checkEventListRendering(view, marker, stoppedMarkerCenter, rulerArea, playheadColor, failures);
-    view.setEventListVisible(false);
-    processPaints();
     checkFractionalMovement(view, timeline, marker, playheadColor, firstTick, failures);
     checkLanesViewportBoundedRepaint(view, *lanes, failures);
 }
