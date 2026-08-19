@@ -51,6 +51,7 @@ RUN python3 -m venv /opt/aqt \
 COPY --from=deno /deno /usr/local/bin/deno
 
 RUN useradd --create-home --uid 1001 --shell /bin/bash runner \
+    && install --directory --mode=1777 /tmp/.X11-unix \
     && mkdir -p /workspace \
     && chown runner:runner /workspace
 
