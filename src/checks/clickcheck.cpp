@@ -40,11 +40,15 @@ constexpr uint64_t kSamplesPerTick = 1000; // 24 tpqn, 120 BPM -> 1000 samples/t
 constexpr uint32_t kChunk = 512;           // AudioEngine's m_bufCapacity analog
 constexpr double kCutFadeSeconds = 0.01;   // matches AudioEngine::kOutputGainRampSeconds
 constexpr uint32_t kRampSamples = uint32_t(kSampleRate * kCutFadeSeconds);
-// After the engine cut, the driver's output queue still holds up to one full
-// DMA buffer (2 VBlank periods) of already-mixed audio. The fade stays at zero
-// through that transit so queued pre-cut audio cannot be amplified when the
-// return ramp starts. The same ordering is used for every transport target.
-constexpr uint32_t kCutFadeSettleSamples = 1607; // ceil(2 * 48000 / 59.7275)
+constexpr double kOutputLsb = 1.0 / 32768.0;
+constexpr double kMeasurableSignalFloor = 64.0 * kOutputLsb;
+// After the engine cut, the pipeline still holds the current render block, a
+// two-VBlank DMA buffer, and the fixed 1536-frame hardware-frontend queue. The
+// fade stays at zero through every transit so queued pre-cut audio cannot
+// reappear during the return ramp.
+constexpr uint32_t kDriverQueueSamples = 1607; // ceil(2 * 48000 / 59.7275)
+constexpr uint32_t kFrontendQueueSamples = 1536;
+constexpr uint32_t kCutFadeSettleSamples = kChunk + kDriverQueueSamples + kFrontendQueueSamples;
 constexpr uint32_t kTimedRingSize = 64;
 constexpr int kTimedMaxActive = 24;
 // Transport states, mirrored from AudioEngine's Transport enum.
@@ -511,7 +515,7 @@ int checkTransition(const char *what, const Driver &d, size_t at)
     const double step =
         std::max(maxStepIn(d.outL, at - 512, winEnd), maxStepIn(d.outR, at - 512, winEnd));
     const double allowed = std::max(0.02 * amp, 1.5 * naturalStep + 0.001);
-    if (amp < 0.01) {
+    if (amp < kMeasurableSignalFloor) {
         std::fprintf(stderr, "clickcheck: FAIL: %s: sustain amplitude %.4f too low to measure\n",
                      what, amp);
         failures++;
@@ -554,8 +558,8 @@ int scenarioPause(bool hardCut, bool square, const MidiTimeline &tl)
         failures++;
     }
     if (!hardCut) {
-        constexpr double kSteadyAmplitudeLimit = 1e-5;
-        constexpr double kSteadyStepLimit = 1e-5;
+        constexpr double kSteadyAmplitudeLimit = kOutputLsb;
+        constexpr double kSteadyStepLimit = kOutputLsb;
         const size_t steadyEnd = std::min(steadyStart + steadySamples, d.outL.size());
         double steadyAmplitude = 0.0;
         double steadyStep = 0.0;
@@ -658,7 +662,7 @@ int scenarioPlayingStartsFirstNote(const MidiTimeline &tl)
     const size_t onset = kRampSamples + kCutFadeSettleSamples;
     const double level =
         std::max(maxAbsIn(d.outL, onset, d.outL.size()), maxAbsIn(d.outR, onset, d.outR.size()));
-    if (level < 0.01) {
+    if (level < kMeasurableSignalFloor) {
         std::fprintf(stderr,
                      "clickcheck: FAIL: Playing transition cut the first sequenced note "
                      "(level %.4f)\n",

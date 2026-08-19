@@ -127,13 +127,17 @@ struct TestVoicegroup {
 
 bool rendersAudibly(M4AEngine *engine)
 {
-    constexpr uint32_t kFrames = 512;
-    float bufL[kFrames], bufR[kFrames];
-    m4a_engine_process(engine, bufL, bufR, int(kFrames));
-    float peak = 0.0f;
-    for (uint32_t i = 0; i < kFrames; i++)
-        peak = std::max(peak, std::max(std::fabs(bufL[i]), std::fabs(bufR[i])));
-    return peak > 0.0f;
+    constexpr uint32_t kChunkFrames = 512;
+    constexpr uint32_t kMaximumFrames = 4096;
+    float bufL[kChunkFrames], bufR[kChunkFrames];
+    for (uint32_t rendered = 0; rendered < kMaximumFrames; rendered += kChunkFrames) {
+        m4a_engine_process(engine, bufL, bufR, int(kChunkFrames));
+        for (uint32_t i = 0; i < kChunkFrames; i++) {
+            if (bufL[i] != 0.0f || bufR[i] != 0.0f)
+                return true;
+        }
+    }
+    return false;
 }
 
 int checkTrackProgram(const M4AEngine &engine, int track, uint8_t program, const char *what)

@@ -58,8 +58,8 @@ int runPrimeCheck();
 // xcmdcheck.cpp; XCMD forwarding and seek-state check (self-contained).
 int runXcmdCheck();
 // smfcheck.cpp; SMF parse-validation + note-pairing check (self-contained,
-// no project needed).
-int runSmfCheck();
+// no project needed). includeStress also runs the bounded automation burst.
+int runSmfCheck(bool includeStress);
 // transportcheck.cpp; playback-start halts ringing auditions (self-contained,
 // no project needed; SKIPs without an audio device).
 int runTransportCheck();
@@ -315,8 +315,10 @@ int main(int argc, char *argv[])
         return runPrimeCheck();
     if (args.contains(QStringLiteral("--xcmdcheck")))
         return runXcmdCheck();
+    if (args.contains(QStringLiteral("--smfstresscheck")))
+        return runSmfCheck(true);
     if (args.contains(QStringLiteral("--smfcheck")))
-        return runSmfCheck();
+        return runSmfCheck(false);
     const int ignoreCheck = args.indexOf(QStringLiteral("--ignorecheck"));
     if (ignoreCheck >= 0 && ignoreCheck + 1 < args.size())
         return runIgnoreCheck(args[ignoreCheck + 1]);
