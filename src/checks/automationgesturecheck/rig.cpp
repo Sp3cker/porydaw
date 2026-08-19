@@ -149,6 +149,7 @@ void AutomationGestureCheckRig::setAutomationZoom(double zoom)
 {
     m_live.timeZoom = zoom;
     m_view->setEditorTimeZoom(zoom);
+    m_live.horizontalScroll = m_view->viewState().scrollPx;
     refreshPage();
     pump();
 }
@@ -256,6 +257,7 @@ bool AutomationGestureCheckRig::initialize(const SongInfo &song, QString &error)
     m_live.timeZoom = 96.0;
     m_live.editCursorTick = 24;
     m_view->setEditorTimeZoom(m_live.timeZoom);
+    m_live.horizontalScroll = m_view->viewState().scrollPx;
     m_page->refreshLiveState(m_live);
     m_page->show();
     pump();

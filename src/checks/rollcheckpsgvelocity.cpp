@@ -223,6 +223,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     fixtureLive.documentRevision = fixtureDocument.revision();
     fixtureLive.timeZoom = 48.0;
     fixtureView.setEditorTimeZoom(fixtureLive.timeZoom);
+    fixtureLive.timeZoom = fixtureView.pxPerBeat();
+    fixtureLive.horizontalScroll = fixtureView.viewState().scrollPx;
     fixtureArea->refreshLiveState(fixtureLive);
     fixtureArea->show();
     QApplication::processEvents();
@@ -364,6 +366,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     live.trackColor = QColor(Qt::cyan);
     view.setEditorTimeZoom(live.timeZoom);
     view.setEditorHorizontalScroll(live.horizontalScroll);
+    live.timeZoom = view.pxPerBeat();
+    live.horizontalScroll = view.viewState().scrollPx;
     area.refreshLiveState(live);
     area.show();
     QApplication::processEvents();
@@ -420,8 +424,9 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     }
     check(matchedExpectedGrid, "velocity grid must continue to the piano grid beyond the song end");
     live.editCursorTick = 0;
-    live.horizontalScroll = 0.0;
-    view.setEditorHorizontalScroll(live.horizontalScroll);
+    view.goToStart();
+    live.timeZoom = view.pxPerBeat();
+    live.horizontalScroll = view.viewState().scrollPx;
     area.refreshLiveState(live);
     QApplication::processEvents();
     const auto beforePanPastZero = area.grab().toImage();
@@ -432,7 +437,9 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     sendMouse(area, QEvent::MouseMove, panLeftPastZero, Qt::NoButton, Qt::MiddleButton);
     sendMouse(area, QEvent::MouseButtonRelease, panLeftPastZero, Qt::MiddleButton);
     QApplication::processEvents();
-    check(view.viewState().scrollPx == 0.0 && samePixels(beforePanPastZero, area.grab().toImage()),
+    const auto afterPanPastZero = area.grab().toImage();
+    check(view.viewState().scrollPx == live.horizontalScroll &&
+              samePixels(beforePanPastZero, afterPanPastZero),
           "panning left at tick zero must not visually overscroll the velocity lane");
     area.refreshLiveState(live);
     QApplication::processEvents();
@@ -639,7 +646,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     area.refreshLiveState(live);
     const QImage secondEditCursor = area.grab().toImage();
     const qreal cursorX =
-        (double(area.plotOrigin()) + 18.0 * live.timeZoom / double(timeline->ticksPerBeat)) *
+        (double(area.plotOrigin()) + 18.0 * live.timeZoom / double(timeline->ticksPerBeat) -
+         live.horizontalScroll) *
         imageScale;
     const QRect cursorBounds(qRound(cursorX) - 2, 0, 5, secondEditCursor.height());
     check(!samePixels(firstEditCursor, secondEditCursor),
@@ -898,6 +906,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     area.refreshLiveState(live);
     QApplication::processEvents();
     const std::vector<DocNote> overlapFixtureNotes = document.notesForTrack(0);
+    live.timeZoom = view.pxPerBeat();
+    live.horizontalScroll = view.viewState().scrollPx;
     const auto overlapIt = std::find_if(overlapFixtureNotes.cbegin(), overlapFixtureNotes.cend(),
                                         [&currentFirst](const DocNote &note) {
                                             return note.tick == currentFirst.tick + 8 &&
@@ -1286,6 +1296,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     view.setDrawerSectionHeight(EditorDrawerPage::Velocity, std::nullopt);
     view.setDrawerSectionHeight(EditorDrawerPage::Velocity, velocitySectionHeight);
     QApplication::processEvents();
+    live.timeZoom = view.pxPerBeat();
+    live.horizontalScroll = view.viewState().scrollPx;
     if (detentUnlockModifiers != Qt::NoModifier) {
         voicegroup.voices[0] = wave;
         view.setVoicegroup(&voicegroup);

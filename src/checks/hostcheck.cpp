@@ -401,11 +401,18 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         QCoreApplication::processEvents();
         const QPointF menuStart(layout::fontPx(17.5 + 13.0 / 3.0) + 4.0, 4.0);
         const QPointF menuEnd = menuStart + QPointF(48.0, 0.0);
-        const QPointF menuPoint = (menuStart + menuEnd) / 2.0;
         sendMouse(*automation, QEvent::MouseButtonPress, menuStart, Qt::RightButton,
                   Qt::RightButton);
         sendMouse(*automation, QEvent::MouseMove, menuEnd, Qt::NoButton, Qt::RightButton);
         sendMouse(*automation, QEvent::MouseButtonRelease, menuEnd, Qt::RightButton);
+        const auto &dragSelection = view.timeSelection();
+        const qreal menuFirst =
+            view.displayX(double(dragSelection.startTick), automation->plotOrigin(),
+                          automation->devicePixelRatioF());
+        const qreal menuLast =
+            view.displayX(double(dragSelection.endTick), automation->plotOrigin(),
+                          automation->devicePixelRatioF());
+        const QPointF menuPoint((menuFirst + menuLast) / 2.0, menuStart.y());
         sendMouse(*automation, QEvent::MouseButtonPress, menuPoint, Qt::RightButton,
                   Qt::RightButton);
         QTimer::singleShot(0, [] {

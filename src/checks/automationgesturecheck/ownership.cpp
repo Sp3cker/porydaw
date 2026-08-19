@@ -133,11 +133,8 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
     rig.mouseRelease(selectionEnd.position);
     rig.pump();
     const auto selectionAfterPencil = rig.view().timeSelection();
-    check(selectionAfterPencil.startTick == pencilSelection.startTick &&
-              selectionAfterPencil.endTick == pencilSelection.endTick &&
-              selectionAfterPencil.scope == pencilSelection.scope &&
-              selectionAfterPencil.lanes == pencilSelection.lanes,
-          QStringLiteral("Pencil stroke changed the existing time selection"));
+    check(!selectionAfterPencil.active(),
+          QStringLiteral("Pencil stroke outside the time selection did not clear it"));
 
     check(
         detailThreshold > 1.0,

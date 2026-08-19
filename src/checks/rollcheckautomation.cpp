@@ -211,6 +211,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     live.documentRevision = document.revision();
     live.timeZoom = 96.0;
     view.setEditorTimeZoom(live.timeZoom);
+    live.horizontalScroll = view.viewState().scrollPx;
     live.editCursorTick = 24;
     page.refreshLiveState(live);
     page.show();
@@ -1087,7 +1088,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     sendMouse(page.area(), QEvent::MouseMove, selectionEnd, Qt::NoButton, Qt::RightButton);
     sendMouse(page.area(), QEvent::MouseButtonRelease, selectionContractedEnd, Qt::RightButton,
               Qt::NoButton);
-    const auto &timeSelection = view.timeSelection();
+    const auto timeSelection = view.timeSelection();
     check(timeSelection.active() && timeSelection.scope == SongView::TimeSelection::Lanes &&
               timeSelection.lanes.size() == 1,
           QStringLiteral("right drag did not commit a half-open automation selection"));
@@ -1109,6 +1110,32 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         popupCheck(selectionActions.contains(QStringLiteral("Clear time selection")),
                    QStringLiteral("right click inside a time selection did not open its menu"));
     }
+    const QPoint selectionOutside(expected.plotOrigin + 260, sharedHeight / 2);
+    sendMouse(page.area(), QEvent::MouseButtonPress, selectionOutside, Qt::LeftButton,
+              Qt::LeftButton);
+    check(!view.timeSelection().active(),
+          QStringLiteral("left click outside a time selection did not clear it"));
+    sendMouse(page.area(), QEvent::MouseButtonRelease, selectionOutside, Qt::LeftButton,
+              Qt::NoButton);
+    view.setTimeSelection(timeSelection);
+    sendMouse(page.area(), QEvent::MouseButtonPress, selectionOutside, Qt::RightButton,
+              Qt::RightButton);
+    check(!view.timeSelection().active(),
+          QStringLiteral("right click outside a time selection did not clear it"));
+    QTimer::singleShot(0, [] {
+        if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget()))
+            menu->close();
+    });
+    sendMouse(page.area(), QEvent::MouseButtonRelease, selectionOutside, Qt::RightButton,
+              Qt::NoButton);
+    view.setTimeSelection(timeSelection);
+    const QPoint laneHeader(expected.plotOrigin - layout::space(layout::Space::One),
+                            sharedHeight / 2);
+    sendMouse(page.area(), QEvent::MouseButtonPress, laneHeader, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(page.area(), QEvent::MouseButtonRelease, laneHeader, Qt::LeftButton, Qt::NoButton);
+    check(!view.timeSelection().active(),
+          QStringLiteral("left click in a lane header did not clear the time selection"));
+    view.setTimeSelection(timeSelection);
     QKeyEvent escapeSelection(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
     QCoreApplication::sendEvent(page.area(), &escapeSelection);
     QCoreApplication::processEvents();
@@ -1490,8 +1517,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         live.playback = {playhead, true};
         page.refreshLiveState(live);
         page.area()->grab();
-        check(view.voiceContext(drawerContextTick(playhead)).voice == &voicegroup.voices[3],
-              QStringLiteral("playing voice context did not use the SongView owner at %1")
+        const uint64_t contextTick = drawerContextTick(playhead);
+        const auto ownerContext = view.voiceContext(contextTick);
+        check(ownerContext.voice == &voicegroup.voices[0] && ownerContext.voiceSlot == 0,
+              QStringLiteral("playing voice context did not follow the rounded playhead at %1")
                   .arg(playhead));
     }
     live.playback.playing = false;

@@ -441,6 +441,16 @@ void AutomationArea::mousePressEvent(QMouseEvent *event)
     const AutomationProjection proj = projection();
     const int boundary =
         event->button() == Qt::LeftButton ? proj.rowBoundaryAt(event->pos().y()) : -1;
+    const int rowIndex = proj.rowIndexAt(event->pos().y());
+    if ((event->button() == Qt::LeftButton || event->button() == Qt::RightButton) &&
+        m_rowData.timeSelection().active()) {
+        const bool insideSelection = boundary < 0 && rowIndex >= 0 &&
+                                     event->position().x() >= m_geometry.plotOrigin &&
+                                     m_rowData.selectionContains(rowIndex, event->position().x(),
+                                                                 m_geometry, devicePixelRatioF());
+        if (!insideSelection && m_rowData.clearTimeSelection())
+            invalidateContent();
+    }
     if (boundary >= 0) {
         m_resize.row = boundary;
         m_resize.startHeight = proj.rowHeight(m_rowData.rows()[boundary]);
@@ -456,7 +466,6 @@ void AutomationArea::mousePressEvent(QMouseEvent *event)
         showAddLaneMenu(event->globalPosition().toPoint());
         return;
     }
-    const int rowIndex = proj.rowIndexAt(event->pos().y());
     if (rowIndex < 0)
         return;
     setFocus();

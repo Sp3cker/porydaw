@@ -175,6 +175,7 @@ void VelocityArea::refreshLiveState(const DrawerPageLiveState &liveState)
         m_owner.announce(tr("Velocity edit cancelled because notes changed."));
     if (!hadInteraction)
         rebuildVisualState();
+    presentPlayhead(liveState.playback.playheadTick);
 }
 
 void VelocityArea::cancelInteraction()

@@ -496,6 +496,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                 check(laneRow != automation->rows().end(),
                       "automation lifecycle lane is unavailable");
                 if (laneRow != automation->rows().end()) {
+                    const EditorViewState lifecycleViewState = view->editorViewState();
                     const int rowIndex = int(std::distance(automation->rows().begin(), laneRow));
                     const int rowHeight = layout::fontPx(4.0);
                     const qreal rowY = qreal(rowIndex * rowHeight + rowHeight / 2);
@@ -560,6 +561,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                             view->setSong(session->timeline.get(), session->voicegroup);
                             view->setDocument(document);
                             view->setVoicegroup(session->voicegroup);
+                            view->applyEditorViewState(lifecycleViewState);
                             view->setDrawerSectionVisible(EditorDrawerPage::Automations, true);
                             view->selectTrack(noteTrack);
                             view->setSelection(selection);

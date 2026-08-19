@@ -3030,6 +3030,15 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         if (!view.timeSelection().active() || view.timeSelection().startTick != startTick ||
             view.timeSelection().endTick != endTick)
             fail("left-dragging the timeline ruler did not create the time selection");
+        const QPoint outsideSelection(
+            qRound(view.displayX(double(endTick + snapCell), rulerBand.timelineOrigin, rulerDpr)),
+            ruler->height() - 2);
+        sendMouse(ruler, QEvent::MouseButtonPress, outsideSelection, Qt::LeftButton,
+                  Qt::LeftButton);
+        sendMouse(ruler, QEvent::MouseButtonRelease, outsideSelection, Qt::LeftButton,
+                  Qt::NoButton);
+        if (!view.timeSelection().active())
+            fail("left-clicking the timeline ruler outside the time selection cleared it");
 
         view.clearTimeSelection();
         sendMouse(ruler, QEvent::MouseButtonPress, start, Qt::RightButton, Qt::RightButton);
