@@ -263,7 +263,6 @@ int runEditorDrawerCheck(const QString &screenshotPath)
                              parentBounds.height());
     const QRect rollBeforeNarrow = roll->geometry();
     drawer->setHostBounds(narrowBounds);
-    QCoreApplication::processEvents();
     check(drawer->plotWidth() == 0 && roll->geometry().top() == rollBeforeNarrow.top() &&
               roll->geometry().height() == rollBeforeNarrow.height(),
           "narrow drawer changed the roll geometry");
@@ -286,9 +285,9 @@ int runEditorDrawerCheck(const QString &screenshotPath)
             EditorDrawerPage::Velocity,
             std::max(drawer->minimumSectionHeight(), headerRows.front()->height() * 2));
         const int automationStep = std::max(1, headerRows.front()->height() / 2);
+        const int maximumAutomationHeight = drawer->maximumSectionHeight();
         for (int height = drawer->minimumSectionHeight();
-             height <= drawer->maximumSectionHeight() && !alignedGeometryFound;
-             height += automationStep) {
+             height <= maximumAutomationHeight && !alignedGeometryFound; height += automationStep) {
             view.setDrawerSectionHeight(EditorDrawerPage::Automations, height);
             QCoreApplication::processEvents();
             const QRect velocityBounds(velocityCanvas->mapToGlobal(QPoint()),

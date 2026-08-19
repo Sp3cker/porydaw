@@ -291,7 +291,6 @@ const std::vector<CheckDefinition> &catalog()
                     [](QApplication &, const QStringList &args) {
                         return runEditorDrawerCheck(optional(args, 1));
                     },
-                .exclusive = true,
             },
             {
                 .name = "automation-gestures",
