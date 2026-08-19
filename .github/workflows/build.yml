@@ -49,12 +49,12 @@ jobs:
         with:
           context: .github/ci/linux
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/porydaw-linux-ci:ci-${{ github.sha }}
+          tags: ghcr.io/sp3cker/porydaw-linux-ci:ci-${{ github.sha }}
 
       - id: image
         name: Publish image digest
         run: |
-          echo "image=ghcr.io/${{ github.repository_owner }}/porydaw-linux-ci@${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/sp3cker/porydaw-linux-ci@${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
 
   build-linux:
     runs-on: ubuntu-latest
