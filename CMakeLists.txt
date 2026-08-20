@@ -177,7 +177,10 @@ qt_add_library(porydaw_app STATIC
     src/core/smf.cpp
     src/core/smf.h
     src/core/songdocument.cpp
-    src/core/songdocument_time.cpp
+    src/core/songdocument_range.cpp
+    src/core/songdocument_timeeditor.cpp
+    src/core/songdocument_timeeditor_insert.cpp
+    src/core/songdocument_tempo.cpp
     src/core/songdocument.h
     src/porydaw_scale.cpp
     src/porydaw_scale.h
@@ -281,6 +284,12 @@ qt_add_library(porydaw_app STATIC
     src/ui/playheadoverlay.h
     src/ui/eventlistview.cpp
     src/ui/eventlistview.h
+    src/ui/eventtablemodel.cpp
+    src/ui/eventtablemodeledit.cpp
+    src/ui/eventtablemodel.h
+    src/ui/eventtabletypes.cpp
+    src/ui/eventtabletypes.h
+    src/ui/eventlistviewactions.cpp
     src/ui/viewsidecar.cpp
     src/ui/viewsidecar.h
     src/core/noteid.h
@@ -296,6 +305,9 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/drawersections.cpp
     src/ui/editordrawer/drawersections.h
     src/ui/editordrawer/automationarea.cpp
+    src/ui/editordrawer/automationarea_gesture.cpp
+    src/ui/editordrawer/automationarea_input.cpp
+    src/ui/editordrawer/automationarea_menu.cpp
     src/ui/editordrawer/automationarea.h
     src/ui/editordrawer/automationgesture.cpp
     src/ui/editordrawer/automationgesture.h
@@ -313,6 +325,9 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationprojection.h
     src/ui/editordrawer/automationpage.cpp
     src/ui/editordrawer/automationpage.h
+    src/ui/editordrawer/tempolane.cpp
+    src/ui/editordrawer/tempolanepaint.cpp
+    src/ui/editordrawer/tempolane.h
     src/ui/editordrawer/velocityarea.cpp
     src/ui/editordrawer/velocityarea.h
     src/ui/editordrawer/linearramp.h

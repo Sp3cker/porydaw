@@ -18,6 +18,18 @@
 using namespace songview;
 using namespace songview::detail;
 
+namespace {
+std::vector<TempoPoint> tempoInRange(const SongDocument &document, uint64_t startTick,
+                                     uint64_t endTick)
+{
+    auto points = std::vector<TempoPoint>{};
+    for (const auto &point : document.tempoPoints()) {
+        if (point.tick >= startTick && point.tick < endTick)
+            points.push_back(point);
+    }
+    return points;
+}
+} // namespace
 void SongView::announceTimeSelection()
 {
     const auto &selection = m_selectionModel.timeSelection();
@@ -27,7 +39,10 @@ void SongView::announceTimeSelection()
                          double(std::max<uint32_t>(1, m_timeline->ticksPerBeat));
     QString scope;
     if (selection.scope == EditorSelectionModel::TimeSelection::Lanes) {
-        scope = tr("%n lane(s)", nullptr, int(selection.lanes.size()));
+        const QString lanes = tr("%n lane(s)", nullptr, int(selection.lanes.size()));
+        scope = selection.tempo
+                    ? (selection.lanes.empty() ? tr("tempo") : tr("%1 + tempo").arg(lanes))
+                    : lanes;
     } else {
         const uint32_t mask = m_selectionModel.resolvedTrackScope(usedTrackMask(m_timeline));
         int n = 0;
@@ -47,10 +62,15 @@ std::optional<SongView::TimeScopeResolution> SongView::resolveTimeSelectionScope
         return std::nullopt;
     TimeScopeResolution resolved;
     if (selection.scope == EditorSelectionModel::TimeSelection::Lanes) {
-        if (selection.lanes.empty())
-            return std::nullopt;
+        resolved.scope.tempo = selection.tempo;
         resolved.scope.lanes = selection.lanes;
-        resolved.label = tr("%n lane(s)", nullptr, int(resolved.scope.lanes.size()));
+        if (resolved.scope.lanes.empty() && !resolved.scope.tempo)
+            return std::nullopt;
+        const QString lanes = tr("%n lane(s)", nullptr, int(resolved.scope.lanes.size()));
+        resolved.label =
+            resolved.scope.tempo
+                ? (resolved.scope.lanes.empty() ? tr("tempo") : tr("%1 + tempo").arg(lanes))
+                : lanes;
         return resolved;
     }
     resolved.scope.tracks = timeSelectionTracks();
@@ -100,9 +120,10 @@ void SongView::copyTimeSelection()
     int noteCount = 0;
     int pointCount = 0;
     const auto copyLanePoints = [&](int track, uint8_t cc) {
+        if (track < 0)
+            return;
         ClipLane lane{track, cc, {}};
-        const int query = track < 0 ? m_selectionModel.primaryTrack() : track;
-        for (const DocLanePoint &pt : m_document->lanePoints(query, cc)) {
+        for (const DocLanePoint &pt : m_document->lanePoints(track, cc)) {
             if (pt.tick >= s && pt.tick < e)
                 lane.points.push_back({uint32_t(pt.tick - s), pt.value});
         }
@@ -111,6 +132,11 @@ void SongView::copyTimeSelection()
         // clears the destination range.
         clip.lanes.push_back(std::move(lane));
     };
+    if (m_selectionModel.timeSelectionCoversTempo(usedTrackMask(m_timeline))) {
+        for (const auto &point : tempoInRange(*m_document, s, e))
+            clip.tempo.push_back({point.tick - s, point.microsecondsPerQuarterNote});
+        pointCount += int(clip.tempo.size());
+    }
     if (selection.scope == EditorSelectionModel::TimeSelection::Lanes) {
         for (const std::pair<int, uint8_t> &id : selection.lanes)
             copyLanePoints(id.first, id.second);
@@ -143,8 +169,9 @@ void SongView::deleteTimeSelection()
     const uint64_t e = selection.endTick;
     SongDocument::RangeEdit edit;
     const auto removeLanePoints = [&](int track, uint8_t cc) {
-        const int query = track < 0 ? m_selectionModel.primaryTrack() : track;
-        for (const DocLanePoint &pt : m_document->lanePoints(query, cc)) {
+        if (track < 0)
+            return;
+        for (const DocLanePoint &pt : m_document->lanePoints(track, cc)) {
             if (pt.tick >= s && pt.tick < e)
                 edit.removePoints.push_back(pt);
         }
@@ -162,13 +189,14 @@ void SongView::deleteTimeSelection()
                 removeLanePoints(track, cc);
         }
     }
+    if (m_selectionModel.timeSelectionCoversTempo(usedTrackMask(m_timeline)))
+        edit.removeTempo = tempoInRange(*m_document, s, e);
     if (edit.empty()) {
         announce(tr("Nothing to delete in the time selection"));
         return;
     }
     const int notes = int(edit.removeNotes.size());
-    const int points = int(edit.removePoints.size());
-    m_document->applyRangeEdit(tr("delete range"), edit);
+    const int points = int(edit.removePoints.size() + edit.removeTempo.size());
     announce(tr("Deleted range: %1 note(s), %2 automation point(s)").arg(notes).arg(points));
 }
 void SongView::transposeTimeSelection(int dKey)
@@ -249,9 +277,11 @@ void SongView::nudgeTimeSelection(bool right)
         return;
     std::vector<DocNote> notes;
     std::vector<DocLanePoint> points;
+    std::vector<TempoPoint> tempo;
     const auto gatherLanePoints = [&](int track, uint8_t cc) {
-        const int query = track < 0 ? m_selectionModel.primaryTrack() : track;
-        for (const DocLanePoint &pt : m_document->lanePoints(query, cc)) {
+        if (track < 0)
+            return;
+        for (const DocLanePoint &pt : m_document->lanePoints(track, cc)) {
             if (pt.tick >= s && pt.tick < e)
                 points.push_back(pt);
         }
@@ -269,7 +299,9 @@ void SongView::nudgeTimeSelection(bool right)
                 gatherLanePoints(track, cc);
         }
     }
-    m_document->moveRange(notes, points, dTick);
+    if (m_selectionModel.timeSelectionCoversTempo(usedTrackMask(m_timeline)))
+        tempo = tempoInRange(*m_document, s, e);
+    m_document->moveRange(notes, points, dTick, tempo);
     // The band follows even over empty content, so repeated nudges keep
     // aiming at the same region.
     EditorSelectionModel::TimeSelection moved = selection;
@@ -285,7 +317,7 @@ void SongView::removeTimeSelectionContents()
         return;
     const auto &selection = m_selectionModel.timeSelection();
     const SongDocument::TimeRange range{selection.startTick, selection.endTick};
-    if (!m_document->rippleDeleteTimeRange(range, resolved->scope)) {
+    if (!m_document->removeTimeRange(range, resolved->scope)) {
         announce(tr("Nothing to remove in the time selection"));
         return;
     }
@@ -351,8 +383,6 @@ void SongView::pasteRangeAtEditCursor()
     int sole = -2;
     bool multi = false;
     const auto consider = [&](int track) {
-        if (track < 0)
-            return; // tempo is global
         if (sole == -2)
             sole = track;
         else if (sole != track)
@@ -363,7 +393,7 @@ void SongView::pasteRangeAtEditCursor()
     for (const ClipLane &cl : m_clip.lanes)
         consider(cl.track);
     const auto mapTrack = [&](int track) {
-        return track < 0 ? -1 : (multi ? track : m_selectionModel.primaryTrack());
+        return multi ? track : m_selectionModel.primaryTrack();
     };
 
     SongDocument::RangeEdit edit;
@@ -384,11 +414,12 @@ void SongView::pasteRangeAtEditCursor()
         }
     }
     for (const ClipLane &cl : m_clip.lanes) {
-        const int t = mapTrack(cl.track);
-        if (t >= 0 && m_document->smfTrackFor(t) < 0)
+        if (cl.track < 0)
             continue;
-        const int query = t < 0 ? m_selectionModel.primaryTrack() : t;
-        for (const DocLanePoint &pt : m_document->lanePoints(query, cl.cc)) {
+        const int t = mapTrack(cl.track);
+        if (m_document->smfTrackFor(t) < 0)
+            continue;
+        for (const DocLanePoint &pt : m_document->lanePoints(t, cl.cc)) {
             if (pt.tick >= s && pt.tick < e)
                 edit.removePoints.push_back(pt);
         }
@@ -398,6 +429,16 @@ void SongView::pasteRangeAtEditCursor()
                 lw.points.push_back({s + pv.first, pv.second});
             edit.addPoints.push_back(std::move(lw));
         }
+    }
+    const auto &selection = m_selectionModel.timeSelection();
+    const bool tempoOnly = m_clip.tracks.empty() && m_clip.lanes.empty();
+    const bool pasteTempo = !m_clip.tempo.empty() &&
+                            (tempoOnly || !selection.active() ||
+                             m_selectionModel.timeSelectionCoversTempo(usedTrackMask(m_timeline)));
+    if (pasteTempo) {
+        edit.removeTempo = tempoInRange(*m_document, s, e);
+        for (const auto &point : m_clip.tempo)
+            edit.addTempo.push_back({s + point.tick, point.microsecondsPerQuarterNote});
     }
     m_document->applyRangeEdit(tr("paste range"), edit);
 

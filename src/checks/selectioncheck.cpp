@@ -229,32 +229,35 @@ int runSelectionCheck()
                    model.timeSelectionCoversLane(2, DOC_CC_BEND, usedTracks) &&
                    !model.timeSelectionCoversLane(1, 7, usedTracks),
                "normal lane track coverage is wrong");
-        expect(model.timeSelectionCoversLane(-1, DOC_CC_TEMPO, usedTracks),
-               "tempo lane was not covered when every used track was scoped");
-        expect(!model.timeSelectionCoversLane(-1, DOC_CC_TEMPO, usedTracks | trackBit(1)) &&
-                   !model.timeSelectionCoversLane(-1, DOC_CC_TEMPO, 0),
-               "tempo lane ignored the all-used-tracks rule");
+        expect(model.timeSelectionCoversTempo(usedTracks),
+               "tempo was not covered when every used track was scoped");
+        expect(!model.timeSelectionCoversTempo(usedTracks | trackBit(1)) &&
+                   !model.timeSelectionCoversTempo(0),
+               "tempo ignored the all-used-tracks rule");
 
         auto lanes = EditorSelectionModel::TimeSelection{};
         lanes.startTick = 300;
         lanes.endTick = 400;
         lanes.scope = EditorSelectionModel::TimeSelection::Lanes;
-        lanes.lanes = {{2, 7}, {-1, DOC_CC_TEMPO}, {2, 7}, {-2, 8}, {16, 9}};
+        lanes.lanes = {{2, 7}, {2, 7}, {-2, 8}, {16, 9}};
+        lanes.tempo = true;
         model.setTimeSelection(lanes);
         expect(model.timeSelection().active() &&
-                   model.timeSelection().lanes ==
-                       std::vector<std::pair<int, uint8_t>>{{2, 7}, {-1, DOC_CC_TEMPO}},
-               "lane-scoped time selection did not deduplicate lane identities");
+                   model.timeSelection().lanes == std::vector<std::pair<int, uint8_t>>{{2, 7}} &&
+                   model.timeSelection().tempo,
+               "lane-scoped time selection did not deduplicate its identities");
         expect(!model.timeSelectionCoversTrack(2, usedTracks) &&
                    model.timeSelectionCoversLane(2, 7, usedTracks) &&
-                   model.timeSelectionCoversLane(-1, DOC_CC_TEMPO, usedTracks) &&
+                   model.timeSelectionCoversTempo(usedTracks) &&
                    !model.timeSelectionCoversLane(2, 8, usedTracks),
                "lane-scoped coverage was not limited to explicit identities");
 
         lanes.lanes.clear();
+        lanes.tempo = false;
         model.setTimeSelection(lanes);
-        expect(!model.timeSelection().active() && model.timeSelection().lanes.empty(),
-               "active lane selection without lanes was not canonicalized inactive");
+        expect(!model.timeSelection().active() && model.timeSelection().lanes.empty() &&
+                   !model.timeSelection().tempo,
+               "active lane selection without contents was not canonicalized inactive");
     }
 
     {
@@ -368,15 +371,17 @@ int runSelectionCheck()
         lanes.startTick = 8;
         lanes.endTick = 18;
         lanes.scope = EditorSelectionModel::TimeSelection::Lanes;
-        lanes.lanes = {{0, 7}, {1, 8}, {-1, DOC_CC_TEMPO}, {1, 8}};
+        lanes.lanes = {{0, 7}, {1, 8}, {1, 8}};
+        lanes.tempo = true;
         laneModel.setTimeSelection(lanes);
         laneNotifications.changes.clear();
         laneModel.applyRemap(remap);
         expect(laneModel.primaryTrack() == 4 &&
                    laneModel.storedTrackScope() == (trackBit(2) | trackBit(4)) &&
                    laneModel.timeSelection().lanes ==
-                       std::vector<std::pair<int, uint8_t>>{{2, 7}, {4, 8}, {-1, DOC_CC_TEMPO}},
-               "TrackRemap did not map and deduplicate lane identities");
+                       std::vector<std::pair<int, uint8_t>>{{2, 7}, {4, 8}} &&
+                   laneModel.timeSelection().tempo,
+               "TrackRemap did not map lanes or preserve Tempo scope");
         expectEvent(laneNotifications, 0, kPrimaryTrack | kTrackScope | kTimeSelection,
                     "lane TrackRemap reported the wrong categories");
 

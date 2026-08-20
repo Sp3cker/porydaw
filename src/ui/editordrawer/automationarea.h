@@ -22,6 +22,7 @@
 #include "ui/editordrawer/automationpencilgesture.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/automationrows.h"
+#include "ui/editordrawer/tempolane.h"
 #include "ui/editorviewstate.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
@@ -47,6 +48,7 @@ class AutomationArea final : public songview::TimelineSurface
 
     const std::vector<AutomationRow> &rows() const noexcept { return m_rowData.rows(); }
     void rebuildRows();
+    void updateTempoLayout();
     void cancelInteraction();
     void setPencilMode(bool enabled);
     bool isPanning() const noexcept;
@@ -92,6 +94,15 @@ class AutomationArea final : public songview::TimelineSurface
                             const AutomationProjection &proj) const;
     void updateActiveGesture(const QPointF &position, Qt::KeyboardModifiers modifiers,
                              bool activateSweep);
+    template <class T>
+    static std::vector<AutomationLaneEdit::Point> laneEditPoints(const std::vector<T> &points)
+    {
+        std::vector<AutomationLaneEdit::Point> result;
+        result.reserve(points.size());
+        for (const auto &point : points)
+            result.push_back({point.tick, point.value});
+        return result;
+    }
     void finishActiveGesture(bool fineMode);
     void showTimeSelectionMenu(const QPoint &globalPosition);
     void showAddLaneMenu(const QPoint &globalPosition);
@@ -103,6 +114,7 @@ class AutomationArea final : public songview::TimelineSurface
     AutomationPage *m_page = nullptr;
     QScrollArea *m_scroll = nullptr;
     AutomationRows m_rowData;
+    TempoLane m_tempoLane;
     struct ResizeState {
         int row = -1;
         int startHeight = 0;

@@ -38,6 +38,11 @@ struct SmfEvent {
     bool isNoteEnd() const { return typeNibble() == 0x8 || (typeNibble() == 0x9 && data1 == 0); }
 };
 
+inline bool isTempoMeta(const SmfEvent &event)
+{
+    return event.isMeta() && event.metaType == 0x51;
+}
+
 inline bool operator==(const SmfEvent &a, const SmfEvent &b)
 {
     return a.tick == b.tick && a.status == b.status && a.metaType == b.metaType &&

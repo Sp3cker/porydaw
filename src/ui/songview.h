@@ -406,11 +406,11 @@ class SongView : public QWidget
     // selected track. All one undoable command each.
     void copyTimeSelection();
     void deleteTimeSelection();
-    // "Remove contents": ripple delete — the selected span vanishes and
-    // everything after it shifts left to close the gap. Selecting every
-    // track cuts the whole song (tempo, time signatures, loop markers and
-    // track ends ripple too); a partial scope shifts only its own tracks or
-    // lanes so the rest of the song keeps its alignment.
+    // "Remove contents": the selected span vanishes and everything after it
+    // shifts left to close the gap. Selecting every track cuts the whole song
+    // (tempo, time signatures, loop markers and track ends close too); a
+    // partial scope shifts only its own tracks or lanes so the rest of the
+    // song keeps its alignment.
     void removeTimeSelectionContents();
     // Insert and duplicate operate only on an active half-open time selection.
     void insertBlankTime();
@@ -452,7 +452,7 @@ class SongView : public QWidget
         std::vector<ClipNote> notes;
     };
     struct ClipLane {
-        int track; // source engine track; -1 = tempo
+        int track; // source engine track
         uint8_t cc;
         std::vector<std::pair<uint32_t, int>> points; // (relTick, value)
     };
@@ -461,7 +461,9 @@ class SongView : public QWidget
         bool wholeLane = false; // gutter "Copy lane" (paste-lane anchor is 0)
         std::vector<ClipTrack> tracks;
         std::vector<ClipLane> lanes;
-        bool empty() const { return tracks.empty() && lanes.empty(); }
+        std::vector<TempoPoint> tempo; // relative ticks, microseconds
+
+        bool empty() const { return tracks.empty() && lanes.empty() && tempo.empty(); }
     };
     Clip &clipboard() { return m_clip; }
 

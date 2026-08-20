@@ -110,7 +110,7 @@ int automationRowsHeight(const AutomationPage &page)
     const auto &state = page.automationViewState();
     const auto expected = expectedAutomationGeometry();
     const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
-    int height = 0;
+    int height = expected.defaultRowHeight;
     for (const auto &row : page.area()->rows()) {
         const auto it = state.laneHeights.find(row.id);
         height += std::clamp(it == state.laneHeights.cend() ? shared : it->second,
@@ -123,7 +123,7 @@ int automationRowTop(const AutomationPage &page, const EditorAutomationRowId &id
     const auto &state = page.automationViewState();
     const auto expected = expectedAutomationGeometry();
     const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
-    int top = 0;
+    int top = expected.defaultRowHeight;
     for (const auto &row : page.area()->rows()) {
         if (row.id == id)
             return top;
@@ -340,7 +340,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         }
         check(panRow >= 0, QStringLiteral("pan row not found for snap-value test"));
         if (panRow >= 0) {
-            AutomationProjection proj(projectionGeometry, rowsForDetent, &page);
+            AutomationProjection proj(projectionGeometry, rowsForDetent, &page,
+                                      projectionGeometry.rowDefaultHeight);
             const auto &row = rowsForDetent[panRow];
             const int top = proj.rowTop(panRow);
             const int h = proj.rowHeight(row);
@@ -474,10 +475,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
               QStringLiteral("empty held-span deletion was treated as unchanged"));
     }
     const auto &rows = page.area()->rows();
-    check(!rows.empty() && rows.front().id.kind == EditorAutomationRowKind::Tempo,
-          QStringLiteral("tempo is not the first automation row"));
-    check(rows.size() > 1 && rows[1].id.kind == EditorAutomationRowKind::Voice,
-          QStringLiteral("document-backed voice row is missing"));
+    check(!rows.empty() && rows.front().id == voiceRow,
+          QStringLiteral("document-backed voice row is not the first generic automation row"));
+    check(!rowExists(rows, EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}),
+          QStringLiteral("Tempo should not be a generic automation row"));
     check(!rowExists(rows, volume), QStringLiteral("hidden lane remained visible"));
     check(rowExists(rows, pan), QStringLiteral("empty primary-track lane is missing"));
     check(rowExists(rows, lfo), QStringLiteral("visible controller lane is missing"));
@@ -556,7 +557,6 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     live.timeZoom = 96.0;
     view.setEditorTimeZoom(live.timeZoom);
     page.refreshLiveState(live);
-    const auto tempo = EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, DOC_CC_TEMPO};
     const uint64_t hoverSnapTick = view.snapTick(30.0, false);
     const uint64_t hoverSnapSpacing =
         std::max<uint64_t>(1, view.gridState(hoverSnapTick, false).snapTicks);
@@ -626,7 +626,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
               Qt::LeftButton);
     sendMouse(page.area(), QEvent::MouseButtonRelease, clickPoint + verticalDragMove,
               Qt::LeftButton, Qt::NoButton);
-    const AutomationProjection sweepProjection(projectionGeometry, page.area()->rows(), &page);
+    const AutomationProjection sweepProjection(projectionGeometry, page.area()->rows(), &page,
+                                               projectionGeometry.rowDefaultHeight);
     const int sweepRow = sweepProjection.rowIndexAt(clickPoint.y());
     const uint64_t sweepTick = view.snapTick(sweepProjection.rawTickAt(clickPoint.x()), false);
     const int sweepValue = sweepProjection.valueAtY(sweepRow, clickPoint.y() + 1);
@@ -1078,9 +1079,9 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
               afterAutomationPublication.activePage == drawerBeforeAutomationPublication.activePage,
           QStringLiteral("automation publication discarded drawer state"));
 
-    const int sharedHeight = page.automationViewState().laneHeight;
-    const QPoint selectionStart(expected.plotOrigin + 24, sharedHeight / 2);
-    const QPoint selectionEnd(expected.plotOrigin + 216, sharedHeight / 2);
+    const int selectionRowY = automationRowTop(page, pan) + heightFor(pan) / 2;
+    const QPoint selectionStart(expected.plotOrigin + 24, selectionRowY);
+    const QPoint selectionEnd(expected.plotOrigin + 216, selectionRowY);
     const QPoint selectionContractedEnd((selectionStart.x() + selectionEnd.x()) / 2,
                                         selectionEnd.y());
     sendMouse(page.area(), QEvent::MouseButtonPress, selectionStart, Qt::RightButton,
@@ -1103,7 +1104,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                 selectionActions.push_back(action->text());
             menu->close();
         });
-        const QPoint selectionInside(expected.plotOrigin + 100, sharedHeight / 2);
+        const QPoint selectionInside(expected.plotOrigin + 100, selectionRowY);
         sendMouse(page.area(), QEvent::MouseButtonPress, selectionInside, Qt::RightButton,
                   Qt::RightButton);
         sendMouse(page.area(), QEvent::MouseButtonRelease, selectionInside, Qt::RightButton,
@@ -1111,7 +1112,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         popupCheck(selectionActions.contains(QStringLiteral("Clear time selection")),
                    QStringLiteral("right click inside a time selection did not open its menu"));
     }
-    const QPoint selectionOutside(expected.plotOrigin + 260, sharedHeight / 2);
+    const QPoint selectionOutside(expected.plotOrigin + 260, selectionRowY);
     sendMouse(page.area(), QEvent::MouseButtonPress, selectionOutside, Qt::LeftButton,
               Qt::LeftButton);
     check(!view.selectionModel().timeSelection().active(),
@@ -1130,8 +1131,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     sendMouse(page.area(), QEvent::MouseButtonRelease, selectionOutside, Qt::RightButton,
               Qt::NoButton);
     view.selectionModel().setTimeSelection(timeSelection);
-    const QPoint laneHeader(expected.plotOrigin - layout::space(layout::Space::One),
-                            sharedHeight / 2);
+    const QPoint laneHeader(expected.plotOrigin - layout::space(layout::Space::One), selectionRowY);
     sendMouse(page.area(), QEvent::MouseButtonPress, laneHeader, Qt::LeftButton, Qt::LeftButton);
     sendMouse(page.area(), QEvent::MouseButtonRelease, laneHeader, Qt::LeftButton, Qt::NoButton);
     check(!view.selectionModel().timeSelection().active(),
@@ -1467,7 +1467,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         QCoreApplication::processEvents();
     }
 
-    const QPoint voiceHover(expected.plotOrigin + 96, sharedHeight + sharedHeight / 2);
+    const QPoint voiceHover(expected.plotOrigin + 96,
+                            automationRowTop(page, voiceRow) + heightFor(voiceRow) / 2);
     sendMouse(page.area(), QEvent::MouseMove, voiceHover, Qt::NoButton, Qt::NoButton);
     page.area()->grab();
     const double hoverTick =
@@ -1480,7 +1481,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const auto checkCancelledGesture = [&](auto cancel, const QString &route) {
         const uint64_t revision = document.revision();
         const int undoIndex = document.undoStack()->index();
-        const QPoint start(expected.plotOrigin + 24, expected.defaultRowHeight / 2);
+        const QPoint start(expected.plotOrigin + 24,
+                           automationRowTop(page, pan) + heightFor(pan) / 2);
         sendMouse(page.area(), QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton);
         sendMouse(page.area(), QEvent::MouseMove, start + QPoint(80, 12), Qt::NoButton,
                   Qt::LeftButton);

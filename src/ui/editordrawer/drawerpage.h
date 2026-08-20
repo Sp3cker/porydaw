@@ -45,6 +45,7 @@ struct DrawerPageTimeSelectionMenuRequest {
     uint64_t startTick = 0;
     uint64_t endTick = 0;
     std::vector<std::pair<int, uint8_t>> lanes;
+    bool tempo = false;
     QPoint globalPosition;
 };
 

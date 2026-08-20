@@ -17,11 +17,6 @@ struct RawEvent {
                    // (program change, CC) stay ahead of note-ons at the same tick
 };
 
-struct TempoChange {
-    uint64_t tick;
-    uint32_t usPerBeat;
-};
-
 // Parsed-but-not-played data destined for MidiTimeline::otherEvents; the
 // engine track is resolved after all tracks are mapped.
 struct RawOther {
@@ -45,19 +40,19 @@ bool textIsLoopMarker(const char *buf, uint32_t len, char marker)
 
 // Convert an absolute tick to an absolute sample index via the tempo map.
 // Default tempo: 500000 us/beat (120 BPM).
-uint64_t tickToSample(uint64_t tick, const std::vector<TempoChange> &tempos, uint32_t tpqn,
+uint64_t tickToSample(uint64_t tick, const std::vector<TempoPoint> &tempoPoints, uint32_t tpqn,
                       double sampleRate)
 {
     double samples = 0.0;
     uint64_t prevTick = 0;
     double prevTempo = 500000.0;
 
-    for (const TempoChange &tc : tempos) {
+    for (const TempoPoint &tc : tempoPoints) {
         if (tc.tick >= tick)
             break;
         samples += double(tc.tick - prevTick) * prevTempo / double(tpqn) / 1000000.0 * sampleRate;
         prevTick = tc.tick;
-        prevTempo = double(tc.usPerBeat);
+        prevTempo = double(tc.microsecondsPerQuarterNote);
     }
     samples += double(tick - prevTick) * prevTempo / double(tpqn) / 1000000.0 * sampleRate;
     return static_cast<uint64_t>(samples + 0.5);
@@ -88,13 +83,34 @@ std::unique_ptr<MidiTimeline> MidiTimeline::load(const QString &path, double sam
     return build(smf, sampleRate);
 }
 
-std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sampleRate)
+namespace {
+
+std::vector<TempoPoint> extractTempoPoints(const SmfFile &smf)
+{
+    std::vector<TempoPoint> tempoPoints;
+    for (const auto &track : smf.tracks) {
+        for (const SmfEvent &event : track.events) {
+            if (!event.isMeta() || event.metaType != 0x51 || event.blob.size() != 3)
+                continue;
+            const uint8_t *data = reinterpret_cast<const uint8_t *>(event.blob.constData());
+            tempoPoints.push_back({event.tick, (static_cast<uint32_t>(data[0]) << 16) |
+                                                   (static_cast<uint32_t>(data[1]) << 8) |
+                                                   data[2]});
+        }
+    }
+    // Stable sort preserves same-tick FF 51 events in file order.
+    std::stable_sort(tempoPoints.begin(), tempoPoints.end(),
+                     [](const TempoPoint &a, const TempoPoint &b) { return a.tick < b.tick; });
+    return tempoPoints;
+}
+
+std::unique_ptr<MidiTimeline>
+buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, double sampleRate)
 {
     const uint32_t tpqn = smf.division;
     const int numTracks = int(smf.tracks.size());
 
     std::vector<RawEvent> rawEvents;
-    std::vector<TempoChange> tempos;
     std::vector<TimeSigPoint> timeSigs;
     std::vector<RawOther> rawOthers;
     std::vector<bool> trackHasChannelEvents(numTracks, false);
@@ -159,11 +175,9 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
             } else if (sev.isMeta()) {
                 const uint8_t metaType = sev.metaType;
                 const QByteArray &blob = sev.blob;
-                if (metaType == 0x51 && blob.size() == 3) {
-                    const uint8_t *p = reinterpret_cast<const uint8_t *>(blob.constData());
-                    tempos.push_back({tick, (static_cast<uint32_t>(p[0]) << 16) |
-                                                (static_cast<uint32_t>(p[1]) << 8) | p[2]});
-                } else if (metaType == 0x58 && blob.size() >= 2) {
+                if (metaType == 0x51 && blob.size() == 3)
+                    continue;
+                if (metaType == 0x58 && blob.size() >= 2) {
                     timeSigs.push_back({tick, uint8_t(blob[0]), uint8_t(blob[1])});
                 } else if (metaType == 0x20 && blob.size() >= 1) {
                     // Channel Prefix: scoping handled by `prefix` above.
@@ -204,16 +218,11 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
             }
         }
     }
-
     std::stable_sort(rawEvents.begin(), rawEvents.end(), [](const RawEvent &a, const RawEvent &b) {
         if (a.tick != b.tick)
             return a.tick < b.tick;
         return a.origIndex < b.origIndex;
     });
-    // stable: same-tick duplicate tempos must keep file order so the last
-    // one in the file is the one that wins, matching mid2agb's stable sort.
-    std::stable_sort(tempos.begin(), tempos.end(),
-                     [](const TempoChange &a, const TempoChange &b) { return a.tick < b.tick; });
 
     auto timeline = std::make_unique<MidiTimeline>();
     timeline->sampleRate = sampleRate;
@@ -237,8 +246,7 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
     }
     timeline->usedTrackCount = next;
 
-    // Convert raw events to sample positions with final engine track indices.
-    timeline->events.reserve(rawEvents.size() + tempos.size() + 1);
+    timeline->events.reserve(rawEvents.size() + tempoPoints.size() + 1);
 
     std::vector<TimelineEvent> noteEvents;
     noteEvents.reserve(rawEvents.size());
@@ -248,7 +256,7 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
             continue; // beyond 16 usable tracks
 
         TimelineEvent ev;
-        ev.samplePos = tickToSample(re.tick, tempos, tpqn, sampleRate);
+        ev.samplePos = tickToSample(re.tick, tempoPoints, tpqn, sampleRate);
         ev.tick = static_cast<uint32_t>(re.tick);
         ev.type = re.type;
         ev.track = static_cast<uint8_t>(engineTrack);
@@ -270,13 +278,13 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
     // vibrato rates) never runs on its unrelated init default. The same points
     // form the viewer's tempo map.
     std::vector<TimelineEvent> tempoEvents;
-    if (tempos.empty() || tempos.front().tick != 0) {
+    if (tempoPoints.empty() || tempoPoints.front().tick != 0) {
         tempoEvents.push_back(makeTempoEvent(0, 0, 120.0));
         timeline->tempoMap.push_back({0, 0, 120.0});
     }
-    for (const TempoChange &tc : tempos) {
-        const uint64_t sp = tickToSample(tc.tick, tempos, tpqn, sampleRate);
-        const double bpm = 60000000.0 / double(tc.usPerBeat);
+    for (const TempoPoint &tc : tempoPoints) {
+        const uint64_t sp = tickToSample(tc.tick, tempoPoints, tpqn, sampleRate);
+        const double bpm = 60000000.0 / double(tc.microsecondsPerQuarterNote);
         tempoEvents.push_back(makeTempoEvent(sp, tc.tick, bpm));
         timeline->tempoMap.push_back({tc.tick, sp, bpm});
     }
@@ -295,9 +303,9 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
     timeline->loopStartTick = loopStartTick;
     timeline->loopEndTick = loopEndTick;
     if (loopStartTick != UINT64_MAX)
-        timeline->loopStartSample = tickToSample(loopStartTick, tempos, tpqn, sampleRate);
+        timeline->loopStartSample = tickToSample(loopStartTick, tempoPoints, tpqn, sampleRate);
     if (loopEndTick != UINT64_MAX)
-        timeline->loopEndSample = tickToSample(loopEndTick, tempos, tpqn, sampleRate);
+        timeline->loopEndSample = tickToSample(loopEndTick, tempoPoints, tpqn, sampleRate);
     if (timeline->loopEndTick != UINT64_MAX)
         timeline->lengthTicks = std::max(timeline->lengthTicks, timeline->loopEndTick);
 
@@ -314,12 +322,28 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
     timeline->otherEvents.reserve(rawOthers.size());
     for (RawOther &ro : rawOthers) {
         const int engineTrack = smfToEngine[ro.smfTrack];
-        timeline->otherEvents.push_back({ro.tick, tickToSample(ro.tick, tempos, tpqn, sampleRate),
+        timeline->otherEvents.push_back({ro.tick,
+                                         tickToSample(ro.tick, tempoPoints, tpqn, sampleRate),
                                          engineTrack, std::move(ro.label)});
         timeline->lengthTicks = std::max(timeline->lengthTicks, ro.tick);
     }
 
     return timeline;
+}
+
+} // namespace
+
+std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sampleRate)
+{
+    auto tempoPoints = extractTempoPoints(smf);
+    return buildTimeline(smf, tempoPoints, sampleRate);
+}
+
+std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf,
+                                                  const std::vector<TempoPoint> &tempoPoints,
+                                                  double sampleRate)
+{
+    return buildTimeline(smf, tempoPoints, sampleRate);
 }
 
 uint64_t MidiTimeline::sampleForTick(uint64_t tick) const

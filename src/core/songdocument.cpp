@@ -11,6 +11,11 @@
 #include "core/miditimeline.h"
 #include "project/songregistry.h"
 
+namespace song_document_tempo {
+void removeTempoMetas(SmfFile &smf);
+void writeTempoMetas(SmfFile &smf, const std::vector<TempoPoint> &points);
+} // namespace song_document_tempo
+
 // Declared in songdocument.h: the event list's summary column shares it.
 bool metaIsLoopMarker(const SmfEvent &ev, char marker)
 {
@@ -37,6 +42,26 @@ bool TrackRemap::isIdentity() const
     return true;
 }
 
+TrackRemap TrackRemap::inverse() const
+{
+    TrackRemap inverse;
+    inverse.smfTrackMap.assign(size_t(newSmfTrackCount), -1);
+    inverse.engineTrackMap.assign(size_t(newEngineTrackCount), -1);
+    inverse.newSmfTrackCount = int(smfTrackMap.size());
+    inverse.newEngineTrackCount = int(engineTrackMap.size());
+    for (int old = 0; old < int(smfTrackMap.size()); old++) {
+        const int current = smfTrackMap[old];
+        if (current >= 0)
+            inverse.smfTrackMap[current] = old;
+    }
+    for (int old = 0; old < int(engineTrackMap.size()); old++) {
+        const int current = engineTrackMap[old];
+        if (current >= 0)
+            inverse.engineTrackMap[current] = old;
+    }
+    return inverse;
+}
+
 namespace {
 
 // Time-signature metas as MidiTimeline::build reads them: numerator and
@@ -56,26 +81,6 @@ void moveChunk(std::vector<SmfTrack> &tracks, int from, int to)
         std::rotate(begin + from, begin + from + 1, begin + to + 1);
     else
         std::rotate(begin + to, begin + from, begin + from + 1);
-}
-
-TrackRemap inverseTrackRemap(const TrackRemap &remap)
-{
-    TrackRemap inverse;
-    inverse.smfTrackMap.assign(size_t(remap.newSmfTrackCount), -1);
-    inverse.engineTrackMap.assign(size_t(remap.newEngineTrackCount), -1);
-    inverse.newSmfTrackCount = int(remap.smfTrackMap.size());
-    inverse.newEngineTrackCount = int(remap.engineTrackMap.size());
-    for (int old = 0; old < int(remap.smfTrackMap.size()); old++) {
-        const int current = remap.smfTrackMap[old];
-        if (current >= 0)
-            inverse.smfTrackMap[current] = old;
-    }
-    for (int old = 0; old < int(remap.engineTrackMap.size()); old++) {
-        const int current = remap.engineTrackMap[old];
-        if (current >= 0)
-            inverse.engineTrackMap[current] = old;
-    }
-    return inverse;
 }
 
 bool cfgSemanticEqual(const SongCfg &a, const SongCfg &b)
@@ -113,7 +118,7 @@ class SongEditCommand : public QUndoCommand
     {
         m_doc->revertOps(m_ops);
         m_doc->rebuildTrackMap();
-        m_doc->publishMutation(inverseTrackRemap(m_remap));
+        m_doc->publishMutation(m_remap.inverse());
     }
 
   private:
@@ -192,7 +197,7 @@ class MoveNotesCommand : public QUndoCommand
     {
         m_doc->revertOps(m_ops);
         m_doc->rebuildTrackMap();
-        m_doc->publishMutation(inverseTrackRemap(m_remap));
+        m_doc->publishMutation(m_remap.inverse());
     }
 
     bool mergeWith(const QUndoCommand *command) override
@@ -358,6 +363,8 @@ bool SongDocument::load(const SongInfo &song, QString *error)
 
     const auto before = trackMapState();
     m_smf = std::move(smf);
+    replaceTempoPoints(normalizeTempoPoints(tempoPointsFromSmf(m_smf)));
+    song_document_tempo::removeTempoMetas(m_smf);
     m_cfg = song.cfg;
     m_savedCfg = song.cfg;
     m_midPath = song.midPath;
@@ -377,7 +384,9 @@ bool SongDocument::load(const SongInfo &song, QString *error)
 
 bool SongDocument::save(QString *error)
 {
-    if (!m_smf.writeFile(m_midPath, error))
+    auto smf = m_smf;
+    song_document_tempo::writeTempoMetas(smf, m_tempoPoints);
+    if (!smf.writeFile(m_midPath, error))
         return false;
 
     if (!cfgSemanticEqual(m_cfg, m_savedCfg) || !m_hadCfgLine) {
@@ -478,28 +487,10 @@ TrackRemap SongDocument::trackRemap(const TrackMapState &before,
 
 void SongDocument::publishMutation(TrackRemap remap)
 {
-    rebuildTempoPoints();
     m_revision++;
     if (!remap.isIdentity())
         emit tracksRemapped(std::move(remap));
     emit documentChanged();
-}
-
-void SongDocument::rebuildTempoPoints()
-{
-    m_tempoPoints.clear();
-    if (m_smf.tracks.empty())
-        return;
-
-    const auto &events = m_smf.tracks.front().events;
-    m_tempoPoints.reserve(events.size());
-    for (const SmfEvent &event : events) {
-        if (!event.isMeta() || event.metaType != 0x51 || event.blob.size() != 3)
-            continue;
-        const auto *bytes = reinterpret_cast<const uint8_t *>(event.blob.constData());
-        m_tempoPoints.push_back(
-            {event.tick, (uint32_t(bytes[0]) << 16) | (uint32_t(bytes[1]) << 8) | bytes[2]});
-    }
 }
 
 void SongDocument::mintNoteId(SmfEvent *event)
@@ -681,11 +672,6 @@ bool SongDocument::laneEventMatches(const SmfEvent &ev, uint8_t cc) const
 
 int SongDocument::laneValue(const SmfEvent &ev, uint8_t cc) const
 {
-    if (cc == DOC_CC_TEMPO) {
-        const uint8_t *p = reinterpret_cast<const uint8_t *>(ev.blob.constData());
-        const uint32_t usPerBeat = (uint32_t(p[0]) << 16) | (uint32_t(p[1]) << 8) | p[2];
-        return int(60000000.0 / double(usPerBeat) + 0.5);
-    }
     if (cc == DOC_CC_BEND)
         return ((int(ev.data1) << 7) | ev.data0) - 8192;
     if (cc == DOC_CC_VOICE)
@@ -696,17 +682,6 @@ int SongDocument::laneValue(const SmfEvent &ev, uint8_t cc) const
 std::vector<DocLanePoint> SongDocument::lanePoints(int engineTrack, uint8_t cc) const
 {
     std::vector<DocLanePoint> points;
-    if (cc == DOC_CC_TEMPO) {
-        // Tempo lives in the first chunk: mid2agb reads seq events only there.
-        if (m_smf.tracks.empty())
-            return points;
-        const auto &evs = m_smf.tracks[0].events;
-        for (size_t i = 0; i < evs.size(); i++) {
-            if (evs[i].isMeta() && evs[i].metaType == 0x51 && evs[i].blob.size() == 3)
-                points.push_back({0, i, evs[i].tick, laneValue(evs[i], cc)});
-        }
-        return points;
-    }
 
     const int smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0)
@@ -1309,18 +1284,6 @@ void SongDocument::nudgeNotesVelocity(const std::vector<DocNote> &notes, int del
 
 SmfEvent SongDocument::makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick, int value) const
 {
-    if (cc == DOC_CC_TEMPO) {
-        SmfEvent ev;
-        ev.tick = tick;
-        ev.status = 0xFF;
-        ev.metaType = 0x51;
-        const uint32_t usPerBeat = uint32_t(60000000.0 / double(std::clamp(value, 1, 999)) + 0.5);
-        ev.blob.resize(3);
-        ev.blob[0] = char((usPerBeat >> 16) & 0xFF);
-        ev.blob[1] = char((usPerBeat >> 8) & 0xFF);
-        ev.blob[2] = char(usPerBeat & 0xFF);
-        return ev;
-    }
     if (cc == DOC_CC_BEND) {
         const int bend14 = std::clamp(value, -8192, 8191) + 8192;
         return makeChannelEvent(0xE, channel, tick, uint8_t(bend14 & 0x7F),
@@ -1333,7 +1296,7 @@ SmfEvent SongDocument::makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick,
 
 void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value)
 {
-    const int smfTrack = cc == DOC_CC_TEMPO ? 0 : smfTrackFor(engineTrack);
+    const int smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0 || m_smf.tracks.empty())
         return;
     std::vector<EditOp> ops;
@@ -1358,7 +1321,7 @@ void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int 
 void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin,
                                    uint64_t tickEnd, const std::vector<LanePointValue> &points)
 {
-    const int smfTrack = cc == DOC_CC_TEMPO ? 0 : smfTrackFor(engineTrack);
+    const int smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0 || m_smf.tracks.empty())
         return;
     std::vector<EditOp> ops;
@@ -1406,18 +1369,14 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
     std::vector<PlannedMove> planned;
     planned.reserve(moves.size());
     for (const LanePointMove &move : moves) {
-        const int smfTrack = move.cc == DOC_CC_TEMPO ? 0 : smfTrackFor(move.engineTrack);
+        const int smfTrack = smfTrackFor(move.engineTrack);
         if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()) ||
             move.point.smfTrack != smfTrack ||
             move.point.index >= m_smf.tracks[size_t(smfTrack)].events.size())
             continue;
         const SmfEvent &source = m_smf.tracks[size_t(smfTrack)].events[move.point.index];
-        if (move.cc == DOC_CC_TEMPO) {
-            if (!source.isMeta() || source.metaType != 0x51 || source.blob.size() != 3)
-                continue;
-        } else if (!laneEventMatches(source, move.cc)) {
+        if (!laneEventMatches(source, move.cc))
             continue;
-        }
         if (source.tick != move.point.tick || laneValue(source, move.cc) != move.point.value ||
             !sourceIndices.emplace(smfTrack, move.point.index).second)
             continue;
@@ -1426,7 +1385,7 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
         if (inserted)
             groups.push_back({smfTrack, move.cc});
         const size_t groupIndex = groupIt->second;
-        const uint8_t channel = move.cc == DOC_CC_TEMPO ? uint8_t(0) : channelFor(move.engineTrack);
+        const uint8_t channel = channelFor(move.engineTrack);
         planned.push_back({move.engineTrack, move.cc, move.point, move.newTick, source,
                            makeLaneEvent(move.cc, channel, move.newTick, move.newValue),
                            groupIndex});
@@ -1437,10 +1396,7 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
         const auto &events = m_smf.tracks[size_t(group.smfTrack)].events;
         for (size_t index = 0; index < events.size(); index++) {
             const SmfEvent &event = events[index];
-            const bool matches =
-                group.cc == DOC_CC_TEMPO
-                    ? event.isMeta() && event.metaType == 0x51 && event.blob.size() == 3
-                    : laneEventMatches(event, group.cc);
+            const bool matches = laneEventMatches(event, group.cc);
             if (matches)
                 group.pointsByTick[event.tick].push_back(index);
         }
@@ -1533,120 +1489,11 @@ void SongDocument::deleteLanePoints(int engineTrack, uint8_t cc,
              std::move(ops));
 }
 
-void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
-{
-    if (edit.empty() || m_smf.tracks.empty())
-        return;
-    std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
-    for (const DocNote &note : edit.removeNotes) {
-        if (note.smfTrack < 0 || note.smfTrack >= int(removals.size()))
-            continue;
-        removals[size_t(note.smfTrack)].push_back(note.onIndex);
-        if (!note.unterminated())
-            removals[size_t(note.smfTrack)].push_back(note.endIndex);
-    }
-    for (const DocLanePoint &pt : edit.removePoints) {
-        if (pt.smfTrack >= 0 && pt.smfTrack < int(removals.size()))
-            removals[size_t(pt.smfTrack)].push_back(pt.index);
-    }
-    std::vector<PlannedNote> written;
-    for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
-        for (const NewNote &note : tn.notes)
-            written.push_back({tn.engineTrack, note.key, note.tick,
-                               note.tick + std::max<uint32_t>(1, note.duration)});
-    }
-    std::vector<EditOp> trims;
-    resolveNoteOverlaps(written, edit.removeNotes, removals, trims);
-
-    std::vector<EditOp> ops;
-    // All removals first (per SMF track, descending — appendRemoveOps sorts
-    // and dedups), so every recorded index stays valid at apply time.
-    for (size_t t = 0; t < m_smf.tracks.size(); t++)
-        appendRemoveOps(ops, int(t), std::move(removals[t]));
-
-    for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
-        const int smfTrack = smfTrackFor(tn.engineTrack);
-        if (smfTrack < 0)
-            continue;
-        const uint8_t channel = channelFor(tn.engineTrack);
-        for (const NewNote &note : tn.notes)
-            appendNoteInsertOps(ops, smfTrack, channel, note.tick, note.key, note.duration,
-                                note.velocity);
-    }
-    for (const RangeEdit::LaneWrite &lw : edit.addPoints) {
-        const int smfTrack = lw.cc == DOC_CC_TEMPO ? 0 : smfTrackFor(lw.engineTrack);
-        if (smfTrack < 0)
-            continue;
-        const uint8_t channel = channelFor(lw.engineTrack);
-        for (const LanePointValue &pt : lw.points) {
-            EditOp op;
-            op.type = EditOp::InsertEvent;
-            op.smfTrack = smfTrack;
-            op.event = makeLaneEvent(lw.cc, channel, pt.tick, pt.value);
-            ops.push_back(op);
-        }
-    }
-    ops.insert(ops.end(), trims.begin(), trims.end());
-    pushEdit(text, std::move(ops));
-}
-
-void SongDocument::moveRange(const std::vector<DocNote> &notes,
-                             const std::vector<DocLanePoint> &points, int64_t dTick)
-{
-    if ((notes.empty() && points.empty()) || dTick == 0 || m_smf.tracks.empty())
-        return;
-    std::vector<std::vector<size_t>> moved(m_smf.tracks.size());
-    const auto mark = [&](int smfTrack, size_t index) {
-        if (smfTrack >= 0 && smfTrack < int(moved.size()))
-            moved[size_t(smfTrack)].push_back(index);
-    };
-    for (const DocNote &note : notes) {
-        mark(note.smfTrack, note.onIndex);
-        if (!note.unterminated())
-            mark(note.smfTrack, note.endIndex);
-    }
-    for (const DocLanePoint &pt : points)
-        mark(pt.smfTrack, pt.index);
-    // Ascending + deduped so the raw re-inserts below mirror the removals
-    // exactly and same-tick events keep their relative order.
-    for (std::vector<size_t> &indices : moved) {
-        std::sort(indices.begin(), indices.end());
-        indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
-    }
-    std::vector<PlannedNote> written;
-    for (const DocNote &note : notes) {
-        if (note.unterminated())
-            continue;
-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
-        written.push_back({note.engineTrack, note.key, newTick, newTick + note.duration});
-    }
-    std::vector<std::vector<size_t>> removals = moved;
-    std::vector<EditOp> trims;
-    resolveNoteOverlaps(written, notes, removals, trims);
-
-    std::vector<EditOp> ops;
-    // All removals first (indices are read at apply time), then the events'
-    // exact bytes re-inserted at the shifted ticks.
-    for (size_t t = 0; t < m_smf.tracks.size(); t++)
-        appendRemoveOps(ops, int(t), std::move(removals[t]));
-    for (size_t t = 0; t < m_smf.tracks.size(); t++) {
-        for (size_t index : moved[t]) {
-            EditOp op;
-            op.type = EditOp::InsertEvent;
-            op.smfTrack = int(t);
-            op.event = m_smf.tracks[t].events[index];
-            op.event.tick = uint64_t(std::max<int64_t>(0, int64_t(op.event.tick) + dTick));
-            op.preservesNoteId = op.event.isNoteOn();
-            ops.push_back(op);
-        }
-    }
-    ops.insert(ops.end(), trims.begin(), trims.end());
-    pushEdit(tr("move range"), std::move(ops));
-}
-
 void SongDocument::insertRawEvent(int smfTrack, const SmfEvent &event)
 {
-    if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()))
+    if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()) ||
+        // Raw FF 51 is rejected because Tempo lives in tempoPoints.
+        isTempoMeta(event))
         return;
     std::vector<EditOp> ops;
     EditOp op;
@@ -1660,7 +1507,9 @@ void SongDocument::insertRawEvent(int smfTrack, const SmfEvent &event)
 void SongDocument::modifyRawEvent(int smfTrack, size_t index, const SmfEvent &event)
 {
     if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()) ||
-        index >= m_smf.tracks[smfTrack].events.size())
+        index >= m_smf.tracks[smfTrack].events.size() ||
+        // Raw FF 51 is rejected because Tempo lives in tempoPoints.
+        isTempoMeta(event))
         return;
     if (m_smf.tracks[smfTrack].events[index] == event)
         return;
@@ -2120,22 +1969,22 @@ bool SongDocument::moveTrack(int engineTrack, int targetEngine)
         return false;
 
     std::vector<EditOp> ops;
-    // mid2agb reads tempo, time signatures, and loop markers only from the
-    // first chunk (so does the tempo lane). When the move changes which
-    // chunk is first, those globals stay with position 0: strip them from
-    // the old seq chunk and re-insert into the new one. Everything else —
-    // channel events, the track's name meta — travels with its chunk.
+    // mid2agb reads time signatures and loop markers only from the first chunk.
+    // When the move changes which chunk is first, those globals stay with
+    // position 0: strip them from the old seq chunk and re-insert into the new
+    // one. Everything else — channel events, the track's name meta — travels
+    // with its chunk.
     std::vector<SmfEvent> rescued;
     if (fromChunk == 0 || toChunk == 0) {
         const auto &evs = m_smf.tracks[0].events;
         std::vector<size_t> indices;
-        // Classify exactly as the canonical readers do: tempo as lanePoints
-        // validates it (three data bytes), time signatures via metaIsTimeSig,
-        // and the whole marker family mid2agb understands (smfMetaIsMarker,
-        // the same set renameTrack refuses). Name metas — the chunk's name
-        // (first unprefixed 0x03, marker text included) and channel-scoped
-        // non-marker 0x03s, as findLoopMarkerEvent and MidiTimeline classify
-        // them — are never markers: they travel with their chunk.
+        // Classify exactly as the canonical readers do: time signatures via
+        // metaIsTimeSig, and the whole marker family mid2agb understands
+        // (smfMetaIsMarker, the same set renameTrack refuses). Name metas — the
+        // chunk's name (first unprefixed 0x03, marker text included) and
+        // channel-scoped non-marker 0x03s, as findLoopMarkerEvent and
+        // MidiTimeline classify them — are never markers: they travel with
+        // their chunk.
         bool nameSeen = false;
         SmfChannelPrefix prefix;
         for (size_t i = 0; i < evs.size(); i++) {
@@ -2148,9 +1997,8 @@ bool SongDocument::moveTrack(int engineTrack, int targetEngine)
                     nameSeen = true;
                 continue;
             }
-            const bool tempo = ev.metaType == 0x51 && ev.blob.size() == 3;
             const bool marker = smfMetaIsMarker(ev);
-            if (tempo || metaIsTimeSig(ev) || marker) {
+            if (metaIsTimeSig(ev) || marker) {
                 indices.push_back(i);
                 rescued.push_back(ev);
             }
@@ -2164,7 +2012,7 @@ bool SongDocument::moveTrack(int engineTrack, int targetEngine)
     ops.push_back(move);
     // Re-inserted in original order: InsertEvent lands each at the end of
     // its tick group, so same-tick globals keep their relative order (the
-    // last tempo/signature at a tick is the one that wins).
+    // last signature at a tick is the one that wins).
     for (const SmfEvent &ev : rescued) {
         EditOp insert;
         insert.type = EditOp::InsertEvent;
@@ -2185,7 +2033,7 @@ void SongDocument::setCfg(const SongCfg &cfg)
 
 std::unique_ptr<MidiTimeline> SongDocument::buildTimeline(double sampleRate) const
 {
-    auto timeline = MidiTimeline::build(m_smf, sampleRate);
+    auto timeline = MidiTimeline::build(m_smf, m_tempoPoints, sampleRate);
     if (timeline)
         timeline->extendedClocks = m_cfg.extendedClocks;
     return timeline;
@@ -2196,6 +2044,7 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
     for (EditOp &op : ops) {
         switch (op.type) {
         case EditOp::InsertEvent: {
+            Q_ASSERT(!isTempoMeta(op.event));
             SmfTrack &track = m_smf.tracks[op.smfTrack];
             auto &events = track.events;
             if (op.event.isNoteOn() && !op.preservesNoteId) {
@@ -2237,6 +2086,7 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
             break;
         }
         case EditOp::ModifyEvent: {
+            Q_ASSERT(!isTempoMeta(op.event));
             auto &events = m_smf.tracks[op.smfTrack].events;
             op.oldEvent = events[op.index];
             if (op.event.isNoteOn()) {

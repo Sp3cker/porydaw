@@ -18,13 +18,10 @@ namespace eventlist {
 class EventTableModel;
 }
 
-// Raw MIDI event list: every event of one SMF chunk as an editable table row
-// (tick, type, channel, data bytes, meta/sysex payload, plus a read-only
-// decoded summary), ending with the chunk's end-of-track marker. An
-// alternative to the piano roll in the same screen space (SongView stacks
-// the two); the ruler and automation lanes stay visible around it. Edits go
-// through SongDocument's raw-event API, so they share the undo stack and
-// refresh through documentChanged like every other editor.
+// Event List presents the raw events in one SMF chunk alongside the chunk-0
+// Tempo projection. Raw event edits use SongDocument's raw-event API; Tempo
+// edits use its dedicated Tempo API. Both share the undo stack and refresh
+// through documentChanged like every other editor.
 class EventListView : public QWidget
 {
     Q_OBJECT
@@ -47,9 +44,9 @@ class EventListView : public QWidget
     // App-wide Follow Playhead toggle: off, the playing row is still tinted
     // but the table stops scrolling to it.
     void setFollowPlayhead(bool on);
-    // Context-menu insert: a copy of the given table row's event at that
-    // row's own tick. Public because the menu itself blocks in exec() and
-    // can't be driven by the offscreen harness.
+    // Context-menu insert: a copy of the given table row at that row's own
+    // tick. Public because the menu itself blocks in exec() and can't be
+    // driven by the offscreen harness.
     void insertCopyOfRow(int row);
 
   protected:
@@ -75,6 +72,7 @@ class EventListView : public QWidget
     int currentChunk() const;
     void selectEventRow(int chunk, const SmfEvent &event);
     void onTracksRemapped(const TrackRemap &remap);
+    void selectRowAtTick(int chunk, uint64_t tick);
 
     SongView *m_sv;
     SongDocument *m_document = nullptr;

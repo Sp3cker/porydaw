@@ -424,9 +424,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
             view.selectionModel().timeSelection();
         check(menuSelection.active() &&
                   menuSelection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
-                  menuSelection.lanes.size() == 1 && menuSelection.lanes.front().first == -1 &&
-                  menuSelection.lanes.front().second == DOC_CC_TEMPO,
-              "automation range menu should delegate its lane scope to the host");
+                  menuSelection.tempo && menuSelection.lanes.empty(),
+              "automation range menu should delegate its Tempo scope to the host");
         view.selectionModel().clearTimeSelection();
     }
 

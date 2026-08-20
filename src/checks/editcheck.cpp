@@ -1,4 +1,5 @@
 #include <QElapsedTimer>
+#include <QFile>
 #include <QString>
 #include <QTemporaryDir>
 #include <array>
@@ -28,6 +29,20 @@ bool tracksSorted(const SmfFile &smf)
         }
     }
     return true;
+}
+
+TempoPoint tempoPoint(uint64_t tick, uint32_t bpm)
+{
+    return {tick, 60'000'000U / bpm};
+}
+
+bool containsTempoPoint(const SongDocument &doc, const TempoPoint &point)
+{
+    for (const TempoPoint &candidate : doc.tempoPoints()) {
+        if (candidate == point)
+            return true;
+    }
+    return false;
 }
 
 int documentContractFailures()
@@ -133,6 +148,8 @@ int documentContractFailures()
                        std::vector<QString>{QStringLiteral("remap"), QStringLiteral("changed")},
                what);
     };
+    expect(doc.tempoPoints() == std::vector<TempoPoint>{tempoPoint(0, 120)},
+           "tempo-free file did not seed tick 0 at 120 BPM");
 
     const auto notes = doc.notesForTrack(0);
     expect(notes.size() == 2 && notes[0].noteId.isAssigned() && notes[1].noteId.isAssigned() &&
@@ -490,7 +507,6 @@ int documentContractFailures()
         if (!globalsLoaded)
             return failures;
         const auto activeGlobalsAreOriginal = [&globalsDoc] {
-            const auto tempos = globalsDoc.lanePoints(-1, DOC_CC_TEMPO);
             const auto &tempoPoints = globalsDoc.tempoPoints();
             const auto signatures = globalsDoc.timeSigs();
             int tempoEvents = 0;
@@ -501,7 +517,7 @@ int documentContractFailures()
                 for (const SmfEvent &event : track.events) {
                     if (!event.isMeta())
                         continue;
-                    if (event.metaType == 0x51 && event.blob.size() == 3)
+                    if (isTempoMeta(event))
                         tempoEvents++;
                     if (event.metaType == 0x58 && event.blob.size() >= 2)
                         signatureEvents++;
@@ -511,13 +527,11 @@ int documentContractFailures()
                         labels++;
                 }
             }
-            return tempos.size() == 1 && tempos.front().tick == 0 && tempos.front().value == 120 &&
-                   tempoPoints.size() == 1 && tempoPoints.front().tick == 0 &&
-                   tempoPoints.front().microsecondsPerQuarterNote == 500000 &&
+            return tempoPoints == std::vector<TempoPoint>{tempoPoint(0, 120)} &&
                    signatures.size() == 1 && signatures.front().tick == 0 &&
                    signatures.front().numerator == 4 && signatures.front().denomPow2 == 2 &&
                    globalsDoc.loopTick(false) == 12 && globalsDoc.loopTick(true) == UINT64_MAX &&
-                   tempoEvents == 1 && signatureEvents == 1 && starts == 1 && labels == 1;
+                   tempoEvents == 0 && signatureEvents == 1 && starts == 1 && labels == 1;
         };
         expect(activeGlobalsAreOriginal(),
                "duplicate-global fixture did not load canonical globals");
@@ -852,13 +866,14 @@ int timeRangeContractFailures()
                                                       const SongDocument::TimeScope &),
                       const char *what) {
             const QByteArray before = doc.smf().write();
+            const auto beforeTempo = doc.tempoPoints();
             const int undoCount = doc.undoStack()->count();
             if ((doc.*operation)(range, scope) || doc.smf().write() != before ||
-                doc.undoStack()->count() != undoCount)
+                doc.tempoPoints() != beforeTempo || doc.undoStack()->count() != undoCount)
                 fail(what);
         };
     SongDocument::TimeScope emptyScope;
-    checkNoOp({20, 20}, emptyScope, &SongDocument::rippleDeleteTimeRange,
+    checkNoOp({20, 20}, emptyScope, &SongDocument::removeTimeRange,
               "empty remove range/scope was not a no-op");
     checkNoOp({20, 10}, emptyScope, &SongDocument::insertBlankTime,
               "backward insert range/scope was not a no-op");
@@ -866,7 +881,7 @@ int timeRangeContractFailures()
               "backward duplicate range/scope was not a no-op");
     SongDocument::TimeScope invalidScope;
     invalidScope.tracks = {99};
-    checkNoOp({20, 30}, invalidScope, &SongDocument::rippleDeleteTimeRange,
+    checkNoOp({20, 30}, invalidScope, &SongDocument::removeTimeRange,
               "invalid remove scope was not a no-op");
     checkNoOp({20, 30}, invalidScope, &SongDocument::insertBlankTime,
               "invalid insert scope was not a no-op");
@@ -879,12 +894,14 @@ int timeRangeContractFailures()
                                                       const SongDocument::TimeScope &),
                       const char *what) {
             const QByteArray before = doc.smf().write();
+            const auto beforeTempo = doc.tempoPoints();
             const int undoCount = doc.undoStack()->count();
             if (!(doc.*operation)(range, scope)) {
                 fail(what);
                 return false;
             }
             const QByteArray after = doc.smf().write();
+            const auto afterTempo = doc.tempoPoints();
             if (doc.undoStack()->count() != undoCount + 1) {
                 fail("time edit pushed more than one undo command");
                 return false;
@@ -894,9 +911,13 @@ int timeRangeContractFailures()
                 fail("time edit undo did not restore exact SMF bytes");
                 return false;
             }
+            if (doc.tempoPoints() != beforeTempo) {
+                fail("time edit undo did not restore tempo points");
+                return false;
+            }
             doc.undoStack()->redo();
-            if (doc.smf().write() != after) {
-                fail("time edit redo did not restore exact SMF bytes");
+            if (doc.smf().write() != after || doc.tempoPoints() != afterTempo) {
+                fail("time edit redo did not restore exact document state");
                 return false;
             }
             return true;
@@ -1042,8 +1063,8 @@ int timeRangeContractFailures()
     doc.insertRawEvent(orphanTrack, channel(0x80, 130, 63, 12));
     doc.insertRawEvent(orphanTrack, channel(0x90, 130, 64, 33));
     doc.insertRawEvent(orphanTrack, channel(0x90, 140, 65, 44));
-    if (checkRoundTrip({100, 130}, trackScope, &SongDocument::rippleDeleteTimeRange,
-                       "orphan-note ripple did not commit")) {
+    if (checkRoundTrip({100, 130}, trackScope, &SongDocument::removeTimeRange,
+                       "orphan-note remove did not commit")) {
         bool beforeBytes = false;
         bool removedBytes = false;
         bool endBytes = false;
@@ -1068,10 +1089,10 @@ int timeRangeContractFailures()
         expect(beforeBytes && !removedBytes && endBytes && endOnBytes && afterBytes &&
                    !removedEnd && noteEndsBeforeOnsAt(0, 100) && doc.findNote(0, 40, 60, &paired) &&
                    !paired.unterminated() && paired.duration == 10,
-               "orphan note events did not ripple half-open without double-handling paired notes");
+               "orphan note events did not close half-open without double-handling paired notes");
     }
     if (!doc.load(info, &error)) {
-        fail("could not reload after orphan-note ripple");
+        fail("could not reload after orphan-note remove");
         return failures;
     }
 
@@ -1114,14 +1135,12 @@ int timeRangeContractFailures()
     }
     const uint64_t tempoStart = 1500;
     SongDocument::TimeScope tempoScope;
-    tempoScope.lanes = {{-1, DOC_CC_TEMPO}};
-    doc.addLanePoint(0, DOC_CC_TEMPO, tempoStart + 10, 150);
+    tempoScope.tempo = true;
+    doc.applyTempoEdit({{tempoPoint(0, 120)}, {tempoPoint(tempoStart + 10, 150)}});
     if (checkRoundTrip({tempoStart, tempoStart + 20}, tempoScope, &SongDocument::duplicateTimeRange,
                        "tempo default duplicate did not commit")) {
-        DocLanePoint tempo;
-        expect(doc.findLanePoint(0, DOC_CC_TEMPO, tempoStart + 20, &tempo) && tempo.value == 120 &&
-                   doc.findLanePoint(0, DOC_CC_TEMPO, tempoStart + 30, &tempo) &&
-                   tempo.value == 150,
+        expect(containsTempoPoint(doc, tempoPoint(tempoStart + 20, 120)) &&
+                   containsTempoPoint(doc, tempoPoint(tempoStart + 30, 150)),
                "tempo duplicate did not use the 120 BPM default");
     }
     auto timeline = doc.buildTimeline(44100.0);
@@ -1157,7 +1176,7 @@ int timeRangeContractFailures()
     doc.addNote(0, 1900, 70, 5, 50);
     const uint64_t globalStart = 1800;
     doc.setTimeSig(globalStart + 10, 3, 2);
-    doc.addLanePoint(0, DOC_CC_TEMPO, globalStart + 10, 180);
+    doc.applyTempoEdit({{}, {tempoPoint(globalStart + 10, 180)}});
     doc.insertRawEvent(0, meta(0x01, globalStart + 15, QByteArrayLiteral("global")));
     SongDocument::TimeScope wholeSong;
     wholeSong.wholeSong = true;
@@ -1174,13 +1193,12 @@ int timeRangeContractFailures()
             if (sig.tick == globalStart + 30 && sig.numerator == 3)
                 copiedSig = true;
         }
-        DocLanePoint tempo;
         DocNote shiftedNote;
         const int noteTrack = doc.smfTrackFor(0);
         expect(copiedMeta && copiedSig &&
-                   doc.findLanePoint(0, DOC_CC_TEMPO, globalStart + 20, &tempo) &&
-                   tempo.value == 120 && doc.findNote(0, 1920, 70, &shiftedNote) &&
-                   noteTrack >= 0 &&
+                   containsTempoPoint(doc, tempoPoint(globalStart + 20, 120)) &&
+                   containsTempoPoint(doc, tempoPoint(globalStart + 30, 180)) &&
+                   doc.findNote(0, 1920, 70, &shiftedNote) && noteTrack >= 0 &&
                    doc.smf().tracks[size_t(noteTrack)].endTick >=
                        shiftedNote.tick + shiftedNote.duration,
                "whole-song duplicate mishandled globals or track ends");
@@ -1378,7 +1396,7 @@ int runEditCheck(const QString &projectRoot)
                 doc.addNotes(track, {{base + step * 30, 60, step * 2, 90},
                                      {base + step * 32, 62, step * 2, 90}});
                 doc.addLanePoint(track, 7, base + step * 30, 80);
-                doc.addLanePoint(track, DOC_CC_TEMPO, base + step * 31, 140);
+                doc.applyTempoEdit({{}, {tempoPoint(base + step * 31, 140)}});
                 SongDocument::RangeEdit edit;
                 for (const DocNote &n : doc.notesForTrack(track)) {
                     if (n.tick >= base + step * 30 && n.tick < base + step * 34)
@@ -1388,13 +1406,13 @@ int runEditCheck(const QString &projectRoot)
                     if (p.tick == base + step * 30)
                         edit.removePoints.push_back(p);
                 }
-                for (const DocLanePoint &p : doc.lanePoints(track, DOC_CC_TEMPO)) {
-                    if (p.tick == base + step * 31)
-                        edit.removePoints.push_back(p);
+                for (const TempoPoint &point : doc.tempoPoints()) {
+                    if (point.tick == base + step * 31)
+                        edit.removeTempo.push_back(point);
                 }
                 edit.addNotes.push_back({track, {{base + step * 40, 65, step * 2, 90}}});
                 edit.addPoints.push_back({track, 7, {{base + step * 40, 70}}});
-                edit.addPoints.push_back({-1, DOC_CC_TEMPO, {{base + step * 41, 155}}});
+                edit.addTempo.push_back(tempoPoint(base + step * 41, 155));
                 doc.applyRangeEdit(QStringLiteral("range edit"), edit);
                 mutateAndCheck("events unsorted after applyRangeEdit");
                 DocNote n;
@@ -1403,8 +1421,7 @@ int runEditCheck(const QString &projectRoot)
                     doc.findNote(track, base + step * 32, 62, &n) ||
                     !doc.findNote(track, base + step * 40, 65, &n) ||
                     !doc.findLanePoint(track, 7, base + step * 40, &p) || p.value != 70 ||
-                    !doc.findLanePoint(track, DOC_CC_TEMPO, base + step * 41, &p) ||
-                    p.value != 155) {
+                    !containsTempoPoint(doc, tempoPoint(base + step * 41, 155))) {
                     fail("range edit produced wrong content");
                     ok = false;
                 } else {
@@ -1426,7 +1443,7 @@ int runEditCheck(const QString &projectRoot)
                 doc.addNotes(track, {{base + step * 80, 60, step * 2, 90},
                                      {base + step * 82, 64, step * 2, 90}});
                 doc.addLanePoint(track, 7, base + step * 80, 45);
-                doc.addLanePoint(track, DOC_CC_TEMPO, base + step * 81, 140);
+                doc.applyTempoEdit({{}, {tempoPoint(base + step * 81, 140)}});
                 std::vector<DocNote> moveNotes;
                 for (const DocNote &n : doc.notesForTrack(track)) {
                     if (n.tick >= base + step * 80 && n.tick < base + step * 84)
@@ -1437,11 +1454,12 @@ int runEditCheck(const QString &projectRoot)
                     if (p.tick == base + step * 80)
                         movePoints.push_back(p);
                 }
-                for (const DocLanePoint &p : doc.lanePoints(track, DOC_CC_TEMPO)) {
-                    if (p.tick == base + step * 81)
-                        movePoints.push_back(p);
+                std::vector<TempoPoint> moveTempo;
+                for (const TempoPoint &point : doc.tempoPoints()) {
+                    if (point.tick == base + step * 81)
+                        moveTempo.push_back(point);
                 }
-                doc.moveRange(moveNotes, movePoints, step * 3);
+                doc.moveRange(moveNotes, movePoints, step * 3, moveTempo);
                 mutateAndCheck("events unsorted after moveRange");
                 DocNote n;
                 DocLanePoint p;
@@ -1449,17 +1467,17 @@ int runEditCheck(const QString &projectRoot)
                     !doc.findNote(track, base + step * 83, 60, &n) || n.duration != step * 2 ||
                     !doc.findNote(track, base + step * 85, 64, &n) ||
                     !doc.findLanePoint(track, 7, base + step * 83, &p) || p.value != 45 ||
-                    !doc.findLanePoint(track, DOC_CC_TEMPO, base + step * 84, &p) ||
-                    p.value != 140) {
+                    !containsTempoPoint(doc, tempoPoint(base + step * 84, 140))) {
                     fail("range move produced wrong content");
                     ok = false;
                 }
                 if (ok) {
-                    doc.moveRange(moveNotes, movePoints, 0); // no-op guard
+                    doc.moveRange(moveNotes, movePoints, 0, moveTempo); // no-op guard
                     doc.undoStack()->undo();
                     if (!doc.findNote(track, base + step * 80, 60, &n) ||
                         doc.findNote(track, base + step * 83, 60, &n) ||
-                        !doc.findLanePoint(track, 7, base + step * 80, &p)) {
+                        !doc.findLanePoint(track, 7, base + step * 80, &p) ||
+                        !containsTempoPoint(doc, tempoPoint(base + step * 81, 140))) {
                         fail("moveRange was not a single undo command");
                         ok = false;
                     } else {
@@ -1925,7 +1943,7 @@ int runEditCheck(const QString &projectRoot)
                 }
             }
 
-            // Ripple remove (rippleDeleteTimeRange): in-range content vanishes,
+            // Remove time range: in-range content vanishes,
             // later events shift left by the span, and the last in-range
             // automation point survives at the seam. ONE undoable command.
             if (ok) {
@@ -1936,25 +1954,25 @@ int runEditCheck(const QString &projectRoot)
                 doc.addLanePoint(track, 7, base + step * 52, 40);
                 SongDocument::TimeScope scope;
                 scope.tracks = {track};
-                if (!doc.rippleDeleteTimeRange({base + step * 51, base + step * 54}, scope)) {
-                    fail("rippleDeleteTimeRange reported nothing to do");
+                if (!doc.removeTimeRange({base + step * 51, base + step * 54}, scope)) {
+                    fail("removeTimeRange reported nothing to do");
                     ok = false;
                 }
-                mutateAndCheck("events unsorted after rippleDeleteTimeRange");
+                mutateAndCheck("events unsorted after removeTimeRange");
                 DocNote n;
                 DocLanePoint p;
                 if (ok && (!doc.findNote(track, base + step * 50, 60, &n) ||
                            doc.findNote(track, base + step * 52, 62, &n) ||
                            !doc.findNote(track, base + step * 53, 64, &n) ||
                            !doc.findLanePoint(track, 7, base + step * 51, &p) || p.value != 40)) {
-                    fail("ripple remove produced wrong content");
+                    fail("removeTimeRange produced wrong content");
                     ok = false;
                 }
                 if (ok) {
                     doc.undoStack()->undo();
                     if (!doc.findNote(track, base + step * 56, 64, &n) ||
                         !doc.findLanePoint(track, 7, base + step * 52, &p) || p.value != 40) {
-                        fail("rippleDeleteTimeRange was not a single undo command");
+                        fail("removeTimeRange was not a single undo command");
                         ok = false;
                     } else {
                         doc.undoStack()->redo();
@@ -1962,7 +1980,7 @@ int runEditCheck(const QString &projectRoot)
                 }
             }
 
-            // Whole-song ripple: the globals travel too — a time signature
+            // Whole-song remove: the globals travel too — a time signature
             // and a tempo change inside the range survive at the seam, later
             // notes shift, loop markers before the range stay put, and the
             // end-of-track ticks close the gap so the song gets shorter.
@@ -1974,35 +1992,34 @@ int runEditCheck(const QString &projectRoot)
                     return end;
                 };
                 doc.setTimeSig(base + step * 62, 3, 2);
-                doc.addLanePoint(track, DOC_CC_TEMPO, base + step * 63, 150);
+                doc.applyTempoEdit({{}, {tempoPoint(base + step * 63, 150)}});
                 doc.addNotes(track, {{base + step * 66, 65, step, 90}});
                 const uint64_t endBefore = maxEnd();
                 const uint64_t loopStartBefore = doc.loopTick(false);
                 SongDocument::TimeScope scope;
                 scope.wholeSong = true;
-                if (!doc.rippleDeleteTimeRange({base + step * 61, base + step * 65}, scope)) {
-                    fail("whole-song rippleDeleteTimeRange reported nothing to do");
+                if (!doc.removeTimeRange({base + step * 61, base + step * 65}, scope)) {
+                    fail("whole-song removeTimeRange reported nothing to do");
                     ok = false;
                 }
-                mutateAndCheck("events unsorted after whole-song rippleDeleteTimeRange");
+                mutateAndCheck("events unsorted after whole-song removeTimeRange");
                 DocNote n;
-                DocLanePoint p;
                 bool sigAtSeam = false;
                 for (const DocTimeSig &sig : doc.timeSigs()) {
                     if (sig.tick == base + step * 61 && sig.numerator == 3)
                         sigAtSeam = true;
                 }
                 if (ok &&
-                    (!sigAtSeam || !doc.findLanePoint(track, DOC_CC_TEMPO, base + step * 61, &p) ||
-                     p.value != 150 || !doc.findNote(track, base + step * 62, 65, &n) ||
+                    (!sigAtSeam || !containsTempoPoint(doc, tempoPoint(base + step * 61, 150)) ||
+                     !doc.findNote(track, base + step * 62, 65, &n) ||
                      maxEnd() != endBefore - step * 4 || doc.loopTick(false) != loopStartBefore)) {
-                    fail("whole-song ripple produced wrong content");
+                    fail("whole-song removeTimeRange produced wrong content");
                     ok = false;
                 }
                 if (ok) {
                     doc.undoStack()->undo();
                     if (!doc.findNote(track, base + step * 66, 65, &n) || maxEnd() != endBefore) {
-                        fail("whole-song rippleDeleteTimeRange was not a single undo command");
+                        fail("whole-song removeTimeRange was not a single undo command");
                         ok = false;
                     } else {
                         doc.undoStack()->redo();
@@ -2038,11 +2055,12 @@ int runEditCheck(const QString &projectRoot)
                 }
             }
 
-            // Automation ops on the volume lane, plus tempo and pitch bend.
+            // Automation ops on the volume lane and pitch bend, plus tempo.
             if (ok) {
                 doc.addLanePoint(track, 7, base + step * 2, 100);
                 doc.addLanePoint(track, DOC_CC_BEND, base + step * 3, -1024);
-                doc.addLanePoint(track, DOC_CC_TEMPO, base + step * 4, 150);
+                const TempoPoint tempo = tempoPoint(base + step * 4, 150);
+                doc.applyTempoEdit({{}, {tempo}});
                 mutateAndCheck("events unsorted after addLanePoint");
                 DocLanePoint pt;
                 if (!doc.findLanePoint(track, 7, base + step * 2, &pt) || pt.value != 100) {
@@ -2056,11 +2074,10 @@ int runEditCheck(const QString &projectRoot)
                         ok = false;
                     } else {
                         std::vector<DocLanePoint> doomed{pt};
-                        DocLanePoint bendPt, tempoPt;
+                        DocLanePoint bendPt;
                         if (doc.findLanePoint(track, DOC_CC_BEND, base + step * 3, &bendPt))
                             doc.deleteLanePoints(track, DOC_CC_BEND, {bendPt});
-                        if (doc.findLanePoint(track, DOC_CC_TEMPO, base + step * 4, &tempoPt))
-                            doc.deleteLanePoints(track, DOC_CC_TEMPO, {tempoPt});
+                        doc.applyTempoEdit({{tempo}, {}});
                         // Re-resolve: the deletes above shifted indices.
                         if (doc.findLanePoint(track, 7, base + step * 5, &pt))
                             doc.deleteLanePoints(track, 7, {pt});
@@ -2133,12 +2150,11 @@ int runEditCheck(const QString &projectRoot)
             }
         }
 
-        // Reordering tracks: the chunk moves with its events and channel
-        // bytes untouched, and the seq globals — tempo, time signatures,
-        // loop markers — stay with chunk 0 even when the move displaces it
-        // (mid2agb and the tempo lane read them only there).
+        // Reordering tracks: the chunks move with their events and channel
+        // bytes untouched, while typed Tempo and chunk-0 time signatures and
+        // loop markers remain global.
         if (ok && doc.engineTrackCount() >= 2 && track >= 0) {
-            doc.addLanePoint(track, DOC_CC_TEMPO, base + step * 110, 145);
+            doc.applyTempoEdit({{}, {tempoPoint(base + step * 110, 145)}});
             doc.setTimeSig(base + step * 112, 5, 2);
             const uint64_t loopStartBefore = doc.loopTick(false);
             const uint64_t loopEndBefore = doc.loopTick(true);
@@ -2181,9 +2197,9 @@ int runEditCheck(const QString &projectRoot)
                 fail("moved track's notes or channel changed");
                 ok = false;
             }
-            if (ok &&
-                (!seqChunkHas(0x51, base + step * 110) || !seqChunkHas(0x58, base + step * 112))) {
-                fail("seq globals did not stay with chunk 0 across the move");
+            if (ok && (!containsTempoPoint(doc, tempoPoint(base + step * 110, 145)) ||
+                       !seqChunkHas(0x58, base + step * 112))) {
+                fail("global tempo or sequence metadata changed across the move");
                 ok = false;
             }
             if (ok &&
@@ -2203,7 +2219,8 @@ int runEditCheck(const QString &projectRoot)
             if (ok) {
                 doc.moveTrack(last, 0); // and back again
                 mutateAndCheck("events unsorted after moveTrack back");
-                if (!notesMatch(0, srcNotes) || !seqChunkHas(0x51, base + step * 110) ||
+                if (!notesMatch(0, srcNotes) ||
+                    !containsTempoPoint(doc, tempoPoint(base + step * 110, 145)) ||
                     !seqChunkHas(0x58, base + step * 112)) {
                     fail("moving the track back did not restore its slot");
                     ok = false;
@@ -2589,7 +2606,7 @@ int runEditCheck(const QString &projectRoot)
             }
         }
         if (ok && (doc.loopTick(false) != 12 || doc.loopTick(true) != 36 ||
-                   doc.lanePoints(0, DOC_CC_TEMPO).size() != 1)) {
+                   doc.tempoPoints() != std::vector<TempoPoint>{tempoPoint(0, 120)})) {
             fail0("seq globals did not stay readable in chunk 0");
             ok = false;
         }
@@ -2606,25 +2623,94 @@ int runEditCheck(const QString &projectRoot)
             fail0("events unsorted after conversion");
             ok = false;
         }
-        const QByteArray converted = ok ? doc.smf().write() : QByteArray();
+        const QByteArray convertedLive = ok ? doc.smf().write() : QByteArray();
+        QByteArray convertedSerialized;
         if (ok) {
-            // SmfFile::read is the conversion choke point: re-reading the
-            // original bytes yields the converted file directly, and doing
-            // it twice proves determinism (an untouched file re-converts
-            // identically next open). Converting the already-converted file
-            // is a no-op (fixed point).
+            SmfFile saved;
+            if (!doc.save(&werror) || !SmfFile::readFile(midPath, &saved, &werror)) {
+                fail0("save did not persist the converted SMF");
+                ok = false;
+            } else {
+                convertedSerialized = saved.write();
+                bool tempoValid = true;
+                std::vector<TempoPoint> savedTempo;
+                bool tempoFirst = true;
+                bool tempoOutsideSeq = false;
+                for (size_t track = 0; track < saved.tracks.size(); track++) {
+                    uint64_t tick = 0;
+                    bool haveTick = false;
+                    bool nonTempoAtTick = false;
+                    for (const SmfEvent &event : saved.tracks[track].events) {
+                        if (!haveTick || event.tick != tick) {
+                            tick = event.tick;
+                            haveTick = true;
+                            nonTempoAtTick = false;
+                        }
+                        if (!isTempoMeta(event)) {
+                            nonTempoAtTick = true;
+                            continue;
+                        }
+                        if (track != 0)
+                            tempoOutsideSeq = true;
+                        if (nonTempoAtTick)
+                            tempoFirst = false;
+                        if (event.blob.size() != 3) {
+                            tempoValid = false;
+                            continue;
+                        }
+                        const auto *bytes =
+                            reinterpret_cast<const uint8_t *>(event.blob.constData());
+                        savedTempo.push_back({event.tick, (uint32_t(bytes[0]) << 16) |
+                                                              (uint32_t(bytes[1]) << 8) |
+                                                              bytes[2]});
+                    }
+                }
+                auto nonTempoSaved = saved;
+                for (SmfTrack &track : nonTempoSaved.tracks) {
+                    std::vector<SmfEvent> events;
+                    events.reserve(track.events.size());
+                    for (const SmfEvent &event : track.events)
+                        if (!isTempoMeta(event))
+                            events.push_back(event);
+                    track.events = std::move(events);
+                }
+                const auto hasLiveTempo = [&doc] {
+                    for (const SmfTrack &track : doc.smf().tracks)
+                        for (const SmfEvent &event : track.events)
+                            if (isTempoMeta(event))
+                                return true;
+                    return false;
+                };
+                if (nonTempoSaved.write() != convertedLive) {
+                    fail0("save changed the converted non-tempo structure");
+                    ok = false;
+                } else if (tempoOutsideSeq || !tempoFirst || !tempoValid ||
+                           savedTempo != doc.tempoPoints()) {
+                    fail0("save did not serialize typed tempo points tempo-first in chunk 0");
+                    ok = false;
+                } else if (hasLiveTempo()) {
+                    fail0("save leaked tempo metas into the live SMF");
+                    ok = false;
+                }
+            }
+        }
+        if (ok) {
+            // SmfFile::read is the conversion choke point: raw re-reading
+            // the original bytes yields the serialized converted form,
+            // including its FF51 tempo event. Converting that already
+            // converted form is a no-op (fixed point).
             SmfFile redo;
             QString rerror;
             if (!SmfFile::read(originalBytes, &redo, &rerror)) {
                 fail0("could not re-read the original bytes");
                 ok = false;
             } else {
-                if (!redo.wasFormat0 || redo.write() != converted) {
+                if (!redo.wasFormat0 || redo.write() != convertedSerialized) {
                     fail0("read() did not coerce deterministically");
                     ok = false;
                 }
                 convertToFormat1(&redo);
-                if (ok && redo.write() != converted) {
+                if (ok && redo.write() != convertedSerialized) {
                     fail0("conversion of a converted file is not a no-op");
                     ok = false;
                 }
@@ -2632,7 +2718,7 @@ int runEditCheck(const QString &projectRoot)
         }
         if (ok) {
             // The editing layer runs on the converted shape: undo-all
-            // restores the converted baseline, not the format-0 bytes.
+            // restores the tempo-free converted baseline, not the format-0 bytes.
             doc.renameTrack(0, QStringLiteral("Bass"));
             doc.moveTrack(0, 2);
             if (doc.trackName(2) != QStringLiteral("Bass")) {
@@ -2641,7 +2727,7 @@ int runEditCheck(const QString &projectRoot)
             }
             while (doc.undoStack()->canUndo())
                 doc.undoStack()->undo();
-            if (ok && doc.smf().write() != converted)
+            if (ok && doc.smf().write() != convertedLive)
                 fail0("undo-all did not restore the converted baseline");
         }
     }
@@ -2746,13 +2832,30 @@ int runEditCheck(const QString &projectRoot)
             ev.blob = std::move(blob);
             return ev;
         };
+        const auto tempoMeta = [&meta](uint64_t tick, uint32_t microsecondsPerQuarterNote) {
+            QByteArray blob(3, '\0');
+            blob[0] = char((microsecondsPerQuarterNote >> 16) & 0xFF);
+            blob[1] = char((microsecondsPerQuarterNote >> 8) & 0xFF);
+            blob[2] = char(microsecondsPerQuarterNote & 0xFF);
+            return meta(tick, 0x51, std::move(blob));
+        };
+        const TempoPoint slowTempo = tempoPoint(24, 20);
+        const TempoPoint inRangeTempo = tempoPoint(48, 150);
+        const TempoPoint fastTempo = tempoPoint(72, 255);
+        const TempoPoint exactTempo{96, 375'001};
+        const std::vector<TempoPoint> expectedTempo{slowTempo, inRangeTempo, fastTempo, exactTempo};
         SmfFile smf;
         smf.format = 1;
         smf.division = 24;
         SmfTrack conductor;
-        conductor.events.push_back(meta(0, 0x51, QByteArray("\x07\xA1\x20", 3))); // 120 BPM
-        conductor.events.push_back(meta(0, 0x51, QByteArray("\x06\x1A\x80", 3))); // 150 BPM
-        conductor.endTick = 96;
+        conductor.events.push_back(meta(0, 0x01, QByteArrayLiteral("conductor")));
+        conductor.events.push_back(tempoMeta(24, 6'000'000)); // 10 BPM, clamps to 20
+        conductor.events.push_back(tempoMeta(48, tempoPoint(48, 120).microsecondsPerQuarterNote));
+        conductor.events.push_back(tempoMeta(48, inRangeTempo.microsecondsPerQuarterNote));
+        conductor.events.push_back(meta(48, 0x01, QByteArrayLiteral("shared tick")));
+        conductor.events.push_back(tempoMeta(72, 200'000)); // 300 BPM, clamps to 255
+        conductor.events.push_back(tempoMeta(96, exactTempo.microsecondsPerQuarterNote));
+        conductor.endTick = 120;
         smf.tracks.push_back(conductor);
         SmfTrack ch0;
         ch0.events.push_back(chEvent(0xC0, 0, 5, 0));
@@ -2760,6 +2863,7 @@ int runEditCheck(const QString &projectRoot)
         ch0.events.push_back(chEvent(0xC0, 0, 9, 0));
         ch0.events.push_back(chEvent(0xB0, 0, 7, 80));
         ch0.events.push_back(chEvent(0x90, 0, 60, 100));
+        ch0.events.push_back(meta(48, 0x51, QByteArray("\x09\x27\xC0", 3)));
         ch0.events.push_back(chEvent(0x80, 96, 60, 0));
         ch0.endTick = 96;
         smf.tracks.push_back(ch0);
@@ -2779,6 +2883,15 @@ int runEditCheck(const QString &projectRoot)
         QObject::connect(&doc, &SongDocument::documentChanged,
                          [&changedSignals] { changedSignals++; });
         const QByteArray baseline = ok ? doc.smf().write() : QByteArray();
+        const auto hasLiveTempoMeta = [&doc] {
+            for (const SmfTrack &track : doc.smf().tracks) {
+                for (const SmfEvent &event : track.events) {
+                    if (isTempoMeta(event))
+                        return true;
+                }
+            }
+            return false;
+        };
         const auto ccPointsAt = [&doc](uint8_t cc, uint64_t tick) {
             std::vector<DocLanePoint> at;
             for (const DocLanePoint &pt : doc.lanePoints(0, cc)) {
@@ -2800,9 +2913,47 @@ int runEditCheck(const QString &projectRoot)
             failD("findLanePoint did not return the last program at the tick");
             ok = false;
         }
-        if (ok && (!doc.findLanePoint(0, DOC_CC_TEMPO, 0, &pt) || pt.value != 150)) {
-            failD("findLanePoint did not return the last tempo at the tick");
+        if (ok && doc.tempoPoints() != expectedTempo) {
+            failD("tempo load did not clamp bounds or preserve exact later tempo points");
             ok = false;
+        }
+        if (ok && hasLiveTempoMeta()) {
+            failD("tempo load retained a live raw FF 51 event");
+            ok = false;
+        }
+        if (ok) {
+            const auto timeline = doc.buildTimeline(48000.0);
+            if (!timeline || timeline->tempoMap.size() != 5 || timeline->tempoMap[0].tick != 0 ||
+                timeline->tempoMap[0].bpm != 120.0 ||
+                timeline->tempoMap[1].tick != slowTempo.tick ||
+                timeline->tempoMap[2].tick != inRangeTempo.tick ||
+                timeline->tempoMap[3].tick != fastTempo.tick ||
+                timeline->tempoMap[4].tick != exactTempo.tick) {
+                failD("timeline did not use the typed tempo points");
+                ok = false;
+            }
+        }
+        if (ok) {
+            const QByteArray liveBytes = doc.smf().write();
+            SmfFile expected = doc.smf();
+            auto &expectedEvents = expected.tracks.front().events;
+            expectedEvents.insert(
+                expectedEvents.begin() + 1,
+                {tempoMeta(slowTempo.tick, slowTempo.microsecondsPerQuarterNote),
+                 tempoMeta(inRangeTempo.tick, inRangeTempo.microsecondsPerQuarterNote)});
+            expectedEvents.insert(
+                expectedEvents.begin() + 4,
+                {tempoMeta(fastTempo.tick, fastTempo.microsecondsPerQuarterNote),
+                 tempoMeta(exactTempo.tick, exactTempo.microsecondsPerQuarterNote)});
+            QFile savedFile(midPath);
+            const bool saved = doc.save(&werror);
+            const bool readSaved = saved && savedFile.open(QIODevice::ReadOnly);
+            const QByteArray savedBytes = readSaved ? savedFile.readAll() : QByteArray();
+            if (!saved || !readSaved || savedBytes != expected.write() ||
+                doc.smf().write() != liveBytes) {
+                failD("save did not serialize tempo first without restoring live FF 51 events");
+                ok = false;
+            }
         }
         if (ok) {
             // Resubmitting the audible value still removes its same-tick
@@ -2873,23 +3024,34 @@ int runEditCheck(const QString &projectRoot)
             }
         }
         if (ok) {
-            doc.addLanePoint(0, DOC_CC_TEMPO, 48, 120);
-            if (!doc.findLanePoint(0, DOC_CC_TEMPO, 48, &pt) ||
-                ccPointsAt(DOC_CC_TEMPO, 48).size() != 1) {
-                failD("tempo no-op fixture did not create one point");
+            const TempoPoint noOpTempo = tempoPoint(48, 120);
+            doc.applyTempoEdit({{}, {noOpTempo}});
+            if (!containsTempoPoint(doc, noOpTempo) || hasLiveTempoMeta()) {
+                failD("tempo edit did not keep live SMF free of FF 51 events");
                 ok = false;
             } else {
                 const QByteArray before = doc.smf().write();
+                const auto beforeTempo = doc.tempoPoints();
                 const uint64_t beforeRevision = doc.revision();
                 const int beforeUndoCount = doc.undoStack()->count();
                 const int beforeUndoIndex = doc.undoStack()->index();
                 changedSignals = 0;
-                doc.moveLanePoints({{0, DOC_CC_TEMPO, pt, pt.tick, pt.value}});
-                if (doc.smf().write() != before || doc.revision() != beforeRevision ||
+                doc.applyTempoEdit({{}, {noOpTempo}});
+                if (doc.smf().write() != before || doc.tempoPoints() != beforeTempo ||
+                    doc.revision() != beforeRevision ||
                     doc.undoStack()->count() != beforeUndoCount ||
                     doc.undoStack()->index() != beforeUndoIndex || changedSignals != 0) {
                     failD("an unchanged global tempo point mutated the document");
                     ok = false;
+                }
+            }
+            if (ok) {
+                doc.undoStack()->undo();
+                if (!containsTempoPoint(doc, tempoPoint(48, 150)) || hasLiveTempoMeta()) {
+                    failD("tempo undo did not keep live SMF free of FF 51 events");
+                    ok = false;
+                } else {
+                    doc.undoStack()->redo();
                 }
             }
         }

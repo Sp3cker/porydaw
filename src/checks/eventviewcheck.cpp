@@ -23,6 +23,7 @@
 #include "core/songdocument.h"
 #include "project/decompproject.h"
 #include "ui/eventlistview.h"
+#include "ui/eventtabletypes.h"
 #include "ui/songview.h"
 #include "ui/typography.h"
 
@@ -208,6 +209,86 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
     if (model->rowCount() != int(filterEvents.size()) + 1)
         fail("all-checked filter does not show every event");
 
+    // Changing a type across the raw/Tempo boundary must stay a single
+    // document command in both directions, including undo and redo.
+    const int tempoChunkIndex = chunkCombo->findData(0);
+    if (tempoChunkIndex < 0) {
+        fail("the Tempo chunk is unavailable");
+    } else {
+        const int originalChunkIndex = chunkCombo->currentIndex();
+        chunkCombo->setCurrentIndex(tempoChunkIndex);
+        Q_EMIT chunkCombo->activated(tempoChunkIndex);
+        uint64_t conversionTick = doc.smf().tracks[0].endTick;
+        for (const SmfEvent &event : doc.smf().tracks[0].events)
+            conversionTick = std::max(conversionTick, event.tick);
+        for (const TempoPoint &point : doc.tempoPoints())
+            conversionTick = std::max(conversionTick, point.tick);
+        conversionTick++;
+        SmfEvent conversionEvent;
+        conversionEvent.tick = conversionTick;
+        conversionEvent.status = 0xFF;
+        conversionEvent.metaType = 0x06;
+        conversionEvent.blob = QByteArrayLiteral("eventview conversion");
+        const int beforeConversionIndex = doc.undoStack()->index();
+        doc.insertRawEvent(0, conversionEvent);
+        QCoreApplication::processEvents();
+        const int rawIndex = doc.undoStack()->index();
+        const int rawCount = doc.undoStack()->count();
+        const auto rowAtConversionTick = [model, conversionTick](int type) {
+            for (int row = 0; row < model->rowCount() - 1; row++) {
+                if (model->data(model->index(row, 0), Qt::EditRole).toULongLong() ==
+                        conversionTick &&
+                    model->data(model->index(row, 1), Qt::EditRole).toInt() == type)
+                    return row;
+            }
+            return -1;
+        };
+        int conversionChanges = 0;
+        QObject conversionObserver;
+        QObject::connect(&doc, &SongDocument::documentChanged, &conversionObserver,
+                         [&conversionChanges] { conversionChanges++; });
+        const auto expectConversionState = [&](int type, int index, int count, const char *what) {
+            const int otherType =
+                type == eventlist::TypeTempo ? eventlist::TypeMeta : eventlist::TypeTempo;
+            if (doc.undoStack()->index() != index || doc.undoStack()->count() != count ||
+                conversionChanges != 1 || rowAtConversionTick(type) < 0 ||
+                rowAtConversionTick(otherType) >= 0)
+                fail(what);
+        };
+        const auto checkTypeChange = [&](int from, int to, int index, int count, const char *what) {
+            const int row = rowAtConversionTick(from);
+            conversionChanges = 0;
+            if (row < 0 || !model->setData(model->index(row, 1), to, Qt::EditRole)) {
+                fail(what);
+                return false;
+            }
+            QCoreApplication::processEvents();
+            expectConversionState(to, index + 1, count + 1, what);
+            conversionChanges = 0;
+            doc.undoStack()->undo();
+            QCoreApplication::processEvents();
+            expectConversionState(from, index, count + 1, what);
+            conversionChanges = 0;
+            doc.undoStack()->redo();
+            QCoreApplication::processEvents();
+            expectConversionState(to, index + 1, count + 1, what);
+            return true;
+        };
+        if (rawIndex != beforeConversionIndex + 1 || rowAtConversionTick(eventlist::TypeMeta) < 0) {
+            fail("conversion test event was not inserted");
+        } else if (checkTypeChange(eventlist::TypeMeta, eventlist::TypeTempo, rawIndex, rawCount,
+                                   "raw-to-Tempo conversion was not one command")) {
+            checkTypeChange(eventlist::TypeTempo, eventlist::TypeMeta, rawIndex + 1, rawCount + 1,
+                            "Tempo-to-raw conversion was not one command");
+        }
+        while (doc.undoStack()->index() > beforeConversionIndex) {
+            doc.undoStack()->undo();
+            QCoreApplication::processEvents();
+        }
+        chunkCombo->setCurrentIndex(originalChunkIndex);
+        Q_EMIT chunkCombo->activated(originalChunkIndex);
+    }
+
     // A complete TrackRemap reaches the list before documentChanged. The
     // visible SMF owner follows a move and survives changes to another
     // owner; when its own chunk goes away, undo/redo must leave it
@@ -246,7 +327,9 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 fail(what);
                 return;
             }
-            if (model->rowCount() != int(doc.smf().tracks[expectedChunk].events.size()) + 1)
+            const int projectedTempoRows = expectedChunk == 0 ? int(doc.tempoPoints().size()) : 0;
+            if (model->rowCount() !=
+                int(doc.smf().tracks[expectedChunk].events.size()) + projectedTempoRows + 1)
                 fail(what);
         };
         const int anchorChunk = doc.smfTrackFor(anchorEngine);
@@ -335,14 +418,15 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                                                Q_ARG(int, metadataComboIndex))) {
                     fail("could not select the metadata chunk in the event list");
                 }
-                const auto engineForMetadataChunk = [&] {
+                const auto engineForMetadataChunk = [&]() -> std::optional<int> {
                     for (int engine = 0; engine < doc.engineTrackCount(); engine++) {
                         if (doc.smfTrackFor(engine) == metadataChunk)
                             return engine;
                     }
-                    return -1;
+                    return std::nullopt;
                 };
-                const auto expectTransitionState = [&](int expectedEngineCount, int expectedOwner,
+                const auto expectTransitionState = [&](int expectedEngineCount,
+                                                       std::optional<int> expectedOwner,
                                                        bool expectProgram, const char *what) {
                     if (doc.engineTrackCount() != expectedEngineCount ||
                         engineForMetadataChunk() != expectedOwner) {
@@ -351,11 +435,10 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                     }
                     expectAnchor(metadataChunk, what);
                     const QString expectedLabel =
-                        expectedOwner >= 0
-                            ? QStringLiteral("Chunk %1 — Track %2")
-                                  .arg(metadataChunk)
-                                  .arg(expectedOwner + 1)
-                            : QStringLiteral("Chunk %1 (tempo/meta)").arg(metadataChunk);
+                        expectedOwner ? QStringLiteral("Chunk %1 — Track %2")
+                                            .arg(metadataChunk)
+                                            .arg(*expectedOwner + 1)
+                                      : QStringLiteral("Chunk %1 (tempo/meta)").arg(metadataChunk);
                     if (chunkCombo->currentText() != expectedLabel) {
                         fail(what);
                         return;
@@ -374,7 +457,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                         fail(what);
                 };
                 const int engineCount = doc.engineTrackCount();
-                expectTransitionState(engineCount, -1, false,
+                expectTransitionState(engineCount, std::nullopt, false,
                                       "metadata chunk was not the active list source");
                 SmfEvent program;
                 program.status = uint8_t(0xc0 | freeChannel);
@@ -383,8 +466,8 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 doc.insertRawEvent(metadataChunk, program);
                 expectNotifications(
                     true, "engine-track transition did not notify remap before documentChanged");
-                const int programOwner = engineForMetadataChunk();
-                if (programOwner < 0) {
+                const auto programOwner = engineForMetadataChunk();
+                if (!programOwner) {
                     fail("program event did not create an engine owner");
                 } else {
                     expectTransitionState(engineCount + 1, programOwner, true,
@@ -395,13 +478,13 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 expectNotifications(true,
                                     "undoing engine-track transition did not notify in order");
                 expectTransitionState(
-                    engineCount, -1, false,
+                    engineCount, std::nullopt, false,
                     "undoing engine-track transition left stale list owner state");
                 notifications.clear();
                 doc.undoStack()->redo();
                 expectNotifications(true,
                                     "redoing engine-track transition did not notify in order");
-                if (programOwner >= 0) {
+                if (programOwner) {
                     expectTransitionState(
                         engineCount + 1, programOwner, true,
                         "redoing engine-track transition left stale list owner state");
@@ -411,7 +494,7 @@ int runUiPass(const SongInfo &song, const QString &screenshotPath)
                 expectNotifications(true,
                                     "restoring engine-track transition did not notify in order");
                 expectTransitionState(
-                    engineCount, -1, false,
+                    engineCount, std::nullopt, false,
                     "restoring engine-track transition left stale list owner state");
                 const int anchorComboIndex = chunkCombo->findData(anchorChunk);
                 if (anchorComboIndex < 0) {

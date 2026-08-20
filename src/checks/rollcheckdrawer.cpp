@@ -244,6 +244,7 @@ int runEditorDrawerCheck(const QString &screenshotPath)
               view.editorViewState().automation.height > automationHeightBefore,
           "state reload did not retain collapsed section heights");
 
+    QApplication::setActiveWindow(&view);
     view.focusContent();
     QCoreApplication::processEvents();
     QWidget *contentFocus = QApplication::focusWidget();
