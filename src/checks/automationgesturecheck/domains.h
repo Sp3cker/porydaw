@@ -18,3 +18,4 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
                                     const AutomationGestureCheck &check);
 void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
                                        const AutomationGestureCheck &check);
+void checkTempoInteractions(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check);
