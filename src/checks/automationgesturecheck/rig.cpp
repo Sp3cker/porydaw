@@ -5,12 +5,14 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QEventLoop>
+#include <QImage>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QTimer>
 #include <QWindow>
 
 #include "core/miditimeline.h"
+#include "core/timedefaults.h"
 #include "project/decompproject.h"
 #include "ui/editordrawer/automationarea.h"
 #include "ui/editordrawer/automationpage.h"
@@ -108,7 +110,7 @@ AutomationGeometry AutomationGestureCheckRig::geometry() const
 AutomationProjection AutomationGestureCheckRig::projection() const
 {
     const auto currentGeometry = geometry();
-    return {currentGeometry, area().rows(), m_page, currentGeometry.rowDefaultHeight};
+    return {currentGeometry, area().rows(), m_page, area().contentTopInset()};
 }
 
 int AutomationGestureCheckRig::rowIndex(const Lane &lane) const noexcept
@@ -130,6 +132,26 @@ AutomationGestureCheckRig::pointAt(const Lane &lane, double tick, int value) con
         m_view->displayX(tick, geometry().plotOrigin, area().devicePixelRatioF()),
         proj.pointY(area().rows()[std::size_t(index)], index, value));
     return {position, proj.pointerMapping(index, position.x(), position.y())};
+}
+
+QPointF AutomationGestureCheckRig::tempoHeaderPoint() const
+{
+    const auto currentGeometry = geometry();
+    return {currentGeometry.plotOrigin / 2.0, area().contentTopInset() / 2.0};
+}
+
+QPointF AutomationGestureCheckRig::tempoBodyPoint(double tick, int bpm) const
+{
+    const auto currentGeometry = geometry();
+    const QRect body(0, 0, area().width(), area().contentTopInset());
+    return {m_view->displayX(tick, currentGeometry.plotOrigin, area().devicePixelRatioF()),
+            AutomationProjection::valueY(body, currentGeometry, CoreTimeDefaults::kMinTempoBpm,
+                                         CoreTimeDefaults::kMaxTempoBpm, bpm)};
+}
+
+QImage AutomationGestureCheckRig::renderArea()
+{
+    return area().grab().toImage();
 }
 
 AutomationGestureCheckRig::Snapshot AutomationGestureCheckRig::snapshot(int track,
@@ -169,9 +191,10 @@ void AutomationGestureCheckRig::setPersistentPencil(bool enabled)
         action->setChecked(enabled);
 }
 
-void AutomationGestureCheckRig::mousePress(const QPointF &position, Qt::KeyboardModifiers modifiers)
+void AutomationGestureCheckRig::mousePress(const QPointF &position, Qt::KeyboardModifiers modifiers,
+                                           Qt::MouseButton button)
 {
-    sendMouse(QEvent::MouseButtonPress, position, Qt::LeftButton, Qt::LeftButton, modifiers);
+    sendMouse(QEvent::MouseButtonPress, position, button, button, modifiers);
 }
 
 void AutomationGestureCheckRig::mouseMove(const QPointF &position, Qt::MouseButtons buttons,
@@ -181,9 +204,16 @@ void AutomationGestureCheckRig::mouseMove(const QPointF &position, Qt::MouseButt
 }
 
 void AutomationGestureCheckRig::mouseRelease(const QPointF &position,
-                                             Qt::KeyboardModifiers modifiers)
+                                             Qt::KeyboardModifiers modifiers,
+                                             Qt::MouseButton button)
 {
-    sendMouse(QEvent::MouseButtonRelease, position, Qt::LeftButton, Qt::NoButton, modifiers);
+    sendMouse(QEvent::MouseButtonRelease, position, button, Qt::NoButton, modifiers);
+}
+
+void AutomationGestureCheckRig::mouseDoubleClick(const QPointF &position,
+                                                 Qt::KeyboardModifiers modifiers)
+{
+    sendMouse(QEvent::MouseButtonDblClick, position, Qt::LeftButton, Qt::LeftButton, modifiers);
 }
 
 void AutomationGestureCheckRig::keyToArea(QEvent::Type type, int key,

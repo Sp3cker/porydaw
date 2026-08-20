@@ -1,7 +1,9 @@
 #include "domains.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
+#include <vector>
 
 #include <QCoreApplication>
 #include <QImage>
@@ -112,7 +114,6 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
         rig.mousePress(emptyStart.position);
         rig.mouseMove(emptyEnd.position);
         rig.mouseRelease(emptyEnd.position);
-        rig.waitForTimers(0);
         const auto after = rig.snapshot(expression.track, expression.controller);
         check(!after.lanePoints.empty() && oneLaneEdit(before, after),
               QStringLiteral("Pencil stroke on an empty CC 11 lane did not commit one SMF, "
@@ -137,7 +138,6 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
           QStringLiteral("Pencil live preview was not visible while preserving SMF, revision, "
                          "Undo, and lane points before release"));
     rig.mouseRelease(previewEnd.position);
-    rig.waitForTimers(0);
     const auto previewAfter = rig.snapshot(rig.pan.track, rig.pan.controller);
     check(oneLaneEdit(previewBefore, previewAfter),
           QStringLiteral("Pencil preview release did not commit exactly one SMF, revision, and "
@@ -154,7 +154,6 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
     rig.mousePress(restoreStart.position);
     rig.mouseMove(restoreEnd.position);
     rig.mouseRelease(restoreEnd.position);
-    rig.waitForTimers(0);
     const auto restoreAfter = rig.snapshot(rig.pan.track, rig.pan.controller);
     DocLanePoint restoredEndpoint;
     const bool restored = rig.document().findLanePoint(rig.pan.track, rig.pan.controller,
@@ -174,7 +173,6 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
     rig.mousePress(flatStart.position);
     rig.mouseMove(flatEnd.position);
     rig.mouseRelease(flatEnd.position);
-    rig.waitForTimers(0);
     const auto flatAfter = rig.snapshot(rig.pan.track, rig.pan.controller);
     check(sameSnapshot(flatBefore, flatAfter),
           QStringLiteral("Pencil flat stroke changed an already-held value's SMF, revision, "
@@ -183,7 +181,6 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
     const auto noOpBefore = rig.snapshot(rig.pan.track, rig.pan.controller);
     rig.mousePress(flatStart.position);
     rig.mouseRelease(flatStart.position);
-    rig.waitForTimers(0);
     const auto noOpAfter = rig.snapshot(rig.pan.track, rig.pan.controller);
     check(sameSnapshot(noOpBefore, noOpAfter),
           QStringLiteral("Pencil semantic no-op click changed SMF, revision, Undo, or lane "
@@ -206,7 +203,6 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
     const auto deletionBefore = rig.snapshot(rig.pan.track, rig.pan.controller);
     rig.mousePress(deletionPoint.position);
     rig.mouseRelease(deletionPoint.position);
-    rig.waitForTimers(0);
     const auto deletionAfter = rig.snapshot(rig.pan.track, rig.pan.controller);
     const bool deletionRangeEmpty = std::none_of(
         deletionAfter.lanePoints.cbegin(), deletionAfter.lanePoints.cend(),

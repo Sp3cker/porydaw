@@ -442,6 +442,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automationgesturecheck/stroke.cpp
         src/checks/automationgesturecheck/ownership.cpp
         src/checks/automationgesturecheck/transactions.cpp
+        src/checks/automationgesturecheck/tempo.cpp
         src/checks/rollcheckdrawer.cpp
         src/checks/rollcheckpsgvelocity.cpp
         src/checks/themechecks.cpp

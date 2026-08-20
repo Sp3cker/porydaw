@@ -21,6 +21,7 @@ extern "C" {
 class QAction;
 class AutomationArea;
 class AutomationPage;
+class QImage;
 class MidiTimeline;
 class QObject;
 class SongView;
@@ -67,6 +68,9 @@ class AutomationGestureCheckRig final
     AutomationProjection projection() const;
     int rowIndex(const Lane &lane) const noexcept;
     InputPoint pointAt(const Lane &lane, double tick, int value) const;
+    QPointF tempoHeaderPoint() const;
+    QPointF tempoBodyPoint(double tick, int bpm) const;
+    QImage renderArea();
     Snapshot snapshot(int track, uint8_t controller) const;
 
     void documentChanged();
@@ -79,10 +83,14 @@ class AutomationGestureCheckRig final
                    bool autoRepeat = false);
     void keyToWindow(QEvent::Type type, int key, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
                      bool autoRepeat = false);
-    void mousePress(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void mousePress(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+                    Qt::MouseButton button = Qt::LeftButton);
     void mouseMove(const QPointF &position, Qt::MouseButtons buttons = Qt::LeftButton,
                    Qt::KeyboardModifiers modifiers = Qt::NoModifier);
-    void mouseRelease(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void mouseRelease(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+                      Qt::MouseButton button = Qt::LeftButton);
+    void mouseDoubleClick(const QPointF &position,
+                          Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void pump();
     void waitForTimers(int milliseconds);
 
