@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "noteid.h"
+#include "tempo.h"
 
 // Event type codes: MIDI status nibbles 0x8 (note off), 0x9 (note on),
 // 0xB (CC), 0xC (program change), 0xE (pitch bend), plus a synthetic tempo
@@ -76,8 +77,12 @@ class MidiTimeline
                                               QString *error);
 
     // Projects a full-fidelity SMF model (the editable document storage) into
-    // a playable timeline. load() is readFile + build.
+    // a playable timeline. This raw-file path reads FF 51 events from the SMF.
     static std::unique_ptr<MidiTimeline> build(const SmfFile &smf, double sampleRate);
+    // Projects an SMF with its Tempo supplied by the document-owned typed
+    // stream, ignoring raw FF 51 events.
+    static std::unique_ptr<MidiTimeline>
+    build(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, double sampleRate);
 
     std::vector<TimelineEvent> events; // sorted by samplePos
     TimelineTrack tracks[16];

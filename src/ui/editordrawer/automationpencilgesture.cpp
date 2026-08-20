@@ -49,8 +49,10 @@ bool collinearForward(double previousDeltaAxis, double previousDeltaValue, doubl
         return false;
     const double leftProduct = previousDeltaAxis * currentDeltaValue;
     const double rightProduct = previousDeltaValue * currentDeltaAxis;
-    const double tolerance = std::numeric_limits<double>::epsilon() * 64.0 *
-                             std::max({1.0, std::abs(leftProduct), std::abs(rightProduct)});
+    const double tolerance =
+        std::max(std::numeric_limits<double>::epsilon() * 64.0 *
+                     std::max({1.0, std::abs(leftProduct), std::abs(rightProduct)}),
+                 0.5 * std::max(std::abs(previousDeltaAxis), std::abs(currentDeltaAxis)));
     return std::abs(leftProduct - rightProduct) <= tolerance;
 }
 

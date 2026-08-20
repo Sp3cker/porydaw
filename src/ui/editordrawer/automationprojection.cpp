@@ -38,16 +38,13 @@ int AutomationProjection::rowHeight(const AutomationRow &row) const
 {
     if (!m_page)
         return m_geometry.rowDefaultHeight;
-    const int shared = m_page->m_viewState.laneHeight > 0 ? m_page->m_viewState.laneHeight
-                                                          : m_geometry.rowDefaultHeight;
-    const auto it = m_page->m_viewState.laneHeights.find(row.id);
-    return std::clamp(it == m_page->m_viewState.laneHeights.cend() ? shared : it->second,
-                      m_geometry.rowMinimumHeight, m_geometry.rowMaximumHeight);
+    return std::clamp(m_page->laneHeightFor(row.id), m_geometry.rowMinimumHeight,
+                      m_geometry.rowMaximumHeight);
 }
 
 int AutomationProjection::rowTop(int index) const
 {
-    int top = layout::space(layout::Space::Zero);
+    int top = m_topInset;
     for (int row = 0; row < index && row < int(m_rows.size()); ++row)
         top += rowHeight(m_rows[row]);
     return top;
@@ -62,7 +59,7 @@ std::pair<int, int> AutomationProjection::valuePlotBounds(int index) const
 
 int AutomationProjection::rowIndexAt(int y) const
 {
-    int bottom = layout::space(layout::Space::Zero);
+    int bottom = m_topInset;
     for (int row = 0; row < int(m_rows.size()); ++row) {
         bottom += rowHeight(m_rows[row]);
         if (y < bottom)
@@ -73,7 +70,7 @@ int AutomationProjection::rowIndexAt(int y) const
 
 int AutomationProjection::rowBoundaryAt(int y) const
 {
-    int bottom = layout::space(layout::Space::Zero);
+    int bottom = m_topInset;
     for (int row = 0; row < int(m_rows.size()); ++row) {
         bottom += rowHeight(m_rows[row]);
         if (std::abs(y - bottom) <= layout::singlePixel())
@@ -84,8 +81,6 @@ int AutomationProjection::rowBoundaryAt(int y) const
 
 int AutomationProjection::rowMinimum(const AutomationRow &row) const
 {
-    if (row.id.kind == EditorAutomationRowKind::Tempo)
-        return 1;
     return row.id.kind == EditorAutomationRowKind::ControlChange &&
                    row.id.controller == automation::kBendController
                ? -8192
@@ -94,12 +89,6 @@ int AutomationProjection::rowMinimum(const AutomationRow &row) const
 
 int AutomationProjection::rowMaximum(const AutomationRow &row) const
 {
-    if (row.id.kind == EditorAutomationRowKind::Tempo) {
-        int maximum = 200;
-        for (const auto &point : m_page->model().tempoLane)
-            maximum = std::max(maximum, point.value + 20);
-        return maximum;
-    }
     if (row.id.kind != EditorAutomationRowKind::ControlChange)
         return 127;
     if (row.id.controller == automation::kBendController)
@@ -141,6 +130,35 @@ double AutomationProjection::rawTickAt(qreal x) const
     return std::max(0.0, m_page->tickAtContentX(std::max(qreal(m_geometry.plotOrigin), x) -
                                                 m_geometry.plotOrigin));
 }
+qreal AutomationProjection::displayX(uint64_t tick, qreal devicePixelRatio) const
+{
+    return m_page->displayX(tick, m_geometry.plotOrigin, devicePixelRatio);
+}
+
+uint64_t AutomationProjection::snapTickAt(qreal x, bool fine) const
+{
+    return m_page->snapTick(rawTickAt(x), fine);
+}
+
+qreal AutomationProjection::valueY(const QRect &bounds, const AutomationGeometry &geometry,
+                                   double minimum, double maximum, double value)
+{
+    const qreal top = bounds.top() + geometry.valuePlotPadding;
+    const qreal bottom = bounds.bottom() - geometry.valuePlotPadding;
+    const double clamped = std::clamp(value, minimum, maximum);
+    return bottom -
+           qreal((clamped - minimum) * (bottom - top) / std::max<qreal>(1.0, maximum - minimum));
+}
+
+double AutomationProjection::valueAtY(const QRect &bounds, const AutomationGeometry &geometry,
+                                      double minimum, double maximum, qreal y)
+{
+    const qreal top = bounds.top() + geometry.valuePlotPadding;
+    const qreal bottom = bounds.bottom() - geometry.valuePlotPadding;
+    const qreal clamped = std::clamp(y, top, bottom);
+    return minimum +
+           double(bottom - clamped) * (maximum - minimum) / std::max<qreal>(1.0, bottom - top);
+}
 
 uint64_t AutomationProjection::fineSnapTick(double rawTick) const
 {
@@ -168,8 +186,6 @@ AutomationProjection::PointerMapping AutomationProjection::pointerMapping(int ro
     const uint64_t length = m_page->timeline()->lengthTicks;
     mapped.rawTick = std::clamp(rawTickAt(x), 0.0, double(length));
     mapped.point.value = valueAtY(rowIndex, y);
-    if (m_rows[rowIndex].id.kind == EditorAutomationRowKind::Tempo)
-        mapped.point.value = std::max(1, mapped.point.value);
     mapped.cell = snapCellAt(mapped.rawTick);
     mapped.point.tick = mapped.cell.tickBegin;
     return mapped;

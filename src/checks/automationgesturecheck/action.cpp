@@ -1,6 +1,7 @@
 #include "domains.h"
 
 #include <QAction>
+#include <QApplication>
 #include <QCoreApplication>
 #include <QCursor>
 #include <QEvent>
@@ -33,6 +34,7 @@ void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
           QStringLiteral("Pencil Mode action must be checkable, initially disabled, and toggle "
                          "on with a bitmap cursor then off"));
     QLineEdit editor(&rig.view());
+    QApplication::setActiveWindow(&rig.view());
     editor.show();
     editor.setFocus();
     rig.pump();

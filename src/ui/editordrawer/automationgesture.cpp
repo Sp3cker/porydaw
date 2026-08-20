@@ -121,8 +121,6 @@ void NodeDragGesture::applyDrag(const ValuePoint &grabCurrent,
         const auto &row = rows[point.row];
         point.current.value =
             std::clamp(point.original.value + dValue, proj.rowMinimum(row), proj.rowMaximum(row));
-        if (row.id.kind == EditorAutomationRowKind::Tempo)
-            point.current.value = std::max(1, point.current.value);
     }
 }
 AxisLock NodeDragGesture::update(const QPointF &position, const ValuePoint &mappedGrabBeforeLock,
@@ -172,8 +170,6 @@ void updateValuePoint(const AutomationProjection &proj, int rowIndex, const Auto
                       int neutralSnapRadius)
 {
     point.value = proj.valueAtY(rowIndex, y);
-    if (row.id.kind == EditorAutomationRowKind::Tempo)
-        point.value = std::max(1, point.value);
     if (snapValue && row.id.kind == EditorAutomationRowKind::ControlChange) {
         const int neutral = row.id.controller == 0xFF
                                 ? 0

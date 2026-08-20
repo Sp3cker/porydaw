@@ -22,6 +22,7 @@ class EditorSelectionModel
         uint64_t endTick = 0;
         Scope scope = Tracks;
         std::vector<std::pair<int, uint8_t>> lanes;
+        bool tempo = false;
 
         bool active() const noexcept { return endTick > startTick; }
     };
@@ -55,6 +56,7 @@ class EditorSelectionModel
     bool timeSelectionCoversTrack(int track, uint32_t usedTrackMask) const noexcept;
     bool timeSelectionCoversLane(int track, uint8_t controller,
                                  uint32_t usedTrackMask) const noexcept;
+    bool timeSelectionCoversTempo(uint32_t usedTrackMask) const noexcept;
 
     void setNoteSelection(std::vector<NoteId> ids);
     void clearNoteSelection();

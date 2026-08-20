@@ -1,10 +1,15 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 
 namespace CoreTimeDefaults {
 
 inline constexpr int kTempoBpm = 120;
+inline constexpr int kMinTempoBpm = 20;
+inline constexpr int kMaxTempoBpm = 255;
+inline constexpr uint32_t kMicrosecondsPerMinute = 60'000'000;
+inline constexpr uint32_t kDefaultTempoUspqn = 500000;
 
 struct ControllerDefault {
     uint8_t cc;
@@ -29,6 +34,25 @@ constexpr int controllerDefault(uint8_t cc)
             return entry.value;
     }
     return -1;
+}
+
+inline uint32_t microsecondsPerQuarterNoteForBpm(int bpm)
+{
+    bpm = std::clamp(bpm, kMinTempoBpm, kMaxTempoBpm);
+    return uint32_t(double(kMicrosecondsPerMinute) / double(bpm) + 0.5);
+}
+
+inline double tempoBpm(uint32_t microsecondsPerQuarterNote)
+{
+    if (microsecondsPerQuarterNote == 0)
+        return kTempoBpm;
+    return double(kMicrosecondsPerMinute) / double(microsecondsPerQuarterNote);
+}
+
+inline uint32_t clampTempoUspqn(uint32_t microsecondsPerQuarterNote)
+{
+    return std::clamp(microsecondsPerQuarterNote, microsecondsPerQuarterNoteForBpm(kMaxTempoBpm),
+                      microsecondsPerQuarterNoteForBpm(kMinTempoBpm));
 }
 
 } // namespace CoreTimeDefaults

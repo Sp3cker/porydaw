@@ -85,6 +85,7 @@ void SongView::showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenu
     selection.endTick = request.endTick;
     selection.scope = EditorSelectionModel::TimeSelection::Lanes;
     selection.lanes = request.lanes;
+    selection.tempo = request.tempo;
     m_selectionModel.setTimeSelection(selection);
     showTimeSelectionMenu(request.globalPosition);
 }

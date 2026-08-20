@@ -404,8 +404,8 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
     if (hadLaneSelection) {
         remappedLanes.reserve(selection.lanes.size());
         for (const std::pair<int, uint8_t> &lane : selection.lanes) {
-            const int track = lane.first < 0 ? lane.first : remapTrack(lane.first);
-            if (track >= 0 || lane.first < 0)
+            const int track = remapTrack(lane.first);
+            if (track >= 0)
                 remappedLanes.emplace_back(track, lane.second);
         }
     }
@@ -425,8 +425,8 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
     std::vector<ClipLane> remappedClipLanes;
     remappedClipLanes.reserve(m_clip.lanes.size());
     for (ClipLane &lane : m_clip.lanes) {
-        const int destination = lane.track < 0 ? lane.track : remapTrack(lane.track);
-        if (destination >= 0 || lane.track < 0) {
+        const int destination = remapTrack(lane.track);
+        if (destination >= 0) {
             lane.track = destination;
             remappedClipLanes.push_back(std::move(lane));
         }

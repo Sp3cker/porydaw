@@ -13,11 +13,6 @@
 
 namespace {
 
-EditorAutomationRowId tempoRow()
-{
-    return {EditorAutomationRowKind::Tempo, 0, DOC_CC_TEMPO};
-}
-
 EditorAutomationRowId voiceRow(int track)
 {
     return {EditorAutomationRowKind::Voice, uint8_t(track), DOC_CC_VOICE};
@@ -58,7 +53,6 @@ void AutomationRows::rebuildRows()
         syncTimeSelection();
         return;
     }
-    appendRow(tempoRow());
     const int track = m_page->m_owner.selectionModel().primaryTrack();
     if (track < 0) {
         syncTimeSelection();
@@ -122,9 +116,10 @@ void AutomationRows::syncTimeSelection()
     }
 }
 
-void AutomationRows::applyHeight(AutomationArea &area, const AutomationGeometry &geometry) const
+void AutomationRows::applyHeight(AutomationArea &area, const AutomationGeometry &geometry,
+                                 int topInset) const
 {
-    const AutomationProjection projection(geometry, m_rows, m_page);
+    const AutomationProjection projection(geometry, m_rows, m_page, topInset);
     const int rowsHeight = projection.rowTop(int(m_rows.size()));
     const int strip = m_page && m_page->document() ? geometry.addLaneStripHeight
                                                    : layout::space(layout::Space::Zero);
@@ -145,8 +140,6 @@ bool AutomationRows::clearTimeSelection()
 const std::vector<LanePoint> &
 AutomationRows::pointsFor(const AutomationRow &row, const AutomationProjection &projection) const
 {
-    if (row.id.kind == EditorAutomationRowKind::Tempo)
-        return m_page->model().tempoLane;
     if (const auto *lane = projection.laneFor(row))
         return lane->points;
     static const std::vector<LanePoint> empty;
@@ -155,8 +148,6 @@ AutomationRows::pointsFor(const AutomationRow &row, const AutomationProjection &
 
 QString AutomationRows::titleFor(const AutomationRow &row) const
 {
-    if (row.id.kind == EditorAutomationRowKind::Tempo)
-        return translated("Tempo (BPM)");
     if (row.id.kind == EditorAutomationRowKind::Voice)
         return translated("Voice");
     return laneLabel(row.id.controller);
@@ -199,9 +190,7 @@ QString AutomationRows::valueTextFor(const AutomationRow &row, int value) const
         return m_valueTextCache.text;
     m_valueTextCache.row = row.id;
     m_valueTextCache.value = value;
-    if (row.id.kind == EditorAutomationRowKind::Tempo)
-        m_valueTextCache.text = QString::number(value);
-    else if (row.id.controller == automation::kBendController)
+    if (row.id.controller == automation::kBendController)
         m_valueTextCache.text = m4aFormatBend(value);
     else
         m_valueTextCache.text = m4aFormatCcValue(row.id.controller, uint8_t(value));
@@ -215,17 +204,13 @@ bool AutomationRows::rowTarget(const AutomationRow &row, int *track, uint8_t *co
         return false;
     if (row.id.kind == EditorAutomationRowKind::Voice)
         return false;
-    *track = row.id.kind == EditorAutomationRowKind::Tempo
-                 ? m_page->m_owner.selectionModel().primaryTrack()
-                 : int(row.id.track);
-    *controller = row.id.kind == EditorAutomationRowKind::Tempo ? DOC_CC_TEMPO : row.id.controller;
-    return *track >= 0;
+    *track = int(row.id.track);
+    *controller = row.id.controller;
+    return true;
 }
 
 std::pair<int, uint8_t> AutomationRows::rowIdentity(const AutomationRow &row) const
 {
-    if (row.id.kind == EditorAutomationRowKind::Tempo)
-        return {-1, DOC_CC_TEMPO};
     if (row.id.kind == EditorAutomationRowKind::Voice)
         return {m_page ? m_page->m_owner.selectionModel().primaryTrack() : -1, DOC_CC_VOICE};
     return {int(row.id.track), row.id.controller};
@@ -368,16 +353,6 @@ bool AutomationRows::cachedPointHit(const AutomationRow &row, int rowIndex, cons
             *hit = *candidate;
     }
     return found;
-}
-
-std::optional<NodeDragGesture>
-AutomationRows::nodeDragGestureAt(int rowIndex, const QPointF &position, bool axisLockArmed,
-                                  bool pencilMode, const AutomationGeometry &geometry,
-                                  qreal devicePixelRatio) const
-{
-    return nodeDragGestureAt(rowIndex, position, axisLockArmed,
-                             AutomationProjection(geometry, m_rows, m_page), pencilMode, geometry,
-                             devicePixelRatio);
 }
 
 std::optional<NodeDragGesture>

@@ -107,7 +107,8 @@ AutomationGeometry AutomationGestureCheckRig::geometry() const
 
 AutomationProjection AutomationGestureCheckRig::projection() const
 {
-    return {geometry(), area().rows(), m_page};
+    const auto currentGeometry = geometry();
+    return {currentGeometry, area().rows(), m_page, currentGeometry.rowDefaultHeight};
 }
 
 int AutomationGestureCheckRig::rowIndex(const Lane &lane) const noexcept

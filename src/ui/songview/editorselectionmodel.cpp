@@ -38,17 +38,25 @@ bool EditorSelectionModel::timeSelectionCoversTrack(int track,
 bool EditorSelectionModel::timeSelectionCoversLane(int track, uint8_t controller,
                                                    uint32_t usedTrackMask) const noexcept
 {
-    if (!m_timeSelection.active())
+    if (!m_timeSelection.active() || track < 0 || track >= 16)
         return false;
     if (m_timeSelection.scope == TimeSelection::Lanes)
         return std::find(m_timeSelection.lanes.cbegin(), m_timeSelection.lanes.cend(),
                          std::pair{track, controller}) != m_timeSelection.lanes.cend();
-
     const uint32_t used = usedTrackMask & kTrackMask;
     const uint32_t selected = resolvedTrackScope(used);
-    if (track >= 0 && track < 16)
-        return (selected & (uint32_t{1} << track)) != 0;
-    return track == -1 && controller == DOC_CC_TEMPO && used != 0 && selected == used;
+    return (selected & (uint32_t{1} << track)) != 0;
+}
+
+bool EditorSelectionModel::timeSelectionCoversTempo(uint32_t usedTrackMask) const noexcept
+{
+    if (!m_timeSelection.active())
+        return false;
+    if (m_timeSelection.scope == TimeSelection::Lanes)
+        return m_timeSelection.tempo;
+    const uint32_t used = usedTrackMask & kTrackMask;
+    const uint32_t selected = resolvedTrackScope(used);
+    return used != 0 && selected == used;
 }
 
 void EditorSelectionModel::setNoteSelection(std::vector<NoteId> ids)
@@ -314,8 +322,8 @@ void EditorSelectionModel::applyRemap(const TrackRemap &remap)
         std::vector<std::pair<int, uint8_t>> lanes;
         lanes.reserve(newTimeSelection.lanes.size());
         for (const auto &lane : newTimeSelection.lanes) {
-            const int destination = lane.first == -1 ? -1 : mappedTrack(lane.first);
-            if (lane.first == -1 || destination >= 0)
+            const int destination = mappedTrack(lane.first);
+            if (destination >= 0)
                 lanes.emplace_back(destination, lane.second);
         }
         newTimeSelection.lanes = std::move(lanes);
@@ -359,7 +367,7 @@ bool EditorSelectionModel::sameTimeSelection(const TimeSelection &a,
                                              const TimeSelection &b) noexcept
 {
     return a.startTick == b.startTick && a.endTick == b.endTick && a.scope == b.scope &&
-           a.lanes == b.lanes;
+           a.lanes == b.lanes && a.tempo == b.tempo;
 }
 
 EditorSelectionModel::TimeSelection
@@ -369,13 +377,13 @@ EditorSelectionModel::sanitizeTimeSelection(TimeSelection selection)
         std::vector<std::pair<int, uint8_t>> lanes;
         lanes.reserve(selection.lanes.size());
         for (const auto &lane : selection.lanes) {
-            if (lane.first < -1 || lane.first >= 16 ||
+            if (lane.first < 0 || lane.first >= 16 ||
                 std::find(lanes.cbegin(), lanes.cend(), lane) != lanes.cend())
                 continue;
             lanes.push_back(lane);
         }
         selection.lanes = std::move(lanes);
-        if (selection.active() && selection.lanes.empty())
+        if (selection.active() && selection.lanes.empty() && !selection.tempo)
             return TimeSelection();
     }
     return selection;

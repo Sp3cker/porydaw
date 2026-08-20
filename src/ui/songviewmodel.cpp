@@ -85,7 +85,7 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
             break;
         }
         case TIMELINE_EVT_TEMPO:
-            break; // synthetic; the tempo lane is built from tl.tempoMap below
+            break;
         default:
             model.strip.push_back(
                 {ev.tick, ev.track,
@@ -100,10 +100,6 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
     for (ViewNote &note : model.notes)
         if (note.unterminated)
             note.endTick = uint32_t(tl.lengthTicks);
-
-    for (const TempoMapPoint &tp : tl.tempoMap)
-        model.tempoLane.push_back({uint32_t(tp.tick), int(tp.bpm + 0.5)});
-
     for (const OtherEvent &oe : tl.otherEvents)
         model.strip.push_back({oe.tick, oe.track, oe.label});
 

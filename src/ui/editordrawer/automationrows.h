@@ -83,7 +83,7 @@ class AutomationRows final
 
     void rebuildRows();
     void syncTimeSelection();
-    void applyHeight(AutomationArea &area, const AutomationGeometry &geometry) const;
+    void applyHeight(AutomationArea &area, const AutomationGeometry &geometry, int topInset) const;
     bool clearTimeSelection();
 
     const std::vector<LanePoint> &pointsFor(const AutomationRow &row,
@@ -102,10 +102,6 @@ class AutomationRows final
     bool cachedPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
                         const AutomationProjection &projection, const AutomationGeometry &geometry,
                         qreal devicePixelRatio, DocLanePoint *hit) const;
-    std::optional<NodeDragGesture> nodeDragGestureAt(int rowIndex, const QPointF &position,
-                                                     bool axisLockArmed, bool pencilMode,
-                                                     const AutomationGeometry &geometry,
-                                                     qreal devicePixelRatio) const;
     std::optional<NodeDragGesture>
     nodeDragGestureAt(int rowIndex, const QPointF &position, bool axisLockArmed,
                       const AutomationProjection &projection, bool pencilMode,

@@ -11,6 +11,7 @@
 
 #include "core/noteid.h"
 #include "core/smf.h"
+#include "core/tempo.h"
 #include "project/decompproject.h"
 
 class MidiTimeline;
@@ -18,10 +19,6 @@ class MidiTimeline;
 // Pseudo-CC numbers for lanes that aren't controller-backed. DOC_CC_BEND
 // matches LANE_CC_BEND in the view model.
 constexpr uint8_t DOC_CC_BEND = 0xFF;  // pitch-bend events (0xE)
-constexpr uint8_t DOC_CC_TEMPO = 0xFE; // tempo metas; live in SMF track 0 only,
-                                       // because mid2agb reads seq events
-                                       // (tempo/timesig/loop markers) from the
-                                       // first MTrk chunk exclusively
 constexpr uint8_t DOC_CC_VOICE = 0xFD; // program changes (0xC): the track's
                                        // voice; value is the voicegroup entry
 
@@ -45,6 +42,7 @@ struct TrackRemap {
     int newEngineTrackCount = 0;
 
     bool isIdentity() const;
+    TrackRemap inverse() const;
 };
 
 // A note located in the SMF model: the note-on event plus the event that ends
@@ -65,20 +63,23 @@ struct DocNote {
     bool unterminated() const { return endIndex == SIZE_MAX; }
 };
 
-// An automation point (CC value, pitch bend, tempo, or voice change) located
-// in the SMF model. Same staleness rule as DocNote.
+// An automation point (CC, pitch bend, or voice change) located in the SMF
+// model. Same staleness rule as DocNote.
 struct DocLanePoint {
     int smfTrack = -1;
     size_t index = 0;
     uint64_t tick = 0;
-    int value = 0; // CC: 0-127; bend: -8192..8191; tempo: BPM; voice: 0-127
+    int value = 0; // CC: 0-127; bend: -8192..8191; voice: 0-127
 };
 
-// A global MIDI tempo change. The value is the exact SMF FF 51 payload rather
-// than a derived BPM, so the document can preserve MIDI tempo precision.
-struct TempoPoint {
-    uint64_t tick = 0;
-    uint32_t microsecondsPerQuarterNote = 0;
+// Tempo-only mutation. Mixed time/range commands apply a typed Tempo payload
+// through replaceTempoPoints inside their own redo; they must not call
+// applyTempoEdit (that would push a second undo item).
+struct TempoEdit {
+    std::vector<TempoPoint> remove;
+    std::vector<TempoPoint> add;
+
+    bool empty() const { return remove.empty() && add.empty(); }
 };
 
 // A time-signature event (meta 0x58) located in the SMF model. Same
@@ -206,12 +207,20 @@ class SongDocument : public QObject
     void moveLanePoints(const std::vector<LanePointMove> &moves);
 
     void deleteLanePoints(int engineTrack, uint8_t cc, const std::vector<DocLanePoint> &points);
-
+    void applyTempoEdit(const TempoEdit &edit);
+    // Removes raw events and edits the global tempo stream as one undoable
+    // mutation. Both payloads refer to the current document state.
+    void removeRawEventsAndEditTempo(const QString &text, int smfTrack,
+                                     std::vector<size_t> rawIndices, const TempoEdit &tempo);
+    // Replaces one projected Tempo point with one raw event in one undoable
+    // mutation. The point is addressed by tick in the current Tempo stream.
+    void replaceTempoPointWithRawEvent(const QString &text, int smfTrack, const TempoPoint &point,
+                                       SmfEvent event);
     // Multi-track range edit (time-selection delete/paste): removals and
     // insertions across any mix of tracks and lanes, applied as one undoable
     // command with a single documentChanged emission. Notes/points to remove
-    // must be freshly resolved (their indices are read at push time); an
-    // engineTrack of -1 targets the tempo lane (DOC_CC_TEMPO only).
+    // must be freshly resolved (their indices are read at push time). Tempo
+    // uses removeTempo/addTempo, not a fake lane.
     struct RangeEdit {
         std::vector<DocNote> removeNotes;
         std::vector<DocLanePoint> removePoints;
@@ -221,35 +230,37 @@ class SongDocument : public QObject
         };
         std::vector<TrackNotes> addNotes;
         struct LaneWrite {
-            int engineTrack; // -1 = tempo (seq chunk)
+            int engineTrack;
             uint8_t cc;
             std::vector<LanePointValue> points; // absolute ticks
         };
         std::vector<LaneWrite> addPoints;
+        std::vector<TempoPoint> removeTempo;
+        std::vector<TempoPoint> addTempo;
 
         bool empty() const
         {
             return removeNotes.empty() && removePoints.empty() && addNotes.empty() &&
-                   addPoints.empty();
+                   addPoints.empty() && removeTempo.empty() && addTempo.empty();
         }
     };
     void applyRangeEdit(const QString &text, const RangeEdit &edit);
 
-    // Time-selection nudge: shift notes and lane points (any mix of tracks
-    // and lanes, tempo included) by a tick delta as one undoable command.
-    // Events are re-inserted with their exact bytes, so tempo blobs keep
-    // their precise microseconds and unterminated notes stay unterminated.
+    // Time-selection nudge: shift notes, lane points, and tempo points by a
+    // tick delta as one undoable command. Events are re-inserted with their
+    // exact bytes so unterminated notes stay unterminated. Tempo keeps its
+    // stored microseconds-per-quarter-note.
     void moveRange(const std::vector<DocNote> &notes, const std::vector<DocLanePoint> &points,
-                   int64_t dTick);
+                   int64_t dTick, const std::vector<TempoPoint> &tempo = {});
 
-    // Ripple delete (time-selection "Remove contents"): erases the half-open
-    // range on the scoped streams and closes the gap — everything at or after
-    // endTick moves left by the span. Value streams (CC, bend, voice, tempo,
-    // time signatures) keep the state the shifted content was authored under:
-    // the last in-range point moves to startTick instead of vanishing (unless
-    // a point shifts onto that seam from endTick anyway).
-    // tracks ripple notes plus every non-note channel event of the track;
-    // wholeSong — the all-tracks cut — ignores tracks/lanes and ripples every
+    // Remove a time range ("Remove contents"): erases the half-open range on
+    // the scoped streams and closes the gap — everything at or after endTick
+    // moves left by the span. Value streams (CC, bend, voice, tempo, time
+    // signatures) keep the state the shifted content was authored under: the
+    // last in-range point moves to startTick instead of vanishing (unless a
+    // point shifts onto that seam from endTick anyway).
+    // tracks close notes plus every non-note channel event of the track;
+    // wholeSong — the all-tracks cut — ignores tracks/lanes and closes every
     // engine track plus the global rows: tempo, time signatures, loop markers
     // and other metas (moved to the seam, never deleted), and each chunk's
     // end-of-track tick, so the song itself gets shorter. One undoable command;
@@ -268,7 +279,8 @@ class SongDocument : public QObject
     };
     struct TimeScope {
         std::vector<int> tracks;                    // engine tracks (ignored when wholeSong)
-        std::vector<std::pair<int, uint8_t>> lanes; // (engineTrack, cc); -1 = tempo
+        std::vector<std::pair<int, uint8_t>> lanes; // Voice/CC (engineTrack, cc)
+        bool tempo = false;
         bool wholeSong = false;
 
         bool coversTrack(int engineTrack) const
@@ -276,6 +288,7 @@ class SongDocument : public QObject
             return wholeSong ||
                    std::find(tracks.begin(), tracks.end(), engineTrack) != tracks.end();
         }
+        bool coversTempo() const { return wholeSong || tempo; }
         bool coversLane(int engineTrack, uint8_t cc) const
         {
             if (wholeSong)
@@ -286,7 +299,7 @@ class SongDocument : public QObject
                    std::find(tracks.begin(), tracks.end(), engineTrack) != tracks.end();
         }
     };
-    bool rippleDeleteTimeRange(const TimeRange &range, const TimeScope &scope);
+    bool removeTimeRange(const TimeRange &range, const TimeScope &scope);
     // Insert a silent [startTick, endTick) gap on the scoped streams. Events
     // at or after startTick shift right; notes crossing the seam split so the
     // inserted interval remains silent. One undoable command.
@@ -386,8 +399,10 @@ class SongDocument : public QObject
 
   private:
     friend class SongEditCommand;
+    friend class TempoEditCommand;
     friend class SongCfgCommand;
     friend class MoveNotesCommand;
+    friend class MixedEditCommand;
     friend class MoveNotesToPitchesCommand;
 
     struct EditOp {
@@ -420,12 +435,16 @@ class SongDocument : public QObject
     void applyOps(std::vector<EditOp> &ops);
     void revertOps(std::vector<EditOp> &ops);
     void pushEdit(const QString &text, std::vector<EditOp> ops);
+    void pushEdit(const QString &text, std::vector<EditOp> ops, std::vector<TempoPoint> nextTempo);
     void rebuildTrackMap();
     TrackMapState trackMapState() const;
     TrackRemap currentTrackRemap() const;
     TrackRemap trackRemap(const TrackMapState &before, const std::vector<EditOp> &ops) const;
     void publishMutation(TrackRemap remap);
-    void rebuildTempoPoints();
+    static std::vector<TempoPoint> tempoPointsFromSmf(const SmfFile &smf);
+    static std::vector<TempoPoint> normalizeTempoPoints(std::vector<TempoPoint> points);
+    // The sole m_tempoPoints writer; its input must be normalized first.
+    void replaceTempoPoints(std::vector<TempoPoint> normalized);
     void mintNoteId(SmfEvent *event);
     bool noteAt(int engineTrack, size_t onIndex, DocNote *out) const;
     void mintUnassignedNoteIds();

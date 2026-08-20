@@ -19,6 +19,7 @@ class QWheelEvent;
 class QPainter;
 class QRect;
 class AutomationArea;
+class TempoLane;
 class AutomationRows;
 struct AutomationHoverState;
 class MidiTimeline;
@@ -51,6 +52,7 @@ class AutomationPage final : public QWidget
   private:
     friend class AutomationArea;
     friend class AutomationRows;
+    friend class TempoLane;
     friend class AutomationHoverState;
     // Read-only access to the timeline mapping queries (tickAtContentX,
     // displayX, visible grid cells) and m_viewState row layout.
@@ -97,6 +99,7 @@ class AutomationPage final : public QWidget
 
     void refreshGeometry();
     int scrollGutter() const noexcept;
+    int laneHeightFor(const EditorAutomationRowId &row) const noexcept;
     class ScrollArea;
     bool ready() const noexcept;
     const DrawerPageLiveState &liveState() const noexcept { return m_liveState; }
@@ -117,7 +120,8 @@ class AutomationPage final : public QWidget
     void publishViewState();
     void rebuildModel();
     void publishTimeSelection(uint64_t startTick, uint64_t endTick,
-                              const std::vector<std::pair<int, uint8_t>> &lanes) const;
+                              const std::vector<std::pair<int, uint8_t>> &lanes,
+                              bool tempo = false) const;
     DrawerPageVoiceContext voiceContext(uint64_t tick) const;
     void showTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request) const;
     bool pickVoice(const QString &title, int initialVoice, int *outVoice) const;

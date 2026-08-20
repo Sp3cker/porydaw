@@ -81,6 +81,13 @@ int AutomationPage::scrollGutter() const noexcept
 {
     return m_scroll ? m_scroll->gutter() : 0;
 }
+int AutomationPage::laneHeightFor(const EditorAutomationRowId &row) const noexcept
+{
+    const int shared =
+        m_viewState.laneHeight > 0 ? m_viewState.laneHeight : m_geometry.rowDefaultHeight;
+    const auto it = m_viewState.laneHeights.find(row);
+    return it == m_viewState.laneHeights.cend() ? shared : it->second;
+}
 
 AutomationPage::AutomationPage(SongView &owner, QWidget *parent)
     : QWidget(parent)
@@ -418,13 +425,15 @@ void AutomationPage::setLaneRange(const EditorAutomationRowId &row, uint8_t rang
 }
 
 void AutomationPage::publishTimeSelection(uint64_t startTick, uint64_t endTick,
-                                          const std::vector<std::pair<int, uint8_t>> &lanes) const
+                                          const std::vector<std::pair<int, uint8_t>> &lanes,
+                                          bool tempo) const
 {
     songview::EditorSelectionModel::TimeSelection selection;
     selection.startTick = startTick;
     selection.endTick = endTick;
     selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
     selection.lanes = lanes;
+    selection.tempo = tempo;
     m_owner.selectionModel().setTimeSelection(selection);
 }
 

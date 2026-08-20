@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include <QRect>
 #include <QtGlobal>
 
 #include "ui/editorviewstate.h"
@@ -91,10 +92,11 @@ class AutomationProjection
     };
 
     AutomationProjection(const AutomationGeometry &geometry, const std::vector<AutomationRow> &rows,
-                         const AutomationPage *page)
+                         const AutomationPage *page, int topInset)
         : m_geometry(geometry)
         , m_rows(rows)
         , m_page(page)
+        , m_topInset(topInset)
     {}
 
     int rowHeight(const AutomationRow &row) const;
@@ -107,6 +109,12 @@ class AutomationProjection
     int valueAtY(int rowIndex, qreal y) const;
     qreal pointY(const AutomationRow &row, int rowIndex, int value) const;
     double rawTickAt(qreal x) const;
+    qreal displayX(uint64_t tick, qreal devicePixelRatio) const;
+    uint64_t snapTickAt(qreal x, bool fine) const;
+    static qreal valueY(const QRect &bounds, const AutomationGeometry &geometry, double minimum,
+                        double maximum, double value);
+    static double valueAtY(const QRect &bounds, const AutomationGeometry &geometry, double minimum,
+                           double maximum, qreal y);
     uint64_t fineSnapTick(double rawTick) const;
     const AutoLane *laneFor(const AutomationRow &row) const;
     bool nodeMarkersVisible() const;
@@ -121,4 +129,5 @@ class AutomationProjection
     AutomationGeometry m_geometry;
     std::vector<AutomationRow> m_rows;
     const AutomationPage *m_page;
+    int m_topInset = 0;
 };
