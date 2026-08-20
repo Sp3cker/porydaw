@@ -478,10 +478,28 @@ TrackRemap SongDocument::trackRemap(const TrackMapState &before,
 
 void SongDocument::publishMutation(TrackRemap remap)
 {
+    rebuildTempoPoints();
     m_revision++;
     if (!remap.isIdentity())
         emit tracksRemapped(std::move(remap));
     emit documentChanged();
+}
+
+void SongDocument::rebuildTempoPoints()
+{
+    m_tempoPoints.clear();
+    if (m_smf.tracks.empty())
+        return;
+
+    const auto &events = m_smf.tracks.front().events;
+    m_tempoPoints.reserve(events.size());
+    for (const SmfEvent &event : events) {
+        if (!event.isMeta() || event.metaType != 0x51 || event.blob.size() != 3)
+            continue;
+        const auto *bytes = reinterpret_cast<const uint8_t *>(event.blob.constData());
+        m_tempoPoints.push_back(
+            {event.tick, (uint32_t(bytes[0]) << 16) | (uint32_t(bytes[1]) << 8) | bytes[2]});
+    }
 }
 
 void SongDocument::mintNoteId(SmfEvent *event)

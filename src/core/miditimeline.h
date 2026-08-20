@@ -33,7 +33,7 @@ struct TimelineTrack {
 
 // Tempo map entry (viewer data; playback uses the merged TIMELINE_EVT_TEMPO
 // events). The map always has an entry at tick 0.
-struct TempoPoint {
+struct TempoMapPoint {
     uint64_t tick;
     uint64_t samplePos;
     double bpm;
@@ -99,7 +99,7 @@ class MidiTimeline
     uint64_t lengthTicks = 0;
     uint64_t loopStartTick = UINT64_MAX;
     uint64_t loopEndTick = UINT64_MAX;
-    std::vector<TempoPoint> tempoMap;    // sorted by tick, first entry at tick 0
+    std::vector<TempoMapPoint> tempoMap; // sorted by tick, first entry at tick 0
     std::vector<TimeSigPoint> timeSigs;  // sorted by tick, may be empty
     std::vector<OtherEvent> otherEvents; // sorted by tick
 
