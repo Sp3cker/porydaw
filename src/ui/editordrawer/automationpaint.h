@@ -37,6 +37,11 @@ void paintAutomationNode(QPainter &painter, const AutomationGeometry &geometry, 
                          const QColor &selectedColor = {}, bool dimUnselected = false,
                          const QColor &dimmedColor = {});
 
+void paintPlainGridFallback(QPainter &painter, const QRect &plot, AutomationPage &page,
+                            qreal plotOriginX, qreal dpr);
+
+void paintEditCursor(QPainter &painter, const QRect &plot, qreal cursorX);
+
 void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
               const QFont &titleFont, const QFont &captionFont, const QRect &primaryTextBox,
               const QRect &secondaryTextBox, AutomationArea &area, AutomationPage &page,

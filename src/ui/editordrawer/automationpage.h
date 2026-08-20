@@ -63,6 +63,8 @@ class AutomationPage final : public QWidget
                                             AutomationPage &, const AutomationGeometry &,
                                             AutomationRows &, const AutomationHoverState &,
                                             const std::optional<ActiveGesture> &, bool);
+    friend void automation::paint::paintPlainGridFallback(QPainter &, const QRect &,
+                                                          AutomationPage &, qreal, qreal);
     friend void automation::paint::paintHover(QPainter &, const automation::paint::RowPaintParams &,
                                               AutomationPage &, const AutomationGeometry &,
                                               const AutomationRows &, const AutomationHoverState &,
