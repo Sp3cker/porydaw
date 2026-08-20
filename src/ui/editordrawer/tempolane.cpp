@@ -13,6 +13,7 @@
 #include "core/timedefaults.h"
 #include "ui/contextmenu.h"
 #include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawerpage.h"
 #include "ui/layout.h"
@@ -312,41 +313,17 @@ std::optional<std::size_t> TempoLane::hitPoint(const QPointF &position,
 {
     if (!m_page || !m_page->document() || !containsBody(position))
         return std::nullopt;
-    const auto &points = m_page->document()->tempoPoints();
-    const auto center = std::lower_bound(
-        points.cbegin(), points.cend(), projection.rawTickAt(position.x()),
-        [](const TempoPoint &point, double tick) { return double(point.tick) < tick; });
-    const qreal radius = geometry.pointHitRadius;
-    const qreal radiusSquared = radius * radius;
-    std::optional<std::size_t> result;
-    qreal nearest = radiusSquared;
-    const auto consider = [&](std::size_t index) {
-        const TempoPoint &point = points[index];
-        const qreal x = projection.displayX(point.tick, devicePixelRatio);
-        if (std::abs(x - position.x()) > radius)
-            return false;
-        const qreal y = AutomationProjection::valueY(
-            m_body, geometry, CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm,
-            CoreTimeDefaults::tempoBpm(point.microsecondsPerQuarterNote));
-        const qreal dx = x - position.x();
-        const qreal dy = y - position.y();
-        const qreal distance = dx * dx + dy * dy;
-        if (distance <= radiusSquared && distance <= nearest) {
-            nearest = distance;
-            result = index;
-        }
-        return true;
-    };
-    for (auto it = center; it != points.cend(); ++it) {
-        if (!consider(std::size_t(it - points.cbegin())))
-            break;
-    }
-    for (auto it = center; it != points.cbegin();) {
-        --it;
-        if (!consider(std::size_t(it - points.cbegin())))
-            break;
-    }
-    return result;
+    return nearestPointInRadius(
+        m_page->document()->tempoPoints(), projection.rawTickAt(position.x()), position,
+        geometry.pointHitRadius,
+        [&projection, devicePixelRatio](const TempoPoint &point) {
+            return projection.displayX(point.tick, devicePixelRatio);
+        },
+        [this, &geometry](const TempoPoint &point) {
+            return AutomationProjection::valueY(
+                m_body, geometry, CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm,
+                CoreTimeDefaults::tempoBpm(point.microsecondsPerQuarterNote));
+        });
 }
 
 bool TempoLane::promptBpm(AutomationArea &area, int currentBpm, int *bpm) const
@@ -364,13 +341,7 @@ bool TempoLane::promptBpm(AutomationArea &area, int currentBpm, int *bpm) const
 
 void TempoLane::appendDrawPoint(DrawState &draw, TempoPoint point)
 {
-    const auto position = std::lower_bound(
-        draw.points.begin(), draw.points.end(), point.tick,
-        [](const TempoPoint &candidate, uint64_t tick) { return candidate.tick < tick; });
-    if (position != draw.points.end() && position->tick == point.tick)
-        *position = point;
-    else
-        draw.points.insert(position, point);
+    upsertByTick(draw.points, std::move(point));
 }
 
 void TempoLane::appendDrawSegment(DrawState &draw, TempoPoint next, bool fine)

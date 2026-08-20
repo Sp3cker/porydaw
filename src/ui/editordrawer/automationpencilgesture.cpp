@@ -1,5 +1,7 @@
 #include "ui/editordrawer/automationpencilgesture.h"
 
+#include "ui/editordrawer/automationgesture.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -90,7 +92,7 @@ AutomationPencilGesture::AutomationPencilGesture(
     m_initialPoint.tick = firstCell.tickBegin;
     m_initialPoint.value = roundedValue(m_previous.continuousValue);
     eraseStrokePointsIn(firstCell.tickBegin, firstCell.tickEnd);
-    upsertPoint(m_strokePoints, m_initialPoint.tick, m_initialPoint.value);
+    upsertByTick(m_strokePoints, m_initialPoint);
     rebuildPreview();
 }
 
@@ -154,13 +156,14 @@ bool AutomationPencilGesture::applySnappedSegment(Sample sample,
         const double continuousValue =
             anchor.continuousValue + (sample.continuousValue - anchor.continuousValue) * fraction;
         eraseStrokePointsIn(cell.tickBegin, cell.tickEnd);
-        upsertPoint(m_strokePoints, cell.tickBegin, roundedValue(continuousValue));
+        upsertByTick(m_strokePoints,
+                     automation::ValuePoint{cell.tickBegin, roundedValue(continuousValue)});
         m_tickBegin = std::min(m_tickBegin, cell.tickBegin);
         m_tickEnd = std::max(m_tickEnd, cell.tickEnd);
     }
 
     if (restoreInitialPoint)
-        upsertPoint(m_strokePoints, m_initialPoint.tick, m_initialPoint.value);
+        upsertByTick(m_strokePoints, m_initialPoint);
     if (exitsInitialCell)
         m_initialCellExited = true;
 
@@ -191,8 +194,7 @@ bool AutomationPencilGesture::applyFreehandSegment(Sample sample)
                                  sample.continuousValue - previous.continuousValue);
         }
         if (!continuesFreehandLine) {
-            upsertPoint(m_strokePoints, m_provisionalFreehandEndpoint->tick,
-                        m_provisionalFreehandEndpoint->value);
+            upsertByTick(m_strokePoints, *m_provisionalFreehandEndpoint);
             preservedTurnTick = m_provisionalFreehandEndpoint->tick;
         }
     }
@@ -211,7 +213,7 @@ bool AutomationPencilGesture::applyFreehandSegment(Sample sample)
         if (provisionalEndpoint)
             m_provisionalFreehandEndpoint = point;
         else if (!interiorSample || !preservedTurnTick || point.tick != *preservedTurnTick)
-            upsertPoint(m_strokePoints, point.tick, point.value);
+            upsertByTick(m_strokePoints, point);
         const uint64_t rangeEnd = nextClockTick(clockTick, m_documentClockTicks, m_songEndTick);
         m_tickBegin = std::min(m_tickBegin, clockTick);
         m_tickEnd = std::max(m_tickEnd, rangeEnd);
@@ -255,13 +257,7 @@ void AutomationPencilGesture::rebuildPreview()
     if (m_provisionalFreehandEndpoint && m_provisionalFreehandEndpoint->tick >= m_tickBegin &&
         m_provisionalFreehandEndpoint->tick <= m_tickEnd) {
         const automation::ValuePoint &endpoint = *m_provisionalFreehandEndpoint;
-        const auto position = std::lower_bound(
-            points.begin(), points.end(), endpoint.tick,
-            [](const AutomationLaneEdit::Point &left, uint64_t tick) { return left.tick < tick; });
-        if (position != points.end() && position->tick == endpoint.tick)
-            position->value = endpoint.value;
-        else
-            points.insert(position, {endpoint.tick, endpoint.value});
+        upsertByTick(points, AutomationLaneEdit::Point{endpoint.tick, endpoint.value});
     }
     m_cachedPreview = m_laneEdit.replaceHeldSpan(m_tickBegin, m_tickEnd, m_songEndTick,
                                                  m_minimumValue, m_maximumValue, std::move(points));
@@ -274,16 +270,6 @@ void AutomationPencilGesture::eraseStrokePointsIn(uint64_t tickBegin, uint64_t t
     const auto last =
         std::lower_bound(m_strokePoints.begin(), m_strokePoints.end(), tickEnd, lessPointTick);
     m_strokePoints.erase(first, last);
-}
-
-void AutomationPencilGesture::upsertPoint(std::vector<automation::ValuePoint> &points,
-                                          uint64_t tick, int value)
-{
-    const auto position = std::lower_bound(points.begin(), points.end(), tick, lessPointTick);
-    if (position != points.end() && position->tick == tick)
-        position->value = value;
-    else
-        points.insert(position, {tick, value});
 }
 
 int AutomationPencilGesture::roundedValue(double continuousValue) const noexcept

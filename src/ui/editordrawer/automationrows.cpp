@@ -308,51 +308,23 @@ bool AutomationRows::cachedPointHit(const AutomationRow &row, int rowIndex, cons
     const auto points = m_page->document()->lanePoints(track, controller);
     if (points.empty())
         return false;
-    const qreal radius = geometry.pointHitRadius;
-    const qreal left = position.x() - radius;
-    const qreal right = position.x() + radius;
-    const double centerTick = projection.rawTickAt(position.x());
-    const auto center = std::lower_bound(
-        points.cbegin(), points.cend(), centerTick,
-        [](const DocLanePoint &point, double tick) { return double(point.tick) < tick; });
-    auto first = center;
-    while (first != points.cbegin()) {
-        const auto candidate = first - 1;
-        if (m_page->displayX(candidate->tick, geometry.plotOrigin, devicePixelRatio) < left)
-            break;
-        first = candidate;
-    }
-    auto last = center;
-    while (last != points.cend()) {
-        if (m_page->displayX(last->tick, geometry.plotOrigin, devicePixelRatio) > right)
-            break;
-        ++last;
-    }
-    if (first == last)
-        return false;
     const auto [top, bottom] = projection.valuePlotBounds(rowIndex);
     const int minimum = projection.rowMinimum(row);
     const int maximum = projection.rowMaximum(row);
     const int valueRange = std::max(1, maximum - minimum);
-    const qreal radiusSquared = radius * radius;
-    bool found = false;
-    qreal nearestDistance = radiusSquared;
-    for (auto candidate = first; candidate != last; ++candidate) {
-        const qreal renderedX =
-            m_page->displayX(candidate->tick, geometry.plotOrigin, devicePixelRatio);
-        const qreal renderedY =
-            qreal(bottom - (candidate->value - minimum) * (bottom - top) / valueRange);
-        const qreal dx = renderedX - position.x();
-        const qreal dy = renderedY - position.y();
-        const qreal candidateDistance = dx * dx + dy * dy;
-        if (candidateDistance > radiusSquared || (found && candidateDistance > nearestDistance))
-            continue;
-        found = true;
-        nearestDistance = candidateDistance;
-        if (hit)
-            *hit = *candidate;
-    }
-    return found;
+    const auto pointIndex = nearestPointInRadius(
+        points, projection.rawTickAt(position.x()), position, geometry.pointHitRadius,
+        [this, &geometry, devicePixelRatio](const DocLanePoint &point) {
+            return m_page->displayX(point.tick, geometry.plotOrigin, devicePixelRatio);
+        },
+        [top, bottom, minimum, valueRange](const DocLanePoint &point) {
+            return qreal(bottom - (point.value - minimum) * (bottom - top) / valueRange);
+        });
+    if (!pointIndex)
+        return false;
+    if (hit)
+        *hit = points[*pointIndex];
+    return true;
 }
 
 std::optional<NodeDragGesture>

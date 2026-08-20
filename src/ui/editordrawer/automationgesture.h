@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -136,6 +137,18 @@ AxisLock resolveAxisLock(AxisLock current, bool shiftHeld, const QPointF &origin
                          const QPointF &position, int activationDistance) noexcept;
 void applyAxisLock(AxisLock lock, const ValuePoint &original, ValuePoint &current) noexcept;
 
+// Insert or replace the point at its tick. Precondition: points sorted by tick.
+template <class Points, class Point>
+void upsertByTick(Points &points, Point point);
+
+// Nearest point to pos within radius px, measured via xOf/yOf pixel mapping.
+// Preconditions: points sorted by .tick; xOf(point) monotonic in tick
+// (early termination relies on it).
+// Tie rule: exact equidistant candidates resolve to the LATER tick.
+template <class Points, class XOf, class YOf>
+std::optional<std::size_t> nearestPointInRadius(const Points &points, double centerRawTick,
+                                                QPointF pos, qreal radius, XOf &&xOf, YOf &&yOf);
+
 // Mapping helpers — page-free versions that take plain values.
 void updateValuePoint(const AutomationProjection &proj, int rowIndex, const AutomationRow &row,
                       ValuePoint &point, int y, uint64_t tick, bool snapValue,
@@ -151,6 +164,53 @@ bool updatePencilDrawPath(PencilGesture &gesture, const QPointF &position, bool 
 
 // ---- template definitions ----
 
+template <class Points, class Point>
+void upsertByTick(Points &points, Point point)
+{
+    auto it = std::lower_bound(points.begin(), points.end(), point.tick,
+                               [](const auto &p, uint64_t tick) { return p.tick < tick; });
+    if (it != points.end() && it->tick == point.tick)
+        *it = point;
+    else
+        points.insert(it, std::move(point));
+}
+
+template <class Points, class XOf, class YOf>
+std::optional<std::size_t> nearestPointInRadius(const Points &points, double centerRawTick,
+                                                QPointF pos, qreal radius, XOf &&xOf, YOf &&yOf)
+{
+    const auto center =
+        std::lower_bound(points.cbegin(), points.cend(), centerRawTick,
+                         [](const auto &point, double tick) { return double(point.tick) < tick; });
+    auto first = center;
+    while (first != points.cbegin()) {
+        const auto candidate = first - 1;
+        if (std::abs(xOf(*candidate) - pos.x()) > radius)
+            break;
+        first = candidate;
+    }
+    auto last = center;
+    while (last != points.cend()) {
+        if (std::abs(xOf(*last) - pos.x()) > radius)
+            break;
+        ++last;
+    }
+
+    const qreal radiusSquared = radius * radius;
+    std::optional<std::size_t> nearest;
+    qreal nearestDistance = radiusSquared;
+    for (auto candidate = first; candidate != last; ++candidate) {
+        const qreal dx = xOf(*candidate) - pos.x();
+        const qreal dy = yOf(*candidate) - pos.y();
+        const qreal distance = dx * dx + dy * dy;
+        if (distance <= radiusSquared && distance <= nearestDistance) {
+            nearestDistance = distance;
+            nearest = std::size_t(candidate - points.cbegin());
+        }
+    }
+    return nearest;
+}
+
 template <typename NextGridTick>
 void extendSweepPoints(SweepGesture &gesture, uint64_t first, uint64_t last, double rawTick,
                        bool fineGrid, NextGridTick &&nextGridTick)
@@ -163,13 +223,7 @@ void extendSweepPoints(SweepGesture &gesture, uint64_t first, uint64_t last, dou
             value = gesture.previousValue +
                     int(std::llround(fraction * (gesture.current.value - gesture.previousValue)));
         }
-        const auto position =
-            std::lower_bound(gesture.points.begin(), gesture.points.end(), tick,
-                             [](const ValuePoint &point, uint64_t v) { return point.tick < v; });
-        if (position != gesture.points.end() && position->tick == tick)
-            position->value = value;
-        else
-            gesture.points.insert(position, {tick, value});
+        upsertByTick(gesture.points, ValuePoint{tick, value});
         if (tick == last)
             break;
         tick = nextGridTick(tick, fineGrid, last);
