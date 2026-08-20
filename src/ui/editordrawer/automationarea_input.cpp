@@ -56,7 +56,8 @@ void AutomationArea::wheelEvent(QWheelEvent *event)
 void AutomationArea::mousePressEvent(QMouseEvent *event)
 {
     m_hoverState.clearHover(*this);
-    m_hoverState.hover.nodeDeleted = false;
+    m_deletedNodeClick.clear();
+    m_activeNodeIdentities.clear();
     if (!m_page || !m_page->document())
         return;
     if (event->button() == Qt::MiddleButton) {
@@ -143,7 +144,8 @@ void AutomationArea::mousePressEvent(QMouseEvent *event)
         if (auto nodeGesture = m_rowData.nodeDragGestureAt(
                 rowIndex, event->position(), event->modifiers() & Qt::ShiftModifier, proj,
                 m_pencilMode, m_geometry, devicePixelRatioF())) {
-            m_activeGesture.emplace(std::move(*nodeGesture));
+            m_activeNodeIdentities = std::move(nodeGesture->identities);
+            m_activeGesture.emplace(std::move(nodeGesture->gesture));
             setGestureActive(true);
             m_hoverState.updatePreviewValueLabel(*this, m_page, m_geometry, m_rowData, proj,
                                                  m_activeGesture);
@@ -181,7 +183,8 @@ void AutomationArea::mousePressEvent(QMouseEvent *event)
     if (auto nodeGesture = m_rowData.nodeDragGestureAt(
             rowIndex, event->position(), event->modifiers() & Qt::ShiftModifier, proj, m_pencilMode,
             m_geometry, devicePixelRatioF())) {
-        m_activeGesture.emplace(std::move(*nodeGesture));
+        m_activeNodeIdentities = std::move(nodeGesture->identities);
+        m_activeGesture.emplace(std::move(nodeGesture->gesture));
     } else {
         SweepGesture sweep;
         sweep.row = rowIndex;
@@ -335,6 +338,7 @@ void AutomationArea::mouseReleaseEvent(QMouseEvent *event)
     updateActiveGesture(event->position(), event->modifiers(), false);
     finishActiveGesture(event->modifiers() & Qt::AltModifier);
     m_activeGesture.reset();
+    m_activeNodeIdentities.clear();
     m_hoverState.previewValueLabel = {};
     setGestureActive(false);
     updateAxisLockCursor(AxisLock::None);
@@ -359,10 +363,8 @@ void AutomationArea::mouseDoubleClickEvent(QMouseEvent *event)
     uint8_t controller = 0;
     if (!m_rowData.rowTarget(m_rowData.rows()[rowIndex], &track, &controller))
         return;
-    if (m_hoverState.hover.nodeDeleted) {
-        m_hoverState.hover.nodeDeleted = false;
+    if (m_deletedNodeClick.consume())
         return;
-    }
     // Node delete is a plain single click (see NodeDragGesture finish). A
     // double-click on empty lane still opens exact value entry; on a node it
     // is a no-op because the first click already removed it.
@@ -425,13 +427,19 @@ void AutomationArea::keyPressEvent(QKeyEvent *event)
         return;
     }
     if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) &&
+        m_tempoLane.deleteTimeSelection()) {
+        event->accept();
+        invalidateContent();
+        return;
+    }
+    if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) &&
         m_rowData.timeSelection().active() && m_page && m_page->document()) {
-        const auto selected = m_rowData.collectSelectedNodeDrags();
-        if (!selected.empty()) {
+        const auto selected = m_rowData.collectSelectedNodeDrags(projection());
+        if (!selected.identities.empty()) {
             SongDocument::RangeEdit edit;
-            edit.removePoints.reserve(selected.size());
-            for (const auto &point : selected)
-                edit.removePoints.push_back(point.documentPoint);
+            edit.removePoints.reserve(selected.identities.size());
+            for (const LaneNodeIdentity &identity : selected.identities)
+                edit.removePoints.push_back(identity.documentPoint);
             m_page->document()->applyRangeEdit(tr("delete selected automation points"), edit);
             m_hoverState.clearHover(*this);
             m_page->requestRefresh();

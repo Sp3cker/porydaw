@@ -70,55 +70,43 @@ void AutomationArea::updateActiveGesture(const QPointF &position, Qt::KeyboardMo
         return m_page->nextGridTick(tick, useFineGrid, limit);
     };
     std::visit(
-        Visitor{
-            [this, position, fineGrid, snapValue, &proj, &axisCursor,
-             modifiers](NodeDragGesture &gesture) {
-                const QPointF effective = [&]() -> QPointF {
-                    if (!gesture.dragSlop.exceeded)
-                        return position;
-                    return QPointF(
-                        gesture.pressPosition.x() + (position.x() - gesture.dragSlop.origin.x()),
-                        gesture.pressPosition.y() + (position.y() - gesture.dragSlop.origin.y()));
-                }();
-                const ValuePoint mappedGrab =
-                    this->mappedForRow(gesture.row, effective, fineGrid, snapValue, proj);
-                axisCursor =
-                    gesture.update(position, mappedGrab, modifiers,
-                                   m_geometry.nodeDragActivationDistance, m_rowData.rows(), proj);
-            },
-            [this, position, fineGrid, snapValue, activateSweep, &proj, &snappedRange,
-             &nextGridTick](SweepGesture &gesture) {
-                if (gesture.mode == SweepGesture::Mode::Ramp) {
-                    const ValuePoint mapped =
-                        this->mappedForRow(gesture.row, position, fineGrid, snapValue, proj);
-                    gesture.update(mapped);
-                    return;
-                }
-                if (!gesture.slop.exceeded) {
-                    const QPointF delta = position - gesture.pressPosition;
-                    const qreal travel = std::abs(delta.x()) + std::abs(delta.y());
-                    const auto activationDistance = qreal(m_geometry.nodeDragActivationDistance);
-                    if (!activateSweep || travel < activationDistance)
+        Visitor{[this, position, fineGrid, snapValue, &proj, &axisCursor,
+                 modifiers](NodeDragGesture &gesture) {
+                    const PointDragUpdate dragUpdate = gesture.drag.update(
+                        position, modifiers, m_geometry.nodeDragActivationDistance);
+                    if (dragUpdate.phase == PointDragUpdate::Phase::Pending)
                         return;
-                    gesture.slop.markExceeded(position);
-                    return;
-                }
-                const QPointF effective = gesture.pressPosition + position - gesture.slop.origin;
-                if (gesture.points.empty() && effective == gesture.pressPosition)
-                    return;
-                const ValuePoint mapped =
-                    this->mappedForRow(gesture.row, effective, fineGrid, snapValue, proj);
-                const double rawTick = proj.rawTickAt(effective.x());
-                const auto [first, last] = snappedRange(gesture.previousRawTick, rawTick);
-                gesture.update(mapped, first, last, rawTick, fineGrid, nextGridTick);
-            },
-            [this, position, modifiers, &proj](PencilGesture &gesture) {
-                const bool freehand = modifiers & Qt::ControlModifier;
-                const AxisLock lock =
-                    modifiers & Qt::ShiftModifier ? AxisLock::Value : AxisLock::None;
-                gesture.update(position, freehand, lock, proj, m_rowData.rows()[gesture.row],
-                               m_geometry.nodeDragActivationDistance);
-            }},
+                    ValuePoint mappedGrab;
+                    if (dragUpdate.phase == PointDragUpdate::Phase::Dragging)
+                        mappedGrab = this->mappedForRow(gesture.row, dragUpdate.effectivePosition,
+                                                        fineGrid, snapValue, proj);
+                    axisCursor = gesture.update(dragUpdate, mappedGrab);
+                },
+                [this, position, fineGrid, snapValue, activateSweep, &proj, &snappedRange,
+                 &nextGridTick](SweepGesture &gesture) {
+                    if (gesture.mode == SweepGesture::Mode::Ramp) {
+                        const ValuePoint mapped =
+                            this->mappedForRow(gesture.row, position, fineGrid, snapValue, proj);
+                        gesture.update(mapped);
+                        return;
+                    }
+                    const auto effective = gesture.dragPosition(
+                        position, activateSweep, m_geometry.nodeDragActivationDistance);
+                    if (!effective)
+                        return;
+                    const ValuePoint mapped =
+                        this->mappedForRow(gesture.row, *effective, fineGrid, snapValue, proj);
+                    const double rawTick = proj.rawTickAt(effective->x());
+                    const auto [first, last] = snappedRange(gesture.previousRawTick, rawTick);
+                    gesture.update(mapped, first, last, rawTick, fineGrid, nextGridTick);
+                },
+                [this, position, modifiers, &proj](PencilGesture &gesture) {
+                    const bool freehand = modifiers & Qt::ControlModifier;
+                    const AxisLock lock =
+                        modifiers & Qt::ShiftModifier ? AxisLock::Value : AxisLock::None;
+                    gesture.update(position, freehand, lock, proj, m_rowData.rows()[gesture.row],
+                                   m_geometry.nodeDragActivationDistance);
+                }},
         *m_activeGesture);
     if (std::holds_alternative<NodeDragGesture>(*m_activeGesture))
         updateAxisLockCursor(axisCursor);
@@ -138,62 +126,79 @@ void AutomationArea::finishActiveGesture(bool fineMode)
     uint8_t controller = 0;
     const bool hasTarget = document && rowIndex >= 0 && rowIndex < int(m_rowData.rows().size()) &&
                            m_rowData.rowTarget(m_rowData.rows()[rowIndex], &track, &controller);
-    GestureCommit commit = std::visit(
-        Visitor{[](const NodeDragGesture &gesture) -> GestureCommit { return gesture.finish(); },
-                [this, &proj, document, hasTarget, track, controller,
-                 fineMode](const SweepGesture &gesture) -> GestureCommit {
-                    if (gesture.mode == SweepGesture::Mode::Drag && !gesture.slop.exceeded) {
-                        m_page->commitEditCursor(
-                            m_page->snapTick(proj.rawTickAt(gesture.pressPosition.x()), false));
-                        return std::monostate{};
-                    }
-                    if (!hasTarget)
-                        return std::monostate{};
-                    const auto existing = document->lanePoints(track, controller);
-                    auto completion =
-                        gesture.finish(track, controller, document->revision(), existing, fineMode,
-                                       [this](uint64_t tick, bool fineGrid, uint64_t last) {
-                                           return m_page->nextGridTick(tick, fineGrid, last);
-                                       });
-                    if (completion.unchanged)
-                        return std::monostate{};
-                    return GestureCommit{std::move(completion)};
-                },
-                [](PencilGesture &gesture) -> GestureCommit {
-                    auto completion = std::move(gesture).finish();
-                    if (completion.unchanged)
-                        return std::monostate{};
-                    return GestureCommit{std::move(completion)};
-                }},
-        *m_activeGesture);
-    const bool changed = std::visit(
-        Visitor{[](std::monostate) { return false; },
-                [this, rowIndex](const AutomationLaneEdit::Completion &completion) {
-                    return commitLaneEdit(rowIndex, completion);
-                },
-                [this, document](const NodeDeleteCommit &del) {
-                    document->deleteLanePoints(del.track, del.controller, {del.point});
-                    m_hoverState.hover.nodeDeleted = true;
-                    return true;
-                },
-                [this, document](const NodeMoveCommit &move) {
-                    document->moveLanePoints(move.moves);
-                    if (move.dTick != 0 && move.selectionDrag) {
-                        const auto &selection = m_rowData.timeSelection();
-                        if (selection.active()) {
-                            auto moved = selection.range;
-                            moved.startTick = uint64_t(
-                                std::max<int64_t>(0, int64_t(moved.startTick) + move.dTick));
-                            moved.endTick =
-                                uint64_t(std::max<int64_t>(0, int64_t(moved.endTick) + move.dTick));
-                            if (!moved.empty())
-                                m_page->publishTimeSelection(moved.startTick, moved.endTick,
-                                                             selection.scope.lanes);
+    bool changed = false;
+    if (const auto *gesture = std::get_if<NodeDragGesture>(&*m_activeGesture)) {
+        if (!document || m_activeNodeIdentities.size() != gesture->points.size())
+            return;
+        const NodeDragFinish finish = gesture->finish();
+        if (finish.release == PointDragRelease::StationaryDelete &&
+            gesture->grabbedPoint < m_activeNodeIdentities.size()) {
+            const auto &identity = m_activeNodeIdentities[gesture->grabbedPoint];
+            document->deleteLanePoints(identity.engineTrack, identity.controller,
+                                       {identity.documentPoint});
+            m_deletedNodeClick.markDeleted();
+            changed = true;
+        } else if (finish.release == PointDragRelease::Move && finish.changed) {
+            std::vector<SongDocument::LanePointMove> moves;
+            moves.reserve(gesture->points.size());
+            for (std::size_t index = 0; index < gesture->points.size(); ++index) {
+                const NodeDrag &point = gesture->points[index];
+                const LaneNodeIdentity &identity = m_activeNodeIdentities[index];
+                moves.push_back({identity.engineTrack, identity.controller, identity.documentPoint,
+                                 point.current.tick, point.current.value});
+            }
+            document->moveLanePoints(moves);
+            if (finish.dTick != 0 && finish.selectionDrag) {
+                const auto &selection = m_rowData.timeSelection();
+                if (selection.active()) {
+                    auto moved = selection.range;
+                    moved.startTick =
+                        uint64_t(std::max<int64_t>(0, int64_t(moved.startTick) + finish.dTick));
+                    moved.endTick =
+                        uint64_t(std::max<int64_t>(0, int64_t(moved.endTick) + finish.dTick));
+                    if (!moved.empty())
+                        m_page->publishTimeSelection(moved.startTick, moved.endTick,
+                                                     selection.scope.lanes);
+                }
+            }
+            changed = true;
+        }
+    } else {
+        GestureCommit commit = std::visit(
+            Visitor{[](const NodeDragGesture &) -> GestureCommit { return std::monostate{}; },
+                    [this, &proj, document, hasTarget, track, controller,
+                     fineMode](const SweepGesture &gesture) -> GestureCommit {
+                        if (gesture.mode == SweepGesture::Mode::Drag && !gesture.slop.exceeded) {
+                            m_page->commitEditCursor(
+                                m_page->snapTick(proj.rawTickAt(gesture.pressPosition.x()), false));
+                            return std::monostate{};
                         }
-                    }
-                    return true;
-                }},
-        commit);
+                        if (!hasTarget)
+                            return std::monostate{};
+                        const auto existing = document->lanePoints(track, controller);
+                        auto completion = gesture.finish(
+                            track, controller, document->revision(), existing, fineMode,
+                            [this](uint64_t tick, bool fineGrid, uint64_t last) {
+                                return m_page->nextGridTick(tick, fineGrid, last);
+                            });
+                        if (completion.unchanged)
+                            return std::monostate{};
+                        return GestureCommit{std::move(completion)};
+                    },
+                    [](PencilGesture &gesture) -> GestureCommit {
+                        auto completion = std::move(gesture).finish();
+                        if (completion.unchanged)
+                            return std::monostate{};
+                        return GestureCommit{std::move(completion)};
+                    }},
+            *m_activeGesture);
+        changed =
+            std::visit(Visitor{[](std::monostate) { return false; },
+                               [this, rowIndex](const AutomationLaneEdit::Completion &completion) {
+                                   return commitLaneEdit(rowIndex, completion);
+                               }},
+                       commit);
+    }
     if (changed)
         m_page->requestRefresh();
 }

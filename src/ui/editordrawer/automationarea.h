@@ -56,6 +56,7 @@ class AutomationArea final : public songview::TimelineSurface
     bool bandPreviewContainsRow(int rowIndex) const noexcept;
     QRect labelGutter() const noexcept { return m_labelGutter; }
     int plotOrigin() const noexcept { return m_geometry.plotOrigin; }
+    int contentTopInset() const noexcept { return m_tempoLane.totalHeight(m_geometry); }
 
   protected:
     bool event(QEvent *event) override;
@@ -71,6 +72,7 @@ class AutomationArea final : public songview::TimelineSurface
 
   private:
     friend class AutomationPage;
+    friend class TempoLane;
 
     void refreshGeometry();
     QFont captionLabelFont() const;
@@ -137,5 +139,7 @@ class AutomationArea final : public songview::TimelineSurface
     qreal m_pencilCursorDpr = 0.0;
     QCursor m_pencilCursor;
     std::optional<ActiveGesture> m_activeGesture;
+    std::vector<LaneNodeIdentity> m_activeNodeIdentities;
     AutomationHoverState m_hoverState;
+    NodeDoubleClickGuard m_deletedNodeClick;
 };

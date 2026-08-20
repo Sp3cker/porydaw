@@ -26,6 +26,7 @@
 #include "core/songdocument.h"
 #include "project/decompproject.h"
 #include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationlaneedit.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/layout.h"
@@ -71,6 +72,7 @@ bool rowsHaveUniqueIds(const std::vector<AutomationRow> &rows)
 }
 struct ExpectedAutomationGeometry {
     int defaultRowHeight;
+    int addLaneStripHeight;
     int minimumRowHeight;
     int maximumRowHeight;
     int gridMinimumCellWidth;
@@ -89,6 +91,7 @@ ExpectedAutomationGeometry expectedAutomationGeometry()
 {
     return {
         layout::fontPx(4.0),
+        layout::fontPx(5.0 / 3.0),
         layout::fontPx(7.0 / 3.0),
         layout::fontPx(32.0 / 3.0),
         layout::fontPx(4.0 / 3.0),
@@ -110,7 +113,7 @@ int automationRowsHeight(const AutomationPage &page)
     const auto &state = page.automationViewState();
     const auto expected = expectedAutomationGeometry();
     const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
-    int height = expected.defaultRowHeight;
+    int height = expected.addLaneStripHeight;
     for (const auto &row : page.area()->rows()) {
         const auto it = state.laneHeights.find(row.id);
         height += std::clamp(it == state.laneHeights.cend() ? shared : it->second,
@@ -123,7 +126,7 @@ int automationRowTop(const AutomationPage &page, const EditorAutomationRowId &id
     const auto &state = page.automationViewState();
     const auto expected = expectedAutomationGeometry();
     const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
-    int top = expected.defaultRowHeight;
+    int top = expected.addLaneStripHeight;
     for (const auto &row : page.area()->rows()) {
         if (row.id == id)
             return top;
@@ -341,7 +344,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         check(panRow >= 0, QStringLiteral("pan row not found for snap-value test"));
         if (panRow >= 0) {
             AutomationProjection proj(projectionGeometry, rowsForDetent, &page,
-                                      projectionGeometry.rowDefaultHeight);
+                                      page.area()->contentTopInset());
             const auto &row = rowsForDetent[panRow];
             const int top = proj.rowTop(panRow);
             const int h = proj.rowHeight(row);
@@ -382,72 +385,65 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         }
     }
     {
-        // 3. NodeDragGesture::finish -> GestureCommit variant (no intermediate NodeDragCommit)
+        // 3. Domain-neutral NodeDragGesture outcomes.
+        const auto laneNode = [](const DocLanePoint &point, ValuePoint current) {
+            return NodeDrag{0, {point.tick, point.value}, current, 0, 127};
+        };
         {
-            NodeDragGesture g;
-            g.points.clear();
-            g.grabbedPoint = 0;
-            GestureCommit c = g.finish();
-            check(std::holds_alternative<std::monostate>(c),
-                  QStringLiteral("NodeDragGesture::finish empty points should be monostate"));
+            NodeDragGesture gesture;
+            const NodeDragFinish finish = gesture.finish();
+            check(finish.release == PointDragRelease::NoOp && !finish.changed,
+                  QStringLiteral("empty NodeDragGesture should finish as unchanged NoOp"));
         }
         {
-            NodeDragGesture g;
-            DocLanePoint orig{0, 7, 24, 60};
-            orig.tick = 24;
-            orig.value = 60;
-            g.points = {{0, 0, 7, orig, {24, 60}, {24, 60}}};
-            g.grabbedPoint = 0;
-            g.dragSlop.exceeded = false;
-            g.axisLockArmed = true;
-            GestureCommit c = g.finish();
-            check(std::holds_alternative<std::monostate>(c),
-                  QStringLiteral(
-                      "NodeDragGesture::finish axisLockArmed without drag should be monostate"));
+            NodeDragGesture gesture;
+            const DocLanePoint original{0, 7, 24, 60};
+            gesture.points = {laneNode(original, {24, 60})};
+            gesture.drag.press({100.0, 100.0}, false);
+            const NodeDragFinish finish = gesture.finish();
+            check(finish.release == PointDragRelease::NoOp && !finish.changed,
+                  QStringLiteral("Shift stationary node drag should be unchanged NoOp"));
         }
         {
-            NodeDragGesture g;
-            DocLanePoint orig{0, 7, 24, 60};
-            g.points = {{0, 0, 7, orig, {24, 60}, {24, 60}}};
-            g.grabbedPoint = 0;
-            g.dragSlop.exceeded = false;
-            g.axisLockArmed = false;
-            GestureCommit c = g.finish();
-            bool isDelete = std::holds_alternative<NodeDeleteCommit>(c);
-            check(isDelete,
-                  QStringLiteral(
-                      "NodeDragGesture::finish click without drag should be NodeDeleteCommit"));
-            if (isDelete) {
-                auto &d = std::get<NodeDeleteCommit>(c);
-                check(d.track == 0 && d.controller == 7 && d.point.tick == 24,
-                      QStringLiteral("NodeDeleteCommit fields wrong"));
-            }
+            NodeDragGesture gesture;
+            const DocLanePoint original{0, 7, 24, 60};
+            gesture.points = {laneNode(original, {24, 60})};
+            gesture.drag.press({100.0, 100.0}, true);
+            const NodeDragFinish finish = gesture.finish();
+            check(finish.release == PointDragRelease::StationaryDelete && !finish.changed,
+                  QStringLiteral("stationary node drag did not report deletion"));
         }
         {
-            NodeDragGesture g;
-            DocLanePoint orig{0, 7, 24, 60};
-            g.points = {{0, 0, 7, orig, {24, 60}, {24, 60}}};
-            g.grabbedPoint = 0;
-            g.dragSlop.exceeded = true;
-            g.selectionDrag = false;
-            // no change -> monostate
-            GestureCommit c0 = g.finish();
-            check(std::holds_alternative<std::monostate>(c0),
-                  QStringLiteral(
-                      "NodeDragGesture::finish dragged without change should be monostate"));
-            // with change -> NodeMoveCommit
-            g.points[0].current = {30, 80};
-            GestureCommit c1 = g.finish();
-            bool isMove = std::holds_alternative<NodeMoveCommit>(c1);
-            check(isMove,
-                  QStringLiteral(
-                      "NodeDragGesture::finish dragged with change should be NodeMoveCommit"));
-            if (isMove) {
-                auto &m = std::get<NodeMoveCommit>(c1);
-                check(m.moves.size() == 1 && m.dTick == 6 && m.moves[0].point.tick == 24 &&
-                          m.moves[0].newTick == 30,
-                      QStringLiteral("NodeMoveCommit dTick or moves wrong"));
-            }
+            NodeDragGesture gesture;
+            const DocLanePoint original{0, 7, 24, 60};
+            gesture.points = {laneNode(original, {24, 60})};
+            gesture.drag.press({100.0, 100.0}, true);
+            gesture.drag.dragSlop.markExceeded({105.0, 100.0});
+            const NodeDragFinish unchanged = gesture.finish();
+            check(unchanged.release == PointDragRelease::Move && !unchanged.changed,
+                  QStringLiteral("unchanged dragged node should be an unchanged Move"));
+
+            gesture.points.front().current = {30, 80};
+            const NodeDragFinish moved = gesture.finish();
+            check(moved.release == PointDragRelease::Move && moved.changed && moved.dTick == 6,
+                  QStringLiteral("changed node drag did not report its tick delta"));
+        }
+        {
+            NodeDragGesture gesture;
+            const DocLanePoint original0{0, 7, 24, 60};
+            const DocLanePoint original1{0, 7, 48, 80};
+            gesture.points = {
+                laneNode(original0, {30, 70}),
+                laneNode(original1, {54, 90}),
+            };
+            gesture.selectionDrag = true;
+            gesture.drag.press({100.0, 100.0}, true);
+            gesture.drag.dragSlop.markExceeded({105.0, 100.0});
+            const NodeDragFinish finish = gesture.finish();
+            check(finish.release == PointDragRelease::Move && finish.changed && finish.dTick == 6 &&
+                      finish.selectionDrag && gesture.points[0].current.tick == 30 &&
+                      gesture.points[1].current.tick == 54,
+                  QStringLiteral("multi-node drag outcome lost shared movement state"));
         }
     }
     {
@@ -627,7 +623,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     sendMouse(page.area(), QEvent::MouseButtonRelease, clickPoint + verticalDragMove,
               Qt::LeftButton, Qt::NoButton);
     const AutomationProjection sweepProjection(projectionGeometry, page.area()->rows(), &page,
-                                               projectionGeometry.rowDefaultHeight);
+                                               page.area()->contentTopInset());
     const int sweepRow = sweepProjection.rowIndexAt(clickPoint.y());
     const uint64_t sweepTick = view.snapTick(sweepProjection.rawTickAt(clickPoint.x()), false);
     const int sweepValue = sweepProjection.valueAtY(sweepRow, clickPoint.y() + 1);

@@ -327,6 +327,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationpage.cpp
     src/ui/editordrawer/automationpage.h
     src/ui/editordrawer/tempolane.cpp
+    src/ui/editordrawer/tempolanegesture.cpp
     src/ui/editordrawer/tempolanepaint.cpp
     src/ui/editordrawer/tempolane.h
     src/ui/editordrawer/velocityarea.cpp

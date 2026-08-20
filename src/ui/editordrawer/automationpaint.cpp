@@ -15,6 +15,7 @@
 #include "ui/editordrawer/automationpencilgesture.h"
 #include "ui/editordrawer/automationrows.h"
 #include "ui/layout.h"
+#include "ui/selectionreticle.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 
@@ -76,6 +77,29 @@ void paintEditCursor(QPainter &painter, const QRect &plot, qreal cursorX)
     painter.setPen(QPen(themes::color(themes::Role::song_view_edit_cursor), layout::singlePixel(),
                         Qt::DashLine));
     painter.drawLine(QPointF(cursorX, plot.top()), QPointF(cursorX, plot.bottom()));
+}
+
+std::optional<TickRange> TickRange::orderedNonEmpty(uint64_t firstTick,
+                                                    uint64_t secondTick) noexcept
+{
+    const uint64_t first = std::min(firstTick, secondTick);
+    const uint64_t last = std::max(firstTick, secondTick);
+    if (first == last)
+        return std::nullopt;
+    return TickRange{first, last};
+}
+
+void paintSelectionReticle(QPainter &painter, const TickRange &range,
+                           const AutomationProjection &projection, const QRect &bounds,
+                           qreal devicePixelRatio)
+{
+    const qreal first = projection.displayX(range.firstTick, devicePixelRatio);
+    const qreal last = projection.displayX(range.lastTick, devicePixelRatio);
+    painter.save();
+    painter.setClipRect(bounds, Qt::IntersectClip);
+    songview::paintSelectionReticle(painter,
+                                    QRectF(first, bounds.top(), last - first, bounds.height()));
+    painter.restore();
 }
 
 void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
@@ -190,47 +214,46 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
         };
         if (activeGesture) {
             std::visit(
-                Visitor{[&](const NodeDragGesture &gesture) {
-                            if (gesture.points.size() > 1) {
-                                if (rowIndex < int(gesture.previewPoints.size()) &&
-                                    !gesture.previewPoints[rowIndex].empty()) {
-                                    RowPaintParams previewCtx{proj,
-                                                              row,
-                                                              rowIndex,
-                                                              plot,
-                                                              gesture.previewPoints[rowIndex],
-                                                              color,
-                                                              nullptr,
-                                                              nullptr,
-                                                              multipleSelectedNodes};
-                                    paintCurve(painter, previewCtx, area, page, geometry, rows);
-                                } else
-                                    paintUnchangedCurve();
-                            } else if (rowIndex == gesture.row) {
-                                const auto &point = gesture.points[gesture.grabbedPoint];
-                                const ValuePoint original = point.original;
-                                RowPaintParams dragCtx{proj,
-                                                       row,
-                                                       rowIndex,
-                                                       plot,
-                                                       points,
-                                                       color,
-                                                       &original,
-                                                       &point.current,
-                                                       multipleSelectedNodes};
-                                paintCurve(painter, dragCtx, area, page, geometry, rows);
-                            } else {
+                Visitor{
+                    [&](const NodeDragGesture &gesture) {
+                        if (gesture.points.size() > 1) {
+                            if (rowIndex < int(gesture.previewPoints.size()) &&
+                                !gesture.previewPoints[rowIndex].empty()) {
+                                std::vector<LanePoint> previewPoints;
+                                previewPoints.reserve(gesture.previewPoints[rowIndex].size());
+                                for (const ValuePoint &point : gesture.previewPoints[rowIndex])
+                                    previewPoints.push_back({uint32_t(point.tick), point.value});
+                                RowPaintParams previewCtx{
+                                    proj,    row,           rowIndex,
+                                    plot,    previewPoints, color,
+                                    nullptr, nullptr,       multipleSelectedNodes};
+                                paintCurve(painter, previewCtx, area, page, geometry, rows);
+                            } else
                                 paintUnchangedCurve();
-                            }
-                        },
-                        [&](const SweepGesture &) { paintUnchangedCurve(); },
-                        [&](const PencilGesture &gesture) {
-                            if (rowIndex == gesture.row)
-                                paintPencilPreview(painter, ctx, gesture, page, geometry,
-                                                   hoverState);
-                            else
-                                paintUnchangedCurve();
-                        }},
+                        } else if (rowIndex == gesture.row) {
+                            const auto &point = gesture.points[gesture.grabbedPoint];
+                            const ValuePoint original = point.original;
+                            RowPaintParams dragCtx{proj,
+                                                   row,
+                                                   rowIndex,
+                                                   plot,
+                                                   points,
+                                                   color,
+                                                   &original,
+                                                   &point.current,
+                                                   multipleSelectedNodes};
+                            paintCurve(painter, dragCtx, area, page, geometry, rows);
+                        } else {
+                            paintUnchangedCurve();
+                        }
+                    },
+                    [&](const SweepGesture &) { paintUnchangedCurve(); },
+                    [&](const PencilGesture &gesture) {
+                        if (rowIndex == gesture.row)
+                            paintPencilPreview(painter, ctx, gesture, page, geometry, hoverState);
+                        else
+                            paintUnchangedCurve();
+                    }},
                 *activeGesture);
         } else {
             paintUnchangedCurve();

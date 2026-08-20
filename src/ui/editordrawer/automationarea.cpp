@@ -4,6 +4,7 @@
 #include "ui/editordrawer/automationrows.h"
 
 #include <algorithm>
+#include <optional>
 
 #include <QCursor>
 #include <QEvent>
@@ -18,7 +19,6 @@
 #include "ui/contextmenu.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
-#include "ui/selectionreticle.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 #include "ui/typography.h"
@@ -183,6 +183,7 @@ void AutomationArea::cancelInteraction()
     m_pan.active = false;
     m_resize.row = -1;
     m_activeGesture.reset();
+    m_activeNodeIdentities.clear();
     m_band.clear();
     m_bandRightRow = -1;
     m_bandEndRow = -1;
@@ -378,39 +379,37 @@ void AutomationArea::paintContent(QPainter &painter)
                          -layout::space(layout::Space::One), layout::space(layout::Space::Zero)),
             Qt::AlignLeft | Qt::AlignVCenter, tr("+ Add lane"));
     }
-    uint64_t first = 0;
-    uint64_t last = 0;
+    const auto selectedRange = [&] {
+        if (m_band.active)
+            return automation::paint::TickRange::orderedNonEmpty(m_band.startTick, m_band.endTick);
+        const auto &selection = m_rowData.timeSelection();
+        if (!selection.active())
+            return std::optional<automation::paint::TickRange>{};
+        return automation::paint::TickRange::orderedNonEmpty(selection.range.startTick,
+                                                             selection.range.endTick);
+    }();
     if (m_band.active) {
-        first = std::min(m_band.startTick, m_band.endTick);
-        last = std::max(m_band.startTick, m_band.endTick);
         const int firstRow = std::min(m_bandRightRow, m_bandEndRow);
         const int lastRow = std::max(m_bandRightRow, m_bandEndRow);
-        if (first < last && firstRow >= 0 && lastRow >= firstRow) {
-            const qreal dpr = painter.device()->devicePixelRatioF();
-            const qreal x0 = m_page->displayX(first, m_geometry.plotOrigin, dpr);
-            const qreal x1 = m_page->displayX(last, m_geometry.plotOrigin, dpr);
+        if (selectedRange && firstRow >= 0 && lastRow >= firstRow) {
             const int top = proj.rowTop(firstRow);
-            const int bottom = proj.rowTop(lastRow + 1);
-            songview::paintSelectionReticle(
-                painter, QRectF(std::min(x0, x1), top, std::abs(x1 - x0), bottom - top));
+            const QRect bounds(m_geometry.plotOrigin, top,
+                               std::max(0, width() - m_geometry.plotOrigin),
+                               proj.rowTop(lastRow + 1) - top);
+            automation::paint::paintSelectionReticle(painter, *selectedRange, proj, bounds,
+                                                     painter.device()->devicePixelRatioF());
         }
-    } else if (m_rowData.timeSelection().active()) {
+    } else if (selectedRange) {
         const auto &selection = m_rowData.timeSelection();
-        first = selection.range.startTick;
-        last = selection.range.endTick;
-        if (!selection.range.empty()) {
-            const qreal dpr = painter.device()->devicePixelRatioF();
-            const qreal x0 = m_page->displayX(first, m_geometry.plotOrigin, dpr);
-            const qreal x1 = m_page->displayX(last, m_geometry.plotOrigin, dpr);
-            for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
-                const auto lane = m_rowData.rowIdentity(rows[rowIndex]);
-                if (!selection.scope.coversLane(lane.first, lane.second))
-                    continue;
-                const int top = proj.rowTop(rowIndex);
-                songview::paintSelectionReticle(painter,
-                                                QRectF(std::min(x0, x1), top, std::abs(x1 - x0),
-                                                       proj.rowHeight(rows[rowIndex])));
-            }
+        const qreal dpr = painter.device()->devicePixelRatioF();
+        for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
+            const auto lane = m_rowData.rowIdentity(rows[rowIndex]);
+            if (!selection.scope.coversLane(lane.first, lane.second))
+                continue;
+            const QRect bounds(m_geometry.plotOrigin, proj.rowTop(rowIndex),
+                               std::max(0, width() - m_geometry.plotOrigin),
+                               proj.rowHeight(rows[rowIndex]));
+            automation::paint::paintSelectionReticle(painter, *selectedRange, proj, bounds, dpr);
         }
     }
 }

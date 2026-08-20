@@ -28,23 +28,6 @@ EditorAutomationRowId tempoHeightKey()
 {
     return {EditorAutomationRowKind::Tempo, 0, 0};
 }
-int tempoBpmAt(const QRect &body, const AutomationGeometry &geometry, qreal y)
-{
-    return std::clamp(
-        qRound(AutomationProjection::valueAtY(body, geometry, CoreTimeDefaults::kMinTempoBpm,
-                                              CoreTimeDefaults::kMaxTempoBpm, y)),
-        CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm);
-}
-
-ValuePoint tempoPointValue(const TempoPoint &point)
-{
-    return {point.tick, int(point.microsecondsPerQuarterNote)};
-}
-
-TempoPoint tempoPointFromValue(const ValuePoint &point)
-{
-    return {point.tick, uint32_t(point.value)};
-}
 
 } // namespace
 
@@ -52,21 +35,24 @@ TempoLane::TempoLane(AutomationPage *page) noexcept : m_page(page) {}
 
 void TempoLane::updateLayout(int width, const AutomationGeometry &geometry)
 {
-    const int header = headerHeight(geometry);
-    m_header = {layout::space(layout::Space::Zero), layout::space(layout::Space::Zero), width,
-                header};
-    m_body = {layout::space(layout::Space::Zero), header, width,
-              m_expanded ? bodyHeight(geometry) : 0};
+    // Expanded, the lane is a single automation row: the header shrinks to
+    // that row's label gutter (the collapse click target) while the body
+    // spans the full row. Collapsed, only a thin caption strip remains.
+    const int height = totalHeight(geometry);
+    m_header = {layout::space(layout::Space::Zero), layout::space(layout::Space::Zero),
+                m_expanded ? geometry.plotOrigin : width, height};
+    m_body = {layout::space(layout::Space::Zero), layout::space(layout::Space::Zero), width,
+              m_expanded ? height : 0};
 }
 
 int TempoLane::totalHeight(const AutomationGeometry &geometry) const
 {
-    return headerHeight(geometry) + (m_expanded ? bodyHeight(geometry) : 0);
+    return m_expanded ? bodyHeight(geometry) : collapsedHeight(geometry);
 }
 
 bool TempoLane::interactionActive() const noexcept
 {
-    return m_drag.has_value() || m_draw.has_value() || m_band.pending;
+    return m_activeGesture.has_value() || m_band.pending;
 }
 
 bool TempoLane::hasTimeSelection() const
@@ -90,9 +76,10 @@ bool TempoLane::selectionContains(const AutomationProjection &projection, qreal 
 
 void TempoLane::cancel()
 {
-    m_drag.reset();
-    m_draw.reset();
-    m_band = {};
+    m_activeGesture.reset();
+    m_activeNodeIdentities.clear();
+    m_band.clear();
+    m_deletedNodeClick.clear();
 }
 
 void TempoLane::clearHover()
@@ -103,6 +90,8 @@ void TempoLane::clearHover()
 bool TempoLane::mousePress(AutomationArea &area, QMouseEvent *event,
                            const AutomationGeometry &geometry)
 {
+    m_deletedNodeClick.clear();
+    m_activeNodeIdentities.clear();
     if (!m_page || !m_page->document() || !contains(event->pos()))
         return false;
     const AutomationProjection projection(geometry, {}, m_page, 0);
@@ -139,20 +128,27 @@ bool TempoLane::mousePress(AutomationArea &area, QMouseEvent *event,
     }
     if (event->button() != Qt::LeftButton)
         return true;
-    const auto hit = hitPoint(event->position(), projection, geometry, area.devicePixelRatioF());
-    if (hit) {
-        const TempoPoint point = m_page->document()->tempoPoints()[*hit];
-        m_drag = DragState{point, point, event->position()};
+    if (auto nodeDrag = nodeDragGestureAt(event->position(), event->modifiers() & Qt::ShiftModifier,
+                                          projection, geometry, area.devicePixelRatioF())) {
+        m_activeNodeIdentities = std::move(nodeDrag->identities);
+        m_activeGesture.emplace(std::move(nodeDrag->gesture));
         return true;
     }
-    const TempoPoint point{
-        projection.snapTickAt(event->position().x(), event->modifiers() & Qt::AltModifier),
-        CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(
-            tempoBpmAt(m_body, geometry, event->position().y()))};
-    DrawState draw;
-    draw.previous = point;
-    appendDrawPoint(draw, point);
-    m_draw = std::move(draw);
+    const ValuePoint mapped =
+        mappedPoint(event->position(), projection, geometry, event->modifiers() & Qt::AltModifier);
+    SweepGesture sweep;
+    sweep.row = 0;
+    sweep.mode = event->modifiers() & Qt::ShiftModifier ? SweepGesture::Mode::Ramp
+                                                        : SweepGesture::Mode::Drag;
+    sweep.anchor = mapped;
+    sweep.current = mapped;
+    sweep.previousRawTick = projection.rawTickAt(event->position().x());
+    sweep.previousValue = mapped.value;
+    sweep.pressPosition = event->position();
+    sweep.slop.origin = event->position();
+    if (sweep.mode == SweepGesture::Mode::Ramp)
+        sweep.slop.markExceeded(event->position());
+    m_activeGesture.emplace(std::move(sweep));
     return true;
 }
 
@@ -171,40 +167,8 @@ bool TempoLane::mouseMove(AutomationArea &area, QMouseEvent *event,
                                                         event->modifiers() & Qt::AltModifier));
         return true;
     }
-    if (m_drag) {
-        DragState &drag = *m_drag;
-        if (!drag.dragSlop.exceeded) {
-            const QPointF delta = event->position() - drag.pressPosition;
-            const qreal travel = std::abs(delta.x()) + std::abs(delta.y());
-            if (travel < qreal(geometry.nodeDragActivationDistance))
-                return true;
-            drag.dragSlop.markExceeded(event->position());
-            drag.current = drag.original;
-            return true;
-        }
-        const QPointF effective = drag.pressPosition + (event->position() - drag.dragSlop.origin);
-        drag.axisLock = resolveAxisLock(drag.axisLock, event->modifiers() & Qt::ShiftModifier,
-                                        drag.pressPosition, event->position(),
-                                        geometry.nodeDragActivationDistance);
-        if (event->modifiers() & Qt::ShiftModifier && drag.axisLock == AxisLock::None) {
-            drag.current = drag.original;
-            return true;
-        }
-        TempoPoint next{projection.snapTickAt(effective.x(), event->modifiers() & Qt::AltModifier),
-                        CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(
-                            tempoBpmAt(m_body, geometry, effective.y()))};
-        ValuePoint locked = tempoPointValue(next);
-        applyAxisLock(drag.axisLock, tempoPointValue(drag.original), locked);
-        drag.current = tempoPointFromValue(locked);
-        return true;
-    }
-    if (m_draw) {
-        const TempoPoint next{
-            projection.snapTickAt(event->position().x(), event->modifiers() & Qt::AltModifier),
-            CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(
-                tempoBpmAt(m_body, geometry, event->position().y()))};
-        m_draw->moved = m_draw->moved || next != m_draw->previous;
-        appendDrawSegment(*m_draw, next, event->modifiers() & Qt::AltModifier);
+    if (m_activeGesture) {
+        updateActiveGesture(area, event->position(), event->modifiers(), geometry, true);
         return true;
     }
     if (!contains(event->pos()))
@@ -242,56 +206,44 @@ bool TempoLane::mouseRelease(AutomationArea &area, QMouseEvent *event,
         }
         return true;
     }
-    if (event->button() != Qt::LeftButton)
+    if (event->button() != Qt::LeftButton || !m_activeGesture)
         return false;
-    if (m_drag) {
-        const DragState drag = *m_drag;
-        m_drag.reset();
-        if (drag.current != drag.original)
-            applyEdit({{drag.original}, {drag.current}});
-        return true;
-    }
-    if (m_draw) {
-        DrawState draw = std::move(*m_draw);
-        m_draw.reset();
-        if (draw.moved && !draw.points.empty()) {
-            const uint64_t first = draw.points.front().tick;
-            const uint64_t last = draw.points.back().tick;
-            TempoEdit edit;
-            for (const TempoPoint &point : m_page->document()->tempoPoints())
-                if (point.tick >= first && point.tick <= last)
-                    edit.remove.push_back(point);
-            edit.add = std::move(draw.points);
-            applyEdit(edit);
-        } else {
-            m_page->commitEditCursor(draw.previous.tick);
-        }
-        return true;
-    }
-    return false;
+    updateActiveGesture(area, event->position(), event->modifiers(), geometry, false);
+    finishActiveGesture(event->modifiers() & Qt::AltModifier, geometry);
+    m_activeGesture.reset();
+    m_activeNodeIdentities.clear();
+    area.updateAxisLockCursor(AxisLock::None);
+    return true;
 }
 
 bool TempoLane::mouseDoubleClick(AutomationArea &area, QMouseEvent *event,
                                  const AutomationGeometry &geometry)
 {
-    if (!m_page || !m_page->document() || event->button() != Qt::LeftButton ||
-        !containsBody(event->position()) || event->position().x() < geometry.plotOrigin)
+    if (!m_page || !m_page->document() || event->button() != Qt::LeftButton)
+        return false;
+    if (m_deletedNodeClick.consume())
+        return true;
+    // Qt delivers a stationary second click as MouseButtonDblClick, so header
+    // double-clicks must reuse the press path or the toggle needs a mouse move.
+    if (m_header.contains(event->pos()))
+        return mousePress(area, event, geometry);
+    if (!containsBody(event->position()) || event->position().x() < geometry.plotOrigin)
         return false;
     const AutomationProjection projection(geometry, {}, m_page, 0);
     if (hitPoint(event->position(), projection, geometry, area.devicePixelRatioF()))
         return true;
     const uint64_t tick =
         projection.snapTickAt(event->position().x(), event->modifiers() & Qt::AltModifier);
-    int bpm = tempoBpmAt(m_body, geometry, event->position().y());
+    int bpm = bpmAt(event->position().y(), geometry);
     if (!promptBpm(area, bpm, &bpm))
         return true;
     applyEdit({{}, {{tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(bpm)}}});
     return true;
 }
 
-int TempoLane::headerHeight(const AutomationGeometry &geometry) const
+int TempoLane::collapsedHeight(const AutomationGeometry &geometry) const
 {
-    return geometry.rowDefaultHeight;
+    return geometry.addLaneStripHeight;
 }
 
 int TempoLane::bodyHeight(const AutomationGeometry &geometry) const
@@ -312,26 +264,6 @@ bool TempoLane::containsBody(const QPointF &position) const
     return m_expanded && m_body.contains(position.toPoint());
 }
 
-std::optional<std::size_t> TempoLane::hitPoint(const QPointF &position,
-                                               const AutomationProjection &projection,
-                                               const AutomationGeometry &geometry,
-                                               qreal devicePixelRatio) const
-{
-    if (!m_page || !m_page->document() || !containsBody(position))
-        return std::nullopt;
-    return nearestPointInRadius(
-        m_page->document()->tempoPoints(), projection.rawTickAt(position.x()), position,
-        geometry.pointHitRadius,
-        [&projection, devicePixelRatio](const TempoPoint &point) {
-            return projection.displayX(point.tick, devicePixelRatio);
-        },
-        [this, &geometry](const TempoPoint &point) {
-            return AutomationProjection::valueY(
-                m_body, geometry, CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm,
-                CoreTimeDefaults::tempoBpm(point.microsecondsPerQuarterNote));
-        });
-}
-
 bool TempoLane::promptBpm(AutomationArea &area, int currentBpm, int *bpm) const
 {
     bool accepted = false;
@@ -343,39 +275,6 @@ bool TempoLane::promptBpm(AutomationArea &area, int currentBpm, int *bpm) const
         return false;
     *bpm = entered;
     return true;
-}
-
-void TempoLane::appendDrawPoint(DrawState &draw, TempoPoint point)
-{
-    upsertByTick(draw.points, std::move(point));
-}
-
-void TempoLane::appendDrawSegment(DrawState &draw, TempoPoint next, bool fine)
-{
-    const TempoPoint previous = draw.previous;
-    const uint64_t first = std::min(previous.tick, next.tick);
-    const uint64_t last = std::max(previous.tick, next.tick);
-    if (first == last) {
-        appendDrawPoint(draw, next);
-        draw.previous = next;
-        return;
-    }
-    const int previousBpm = qRound(CoreTimeDefaults::tempoBpm(previous.microsecondsPerQuarterNote));
-    const int nextBpm = qRound(CoreTimeDefaults::tempoBpm(next.microsecondsPerQuarterNote));
-    for (uint64_t tick = first;;) {
-        const double fraction = double(int64_t(tick) - int64_t(previous.tick)) /
-                                double(int64_t(next.tick) - int64_t(previous.tick));
-        const int bpm = std::clamp(qRound(previousBpm + fraction * (nextBpm - previousBpm)),
-                                   CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm);
-        appendDrawPoint(draw, {tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(bpm)});
-        if (tick == last)
-            break;
-        const uint64_t following = m_page->nextGridTick(tick, fine, last);
-        if (following <= tick)
-            break;
-        tick = following;
-    }
-    draw.previous = next;
 }
 
 void TempoLane::applyEdit(const TempoEdit &edit) const

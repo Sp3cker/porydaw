@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <variant>
 #include <vector>
 
 #include <QPoint>
@@ -34,6 +35,7 @@ class TempoLane final
                            qreal devicePixelRatio) const;
     void cancel();
     void clearHover();
+    bool deleteTimeSelection();
 
     bool mousePress(AutomationArea &area, QMouseEvent *event, const AutomationGeometry &geometry);
     bool mouseMove(AutomationArea &area, QMouseEvent *event, const AutomationGeometry &geometry);
@@ -45,20 +47,13 @@ class TempoLane final
                const QFont &titleFont, const QFont &captionFont);
 
   private:
-    struct DragState {
-        TempoPoint original;
-        TempoPoint current;
-        QPointF pressPosition;
-        Slop dragSlop;
-        AxisLock axisLock = AxisLock::None;
-    };
-    struct DrawState {
-        TempoPoint previous;
-        std::vector<TempoPoint> points;
-        bool moved = false;
+    using ActiveGesture = std::variant<NodeDragGesture, SweepGesture>;
+    struct NodeDragState {
+        NodeDragGesture gesture;
+        std::vector<TempoPoint> identities;
     };
 
-    int headerHeight(const AutomationGeometry &geometry) const;
+    int collapsedHeight(const AutomationGeometry &geometry) const;
     int bodyHeight(const AutomationGeometry &geometry) const;
     bool contains(const QPoint &position) const;
     bool containsBody(const QPointF &position) const;
@@ -66,9 +61,19 @@ class TempoLane final
                                         const AutomationProjection &projection,
                                         const AutomationGeometry &geometry,
                                         qreal devicePixelRatio) const;
+    int bpmAt(qreal y, const AutomationGeometry &geometry) const;
+    ValuePoint mappedPoint(const QPointF &position, const AutomationProjection &projection,
+                           const AutomationGeometry &geometry, bool fine) const;
+    std::optional<NodeDragState> nodeDragGestureAt(const QPointF &position, bool axisLockArmed,
+                                                   const AutomationProjection &projection,
+                                                   const AutomationGeometry &geometry,
+                                                   qreal devicePixelRatio) const;
+    void updateActiveGesture(AutomationArea &area, const QPointF &position,
+                             Qt::KeyboardModifiers modifiers, const AutomationGeometry &geometry,
+                             bool activateSweep);
+    void finishActiveGesture(bool fine, const AutomationGeometry &geometry);
+    bool pointInTimeSelection(uint64_t tick) const;
     bool promptBpm(AutomationArea &area, int currentBpm, int *bpm) const;
-    void appendDrawPoint(DrawState &draw, TempoPoint point);
-    void appendDrawSegment(DrawState &draw, TempoPoint next, bool fine);
     void applyEdit(const TempoEdit &edit) const;
     void showTempoMenu(AutomationArea &area, const QPoint &globalPosition);
     void showPointMenu(AutomationArea &area, std::size_t pointIndex, const QPoint &globalPosition);
@@ -79,10 +84,11 @@ class TempoLane final
     AutomationPage *m_page = nullptr;
     QRect m_header;
     QRect m_body;
+    std::vector<TempoPoint> m_activeNodeIdentities;
     bool m_expanded = false;
     std::optional<std::size_t> m_hoveredPoint;
-    std::optional<DragState> m_drag;
-    std::optional<DrawState> m_draw;
+    std::optional<ActiveGesture> m_activeGesture;
     BandGesture m_band;
     std::vector<TempoPoint> m_clipboard;
+    NodeDoubleClickGuard m_deletedNodeClick;
 };
