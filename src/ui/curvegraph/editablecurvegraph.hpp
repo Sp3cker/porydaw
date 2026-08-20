@@ -74,6 +74,7 @@ class EditableCurveGraph final : public QWidget
         CurveAxisSpec xAxis;
         CurveAxisSpec yAxis;
         double defaultY = 0.0;
+        bool lockStartEndpointY = false;
         CurveSamplingPolicy sampling;
         CurveSegmentPolicy segments;
         QRect canvasRect = QRect(52, 44, 280, 112);
@@ -138,7 +139,9 @@ class EditableCurveGraph final : public QWidget
 
     struct VertexDragState {
         std::vector<CurvePoint> snapshot;
+        QPointF pressPosition;
         double originalX = 0.0;
+        bool hasMoved = false;
     };
 
     static constexpr int kAxisGutter = 52;

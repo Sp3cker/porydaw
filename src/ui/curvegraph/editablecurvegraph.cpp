@@ -1,5 +1,6 @@
 #include "editablecurvegraph.hpp"
 
+#include <QApplication>
 #include <algorithm>
 #include <cmath>
 #include <iterator>
@@ -16,7 +17,7 @@ EditableCurveGraph::EditableCurveGraph(CurveSpec spec, QWidget *parent)
 {
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
-    setCursor(Qt::CrossCursor);
+    setCursor(Qt::ArrowCursor);
 }
 void EditableCurveGraph::setSpec(CurveSpec spec)
 {
@@ -191,11 +192,10 @@ void EditableCurveGraph::mousePressEvent(QMouseEvent *event)
         setSelectedX(hit->x);
         auto &state = m_gesture.emplace<VertexDragState>();
         state.snapshot = m_points;
+        state.pressPosition = event->position();
         state.originalX = hit->x;
         m_keyboardX = hit->x;
         m_liveValue = hit->y;
-        if (m_callbacks.previewChanged)
-            m_callbacks.previewChanged();
         update();
         event->accept();
         return;
@@ -306,8 +306,14 @@ void EditableCurveGraph::updateVertexDrag(const QPointF &position, Qt::KeyboardM
     auto *state = std::get_if<VertexDragState>(&m_gesture);
     if (!state)
         return;
+    if (!state->hasMoved) {
+        if ((position - state->pressPosition).manhattanLength() <=
+            QApplication::startDragDistance())
+            return;
+        state->hasMoved = true;
+    }
     m_points = state->snapshot;
-    const double y = yAt(position.y());
+    double y = yAt(position.y());
     double x = state->originalX;
     const bool endpoint = x == m_spec.xAxis.minimum || x == m_spec.xAxis.maximum;
     if (!endpoint && maximumInteriorX() >= minimumInteriorX()) {
@@ -344,14 +350,20 @@ void EditableCurveGraph::updateVertexDrag(const QPointF &position, Qt::KeyboardM
     insertOrReplace(x, storedValue);
     m_selectedX = x;
     m_keyboardX = x;
-    m_liveValue = storedValue;
+    m_liveValue = valueAtX(x);
     if (m_callbacks.previewChanged)
         m_callbacks.previewChanged();
     update();
 }
 void EditableCurveGraph::finishGesture()
 {
+    const auto *vertex = std::get_if<VertexDragState>(&m_gesture);
+    const bool deleteVertex = vertex && !vertex->hasMoved &&
+                              vertex->originalX != m_spec.xAxis.minimum &&
+                              vertex->originalX != m_spec.xAxis.maximum;
     m_gesture = std::monostate{};
+    if (deleteVertex && removeSelectedPoint())
+        return;
     if (m_callbacks.commitRequested)
         m_callbacks.commitRequested();
 }
@@ -400,6 +412,8 @@ void EditableCurveGraph::materializeEndpoints()
     };
     if (!hasPointAt(m_spec.xAxis.minimum))
         m_points.insert(m_points.begin(), {m_spec.xAxis.minimum, defaultValue});
+    else if (m_spec.lockStartEndpointY)
+        m_points.front().y = defaultValue;
     if (!hasPointAt(m_spec.xAxis.maximum))
         m_points.push_back({m_spec.xAxis.maximum, defaultValue});
 }
@@ -448,7 +462,11 @@ double EditableCurveGraph::valueAtX(double x) const
                          [](double value, const auto &point) { return value < point.x; });
     if (it == m_points.begin())
         return m_spec.defaultY;
-    return std::prev(it)->y;
+    const auto previous = std::prev(it);
+    if (it == m_points.end() || !isLinearSegment(previous->x, it->x))
+        return previous->y;
+    const double fraction = (x - previous->x) / (it->x - previous->x);
+    return previous->y + fraction * (it->y - previous->y);
 }
 double EditableCurveGraph::minimumInteriorX() const
 {
@@ -555,6 +573,8 @@ int EditableCurveGraph::pixelY(double y) const
 void EditableCurveGraph::insertOrReplace(double x, double y)
 {
     x = std::clamp(x, m_spec.xAxis.minimum, m_spec.xAxis.maximum);
+    if (x == m_spec.xAxis.minimum && m_spec.lockStartEndpointY)
+        y = m_spec.defaultY;
     y = std::clamp(y, m_spec.yAxis.minimum, m_spec.yAxis.maximum);
     const auto it = std::find_if(m_points.begin(), m_points.end(),
                                  [x](const auto &point) { return point.x == x; });
