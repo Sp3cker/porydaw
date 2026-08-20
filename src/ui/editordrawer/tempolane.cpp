@@ -36,6 +36,16 @@ int tempoBpmAt(const QRect &body, const AutomationGeometry &geometry, qreal y)
         CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm);
 }
 
+ValuePoint tempoPointValue(const TempoPoint &point)
+{
+    return {point.tick, int(point.microsecondsPerQuarterNote)};
+}
+
+TempoPoint tempoPointFromValue(const ValuePoint &point)
+{
+    return {point.tick, uint32_t(point.value)};
+}
+
 } // namespace
 
 TempoLane::TempoLane(AutomationPage *page) noexcept : m_page(page) {}
@@ -162,19 +172,30 @@ bool TempoLane::mouseMove(AutomationArea &area, QMouseEvent *event,
         return true;
     }
     if (m_drag) {
-        const TempoPoint original = m_drag->original;
-        TempoPoint next{
-            projection.snapTickAt(event->position().x(), event->modifiers() & Qt::AltModifier),
-            CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(
-                tempoBpmAt(m_body, geometry, event->position().y()))};
-        const qreal dx = event->position().x() - m_drag->pressPosition.x();
-        const qreal dy = event->position().y() - m_drag->pressPosition.y();
-        if ((event->modifiers() & Qt::ShiftModifier && std::abs(dx) >= std::abs(dy)) ||
-            std::abs(dy) <= layout::singlePixel())
-            next.microsecondsPerQuarterNote = original.microsecondsPerQuarterNote;
-        if (event->modifiers() & Qt::ShiftModifier && std::abs(dy) > std::abs(dx))
-            next.tick = original.tick;
-        m_drag->current = next;
+        DragState &drag = *m_drag;
+        if (!drag.dragSlop.exceeded) {
+            const QPointF delta = event->position() - drag.pressPosition;
+            const qreal travel = std::abs(delta.x()) + std::abs(delta.y());
+            if (travel < qreal(geometry.nodeDragActivationDistance))
+                return true;
+            drag.dragSlop.markExceeded(event->position());
+            drag.current = drag.original;
+            return true;
+        }
+        const QPointF effective = drag.pressPosition + (event->position() - drag.dragSlop.origin);
+        drag.axisLock = resolveAxisLock(drag.axisLock, event->modifiers() & Qt::ShiftModifier,
+                                        drag.pressPosition, event->position(),
+                                        geometry.nodeDragActivationDistance);
+        if (event->modifiers() & Qt::ShiftModifier && drag.axisLock == AxisLock::None) {
+            drag.current = drag.original;
+            return true;
+        }
+        TempoPoint next{projection.snapTickAt(effective.x(), event->modifiers() & Qt::AltModifier),
+                        CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(
+                            tempoBpmAt(m_body, geometry, effective.y()))};
+        ValuePoint locked = tempoPointValue(next);
+        applyAxisLock(drag.axisLock, tempoPointValue(drag.original), locked);
+        drag.current = tempoPointFromValue(locked);
         return true;
     }
     if (m_draw) {

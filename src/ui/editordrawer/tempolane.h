@@ -49,6 +49,8 @@ class TempoLane final
         TempoPoint original;
         TempoPoint current;
         QPointF pressPosition;
+        Slop dragSlop;
+        AxisLock axisLock = AxisLock::None;
     };
     struct DrawState {
         TempoPoint previous;
