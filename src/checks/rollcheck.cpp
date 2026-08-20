@@ -24,10 +24,12 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <optional>
 #include <vector>
 
 #include "core/songdocument.h"
 #include "pitchbendcheck.hpp"
+#include "pitchenvelopecheck.hpp"
 #include "project/decompproject.h"
 #include "rollcheckplayhead.h"
 #include "ui/layout.h"
@@ -3348,6 +3350,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("loop-marker name was not refused");
         }
     }
+
+    failures += runPitchEnvelopeCheck(doc, view, roll, noteA, songLabel);
 
     // The header voice line is live: currentProgram is the last program
     // change at or before the display position — the playhead while playing,

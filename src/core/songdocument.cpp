@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <algorithm>
+#include <iterator>
 #include <map>
 #include <numeric>
 #include <set>
@@ -1321,31 +1322,60 @@ void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int 
              std::move(ops));
 }
 
-void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin,
-                                   uint64_t tickEnd, const std::vector<LanePointValue> &points)
+void SongDocument::writeLanePointRanges(int engineTrack, uint8_t cc,
+                                        const std::vector<LanePointRange> &ranges,
+                                        const std::vector<LanePointValue> &points)
 {
     const int smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0 || m_smf.tracks.empty())
         return;
+    std::vector<LanePointRange> mergedRanges = ranges;
+    for (LanePointRange &range : mergedRanges) {
+        if (range.tickBegin > range.tickEnd)
+            std::swap(range.tickBegin, range.tickEnd);
+    }
+    std::sort(mergedRanges.begin(), mergedRanges.end(),
+              [](const LanePointRange &lhs, const LanePointRange &rhs) {
+                  return lhs.tickBegin < rhs.tickBegin;
+              });
+    auto mergedEnd = mergedRanges.begin();
+    for (auto range = mergedRanges.begin(); range != mergedRanges.end(); ++range) {
+        if (mergedEnd == mergedRanges.begin() || range->tickBegin > std::prev(mergedEnd)->tickEnd) {
+            *mergedEnd++ = *range;
+        } else {
+            std::prev(mergedEnd)->tickEnd = std::max(std::prev(mergedEnd)->tickEnd, range->tickEnd);
+        }
+    }
+    mergedRanges.erase(mergedEnd, mergedRanges.end());
     std::vector<EditOp> ops;
-    // Points already inside the swept range are overwritten by the gesture.
     std::vector<size_t> overwritten;
-    for (const DocLanePoint &pt : lanePoints(engineTrack, cc)) {
-        if (pt.tick >= tickBegin && pt.tick <= tickEnd)
-            overwritten.push_back(pt.index);
+    size_t rangeIndex = 0;
+    for (const DocLanePoint &point : lanePoints(engineTrack, cc)) {
+        while (rangeIndex < mergedRanges.size() && mergedRanges[rangeIndex].tickEnd < point.tick) {
+            ++rangeIndex;
+        }
+        if (rangeIndex < mergedRanges.size() && mergedRanges[rangeIndex].tickBegin <= point.tick) {
+            overwritten.push_back(point.index);
+        }
     }
     if (overwritten.empty() && points.empty())
         return;
     appendRemoveOps(ops, smfTrack, std::move(overwritten));
     const uint8_t channel = channelFor(engineTrack);
-    for (const LanePointValue &pt : points) {
+    for (const LanePointValue &point : points) {
         EditOp op;
         op.type = EditOp::InsertEvent;
         op.smfTrack = smfTrack;
-        op.event = makeLaneEvent(cc, channel, pt.tick, pt.value);
+        op.event = makeLaneEvent(cc, channel, point.tick, point.value);
         ops.push_back(op);
     }
     pushEdit(tr("draw automation points"), std::move(ops));
+}
+
+void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin,
+                                   uint64_t tickEnd, const std::vector<LanePointValue> &points)
+{
+    writeLanePointRanges(engineTrack, cc, {{tickBegin, tickEnd}}, points);
 }
 
 void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)

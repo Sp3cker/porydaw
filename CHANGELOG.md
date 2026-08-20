@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Added
 - There is now buffer space before the start of the song in the piano roll to make it easier to scroll and focus the start of the song. Similarly, there is now much bigger buffer after the end of the song.
 - Press `G` with one note selected to edit its channel-wide pitch bend: scroll the graph for a note-scoped BENDR range, hold `Option`/`Alt` for angled lines, reset to zero, and audition from note-on with `Space`. The popup stays open until click-away or `Escape`.
+- Square 1, Square 2, and programmable-wave tracks now provide a header toggle for one track-level 0–100 ms pitch-envelope template. Each edit projects ordinary bend events to the eligible note-ons currently on the selected track, with explicit resets and no additional persistence artifact.
 
 ## Changed
 - Resonance suppression now uses a 150 ms default attack for faster response to ringing and whistles.

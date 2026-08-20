@@ -37,9 +37,47 @@ using Space = lyt::Space;
 namespace songview {
 using namespace songview::detail;
 
+namespace {
+
+struct PitchEnvelopeButtonState {
+    bool visible;
+    bool checked;
+    bool enabled;
+    QString toolTip;
+};
+
+PitchEnvelopeButtonState pitchEnvelopeButtonState(const SongView &songView, int track)
+{
+    const bool hasEligibleVoice = songView.trackHasPitchEnvelopeVoice(track);
+    const bool selected = songView.selectionModel().primaryTrack() == track;
+    const bool open = songView.pitchEnvelopeTrack() == track;
+    const bool creationEnabled = songView.pitchEnvelopeCreationEnabled(track);
+    const bool available = selected ? creationEnabled : hasEligibleVoice;
+    auto state = PitchEnvelopeButtonState{
+        available || open, open, selected && (creationEnabled || open), {}};
+    if (!hasEligibleVoice && !open) {
+        state.toolTip = SongView::tr(
+            "Pitch envelope is unavailable because this track has no compatible voice.");
+    } else if (!selected) {
+        state.toolTip = SongView::tr("Select this track to show its pitch envelope.");
+    } else if (!creationEnabled) {
+        state.toolTip =
+            open ? SongView::tr(
+                       "Hide pitch envelope. No notes on this track use a compatible voice.")
+                 : SongView::tr(
+                       "Add a note in a compatible voice span to edit the track pitch envelope.");
+    } else {
+        state.toolTip =
+            open ? SongView::tr("Hide pitch envelope") : SongView::tr("Show pitch envelope");
+    }
+    return state;
+}
+
+} // namespace
+
 TrackHeaderRow::Geometry TrackHeaderRow::Geometry::resolve()
 {
-    return {lyt::fontPx(1.5),       lyt::fontPx(4.0),        lyt::fontPx(2.0),
+    return {lyt::fontPx(1.5),       lyt::fontPx(4.5),        lyt::fontPx(2.0),
             lyt::fontPx(5.0 / 6.0), lyt::fontPx(11.0 / 6.0), lyt::fontPx(3.0),
             lyt::fontPx(4.0 / 3.0), lyt::fontPx(5.0 / 6.0),  lyt::fontPx(0.5),
             lyt::fontPx(1.0 / 6.0), lyt::fontPx(8.0 / 3.0),  lyt::fontPx(5.0 / 3.0)};
@@ -72,6 +110,10 @@ void TrackHeaderRow::refreshGeometry()
     if (m_solo)
         m_solo->setFixedSize(m_geometry.trackHeaderButtonExtent,
                              m_geometry.trackHeaderButtonExtent);
+    if (m_pitchEnvelope)
+        m_pitchEnvelope->setFixedSize(m_geometry.trackHeaderButtonExtent,
+                                      m_geometry.trackHeaderButtonExtent);
+
     if (m_editor)
         m_editor->setGeometry(editorRect());
     update();
@@ -97,6 +139,10 @@ TrackHeaderRow::TrackHeaderRow(SongView *sv, int track, QWidget *parent)
 
     auto *buttons = new QVBoxLayout;
     buttons->setSpacing(::layout::space(::layout::Space::Zero));
+    buttons->setContentsMargins(
+        ::layout::space(::layout::Space::Zero), ::layout::space(::layout::Space::Zero),
+        ::layout::space(::layout::Space::Zero), ::layout::space(::layout::Space::Zero));
+
     m_mute = new QToolButton(this);
     m_mute->setAutoRaise(false);
     m_mute->setText(QStringLiteral("M"));
@@ -117,6 +163,18 @@ TrackHeaderRow::TrackHeaderRow(SongView *sv, int track, QWidget *parent)
     m_solo->setChecked(sv->trackSoloed(track));
     connect(m_solo, &QToolButton::toggled, this,
             [this](bool on) { m_sv->setTrackSolo(m_track, on); });
+    m_pitchEnvelope = new QToolButton(this);
+    m_pitchEnvelope->setAutoRaise(false);
+    m_pitchEnvelope->setText(QStringLiteral("P"));
+    m_pitchEnvelope->setCheckable(true);
+    m_pitchEnvelope->setFixedSize(buttonExtent, buttonExtent);
+    m_pitchEnvelope->setObjectName(QStringLiteral("pitchEnvelopeButton"));
+    m_pitchEnvelope->setAccessibleName(SongView::tr("Pitch envelope"));
+    m_pitchEnvelope->setFocusPolicy(Qt::NoFocus);
+    syncPitchEnvelope();
+    connect(m_pitchEnvelope, &QToolButton::toggled, this,
+            [this](bool visible) { m_sv->setPitchEnvelopeVisible(m_track, visible); });
+
     // The keyboard toggles change the masks without a header rebuild;
     // follow them. Re-entry through toggled is safe: setTrackMute/Solo
     // no-op when the bit already matches.
@@ -140,6 +198,9 @@ TrackHeaderRow::TrackHeaderRow(SongView *sv, int track, QWidget *parent)
     retip();
     connect(&keymap::Registry::instance(), &keymap::Registry::bindingsChanged, this, retip);
     buttons->addStretch();
+    buttons->addWidget(m_pitchEnvelope);
+    buttons->addStretch();
+
     buttons->addWidget(m_mute);
     buttons->addStretch();
     buttons->addWidget(m_solo);
@@ -288,6 +349,14 @@ void TrackHeaderRow::syncVoice()
         return;
     update();
     updateToolTip();
+}
+void TrackHeaderRow::syncPitchEnvelope()
+{
+    const auto state = pitchEnvelopeButtonState(*m_sv, m_track);
+    m_pitchEnvelope->setVisible(state.visible);
+    m_pitchEnvelope->setChecked(state.checked);
+    m_pitchEnvelope->setEnabled(state.enabled);
+    m_pitchEnvelope->setToolTip(state.toolTip);
 }
 
 void TrackHeaderRow::updateToolTip()

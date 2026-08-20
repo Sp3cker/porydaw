@@ -23,6 +23,7 @@
 #include "ui/layout.h"
 #include "ui/pitchprojection.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/pitchenvelopecoordination.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
 #include "ui/velocitygesturemodel.h"
@@ -58,6 +59,7 @@ class PlayheadOverlay;
 class TrackHeaderPanel;
 class TrackHeaderRow;
 
+class PitchEnvelopeHost;
 // Perceptually mixes a color toward its backdrop. Timeline surfaces use this
 // shared shade for receding track-colored details.
 QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t);
@@ -212,6 +214,16 @@ class SongView : public QWidget
     void goToStart();
 
     void selectTrack(int track);
+    // Track-wide pitch-envelope chrome belongs to the view, not its rebuilt
+    // header rows. At most the selected track can be open.
+    std::optional<int> pitchEnvelopeTrack() const { return m_pitchEnvelopeState.openTrack(); }
+    void setPitchEnvelopeVisible(int track, bool visible);
+    // Stable track eligibility across its initial program and every program
+    // change; this never follows playback or note selection.
+    bool trackHasPitchEnvelopeVoice(int track) const;
+    // Track-wide authoring is available whenever the selected track contains
+    // at least one note that starts in an eligible PSG voice span.
+    bool pitchEnvelopeCreationEnabled(int track) const;
 
     // Scale controls are independent per-tab runtime toggles; neither is
     // persisted with the song or its view sidecar.
@@ -531,6 +543,8 @@ class SongView : public QWidget
     void muteMaskChanged(uint32_t mask);
     void soloMaskChanged(uint32_t mask);
     void selectedTrackChanged(int track);
+    void pitchEnvelopeVisibilityChanged();
+
     void scaleHighlightChanged();
     void scaleFoldChanged();
     void scaleRootChanged();
@@ -603,6 +617,7 @@ class SongView : public QWidget
     void buildOccupancySet(std::span<bool, 128> out) const;
     void rebuildProjectionWithAnchoring();
     void syncPlayheadOverlay();
+    void refreshPitchEnvelopeState();
 
     void notifyDrawerSongChanged();
     void notifyVelocityGestureChanged();
@@ -650,6 +665,7 @@ class SongView : public QWidget
     porydaw_scale::ScaleId m_scaleId = porydaw_scale::ScaleId::major;
     double m_playheadTick = 0.0;
     uint64_t m_editCursorTick = 0;
+    songview::PitchEnvelopeUiState m_pitchEnvelopeState;
     bool m_playing = false;
     uint32_t m_muteMask = 0;
     uint32_t m_soloMask = 0;
@@ -669,6 +685,7 @@ class SongView : public QWidget
     songview::TrackHeaderPanel *m_headers = nullptr;
     songview::PianoRoll *m_roll = nullptr;
     QStackedWidget *m_rollStack = nullptr; // page 0: roll (+vbar), page 1: event list
+    songview::PitchEnvelopeHost *m_pitchEnvelopeHost = nullptr;
     EventListView *m_events = nullptr;
     songview::OtherStrip *m_strip = nullptr;
     songview::PlayheadOverlay *m_playheadOverlay = nullptr;

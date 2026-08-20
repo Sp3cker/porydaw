@@ -50,6 +50,10 @@ TrackHeaderPanel::TrackHeaderPanel(SongView *sv)
     m_indicator->setFixedHeight(m_geometry.trackHeaderReorderIndicatorHeight);
     m_indicator->setStyleSheet(QStringLiteral("background: palette(highlight);"));
     m_indicator->hide();
+    connect(m_sv, &SongView::pitchEnvelopeVisibilityChanged, this, [this] {
+        for (TrackHeaderRow *row : m_trackRows)
+            row->syncPitchEnvelope();
+    });
 }
 
 void TrackHeaderPanel::rebuild()
@@ -108,6 +112,8 @@ void TrackHeaderPanel::rebuild()
 
 void TrackHeaderPanel::syncSelection()
 {
+    for (const auto &entry : m_rowByTrack)
+        entry.second->syncPitchEnvelope();
     for (QWidget *row : m_rows)
         row->update();
 }

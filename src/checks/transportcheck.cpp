@@ -14,6 +14,7 @@
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "miniaudio.h"
+#include "transportseekcheck.hpp"
 
 // --transportcheck: transport transitions halt ringing sound (self-contained,
 // needs a working audio output device — SKIPs cleanly without one). A
@@ -225,7 +226,6 @@ int runTransportCheck()
         handoff.publish(active);
         handoff.acquirePending();
         active.reset();
-
         auto superseded = std::make_shared<MidiTimeline>();
         std::weak_ptr<const MidiTimeline> supersededLifetime = superseded;
         handoff.publish(superseded);
@@ -236,7 +236,6 @@ int runTransportCheck()
             fail("rapid timeline publications released the audio thread's active snapshot");
         if (!supersededLifetime.expired())
             fail("superseded pending timeline remained retained");
-
         handoff.acquirePending();
         auto replacement = std::make_shared<MidiTimeline>();
         handoff.publish(replacement);
@@ -254,64 +253,15 @@ int runTransportCheck()
         return 0;
     }
     const auto smf = buildSilentSong();
+    const auto noteSmf = buildNoteSong();
     timeline = std::shared_ptr<MidiTimeline>(MidiTimeline::build(smf, engine.sampleRate()));
     if (!timeline || timeline->usedTrackCount != 2) {
         std::fprintf(stderr, "transportcheck: synthesized song built wrong\n");
         return 1;
     }
-    engine.loadSong(timeline, &tvg.vg, SongSettings{});
-    // Hot seek must only publish a request; restarting the Core Audio device
-    // here used to block the UI thread for tens of milliseconds.
-    auto slowestSeekNs = qint64{0};
-    const auto midSong = timeline->lengthSamples / 2;
-    for (int i = 0; i < 5; i++) {
-        QElapsedTimer seekTimer;
-        seekTimer.start();
-        engine.seek(i & 1 ? 0 : midSong);
-        slowestSeekNs = std::max(slowestSeekNs, seekTimer.nsecsElapsed());
-    }
-    if (slowestSeekNs > 20'000'000)
-        fail("seek blocked instead of publishing to the audio thread");
-    if (!waitFor([&] { return engine.playheadSamples() == midSong; }, 2000))
-        fail("audio thread did not apply the latest seek");
-    engine.seek(0);
-    if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
-        fail("audio thread did not apply the reset seek");
     const auto active = [&] { return engine.activePcmChannels(); };
-    engine.play();
-    if (!waitFor([&] { return engine.playheadSamples() > 0; }, 2000)) {
-        fail("playback did not start for pending-seek cancellation check");
-    } else {
-        engine.seek(midSong);
-        engine.stop();
-        if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
-            fail("Stop did not cancel a pending seek");
-    }
-    // An edit rebuild must carry a pending seek onto a distinct replacement
-    // timeline. The old owner retires only after the callback acquires its
-    // replacement.
-    auto seekReplacementSmf = smf;
-    seekReplacementSmf.tracks[1].events[0].data0 = 1;
-    auto seekReplacement =
-        std::shared_ptr<MidiTimeline>(MidiTimeline::build(seekReplacementSmf, engine.sampleRate()));
-    if (!seekReplacement) {
-        fail("seek replacement timeline built wrong");
-    } else {
-        engine.seek(midSong);
-        engine.updateTimeline(seekReplacement);
-        timeline = std::move(seekReplacement);
-        if (!waitFor(
-                [&] {
-                    return engine.timeline() == timeline.get() &&
-                           engine.playheadSamples() == midSong;
-                },
-                2000)) {
-            fail("updateTimeline dropped a pending seek or retained old data");
-        }
-    }
-    engine.seek(0);
-    if (!waitFor([&] { return engine.playheadSamples() == 0; }, 2000))
-        fail("reset seek after updateTimeline not applied");
+    const auto engineTrackBend = [&] { return engine.m_engine->tracks[0].bend; };
+    failures += runTransportSeekCheck(engine, smf, noteSmf, timeline, &tvg.vg, engineTrackBend);
     // Publishing an edit must not wait for a callback. The replacement has a
     // different event layout and becomes the active data source during play.
     auto liveReplacementSmf = smf;
@@ -469,7 +419,6 @@ int runTransportCheck()
     // outgoing voicegroup right after unloadSong returns, so freeAll + the
     // sleep below give ASAN a window to catch any channel still rendering
     // it.
-    const auto noteSmf = buildNoteSong();
     auto noteTimeline =
         std::shared_ptr<MidiTimeline>(MidiTimeline::build(noteSmf, engine.sampleRate()));
     HeapVoicegroup hvg;

@@ -278,10 +278,19 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/pianoroll_paint.cpp
     src/ui/songview/pianoroll_interaction.cpp
     src/ui/songview/pianoroll_commands.cpp
+    src/ui/songview/pitchenvelopehost.cpp
+    src/ui/songview/pitchenvelopehost.h
+    src/ui/songview/pitchenvelopemapping.cpp
+    src/ui/songview/pitchenvelopemapping.h
+    src/ui/songview/pitchenvelopecoordination.cpp
+    src/ui/songview/pitchenvelopecoordination.h
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
-    src/ui/pitchbendgraph.cpp
-    src/ui/pitchbendgraph.hpp
+    src/ui/pitchbendcurveadapter.cpp
+    src/ui/pitchbendcurveadapter.hpp
+    src/ui/curvegraph/editablecurvegraph.cpp
+    src/ui/curvegraph/editablecurvegraph_paint.cpp
+    src/ui/curvegraph/editablecurvegraph.hpp
     src/ui/playheadoverlay.cpp
     src/ui/playheadoverlay.h
     src/ui/eventlistview.cpp
@@ -398,6 +407,13 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/eventviewcheck.cpp
         src/checks/pitchbendcheck.cpp
         src/checks/pitchbendcheck.hpp
+        src/checks/pitchbendcheck_internal.hpp
+        src/checks/pitchbendcheck_gestures.cpp
+        src/checks/pitchbendcheck_rendering.cpp
+        src/checks/pitchenvelopecheck.cpp
+        src/checks/pitchenvelopecheck.hpp
+        src/checks/pitchenvelopecheck_persistence.cpp
+        src/checks/pitchenvelopecheck_persistence.hpp
         src/checks/rollcheck.cpp
         src/checks/rollcheckwindowing.cpp
         src/checks/rollcheckplayhead.cpp
@@ -428,6 +444,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/smfcheckfixtures.cpp
         src/checks/smfcheckfixtures.h
         src/checks/transportcheck.cpp
+        src/checks/transportseekcheck.cpp
+        src/checks/transportseekcheck.hpp
         src/checks/trackactivitycheck.cpp
         src/checks/trackactivitymetercheck.cpp
         src/checks/audiocheck.cpp

@@ -56,6 +56,9 @@ QString m4aAdvancedCcLabel(uint8_t cc, uint8_t value);
 // "Drumkit", ...). Keysplit voices read as "Sample".
 QString m4aVoiceTypeName(uint8_t type);
 
+// Whether an m4a ToneData.type can use a pitch envelope.
+bool voiceSupportsPitchEnvelope(uint8_t type);
+
 // Plain MIDI display helpers shared by the piano roll and the event list.
 QString midiKeyName(int key);                           // "C5", "A#3" (60 = C4)
 QString midiTimeSigLabel(int numerator, int denomPow2); // "3/8"

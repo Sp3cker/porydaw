@@ -4,6 +4,7 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/trackheaderpanel.h"
 
 #include <algorithm>
 #include <array>
@@ -16,6 +17,22 @@
 
 using namespace songview;
 using namespace songview::detail;
+
+void SongView::setEditCursorTick(uint64_t tick)
+{
+    if (m_editCursorTick == tick)
+        return;
+    m_editCursorTick = tick;
+    m_headers->syncVoices();
+    refreshPitchEnvelopeState();
+    refreshTimelineViews();
+    refreshDrawerPages();
+}
+void SongView::commitEditCursor(uint64_t tick)
+{
+    setEditCursorTick(tick);
+    emit editCursorMoved(tick);
+}
 
 void SongView::notifyVelocityGestureChanged()
 {

@@ -59,6 +59,8 @@ class TrackHeaderRow : public QWidget
     bool isSilentInGame() const;
     void syncVoice();
     void updateToolTip();
+    void syncPitchEnvelope();
+
     void beginRename();
     void commitOpenRename();
 
@@ -94,6 +96,7 @@ class TrackHeaderRow : public QWidget
     Geometry m_geometry;
     QToolButton *m_mute;
     QToolButton *m_solo;
+    QToolButton *m_pitchEnvelope;
     QLineEdit *m_editor = nullptr;
     TrackActivityMeter *m_activityMeter = nullptr;
     bool m_finishing = false;

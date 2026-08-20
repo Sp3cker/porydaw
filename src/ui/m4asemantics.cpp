@@ -130,6 +130,18 @@ QString m4aVoiceTypeName(uint8_t type)
     }
 }
 
+bool voiceSupportsPitchEnvelope(uint8_t type)
+{
+    switch (type & VOICE_TYPE_CGB_MASK) {
+    case VOICE_SQUARE_1:
+    case VOICE_SQUARE_2:
+    case VOICE_PROGRAMMABLE_WAVE:
+        return true;
+    default:
+        return false;
+    }
+}
+
 QString midiKeyName(int key)
 {
     static const char *const names[] = {"C",  "C#", "D",  "D#", "E",  "F",

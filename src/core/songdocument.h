@@ -187,13 +187,22 @@ class SongDocument : public QObject
     void nudgeNotesVelocity(const std::vector<DocNote> &notes, int delta);
 
     void addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value);
-    // Gesture write (freehand sweep / line ramp): replaces every point of the
-    // lane inside [tickBegin, tickEnd] with the given stream, as one undoable
-    // command. Not for DOC_CC_VOICE (the voice row has no drag editing).
     struct LanePointValue {
         uint64_t tick;
         int value;
     };
+    struct LanePointRange {
+        uint64_t tickBegin;
+        uint64_t tickEnd;
+    };
+    // Gesture write (freehand sweep / line ramp): replaces every point of the
+    // lane inside the inclusive ranges with the given stream, as one undoable
+    // command. Overlapping or touching ranges are coalesced; a shared endpoint
+    // belongs to the gesture. Not for DOC_CC_VOICE (the voice row has no drag
+    // editing).
+    void writeLanePointRanges(int engineTrack, uint8_t cc,
+                              const std::vector<LanePointRange> &ranges,
+                              const std::vector<LanePointValue> &points);
     void writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin, uint64_t tickEnd,
                          const std::vector<LanePointValue> &points);
     struct LanePointMove {

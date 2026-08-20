@@ -106,17 +106,21 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
     setAccessibleName(SongView::tr("Note automation editor"));
     rebuildFonts();
     m_endTick = m_document->noteEndTick(m_noteSnapshot);
-    m_pitchGraph = new PitchBendGraph(m_songView, m_engineTrack, m_startTick, m_endTick,
-                                      m_unterminated, PitchBendGraph::Lane::PitchBend, this);
-    m_modGraph = new PitchBendGraph(m_songView, m_engineTrack, m_startTick, m_endTick,
-                                    m_unterminated, PitchBendGraph::Lane::ModWheel, this);
-    const auto configureGraph = [this](PitchBendGraph *graph) {
+    m_pitchCurve = std::make_unique<PitchBendCurveAdapter>(
+        m_songView, m_engineTrack, m_startTick, m_endTick, m_unterminated,
+        PitchBendCurveAdapter::Lane::PitchBend, this);
+    m_modCurve = std::make_unique<PitchBendCurveAdapter>(
+        m_songView, m_engineTrack, m_startTick, m_endTick, m_unterminated,
+        PitchBendCurveAdapter::Lane::ModWheel, this);
+    m_pitchGraph = &m_pitchCurve->graph();
+    m_modGraph = &m_modCurve->graph();
+    const auto configureGraph = [this](EditableCurveGraph *graph, PitchBendCurveAdapter *curve,
+                                       int y) {
         graph->installEventFilter(this);
-        graph->setGeometry(0, graph == m_pitchGraph ? kHeaderHeight : kHeaderHeight + kGraphHeight,
-                           kPopupWidth, kGraphHeight);
-        PitchBendGraph::Callbacks callbacks;
-        callbacks.previewChanged = [this, graph] {
-            markCurvePending(graph);
+        graph->setGeometry(0, y, kPopupWidth, kGraphHeight);
+        EditableCurveGraph::Callbacks callbacks;
+        callbacks.previewChanged = [this, curve] {
+            markCurvePending(curve);
             update();
         };
         callbacks.commitRequested = [this] { commitCurve(); };
@@ -126,13 +130,13 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
             m_songView->requestPlayPauseFrom(m_startTick);
         };
         if (graph == m_pitchGraph)
-            callbacks.rangeChangeRequested = [this](int steps) { updateRange(steps); };
+            callbacks.wheelChanged = [this](int steps) { updateRange(steps); };
         graph->setCallbacks(std::move(callbacks));
         graph->show();
     };
-    configureGraph(m_pitchGraph);
-    configureGraph(m_modGraph);
-    const auto configureReset = [this](QPushButton *button, PitchBendGraph *graph, int y) {
+    configureGraph(m_pitchGraph, m_pitchCurve.get(), kHeaderHeight);
+    configureGraph(m_modGraph, m_modCurve.get(), kHeaderHeight + kGraphHeight);
+    const auto configureReset = [this](QPushButton *button, EditableCurveGraph *graph, int y) {
         button->setGeometry(kPopupWidth - kOuterInset - kResetWidth, y, kResetWidth, kResetHeight);
         button->setFocusPolicy(Qt::NoFocus);
         button->setCursor(Qt::ArrowCursor);
@@ -174,8 +178,13 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
         update();
     });
     connect(m_document, &SongDocument::documentChanged, this, [this] {
-        if (!noteSpanStillPresent())
+        if (!noteSpanStillPresent()) {
             close(CloseState::Cancel, CloseFocus::Restore);
+            return;
+        }
+        snapshotCurves();
+        updateDescription();
+        update();
     });
     new PitchBendCloseController(
         this, std::move(focusNoteUnderCursor),
@@ -272,7 +281,7 @@ bool PitchBendEditor::event(QEvent *event)
 }
 bool PitchBendEditor::eventFilter(QObject *watched, QEvent *event)
 {
-    PitchBendGraph *watchedGraph = nullptr;
+    EditableCurveGraph *watchedGraph = nullptr;
     if (watched == m_pitchGraph)
         watchedGraph = m_pitchGraph;
     else if (watched == m_modGraph)
@@ -305,7 +314,7 @@ void PitchBendEditor::keyPressEvent(QKeyEvent *event)
     }
     if (tryDeleteSelectedVertex(focusedGraph(), event))
         return;
-    if (PitchBendGraph *graph = focusedGraph(); graph && graph->handleKeyPress(event))
+    if (EditableCurveGraph *graph = focusedGraph(); graph && graph->handleKeyPress(event))
         return;
     QFrame::keyPressEvent(event);
 }
@@ -351,23 +360,23 @@ void PitchBendEditor::hideEvent(QHideEvent *event)
     deleteLater();
 }
 
-PitchBendGraph *PitchBendEditor::focusedGraph() const
+EditableCurveGraph *PitchBendEditor::focusedGraph() const
 {
     return m_modGraph && m_modGraph->hasFocus() ? m_modGraph : m_pitchGraph;
 }
 
-bool PitchBendEditor::tryDeleteSelectedVertex(PitchBendGraph *graph, QKeyEvent *event)
+bool PitchBendEditor::tryDeleteSelectedVertex(EditableCurveGraph *graph, QKeyEvent *event)
 {
     const bool deleting = event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace;
-    if (!deleting || !graph || !graph->selectedTick())
+    if (!deleting || !graph || !graph->selectedX())
         return false;
     if (noteSpanStillPresent())
-        graph->removeSelectedVertex();
+        graph->removeSelectedPoint();
     event->accept();
     return true;
 }
 
-uint8_t PitchBendEditor::ccForGraph(const PitchBendGraph *graph) const
+uint8_t PitchBendEditor::ccForGraph(const EditableCurveGraph *graph) const
 {
     return graph == m_modGraph ? uint8_t{1} : DOC_CC_BEND;
 }
@@ -382,7 +391,7 @@ void PitchBendEditor::undoCurve()
     m_document->undoStack()->undo();
 }
 
-void PitchBendEditor::resetCurve(PitchBendGraph *graph)
+void PitchBendEditor::resetCurve(EditableCurveGraph *graph)
 {
     graph->resetCurve();
     commitCurve();
@@ -413,15 +422,15 @@ void PitchBendEditor::snapshotCurves()
     const QSignalBlocker lfoBlocker(m_lfoSpeedSpin);
     m_bendRangeSpin->setValue(m_bendRange);
     m_lfoSpeedSpin->setValue(m_lfoSpeed);
-    m_pitchGraph->setBendRange(m_bendRange);
-    snapshotCurve(m_pitchGraph, DOC_CC_BEND);
-    snapshotCurve(m_modGraph, 1);
+    m_pitchCurve->setBendRange(m_bendRange);
+    snapshotCurve(m_pitchCurve.get(), DOC_CC_BEND);
+    snapshotCurve(m_modCurve.get(), 1);
 }
 
-void PitchBendEditor::snapshotCurve(PitchBendGraph *graph, uint8_t cc)
+void PitchBendEditor::snapshotCurve(PitchBendCurveAdapter *curve, uint8_t cc)
 {
     const auto points = m_document->lanePoints(m_engineTrack, cc);
-    std::map<uint64_t, int> curve;
+    std::map<uint64_t, int> pointsByTick;
     int enteringValue = 0;
     int endValue = 0;
     for (const DocLanePoint &point : points) {
@@ -430,11 +439,11 @@ void PitchBendEditor::snapshotCurve(PitchBendGraph *graph, uint8_t cc)
         if (point.tick <= m_endTick)
             endValue = point.value;
         if (point.tick > m_startTick && point.tick < m_endTick)
-            curve[point.tick] = point.value;
+            pointsByTick[point.tick] = point.value;
     }
-    curve[m_startTick] = enteringValue;
-    curve[m_endTick] = endValue;
-    graph->setCurve(curve, endValue);
+    pointsByTick[m_startTick] = enteringValue;
+    pointsByTick[m_endTick] = endValue;
+    curve->setCurve(pointsByTick, endValue);
 }
 
 bool PitchBendEditor::writeController(uint8_t cc, int value, int endValue)
@@ -446,33 +455,33 @@ bool PitchBendEditor::writeController(uint8_t cc, int value, int endValue)
     return true;
 }
 
-void PitchBendEditor::writeCurve(PitchBendGraph *graph)
+void PitchBendEditor::writeCurve(PitchBendCurveAdapter *curve)
 {
     if (!noteSpanStillPresent())
         return;
-    m_document->writeLanePoints(m_engineTrack, ccForGraph(graph), m_startTick, m_endTick,
-                                graph->curvePoints());
+    m_document->writeLanePoints(m_engineTrack, ccForGraph(&curve->graph()), m_startTick, m_endTick,
+                                curve->curvePoints());
 }
 
-void PitchBendEditor::markCurvePending(PitchBendGraph *graph)
+void PitchBendEditor::markCurvePending(PitchBendCurveAdapter *curve)
 {
-    m_pendingGraph = graph;
+    m_pendingCurve = curve;
     m_pending = PendingEdit::Curve;
 }
 
 void PitchBendEditor::commitCurve()
 {
-    if (m_pending != PendingEdit::Curve || !m_pendingGraph)
+    if (m_pending != PendingEdit::Curve || !m_pendingCurve)
         return;
-    PitchBendGraph *graph = m_pendingGraph;
-    m_pendingGraph = nullptr;
+    PitchBendCurveAdapter *curve = m_pendingCurve;
+    m_pendingCurve = nullptr;
     m_pending = PendingEdit::None;
-    writeCurve(graph);
+    writeCurve(curve);
 }
 
 void PitchBendEditor::cancelCurve()
 {
-    m_pendingGraph = nullptr;
+    m_pendingCurve = nullptr;
     m_pending = PendingEdit::None;
 }
 
@@ -492,7 +501,7 @@ void PitchBendEditor::setBendRange(int range)
         return;
     }
     m_bendRange = range;
-    m_pitchGraph->setBendRange(range);
+    m_pitchCurve->setBendRange(range);
     updateDescription();
     update();
 }

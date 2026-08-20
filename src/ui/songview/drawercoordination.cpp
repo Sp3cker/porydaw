@@ -5,6 +5,7 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/pitchenvelopehost.h"
 
 #include <optional>
 
@@ -134,6 +135,8 @@ void SongView::cancelActiveInteractions()
         m_roll->cancelVelocityInteraction();
     if (m_velocityGesture.active())
         cancelVelocityGesture();
+    if (m_pitchEnvelopeHost)
+        m_pitchEnvelopeHost->cancelGesture();
 }
 
 void SongView::notifyDrawerSongChanged()

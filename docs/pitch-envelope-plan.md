@@ -2,19 +2,35 @@
 
 ## Status and authority
 
-This document records the pitch-envelope design discussed so far and maps it onto the current porydaw implementation. It is a directional implementation plan, not yet a complete normative specification.
+This document records the pitch-envelope design discussed so far and maps it onto the current porydaw implementation. The compact normative behavior matrix below is the implementation contract; the remaining sections provide rationale, evidence, and sequencing.
 
-The product decisions under **Agreed contract** are authoritative for this feature. The choices under **Open decisions** are intentionally unresolved and must be settled before implementation reaches the affected wave. Implementers must not silently choose a persistence model or endpoint policy.
+The matrix and its repeated summary under **Agreed contract** are authoritative for this feature. The former **Open decisions** are resolved below, and the historical alternatives are retained only to explain the selected design. Implementers must follow the matrix rather than infer a different persistence model or endpoint policy.
+
+### Normative behavior matrix
+
+| Concern | Selected behavior |
+| --- | --- |
+| Timing | **Alternative A (selected):** the graph is one fixed local 0–100 ms template. Each commit maps it through the tempo map at every eligible note-on; later tempo edits may stretch or shrink elapsed duration. |
+| Authoring scope | The selected track owns one template. No note pick is required; a gesture applies it to every eligible note currently on that track. |
+| Endpoints and reset | Each projected interval starts at zero and explicitly resets to zero at 100 ms or the next distinct note-on, whichever comes first. A note-off never clips the interval. |
+| Vertical scale | Convert the same relative-pitch template through the `BENDR` active at each eligible note-on. |
+| Editor visibility | Only the selected track's envelope editor may be open at a time. |
+| Program changes | Show one stable header toggle whenever the selected track contains an eligible note. It remains authorable across cursor and playhead program changes; the effective voice only decides which note-ons receive a projection. |
+| Storage and manual lane ownership | Ordinary `DOC_CC_BEND` events are the sole persistence representation. There is no sidecar, persistent template artifact, or generated-versus-manual ownership split; manual edits to that lane remain authoritative. |
+| Playback semantics | The bend is track-wide and never polyphonic: every active note on the engine track hears the same bend. |
+
+The matrix deliberately resolves the initially requested strict millisecond timing to creation-time-only behavior because no persistence format was selected.
 
 ## Agreed contract
 
 The feature is a track-wide pitch-envelope editor for GBA PSG melodic voices.
 
-- Each track header provides a button that shows or hides the track's pitch-envelope editor.
-- The button is available for Square 1, Square 2, and programmable-wave (PSW/Wave) voices.
+- Each track header provides a button that shows or hides the selected track's pitch-envelope editor.
+- The editor has one local 0–100 ms template and needs no note selection.
+- A completed gesture projects that template onto every eligible note currently on the selected track. Notes added later receive no retroactive projection; edit the envelope again to apply it to them.
+- Program changes determine eligibility at each note-on. Any later note-on, eligible or not, clips and resets the preceding projection.
 - Noise and sampled voices are out of scope.
 - The editor is an editable vector graph made of points.
-- A newly created envelope uses a 100 ms default authoring window. The default is not derived from note duration, tempo-relative note values, or mid2agb clock counts.
 - The graph editor shares its implementation with the graph widgets in the existing pitch-bend popup.
 - Pitch envelopes ultimately drive ordinary track-wide pitch bend. They are not polyphonic per-note expression: every active note on the engine track hears the same bend.
 
@@ -34,13 +50,13 @@ Square 1 hardware sweep remains an independent voice parameter. It does not prov
 
 ## Terminology
 
-**Pitch envelope** — a bounded point curve authored through the new editor and realized as track-wide pitch bend.
+**Pitch envelope** — the selected track's bounded local point template, realized as ordinary track-wide pitch bends.
 
-**Envelope anchor** — the song position at which the envelope's zero-millisecond point begins.
+**Template source** — a deterministic existing eligible projection used to reconstruct the graph, preferring an unclipped projection. It is a display source, not note-scoped authoring state.
 
-**Authoring window** — the envelope's local horizontal domain. Its default length is 100 ms.
+**Authoring window** — the template's fixed local horizontal domain: 0–100 ms.
 
-**Playable projection** — the ordinary SMF pitch-bend events (`0xE`) consumed by playback and export.
+**Playable projection** — ordinary SMF pitch-bend events (`0xE`) written for one eligible note-on, ending at 100 ms or the next note-on.
 
 **Eligible voice** — a voice whose masked CGB type is Square 1, Square 2, or programmable wave.
 
@@ -55,7 +71,7 @@ The repository's “mid2agb clock” is not the envelope's authoring unit. `Song
 - `MidiTimeline::build(...)` in `src/core/miditimeline.cpp` projects the editable SMF into sample-positioned events.
 - `TimelinePlayer` in `src/core/timelineplayer.cpp` dispatches pitch bend to the M4A engine and chases the current value when playback seeks.
 
-The runtime and export vocabulary therefore already support the playable result. The unresolved work is the authoring representation and editor, not a new engine command.
+The runtime and export vocabulary therefore already support the playable result. The remaining work is the authoring representation and editor implementation, not a new engine command.
 
 ### Existing graph implementation
 
@@ -94,11 +110,11 @@ Eligibility must be derived from the effective `ToneData::type`, including alter
 
 The editable SMF stores event positions in ticks. `MidiTimeline` exposes a tempo map plus `sampleForTick(...)` and `tickForSample(...)`, so porydaw can project between song position and elapsed time.
 
-A point stored only as an SMF tick cannot remain exactly 100 ms from its anchor after a tempo-map edit. A strict millisecond invariant requires persistent millisecond-domain authoring data and regeneration of the playable projection. A creation-time-only 100 ms default can write ordinary bend points immediately but will subsequently stretch or shrink with tempo changes.
+An initially requested strict millisecond invariant would require persistent millisecond-domain authoring data and regeneration of the playable projection. Because no tracked persistence format or verified in-SMF metadata encoding was selected, that invariant is deliberately not used: the selected creation-time-only 100 ms window writes ordinary bend points immediately, and later tempo edits may stretch or shrink its elapsed duration.
 
 ### Sidecars
 
-`src/project/sidecar.h` defines `.porydaw/` as ignored, per-user state that never belongs in the repository. Musical envelope intent must not be stored there. If rich millisecond-domain intent is required, it needs either a tracked song artifact or a verified in-SMF metadata encoding.
+`src/project/sidecar.h` defines `.porydaw/` as ignored, per-user state that never belongs in the repository. The selected plan does not store musical envelope intent there or in another strict millisecond-domain artifact. Alternative B would have required either a tracked song artifact or a verified in-SMF metadata encoding.
 
 ## Proposed module design
 
@@ -149,23 +165,23 @@ Because `src/ui/pitchbendgraph.cpp` is already above the repository's 600-line c
 
 Add a host responsible for:
 
-- The selected engine track and envelope anchor
-- The 0–100 ms default graph domain
+- The selected engine track and deterministic template source
+- The fixed 0–100 ms graph domain
 - Relative-pitch bounds and formatting
-- Loading the source curve
-- Previewing the playable projection
-- Committing one undoable edit
+- Loading the template from ordinary bends
+- Previewing the playable projections
+- Committing one undoable track-wide edit
 - Restoring focus and handling document/header rebuilds
 
 The first implementation uses points joined by straight lines. Reuse the existing point insertion, drag, deletion, line, cancel, and keyboard mechanics. Do not add Bézier handles.
 
-The vertical axis should display musical relative pitch rather than raw 14-bit MIDI numbers. Conversion through the effective BENDR value belongs outside the shared graph. The exact default vertical range remains an open product choice.
+The vertical axis should display musical relative pitch rather than raw 14-bit MIDI numbers. Conversion through the effective BENDR value belongs outside the shared graph. Use the active `BENDR` range and continuously adjust the displayed/editable vertical range when that active range changes.
 
 ### Track-header toggle
 
 Add a checkable pitch-envelope button to `TrackHeaderRow`.
 
-The button widget publishes intent; it does not own canonical visibility state. Store the state in the `SongView`/per-tab UI model so header reconstruction restores the checked state. The plan does not yet choose whether several tracks may keep editors open simultaneously or whether opening one closes the previous editor.
+The button widget publishes intent; it does not own canonical visibility state. Store the state in the `SongView`/per-tab UI model so header reconstruction restores the checked state. Only the selected track's envelope editor may be open at a time; changing track selection closes the previously open editor.
 
 Eligibility must use a single helper over `ToneData::type`:
 
@@ -177,44 +193,46 @@ The helper accepts masked Square 1, Square 2, and programmable-wave types and re
 
 #### Program changes
 
-Track-wide visibility and time-local eligibility are different concerns. A track can contain program changes between eligible and ineligible voices. The current `currentProgram()` follows the playhead during playback, which would make an editing control appear or disappear while the song plays.
+Track-wide authoring and per-note eligibility are different concerns. A track can contain program changes between eligible and ineligible voices. The current `currentProgram()` follows the playhead during playback, which must not make an editing control appear, disappear, or become disabled.
 
-Recommended behavior:
+Selected behavior:
 
-- Do not change button visibility merely because playback crosses a program change.
-- Resolve edit eligibility at the edit cursor or prospective envelope anchor through `voiceContext(tick)`.
-- Keep an already-open editor visible when the cursor enters an ineligible span, but disable point creation there and explain why.
-- Existing envelope data remains visible even when the current span is ineligible.
+- Show the stable button whenever the selected track contains at least one eligible note.
+- Keep the toggle and open editor enabled across cursor and playhead program changes.
+- Resolve the effective voice and `BENDR` at each note-on when the graph refreshes; snapshot those eligible projections for the gesture.
+- Every later note-on clips the prior projection regardless of eligibility, so the bend resets deterministically.
+- Existing bend data remains visible; atomically rewrite only the disjoint projected intervals so every event outside them survives untouched.
 
-This behavior must be confirmed before the header wave begins.
+This behavior is settled by the normative matrix and must be implemented without playhead-driven flicker.
 
-## Timing and persistence alternatives
+## Timing and persistence alternatives (historical rationale)
 
-This is the principal unresolved design choice.
+The alternatives below preserve the historical tradeoff. **Alternative A is selected; Alternative B is unselected.** The initially requested strict millisecond invariant is deliberately resolved to creation-time-only behavior because no tracked persistence format or verified in-SMF metadata encoding was selected.
 
-### Alternative A — 100 ms at creation, raw lane remains authoritative
+### Alternative A — local template, raw lane remains authoritative (SELECTED)
 
-At envelope creation:
+At envelope commit:
 
-1. Resolve the anchor tick through the tempo map.
-2. Add 100 ms in sample/time space.
-3. Convert that end position back to an SMF tick.
-4. Initialize/edit vector points over that bounded tick interval.
-5. Commit ordinary `DOC_CC_BEND` points through `SongDocument::writeLanePoints(...)`.
+1. Read the fixed local 0–100 ms graph for the selected track.
+2. Resolve every eligible note currently on that track, with its voice and `BENDR` at note-on.
+3. Convert the template into ordinary bend points for each distinct note-on.
+4. Clip each projection at the next distinct note-on, regardless of that later note's eligibility.
+5. Commit the combined points through one `SongDocument::writeLanePoints(...)` edit while preserving bends outside each projected interval.
 
 Consequences:
 
-- No new musical storage format or note identity is required.
+- No new musical storage format, note identity, sidecar, or second template artifact is required.
 - Existing undo, raw-event editing, playback, seeking, save, export, and round-trip behavior remain authoritative.
-- The envelope's elapsed duration changes if the tempo map is edited later.
-- Reopening the editor reconstructs the curve from ordinary bend points.
+- The template's elapsed duration changes if the tempo map is edited later.
+- Reopening the editor reconstructs its template from a deterministic eligible projection, preferring an unclipped one and padding unavailable tail with zero.
+- Notes added after a commit require a later envelope edit before they receive a projection.
 - The feature is a focused track-wide automation affordance rather than a second musical data model.
 
-This is the simplest design and is recommended if “100 ms” means the initial drawing window rather than a permanent elapsed-time guarantee.
+Alternative A is the selected design: “100 ms” means the initial drawing window, not a permanent elapsed-time guarantee.
 
-### Alternative B — 100 ms remains invariant
+### Alternative B — 100 ms remains invariant (UNSELECTED — historical alternative)
 
-Persist each envelope as an anchor plus millisecond-domain points. On playback/save/export, compile those points through the current tempo map into ordinary pitch-bend events.
+Persist each track template as millisecond-domain points. On playback/save/export, compile them through the current tempo map into ordinary pitch-bend events.
 
 Consequences:
 
@@ -225,7 +243,7 @@ Consequences:
 - A tracked adjacent song file or a verified sequencer-specific SMF meta encoding is required.
 - Playback and export must use the same compiler so they cannot disagree.
 
-Do not begin this alternative until the storage artifact and manual-lane interaction are explicitly approved. It is substantially larger than a graph/editor feature.
+Alternative B is unselected under this plan and must not be implemented as part of this feature. It is retained only as rationale for the selected creation-time-only behavior; it would require an explicitly approved storage artifact and manual-lane ownership policy.
 
 ## Point and endpoint behavior
 
@@ -240,32 +258,33 @@ The initial graph behavior should be deliberately small:
 - Explicit live pitch readout
 - Fine vertical adjustment through the existing modifier convention
 
-The following endpoint choices remain open:
+The endpoint contract is resolved as follows:
 
-- Whether start and end points are mandatory
-- Whether the default end point is zero
-- Whether the final value is allowed to hold after 100 ms
-- Whether commit automatically restores zero at the end of the authoring window, at note-off, at the next note-on, or only when the user draws a reset
+- The local graph has mandatory zero-valued start and 100 ms end points.
+- Each eligible note-on writes a zero-valued start.
+- Each projection explicitly resets to zero at its 100 ms end or the next distinct note-on, whichever comes first.
+- A later ineligible note still clips and resets the preceding projection.
+- A note-off does not clip a projection.
 
-Because pitch bend is persistent track state, the editor must make any held value visually explicit. It must not silently imply that a curve ends when the engine will continue holding its last value.
+Because pitch bend is persistent track state, the reset must be explicitly represented in ordinary bend events. It must not silently imply that a curve ends when the engine will continue holding its last value.
 
-## Track-wide and overlap semantics
+## Track-wide projection semantics
 
-The playable projection is track-wide. If several notes overlap on the same engine track, every active note receives the same pitch bend. The editor must not label the curve as per-note expression or imply independent note control.
+The local template projects onto every eligible existing note-on on the selected engine track. Resolve eligibility and `BENDR` at each note-on so equivalent graph values produce equivalent semitone bends even when ranges differ. Same-tick eligible notes produce one projection. The next later note-on clips the prior projection regardless of its voice, and note-off does not clip it.
 
-No overlap arbitration is needed for Alternative A because there is only one authoritative lane. Alternative B would require generated/manual ownership and conflict rules before it can be implemented.
+There is one authoritative ordinary lane. A commit atomically rewrites only the disjoint projected intervals, so all bends outside them survive untouched. Since no second representation exists, later-added notes are not backfilled; a later envelope edit projects the current template onto the then-current eligible notes.
 
 ## Undo, save, playback, and export
 
-### Alternative A
+### Alternative A (SELECTED)
 
-- Commit each completed graph gesture through the existing lane-edit command path as one undoable operation.
+- Commit each completed graph gesture through one atomic multi-range lane-edit command.
 - Preview may update the graph continuously, but it must not create an undo command per mouse move.
-- Saving writes the existing SMF pitch-bend events.
+- Saving writes only the existing SMF pitch-bend events; reopening reconstructs from those events without a sidecar or template artifact.
 - `MidiTimeline::build(...)`, `TimelinePlayer`, WAV export, and mid2agb continue to consume the ordinary events without a new runtime path.
 - Event ordering and pitch-bend chase behavior remain the existing `SongDocument`/`MidiTimeline` contract.
 
-### Alternative B
+### Alternative B (UNSELECTED — rationale only)
 
 - Envelope mutation and regeneration must be one atomic undoable document operation.
 - The compiler must be the only implementation of millisecond-to-tick sampling.
@@ -274,13 +293,7 @@ No overlap arbitration is needed for Alternative A because there is only one aut
 
 ## Implementation sequence
 
-### Decision gate — Timing, endpoint, and visibility contracts
-
-Before production edits, settle every item in **Open decisions** that affects storage or observable behavior.
-
-Use a `task` agent to turn the selected alternatives into a compact normative behavior matrix. Use a `reviewer` agent to check that the matrix neither promises tempo independence from tick-only storage nor implies polyphonic pitch bend.
-
-Deliverable: an approved amendment to this document or a separate normative specification. No implementation proceeds past this gate with both timing alternatives still open.
+The normative behavior matrix above closes the former decision gate. Timing, track-level scope, endpoint, vertical-scale, editor-visibility, program-change, and persistence ownership choices are settled; implementation must use selected Alternative A and must not introduce Alternative B's strict millisecond artifact.
 
 ### Wave 1 — Shared graph cutover
 
@@ -311,21 +324,19 @@ Do not refactor unrelated header selection, rename, reorder, mute, solo, or voic
 
 ### Wave 3 — Envelope host and 100 ms mapping
 
-Use a `task` agent because this wave crosses UI, timing conversion, undo, and document behavior.
+Use a `task` agent because this wave crosses UI, timing conversion, note-on resolution, undo, and document behavior.
 
 - Add the envelope host using the shared graph.
-- Anchor new envelopes according to the approved cursor/selection rule.
-- Initialize the approved 100 ms point window.
-- Convert between local graph time and playable tick positions through one timing function.
-- Apply the approved endpoint/hold/reset semantics.
+- Keep one fixed local 0–100 ms template on the selected track; do not require a note pick.
+- Load from a deterministic eligible projection, preferring an unclipped projection and padding unavailable tail with zero.
+- Resolve eligible note-ons and active `BENDR` when the graph refreshes, then snapshot those projections for the gesture and map the same semitone template to each.
+- Clip every projection at the next distinct note-on, including an ineligible one; never clip at note-off.
+- Preserve bends outside individual projection intervals by writing only the disjoint affected ranges.
 - Commit one undoable gesture.
-- Prevent creation in ineligible voice spans while preserving visibility of existing data.
 
-If Alternative A is selected, reuse `SongDocument::writeLanePoints(...)`; do not add a second envelope store or compiler.
+Because Alternative A is selected, use `SongDocument::writeLanePointRanges(...)` for one atomic disjoint-range edit; do not add a second envelope store, sidecar, persistent template artifact, or runtime compiler.
 
-If Alternative B is selected, this wave must first implement the approved tracked persistence format and one compiler seam. Do not hide that work behind UI-only state.
-
-Use a `reviewer` agent to compare the audible result, saved events, and displayed curve at constant tempo, across a tempo change, and around a program change.
+Alternative B is unselected; do not hide a strict millisecond persistence artifact or compiler behind UI-only state.
 
 ### Wave 4 — Focused verification and wiring
 
@@ -335,48 +346,46 @@ Prefer extending the existing pitch-bend/roll harnesses over creating a second o
 
 Required checks:
 
-- Square 1, Square 2, and programmable-wave types enable the editor.
-- Alternate CGB encodings resolve through the masked type.
-- Noise, sample, keysplit, and missing voices do not permit creation.
-- The header button toggles the correct track and survives a document-triggered header rebuild.
-- Playback does not make the control flicker across a program change.
-- A new envelope's initial elapsed span matches the approved 100 ms contract within one playable-grid step.
-- Point add, drag, delete, and cancel produce one deterministic commit.
-- Undo restores the exact pre-edit SMF bytes/state; redo restores the envelope.
-- The final value/reset behavior matches the approved endpoint contract.
-- Overlapping notes hear the same track-wide bend.
-- Save and reload preserve the approved source representation.
+- Square 1, Square 2, and programmable-wave types enable the editor; Noise, sample, keysplit, and missing voices do not.
+- The header button toggles the selected track, survives a document-triggered header rebuild, and works with no note selection.
+- Cursor and playback program changes do not flicker or disable the track-level editor.
+- A new template's local span matches the approved 100 ms contract within one playable-grid step.
+- One drawn curve repeats at multiple eligible note-ons, including same-tick notes, with each note-on's active `BENDR` representing the same semitone curve.
+- Mixed eligible/ineligible program spans omit ineligible projections; any later note-on clips and resets the preceding projection without note-off clipping.
+- A commit preserves ordinary bends outside projected intervals, including gaps.
+- Point add, drag, delete, and cancel produce one deterministic commit and one undo/redo step.
+- Save and reload reconstruct the graph from ordinary bend events alone.
 - Playback seek chases the resulting bend correctly.
 
 After focused checks pass, run the actual application, open an eligible track, toggle the header button, draw and edit an envelope, audition it, save/reload, and observe the same curve and playback. This UI smoke test is required; offscreen widget construction alone is insufficient.
 
-Finally run the applicable incremental build, focused harness, full check sweep when a writable decomp fixture is available, and `deno task format:check` once after all implementation waves.
+Finally run the applicable incremental build, focused harness, full check sweep when a writable decomp fixture is available, and `tools/format.sh --check` once after all implementation waves.
 
 ## Definition of done
 
 The feature is complete when:
 
-- Eligible track headers expose one stable pitch-envelope toggle.
-- Ineligible voices cannot create pitch envelopes.
-- The editor is a point-based vector graph with the agreed 100 ms behavior.
+- Eligible track headers expose one stable pitch-envelope toggle that works with no note selection.
+- The selected track owns one fixed local 0–100 ms template that projects to every eligible note currently on that track.
+- Ineligible note-ons receive no projection but still reset an earlier projection; note-off never clips it.
 - The existing pitch/modulation popup and the new editor use one shared graph implementation.
-- No second curve-editing convention exists beside the shared module.
-- Graph gestures commit as one undoable edit.
-- Track-wide behavior and held/reset pitch state are visually honest.
+- No second curve-editing convention or persistence artifact exists beside the shared module and ordinary bend lane.
+- Graph gestures commit as one undoable edit while preserving out-of-interval bends.
 - Playback, seeking, save/reload, WAV rendering, and mid2agb export agree on the resulting pitch bend.
-- Header rebuilds, program changes, and tempo changes follow the approved contract.
+- Later-added notes receive a projection only after a later envelope edit.
+- Header rebuilds and program changes follow the approved contract.
 - Focused checks and an actual UI smoke test cover the changed behavior.
 - No palette, special voice type, or native hardware-sweep implementation is added.
 
-## Open decisions
+## Resolved decisions (formerly Open decisions)
 
-These questions must be answered before implementation crosses the decision gate:
+These decisions are normative and require no further product choice:
 
-1. Does 100 ms describe only the initial window at creation, or must the envelope remain exactly 100 ms after later tempo-map changes?
-2. Where is a new envelope anchored: edit cursor, selected note-on, clicked timeline position, or an explicit time selection?
-3. Are the first and last points mandatory, and what are their default values?
-4. Does the final point hold, or does the editor insert an automatic zero reset? If reset is automatic, when does it occur?
-5. What is the default vertical range and snapping unit: semitones, cents, or the track's active BENDR range?
-6. Can several track envelope editors remain open, or is there one active editor for the selected track?
-7. For tracks with program changes, is the header toggle shown when any eligible span exists, only at an eligible edit cursor, or always shown but disabled contextually?
-8. If strict millisecond persistence is selected, which tracked musical storage format owns the envelope intent, and what happens when raw generated bend events are edited manually?
+1. **Timing:** The graph is a fixed 0–100 ms local template. Later tempo-map edits may change a committed projection's elapsed duration.
+2. **Scope:** No note pick is required. Each gesture applies the selected track's template to every eligible note currently on that track; notes added later require another edit.
+3. **Endpoints:** The local graph's first and last points are mandatory and zero-valued. Each projection resets to zero at 100 ms or the next distinct note-on.
+4. **Reset:** Any later note-on, including an ineligible one, clips and resets the prior projection. Note-off does not clip it.
+5. **Vertical scale:** Resolve `BENDR` at each eligible note-on to convert the same semitone template.
+6. **Editor visibility:** Only the selected track's envelope editor may be open.
+7. **Program changes:** A track containing an eligible note remains authorable across cursor and playhead program changes. Voice changes decide projections at note-on only.
+8. **Storage and manual lane ownership:** Ordinary `DOC_CC_BEND` events are the sole representation. There is no sidecar, persistent template artifact, or second store; manual edits remain authoritative.

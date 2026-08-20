@@ -1,12 +1,12 @@
 #pragma once
 
 #include "core/songdocument.h"
-#include "pitchbendgraph.hpp"
+#include "pitchbendcurveadapter.hpp"
 #include "songview.h"
 
-#include <QFont>
 #include <QEvent>
 #include <QFocusEvent>
+#include <QFont>
 #include <QFrame>
 #include <QHideEvent>
 #include <QKeyEvent>
@@ -20,6 +20,7 @@
 #include <QString>
 #include <cstdint>
 #include <functional>
+#include <memory>
 
 namespace songview {
 
@@ -61,16 +62,16 @@ class PitchBendEditor final : public QFrame
     static constexpr int kHeaderHeight = 64;
     static constexpr int kGraphHeight = 184;
 
-    bool tryDeleteSelectedVertex(PitchBendGraph *graph, QKeyEvent *event);
-    PitchBendGraph *focusedGraph() const;
-    uint8_t ccForGraph(const PitchBendGraph *graph) const;
+    bool tryDeleteSelectedVertex(EditableCurveGraph *graph, QKeyEvent *event);
+    EditableCurveGraph *focusedGraph() const;
+    uint8_t ccForGraph(const EditableCurveGraph *graph) const;
     void undoCurve();
-    void resetCurve(PitchBendGraph *graph);
+    void resetCurve(EditableCurveGraph *graph);
     void snapshotCurves();
-    void snapshotCurve(PitchBendGraph *graph, uint8_t cc);
+    void snapshotCurve(PitchBendCurveAdapter *curve, uint8_t cc);
     bool writeController(uint8_t cc, int value, int endValue);
-    void writeCurve(PitchBendGraph *graph);
-    void markCurvePending(PitchBendGraph *graph);
+    void writeCurve(PitchBendCurveAdapter *curve);
+    void markCurvePending(PitchBendCurveAdapter *curve);
     void commitCurve();
     void cancelCurve();
     void updateRange(int steps);
@@ -96,13 +97,15 @@ class PitchBendEditor final : public QFrame
     int m_endLfoSpeed = 22;
     QFont m_titleFont;
     QFont m_captionFont;
-    PitchBendGraph *m_pitchGraph = nullptr;
-    PitchBendGraph *m_modGraph = nullptr;
+    std::unique_ptr<PitchBendCurveAdapter> m_pitchCurve;
+    std::unique_ptr<PitchBendCurveAdapter> m_modCurve;
+    EditableCurveGraph *m_pitchGraph = nullptr;
+    EditableCurveGraph *m_modGraph = nullptr;
     QPushButton *m_pitchResetButton = nullptr;
     QPushButton *m_modResetButton = nullptr;
     QSpinBox *m_bendRangeSpin = nullptr;
     QSpinBox *m_lfoSpeedSpin = nullptr;
-    PitchBendGraph *m_pendingGraph = nullptr;
+    PitchBendCurveAdapter *m_pendingCurve = nullptr;
     PendingEdit m_pending = PendingEdit::None;
     CloseState m_closeState = CloseState::Open;
     CloseFocus m_closeFocus = CloseFocus::Restore;

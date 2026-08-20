@@ -1,6 +1,7 @@
 #include "songview.h"
 #include "core/songdocument.h"
 #include "layout.h"
+
 #include "songview/detail.h"
 #include "theme/themeruntime.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -12,6 +13,7 @@
 #include "ui/playheadoverlay.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/pitchenvelopehost.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheaderpanel.h"
 
@@ -28,6 +30,7 @@
 #include <QVBoxLayout>
 
 #include <algorithm>
+
 #include <cstdint>
 #include <span>
 #include <utility>
@@ -153,6 +156,9 @@ SongView::SongView(QWidget *parent)
     m_rollStack->addWidget(m_events);
     mid->addWidget(m_rollStack, 1);
     vbox->addWidget(rollPane, 1);
+    m_pitchEnvelopeHost = new PitchEnvelopeHost(this, this);
+    m_pitchEnvelopeHost->hide();
+    vbox->addWidget(m_pitchEnvelopeHost);
 
     m_strip = new OtherStrip(this);
     vbox->addWidget(m_strip);
@@ -193,6 +199,9 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     if (m_roll)
         m_roll->cancelPitchBendPopup();
     cancelActiveInteractions();
+    if (m_pitchEnvelopeState.clear())
+        refreshPitchEnvelopeState();
+
     if (timeline)
         m_trackActivity.resetPaused();
     else
@@ -269,6 +278,9 @@ void SongView::updateSong(const MidiTimeline *timeline)
     cancelActiveInteractions();
     m_timeline = timeline;
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
+    // The open envelope is a view-owned state. A document refresh may make
+    // its selected anchor unavailable, but must not close the host.
+
     // The concrete automation page owns cosmetic empty lanes; the projection
     // remains solely the timeline model.
 
@@ -302,6 +314,7 @@ void SongView::updateSong(const MidiTimeline *timeline)
         updateScrollbars();
     }
     refreshTimelineViews();
+    refreshPitchEnvelopeState();
 }
 
 void SongView::setDocument(SongDocument *document)
@@ -315,7 +328,12 @@ void SongView::setDocument(SongDocument *document)
             disconnect(m_document, &SongDocument::documentChanged, this, nullptr);
         }
         if (document) {
-            connect(document, &SongDocument::tracksRemapped, this, &SongView::onTracksRemapped);
+            connect(document, &SongDocument::tracksRemapped, this, [this](const TrackRemap &remap) {
+                const bool pitchEnvelopeStateChanged = m_pitchEnvelopeState.remap(remap);
+                onTracksRemapped(remap);
+                if (pitchEnvelopeStateChanged)
+                    refreshPitchEnvelopeState();
+            });
             connect(document, &SongDocument::documentChanged, this, [this] {
                 // Any document edit invalidates a preview captured at the
                 // previous revision before the normal page refresh.
@@ -323,6 +341,8 @@ void SongView::setDocument(SongDocument *document)
                 m_editorDrawer->automationPage()->documentChanged();
                 m_editorDrawer->velocityArea()->documentChanged();
                 refreshDrawerPages();
+                if (m_pitchEnvelopeHost)
+                    m_pitchEnvelopeHost->refresh();
             });
         }
     }
@@ -331,6 +351,7 @@ void SongView::setDocument(SongDocument *document)
     m_selectionModel.clearNoteSelectionForDocumentAttachment();
     m_headers->rebuild();
     notifyDrawerSongChanged();
+    refreshPitchEnvelopeState();
 }
 
 bool SongView::eventListVisible() const
@@ -422,6 +443,7 @@ void SongView::applyViewState(const ViewState &state)
     setVScroll(state.scrollY);
     setEventListVisible(state.eventList);
     refreshTimelineViews();
+    refreshPitchEnvelopeState();
 }
 
 void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup)
@@ -433,6 +455,7 @@ void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup)
     m_headers->rebuild();
     notifyDrawerSongChanged();
     refreshTimelineViews();
+    refreshPitchEnvelopeState();
 }
 
 void SongView::coordinateSelectionChange(songview::EditorSelectionModel::SelectionChange change)
@@ -446,6 +469,9 @@ void SongView::coordinateSelectionChange(songview::EditorSelectionModel::Selecti
     const bool trackScopeChanged =
         changed(songview::EditorSelectionModel::SelectionChange::TrackScope);
     if (primaryChanged) {
+        if (m_pitchEnvelopeState.applySelectionTransition(m_selectionModel.primaryTrack()))
+            refreshPitchEnvelopeState();
+
         m_headers->syncSelection();
         if (m_roll)
             m_roll->setFocus();
@@ -538,22 +564,6 @@ void SongView::syncPlayheadOverlay()
     if (m_playheadOverlay) {
         m_playheadOverlay->setPlayhead(contentX(m_playheadTick), m_timeline != nullptr, m_playing);
     }
-}
-
-void SongView::setEditCursorTick(uint64_t tick)
-{
-    if (m_editCursorTick == tick)
-        return;
-    m_editCursorTick = tick;
-    m_headers->syncVoices();
-    refreshTimelineViews();
-    refreshDrawerPages();
-}
-
-void SongView::commitEditCursor(uint64_t tick)
-{
-    setEditCursorTick(tick);
-    emit editCursorMoved(tick);
 }
 
 void SongView::goToStart()
