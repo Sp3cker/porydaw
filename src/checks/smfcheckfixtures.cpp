@@ -392,14 +392,13 @@ void checkAutomationStressFixture(int *failures)
 
 } // namespace
 
-int runSmfFixtureChecks(const QTemporaryDir &dir, bool includeStress)
+int runSmfFixtureChecks(const QTemporaryDir &dir)
 {
     int failures = 0;
     checkOpaqueSysExFixture(&failures);
     checkVlqRunningStatusFixture(&failures);
     checkNoteLifecycleFixture(dir, &failures);
     checkDuplicateEotFixture(&failures);
-    if (includeStress)
-        checkAutomationStressFixture(&failures);
+    checkAutomationStressFixture(&failures);
     return failures;
 }

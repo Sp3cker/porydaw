@@ -71,7 +71,7 @@ SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data
 
 } // namespace
 
-int runSmfCheck(bool includeStress)
+int runSmfCheck()
 {
     int failures = 0;
     {
@@ -114,7 +114,7 @@ int runSmfCheck(bool includeStress)
         std::printf("smfcheck: FAIL\n");
         return 1;
     }
-    failures += runSmfFixtureChecks(dir, includeStress);
+    failures += runSmfFixtureChecks(dir);
 
     // Shared ends, velocity-zero note ends, mixed channels, unterminated
     // notes, and raw 8-bit key equality keep the linear pairing rule honest.

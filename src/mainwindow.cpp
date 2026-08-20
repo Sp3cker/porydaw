@@ -1458,8 +1458,8 @@ void MainWindow::onDocumentChanged(SongSession &session)
     auto timeline = std::shared_ptr<MidiTimeline>(session.doc.buildTimeline(m_audio.sampleRate()));
     if (active && m_audio.songLoaded())
         m_audio.updateTimeline(timeline);
+    session.view->updateSong(timeline.get());
     session.timeline = std::move(timeline);
-    session.view->updateSong(session.timeline.get());
     updateTabTitle(session);
     if (active) {
         // The timeline was rebuilt, track names may have changed, and the

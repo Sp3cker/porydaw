@@ -20,4 +20,4 @@ int checkNote(const std::vector<DocNote> &notes, size_t n, size_t onIndex, size_
 
 } // namespace SmfCheck
 
-int runSmfFixtureChecks(const QTemporaryDir &dir, bool includeStress);
+int runSmfFixtureChecks(const QTemporaryDir &dir);
