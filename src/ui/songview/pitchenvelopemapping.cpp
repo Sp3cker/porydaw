@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <tuple>
@@ -29,6 +30,48 @@ uint64_t saturatedAdd(uint64_t value, uint64_t offset)
     return value > std::numeric_limits<uint64_t>::max() - offset
                ? std::numeric_limits<uint64_t>::max()
                : value + offset;
+}
+
+uint64_t saturatedMultiply(uint64_t value, uint64_t factor)
+{
+    return factor != 0 && value > std::numeric_limits<uint64_t>::max() / factor
+               ? std::numeric_limits<uint64_t>::max()
+               : value * factor;
+}
+
+uint64_t sixtyFourthBoundaryTick(uint64_t startTick, uint64_t index, uint64_t ticksPerBeat)
+{
+    constexpr uint64_t kSubdivisionPerQuarter = 16;
+    const uint64_t whole = saturatedMultiply(index / kSubdivisionPerQuarter, ticksPerBeat);
+    const uint64_t fractionalNumerator = index % kSubdivisionPerQuarter * ticksPerBeat;
+    const uint64_t fractional =
+        (fractionalNumerator + kSubdivisionPerQuarter / 2) / kSubdivisionPerQuarter;
+    return saturatedAdd(startTick, saturatedAdd(whole, fractional));
+}
+
+double linearCurveValue(const std::vector<songview::pitch_envelope::CurveSample> &curve,
+                        double milliseconds)
+{
+    if (curve.empty())
+        return 0.0;
+    const auto upper =
+        std::upper_bound(curve.begin(), curve.end(), milliseconds,
+                         [](double value, const songview::pitch_envelope::CurveSample &sample) {
+                             return value < sample.milliseconds;
+                         });
+    if (upper == curve.begin())
+        return upper->semitones;
+    const auto lower = std::prev(upper);
+    if (upper == curve.end() || upper->milliseconds <= lower->milliseconds)
+        return lower->semitones;
+    const double fraction =
+        (milliseconds - lower->milliseconds) / (upper->milliseconds - lower->milliseconds);
+    return lower->semitones + fraction * (upper->semitones - lower->semitones);
+}
+
+int effectiveM4ABend(int bend14)
+{
+    return bend14 >> 7;
 }
 } // namespace
 
@@ -109,15 +152,44 @@ LaneWrite compileLaneWrite(const MidiTimeline *timeline, const std::vector<Curve
         } else {
             write.ranges.back().tickEnd = std::max(write.ranges.back().tickEnd, projection.endTick);
         }
-        const uint64_t windowEndTick = std::max(projection.startTick, projection.windowEndTick);
-        for (const CurveSample &sample : curve) {
-            const double milliseconds = std::clamp(sample.milliseconds, 0.0, kWindowMilliseconds);
-            const uint64_t tick =
-                tickForMilliseconds(timeline, projection.startTick, windowEndTick, milliseconds);
-            if (tick > projection.startTick && tick < projection.endTick)
-                projected[tick] = semitonesToBend(sample.semitones, projection.bendRange);
-        }
         projected[projection.startTick] = 0;
+        if (timeline && projection.endTick > projection.startTick) {
+            const uint64_t ticksPerBeat = std::max<uint32_t>(1, timeline->ticksPerBeat);
+            int previousEffectiveBend = 0;
+            bool hasPendingSample = false;
+            uint64_t pendingTick = 0;
+            int pendingBend = 0;
+            const auto writePendingSample = [&] {
+                const int effectiveBend = effectiveM4ABend(pendingBend);
+                if (effectiveBend != previousEffectiveBend)
+                    projected[pendingTick] = pendingBend;
+                previousEffectiveBend = effectiveBend;
+            };
+            for (uint64_t index = 1; index != std::numeric_limits<uint64_t>::max(); ++index) {
+                const uint64_t tick =
+                    sixtyFourthBoundaryTick(projection.startTick, index, ticksPerBeat);
+                if (tick >= projection.endTick)
+                    break;
+                if (tick <= projection.startTick)
+                    continue;
+                const double milliseconds =
+                    std::clamp(elapsedMilliseconds(timeline, projection.startTick, tick), 0.0,
+                               kWindowMilliseconds);
+                const int bend =
+                    semitonesToBend(linearCurveValue(curve, milliseconds), projection.bendRange);
+                if (hasPendingSample && tick == pendingTick) {
+                    pendingBend = bend;
+                    continue;
+                }
+                if (hasPendingSample)
+                    writePendingSample();
+                pendingTick = tick;
+                pendingBend = bend;
+                hasPendingSample = true;
+            }
+            if (hasPendingSample)
+                writePendingSample();
+        }
         projected[projection.endTick] = 0;
     }
     write.points.reserve(projected.size());

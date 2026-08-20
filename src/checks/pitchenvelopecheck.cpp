@@ -41,6 +41,7 @@ void sendCurveMouse(QWidget *widget, QEvent::Type type, QPoint position, Qt::Mou
 
 struct PitchEnvelopeFixture {
     int undoIndex = 0;
+    SongView::ViewState beforeViewState;
     int firstTrack = -1;
     int secondTrack = -1;
     LoadedVoiceGroup voicegroup{};
@@ -153,6 +154,7 @@ class PitchEnvelopeCheckContext final
     {
         PitchEnvelopeFixture fixture;
         fixture.undoIndex = m_document.undoStack()->index();
+        fixture.beforeViewState = m_view.viewState();
         fixture.firstTrack = m_view.selectionModel().primaryTrack();
         fixture.secondTrack = fixture.firstTrack == 0 ? 1 : 0;
         if (fixture.firstTrack < 0) {
@@ -377,6 +379,10 @@ class PitchEnvelopeCheckContext final
             fail("track pitch-envelope toggle did not expose enabled host widgets");
             return std::nullopt;
         }
+        m_view.setGridFeel(SongView::GridFeel::Straight);
+        m_view.setGridMinDenom(4);
+        QCoreApplication::processEvents();
+        const uint64_t authoredGridTicks = m_view.gridTicksAt(templateSource.tick);
         const auto initialCurve = graph->points();
         const double initialEndMilliseconds = initialCurve.empty() ? 0.0 : initialCurve.back().x;
         const uint64_t initialEndSample =
@@ -397,6 +403,17 @@ class PitchEnvelopeCheckContext final
             fail("track pitch-envelope graph has no usable canvas");
             return std::nullopt;
         }
+        const QPoint detentX(canvas.left() + canvas.width() / 3, canvas.center().y() + 8);
+        sendCurveMouse(graph, QEvent::MouseButtonPress, detentX, Qt::LeftButton, Qt::LeftButton);
+        const bool withinDetent = std::abs(graph->liveValue()) <= 1e-9;
+        graph->cancelGesture();
+        const QPoint outsideDetent(detentX.x(), detentX.y() + 1);
+        sendCurveMouse(graph, QEvent::MouseButtonPress, outsideDetent, Qt::LeftButton,
+                       Qt::LeftButton);
+        const bool beyondDetent = std::abs(graph->liveValue()) > 1e-9;
+        graph->cancelGesture();
+        if (!withinDetent || !beyondDetent)
+            fail("pitch-envelope graph did not apply its 8-pixel zero detent");
         const QByteArray beforeCurve = m_document.smf().write();
         const int curveUndoIndex = m_document.undoStack()->index();
         const QPoint strokeStart(canvas.left() + canvas.width() / 3, canvas.center().y());
@@ -407,6 +424,7 @@ class PitchEnvelopeCheckContext final
         sendCurveMouse(graph, QEvent::MouseMove, strokeEnd, Qt::NoButton, Qt::LeftButton);
         if (!graph->hasGesture() || m_document.undoStack()->index() != curveUndoIndex)
             fail("track pitch-envelope gesture escaped graph preview before release");
+        const auto authoredCurve = graph->points();
         sendCurveMouse(graph, QEvent::MouseButtonRelease, strokeEnd, Qt::LeftButton, Qt::NoButton);
         QCoreApplication::processEvents();
         const auto result = pitchenvelopecheck::verifyPitchEnvelopePersistence(
@@ -414,6 +432,7 @@ class PitchEnvelopeCheckContext final
              m_view,
              fixture.voicegroup,
              *graph,
+             authoredCurve,
              templateSource,
              fixture.fullProjections,
              fixture.finalProjection->tick,
@@ -424,6 +443,7 @@ class PitchEnvelopeCheckContext final
              expectedEndTick,
              targetEndSample,
              playableGridSamples,
+             authoredGridTicks,
              fixture.preservedGapTick,
              fixture.preservedGapValue,
              fixture.postSpanTick,
@@ -486,6 +506,7 @@ class PitchEnvelopeCheckContext final
         while (m_document.undoStack()->index() > fixture.undoIndex &&
                m_document.undoStack()->canUndo())
             m_document.undoStack()->undo();
+        m_view.applyViewState(fixture.beforeViewState);
         m_view.selectTrack(m_fixtureNote.engineTrack);
         m_view.selectionModel().clearNoteSelection();
         m_view.setEditCursorTick(0);

@@ -11,6 +11,7 @@
 #include <QSizePolicy>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -74,6 +75,14 @@ void PitchEnvelopeHost::setEnvelopeVisible(bool visible)
     }
     show();
     refresh();
+}
+
+void PitchEnvelopeHost::refreshGrid()
+{
+    if (!m_graph || !m_session)
+        return;
+    cancelGesture();
+    m_graph->setSpec(makeGraphSpec());
 }
 
 void PitchEnvelopeHost::refresh()
@@ -215,6 +224,94 @@ int PitchEnvelopeHost::activeBendRange(int engineTrack, uint64_t tick) const
     return range;
 }
 
+PitchEnvelopeHost::EditingGrid
+PitchEnvelopeHost::editingGridAt(uint64_t tick, EditableCurveGraph::Sampling sampling) const
+{
+    if (!m_songView || !m_session)
+        return {};
+    const EnvelopeSession &session = *m_session;
+    if (sampling == EditableCurveGraph::Sampling::Fine) {
+        return {std::max<uint64_t>(1, m_songView->fineGridTicks()), 0,
+                session.templateWindowEndTick};
+    }
+    const QSize graphSize = m_graph ? m_graph->size() : QSize(480, 164);
+    const int canvasWidth = std::max(80, graphSize.width() - 60);
+    const uint64_t span =
+        std::max<uint64_t>(1, session.templateWindowEndTick - session.templateSourceTick);
+    const SongView::GridSeg segment = m_songView->gridSegAt(tick);
+    return {std::max<uint64_t>(
+                1, m_songView->gridTicksAtScale(tick, double(canvasWidth) / double(span))),
+            segment.start, std::min(session.templateWindowEndTick, segment.next)};
+}
+
+uint64_t PitchEnvelopeHost::snappedGridTick(uint64_t tick,
+                                            EditableCurveGraph::Sampling sampling) const
+{
+    if (!m_session)
+        return 0;
+    const EnvelopeSession &session = *m_session;
+    const EditingGrid grid = editingGridAt(tick, sampling);
+    if (grid.endTick <= session.templateSourceTick)
+        return session.templateSourceTick;
+    const uint64_t clampedTick = std::min(tick, grid.endTick);
+    const uint64_t offset = clampedTick > grid.anchorTick ? clampedTick - grid.anchorTick : 0;
+    const uint64_t lower = grid.anchorTick + offset / grid.cellTicks * grid.cellTicks;
+    const uint64_t upper =
+        std::min(grid.endTick, lower > std::numeric_limits<uint64_t>::max() - grid.cellTicks
+                                   ? std::numeric_limits<uint64_t>::max()
+                                   : lower + grid.cellTicks);
+    const uint64_t snapped = clampedTick - lower <= upper - clampedTick ? lower : upper;
+    return std::clamp(snapped, session.templateSourceTick, session.templateWindowEndTick);
+}
+
+uint64_t PitchEnvelopeHost::nextGridTick(uint64_t tick, EditableCurveGraph::Sampling sampling) const
+{
+    if (!m_session)
+        return 0;
+    const EnvelopeSession &session = *m_session;
+    if (tick >= session.templateWindowEndTick)
+        return session.templateWindowEndTick;
+    const EditingGrid grid = editingGridAt(tick, sampling);
+    const uint64_t offset = tick > grid.anchorTick ? tick - grid.anchorTick : 0;
+    const uint64_t lower = grid.anchorTick + offset / grid.cellTicks * grid.cellTicks;
+    const uint64_t next = lower > std::numeric_limits<uint64_t>::max() - grid.cellTicks
+                              ? std::numeric_limits<uint64_t>::max()
+                              : lower + grid.cellTicks;
+    return std::min(grid.endTick, next);
+}
+
+uint64_t PitchEnvelopeHost::lastEditableGridTick(EditableCurveGraph::Sampling sampling) const
+{
+    if (!m_session)
+        return 0;
+    const EnvelopeSession &session = *m_session;
+    if (session.templateEndTick <= session.templateSourceTick)
+        return session.templateSourceTick;
+    const uint64_t lastTick = session.templateEndTick - 1;
+    const EditingGrid grid = editingGridAt(lastTick, sampling);
+    const uint64_t offset = lastTick > grid.anchorTick ? lastTick - grid.anchorTick : 0;
+    const uint64_t lower = grid.anchorTick + offset / grid.cellTicks * grid.cellTicks;
+    return std::max(session.templateSourceTick, lower);
+}
+
+std::vector<double> PitchEnvelopeHost::gridLines() const
+{
+    std::vector<double> lines;
+    if (!m_songView || !m_session)
+        return lines;
+    const EnvelopeSession &session = *m_session;
+    const MidiTimeline *timeline = m_songView->timeline();
+    for (uint64_t tick = session.templateSourceTick;;) {
+        const uint64_t next = nextGridTick(tick, EditableCurveGraph::Sampling::Normal);
+        if (next <= tick || next >= session.templateWindowEndTick)
+            break;
+        lines.push_back(
+            pitch_envelope::elapsedMilliseconds(timeline, session.templateSourceTick, next));
+        tick = next;
+    }
+    return lines;
+}
+
 EditableCurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
 {
     const EnvelopeSession *session = m_session ? &*m_session : nullptr;
@@ -227,16 +324,19 @@ EditableCurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
     spec.yAxis.minimum = -range;
     spec.yAxis.maximum = range;
     spec.yAxis.mapping = EditableCurveGraph::CurveAxisMapping::BipolarCenter;
+    spec.yAxis.zeroDetentPixels = 8;
     spec.defaultY = 0.0;
+    spec.lockStartEndpointY = true;
     spec.sampling.endpointInset = 0.1;
     spec.sampling.interiorStep = spec.sampling.endpointInset;
     spec.canvasRect =
-        QRect(52, 22, std::max(80, graphSize.width() - 60), std::max(60, graphSize.height() - 48));
+        QRect(52, 16, std::max(1, graphSize.width() - 60), std::max(1, graphSize.height() - 36));
     spec.title = SongView::tr("Track pitch envelope (BEND)");
     spec.startLabel = SongView::tr("0 ms");
     spec.endLabel = SongView::tr("100 ms");
     spec.text.zeroLabel = QStringLiteral("0");
     spec.text.showZeroLabel = true;
+    spec.gridLines = gridLines();
     spec.colors = {themes::color(themes::Role::song_view_piano_roll_background),
                    themes::color(themes::Role::song_view_grid),
                    themes::color(themes::Role::song_view_separator),
@@ -245,7 +345,7 @@ EditableCurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
                    themes::color(themes::Role::focus_outline),
                    themes::color(themes::Role::song_view_edit_preview_outline),
                    themes::color(themes::Role::song_view_secondary_text)};
-    spec.sampling.snap = [this](double x, EditableCurveGraph::Sampling) {
+    spec.sampling.snap = [this](double x, EditableCurveGraph::Sampling sampling) {
         if (x <= 0.0)
             return 0.0;
         if (x >= pitch_envelope::kWindowMilliseconds)
@@ -256,11 +356,13 @@ EditableCurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
         const MidiTimeline *timeline = m_songView->timeline();
         const uint64_t tick = pitch_envelope::tickForMilliseconds(
             timeline, session.templateSourceTick, session.templateWindowEndTick, x);
+        const uint64_t snapped =
+            std::min(snappedGridTick(tick, sampling), lastEditableGridTick(sampling));
         return std::min(
             pitch_envelope::kWindowMilliseconds,
-            pitch_envelope::elapsedMilliseconds(timeline, session.templateSourceTick, tick));
+            pitch_envelope::elapsedMilliseconds(timeline, session.templateSourceTick, snapped));
     };
-    spec.sampling.nextSample = [this](double x, EditableCurveGraph::Sampling) {
+    spec.sampling.nextSample = [this](double x, EditableCurveGraph::Sampling sampling) {
         if (x >= pitch_envelope::kWindowMilliseconds)
             return pitch_envelope::kWindowMilliseconds;
         if (!m_songView || !m_session)
@@ -269,26 +371,19 @@ EditableCurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
         const MidiTimeline *timeline = m_songView->timeline();
         const uint64_t tick = pitch_envelope::tickForMilliseconds(
             timeline, session.templateSourceTick, session.templateWindowEndTick, x);
-        if (tick >= session.templateWindowEndTick)
+        const uint64_t next = nextGridTick(tick, sampling);
+        if (next <= tick || next >= session.templateEndTick)
             return pitch_envelope::kWindowMilliseconds;
-        const double next =
-            pitch_envelope::elapsedMilliseconds(timeline, session.templateSourceTick, tick + 1);
-        return next <= x || next >= pitch_envelope::kWindowMilliseconds
-                   ? pitch_envelope::kWindowMilliseconds
-                   : next;
+        return pitch_envelope::elapsedMilliseconds(timeline, session.templateSourceTick, next);
     };
-    spec.sampling.lastEditable = [this](EditableCurveGraph::Sampling) {
+    spec.sampling.lastEditable = [this](EditableCurveGraph::Sampling sampling) {
         if (!m_songView || !m_session)
             return 0.0;
         const EnvelopeSession &session = *m_session;
-        if (session.templateEndTick <= session.templateSourceTick ||
-            session.templateEndTick - session.templateSourceTick <= 1) {
-            return 0.0;
-        }
         return std::min(pitch_envelope::kWindowMilliseconds,
                         pitch_envelope::elapsedMilliseconds(m_songView->timeline(),
                                                             session.templateSourceTick,
-                                                            session.templateEndTick - 1));
+                                                            lastEditableGridTick(sampling)));
     };
     spec.segments.allLinear = true;
     spec.text.formatLiveValue = [](double semitones) {

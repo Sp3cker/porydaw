@@ -24,6 +24,7 @@ struct PitchEnvelopePersistenceInput {
     SongView &view;
     const LoadedVoiceGroup &voicegroup;
     songview::EditableCurveGraph &graph;
+    std::vector<songview::CurvePoint> authoredCurve;
     DocNote templateSource;
     std::vector<PitchEnvelopeProjection> fullProjections;
     uint64_t sameTickProjectionTick = 0;
@@ -33,6 +34,7 @@ struct PitchEnvelopePersistenceInput {
     uint64_t expectedEndTick = 0;
     uint64_t targetEndSample = 0;
     uint64_t playableGridSamples = 0;
+    uint64_t authoredGridTicks = 0;
     uint64_t preservedGapTick = 0;
     int preservedGapValue = 0;
     uint64_t postSpanTick = 0;

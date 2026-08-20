@@ -24,6 +24,7 @@ class PitchEnvelopeHost final : public QWidget
 
     void setEnvelopeVisible(bool visible);
     void refresh();
+    void refreshGrid();
     void cancelGesture();
 
   protected:
@@ -45,6 +46,17 @@ class PitchEnvelopeHost final : public QWidget
     std::optional<int> selectedPrimaryTrack() const;
     std::vector<pitch_envelope::Projection> eligibleProjectionsForTrack(int engineTrack) const;
     int activeBendRange(int engineTrack, uint64_t tick) const;
+    struct EditingGrid {
+        uint64_t cellTicks = 1;
+        uint64_t anchorTick = 0;
+        uint64_t endTick = 0;
+    };
+
+    EditingGrid editingGridAt(uint64_t tick, EditableCurveGraph::Sampling sampling) const;
+    uint64_t snappedGridTick(uint64_t tick, EditableCurveGraph::Sampling sampling) const;
+    uint64_t nextGridTick(uint64_t tick, EditableCurveGraph::Sampling sampling) const;
+    uint64_t lastEditableGridTick(EditableCurveGraph::Sampling sampling) const;
+    std::vector<double> gridLines() const;
     EditableCurveGraph::CurveSpec makeGraphSpec() const;
     void applyReadOnlyState(const QString &text);
     void loadCurve();
