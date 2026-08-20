@@ -9,8 +9,6 @@ namespace {
 
 [[maybe_unused]] bool tempoPointsAreNormalized(const std::vector<TempoPoint> &points)
 {
-    if (points.empty())
-        return false;
     for (size_t i = 0; i < points.size(); i++) {
         const TempoPoint &point = points[i];
         if (point.microsecondsPerQuarterNote !=
@@ -50,8 +48,6 @@ std::vector<TempoPoint> SongDocument::normalizeTempoPoints(std::vector<TempoPoin
         else
             out.push_back(clamped);
     }
-    if (out.empty())
-        out.push_back({0, CoreTimeDefaults::kDefaultTempoUspqn});
     return out;
 }
 
