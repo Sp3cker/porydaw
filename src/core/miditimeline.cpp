@@ -325,8 +325,8 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf, double sam
 uint64_t MidiTimeline::sampleForTick(uint64_t tick) const
 {
     // tempoMap always has an entry at tick 0.
-    const TempoPoint *tp = &tempoMap.front();
-    for (const TempoPoint &p : tempoMap) {
+    const TempoMapPoint *tp = &tempoMap.front();
+    for (const TempoMapPoint &p : tempoMap) {
         if (p.tick > tick)
             break;
         tp = &p;
@@ -337,8 +337,8 @@ uint64_t MidiTimeline::sampleForTick(uint64_t tick) const
 
 double MidiTimeline::tickForSample(uint64_t samplePos) const
 {
-    const TempoPoint *tp = &tempoMap.front();
-    for (const TempoPoint &p : tempoMap) {
+    const TempoMapPoint *tp = &tempoMap.front();
+    for (const TempoMapPoint &p : tempoMap) {
         if (p.samplePos > samplePos)
             break;
         tp = &p;

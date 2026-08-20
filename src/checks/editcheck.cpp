@@ -491,6 +491,7 @@ int documentContractFailures()
             return failures;
         const auto activeGlobalsAreOriginal = [&globalsDoc] {
             const auto tempos = globalsDoc.lanePoints(-1, DOC_CC_TEMPO);
+            const auto &tempoPoints = globalsDoc.tempoPoints();
             const auto signatures = globalsDoc.timeSigs();
             int tempoEvents = 0;
             int signatureEvents = 0;
@@ -511,6 +512,8 @@ int documentContractFailures()
                 }
             }
             return tempos.size() == 1 && tempos.front().tick == 0 && tempos.front().value == 120 &&
+                   tempoPoints.size() == 1 && tempoPoints.front().tick == 0 &&
+                   tempoPoints.front().microsecondsPerQuarterNote == 500000 &&
                    signatures.size() == 1 && signatures.front().tick == 0 &&
                    signatures.front().numerator == 4 && signatures.front().denomPow2 == 2 &&
                    globalsDoc.loopTick(false) == 12 && globalsDoc.loopTick(true) == UINT64_MAX &&

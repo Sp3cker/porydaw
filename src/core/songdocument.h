@@ -74,6 +74,13 @@ struct DocLanePoint {
     int value = 0; // CC: 0-127; bend: -8192..8191; tempo: BPM; voice: 0-127
 };
 
+// A global MIDI tempo change. The value is the exact SMF FF 51 payload rather
+// than a derived BPM, so the document can preserve MIDI tempo precision.
+struct TempoPoint {
+    uint64_t tick = 0;
+    uint32_t microsecondsPerQuarterNote = 0;
+};
+
 // A time-signature event (meta 0x58) located in the SMF model. Same
 // staleness rule as DocNote.
 struct DocTimeSig {
@@ -101,6 +108,7 @@ class SongDocument : public QObject
     const QString &midPath() const { return m_midPath; }
     const QString &label() const { return m_label; }
     const SmfFile &smf() const { return m_smf; }
+    const std::vector<TempoPoint> &tempoPoints() const { return m_tempoPoints; }
     const SongCfg &cfg() const { return m_cfg; }
     QUndoStack *undoStack() { return &m_undoStack; }
     bool isDirty() const { return !m_undoStack.isClean(); }
@@ -417,6 +425,7 @@ class SongDocument : public QObject
     TrackRemap currentTrackRemap() const;
     TrackRemap trackRemap(const TrackMapState &before, const std::vector<EditOp> &ops) const;
     void publishMutation(TrackRemap remap);
+    void rebuildTempoPoints();
     void mintNoteId(SmfEvent *event);
     bool noteAt(int engineTrack, size_t onIndex, DocNote *out) const;
     void mintUnassignedNoteIds();
@@ -487,6 +496,7 @@ class SongDocument : public QObject
     QUndoStack m_undoStack;
     uint64_t m_revision = 0;
     uint64_t m_nextNoteId = 1;
+    std::vector<TempoPoint> m_tempoPoints;
 
     std::vector<int> m_engineToSmf;       // engine track -> SMF track
     std::vector<uint8_t> m_engineChannel; // engine track -> MIDI channel

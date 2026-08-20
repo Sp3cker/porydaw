@@ -101,7 +101,7 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
         if (note.unterminated)
             note.endTick = uint32_t(tl.lengthTicks);
 
-    for (const TempoPoint &tp : tl.tempoMap)
+    for (const TempoMapPoint &tp : tl.tempoMap)
         model.tempoLane.push_back({uint32_t(tp.tick), int(tp.bpm + 0.5)});
 
     for (const OtherEvent &oe : tl.otherEvents)
