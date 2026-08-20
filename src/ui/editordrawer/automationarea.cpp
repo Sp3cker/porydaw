@@ -100,8 +100,8 @@ bool AutomationArea::bandPreviewContainsRow(int rowIndex) const noexcept
 {
     if (!m_band.active)
         return false;
-    const int firstRow = std::min(m_band.rightRow, m_band.endRow);
-    const int lastRow = std::max(m_band.rightRow, m_band.endRow);
+    const int firstRow = std::min(m_bandRightRow, m_bandEndRow);
+    const int lastRow = std::max(m_bandRightRow, m_bandEndRow);
     return rowIndex >= firstRow && rowIndex <= lastRow;
 }
 void AutomationArea::setPencilMode(bool enabled)
@@ -179,18 +179,15 @@ void AutomationArea::updateTempoLayout()
 void AutomationArea::cancelInteraction()
 {
     const bool wasActive =
-        m_pan.active || m_resize.row >= 0 || m_band.rightPending || m_activeGesture.has_value();
+        m_pan.active || m_resize.row >= 0 || m_band.pending || m_activeGesture.has_value();
     m_pan.active = false;
     m_resize.row = -1;
     m_activeGesture.reset();
-    m_band.rightPending = false;
-    m_band.active = false;
-    m_band.rightRow = -1;
-    m_band.endRow = -1;
+    m_band.clear();
+    m_bandRightRow = -1;
+    m_bandEndRow = -1;
     m_tempoLane.cancel();
     m_hoverState.previewValueLabel = {};
-    m_band.endTick = 0;
-    m_band.rightStart = {};
     m_hoverState.hover.highlightLocked = false;
     m_hoverState.clearHover(*this);
     updateAxisLockCursor(AxisLock::None);
@@ -386,8 +383,8 @@ void AutomationArea::paintContent(QPainter &painter)
     if (m_band.active) {
         first = std::min(m_band.startTick, m_band.endTick);
         last = std::max(m_band.startTick, m_band.endTick);
-        const int firstRow = std::min(m_band.rightRow, m_band.endRow);
-        const int lastRow = std::max(m_band.rightRow, m_band.endRow);
+        const int firstRow = std::min(m_bandRightRow, m_bandEndRow);
+        const int lastRow = std::max(m_bandRightRow, m_bandEndRow);
         if (first < last && firstRow >= 0 && lastRow >= firstRow) {
             const qreal dpr = painter.device()->devicePixelRatioF();
             const qreal x0 = m_page->displayX(first, m_geometry.plotOrigin, dpr);

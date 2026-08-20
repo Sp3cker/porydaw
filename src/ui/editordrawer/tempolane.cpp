@@ -4,7 +4,6 @@
 #include <cmath>
 
 #include <QAction>
-#include <QApplication>
 #include <QCoreApplication>
 #include <QInputDialog>
 #include <QMenu>
@@ -102,37 +101,30 @@ bool TempoLane::mousePress(AutomationArea &area, QMouseEvent *event,
         (!hasTimeSelection() ||
          !selectionContains(projection, event->position().x(), area.devicePixelRatioF())))
         m_page->m_owner.selectionModel().clearTimeSelection();
-    if (m_header.contains(event->pos())) {
+    const bool inHeader = m_header.contains(event->pos());
+    const bool inBody = containsBody(event->position());
+    if (event->button() == Qt::RightButton &&
+        (inHeader || (inBody && event->position().x() >= geometry.plotOrigin))) {
+        m_band.press(event->pos(), projection.snapTickAt(event->position().x(),
+                                                         event->modifiers() & Qt::AltModifier));
+        if (!inHeader)
+            m_hoveredPoint =
+                hitPoint(event->position(), projection, geometry, area.devicePixelRatioF());
+        return true;
+    }
+    if (inHeader) {
         if (event->button() == Qt::LeftButton) {
             m_expanded = !m_expanded;
             cancel();
             area.updateTempoLayout();
-        } else if (event->button() == Qt::RightButton) {
-            m_band.pending = true;
-            m_band.active = false;
-            m_band.startPosition = event->pos();
-            m_band.startTick =
-                projection.snapTickAt(event->position().x(), event->modifiers() & Qt::AltModifier);
-            m_band.endTick = m_band.startTick;
         }
         return true;
     }
-    if (!containsBody(event->position()))
+    if (!inBody)
         return true;
     if (event->position().x() < geometry.plotOrigin) {
         if (event->button() == Qt::RightButton)
             showTempoMenu(area, event->globalPosition().toPoint());
-        return true;
-    }
-    if (event->button() == Qt::RightButton) {
-        m_band.pending = true;
-        m_band.active = false;
-        m_band.startPosition = event->pos();
-        m_band.startTick =
-            projection.snapTickAt(event->position().x(), event->modifiers() & Qt::AltModifier);
-        m_band.endTick = m_band.startTick;
-        m_hoveredPoint =
-            hitPoint(event->position(), projection, geometry, area.devicePixelRatioF());
         return true;
     }
     if (event->button() != Qt::LeftButton)
@@ -162,15 +154,11 @@ bool TempoLane::mouseMove(AutomationArea &area, QMouseEvent *event,
     const AutomationProjection projection(geometry, {}, m_page, 0);
     if (m_band.pending) {
         if (!(event->buttons() & Qt::RightButton)) {
-            m_band = {};
+            m_band.clear();
             return true;
         }
-        if (!m_band.active && (event->pos() - m_band.startPosition).manhattanLength() >=
-                                  QApplication::startDragDistance())
-            m_band.active = true;
-        if (m_band.active)
-            m_band.endTick =
-                projection.snapTickAt(event->position().x(), event->modifiers() & Qt::AltModifier);
+        m_band.move(event->pos(), projection.snapTickAt(event->position().x(),
+                                                        event->modifiers() & Qt::AltModifier));
         return true;
     }
     if (m_drag) {
@@ -213,12 +201,9 @@ bool TempoLane::mouseRelease(AutomationArea &area, QMouseEvent *event,
         return false;
     const AutomationProjection projection(geometry, {}, m_page, 0);
     if (event->button() == Qt::RightButton && m_band.pending) {
-        const bool active = m_band.active;
-        const uint64_t first = std::min(m_band.startTick, m_band.endTick);
-        const uint64_t last = std::max(m_band.startTick, m_band.endTick);
-        m_band = {};
-        if (active && first < last) {
-            publishTimeSelection(first, last);
+        const auto selection = m_band.release();
+        if (selection && selection->first < selection->second) {
+            publishTimeSelection(selection->first, selection->second);
             return true;
         }
         if (selectionContains(projection, event->position().x(), area.devicePixelRatioF())) {

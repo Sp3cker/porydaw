@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 
-#include <QApplication>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -118,13 +117,10 @@ void AutomationArea::mousePressEvent(QMouseEvent *event)
         return;
     }
     if (event->button() == Qt::RightButton) {
-        m_band.rightPending = true;
-        m_band.active = false;
-        m_band.rightStart = event->pos();
-        m_band.rightRow = rowIndex;
-        m_band.endRow = rowIndex;
-        m_band.startTick = m_page->snapTick(proj.rawTickAt(event->position().x()),
-                                            event->modifiers() & Qt::AltModifier);
+        m_band.press(event->pos(), m_page->snapTick(proj.rawTickAt(event->position().x()),
+                                                    event->modifiers() & Qt::AltModifier));
+        m_bandRightRow = rowIndex;
+        m_bandEndRow = rowIndex;
         DocLanePoint point;
         if (pencilPointHit(row, rowIndex, event->position(), proj, &point))
             m_hoverState.setContextPointHighlight(*this, m_page, m_geometry, m_rowData, proj,
@@ -241,20 +237,17 @@ void AutomationArea::mouseMoveEvent(QMouseEvent *event)
         }
         return;
     }
-    if (m_band.rightPending) {
-        if (!m_band.active && (event->pos() - m_band.rightStart).manhattanLength() >=
-                                  QApplication::startDragDistance()) {
-            m_band.active = true;
+    if (m_band.pending) {
+        if (m_band.move(event->pos(), m_page->snapTick(proj.rawTickAt(event->position().x()),
+                                                       event->modifiers() & Qt::AltModifier))) {
             m_hoverState.hover.highlightLocked = false;
             m_hoverState.clearHover(*this);
         }
         if (m_band.active) {
-            m_band.endTick = m_page->snapTick(proj.rawTickAt(event->position().x()),
-                                              event->modifiers() & Qt::AltModifier);
             const int lastY =
                 std::max(layout::space(layout::Space::Zero),
                          proj.rowTop(int(m_rowData.rows().size())) - layout::singlePixel());
-            m_band.endRow = proj.rowIndexAt(
+            m_bandEndRow = proj.rowIndexAt(
                 std::clamp(event->pos().y(), layout::space(layout::Space::Zero), lastY));
             invalidateContent();
         }
@@ -292,30 +285,27 @@ void AutomationArea::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
 
-    if (event->button() == Qt::RightButton && m_band.rightPending) {
-        const int rowIndex = m_band.rightRow;
-        m_band.rightPending = false;
-        if (m_band.active) {
-            m_band.active = false;
-            const uint64_t first = std::min(m_band.startTick, m_band.endTick);
-            const uint64_t last = std::max(m_band.startTick, m_band.endTick);
-            if (first < last && rowIndex >= 0 && m_band.endRow >= 0) {
-                auto &timeSelection = m_rowData.timeSelection();
-                timeSelection.range = {first, last};
-                timeSelection.scope = {};
-                timeSelection.firstRow = std::min(rowIndex, m_band.endRow);
-                timeSelection.lastRow = std::max(rowIndex, m_band.endRow);
-                timeSelection.scope.lanes.reserve(
-                    std::size_t(timeSelection.lastRow - timeSelection.firstRow + 1));
-                for (int row = timeSelection.firstRow;
-                     row <= timeSelection.lastRow && row < int(m_rowData.rows().size()); ++row)
-                    timeSelection.scope.lanes.push_back(
-                        m_rowData.rowIdentity(m_rowData.rows()[row]));
-                m_page->publishTimeSelection(first, last, timeSelection.scope.lanes);
-                m_page->announce(tr("Automation range [%1, %2)").arg(first).arg(last));
-            } else {
-                m_rowData.clearTimeSelection();
-            }
+    if (event->button() == Qt::RightButton && m_band.pending) {
+        const int rowIndex = m_bandRightRow;
+        const auto selection = m_band.release();
+        if (selection && selection->first < selection->second && rowIndex >= 0 &&
+            m_bandEndRow >= 0) {
+            auto &timeSelection = m_rowData.timeSelection();
+            timeSelection.range = {selection->first, selection->second};
+            timeSelection.scope = {};
+            timeSelection.firstRow = std::min(rowIndex, m_bandEndRow);
+            timeSelection.lastRow = std::max(rowIndex, m_bandEndRow);
+            timeSelection.scope.lanes.reserve(
+                std::size_t(timeSelection.lastRow - timeSelection.firstRow + 1));
+            for (int row = timeSelection.firstRow;
+                 row <= timeSelection.lastRow && row < int(m_rowData.rows().size()); ++row)
+                timeSelection.scope.lanes.push_back(m_rowData.rowIdentity(m_rowData.rows()[row]));
+            m_page->publishTimeSelection(selection->first, selection->second,
+                                         timeSelection.scope.lanes);
+            m_page->announce(
+                tr("Automation range [%1, %2)").arg(selection->first).arg(selection->second));
+        } else if (selection) {
+            m_rowData.clearTimeSelection();
         } else {
             const bool handled = rowIndex >= 0 && rowIndex < int(m_rowData.rows().size()) &&
                                  showPointMenuNear(m_rowData.rows()[rowIndex], rowIndex,
@@ -329,8 +319,8 @@ void AutomationArea::mouseReleaseEvent(QMouseEvent *event)
                      m_rowData.rows()[rowIndex].id.kind != EditorAutomationRowKind::Voice)
                 m_rowData.clearTimeSelection();
         }
-        m_band.rightRow = -1;
-        m_band.endRow = -1;
+        m_bandRightRow = -1;
+        m_bandEndRow = -1;
         setGestureActive(false);
         invalidateContent();
         return;
@@ -422,8 +412,7 @@ void AutomationArea::mouseDoubleClickEvent(QMouseEvent *event)
 void AutomationArea::keyPressEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) {
-        if (m_tempoLane.interactionActive() || m_band.rightPending || m_band.active ||
-            m_activeGesture) {
+        if (m_tempoLane.interactionActive() || m_band.pending || m_activeGesture) {
             cancelInteraction();
         } else {
             if (m_tempoLane.hasTimeSelection())

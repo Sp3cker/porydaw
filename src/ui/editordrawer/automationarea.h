@@ -129,15 +129,9 @@ class AutomationArea final : public songview::TimelineSurface
         double startHScroll = 0;
         int startVScroll = 0;
     } m_pan;
-    struct BandState {
-        bool rightPending = false;
-        QPoint rightStart;
-        int rightRow = -1;
-        bool active = false;
-        uint64_t startTick = 0;
-        uint64_t endTick = 0;
-        int endRow = -1;
-    } m_band;
+    BandGesture m_band;
+    int m_bandRightRow = -1;
+    int m_bandEndRow = -1;
     std::vector<ValuePoint> m_clipboard;
     bool m_pencilMode = false;
     qreal m_pencilCursorDpr = 0.0;

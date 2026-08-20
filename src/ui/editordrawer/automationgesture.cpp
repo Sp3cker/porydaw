@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include <QApplication>
+
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/linearramp.h"
 
@@ -13,6 +15,41 @@ bool Slop::shouldSuppress(QPointF pos, int threshold, qreal aspect) const noexce
     const qreal dy = std::abs(pos.y() - origin.y());
     const qreal travel = dx + dy;
     return dy < qreal(threshold) && (travel < qreal(threshold) || dy == 0.0 || dx > dy * aspect);
+}
+
+void BandGesture::press(QPoint pos, uint64_t tick)
+{
+    pending = true;
+    active = false;
+    pressPos = pos;
+    startTick = tick;
+    endTick = tick;
+}
+
+bool BandGesture::move(QPoint pos, uint64_t tick)
+{
+    if (!pending)
+        return false;
+    if (!active && (pos - pressPos).manhattanLength() >= QApplication::startDragDistance()) {
+        active = true;
+        endTick = tick;
+        return true;
+    }
+    if (active)
+        endTick = tick;
+    return false;
+}
+
+std::optional<std::pair<uint64_t, uint64_t>> BandGesture::release()
+{
+    if (!pending || !active) {
+        clear();
+        return std::nullopt;
+    }
+    const std::pair<uint64_t, uint64_t> result{std::min(startTick, endTick),
+                                               std::max(startTick, endTick)};
+    clear();
+    return result;
 }
 
 void NodeDragGesture::preparePreview(const std::vector<AutomationRow> &rows,
