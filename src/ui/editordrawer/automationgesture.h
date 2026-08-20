@@ -44,52 +44,71 @@ struct Slop {
 
 inline constexpr qreal kPencilSlopAspect = 4.0;
 
-struct NodeDrag {
-    int row = -1;
-    int engineTrack = -1;
-    uint8_t controller = 0;
-    DocLanePoint documentPoint;
-    ValuePoint original;
-    ValuePoint current;
+enum class PointDragRelease : uint8_t { NoOp, StationaryDelete, Move };
+
+struct PointDragUpdate {
+    enum class Phase : uint8_t { Pending, Reset, Dragging };
+
+    Phase phase = Phase::Pending;
+    QPointF effectivePosition;
+    AxisLock axisLock = AxisLock::None;
 };
 
-struct NodeDeleteCommit {
-    DocLanePoint point;
-    int track = -1;
-    uint8_t controller = 0;
+// Page-free pointer mechanics for a single point. The caller retains domain
+// points: Reset restores its original; Dragging maps effectivePosition and
+// applies axisLock to its own original/current values.
+struct PointDragGesture {
+    QPointF pressPosition;
+    Slop dragSlop;
+    AxisLock axisLock = AxisLock::None;
+    bool deleteOnStationary = true;
+
+    void press(QPointF position, bool deleteStationary) noexcept;
+    PointDragUpdate update(QPointF position, Qt::KeyboardModifiers modifiers,
+                           int activationDistance) noexcept;
+    PointDragRelease release() const noexcept;
 };
-struct NodeMoveCommit {
-    std::vector<SongDocument::LanePointMove> moves;
+
+struct NodeDrag {
+    int row = -1;
+    ValuePoint original;
+    ValuePoint current;
+    int minimumValue = 0;
+    int maximumValue = 127;
+};
+
+struct NodeDragFinish {
+    PointDragRelease release = PointDragRelease::NoOp;
+    bool changed = false;
     int64_t dTick = 0;
     bool selectionDrag = false;
 };
-using GestureCommit =
-    std::variant<std::monostate, AutomationLaneEdit::Completion, NodeDeleteCommit, NodeMoveCommit>;
+
+struct NodeDoubleClickGuard {
+    bool pending = false;
+
+    void clear() noexcept { pending = false; }
+    void markDeleted() noexcept { pending = true; }
+    bool consume() noexcept { return std::exchange(pending, false); }
+};
+
+using GestureCommit = std::variant<std::monostate, AutomationLaneEdit::Completion>;
 
 struct NodeDragGesture {
     int row = -1;
     std::vector<NodeDrag> points;
     std::size_t grabbedPoint = 0;
-    QPointF pressPosition;
-    // Set when travel first exceeds automationNodeDragActivationDistance.
-    // Subsequent drag deltas are measured from here so the slop is not
-    // applied as intentional node movement.
-    Slop dragSlop;
-    AxisLock axisLock = AxisLock::None;
-    bool axisLockArmed = false;
+    PointDragGesture drag;
     bool selectionDrag = false;
     std::vector<std::vector<std::size_t>> pointIndexesByRow;
-    std::vector<std::vector<LanePoint>> basePointsByRow;
-    std::vector<std::vector<LanePoint>> previewPoints;
+    std::vector<std::vector<ValuePoint>> basePointsByRow;
+    std::vector<std::vector<ValuePoint>> previewPoints;
 
-    AxisLock update(const QPointF &position, const ValuePoint &mappedGrabBeforeLock,
-                    Qt::KeyboardModifiers mods, int activationDistance,
-                    const std::vector<AutomationRow> &rows, const AutomationProjection &proj);
-    GestureCommit finish() const;
-    void applyDrag(const ValuePoint &grabCurrent, const std::vector<AutomationRow> &rows,
-                   const AutomationProjection &proj);
-    void preparePreview(const std::vector<AutomationRow> &rows,
-                        const std::vector<std::vector<LanePoint>> &lanePointsByRow);
+    AxisLock update(const PointDragUpdate &dragUpdate, const ValuePoint &mappedGrabBeforeLock);
+    NodeDragFinish finish() const;
+    void applyDrag(const ValuePoint &grabCurrent);
+    void preparePreview(std::size_t rowCount,
+                        const std::vector<std::vector<ValuePoint>> &lanePointsByRow);
     void updatePreview();
 };
 
@@ -111,6 +130,9 @@ struct SweepGesture {
     void update(const ValuePoint &mapped, uint64_t first, uint64_t last, double rawTick,
                 bool fineGrid, NextGridTick &&nextGridTick);
     void update(const ValuePoint &mapped) { current = mapped; }
+    std::optional<QPointF> dragPosition(QPointF position, bool activate, int activationDistance);
+    template <typename NextGridTick>
+    std::vector<ValuePoint> finishedPoints(bool fineGrid, NextGridTick &&nextGridTick) const;
     template <typename NextGridTick>
     AutomationLaneEdit::Completion finish(int track, uint8_t controller, uint64_t revision,
                                           const std::vector<DocLanePoint> &existing, bool fineGrid,
@@ -261,49 +283,50 @@ void SweepGesture::update(const ValuePoint &mapped, uint64_t first, uint64_t las
 }
 
 template <typename NextGridTick>
+std::vector<ValuePoint> SweepGesture::finishedPoints(bool fineGrid,
+                                                     NextGridTick &&nextGridTick) const
+{
+    if (mode != Mode::Ramp)
+        return points;
+    uint64_t first = anchor.tick;
+    uint64_t last = current.tick;
+    int firstValue = anchor.value;
+    int lastValue = current.value;
+    if (first > last) {
+        std::swap(first, last);
+        std::swap(firstValue, lastValue);
+    }
+    std::vector<ValuePoint> result;
+    for (uint64_t tick = first;;) {
+        const int value = int(std::llround(ui::linearRampValue(
+            double(tick), double(first), double(firstValue), double(last), double(lastValue))));
+        result.push_back({tick, value});
+        if (tick == last)
+            break;
+        tick = nextGridTick(tick, fineGrid, last);
+    }
+    return result;
+}
+
+template <typename NextGridTick>
 AutomationLaneEdit::Completion
 SweepGesture::finish(int track, uint8_t controller, uint64_t revision,
                      const std::vector<DocLanePoint> &existing, bool fineGrid,
                      NextGridTick &&nextGridTick) const
 {
-    const auto laneEditPoints = [](const std::vector<ValuePoint> &valuePoints) {
-        std::vector<AutomationLaneEdit::Point> lanePoints;
-        lanePoints.reserve(valuePoints.size());
-        for (const ValuePoint &point : valuePoints)
-            lanePoints.push_back({point.tick, point.value});
-        return lanePoints;
-    };
-    const auto replace = [track, controller, revision,
-                          &existing](uint64_t first, uint64_t last,
-                                     std::vector<AutomationLaneEdit::Point> lanePoints) {
-        std::vector<AutomationLaneEdit::Point> existingEdit;
-        existingEdit.reserve(existing.size());
-        for (const DocLanePoint &point : existing)
-            existingEdit.push_back({point.tick, point.value});
-        const AutomationLaneEdit laneEdit({track, controller, revision}, std::move(existingEdit));
-        return laneEdit.replacePointRange(first, last, std::move(lanePoints));
-    };
-    if (mode == Mode::Ramp) {
-        uint64_t first = anchor.tick;
-        uint64_t last = current.tick;
-        int firstValue = anchor.value;
-        int lastValue = current.value;
-        if (first > last) {
-            std::swap(first, last);
-            std::swap(firstValue, lastValue);
-        }
-        std::vector<AutomationLaneEdit::Point> rampPoints;
-        for (uint64_t tick = first;;) {
-            const int value = int(std::llround(ui::linearRampValue(
-                double(tick), double(first), double(firstValue), double(last), double(lastValue))));
-            rampPoints.push_back({tick, value});
-            if (tick == last)
-                break;
-            tick = nextGridTick(tick, fineGrid, last);
-        }
-        return replace(first, last, std::move(rampPoints));
-    }
-    if (points.empty())
+    const std::vector<ValuePoint> result =
+        finishedPoints(fineGrid, std::forward<NextGridTick>(nextGridTick));
+    if (result.empty())
         return {};
-    return replace(points.front().tick, points.back().tick, laneEditPoints(points));
+    std::vector<AutomationLaneEdit::Point> lanePoints;
+    lanePoints.reserve(result.size());
+    for (const ValuePoint &point : result)
+        lanePoints.push_back({point.tick, point.value});
+    std::vector<AutomationLaneEdit::Point> existingEdit;
+    existingEdit.reserve(existing.size());
+    for (const DocLanePoint &point : existing)
+        existingEdit.push_back({point.tick, point.value});
+    const AutomationLaneEdit laneEdit({track, controller, revision}, std::move(existingEdit));
+    return laneEdit.replacePointRange(result.front().tick, result.back().tick,
+                                      std::move(lanePoints));
 }

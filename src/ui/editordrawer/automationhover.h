@@ -25,7 +25,6 @@ struct AutomationHoverState {
         bool hasPoint = false;
         ValuePoint point;
         bool highlightLocked = false;
-        bool nodeDeleted = false;
     };
     HoverState hover;
 

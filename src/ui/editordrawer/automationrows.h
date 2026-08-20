@@ -23,6 +23,16 @@ extern "C" {
 
 class AutomationArea;
 class AutomationPage;
+struct LaneNodeIdentity {
+    int engineTrack = -1;
+    uint8_t controller = 0;
+    DocLanePoint documentPoint;
+};
+
+struct LaneNodeDragState {
+    NodeDragGesture gesture;
+    std::vector<LaneNodeIdentity> identities;
+};
 
 // Row data and caches for the automation canvas. It owns the stable row
 // snapshot used by painting and input throughout an AutomationArea frame.
@@ -98,11 +108,11 @@ class AutomationRows final
                            qreal devicePixelRatio) const;
     bool pointInTimeSelection(int rowIndex, uint64_t tick) const;
     bool selectionHasMultipleNodes() const;
-    std::vector<NodeDrag> collectSelectedNodeDrags() const;
+    LaneNodeDragState collectSelectedNodeDrags(const AutomationProjection &projection) const;
     bool cachedPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
                         const AutomationProjection &projection, const AutomationGeometry &geometry,
                         qreal devicePixelRatio, DocLanePoint *hit) const;
-    std::optional<NodeDragGesture>
+    std::optional<LaneNodeDragState>
     nodeDragGestureAt(int rowIndex, const QPointF &position, bool axisLockArmed,
                       const AutomationProjection &projection, bool pencilMode,
                       const AutomationGeometry &geometry, qreal devicePixelRatio) const;

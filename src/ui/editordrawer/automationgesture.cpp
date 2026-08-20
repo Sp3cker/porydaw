@@ -17,6 +17,39 @@ bool Slop::shouldSuppress(QPointF pos, int threshold, qreal aspect) const noexce
     return dy < qreal(threshold) && (travel < qreal(threshold) || dy == 0.0 || dx > dy * aspect);
 }
 
+void PointDragGesture::press(QPointF position, bool deleteStationary) noexcept
+{
+    pressPosition = position;
+    dragSlop = {position, false};
+    axisLock = AxisLock::None;
+    deleteOnStationary = deleteStationary;
+}
+
+PointDragUpdate PointDragGesture::update(QPointF position, Qt::KeyboardModifiers modifiers,
+                                         int activationDistance) noexcept
+{
+    if (!dragSlop.exceeded) {
+        const QPointF delta = position - pressPosition;
+        const qreal travel = std::abs(delta.x()) + std::abs(delta.y());
+        if (travel < qreal(activationDistance))
+            return {};
+        dragSlop.markExceeded(position);
+        return {PointDragUpdate::Phase::Reset, pressPosition, AxisLock::None};
+    }
+    axisLock = resolveAxisLock(axisLock, modifiers & Qt::ShiftModifier, pressPosition, position,
+                               activationDistance);
+    if (modifiers & Qt::ShiftModifier && axisLock == AxisLock::None)
+        return {PointDragUpdate::Phase::Reset, pressPosition, AxisLock::None};
+    return {PointDragUpdate::Phase::Dragging, pressPosition + position - dragSlop.origin, axisLock};
+}
+
+PointDragRelease PointDragGesture::release() const noexcept
+{
+    if (!dragSlop.exceeded)
+        return deleteOnStationary ? PointDragRelease::StationaryDelete : PointDragRelease::NoOp;
+    return PointDragRelease::Move;
+}
+
 void BandGesture::press(QPoint pos, uint64_t tick)
 {
     pending = true;
@@ -52,20 +85,18 @@ std::optional<std::pair<uint64_t, uint64_t>> BandGesture::release()
     return result;
 }
 
-void NodeDragGesture::preparePreview(const std::vector<AutomationRow> &rows,
-                                     const std::vector<std::vector<LanePoint>> &lanePointsByRow)
+void NodeDragGesture::preparePreview(std::size_t rowCount,
+                                     const std::vector<std::vector<ValuePoint>> &lanePointsByRow)
 {
-    pointIndexesByRow.assign(rows.size(), {});
-    basePointsByRow.assign(rows.size(), {});
-    previewPoints.assign(rows.size(), {});
-    if (points.size() <= 1)
-        return;
+    pointIndexesByRow.assign(rowCount, {});
+    basePointsByRow.assign(rowCount, {});
+    previewPoints.assign(rowCount, {});
     for (size_t index = 0; index < points.size(); ++index) {
         const int rowIndex = points[index].row;
-        if (rowIndex >= 0 && rowIndex < int(rows.size()))
+        if (rowIndex >= 0 && rowIndex < int(rowCount))
             pointIndexesByRow[rowIndex].push_back(index);
     }
-    for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
+    for (int rowIndex = 0; rowIndex < int(rowCount); ++rowIndex) {
         auto &indexes = pointIndexesByRow[rowIndex];
         if (indexes.empty())
             continue;
@@ -80,7 +111,7 @@ void NodeDragGesture::preparePreview(const std::vector<AutomationRow> &rows,
         auto &base = basePointsByRow[rowIndex];
         base.reserve(lanePoints.size());
         size_t selected = 0;
-        for (const LanePoint &point : lanePoints) {
+        for (const ValuePoint &point : lanePoints) {
             while (selected < indexes.size() &&
                    points[indexes[selected]].original.tick < point.tick)
                 ++selected;
@@ -110,7 +141,7 @@ void NodeDragGesture::updatePreview()
         size_t movedIndex = 0;
         const auto appendMoved = [&] {
             const auto &point = points[indexes[movedIndex++]].current;
-            const LanePoint moved{uint32_t(point.tick), point.value};
+            const ValuePoint moved{point.tick, point.value};
             if (!preview.empty() && preview.back().tick == moved.tick)
                 preview.back() = moved;
             else
@@ -136,9 +167,7 @@ void NodeDragGesture::updatePreview()
     }
 }
 
-void NodeDragGesture::applyDrag(const ValuePoint &grabCurrent,
-                                const std::vector<AutomationRow> &rows,
-                                const AutomationProjection &proj)
+void NodeDragGesture::applyDrag(const ValuePoint &grabCurrent)
 {
     if (points.empty() || grabbedPoint >= points.size())
         return;
@@ -151,48 +180,42 @@ void NodeDragGesture::applyDrag(const ValuePoint &grabCurrent,
     const int dValue = grabCurrent.value - grabOriginal.value;
     for (NodeDrag &point : points) {
         point.current.tick = uint64_t(int64_t(point.original.tick) + dTick);
-        if (point.row < 0 || point.row >= int(rows.size())) {
-            point.current.value = point.original.value + dValue;
-            continue;
-        }
-        const auto &row = rows[point.row];
         point.current.value =
-            std::clamp(point.original.value + dValue, proj.rowMinimum(row), proj.rowMaximum(row));
+            std::clamp(point.original.value + dValue, point.minimumValue, point.maximumValue);
     }
 }
-AxisLock NodeDragGesture::update(const QPointF &position, const ValuePoint &mappedGrabBeforeLock,
-                                 Qt::KeyboardModifiers mods, int activationDistance,
-                                 const std::vector<AutomationRow> &rows,
-                                 const AutomationProjection &proj)
+AxisLock NodeDragGesture::update(const PointDragUpdate &dragUpdate,
+                                 const ValuePoint &mappedGrabBeforeLock)
 {
-    const bool shiftHeld = mods & Qt::ShiftModifier;
-    if (!dragSlop.exceeded) {
-        const qreal travel =
-            std::abs(position.x() - pressPosition.x()) + std::abs(position.y() - pressPosition.y());
-        if (travel < qreal(activationDistance))
-            return AxisLock::None;
-        dragSlop.markExceeded(position);
-        const auto &original = points[grabbedPoint].original;
-        applyDrag({original.tick, original.value}, rows, proj);
-        if (points.size() > 1)
-            updatePreview();
+    if (points.empty() || grabbedPoint >= points.size() ||
+        dragUpdate.phase == PointDragUpdate::Phase::Pending)
         return AxisLock::None;
+    NodeDrag &grabbed = points[grabbedPoint];
+    if (dragUpdate.phase == PointDragUpdate::Phase::Reset) {
+        grabbed.current = grabbed.original;
+    } else {
+        grabbed.current = mappedGrabBeforeLock;
+        applyAxisLock(dragUpdate.axisLock, grabbed.original, grabbed.current);
     }
-    axisLock = resolveAxisLock(axisLock, shiftHeld, pressPosition, position, activationDistance);
-    if (shiftHeld && axisLock == AxisLock::None) {
-        const auto &original = points[grabbedPoint].original;
-        applyDrag({original.tick, original.value}, rows, proj);
-        if (points.size() > 1)
-            updatePreview();
-        return axisLock;
+    applyDrag(grabbed.current);
+    updatePreview();
+    return dragUpdate.axisLock;
+}
+std::optional<QPointF> SweepGesture::dragPosition(QPointF position, bool activate,
+                                                  int activationDistance)
+{
+    if (!slop.exceeded) {
+        const QPointF delta = position - pressPosition;
+        const qreal travel = std::abs(delta.x()) + std::abs(delta.y());
+        if (!activate || travel < qreal(activationDistance))
+            return std::nullopt;
+        slop.markExceeded(position);
+        return std::nullopt;
     }
-    ValuePoint grab = mappedGrabBeforeLock;
-    applyAxisLock(axisLock,
-                  {points[grabbedPoint].original.tick, points[grabbedPoint].original.value}, grab);
-    applyDrag(grab, rows, proj);
-    if (points.size() > 1)
-        updatePreview();
-    return axisLock;
+    const QPointF effective = pressPosition + position - slop.origin;
+    if (points.empty() && effective == pressPosition)
+        return std::nullopt;
+    return effective;
 }
 
 bool PencilGesture::update(const QPointF &position, bool freehand, AxisLock lock,
@@ -285,31 +308,19 @@ bool updatePencilDrawPath(PencilGesture &gesture, const QPointF &position, bool 
     return applied;
 }
 
-GestureCommit NodeDragGesture::finish() const
+NodeDragFinish NodeDragGesture::finish() const
 {
     if (points.empty() || grabbedPoint >= points.size())
-        return std::monostate{};
+        return {};
     const auto &grabbed = points[grabbedPoint];
-    if (!dragSlop.exceeded) {
-        if (axisLockArmed)
-            return std::monostate{};
-        return NodeDeleteCommit{grabbed.documentPoint, grabbed.engineTrack, grabbed.controller};
-    }
-    bool anyChanged = false;
-    std::vector<SongDocument::LanePointMove> moves;
-    moves.reserve(points.size());
-    for (const NodeDrag &point : points) {
-        if (point.original.tick != point.current.tick ||
-            point.original.value != point.current.value)
-            anyChanged = true;
-        moves.push_back({point.engineTrack, point.controller, point.documentPoint,
-                         point.current.tick, point.current.value});
-    }
-    if (!anyChanged)
-        return std::monostate{};
-    return NodeMoveCommit{std::move(moves),
-                          int64_t(grabbed.current.tick) - int64_t(grabbed.original.tick),
-                          selectionDrag};
+    NodeDragFinish result;
+    result.release = drag.release();
+    result.dTick = int64_t(grabbed.current.tick) - int64_t(grabbed.original.tick);
+    result.selectionDrag = selectionDrag;
+    for (const NodeDrag &point : points)
+        result.changed = result.changed || point.original.tick != point.current.tick ||
+                         point.original.value != point.current.value;
+    return result;
 }
 
 AutomationLaneEdit::Completion PencilGesture::finish() &&

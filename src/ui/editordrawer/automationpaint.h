@@ -1,7 +1,7 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
-#include <vector>
 
 #include <QColor>
 #include <QPointF>
@@ -32,6 +32,14 @@ struct RowPaintParams {
     bool multipleSelectedNodes = false;
 };
 
+struct TickRange {
+    uint64_t firstTick = 0;
+    uint64_t lastTick = 0;
+
+    [[nodiscard]] static std::optional<TickRange> orderedNonEmpty(uint64_t firstTick,
+                                                                  uint64_t secondTick) noexcept;
+};
+
 void paintAutomationNode(QPainter &painter, const AutomationGeometry &geometry, const QColor &color,
                          const QPointF &center, bool selected = false,
                          const QColor &selectedColor = {}, bool dimUnselected = false,
@@ -41,6 +49,9 @@ void paintPlainGridFallback(QPainter &painter, const QRect &plot, AutomationPage
                             qreal plotOriginX, qreal dpr);
 
 void paintEditCursor(QPainter &painter, const QRect &plot, qreal cursorX);
+void paintSelectionReticle(QPainter &painter, const TickRange &range,
+                           const AutomationProjection &projection, const QRect &bounds,
+                           qreal devicePixelRatio);
 
 void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
               const QFont &titleFont, const QFont &captionFont, const QRect &primaryTextBox,
