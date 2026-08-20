@@ -47,7 +47,6 @@ class AutomationPencilGesture
 
     void rebuildPreview();
     void eraseStrokePointsIn(uint64_t tickBegin, uint64_t tickEnd);
-    static void upsertPoint(std::vector<automation::ValuePoint> &points, uint64_t tick, int value);
     int roundedValue(double continuousValue) const noexcept;
 
     int m_minimumValue = 0;
