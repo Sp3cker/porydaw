@@ -5,14 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+Nothing, yet.
+
+## [1.1.0] - 2026-08-20
 
 ## Added
 - Added a new Velocity lane, which allows viewing/editing note velocities. This is generally more flexible/powerful than vertically dragging on notes in the piano roll. Toggle the Velocity lane's visibility with `V` or `View -> Velocity Lane`.
    - PSG channels (square 1 & 2, programmable wave, noise) have a special detented view which makes it simply to see and know what final hardware volumes are used for the note's velocity.
 - Added buttons for showing/hiding the Automation lanes and the Velocity lane.
 - Added buffer area before and after the song's boundaries so that scrolling and snapping to the start or end of the song is easy.
-- Added a bunch of general improvements to general Automation lane behavior.
-- Added the ability to select the "alt" square and programmable wave voices. In general, the "alt" voice are slightly detuned to help avoid aliasing, or provide a thicker sound. Note that the noise voice's "alt" variant is identical in the m4a engine, so porydaw hides it.
+- Added a bunch of general improvements to general Automation lane behavior (see Pencil Mode below).
+- Added support for the "alt" square and programmable wave voices. The "alt" voice are slightly detuned to help avoid aliasing, or provide a thicker sound. Note that the noise voice's "alt" variant is identical in the m4a engine, so porydaw hides it.
 
 ## Changed
 - Editing values in the Automation Lanes is now split into two modes: Pointer and Pencil modes. Toggle between the modes with `B`. If you *hold* `B` -> draw in pencil mode -> then release `B`, it will automatically revert back to Pointer mode.
@@ -39,5 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-08-01
 Initial release.
 
-[Unreleased]: https://github.com/huderlem/porydaw/compare/1.0.0...HEAD
+[Unreleased]: https://github.com/huderlem/porydaw/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/huderlem/porydaw/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/huderlem/porydaw/releases/tag/1.0.0
