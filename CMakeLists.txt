@@ -314,6 +314,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationhover.cpp
     src/ui/editordrawer/automationhover.h
     src/ui/editordrawer/automationpaint.cpp
+    src/ui/editordrawer/automationpaintpreview.cpp
     src/ui/editordrawer/automationpaint.h
     src/ui/editordrawer/automationrows.cpp
     src/ui/editordrawer/automationrows.h
