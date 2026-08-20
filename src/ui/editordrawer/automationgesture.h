@@ -9,8 +9,8 @@
 #include <variant>
 #include <vector>
 
+#include <QPoint>
 #include <QPointF>
-#include <QRect>
 
 #include "ui/editordrawer/automationlaneedit.h"
 #include "ui/editordrawer/automationpencilgesture.h"
@@ -128,6 +128,25 @@ struct PencilGesture {
                 const AutomationProjection &proj, const AutomationRow &row,
                 int verticalSlopDistance);
     AutomationLaneEdit::Completion finish() &&;
+};
+
+struct BandGesture {
+    bool pending = false;
+    bool active = false;
+    QPoint pressPos;
+    uint64_t startTick = 0;
+    uint64_t endTick = 0;
+
+    void press(QPoint pos, uint64_t tick);
+    // Owns QApplication::startDragDistance. Returns true only on the move
+    // that first activates (callers clear locked hover on that transition).
+    bool move(QPoint pos, uint64_t tick);
+    // Clears pending/active. Returns:
+    //   nullopt            — never activated (click)
+    //   {t, t}             — activated drag, snapped width zero
+    //   {first, last}      — activated drag, first < last
+    std::optional<std::pair<uint64_t, uint64_t>> release();
+    void clear() { *this = {}; }
 };
 
 using ActiveGesture = std::variant<NodeDragGesture, SweepGesture, PencilGesture>;

@@ -11,8 +11,8 @@
 #include <QString>
 
 #include "core/songdocument.h"
+#include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationprojection.h"
-
 class AutomationArea;
 class AutomationPage;
 class QFont;
@@ -55,13 +55,6 @@ class TempoLane final
         std::vector<TempoPoint> points;
         bool moved = false;
     };
-    struct BandState {
-        bool pending = false;
-        bool active = false;
-        QPoint startPosition;
-        uint64_t startTick = 0;
-        uint64_t endTick = 0;
-    };
 
     int headerHeight(const AutomationGeometry &geometry) const;
     int bodyHeight(const AutomationGeometry &geometry) const;
@@ -88,6 +81,6 @@ class TempoLane final
     std::optional<std::size_t> m_hoveredPoint;
     std::optional<DragState> m_drag;
     std::optional<DrawState> m_draw;
-    BandState m_band;
+    BandGesture m_band;
     std::vector<TempoPoint> m_clipboard;
 };
