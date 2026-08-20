@@ -56,6 +56,28 @@ void paintAutomationNode(QPainter &painter, const AutomationGeometry &geometry, 
     painter.setRenderHint(QPainter::Antialiasing, antialiasing);
 }
 
+void paintPlainGridFallback(QPainter &painter, const QRect &plot, AutomationPage &page,
+                            qreal plotOriginX, qreal dpr)
+{
+    const uint64_t length = page.timeline()->lengthTicks;
+    painter.setPen(QPen(themes::color(themes::Role::song_view_grid), layout::singlePixel()));
+    for (uint64_t tick = 0;;) {
+        const qreal x = page.displayX(tick, plotOriginX, dpr);
+        if (x >= plot.left() && x <= plot.right())
+            painter.drawLine(QPointF(x, plot.top()), QPointF(x, plot.bottom()));
+        if (tick >= length)
+            break;
+        tick = page.nextGridTick(tick, false, length);
+    }
+}
+
+void paintEditCursor(QPainter &painter, const QRect &plot, qreal cursorX)
+{
+    painter.setPen(QPen(themes::color(themes::Role::song_view_edit_cursor), layout::singlePixel(),
+                        Qt::DashLine));
+    painter.drawLine(QPointF(cursorX, plot.top()), QPointF(cursorX, plot.bottom()));
+}
+
 void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
               const QFont &titleFont, const QFont &captionFont, const QRect &primaryTextBox,
               const QRect &secondaryTextBox, AutomationArea &area, AutomationPage &page,
@@ -157,15 +179,7 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
                 }
             }
         }
-        painter.setPen(QPen(themes::color(themes::Role::song_view_grid), layout::singlePixel()));
-        for (uint64_t tick = 0;;) {
-            const qreal x = page.displayX(tick, geometry.plotOrigin, dpr);
-            if (x >= plot.left() && x <= plot.right())
-                painter.drawLine(QPointF(x, plot.top()), QPointF(x, plot.bottom()));
-            if (tick >= length)
-                break;
-            tick = page.nextGridTick(tick, false, length);
-        }
+        paintPlainGridFallback(painter, plot, page, geometry.plotOrigin, dpr);
     }
     if (row.id.kind == EditorAutomationRowKind::Voice) {
         painter.setFont(captionFont);
@@ -290,9 +304,7 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
     }
     paintHover(painter, ctx, page, geometry, rows, hoverState, pencilMode);
     const qreal cursorX = page.displayX(page.liveState().editCursorTick, geometry.plotOrigin, dpr);
-    painter.setPen(QPen(themes::color(themes::Role::song_view_edit_cursor), layout::singlePixel(),
-                        Qt::DashLine));
-    painter.drawLine(QPointF(cursorX, plot.top()), QPointF(cursorX, plot.bottom()));
+    paintEditCursor(painter, plot, cursorX);
     painter.restore();
 }
 

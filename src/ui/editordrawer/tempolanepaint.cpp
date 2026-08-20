@@ -63,18 +63,25 @@ void TempoLane::paint(QPainter &painter, const AutomationGeometry &geometry,
     const AutomationProjection projection(geometry, {}, m_page, 0);
     const qreal dpr = painter.device()->devicePixelRatioF();
     const auto &points = m_page->document()->tempoPoints();
-    painter.save();
-    painter.setPen(themes::color(themes::Role::song_view_separator));
-    painter.drawLine(m_header.left(), m_header.bottom(), m_header.right(), m_header.bottom());
-    if (hasTimeSelection()) {
+    const auto paintTimeSelection = [this, &painter, &projection,
+                                     dpr](const QRect &selectionBounds) {
         const auto &selection = m_page->m_owner.selectionModel().timeSelection();
         const qreal first = projection.displayX(selection.startTick, dpr);
         const qreal last = projection.displayX(selection.endTick, dpr);
-        const QRect selectionBounds = m_expanded ? m_body : m_header;
         songview::paintSelectionReticle(painter,
                                         QRectF(std::min(first, last), selectionBounds.top(),
                                                std::abs(first - last), selectionBounds.height()));
-    }
+    };
+
+    painter.save();
+    painter.setClipRect(m_header, Qt::IntersectClip);
+    painter.fillRect(m_header, themes::color(themes::Role::song_view_piano_roll_background));
+    painter.setPen(themes::color(themes::Role::song_view_separator));
+    painter.drawLine(m_header.left(), m_header.bottom(), m_header.right(), m_header.bottom());
+    if (hasTimeSelection() && !m_expanded)
+        paintTimeSelection(m_header);
+    painter.save();
+    painter.setClipRect(labelGutter, Qt::IntersectClip);
     const int arrowSize = std::max(layout::fontPx(0.5), m_header.height() / 3);
     const QRect arrow(labelGutter.left(), m_header.center().y() - arrowSize / 2, arrowSize,
                       arrowSize);
@@ -87,39 +94,35 @@ void TempoLane::paint(QPainter &painter, const AutomationGeometry &geometry,
     painter.setPen(Qt::NoPen);
     painter.setBrush(themes::color(themes::Role::song_view_primary_text));
     painter.drawPolygon(triangle);
-    const QRect title(
+    const QRect textBounds(
         labelGutter.x() + arrowSize + layout::space(layout::Space::One), m_header.top(),
         std::max(0, labelGutter.width() - arrowSize - layout::space(layout::Space::One)),
         m_header.height());
+    const auto textBoxes =
+        layout::twoLineText(titleFont, titleFont, captionFont, layout::Space::Zero)
+            .align(textBounds, layout::VerticalAlignment::Center);
     painter.setFont(titleFont);
     painter.setPen(themes::color(themes::Role::song_view_primary_text));
-    painter.drawText(title, Qt::AlignLeft | Qt::AlignVCenter,
+    painter.drawText(textBoxes.primary, Qt::AlignLeft | Qt::AlignVCenter,
                      QCoreApplication::translate("AutomationArea", "Tempo (BPM)"));
     painter.setFont(captionFont);
     painter.setPen(themes::color(themes::Role::song_view_secondary_text));
     painter.drawText(
-        m_header.adjusted(geometry.plotOrigin, 0, -layout::space(layout::Space::One), 0),
-        Qt::AlignRight | Qt::AlignVCenter,
+        textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
         QCoreApplication::translate("AutomationArea", "%n point(s)", nullptr, int(points.size())));
-    if (!m_expanded) {
-        painter.restore();
+    painter.restore();
+    painter.restore();
+    if (!m_expanded)
         return;
-    }
+
     const QRect plot(geometry.plotOrigin, m_body.top(),
-                     std::max(0, m_body.right() - geometry.plotOrigin + 1), m_body.height());
-    painter.setClipRect(m_body, Qt::IntersectClip);
-    if (!m_page->paintGrid(painter, plot, geometry.plotOrigin)) {
-        painter.setPen(QPen(themes::color(themes::Role::song_view_grid), layout::singlePixel()));
-        const uint64_t length = m_page->timeline()->lengthTicks;
-        for (uint64_t tick = 0;;) {
-            const qreal x = projection.displayX(tick, dpr);
-            if (x >= plot.left() && x <= plot.right())
-                painter.drawLine(QPointF(x, plot.top()), QPointF(x, plot.bottom()));
-            if (tick >= length)
-                break;
-            tick = m_page->nextGridTick(tick, false, length);
-        }
-    }
+                     std::max(0, m_body.width() - geometry.plotOrigin), m_body.height());
+    painter.save();
+    painter.setClipRect(plot, Qt::IntersectClip);
+    if (hasTimeSelection())
+        paintTimeSelection(m_body);
+    if (!m_page->paintGrid(painter, plot, geometry.plotOrigin))
+        automation::paint::paintPlainGridFallback(painter, plot, *m_page, geometry.plotOrigin, dpr);
     const QColor color = themes::color(themes::Role::song_view_automation_tempo_curve);
     const auto pointY = [this, &geometry](const TempoPoint &point) {
         return AutomationProjection::valueY(
@@ -159,8 +162,6 @@ void TempoLane::paint(QPainter &painter, const AutomationGeometry &geometry,
         painter.drawText(label, Qt::AlignHCenter | Qt::AlignVCenter, text);
     }
     const qreal cursor = projection.displayX(m_page->liveState().editCursorTick, dpr);
-    painter.setPen(QPen(themes::color(themes::Role::song_view_edit_cursor), layout::singlePixel(),
-                        Qt::DashLine));
-    painter.drawLine(QPointF(cursor, plot.top()), QPointF(cursor, plot.bottom()));
+    automation::paint::paintEditCursor(painter, plot, cursor);
     painter.restore();
 }
