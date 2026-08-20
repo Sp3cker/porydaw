@@ -47,24 +47,57 @@ void PitchBendCurveAdapter::setCurve(const std::map<uint64_t, int> &points, int 
 std::vector<SongDocument::LanePointValue> PitchBendCurveAdapter::curvePoints() const
 {
     std::vector<SongDocument::LanePointValue> result;
-    result.reserve(m_graph->points().size());
-    const uint64_t fineTick = m_songView ? m_songView->fineGridTicks() : 1;
-    int previous = 0;
-    uint64_t previousTick = 0;
-    bool havePrevious = false;
-    for (const CurvePoint &point : m_graph->points()) {
-        const uint64_t tick = uint64_t(std::llround(point.x));
-        const int value = qRound(point.y);
-        const bool endpoint = tick == m_startTick || tick == m_endTick;
-        const bool fineSample =
-            havePrevious && tick > previousTick && tick - previousTick == fineTick;
-        if (endpoint || !havePrevious || value != previous || fineSample)
-            result.push_back({tick, value});
-        previous = value;
-        previousTick = tick;
-        havePrevious = true;
+    const auto appendSample = [this, &result](uint64_t tick, bool endpoint) {
+        const int value = curveValueAt(tick);
+        if (!result.empty() && result.back().tick == tick) {
+            result.back().value = value;
+            return;
+        }
+        const auto effectiveBend = [](int bend) {
+            return (std::clamp(bend, -8192, 8191) + 8192) >> 7;
+        };
+        if (!endpoint && m_lane == Lane::PitchBend && !result.empty() &&
+            effectiveBend(value) == effectiveBend(result.back().value))
+            return;
+        result.push_back({tick, value});
+    };
+
+    appendSample(m_startTick, true);
+    if (m_endTick > m_startTick) {
+        const uint64_t ticksPerQuarter = std::max<uint64_t>(
+            1, m_songView && m_songView->document() ? m_songView->document()->smf().division : 24);
+        using WideTick = unsigned __int128;
+        const WideTick firstBoundary = WideTick(m_startTick) * 16 / ticksPerQuarter + 1;
+        for (WideTick boundary = firstBoundary;; ++boundary) {
+            const WideTick roundedTick = (boundary * ticksPerQuarter + 8) / 16;
+            if (roundedTick >= m_endTick)
+                break;
+            appendSample(uint64_t(roundedTick), false);
+        }
     }
+    appendSample(m_endTick, true);
     return result;
+}
+
+int PitchBendCurveAdapter::curveValueAt(uint64_t tick) const
+{
+    const auto &points = m_graph->points();
+    if (points.empty())
+        return defaultValue();
+
+    const double x = double(tick);
+    const auto next =
+        std::lower_bound(points.begin(), points.end(), x,
+                         [](const CurvePoint &point, double value) { return point.x < value; });
+    if (next == points.begin())
+        return qRound(next->y);
+    if (next == points.end())
+        return qRound(points.back().y);
+
+    const CurvePoint &previous = *std::prev(next);
+    const double fraction = (x - previous.x) / (next->x - previous.x);
+    return qRound(std::clamp(previous.y + fraction * (next->y - previous.y), double(minimumValue()),
+                             double(maximumValue())));
 }
 
 EditableCurveGraph::CurveSpec PitchBendCurveAdapter::makeSpec() const
@@ -109,7 +142,7 @@ EditableCurveGraph::CurveSpec PitchBendCurveAdapter::makeSpec() const
     spec.sampling.lastEditable = [this](EditableCurveGraph::Sampling sampling) {
         return double(lastEditableTick(sampling));
     };
-    spec.segments.linearSampleSpacing = double(m_songView ? m_songView->fineGridTicks() : 1);
+    spec.segments.allLinear = true;
     spec.gridLines = gridLines();
     spec.text.formatLiveValue = [this](double) { return formatLiveValue(); };
     spec.text.formatRangeLimit = [this](bool positive) { return formatRangeLimit(positive); };

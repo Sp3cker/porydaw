@@ -103,16 +103,15 @@ void PitchBendCheckContext::drivePersistedAltRamp(const PersistedAltPopupState &
         if (point.tick > m_note.tick && point.tick < m_endTick)
             angled.push_back(point);
     }
-    bool fineLinearRamp = angled.size() >= 3;
+    bool risingRamp = angled.size() >= 3;
     for (size_t i = 1; i < angled.size(); i++) {
-        if (angled[i].tick - angled[i - 1].tick > m_view.fineGridTicks() ||
-            angled[i].value <= angled[i - 1].value) {
-            fineLinearRamp = false;
+        if (angled[i].value <= angled[i - 1].value) {
+            risingRamp = false;
             break;
         }
     }
-    if (!fineLinearRamp)
-        fail("Alt drag did not write a fine-grid angled pitch-bend ramp");
+    if (!risingRamp)
+        fail("Alt drag did not write a rising pitch-bend ramp");
 }
 
 bool PitchBendCheckContext::reopenPersistedAltPopup(PersistedAltPopupState *state)
@@ -295,8 +294,6 @@ void PitchBendCheckContext::runActiveGridBoundary()
     if (ready)
         ready = inspectBoundaryFixturePopup(&fixture);
     if (ready)
-        ready = installBoundarySignature(&fixture);
-    if (ready)
         ready = driveBoundaryFreehand(&fixture);
     if (ready)
         verifyBoundarySamples(fixture);
@@ -336,19 +333,19 @@ bool PitchBendCheckContext::createBoundaryFixture(BoundaryFixtureState *fixture)
     fixture->beforeUndoIndex = m_document.undoStack()->index();
     fixture->beforeSelection = m_view.selectionModel().noteSelection();
     fixture->beforeViewState = m_view.viewState();
-    fixture->clock = std::max<uint64_t>(1, m_document.ticksPerClock());
+    const uint64_t clock = std::max<uint64_t>(1, m_document.ticksPerClock());
     uint64_t fixtureEnd = 0;
     for (const SmfTrack &track : m_document.smf().tracks)
         fixtureEnd = std::max(fixtureEnd, track.endTick);
-    const uint64_t margin = std::max<uint64_t>(fixture->clock * 8, 96);
+    const uint64_t margin = std::max<uint64_t>(clock * 8, 96);
     if (fixtureEnd > UINT64_MAX - margin) {
-        fail("active-grid fixture tick overflowed");
+        fail("fixed-granularity fixture tick overflowed");
         return false;
     }
     fixture->fixtureTick = fixtureEnd + margin;
-    fixture->span = std::max<uint64_t>(fixture->clock * 96, 192);
+    fixture->span = std::max<uint64_t>(clock * 96, 192);
     if (fixture->fixtureTick > UINT64_MAX - fixture->span) {
-        fail("active-grid fixture span overflowed");
+        fail("fixed-granularity fixture span overflowed");
         return false;
     }
     fixture->fixtureEndTick = fixture->fixtureTick + fixture->span;
@@ -358,7 +355,7 @@ bool PitchBendCheckContext::createBoundaryFixture(BoundaryFixtureState *fixture)
     QCoreApplication::processEvents();
     if (!m_document.findNote(m_engineTrack, fixture->fixtureTick, fixture->fixtureKey,
                              &fixture->fixtureNote)) {
-        fail("active-grid fixture note was not created");
+        fail("fixed-granularity fixture note was not created");
         return false;
     }
     return true;
@@ -382,66 +379,20 @@ PitchBendCheckContext::openBoundaryPopup(const BoundaryFixtureState &fixture, co
 
 bool PitchBendCheckContext::inspectBoundaryFixturePopup(BoundaryFixtureState *fixture)
 {
-    auto *popup =
-        openBoundaryPopup(*fixture, "active-grid fixture note did not open its pitch-bend popup");
+    m_view.setGridFeel(SongView::GridFeel::Straight);
+    m_view.setGridMinDenom(4);
+    QCoreApplication::processEvents();
+    auto *popup = openBoundaryPopup(
+        *fixture, "fixed-granularity fixture note did not open its pitch-bend popup");
     if (!popup)
         return false;
     const QRect graph = popup->graphRect();
     fixture->pixelsPerTick = double(graph.width()) / double(fixture->span);
-    fixture->initialSegment = m_view.gridSegAt(fixture->fixtureTick);
-    fixture->initialCell = m_view.gridTicksAtScale(fixture->fixtureTick, fixture->pixelsPerTick);
+    fixture->editingCell = m_view.gridTicksAtScale(fixture->fixtureTick, fixture->pixelsPerTick);
     sendKey(popup, Qt::Key_Escape, Qt::NoModifier);
     drainPopupDeletes();
-    if (fixture->initialCell == 0) {
-        fail("active-grid fixture produced no normal grid cell");
-        return false;
-    }
-    return true;
-}
-
-bool PitchBendCheckContext::installBoundarySignature(BoundaryFixtureState *fixture)
-{
-    const std::vector<uint64_t> offsets{fixture->span / 5, fixture->span / 3, fixture->span / 2,
-                                        (fixture->span * 2) / 3, (fixture->span * 4) / 5};
-    bool signatureInstalled = false;
-    for (const uint64_t offset : offsets) {
-        if (offset <= fixture->clock || offset >= fixture->span - fixture->clock)
-            continue;
-        const uint64_t candidate = fixture->fixtureTick + offset;
-        m_document.setTimeSig(candidate, 8, 3);
-        QCoreApplication::processEvents();
-        bool oldStartAnchorWouldFail = false;
-        const uint64_t delta = candidate > fixture->initialSegment.start
-                                   ? candidate - fixture->initialSegment.start
-                                   : 0;
-        const uint64_t steps = delta / fixture->initialCell + 1;
-        if (steps <= (UINT64_MAX - fixture->initialSegment.start) / fixture->initialCell) {
-            uint64_t oldTick = fixture->initialSegment.start + steps * fixture->initialCell;
-            while (oldTick < fixture->fixtureEndTick) {
-                if (oldTick > candidate) {
-                    const SongView::GridSeg segment = m_view.gridSegAt(oldTick);
-                    const uint64_t cell = m_view.gridTicksAtScale(oldTick, fixture->pixelsPerTick);
-                    if (cell == 0 || oldTick < segment.start ||
-                        (oldTick - segment.start) % cell != 0) {
-                        oldStartAnchorWouldFail = true;
-                        break;
-                    }
-                }
-                if (UINT64_MAX - oldTick < fixture->initialCell)
-                    break;
-                oldTick += fixture->initialCell;
-            }
-        }
-        if (oldStartAnchorWouldFail) {
-            fixture->boundaryTick = candidate;
-            signatureInstalled = true;
-            break;
-        }
-        m_document.undoStack()->undo();
-        QCoreApplication::processEvents();
-    }
-    if (!signatureInstalled) {
-        fail("active-grid fixture could not separate signature grid anchors");
+    if (fixture->editingCell == 0) {
+        fail("fixed-granularity fixture produced no coarse editing cell");
         return false;
     }
     return true;
@@ -449,21 +400,21 @@ bool PitchBendCheckContext::installBoundarySignature(BoundaryFixtureState *fixtu
 
 bool PitchBendCheckContext::driveBoundaryFreehand(BoundaryFixtureState *fixture)
 {
-    auto *popup =
-        openBoundaryPopup(*fixture, "active-grid fixture could not reopen its pitch-bend popup");
+    auto *popup = openBoundaryPopup(
+        *fixture, "fixed-granularity fixture could not reopen its pitch-bend popup");
     if (!popup)
         return false;
     auto *graphWidget = dynamic_cast<songview::EditableCurveGraph *>(
         popup->findChild<QWidget *>(QStringLiteral("pitchBendGraph")));
     if (!graphWidget) {
-        fail("active-grid popup has no EditableCurveGraph pitchBendGraph child");
+        fail("fixed-granularity popup has no EditableCurveGraph pitchBendGraph child");
         sendKey(popup, Qt::Key_Escape, Qt::NoModifier);
         return false;
     }
     if (!m_document.findNote(m_engineTrack, fixture->fixtureTick, fixture->fixtureKey,
                              &fixture->fixtureNote) ||
         !m_document.containsNoteSpan(m_engineTrack, fixture->fixtureNote, fixture->fixtureEndTick))
-        fail("active-grid fixture note span was not preserved");
+        fail("fixed-granularity fixture note span was not preserved");
     const QRect graph = popup->graphRect();
     const QPoint lineStart(graph.left() + graph.width() / 12, graph.bottom() - graph.height() / 10);
     const QPoint lineFinish(graph.right() - graph.width() / 12, graph.top() + graph.height() / 10);
@@ -475,35 +426,65 @@ bool PitchBendCheckContext::driveBoundaryFreehand(BoundaryFixtureState *fixture)
     sendMouse(graphWidget, QEvent::MouseButtonRelease, graphWidget->mapFrom(popup, lineFinish),
               Qt::LeftButton, Qt::NoButton);
     if (!popup->isVisible())
-        fail("active-grid freehand drag dismissed the pitch-bend popup");
+        fail("fixed-granularity freehand drag dismissed the pitch-bend popup");
     if (m_document.undoStack()->index() != curveUndoIndex + 1)
-        fail("active-grid freehand drag did not push exactly one curve command");
+        fail("fixed-granularity freehand drag did not push exactly one curve command");
     return true;
 }
 
 void PitchBendCheckContext::verifyBoundarySamples(const BoundaryFixtureState &fixture)
 {
-    bool sawBeforeBoundary = false;
-    bool sawAfterBoundary = false;
-    bool misaligned = false;
+    const uint64_t division = m_document.smf().division;
+    if (division == 0) {
+        fail("fixed-granularity fixture had no musical division");
+        return;
+    }
+    const auto boundaryAt = [division](uint64_t index) {
+        return uint64_t((__uint128_t(index) * division + 8) / 16);
+    };
+    std::vector<uint64_t> boundaries;
+    uint64_t index = (fixture.fixtureTick / division) * 16;
+    while (boundaryAt(index) <= fixture.fixtureTick)
+        index++;
+    while (boundaryAt(index) < fixture.fixtureEndTick) {
+        boundaries.push_back(boundaryAt(index));
+        index++;
+    }
+    std::vector<DocLanePoint> points;
     for (const DocLanePoint &point : m_document.lanePoints(m_engineTrack, DOC_CC_BEND)) {
-        if (point.tick <= fixture.fixtureTick || point.tick >= fixture.fixtureEndTick)
-            continue;
+        if (point.tick >= fixture.fixtureTick && point.tick <= fixture.fixtureEndTick)
+            points.push_back(point);
+    }
+    if (points.size() < 3 || points.front().tick != fixture.fixtureTick ||
+        points.front().value != 0 || points.back().tick != fixture.fixtureEndTick ||
+        points.back().value != 0) {
+        fail("fixed-granularity ramp did not retain exact zero-reset endpoints");
+        return;
+    }
+    int fixedInteriorSamples = 0;
+    bool sawOffGridBoundary = false;
+    for (size_t i = 1; i + 1 < points.size(); i++) {
+        const DocLanePoint &point = points[i];
+        if (!std::binary_search(boundaries.begin(), boundaries.end(), point.tick)) {
+            fail("pitch-bend persistence wrote an interior point off the 1/64-note grid");
+            return;
+        }
+        fixedInteriorSamples++;
         const SongView::GridSeg segment = m_view.gridSegAt(point.tick);
         const uint64_t cell = m_view.gridTicksAtScale(point.tick, fixture.pixelsPerTick);
-        const bool aligned =
-            cell > 0 && point.tick >= segment.start && (point.tick - segment.start) % cell == 0;
-        if (!aligned)
-            misaligned = true;
-        if (point.tick < fixture.boundaryTick)
-            sawBeforeBoundary = true;
-        if (point.tick > fixture.boundaryTick)
-            sawAfterBoundary = true;
+        if (cell > 0 && point.tick >= segment.start && (point.tick - segment.start) % cell != 0)
+            sawOffGridBoundary = true;
+        const int previousEffective = (std::clamp(points[i - 1].value, -8192, 8191) + 8192) >> 7;
+        const int currentEffective = (std::clamp(point.value, -8192, 8191) + 8192) >> 7;
+        if (previousEffective == currentEffective && points[i - 1].tick != fixture.fixtureTick) {
+            fail("pitch-bend persistence retained consecutive equal M4A bend samples");
+            return;
+        }
     }
-    if (misaligned)
-        fail("normal freehand drag used a stale start-segment grid anchor");
-    if (!sawBeforeBoundary || !sawAfterBoundary)
-        fail("active-grid freehand drag did not sample both signature segments");
+    if (fixedInteriorSamples < 16)
+        fail("pitch-bend persistence did not resample its ramp at fixed 1/64-note density");
+    if (!sawOffGridBoundary)
+        fail("pitch-bend persistence followed the coarse editing grid instead of the 1/64 grid");
 }
 
 } // namespace pitchbendcheck

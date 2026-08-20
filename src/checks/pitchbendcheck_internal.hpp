@@ -57,15 +57,12 @@ class PitchBendCheckContext final
         int beforeUndoIndex = 0;
         std::vector<NoteId> beforeSelection;
         SongView::ViewState beforeViewState;
-        uint64_t clock = 1;
         uint64_t fixtureTick = 0;
         uint64_t fixtureEndTick = 0;
         uint64_t span = 0;
-        uint64_t boundaryTick = 0;
         uint8_t fixtureKey = 0;
+        uint64_t editingCell = 0;
         double pixelsPerTick = 0.0;
-        SongView::GridSeg initialSegment;
-        uint64_t initialCell = 0;
         DocNote fixtureNote;
     };
 
@@ -108,7 +105,6 @@ class PitchBendCheckContext final
     songview::PitchBendEditor *openBoundaryPopup(const BoundaryFixtureState &fixture,
                                                  const char *failure);
     bool inspectBoundaryFixturePopup(BoundaryFixtureState *fixture);
-    bool installBoundarySignature(BoundaryFixtureState *fixture);
     bool driveBoundaryFreehand(BoundaryFixtureState *fixture);
     void verifyBoundarySamples(const BoundaryFixtureState &fixture);
 

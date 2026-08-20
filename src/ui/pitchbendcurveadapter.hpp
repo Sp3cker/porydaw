@@ -43,6 +43,7 @@ class PitchBendCurveAdapter final
     uint64_t nextSampleTick(uint64_t tick, const SampleParams &params) const;
     uint64_t nextSampleTick(uint64_t tick, EditableCurveGraph::Sampling sampling) const;
     uint64_t lastEditableTick(EditableCurveGraph::Sampling sampling) const;
+    int curveValueAt(uint64_t tick) const;
     uint64_t tickAtFraction(double fraction, EditableCurveGraph::Sampling sampling) const;
     int minimumValue() const;
     int maximumValue() const;
