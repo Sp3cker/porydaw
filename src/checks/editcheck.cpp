@@ -2,6 +2,7 @@
 #include <QFile>
 #include <QString>
 #include <QTemporaryDir>
+#include <algorithm>
 #include <array>
 #include <cstdio>
 #include <iterator>
@@ -148,8 +149,41 @@ int documentContractFailures()
                        std::vector<QString>{QStringLiteral("remap"), QStringLiteral("changed")},
                what);
     };
-    expect(doc.tempoPoints() == std::vector<TempoPoint>{tempoPoint(0, 120)},
-           "tempo-free file did not seed tick 0 at 120 BPM");
+    expect(doc.tempoPoints().empty(), "tempo-free file grew a synthetic tempo point");
+    if (ok) {
+        const auto timeline = doc.buildTimeline(48000.0);
+        expect(timeline && timeline->tempoMap.size() == 1 && timeline->tempoMap.front().tick == 0 &&
+                   timeline->tempoMap.front().bpm == 120.0,
+               "tempo-free file did not use the implicit 120 BPM playback default");
+    }
+    if (ok) {
+        const TempoPoint point = tempoPoint(24, 150);
+        doc.applyTempoEdit({{}, {point}});
+        doc.applyTempoEdit({{point}, {}});
+        expect(doc.tempoPoints().empty(), "removing the last tempo point reseeded the document");
+        doc.undoStack()->undo();
+        expect(doc.tempoPoints() == std::vector<TempoPoint>{point},
+               "tempo-point removal undo did not restore the point");
+        doc.undoStack()->redo();
+        expect(doc.tempoPoints().empty(),
+               "tempo-point removal redo did not restore the empty document");
+    }
+    if (ok) {
+        SmfFile saved;
+        const bool savedFile = doc.save(&error) && SmfFile::readFile(midPath, &saved, &error);
+        auto savedTempoCount = 0;
+        if (savedFile) {
+            for (const SmfTrack &track : saved.tracks) {
+                savedTempoCount +=
+                    int(std::count_if(track.events.cbegin(), track.events.cend(),
+                                      [](const SmfEvent &event) { return isTempoMeta(event); }));
+            }
+        }
+        expect(savedFile && savedTempoCount == 0,
+               "saving an empty tempo list emitted an FF 51 event");
+    }
+    doc.undoStack()->clear();
+    clearSignals();
 
     const auto notes = doc.notesForTrack(0);
     expect(notes.size() == 2 && notes[0].noteId.isAssigned() && notes[1].noteId.isAssigned() &&
