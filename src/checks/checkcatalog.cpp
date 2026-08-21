@@ -84,8 +84,7 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = decompProjectFiles +
                              strings({"sound/songs/midi/mus_littleroot_test.mid"}) +
-                             richVoicegroupFiles,
-             .exclusive = true},
+                             richVoicegroupFiles},
             {.name = "savecheck",
              .argv = strings({"--savecheck", "{scratch}", "mus_route101", "{mid2agb}"}),
              .handler =
@@ -130,8 +129,8 @@ const std::vector<CheckDefinition> &catalog()
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = route101Files + voicegroupEditorFiles + strings({"data/sound_data.s"}),
-             .exclusive = true},
+             .fixtureFiles =
+                 route101Files + voicegroupEditorFiles + strings({"data/sound_data.s"})},
             {.name = "exportcheck-loop",
              .argv = strings({"--exportcheck", "{scratch}", "mus_route101"}),
              .handler = [](QApplication &,
@@ -219,8 +218,7 @@ const std::vector<CheckDefinition> &catalog()
              .handler = [](QApplication &, const QStringList &) { return runSmfCheck(); }},
             {.name = "transportcheck",
              .argv = strings({"--transportcheck"}),
-             .handler = [](QApplication &, const QStringList &) { return runTransportCheck(); },
-             .exclusive = true},
+             .handler = [](QApplication &, const QStringList &) { return runTransportCheck(); }},
             {.name = "audiocheck",
              .argv = strings({"--audiocheck"}),
              .handler = [](QApplication &, const QStringList &) { return runAudioCheck(); },
@@ -266,8 +264,7 @@ const std::vector<CheckDefinition> &catalog()
                  },
              .scratchKind = ScratchKind::MustNotExistPath,
              .optionalArgumentEnvironment = {{QStringLiteral("{sample-corpus?}"),
-                                              QStringLiteral("PORYDAW_SAMPLE_CORPUS")}},
-             .exclusive = true},
+                                              QStringLiteral("PORYDAW_SAMPLE_CORPUS")}}},
             {.name = "noteidcheck",
              .argv = strings({"--check-note-identity", "{scratch}"}),
              .handler = [](QApplication &,
