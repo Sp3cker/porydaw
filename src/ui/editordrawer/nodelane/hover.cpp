@@ -2,11 +2,10 @@
 
 #include <algorithm>
 
+#include "ui/editordrawer/automationprojection.h"
 #include <QFontMetrics>
 #include <QRegion>
 
-#include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/nodelane/paint.h"
@@ -86,37 +85,36 @@ bool NodeLaneHoverState::hoverValueFor(const NodeLane &lane, const QRect &body,
     return true;
 }
 
-QString NodeLaneHoverState::hoverTextFor(const AutomationPage &page, const NodeLane &lane,
+QString NodeLaneHoverState::hoverTextFor(const NodeLaneHoverTarget &target, const NodeLane &lane,
                                          const QRect &body, const AutomationGeometry &geometry,
                                          const AutomationProjection &projection, double tick,
                                          bool pencilMode) const
 {
-    if (!page.ready())
+    if (!target.ready)
         return {};
     int value = 0;
     return hoverValueFor(lane, body, geometry, projection, tick, pencilMode,
-                         page.liveState().documentRevision, &value)
+                         target.documentRevision, &value)
                ? lane.valueText(value)
                : QString{};
 }
 
-const QString &NodeLaneHoverState::hoverTextCached(const AutomationPage &page, const NodeLane &lane,
-                                                   const QRect &body,
+const QString &NodeLaneHoverState::hoverTextCached(const NodeLaneHoverTarget &target,
+                                                   const NodeLane &lane, const QRect &body,
                                                    const AutomationGeometry &geometry,
                                                    const AutomationProjection &projection,
                                                    double tick, qreal x, bool pencilMode) const
 {
-    const uint64_t revision = page.liveState().documentRevision;
+    const uint64_t revision = target.documentRevision;
     if (hoverTextCache.key == HoverTextCache::Key{hover.lane, tick, x, revision, pencilMode})
         return hoverTextCache.text;
-    hoverTextCache.text = hoverTextFor(page, lane, body, geometry, projection, tick, pencilMode);
+    hoverTextCache.text = hoverTextFor(target, lane, body, geometry, projection, tick, pencilMode);
     hoverTextCache.key = {hover.lane, tick, x, revision, pencilMode};
     return hoverTextCache.text;
 }
 
-QRect NodeLaneHoverState::hoverValueRect(const AutomationCanvas &area, const AutomationPage &page,
-                                         const NodeLane &lane, const QRect &body,
-                                         const AutomationGeometry &geometry,
+QRect NodeLaneHoverState::hoverValueRect(const NodeLaneHoverTarget &target, const NodeLane &lane,
+                                         const QRect &body, const AutomationGeometry &geometry,
                                          const AutomationProjection &projection, qreal x,
                                          bool pencilMode) const
 {
@@ -124,12 +122,12 @@ QRect NodeLaneHoverState::hoverValueRect(const AutomationCanvas &area, const Aut
     qreal anchorX = x;
     int mappedValue = 0;
     if (!hoverValueFor(lane, body, geometry, projection, insertionTick(projection, pencilMode),
-                       pencilMode, page.liveState().documentRevision, &mappedValue))
+                       pencilMode, target.documentRevision, &mappedValue))
         return {};
     if (hover.hasPoint)
-        anchorX = projection.displayX(hover.point.tick, area.devicePixelRatioF());
+        anchorX = projection.displayX(hover.point.tick, target.devicePixelRatio);
     const int anchorY = qRound(nodelane::valueY(lane, body, geometry, mappedValue));
-    const QFontMetrics metrics(valueLabelFont(area.font()));
+    const QFontMetrics metrics(valueLabelFont(target.font));
     const int textWidth = metrics.horizontalAdvance(QStringLiteral("0000"));
     const int textHeight = metrics.height();
     const int gap = layout::space(layout::Space::One);
@@ -144,17 +142,16 @@ QRect NodeLaneHoverState::hoverValueRect(const AutomationCanvas &area, const Aut
     return {textX, textY, textWidth, textHeight};
 }
 
-QRect NodeLaneHoverState::hoverPaintBounds(const AutomationCanvas &area, const AutomationPage *page,
-                                           const NodeLane *lane, const QRect &body,
-                                           const AutomationGeometry &geometry,
+QRect NodeLaneHoverState::hoverPaintBounds(const NodeLaneHoverTarget &target, const NodeLane *lane,
+                                           const QRect &body, const AutomationGeometry &geometry,
                                            const AutomationProjection &projection,
                                            bool pencilMode) const
 {
-    if (!page || !page->ready() || !lane || !hover.lane.valid())
+    if (!target.ready || !lane || !hover.lane.valid())
         return {};
     const double tick = insertionTick(projection, pencilMode);
     const QRect plot = nodelane::plotRect(body, geometry);
-    const qreal x = projection.displayX(uint64_t(std::max(0.0, tick)), area.devicePixelRatioF());
+    const qreal x = projection.displayX(uint64_t(std::max(0.0, tick)), target.devicePixelRatio);
     const QString &text = hoverTextCache.text;
     const int paintPadding = geometry.hoverPaintPadding;
     QRect bounds =
@@ -162,7 +159,7 @@ QRect NodeLaneHoverState::hoverPaintBounds(const AutomationCanvas &area, const A
     if (hover.hasPoint) {
         const qreal nodeRadius = nodelane::hoverRingRadius(geometry);
         const qreal outerRadius = nodeRadius + paintPadding;
-        const QPointF center(projection.displayX(hover.point.tick, area.devicePixelRatioF()),
+        const QPointF center(projection.displayX(hover.point.tick, target.devicePixelRatio),
                              nodelane::valueY(*lane, body, geometry, hover.point.value));
         bounds = bounds.united(QRectF(center.x() - outerRadius, center.y() - outerRadius,
                                       2 * outerRadius, 2 * outerRadius)
@@ -179,7 +176,7 @@ QRect NodeLaneHoverState::hoverPaintBounds(const AutomationCanvas &area, const A
         } else {
             int heldValue = 0;
             if (hoverValueFor(*lane, body, geometry, projection, tick, false,
-                              page->liveState().documentRevision, &heldValue)) {
+                              target.documentRevision, &heldValue)) {
                 const QPointF center(x, nodelane::valueY(*lane, body, geometry, heldValue));
                 bounds = bounds.united(QRectF(center.x() - outerRadius, center.y() - outerRadius,
                                               2 * outerRadius, 2 * outerRadius)
@@ -188,11 +185,11 @@ QRect NodeLaneHoverState::hoverPaintBounds(const AutomationCanvas &area, const A
         }
     }
     if (text.isEmpty())
-        return bounds.intersected(area.rect());
+        return bounds.intersected(target.widgetBounds);
     if (hoverValueLabel.valid && hoverValueLabel.lane == hover.lane)
         bounds = bounds.united(hoverValueLabel.bounds.adjusted(-paintPadding, -paintPadding,
                                                                paintPadding, paintPadding));
-    return bounds.intersected(area.rect());
+    return bounds.intersected(target.widgetBounds);
 }
 
 QFont NodeLaneHoverState::valueLabelFont(const QFont &font) const
@@ -223,34 +220,38 @@ NodeLaneHoverState::clampedValueLabel(qreal x, int y, const QRect &plot, const Q
     return {textRect};
 }
 
-void NodeLaneHoverState::updateHoverValueLabel(const AutomationCanvas &area,
-                                               const AutomationPage *page,
-                                               const AutomationGeometry &geometry,
-                                               const NodeLane *lane, const QRect &body,
-                                               const AutomationProjection &projection,
-                                               bool pencilMode)
+QRegion NodeLaneHoverState::updateHoverValueLabel(const NodeLaneHoverTarget &target,
+                                                  const AutomationGeometry &geometry,
+                                                  const NodeLane *lane, const QRect &body,
+                                                  const AutomationProjection &projection,
+                                                  bool pencilMode)
 {
+    const QRect previousBounds = hoverDirtyBounds;
     hoverValueLabel = {};
     const auto syncDirtyBounds = [&] {
-        hoverDirtyBounds =
-            hoverPaintBounds(area, page, lane, body, geometry, projection, pencilMode);
+        hoverDirtyBounds = hoverPaintBounds(target, lane, body, geometry, projection, pencilMode);
     };
-    if (!page || !page->ready() || !lane || !hover.lane.valid()) {
+    const auto dirtyRegion = [this, previousBounds] {
+        QRegion dirty(previousBounds);
+        dirty += hoverDirtyBounds;
+        return dirty;
+    };
+    if (!target.ready || !lane || !hover.lane.valid()) {
         syncDirtyBounds();
-        return;
+        return dirtyRegion();
     }
     const double tick = insertionTick(projection, pencilMode);
-    const qreal x = projection.displayX(uint64_t(std::max(0.0, tick)), area.devicePixelRatioF());
+    const qreal x = projection.displayX(uint64_t(std::max(0.0, tick)), target.devicePixelRatio);
     const QString &text =
-        hoverTextCached(*page, *lane, body, geometry, projection, tick, x, pencilMode);
+        hoverTextCached(target, *lane, body, geometry, projection, tick, x, pencilMode);
     if (text.isEmpty()) {
         syncDirtyBounds();
-        return;
+        return dirtyRegion();
     }
     auto &label = hoverValueLabel;
     label.lane = hover.lane;
     label.text = text;
-    label.font = valueLabelFont(area.font());
+    label.font = valueLabelFont(target.font);
     const QRect plot = nodelane::plotRect(body, geometry);
     if (pencilMode) {
         const QFontMetrics metrics(label.font);
@@ -263,57 +264,61 @@ void NodeLaneHoverState::updateHoverValueLabel(const AutomationCanvas &area,
         label.bounds = bounds;
     } else {
         const QRect bounds =
-            hoverValueRect(area, *page, *lane, body, geometry, projection, x, pencilMode);
+            hoverValueRect(target, *lane, body, geometry, projection, x, pencilMode);
         label.rect = bounds;
         label.bounds = bounds;
     }
     label.valid = true;
     syncDirtyBounds();
+    return dirtyRegion();
 }
 
-void NodeLaneHoverState::updatePreviewValueLabel(const AutomationCanvas &area,
-                                                 const AutomationPage *page,
-                                                 const AutomationGeometry &geometry,
-                                                 const NodeLane *lane, const QRect &body,
-                                                 LaneHandle handle, qreal x, int value)
+QRegion NodeLaneHoverState::updatePreviewValueLabel(const NodeLaneHoverTarget &target,
+                                                    const AutomationGeometry &geometry,
+                                                    const NodeLane *lane, const QRect &body,
+                                                    LaneHandle handle, qreal x, int value)
 {
+    const QRect previousBounds = previewValueLabel.valid ? previewValueLabel.bounds : QRect{};
     previewValueLabel = {};
-    if (!page || !page->ready() || !lane || !handle.valid())
-        return;
+    if (!target.ready || !lane || !handle.valid())
+        return QRegion(previousBounds);
     const int y = qRound(nodelane::valueY(*lane, body, geometry, value));
     const QRect plot = nodelane::plotRect(body, geometry);
-    const auto clamped = clampedValueLabel(x, y, plot, area.font());
+    const auto clamped = clampedValueLabel(x, y, plot, target.font);
     auto &label = previewValueLabel;
     label.lane = handle;
     label.text = lane->valueText(value);
-    label.font = valueLabelFont(area.font());
+    label.font = valueLabelFont(target.font);
     label.rect = clamped.bounds;
     label.bounds = clamped.bounds;
     label.valid = true;
+    QRegion dirty(previousBounds);
+    dirty += label.bounds;
+    return dirty;
 }
 
-void NodeLaneHoverState::updateHover(AutomationCanvas &area, AutomationPage &page,
-                                     const AutomationGeometry &geometry, const NodeLane &lane,
-                                     const QRect &body, LaneHandle handle,
-                                     const AutomationProjection &projection, qreal x, int y,
-                                     bool pencilMode)
+QRegion NodeLaneHoverState::updateHover(const NodeLaneHoverTarget &target,
+                                        const AutomationGeometry &geometry, const NodeLane &lane,
+                                        const QRect &body, LaneHandle handle,
+                                        const AutomationProjection &projection, qreal x, int y,
+                                        bool pencilMode)
 {
     int mappedValue = 0;
     if (pencilMode)
         mappedValue = valueAtY(lane, body, geometry, y);
     if (handle == hover.lane && hover.pos == QPointF(x, y) &&
         (!pencilMode || mappedValue == hoverValue(lane, body, geometry)))
-        return;
+        return {};
     const QRect previousBounds = hoverDirtyBounds;
     hover.lane = handle;
     hover.pos = QPointF(x, y);
     hover.hasPoint = false;
-    const auto &points = cachedPoints(lane, handle, page.liveState().documentRevision);
+    const auto &points = cachedPoints(lane, handle, target.documentRevision);
     if (!pencilMode || projection.nodeMarkersVisible()) {
         if (const auto hit = nearestPointInRadius(
                 points, projection.rawTickAt(x), hover.pos, geometry.pointHitRadius,
-                [&projection, &area](const NodePoint &point) {
-                    return projection.displayX(point.tick, area.devicePixelRatioF());
+                [&projection, &target](const NodePoint &point) {
+                    return projection.displayX(point.tick, target.devicePixelRatio);
                 },
                 [&lane, &body, &geometry](const NodePoint &point) {
                     return nodelane::valueY(lane, body, geometry, point.value);
@@ -323,19 +328,17 @@ void NodeLaneHoverState::updateHover(AutomationCanvas &area, AutomationPage &pag
         }
     }
     hoverTextCache = {};
-    updateHoverValueLabel(area, &page, geometry, &lane, body, projection, pencilMode);
-    const QRect currentBounds = hoverDirtyBounds;
+    const QRegion currentDirty =
+        updateHoverValueLabel(target, geometry, &lane, body, projection, pencilMode);
     QRegion dirty(previousBounds);
-    dirty += currentBounds;
-    if (!dirty.isEmpty())
-        area.invalidateContent(dirty);
+    dirty += currentDirty;
+    return dirty;
 }
 
-void NodeLaneHoverState::setContextPointHighlight(
-    AutomationCanvas &area, const AutomationPage *page, const AutomationGeometry &geometry,
-    const NodeLane &lane, const QRect &body, LaneHandle handle,
-    const AutomationProjection &projection, const QPointF &position, const NodePoint &point,
-    bool pencilMode)
+QRegion NodeLaneHoverState::setContextPointHighlight(
+    const NodeLaneHoverTarget &target, const AutomationGeometry &geometry, const NodeLane &lane,
+    const QRect &body, LaneHandle handle, const AutomationProjection &projection,
+    const QPointF &position, const NodePoint &point, bool pencilMode)
 {
     invalidateCaches();
     const QRect previousBounds = hoverDirtyBounds;
@@ -344,27 +347,25 @@ void NodeLaneHoverState::setContextPointHighlight(
     hover.hasPoint = true;
     hover.point = point;
     hover.highlightLocked = true;
-    updateHoverValueLabel(area, page, geometry, &lane, body, projection, pencilMode);
-    const QRect currentBounds = hoverDirtyBounds;
+    const QRegion currentDirty =
+        updateHoverValueLabel(target, geometry, &lane, body, projection, pencilMode);
     QRegion dirty(previousBounds);
-    dirty += currentBounds;
-    if (!dirty.isEmpty())
-        area.invalidateContent(dirty);
+    dirty += currentDirty;
+    return dirty;
 }
 
-void NodeLaneHoverState::clearHover(AutomationCanvas &area)
+QRegion NodeLaneHoverState::clearHover()
 {
     if (hover.highlightLocked)
-        return;
+        return {};
     const QRect previousBounds = hoverDirtyBounds;
     hoverDirtyBounds = {};
     invalidateCaches();
     hoverValueLabel = {};
     if (!hover.lane.valid())
-        return;
+        return QRegion(previousBounds);
     hover.lane = {};
     hover.hasPoint = false;
     hover.pos = {};
-    if (!previousBounds.isEmpty())
-        area.invalidateContent(previousBounds);
+    return QRegion(previousBounds);
 }

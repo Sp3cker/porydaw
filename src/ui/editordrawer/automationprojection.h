@@ -10,6 +10,8 @@
 #include "ui/editordrawer/nodelane/nodelane.h"
 
 class AutomationPage;
+class MidiTimeline;
+class SongView;
 
 // A half-open visible grid cell. Snapped callers provide crossed cells in
 // pointer traversal order, including both endpoint cells.
@@ -59,6 +61,10 @@ class AutomationProjection
         : m_geometry(geometry)
         , m_page(page)
     {}
+    AutomationProjection(const AutomationGeometry &geometry, const SongView *songView)
+        : m_geometry(geometry)
+        , m_songView(songView)
+    {}
 
     const AutomationGeometry &geometry() const noexcept { return m_geometry; }
     double rawTickAt(qreal x) const;
@@ -78,6 +84,12 @@ class AutomationProjection
                                                             double currentRawTick) const;
 
   private:
+    const MidiTimeline *timeline() const;
+    uint64_t gridSnapTicks(uint64_t tick, bool fine) const;
+    uint64_t snapTickDown(double tick, bool fine) const;
+    uint64_t nextGridTick(uint64_t tick, bool fine, uint64_t limit) const;
+
     AutomationGeometry m_geometry;
-    const AutomationPage *m_page;
+    const AutomationPage *m_page = nullptr;
+    const SongView *m_songView = nullptr;
 };

@@ -94,6 +94,7 @@ class AutomationCanvas final : public songview::TimelineSurface
 
     // Pixel <-> tick mapping over the current geometry and page timeline.
     AutomationProjection projection() const;
+    NodeLaneHoverTarget hoverTarget() const;
 
     bool promptPointValue(const AutomationRow &row, uint8_t controller, int currentValue,
                           int *storedValue);

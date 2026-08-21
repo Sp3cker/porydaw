@@ -6,15 +6,22 @@
 #include <QPointF>
 #include <QRect>
 #include <QRectF>
+#include <QRegion>
 #include <QString>
 
 #include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 
-class AutomationCanvas;
-class AutomationPage;
 class AutomationProjection;
 struct AutomationGeometry;
+
+struct NodeLaneHoverTarget {
+    QRect widgetBounds;
+    QFont font;
+    qreal devicePixelRatio = 1.0;
+    uint64_t documentRevision = 0;
+    bool ready = false;
+};
 
 struct NodeLaneHoverState {
     struct HoverState {
@@ -69,31 +76,29 @@ struct NodeLaneHoverState {
     bool hoverValueFor(const NodeLane &lane, const QRect &body, const AutomationGeometry &geometry,
                        const AutomationProjection &projection, double tick, bool pencilMode,
                        uint64_t revision, int *value) const;
-    QString hoverTextFor(const AutomationPage &page, const NodeLane &lane, const QRect &body,
+    QString hoverTextFor(const NodeLaneHoverTarget &target, const NodeLane &lane, const QRect &body,
                          const AutomationGeometry &geometry, const AutomationProjection &projection,
                          double tick, bool pencilMode) const;
-    const QString &hoverTextCached(const AutomationPage &page, const NodeLane &lane,
+    const QString &hoverTextCached(const NodeLaneHoverTarget &target, const NodeLane &lane,
                                    const QRect &body, const AutomationGeometry &geometry,
                                    const AutomationProjection &projection, double tick, qreal x,
                                    bool pencilMode) const;
-    QRect hoverValueRect(const AutomationCanvas &area, const AutomationPage &page,
-                         const NodeLane &lane, const QRect &body,
+    QRect hoverValueRect(const NodeLaneHoverTarget &target, const NodeLane &lane, const QRect &body,
                          const AutomationGeometry &geometry, const AutomationProjection &projection,
                          qreal x, bool pencilMode) const;
-    QRect hoverPaintBounds(const AutomationCanvas &area, const AutomationPage *page,
-                           const NodeLane *lane, const QRect &body,
-                           const AutomationGeometry &geometry,
+    QRect hoverPaintBounds(const NodeLaneHoverTarget &target, const NodeLane *lane,
+                           const QRect &body, const AutomationGeometry &geometry,
                            const AutomationProjection &projection, bool pencilMode) const;
-    void updateHover(AutomationCanvas &area, AutomationPage &page,
-                     const AutomationGeometry &geometry, const NodeLane &lane, const QRect &body,
-                     LaneHandle handle, const AutomationProjection &projection, qreal x, int y,
-                     bool pencilMode);
-    void setContextPointHighlight(AutomationCanvas &area, const AutomationPage *page,
-                                  const AutomationGeometry &geometry, const NodeLane &lane,
-                                  const QRect &body, LaneHandle handle,
-                                  const AutomationProjection &projection, const QPointF &position,
-                                  const NodePoint &point, bool pencilMode);
-    void clearHover(AutomationCanvas &area);
+    QRegion updateHover(const NodeLaneHoverTarget &target, const AutomationGeometry &geometry,
+                        const NodeLane &lane, const QRect &body, LaneHandle handle,
+                        const AutomationProjection &projection, qreal x, int y, bool pencilMode);
+    QRegion setContextPointHighlight(const NodeLaneHoverTarget &target,
+                                     const AutomationGeometry &geometry, const NodeLane &lane,
+                                     const QRect &body, LaneHandle handle,
+                                     const AutomationProjection &projection,
+                                     const QPointF &position, const NodePoint &point,
+                                     bool pencilMode);
+    QRegion clearHover();
     void invalidateCaches();
     QFont valueLabelFont(const QFont &font) const;
 
@@ -101,13 +106,13 @@ struct NodeLaneHoverState {
         QRect bounds;
     };
     ClampedValueLabel clampedValueLabel(qreal x, int y, const QRect &plot, const QFont &font) const;
-    void updateHoverValueLabel(const AutomationCanvas &area, const AutomationPage *page,
-                               const AutomationGeometry &geometry, const NodeLane *lane,
-                               const QRect &body, const AutomationProjection &projection,
-                               bool pencilMode);
-    void updatePreviewValueLabel(const AutomationCanvas &area, const AutomationPage *page,
-                                 const AutomationGeometry &geometry, const NodeLane *lane,
-                                 const QRect &body, LaneHandle handle, qreal x, int value);
+    QRegion updateHoverValueLabel(const NodeLaneHoverTarget &target,
+                                  const AutomationGeometry &geometry, const NodeLane *lane,
+                                  const QRect &body, const AutomationProjection &projection,
+                                  bool pencilMode);
+    QRegion updatePreviewValueLabel(const NodeLaneHoverTarget &target,
+                                    const AutomationGeometry &geometry, const NodeLane *lane,
+                                    const QRect &body, LaneHandle handle, qreal x, int value);
 
   private:
     const std::vector<NodePoint> &cachedPoints(const NodeLane &lane, LaneHandle handle,

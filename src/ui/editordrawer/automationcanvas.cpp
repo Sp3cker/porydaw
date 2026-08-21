@@ -78,6 +78,17 @@ AutomationProjection AutomationCanvas::projection() const
     return AutomationProjection(m_geometry, m_page);
 }
 
+NodeLaneHoverTarget AutomationCanvas::hoverTarget() const
+{
+    NodeLaneHoverTarget target;
+    target.widgetBounds = rect();
+    target.font = font();
+    target.devicePixelRatio = devicePixelRatioF();
+    target.documentRevision = m_page ? m_page->liveState().documentRevision : 0;
+    target.ready = m_page && m_page->ready();
+    return target;
+}
+
 void AutomationCanvas::invalidateContent()
 {
     m_rowData.syncTimeSelection();
@@ -105,7 +116,7 @@ bool AutomationCanvas::bandPreviewContainsLane(LaneHandle handle) const noexcept
 void AutomationCanvas::setPencilMode(bool enabled)
 {
     if (!m_activeGesture)
-        m_hoverState.clearHover(*this);
+        invalidateContent(m_hoverState.clearHover());
     m_pencilMode = enabled;
     syncHoverValueLabel();
     syncPreviewValueLabel();
@@ -203,7 +214,7 @@ void AutomationCanvas::rebuildNodeStack()
     cancelNodeGestures();
     m_hoverState.hover.highlightLocked = false;
     m_hoverState.invalidateCaches();
-    m_hoverState.clearHover(*this);
+    invalidateContent(m_hoverState.clearHover());
     m_nodeStack.clear();
     m_ccAdapters.clear();
     m_nodeStack.push_back({&m_tempoLane, m_tempoLane.bodyRect()});
@@ -270,8 +281,8 @@ void AutomationCanvas::syncHoverValueLabel()
     const NodeLane *lane = nullptr;
     QRect body;
     const bool resolved = resolveLane(m_hoverState.hover.lane, &lane, &body);
-    m_hoverState.updateHoverValueLabel(*this, m_page, m_geometry, resolved ? lane : nullptr, body,
-                                       projection(), m_pencilMode);
+    invalidateContent(m_hoverState.updateHoverValueLabel(
+        hoverTarget(), m_geometry, resolved ? lane : nullptr, body, projection(), m_pencilMode));
 }
 
 void AutomationCanvas::syncPreviewValueLabel()
@@ -304,7 +315,8 @@ void AutomationCanvas::syncPreviewValueLabel()
             }
         }
     }
-    m_hoverState.updatePreviewValueLabel(*this, m_page, m_geometry, lane, body, handle, x, value);
+    invalidateContent(m_hoverState.updatePreviewValueLabel(hoverTarget(), m_geometry, lane, body,
+                                                           handle, x, value));
 }
 
 void AutomationCanvas::highlightHoveredPoint(LaneHandle handle, const QPointF &position,
@@ -314,8 +326,9 @@ void AutomationCanvas::highlightHoveredPoint(LaneHandle handle, const QPointF &p
     QRect body;
     if (!resolveLane(handle, &lane, &body))
         return;
-    m_hoverState.setContextPointHighlight(*this, m_page, m_geometry, *lane, body, handle,
-                                          projection(), position, point, m_pencilMode);
+    invalidateContent(m_hoverState.setContextPointHighlight(hoverTarget(), m_geometry, *lane, body,
+                                                            handle, projection(), position, point,
+                                                            m_pencilMode));
 }
 
 int AutomationCanvas::ccRowIndexAt(int y) const noexcept
@@ -378,7 +391,7 @@ void AutomationCanvas::cancelInteraction()
     m_voiceLane.cancel();
     m_hoverState.previewValueLabel = {};
     m_hoverState.hover.highlightLocked = false;
-    m_hoverState.clearHover(*this);
+    invalidateContent(m_hoverState.clearHover());
     updateAxisLockCursor(AxisLock::None);
     if (m_pencilMode)
         setCursor(pencilCursor());
