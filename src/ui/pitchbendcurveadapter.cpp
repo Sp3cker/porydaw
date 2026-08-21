@@ -122,9 +122,7 @@ CurveGraph::CurveSpec PitchBendCurveAdapter::makeSpec() const
     spec.text.showZeroLabel = m_lane == Lane::PitchBend;
     spec.colors = {themes::color(themes::Role::song_view_piano_roll_background),
                    themes::color(themes::Role::song_view_grid),
-                   themes::color(themes::Role::song_view_separator),
                    SongView::trackColor(m_engineTrack),
-                   themes::color(themes::Role::song_view_secondary_text),
                    themes::color(themes::Role::focus_outline),
                    themes::color(themes::Role::song_view_edit_preview_outline),
                    themes::color(themes::Role::song_view_secondary_text)};

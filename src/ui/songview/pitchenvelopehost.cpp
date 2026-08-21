@@ -1,5 +1,6 @@
 #include "ui/songview/pitchenvelopehost.h"
 
+#include "ui/layout.h"
 #include "ui/m4asemantics.h"
 #include "ui/songview.h"
 #include "ui/theme/themeruntime.h"
@@ -30,18 +31,20 @@ PitchEnvelopeHost::PitchEnvelopeHost(::SongView *songView, QWidget *parent)
 {
     setObjectName(QStringLiteral("pitchEnvelopeHost"));
     setAccessibleName(SongView::tr("Track pitch envelope"));
-    setMinimumHeight(196);
-    setMaximumHeight(196);
+    const auto hostHeight = layout::fontPx(49.0 / 3.0);
+    setMinimumHeight(hostHeight);
+    setMaximumHeight(hostHeight);
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(8, 4, 8, 4);
-    layout->setSpacing(2);
+    layout->setContentsMargins(layout::fontPx(2.0 / 3.0), layout::fontPx(1.0 / 3.0),
+                               layout::fontPx(2.0 / 3.0), layout::fontPx(1.0 / 3.0));
+    layout->setSpacing(layout::fontPx(1.0 / 6.0));
     m_status = new QLabel(this);
     m_status->setObjectName(QStringLiteral("pitchEnvelopeStatus"));
     m_status->setWordWrap(false);
     layout->addWidget(m_status);
     m_graph = new CurveGraph(makeGraphSpec(), this);
     m_graph->setObjectName(QStringLiteral("pitchEnvelopeGraph"));
-    m_graph->setMinimumHeight(164);
+    m_graph->setMinimumHeight(layout::fontPx(41.0 / 3.0));
     m_graph->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     CurveGraph::Callbacks callbacks;
     callbacks.previewChanged = [this] {
@@ -172,7 +175,6 @@ void PitchEnvelopeHost::keyPressEvent(QKeyEvent *event)
 void PitchEnvelopeHost::hideEvent(QHideEvent *event)
 {
     QWidget::hideEvent(event);
-    return;
     QMetaObject::invokeMethod(
         m_songView.data(),
         [songView = m_songView] {
@@ -337,6 +339,9 @@ CurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
     const int bendRange = session ? session->templateBendRange : kDefaultBendRange;
     CurveGraph::CurveSpec spec;
     const QSize graphSize = m_graph ? m_graph->size() : QSize(480, 164);
+    const CurveGeometry geometry =
+        CurveGeometry::resolve(m_graph ? m_graph->font() : font(),
+                               m_graph ? m_graph->devicePixelRatioF() : devicePixelRatioF());
     const double range = double(bendRange);
     const double windowTicks =
         double(session ? (session->templateWindowEndTick - session->templateSourceTick)
@@ -352,8 +357,9 @@ CurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
     spec.sampling.endpointInset = 0.1;
     spec.sampling.interiorStep = spec.sampling.endpointInset;
     spec.canvasRect =
-        QRect(52, 16, std::max(1, graphSize.width() - 60), std::max(1, graphSize.height() - 36));
-    spec.title = SongView::tr("Track pitch envelope (BEND)");
+        QRect(geometry.axisGutter, geometry.topBandHeight,
+              std::max(1, graphSize.width() - geometry.axisGutter - geometry.rightInset),
+              std::max(1, graphSize.height() - geometry.topBandHeight - geometry.bottomBandHeight));
     spec.startLabel = SongView::tr("0");
     spec.endLabel = SongView::tr("%1 ticks").arg(int(windowTicks));
     spec.text.zeroLabel = QStringLiteral("0");
@@ -361,9 +367,7 @@ CurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
     spec.gridLines = gridLines();
     spec.colors = {themes::color(themes::Role::song_view_piano_roll_background),
                    themes::color(themes::Role::song_view_grid),
-                   themes::color(themes::Role::song_view_separator),
                    SongView::trackColor(session ? session->engineTrack : 0),
-                   themes::color(themes::Role::song_view_secondary_text),
                    themes::color(themes::Role::focus_outline),
                    themes::color(themes::Role::song_view_edit_preview_outline),
                    themes::color(themes::Role::song_view_secondary_text)};

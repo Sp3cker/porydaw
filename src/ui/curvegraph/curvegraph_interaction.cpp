@@ -1,6 +1,7 @@
 #include "curvegraph.hpp"
 
 #include <QApplication>
+#include <QCursor>
 #include <algorithm>
 #include <type_traits>
 #include <utility>
@@ -127,12 +128,29 @@ void CurveGraph::updateGesture(const QPointF &position, Qt::KeyboardModifiers mo
 
 void CurveGraph::mouseMoveEvent(QMouseEvent *event)
 {
-    if (!hasGesture()) {
-        event->ignore();
-        return;
+    const bool gesture = hasGesture();
+    if (gesture)
+        updateGesture(event->position(), event->modifiers());
+    const auto hit = hitTest(event->position());
+    const std::optional<double> hoverX = hit ? std::optional<double>(hit->x) : std::nullopt;
+    if (m_hoverX != hoverX) {
+        m_hoverX = hoverX;
+        update();
     }
-    updateGesture(event->position(), event->modifiers());
+    const Qt::CursorShape cursorShape = m_hoverX ? Qt::SizeAllCursor : Qt::ArrowCursor;
+    if (cursor().shape() != cursorShape)
+        setCursor(cursorShape);
     event->accept();
+}
+
+void CurveGraph::leaveEvent(QEvent *event)
+{
+    QWidget::leaveEvent(event);
+    if (!m_hoverX)
+        return;
+    m_hoverX.reset();
+    setCursor(Qt::ArrowCursor);
+    update();
 }
 
 void CurveGraph::mouseReleaseEvent(QMouseEvent *event)

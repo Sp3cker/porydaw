@@ -16,6 +16,7 @@
 #include <variant>
 #include <vector>
 
+class QFont;
 class QPainter;
 
 namespace songview {
@@ -28,12 +29,29 @@ struct CurvePoint {
 struct CurveColors {
     QColor background;
     QColor grid;
-    QColor separator;
     QColor curve;
-    QColor endpoint;
-    QColor focus;
+    QColor focusOutline;
     QColor previewOutline;
     QColor text;
+};
+
+struct CurveGeometry {
+    int axisGutter;
+    int labelHeight;
+    int labelGap;
+    int topBandHeight;
+    int bottomBandHeight;
+    int rightInset;
+    qreal physicalPixel;
+    qreal curveWidth;
+    qreal nodeRadius;
+    qreal nodeOutlineWidth;
+    qreal ringRadius;
+    qreal ringOutlineWidth;
+    qreal hitRadius;
+    qreal previewRadius;
+
+    [[nodiscard]] static CurveGeometry resolve(const QFont &font, qreal dpr);
 };
 
 class CurveGraph final : public QWidget
@@ -119,6 +137,7 @@ class CurveGraph final : public QWidget
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
+    void leaveEvent(QEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
@@ -145,16 +164,10 @@ class CurveGraph final : public QWidget
         bool hasMoved = false;
     };
 
-    static constexpr int kAxisGutter = 52;
-    static constexpr int kAxisLabelHeight = 20;
-    static constexpr int kNodeHitRadius = 8;
-    static constexpr int kNodePaintRadius = 3;
-    static constexpr int kSelectedNodeRingRadius = 6;
-
-    void paintGrid(QPainter &painter);
-    void paintCurve(QPainter &painter);
-    void paintAxes(QPainter &painter);
-    void paintFocus(QPainter &painter);
+    void paintGrid(QPainter &painter, const CurveGeometry &geometry);
+    void paintCurve(QPainter &painter, const CurveGeometry &geometry);
+    void paintAxes(QPainter &painter, const CurveGeometry &geometry);
+    void paintFocus(QPainter &painter, const CurveGeometry &geometry);
     void updateGesture(const QPointF &position, Qt::KeyboardModifiers modifiers);
     void updateStroke(const QPointF &position);
     void updateVertexDrag(const QPointF &position, Qt::KeyboardModifiers modifiers);
@@ -191,6 +204,7 @@ class CurveGraph final : public QWidget
     double m_rangeWheelRemainder = 0.0;
     std::variant<std::monostate, StrokeState, VertexDragState> m_gesture;
     std::optional<double> m_selectedX;
+    std::optional<double> m_hoverX;
     Callbacks m_callbacks;
 };
 

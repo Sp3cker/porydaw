@@ -1,12 +1,37 @@
 #include "curvegraph.hpp"
 
+#include "ui/layout.h"
+#include "ui/typography.h"
+
 #include <QApplication>
+#include <QCoreApplication>
+#include <QFontMetrics>
 #include <algorithm>
 #include <cmath>
 #include <iterator>
 #include <utility>
 
 namespace songview {
+
+CurveGeometry CurveGeometry::resolve(const QFont &font, qreal dpr)
+{
+    CurveGeometry geometry;
+    geometry.physicalPixel = qreal(layout::singlePixel()) / std::max(dpr, qreal(1.0));
+    geometry.labelGap = layout::space(layout::Space::One) + layout::singlePixel();
+    geometry.labelHeight = QFontMetrics(typography::caption(font)).lineSpacing();
+    geometry.axisGutter = layout::fontPx(4.0) + geometry.labelGap;
+    geometry.topBandHeight = geometry.labelHeight + 2 * layout::space(layout::Space::Half);
+    geometry.bottomBandHeight = geometry.labelHeight + geometry.labelGap;
+    geometry.rightInset = 2 * geometry.labelGap;
+    geometry.curveWidth = 2.0 * geometry.physicalPixel;
+    geometry.nodeRadius = layout::space(layout::Space::Half) + layout::singlePixel();
+    geometry.nodeOutlineWidth = 2.0 * geometry.physicalPixel;
+    geometry.ringRadius = layout::fontPxF(1.0 / 2.0);
+    geometry.ringOutlineWidth = 2.0 * geometry.physicalPixel;
+    geometry.hitRadius = 8.0 * std::max(dpr, qreal(1.0));
+    geometry.previewRadius = geometry.nodeRadius;
+    return geometry;
+}
 
 CurveGraph::CurveGraph(CurveSpec spec, QWidget *parent)
     : QWidget(parent)
@@ -15,6 +40,7 @@ CurveGraph::CurveGraph(CurveSpec spec, QWidget *parent)
     , m_liveValue(m_spec.defaultY)
 {
     setFocusPolicy(Qt::StrongFocus);
+    setAccessibleName(QCoreApplication::translate("CurveGraph", "Envelope curve"));
     setMouseTracking(true);
     setCursor(Qt::ArrowCursor);
 }
@@ -29,6 +55,10 @@ void CurveGraph::setSpec(CurveSpec spec)
     if (m_selectedX && std::none_of(m_points.begin(), m_points.end(),
                                     [this](const auto &point) { return point.x == *m_selectedX; }))
         m_selectedX.reset();
+    if (m_hoverX) {
+        m_hoverX.reset();
+        setCursor(Qt::ArrowCursor);
+    }
     update();
 }
 
@@ -38,6 +68,10 @@ void CurveGraph::setPoints(std::vector<CurvePoint> points)
     m_points = std::move(points);
     materializeEndpoints();
     m_selectedX.reset();
+    if (m_hoverX) {
+        m_hoverX.reset();
+        setCursor(Qt::ArrowCursor);
+    }
     m_keyboardX = m_spec.xAxis.minimum;
     m_liveValue = valueAtX(m_keyboardX);
     update();
@@ -57,6 +91,10 @@ void CurveGraph::resetCurve()
     insertOrReplace(m_spec.xAxis.maximum, endValue);
     m_keyboardX = m_spec.xAxis.minimum;
     m_liveValue = m_spec.defaultY;
+    if (m_hoverX) {
+        m_hoverX.reset();
+        setCursor(Qt::ArrowCursor);
+    }
     if (m_callbacks.previewChanged)
         m_callbacks.previewChanged();
     setFocus(Qt::MouseFocusReason);
@@ -81,7 +119,7 @@ void CurveGraph::setSelectedX(std::optional<double> x)
 
 std::optional<CurvePoint> CurveGraph::hitTest(const QPointF &position) const
 {
-    const qreal radius = kNodeHitRadius * std::max<qreal>(devicePixelRatioF(), 1.0);
+    const qreal radius = CurveGeometry::resolve(font(), devicePixelRatioF()).hitRadius;
     const qreal radiusSquared = radius * radius;
     qreal nearestDistanceSquared = radiusSquared;
     std::optional<CurvePoint> nearest;

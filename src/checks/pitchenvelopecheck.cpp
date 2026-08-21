@@ -397,6 +397,89 @@ class PitchEnvelopeCheckContext final
             fail("track pitch-envelope graph has no usable canvas");
             return std::nullopt;
         }
+        const QPoint hoverPosition = graph->pointPosition(initialCurve.front());
+        sendCurveMouse(graph, QEvent::MouseMove, hoverPosition, Qt::NoButton, Qt::NoButton);
+        if (graph->hasGesture() || graph->cursor().shape() != Qt::SizeAllCursor)
+            fail("track pitch-envelope graph did not hover a node without starting a gesture");
+        std::optional<QPoint> blankPosition;
+        const int xStep = std::max(1, canvas.width() / 4);
+        const int yStep = std::max(1, canvas.height() / 4);
+        // Prefer interior blank positions where x is not already occupied (avoid endpoints at same x).
+        for (int y = canvas.top() + yStep; y < canvas.bottom() && !blankPosition; y += yStep) {
+            for (int x = canvas.left() + xStep; x < canvas.right() && !blankPosition; x += xStep) {
+                const QPoint candidate(x, y);
+                if (graph->hitTest(QPointF(candidate)))
+                    continue;
+                bool sameX = false;
+                for (const auto &pt : graph->points()) {
+                    if (std::abs(graph->pointPosition(pt).x() - candidate.x()) < xStep) {
+                        sameX = true;
+                        break;
+                    }
+                }
+                if (!sameX) {
+                    blankPosition = candidate;
+                    break;
+                }
+            }
+        }
+        if (!blankPosition) {
+            for (int y = canvas.top(); y <= canvas.bottom() && !blankPosition; y += yStep) {
+                for (int x = canvas.left(); x <= canvas.right(); x += xStep) {
+                    const QPoint candidate(x, y);
+                    if (!graph->hitTest(QPointF(candidate))) {
+                        blankPosition = candidate;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!blankPosition) {
+            fail("track pitch-envelope graph had no non-node cursor position");
+        } else {
+            sendCurveMouse(graph, QEvent::MouseMove, *blankPosition, Qt::NoButton, Qt::NoButton);
+            if (graph->cursor().shape() != Qt::ArrowCursor)
+                fail("track pitch-envelope graph did not restore the arrow away from a node");
+            bool singleClickSucceeded = false;
+            for (int y = canvas.top() + yStep; y < canvas.bottom() && !singleClickSucceeded;
+                 y += yStep) {
+                for (int x = canvas.left() + xStep; x < canvas.right() && !singleClickSucceeded;
+                     x += xStep) {
+                    const QPoint cand(x, y);
+                    if (graph->hitTest(QPointF(cand)))
+                        continue;
+                    const size_t before = graph->points().size();
+                    const QByteArray smfBefore = m_document.smf().write();
+                    const int undoBefore = m_document.undoStack()->index();
+                    sendCurveMouse(graph, QEvent::MouseButtonPress, cand, Qt::LeftButton,
+                                   Qt::LeftButton);
+                    const size_t afterPress = graph->points().size();
+                    sendCurveMouse(graph, QEvent::MouseButtonRelease, cand, Qt::LeftButton,
+                                   Qt::NoButton);
+                    QCoreApplication::processEvents();
+                    const size_t afterRelease = graph->points().size();
+                    const bool ok = afterPress == before + 1 && afterRelease == before + 1 &&
+                                    m_document.undoStack()->index() == undoBefore + 1 &&
+                                    m_document.smf().write() != smfBefore;
+                    if (ok) {
+                        singleClickSucceeded = true;
+                        m_document.undoStack()->undo();
+                        QCoreApplication::processEvents();
+                        graph->cancelGesture();
+                    } else {
+                        if (graph->hasGesture())
+                            graph->cancelGesture();
+                        if (m_document.undoStack()->index() == undoBefore + 1) {
+                            m_document.undoStack()->undo();
+                            QCoreApplication::processEvents();
+                        }
+                    }
+                }
+            }
+            if (!singleClickSucceeded) {
+                fail("single-click did not add pitch-envelope node at any interior blank position");
+            }
+        }
         const QPoint detentX(canvas.left() + canvas.width() / 3, canvas.center().y() + 8);
         sendCurveMouse(graph, QEvent::MouseButtonPress, detentX, Qt::LeftButton, Qt::LeftButton);
         const bool withinDetent = std::abs(graph->liveValue()) <= 1e-9;
