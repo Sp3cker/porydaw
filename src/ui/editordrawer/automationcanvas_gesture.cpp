@@ -116,8 +116,7 @@ void AutomationCanvas::updateActiveGesture(const QPointF &position, Qt::Keyboard
         *m_activeGesture);
     if (std::holds_alternative<NodeDragGesture>(*m_activeGesture))
         updateAxisLockCursor(axisCursor);
-    m_hoverState.updatePreviewValueLabel(*this, m_page, m_geometry, m_rowData, proj,
-                                         m_activeGesture);
+    syncPreviewValueLabel();
 }
 
 void AutomationCanvas::finishActiveGesture(bool fineMode)

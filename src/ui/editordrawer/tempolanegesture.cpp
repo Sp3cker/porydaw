@@ -207,6 +207,5 @@ bool TempoLane::deleteTimeSelection()
         if (pointInTimeSelection(point.tick))
             edit.remove.push_back(point);
     applyEdit(edit);
-    clearHover();
     return true;
 }

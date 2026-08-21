@@ -131,8 +131,8 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
         m_bandEndRow = rowIndex;
         DocLanePoint point;
         if (pencilPointHit(row, rowIndex, event->position(), proj, &point))
-            m_hoverState.setContextPointHighlight(*this, m_page, m_geometry, m_rowData, proj,
-                                                  rowIndex, event->position(), point, m_pencilMode);
+            highlightHoveredPoint(LaneHandle{rowIndex + 1}, event->position(),
+                                  {point.tick, point.value});
         setGestureActive(true);
         return;
     }
@@ -150,8 +150,7 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
             m_activeNodeIdentities = std::move(nodeGesture->identities);
             m_activeGesture.emplace(std::move(nodeGesture->gesture));
             setGestureActive(true);
-            m_hoverState.updatePreviewValueLabel(*this, m_page, m_geometry, m_rowData, proj,
-                                                 m_activeGesture);
+            syncPreviewValueLabel();
             invalidateContent();
             return;
         }
@@ -175,8 +174,7 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
         pencil.previousY = event->position().y();
         m_activeGesture.emplace(std::move(pencil));
         setGestureActive(true);
-        m_hoverState.updatePreviewValueLabel(*this, m_page, m_geometry, m_rowData, proj,
-                                             m_activeGesture);
+        syncPreviewValueLabel();
         invalidateContent();
         return;
     }
@@ -203,8 +201,7 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
             sweep.slop.markExceeded(event->position());
         m_activeGesture.emplace(std::move(sweep));
     }
-    m_hoverState.updatePreviewValueLabel(*this, m_page, m_geometry, m_rowData, projection(),
-                                         m_activeGesture);
+    syncPreviewValueLabel();
     invalidateContent();
 }
 
@@ -275,8 +272,16 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
             setCursor(Qt::SplitVCursor);
             return;
         }
-        m_hoverState.updateHover(*this, *m_page, m_geometry, m_rowData, proj, event->position().x(),
-                                 event->pos().y(), m_pencilMode);
+        const qreal x = event->position().x();
+        const int y = event->pos().y();
+        const NodeLane *lane = nullptr;
+        QRect body;
+        const LaneHandle handle = x >= m_geometry.plotOrigin ? laneAt(y) : LaneHandle{};
+        if (!m_page || !resolveLane(handle, &lane, &body))
+            m_hoverState.clearHover(*this);
+        else
+            m_hoverState.updateHover(*this, *m_page, m_geometry, *lane, body, handle, proj, x, y,
+                                     m_pencilMode);
         if (m_pencilMode)
             setCursor(pencilCursor());
         else
@@ -462,16 +467,19 @@ void AutomationCanvas::keyPressEvent(QKeyEvent *event)
         return;
     }
     if (m_pencilMode && (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) &&
-        m_hoverState.hover.row >= 0 && m_hoverState.hover.row < int(m_rowData.rows().size())) {
-        const auto &row = m_rowData.rows()[m_hoverState.hover.row];
-        DocLanePoint point;
-        int track = -1;
-        uint8_t controller = 0;
-        if (pencilPointHit(row, m_hoverState.hover.row, m_hoverState.hover.pos, &point) &&
-            m_rowData.rowTarget(row, &track, &controller)) {
-            m_page->document()->deleteLanePoints(track, controller, {point});
-            m_hoverState.clearHover(*this);
-            m_page->requestRefresh();
+        m_hoverState.hover.lane.valid() && m_hoverState.hover.lane.index > 0) {
+        const int rowIndex = m_hoverState.hover.lane.index - 1;
+        if (rowIndex < int(m_rowData.rows().size())) {
+            const auto &row = m_rowData.rows()[std::size_t(rowIndex)];
+            DocLanePoint point;
+            int track = -1;
+            uint8_t controller = 0;
+            if (pencilPointHit(row, rowIndex, m_hoverState.hover.pos, &point) &&
+                m_rowData.rowTarget(row, &track, &controller)) {
+                m_page->document()->deleteLanePoints(track, controller, {point});
+                m_hoverState.clearHover(*this);
+                m_page->requestRefresh();
+            }
         }
         event->accept();
         return;
@@ -481,7 +489,6 @@ void AutomationCanvas::keyPressEvent(QKeyEvent *event)
 
 void AutomationCanvas::leaveEvent(QEvent *)
 {
-    m_tempoLane.clearHover();
     m_voiceLane.clearHover(*this);
     m_hoverState.clearHover(*this);
 }

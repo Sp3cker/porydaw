@@ -16,11 +16,11 @@
 #include <QString>
 
 #include "ui/editordrawer/automationgesture.h"
-#include "ui/editordrawer/automationhover.h"
 #include "ui/editordrawer/automationpaint.h"
 #include "ui/editordrawer/automationpencilgesture.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/editordrawer/voicechangelane.h"
@@ -35,10 +35,6 @@ class QPainter;
 class QScrollArea;
 class QWheelEvent;
 class QMouseEvent;
-struct LaneHandle {
-    int index = -1;
-    constexpr bool valid() const noexcept { return index >= 0; }
-};
 
 struct LaneNodeIdentity {
     int engineTrack = -1;
@@ -137,6 +133,10 @@ class AutomationCanvas final : public songview::TimelineSurface
     void cancelNodeGestures();
     void rebuildNodeStack();
     LaneHandle laneAt(int y) const noexcept;
+    bool resolveLane(LaneHandle handle, const NodeLane **lane, QRect *body) const noexcept;
+    void syncHoverValueLabel();
+    void syncPreviewValueLabel();
+    void highlightHoveredPoint(LaneHandle handle, const QPointF &position, const ValuePoint &point);
     int ccRowIndexAt(int y) const noexcept;
     void setGestureActive(bool active);
     AutomationGeometry m_geometry;
@@ -175,6 +175,6 @@ class AutomationCanvas final : public songview::TimelineSurface
     QCursor m_pencilCursor;
     std::optional<ActiveGesture> m_activeGesture;
     std::vector<LaneNodeIdentity> m_activeNodeIdentities;
-    AutomationHoverState m_hoverState;
+    NodeLaneHoverState m_hoverState;
     NodeDoubleClickGuard m_deletedNodeClick;
 };

@@ -24,6 +24,7 @@ constexpr std::array kDomains{
     Domain{"transactions", checkAutomationPencilTransactions},
     Domain{"tempo", checkTempoInteractions},
     Domain{"node-contract", checkNodeContract},
+    Domain{"hover", checkNodeLaneHoverParity},
     Domain{"lifecycle", checkAutomationLifecycle},
 };
 

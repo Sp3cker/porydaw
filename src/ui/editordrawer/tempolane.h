@@ -52,7 +52,6 @@ class TempoLane final : public NodeLane
     bool selectionContains(const AutomationProjection &projection, qreal x,
                            qreal devicePixelRatio) const;
     void cancel();
-    void clearHover();
     bool deleteTimeSelection();
 
     bool mousePress(AutomationCanvas &area, QMouseEvent *event, const AutomationGeometry &geometry);
@@ -112,7 +111,6 @@ class TempoLane final : public NodeLane
     QRect m_body;
     std::vector<TempoPoint> m_activeNodeIdentities;
     bool m_expanded = false;
-    std::optional<std::size_t> m_hoveredPoint;
     std::optional<ActiveGesture> m_activeGesture;
     BandGesture m_band;
     std::vector<TempoPoint> m_clipboard;
