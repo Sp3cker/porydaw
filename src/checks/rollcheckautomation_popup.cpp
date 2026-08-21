@@ -9,7 +9,6 @@
 #include <QMenu>
 #include <QMouseEvent>
 #include <QString>
-#include <QStringList>
 #include <QTimer>
 #include <QWidget>
 
@@ -35,8 +34,8 @@ void sendMouse(QWidget *widget, QEvent::Type type, const QPointF &position, Qt::
 void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDocument &document,
                                    const QString &songLabel,
                                    const AutomationGeometry &projectionGeometry, int lfoTop,
-                                   int lfoHeight, int voiceTop, int voiceHeight, int rowsHeight,
-                                   int &failures)
+                                   int lfoHeight, int /*voiceTop*/, int /*voiceHeight*/,
+                                   int rowsHeight, int &failures)
 {
     const auto popupCheck = [&](bool condition, const QString &message) {
         if (condition)
@@ -96,7 +95,8 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
                    ccLaneActions.contains(QStringLiteral("Hide CC lane")) &&
                    ccLaneActions.contains(QStringLiteral("Delete CC lane")),
                QStringLiteral("CC lane header menu lost Copy/Hide/Delete CC lane"));
-    const QPoint tempoHeader(projectionGeometry.plotOrigin / 2, std::max(1, voiceTop / 2));
+    const QRect tempoRect = page.canvas()->pinnedTempoRect();
+    const QPoint tempoHeader(projectionGeometry.plotOrigin / 2, tempoRect.center().y());
     sendMouse(page.canvas(), QEvent::MouseButtonPress, tempoHeader, Qt::LeftButton, Qt::LeftButton);
     sendMouse(page.canvas(), QEvent::MouseButtonRelease, tempoHeader, Qt::LeftButton, Qt::NoButton);
     QCoreApplication::processEvents();
@@ -123,8 +123,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
     document.applyTempoEdit(tempoSeed);
     page.documentChanged();
     QCoreApplication::processEvents();
-    const int tempoBottom = page.canvas()->contentTopInset() - voiceHeight;
-    const QRect tempoBody(0, 0, page.canvas()->width(), tempoBottom);
+    const QRect tempoBody = page.canvas()->laneBody(LaneHandle{0});
     const QPointF tempoNode(
         view.displayX(96.0, projectionGeometry.plotOrigin, page.canvas()->devicePixelRatioF()),
         AutomationProjection::valueY(tempoBody, projectionGeometry, CoreTimeDefaults::kMinTempoBpm,

@@ -176,6 +176,16 @@ QFont caption(const QFont &source)
     return font;
 }
 
+QFont regular(const QFont &source)
+{
+    auto font = source;
+    font.setStyleName({});
+    font.setWeight(QFont::Normal);
+    font.setStyle(QFont::StyleNormal);
+    font.setPixelSize(resolvedPixelSize(source));
+    return font;
+}
+
 QFont bold(const QFont &source)
 {
     auto font = source;

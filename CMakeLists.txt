@@ -272,10 +272,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/timeruler.h
     src/ui/songview/timeruler_paint.cpp
     src/ui/songview/timeruler_interaction.cpp
-    src/ui/songview/tempostrip.cpp
-    src/ui/songview/tempostrip.h
-    src/ui/songview/tempostrip_input.cpp
-    src/ui/songview/tempostrip_paint.cpp
     src/ui/songview/pianoroll.cpp
     src/ui/songview/pianoroll.h
     src/ui/songview/pianoroll_geometry.cpp
@@ -444,9 +440,10 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/noteidcheck.cpp
         src/checks/renderingplayheadcheck.cpp
         src/checks/rollcheckautomation.cpp
+        src/checks/rollcheckautomation_tempo.cpp
         src/checks/rollcheckautomation_paint.cpp
+        src/checks/rollcheckautomation_tempo_paint.cpp
         src/checks/rollcheckautomation_popup.cpp
-        src/checks/tempostripcheck.cpp
         src/checks/automationgesturecheck/rig.cpp
         src/checks/automationgesturecheck/runner.cpp
         src/checks/automationgesturecheck/action.cpp

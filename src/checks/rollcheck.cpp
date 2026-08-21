@@ -528,11 +528,23 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 remapTimeline = std::move(rebuilt);
                 order.push_back(QStringLiteral("document"));
             });
+            const auto headersMatchTimeline = [&] {
+                for (int track = 0; track < 16; ++track) {
+                    const bool hasHeader =
+                        remapView.findChild<QWidget *>(
+                            QStringLiteral("trackHeaderRow%1").arg(track)) != nullptr;
+                    if (hasHeader != remapTimeline->tracks[track].used)
+                        return false;
+                }
+                return true;
+            };
             const auto expectRemapBeforeDocument = [&](const char *what) {
                 if (order.size() != 2 || order[0] != QStringLiteral("remap") ||
                     order[1] != QStringLiteral("document")) {
                     fail(what);
                 }
+                if (!headersMatchTimeline())
+                    fail("track header list did not follow the rebuilt timeline");
                 order.clear();
             };
             const auto hasEmptyLane = [](const EditorViewState &state, int owner, uint8_t cc) {

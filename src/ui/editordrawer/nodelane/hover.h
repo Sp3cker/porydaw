@@ -63,8 +63,13 @@ struct NodeLaneHoverState {
         QString text;
     };
     mutable HoverTextCache hoverTextCache;
-    mutable QFont valueLabelFontCache;
-    mutable bool valueLabelFontValid = false;
+    struct ValueLabelFontCache {
+        QFont font;
+        int width = 0;
+        int height = 0;
+        bool valid = false;
+    };
+    mutable ValueLabelFontCache m_valueLabelFontCache;
     ValueLabelCache hoverValueLabel;
     ValueLabelCache previewValueLabel;
     QRect hoverDirtyBounds;
@@ -100,12 +105,14 @@ struct NodeLaneHoverState {
                                      bool pencilMode);
     QRegion clearHover();
     void invalidateCaches();
-    QFont valueLabelFont(const QFont &font) const;
+    void invalidateFontCache();
+    const ValueLabelFontCache &valueLabelFontCache(const QFont &font) const;
 
     struct ClampedValueLabel {
         QRect bounds;
     };
-    ClampedValueLabel clampedValueLabel(qreal x, int y, const QRect &plot, const QFont &font) const;
+    ClampedValueLabel clampedValueLabel(qreal x, int y, const QRect &plot,
+                                        const ValueLabelFontCache &fontCache) const;
     QRegion updateHoverValueLabel(const NodeLaneHoverTarget &target,
                                   const AutomationGeometry &geometry, const NodeLane *lane,
                                   const QRect &body, const AutomationProjection &projection,

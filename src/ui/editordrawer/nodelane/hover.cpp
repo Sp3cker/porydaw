@@ -29,6 +29,11 @@ void NodeLaneHoverState::invalidateCaches()
     hoverTextCache = {};
 }
 
+void NodeLaneHoverState::invalidateFontCache()
+{
+    m_valueLabelFontCache = {};
+}
+
 const std::vector<NodePoint> &
 NodeLaneHoverState::cachedPoints(const NodeLane &lane, LaneHandle handle, uint64_t revision) const
 {
@@ -127,9 +132,9 @@ QRect NodeLaneHoverState::hoverValueRect(const NodeLaneHoverTarget &target, cons
     if (hover.hasPoint)
         anchorX = projection.displayX(hover.point.tick, target.devicePixelRatio);
     const int anchorY = qRound(nodelane::valueY(lane, body, geometry, mappedValue));
-    const QFontMetrics metrics(valueLabelFont(target.font));
-    const int textWidth = metrics.horizontalAdvance(QStringLiteral("0000"));
-    const int textHeight = metrics.height();
+    const auto &fontCache = valueLabelFontCache(target.font);
+    const int textWidth = fontCache.width;
+    const int textHeight = fontCache.height;
     const int gap = layout::space(layout::Space::One);
     int textX = qCeil(anchorX - gap - textWidth);
     int textY = anchorY - gap - textHeight;
@@ -192,23 +197,28 @@ QRect NodeLaneHoverState::hoverPaintBounds(const NodeLaneHoverTarget &target, co
     return bounds.intersected(target.widgetBounds);
 }
 
-QFont NodeLaneHoverState::valueLabelFont(const QFont &font) const
+const NodeLaneHoverState::ValueLabelFontCache &
+NodeLaneHoverState::valueLabelFontCache(const QFont &font) const
 {
-    if (!valueLabelFontValid) {
-        valueLabelFontCache = typography::noteName(font);
-        valueLabelFontValid = true;
+    if (!m_valueLabelFontCache.valid) {
+        m_valueLabelFontCache.font = typography::noteName(font);
+        const QFontMetrics metrics(m_valueLabelFontCache.font);
+        m_valueLabelFontCache.width = metrics.horizontalAdvance(QStringLiteral("0000"));
+        m_valueLabelFontCache.height = metrics.height();
+        m_valueLabelFontCache.valid = true;
     }
-    return valueLabelFontCache;
+    return m_valueLabelFontCache;
 }
 
 NodeLaneHoverState::ClampedValueLabel
-NodeLaneHoverState::clampedValueLabel(qreal x, int y, const QRect &plot, const QFont &font) const
+NodeLaneHoverState::clampedValueLabel(qreal x, int y, const QRect &plot,
+                                      const ValueLabelFontCache &fontCache) const
 {
-    const QFontMetrics metrics(valueLabelFont(font));
     const int gap = layout::space(layout::Space::One);
     const int half = layout::space(layout::Space::Half);
-    const int width = metrics.horizontalAdvance(QStringLiteral("0000"));
-    QRect textRect(qCeil(x + gap + half), y - gap - metrics.height(), width, metrics.height());
+    const int width = fontCache.width;
+    const int height = fontCache.height;
+    QRect textRect(qCeil(x + gap + half), y - gap - height, width, height);
     if (textRect.right() > plot.right())
         textRect.moveRight(plot.right());
     if (textRect.left() < plot.left())
@@ -250,14 +260,13 @@ QRegion NodeLaneHoverState::updateHoverValueLabel(const NodeLaneHoverTarget &tar
     }
     auto &label = hoverValueLabel;
     label.lane = hover.lane;
-    label.text = text;
-    label.font = valueLabelFont(target.font);
+    const auto &fontCache = valueLabelFontCache(target.font);
+    label.font = fontCache.font;
     const QRect plot = nodelane::plotRect(body, geometry);
     if (pencilMode) {
-        const QFontMetrics metrics(label.font);
         const int gap = layout::space(layout::Space::One);
-        const int width = metrics.horizontalAdvance(QStringLiteral("0000"));
-        const int height = metrics.height();
+        const int width = fontCache.width;
+        const int height = fontCache.height;
         const QRect bounds(qFloor(x + gap), plot.top() + (plot.height() - height) / 2, width,
                            height);
         label.rect = bounds;
@@ -284,11 +293,12 @@ QRegion NodeLaneHoverState::updatePreviewValueLabel(const NodeLaneHoverTarget &t
         return QRegion(previousBounds);
     const int y = qRound(nodelane::valueY(*lane, body, geometry, value));
     const QRect plot = nodelane::plotRect(body, geometry);
-    const auto clamped = clampedValueLabel(x, y, plot, target.font);
+    const auto &fontCache = valueLabelFontCache(target.font);
+    const auto clamped = clampedValueLabel(x, y, plot, fontCache);
     auto &label = previewValueLabel;
     label.lane = handle;
     label.text = lane->valueText(value);
-    label.font = valueLabelFont(target.font);
+    label.font = fontCache.font;
     label.rect = clamped.bounds;
     label.bounds = clamped.bounds;
     label.valid = true;

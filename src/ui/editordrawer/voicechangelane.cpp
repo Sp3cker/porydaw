@@ -49,7 +49,22 @@ bool VoiceChangeLane::voiceMarkerAt(const AutomationCanvas &area, qreal x,
 
 VoiceChangeLane::VoiceChangeLane(AutomationPage *page) noexcept : m_page(page) {}
 
-void VoiceChangeLane::rebuild(int engineTrack, int width, int top, int height)
+void VoiceChangeLane::invalidateFontCache()
+{
+    m_hoverLabelFontValid = false;
+}
+
+void VoiceChangeLane::ensureHoverLabelFontCache(const QFont &font)
+{
+    if (m_hoverLabelFontValid)
+        return;
+    m_hoverLabelFont = typography::noteName(font);
+    m_hoverLabelMetrics = QFontMetrics(m_hoverLabelFont);
+    m_hoverLabelFontValid = true;
+}
+
+void VoiceChangeLane::rebuild(int engineTrack, int width, int top,
+                              const AutomationGeometry &geometry)
 {
     m_engineTrack = engineTrack;
     m_changeCount = -1;
@@ -61,11 +76,16 @@ void VoiceChangeLane::rebuild(int engineTrack, int width, int top, int height)
     m_hoverLabelRect = {};
     m_hoverLabelBounds = {};
     m_hoverDirtyBounds = {};
-    if (engineTrack < 0 || height <= 0) {
+    if (engineTrack < 0) {
         m_bounds = {};
         return;
     }
-    m_bounds = QRect(layout::space(layout::Space::Zero), top, width, height);
+    const int requestedHeight = m_page && m_page->m_viewState.laneHeight > 0
+                                    ? m_page->m_viewState.laneHeight
+                                    : geometry.rowDefaultHeight;
+    m_bounds =
+        QRect(layout::space(layout::Space::Zero), top, width,
+              std::clamp(requestedHeight, geometry.rowMinimumHeight, geometry.rowMaximumHeight));
 }
 
 void VoiceChangeLane::cancel()
@@ -280,25 +300,24 @@ void VoiceChangeLane::updateHover(AutomationCanvas &area, const AutomationGeomet
             hoverLabel = paintTextFor(slot).hoverLabel;
     }
     const QRect plot = plotRect(geometry);
-    QFont labelFont;
     QRectF labelRect;
     QRect labelBounds;
     if (!hoverLabel.isEmpty()) {
-        labelFont = typography::noteName(area.font());
+        ensureHoverLabelFontCache(area.font());
         labelRect = QRectF(lineX + layout::space(layout::Space::One), plot.top(),
                            std::max<qreal>(0, plot.right() - lineX), plot.height());
-        labelBounds = QFontMetrics(labelFont).boundingRect(
+        labelBounds = m_hoverLabelMetrics.boundingRect(
             labelRect.toAlignedRect(), Qt::AlignLeft | Qt::AlignVCenter, hoverLabel);
     }
     if (m_hoverActive && m_hoverX == lineX && m_hoverTick == hoverTick &&
-        m_hoverLabel == hoverLabel)
+        m_hoverLabel == hoverLabel && m_hoverLabelRect == labelRect &&
+        m_hoverLabelBounds == labelBounds)
         return;
     const QRect previousBounds = m_hoverDirtyBounds;
     m_hoverActive = true;
     m_hoverX = lineX;
     m_hoverTick = hoverTick;
     m_hoverLabel = std::move(hoverLabel);
-    m_hoverLabelFont = labelFont;
     m_hoverLabelRect = labelRect;
     m_hoverLabelBounds = labelBounds;
     const int paintPadding = geometry.hoverPaintPadding;
@@ -316,14 +335,13 @@ void VoiceChangeLane::updateHover(AutomationCanvas &area, const AutomationGeomet
 
 void VoiceChangeLane::paint(QPainter &painter, AutomationCanvas &area,
                             const AutomationGeometry &geometry, const QRect &labelGutter,
-                            const QFont &titleFont, const QFont &captionFont)
+                            const QFont &titleFont, const QFont &captionFont,
+                            const layout::TwoLineTextLayout &textLayout, qreal captionHeight)
 {
     if (m_bounds.isEmpty() || !m_page || !m_page->ready() || !m_page->timeline())
         return;
     const QRect bounds = m_bounds;
     const QRect plot = plotRect(geometry);
-    const auto textLayout =
-        layout::twoLineText(titleFont, titleFont, captionFont, layout::Space::Zero);
     const QRect textBounds(labelGutter.x(), bounds.top(), labelGutter.width(), bounds.height());
     const auto textBoxes = textLayout.align(textBounds, layout::VerticalAlignment::Center);
     painter.save();
@@ -402,8 +420,8 @@ void VoiceChangeLane::paint(QPainter &painter, AutomationCanvas &area,
     const qreal pad = layout::space(layout::Space::One);
     const qreal gap =
         std::max<qreal>(geometry.hoverPaintPadding, layout::space(layout::Space::One));
-    const QFontMetricsF fm(painter.font());
-    const qreal labelH = fm.height();
+    const QFontMetricsF fm(captionFont);
+    const qreal labelH = captionHeight;
     const qreal centerY = plot.center().y() - labelH / 2.0;
     const qreal stairStep = std::min<qreal>(layout::space(layout::Space::Four),
                                             (plot.height() - labelH - 2 * pad) / 2.0);
@@ -439,11 +457,11 @@ void VoiceChangeLane::paint(QPainter &painter, AutomationCanvas &area,
                 stairUp = true;
             if (close && canStair)
                 labelY = stairUp ? centerY - stairStep : centerY + stairStep;
-            labelY = std::clamp(labelY, qreal(plot.top()) + pad,
-                                qreal(plot.bottom()) - fm.height() - pad);
+            labelY =
+                std::clamp(labelY, qreal(plot.top()) + pad, qreal(plot.bottom()) - labelH - pad);
             lastXEnd = labelX + w + gap;
         }
-        layouts.push_back({std::move(text), QRectF(labelX, labelY, w, fm.height()), offscreen});
+        layouts.push_back({std::move(text), QRectF(labelX, labelY, w, labelH), offscreen});
     }
     const QColor trackColor = themes::trackIdentityColor(track % themes::trackIdentityColorCount);
     const qreal markerW = layout::singlePixel() + layout::singlePixel();
@@ -457,6 +475,17 @@ void VoiceChangeLane::paint(QPainter &painter, AutomationCanvas &area,
     for (const auto &lt : layouts)
         if (!lt.offscreen)
             painter.drawText(lt.rect, Qt::AlignLeft | Qt::AlignVCenter, lt.text);
+    if (m_hoverActive && !m_hoverLabel.isEmpty() && !m_hoverLabelFontValid) {
+        ensureHoverLabelFontCache(area.font());
+        m_hoverLabelBounds = m_hoverLabelMetrics.boundingRect(
+            m_hoverLabelRect.toAlignedRect(), Qt::AlignLeft | Qt::AlignVCenter, m_hoverLabel);
+        const int paintPadding = geometry.hoverPaintPadding;
+        QRect dirty = QRectF(m_hoverX - paintPadding, plot.top(), 2 * paintPadding, plot.height())
+                          .toAlignedRect();
+        dirty = dirty.united(
+            m_hoverLabelBounds.adjusted(-paintPadding, -paintPadding, paintPadding, paintPadding));
+        m_hoverDirtyBounds = dirty.intersected(area.rect());
+    }
     if (m_hoverActive) {
         painter.setPen(QPen(themes::color(themes::Role::song_view_secondary_text),
                             layout::singlePixel(), Qt::DotLine));

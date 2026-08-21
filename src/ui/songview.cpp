@@ -291,6 +291,7 @@ void SongView::updateSong(const MidiTimeline *timeline)
             validIds.push_back(note.noteId);
     }
     m_selectionModel.reconcileNoteSelection(std::span<const NoteId>(validIds));
+    m_headers->rebuild();
     notifyDrawerSongChanged();
     if (m_scaleFold) {
         if (m_projectionLocked)

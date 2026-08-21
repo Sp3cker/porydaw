@@ -74,12 +74,14 @@ constexpr std::array kCases{
 
 constexpr uint64_t kHeldTick = 0;
 constexpr uint64_t kNodeTick = 144;
-constexpr int kTempoHeld = 80;
-constexpr int kTempoNode = 200;
-constexpr int kTempoCursor = 140;
-constexpr int kCcHeld = 16;
-constexpr int kCcNode = 112;
-constexpr int kCcCursor = 64;
+constexpr double kHeldBodyFraction = 0.25;
+constexpr double kNodeBodyFraction = 0.75;
+constexpr double kCursorBodyFraction = 0.50;
+
+int valueAtBodyFraction(int minimum, int maximum, double fractionFromBottom)
+{
+    return minimum + int(std::lround(double(maximum - minimum) * fractionFromBottom));
+}
 
 void report(const AutomationGestureCheck &check, const char *name, bool condition,
             const QString &message)
@@ -211,32 +213,30 @@ qreal valueY(const QRect &body, const AutomationGeometry &geometry, int minimum,
 PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
 {
     PreparedLane lane;
+    const int minimum = row.kind == AdapterKind::Tempo ? CoreTimeDefaults::kMinTempoBpm : 0;
+    const int maximum = row.kind == AdapterKind::Tempo ? CoreTimeDefaults::kMaxTempoBpm : 127;
+    const int held = valueAtBodyFraction(minimum, maximum, kHeldBodyFraction);
+    const int node = valueAtBodyFraction(minimum, maximum, kNodeBodyFraction);
+    const int cursor = valueAtBodyFraction(minimum, maximum, kCursorBodyFraction);
     if (row.kind == AdapterKind::Tempo) {
-        setTempoPoints(
-            rig, {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)},
-                  {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)}});
+        setTempoPoints(rig,
+                       {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(held)},
+                        {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(node)}});
         lane.handle = LaneHandle{0};
     } else {
         lane.handle = rig.handleFor(rig.pan);
         if (!lane.handle.valid())
             return lane;
-        setCcPoints(rig, {{kHeldTick, kCcHeld}, {kNodeTick, kCcNode}});
+        setCcPoints(rig, {{kHeldTick, held}, {kNodeTick, node}});
     }
     const auto geometry = rig.geometry();
     const qreal dpr = rig.canvas().devicePixelRatioF();
     const auto projection = rig.projection();
     lane.body = rig.bodyFor(lane.handle);
-    if (row.kind == AdapterKind::Tempo) {
-        lane.insertionPos = rig.tempoBodyPoint(96, kTempoCursor);
-        lane.heldY = valueY(lane.body, geometry, CoreTimeDefaults::kMinTempoBpm,
-                            CoreTimeDefaults::kMaxTempoBpm, kTempoHeld);
-        lane.nodeY = valueY(lane.body, geometry, CoreTimeDefaults::kMinTempoBpm,
-                            CoreTimeDefaults::kMaxTempoBpm, kTempoNode);
-    } else {
-        lane.insertionPos = rig.pointAt(rig.pan, 96, kCcCursor).position;
-        lane.heldY = valueY(lane.body, geometry, 0, 127, kCcHeld);
-        lane.nodeY = valueY(lane.body, geometry, 0, 127, kCcNode);
-    }
+    lane.insertionPos = {projection.displayX(96, dpr),
+                         valueY(lane.body, geometry, minimum, maximum, cursor)};
+    lane.heldY = valueY(lane.body, geometry, minimum, maximum, held);
+    lane.nodeY = valueY(lane.body, geometry, minimum, maximum, node);
     lane.priorHeldY = lane.heldY;
     lane.plot = {geometry.plotOrigin, lane.body.top(),
                  std::max(0, rig.canvas().width() - geometry.plotOrigin), lane.body.height()};
@@ -370,7 +370,7 @@ void checkNodeLaneHoverParity(AutomationGestureCheckRig &rig, const AutomationGe
     rig.mousePress(rig.tempoHeaderPoint());
     rig.mouseRelease(rig.tempoHeaderPoint());
     rig.pump();
-    const bool tempoExpanded = rig.voiceBounds().top() > rig.geometry().addLaneStripHeight;
+    const bool tempoExpanded = !rig.canvas().laneBody(LaneHandle{0}).isEmpty();
     check(tempoExpanded, QStringLiteral("Tempo header did not expose the expanded body"));
     const auto initialTempo = rig.document().tempoPoints();
     const auto initialPan = rig.document().lanePoints(rig.pan.track, rig.pan.controller);

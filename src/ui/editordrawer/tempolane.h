@@ -20,10 +20,10 @@ class AutomationPage;
 class QFont;
 class QPainter;
 
-// Song-wide Tempo lives above Voice Change and the CC lanes. It shares their
-// canvas but deliberately has no controller or track identity. Interaction
-// goes through the canvas NodeLane dispatcher; this type owns the header
-// shell, collapse, BPM prompts, and the NodeLane adapter.
+// Song-wide Tempo is pinned to the canvas viewport bottom over Voice Change
+// and the CC lanes. It deliberately has no controller or track identity.
+// Interaction goes through the canvas NodeLane dispatcher; this type owns the
+// header shell, collapse, BPM prompts, and the NodeLane adapter.
 class TempoLane final : public NodeLane
 {
   public:
@@ -40,7 +40,7 @@ class TempoLane final : public NodeLane
     void deletePoints(const std::vector<uint64_t> &ticks) override;
     void movePoints(const std::vector<NodePointMove> &moves) override;
     void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
-    void updateLayout(int width, const AutomationGeometry &geometry);
+    void updateLayout(int width, int top, const AutomationGeometry &geometry);
     int totalHeight(const AutomationGeometry &geometry) const;
     QRect bodyRect() const noexcept { return m_body; }
     QRect headerRect() const noexcept { return m_header; }

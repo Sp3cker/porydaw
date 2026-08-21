@@ -50,6 +50,9 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
                                    const AutomationGeometry &projectionGeometry, int lfoTop,
                                    int lfoHeight, int voiceTop, int voiceHeight, int rowsHeight,
                                    int &failures);
+void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
+                                  const std::vector<AutomationRow> &rows, const QString &songLabel,
+                                  int &failures);
 
 namespace {
 
@@ -180,11 +183,7 @@ QPointF automationNodePoint(SongView &view, const AutomationPage &page,
 }
 QRect automationVoiceRect(const AutomationPage &page)
 {
-    const auto &state = page.automationViewState();
-    const auto expected = expectedAutomationGeometry();
-    const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
-    const int height = std::clamp(shared, expected.minimumRowHeight, expected.maximumRowHeight);
-    return {0, page.canvas()->contentTopInset() - height, page.canvas()->width(), height};
+    return {0, 0, page.canvas()->width(), page.canvas()->contentTopInset()};
 }
 QRect automationVoiceDeviceRect(AutomationPage &page, qreal dpr)
 {
@@ -539,9 +538,9 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const bool voiceIsCcRow = std::any_of(rows.cbegin(), rows.cend(), [](const AutomationRow &row) {
         return row.id.controller == DOC_CC_VOICE;
     });
-    check(!rows.empty() && !voiceIsCcRow && !voiceRect.isEmpty() &&
-              voiceRect.bottom() < page.canvas()->contentTopInset(),
-          QStringLiteral("Voice Change is missing or hit-tested as a NodeLane/CC row"));
+    check(!rows.empty() && !voiceIsCcRow && !voiceRect.isEmpty() && voiceRect.top() == 0 &&
+              voiceRect.height() == page.canvas()->contentTopInset(),
+          QStringLiteral("Voice Change must occupy the canvas origin and define the CC inset"));
     check(!rowExists(rows, EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}),
           QStringLiteral("Tempo should not be a generic automation row"));
     check(!rowExists(rows, volume), QStringLiteral("hidden lane remained visible"));
@@ -559,6 +558,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         return std::clamp(it == state.laneHeights.cend() ? shared : it->second,
                           expected.minimumRowHeight, expected.maximumRowHeight);
     };
+    if (!popupMenus)
+        checkAutomationTempoGeometry(view, page, rows, songLabel, failures);
     const int voiceTop = voiceRect.top();
     const int voiceHeight = voiceRect.height();
     const int lfoTop = automationRowTop(page, lfo);

@@ -204,30 +204,24 @@ AutomationGestureCheckRig::pointAt(const Lane &lane, double tick, int value) con
 
 bool AutomationGestureCheckRig::expandTempo()
 {
-    if (voiceBounds().top() > geometry().addLaneStripHeight)
+    const LaneHandle tempo{0};
+    if (!canvas().laneBody(tempo).isEmpty())
         return true;
     mousePress(tempoHeaderPoint());
     mouseRelease(tempoHeaderPoint());
     pump();
-    return voiceBounds().top() > geometry().addLaneStripHeight;
+    return !canvas().laneBody(tempo).isEmpty();
 }
 
 QRect AutomationGestureCheckRig::voiceBounds() const
 {
-    const auto currentGeometry = geometry();
-    const int shared = m_page->automationViewState().laneHeight > 0
-                           ? m_page->automationViewState().laneHeight
-                           : currentGeometry.rowDefaultHeight;
-    const int height =
-        std::clamp(shared, currentGeometry.rowMinimumHeight, currentGeometry.rowMaximumHeight);
-    const int top = canvas().contentTopInset() - height;
-    return {0, top, canvas().width(), height};
+    return {0, 0, canvas().width(), canvas().contentTopInset()};
 }
 
 QPointF AutomationGestureCheckRig::tempoHeaderPoint() const
 {
-    const auto currentGeometry = geometry();
-    return {currentGeometry.plotOrigin / 2.0, voiceBounds().top() / 2.0};
+    const QRect tempo = canvas().pinnedTempoRect();
+    return {geometry().plotOrigin / 2.0, qreal(tempo.center().y())};
 }
 
 QPointF AutomationGestureCheckRig::tempoBodyPoint(double tick, int bpm) const

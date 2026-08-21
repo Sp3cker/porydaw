@@ -13,6 +13,7 @@
 #include <QMenu>
 #include <QPixmap>
 #include <QScrollArea>
+#include <QScrollBar>
 
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
@@ -20,7 +21,6 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
 #include "ui/songview/editorselectionmodel.h"
-#include "ui/typography.h"
 
 void AutomationCanvas::refreshGeometry()
 {
@@ -51,14 +51,6 @@ void AutomationCanvas::contentGeometryChanged()
     syncPreviewValueLabel();
 }
 
-QFont AutomationCanvas::captionLabelFont() const
-{
-    QFont caption = typography::caption(font());
-    caption.setStyleName(QStringLiteral("Regular"));
-    caption.setWeight(QFont::Normal);
-    return caption;
-}
-
 AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
     : songview::TimelineSurface(nullptr)
     , m_geometry(AutomationGeometry::resolve())
@@ -71,7 +63,17 @@ AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
     setObjectName(QStringLiteral("automationCanvas"));
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
+    rebuildFontCache();
     setMinimumHeight(m_tempoLane.totalHeight(m_geometry) + m_geometry.rowDefaultHeight);
+    if (m_scroll && m_scroll->verticalScrollBar()) {
+        const auto updatePinnedTempo = [this] {
+            const QRegion dirty = syncPinnedTempoLayout();
+            syncHoverValueLabel();
+            songview::TimelineSurface::invalidateContent(dirty);
+        };
+        connect(m_scroll->verticalScrollBar(), &QScrollBar::valueChanged, this, updatePinnedTempo);
+        connect(m_scroll->verticalScrollBar(), &QScrollBar::rangeChanged, this, updatePinnedTempo);
+    }
 }
 AutomationProjection AutomationCanvas::projection() const
 {
@@ -151,10 +153,12 @@ const QCursor &AutomationCanvas::pencilCursor()
 bool AutomationCanvas::event(QEvent *event)
 {
     if (event->type() == QEvent::FontChange) {
-        m_hoverState.valueLabelFontValid = false;
+        rebuildFontCache();
+        m_hoverState.invalidateFontCache();
+        m_voiceLane.invalidateFontCache();
         m_hoverState.hoverValueLabel = {};
         m_hoverState.previewValueLabel = {};
-        refreshGeometry();
+        invalidateContent();
         syncHoverValueLabel();
         syncPreviewValueLabel();
     }
@@ -194,19 +198,31 @@ void AutomationCanvas::updateTempoLayout()
 {
     refreshGeometry();
 }
+int AutomationCanvas::tempoTop() const
+{
+    return std::min(m_scroll->verticalScrollBar()->value() + m_scroll->viewport()->height(),
+                    height()) -
+           m_tempoLane.totalHeight(m_geometry);
+}
+
+QRegion AutomationCanvas::syncPinnedTempoLayout()
+{
+    QRegion dirty(pinnedTempoRect());
+    m_tempoLane.updateLayout(width(), tempoTop(), m_geometry);
+    if (!m_nodeStack.empty())
+        m_nodeStack.front().body = m_tempoLane.bodyRect();
+    dirty += pinnedTempoRect();
+    return dirty;
+}
 
 void AutomationCanvas::layoutLaneStack(int voiceTrack)
 {
     cancelNodeGestures();
-    m_tempoLane.updateLayout(width(), m_geometry);
-    const int shared = m_page && m_page->m_viewState.laneHeight > 0 ? m_page->m_viewState.laneHeight
-                                                                    : m_geometry.rowDefaultHeight;
-    const int voiceHeight = voiceTrack >= 0 ? std::clamp(shared, m_geometry.rowMinimumHeight,
-                                                         m_geometry.rowMaximumHeight)
-                                            : 0;
-    m_voiceLane.rebuild(voiceTrack, width(), m_tempoLane.totalHeight(m_geometry), voiceHeight);
+    m_voiceLane.rebuild(voiceTrack, width(), 0, m_geometry);
+    const int scrollableHeight = m_rowData.minimumHeight(m_geometry, contentTopInset());
+    setMinimumHeight(scrollableHeight + m_tempoLane.totalHeight(m_geometry));
+    syncPinnedTempoLayout();
     rebuildNodeStack();
-    setMinimumHeight(m_rowData.minimumHeight(m_geometry, contentTopInset()));
 }
 
 void AutomationCanvas::rebuildNodeStack()
@@ -245,6 +261,12 @@ LaneHandle AutomationCanvas::laneAt(int y) const noexcept
     }
     return {};
 }
+AutomationCanvas::PointerLaneHit
+AutomationCanvas::pointerLaneAt(const QPoint &position) const noexcept
+{
+    const bool tempoHeader = m_tempoLane.containsHeader(position);
+    return {tempoHeader ? LaneHandle{0} : laneAt(position.y()), tempoHeader};
+}
 
 bool AutomationCanvas::resolveLane(LaneHandle handle, const NodeLane **lane,
                                    QRect *body) const noexcept
@@ -267,6 +289,11 @@ QRect AutomationCanvas::laneBody(LaneHandle handle) const
     if (!resolveLane(handle, nullptr, &body))
         return {};
     return body;
+}
+QRect AutomationCanvas::pinnedTempoRect() const noexcept
+{
+    const QRect body = m_tempoLane.bodyRect();
+    return body.isEmpty() ? m_tempoLane.headerRect() : body;
 }
 
 NodeLane *AutomationCanvas::mutableLane(LaneHandle handle) noexcept

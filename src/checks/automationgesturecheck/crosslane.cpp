@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <utility>
 #include <vector>
 
 #include <QByteArray>
@@ -236,6 +237,71 @@ QPointF shiftDragPreview(AutomationGestureCheckRig &rig, LaneHandle handle, uint
     rig.pump();
     return end;
 }
+void runBandIsolation(Context &ctx)
+{
+    auto &rig = ctx.rig;
+    if (!requirePanLfo(ctx) || !rig.expandTempo()) {
+        report(ctx, false, QStringLiteral("Tempo, pan, or LFO lane body is missing"));
+        return;
+    }
+    seedMixed(rig);
+    auto &selectionModel = rig.view().selectionModel();
+    selectionModel.clearTimeSelection();
+    rig.pump();
+
+    const int selectedBpm = tempoValue(kPreservedTempoUs);
+    const QPointF tempoStart = rig.tempoBodyPoint(kSelectedTick - 24, selectedBpm);
+    const QPointF panEnd = rig.pointAt(rig.pan, kMovedTick, 64).position;
+    rig.mousePress(tempoStart, Qt::NoModifier, Qt::RightButton);
+    rig.mouseMove(panEnd, Qt::RightButton);
+    rig.mouseRelease(panEnd, Qt::NoModifier, Qt::RightButton);
+    rig.pump();
+
+    const auto &tempoSelection = selectionModel.timeSelection();
+    report(ctx,
+           tempoSelection.active() &&
+               tempoSelection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
+               tempoSelection.tempo && tempoSelection.lanes.empty() &&
+               selectionModel.timeSelectionCoversTempo(1u) &&
+               !selectionModel.timeSelectionCoversLane(rig.pan.track, rig.pan.controller, 1u) &&
+               !selectionModel.timeSelectionCoversLane(rig.lfo.track, rig.lfo.controller, 1u),
+           QStringLiteral("Tempo band selection leaked into CC rows"));
+
+    const auto beforeTempoDrag = snapshot(rig.document());
+    const auto panBefore = laneValues(rig.document().lanePoints(rig.pan.track, rig.pan.controller));
+    const auto lfoBefore = laneValues(rig.document().lanePoints(rig.lfo.track, rig.lfo.controller));
+    const QPointF tempoDragEnd =
+        shiftDragPreview(rig, LaneHandle{0}, kSelectedTick, kMovedTick, selectedBpm);
+    rig.mouseRelease(tempoDragEnd, Qt::ShiftModifier);
+    rig.pump();
+    report(ctx,
+           oneEdit(beforeTempoDrag, snapshot(rig.document())) &&
+               sameRaw(rig.document().lanePoints(rig.pan.track, rig.pan.controller), panBefore) &&
+               sameRaw(rig.document().lanePoints(rig.lfo.track, rig.lfo.controller), lfoBefore),
+           QStringLiteral("dragging a Tempo band selection moved a CC row"));
+
+    rig.document().undoStack()->undo();
+    rig.documentChanged();
+    selectionModel.clearTimeSelection();
+    rig.pump();
+
+    const QPointF ccStart = rig.pointAt(rig.volume, kSelectedTick - 24, 64).position;
+    const QPointF ccEnd = rig.pointAt(rig.volume, kMovedTick, 64).position;
+    rig.mousePress(ccStart, Qt::NoModifier, Qt::RightButton);
+    rig.mouseMove(ccEnd, Qt::RightButton);
+    rig.mouseRelease(ccEnd, Qt::NoModifier, Qt::RightButton);
+    rig.pump();
+
+    const auto &ccSelection = selectionModel.timeSelection();
+    report(ctx,
+           ccSelection.active() &&
+               ccSelection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
+               !ccSelection.tempo &&
+               ccSelection.lanes == std::vector<std::pair<int, uint8_t>>{{rig.volume.track,
+                                                                          rig.volume.controller}} &&
+               !selectionModel.timeSelectionCoversTempo(1u),
+           QStringLiteral("CC band selection leaked into Tempo"));
+}
 
 void expectOneCommittedEdit(const Context &ctx, const Snapshot &before, const char *label)
 {
@@ -420,6 +486,7 @@ void runPanLfoRangeEdit(Context &ctx)
 }
 
 constexpr std::array kCrossLaneScenarios{
+    Scenario{"band-isolation", runBandIsolation},
     Scenario{"tempo-pan-lfo", runTempoPanLfo},
     Scenario{"stale-batch", runStaleBatch},
     Scenario{"pan-lfo", runPanLfoRangeEdit},

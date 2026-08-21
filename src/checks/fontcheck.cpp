@@ -87,6 +87,12 @@ int runFontCheck(int expectedBaseFontPx)
               captionInfo.pixelSize() == *baseFontPx && captionInfo.weight() == QFont::Normal,
           "Caption has the wrong face, size, or weight");
     check(hasTabularNumbers(caption), "Caption does not preserve tabular numbers");
+    const auto regularCaption = typography::regular(caption);
+    const auto regularCaptionInfo = QFontInfo(regularCaption);
+    check(regularCaptionInfo.family() == captionInfo.family() &&
+              regularCaptionInfo.pixelSize() == captionInfo.pixelSize() &&
+              regularCaptionInfo.weight() == QFont::Normal,
+          "Bundled Regular did not preserve the caption face or resolve normal weight");
     const auto bodyBoldInfo = QFontInfo(typography::bold(body));
     check(bodyBoldInfo.pixelSize() == bodyInfo.pixelSize() &&
               bodyBoldInfo.weight() == QFont::DemiBold,
@@ -170,6 +176,12 @@ int runFontCheck(int expectedBaseFontPx)
     check(systemBody.has_value() && QFontInfo(*systemBody).family() == platformFamily &&
               QFontInfo(*systemBody).pixelSize() == *baseFontPx,
           "System-font Body is not the platform face at its native size");
+    const auto regularSystemBody = typography::regular(*systemBody);
+    const auto regularSystemBodyInfo = QFontInfo(regularSystemBody);
+    check(regularSystemBodyInfo.family() == platformFamily &&
+              regularSystemBodyInfo.pixelSize() == QFontInfo(*systemBody).pixelSize() &&
+              regularSystemBodyInfo.weight() == QFont::Normal,
+          "System Regular did not preserve the platform face or resolve normal weight");
     themes::apply(*application, themes::vanilla());
     check(QFontInfo(QApplication::font()).family() == platformFamily,
           "Theme apply did not install the system Body");

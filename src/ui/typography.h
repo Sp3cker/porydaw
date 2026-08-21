@@ -31,6 +31,7 @@ QString systemFontFamily();
 QString systemMonoFamily();
 QFont bodyMono(const QFont &body);
 QFont caption(const QFont &source);
+QFont regular(const QFont &source);
 QFont bold(const QFont &source);
 /// Finds the largest caption-or-smaller version of base's face that fits the
 /// available height. The result never exceeds base's current pixel size.

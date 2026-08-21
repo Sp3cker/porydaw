@@ -70,16 +70,21 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
         event->accept();
         return;
     }
-    if (m_voiceLane.contains(event->pos())) {
+    const AutomationProjection proj = projection();
+    const PointerLaneHit pointer = pointerLaneAt(event->pos());
+    const bool inTempoHeader = pointer.tempoHeader;
+    const LaneHandle pointerLane = pointer.lane;
+    const bool inTempo = pointerLane.index == 0;
+    if (inTempo)
+        m_voiceLane.clearHover(*this);
+    if (!inTempo && m_voiceLane.contains(event->pos())) {
         setFocus();
         m_voiceLane.mousePress(*this, event, m_geometry);
         event->accept();
         return;
     }
-    const AutomationProjection proj = projection();
-    const bool inTempoHeader = m_tempoLane.containsHeader(event->pos());
     if ((event->button() == Qt::LeftButton || event->button() == Qt::RightButton)) {
-        const LaneHandle handle = inTempoHeader ? LaneHandle{0} : laneAt(event->pos().y());
+        const LaneHandle handle = pointerLane;
         bool insideSelection = false;
         if (handle.valid() && event->position().x() >= m_geometry.plotOrigin) {
             if (handle.index == 0)
@@ -111,7 +116,8 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
         event->accept();
         return;
     }
-    const int boundary = event->button() == Qt::LeftButton ? ccRowBoundaryAt(event->pos().y()) : -1;
+    const int boundary =
+        !inTempo && event->button() == Qt::LeftButton ? ccRowBoundaryAt(event->pos().y()) : -1;
     if (boundary >= 0) {
         m_resize.row = boundary;
         m_resize.startHeight = ccLaneHeight(m_rowData.rows()[std::size_t(boundary)]);
@@ -121,12 +127,12 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     }
     const QRect addRect(layout::space(layout::Space::Zero), addLaneStripTop(), width(),
                         m_geometry.addLaneStripHeight);
-    if ((event->button() == Qt::LeftButton || event->button() == Qt::RightButton) &&
+    if (!inTempo && (event->button() == Qt::LeftButton || event->button() == Qt::RightButton) &&
         addRect.contains(event->pos())) {
         showAddLaneMenu(event->globalPosition().toPoint());
         return;
     }
-    const LaneHandle handle = laneAt(event->pos().y());
+    const LaneHandle handle = pointerLane;
     const NodeLane *lane = nullptr;
     QRect body;
     if (!resolveLane(handle, &lane, &body) || !lane)
@@ -259,16 +265,26 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
             const int lastY = std::max(layout::space(layout::Space::Zero),
                                        addLaneStripTop() - layout::singlePixel());
             const int y = std::clamp(event->pos().y(), layout::space(layout::Space::Zero), lastY);
-            if (m_tempoLane.containsHeader(QPoint(event->pos().x(), y)))
+            const LaneHandle candidate = pointerLaneAt(QPoint(event->pos().x(), y)).lane;
+            if (m_bandStart.index == 0)
                 m_bandEnd = LaneHandle{0};
-            else
-                m_bandEnd = laneAt(y);
+            else if (candidate.index > 0)
+                m_bandEnd = candidate;
             invalidateContent();
         }
         return;
     }
     if (!m_activeGesture) {
-        if (m_voiceLane.contains(event->pos())) {
+        const PointerLaneHit pointer = pointerLaneAt(event->pos());
+        if (pointer.tempoHeader) {
+            m_voiceLane.clearHover(*this);
+            invalidateContent(m_hoverState.clearHover());
+            setCursor(Qt::ArrowCursor);
+            return;
+        }
+        const LaneHandle pointerLane = pointer.lane;
+        const bool inTempo = pointerLane.index == 0;
+        if (!inTempo && m_voiceLane.contains(event->pos())) {
             invalidateContent(m_hoverState.clearHover());
             m_voiceLane.updateHover(*this, m_geometry, event->position().x(), event->pos().y());
             if (m_pencilMode)
@@ -278,7 +294,7 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
             return;
         }
         m_voiceLane.clearHover(*this);
-        if (ccRowBoundaryAt(event->pos().y()) >= 0) {
+        if (!inTempo && ccRowBoundaryAt(event->pos().y()) >= 0) {
             invalidateContent(m_hoverState.clearHover());
             setCursor(Qt::SplitVCursor);
             return;
@@ -287,7 +303,7 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
         const int y = event->pos().y();
         const NodeLane *lane = nullptr;
         QRect body;
-        const LaneHandle handle = x >= m_geometry.plotOrigin ? laneAt(y) : LaneHandle{};
+        const LaneHandle handle = x >= m_geometry.plotOrigin ? pointerLane : LaneHandle{};
         if (!m_page || !resolveLane(handle, &lane, &body))
             invalidateContent(m_hoverState.clearHover());
         else
@@ -313,32 +329,38 @@ void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
     if (event->button() == Qt::RightButton && m_band.pending) {
-        const LaneHandle handle = m_bandStart;
+        const LaneHandle pointerLane = pointerLaneAt(event->pos()).lane;
+        const LaneHandle bandStart = m_bandStart;
+        if (bandStart.index == 0)
+            m_bandEnd = LaneHandle{0};
+        else if (pointerLane.index > 0)
+            m_bandEnd = pointerLane;
+        const LaneHandle contextLane = bandStart;
         const auto selection = m_band.release();
-        if (selection && selection->first < selection->second && handle.valid() &&
+        if (selection && selection->first < selection->second && bandStart.valid() &&
             m_bandEnd.valid()) {
-            publishBandSelection(selection->first, selection->second, handle, m_bandEnd);
+            publishBandSelection(selection->first, selection->second, bandStart, m_bandEnd);
         } else if (selection) {
             m_rowData.clearTimeSelection();
             if (m_tempoLane.hasTimeSelection())
                 m_page->m_owner.selectionModel().clearTimeSelection();
         } else {
             const bool handled =
-                handle.valid() &&
-                showPointMenuNear(handle, event->pos(), event->globalPosition().toPoint());
+                contextLane.valid() &&
+                showPointMenuNear(contextLane, event->pos(), event->globalPosition().toPoint());
             m_hoverState.hover.highlightLocked = false;
             invalidateContent(m_hoverState.clearHover());
-            if (!handled && handle.index == 0 &&
+            if (!handled && contextLane.index == 0 &&
                 m_tempoLane.selectionContains(projection(), event->position().x(),
                                               devicePixelRatioF()))
                 m_tempoLane.showTimeSelectionMenu(event->globalPosition().toPoint());
-            else if (!handled && handle.index > 0 &&
-                     m_rowData.selectionContains(handle.index - 1, event->position().x(),
+            else if (!handled && contextLane.index > 0 &&
+                     m_rowData.selectionContains(contextLane.index - 1, event->position().x(),
                                                  m_geometry, devicePixelRatioF()))
                 showTimeSelectionMenu(event->globalPosition().toPoint());
-            else if (!handled && handle.index == 0)
+            else if (!handled && contextLane.index == 0)
                 m_tempoLane.showTempoMenu(*this, event->globalPosition().toPoint());
-            else if (!handled && handle.valid())
+            else if (!handled && contextLane.valid())
                 m_rowData.clearTimeSelection();
         }
         m_bandStart = {};
@@ -367,20 +389,28 @@ void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if (!m_page || !m_page->document())
         return;
-    if (m_voiceLane.contains(event->pos())) {
+    const PointerLaneHit pointer = pointerLaneAt(event->pos());
+    const bool inTempoHeader = pointer.tempoHeader;
+    const LaneHandle handle = pointer.lane;
+    const bool inTempo = handle.index == 0;
+    if (inTempo)
+        m_voiceLane.clearHover(*this);
+    if (inTempoHeader) {
+        invalidateContent(m_hoverState.clearHover());
+        if (event->button() == Qt::LeftButton) {
+            m_tempoLane.toggleExpanded();
+            updateTempoLayout();
+        }
+        return;
+    }
+    if (!inTempo && m_voiceLane.contains(event->pos())) {
         m_voiceLane.mouseDoubleClick(*this, event, m_geometry);
         return;
     }
     if (event->button() != Qt::LeftButton)
         return;
-    if (m_tempoLane.containsHeader(event->pos())) {
-        m_tempoLane.toggleExpanded();
-        updateTempoLayout();
+    if (!inTempo && event->position().x() < m_geometry.plotOrigin)
         return;
-    }
-    if (event->position().x() < m_geometry.plotOrigin)
-        return;
-    const LaneHandle handle = laneAt(event->pos().y());
     const NodeLane *lane = nullptr;
     QRect body;
     if (!resolveLane(handle, &lane, &body) || !lane)

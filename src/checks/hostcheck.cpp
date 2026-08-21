@@ -323,8 +323,10 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     QCoreApplication::processEvents();
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     auto *automation = automationCanvas(view);
-    check(automation != nullptr, "host should construct the automation page");
-    if (automation) {
+    auto *automationScroll = view.findChild<QScrollArea *>(QStringLiteral("automationScroll"));
+    check(automation != nullptr && automationScroll != nullptr,
+          "host should construct the automation page and scroll area");
+    if (automation && automationScroll) {
         const int selectedTrack = view.selectionModel().primaryTrack();
         view.setTrackSolo(selectedTrack, false);
         sendKey(*area, Qt::Key_S);
@@ -399,7 +401,12 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "visible automation context should refresh when playback crosses a voice change");
         view.setPlayheadSample(timeline->sampleForTick(24), false);
         QCoreApplication::processEvents();
-        const QPointF menuStart(layout::fontPx(17.5 + 13.0 / 3.0) + 4.0, 4.0);
+        const int pinnedTempoHeaderY =
+            automation
+                ->mapFrom(automationScroll->viewport(),
+                          QPoint(0, automationScroll->viewport()->height() - 1))
+                .y();
+        const QPointF menuStart(layout::fontPx(17.5 + 13.0 / 3.0) + 4.0, pinnedTempoHeaderY);
         const QPointF menuEnd = menuStart + QPointF(48.0, 0.0);
         sendMouse(*automation, QEvent::MouseButtonPress, menuStart, Qt::RightButton,
                   Qt::RightButton);

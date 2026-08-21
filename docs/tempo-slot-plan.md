@@ -1,14 +1,19 @@
 # Node lanes and Voice Change lane plan
 
+**Status:** Authoritative implementation and behavior record. Historical
+decision context remains in [`tempo-slot-minutes.md`](tempo-slot-minutes.md);
+the abandoned standalone-strip plan is tombstoned in
+[`tempo-strip-plan.md`](tempo-strip-plan.md).
+
 ## Goal
 
-One painting, hovering, and interaction model for the node lanes — Tempo and
-Control Change. Voice Change is a separate, non-node lane with its existing
-held-segment labels and picker interaction. This is a
-`src/ui/editordrawer` remodel; core storage stays unchanged. Tempo remains
-typed in `tempoPoints`, while Voice Change and CC remain raw-SMF-backed
-through the existing `SongDocument` lane interface. The tempo-slot core
-boundary is preserved — the seam is presentation.
+The completed drawer design uses one painting, hovering, and interaction model
+for the node lanes — Tempo and Control Change. Voice Change remains a separate,
+non-node lane with its existing held-segment labels and picker interaction.
+Core storage is unchanged: Tempo stays typed in `tempoPoints`, while Voice
+Change and CC remain raw-SMF-backed through the existing `SongDocument` lane
+interface. Presentation keeps Tempo in `AutomationCanvas` as node-stack slot 0
+and resolves it as a sticky viewport-bottom overlay.
 
 ## Naming
 
@@ -18,43 +23,31 @@ page — and each kind gets its own name: **Tempo lane**, **Voice Change lane**,
 pan, expression, bend); it never stands in for the whole family. The
 vocabulary lives in `CONTEXT.md`.
 
-Keep `automation` only on the page-level coordinator while the drawer page is
-still named Automations. `AutomationPage`, `AutomationCanvas`,
-`AutomationProjection`, `AutomationGeometry`, the drawer toggle, and
-`EditorDrawerPage::Automations` stay because they lay out or route both node
-and non-node lanes. Rename `AutomationArea` to `AutomationCanvas`, including
-`automationarea.{h,cpp}` and its `_input`, `_menu`, and `_gesture`
-implementation files. `AutomationPage` owns the scroll container and
-application routing; `AutomationCanvas` is the required scrollable child and
-owns the node-lane stack, the Voice Change strip, painting, hit testing, and input dispatch. An
-`automationcanvas_*.cpp` file stays only while it implements cross-lane
-dispatch; node-only or Voice-only code moves to the owning lane module.
+`AutomationPage`, `AutomationCanvas`, `AutomationProjection`,
+`AutomationGeometry`, the drawer toggle, and `EditorDrawerPage::Automations`
+remain the page-level coordination vocabulary. `AutomationPage` owns the scroll
+container and application routing. `AutomationCanvas` is its scrollable child:
+it owns the node-lane stack, Voice Change strip, scrollable CC content, final
+paint order, hit testing, and input dispatch.
 
-Rename leaf code by what it actually owns:
+The leaf modules now own the concerns their names describe:
 
-The NodeLane module lives under `src/ui/editordrawer/nodelane/`. Its public
-front door is `nodelane/nodelane.h`; `nodelane.cpp` implements the shared
-contract and edit preparation. Paint, hover, and gestures are private parts of
-that same module.
+- `nodelane/nodelane.{h,cpp}` defines the NodeLane contract and edit
+  preparation. Its private paint, hover, gesture, pencil, and batch-commit
+  files serve both Tempo and CC.
+- `nodelane/paint.{h,cpp}` owns normal and active-gesture node-body painting.
+  Whole-page grid and selection chrome remain with `AutomationCanvas`;
+  `VoiceChangeLane` owns Voice painting; `TempoLane` owns only its header,
+  collapse, BPM prompt, and adapter concerns.
+- `cclanes.{h,cpp}` owns the CC lane table and `CCLaneAdapter`. It depends on
+  the NodeLane contract but not on node paint, hover, gesture, or Voice code.
+- `EditorAutomationRowKind` and `EditorAutomationRowId` retain Tempo and CC
+  persisted state. Loading discards legacy `voice:<track>` entries and never
+  writes them again. The Tempo key remains the stable custom-height/range key.
 
-- `automationpaint.{h,cpp}` and `automationpaintpreview.cpp` →
-  `nodelane/paint.{h,cpp}`. Normal and active-gesture preview painting stay in
-  this one paint module. Whole-page grid or selection chrome stays with
-  `AutomationCanvas`; Voice painting moves to `VoiceChangeLane`. Delete
-  `tempolanepaint.cpp`: the shared NodeLane painter owns the complete Tempo and
-  CC node bodies, while the small collapsible Tempo header stays in
-  `tempolane.cpp`.
-- `automationhover.{h,cpp}` → `nodelane/hover.{h,cpp}` once Voice hover is owned
-  by `VoiceChangeLane`.
-- `automationgesture.{h,cpp}` → `nodelane/gesture.{h,cpp}` and
-  `automationpencilgesture.{h,cpp}` → `nodelane/pencilgesture.{h,cpp}`. Voice
-  does not use these gestures.
-- Fold `automationlaneedit.{h,cpp}` into `nodelane/nodelane.{h,cpp}` and rename
-  the type `NodeLaneEdit`. Its canonicalization, held-span restoration, no-op
-  detection, completion types, and revision data are part of the shared
-  NodeLane contract; do not create separate `edit.{h,cpp}` files.
-- `automationrows.{h,cpp}` → `cclanes.{h,cpp}` — the CC lane table and
-  `CCLaneAdapter`.
+"Automation point(s)" announce strings may stay when they count across node
+lane kinds. "Note automation" in the pitch-bend editor is note-attached and
+unrelated.
 
 `cclanes` dependency contract:
 
@@ -68,20 +61,15 @@ that same module.
 - `cclanes` does not include node painting, hover, gesture, Voice Change, or
   voicegroup headers. Those belong to their owning modules.
 
-- `AutoLane` (`songviewmodel.h`) → `CcLane` — the view-model CC lane struct.
-- CC row menu and add-lane strings: "+ Add CC lane", "Added %1 CC lane",
-  "Delete CC lane", "Hide CC lane", "Remove empty CC lane", "Hidden CC
-  lanes", "All parameters already have CC lanes", and the copy/paste/hide
-  announcements that name a lane. These are CC-only today, so the timing is
-  free; batch them with phase 5.
+- `CcLane` (`songviewmodel.h`) is the view-model CC lane struct.
+- CC row menu and add-lane strings are CC-only: "+ Add CC lane", "Added %1 CC
+  lane", "Delete CC lane", "Hide CC lane", "Remove empty CC lane", "Hidden CC
+  lanes", "All parameters already have CC lanes", and the CC-specific
+  copy/paste/hide announcements.
 
-`EditorAutomationRowKind` and `EditorAutomationRowId` keep their names for the
-remaining Tempo and CC persisted state, but remove the `Voice` enum value.
-`viewsidecar.cpp` discards legacy `voice:<track>` row entries while loading and
-never writes them again; no migration or replacement Voice-row state is added.
-"Automation point(s)" announce strings may stay when they count across node
-lane kinds. "Note automation" in the pitch-bend editor is note-attached and
-unrelated; it stays.
+`EditorAutomationRowKind` and `EditorAutomationRowId` retain Tempo and CC
+persisted state; the `Voice` enum value is removed. `viewsidecar.cpp` discards
+legacy `voice:<track>` entries while loading and never writes them again.
 
 ## Model
 
@@ -97,7 +85,7 @@ Define one contract the widget layer talks to — a **node lane**:
 - time-selection membership per tick
 - a commit back-end with exactly three operations
 
-Painting, hovering, hit testing, gestures, previews, and value labels become
+Painting, hovering, hit testing, gestures, previews, and value labels are
 generic over that contract. The commit back-end stays per-kind behind it:
 Tempo builds `TempoEdit` and pushes one `TempoEditCommand`; CC calls
 `writeLanePoints` / `moveLanePoints` / `deleteLanePoints`.
@@ -135,9 +123,9 @@ class NodeLane {
 
 Contract notes:
 
-- A tick identifies a point within its lane. Node-drag identities become
-  `(lane, tick)`; `LaneNodeIdentity` and tempo's `m_activeNodeIdentities`
-  dissolve into that.
+- A tick identifies a point within its lane. Node-drag identities are
+  `(lane, tick)`; `LaneNodeIdentity` and Tempo's `m_activeNodeIdentities`
+  are gone.
 - Deleting a node removes every underlying event for that same lane and tick.
   It does not remove notes or events belonging to another lane at that tick.
 - Moving a CC node moves every underlying event for that same lane and source
@@ -161,331 +149,113 @@ Contract notes:
   zoom (`laneRanges`) is not. Tempo converts BPM ↔ microseconds only
   inside its adapter.
 
-## Lane table
+## Resolved canvas layout
 
-`AutomationCanvas` lays out, top to bottom, Tempo, then Voice Change, then
-the CC lanes. Only Tempo and CC form the node-lane stack:
+`AutomationCanvas` has two layout layers in one widget.
+
+1. **Scrollable content** is laid out in canvas-content coordinates: Voice
+   Change starts at y=0 when present, CC bodies follow at
+   `contentTopInset()`, and the add-lane strip follows the final CC body.
+   `contentTopInset()` is Voice-only.
+2. **Pinned Tempo** is also a canvas rectangle, but its top is recomputed from
+   vertical scroll position and viewport height. Its canvas-to-page position
+   therefore remains at the viewport bottom. Page-space code maps through the
+   canvas; it must not compare page-space points directly with a lane body.
+
+Tempo remains the first node-stack entry even while collapsed:
 
 ```
-[0] TempoLane       (implements NodeLane over SongDocument::tempoPoints())
-[1…] CCLaneAdapter  (implements NodeLane over {track, controller})
+[0] TempoLane       (NodeLane over SongDocument::tempoPoints())
+[1…] CCLaneAdapter  (NodeLane over {track, controller})
 ```
 
-`VoiceChangeLane` is a sibling strip in that y-order: not a stack entry, not
-a `NodeLane`, and not a `LaneHandle`. A `LaneHandle` is an index into the
-node-lane stack only. Node painting, hover, gestures, previews, and
-completions take `NodeLane &` from that stack. Hit-testing is: Voice rect →
-`VoiceChangeLane`; else `nodeStack.laneAt(y)`. Every rebuild cancels the
-active gesture before replacing the stack or the Voice strip, so a
-`LaneHandle` never survives a rebuild. `TempoLane` stops faking `row = 0`.
+`LaneHandle{0}` is Tempo's stable identity. When collapsed, that slot has an
+empty body but remains in the stack; the header is still the collapse target.
+Expanded, the body fills the pinned Tempo row. CC handles are one-based because
+they follow slot 0. `VoiceChangeLane` is neither a stack entry nor a
+`LaneHandle`.
 
-### Projection dissolution
+The collapsed Tempo total height is `AutomationGeometry::addLaneStripHeight`.
+The expanded total height is the persisted Tempo row height, keyed by
+`EditorAutomationRowId{Tempo, 0, 0}` and clamped to the normal automation-row
+limits. `m_expanded` is current-editor-session state: it starts collapsed and
+is not persisted per song. The canvas adds Tempo's current total height to its
+minimum height, leaving trailing clearance so the last CC body and add-lane
+strip can scroll clear of the overlay.
 
-`AutomationProjection` bundles two roles: the page-level time axis
-(`rawTickAt`, `displayX`, `snapTickAt`, `fineSnapTick`, grid cells) and
-row-stack layout (`rowIndexAt`, `rowTop`, `rowHeight`, `valuePlotBounds`,
-row-keyed `pointY` / `valueAtY` / `pointerMapping`). Only the layout role
-is row-keyed, and the node-lane stack replaces it consumer by consumer:
+### Node-lane contract
 
-- Phase 2: the canvas owns layout. Voice has its own body rect; node
-  `laneAt(y)` and each NodeLane body rect replace `rowIndexAt` /
-  `rowTop` / `rowHeight` for Tempo and CC.
-- Phases 3–4: hover and paint read the lane's body rect and value range
-  through the static `valueY` / `valueAtY` and use the projection only for
-  the time axis. This is the pattern `TempoLane` already runs today: it
-  constructs the projection with an empty row list.
-- Phase 5: `pointerMapping` becomes lane-keyed and, with its last consumer
-  gone, every row-keyed member plus the rows vector and `topInset`
-  constructor inputs are deleted. What remains is the time axis and the
-  statics.
+The shared `NodeLane` contract remains the widget-facing model:
 
-Each phase removes its consumers'
-dependence on the row-keyed members, and the members die in phase 5 when
-the last consumer migrates. The in-phase removal rule's unit is the
-consumer's dependency; shared plumbing whose remaining consumers are
-scheduled for later phases survives until then.
+- identity and title;
+- a resolved body rectangle in canvas-content coordinates;
+- effective, sorted `(tick, int value)` points, with one visible node per tick;
+- value range and value text;
+- time-selection membership; and
+- delete, move, and replace-span commits, each representing one user gesture.
 
-## Voice Change stays a non-node lane
+Tempo's adapter reads `tempoPoints()` directly, exposes BPM only for display,
+and commits a typed `TempoEdit`. It preserves exact microseconds when a move
+changes only tick. CC's adapter exposes the effective last same-tick event and
+commits through the existing lane operations. Revision-guarded completions and
+the one-undo-step rule apply to both adapters.
 
-Add `voicechangelane.h` and `voicechangelane.cpp` as the concrete owner of
-the existing Voice Change row behavior:
+## Paint and hit-test order
 
-- Preserve the current held-voice segments and per-segment name labels from
-  `paintVoiceRow`.
-- Preserve the current voice picker and Voice-specific menu/input behavior.
-- Do not add nodes, vertical value dragging, sweep, pencil, or ramp editing.
-- Capture the lane's track when the Voice strip rebuilds instead of repeatedly
-  resolving the ambient `primaryTrack()`.
-- Voice is identified by its body rect, not a `LaneHandle`. Core edits
-  continue through the existing raw-SMF-backed `DOC_CC_VOICE` lane functions.
-  Persisted `EditorAutomationRowId` data stays unchanged.
+The draw order is intentional:
 
-## Migration
+1. The canvas paints its background/grid, then Voice, CC rows, selection chrome,
+   and the add-lane strip in normal scrollable-content order.
+2. It paints Tempo's header last. If expanded, it clips Tempo's shared
+   NodeLane body and reticle to the resolved pinned body after all CC paint.
 
-| Site | Today | After |
-|---|---|---|
-| `AutomationProjection` row-keyed mapping | `rowIndexAt`, `pointY(row, rowIndex, …)`, `pointerMapping` borrow `vector<AutomationRow>` | lane body rect + the existing static `valueY` / `valueAtY(bounds, geometry, min, max, …)`; pointer mapping takes the lane |
-| `AutomationHoverState` | keys on `hover.row`, calls `rows.pointsFor` / `valueTextFor` | becomes `NodeLaneHoverState`, keys on `LaneHandle`, reads the `NodeLane` |
-| `ActiveGesture` variants | `int row` (`TempoLane` fakes 0) | `LaneHandle` |
-| `AutomationLaneEdit::Completion::Target` | `{engineTrack, controller, expectedRevision}` | `NodeLaneEdit::Completion::Target{LaneHandle, expectedRevision}`; commit routing resolves the lane |
-| `TempoLane` | own `hitPoint`, own `m_hoveredPoint` hover, own `finishActiveGesture`, own paint file | `NodeLane` adapter + header/collapse shell + BPM text provider |
-| `paintRow` Voice branches | `paintVoiceRow` dispatch, Voice grid tint, `SummaryKind::VoiceChanges` | `VoiceChangeLane` owns the existing segment paint |
-| Voice input guards | `automationarea_input.cpp` `kind == Voice` branches (menu, delete guard, row-boundary guard) | move into `VoiceChangeLane`; do not route through node gestures |
-| `AutomationRows::{rowTarget, rowIdentity}` | Voice re-resolves `primaryTrack()` | lane addresses captured at rebuild |
-| Node-drag identities | `LaneNodeIdentity{engineTrack, controller, documentPoint}` / `std::vector<TempoPoint>` | `(LaneHandle, tick)` |
+CC content can occupy the same canvas-space y-range while it scrolls, but the
+opaque Tempo layer is the final visible layer in that range. Its input order
+matches its paint order:
 
-## Implementation order
+1. Tempo header or pinned body is recognized first and clears Voice hover.
+2. A header click toggles collapse. A body event resolves `LaneHandle{0}` for
+   node hit testing, menus, gestures, and band-selection endpoints.
+3. Only outside Tempo can Voice, a CC resize boundary, the add-lane strip, or
+   another node lane receive the event.
 
-Each phase builds and passes checks on its own. The pre-phase establishes the
-adapter seam behind its executable contract; phase 1 establishes the canvas;
-phase 2 extracts Voice Change before phases 3–5 simplify the remaining
-node-only path. A phase is not complete until its replacement is the
-only live path: remove the superseded handlers, branches, adapters, and state
-in that same phase instead of leaving parallel paths for later cleanup.
-Shared plumbing is the one exception: starve it consumer by consumer and
-delete it when its last consumer migrates (see Projection dissolution).
-Each phase also updates `CMakeLists.txt` and the affected check-source manifests,
-passes its focused gate, is audited by a thermo-nuclear code quality review
-whose findings are addressed, and ends at a clean commit checkpoint before
-the next phase begins.
+This keeps an occluded CC control from responding through Tempo. Rebuilds
+cancel active gestures before stack/body replacement, so a stale handle cannot
+commit after a geometry or document refresh.
 
-0. **NodeLane contract and matrix, no behavior change.** Add
-   `nodelane/nodelane.{h,cpp}` holding `NodePoint`, `NodePointMove`, and the
-   `NodeLane` contract. Implement `NodeLane` in `TempoLane` — BPM ↔ µs
-   conversion stays inside the adapter — and add a `CCLaneAdapter` over
-   `(track, controller)` in the current `automationrows` module; phase 2
-   renames that module after Voice leaves it. No widget path changes:
-   rowIndex keying stays and the adapters take no production callers yet.
+## Completed implementation waves
 
-   The matrix is their first and only caller. Add a `node-contract` domain
-   to the existing `automation-gestures` harness in a new
-   `src/checks/automationgesturecheck/contract.cpp`; it calls both adapters
-   through `NodeLane` directly, with no canvas and no widget, and every row
-   runs against both adapters from one table:
+1. **NodeLane unification.** Shared point, hover, paint, gesture, preview, and
+   commit preparation moved behind `NodeLane`; Tempo retained its BPM and
+   `TempoEdit` adapter and CC retained its existing storage back-end.
+2. **Voice separation.** `VoiceChangeLane` became the non-node owner of Voice
+   paint and input. `CCLanes` became CC-only; legacy Voice sidecar rows are
+   discarded.
+3. **Stable Tempo slot.** `AutomationCanvas` retained `m_tempoLane` as
+   `LaneHandle{0}` and made all remaining CC adapters follow it.
+4. **Sticky in-drawer composition.** `tempoTop`,
+   `syncPinnedTempoLayout`, trailing minimum-height clearance, final-pass Tempo
+   paint, and header/body-first routing produced the viewport-bottom overlay.
+5. **Behavioral coverage.** Geometry, scrolling, collapse, paint occlusion,
+   and shared Tempo gesture coverage were added to the existing automation
+   checks.
 
-   - `points()` returns the lane's effective points: sorted by tick, one
-     node per tick. A CC lane holding several same-tick raw events exposes
-     the last event's value. Tempo returns `tempoPoints()` as-is — no
-     synthetic tick-0 120 node.
-   - `minimumValue()` / `maximumValue()` are `CoreTimeDefaults` for Tempo
-     (20–255) and `laneValueMinimum` / `laneValueMaximum` for CC (0–127,
-     bend −8192–8191). `valueText()` formats CC values with their controller
-     semantics and Tempo values as integer BPM. `pointSelected()` reports
-     time-selection membership.
-   - `deletePoints(ticks)` removes exactly the points at those ticks —
-     every underlying event for that lane and tick — and advances revision
-     and undo index exactly once. Empty or unknown ticks advance neither.
-   - `movePoints(moves)` resolves each point by its `fromTick`. A Tempo
-     move whose value is unchanged keeps the exact microseconds. A CC move
-     carries every underlying event for that lane and source tick as one
-     group, preserving order at the destination tick and leaving no event
-     at the source tick. One revision and one undo step.
-   - `replaceSpan(first, last, points)` replaces the lane's points in that
-     tick range. Empty Tempo stays empty. One revision and one undo step.
+## Verification coverage
 
-   Verify: build, the new domain green for both adapters, zero behavior
-   delta in the running app.
-
-1. **Canvas rename and edit fold, no behavior change.** Rename
-   `AutomationArea` and its implementation files to `AutomationCanvas`. Move
-   `AutomationLaneEdit` into the pre-phase's `nodelane/nodelane.{h,cpp}` as
-   `NodeLaneEdit`. Keep rowIndex keying; the widget path is untouched and the
-   adapters still have no production callers. Rename
-   `src/checks/automationgesturecheck/tempo.cpp` to `nodelane.cpp`.
-   Verify: build, checks, zero behavior delta, the pre-phase contract matrix
-   still passes for both adapters, no separate NodeLane edit file remains,
-   and no `AutomationArea` symbol or `automationarea*` source file remains.
-2. **Voice Change extraction, no behavior change.** Add
-   `voicechangelane.{h,cpp}` and make it the sole owner of Voice segment
-   painting, label layout, hover handling, picker double-click, the Voice
-   context menu, and Voice input guards. Capture its track identity when
-   `AutomationCanvas` rebuilds the Voice strip; all later Voice paint, input,
-   and commit work uses that captured identity instead of resolving the
-   ambient primary track again. The node-lane stack born here is Tempo plus
-   CC only: `laneAt(y)` returns a `LaneHandle` into that stack and does not
-   name Voice. `VoiceChangeLane` owns its own body rect between Tempo and
-   the first CC lane. Keep `DOC_CC_VOICE` and the existing core lane
-   functions. Remove `EditorAutomationRowKind::Voice`, discard legacy
-   `voice:<track>` sidecar row entries on load, and stop writing them. Once
-   the mixed row owner contains only CC lanes, rename
-   `automationrows.{h,cpp}` to `cclanes.{h,cpp}` and rename the view-model
-   `AutoLane` type to `CcLane`. Update stale documentation and harnesses.
-   Verify that no Voice paint, label-layout, hover, picker, menu, or input
-   branch remains outside
-   `VoiceChangeLane`; `VoiceChangeLane` contains no `primaryTrack()` call or
-   other track re-resolution; a repository-wide search finds no
-   `EditorAutomationRowKind::Voice` occurrence; and loading a legacy entry
-   neither restores nor re-serializes it. Gate the phase with
-   `automation-popup-menus`, `automation`, `host-seams`, and
-   `mainwindow-routing`. Using the same fixture, geometry, theme, and device
-   pixel ratio, the Voice segment-and-label canvas region must match its
-   pre-phase capture pixel for pixel. Picker and menu checks must preserve the
-   same trigger, contents and order, target, commit, and undo behavior; do not
-   compare platform-rendered Qt dialog or menu chrome pixel for pixel.
-3. **Hover parity.** Rename `AutomationHoverState` to `NodeLaneHoverState` and
-   store only its `LaneHandle`; resolve the current lane from the stack and
-   pass it as `const NodeLane&` when hover calculation needs points or value
-   text. Start `nodelane/paint.{h,cpp}` with the shared hover chrome so this
-   phase does not duplicate CC paint inside `TempoLane`. Delete Tempo's
-   `m_hoveredPoint`, caption-only hover paint, and private hover-tracking
-   branches while retaining hit testing still used by menus and gestures.
-   Tempo gains the insertion line, held-BPM ghost, node ring, label cache, and
-   dirty-bounds diffing used by CC. Hover reads the lane's body rect and
-   value range through the static `valueY` / `valueAtY`, using the
-   projection only for the time axis — the pattern `TempoLane` already
-   runs. Grow the widget-level parity matrix with the hover and
-   insertion-preview cases for both Tempo and CC. This phase also routes
-   tempo-region mouse moves into the shared hover update: the tempo
-   dispatch's early return becomes a lane-resolved hover call. That
-   input-routing change is expected here, ahead of full input unification in
-   phase 5. Gate the phase with `automation-gestures`, `automation`, and
-   `rendering-playhead`.
-4. **Paint ownership and unification.** Complete `nodelane/paint.{h,cpp}` by
-   moving normal node curves, selection rings, and every active-gesture
-   preview (node drag, sweep/ramp, and Pencil), including its value label, out
-   of `automationpaint.*` and `automationpaintpreview.cpp` behind
-   `paintNodeLane(painter, lane, leadIn, …)`. `leadIn` is an optional
-   `(tick, value)` that is not a node: Tempo passes `{0, 120}` only when
-   `points()` is non-empty and has no tick-0 point; empty Tempo and every CC
-   lane pass none. Voice painting is already owned by
-   `VoiceChangeLane` from phase 2; move true whole-page grid and selection
-   chrome into `AutomationCanvas`. Delete `automationpaint.*` when those moves
-   leave it empty, and delete `tempolanepaint.cpp` after moving its small
-   header/collapse shell into `tempolane.cpp`. Tempo and CC must have no
-   other lane-specific node-body paint path. Gate the phase with `automation` and
-   `rendering-playhead`, then prove by source search that no Tempo- or CC-only
-   node-body painter remains.
-5. **Input and commit unification.** One input dispatcher resolves a
-   `NodeLane` from the cursor (Voice is already excluded by hit-test) and runs
-   the generic press/move/release logic; tempo's
-   `mousePress` / `mouseMove` / `mouseRelease` / `mouseDoubleClick` handlers
-   dissolve. Tempo gains Pencil with the unified dispatcher — Pencil belongs
-   to every node lane — and that is intended new behavior from this plan,
-   not a pre-existing behavior to preserve. Gesture `row` fields become
-   `LaneHandle`; completions target the handle; `nodeDragGestureAt` /
-   `collectSelectedNodeDrags` unify behind the `NodeLane` contract.
-   `pointerMapping` becomes lane-keyed — grid cells
-   from the page, value mapping from the lane — and with its last consumer
-   gone, the row-keyed `AutomationProjection` members plus its rows vector
-   and `topInset` constructor inputs are deleted; what remains is the time
-   axis and the static `valueY` / `valueAtY`. Rename the now node-only
-   gesture and Pencil files
-   listed under **Naming**, and land the CC-only UI strings. Hover, paint,
-   `cclanes`, and `CcLane` already have their final names from their owning
-   earlier phases; do not defer those renames to this cleanup. Preserve the
-   lane-stack-rebuild cancellation rule and run release-after-rebuild against
-   both adapters: neither release may commit through the stale handle. Gate
-   the phase with `automation-gestures`, `automation-popup-menus`, and
-   `automation`. Then require a source-name scan to find no node-only
-   implementation under an `automation*` leaf filename; only page-level
-   cross-lane coordinators and persisted-state names may retain `automation`.
-
-## Verification
-
-Before phase 1, add a named-check selector to `tools/run_checks.ts` with this
-form:
-
-```sh
-deno task checks build/porydaw_checks --only=check-a,check-b
-```
-
-Prove the selector runs exactly the requested names and rejects an unknown
-name. Then run this untouched-branch baseline and require it to pass before
-changing production code:
-
-```sh
-deno task checks build/porydaw_checks --only=automation-gestures,automation-popup-menus,automation,editor-drawer,mainwindow-routing,rendering-playhead,host-seams
-```
-
-During the migration, build after every phase and run only the focused checks
-that exercise the automation drawer code changed by that phase:
-
-| Phase | Focused checks |
-|---|---|
-| 0. NodeLane contract and matrix | `automation-gestures`, `automation`, `editor-drawer` |
-| 1. Canvas rename and edit fold | `automation-gestures`, `automation`, `editor-drawer`, `mainwindow-routing`, `rendering-playhead` |
-| 2. Voice Change extraction | `automation-popup-menus`, `automation`, `host-seams`, `mainwindow-routing` |
-| 3. Hover parity | `automation-gestures`, `automation`, `rendering-playhead` |
-| 4. Paint unification | `automation`, `rendering-playhead` |
-| 5. Input and commit unification | `automation-gestures`, `automation-popup-menus`, `automation` |
-
-Before phase 2 changes production code, use the phase 1 `automation` check
-build and its screenshot output to retain an untracked baseline under
-`build/check-artifacts/`. The phase 2 check renders the same fixture and crops
-the Voice lane with the same resolved geometry, then compares the two `QImage`
-pixel buffers exactly. Keep both captures as build artifacts, not repository
-assets.
-
-The pre-phase adds a direct `node-contract` domain to the existing
-`automation-gestures` harness, detailed in the implementation order. It
-calls both adapters through `NodeLane` without routing through
-`AutomationCanvas` and verifies the resulting document data plus revision
-and undo changes. This is the adapters' executable interface contract
-before the widget path changes; every later phase must keep it green.
-
-The widget-level automated acceptance gate lives in that same harness; do not
-add another top-level check. Refactor the current separate Tempo and CC cases
-into one table-driven NodeLane parity matrix. Run each synthetic pointer/key
-sequence once against `TempoLane` and once against `CCLaneAdapter`:
-
-- hover and insertion preview
-- stationary-click delete
-- node drag, including horizontal and vertical axis lock
-- multi-node selection drag and delete
-- sweep and Shift-ramp
-- Pencil stroke — the Tempo half of this row first applies in phase 5, when
-  the unified dispatcher delivers Pencil to the Tempo lane as intended new
-  behavior
-- right-drag band selection
-- Escape cancellation, lane-stack-rebuild cancellation, and semantic no-op
-
-For every scenario, both adapters must produce the same interaction-state
-transitions and the same normalized node result. A completed gesture must
-advance the document revision and undo index exactly once; a preview,
-cancellation, or no-op must advance neither. Only the lane value range,
-displayed value text, and commit back-end may differ. Add one negative case
-proving `VoiceChangeLane` never enters a NodeLane gesture. Preserve the
-pre-phase CC same-tick group case. Preserve the existing active-gesture
-document refresh cancellation check and run that scenario against both
-Tempo and CC;
-release after the rebuild must not commit through the old handle.
-
-Do not run unrelated checks between phases. After phase 5 and the source-name
-cleanup check pass, run the full suite once as the final regression gate:
-
-```sh
-deno task checks build/porydaw_checks
-```
-
-Manual pass over the running app:
-
-- Hover chrome identical on Tempo and CC lanes: insertion line,
-  held-value ghost, node ring, value label.
-- Node drag, sweep, ramp, pencil, band select, stationary delete, and
-  selection drag behave identically on Tempo and CC; each gesture is one undo
-  step.
-- A moved fractional imported tempo point keeps its exact MIDI value. A
-  fractional point displays as integer BPM — rounded, decimal discarded —
-  while its stored microseconds stay exact.
-- Tempo still paints first and collapses via its header. With no explicit
-  points, its body is blank while playback uses the implicit 120 BPM default;
-  save emits no Tempo event until the user creates one. A later first point
-  still gets the node-free 120 BPM lead-in from `paintNodeLane`'s optional
-  lead-in, not from a synthetic `points()` entry.
-- Voice Change keeps its held-segment labels, double-click picker, and current
-  context menu, with no node gestures added.
-- A source-name check finds no node-only paint, hover, gesture, Pencil, edit,
-  row, or adapter implementation left in an `automation*` leaf file. Remaining
-  `automation*` files must belong to the page-level coordinator or persisted
-  editor state named under **Naming**.
+- `rollcheckautomation` verifies slot 0 has no body while collapsed, restores
+  the persisted Tempo row height when expanded, remains pinned across vertical
+  scroll, leaves CC/add-lane trailing clearance, and returns the reserved space
+  on collapse.
+- `rollcheckautomation_paint` verifies a Tempo reticle changes the pixels of a
+  CC body geometrically beneath the pinned body, proving final paint z-order.
+- The automation-gesture harness expands Tempo through its header and runs
+  shared NodeLane mapping, hover, parity, and gesture scenarios against
+  `LaneHandle{0}`.
 
 ## Non-goals
 
-- Unified core storage or a unified `SongDocumentEdit`
-- Tempo re-entering the generic row list
-- New track identity model or track-limit changes
-- Event List changes
-- New lane y-zoom or value-range UI
-- New Voice Change sidecar state, persisted collapse state, or lane-height
-  storage changes. Phase 2 only discards the obsolete persisted Voice-row
-  entries.
+- No unified core storage or universal `SongDocument` edit interface.
+- No Tempo-specific widget, timeline band, or input framework.
+- No change to Tempo's typed storage, global selection semantics, session
+  collapse, or persisted custom-height/range state.
+- No node, sweep, pencil, ramp, or vertical-drag behavior for Voice Change.

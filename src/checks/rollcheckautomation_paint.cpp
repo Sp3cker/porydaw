@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <limits>
 #include <vector>
 
@@ -30,6 +29,10 @@
 #include "ui/songview/editorselectionmodel.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
+void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDocument &document,
+                                   DrawerPageLiveState &live, int &failures);
+void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDocument &document,
+                                    DrawerPageLiveState &live, int &failures);
 
 namespace {
 
@@ -179,20 +182,10 @@ int lineBudget(qreal radius, qreal dpr)
     return std::max(4, int(std::ceil(6.0 * radius * dpr)));
 }
 
-int tempoBodyBottom(const AutomationPage &page)
-{
-    const auto geometry = AutomationGeometry::resolve();
-    const int shared = page.automationViewState().laneHeight > 0
-                           ? page.automationViewState().laneHeight
-                           : geometry.rowDefaultHeight;
-    const int voiceHeight =
-        std::clamp(shared, geometry.rowMinimumHeight, geometry.rowMaximumHeight);
-    return page.canvas()->contentTopInset() - voiceHeight;
-}
-
 QPointF tempoHeaderPoint(const AutomationPage &page)
 {
-    return {page.canvas()->plotOrigin() / 2.0, std::max(1, tempoBodyBottom(page)) / 2.0};
+    const QRect tempo = page.canvas()->pinnedTempoRect();
+    return {page.canvas()->plotOrigin() / 2.0, qreal(tempo.center().y())};
 }
 
 int panRowIndex(const AutomationPage &page)
@@ -237,14 +230,13 @@ void setTempoPoints(AutomationPage &page, SongDocument &document, DrawerPageLive
 void setCcPoints(AutomationPage &page, SongDocument &document, DrawerPageLiveState &live,
                  const std::vector<SongDocument::LanePointValue> &points)
 {
-    document.writeLanePoints(0, 10, 0, std::numeric_limits<uint64_t>::max(), points);
+    document.writeLanePoints(0, uint8_t{10}, 0, std::numeric_limits<uint64_t>::max(), points);
     refresh(page, document, live);
 }
 
 bool toggleTempoExpanded(AutomationPage &page, bool wantExpanded, int &failures)
 {
-    const auto strip = AutomationGeometry::resolve().addLaneStripHeight;
-    auto expanded = tempoBodyBottom(page) > strip;
+    const bool expanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
     if (expanded == wantExpanded)
         return expanded;
     const QImage beforeToggle = page.canvas()->grab().toImage();
@@ -257,7 +249,7 @@ bool toggleTempoExpanded(AutomationPage &page, bool wantExpanded, int &failures)
         std::fprintf(stderr, "automation-check: FAIL paint: tempo header toggle did not repaint\n");
         ++failures;
     }
-    return (tempoBodyBottom(page) > strip) == wantExpanded;
+    return !page.canvas()->laneBody(LaneHandle{0}).isEmpty() == wantExpanded;
 }
 
 LaneGeom laneGeom(AutomationPage &page, const LaneCase &row)
@@ -267,7 +259,7 @@ LaneGeom laneGeom(AutomationPage &page, const LaneCase &row)
     geometry.plotOrigin = page.canvas()->plotOrigin();
     if (row.kind == LaneKind::Tempo) {
         geom.handle = LaneHandle{0};
-        geom.body = {0, 0, page.canvas()->width(), tempoBodyBottom(page)};
+        geom.body = page.canvas()->laneBody(geom.handle);
         geom.curveColor = themes::color(themes::Role::song_view_automation_tempo_curve);
     } else {
         const int panRow = panRowIndex(page);
@@ -325,6 +317,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     CCLaneAdapter ccLane(document, view.selectionModel(), usedTrackMask, 0, uint8_t{10});
     const bool tempoExpanded = toggleTempoExpanded(page, true, failures);
     check(tempoExpanded, QStringLiteral("Tempo header did not expose the expanded body"));
+    checkAutomationCanvasFontPaint(view, page, document, live, failures);
     auto geometry = AutomationGeometry::resolve();
     geometry.plotOrigin = page.canvas()->plotOrigin();
     const qreal dpr = page.canvas()->devicePixelRatioF();
@@ -581,6 +574,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                        QRectF(cursorX - 2.0, page.canvas()->contentTopInset() + 4.0, 4.0, 12.0),
                        dpr, themes::color(themes::Role::song_view_edit_cursor), 16),
           QStringLiteral("canvas did not paint the edit cursor"));
+    checkAutomationTempoOcclusion(view, page, document, live, failures);
     cancel();
     if (QAction *pencil = pencilModeAction(page))
         pencil->setChecked(false);

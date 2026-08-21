@@ -23,6 +23,7 @@
 #include "ui/editordrawer/tempolane.h"
 #include "ui/editordrawer/voicechangelane.h"
 #include "ui/editorviewstate.h"
+#include "ui/layout.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
 
@@ -54,11 +55,9 @@ class AutomationCanvas final : public songview::TimelineSurface
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect labelGutter() const noexcept { return m_labelGutter; }
     int plotOrigin() const noexcept { return m_geometry.plotOrigin; }
-    int contentTopInset() const noexcept
-    {
-        return m_tempoLane.totalHeight(m_geometry) + m_voiceLane.height();
-    }
+    int contentTopInset() const noexcept { return m_voiceLane.height(); }
     QRect laneBody(LaneHandle handle) const;
+    QRect pinnedTempoRect() const noexcept;
 
   protected:
     bool event(QEvent *event) override;
@@ -82,6 +81,10 @@ class AutomationCanvas final : public songview::TimelineSurface
         [[nodiscard]] static std::optional<TickRange> orderedNonEmpty(uint64_t firstTick,
                                                                       uint64_t secondTick) noexcept;
     };
+    struct PointerLaneHit {
+        LaneHandle lane;
+        bool tempoHeader = false;
+    };
     static void paintPlainGridFallback(QPainter &painter, const QRect &plot, AutomationPage &page,
                                        qreal plotOriginX, qreal dpr);
     static void paintEditCursor(QPainter &painter, const QRect &plot, qreal cursorX);
@@ -90,7 +93,7 @@ class AutomationCanvas final : public songview::TimelineSurface
                                       qreal devicePixelRatio);
 
     void refreshGeometry();
-    QFont captionLabelFont() const;
+    void rebuildFontCache();
 
     // Pixel <-> tick mapping over the current geometry and page timeline.
     AutomationProjection projection() const;
@@ -122,9 +125,12 @@ class AutomationCanvas final : public songview::TimelineSurface
     void showAddLaneMenu(const QPoint &globalPosition);
     void showLaneMenu(const AutomationRow &row, const QPoint &globalPosition);
     void layoutLaneStack(int voiceTrack);
+    int tempoTop() const;
+    QRegion syncPinnedTempoLayout();
     void cancelNodeGestures();
     void rebuildNodeStack();
     LaneHandle laneAt(int y) const noexcept;
+    PointerLaneHit pointerLaneAt(const QPoint &position) const noexcept;
     bool resolveLane(LaneHandle handle, const NodeLane **lane, QRect *body) const noexcept;
     NodeLane *mutableLane(LaneHandle handle) noexcept;
     void syncHoverValueLabel();
@@ -139,6 +145,10 @@ class AutomationCanvas final : public songview::TimelineSurface
                               LaneHandle end) const;
     void setGestureActive(bool active);
     AutomationGeometry m_geometry;
+    QFont m_laneTitleFont;
+    QFont m_laneCaptionFont;
+    std::optional<layout::TwoLineTextLayout> m_laneTextLayout;
+    qreal m_laneCaptionHeight = 0.0;
     QRect m_labelGutter;
     AutomationPage *m_page = nullptr;
     QScrollArea *m_scroll = nullptr;

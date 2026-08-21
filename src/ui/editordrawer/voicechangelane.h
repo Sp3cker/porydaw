@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include <QFont>
+#include <QFontMetrics>
 #include <QRect>
 #include <QRectF>
 #include <QString>
@@ -20,6 +21,10 @@ class QPoint;
 struct AutomationGeometry;
 struct DocLanePoint;
 
+namespace layout {
+class TwoLineTextLayout;
+}
+
 // Non-node Voice Change strip. It owns held-segment painting, hover, picker,
 // and DOC_CC_VOICE commits for one captured engine track.
 class VoiceChangeLane final
@@ -27,9 +32,10 @@ class VoiceChangeLane final
   public:
     explicit VoiceChangeLane(AutomationPage *page) noexcept;
 
-    void rebuild(int engineTrack, int width, int top, int height);
+    void rebuild(int engineTrack, int width, int top, const AutomationGeometry &geometry);
     void cancel();
     void clearHover(AutomationCanvas &area);
+    void invalidateFontCache();
 
     QRect bounds() const noexcept { return m_bounds; }
     int height() const noexcept { return m_bounds.height(); }
@@ -40,7 +46,8 @@ class VoiceChangeLane final
     bool mouseDoubleClick(AutomationCanvas &area, QMouseEvent *event,
                           const AutomationGeometry &geometry);
     void paint(QPainter &painter, AutomationCanvas &area, const AutomationGeometry &geometry,
-               const QRect &labelGutter, const QFont &titleFont, const QFont &captionFont);
+               const QRect &labelGutter, const QFont &titleFont, const QFont &captionFont,
+               const layout::TwoLineTextLayout &textLayout, qreal captionHeight);
     void updateHover(AutomationCanvas &area, const AutomationGeometry &geometry, qreal x, int y);
 
   private:
@@ -54,6 +61,7 @@ class VoiceChangeLane final
 
     const VoicePaintText &paintTextFor(int program) const;
     int voiceSlotAt(uint64_t tick) const;
+    void ensureHoverLabelFontCache(const QFont &font);
     QRect plotRect(const AutomationGeometry &geometry) const;
     bool voiceMarkerAt(const AutomationCanvas &area, qreal x, const AutomationGeometry &geometry,
                        DocLanePoint *out) const;
@@ -72,6 +80,8 @@ class VoiceChangeLane final
     QRectF m_hoverLabelRect;
     QRect m_hoverLabelBounds;
     QFont m_hoverLabelFont;
+    QFontMetrics m_hoverLabelMetrics{QFont{}};
+    bool m_hoverLabelFontValid = false;
     QRect m_hoverDirtyBounds;
     mutable std::array<VoicePaintText, VOICEGROUP_SIZE> m_paintTexts;
     mutable QString m_secondary;

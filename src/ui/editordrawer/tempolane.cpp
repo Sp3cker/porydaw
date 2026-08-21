@@ -42,16 +42,15 @@ TempoLane::TempoLane(SongDocument &document, const songview::EditorSelectionMode
     , m_usedTrackMask(usedTrackMask)
 {}
 
-void TempoLane::updateLayout(int width, const AutomationGeometry &geometry)
+void TempoLane::updateLayout(int width, int top, const AutomationGeometry &geometry)
 {
     // Expanded, the lane is a single automation row: the header shrinks to
     // that row's label gutter (the collapse click target) while the body
     // spans the full row. Collapsed, only a thin caption strip remains.
     const int height = totalHeight(geometry);
-    m_header = {layout::space(layout::Space::Zero), layout::space(layout::Space::Zero),
-                m_expanded ? geometry.plotOrigin : width, height};
-    m_body = {layout::space(layout::Space::Zero), layout::space(layout::Space::Zero), width,
-              m_expanded ? height : 0};
+    m_header = {layout::space(layout::Space::Zero), top, m_expanded ? geometry.plotOrigin : width,
+                height};
+    m_body = {layout::space(layout::Space::Zero), top, width, m_expanded ? height : 0};
 }
 
 int TempoLane::totalHeight(const AutomationGeometry &geometry) const
