@@ -158,7 +158,10 @@ void CurveGraph::setCallbacks(Callbacks callbacks)
 
 QRect CurveGraph::canvasRect() const
 {
-    return m_spec.canvasRect;
+    const CurveGeometry geometry = CurveGeometry::resolve(font(), devicePixelRatioF());
+    return QRect(geometry.axisGutter, geometry.topBandHeight,
+                 std::max(1, width() - geometry.axisGutter - geometry.rightInset),
+                 std::max(1, height() - geometry.topBandHeight - geometry.bottomBandHeight));
 }
 
 double CurveGraph::liveValue() const

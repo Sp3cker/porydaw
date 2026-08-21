@@ -187,8 +187,7 @@ void PitchEnvelopeHost::hideEvent(QHideEvent *event)
 void PitchEnvelopeHost::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
-    if (m_graph && m_session && !m_graph->hasGesture())
-        m_graph->setSpec(makeGraphSpec());
+    // Canvas geometry is size-derived inside CurveGraph; grid snapping reads it live.
 }
 
 std::optional<int> PitchEnvelopeHost::selectedPrimaryTrack() const
@@ -258,8 +257,7 @@ PitchEnvelopeHost::EditingGrid PitchEnvelopeHost::editingGridAt(uint64_t tick,
         return {std::max<uint64_t>(1, m_songView->fineGridTicks()), 0,
                 session.templateWindowEndTick};
     }
-    const QSize graphSize = m_graph ? m_graph->size() : QSize(480, 164);
-    const int canvasWidth = std::max(80, graphSize.width() - 60);
+    const int canvasWidth = std::max(80, m_graph ? m_graph->canvasRect().width() : 80);
     const uint64_t span =
         std::max<uint64_t>(1, session.templateWindowEndTick - session.templateSourceTick);
     const SongView::GridSeg segment = m_songView->gridSegAt(tick);
@@ -338,10 +336,6 @@ CurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
     const EnvelopeSession *session = m_session ? &*m_session : nullptr;
     const int bendRange = session ? session->templateBendRange : kDefaultBendRange;
     CurveGraph::CurveSpec spec;
-    const QSize graphSize = m_graph ? m_graph->size() : QSize(480, 164);
-    const CurveGeometry geometry =
-        CurveGeometry::resolve(m_graph ? m_graph->font() : font(),
-                               m_graph ? m_graph->devicePixelRatioF() : devicePixelRatioF());
     const double range = double(bendRange);
     const double windowTicks =
         double(session ? (session->templateWindowEndTick - session->templateSourceTick)
@@ -356,10 +350,6 @@ CurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
     spec.lockStartEndpointY = true;
     spec.sampling.endpointInset = 0.1;
     spec.sampling.interiorStep = spec.sampling.endpointInset;
-    spec.canvasRect =
-        QRect(geometry.axisGutter, geometry.topBandHeight,
-              std::max(1, graphSize.width() - geometry.axisGutter - geometry.rightInset),
-              std::max(1, graphSize.height() - geometry.topBandHeight - geometry.bottomBandHeight));
     spec.startLabel = SongView::tr("0");
     spec.endLabel = SongView::tr("%1 ticks").arg(int(windowTicks));
     spec.text.zeroLabel = QStringLiteral("0");

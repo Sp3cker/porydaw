@@ -154,8 +154,6 @@ void CurveGraph::paintAxes(QPainter &painter, const CurveGeometry &geometry)
     painter.setPen(m_spec.colors.text);
     const QRect topLabelRect(graph.left(), graph.top() - geometry.topBandHeight, graph.width(),
                              geometry.labelHeight);
-    if (!m_spec.title.isEmpty())
-        painter.drawText(topLabelRect, Qt::AlignLeft | Qt::AlignVCenter, m_spec.title);
     if (!m_spec.startLabel.isEmpty())
         painter.drawText(graph.left(), graph.bottom() + geometry.labelGap, graph.width() / 2,
                          geometry.labelHeight, Qt::AlignLeft | Qt::AlignVCenter, m_spec.startLabel);

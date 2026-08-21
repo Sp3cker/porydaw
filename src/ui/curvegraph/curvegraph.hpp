@@ -95,8 +95,6 @@ class CurveGraph final : public QWidget
         bool lockStartEndpointY = false;
         CurveSamplingPolicy sampling;
         CurveSegmentPolicy segments;
-        QRect canvasRect = QRect(52, 44, 280, 112);
-        QString title;
         QString startLabel;
         QString endLabel;
         std::vector<double> gridLines;

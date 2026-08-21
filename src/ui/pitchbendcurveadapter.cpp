@@ -114,8 +114,6 @@ CurveGraph::CurveSpec PitchBendCurveAdapter::makeSpec() const
     spec.defaultY = defaultValue();
     spec.sampling.endpointInset = 1.0;
     spec.sampling.interiorStep = 1.0;
-    spec.canvasRect = QRect(52, 44, 280, 112);
-    spec.title = laneTitle();
     spec.startLabel = SongView::tr("Note on");
     spec.endLabel = m_unterminated ? SongView::tr("Song end") : SongView::tr("Note off");
     spec.text.zeroLabel = QStringLiteral("0");
