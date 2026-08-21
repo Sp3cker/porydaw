@@ -40,6 +40,9 @@
 
 static_assert(!std::is_base_of_v<NodeLane, VoiceChangeLane>);
 
+void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument &document,
+                              DrawerPageLiveState &live, int &failures);
+
 namespace {
 
 void sendWheel(QWidget *widget, const QPoint &position, int vertical,
@@ -1582,6 +1585,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     check(stoppedVoice.voiceSlot == 3,
           QStringLiteral("stopped voice context did not use the edit cursor (slot %1)")
               .arg(stoppedVoice.voiceSlot));
+    if (!popupMenus)
+        checkAutomationNodePaint(view, page, document, live, failures);
 
     view.setDocument(&document);
     while (document.undoStack()->index() > 0)

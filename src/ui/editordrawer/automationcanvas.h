@@ -16,7 +16,6 @@
 #include <QString>
 
 #include "ui/editordrawer/automationgesture.h"
-#include "ui/editordrawer/automationpaint.h"
 #include "ui/editordrawer/automationpencilgesture.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
@@ -88,6 +87,18 @@ class AutomationCanvas final : public songview::TimelineSurface
     friend class AutomationPage;
     friend class TempoLane;
     friend class VoiceChangeLane;
+    struct TickRange {
+        uint64_t firstTick = 0;
+        uint64_t lastTick = 0;
+        [[nodiscard]] static std::optional<TickRange> orderedNonEmpty(uint64_t firstTick,
+                                                                      uint64_t secondTick) noexcept;
+    };
+    static void paintPlainGridFallback(QPainter &painter, const QRect &plot, AutomationPage &page,
+                                       qreal plotOriginX, qreal dpr);
+    static void paintEditCursor(QPainter &painter, const QRect &plot, qreal cursorX);
+    static void paintSelectionReticle(QPainter &painter, const TickRange &range,
+                                      const AutomationProjection &projection, const QRect &bounds,
+                                      qreal devicePixelRatio);
 
     void refreshGeometry();
     QFont captionLabelFont() const;

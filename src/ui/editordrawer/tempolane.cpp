@@ -2,13 +2,15 @@
 
 #include <algorithm>
 #include <cmath>
-#include <set>
 
 #include <QAction>
 #include <QCoreApplication>
 #include <QInputDialog>
 #include <QMenu>
 #include <QMouseEvent>
+#include <QPainter>
+#include <QPen>
+#include <QPolygon>
 
 #include "core/timedefaults.h"
 #include "ui/contextmenu.h"
@@ -16,8 +18,12 @@
 #include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawerpage.h"
+#include "ui/editordrawer/nodelane/hover.h"
+#include "ui/editordrawer/nodelane/paint.h"
+
 #include "ui/layout.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/theme/themeruntime.h"
 
 namespace {
 
@@ -41,122 +47,6 @@ TempoLane::TempoLane(SongDocument &document, const songview::EditorSelectionMode
     , m_selection(&selection)
     , m_usedTrackMask(usedTrackMask)
 {}
-
-QString TempoLane::title() const
-{
-    return QCoreApplication::translate("AutomationCanvas", "Tempo (BPM)");
-}
-
-std::vector<NodePoint> TempoLane::points() const
-{
-    std::vector<NodePoint> points;
-    const SongDocument *document = boundDocument();
-    if (!document)
-        return points;
-    const auto &tempoPoints = document->tempoPoints();
-    points.reserve(tempoPoints.size());
-    for (const TempoPoint &point : tempoPoints)
-        points.push_back(
-            {point.tick, qRound(CoreTimeDefaults::tempoBpm(point.microsecondsPerQuarterNote))});
-    return points;
-}
-
-int TempoLane::minimumValue() const
-{
-    return CoreTimeDefaults::kMinTempoBpm;
-}
-
-int TempoLane::maximumValue() const
-{
-    return CoreTimeDefaults::kMaxTempoBpm;
-}
-
-QString TempoLane::valueText(int value) const
-{
-    return QString::number(value);
-}
-
-bool TempoLane::pointSelected(uint64_t tick) const
-{
-    const auto *selection = boundSelection();
-    if (!selection || !selection->timeSelectionCoversTempo(boundUsedTrackMask()))
-        return false;
-    const auto &range = selection->timeSelection();
-    return tick >= range.startTick && tick < range.endTick;
-}
-
-void TempoLane::deletePoints(const std::vector<uint64_t> &ticks)
-{
-    SongDocument *document = boundDocument();
-    if (!document || ticks.empty())
-        return;
-    const std::set<uint64_t> tickSet(ticks.begin(), ticks.end());
-    TempoEdit edit;
-    for (const TempoPoint &point : document->tempoPoints()) {
-        if (tickSet.contains(point.tick))
-            edit.remove.push_back(point);
-    }
-    if (edit.empty())
-        return;
-    document->applyTempoEdit(edit);
-    if (m_page)
-        m_page->requestRefresh();
-}
-
-void TempoLane::movePoints(const std::vector<NodePointMove> &moves)
-{
-    SongDocument *document = boundDocument();
-    if (!document || moves.empty())
-        return;
-    const auto &tempoPoints = document->tempoPoints();
-    TempoEdit edit;
-    for (const NodePointMove &move : moves) {
-        const TempoPoint *source = nullptr;
-        for (const TempoPoint &point : tempoPoints) {
-            if (point.tick == move.fromTick) {
-                source = &point;
-                break;
-            }
-        }
-        if (!source)
-            continue;
-        const int currentBpm =
-            qRound(CoreTimeDefaults::tempoBpm(source->microsecondsPerQuarterNote));
-        TempoPoint destination{move.to.tick, source->microsecondsPerQuarterNote};
-        if (move.to.value != currentBpm)
-            destination.microsecondsPerQuarterNote =
-                CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(move.to.value);
-        if (destination == *source)
-            continue;
-        edit.remove.push_back(*source);
-        edit.add.push_back(destination);
-    }
-    if (edit.empty())
-        return;
-    document->applyTempoEdit(edit);
-    if (m_page)
-        m_page->requestRefresh();
-}
-
-void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)
-{
-    SongDocument *document = boundDocument();
-    if (!document)
-        return;
-    const auto &tempoPoints = document->tempoPoints();
-    TempoEdit edit;
-    for (const TempoPoint &point : tempoPoints) {
-        if (point.tick >= first && point.tick <= last)
-            edit.remove.push_back(point);
-    }
-    edit.add.reserve(points.size());
-    for (const NodePoint &point : points)
-        edit.add.push_back(
-            {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
-    document->applyTempoEdit(edit);
-    if (m_page)
-        m_page->requestRefresh();
-}
 
 void TempoLane::updateLayout(int width, const AutomationGeometry &geometry)
 {
@@ -483,17 +373,127 @@ QString TempoLane::bpmText(uint32_t microsecondsPerQuarterNote) const
     return bpm == rounded ? QString::number(int(rounded)) : QString::number(bpm, 'f', 2);
 }
 
-SongDocument *TempoLane::boundDocument() const noexcept
+void TempoLane::paint(QPainter &painter, const AutomationGeometry &geometry,
+                      const QRect &labelGutter, const QFont &titleFont, const QFont &captionFont,
+                      const NodeLaneHoverState &hoverState, bool pencilMode)
 {
-    return m_page ? m_page->document() : m_document;
-}
-
-const songview::EditorSelectionModel *TempoLane::boundSelection() const noexcept
-{
-    return m_page ? &m_page->m_owner.selectionModel() : m_selection;
-}
-
-uint32_t TempoLane::boundUsedTrackMask() const noexcept
-{
-    return m_page ? m_page->usedTrackMask() : m_usedTrackMask;
+    if (!m_page || !m_page->ready() || !m_page->timeline() || !m_page->document())
+        return;
+    const AutomationProjection projection(geometry, {}, m_page, 0);
+    const qreal dpr = painter.device()->devicePixelRatioF();
+    const auto &points = m_page->document()->tempoPoints();
+    const auto selectedRange = [&] {
+        if (m_band.active)
+            return AutomationCanvas::TickRange::orderedNonEmpty(m_band.startTick, m_band.endTick);
+        if (!hasTimeSelection())
+            return std::optional<AutomationCanvas::TickRange>{};
+        const auto &selection = m_page->m_owner.selectionModel().timeSelection();
+        return AutomationCanvas::TickRange::orderedNonEmpty(selection.startTick, selection.endTick);
+    }();
+    const QRect band = m_expanded ? m_body : m_header;
+    painter.save();
+    painter.setClipRect(band, Qt::IntersectClip);
+    painter.fillRect(band, themes::color(themes::Role::song_view_piano_roll_background));
+    painter.setPen(themes::color(themes::Role::song_view_separator));
+    painter.drawLine(band.left(), band.bottom(), band.right(), band.bottom());
+    painter.restore();
+    if (!m_expanded && selectedRange)
+        AutomationCanvas::paintSelectionReticle(painter, *selectedRange, projection, band, dpr);
+    painter.save();
+    painter.setClipRect(QRect(labelGutter.x(), band.top(), labelGutter.width(), band.height()),
+                        Qt::IntersectClip);
+    const QRect strip(band.left(), band.top(), band.width(), geometry.addLaneStripHeight);
+    const int arrowSize = std::max(layout::fontPx(0.5), strip.height() / 3);
+    const QRect arrow(labelGutter.left(), strip.center().y() - arrowSize / 2, arrowSize, arrowSize);
+    const QPolygon triangle = m_expanded ? QPolygon{{arrow.left(), arrow.top()},
+                                                    {arrow.right(), arrow.top()},
+                                                    {arrow.center().x(), arrow.bottom()}}
+                                         : QPolygon{{arrow.left(), arrow.top()},
+                                                    {arrow.right(), arrow.center().y()},
+                                                    {arrow.left(), arrow.bottom()}};
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(themes::color(themes::Role::song_view_primary_text));
+    painter.drawPolygon(triangle);
+    const QRect textBounds(
+        labelGutter.x() + arrowSize + layout::space(layout::Space::One), strip.top(),
+        std::max(0, labelGutter.width() - arrowSize - layout::space(layout::Space::One)),
+        strip.height());
+    painter.setFont(m_expanded ? titleFont : captionFont);
+    painter.setPen(themes::color(themes::Role::song_view_primary_text));
+    painter.drawText(textBounds, Qt::AlignLeft | Qt::AlignVCenter,
+                     QCoreApplication::translate("AutomationCanvas", "Tempo (BPM)"));
+    if (m_expanded) {
+        const QRect summaryBounds(textBounds.x(), strip.top() + strip.height(), textBounds.width(),
+                                  strip.height());
+        painter.setFont(captionFont);
+        painter.setPen(themes::color(themes::Role::song_view_secondary_text));
+        painter.drawText(summaryBounds, Qt::AlignLeft | Qt::AlignVCenter,
+                         QCoreApplication::translate("AutomationCanvas", "%n point(s)", nullptr,
+                                                     int(points.size())));
+    }
+    painter.restore();
+    if (!m_expanded)
+        return;
+    const QRect plot = nodelane::plotRect(m_body, geometry);
+    painter.save();
+    painter.setClipRect(m_body, Qt::IntersectClip);
+    painter.save();
+    painter.setClipRect(plot, Qt::IntersectClip);
+    if (!m_page->paintGrid(painter, plot, geometry.plotOrigin))
+        AutomationCanvas::paintPlainGridFallback(painter, plot, *m_page, geometry.plotOrigin, dpr);
+    painter.restore();
+    std::optional<NodePoint> leadIn;
+    if (!points.empty() && points.front().tick > 0)
+        leadIn = NodePoint{0, CoreTimeDefaults::kTempoBpm};
+    const NodeDragGesture *nodeDrag = nullptr;
+    const SweepGesture *sweep = nullptr;
+    if (m_activeGesture) {
+        nodeDrag = std::get_if<NodeDragGesture>(&*m_activeGesture);
+        sweep = std::get_if<SweepGesture>(&*m_activeGesture);
+    }
+    const bool bandLane = m_band.active;
+    const uint64_t bandFirst = std::min(m_band.startTick, m_band.endTick);
+    const uint64_t bandLast = std::max(m_band.startTick, m_band.endTick);
+    bool multipleSelectedNodes = false;
+    int selectedCount = 0;
+    for (const TempoPoint &point : points) {
+        if (!pointInTimeSelection(point.tick) &&
+            !(bandLane && point.tick >= bandFirst && point.tick < bandLast))
+            continue;
+        if (++selectedCount > 1) {
+            multipleSelectedNodes = true;
+            break;
+        }
+    }
+    const QColor color = themes::color(themes::Role::song_view_automation_tempo_curve);
+    nodelane::paintNodeLane(painter, nodelane::NodeLanePaint{
+                                         .lane = *this,
+                                         .body = m_body,
+                                         .geometry = geometry,
+                                         .projection = projection,
+                                         .color = color,
+                                         .leadIn = leadIn,
+                                         .handle = LaneHandle{0},
+                                         .hoverState = hoverState,
+                                         .nodeDrag = nodeDrag,
+                                         .sweep = sweep,
+                                         .gestureRow = 0,
+                                         .pencilMode = pencilMode,
+                                         .multipleSelectedNodes = multipleSelectedNodes,
+                                         .selectedLane = hasTimeSelection() || bandLane,
+                                         .bandLane = bandLane,
+                                         .bandFirstTick = bandFirst,
+                                         .bandLastTick = bandLast,
+                                         .preparedPreviewCurve = true,
+                                         .selectedColor = m_page->palette().highlight().color(),
+                                         .dimmedColor = color,
+                                     });
+    painter.save();
+    painter.setClipRect(plot, Qt::IntersectClip);
+    AutomationCanvas::paintEditCursor(painter, plot,
+                                      projection.displayX(m_page->liveState().editCursorTick, dpr));
+    painter.restore();
+    if (selectedRange)
+        AutomationCanvas::paintSelectionReticle(painter, *selectedRange, projection, plot, dpr);
+    painter.restore();
 }

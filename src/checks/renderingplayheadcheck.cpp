@@ -2,10 +2,12 @@
 #include "project/decompproject.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/drawerpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
+#include "ui/theme/themeruntime.h"
 #include "ui/timelinesurface.h"
 
 #include <QCoreApplication>
@@ -15,6 +17,7 @@
 #include <QPixmap>
 #include <QWidget>
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <optional>
 #include <utility>
@@ -30,6 +33,21 @@ class ProbeSurface final : public songview::TimelineSurface
   protected:
     void paintContent(QPainter &painter) override { painter.fillRect(rect(), Qt::transparent); }
 };
+
+bool hasColorNear(const QImage &image, const QRect &bounds, const QColor &expected, int tolerance)
+{
+    const QRect clipped = bounds.intersected(image.rect());
+    for (int y = clipped.top(); y <= clipped.bottom(); ++y) {
+        for (int x = clipped.left(); x <= clipped.right(); ++x) {
+            const QColor actual(image.pixel(x, y));
+            if (std::abs(actual.red() - expected.red()) <= tolerance &&
+                std::abs(actual.green() - expected.green()) <= tolerance &&
+                std::abs(actual.blue() - expected.blue()) <= tolerance)
+                return true;
+        }
+    }
+    return false;
+}
 
 } // namespace
 
@@ -222,6 +240,9 @@ int runRenderingPlayheadCheck(const QString &scratchProject, const QString &song
     check(fixtureOverlay != nullptr, "fixture SongView did not expose its playhead overlay");
 
     if (fixtureBand) {
+        const auto smfBeforePaint = fixtureDocument.smf().write();
+        const uint64_t revisionBeforePaint = fixtureDocument.revision();
+        const int undoBeforePaint = fixtureDocument.undoStack()->index();
         const uint64_t firstSample = fixtureTimeline->sampleForTick(0);
         const uint64_t secondSample = fixtureTimeline->sampleForTick(fixtureTimeline->ticksPerBeat);
         fixtureView.setPlayheadSample(firstSample, false);
@@ -244,6 +265,32 @@ int runRenderingPlayheadCheck(const QString &scratchProject, const QString &song
               "fixture playhead updates changed cached automation pixels");
         check(fixtureView.playheadTick() == fixtureTimeline->tickForSample(secondSample),
               "fixture playhead did not reach its final timeline position");
+        DrawerPageLiveState live;
+        live.documentRevision = fixtureDocument.revision();
+        live.timeZoom = 96.0;
+        live.editCursorTick = 0;
+        fixturePage->refreshLiveState(live);
+        QCoreApplication::processEvents();
+        const QImage cursorAtZero = fixtureBand->grab().toImage();
+        live.editCursorTick = fixtureTimeline->ticksPerBeat;
+        fixturePage->refreshLiveState(live);
+        QCoreApplication::processEvents();
+        const QImage cursorAtBeat = fixtureBand->grab().toImage();
+        const songview::TimelineSurfaceDiagnostics afterCursor = fixtureBand->diagnostics();
+        check(cursorAtZero != cursorAtBeat,
+              "moving the edit cursor did not change cached automation content");
+        check(afterCursor.contentPaintCount > afterPlayhead.contentPaintCount,
+              "edit cursor move did not repaint automation content");
+        const qreal cursorX =
+            (double(fixtureBand->plotOrigin()) + 96.0) * fixtureBand->devicePixelRatioF();
+        check(hasColorNear(cursorAtBeat,
+                           QRect(int(cursorX) - 2, 4, 5, std::max(8, fixtureBand->height() / 4)),
+                           themes::color(themes::Role::song_view_edit_cursor), 16),
+              "automation canvas did not paint the edit cursor");
+        check(fixtureDocument.smf().write() == smfBeforePaint &&
+                  fixtureDocument.revision() == revisionBeforePaint &&
+                  fixtureDocument.undoStack()->index() == undoBeforePaint,
+              "automation canvas paint changed SMF, revision, or undo");
     }
     if (fixtureOverlay)
         check(fixtureOverlay->isVisible(), "fixture playhead overlay is not presenting");

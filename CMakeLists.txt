@@ -308,14 +308,12 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationcanvas_gesture.cpp
     src/ui/editordrawer/automationcanvas_input.cpp
     src/ui/editordrawer/automationcanvas_menu.cpp
+    src/ui/editordrawer/automationcanvas_paint.cpp
     src/ui/editordrawer/automationcanvas.h
     src/ui/editordrawer/automationgesture.cpp
     src/ui/editordrawer/automationgesture.h
     src/ui/editordrawer/nodelane/hover.cpp
     src/ui/editordrawer/nodelane/hover.h
-    src/ui/editordrawer/automationpaint.cpp
-    src/ui/editordrawer/automationpaintpreview.cpp
-    src/ui/editordrawer/automationpaint.h
     src/ui/editordrawer/cclanes.cpp
     src/ui/editordrawer/cclanes.h
     src/ui/editordrawer/voicechangelane.cpp
@@ -330,9 +328,9 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/nodelane/nodelane.h
     src/ui/editordrawer/nodelane/paint.cpp
     src/ui/editordrawer/nodelane/paint.h
+    src/ui/editordrawer/nodelane/tempoadapter.cpp
     src/ui/editordrawer/tempolane.cpp
     src/ui/editordrawer/tempolanegesture.cpp
-    src/ui/editordrawer/tempolanepaint.cpp
     src/ui/editordrawer/tempolane.h
     src/ui/editordrawer/velocityarea.cpp
     src/ui/editordrawer/velocityarea.h
@@ -439,6 +437,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/noteidcheck.cpp
         src/checks/renderingplayheadcheck.cpp
         src/checks/rollcheckautomation.cpp
+        src/checks/rollcheckautomation_paint.cpp
         src/checks/automationgesturecheck/rig.cpp
         src/checks/automationgesturecheck/runner.cpp
         src/checks/automationgesturecheck/action.cpp
