@@ -21,7 +21,7 @@ An active half-open musical interval `[startTick, endTick)` with either Track Sc
 _Avoid_: Loop region, note selection, range highlight
 
 **Lane Scope**:
-The explicit automation-lane identities stored inside an active lane-scoped Time Selection.
+The explicit automation-lane identities (`LaneHandle`) stored inside an active lane-scoped Time Selection.
 _Avoid_: Selected rows, automation selection, track scope
 
 **Selection Projection**:
@@ -33,21 +33,21 @@ Gesture-local selection feedback that has not become canonical selection, such a
 _Avoid_: Selection, temporary selection model, local selection
 
 **Automation**:
-The editor drawer's shared node-lane editing model, spanning Tempo, Voice, and CC lanes. The family name — never a synonym for one kind.
+The editor drawer's umbrella page and editing family across Tempo, Voice Change, and CC, rendered by `AutomationCanvas`. The family name — never a synonym for one kind.
 _Avoid_: Automation lane (as a kind name), auto lane
 
 **Node Lane**:
- Tempo or CC lane.
+The point-editing lane kind spanning Tempo or CC only. Voice Change is explicitly non-node.
 _Avoid_: Automation row, row
 
 **CC Lane**:
-A per-track, controller-backed lane such as volume, pan, expression, or bend. Its points hold MIDI controller values.
+A per-track, controller-backed node lane owned by `CCLanes`, such as volume, pan, expression, or bend. Its points hold MIDI controller values.
 _Avoid_: Automation lane, controller lane, parameter lane
 
 **Tempo Lane**:
-The single global tempo lane. It belongs to the song, not to any track.
+The single global tempo node lane owned by `TempoLane`. It belongs to the song, not to any track.
 _Avoid_: Tempo track, tempo row
 
-**Voice Lane**:
-The per-track lane of voice changes. Its value is a voice slot in the track's voicegroup.
-_Avoid_: Voice row, program lane
+**Voice Change Lane**:
+The per-track, non-node lane of voice changes owned by `VoiceChangeLane`. Its value is a voice slot in the track's voicegroup.
+_Avoid_: Voice row, program lane, voice node lane

@@ -39,7 +39,7 @@ This extraction preserves behavior. It does not introduce a new selection featur
 - **Track Scope** — the non-empty set of engine tracks selected through the track headers. It always contains the Primary Track.
 - **Note Selection** — an ordered set of opaque `NoteId` values on the Primary Track.
 - **Time Selection** — a half-open musical interval `[startTick, endTick)` with either Track Scope or Lane Scope.
-- **Lane Scope** — the explicit automation-lane identities covered by a lane-scoped Time Selection. A lane identity is `(track, controller)`; track `-1` identifies the tempo lane.
+- **Lane Scope** — the explicit automation-lane identities (`LaneHandle`) covered by a lane-scoped Time Selection. A lane identity is `(track, controller)`; track `-1` identifies the tempo lane.
 - **Selection Projection** — a surface-specific visual interpretation of canonical selection, such as selection rings around notes overlapping a Time Selection.
 - **Transient selection preview** — gesture-local state that has not yet become canonical selection, such as the piano roll's note rubber band before release.
 
@@ -284,11 +284,11 @@ An explicit Note Selection projects only onto matching `NoteId` values on Primar
 
 A lane is projected as selected when its lane identity is covered. Automation nodes use the half-open interval rule: a node at `endTick` is not selected.
 
-`AutomationRows` may cache row indices derived from explicit lane identities for layout and painting. That cache is a projection, not canonical selection.
+`CCLanes` and `AutomationCanvas` may map visual lane layout derived from explicit lane identities (`LaneHandle`) for painting. That layout mapping is a projection, not canonical selection.
 
 ### Range bands
 
-The ruler, piano roll, and automation area derive selection bands and edge handles from the same Time Selection ticks. Each surface owns tick-to-pixel conversion and painting.
+The ruler, piano roll, and `AutomationCanvas` derive selection bands and edge handles from the same Time Selection ticks. Each surface owns tick-to-pixel conversion and painting.
 
 ## Canonical selection versus interaction state
 
@@ -300,7 +300,7 @@ Interaction controllers continue to own transient state such as:
 - Drag mode and edge being dragged
 - Rubber-band rectangle
 - Original values captured for a gesture
-- Provisional automation row range
+- Provisional automation lane-selection range
 - Audition membership
 
 The piano roll's note rubber band remains provisional until release; it must not populate Note Selection during the drag. Its temporary selection rings remain a painter projection of gesture state.
@@ -396,7 +396,7 @@ The extraction must preserve behavior currently implemented by these symbols:
 - `SongView::setSong`, `setDocument`, `updateSong`, and `onTracksRemapped`
 - `SongView::isSelected`, `timeSelectionCoversTrack`, and `timeSelectionCoversLane`
 - The `TimeRuler` and `PianoRoll` implementations in `src/ui/songview.cpp`
-- `AutomationPage`, `AutomationRows`, and `AutomationArea` in `src/ui/editordrawer/`
+- `AutomationPage`, `CCLanes`, `VoiceChangeLane`, and `AutomationCanvas` in `src/ui/editordrawer/`
 - `VelocityArea` in `src/ui/editordrawer/`
 - `EventListView` in `src/ui/eventlistview.*`
 

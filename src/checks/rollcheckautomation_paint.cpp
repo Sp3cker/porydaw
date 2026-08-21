@@ -509,9 +509,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                             themes::color(themes::Role::song_view_edit_preview_outline), 24),
                QStringLiteral("sweep preview is missing"));
         cancel();
-        const QPointF rampStart(heldX + 8, heldY);
-        const QPointF rampEnd(nodeX, nodeY);
+        const QPointF rampStart(tickX(48), heldY);
+        const QPointF rampEnd(tickX(kSecondTick), nodeY);
         sendMouse(page.canvas(), QEvent::MouseButtonPress, rampStart, Qt::LeftButton,
+                  Qt::LeftButton, Qt::ShiftModifier);
+        sendMouse(page.canvas(), QEvent::MouseMove, rampStart + QPointF(drag, 0), Qt::NoButton,
                   Qt::LeftButton, Qt::ShiftModifier);
         sendMouse(page.canvas(), QEvent::MouseMove, rampEnd, Qt::NoButton, Qt::LeftButton,
                   Qt::ShiftModifier);
