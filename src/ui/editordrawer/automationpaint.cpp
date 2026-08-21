@@ -9,7 +9,7 @@
 #include <QPen>
 #include <limits>
 
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationhover.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationpencilgesture.h"
@@ -104,7 +104,7 @@ void paintSelectionReticle(QPainter &painter, const TickRange &range,
 
 void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
               const QFont &titleFont, const QFont &captionFont, const QRect &primaryTextBox,
-              const QRect &secondaryTextBox, AutomationArea &area, AutomationPage &page,
+              const QRect &secondaryTextBox, AutomationCanvas &area, AutomationPage &page,
               const AutomationGeometry &geometry, AutomationRows &rows,
               const AutomationHoverState &hoverState,
               const std::optional<ActiveGesture> &activeGesture, bool pencilMode)
@@ -135,8 +135,10 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
         if (rowText.summaryKind != AutomationRows::SummaryKind::Points ||
             rowText.pointCount != pointCount || rowText.minimum != minimum ||
             rowText.maximum != maximum) {
-            rowText.secondary =
-                AutomationArea::tr("%1 points · %2..%3").arg(pointCount).arg(minimum).arg(maximum);
+            rowText.secondary = AutomationCanvas::tr("%1 points · %2..%3")
+                                    .arg(pointCount)
+                                    .arg(minimum)
+                                    .arg(maximum);
             rowText.summaryKind = AutomationRows::SummaryKind::Points;
             rowText.pointCount = pointCount;
             rowText.minimum = minimum;
@@ -146,7 +148,7 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
         painter.drawText(secondaryTextBox, Qt::AlignLeft | Qt::AlignVCenter, rowText.secondary);
     } else if (row.id.kind == EditorAutomationRowKind::ControlChange) {
         if (rowText.summaryKind != AutomationRows::SummaryKind::EmptyControl) {
-            rowText.secondary = AutomationArea::tr("empty · click to add points");
+            rowText.secondary = AutomationCanvas::tr("empty · click to add points");
             rowText.summaryKind = AutomationRows::SummaryKind::EmptyControl;
         }
         painter.setPen(themes::color(themes::Role::song_view_secondary_text));
@@ -159,9 +161,9 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
                           }));
         if (rowText.summaryKind != AutomationRows::SummaryKind::VoiceChanges ||
             rowText.changeCount != changeCount) {
-            rowText.secondary = changeCount ? AutomationArea::tr("%n change(s) · click to edit",
-                                                                 nullptr, changeCount)
-                                            : AutomationArea::tr("no voice set · click to add");
+            rowText.secondary = changeCount ? AutomationCanvas::tr("%n change(s) · click to edit",
+                                                                   nullptr, changeCount)
+                                            : AutomationCanvas::tr("no voice set · click to add");
             rowText.summaryKind = AutomationRows::SummaryKind::VoiceChanges;
             rowText.changeCount = changeCount;
         }
@@ -331,7 +333,7 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
     painter.restore();
 }
 
-void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationArea &area,
+void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationCanvas &area,
                 AutomationPage &page, const AutomationGeometry &geometry,
                 const AutomationRows &rows)
 {
@@ -383,7 +385,7 @@ void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationArea &ar
     paintCurveNodes(painter, ctx, area, page, geometry, rows);
 }
 
-void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationArea &area,
+void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationCanvas &area,
                      AutomationPage &page, const AutomationGeometry &geometry,
                      const AutomationRows &rows)
 {
@@ -455,7 +457,7 @@ layoutVoiceLabels(const QRect &plot, const SongViewModel &model, int track,
         const qreal labelX = displayX(change.tick) + pad;
         QString text = rows.voicePaintTextFor(change.program).label;
         if (text.isEmpty())
-            text = AutomationArea::tr("No voice");
+            text = AutomationCanvas::tr("No voice");
         const qreal maxW = std::max<qreal>(0, plot.right() - labelX);
         if (fm.horizontalAdvance(text) > maxW && maxW > 0)
             text = fm.elidedText(text, Qt::ElideRight, int(std::floor(maxW)));
@@ -490,7 +492,7 @@ void paintVoiceRow(QPainter &painter, const QRect &plot, AutomationPage &page,
         page.voiceContext(static_cast<uint64_t>(std::round(std::max(0.0, contextTick))));
     const QString contextText = context.voiceSlot >= 0 && context.voiceSlot < VOICEGROUP_SIZE
                                     ? rows.voicePaintTextFor(context.voiceSlot).label
-                                    : AutomationArea::tr("No voice");
+                                    : AutomationCanvas::tr("No voice");
     painter.setPen(themes::color(themes::Role::song_view_secondary_text));
     painter.drawText(
         plot.adjusted(layout::space(layout::Space::One), layout::space(layout::Space::Zero),

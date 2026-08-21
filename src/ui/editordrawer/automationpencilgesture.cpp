@@ -63,8 +63,8 @@ bool collinearForward(double previousDeltaAxis, double previousDeltaValue, doubl
 std::optional<AutomationPencilGesture>
 AutomationPencilGesture::start(Target target, int minimumValue, int maximumValue,
                                uint64_t songEndTick, uint64_t documentClockTicks,
-                               std::vector<AutomationLaneEdit::Point> originalPoints,
-                               Sample firstSample, AutomationGridCell firstCell)
+                               std::vector<NodeLaneEdit::Point> originalPoints, Sample firstSample,
+                               AutomationGridCell firstCell)
 {
     if (target.engineTrack < 0 || minimumValue > maximumValue || documentClockTicks == 0 ||
         !finiteSample(firstSample) || !validCell(firstCell, songEndTick))
@@ -74,10 +74,10 @@ AutomationPencilGesture::start(Target target, int minimumValue, int maximumValue
                                    firstCell);
 }
 
-AutomationPencilGesture::AutomationPencilGesture(
-    Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
-    uint64_t documentClockTicks, std::vector<AutomationLaneEdit::Point> originalPoints,
-    Sample firstSample, AutomationGridCell firstCell)
+AutomationPencilGesture::AutomationPencilGesture(Target target, int minimumValue, int maximumValue,
+                                                 uint64_t songEndTick, uint64_t documentClockTicks,
+                                                 std::vector<NodeLaneEdit::Point> originalPoints,
+                                                 Sample firstSample, AutomationGridCell firstCell)
     : m_minimumValue(minimumValue)
     , m_maximumValue(maximumValue)
     , m_songEndTick(songEndTick)
@@ -250,14 +250,14 @@ bool AutomationPencilGesture::validCell(const AutomationGridCell &cell,
 
 void AutomationPencilGesture::rebuildPreview()
 {
-    std::vector<AutomationLaneEdit::Point> points;
+    std::vector<NodeLaneEdit::Point> points;
     points.reserve(m_strokePoints.size() + (m_provisionalFreehandEndpoint ? 1 : 0));
     for (const automation::ValuePoint &point : m_strokePoints)
         points.push_back({point.tick, point.value});
     if (m_provisionalFreehandEndpoint && m_provisionalFreehandEndpoint->tick >= m_tickBegin &&
         m_provisionalFreehandEndpoint->tick <= m_tickEnd) {
         const automation::ValuePoint &endpoint = *m_provisionalFreehandEndpoint;
-        upsertByTick(points, AutomationLaneEdit::Point{endpoint.tick, endpoint.value});
+        upsertByTick(points, NodeLaneEdit::Point{endpoint.tick, endpoint.value});
     }
     m_cachedPreview = m_laneEdit.replaceHeldSpan(m_tickBegin, m_tickEnd, m_songEndTick,
                                                  m_minimumValue, m_maximumValue, std::move(points));

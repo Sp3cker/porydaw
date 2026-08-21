@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <optional>
 
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawersections.h"
 #include "ui/editordrawer/velocityarea.h"
@@ -27,8 +27,8 @@ EditorDrawer::EditorDrawer(SongView &owner, QWidget *parent, EditorViewState vie
     m_velocityArea = new VelocityArea(owner, this);
     m_automationPage->setFocusPolicy(Qt::NoFocus);
     m_velocityArea->installEventFilter(this);
-    if (m_automationPage->area())
-        m_automationPage->area()->installEventFilter(this);
+    if (m_automationPage->canvas())
+        m_automationPage->canvas()->installEventFilter(this);
     m_sections = new DrawerSections(this, m_automationPage, m_velocityArea);
     connect(m_sections, &DrawerSections::geometryChanged, this, &EditorDrawer::arrange);
     connect(m_sections, &DrawerSections::statePublished, this, &EditorDrawer::publishViewState);
@@ -283,8 +283,9 @@ bool EditorDrawer::ownsFocus() const
 
 QWidget *EditorDrawer::canvasFor(EditorDrawerPage page) const
 {
-    return page == EditorDrawerPage::Automations ? static_cast<QWidget *>(m_automationPage->area())
-                                                 : static_cast<QWidget *>(m_velocityArea);
+    return page == EditorDrawerPage::Automations
+               ? static_cast<QWidget *>(m_automationPage->canvas())
+               : static_cast<QWidget *>(m_velocityArea);
 }
 
 QRect EditorDrawer::resolvedHostBounds() const noexcept

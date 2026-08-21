@@ -208,7 +208,7 @@ void checkUndoRestores(const CaseContext &context, const Snapshot &before,
 QString expectedTitle(const CaseContext &context)
 {
     if (context.adapter.kind == AdapterKind::Tempo)
-        return QCoreApplication::translate("AutomationArea", "Tempo (BPM)");
+        return QCoreApplication::translate("AutomationCanvas", "Tempo (BPM)");
     const auto info = m4aClassifyCc(context.session.controller);
     return QStringLiteral("%1 (%2)").arg(QLatin1String(info.display), QLatin1String(info.name));
 }

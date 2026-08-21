@@ -1,4 +1,4 @@
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 
 #include <algorithm>
 #include <cmath>
@@ -18,13 +18,14 @@ Visitor(Ts...) -> Visitor<Ts...>;
 
 } // namespace
 
-bool AutomationArea::pencilPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
-                                    DocLanePoint *point) const
+bool AutomationCanvas::pencilPointHit(const AutomationRow &row, int rowIndex,
+                                      const QPointF &position, DocLanePoint *point) const
 {
     return pencilPointHit(row, rowIndex, position, projection(), point);
 }
-bool AutomationArea::pencilPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
-                                    const AutomationProjection &proj, DocLanePoint *point) const
+bool AutomationCanvas::pencilPointHit(const AutomationRow &row, int rowIndex,
+                                      const QPointF &position, const AutomationProjection &proj,
+                                      DocLanePoint *point) const
 {
     if (!m_page || !m_page->document() || (m_pencilMode && !proj.nodeMarkersVisible()))
         return false;
@@ -37,7 +38,7 @@ bool AutomationArea::pencilPointHit(const AutomationRow &row, int rowIndex, cons
     return true;
 }
 
-bool AutomationArea::commitLaneEdit(int rowIndex, const AutomationLaneEdit::Completion &completion)
+bool AutomationCanvas::commitLaneEdit(int rowIndex, const NodeLaneEdit::Completion &completion)
 {
     if (completion.unchanged || !m_page || !m_page->document() || rowIndex < 0 ||
         rowIndex >= int(m_rowData.rows().size()))
@@ -48,13 +49,17 @@ bool AutomationArea::commitLaneEdit(int rowIndex, const AutomationLaneEdit::Comp
         track != completion.target.engineTrack || controller != completion.target.controller ||
         m_page->document()->revision() != completion.target.expectedRevision)
         return false;
+    std::vector<SongDocument::LanePointValue> lanePoints;
+    lanePoints.reserve(completion.points.size());
+    for (const auto &point : completion.points)
+        lanePoints.push_back({point.tick, point.value});
     m_page->document()->writeLanePoints(track, controller, completion.tickBegin, completion.tickEnd,
-                                        completion.points);
+                                        lanePoints);
     return true;
 }
 
-void AutomationArea::updateActiveGesture(const QPointF &position, Qt::KeyboardModifiers modifiers,
-                                         bool activateSweep)
+void AutomationCanvas::updateActiveGesture(const QPointF &position, Qt::KeyboardModifiers modifiers,
+                                           bool activateSweep)
 {
     if (!m_activeGesture || !m_page)
         return;
@@ -114,7 +119,7 @@ void AutomationArea::updateActiveGesture(const QPointF &position, Qt::KeyboardMo
                                          m_activeGesture);
 }
 
-void AutomationArea::finishActiveGesture(bool fineMode)
+void AutomationCanvas::finishActiveGesture(bool fineMode)
 {
     if (!m_page || !m_activeGesture)
         return;
@@ -192,12 +197,11 @@ void AutomationArea::finishActiveGesture(bool fineMode)
                         return GestureCommit{std::move(completion)};
                     }},
             *m_activeGesture);
-        changed =
-            std::visit(Visitor{[](std::monostate) { return false; },
-                               [this, rowIndex](const AutomationLaneEdit::Completion &completion) {
-                                   return commitLaneEdit(rowIndex, completion);
-                               }},
-                       commit);
+        changed = std::visit(Visitor{[](std::monostate) { return false; },
+                                     [this, rowIndex](const NodeLaneEdit::Completion &completion) {
+                                         return commitLaneEdit(rowIndex, completion);
+                                     }},
+                             commit);
     }
     if (changed)
         m_page->requestRefresh();

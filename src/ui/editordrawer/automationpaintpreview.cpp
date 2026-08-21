@@ -7,7 +7,7 @@
 #include <QPainter>
 #include <QPen>
 
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationhover.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationpencilgesture.h"
@@ -78,7 +78,7 @@ void paintHover(QPainter &painter, const RowPaintParams &ctx, AutomationPage &pa
 }
 
 void paintNodeDragPreview(QPainter &painter, const RowPaintParams &ctx,
-                          const NodeDragGesture &gesture, AutomationArea &area,
+                          const NodeDragGesture &gesture, AutomationCanvas &area,
                           AutomationPage &page, const AutomationGeometry &geometry,
                           const AutomationHoverState &hoverState)
 {
@@ -170,7 +170,7 @@ void paintPencilPreview(QPainter &painter, const RowPaintParams &ctx, const Penc
     const QRect &plot = ctx.plot;
     const std::vector<LanePoint> &points = ctx.points;
     const QColor &color = ctx.color;
-    const AutomationLaneEdit::Completion &preview = gesture.stroke.preview();
+    const NodeLaneEdit::Completion &preview = gesture.stroke.preview();
     const auto valueY = [&](int value) { return qRound(proj.pointY(row, rowIndex, value)); };
     const qreal dpr = painter.device()->devicePixelRatioF();
     const auto tickX = [&](uint64_t tick) { return page.displayX(tick, geometry.plotOrigin, dpr); };

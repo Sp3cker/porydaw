@@ -20,7 +20,7 @@ namespace songview {
 class EditorSelectionModel;
 }
 
-class AutomationArea;
+class AutomationCanvas;
 class AutomationPage;
 class QFont;
 class QMouseEvent;
@@ -54,10 +54,11 @@ class TempoLane final : public NodeLane
     void clearHover();
     bool deleteTimeSelection();
 
-    bool mousePress(AutomationArea &area, QMouseEvent *event, const AutomationGeometry &geometry);
-    bool mouseMove(AutomationArea &area, QMouseEvent *event, const AutomationGeometry &geometry);
-    bool mouseRelease(AutomationArea &area, QMouseEvent *event, const AutomationGeometry &geometry);
-    bool mouseDoubleClick(AutomationArea &area, QMouseEvent *event,
+    bool mousePress(AutomationCanvas &area, QMouseEvent *event, const AutomationGeometry &geometry);
+    bool mouseMove(AutomationCanvas &area, QMouseEvent *event, const AutomationGeometry &geometry);
+    bool mouseRelease(AutomationCanvas &area, QMouseEvent *event,
+                      const AutomationGeometry &geometry);
+    bool mouseDoubleClick(AutomationCanvas &area, QMouseEvent *event,
                           const AutomationGeometry &geometry);
 
     void paint(QPainter &painter, const AutomationGeometry &geometry, const QRect &labelGutter,
@@ -85,15 +86,16 @@ class TempoLane final : public NodeLane
                                                    const AutomationProjection &projection,
                                                    const AutomationGeometry &geometry,
                                                    qreal devicePixelRatio) const;
-    void updateActiveGesture(AutomationArea &area, const QPointF &position,
+    void updateActiveGesture(AutomationCanvas &area, const QPointF &position,
                              Qt::KeyboardModifiers modifiers, const AutomationGeometry &geometry,
                              bool activateSweep);
     void finishActiveGesture(bool fine, const AutomationGeometry &geometry);
     bool pointInTimeSelection(uint64_t tick) const;
-    bool promptBpm(AutomationArea &area, int currentBpm, int *bpm) const;
+    bool promptBpm(AutomationCanvas &area, int currentBpm, int *bpm) const;
     void applyEdit(const TempoEdit &edit) const;
-    void showTempoMenu(AutomationArea &area, const QPoint &globalPosition);
-    void showPointMenu(AutomationArea &area, std::size_t pointIndex, const QPoint &globalPosition);
+    void showTempoMenu(AutomationCanvas &area, const QPoint &globalPosition);
+    void showPointMenu(AutomationCanvas &area, std::size_t pointIndex,
+                       const QPoint &globalPosition);
     void showTimeSelectionMenu(const QPoint &globalPosition) const;
     void publishTimeSelection(uint64_t first, uint64_t last) const;
     QString bpmText(uint32_t microsecondsPerQuarterNote) const;

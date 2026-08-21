@@ -107,14 +107,14 @@ void TempoLane::paint(QPainter &painter, const AutomationGeometry &geometry,
     painter.setFont(m_expanded ? titleFont : captionFont);
     painter.setPen(themes::color(themes::Role::song_view_primary_text));
     painter.drawText(textBounds, Qt::AlignLeft | Qt::AlignVCenter,
-                     QCoreApplication::translate("AutomationArea", "Tempo (BPM)"));
+                     QCoreApplication::translate("AutomationCanvas", "Tempo (BPM)"));
     if (m_expanded) {
         const QRect summaryBounds(textBounds.x(), strip.top() + strip.height(), textBounds.width(),
                                   strip.height());
         painter.setFont(captionFont);
         painter.setPen(themes::color(themes::Role::song_view_secondary_text));
         painter.drawText(summaryBounds, Qt::AlignLeft | Qt::AlignVCenter,
-                         QCoreApplication::translate("AutomationArea", "%n point(s)", nullptr,
+                         QCoreApplication::translate("AutomationCanvas", "%n point(s)", nullptr,
                                                      int(points.size())));
     }
     painter.restore();

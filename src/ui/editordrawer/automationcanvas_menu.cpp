@@ -1,4 +1,4 @@
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 
 #include <algorithm>
 #include <limits>
@@ -29,7 +29,7 @@ QString laneLabel(uint8_t controller)
 
 } // namespace
 
-void AutomationArea::showAddLaneMenu(const QPoint &globalPosition)
+void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
 {
     if (!m_page)
         return;
@@ -77,7 +77,7 @@ void AutomationArea::showAddLaneMenu(const QPoint &globalPosition)
     }
 }
 
-void AutomationArea::showLaneMenu(const AutomationRow &row, const QPoint &globalPosition)
+void AutomationCanvas::showLaneMenu(const AutomationRow &row, const QPoint &globalPosition)
 {
     const bool empty = m_rowData.pointsFor(row, projection()).empty();
     QMenu menu;
@@ -129,21 +129,25 @@ void AutomationArea::showLaneMenu(const AutomationRow &row, const QPoint &global
         m_page->announce(tr("Copied the %1 lane (%n point(s))", nullptr, int(points.size()))
                              .arg(m_rowData.titleFor(row)));
     } else if (chosen == paste) {
-        std::vector<SongDocument::LanePointValue> replacementPoints;
+        std::vector<NodeLaneEdit::Point> replacementPoints;
         replacementPoints.reserve(m_clipboard.size());
         const int minimum = CoreTimeDefaults::laneValueMinimum(controller);
         const int maximum = CoreTimeDefaults::laneValueMaximum(controller);
         for (const auto &point : m_clipboard)
             replacementPoints.push_back({point.tick, std::clamp(point.value, minimum, maximum)});
         auto completion =
-            AutomationLaneEdit({track, controller, document->revision()}, laneEditPoints(points))
+            NodeLaneEdit({track, controller, document->revision()}, laneEditPoints(points))
                 .replacePointRange(0, std::numeric_limits<uint64_t>::max(),
                                    std::move(replacementPoints));
         if (!completion.unchanged) {
             SongDocument::RangeEdit edit;
             edit.removePoints = points;
+            std::vector<SongDocument::LanePointValue> lanePoints;
+            lanePoints.reserve(completion.points.size());
+            for (const auto &point : completion.points)
+                lanePoints.push_back({point.tick, point.value});
             SongDocument::RangeEdit::LaneWrite replacement{track, controller,
-                                                           std::move(completion.points)};
+                                                           std::move(lanePoints)};
             edit.addPoints.push_back(std::move(replacement));
             document->applyRangeEdit(tr("paste lane"), edit);
             changed = true;
@@ -177,7 +181,7 @@ void AutomationArea::showLaneMenu(const AutomationRow &row, const QPoint &global
         m_page->requestRefresh();
 }
 
-void AutomationArea::showVoiceMenu(const AutomationRow &row, const QPoint &globalPosition)
+void AutomationCanvas::showVoiceMenu(const AutomationRow &row, const QPoint &globalPosition)
 {
     Q_UNUSED(row);
     if (!m_page || !m_page->document())

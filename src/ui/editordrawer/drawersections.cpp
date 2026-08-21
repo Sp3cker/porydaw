@@ -12,7 +12,7 @@
 #include <cmath>
 #include <optional>
 
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/velocityarea.h"
 #include "ui/layout.h"
@@ -314,7 +314,7 @@ void DrawerSections::focusActivePage()
 {
     const auto canvasFor = [this](EditorDrawerPage page) {
         return page == EditorDrawerPage::Velocity ? static_cast<QWidget *>(m_velocity)
-                                                  : static_cast<QWidget *>(m_automation->area());
+                                                  : static_cast<QWidget *>(m_automation->canvas());
     };
     QWidget *target = canvasFor(m_activePage);
     if (!target || !target->isVisible()) {

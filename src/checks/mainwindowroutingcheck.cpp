@@ -29,7 +29,7 @@
 #include "core/smf.h"
 #include "mainwindow.h"
 #include "project/sidecar.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea.h"
 #include "ui/layout.h"
@@ -165,7 +165,7 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
               (focusAfterClose == tabB->view || tabB->view->isAncestorOf(focusAfterClose)),
           "closing a focus-owned drawer did not return focus to active content");
 
-    auto *automationSurface = descendant<AutomationArea>(*tabB->view);
+    auto *automationSurface = descendant<AutomationCanvas>(*tabB->view);
     auto *velocitySurface = descendant<VelocityArea>(*tabB->view);
     check(automationSurface && velocitySurface,
           "drawer shortcut focus check could not find both editor surfaces");
@@ -373,7 +373,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
         view->setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
         view->setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
         QCoreApplication::processEvents();
-        auto *automation = descendant<AutomationArea>(*view);
+        auto *automation = descendant<AutomationCanvas>(*view);
         auto *velocity = descendant<VelocityArea>(*view);
         auto *drawer = descendant<EditorDrawer>(*view);
         check(automation && velocity && drawer,

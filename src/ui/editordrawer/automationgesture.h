@@ -12,10 +12,11 @@
 #include <QPoint>
 #include <QPointF>
 
-#include "ui/editordrawer/automationlaneedit.h"
+#include "core/songdocument.h"
 #include "ui/editordrawer/automationpencilgesture.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/linearramp.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/songviewmodel.h"
 
 // Automation gestures — page-free domain for the automation drawer.
@@ -92,7 +93,7 @@ struct NodeDoubleClickGuard {
     bool consume() noexcept { return std::exchange(pending, false); }
 };
 
-using GestureCommit = std::variant<std::monostate, AutomationLaneEdit::Completion>;
+using GestureCommit = std::variant<std::monostate, NodeLaneEdit::Completion>;
 
 struct NodeDragGesture {
     int row = -1;
@@ -134,9 +135,9 @@ struct SweepGesture {
     template <typename NextGridTick>
     std::vector<ValuePoint> finishedPoints(bool fineGrid, NextGridTick &&nextGridTick) const;
     template <typename NextGridTick>
-    AutomationLaneEdit::Completion finish(int track, uint8_t controller, uint64_t revision,
-                                          const std::vector<DocLanePoint> &existing, bool fineGrid,
-                                          NextGridTick &&nextGridTick) const;
+    NodeLaneEdit::Completion finish(int track, uint8_t controller, uint64_t revision,
+                                    const std::vector<DocLanePoint> &existing, bool fineGrid,
+                                    NextGridTick &&nextGridTick) const;
 };
 
 struct PencilGesture {
@@ -149,7 +150,7 @@ struct PencilGesture {
     bool update(const QPointF &position, bool freehand, AxisLock lock,
                 const AutomationProjection &proj, const AutomationRow &row,
                 int verticalSlopDistance);
-    AutomationLaneEdit::Completion finish() &&;
+    NodeLaneEdit::Completion finish() &&;
 };
 
 struct BandGesture {
@@ -173,7 +174,7 @@ struct BandGesture {
 
 using ActiveGesture = std::variant<NodeDragGesture, SweepGesture, PencilGesture>;
 
-// Shared helpers — moved from AutomationArea (Feature Envy).
+// Shared helpers — moved from AutomationCanvas (Feature Envy).
 AxisLock resolveAxisLock(AxisLock current, bool shiftHeld, const QPointF &origin,
                          const QPointF &position, int activationDistance) noexcept;
 void applyAxisLock(AxisLock lock, const ValuePoint &original, ValuePoint &current) noexcept;
@@ -309,24 +310,23 @@ std::vector<ValuePoint> SweepGesture::finishedPoints(bool fineGrid,
 }
 
 template <typename NextGridTick>
-AutomationLaneEdit::Completion
-SweepGesture::finish(int track, uint8_t controller, uint64_t revision,
-                     const std::vector<DocLanePoint> &existing, bool fineGrid,
-                     NextGridTick &&nextGridTick) const
+NodeLaneEdit::Completion SweepGesture::finish(int track, uint8_t controller, uint64_t revision,
+                                              const std::vector<DocLanePoint> &existing,
+                                              bool fineGrid, NextGridTick &&nextGridTick) const
 {
     const std::vector<ValuePoint> result =
         finishedPoints(fineGrid, std::forward<NextGridTick>(nextGridTick));
     if (result.empty())
         return {};
-    std::vector<AutomationLaneEdit::Point> lanePoints;
+    std::vector<NodeLaneEdit::Point> lanePoints;
     lanePoints.reserve(result.size());
     for (const ValuePoint &point : result)
         lanePoints.push_back({point.tick, point.value});
-    std::vector<AutomationLaneEdit::Point> existingEdit;
+    std::vector<NodeLaneEdit::Point> existingEdit;
     existingEdit.reserve(existing.size());
     for (const DocLanePoint &point : existing)
         existingEdit.push_back({point.tick, point.value});
-    const AutomationLaneEdit laneEdit({track, controller, revision}, std::move(existingEdit));
+    const NodeLaneEdit laneEdit({track, controller, revision}, std::move(existingEdit));
     return laneEdit.replacePointRange(result.front().tick, result.back().tick,
                                       std::move(lanePoints));
 }

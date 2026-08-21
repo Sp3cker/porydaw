@@ -19,7 +19,7 @@ extern "C" {
 }
 
 class QAction;
-class AutomationArea;
+class AutomationCanvas;
 class AutomationPage;
 class QImage;
 class MidiTimeline;
@@ -60,8 +60,8 @@ class AutomationGestureCheckRig final
     const SongView &view() const noexcept;
     AutomationPage &page() noexcept;
     const AutomationPage &page() const noexcept;
-    AutomationArea &area() noexcept;
-    const AutomationArea &area() const noexcept;
+    AutomationCanvas &canvas() noexcept;
+    const AutomationCanvas &canvas() const noexcept;
     QAction *pencilModeAction() const noexcept;
 
     AutomationGeometry geometry() const;

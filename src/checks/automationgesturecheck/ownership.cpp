@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "rig.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/songview.h"
 
 void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
@@ -41,12 +41,12 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
     if (lfoIndex >= 0) {
         const auto projection = rig.projection();
         const auto lfoPoint = rig.pointAt(rig.lfo, 24, 64);
-        const auto &rows = rig.area().rows();
+        const auto &rows = rig.canvas().rows();
         const QPointF boundary(lfoPoint.position.x(),
                                projection.rowTop(lfoIndex) + projection.rowHeight(rows[lfoIndex]));
         rig.mouseMove(boundary, Qt::NoButton);
         rig.pump();
-        check(rig.area().cursor().shape() == Qt::SplitVCursor,
+        check(rig.canvas().cursor().shape() == Qt::SplitVCursor,
               QStringLiteral("Pencil row boundary did not retain resize cursor precedence"));
     }
 

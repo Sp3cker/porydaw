@@ -1,7 +1,7 @@
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "project/decompproject.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea.h"
@@ -76,11 +76,11 @@ VelocityArea *velocityArea(SongView &view)
     return drawer ? drawer->velocityArea() : nullptr;
 }
 
-AutomationArea *automationArea(SongView &view)
+AutomationCanvas *automationCanvas(SongView &view)
 {
     auto *drawer = editorDrawer(view);
     auto *page = drawer ? drawer->automationPage() : nullptr;
-    return page ? page->area() : nullptr;
+    return page ? page->canvas() : nullptr;
 }
 
 songview::PlayheadOverlay *playheadOverlay(SongView &view)
@@ -322,7 +322,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     QCoreApplication::processEvents();
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
-    auto *automation = automationArea(view);
+    auto *automation = automationCanvas(view);
     check(automation != nullptr, "host should construct the automation page");
     if (automation) {
         const int selectedTrack = view.selectionModel().primaryTrack();
@@ -872,7 +872,7 @@ int runHostSeamsCheck()
     live.playback = {12.0, true};
     automation->refreshLiveState(live);
     velocity->refreshLiveState(live);
-    check(!automation->area()->rows().empty() &&
+    check(!automation->canvas()->rows().empty() &&
               velocity->axis().mode() == VelocityAxis::Mode::Intrinsic,
           "concrete pages should refresh live state through their SongView owner");
 

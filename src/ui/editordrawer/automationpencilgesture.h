@@ -5,16 +5,16 @@
 #include <utility>
 #include <vector>
 
-#include "ui/editordrawer/automationlaneedit.h"
 #include "ui/editordrawer/automationprojection.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
 
 // One deferred automation Pencil stroke. The caller maps pointer events and
 // visible grid cells; this gesture owns stroke sampling and traversal.
 class AutomationPencilGesture
 {
   public:
-    using Target = AutomationLaneEdit::Target;
-    using Completion = AutomationLaneEdit::Completion;
+    using Target = NodeLaneEdit::Target;
+    using Completion = NodeLaneEdit::Completion;
 
     struct Sample {
         double rawTick = 0.0;
@@ -26,7 +26,7 @@ class AutomationPencilGesture
     // Edit snap cells are produced by AutomationProjection.
     static std::optional<AutomationPencilGesture>
     start(Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
-          uint64_t documentClockTicks, std::vector<AutomationLaneEdit::Point> originalPoints,
+          uint64_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
           Sample firstSample, AutomationGridCell firstCell);
 
     bool applySnappedSegment(Sample sample, const std::vector<AutomationGridCell> &cells);
@@ -39,8 +39,8 @@ class AutomationPencilGesture
   private:
     AutomationPencilGesture(Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
                             uint64_t documentClockTicks,
-                            std::vector<AutomationLaneEdit::Point> originalPoints,
-                            Sample firstSample, AutomationGridCell firstCell);
+                            std::vector<NodeLaneEdit::Point> originalPoints, Sample firstSample,
+                            AutomationGridCell firstCell);
 
     static bool lessPointTick(const automation::ValuePoint &left, uint64_t tick) noexcept;
     static bool validCell(const AutomationGridCell &cell, uint64_t songEndTick) noexcept;
@@ -54,7 +54,7 @@ class AutomationPencilGesture
     uint64_t m_songEndTick = 0;
     uint64_t m_documentClockTicks = 0;
     Sample m_previous;
-    AutomationLaneEdit m_laneEdit;
+    NodeLaneEdit m_laneEdit;
     std::vector<automation::ValuePoint> m_strokePoints;
     AutomationGridCell m_initialCell;
     automation::ValuePoint m_initialPoint{};

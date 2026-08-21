@@ -10,7 +10,7 @@
 #include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationprojection.h"
 
-class AutomationArea;
+class AutomationCanvas;
 struct AutomationHoverState;
 class AutomationPage;
 class PencilGesture;
@@ -55,7 +55,7 @@ void paintSelectionReticle(QPainter &painter, const TickRange &range,
 
 void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
               const QFont &titleFont, const QFont &captionFont, const QRect &primaryTextBox,
-              const QRect &secondaryTextBox, AutomationArea &area, AutomationPage &page,
+              const QRect &secondaryTextBox, AutomationCanvas &area, AutomationPage &page,
               const AutomationGeometry &geometry, AutomationRows &rows,
               const AutomationHoverState &hoverState,
               const std::optional<ActiveGesture> &activeGesture, bool pencilMode);
@@ -65,7 +65,7 @@ void paintHover(QPainter &painter, const RowPaintParams &ctx, AutomationPage &pa
                 const AutomationHoverState &hoverState, bool pencilMode);
 
 void paintNodeDragPreview(QPainter &painter, const RowPaintParams &ctx,
-                          const NodeDragGesture &gesture, AutomationArea &area,
+                          const NodeDragGesture &gesture, AutomationCanvas &area,
                           AutomationPage &page, const AutomationGeometry &geometry,
                           const AutomationHoverState &hoverState);
 
@@ -73,11 +73,11 @@ void paintPencilPreview(QPainter &painter, const RowPaintParams &ctx, const Penc
                         AutomationPage &page, const AutomationGeometry &geometry,
                         const AutomationHoverState &hoverState);
 
-void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationArea &area,
+void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationCanvas &area,
                 AutomationPage &page, const AutomationGeometry &geometry,
                 const AutomationRows &rows);
 
-void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationArea &area,
+void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationCanvas &area,
                      AutomationPage &page, const AutomationGeometry &geometry,
                      const AutomationRows &rows);
 
