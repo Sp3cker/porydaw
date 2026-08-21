@@ -364,6 +364,8 @@ target_include_directories(porydaw_app PUBLIC
 target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
+target_precompile_headers(porydaw_app PRIVATE
+    "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 if(WIN32)
     target_sources(porydaw_app PRIVATE src/ui/playheadrenderer_dcomp.cpp)
     target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_DIRECT_PLAYHEAD)
@@ -471,6 +473,8 @@ if(PORYDAW_BUILD_CHECKS)
         )
     endif()
     target_link_libraries(porydaw_checks PRIVATE porydaw_app)
+    target_precompile_headers(porydaw_checks PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
     add_dependencies(porydaw_checks mid2agb)
 endif()
 qt_add_resources(porydaw "app_icon"
