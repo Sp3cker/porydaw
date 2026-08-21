@@ -7,7 +7,7 @@
 #include <QFontMetrics>
 #include <QRegion>
 
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationrows.h"
 #include "ui/layout.h"
@@ -70,7 +70,7 @@ bool AutomationHoverState::hoverValueFor(const AutomationRows &rows,
     return true;
 }
 
-QString AutomationHoverState::hoverTextFor(const AutomationArea &area, const AutomationPage &page,
+QString AutomationHoverState::hoverTextFor(const AutomationCanvas &area, const AutomationPage &page,
                                            const AutomationGeometry &geometry,
                                            const AutomationRows &rows,
                                            const AutomationProjection &projection,
@@ -103,7 +103,7 @@ QString AutomationHoverState::hoverTextFor(const AutomationArea &area, const Aut
 }
 
 const QString &AutomationHoverState::hoverTextCached(
-    const AutomationArea &area, const AutomationPage &page, const AutomationGeometry &geometry,
+    const AutomationCanvas &area, const AutomationPage &page, const AutomationGeometry &geometry,
     const AutomationRows &rows, const AutomationProjection &projection, int rowIndex, double tick,
     qreal x, bool pencilMode) const
 {
@@ -122,7 +122,7 @@ const QString &AutomationHoverState::hoverTextCached(
     return hoverText;
 }
 
-QRect AutomationHoverState::hoverValueRect(const AutomationArea &area, const AutomationPage &page,
+QRect AutomationHoverState::hoverValueRect(const AutomationCanvas &area, const AutomationPage &page,
                                            const AutomationGeometry &geometry,
                                            const AutomationRows &rows,
                                            const AutomationProjection &projection,
@@ -154,7 +154,8 @@ QRect AutomationHoverState::hoverValueRect(const AutomationArea &area, const Aut
     return {textX, textY, textWidth, textHeight};
 }
 
-QRect AutomationHoverState::hoverPaintBounds(const AutomationArea &area, const AutomationPage *page,
+QRect AutomationHoverState::hoverPaintBounds(const AutomationCanvas &area,
+                                             const AutomationPage *page,
                                              const AutomationGeometry &geometry,
                                              const AutomationRows &rows,
                                              const AutomationProjection &projection, int rowIndex,
@@ -237,7 +238,7 @@ AutomationHoverState::clampedValueLabel(qreal x, int y, const QRect &plot, const
 }
 
 void AutomationHoverState::updateHoverValueLabel(
-    const AutomationArea &area, const AutomationPage *page, const AutomationGeometry &geometry,
+    const AutomationCanvas &area, const AutomationPage *page, const AutomationGeometry &geometry,
     const AutomationRows &rows, const AutomationProjection &projection, bool pencilMode)
 {
     hoverValueLabel = {};
@@ -290,7 +291,7 @@ void AutomationHoverState::updateHoverValueLabel(
 }
 
 void AutomationHoverState::updatePreviewValueLabel(
-    const AutomationArea &area, const AutomationPage *page, const AutomationGeometry &geometry,
+    const AutomationCanvas &area, const AutomationPage *page, const AutomationGeometry &geometry,
     const AutomationRows &rows, const AutomationProjection &projection,
     const std::optional<ActiveGesture> &activeGesture)
 {
@@ -348,7 +349,7 @@ void AutomationHoverState::updatePreviewValueLabel(
                *activeGesture);
 }
 
-void AutomationHoverState::updateHover(AutomationArea &area, AutomationPage &page,
+void AutomationHoverState::updateHover(AutomationCanvas &area, AutomationPage &page,
                                        const AutomationGeometry &geometry,
                                        const AutomationRows &rows,
                                        const AutomationProjection &projection, qreal x, int y,
@@ -386,7 +387,7 @@ void AutomationHoverState::updateHover(AutomationArea &area, AutomationPage &pag
 }
 
 void AutomationHoverState::setContextPointHighlight(
-    AutomationArea &area, const AutomationPage *page, const AutomationGeometry &geometry,
+    AutomationCanvas &area, const AutomationPage *page, const AutomationGeometry &geometry,
     const AutomationRows &rows, const AutomationProjection &projection, int rowIndex,
     const QPointF &position, const DocLanePoint &point, bool pencilMode)
 {
@@ -405,7 +406,7 @@ void AutomationHoverState::setContextPointHighlight(
         area.invalidateContent(dirty);
 }
 
-void AutomationHoverState::clearHover(AutomationArea &area)
+void AutomationHoverState::clearHover(AutomationCanvas &area)
 {
     if (hover.highlightLocked)
         return;

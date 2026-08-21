@@ -1,7 +1,7 @@
 #include "domains.h"
 
 #include "rig.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationhover.h"
 #include "ui/songview.h"
 
@@ -19,7 +19,7 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
               finalCell.tickEnd == timeline->lengthTicks,
           QStringLiteral("Pencil snap grid did not retain the final partial timeline cell"));
 
-    const auto &rows = rig.area().rows();
+    const auto &rows = rig.canvas().rows();
     const auto checkSupportedRange = [&](const AutomationGestureCheckRig::Lane &lane,
                                          const QString &name) {
         const int index = rig.rowIndex(lane);

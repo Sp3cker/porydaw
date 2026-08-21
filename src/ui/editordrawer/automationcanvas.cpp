@@ -1,4 +1,4 @@
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationhover.h"
 #include "ui/editordrawer/automationpaint.h"
 #include "ui/editordrawer/automationrows.h"
@@ -24,7 +24,7 @@
 #include "ui/theme/trackidentitycolors.h"
 #include "ui/typography.h"
 
-void AutomationArea::refreshGeometry()
+void AutomationCanvas::refreshGeometry()
 {
     m_geometry = AutomationGeometry::resolve();
     const int leftScrollbarGutter =
@@ -44,7 +44,7 @@ void AutomationArea::refreshGeometry()
     update();
 }
 
-void AutomationArea::contentGeometryChanged()
+void AutomationCanvas::contentGeometryChanged()
 {
     refreshGeometry();
     m_hoverState.updateHoverValueLabel(*this, m_page, m_geometry, m_rowData, projection(),
@@ -53,7 +53,7 @@ void AutomationArea::contentGeometryChanged()
                                          m_activeGesture);
 }
 
-QFont AutomationArea::captionLabelFont() const
+QFont AutomationCanvas::captionLabelFont() const
 {
     QFont caption = typography::caption(font());
     caption.setStyleName(QStringLiteral("Regular"));
@@ -61,7 +61,7 @@ QFont AutomationArea::captionLabelFont() const
     return caption;
 }
 
-AutomationArea::AutomationArea(AutomationPage *page, QScrollArea *scroll)
+AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
     : songview::TimelineSurface(nullptr)
     , m_geometry(AutomationGeometry::resolve())
     , m_page(page)
@@ -69,25 +69,25 @@ AutomationArea::AutomationArea(AutomationPage *page, QScrollArea *scroll)
     , m_rowData(page)
     , m_tempoLane(page)
 {
-    setObjectName(QStringLiteral("automationArea"));
+    setObjectName(QStringLiteral("automationCanvas"));
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
     setMinimumHeight(m_tempoLane.totalHeight(m_geometry) + m_geometry.rowDefaultHeight);
 }
-AutomationProjection AutomationArea::projection() const
+AutomationProjection AutomationCanvas::projection() const
 {
     return AutomationProjection(m_geometry, m_rowData.rows(), m_page,
                                 m_tempoLane.totalHeight(m_geometry));
 }
 
-void AutomationArea::invalidateContent()
+void AutomationCanvas::invalidateContent()
 {
     m_rowData.syncTimeSelection();
     m_hoverState.updateHoverValueLabel(*this, m_page, m_geometry, m_rowData, projection(),
                                        m_pencilMode);
     songview::TimelineSurface::invalidateContent();
 }
-bool AutomationArea::bandPreviewContains(int rowIndex, uint64_t tick) const noexcept
+bool AutomationCanvas::bandPreviewContains(int rowIndex, uint64_t tick) const noexcept
 {
     if (!m_band.active)
         return false;
@@ -97,7 +97,7 @@ bool AutomationArea::bandPreviewContains(int rowIndex, uint64_t tick) const noex
         return false;
     return bandPreviewContainsRow(rowIndex);
 }
-bool AutomationArea::bandPreviewContainsRow(int rowIndex) const noexcept
+bool AutomationCanvas::bandPreviewContainsRow(int rowIndex) const noexcept
 {
     if (!m_band.active)
         return false;
@@ -105,7 +105,7 @@ bool AutomationArea::bandPreviewContainsRow(int rowIndex) const noexcept
     const int lastRow = std::max(m_bandRightRow, m_bandEndRow);
     return rowIndex >= firstRow && rowIndex <= lastRow;
 }
-void AutomationArea::setPencilMode(bool enabled)
+void AutomationCanvas::setPencilMode(bool enabled)
 {
     if (!m_activeGesture)
         m_hoverState.clearHover(*this);
@@ -122,12 +122,12 @@ void AutomationArea::setPencilMode(bool enabled)
         m_page->announce(enabled ? tr("Pencil mode on") : tr("Pencil mode off"));
 }
 
-bool AutomationArea::isPanning() const noexcept
+bool AutomationCanvas::isPanning() const noexcept
 {
     return m_pan.active;
 }
 
-const QCursor &AutomationArea::pencilCursor()
+const QCursor &AutomationCanvas::pencilCursor()
 {
     const qreal dpr = devicePixelRatioF();
     if (m_pencilCursorDpr != dpr) {
@@ -142,7 +142,7 @@ const QCursor &AutomationArea::pencilCursor()
     return m_pencilCursor;
 }
 
-bool AutomationArea::event(QEvent *event)
+bool AutomationCanvas::event(QEvent *event)
 {
     if (event->type() == QEvent::FontChange) {
         m_hoverState.valueLabelFontValid = false;
@@ -159,7 +159,7 @@ bool AutomationArea::event(QEvent *event)
         cancelInteraction();
     return songview::TimelineSurface::event(event);
 }
-void AutomationArea::rebuildRows()
+void AutomationCanvas::rebuildRows()
 {
     cancelInteraction();
     m_hoverState.hoverText.clear();
@@ -172,12 +172,12 @@ void AutomationArea::rebuildRows()
     invalidateContent();
 }
 
-void AutomationArea::updateTempoLayout()
+void AutomationCanvas::updateTempoLayout()
 {
     refreshGeometry();
 }
 
-void AutomationArea::cancelInteraction()
+void AutomationCanvas::cancelInteraction()
 {
     const bool wasActive =
         m_pan.active || m_resize.row >= 0 || m_band.pending || m_activeGesture.has_value();
@@ -202,8 +202,8 @@ void AutomationArea::cancelInteraction()
     invalidateContent();
 }
 
-bool AutomationArea::promptPointValue(const AutomationRow &row, uint8_t controller,
-                                      int currentValue, int *storedValue)
+bool AutomationCanvas::promptPointValue(const AutomationRow &row, uint8_t controller,
+                                        int currentValue, int *storedValue)
 {
     int value = currentValue;
     int minimum = CoreTimeDefaults::laneValueMinimum(controller);
@@ -226,8 +226,8 @@ bool AutomationArea::promptPointValue(const AutomationRow &row, uint8_t controll
     return true;
 }
 
-bool AutomationArea::showPointMenuNear(const AutomationRow &row, int rowIndex,
-                                       const QPoint &position, const QPoint &globalPosition)
+bool AutomationCanvas::showPointMenuNear(const AutomationRow &row, int rowIndex,
+                                         const QPoint &position, const QPoint &globalPosition)
 {
     if (!m_page || !m_page->document() || row.id.kind == EditorAutomationRowKind::Voice)
         return false;
@@ -289,7 +289,7 @@ bool AutomationArea::showPointMenuNear(const AutomationRow &row, int rowIndex,
     return true;
 }
 
-void AutomationArea::setGestureActive(bool active)
+void AutomationCanvas::setGestureActive(bool active)
 {
     if (m_page) {
         if (active)
@@ -298,7 +298,7 @@ void AutomationArea::setGestureActive(bool active)
     }
 }
 
-void AutomationArea::updateAxisLockCursor(AxisLock lock)
+void AutomationCanvas::updateAxisLockCursor(AxisLock lock)
 {
     if (lock == AxisLock::Time)
         setCursor(Qt::SizeHorCursor);
@@ -309,8 +309,8 @@ void AutomationArea::updateAxisLockCursor(AxisLock lock)
     else
         setCursor(Qt::ArrowCursor);
 }
-ValuePoint AutomationArea::mappedForRow(int row, QPointF pos, bool fine, bool snapValue,
-                                        const AutomationProjection &proj) const
+ValuePoint AutomationCanvas::mappedForRow(int row, QPointF pos, bool fine, bool snapValue,
+                                          const AutomationProjection &proj) const
 {
     const uint64_t tick = m_page->snapTick(proj.rawTickAt(pos.x()), fine);
     ValuePoint out;
@@ -319,7 +319,7 @@ ValuePoint AutomationArea::mappedForRow(int row, QPointF pos, bool fine, bool sn
     return out;
 }
 
-void AutomationArea::showTimeSelectionMenu(const QPoint &globalPosition)
+void AutomationCanvas::showTimeSelectionMenu(const QPoint &globalPosition)
 {
     const auto &selection = m_rowData.timeSelection();
     if (selection.active()) {
@@ -337,7 +337,7 @@ void AutomationArea::showTimeSelectionMenu(const QPoint &globalPosition)
         invalidateContent();
 }
 
-void AutomationArea::paintContent(QPainter &painter)
+void AutomationCanvas::paintContent(QPainter &painter)
 {
     painter.fillRect(rect(), themes::color(themes::Role::song_view_piano_roll_background));
     if (!m_page || !m_page->ready() || !m_page->timeline())

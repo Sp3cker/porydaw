@@ -1,4 +1,4 @@
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 
 #include <algorithm>
 #include <cmath>
@@ -15,7 +15,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
 
-void AutomationArea::wheelEvent(QWheelEvent *event)
+void AutomationCanvas::wheelEvent(QWheelEvent *event)
 {
     if (!m_page || !m_page->ready())
         return;
@@ -54,7 +54,7 @@ void AutomationArea::wheelEvent(QWheelEvent *event)
     event->accept();
 }
 
-void AutomationArea::mousePressEvent(QMouseEvent *event)
+void AutomationCanvas::mousePressEvent(QMouseEvent *event)
 {
     m_hoverState.clearHover(*this);
     m_deletedNodeClick.clear();
@@ -206,7 +206,7 @@ void AutomationArea::mousePressEvent(QMouseEvent *event)
     invalidateContent();
 }
 
-void AutomationArea::mouseMoveEvent(QMouseEvent *event)
+void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
 {
     if (m_pan.active) {
         if (!(event->buttons() & Qt::MiddleButton)) {
@@ -274,7 +274,7 @@ void AutomationArea::mouseMoveEvent(QMouseEvent *event)
     updateActiveGesture(event->position(), event->modifiers(), true);
     invalidateContent();
 }
-void AutomationArea::mouseReleaseEvent(QMouseEvent *event)
+void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::MiddleButton && m_pan.active) {
         m_pan.active = false;
@@ -346,7 +346,7 @@ void AutomationArea::mouseReleaseEvent(QMouseEvent *event)
     invalidateContent();
 }
 
-void AutomationArea::mouseDoubleClickEvent(QMouseEvent *event)
+void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if (!m_page || !m_page->document())
         return;
@@ -410,7 +410,7 @@ void AutomationArea::mouseDoubleClickEvent(QMouseEvent *event)
     m_page->requestRefresh();
 }
 
-void AutomationArea::keyPressEvent(QKeyEvent *event)
+void AutomationCanvas::keyPressEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) {
         if (m_tempoLane.interactionActive() || m_band.pending || m_activeGesture) {
@@ -465,7 +465,7 @@ void AutomationArea::keyPressEvent(QKeyEvent *event)
     QWidget::keyPressEvent(event);
 }
 
-void AutomationArea::leaveEvent(QEvent *)
+void AutomationCanvas::leaveEvent(QEvent *)
 {
     m_tempoLane.clearHover();
     m_hoverState.clearHover(*this);

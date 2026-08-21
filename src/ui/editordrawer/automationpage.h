@@ -18,7 +18,7 @@ class QKeyEvent;
 class QWheelEvent;
 class QPainter;
 class QRect;
-class AutomationArea;
+class AutomationCanvas;
 class TempoLane;
 class AutomationRows;
 struct AutomationHoverState;
@@ -34,8 +34,8 @@ class AutomationPage final : public QWidget
     explicit AutomationPage(SongView &owner, QWidget *parent = nullptr);
     ~AutomationPage() override;
 
-    AutomationArea *area() noexcept { return m_area; }
-    const AutomationArea *area() const noexcept { return m_area; }
+    AutomationCanvas *canvas() noexcept { return m_canvas; }
+    const AutomationCanvas *canvas() const noexcept { return m_canvas; }
     bool event(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
     const EditorViewState &automationViewState() const noexcept { return m_viewState; }
@@ -50,7 +50,7 @@ class AutomationPage final : public QWidget
     void setLaneRange(const EditorAutomationRowId &row, uint8_t range);
 
   private:
-    friend class AutomationArea;
+    friend class AutomationCanvas;
     friend class AutomationRows;
     friend class TempoLane;
     friend class AutomationHoverState;
@@ -59,7 +59,7 @@ class AutomationPage final : public QWidget
     friend class AutomationProjection;
     friend void automation::paint::paintRow(QPainter &, const automation::paint::RowPaintParams &,
                                             const QRect &, const QFont &, const QFont &,
-                                            const QRect &, const QRect &, AutomationArea &,
+                                            const QRect &, const QRect &, AutomationCanvas &,
                                             AutomationPage &, const AutomationGeometry &,
                                             AutomationRows &, const AutomationHoverState &,
                                             const std::optional<ActiveGesture> &, bool);
@@ -71,7 +71,7 @@ class AutomationPage final : public QWidget
                                               bool);
     friend void automation::paint::paintNodeDragPreview(QPainter &,
                                                         const automation::paint::RowPaintParams &,
-                                                        const NodeDragGesture &, AutomationArea &,
+                                                        const NodeDragGesture &, AutomationCanvas &,
                                                         AutomationPage &,
                                                         const AutomationGeometry &,
                                                         const AutomationHoverState &);
@@ -81,11 +81,11 @@ class AutomationPage final : public QWidget
                                                       const AutomationGeometry &,
                                                       const AutomationHoverState &);
     friend void automation::paint::paintCurve(QPainter &, const automation::paint::RowPaintParams &,
-                                              AutomationArea &, AutomationPage &,
+                                              AutomationCanvas &, AutomationPage &,
                                               const AutomationGeometry &, const AutomationRows &);
     friend void automation::paint::paintCurveNodes(QPainter &,
                                                    const automation::paint::RowPaintParams &,
-                                                   AutomationArea &, AutomationPage &,
+                                                   AutomationCanvas &, AutomationPage &,
                                                    const AutomationGeometry &,
                                                    const AutomationRows &);
     friend void automation::paint::paintVoiceRow(QPainter &, const QRect &, AutomationPage &,
@@ -141,7 +141,7 @@ class AutomationPage final : public QWidget
     DrawerPageLiveState m_liveState;
     EditorViewState m_viewState;
     ScrollArea *m_scroll = nullptr;
-    AutomationArea *m_area = nullptr;
+    AutomationCanvas *m_canvas = nullptr;
     std::chrono::steady_clock::time_point m_pencilShortcutPressedAt{};
     int m_pencilShortcutKey = 0;
     bool m_pencilShortcutHeld = false;

@@ -17,11 +17,11 @@
 
 #include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationhover.h"
-#include "ui/editordrawer/automationlaneedit.h"
 #include "ui/editordrawer/automationpaint.h"
 #include "ui/editordrawer/automationpencilgesture.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/automationrows.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/editorviewstate.h"
 #include "ui/songviewmodel.h"
@@ -36,13 +36,13 @@ class QWheelEvent;
 class QMouseEvent;
 struct AutoLane;
 
-// AutomationArea is the paint and input surface owned by AutomationPage.
+// AutomationCanvas is the paint and input surface owned by AutomationPage.
 // Temporary gesture state stays local to this canvas; song data and routing
 // are obtained from the page's stable SongView owner.
-class AutomationArea final : public songview::TimelineSurface
+class AutomationCanvas final : public songview::TimelineSurface
 {
   public:
-    explicit AutomationArea(AutomationPage *page, QScrollArea *scroll);
+    explicit AutomationCanvas(AutomationPage *page, QScrollArea *scroll);
     using songview::TimelineSurface::invalidateContent;
     void invalidateContent();
 
@@ -85,7 +85,7 @@ class AutomationArea final : public songview::TimelineSurface
                           int *storedValue);
     bool showPointMenuNear(const AutomationRow &row, int rowIndex, const QPoint &position,
                            const QPoint &globalPosition);
-    bool commitLaneEdit(int rowIndex, const AutomationLaneEdit::Completion &completion);
+    bool commitLaneEdit(int rowIndex, const NodeLaneEdit::Completion &completion);
     bool pencilPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
                         DocLanePoint *point) const;
     bool pencilPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
@@ -97,9 +97,9 @@ class AutomationArea final : public songview::TimelineSurface
     void updateActiveGesture(const QPointF &position, Qt::KeyboardModifiers modifiers,
                              bool activateSweep);
     template <class T>
-    static std::vector<AutomationLaneEdit::Point> laneEditPoints(const std::vector<T> &points)
+    static std::vector<NodeLaneEdit::Point> laneEditPoints(const std::vector<T> &points)
     {
-        std::vector<AutomationLaneEdit::Point> result;
+        std::vector<NodeLaneEdit::Point> result;
         result.reserve(points.size());
         for (const auto &point : points)
             result.push_back({point.tick, point.value});

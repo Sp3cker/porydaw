@@ -14,7 +14,7 @@
 #include "core/miditimeline.h"
 #include "core/timedefaults.h"
 #include "project/decompproject.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/songview.h"
@@ -81,14 +81,14 @@ const AutomationPage &AutomationGestureCheckRig::page() const noexcept
     return *m_page;
 }
 
-AutomationArea &AutomationGestureCheckRig::area() noexcept
+AutomationCanvas &AutomationGestureCheckRig::canvas() noexcept
 {
-    return *m_page->area();
+    return *m_page->canvas();
 }
 
-const AutomationArea &AutomationGestureCheckRig::area() const noexcept
+const AutomationCanvas &AutomationGestureCheckRig::canvas() const noexcept
 {
-    return *m_page->area();
+    return *m_page->canvas();
 }
 
 QAction *AutomationGestureCheckRig::pencilModeAction() const noexcept
@@ -103,19 +103,19 @@ QAction *AutomationGestureCheckRig::pencilModeAction() const noexcept
 AutomationGeometry AutomationGestureCheckRig::geometry() const
 {
     auto result = AutomationGeometry::resolve();
-    result.plotOrigin = area().plotOrigin();
+    result.plotOrigin = canvas().plotOrigin();
     return result;
 }
 
 AutomationProjection AutomationGestureCheckRig::projection() const
 {
     const auto currentGeometry = geometry();
-    return {currentGeometry, area().rows(), m_page, area().contentTopInset()};
+    return {currentGeometry, canvas().rows(), m_page, canvas().contentTopInset()};
 }
 
 int AutomationGestureCheckRig::rowIndex(const Lane &lane) const noexcept
 {
-    const auto &rows = area().rows();
+    const auto &rows = canvas().rows();
     for (int index = 0; index < int(rows.size()); ++index) {
         if (rows[std::size_t(index)].id == lane.row)
             return index;
@@ -129,29 +129,29 @@ AutomationGestureCheckRig::pointAt(const Lane &lane, double tick, int value) con
     const auto proj = projection();
     const int index = rowIndex(lane);
     const QPointF position(
-        m_view->displayX(tick, geometry().plotOrigin, area().devicePixelRatioF()),
-        proj.pointY(area().rows()[std::size_t(index)], index, value));
+        m_view->displayX(tick, geometry().plotOrigin, canvas().devicePixelRatioF()),
+        proj.pointY(canvas().rows()[std::size_t(index)], index, value));
     return {position, proj.pointerMapping(index, position.x(), position.y())};
 }
 
 QPointF AutomationGestureCheckRig::tempoHeaderPoint() const
 {
     const auto currentGeometry = geometry();
-    return {currentGeometry.plotOrigin / 2.0, area().contentTopInset() / 2.0};
+    return {currentGeometry.plotOrigin / 2.0, canvas().contentTopInset() / 2.0};
 }
 
 QPointF AutomationGestureCheckRig::tempoBodyPoint(double tick, int bpm) const
 {
     const auto currentGeometry = geometry();
-    const QRect body(0, 0, area().width(), area().contentTopInset());
-    return {m_view->displayX(tick, currentGeometry.plotOrigin, area().devicePixelRatioF()),
+    const QRect body(0, 0, canvas().width(), canvas().contentTopInset());
+    return {m_view->displayX(tick, currentGeometry.plotOrigin, canvas().devicePixelRatioF()),
             AutomationProjection::valueY(body, currentGeometry, CoreTimeDefaults::kMinTempoBpm,
                                          CoreTimeDefaults::kMaxTempoBpm, bpm)};
 }
 
 QImage AutomationGestureCheckRig::renderArea()
 {
-    return area().grab().toImage();
+    return canvas().grab().toImage();
 }
 
 AutomationGestureCheckRig::Snapshot AutomationGestureCheckRig::snapshot(int track,
@@ -219,7 +219,7 @@ void AutomationGestureCheckRig::mouseDoubleClick(const QPointF &position,
 void AutomationGestureCheckRig::keyToArea(QEvent::Type type, int key,
                                           Qt::KeyboardModifiers modifiers, bool autoRepeat)
 {
-    sendKey(&area(), type, key, modifiers, autoRepeat);
+    sendKey(&canvas(), type, key, modifiers, autoRepeat);
 }
 
 void AutomationGestureCheckRig::keyToView(QEvent::Type type, int key,
@@ -305,9 +305,9 @@ void AutomationGestureCheckRig::sendMouse(QEvent::Type type, const QPointF &posi
                                           Qt::MouseButton button, Qt::MouseButtons buttons,
                                           Qt::KeyboardModifiers modifiers)
 {
-    QMouseEvent event(type, position, QPointF(area().mapToGlobal(position.toPoint())), button,
+    QMouseEvent event(type, position, QPointF(canvas().mapToGlobal(position.toPoint())), button,
                       buttons, modifiers);
-    QCoreApplication::sendEvent(&area(), &event);
+    QCoreApplication::sendEvent(&canvas(), &event);
 }
 
 void AutomationGestureCheckRig::sendKey(QObject *target, QEvent::Type type, int key,

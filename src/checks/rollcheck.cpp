@@ -3288,7 +3288,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // middle-button pan held in the roll (or the lanes), a playing playhead
     // far past the right edge must not move the view; releasing the button
     // lets the next playhead tick scroll again.
-    auto *lanes = view.findChild<QWidget *>(QStringLiteral("automationArea"));
+    auto *lanes = view.findChild<QWidget *>(QStringLiteral("automationCanvas"));
     if (!lanes)
         fail("automation area not found");
     for (QWidget *panned : {roll, lanes}) {

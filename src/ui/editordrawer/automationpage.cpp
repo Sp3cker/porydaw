@@ -14,7 +14,7 @@
 #include <QWindow>
 
 #include "core/songdocument.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
@@ -106,20 +106,20 @@ AutomationPage::AutomationPage(SongView &owner, QWidget *parent)
     m_scroll->setFocusPolicy(Qt::NoFocus);
     m_scroll->setLayoutDirection(Qt::RightToLeft);
     m_scroll->setMinimumHeight(m_geometry.rowDefaultHeight + m_geometry.addLaneStripHeight);
-    m_area = new AutomationArea(this, m_scroll);
-    m_area->setLayoutDirection(Qt::LeftToRight);
-    m_scroll->setWidget(m_area);
+    m_canvas = new AutomationCanvas(this, m_scroll);
+    m_canvas->setLayoutDirection(Qt::LeftToRight);
+    m_scroll->setWidget(m_canvas);
     m_scroll->updateScrollbarGutter(false);
     m_scroll->syncBackground();
-    if (m_area)
-        m_area->contentGeometryChanged();
+    if (m_canvas)
+        m_canvas->contentGeometryChanged();
     m_pencilModeAction = new QAction(tr("Pencil Mode"), this);
     m_pencilModeAction->setCheckable(true);
     m_pencilModeAction->setShortcutContext(Qt::WindowShortcut);
     keymap::Registry::instance().attach(QStringLiteral("automation.pencil_mode"),
                                         m_pencilModeAction);
     addAction(m_pencilModeAction);
-    connect(m_pencilModeAction, &QAction::toggled, m_area, &AutomationArea::setPencilMode);
+    connect(m_pencilModeAction, &QAction::toggled, m_canvas, &AutomationCanvas::setPencilMode);
     box->addWidget(m_scroll);
     qApp->installEventFilter(this);
 }
@@ -183,7 +183,7 @@ bool AutomationPage::eventFilter(QObject *watched, QEvent *event)
         m_pencilShortcutPriorState = m_pencilModeAction->isChecked();
         m_pencilShortcutGestureStarted = false;
         m_pencilShortcutPressedAt = std::chrono::steady_clock::now();
-        m_area->setPencilMode(!m_pencilShortcutPriorState);
+        m_canvas->setPencilMode(!m_pencilShortcutPriorState);
         return true;
     }
 
@@ -227,7 +227,7 @@ void AutomationPage::finishPencilShortcut(bool forceMomentary)
     m_pencilShortcutKey = 0;
     m_pencilShortcutGestureStarted = false;
     if (momentary)
-        m_area->setPencilMode(priorState);
+        m_canvas->setPencilMode(priorState);
     else
         m_pencilModeAction->setChecked(!priorState);
 }
@@ -279,21 +279,21 @@ void AutomationPage::songChanged()
 void AutomationPage::refreshLiveState(const DrawerPageLiveState &liveState)
 {
     const EditorViewState viewState = m_owner.editorViewState();
-    const bool preservePan = m_area->isPanning() &&
+    const bool preservePan = m_canvas->isPanning() &&
                              m_liveState.documentRevision == liveState.documentRevision &&
                              m_viewState == viewState;
     m_liveState = liveState;
     m_viewState = viewState;
     if (preservePan)
-        m_area->invalidateContent();
+        m_canvas->invalidateContent();
     else
-        m_area->rebuildRows();
+        m_canvas->rebuildRows();
 }
 
 void AutomationPage::cancelInteraction()
 {
-    if (m_area)
-        m_area->cancelInteraction();
+    if (m_canvas)
+        m_canvas->cancelInteraction();
 }
 
 void AutomationPage::documentChanged()
@@ -392,8 +392,8 @@ void AutomationPage::publishViewState()
 
 void AutomationPage::rebuildModel()
 {
-    if (m_area)
-        m_area->rebuildRows();
+    if (m_canvas)
+        m_canvas->rebuildRows();
 }
 
 void AutomationPage::addEmptyLane(int track, uint8_t controller)
@@ -403,7 +403,7 @@ void AutomationPage::addEmptyLane(int track, uint8_t controller)
     if (m_viewState.emptyLanes.insert(row).second) {
         m_viewState.unhideLane(row);
         publishViewState();
-        m_area->rebuildRows();
+        m_canvas->rebuildRows();
     }
 }
 
@@ -413,7 +413,7 @@ void AutomationPage::removeEmptyLane(int track, uint8_t controller)
                                     controller};
     if (m_viewState.emptyLanes.erase(row) != 0) {
         publishViewState();
-        m_area->rebuildRows();
+        m_canvas->rebuildRows();
     }
 }
 
@@ -421,7 +421,7 @@ void AutomationPage::setLaneRange(const EditorAutomationRowId &row, uint8_t rang
 {
     m_viewState.laneRanges[row] = range;
     publishViewState();
-    m_area->invalidateContent();
+    m_canvas->invalidateContent();
 }
 
 void AutomationPage::publishTimeSelection(uint64_t startTick, uint64_t endTick,

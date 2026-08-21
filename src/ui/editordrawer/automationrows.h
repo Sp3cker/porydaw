@@ -22,7 +22,7 @@ extern "C" {
 #include "voicegroup_loader.h"
 }
 
-class AutomationArea;
+class AutomationCanvas;
 class AutomationPage;
 namespace songview {
 class EditorSelectionModel;
@@ -63,7 +63,7 @@ class CCLaneAdapter final : public NodeLane
 };
 
 // Row data and caches for the automation canvas. It owns the stable row
-// snapshot used by painting and input throughout an AutomationArea frame.
+// snapshot used by painting and input throughout an AutomationCanvas frame.
 class AutomationRows final
 {
   public:
@@ -121,7 +121,8 @@ class AutomationRows final
 
     void rebuildRows();
     void syncTimeSelection();
-    void applyHeight(AutomationArea &area, const AutomationGeometry &geometry, int topInset) const;
+    void applyHeight(AutomationCanvas &area, const AutomationGeometry &geometry,
+                     int topInset) const;
     bool clearTimeSelection();
 
     const std::vector<LanePoint> &pointsFor(const AutomationRow &row,

@@ -12,7 +12,7 @@
 #include "core/timedefaults.h"
 
 #include "rig.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
 
@@ -64,7 +64,7 @@ void checkTempoInteractions(AutomationGestureCheckRig &rig, const AutomationGest
     rig.mousePress(rig.tempoHeaderPoint());
     rig.mouseRelease(rig.tempoHeaderPoint());
     rig.pump();
-    const bool tempoExpanded = rig.area().contentTopInset() > rig.geometry().addLaneStripHeight;
+    const bool tempoExpanded = rig.canvas().contentTopInset() > rig.geometry().addLaneStripHeight;
     check(tempoExpanded, QStringLiteral("Tempo header did not expose the expanded body"));
     if (tempoExpanded) {
         seedTempo(tempoFixture);

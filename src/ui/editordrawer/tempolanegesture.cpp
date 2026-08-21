@@ -4,9 +4,9 @@
 #include <cmath>
 
 #include "core/timedefaults.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
-void TempoLane::updateActiveGesture(AutomationArea &area, const QPointF &position,
+void TempoLane::updateActiveGesture(AutomationCanvas &area, const QPointF &position,
                                     Qt::KeyboardModifiers modifiers,
                                     const AutomationGeometry &geometry, bool activateSweep)
 {

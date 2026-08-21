@@ -1,6 +1,6 @@
 #include "core/songdocument.h"
 #include "project/decompproject.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea.h"
@@ -206,7 +206,7 @@ int runRenderingPlayheadCheck(const QString &scratchProject, const QString &song
 
     auto *fixtureDrawer = fixtureView.editorDrawer();
     auto *fixturePage = fixtureDrawer ? fixtureDrawer->automationPage() : nullptr;
-    auto *fixtureBand = fixturePage ? fixturePage->area() : nullptr;
+    auto *fixtureBand = fixturePage ? fixturePage->canvas() : nullptr;
     songview::PlayheadOverlay *fixtureOverlay = nullptr;
     for (QWidget *widget : fixtureView.findChildren<QWidget *>()) {
         if (auto *candidate = dynamic_cast<songview::PlayheadOverlay *>(widget)) {

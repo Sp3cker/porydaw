@@ -304,11 +304,11 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/editordrawer.h
     src/ui/editordrawer/drawersections.cpp
     src/ui/editordrawer/drawersections.h
-    src/ui/editordrawer/automationarea.cpp
-    src/ui/editordrawer/automationarea_gesture.cpp
-    src/ui/editordrawer/automationarea_input.cpp
-    src/ui/editordrawer/automationarea_menu.cpp
-    src/ui/editordrawer/automationarea.h
+    src/ui/editordrawer/automationcanvas.cpp
+    src/ui/editordrawer/automationcanvas_gesture.cpp
+    src/ui/editordrawer/automationcanvas_input.cpp
+    src/ui/editordrawer/automationcanvas_menu.cpp
+    src/ui/editordrawer/automationcanvas.h
     src/ui/editordrawer/automationgesture.cpp
     src/ui/editordrawer/automationgesture.h
     src/ui/editordrawer/automationhover.cpp
@@ -318,8 +318,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationpaint.h
     src/ui/editordrawer/automationrows.cpp
     src/ui/editordrawer/automationrows.h
-    src/ui/editordrawer/automationlaneedit.cpp
-    src/ui/editordrawer/automationlaneedit.h
     src/ui/editordrawer/automationpencilgesture.cpp
     src/ui/editordrawer/automationpencilgesture.h
     src/ui/editordrawer/automationprojection.cpp
@@ -444,7 +442,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automationgesturecheck/stroke.cpp
         src/checks/automationgesturecheck/ownership.cpp
         src/checks/automationgesturecheck/transactions.cpp
-        src/checks/automationgesturecheck/tempo.cpp
+        src/checks/automationgesturecheck/nodelane.cpp
         src/checks/automationgesturecheck/contract.cpp
         src/checks/rollcheckdrawer.cpp
         src/checks/rollcheckpsgvelocity.cpp

@@ -1,7 +1,7 @@
 #include "domains.h"
 
 #include "rig.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/songview.h"
 
 #include <QStringList>
@@ -326,7 +326,7 @@ void checkAutomationPencilStroke(AutomationGestureCheckRig &rig,
     const auto rawPoint = [&](double tick, int value) {
         auto point = rig.pointAt(rig.pan, uint64_t(std::floor(tick)), value);
         point.position.setX(
-            rig.view().displayX(tick, rig.geometry().plotOrigin, rig.area().devicePixelRatioF()));
+            rig.view().displayX(tick, rig.geometry().plotOrigin, rig.canvas().devicePixelRatioF()));
         point.mapped = rig.projection().pointerMapping(rig.rowIndex(rig.pan), point.position.x(),
                                                        point.position.y());
         return point;

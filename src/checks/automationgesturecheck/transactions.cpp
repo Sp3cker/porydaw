@@ -11,7 +11,7 @@
 #include <QRect>
 
 #include "rig.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 
 void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
@@ -58,7 +58,7 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
         rig.documentChanged();
     };
     const auto rowsHaveUniqueIds = [&rig] {
-        const auto &rows = rig.area().rows();
+        const auto &rows = rig.canvas().rows();
         for (auto left = size_t{0}; left < rows.size(); ++left) {
             for (auto right = left + 1; right < rows.size(); ++right) {
                 if (rows[left].id == rows[right].id)
@@ -82,10 +82,10 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
     QImage lfoTitleBefore;
     if (lfoRowBefore >= 0) {
         const auto projection = rig.projection();
-        const auto &rows = rig.area().rows();
+        const auto &rows = rig.canvas().rows();
         lfoTitleBefore =
-            rig.area()
-                .grab(QRect(0, projection.rowTop(lfoRowBefore), rig.area().plotOrigin(),
+            rig.canvas()
+                .grab(QRect(0, projection.rowTop(lfoRowBefore), rig.canvas().plotOrigin(),
                             projection.rowHeight(rows[size_t(lfoRowBefore)])))
                 .toImage();
     }
@@ -95,11 +95,12 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
     QImage lfoTitleAfter;
     if (lfoRowAfter >= 0) {
         const auto projection = rig.projection();
-        const auto &rows = rig.area().rows();
-        lfoTitleAfter = rig.area()
-                            .grab(QRect(0, projection.rowTop(lfoRowAfter), rig.area().plotOrigin(),
-                                        projection.rowHeight(rows[size_t(lfoRowAfter)])))
-                            .toImage();
+        const auto &rows = rig.canvas().rows();
+        lfoTitleAfter =
+            rig.canvas()
+                .grab(QRect(0, projection.rowTop(lfoRowAfter), rig.canvas().plotOrigin(),
+                            projection.rowHeight(rows[size_t(lfoRowAfter)])))
+                .toImage();
     }
     check(lfoRowBefore >= 0 && lfoRowAfter >= 0 && lfoTitleBefore == lfoTitleAfter,
           QStringLiteral("adding CC 11 changed the existing LFO lane title"));
@@ -128,12 +129,12 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
     const auto previewStart = pointInCell(rig.pan, 48, 28);
     const auto previewEnd = nextCellPoint(rig.pan, nextCellPoint(rig.pan, previewStart, 72), 104);
     const auto previewBefore = rig.snapshot(rig.pan.track, rig.pan.controller);
-    const QImage previewImageBefore = rig.area().grab().toImage();
+    const QImage previewImageBefore = rig.canvas().grab().toImage();
     rig.mousePress(previewStart.position);
     rig.mouseMove(previewEnd.position);
     rig.pump();
     const auto previewDuring = rig.snapshot(rig.pan.track, rig.pan.controller);
-    const QImage previewImageDuring = rig.area().grab().toImage();
+    const QImage previewImageDuring = rig.canvas().grab().toImage();
     check(sameSnapshot(previewBefore, previewDuring) && previewImageDuring != previewImageBefore,
           QStringLiteral("Pencil live preview was not visible while preserving SMF, revision, "
                          "Undo, and lane points before release"));

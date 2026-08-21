@@ -11,7 +11,7 @@
 #include <QPixmap>
 
 #include "rig.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/songview.h"
 
 void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
@@ -25,7 +25,7 @@ void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
     const bool pencilActionInitiallyDisabled = !pencilModeAction->isChecked();
     pencilModeAction->trigger();
     const bool pencilActionToggledOn = pencilModeAction->isChecked();
-    const QPixmap pencilCursorPixmap = rig.area().cursor().pixmap();
+    const QPixmap pencilCursorPixmap = rig.canvas().cursor().pixmap();
     const bool pencilCursorInstalled = !pencilCursorPixmap.isNull();
     pencilModeAction->trigger();
     const bool pencilActionToggledOff = !pencilModeAction->isChecked();

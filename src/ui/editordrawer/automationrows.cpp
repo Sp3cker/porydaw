@@ -7,7 +7,7 @@
 
 #include <QCoreApplication>
 
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
 #include "ui/m4asemantics.h"
@@ -35,7 +35,7 @@ QString laneLabel(uint8_t controller)
 
 QString translated(const char *text)
 {
-    return QCoreApplication::translate("AutomationArea", text);
+    return QCoreApplication::translate("AutomationCanvas", text);
 }
 
 } // namespace
@@ -118,7 +118,7 @@ void AutomationRows::syncTimeSelection()
     }
 }
 
-void AutomationRows::applyHeight(AutomationArea &area, const AutomationGeometry &geometry,
+void AutomationRows::applyHeight(AutomationCanvas &area, const AutomationGeometry &geometry,
                                  int topInset) const
 {
     const AutomationProjection projection(geometry, m_rows, m_page, topInset);

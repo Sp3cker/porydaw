@@ -323,7 +323,7 @@ NodeDragFinish NodeDragGesture::finish() const
     return result;
 }
 
-AutomationLaneEdit::Completion PencilGesture::finish() &&
+NodeLaneEdit::Completion PencilGesture::finish() &&
 {
     return std::move(stroke).finish();
 }

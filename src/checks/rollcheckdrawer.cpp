@@ -1,5 +1,5 @@
 #include "core/miditimeline.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea.h"
@@ -58,7 +58,7 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     auto *drawer = view.editorDrawer();
     auto *roll = view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
     auto *automationPage = drawer ? drawer->automationPage() : nullptr;
-    auto *automationCanvas = automationPage ? automationPage->area() : nullptr;
+    auto *automationCanvas = automationPage ? automationPage->canvas() : nullptr;
     auto *velocityCanvas = drawer ? drawer->velocityArea() : nullptr;
     check(drawer && roll && automationPage && automationCanvas && velocityCanvas,
           "concrete SongView did not expose its drawer pages");

@@ -12,7 +12,7 @@
 
 #include "core/timedefaults.h"
 #include "ui/contextmenu.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawerpage.h"
@@ -23,7 +23,7 @@ namespace {
 
 QString translated(const char *text)
 {
-    return QCoreApplication::translate("AutomationArea", text);
+    return QCoreApplication::translate("AutomationCanvas", text);
 }
 
 EditorAutomationRowId tempoHeightKey()
@@ -44,7 +44,7 @@ TempoLane::TempoLane(SongDocument &document, const songview::EditorSelectionMode
 
 QString TempoLane::title() const
 {
-    return QCoreApplication::translate("AutomationArea", "Tempo (BPM)");
+    return QCoreApplication::translate("AutomationCanvas", "Tempo (BPM)");
 }
 
 std::vector<NodePoint> TempoLane::points() const
@@ -212,7 +212,7 @@ void TempoLane::clearHover()
     m_hoveredPoint.reset();
 }
 
-bool TempoLane::mousePress(AutomationArea &area, QMouseEvent *event,
+bool TempoLane::mousePress(AutomationCanvas &area, QMouseEvent *event,
                            const AutomationGeometry &geometry)
 {
     m_deletedNodeClick.clear();
@@ -277,7 +277,7 @@ bool TempoLane::mousePress(AutomationArea &area, QMouseEvent *event,
     return true;
 }
 
-bool TempoLane::mouseMove(AutomationArea &area, QMouseEvent *event,
+bool TempoLane::mouseMove(AutomationCanvas &area, QMouseEvent *event,
                           const AutomationGeometry &geometry)
 {
     if (!m_page || !m_page->document())
@@ -304,7 +304,7 @@ bool TempoLane::mouseMove(AutomationArea &area, QMouseEvent *event,
     return true;
 }
 
-bool TempoLane::mouseRelease(AutomationArea &area, QMouseEvent *event,
+bool TempoLane::mouseRelease(AutomationCanvas &area, QMouseEvent *event,
                              const AutomationGeometry &geometry)
 {
     if (!m_page || !m_page->document())
@@ -341,7 +341,7 @@ bool TempoLane::mouseRelease(AutomationArea &area, QMouseEvent *event,
     return true;
 }
 
-bool TempoLane::mouseDoubleClick(AutomationArea &area, QMouseEvent *event,
+bool TempoLane::mouseDoubleClick(AutomationCanvas &area, QMouseEvent *event,
                                  const AutomationGeometry &geometry)
 {
     if (!m_page || !m_page->document() || event->button() != Qt::LeftButton)
@@ -389,7 +389,7 @@ bool TempoLane::containsBody(const QPointF &position) const
     return m_expanded && m_body.contains(position.toPoint());
 }
 
-bool TempoLane::promptBpm(AutomationArea &area, int currentBpm, int *bpm) const
+bool TempoLane::promptBpm(AutomationCanvas &area, int currentBpm, int *bpm) const
 {
     bool accepted = false;
     const int entered = QInputDialog::getInt(
@@ -410,7 +410,7 @@ void TempoLane::applyEdit(const TempoEdit &edit) const
     m_page->requestRefresh();
 }
 
-void TempoLane::showTempoMenu(AutomationArea &area, const QPoint &globalPosition)
+void TempoLane::showTempoMenu(AutomationCanvas &area, const QPoint &globalPosition)
 {
     if (!m_page || !m_page->document())
         return;
@@ -440,7 +440,7 @@ void TempoLane::showTempoMenu(AutomationArea &area, const QPoint &globalPosition
     }
 }
 
-void TempoLane::showPointMenu(AutomationArea &area, std::size_t pointIndex,
+void TempoLane::showPointMenu(AutomationCanvas &area, std::size_t pointIndex,
                               const QPoint &globalPosition)
 {
     if (!m_page || !m_page->document())

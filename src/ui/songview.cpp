@@ -3,7 +3,7 @@
 #include "layout.h"
 #include "songview/detail.h"
 #include "theme/themeruntime.h"
-#include "ui/editordrawer/automationarea.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea.h"
@@ -102,7 +102,7 @@ std::vector<songview::TimelineBand> SongView::timelineBands() noexcept
     return {
         {*m_ruler, m_geometry.plotOrigin},
         {*m_roll, m_geometry.pianoKeyboardWidth},
-        {*m_editorDrawer->automationPage()->area(), m_geometry.plotOrigin},
+        {*m_editorDrawer->automationPage()->canvas(), m_geometry.plotOrigin},
         {*m_editorDrawer->velocityArea(), m_editorDrawer->velocityArea()->plotOrigin()},
         {*m_strip, m_geometry.plotOrigin},
     };
