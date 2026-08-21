@@ -10,6 +10,7 @@
 import { dirname, join } from "node:path";
 import { createReporter } from "./checks_reporter.ts";
 import type { Reporter } from "./checks_reporter.ts";
+import { wallEstimate } from "./checks_walls.ts";
 
 type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
 type FixtureRootKind = "decomp-project" | "songs-mk-project" | "none";
@@ -29,54 +30,22 @@ interface CheckManifestEntry {
 }
 const CHECK_TIMEOUT_MS = 90_000;
 const TERMINATE_GRACE_MS = 5_000;
+// Benchmark 2026-08-21 (M4, 10 cores): unified LPT pool of 6 beat 5/7/8 —
+// 7+ slows CPU-saturating checks via contention, 5 underuses the machine.
 const MAX_PARALLEL_CHECKS = Math.max(
   1,
-  Math.min(4, navigator.hardwareConcurrency),
+  Math.min(6, navigator.hardwareConcurrency),
 );
-// Benchmark 2026-08-21: resonance 5.5s@99%, sample 5.85s@98%, roll 0.82s@123%, etc.
-const CPU_HEAVY_NAMES: Record<string, true> = {
-  resonancecheck: true,
-  rollcheck: true,
-  automation: true,
-  "exportcheck-loop": true,
-  "exportcheck-tail": true,
-  loopcheck: true,
-  viewcheck: true,
-  "velocity-page": true,
-};
-// Wall estimates for LPT (Largest Processing Time) scheduling — sort heaviest first
-// to reduce makespan on 2+6 split. Values from /tmp/bench_csv.csv 2026-08-21.
-const WALL_ESTIMATE: Record<string, number> = {
-  samplecheck: 5.85,
-  selftest: 5.90,
-  resonancecheck: 5.50,
-  transportcheck: 3.70,
-  savecheck: 2.29,
-  vgsavecheck: 2.17,
-  "host-integration": 1.19,
-  automation: 1.10,
-  "automation-popup-menus": 1.06,
-  "automation-gestures": 0.93,
-  polycheck: 0.92,
-  exportcheck: 0.80,
-  "exportcheck-loop": 0.71,
-  "exportcheck-tail": 0.89,
-  loopcheck: 0.68,
-  clickcheck: 0.89,
-  rollcheck: 0.82,
-  "mainwindow-routing": 0.77,
-  rollwindowingcheck: 0.71,
-};
-function wallEstimate(name: string): number {
-  return WALL_ESTIMATE[name] ?? 0.3;
+function parsePool(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 64) usage();
+  return parsed;
 }
-const MAX_CPU_POOL = 2;
-const MAX_IO_POOL = 6;
 const decoder = new TextDecoder();
 
 function usage(): never {
   console.error(
-    "usage: deno task checks <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>]",
+    "usage: deno task checks <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>] [--pool=<n>]",
   );
   console.error("  --all (default): all checks");
   console.error(
@@ -87,6 +56,9 @@ function usage(): never {
     "  --filter=<name>: only run harnesses whose name contains <name> (repeatable, substring)",
   );
   console.error("  --verbose: alias for --reporter=verbose");
+  console.error(
+    "  --pool=<n>: worker count for the unified LPT pool (default: MAX_PARALLEL_CHECKS)",
+  );
   Deno.exit(2);
 }
 
@@ -366,31 +338,21 @@ function lastNonemptyLine(output: string): string | undefined {
   return output.trimEnd().split(/\r?\n/).findLast((line) => line.length > 0);
 }
 
-function printFailure(name: string, result: CheckResult): void {
-  const reason = result.timedOut
-    ? `exceeded ${CHECK_TIMEOUT_MS / 1000}s`
-    : result.signal !== null
-    ? `crashed with ${result.signal}`
-    : `exit ${result.code}`;
-  console.log(
-    `FAIL: ${name} (${reason}, ${(result.durationMs / 1000).toFixed(2)}s)`,
-  );
-  const lines = result.output.trimEnd().split(/\r?\n/);
-  console.log(lines.slice(-40).join("\n"));
-}
-
 if (Deno.args.length < 1) {
   usage();
 }
 let selection: string = "--all";
 let reporterMode: "quiet" | "verbose" = "quiet";
 const filters: string[] = [];
+let unifiedPoolSize = MAX_PARALLEL_CHECKS;
 for (let i = 1; i < Deno.args.length; i++) {
   const arg = Deno.args[i];
   if (arg === "--all" || arg === "--no-windowing-checks") {
     selection = arg;
   } else if (arg === "--verbose") {
     reporterMode = "verbose";
+  } else if (arg.startsWith("--pool=")) {
+    unifiedPoolSize = parsePool(arg.slice("--pool=".length));
   } else if (arg.startsWith("--reporter=")) {
     const value = arg.slice("--reporter=".length);
     if (value === "quiet" || value === "verbose") {
@@ -488,7 +450,7 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
 
 async function runParallel(
   checks: readonly CheckManifestEntry[],
-  poolSize: number = MAX_PARALLEL_CHECKS,
+  poolSize: number,
 ): Promise<void> {
   if (checks.length === 0) return;
   // Each worker claims its next index before awaiting, so Deno's single
@@ -508,30 +470,18 @@ async function runParallel(
 async function runScheduled(
   checks: readonly CheckManifestEntry[],
 ): Promise<void> {
-  // Split non-exclusive offscreen into CPU-heavy (2) vs IO-light (6) that can overlap.
-  let cpuBatch: CheckManifestEntry[] = [];
-  let ioBatch: CheckManifestEntry[] = [];
-  const flush = async () => {
-    // LPT: heaviest walls first minimizes makespan on heterogeneous pools
-    cpuBatch.sort((a, b) => wallEstimate(b.name) - wallEstimate(a.name));
-    ioBatch.sort((a, b) => wallEstimate(b.name) - wallEstimate(a.name));
-    await Promise.all([
-      runParallel(cpuBatch, MAX_CPU_POOL),
-      runParallel(ioBatch, MAX_IO_POOL),
-    ]);
-    cpuBatch = [];
-    ioBatch = [];
-  };
-  for (const check of checks) {
-    if (!check.exclusive) {
-      if (CPU_HEAVY_NAMES[check.name]) cpuBatch.push(check);
-      else ioBatch.push(check);
-      continue;
-    }
-    await flush();
+  // Exclusive harnesses share global state (host audio device, QSettings) and
+  // must run alone. Running them from manifest position drains every in-flight
+  // batch once per exclusive; one serial tail drains at most once.
+  const exclusiveChecks = checks.filter((check) => check.exclusive);
+  // LPT: heaviest walls first minimizes makespan.
+  const batched = checks
+    .filter((check) => !check.exclusive)
+    .sort((a, b) => wallEstimate(b.name) - wallEstimate(a.name));
+  await runParallel(batched, unifiedPoolSize);
+  for (const check of exclusiveChecks) {
     await runCheck(check);
   }
-  await flush();
 }
 
 const skipWindowSystem = selection === "--no-windowing-checks";
@@ -551,23 +501,10 @@ if (filters.length > 0) {
 }
 reporter = createReporter(reporterMode, runnableChecks.length);
 try {
-  const offscreenChecks = runnableChecks.filter(
-    (check) => check.windowing === "offscreen",
-  );
-  const windowSystemChecks = runnableChecks.filter(
-    (check) => check.windowing === "window-system",
-  );
-  // Overlap window-system with offscreen tail — they use different windowing, can run concurrently
-  await Promise.all([
-    (async () => {
-      await runScheduled(offscreenChecks);
-    })(),
-    (async () => {
-      for (const check of windowSystemChecks) {
-        await runCheck(check);
-      }
-    })(),
-  ]);
+  // Window-system checks schedule like any other: the unified pool already
+  // overlaps them with offscreen work, and a separate lane would push peak
+  // concurrency to pool+1.
+  await runScheduled(runnableChecks);
 } finally {
   await Deno.remove(tempRoot, { recursive: true });
 }
