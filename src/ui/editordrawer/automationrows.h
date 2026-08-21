@@ -14,6 +14,7 @@
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationprojection.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editorviewstate.h"
 #include "ui/songviewmodel.h"
 
@@ -23,6 +24,9 @@ extern "C" {
 
 class AutomationArea;
 class AutomationPage;
+namespace songview {
+class EditorSelectionModel;
+}
 struct LaneNodeIdentity {
     int engineTrack = -1;
     uint8_t controller = 0;
@@ -32,6 +36,30 @@ struct LaneNodeIdentity {
 struct LaneNodeDragState {
     NodeDragGesture gesture;
     std::vector<LaneNodeIdentity> identities;
+};
+
+class CCLaneAdapter final : public NodeLane
+{
+  public:
+    CCLaneAdapter(SongDocument &document, const songview::EditorSelectionModel &selection,
+                  uint32_t usedTrackMask, int engineTrack, uint8_t controller) noexcept;
+
+    QString title() const override;
+    std::vector<NodePoint> points() const override;
+    int minimumValue() const override;
+    int maximumValue() const override;
+    QString valueText(int value) const override;
+    bool pointSelected(uint64_t tick) const override;
+    void deletePoints(const std::vector<uint64_t> &ticks) override;
+    void movePoints(const std::vector<NodePointMove> &moves) override;
+    void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
+
+  private:
+    SongDocument &m_document;
+    const songview::EditorSelectionModel &m_selection;
+    uint32_t m_usedTrackMask = 0;
+    int m_engineTrack = -1;
+    uint8_t m_controller = 0;
 };
 
 // Row data and caches for the automation canvas. It owns the stable row

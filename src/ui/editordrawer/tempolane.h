@@ -14,6 +14,12 @@
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationprojection.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
+
+namespace songview {
+class EditorSelectionModel;
+}
+
 class AutomationArea;
 class AutomationPage;
 class QFont;
@@ -22,11 +28,22 @@ class QPainter;
 
 // Song-wide Tempo lives above the track-owned automation rows. It shares their
 // canvas but deliberately has no controller or track identity.
-class TempoLane final
+class TempoLane final : public NodeLane
 {
   public:
     explicit TempoLane(AutomationPage *page) noexcept;
+    TempoLane(SongDocument &document, const songview::EditorSelectionModel &selection,
+              uint32_t usedTrackMask) noexcept;
 
+    QString title() const override;
+    std::vector<NodePoint> points() const override;
+    int minimumValue() const override;
+    int maximumValue() const override;
+    QString valueText(int value) const override;
+    bool pointSelected(uint64_t tick) const override;
+    void deletePoints(const std::vector<uint64_t> &ticks) override;
+    void movePoints(const std::vector<NodePointMove> &moves) override;
+    void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
     void updateLayout(int width, const AutomationGeometry &geometry);
     int totalHeight(const AutomationGeometry &geometry) const;
     bool interactionActive() const noexcept;
@@ -80,8 +97,14 @@ class TempoLane final
     void showTimeSelectionMenu(const QPoint &globalPosition) const;
     void publishTimeSelection(uint64_t first, uint64_t last) const;
     QString bpmText(uint32_t microsecondsPerQuarterNote) const;
+    SongDocument *boundDocument() const noexcept;
+    const songview::EditorSelectionModel *boundSelection() const noexcept;
+    uint32_t boundUsedTrackMask() const noexcept;
 
     AutomationPage *m_page = nullptr;
+    SongDocument *m_document = nullptr;
+    const songview::EditorSelectionModel *m_selection = nullptr;
+    uint32_t m_usedTrackMask = 0;
     QRect m_header;
     QRect m_body;
     std::vector<TempoPoint> m_activeNodeIdentities;

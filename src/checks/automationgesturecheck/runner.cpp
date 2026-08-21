@@ -23,6 +23,7 @@ constexpr std::array kDomains{
     Domain{"ownership", checkAutomationPencilOwnership},
     Domain{"transactions", checkAutomationPencilTransactions},
     Domain{"tempo", checkTempoInteractions},
+    Domain{"node-contract", checkNodeContract},
 };
 
 } // namespace
