@@ -33,6 +33,45 @@ const MAX_PARALLEL_CHECKS = Math.max(
   1,
   Math.min(4, navigator.hardwareConcurrency),
 );
+// Benchmark 2026-08-21: resonance 5.5s@99%, sample 5.85s@98%, roll 0.82s@123%, etc.
+const CPU_HEAVY_NAMES: Record<string, true> = {
+  resonancecheck: true,
+  rollcheck: true,
+  automation: true,
+  "exportcheck-loop": true,
+  "exportcheck-tail": true,
+  loopcheck: true,
+  viewcheck: true,
+  "velocity-page": true,
+};
+// Wall estimates for LPT (Largest Processing Time) scheduling — sort heaviest first
+// to reduce makespan on 2+6 split. Values from /tmp/bench_csv.csv 2026-08-21.
+const WALL_ESTIMATE: Record<string, number> = {
+  samplecheck: 5.85,
+  selftest: 5.90,
+  resonancecheck: 5.50,
+  transportcheck: 3.70,
+  savecheck: 2.29,
+  vgsavecheck: 2.17,
+  "host-integration": 1.19,
+  automation: 1.10,
+  "automation-popup-menus": 1.06,
+  "automation-gestures": 0.93,
+  polycheck: 0.92,
+  exportcheck: 0.80,
+  "exportcheck-loop": 0.71,
+  "exportcheck-tail": 0.89,
+  loopcheck: 0.68,
+  clickcheck: 0.89,
+  rollcheck: 0.82,
+  "mainwindow-routing": 0.77,
+  rollwindowingcheck: 0.71,
+};
+function wallEstimate(name: string): number {
+  return WALL_ESTIMATE[name] ?? 0.3;
+}
+const MAX_CPU_POOL = 2;
+const MAX_IO_POOL = 6;
 const decoder = new TextDecoder();
 
 function usage(): never {
@@ -449,11 +488,13 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
 
 async function runParallel(
   checks: readonly CheckManifestEntry[],
+  poolSize: number = MAX_PARALLEL_CHECKS,
 ): Promise<void> {
+  if (checks.length === 0) return;
   // Each worker claims its next index before awaiting, so Deno's single
   // JavaScript event loop cannot assign one check to two workers.
   let nextCheck = 0;
-  const workerCount = Math.min(MAX_PARALLEL_CHECKS, checks.length);
+  const workerCount = Math.min(poolSize, checks.length);
   await Promise.all(
     Array.from({ length: workerCount }, async () => {
       while (nextCheck < checks.length) {
@@ -467,17 +508,30 @@ async function runParallel(
 async function runScheduled(
   checks: readonly CheckManifestEntry[],
 ): Promise<void> {
-  let parallelBatch: CheckManifestEntry[] = [];
+  // Split non-exclusive offscreen into CPU-heavy (2) vs IO-light (6) that can overlap.
+  let cpuBatch: CheckManifestEntry[] = [];
+  let ioBatch: CheckManifestEntry[] = [];
+  const flush = async () => {
+    // LPT: heaviest walls first minimizes makespan on heterogeneous pools
+    cpuBatch.sort((a, b) => wallEstimate(b.name) - wallEstimate(a.name));
+    ioBatch.sort((a, b) => wallEstimate(b.name) - wallEstimate(a.name));
+    await Promise.all([
+      runParallel(cpuBatch, MAX_CPU_POOL),
+      runParallel(ioBatch, MAX_IO_POOL),
+    ]);
+    cpuBatch = [];
+    ioBatch = [];
+  };
   for (const check of checks) {
     if (!check.exclusive) {
-      parallelBatch.push(check);
+      if (CPU_HEAVY_NAMES[check.name]) cpuBatch.push(check);
+      else ioBatch.push(check);
       continue;
     }
-    await runParallel(parallelBatch);
-    parallelBatch = [];
+    await flush();
     await runCheck(check);
   }
-  await runParallel(parallelBatch);
+  await flush();
 }
 
 const skipWindowSystem = selection === "--no-windowing-checks";
@@ -503,12 +557,17 @@ try {
   const windowSystemChecks = runnableChecks.filter(
     (check) => check.windowing === "window-system",
   );
-  await runScheduled(offscreenChecks);
-  // A window system has shared focus and popup state. Run these after the
-  // offscreen work, one process at a time.
-  for (const check of windowSystemChecks) {
-    await runCheck(check);
-  }
+  // Overlap window-system with offscreen tail — they use different windowing, can run concurrently
+  await Promise.all([
+    (async () => {
+      await runScheduled(offscreenChecks);
+    })(),
+    (async () => {
+      for (const check of windowSystemChecks) {
+        await runCheck(check);
+      }
+    })(),
+  ]);
 } finally {
   await Deno.remove(tempRoot, { recursive: true });
 }

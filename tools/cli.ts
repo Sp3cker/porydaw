@@ -146,7 +146,7 @@ async function runVerify(rawArgs: string[]): Promise<void> {
   }
 
   if (!noBuild) {
-    await runBuild(["porydaw", "porydaw_checks", "mid2agb"], verbose);
+    await runBuild(["porydaw_checks", "mid2agb"], verbose);
   }
 
   const binary = join(BUILD_DIR, "porydaw_checks");

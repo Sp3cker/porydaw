@@ -322,6 +322,17 @@ std::vector<float> genSine(double rate, double freq, double seconds, double amp)
         v[i] = float(amp * std::sin(2.0 * kPi * freq * double(i) / rate));
     return v;
 }
+std::vector<float> genSineFast(double rate, double freq, double seconds, double amp)
+{
+    const float frate = float(rate);
+    const float ffreq = float(freq);
+    const float famp = float(amp);
+    const float kPiF = float(kPi);
+    std::vector<float> v(size_t(rate * seconds));
+    for (size_t i = 0; i < v.size(); i++)
+        v[i] = famp * std::sin(2.0f * kPiF * ffreq * float(i) / frate);
+    return v;
+}
 
 double rmsOf(const std::vector<float> &v, size_t from, size_t to)
 {
@@ -878,7 +889,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
 
         // 1. Passband: 100 Hz–6.0 kHz within ±0.1 dB of unity.
         for (const double f : {100.0, 500.0, 1000.0, 2000.0, 4000.0, 5000.0, 5500.0, 6000.0}) {
-            const std::vector<float> in = genSine(srcRate, f, 0.3, 0.5);
+            const std::vector<float> in = genSineFast(srcRate, f, 0.3, 0.5);
             const qint64 nOut = qint64(std::llround(double(in.size()) * r));
             const std::vector<float> out = SampleDsp::resampleSinc(in, r, nOut);
             const double amp = toneAmp(out, dstRate, f, size_t(nOut / 5), size_t(nOut * 4 / 5));
