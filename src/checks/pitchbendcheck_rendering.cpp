@@ -10,7 +10,7 @@
 #include <cmath>
 #include <vector>
 
-#include "ui/curvegraph/editablecurvegraph.hpp"
+#include "ui/curvegraph/curvegraph.hpp"
 #include "ui/pitchbendeditor.hpp"
 
 namespace pitchbendcheck {
@@ -69,10 +69,10 @@ bool PitchBendCheckContext::openPersistedAltPopup(PersistedAltPopupState *state)
     }
     state->popup = popup;
     state->graph = popup->graphRect();
-    state->graphWidget = dynamic_cast<songview::EditableCurveGraph *>(
+    state->graphWidget = dynamic_cast<songview::CurveGraph *>(
         popup->findChild<QWidget *>(QStringLiteral("pitchBendGraph")));
     if (!state->graphWidget) {
-        fail("pitch-bend popup has no EditableCurveGraph pitchBendGraph child for its Alt line");
+        fail("pitch-bend popup has no CurveGraph pitchBendGraph child for its Alt line");
         dismissPopup(popup);
         return false;
     }
@@ -127,10 +127,10 @@ bool PitchBendCheckContext::reopenPersistedAltPopup(PersistedAltPopupState *stat
     }
     state->popup = popup;
     state->graph = popup->graphRect();
-    state->graphWidget = dynamic_cast<songview::EditableCurveGraph *>(
+    state->graphWidget = dynamic_cast<songview::CurveGraph *>(
         popup->findChild<QWidget *>(QStringLiteral("pitchBendGraph")));
     if (!state->graphWidget) {
-        fail("reopened pitch-bend popup has no EditableCurveGraph pitchBendGraph child");
+        fail("reopened pitch-bend popup has no CurveGraph pitchBendGraph child");
         dismissPopup(popup);
         return false;
     }
@@ -269,7 +269,7 @@ void PitchBendCheckContext::runFocusHandoff()
     popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
     popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
     auto *replacementGraph =
-        popup ? dynamic_cast<songview::EditableCurveGraph *>(
+        popup ? dynamic_cast<songview::CurveGraph *>(
                     popup->findChild<QWidget *>(QStringLiteral("pitchBendGraph")))
               : nullptr;
     if (!popup || !popup->isVisible() || !replacementGraph || !replacementGraph->hasFocus()) {
@@ -404,10 +404,10 @@ bool PitchBendCheckContext::driveBoundaryFreehand(BoundaryFixtureState *fixture)
         *fixture, "fixed-granularity fixture could not reopen its pitch-bend popup");
     if (!popup)
         return false;
-    auto *graphWidget = dynamic_cast<songview::EditableCurveGraph *>(
+    auto *graphWidget = dynamic_cast<songview::CurveGraph *>(
         popup->findChild<QWidget *>(QStringLiteral("pitchBendGraph")));
     if (!graphWidget) {
-        fail("fixed-granularity popup has no EditableCurveGraph pitchBendGraph child");
+        fail("fixed-granularity popup has no CurveGraph pitchBendGraph child");
         sendKey(popup, Qt::Key_Escape, Qt::NoModifier);
         return false;
     }

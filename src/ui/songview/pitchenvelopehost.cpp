@@ -5,12 +5,14 @@
 #include "ui/theme/themeruntime.h"
 
 #include <QHideEvent>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QMetaObject>
+#include <QPainter>
 #include <QResizeEvent>
 #include <QSizePolicy>
 #include <QVBoxLayout>
-#include <algorithm>
+#include <cmath>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -37,11 +39,11 @@ PitchEnvelopeHost::PitchEnvelopeHost(::SongView *songView, QWidget *parent)
     m_status->setObjectName(QStringLiteral("pitchEnvelopeStatus"));
     m_status->setWordWrap(false);
     layout->addWidget(m_status);
-    m_graph = new EditableCurveGraph(makeGraphSpec(), this);
+    m_graph = new CurveGraph(makeGraphSpec(), this);
     m_graph->setObjectName(QStringLiteral("pitchEnvelopeGraph"));
     m_graph->setMinimumHeight(164);
     m_graph->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    EditableCurveGraph::Callbacks callbacks;
+    CurveGraph::Callbacks callbacks;
     callbacks.previewChanged = [this] {
         if (m_session)
             m_session->gestureDirty = true;
@@ -105,23 +107,23 @@ void PitchEnvelopeHost::refresh()
                                            return projection.endTick == projection.windowEndTick;
                                        });
     if (templateSource == projections.end()) {
-        const MidiTimeline *timeline = m_songView->timeline();
         templateSource = std::max_element(
             projections.begin(), projections.end(),
-            [timeline](const pitch_envelope::Projection &lhs,
-                       const pitch_envelope::Projection &rhs) {
-                return pitch_envelope::elapsedMilliseconds(timeline, lhs.startTick, lhs.endTick) <
-                       pitch_envelope::elapsedMilliseconds(timeline, rhs.startTick, rhs.endTick);
+            [](const pitch_envelope::Projection &lhs, const pitch_envelope::Projection &rhs) {
+                const uint64_t lhsSpan =
+                    lhs.endTick > lhs.startTick ? lhs.endTick - lhs.startTick : 0;
+                const uint64_t rhsSpan =
+                    rhs.endTick > rhs.startTick ? rhs.endTick - rhs.startTick : 0;
+                return lhsSpan < rhsSpan;
             });
     }
     const pitch_envelope::Projection &source = *templateSource;
-    m_session = {*engineTrack,
-                 projections,
-                 source.startTick,
-                 source.windowEndTick,
-                 source.endTick,
-                 source.bendRange,
-                 m_songView->document()->revision()};
+    const uint64_t windowTicks = source.windowEndTick > source.startTick
+                                     ? source.windowEndTick - source.startTick
+                                     : pitch_envelope::kDefaultWindowTicks;
+    m_session = {
+        *engineTrack,   projections,      source.startTick, source.windowEndTick,
+        source.endTick, source.bendRange, windowTicks,      m_songView->document()->revision()};
     m_graph->setSpec(makeGraphSpec());
     loadCurve();
     m_graph->setEnabled(true);
@@ -145,12 +147,32 @@ void PitchEnvelopeHost::cancelGesture()
     if (m_session)
         m_session->gestureDirty = false;
 }
+void PitchEnvelopeHost::paintEvent(QPaintEvent *event)
+{
+    QWidget::paintEvent(event);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const QRectF bounds = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    painter.setBrush(themes::color(themes::Role::song_view_piano_roll_background));
+    painter.setPen(QPen(themes::color(themes::Role::song_view_separator), 1.0));
+    painter.drawRoundedRect(bounds, 4.0, 4.0);
+}
+
+void PitchEnvelopeHost::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Escape && m_songView && m_session) {
+        const int track = m_session->engineTrack;
+        m_songView->setPitchEnvelopeVisible(track, false);
+        event->accept();
+        return;
+    }
+    QWidget::keyPressEvent(event);
+}
 
 void PitchEnvelopeHost::hideEvent(QHideEvent *event)
 {
     QWidget::hideEvent(event);
-    if (!m_songView)
-        return;
+    return;
     QMetaObject::invokeMethod(
         m_songView.data(),
         [songView = m_songView] {
@@ -186,7 +208,6 @@ PitchEnvelopeHost::eligibleProjectionsForTrack(int engineTrack) const
     std::sort(notes.begin(), notes.end(),
               [](const DocNote &lhs, const DocNote &rhs) { return lhs.tick < rhs.tick; });
     std::vector<pitch_envelope::Projection> projections;
-    const MidiTimeline *timeline = m_songView->timeline();
     for (size_t index = 0; index < notes.size();) {
         const uint64_t startTick = notes[index].tick;
         size_t nextIndex = index + 1;
@@ -194,7 +215,8 @@ PitchEnvelopeHost::eligibleProjectionsForTrack(int engineTrack) const
             ++nextIndex;
         const DrawerPageVoiceContext context = m_songView->voiceContext(startTick);
         if (context.voice && voiceSupportsPitchEnvelope(context.voice->type)) {
-            const uint64_t windowEndTick = pitch_envelope::creationEndTick(timeline, startTick);
+            const uint64_t windowEndTick =
+                pitch_envelope::creationEndTick(startTick, pitch_envelope::kDefaultWindowTicks);
             const uint64_t endTick = nextIndex == notes.size()
                                          ? windowEndTick
                                          : std::min(windowEndTick, notes[nextIndex].tick);
@@ -224,13 +246,13 @@ int PitchEnvelopeHost::activeBendRange(int engineTrack, uint64_t tick) const
     return range;
 }
 
-PitchEnvelopeHost::EditingGrid
-PitchEnvelopeHost::editingGridAt(uint64_t tick, EditableCurveGraph::Sampling sampling) const
+PitchEnvelopeHost::EditingGrid PitchEnvelopeHost::editingGridAt(uint64_t tick,
+                                                                CurveGraph::Sampling sampling) const
 {
     if (!m_songView || !m_session)
         return {};
     const EnvelopeSession &session = *m_session;
-    if (sampling == EditableCurveGraph::Sampling::Fine) {
+    if (sampling == CurveGraph::Sampling::Fine) {
         return {std::max<uint64_t>(1, m_songView->fineGridTicks()), 0,
                 session.templateWindowEndTick};
     }
@@ -244,8 +266,7 @@ PitchEnvelopeHost::editingGridAt(uint64_t tick, EditableCurveGraph::Sampling sam
             segment.start, std::min(session.templateWindowEndTick, segment.next)};
 }
 
-uint64_t PitchEnvelopeHost::snappedGridTick(uint64_t tick,
-                                            EditableCurveGraph::Sampling sampling) const
+uint64_t PitchEnvelopeHost::snappedGridTick(uint64_t tick, CurveGraph::Sampling sampling) const
 {
     if (!m_session)
         return 0;
@@ -264,7 +285,7 @@ uint64_t PitchEnvelopeHost::snappedGridTick(uint64_t tick,
     return std::clamp(snapped, session.templateSourceTick, session.templateWindowEndTick);
 }
 
-uint64_t PitchEnvelopeHost::nextGridTick(uint64_t tick, EditableCurveGraph::Sampling sampling) const
+uint64_t PitchEnvelopeHost::nextGridTick(uint64_t tick, CurveGraph::Sampling sampling) const
 {
     if (!m_session)
         return 0;
@@ -280,7 +301,7 @@ uint64_t PitchEnvelopeHost::nextGridTick(uint64_t tick, EditableCurveGraph::Samp
     return std::min(grid.endTick, next);
 }
 
-uint64_t PitchEnvelopeHost::lastEditableGridTick(EditableCurveGraph::Sampling sampling) const
+uint64_t PitchEnvelopeHost::lastEditableGridTick(CurveGraph::Sampling sampling) const
 {
     if (!m_session)
         return 0;
@@ -300,30 +321,31 @@ std::vector<double> PitchEnvelopeHost::gridLines() const
     if (!m_songView || !m_session)
         return lines;
     const EnvelopeSession &session = *m_session;
-    const MidiTimeline *timeline = m_songView->timeline();
     for (uint64_t tick = session.templateSourceTick;;) {
-        const uint64_t next = nextGridTick(tick, EditableCurveGraph::Sampling::Normal);
+        const uint64_t next = nextGridTick(tick, CurveGraph::Sampling::Normal);
         if (next <= tick || next >= session.templateWindowEndTick)
             break;
-        lines.push_back(
-            pitch_envelope::elapsedMilliseconds(timeline, session.templateSourceTick, next));
+        lines.push_back(double(next - session.templateSourceTick));
         tick = next;
     }
     return lines;
 }
 
-EditableCurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
+CurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
 {
     const EnvelopeSession *session = m_session ? &*m_session : nullptr;
     const int bendRange = session ? session->templateBendRange : kDefaultBendRange;
-    EditableCurveGraph::CurveSpec spec;
+    CurveGraph::CurveSpec spec;
     const QSize graphSize = m_graph ? m_graph->size() : QSize(480, 164);
     const double range = double(bendRange);
+    const double windowTicks =
+        double(session ? (session->templateWindowEndTick - session->templateSourceTick)
+                       : pitch_envelope::kDefaultWindowTicks);
     spec.xAxis.minimum = 0.0;
-    spec.xAxis.maximum = pitch_envelope::kWindowMilliseconds;
+    spec.xAxis.maximum = windowTicks;
     spec.yAxis.minimum = -range;
     spec.yAxis.maximum = range;
-    spec.yAxis.mapping = EditableCurveGraph::CurveAxisMapping::BipolarCenter;
+    spec.yAxis.mapping = CurveGraph::CurveAxisMapping::BipolarCenter;
     spec.yAxis.zeroDetentPixels = 8;
     spec.defaultY = 0.0;
     spec.lockStartEndpointY = true;
@@ -332,8 +354,8 @@ EditableCurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
     spec.canvasRect =
         QRect(52, 16, std::max(1, graphSize.width() - 60), std::max(1, graphSize.height() - 36));
     spec.title = SongView::tr("Track pitch envelope (BEND)");
-    spec.startLabel = SongView::tr("0 ms");
-    spec.endLabel = SongView::tr("100 ms");
+    spec.startLabel = SongView::tr("0");
+    spec.endLabel = SongView::tr("%1 ticks").arg(int(windowTicks));
     spec.text.zeroLabel = QStringLiteral("0");
     spec.text.showZeroLabel = true;
     spec.gridLines = gridLines();
@@ -345,47 +367,43 @@ EditableCurveGraph::CurveSpec PitchEnvelopeHost::makeGraphSpec() const
                    themes::color(themes::Role::focus_outline),
                    themes::color(themes::Role::song_view_edit_preview_outline),
                    themes::color(themes::Role::song_view_secondary_text)};
-    spec.sampling.snap = [this](double x, EditableCurveGraph::Sampling sampling) {
+    spec.sampling.snap = [this](double x, CurveGraph::Sampling sampling) {
+        if (!m_songView || !m_session)
+            return 0.0;
+        const EnvelopeSession &sess = *m_session;
+        const double window = double(sess.templateWindowEndTick - sess.templateSourceTick);
         if (x <= 0.0)
             return 0.0;
-        if (x >= pitch_envelope::kWindowMilliseconds)
-            return pitch_envelope::kWindowMilliseconds;
-        if (!m_songView || !m_session)
-            return 0.0;
-        const EnvelopeSession &session = *m_session;
-        const MidiTimeline *timeline = m_songView->timeline();
-        const uint64_t tick = pitch_envelope::tickForMilliseconds(
-            timeline, session.templateSourceTick, session.templateWindowEndTick, x);
+        if (x >= window)
+            return window;
+        const uint64_t tick = sess.templateSourceTick + uint64_t(std::llround(x));
         const uint64_t snapped =
             std::min(snappedGridTick(tick, sampling), lastEditableGridTick(sampling));
-        return std::min(
-            pitch_envelope::kWindowMilliseconds,
-            pitch_envelope::elapsedMilliseconds(timeline, session.templateSourceTick, snapped));
+        const uint64_t clamped =
+            std::clamp(snapped, sess.templateSourceTick, sess.templateWindowEndTick);
+        return double(clamped - sess.templateSourceTick);
     };
-    spec.sampling.nextSample = [this](double x, EditableCurveGraph::Sampling sampling) {
-        if (x >= pitch_envelope::kWindowMilliseconds)
-            return pitch_envelope::kWindowMilliseconds;
+    spec.sampling.nextSample = [this](double x, CurveGraph::Sampling sampling) {
         if (!m_songView || !m_session)
-            return pitch_envelope::kWindowMilliseconds;
-        const EnvelopeSession &session = *m_session;
-        const MidiTimeline *timeline = m_songView->timeline();
-        const uint64_t tick = pitch_envelope::tickForMilliseconds(
-            timeline, session.templateSourceTick, session.templateWindowEndTick, x);
+            return double(m_session
+                              ? m_session->templateWindowEndTick - m_session->templateSourceTick
+                              : pitch_envelope::kDefaultWindowTicks);
+        const EnvelopeSession &sess = *m_session;
+        const double window = double(sess.templateWindowEndTick - sess.templateSourceTick);
+        if (x >= window)
+            return window;
+        const uint64_t tick = sess.templateSourceTick + uint64_t(std::llround(x));
         const uint64_t next = nextGridTick(tick, sampling);
-        if (next <= tick || next >= session.templateEndTick)
-            return pitch_envelope::kWindowMilliseconds;
-        return pitch_envelope::elapsedMilliseconds(timeline, session.templateSourceTick, next);
+        if (next <= tick || next >= sess.templateEndTick)
+            return window;
+        return double(next - sess.templateSourceTick);
     };
-    spec.sampling.lastEditable = [this](EditableCurveGraph::Sampling sampling) {
+    spec.sampling.lastEditable = [this](CurveGraph::Sampling sampling) {
         if (!m_songView || !m_session)
             return 0.0;
-        const EnvelopeSession &session = *m_session;
-        return std::min(pitch_envelope::kWindowMilliseconds,
-                        pitch_envelope::elapsedMilliseconds(m_songView->timeline(),
-                                                            session.templateSourceTick,
-                                                            lastEditableGridTick(sampling)));
+        const EnvelopeSession &sess = *m_session;
+        return double(lastEditableGridTick(sampling) - sess.templateSourceTick);
     };
-    spec.segments.allLinear = true;
     spec.text.formatLiveValue = [](double semitones) {
         return SongView::tr("%1%2 st")
             .arg(semitones > 0.0 ? QStringLiteral("+") : QStringLiteral(""))
@@ -406,11 +424,6 @@ void PitchEnvelopeHost::loadCurve()
     if (!m_session || !m_songView || !m_songView->document())
         return;
     const EnvelopeSession &session = *m_session;
-    const MidiTimeline *timeline = m_songView->timeline();
-    const double availableMilliseconds =
-        std::min(pitch_envelope::kWindowMilliseconds,
-                 pitch_envelope::elapsedMilliseconds(timeline, session.templateSourceTick,
-                                                     session.templateEndTick));
     std::vector<DocLanePoint> bends =
         m_songView->document()->lanePoints(session.engineTrack, DOC_CC_BEND);
     std::stable_sort(
@@ -421,22 +434,17 @@ void PitchEnvelopeHost::loadCurve()
     for (const DocLanePoint &point : bends) {
         if (point.tick <= session.templateSourceTick || point.tick >= session.templateEndTick)
             continue;
-        const double milliseconds =
-            pitch_envelope::elapsedMilliseconds(timeline, session.templateSourceTick, point.tick);
-        if (milliseconds <= 0.0 || milliseconds >= availableMilliseconds)
+        const double offsetTick = double(point.tick - session.templateSourceTick);
+        if (offsetTick <= 0.0)
             continue;
         const double semitones =
             pitch_envelope::bendToSemitones(point.value, session.templateBendRange);
-        if (!points.empty() && points.back().x == milliseconds)
+        if (!points.empty() && points.back().x == offsetTick)
             points.back().y = semitones;
         else
-            points.push_back({milliseconds, semitones});
+            points.push_back({offsetTick, semitones});
     }
-    if (availableMilliseconds > 0.0 &&
-        availableMilliseconds < pitch_envelope::kWindowMilliseconds) {
-        points.push_back({availableMilliseconds, 0.0});
-    }
-    points.push_back({pitch_envelope::kWindowMilliseconds, 0.0});
+    points.push_back({double(session.templateWindowEndTick - session.templateSourceTick), 0.0});
     m_graph->setPoints(std::move(points));
 }
 
@@ -455,7 +463,7 @@ void PitchEnvelopeHost::commitCurve()
     for (const CurvePoint &point : m_graph->points())
         curve.push_back({point.x, point.y});
     const pitch_envelope::LaneWrite write =
-        pitch_envelope::compileLaneWrite(m_songView->timeline(), curve, session.projections);
+        pitch_envelope::compileLaneWrite(curve, session.projections);
     std::vector<SongDocument::LanePointRange> ranges;
     ranges.reserve(write.ranges.size());
     for (const pitch_envelope::LaneRange &range : write.ranges)

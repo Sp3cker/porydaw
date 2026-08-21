@@ -618,7 +618,7 @@ class SongView : public QWidget
     void rebuildProjectionWithAnchoring();
     void syncPlayheadOverlay();
     void refreshPitchEnvelopeState();
-
+    void updatePitchEnvelopeGeometry();
     void notifyDrawerSongChanged();
     void notifyVelocityGestureChanged();
     void refreshDrawerPages();

@@ -62,11 +62,11 @@ class PitchBendEditor final : public QFrame
     static constexpr int kHeaderHeight = 64;
     static constexpr int kGraphHeight = 184;
 
-    bool tryDeleteSelectedVertex(EditableCurveGraph *graph, QKeyEvent *event);
-    EditableCurveGraph *focusedGraph() const;
-    uint8_t ccForGraph(const EditableCurveGraph *graph) const;
+    bool tryDeleteSelectedVertex(CurveGraph *graph, QKeyEvent *event);
+    CurveGraph *focusedGraph() const;
+    uint8_t ccForGraph(const CurveGraph *graph) const;
     void undoCurve();
-    void resetCurve(EditableCurveGraph *graph);
+    void resetCurve(CurveGraph *graph);
     void snapshotCurves();
     void snapshotCurve(PitchBendCurveAdapter *curve, uint8_t cc);
     bool writeController(uint8_t cc, int value, int endValue);
@@ -99,8 +99,8 @@ class PitchBendEditor final : public QFrame
     QFont m_captionFont;
     std::unique_ptr<PitchBendCurveAdapter> m_pitchCurve;
     std::unique_ptr<PitchBendCurveAdapter> m_modCurve;
-    EditableCurveGraph *m_pitchGraph = nullptr;
-    EditableCurveGraph *m_modGraph = nullptr;
+    CurveGraph *m_pitchGraph = nullptr;
+    CurveGraph *m_modGraph = nullptr;
     QPushButton *m_pitchResetButton = nullptr;
     QPushButton *m_modResetButton = nullptr;
     QSpinBox *m_bendRangeSpin = nullptr;

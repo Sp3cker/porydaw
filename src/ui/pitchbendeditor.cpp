@@ -114,11 +114,10 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
         PitchBendCurveAdapter::Lane::ModWheel, this);
     m_pitchGraph = &m_pitchCurve->graph();
     m_modGraph = &m_modCurve->graph();
-    const auto configureGraph = [this](EditableCurveGraph *graph, PitchBendCurveAdapter *curve,
-                                       int y) {
+    const auto configureGraph = [this](CurveGraph *graph, PitchBendCurveAdapter *curve, int y) {
         graph->installEventFilter(this);
         graph->setGeometry(0, y, kPopupWidth, kGraphHeight);
-        EditableCurveGraph::Callbacks callbacks;
+        CurveGraph::Callbacks callbacks;
         callbacks.previewChanged = [this, curve] {
             markCurvePending(curve);
             update();
@@ -136,7 +135,7 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
     };
     configureGraph(m_pitchGraph, m_pitchCurve.get(), kHeaderHeight);
     configureGraph(m_modGraph, m_modCurve.get(), kHeaderHeight + kGraphHeight);
-    const auto configureReset = [this](QPushButton *button, EditableCurveGraph *graph, int y) {
+    const auto configureReset = [this](QPushButton *button, CurveGraph *graph, int y) {
         button->setGeometry(kPopupWidth - kOuterInset - kResetWidth, y, kResetWidth, kResetHeight);
         button->setFocusPolicy(Qt::NoFocus);
         button->setCursor(Qt::ArrowCursor);
@@ -281,7 +280,7 @@ bool PitchBendEditor::event(QEvent *event)
 }
 bool PitchBendEditor::eventFilter(QObject *watched, QEvent *event)
 {
-    EditableCurveGraph *watchedGraph = nullptr;
+    CurveGraph *watchedGraph = nullptr;
     if (watched == m_pitchGraph)
         watchedGraph = m_pitchGraph;
     else if (watched == m_modGraph)
@@ -314,7 +313,7 @@ void PitchBendEditor::keyPressEvent(QKeyEvent *event)
     }
     if (tryDeleteSelectedVertex(focusedGraph(), event))
         return;
-    if (EditableCurveGraph *graph = focusedGraph(); graph && graph->handleKeyPress(event))
+    if (CurveGraph *graph = focusedGraph(); graph && graph->handleKeyPress(event))
         return;
     QFrame::keyPressEvent(event);
 }
@@ -360,12 +359,12 @@ void PitchBendEditor::hideEvent(QHideEvent *event)
     deleteLater();
 }
 
-EditableCurveGraph *PitchBendEditor::focusedGraph() const
+CurveGraph *PitchBendEditor::focusedGraph() const
 {
     return m_modGraph && m_modGraph->hasFocus() ? m_modGraph : m_pitchGraph;
 }
 
-bool PitchBendEditor::tryDeleteSelectedVertex(EditableCurveGraph *graph, QKeyEvent *event)
+bool PitchBendEditor::tryDeleteSelectedVertex(CurveGraph *graph, QKeyEvent *event)
 {
     const bool deleting = event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace;
     if (!deleting || !graph || !graph->selectedX())
@@ -376,7 +375,7 @@ bool PitchBendEditor::tryDeleteSelectedVertex(EditableCurveGraph *graph, QKeyEve
     return true;
 }
 
-uint8_t PitchBendEditor::ccForGraph(const EditableCurveGraph *graph) const
+uint8_t PitchBendEditor::ccForGraph(const CurveGraph *graph) const
 {
     return graph == m_modGraph ? uint8_t{1} : DOC_CC_BEND;
 }
@@ -391,7 +390,7 @@ void PitchBendEditor::undoCurve()
     m_document->undoStack()->undo();
 }
 
-void PitchBendEditor::resetCurve(EditableCurveGraph *graph)
+void PitchBendEditor::resetCurve(CurveGraph *graph)
 {
     graph->resetCurve();
     commitCurve();

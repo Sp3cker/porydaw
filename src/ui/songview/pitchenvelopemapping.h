@@ -3,12 +3,10 @@
 #include <cstdint>
 #include <vector>
 
-class MidiTimeline;
-
 namespace songview {
 namespace pitch_envelope {
 
-constexpr double kWindowMilliseconds = 100.0;
+constexpr uint64_t kDefaultWindowTicks = 24;
 constexpr double kPositiveBendScale = 8191.0;
 constexpr double kNegativeBendScale = 8192.0;
 
@@ -20,7 +18,7 @@ struct Projection {
 };
 
 struct CurveSample {
-    double milliseconds = 0.0;
+    double offsetTick = 0.0;
     double semitones = 0.0;
 };
 
@@ -39,13 +37,10 @@ struct LaneWrite {
     std::vector<LanePoint> points;
 };
 
-uint64_t creationEndTick(const MidiTimeline *timeline, uint64_t startTick);
-double elapsedMilliseconds(const MidiTimeline *timeline, uint64_t startTick, uint64_t tick);
-uint64_t tickForMilliseconds(const MidiTimeline *timeline, uint64_t startTick, uint64_t endTick,
-                             double milliseconds);
+uint64_t creationEndTick(uint64_t startTick, uint64_t windowTicks = kDefaultWindowTicks);
 double bendToSemitones(int bendValue, int bendRange);
 int semitonesToBend(double semitones, int bendRange);
-LaneWrite compileLaneWrite(const MidiTimeline *timeline, const std::vector<CurveSample> &curve,
+LaneWrite compileLaneWrite(const std::vector<CurveSample> &curve,
                            const std::vector<Projection> &projections);
 
 } // namespace pitch_envelope

@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "core/songdocument.h"
-#include "ui/curvegraph/editablecurvegraph.hpp"
+#include "ui/curvegraph/curvegraph.hpp"
 #include "ui/songview.h"
 
 namespace pitchenvelopecheck {
@@ -23,7 +23,7 @@ struct PitchEnvelopePersistenceInput {
     SongDocument &document;
     SongView &view;
     const LoadedVoiceGroup &voicegroup;
-    songview::EditableCurveGraph &graph;
+    songview::CurveGraph &graph;
     std::vector<songview::CurvePoint> authoredCurve;
     DocNote templateSource;
     std::vector<PitchEnvelopeProjection> fullProjections;
@@ -32,9 +32,7 @@ struct PitchEnvelopePersistenceInput {
     DocNote clippingNote;
     int track = -1;
     uint64_t expectedEndTick = 0;
-    uint64_t targetEndSample = 0;
-    uint64_t playableGridSamples = 0;
-    uint64_t authoredGridTicks = 0;
+    uint64_t expectedWindowTicks = 24;
     uint64_t preservedGapTick = 0;
     int preservedGapValue = 0;
     uint64_t postSpanTick = 0;

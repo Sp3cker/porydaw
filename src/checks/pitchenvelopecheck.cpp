@@ -114,11 +114,11 @@ class PitchEnvelopeCheckContext final
         return openTrack && *openTrack == track;
     }
 
-    static songview::EditableCurveGraph *graphFor(QWidget *host)
+    static songview::CurveGraph *graphFor(QWidget *host)
     {
         auto *widget =
             host ? host->findChild<QWidget *>(QStringLiteral("pitchEnvelopeGraph")) : nullptr;
-        return dynamic_cast<songview::EditableCurveGraph *>(widget);
+        return dynamic_cast<songview::CurveGraph *>(widget);
     }
 
     std::optional<DocNote> addEnvelopeNote(int track, uint64_t tick)
@@ -189,10 +189,10 @@ class PitchEnvelopeCheckContext final
             fail("could not create same-tick eligible pitch-envelope fixture notes");
             return fixture;
         }
-        fixture.sourceEndTick = songview::pitch_envelope::creationEndTick(
-            m_view.timeline(), fixture.templateSource->tick);
+        fixture.sourceEndTick =
+            songview::pitch_envelope::creationEndTick(fixture.templateSource->tick);
         if (fixture.sourceEndTick <= fixture.templateSource->tick + 1) {
-            fail("pitch-envelope fixture did not have a usable 100ms source interval");
+            fail("pitch-envelope fixture did not have a usable 24-tick source interval");
             return fixture;
         }
 
@@ -204,8 +204,8 @@ class PitchEnvelopeCheckContext final
             fail("could not create clipped eligible pitch-envelope fixture note");
             return fixture;
         }
-        fixture.clippedWindowEndTick = songview::pitch_envelope::creationEndTick(
-            m_view.timeline(), fixture.clippedProjection->tick);
+        fixture.clippedWindowEndTick =
+            songview::pitch_envelope::creationEndTick(fixture.clippedProjection->tick);
         const uint64_t clippingTick =
             fixture.clippedProjection->tick +
             (fixture.clippedWindowEndTick - fixture.clippedProjection->tick) / 2;
@@ -222,7 +222,7 @@ class PitchEnvelopeCheckContext final
         }
 
         const uint64_t finalTick =
-            songview::pitch_envelope::creationEndTick(m_view.timeline(), clippingTick) + 2 * grid;
+            songview::pitch_envelope::creationEndTick(clippingTick) + 2 * grid;
         m_document.addLanePoint(fixture.firstTrack, DOC_CC_VOICE, finalTick, kWaveProgram);
         m_document.addLanePoint(fixture.firstTrack, kBendRangeController, finalTick, 7);
         fixture.finalProjection = addEnvelopeNote(fixture.firstTrack, finalTick);
@@ -231,8 +231,8 @@ class PitchEnvelopeCheckContext final
             fail("could not create final same-tick pitch-envelope fixture notes");
             return fixture;
         }
-        fixture.finalEndTick = songview::pitch_envelope::creationEndTick(
-            m_view.timeline(), fixture.finalProjection->tick);
+        fixture.finalEndTick =
+            songview::pitch_envelope::creationEndTick(fixture.finalProjection->tick);
         if (fixture.finalEndTick <= fixture.finalProjection->tick + 1) {
             fail("pitch-envelope fixture did not have a usable final projection interval");
             return fixture;
@@ -353,13 +353,8 @@ class PitchEnvelopeCheckContext final
             return std::nullopt;
         }
         const DocNote templateSource = *fixture.templateSource;
-        const uint64_t startSample = m_view.timeline()->sampleForTick(templateSource.tick);
-        const uint64_t targetEndSample =
-            startSample + uint64_t(std::llround(0.100 * m_view.timeline()->sampleRate));
         const uint64_t expectedEndTick = fixture.sourceEndTick;
-        const uint64_t nextGridSample = m_view.timeline()->sampleForTick(
-            templateSource.tick + std::max<uint64_t>(1, m_document.ticksPerClock()));
-        const uint64_t playableGridSamples = std::max<uint64_t>(1, nextGridSample - startSample);
+        const uint64_t expectedWindowTicks = songview::pitch_envelope::kDefaultWindowTicks;
         m_view.selectionModel().clearNoteSelection();
         m_view.setPitchEnvelopeVisible(fixture.firstTrack, false);
         auto *button = pitchEnvelopeButtonFor(fixture.firstTrack);
@@ -382,22 +377,21 @@ class PitchEnvelopeCheckContext final
         m_view.setGridFeel(SongView::GridFeel::Straight);
         m_view.setGridMinDenom(4);
         QCoreApplication::processEvents();
-        const uint64_t authoredGridTicks = m_view.gridTicksAt(templateSource.tick);
         const auto initialCurve = graph->points();
-        const double initialEndMilliseconds = initialCurve.empty() ? 0.0 : initialCurve.back().x;
-        const uint64_t initialEndSample =
-            startSample +
-            uint64_t(std::llround(initialEndMilliseconds * m_view.timeline()->sampleRate / 1000.0));
-        const uint64_t initialEndpointError = initialEndSample > targetEndSample
-                                                  ? initialEndSample - targetEndSample
-                                                  : targetEndSample - initialEndSample;
         const bool zeroEndpoints =
-            initialCurve.size() >= 2 && std::abs(initialCurve.front().x) <= 1e-9 &&
-            std::abs(initialCurve.front().y) <= 1e-9 && std::abs(initialCurve.back().y) <= 1e-9;
+            initialCurve.size() >= 2 && std::abs(initialCurve.front().x - 0.0) <= 1e-9 &&
+            std::abs(initialCurve.front().y) <= 1e-9 &&
+            std::abs(initialCurve.back().x - double(expectedWindowTicks)) <= 1e-9 &&
+            std::abs(initialCurve.back().y) <= 1e-9;
         if (!zeroEndpoints)
             fail("new track pitch envelope did not expose mandatory zero endpoints");
-        if (initialEndpointError > playableGridSamples)
-            fail("new track pitch-envelope end was not within one grid step of 100ms");
+        bool outOfTickRange = false;
+        for (const auto &pt : initialCurve) {
+            if (pt.x < -1e-9 || pt.x > double(expectedWindowTicks) + 1e-9)
+                outOfTickRange = true;
+        }
+        if (outOfTickRange)
+            fail("new track pitch envelope exposed points outside 0..24 tick window");
         const QRect canvas = graph->canvasRect();
         if (canvas.width() < 3 || canvas.height() < 3) {
             fail("track pitch-envelope graph has no usable canvas");
@@ -414,17 +408,23 @@ class PitchEnvelopeCheckContext final
         graph->cancelGesture();
         if (!withinDetent || !beyondDetent)
             fail("pitch-envelope graph did not apply its 8-pixel zero detent");
+        const QPoint strokeStart(canvas.left() + canvas.width() / 4, canvas.center().y() + 16);
+        const QPoint strokeEnd(canvas.left() + (canvas.width() * 3) / 4, canvas.center().y() - 16);
         const QByteArray beforeCurve = m_document.smf().write();
         const int curveUndoIndex = m_document.undoStack()->index();
-        const QPoint strokeStart(canvas.left() + canvas.width() / 3, canvas.center().y());
-        const QPoint strokeEnd(canvas.left() + 2 * canvas.width() / 3,
-                               canvas.top() + canvas.height() / 4);
         sendCurveMouse(graph, QEvent::MouseButtonPress, strokeStart, Qt::LeftButton,
                        Qt::LeftButton);
         sendCurveMouse(graph, QEvent::MouseMove, strokeEnd, Qt::NoButton, Qt::LeftButton);
         if (!graph->hasGesture() || m_document.undoStack()->index() != curveUndoIndex)
             fail("track pitch-envelope gesture escaped graph preview before release");
         const auto authoredCurve = graph->points();
+        bool authoredOutOfRange = false;
+        for (const auto &pt : authoredCurve) {
+            if (pt.x < -1e-9 || pt.x > double(expectedWindowTicks) + 1e-9)
+                authoredOutOfRange = true;
+        }
+        if (authoredOutOfRange)
+            fail("track pitch-envelope gesture authored points outside 0..24 tick window");
         sendCurveMouse(graph, QEvent::MouseButtonRelease, strokeEnd, Qt::LeftButton, Qt::NoButton);
         QCoreApplication::processEvents();
         const auto result = pitchenvelopecheck::verifyPitchEnvelopePersistence(
@@ -441,9 +441,7 @@ class PitchEnvelopeCheckContext final
              *fixture.clippingNote,
              fixture.firstTrack,
              expectedEndTick,
-             targetEndSample,
-             playableGridSamples,
-             authoredGridTicks,
+             expectedWindowTicks,
              fixture.preservedGapTick,
              fixture.preservedGapValue,
              fixture.postSpanTick,

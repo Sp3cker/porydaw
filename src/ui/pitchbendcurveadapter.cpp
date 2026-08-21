@@ -20,14 +20,14 @@ PitchBendCurveAdapter::PitchBendCurveAdapter(::SongView *songView, int engineTra
     , m_endTick(endTick)
     , m_unterminated(unterminated)
     , m_lane(lane)
-    , m_graph(std::make_unique<EditableCurveGraph>(makeSpec(), parent))
+    , m_graph(std::make_unique<CurveGraph>(makeSpec(), parent))
 {
     m_graph->setObjectName(lane == Lane::PitchBend ? QStringLiteral("pitchBendGraph")
                                                    : QStringLiteral("modWheelGraph"));
     m_graph->setAttribute(Qt::WA_NoMousePropagation);
 }
 
-EditableCurveGraph &PitchBendCurveAdapter::graph()
+CurveGraph &PitchBendCurveAdapter::graph()
 {
     return *m_graph;
 }
@@ -100,16 +100,15 @@ int PitchBendCurveAdapter::curveValueAt(uint64_t tick) const
                              double(maximumValue())));
 }
 
-EditableCurveGraph::CurveSpec PitchBendCurveAdapter::makeSpec() const
+CurveGraph::CurveSpec PitchBendCurveAdapter::makeSpec() const
 {
-    EditableCurveGraph::CurveSpec spec;
+    CurveGraph::CurveSpec spec;
     spec.xAxis.minimum = double(m_startTick);
     spec.xAxis.maximum = double(m_endTick);
     spec.yAxis.minimum = minimumValue();
     spec.yAxis.maximum = maximumValue();
-    spec.yAxis.mapping = m_lane == Lane::PitchBend
-                             ? EditableCurveGraph::CurveAxisMapping::BipolarCenter
-                             : EditableCurveGraph::CurveAxisMapping::Linear;
+    spec.yAxis.mapping = m_lane == Lane::PitchBend ? CurveGraph::CurveAxisMapping::BipolarCenter
+                                                   : CurveGraph::CurveAxisMapping::Linear;
     spec.yAxis.quantizationStep = m_lane == Lane::PitchBend ? 128.0 : 1.0;
     spec.yAxis.zeroDetentPixels = m_lane == Lane::PitchBend ? 8 : 0;
     spec.defaultY = defaultValue();
@@ -129,17 +128,17 @@ EditableCurveGraph::CurveSpec PitchBendCurveAdapter::makeSpec() const
                    themes::color(themes::Role::focus_outline),
                    themes::color(themes::Role::song_view_edit_preview_outline),
                    themes::color(themes::Role::song_view_secondary_text)};
-    spec.sampling.snap = [this](double x, EditableCurveGraph::Sampling sampling) {
+    spec.sampling.snap = [this](double x, CurveGraph::Sampling sampling) {
         if (m_endTick <= m_startTick)
             return double(m_startTick);
         const double fraction =
             std::clamp((x - double(m_startTick)) / double(m_endTick - m_startTick), 0.0, 1.0);
         return double(tickAtFraction(fraction, sampling));
     };
-    spec.sampling.nextSample = [this](double x, EditableCurveGraph::Sampling sampling) {
+    spec.sampling.nextSample = [this](double x, CurveGraph::Sampling sampling) {
         return double(nextSampleTick(uint64_t(std::llround(x)), sampling));
     };
-    spec.sampling.lastEditable = [this](EditableCurveGraph::Sampling sampling) {
+    spec.sampling.lastEditable = [this](CurveGraph::Sampling sampling) {
         return double(lastEditableTick(sampling));
     };
     spec.segments.allLinear = true;
@@ -159,8 +158,7 @@ std::vector<double> PitchBendCurveAdapter::gridLines() const
         return result;
     uint64_t segmentTick = m_startTick;
     while (segmentTick < m_endTick) {
-        const SampleParams params =
-            sampleParamsAt(segmentTick, EditableCurveGraph::Sampling::Normal);
+        const SampleParams params = sampleParamsAt(segmentTick, CurveGraph::Sampling::Normal);
         uint64_t tick = nextSampleTick(segmentTick, params);
         while (tick < params.segmentEnd) {
             result.push_back(double(tick));
@@ -203,9 +201,9 @@ uint64_t PitchBendCurveAdapter::normalCellTicksAt(uint64_t tick) const
 }
 
 PitchBendCurveAdapter::SampleParams
-PitchBendCurveAdapter::sampleParamsAt(uint64_t tick, EditableCurveGraph::Sampling sampling) const
+PitchBendCurveAdapter::sampleParamsAt(uint64_t tick, CurveGraph::Sampling sampling) const
 {
-    if (sampling == EditableCurveGraph::Sampling::Fine)
+    if (sampling == CurveGraph::Sampling::Fine)
         return {std::max<uint64_t>(1, m_songView ? m_songView->fineGridTicks() : 1), 0, m_endTick};
     SampleParams params{normalCellTicksAt(tick), 0, m_endTick};
     if (!m_songView)
@@ -227,15 +225,14 @@ uint64_t PitchBendCurveAdapter::nextSampleTick(uint64_t tick, const SampleParams
     return std::min(aligned, params.segmentEnd);
 }
 
-uint64_t PitchBendCurveAdapter::nextSampleTick(uint64_t tick,
-                                               EditableCurveGraph::Sampling sampling) const
+uint64_t PitchBendCurveAdapter::nextSampleTick(uint64_t tick, CurveGraph::Sampling sampling) const
 {
     if (tick >= m_endTick)
         return m_endTick;
     return nextSampleTick(tick, sampleParamsAt(tick, sampling));
 }
 
-uint64_t PitchBendCurveAdapter::lastEditableTick(EditableCurveGraph::Sampling sampling) const
+uint64_t PitchBendCurveAdapter::lastEditableTick(CurveGraph::Sampling sampling) const
 {
     if (m_endTick <= m_startTick + 1)
         return m_startTick;
@@ -246,8 +243,7 @@ uint64_t PitchBendCurveAdapter::lastEditableTick(EditableCurveGraph::Sampling sa
     return std::clamp(aligned, m_startTick, lastRaw);
 }
 
-uint64_t PitchBendCurveAdapter::tickAtFraction(double fraction,
-                                               EditableCurveGraph::Sampling sampling) const
+uint64_t PitchBendCurveAdapter::tickAtFraction(double fraction, CurveGraph::Sampling sampling) const
 {
     if (fraction <= 0.0)
         return m_startTick;

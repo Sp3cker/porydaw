@@ -288,9 +288,10 @@ qt_add_library(porydaw_app STATIC
     src/ui/pitchbendeditor.hpp
     src/ui/pitchbendcurveadapter.cpp
     src/ui/pitchbendcurveadapter.hpp
-    src/ui/curvegraph/editablecurvegraph.cpp
-    src/ui/curvegraph/editablecurvegraph_paint.cpp
-    src/ui/curvegraph/editablecurvegraph.hpp
+    src/ui/curvegraph/curvegraph.cpp
+    src/ui/curvegraph/curvegraph_interaction.cpp
+    src/ui/curvegraph/curvegraph_paint.cpp
+    src/ui/curvegraph/curvegraph.hpp
     src/ui/playheadoverlay.cpp
     src/ui/playheadoverlay.h
     src/ui/eventlistview.cpp

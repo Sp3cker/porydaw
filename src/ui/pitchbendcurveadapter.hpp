@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/songdocument.h"
-#include "curvegraph/editablecurvegraph.hpp"
+#include "curvegraph/curvegraph.hpp"
 
 #include <cstdint>
 #include <map>
@@ -21,7 +21,7 @@ class PitchBendCurveAdapter final
     PitchBendCurveAdapter(::SongView *songView, int engineTrack, uint64_t startTick,
                           uint64_t endTick, bool unterminated, Lane lane, QWidget *parent);
 
-    EditableCurveGraph &graph();
+    CurveGraph &graph();
     void setBendRange(int range);
     void setCurve(const std::map<uint64_t, int> &points, int endValue);
     std::vector<SongDocument::LanePointValue> curvePoints() const;
@@ -34,17 +34,17 @@ class PitchBendCurveAdapter final
         uint64_t segmentEnd;
     };
 
-    EditableCurveGraph::CurveSpec makeSpec() const;
+    CurveGraph::CurveSpec makeSpec() const;
     std::vector<double> gridLines() const;
     void refreshSpec();
     void setPointsFromMap(const std::map<uint64_t, int> &points);
     uint64_t normalCellTicksAt(uint64_t tick) const;
-    SampleParams sampleParamsAt(uint64_t tick, EditableCurveGraph::Sampling sampling) const;
+    SampleParams sampleParamsAt(uint64_t tick, CurveGraph::Sampling sampling) const;
     uint64_t nextSampleTick(uint64_t tick, const SampleParams &params) const;
-    uint64_t nextSampleTick(uint64_t tick, EditableCurveGraph::Sampling sampling) const;
-    uint64_t lastEditableTick(EditableCurveGraph::Sampling sampling) const;
+    uint64_t nextSampleTick(uint64_t tick, CurveGraph::Sampling sampling) const;
+    uint64_t lastEditableTick(CurveGraph::Sampling sampling) const;
     int curveValueAt(uint64_t tick) const;
-    uint64_t tickAtFraction(double fraction, EditableCurveGraph::Sampling sampling) const;
+    uint64_t tickAtFraction(double fraction, CurveGraph::Sampling sampling) const;
     int minimumValue() const;
     int maximumValue() const;
     int defaultValue() const;
@@ -60,6 +60,6 @@ class PitchBendCurveAdapter final
     int m_bendRange = 2;
     int m_endValue = 0;
     Lane m_lane = Lane::PitchBend;
-    std::unique_ptr<EditableCurveGraph> m_graph;
+    std::unique_ptr<CurveGraph> m_graph;
 };
 } // namespace songview

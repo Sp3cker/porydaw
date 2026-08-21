@@ -9,7 +9,7 @@
 #include <optional>
 #include <vector>
 
-#include "ui/curvegraph/editablecurvegraph.hpp"
+#include "ui/curvegraph/curvegraph.hpp"
 #include "ui/pitchbendeditor.hpp"
 
 namespace pitchbendcheck {
@@ -185,20 +185,20 @@ void PitchBendCheckContext::runVertexEditing()
         fail("pitch-bend popup was not visible for vertex editing");
         return;
     }
-    auto *bendGraph = dynamic_cast<songview::EditableCurveGraph *>(
+    auto *bendGraph = dynamic_cast<songview::CurveGraph *>(
         popup->findChild<QWidget *>(QStringLiteral("pitchBendGraph")));
-    auto *modGraph = dynamic_cast<songview::EditableCurveGraph *>(
+    auto *modGraph = dynamic_cast<songview::CurveGraph *>(
         popup->findChild<QWidget *>(QStringLiteral("modWheelGraph")));
     if (!bendGraph)
-        fail("pitch-bend popup had no EditableCurveGraph pitchBendGraph child for vertex editing");
+        fail("pitch-bend popup had no CurveGraph pitchBendGraph child for vertex editing");
     else
         runVertexEditingGraph(bendGraph, DOC_CC_BEND);
     if (!modGraph)
-        fail("pitch-bend popup had no EditableCurveGraph modWheelGraph child for vertex editing");
+        fail("pitch-bend popup had no CurveGraph modWheelGraph child for vertex editing");
     else
         runVertexEditingGraph(modGraph, 1);
 }
-void PitchBendCheckContext::runVertexEditingGraph(songview::EditableCurveGraph *graph, uint8_t cc)
+void PitchBendCheckContext::runVertexEditingGraph(songview::CurveGraph *graph, uint8_t cc)
 {
     if (graph->cursor().shape() != Qt::ArrowCursor)
         fail("editable curve graph did not use the regular arrow cursor");
@@ -256,8 +256,10 @@ void PitchBendCheckContext::runVertexEditingGraph(songview::EditableCurveGraph *
         restoreBaseline();
         return;
     }
+    const QPoint grabOffset(0, 6);
+    const QPoint pressPos = targetPos + grabOffset;
     const int dragUndo = m_document.undoStack()->index();
-    sendMouse(graph, QEvent::MouseButtonPress, targetPos, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(graph, QEvent::MouseButtonPress, pressPos, Qt::LeftButton, Qt::LeftButton);
     QCoreApplication::processEvents();
     const auto selected = graph->selectedX();
     if (!selected || uint64_t(std::llround(*selected)) != target.tick) {
@@ -265,10 +267,10 @@ void PitchBendCheckContext::runVertexEditingGraph(songview::EditableCurveGraph *
         restoreBaseline();
         return;
     }
-    QPoint movedPos = targetPos + QPoint(20, -10);
+    QPoint movedPos = pressPos + QPoint(20, -10);
     movedPos.setX(std::clamp(movedPos.x(), canvas.left() + 2, canvas.right() - 2));
     movedPos.setY(std::clamp(movedPos.y(), canvas.top() + 2, canvas.bottom() - 2));
-    if (movedPos == targetPos) {
+    if (movedPos == pressPos) {
         fail("automation vertex had no usable drag destination");
         restoreBaseline();
         return;
@@ -276,6 +278,17 @@ void PitchBendCheckContext::runVertexEditingGraph(songview::EditableCurveGraph *
     sendMouse(graph, QEvent::MouseMove, movedPos, Qt::NoButton, Qt::LeftButton, Qt::AltModifier);
     const auto movedX = graph->selectedX();
     const std::vector<songview::CurvePoint> movedPreview = graph->points();
+    const auto movedPoint = movedX ? std::find_if(movedPreview.begin(), movedPreview.end(),
+                                                  [movedX](const songview::CurvePoint &point) {
+                                                      return point.x == *movedX;
+                                                  })
+                                   : movedPreview.end();
+    if (movedPoint == movedPreview.end() ||
+        std::abs(graph->pointPosition(*movedPoint).y() - (movedPos.y() - grabOffset.y())) > 1) {
+        fail("automation vertex drag did not preserve its cursor grab offset");
+        restoreBaseline();
+        return;
+    }
     sendMouse(graph, QEvent::MouseButtonRelease, movedPos, Qt::LeftButton, Qt::NoButton,
               Qt::AltModifier);
     QCoreApplication::processEvents();
@@ -358,11 +371,11 @@ void PitchBendCheckContext::runModWheelEditing()
 {
     QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
     auto *popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
-    auto *graphWidget = popup ? dynamic_cast<songview::EditableCurveGraph *>(
+    auto *graphWidget = popup ? dynamic_cast<songview::CurveGraph *>(
                                     popup->findChild<QWidget *>(QStringLiteral("modWheelGraph")))
                               : nullptr;
     if (!popup || !popup->isVisible() || !graphWidget) {
-        fail("pitch-bend popup did not expose its EditableCurveGraph modWheelGraph child");
+        fail("pitch-bend popup did not expose its CurveGraph modWheelGraph child");
         return;
     }
     const QRect graph = popup->modGraphRect();
@@ -419,9 +432,9 @@ void PitchBendCheckContext::runPointClickAndEscape()
         dismissPopup(popup);
         return;
     }
-    QPointer<songview::EditableCurveGraph> graph = range.graphWidget;
+    QPointer<songview::CurveGraph> graph = range.graphWidget;
     if (!graph) {
-        fail("pitch-bend popup had no EditableCurveGraph pitchBendGraph child");
+        fail("pitch-bend popup had no CurveGraph pitchBendGraph child");
         dismissPopup(popup);
         return;
     }
@@ -533,10 +546,10 @@ void PitchBendCheckContext::runModWheelShiftLine()
         dismissPopup(popup);
         return;
     }
-    QPointer<songview::EditableCurveGraph> graph = dynamic_cast<songview::EditableCurveGraph *>(
+    QPointer<songview::CurveGraph> graph = dynamic_cast<songview::CurveGraph *>(
         popup->findChild<QWidget *>(QStringLiteral("modWheelGraph")));
     if (!graph) {
-        fail("pitch-bend popup had no EditableCurveGraph modWheelGraph child");
+        fail("pitch-bend popup had no CurveGraph modWheelGraph child");
         dismissPopup(popup);
         return;
     }

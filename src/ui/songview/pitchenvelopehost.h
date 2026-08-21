@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/songdocument.h"
-#include "ui/curvegraph/editablecurvegraph.hpp"
+#include "ui/curvegraph/curvegraph.hpp"
 #include "ui/songview/pitchenvelopemapping.h"
 
 #include <QPointer>
@@ -28,6 +28,8 @@ class PitchEnvelopeHost final : public QWidget
     void cancelGesture();
 
   protected:
+    void paintEvent(QPaintEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
     void hideEvent(QHideEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
@@ -39,6 +41,7 @@ class PitchEnvelopeHost final : public QWidget
         uint64_t templateWindowEndTick = 0;
         uint64_t templateEndTick = 0;
         int templateBendRange = 0;
+        uint64_t templateWindowTicks = pitch_envelope::kDefaultWindowTicks;
         uint64_t documentRevision = 0;
         bool gestureDirty = false;
     };
@@ -52,19 +55,19 @@ class PitchEnvelopeHost final : public QWidget
         uint64_t endTick = 0;
     };
 
-    EditingGrid editingGridAt(uint64_t tick, EditableCurveGraph::Sampling sampling) const;
-    uint64_t snappedGridTick(uint64_t tick, EditableCurveGraph::Sampling sampling) const;
-    uint64_t nextGridTick(uint64_t tick, EditableCurveGraph::Sampling sampling) const;
-    uint64_t lastEditableGridTick(EditableCurveGraph::Sampling sampling) const;
+    EditingGrid editingGridAt(uint64_t tick, CurveGraph::Sampling sampling) const;
+    uint64_t snappedGridTick(uint64_t tick, CurveGraph::Sampling sampling) const;
+    uint64_t nextGridTick(uint64_t tick, CurveGraph::Sampling sampling) const;
+    uint64_t lastEditableGridTick(CurveGraph::Sampling sampling) const;
     std::vector<double> gridLines() const;
-    EditableCurveGraph::CurveSpec makeGraphSpec() const;
+    CurveGraph::CurveSpec makeGraphSpec() const;
     void applyReadOnlyState(const QString &text);
     void loadCurve();
     void commitCurve();
     void updateStatus(const QString &text);
 
     QPointer<::SongView> m_songView;
-    EditableCurveGraph *m_graph = nullptr;
+    CurveGraph *m_graph = nullptr;
     QLabel *m_status = nullptr;
     std::optional<EnvelopeSession> m_session;
 };

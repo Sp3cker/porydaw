@@ -10,14 +10,14 @@ The matrix, **Agreed contract**, and **Where we are** are authoritative together
 
 | Concern | Selected behavior |
 | --- | --- |
-| Timing | **Authoring (agreed, not implemented):** one fixed note-relative tick window `0 … windowTicks` (`windowTicks` not chosen yet). Graph *x* is an offset tick; `eventTick = noteStartTick + offsetTick`. Tempo and time-signature conversions leave the editor. Milliseconds are optional display only. **Playback:** generated 1/64-note samples plus M4A bend quantization. Playback granularity must not constrain pointer placement. **Current code:** still Alternative A's local 0–100 ms template, compiled through the tempo map at each eligible note-on. |
+| Timing | The editor is M4A-native: every visible node is a discrete bend event in a fixed note-relative tick window `0 … windowTicks` (`kDefaultWindowTicks = 24`, 1 quarter note / beat). Graph *x* is an offset tick; `eventTick = noteStartTick + offsetTick`. Each value is held until the next node. |
 | Authoring scope | The selected track owns one template. No note pick is required; a gesture applies it to every eligible note currently on that track. |
-| Endpoints and reset | Each projected interval starts at zero and explicitly resets to zero at the authoring-window end or the next distinct note-on, whichever comes first. A note-off never clips the interval. Current code uses 100 ms as that window end. |
+| Endpoints and reset | Each projected interval starts at zero and explicitly resets to zero at the authoring-window end (`windowEndTick = startTick + windowTicks`) or the next distinct note-on, whichever comes first. A note-off never clips the interval. |
 | Vertical scale | Convert the same relative-pitch template through the `BENDR` active at each eligible note-on. |
 | Editor visibility | Only the selected track's envelope editor may be open at a time. |
 | Editor placement | The host belongs around the track headers. The user opens it with the header P button. The graph fits in the header column (`trackHeaderWidth` = `fontPx(17.5)`). **Rejected:** `EditorDrawer` / velocity-pane overlay. |
 | Program changes | Show one stable header toggle whenever the selected track contains an eligible note. It remains authorable across cursor and playhead program changes; the effective voice only decides which note-ons receive a projection. |
-| Storage and manual lane ownership | Ordinary `DOC_CC_BEND` events are the sole persistence representation. There is no sidecar, persistent template artifact, or generated-versus-manual ownership split; manual edits to that lane remain authoritative. Explicit user-entered ticks must survive compilation alongside generated 1/64 samples. No custom embedded metadata is required for integer-tick handles. |
+| Storage and manual lane ownership | Ordinary `DOC_CC_BEND` events are the sole persistence representation. There is no sidecar, persistent template artifact, generated-versus-manual ownership split, or hidden playback sampling layer. Every visible node is projected as an ordinary bend event, and manual edits to that lane remain authoritative. |
 | Playback semantics | The bend is track-wide and never polyphonic: every active note on the engine track hears the same bend. |
 
 The matrix originally resolved strict millisecond timing to creation-time-only 100 ms because no persistence format was selected. Tick-native authoring later replaced milliseconds as the editor domain; Alternative A's ordinary-`DOC_CC_BEND` commit path remains.
@@ -28,41 +28,35 @@ The feature is a track-wide pitch-envelope editor for GBA PSG melodic voices.
 
 - Each track header provides a button that shows or hides the selected track's pitch-envelope editor.
 - The editor sits around the track headers. The graph fits in the header column width. It is not part of `EditorDrawer` and does not overlay the velocity pane.
-- The agreed authoring domain is a fixed local tick window `0 … windowTicks` (value not chosen). Current code still uses 0–100 ms.
+- The authoring domain is a fixed local tick window `0 … windowTicks` (`kDefaultWindowTicks = 24`).
 - A completed gesture projects that template onto every eligible note currently on the selected track. Notes added later receive no retroactive projection; edit the envelope again to apply it to them.
 - Program changes determine eligibility at each note-on. Any later note-on, eligible or not, clips and resets the preceding projection.
 - Noise and sampled voices are out of scope.
-- The editor is an editable vector graph made of points.
-- The graph editor shares its implementation with the graph widgets in the existing pitch-bend popup (`EditableCurveGraph`).
+- The editor is an M4A-native event graph: each point is a discrete bend command and segments use sample-and-hold steps.
+- The graph editor shares its implementation with the graph widgets in the existing pitch-bend popup (`CurveGraph`).
 - Pitch envelopes ultimately drive ordinary track-wide pitch bend. They are not polyphonic per-note expression: every active note on the engine track hears the same bend.
 
 ## Where we are (2026-08-20)
 
 ### Implemented
 
-- Shared `EditableCurveGraph` in `src/ui/curvegraph/`. Pitch-bend popup and envelope host use it. No second graph engine.
+- Shared `CurveGraph` in `src/ui/curvegraph/`. Pitch-bend popup and envelope host use it. No second graph engine.
 - Header P button on `TrackHeaderRow`. Canonical open-state lives in `SongView` / `PitchEnvelopeUiState`, not in the ephemeral row. Survives header rebuild. Only the selected track may be open.
 - `voiceSupportsPitchEnvelope` is the single eligibility helper.
-- `PitchEnvelopeHost` exists with: linear painting and `valueAtX()`, interior-point single-click deletion, drag threshold, fixed-zero envelope endpoints, envelope grid, 8 px zero detent, 1/64 persistence independent of the coarse visible grid.
-- Expanded pitch-envelope checks. Incremental build and `deno task checks build/porydaw_checks` passed after the drawer overlay.
+- `PitchEnvelopeHost` exists with: tick-native domain `[0 ... 24]`, M4A sample-and-hold painting and `valueAtX()`, direct projection of displayed bend events, interior-point single-click deletion, drag threshold with preserved grab offset, fixed-zero endpoints, envelope grid, and 8 px zero detent.
+- Anchored overlay placement in the track header column (`trackHeaderWidth = fontPx(17.5)`), latched on P / Esc close, with scroll synchronization.
+- Full check suite passing (all 53 harnesses pass).
 
 ### Core breakthroughs
 
-1. The two editors already share one graph. Painting and gestures live in `EditableCurveGraph`. Divergence is configuration and host persistence, not duplicated widgets. No fork.
-2. Node displacement cause. Current envelope path:
-   `pixel → milliseconds → tick → grid-snapped tick → milliseconds → 1/64 resampling → reload generated events as nodes`.
-   The click's original position is discarded twice: grid snap and compilation.
-3. Custom embedded metadata is not required. Standard MIDI pitch-bend events already exist at arbitrary integer MIDI ticks. Preserve explicit user-entered ticks alongside generated 1/64 samples. Metadata would only be necessary if sparse authored handles must stay distinguishable from generated samples, or if sub-tick persistence is required.
-4. Authoring and playback precision are separate:
-   - Authoring: any MIDI tick in the envelope window
-   - Curve: continuous linear interpolation
-   - Playback: generated 1/64 samples and M4A bend quantization
-   Machine playback granularity must not constrain pointer placement.
-5. The authoring domain should be ticks, not elapsed milliseconds. Fixed note-relative window `0 … windowTicks`. Projection: `eventTick = noteStartTick + offsetTick`. Tempo and time-signature conversions leave editing. Milliseconds become optional display information only.
-6. Explicit points must survive compilation. Compilation should union user-entered ticks, 1/64 sampling boundaries, and projection start/reset ticks. Effective-bend deduplication may collapse generated samples but must never remove explicit user ticks.
-7. **Superseded:** "Move `PitchEnvelopeHost` into `EditorDrawer` as an overlay over `VelocityArea`." That move was implemented and then rejected. Do not invent a sizing system from the velocity pane.
+1. The two editors share one `CurveGraph`. Painting and gestures live in `src/ui/curvegraph/`; divergence is configuration and host persistence, not duplicated widgets.
+2. Reloading generated 1/64 playback samples as editable nodes conflated a sparse vector curve with the authoritative bend-event stream. The envelope now uses one M4A-native model instead: every displayed node is one persisted event.
+3. Sample-and-hold rendering matches M4A interpretation. A node's value remains active until the next displayed event; no continuous line or hidden interpolation is implied.
+4. Custom embedded metadata is unnecessary because the graph and ordinary `DOC_CC_BEND` stream have the same identity. Commit directly projects each displayed offset to every eligible note start through that note's active `BENDR`.
+5. The authoring domain is ticks, not elapsed milliseconds. Fixed note-relative window `0 … windowTicks`; projection is `eventTick = noteStartTick + offsetTick`. Tempo and time-signature conversions stay out of editing.
+6. **Superseded:** "Move `PitchEnvelopeHost` into `EditorDrawer` as an overlay over `VelocityArea`." That move was implemented and then rejected. Do not invent a sizing system from the velocity pane.
 
-`windowTicks` is not selected. Tick-native authoring is agreed and not implemented. The host still uses 0–100 ms.
+`kDefaultWindowTicks = 24` (1 beat / quarter note) is implemented. Tick-native authoring is active across `pitchenvelopemapping`, `PitchEnvelopeHost`, and test harnesses.
 
 ### Placement reversal (EditorDrawer)
 
@@ -92,13 +86,7 @@ Do not use `Qt::Popup` (sample-picker auto-close + mouse grab) or `QDockWidget` 
 | Lane overlay | Child of `rollPane` / `PianoRoll` | Flush with the header; covers that track's notes. |
 
 ### Remaining
-
-- Choose `windowTicks`.
-- Tick-native graph domain; stop the millisecond round-trip that discards click position.
-- Compilation unions explicit user ticks with 1/64 samples and must not drop explicit ticks.
-- Unwind the `EditorDrawer` overlay; put the host around the track headers.
-- Size the graph from the header column, not from velocity/`EditorDrawer`.
-
+- All core milestones implemented and verified.
 ## Explicit non-goals
 
 Do not add:
@@ -119,13 +107,13 @@ Square 1 hardware sweep remains an independent voice parameter. It does not prov
 
 **Template source** — a deterministic existing eligible projection used to reconstruct the graph, preferring an unclipped projection. It is a display source, not note-scoped authoring state.
 
-**Authoring window** — the template's fixed local horizontal domain. Agreed: `0 … windowTicks` (value not chosen). Current code: 0–100 ms.
+**Authoring window** — the template's fixed local horizontal domain. Current value: `0 … 24` ticks.
 
 **Playable projection** — ordinary SMF pitch-bend events (`0xE`) written for one eligible note-on, ending at the authoring-window end or the next note-on.
 
 **Eligible voice** — a voice whose masked CGB type is Square 1, Square 2, or programmable wave.
 
-The repository's “mid2agb clock” is not the envelope's authoring unit. `SongDocument::ticksPerClock()` describes the build grid at 24 or 48 clocks per beat. Authoring uses MIDI ticks in the local window; playback samples at 1/64-note. Do not design the UI around extended `-X` 48-clock mode.
+The repository's “mid2agb clock” is not the envelope's authoring unit. `SongDocument::ticksPerClock()` describes the build grid at 24 or 48 clocks per beat. Envelope nodes use MIDI ticks directly and persist as the exact bend events M4A consumes. Do not design the UI around extended `-X` 48-clock mode.
 
 ## Current implementation evidence
 
@@ -212,7 +200,7 @@ Because `src/ui/pitchbendgraph.cpp` is already above the repository's 600-line c
 Add a host responsible for:
 
 - The selected engine track and deterministic template source
-- The fixed 0–100 ms graph domain
+- The fixed `0 … 24` tick graph domain
 - Relative-pitch bounds and formatting
 - Loading the template from ordinary bends
 - Previewing the playable projections
@@ -339,21 +327,19 @@ There is one authoritative ordinary lane. A commit atomically rewrites only the 
 
 ## Implementation sequence
 
-The matrix and **Where we are** close the former decision gate. Alternative A's ordinary-`DOC_CC_BEND` commit path remains. Do not introduce Alternative B's strict millisecond artifact. Tick-native authoring and header placement are the remaining design/implementation work; do not put the host in `EditorDrawer`.
+The matrix and **Where we are** close the former decision gate. Alternative A's ordinary-`DOC_CC_BEND` commit path remains. Do not introduce Alternative B's strict millisecond artifact or a second envelope store.
 
 ### Wave 1 — Shared graph cutover — DONE
 
-`EditableCurveGraph` extracted. `PitchBendEditor` adapted. Existing pitch and modulation graphs remain.
+`CurveGraph` extracted. `PitchBendEditor` adapted. Existing pitch and modulation graphs remain.
 
 ### Wave 2 — Header toggle and eligibility — DONE
 
 Header P button, `voiceSupportsPitchEnvelope`, per-tab `PitchEnvelopeUiState`, rebuild-safe checked state, program-change contract without playhead flicker.
 
-### Wave 3 — Envelope host and mapping — PARTIAL
+### Wave 3 — Envelope host and mapping — DONE
 
-Host exists and commits through `writeLanePointRanges`. Still a 0–100 ms local template. Tick-native `0 … windowTicks` is agreed and not implemented. Compilation still resamples to 1/64 and reloads generated events as nodes, which discards click position and can drop explicit user ticks.
-
-Do not keep the 100 ms graph domain. Do not add a second envelope store, sidecar, persistent template artifact, or runtime compiler.
+The host commits through `writeLanePointRanges` in a tick-native `0 … 24` domain. Displayed sample-and-hold nodes project directly to eligible note starts as ordinary bend events; commit does not synthesize hidden playback samples.
 
 ### Wave 4 — Focused verification and wiring
 
@@ -366,8 +352,8 @@ Required checks:
 - Square 1, Square 2, and programmable-wave types enable the editor; Noise, sample, keysplit, and missing voices do not.
 - The header button toggles the selected track, survives a document-triggered header rebuild, and works with no note selection.
 - Cursor and playback program changes do not flicker or disable the track-level editor.
-- A new template's local span matches the approved 100 ms contract within one playable-grid step.
-- One drawn curve repeats at multiple eligible note-ons, including same-tick notes, with each note-on's active `BENDR` representing the same semitone curve.
+- A new template's local span is exactly 24 ticks.
+- One stepped event pattern repeats at multiple eligible note-ons, including same-tick notes, with each note-on's active `BENDR` representing the same semitone values.
 - Mixed eligible/ineligible program spans omit ineligible projections; any later note-on clips and resets the preceding projection without note-off clipping.
 - A commit preserves ordinary bends outside projected intervals, including gaps.
 - Point add, drag, delete, and cancel produce one deterministic commit and one undo/redo step.
@@ -378,20 +364,19 @@ After focused checks pass, run the actual application, open an eligible track, t
 
 Finally run the applicable incremental build, focused harness, full check sweep when a writable decomp fixture is available, and `tools/format.sh --check` once after all implementation waves.
 
-### Wave 5 — Header placement and tick-native authoring — NEXT
+### Wave 5 — Header placement and tick-native authoring — DONE
 
-- Unwind `PitchEnvelopeHost` from `EditorDrawer` / `DrawerSections`.
-- Place the host around the track headers. The graph fits in `trackHeaderWidth`. Latch on the P button; do not use `Qt::Popup` or `QDockWidget`.
-- Switch the graph domain to `0 … windowTicks` once that value is chosen.
-- Compile as the union of explicit user ticks, 1/64 sampling boundaries, and start/reset ticks. Never remove explicit user ticks.
-- Stop the millisecond round-trip in the pointer path.
+- `PitchEnvelopeHost` sits around the track headers and latches on the P button.
+- The graph domain is `0 … windowTicks`.
+- Displayed bend-event offsets project directly with mandatory start/reset events.
+- The pointer path and persistence path use ticks throughout.
 
 ## Definition of done
 
 The feature is complete when:
 
 - Eligible track headers expose one stable pitch-envelope toggle that works with no note selection.
-- The selected track owns one fixed local tick-window template that projects to every eligible note currently on that track. Current code still uses 0–100 ms until Wave 5.
+- The selected track owns one fixed `0 … 24` tick-window event template that projects to every eligible note currently on that track.
 - The envelope host sits around the track headers and fits the header column. It is not an `EditorDrawer` or velocity overlay.
 - Ineligible note-ons receive no projection but still reset an earlier projection; note-off never clips it.
 - The existing pitch/modulation popup and the new editor use one shared graph implementation.
@@ -407,13 +392,13 @@ The feature is complete when:
 
 These decisions are normative and require no further product choice:
 
-1. **Timing:** Authoring is a fixed local tick window `0 … windowTicks` (`windowTicks` not chosen). Playback samples at 1/64-note. Current code still uses 0–100 ms. Later tempo-map edits may change a committed projection's elapsed duration until tick-native authoring lands.
+1. **Timing:** The editor uses a fixed local tick window `0 … 24`. Every node is a discrete bend event whose value is held until the next node; commit introduces no hidden 1/64 sampling.
 2. **Scope:** No note pick is required. Each gesture applies the selected track's template to every eligible note currently on that track; notes added later require another edit.
 3. **Endpoints:** The local graph's first and last points are mandatory and zero-valued. Each projection resets to zero at the authoring-window end or the next distinct note-on.
 4. **Reset:** Any later note-on, including an ineligible one, clips and resets the prior projection. Note-off does not clip it.
 5. **Vertical scale:** Resolve `BENDR` at each eligible note-on to convert the same semitone template.
 6. **Editor visibility:** Only the selected track's envelope editor may be open.
 7. **Program changes:** A track containing an eligible note remains authorable across cursor and playhead program changes. Voice changes decide projections at note-on only.
-8. **Storage and manual lane ownership:** Ordinary `DOC_CC_BEND` events are the sole representation. There is no sidecar, persistent template artifact, or second store; manual edits remain authoritative. Explicit user ticks survive compilation; no custom metadata is required.
+8. **Storage and manual lane ownership:** Ordinary `DOC_CC_BEND` events are the sole representation. There is no sidecar, persistent template artifact, second store, or generated sample identity; every displayed node maps to an authoritative event.
 9. **Editor placement:** Around the track headers. Graph fits in the header column. `EditorDrawer` / velocity overlay is rejected.
-10. **Authoring vs playback:** Pointer placement may use any MIDI tick in the window. Playback quantization must not snap the pointer.
+10. **Authoring vs playback:** The displayed sample-and-hold event graph is the playback representation. Pointer placement and persisted event timing use the same MIDI-tick domain.

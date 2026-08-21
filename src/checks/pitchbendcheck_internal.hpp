@@ -16,7 +16,7 @@ class QColor;
 class QImage;
 
 namespace songview {
-class EditableCurveGraph;
+class CurveGraph;
 class PitchBendEditor;
 } // namespace songview
 
@@ -42,16 +42,15 @@ class PitchBendCheckContext final
   private:
     struct RangePopupState {
         songview::PitchBendEditor *popup = nullptr;
-        songview::EditableCurveGraph *graphWidget = nullptr;
+        songview::CurveGraph *graphWidget = nullptr;
         QRect graph;
     };
 
     struct PersistedAltPopupState {
         songview::PitchBendEditor *popup = nullptr;
-        songview::EditableCurveGraph *graphWidget = nullptr;
+        songview::CurveGraph *graphWidget = nullptr;
         QRect graph;
     };
-
     struct BoundaryFixtureState {
         QByteArray beforeSmf;
         int beforeUndoIndex = 0;
@@ -82,7 +81,7 @@ class PitchBendCheckContext final
     void runLifecycleCancellation();
     void runRangeFreehandAndUndo();
     void runVertexEditing();
-    void runVertexEditingGraph(songview::EditableCurveGraph *graph, uint8_t cc);
+    void runVertexEditingGraph(songview::CurveGraph *graph, uint8_t cc);
     void runModWheelEditing();
     void runPointClickAndEscape();
     void runModWheelShiftLine();

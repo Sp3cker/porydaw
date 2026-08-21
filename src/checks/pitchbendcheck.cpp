@@ -18,7 +18,7 @@
 #include <cstdio>
 #include <vector>
 
-#include "ui/curvegraph/editablecurvegraph.hpp"
+#include "ui/curvegraph/curvegraph.hpp"
 #include "ui/pitchbendeditor.hpp"
 
 namespace pitchbendcheck {
@@ -178,10 +178,10 @@ PitchBendCheckContext::RangePopupState PitchBendCheckContext::openRangePopup()
                                 .arg(bendPopup->accessibleDescription())));
     }
     const QRect graph = bendPopup->graphRect();
-    auto *graphWidget = dynamic_cast<songview::EditableCurveGraph *>(
+    auto *graphWidget = dynamic_cast<songview::CurveGraph *>(
         bendPopup->findChild<QWidget *>(QStringLiteral("pitchBendGraph")));
     if (!graphWidget) {
-        fail("pitch-bend popup has no EditableCurveGraph pitchBendGraph child");
+        fail("pitch-bend popup has no CurveGraph pitchBendGraph child");
         return {};
     }
     sendMouse(graphWidget, QEvent::MouseMove, graphWidget->mapFrom(bendPopup, graph.center()),

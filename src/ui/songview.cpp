@@ -158,7 +158,6 @@ SongView::SongView(QWidget *parent)
     vbox->addWidget(rollPane, 1);
     m_pitchEnvelopeHost = new PitchEnvelopeHost(this, this);
     m_pitchEnvelopeHost->hide();
-    vbox->addWidget(m_pitchEnvelopeHost);
 
     m_strip = new OtherStrip(this);
     vbox->addWidget(m_strip);
@@ -580,6 +579,8 @@ void SongView::refreshTimelineViews()
     m_roll->invalidateContent();
     m_strip->invalidateContent();
     syncPlayheadOverlay();
+    if (m_pitchEnvelopeHost && m_pitchEnvelopeHost->isVisible())
+        m_pitchEnvelopeHost->refreshGrid();
 }
 
 void SongView::resizeEvent(QResizeEvent *event)
@@ -587,4 +588,32 @@ void SongView::resizeEvent(QResizeEvent *event)
     QWidget::resizeEvent(event);
     updateScrollbars();
     refreshDrawerPages();
+    updatePitchEnvelopeGeometry();
+}
+
+void SongView::updatePitchEnvelopeGeometry()
+{
+    if (!m_pitchEnvelopeHost || m_pitchEnvelopeHost->isHidden() || !m_headerScroll)
+        return;
+    const auto openTrack = m_pitchEnvelopeState.openTrack();
+    if (!openTrack)
+        return;
+    const QPoint headerTopLeft = m_headerScroll->mapTo(this, QPoint(0, 0));
+    const int width = m_headerScroll->width();
+    const int height = m_pitchEnvelopeHost->sizeHint().height() > 0
+                           ? m_pitchEnvelopeHost->sizeHint().height()
+                           : 196;
+    int targetY = headerTopLeft.y();
+    if (m_headers) {
+        auto *row =
+            m_headers->findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(*openTrack));
+        if (row && row->isVisible()) {
+            const QPoint rowPos = row->mapTo(this, QPoint(0, 0));
+            targetY = rowPos.y();
+        }
+    }
+    const int maxY = m_headerScroll->mapTo(this, QPoint(0, m_headerScroll->height())).y() - height;
+    targetY = std::clamp(targetY, headerTopLeft.y(), std::max(headerTopLeft.y(), maxY));
+    m_pitchEnvelopeHost->setGeometry(headerTopLeft.x(), targetY, width, height);
+    m_pitchEnvelopeHost->raise();
 }

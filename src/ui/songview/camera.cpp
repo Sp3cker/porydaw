@@ -138,8 +138,10 @@ void SongView::setVScroll(double y)
         m_vbar->setValue(scrollbarValue);
         m_vbar->blockSignals(false);
     }
-    if (cameraChanged)
+    if (cameraChanged) {
         m_roll->invalidateContent();
+        updatePitchEnvelopeGeometry();
+    }
 }
 double SongView::maxRollScroll() const
 {

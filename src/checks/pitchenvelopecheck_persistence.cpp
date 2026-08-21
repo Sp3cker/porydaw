@@ -40,11 +40,11 @@ bool sameLane(const std::vector<DocLanePoint> &lhs, const std::vector<DocLanePoi
     return true;
 }
 
-songview::EditableCurveGraph *graphFor(QWidget *host)
+songview::CurveGraph *graphFor(QWidget *host)
 {
     auto *widget =
         host ? host->findChild<QWidget *>(QStringLiteral("pitchEnvelopeGraph")) : nullptr;
-    return dynamic_cast<songview::EditableCurveGraph *>(widget);
+    return dynamic_cast<songview::CurveGraph *>(widget);
 }
 
 std::vector<DocLanePoint> lanePointsInRange(const std::vector<DocLanePoint> &points,
@@ -67,75 +67,24 @@ bool hasLanePoint(const std::vector<DocLanePoint> &points, uint64_t tick, int va
     return false;
 }
 
-double linearCurveValue(const std::vector<songview::CurvePoint> &curve, double milliseconds)
-{
-    if (curve.empty() || milliseconds <= curve.front().x)
-        return curve.empty() ? 0.0 : curve.front().y;
-    for (size_t i = 1; i < curve.size(); i++) {
-        if (milliseconds > curve[i].x)
-            continue;
-        const songview::CurvePoint &left = curve[i - 1];
-        const songview::CurvePoint &right = curve[i];
-        const double span = right.x - left.x;
-        if (span <= 0.0)
-            return right.y;
-        const double fraction = (milliseconds - left.x) / span;
-        return left.y + fraction * (right.y - left.y);
-    }
-    return curve.back().y;
-}
-
 std::vector<DocLanePoint>
-expectedProjection(const SongView &view, const MidiTimeline *timeline,
-                   const std::vector<songview::CurvePoint> &curve,
+expectedProjection(const std::vector<songview::CurvePoint> &curve,
                    const pitchenvelopecheck::PitchEnvelopeProjection &projection)
 {
     std::vector<DocLanePoint> result;
     result.push_back(expectedLanePoint(projection.note.tick, 0));
     const uint64_t span = projection.endTick - projection.note.tick;
-    const uint64_t beatTicks =
-        std::max<uint64_t>(1, view.gridSegAt(projection.note.tick).beatTicks);
-    const auto offsetForBoundary = [beatTicks](uint64_t index) {
-        return uint64_t((__uint128_t(index) * beatTicks + 8) / 16);
-    };
-    int previousEffective = 64;
-    for (uint64_t index = 1;; index++) {
-        const uint64_t offset = offsetForBoundary(index);
-        if (offset >= span)
-            break;
-        const uint64_t tick = projection.note.tick + offset;
-        const double milliseconds = std::clamp(
-            songview::pitch_envelope::elapsedMilliseconds(timeline, projection.note.tick, tick),
-            0.0, songview::pitch_envelope::kWindowMilliseconds);
-        const int value = songview::pitch_envelope::semitonesToBend(
-            linearCurveValue(curve, milliseconds), projection.bendRange);
-        const int effective = (std::clamp(value, -8192, 8191) + 8192) >> 7;
-        if (effective == previousEffective)
+    for (const songview::CurvePoint &point : curve) {
+        if (point.x <= 0.0)
             continue;
-        result.push_back(expectedLanePoint(tick, value));
-        previousEffective = effective;
+        const uint64_t offset = uint64_t(std::llround(point.x));
+        if (offset >= span)
+            continue;
+        const int value = songview::pitch_envelope::semitonesToBend(point.y, projection.bendRange);
+        result.push_back(expectedLanePoint(projection.note.tick + offset, value));
     }
     result.push_back(expectedLanePoint(projection.endTick, 0));
     return result;
-}
-
-bool fixedCadenceEscapesEditingGrid(const SongView &view,
-                                    const pitchenvelopecheck::PitchEnvelopeProjection &projection,
-                                    uint64_t editingGridTicks)
-{
-    if (editingGridTicks == 0 || projection.endTick <= projection.note.tick)
-        return false;
-    const uint64_t beatTicks =
-        std::max<uint64_t>(1, view.gridSegAt(projection.note.tick).beatTicks);
-    for (uint64_t index = 1;; index++) {
-        const uint64_t offset = uint64_t((__uint128_t(index) * beatTicks + 8) / 16);
-        if (offset >= projection.endTick - projection.note.tick)
-            return false;
-        const uint64_t tick = projection.note.tick + offset;
-        const SongView::GridSeg segment = view.gridSegAt(tick);
-        if (tick >= segment.start && (tick - segment.start) % editingGridTicks != 0)
-            return true;
-    }
 }
 
 } // namespace
@@ -155,55 +104,56 @@ verifyPitchEnvelopePersistence(const PitchEnvelopePersistenceInput &input)
     const QByteArray committedBytes = input.document.smf().write();
     result.committedBends = input.document.lanePoints(input.track, DOC_CC_BEND);
     result.committedCurve = input.graph.points();
-    const uint64_t endSample = input.view.timeline()->sampleForTick(input.expectedEndTick);
-    const uint64_t endpointError = endSample > input.targetEndSample
-                                       ? endSample - input.targetEndSample
-                                       : input.targetEndSample - endSample;
+    const double expectedEndX = input.expectedWindowTicks != 0
+                                    ? double(input.expectedWindowTicks)
+                                    : double(input.expectedEndTick > input.templateSource.tick
+                                                 ? input.expectedEndTick - input.templateSource.tick
+                                                 : 0);
     const bool zeroEndpoints = result.committedCurve.size() >= 2 &&
+                               std::abs(result.committedCurve.front().x - 0.0) <= 1e-9 &&
                                std::abs(result.committedCurve.front().y) <= 1e-9 &&
+                               std::abs(result.committedCurve.back().x - expectedEndX) <= 1e-9 &&
                                std::abs(result.committedCurve.back().y) <= 1e-9;
-    if (!zeroEndpoints || endpointError > input.playableGridSamples)
-        fail("track pitch-envelope gesture did not retain its 100ms zero-reset template");
-    bool sawFixedCadenceOutsideEditingGrid = false;
-    const auto inspectFixedSamples = [&](const std::vector<DocLanePoint> &points) {
-        for (size_t i = 1; i + 1 < points.size(); i++) {
-            const int previousEffective =
-                (std::clamp(points[i - 1].value, -8192, 8191) + 8192) >> 7;
-            const int effective = (std::clamp(points[i].value, -8192, 8191) + 8192) >> 7;
-            if (effective == previousEffective)
-                fail("pitch-envelope persistence retained consecutive equal M4A bend samples");
-        }
-    };
+    if (!zeroEndpoints)
+        fail("track pitch-envelope gesture did not retain its 24-tick zero-reset template");
+    if (!input.fullProjections.empty()) {
+        const int templateBendRange = input.fullProjections.front().bendRange;
+        const bool retainedAuthoredPoints = std::all_of(
+            input.authoredCurve.begin(), input.authoredCurve.end(),
+            [&](const songview::CurvePoint &authored) {
+                const double persistedY = songview::pitch_envelope::bendToSemitones(
+                    songview::pitch_envelope::semitonesToBend(authored.y, templateBendRange),
+                    templateBendRange);
+                return std::any_of(result.committedCurve.begin(), result.committedCurve.end(),
+                                   [&](const songview::CurvePoint &committed) {
+                                       return std::abs(committed.x - authored.x) <= 1e-9 &&
+                                              std::abs(committed.y - persistedY) <= 1e-9;
+                                   });
+            });
+        if (!retainedAuthoredPoints)
+            fail("track pitch-envelope commit moved an authored graph handle");
+        if (result.committedCurve.size() != input.authoredCurve.size())
+            fail("track pitch-envelope commit introduced undisplayed bend events");
+    }
     for (const PitchEnvelopeProjection &projection : input.fullProjections) {
         const std::vector<DocLanePoint> expected =
-            expectedProjection(input.view, input.view.timeline(), input.authoredCurve, projection);
+            expectedProjection(input.authoredCurve, projection);
         const std::vector<DocLanePoint> actual =
             lanePointsInRange(result.committedBends, projection.note.tick, projection.endTick);
         if (!sameLane(expected, actual)) {
             fail(
                 projection.note.tick == input.sameTickProjectionTick
                     ? "same-tick eligible note-ons produced more than one pitch-envelope projection"
-                    : "eligible note-on did not receive the fixed 1/64-note pitch-envelope "
-                      "projection at its active BENDR");
+                    : "eligible note-on did not receive the displayed M4A bend events at its "
+                      "active BENDR");
         }
-        inspectFixedSamples(actual);
-        sawFixedCadenceOutsideEditingGrid =
-            sawFixedCadenceOutsideEditingGrid ||
-            fixedCadenceEscapesEditingGrid(input.view, projection, input.authoredGridTicks);
     }
-    const std::vector<DocLanePoint> expectedClipped = expectedProjection(
-        input.view, input.view.timeline(), input.authoredCurve, input.clippedProjection);
+    const std::vector<DocLanePoint> expectedClipped =
+        expectedProjection(input.authoredCurve, input.clippedProjection);
     const std::vector<DocLanePoint> actualClipped = lanePointsInRange(
         result.committedBends, input.clippedProjection.note.tick, input.clippedProjection.endTick);
     if (!sameLane(expectedClipped, actualClipped))
         fail("eligible note-on did not receive the template before the next note clipped it");
-    inspectFixedSamples(actualClipped);
-    sawFixedCadenceOutsideEditingGrid =
-        sawFixedCadenceOutsideEditingGrid ||
-        fixedCadenceEscapesEditingGrid(input.view, input.clippedProjection,
-                                       input.authoredGridTicks);
-    if (!sawFixedCadenceOutsideEditingGrid)
-        fail("pitch-envelope fixture did not expose fixed 1/64 cadence beyond its editing grid");
     for (const DocLanePoint &point : result.committedBends) {
         if (point.tick > input.clippingNote.tick &&
             point.tick < input.fullProjections.back().note.tick && point.value != 0) {

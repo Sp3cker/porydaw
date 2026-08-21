@@ -113,6 +113,9 @@ void SongView::setPitchEnvelopeVisible(int track, bool visible)
 
 void SongView::refreshPitchEnvelopeState()
 {
-    m_pitchEnvelopeHost->setEnvelopeVisible(m_pitchEnvelopeState.openTrack().has_value());
+    const bool visible = m_pitchEnvelopeState.openTrack().has_value();
+    m_pitchEnvelopeHost->setEnvelopeVisible(visible);
+    if (visible)
+        updatePitchEnvelopeGeometry();
     emit pitchEnvelopeVisibilityChanged();
 }

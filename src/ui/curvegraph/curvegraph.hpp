@@ -13,8 +13,8 @@
 #include <QWidget>
 #include <functional>
 #include <optional>
-#include <vector>
 #include <variant>
+#include <vector>
 
 class QPainter;
 
@@ -36,7 +36,7 @@ struct CurveColors {
     QColor text;
 };
 
-class EditableCurveGraph final : public QWidget
+class CurveGraph final : public QWidget
 {
   public:
     enum class Sampling { Normal, Fine };
@@ -95,7 +95,7 @@ class EditableCurveGraph final : public QWidget
         std::function<void(int)> wheelChanged;
     };
 
-    explicit EditableCurveGraph(CurveSpec spec, QWidget *parent = nullptr);
+    explicit CurveGraph(CurveSpec spec, QWidget *parent = nullptr);
 
     void setSpec(CurveSpec spec);
     void setPoints(std::vector<CurvePoint> points);
@@ -141,6 +141,7 @@ class EditableCurveGraph final : public QWidget
         std::vector<CurvePoint> snapshot;
         QPointF pressPosition;
         double originalX = 0.0;
+        QPointF grabOffset;
         bool hasMoved = false;
     };
 
@@ -192,4 +193,5 @@ class EditableCurveGraph final : public QWidget
     std::optional<double> m_selectedX;
     Callbacks m_callbacks;
 };
+
 } // namespace songview
