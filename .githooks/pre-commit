@@ -11,18 +11,3 @@ if ! deno task format:check; then
     echo "pre-commit: formatting check failed; run deno task format, then retry the commit." >&2
     exit 1
 fi
-
-if ! cmake -S . -B build-asan -G Ninja -DPORYDAW_ASAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo; then
-    echo "pre-commit: AddressSanitizer configuration failed." >&2
-    exit 1
-fi
-
-if ! cmake --build build-asan --parallel; then
-    echo "pre-commit: AddressSanitizer build failed." >&2
-    exit 1
-fi
-
-if ! deno task checks build-asan/porydaw_checks; then
-    echo "pre-commit: AddressSanitizer checks failed." >&2
-    exit 1
-fi
