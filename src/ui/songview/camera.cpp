@@ -87,6 +87,7 @@ void SongView::zoomKeyHeight(const QWheelEvent *event)
     const double anchorY = event->position().y();
     const double anchoredScroll = cursorAnchoredScroll(anchorY, oldH, m_scrollY, newH);
     m_keyHeight = newH;
+    m_roll->refreshTextLayout();
     updateScrollbars();
     setVScroll(std::clamp(anchoredScroll, 0.0, maxRollScroll()));
     // The camera scale changed even when the cursor anchor keeps its scroll

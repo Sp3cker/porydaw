@@ -161,6 +161,12 @@ QFont bodyMono(const QFont &body)
     font.setPixelSize(resolvedPixelSize(body));
     return font;
 }
+QFont tableMono(const QFont &body)
+{
+    auto font = bodyMono(body);
+    font.setLetterSpacing(QFont::AbsoluteSpacing, -0.5);
+    return font;
+}
 
 QFont caption(const QFont &source)
 {
@@ -182,6 +188,14 @@ QFont regular(const QFont &source)
     font.setStyleName({});
     font.setWeight(QFont::Normal);
     font.setStyle(QFont::StyleNormal);
+    font.setPixelSize(resolvedPixelSize(source));
+    return font;
+}
+QFont italic(const QFont &source)
+{
+    auto font = source;
+    font.setStyleName({});
+    font.setStyle(QFont::StyleItalic);
     font.setPixelSize(resolvedPixelSize(source));
     return font;
 }

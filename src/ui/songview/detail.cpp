@@ -3,7 +3,6 @@
 #include "ui/theme/color_math.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
-#include "ui/typography.h"
 
 #include <QComboBox>
 #include <QDialog>
@@ -409,29 +408,6 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
     }
 }
 
-QFont timeRulerFont(const QFont &source, int minimumFontPixelSize, qreal letterSpacing)
-{
-    auto font = typography::bodyMono(typography::caption(source));
-    font.setPixelSize(std::max(minimumFontPixelSize, font.pixelSize() - lyt::singlePixel()));
-    font.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
-    return font;
-}
-// "bar.beat" labels sit one size below the bar numbers so the two label
-// tiers read apart even where the deemphasized color alone wouldn't.
-QFont beatRulerFont(const QFont &source, int minimumFontPixelSize, qreal letterSpacing)
-{
-    auto font = timeRulerFont(source, minimumFontPixelSize, letterSpacing);
-    font.setPixelSize(std::max(minimumFontPixelSize, font.pixelSize() - lyt::singlePixel()));
-    return font;
-}
-
-std::optional<QFont> velocityLabelFont(const QFont &source, int availableHeight)
-{
-    auto font = typography::fitted(source, availableHeight);
-    if (font)
-        font->setPixelSize(std::max(lyt::singlePixel(), font->pixelSize() - lyt::singlePixel()));
-    return font;
-}
 // Note text sits on a plate of the note's own fill: the velocity bar can
 // cross the text rows, and both the bar and a dark picked ink derive from
 // the fill, so glyphs painted straight over the bar lose their contrast.
@@ -444,25 +420,6 @@ void drawPlatedNoteText(QPainter &painter, const QRectF &rect, int flags, const 
     painter.fillRect(plate.adjusted(-pad, 0.0, pad, 0.0), fill);
     painter.setPen(ink);
     painter.drawText(rect, flags, text);
-}
-
-QFont fixedNoteNameFont(const QFont &source)
-{
-    auto font = typography::noteName(source);
-    font.setPixelSize(std::max(lyt::singlePixel(), font.pixelSize() - 2 * lyt::singlePixel()));
-    return font;
-}
-
-std::optional<QFont> noteNameFont(const QFont &source, qreal noteBoxHeight)
-{
-    const auto textHeight = int(std::floor(noteBoxHeight - 2.0 * lyt::space(Space::Half)));
-    const auto font = fixedNoteNameFont(source);
-    // The face is fixed: when its padded height misses the row, labels hide
-    // rather than shrink.
-    const QFontMetrics metrics(font);
-    if (metrics.ascent() + metrics.descent() > textHeight)
-        return std::nullopt;
-    return font;
 }
 
 } // namespace songview::detail

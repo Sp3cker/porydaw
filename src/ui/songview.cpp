@@ -410,6 +410,7 @@ void SongView::applyViewState(const ViewState &state)
     m_pxPerTick = pxPerTick;
     m_keyHeight = std::clamp(state.keyHeight, double(m_geometry.pianoRollMinimumKeyHeight),
                              double(m_geometry.pianoRollMaximumKeyHeight));
+    m_roll->refreshTextLayout();
     setGridMinDenom(state.gridMinDenom); // setter validates the denominator
     setGridFeel(state.gridTriplet ? GridFeel::Triplet : GridFeel::Straight);
     m_editCursorTick = std::min<uint64_t>(state.editCursorTick, m_timeline->lengthTicks);

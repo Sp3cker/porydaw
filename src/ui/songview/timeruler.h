@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QFont>
 #include <QFontMetrics>
 #include <QPoint>
 #include <QPointF>
@@ -88,6 +89,10 @@ class TimeRuler : public QWidget
 
     void showRulerMenu(uint64_t clickTick, const QPoint &globalPos);
 
+    QFont m_signatureFont;
+    QFont m_rulerFont;
+    QFont m_beatFont;
+    QFont m_boldRulerFont;
     SongView *m_sv;
     Geometry m_geometry;
     int m_markerHeight = 0;

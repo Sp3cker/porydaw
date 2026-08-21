@@ -2,6 +2,8 @@
 
 #include "core/songdocument.h"
 
+#include <QEvent>
+#include <QFont>
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -56,6 +58,7 @@ class PitchBendGraph final : public QWidget
     Lane lane() const;
 
   protected:
+    bool event(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -126,6 +129,7 @@ class PitchBendGraph final : public QWidget
     QString formatLiveValue() const;
     QString formatRangeLimit(bool positive) const;
 
+    void rebuildFont();
     ::SongView *m_songView = nullptr;
     int m_engineTrack = -1;
     uint64_t m_startTick = 0;
@@ -142,5 +146,6 @@ class PitchBendGraph final : public QWidget
     std::optional<VertexDragState> m_vertexDragState;
     std::optional<uint64_t> m_selectedTick;
     Callbacks m_callbacks;
+    QFont m_captionFont;
 };
 } // namespace songview

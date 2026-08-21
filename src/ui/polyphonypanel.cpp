@@ -21,6 +21,7 @@
 #include "core/miditimeline.h"
 #include "ui/m4asemantics.h"
 #include "ui/theme/themeruntime.h"
+#include "ui/typography.h"
 
 namespace {
 
@@ -93,6 +94,7 @@ class PolyChannelGrid : public QWidget
     explicit PolyChannelGrid(QWidget *parent = nullptr) : QWidget(parent)
     {
         setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        m_cellFont = typography::caption(font());
     }
 
     void setSnapshot(const AudioEngine::PolySnapshot &snap)
@@ -121,6 +123,13 @@ class PolyChannelGrid : public QWidget
     QSize minimumSizeHint() const override { return QSize(kCellW + kGap, kCellH); }
 
   protected:
+    void changeEvent(QEvent *event) override
+    {
+        QWidget::changeEvent(event);
+        if (event->type() == QEvent::FontChange)
+            m_cellFont = typography::caption(font());
+    }
+
     void resizeEvent(QResizeEvent *event) override
     {
         QWidget::resizeEvent(event);
@@ -192,6 +201,8 @@ class PolyChannelGrid : public QWidget
         const int count = static_cast<int>(channels.size());
         static const char *cgbNames[MAX_CGB_CHANNELS] = {"Sq1", "Sq2", "Wave", "Noise"};
         paintCaption(p, y, caption);
+        p->save();
+        p->setFont(m_cellFont);
         const int perRow = cellsPerRow(width());
         for (int i = 0; i < count; i++) {
             const AudioEngine::PolyChannel &ch = channels[i];
@@ -215,14 +226,13 @@ class PolyChannelGrid : public QWidget
             p->drawRoundedRect(rect, 3, 3);
             p->setPen(themes::color(state == 0 ? themes::Role::polyphony_cell_free_text
                                                : themes::Role::polyphony_cell_text));
-            QFont f = font();
-            f.setPixelSize(10);
-            p->setFont(f);
             p->drawText(rect, Qt::AlignCenter, label);
         }
+        p->restore();
         y += ((count + perRow - 1) / perRow) * (kCellH + kGap);
     }
 
+    QFont m_cellFont;
     AudioEngine::PolySnapshot m_snap;
     int m_hintWidth = 0; // last laid-out width; sizeHint wraps to it
 };
@@ -260,9 +270,9 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     auto *usageLayout = new QVBoxLayout(m_usageBox);
     usageLayout->setContentsMargins(0, 0, 0, 0);
     usageLayout->setSpacing(6);
-    auto *usageLabel = new QLabel(tr("Channel usage"), m_usageBox);
-    usageLabel->setStyleSheet(QStringLiteral("font-weight: bold;"));
-    usageLayout->addWidget(usageLabel);
+    m_usageLabel = new QLabel(tr("Channel usage"), m_usageBox);
+    m_usageLabel->setFont(typography::bold(font()));
+    usageLayout->addWidget(m_usageLabel);
     m_grid = new PolyChannelGrid(m_usageBox);
     usageLayout->addWidget(m_grid);
     usageLayout->addStretch();
@@ -272,9 +282,9 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     overflowLayout->setContentsMargins(0, 0, 0, 0);
     overflowLayout->setSpacing(6);
     auto *tableHeader = new QHBoxLayout;
-    auto *tableLabel = new QLabel(tr("Overflow by track"), m_overflowBox);
-    tableLabel->setStyleSheet(QStringLiteral("font-weight: bold;"));
-    tableHeader->addWidget(tableLabel);
+    m_tableLabel = new QLabel(tr("Overflow by track"), m_overflowBox);
+    m_tableLabel->setFont(typography::bold(font()));
+    tableHeader->addWidget(m_tableLabel);
     tableHeader->addStretch();
     m_reset = new QPushButton(tr("Reset"), m_overflowBox);
     connect(m_reset, &QPushButton::clicked, this, [this] {
@@ -323,9 +333,9 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     layout->addLayout(m_bodyGrid, 1);
     setWideLayout(false);
 
-    auto *logLabel = new QLabel(tr("Recent events"), content);
-    logLabel->setStyleSheet(QStringLiteral("font-weight: bold;"));
-    layout->addWidget(logLabel);
+    m_logLabel = new QLabel(tr("Recent events"), content);
+    m_logLabel->setFont(typography::bold(font()));
+    layout->addWidget(m_logLabel);
     m_log = new QListWidget(content);
     m_log->setSelectionMode(QAbstractItemView::SingleSelection);
     m_log->setToolTip(tr("Double-click an event to jump to its position."));
@@ -528,9 +538,20 @@ void PolyphonyPanel::applyLogItemInk(QListWidgetItem *item)
 
 // Log rows are inked once when they are appended; a theme change would
 // otherwise leave them in the old theme's severity colors.
+void PolyphonyPanel::refreshHeadingFonts()
+{
+    const auto headingFont = typography::bold(font());
+    for (QLabel *label : {m_usageLabel, m_tableLabel, m_logLabel}) {
+        if (label)
+            label->setFont(headingFont);
+    }
+}
+
 void PolyphonyPanel::changeEvent(QEvent *event)
 {
     QWidget::changeEvent(event);
+    if (event->type() == QEvent::FontChange)
+        refreshHeadingFonts();
     if (event->type() == QEvent::PaletteChange) {
         for (int i = 0; i < m_log->count(); i++)
             applyLogItemInk(m_log->item(i));

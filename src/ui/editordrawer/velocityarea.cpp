@@ -92,8 +92,7 @@ void VelocityArea::Geometry::resolve()
 void VelocityArea::rebuildFonts()
 {
     m_captionFont = typography::noteName(font());
-    m_boldCaptionFont = m_captionFont;
-    m_boldCaptionFont.setBold(true);
+    m_boldCaptionFont = typography::bold(m_captionFont);
     m_captionFontHeight = QFontMetrics(m_captionFont).height();
 }
 

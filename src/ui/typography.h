@@ -30,8 +30,11 @@ QString systemFontFamily();
 /// system font is preferred.
 QString systemMonoFamily();
 QFont bodyMono(const QFont &body);
+/// Fixed-pitch tabular font for compact numeric table cells.
+QFont tableMono(const QFont &body);
 QFont caption(const QFont &source);
 QFont regular(const QFont &source);
+QFont italic(const QFont &source);
 QFont bold(const QFont &source);
 /// Finds the largest caption-or-smaller version of base's face that fits the
 /// available height. The result never exceeds base's current pixel size.

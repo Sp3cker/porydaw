@@ -45,9 +45,24 @@ TrackHeaderRow::Geometry TrackHeaderRow::Geometry::resolve()
             lyt::fontPx(1.0 / 6.0), lyt::fontPx(8.0 / 3.0),  lyt::fontPx(5.0 / 3.0)};
 }
 
+void TrackHeaderRow::rebuildFontCache()
+{
+    m_normalTitleFont = font();
+    m_boldTitleFont = typography::bold(m_normalTitleFont);
+    m_subtitleFont = typography::caption(m_normalTitleFont);
+    m_normalTitleMetrics = QFontMetrics(m_normalTitleFont);
+    m_boldTitleMetrics = QFontMetrics(m_boldTitleFont);
+    m_subtitleMetrics = QFontMetrics(m_subtitleFont);
+    m_textLayout.emplace(::layout::twoLineText(m_normalTitleFont, m_boldTitleFont, m_subtitleFont,
+                                               ::layout::Space::Half));
+    m_centeredTitle.clear();
+    m_selectedTitleOffset = {};
+}
+
 void TrackHeaderRow::refreshGeometry()
 {
     m_geometry = Geometry::resolve();
+    rebuildFontCache();
     setFixedHeight(m_geometry.trackHeaderRowHeight);
     if (m_activityMeter)
         m_activityMeter->setGeometry(activityMeterRect());
@@ -68,6 +83,7 @@ TrackHeaderRow::TrackHeaderRow(SongView *sv, int track, QWidget *parent)
     , m_track(track)
     , m_geometry(Geometry::resolve())
 {
+    rebuildFontCache();
     const auto buttonExtent = m_geometry.trackHeaderButtonExtent;
     setFixedHeight(m_geometry.trackHeaderRowHeight);
     m_activityMeter = new TrackActivityMeter(SongView::trackColor(m_track), this);
@@ -177,9 +193,8 @@ void TrackHeaderRow::paintEvent(QPaintEvent *)
     const auto textW = width() - m_geometry.trackHeaderButtonColumnWidth -
                        m_geometry.trackHeaderTextLeft - lyt::space(Space::One);
     const auto title = QStringLiteral("%1 · %2").arg(m_track + 1).arg(name);
-    const auto normalTitleFont = p.font();
-    const auto titleFont = selected ? typography::bold(normalTitleFont) : normalTitleFont;
-    const auto titleMetrics = QFontMetrics(titleFont);
+    const QFont &titleFont = selected ? m_boldTitleFont : m_normalTitleFont;
+    const QFontMetrics &titleMetrics = selected ? m_boldTitleMetrics : m_normalTitleMetrics;
     const auto visibleTitle = titleMetrics.elidedText(title, Qt::ElideRight, textW);
     const QColor backdrop = selected ? themes::color(themes::Role::song_view_track_header_selection)
                             : (selectionModel.resolvedTrackScope(usedTracks) & (1u << m_track))
@@ -211,19 +226,20 @@ void TrackHeaderRow::paintEvent(QPaintEvent *)
     }
     p.setFont(titleFont);
     p.setPen(titleColor);
-    const auto subtitleFont = typography::caption(normalTitleFont);
-    const auto subtitleMetrics = QFontMetrics(subtitleFont);
-    const auto textLayout = ::layout::twoLineText(
-        normalTitleFont, typography::bold(normalTitleFont), subtitleFont, ::layout::Space::Half);
+    const auto &subtitleFont = m_subtitleFont;
     // The bottom pixel belongs to the separator, not the row's content.
     const auto textBounds = QRect(m_geometry.trackHeaderTextLeft, lyt::space(Space::Zero), textW,
                                   height() - lyt::singlePixel());
-    const auto textBoxes = textLayout.align(textBounds, ::layout::VerticalAlignment::Center);
-    // Bold and regular glyph bounds differ. Translate the selected title
-    // so changing weight does not make the visible text jump.
+    const auto textBoxes = m_textLayout->align(textBounds, ::layout::VerticalAlignment::Center);
+    // Bold and regular glyph bounds differ. Cache the selected-face offset
+    // until the visible title or font changes.
+    if (visibleTitle != m_centeredTitle) {
+        m_centeredTitle = visibleTitle;
+        m_selectedTitleOffset =
+            typography::glyphCenteringOffset(m_normalTitleFont, m_boldTitleFont, visibleTitle);
+    }
     const auto titleBox =
-        QRectF(textBoxes.primary)
-            .translated(typography::glyphCenteringOffset(normalTitleFont, titleFont, visibleTitle));
+        QRectF(textBoxes.primary).translated(selected ? m_selectedTitleOffset : QPointF{});
     p.drawText(titleBox, Qt::AlignLeft | Qt::AlignVCenter, visibleTitle);
 
     p.setFont(subtitleFont);
@@ -233,7 +249,7 @@ void TrackHeaderRow::paintEvent(QPaintEvent *)
         silentInGame ? SongView::tr("silent in-game · %1").arg(m_sv->instrumentLabel(m_track))
                      : m_sv->instrumentLabel(m_track);
     p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
-               subtitleMetrics.elidedText(subtitle, Qt::ElideRight, textW));
+               m_subtitleMetrics.elidedText(subtitle, Qt::ElideRight, textW));
 }
 
 // The painted voice line (paintEvent's instrument-label rect): a plain

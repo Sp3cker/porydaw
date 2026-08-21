@@ -69,6 +69,7 @@ class PolyphonyPanel : public QWidget
 
   private:
     void appendEvent(const M4APolyEvent &ev);
+    void refreshHeadingFonts();
     void applyLogItemInk(QListWidgetItem *item);
     void refreshTable(const AudioEngine::PolySnapshot &snap);
     void clearRuntimeState();
@@ -83,6 +84,9 @@ class PolyphonyPanel : public QWidget
     QWidget *m_overflowBox = nullptr;
     QGridLayout *m_bodyGrid = nullptr;
     bool m_wideLayout = false;
+    QLabel *m_usageLabel = nullptr;
+    QLabel *m_tableLabel = nullptr;
+    QLabel *m_logLabel = nullptr;
     QTableWidget *m_table = nullptr;
     QLabel *m_tableEmpty = nullptr;
     QPushButton *m_reset = nullptr;

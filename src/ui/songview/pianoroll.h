@@ -71,7 +71,6 @@ struct PianoRollGeometry {
     qreal selectionRingDipWidth;
     int noteBorderDashLength;
     int noteBorderDashGap;
-    int keyboardHoverChipFontPixelSize;
     int keyboardHoverChipHorizontalPadding;
     int keyboardHoverChipVerticalPadding;
     int keyboardHoverChipRightInset;
@@ -112,6 +111,7 @@ class PianoRoll : public TimelineSurface
     bool gestureActive() const;
     void cancelPitchBendPopup();
     void cancelVelocityInteraction();
+    void refreshTextLayout();
 
   protected:
     void paintContent(QPainter &p) override;
@@ -187,11 +187,20 @@ class PianoRoll : public TimelineSurface
     bool moveNoteMenu(QPointF globalPos);
     void handleNoteMenuChoice(pianoroll_detail::NoteMenuChoice choice);
 
+    void rebuildFontCache();
     void drawKeyboard(QPainter &p);
     void auditionBandEntrants(const QRectF &band);
     void stopBandAuditions();
     void selectBand(const QRectF &band, bool additive);
 
+    std::optional<QFont> m_velocityLabelFont;
+    std::optional<QFont> m_noteNameFont;
+    std::optional<QFont> m_keyboardLabelFont;
+    QFont m_fixedNoteNameFont;
+    int m_fixedNoteNameOccupiedHeight = 0;
+    QFont m_keyboardHoverChipFont;
+    int m_keyboardHoverChipHeight = 0;
+    std::array<int, 128> m_keyboardHoverNameWidths{};
     SongView *m_sv;
     pianoroll_detail::PianoRollGeometry m_geometry;
     pianoroll_detail::MidiCursors m_cursors;

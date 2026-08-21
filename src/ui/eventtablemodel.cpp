@@ -33,15 +33,6 @@ bool EventTableModel::usesNumericFont(int column)
     return column == ColTick || column == ColChannel || column == ColData1 || column == ColData2;
 }
 
-QFont EventTableModel::numericFont(const QFont &source)
-{
-    const auto style = source.style();
-    auto font = typography::bodyMono(source);
-    font.setStyle(style);
-    font.setLetterSpacing(QFont::AbsoluteSpacing, -0.5);
-    return font;
-}
-
 QList<std::pair<QString, int>> EventTableModel::typeChoices(bool includeTempo)
 {
     QList<std::pair<QString, int>> choices;
@@ -52,10 +43,22 @@ QList<std::pair<QString, int>> EventTableModel::typeChoices(bool includeTempo)
     return choices;
 }
 
+void EventTableModel::refreshFonts()
+{
+    m_bodyFont = QApplication::font();
+    m_bodyItalicFont = typography::italic(m_bodyFont);
+    m_numericFont = typography::tableMono(m_bodyFont);
+    m_numericItalicFont = typography::italic(m_numericFont);
+    if (rowCount() > 0)
+        emit dataChanged(index(0, 0), index(rowCount() - 1, ColCount - 1), {Qt::FontRole});
+}
+
 EventTableModel::EventTableModel(SongView *sv, QObject *parent)
     : QAbstractTableModel(parent)
     , m_sv(sv)
-{}
+{
+    refreshFonts();
+}
 
 void EventTableModel::setSource(SongDocument *doc, int chunk)
 {
@@ -243,14 +246,11 @@ QVariant EventTableModel::data(const QModelIndex &index, int role) const
     if (!tr || !index.isValid())
         return {};
     if (role == Qt::FontRole) {
-        auto font = usesNumericFont(index.column()) ? numericFont(QApplication::font())
-                                                    : QApplication::font();
-        if (index.row() == int(m_rows.size())) {
-            font.setItalic(true);
-            return font;
-        }
-        if (usesNumericFont(index.column()))
-            return font;
+        const bool numeric = usesNumericFont(index.column());
+        if (index.row() == int(m_rows.size()))
+            return numeric ? m_numericItalicFont : m_bodyItalicFont;
+        if (numeric)
+            return m_numericFont;
     }
     if (role == Qt::TextAlignmentRole) {
         if (index.column() == ColTick || index.column() == ColChannel ||

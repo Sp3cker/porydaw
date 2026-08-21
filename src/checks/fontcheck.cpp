@@ -79,6 +79,11 @@ int runFontCheck(int expectedBaseFontPx)
               monoInfo.pixelSize() == expectedBodySize && monoInfo.weight() == QFont::Normal,
           "Body Mono has the wrong face, size, or weight");
     check(hasTabularNumbers(mono), "Body Mono does not preserve tabular numbers");
+    const auto tableMono = typography::tableMono(body);
+    check(QFontInfo(tableMono).family() == monoInfo.family() &&
+              tableMono.letterSpacingType() == QFont::AbsoluteSpacing &&
+              qFuzzyCompare(tableMono.letterSpacing(), -0.5),
+          "Table Mono changed face or lost compact numeric spacing");
     const auto caption = typography::caption(body);
     const auto captionInfo = QFontInfo(caption);
     check(caption.hintingPreference() == QFont::PreferNoHinting,
@@ -93,6 +98,11 @@ int runFontCheck(int expectedBaseFontPx)
               regularCaptionInfo.pixelSize() == captionInfo.pixelSize() &&
               regularCaptionInfo.weight() == QFont::Normal,
           "Bundled Regular did not preserve the caption face or resolve normal weight");
+    const auto italicCaptionInfo = QFontInfo(typography::italic(caption));
+    check(italicCaptionInfo.family() == captionInfo.family() &&
+              italicCaptionInfo.pixelSize() == captionInfo.pixelSize() &&
+              italicCaptionInfo.style() == QFont::StyleItalic,
+          "Caption Italic changed face or size, or failed to resolve italic style");
     const auto bodyBoldInfo = QFontInfo(typography::bold(body));
     check(bodyBoldInfo.pixelSize() == bodyInfo.pixelSize() &&
               bodyBoldInfo.weight() == QFont::DemiBold,

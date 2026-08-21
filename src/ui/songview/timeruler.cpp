@@ -36,10 +36,17 @@ void TimeRuler::refreshGeometry()
     m_geometry = Geometry::resolve();
     const auto markerRowPadding = lyt::singlePixel();
     const auto tickRowPadding = lyt::singlePixel();
-    const auto rulerFont = timeRulerFont(font(), m_geometry.timeRulerMinimumFontPixelSize,
-                                         m_geometry.timeRulerLetterSpacing);
-    const QFontMetrics markerMetrics(typography::bold(rulerFont));
-    const QFontMetrics tickMetrics(rulerFont);
+    m_rulerFont = typography::bodyMono(typography::caption(font()));
+    m_rulerFont.setPixelSize(std::max(m_geometry.timeRulerMinimumFontPixelSize,
+                                      m_rulerFont.pixelSize() - lyt::singlePixel()));
+    m_rulerFont.setLetterSpacing(QFont::AbsoluteSpacing, m_geometry.timeRulerLetterSpacing);
+    m_beatFont = m_rulerFont;
+    m_beatFont.setPixelSize(std::max(m_geometry.timeRulerMinimumFontPixelSize,
+                                     m_beatFont.pixelSize() - lyt::singlePixel()));
+    m_signatureFont = typography::bold(font());
+    m_boldRulerFont = typography::bold(m_rulerFont);
+    const QFontMetrics markerMetrics(m_boldRulerFont);
+    const QFontMetrics tickMetrics(m_rulerFont);
     m_markerHeight = markerMetrics.height() + markerRowPadding;
     const auto rulerHeight = m_markerHeight + tickMetrics.height() + tickRowPadding;
     setFixedHeight(rulerHeight);
@@ -176,8 +183,7 @@ std::vector<TimeRuler::SigChip> TimeRuler::sigChips() const
     if (!tl)
         return chips;
     const qreal dpr = devicePixelRatioF();
-    const auto boldFont = typography::bold(font());
-    const QFontMetrics fm(boldFont);
+    const QFontMetrics fm(m_signatureFont);
     const auto labelInset = lyt::space(Space::Half);
     const auto add = [&](uint64_t tick, int numerator, int denomPow2, bool implicit) {
         const qreal x = m_sv->displayX(double(tick), m_geometry.plotOrigin, dpr);

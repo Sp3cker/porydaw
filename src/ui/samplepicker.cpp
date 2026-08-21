@@ -12,6 +12,7 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
+#include "ui/typography.h"
 namespace {
 constexpr int kSymbolRole = Qt::UserRole; // full symbol; absent on sections
 constexpr int kKeysplitRole = Qt::UserRole + 1;
@@ -186,16 +187,29 @@ void SamplePickerButton::openPopup()
     m_search->setFocus();
 }
 
+void SamplePickerButton::refreshItemFonts()
+{
+    if (!m_list)
+        return;
+    const auto headingFont = typography::bold(font());
+    for (int i = 0; i < m_list->topLevelItemCount(); ++i) {
+        auto *item = m_list->topLevelItem(i);
+        item->setFont(0, item == m_typedRow ? typography::italic(font()) : headingFont);
+    }
+}
+
+void SamplePickerButton::changeEvent(QEvent *event)
+{
+    QPushButton::changeEvent(event);
+    if (event->type() == QEvent::FontChange)
+        refreshItemFonts();
+}
+
 QTreeWidgetItem *SamplePickerButton::addSection(const QString &title)
 {
     auto *item = new QTreeWidgetItem(m_list, {title});
     item->setFlags(Qt::ItemIsEnabled); // a label, never current/selected
-    // A weight-only font: the section header resolves family and size from
-    // the list's font at paint time, so it follows the typeface preference.
-    QFont f;
-    f.setStyleName({});
-    f.setWeight(QFont::DemiBold);
-    item->setFont(0, f);
+    item->setFont(0, typography::bold(m_list->font()));
     return item;
 }
 
@@ -290,9 +304,7 @@ void SamplePickerButton::applyFilter()
     const bool wantTyped = !filter.isEmpty() && !exactMatch;
     if (wantTyped && !m_typedRow) {
         m_typedRow = new QTreeWidgetItem(m_list);
-        QFont f = m_typedRow->font(0);
-        f.setItalic(true);
-        m_typedRow->setFont(0, f);
+        m_typedRow->setFont(0, typography::italic(m_typedRow->font(0)));
     }
     if (m_typedRow) {
         m_typedRow->setHidden(!wantTyped);

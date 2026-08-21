@@ -6,7 +6,6 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/theme/themeruntime.h"
-#include "ui/typography.h"
 
 #include <QFontMetrics>
 #include <QPainter>
@@ -24,11 +23,7 @@ void TimeRuler::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
     const qreal dpr = p.device()->devicePixelRatioF();
-    const QFont rulerFont = timeRulerFont(p.font(), m_geometry.timeRulerMinimumFontPixelSize,
-                                          m_geometry.timeRulerLetterSpacing);
-    const QFont beatFont = beatRulerFont(p.font(), m_geometry.timeRulerMinimumFontPixelSize,
-                                         m_geometry.timeRulerLetterSpacing);
-    p.setFont(rulerFont);
+    p.setFont(m_rulerFont);
     const QColor chrome = themes::color(themes::Role::song_view_timeline_chrome_background);
     p.fillRect(rect(), chrome);
     p.setPen(QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
@@ -71,7 +66,7 @@ void TimeRuler::paintEvent(QPaintEvent *)
     const QRect ticks = tickRow();
     const int tickBottom = ticks.bottom();
     const QFontMetrics tickMetrics(p.font());
-    const QFontMetrics beatMetrics(beatFont);
+    const QFontMetrics beatMetrics(m_beatFont);
     const int tickBaseline = ticks.top() + tickMetrics.ascent();
     const auto barCapWidth = lyt::space(Space::Half);
     const auto indicatorRise = lyt::space(Space::Half);
@@ -135,14 +130,14 @@ void TimeRuler::paintEvent(QPaintEvent *)
                 p.drawLine(QLineF(x, ticks.center().y() - indicatorRise, x, tickBottom));
             }
             p.setPen(isBar ? barTextColor : textColor);
-            p.setFont(isBar ? rulerFont : beatFont);
+            p.setFont(isBar ? m_rulerFont : m_beatFont);
             p.drawText(QPointF(labelX, tickBaseline), label);
-            p.setFont(rulerFont);
+            p.setFont(m_rulerFont);
             lastLabelRight = labelX + labelWidth;
         });
 
     const MidiTimeline *tl = m_sv->timeline();
-    p.setFont(typography::bold(rulerFont));
+    p.setFont(m_boldRulerFont);
 
     const QRect markers = markerRow();
     const int markerBaseline = textBaseline(markers, p.fontMetrics());

@@ -4,6 +4,7 @@
 #include "pitchbendgraph.hpp"
 #include "songview.h"
 
+#include <QFont>
 #include <QEvent>
 #include <QFocusEvent>
 #include <QFrame>
@@ -80,6 +81,7 @@ class PitchBendEditor final : public QFrame
 
     bool noteSpanStillPresent() const;
 
+    void rebuildFonts();
     ::SongView *m_songView = nullptr;
     SongDocument *m_document = nullptr;
     QPointer<QWidget> m_focusTarget;
@@ -92,6 +94,8 @@ class PitchBendEditor final : public QFrame
     int m_endRange = 2;
     int m_lfoSpeed = 22;
     int m_endLfoSpeed = 22;
+    QFont m_titleFont;
+    QFont m_captionFont;
     PitchBendGraph *m_pitchGraph = nullptr;
     PitchBendGraph *m_modGraph = nullptr;
     QPushButton *m_pitchResetButton = nullptr;

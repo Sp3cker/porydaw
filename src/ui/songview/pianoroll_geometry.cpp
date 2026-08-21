@@ -28,9 +28,9 @@ PianoRollGeometry PianoRollGeometry::resolve()
             lyt::fontPx(1.0 / 6.0), lyt::fontPx(1.0 / 6.0),  lyt::fontPxF(0.25),
             lyt::fontPxF(0.5),      lyt::fontPx(1.0),        lyt::fontPx(5.0 / 3.0),
             lyt::fontPx(1.0 / 6.0), lyt::fontPx(1.0 / 6.0),  lyt::fontPxF(1.0 / 8.0),
-            lyt::fontPx(1.0 / 3.0), lyt::fontPx(1.0 / 6.0),  lyt::fontPx(5.0 / 6.0),
-            lyt::fontPx(2.0 / 3.0), lyt::fontPx(1.0 / 6.0),  lyt::fontPx(1.0 / 6.0),
-            lyt::fontPx(1.0 / 2.0), lyt::fontPx(0.25),       lyt::fontPx(0.25)};
+            lyt::fontPx(1.0 / 3.0), lyt::fontPx(1.0 / 6.0),  lyt::fontPx(2.0 / 3.0),
+            lyt::fontPx(1.0 / 6.0), lyt::fontPx(1.0 / 6.0),  lyt::fontPx(1.0 / 2.0),
+            lyt::fontPx(0.25),      lyt::fontPx(0.25)};
 }
 
 QRectF velocityBarRect(const QRectF &noteRect, int velocity, qreal dpr,
@@ -239,17 +239,15 @@ qreal PianoRoll::physicalPixel() const
 
 std::optional<PianoRoll::KeyboardHoverGeometry> PianoRoll::keyboardHoverGeometry(int key) const
 {
-    if (m_sv->pitchProjection().rowForPitch(key) == PitchProjection::cHiddenRow)
+    if (key < 0 || key >= int(m_keyboardHoverNameWidths.size()) ||
+        m_sv->pitchProjection().rowForPitch(key) == PitchProjection::cHiddenRow)
         return std::nullopt;
 
     const QRectF highlight = keyRect(key, lyt::space(Space::Zero), m_geometry.pianoKeyboardWidth);
     const QString name = midiKeyName(key);
-    QFont chipFont = font();
-    chipFont.setPixelSize(m_geometry.keyboardHoverChipFontPixelSize);
-    const QFontMetrics metrics(chipFont);
     const int chipWidth =
-        metrics.horizontalAdvance(name) + m_geometry.keyboardHoverChipHorizontalPadding;
-    const int chipHeight = metrics.height() + m_geometry.keyboardHoverChipVerticalPadding;
+        m_keyboardHoverNameWidths[std::size_t(key)] + m_geometry.keyboardHoverChipHorizontalPadding;
+    const int chipHeight = m_keyboardHoverChipHeight;
     const qreal chipY =
         std::clamp(highlight.center().y() - chipHeight / 2.0, qreal(lyt::space(Space::Zero)),
                    qreal(std::max(lyt::space(Space::Zero), height() - chipHeight)));
@@ -261,7 +259,7 @@ std::optional<PianoRoll::KeyboardHoverGeometry> PianoRoll::keyboardHoverGeometry
         paintRegion |= QRegion(highlight.toAlignedRect());
     paintRegion &= QRegion(lyt::space(Space::Zero), lyt::space(Space::Zero),
                            m_geometry.pianoKeyboardWidth, height());
-    return KeyboardHoverGeometry{highlight, name, chipFont, chip, paintRegion};
+    return KeyboardHoverGeometry{highlight, name, m_keyboardHoverChipFont, chip, paintRegion};
 }
 
 void PianoRoll::setHoverKey(int key)

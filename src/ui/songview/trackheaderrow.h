@@ -1,11 +1,16 @@
 #pragma once
 
+#include <QFont>
+#include <QFontMetrics>
 #include <QPoint>
+#include <QPointF>
 #include <QRect>
+#include <QString>
 #include <QWidget>
-#include <cstdint>
+#include <optional>
 
 #include "audio/trackactivitylevel.h"
+#include "ui/layout.h"
 
 class QContextMenuEvent;
 class QEvent;
@@ -44,6 +49,7 @@ class TrackHeaderRow : public QWidget
     };
 
     void refreshGeometry();
+    void rebuildFontCache();
 
   public:
     TrackHeaderRow(SongView *sv, int track, QWidget *parent);
@@ -74,6 +80,15 @@ class TrackHeaderRow : public QWidget
     QRect editorRect() const;
     void finishRename(bool commit, bool restoreFocus);
 
+    QFont m_normalTitleFont;
+    QFont m_boldTitleFont;
+    QFont m_subtitleFont;
+    QFontMetrics m_normalTitleMetrics{QFont{}};
+    QFontMetrics m_boldTitleMetrics{QFont{}};
+    QFontMetrics m_subtitleMetrics{QFont{}};
+    std::optional<layout::TwoLineTextLayout> m_textLayout;
+    QString m_centeredTitle;
+    QPointF m_selectedTitleOffset;
     SongView *m_sv;
     int m_track;
     Geometry m_geometry;

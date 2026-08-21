@@ -7,12 +7,16 @@
 #include "ui/pitchbendeditor.hpp"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/typography.h"
 
 #include <QAction>
 #include <QEvent>
 #include <QMenu>
 #include <QWheelEvent>
 
+#include <QFontMetrics>
+#include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace lyt = ::layout;
@@ -72,10 +76,48 @@ PianoRoll::PianoRoll(SongView *sv)
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
+    rebuildFontCache();
     m_noteMenu =
         new NoteContextMenu(this, [this](QPointF globalPos) { return moveNoteMenu(globalPos); });
     connect(m_noteMenu, &QMenu::triggered, this,
             [this](QAction *action) { handleNoteMenuChoice(m_noteMenu->handleAction(action)); });
+}
+
+void PianoRoll::rebuildFontCache()
+{
+    m_fixedNoteNameFont = typography::noteName(font());
+    m_fixedNoteNameFont.setPixelSize(
+        std::max(lyt::singlePixel(), m_fixedNoteNameFont.pixelSize() - 2 * lyt::singlePixel()));
+    const QFontMetrics noteMetrics(m_fixedNoteNameFont);
+    m_fixedNoteNameOccupiedHeight = noteMetrics.ascent() + noteMetrics.descent();
+
+    m_keyboardHoverChipFont = typography::caption(font());
+    const QFontMetrics hoverMetrics(m_keyboardHoverChipFont);
+    m_keyboardHoverChipHeight = hoverMetrics.height() + m_geometry.keyboardHoverChipVerticalPadding;
+    for (int key = 0; key < int(m_keyboardHoverNameWidths.size()); ++key)
+        m_keyboardHoverNameWidths[std::size_t(key)] =
+            hoverMetrics.horizontalAdvance(midiKeyName(key));
+
+    refreshTextLayout();
+}
+
+void PianoRoll::refreshTextLayout()
+{
+    m_velocityLabelFont = typography::fitted(font(), velocityLabelHeight());
+    if (m_velocityLabelFont) {
+        m_velocityLabelFont->setPixelSize(
+            std::max(lyt::singlePixel(), m_velocityLabelFont->pixelSize() - lyt::singlePixel()));
+    }
+
+    const int noteTextHeight =
+        int(std::floor(m_sv->keyHeight() - physicalPixel() - 2.0 * lyt::space(Space::Half)));
+    if (m_sv->keyHeight() >= kNoteNameMinKeyH && m_fixedNoteNameOccupiedHeight <= noteTextHeight) {
+        m_noteNameFont = m_fixedNoteNameFont;
+    } else {
+        m_noteNameFont.reset();
+    }
+
+    m_keyboardLabelFont = typography::fitted(font(), int(std::lround(m_sv->keyHeight())));
 }
 
 bool PianoRoll::gestureActive() const
@@ -121,11 +163,15 @@ bool PianoRoll::event(QEvent *event)
     if ((losesFocus || type == QEvent::UngrabMouse) && (m_drag == Drag::Velocity || m_velModPress))
         cancelVelocityInteraction();
     const bool handled = TimelineSurface::event(event);
-    if (event->type() == QEvent::FontChange) {
+    if (type == QEvent::FontChange || type == QEvent::DevicePixelRatioChange) {
         m_geometry = PianoRollGeometry::resolve();
         setMinimumHeight(m_geometry.minimumVisiblePianoRollHeight);
         m_cursors = loadMidiCursors(devicePixelRatioF(), m_geometry.midiCursorExtent);
         m_rowEdgesValid = false;
+        if (type == QEvent::FontChange)
+            rebuildFontCache();
+        else
+            refreshTextLayout();
         invalidateContent();
     }
     return handled;

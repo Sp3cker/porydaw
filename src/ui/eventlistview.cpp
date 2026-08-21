@@ -58,14 +58,14 @@ class EventItemDelegate : public QStyledItemDelegate
             auto *box = new QSpinBox(parent);
             box->setRange(min, max);
             box->setFrame(false);
-            box->setFont(eventlist::EventTableModel::numericFont(box->font()));
+            box->setFont(typography::tableMono(box->font()));
             return box;
         };
         switch (index.column()) {
         case eventlist::EventTableModel::ColTick: {
             auto *edit = new QLineEdit(parent);
             edit->setFrame(false);
-            edit->setFont(eventlist::EventTableModel::numericFont(edit->font()));
+            edit->setFont(typography::tableMono(edit->font()));
             static const QRegularExpression digits(QStringLiteral("[0-9]{1,19}"));
             edit->setValidator(new QRegularExpressionValidator(digits, edit));
             return edit;
@@ -385,16 +385,17 @@ void EventListView::jumpCursorToRow(int row)
 
 void EventListView::applyRowIndexFont()
 {
-    auto rowIndexFont = typography::bodyMono(m_table->font());
-    rowIndexFont.setPixelSize(qMax(1, rowIndexFont.pixelSize() - 1));
+    const auto rowIndexFont = typography::caption(typography::bodyMono(m_table->font()));
     m_table->verticalHeader()->setFont(rowIndexFont);
 }
 
 void EventListView::changeEvent(QEvent *event)
 {
     QWidget::changeEvent(event);
-    if (event->type() == QEvent::ApplicationFontChange || event->type() == QEvent::StyleChange)
+    if (event->type() == QEvent::ApplicationFontChange || event->type() == QEvent::StyleChange) {
+        m_model->refreshFonts();
         applyRowIndexFont();
+    }
 }
 
 void EventListView::rebuildChunkCombo()

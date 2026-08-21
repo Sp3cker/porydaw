@@ -1,6 +1,7 @@
 #include "keyboardshortcutsdialog.h"
 
 #include <QComboBox>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QKeySequenceEdit>
@@ -13,6 +14,7 @@
 #include <QVBoxLayout>
 
 #include "keymap.h"
+#include "ui/typography.h"
 
 namespace {
 
@@ -145,6 +147,13 @@ QString KeyboardShortcutsWidget::currentCommandId() const
     return item ? item->data(0, kIdRole).toString() : QString();
 }
 
+void KeyboardShortcutsWidget::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::FontChange && m_tree)
+        rebuildTree();
+}
+
 void KeyboardShortcutsWidget::rebuildTree()
 {
     const QString selected = currentCommandId();
@@ -158,9 +167,7 @@ void KeyboardShortcutsWidget::rebuildTree()
             categoryItem = new QTreeWidgetItem(m_tree, {info.category});
             categoryItem->setFlags(Qt::ItemIsEnabled);
             categoryItem->setFirstColumnSpanned(true);
-            QFont font = categoryItem->font(0);
-            font.setBold(true);
-            categoryItem->setFont(0, font);
+            categoryItem->setFont(0, typography::bold(font()));
         }
         const QString binding = info.modifier
                                     ? modifierDisplayText(registry.modifierBinding(info.id))
@@ -169,9 +176,7 @@ void KeyboardShortcutsWidget::rebuildTree()
         item->setData(0, kIdRole, info.id);
         if (registry.isOverridden(info.id)) {
             // Non-default bindings read bold, Qt Creator-style.
-            QFont font = item->font(1);
-            font.setBold(true);
-            item->setFont(1, font);
+            item->setFont(1, typography::bold(font()));
         }
         if (info.id == selected)
             toReselect = item;

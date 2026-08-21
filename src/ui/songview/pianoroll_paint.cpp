@@ -118,22 +118,18 @@ void PianoRoll::drawNotes(QPainter &painter, const SongViewModel &model, int sel
     // not the row pitch: the row includes the hairline gap under the box,
     // and a face fitted to the rounded pitch pushes digit ink across the
     // note's bottom border on 1x displays.
-    const auto velocityFont = showVelocityValues
-                                  ? velocityLabelFont(painter.font(), velocityLabelHeight())
-                                  : std::optional<QFont>{};
-    if (velocityFont)
-        painter.setFont(*velocityFont);
+    const bool velocityFontVisible = showVelocityValues && m_velocityLabelFont.has_value();
+    if (velocityFontVisible)
+        painter.setFont(*m_velocityLabelFont);
 
     // Note-name labels use a fixed face two layout pixels below caption.
     // Each visible active-track note independently shows its label only
     // when its complete name fits with two trailing spaces; the velocity
     // shortcut replaces it with the note's velocity value.
-    const auto nameFont = !drawingGhostNotes && !showVelocityValues && m_sv->noteNameMode() &&
-                                  keyHeight >= kNoteNameMinKeyH
-                              ? noteNameFont(painter.font(), keyHeight - physicalPixel())
-                              : std::optional<QFont>{};
-    if (nameFont)
-        painter.setFont(*nameFont);
+    const bool nameFontVisible = !drawingGhostNotes && !showVelocityValues &&
+                                 m_sv->noteNameMode() && m_noteNameFont.has_value();
+    if (nameFontVisible)
+        painter.setFont(*m_noteNameFont);
 
     const auto drawSelectionRing = [&](const QRectF &noteBox, const ViewNote &note) {
         const QColor selectionColor = themes::color(themes::Role::item_selected_background);
@@ -193,12 +189,12 @@ void PianoRoll::drawNotes(QPainter &painter, const SongViewModel &model, int sel
             painter.fillRect(
                 velocityBarRect(noteRect, renderedVelocity, devicePixelRatioF(), m_geometry), stem);
         }
-        if (nameFont)
+        if (nameFontVisible)
             drawNoteName(painter, noteRect, noteBox, displayedNoteKey(note), fill);
 
         // While velocity is active, every current-track note shows its
         // value instead of the pitch label.
-        if (showVelocityValues && velocityFont) {
+        if (velocityFontVisible) {
             const QString velocityText = QString::number(renderedVelocity);
             if (noteRect.width() >= painter.fontMetrics().horizontalAdvance(velocityText) +
                                         m_geometry.velocityLabelFitAllowance) {
@@ -269,8 +265,8 @@ void PianoRoll::drawDragPreview(QPainter &p, const SongViewModel &model, int sel
     const auto &keys = keymap::Registry::instance();
     if (keys.matchesModifier(QApplication::queryKeyboardModifiers(),
                              QStringLiteral("roll.velocity_drag"))) {
-        if (const auto font = velocityLabelFont(p.font(), velocityLabelHeight())) {
-            p.setFont(*font);
+        if (m_velocityLabelFont) {
+            p.setFont(*m_velocityLabelFont);
             const auto velocityText = QString::number(m_lastVelocity);
             if (r.width() >= p.fontMetrics().horizontalAdvance(velocityText) + 4) {
                 p.save();
@@ -285,7 +281,7 @@ void PianoRoll::drawDragPreview(QPainter &p, const SongViewModel &model, int sel
         // stay visible while the gesture chooses a pitch, so it skips the
         // fit rules — the plate keeps it readable where it overruns the
         // pending note or a short row.
-        p.setFont(fixedNoteNameFont(p.font()));
+        p.setFont(m_fixedNoteNameFont);
         const QRectF labelRect(box.left() + lyt::space(Space::Half), r.top(), 512.0, r.height());
         drawPlatedNoteText(p, labelRect, Qt::AlignLeft | Qt::AlignVCenter, keyName(m_drawKey), fill,
                            contrastingTextColor(fill));
@@ -303,9 +299,8 @@ void PianoRoll::drawKeyboard(QPainter &p)
                    themes::color(themes::Role::song_view_piano_keyboard_natural_key));
     }
     // Natural-key labels disappear when no real font face fits the lane.
-    const auto labelFont = typography::fitted(p.font(), keyH);
-    if (labelFont)
-        p.setFont(*labelFont);
+    if (m_keyboardLabelFont)
+        p.setFont(*m_keyboardLabelFont);
     const int hovered = m_hoverKey;
     const QPen separatorPen(themes::color(themes::Role::song_view_piano_keyboard_separator),
                             lyt::space(Space::Zero));
@@ -334,7 +329,7 @@ void PianoRoll::drawKeyboard(QPainter &p)
             }
             if (key % 12 == 0) {
                 p.setPen(themes::color(themes::Role::song_view_piano_keyboard_label));
-                if (labelFont) {
+                if (m_keyboardLabelFont) {
                     p.drawText(QRectF(lyt::space(Space::Zero), rowRect.top(),
                                       m_geometry.pianoKeyboardWidth -
                                           m_geometry.pianoKeyboardLabelRightInset,

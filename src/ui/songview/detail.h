@@ -90,12 +90,7 @@ void drawPreRoll(QPainter &p, const SongView *sv, const QRect &rect, qreal origi
                  const QColor &background);
 void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
               int timelineDetailMinimumPixelsPerBeat, int gridLineStrokeWidth);
-QFont timeRulerFont(const QFont &source, int minimumFontPixelSize, qreal letterSpacing);
-QFont beatRulerFont(const QFont &source, int minimumFontPixelSize, qreal letterSpacing);
-std::optional<QFont> velocityLabelFont(const QFont &source, int availableHeight);
 void drawPlatedNoteText(QPainter &painter, const QRectF &rect, int flags, const QString &text,
                         const QColor &fill, const QColor &ink);
-QFont fixedNoteNameFont(const QFont &source);
-std::optional<QFont> noteNameFont(const QFont &source, qreal noteBoxHeight);
 
 } // namespace songview::detail

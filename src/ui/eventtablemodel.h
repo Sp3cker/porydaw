@@ -37,7 +37,6 @@ class EventTableModel : public QAbstractTableModel
     };
 
     static bool usesNumericFont(int column);
-    static QFont numericFont(const QFont &source);
     static QList<std::pair<QString, int>> typeChoices(bool includeTempo);
 
     explicit EventTableModel(SongView *sv, QObject *parent);
@@ -58,6 +57,7 @@ class EventTableModel : public QAbstractTableModel
     uint8_t fallbackChannel() const;
     void setReorderHandler(std::function<void(size_t, size_t)> handler);
     void setSelectionHandler(std::function<void(int, uint64_t)> handler);
+    void refreshFonts();
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -105,6 +105,10 @@ class EventTableModel : public QAbstractTableModel
     uint64_t rowTick(const RowKey &key) const;
     void rebuildRows();
 
+    QFont m_bodyFont;
+    QFont m_bodyItalicFont;
+    QFont m_numericFont;
+    QFont m_numericItalicFont;
     SongView *m_sv;
     SongDocument *m_doc = nullptr;
     int m_chunk = -1;
