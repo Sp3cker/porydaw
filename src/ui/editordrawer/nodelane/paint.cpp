@@ -7,8 +7,8 @@
 #include <QPen>
 #include <QRectF>
 
-#include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationprojection.h"
+#include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
@@ -143,7 +143,7 @@ void paintDragPreview(QPainter &painter, const std::vector<NodePoint> &points, c
 {
     if (gesture.points.empty() || gesture.grabbedPoint >= gesture.points.size())
         return;
-    const int rowIndex = paint.gestureRow;
+    const LaneHandle handle = paint.handle;
     const auto &grabbed = gesture.points[gesture.grabbedPoint];
     const QColor previewColor = themes::color(themes::Role::song_view_edit_preview_outline);
     const auto tickX = [&](uint64_t tick) { return paint.projection.displayX(tick, dpr); };
@@ -151,7 +151,7 @@ void paintDragPreview(QPainter &painter, const std::vector<NodePoint> &points, c
         return valueY(paint.lane, paint.body, paint.geometry, value);
     };
     if (gesture.points.size() == 1 && !paint.preparedPreviewCurve) {
-        if (grabbed.row != rowIndex)
+        if (grabbed.lane != handle)
             return;
         const auto isOriginal = [&](const NodePoint &point) {
             return point.tick == grabbed.original.tick && point.value == grabbed.original.value;
@@ -185,9 +185,9 @@ void paintDragPreview(QPainter &painter, const std::vector<NodePoint> &points, c
         paintPreviewLabel(painter, paint.hoverState, paint.handle);
         return;
     }
-    if (rowIndex < 0 || rowIndex >= int(gesture.pointIndexesByRow.size()))
+    if (!handle.valid() || handle.index >= int(gesture.pointIndexesByLane.size()))
         return;
-    for (const size_t index : gesture.pointIndexesByRow[std::size_t(rowIndex)]) {
+    for (const size_t index : gesture.pointIndexesByLane[std::size_t(handle.index)]) {
         if (index >= gesture.points.size())
             continue;
         const auto &point = gesture.points[index];
@@ -418,8 +418,8 @@ void paintNodeLane(QPainter &painter, const NodeLanePaint &paint)
     painter.save();
     const qreal dpr = painter.device()->devicePixelRatioF();
     const std::vector<NodePoint> points = paint.lane.points();
-    const int row = paint.gestureRow;
-    if (paint.pencil && paint.pencil->row == row) {
+    const LaneHandle handle = paint.handle;
+    if (paint.pencil && paint.pencil->lane == handle) {
         painter.setClipRect(overflow, Qt::IntersectClip);
         paintPencilPreview(painter, points, plot, paint, *paint.pencil, dpr);
     } else {
@@ -428,20 +428,17 @@ void paintNodeLane(QPainter &painter, const NodeLanePaint &paint)
         NodePoint omittedStore;
         NodePoint replacementStore;
         const std::vector<NodePoint> *curve = &points;
-        std::vector<NodePoint> previewCurve;
         if (const NodeDragGesture *gesture = paint.nodeDrag) {
             const bool usePreview = (gesture->points.size() > 1 || paint.preparedPreviewCurve) &&
-                                    row >= 0 && row < int(gesture->previewPoints.size()) &&
-                                    !gesture->previewPoints[std::size_t(row)].empty();
+                                    handle.valid() &&
+                                    handle.index < int(gesture->previewPoints.size()) &&
+                                    !gesture->previewPoints[std::size_t(handle.index)].empty();
             if (usePreview) {
-                previewCurve.reserve(gesture->previewPoints[std::size_t(row)].size());
-                for (const ValuePoint &point : gesture->previewPoints[std::size_t(row)])
-                    previewCurve.push_back({point.tick, point.value});
-                curve = &previewCurve;
-            } else if (row == gesture->row && gesture->grabbedPoint < gesture->points.size()) {
+                curve = &gesture->previewPoints[std::size_t(handle.index)];
+            } else if (handle == gesture->lane && gesture->grabbedPoint < gesture->points.size()) {
                 const auto &point = gesture->points[gesture->grabbedPoint];
-                omittedStore = {point.original.tick, point.original.value};
-                replacementStore = {point.current.tick, point.current.value};
+                omittedStore = point.original;
+                replacementStore = point.current;
                 omitted = &omittedStore;
                 replacement = &replacementStore;
             }
@@ -454,9 +451,9 @@ void paintNodeLane(QPainter &painter, const NodeLanePaint &paint)
         painter.restore();
         painter.setClipRect(overflow, Qt::IntersectClip);
         paintNodes(painter, *curve, plot, paint, dpr, omitted);
-        if (paint.nodeDrag && (paint.nodeDrag->points.size() > 1 || row == paint.nodeDrag->row))
+        if (paint.nodeDrag && (paint.nodeDrag->points.size() > 1 || handle == paint.nodeDrag->lane))
             paintDragPreview(painter, points, plot, paint, *paint.nodeDrag, dpr);
-        else if (paint.sweep && row == paint.sweep->row)
+        else if (paint.sweep && handle == paint.sweep->lane)
             paintSweepPreview(painter, paint, *paint.sweep, dpr);
     }
     if (paint.hoverState.hover.lane == paint.handle)

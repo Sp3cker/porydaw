@@ -166,8 +166,7 @@ void checkAutomationPencilStroke(AutomationGestureCheckRig &rig,
         const auto cellE = nextCell(cellD);
         const auto cellF = nextCell(cellE);
         const std::array cells{cellA, cellB, cellC, cellD, cellE, cellF};
-        const auto projection = rig.projection();
-        const int panRow = rig.rowIndex(rig.pan);
+        const auto panHandle = rig.handleFor(rig.pan);
         std::array<AutomationGestureCheckRig::InputPoint, 6> input{};
         std::array<std::pair<uint64_t, int>, 6> expected{};
         if (canonicalValues) {
@@ -185,8 +184,7 @@ void checkAutomationPencilStroke(AutomationGestureCheckRig &rig,
                                        std::max<qreal>(1.0, end.position.x() - start.position.x());
                 const QPointF position(x, start.position.y() +
                                               (end.position.y() - start.position.y()) * fraction);
-                input[index] = {position,
-                                projection.pointerMapping(panRow, position.x(), position.y())};
+                input[index] = {position, rig.mappingAt(panHandle, position)};
                 expected[index] = {cells[index].tickBegin, input[index].mapped.point.value};
             }
         }
@@ -327,8 +325,7 @@ void checkAutomationPencilStroke(AutomationGestureCheckRig &rig,
         auto point = rig.pointAt(rig.pan, uint64_t(std::floor(tick)), value);
         point.position.setX(
             rig.view().displayX(tick, rig.geometry().plotOrigin, rig.canvas().devicePixelRatioF()));
-        point.mapped = rig.projection().pointerMapping(rig.rowIndex(rig.pan), point.position.x(),
-                                                       point.position.y());
+        point.mapped = rig.mappingAt(rig.handleFor(rig.pan), point.position);
         return point;
     };
     const auto commandGesture = [&](bool reverse, bool dense) {

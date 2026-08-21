@@ -268,11 +268,20 @@ LaneGeom laneGeom(AutomationPage &page, const LaneCase &row)
         const int panRow = panRowIndex(page);
         if (panRow < 0)
             return geom;
-        const auto projection = AutomationProjection(geometry, page.canvas()->rows(), &page,
-                                                     page.canvas()->contentTopInset());
         geom.handle = LaneHandle{panRow + 1};
-        geom.body = {0, projection.rowTop(panRow), page.canvas()->width(),
-                     projection.rowHeight(page.canvas()->rows()[std::size_t(panRow)])};
+        const auto &state = page.automationViewState();
+        const int shared = state.laneHeight > 0 ? state.laneHeight : geometry.rowDefaultHeight;
+        const auto &rows = page.canvas()->rows();
+        int top = page.canvas()->contentTopInset();
+        for (int index = 0; index < panRow; ++index) {
+            const auto it = state.laneHeights.find(rows[std::size_t(index)].id);
+            top += std::clamp(it == state.laneHeights.cend() ? shared : it->second,
+                              geometry.rowMinimumHeight, geometry.rowMaximumHeight);
+        }
+        const auto it = state.laneHeights.find(rows[std::size_t(panRow)].id);
+        const int height = std::clamp(it == state.laneHeights.cend() ? shared : it->second,
+                                      geometry.rowMinimumHeight, geometry.rowMaximumHeight);
+        geom.body = {0, top, page.canvas()->width(), height};
         geom.curveColor = themes::trackIdentityColor(0);
     }
     geom.plot = nodelane::plotRect(geom.body, geometry);

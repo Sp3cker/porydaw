@@ -46,8 +46,7 @@ class NodeLaneEdit
     using Point = NodePoint;
 
     struct Target {
-        int engineTrack = -1;
-        uint8_t controller = 0;
+        LaneHandle lane;
         uint64_t expectedRevision = 0;
     };
 

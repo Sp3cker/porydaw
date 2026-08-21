@@ -1,6 +1,6 @@
-#include "ui/editordrawer/automationpencilgesture.h"
+#include "ui/editordrawer/nodelane/pencilgesture.h"
 
-#include "ui/editordrawer/automationgesture.h"
+#include "ui/editordrawer/nodelane/gesture.h"
 
 #include <algorithm>
 #include <cmath>
@@ -66,7 +66,7 @@ AutomationPencilGesture::start(Target target, int minimumValue, int maximumValue
                                std::vector<NodeLaneEdit::Point> originalPoints, Sample firstSample,
                                AutomationGridCell firstCell)
 {
-    if (target.engineTrack < 0 || minimumValue > maximumValue || documentClockTicks == 0 ||
+    if (!target.lane.valid() || minimumValue > maximumValue || documentClockTicks == 0 ||
         !finiteSample(firstSample) || !validCell(firstCell, songEndTick))
         return std::nullopt;
     return AutomationPencilGesture(target, minimumValue, maximumValue, songEndTick,
@@ -156,8 +156,7 @@ bool AutomationPencilGesture::applySnappedSegment(Sample sample,
         const double continuousValue =
             anchor.continuousValue + (sample.continuousValue - anchor.continuousValue) * fraction;
         eraseStrokePointsIn(cell.tickBegin, cell.tickEnd);
-        upsertByTick(m_strokePoints,
-                     automation::ValuePoint{cell.tickBegin, roundedValue(continuousValue)});
+        upsertByTick(m_strokePoints, NodePoint{cell.tickBegin, roundedValue(continuousValue)});
         m_tickBegin = std::min(m_tickBegin, cell.tickBegin);
         m_tickEnd = std::max(m_tickEnd, cell.tickEnd);
     }
@@ -209,7 +208,7 @@ bool AutomationPencilGesture::applyFreehandSegment(Sample sample)
             (sample.continuousValue - previous.continuousValue) * fraction;
         const uint64_t rawIntegerTick = clampedTick(rawTick, m_songEndTick);
         const uint64_t clockTick = (rawIntegerTick / m_documentClockTicks) * m_documentClockTicks;
-        const automation::ValuePoint point{clockTick, roundedValue(continuousValue)};
+        const NodePoint point{clockTick, roundedValue(continuousValue)};
         if (provisionalEndpoint)
             m_provisionalFreehandEndpoint = point;
         else if (!interiorSample || !preservedTurnTick || point.tick != *preservedTurnTick)
@@ -236,8 +235,7 @@ bool AutomationPencilGesture::applyFreehandSegment(Sample sample)
     return true;
 }
 
-bool AutomationPencilGesture::lessPointTick(const automation::ValuePoint &left,
-                                            uint64_t tick) noexcept
+bool AutomationPencilGesture::lessPointTick(const NodePoint &left, uint64_t tick) noexcept
 {
     return left.tick < tick;
 }
@@ -250,15 +248,10 @@ bool AutomationPencilGesture::validCell(const AutomationGridCell &cell,
 
 void AutomationPencilGesture::rebuildPreview()
 {
-    std::vector<NodeLaneEdit::Point> points;
-    points.reserve(m_strokePoints.size() + (m_provisionalFreehandEndpoint ? 1 : 0));
-    for (const automation::ValuePoint &point : m_strokePoints)
-        points.push_back({point.tick, point.value});
+    std::vector<NodePoint> points = m_strokePoints;
     if (m_provisionalFreehandEndpoint && m_provisionalFreehandEndpoint->tick >= m_tickBegin &&
-        m_provisionalFreehandEndpoint->tick <= m_tickEnd) {
-        const automation::ValuePoint &endpoint = *m_provisionalFreehandEndpoint;
-        upsertByTick(points, NodeLaneEdit::Point{endpoint.tick, endpoint.value});
-    }
+        m_provisionalFreehandEndpoint->tick <= m_tickEnd)
+        upsertByTick(points, *m_provisionalFreehandEndpoint);
     m_cachedPreview = m_laneEdit.replaceHeldSpan(m_tickBegin, m_tickEnd, m_songEndTick,
                                                  m_minimumValue, m_maximumValue, std::move(points));
 }

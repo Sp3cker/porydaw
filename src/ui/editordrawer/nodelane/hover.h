@@ -8,7 +8,7 @@
 #include <QRectF>
 #include <QString>
 
-#include "ui/editordrawer/automationgesture.h"
+#include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 
 class AutomationCanvas;
@@ -21,7 +21,7 @@ struct NodeLaneHoverState {
         LaneHandle lane;
         QPointF pos;
         bool hasPoint = false;
-        ValuePoint point;
+        NodePoint point;
         bool highlightLocked = false;
     };
     HoverState hover;
@@ -92,7 +92,7 @@ struct NodeLaneHoverState {
                                   const AutomationGeometry &geometry, const NodeLane &lane,
                                   const QRect &body, LaneHandle handle,
                                   const AutomationProjection &projection, const QPointF &position,
-                                  const ValuePoint &point, bool pencilMode);
+                                  const NodePoint &point, bool pencilMode);
     void clearHover(AutomationCanvas &area);
     void invalidateCaches();
     QFont valueLabelFont(const QFont &font) const;

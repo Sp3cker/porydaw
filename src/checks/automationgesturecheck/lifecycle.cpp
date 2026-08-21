@@ -35,21 +35,11 @@ void checkAutomationLifecycle(AutomationGestureCheckRig &rig, const AutomationGe
         }
         return true;
     };
-    const auto sameSnapshot = [&sameLanePoints](const AutomationGestureCheckRig::Snapshot &left,
-                                                const AutomationGestureCheckRig::Snapshot &right) {
-        return left.smf == right.smf && left.revision == right.revision &&
-               left.undoIndex == right.undoIndex &&
-               sameLanePoints(left.lanePoints, right.lanePoints);
-    };
     const auto oneLaneEdit = [&sameLanePoints](const AutomationGestureCheckRig::Snapshot &before,
                                                const AutomationGestureCheckRig::Snapshot &after) {
         return after.smf != before.smf && after.revision == before.revision + 1 &&
                after.undoIndex == before.undoIndex + 1 &&
                !sameLanePoints(before.lanePoints, after.lanePoints);
-    };
-    const auto idleInteraction = [&rig] {
-        return !rig.canvas().isPanning() && !rig.view().userGestureActive() &&
-               !rig.view().selectionModel().timeSelection().active();
     };
     const auto cropVoice = [&rig] { return rig.canvas().grab(rig.voiceBounds()).toImage(); };
     const auto labelSample = [](const QImage &image, qreal lineX, qreal origin, qreal dpr) {
@@ -106,52 +96,6 @@ void checkAutomationLifecycle(AutomationGestureCheckRig &rig, const AutomationGe
         QEvent clearHover(QEvent::Leave);
         QCoreApplication::sendEvent(&rig.canvas(), &clearHover);
         rig.pump();
-    }
-
-    const int panRow = rig.rowIndex(rig.pan);
-    check(panRow >= 0, QStringLiteral("lifecycle fixture did not expose the pan CC lane"));
-    if (panRow >= 0) {
-        const auto source = rig.pointAt(rig.pan, 72, 64);
-        rig.document().writeLanePoints(rig.pan.track, rig.pan.controller, 0,
-                                       std::numeric_limits<uint64_t>::max(),
-                                       {{source.mapped.point.tick, source.mapped.point.value}});
-        rig.documentChanged();
-        const auto grab = rig.pointAt(rig.pan, source.mapped.point.tick, source.mapped.point.value);
-        const qreal armDistance = qreal(rig.geometry().nodeDragActivationDistance + 2);
-        const QPointF arm = grab.position + QPointF(armDistance, 0.0);
-        const auto beforeDrag = rig.snapshot(rig.pan.track, rig.pan.controller);
-        rig.mousePress(grab.position);
-        rig.mouseMove(arm);
-        rig.pump();
-        check(rig.view().userGestureActive(),
-              QStringLiteral("CC node drag did not activate before the stack rebuild"));
-        const QSize canvasSize = rig.canvas().size();
-        QResizeEvent resizeEvent(QSize(canvasSize.width() + 48, canvasSize.height()), canvasSize);
-        QCoreApplication::sendEvent(&rig.canvas(), &resizeEvent);
-        rig.pump();
-        rig.mouseRelease(arm);
-        rig.pump();
-        const auto afterRebuildRelease = rig.snapshot(rig.pan.track, rig.pan.controller);
-        check(sameSnapshot(beforeDrag, afterRebuildRelease) && idleInteraction() &&
-                  !rig.canvas().bandPreviewContainsRow(panRow),
-              QStringLiteral(
-                  "release after a geometry stack rebuild committed a stale CC node drag"));
-        const auto followGrab =
-            rig.pointAt(rig.pan, source.mapped.point.tick, source.mapped.point.value);
-        const auto followTarget = rig.pointAt(rig.pan, followGrab.mapped.cell.tickEnd + 96, 96);
-        const QPointF followArm = followGrab.position + QPointF(armDistance, 0.0);
-        const QPointF followEnd = followTarget.position + QPointF(armDistance, 0.0);
-        const auto beforeFollow = rig.snapshot(rig.pan.track, rig.pan.controller);
-        rig.mousePress(followGrab.position);
-        rig.mouseMove(followArm);
-        rig.mouseMove(followEnd);
-        rig.mouseRelease(followEnd);
-        rig.pump();
-        const auto afterFollow = rig.snapshot(rig.pan.track, rig.pan.controller);
-        check(oneLaneEdit(beforeFollow, afterFollow) && !rig.canvas().isPanning() &&
-                  !rig.view().userGestureActive(),
-              QStringLiteral(
-                  "automation input did not recover after a geometry stack rebuild cancel"));
     }
 
     auto capturedTrack = -1;

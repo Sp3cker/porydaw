@@ -23,7 +23,7 @@ EditorAutomationRowId laneRow(int track, uint8_t controller)
 
 QString laneLabel(uint8_t controller)
 {
-    if (controller == automation::kBendController)
+    if (controller == CCLanes::bendController())
         return QStringLiteral("Pitch bend (BEND)");
     const auto info = m4aClassifyCc(controller);
     return QStringLiteral("%1 (%2)").arg(QLatin1String(info.display), QLatin1String(info.name));
@@ -34,6 +34,32 @@ QString laneLabel(uint8_t controller)
 CCLanes::CCLanes(AutomationPage *page) noexcept : m_page(page) {}
 
 CCLanes::~CCLanes() = default;
+
+uint8_t CCLanes::bendController() noexcept
+{
+    return CoreTimeDefaults::kLaneCcBend;
+}
+
+bool CCLanes::rangeZoomable(uint8_t controller) noexcept
+{
+    return controller != bendController() && controller != 10 && controller != 24;
+}
+
+uint8_t CCLanes::defaultRange(uint8_t controller) noexcept
+{
+    return controller == 1 ? 0 : 127;
+}
+
+int CCLanes::autoRange(int maximum) noexcept
+{
+    if (maximum <= 16)
+        return 16;
+    if (maximum <= 32)
+        return 32;
+    if (maximum <= 64)
+        return 64;
+    return 127;
+}
 
 void CCLanes::rebuildRows()
 {
@@ -94,19 +120,16 @@ void CCLanes::syncTimeSelection()
                 m_timeSelection.lanes.cend())
             continue;
         m_timeSelection.lanes.push_back(lane);
-        const int rowIndex = int(row - m_rows.cbegin());
-        if (m_timeSelection.firstRow < 0)
-            m_timeSelection.firstRow = rowIndex;
-        else
-            m_timeSelection.firstRow = std::min(m_timeSelection.firstRow, rowIndex);
-        m_timeSelection.lastRow = std::max(m_timeSelection.lastRow, rowIndex);
     }
 }
 
 int CCLanes::minimumHeight(const AutomationGeometry &geometry, int topInset) const
 {
-    const AutomationProjection projection(geometry, m_rows, m_page, topInset);
-    const int rowsHeight = projection.rowTop(int(m_rows.size()));
+    int rowsHeight = topInset;
+    for (const auto &row : m_rows) {
+        const int height = m_page ? m_page->laneHeightFor(row.id) : geometry.rowDefaultHeight;
+        rowsHeight += std::clamp(height, geometry.rowMinimumHeight, geometry.rowMaximumHeight);
+    }
     const int strip = m_page && m_page->document() ? geometry.addLaneStripHeight
                                                    : layout::space(layout::Space::Zero);
     return std::max(geometry.rowDefaultHeight, rowsHeight + strip);
@@ -123,43 +146,9 @@ bool CCLanes::clearTimeSelection()
     return wasActive;
 }
 
-const std::vector<LanePoint> &CCLanes::pointsFor(const AutomationRow &row,
-                                                 const AutomationProjection &projection) const
-{
-    if (const auto *lane = projection.laneFor(row))
-        return lane->points;
-    static const std::vector<LanePoint> empty;
-    return empty;
-}
-
 QString CCLanes::titleFor(const AutomationRow &row) const
 {
     return laneLabel(row.id.controller);
-}
-
-QString CCLanes::valueTextFor(const AutomationRow &row, int value) const
-{
-    if (m_valueTextCache.valid && m_valueTextCache.track == int(row.id.track) &&
-        m_valueTextCache.controller == row.id.controller && m_valueTextCache.value == value)
-        return m_valueTextCache.text;
-    m_valueTextCache.track = int(row.id.track);
-    m_valueTextCache.controller = row.id.controller;
-    m_valueTextCache.value = value;
-    if (row.id.controller == automation::kBendController)
-        m_valueTextCache.text = m4aFormatBend(value);
-    else
-        m_valueTextCache.text = m4aFormatCcValue(row.id.controller, uint8_t(value));
-    m_valueTextCache.valid = true;
-    return m_valueTextCache.text;
-}
-
-bool CCLanes::rowTarget(const AutomationRow &row, int *track, uint8_t *controller) const
-{
-    if (!m_page || !m_page->document())
-        return false;
-    *track = int(row.id.track);
-    *controller = row.id.controller;
-    return true;
 }
 
 std::pair<int, uint8_t> CCLanes::rowIdentity(const AutomationRow &row) const
@@ -172,7 +161,7 @@ bool CCLanes::selectionContains(int rowIndex, qreal x, const AutomationGeometry 
 {
     if (!m_timeSelection.active() || rowIndex < 0 || rowIndex >= int(m_rows.size()))
         return false;
-    const auto lane = rowIdentity(m_rows[rowIndex]);
+    const auto lane = rowIdentity(m_rows[std::size_t(rowIndex)]);
     if (!m_timeSelection.coversLane(lane.first, lane.second))
         return false;
     const qreal first =
@@ -180,79 +169,6 @@ bool CCLanes::selectionContains(int rowIndex, qreal x, const AutomationGeometry 
     const qreal last =
         m_page->displayX(m_timeSelection.endTick, geometry.plotOrigin, devicePixelRatio);
     return x >= first && x < last;
-}
-
-bool CCLanes::pointInTimeSelection(int rowIndex, uint64_t tick) const
-{
-    if (!m_timeSelection.active() || rowIndex < 0 || rowIndex >= int(m_rows.size()))
-        return false;
-    const auto lane = rowIdentity(m_rows[rowIndex]);
-    return m_timeSelection.coversLane(lane.first, lane.second) && m_timeSelection.contains(tick);
-}
-
-bool CCLanes::selectionHasMultipleNodes() const
-{
-    if (!m_timeSelection.active() || !m_page || !m_page->document())
-        return false;
-    int count = 0;
-    for (int rowIndex = 0; rowIndex < int(m_rows.size()); ++rowIndex) {
-        const auto lane = rowIdentity(m_rows[rowIndex]);
-        if (!m_timeSelection.coversLane(lane.first, lane.second))
-            continue;
-        int track = -1;
-        uint8_t controller = 0;
-        if (!rowTarget(m_rows[rowIndex], &track, &controller))
-            continue;
-        const auto points = m_page->document()->lanePoints(track, controller);
-        for (const auto &point : points) {
-            if (!m_timeSelection.contains(point.tick))
-                continue;
-            if (++count > 1)
-                return true;
-        }
-    }
-    return false;
-}
-
-bool CCLanes::cachedPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
-                             const AutomationProjection &projection,
-                             const AutomationGeometry &geometry, qreal devicePixelRatio,
-                             DocLanePoint *hit) const
-{
-    if (!m_page || !m_page->document() || rowIndex < 0 || rowIndex >= int(m_rows.size()))
-        return false;
-    int track = -1;
-    uint8_t controller = 0;
-    if (!rowTarget(row, &track, &controller))
-        return false;
-    const auto points = m_page->document()->lanePoints(track, controller);
-    if (points.empty())
-        return false;
-    const auto [top, bottom] = projection.valuePlotBounds(rowIndex);
-    const int minimum = projection.rowMinimum(row);
-    const int maximum = projection.rowMaximum(row);
-    const int valueRange = std::max(1, maximum - minimum);
-    const qreal radiusSquared = geometry.pointHitRadius * geometry.pointHitRadius;
-    auto nearest = points.size();
-    qreal nearestDistance = radiusSquared;
-    for (auto index = std::size_t{0}; index < points.size(); ++index) {
-        const qreal dx =
-            m_page->displayX(points[index].tick, geometry.plotOrigin, devicePixelRatio) -
-            position.x();
-        const qreal dy =
-            qreal(bottom - (points[index].value - minimum) * (bottom - top) / valueRange) -
-            position.y();
-        const qreal distance = dx * dx + dy * dy;
-        if (distance <= nearestDistance) {
-            nearestDistance = distance;
-            nearest = index;
-        }
-    }
-    if (nearest == points.size())
-        return false;
-    if (hit)
-        *hit = points[nearest];
-    return true;
 }
 
 CCLaneAdapter::CCLaneAdapter(SongDocument &document,
@@ -294,7 +210,7 @@ int CCLaneAdapter::maximumValue() const
 
 QString CCLaneAdapter::valueText(int value) const
 {
-    if (m_controller == automation::kBendController)
+    if (m_controller == CCLanes::bendController())
         return m4aFormatBend(value);
     return m4aFormatCcValue(m_controller, uint8_t(value));
 }
@@ -327,7 +243,7 @@ void CCLaneAdapter::movePoints(const std::vector<NodePointMove> &moves)
     if (moves.empty())
         return;
     const auto raw = m_document.lanePoints(m_engineTrack, m_controller);
-    std::vector<SongDocument::LanePointMove> planned;
+    std::vector<SongDocument::LanePointMove> laneMoves;
     for (const NodePointMove &move : moves) {
         std::vector<DocLanePoint> group;
         for (const DocLanePoint &point : raw) {
@@ -335,16 +251,14 @@ void CCLaneAdapter::movePoints(const std::vector<NodePointMove> &moves)
                 group.push_back(point);
         }
         if (group.empty())
-            continue;
+            return;
         const int newValue = CoreTimeDefaults::clampLaneValue(m_controller, move.to.value);
-        for (auto index = std::size_t{0}; index < group.size(); ++index) {
+        for (size_t index = 0; index < group.size(); ++index) {
             const int value = index + 1 == group.size() ? newValue : group[index].value;
-            planned.push_back({m_engineTrack, m_controller, group[index], move.to.tick, value});
+            laneMoves.push_back({m_engineTrack, m_controller, group[index], move.to.tick, value});
         }
     }
-    if (planned.empty())
-        return;
-    m_document.moveLanePoints(planned);
+    m_document.moveLanePoints(laneMoves);
 }
 
 void CCLaneAdapter::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)

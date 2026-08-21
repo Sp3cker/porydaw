@@ -1,0 +1,524 @@
+#include "domains.h"
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <limits>
+#include <vector>
+
+#include <QByteArray>
+#include <QCoreApplication>
+#include <QEvent>
+#include <QResizeEvent>
+#include <QSize>
+#include <QString>
+#include <QUndoStack>
+
+#include "core/songdocument.h"
+#include "core/timedefaults.h"
+#include "rig.h"
+#include "ui/editordrawer/automationcanvas.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
+#include "ui/songview.h"
+#include "ui/songview/editorselectionmodel.h"
+
+namespace {
+
+enum class AdapterKind { Tempo, Cc };
+
+struct Adapter {
+    AdapterKind kind = AdapterKind::Tempo;
+    const char *name = "";
+};
+
+struct Snapshot {
+    QByteArray smf;
+    uint64_t revision = 0;
+    int undoIndex = 0;
+};
+
+struct Context {
+    AutomationGestureCheckRig &rig;
+    const AutomationGestureCheck &check;
+    Adapter adapter;
+    const char *scenario = "";
+    LaneHandle handle;
+    int track = 0;
+    uint8_t controller = 10;
+};
+
+struct Scenario {
+    const char *name;
+    void (*run)(Context &);
+};
+
+constexpr uint32_t kPreservedTempoUs = 499999;
+constexpr std::array kAdapters{
+    Adapter{AdapterKind::Tempo, "Tempo"},
+    Adapter{AdapterKind::Cc, "CC"},
+};
+const std::vector<NodePoint> kFixture{{0, 80}, {96, 100}, {288, 64}};
+const std::vector<NodePoint> kMulti{{0, 80}, {96, 100}, {192, 64}, {384, 110}};
+
+void report(const Context &ctx, bool condition, const QString &message)
+{
+    ctx.check(condition,
+              QStringLiteral("%1 %2: %3")
+                  .arg(QLatin1String(ctx.adapter.name), QLatin1String(ctx.scenario), message));
+}
+
+Snapshot snapshot(SongDocument &document)
+{
+    return {document.smf().write(), document.revision(), document.undoStack()->index()};
+}
+
+bool oneEdit(const Snapshot &before, const Snapshot &after)
+{
+    return after.revision == before.revision + 1 && after.undoIndex == before.undoIndex + 1;
+}
+
+bool unchanged(const Snapshot &before, const Snapshot &after)
+{
+    return after.smf == before.smf && after.revision == before.revision &&
+           after.undoIndex == before.undoIndex;
+}
+
+bool samePoints(const std::vector<NodePoint> &left, const std::vector<NodePoint> &right)
+{
+    if (left.size() != right.size())
+        return false;
+    for (auto i = std::size_t{0}; i < left.size(); ++i) {
+        if (left[i].tick != right[i].tick || left[i].value != right[i].value)
+            return false;
+    }
+    return true;
+}
+
+bool containsPoint(const std::vector<NodePoint> &points, uint64_t tick, int value)
+{
+    return std::any_of(points.cbegin(), points.cend(), [tick, value](const NodePoint &point) {
+        return point.tick == tick && point.value == value;
+    });
+}
+
+int tempoValue(uint32_t microseconds)
+{
+    return int(std::lround(CoreTimeDefaults::tempoBpm(microseconds)));
+}
+
+std::vector<NodePoint> pointsOf(const Context &ctx)
+{
+    std::vector<NodePoint> out;
+    if (ctx.adapter.kind == AdapterKind::Tempo) {
+        for (const auto &point : ctx.rig.document().tempoPoints())
+            out.push_back({point.tick, tempoValue(point.microsecondsPerQuarterNote)});
+        return out;
+    }
+    for (const auto &point : ctx.rig.document().lanePoints(ctx.track, ctx.controller)) {
+        if (!out.empty() && out.back().tick == point.tick)
+            out.back().value = point.value;
+        else
+            out.push_back({point.tick, point.value});
+    }
+    return out;
+}
+
+std::vector<int> rawValuesAt(const Context &ctx, uint64_t tick)
+{
+    std::vector<int> values;
+    for (const auto &point : ctx.rig.document().lanePoints(ctx.track, ctx.controller)) {
+        if (point.tick == tick)
+            values.push_back(point.value);
+    }
+    return values;
+}
+
+void setTempo(Context &ctx, const std::vector<TempoPoint> &points)
+{
+    if (ctx.rig.document().tempoPoints() == points)
+        return;
+    TempoEdit edit;
+    edit.remove = ctx.rig.document().tempoPoints();
+    edit.add = points;
+    ctx.rig.document().applyTempoEdit(edit);
+    ctx.rig.documentChanged();
+}
+
+void seed(Context &ctx, const std::vector<NodePoint> &points)
+{
+    if (ctx.adapter.kind == AdapterKind::Tempo) {
+        std::vector<TempoPoint> tempo;
+        tempo.reserve(points.size());
+        for (const auto &point : points) {
+            tempo.push_back(
+                {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
+        }
+        setTempo(ctx, tempo);
+        return;
+    }
+    std::vector<SongDocument::LanePointValue> values;
+    values.reserve(points.size());
+    for (const auto &point : points)
+        values.push_back({point.tick, point.value});
+    ctx.rig.document().writeLanePoints(ctx.track, ctx.controller, 0,
+                                       std::numeric_limits<uint64_t>::max(), values);
+    ctx.rig.documentChanged();
+}
+
+AutomationGestureCheckRig::InputPoint at(const Context &ctx, double tick, int value)
+{
+    return ctx.rig.pointAt(ctx.handle, tick, value);
+}
+
+void activatedDrag(const Context &ctx, const QPointF &start, const QPointF &target,
+                   Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+{
+    const QPointF activation =
+        start + QPointF(ctx.rig.geometry().nodeDragActivationDistance + 2, 0.0);
+    const QPointF end = activation + target - start;
+    ctx.rig.mousePress(start, modifiers);
+    ctx.rig.mouseMove(activation, Qt::LeftButton, modifiers);
+    ctx.rig.mouseMove(end, Qt::LeftButton, modifiers);
+    ctx.rig.mouseRelease(end, modifiers);
+}
+
+void selectRange(Context &ctx, uint64_t first, uint64_t last)
+{
+    songview::EditorSelectionModel::TimeSelection selection;
+    selection.startTick = first;
+    selection.endTick = last;
+    selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+    if (ctx.adapter.kind == AdapterKind::Tempo)
+        selection.tempo = true;
+    else
+        selection.lanes = {{ctx.track, ctx.controller}};
+    ctx.rig.view().selectionModel().setTimeSelection(std::move(selection));
+    ctx.rig.pump();
+}
+
+bool idle(const Context &ctx)
+{
+    return !ctx.rig.canvas().isPanning() && !ctx.rig.view().userGestureActive();
+}
+
+void expectOneEdit(const Context &ctx, const Snapshot &before,
+                   const std::vector<NodePoint> &expected)
+{
+    const auto after = snapshot(ctx.rig.document());
+    report(ctx, oneEdit(before, after) && samePoints(pointsOf(ctx), expected),
+           QStringLiteral("completed gesture did not commit one edit with the shared node result"));
+}
+
+void expectUnchanged(const Context &ctx, const Snapshot &before, const char *label)
+{
+    report(ctx, unchanged(before, snapshot(ctx.rig.document())),
+           QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
+}
+
+void runHoverInsertion(Context &ctx)
+{
+    seed(ctx, kFixture);
+    const auto before = snapshot(ctx.rig.document());
+    ctx.rig.mouseMove(at(ctx, 48, 90).position, Qt::NoButton);
+    ctx.rig.pump();
+    expectUnchanged(ctx, before, "insertion hover");
+}
+
+void runClickDelete(Context &ctx)
+{
+    seed(ctx, kFixture);
+    const auto node = at(ctx, 96, 100);
+    const auto before = snapshot(ctx.rig.document());
+    ctx.rig.mousePress(node.position);
+    ctx.rig.mouseRelease(node.position);
+    expectOneEdit(ctx, before, {{0, 80}, {288, 64}});
+    const auto afterDelete = snapshot(ctx.rig.document());
+    ctx.rig.mouseDoubleClick(node.position);
+    ctx.rig.pump();
+    expectUnchanged(ctx, afterDelete, "double-click after delete");
+    seed(ctx, kFixture);
+    const auto shiftBefore = snapshot(ctx.rig.document());
+    ctx.rig.mousePress(node.position, Qt::ShiftModifier);
+    ctx.rig.mouseRelease(node.position, Qt::ShiftModifier);
+    expectUnchanged(ctx, shiftBefore, "Shift+stationary click");
+}
+
+void runNodeDrag(Context &ctx)
+{
+    seed(ctx, kFixture);
+    auto before = snapshot(ctx.rig.document());
+    activatedDrag(ctx, at(ctx, 96, 100).position, at(ctx, 192, 100).position);
+    expectOneEdit(ctx, before, {{0, 80}, {192, 100}, {288, 64}});
+    seed(ctx, kFixture);
+    activatedDrag(ctx, at(ctx, 96, 100).position, at(ctx, 192, 64).position, Qt::ShiftModifier);
+    report(ctx, samePoints(pointsOf(ctx), {{0, 80}, {192, 100}, {288, 64}}),
+           QStringLiteral("horizontal Shift drag did not lock value"));
+    seed(ctx, kFixture);
+    const auto axisStart = at(ctx, 96, 100).position;
+    const auto valueActivation = axisStart + QPointF(2.0, 28.0);
+    const auto valueTarget = at(ctx, 96, 64).position;
+    const auto valueEnd = valueActivation + valueTarget - axisStart;
+    ctx.rig.mousePress(axisStart, Qt::ShiftModifier);
+    ctx.rig.mouseMove(valueActivation, Qt::LeftButton, Qt::ShiftModifier);
+    ctx.rig.mouseMove(valueEnd, Qt::LeftButton, Qt::ShiftModifier);
+    ctx.rig.mouseRelease(valueEnd, Qt::ShiftModifier);
+    report(ctx, samePoints(pointsOf(ctx), {{0, 80}, {96, 64}, {288, 64}}),
+           QStringLiteral("vertical Shift drag did not lock time"));
+    if (ctx.adapter.kind == AdapterKind::Tempo) {
+        setTempo(ctx, {{96, kPreservedTempoUs},
+                       {288, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(64)}});
+        const auto preserved = tempoValue(kPreservedTempoUs);
+        before = snapshot(ctx.rig.document());
+        activatedDrag(ctx, at(ctx, 96, preserved).position, at(ctx, 192, preserved).position);
+        report(ctx, oneEdit(before, snapshot(ctx.rig.document())),
+               QStringLiteral("fractional Tempo drag did not commit one edit"));
+        const auto moved = ctx.rig.document().tempoPoints();
+        report(ctx,
+               moved.size() == 2 && moved.front().tick == 192 &&
+                   moved.front().microsecondsPerQuarterNote == kPreservedTempoUs,
+               QStringLiteral("unchanged-value Tempo drag discarded microseconds"));
+        return;
+    }
+    ctx.rig.document().writeLanePoints(ctx.track, ctx.controller, 0,
+                                       std::numeric_limits<uint64_t>::max(), {{288, 40}});
+    SmfEvent first;
+    first.tick = 96;
+    first.status = uint8_t((0xB << 4) | (ctx.rig.document().channelFor(ctx.track) & 0x0F));
+    first.data0 = ctx.controller;
+    first.data1 = 10;
+    ctx.rig.document().insertRawEvent(ctx.rig.document().smfTrackFor(ctx.track), first);
+    SmfEvent second = first;
+    second.data1 = 20;
+    ctx.rig.document().insertRawEvent(ctx.rig.document().smfTrackFor(ctx.track), second);
+    ctx.rig.documentChanged();
+    before = snapshot(ctx.rig.document());
+    activatedDrag(ctx, at(ctx, 96, 20).position, at(ctx, 192, 20).position);
+    report(ctx,
+           oneEdit(before, snapshot(ctx.rig.document())) && rawValuesAt(ctx, 96).empty() &&
+               rawValuesAt(ctx, 192) == std::vector<int>{10, 20},
+           QStringLiteral("CC same-tick drag did not keep the grouped events ordered"));
+}
+
+void runSelection(Context &ctx)
+{
+    seed(ctx, kMulti);
+    selectRange(ctx, 96, 288);
+    auto before = snapshot(ctx.rig.document());
+    activatedDrag(ctx, at(ctx, 96, 100).position, at(ctx, 144, 100).position);
+    const auto &moved = ctx.rig.view().selectionModel().timeSelection();
+    report(ctx,
+           oneEdit(before, snapshot(ctx.rig.document())) &&
+               samePoints(pointsOf(ctx), {{0, 80}, {144, 100}, {240, 64}, {384, 110}}) &&
+               moved.startTick == 144 && moved.endTick == 336,
+           QStringLiteral("selection drag did not move every selected node and range"));
+    seed(ctx, kMulti);
+    selectRange(ctx, 96, 288);
+    before = snapshot(ctx.rig.document());
+    ctx.rig.keyToArea(QEvent::KeyPress, Qt::Key_Delete);
+    expectOneEdit(ctx, before, {{0, 80}, {384, 110}});
+}
+
+void runSweepRamp(Context &ctx)
+{
+    seed(ctx, kFixture);
+    auto start = at(ctx, 48, 80);
+    auto target = at(ctx, 144, 110);
+    auto before = snapshot(ctx.rig.document());
+    activatedDrag(ctx, start.position, target.position);
+    const auto sweep = pointsOf(ctx);
+    const bool hasTarget =
+        containsPoint(sweep, target.mapped.point.tick, target.mapped.point.value);
+    report(ctx, oneEdit(before, snapshot(ctx.rig.document())) && hasTarget,
+           QStringLiteral("sweep did not commit the mapped target in one edit"));
+    seed(ctx, kFixture);
+    start = at(ctx, 48, 80);
+    target = at(ctx, 144, 110);
+    before = snapshot(ctx.rig.document());
+    ctx.rig.mousePress(start.position, Qt::ShiftModifier);
+    ctx.rig.mouseMove(target.position, Qt::LeftButton, Qt::ShiftModifier);
+    ctx.rig.mouseRelease(target.position, Qt::ShiftModifier);
+    const auto ramp = pointsOf(ctx);
+    const bool hasEnds = containsPoint(ramp, start.mapped.point.tick, start.mapped.point.value) &&
+                         containsPoint(ramp, target.mapped.point.tick, target.mapped.point.value);
+    report(ctx, oneEdit(before, snapshot(ctx.rig.document())) && hasEnds,
+           QStringLiteral("Shift-ramp did not commit both mapped endpoints in one edit"));
+}
+
+void runPencil(Context &ctx)
+{
+    seed(ctx, {});
+    ctx.rig.setPersistentPencil(true);
+    const auto start = at(ctx, 36, 80);
+    const auto end = at(ctx, 144, 110);
+    const auto before = snapshot(ctx.rig.document());
+    ctx.rig.mousePress(start.position);
+    ctx.rig.mouseMove(end.position);
+    ctx.rig.pump();
+    expectUnchanged(ctx, before, "Pencil preview");
+    ctx.rig.mouseRelease(end.position);
+    ctx.rig.waitForTimers(0);
+    const auto after = snapshot(ctx.rig.document());
+    report(ctx, oneEdit(before, after) && !pointsOf(ctx).empty(),
+           QStringLiteral("Pencil stroke did not commit one edit"));
+    ctx.rig.setPersistentPencil(false);
+}
+
+void runBandSelect(Context &ctx)
+{
+    seed(ctx, kFixture);
+    ctx.rig.view().selectionModel().clearTimeSelection();
+    ctx.rig.pump();
+    const auto start = at(ctx, 96, 80);
+    const auto end = at(ctx, 288, 80);
+    const uint64_t expectedStart = ctx.rig.projection().snapTickAt(start.position.x(), false);
+    const uint64_t expectedEnd = ctx.rig.projection().snapTickAt(end.position.x(), false);
+    ctx.rig.mousePress(start.position, Qt::NoModifier, Qt::RightButton);
+    ctx.rig.mouseMove(end.position, Qt::RightButton);
+    ctx.rig.mouseRelease(end.position, Qt::NoModifier, Qt::RightButton);
+    ctx.rig.pump();
+    const auto &selection = ctx.rig.view().selectionModel().timeSelection();
+    const bool tempo = ctx.adapter.kind == AdapterKind::Tempo;
+    const bool lanesMatch = tempo ? selection.lanes.empty()
+                                  : selection.lanes.size() == 1 &&
+                                        selection.lanes.front().first == ctx.track &&
+                                        selection.lanes.front().second == ctx.controller;
+    report(ctx,
+           selection.active() &&
+               selection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
+               selection.tempo == tempo && lanesMatch && selection.startTick == expectedStart &&
+               selection.endTick == expectedEnd,
+           QStringLiteral("right-drag band did not publish the shared time selection"));
+}
+
+void runEscapeCancel(Context &ctx)
+{
+    seed(ctx, kFixture);
+    const auto before = snapshot(ctx.rig.document());
+    const auto start = at(ctx, 96, 100).position;
+    const auto target = at(ctx, 192, 64).position;
+    const QPointF activation =
+        start + QPointF(ctx.rig.geometry().nodeDragActivationDistance + 2, 0.0);
+    ctx.rig.mousePress(start);
+    ctx.rig.mouseMove(activation);
+    ctx.rig.mouseMove(activation + target - start);
+    ctx.rig.keyToArea(QEvent::KeyPress, Qt::Key_Escape);
+    ctx.rig.mouseRelease(activation + target - start);
+    expectUnchanged(ctx, before, "Escape");
+    report(ctx, idle(ctx), QStringLiteral("Escape left a live gesture"));
+}
+
+void runRebuildCancel(Context &ctx)
+{
+    seed(ctx, kFixture);
+    const auto grab = at(ctx, 96, 100);
+    const qreal arm = qreal(ctx.rig.geometry().nodeDragActivationDistance + 2);
+    const QPointF armed = grab.position + QPointF(arm, 0.0);
+    auto before = snapshot(ctx.rig.document());
+    ctx.rig.mousePress(grab.position);
+    ctx.rig.mouseMove(armed);
+    ctx.rig.pump();
+    ctx.rig.documentChanged();
+    ctx.rig.mouseRelease(armed);
+    ctx.rig.pump();
+    report(ctx, unchanged(before, snapshot(ctx.rig.document())) && idle(ctx),
+           QStringLiteral("release after document rebuild committed a stale handle"));
+    const QSize size = ctx.rig.canvas().size();
+    before = snapshot(ctx.rig.document());
+    ctx.rig.mousePress(at(ctx, 96, 100).position);
+    ctx.rig.mouseMove(at(ctx, 96, 100).position + QPointF(arm, 0.0));
+    ctx.rig.pump();
+    QResizeEvent resize(QSize(size.width() + 48, size.height()), size);
+    QCoreApplication::sendEvent(&ctx.rig.canvas(), &resize);
+    ctx.rig.pump();
+    ctx.rig.mouseRelease(at(ctx, 96, 100).position + QPointF(arm, 0.0));
+    ctx.rig.pump();
+    report(ctx,
+           unchanged(before, snapshot(ctx.rig.document())) && idle(ctx) &&
+               !ctx.rig.canvas().bandPreviewContainsLane(ctx.handle),
+           QStringLiteral("release after a geometry stack rebuild committed a stale handle"));
+    const auto followGrab = at(ctx, 96, 100);
+    const auto followTarget = at(ctx, 192, 100);
+    before = snapshot(ctx.rig.document());
+    activatedDrag(ctx, followGrab.position, followTarget.position);
+    report(ctx, oneEdit(before, snapshot(ctx.rig.document())) && idle(ctx),
+           QStringLiteral("input did not recover after stack-rebuild cancellation"));
+}
+
+void runSemanticNoOp(Context &ctx)
+{
+    seed(ctx, kFixture);
+    const auto empty = at(ctx, 48, 90);
+    const auto before = snapshot(ctx.rig.document());
+    ctx.rig.mousePress(empty.position);
+    ctx.rig.mouseRelease(empty.position);
+    expectUnchanged(ctx, before, "empty-plot click");
+    const int slop = ctx.rig.geometry().nodeDragActivationDistance;
+    ctx.rig.mousePress(empty.position);
+    ctx.rig.mouseMove(empty.position + QPointF(std::max(0, slop - 1), 0.0));
+    ctx.rig.mouseRelease(empty.position + QPointF(std::max(0, slop - 1), 0.0));
+    report(ctx,
+           unchanged(before, snapshot(ctx.rig.document())) && samePoints(pointsOf(ctx), kFixture),
+           QStringLiteral("sub-threshold empty jitter mutated the document"));
+}
+
+constexpr std::array kScenarios{
+    Scenario{"hover-insertion", runHoverInsertion},
+    Scenario{"click-delete", runClickDelete},
+    Scenario{"node-drag", runNodeDrag},
+    Scenario{"selection", runSelection},
+    Scenario{"sweep-ramp", runSweepRamp},
+    Scenario{"pencil", runPencil},
+    Scenario{"band-select", runBandSelect},
+    Scenario{"escape", runEscapeCancel},
+    Scenario{"rebuild-cancel", runRebuildCancel},
+    Scenario{"semantic-no-op", runSemanticNoOp},
+};
+
+} // namespace
+
+void runNodeLaneCrossLaneParity(AutomationGestureCheckRig &rig,
+                                const AutomationGestureCheck &check);
+
+void checkNodeLaneParity(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check)
+{
+    rig.setAutomationZoom(96.0);
+    rig.setAutomationScroll(0.0);
+    rig.setPersistentPencil(false);
+    rig.pump();
+    check(rig.expandTempo(), QStringLiteral("Tempo header did not expose the expanded body"));
+    const auto initialTempo = rig.document().tempoPoints();
+    const auto initialPan = rig.document().lanePoints(rig.pan.track, rig.pan.controller);
+    const auto restore = [&] {
+        rig.view().selectionModel().clearTimeSelection();
+        rig.setPersistentPencil(false);
+        TempoEdit edit;
+        edit.remove = rig.document().tempoPoints();
+        edit.add = initialTempo;
+        if (rig.document().tempoPoints() != initialTempo)
+            rig.document().applyTempoEdit(edit);
+        std::vector<SongDocument::LanePointValue> pan;
+        pan.reserve(initialPan.size());
+        for (const auto &point : initialPan)
+            pan.push_back({point.tick, point.value});
+        rig.document().writeLanePoints(rig.pan.track, rig.pan.controller, 0,
+                                       std::numeric_limits<uint64_t>::max(), pan);
+        rig.documentChanged();
+        rig.pump();
+    };
+    for (const auto &scenario : kScenarios) {
+        for (const auto &adapter : kAdapters) {
+            Context ctx{rig, check, adapter, scenario.name, {}, rig.pan.track, rig.pan.controller};
+            ctx.handle =
+                adapter.kind == AdapterKind::Tempo ? LaneHandle{0} : rig.handleFor(rig.pan);
+            if (!ctx.handle.valid()) {
+                check(false, QStringLiteral("%1 %2: lane body is missing")
+                                 .arg(QLatin1String(adapter.name), QLatin1String(scenario.name)));
+                continue;
+            }
+            scenario.run(ctx);
+            restore();
+        }
+    }
+    runNodeLaneCrossLaneParity(rig, check);
+}

@@ -7,45 +7,9 @@
 #include <QRect>
 #include <QtGlobal>
 
-#include "ui/editorviewstate.h"
-#include "ui/songviewmodel.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
 
 class AutomationPage;
-
-namespace automation {
-struct ValuePoint {
-    uint64_t tick = 0;
-    int value = 0;
-};
-
-inline constexpr uint8_t kBendController = LANE_CC_BEND;
-
-inline bool rangeZoomable(uint8_t controller)
-{
-    return controller != kBendController && controller != 10 && controller != 24;
-}
-
-inline uint8_t defaultRange(uint8_t controller)
-{
-    return controller == 1 ? 0 : 127;
-}
-
-inline int autoRange(int maximum)
-{
-    if (maximum <= 16)
-        return 16;
-    if (maximum <= 32)
-        return 32;
-    if (maximum <= 64)
-        return 64;
-    return 127;
-}
-
-} // namespace automation
-
-struct AutomationRow {
-    EditorAutomationRowId id;
-};
 
 // A half-open visible grid cell. Snapped callers provide crossed cells in
 // pointer traversal order, including both endpoint cells.
@@ -55,7 +19,7 @@ struct AutomationGridCell {
 };
 
 // Automation drawer layout constants resolved from the UI scale. Shared by the
-// projection (mapping math) and the area (paint and hit-test geometry).
+// projection (mapping math) and the canvas (paint and hit-test geometry).
 struct AutomationGeometry {
     int rowDefaultHeight = 0;
     int rowMinimumHeight = 0;
@@ -79,35 +43,24 @@ struct AutomationGeometry {
     static AutomationGeometry resolve();
 };
 
-// AutomationProjection owns the current geometry and row snapshot for pixel
-// <-> tick <-> value mapping. It borrows only the page and widget DPR;
-// construct one per event or paint pass.
+// AutomationProjection owns the current geometry for pixel <-> tick mapping.
+// It borrows only the page; construct one per event or paint pass. Value
+// mapping is lane-keyed through pointerMapping and the static valueY helpers.
 class AutomationProjection
 {
   public:
     struct PointerMapping {
-        automation::ValuePoint point;
+        NodePoint point;
         double rawTick = 0.0;
         AutomationGridCell cell;
     };
 
-    AutomationProjection(const AutomationGeometry &geometry, const std::vector<AutomationRow> &rows,
-                         const AutomationPage *page, int topInset)
+    AutomationProjection(const AutomationGeometry &geometry, const AutomationPage *page)
         : m_geometry(geometry)
-        , m_rows(rows)
         , m_page(page)
-        , m_topInset(topInset)
     {}
 
-    int rowHeight(const AutomationRow &row) const;
-    int rowTop(int index) const;
-    std::pair<int, int> valuePlotBounds(int index) const;
-    int rowIndexAt(int y) const;
-    int rowBoundaryAt(int y) const;
-    int rowMinimum(const AutomationRow &row) const;
-    int rowMaximum(const AutomationRow &row) const;
-    int valueAtY(int rowIndex, qreal y) const;
-    qreal pointY(const AutomationRow &row, int rowIndex, int value) const;
+    const AutomationGeometry &geometry() const noexcept { return m_geometry; }
     double rawTickAt(qreal x) const;
     qreal displayX(uint64_t tick, qreal devicePixelRatio) const;
     uint64_t snapTickAt(qreal x, bool fine) const;
@@ -116,9 +69,8 @@ class AutomationProjection
     static double valueAtY(const QRect &bounds, const AutomationGeometry &geometry, double minimum,
                            double maximum, qreal y);
     uint64_t fineSnapTick(double rawTick) const;
-    const CcLane *laneFor(const AutomationRow &row) const;
     bool nodeMarkersVisible() const;
-    PointerMapping pointerMapping(int rowIndex, qreal x, qreal y) const;
+    PointerMapping pointerMapping(const NodeLane &lane, const QRect &body, qreal x, qreal y) const;
     AutomationGridCell snapCellAt(double rawTick) const;
     // Fills `cells` (reused scratch, no allocation) and returns it.
     const std::vector<AutomationGridCell> &snapCellsCrossed(std::vector<AutomationGridCell> &cells,
@@ -127,7 +79,5 @@ class AutomationProjection
 
   private:
     AutomationGeometry m_geometry;
-    std::vector<AutomationRow> m_rows;
     const AutomationPage *m_page;
-    int m_topInset = 0;
 };

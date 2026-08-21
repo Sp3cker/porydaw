@@ -18,7 +18,7 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
                                     const AutomationGestureCheck &check);
 void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
                                        const AutomationGestureCheck &check);
-void checkTempoInteractions(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check);
+void checkNodeLaneParity(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check);
 void checkNodeContract(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check);
 void checkNodeLaneHoverParity(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check);
 void checkAutomationLifecycle(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check);

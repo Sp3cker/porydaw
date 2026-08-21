@@ -15,10 +15,9 @@
 #include <QRectF>
 #include <QString>
 
-#include "ui/editordrawer/automationgesture.h"
-#include "ui/editordrawer/automationpencilgesture.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
@@ -34,17 +33,6 @@ class QPainter;
 class QScrollArea;
 class QWheelEvent;
 class QMouseEvent;
-
-struct LaneNodeIdentity {
-    int engineTrack = -1;
-    uint8_t controller = 0;
-    DocLanePoint documentPoint;
-};
-
-struct LaneNodeDragState {
-    NodeDragGesture gesture;
-    std::vector<LaneNodeIdentity> identities;
-};
 
 // AutomationCanvas is the paint and input surface owned by AutomationPage.
 // Temporary gesture state stays local to this canvas; song data and routing
@@ -62,14 +50,15 @@ class AutomationCanvas final : public songview::TimelineSurface
     void cancelInteraction();
     void setPencilMode(bool enabled);
     bool isPanning() const noexcept;
-    bool bandPreviewContains(int rowIndex, uint64_t tick) const noexcept;
-    bool bandPreviewContainsRow(int rowIndex) const noexcept;
+    bool bandPreviewContains(LaneHandle handle, uint64_t tick) const noexcept;
+    bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect labelGutter() const noexcept { return m_labelGutter; }
     int plotOrigin() const noexcept { return m_geometry.plotOrigin; }
     int contentTopInset() const noexcept
     {
         return m_tempoLane.totalHeight(m_geometry) + m_voiceLane.height();
     }
+    QRect laneBody(LaneHandle handle) const;
 
   protected:
     bool event(QEvent *event) override;
@@ -103,40 +92,31 @@ class AutomationCanvas final : public songview::TimelineSurface
     void refreshGeometry();
     QFont captionLabelFont() const;
 
-    // Pixel <-> tick <-> value mapping over the current geometry, rows, and
-    // page timeline. Constructed fresh per event or paint pass.
+    // Pixel <-> tick mapping over the current geometry and page timeline.
     AutomationProjection projection() const;
 
     bool promptPointValue(const AutomationRow &row, uint8_t controller, int currentValue,
                           int *storedValue);
-    bool showPointMenuNear(const AutomationRow &row, int rowIndex, const QPoint &position,
-                           const QPoint &globalPosition);
-    bool commitLaneEdit(int rowIndex, const NodeLaneEdit::Completion &completion);
-    bool pencilPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
-                        DocLanePoint *point) const;
-    bool pencilPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
-                        const AutomationProjection &proj, DocLanePoint *point) const;
-    LaneNodeDragState collectSelectedNodeDrags(const AutomationProjection &projection) const;
-    std::optional<LaneNodeDragState> nodeDragGestureAt(int rowIndex, const QPointF &position,
-                                                       bool axisLockArmed,
-                                                       const AutomationProjection &projection,
-                                                       bool pencilMode) const;
+    bool showPointMenuNear(LaneHandle handle, const QPoint &position, const QPoint &globalPosition);
+    bool commitLaneEdit(const NodeLaneEdit::Completion &completion);
+    bool nodePointHit(LaneHandle handle, const QPointF &position, NodePoint *point) const;
+    bool nodePointHit(LaneHandle handle, const QPointF &position, const AutomationProjection &proj,
+                      NodePoint *point) const;
+    NodeDragGesture collectSelectedNodeDrags() const;
+    std::optional<NodeDragGesture> nodeDragGestureAt(LaneHandle handle, const QPointF &position,
+                                                     bool axisLockArmed,
+                                                     const AutomationProjection &projection,
+                                                     bool pencilMode) const;
     const QCursor &pencilCursor();
     void updateAxisLockCursor(AxisLock lock);
-    ValuePoint mappedForRow(int row, QPointF pos, bool fine, bool snapValue,
+    NodePoint mappedForLane(LaneHandle handle, QPointF pos, bool fine, bool snapValue,
                             const AutomationProjection &proj) const;
     void updateActiveGesture(const QPointF &position, Qt::KeyboardModifiers modifiers,
                              bool activateSweep);
-    template <class T>
-    static std::vector<NodeLaneEdit::Point> laneEditPoints(const std::vector<T> &points)
-    {
-        std::vector<NodeLaneEdit::Point> result;
-        result.reserve(points.size());
-        for (const auto &point : points)
-            result.push_back({point.tick, point.value});
-        return result;
-    }
     void finishActiveGesture(bool fineMode);
+    bool commitNodePointMoves(uint64_t expectedRevision, const std::vector<NodeDrag> &points);
+    bool commitNodePointDeletes(std::optional<uint64_t> expectedRevision,
+                                const std::vector<NodeDrag> &points);
     void showTimeSelectionMenu(const QPoint &globalPosition);
     void showAddLaneMenu(const QPoint &globalPosition);
     void showLaneMenu(const AutomationRow &row, const QPoint &globalPosition);
@@ -145,10 +125,17 @@ class AutomationCanvas final : public songview::TimelineSurface
     void rebuildNodeStack();
     LaneHandle laneAt(int y) const noexcept;
     bool resolveLane(LaneHandle handle, const NodeLane **lane, QRect *body) const noexcept;
+    NodeLane *mutableLane(LaneHandle handle) noexcept;
     void syncHoverValueLabel();
     void syncPreviewValueLabel();
-    void highlightHoveredPoint(LaneHandle handle, const QPointF &position, const ValuePoint &point);
+    void highlightHoveredPoint(LaneHandle handle, const QPointF &position, const NodePoint &point);
     int ccRowIndexAt(int y) const noexcept;
+    int ccLaneHeight(const AutomationRow &row) const;
+    int ccRowBoundaryAt(int y) const;
+    int addLaneStripTop() const;
+    int snapNeutralFor(LaneHandle handle) const;
+    void publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
+                              LaneHandle end) const;
     void setGestureActive(bool active);
     AutomationGeometry m_geometry;
     QRect m_labelGutter;
@@ -178,14 +165,13 @@ class AutomationCanvas final : public songview::TimelineSurface
         int startVScroll = 0;
     } m_pan;
     BandGesture m_band;
-    int m_bandRightRow = -1;
-    int m_bandEndRow = -1;
-    std::vector<ValuePoint> m_clipboard;
+    LaneHandle m_bandStart;
+    LaneHandle m_bandEnd;
+    std::vector<NodePoint> m_clipboard;
     bool m_pencilMode = false;
     qreal m_pencilCursorDpr = 0.0;
     QCursor m_pencilCursor;
     std::optional<ActiveGesture> m_activeGesture;
-    std::vector<LaneNodeIdentity> m_activeNodeIdentities;
     NodeLaneHoverState m_hoverState;
     NodeDoubleClickGuard m_deletedNodeClick;
 };

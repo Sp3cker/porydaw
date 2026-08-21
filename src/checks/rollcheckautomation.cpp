@@ -29,10 +29,13 @@
 #include <QWheelEvent>
 
 #include "core/songdocument.h"
+#include "core/timedefaults.h"
 #include "project/decompproject.h"
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/automationgesture.h"
+#include "ui/editordrawer/automationprojection.h"
+#include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/editordrawer.h"
+#include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/voicechangelane.h"
 #include "ui/layout.h"
@@ -42,6 +45,11 @@ static_assert(!std::is_base_of_v<NodeLane, VoiceChangeLane>);
 
 void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument &document,
                               DrawerPageLiveState &live, int &failures);
+void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDocument &document,
+                                   const QString &songLabel,
+                                   const AutomationGeometry &projectionGeometry, int lfoTop,
+                                   int lfoHeight, int voiceTop, int voiceHeight, int rowsHeight,
+                                   int &failures);
 
 namespace {
 
@@ -146,6 +154,29 @@ int automationRowTop(const AutomationPage &page, const EditorAutomationRowId &id
                           expected.minimumRowHeight, expected.maximumRowHeight);
     }
     return -1;
+}
+QRect automationRowBody(const AutomationPage &page, const EditorAutomationRowId &id)
+{
+    const int top = automationRowTop(page, id);
+    if (top < 0)
+        return {};
+    const auto &state = page.automationViewState();
+    const auto expected = expectedAutomationGeometry();
+    const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
+    const auto it = state.laneHeights.find(id);
+    const int height = std::clamp(it == state.laneHeights.cend() ? shared : it->second,
+                                  expected.minimumRowHeight, expected.maximumRowHeight);
+    return {0, top, page.canvas()->width(), height};
+}
+QPointF automationNodePoint(SongView &view, const AutomationPage &page,
+                            const AutomationGeometry &geometry, const EditorAutomationRowId &id,
+                            uint64_t tick, int value)
+{
+    const QRect body = automationRowBody(page, id);
+    return {view.displayX(double(tick), geometry.plotOrigin, page.canvas()->devicePixelRatioF()),
+            AutomationProjection::valueY(body, geometry,
+                                         CoreTimeDefaults::laneValueMinimum(id.controller),
+                                         CoreTimeDefaults::laneValueMaximum(id.controller), value)};
 }
 QRect automationVoiceRect(const AutomationPage &page)
 {
@@ -323,11 +354,11 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
           QStringLiteral("middle-button automation pan stopped after its first scroll refresh"));
     view.setEditorHorizontalScroll(0.0);
     live.horizontalScroll = 0.0;
-    // ---- 3 cheap-fix regression oracles (template / mappedForRow / GestureCommit) ----
+    // ---- 3 cheap-fix regression oracles (template / mappedForLane / GestureCommit) ----
     {
         // 1. Sweep template stepping: extendSweepPoints must interpolate without std::function
         SweepGesture g;
-        g.row = 0;
+        g.lane = LaneHandle{0};
         g.current = {10, 100};
         g.previousRawTick = 0.0;
         g.previousValue = 0;
@@ -342,11 +373,11 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         check(sweepOk, QStringLiteral(
                            "Sweep extendSweepPoints template did not interpolate 0..10 -> 0..100"));
         SweepGesture g2;
-        g2.row = 0;
+        g2.lane = LaneHandle{0};
         g2.current = {0, 0};
         g2.previousRawTick = 0.0;
         g2.previousValue = 0;
-        ValuePoint mapped{5, 50};
+        NodePoint mapped{5, 50};
         g2.update(mapped, 0, 5, 5.0, false, stepOne);
         check(g2.current.tick == 5 && g2.current.value == 50 && g2.points.size() >= 6,
               QStringLiteral("Sweep::update template did not forward to extendSweepPoints"));
@@ -354,34 +385,39 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         ramp.mode = SweepGesture::Mode::Ramp;
         ramp.anchor = {0, 0};
         ramp.current = {10, 100};
-        std::vector<DocLanePoint> existing;
-        auto rampCompletion = ramp.finish(0, 7, document.revision(), existing, false, stepOne);
+        std::vector<NodePoint> existing;
+        auto rampCompletion =
+            ramp.finish(LaneHandle{0}, document.revision(), existing, false, stepOne);
         bool rampOk = !rampCompletion.unchanged && rampCompletion.points.size() == 11 &&
                       rampCompletion.points.front().value == 0 &&
                       rampCompletion.points.back().value == 100;
         check(rampOk, QStringLiteral("Sweep ramp finish did not step via nextGridTick"));
     }
     {
-        // 2. mappedForRow core: updateValuePoint with snap-value neutral snapping
-        const auto &rowsForDetent = page.canvas()->rows();
-        int panRow = -1;
-        for (int i = 0; i < int(rowsForDetent.size()); ++i) {
-            if (rowsForDetent[i].id.controller == 10)
-                panRow = i;
-        }
-        check(panRow >= 0, QStringLiteral("pan row not found for snap-value test"));
-        if (panRow >= 0) {
-            AutomationProjection proj(projectionGeometry, rowsForDetent, &page,
-                                      page.canvas()->contentTopInset());
-            const auto &row = rowsForDetent[panRow];
-            const int top = proj.rowTop(panRow);
-            const int h = proj.rowHeight(row);
-            const int span = proj.rowMaximum(row) - proj.rowMinimum(row);
-            const int snapThresh = span * projectionGeometry.neutralSnapRadius / std::max(1, h);
+        // 2. mappedForLane core: updateValuePoint with snap-value neutral snapping
+        const int panTop = automationRowTop(page, pan);
+        check(panTop >= 0, QStringLiteral("pan lane not found for snap-value test"));
+        if (panTop >= 0) {
+            const auto it = state.laneHeights.find(pan);
+            const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
+            const int panHeight = std::clamp(it == state.laneHeights.cend() ? shared : it->second,
+                                             expected.minimumRowHeight, expected.maximumRowHeight);
+            const QRect panBody(0, panTop, page.canvas()->width(), panHeight);
+            AutomationProjection proj(projectionGeometry, &page);
+            auto usedTrackMask = uint32_t{0};
+            for (int track = 0; track < document.engineTrackCount() && track < 16; ++track)
+                usedTrackMask |= uint32_t{1} << track;
+            CCLaneAdapter panLane(document, view.selectionModel(), usedTrackMask, 0,
+                                  pan.controller);
+            const int span = panLane.maximumValue() - panLane.minimumValue();
+            const int snapThresh =
+                span * projectionGeometry.neutralSnapRadius / std::max(1, panHeight);
             int yNear = -1;
             int vNear = -1;
-            for (int y = top; y < top + h; ++y) {
-                int v = proj.valueAtY(panRow, qreal(y));
+            for (int y = panTop; y < panTop + panHeight; ++y) {
+                int v = qRound(AutomationProjection::valueAtY(panBody, projectionGeometry,
+                                                              panLane.minimumValue(),
+                                                              panLane.maximumValue(), qreal(y)));
                 if (yNear < 0 && v != 64 && std::abs(v - 64) <= snapThresh &&
                     std::abs(v - 64) > 0) {
                     yNear = y;
@@ -390,23 +426,23 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             }
             check(yNear >= 0, QStringLiteral("yNear not found for snap-value test"));
             if (yNear >= 0) {
-                ValuePoint p;
-                updateValuePoint(proj, panRow, row, p, yNear, 100, false,
-                                 projectionGeometry.neutralSnapRadius);
+                NodePoint p;
+                updateValuePoint(proj, panLane, panBody, p, yNear, 100, false,
+                                 projectionGeometry.neutralSnapRadius, 64);
                 const bool withoutSnapValue = p.value == vNear;
-                updateValuePoint(proj, panRow, row, p, yNear, 100, true,
-                                 projectionGeometry.neutralSnapRadius);
+                updateValuePoint(proj, panLane, panBody, p, yNear, 100, true,
+                                 projectionGeometry.neutralSnapRadius, 64);
                 const bool withSnapValue = p.value == 64;
                 check(withoutSnapValue && withSnapValue,
                       QStringLiteral("updateValuePoint snap-value did not snap %1->64 for pan")
                           .arg(vNear));
             }
-            // y for 64 via pointY — guaranteed to exist
-            const qreal yAt64f = proj.pointY(row, panRow, 64);
+            const qreal yAt64f = AutomationProjection::valueY(
+                panBody, projectionGeometry, panLane.minimumValue(), panLane.maximumValue(), 64);
             const int yAt64 = qRound(yAt64f);
-            ValuePoint p;
-            updateValuePoint(proj, panRow, row, p, yAt64, 200, true,
-                             projectionGeometry.neutralSnapRadius);
+            NodePoint p;
+            updateValuePoint(proj, panLane, panBody, p, yAt64, 200, true,
+                             projectionGeometry.neutralSnapRadius, 64);
             check(
                 p.value == 64 && p.tick == 200,
                 QStringLiteral("updateValuePoint with snap-value corrupted tick/value at neutral"));
@@ -414,8 +450,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     }
     {
         // 3. Domain-neutral NodeDragGesture outcomes.
-        const auto laneNode = [](const DocLanePoint &point, ValuePoint current) {
-            return NodeDrag{0, {point.tick, point.value}, current, 0, 127};
+        const auto laneNode = [](const DocLanePoint &point, NodePoint current) {
+            return NodeDrag{LaneHandle{0}, {point.tick, point.value}, current, 0, 127};
         };
         {
             NodeDragGesture gesture;
@@ -476,7 +512,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     }
     {
         using LaneEdit = NodeLaneEdit;
-        const auto target = LaneEdit::Target{2, 7, document.revision()};
+        const auto target = LaneEdit::Target{LaneHandle{0}, document.revision()};
         const auto pointRange = LaneEdit(target, {{24, 64}, {48, 64}});
         const auto identical = pointRange.replacePointRange(24, 48, {{24, 64}, {48, 64}});
         check(identical.unchanged,
@@ -541,7 +577,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     check(document.smf().write() == voiceGestureMidi &&
               document.revision() == voiceGestureRevision &&
               document.undoStack()->index() == voiceGestureUndo && !page.canvas()->isPanning() &&
-              !page.canvas()->bandPreviewContainsRow(0) && !view.userGestureActive() &&
+              !page.canvas()->bandPreviewContainsLane(LaneHandle{0}) && !view.userGestureActive() &&
               !view.selectionModel().timeSelection().active(),
           QStringLiteral("Voice Change entered a NodeLane gesture"));
     const int voicePointX =
@@ -561,38 +597,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     DocLanePoint updatedVoice;
     check(document.findLanePoint(0, DOC_CC_VOICE, 24, &updatedVoice) && updatedVoice.value == 4,
           QStringLiteral("voice automation did not use the concrete SongView voice picker"));
-    if (popupMenus) {
-        bool leftGutterMenuOpened = false;
-        QTimer::singleShot(0, [&] {
-            if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget())) {
-                leftGutterMenuOpened = true;
-                menu->close();
-            }
-        });
-        sendMouse(page.canvas(), QEvent::MouseButtonPress,
-                  QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2), Qt::LeftButton,
-                  Qt::LeftButton);
-        sendMouse(page.canvas(), QEvent::MouseButtonRelease,
-                  QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2), Qt::LeftButton,
-                  Qt::NoButton);
-        QCoreApplication::processEvents();
-        popupCheck(!leftGutterMenuOpened,
-                   QStringLiteral("left click in a control-row gutter opened its menu"));
-        QStringList addLaneActions;
-        QTimer::singleShot(0, [&] {
-            auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
-            if (!menu)
-                return;
-            for (QAction *action : menu->actions())
-                addLaneActions.push_back(action->text());
-            menu->close();
-        });
-        sendMouse(page.canvas(), QEvent::MouseButtonPress,
-                  QPoint(layout::space(layout::Space::One), automationRowsHeight(page) + 1),
-                  Qt::RightButton, Qt::RightButton);
-        popupCheck(addLaneActions.contains(QStringLiteral("Show: Volume (VOL) (hidden)")),
-                   QStringLiteral("right-click add-lane menu lost hidden-lane label or order"));
-    }
+    if (popupMenus)
+        checkAutomationLanePopupMenus(view, page, document, songLabel, projectionGeometry, lfoTop,
+                                      lfoHeight, voiceRect.top(), voiceRect.height(),
+                                      automationRowsHeight(page), failures);
 
     page.canvas()->invalidateContent();
     page.canvas()->grab();
@@ -674,11 +682,11 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
               Qt::LeftButton);
     sendMouse(page.canvas(), QEvent::MouseButtonRelease, clickPoint + verticalDragMove,
               Qt::LeftButton, Qt::NoButton);
-    const AutomationProjection sweepProjection(projectionGeometry, page.canvas()->rows(), &page,
-                                               page.canvas()->contentTopInset());
-    const int sweepRow = sweepProjection.rowIndexAt(clickPoint.y());
+    const AutomationProjection sweepProjection(projectionGeometry, &page);
+    const QRect sweepBody(0, panTop, page.canvas()->width(), panHeight);
     const uint64_t sweepTick = view.snapTick(sweepProjection.rawTickAt(clickPoint.x()), false);
-    const int sweepValue = sweepProjection.valueAtY(sweepRow, clickPoint.y() + 1);
+    const int sweepValue = qRound(
+        AutomationProjection::valueAtY(sweepBody, projectionGeometry, 0, 127, clickPoint.y() + 1));
     DocLanePoint sweepPoint;
     check(document.findLanePoint(0, pan.controller, sweepTick, &sweepPoint) &&
               sweepPoint.value == sweepValue && document.revision() == clickRevision + 1 &&
@@ -692,18 +700,15 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         document.undoStack()->setIndex(pdBaseUndo);
         page.documentChanged();
     };
-    const int pdPlotTop = panTop + expected.valuePlotPadding;
-    const int pdPlotBottom = panTop + panHeight - expected.valuePlotPadding;
     const auto pdPointAt = [&](uint64_t tick, int value) {
-        return QPoint(qRound(view.displayX(double(tick), expected.plotOrigin, dpr)),
-                      pdPlotBottom - value * (pdPlotBottom - pdPlotTop) / 127);
+        return automationNodePoint(view, page, projectionGeometry, pan, tick, value);
     };
     resetDrawFixture();
     const uint64_t normalNodeTick = view.snapTickDown(120.5);
     constexpr int normalNodeValue = 64;
     document.addLanePoint(0, pan.controller, normalNodeTick, normalNodeValue);
     page.documentChanged();
-    const QPoint normalNodePoint = pdPointAt(normalNodeTick, normalNodeValue);
+    const QPointF normalNodePoint = pdPointAt(normalNodeTick, normalNodeValue);
     const auto activatePointMenuAction = [](QMenu *menu, QAction *action) {
         if (!menu || !action) {
             if (menu)
@@ -857,7 +862,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         constexpr int popupNodeValue = 70;
         document.addLanePoint(0, pan.controller, popupNodeTick, popupNodeValue);
         page.documentChanged();
-        const QPoint popupNodePoint = pdPointAt(popupNodeTick, popupNodeValue);
+        const QPointF popupNodePoint = pdPointAt(popupNodeTick, popupNodeValue);
         const uint64_t popupNodeRevision = document.revision();
         const int popupNodeUndo = document.undoStack()->index();
         bool popupNodeDeleteActionAvailable = false;
@@ -886,15 +891,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             QStringLiteral("automation node right-click Delete action did not commit one edit"));
     }
     const int duplicateTop = automationRowTop(page, lfo);
-    const int duplicateHeight = heightFor(lfo);
     check(duplicateTop >= 0, QStringLiteral("same-tick duplicate lane is missing"));
-    const int duplicatePlotTop = duplicateTop + expected.valuePlotPadding;
-    const int duplicatePlotBottom = duplicateTop + duplicateHeight - expected.valuePlotPadding;
-    const int duplicateX = qRound(view.displayX(96.0, expected.plotOrigin, dpr));
-    const int duplicateTargetX = qRound(view.displayX(120.0, expected.plotOrigin, dpr));
-    const int lowerPointY =
-        duplicatePlotBottom - 32 * (duplicatePlotBottom - duplicatePlotTop) / 96;
-    const QPoint duplicatePoint(duplicateX, lowerPointY);
+    const QPointF duplicatePoint = automationNodePoint(view, page, projectionGeometry, lfo, 96, 96);
+    const QPointF duplicateTarget =
+        automationNodePoint(view, page, projectionGeometry, lfo, 120, 96);
     const uint64_t duplicateRevision = document.revision();
     sendMouse(page.canvas(), QEvent::MouseButtonPress, duplicatePoint, Qt::LeftButton,
               Qt::LeftButton);
@@ -903,21 +903,21 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         sendMouse(page.canvas(), QEvent::MouseMove, duplicatePoint + QPoint(arm, 0), Qt::NoButton,
                   Qt::LeftButton);
     }
-    sendMouse(page.canvas(), QEvent::MouseMove, QPoint(duplicateTargetX, lowerPointY - 4),
-              Qt::NoButton, Qt::LeftButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease, QPoint(duplicateTargetX, lowerPointY - 4),
-              Qt::LeftButton, Qt::NoButton);
+    sendMouse(page.canvas(), QEvent::MouseMove, duplicateTarget, Qt::NoButton, Qt::LeftButton);
+    sendMouse(page.canvas(), QEvent::MouseButtonRelease, duplicateTarget, Qt::LeftButton,
+              Qt::NoButton);
     check(document.revision() == duplicateRevision + 1,
           QStringLiteral("same-tick automation point drag did not commit"));
     const auto duplicateRun = document.lanePoints(0, lfo.controller);
     QStringList duplicateState;
     for (const auto &point : duplicateRun)
         duplicateState.push_back(QStringLiteral("%1:%2").arg(point.tick).arg(point.value));
-    const auto retainedDuplicate =
-        std::find_if(duplicateRun.cbegin(), duplicateRun.cend(),
-                     [](const DocLanePoint &point) { return point.tick == 96; });
-    check(retainedDuplicate != duplicateRun.cend() && retainedDuplicate->value == 96,
-          QStringLiteral("automation point drag edited a different same-tick point (%1)")
+    const bool groupMoved =
+        duplicateRun.size() == 2 && duplicateRun[0].tick == duplicateRun[1].tick &&
+        duplicateRun[0].tick != 96 && duplicateRun[0].value == 32 && duplicateRun[1].value == 96;
+    check(groupMoved,
+          QStringLiteral("same-tick automation point drag did not move the effective node group "
+                         "(%1)")
               .arg(duplicateState.join(QLatin1Char(','))));
     document.undoStack()->setIndex(clickUndo);
     page.documentChanged();
@@ -955,32 +955,31 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             });
             activatePointMenuAction(menu, setValueAction);
         });
-        const QPoint duplicateUpperPoint(duplicateX, duplicatePlotTop);
         const uint64_t pointEditRevision = document.revision();
         const int pointEditUndo = document.undoStack()->index();
-        sendMouse(page.canvas(), QEvent::MouseButtonPress, duplicateUpperPoint, Qt::RightButton,
+        sendMouse(page.canvas(), QEvent::MouseButtonPress, duplicatePoint, Qt::RightButton,
                   Qt::RightButton);
-        sendMouse(page.canvas(), QEvent::MouseButtonRelease, duplicateUpperPoint, Qt::RightButton,
+        sendMouse(page.canvas(), QEvent::MouseButtonRelease, duplicatePoint, Qt::RightButton,
                   Qt::NoButton);
         QCoreApplication::processEvents();
         const auto editedRun = document.lanePoints(0, lfo.controller);
         QStringList editedState;
         for (const auto &point : editedRun)
             editedState.push_back(QStringLiteral("%1:%2").arg(point.tick).arg(point.value));
-        const auto editedPoint =
-            std::find_if(editedRun.cbegin(), editedRun.cend(),
-                         [](const DocLanePoint &point) { return point.tick == 96; });
-        const auto editedPointCount =
-            std::count_if(editedRun.cbegin(), editedRun.cend(),
-                          [](const DocLanePoint &point) { return point.tick == 96; });
+        std::vector<DocLanePoint> editedAt96;
+        for (const auto &point : editedRun) {
+            if (point.tick == 96)
+                editedAt96.push_back(point);
+        }
         popupCheck(
             pointMenuActions == pointMenuExpected,
             QStringLiteral("automation point context menu actions were not exactly Set Value, "
                            "Delete"));
         popupCheck(pointValueInputOpened,
                    QStringLiteral("right-clicking an automation point did not open numeric input"));
-        popupCheck(editedPointCount == 1 && editedPoint != editedRun.cend() &&
-                       editedPoint->value == 64 && document.revision() == pointEditRevision + 1 &&
+        popupCheck(editedAt96.size() == 2 && editedAt96.front().value == 32 &&
+                       editedAt96.back().value == 64 &&
+                       document.revision() == pointEditRevision + 1 &&
                        document.undoStack()->index() == pointEditUndo + 1,
                    QStringLiteral("numeric automation point input did not update the clicked point "
                                   "(points %1, revision %2/%3, undo %4/%5)")
@@ -991,11 +990,17 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                        .arg(pointEditUndo + 1));
         document.undoStack()->setIndex(pointEditUndo);
         page.documentChanged();
+        constexpr uint64_t retargetTick = 48;
+        constexpr int retargetValue = 32;
+        document.addLanePoint(0, lfo.controller, retargetTick, retargetValue);
+        page.documentChanged();
+        const QPointF retargetNodePoint =
+            automationNodePoint(view, page, projectionGeometry, lfo, retargetTick, retargetValue);
         const auto retargetBeforePoints = document.lanePoints(0, lfo.controller);
         auto retargetExpectedPoints = retargetBeforePoints;
         const auto retargetPointIt = std::find_if(
             retargetExpectedPoints.cbegin(), retargetExpectedPoints.cend(),
-            [](const DocLanePoint &point) { return point.tick == 96 && point.value == 32; });
+            [](const DocLanePoint &point) { return point.tick == 48 && point.value == 32; });
         const bool retargetPointPresent = retargetPointIt != retargetExpectedPoints.cend();
         if (retargetPointPresent)
             retargetExpectedPoints.erase(retargetPointIt);
@@ -1020,7 +1025,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                 menu->close();
                 return;
             }
-            const QPoint pointBGlobal = page.canvas()->mapToGlobal(duplicatePoint);
+            const QPoint pointBGlobal = page.canvas()->mapToGlobal(retargetNodePoint.toPoint());
             sendMouse(menu, QEvent::MouseButtonPress, menu->mapFromGlobal(pointBGlobal),
                       Qt::RightButton, Qt::RightButton);
             sendMouse(menu, QEvent::MouseButtonRelease, menu->mapFromGlobal(pointBGlobal),
@@ -1031,9 +1036,9 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         });
         const uint64_t retargetDeleteRevision = document.revision();
         const int retargetDeleteUndo = document.undoStack()->index();
-        sendMouse(page.canvas(), QEvent::MouseButtonPress, duplicateUpperPoint, Qt::RightButton,
+        sendMouse(page.canvas(), QEvent::MouseButtonPress, duplicatePoint, Qt::RightButton,
                   Qt::RightButton);
-        sendMouse(page.canvas(), QEvent::MouseButtonRelease, duplicateUpperPoint, Qt::RightButton,
+        sendMouse(page.canvas(), QEvent::MouseButtonRelease, duplicatePoint, Qt::RightButton,
                   Qt::NoButton);
         QCoreApplication::processEvents();
         const auto retargetAfterPoints = document.lanePoints(0, lfo.controller);
@@ -1055,7 +1060,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                    QStringLiteral("outside right-click dismissed the open automation point menu"));
         popupCheck(retargetPointPresent && retargetPointsMatch &&
                        hasRetargetPoint(retargetAfterPoints, 96, 96) &&
-                       !hasRetargetPoint(retargetAfterPoints, 96, 32) &&
+                       hasRetargetPoint(retargetAfterPoints, 96, 32) &&
+                       !hasRetargetPoint(retargetAfterPoints, retargetTick, retargetValue) &&
                        document.revision() == retargetDeleteRevision + 1 &&
                        document.undoStack()->index() == retargetDeleteUndo + 1,
                    QStringLiteral("retargeted automation Delete did not remove point B only"));

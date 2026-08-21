@@ -29,6 +29,10 @@ struct EditorAutomationRowId {
     auto operator<=>(const EditorAutomationRowId &) const noexcept = default;
 };
 
+struct AutomationRow {
+    EditorAutomationRowId id;
+};
+
 // Value-only drawer chrome. MainWindow persists this application-wide; runtime
 // pointers and transient interaction data stay in the concrete editor pages.
 struct DrawerSectionState {

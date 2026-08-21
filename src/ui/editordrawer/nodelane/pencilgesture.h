@@ -19,7 +19,7 @@ class AutomationPencilGesture
     struct Sample {
         double rawTick = 0.0;
         double logicalX = 0.0;
-        automation::ValuePoint point;
+        NodePoint point;
         double continuousValue = 0.0;
     };
 
@@ -42,7 +42,7 @@ class AutomationPencilGesture
                             std::vector<NodeLaneEdit::Point> originalPoints, Sample firstSample,
                             AutomationGridCell firstCell);
 
-    static bool lessPointTick(const automation::ValuePoint &left, uint64_t tick) noexcept;
+    static bool lessPointTick(const NodePoint &left, uint64_t tick) noexcept;
     static bool validCell(const AutomationGridCell &cell, uint64_t songEndTick) noexcept;
 
     void rebuildPreview();
@@ -55,13 +55,13 @@ class AutomationPencilGesture
     uint64_t m_documentClockTicks = 0;
     Sample m_previous;
     NodeLaneEdit m_laneEdit;
-    std::vector<automation::ValuePoint> m_strokePoints;
+    std::vector<NodePoint> m_strokePoints;
     AutomationGridCell m_initialCell;
-    automation::ValuePoint m_initialPoint{};
+    NodePoint m_initialPoint{};
     bool m_initialCellExited = false;
     // A non-integral freehand endpoint remains provisional until the next
     // event proves it collinear and forward with both adjacent segments.
-    std::optional<automation::ValuePoint> m_provisionalFreehandEndpoint;
+    std::optional<NodePoint> m_provisionalFreehandEndpoint;
     std::optional<Sample> m_freehandSegmentStart;
     std::optional<Sample> m_snappedSegmentStart;
     uint64_t m_tickBegin = 0;

@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/layout.h"
 
 AutomationGeometry AutomationGeometry::resolve()
@@ -35,93 +35,21 @@ AutomationGeometry AutomationGeometry::resolve()
     return geometry;
 }
 
-int AutomationProjection::rowHeight(const AutomationRow &row) const
+AutomationProjection::PointerMapping AutomationProjection::pointerMapping(const NodeLane &lane,
+                                                                          const QRect &body,
+                                                                          qreal x, qreal y) const
 {
-    if (!m_page)
-        return m_geometry.rowDefaultHeight;
-    return std::clamp(m_page->laneHeightFor(row.id), m_geometry.rowMinimumHeight,
-                      m_geometry.rowMaximumHeight);
-}
-
-int AutomationProjection::rowTop(int index) const
-{
-    int top = m_topInset;
-    for (int row = 0; row < index && row < int(m_rows.size()); ++row)
-        top += rowHeight(m_rows[row]);
-    return top;
-}
-
-std::pair<int, int> AutomationProjection::valuePlotBounds(int index) const
-{
-    const int top = rowTop(index);
-    const int height = rowHeight(m_rows[index]);
-    return {top + m_geometry.valuePlotPadding, top + height - m_geometry.valuePlotPadding};
-}
-
-int AutomationProjection::rowIndexAt(int y) const
-{
-    int bottom = m_topInset;
-    for (int row = 0; row < int(m_rows.size()); ++row) {
-        bottom += rowHeight(m_rows[row]);
-        if (y < bottom)
-            return row;
-    }
-    return -1;
-}
-
-int AutomationProjection::rowBoundaryAt(int y) const
-{
-    int bottom = m_topInset;
-    for (int row = 0; row < int(m_rows.size()); ++row) {
-        bottom += rowHeight(m_rows[row]);
-        if (std::abs(y - bottom) <= layout::singlePixel())
-            return row;
-    }
-    return -1;
-}
-
-int AutomationProjection::rowMinimum(const AutomationRow &row) const
-{
-    if (row.id.kind != EditorAutomationRowKind::ControlChange)
-        return CoreTimeDefaults::kMinCcValue;
-    return CoreTimeDefaults::laneValueMinimum(row.id.controller);
-}
-
-int AutomationProjection::rowMaximum(const AutomationRow &row) const
-{
-    if (row.id.kind != EditorAutomationRowKind::ControlChange)
-        return CoreTimeDefaults::kMaxCcValue;
-    if (row.id.controller == automation::kBendController ||
-        !automation::rangeZoomable(row.id.controller))
-        return CoreTimeDefaults::laneValueMaximum(row.id.controller);
-    int dataMaximum = 0;
-    if (const auto *lane = laneFor(row))
-        for (const auto &point : lane->points)
-            dataMaximum = std::max(dataMaximum, point.value);
-    const auto it = m_page->m_viewState.laneRanges.find(row.id);
-    const uint8_t mode = it == m_page->m_viewState.laneRanges.cend()
-                             ? automation::defaultRange(row.id.controller)
-                             : it->second;
-    return mode == 0 ? automation::autoRange(dataMaximum) : std::max(int(mode), dataMaximum);
-}
-
-int AutomationProjection::valueAtY(int rowIndex, qreal y) const
-{
-    if (rowIndex < 0 || rowIndex >= int(m_rows.size()))
-        return 0;
-    const auto [top, bottom] = valuePlotBounds(rowIndex);
-    const int minimum = rowMinimum(m_rows[rowIndex]);
-    const int maximum = rowMaximum(m_rows[rowIndex]);
-    const qreal clamped = std::clamp(y, qreal(top), qreal(bottom));
-    return minimum + int((qreal(bottom) - clamped) * qreal(maximum - minimum) /
-                         qreal(std::max(1, bottom - top)));
-}
-
-qreal AutomationProjection::pointY(const AutomationRow &row, int rowIndex, int value) const
-{
-    const auto [top, bottom] = valuePlotBounds(rowIndex);
-    return qreal(bottom) - qreal(value - rowMinimum(row)) * qreal(bottom - top) /
-                               qreal(std::max(1, rowMaximum(row) - rowMinimum(row)));
+    PointerMapping mapped;
+    if (!m_page || !m_page->timeline())
+        return mapped;
+    const uint64_t length = m_page->timeline()->lengthTicks;
+    mapped.rawTick = std::clamp(rawTickAt(x), 0.0, double(length));
+    mapped.point.value =
+        std::clamp(qRound(valueAtY(body, m_geometry, lane.minimumValue(), lane.maximumValue(), y)),
+                   lane.minimumValue(), lane.maximumValue());
+    mapped.cell = snapCellAt(mapped.rawTick);
+    mapped.point.tick = mapped.cell.tickBegin;
+    return mapped;
 }
 
 double AutomationProjection::rawTickAt(qreal x) const
@@ -129,6 +57,7 @@ double AutomationProjection::rawTickAt(qreal x) const
     return std::max(0.0, m_page->tickAtContentX(std::max(qreal(m_geometry.plotOrigin), x) -
                                                 m_geometry.plotOrigin));
 }
+
 qreal AutomationProjection::displayX(uint64_t tick, qreal devicePixelRatio) const
 {
     return m_page->displayX(tick, m_geometry.plotOrigin, devicePixelRatio);
@@ -164,30 +93,9 @@ uint64_t AutomationProjection::fineSnapTick(double rawTick) const
     return m_page->snapTick(rawTick, true);
 }
 
-const CcLane *AutomationProjection::laneFor(const AutomationRow &row) const
-{
-    if (row.id.kind != EditorAutomationRowKind::ControlChange)
-        return nullptr;
-    return m_page->model().findLane(int(row.id.track), row.id.controller);
-}
-
 bool AutomationProjection::nodeMarkersVisible() const
 {
     return m_page && m_page->pxPerBeat() >= m_geometry.pointDetailThreshold;
-}
-
-AutomationProjection::PointerMapping AutomationProjection::pointerMapping(int rowIndex, qreal x,
-                                                                          qreal y) const
-{
-    PointerMapping mapped;
-    if (!m_page || !m_page->timeline() || rowIndex < 0 || rowIndex >= int(m_rows.size()))
-        return mapped;
-    const uint64_t length = m_page->timeline()->lengthTicks;
-    mapped.rawTick = std::clamp(rawTickAt(x), 0.0, double(length));
-    mapped.point.value = valueAtY(rowIndex, y);
-    mapped.cell = snapCellAt(mapped.rawTick);
-    mapped.point.tick = mapped.cell.tickBegin;
-    return mapped;
 }
 
 AutomationGridCell AutomationProjection::snapCellAt(double rawTick) const

@@ -217,27 +217,22 @@ PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
                   {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)}});
         lane.handle = LaneHandle{0};
     } else {
-        const int panRow = rig.rowIndex(rig.pan);
-        if (panRow < 0)
+        lane.handle = rig.handleFor(rig.pan);
+        if (!lane.handle.valid())
             return lane;
         setCcPoints(rig, {{kHeldTick, kCcHeld}, {kNodeTick, kCcNode}});
-        lane.handle = LaneHandle{panRow + 1};
     }
     const auto geometry = rig.geometry();
     const qreal dpr = rig.canvas().devicePixelRatioF();
     const auto projection = rig.projection();
+    lane.body = rig.bodyFor(lane.handle);
     if (row.kind == AdapterKind::Tempo) {
-        lane.body = {0, 0, rig.canvas().width(), rig.voiceBounds().top()};
         lane.insertionPos = rig.tempoBodyPoint(96, kTempoCursor);
         lane.heldY = valueY(lane.body, geometry, CoreTimeDefaults::kMinTempoBpm,
                             CoreTimeDefaults::kMaxTempoBpm, kTempoHeld);
         lane.nodeY = valueY(lane.body, geometry, CoreTimeDefaults::kMinTempoBpm,
                             CoreTimeDefaults::kMaxTempoBpm, kTempoNode);
     } else {
-        const int panRow = lane.handle.index - 1;
-        const auto &rows = rig.canvas().rows();
-        lane.body = {0, projection.rowTop(panRow), rig.canvas().width(),
-                     projection.rowHeight(rows[std::size_t(panRow)])};
         lane.insertionPos = rig.pointAt(rig.pan, 96, kCcCursor).position;
         lane.heldY = valueY(lane.body, geometry, 0, 127, kCcHeld);
         lane.nodeY = valueY(lane.body, geometry, 0, 127, kCcNode);

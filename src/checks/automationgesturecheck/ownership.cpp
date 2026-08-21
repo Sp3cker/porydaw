@@ -36,14 +36,13 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
     const double detailThreshold = double(geometry.pointDetailThreshold);
     resetPan();
     rig.setPersistentPencil(true);
-    const int lfoIndex = rig.rowIndex(rig.lfo);
-    check(lfoIndex >= 0, QStringLiteral("Pencil ownership fixture did not expose the LFO row"));
-    if (lfoIndex >= 0) {
-        const auto projection = rig.projection();
+    const auto lfoHandle = rig.handleFor(rig.lfo);
+    check(lfoHandle.valid(),
+          QStringLiteral("Pencil ownership fixture did not expose the LFO lane"));
+    if (lfoHandle.valid()) {
         const auto lfoPoint = rig.pointAt(rig.lfo, 24, 64);
-        const auto &rows = rig.canvas().rows();
-        const QPointF boundary(lfoPoint.position.x(),
-                               projection.rowTop(lfoIndex) + projection.rowHeight(rows[lfoIndex]));
+        const QRect lfoBody = rig.bodyFor(lfoHandle);
+        const QPointF boundary(lfoPoint.position.x(), lfoBody.top() + lfoBody.height());
         rig.mouseMove(boundary, Qt::NoButton);
         rig.pump();
         check(rig.canvas().cursor().shape() == Qt::SplitVCursor,

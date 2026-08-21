@@ -21,7 +21,7 @@ EditorAutomationRowId laneRow(int track, uint8_t controller)
 
 QString laneLabel(uint8_t controller)
 {
-    if (controller == automation::kBendController)
+    if (controller == CCLanes::bendController())
         return QStringLiteral("Pitch bend (BEND)");
     const auto info = m4aClassifyCc(controller);
     return QStringLiteral("%1 (%2)").arg(QLatin1String(info.display), QLatin1String(info.name));
@@ -36,12 +36,12 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
     const int track = m_page->m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
-    static constexpr uint8_t candidates[] = {1, 7, 10, 20, 21, automation::kBendController};
+    const uint8_t candidates[] = {1, 7, 10, 20, 21, CCLanes::bendController()};
     QMenu menu;
     std::vector<EditorAutomationRowId> hidden;
     for (const uint8_t controller : candidates) {
         const auto row = laneRow(track, controller);
-        if (m_page->m_viewState.isLaneHidden(row) || projection().laneFor({row}) ||
+        if (m_page->m_viewState.isLaneHidden(row) || m_page->model().findLane(track, controller) ||
             m_page->m_viewState.emptyLanes.find(row) != m_page->m_viewState.emptyLanes.cend())
             continue;
         auto *action = menu.addAction(laneLabel(controller));
@@ -51,10 +51,10 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
         if (row.kind == EditorAutomationRowKind::ControlChange && row.track == uint8_t(track))
             hidden.push_back(row);
     if (menu.isEmpty())
-        menu.addAction(tr("All parameters already have lanes"))->setEnabled(false);
+        menu.addAction(tr("All parameters already have CC lanes"))->setEnabled(false);
     if (!hidden.empty()) {
         menu.addSeparator();
-        menu.addAction(tr("Hidden lanes"))->setEnabled(false);
+        menu.addAction(tr("Hidden CC lanes"))->setEnabled(false);
         for (const auto &row : hidden) {
             auto *action = menu.addAction(tr("Show: %1 (hidden)").arg(laneLabel(row.controller)));
             action->setData(256 + int(row.controller));
@@ -69,33 +69,37 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
         if (m_page->m_viewState.unhideLane(row)) {
             m_page->publishViewState();
             rebuildRows();
-            m_page->announce(tr("Showed the %1 lane").arg(laneLabel(row.controller)));
+            m_page->announce(tr("Showed the %1 CC lane").arg(laneLabel(row.controller)));
         }
     } else {
         m_page->addEmptyLane(track, uint8_t(value));
-        m_page->announce(tr("Added %1 lane").arg(laneLabel(uint8_t(value))));
+        m_page->announce(tr("Added %1 CC lane").arg(laneLabel(uint8_t(value))));
     }
 }
 
 void AutomationCanvas::showLaneMenu(const AutomationRow &row, const QPoint &globalPosition)
 {
-    const bool empty = m_rowData.pointsFor(row, projection()).empty();
+    const auto documentPoints =
+        m_page && m_page->document()
+            ? m_page->document()->lanePoints(int(row.id.track), row.id.controller)
+            : std::vector<DocLanePoint>{};
+    const bool empty = documentPoints.empty();
     QMenu menu;
-    QAction *copy = menu.addAction(tr("Copy lane"));
+    QAction *copy = menu.addAction(tr("Copy CC lane"));
     copy->setEnabled(!empty);
-    QAction *paste = menu.addAction(tr("Paste lane (replace)"));
+    QAction *paste = menu.addAction(tr("Paste CC lane (replace)"));
     paste->setEnabled(!m_clipboard.empty());
     menu.addSeparator();
     QAction *clear = menu.addAction(tr("Clear events"));
     clear->setEnabled(!empty);
-    QAction *remove = menu.addAction(empty ? tr("Remove empty lane") : tr("Delete lane"));
-    QAction *hide = menu.addAction(tr("Hide lane"));
+    QAction *remove = menu.addAction(empty ? tr("Remove empty CC lane") : tr("Delete CC lane"));
+    QAction *hide = menu.addAction(tr("Hide CC lane"));
     std::vector<std::pair<QAction *, uint8_t>> ranges;
-    if (automation::rangeZoomable(row.id.controller)) {
+    if (CCLanes::rangeZoomable(row.id.controller)) {
         auto *rangeMenu = menu.addMenu(tr("Value range"));
         const auto range = m_page->m_viewState.laneRanges.find(row.id);
         const uint8_t current = range == m_page->m_viewState.laneRanges.cend()
-                                    ? automation::defaultRange(row.id.controller)
+                                    ? CCLanes::defaultRange(row.id.controller)
                                     : range->second;
         for (const uint8_t value :
              {uint8_t(0), uint8_t(16), uint8_t(32), uint8_t(64), uint8_t(127)}) {
@@ -126,7 +130,7 @@ void AutomationCanvas::showLaneMenu(const AutomationRow &row, const QPoint &glob
         m_clipboard.clear();
         for (const auto &point : points)
             m_clipboard.push_back({point.tick, point.value});
-        m_page->announce(tr("Copied the %1 lane (%n point(s))", nullptr, int(points.size()))
+        m_page->announce(tr("Copied the %1 CC lane (%n point(s))", nullptr, int(points.size()))
                              .arg(m_rowData.titleFor(row)));
     } else if (chosen == paste) {
         std::vector<NodeLaneEdit::Point> replacementPoints;
@@ -135,10 +139,21 @@ void AutomationCanvas::showLaneMenu(const AutomationRow &row, const QPoint &glob
         const int maximum = CoreTimeDefaults::laneValueMaximum(controller);
         for (const auto &point : m_clipboard)
             replacementPoints.push_back({point.tick, std::clamp(point.value, minimum, maximum)});
-        auto completion =
-            NodeLaneEdit({track, controller, document->revision()}, laneEditPoints(points))
-                .replacePointRange(0, std::numeric_limits<uint64_t>::max(),
-                                   std::move(replacementPoints));
+        LaneHandle handle;
+        for (int i = 0; i < int(m_rowData.rows().size()); ++i) {
+            if (m_rowData.rows()[std::size_t(i)].id.track == row.id.track &&
+                m_rowData.rows()[std::size_t(i)].id.controller == row.id.controller) {
+                handle = LaneHandle{i + 1};
+                break;
+            }
+        }
+        std::vector<NodePoint> original;
+        original.reserve(points.size());
+        for (const auto &point : points)
+            original.push_back({point.tick, point.value});
+        auto completion = NodeLaneEdit({handle, document->revision()}, std::move(original))
+                              .replacePointRange(0, std::numeric_limits<uint64_t>::max(),
+                                                 std::move(replacementPoints));
         if (!completion.unchanged) {
             SongDocument::RangeEdit edit;
             edit.removePoints = points;
@@ -149,9 +164,9 @@ void AutomationCanvas::showLaneMenu(const AutomationRow &row, const QPoint &glob
             SongDocument::RangeEdit::LaneWrite replacement{track, controller,
                                                            std::move(lanePoints)};
             edit.addPoints.push_back(std::move(replacement));
-            document->applyRangeEdit(tr("paste lane"), edit);
+            document->applyRangeEdit(tr("paste CC lane"), edit);
             changed = true;
-            m_page->announce(tr("Replaced the %1 lane").arg(m_rowData.titleFor(row)));
+            m_page->announce(tr("Replaced the %1 CC lane").arg(m_rowData.titleFor(row)));
         }
     } else if (chosen == clear) {
         if (!points.empty()) {
@@ -160,8 +175,8 @@ void AutomationCanvas::showLaneMenu(const AutomationRow &row, const QPoint &glob
             changed = true;
         }
     } else if (chosen == remove) {
-        if (!points.empty() && QMessageBox::question(this, tr("Delete lane"),
-                                                     tr("Delete the %1 lane and its %2 events?")
+        if (!points.empty() && QMessageBox::question(this, tr("Delete CC lane"),
+                                                     tr("Delete the %1 CC lane and its %2 events?")
                                                          .arg(m_rowData.titleFor(row))
                                                          .arg(points.size())) != QMessageBox::Yes)
             return;
@@ -174,7 +189,7 @@ void AutomationCanvas::showLaneMenu(const AutomationRow &row, const QPoint &glob
         if (m_page->m_viewState.hideLane(row.id)) {
             m_page->publishViewState();
             rebuildRows();
-            m_page->announce(tr("Hid the %1 lane").arg(m_rowData.titleFor(row)));
+            m_page->announce(tr("Hid the %1 CC lane").arg(m_rowData.titleFor(row)));
         }
     }
     if (changed)

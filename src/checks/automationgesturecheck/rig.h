@@ -67,6 +67,13 @@ class AutomationGestureCheckRig final
     AutomationGeometry geometry() const;
     AutomationProjection projection() const;
     int rowIndex(const Lane &lane) const noexcept;
+    LaneHandle handleFor(const Lane &lane) const noexcept;
+    QRect bodyFor(LaneHandle handle) const;
+    QRect bodyFor(const Lane &lane) const;
+    InputPoint pointAt(LaneHandle handle, double tick, int value) const;
+    AutomationProjection::PointerMapping mappingAt(LaneHandle handle,
+                                                   const QPointF &position) const;
+    bool expandTempo();
     InputPoint pointAt(const Lane &lane, double tick, int value) const;
     QRect voiceBounds() const;
     QPointF tempoHeaderPoint() const;

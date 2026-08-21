@@ -1,5 +1,4 @@
-#include "ui/editordrawer/automationgesture.h"
-#include "core/songdocument.h"
+#include "ui/editordrawer/nodelane/gesture.h"
 
 #include <algorithm>
 #include <cmath>
@@ -85,33 +84,33 @@ std::optional<std::pair<uint64_t, uint64_t>> BandGesture::release()
     return result;
 }
 
-void NodeDragGesture::preparePreview(std::size_t rowCount,
-                                     const std::vector<std::vector<ValuePoint>> &lanePointsByRow)
+void NodeDragGesture::preparePreview(std::size_t laneCount,
+                                     const std::vector<std::vector<NodePoint>> &lanePointsByLane)
 {
-    pointIndexesByRow.assign(rowCount, {});
-    basePointsByRow.assign(rowCount, {});
-    previewPoints.assign(rowCount, {});
+    pointIndexesByLane.assign(laneCount, {});
+    basePointsByLane.assign(laneCount, {});
+    previewPoints.assign(laneCount, {});
     for (size_t index = 0; index < points.size(); ++index) {
-        const int rowIndex = points[index].row;
-        if (rowIndex >= 0 && rowIndex < int(rowCount))
-            pointIndexesByRow[rowIndex].push_back(index);
+        const int laneIndex = points[index].lane.index;
+        if (laneIndex >= 0 && laneIndex < int(laneCount))
+            pointIndexesByLane[std::size_t(laneIndex)].push_back(index);
     }
-    for (int rowIndex = 0; rowIndex < int(rowCount); ++rowIndex) {
-        auto &indexes = pointIndexesByRow[rowIndex];
+    for (int laneIndex = 0; laneIndex < int(laneCount); ++laneIndex) {
+        auto &indexes = pointIndexesByLane[std::size_t(laneIndex)];
         if (indexes.empty())
             continue;
         std::stable_sort(indexes.begin(), indexes.end(), [this](size_t left, size_t right) {
             return points[left].original.tick < points[right].original.tick;
         });
-        if (rowIndex >= int(lanePointsByRow.size()))
+        if (laneIndex >= int(lanePointsByLane.size()))
             continue;
-        const auto &lanePoints = lanePointsByRow[rowIndex];
+        const auto &lanePoints = lanePointsByLane[std::size_t(laneIndex)];
         if (lanePoints.empty())
             continue;
-        auto &base = basePointsByRow[rowIndex];
+        auto &base = basePointsByLane[std::size_t(laneIndex)];
         base.reserve(lanePoints.size());
         size_t selected = 0;
-        for (const ValuePoint &point : lanePoints) {
+        for (const NodePoint &point : lanePoints) {
             while (selected < indexes.size() &&
                    points[indexes[selected]].original.tick < point.tick)
                 ++selected;
@@ -123,25 +122,24 @@ void NodeDragGesture::preparePreview(std::size_t rowCount,
             }
             base.push_back(point);
         }
-        previewPoints[rowIndex].reserve(lanePoints.size());
+        previewPoints[std::size_t(laneIndex)].reserve(lanePoints.size());
     }
     updatePreview();
 }
 
 void NodeDragGesture::updatePreview()
 {
-    for (int rowIndex = 0; rowIndex < int(pointIndexesByRow.size()); ++rowIndex) {
-        const auto &indexes = pointIndexesByRow[rowIndex];
+    for (int laneIndex = 0; laneIndex < int(pointIndexesByLane.size()); ++laneIndex) {
+        const auto &indexes = pointIndexesByLane[std::size_t(laneIndex)];
         if (indexes.empty())
             continue;
-        const auto &base = basePointsByRow[rowIndex];
-        auto &preview = previewPoints[rowIndex];
+        const auto &base = basePointsByLane[std::size_t(laneIndex)];
+        auto &preview = previewPoints[std::size_t(laneIndex)];
         preview.clear();
         size_t baseIndex = 0;
         size_t movedIndex = 0;
         const auto appendMoved = [&] {
-            const auto &point = points[indexes[movedIndex++]].current;
-            const ValuePoint moved{point.tick, point.value};
+            const auto &moved = points[indexes[movedIndex++]].current;
             if (!preview.empty() && preview.back().tick == moved.tick)
                 preview.back() = moved;
             else
@@ -167,11 +165,11 @@ void NodeDragGesture::updatePreview()
     }
 }
 
-void NodeDragGesture::applyDrag(const ValuePoint &grabCurrent)
+void NodeDragGesture::applyDrag(const NodePoint &grabCurrent)
 {
     if (points.empty() || grabbedPoint >= points.size())
         return;
-    const ValuePoint grabOriginal = points[grabbedPoint].original;
+    const NodePoint grabOriginal = points[grabbedPoint].original;
     const int64_t requestedTickDelta = int64_t(grabCurrent.tick) - int64_t(grabOriginal.tick);
     uint64_t earliestTick = points.front().original.tick;
     for (const NodeDrag &point : points)
@@ -185,7 +183,7 @@ void NodeDragGesture::applyDrag(const ValuePoint &grabCurrent)
     }
 }
 AxisLock NodeDragGesture::update(const PointDragUpdate &dragUpdate,
-                                 const ValuePoint &mappedGrabBeforeLock)
+                                 const NodePoint &mappedGrabBeforeLock)
 {
     if (points.empty() || grabbedPoint >= points.size() ||
         dragUpdate.phase == PointDragUpdate::Phase::Pending)
@@ -219,29 +217,51 @@ std::optional<QPointF> SweepGesture::dragPosition(QPointF position, bool activat
 }
 
 bool PencilGesture::update(const QPointF &position, bool freehand, AxisLock lock,
-                           const AutomationProjection &proj, const AutomationRow &row,
-                           int verticalSlopDistance)
+                           const AutomationProjection &proj, const NodeLane &nodeLane,
+                           const QRect &body, int verticalSlopDistance)
 {
-    return updatePencilDrawPath(*this, position, freehand, lock, proj, row, verticalSlopDistance);
+    return updatePencilDrawPath(*this, position, freehand, lock, proj, nodeLane, body,
+                                verticalSlopDistance);
 }
 
-void updateValuePoint(const AutomationProjection &proj, int rowIndex, const AutomationRow &row,
-                      ValuePoint &point, int y, uint64_t tick, bool snapValue,
-                      int neutralSnapRadius)
+void updateValuePoint(const AutomationProjection &proj, const NodeLane &lane, const QRect &body,
+                      NodePoint &point, qreal y, uint64_t tick, bool snapValue,
+                      int neutralSnapRadius, int snapNeutral)
 {
-    point.value = proj.valueAtY(rowIndex, y);
-    if (snapValue && row.id.kind == EditorAutomationRowKind::ControlChange) {
-        const int neutral = row.id.controller == 0xFF
-                                ? 0
-                                : (row.id.controller == 10 || row.id.controller == 24 ? 64 : -1);
-        if (neutral >= 0) {
-            const int span = proj.rowMaximum(row) - proj.rowMinimum(row);
-            if (std::abs(point.value - neutral) <=
-                span * neutralSnapRadius / std::max(1, proj.rowHeight(row)))
-                point.value = neutral;
-        }
+    point.value =
+        std::clamp(qRound(AutomationProjection::valueAtY(body, proj.geometry(), lane.minimumValue(),
+                                                         lane.maximumValue(), y)),
+                   lane.minimumValue(), lane.maximumValue());
+    if (snapValue && snapNeutral >= 0) {
+        const int span = lane.maximumValue() - lane.minimumValue();
+        const int height = std::max(1, body.height());
+        if (std::abs(point.value - snapNeutral) <= span * neutralSnapRadius / height)
+            point.value = snapNeutral;
     }
     point.tick = tick;
+}
+
+bool hitNodePoint(const NodeLane &lane, const QRect &body, const AutomationProjection &proj,
+                  const AutomationGeometry &geometry, QPointF position, qreal devicePixelRatio,
+                  bool requireVisibleMarkers, NodePoint *point)
+{
+    if (requireVisibleMarkers && !proj.nodeMarkersVisible())
+        return false;
+    const std::vector<NodePoint> points = lane.points();
+    const auto hit = nearestPointInRadius(
+        points, proj.rawTickAt(position.x()), position, geometry.pointHitRadius,
+        [&proj, devicePixelRatio](const NodePoint &candidate) {
+            return proj.displayX(candidate.tick, devicePixelRatio);
+        },
+        [&lane, &body, &geometry](const NodePoint &candidate) {
+            return AutomationProjection::valueY(body, geometry, lane.minimumValue(),
+                                                lane.maximumValue(), candidate.value);
+        });
+    if (!hit)
+        return false;
+    if (point)
+        *point = points[*hit];
+    return true;
 }
 
 AxisLock resolveAxisLock(AxisLock current, bool shiftHeld, const QPointF &origin,
@@ -259,7 +279,7 @@ AxisLock resolveAxisLock(AxisLock current, bool shiftHeld, const QPointF &origin
     return std::abs(dx) >= std::abs(dy) ? AxisLock::Time : AxisLock::Value;
 }
 
-void applyAxisLock(AxisLock lock, const ValuePoint &original, ValuePoint &current) noexcept
+void applyAxisLock(AxisLock lock, const NodePoint &original, NodePoint &current) noexcept
 {
     if (lock == AxisLock::None)
         return;
@@ -270,10 +290,11 @@ void applyAxisLock(AxisLock lock, const ValuePoint &original, ValuePoint &curren
 }
 
 bool updatePencilDrawPath(PencilGesture &gesture, const QPointF &position, bool freehand,
-                          AxisLock lock, const AutomationProjection &proj, const AutomationRow &row,
-                          int verticalSlopDistance)
+                          AxisLock lock, const AutomationProjection &proj, const NodeLane &lane,
+                          const QRect &body, int verticalSlopDistance)
 {
-    const auto [top, bottom] = proj.valuePlotBounds(gesture.row);
+    const qreal top = body.top() + proj.geometry().valuePlotPadding;
+    const qreal bottom = body.bottom() - proj.geometry().valuePlotPadding;
     const auto previous = gesture.stroke.lastSample();
     bool withinVerticalSlop = false;
     if (!freehand && lock != AxisLock::Value && !gesture.verticalSlop.exceeded) {
@@ -289,11 +310,11 @@ bool updatePencilDrawPath(PencilGesture &gesture, const QPointF &position, bool 
             ? previous.continuousValue
             : std::clamp(previous.continuousValue +
                              double(gesture.previousY - position.y()) *
-                                 double(proj.rowMaximum(row) - proj.rowMinimum(row)) /
-                                 double(std::max(1, bottom - top)),
-                         double(proj.rowMinimum(row)), double(proj.rowMaximum(row)));
+                                 double(lane.maximumValue() - lane.minimumValue()) /
+                                 double(std::max<qreal>(1.0, bottom - top)),
+                         double(lane.minimumValue()), double(lane.maximumValue()));
     const AutomationProjection::PointerMapping current =
-        proj.pointerMapping(gesture.row, position.x(), position.y());
+        proj.pointerMapping(lane, body, position.x(), position.y());
     const AutomationPencilGesture::Sample sample{current.rawTick, position.x(), current.point,
                                                  continuousValue};
     const bool applied =

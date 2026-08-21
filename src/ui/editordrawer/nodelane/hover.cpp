@@ -6,8 +6,8 @@
 #include <QRegion>
 
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/nodelane/paint.h"
 #include "ui/layout.h"
@@ -334,7 +334,7 @@ void NodeLaneHoverState::updateHover(AutomationCanvas &area, AutomationPage &pag
 void NodeLaneHoverState::setContextPointHighlight(
     AutomationCanvas &area, const AutomationPage *page, const AutomationGeometry &geometry,
     const NodeLane &lane, const QRect &body, LaneHandle handle,
-    const AutomationProjection &projection, const QPointF &position, const ValuePoint &point,
+    const AutomationProjection &projection, const QPointF &position, const NodePoint &point,
     bool pencilMode)
 {
     invalidateCaches();
