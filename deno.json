@@ -1,33 +1,12 @@
 {
-  "permissions": {
-    "checks": {
-      "read": true,
-      "write": true,
-      "run": true,
-      "env": [
-        "ASAN_OPTIONS",
-        "DISPLAY",
-        "LLVM_PROFILE_FILE",
-        "PORYDAW_SAMPLE_CORPUS"
-      ]
-    },
-    "coverage": {
-      "read": true,
-      "write": true,
-      "run": true,
-      "env": ["CI", "PORYDAW_COVERAGE_IN_CI"]
-    },
-    "format": {
-      "read": true,
-      "run": true,
-      "env": ["CLANG_FORMAT"]
-    }
-  },
   "tasks": {
-    "checks": "deno run -P=checks tools/run_checks.ts",
-    "format": "deno fmt && deno run -P=format tools/format.ts",
-    "format:check": "deno fmt --check && deno run -P=format tools/format.ts --check",
-    "coverage": "deno run -P=coverage tools/coverage.ts"
+    "checks": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/run_checks.ts",
+    "build:app": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:app",
+    "build:checks": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:checks",
+    "verify": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify",
+    "format": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format",
+    "format:check": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format --check",
+    "coverage": "deno run --allow-read --allow-write --allow-run --allow-env=CI,PORYDAW_COVERAGE_IN_CI tools/coverage.ts"
   },
   "fmt": {
     "include": ["tools/**/*.ts"]

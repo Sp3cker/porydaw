@@ -65,11 +65,17 @@ Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_
 
 ## Build & verify
 ```bash
-cmake --build build -j"$(nproc)"                           # fast incremental
-deno task checks build/porydaw_checks                       # Tests
-deno task format                                           # format TypeScript and C/C++
+deno task build:app                                     # build porydaw app only (quiet)
+deno task build:checks                                   # build porydaw + checks + mid2agb
+deno task verify                                         # run all harnesses (quiet, live name line)
+deno task verify --filter rollcheck --verbose            # single harness, verbose ok: lines
+deno task format [--check] [files...]                    # clang-format + deno fmt
 ```
-
+Legacy (CI):
+```bash
+cmake --build build -j"$(nproc)"
+deno task checks build/porydaw_checks
+```
 Project-backed harnesses use checked-in fixtures. The Deno runner gives each
 harness a private scratch path and stages only the files declared in
 the test-only C++ registry exposed by `porydaw_checks --manifest`.

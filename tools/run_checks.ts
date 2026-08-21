@@ -2,17 +2,18 @@
 // Point this at an ASAN build (-DPORYDAW_ASAN=ON) to turn silent memory bugs
 // into aborts with stack traces.
 //
-// usage: deno task checks <porydaw-checks-binary>
+// usage: deno task checks <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>]
 //
 // env: PORYDAW_SAMPLE_CORPUS  optional built project for samplecheck's corpus
 //      ASAN_OPTIONS defaults to detect_leaks=0
 
 import { dirname, join } from "node:path";
+import { createReporter } from "./checks_reporter.ts";
+import type { Reporter } from "./checks_reporter.ts";
 
 type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
 type FixtureRootKind = "decomp-project" | "songs-mk-project" | "none";
 type Windowing = "offscreen" | "window-system";
-
 interface CheckManifestEntry {
   readonly name: string;
   readonly argv: readonly string[];
@@ -36,12 +37,17 @@ const decoder = new TextDecoder();
 
 function usage(): never {
   console.error(
-    "usage: deno task checks <porydaw-checks-binary> [--all|--no-windowing-checks]",
+    "usage: deno task checks <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>]",
   );
   console.error("  --all (default): all checks");
   console.error(
     "  --no-windowing-checks: skip checks that require a window system",
   );
+  console.error("  --reporter=quiet|verbose (default: quiet)");
+  console.error(
+    "  --filter=<name>: only run harnesses whose name contains <name> (repeatable, substring)",
+  );
+  console.error("  --verbose: alias for --reporter=verbose");
   Deno.exit(2);
 }
 
@@ -334,16 +340,43 @@ function printFailure(name: string, result: CheckResult): void {
   console.log(lines.slice(-40).join("\n"));
 }
 
-if (Deno.args.length < 1 || Deno.args.length > 2) {
+if (Deno.args.length < 1) {
   usage();
 }
-const selection = Deno.args[1] ?? "--all";
-const validSelections = [
-  "--all",
-  "--no-windowing-checks",
-];
-if (!validSelections.includes(selection)) {
-  usage();
+let selection: string = "--all";
+let reporterMode: "quiet" | "verbose" = "quiet";
+const filters: string[] = [];
+for (let i = 1; i < Deno.args.length; i++) {
+  const arg = Deno.args[i];
+  if (arg === "--all" || arg === "--no-windowing-checks") {
+    selection = arg;
+  } else if (arg === "--verbose") {
+    reporterMode = "verbose";
+  } else if (arg.startsWith("--reporter=")) {
+    const value = arg.slice("--reporter=".length);
+    if (value === "quiet" || value === "verbose") {
+      reporterMode = value;
+    } else {
+      usage();
+    }
+  } else if (arg === "--reporter") {
+    const value = Deno.args[++i];
+    if (value === "quiet" || value === "verbose") {
+      reporterMode = value;
+    } else {
+      usage();
+    }
+  } else if (arg.startsWith("--filter=")) {
+    const value = arg.slice("--filter=".length);
+    if (value.length === 0) usage();
+    filters.push(value);
+  } else if (arg === "--filter") {
+    const value = Deno.args[++i];
+    if (!value) usage();
+    filters.push(value);
+  } else {
+    usage();
+  }
 }
 
 const repoRoot = await Deno.realPath(new URL("..", import.meta.url));
@@ -372,8 +405,10 @@ const songsMkFixture = join(
 const tempRoot = await Deno.makeTempDir({ prefix: "porydaw-checks-" });
 const failures: string[] = [];
 const suiteStartedAt = performance.now();
-
+// deno-lint-ignore prefer-const
+let reporter!: Reporter;
 async function runCheck(check: CheckManifestEntry): Promise<void> {
+  if (reporter.onCheckStart) reporter.onCheckStart(check.name);
   const scratch = join(tempRoot, check.name);
   let result: CheckResult;
   try {
@@ -405,16 +440,11 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
   }
   if (result.code !== 0 || result.signal !== null || result.timedOut) {
     failures.push(check.name);
-    printFailure(check.name, result);
+    reporter.onCheckFail(check.name, result);
     return;
   }
   const detail = lastNonemptyLine(result.output);
-  const duration = `${(result.durationMs / 1000).toFixed(2)}s`;
-  console.log(
-    detail
-      ? `ok: ${check.name} (${duration}) — ${detail}`
-      : `ok: ${check.name} (${duration})`,
-  );
+  reporter.onCheckPass(check.name, result.durationMs, detail);
 }
 
 async function runParallel(
@@ -451,9 +481,21 @@ async function runScheduled(
 }
 
 const skipWindowSystem = selection === "--no-windowing-checks";
-const runnableChecks = checkManifest.filter(
+let runnableChecks = checkManifest.filter(
   (check) => !skipWindowSystem || check.windowing !== "window-system",
 );
+if (filters.length > 0) {
+  runnableChecks = runnableChecks.filter((check) =>
+    filters.some((filter) => check.name.includes(filter))
+  );
+  if (runnableChecks.length === 0) {
+    console.error(
+      `run_checks: no harness matches filter: ${filters.join(", ")}`,
+    );
+    Deno.exit(2);
+  }
+}
+reporter = createReporter(reporterMode, runnableChecks.length);
 try {
   const offscreenChecks = runnableChecks.filter(
     (check) => check.windowing === "offscreen",
@@ -471,13 +513,12 @@ try {
   await Deno.remove(tempRoot, { recursive: true });
 }
 
-console.log();
+reporter.onSummary(
+  failures,
+  performance.now() - suiteStartedAt,
+  checkManifest.length,
+  runnableChecks.length,
+);
 if (failures.length > 0) {
-  console.log(`run_checks: FAIL (${failures.length}): ${failures.join(" ")}`);
   Deno.exit(1);
 }
-console.log(
-  `run_checks: PASS (all harnesses in ${
-    ((performance.now() - suiteStartedAt) / 1000).toFixed(2)
-  }s)`,
-);

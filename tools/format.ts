@@ -1,16 +1,24 @@
 // Format porydaw's tracked C/C++ sources with the repo .clang-format,
 // or verify they are already formatted.
 //
-// Usage: deno run -P=format tools/format.ts [--check]
+// Usage: deno run -P=format tools/format.ts [--check] [files...]
+//   no files: formats all tracked src/*.cpp, src/*.h, tools/*.cpp, tools/*.h
+//   files:    formats only those paths (useful for `deno task format file.cc`)
 // Env: CLANG_FORMAT overrides the clang-format executable.
 
 const root = new URL("../", import.meta.url);
 const decoder = new TextDecoder();
-const check = Deno.args.length === 1 && Deno.args[0] === "--check";
-
-if (Deno.args.length !== 0 && !check) {
-  console.error("usage: deno task format:check");
-  Deno.exit(2);
+let check = false;
+const explicitFiles: string[] = [];
+for (const arg of Deno.args) {
+  if (arg === "--check") {
+    check = true;
+  } else if (arg.startsWith("-")) {
+    console.error("usage: deno task format[--:check] [files...]");
+    Deno.exit(2);
+  } else {
+    explicitFiles.push(arg);
+  }
 }
 
 async function capture(bin: string, args: string[]): Promise<string> {
@@ -64,20 +72,37 @@ try {
     );
   }
 
-  const tracked = (await capture("git", [
-    "ls-files",
-    "src/*.cpp",
-    "src/*.h",
-    "tools/*.cpp",
-    "tools/*.h",
-  ])).split("\n").filter(Boolean);
-  const files: string[] = [];
-  for (const file of tracked) {
-    try {
-      await Deno.stat(new URL(file, root));
-      files.push(file);
-    } catch (error) {
-      if (!(error instanceof Deno.errors.NotFound)) throw error;
+  let files: string[];
+  if (explicitFiles.length > 0) {
+    files = [];
+    for (const file of explicitFiles) {
+      try {
+        await Deno.stat(new URL(file, root));
+        files.push(file);
+      } catch (error) {
+        if (error instanceof Deno.errors.NotFound) {
+          console.error(`format: not found: ${file}`);
+          Deno.exit(2);
+        }
+        throw error;
+      }
+    }
+  } else {
+    const tracked = (await capture("git", [
+      "ls-files",
+      "src/*.cpp",
+      "src/*.h",
+      "tools/*.cpp",
+      "tools/*.h",
+    ])).split("\n").filter(Boolean);
+    files = [];
+    for (const file of tracked) {
+      try {
+        await Deno.stat(new URL(file, root));
+        files.push(file);
+      } catch (error) {
+        if (!(error instanceof Deno.errors.NotFound)) throw error;
+      }
     }
   }
 

@@ -440,6 +440,7 @@ if(PORYDAW_BUILD_CHECKS)
         )
     endif()
     target_link_libraries(porydaw_checks PRIVATE porydaw_app)
+    add_dependencies(porydaw_checks mid2agb)
 endif()
 qt_add_resources(porydaw "app_icon"
     PREFIX "/icons"
