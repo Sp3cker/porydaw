@@ -1,82 +1,67 @@
 ---
 name: verify
-description: Build porydaw and observe changes at runtime — in-binary harnesses plus offscreen widget driving.
+description: Build porydaw and run in-repo harnesses through deno task. Use when verifying a change, running checks, or choosing a build/verify command.
 ---
 
 # Verifying porydaw changes
 
+Agents MUST use `deno task`. Do not invoke `cmake` / `cmake --build` directly.
+There is no `deno task build`.
+
 ## Build
 
 ```bash
-cmake --build build -j"$(nproc)"
+deno task build:app       # porydaw app only
+deno task build:checks    # app + porydaw_checks + mid2agb
 ```
 
-## In-binary harnesses (the repo's convention)
+The tasks configure `build/` as Release if needed, then compile. Prefer
+`build:checks` when you will run harnesses.
 
-Model/engine changes are covered by `--*check` flags on the main binary
-(see `src/main.cpp` for the full list and required args — every flag needs
-ALL of its args). They write into the project, so always run against a
-**fresh scratch copy** of a decomp project.
-
-Find a decomp project to copy, in this order:
-
-1. `$PORYDAW_TEST_PROJECT` if set.
-2. An existing checkout of pokeemerald/pokefirered/pokeruby near this repo
-   (check siblings of the repo and `~`; it's a decomp project if it has
-   `sound/song_table.inc`). Prefer a vanilla checkout over forks/hacks
-   unless the change under test targets a specific fork.
-3. Otherwise shallow-clone one:
-   `git clone --depth 1 https://github.com/pret/pokeemerald "$(mktemp -d)/pokeemerald"`
-   (no ROM build needed — the harnesses only read the source tree).
+## Run harnesses
 
 ```bash
-SCRATCH=$(mktemp -d)/scratch
-cp -r "$DECOMP_PROJECT/." "$SCRATCH"
-QT_QPA_PLATFORM=offscreen ./build/porydaw --vgcheck "$SCRATCH" mus_abandoned_ship
+deno task verify                              # builds checks, then all harnesses
+deno task verify --filter rollcheck --verbose
+deno task verify --no-build --filter vgcheck  # reuse an existing build/
 ```
 
-`QT_QPA_PLATFORM=offscreen` is required when there's no display
-(WSL/CI/headless); it's harmless otherwise. Song labels come from
-`sound/song_table.inc`. `sound/songs/midi/midi.cfg` is CRLF — keep
-byte-conservative edits. (`mus_abandoned_ship` is a vanilla pokeemerald
-label — pick a label from the project's own `song_table.inc` if using a
-different project.)
+`deno task verify` is the default. `deno task checks <binary>` is the raw
+runner; only use it when the binary is not `build/porydaw_checks` (CI's
+ASAN job does this).
 
-## Full sweep + AddressSanitizer
+Do not:
 
-`tools/run_checks.sh` runs EVERY harness against fresh scratches — use it
-for the pre-push ritual instead of hand-running flags:
+- run `./build/porydaw --vgcheck` / `--viewcheck` / other `--*check` flags
+- copy a decomp tree to `/tmp` or `/tmp/scratch`
+- call `tools/run_checks.sh`
+
+Harnesses live in `src/checks/` and run from `porydaw_checks`. The Deno
+runner asks that binary for `--manifest`, gives each harness a private
+scratch path, and stages only the fixture files declared in the C++
+registry. Optional corpus: `PORYDAW_SAMPLE_CORPUS`.
+
+New coverage belongs in `src/checks/` (`*check.cpp` or a sibling file
+registered there). Do not stand up a scratch CMake project that compiles
+widgets out of tree.
+
+## Format
 
 ```bash
-tools/run_checks.sh build/porydaw "$DECOMP_PROJECT" [songsmk-fork]
+deno task format --check
+deno task format [files...]
 ```
 
-The third argument is a songs.mk-only fork checkout for `--mkcheck`
-(skipped with a note if omitted); `PORYDAW_SAMPLE_CORPUS=<built tree>`
-adds samplecheck's corpus pass. For memory-bug detection (use-after-free
-from mid-event widget rebuilds passes SILENTLY in a normal build), run the
-sweep on the ASAN build — CI does this on every push (`asan-checks` job):
+## ASAN
+
+Memory bugs can pass silently in a normal build. CI's `asan-checks` job
+configures `build-asan` with `-DPORYDAW_ASAN=ON` and runs
+`deno task checks build-asan/porydaw_checks`.
+
+The current `deno task` CLI cannot configure that tree: it hardcodes
+`build/` + `CMAKE_BUILD_TYPE=Release`. Do not invent a local ASAN cmake
+line unless the user asks. If `build-asan/porydaw_checks` already exists:
 
 ```bash
-cmake -B build-asan -DPORYDAW_ASAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build-asan -j"$(nproc)"
-tools/run_checks.sh build-asan/porydaw "$DECOMP_PROJECT"
+deno task checks build-asan/porydaw_checks --filter <name>
 ```
-
-The script defaults `ASAN_OPTIONS=detect_leaks=0` (Qt's process-lifetime
-allocations drown real leaks).
-
-## Driving a widget the harnesses don't cover
-
-Pattern (used for the voicegroup browser's editor panel): a standalone
-CMake project in a scratch dir that compiles the widget's .cpp files from
-this repo directly, links `Qt6::Widgets Qt6::Test` plus a static lib built
-from `external/poryaaaa/plugin/*.c`, instantiates the widget offscreen,
-drives it with QTest key events / combo popups, asserts on the source
-model, and saves `widget.grab().toImage()` as evidence. Include dirs:
-`src`, `external/poryaaaa/plugin`, `external/poryaaaa/third_party`;
-`CMAKE_AUTOMOC ON`. Find private child widgets via `findChildren` +
-tooltips/item text, not member access.
-
-For a rendered-view smoke test of a song, `--viewcheck <root> [song shot.png]`
-already saves a SongView screenshot.

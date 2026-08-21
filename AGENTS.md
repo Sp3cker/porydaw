@@ -64,23 +64,30 @@ Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_
 - See `rule://keep-files-small` for enforcement.
 
 ## Build & verify
+
+Agents MUST use `deno task`. Do not invoke `cmake` / `cmake --build` directly;
+the tasks configure and compile.
+
 ```bash
-deno task build:app                                     # build porydaw app only (quiet)
-deno task build:checks                                   # build porydaw + checks + mid2agb
-deno task verify                                         # run all harnesses (quiet, live name line)
-deno task verify --filter rollcheck --verbose            # single harness, verbose ok: lines
-deno task format [--check] [files...]                    # clang-format + deno fmt
+deno task build:app                          # porydaw app only
+deno task build:checks                       # app + checks + mid2agb
+deno task verify                             # all harnesses (builds first)
+deno task verify --filter rollcheck --verbose
+deno task format [--check] [files...]
 ```
-Legacy (CI):
-```bash
-cmake --build build -j"$(nproc)"
-deno task checks build/porydaw_checks
-```
+
+There is no `deno task build`. Pick `build:app` or `build:checks`.
+`deno task checks` is the raw harness runner; prefer `verify`.
+
 Project-backed harnesses use checked-in fixtures. The Deno runner gives each
 harness a private scratch path and stages only the files declared in
 the test-only C++ registry exposed by `porydaw_checks --manifest`.
 
 ## Conventions
 
-- C++20, Qt6, `clang-format`
+- C++20, Qt6, `clang-format`. Use C++20 library types. `std::span` is the
+  non-owning view; do not add pointer+length pairs or homemade span aliases.
+- All widget geometry is `layout::` font primitives. Size, pad, hit-test, and
+  stroke with `layout::fontPx` / `layout::fontPxF`, `layout::space`, and
+  `layout::singlePixel`. Hard-coded pixel constants in widgets are a bug.
 - Checks use fixture files locally from repo. All copying and setup is handled by `tools/run_checks.ts`
