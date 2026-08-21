@@ -241,17 +241,22 @@ void setCcPoints(AutomationPage &page, SongDocument &document, DrawerPageLiveSta
     refresh(page, document, live);
 }
 
-bool toggleTempoExpanded(AutomationPage &page, bool wantExpanded)
+bool toggleTempoExpanded(AutomationPage &page, bool wantExpanded, int &failures)
 {
     const auto strip = AutomationGeometry::resolve().addLaneStripHeight;
     auto expanded = tempoBodyBottom(page) > strip;
     if (expanded == wantExpanded)
         return expanded;
+    const QImage beforeToggle = page.canvas()->grab().toImage();
     sendMouse(page.canvas(), QEvent::MouseButtonPress, tempoHeaderPoint(page), Qt::LeftButton,
               Qt::LeftButton);
     sendMouse(page.canvas(), QEvent::MouseButtonRelease, tempoHeaderPoint(page), Qt::LeftButton,
               Qt::NoButton);
     pump();
+    if (page.canvas()->grab().toImage() == beforeToggle) {
+        std::fprintf(stderr, "automation-check: FAIL paint: tempo header toggle did not repaint\n");
+        ++failures;
+    }
     return (tempoBodyBottom(page) > strip) == wantExpanded;
 }
 
@@ -318,7 +323,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         usedTrackMask |= uint32_t{1} << track;
     TempoLane tempoLane(document, view.selectionModel(), usedTrackMask);
     CCLaneAdapter ccLane(document, view.selectionModel(), usedTrackMask, 0, uint8_t{10});
-    const bool tempoExpanded = toggleTempoExpanded(page, true);
+    const bool tempoExpanded = toggleTempoExpanded(page, true, failures);
     check(tempoExpanded, QStringLiteral("Tempo header did not expose the expanded body"));
     auto geometry = AutomationGeometry::resolve();
     geometry.plotOrigin = page.canvas()->plotOrigin();
@@ -585,7 +590,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     live.editCursorTick = 24;
     page.documentChanged();
     page.refreshLiveState(live);
-    toggleTempoExpanded(page, false);
+    toggleTempoExpanded(page, false, failures);
     pump();
     check(document.smf().write() == startSnap.smf &&
               document.undoStack()->index() == startSnap.undoIndex &&

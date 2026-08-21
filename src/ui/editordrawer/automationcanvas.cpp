@@ -37,6 +37,9 @@ void AutomationCanvas::refreshGeometry()
         std::max(layout::space(layout::Space::Zero), m_geometry.plotOrigin - 2 * gutterMargin),
         layout::space(layout::Space::Zero));
     layoutLaneStack(m_voiceLane.engineTrack());
+    // Lane layout is content: the surface cache must re-rasterize, a plain
+    // update() would keep blitting the stale pre-layout pixels.
+    invalidateContent();
     updateGeometry();
     update();
 }
