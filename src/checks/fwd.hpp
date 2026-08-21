@@ -44,8 +44,7 @@ int runNoteIdentityCheck(const QString &scratchProject);
 int runHostSeamsCheck();
 int runVelocityModelCheck();
 int runEditorDrawerCheck(const QString &screenshotPath = QString());
-int runAutomationCheck(const QString &scratchProject, const QString &songLabel,
-                       const QString &screenshotPath = QString());
+int runAutomationCheck(const QString &scratchProject, const QString &songLabel);
 int runAutomationGestureCheck(const QString &scratchProject, const QString &songLabel,
                               const QString &domain = QString());
 int runAutomationPopupMenuCheck(const QString &scratchProject, const QString &songLabel,

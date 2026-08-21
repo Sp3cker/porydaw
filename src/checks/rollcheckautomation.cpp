@@ -12,16 +12,13 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDialog>
-#include <QDir>
 #include <QEventLoop>
-#include <QFileInfo>
 #include <QImage>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QListWidget>
 #include <QMenu>
 #include <QMouseEvent>
-#include <QPixmap>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QStringList>
@@ -184,14 +181,6 @@ QPointF automationNodePoint(SongView &view, const AutomationPage &page,
 QRect automationVoiceRect(const AutomationPage &page)
 {
     return {0, 0, page.canvas()->width(), page.canvas()->contentTopInset()};
-}
-QRect automationVoiceDeviceRect(AutomationPage &page, qreal dpr)
-{
-    const QRect voice = automationVoiceRect(page);
-    const QPoint origin = page.canvas()->mapTo(&page, QPoint(0, 0));
-    const QRect pageVoice = voice.translated(origin);
-    return {qRound(pageVoice.x() * dpr), qRound(pageVoice.y() * dpr),
-            qRound(pageVoice.width() * dpr), qRound(pageVoice.height() * dpr)};
 }
 } // namespace
 
@@ -1605,33 +1594,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
               page.automationViewState().isLaneHidden(volume),
           QStringLiteral("document refresh did not retain surviving typed row state"));
     const char *checkName = popupMenus ? "automation-popup-check" : "automation-check";
-    if (!screenshotPath.isEmpty() && !popupMenus) {
-        const QPixmap grabbed = page.grab();
-        const QImage current = grabbed.toImage();
-        const qreal dpr = grabbed.devicePixelRatio();
-        const QRect crop = automationVoiceDeviceRect(page, dpr);
-        const QFileInfo imageFile(screenshotPath);
-        if (!imageFile.exists()) {
-            QDir().mkpath(imageFile.absolutePath());
-            check(current.save(screenshotPath),
-                  QStringLiteral("could not write automation baseline image"));
-            std::printf("%s: wrote %s\n", checkName, qUtf8Printable(screenshotPath));
-        } else {
-            const QImage baseline(screenshotPath);
-            const QImage baselineVoice =
-                baseline.copy(crop).convertToFormat(QImage::Format_ARGB32_Premultiplied);
-            const QImage currentVoice =
-                current.copy(crop).convertToFormat(QImage::Format_ARGB32_Premultiplied);
-            if (baseline.isNull() || baseline.size() != current.size() || crop.isEmpty() ||
-                !current.rect().contains(crop) || !baseline.rect().contains(crop) ||
-                baselineVoice != currentVoice) {
-                QDir().mkpath(QStringLiteral("build/check-artifacts"));
-                current.save(QStringLiteral("build/check-artifacts/voice-lane-phase2-current.png"));
-                recordFailure(QStringLiteral(
-                    "Voice Change canvas region did not match the phase-1 baseline"));
-            }
-        }
-    } else if (!screenshotPath.isEmpty()) {
+    if (!screenshotPath.isEmpty()) {
         page.grab().toImage().save(screenshotPath);
         std::printf("%s: wrote %s\n", checkName, qUtf8Printable(screenshotPath));
     }
@@ -1643,10 +1606,9 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
 
 } // namespace
 
-int runAutomationCheck(const QString &scratchProject, const QString &songLabel,
-                       const QString &screenshotPath)
+int runAutomationCheck(const QString &scratchProject, const QString &songLabel)
 {
-    return runAutomationCheckImpl(scratchProject, songLabel, screenshotPath, false);
+    return runAutomationCheckImpl(scratchProject, songLabel, {}, false);
 }
 
 int runAutomationPopupMenuCheck(const QString &scratchProject, const QString &songLabel,

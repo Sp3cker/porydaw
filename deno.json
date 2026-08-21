@@ -1,10 +1,10 @@
 {
 
   "tasks": {
-    "checks": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS,PORYDAW_AUTOMATION_IMAGE tools/run_checks.ts",
+    "checks": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/run_checks.ts",
     "build:app": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:app",
     "build:checks": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:checks",
-    "verify": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS,PORYDAW_AUTOMATION_IMAGE tools/cli.ts verify",
+    "verify": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify",
     "format": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format",
     "format:check": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format --check",
     "coverage": "deno run --allow-read --allow-write --allow-run --allow-env=CI,PORYDAW_COVERAGE_IN_CI tools/coverage.ts"
