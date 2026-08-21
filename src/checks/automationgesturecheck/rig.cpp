@@ -1,8 +1,5 @@
 #include "rig.h"
 
-#include <algorithm>
-#include <cstring>
-
 #include <QAction>
 #include <QCoreApplication>
 #include <QEventLoop>
@@ -11,6 +8,9 @@
 #include <QMouseEvent>
 #include <QTimer>
 #include <QWindow>
+#include <algorithm>
+#include <cstring>
+#include <utility>
 
 #include "core/miditimeline.h"
 #include "core/timedefaults.h"
@@ -18,6 +18,7 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/songview.h"
 
 std::unique_ptr<AutomationGestureCheckRig>
@@ -110,8 +111,7 @@ AutomationGeometry AutomationGestureCheckRig::geometry() const
 
 AutomationProjection AutomationGestureCheckRig::projection() const
 {
-    const auto currentGeometry = geometry();
-    return {currentGeometry, canvas().rows(), m_page, canvas().contentTopInset()};
+    return {geometry(), m_page};
 }
 
 int AutomationGestureCheckRig::rowIndex(const Lane &lane) const noexcept
@@ -124,15 +124,92 @@ int AutomationGestureCheckRig::rowIndex(const Lane &lane) const noexcept
     return -1;
 }
 
+LaneHandle AutomationGestureCheckRig::handleFor(const Lane &lane) const noexcept
+{
+    const int index = rowIndex(lane);
+    return index >= 0 ? LaneHandle{index + 1} : LaneHandle{};
+}
+
+QRect AutomationGestureCheckRig::bodyFor(LaneHandle handle) const
+{
+    return canvas().laneBody(handle);
+}
+
+QRect AutomationGestureCheckRig::bodyFor(const Lane &lane) const
+{
+    return bodyFor(handleFor(lane));
+}
+
+namespace {
+
+class MappingLane final : public NodeLane
+{
+  public:
+    MappingLane(int minimum, int maximum) noexcept : m_minimum(minimum), m_maximum(maximum) {}
+    QString title() const override { return {}; }
+    std::vector<NodePoint> points() const override { return {}; }
+    int minimumValue() const override { return m_minimum; }
+    int maximumValue() const override { return m_maximum; }
+    QString valueText(int) const override { return {}; }
+    bool pointSelected(uint64_t) const override { return false; }
+    void deletePoints(const std::vector<uint64_t> &) override {}
+    void movePoints(const std::vector<NodePointMove> &) override {}
+    void replaceSpan(uint64_t, uint64_t, const std::vector<NodePoint> &) override {}
+
+  private:
+    int m_minimum = 0;
+    int m_maximum = 0;
+};
+
+std::pair<int, int> valueRangeFor(const AutomationCanvas &canvas, LaneHandle handle)
+{
+    if (!handle.valid() || handle.index == 0)
+        return {CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm};
+    const auto &rows = canvas.rows();
+    const int row = handle.index - 1;
+    if (row < 0 || row >= int(rows.size()))
+        return {0, 127};
+    const auto controller = rows[std::size_t(row)].id.controller;
+    return {CoreTimeDefaults::laneValueMinimum(controller),
+            CoreTimeDefaults::laneValueMaximum(controller)};
+}
+
+} // namespace
+
+AutomationProjection::PointerMapping
+AutomationGestureCheckRig::mappingAt(LaneHandle handle, const QPointF &position) const
+{
+    const auto range = valueRangeFor(canvas(), handle);
+    MappingLane lane(range.first, range.second);
+    return projection().pointerMapping(lane, bodyFor(handle), position.x(), position.y());
+}
+
+AutomationGestureCheckRig::InputPoint
+AutomationGestureCheckRig::pointAt(LaneHandle handle, double tick, int value) const
+{
+    const auto geom = geometry();
+    const auto range = valueRangeFor(canvas(), handle);
+    const QRect body = bodyFor(handle);
+    const QPointF position(
+        m_view->displayX(tick, geom.plotOrigin, canvas().devicePixelRatioF()),
+        AutomationProjection::valueY(body, geom, range.first, range.second, value));
+    return {position, mappingAt(handle, position)};
+}
+
 AutomationGestureCheckRig::InputPoint
 AutomationGestureCheckRig::pointAt(const Lane &lane, double tick, int value) const
 {
-    const auto proj = projection();
-    const int index = rowIndex(lane);
-    const QPointF position(
-        m_view->displayX(tick, geometry().plotOrigin, canvas().devicePixelRatioF()),
-        proj.pointY(canvas().rows()[std::size_t(index)], index, value));
-    return {position, proj.pointerMapping(index, position.x(), position.y())};
+    return pointAt(handleFor(lane), tick, value);
+}
+
+bool AutomationGestureCheckRig::expandTempo()
+{
+    if (voiceBounds().top() > geometry().addLaneStripHeight)
+        return true;
+    mousePress(tempoHeaderPoint());
+    mouseRelease(tempoHeaderPoint());
+    pump();
+    return voiceBounds().top() > geometry().addLaneStripHeight;
 }
 
 QRect AutomationGestureCheckRig::voiceBounds() const
@@ -155,11 +232,7 @@ QPointF AutomationGestureCheckRig::tempoHeaderPoint() const
 
 QPointF AutomationGestureCheckRig::tempoBodyPoint(double tick, int bpm) const
 {
-    const auto currentGeometry = geometry();
-    const QRect body(0, 0, canvas().width(), voiceBounds().top());
-    return {m_view->displayX(tick, currentGeometry.plotOrigin, canvas().devicePixelRatioF()),
-            AutomationProjection::valueY(body, currentGeometry, CoreTimeDefaults::kMinTempoBpm,
-                                         CoreTimeDefaults::kMaxTempoBpm, bpm)};
+    return pointAt(LaneHandle{0}, tick, bpm).position;
 }
 
 QImage AutomationGestureCheckRig::renderArea()

@@ -8,6 +8,7 @@
 #include <numeric>
 #include <set>
 
+#include "core/lanemoveplan.h"
 #include "core/miditimeline.h"
 #include "core/timedefaults.h"
 #include "project/songregistry.h"
@@ -1351,25 +1352,18 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
 {
     if (moves.empty() || m_smf.tracks.empty())
         return;
-    struct LaneGroup {
-        int smfTrack = -1;
-        uint8_t cc = 0;
-        std::map<uint64_t, std::vector<size_t>> pointsByTick;
-    };
-    struct PlannedMove {
+    struct LaneRequests {
         int engineTrack = -1;
         uint8_t cc = 0;
-        DocLanePoint point;
-        uint64_t newTick = 0;
-        SmfEvent sourceEvent;
-        SmfEvent event;
-        size_t groupIndex = 0;
+        std::vector<LaneMoveRequest> requests;
+        std::vector<DocLanePoint> existingPoints;
+        std::vector<LaneMovePoint> existing;
     };
-    std::vector<LaneGroup> groups;
-    std::map<std::pair<int, uint8_t>, size_t> groupByLane;
+    std::vector<LaneRequests> lanes;
+    std::map<std::pair<int, uint8_t>, size_t> laneIndex;
     std::set<std::pair<int, size_t>> sourceIndices;
-    std::vector<PlannedMove> planned;
-    planned.reserve(moves.size());
+    size_t validCount = 0;
+    uint8_t singularCc = 0;
     for (const LanePointMove &move : moves) {
         const int smfTrack = smfTrackFor(move.engineTrack);
         if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()) ||
@@ -1382,75 +1376,66 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
         if (source.tick != move.point.tick || laneValue(source, move.cc) != move.point.value ||
             !sourceIndices.emplace(smfTrack, move.point.index).second)
             continue;
-        const auto key = std::make_pair(smfTrack, move.cc);
-        auto [groupIt, inserted] = groupByLane.emplace(key, groups.size());
-        if (inserted)
-            groups.push_back({smfTrack, move.cc});
-        const size_t groupIndex = groupIt->second;
-        const uint8_t channel = channelFor(move.engineTrack);
-        planned.push_back({move.engineTrack, move.cc, move.point, move.newTick, source,
-                           makeLaneEvent(move.cc, channel, move.newTick, move.newValue),
-                           groupIndex});
-    }
-    if (planned.empty())
-        return;
-    for (LaneGroup &group : groups) {
-        const auto &events = m_smf.tracks[size_t(group.smfTrack)].events;
-        for (size_t index = 0; index < events.size(); index++) {
-            const SmfEvent &event = events[index];
-            const bool matches = laneEventMatches(event, group.cc);
-            if (matches)
-                group.pointsByTick[event.tick].push_back(index);
+        const auto key = std::make_pair(move.engineTrack, move.cc);
+        auto [it, inserted] = laneIndex.emplace(key, lanes.size());
+        if (inserted) {
+            LaneRequests lane;
+            lane.engineTrack = move.engineTrack;
+            lane.cc = move.cc;
+            lane.existingPoints = lanePoints(move.engineTrack, move.cc);
+            lane.existing.reserve(lane.existingPoints.size());
+            for (const DocLanePoint &point : lane.existingPoints)
+                lane.existing.push_back({point.tick, point.value});
+            lanes.push_back(std::move(lane));
         }
+        LaneRequests &lane = lanes[it->second];
+        size_t sourceId = lane.existingPoints.size();
+        for (size_t id = 0; id < lane.existingPoints.size(); ++id) {
+            if (lane.existingPoints[id].smfTrack == move.point.smfTrack &&
+                lane.existingPoints[id].index == move.point.index) {
+                sourceId = id;
+                break;
+            }
+        }
+        if (sourceId >= lane.existingPoints.size())
+            continue;
+        lane.requests.push_back({sourceId, move.newTick, move.newValue});
+        singularCc = move.cc;
+        ++validCount;
     }
+    if (lanes.empty())
+        return;
     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<EditOp> modifications;
     std::vector<EditOp> insertions;
-    std::map<std::pair<size_t, uint64_t>, uint64_t> winningSourceTick;
-    for (const PlannedMove &move : planned)
-        winningSourceTick[{move.groupIndex, move.newTick}] = move.point.tick;
-    const auto winsDest = [&](const PlannedMove &move) {
-        return winningSourceTick[{move.groupIndex, move.newTick}] == move.point.tick;
-    };
-    std::vector<std::set<size_t>> winningSources(groups.size());
-    for (const PlannedMove &move : planned) {
-        if (winsDest(move))
-            winningSources[move.groupIndex].insert(move.point.index);
-    }
-    for (const PlannedMove &move : planned) {
-        if (!winsDest(move))
-            removals[size_t(groups[move.groupIndex].smfTrack)].push_back(move.point.index);
-    }
-    for (size_t i = 0; i < planned.size(); ++i) {
-        const PlannedMove &move = planned[i];
-        const LaneGroup &group = groups[move.groupIndex];
-        if (!winsDest(move))
+    for (const LaneRequests &lane : lanes) {
+        const auto plan = planLaneMoves(lane.existing, lane.requests);
+        if (!plan || plan->empty())
             continue;
-        bool shadowed = false;
-        const auto occupied = group.pointsByTick.find(move.newTick);
-        if (occupied != group.pointsByTick.end()) {
-            for (const size_t index : occupied->second) {
-                if (!winningSources[move.groupIndex].count(index)) {
-                    removals[size_t(group.smfTrack)].push_back(index);
-                    shadowed = true;
-                }
-            }
-        }
-        if (move.newTick == move.point.tick) {
-            if (!shadowed && move.event == move.sourceEvent)
+        const uint8_t channel = channelFor(lane.engineTrack);
+        for (size_t id : plan->removeIds)
+            removals[size_t(lane.existingPoints[id].smfTrack)].push_back(
+                lane.existingPoints[id].index);
+        for (const LaneMoveWrite &write : plan->writes) {
+            const DocLanePoint &sourcePoint = lane.existingPoints[write.sourceId];
+            const SmfEvent event = makeLaneEvent(lane.cc, channel, write.tick, write.value);
+            if (write.tick == sourcePoint.tick) {
+                const SmfEvent &source =
+                    m_smf.tracks[size_t(sourcePoint.smfTrack)].events[sourcePoint.index];
+                if (event == source)
+                    continue;
+                EditOp modify;
+                modify.type = EditOp::ModifyEvent;
+                modify.smfTrack = sourcePoint.smfTrack;
+                modify.index = sourcePoint.index;
+                modify.event = event;
+                modifications.push_back(std::move(modify));
                 continue;
-            EditOp modify;
-            modify.type = EditOp::ModifyEvent;
-            modify.smfTrack = group.smfTrack;
-            modify.index = move.point.index;
-            modify.event = move.event;
-            modifications.push_back(std::move(modify));
-        } else {
-            removals[size_t(group.smfTrack)].push_back(move.point.index);
+            }
             EditOp insert;
             insert.type = EditOp::InsertEvent;
-            insert.smfTrack = group.smfTrack;
-            insert.event = move.event;
+            insert.smfTrack = sourcePoint.smfTrack;
+            insert.event = event;
             insertions.push_back(std::move(insert));
         }
     }
@@ -1467,10 +1452,10 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
         appendRemoveOps(ops, int(track), std::move(removals[track]));
     for (EditOp &insert : insertions)
         ops.push_back(std::move(insert));
-    const bool singular = planned.size() == 1;
-    const QString text = singular && planned.front().cc == DOC_CC_VOICE ? tr("change voice")
-                         : singular ? tr("edit automation point")
-                                    : tr("edit automation points");
+    const bool singular = validCount == 1;
+    const QString text = singular && singularCc == DOC_CC_VOICE ? tr("change voice")
+                         : singular                             ? tr("edit automation point")
+                                                                : tr("edit automation points");
     pushEdit(text, std::move(ops));
 }
 

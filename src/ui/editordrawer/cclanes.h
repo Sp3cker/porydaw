@@ -4,18 +4,14 @@
 #include <utility>
 #include <vector>
 
-#include <QPointF>
-#include <QString>
-
 #include "ui/editordrawer/nodelane/nodelane.h"
+#include <QString>
+#include <QtGlobal>
 
 class AutomationPage;
-class AutomationProjection;
 class SongDocument;
 struct AutomationGeometry;
 struct AutomationRow;
-struct DocLanePoint;
-struct LanePoint;
 
 namespace songview {
 class EditorSelectionModel;
@@ -51,12 +47,15 @@ class CCLaneAdapter final : public NodeLane
 class CCLanes final
 {
   public:
+    static uint8_t bendController() noexcept;
+    static bool rangeZoomable(uint8_t controller) noexcept;
+    static uint8_t defaultRange(uint8_t controller) noexcept;
+    static int autoRange(int maximum) noexcept;
+
     struct TimeSelection {
         uint64_t startTick = 0;
         uint64_t endTick = 0;
         std::vector<std::pair<int, uint8_t>> lanes;
-        int firstRow = -1;
-        int lastRow = -1;
 
         bool empty() const noexcept { return endTick <= startTick; }
         bool contains(uint64_t tick) const noexcept { return tick >= startTick && tick < endTick; }
@@ -68,7 +67,7 @@ class CCLanes final
             }
             return false;
         }
-        bool active() const noexcept { return !empty() && firstRow >= 0 && !lanes.empty(); }
+        bool active() const noexcept { return !empty() && !lanes.empty(); }
     };
 
     enum class SummaryKind : uint8_t {
@@ -86,14 +85,6 @@ class CCLanes final
         int maximum = 0;
     };
 
-    struct ValueTextCache {
-        int track = -1;
-        uint8_t controller = 0;
-        int value = 0;
-        QString text;
-        bool valid = false;
-    };
-
     explicit CCLanes(AutomationPage *page) noexcept;
     ~CCLanes();
 
@@ -108,25 +99,15 @@ class CCLanes final
     int minimumHeight(const AutomationGeometry &geometry, int topInset) const;
     bool clearTimeSelection();
 
-    const std::vector<LanePoint> &pointsFor(const AutomationRow &row,
-                                            const AutomationProjection &projection) const;
     QString titleFor(const AutomationRow &row) const;
-    QString valueTextFor(const AutomationRow &row, int value) const;
-    bool rowTarget(const AutomationRow &row, int *track, uint8_t *controller) const;
     std::pair<int, uint8_t> rowIdentity(const AutomationRow &row) const;
 
     bool selectionContains(int rowIndex, qreal x, const AutomationGeometry &geometry,
                            qreal devicePixelRatio) const;
-    bool pointInTimeSelection(int rowIndex, uint64_t tick) const;
-    bool selectionHasMultipleNodes() const;
-    bool cachedPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
-                        const AutomationProjection &projection, const AutomationGeometry &geometry,
-                        qreal devicePixelRatio, DocLanePoint *hit) const;
 
   private:
     AutomationPage *m_page = nullptr;
     std::vector<AutomationRow> m_rows;
     std::vector<RowTextCache> m_rowText;
     TimeSelection m_timeSelection;
-    mutable ValueTextCache m_valueTextCache;
 };

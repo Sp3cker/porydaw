@@ -6,6 +6,7 @@
 
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/songview/editorselectionmodel.h"
 
 QString TempoLane::title() const
@@ -74,32 +75,10 @@ void TempoLane::movePoints(const std::vector<NodePointMove> &moves)
     SongDocument *document = boundDocument();
     if (!document || moves.empty())
         return;
-    const auto &tempoPoints = document->tempoPoints();
-    TempoEdit edit;
-    for (const NodePointMove &move : moves) {
-        const TempoPoint *source = nullptr;
-        for (const TempoPoint &point : tempoPoints) {
-            if (point.tick == move.fromTick) {
-                source = &point;
-                break;
-            }
-        }
-        if (!source)
-            continue;
-        const int currentBpm =
-            qRound(CoreTimeDefaults::tempoBpm(source->microsecondsPerQuarterNote));
-        TempoPoint destination{move.to.tick, source->microsecondsPerQuarterNote};
-        if (move.to.value != currentBpm)
-            destination.microsecondsPerQuarterNote =
-                CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(move.to.value);
-        if (destination == *source)
-            continue;
-        edit.remove.push_back(*source);
-        edit.add.push_back(destination);
-    }
-    if (edit.empty())
+    const auto resolved = nodelane::resolveTempoMoves(*document, moves);
+    if (!resolved || resolved->empty())
         return;
-    document->applyTempoEdit(edit);
+    document->applyTempoEdit(*resolved);
     if (m_page)
         m_page->requestRefresh();
 }

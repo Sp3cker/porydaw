@@ -6,6 +6,7 @@
 #include <QPainter>
 #include <QPen>
 
+#include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/nodelane/paint.h"
 #include "ui/layout.h"
@@ -65,11 +66,25 @@ void AutomationCanvas::paintContent(QPainter &painter)
     if (!m_page || !m_page->ready() || !m_page->timeline())
         return;
     const AutomationProjection proj = projection();
-    const bool multipleSelectedNodes = m_rowData.selectionHasMultipleNodes();
+    int selectedCount = 0;
+    bool multipleSelectedNodes = false;
+    for (const NodeLaneSlot &slot : m_nodeStack) {
+        if (!slot.lane)
+            continue;
+        for (const NodePoint &point : slot.lane->points()) {
+            if (!slot.lane->pointSelected(point.tick))
+                continue;
+            if (++selectedCount > 1) {
+                multipleSelectedNodes = true;
+                break;
+            }
+        }
+        if (multipleSelectedNodes)
+            break;
+    }
     const QFont titleFont = typography::bold(typography::caption(font()));
     const QFont captionFont = captionLabelFont();
-    m_tempoLane.paint(painter, m_geometry, m_labelGutter, titleFont, captionFont, m_hoverState,
-                      m_pencilMode);
+    m_tempoLane.paint(painter, m_geometry, m_labelGutter, titleFont, captionFont);
     m_voiceLane.paint(painter, *this, m_geometry, m_labelGutter, titleFont, captionFont);
     const auto textLayout =
         layout::twoLineText(titleFont, titleFont, captionFont, layout::Space::Zero);
@@ -87,17 +102,70 @@ void AutomationCanvas::paintContent(QPainter &painter)
     }
     const uint64_t bandFirst = std::min(m_band.startTick, m_band.endTick);
     const uint64_t bandLast = std::max(m_band.startTick, m_band.endTick);
+    auto paintLaneBody = [&](LaneHandle handle, const NodeLane &lane, const QRect &body,
+                             const QColor &color, bool selectedLane, bool bandLane,
+                             bool preparedPreview, std::optional<NodePoint> leadIn) {
+        const QRect plot(m_geometry.plotOrigin, body.top(),
+                         std::max(0, width() - m_geometry.plotOrigin), body.height());
+        painter.save();
+        painter.setClipRect(plot, Qt::IntersectClip);
+        if (!m_page->paintGrid(painter, plot, m_geometry.plotOrigin))
+            paintPlainGridFallback(painter, plot, *m_page, m_geometry.plotOrigin, dpr);
+        painter.restore();
+        nodelane::paintNodeLane(painter, nodelane::NodeLanePaint{
+                                             .lane = lane,
+                                             .body = body,
+                                             .geometry = m_geometry,
+                                             .projection = proj,
+                                             .color = color,
+                                             .leadIn = leadIn,
+                                             .handle = handle,
+                                             .hoverState = m_hoverState,
+                                             .nodeDrag = nodeDrag,
+                                             .sweep = sweep,
+                                             .pencil = pencil,
+                                             .pencilMode = m_pencilMode,
+                                             .multipleSelectedNodes = multipleSelectedNodes,
+                                             .selectedLane = selectedLane,
+                                             .bandLane = bandLane,
+                                             .bandFirstTick = bandFirst,
+                                             .bandLastTick = bandLast,
+                                             .preparedPreviewCurve = preparedPreview,
+                                             .selectedColor = selectedColor,
+                                             .dimmedColor = preparedPreview ? color : dimmedColor,
+                                         });
+        painter.save();
+        painter.setClipRect(plot, Qt::IntersectClip);
+        paintEditCursor(painter, plot, proj.displayX(m_page->liveState().editCursorTick, dpr));
+        painter.restore();
+    };
+    if (m_tempoLane.expanded() && !m_nodeStack.empty() && m_nodeStack.front().lane) {
+        const LaneHandle handle{0};
+        const QRect &body = m_nodeStack.front().body;
+        const bool bandLane = bandPreviewContainsLane(handle);
+        const auto points = m_nodeStack.front().lane->points();
+        std::optional<NodePoint> leadIn;
+        if (!points.empty() && points.front().tick > 0)
+            leadIn = NodePoint{0, CoreTimeDefaults::kTempoBpm};
+        painter.save();
+        painter.setClipRect(body, Qt::IntersectClip);
+        paintLaneBody(handle, *m_nodeStack.front().lane, body,
+                      themes::color(themes::Role::song_view_automation_tempo_curve),
+                      m_tempoLane.hasTimeSelection() || bandLane, bandLane, true, leadIn);
+        painter.restore();
+    }
     for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
         const AutomationRow &row = rows[std::size_t(rowIndex)];
-        const int height = proj.rowHeight(row);
-        const QRect bounds(layout::space(layout::Space::Zero), proj.rowTop(rowIndex), width(),
-                           height);
-        const QRect plot(m_geometry.plotOrigin, bounds.top(),
-                         std::max(0, width() - m_geometry.plotOrigin), bounds.height());
+        const LaneHandle handle{rowIndex + 1};
+        const NodeLane *lane = nullptr;
+        QRect body;
+        if (!resolveLane(handle, &lane, &body) || !lane)
+            continue;
+        const QRect bounds(layout::space(layout::Space::Zero), body.top(), width(), body.height());
         const QRect textBounds(m_labelGutter.x(), bounds.top(), m_labelGutter.width(),
                                bounds.height());
         const auto textBoxes = textLayout.align(textBounds, layout::VerticalAlignment::Center);
-        const auto &points = m_rowData.pointsFor(row, proj);
+        const auto points = lane->points();
         const QColor color =
             themes::trackIdentityColor(row.id.track % themes::trackIdentityColorCount);
         painter.save();
@@ -113,8 +181,8 @@ void AutomationCanvas::paintContent(QPainter &painter)
         painter.setFont(captionFont);
         if (!points.empty()) {
             const std::size_t pointCount = points.size();
-            const int minimum = proj.rowMinimum(row);
-            const int maximum = proj.rowMaximum(row);
+            const int minimum = lane->minimumValue();
+            const int maximum = lane->maximumValue();
             if (rowText.summaryKind != CCLanes::SummaryKind::Points ||
                 rowText.pointCount != pointCount || rowText.minimum != minimum ||
                 rowText.maximum != maximum) {
@@ -138,86 +206,60 @@ void AutomationCanvas::paintContent(QPainter &painter)
                              rowText.secondary);
         }
         painter.restore();
-        painter.save();
-        painter.setClipRect(plot, Qt::IntersectClip);
-        if (!m_page->paintGrid(painter, plot, m_geometry.plotOrigin))
-            paintPlainGridFallback(painter, plot, *m_page, m_geometry.plotOrigin, dpr);
-        painter.restore();
-        const NodeLane *lane = nullptr;
-        QRect body;
-        const LaneHandle handle{rowIndex + 1};
-        if (resolveLane(handle, &lane, &body) && lane) {
-            const bool bandLane = bandPreviewContainsRow(rowIndex);
-            const auto laneId = m_rowData.rowIdentity(row);
-            const auto &timeSelection = m_rowData.timeSelection();
-            const bool selectedLane =
-                (timeSelection.active() && timeSelection.coversLane(laneId.first, laneId.second)) ||
-                bandLane;
-            nodelane::paintNodeLane(painter, nodelane::NodeLanePaint{
-                                                 .lane = *lane,
-                                                 .body = body,
-                                                 .geometry = m_geometry,
-                                                 .projection = proj,
-                                                 .color = color,
-                                                 .handle = handle,
-                                                 .hoverState = m_hoverState,
-                                                 .nodeDrag = nodeDrag,
-                                                 .sweep = sweep,
-                                                 .pencil = pencil,
-                                                 .gestureRow = rowIndex,
-                                                 .pencilMode = m_pencilMode,
-                                                 .multipleSelectedNodes = multipleSelectedNodes,
-                                                 .selectedLane = selectedLane,
-                                                 .bandLane = bandLane,
-                                                 .bandFirstTick = bandFirst,
-                                                 .bandLastTick = bandLast,
-                                                 .selectedColor = selectedColor,
-                                                 .dimmedColor = dimmedColor,
-                                             });
-        }
-        painter.save();
-        painter.setClipRect(plot, Qt::IntersectClip);
-        paintEditCursor(painter, plot, proj.displayX(m_page->liveState().editCursorTick, dpr));
-        painter.restore();
+        const bool bandLane = bandPreviewContainsLane(handle);
+        const auto laneId = m_rowData.rowIdentity(row);
+        const auto &timeSelection = m_rowData.timeSelection();
+        const bool selectedLane =
+            (timeSelection.active() && timeSelection.coversLane(laneId.first, laneId.second)) ||
+            bandLane;
+        paintLaneBody(handle, *lane, body, color, selectedLane, bandLane, false, {});
         painter.restore();
     }
     if (m_page->document()) {
-        const QRect add(layout::space(layout::Space::Zero), proj.rowTop(int(rows.size())), width(),
+        const QRect add(layout::space(layout::Space::Zero), addLaneStripTop(), width(),
                         m_geometry.addLaneStripHeight);
         painter.setPen(themes::color(themes::Role::song_view_add_automation_lane_action));
         painter.drawText(
             add.adjusted(layout::space(layout::Space::One), layout::space(layout::Space::Zero),
                          -layout::space(layout::Space::One), layout::space(layout::Space::Zero)),
-            Qt::AlignLeft | Qt::AlignVCenter, tr("+ Add lane"));
+            Qt::AlignLeft | Qt::AlignVCenter, tr("+ Add CC lane"));
     }
     const auto selectedRange = [&] {
         if (m_band.active)
             return TickRange::orderedNonEmpty(m_band.startTick, m_band.endTick);
-        const auto &selection = m_rowData.timeSelection();
+        const auto &selection = m_page->m_owner.selectionModel().timeSelection();
         if (!selection.active())
             return std::optional<TickRange>{};
         return TickRange::orderedNonEmpty(selection.startTick, selection.endTick);
     }();
+    if (!selectedRange)
+        return;
+    auto paintLaneReticle = [&](const QRect &body) {
+        const QRect bounds(m_geometry.plotOrigin, body.top(),
+                           std::max(0, width() - m_geometry.plotOrigin), body.height());
+        paintSelectionReticle(painter, *selectedRange, proj, bounds, dpr);
+    };
     if (m_band.active) {
-        const int firstRow = std::min(m_bandRightRow, m_bandEndRow);
-        const int lastRow = std::max(m_bandRightRow, m_bandEndRow);
-        if (selectedRange && firstRow >= 0 && lastRow >= firstRow) {
-            const int top = proj.rowTop(firstRow);
-            const QRect bounds(m_geometry.plotOrigin, top,
-                               std::max(0, width() - m_geometry.plotOrigin),
-                               proj.rowTop(lastRow + 1) - top);
-            paintSelectionReticle(painter, *selectedRange, proj, bounds, dpr);
-        }
-    } else if (selectedRange) {
-        const auto &selection = m_rowData.timeSelection();
-        for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
-            const auto lane = m_rowData.rowIdentity(rows[std::size_t(rowIndex)]);
-            if (!selection.coversLane(lane.first, lane.second))
+        const int first = std::min(m_bandStart.index, m_bandEnd.index);
+        const int last = std::max(m_bandStart.index, m_bandEnd.index);
+        for (int index = first; index <= last && index < int(m_nodeStack.size()); ++index) {
+            if (index == 0 && !m_tempoLane.expanded())
                 continue;
-            const QRect bounds(m_geometry.plotOrigin, proj.rowTop(rowIndex),
-                               std::max(0, width() - m_geometry.plotOrigin),
-                               proj.rowHeight(rows[std::size_t(rowIndex)]));
-            paintSelectionReticle(painter, *selectedRange, proj, bounds, dpr);
+            paintLaneReticle(m_nodeStack[std::size_t(index)].body);
         }
+        return;
+    }
+    const auto &selection = m_page->m_owner.selectionModel().timeSelection();
+    if (m_tempoLane.expanded() && m_tempoLane.hasTimeSelection() && !m_nodeStack.empty())
+        paintLaneReticle(m_nodeStack.front().body);
+    for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
+        const auto lane = m_rowData.rowIdentity(rows[std::size_t(rowIndex)]);
+        if (!selection.active() || !m_rowData.timeSelection().coversLane(lane.first, lane.second))
+            continue;
+        const LaneHandle handle{rowIndex + 1};
+        const NodeLane *ignored = nullptr;
+        QRect body;
+        if (resolveLane(handle, &ignored, &body))
+            paintLaneReticle(body);
     }
 }

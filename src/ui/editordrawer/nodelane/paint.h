@@ -39,7 +39,6 @@ struct NodeLanePaint {
     const NodeDragGesture *nodeDrag = nullptr;
     const SweepGesture *sweep = nullptr;
     const PencilGesture *pencil = nullptr;
-    int gestureRow = -1;
     bool pencilMode = false;
     bool multipleSelectedNodes = false;
     bool selectedLane = false;

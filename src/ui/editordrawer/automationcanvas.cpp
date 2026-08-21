@@ -72,7 +72,7 @@ AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
 }
 AutomationProjection AutomationCanvas::projection() const
 {
-    return AutomationProjection(m_geometry, m_rowData.rows(), m_page, contentTopInset());
+    return AutomationProjection(m_geometry, m_page);
 }
 
 void AutomationCanvas::invalidateContent()
@@ -81,7 +81,7 @@ void AutomationCanvas::invalidateContent()
     syncHoverValueLabel();
     songview::TimelineSurface::invalidateContent();
 }
-bool AutomationCanvas::bandPreviewContains(int rowIndex, uint64_t tick) const noexcept
+bool AutomationCanvas::bandPreviewContains(LaneHandle handle, uint64_t tick) const noexcept
 {
     if (!m_band.active)
         return false;
@@ -89,15 +89,15 @@ bool AutomationCanvas::bandPreviewContains(int rowIndex, uint64_t tick) const no
     const uint64_t last = std::max(m_band.startTick, m_band.endTick);
     if (first >= last || tick < first || tick >= last)
         return false;
-    return bandPreviewContainsRow(rowIndex);
+    return bandPreviewContainsLane(handle);
 }
-bool AutomationCanvas::bandPreviewContainsRow(int rowIndex) const noexcept
+bool AutomationCanvas::bandPreviewContainsLane(LaneHandle handle) const noexcept
 {
-    if (!m_band.active)
+    if (!m_band.active || !handle.valid() || !m_bandStart.valid() || !m_bandEnd.valid())
         return false;
-    const int firstRow = std::min(m_bandRightRow, m_bandEndRow);
-    const int lastRow = std::max(m_bandRightRow, m_bandEndRow);
-    return rowIndex >= firstRow && rowIndex <= lastRow;
+    const int first = std::min(m_bandStart.index, m_bandEnd.index);
+    const int last = std::max(m_bandStart.index, m_bandEnd.index);
+    return handle.index >= first && handle.index <= last;
 }
 void AutomationCanvas::setPencilMode(bool enabled)
 {
@@ -197,6 +197,7 @@ void AutomationCanvas::layoutLaneStack(int voiceTrack)
 
 void AutomationCanvas::rebuildNodeStack()
 {
+    cancelNodeGestures();
     m_hoverState.hover.highlightLocked = false;
     m_hoverState.invalidateCaches();
     m_hoverState.clearHover(*this);
@@ -212,11 +213,12 @@ void AutomationCanvas::rebuildNodeStack()
     for (const auto &row : rows)
         m_ccAdapters.emplace_back(*m_page->document(), selection, mask, int(row.id.track),
                                   row.id.controller);
-    const AutomationProjection proj = projection();
+    int top = contentTopInset();
     for (int i = 0; i < int(rows.size()); ++i) {
-        const QRect body(layout::space(layout::Space::Zero), proj.rowTop(i), width(),
-                         proj.rowHeight(rows[std::size_t(i)]));
+        const int height = ccLaneHeight(rows[std::size_t(i)]);
+        const QRect body(layout::space(layout::Space::Zero), top, width(), height);
         m_nodeStack.push_back({&m_ccAdapters[std::size_t(i)], body});
+        top += height;
     }
 }
 
@@ -245,6 +247,21 @@ bool AutomationCanvas::resolveLane(LaneHandle handle, const NodeLane **lane,
     return true;
 }
 
+QRect AutomationCanvas::laneBody(LaneHandle handle) const
+{
+    QRect body;
+    if (!resolveLane(handle, nullptr, &body))
+        return {};
+    return body;
+}
+
+NodeLane *AutomationCanvas::mutableLane(LaneHandle handle) noexcept
+{
+    if (!handle.valid() || handle.index >= int(m_nodeStack.size()))
+        return nullptr;
+    return m_nodeStack[std::size_t(handle.index)].lane;
+}
+
 void AutomationCanvas::syncHoverValueLabel()
 {
     const NodeLane *lane = nullptr;
@@ -262,29 +279,25 @@ void AutomationCanvas::syncPreviewValueLabel()
     qreal x = 0;
     int value = 0;
     if (m_activeGesture && m_page && m_page->ready()) {
-        const auto rowIndex =
-            std::visit([](const auto &gesture) { return gesture.row; }, *m_activeGesture);
-        if (rowIndex >= 0 && rowIndex < int(m_rowData.rows().size())) {
-            handle = LaneHandle{rowIndex + 1};
-            if (resolveLane(handle, &lane, &body)) {
-                if (const auto *gesture = std::get_if<NodeDragGesture>(&*m_activeGesture)) {
-                    if (gesture->grabbedPoint < gesture->points.size()) {
-                        const auto &point = gesture->points[gesture->grabbedPoint];
-                        x = m_page->displayX(point.current.tick, m_geometry.plotOrigin,
-                                             devicePixelRatioF());
-                        value = point.current.value;
-                    } else {
-                        lane = nullptr;
-                    }
-                } else if (const auto *gesture = std::get_if<SweepGesture>(&*m_activeGesture)) {
-                    x = m_page->displayX(gesture->current.tick, m_geometry.plotOrigin,
+        handle = std::visit([](const auto &gesture) { return gesture.lane; }, *m_activeGesture);
+        if (resolveLane(handle, &lane, &body)) {
+            if (const auto *gesture = std::get_if<NodeDragGesture>(&*m_activeGesture)) {
+                if (gesture->grabbedPoint < gesture->points.size()) {
+                    const auto &point = gesture->points[gesture->grabbedPoint];
+                    x = m_page->displayX(point.current.tick, m_geometry.plotOrigin,
                                          devicePixelRatioF());
-                    value = gesture->current.value;
-                } else if (const auto *gesture = std::get_if<PencilGesture>(&*m_activeGesture)) {
-                    const auto &sample = gesture->stroke.lastSample();
-                    x = sample.logicalX;
-                    value = int(std::lround(sample.continuousValue));
+                    value = point.current.value;
+                } else {
+                    lane = nullptr;
                 }
+            } else if (const auto *gesture = std::get_if<SweepGesture>(&*m_activeGesture)) {
+                x = m_page->displayX(gesture->current.tick, m_geometry.plotOrigin,
+                                     devicePixelRatioF());
+                value = gesture->current.value;
+            } else if (const auto *gesture = std::get_if<PencilGesture>(&*m_activeGesture)) {
+                const auto &sample = gesture->stroke.lastSample();
+                x = sample.logicalX;
+                value = int(std::lround(sample.continuousValue));
             }
         }
     }
@@ -292,7 +305,7 @@ void AutomationCanvas::syncPreviewValueLabel()
 }
 
 void AutomationCanvas::highlightHoveredPoint(LaneHandle handle, const QPointF &position,
-                                             const ValuePoint &point)
+                                             const NodePoint &point)
 {
     const NodeLane *lane = nullptr;
     QRect body;
@@ -310,6 +323,44 @@ int AutomationCanvas::ccRowIndexAt(int y) const noexcept
     return handle.index - 1;
 }
 
+int AutomationCanvas::ccLaneHeight(const AutomationRow &row) const
+{
+    if (!m_page)
+        return m_geometry.rowDefaultHeight;
+    return std::clamp(m_page->laneHeightFor(row.id), m_geometry.rowMinimumHeight,
+                      m_geometry.rowMaximumHeight);
+}
+
+int AutomationCanvas::ccRowBoundaryAt(int y) const
+{
+    for (int i = 1; i < int(m_nodeStack.size()); ++i) {
+        const QRect &body = m_nodeStack[std::size_t(i)].body;
+        const int bottom = body.top() + body.height();
+        if (std::abs(y - bottom) <= layout::singlePixel())
+            return i - 1;
+    }
+    return -1;
+}
+
+int AutomationCanvas::addLaneStripTop() const
+{
+    if (m_nodeStack.size() > 1)
+        return m_nodeStack.back().body.top() + m_nodeStack.back().body.height();
+    return contentTopInset();
+}
+
+int AutomationCanvas::snapNeutralFor(LaneHandle handle) const
+{
+    if (!handle.valid() || handle.index <= 0 || handle.index - 1 >= int(m_rowData.rows().size()))
+        return -1;
+    const uint8_t controller = m_rowData.rows()[std::size_t(handle.index - 1)].id.controller;
+    if (controller == CCLanes::bendController())
+        return 0;
+    if (controller == 10 || controller == 24)
+        return 64;
+    return -1;
+}
+
 void AutomationCanvas::cancelInteraction()
 {
     const bool wasActive =
@@ -317,10 +368,9 @@ void AutomationCanvas::cancelInteraction()
     m_pan.active = false;
     m_resize.row = -1;
     m_activeGesture.reset();
-    m_activeNodeIdentities.clear();
     m_band.clear();
-    m_bandRightRow = -1;
-    m_bandEndRow = -1;
+    m_bandStart = {};
+    m_bandEnd = {};
     m_tempoLane.cancel();
     m_voiceLane.cancel();
     m_hoverState.previewValueLabel = {};
@@ -340,10 +390,9 @@ void AutomationCanvas::cancelNodeGestures()
 {
     const bool gestureActive = m_band.pending || m_activeGesture.has_value();
     m_activeGesture.reset();
-    m_activeNodeIdentities.clear();
     m_band.clear();
-    m_bandRightRow = -1;
-    m_bandEndRow = -1;
+    m_bandStart = {};
+    m_bandEnd = {};
     m_hoverState.previewValueLabel = {};
     if (gestureActive)
         setGestureActive(false);
@@ -356,7 +405,7 @@ bool AutomationCanvas::promptPointValue(const AutomationRow &row, uint8_t contro
     int minimum = CoreTimeDefaults::laneValueMinimum(controller);
     int maximum = CoreTimeDefaults::laneValueMaximum(controller);
     QString label = tr("Value:");
-    if (controller == automation::kBendController) {
+    if (controller == CCLanes::bendController()) {
         label = tr("Bend (0 = none):");
     } else if (controller == 10 || controller == 24) {
         minimum = -64;
@@ -373,61 +422,50 @@ bool AutomationCanvas::promptPointValue(const AutomationRow &row, uint8_t contro
     return true;
 }
 
-bool AutomationCanvas::showPointMenuNear(const AutomationRow &row, int rowIndex,
-                                         const QPoint &position, const QPoint &globalPosition)
+bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &position,
+                                         const QPoint &globalPosition)
 {
     if (!m_page || !m_page->document())
         return false;
-    int track = -1;
-    uint8_t controller = 0;
-    if (!m_rowData.rowTarget(row, &track, &controller))
+    NodePoint point;
+    if (!nodePointHit(handle, position, &point))
         return false;
-    DocLanePoint point;
-    if (!pencilPointHit(row, rowIndex, position, &point))
-        return false;
-    int targetRowIndex = rowIndex;
-    std::pair<int, uint8_t> targetLane{track, controller};
-    DocLanePoint targetPoint = point;
+    LaneHandle target = handle;
+    NodePoint targetPoint = point;
     ui::ContextMenu menu(this);
     QAction *setValue = menu.addAction(tr("Set Value"));
     QAction *deletePoint = menu.addAction(tr("Delete"));
-    menu.setOutsideRightClickHandler(
-        [this, &menu, &targetRowIndex, &targetLane, &targetPoint](QPointF globalPos) {
-            const QPoint localPosition = mapFromGlobal(globalPos.toPoint());
-            const int candidateRowIndex = ccRowIndexAt(localPosition.y());
-            if (candidateRowIndex < 0 || candidateRowIndex >= int(m_rowData.rows().size()))
-                return false;
-            const auto &candidateRow = m_rowData.rows()[candidateRowIndex];
-            int candidateTrack = -1;
-            uint8_t candidateController = 0;
-            if (!m_rowData.rowTarget(candidateRow, &candidateTrack, &candidateController))
-                return false;
-            DocLanePoint candidatePoint;
-            if (!pencilPointHit(candidateRow, candidateRowIndex, localPosition, &candidatePoint))
-                return false;
-            targetRowIndex = candidateRowIndex;
-            targetLane = {candidateTrack, candidateController};
-            targetPoint = candidatePoint;
-            highlightHoveredPoint(LaneHandle{candidateRowIndex + 1}, localPosition,
-                                  {candidatePoint.tick, candidatePoint.value});
-            menu.popup(globalPos.toPoint());
-            return true;
-        });
-    QAction *chosen = menu.exec(globalPosition);
-    if (targetRowIndex < 0 || targetRowIndex >= int(m_rowData.rows().size()) || !m_page ||
-        !m_page->document())
+    menu.setOutsideRightClickHandler([this, &menu, &target, &targetPoint](QPointF globalPos) {
+        const QPoint localPosition = mapFromGlobal(globalPos.toPoint());
+        const LaneHandle candidate = laneAt(localPosition.y());
+        NodePoint candidatePoint;
+        if (!nodePointHit(candidate, localPosition, &candidatePoint))
+            return false;
+        target = candidate;
+        targetPoint = candidatePoint;
+        highlightHoveredPoint(candidate, localPosition, candidatePoint);
+        menu.popup(globalPos.toPoint());
         return true;
-    const auto &targetRow = m_rowData.rows()[targetRowIndex];
+    });
+    QAction *chosen = menu.exec(globalPosition);
+    NodeLane *lane = mutableLane(target);
+    if (!lane || !m_page || !m_page->document())
+        return true;
     if (chosen == setValue) {
         int stored = targetPoint.value;
-        if (promptPointValue(targetRow, targetLane.second, targetPoint.value, &stored) &&
-            targetPoint.value != stored) {
-            m_page->document()->moveLanePoints(
-                {{targetLane.first, targetLane.second, targetPoint, targetPoint.tick, stored}});
+        bool accepted = false;
+        if (target.index == 0)
+            accepted = m_tempoLane.promptBpm(*this, stored, &stored);
+        else if (target.index > 0 && target.index - 1 < int(m_rowData.rows().size())) {
+            const auto &row = m_rowData.rows()[std::size_t(target.index - 1)];
+            accepted = promptPointValue(row, row.id.controller, stored, &stored);
+        }
+        if (accepted && stored != targetPoint.value) {
+            lane->movePoints({{targetPoint.tick, {targetPoint.tick, stored}}});
             m_page->requestRefresh();
         }
     } else if (chosen == deletePoint) {
-        m_page->document()->deleteLanePoints(targetLane.first, targetLane.second, {targetPoint});
+        lane->deletePoints({targetPoint.tick});
         m_page->requestRefresh();
     }
     return true;
@@ -453,14 +491,44 @@ void AutomationCanvas::updateAxisLockCursor(AxisLock lock)
     else
         setCursor(Qt::ArrowCursor);
 }
-ValuePoint AutomationCanvas::mappedForRow(int row, QPointF pos, bool fine, bool snapValue,
+
+NodePoint AutomationCanvas::mappedForLane(LaneHandle handle, QPointF pos, bool fine, bool snapValue,
                                           const AutomationProjection &proj) const
 {
+    const NodeLane *lane = nullptr;
+    QRect body;
+    if (!resolveLane(handle, &lane, &body) || !lane)
+        return {};
     const uint64_t tick = m_page->snapTick(proj.rawTickAt(pos.x()), fine);
-    ValuePoint out;
-    updateValuePoint(proj, row, m_rowData.rows()[row], out, qRound(pos.y()), tick, snapValue,
-                     m_geometry.neutralSnapRadius);
+    NodePoint out;
+    updateValuePoint(proj, *lane, body, out, pos.y(), tick, snapValue, m_geometry.neutralSnapRadius,
+                     snapNeutralFor(handle));
     return out;
+}
+
+void AutomationCanvas::publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
+                                            LaneHandle end) const
+{
+    if (!m_page || first >= last || !start.valid() || !end.valid())
+        return;
+    const int firstIndex = std::min(start.index, end.index);
+    const int lastIndex = std::max(start.index, end.index);
+    std::vector<std::pair<int, uint8_t>> lanes;
+    bool tempo = false;
+    for (int index = firstIndex; index <= lastIndex && index < int(m_nodeStack.size()); ++index) {
+        if (index == 0) {
+            tempo = true;
+            continue;
+        }
+        const int rowIndex = index - 1;
+        if (rowIndex >= 0 && rowIndex < int(m_rowData.rows().size()))
+            lanes.push_back(m_rowData.rowIdentity(m_rowData.rows()[std::size_t(rowIndex)]));
+    }
+    m_page->publishTimeSelection(first, last, lanes, tempo);
+    if (tempo && lanes.empty())
+        m_page->announce(tr("Tempo range [%1, %2)").arg(first).arg(last));
+    else
+        m_page->announce(tr("Automation range [%1, %2)").arg(first).arg(last));
 }
 
 void AutomationCanvas::showTimeSelectionMenu(const QPoint &globalPosition)

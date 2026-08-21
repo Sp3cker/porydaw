@@ -78,31 +78,27 @@ void checkAutomationPencilTransactions(AutomationGestureCheckRig &rig,
     check(emptyLaneBefore.lanePoints.empty(),
           QStringLiteral("CC 11 empty-lane fixture unexpectedly contains document points"));
 
-    const int lfoRowBefore = rig.rowIndex(rig.lfo);
+    const auto lfoHandleBefore = rig.handleFor(rig.lfo);
     QImage lfoTitleBefore;
-    if (lfoRowBefore >= 0) {
-        const auto projection = rig.projection();
-        const auto &rows = rig.canvas().rows();
+    if (lfoHandleBefore.valid()) {
+        const QRect lfoBody = rig.bodyFor(lfoHandleBefore);
         lfoTitleBefore =
             rig.canvas()
-                .grab(QRect(0, projection.rowTop(lfoRowBefore), rig.canvas().plotOrigin(),
-                            projection.rowHeight(rows[size_t(lfoRowBefore)])))
+                .grab(QRect(0, lfoBody.top(), rig.canvas().plotOrigin(), lfoBody.height()))
                 .toImage();
     }
     rig.page().addEmptyLane(expression.track, expression.controller);
     rig.pump();
-    const int lfoRowAfter = rig.rowIndex(rig.lfo);
+    const auto lfoHandleAfter = rig.handleFor(rig.lfo);
     QImage lfoTitleAfter;
-    if (lfoRowAfter >= 0) {
-        const auto projection = rig.projection();
-        const auto &rows = rig.canvas().rows();
+    if (lfoHandleAfter.valid()) {
+        const QRect lfoBody = rig.bodyFor(lfoHandleAfter);
         lfoTitleAfter =
             rig.canvas()
-                .grab(QRect(0, projection.rowTop(lfoRowAfter), rig.canvas().plotOrigin(),
-                            projection.rowHeight(rows[size_t(lfoRowAfter)])))
+                .grab(QRect(0, lfoBody.top(), rig.canvas().plotOrigin(), lfoBody.height()))
                 .toImage();
     }
-    check(lfoRowBefore >= 0 && lfoRowAfter >= 0 && lfoTitleBefore == lfoTitleAfter,
+    check(lfoHandleBefore.valid() && lfoHandleAfter.valid() && lfoTitleBefore == lfoTitleAfter,
           QStringLiteral("adding CC 11 changed the existing LFO lane title"));
     check(rig.rowIndex(expression) >= 0 && rowsHaveUniqueIds(),
           QStringLiteral("adding CC 11 did not create one uniquely identified automation lane"));

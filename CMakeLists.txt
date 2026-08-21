@@ -182,6 +182,8 @@ qt_add_library(porydaw_app STATIC
     src/core/songdocument_timeeditor_insert.cpp
     src/core/songdocument_tempo.cpp
     src/core/songdocument.h
+    src/core/lanemoveplan.cpp
+    src/core/lanemoveplan.h
     src/porydaw_scale.cpp
     src/porydaw_scale.h
     src/core/timelineplayer.cpp
@@ -310,27 +312,28 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationcanvas_menu.cpp
     src/ui/editordrawer/automationcanvas_paint.cpp
     src/ui/editordrawer/automationcanvas.h
-    src/ui/editordrawer/automationgesture.cpp
-    src/ui/editordrawer/automationgesture.h
+    src/ui/editordrawer/nodelane/gesture.cpp
+    src/ui/editordrawer/nodelane/gesture.h
     src/ui/editordrawer/nodelane/hover.cpp
     src/ui/editordrawer/nodelane/hover.h
     src/ui/editordrawer/cclanes.cpp
     src/ui/editordrawer/cclanes.h
     src/ui/editordrawer/voicechangelane.cpp
     src/ui/editordrawer/voicechangelane.h
-    src/ui/editordrawer/automationpencilgesture.cpp
-    src/ui/editordrawer/automationpencilgesture.h
+    src/ui/editordrawer/nodelane/pencilgesture.cpp
+    src/ui/editordrawer/nodelane/pencilgesture.h
     src/ui/editordrawer/automationprojection.cpp
     src/ui/editordrawer/automationprojection.h
     src/ui/editordrawer/automationpage.cpp
     src/ui/editordrawer/automationpage.h
     src/ui/editordrawer/nodelane/nodelane.cpp
     src/ui/editordrawer/nodelane/nodelane.h
+    src/ui/editordrawer/nodelane/batchcommit.cpp
+    src/ui/editordrawer/nodelane/batchcommit.h
     src/ui/editordrawer/nodelane/paint.cpp
     src/ui/editordrawer/nodelane/paint.h
     src/ui/editordrawer/nodelane/tempoadapter.cpp
     src/ui/editordrawer/tempolane.cpp
-    src/ui/editordrawer/tempolanegesture.cpp
     src/ui/editordrawer/tempolane.h
     src/ui/editordrawer/velocityarea.cpp
     src/ui/editordrawer/velocityarea.h
@@ -438,6 +441,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/renderingplayheadcheck.cpp
         src/checks/rollcheckautomation.cpp
         src/checks/rollcheckautomation_paint.cpp
+        src/checks/rollcheckautomation_popup.cpp
         src/checks/automationgesturecheck/rig.cpp
         src/checks/automationgesturecheck/runner.cpp
         src/checks/automationgesturecheck/action.cpp
@@ -445,7 +449,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automationgesturecheck/stroke.cpp
         src/checks/automationgesturecheck/ownership.cpp
         src/checks/automationgesturecheck/transactions.cpp
-        src/checks/automationgesturecheck/nodelane.cpp
+        src/checks/automationgesturecheck/parity.cpp
+        src/checks/automationgesturecheck/crosslane.cpp
         src/checks/automationgesturecheck/contract.cpp
         src/checks/automationgesturecheck/hover.cpp
         src/checks/automationgesturecheck/lifecycle.cpp

@@ -471,11 +471,53 @@ void checkReplaceSpan(const CaseContext &context)
     checkUndoRestores(context, fractionalBefore, fractionalBeforePoints, {{96, displayed}});
 }
 
+void checkMoveCollision(const CaseContext &context)
+{
+    auto &document = context.session.document;
+    auto &lane = *context.adapter.lane;
+    if (context.adapter.kind == AdapterKind::Tempo) {
+        setTempo(document, {{96, kPreservedTempoUs}, tempoAt(288, 110)});
+        const auto before = snapshot(document);
+        const auto beforePoints = lane.points();
+        const auto preservedBpm = tempoValue(kPreservedTempoUs);
+        lane.movePoints({{uint64_t{96}, NodePoint{288, preservedBpm}}});
+        expectOneEdit(context, before);
+        expectPoints(context, {{288, preservedBpm}});
+        const auto moved = document.tempoPoints();
+        report(context,
+               moved.size() == 1 && moved.front().tick == 288 &&
+                   moved.front().microsecondsPerQuarterNote == kPreservedTempoUs,
+               QStringLiteral("Tempo move onto an occupied tick did not keep exactly one "
+                              "destination with source microseconds"));
+        checkUndoRestores(context, before, beforePoints, {{288, preservedBpm}});
+        return;
+    }
+    setLaneValues(document, context.session.engineTrack, context.session.controller, {{288, 40}});
+    insertCcEvent(document, context.session.engineTrack, context.session.controller, 96, 10);
+    insertCcEvent(document, context.session.engineTrack, context.session.controller, 96, 20);
+    insertCcEvent(document, context.session.engineTrack, context.session.controller, 192, 70);
+    insertCcEvent(document, context.session.engineTrack, context.session.controller, 192, 80);
+    const auto before = snapshot(document);
+    const auto beforePoints = lane.points();
+    lane.movePoints({{uint64_t{96}, NodePoint{192, 20}}});
+    expectOneEdit(context, before);
+    expectPoints(context, {{192, 20}, {288, 40}});
+    report(context,
+           rawValuesAt(document, context.session.engineTrack, context.session.controller, 96)
+                   .empty() &&
+               rawValuesAt(document, context.session.engineTrack, context.session.controller,
+                           192) == std::vector<int>{10, 20},
+           QStringLiteral("CC move onto an occupied tick left destination ghosts or reordered the "
+                          "source group"));
+    checkUndoRestores(context, before, beforePoints, {{192, 20}, {288, 40}});
+}
+
 constexpr std::array kCases{
     Case{"points", checkEffectivePoints},
     Case{"ranges", checkRangesTextSelection},
     Case{"delete", checkDelete},
     Case{"move", checkMove},
+    Case{"move-collision", checkMoveCollision},
     Case{"replace-span", checkReplaceSpan},
 };
 
