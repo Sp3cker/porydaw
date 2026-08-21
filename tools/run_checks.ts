@@ -36,12 +36,13 @@ const decoder = new TextDecoder();
 
 function usage(): never {
   console.error(
-    "usage: deno task checks <porydaw-checks-binary> [--all|--no-windowing-checks]",
+    "usage: deno task checks <porydaw-checks-binary> [--all|--no-windowing-checks|--only=check-a,check-b]",
   );
   console.error("  --all (default): all checks");
   console.error(
     "  --no-windowing-checks: skip checks that require a window system",
   );
+  console.error("  --only=check-a,check-b: run exactly the named checks");
   Deno.exit(2);
 }
 
@@ -338,11 +339,12 @@ if (Deno.args.length < 1 || Deno.args.length > 2) {
   usage();
 }
 const selection = Deno.args[1] ?? "--all";
-const validSelections = [
-  "--all",
-  "--no-windowing-checks",
-];
-if (!validSelections.includes(selection)) {
+const onlyPrefix = "--only=";
+const isNamedSelection = selection.startsWith(onlyPrefix);
+if (
+  selection !== "--all" && selection !== "--no-windowing-checks" &&
+  !isNamedSelection
+) {
   usage();
 }
 
@@ -451,8 +453,26 @@ async function runScheduled(
 }
 
 const skipWindowSystem = selection === "--no-windowing-checks";
+const requestedNames = isNamedSelection
+  ? selection.slice(onlyPrefix.length).split(",")
+  : [];
+if (isNamedSelection) {
+  const availableNames = new Set(checkManifest.map((check) => check.name));
+  const unknownNames = requestedNames.filter(
+    (name) => name.length === 0 || !availableNames.has(name),
+  );
+  if (unknownNames.length > 0) {
+    console.error(
+      `run_checks: unknown check name(s): ${unknownNames.join(", ")}`,
+    );
+    Deno.exit(2);
+  }
+}
+const requestedNameSet = new Set(requestedNames);
 const runnableChecks = checkManifest.filter(
-  (check) => !skipWindowSystem || check.windowing !== "window-system",
+  (check) =>
+    (!skipWindowSystem || check.windowing !== "window-system") &&
+    (!isNamedSelection || requestedNameSet.has(check.name)),
 );
 try {
   const offscreenChecks = runnableChecks.filter(

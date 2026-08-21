@@ -1406,23 +1406,25 @@ void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<EditOp> modifications;
     std::vector<EditOp> insertions;
-    std::map<std::pair<size_t, uint64_t>, size_t> winners;
-    for (size_t i = 0; i < planned.size(); ++i)
-        winners[{planned[i].groupIndex, planned[i].newTick}] = i;
+    std::map<std::pair<size_t, uint64_t>, uint64_t> winningSourceTick;
+    for (const PlannedMove &move : planned)
+        winningSourceTick[{move.groupIndex, move.newTick}] = move.point.tick;
+    const auto winsDest = [&](const PlannedMove &move) {
+        return winningSourceTick[{move.groupIndex, move.newTick}] == move.point.tick;
+    };
     std::vector<std::set<size_t>> winningSources(groups.size());
-    for (const auto &entry : winners) {
-        const size_t winner = entry.second;
-        winningSources[planned[winner].groupIndex].insert(planned[winner].point.index);
+    for (const PlannedMove &move : planned) {
+        if (winsDest(move))
+            winningSources[move.groupIndex].insert(move.point.index);
     }
-    for (size_t i = 0; i < planned.size(); ++i) {
-        const PlannedMove &move = planned[i];
-        if (winners[{move.groupIndex, move.newTick}] != i)
+    for (const PlannedMove &move : planned) {
+        if (!winsDest(move))
             removals[size_t(groups[move.groupIndex].smfTrack)].push_back(move.point.index);
     }
     for (size_t i = 0; i < planned.size(); ++i) {
         const PlannedMove &move = planned[i];
         const LaneGroup &group = groups[move.groupIndex];
-        if (winners[{move.groupIndex, move.newTick}] != i)
+        if (!winsDest(move))
             continue;
         bool shadowed = false;
         const auto occupied = group.pointsByTick.find(move.newTick);
