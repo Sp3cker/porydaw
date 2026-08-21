@@ -1,5 +1,6 @@
 #include "rig.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include <QAction>
@@ -134,16 +135,28 @@ AutomationGestureCheckRig::pointAt(const Lane &lane, double tick, int value) con
     return {position, proj.pointerMapping(index, position.x(), position.y())};
 }
 
+QRect AutomationGestureCheckRig::voiceBounds() const
+{
+    const auto currentGeometry = geometry();
+    const int shared = m_page->automationViewState().laneHeight > 0
+                           ? m_page->automationViewState().laneHeight
+                           : currentGeometry.rowDefaultHeight;
+    const int height =
+        std::clamp(shared, currentGeometry.rowMinimumHeight, currentGeometry.rowMaximumHeight);
+    const int top = canvas().contentTopInset() - height;
+    return {0, top, canvas().width(), height};
+}
+
 QPointF AutomationGestureCheckRig::tempoHeaderPoint() const
 {
     const auto currentGeometry = geometry();
-    return {currentGeometry.plotOrigin / 2.0, canvas().contentTopInset() / 2.0};
+    return {currentGeometry.plotOrigin / 2.0, voiceBounds().top() / 2.0};
 }
 
 QPointF AutomationGestureCheckRig::tempoBodyPoint(double tick, int bpm) const
 {
     const auto currentGeometry = geometry();
-    const QRect body(0, 0, canvas().width(), canvas().contentTopInset());
+    const QRect body(0, 0, canvas().width(), voiceBounds().top());
     return {m_view->displayX(tick, currentGeometry.plotOrigin, canvas().devicePixelRatioF()),
             AutomationProjection::valueY(body, currentGeometry, CoreTimeDefaults::kMinTempoBpm,
                                          CoreTimeDefaults::kMaxTempoBpm, bpm)};
@@ -258,7 +271,7 @@ bool AutomationGestureCheckRig::initialize(const SongInfo &song, QString &error)
     }
     m_document->addLanePoint(volume.track, volume.controller, 24, 32);
     m_document->writeLanePoints(lfo.track, lfo.controller, 96, 96, {{96, 32}, {96, 96}});
-    m_document->addLanePoint(voice.track, voice.controller, 24, 3);
+    m_document->addLanePoint(0, DOC_CC_VOICE, 24, 3);
     m_voicegroup = std::make_unique<LoadedVoiceGroup>();
     m_voicegroup->voices[3].type = VOICE_NOISE;
     std::strncpy(m_voicegroup->voiceNames[3], "automation-voice",

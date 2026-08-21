@@ -1,42 +1,25 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
-#include <optional>
 #include <utility>
 #include <vector>
 
-#include <QColor>
-#include <QFont>
 #include <QPointF>
 #include <QString>
 
-#include "core/songdocument.h"
-#include "ui/editordrawer/automationgesture.h"
-#include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
-#include "ui/editorviewstate.h"
-#include "ui/songviewmodel.h"
 
-extern "C" {
-#include "voicegroup_loader.h"
-}
-
-class AutomationCanvas;
 class AutomationPage;
+class AutomationProjection;
+class SongDocument;
+struct AutomationGeometry;
+struct AutomationRow;
+struct DocLanePoint;
+struct LanePoint;
+
 namespace songview {
 class EditorSelectionModel;
 }
-struct LaneNodeIdentity {
-    int engineTrack = -1;
-    uint8_t controller = 0;
-    DocLanePoint documentPoint;
-};
-
-struct LaneNodeDragState {
-    NodeDragGesture gesture;
-    std::vector<LaneNodeIdentity> identities;
-};
 
 class CCLaneAdapter final : public NodeLane
 {
@@ -62,28 +45,36 @@ class CCLaneAdapter final : public NodeLane
     uint8_t m_controller = 0;
 };
 
-// Row data and caches for the automation canvas. It owns the stable row
-// snapshot used by painting and input throughout an AutomationCanvas frame.
-class AutomationRows final
+// CC lane table and CCLaneAdapter for the automation canvas. It owns the
+// stable CC-row snapshot used by painting and input throughout an
+// AutomationCanvas frame.
+class CCLanes final
 {
   public:
     struct TimeSelection {
-        SongDocument::TimeRange range;
-        SongDocument::TimeScope scope;
+        uint64_t startTick = 0;
+        uint64_t endTick = 0;
+        std::vector<std::pair<int, uint8_t>> lanes;
         int firstRow = -1;
         int lastRow = -1;
 
-        bool active() const noexcept
+        bool empty() const noexcept { return endTick <= startTick; }
+        bool contains(uint64_t tick) const noexcept { return tick >= startTick && tick < endTick; }
+        bool coversLane(int engineTrack, uint8_t cc) const noexcept
         {
-            return !range.empty() && firstRow >= 0 && !scope.lanes.empty();
+            for (const auto &lane : lanes) {
+                if (lane.first == engineTrack && lane.second == cc)
+                    return true;
+            }
+            return false;
         }
+        bool active() const noexcept { return !empty() && firstRow >= 0 && !lanes.empty(); }
     };
 
     enum class SummaryKind : uint8_t {
         None,
         Points,
         EmptyControl,
-        VoiceChanges,
     };
 
     struct RowTextCache {
@@ -93,25 +84,18 @@ class AutomationRows final
         std::size_t pointCount = 0;
         int minimum = 0;
         int maximum = 0;
-        int changeCount = 0;
     };
 
     struct ValueTextCache {
-        EditorAutomationRowId row;
+        int track = -1;
+        uint8_t controller = 0;
         int value = 0;
         QString text;
         bool valid = false;
     };
 
-    struct VoicePaintText {
-        const LoadedVoiceGroup *group = nullptr;
-        int type = -1;
-        std::array<char, VG_VOICE_NAME_LEN> sourceName{};
-        QString label;
-        QString hoverLabel;
-    };
-
-    explicit AutomationRows(AutomationPage *page) noexcept;
+    explicit CCLanes(AutomationPage *page) noexcept;
+    ~CCLanes();
 
     const std::vector<AutomationRow> &rows() const noexcept { return m_rows; }
     const std::vector<RowTextCache> &rowText() const noexcept { return m_rowText; }
@@ -121,14 +105,12 @@ class AutomationRows final
 
     void rebuildRows();
     void syncTimeSelection();
-    void applyHeight(AutomationCanvas &area, const AutomationGeometry &geometry,
-                     int topInset) const;
+    int minimumHeight(const AutomationGeometry &geometry, int topInset) const;
     bool clearTimeSelection();
 
     const std::vector<LanePoint> &pointsFor(const AutomationRow &row,
                                             const AutomationProjection &projection) const;
     QString titleFor(const AutomationRow &row) const;
-    const VoicePaintText &voicePaintTextFor(int program) const;
     QString valueTextFor(const AutomationRow &row, int value) const;
     bool rowTarget(const AutomationRow &row, int *track, uint8_t *controller) const;
     std::pair<int, uint8_t> rowIdentity(const AutomationRow &row) const;
@@ -137,14 +119,9 @@ class AutomationRows final
                            qreal devicePixelRatio) const;
     bool pointInTimeSelection(int rowIndex, uint64_t tick) const;
     bool selectionHasMultipleNodes() const;
-    LaneNodeDragState collectSelectedNodeDrags(const AutomationProjection &projection) const;
     bool cachedPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
                         const AutomationProjection &projection, const AutomationGeometry &geometry,
                         qreal devicePixelRatio, DocLanePoint *hit) const;
-    std::optional<LaneNodeDragState>
-    nodeDragGestureAt(int rowIndex, const QPointF &position, bool axisLockArmed,
-                      const AutomationProjection &projection, bool pencilMode,
-                      const AutomationGeometry &geometry, qreal devicePixelRatio) const;
 
   private:
     AutomationPage *m_page = nullptr;
@@ -152,5 +129,4 @@ class AutomationRows final
     std::vector<RowTextCache> m_rowText;
     TimeSelection m_timeSelection;
     mutable ValueTextCache m_valueTextCache;
-    mutable std::array<VoicePaintText, VOICEGROUP_SIZE> m_voicePaintTexts;
 };

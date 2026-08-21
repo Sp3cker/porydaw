@@ -5,18 +5,23 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDialog>
+#include <QDir>
 #include <QEventLoop>
+#include <QFileInfo>
+#include <QImage>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QListWidget>
 #include <QMenu>
 #include <QMouseEvent>
+#include <QPixmap>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QStringList>
@@ -29,8 +34,11 @@
 #include "ui/editordrawer/automationgesture.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
+#include "ui/editordrawer/voicechangelane.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+
+static_assert(!std::is_base_of_v<NodeLane, VoiceChangeLane>);
 
 namespace {
 
@@ -113,7 +121,7 @@ int automationRowsHeight(const AutomationPage &page)
     const auto &state = page.automationViewState();
     const auto expected = expectedAutomationGeometry();
     const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
-    int height = expected.addLaneStripHeight;
+    int height = page.canvas()->contentTopInset();
     for (const auto &row : page.canvas()->rows()) {
         const auto it = state.laneHeights.find(row.id);
         height += std::clamp(it == state.laneHeights.cend() ? shared : it->second,
@@ -126,7 +134,7 @@ int automationRowTop(const AutomationPage &page, const EditorAutomationRowId &id
     const auto &state = page.automationViewState();
     const auto expected = expectedAutomationGeometry();
     const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
-    int top = expected.addLaneStripHeight;
+    int top = page.canvas()->contentTopInset();
     for (const auto &row : page.canvas()->rows()) {
         if (row.id == id)
             return top;
@@ -135,6 +143,22 @@ int automationRowTop(const AutomationPage &page, const EditorAutomationRowId &id
                           expected.minimumRowHeight, expected.maximumRowHeight);
     }
     return -1;
+}
+QRect automationVoiceRect(const AutomationPage &page)
+{
+    const auto &state = page.automationViewState();
+    const auto expected = expectedAutomationGeometry();
+    const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
+    const int height = std::clamp(shared, expected.minimumRowHeight, expected.maximumRowHeight);
+    return {0, page.canvas()->contentTopInset() - height, page.canvas()->width(), height};
+}
+QRect automationVoiceDeviceRect(AutomationPage &page, qreal dpr)
+{
+    const QRect voice = automationVoiceRect(page);
+    const QPoint origin = page.canvas()->mapTo(&page, QPoint(0, 0));
+    const QRect pageVoice = voice.translated(origin);
+    return {qRound(pageVoice.x() * dpr), qRound(pageVoice.y() * dpr),
+            qRound(pageVoice.width() * dpr), qRound(pageVoice.height() * dpr)};
 }
 } // namespace
 
@@ -190,7 +214,6 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, 0, 10};
     const EditorAutomationRowId lfo{EditorAutomationRowKind::ControlChange, 0, 21};
     const EditorAutomationRowId modulation{EditorAutomationRowKind::ControlChange, 0, 20};
-    const EditorAutomationRowId voiceRow{EditorAutomationRowKind::Voice, 0, DOC_CC_VOICE};
     state.hideLane(volume);
     state.emptyLanes.insert(pan);
     state.laneHeights[lfo] = expected.defaultRowHeight + 5;
@@ -473,8 +496,13 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
               QStringLiteral("empty held-span deletion was treated as unchanged"));
     }
     const auto &rows = page.canvas()->rows();
-    check(!rows.empty() && rows.front().id == voiceRow,
-          QStringLiteral("document-backed voice row is not the first generic automation row"));
+    const QRect voiceRect = automationVoiceRect(page);
+    const bool voiceIsCcRow = std::any_of(rows.cbegin(), rows.cend(), [](const AutomationRow &row) {
+        return row.id.controller == DOC_CC_VOICE;
+    });
+    check(!rows.empty() && !voiceIsCcRow && !voiceRect.isEmpty() &&
+              voiceRect.bottom() < page.canvas()->contentTopInset(),
+          QStringLiteral("Voice Change is missing or hit-tested as a NodeLane/CC row"));
     check(!rowExists(rows, EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}),
           QStringLiteral("Tempo should not be a generic automation row"));
     check(!rowExists(rows, volume), QStringLiteral("hidden lane remained visible"));
@@ -492,10 +520,27 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         return std::clamp(it == state.laneHeights.cend() ? shared : it->second,
                           expected.minimumRowHeight, expected.maximumRowHeight);
     };
-    const int voiceTop = automationRowTop(page, voiceRow);
-    const int voiceHeight = heightFor(voiceRow);
+    const int voiceTop = voiceRect.top();
+    const int voiceHeight = voiceRect.height();
     const int lfoTop = automationRowTop(page, lfo);
     const int lfoHeight = heightFor(lfo);
+    const QByteArray voiceGestureMidi = document.smf().write();
+    const uint64_t voiceGestureRevision = document.revision();
+    const int voiceGestureUndo = document.undoStack()->index();
+    const QPoint voiceGestureStart(expected.plotOrigin + 40, voiceTop + voiceHeight / 2);
+    sendMouse(page.canvas(), QEvent::MouseButtonPress, voiceGestureStart, Qt::LeftButton,
+              Qt::LeftButton);
+    sendMouse(page.canvas(), QEvent::MouseMove, voiceGestureStart + QPoint(48, 6), Qt::NoButton,
+              Qt::LeftButton);
+    sendMouse(page.canvas(), QEvent::MouseButtonRelease, voiceGestureStart + QPoint(48, 6),
+              Qt::LeftButton, Qt::NoButton);
+    QCoreApplication::processEvents();
+    check(document.smf().write() == voiceGestureMidi &&
+              document.revision() == voiceGestureRevision &&
+              document.undoStack()->index() == voiceGestureUndo && !page.canvas()->isPanning() &&
+              !page.canvas()->bandPreviewContainsRow(0) && !view.userGestureActive() &&
+              !view.selectionModel().timeSelection().active(),
+          QStringLiteral("Voice Change entered a NodeLane gesture"));
     const int voicePointX =
         qRound(expected.plotOrigin + 24.0 * live.timeZoom / timeline->ticksPerBeat);
     QTimer::singleShot(0, [] {
@@ -505,8 +550,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             dialog->accept();
         }
     });
-    sendMouse(page.canvas(), QEvent::MouseButtonPress,
+    sendMouse(page.canvas(), QEvent::MouseButtonDblClick,
               QPoint(voicePointX, voiceTop + voiceHeight / 2), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(page.canvas(), QEvent::MouseButtonRelease,
+              QPoint(voicePointX, voiceTop + voiceHeight / 2), Qt::LeftButton, Qt::NoButton);
     QCoreApplication::processEvents();
     DocLanePoint updatedVoice;
     check(document.findLanePoint(0, DOC_CC_VOICE, 24, &updatedVoice) && updatedVoice.value == 4,
@@ -1465,8 +1512,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         QCoreApplication::processEvents();
     }
 
-    const QPoint voiceHover(expected.plotOrigin + 96,
-                            automationRowTop(page, voiceRow) + heightFor(voiceRow) / 2);
+    const QPoint voiceHover(expected.plotOrigin + 96, voiceTop + voiceHeight / 2);
     sendMouse(page.canvas(), QEvent::MouseMove, voiceHover, Qt::NoButton, Qt::NoButton);
     page.canvas()->grab();
     const double hoverTick =
@@ -1547,7 +1593,33 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
               page.automationViewState().isLaneHidden(volume),
           QStringLiteral("document refresh did not retain surviving typed row state"));
     const char *checkName = popupMenus ? "automation-popup-check" : "automation-check";
-    if (!screenshotPath.isEmpty()) {
+    if (!screenshotPath.isEmpty() && !popupMenus) {
+        const QPixmap grabbed = page.grab();
+        const QImage current = grabbed.toImage();
+        const qreal dpr = grabbed.devicePixelRatio();
+        const QRect crop = automationVoiceDeviceRect(page, dpr);
+        const QFileInfo imageFile(screenshotPath);
+        if (!imageFile.exists()) {
+            QDir().mkpath(imageFile.absolutePath());
+            check(current.save(screenshotPath),
+                  QStringLiteral("could not write automation baseline image"));
+            std::printf("%s: wrote %s\n", checkName, qUtf8Printable(screenshotPath));
+        } else {
+            const QImage baseline(screenshotPath);
+            const QImage baselineVoice =
+                baseline.copy(crop).convertToFormat(QImage::Format_ARGB32_Premultiplied);
+            const QImage currentVoice =
+                current.copy(crop).convertToFormat(QImage::Format_ARGB32_Premultiplied);
+            if (baseline.isNull() || baseline.size() != current.size() || crop.isEmpty() ||
+                !current.rect().contains(crop) || !baseline.rect().contains(crop) ||
+                baselineVoice != currentVoice) {
+                QDir().mkpath(QStringLiteral("build/check-artifacts"));
+                current.save(QStringLiteral("build/check-artifacts/voice-lane-phase2-current.png"));
+                recordFailure(QStringLiteral(
+                    "Voice Change canvas region did not match the phase-1 baseline"));
+            }
+        }
+    } else if (!screenshotPath.isEmpty()) {
         page.grab().toImage().save(screenshotPath);
         std::printf("%s: wrote %s\n", checkName, qUtf8Printable(screenshotPath));
     }

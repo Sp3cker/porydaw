@@ -91,12 +91,8 @@ std::optional<EditorAutomationRowId> decodeRowId(const QString &key)
     const QStringView text(key);
     if (text == QLatin1String("tempo"))
         return EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0};
-    if (text.startsWith(QLatin1String("voice:"))) {
-        const auto track = decodeRowNumber(text.mid(6), 15);
-        if (track)
-            return EditorAutomationRowId{EditorAutomationRowKind::Voice, uint8_t(*track), 0};
+    if (text.startsWith(QLatin1String("voice:")))
         return std::nullopt;
-    }
     if (!text.startsWith(QLatin1String("cc:")))
         return std::nullopt;
     const qsizetype separator = text.indexOf(QLatin1Char(':'), 3);
@@ -115,8 +111,6 @@ bool isValidRowId(const EditorAutomationRowId &row)
     switch (row.kind) {
     case EditorAutomationRowKind::Tempo:
         return row.track == 0 && row.controller == 0;
-    case EditorAutomationRowKind::Voice:
-        return row.track < 16 && row.controller == 0;
     case EditorAutomationRowKind::ControlChange:
         return row.track < 16 && isControllerNumber(row.controller);
     }
@@ -130,8 +124,6 @@ QString encodeRowId(const EditorAutomationRowId &row)
     switch (row.kind) {
     case EditorAutomationRowKind::Tempo:
         return QStringLiteral("tempo");
-    case EditorAutomationRowKind::Voice:
-        return QStringLiteral("voice:%1").arg(row.track);
     case EditorAutomationRowKind::ControlChange:
         return QStringLiteral("cc:%1:%2").arg(row.track).arg(row.controller);
     }

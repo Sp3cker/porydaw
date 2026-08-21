@@ -61,7 +61,7 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
                 return ev.type == TIMELINE_EVT_TEMPO;
             }));
         size_t lanePoints = 0;
-        for (const AutoLane &lane : model.lanes)
+        for (const CcLane &lane : model.lanes)
             lanePoints += lane.points.size();
         const size_t stripFromEvents = model.strip.size() - tl->otherEvents.size();
         const size_t offEvents =

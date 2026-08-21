@@ -1,19 +1,16 @@
 #include "ui/editordrawer/automationpaint.h"
 
 #include <algorithm>
-#include <cmath>
 
-#include <QFontMetricsF>
 #include <QLineF>
 #include <QPainter>
 #include <QPen>
-#include <limits>
 
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationhover.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationpencilgesture.h"
-#include "ui/editordrawer/automationrows.h"
+#include "ui/editordrawer/cclanes.h"
 #include "ui/layout.h"
 #include "ui/selectionreticle.h"
 #include "ui/theme/themeruntime.h"
@@ -105,7 +102,7 @@ void paintSelectionReticle(QPainter &painter, const TickRange &range,
 void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
               const QFont &titleFont, const QFont &captionFont, const QRect &primaryTextBox,
               const QRect &secondaryTextBox, AutomationCanvas &area, AutomationPage &page,
-              const AutomationGeometry &geometry, AutomationRows &rows,
+              const AutomationGeometry &geometry, CCLanes &rows,
               const AutomationHoverState &hoverState,
               const std::optional<ActiveGesture> &activeGesture, bool pencilMode)
 {
@@ -132,14 +129,14 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
         const std::size_t pointCount = points.size();
         const int minimum = proj.rowMinimum(row);
         const int maximum = proj.rowMaximum(row);
-        if (rowText.summaryKind != AutomationRows::SummaryKind::Points ||
+        if (rowText.summaryKind != CCLanes::SummaryKind::Points ||
             rowText.pointCount != pointCount || rowText.minimum != minimum ||
             rowText.maximum != maximum) {
             rowText.secondary = AutomationCanvas::tr("%1 points · %2..%3")
                                     .arg(pointCount)
                                     .arg(minimum)
                                     .arg(maximum);
-            rowText.summaryKind = AutomationRows::SummaryKind::Points;
+            rowText.summaryKind = CCLanes::SummaryKind::Points;
             rowText.pointCount = pointCount;
             rowText.minimum = minimum;
             rowText.maximum = maximum;
@@ -147,25 +144,9 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
         painter.setPen(themes::color(themes::Role::song_view_secondary_text));
         painter.drawText(secondaryTextBox, Qt::AlignLeft | Qt::AlignVCenter, rowText.secondary);
     } else if (row.id.kind == EditorAutomationRowKind::ControlChange) {
-        if (rowText.summaryKind != AutomationRows::SummaryKind::EmptyControl) {
+        if (rowText.summaryKind != CCLanes::SummaryKind::EmptyControl) {
             rowText.secondary = AutomationCanvas::tr("empty · click to add points");
-            rowText.summaryKind = AutomationRows::SummaryKind::EmptyControl;
-        }
-        painter.setPen(themes::color(themes::Role::song_view_secondary_text));
-        painter.drawText(secondaryTextBox, Qt::AlignLeft | Qt::AlignVCenter, rowText.secondary);
-    } else if (row.id.kind == EditorAutomationRowKind::Voice && page.document()) {
-        const int changeCount = int(
-            std::count_if(page.model().voices.cbegin(), page.model().voices.cend(),
-                          [&page](const VoiceChange &change) {
-                              return change.track == page.m_owner.selectionModel().primaryTrack();
-                          }));
-        if (rowText.summaryKind != AutomationRows::SummaryKind::VoiceChanges ||
-            rowText.changeCount != changeCount) {
-            rowText.secondary = changeCount ? AutomationCanvas::tr("%n change(s) · click to edit",
-                                                                   nullptr, changeCount)
-                                            : AutomationCanvas::tr("no voice set · click to add");
-            rowText.summaryKind = AutomationRows::SummaryKind::VoiceChanges;
-            rowText.changeCount = changeCount;
+            rowText.summaryKind = CCLanes::SummaryKind::EmptyControl;
         }
         painter.setPen(themes::color(themes::Role::song_view_secondary_text));
         painter.drawText(secondaryTextBox, Qt::AlignLeft | Qt::AlignVCenter, rowText.secondary);
@@ -175,49 +156,12 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
     const qreal dpr = painter.device()->devicePixelRatioF();
     const bool hostPaintedGrid = page.paintGrid(painter, plot, geometry.plotOrigin);
     if (!hostPaintedGrid) {
-        const uint64_t length = page.timeline()->lengthTicks;
-        const double pxPerTick =
-            page.pxPerBeat() / double(std::max(1u, page.timeline()->ticksPerBeat));
-        if (row.id.kind == EditorAutomationRowKind::Voice) {
-            if (page.ready()) {
-                QColor subdivision = themes::color(themes::Role::song_view_grid);
-                subdivision.setAlpha((subdivision.alpha() * 125 + 127) / 255);
-                painter.setPen(QPen(subdivision, layout::singlePixel()));
-                const double firstVisibleTick =
-                    std::max(0.0, page.tickAtContentX(layout::space(layout::Space::Zero)));
-                for (uint64_t tick = page.snapTick(firstVisibleTick, false);;) {
-                    const auto state = page.gridState(tick, false);
-                    const qreal x = page.displayX(tick, geometry.plotOrigin, dpr);
-                    if (x > plot.right())
-                        break;
-                    if (state.snapTicks < state.gridTicks &&
-                        pxPerTick * double(state.snapTicks) >= geometry.gridMinimumCellWidth &&
-                        x >= plot.left())
-                        painter.drawLine(QPointF(x, plot.top()), QPointF(x, plot.bottom()));
-                    if (tick >= length)
-                        break;
-                    const uint64_t next = page.snapTick(
-                        double(tick) + double(std::max<uint64_t>(1, state.snapTicks)) * 0.75,
-                        false);
-                    if (next <= tick)
-                        break;
-                    tick = std::min(next, length);
-                }
-            }
-        }
         paintPlainGridFallback(painter, plot, page, geometry.plotOrigin, dpr);
     }
-    if (row.id.kind == EditorAutomationRowKind::Voice) {
-        painter.setFont(captionFont);
-        paintVoiceRow(painter, plot, page, geometry, rows);
-    } else {
-        const auto paintUnchangedCurve = [&] {
-            paintCurve(painter, ctx, area, page, geometry, rows);
-        };
-        if (activeGesture) {
-            std::visit(
-                Visitor{
-                    [&](const NodeDragGesture &gesture) {
+    const auto paintUnchangedCurve = [&] { paintCurve(painter, ctx, area, page, geometry, rows); };
+    if (activeGesture) {
+        std::visit(
+            Visitor{[&](const NodeDragGesture &gesture) {
                         if (gesture.points.size() > 1) {
                             if (rowIndex < int(gesture.previewPoints.size()) &&
                                 !gesture.previewPoints[rowIndex].empty()) {
@@ -256,24 +200,22 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
                         else
                             paintUnchangedCurve();
                     }},
-                *activeGesture);
-        } else {
-            paintUnchangedCurve();
-        }
-        if (rowIndex == hoverState.hover.row && hoverState.hover.hasPoint) {
-            const qreal nodeRadius =
-                geometry.nodePaintRadius + geometry.nodeOutlineDipWidth + layout::singlePixel();
-            const QPointF center(
-                page.displayX(hoverState.hover.point.tick, geometry.plotOrigin, dpr),
-                proj.pointY(row, rowIndex, hoverState.hover.point.value));
-            const bool antialiasing = painter.testRenderHint(QPainter::Antialiasing);
-            painter.setRenderHint(QPainter::Antialiasing, true);
-            painter.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline),
-                                2 * layout::singlePixel()));
-            painter.setBrush(Qt::NoBrush);
-            painter.drawEllipse(center, nodeRadius, nodeRadius);
-            painter.setRenderHint(QPainter::Antialiasing, antialiasing);
-        }
+            *activeGesture);
+    } else {
+        paintUnchangedCurve();
+    }
+    if (rowIndex == hoverState.hover.row && hoverState.hover.hasPoint) {
+        const qreal nodeRadius =
+            geometry.nodePaintRadius + geometry.nodeOutlineDipWidth + layout::singlePixel();
+        const QPointF center(page.displayX(hoverState.hover.point.tick, geometry.plotOrigin, dpr),
+                             proj.pointY(row, rowIndex, hoverState.hover.point.value));
+        const bool antialiasing = painter.testRenderHint(QPainter::Antialiasing);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline),
+                            2 * layout::singlePixel()));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawEllipse(center, nodeRadius, nodeRadius);
+        painter.setRenderHint(QPainter::Antialiasing, antialiasing);
     }
     if (activeGesture) {
         const auto valueY = [&](int value) { return proj.pointY(row, rowIndex, value); };
@@ -334,8 +276,7 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
 }
 
 void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationCanvas &area,
-                AutomationPage &page, const AutomationGeometry &geometry,
-                const AutomationRows &rows)
+                AutomationPage &page, const AutomationGeometry &geometry, const CCLanes &rows)
 {
     const std::vector<LanePoint> &points = ctx.points;
     if (points.empty())
@@ -386,8 +327,7 @@ void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationCanvas &
 }
 
 void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationCanvas &area,
-                     AutomationPage &page, const AutomationGeometry &geometry,
-                     const AutomationRows &rows)
+                     AutomationPage &page, const AutomationGeometry &geometry, const CCLanes &rows)
 {
     const AutomationProjection &proj = ctx.proj;
     const AutomationRow &row = ctx.row;
@@ -432,97 +372,6 @@ void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationCan
     };
     paintPass(false);
     paintPass(true);
-}
-
-namespace {
-struct VoiceLabelLayout {
-    QString text;
-    QRectF rect;
-    bool offscreen = true;
-};
-
-template <typename DisplayX>
-std::vector<VoiceLabelLayout>
-layoutVoiceLabels(const QRect &plot, const SongViewModel &model, int track,
-                  const AutomationRows &rows, const QFontMetricsF &fm, qreal pad, qreal gap,
-                  qreal stairStep, bool canStair, qreal centerY, DisplayX &&displayX)
-{
-    std::vector<VoiceLabelLayout> out;
-    out.reserve(model.voices.size());
-    qreal lastXEnd = -std::numeric_limits<qreal>::infinity();
-    bool stairUp = true;
-    for (const auto &change : model.voices) {
-        if (change.track != track)
-            continue;
-        const qreal labelX = displayX(change.tick) + pad;
-        QString text = rows.voicePaintTextFor(change.program).label;
-        if (text.isEmpty())
-            text = AutomationCanvas::tr("No voice");
-        const qreal maxW = std::max<qreal>(0, plot.right() - labelX);
-        if (fm.horizontalAdvance(text) > maxW && maxW > 0)
-            text = fm.elidedText(text, Qt::ElideRight, int(std::floor(maxW)));
-        const qreal w = std::min(fm.horizontalAdvance(text), maxW);
-        const bool offscreen = labelX + w < plot.left() || labelX > plot.right() || w <= 0;
-        qreal y = centerY;
-        if (!offscreen) {
-            const bool close = labelX < lastXEnd + gap;
-            if (close && canStair)
-                stairUp = !stairUp;
-            else
-                stairUp = true;
-            if (close && canStair)
-                y = stairUp ? centerY - stairStep : centerY + stairStep;
-            y = std::clamp(y, qreal(plot.top()) + pad, qreal(plot.bottom()) - fm.height() - pad);
-            lastXEnd = labelX + w + gap;
-        }
-        out.push_back({std::move(text), QRectF(labelX, y, w, fm.height()), offscreen});
-    }
-    return out;
-}
-} // namespace
-
-void paintVoiceRow(QPainter &painter, const QRect &plot, AutomationPage &page,
-                   const AutomationGeometry &geometry, AutomationRows &rows)
-{
-    const int track = page.m_owner.selectionModel().primaryTrack();
-    const auto &live = page.liveState();
-    const double contextTick =
-        live.playback.playing ? live.playback.playheadTick : double(live.editCursorTick);
-    const auto context =
-        page.voiceContext(static_cast<uint64_t>(std::round(std::max(0.0, contextTick))));
-    const QString contextText = context.voiceSlot >= 0 && context.voiceSlot < VOICEGROUP_SIZE
-                                    ? rows.voicePaintTextFor(context.voiceSlot).label
-                                    : AutomationCanvas::tr("No voice");
-    painter.setPen(themes::color(themes::Role::song_view_secondary_text));
-    painter.drawText(
-        plot.adjusted(layout::space(layout::Space::One), layout::space(layout::Space::Zero),
-                      -layout::space(layout::Space::One), layout::space(layout::Space::Zero)),
-        Qt::AlignRight | Qt::AlignVCenter, contextText);
-    const qreal dpr = painter.device()->devicePixelRatioF();
-    const qreal pad = layout::space(layout::Space::One);
-    const qreal gap =
-        std::max<qreal>(geometry.hoverPaintPadding, layout::space(layout::Space::One));
-    const QFontMetricsF fm(painter.font());
-    const qreal labelH = fm.height();
-    const qreal centerY = plot.center().y() - labelH / 2.0;
-    const qreal stairStep = std::min<qreal>(layout::space(layout::Space::Four),
-                                            (plot.height() - labelH - 2 * pad) / 2.0);
-    const bool canStair = stairStep > 1.0;
-    auto displayX = [&](uint32_t tick) { return page.displayX(tick, geometry.plotOrigin, dpr); };
-    const auto layouts = layoutVoiceLabels(plot, page.model(), track, rows, fm, pad, gap, stairStep,
-                                           canStair, centerY, displayX);
-    const QColor trackColor = themes::trackIdentityColor(track % themes::trackIdentityColorCount);
-    const qreal markerW = layout::singlePixel() + layout::singlePixel();
-    for (const auto &lt : layouts) {
-        const qreal x = lt.rect.left() - pad;
-        painter.setPen(QPen(trackColor, markerW));
-        painter.drawLine(QPointF(x, plot.top() + pad), QPointF(x, plot.bottom() - pad));
-    }
-    const QColor primary = themes::color(themes::Role::song_view_primary_text);
-    painter.setPen(primary);
-    for (const auto &lt : layouts)
-        if (!lt.offscreen)
-            painter.drawText(lt.rect, Qt::AlignLeft | Qt::AlignVCenter, lt.text);
 }
 
 } // namespace automation::paint

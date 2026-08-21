@@ -5,10 +5,9 @@
 
 namespace {
 
-AutoLane &laneFor(SongViewModel &model, uint8_t track, uint8_t cc, M4aLane lane,
-                  const QString &name)
+CcLane &laneFor(SongViewModel &model, uint8_t track, uint8_t cc, M4aLane lane, const QString &name)
 {
-    for (AutoLane &l : model.lanes)
+    for (CcLane &l : model.lanes)
         if (l.track == track && l.cc == cc)
             return l;
     model.lanes.push_back({track, cc, lane, name, {}});
@@ -110,12 +109,11 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
 
     // Stable lane order: by track, then §4.2 table order via CC number
     // (bend sorts last as 0xFF, which matches the table's row order).
-    std::stable_sort(model.lanes.begin(), model.lanes.end(),
-                     [](const AutoLane &a, const AutoLane &b) {
-                         if (a.track != b.track)
-                             return a.track < b.track;
-                         return a.cc < b.cc;
-                     });
+    std::stable_sort(model.lanes.begin(), model.lanes.end(), [](const CcLane &a, const CcLane &b) {
+        if (a.track != b.track)
+            return a.track < b.track;
+        return a.cc < b.cc;
+    });
 
     return model;
 }

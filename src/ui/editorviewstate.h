@@ -16,7 +16,6 @@ enum class EditorDrawerPage : uint8_t {
 
 enum class EditorAutomationRowKind : uint8_t {
     Tempo,
-    Voice,
     ControlChange,
 };
 

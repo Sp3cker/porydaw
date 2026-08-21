@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <variant>
 
 #include "core/songdocument.h"
@@ -156,14 +157,12 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
             if (finish.dTick != 0 && finish.selectionDrag) {
                 const auto &selection = m_rowData.timeSelection();
                 if (selection.active()) {
-                    auto moved = selection.range;
-                    moved.startTick =
-                        uint64_t(std::max<int64_t>(0, int64_t(moved.startTick) + finish.dTick));
-                    moved.endTick =
-                        uint64_t(std::max<int64_t>(0, int64_t(moved.endTick) + finish.dTick));
-                    if (!moved.empty())
-                        m_page->publishTimeSelection(moved.startTick, moved.endTick,
-                                                     selection.scope.lanes);
+                    const auto startTick =
+                        uint64_t(std::max<int64_t>(0, int64_t(selection.startTick) + finish.dTick));
+                    const auto endTick =
+                        uint64_t(std::max<int64_t>(0, int64_t(selection.endTick) + finish.dTick));
+                    if (endTick > startTick)
+                        m_page->publishTimeSelection(startTick, endTick, selection.lanes);
                 }
             }
             changed = true;
@@ -205,4 +204,87 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
     }
     if (changed)
         m_page->requestRefresh();
+}
+
+LaneNodeDragState
+AutomationCanvas::collectSelectedNodeDrags(const AutomationProjection &projection) const
+{
+    LaneNodeDragState result;
+    if (!m_rowData.timeSelection().active() || !m_page || !m_page->document())
+        return result;
+    const auto &rows = m_rowData.rows();
+    for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
+        const auto lane = m_rowData.rowIdentity(rows[rowIndex]);
+        if (!m_rowData.timeSelection().coversLane(lane.first, lane.second))
+            continue;
+        int track = -1;
+        uint8_t controller = 0;
+        if (!m_rowData.rowTarget(rows[rowIndex], &track, &controller))
+            continue;
+        const auto docPoints = m_page->document()->lanePoints(track, controller);
+        for (const auto &point : docPoints) {
+            if (!m_rowData.timeSelection().contains(point.tick))
+                continue;
+            const DocLanePoint documentPoint{point.smfTrack, point.index, point.tick, point.value};
+            result.gesture.points.push_back({rowIndex,
+                                             {documentPoint.tick, documentPoint.value},
+                                             {documentPoint.tick, documentPoint.value},
+                                             projection.rowMinimum(rows[rowIndex]),
+                                             projection.rowMaximum(rows[rowIndex])});
+            result.identities.push_back({track, controller, documentPoint});
+        }
+    }
+    return result;
+}
+
+std::optional<LaneNodeDragState>
+AutomationCanvas::nodeDragGestureAt(int rowIndex, const QPointF &position, bool axisLockArmed,
+                                    const AutomationProjection &projection, bool pencilMode) const
+{
+    const auto &rows = m_rowData.rows();
+    if (rowIndex < 0 || rowIndex >= int(rows.size()) || !m_page || !m_page->document() ||
+        (pencilMode && !projection.nodeMarkersVisible()))
+        return std::nullopt;
+    DocLanePoint hit;
+    if (!m_rowData.cachedPointHit(rows[rowIndex], rowIndex, position, projection, m_geometry,
+                                  devicePixelRatioF(), &hit))
+        return std::nullopt;
+    int track = -1;
+    uint8_t controller = 0;
+    if (!m_rowData.rowTarget(rows[rowIndex], &track, &controller))
+        return std::nullopt;
+    LaneNodeDragState state;
+    state.gesture.row = rowIndex;
+    const NodeDrag grabbed{rowIndex,
+                           {hit.tick, hit.value},
+                           {hit.tick, hit.value},
+                           projection.rowMinimum(rows[rowIndex]),
+                           projection.rowMaximum(rows[rowIndex])};
+    const LaneNodeIdentity grabbedIdentity{track, controller, hit};
+    if (m_rowData.pointInTimeSelection(rowIndex, hit.tick)) {
+        auto selected = collectSelectedNodeDrags(projection);
+        const auto grabbedPosition =
+            std::find_if(selected.identities.cbegin(), selected.identities.cend(),
+                         [&hit](const LaneNodeIdentity &identity) {
+                             return identity.documentPoint.smfTrack == hit.smfTrack &&
+                                    identity.documentPoint.index == hit.index;
+                         });
+        if (grabbedPosition != selected.identities.cend()) {
+            selected.gesture.grabbedPoint = size_t(grabbedPosition - selected.identities.cbegin());
+            selected.gesture.selectionDrag = true;
+            state = std::move(selected);
+            state.gesture.row = rowIndex;
+        }
+    }
+    if (state.gesture.points.empty()) {
+        state.gesture.points.push_back(grabbed);
+        state.identities.push_back(grabbedIdentity);
+    }
+    state.gesture.drag.press(position, !axisLockArmed);
+    std::vector<std::vector<ValuePoint>> lanePointsByRow(rows.size());
+    for (size_t i = 0; i < rows.size(); ++i)
+        for (const LanePoint &point : m_rowData.pointsFor(rows[i], projection))
+            lanePointsByRow[i].push_back({point.tick, point.value});
+    state.gesture.preparePreview(rows.size(), lanePointsByRow);
+    return state;
 }

@@ -8,6 +8,7 @@
         "ASAN_OPTIONS",
         "DISPLAY",
         "LLVM_PROFILE_FILE",
+        "PORYDAW_AUTOMATION_IMAGE",
         "PORYDAW_SAMPLE_CORPUS"
       ]
     },

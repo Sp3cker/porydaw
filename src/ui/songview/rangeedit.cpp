@@ -102,7 +102,7 @@ std::vector<int> SongView::timeSelectionTracks() const
 std::vector<uint8_t> SongView::trackCcs(int track) const
 {
     std::vector<uint8_t> ccs;
-    for (const AutoLane &lane : m_model.lanes)
+    for (const CcLane &lane : m_model.lanes)
         if (lane.track == track)
             ccs.push_back(lane.cc); // LANE_CC_BEND == DOC_CC_BEND
     ccs.push_back(DOC_CC_VOICE);

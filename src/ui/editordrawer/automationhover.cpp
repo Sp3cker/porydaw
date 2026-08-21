@@ -9,7 +9,7 @@
 
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/automationrows.h"
+#include "ui/editordrawer/cclanes.h"
 #include "ui/layout.h"
 #include "ui/typography.h"
 
@@ -35,7 +35,7 @@ double AutomationHoverState::insertionTick(const AutomationProjection &projectio
     const double tick = hoverTick(projection);
     if (hover.hasPoint)
         return tick;
-    if (!pencilMode || row.id.kind == EditorAutomationRowKind::Voice)
+    if (!pencilMode)
         return double(projection.fineSnapTick(tick));
     return double(
         projection.pointerMapping(hover.row, hover.pos.x(), hover.pos.y()).cell.tickBegin);
@@ -48,7 +48,7 @@ int AutomationHoverState::hoverValue(const AutomationProjection &projection) con
                : projection.pointerMapping(hover.row, hover.pos.x(), hover.pos.y()).point.value;
 }
 
-bool AutomationHoverState::hoverValueFor(const AutomationRows &rows,
+bool AutomationHoverState::hoverValueFor(const CCLanes &rows,
                                          const AutomationProjection &projection,
                                          const AutomationRow &row, int rowIndex, double tick,
                                          bool pencilMode, int *value) const
@@ -71,41 +71,24 @@ bool AutomationHoverState::hoverValueFor(const AutomationRows &rows,
 }
 
 QString AutomationHoverState::hoverTextFor(const AutomationCanvas &area, const AutomationPage &page,
-                                           const AutomationGeometry &geometry,
-                                           const AutomationRows &rows,
+                                           const AutomationGeometry &geometry, const CCLanes &rows,
                                            const AutomationProjection &projection,
                                            const AutomationRow &row, int rowIndex, double tick,
                                            qreal x, bool pencilMode) const
 {
     if (!page.ready())
         return {};
-    if (row.id.kind == EditorAutomationRowKind::Voice) {
-        const int track = page.m_owner.selectionModel().primaryTrack();
-        if (track < 0)
-            return {};
-        if (const auto *document = page.document(); document)
-            for (const auto &point : document->lanePoints(track, DOC_CC_VOICE))
-                if (std::abs(
-                        page.displayX(point.tick, geometry.plotOrigin, area.devicePixelRatioF()) -
-                        x) <= geometry.deleteTimeRadius)
-                    return {};
-        const auto voice =
-            page.voiceContext(static_cast<uint64_t>(std::floor(std::max(0.0, tick) + 0.5)));
-        const int voiceSlot = voice.voiceSlot;
-        if (voiceSlot < 0 || voiceSlot >= VOICEGROUP_SIZE)
-            return {};
-        return rows.voicePaintTextFor(voiceSlot).hoverLabel;
-    }
     int value = 0;
     return hoverValueFor(rows, projection, row, rowIndex, tick, pencilMode, &value)
                ? rows.valueTextFor(row, value)
                : QString{};
 }
 
-const QString &AutomationHoverState::hoverTextCached(
-    const AutomationCanvas &area, const AutomationPage &page, const AutomationGeometry &geometry,
-    const AutomationRows &rows, const AutomationProjection &projection, int rowIndex, double tick,
-    qreal x, bool pencilMode) const
+const QString &
+AutomationHoverState::hoverTextCached(const AutomationCanvas &area, const AutomationPage &page,
+                                      const AutomationGeometry &geometry, const CCLanes &rows,
+                                      const AutomationProjection &projection, int rowIndex,
+                                      double tick, qreal x, bool pencilMode) const
 {
     const uint64_t revision = page.liveState().documentRevision;
     if (hoverTextRow == rowIndex && hoverTextTick == tick && hoverTextX == x &&
@@ -123,8 +106,7 @@ const QString &AutomationHoverState::hoverTextCached(
 }
 
 QRect AutomationHoverState::hoverValueRect(const AutomationCanvas &area, const AutomationPage &page,
-                                           const AutomationGeometry &geometry,
-                                           const AutomationRows &rows,
+                                           const AutomationGeometry &geometry, const CCLanes &rows,
                                            const AutomationProjection &projection,
                                            const AutomationRow &row, int rowIndex, qreal x,
                                            bool pencilMode) const
@@ -157,7 +139,7 @@ QRect AutomationHoverState::hoverValueRect(const AutomationCanvas &area, const A
 QRect AutomationHoverState::hoverPaintBounds(const AutomationCanvas &area,
                                              const AutomationPage *page,
                                              const AutomationGeometry &geometry,
-                                             const AutomationRows &rows,
+                                             const CCLanes &rows,
                                              const AutomationProjection &projection, int rowIndex,
                                              bool pencilMode) const
 {
@@ -181,7 +163,7 @@ QRect AutomationHoverState::hoverPaintBounds(const AutomationCanvas &area,
         bounds = bounds.united(QRectF(center.x() - outerRadius, center.y() - outerRadius,
                                       2 * outerRadius, 2 * outerRadius)
                                    .toAlignedRect());
-    } else if (row.id.kind != EditorAutomationRowKind::Voice && !hover.hasPoint) {
+    } else if (!hover.hasPoint) {
         const qreal outerRadius =
             geometry.nodePaintRadius + geometry.nodeOutlineDipWidth + paintPadding;
         if (pencilMode) {
@@ -199,8 +181,6 @@ QRect AutomationHoverState::hoverPaintBounds(const AutomationCanvas &area,
             }
         }
     }
-    if (row.id.kind == EditorAutomationRowKind::Voice)
-        return bounds.intersected(area.rect());
     if (text.isEmpty())
         return bounds.intersected(area.rect());
     if (hoverValueLabel.valid && hoverValueLabel.row == rowIndex)
@@ -239,7 +219,7 @@ AutomationHoverState::clampedValueLabel(qreal x, int y, const QRect &plot, const
 
 void AutomationHoverState::updateHoverValueLabel(
     const AutomationCanvas &area, const AutomationPage *page, const AutomationGeometry &geometry,
-    const AutomationRows &rows, const AutomationProjection &projection, bool pencilMode)
+    const CCLanes &rows, const AutomationProjection &projection, bool pencilMode)
 {
     hoverValueLabel = {};
     const auto syncDirtyBounds = [&] {
@@ -265,13 +245,7 @@ void AutomationHoverState::updateHoverValueLabel(
     label.font = valueLabelFont(area.font());
     const QRect plot(geometry.plotOrigin, projection.rowTop(hover.row),
                      std::max(0, area.width() - geometry.plotOrigin), projection.rowHeight(row));
-    if (row.id.kind == EditorAutomationRowKind::Voice) {
-        label.rect = QRectF(x + layout::space(layout::Space::One), plot.top(),
-                            std::max<qreal>(0, plot.right() - x), plot.height());
-        label.bounds = QFontMetrics(label.font)
-                           .boundingRect(label.rect.toAlignedRect(),
-                                         Qt::AlignLeft | Qt::AlignVCenter, label.text);
-    } else if (pencilMode) {
+    if (pencilMode) {
         const QFontMetrics metrics(label.font);
         const int gap = layout::space(layout::Space::One);
         const int width = metrics.horizontalAdvance(QStringLiteral("0000"));
@@ -292,7 +266,7 @@ void AutomationHoverState::updateHoverValueLabel(
 
 void AutomationHoverState::updatePreviewValueLabel(
     const AutomationCanvas &area, const AutomationPage *page, const AutomationGeometry &geometry,
-    const AutomationRows &rows, const AutomationProjection &projection,
+    const CCLanes &rows, const AutomationProjection &projection,
     const std::optional<ActiveGesture> &activeGesture)
 {
     previewValueLabel = {};
@@ -350,8 +324,7 @@ void AutomationHoverState::updatePreviewValueLabel(
 }
 
 void AutomationHoverState::updateHover(AutomationCanvas &area, AutomationPage &page,
-                                       const AutomationGeometry &geometry,
-                                       const AutomationRows &rows,
+                                       const AutomationGeometry &geometry, const CCLanes &rows,
                                        const AutomationProjection &projection, qreal x, int y,
                                        bool pencilMode)
 {
@@ -362,7 +335,7 @@ void AutomationHoverState::updateHover(AutomationCanvas &area, AutomationPage &p
     }
     const QRect previousBounds = hoverDirtyBounds;
     int mappedValue = 0;
-    if (pencilMode && rows.rows()[rowIndex].id.kind != EditorAutomationRowKind::Voice)
+    if (pencilMode)
         mappedValue = projection.pointerMapping(rowIndex, x, y).point.value;
     if (rowIndex == hover.row && hover.pos == QPointF(x, y) &&
         (!pencilMode || mappedValue == hoverValue(projection)))
@@ -388,7 +361,7 @@ void AutomationHoverState::updateHover(AutomationCanvas &area, AutomationPage &p
 
 void AutomationHoverState::setContextPointHighlight(
     AutomationCanvas &area, const AutomationPage *page, const AutomationGeometry &geometry,
-    const AutomationRows &rows, const AutomationProjection &projection, int rowIndex,
+    const CCLanes &rows, const AutomationProjection &projection, int rowIndex,
     const QPointF &position, const DocLanePoint &point, bool pencilMode)
 {
     const QRect previousBounds = hoverDirtyBounds;

@@ -15,7 +15,7 @@
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "rig.h"
-#include "ui/editordrawer/automationrows.h"
+#include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/m4asemantics.h"

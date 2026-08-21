@@ -11,14 +11,14 @@
 #include "ui/editordrawer/automationhover.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationpencilgesture.h"
-#include "ui/editordrawer/automationrows.h"
+#include "ui/editordrawer/cclanes.h"
 #include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
 
 namespace automation::paint {
 
 void paintHover(QPainter &painter, const RowPaintParams &ctx, AutomationPage &page,
-                const AutomationGeometry &geometry, const AutomationRows &rows,
+                const AutomationGeometry &geometry, const CCLanes &rows,
                 const AutomationHoverState &hoverState, bool pencilMode)
 {
     const AutomationRow &row = ctx.row;
@@ -29,12 +29,6 @@ void paintHover(QPainter &painter, const RowPaintParams &ctx, AutomationPage &pa
     const qreal dpr = painter.device()->devicePixelRatioF();
     const qreal x = page.displayX(hoverState.insertionTick(ctx.proj, row, pencilMode),
                                   geometry.plotOrigin, dpr);
-    if (row.id.kind == EditorAutomationRowKind::Voice) {
-        painter.setPen(QPen(themes::color(themes::Role::song_view_secondary_text),
-                            layout::singlePixel(), Qt::DotLine));
-        painter.drawLine(QPointF(x, plot.top()), QPointF(x, plot.bottom()));
-        return;
-    }
     const QString &text = hoverState.hoverText;
     const auto &label = hoverState.hoverValueLabel;
     const QColor backdrop = themes::color(themes::Role::song_view_piano_roll_accidental_lane);

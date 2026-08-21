@@ -116,7 +116,7 @@ class AutomationProjection
     static double valueAtY(const QRect &bounds, const AutomationGeometry &geometry, double minimum,
                            double maximum, qreal y);
     uint64_t fineSnapTick(double rawTick) const;
-    const AutoLane *laneFor(const AutomationRow &row) const;
+    const CcLane *laneFor(const AutomationRow &row) const;
     bool nodeMarkersVisible() const;
     PointerMapping pointerMapping(int rowIndex, qreal x, qreal y) const;
     AutomationGridCell snapCellAt(double rawTick) const;

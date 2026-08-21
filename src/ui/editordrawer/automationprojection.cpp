@@ -164,7 +164,7 @@ uint64_t AutomationProjection::fineSnapTick(double rawTick) const
     return m_page->snapTick(rawTick, true);
 }
 
-const AutoLane *AutomationProjection::laneFor(const AutomationRow &row) const
+const CcLane *AutomationProjection::laneFor(const AutomationRow &row) const
 {
     if (row.id.kind != EditorAutomationRowKind::ControlChange)
         return nullptr;

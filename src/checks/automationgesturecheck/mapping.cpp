@@ -1,9 +1,16 @@
 #include "domains.h"
 
+#include <algorithm>
+#include <type_traits>
+
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationhover.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
+#include "ui/editordrawer/voicechangelane.h"
 #include "ui/songview.h"
+
+static_assert(!std::is_base_of_v<NodeLane, VoiceChangeLane>);
 
 void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
                                   const AutomationGestureCheck &check)
@@ -41,13 +48,32 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     checkSupportedRange(rig.pan, QStringLiteral("pan"));
     checkSupportedRange(rig.lfo, QStringLiteral("LFO"));
     checkSupportedRange(rig.volume, QStringLiteral("volume"));
-    checkSupportedRange(rig.voice, QStringLiteral("voice"));
+
+    const QRect voice = rig.voiceBounds();
+    const bool voiceIsCcRow = std::any_of(rows.cbegin(), rows.cend(), [](const AutomationRow &row) {
+        return row.id.controller == DOC_CC_VOICE;
+    });
+    check(!rows.empty() && !voice.isEmpty() && !voiceIsCcRow &&
+              voice.bottom() < projection.rowTop(0),
+          QStringLiteral("Voice Change hit-tested as a NodeLane or CC row"));
+    const auto voiceBefore = rig.snapshot(rig.pan.track, rig.pan.controller);
+    const QPointF voiceStart(rig.geometry().plotOrigin + 40, voice.center().y());
+    const QPointF voiceEnd = voiceStart + QPointF(48, 6);
+    rig.mousePress(voiceStart);
+    rig.mouseMove(voiceEnd);
+    rig.mouseRelease(voiceEnd);
+    rig.pump();
+    const auto voiceAfter = rig.snapshot(rig.pan.track, rig.pan.controller);
+    check(voiceBefore.smf == voiceAfter.smf && voiceBefore.revision == voiceAfter.revision &&
+              voiceBefore.undoIndex == voiceAfter.undoIndex && !rig.canvas().isPanning() &&
+              !rig.canvas().bandPreviewContainsRow(0) && !rig.view().userGestureActive() &&
+              !rig.view().selectionModel().timeSelection().active(),
+          QStringLiteral("Voice Change entered a NodeLane gesture"));
 
     const int panRow = rig.rowIndex(rig.pan);
-    const int voiceRow = rig.rowIndex(rig.voice);
-    check(panRow >= 0 && voiceRow >= 0 && panRow < int(rows.size()) && voiceRow < int(rows.size()),
+    check(panRow >= 0 && panRow < int(rows.size()),
           QStringLiteral("Pencil indicator rows are missing from the live projection"));
-    if (panRow < 0 || voiceRow < 0 || panRow >= int(rows.size()) || voiceRow >= int(rows.size()))
+    if (panRow < 0 || panRow >= int(rows.size()))
         return;
 
     const auto seed = rig.pointAt(rig.pan, 24, 64);
@@ -55,16 +81,11 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     const double indicatorTick =
         double(indicatorCell.tickBegin) + 0.4 * double(rig.view().fineGridTicks());
     const auto panInput = rig.pointAt(rig.pan, indicatorTick, 64);
-    const auto voiceInput = rig.pointAt(rig.voice, indicatorTick, 3);
     AutomationHoverState panIndicator;
     panIndicator.hover.row = panRow;
     panIndicator.hover.pos = panInput.position;
-    AutomationHoverState voiceIndicator;
-    voiceIndicator.hover.row = voiceRow;
-    voiceIndicator.hover.pos = voiceInput.position;
     const auto mappedCell = projection.snapCellAt(panInput.mapped.rawTick);
     const double panCaretTick = double(rig.view().snapTick(panInput.mapped.rawTick, true));
-    const double voiceCaretTick = double(rig.view().snapTick(voiceInput.mapped.rawTick, true));
     check(panInput.mapped.point.tick == mappedCell.tickBegin &&
               panInput.mapped.cell.tickEnd == mappedCell.tickEnd &&
               panInput.mapped.rawTick != double(panInput.mapped.point.tick) &&
@@ -72,10 +93,7 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
               projection.valueAtY(panRow, panInput.position.y()) == panInput.mapped.point.value &&
               panIndicator.insertionTick(projection, rows[panRow], true) ==
                   double(panInput.mapped.point.tick) &&
-              panIndicator.insertionTick(projection, rows[panRow], false) == panCaretTick &&
-              projection.valueAtY(voiceRow, voiceInput.position.y()) ==
-                  voiceInput.mapped.point.value &&
-              voiceIndicator.insertionTick(projection, rows[voiceRow], true) == voiceCaretTick,
+              panIndicator.insertionTick(projection, rows[panRow], false) == panCaretTick,
           QStringLiteral("Automation insertion indicators did not retain live row, value, and "
                          "fine-grid timing mappings"));
 
