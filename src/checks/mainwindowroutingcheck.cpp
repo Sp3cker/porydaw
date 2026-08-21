@@ -1055,6 +1055,55 @@ int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel)
               strict.editor.hiddenLanes().size() == 1 && strict.editor.hiddenLanes()[0] == hidden,
           "lane arrays tolerate bad entries without retaining invalid lanes");
 
+    const EditorAutomationRowId tempoRow{EditorAutomationRowKind::Tempo, 0, 0};
+    QJsonObject voiceDiscardHeights;
+    voiceDiscardHeights.insert(QStringLiteral("tempo"), 94);
+    voiceDiscardHeights.insert(QStringLiteral("cc:2:7"), 112);
+    voiceDiscardHeights.insert(QStringLiteral("voice:0"), 66);
+    voiceDiscardHeights.insert(QStringLiteral("voice:2"), 70);
+    QJsonObject voiceDiscardRanges;
+    voiceDiscardRanges.insert(QStringLiteral("tempo"), 116);
+    voiceDiscardRanges.insert(QStringLiteral("cc:2:7"), 91);
+    voiceDiscardRanges.insert(QStringLiteral("voice:0"), 103);
+    QJsonObject voiceDiscardEditor;
+    voiceDiscardEditor.insert(QStringLiteral("laneHeight"), 96);
+    voiceDiscardEditor.insert(QStringLiteral("laneHeights"), voiceDiscardHeights);
+    voiceDiscardEditor.insert(QStringLiteral("laneRanges"), voiceDiscardRanges);
+    check(writeJson(path, QJsonObject{{QStringLiteral("view"), QJsonObject{}},
+                                      {QStringLiteral("editor"), voiceDiscardEditor}}),
+          "seeded legacy voice sidecar entries");
+    ViewSidecar::Snapshot voiceDiscarded;
+    check(ViewSidecar::load(scratchProject, label, &voiceDiscarded),
+          "loads sidecar with legacy voice keys");
+    check(voiceDiscarded.editor.laneHeight == 96 && voiceDiscarded.editor.laneHeights.size() == 2 &&
+              voiceDiscarded.editor.laneHeights.find(tempoRow) !=
+                  voiceDiscarded.editor.laneHeights.end() &&
+              voiceDiscarded.editor.laneHeights.at(tempoRow) == 94 &&
+              voiceDiscarded.editor.laneHeights.at(volume) == 112 &&
+              voiceDiscarded.editor.laneRanges.size() == 2 &&
+              voiceDiscarded.editor.laneRanges.at(tempoRow) == 116 &&
+              voiceDiscarded.editor.laneRanges.at(volume) == 91,
+          "legacy voice sidecar entries are discarded while Tempo and CC survive");
+    check(ViewSidecar::save(scratchProject, label, voiceDiscarded),
+          "saves sidecar after discarding voice keys");
+    const QByteArray rewrittenSidecar = fileContents(path);
+    const QJsonObject rewrittenHeights = readJson(path)
+                                             .value(QStringLiteral("editor"))
+                                             .toObject()
+                                             .value(QStringLiteral("laneHeights"))
+                                             .toObject();
+    const QJsonObject rewrittenRanges = readJson(path)
+                                            .value(QStringLiteral("editor"))
+                                            .toObject()
+                                            .value(QStringLiteral("laneRanges"))
+                                            .toObject();
+    check(!QString::fromUtf8(rewrittenSidecar).contains(QLatin1String("voice:")) &&
+              rewrittenHeights.contains(QStringLiteral("tempo")) &&
+              rewrittenHeights.contains(QStringLiteral("cc:2:7")) &&
+              rewrittenRanges.contains(QStringLiteral("tempo")) &&
+              rewrittenRanges.contains(QStringLiteral("cc:2:7")),
+          "reserialized sidecar contains no voice key");
+
     const int maximumRowHeight = layout::fontPx(32.0 / 3.0);
     QJsonObject oversizedHeights;
     oversizedHeights.insert(QStringLiteral("cc:2:7"), maximumRowHeight + 1);

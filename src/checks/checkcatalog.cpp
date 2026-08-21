@@ -313,7 +313,8 @@ const std::vector<CheckDefinition> &catalog()
             },
             {
                 .name = "automation",
-                .argv = strings({"--check-automation", "{scratch}", "mus_route101"}),
+                .argv = strings(
+                    {"--check-automation", "{scratch}", "mus_route101", "{automation-image?}"}),
                 .handler =
                     [](QApplication &, const QStringList &args) {
                         return runAutomationCheck(args[1], args[2], optional(args, 3));
@@ -321,6 +322,8 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101Files,
+                .optionalArgumentEnvironment = {{QStringLiteral("{automation-image?}"),
+                                                 QStringLiteral("PORYDAW_AUTOMATION_IMAGE")}},
             },
             {
                 .name = "velocity-page",

@@ -541,9 +541,6 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                        state.emptyLanes.end();
             };
             const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
-            const auto voiceRow = [](int owner) {
-                return EditorAutomationRowId{EditorAutomationRowKind::Voice, uint8_t(owner), 0};
-            };
             const auto controllerRow = [](int owner, uint8_t cc) {
                 return EditorAutomationRowId{EditorAutomationRowKind::ControlChange, uint8_t(owner),
                                              cc};
@@ -565,42 +562,32 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             EditorViewState remapCosmetics;
             remapCosmetics.laneHeight = 64;
             remapCosmetics.laneHeights.emplace(tempo, 94);
-            remapCosmetics.laneHeights.emplace(voiceRow(0), 66);
             remapCosmetics.laneHeights.emplace(controllerRow(0, 7), 67);
-            remapCosmetics.laneHeights.emplace(voiceRow(1), 76);
             remapCosmetics.laneHeights.emplace(controllerRow(1, 10), 77);
             remapCosmetics.laneRanges.emplace(tempo, 116);
-            remapCosmetics.laneRanges.emplace(voiceRow(0), 103);
             remapCosmetics.laneRanges.emplace(controllerRow(0, 7), 102);
-            remapCosmetics.laneRanges.emplace(voiceRow(1), 93);
             remapCosmetics.laneRanges.emplace(controllerRow(1, 10), 92);
             remapCosmetics.emptyLanes.emplace(controllerRow(0, 7));
             remapCosmetics.emptyLanes.emplace(controllerRow(1, 10));
             remapView.applyEditorViewState(remapCosmetics);
             const auto hasRemappedCosmetics = [&](const EditorViewState &state, int zeroOwner,
                                                   int oneOwner) {
-                return state.laneHeight == 64 && state.laneHeights.size() == 5 &&
-                       state.laneRanges.size() == 5 && state.emptyLanes.size() == 2 &&
+                return state.laneHeight == 64 && state.laneHeights.size() == 3 &&
+                       state.laneRanges.size() == 3 && state.emptyLanes.size() == 2 &&
                        hasRowValue(state.laneHeights, tempo, 94) &&
-                       hasRowValue(state.laneHeights, voiceRow(zeroOwner), 66) &&
                        hasRowValue(state.laneHeights, controllerRow(zeroOwner, 7), 67) &&
-                       hasRowValue(state.laneHeights, voiceRow(oneOwner), 76) &&
                        hasRowValue(state.laneHeights, controllerRow(oneOwner, 10), 77) &&
                        hasRowValue(state.laneRanges, tempo, 116) &&
-                       hasRowValue(state.laneRanges, voiceRow(zeroOwner), 103) &&
                        hasRowValue(state.laneRanges, controllerRow(zeroOwner, 7), 102) &&
-                       hasRowValue(state.laneRanges, voiceRow(oneOwner), 93) &&
                        hasRowValue(state.laneRanges, controllerRow(oneOwner, 10), 92) &&
                        hasEmptyLane(state, zeroOwner, 7) && hasEmptyLane(state, oneOwner, 10);
             };
             const auto hasRawCosmetics = [&](const EditorViewState &state, int owner) {
-                return state.laneHeight == 64 && state.laneHeights.size() == 3 &&
-                       state.laneRanges.size() == 3 && state.emptyLanes.size() == 1 &&
+                return state.laneHeight == 64 && state.laneHeights.size() == 2 &&
+                       state.laneRanges.size() == 2 && state.emptyLanes.size() == 1 &&
                        hasRowValue(state.laneHeights, tempo, 94) &&
-                       hasRowValue(state.laneHeights, voiceRow(owner), 66) &&
                        hasRowValue(state.laneHeights, controllerRow(owner, 7), 67) &&
                        hasRowValue(state.laneRanges, tempo, 116) &&
-                       hasRowValue(state.laneRanges, voiceRow(owner), 103) &&
                        hasRowValue(state.laneRanges, controllerRow(owner, 7), 102) &&
                        hasEmptyLane(state, owner, 7);
             };
@@ -743,9 +730,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 remapView.setTrackSolo(duplicate, true);
                 remapView.addEmptyLane(duplicate, 74);
                 EditorViewState deletedCosmetics = remapView.editorViewState();
-                deletedCosmetics.laneHeights.emplace(voiceRow(duplicate), 124);
                 deletedCosmetics.laneHeights.emplace(controllerRow(duplicate, 74), 123);
-                deletedCosmetics.laneRanges.emplace(voiceRow(duplicate), 121);
                 deletedCosmetics.laneRanges.emplace(controllerRow(duplicate, 74), 120);
                 remapView.applyEditorViewState(deletedCosmetics);
 
@@ -898,10 +883,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                     EditorViewState rawCosmetics;
                     rawCosmetics.laneHeight = 64;
                     rawCosmetics.laneHeights.emplace(tempo, 94);
-                    rawCosmetics.laneHeights.emplace(voiceRow(0), 66);
                     rawCosmetics.laneHeights.emplace(controllerRow(0, 7), 67);
                     rawCosmetics.laneRanges.emplace(tempo, 116);
-                    rawCosmetics.laneRanges.emplace(voiceRow(0), 103);
                     rawCosmetics.laneRanges.emplace(controllerRow(0, 7), 102);
                     rawCosmetics.emptyLanes.emplace(controllerRow(0, 7));
                     rawView.applyEditorViewState(rawCosmetics);

@@ -20,9 +20,10 @@
 #include "ui/editordrawer/automationpaint.h"
 #include "ui/editordrawer/automationpencilgesture.h"
 #include "ui/editordrawer/automationprojection.h"
-#include "ui/editordrawer/automationrows.h"
+#include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
+#include "ui/editordrawer/voicechangelane.h"
 #include "ui/editorviewstate.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
@@ -34,7 +35,21 @@ class QPainter;
 class QScrollArea;
 class QWheelEvent;
 class QMouseEvent;
-struct AutoLane;
+struct LaneHandle {
+    int index = -1;
+    constexpr bool valid() const noexcept { return index >= 0; }
+};
+
+struct LaneNodeIdentity {
+    int engineTrack = -1;
+    uint8_t controller = 0;
+    DocLanePoint documentPoint;
+};
+
+struct LaneNodeDragState {
+    NodeDragGesture gesture;
+    std::vector<LaneNodeIdentity> identities;
+};
 
 // AutomationCanvas is the paint and input surface owned by AutomationPage.
 // Temporary gesture state stays local to this canvas; song data and routing
@@ -56,7 +71,10 @@ class AutomationCanvas final : public songview::TimelineSurface
     bool bandPreviewContainsRow(int rowIndex) const noexcept;
     QRect labelGutter() const noexcept { return m_labelGutter; }
     int plotOrigin() const noexcept { return m_geometry.plotOrigin; }
-    int contentTopInset() const noexcept { return m_tempoLane.totalHeight(m_geometry); }
+    int contentTopInset() const noexcept
+    {
+        return m_tempoLane.totalHeight(m_geometry) + m_voiceLane.height();
+    }
 
   protected:
     bool event(QEvent *event) override;
@@ -73,6 +91,7 @@ class AutomationCanvas final : public songview::TimelineSurface
   private:
     friend class AutomationPage;
     friend class TempoLane;
+    friend class VoiceChangeLane;
 
     void refreshGeometry();
     QFont captionLabelFont() const;
@@ -90,6 +109,11 @@ class AutomationCanvas final : public songview::TimelineSurface
                         DocLanePoint *point) const;
     bool pencilPointHit(const AutomationRow &row, int rowIndex, const QPointF &position,
                         const AutomationProjection &proj, DocLanePoint *point) const;
+    LaneNodeDragState collectSelectedNodeDrags(const AutomationProjection &projection) const;
+    std::optional<LaneNodeDragState> nodeDragGestureAt(int rowIndex, const QPointF &position,
+                                                       bool axisLockArmed,
+                                                       const AutomationProjection &projection,
+                                                       bool pencilMode) const;
     const QCursor &pencilCursor();
     void updateAxisLockCursor(AxisLock lock);
     ValuePoint mappedForRow(int row, QPointF pos, bool fine, bool snapValue,
@@ -109,14 +133,25 @@ class AutomationCanvas final : public songview::TimelineSurface
     void showTimeSelectionMenu(const QPoint &globalPosition);
     void showAddLaneMenu(const QPoint &globalPosition);
     void showLaneMenu(const AutomationRow &row, const QPoint &globalPosition);
-    void showVoiceMenu(const AutomationRow &row, const QPoint &globalPosition);
+    void layoutLaneStack(int voiceTrack);
+    void cancelNodeGestures();
+    void rebuildNodeStack();
+    LaneHandle laneAt(int y) const noexcept;
+    int ccRowIndexAt(int y) const noexcept;
     void setGestureActive(bool active);
     AutomationGeometry m_geometry;
     QRect m_labelGutter;
     AutomationPage *m_page = nullptr;
     QScrollArea *m_scroll = nullptr;
-    AutomationRows m_rowData;
+    CCLanes m_rowData;
     TempoLane m_tempoLane;
+    VoiceChangeLane m_voiceLane;
+    std::vector<CCLaneAdapter> m_ccAdapters;
+    struct NodeLaneSlot {
+        NodeLane *lane = nullptr;
+        QRect body;
+    };
+    std::vector<NodeLaneSlot> m_nodeStack;
     struct ResizeState {
         int row = -1;
         int startHeight = 0;

@@ -15,7 +15,7 @@
 class AutomationCanvas;
 class AutomationPage;
 class AutomationProjection;
-class AutomationRows;
+class CCLanes;
 struct AutomationGeometry;
 struct AutomationRow;
 
@@ -54,30 +54,30 @@ struct AutomationHoverState {
                          bool pencilMode) const;
     int hoverValue(const AutomationProjection &projection) const;
 
-    bool hoverValueFor(const AutomationRows &rows, const AutomationProjection &projection,
+    bool hoverValueFor(const CCLanes &rows, const AutomationProjection &projection,
                        const AutomationRow &row, int rowIndex, double tick, bool pencilMode,
                        int *value) const;
     QString hoverTextFor(const AutomationCanvas &area, const AutomationPage &page,
-                         const AutomationGeometry &geometry, const AutomationRows &rows,
+                         const AutomationGeometry &geometry, const CCLanes &rows,
                          const AutomationProjection &projection, const AutomationRow &row,
                          int rowIndex, double tick, qreal x, bool pencilMode) const;
     const QString &hoverTextCached(const AutomationCanvas &area, const AutomationPage &page,
-                                   const AutomationGeometry &geometry, const AutomationRows &rows,
+                                   const AutomationGeometry &geometry, const CCLanes &rows,
                                    const AutomationProjection &projection, int rowIndex,
                                    double tick, qreal x, bool pencilMode) const;
     QRect hoverValueRect(const AutomationCanvas &area, const AutomationPage &page,
-                         const AutomationGeometry &geometry, const AutomationRows &rows,
+                         const AutomationGeometry &geometry, const CCLanes &rows,
                          const AutomationProjection &projection, const AutomationRow &row,
                          int rowIndex, qreal x, bool pencilMode) const;
     QRect hoverPaintBounds(const AutomationCanvas &area, const AutomationPage *page,
-                           const AutomationGeometry &geometry, const AutomationRows &rows,
+                           const AutomationGeometry &geometry, const CCLanes &rows,
                            const AutomationProjection &projection, int rowIndex,
                            bool pencilMode) const;
     void updateHover(AutomationCanvas &area, AutomationPage &page,
-                     const AutomationGeometry &geometry, const AutomationRows &rows,
+                     const AutomationGeometry &geometry, const CCLanes &rows,
                      const AutomationProjection &projection, qreal x, int y, bool pencilMode);
     void setContextPointHighlight(AutomationCanvas &area, const AutomationPage *page,
-                                  const AutomationGeometry &geometry, const AutomationRows &rows,
+                                  const AutomationGeometry &geometry, const CCLanes &rows,
                                   const AutomationProjection &projection, int rowIndex,
                                   const QPointF &position, const DocLanePoint &point,
                                   bool pencilMode);
@@ -89,10 +89,10 @@ struct AutomationHoverState {
     };
     ClampedValueLabel clampedValueLabel(qreal x, int y, const QRect &plot, const QFont &font) const;
     void updateHoverValueLabel(const AutomationCanvas &area, const AutomationPage *page,
-                               const AutomationGeometry &geometry, const AutomationRows &rows,
+                               const AutomationGeometry &geometry, const CCLanes &rows,
                                const AutomationProjection &projection, bool pencilMode);
     void updatePreviewValueLabel(const AutomationCanvas &area, const AutomationPage *page,
-                                 const AutomationGeometry &geometry, const AutomationRows &rows,
+                                 const AutomationGeometry &geometry, const CCLanes &rows,
                                  const AutomationProjection &projection,
                                  const std::optional<ActiveGesture> &activeGesture);
 };

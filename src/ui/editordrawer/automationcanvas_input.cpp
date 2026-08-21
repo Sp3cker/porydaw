@@ -38,7 +38,7 @@ void AutomationCanvas::wheelEvent(QWheelEvent *event)
                         std::clamp(int(std::lround(rowHeight * factor)),
                                    m_geometry.rowMinimumHeight, m_geometry.rowMaximumHeight);
                 m_page->m_viewState.laneHeight = height;
-                m_rowData.applyHeight(*this, m_geometry, m_tempoLane.totalHeight(m_geometry));
+                layoutLaneStack(m_voiceLane.engineTrack());
             }
         }
     } else if (event->modifiers() & Qt::ShiftModifier) {
@@ -80,10 +80,16 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     if ((event->button() == Qt::LeftButton || event->button() == Qt::RightButton) &&
         m_tempoLane.hasTimeSelection())
         m_page->m_owner.selectionModel().clearTimeSelection();
+    if (m_voiceLane.contains(event->pos())) {
+        setFocus();
+        m_voiceLane.mousePress(*this, event, m_geometry);
+        event->accept();
+        return;
+    }
     const AutomationProjection proj = projection();
     const int boundary =
         event->button() == Qt::LeftButton ? proj.rowBoundaryAt(event->pos().y()) : -1;
-    const int rowIndex = proj.rowIndexAt(event->pos().y());
+    const int rowIndex = ccRowIndexAt(event->pos().y());
     if ((event->button() == Qt::LeftButton || event->button() == Qt::RightButton) &&
         m_rowData.timeSelection().active()) {
         const bool insideSelection = boundary < 0 && rowIndex >= 0 &&
@@ -132,19 +138,15 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     }
     if (event->button() != Qt::LeftButton)
         return;
-    if (row.id.kind == EditorAutomationRowKind::Voice) {
-        showVoiceMenu(row, event->globalPosition().toPoint());
-        return;
-    }
     int track = -1;
     uint8_t controller = 0;
     if (!m_rowData.rowTarget(row, &track, &controller))
         return;
     const bool fine = event->modifiers() & Qt::AltModifier;
     if (m_pencilMode) {
-        if (auto nodeGesture = m_rowData.nodeDragGestureAt(
-                rowIndex, event->position(), event->modifiers() & Qt::ShiftModifier, proj,
-                m_pencilMode, m_geometry, devicePixelRatioF())) {
+        if (auto nodeGesture =
+                nodeDragGestureAt(rowIndex, event->position(),
+                                  event->modifiers() & Qt::ShiftModifier, proj, m_pencilMode)) {
             m_activeNodeIdentities = std::move(nodeGesture->identities);
             m_activeGesture.emplace(std::move(nodeGesture->gesture));
             setGestureActive(true);
@@ -181,9 +183,9 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     const ValuePoint mapped = mappedForRow(rowIndex, event->position(), fine,
                                            event->modifiers() & Qt::ControlModifier, proj);
     setGestureActive(true);
-    if (auto nodeGesture = m_rowData.nodeDragGestureAt(
-            rowIndex, event->position(), event->modifiers() & Qt::ShiftModifier, proj, m_pencilMode,
-            m_geometry, devicePixelRatioF())) {
+    if (auto nodeGesture =
+            nodeDragGestureAt(rowIndex, event->position(), event->modifiers() & Qt::ShiftModifier,
+                              proj, m_pencilMode)) {
         m_activeNodeIdentities = std::move(nodeGesture->identities);
         m_activeGesture.emplace(std::move(nodeGesture->gesture));
     } else {
@@ -236,7 +238,7 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
         if (height != proj.rowHeight(m_rowData.rows()[m_resize.row])) {
             m_page->m_viewState.laneHeights[m_rowData.rows()[m_resize.row].id] = height;
             m_page->publishViewState();
-            m_rowData.applyHeight(*this, m_geometry, m_tempoLane.totalHeight(m_geometry));
+            layoutLaneStack(m_voiceLane.engineTrack());
             invalidateContent();
         }
         return;
@@ -251,13 +253,23 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
             const int lastY =
                 std::max(layout::space(layout::Space::Zero),
                          proj.rowTop(int(m_rowData.rows().size())) - layout::singlePixel());
-            m_bandEndRow = proj.rowIndexAt(
+            m_bandEndRow = ccRowIndexAt(
                 std::clamp(event->pos().y(), layout::space(layout::Space::Zero), lastY));
             invalidateContent();
         }
         return;
     }
     if (!m_activeGesture) {
+        if (m_voiceLane.contains(event->pos())) {
+            m_hoverState.clearHover(*this);
+            m_voiceLane.updateHover(*this, m_geometry, event->position().x(), event->pos().y());
+            if (m_pencilMode)
+                setCursor(pencilCursor());
+            else
+                setCursor(Qt::ArrowCursor);
+            return;
+        }
+        m_voiceLane.clearHover(*this);
         if (proj.rowBoundaryAt(event->pos().y()) >= 0) {
             m_hoverState.clearHover(*this);
             setCursor(Qt::SplitVCursor);
@@ -295,17 +307,17 @@ void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
         if (selection && selection->first < selection->second && rowIndex >= 0 &&
             m_bandEndRow >= 0) {
             auto &timeSelection = m_rowData.timeSelection();
-            timeSelection.range = {selection->first, selection->second};
-            timeSelection.scope = {};
+            timeSelection.startTick = selection->first;
+            timeSelection.endTick = selection->second;
+            timeSelection.lanes.clear();
             timeSelection.firstRow = std::min(rowIndex, m_bandEndRow);
             timeSelection.lastRow = std::max(rowIndex, m_bandEndRow);
-            timeSelection.scope.lanes.reserve(
+            timeSelection.lanes.reserve(
                 std::size_t(timeSelection.lastRow - timeSelection.firstRow + 1));
             for (int row = timeSelection.firstRow;
                  row <= timeSelection.lastRow && row < int(m_rowData.rows().size()); ++row)
-                timeSelection.scope.lanes.push_back(m_rowData.rowIdentity(m_rowData.rows()[row]));
-            m_page->publishTimeSelection(selection->first, selection->second,
-                                         timeSelection.scope.lanes);
+                timeSelection.lanes.push_back(m_rowData.rowIdentity(m_rowData.rows()[row]));
+            m_page->publishTimeSelection(selection->first, selection->second, timeSelection.lanes);
             m_page->announce(
                 tr("Automation range [%1, %2)").arg(selection->first).arg(selection->second));
         } else if (selection) {
@@ -319,8 +331,7 @@ void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
             if (!handled && m_rowData.selectionContains(rowIndex, event->position().x(), m_geometry,
                                                         devicePixelRatioF()))
                 showTimeSelectionMenu(event->globalPosition().toPoint());
-            else if (!handled && rowIndex >= 0 && rowIndex < int(m_rowData.rows().size()) &&
-                     m_rowData.rows()[rowIndex].id.kind != EditorAutomationRowKind::Voice)
+            else if (!handled && rowIndex >= 0 && rowIndex < int(m_rowData.rows().size()))
                 m_rowData.clearTimeSelection();
         }
         m_bandRightRow = -1;
@@ -354,11 +365,15 @@ void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
         invalidateContent();
         return;
     }
+    if (m_voiceLane.contains(event->pos())) {
+        m_voiceLane.mouseDoubleClick(*this, event, m_geometry);
+        return;
+    }
     if (event->button() != Qt::LeftButton || event->position().x() < m_geometry.plotOrigin)
         return;
     const AutomationProjection proj = projection();
-    const int rowIndex = proj.rowIndexAt(event->pos().y());
-    if (rowIndex < 0 || m_rowData.rows()[rowIndex].id.kind == EditorAutomationRowKind::Voice)
+    const int rowIndex = ccRowIndexAt(event->pos().y());
+    if (rowIndex < 0)
         return;
     int track = -1;
     uint8_t controller = 0;
@@ -433,7 +448,7 @@ void AutomationCanvas::keyPressEvent(QKeyEvent *event)
     }
     if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) &&
         m_rowData.timeSelection().active() && m_page && m_page->document()) {
-        const auto selected = m_rowData.collectSelectedNodeDrags(projection());
+        const auto selected = collectSelectedNodeDrags(projection());
         if (!selected.identities.empty()) {
             SongDocument::RangeEdit edit;
             edit.removePoints.reserve(selected.identities.size());
@@ -452,8 +467,7 @@ void AutomationCanvas::keyPressEvent(QKeyEvent *event)
         DocLanePoint point;
         int track = -1;
         uint8_t controller = 0;
-        if (row.id.kind != EditorAutomationRowKind::Voice &&
-            pencilPointHit(row, m_hoverState.hover.row, m_hoverState.hover.pos, &point) &&
+        if (pencilPointHit(row, m_hoverState.hover.row, m_hoverState.hover.pos, &point) &&
             m_rowData.rowTarget(row, &track, &controller)) {
             m_page->document()->deleteLanePoints(track, controller, {point});
             m_hoverState.clearHover(*this);
@@ -468,5 +482,6 @@ void AutomationCanvas::keyPressEvent(QKeyEvent *event)
 void AutomationCanvas::leaveEvent(QEvent *)
 {
     m_tempoLane.clearHover();
+    m_voiceLane.clearHover(*this);
     m_hoverState.clearHover(*this);
 }

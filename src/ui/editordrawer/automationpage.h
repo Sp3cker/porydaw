@@ -20,7 +20,8 @@ class QPainter;
 class QRect;
 class AutomationCanvas;
 class TempoLane;
-class AutomationRows;
+class CCLanes;
+class VoiceChangeLane;
 struct AutomationHoverState;
 class MidiTimeline;
 class SongDocument;
@@ -51,7 +52,8 @@ class AutomationPage final : public QWidget
 
   private:
     friend class AutomationCanvas;
-    friend class AutomationRows;
+    friend class CCLanes;
+    friend class VoiceChangeLane;
     friend class TempoLane;
     friend class AutomationHoverState;
     // Read-only access to the timeline mapping queries (tickAtContentX,
@@ -60,15 +62,14 @@ class AutomationPage final : public QWidget
     friend void automation::paint::paintRow(QPainter &, const automation::paint::RowPaintParams &,
                                             const QRect &, const QFont &, const QFont &,
                                             const QRect &, const QRect &, AutomationCanvas &,
-                                            AutomationPage &, const AutomationGeometry &,
-                                            AutomationRows &, const AutomationHoverState &,
+                                            AutomationPage &, const AutomationGeometry &, CCLanes &,
+                                            const AutomationHoverState &,
                                             const std::optional<ActiveGesture> &, bool);
     friend void automation::paint::paintPlainGridFallback(QPainter &, const QRect &,
                                                           AutomationPage &, qreal, qreal);
     friend void automation::paint::paintHover(QPainter &, const automation::paint::RowPaintParams &,
                                               AutomationPage &, const AutomationGeometry &,
-                                              const AutomationRows &, const AutomationHoverState &,
-                                              bool);
+                                              const CCLanes &, const AutomationHoverState &, bool);
     friend void automation::paint::paintNodeDragPreview(QPainter &,
                                                         const automation::paint::RowPaintParams &,
                                                         const NodeDragGesture &, AutomationCanvas &,
@@ -82,14 +83,11 @@ class AutomationPage final : public QWidget
                                                       const AutomationHoverState &);
     friend void automation::paint::paintCurve(QPainter &, const automation::paint::RowPaintParams &,
                                               AutomationCanvas &, AutomationPage &,
-                                              const AutomationGeometry &, const AutomationRows &);
+                                              const AutomationGeometry &, const CCLanes &);
     friend void automation::paint::paintCurveNodes(QPainter &,
                                                    const automation::paint::RowPaintParams &,
                                                    AutomationCanvas &, AutomationPage &,
-                                                   const AutomationGeometry &,
-                                                   const AutomationRows &);
-    friend void automation::paint::paintVoiceRow(QPainter &, const QRect &, AutomationPage &,
-                                                 const AutomationGeometry &, AutomationRows &);
+                                                   const AutomationGeometry &, const CCLanes &);
 
     struct Geometry {
         int rowDefaultHeight = 0;

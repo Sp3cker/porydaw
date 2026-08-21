@@ -26,7 +26,7 @@ class QFont;
 class QMouseEvent;
 class QPainter;
 
-// Song-wide Tempo lives above the track-owned automation rows. It shares their
+// Song-wide Tempo lives above Voice Change and the CC lanes. It shares their
 // canvas but deliberately has no controller or track identity.
 class TempoLane final : public NodeLane
 {
@@ -46,6 +46,7 @@ class TempoLane final : public NodeLane
     void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
     void updateLayout(int width, const AutomationGeometry &geometry);
     int totalHeight(const AutomationGeometry &geometry) const;
+    QRect bodyRect() const noexcept { return m_body; }
     bool interactionActive() const noexcept;
     bool hasTimeSelection() const;
     bool selectionContains(const AutomationProjection &projection, qreal x,

@@ -14,7 +14,7 @@ class AutomationCanvas;
 struct AutomationHoverState;
 class AutomationPage;
 class PencilGesture;
-class AutomationRows;
+class CCLanes;
 class QFont;
 class QPainter;
 
@@ -56,12 +56,12 @@ void paintSelectionReticle(QPainter &painter, const TickRange &range,
 void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
               const QFont &titleFont, const QFont &captionFont, const QRect &primaryTextBox,
               const QRect &secondaryTextBox, AutomationCanvas &area, AutomationPage &page,
-              const AutomationGeometry &geometry, AutomationRows &rows,
+              const AutomationGeometry &geometry, CCLanes &rows,
               const AutomationHoverState &hoverState,
               const std::optional<ActiveGesture> &activeGesture, bool pencilMode);
 
 void paintHover(QPainter &painter, const RowPaintParams &ctx, AutomationPage &page,
-                const AutomationGeometry &geometry, const AutomationRows &rows,
+                const AutomationGeometry &geometry, const CCLanes &rows,
                 const AutomationHoverState &hoverState, bool pencilMode);
 
 void paintNodeDragPreview(QPainter &painter, const RowPaintParams &ctx,
@@ -74,14 +74,9 @@ void paintPencilPreview(QPainter &painter, const RowPaintParams &ctx, const Penc
                         const AutomationHoverState &hoverState);
 
 void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationCanvas &area,
-                AutomationPage &page, const AutomationGeometry &geometry,
-                const AutomationRows &rows);
+                AutomationPage &page, const AutomationGeometry &geometry, const CCLanes &rows);
 
 void paintCurveNodes(QPainter &painter, const RowPaintParams &ctx, AutomationCanvas &area,
-                     AutomationPage &page, const AutomationGeometry &geometry,
-                     const AutomationRows &rows);
-
-void paintVoiceRow(QPainter &painter, const QRect &plot, AutomationPage &page,
-                   const AutomationGeometry &geometry, AutomationRows &rows);
+                     AutomationPage &page, const AutomationGeometry &geometry, const CCLanes &rows);
 
 } // namespace automation::paint

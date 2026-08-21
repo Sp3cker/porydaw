@@ -31,7 +31,7 @@ struct LanePoint {
 
 constexpr uint8_t LANE_CC_BEND = CoreTimeDefaults::kLaneCcBend;
 
-struct AutoLane {
+struct CcLane {
     uint8_t track;
     uint8_t cc; // MIDI CC number, or LANE_CC_BEND
     M4aLane lane;
@@ -53,7 +53,7 @@ struct StripItem {
 
 struct SongViewModel {
     std::vector<ViewNote> notes;     // sorted by startTick
-    std::vector<AutoLane> lanes;     // grouped by track, lane order per §4.2
+    std::vector<CcLane> lanes;       // grouped by track, lane order per §4.2
     std::vector<VoiceChange> voices; // sorted by tick
     std::vector<StripItem> strip;    // sorted by tick; advanced CCs + parser leftovers
     int minNoteKey = 127;
@@ -63,9 +63,9 @@ struct SongViewModel {
     size_t unpairedNoteOns = 0; // rendered anyway (unterminated), but reported
     size_t orphanNoteOffs = 0;  // shown in the strip
 
-    const AutoLane *findLane(int track, uint8_t cc) const
+    const CcLane *findLane(int track, uint8_t cc) const
     {
-        for (const AutoLane &l : lanes)
+        for (const CcLane &l : lanes)
             if (l.track == track && l.cc == cc)
                 return &l;
         return nullptr;

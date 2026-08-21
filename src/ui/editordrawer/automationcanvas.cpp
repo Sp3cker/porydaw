@@ -1,7 +1,7 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationhover.h"
 #include "ui/editordrawer/automationpaint.h"
-#include "ui/editordrawer/automationrows.h"
+#include "ui/editordrawer/cclanes.h"
 
 #include <algorithm>
 #include <optional>
@@ -20,6 +20,7 @@
 #include "ui/contextmenu.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
+#include "ui/songview/editorselectionmodel.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 #include "ui/typography.h"
@@ -38,8 +39,7 @@ void AutomationCanvas::refreshGeometry()
         gutterMargin, layout::space(layout::Space::Zero),
         std::max(layout::space(layout::Space::Zero), m_geometry.plotOrigin - 2 * gutterMargin),
         layout::space(layout::Space::Zero));
-    m_tempoLane.updateLayout(width(), m_geometry);
-    m_rowData.applyHeight(*this, m_geometry, m_tempoLane.totalHeight(m_geometry));
+    layoutLaneStack(m_voiceLane.engineTrack());
     updateGeometry();
     update();
 }
@@ -68,6 +68,7 @@ AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
     , m_scroll(scroll)
     , m_rowData(page)
     , m_tempoLane(page)
+    , m_voiceLane(page)
 {
     setObjectName(QStringLiteral("automationCanvas"));
     setMouseTracking(true);
@@ -76,8 +77,7 @@ AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
 }
 AutomationProjection AutomationCanvas::projection() const
 {
-    return AutomationProjection(m_geometry, m_rowData.rows(), m_page,
-                                m_tempoLane.totalHeight(m_geometry));
+    return AutomationProjection(m_geometry, m_rowData.rows(), m_page, contentTopInset());
 }
 
 void AutomationCanvas::invalidateContent()
@@ -166,15 +166,84 @@ void AutomationCanvas::rebuildRows()
     m_hoverState.hoverTextRow = -1;
     m_hoverState.hoverValueLabel = {};
     m_hoverState.previewValueLabel = {};
+    int voiceTrack = -1;
+    bool showVoice = false;
+    if (m_page && m_page->ready() && m_page->timeline()) {
+        voiceTrack = m_page->m_owner.selectionModel().primaryTrack();
+        if (voiceTrack >= 0) {
+            showVoice = m_page->document() != nullptr;
+            if (!showVoice) {
+                for (const auto &change : m_page->model().voices) {
+                    if (change.track == voiceTrack) {
+                        showVoice = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
     m_rowData.rebuildRows();
-    m_tempoLane.updateLayout(width(), m_geometry);
-    m_rowData.applyHeight(*this, m_geometry, m_tempoLane.totalHeight(m_geometry));
+    layoutLaneStack(showVoice ? voiceTrack : -1);
     invalidateContent();
 }
 
 void AutomationCanvas::updateTempoLayout()
 {
     refreshGeometry();
+}
+
+void AutomationCanvas::layoutLaneStack(int voiceTrack)
+{
+    cancelNodeGestures();
+    m_tempoLane.updateLayout(width(), m_geometry);
+    const int shared = m_page && m_page->m_viewState.laneHeight > 0 ? m_page->m_viewState.laneHeight
+                                                                    : m_geometry.rowDefaultHeight;
+    const int voiceHeight = voiceTrack >= 0 ? std::clamp(shared, m_geometry.rowMinimumHeight,
+                                                         m_geometry.rowMaximumHeight)
+                                            : 0;
+    m_voiceLane.rebuild(voiceTrack, width(), m_tempoLane.totalHeight(m_geometry), voiceHeight);
+    rebuildNodeStack();
+    setMinimumHeight(m_rowData.minimumHeight(m_geometry, contentTopInset()));
+}
+
+void AutomationCanvas::rebuildNodeStack()
+{
+    m_nodeStack.clear();
+    m_ccAdapters.clear();
+    m_nodeStack.push_back({&m_tempoLane, m_tempoLane.bodyRect()});
+    if (!m_page || !m_page->document())
+        return;
+    const auto &rows = m_rowData.rows();
+    m_ccAdapters.reserve(rows.size());
+    const auto &selection = m_page->m_owner.selectionModel();
+    const uint32_t mask = m_page->usedTrackMask();
+    for (const auto &row : rows)
+        m_ccAdapters.emplace_back(*m_page->document(), selection, mask, int(row.id.track),
+                                  row.id.controller);
+    const AutomationProjection proj = projection();
+    for (int i = 0; i < int(rows.size()); ++i) {
+        const QRect body(layout::space(layout::Space::Zero), proj.rowTop(i), width(),
+                         proj.rowHeight(rows[std::size_t(i)]));
+        m_nodeStack.push_back({&m_ccAdapters[std::size_t(i)], body});
+    }
+}
+
+LaneHandle AutomationCanvas::laneAt(int y) const noexcept
+{
+    for (int i = 0; i < int(m_nodeStack.size()); ++i) {
+        const QRect &body = m_nodeStack[std::size_t(i)].body;
+        if (y >= body.top() && y < body.top() + body.height())
+            return LaneHandle{i};
+    }
+    return {};
+}
+
+int AutomationCanvas::ccRowIndexAt(int y) const noexcept
+{
+    const LaneHandle handle = laneAt(y);
+    if (!handle.valid() || handle.index == 0)
+        return -1;
+    return handle.index - 1;
 }
 
 void AutomationCanvas::cancelInteraction()
@@ -189,6 +258,7 @@ void AutomationCanvas::cancelInteraction()
     m_bandRightRow = -1;
     m_bandEndRow = -1;
     m_tempoLane.cancel();
+    m_voiceLane.cancel();
     m_hoverState.previewValueLabel = {};
     m_hoverState.hover.highlightLocked = false;
     m_hoverState.clearHover(*this);
@@ -200,6 +270,19 @@ void AutomationCanvas::cancelInteraction()
     if (wasActive)
         setGestureActive(false);
     invalidateContent();
+}
+
+void AutomationCanvas::cancelNodeGestures()
+{
+    const bool gestureActive = m_band.pending || m_activeGesture.has_value();
+    m_activeGesture.reset();
+    m_activeNodeIdentities.clear();
+    m_band.clear();
+    m_bandRightRow = -1;
+    m_bandEndRow = -1;
+    m_hoverState.previewValueLabel = {};
+    if (gestureActive)
+        setGestureActive(false);
 }
 
 bool AutomationCanvas::promptPointValue(const AutomationRow &row, uint8_t controller,
@@ -229,7 +312,7 @@ bool AutomationCanvas::promptPointValue(const AutomationRow &row, uint8_t contro
 bool AutomationCanvas::showPointMenuNear(const AutomationRow &row, int rowIndex,
                                          const QPoint &position, const QPoint &globalPosition)
 {
-    if (!m_page || !m_page->document() || row.id.kind == EditorAutomationRowKind::Voice)
+    if (!m_page || !m_page->document())
         return false;
     int track = -1;
     uint8_t controller = 0;
@@ -247,12 +330,10 @@ bool AutomationCanvas::showPointMenuNear(const AutomationRow &row, int rowIndex,
     menu.setOutsideRightClickHandler(
         [this, &menu, &targetRowIndex, &targetLane, &targetPoint](QPointF globalPos) {
             const QPoint localPosition = mapFromGlobal(globalPos.toPoint());
-            const int candidateRowIndex = projection().rowIndexAt(localPosition.y());
+            const int candidateRowIndex = ccRowIndexAt(localPosition.y());
             if (candidateRowIndex < 0 || candidateRowIndex >= int(m_rowData.rows().size()))
                 return false;
             const auto &candidateRow = m_rowData.rows()[candidateRowIndex];
-            if (candidateRow.id.kind == EditorAutomationRowKind::Voice)
-                return false;
             int candidateTrack = -1;
             uint8_t candidateController = 0;
             if (!m_rowData.rowTarget(candidateRow, &candidateTrack, &candidateController))
@@ -324,10 +405,10 @@ void AutomationCanvas::showTimeSelectionMenu(const QPoint &globalPosition)
     const auto &selection = m_rowData.timeSelection();
     if (selection.active()) {
         DrawerPageTimeSelectionMenuRequest request;
-        request.startTick = selection.range.startTick;
-        request.endTick = selection.range.endTick;
+        request.startTick = selection.startTick;
+        request.endTick = selection.endTick;
         request.globalPosition = globalPosition;
-        request.lanes = selection.scope.lanes;
+        request.lanes = selection.lanes;
         m_page->showTimeSelectionMenu(request);
         return;
     }
@@ -347,6 +428,7 @@ void AutomationCanvas::paintContent(QPainter &painter)
     const QFont titleFont = typography::bold(typography::caption(font()));
     const QFont captionFont = captionLabelFont();
     m_tempoLane.paint(painter, m_geometry, m_labelGutter, titleFont, captionFont);
+    m_voiceLane.paint(painter, *this, m_geometry, m_labelGutter, titleFont, captionFont);
     const auto textLayout =
         layout::twoLineText(titleFont, titleFont, captionFont, layout::Space::Zero);
     const auto &rows = m_rowData.rows();
@@ -384,8 +466,8 @@ void AutomationCanvas::paintContent(QPainter &painter)
         const auto &selection = m_rowData.timeSelection();
         if (!selection.active())
             return std::optional<automation::paint::TickRange>{};
-        return automation::paint::TickRange::orderedNonEmpty(selection.range.startTick,
-                                                             selection.range.endTick);
+        return automation::paint::TickRange::orderedNonEmpty(selection.startTick,
+                                                             selection.endTick);
     }();
     if (m_band.active) {
         const int firstRow = std::min(m_bandRightRow, m_bandEndRow);
@@ -403,7 +485,7 @@ void AutomationCanvas::paintContent(QPainter &painter)
         const qreal dpr = painter.device()->devicePixelRatioF();
         for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
             const auto lane = m_rowData.rowIdentity(rows[rowIndex]);
-            if (!selection.scope.coversLane(lane.first, lane.second))
+            if (!selection.coversLane(lane.first, lane.second))
                 continue;
             const QRect bounds(m_geometry.plotOrigin, proj.rowTop(rowIndex),
                                std::max(0, width() - m_geometry.plotOrigin),

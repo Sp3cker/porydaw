@@ -7,7 +7,7 @@
 #include <QByteArray>
 #include <QEvent>
 #include <QPointF>
-#include <QString>
+#include <QRect>
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationprojection.h"
@@ -68,6 +68,7 @@ class AutomationGestureCheckRig final
     AutomationProjection projection() const;
     int rowIndex(const Lane &lane) const noexcept;
     InputPoint pointAt(const Lane &lane, double tick, int value) const;
+    QRect voiceBounds() const;
     QPointF tempoHeaderPoint() const;
     QPointF tempoBodyPoint(double tick, int bpm) const;
     QImage renderArea();
@@ -97,7 +98,6 @@ class AutomationGestureCheckRig final
     const Lane pan{{EditorAutomationRowKind::ControlChange, 0, 10}, 0, 10};
     const Lane lfo{{EditorAutomationRowKind::ControlChange, 0, 21}, 0, 21};
     const Lane volume{{EditorAutomationRowKind::ControlChange, 0, 7}, 0, 7};
-    const Lane voice{{EditorAutomationRowKind::Voice, 0, DOC_CC_VOICE}, 0, DOC_CC_VOICE};
 
   private:
     AutomationGestureCheckRig() = default;
