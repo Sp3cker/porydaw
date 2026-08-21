@@ -1,7 +1,5 @@
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/automationpaint.h"
 #include "ui/editordrawer/cclanes.h"
-#include "ui/editordrawer/nodelane/paint.h"
 
 #include <algorithm>
 #include <cmath>
@@ -13,7 +11,6 @@
 #include <QIcon>
 #include <QInputDialog>
 #include <QMenu>
-#include <QPainter>
 #include <QPixmap>
 #include <QScrollArea>
 
@@ -23,8 +20,6 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
 #include "ui/songview/editorselectionmodel.h"
-#include "ui/theme/themeruntime.h"
-#include "ui/theme/trackidentitycolors.h"
 #include "ui/typography.h"
 
 void AutomationCanvas::refreshGeometry()
@@ -484,94 +479,4 @@ void AutomationCanvas::showTimeSelectionMenu(const QPoint &globalPosition)
     QAction *clear = menu.addAction(tr("Clear time selection"));
     if (menu.exec(globalPosition) == clear && m_rowData.clearTimeSelection())
         invalidateContent();
-}
-
-void AutomationCanvas::paintContent(QPainter &painter)
-{
-    painter.fillRect(rect(), themes::color(themes::Role::song_view_piano_roll_background));
-    if (!m_page || !m_page->ready() || !m_page->timeline())
-        return;
-    const AutomationProjection proj = projection();
-    const bool multipleSelectedNodes = m_rowData.selectionHasMultipleNodes();
-    const QFont titleFont = typography::bold(typography::caption(font()));
-    const QFont captionFont = captionLabelFont();
-    m_tempoLane.paint(painter, m_geometry, m_labelGutter, titleFont, captionFont);
-    m_voiceLane.paint(painter, *this, m_geometry, m_labelGutter, titleFont, captionFont);
-    const auto textLayout =
-        layout::twoLineText(titleFont, titleFont, captionFont, layout::Space::Zero);
-    const auto &rows = m_rowData.rows();
-    for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
-        const AutomationRow &row = rows[rowIndex];
-        const int height = proj.rowHeight(row);
-        const QRect bounds(layout::space(layout::Space::Zero), proj.rowTop(rowIndex), width(),
-                           height);
-        const QRect plot(m_geometry.plotOrigin, bounds.top(),
-                         std::max(0, width() - m_geometry.plotOrigin), bounds.height());
-        const QRect textBounds(m_labelGutter.x(), bounds.top(), m_labelGutter.width(),
-                               bounds.height());
-        const auto textBoxes = textLayout.align(textBounds, layout::VerticalAlignment::Center);
-        const auto &points = m_rowData.pointsFor(row, proj);
-        const QColor color =
-            themes::trackIdentityColor(row.id.track % themes::trackIdentityColorCount);
-        const automation::paint::RowPaintParams ctx{
-            proj, row, rowIndex, plot, points, color, nullptr, nullptr, multipleSelectedNodes};
-        automation::paint::paintRow(painter, ctx, bounds, titleFont, captionFont, textBoxes.primary,
-                                    textBoxes.secondary, *this, *m_page, m_geometry, m_rowData,
-                                    m_hoverState, m_activeGesture, m_pencilMode);
-    }
-    const NodeLane *hoveredLane = nullptr;
-    QRect hoveredBody;
-    if (resolveLane(m_hoverState.hover.lane, &hoveredLane, &hoveredBody)) {
-        nodelane::paintHover(painter, *hoveredLane, hoveredBody, m_geometry, proj, m_hoverState,
-                             m_pencilMode);
-        const QRect plot = nodelane::plotRect(hoveredBody, m_geometry);
-        painter.save();
-        painter.setClipRect(plot, Qt::IntersectClip);
-        automation::paint::paintEditCursor(painter, plot,
-                                           proj.displayX(m_page->liveState().editCursorTick,
-                                                         painter.device()->devicePixelRatioF()));
-        painter.restore();
-    }
-    if (m_page->document()) {
-        const QRect add(layout::space(layout::Space::Zero), proj.rowTop(int(rows.size())), width(),
-                        m_geometry.addLaneStripHeight);
-        painter.setPen(themes::color(themes::Role::song_view_add_automation_lane_action));
-        painter.drawText(
-            add.adjusted(layout::space(layout::Space::One), layout::space(layout::Space::Zero),
-                         -layout::space(layout::Space::One), layout::space(layout::Space::Zero)),
-            Qt::AlignLeft | Qt::AlignVCenter, tr("+ Add lane"));
-    }
-    const auto selectedRange = [&] {
-        if (m_band.active)
-            return automation::paint::TickRange::orderedNonEmpty(m_band.startTick, m_band.endTick);
-        const auto &selection = m_rowData.timeSelection();
-        if (!selection.active())
-            return std::optional<automation::paint::TickRange>{};
-        return automation::paint::TickRange::orderedNonEmpty(selection.startTick,
-                                                             selection.endTick);
-    }();
-    if (m_band.active) {
-        const int firstRow = std::min(m_bandRightRow, m_bandEndRow);
-        const int lastRow = std::max(m_bandRightRow, m_bandEndRow);
-        if (selectedRange && firstRow >= 0 && lastRow >= firstRow) {
-            const int top = proj.rowTop(firstRow);
-            const QRect bounds(m_geometry.plotOrigin, top,
-                               std::max(0, width() - m_geometry.plotOrigin),
-                               proj.rowTop(lastRow + 1) - top);
-            automation::paint::paintSelectionReticle(painter, *selectedRange, proj, bounds,
-                                                     painter.device()->devicePixelRatioF());
-        }
-    } else if (selectedRange) {
-        const auto &selection = m_rowData.timeSelection();
-        const qreal dpr = painter.device()->devicePixelRatioF();
-        for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
-            const auto lane = m_rowData.rowIdentity(rows[rowIndex]);
-            if (!selection.coversLane(lane.first, lane.second))
-                continue;
-            const QRect bounds(m_geometry.plotOrigin, proj.rowTop(rowIndex),
-                               std::max(0, width() - m_geometry.plotOrigin),
-                               proj.rowHeight(rows[rowIndex]));
-            automation::paint::paintSelectionReticle(painter, *selectedRange, proj, bounds, dpr);
-        }
-    }
 }

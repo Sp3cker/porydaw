@@ -5,7 +5,6 @@
 
 #include <QWidget>
 
-#include "ui/editordrawer/automationpaint.h"
 #include "ui/editordrawer/drawerpage.h"
 #include "ui/editorviewstate.h"
 #include "ui/songview.h"
@@ -59,32 +58,6 @@ class AutomationPage final : public QWidget
     // Read-only access to the timeline mapping queries (tickAtContentX,
     // displayX, visible grid cells) and m_viewState row layout.
     friend class AutomationProjection;
-    friend void automation::paint::paintRow(QPainter &, const automation::paint::RowPaintParams &,
-                                            const QRect &, const QFont &, const QFont &,
-                                            const QRect &, const QRect &, AutomationCanvas &,
-                                            AutomationPage &, const AutomationGeometry &, CCLanes &,
-                                            const NodeLaneHoverState &,
-                                            const std::optional<ActiveGesture> &, bool);
-    friend void automation::paint::paintPlainGridFallback(QPainter &, const QRect &,
-                                                          AutomationPage &, qreal, qreal);
-    friend void automation::paint::paintNodeDragPreview(QPainter &,
-                                                        const automation::paint::RowPaintParams &,
-                                                        const NodeDragGesture &, AutomationCanvas &,
-                                                        AutomationPage &,
-                                                        const AutomationGeometry &,
-                                                        const NodeLaneHoverState &);
-    friend void automation::paint::paintPencilPreview(QPainter &,
-                                                      const automation::paint::RowPaintParams &,
-                                                      const PencilGesture &, AutomationPage &,
-                                                      const AutomationGeometry &,
-                                                      const NodeLaneHoverState &);
-    friend void automation::paint::paintCurve(QPainter &, const automation::paint::RowPaintParams &,
-                                              AutomationCanvas &, AutomationPage &,
-                                              const AutomationGeometry &, const CCLanes &);
-    friend void automation::paint::paintCurveNodes(QPainter &,
-                                                   const automation::paint::RowPaintParams &,
-                                                   AutomationCanvas &, AutomationPage &,
-                                                   const AutomationGeometry &, const CCLanes &);
 
     struct Geometry {
         int rowDefaultHeight = 0;

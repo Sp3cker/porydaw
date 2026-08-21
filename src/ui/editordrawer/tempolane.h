@@ -25,6 +25,7 @@ class AutomationPage;
 class QFont;
 class QMouseEvent;
 class QPainter;
+struct NodeLaneHoverState;
 
 // Song-wide Tempo lives above Voice Change and the CC lanes. It shares their
 // canvas but deliberately has no controller or track identity.
@@ -62,7 +63,8 @@ class TempoLane final : public NodeLane
                           const AutomationGeometry &geometry);
 
     void paint(QPainter &painter, const AutomationGeometry &geometry, const QRect &labelGutter,
-               const QFont &titleFont, const QFont &captionFont);
+               const QFont &titleFont, const QFont &captionFont,
+               const NodeLaneHoverState &hoverState, bool pencilMode);
 
   private:
     using ActiveGesture = std::variant<NodeDragGesture, SweepGesture>;

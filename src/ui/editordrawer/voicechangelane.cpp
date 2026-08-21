@@ -18,7 +18,6 @@
 #include "ui/contextmenu.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/automationpaint.h"
 #include "ui/layout.h"
 #include "ui/m4asemantics.h"
 #include "ui/theme/themeruntime.h"
@@ -383,7 +382,7 @@ void VoiceChangeLane::paint(QPainter &painter, AutomationCanvas &area,
                 tick = std::min(next, length);
             }
         }
-        automation::paint::paintPlainGridFallback(painter, plot, *m_page, geometry.plotOrigin, dpr);
+        AutomationCanvas::paintPlainGridFallback(painter, plot, *m_page, geometry.plotOrigin, dpr);
     }
     painter.setFont(captionFont);
     const int track = m_engineTrack;
@@ -470,7 +469,7 @@ void VoiceChangeLane::paint(QPainter &painter, AutomationCanvas &area,
     }
     const qreal cursorX =
         m_page->displayX(m_page->liveState().editCursorTick, geometry.plotOrigin, dpr);
-    automation::paint::paintEditCursor(painter, plot, cursorX);
+    AutomationCanvas::paintEditCursor(painter, plot, cursorX);
     painter.restore();
     Q_UNUSED(area);
 }
