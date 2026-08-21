@@ -5,7 +5,7 @@
 
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/automationhover.h"
+#include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/voicechangelane.h"
 #include "ui/songview.h"
@@ -81,8 +81,8 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     const double indicatorTick =
         double(indicatorCell.tickBegin) + 0.4 * double(rig.view().fineGridTicks());
     const auto panInput = rig.pointAt(rig.pan, indicatorTick, 64);
-    AutomationHoverState panIndicator;
-    panIndicator.hover.row = panRow;
+    NodeLaneHoverState panIndicator;
+    panIndicator.hover.lane = LaneHandle{panRow + 1};
     panIndicator.hover.pos = panInput.position;
     const auto mappedCell = projection.snapCellAt(panInput.mapped.rawTick);
     const double panCaretTick = double(rig.view().snapTick(panInput.mapped.rawTick, true));
@@ -91,9 +91,8 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
               panInput.mapped.rawTick != double(panInput.mapped.point.tick) &&
               panInput.mapped.rawTick != panCaretTick &&
               projection.valueAtY(panRow, panInput.position.y()) == panInput.mapped.point.value &&
-              panIndicator.insertionTick(projection, rows[panRow], true) ==
-                  double(panInput.mapped.point.tick) &&
-              panIndicator.insertionTick(projection, rows[panRow], false) == panCaretTick,
+              panIndicator.insertionTick(projection, true) == double(panInput.mapped.point.tick) &&
+              panIndicator.insertionTick(projection, false) == panCaretTick,
           QStringLiteral("Automation insertion indicators did not retain live row, value, and "
                          "fine-grid timing mappings"));
 

@@ -7,7 +7,6 @@
 #include <utility>
 
 #include <QCoreApplication>
-#include <QFontMetricsF>
 #include <QLineF>
 #include <QPainter>
 #include <QPen>
@@ -201,21 +200,6 @@ void TempoLane::paint(QPainter &painter, const AutomationGeometry &geometry,
         automation::paint::paintAutomationNode(
             painter, geometry, previewColor,
             QPointF(projection.displayX(current.tick, dpr), pointY(current)));
-    }
-    if (m_hoveredPoint && *m_hoveredPoint < points.size()) {
-        const TempoPoint &point = points[*m_hoveredPoint];
-        const QPointF center(projection.displayX(point.tick, dpr), pointY(point));
-        const QString text = bpmText(point.microsecondsPerQuarterNote);
-        const QFontMetricsF metrics(captionFont);
-        const QRectF textBounds = metrics.boundingRect(text);
-        const QRectF label(center.x() + layout::space(layout::Space::One),
-                           center.y() - textBounds.height() - layout::space(layout::Space::One),
-                           textBounds.width() + 2 * layout::space(layout::Space::One),
-                           textBounds.height());
-        painter.fillRect(label, themes::color(themes::Role::song_view_piano_roll_accidental_lane));
-        painter.setFont(captionFont);
-        painter.setPen(themes::color(themes::Role::song_view_primary_text));
-        painter.drawText(label, Qt::AlignHCenter | Qt::AlignVCenter, text);
     }
     const qreal cursor = projection.displayX(m_page->liveState().editCursorTick, dpr);
     automation::paint::paintEditCursor(painter, plot, cursor);

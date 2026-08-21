@@ -311,8 +311,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationcanvas.h
     src/ui/editordrawer/automationgesture.cpp
     src/ui/editordrawer/automationgesture.h
-    src/ui/editordrawer/automationhover.cpp
-    src/ui/editordrawer/automationhover.h
+    src/ui/editordrawer/nodelane/hover.cpp
+    src/ui/editordrawer/nodelane/hover.h
     src/ui/editordrawer/automationpaint.cpp
     src/ui/editordrawer/automationpaintpreview.cpp
     src/ui/editordrawer/automationpaint.h
@@ -328,6 +328,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationpage.h
     src/ui/editordrawer/nodelane/nodelane.cpp
     src/ui/editordrawer/nodelane/nodelane.h
+    src/ui/editordrawer/nodelane/paint.cpp
+    src/ui/editordrawer/nodelane/paint.h
     src/ui/editordrawer/tempolane.cpp
     src/ui/editordrawer/tempolanegesture.cpp
     src/ui/editordrawer/tempolanepaint.cpp
@@ -446,6 +448,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automationgesturecheck/transactions.cpp
         src/checks/automationgesturecheck/nodelane.cpp
         src/checks/automationgesturecheck/contract.cpp
+        src/checks/automationgesturecheck/hover.cpp
         src/checks/automationgesturecheck/lifecycle.cpp
         src/checks/rollcheckdrawer.cpp
         src/checks/rollcheckpsgvelocity.cpp

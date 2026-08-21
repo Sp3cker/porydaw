@@ -8,73 +8,18 @@
 #include <QPen>
 
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/automationhover.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationpencilgesture.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/nodelane/hover.h"
 #include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
 
 namespace automation::paint {
-
-void paintHover(QPainter &painter, const RowPaintParams &ctx, AutomationPage &page,
-                const AutomationGeometry &geometry, const CCLanes &rows,
-                const AutomationHoverState &hoverState, bool pencilMode)
-{
-    const AutomationRow &row = ctx.row;
-    const int rowIndex = ctx.rowIndex;
-    const QRect &plot = ctx.plot;
-    if (rowIndex != hoverState.hover.row)
-        return;
-    const qreal dpr = painter.device()->devicePixelRatioF();
-    const qreal x = page.displayX(hoverState.insertionTick(ctx.proj, row, pencilMode),
-                                  geometry.plotOrigin, dpr);
-    const QString &text = hoverState.hoverText;
-    const auto &label = hoverState.hoverValueLabel;
-    const QColor backdrop = themes::color(themes::Role::song_view_piano_roll_accidental_lane);
-    const qreal padding = layout::singlePixel();
-    if (pencilMode) {
-        if (!hoverState.hover.hasPoint) {
-            const QPointF center(x,
-                                 ctx.proj.pointY(row, rowIndex, hoverState.hoverValue(ctx.proj)));
-            paintAutomationNode(painter, geometry,
-                                themes::color(themes::Role::song_view_edit_preview_outline),
-                                center);
-        }
-        if (text.isEmpty() || !label.valid || label.row != rowIndex)
-            return;
-        painter.setFont(label.font);
-        painter.fillRect(label.bounds.adjusted(-padding, -padding, padding, padding), backdrop);
-        painter.setPen(themes::color(themes::Role::song_view_primary_text));
-        painter.drawText(label.rect, Qt::AlignHCenter | Qt::AlignVCenter, text);
-        return;
-    }
-    painter.setPen(QPen(themes::color(themes::Role::song_view_secondary_text),
-                        layout::singlePixel(), Qt::DotLine));
-    painter.drawLine(QPointF(x, plot.top()), QPointF(x, plot.bottom()));
-    if (!hoverState.hover.hasPoint) {
-        int heldValue = 0;
-        if (hoverState.hoverValueFor(rows, ctx.proj, row, rowIndex,
-                                     hoverState.insertionTick(ctx.proj, row, false), false,
-                                     &heldValue)) {
-            const QPointF center(x, ctx.proj.pointY(row, rowIndex, heldValue));
-            paintAutomationNode(painter, geometry,
-                                themes::color(themes::Role::song_view_edit_preview_outline),
-                                center);
-        }
-    }
-    if (text.isEmpty() || !label.valid || label.row != rowIndex)
-        return;
-    painter.setFont(label.font);
-    painter.fillRect(label.bounds.adjusted(-padding, -padding, padding, padding), backdrop);
-    painter.setPen(themes::color(themes::Role::song_view_primary_text));
-    painter.drawText(label.rect, Qt::AlignHCenter | Qt::AlignVCenter, text);
-}
-
 void paintNodeDragPreview(QPainter &painter, const RowPaintParams &ctx,
                           const NodeDragGesture &gesture, AutomationCanvas &area,
                           AutomationPage &page, const AutomationGeometry &geometry,
-                          const AutomationHoverState &hoverState)
+                          const NodeLaneHoverState &hoverState)
 {
     if (gesture.points.empty() || gesture.grabbedPoint >= gesture.points.size())
         return;
@@ -121,7 +66,7 @@ void paintNodeDragPreview(QPainter &painter, const RowPaintParams &ctx,
             painter.drawLine(QLineF(nextX, y, nextX, valueY(next->value)));
         paintAutomationNode(painter, geometry, previewColor, QPointF(x, y));
         const auto &label = hoverState.previewValueLabel;
-        if (label.valid && label.row == rowIndex) {
+        if (label.valid && label.lane == LaneHandle{rowIndex + 1}) {
             painter.setFont(label.font);
             painter.fillRect(label.bounds.adjusted(-layout::singlePixel(), -layout::singlePixel(),
                                                    layout::singlePixel(), layout::singlePixel()),
@@ -143,7 +88,7 @@ void paintNodeDragPreview(QPainter &painter, const RowPaintParams &ctx,
         if (index != gesture.grabbedPoint)
             continue;
         const auto &label = hoverState.previewValueLabel;
-        if (label.valid && label.row == rowIndex) {
+        if (label.valid && label.lane == LaneHandle{rowIndex + 1}) {
             painter.setFont(label.font);
             painter.fillRect(label.bounds.adjusted(-layout::singlePixel(), -layout::singlePixel(),
                                                    layout::singlePixel(), layout::singlePixel()),
@@ -156,7 +101,7 @@ void paintNodeDragPreview(QPainter &painter, const RowPaintParams &ctx,
 
 void paintPencilPreview(QPainter &painter, const RowPaintParams &ctx, const PencilGesture &gesture,
                         AutomationPage &page, const AutomationGeometry &geometry,
-                        const AutomationHoverState &hoverState)
+                        const NodeLaneHoverState &hoverState)
 {
     const AutomationProjection &proj = ctx.proj;
     const AutomationRow &row = ctx.row;
@@ -256,7 +201,7 @@ void paintPencilPreview(QPainter &painter, const RowPaintParams &ctx, const Penc
     }
 
     const auto &label = hoverState.previewValueLabel;
-    if (!label.valid || label.row != rowIndex)
+    if (!label.valid || label.lane != LaneHandle{rowIndex + 1})
         return;
     painter.setFont(label.font);
     painter.fillRect(label.bounds.adjusted(-layout::singlePixel(), -layout::singlePixel(),

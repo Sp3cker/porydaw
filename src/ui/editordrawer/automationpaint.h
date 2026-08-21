@@ -11,7 +11,7 @@
 #include "ui/editordrawer/automationprojection.h"
 
 class AutomationCanvas;
-struct AutomationHoverState;
+struct NodeLaneHoverState;
 class AutomationPage;
 class PencilGesture;
 class CCLanes;
@@ -57,21 +57,17 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
               const QFont &titleFont, const QFont &captionFont, const QRect &primaryTextBox,
               const QRect &secondaryTextBox, AutomationCanvas &area, AutomationPage &page,
               const AutomationGeometry &geometry, CCLanes &rows,
-              const AutomationHoverState &hoverState,
+              const NodeLaneHoverState &hoverState,
               const std::optional<ActiveGesture> &activeGesture, bool pencilMode);
-
-void paintHover(QPainter &painter, const RowPaintParams &ctx, AutomationPage &page,
-                const AutomationGeometry &geometry, const CCLanes &rows,
-                const AutomationHoverState &hoverState, bool pencilMode);
 
 void paintNodeDragPreview(QPainter &painter, const RowPaintParams &ctx,
                           const NodeDragGesture &gesture, AutomationCanvas &area,
                           AutomationPage &page, const AutomationGeometry &geometry,
-                          const AutomationHoverState &hoverState);
+                          const NodeLaneHoverState &hoverState);
 
 void paintPencilPreview(QPainter &painter, const RowPaintParams &ctx, const PencilGesture &gesture,
                         AutomationPage &page, const AutomationGeometry &geometry,
-                        const AutomationHoverState &hoverState);
+                        const NodeLaneHoverState &hoverState);
 
 void paintCurve(QPainter &painter, const RowPaintParams &ctx, AutomationCanvas &area,
                 AutomationPage &page, const AutomationGeometry &geometry, const CCLanes &rows);

@@ -22,7 +22,7 @@ class AutomationCanvas;
 class TempoLane;
 class CCLanes;
 class VoiceChangeLane;
-struct AutomationHoverState;
+struct NodeLaneHoverState;
 class MidiTimeline;
 class SongDocument;
 class SongView;
@@ -55,7 +55,7 @@ class AutomationPage final : public QWidget
     friend class CCLanes;
     friend class VoiceChangeLane;
     friend class TempoLane;
-    friend class AutomationHoverState;
+    friend struct NodeLaneHoverState;
     // Read-only access to the timeline mapping queries (tickAtContentX,
     // displayX, visible grid cells) and m_viewState row layout.
     friend class AutomationProjection;
@@ -63,24 +63,21 @@ class AutomationPage final : public QWidget
                                             const QRect &, const QFont &, const QFont &,
                                             const QRect &, const QRect &, AutomationCanvas &,
                                             AutomationPage &, const AutomationGeometry &, CCLanes &,
-                                            const AutomationHoverState &,
+                                            const NodeLaneHoverState &,
                                             const std::optional<ActiveGesture> &, bool);
     friend void automation::paint::paintPlainGridFallback(QPainter &, const QRect &,
                                                           AutomationPage &, qreal, qreal);
-    friend void automation::paint::paintHover(QPainter &, const automation::paint::RowPaintParams &,
-                                              AutomationPage &, const AutomationGeometry &,
-                                              const CCLanes &, const AutomationHoverState &, bool);
     friend void automation::paint::paintNodeDragPreview(QPainter &,
                                                         const automation::paint::RowPaintParams &,
                                                         const NodeDragGesture &, AutomationCanvas &,
                                                         AutomationPage &,
                                                         const AutomationGeometry &,
-                                                        const AutomationHoverState &);
+                                                        const NodeLaneHoverState &);
     friend void automation::paint::paintPencilPreview(QPainter &,
                                                       const automation::paint::RowPaintParams &,
                                                       const PencilGesture &, AutomationPage &,
                                                       const AutomationGeometry &,
-                                                      const AutomationHoverState &);
+                                                      const NodeLaneHoverState &);
     friend void automation::paint::paintCurve(QPainter &, const automation::paint::RowPaintParams &,
                                               AutomationCanvas &, AutomationPage &,
                                               const AutomationGeometry &, const CCLanes &);

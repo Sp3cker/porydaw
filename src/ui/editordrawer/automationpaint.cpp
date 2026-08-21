@@ -7,10 +7,10 @@
 #include <QPen>
 
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/automationhover.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationpencilgesture.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/nodelane/hover.h"
 #include "ui/layout.h"
 #include "ui/selectionreticle.h"
 #include "ui/theme/themeruntime.h"
@@ -103,8 +103,8 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
               const QFont &titleFont, const QFont &captionFont, const QRect &primaryTextBox,
               const QRect &secondaryTextBox, AutomationCanvas &area, AutomationPage &page,
               const AutomationGeometry &geometry, CCLanes &rows,
-              const AutomationHoverState &hoverState,
-              const std::optional<ActiveGesture> &activeGesture, bool pencilMode)
+              const NodeLaneHoverState &hoverState,
+              const std::optional<ActiveGesture> &activeGesture, bool)
 {
     const AutomationProjection &proj = ctx.proj;
     const AutomationRow &row = ctx.row;
@@ -204,19 +204,6 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
     } else {
         paintUnchangedCurve();
     }
-    if (rowIndex == hoverState.hover.row && hoverState.hover.hasPoint) {
-        const qreal nodeRadius =
-            geometry.nodePaintRadius + geometry.nodeOutlineDipWidth + layout::singlePixel();
-        const QPointF center(page.displayX(hoverState.hover.point.tick, geometry.plotOrigin, dpr),
-                             proj.pointY(row, rowIndex, hoverState.hover.point.value));
-        const bool antialiasing = painter.testRenderHint(QPainter::Antialiasing);
-        painter.setRenderHint(QPainter::Antialiasing, true);
-        painter.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline),
-                            2 * layout::singlePixel()));
-        painter.setBrush(Qt::NoBrush);
-        painter.drawEllipse(center, nodeRadius, nodeRadius);
-        painter.setRenderHint(QPainter::Antialiasing, antialiasing);
-    }
     if (activeGesture) {
         const auto valueY = [&](int value) { return proj.pointY(row, rowIndex, value); };
         const auto tickX = [&](uint64_t tick) {
@@ -229,7 +216,7 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
                                 themes::color(themes::Role::song_view_edit_preview_outline),
                                 QPointF(x, y));
             const auto &label = hoverState.previewValueLabel;
-            if (!label.valid || label.row != rowIndex)
+            if (!label.valid || label.lane != LaneHandle{rowIndex + 1})
                 return;
             painter.setFont(label.font);
             painter.fillRect(label.bounds.adjusted(-layout::singlePixel(), -layout::singlePixel(),
@@ -269,7 +256,6 @@ void paintRow(QPainter &painter, const RowPaintParams &ctx, const QRect &bounds,
                     [&](const PencilGesture &) {}},
             *activeGesture);
     }
-    paintHover(painter, ctx, page, geometry, rows, hoverState, pencilMode);
     const qreal cursorX = page.displayX(page.liveState().editCursorTick, geometry.plotOrigin, dpr);
     paintEditCursor(painter, plot, cursorX);
     painter.restore();

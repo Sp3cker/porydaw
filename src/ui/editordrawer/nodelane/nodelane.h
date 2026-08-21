@@ -15,6 +15,12 @@ struct NodePointMove {
     NodePoint to;          // destination tick + value
 };
 
+struct LaneHandle {
+    int index = -1;
+    constexpr bool valid() const noexcept { return index >= 0; }
+    constexpr bool operator==(const LaneHandle &) const noexcept = default;
+};
+
 class NodeLane
 {
   public:

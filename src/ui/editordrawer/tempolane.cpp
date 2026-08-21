@@ -207,11 +207,6 @@ void TempoLane::cancel()
     m_deletedNodeClick.clear();
 }
 
-void TempoLane::clearHover()
-{
-    m_hoveredPoint.reset();
-}
-
 bool TempoLane::mousePress(AutomationCanvas &area, QMouseEvent *event,
                            const AutomationGeometry &geometry)
 {
@@ -231,9 +226,6 @@ bool TempoLane::mousePress(AutomationCanvas &area, QMouseEvent *event,
         (inHeader || (inBody && event->position().x() >= geometry.plotOrigin))) {
         m_band.press(event->pos(), projection.snapTickAt(event->position().x(),
                                                          event->modifiers() & Qt::AltModifier));
-        if (!inHeader)
-            m_hoveredPoint =
-                hitPoint(event->position(), projection, geometry, area.devicePixelRatioF());
         return true;
     }
     if (inHeader) {
@@ -296,12 +288,7 @@ bool TempoLane::mouseMove(AutomationCanvas &area, QMouseEvent *event,
         updateActiveGesture(area, event->position(), event->modifiers(), geometry, true);
         return true;
     }
-    if (!contains(event->pos()))
-        return false;
-    m_hoveredPoint = containsBody(event->position()) ? hitPoint(event->position(), projection,
-                                                                geometry, area.devicePixelRatioF())
-                                                     : std::nullopt;
-    return true;
+    return false;
 }
 
 bool TempoLane::mouseRelease(AutomationCanvas &area, QMouseEvent *event,
