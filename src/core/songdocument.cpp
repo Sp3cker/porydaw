@@ -9,6 +9,7 @@
 #include <set>
 
 #include "core/miditimeline.h"
+#include "core/timedefaults.h"
 #include "project/songregistry.h"
 
 namespace song_document_tempo {
@@ -1284,14 +1285,15 @@ void SongDocument::nudgeNotesVelocity(const std::vector<DocNote> &notes, int del
 
 SmfEvent SongDocument::makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick, int value) const
 {
+    value = CoreTimeDefaults::clampLaneValue(cc, value);
     if (cc == DOC_CC_BEND) {
-        const int bend14 = std::clamp(value, -8192, 8191) + 8192;
+        const auto bend14 = value - CoreTimeDefaults::kMinBendValue;
         return makeChannelEvent(0xE, channel, tick, uint8_t(bend14 & 0x7F),
                                 uint8_t((bend14 >> 7) & 0x7F));
     }
     if (cc == DOC_CC_VOICE)
-        return makeChannelEvent(0xC, channel, tick, uint8_t(std::clamp(value, 0, 127)), 0);
-    return makeChannelEvent(0xB, channel, tick, cc, uint8_t(std::clamp(value, 0, 127)));
+        return makeChannelEvent(0xC, channel, tick, uint8_t(value), 0);
+    return makeChannelEvent(0xB, channel, tick, cc, uint8_t(value));
 }
 
 void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value)

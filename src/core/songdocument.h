@@ -12,15 +12,14 @@
 #include "core/noteid.h"
 #include "core/smf.h"
 #include "core/tempo.h"
+#include "core/timedefaults.h"
 #include "project/decompproject.h"
 
 class MidiTimeline;
 
-// Pseudo-CC numbers for lanes that aren't controller-backed. DOC_CC_BEND
-// matches LANE_CC_BEND in the view model.
-constexpr uint8_t DOC_CC_BEND = 0xFF;  // pitch-bend events (0xE)
-constexpr uint8_t DOC_CC_VOICE = 0xFD; // program changes (0xC): the track's
-                                       // voice; value is the voicegroup entry
+// Pseudo-CC numbers for lanes that aren't controller-backed.
+constexpr uint8_t DOC_CC_BEND = CoreTimeDefaults::kLaneCcBend;
+constexpr uint8_t DOC_CC_VOICE = CoreTimeDefaults::kLaneCcVoice;
 
 // Loop markers as mid2agb reads them: a text-type meta (0x01-0x07) whose
 // content, truncated to 32 bytes and whitespace-trimmed, is the single
@@ -69,7 +68,7 @@ struct DocLanePoint {
     int smfTrack = -1;
     size_t index = 0;
     uint64_t tick = 0;
-    int value = 0; // CC: 0-127; bend: -8192..8191; voice: 0-127
+    int value = 0; // CoreTimeDefaults::laneValueMinimum/Maximum
 };
 
 // Tempo-only mutation. Mixed time/range commands apply a typed Tempo payload

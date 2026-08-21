@@ -6,6 +6,7 @@
 
 #include "core/miditimeline.h"
 #include "core/noteid.h"
+#include "core/timedefaults.h"
 #include "ui/m4asemantics.h"
 
 // Presentation model derived from a MidiTimeline: notes paired from on/off
@@ -28,8 +29,7 @@ struct LanePoint {
     int value;
 };
 
-// Sentinel "CC" numbers for lanes that aren't controller-backed.
-constexpr uint8_t LANE_CC_BEND = 0xFF;
+constexpr uint8_t LANE_CC_BEND = CoreTimeDefaults::kLaneCcBend;
 
 struct AutoLane {
     uint8_t track;

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
 
@@ -81,20 +82,18 @@ int AutomationProjection::rowBoundaryAt(int y) const
 
 int AutomationProjection::rowMinimum(const AutomationRow &row) const
 {
-    return row.id.kind == EditorAutomationRowKind::ControlChange &&
-                   row.id.controller == automation::kBendController
-               ? -8192
-               : 0;
+    if (row.id.kind != EditorAutomationRowKind::ControlChange)
+        return CoreTimeDefaults::kMinCcValue;
+    return CoreTimeDefaults::laneValueMinimum(row.id.controller);
 }
 
 int AutomationProjection::rowMaximum(const AutomationRow &row) const
 {
     if (row.id.kind != EditorAutomationRowKind::ControlChange)
-        return 127;
-    if (row.id.controller == automation::kBendController)
-        return 8191;
-    if (!automation::rangeZoomable(row.id.controller))
-        return 127;
+        return CoreTimeDefaults::kMaxCcValue;
+    if (row.id.controller == automation::kBendController ||
+        !automation::rangeZoomable(row.id.controller))
+        return CoreTimeDefaults::laneValueMaximum(row.id.controller);
     int dataMaximum = 0;
     if (const auto *lane = laneFor(row))
         for (const auto &point : lane->points)

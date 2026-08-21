@@ -36,6 +36,28 @@ constexpr int controllerDefault(uint8_t cc)
     return -1;
 }
 
+inline constexpr int kMinCcValue = 0;
+inline constexpr int kMaxCcValue = 127;
+inline constexpr int kMinBendValue = -8192;
+inline constexpr int kMaxBendValue = 8191;
+inline constexpr uint8_t kLaneCcBend = 0xFF;  // pitch-bend events (0xE)
+inline constexpr uint8_t kLaneCcVoice = 0xFD; // program changes (0xC)
+
+constexpr int laneValueMinimum(uint8_t cc)
+{
+    return cc == kLaneCcBend ? kMinBendValue : kMinCcValue;
+}
+
+constexpr int laneValueMaximum(uint8_t cc)
+{
+    return cc == kLaneCcBend ? kMaxBendValue : kMaxCcValue;
+}
+
+constexpr int clampLaneValue(uint8_t cc, int value)
+{
+    return std::clamp(value, laneValueMinimum(cc), laneValueMaximum(cc));
+}
+
 inline uint32_t microsecondsPerQuarterNoteForBpm(int bpm)
 {
     bpm = std::clamp(bpm, kMinTempoBpm, kMaxTempoBpm);
