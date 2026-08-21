@@ -8,6 +8,7 @@
 #include <QMessageBox>
 
 #include "core/songdocument.h"
+#include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/m4asemantics.h"
 
@@ -130,8 +131,8 @@ void AutomationArea::showLaneMenu(const AutomationRow &row, const QPoint &global
     } else if (chosen == paste) {
         std::vector<SongDocument::LanePointValue> replacementPoints;
         replacementPoints.reserve(m_clipboard.size());
-        const int minimum = controller == automation::kBendController ? -8192 : 0;
-        const int maximum = controller == automation::kBendController ? 8191 : 127;
+        const int minimum = CoreTimeDefaults::laneValueMinimum(controller);
+        const int maximum = CoreTimeDefaults::laneValueMaximum(controller);
         for (const auto &point : m_clipboard)
             replacementPoints.push_back({point.tick, std::clamp(point.value, minimum, maximum)});
         auto completion =

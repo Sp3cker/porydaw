@@ -1,6 +1,6 @@
 # Porydaw Editor Context
 
-Porydaw edits m4a-native song data through coordinated timeline surfaces. These terms describe the canonical selection shared by those surfaces.
+Porydaw edits m4a-native song data through coordinated timeline surfaces. These terms cover the selection model and the automation lane family shared by those surfaces.
 
 ## Language
 
@@ -31,3 +31,23 @@ _Avoid_: Mirrored selection, copied selection, local selection
 **Transient Selection Preview**:
 Gesture-local selection feedback that has not become canonical selection, such as a piano-roll rubber band before release.
 _Avoid_: Selection, temporary selection model, local selection
+
+**Automation**:
+The editor drawer's shared node-lane editing model, spanning Tempo, Voice, and CC lanes. The family name — never a synonym for one kind.
+_Avoid_: Automation lane (as a kind name), auto lane
+
+**Node Lane**:
+ Tempo or CC lane.
+_Avoid_: Automation row, row
+
+**CC Lane**:
+A per-track, controller-backed lane such as volume, pan, expression, or bend. Its points hold MIDI controller values.
+_Avoid_: Automation lane, controller lane, parameter lane
+
+**Tempo Lane**:
+The single global tempo lane. It belongs to the song, not to any track.
+_Avoid_: Tempo track, tempo row
+
+**Voice Lane**:
+The per-track lane of voice changes. Its value is a voice slot in the track's voicegroup.
+_Avoid_: Voice row, program lane

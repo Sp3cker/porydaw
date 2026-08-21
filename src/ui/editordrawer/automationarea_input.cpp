@@ -11,6 +11,7 @@
 #include <QWheelEvent>
 
 #include "core/songdocument.h"
+#include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
 
@@ -386,12 +387,10 @@ void AutomationArea::mouseDoubleClickEvent(QMouseEvent *event)
     DocLanePoint existing;
     const bool hasExisting = m_page->document()->findLanePoint(track, controller, tick, &existing);
     int value = hasExisting ? existing.value : proj.valueAtY(rowIndex, event->pos().y());
-    int minimum = 0;
-    int maximum = 127;
+    int minimum = CoreTimeDefaults::laneValueMinimum(controller);
+    int maximum = CoreTimeDefaults::laneValueMaximum(controller);
     QString label = tr("Value:");
     if (controller == automation::kBendController) {
-        minimum = -8192;
-        maximum = 8191;
         label = tr("Bend (0 = none):");
     } else if (controller == 10 || controller == 24) {
         minimum = -64;
