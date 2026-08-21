@@ -50,6 +50,7 @@ int runAutomationGestureCheck(const QString &scratchProject, const QString &song
                               const QString &domain = QString());
 int runAutomationPopupMenuCheck(const QString &scratchProject, const QString &songLabel,
                                 const QString &screenshotPath = QString());
+int runTempoStripCheck(const QString &scratchProject, const QString &songLabel);
 int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel,
                          const QString &screenshotPath = QString());
 int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel);

@@ -301,6 +301,17 @@ const std::vector<CheckDefinition> &catalog()
                 .fixtureFiles = route101Files,
             },
             {
+                .name = "tempo-strip",
+                .argv = strings({"--check-tempo-strip", "{scratch}", "mus_route101"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runTempoStripCheck(args[1], args[2]);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101Files,
+            },
+            {
                 .name = "automation-popup-menus",
                 .argv = strings({"--check-automation-popup-menus", "{scratch}", "mus_route101"}),
                 .handler =
