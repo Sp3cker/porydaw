@@ -18,6 +18,7 @@ struct Domain {
 
 constexpr std::array kDomains{
     Domain{"action", checkAutomationPencilAction},
+    Domain{"cursor", checkAutomationPencilCursor},
     Domain{"mapping", checkAutomationPencilMapping},
     Domain{"stroke", checkAutomationPencilStroke},
     Domain{"ownership", checkAutomationPencilOwnership},

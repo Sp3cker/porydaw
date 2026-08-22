@@ -122,10 +122,7 @@ void AutomationCanvas::setPencilMode(bool enabled)
     m_pencilMode = enabled;
     syncHoverValueLabel();
     syncPreviewValueLabel();
-    const QCursor cursor = enabled ? pencilCursor() : QCursor(Qt::ArrowCursor);
-    setCursor(cursor);
-    if (m_scroll && m_scroll->viewport())
-        m_scroll->viewport()->setCursor(cursor);
+    updatePencilCursor();
     if (m_page)
         m_page->announce(enabled ? tr("Pencil mode on") : tr("Pencil mode off"));
 }
@@ -420,8 +417,6 @@ void AutomationCanvas::cancelInteraction()
     m_hoverState.hover.highlightLocked = false;
     invalidateContent(m_hoverState.clearHover());
     updateAxisLockCursor(AxisLock::None);
-    if (m_pencilMode)
-        setCursor(pencilCursor());
     if (mouseGrabber() == this)
         releaseMouse();
     if (wasActive)
@@ -529,10 +524,8 @@ void AutomationCanvas::updateAxisLockCursor(AxisLock lock)
         setCursor(Qt::SizeHorCursor);
     else if (lock == AxisLock::Value)
         setCursor(Qt::SizeVerCursor);
-    else if (m_pencilMode)
-        setCursor(pencilCursor());
     else
-        setCursor(Qt::ArrowCursor);
+        updatePencilCursor();
 }
 
 NodePoint AutomationCanvas::mappedForLane(LaneHandle handle, QPointF pos, bool fine, bool snapValue,

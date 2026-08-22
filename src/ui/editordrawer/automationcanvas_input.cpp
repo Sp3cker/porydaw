@@ -15,6 +15,27 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
 
+bool AutomationCanvas::isEditablePencilHit(const QPointF &position) const noexcept
+{
+    if (position.x() < qreal(m_geometry.plotOrigin))
+        return false;
+    const PointerLaneHit pointer = pointerLaneAt(position.toPoint());
+    if (pointer.tempoHeader)
+        return false;
+    const NodeLane *lane = nullptr;
+    return resolveLane(pointer.lane, &lane, nullptr) && lane != nullptr;
+}
+
+void AutomationCanvas::updatePencilCursor()
+{
+    if (!m_pencilMode) {
+        setCursor(Qt::ArrowCursor);
+        return;
+    }
+    setCursor(isEditablePencilHit(mapFromGlobal(QCursor::pos())) ? pencilCursor()
+                                                                 : QCursor(Qt::ArrowCursor));
+}
+
 void AutomationCanvas::wheelEvent(QWheelEvent *event)
 {
     if (!m_page || !m_page->ready())
@@ -287,10 +308,7 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
         if (!inTempo && m_voiceLane.contains(event->pos())) {
             invalidateContent(m_hoverState.clearHover());
             m_voiceLane.updateHover(*this, m_geometry, event->position().x(), event->pos().y());
-            if (m_pencilMode)
-                setCursor(pencilCursor());
-            else
-                setCursor(Qt::ArrowCursor);
+            setCursor(Qt::ArrowCursor);
             return;
         }
         m_voiceLane.clearHover(*this);
@@ -309,7 +327,7 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
         else
             invalidateContent(m_hoverState.updateHover(hoverTarget(), m_geometry, *lane, body,
                                                        handle, proj, x, y, m_pencilMode));
-        if (m_pencilMode)
+        if (m_pencilMode && isEditablePencilHit(event->position()))
             setCursor(pencilCursor());
         else
             setCursor(Qt::ArrowCursor);
