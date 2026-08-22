@@ -2953,30 +2953,30 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     }
 
     // Keyboard transpose/nudge on note D (clicking it selects it):
-    // Ctrl+Up is a semitone, Ctrl+Shift+Down an octave, and Ctrl+Right
+    // Up is a semitone, Shift+Down an octave, and Right
     // moves one snap cell from an on-grid start.
     const QPoint dCenter(
         pianoKeyboardWidth + view.contentX(double(d.tick) + 0.5 * double(snapCell)), rowY);
     click(roll, dCenter);
-    sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+    sendKey(roll, Qt::Key_Up, Qt::NoModifier);
     DocNote transposed;
     if (!doc.findNote(track, d.tick, uint8_t(d.key + 1), &transposed))
-        fail("Ctrl+Up did not transpose up a semitone");
-    sendKey(roll, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier);
+        fail("Up did not transpose up a semitone");
+    sendKey(roll, Qt::Key_Down, Qt::ShiftModifier);
     if (!doc.findNote(track, d.tick, uint8_t(d.key - 11), &transposed))
-        fail("Ctrl+Shift+Down did not transpose down an octave");
-    sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
+        fail("Shift+Down did not transpose down an octave");
+    sendKey(roll, Qt::Key_Right, Qt::NoModifier);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
-        fail("Ctrl+Right did not nudge one snap cell right");
+        fail("Right did not nudge one snap cell right");
     // An off-grid selection nudges onto the grid line, not by a whole
     // cell: push the note half a snap cell right behind the view's back
     // (reselecting — the selection keys on the start tick, which moved),
-    // and Ctrl+Left must bring it back to the line it left.
+    // and Left must bring it back to the line it left.
     doc.moveNotes({transposed}, int64_t(snapCell / 2), 0);
     view.selectionModel().setNoteSelection({transposed.noteId});
-    sendKey(roll, Qt::Key_Left, Qt::ControlModifier);
+    sendKey(roll, Qt::Key_Left, Qt::NoModifier);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
-        fail("Ctrl+Left did not snap the off-grid note back to the grid");
+        fail("Left did not snap the off-grid note back to the grid");
 
     // Keyboard moves keep the notes in view, scrolling just enough rather
     // than re-anchoring. Vertical: park the note's row above the viewport,
@@ -2985,10 +2985,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     view.scrollRollBy((129 - keyNow) * view.keyHeight() - view.scrollY());
     if ((128 - keyNow) * view.keyHeight() - view.scrollY() > 1e-9)
         fail("could not park the note's row above the viewport");
-    sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+    sendKey(roll, Qt::Key_Up, Qt::NoModifier);
     if (std::abs(view.scrollY() - (126 - keyNow) * view.keyHeight()) > 1e-9)
-        fail("Ctrl+Up above the viewport did not scroll the row flush to the top");
-    sendKey(roll, Qt::Key_Down, Qt::ControlModifier); // undo the extra semitone
+        fail("Up above the viewport did not scroll the row flush to the top");
+    sendKey(roll, Qt::Key_Down, Qt::NoModifier); // undo the extra semitone
 
     // Horizontal: park the note past the left edge; nudging right must
     // bring its start flush to the left edge (minimal scroll, not the
@@ -3000,23 +3000,23 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     view.scrollByPx(view.contentX(double(nStart + snapCell)) + 40);
     if (view.displayX(double(nStart + snapCell), 0.0, dpr) >= 0.0)
         fail("could not park the note past the left edge");
-    sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
+    sendKey(roll, Qt::Key_Right, Qt::NoModifier);
     nStart += snapCell;
     if (view.displayX(double(nStart), 0.0, dpr) != 0.0)
-        fail("Ctrl+Right off-screen-left did not scroll the start flush to the "
+        fail("Right off-screen-left did not scroll the start flush to the "
              "left edge");
     const qreal vw = std::max(50, roll->width() - pianoKeyboardWidth);
     const qreal cellPx = view.contentX(double(nStart + snapCell)) - view.contentX(double(nStart));
     const int rides = (vw - view.contentX(double(nStart + snapCell))) / cellPx + 2;
     for (int i = 0; i < rides; i++)
-        sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
+        sendKey(roll, Qt::Key_Right, Qt::NoModifier);
     nStart += uint64_t(rides) * snapCell;
     if (view.displayX(double(nStart + snapCell), 0.0, dpr) != vw - physicalPixel)
         fail("riding the nudge right did not keep the note's end at the right edge");
     // Ride back home so the time-selection checks below find the note
     // where they expect it; every press so far merges into one command.
     for (int i = 0; i < rides + 1; i++)
-        sendKey(roll, Qt::Key_Left, Qt::ControlModifier);
+        sendKey(roll, Qt::Key_Left, Qt::NoModifier);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
         fail("the ride right and back did not return the note home");
 
@@ -3120,12 +3120,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             view.selectionModel().setTimeSelection(band);
         }
     }
-    sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+    sendKey(roll, Qt::Key_Up, Qt::NoModifier);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 10), &transposed))
-        fail("time-selection Ctrl+Up did not transpose the covered note");
-    sendKey(roll, Qt::Key_Right, Qt::ControlModifier);
+        fail("time-selection Up did not transpose the covered note");
+    sendKey(roll, Qt::Key_Right, Qt::NoModifier);
     if (!doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed))
-        fail("time-selection Ctrl+Right did not nudge the covered note");
+        fail("time-selection Right did not nudge the covered note");
     if (view.selectionModel().timeSelection().startTick != d.tick + 2 * snapCell)
         fail("time-selection band did not follow the nudge");
 
@@ -3612,7 +3612,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // delete, the press-grown draw, the tiny-drag draw, two modifier
     // velocity nudges, the abutting-note fixture add, add, two resizes, the
     // three note-selection presses MERGED into one, the off-grid
-    // behind-the-back move, Ctrl+Left (all the scroll-follow presses merge
+    // behind-the-back move, Left (all the scroll-follow presses merge
     // into it), two time-selection moves (kept separate by the clean-index
     // save point), the inline rename, and the mid-song voice change — plus,
     // when the song has a second track, the header-drag track move and the
@@ -4157,49 +4157,49 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         view.setScaleRoot(0);
         view.setScaleId(scaleMajor);
 
-        // D1. Fold Ctrl+Up moves one scale degree (C60 -> D62).
+        // D1. Fold Up moves one scale degree (C60 -> D62).
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 60, dur, 100);
             view.selectionModel().setNoteSelection({noteIdAt(tBase, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
-            sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+            sendKey(roll, Qt::Key_Up, Qt::NoModifier);
             DocNote moved;
             if (!doc.findNote(scaleTrack, tBase, 62, &moved))
-                fail("Fold Ctrl+Up did not move C up one scale degree to D");
+                fail("Fold Up did not move C up one scale degree to D");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
             view.selectionModel().clearNoteSelection();
         }
 
-        // D2. Fold Ctrl+Shift+Up moves a chromatic octave (C60 -> 72).
+        // D2. Fold Shift+Up moves a chromatic octave (C60 -> 72).
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 60, dur, 100);
             view.selectionModel().setNoteSelection({noteIdAt(tBase, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
-            sendKey(roll, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier);
+            sendKey(roll, Qt::Key_Up, Qt::ShiftModifier);
             DocNote moved;
             if (!doc.findNote(scaleTrack, tBase, 72, &moved))
-                fail("Fold Ctrl+Shift+Up did not move C up an octave");
+                fail("Fold Shift+Up did not move C up an octave");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
             view.selectionModel().clearNoteSelection();
         }
 
-        // D3. Off Ctrl+Up stays chromatic (C60 -> 61).
+        // D3. Off Up stays chromatic (C60 -> 61).
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 60, dur, 100);
             view.selectionModel().setNoteSelection({noteIdAt(tBase, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(false);
-            sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+            sendKey(roll, Qt::Key_Up, Qt::NoModifier);
             DocNote moved;
             if (!doc.findNote(scaleTrack, tBase, 61, &moved))
-                fail("Off Ctrl+Up did not move C up a semitone");
+                fail("Off Up did not move C up a semitone");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
             view.selectionModel().clearNoteSelection();
@@ -4213,12 +4213,12 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             view.selectionModel().setNoteSelection({noteIdAt(tBase, 60), noteIdAt(tBase, 61)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
-            sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+            sendKey(roll, Qt::Key_Up, Qt::NoModifier);
             DocNote moved;
             const bool okA = doc.findNote(scaleTrack, tBase, 62, &moved);
             const bool okB = doc.findNote(scaleTrack, tBase, 64, &moved);
             if (!okA || !okB)
-                fail("Fold Ctrl+Up did not map selected notes to distinct degrees");
+                fail("Fold Up did not map selected notes to distinct degrees");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
             view.selectionModel().clearNoteSelection();
@@ -4233,7 +4233,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             view.selectionModel().setNoteSelection({noteIdAt(tA, 60), noteIdAt(tB, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
-            sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+            sendKey(roll, Qt::Key_Up, Qt::NoModifier);
             DocNote moved;
             const bool okA = doc.findNote(scaleTrack, tA, 62, &moved);
             const bool okB = doc.findNote(scaleTrack, tB, 62, &moved);
@@ -4252,10 +4252,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             view.selectionModel().setNoteSelection({noteIdAt(tBase, 61)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
-            sendKey(roll, Qt::Key_Up, Qt::ControlModifier);
+            sendKey(roll, Qt::Key_Up, Qt::NoModifier);
             DocNote moved;
             if (!doc.findNote(scaleTrack, tBase, 62, &moved))
-                fail("Fold Ctrl+Up did not move an off-scale exception to the next degree");
+                fail("Fold Up did not move an off-scale exception to the next degree");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
             view.selectionModel().clearNoteSelection();
@@ -4439,7 +4439,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             view.setScaleHighlight(false);
             view.setScaleFold(true);
             const int cmdsBefore = doc.undoStack()->count();
-            sendKey(roll, Qt::Key_Up, Qt::ControlModifier); // out of range
+            sendKey(roll, Qt::Key_Up, Qt::NoModifier); // out of range
             if (doc.undoStack()->count() != cmdsBefore)
                 fail("Fold out-of-range nudge pushed an undo command");
             DocNote still;

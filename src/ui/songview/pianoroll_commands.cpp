@@ -118,7 +118,7 @@ void PianoRoll::keyReleaseEvent(QKeyEvent *event)
         invalidateContent();
     }
     // End the transpose audition when the shortcut's keys come up.
-    // Autorepeat releases are skipped so a held Ctrl+Up keeps sounding
+    // Autorepeat releases are skipped so a held transpose key keeps sounding
     // the moving pitch; the Drag::None guard keeps a stray key release
     // from cutting a mouse gesture's preview short.
     if (!event->isAutoRepeat() && m_drag == Drag::None)

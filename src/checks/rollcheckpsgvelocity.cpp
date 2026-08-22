@@ -1651,7 +1651,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
           "focused velocity keyboard fixture must resolve its selected notes");
     const uint64_t revisionBeforeKeyboard = document.revision();
     area.setFocus(Qt::OtherFocusReason);
-    QKeyEvent transposeUp(QEvent::KeyPress, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier);
+    QKeyEvent transposeUp(QEvent::KeyPress, Qt::Key_Up, Qt::ShiftModifier);
     QApplication::sendEvent(&area, &transposeUp);
     DocNote firstAfterKeyboard;
     DocNote thirdAfterKeyboard;

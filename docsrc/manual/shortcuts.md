@@ -20,12 +20,12 @@ On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 | Paste at Edit Cursor | `Ctrl+V` | Pastes clipboard content at the edit cursor |
 | Select All Notes | `Ctrl+A` | Selects all notes on the active track |
 | Delete Selection | `Delete` / `Backspace` | Deletes selected notes or active time range |
-| Transpose Up (Semitone) | `Ctrl+Up` | Transposes selection up by 1 semitone |
-| Transpose Down (Semitone) | `Ctrl+Down` | Transposes selection down by 1 semitone |
-| Transpose Up (Octave) | `Ctrl+Shift+Up` | Transposes selection up by 1 octave |
-| Transpose Down (Octave) | `Ctrl+Shift+Down` | Transposes selection down by 1 octave |
-| Nudge Left | `Ctrl+Left` | Nudges active time selection left by grid step |
-| Nudge Right | `Ctrl+Right` | Nudges active time selection right by grid step |
+| Transpose Up (Semitone) | `Up` | Transposes selection up by 1 semitone |
+| Transpose Down (Semitone) | `Down` | Transposes selection down by 1 semitone |
+| Transpose Up (Octave) | `Shift+Up` | Transposes selection up by 1 octave |
+| Transpose Down (Octave) | `Shift+Down` | Transposes selection down by 1 octave |
+| Nudge Left | `Left` | Nudges active time selection left by grid step |
+| Nudge Right | `Right` | Nudges active time selection right by grid step |
 | Mute Selected Tracks | `M` | Toggles mute on selected track(s) |
 | Solo Selected Tracks | `S` | Toggles solo on selected track(s) |
 | Adjust Velocity | `Ctrl` + vertical drag | Adjusts note velocity by holding modifier and dragging |

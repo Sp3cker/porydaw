@@ -416,11 +416,11 @@ class SongView : public QWidget
     void insertBlankTime();
     void duplicateTimeSelection();
     void pasteRangeAtEditCursor();
-    // Ctrl+Up/Down on the selection: transpose every covered note (all
-    // scoped tracks at once). Same all-or-nothing rule as the roll's note
+    // Transpose selection (Up/Down / Shift+Up/Down): transpose every covered note
+    // (all scoped tracks at once). Same all-or-nothing rule as the roll's note
     // selection — if any note would clamp at the key range, nothing moves.
     void transposeTimeSelection(int dKey);
-    // Ctrl+Left/Right: the selection start moves to the previous/next
+    // Nudge selection (Left/Right): the selection start moves to the previous/next
     // ruler grid line and the covered contents (notes and automation
     // points) move with it; the band follows.
     void nudgeTimeSelection(bool right);
