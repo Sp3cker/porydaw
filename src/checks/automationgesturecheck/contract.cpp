@@ -28,7 +28,7 @@ struct Session {
     songview::EditorSelectionModel &selection;
     uint32_t usedTrackMask = 0;
     int engineTrack = 0;
-    uint8_t controller = 10;
+    uint8_t controller = 11;
 };
 
 struct Adapter {
@@ -449,6 +449,43 @@ void checkMoveCollision(const CaseContext &context)
     checkUndoRestores(context, before, beforePoints, {{192, 20}, {288, 40}});
 }
 
+void checkEngineDefaultNodes(Session &session, const AutomationGestureCheck &fn)
+{
+    Check check{fn, QStringLiteral("engine-default")};
+    auto &document = session.document;
+    setLaneValues(document, session.engineTrack, 7, {});
+    setLaneValues(document, session.engineTrack, 10, {});
+    setLaneValues(document, session.engineTrack, 1, {});
+    CCLaneAdapter volume(document, session.selection, session.usedTrackMask, session.engineTrack,
+                         7);
+    CCLaneAdapter pan(document, session.selection, session.usedTrackMask, session.engineTrack, 10);
+    CCLaneAdapter modulation(document, session.selection, session.usedTrackMask,
+                             session.engineTrack, 1);
+    check.require(sameNodePoints(volume.points(), {{0, 127}}),
+                  QStringLiteral("Volume did not expose its engine-default tick-zero node"));
+    check.require(sameNodePoints(pan.points(), {{0, 64}}),
+                  QStringLiteral("Pan did not expose its engine-default tick-zero node"));
+    check.require(modulation.points().empty(),
+                  QStringLiteral("a non-Volume/Pan lane exposed a synthetic default node"));
+
+    const auto checkPromotion = [&](CCLaneAdapter &lane, uint8_t controller, int value,
+                                    const QString &name) {
+        const auto before = snapshot(document);
+        lane.movePoints({{uint64_t{0}, NodePoint{96, value}}});
+        const auto raw = document.lanePoints(session.engineTrack, controller);
+        check.require(isOneEdit(before, snapshot(document)) && raw.size() == 1 &&
+                          raw.front().tick == 96 && raw.front().value == value,
+                      QStringLiteral("%1 engine-default node did not promote to one document point")
+                          .arg(name));
+        document.undoStack()->undo();
+        check.require(snapshot(document).smf == before.smf &&
+                          sameNodePoints(lane.points(), {{0, controller == 7 ? 127 : 64}}),
+                      QStringLiteral("%1 default-node promotion did not undo cleanly").arg(name));
+    };
+    checkPromotion(volume, 7, 100, QStringLiteral("Volume"));
+    checkPromotion(pan, 10, 32, QStringLiteral("Pan"));
+}
+
 constexpr std::array kCases{
     Case{"points", checkEffectivePoints},
     Case{"ranges", checkRangesTextSelection},
@@ -472,8 +509,8 @@ void checkNodeContract(AutomationGestureCheckRig &rig, const AutomationGestureCh
     for (int track = 0; track < document.engineTrackCount() && track < 16; ++track)
         usedTrackMask |= uint32_t{1} << track;
     TempoLane tempoLane(document, selection, usedTrackMask);
-    CCLaneAdapter ccLane(document, selection, usedTrackMask, 0, uint8_t{10});
-    Session session{document, selection, usedTrackMask, 0, uint8_t{10}};
+    CCLaneAdapter ccLane(document, selection, usedTrackMask, 0, uint8_t{11});
+    Session session{document, selection, usedTrackMask, 0, uint8_t{11}};
     std::array adapters{
         Adapter{AdapterKind::Tempo, "Tempo", &tempoLane},
         Adapter{AdapterKind::Cc, "CC", &ccLane},
@@ -484,4 +521,5 @@ void checkNodeContract(AutomationGestureCheckRig &rig, const AutomationGestureCh
             row.run(context);
         }
     }
+    checkEngineDefaultNodes(session, check);
 }

@@ -3,11 +3,14 @@
 #include <algorithm>
 #include <set>
 
+#include <QCoreApplication>
+
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationprojection.h"
+#include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
 #include "ui/m4asemantics.h"
@@ -42,12 +45,13 @@ uint8_t CCLanes::bendController() noexcept
 
 bool CCLanes::rangeZoomable(uint8_t controller) noexcept
 {
-    return controller != bendController() && controller != 10 && controller != 24;
+    return controller != bendController() && controller != CoreTimeDefaults::kCcPan &&
+           controller != 24;
 }
 
 uint8_t CCLanes::defaultRange(uint8_t controller) noexcept
 {
-    return controller == 1 ? 0 : 127;
+    return controller == CoreTimeDefaults::kCcModulation ? 0 : 127;
 }
 
 int CCLanes::autoRange(int maximum) noexcept
@@ -84,6 +88,8 @@ void CCLanes::rebuildRows()
         if (std::find(controllers.cbegin(), controllers.cend(), controller) == controllers.cend())
             controllers.push_back(controller);
     };
+    for (const uint8_t controller : CoreTimeDefaults::kDefaultVisibleControllers)
+        addController(controller);
     for (const auto &lane : m_page->model().lanes)
         if (lane.track == track)
             addController(lane.cc);
@@ -189,7 +195,10 @@ QString CCLaneAdapter::title() const
 std::vector<NodePoint> CCLaneAdapter::points() const
 {
     std::vector<NodePoint> points;
-    for (const DocLanePoint &point : m_document.lanePoints(m_engineTrack, m_controller)) {
+    const auto documentPoints = m_document.lanePoints(m_engineTrack, m_controller);
+    if (const auto synthetic = CoreTimeDefaults::syntheticTickZero(m_controller, documentPoints))
+        points.push_back({0, *synthetic});
+    for (const DocLanePoint &point : documentPoints) {
         if (!points.empty() && points.back().tick == point.tick)
             points.back().value = point.value;
         else
@@ -240,25 +249,13 @@ void CCLaneAdapter::deletePoints(const std::vector<uint64_t> &ticks)
 
 void CCLaneAdapter::movePoints(const std::vector<NodePointMove> &moves)
 {
-    if (moves.empty())
+    const auto resolved = nodelane::resolveCcMoves(m_document, m_engineTrack, m_controller, moves);
+    if (!resolved)
         return;
-    const auto raw = m_document.lanePoints(m_engineTrack, m_controller);
-    std::vector<SongDocument::LanePointMove> laneMoves;
-    for (const NodePointMove &move : moves) {
-        std::vector<DocLanePoint> group;
-        for (const DocLanePoint &point : raw) {
-            if (point.tick == move.fromTick)
-                group.push_back(point);
-        }
-        if (group.empty())
-            return;
-        const int newValue = CoreTimeDefaults::clampLaneValue(m_controller, move.to.value);
-        for (size_t index = 0; index < group.size(); ++index) {
-            const int value = index + 1 == group.size() ? newValue : group[index].value;
-            laneMoves.push_back({m_engineTrack, m_controller, group[index], move.to.tick, value});
-        }
-    }
-    m_document.moveLanePoints(laneMoves);
+    SongDocument::RangeEdit edit;
+    nodelane::appendResolvedCcMoves(edit, *resolved);
+    m_document.applyRangeEdit(
+        QCoreApplication::translate("AutomationCanvas", "edit automation point(s)"), edit);
 }
 
 void CCLaneAdapter::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)

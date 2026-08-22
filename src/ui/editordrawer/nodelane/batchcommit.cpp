@@ -93,11 +93,19 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int 
         return resolved;
     const auto raw = document.lanePoints(engineTrack, controller);
     std::vector<LaneMovePoint> existing;
-    existing.reserve(raw.size());
+    existing.reserve(raw.size() + 1);
+    std::vector<std::optional<size_t>> rawIdByPoint;
+    rawIdByPoint.reserve(raw.size() + 1);
     std::map<uint64_t, std::vector<size_t>> idsByTick;
-    for (size_t id = 0; id < raw.size(); ++id) {
-        existing.push_back({raw[id].tick, raw[id].value});
-        idsByTick[raw[id].tick].push_back(id);
+    if (const auto synthetic = CoreTimeDefaults::syntheticTickZero(controller, raw)) {
+        idsByTick[0].push_back(existing.size());
+        existing.push_back({0, *synthetic});
+        rawIdByPoint.push_back(std::nullopt);
+    }
+    for (size_t rawId = 0; rawId < raw.size(); ++rawId) {
+        idsByTick[raw[rawId].tick].push_back(existing.size());
+        existing.push_back({raw[rawId].tick, raw[rawId].value});
+        rawIdByPoint.push_back(rawId);
     }
     for (const NodePointMove &move : moves) {
         const auto found = idsByTick.find(move.fromTick);
@@ -119,9 +127,9 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int 
         return std::nullopt;
     std::set<size_t> removed;
     const auto removeId = [&](size_t id) {
-        if (!removed.insert(id).second)
+        if (!removed.insert(id).second || !rawIdByPoint[id])
             return;
-        resolved.removePoints.push_back(raw[id]);
+        resolved.removePoints.push_back(raw[*rawIdByPoint[id]]);
     };
     for (size_t id : plan->removeIds)
         removeId(id);
@@ -152,11 +160,18 @@ resolveBatchDeletes(const SongDocument &document, const std::vector<uint64_t> &t
         std::map<uint64_t, std::vector<DocLanePoint>> groups;
         for (const DocLanePoint &point : raw)
             groups[point.tick].push_back(point);
+        const bool hasSyntheticTickZero =
+            CoreTimeDefaults::syntheticTickZero(lane.controller, raw).has_value();
         std::set<uint64_t> seen;
         for (uint64_t tick : lane.ticks) {
             const auto found = groups.find(tick);
-            if (found == groups.end() || found->second.empty())
+            if (found == groups.end() || found->second.empty()) {
+                if (tick == 0 && hasSyntheticTickZero) {
+                    seen.insert(tick);
+                    continue;
+                }
                 return std::nullopt;
+            }
             if (!seen.insert(tick).second)
                 continue;
             edit.removePoints.insert(edit.removePoints.end(), found->second.begin(),

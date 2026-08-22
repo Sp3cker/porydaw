@@ -115,10 +115,10 @@ void runJitter(StrokeContext &ctx)
 {
     AutomationGestureCheckRig &rig = ctx.rig;
     resetPan(rig);
-    const auto jitterCellA = rig.pointAt(rig.pan, 36, 64).mapped.cell;
+    const auto jitterCellA = rig.pointAt(rig.pan, 36, 48).mapped.cell;
     const auto jitterCellB = nextCell(rig, jitterCellA);
     const auto jitterCellC = nextCell(rig, jitterCellB);
-    const auto jitterStart = cellPoint(rig, jitterCellA, 64);
+    const auto jitterStart = cellPoint(rig, jitterCellA, 48);
     const auto jitterEnd = cellPoint(rig, jitterCellC, jitterStart.mapped.point.value);
     const int horizontalJitter = std::max(0, rig.geometry().nodeDragActivationDistance - 1);
     rig.mousePress(jitterStart.position);

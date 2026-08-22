@@ -181,6 +181,12 @@ void AutomationCanvas::showLaneMenu(const AutomationRow &row, const QPoint &glob
                                                          .arg(points.size())) != QMessageBox::Yes)
             return;
         m_page->removeEmptyLane(track, controller);
+        if (points.empty() && CoreTimeDefaults::isDefaultVisibleController(controller)) {
+            if (m_page->m_viewState.hideLane(row.id)) {
+                m_page->publishViewState();
+                rebuildRows();
+            }
+        }
         if (!points.empty()) {
             document->deleteLanePoints(track, controller, points);
             changed = true;

@@ -82,11 +82,11 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     check(panHandle.valid(), QStringLiteral("Pencil indicator lanes are missing from the stack"));
     if (!panHandle.valid())
         return;
-    const auto seed = rig.pointAt(rig.pan, 24, 64);
+    const auto seed = rig.pointAt(rig.pan, 24, 72);
     const auto indicatorCell = projection.snapCellAt(seed.mapped.rawTick);
     const double indicatorTick =
         double(indicatorCell.tickBegin) + 0.4 * double(rig.view().fineGridTicks());
-    const auto panInput = rig.pointAt(rig.pan, indicatorTick, 64);
+    const auto panInput = rig.pointAt(rig.pan, indicatorTick, 72);
     NodeLaneHoverState panIndicator;
     panIndicator.hover.lane = panHandle;
     panIndicator.hover.pos = panInput.position;
@@ -111,7 +111,7 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     }
     rig.setPersistentPencil(true);
     rig.pump();
-    const auto clickInput = rig.pointAt(rig.pan, indicatorTick, 64);
+    const auto clickInput = rig.pointAt(rig.pan, indicatorTick, 72);
     rig.mousePress(clickInput.position);
     rig.mouseRelease(clickInput.position);
     rig.commitTimers();
