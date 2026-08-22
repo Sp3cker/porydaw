@@ -112,6 +112,8 @@ class AutomationCanvas final : public songview::TimelineSurface
                                                      const AutomationProjection &projection,
                                                      bool pencilMode) const;
     const QCursor &pencilCursor();
+    bool isEditablePencilHit(const QPointF &position) const noexcept;
+    void updatePencilCursor();
     void updateAxisLockCursor(AxisLock lock);
     NodePoint mappedForLane(LaneHandle handle, QPointF pos, bool fine, bool snapValue,
                             const AutomationProjection &proj) const;

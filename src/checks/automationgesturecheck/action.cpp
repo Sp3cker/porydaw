@@ -2,11 +2,10 @@
 
 #include <QAction>
 #include <QApplication>
-#include <QCursor>
+#include <QCoreApplication>
 #include <QEvent>
 #include <QKeySequence>
 #include <QLineEdit>
-#include <QPixmap>
 
 #include "checks/support/eventsynth.h"
 #include "rig.h"
@@ -46,14 +45,13 @@ void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
     const bool pencilActionInitiallyDisabled = !pencilModeAction->isChecked();
     pencilModeAction->trigger();
     const bool pencilActionToggledOn = pencilModeAction->isChecked();
-    const QPixmap pencilCursorPixmap = rig.canvas().cursor().pixmap();
-    const bool pencilCursorInstalled = !pencilCursorPixmap.isNull();
     pencilModeAction->trigger();
     const bool pencilActionToggledOff = !pencilModeAction->isChecked();
     check(pencilModeAction->isCheckable() && pencilActionInitiallyDisabled &&
-              pencilActionToggledOn && pencilCursorInstalled && pencilActionToggledOff,
-          QStringLiteral("Pencil Mode action must be checkable, initially disabled, and toggle "
-                         "on with a bitmap cursor then off"));
+              pencilActionToggledOn && pencilActionToggledOff,
+          QStringLiteral("Pencil Mode action must be checkable and toggle between disabled and "
+                         "enabled; the pencil cursor itself is position-scoped (see cursor "
+                         "domain)"));
     QLineEdit editor(&rig.view());
     QApplication::setActiveWindow(&rig.view());
     editor.show();

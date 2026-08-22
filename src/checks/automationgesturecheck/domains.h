@@ -8,6 +8,8 @@ class AutomationGestureCheckRig;
 
 void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
                                  const AutomationGestureCheck &check);
+void checkAutomationPencilCursor(AutomationGestureCheckRig &rig,
+                                 const AutomationGestureCheck &check);
 void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
                                   const AutomationGestureCheck &check);
 void checkAutomationPencilStroke(AutomationGestureCheckRig &rig,

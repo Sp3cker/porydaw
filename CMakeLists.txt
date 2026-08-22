@@ -499,6 +499,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automationgesturecheck/rig.cpp
         src/checks/automationgesturecheck/runner.cpp
         src/checks/automationgesturecheck/action.cpp
+        src/checks/automationgesturecheck/cursor.cpp
         src/checks/automationgesturecheck/mapping.cpp
         src/checks/automationgesturecheck/stroke.cpp
         src/checks/automationgesturecheck/ownership.cpp
