@@ -1,5 +1,9 @@
 #include "decompproject.h"
 
+#if defined(__APPLE__)
+#include <os/log.h>
+#include <os/signpost.h>
+#endif
 #include <QDir>
 #include <QFile>
 #include <QHash>
@@ -10,24 +14,83 @@
 #include "project/songregistry.h"
 #include "project/songsmk.h"
 
+#if defined(__APPLE__)
+namespace {
+os_log_t projectIndexingLog()
+{
+    static os_log_t log = os_log_create("com.huderlem.porydaw", "project-indexing");
+    return log;
+}
+} // namespace
+#endif
+
 bool DecompProject::open(const QString &rootDir, QString *error)
 {
+#if defined(__APPLE__)
+    const os_log_t indexingLog = projectIndexingLog();
+    const bool signpostsEnabled = os_signpost_enabled(indexingLog);
+    const os_signpost_id_t projectIndexingId =
+        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
+    if (signpostsEnabled)
+        os_signpost_interval_begin(indexingLog, projectIndexingId, "ProjectIndexing");
+    const auto endProjectIndexing = [&] {
+        if (signpostsEnabled)
+            os_signpost_interval_end(indexingLog, projectIndexingId, "ProjectIndexing");
+    };
+#endif
+
     close();
 
     const QDir dir(rootDir);
     if (!dir.exists()) {
         if (error)
             *error = QStringLiteral("Directory does not exist: %1").arg(rootDir);
+#if defined(__APPLE__)
+        endProjectIndexing();
+#endif
         return false;
     }
     m_root = dir.absolutePath();
 
-    if (!parseSongTable(error)) {
+#if defined(__APPLE__)
+    const os_signpost_id_t songTableId =
+        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
+    if (signpostsEnabled)
+        os_signpost_interval_begin(indexingLog, songTableId, "SongTable");
+#endif
+    const QDir midiDir(m_root + QStringLiteral("/sound/songs/midi"));
+    const QStringList midiFiles =
+        midiDir.entryList({QStringLiteral("*.mid")}, QDir::Files, QDir::Name);
+    QSet<QString> midiFileNames;
+    for (const QString &fileName : midiFiles)
+        midiFileNames.insert(fileName);
+    if (!parseSongTable(midiDir, midiFileNames, error)) {
         m_root.clear();
+#if defined(__APPLE__)
+        if (signpostsEnabled)
+            os_signpost_interval_end(indexingLog, songTableId, "SongTable");
+        endProjectIndexing();
+#endif
         return false;
     }
+#if defined(__APPLE__)
+    if (signpostsEnabled)
+        os_signpost_interval_end(indexingLog, songTableId, "SongTable");
+    const os_signpost_id_t songDiscoveryId =
+        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
+    if (signpostsEnabled)
+        os_signpost_interval_begin(indexingLog, songDiscoveryId, "SongDiscovery");
+#endif
     parseSongConstants();
-    discoverUnregisteredSongs();
+    discoverUnregisteredSongs(midiDir, midiFiles);
+#if defined(__APPLE__)
+    if (signpostsEnabled)
+        os_signpost_interval_end(indexingLog, songDiscoveryId, "SongDiscovery");
+    const os_signpost_id_t registrationCheckId =
+        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
+    if (signpostsEnabled)
+        os_signpost_interval_begin(indexingLog, registrationCheckId, "RegistrationCheck");
+#endif
     // Which registration files still miss each song's entry — one pass over
     // the registration files for the whole project (checkRegistration per
     // song would reopen them hundreds of times).
@@ -47,9 +110,30 @@ bool DecompProject::open(const QString &rootDir, QString *error)
         if (status.debugApplicable && !status.inDebugMenu)
             song.registrationGaps.append(QStringLiteral("src/debug.c"));
     }
+#if defined(__APPLE__)
+    if (signpostsEnabled)
+        os_signpost_interval_end(indexingLog, registrationCheckId, "RegistrationCheck");
+    const os_signpost_id_t songConfigurationId =
+        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
+    if (signpostsEnabled)
+        os_signpost_interval_begin(indexingLog, songConfigurationId, "SongConfiguration");
+#endif
     if (!parseMidiCfg())
         parseSongsMk();
+#if defined(__APPLE__)
+    if (signpostsEnabled)
+        os_signpost_interval_end(indexingLog, songConfigurationId, "SongConfiguration");
+    const os_signpost_id_t musicPlayersId =
+        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
+    if (signpostsEnabled)
+        os_signpost_interval_begin(indexingLog, musicPlayersId, "MusicPlayers");
+#endif
     m_players = SongRegistry::musicPlayers(m_root);
+#if defined(__APPLE__)
+    if (signpostsEnabled)
+        os_signpost_interval_end(indexingLog, musicPlayersId, "MusicPlayers");
+    endProjectIndexing();
+#endif
     return true;
 }
 
@@ -75,7 +159,8 @@ void DecompProject::close()
     m_players.clear();
 }
 
-bool DecompProject::parseSongTable(QString *error)
+bool DecompProject::parseSongTable(const QDir &midiDir, const QSet<QString> &midiFiles,
+                                   QString *error)
 {
     const QString path = m_root + QStringLiteral("/sound/song_table.inc");
     QFile file(path);
@@ -91,7 +176,6 @@ bool DecompProject::parseSongTable(QString *error)
     static const QRegularExpression songRe(
         QStringLiteral(R"(^\s*song\s+(\w+)\s*,\s*(\w+)\s*,\s*(\w+))"));
 
-    const QString midiDir = m_root + QStringLiteral("/sound/songs/midi/");
     QTextStream in(&file);
     while (!in.atEnd()) {
         const QString line = in.readLine();
@@ -104,9 +188,9 @@ bool DecompProject::parseSongTable(QString *error)
         song.label = m.captured(1);
         song.player = m.captured(2);
 
-        const QString midPath = midiDir + song.label + QStringLiteral(".mid");
-        if (QFile::exists(midPath)) {
-            song.midPath = midPath;
+        const QString midiFileName = song.label + QStringLiteral(".mid");
+        if (midiFiles.contains(midiFileName)) {
+            song.midPath = midiDir.filePath(midiFileName);
             song.hasMid = true;
         }
         m_songs.append(song);
@@ -149,7 +233,7 @@ void DecompProject::parseSongConstants()
     }
 }
 
-void DecompProject::discoverUnregisteredSongs()
+void DecompProject::discoverUnregisteredSongs(const QDir &midiDir, const QStringList &midiFiles)
 {
     // .mid files with no song_table.inc entry: songs whose registration
     // never ran (dropped-in files) or failed. Listing them keeps the badge
@@ -160,9 +244,7 @@ void DecompProject::discoverUnregisteredSongs()
     for (const SongInfo &song : m_songs)
         known.insert(song.label);
 
-    const QDir midiDir(m_root + QStringLiteral("/sound/songs/midi"));
-    const QStringList mids = midiDir.entryList({QStringLiteral("*.mid")}, QDir::Files, QDir::Name);
-    for (const QString &fileName : mids) {
+    for (const QString &fileName : midiFiles) {
         const QString label = fileName.chopped(4);
         if (known.contains(label))
             continue;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QDir>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -91,11 +93,11 @@ class DecompProject
     bool reload(QString *error);
 
   private:
-    bool parseSongTable(QString *error);
+    bool parseSongTable(const QDir &midiDir, const QSet<QString> &midiFiles, QString *error);
     void parseSongConstants();
     bool parseMidiCfg(); // false if midi.cfg does not exist (or can't open)
     void parseSongsMk();
-    void discoverUnregisteredSongs();
+    void discoverUnregisteredSongs(const QDir &midiDir, const QStringList &midiFiles);
 
     QString m_root;
     QVector<SongInfo> m_songs;
