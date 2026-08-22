@@ -6,6 +6,8 @@
 #include <QStringList>
 #include <QVector>
 
+#include "project/projectindex.h"
+
 // Per-song mid2agb options from the song's line in sound/songs/midi/midi.cfg
 // (or, in projects predating midi.cfg, its songs.mk rule).
 struct SongCfg {
@@ -92,6 +94,12 @@ class DecompProject
     // registers a song). Song ids are reassigned.
     bool reload(QString *error);
 
+    // Persistent-index hook: when storeDir is non-empty, open() serves the
+    // song list from ProjectIndex when its fingerprint still matches every
+    // input, and otherwise scans and writes the store back. The project
+    // itself is never written to.
+    void setIndexCache(const QString &storeDir, ProjectIndex::Backend backend);
+
   private:
     bool parseSongTable(const QDir &midiDir, const QSet<QString> &midiFiles, QString *error);
     void parseSongConstants();
@@ -102,4 +110,7 @@ class DecompProject
     QString m_root;
     QVector<SongInfo> m_songs;
     QVector<MusicPlayer> m_players; // cached at open (one file read)
+
+    QString m_cacheStoreDir; // empty: index persistence disabled
+    ProjectIndex::Backend m_cacheBackend = ProjectIndex::Backend::Sqlite;
 };

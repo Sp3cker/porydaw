@@ -74,7 +74,7 @@ if(PORYDAW_COVERAGE)
     add_link_options(-fprofile-instr-generate)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Svg Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Sql Svg Widgets)
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
@@ -611,8 +611,9 @@ add_executable(porydaw_index_bench
     src/project/songregistry.cpp
     src/project/songsmk.cpp
     src/project/sidecar.cpp
+    src/project/projectindex.cpp
     src/project/voicegroupsource.cpp
     src/core/smf.cpp
 )
 target_include_directories(porydaw_index_bench PRIVATE src)
-target_link_libraries(porydaw_index_bench PRIVATE Qt6::Core poryaaaa_engine)
+target_link_libraries(porydaw_index_bench PRIVATE Qt6::Core Qt6::Sql poryaaaa_engine)

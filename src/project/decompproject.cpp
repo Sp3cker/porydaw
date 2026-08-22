@@ -52,6 +52,21 @@ bool DecompProject::open(const QString &rootDir, QString *error)
     }
     m_root = dir.absolutePath();
 
+    // Persistent-index fast path: a store whose fingerprint still matches
+    // every input replaces the scan entirely; anything else falls through
+    // to the full rescan and is rewritten below.
+    QByteArray indexFinger;
+    if (!m_cacheStoreDir.isEmpty()) {
+        indexFinger = ProjectIndex::fingerprint(m_root);
+        if (ProjectIndex::load(m_cacheBackend, m_cacheStoreDir, m_root, indexFinger, &m_songs,
+                               &m_players)) {
+#if defined(__APPLE__)
+            endProjectIndexing();
+#endif
+            return true;
+        }
+    }
+
 #if defined(__APPLE__)
     const os_signpost_id_t songTableId =
         signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
@@ -134,6 +149,9 @@ bool DecompProject::open(const QString &rootDir, QString *error)
         os_signpost_interval_end(indexingLog, musicPlayersId, "MusicPlayers");
     endProjectIndexing();
 #endif
+    if (!m_cacheStoreDir.isEmpty())
+        ProjectIndex::save(m_cacheBackend, m_cacheStoreDir, m_root, indexFinger, m_songs,
+                           m_players);
     return true;
 }
 
@@ -157,6 +175,12 @@ void DecompProject::close()
     m_root.clear();
     m_songs.clear();
     m_players.clear();
+}
+
+void DecompProject::setIndexCache(const QString &storeDir, ProjectIndex::Backend backend)
+{
+    m_cacheStoreDir = storeDir;
+    m_cacheBackend = backend;
 }
 
 bool DecompProject::parseSongTable(const QDir &midiDir, const QSet<QString> &midiFiles,

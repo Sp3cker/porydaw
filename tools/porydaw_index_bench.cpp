@@ -8,6 +8,7 @@
 //
 // Usage:
 //   porydaw_index_bench [--root DIR] [--runs N]
+//       [--backend none|sqlite|json] [--cache-dir DIR]
 //
 // Metrics (consumed by autoresearch.sh):
 //   METRIC project_open_ms       median wall time of one full open
@@ -15,6 +16,7 @@
 //   METRIC project_open_min_ms   fastest open
 //   METRIC project_open_max_ms   slowest open
 //   METRIC index_songs           songs in the assembled index
+//   METRIC index_store_bytes     bytes of the persistent store, 0 when none
 //
 // Every run's index is digested (FNV-1a over the full SongInfo/player
 // content); a mismatch between runs aborts — the benchmark refuses to time
@@ -23,6 +25,7 @@
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QFileInfo>
 #include <QString>
 #include <QVector>
 
@@ -32,6 +35,7 @@
 #include <vector>
 
 #include "project/decompproject.h"
+#include "project/projectindex.h"
 
 namespace {
 
@@ -111,14 +115,22 @@ int main(int argc, char **argv)
         root = envRoot;
     int runs = kDefaultRuns;
 
+    QString backendName = QStringLiteral("none");
+    QString cacheDir;
+
     const QStringList args = app.arguments();
     for (int i = 1; i < args.size(); ++i) {
         if (args[i] == QLatin1String("--root") && i + 1 < args.size()) {
             root = args[++i];
         } else if (args[i] == QLatin1String("--runs") && i + 1 < args.size()) {
             runs = args[++i].toInt();
+        } else if (args[i] == QLatin1String("--backend") && i + 1 < args.size()) {
+            backendName = args[++i];
+        } else if (args[i] == QLatin1String("--cache-dir") && i + 1 < args.size()) {
+            cacheDir = args[++i];
         } else {
-            fprintf(stderr, "usage: porydaw_index_bench [--root DIR] [--runs N]\n");
+            fprintf(stderr, "usage: porydaw_index_bench [--root DIR] [--runs N]"
+                            " [--backend none|sqlite|json] [--cache-dir DIR]\n");
             return 2;
         }
     }
@@ -126,8 +138,20 @@ int main(int argc, char **argv)
         fprintf(stderr, "index_bench: --runs must be >= 1\n");
         return 2;
     }
+    ProjectIndex::Backend backend = ProjectIndex::Backend::Sqlite;
+    if (backendName == QLatin1String("sqlite")) {
+        backend = ProjectIndex::Backend::Sqlite;
+    } else if (backendName == QLatin1String("json")) {
+        backend = ProjectIndex::Backend::Json;
+    } else if (backendName != QLatin1String("none")) {
+        fprintf(stderr, "index_bench: unknown --backend %s\n", qPrintable(backendName));
+        return 2;
+    }
 
     DecompProject project;
+    if (!cacheDir.isEmpty() && backendName != QLatin1String("none"))
+        project.setIndexCache(cacheDir, backend);
+
     QString error;
     std::vector<double> elapsedMs;
     elapsedMs.reserve(runs);
@@ -181,8 +205,13 @@ int main(int argc, char **argv)
     printf("METRIC project_open_min_ms=%.2f\n", minMs);
     printf("METRIC project_open_max_ms=%.2f\n", maxMs);
     printf("METRIC index_songs=%d\n", songs);
+    const qint64 storeBytes = backendName == QLatin1String("none")
+                                  ? 0
+                                  : QFileInfo(ProjectIndex::storePath(backend, cacheDir)).size();
+    printf("METRIC index_store_bytes=%lld\n", (long long)storeBytes);
     printf("ASI runs=%d\n", runs);
     printf("ASI root=%s\n", qPrintable(root));
+    printf("ASI backend=%s\n", qPrintable(backendName));
     printf("ASI registered=%d\n", registered);
     printf("ASI checksum=%016llx\n", (unsigned long long)expectedDigest);
     return 0;
