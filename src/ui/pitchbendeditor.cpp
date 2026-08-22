@@ -104,7 +104,6 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
     setMouseTracking(true);
     setCursor(Qt::CrossCursor);
     setAccessibleName(SongView::tr("Note automation editor"));
-    rebuildFonts();
     m_endTick = m_document->noteEndTick(m_noteSnapshot);
     m_pitchGraph = new PitchBendGraph(m_songView, m_engineTrack, m_startTick, m_endTick,
                                       m_unterminated, PitchBendGraph::Lane::PitchBend, this);
@@ -227,12 +226,6 @@ QRect PitchBendEditor::modGraphRect() const
     return m_modGraph ? m_modGraph->canvasRect().translated(m_modGraph->pos()) : QRect();
 }
 
-void PitchBendEditor::rebuildFonts()
-{
-    m_titleFont = typography::bold(font());
-    m_captionFont = typography::caption(font());
-}
-
 void PitchBendEditor::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
@@ -240,11 +233,11 @@ void PitchBendEditor::paintEvent(QPaintEvent *)
     painter.fillRect(rect(), themes::color(themes::Role::window_background));
     painter.setPen(QPen(themes::color(themes::Role::menu_outline), 1));
     painter.drawRect(rect().adjusted(0, 0, -1, -1));
-    painter.setFont(m_titleFont);
+    painter.setFont(typography::bold(font()));
     painter.setPen(themes::color(themes::Role::song_view_primary_text));
     painter.drawText(QRect(kOuterInset, 3, width() - 2 * kOuterInset, 17),
                      Qt::AlignLeft | Qt::AlignVCenter, SongView::tr("Note automation"));
-    painter.setFont(m_captionFont);
+    painter.setFont(typography::caption(font()));
     painter.setPen(themes::color(themes::Role::song_view_secondary_text));
     painter.drawText(
         QRect(kOuterInset, 19, width() - 2 * kOuterInset, 15), Qt::AlignLeft | Qt::AlignVCenter,
@@ -257,10 +250,6 @@ void PitchBendEditor::paintEvent(QPaintEvent *)
 
 bool PitchBendEditor::event(QEvent *event)
 {
-    if (event->type() == QEvent::FontChange) {
-        rebuildFonts();
-        update();
-    }
     if (event->type() == QEvent::ShortcutOverride) {
         auto *keyEvent = static_cast<QKeyEvent *>(event);
         if (keyEvent->matches(QKeySequence::Undo)) {

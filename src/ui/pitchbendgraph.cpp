@@ -30,21 +30,6 @@ PitchBendGraph::PitchBendGraph(::SongView *songView, int engineTrack, uint64_t s
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
     setCursor(Qt::CrossCursor);
-    rebuildFont();
-}
-
-void PitchBendGraph::rebuildFont()
-{
-    m_captionFont = typography::caption(font());
-}
-
-bool PitchBendGraph::event(QEvent *event)
-{
-    if (event->type() == QEvent::FontChange) {
-        rebuildFont();
-        update();
-    }
-    return QWidget::event(event);
 }
 
 void PitchBendGraph::setCallbacks(Callbacks callbacks)
@@ -441,7 +426,7 @@ void PitchBendGraph::paintLinePreview(QPainter &painter)
 void PitchBendGraph::paintAxes(QPainter &painter)
 {
     const QRect graph = canvasRect();
-    painter.setFont(m_captionFont);
+    painter.setFont(typography::caption(font()));
     painter.setPen(themes::color(themes::Role::song_view_secondary_text));
     const QRect axisRect(8, graph.top() - 7, kAxisGutter - 12, 14);
     const QRect titleRect(graph.left(), 3, graph.width() - 68, 17);
