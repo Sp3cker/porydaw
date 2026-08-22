@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QByteArray>
-#include <QString>
+#include <QStringList>
 #include <QVector>
 
 struct MusicPlayer;
@@ -40,5 +40,10 @@ bool save(Backend backend, const QString &storeDir, const QString &projectRoot,
 
 // Where a backend keeps its bytes under storeDir (for size metrics/tests).
 QString storePath(Backend backend, const QString &storeDir);
+
+// Bare file names in dirPath whose name ends with suffix — dotfiles
+// (FAT32 AppleDouble twins) excluded, sorted. A bare dirent walk: no
+// per-entry stat, unlike QDir::entryList on macOS.
+QStringList listFileNames(const QString &dirPath, const QString &suffix);
 
 } // namespace ProjectIndex

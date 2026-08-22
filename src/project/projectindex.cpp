@@ -68,26 +68,10 @@ void feedStat(QCryptographicHash *hash, const QString &path)
 
 void feedListing(QCryptographicHash *hash, const QString &dirPath, const QString &suffix)
 {
-    // Names-only walk: QDir::entryList pays a per-entry metadata stat on
-    // macOS (hidden/bundle resource flags), which dominates the whole warm
-    // open on a 1500-entry FAT32 checkout. std::filesystem reads dirents
-    // bare; dotfiles (FAT32 AppleDouble twins like ._mus_foo.mid) are
-    // skipped exactly like QDir's hidden-file rule.
-    std::vector<std::string> names;
-    std::error_code error;
-    for (std::filesystem::directory_iterator it(dirPath.toStdString(), error), end;
-         !error && it != end; it.increment(error)) {
-        const std::string name = it->path().filename().string();
-        if (!name.empty() && name[0] != '.' && name.ends_with(suffix.toStdString()))
-            names.push_back(name);
-    }
-    std::sort(names.begin(), names.end());
-    hash->addData(QByteArray::number(qint64(names.size())));
+    const QStringList names = listFileNames(dirPath, suffix);
+    hash->addData(QByteArray::number(qsizetype(names.size())));
     hash->addData(":");
-    for (const std::string &name : names) {
-        hash->addData(name.c_str(), qint64(name.size()));
-        hash->addData(",");
-    }
+    hash->addData(names.join(u',').toUtf8());
     hash->addData("\n");
 }
 
@@ -403,6 +387,24 @@ bool saveSqlite(const QString &path, const QString &root, const QByteArray &fing
 }
 
 } // namespace
+
+QStringList listFileNames(const QString &dirPath, const QString &suffix)
+{
+    // Bare dirent walk: QDir::entryList pays a per-entry metadata stat on
+    // macOS (hidden/bundle resource flags), which dominates opens on a
+    // 1500-entry FAT32 checkout. Dotfiles — AppleDouble twins like
+    // ._mus_foo.mid — are skipped exactly like QDir's hidden-file rule.
+    QStringList names;
+    std::error_code error;
+    for (std::filesystem::directory_iterator it(dirPath.toStdString(), error), end;
+         !error && it != end; it.increment(error)) {
+        const std::string name = it->path().filename().string();
+        if (!name.empty() && name[0] != '.' && name.ends_with(suffix.toStdString()))
+            names.append(QString::fromStdString(name));
+    }
+    std::sort(names.begin(), names.end());
+    return names;
+}
 
 QByteArray fingerprint(const QString &projectRoot)
 {

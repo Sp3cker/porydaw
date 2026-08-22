@@ -74,8 +74,11 @@ bool DecompProject::open(const QString &rootDir, QString *error)
         os_signpost_interval_begin(indexingLog, songTableId, "SongTable");
 #endif
     const QDir midiDir(m_root + QStringLiteral("/sound/songs/midi"));
-    const QStringList midiFiles =
-        midiDir.entryList({QStringLiteral("*.mid")}, QDir::Files, QDir::Name);
+    // Bare names-only walk: QDir::entryList's per-entry metadata stat
+    // dominates the scan on large FAT32 checkouts (see ProjectIndex::
+    // listFileNames).
+    const QStringList midiFiles = ProjectIndex::listFileNames(
+        m_root + QStringLiteral("/sound/songs/midi"), QStringLiteral(".mid"));
     QSet<QString> midiFileNames;
     for (const QString &fileName : midiFiles)
         midiFileNames.insert(fileName);

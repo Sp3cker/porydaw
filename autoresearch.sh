@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 
 ROOT="${PORYDAW_BENCH_ROOT:-/Volumes/ESD-USB/hearth-usb}"
 RUNS="${PORYDAW_BENCH_RUNS:-7}"
-BACKEND="${PORYDAW_INDEX_BACKEND:-json}"
+BACKEND="${PORYDAW_INDEX_BACKEND:-sqlite}"
 CACHE_DIR="build/bench-cache"
 
 if [ ! -d "$ROOT" ]; then
