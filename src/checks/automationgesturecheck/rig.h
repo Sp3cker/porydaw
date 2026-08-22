@@ -47,6 +47,11 @@ class AutomationGestureCheckRig final
         std::vector<DocLanePoint> lanePoints;
     };
 
+    struct ValueRange {
+        int min = 0;
+        int max = 0;
+    };
+
     static std::unique_ptr<AutomationGestureCheckRig> create(const QString &project,
                                                              const QString &song, QString &error);
     ~AutomationGestureCheckRig();
@@ -85,6 +90,16 @@ class AutomationGestureCheckRig final
     void setAutomationZoom(double zoom);
     void setAutomationScroll(double scroll);
     void setPersistentPencil(bool enabled);
+
+    // True when no canvas pan or view gesture is in flight. Callers pump
+    // first; the paint cache and gesture state are per-view.
+    bool isIdle() const noexcept;
+    // Zoom/scroll a fixture view back to the canonical pencil-test framing.
+    void resetView(double zoom = 96.0, double scroll = 0.0);
+    // Runs the rig's event loop for `milliseconds` (0 = one pass).
+    void commitTimers(int milliseconds = 0);
+    // Value slab for a handle; tempo lane and unknown handles get the tempo range.
+    ValueRange valueRange(LaneHandle handle) const;
     void keyToArea(QEvent::Type type, int key, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
                    bool autoRepeat = false);
     void keyToView(QEvent::Type type, int key, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
@@ -100,11 +115,11 @@ class AutomationGestureCheckRig final
     void mouseDoubleClick(const QPointF &position,
                           Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void pump();
-    void waitForTimers(int milliseconds);
 
     const Lane pan{{EditorAutomationRowKind::ControlChange, 0, 10}, 0, 10};
     const Lane lfo{{EditorAutomationRowKind::ControlChange, 0, 21}, 0, 21};
     const Lane volume{{EditorAutomationRowKind::ControlChange, 0, 7}, 0, 7};
+    static constexpr LaneHandle kTempoHandle{0};
 
   private:
     AutomationGestureCheckRig() = default;
@@ -115,6 +130,8 @@ class AutomationGestureCheckRig final
                         Qt::KeyboardModifiers modifiers, bool autoRepeat);
     void sendMouse(QEvent::Type type, const QPointF &position, Qt::MouseButton button,
                    Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers);
+    // Event-loop spin used by commitTimers(); not part of the public seam.
+    void waitForTimers(int milliseconds);
 
     DrawerPageLiveState m_live;
     std::unique_ptr<SongDocument> m_document;

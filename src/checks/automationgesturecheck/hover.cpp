@@ -1,4 +1,5 @@
 #include "domains.h"
+#include "support.h"
 
 #include <algorithm>
 #include <array>
@@ -7,7 +8,6 @@
 #include <limits>
 #include <vector>
 
-#include <QByteArray>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
@@ -15,7 +15,6 @@
 #include <QRect>
 #include <QRectF>
 #include <QString>
-#include <QUndoStack>
 
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
@@ -47,12 +46,6 @@ struct Topology {
     bool noRepeatChurn = false;
 };
 
-struct DocSnap {
-    QByteArray smf;
-    uint64_t revision = 0;
-    int undoIndex = 0;
-};
-
 struct PreparedLane {
     LaneHandle handle;
     QRect body;
@@ -77,27 +70,17 @@ constexpr uint64_t kNodeTick = 144;
 constexpr double kHeldBodyFraction = 0.25;
 constexpr double kNodeBodyFraction = 0.75;
 constexpr double kCursorBodyFraction = 0.50;
+// Ghost-ring tolerance and label probe metrics (see lineBudget/labelProbe).
+constexpr double kGhostBudgetRadiusMultiple = 6.0;
+constexpr int kGhostBudgetFloor = 4;
+constexpr double kLabelWidthFontScale = 2.0;
+constexpr double kLabelHeightFontScale = 1.0;
+constexpr qreal kInsertionProbeHalfHeight = 6;
+constexpr qreal kLineSampleClearance = 4;
 
 int valueAtBodyFraction(int minimum, int maximum, double fractionFromBottom)
 {
     return minimum + int(std::lround(double(maximum - minimum) * fractionFromBottom));
-}
-
-void report(const AutomationGestureCheck &check, const char *name, bool condition,
-            const QString &message)
-{
-    check(condition, QStringLiteral("%1: %2").arg(QLatin1String(name), message));
-}
-
-DocSnap snapshot(SongDocument &document)
-{
-    return {document.smf().write(), document.revision(), document.undoStack()->index()};
-}
-
-bool unchanged(const DocSnap &before, const DocSnap &after)
-{
-    return after.smf == before.smf && after.revision == before.revision &&
-           after.undoIndex == before.undoIndex;
 }
 
 void leaveCanvas(AutomationGestureCheckRig &rig)
@@ -152,8 +135,8 @@ QRectF lineProbe(qreal x, qreal y, qreal halfWidth, qreal halfHeight)
 QRectF labelProbe(qreal x, qreal y, const QRect &plot)
 {
     const int gap = layout::space(layout::Space::One);
-    const int width = layout::fontPx(2.0);
-    const int height = layout::fontPx(1.0);
+    const int width = layout::fontPx(kLabelWidthFontScale);
+    const int height = layout::fontPx(kLabelHeightFontScale);
     QRectF rect(x - gap - width, y - gap - height, width, height);
     if (rect.left() < plot.left())
         rect.moveLeft(x + gap);
@@ -173,7 +156,7 @@ qreal lineSampleY(const QRect &plot, qreal avoidY, qreal clearance)
 
 int lineBudget(qreal radius, qreal dpr)
 {
-    return std::max(4, int(std::ceil(6.0 * radius * dpr)));
+    return std::max(kGhostBudgetFloor, int(std::ceil(kGhostBudgetRadiusMultiple * radius * dpr)));
 }
 
 void setTempoPoints(AutomationGestureCheckRig &rig, const std::vector<TempoPoint> &points)
@@ -219,10 +202,8 @@ PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
     const int node = valueAtBodyFraction(minimum, maximum, kNodeBodyFraction);
     const int cursor = valueAtBodyFraction(minimum, maximum, kCursorBodyFraction);
     if (row.kind == AdapterKind::Tempo) {
-        setTempoPoints(rig,
-                       {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(held)},
-                        {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(node)}});
-        lane.handle = LaneHandle{0};
+        setTempoPoints(rig, {{kHeldTick, tempoUsForBpm(held)}, {kNodeTick, tempoUsForBpm(node)}});
+        lane.handle = AutomationGestureCheckRig::kTempoHandle;
     } else {
         lane.handle = rig.handleFor(rig.pan);
         if (!lane.handle.valid())
@@ -233,7 +214,7 @@ PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
     const qreal dpr = rig.canvas().devicePixelRatioF();
     const auto projection = rig.projection();
     lane.body = rig.bodyFor(lane.handle);
-    lane.insertionPos = {projection.displayX(96, dpr),
+    lane.insertionPos = {projection.displayX(kFixtureTick, dpr),
                          valueY(lane.body, geometry, minimum, maximum, cursor)};
     lane.heldY = valueY(lane.body, geometry, minimum, maximum, held);
     lane.nodeY = valueY(lane.body, geometry, minimum, maximum, node);
@@ -254,14 +235,14 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
                  const AutomationGestureCheck &check)
 {
     Topology topology;
+    const Check probe{check, row.name};
     const auto lane = prepareLane(rig, row);
     if (!lane.handle.valid() || lane.plot.isEmpty()) {
-        report(check, row.name, false,
-               QStringLiteral("lane body is missing from the canvas stack"));
+        probe.require(false, QStringLiteral("lane body is missing from the canvas stack"));
         return topology;
     }
-    report(check, row.name, lane.insertionTick != kHeldTick && lane.insertionTick != kNodeTick,
-           QStringLiteral("inter-node insertion landed on an existing node"));
+    probe.require(lane.insertionTick != kHeldTick && lane.insertionTick != kNodeTick,
+                  QStringLiteral("inter-node insertion landed on an existing node"));
     leaveCanvas(rig);
     const QImage idle = rig.renderArea();
     const auto before = snapshot(rig.document());
@@ -272,33 +253,34 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     const qreal lineHalf =
         std::max(qreal(layout::singlePixel()), qreal(geometry.hoverPaintPadding + 1));
     const auto previewUnchanged = [&](const char *label) {
-        report(check, row.name, unchanged(before, snapshot(rig.document())),
-               QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
+        probe.require(
+            isUnchanged(before, snapshot(rig.document())),
+            QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
     };
-    report(check, row.name,
-           lane.nodeX - radius >= 0 && lane.nodeX + radius < rig.canvas().width() &&
-               lane.nodeY - radius >= 0 && lane.nodeY + radius < rig.canvas().height(),
-           QStringLiteral("existing-node hover probe is outside the canvas"));
+    probe.require(lane.nodeX - radius >= 0 && lane.nodeX + radius < rig.canvas().width() &&
+                      lane.nodeY - radius >= 0 && lane.nodeY + radius < rig.canvas().height(),
+                  QStringLiteral("existing-node hover probe is outside the canvas"));
 
     rig.mouseMove(lane.insertionPos, Qt::NoButton);
     rig.pump();
     const QImage insertion = rig.renderArea();
     previewUnchanged("insertion preview");
-    const qreal insertionLineY = lineSampleY(lane.plot, lane.heldY, radius + 4);
-    topology.insertionLine =
-        changedPixels(idle, insertion, lineProbe(lane.insertionX, insertionLineY, lineHalf, 6),
-                      dpr) > 0;
+    const qreal insertionLineY = lineSampleY(lane.plot, lane.heldY, radius + kLineSampleClearance);
+    topology.insertionLine = changedPixels(idle, insertion,
+                                           lineProbe(lane.insertionX, insertionLineY, lineHalf,
+                                                     kInsertionProbeHalfHeight),
+                                           dpr) > 0;
     const int ghostPixels =
         changedPixels(idle, insertion, nodeProbe(lane.insertionX, lane.heldY, radius), dpr);
     topology.heldGhost = ghostPixels > lineBudget(radius, dpr);
     topology.insertionLabel =
         changedPixels(idle, insertion, labelProbe(lane.insertionX, lane.heldY, lane.plot), dpr) > 0;
-    report(check, row.name, topology.insertionLine,
-           QStringLiteral("inter-node hover did not paint an insertion line"));
-    report(check, row.name, topology.heldGhost,
-           QStringLiteral("inter-node hover did not paint a held-value ghost"));
-    report(check, row.name, topology.insertionLabel,
-           QStringLiteral("inter-node hover did not paint a value label"));
+    probe.require(topology.insertionLine,
+                  QStringLiteral("inter-node hover did not paint an insertion line"));
+    probe.require(topology.heldGhost,
+                  QStringLiteral("inter-node hover did not paint a held-value ghost"));
+    probe.require(topology.insertionLabel,
+                  QStringLiteral("inter-node hover did not paint a value label"));
 
     const auto afterInsertion = rig.canvas().diagnostics();
     rig.mouseMove(lane.insertionPos, Qt::NoButton);
@@ -309,8 +291,8 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     topology.noRepeatChurn =
         afterRepeat.contentInvalidationCount == afterInsertion.contentInvalidationCount &&
         repeated == insertion;
-    report(check, row.name, topology.noRepeatChurn,
-           QStringLiteral("repeat hover at the same coordinate churned a stale repaint"));
+    probe.require(topology.noRepeatChurn,
+                  QStringLiteral("repeat hover at the same coordinate churned a stale repaint"));
 
     rig.mouseMove(lane.nodePos, Qt::NoButton);
     rig.pump();
@@ -325,12 +307,12 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     topology.noInsertionGhost = strayGhost >= 0 &&
                                 std::abs(lane.nodeY - lane.priorHeldY) > 2 * radius &&
                                 strayGhost <= lineBudget(radius, dpr);
-    report(check, row.name, topology.nodeRing,
-           QStringLiteral("existing-node hover did not paint a node ring"));
-    report(check, row.name, topology.nodeLabel,
-           QStringLiteral("existing-node hover did not paint a value label"));
-    report(check, row.name, topology.noInsertionGhost,
-           QStringLiteral("existing-node hover painted an insertion ghost"));
+    probe.require(topology.nodeRing,
+                  QStringLiteral("existing-node hover did not paint a node ring"));
+    probe.require(topology.nodeLabel,
+                  QStringLiteral("existing-node hover did not paint a value label"));
+    probe.require(topology.noInsertionGhost,
+                  QStringLiteral("existing-node hover painted an insertion ghost"));
 
     const QRect voice = rig.voiceBounds();
     if (!voice.isEmpty()) {
@@ -346,8 +328,8 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     const QImage left = rig.renderArea();
     previewUnchanged("leave");
     topology.leaveCleared = transitionCleared && cropUnchanged(idle, left, lane.plot, dpr);
-    report(check, row.name, topology.leaveCleared,
-           QStringLiteral("lane transition or leave left dirty hover bounds"));
+    probe.require(topology.leaveCleared,
+                  QStringLiteral("lane transition or leave left dirty hover bounds"));
     return topology;
 }
 
@@ -370,7 +352,8 @@ void checkNodeLaneHoverParity(AutomationGestureCheckRig &rig, const AutomationGe
     rig.mousePress(rig.tempoHeaderPoint());
     rig.mouseRelease(rig.tempoHeaderPoint());
     rig.pump();
-    const bool tempoExpanded = !rig.canvas().laneBody(LaneHandle{0}).isEmpty();
+    const bool tempoExpanded =
+        !rig.canvas().laneBody(AutomationGestureCheckRig::kTempoHandle).isEmpty();
     check(tempoExpanded, QStringLiteral("Tempo header did not expose the expanded body"));
     const auto initialTempo = rig.document().tempoPoints();
     const auto initialPan = rig.document().lanePoints(rig.pan.track, rig.pan.controller);
