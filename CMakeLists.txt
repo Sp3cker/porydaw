@@ -200,6 +200,8 @@ qt_add_library(porydaw_app STATIC
     src/project/samplereg.h
     src/project/sidecar.cpp
     src/project/sidecar.h
+    src/project/projectindex.cpp
+    src/project/projectindex.h
     src/project/voicegroupsource.cpp
     src/project/voicegroupsource.h
     src/project/voicegroupeditcommand.cpp
@@ -364,6 +366,7 @@ target_include_directories(porydaw_app PUBLIC
 target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
+target_link_libraries(porydaw_app PRIVATE Qt6::Sql)
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 if(WIN32)
