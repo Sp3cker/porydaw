@@ -1657,7 +1657,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const uint64_t revisionBeforeKeyboard = document.revision();
     area.setFocus(Qt::OtherFocusReason);
     checks::events::sendKey(area, QEvent::KeyPress, Qt::Key_Up,
-                            Qt::ControlModifier | Qt::ShiftModifier, QString(), false, 1);
+                            Qt::ShiftModifier, QString(), false, 1);
     DocNote firstAfterKeyboard;
     DocNote thirdAfterKeyboard;
     check(document.revision() == revisionBeforeKeyboard &&

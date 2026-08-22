@@ -32,42 +32,42 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
     const int undoBaseline = doc.undoStack()->index();
     auto fail = [&](const char *what) { check.fail(what); };
     // Keyboard transpose/nudge on note D (clicking it selects it):
-    // Ctrl+Up is a semitone, Ctrl+Shift+Down an octave, and Ctrl+Right
+    // Up is a semitone, Shift+Down an octave, and Right
     // moves one snap cell from an on-grid start.
     const QPoint dCenter(
         pianoKeyboardWidth + view.contentX(double(d.tick) + 0.5 * double(snapCell)), rowY);
     click(*roll, dCenter);
-    sendKeyStroke(*roll, Qt::Key_Up, Qt::ControlModifier, false);
+    sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
     DocNote transposed;
     if (!doc.findNote(track, d.tick, uint8_t(d.key + 1), &transposed))
-        fail("Ctrl+Up did not transpose up a semitone");
-    sendKeyStroke(*roll, Qt::Key_Down, Qt::ControlModifier | Qt::ShiftModifier, false);
+        fail("Up did not transpose up a semitone");
+    sendKeyStroke(*roll, Qt::Key_Down, Qt::ShiftModifier, false);
     if (!doc.findNote(track, d.tick, uint8_t(d.key - 11), &transposed))
-        fail("Ctrl+Shift+Down did not transpose down an octave");
-    sendKeyStroke(*roll, Qt::Key_Right, Qt::ControlModifier, false);
+        fail("Shift+Down did not transpose down an octave");
+    sendKeyStroke(*roll, Qt::Key_Right, Qt::NoModifier, false);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
-        fail("Ctrl+Right did not nudge one snap cell right");
+        fail("Right did not nudge one snap cell right");
     // An off-grid selection nudges onto the grid line, not by a whole
     // cell: push the note half a snap cell right behind the view's back
     // (reselecting — the selection keys on the start tick, which moved),
-    // and Ctrl+Left must bring it back to the line it left.
+    // and Left must bring it back to the line it left.
     doc.moveNotes({transposed}, int64_t(snapCell / 2), 0);
     view.selectionModel().setNoteSelection({transposed.noteId});
-    sendKeyStroke(*roll, Qt::Key_Left, Qt::ControlModifier, false);
+    sendKeyStroke(*roll, Qt::Key_Left, Qt::NoModifier, false);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
-        fail("Ctrl+Left did not snap the off-grid note back to the grid");
+        fail("Left did not snap the off-grid note back to the grid");
 
     // Keyboard moves keep the notes in view, scrolling just enough rather
     // than re-anchoring. Vertical: park the note's row above the viewport,
-    // and Ctrl+Up must land it flush at the top edge.
+    // and Up must land it flush at the top edge.
     const int keyNow = d.key - 11;
     view.scrollRollBy((129 - keyNow) * view.keyHeight() - view.scrollY());
     if ((128 - keyNow) * view.keyHeight() - view.scrollY() > 1e-9)
         fail("could not park the note's row above the viewport");
-    sendKeyStroke(*roll, Qt::Key_Up, Qt::ControlModifier, false);
+    sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
     if (std::abs(view.scrollY() - (126 - keyNow) * view.keyHeight()) > 1e-9)
-        fail("Ctrl+Up above the viewport did not scroll the row flush to the top");
-    sendKeyStroke(*roll, Qt::Key_Down, Qt::ControlModifier, false); // undo the extra semitone
+        fail("Up above the viewport did not scroll the row flush to the top");
+    sendKeyStroke(*roll, Qt::Key_Down, Qt::NoModifier, false); // undo the extra semitone
 
     // Horizontal: park the note past the left edge; nudging right must
     // bring its start flush to the left edge (minimal scroll, not the
@@ -79,23 +79,23 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
     view.scrollByPx(view.contentX(double(nStart + snapCell)) + 40);
     if (view.displayX(double(nStart + snapCell), 0.0, dpr) >= 0.0)
         fail("could not park the note past the left edge");
-    sendKeyStroke(*roll, Qt::Key_Right, Qt::ControlModifier, false);
+    sendKeyStroke(*roll, Qt::Key_Right, Qt::NoModifier, false);
     nStart += snapCell;
     if (view.displayX(double(nStart), 0.0, dpr) != 0.0)
-        fail("Ctrl+Right off-screen-left did not scroll the start flush to the "
+        fail("Right off-screen-left did not scroll the start flush to the "
              "left edge");
     const qreal vw = std::max(50, roll->width() - pianoKeyboardWidth);
     const qreal cellPx = view.contentX(double(nStart + snapCell)) - view.contentX(double(nStart));
     const int rides = (vw - view.contentX(double(nStart + snapCell))) / cellPx + 2;
     for (int i = 0; i < rides; i++)
-        sendKeyStroke(*roll, Qt::Key_Right, Qt::ControlModifier, false);
+        sendKeyStroke(*roll, Qt::Key_Right, Qt::NoModifier, false);
     nStart += uint64_t(rides) * snapCell;
     if (view.displayX(double(nStart + snapCell), 0.0, dpr) != vw - physicalPixel)
         fail("riding the nudge right did not keep the note's end at the right edge");
     // Ride back home so the time-selection checks below find the note
     // where they expect it; every press so far merges into one command.
     for (int i = 0; i < rides + 1; i++)
-        sendKeyStroke(*roll, Qt::Key_Left, Qt::ControlModifier, false);
+        sendKeyStroke(*roll, Qt::Key_Left, Qt::NoModifier, false);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed))
         fail("the ride right and back did not return the note home");
 
@@ -205,12 +205,12 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             view.selectionModel().setTimeSelection(band);
         }
     }
-    sendKeyStroke(*roll, Qt::Key_Up, Qt::ControlModifier, false);
+    sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
     if (!doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 10), &transposed))
-        fail("time-selection Ctrl+Up did not transpose the covered note");
-    sendKeyStroke(*roll, Qt::Key_Right, Qt::ControlModifier, false);
+        fail("time-selection Up did not transpose the covered note");
+    sendKeyStroke(*roll, Qt::Key_Right, Qt::NoModifier, false);
     if (!doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed))
-        fail("time-selection Ctrl+Right did not nudge the covered note");
+        fail("time-selection Right did not nudge the covered note");
     if (view.selectionModel().timeSelection().startTick != d.tick + 2 * snapCell)
         fail("time-selection band did not follow the nudge");
 

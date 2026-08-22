@@ -54,49 +54,49 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
         view.setScaleRoot(0);
         view.setScaleId(scaleMajor);
 
-        // D1. Fold Ctrl+Up moves one scale degree (C60 -> D62).
+        // D1. Fold Up moves one scale degree (C60 -> D62).
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 60, dur, 100);
             view.selectionModel().setNoteSelection({noteIdAt(tBase, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
-            sendKeyStroke(*roll, Qt::Key_Up, Qt::ControlModifier, false);
+            sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
             DocNote moved;
             if (!doc.findNote(scaleTrack, tBase, 62, &moved))
-                fail("Fold Ctrl+Up did not move C up one scale degree to D");
+                fail("Fold Up did not move C up one scale degree to D");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
             view.selectionModel().clearNoteSelection();
         }
 
-        // D2. Fold Ctrl+Shift+Up moves a chromatic octave (C60 -> 72).
+        // D2. Fold Shift+Up moves a chromatic octave (C60 -> 72).
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 60, dur, 100);
             view.selectionModel().setNoteSelection({noteIdAt(tBase, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
-            sendKeyStroke(*roll, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier, false);
+            sendKeyStroke(*roll, Qt::Key_Up, Qt::ShiftModifier, false);
             DocNote moved;
             if (!doc.findNote(scaleTrack, tBase, 72, &moved))
-                fail("Fold Ctrl+Shift+Up did not move C up an octave");
+                fail("Fold Shift+Up did not move C up an octave");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
             view.selectionModel().clearNoteSelection();
         }
 
-        // D3. Off Ctrl+Up stays chromatic (C60 -> 61).
+        // D3. Off Up stays chromatic (C60 -> 61).
         {
             const int cmd0 = doc.undoStack()->index();
             doc.addNote(scaleTrack, tBase, 60, dur, 100);
             view.selectionModel().setNoteSelection({noteIdAt(tBase, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(false);
-            sendKeyStroke(*roll, Qt::Key_Up, Qt::ControlModifier, false);
+            sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
             DocNote moved;
             if (!doc.findNote(scaleTrack, tBase, 61, &moved))
-                fail("Off Ctrl+Up did not move C up a semitone");
+                fail("Off Up did not move C up a semitone");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
             view.selectionModel().clearNoteSelection();
@@ -110,12 +110,12 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
             view.selectionModel().setNoteSelection({noteIdAt(tBase, 60), noteIdAt(tBase, 61)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
-            sendKeyStroke(*roll, Qt::Key_Up, Qt::ControlModifier, false);
+            sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
             DocNote moved;
             const bool okA = doc.findNote(scaleTrack, tBase, 62, &moved);
             const bool okB = doc.findNote(scaleTrack, tBase, 64, &moved);
             if (!okA || !okB)
-                fail("Fold Ctrl+Up did not map selected notes to distinct degrees");
+                fail("Fold Up did not map selected notes to distinct degrees");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
             view.selectionModel().clearNoteSelection();
@@ -130,7 +130,7 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
             view.selectionModel().setNoteSelection({noteIdAt(tA, 60), noteIdAt(tB, 60)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
-            sendKeyStroke(*roll, Qt::Key_Up, Qt::ControlModifier, false);
+            sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
             DocNote moved;
             const bool okA = doc.findNote(scaleTrack, tA, 62, &moved);
             const bool okB = doc.findNote(scaleTrack, tB, 62, &moved);
@@ -149,10 +149,10 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
             view.selectionModel().setNoteSelection({noteIdAt(tBase, 61)});
             view.setScaleHighlight(false);
             view.setScaleFold(true);
-            sendKeyStroke(*roll, Qt::Key_Up, Qt::ControlModifier, false);
+            sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
             DocNote moved;
             if (!doc.findNote(scaleTrack, tBase, 62, &moved))
-                fail("Fold Ctrl+Up did not move an off-scale exception to the next degree");
+                fail("Fold Up did not move an off-scale exception to the next degree");
             while (doc.undoStack()->index() > cmd0)
                 doc.undoStack()->undo();
             view.selectionModel().clearNoteSelection();
@@ -340,7 +340,7 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
             view.setScaleHighlight(false);
             view.setScaleFold(true);
             const int cmdsBefore = doc.undoStack()->count();
-            sendKeyStroke(*roll, Qt::Key_Up, Qt::ControlModifier, false); // out of range
+            sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false); // out of range
             if (doc.undoStack()->count() != cmdsBefore)
                 fail("Fold out-of-range nudge pushed an undo command");
             DocNote still;

@@ -88,17 +88,14 @@ int runKeymapCheck()
     // octave transpose commands; keypad arrows still count; StandardKey
     // multi-bindings and the Delete/Backspace alternates all match.
     {
-        check(keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_Up, Qt::ControlModifier),
-              "Ctrl+Up should transpose up a semitone");
-        check(!keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_Up,
-                          Qt::ControlModifier | Qt::ShiftModifier),
-              "Ctrl+Shift+Up must not match the semitone command");
-        check(keyMatches(QStringLiteral("roll.transpose_up_octave"), Qt::Key_Up,
-                         Qt::ControlModifier | Qt::ShiftModifier),
-              "Ctrl+Shift+Up should transpose up an octave");
-        check(keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_Up,
-                         Qt::ControlModifier | Qt::KeypadModifier),
-              "keypad Ctrl+Up should still transpose");
+        check(keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_Up, Qt::NoModifier),
+              "Up should transpose up a semitone");
+        check(!keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_Up, Qt::ShiftModifier),
+              "Shift+Up must not match the semitone command");
+        check(keyMatches(QStringLiteral("roll.transpose_up_octave"), Qt::Key_Up, Qt::ShiftModifier),
+              "Shift+Up should transpose up an octave");
+        check(keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_Up, Qt::KeypadModifier),
+              "keypad Up should still transpose");
         check(keyMatches(QStringLiteral("roll.delete"), Qt::Key_Delete, Qt::NoModifier) &&
                   keyMatches(QStringLiteral("roll.delete"), Qt::Key_Backspace, Qt::NoModifier),
               "Delete and Backspace alternates should both delete");
@@ -153,8 +150,8 @@ int runKeymapCheck()
                             QKeySequence(QStringLiteral("Alt+T")));
         check(keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_T, Qt::AltModifier),
               "override Alt+T should match");
-        check(!keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_Up, Qt::ControlModifier),
-              "old Ctrl+Up must stop matching after override");
+        check(!keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_Up, Qt::NoModifier),
+              "old Up must stop matching after override");
         check(registry.isOverridden(QStringLiteral("roll.transpose_up")),
               "override not marked as overridden");
         QSettings settings;
@@ -168,7 +165,7 @@ int runKeymapCheck()
     // 4. Unbind: explicitly bound to nothing, persisted as an empty delta.
     {
         registry.setBinding(QStringLiteral("roll.nudge_left"), QKeySequence());
-        check(!keyMatches(QStringLiteral("roll.nudge_left"), Qt::Key_Left, Qt::ControlModifier),
+        check(!keyMatches(QStringLiteral("roll.nudge_left"), Qt::Key_Left, Qt::NoModifier),
               "unbound command still matches its default");
         check(registry.bindings(QStringLiteral("roll.nudge_left")).isEmpty(),
               "unbound command reports bindings");
@@ -180,7 +177,7 @@ int runKeymapCheck()
     // sole default is also a reset — the store stays delta-only.
     {
         registry.resetBinding(QStringLiteral("roll.transpose_up"));
-        check(keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_Up, Qt::ControlModifier),
+        check(keyMatches(QStringLiteral("roll.transpose_up"), Qt::Key_Up, Qt::NoModifier),
               "reset did not restore the default");
         QSettings settings;
         check(!settings.contains(QStringLiteral("keymap/roll.transpose_up")),
@@ -192,7 +189,7 @@ int runKeymapCheck()
         registry.resetAll();
         check(!QSettings().contains(QStringLiteral("keymap/roll.nudge_left")),
               "resetAll left deltas behind");
-        check(keyMatches(QStringLiteral("roll.nudge_left"), Qt::Key_Left, Qt::ControlModifier),
+        check(keyMatches(QStringLiteral("roll.nudge_left"), Qt::Key_Left, Qt::NoModifier),
               "resetAll did not restore nudge left");
 
         QSettings snapshotSettings;
@@ -205,7 +202,7 @@ int runKeymapCheck()
         snapshotSettings.setValue(QStringLiteral("keymap/added.later"), QStringLiteral("Ctrl+9"));
         registry.restoreOverrides(snapshot);
         QSettings restoredSettings;
-        check(keyMatches(QStringLiteral("roll.nudge_left"), Qt::Key_Left, Qt::ControlModifier),
+        check(keyMatches(QStringLiteral("roll.nudge_left"), Qt::Key_Left, Qt::NoModifier),
               "snapshot restore did not recover an absent command override");
         check(restoredSettings.contains(QStringLiteral("keymap/future.command")) &&
                   restoredSettings.value(QStringLiteral("keymap/future.command"))
