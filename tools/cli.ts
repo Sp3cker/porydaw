@@ -31,6 +31,15 @@ function usage(): never {
 function isVerbose(args: string[]): boolean {
   return args.includes("--verbose") || args.includes("-v");
 }
+function getAppPath(): string {
+  if (Deno.build.os === "darwin") {
+    return `${BUILD_DIR}/porydaw.app`;
+  }
+  if (Deno.build.os === "windows") {
+    return `${BUILD_DIR}/porydaw.exe`;
+  }
+  return `${BUILD_DIR}/porydaw`;
+}
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -101,7 +110,13 @@ async function runBuild(
   console.log(`build: ok (${sec}s)`);
   const artifacts: string[] = [];
   if (targets.includes("porydaw")) {
-    artifacts.push(`${BUILD_DIR}/porydaw.app/Contents/MacOS/porydaw`);
+    if (Deno.build.os === "darwin") {
+      artifacts.push(`${BUILD_DIR}/porydaw.app/Contents/MacOS/porydaw`);
+    } else if (Deno.build.os === "windows") {
+      artifacts.push(`${BUILD_DIR}/porydaw.exe`);
+    } else {
+      artifacts.push(`${BUILD_DIR}/porydaw`);
+    }
   }
   if (targets.includes("porydaw_checks")) {
     artifacts.push(`${BUILD_DIR}/porydaw_checks`);
@@ -115,7 +130,11 @@ async function runBuild(
   if (artifacts.length > 0) {
     console.log(`  → ${artifacts.join("\n  → ")}`);
   }
-  console.log(`Built to ${BUILD_DIR}/`);
+  if (targets.length === 1 && targets[0] === "porydaw") {
+    console.log(`Built to ${getAppPath()}`);
+  } else {
+    console.log(`Built to ${BUILD_DIR}/`);
+  }
 }
 
 async function runVerify(rawArgs: string[]): Promise<void> {
