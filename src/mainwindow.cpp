@@ -3,7 +3,6 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
-#include <QCryptographicHash>
 #include <QDebug>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -29,7 +28,6 @@
 #include <QRegularExpressionValidator>
 #include <QSettings>
 #include <QSpinBox>
-#include <QStandardPaths>
 #include <QStatusBar>
 #include <QStyle>
 #include <QTabBar>
@@ -1211,24 +1209,6 @@ void MainWindow::restoreSession()
     }
 }
 
-// Persistent-index store for one project root, kept outside the project
-// tree: FAT32 sticks have neither the space nor the metadata fidelity for
-// derived state. Keyed by the canonical root so two projects never thrash
-// one shared store (ProjectIndex refuses a store whose recorded root does
-// not match). Empty when disabled — setIndexCache treats that as off.
-static QString indexStoreDirFor(const QString &projectDir)
-{
-    if (!qEnvironmentVariableIsEmpty("PORYDAW_DISABLE_INDEX_CACHE"))
-        return {};
-    const QString canonical = QFileInfo(projectDir).canonicalFilePath();
-    if (canonical.isEmpty())
-        return {};
-    const QString key = QString::fromLatin1(
-        QCryptographicHash::hash(canonical.toUtf8(), QCryptographicHash::Sha1).toHex());
-    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
-           QStringLiteral("/index-cache/") + key;
-}
-
 bool MainWindow::openProjectDir(const QString &dir, bool interactive)
 {
     QElapsedTimer timer;
@@ -1244,7 +1224,6 @@ bool MainWindow::openProjectDir(const QString &dir, bool interactive)
     cleanupVgPreview();
 
     QString error;
-    m_project.setIndexCache(indexStoreDirFor(dir), ProjectIndex::Backend::Sqlite);
     if (!m_project.open(dir, &error)) {
         if (interactive)
             QMessageBox::warning(this, tr("Open Project"), error);

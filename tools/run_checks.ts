@@ -292,6 +292,9 @@ async function runProcess(
     args,
     env: {
       ASAN_OPTIONS: Deno.env.get("ASAN_OPTIONS") ?? "detect_leaks=0",
+      // Tests that exercise indexing provide an explicit scratch cache.
+      // Disable the automatic per-user cache for every other isolated fixture.
+      PORYDAW_DISABLE_INDEX_CACHE: "1",
       ...(profileFile ? { LLVM_PROFILE_FILE: profileFile } : {}),
       ...environment,
     },

@@ -36,6 +36,7 @@ int runTrackActivityMeterCheck();
 int runSampleCheck(const QString &scratchDir, const QString &corpusRoot = QString(),
                    const QString &screenshotPath = QString());
 int runIgnoreCheck(const QString &scratchDir);
+int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDir);
 int runKeymapCheck();
 int runSelectionCheck();
 int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong = QString(),

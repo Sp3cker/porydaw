@@ -14,7 +14,6 @@ const BUILD_DIR = "build";
 type Subcommand =
   | "build:app"
   | "build:checks"
-  | "build:bench"
   | "verify"
   | "format";
 
@@ -22,7 +21,6 @@ function usage(): never {
   console.error(`usage:
  deno task build:app            build porydaw app only
  deno task build:checks         build porydaw + checks + mid2agb
- deno task build:bench         build indexing benchmark CLI
  deno task verify [--verbose] [--filter <name>] [--no-build] [-- <run_checks args>]
  deno task format [--check] [files...]`);
   console.error("");
@@ -111,9 +109,6 @@ async function runBuild(
   }
   if (targets.includes("porydaw_checks")) {
     artifacts.push(`${BUILD_DIR}/porydaw_checks`);
-  }
-  if (targets.includes("porydaw_index_bench")) {
-    artifacts.push(`${BUILD_DIR}/porydaw_index_bench`);
   }
   if (targets.includes("mid2agb")) {
     artifacts.push(`${BUILD_DIR}/mid2agb`);
@@ -243,7 +238,6 @@ const rest = raw.slice(1);
 // Normalize hyphen vs colon: build-app -> build:app
 if (sub === "build-app") sub = "build:app";
 if (sub === "build-checks" || sub === "build:check") sub = "build:checks";
-if (sub === "build-bench") sub = "build:bench";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
@@ -251,9 +245,6 @@ switch (normalized) {
     break;
   case "build:checks":
     await runBuild(["porydaw", "porydaw_checks", "mid2agb"], isVerbose(rest));
-    break;
-  case "build:bench":
-    await runBuild(["porydaw_index_bench"], isVerbose(rest));
     break;
   case "verify":
     await runVerify(rest);

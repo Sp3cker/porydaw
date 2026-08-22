@@ -24,8 +24,8 @@ struct SongCfg {
     bool exactGate = false;      // -E
     bool extendedClocks = false; // -X (48 clocks/beat)
     bool noCompression = false;  // -N
+    static SongCfg fromFlags(const QStringList &flags);
 };
-
 struct MusicPlayer {
     QString name;   // e.g. "MUSIC_PLAYER_BGM"
     int number = 0; // the .equiv value; also the song macro's third argument
@@ -94,11 +94,11 @@ class DecompProject
     // registers a song). Song ids are reassigned.
     bool reload(QString *error);
 
-    // Persistent-index hook: when storeDir is non-empty, open() serves the
-    // song list from ProjectIndex when its fingerprint still matches every
-    // input, and otherwise scans and writes the store back. The project
-    // itself is never written to.
-    void setIndexCache(const QString &storeDir, ProjectIndex::Backend backend);
+    // Persistent-index hook: open() uses storeDir when provided, otherwise
+    // ProjectIndex::defaultStoreDir(root). A matching store replaces the scan;
+    // a missing or stale store is rebuilt. PORYDAW_DISABLE_INDEX_CACHE makes
+    // the default directory empty and disables automatic persistence.
+    void setIndexCache(const QString &storeDir = QString());
 
   private:
     bool parseSongTable(const QDir &midiDir, const QSet<QString> &midiFiles, QString *error);
@@ -111,6 +111,5 @@ class DecompProject
     QVector<SongInfo> m_songs;
     QVector<MusicPlayer> m_players; // cached at open (one file read)
 
-    QString m_cacheStoreDir; // empty: index persistence disabled
-    ProjectIndex::Backend m_cacheBackend = ProjectIndex::Backend::Sqlite;
+    QString m_cacheStoreDir; // empty: use ProjectIndex::defaultStoreDir()
 };

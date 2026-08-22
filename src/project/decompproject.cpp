@@ -1,9 +1,5 @@
 #include "decompproject.h"
 
-#if defined(__APPLE__)
-#include <os/log.h>
-#include <os/signpost.h>
-#endif
 #include <QDir>
 #include <QFile>
 #include <QHash>
@@ -14,101 +10,66 @@
 #include "project/songregistry.h"
 #include "project/songsmk.h"
 
-#if defined(__APPLE__)
-namespace {
-os_log_t projectIndexingLog()
-{
-    static os_log_t log = os_log_create("com.huderlem.porydaw", "project-indexing");
-    return log;
-}
-} // namespace
-#endif
-
 bool DecompProject::open(const QString &rootDir, QString *error)
 {
-#if defined(__APPLE__)
-    const os_log_t indexingLog = projectIndexingLog();
-    const bool signpostsEnabled = os_signpost_enabled(indexingLog);
-    const os_signpost_id_t projectIndexingId =
-        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
-    if (signpostsEnabled)
-        os_signpost_interval_begin(indexingLog, projectIndexingId, "ProjectIndexing");
-    const auto endProjectIndexing = [&] {
-        if (signpostsEnabled)
-            os_signpost_interval_end(indexingLog, projectIndexingId, "ProjectIndexing");
-    };
-#endif
-
     close();
 
     const QDir dir(rootDir);
     if (!dir.exists()) {
         if (error)
             *error = QStringLiteral("Directory does not exist: %1").arg(rootDir);
-#if defined(__APPLE__)
-        endProjectIndexing();
-#endif
         return false;
     }
-    m_root = dir.absolutePath();
+    const QString canonical = dir.canonicalPath();
+    m_root = canonical.isEmpty() ? dir.absolutePath() : canonical;
+    const QString cacheStoreDir =
+        m_cacheStoreDir.isEmpty() ? ProjectIndex::defaultStoreDir(m_root) : m_cacheStoreDir;
 
     // Persistent-index fast path: a store whose fingerprint still matches
     // every input replaces the scan entirely; anything else falls through
     // to the full rescan and is rewritten below.
     QByteArray indexFinger;
-    if (!m_cacheStoreDir.isEmpty()) {
-        indexFinger = ProjectIndex::fingerprint(m_root);
-        if (ProjectIndex::load(m_cacheBackend, m_cacheStoreDir, m_root, indexFinger, &m_songs,
-                               &m_players)) {
-#if defined(__APPLE__)
-            endProjectIndexing();
-#endif
+    QStringList midiFiles;
+    if (!cacheStoreDir.isEmpty()) {
+        // Listing feeds the fingerprint, and the scan below reuses it —
+        // sound/songs/midi is never walked twice.
+        midiFiles = ProjectIndex::listFileNames(m_root + QStringLiteral("/sound/songs/midi"),
+                                                QStringLiteral(".mid"));
+        const QStringList sidecarFiles = ProjectIndex::listFileNames(
+            m_root + QStringLiteral("/.porydaw"), QStringLiteral(".json"));
+        indexFinger = ProjectIndex::fingerprint(m_root, midiFiles, sidecarFiles);
+        if (ProjectIndex::load(cacheStoreDir, m_root, indexFinger, &m_songs, &m_players)) {
+            for (SongInfo &song : m_songs) {
+                if (!song.registered) {
+                    QString constant, player;
+                    if (SongRegistry::loadRegistrationMeta(m_root, song.label, &constant,
+                                                           &player)) {
+                        if (!constant.isEmpty())
+                            song.constant = constant;
+                        if (!player.isEmpty())
+                            song.player = player;
+                    }
+                }
+            }
             return true;
         }
     }
-
-#if defined(__APPLE__)
-    const os_signpost_id_t songTableId =
-        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
-    if (signpostsEnabled)
-        os_signpost_interval_begin(indexingLog, songTableId, "SongTable");
-#endif
     const QDir midiDir(m_root + QStringLiteral("/sound/songs/midi"));
     // Bare names-only walk: QDir::entryList's per-entry metadata stat
     // dominates the scan on large FAT32 checkouts (see ProjectIndex::
-    // listFileNames).
-    const QStringList midiFiles = ProjectIndex::listFileNames(
-        m_root + QStringLiteral("/sound/songs/midi"), QStringLiteral(".mid"));
+    // listFileNames). Listed only when the cache fast path above did not.
+    if (midiFiles.isEmpty())
+        midiFiles = ProjectIndex::listFileNames(m_root + QStringLiteral("/sound/songs/midi"),
+                                                QStringLiteral(".mid"));
     QSet<QString> midiFileNames;
     for (const QString &fileName : midiFiles)
         midiFileNames.insert(fileName);
     if (!parseSongTable(midiDir, midiFileNames, error)) {
         m_root.clear();
-#if defined(__APPLE__)
-        if (signpostsEnabled)
-            os_signpost_interval_end(indexingLog, songTableId, "SongTable");
-        endProjectIndexing();
-#endif
         return false;
     }
-#if defined(__APPLE__)
-    if (signpostsEnabled)
-        os_signpost_interval_end(indexingLog, songTableId, "SongTable");
-    const os_signpost_id_t songDiscoveryId =
-        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
-    if (signpostsEnabled)
-        os_signpost_interval_begin(indexingLog, songDiscoveryId, "SongDiscovery");
-#endif
     parseSongConstants();
     discoverUnregisteredSongs(midiDir, midiFiles);
-#if defined(__APPLE__)
-    if (signpostsEnabled)
-        os_signpost_interval_end(indexingLog, songDiscoveryId, "SongDiscovery");
-    const os_signpost_id_t registrationCheckId =
-        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
-    if (signpostsEnabled)
-        os_signpost_interval_begin(indexingLog, registrationCheckId, "RegistrationCheck");
-#endif
     // Which registration files still miss each song's entry — one pass over
     // the registration files for the whole project (checkRegistration per
     // song would reopen them hundreds of times).
@@ -128,33 +89,11 @@ bool DecompProject::open(const QString &rootDir, QString *error)
         if (status.debugApplicable && !status.inDebugMenu)
             song.registrationGaps.append(QStringLiteral("src/debug.c"));
     }
-#if defined(__APPLE__)
-    if (signpostsEnabled)
-        os_signpost_interval_end(indexingLog, registrationCheckId, "RegistrationCheck");
-    const os_signpost_id_t songConfigurationId =
-        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
-    if (signpostsEnabled)
-        os_signpost_interval_begin(indexingLog, songConfigurationId, "SongConfiguration");
-#endif
     if (!parseMidiCfg())
         parseSongsMk();
-#if defined(__APPLE__)
-    if (signpostsEnabled)
-        os_signpost_interval_end(indexingLog, songConfigurationId, "SongConfiguration");
-    const os_signpost_id_t musicPlayersId =
-        signpostsEnabled ? os_signpost_id_generate(indexingLog) : OS_SIGNPOST_ID_NULL;
-    if (signpostsEnabled)
-        os_signpost_interval_begin(indexingLog, musicPlayersId, "MusicPlayers");
-#endif
     m_players = SongRegistry::musicPlayers(m_root);
-#if defined(__APPLE__)
-    if (signpostsEnabled)
-        os_signpost_interval_end(indexingLog, musicPlayersId, "MusicPlayers");
-    endProjectIndexing();
-#endif
-    if (!m_cacheStoreDir.isEmpty())
-        ProjectIndex::save(m_cacheBackend, m_cacheStoreDir, m_root, indexFinger, m_songs,
-                           m_players);
+    if (!cacheStoreDir.isEmpty())
+        ProjectIndex::save(cacheStoreDir, m_root, indexFinger, m_songs, m_players);
     return true;
 }
 
@@ -180,10 +119,9 @@ void DecompProject::close()
     m_players.clear();
 }
 
-void DecompProject::setIndexCache(const QString &storeDir, ProjectIndex::Backend backend)
+void DecompProject::setIndexCache(const QString &storeDir)
 {
     m_cacheStoreDir = storeDir;
-    m_cacheBackend = backend;
 }
 
 bool DecompProject::parseSongTable(const QDir &midiDir, const QSet<QString> &midiFiles,
@@ -294,8 +232,7 @@ void DecompProject::discoverUnregisteredSongs(const QDir &midiDir, const QString
     }
 }
 
-// mid2agb parses option letters case-insensitively (-v080 == -V080).
-static SongCfg cfgFromFlags(const QStringList &flags)
+SongCfg SongCfg::fromFlags(const QStringList &flags)
 {
     SongCfg cfg;
     cfg.rawFlags = flags;
@@ -355,8 +292,8 @@ bool DecompProject::parseMidiCfg()
         if (name.endsWith(QStringLiteral(".mid"), Qt::CaseInsensitive))
             name.chop(4);
 
-        byLabel.insert(
-            name, cfgFromFlags(line.mid(colon + 1).split(QLatin1Char(' '), Qt::SkipEmptyParts)));
+        byLabel.insert(name, SongCfg::fromFlags(
+                                 line.mid(colon + 1).split(QLatin1Char(' '), Qt::SkipEmptyParts)));
     }
 
     for (SongInfo &song : m_songs) {
@@ -377,7 +314,7 @@ void DecompProject::parseSongsMk()
         const auto it = byLabel.constFind(song.label);
         if (it != byLabel.constEnd()) {
             song.hasCfg = true;
-            song.cfg = cfgFromFlags(it.value());
+            song.cfg = SongCfg::fromFlags(it.value());
         }
     }
 }
