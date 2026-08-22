@@ -548,8 +548,8 @@ class SongView : public QWidget
     // Edit cursor committed to a new position (click released); the main
     // window seeks playback here when not stopped.
     void editCursorMoved(uint64_t tick);
-    // Popup/editor audition: start from tick when stopped or paused, or pause
-    // the currently playing transport.
+    // Popup/editor audition: start from tick when stopped or paused; when
+    // playing, pause and return the transport to tick for the next audition.
     void playPauseFromRequested(uint64_t tick);
     // Roll/event-list swap (user toggle or applyViewState); the main window
     // mirrors it into the View-menu checkbox.

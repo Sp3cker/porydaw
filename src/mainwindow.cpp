@@ -832,8 +832,12 @@ SongSession *MainWindow::createSession()
     connect(s->view, &SongView::playPauseFromRequested, this, [this, s](uint64_t tick) {
         if (s != m_active)
             return;
-        if (m_audio.transport() != Transport::Playing)
+        if (m_audio.transport() == Transport::Playing) {
+            m_transportBar->playPauseAction()->trigger();
             s->view->commitEditCursor(tick);
+            return;
+        }
+        s->view->commitEditCursor(tick);
         m_transportBar->playPauseAction()->trigger();
     });
     // Jump-from-context voice navigation (header voice line, event list):

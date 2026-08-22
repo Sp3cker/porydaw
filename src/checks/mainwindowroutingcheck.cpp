@@ -95,6 +95,18 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         std::fprintf(stderr, "mainwindow-routing: songs did not open in two tabs\n");
         return false;
     }
+    constexpr uint64_t auditionTick = 24;
+    stopPlayback();
+    tabB->view->commitEditCursor(0);
+    tabB->view->requestPlayPauseFrom(auditionTick);
+    check(m_audio.transport() == Transport::Playing && tabB->view->editCursorTick() == auditionTick,
+          "audition request did not start playback from its requested tick");
+    tabB->view->requestPlayPauseFrom(auditionTick);
+    check(m_audio.transport() == Transport::Paused &&
+              tabB->view->editCursorTick() == auditionTick &&
+              uint64_t(tabB->view->playheadTick() + 0.5) == auditionTick,
+          "playing audition did not pause and return the playhead to its requested tick");
+    stopPlayback();
 
     check(m_automationDrawerAction->shortcut() == QKeySequence(Qt::Key_A) &&
               m_automationDrawerAction->shortcutContext() == Qt::WindowShortcut &&

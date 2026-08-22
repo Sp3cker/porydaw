@@ -2,6 +2,7 @@
 
 #include "theme/themeruntime.h"
 #include "typography.h"
+#include "ui/keymap.h"
 
 #include <QApplication>
 #include <QKeySequence>
@@ -252,7 +253,9 @@ bool PitchBendEditor::event(QEvent *event)
 {
     if (event->type() == QEvent::ShortcutOverride) {
         auto *keyEvent = static_cast<QKeyEvent *>(event);
-        if (keyEvent->matches(QKeySequence::Undo)) {
+        if (keyEvent->matches(QKeySequence::Undo) ||
+            keymap::Registry::instance().matches(keyEvent,
+                                                 QStringLiteral("transport.play_pause"))) {
             event->accept();
             return true;
         }
@@ -272,6 +275,11 @@ bool PitchBendEditor::eventFilter(QObject *watched, QEvent *event)
     if (keyEvent->matches(QKeySequence::Undo)) {
         if (event->type() == QEvent::KeyPress)
             undoCurve();
+        event->accept();
+        return true;
+    }
+    if (event->type() == QEvent::ShortcutOverride &&
+        keymap::Registry::instance().matches(keyEvent, QStringLiteral("transport.play_pause"))) {
         event->accept();
         return true;
     }
@@ -296,7 +304,15 @@ void PitchBendEditor::keyPressEvent(QKeyEvent *event)
         return;
     if (PitchBendGraph *graph = focusedGraph(); graph && graph->handleKeyPress(event))
         return;
-    QFrame::keyPressEvent(event);
+    // Only solo routes out of the popup; the remaining roll edit commands
+    // must not reach the song while the note automation popup has focus.
+    if (m_songView &&
+        keymap::Registry::instance().matches(event, QStringLiteral("roll.solo_tracks"))) {
+        m_songView->toggleSoloOnSelectedTracks();
+        event->accept();
+        return;
+    }
+    event->accept();
 }
 
 void PitchBendEditor::focusInEvent(QFocusEvent *event)
