@@ -1074,6 +1074,13 @@ class PitchBendCheckContext final
                 fail("Reset did not zero the pitch bend across the note");
             if (!restoredEnd)
                 fail("Reset did not restore the note-off bend state");
+            QWidget *keyTarget = QApplication::focusWidget();
+            if (!keyTarget || (keyTarget != resetPopup && !resetPopup->isAncestorOf(keyTarget)))
+                keyTarget = resetPopup;
+            QKeyEvent playPauseOverride(QEvent::ShortcutOverride, Qt::Key_Space, Qt::NoModifier);
+            QCoreApplication::sendEvent(keyTarget, &playPauseOverride);
+            if (!playPauseOverride.isAccepted())
+                fail("pitch-bend editor did not claim Space from the window transport shortcut");
             uint64_t requestedTick = UINT64_MAX;
             int playbackRequests = 0;
             const QMetaObject::Connection connection =
@@ -1082,12 +1089,23 @@ class PitchBendCheckContext final
                                      requestedTick = tick;
                                      playbackRequests++;
                                  });
-            sendKey(resetPopup, Qt::Key_Space, Qt::NoModifier);
+            sendKey(keyTarget, Qt::Key_Space, Qt::NoModifier);
             QObject::disconnect(connection);
             if (playbackRequests != 1 || requestedTick != m_note.tick)
                 fail("Space did not request playback from the selected note's start");
             if (!resetPopup->isVisible())
                 fail("Space closed the pitch-bend popup");
+            const uint32_t muteBefore = m_view.muteMask();
+            sendKey(keyTarget, Qt::Key_M, Qt::NoModifier);
+            if (m_view.muteMask() != muteBefore)
+                fail("M from the pitch-bend editor reached the roll mute command");
+            const uint32_t soloBefore = m_view.soloMask();
+            sendKey(keyTarget, Qt::Key_S, Qt::NoModifier);
+            if (m_view.soloMask() != (soloBefore ^ (uint32_t{1} << m_engineTrack)))
+                fail("S from the pitch-bend editor did not toggle the selected track's Solo");
+            sendKey(keyTarget, Qt::Key_S, Qt::NoModifier);
+            if (m_view.soloMask() != soloBefore)
+                fail("second S from the pitch-bend editor did not restore the Solo state");
             if (m_document.undoStack()->index() != resetBaseline + 1)
                 fail("Reset audition did not push exactly one pitch-bend edit");
             m_document.undoStack()->undo();
