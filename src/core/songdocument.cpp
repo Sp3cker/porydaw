@@ -1730,7 +1730,7 @@ bool SongDocument::canAddTrack() const
 {
     if (m_smf.tracks.empty())
         return false;
-    if (engineTrackCount() >= 16)
+    if (engineTrackCount() >= track_limits::kHardwareCapacity)
         return false;
     return freeChannel() >= 0;
 }

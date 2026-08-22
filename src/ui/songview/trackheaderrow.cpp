@@ -155,12 +155,13 @@ int TrackHeaderRow::track() const
 
 void TrackHeaderRow::setActivity(TrackActivityIntensity intensity, bool playing)
 {
-    m_activityMeter->setState({intensity, playing, activityMaximumIntensity()});
+    m_activityMeter->setState({intensity, playing, 1.0f});
 }
 
-// True when the song's music player never starts this track in-game
-// (track index at or beyond SongDocument::trackBudget).
-bool TrackHeaderRow::isSilentInGame() const
+// True when the track index is at or beyond the project's in-game
+// allocation (SongDocument::trackBudget). Warning-only: the track stays
+// audible and editable.
+bool TrackHeaderRow::exceedsProjectTrackBudget() const
 {
     const SongDocument *doc = m_sv->document();
     return doc && m_track >= doc->trackBudget();
@@ -181,7 +182,7 @@ void TrackHeaderRow::paintEvent(QPaintEvent *)
         // the primary selection.
         p.fillRect(rect(), trackHeaderAlsoSelectedColor());
     }
-    const bool silentInGame = isSilentInGame();
+    const bool overBudget = exceedsProjectTrackBudget();
     p.setPen(QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
     p.drawLine(lyt::space(Space::Zero), height() - lyt::singlePixel(), width(),
                height() - lyt::singlePixel());
@@ -200,29 +201,16 @@ void TrackHeaderRow::paintEvent(QPaintEvent *)
                             : (selectionModel.resolvedTrackScope(usedTracks) & (1u << m_track))
                                 ? trackHeaderAlsoSelectedColor()
                                 : palette().color(QPalette::Window);
-    // The song's music player never starts this track in-game
-    // (MPlayStart), so playback mutes it; the header must read as inert
-    // at a glance: text recedes most of the way into the backdrop and a
-    // faint cross spans the row, under the text so labels stay legible.
+    // Tracks beyond the project budget recede to a gray warning but stay active.
     QColor titleColor = selected
                             ? themes::color(themes::Role::song_view_track_header_selection_text)
                             : themes::color(themes::Role::song_view_primary_text);
     QColor subtitleColor = selected
                                ? themes::color(themes::Role::song_view_track_header_selection_text)
                                : themes::color(themes::Role::song_view_secondary_text);
-    if (silentInGame) {
+    if (overBudget) {
         titleColor = mixTowardOklab(titleColor, backdrop, selected ? 0.35 : 0.6);
         subtitleColor = mixTowardOklab(subtitleColor, backdrop, selected ? 0.35 : 0.6);
-        QColor cross = mixTowardOklab(titleColor, backdrop, 0.3);
-        p.save();
-        p.setRenderHint(QPainter::Antialiasing);
-        p.setPen(QPen(cross, lyt::singlePixel()));
-        const QRectF box = QRectF(rect()).adjusted(lyt::space(Space::One), lyt::space(Space::One),
-                                                   -lyt::space(Space::One),
-                                                   -lyt::space(Space::One) - lyt::singlePixel());
-        p.drawLine(box.topLeft(), box.bottomRight());
-        p.drawLine(box.bottomLeft(), box.topRight());
-        p.restore();
     }
     p.setFont(titleFont);
     p.setPen(titleColor);
@@ -245,9 +233,7 @@ void TrackHeaderRow::paintEvent(QPaintEvent *)
     p.setFont(subtitleFont);
     p.setPen(subtitleColor);
     m_shownProgram = m_sv->currentProgram(m_track);
-    const QString subtitle =
-        silentInGame ? SongView::tr("silent in-game · %1").arg(m_sv->instrumentLabel(m_track))
-                     : m_sv->instrumentLabel(m_track);
+    const QString subtitle = m_sv->instrumentLabel(m_track);
     p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
                m_subtitleMetrics.elidedText(subtitle, Qt::ElideRight, textW));
 }
@@ -298,12 +284,10 @@ void TrackHeaderRow::updateToolTip()
     QString tip = SongView::tr("%1 notes · %2")
                       .arg(tl->tracks[m_track].noteCount)
                       .arg(m_sv->instrumentLabel(m_track));
-    if (isSilentInGame()) {
-        tip += SongView::tr("\nSilent in-game: this song's music player only allocates "
-                            "%1 track(s) (sound/music_player_table.inc), and the game "
-                            "never starts the tracks beyond them. porydaw plays it the "
-                            "same way. Raise the player's track count in the project to "
-                            "use this track.")
+    if (exceedsProjectTrackBudget()) {
+        tip += SongView::tr("\nPossibly incompatible in-game: this song's music player "
+                            "only allocates %1 track(s) (sound/music_player_table.inc). "
+                            "The track stays audible here.")
                    .arg(m_sv->document()->trackBudget());
     }
     if (m_sv->document()) {
@@ -436,11 +420,6 @@ QRect TrackHeaderRow::activityMeterRect() const
 {
     return QRect(lyt::space(Space::Zero), lyt::space(Space::Zero), lyt::space(Space::One),
                  height() - lyt::singlePixel());
-}
-
-float TrackHeaderRow::activityMaximumIntensity() const
-{
-    return isSilentInGame() ? 0.15f : 1.0f;
 }
 
 // The row's name line, clear of the color strip and the M/S column.

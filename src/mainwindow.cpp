@@ -1764,7 +1764,6 @@ SongSettings MainWindow::songSettingsFor(const SongSession &session) const
     settings.reverb = uint8_t(cfg.reverb >= 0 ? cfg.reverb : SongCfg::kDefaultReverb);
     settings.pcmMixer = m_engineSettings.pcmMixer;
     settings.maxPcmChannels = uint8_t(m_engineSettings.maxPcmChannels);
-    settings.trackBudget = uint8_t(session.doc.trackBudget());
     settings.pcmMixRate = m_engineSettings.pcmMixRate;
     settings.analogFilter = m_engineSettings.analogFilter;
     return settings;

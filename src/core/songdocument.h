@@ -13,6 +13,7 @@
 #include "core/smf.h"
 #include "core/tempo.h"
 #include "core/timedefaults.h"
+#include "core/tracklimits.h"
 #include "project/decompproject.h"
 
 class MidiTimeline;
@@ -126,10 +127,14 @@ class SongDocument : public QObject
 
     // Tracks this song's music player allocates in-game (DecompProject::
     // trackBudgetFor, set by the owner after load). MPlayStart never starts
-    // tracks at or beyond this index, so playback mutes them and the UI
-    // marks them; editing is never gated on it. Default 16 = engine ceiling.
+    // tracks at or beyond this index, so the UI warns that they can be
+    // incompatible in-game. Editing and Porydaw playback are never gated on
+    // it. Defaults to track_limits::kHardwareCapacity.
     int trackBudget() const { return m_trackBudget; }
-    void setTrackBudget(int budget) { m_trackBudget = std::clamp(budget, 0, 16); }
+    void setTrackBudget(int budget)
+    {
+        m_trackBudget = std::clamp(budget, 0, track_limits::kHardwareCapacity);
+    }
 
     // Lookups. NoteId is the stable identity for note selection and velocity
     // mutation; physical event locations remain document-owned details.
@@ -518,5 +523,5 @@ class SongDocument : public QObject
 
     std::vector<int> m_engineToSmf;       // engine track -> SMF track
     std::vector<uint8_t> m_engineChannel; // engine track -> MIDI channel
-    int m_trackBudget = 16;
+    int m_trackBudget = track_limits::kHardwareCapacity;
 };

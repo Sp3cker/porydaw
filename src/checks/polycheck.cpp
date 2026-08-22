@@ -305,39 +305,6 @@ int runEngineStage()
     }
     m4a_engine_destroy(&engine);
 
-    // ---- Music-player track budget: rendering with trackBudgetMuteMask(n)
-    // never starts tracks >= n, matching MPlayStart's in-game truncation ----
-    check(trackBudgetMuteMask(16) == 0, "budget 16 mutes nothing");
-    check(trackBudgetMuteMask(10) == 0xFC00, "budget 10 mutes tracks 10-15");
-    check(trackBudgetMuteMask(1) == 0xFFFE, "budget 1 mutes tracks 1-15");
-    check(trackBudgetMuteMask(0) == 0xFFFF, "budget 0 mutes everything");
-    m4a_engine_init(&engine, float(kSampleRate));
-    m4a_engine_set_voicegroup(&engine, vg.voices);
-    // With tracks 1-3 masked at most one note sounds at a time, so any
-    // silence below is the mask's doing, not channel stealing.
-    {
-        TimelinePlayer player;
-        player.reset();
-        constexpr uint32_t kChunk = 500;
-        float bufL[kChunk], bufR[kChunk], peak = 0.0f;
-        bool foreignChannelOwner = false;
-        for (uint64_t rendered = 0; rendered < 220000; rendered += kChunk) {
-            player.render(&engine, timeline.get(), std::span(bufL), std::span(bufR), false,
-                          trackBudgetMuteMask(1));
-            for (uint32_t i = 0; i < kChunk; i++)
-                peak = std::max({peak, std::fabs(bufL[i]), std::fabs(bufR[i])});
-            for (int i = 0; i < TOTAL_PCM_CHANNELS; i++) {
-                if ((engine.pcmChannels[i].status & CHN_ON) &&
-                    engine.pcmChannels[i].trackIndex != 0)
-                    foreignChannelOwner = true;
-            }
-        }
-        check(peak > 1e-4f, "budget: track 0 still audible");
-        check(!foreignChannelOwner, "budget: no channel ever owned by track >= 1");
-        check(engine.polyEventTotal == 0, "budget: muted tracks cause no overflow events");
-    }
-    m4a_engine_destroy(&engine);
-
     return failures;
 }
 

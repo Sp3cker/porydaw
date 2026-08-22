@@ -7,6 +7,7 @@
 
 #include "checks/editcheck/documentcontractfixtures.h"
 #include "checks/editcheck/support.h"
+#include "core/tracklimits.h"
 
 namespace editcheck {
 int documentTrackDuplicationOwnershipFailures()
@@ -113,6 +114,9 @@ int documentTrackDuplicationOwnershipFailures()
         expect(copy >= 0 && collisionDoc.channelFor(copy) == 0 && visibleMatch && copiedEvents &&
                    completeRemap,
                "track duplication did not isolate the owned channel");
+        expect(collisionDoc.engineTrackCount() == track_limits::kHardwareCapacity &&
+                   !collisionDoc.canAddTrack() && collisionDoc.duplicateTrack(0) < 0,
+               "track creation did not stop at the 16-track engine capacity");
         if (copy >= 0 && !copied.empty() && !source.empty()) {
             const NoteId copiedId = copied.front().noteId;
             collisionDoc.undoStack()->undo();
