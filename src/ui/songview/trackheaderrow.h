@@ -56,7 +56,7 @@ class TrackHeaderRow : public QWidget
 
     int track() const;
     void setActivity(TrackActivityIntensity intensity, bool playing);
-    bool isSilentInGame() const;
+    bool exceedsProjectTrackBudget() const;
     void syncVoice();
     void updateToolTip();
     void beginRename();
@@ -76,7 +76,6 @@ class TrackHeaderRow : public QWidget
 
   private:
     QRect activityMeterRect() const;
-    float activityMaximumIntensity() const;
     QRect editorRect() const;
     void finishRename(bool commit, bool restoreFocus);
 

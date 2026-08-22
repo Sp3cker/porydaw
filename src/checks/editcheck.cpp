@@ -9,6 +9,7 @@
 
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
+#include "core/tracklimits.h"
 #include "project/decompproject.h"
 
 // --editcheck <projectRoot>: M2 undo-integrity check. For every song with a
@@ -497,6 +498,9 @@ int documentContractFailures()
         expect(copy >= 0 && collisionDoc.channelFor(copy) == 0 && visibleMatch && copiedEvents &&
                    completeRemap,
                "track duplication did not isolate the owned channel");
+        expect(collisionDoc.engineTrackCount() == track_limits::kHardwareCapacity &&
+                   !collisionDoc.canAddTrack() && collisionDoc.duplicateTrack(0) < 0,
+               "track creation did not stop at the 16-track engine capacity");
         if (copy >= 0 && !copied.empty() && !source.empty()) {
             const NoteId copiedId = copied.front().noteId;
             collisionDoc.undoStack()->undo();
