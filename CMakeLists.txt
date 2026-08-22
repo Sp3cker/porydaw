@@ -603,3 +603,16 @@ target_link_libraries(porydaw_render_cli PRIVATE Qt6::Core poryaaaa_engine)
 if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(porydaw_render_cli PRIVATE -static)
 endif()
+
+# ---- Project indexing benchmark (autoresearch harness entrypoint) ----
+add_executable(porydaw_index_bench
+    tools/porydaw_index_bench.cpp
+    src/project/decompproject.cpp
+    src/project/songregistry.cpp
+    src/project/songsmk.cpp
+    src/project/sidecar.cpp
+    src/project/voicegroupsource.cpp
+    src/core/smf.cpp
+)
+target_include_directories(porydaw_index_bench PRIVATE src)
+target_link_libraries(porydaw_index_bench PRIVATE Qt6::Core poryaaaa_engine)
