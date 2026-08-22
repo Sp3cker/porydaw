@@ -435,6 +435,12 @@ bool save(Backend backend, const QString &storeDir, const QString &projectRoot,
           const QByteArray &finger, const QVector<SongInfo> &songs,
           const QVector<MusicPlayer> &players)
 {
+    if (storeDir.isEmpty())
+        return false;
+    // QSaveFile and SQLite do not create parent directories; the persistence
+    // layer owns that prerequisite so callers can point at a fresh path.
+    if (!QDir().mkpath(storeDir))
+        return false;
     switch (backend) {
     case Backend::Sqlite:
         return saveSqlite(storePath(backend, storeDir), projectRoot, finger, songs, players);
