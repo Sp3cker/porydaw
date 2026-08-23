@@ -1,0 +1,8 @@
+Source: https://github.com/TheQtCompanyRnD/agent-skills
+Path:   skills/qt-cpp-review
+Commit: 71d6c10da78b9a764468ae11c86ab3bc4ca4921f
+Date:   2026-08-23
+
+Do not install this directory into any skills discovery root
+(.omp/skills, ~/.omp/agent/skills, managed-skills, .claude/skills).
+Only .omp/agents/qt-cpp-reviewer.md should load these files.
