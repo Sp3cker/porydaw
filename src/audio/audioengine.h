@@ -187,6 +187,10 @@ class AudioEngine
     void setMuteMask(uint32_t mask) { m_muteMask.store(mask); }
     void setSoloMask(uint32_t mask) { m_soloMask.store(mask); }
 
+    static constexpr int kDefaultOutputVolume = 100;
+    void setOutputVolume(int percent) { m_targetOutputVolume.store(std::clamp(percent, 0, 100)); }
+    int outputVolume() const { return m_targetOutputVolume.load(); }
+
     // Hot: polyphony-overflow debug mode — mutes normal playback and plays
     // only the sounds lost to the polyphony limit (SPEC §6.1 Polyphony dock).
     // Applied at the callback boundary against the live engine field, so it
@@ -279,6 +283,7 @@ class AudioEngine
     std::atomic<bool> m_loopEnabled{true};
     std::atomic<uint32_t> m_muteMask{0};
     std::atomic<uint32_t> m_soloMask{0};
+    std::atomic<int> m_targetOutputVolume{kDefaultOutputVolume};
     // Avoid stop/start stalls: publish the latest seek for the audio callback.
     static constexpr uint64_t kNoPendingSeek = UINT64_MAX;
     std::atomic<uint64_t> m_pendingSeek{kNoPendingSeek};
@@ -320,6 +325,16 @@ class AudioEngine
     std::atomic<uint64_t> m_playhead{0};
     std::atomic<int> m_activePcm{0};
     std::atomic<int> m_activeCgb{0};
+
+    // Audio-thread-only output gain state. The control thread publishes only
+    // m_targetOutputVolume above.
+    static constexpr double kOutputGainRampSeconds = 0.01;
+    uint32_t m_outputGainRampSamples = 1;
+    int m_outputGainTargetVolume = kDefaultOutputVolume;
+    float m_outputGainTarget = float(kDefaultOutputVolume) / 100.0f;
+    float m_appliedOutputGain = float(kDefaultOutputVolume) / 100.0f;
+    float m_outputGainStep = 0.0f;
+    uint32_t m_outputGainRampRemaining = 0;
 
     // Audio-thread-only sequencer state
     int m_appliedTransport = static_cast<int>(Transport::Stopped);

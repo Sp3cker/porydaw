@@ -12,10 +12,30 @@
 int runAudioCheck()
 {
     AudioEngine engine;
+    int failures = 0;
+    if (engine.outputVolume() != AudioEngine::kDefaultOutputVolume) {
+        std::fprintf(stderr, "audiocheck: FAIL: output volume default changed\n");
+        failures++;
+    }
+    engine.setOutputVolume(42);
+    if (engine.outputVolume() != 42) {
+        std::fprintf(stderr, "audiocheck: FAIL: output volume rejected an ordinary value\n");
+        failures++;
+    }
+    engine.setOutputVolume(-1);
+    if (engine.outputVolume() != 0) {
+        std::fprintf(stderr, "audiocheck: FAIL: output volume did not clamp below zero\n");
+        failures++;
+    }
+    engine.setOutputVolume(101);
+    if (engine.outputVolume() != 100) {
+        std::fprintf(stderr, "audiocheck: FAIL: output volume did not clamp above 100\n");
+        failures++;
+    }
     QString error;
     if (!engine.init(&error)) {
         std::printf("audiocheck: SKIP (no audio device: %s)\n", qUtf8Printable(error));
-        return 0;
+        return failures ? 1 : 0;
     }
 
     const QString backend = engine.backendName();
@@ -26,7 +46,6 @@ int runAudioCheck()
                 qUtf8Printable(backend), int(engine.sampleRate()), engine.periodCount(),
                 engine.periodSizeFrames(), periodMs, engine.usingNullBackend() ? "yes" : "no");
 
-    int failures = 0;
     if (backend.isEmpty()) {
         std::fprintf(stderr, "audiocheck: FAIL: empty backend name\n");
         failures++;
