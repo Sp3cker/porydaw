@@ -119,7 +119,7 @@ void paintNodes(QPainter &painter, std::span<const NodePoint> points, const QRec
         return;
     const QRectF nodeClip = painter.clipBoundingRect().intersected(QRectF(plot));
     const qreal nodeExtent =
-        std::max(paint.geometry.nodePaintRadius, paint.geometry.selectedNodeRingRadius) +
+        std::max<qreal>(paint.geometry.nodePaintRadius, paint.geometry.selectedNodeRingRadius) +
         layout::singlePixel();
     const bool dimLane = paint.multipleSelectedNodes && !paint.selectedLane;
     const auto paintPass = [&](bool selectedPass) {
@@ -262,7 +262,8 @@ void paintPencilPreview(QPainter &painter, std::span<const NodePoint> points, co
         const uint64_t nextTick =
             index + 1 < points.size() ? points[index + 1].tick : preview.tickBegin;
         if (point.tick < preview.tickBegin) {
-            drawHeld(point.tick, std::min(nextTick, preview.tickBegin), point.value, paint.color);
+            drawHeld(point.tick, std::min<uint64_t>(nextTick, preview.tickBegin), point.value,
+                     paint.color);
             if (nextTick < preview.tickBegin)
                 painter.drawLine(QLineF(tickX(nextTick), yAt(point.value), tickX(nextTick),
                                         yAt(points[index + 1].value)));
@@ -329,7 +330,8 @@ void paintPencilPreview(QPainter &painter, std::span<const NodePoint> points, co
 QRectF nodeOverflowClip(const QRect &plot, const AutomationGeometry &geometry)
 {
     const qreal extent =
-        std::max(geometry.nodePaintRadius, geometry.selectedNodeRingRadius) + layout::singlePixel();
+        std::max<qreal>(geometry.nodePaintRadius, geometry.selectedNodeRingRadius) +
+        layout::singlePixel();
     return QRectF(plot).adjusted(-extent, -extent, extent, extent);
 }
 
@@ -371,7 +373,7 @@ void paintLaneHeader(QPainter &painter, const LaneHeaderPaint &paint)
 
 QRect plotRect(const QRect &body, const AutomationGeometry &geometry)
 {
-    return {geometry.plotOrigin, body.top(), std::max(0, body.width() - geometry.plotOrigin),
+    return {geometry.plotOrigin, body.top(), std::max<int>(0, body.width() - geometry.plotOrigin),
             body.height()};
 }
 
@@ -397,7 +399,7 @@ void paintHover(QPainter &painter, const NodeLane &lane, const QRect &body,
     painter.setClipRect(plot, Qt::IntersectClip);
     const qreal dpr = painter.device()->devicePixelRatioF();
     const qreal x = projection.displayX(
-        uint64_t(std::max(0.0, hoverState.insertionTick(projection, pencilMode))), dpr);
+        uint64_t(std::max<double>(0.0, hoverState.insertionTick(projection, pencilMode))), dpr);
     const QString &text = hoverState.hoverTextCache.text;
     const auto &label = hoverState.hoverValueLabel;
     const QColor backdrop = themes::color(themes::Role::song_view_piano_roll_accidental_lane);
