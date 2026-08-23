@@ -22,6 +22,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPainter>
+#include <QPlainTextEdit>
 #include <QPointer>
 #include <QProgressDialog>
 #include <QPushButton>
@@ -32,6 +33,7 @@
 #include <QStyle>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QTextEdit>
 #include <QTimer>
 #include <QUndoGroup>
 
@@ -293,6 +295,29 @@ void MainWindow::buildUi()
     QAction *redoAction = m_undoGroup->createRedoAction(this, tr("&Redo"));
     keys.attach(QStringLiteral("edit.redo"), redoAction);
     editMenu->addAction(redoAction);
+    editMenu->addSeparator();
+    m_copyAction = new QAction(tr("&Copy"), this);
+    m_copyAction->setObjectName(QStringLiteral("copyWindowAction"));
+    m_copyAction->setShortcutContext(Qt::WindowShortcut);
+    keys.attach(QStringLiteral("roll.copy"), m_copyAction);
+    connect(m_copyAction, &QAction::triggered, this, [this] {
+        if (auto *lineEdit = qobject_cast<QLineEdit *>(QApplication::focusWidget())) {
+            lineEdit->copy();
+            return;
+        }
+        if (auto *plainTextEdit = qobject_cast<QPlainTextEdit *>(QApplication::focusWidget())) {
+            plainTextEdit->copy();
+            return;
+        }
+        if (auto *textEdit = qobject_cast<QTextEdit *>(QApplication::focusWidget())) {
+            textEdit->copy();
+            return;
+        }
+        if (m_active)
+            m_active->view->copySelection();
+    });
+    editMenu->addAction(m_copyAction);
+    m_copyAction->setEnabled(false);
     editMenu->addSeparator();
     QAction *preferencesAction = editMenu->addAction(tr("Prefere&nces..."), this, [this] {
         openSettings(m_active ? SettingsDialog::Tab::Song : SettingsDialog::Tab::Engine);
@@ -940,6 +965,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
     m_settingsAction->setEnabled(loaded);
     m_closeTabAction->setEnabled(loaded);
     m_eventListAction->setEnabled(loaded);
+    m_copyAction->setEnabled(loaded);
     {
         // Reflect the incoming tab's roll/event-list state without the
         // checkbox driving a redundant toggle.

@@ -38,6 +38,8 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot = QStrin
 int runIgnoreCheck(const QString &scratchDir);
 int runKeymapCheck();
 int runSelectionCheck();
+int runClipMimeCheck();
+int runClipCheck();
 int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong = QString(),
                       const QString &screenshotPath = QString());
 int runNoteIdentityCheck(const QString &scratchProject);

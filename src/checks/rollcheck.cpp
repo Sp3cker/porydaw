@@ -612,22 +612,6 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                            selection.startTick == 24 && selection.endTick == 48 &&
                            selection.lanes == expected;
                 };
-            const auto hasClipboardOwners =
-                [&](const std::vector<int> &expectedTracks,
-                    const std::vector<std::pair<int, uint8_t>> &expectedLanes) {
-                    const SongView::Clip &clip = remapView.clipboard();
-                    if (clip.tracks.size() != expectedTracks.size() ||
-                        clip.lanes.size() != expectedLanes.size())
-                        return false;
-                    for (size_t i = 0; i < expectedTracks.size(); i++)
-                        if (clip.tracks[i].track != expectedTracks[i])
-                            return false;
-                    for (size_t i = 0; i < expectedLanes.size(); i++)
-                        if (clip.lanes[i].track != expectedLanes[i].first ||
-                            clip.lanes[i].cc != expectedLanes[i].second)
-                            return false;
-                    return true;
-                };
             const auto hasMovedTrackState = [&] {
                 return remapView.selectionModel().primaryTrack() == 0 &&
                        remapView.selectionModel().storedTrackScope() == 0x3 &&
@@ -643,18 +627,15 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                        hasRemappedCosmetics(remapView.editorViewState(), 0, 1);
             };
             const auto hasMovedOwnerState = [&] {
-                return hasMovedTrackState() && hasTimeSelectionLanes({{1, 7}, {0, 10}}) &&
-                       hasClipboardOwners({1, 0}, {{1, 7}, {0, 10}});
+                return hasMovedTrackState() && hasTimeSelectionLanes({{1, 7}, {0, 10}});
             };
             const auto hasOriginalOwnerState = [&] {
-                return hasOriginalTrackState() && hasTimeSelectionLanes({{0, 7}, {1, 10}}) &&
-                       hasClipboardOwners({0, 1}, {{0, 7}, {1, 10}});
+                return hasOriginalTrackState() && hasTimeSelectionLanes({{0, 7}, {1, 10}});
             };
             // Restore the complete fixture before exercising the main remap matrix.
             remapView.applyEditorViewState(remapCosmetics);
             remapView.selectionModel().clearNoteSelection();
             remapView.selectionModel().clearTimeSelection();
-            remapView.clipboard() = SongView::Clip{};
             remapView.setTrackMute(0, false);
             remapView.setTrackMute(1, false);
             remapView.setTrackSolo(0, false);
@@ -670,10 +651,6 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
             lanes.endTick = 48;
             lanes.lanes = {{0, 7}, {1, 10}};
             remapView.selectionModel().setTimeSelection(lanes);
-            SongView::Clip clip;
-            clip.tracks = {{0, {}}, {1, {}}};
-            clip.lanes = {{0, 7, {}}, {1, 10, {}}};
-            remapView.clipboard() = clip;
 
             remapDoc.moveTrack(0, 1);
             expectRemapBeforeDocument("move did not remap before documentChanged");
@@ -689,10 +666,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 fail("move redo did not restore remapped owners");
 
             // Later track-structure cases start without the move case's
-            // lane-selection and clipboard payload.
+            // lane-selection payload.
             remapView.selectionModel().clearTimeSelection();
             remapView.selectionModel().clearNoteSelection();
-            remapView.clipboard() = SongView::Clip{};
 
             const int inserted = remapDoc.addTrack(0);
             if (inserted < 0) {
@@ -752,10 +728,6 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 deletedLanes.endTick = 48;
                 deletedLanes.lanes = {{duplicate, 74}};
                 remapView.selectionModel().setTimeSelection(deletedLanes);
-                SongView::Clip deletedClip;
-                deletedClip.tracks = {{duplicate, {}}};
-                deletedClip.lanes = {{duplicate, 74, {}}};
-                remapView.clipboard() = deletedClip;
                 const std::vector<DocNote> duplicateNotes = remapDoc.notesForTrack(duplicate);
                 if (!duplicateNotes.empty())
                     remapView.selectionModel().setNoteSelection({duplicateNotes.front().noteId});
@@ -764,8 +736,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 if (remapView.selectionModel().primaryTrack() == duplicate ||
                     !remapView.selectionModel().noteSelection().empty() ||
                     remapView.selectionModel().timeSelection().active() ||
-                    !remapView.clipboard().empty() || remapView.trackMuted(duplicate) ||
-                    remapView.trackSoloed(duplicate) ||
+                    remapView.trackMuted(duplicate) || remapView.trackSoloed(duplicate) ||
                     hasEmptyLane(remapView.editorViewState(), duplicate, 74)) {
                     fail("deleted track left SongView-owned state behind");
                 }
@@ -782,8 +753,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 expectRemapBeforeDocument("delete undo did not remap before documentChanged");
                 if (!remapView.selectionModel().noteSelection().empty() ||
                     remapView.selectionModel().timeSelection().active() ||
-                    !remapView.clipboard().empty() || remapView.trackMuted(duplicate) ||
-                    remapView.trackSoloed(duplicate) ||
+                    remapView.trackMuted(duplicate) || remapView.trackSoloed(duplicate) ||
                     hasEmptyLane(remapView.editorViewState(), duplicate, 74)) {
                     fail("restored track inherited dropped SongView state");
                 }
@@ -3039,13 +3009,68 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                          ruler->height() - 2);
 
         view.selectionModel().clearTimeSelection();
+        view.selectionModel().applyTrackScopeAdjustment(
+            track, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Plain);
+        if (doc.engineTrackCount() > 1) {
+            const int priorSecondary = track == 0 ? 1 : 0;
+            view.selectionModel().applyTrackScopeAdjustment(
+                priorSecondary, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Toggle);
+        }
+        // Modifier changes after the press do not change this plain sweep.
         sendMouse(ruler, QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton);
-        sendMouse(ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton);
-        sendMouse(ruler, QEvent::MouseButtonRelease, end, Qt::LeftButton, Qt::NoButton);
+        sendMouse(ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+        sendMouse(ruler, QEvent::MouseButtonRelease, end, Qt::LeftButton, Qt::NoButton,
+                  Qt::ControlModifier);
         if (!view.selectionModel().timeSelection().active() ||
             view.selectionModel().timeSelection().startTick != startTick ||
-            view.selectionModel().timeSelection().endTick != endTick)
-            fail("left-dragging the timeline ruler did not create the time selection");
+            view.selectionModel().timeSelection().endTick != endTick ||
+            view.selectionModel().storedTrackScope() != (uint32_t{1} << track))
+            fail("plain ruler drag did not create a primary-only time selection");
+
+        uint32_t expectedScope = uint32_t{1} << track;
+        const ViewNote *scopedGhost = nullptr;
+        for (const ViewNote &note : view.model().notes) {
+            if (note.startTick >= endTick)
+                break;
+            if (startTick < note.endTick) {
+                expectedScope |= uint32_t{1} << note.track;
+                if (note.track != track && !scopedGhost)
+                    scopedGhost = &note;
+            }
+        }
+        QWidget *secondaryHeader =
+            scopedGhost ? view.findChild<QWidget *>(
+                              QStringLiteral("trackHeaderRow%1").arg(scopedGhost->track))
+                        : nullptr;
+        const QImage plainHeader = secondaryHeader ? secondaryHeader->grab().toImage() : QImage{};
+        // Ctrl is captured at press even though it is absent from move/release.
+        sendMouse(ruler, QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton,
+                  Qt::ControlModifier);
+        sendMouse(ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton);
+        sendMouse(ruler, QEvent::MouseButtonRelease, end, Qt::LeftButton, Qt::NoButton);
+        if (view.selectionModel().timeSelection().startTick != startTick ||
+            view.selectionModel().timeSelection().endTick != endTick ||
+            view.selectionModel().storedTrackScope() != expectedScope)
+            fail("modified ruler drag did not derive the overlapping note-track scope");
+        if (!scopedGhost) {
+            fail("modified ruler drag fixture has no overlapping secondary-track note");
+        } else {
+            const QRectF ghostBox = rows.noteBox(rows.noteRect(
+                view.displayX(double(scopedGhost->startTick), pianoKeyboardWidth, rows.dpr()),
+                view.displayX(double(scopedGhost->endTick), pianoKeyboardWidth, rows.dpr()),
+                scopedGhost->key));
+            const QPixmap scopedPixmap = roll->grab();
+            const QImage scopedImage = scopedPixmap.toImage();
+            const qreal scopedDpr = scopedPixmap.devicePixelRatio();
+            const int centerX = qRound(ghostBox.center().x() * scopedDpr);
+            const int bottomY = qRound(ghostBox.bottom() * scopedDpr) - 1;
+            if (!isSelectionRingColor(scopedImage.pixel(centerX, bottomY)))
+                fail("time-scoped ghost note did not render its selection ring");
+            const QImage selectedHeader =
+                secondaryHeader ? secondaryHeader->grab().toImage() : QImage{};
+            if (plainHeader.isNull() || selectedHeader.isNull() || plainHeader == selectedHeader)
+                fail("time-scoped secondary header did not render its selection indicator");
+        }
         const QPoint outsideSelection(
             qRound(view.displayX(double(endTick + snapCell), rulerBand.timelineOrigin, rulerDpr)),
             ruler->height() - 2);
@@ -3201,7 +3226,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
                 songview::EditorSelectionModel::TimeSelection trackSelection;
                 trackSelection.startTick = insertStart;
                 trackSelection.endTick = insertEnd;
-                view.selectionModel().setTimeSelection(trackSelection);
+                view.selectionModel().setTimeSelectionAndTrackScope(trackSelection, 1u << track);
                 const int insertUndoIndex = doc.undoStack()->index();
                 view.insertBlankTime();
                 DocNote otherAfter;

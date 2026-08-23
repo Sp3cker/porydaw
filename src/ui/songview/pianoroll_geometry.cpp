@@ -422,8 +422,7 @@ int PianoRoll::displayedNoteKey(const ViewNote &note) const
         !note.noteId.isAssigned() || !m_sv->selectionModel().isNoteSelected(note.noteId))
         return note.key;
     if (m_sv->scaleFold()) {
-        const int destination =
-            porydaw_scale::nextScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), note.key, m_dKey);
+        const int destination = m_sv->nextScalePitch(note.key, m_dKey);
         return destination >= 0 ? destination : note.key;
     }
     return std::clamp(int(note.key) + m_dKey, 0, 127);

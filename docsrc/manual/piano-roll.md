@@ -42,10 +42,12 @@ Velocity for seeing dynamics at a glance (purple = soft, red = loud). -->
 ## Cut, copy, paste, and range edits
 
 ### Time selections and scope
-You can create an active, half-open time selection (`[start, end)`) across a span of beats in the timeline ruler, the piano roll canvas, or the automation lanes drawer. Time operations operate strictly on this active selection span and respect the current editing scope:
+You can create an active, half-open time selection (`[start, end)`) across a span of beats in the timeline ruler, the piano roll canvas, or the automation lanes drawer. Time operations operate strictly on this active selection span and its editing scope.
 Covered notes and automation nodes use the normal selection highlight without becoming an explicit note or node selection. Notes are covered when their sounding interval intersects the selection; automation nodes use the selection's half-open tick boundaries.
 
-- **Track scope**: When one or more tracks are selected in the track headers, time operations affect notes and automation parameters on those scoped tracks.
+- **Plain ruler drag**: Selects time on the current primary track only, replacing any previous multi-track scope.
+- **Cmd-drag on macOS / Ctrl-drag elsewhere**: Selects the primary track plus every track with a note whose sounding interval intersects the ruler range. Covered ghost notes receive the selection highlight, and their secondary track headers show the normal multi-selection indicator.
+- **Track scope**: Existing time selections continue to use the selected track headers as their editing scope.
 - **Whole-song scope**: When all used tracks are selected, time operations affect every track across the entire project.
 - **Lane-only scope**: When a time selection is made directly within an automation lane in the drawer, time operations apply only to the selected automation lanes, leaving notes and other tracks untouched.
 

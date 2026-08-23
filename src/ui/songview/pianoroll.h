@@ -112,6 +112,7 @@ class PianoRoll : public TimelineSurface
     void cancelPitchBendPopup();
     void cancelVelocityInteraction();
     void refreshTextLayout();
+    void copySelectedNotes();
 
   protected:
     void paintContent(QPainter &p) override;
