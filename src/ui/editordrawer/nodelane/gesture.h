@@ -157,8 +157,14 @@ struct BandGesture {
     QPoint pressPos;
     uint64_t startTick = 0;
     uint64_t endTick = 0;
+    LaneHandle laneStart;
+    LaneHandle laneEnd;
 
     void press(QPoint pos, uint64_t tick);
+    void pressLane(LaneHandle handle) { laneStart = laneEnd = handle; }
+    void extendTo(LaneHandle candidate);
+    std::pair<LaneHandle, LaneHandle> laneRange() const noexcept { return {laneStart, laneEnd}; }
+    bool coversLane(LaneHandle handle) const noexcept;
     // Owns QApplication::startDragDistance. Returns true only on the move
     // that first activates (callers clear locked hover on that transition).
     bool move(QPoint pos, uint64_t tick);

@@ -21,6 +21,53 @@ EditorAutomationRowId laneRow(int track, uint8_t controller)
 
 } // namespace
 
+void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
+                                                const QPoint &globalPosition)
+{
+    if (!m_page)
+        return;
+    auto &model = m_page->m_owner.selectionModel();
+    const auto &selection = model.timeSelection();
+    if (selection.active()) {
+        DrawerPageTimeSelectionMenuRequest request{.startTick = selection.startTick,
+                                                   .endTick = selection.endTick,
+                                                   .tempo = contextLane.index == 0,
+                                                   .globalPosition = globalPosition};
+        if (!request.tempo && m_laneSelection)
+            request.lanes = m_laneSelection->visibleLanes();
+        m_page->showTimeSelectionMenu(request);
+        return;
+    }
+    QMenu menu;
+    if (menu.exec(globalPosition) == menu.addAction(tr("Clear time selection")) &&
+        model.timeSelection().active()) {
+        model.clearTimeSelection();
+        invalidateContent();
+    }
+}
+
+void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPosition)
+{
+    if (!handle.valid())
+        return;
+    if (handle.index == 0) {
+        m_tempoLane.showTempoMenu(*this, globalPosition);
+        return;
+    }
+    const int rowIndex = m_rowData.rowIndexFor(handle);
+    if (rowIndex >= 0)
+        showLaneMenu(m_rowData.rows()[std::size_t(rowIndex)], globalPosition);
+}
+
+bool AutomationCanvas::showEmptyBodyMenuFor(LaneHandle handle, const QPoint &globalPosition)
+{
+    if (handle.index == 0) {
+        m_tempoLane.showTempoMenu(*this, globalPosition);
+        return true;
+    }
+    return false;
+}
+
 void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
 {
     if (!m_page)

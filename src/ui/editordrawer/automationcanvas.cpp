@@ -9,16 +9,15 @@
 #include <QCursor>
 #include <QEvent>
 #include <QIcon>
-#include <QInputDialog>
 #include <QMenu>
 #include <QPixmap>
 #include <QScrollArea>
 #include <QScrollBar>
 
 #include "core/songdocument.h"
-#include "core/timedefaults.h"
 #include "ui/contextmenu.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/layout.h"
 #include "ui/songview/editorselectionmodel.h"
 
@@ -93,27 +92,12 @@ NodeLaneHoverTarget AutomationCanvas::hoverTarget() const
 
 void AutomationCanvas::invalidateContent()
 {
-    m_rowData.syncTimeSelection();
     syncHoverValueLabel();
     songview::TimelineSurface::invalidateContent();
 }
-bool AutomationCanvas::bandPreviewContains(LaneHandle handle, uint64_t tick) const noexcept
-{
-    if (!m_band.active)
-        return false;
-    const uint64_t first = std::min(m_band.startTick, m_band.endTick);
-    const uint64_t last = std::max(m_band.startTick, m_band.endTick);
-    if (first >= last || tick < first || tick >= last)
-        return false;
-    return bandPreviewContainsLane(handle);
-}
 bool AutomationCanvas::bandPreviewContainsLane(LaneHandle handle) const noexcept
 {
-    if (!m_band.active || !handle.valid() || !m_bandStart.valid() || !m_bandEnd.valid())
-        return false;
-    const int first = std::min(m_bandStart.index, m_bandEnd.index);
-    const int last = std::max(m_bandStart.index, m_bandEnd.index);
-    return handle.index >= first && handle.index <= last;
+    return m_band.coversLane(handle);
 }
 void AutomationCanvas::setPencilMode(bool enabled)
 {
@@ -187,6 +171,9 @@ void AutomationCanvas::rebuildRows()
         }
     }
     m_rowData.rebuildRows();
+    if (m_page)
+        m_laneSelection.emplace(m_page->m_owner.selectionModel(), m_rowData.rows(),
+                                m_page->usedTrackMask());
     layoutLaneStack(showVoice ? voiceTrack : -1);
     invalidateContent();
 }
@@ -389,18 +376,6 @@ int AutomationCanvas::addLaneStripTop() const
     return contentTopInset();
 }
 
-int AutomationCanvas::snapNeutralFor(LaneHandle handle) const
-{
-    if (!handle.valid() || handle.index <= 0 || handle.index - 1 >= int(m_rowData.rows().size()))
-        return -1;
-    const uint8_t controller = m_rowData.rows()[std::size_t(handle.index - 1)].id.controller;
-    if (controller == CCLanes::bendController())
-        return 0;
-    if (controller == 10 || controller == 24)
-        return 64;
-    return -1;
-}
-
 void AutomationCanvas::cancelInteraction()
 {
     const bool wasActive =
@@ -409,8 +384,6 @@ void AutomationCanvas::cancelInteraction()
     m_resize.row = -1;
     m_activeGesture.reset();
     m_band.clear();
-    m_bandStart = {};
-    m_bandEnd = {};
     m_tempoLane.cancel();
     m_voiceLane.cancel();
     m_hoverState.previewValueLabel = {};
@@ -429,35 +402,9 @@ void AutomationCanvas::cancelNodeGestures()
     const bool gestureActive = m_band.pending || m_activeGesture.has_value();
     m_activeGesture.reset();
     m_band.clear();
-    m_bandStart = {};
-    m_bandEnd = {};
     m_hoverState.previewValueLabel = {};
     if (gestureActive)
         setGestureActive(false);
-}
-
-bool AutomationCanvas::promptPointValue(const AutomationRow &row, uint8_t controller,
-                                        int currentValue, int *storedValue)
-{
-    int value = currentValue;
-    int minimum = CoreTimeDefaults::laneValueMinimum(controller);
-    int maximum = CoreTimeDefaults::laneValueMaximum(controller);
-    QString label = tr("Value:");
-    if (controller == CCLanes::bendController()) {
-        label = tr("Bend (0 = none):");
-    } else if (controller == 10 || controller == 24) {
-        minimum = -64;
-        maximum = 63;
-        value -= 64;
-        label = tr("c_v value (0 = center):");
-    }
-    bool accepted = false;
-    const int entered = QInputDialog::getInt(this, m_rowData.titleFor(row), label, value, minimum,
-                                             maximum, 1, &accepted);
-    if (!accepted)
-        return false;
-    *storedValue = (controller == 10 || controller == 24) ? entered + 64 : entered;
-    return true;
 }
 
 bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &position,
@@ -486,24 +433,44 @@ bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &positi
         return true;
     });
     QAction *chosen = menu.exec(globalPosition);
-    NodeLane *lane = mutableLane(target);
-    if (!lane || !m_page || !m_page->document())
+    if (!m_page || !m_page->document() || !mutableLane(target))
         return true;
+    SongDocument *document = m_page->document();
     if (chosen == setValue) {
         int stored = targetPoint.value;
-        bool accepted = false;
-        if (target.index == 0)
-            accepted = m_tempoLane.promptBpm(*this, stored, &stored);
-        else if (target.index > 0 && target.index - 1 < int(m_rowData.rows().size())) {
-            const auto &row = m_rowData.rows()[std::size_t(target.index - 1)];
-            accepted = promptPointValue(row, row.id.controller, stored, &stored);
-        }
+        const NodeLane *lane = mutableLane(target);
+        bool accepted = lane->promptValue(this, stored, &stored);
         if (accepted && stored != targetPoint.value) {
-            lane->movePoints({{targetPoint.tick, {targetPoint.tick, stored}}});
+            const std::vector<NodePointMove> moves{{targetPoint.tick, {targetPoint.tick, stored}}};
+            SongDocument::RangeEdit edit;
+            if (target.index == 0) {
+                const auto resolved = nodelane::resolveTempoMoves(*document, moves);
+                if (resolved)
+                    nodelane::appendResolvedTempoMoves(edit, *resolved);
+            } else if (target.index > 0 && target.index - 1 < int(m_rowData.rows().size())) {
+                const auto identity =
+                    m_rowData.rowIdentity(m_rowData.rows()[std::size_t(target.index - 1)]);
+                const auto resolved =
+                    nodelane::resolveCcMoves(*document, identity.first, identity.second, moves);
+                if (resolved)
+                    nodelane::appendResolvedCcMoves(edit, *resolved);
+            }
+            if (!edit.empty())
+                document->applyRangeEdit(tr("edit automation points"), edit);
             m_page->requestRefresh();
         }
     } else if (chosen == deletePoint) {
-        lane->deletePoints({targetPoint.tick});
+        const std::vector<uint64_t> tempoTicks =
+            target.index == 0 ? std::vector<uint64_t>{targetPoint.tick} : std::vector<uint64_t>{};
+        std::vector<nodelane::CcDeleteRequest> ccDeletes;
+        if (target.index > 0 && target.index - 1 < int(m_rowData.rows().size())) {
+            const auto identity =
+                m_rowData.rowIdentity(m_rowData.rows()[std::size_t(target.index - 1)]);
+            ccDeletes.push_back({identity.first, identity.second, {targetPoint.tick}});
+        }
+        const auto edit = nodelane::resolveBatchDeletes(*document, tempoTicks, ccDeletes);
+        if (edit && !edit->empty())
+            document->applyRangeEdit(tr("delete automation point(s)"), *edit);
         m_page->requestRefresh();
     }
     return true;
@@ -538,49 +505,19 @@ NodePoint AutomationCanvas::mappedForLane(LaneHandle handle, QPointF pos, bool f
     const uint64_t tick = m_page->snapTick(proj.rawTickAt(pos.x()), fine);
     NodePoint out;
     updateValuePoint(proj, *lane, body, out, pos.y(), tick, snapValue, m_geometry.neutralSnapRadius,
-                     snapNeutralFor(handle));
+                     lane->neutralValue());
     return out;
 }
 
 void AutomationCanvas::publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
                                             LaneHandle end) const
 {
-    if (!m_page || first >= last || !start.valid() || !end.valid())
+    if (!m_page || !m_laneSelection || first >= last || !start.valid() || !end.valid())
         return;
-    const int firstIndex = std::min(start.index, end.index);
-    const int lastIndex = std::max(start.index, end.index);
-    std::vector<std::pair<int, uint8_t>> lanes;
-    bool tempo = false;
-    for (int index = firstIndex; index <= lastIndex && index < int(m_nodeStack.size()); ++index) {
-        if (index == 0) {
-            tempo = true;
-            continue;
-        }
-        const int rowIndex = index - 1;
-        if (rowIndex >= 0 && rowIndex < int(m_rowData.rows().size()))
-            lanes.push_back(m_rowData.rowIdentity(m_rowData.rows()[std::size_t(rowIndex)]));
-    }
+    const auto [tempo, lanes] = m_laneSelection->laneSet(start, end);
     m_page->publishTimeSelection(first, last, lanes, tempo);
     if (tempo && lanes.empty())
         m_page->announce(tr("Tempo range [%1, %2)").arg(first).arg(last));
     else
         m_page->announce(tr("Automation range [%1, %2)").arg(first).arg(last));
-}
-
-void AutomationCanvas::showTimeSelectionMenu(const QPoint &globalPosition)
-{
-    const auto &selection = m_rowData.timeSelection();
-    if (selection.active()) {
-        DrawerPageTimeSelectionMenuRequest request;
-        request.startTick = selection.startTick;
-        request.endTick = selection.endTick;
-        request.globalPosition = globalPosition;
-        request.lanes = selection.lanes;
-        m_page->showTimeSelectionMenu(request);
-        return;
-    }
-    QMenu menu;
-    QAction *clear = menu.addAction(tr("Clear time selection"));
-    if (menu.exec(globalPosition) == clear && m_rowData.clearTimeSelection())
-        invalidateContent();
 }

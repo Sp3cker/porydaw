@@ -5,6 +5,7 @@
 #include <QLineF>
 #include <QPainter>
 #include <QPen>
+#include <QPolygon>
 #include <QRectF>
 
 #include "ui/editordrawer/automationprojection.h"
@@ -73,12 +74,12 @@ void paintStepCurve(QPainter &painter, const std::vector<NodePoint> &points, con
     const auto yAt = [&](int value) {
         return valueY(paint.lane, paint.body, paint.geometry, value);
     };
-    if (paint.leadIn) {
+    const std::optional<NodePoint> leadIn = paint.lane.leadIn();
+    if (leadIn) {
         const qreal x = paint.projection.displayX(points.front().tick, dpr);
         const qreal y = yAt(points.front().value);
-        const qreal leadY = yAt(paint.leadIn->value);
-        painter.drawLine(
-            QLineF(paint.projection.displayX(paint.leadIn->tick, dpr), leadY, x, leadY));
+        const qreal leadY = yAt(leadIn->value);
+        painter.drawLine(QLineF(paint.projection.displayX(leadIn->tick, dpr), leadY, x, leadY));
         if (y != leadY)
             painter.drawLine(QLineF(x, leadY, x, y));
     }
@@ -327,6 +328,35 @@ QRectF nodeOverflowClip(const QRect &plot, const AutomationGeometry &geometry)
 }
 
 } // namespace
+
+void paintLaneHeader(QPainter &painter, const LaneHeaderPaint &paint)
+{
+    painter.save();
+    painter.setPen(themes::color(themes::Role::song_view_separator));
+    painter.drawLine(paint.band.left(), paint.band.bottom(), paint.band.right(),
+                     paint.band.bottom());
+    if (paint.arrow) {
+        const QRect &arrow = *paint.arrow;
+        const QPolygon triangle = paint.expanded ? QPolygon{{arrow.left(), arrow.top()},
+                                                            {arrow.right(), arrow.top()},
+                                                            {arrow.center().x(), arrow.bottom()}}
+                                                 : QPolygon{{arrow.left(), arrow.top()},
+                                                            {arrow.right(), arrow.center().y()},
+                                                            {arrow.left(), arrow.bottom()}};
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(themes::color(themes::Role::song_view_primary_text));
+        painter.drawPolygon(triangle);
+    }
+    painter.setFont(paint.expanded ? paint.titleFont : paint.captionFont);
+    painter.setPen(themes::color(themes::Role::song_view_primary_text));
+    painter.drawText(paint.primary, Qt::AlignLeft | Qt::AlignVCenter, paint.title);
+    if (!paint.secondaryText.isEmpty()) {
+        painter.setFont(paint.captionFont);
+        painter.setPen(themes::color(themes::Role::song_view_secondary_text));
+        painter.drawText(paint.secondary, Qt::AlignLeft | Qt::AlignVCenter, paint.secondaryText);
+    }
+    painter.restore();
+}
 
 QRect plotRect(const QRect &body, const AutomationGeometry &geometry)
 {

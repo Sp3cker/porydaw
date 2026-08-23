@@ -84,6 +84,27 @@ std::optional<std::pair<uint64_t, uint64_t>> BandGesture::release()
     return result;
 }
 
+void BandGesture::extendTo(LaneHandle candidate)
+{
+    if (!laneStart.valid())
+        return;
+    if (laneStart.index == 0) {
+        laneEnd = LaneHandle{0};
+        return;
+    }
+    if (candidate.index > 0)
+        laneEnd = candidate;
+}
+
+bool BandGesture::coversLane(LaneHandle handle) const noexcept
+{
+    if (!active || !laneStart.valid() || !laneEnd.valid() || !handle.valid())
+        return false;
+    const int first = std::min(laneStart.index, laneEnd.index);
+    const int last = std::max(laneStart.index, laneEnd.index);
+    return handle.index >= first && handle.index <= last;
+}
+
 void NodeDragGesture::preparePreview(std::size_t laneCount,
                                      const std::vector<std::vector<NodePoint>> &lanePointsByLane)
 {
