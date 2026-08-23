@@ -601,6 +601,34 @@ void runXcmdRangeMoves(Context &ctx)
     rig.documentChanged();
 }
 
+// Regression: a range paste that expands the engine-track count must carry
+// descriptor-lane writes onto the freshly created track through the same
+// canonical plan — the new stream is empty, so its epoch is built from
+// nothing instead of being silently dropped.
+void runXcmdExpansionPaste(Context &ctx)
+{
+    auto &rig = ctx.rig;
+    auto &document = rig.document();
+    const int newEngineTrack = document.engineTrackCount();
+    const auto before = snapshot(document);
+    SongDocument::RangeEdit edit;
+    edit.minimumEngineTrackCount = newEngineTrack + 1;
+    edit.addNotes.push_back({newEngineTrack, {{0, 60, 96, 100}}});
+    edit.addPoints.push_back({newEngineTrack, DOC_CC_ECHO_VOLUME, {{96, 34}}});
+    document.applyRangeEdit(QStringLiteral("xcmd expansion paste"), edit);
+    expectOneCommittedEdit(ctx, before, "expansion paste with XCMD lane");
+    ctx.check.require(document.engineTrackCount() == newEngineTrack + 1,
+                      QStringLiteral("paste did not create the requested track"));
+    const auto volume = document.lanePoints(newEngineTrack, DOC_CC_ECHO_VOLUME);
+    ctx.check.require(volume.size() == 1 && volume.front().tick == 96 && volume.front().value == 34,
+                      QStringLiteral("expansion paste lost the echo volume point"));
+    ctx.check.require(
+        sameCcBytes(ccChain(document, newEngineTrack),
+                    {{96, xcmd::kSelectorController, 0x08}, {96, xcmd::kPayloadController, 34}}),
+        QStringLiteral("new-track echo point did not become a canonical epoch; got%1")
+            .arg(formatCcBytes(ccChain(document, newEngineTrack))));
+}
+
 constexpr std::array kCrossLaneScenarios{
     Scenario{"band-isolation", runBandIsolation},
     Scenario{"tempo-pan-lfo", runTempoPanLfo},
@@ -608,6 +636,7 @@ constexpr std::array kCrossLaneScenarios{
     Scenario{"pan-lfo", runPanLfoRangeEdit},
     Scenario{"xcmd-remove-only", runXcmdRemoveOnly},
     Scenario{"xcmd-range-moves", runXcmdRangeMoves},
+    Scenario{"xcmd-expansion-paste", runXcmdExpansionPaste},
 };
 
 } // namespace
