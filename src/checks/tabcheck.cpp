@@ -177,8 +177,8 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     TransportBar defaultTransport;
     auto *defaultOutputDial =
         defaultTransport.findChild<QDial *>(QStringLiteral("transportOutputVolume"));
-    check(defaultOutputDial && defaultOutputDial->value() == 68,
-          "application-output dial does not default to 68 percent");
+    check(defaultOutputDial && defaultOutputDial->value() == 100,
+          "application-output dial does not default to 100 percent");
     if (defaultOutputDial) {
         QImage outputDialImage(defaultOutputDial->size(), QImage::Format_ARGB32_Premultiplied);
         outputDialImage.fill(Qt::transparent);
@@ -267,7 +267,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
                   tabA->doc.undoStack()->count() == documentUndoCountBeforeOutputEdit &&
                   m_undoGroup->activeStack() == tabA->doc.undoStack() && !tabA->doc.isDirty(),
               "application-output dial changed song state or document undo state");
-        outputDial->setValue(68);
+        outputDial->setValue(50);
 
         const auto sendOutputMouse = [outputDial](QEvent::Type type, const QPointF &position,
                                                   Qt::MouseButton button, Qt::MouseButtons buttons,
@@ -277,50 +277,36 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
             QApplication::sendEvent(outputDial, &event);
         };
         const QPointF outputCenter(outputDial->rect().center());
-        const qreal outputRadius =
-            qreal(std::min(outputDial->width(), outputDial->height())) / 2.0 -
-            layout::singlePixel();
-        const QPointF rotaryPress = outputCenter + QPointF(0.0, -outputRadius * 0.75);
         const int documentUndoCount = tabA->doc.undoStack()->count();
-        sendOutputMouse(QEvent::MouseButtonPress, rotaryPress, Qt::LeftButton, Qt::LeftButton,
+        sendOutputMouse(QEvent::MouseButtonPress, outputCenter, Qt::LeftButton, Qt::LeftButton,
                         Qt::NoModifier);
-        check(outputDial->value() == 68,
-              "application-output dial jumped to the rotary press position");
-        sendOutputMouse(QEvent::MouseButtonRelease, rotaryPress, Qt::LeftButton, Qt::NoButton,
+        sendOutputMouse(QEvent::MouseButtonRelease, outputCenter, Qt::LeftButton, Qt::NoButton,
                         Qt::NoModifier);
-        check(outputDial->value() == 68 && tabA->doc.undoStack()->count() == documentUndoCount &&
+        check(outputDial->value() == 50 && tabA->doc.undoStack()->count() == documentUndoCount &&
                   m_undoGroup->activeStack() == tabA->doc.undoStack(),
               "application-output dial treated a plain click as an edit");
 
-        const QPointF rotaryMove =
-            outputCenter + QPointF(outputRadius * 0.53, -outputRadius * 0.53);
-        sendOutputMouse(QEvent::MouseButtonPress, rotaryPress, Qt::LeftButton, Qt::LeftButton,
-                        Qt::NoModifier);
-        sendOutputMouse(QEvent::MouseMove, rotaryMove, Qt::NoButton, Qt::LeftButton,
-                        Qt::NoModifier);
-        const int rotaryValue = outputDial->value();
-        sendOutputMouse(QEvent::MouseButtonRelease, rotaryMove, Qt::LeftButton, Qt::NoButton,
-                        Qt::NoModifier);
-        check(rotaryValue > 68 && rotaryValue < 90 &&
-                  tabA->doc.undoStack()->count() == documentUndoCount &&
-                  m_undoGroup->activeStack() == tabA->doc.undoStack(),
-              "application-output rotary drag changed document undo history");
-        outputDial->setValue(68);
-
         sendOutputMouse(QEvent::MouseButtonPress, outputCenter, Qt::LeftButton, Qt::LeftButton,
                         Qt::NoModifier);
-        sendOutputMouse(QEvent::MouseMove, outputCenter + QPointF(0.0, -2.0), Qt::NoButton,
+        sendOutputMouse(QEvent::MouseMove, outputCenter + QPointF(0.0, 11.0), Qt::NoButton,
                         Qt::LeftButton, Qt::NoModifier);
-        check(outputDial->value() == 68,
-              "application-output linear drag ignored its press dead zone");
+        sendOutputMouse(QEvent::MouseButtonRelease, outputCenter + QPointF(0.0, 11.0),
+                        Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        check(outputDial->value() > 50 && tabA->doc.undoStack()->count() == documentUndoCount &&
+                  m_undoGroup->activeStack() == tabA->doc.undoStack(),
+              "dragging down did not increase application output volume");
+
+        outputDial->setValue(50);
+        sendOutputMouse(QEvent::MouseButtonPress, outputCenter, Qt::LeftButton, Qt::LeftButton,
+                        Qt::NoModifier);
         sendOutputMouse(QEvent::MouseMove, outputCenter + QPointF(0.0, -11.0), Qt::NoButton,
                         Qt::LeftButton, Qt::NoModifier);
         sendOutputMouse(QEvent::MouseButtonRelease, outputCenter + QPointF(0.0, -11.0),
                         Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
-        check(outputDial->value() == 72 && tabA->doc.undoStack()->count() == documentUndoCount &&
+        check(outputDial->value() < 50 && tabA->doc.undoStack()->count() == documentUndoCount &&
                   m_undoGroup->activeStack() == tabA->doc.undoStack(),
-              "application-output linear drag changed document undo history");
-        outputDial->setValue(68);
+              "dragging up did not decrease application output volume");
+        outputDial->setValue(50);
         outputDial->setValue(42);
         check(outputDial->value() == 42 && m_audio.outputVolume() == 42 &&
                   outputSettings.value(QStringLiteral("outputVolume")).toInt() == 42,

@@ -388,7 +388,7 @@ void MainWindow::buildUi()
     {
         QSettings settings;
         m_transportBar->setFollowPlayhead(settings.value(kFollowPlayheadKey, true).toBool());
-        m_audio.setOutputVolume(settings.value(kOutputVolumeKey, 68).toInt());
+        m_audio.setOutputVolume(settings.value(kOutputVolumeKey, 100).toInt());
         m_transportBar->setOutputVolume(m_audio.outputVolume());
         const bool resonanceSuppression = settings.value(kResonanceSuppressionKey, false).toBool();
         m_audio.setResonanceSuppression(resonanceSuppression);
