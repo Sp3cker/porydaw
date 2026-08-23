@@ -2908,12 +2908,14 @@ void MainWindow::reloadVoicegroupPreview(SongSession &session, int keepSlot)
     swapVoicegroup(session, vg, keepSlot);
 }
 
-const VgSynthDesc *MainWindow::synthDescForSymbol(const QString &symbol)
+std::optional<VgSynthDesc> MainWindow::synthDescForSymbol(const QString &symbol)
 {
     const auto pending = m_pendingSynths.constFind(symbol);
     if (pending != m_pendingSynths.constEnd())
-        return &pending.value();
-    return vgCatalog().synths.find(symbol);
+        return pending.value();
+    const VgCatalog catalog = vgCatalog();
+    const VgSynthDesc *onDisk = catalog.synths.find(symbol);
+    return onDisk ? std::optional<VgSynthDesc>(*onDisk) : std::nullopt;
 }
 
 bool MainWindow::applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *vg)
@@ -2926,7 +2928,7 @@ bool MainWindow::applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *
         if (!v || (v->macro != VgMacro::DirectSound && v->macro != VgMacro::DirectSoundNoResample &&
                    v->macro != VgMacro::DirectSoundAlt))
             continue;
-        const VgSynthDesc *desc = synthDescForSymbol(v->symbol);
+        const auto desc = synthDescForSymbol(v->symbol);
         if (!desc)
             continue;
         // A synth param edit rides the scalar path, so the reload that would

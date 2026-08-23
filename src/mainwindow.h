@@ -226,7 +226,7 @@ class MainWindow : public QMainWindow
     // Returns whether any tone or name actually changed.
     bool applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *vg);
     // The descriptor a synth symbol stands for: pending first, then on-disk.
-    const VgSynthDesc *synthDescForSymbol(const QString &symbol);
+    std::optional<VgSynthDesc> synthDescForSymbol(const QString &symbol);
     void updateVgDockTitle();
     void newVoicegroup();
     // Sidecar view state (SPEC §4.4): written whenever a session is let go
