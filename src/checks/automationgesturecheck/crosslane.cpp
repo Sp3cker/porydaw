@@ -418,11 +418,196 @@ void runPanLfoRangeEdit(Context &ctx)
     restoreLfo(rig, initialLfo);
 }
 
+// One raw 0xB channel byte of the stream, for exact byte-level assertions.
+struct CcByte {
+    uint64_t tick = 0;
+    uint8_t data0 = 0;
+    uint8_t data1 = 0;
+};
+
+bool sameCcBytes(const std::vector<CcByte> &left, const std::vector<CcByte> &right)
+{
+    if (left.size() != right.size())
+        return false;
+    for (auto i = std::size_t{0}; i < left.size(); ++i) {
+        if (left[i].tick != right[i].tick || left[i].data0 != right[i].data0 ||
+            left[i].data1 != right[i].data1)
+            return false;
+    }
+    return true;
+}
+
+QString formatCcBytes(const std::vector<CcByte> &bytes)
+{
+    QString formatted;
+    for (const CcByte &byte : bytes)
+        formatted += QStringLiteral(" {%1,%2,%3}").arg(byte.tick).arg(byte.data0).arg(byte.data1);
+    return formatted;
+}
+
+std::vector<CcByte> ccChain(const SongDocument &document, int engineTrack)
+{
+    std::vector<CcByte> bytes;
+    const int smfTrack = document.smfTrackFor(engineTrack);
+    if (smfTrack < 0 || smfTrack >= int(document.smf().tracks.size()))
+        return bytes;
+    for (const SmfEvent &event : document.smf().tracks[std::size_t(smfTrack)].events) {
+        if (!event.isChannel() || event.typeNibble() != 0xB)
+            continue;
+        if (event.data0 == 7 || event.data0 == 10 || event.data0 == xcmd::kSelectorController ||
+            event.data0 == xcmd::kPayloadController ||
+            event.data0 == xcmd::kAlternatePayloadController)
+            bytes.push_back({event.tick, event.data0, event.data1});
+    }
+    return bytes;
+}
+
+void clearXcmd(SongDocument &document, int track)
+{
+    document.writeLanePoints(track, DOC_CC_ECHO_VOLUME, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+    document.writeLanePoints(track, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+}
+
+// Deterministic baseline around the XCMD traffic: an untouched raw CC pair on
+// the same track (pan/volume), so byte-level comparisons prove unrelated
+// events survive edits byte-for-byte.
+void seedXcmdBaseline(AutomationGestureCheckRig &rig)
+{
+    auto &document = rig.document();
+    const int track = rig.pan.track;
+    document.writeLanePoints(track, rig.pan.controller, 0, std::numeric_limits<uint64_t>::max(),
+                             {{0, 80}, {384, 110}});
+    document.writeLanePoints(track, rig.volume.controller, 0, std::numeric_limits<uint64_t>::max(),
+                             {{0, 64}, {288, 48}});
+    rig.documentChanged();
+}
+
+std::vector<SongDocument::LanePointValue> laneFor(SongDocument &document, int track,
+                                                  uint8_t controller)
+{
+    std::vector<SongDocument::LanePointValue> values;
+    for (const DocLanePoint &point : document.lanePoints(track, controller))
+        values.push_back({point.tick, point.value});
+    return values;
+}
+
+void runXcmdRemoveOnly(Context &ctx)
+{
+    auto &rig = ctx.rig;
+    auto &document = rig.document();
+    const int track = rig.pan.track;
+    const auto initialPan = laneFor(document, track, rig.pan.controller);
+    const auto initialVolume = laneFor(document, track, rig.volume.controller);
+    clearXcmd(document, track);
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 96, 34);
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 192, 35);
+    document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 96, 17);
+    seedXcmdBaseline(rig);
+    const auto before = snapshot(document);
+    // The batch-delete gesture builds exactly this shape: removePoints only,
+    // no XCMD lane write anywhere in the edit.
+    SongDocument::RangeEdit edit;
+    edit.removePoints.push_back(document.lanePoints(track, DOC_CC_ECHO_VOLUME).front());
+    edit.removePoints.push_back(document.lanePoints(track, DOC_CC_ECHO_LENGTH).front());
+    document.applyRangeEdit(QStringLiteral("xcmd remove-only"), edit);
+    expectOneCommittedEdit(ctx, before, "remove-only XCMD batch");
+    const auto volume = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
+    ctx.check.require(
+        volume.size() == 1 && volume.front().tick == 192 && volume.front().value == 35 &&
+            document.lanePoints(track, DOC_CC_ECHO_LENGTH).empty(),
+        QStringLiteral("remove-only batch kept a deleted point or lost the survivor"));
+    ctx.check.require(
+        sameCcBytes(ccChain(document, track), {{0, 0x0A, 80},
+                                               {0, 0x07, 64},
+                                               {192, xcmd::kSelectorController, 0x08},
+                                               {192, xcmd::kPayloadController, 35},
+                                               {288, 0x07, 48},
+                                               {384, 0x0A, 110}}),
+        QStringLiteral("remove-only batch left dead protocol bytes behind or touched unrelated "
+                       "events"));
+    clearXcmd(document, track);
+    document.writeLanePoints(track, rig.pan.controller, 0, std::numeric_limits<uint64_t>::max(),
+                             initialPan);
+    document.writeLanePoints(track, rig.volume.controller, 0, std::numeric_limits<uint64_t>::max(),
+                             initialVolume);
+    rig.documentChanged();
+}
+
+void runXcmdRangeMoves(Context &ctx)
+{
+    auto &rig = ctx.rig;
+    auto &document = rig.document();
+    const int track = rig.pan.track;
+    const auto initialPan = laneFor(document, track, rig.pan.controller);
+    const auto initialVolume = laneFor(document, track, rig.volume.controller);
+
+    // Left move into the span of the disjoint length epoch: both epochs are
+    // rebuilt as explicit pairs — the moved volume point at 144, length
+    // survivors at 96 and 192 — with no restoration bytes.
+    clearXcmd(document, track);
+    document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 96, 17);
+    document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 192, 18);
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 192, 34);
+    seedXcmdBaseline(rig);
+    auto before = snapshot(document);
+    document.moveRange({}, document.lanePoints(track, DOC_CC_ECHO_VOLUME), -48);
+    expectOneCommittedEdit(ctx, before, "XCMD left range move");
+    ctx.check.require(
+        sameCcBytes(ccChain(document, track), {{0, 0x0A, 80},
+                                               {0, 0x07, 64},
+                                               {96, xcmd::kSelectorController, 0x09},
+                                               {96, xcmd::kPayloadController, 17},
+                                               {144, xcmd::kSelectorController, 0x08},
+                                               {144, xcmd::kPayloadController, 34},
+                                               {192, xcmd::kSelectorController, 0x09},
+                                               {192, xcmd::kPayloadController, 18},
+                                               {288, 0x07, 48},
+                                               {384, 0x0A, 110}}),
+        QStringLiteral("left move did not rebuild both epochs as explicit pairs; got%1")
+            .arg(formatCcBytes(ccChain(document, track))));
+
+    // Right move onto an unrelated length payload's tick: the destination
+    // epoch and the moved point each rebuild as explicit pairs, in stream
+    // order, with no duplicate selectors.
+    clearXcmd(document, track);
+    document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 96, 17);
+    document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 192, 18);
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 96, 34);
+    seedXcmdBaseline(rig);
+    before = snapshot(document);
+    document.moveRange({}, document.lanePoints(track, DOC_CC_ECHO_VOLUME), 96);
+    expectOneCommittedEdit(ctx, before, "XCMD right range move");
+    ctx.check.require(
+        sameCcBytes(ccChain(document, track), {{0, 0x0A, 80},
+                                               {0, 0x07, 64},
+                                               {96, xcmd::kSelectorController, 0x09},
+                                               {96, xcmd::kPayloadController, 17},
+                                               {192, xcmd::kSelectorController, 0x09},
+                                               {192, xcmd::kPayloadController, 18},
+                                               {192, xcmd::kSelectorController, 0x08},
+                                               {192, xcmd::kPayloadController, 34},
+                                               {288, 0x07, 48},
+                                               {384, 0x0A, 110}}),
+        QStringLiteral("right move did not rebuild the destination epoch and the moved point as "
+                       "explicit pairs; got%1")
+            .arg(formatCcBytes(ccChain(document, track))));
+    clearXcmd(document, track);
+    document.writeLanePoints(track, rig.pan.controller, 0, std::numeric_limits<uint64_t>::max(),
+                             initialPan);
+    document.writeLanePoints(track, rig.volume.controller, 0, std::numeric_limits<uint64_t>::max(),
+                             initialVolume);
+    rig.documentChanged();
+}
+
 constexpr std::array kCrossLaneScenarios{
     Scenario{"band-isolation", runBandIsolation},
     Scenario{"tempo-pan-lfo", runTempoPanLfo},
     Scenario{"stale-batch", runStaleBatch},
     Scenario{"pan-lfo", runPanLfoRangeEdit},
+    Scenario{"xcmd-remove-only", runXcmdRemoveOnly},
+    Scenario{"xcmd-range-moves", runXcmdRangeMoves},
 };
 
 } // namespace

@@ -486,6 +486,297 @@ void checkEngineDefaultNodes(Session &session, const AutomationGestureCheck &fn)
     checkPromotion(pan, 10, 32, QStringLiteral("Pan"));
 }
 
+std::vector<std::pair<uint8_t, uint8_t>> xcmdBytes(const SongDocument &document, int engineTrack)
+{
+    const int smfTrack = document.smfTrackFor(engineTrack);
+    std::vector<std::pair<uint8_t, uint8_t>> bytes;
+    if (smfTrack < 0 || smfTrack >= int(document.smf().tracks.size()))
+        return bytes;
+    for (const SmfEvent &event : document.smf().tracks[size_t(smfTrack)].events) {
+        if ((event.status >> 4) != 0xB)
+            continue;
+        if (event.data0 == xcmd::kSelectorController || event.data0 == xcmd::kPayloadController ||
+            event.data0 == xcmd::kAlternatePayloadController)
+            bytes.emplace_back(event.data0, event.data1);
+    }
+    return bytes;
+}
+
+std::vector<std::pair<uint8_t, uint8_t>> xcmdBytesAt(const SongDocument &document, int engineTrack,
+                                                     uint64_t tick)
+{
+    std::vector<std::pair<uint8_t, uint8_t>> bytes;
+    const int smfTrack = document.smfTrackFor(engineTrack);
+    if (smfTrack < 0 || smfTrack >= int(document.smf().tracks.size()))
+        return bytes;
+    for (const SmfEvent &event : document.smf().tracks[std::size_t(smfTrack)].events) {
+        if (event.tick != tick || (event.status >> 4) != 0xB)
+            continue;
+        if (event.data0 == xcmd::kSelectorController || event.data0 == xcmd::kPayloadController ||
+            event.data0 == xcmd::kAlternatePayloadController)
+            bytes.emplace_back(event.data0, event.data1);
+    }
+    return bytes;
+}
+
+QString formatXcmdBytes(const std::vector<std::pair<uint8_t, uint8_t>> &bytes)
+{
+    QStringList parts;
+    for (const auto &[controller, value] : bytes)
+        parts.append(QStringLiteral("%1:%2").arg(controller).arg(value));
+    return QStringLiteral("[%1]").arg(parts.join(QStringLiteral(", ")));
+}
+
+void checkLogicalXcmdOccurrences(Session &session, const AutomationGestureCheck &fn)
+{
+    Check check{fn, QStringLiteral("xcmd-occurrences")};
+    auto &document = session.document;
+    const int track = session.engineTrack;
+
+    // Every known point is an explicit selector+payload pair; points never
+    // share a selector event. Deleting one point of an epoch rebuilds the
+    // epoch: the survivor is re-emitted as its own pair, and no dead
+    // selector stays behind.
+    document.writeLanePoints(track, DOC_CC_ECHO_VOLUME, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+    document.writeLanePoints(track, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 96, 34);
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 192, 35);
+    auto volume = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
+    check.require(volume.size() == 2 &&
+                      xcmdBytesAt(document, track, 96) ==
+                          std::vector<std::pair<uint8_t, uint8_t>>{
+                              {xcmd::kSelectorController, 0x08}, {xcmd::kPayloadController, 34}} &&
+                      xcmdBytesAt(document, track, 192) ==
+                          std::vector<std::pair<uint8_t, uint8_t>>{
+                              {xcmd::kSelectorController, 0x08}, {xcmd::kPayloadController, 35}},
+                  QStringLiteral("two echo points did not each get an explicit selector+payload "
+                                 "pair"));
+    document.deleteLanePoints(track, DOC_CC_ECHO_VOLUME, {volume[0]});
+    volume = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
+    check.require(
+        volume.size() == 1 && volume.front().tick == 192 && volume.front().value == 35 &&
+            xcmdBytesAt(document, track, 96).empty() &&
+            xcmdBytesAt(document, track, 192) ==
+                std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                         {xcmd::kPayloadController, 35}},
+        QStringLiteral("deleting the first of two points did not rebuild the survivor as an "
+                       "explicit pair"));
+    document.deleteLanePoints(track, DOC_CC_ECHO_VOLUME, {volume[0]});
+    check.require(document.lanePoints(track, DOC_CC_ECHO_VOLUME).empty() &&
+                      xcmdBytes(document, track).empty(),
+                  QStringLiteral("deleting the last point left protocol events behind"));
+
+    // Moving one point of a known epoch is a canonical rebuild: the whole
+    // epoch leaves, the survivor is re-emitted as its own explicit pair, and
+    // the moved point lands as its own pair at the destination.
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 96, 34);
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 192, 35);
+    volume = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
+    document.moveLanePoints({{track, DOC_CC_ECHO_VOLUME, volume[0], 384, 36}});
+    volume = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
+    check.require(
+        volume.size() == 2 &&
+            xcmdBytesAt(document, track, 384) ==
+                std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                         {xcmd::kPayloadController, 36}} &&
+            xcmdBytesAt(document, track, 96).empty() &&
+            xcmdBytesAt(document, track, 192) ==
+                std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                         {xcmd::kPayloadController, 35}},
+        QStringLiteral("moving one of two points did not rebuild the survivor and destination as "
+                       "explicit pairs"));
+    document.writeLanePoints(track, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+    document.writeLanePoints(track, DOC_CC_ECHO_VOLUME, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+
+    // Moving into the span of a disjoint known epoch rebuilds both epochs as
+    // explicit pairs (no restoration bytes); only a collision with an opaque
+    // epoch's span is rejected atomically.
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 96, 34);
+    document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 96, 17);
+    document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 192, 18);
+    check.require(document.lanePoints(track, DOC_CC_ECHO_LENGTH).size() == 2 &&
+                      xcmdBytesAt(document, track, 192) ==
+                          std::vector<std::pair<uint8_t, uint8_t>>{
+                              {xcmd::kSelectorController, 0x09}, {xcmd::kPayloadController, 18}},
+                  QStringLiteral("second length point did not get its own explicit pair"));
+    volume = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
+    document.moveLanePoints({{track, DOC_CC_ECHO_VOLUME, volume.front(), 160, 36}});
+    volume = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
+    check.require(
+        volume.size() == 1 && volume.front().tick == 160 && volume.front().value == 36 &&
+            xcmdBytesAt(document, track, 160) ==
+                std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                         {xcmd::kPayloadController, 36}} &&
+            xcmdBytesAt(document, track, 96) ==
+                std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x09},
+                                                         {xcmd::kPayloadController, 17}} &&
+            xcmdBytesAt(document, track, 192) ==
+                std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x09},
+                                                         {xcmd::kPayloadController, 18}},
+        QStringLiteral("move into another known epoch's span did not rebuild both epochs as "
+                       "explicit pairs"));
+    document.writeLanePoints(track, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+    document.writeLanePoints(track, DOC_CC_ECHO_VOLUME, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+
+    // A write inside an opaque epoch's occupied tick span is rejected
+    // atomically: the opaque bytes would be re-rolled by a canonical pair.
+    insertCcEvent(document, track, xcmd::kSelectorController, 0, 0x01);
+    insertCcEvent(document, track, xcmd::kPayloadController, 1, 1);
+    insertCcEvent(document, track, xcmd::kPayloadController, 2, 2);
+    const auto opaqueBefore = snapshot(document);
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 1, 30);
+    check.require(isUnchanged(opaqueBefore, snapshot(document)),
+                  QStringLiteral("write inside an opaque epoch's span was not rejected"));
+    document.undoStack()->undo();
+    document.undoStack()->undo();
+    document.undoStack()->undo();
+
+    // Malformed and multi-byte traffic is preserved byte-identically across
+    // lane writes: a dangling four-byte fragment and a stray payload after
+    // an unsupported selector survive untouched.
+    insertCcEvent(document, track, xcmd::kSelectorController, 4, 0x01);
+    insertCcEvent(document, track, xcmd::kPayloadController, 5, 1);
+    insertCcEvent(document, track, xcmd::kPayloadController, 6, 2);
+    insertCcEvent(document, track, xcmd::kSelectorController, 8, 0x03);
+    insertCcEvent(document, track, xcmd::kPayloadController, 9, 99);
+    const auto rawBefore = snapshot(document);
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 400, 30);
+    check.require(
+        snapshot(document).revision == rawBefore.revision + 1 &&
+            xcmdBytes(document, track) ==
+                std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x01},
+                                                         {xcmd::kPayloadController, 1},
+                                                         {xcmd::kPayloadController, 2},
+                                                         {xcmd::kSelectorController, 0x03},
+                                                         {xcmd::kPayloadController, 99},
+                                                         {xcmd::kSelectorController, 0x08},
+                                                         {xcmd::kPayloadController, 30}},
+        QStringLiteral("lane write disturbed dangling or stray XCMD traffic"));
+    // A write that would turn the stray payload into consumed XCMD traffic
+    // must fail without mutating anything.
+    const auto rejectedBefore = snapshot(document);
+    document.writeLanePoints(track, DOC_CC_ECHO_VOLUME, 8, 8, {{8, 30}});
+    check.require(isUnchanged(rejectedBefore, snapshot(document)),
+                  QStringLiteral("stray-consuming rewrite was not rejected without mutation"));
+    document.undoStack()->undo(); // drop the addLanePoint above
+    document.undoStack()->undo();
+    document.undoStack()->undo();
+    document.undoStack()->undo();
+    document.undoStack()->undo();
+    document.undoStack()->undo(); // back past the five raw inserts
+    document.writeLanePoints(track, DOC_CC_ECHO_VOLUME, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+    document.writeLanePoints(track, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+
+    // Lane-scoped time ranges: cutting the Echo Volume lane removes its
+    // point atomically and leaves the Echo Length lane byte-identical; no
+    // selector survives for the removed lane.
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 96, 34);
+    document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 96, 17);
+    const auto rangeBefore = snapshot(document);
+    SongDocument::TimeScope volumeScope;
+    volumeScope.lanes = {{track, uint8_t(DOC_CC_ECHO_VOLUME)}};
+    const bool removed = document.removeTimeRange({96, 192}, volumeScope);
+    check.require(removed && document.lanePoints(track, DOC_CC_ECHO_VOLUME).empty() &&
+                      xcmdBytesAt(document, track, 96) ==
+                          std::vector<std::pair<uint8_t, uint8_t>>{
+                              {xcmd::kSelectorController, 0x09}, {xcmd::kPayloadController, 17}},
+                  QStringLiteral("lane-scoped cut left volume events or removed length events"));
+    document.undoStack()->undo();
+    check.require(document.smf().write() == rangeBefore.smf,
+                  QStringLiteral("lane cut undo was not byte-identical"));
+    document.undoStack()->redo();
+    document.undoStack()->undo();
+    document.writeLanePoints(track, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+    document.writeLanePoints(track, DOC_CC_ECHO_VOLUME, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+
+    // A whole-song cut rebuilds the surviving shifted point as an explicit
+    // pair at its new tick; nothing of the removed range survives. Undo is
+    // byte-identical.
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 96, 34);
+    document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 96, 17);
+    document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 192, 18);
+    const auto cutBefore = snapshot(document);
+    SongDocument::TimeScope wholeSong;
+    wholeSong.wholeSong = true;
+    check.require(document.removeTimeRange({96, 192}, wholeSong),
+                  QStringLiteral("whole-song cut did not mutate"));
+    const auto volumeAfter = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
+    const auto lengthAfter = document.lanePoints(track, DOC_CC_ECHO_LENGTH);
+    check.require(volumeAfter.empty() && lengthAfter.size() == 1 &&
+                      lengthAfter.front().tick == 96 && lengthAfter.front().value == 18 &&
+                      xcmdBytesAt(document, track, 96) ==
+                          std::vector<std::pair<uint8_t, uint8_t>>{
+                              {xcmd::kSelectorController, 0x09}, {xcmd::kPayloadController, 18}},
+                  QStringLiteral("whole-song cut did not rebuild the shifted survivor as an "
+                                 "explicit pair; got %1")
+                      .arg(formatXcmdBytes(xcmdBytesAt(document, track, 96))));
+    document.undoStack()->undo();
+    check.require(document.smf().write() == cutBefore.smf,
+                  QStringLiteral("whole-song cut undo was not byte-identical"));
+    document.undoStack()->redo();
+    check.require(document.lanePoints(track, DOC_CC_ECHO_VOLUME).empty() &&
+                      document.lanePoints(track, DOC_CC_ECHO_LENGTH).size() == 1,
+                  QStringLiteral("whole-song cut redo did not reproduce the state"));
+}
+
+void checkLogicalXcmdEdits(Session &session, const AutomationGestureCheck &fn)
+{
+    Check check{fn, QStringLiteral("xcmd-edits")};
+    auto &document = session.document;
+    document.writeLanePoints(session.engineTrack, DOC_CC_ECHO_VOLUME, 0,
+                             std::numeric_limits<uint64_t>::max(), {});
+    document.writeLanePoints(session.engineTrack, DOC_CC_ECHO_LENGTH, 0,
+                             std::numeric_limits<uint64_t>::max(), {});
+    const auto before = snapshot(document);
+
+    document.addLanePoint(session.engineTrack, DOC_CC_ECHO_VOLUME, 96, 34);
+    document.addLanePoint(session.engineTrack, DOC_CC_ECHO_LENGTH, 96, 17);
+    const std::vector<std::pair<uint8_t, uint8_t>> expected{
+        {xcmd::kSelectorController, 0x08},
+        {xcmd::kPayloadController, 34},
+        {xcmd::kSelectorController, 0x09},
+        {xcmd::kPayloadController, 17},
+    };
+    const auto volume = document.lanePoints(session.engineTrack, DOC_CC_ECHO_VOLUME);
+    const auto length = document.lanePoints(session.engineTrack, DOC_CC_ECHO_LENGTH);
+    check.require(volume.size() == 1 && volume.front().tick == 96 && volume.front().value == 34 &&
+                      length.size() == 1 && length.front().tick == 96 &&
+                      length.front().value == 17 &&
+                      xcmdBytesAt(document, session.engineTrack, 96) == expected,
+                  QStringLiteral("logical echo lanes did not write ordered canonical XCMD pairs"));
+
+    const auto moveBefore = snapshot(document);
+    document.moveLanePoints({{session.engineTrack, DOC_CC_ECHO_VOLUME, volume.front(), 192, 35}});
+    const auto moved = document.lanePoints(session.engineTrack, DOC_CC_ECHO_VOLUME);
+    const std::vector<std::pair<uint8_t, uint8_t>> movedBytes{
+        {xcmd::kSelectorController, 0x08},
+        {xcmd::kPayloadController, 35},
+    };
+    check.require(isOneEdit(moveBefore, snapshot(document)) && moved.size() == 1 &&
+                      moved.front().tick == 192 && moved.front().value == 35 &&
+                      xcmdBytesAt(document, session.engineTrack, 192) == movedBytes,
+                  QStringLiteral("moving a logical echo lane did not preserve canonical XCMD "
+                                 "framing"));
+
+    document.undoStack()->undo();
+    document.undoStack()->undo();
+    document.undoStack()->undo();
+    check.require(snapshot(document).smf == before.smf &&
+                      document.lanePoints(session.engineTrack, DOC_CC_ECHO_VOLUME).empty() &&
+                      document.lanePoints(session.engineTrack, DOC_CC_ECHO_LENGTH).empty(),
+                  QStringLiteral("logical echo-lane edits did not undo to the original SMF"));
+}
+
 constexpr std::array kCases{
     Case{"points", checkEffectivePoints},
     Case{"ranges", checkRangesTextSelection},
@@ -522,4 +813,6 @@ void checkNodeContract(AutomationGestureCheckRig &rig, const AutomationGestureCh
         }
     }
     checkEngineDefaultNodes(session, check);
+    checkLogicalXcmdEdits(session, check);
+    checkLogicalXcmdOccurrences(session, check);
 }

@@ -11,13 +11,15 @@
 // A drawable automation lane. Values are the lane identity used by the viewer;
 // CC-backed lanes exist per (track, cc), Bend/Tempo are dedicated event types.
 enum class M4aLane {
-    Mod,       // CC 1  -> MOD (LFO depth)
-    Volume,    // CC 7  -> VOL
-    Pan,       // CC 10 -> PAN
-    BendRange, // CC 20 -> BENDR
-    LfoSpeed,  // CC 21 -> LFOS
-    PitchBend, // pitch-bend events -> BEND
-    Tempo,     // tempo meta -> TEMPO (song-level lane)
+    Mod,        // CC 1  -> MOD (LFO depth)
+    Volume,     // CC 7  -> VOL
+    Pan,        // CC 10 -> PAN
+    BendRange,  // CC 20 -> BENDR
+    LfoSpeed,   // CC 21 -> LFOS
+    PitchBend,  // pitch-bend events -> BEND
+    EchoVolume, // XCMD xIECV -> pseudo-echo volume
+    EchoLength, // XCMD xIECL -> pseudo-echo length
+    Tempo,      // tempo meta -> TEMPO (song-level lane)
 };
 
 // How the viewer treats one incoming event.
@@ -39,6 +41,14 @@ struct M4aCcInfo {
 // Classification for a MIDI CC number per mid2agb + the poryaaaa engine.
 // Never fails: unmapped CCs come back as Advanced with a generic name.
 M4aCcInfo m4aClassifyCc(uint8_t cc);
+
+// Descriptor-driven lane identity for the XCMD pseudo-lanes. The core
+// mutation machinery never branches per descriptor: every supported selector
+// maps through xcmd::laneDescriptors(), and this table gives each descriptor
+// its view-layer M4aLane. Adding a third XCMD descriptor needs exactly one
+// row here, one M4aLane enum value, and one m4aLaneName case — nothing in
+// the editor core changes.
+M4aLane m4aLaneForXcmdSelector(uint8_t selector);
 
 // Lane display name ("Volume", "Pitch bend", ...).
 QString m4aLaneName(M4aLane lane);

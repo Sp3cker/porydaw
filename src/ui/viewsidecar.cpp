@@ -13,6 +13,8 @@
 #include <optional>
 #include <utility>
 
+#include "core/timedefaults.h"
+#include "core/xcmd.h"
 #include "project/sidecar.h"
 #include "ui/layout.h"
 
@@ -83,7 +85,8 @@ std::optional<int> decodeRowNumber(QStringView text, int maximum)
 
 bool isControllerNumber(int controller)
 {
-    return (controller >= 0 && controller <= 127) || controller == 255;
+    return (controller >= 0 && controller <= 127) || controller == CoreTimeDefaults::kLaneCcBend ||
+           (controller >= 0 && controller <= 255 && xcmd::isLaneController(uint8_t(controller)));
 }
 
 std::optional<EditorAutomationRowId> decodeRowId(const QString &key)

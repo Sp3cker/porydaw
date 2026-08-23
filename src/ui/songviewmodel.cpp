@@ -1,7 +1,9 @@
 #include "songviewmodel.h"
+#include "core/xcmd.h"
 
 #include <algorithm>
 #include <array>
+#include <span>
 
 namespace {
 
@@ -29,7 +31,45 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
     // instead of being papered over).
     std::array<std::vector<size_t>, 16 * 128> open;
 
-    for (const TimelineEvent &ev : tl.events) {
+    // XCMD traffic projects from the deep xcmd module (one pass over adapted
+    // CC events): known descriptor points populate logical echo lanes and all
+    // protocol events are marked consumed so the generic pass skips them.
+    // The adapter is projection-only: the model never re-emits protocol
+    // bytes, so the MIDI channel is irrelevant here and is kept neutral (0);
+    // the decoder stream is the engine-track ordinal (ev.track) — the same
+    // identity playback uses.
+    std::vector<xcmd::Event> xcmdEvents;
+    for (size_t eventIndex = 0; eventIndex < tl.events.size(); ++eventIndex) {
+        const TimelineEvent &ev = tl.events[eventIndex];
+        if (ev.type == 0xB) {
+            xcmdEvents.push_back({
+                .index = eventIndex,
+                .tick = ev.tick,
+                .stream = ev.track,
+                .controller = ev.data0,
+                .value = ev.data1,
+                .channel = 0,
+            });
+        }
+    }
+    const xcmd::Projection xcmdProjection = xcmd::projectEvents(xcmdEvents);
+    std::vector<uint8_t> xcmdConsumed(tl.events.size(), 0);
+    for (uint64_t index : xcmdProjection.consumed)
+        if (index < xcmdConsumed.size())
+            xcmdConsumed[index] = 1;
+    for (const xcmd::Point &point : xcmdProjection.points) {
+        if (const xcmd::Descriptor *descriptor = xcmd::descriptorForLane(point.lane)) {
+            laneFor(model, point.stream, descriptor->laneController,
+                    m4aLaneForXcmdSelector(descriptor->selector),
+                    QString::fromLatin1(descriptor->displayName))
+                .points.push_back({uint32_t(point.tick), int(point.value)});
+        }
+    }
+
+    for (size_t eventIndex = 0; eventIndex < tl.events.size(); ++eventIndex) {
+        const TimelineEvent &ev = tl.events[eventIndex];
+        if (eventIndex < xcmdConsumed.size() && xcmdConsumed[eventIndex])
+            continue;
         switch (ev.type) {
         case 0x9: { // note on
             ViewNote note;
@@ -63,7 +103,7 @@ SongViewModel buildSongViewModel(const MidiTimeline &tl)
             stack.clear();
             break;
         }
-        case 0xB: { // control change
+        case 0xB: { // control change (XCMD traffic already projected)
             const M4aCcInfo info = m4aClassifyCc(ev.data0);
             if (info.eventClass == M4aEventClass::AudibleLane) {
                 laneFor(model, ev.track, ev.data0, info.lane, QString::fromLatin1(info.display))

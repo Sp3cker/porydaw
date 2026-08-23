@@ -1,111 +1,538 @@
+#include <cstdint>
 #include <cstdio>
 #include <span>
+#include <vector>
 
-#include "core/miditimeline.h"
-#include "core/smf.h"
-#include "core/timelineplayer.h"
-
-extern "C" {
-#include "m4a_engine.h"
-}
+#include "core/xcmd.h"
 
 namespace {
 
-constexpr double kSampleRate = 48000.0;
-constexpr uint8_t kPseudoEchoVolume = 0x22;
-constexpr uint8_t kPseudoEchoLength = 0x11;
+using xcmd::Event;
+using xcmd::PointWrite;
+using xcmd::Projection;
+using xcmd::Relocation;
 
-SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
+Event ev(uint64_t index, uint64_t tick, uint8_t stream, uint8_t controller, uint8_t value,
+         uint8_t channel = 0)
 {
-    SmfEvent event;
+    Event event;
+    event.index = index;
     event.tick = tick;
-    event.status = status;
-    event.data0 = data0;
-    event.data1 = data1;
+    event.stream = stream;
+    event.controller = controller;
+    event.value = value;
+    event.channel = channel;
     return event;
 }
 
-std::unique_ptr<MidiTimeline> buildXcmdTimeline()
+template <typename... Events>
+std::vector<Event> makeEvents(Events... events)
 {
-    SmfFile smf;
-    smf.format = 1;
-    smf.division = 24;
-    smf.tracks.resize(1);
-    SmfTrack &track = smf.tracks[0];
-    track.events.push_back(channelEvent(0, 0xC0, 0, 0));
-    track.events.push_back(channelEvent(1, 0xB0, 0x1E, 0x08));
-    track.events.push_back(channelEvent(1, 0xB0, 0x1D, kPseudoEchoVolume));
-    track.events.push_back(channelEvent(1, 0xB0, 0x1E, 0x09));
-    track.events.push_back(channelEvent(1, 0xB0, 0x1F, kPseudoEchoLength));
-    track.events.push_back(channelEvent(2, 0x90, 60, 127));
-    track.endTick = 3;
-    return MidiTimeline::build(smf, kSampleRate);
+    return std::vector<Event>{static_cast<Event>(events)...};
 }
 
-int checkEchoState(const M4AEngine &engine, uint8_t volume, uint8_t length, const char *path)
+Projection project(const std::vector<Event> &events)
 {
-    const M4ATrack &track = engine.tracks[0];
-    if (track.pseudoEchoVolume == volume && track.pseudoEchoLength == length)
-        return 0;
-
-    std::fprintf(stderr,
-                 "xcmdcheck: FAIL: %s produced pseudo-echo volume %u, length %u; "
-                 "expected %u, %u\n",
-                 path, unsigned(track.pseudoEchoVolume), unsigned(track.pseudoEchoLength),
-                 unsigned(volume), unsigned(length));
-    return 1;
+    return xcmd::projectEvents(std::span<const Event>(events));
 }
 
-int checkAltVoiceEcho(const M4AEngine &engine)
-{
-    const M4ATrack &track = engine.tracks[0];
-    const M4ACGBChannel &channel = engine.cgbChannels[0];
-    if (track.currentVoice.type == VOICE_SQUARE_1_ALT && channel.trackIndex == 0 &&
-        channel.pseudoEchoVolume == kPseudoEchoVolume &&
-        channel.pseudoEchoLength == kPseudoEchoLength)
-        return 0;
+// ---------------------------------------------------------------------------
+// Projection
+// ---------------------------------------------------------------------------
 
-    std::fprintf(stderr, "xcmdcheck: FAIL: _alt voice did not inherit XCMD pseudo-echo state\n");
-    return 1;
+int checkProjection()
+{
+    int failures = 0;
+    const auto fail = [&failures](const char *message) {
+        std::fprintf(stderr, "xcmdcheck: FAIL: %s\n", message);
+        ++failures;
+    };
+
+    // One shared selector serves two one-byte completions: two known points
+    // at their terminal ticks, and every protocol event consumed.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 35));
+        const Projection result = project(events);
+        if (result.points.size() != 2 || result.points[0].lane != xcmd::kEchoVolumeLane ||
+            result.points[0].value != 34 || result.points[0].tick != 2 ||
+            result.points[0].index != 1 || result.points[1].value != 35 ||
+            result.points[1].tick != 3 || result.points[1].index != 2 ||
+            result.consumed != std::vector<uint64_t>({0, 1, 2}))
+            fail("shared-selector projection did not expose both points and consumed indices");
+    }
+
+    // An unknown selector epoch (0x01, multi-byte) is one opaque block: no
+    // points, but the whole epoch is consumed protocol traffic.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x01),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 1),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 2));
+        const Projection result = project(events);
+        if (!result.points.empty() || result.consumed != std::vector<uint64_t>({0, 1, 2}))
+            fail("unknown-selector epoch did not stay opaque with consumed bytes");
+    }
+
+    // A known selector with no payload at all is a dangling epoch: no point,
+    // selector still consumed.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08));
+        const Projection result = project(events);
+        if (!result.points.empty() || result.consumed != std::vector<uint64_t>({0}))
+            fail("payload-less selector epoch did not project as opaque");
+    }
+
+    // Leading stray payloads (before any selector) are their own opaque
+    // block: no point, consumed bytes.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kPayloadController, 99),
+                                       ev(1, 2, 0, xcmd::kSelectorController, 0x09),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 17));
+        const Projection result = project(events);
+        if (result.points.size() != 1 || result.points[0].value != 17 ||
+            result.consumed != std::vector<uint64_t>({0, 1, 2}))
+            fail("leading stray payload run was not kept opaque");
+    }
+
+    // Per-stream separation: traffic on different streams projects as
+    // separate points, never merged into one epoch.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34),
+                                       ev(2, 1, 1, xcmd::kSelectorController, 0x09),
+                                       ev(3, 2, 1, xcmd::kPayloadController, 17));
+        const Projection result = project(events);
+        if (result.points.size() != 2 || result.points[0].stream != 0 ||
+            result.points[0].lane != xcmd::kEchoVolumeLane || result.points[1].stream != 1 ||
+            result.points[1].lane != xcmd::kEchoLengthLane || result.points[1].value != 17)
+            fail("streams did not project independently");
+    }
+
+    return failures;
+}
+
+// ---------------------------------------------------------------------------
+// Canonical lane rewrites
+// ---------------------------------------------------------------------------
+
+int checkRewrites()
+{
+    int failures = 0;
+    const auto fail = [&failures](const char *message) {
+        std::fprintf(stderr, "xcmdcheck: FAIL: %s\n", message);
+        ++failures;
+    };
+
+    // Add on an empty track: canonical selector support + payload, both on
+    // the requested channel.
+    {
+        const std::vector<PointWrite> writes = {{5, xcmd::kEchoVolumeLane, 40, 0, 7}};
+        const auto patch = xcmd::rewritePoints({}, {}, writes);
+        if (!patch || !patch->removeEvents.empty() || patch->inserts.size() != 2 ||
+            patch->inserts[0].tick != 5 ||
+            patch->inserts[0].controller != xcmd::kSelectorController ||
+            patch->inserts[0].value != 0x08 || patch->inserts[0].channel != 7 ||
+            patch->inserts[1].controller != xcmd::kPayloadController ||
+            patch->inserts[1].value != 40)
+            fail("add did not emit canonical selector+payload");
+    }
+
+    // Add under already-active matching state still emits a full explicit
+    // pair: no selector reuse ever.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34));
+        const std::vector<PointWrite> writes = {{5, xcmd::kEchoVolumeLane, 40, 0, 7}};
+        const auto patch = xcmd::rewritePoints(events, {}, writes);
+        if (!patch || patch->inserts.size() != 2 ||
+            patch->inserts[0].controller != xcmd::kSelectorController ||
+            patch->inserts[0].value != 0x08 ||
+            patch->inserts[1].controller != xcmd::kPayloadController ||
+            !patch->removeEvents.empty())
+            fail("write did not emit a self-contained pair under active state");
+    }
+
+    // Replace the point on a tick: its whole epoch is rebuilt; the survivor
+    // set is empty so only the write's canonical pair lands.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34));
+        const std::vector<PointWrite> writes = {{2, xcmd::kEchoVolumeLane, 40, 0, 7}};
+        const auto patch = xcmd::rewritePoints(events, {}, writes);
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1}) ||
+            patch->inserts.size() != 2 || patch->inserts[0].value != 0x08 ||
+            patch->inserts[1].value != 40)
+            fail("replace did not rebuild the epoch with an explicit pair");
+    }
+
+    // Delete one of two points sharing a selector: the epoch is rebuilt and
+    // the survivor is re-emitted as its own explicit pair (no shared
+    // selector output).
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 35));
+        const Projection projection = project(events);
+        const std::vector<uint64_t> removeIdentities = {projection.points[0].index};
+        const auto patch = xcmd::rewritePoints(events, removeIdentities, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1, 2}) ||
+            patch->inserts.size() != 2 || patch->inserts[0].tick != 3 ||
+            patch->inserts[0].value != 0x08 || patch->inserts[1].value != 35)
+            fail("deleting one shared point did not rebuild the survivor as a pair");
+    }
+
+    // Delete the last point of an epoch: the whole epoch leaves, nothing
+    // is inserted.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34));
+        const Projection projection = project(events);
+        const std::vector<uint64_t> removeIdentities = {projection.points[0].index};
+        const auto patch = xcmd::rewritePoints(events, removeIdentities, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1}) ||
+            !patch->inserts.empty())
+            fail("deleting the last point left the dead epoch behind");
+    }
+
+    // A write inside a known epoch's span (between two shared points of a
+    // different lane) rebuilds that epoch: survivor pairs replace it, and
+    // the write lands as its own explicit pair. No selector restoration.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34),
+                                       ev(2, 10, 0, xcmd::kSelectorController, 0x09),
+                                       ev(3, 13, 0, xcmd::kPayloadController, 17));
+        const std::vector<PointWrite> writes = {{12, xcmd::kEchoVolumeLane, 40, 0, 0}};
+        const auto patch = xcmd::rewritePoints(events, {}, writes);
+        // 0x09 epoch [10,13] is affected: events 2,3 leave; survivor point@13
+        // re-emitted as its own pair; write pair@12.
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({2, 3}) ||
+            patch->inserts.size() != 4 || patch->inserts[0].tick != 12 ||
+            patch->inserts[0].value != 0x08 || patch->inserts[1].value != 40 ||
+            patch->inserts[2].tick != 13 || patch->inserts[2].value != 0x09 ||
+            patch->inserts[3].value != 17)
+            fail("in-span write did not rebuild the epoch canonically");
+    }
+
+    // Values clamp to the descriptor range.
+    {
+        const std::vector<PointWrite> writes = {{5, xcmd::kEchoLengthLane, 200, 0, 0}};
+        const auto patch = xcmd::rewritePoints({}, {}, writes);
+        if (!patch || patch->inserts[1].value != 127)
+            fail("lane write did not clamp to the descriptor maximum");
+    }
+
+    // Unknown lane rejects; duplicate writes collapse to the later one.
+    {
+        const std::vector<PointWrite> unknownLane = {{5, 0x77, 40, 0, 0}};
+        if (xcmd::rewritePoints({}, {}, unknownLane))
+            fail("write on an unknown lane was not rejected");
+        const std::vector<PointWrite> duplicates = {{5, xcmd::kEchoVolumeLane, 40, 0, 0},
+                                                    {5, xcmd::kEchoVolumeLane, 55, 0, 0}};
+        const auto patch = xcmd::rewritePoints({}, {}, duplicates);
+        if (!patch || patch->inserts.size() != 2 || patch->inserts[1].value != 55)
+            fail("duplicate same-slot write did not collapse to the later value");
+    }
+
+    return failures;
+}
+
+// ---------------------------------------------------------------------------
+// Opaque preservation and rejection
+// ---------------------------------------------------------------------------
+
+int checkOpaqueTraffic()
+{
+    int failures = 0;
+    const auto fail = [&failures](const char *message) {
+        std::fprintf(stderr, "xcmdcheck: FAIL: %s\n", message);
+        ++failures;
+    };
+
+    // A write past an unknown-selector epoch keeps the opaque bytes
+    // entirely untouched (no removal, no re-role).
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x03),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 9),
+                                       ev(2, 5, 0, xcmd::kSelectorController, 0x08),
+                                       ev(3, 6, 0, xcmd::kPayloadController, 34));
+        const std::vector<PointWrite> writes = {{8, xcmd::kEchoVolumeLane, 40, 0, 0}};
+        const auto patch = xcmd::rewritePoints(events, {}, writes);
+        if (!patch || !patch->removeEvents.empty() || patch->inserts.size() != 2 ||
+            patch->inserts[0].tick != 8 || patch->inserts[1].tick != 8)
+            fail("write after an opaque epoch touched the opaque traffic");
+    }
+
+    // A write at an opaque epoch's interior tick would re-roll surviving
+    // bytes: rejected.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x03),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 9),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 10));
+        std::vector<PointWrite> writes = {{2, xcmd::kEchoVolumeLane, 40, 0, 0}};
+        if (xcmd::rewritePoints(events, {}, writes))
+            fail("write inside an opaque epoch was not rejected");
+        writes[0].tick = 1; // the opaque selector's own tick
+        if (xcmd::rewritePoints(events, {}, writes))
+            fail("write on an opaque epoch's first tick was not rejected");
+    }
+
+    // A write inside a leading stray run's occupied span is rejected too.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kPayloadController, 99),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 98));
+        const std::vector<PointWrite> writes = {{1, xcmd::kEchoVolumeLane, 40, 0, 0}};
+        if (xcmd::rewritePoints(events, {}, writes))
+            fail("write inside a stray-run span was not rejected");
+    }
+
+    // Remove identities that are not known points reject: opaque member,
+    // selector byte, and unknown index.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x03),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 9),
+                                       ev(2, 3, 0, xcmd::kSelectorController, 0x08),
+                                       ev(3, 4, 0, xcmd::kPayloadController, 34));
+        const std::vector<uint64_t> opaqueMember = {1};
+        if (xcmd::rewritePoints(events, opaqueMember, {}))
+            fail("removing an opaque member was not rejected");
+        const std::vector<uint64_t> selectorByte = {2};
+        if (xcmd::rewritePoints(events, selectorByte, {}))
+            fail("removing a known selector was not rejected");
+        const std::vector<uint64_t> staleIdentity = {999};
+        if (xcmd::rewritePoints(events, staleIdentity, {}))
+            fail("removing a stale identity was not rejected");
+    }
+
+    return failures;
+}
+
+// ---------------------------------------------------------------------------
+// Raw reconciliation
+// ---------------------------------------------------------------------------
+
+int checkRawReconciliation()
+{
+    int failures = 0;
+    const auto fail = [&failures](const char *message) {
+        std::fprintf(stderr, "xcmdcheck: FAIL: %s\n", message);
+        ++failures;
+    };
+
+    // Byte-exact relocation of a whole unknown selector epoch: every member
+    // leaves and every member re-inserts through sourceIndex.
+    {
+        const auto events = makeEvents(
+            ev(0, 1, 0, xcmd::kSelectorController, 0x01), ev(1, 2, 0, xcmd::kPayloadController, 1),
+            ev(2, 3, 0, xcmd::kPayloadController, 2), ev(3, 4, 0, xcmd::kPayloadController, 3),
+            ev(4, 5, 0, xcmd::kPayloadController, 4));
+        const std::vector<Relocation> moves = {Relocation{0, 20, 0}, Relocation{1, 21, 0},
+                                               Relocation{2, 22, 0}, Relocation{3, 23, 0},
+                                               Relocation{4, 24, 0}};
+        const auto patch = xcmd::reconcileRaw(events, {}, moves, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1, 2, 3, 4}) ||
+            patch->inserts.size() != 5 || patch->inserts[0].sourceIndex != 0 ||
+            patch->inserts[0].tick != 20 || patch->inserts[1].sourceIndex != 1 ||
+            patch->inserts[1].tick != 21 || patch->inserts[4].sourceIndex != 4 ||
+            patch->inserts[4].tick != 24)
+            fail("whole opaque relocation did not re-insert every byte");
+    }
+
+    // Moving only part of an unknown epoch is a split: rejected. Mixing
+    // remove and move within one epoch is rejected too.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x01),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 1),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 2));
+        const std::vector<Relocation> partialMoves = {Relocation{1, 20, 0}};
+        if (xcmd::reconcileRaw(events, {}, partialMoves, {}))
+            fail("partial opaque relocation was not rejected");
+        const std::vector<uint64_t> mixedRemovals = {0};
+        const std::vector<Relocation> mixedMoves = {Relocation{1, 20, 0}, Relocation{2, 21, 0}};
+        if (xcmd::reconcileRaw(events, mixedRemovals, mixedMoves, {}))
+            fail("mixed remove/move within one opaque epoch was not rejected");
+    }
+
+    // Whole-epoch copy duplicates every byte and keeps the source.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x01),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 1),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 2));
+        const std::vector<Relocation> copies = {Relocation{0, 20, 0}, Relocation{1, 21, 0},
+                                                Relocation{2, 22, 0}};
+        const auto patch = xcmd::reconcileRaw(events, {}, {}, copies);
+        if (!patch || !patch->removeEvents.empty() || patch->inserts.size() != 3 ||
+            patch->inserts[0].sourceIndex != 0 || patch->inserts[0].tick != 20)
+            fail("whole opaque copy did not duplicate every byte");
+        const std::vector<Relocation> mixedMoves = {Relocation{0, 20, 0}, Relocation{1, 21, 0}};
+        const std::vector<Relocation> mixedCopies = {Relocation{2, 22, 0}};
+        if (xcmd::reconcileRaw(events, {}, mixedMoves, mixedCopies))
+            fail("mixed move/copy in one opaque epoch was not rejected");
+    }
+
+    // A whole-unknown-epoch removal: selector and payloads leave together.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x01),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 1),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 2));
+        const std::vector<uint64_t> payloadOnly = {1, 2};
+        if (xcmd::reconcileRaw(events, payloadOnly, {}, {}))
+            fail("removing only payload bytes of an opaque epoch was accepted");
+        const std::vector<uint64_t> wholeEpoch = {0, 1, 2};
+        const auto patch = xcmd::reconcileRaw(events, wholeEpoch, {}, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1, 2}) ||
+            !patch->inserts.empty())
+            fail("whole-epoch removal left bytes behind");
+    }
+
+    // Stray-run operations must be whole-block too.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kPayloadController, 9),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 10));
+        const std::vector<Relocation> partialMoves = {Relocation{0, 20, 3}};
+        if (xcmd::reconcileRaw(events, {}, partialMoves, {}))
+            fail("partial stray-run relocation was not rejected");
+        const std::vector<Relocation> wholeMoves = {Relocation{0, 20, 3}, Relocation{1, 21, 3}};
+        const auto patch = xcmd::reconcileRaw(events, {}, wholeMoves, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1}) ||
+            patch->inserts.size() != 2 || patch->inserts[0].sourceIndex != 0 ||
+            patch->inserts[1].sourceIndex != 1)
+            fail("whole stray-run relocation was not byte-exact");
+    }
+
+    // Moving one point of a shared known epoch rebuilds the epoch: the
+    // survivor becomes its own explicit pair, the moved point lands as a
+    // pair at the destination, and every original byte leaves.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 35));
+        const std::vector<Relocation> moves = {Relocation{1, 20, 0}};
+        const auto patch = xcmd::reconcileRaw(events, {}, moves, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1, 2}) ||
+            patch->inserts.size() != 4 || patch->inserts[0].tick != 3 ||
+            patch->inserts[0].value != 0x08 || patch->inserts[1].value != 35 ||
+            patch->inserts[2].tick != 20 || patch->inserts[2].value != 0x08 ||
+            patch->inserts[3].value != 34)
+            fail("known-point move did not rebuild the epoch canonically");
+    }
+
+    // Copying one point of a known epoch keeps the copy as an explicit pair
+    // at its own tick and adds the destination pair.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 35));
+        const std::vector<Relocation> copies = {Relocation{1, 20, 0}};
+        const auto patch = xcmd::reconcileRaw(events, {}, {}, copies);
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1, 2}) ||
+            patch->inserts.size() != 6)
+            fail("known-point copy did not rebuild both copies canonically");
+    }
+
+    // Mixed per-point operations inside one known epoch are fine: each
+    // point rebuilds independently (remove one, move the other).
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34),
+                                       ev(2, 3, 0, xcmd::kPayloadController, 35));
+        const std::vector<uint64_t> removals = {2};
+        const std::vector<Relocation> moves = {Relocation{1, 20, 0}};
+        const auto patch = xcmd::reconcileRaw(events, removals, moves, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1, 2}) ||
+            patch->inserts.size() != 2 || patch->inserts[0].tick != 20 ||
+            patch->inserts[0].value != 0x08 || patch->inserts[1].value != 34)
+            fail("mixed remove/move within a known epoch was not rebuilt point-by-point");
+    }
+
+    // Removing a known point through raw ops kills the epoch only via the
+    // same unified rule: survivor rebuilt, dead epoch gone.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34));
+        const std::vector<uint64_t> removals = {1};
+        const auto patch = xcmd::reconcileRaw(events, removals, {}, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1}) ||
+            !patch->inserts.empty())
+            fail("raw removal of a lone point left the epoch behind");
+    }
+
+    // Stale/unknown identities and destinations inside another epoch's
+    // span are rejected. Known-epoch selectors are glue: raw editors may
+    // address them, but payload operations determine whether the epoch moves.
+    {
+        const auto events = makeEvents(
+            ev(0, 1, 0, xcmd::kSelectorController, 0x08), ev(1, 2, 0, xcmd::kPayloadController, 34),
+            ev(2, 3, 0, xcmd::kSelectorController, 0x03), ev(3, 4, 0, xcmd::kPayloadController, 9));
+        const std::vector<Relocation> staleMoves = {Relocation{7, 20, 0}};
+        if (xcmd::reconcileRaw(events, {}, staleMoves, {}))
+            fail("raw move of a stale identity was not rejected");
+        const std::vector<Relocation> selectorMoves = {
+            Relocation{0, 20, 0}}; // a known epoch's selector
+        const auto selectorPatch = xcmd::reconcileRaw(events, {}, selectorMoves, {});
+        if (!selectorPatch || !selectorPatch->removeEvents.empty() ||
+            !selectorPatch->inserts.empty())
+            fail("raw move of known-epoch selector glue was not ignored");
+        const std::vector<Relocation> intoOtherMoves = {
+            Relocation{1, 3, 0}}; // lands in the opaque epoch's span
+        if (xcmd::reconcileRaw(events, {}, intoOtherMoves, {}))
+            fail("raw move inside another epoch's span was not rejected");
+        const std::vector<Relocation> ownEpochMoves = {
+            Relocation{1, 2, 0}}; // inside its own rebuilt epoch
+        const auto patch = xcmd::reconcileRaw(events, {}, ownEpochMoves, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1}) ||
+            patch->inserts.size() != 2)
+            fail("raw move within its own epoch was not rebuilt");
+    }
+
+    // Whole-song cut shape: a removed epoch's span is vacated by the edit,
+    // so moving a later point onto it is accepted (not a re-role hazard).
+    {
+        const auto events = makeEvents(ev(0, 96, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 96, 0, xcmd::kPayloadController, 34),
+                                       ev(2, 192, 0, xcmd::kSelectorController, 0x09),
+                                       ev(3, 192, 0, xcmd::kPayloadController, 17));
+        const std::vector<uint64_t> removals = {0, 1}; // cut [96,192): the volume pair leaves
+        const std::vector<Relocation> moves = {
+            Relocation{3, 96, 0}}; // the length point lands at 96
+        const auto patch = xcmd::reconcileRaw(events, removals, moves, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1, 2, 3}) ||
+            patch->inserts.size() != 2 || patch->inserts[0].tick != 96 ||
+            patch->inserts[0].value != 0x09 || patch->inserts[1].value != 17)
+            fail("whole-song cut could not move onto a removed epoch's span");
+    }
+
+    // A fully relocated opaque epoch vacates its span: another group's
+    // move may land there.
+    {
+        const auto events = makeEvents(
+            ev(0, 1, 0, xcmd::kSelectorController, 0x03), ev(1, 2, 0, xcmd::kPayloadController, 9),
+            ev(2, 3, 0, xcmd::kPayloadController, 10), ev(3, 5, 0, xcmd::kSelectorController, 0x08),
+            ev(4, 5, 0, xcmd::kPayloadController, 34));
+        const std::vector<Relocation> moves = {Relocation{0, 40, 0}, Relocation{1, 41, 0},
+                                               Relocation{2, 42, 0}, Relocation{4, 2, 0}};
+        const auto patch = xcmd::reconcileRaw(events, {}, moves, {});
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1, 2, 3, 4}) ||
+            patch->inserts.size() != 5 || patch->inserts[0].tick != 2 ||
+            patch->inserts[0].value != 0x08 || patch->inserts[1].value != 34 ||
+            patch->inserts[2].sourceIndex != 0 || patch->inserts[2].tick != 40 ||
+            patch->inserts[3].sourceIndex != 1 || patch->inserts[4].sourceIndex != 2)
+            fail("move onto a fully relocated opaque epoch's span was not accepted");
+    }
+
+    return failures;
 }
 
 } // namespace
 
 int runXcmdCheck()
 {
-    const auto timeline = buildXcmdTimeline();
-    if (!timeline || timeline->usedTrackCount != 1) {
-        std::fprintf(stderr, "xcmdcheck: FAIL: synthesized timeline built wrong\n");
-        return 1;
-    }
-
     int failures = 0;
-    {
-        M4AEngine engine;
-        m4a_engine_init(&engine, float(kSampleRate));
-        ToneData voices[128] = {};
-        voices[0].type = VOICE_SQUARE_1_ALT;
-        voices[0].key = 60;
-        voices[0].attack = 255;
-        voices[0].sustain = 255;
-        voices[0].release = 165;
-        m4a_engine_set_voicegroup(&engine, voices);
-        TimelinePlayer player;
-        float left[2001], right[2001];
-        player.render(&engine, timeline.get(), std::span(left), std::span(right), false, 0);
-        failures += checkEchoState(engine, kPseudoEchoVolume, kPseudoEchoLength, "linear playback");
-        failures += checkAltVoiceEcho(engine);
-        m4a_engine_destroy(&engine);
-    }
-    {
-        M4AEngine engine;
-        m4a_engine_init(&engine, float(kSampleRate));
-        TimelinePlayer::chase(&engine, timeline.get(), 1001);
-        failures += checkEchoState(engine, kPseudoEchoVolume, kPseudoEchoLength, "mid-song chase");
-        TimelinePlayer::chase(&engine, timeline.get(), 0);
-        failures += checkEchoState(engine, 0, 0, "backward chase");
-        m4a_engine_destroy(&engine);
-    }
+    failures += checkProjection();
+    failures += checkRewrites();
+    failures += checkOpaqueTraffic();
+    failures += checkRawReconciliation();
 
     std::printf("xcmdcheck: %s\n", failures == 0 ? "PASS" : "FAIL");
     return failures == 0 ? 0 : 1;
