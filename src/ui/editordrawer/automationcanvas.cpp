@@ -9,7 +9,6 @@
 #include <QCursor>
 #include <QEvent>
 #include <QIcon>
-#include <QMenu>
 #include <QPixmap>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -446,39 +445,41 @@ bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &positi
         const NodeLane *lane = mutableLane(target);
         bool accepted = lane->promptValue(this, stored, &stored);
         if (accepted && stored != targetPoint.value) {
-            const std::vector<NodePointMove> moves{{targetPoint.tick, {targetPoint.tick, stored}}};
-            SongDocument::RangeEdit edit;
-            if (target.index == 0) {
-                const auto resolved = nodelane::resolveTempoMoves(*document, moves);
-                if (resolved)
-                    nodelane::appendResolvedTempoMoves(edit, *resolved);
-            } else if (target.index > 0 && target.index - 1 < int(m_rowData.rows().size())) {
-                const auto identity =
-                    m_rowData.rowIdentity(m_rowData.rows()[std::size_t(target.index - 1)]);
-                const auto resolved =
-                    nodelane::resolveCcMoves(*document, identity.first, identity.second, moves);
-                if (resolved)
-                    nodelane::appendResolvedCcMoves(edit, *resolved);
-            }
-            if (!edit.empty())
-                document->applyRangeEdit(tr("edit automation points"), edit);
+            const NodeDrag drag{target,
+                                targetPoint,
+                                {targetPoint.tick, stored},
+                                lane->minimumValue(),
+                                lane->maximumValue()};
+            commitNodePointMoves(document->revision(), {drag});
             m_page->requestRefresh();
         }
     } else if (chosen == deletePoint) {
-        const std::vector<uint64_t> tempoTicks =
-            target.index == 0 ? std::vector<uint64_t>{targetPoint.tick} : std::vector<uint64_t>{};
-        std::vector<nodelane::CcDeleteRequest> ccDeletes;
-        if (target.index > 0 && target.index - 1 < int(m_rowData.rows().size())) {
-            const auto identity =
-                m_rowData.rowIdentity(m_rowData.rows()[std::size_t(target.index - 1)]);
-            ccDeletes.push_back({identity.first, identity.second, {targetPoint.tick}});
-        }
-        const auto edit = nodelane::resolveBatchDeletes(*document, tempoTicks, ccDeletes);
-        if (edit && !edit->empty())
-            document->applyRangeEdit(tr("delete automation point(s)"), *edit);
+        const NodeLane *lane = mutableLane(target);
+        const NodeDrag drag{target, targetPoint, targetPoint, lane->minimumValue(),
+                            lane->maximumValue()};
+        commitNodePointDeletes(document->revision(), {drag});
         m_page->requestRefresh();
     }
     return true;
+}
+
+bool AutomationCanvas::isLaneSelected(LaneHandle handle) const noexcept
+{
+    return m_laneSelection && m_laneSelection->covers(handle);
+}
+
+bool AutomationCanvas::laneSelectionHitTest(LaneHandle handle, qreal x,
+                                            const AutomationProjection &projection,
+                                            qreal devicePixelRatio) const noexcept
+{
+    return m_laneSelection && m_laneSelection->hitTest(handle, x, projection, devicePixelRatio);
+}
+
+std::vector<std::pair<int, uint8_t>> AutomationCanvas::selectionVisibleLanes() const noexcept
+{
+    if (!m_laneSelection)
+        return {};
+    return m_laneSelection->visibleLanes();
 }
 
 void AutomationCanvas::setGestureActive(bool active)

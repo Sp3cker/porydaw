@@ -86,8 +86,8 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
         auto &model = m_page->m_owner.selectionModel();
         const LaneHandle handle = pointerLane;
         const bool insideSelection =
-            handle.valid() && event->position().x() >= m_geometry.plotOrigin && m_laneSelection &&
-            m_laneSelection->hitTest(handle, event->position().x(), proj, devicePixelRatioF());
+            handle.valid() && event->position().x() >= m_geometry.plotOrigin &&
+            laneSelectionHitTest(handle, event->position().x(), proj, devicePixelRatioF());
         if (!insideSelection && model.timeSelection().active()) {
             model.clearTimeSelection();
             invalidateContent();
@@ -332,9 +332,9 @@ void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
                 showPointMenuNear(contextLane, event->pos(), event->globalPosition().toPoint());
             m_hoverState.hover.highlightLocked = false;
             invalidateContent(m_hoverState.clearHover());
-            if (!handled && contextLane.valid() && m_laneSelection &&
-                m_laneSelection->hitTest(contextLane, event->position().x(), projection(),
-                                         devicePixelRatioF()))
+            if (!handled && contextLane.valid() &&
+                laneSelectionHitTest(contextLane, event->position().x(), projection(),
+                                     devicePixelRatioF()))
                 showTimeSelectionMenuFor(contextLane, event->globalPosition().toPoint());
             else if (!handled && contextLane.valid()) {
                 if (!showEmptyBodyMenuFor(contextLane, event->globalPosition().toPoint())) {
@@ -457,22 +457,10 @@ void AutomationCanvas::keyPressEvent(QKeyEvent *event)
         if (m_pencilMode && m_hoverState.hover.lane.valid()) {
             NodePoint point;
             if (nodePointHit(m_hoverState.hover.lane, m_hoverState.hover.pos, &point)) {
-                if (mutableLane(m_hoverState.hover.lane)) {
-                    const auto handle = m_hoverState.hover.lane;
-                    std::vector<uint64_t> tempoTicks;
-                    std::vector<nodelane::CcDeleteRequest> ccDeletes;
-                    if (handle.index == 0) {
-                        tempoTicks.push_back(point.tick);
-                    } else if (handle.index > 0 &&
-                               handle.index - 1 < int(m_rowData.rows().size())) {
-                        const auto &row = m_rowData.rows()[std::size_t(handle.index - 1)];
-                        const auto identity = m_rowData.rowIdentity(row);
-                        ccDeletes.push_back({identity.first, identity.second, {point.tick}});
-                    }
-                    const auto edit =
-                        nodelane::resolveBatchDeletes(*m_page->document(), tempoTicks, ccDeletes);
-                    if (edit && !edit->empty())
-                        m_page->document()->applyRangeEdit(tr("delete automation point(s)"), *edit);
+                if (NodeLane *lane = mutableLane(m_hoverState.hover.lane)) {
+                    const NodeDrag drag{m_hoverState.hover.lane, point, point, lane->minimumValue(),
+                                        lane->maximumValue()};
+                    commitNodePointDeletes(m_page->document()->revision(), {drag});
                     invalidateContent(m_hoverState.clearHover());
                     m_page->requestRefresh();
                 }
