@@ -215,7 +215,7 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
         const auto beforeDelete = rig.snapshot(rig.pan.track, rig.pan.controller);
         rig.mousePress(visibleDelete.position);
         rig.mouseRelease(visibleDelete.position);
-        rig.waitForTimers(0);
+        rig.commitTimers();
         DocLanePoint visibleAfterDelete{};
         const bool visibleStillPresent =
             rig.document().findLanePoint(rig.pan.track, rig.pan.controller,

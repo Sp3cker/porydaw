@@ -1,15 +1,13 @@
 #include "domains.h"
+#include "support.h"
 
 #include <array>
-#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <vector>
 
-#include <QByteArray>
 #include <QCoreApplication>
 #include <QString>
-#include <QStringList>
 #include <QUndoStack>
 
 #include "core/songdocument.h"
@@ -43,13 +41,15 @@ struct CaseContext {
     Session &session;
     Adapter &adapter;
     const char *row = "";
-    const AutomationGestureCheck &check;
-};
+    Check check;
 
-struct Snapshot {
-    QByteArray smf;
-    uint64_t revision = 0;
-    int undoIndex = 0;
+    CaseContext(Session &session, Adapter &adapter, const char *row,
+                const AutomationGestureCheck &fn)
+        : session(session)
+        , adapter(adapter)
+        , row(row)
+        , check(fn, QStringLiteral("%1 %2").arg(QLatin1String(adapter.name), QLatin1String(row)))
+    {}
 };
 
 struct Case {
@@ -60,56 +60,9 @@ struct Case {
 constexpr uint32_t kPreservedTempoUs = 499999;
 constexpr uint32_t kFractionalTempoUs = 398406;
 
-void report(const CaseContext &context, bool condition, const QString &message)
-{
-    context.check(condition, QStringLiteral("%1 %2: %3")
-                                 .arg(QLatin1String(context.adapter.name),
-                                      QLatin1String(context.row), message));
-}
-
-Snapshot snapshot(SongDocument &document)
-{
-    return {document.smf().write(), document.revision(), document.undoStack()->index()};
-}
-
-bool samePoints(const std::vector<NodePoint> &left, const std::vector<NodePoint> &right)
-{
-    if (left.size() != right.size())
-        return false;
-    for (auto i = std::size_t{0}; i < left.size(); ++i) {
-        if (left[i].tick != right[i].tick || left[i].value != right[i].value)
-            return false;
-    }
-    return true;
-}
-
-QString formatPoints(const std::vector<NodePoint> &points)
-{
-    QStringList parts;
-    for (const auto &point : points)
-        parts.append(QStringLiteral("{%1,%2}").arg(point.tick).arg(point.value));
-    return QStringLiteral("[%1]").arg(parts.join(QStringLiteral(", ")));
-}
-
-bool oneStep(const Snapshot &before, const Snapshot &after)
-{
-    return after.revision == before.revision + 1 && after.undoIndex == before.undoIndex + 1;
-}
-
-bool unchanged(const Snapshot &before, const Snapshot &after)
-{
-    return after.smf == before.smf && after.revision == before.revision &&
-           after.undoIndex == before.undoIndex;
-}
-
-int tempoValue(uint32_t microseconds)
-{
-    return int(std::lround(CoreTimeDefaults::tempoBpm(microseconds)));
-}
-
 TempoPoint tempoAt(uint64_t tick, int bpm)
 {
-    return {tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(bpm)};
+    return {tick, tempoUsForBpm(bpm)};
 }
 
 void setTempo(SongDocument &document, const std::vector<TempoPoint> &points)
@@ -138,17 +91,6 @@ void insertCcEvent(SongDocument &document, int track, uint8_t controller, uint64
     document.insertRawEvent(document.smfTrackFor(track), event);
 }
 
-std::vector<int> rawValuesAt(const SongDocument &document, int track, uint8_t controller,
-                             uint64_t tick)
-{
-    std::vector<int> values;
-    for (const auto &point : document.lanePoints(track, controller)) {
-        if (point.tick == tick)
-            values.push_back(point.value);
-    }
-    return values;
-}
-
 void seedUnique(const CaseContext &context, const std::vector<NodePoint> &points)
 {
     auto &document = context.session.document;
@@ -170,22 +112,24 @@ void seedUnique(const CaseContext &context, const std::vector<NodePoint> &points
 void expectPoints(const CaseContext &context, const std::vector<NodePoint> &expected)
 {
     const auto actual = context.adapter.lane->points();
-    report(context, samePoints(actual, expected),
-           QStringLiteral("expected %1, got %2").arg(formatPoints(expected), formatPoints(actual)));
+    context.check.require(
+        sameNodePoints(actual, expected),
+        QStringLiteral("expected %1, got %2").arg(formatPoints(expected), formatPoints(actual)));
 }
 
-void expectOneEdit(const CaseContext &context, const Snapshot &before)
+void expectOneEdit(const CaseContext &context, const DocSnapshot &before)
 {
     const auto after = snapshot(context.session.document);
-    report(context, oneStep(before, after),
-           QStringLiteral("expected revision %1 and undo %2, got revision %3 and undo %4")
-               .arg(before.revision + 1)
-               .arg(before.undoIndex + 1)
-               .arg(after.revision)
-               .arg(after.undoIndex));
+    context.check.require(
+        isOneEdit(before, after),
+        QStringLiteral("expected revision %1 and undo %2, got revision %3 and undo %4")
+            .arg(before.revision + 1)
+            .arg(before.undoIndex + 1)
+            .arg(after.revision)
+            .arg(after.undoIndex));
 }
 
-void checkUndoRestores(const CaseContext &context, const Snapshot &before,
+void checkUndoRestores(const CaseContext &context, const DocSnapshot &before,
                        const std::vector<NodePoint> &beforePoints,
                        const std::vector<NodePoint> &afterPoints)
 {
@@ -193,15 +137,15 @@ void checkUndoRestores(const CaseContext &context, const Snapshot &before,
     auto &lane = *context.adapter.lane;
     document.undoStack()->undo();
     const auto undone = snapshot(document);
-    report(context,
-           undone.undoIndex == before.undoIndex && undone.smf == before.smf &&
-               samePoints(lane.points(), beforePoints),
-           QStringLiteral("undo did not restore SMF, undo index, and points %1 (got %2)")
-               .arg(formatPoints(beforePoints), formatPoints(lane.points())));
+    context.check.require(
+        undone.undoIndex == before.undoIndex && undone.smf == before.smf &&
+            sameNodePoints(lane.points(), beforePoints),
+        QStringLiteral("undo did not restore SMF, undo index, and points %1 (got %2)")
+            .arg(formatPoints(beforePoints), formatPoints(lane.points())));
     document.undoStack()->redo();
-    report(context, samePoints(lane.points(), afterPoints),
-           QStringLiteral("redo did not restore points %1 (got %2)")
-               .arg(formatPoints(afterPoints), formatPoints(lane.points())));
+    context.check.require(sameNodePoints(lane.points(), afterPoints),
+                          QStringLiteral("redo did not restore points %1 (got %2)")
+                              .arg(formatPoints(afterPoints), formatPoints(lane.points())));
     document.undoStack()->undo();
 }
 
@@ -237,8 +181,8 @@ void checkEffectivePoints(const CaseContext &context)
     auto &document = context.session.document;
     auto &lane = *context.adapter.lane;
     seedUnique(context, {});
-    report(context, lane.points().empty(),
-           QStringLiteral("empty lane exposed %1").arg(formatPoints(lane.points())));
+    context.check.require(lane.points().empty(),
+                          QStringLiteral("empty lane exposed %1").arg(formatPoints(lane.points())));
     if (context.adapter.kind == AdapterKind::Tempo) {
         setTempo(document, {tempoAt(288, 110), tempoAt(0, 120), tempoAt(96, 150)});
         expectPoints(context, {{0, 120}, {96, 150}, {288, 110}});
@@ -252,8 +196,8 @@ void checkEffectivePoints(const CaseContext &context)
     expectPoints(context, {{0, 64}, {96, 20}, {288, 40}});
     const auto sameTick =
         rawValuesAt(document, context.session.engineTrack, context.session.controller, 96);
-    report(context, sameTick == std::vector<int>{10, 20},
-           QStringLiteral("same-tick seed did not keep both raw events in order"));
+    context.check.require(sameTick == std::vector<int>{10, 20},
+                          QStringLiteral("same-tick seed did not keep both raw events in order"));
 }
 
 void checkRangesTextSelection(const CaseContext &context)
@@ -261,63 +205,60 @@ void checkRangesTextSelection(const CaseContext &context)
     auto &lane = *context.adapter.lane;
     auto &selection = context.session.selection;
     selection.clearTimeSelection();
-    report(context, lane.title() == expectedTitle(context),
-           QStringLiteral("title was %1").arg(lane.title()));
+    context.check.require(lane.title() == expectedTitle(context),
+                          QStringLiteral("title was %1").arg(lane.title()));
     if (context.adapter.kind == AdapterKind::Tempo) {
-        report(context,
-               lane.minimumValue() == CoreTimeDefaults::kMinTempoBpm &&
-                   lane.maximumValue() == CoreTimeDefaults::kMaxTempoBpm,
-               QStringLiteral("Tempo range was [%1, %2]")
-                   .arg(lane.minimumValue())
-                   .arg(lane.maximumValue()));
+        context.check.require(lane.minimumValue() == CoreTimeDefaults::kMinTempoBpm &&
+                                  lane.maximumValue() == CoreTimeDefaults::kMaxTempoBpm,
+                              QStringLiteral("Tempo range was [%1, %2]")
+                                  .arg(lane.minimumValue())
+                                  .arg(lane.maximumValue()));
         setTempo(context.session.document, {tempoAt(0, 150), {96, kFractionalTempoUs}});
-        const auto fractional = tempoValue(kFractionalTempoUs);
-        report(context,
-               lane.valueText(150) == QStringLiteral("150") &&
-                   lane.valueText(fractional) == QString::number(fractional),
-               QStringLiteral("Tempo valueText was %1 / %2")
-                   .arg(lane.valueText(150), lane.valueText(fractional)));
+        const auto fractional = tempoBpm(kFractionalTempoUs);
+        context.check.require(lane.valueText(150) == QStringLiteral("150") &&
+                                  lane.valueText(fractional) == QString::number(fractional),
+                              QStringLiteral("Tempo valueText was %1 / %2")
+                                  .arg(lane.valueText(150), lane.valueText(fractional)));
         const auto points = lane.points();
-        report(context, points.size() == 2 && points[1].value == fractional,
-               QStringLiteral("fractional Tempo node was %1").arg(formatPoints(points)));
+        context.check.require(
+            points.size() == 2 && points[1].value == fractional,
+            QStringLiteral("fractional Tempo node was %1").arg(formatPoints(points)));
     } else {
-        report(context,
-               lane.minimumValue() ==
-                       CoreTimeDefaults::laneValueMinimum(context.session.controller) &&
-                   lane.maximumValue() ==
-                       CoreTimeDefaults::laneValueMaximum(context.session.controller),
-               QStringLiteral("CC range was [%1, %2]")
-                   .arg(lane.minimumValue())
-                   .arg(lane.maximumValue()));
-        report(
-            context,
+        context.check.require(
+            lane.minimumValue() == CoreTimeDefaults::laneValueMinimum(context.session.controller) &&
+                lane.maximumValue() ==
+                    CoreTimeDefaults::laneValueMaximum(context.session.controller),
+            QStringLiteral("CC range was [%1, %2]")
+                .arg(lane.minimumValue())
+                .arg(lane.maximumValue()));
+        context.check.require(
             lane.valueText(64) == m4aFormatCcValue(context.session.controller, 64) &&
                 lane.valueText(0) == m4aFormatCcValue(context.session.controller, 0),
             QStringLiteral("CC valueText was %1 / %2").arg(lane.valueText(64), lane.valueText(0)));
         CCLaneAdapter bend(context.session.document, context.session.selection,
                            context.session.usedTrackMask, context.session.engineTrack, DOC_CC_BEND);
-        report(context,
-               bend.minimumValue() == CoreTimeDefaults::kMinBendValue &&
-                   bend.maximumValue() == CoreTimeDefaults::kMaxBendValue &&
-                   bend.valueText(0) == m4aFormatBend(0) &&
-                   bend.valueText(100) == m4aFormatBend(100),
-               QStringLiteral("bend range/text was [%1, %2] %3")
-                   .arg(bend.minimumValue())
-                   .arg(bend.maximumValue())
-                   .arg(bend.valueText(0)));
+        context.check.require(bend.minimumValue() == CoreTimeDefaults::kMinBendValue &&
+                                  bend.maximumValue() == CoreTimeDefaults::kMaxBendValue &&
+                                  bend.valueText(0) == m4aFormatBend(0) &&
+                                  bend.valueText(100) == m4aFormatBend(100),
+                              QStringLiteral("bend range/text was [%1, %2] %3")
+                                  .arg(bend.minimumValue())
+                                  .arg(bend.maximumValue())
+                                  .arg(bend.valueText(0)));
     }
     seedUnique(context, {{0, 120}, {96, 100}, {288, 110}});
     selectTicks(context, 50, 150, true);
-    report(context,
-           !lane.pointSelected(0) && lane.pointSelected(50) && lane.pointSelected(96) &&
-               !lane.pointSelected(150) && !lane.pointSelected(288),
-           QStringLiteral("time-selection membership was wrong for the covered lane"));
+    context.check.require(
+        !lane.pointSelected(0) && lane.pointSelected(50) && lane.pointSelected(96) &&
+            !lane.pointSelected(150) && !lane.pointSelected(288),
+        QStringLiteral("time-selection membership was wrong for the covered lane"));
     selectTicks(context, 50, 150, false);
-    report(context, !lane.pointSelected(50) && !lane.pointSelected(96) && !lane.pointSelected(0),
-           QStringLiteral("uncovered lane reported a selected tick"));
+    context.check.require(!lane.pointSelected(50) && !lane.pointSelected(96) &&
+                              !lane.pointSelected(0),
+                          QStringLiteral("uncovered lane reported a selected tick"));
     selection.clearTimeSelection();
-    report(context, !lane.pointSelected(96),
-           QStringLiteral("cleared time selection still selected a tick"));
+    context.check.require(!lane.pointSelected(96),
+                          QStringLiteral("cleared time selection still selected a tick"));
 }
 
 void checkDelete(const CaseContext &context)
@@ -327,20 +268,19 @@ void checkDelete(const CaseContext &context)
     seedUnique(context, fixture);
     const auto before = snapshot(context.session.document);
     lane.deletePoints({});
-    report(context, unchanged(before, snapshot(context.session.document)),
-           QStringLiteral("empty delete mutated the document"));
+    context.check.require(isUnchanged(before, snapshot(context.session.document)),
+                          QStringLiteral("empty delete mutated the document"));
     lane.deletePoints({uint64_t{99999}});
-    report(context, unchanged(before, snapshot(context.session.document)),
-           QStringLiteral("unknown-tick delete mutated the document"));
+    context.check.require(isUnchanged(before, snapshot(context.session.document)),
+                          QStringLiteral("unknown-tick delete mutated the document"));
     lane.deletePoints({uint64_t{96}});
     expectOneEdit(context, before);
     expectPoints(context, {{0, 120}, {288, 110}});
     if (context.adapter.kind == AdapterKind::Cc) {
-        report(context,
-               rawValuesAt(context.session.document, context.session.engineTrack,
-                           context.session.controller, 96)
-                   .empty(),
-               QStringLiteral("delete left raw events at the removed tick"));
+        context.check.require(rawValuesAt(context.session.document, context.session.engineTrack,
+                                          context.session.controller, 96)
+                                  .empty(),
+                              QStringLiteral("delete left raw events at the removed tick"));
     }
     checkUndoRestores(context, before, fixture, {{0, 120}, {288, 110}});
     if (context.adapter.kind != AdapterKind::Cc)
@@ -356,11 +296,10 @@ void checkDelete(const CaseContext &context)
     lane.deletePoints({uint64_t{96}});
     expectOneEdit(context, grouped);
     expectPoints(context, {{0, 64}});
-    report(context,
-           rawValuesAt(context.session.document, context.session.engineTrack,
-                       context.session.controller, 96)
-               .empty(),
-           QStringLiteral("same-tick delete left hidden events"));
+    context.check.require(rawValuesAt(context.session.document, context.session.engineTrack,
+                                      context.session.controller, 96)
+                              .empty(),
+                          QStringLiteral("same-tick delete left hidden events"));
     checkUndoRestores(context, grouped, groupedPoints, {{0, 64}});
 }
 
@@ -373,20 +312,19 @@ void checkMove(const CaseContext &context)
         const auto before = snapshot(document);
         const auto beforePoints = lane.points();
         lane.movePoints({});
-        report(context, unchanged(before, snapshot(document)),
-               QStringLiteral("empty move mutated the document"));
+        context.check.require(isUnchanged(before, snapshot(document)),
+                              QStringLiteral("empty move mutated the document"));
         lane.movePoints({{uint64_t{99999}, NodePoint{192, 120}}});
-        report(context, unchanged(before, snapshot(document)),
-               QStringLiteral("unknown-tick move mutated the document"));
-        const auto preservedBpm = tempoValue(kPreservedTempoUs);
+        context.check.require(isUnchanged(before, snapshot(document)),
+                              QStringLiteral("unknown-tick move mutated the document"));
+        const auto preservedBpm = tempoBpm(kPreservedTempoUs);
         lane.movePoints({{uint64_t{96}, NodePoint{192, preservedBpm}}});
         expectOneEdit(context, before);
         expectPoints(context, {{192, preservedBpm}, {288, 110}});
         const auto moved = document.tempoPoints();
-        report(context,
-               moved.size() == 2 && moved.front().tick == 192 &&
-                   moved.front().microsecondsPerQuarterNote == kPreservedTempoUs,
-               QStringLiteral("unchanged-value Tempo move discarded microseconds"));
+        context.check.require(moved.size() == 2 && moved.front().tick == 192 &&
+                                  moved.front().microsecondsPerQuarterNote == kPreservedTempoUs,
+                              QStringLiteral("unchanged-value Tempo move discarded microseconds"));
         checkUndoRestores(context, before, beforePoints, {{192, preservedBpm}, {288, 110}});
         const auto rewriteBefore = snapshot(document);
         const auto rewriteBeforePoints = lane.points();
@@ -394,11 +332,10 @@ void checkMove(const CaseContext &context)
         expectOneEdit(context, rewriteBefore);
         expectPoints(context, {{192, 140}, {288, 110}});
         const auto rewritten = document.tempoPoints();
-        report(context,
-               rewritten.size() == 2 && rewritten.front().tick == 192 &&
-                   rewritten.front().microsecondsPerQuarterNote ==
-                       CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(140),
-               QStringLiteral("value-changing Tempo move did not rewrite microseconds"));
+        context.check.require(
+            rewritten.size() == 2 && rewritten.front().tick == 192 &&
+                rewritten.front().microsecondsPerQuarterNote == tempoUsForBpm(140),
+            QStringLiteral("value-changing Tempo move did not rewrite microseconds"));
         checkUndoRestores(context, rewriteBefore, rewriteBeforePoints, {{192, 140}, {288, 110}});
         return;
     }
@@ -408,20 +345,20 @@ void checkMove(const CaseContext &context)
     const auto before = snapshot(document);
     const auto beforePoints = lane.points();
     lane.movePoints({});
-    report(context, unchanged(before, snapshot(document)),
-           QStringLiteral("empty move mutated the document"));
+    context.check.require(isUnchanged(before, snapshot(document)),
+                          QStringLiteral("empty move mutated the document"));
     lane.movePoints({{uint64_t{99999}, NodePoint{192, 20}}});
-    report(context, unchanged(before, snapshot(document)),
-           QStringLiteral("unknown-tick move mutated the document"));
+    context.check.require(isUnchanged(before, snapshot(document)),
+                          QStringLiteral("unknown-tick move mutated the document"));
     lane.movePoints({{uint64_t{96}, NodePoint{192, 20}}});
     expectOneEdit(context, before);
     expectPoints(context, {{192, 20}, {288, 40}});
-    report(context,
-           rawValuesAt(document, context.session.engineTrack, context.session.controller, 96)
-                   .empty() &&
-               rawValuesAt(document, context.session.engineTrack, context.session.controller,
-                           192) == std::vector<int>{10, 20},
-           QStringLiteral("CC same-tick move did not keep the group ordered at the destination"));
+    context.check.require(
+        rawValuesAt(document, context.session.engineTrack, context.session.controller, 96)
+                .empty() &&
+            rawValuesAt(document, context.session.engineTrack, context.session.controller, 192) ==
+                std::vector<int>{10, 20},
+        QStringLiteral("CC same-tick move did not keep the group ordered at the destination"));
     checkUndoRestores(context, before, beforePoints, {{192, 20}, {288, 40}});
 }
 
@@ -432,8 +369,9 @@ void checkReplaceSpan(const CaseContext &context)
     seedUnique(context, {});
     const auto emptyBefore = snapshot(document);
     lane.replaceSpan(0, 10000, {});
-    report(context, unchanged(emptyBefore, snapshot(document)) && lane.points().empty(),
-           QStringLiteral("empty replaceSpan on an empty lane mutated the document"));
+    context.check.require(
+        isUnchanged(emptyBefore, snapshot(document)) && lane.points().empty(),
+        QStringLiteral("empty replaceSpan on an empty lane mutated the document"));
     lane.replaceSpan(0, 10000, {{96, 90}});
     expectOneEdit(context, emptyBefore);
     expectPoints(context, {{96, 90}});
@@ -442,8 +380,8 @@ void checkReplaceSpan(const CaseContext &context)
     seedUnique(context, fixture);
     const auto before = snapshot(document);
     lane.replaceSpan(96, 96, {{96, 100}});
-    report(context, unchanged(before, snapshot(document)),
-           QStringLiteral("identical replaceSpan mutated the document"));
+    context.check.require(isUnchanged(before, snapshot(document)),
+                          QStringLiteral("identical replaceSpan mutated the document"));
     lane.replaceSpan(96, 200, {{96, 80}, {128, 70}});
     expectOneEdit(context, before);
     expectPoints(context, {{0, 120}, {96, 80}, {128, 70}, {288, 110}});
@@ -456,18 +394,17 @@ void checkReplaceSpan(const CaseContext &context)
     if (context.adapter.kind != AdapterKind::Tempo)
         return;
     setTempo(document, {{96, kFractionalTempoUs}});
-    const auto displayed = tempoValue(kFractionalTempoUs);
+    const auto displayed = tempoBpm(kFractionalTempoUs);
     const auto fractionalBefore = snapshot(document);
     const auto fractionalBeforePoints = lane.points();
     lane.replaceSpan(96, 96, {{96, displayed}});
     expectOneEdit(context, fractionalBefore);
     expectPoints(context, {{96, displayed}});
     const auto converted = document.tempoPoints();
-    const auto expectedUs = CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(displayed);
-    report(context,
-           converted.size() == 1 && converted.front().tick == 96 &&
-               converted.front().microsecondsPerQuarterNote == expectedUs,
-           QStringLiteral("fractional Tempo replaceSpan preserved microseconds"));
+    const auto expectedUs = tempoUsForBpm(displayed);
+    context.check.require(converted.size() == 1 && converted.front().tick == 96 &&
+                              converted.front().microsecondsPerQuarterNote == expectedUs,
+                          QStringLiteral("fractional Tempo replaceSpan preserved microseconds"));
     checkUndoRestores(context, fractionalBefore, fractionalBeforePoints, {{96, displayed}});
 }
 
@@ -479,16 +416,16 @@ void checkMoveCollision(const CaseContext &context)
         setTempo(document, {{96, kPreservedTempoUs}, tempoAt(288, 110)});
         const auto before = snapshot(document);
         const auto beforePoints = lane.points();
-        const auto preservedBpm = tempoValue(kPreservedTempoUs);
+        const auto preservedBpm = tempoBpm(kPreservedTempoUs);
         lane.movePoints({{uint64_t{96}, NodePoint{288, preservedBpm}}});
         expectOneEdit(context, before);
         expectPoints(context, {{288, preservedBpm}});
         const auto moved = document.tempoPoints();
-        report(context,
-               moved.size() == 1 && moved.front().tick == 288 &&
-                   moved.front().microsecondsPerQuarterNote == kPreservedTempoUs,
-               QStringLiteral("Tempo move onto an occupied tick did not keep exactly one "
-                              "destination with source microseconds"));
+        context.check.require(
+            moved.size() == 1 && moved.front().tick == 288 &&
+                moved.front().microsecondsPerQuarterNote == kPreservedTempoUs,
+            QStringLiteral("Tempo move onto an occupied tick did not keep exactly one "
+                           "destination with source microseconds"));
         checkUndoRestores(context, before, beforePoints, {{288, preservedBpm}});
         return;
     }
@@ -502,13 +439,13 @@ void checkMoveCollision(const CaseContext &context)
     lane.movePoints({{uint64_t{96}, NodePoint{192, 20}}});
     expectOneEdit(context, before);
     expectPoints(context, {{192, 20}, {288, 40}});
-    report(context,
-           rawValuesAt(document, context.session.engineTrack, context.session.controller, 96)
-                   .empty() &&
-               rawValuesAt(document, context.session.engineTrack, context.session.controller,
-                           192) == std::vector<int>{10, 20},
-           QStringLiteral("CC move onto an occupied tick left destination ghosts or reordered the "
-                          "source group"));
+    context.check.require(
+        rawValuesAt(document, context.session.engineTrack, context.session.controller, 96)
+                .empty() &&
+            rawValuesAt(document, context.session.engineTrack, context.session.controller, 192) ==
+                std::vector<int>{10, 20},
+        QStringLiteral("CC move onto an occupied tick left destination ghosts or reordered the "
+                       "source group"));
     checkUndoRestores(context, before, beforePoints, {{192, 20}, {288, 40}});
 }
 

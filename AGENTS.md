@@ -12,7 +12,7 @@ src/
   project/    — DecompProject, SongRegistry, VoicegroupSource, SampleReg, sidecars
   audio/      — AudioEngine, resonance_suppressor, sample DSP/import, poryaaaa compat
   ui/         — all Qt widgets
-    ui/songview.{h,cpp}           # 6676L god file — needs splitting (see BACKLOG)
+    ui/songview.{h,cpp}
     ui/editordrawer/              # well-factored example: one concept per file
     ui/theme/                     # color roles, resolver, runtime, picker
     ui/activity/                  # track activity meters
@@ -45,7 +45,7 @@ Workflow:
 1. `glob path="src/ui/editordrawer"` or `read` the directory listing to discover files.
 2. `grep`/`ast_grep` scoped to that folder.
 3. `lsp definition/references` for symbols — follows re-exports that text search misses.
-4. `read file:50-120` — range reads, never whole 3000L+ files hoping.
+4. range reads, never whole 3000L+ files hoping.
 
 Scopes by concern:
 - Piano roll / notes / velocity: `src/ui/songview.cpp; src/ui/editordrawer; src/core`
@@ -58,7 +58,7 @@ Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_
 
 ## File-size discipline
 
-- Target 200–400L per file, 600L ceiling. The current outliers (`songview.cpp:6676`, `mainwindow.cpp:3351`, `songdocument.cpp:2289`) are tech debt — see `BACKLOG.md`.
+- Target 200–400L per file, review cohesion above 600L
 - One concept per file. `ui/editordrawer/` is the model.
 - Don't create 80L fragments — 40 tiny files in one feature is also undiscoverable.
 - See `rule://keep-files-small` for enforcement.

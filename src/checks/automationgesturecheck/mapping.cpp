@@ -114,7 +114,7 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     const auto clickInput = rig.pointAt(rig.pan, indicatorTick, 64);
     rig.mousePress(clickInput.position);
     rig.mouseRelease(clickInput.position);
-    rig.waitForTimers(0);
+    rig.commitTimers();
     DocLanePoint clickedPoint;
     const bool clickFound = rig.document().findLanePoint(
         rig.pan.track, rig.pan.controller, clickInput.mapped.point.tick, &clickedPoint);
@@ -134,7 +134,7 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
                          "cell"));
     rig.mousePress(boundaryInput.position);
     rig.mouseRelease(boundaryInput.position);
-    rig.waitForTimers(0);
+    rig.commitTimers();
     DocLanePoint precedingPoint;
     DocLanePoint followingPoint;
     const bool precedingFound = rig.document().findLanePoint(

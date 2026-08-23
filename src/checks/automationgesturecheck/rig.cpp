@@ -161,11 +161,13 @@ class MappingLane final : public NodeLane
     int m_maximum = 0;
 };
 
-std::pair<int, int> valueRangeFor(const AutomationCanvas &canvas, LaneHandle handle)
+} // namespace
+
+AutomationGestureCheckRig::ValueRange AutomationGestureCheckRig::valueRange(LaneHandle handle) const
 {
     if (!handle.valid() || handle.index == 0)
         return {CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm};
-    const auto &rows = canvas.rows();
+    const auto &rows = canvas().rows();
     const int row = handle.index - 1;
     if (row < 0 || row >= int(rows.size()))
         return {0, 127};
@@ -174,13 +176,11 @@ std::pair<int, int> valueRangeFor(const AutomationCanvas &canvas, LaneHandle han
             CoreTimeDefaults::laneValueMaximum(controller)};
 }
 
-} // namespace
-
 AutomationProjection::PointerMapping
 AutomationGestureCheckRig::mappingAt(LaneHandle handle, const QPointF &position) const
 {
-    const auto range = valueRangeFor(canvas(), handle);
-    MappingLane lane(range.first, range.second);
+    const auto range = valueRange(handle);
+    MappingLane lane(range.min, range.max);
     return projection().pointerMapping(lane, bodyFor(handle), position.x(), position.y());
 }
 
@@ -188,11 +188,10 @@ AutomationGestureCheckRig::InputPoint
 AutomationGestureCheckRig::pointAt(LaneHandle handle, double tick, int value) const
 {
     const auto geom = geometry();
-    const auto range = valueRangeFor(canvas(), handle);
+    const auto range = valueRange(handle);
     const QRect body = bodyFor(handle);
-    const QPointF position(
-        m_view->displayX(tick, geom.plotOrigin, canvas().devicePixelRatioF()),
-        AutomationProjection::valueY(body, geom, range.first, range.second, value));
+    const QPointF position(m_view->displayX(tick, geom.plotOrigin, canvas().devicePixelRatioF()),
+                           AutomationProjection::valueY(body, geom, range.min, range.max, value));
     return {position, mappingAt(handle, position)};
 }
 
@@ -204,13 +203,12 @@ AutomationGestureCheckRig::pointAt(const Lane &lane, double tick, int value) con
 
 bool AutomationGestureCheckRig::expandTempo()
 {
-    const LaneHandle tempo{0};
-    if (!canvas().laneBody(tempo).isEmpty())
+    if (!canvas().laneBody(kTempoHandle).isEmpty())
         return true;
     mousePress(tempoHeaderPoint());
     mouseRelease(tempoHeaderPoint());
     pump();
-    return !canvas().laneBody(tempo).isEmpty();
+    return !canvas().laneBody(kTempoHandle).isEmpty();
 }
 
 QRect AutomationGestureCheckRig::voiceBounds() const
@@ -226,7 +224,7 @@ QPointF AutomationGestureCheckRig::tempoHeaderPoint() const
 
 QPointF AutomationGestureCheckRig::tempoBodyPoint(double tick, int bpm) const
 {
-    return pointAt(LaneHandle{0}, tick, bpm).position;
+    return pointAt(kTempoHandle, tick, bpm).position;
 }
 
 QImage AutomationGestureCheckRig::renderArea()
@@ -325,6 +323,23 @@ void AutomationGestureCheckRig::waitForTimers(int milliseconds)
     QEventLoop loop;
     QTimer::singleShot(milliseconds, &loop, &QEventLoop::quit);
     loop.exec();
+}
+
+bool AutomationGestureCheckRig::isIdle() const noexcept
+{
+    return !canvas().isPanning() && !view().userGestureActive();
+}
+
+void AutomationGestureCheckRig::resetView(double zoom, double scroll)
+{
+    setAutomationZoom(zoom);
+    setAutomationScroll(scroll);
+    pump();
+}
+
+void AutomationGestureCheckRig::commitTimers(int milliseconds)
+{
+    waitForTimers(milliseconds);
 }
 
 bool AutomationGestureCheckRig::initialize(const SongInfo &song, QString &error)

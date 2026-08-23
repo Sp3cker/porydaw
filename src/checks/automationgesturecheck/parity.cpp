@@ -1,19 +1,17 @@
 #include "domains.h"
+#include "support.h"
 
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <vector>
 
-#include <QByteArray>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QResizeEvent>
 #include <QSize>
 #include <QString>
-#include <QUndoStack>
 
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
@@ -32,20 +30,26 @@ struct Adapter {
     const char *name = "";
 };
 
-struct Snapshot {
-    QByteArray smf;
-    uint64_t revision = 0;
-    int undoIndex = 0;
-};
-
 struct Context {
     AutomationGestureCheckRig &rig;
-    const AutomationGestureCheck &check;
+    Check check;
     Adapter adapter;
     const char *scenario = "";
     LaneHandle handle;
     int track = 0;
     uint8_t controller = 10;
+
+    Context(AutomationGestureCheckRig &rig, const AutomationGestureCheck &fn, Adapter adapter,
+            const char *scenario, LaneHandle handle, int track, uint8_t controller)
+        : rig(rig)
+        , check(fn,
+                QStringLiteral("%1 %2").arg(QLatin1String(adapter.name), QLatin1String(scenario)))
+        , adapter(adapter)
+        , scenario(scenario)
+        , handle(handle)
+        , track(track)
+        , controller(controller)
+    {}
 };
 
 struct Scenario {
@@ -58,42 +62,8 @@ constexpr std::array kAdapters{
     Adapter{AdapterKind::Tempo, "Tempo"},
     Adapter{AdapterKind::Cc, "CC"},
 };
-const std::vector<NodePoint> kFixture{{0, 80}, {96, 100}, {288, 64}};
-const std::vector<NodePoint> kMulti{{0, 80}, {96, 100}, {192, 64}, {384, 110}};
-
-void report(const Context &ctx, bool condition, const QString &message)
-{
-    ctx.check(condition,
-              QStringLiteral("%1 %2: %3")
-                  .arg(QLatin1String(ctx.adapter.name), QLatin1String(ctx.scenario), message));
-}
-
-Snapshot snapshot(SongDocument &document)
-{
-    return {document.smf().write(), document.revision(), document.undoStack()->index()};
-}
-
-bool oneEdit(const Snapshot &before, const Snapshot &after)
-{
-    return after.revision == before.revision + 1 && after.undoIndex == before.undoIndex + 1;
-}
-
-bool unchanged(const Snapshot &before, const Snapshot &after)
-{
-    return after.smf == before.smf && after.revision == before.revision &&
-           after.undoIndex == before.undoIndex;
-}
-
-bool samePoints(const std::vector<NodePoint> &left, const std::vector<NodePoint> &right)
-{
-    if (left.size() != right.size())
-        return false;
-    for (auto i = std::size_t{0}; i < left.size(); ++i) {
-        if (left[i].tick != right[i].tick || left[i].value != right[i].value)
-            return false;
-    }
-    return true;
-}
+const std::vector<NodePoint> kFixture{{0, 80}, {kFixtureTick, 100}, {288, 64}};
+const std::vector<NodePoint> kMulti{{0, 80}, {kFixtureTick, 100}, {192, 64}, {384, 110}};
 
 bool containsPoint(const std::vector<NodePoint> &points, uint64_t tick, int value)
 {
@@ -102,17 +72,12 @@ bool containsPoint(const std::vector<NodePoint> &points, uint64_t tick, int valu
     });
 }
 
-int tempoValue(uint32_t microseconds)
-{
-    return int(std::lround(CoreTimeDefaults::tempoBpm(microseconds)));
-}
-
 std::vector<NodePoint> pointsOf(const Context &ctx)
 {
     std::vector<NodePoint> out;
     if (ctx.adapter.kind == AdapterKind::Tempo) {
         for (const auto &point : ctx.rig.document().tempoPoints())
-            out.push_back({point.tick, tempoValue(point.microsecondsPerQuarterNote)});
+            out.push_back({point.tick, tempoBpm(point.microsecondsPerQuarterNote)});
         return out;
     }
     for (const auto &point : ctx.rig.document().lanePoints(ctx.track, ctx.controller)) {
@@ -122,16 +87,6 @@ std::vector<NodePoint> pointsOf(const Context &ctx)
             out.push_back({point.tick, point.value});
     }
     return out;
-}
-
-std::vector<int> rawValuesAt(const Context &ctx, uint64_t tick)
-{
-    std::vector<int> values;
-    for (const auto &point : ctx.rig.document().lanePoints(ctx.track, ctx.controller)) {
-        if (point.tick == tick)
-            values.push_back(point.value);
-    }
-    return values;
 }
 
 void setTempo(Context &ctx, const std::vector<TempoPoint> &points)
@@ -151,8 +106,7 @@ void seed(Context &ctx, const std::vector<NodePoint> &points)
         std::vector<TempoPoint> tempo;
         tempo.reserve(points.size());
         for (const auto &point : points) {
-            tempo.push_back(
-                {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
+            tempo.push_back({point.tick, tempoUsForBpm(point.value)});
         }
         setTempo(ctx, tempo);
         return;
@@ -197,23 +151,20 @@ void selectRange(Context &ctx, uint64_t first, uint64_t last)
     ctx.rig.pump();
 }
 
-bool idle(const Context &ctx)
-{
-    return !ctx.rig.canvas().isPanning() && !ctx.rig.view().userGestureActive();
-}
-
-void expectOneEdit(const Context &ctx, const Snapshot &before,
+bool expectOneEdit(const Context &ctx, const DocSnapshot &before,
                    const std::vector<NodePoint> &expected)
 {
     const auto after = snapshot(ctx.rig.document());
-    report(ctx, oneEdit(before, after) && samePoints(pointsOf(ctx), expected),
-           QStringLiteral("completed gesture did not commit one edit with the shared node result"));
+    ctx.check.require(
+        isOneEdit(before, after) && sameNodePoints(pointsOf(ctx), expected),
+        QStringLiteral("completed gesture did not commit one edit with the shared node result"));
 }
 
-void expectUnchanged(const Context &ctx, const Snapshot &before, const char *label)
+void expectUnchanged(const Context &ctx, const DocSnapshot &before, const char *label)
 {
-    report(ctx, unchanged(before, snapshot(ctx.rig.document())),
-           QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
+    ctx.check.require(
+        isUnchanged(before, snapshot(ctx.rig.document())),
+        QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
 }
 
 void runHoverInsertion(Context &ctx)
@@ -228,7 +179,7 @@ void runHoverInsertion(Context &ctx)
 void runClickDelete(Context &ctx)
 {
     seed(ctx, kFixture);
-    const auto node = at(ctx, 96, 100);
+    const auto node = at(ctx, kFixtureTick, 100);
     const auto before = snapshot(ctx.rig.document());
     ctx.rig.mousePress(node.position);
     ctx.rig.mouseRelease(node.position);
@@ -248,42 +199,42 @@ void runNodeDrag(Context &ctx)
 {
     seed(ctx, kFixture);
     auto before = snapshot(ctx.rig.document());
-    activatedDrag(ctx, at(ctx, 96, 100).position, at(ctx, 192, 100).position);
+    activatedDrag(ctx, at(ctx, kFixtureTick, 100).position, at(ctx, 192, 100).position);
     expectOneEdit(ctx, before, {{0, 80}, {192, 100}, {288, 64}});
     seed(ctx, kFixture);
-    activatedDrag(ctx, at(ctx, 96, 100).position, at(ctx, 192, 64).position, Qt::ShiftModifier);
-    report(ctx, samePoints(pointsOf(ctx), {{0, 80}, {192, 100}, {288, 64}}),
-           QStringLiteral("horizontal Shift drag did not lock value"));
+    activatedDrag(ctx, at(ctx, kFixtureTick, 100).position, at(ctx, 192, 64).position,
+                  Qt::ShiftModifier);
+    ctx.check.require(sameNodePoints(pointsOf(ctx), {{0, 80}, {192, 100}, {288, 64}}),
+                      QStringLiteral("horizontal Shift drag did not lock value"));
     seed(ctx, kFixture);
-    const auto axisStart = at(ctx, 96, 100).position;
+    const auto axisStart = at(ctx, kFixtureTick, 100).position;
     const auto valueActivation = axisStart + QPointF(2.0, 28.0);
-    const auto valueTarget = at(ctx, 96, 64).position;
+    const auto valueTarget = at(ctx, kFixtureTick, 64).position;
     const auto valueEnd = valueActivation + valueTarget - axisStart;
     ctx.rig.mousePress(axisStart, Qt::ShiftModifier);
     ctx.rig.mouseMove(valueActivation, Qt::LeftButton, Qt::ShiftModifier);
     ctx.rig.mouseMove(valueEnd, Qt::LeftButton, Qt::ShiftModifier);
     ctx.rig.mouseRelease(valueEnd, Qt::ShiftModifier);
-    report(ctx, samePoints(pointsOf(ctx), {{0, 80}, {96, 64}, {288, 64}}),
-           QStringLiteral("vertical Shift drag did not lock time"));
+    ctx.check.require(sameNodePoints(pointsOf(ctx), {{0, 80}, {kFixtureTick, 64}, {288, 64}}),
+                      QStringLiteral("vertical Shift drag did not lock time"));
     if (ctx.adapter.kind == AdapterKind::Tempo) {
-        setTempo(ctx, {{96, kPreservedTempoUs},
-                       {288, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(64)}});
-        const auto preserved = tempoValue(kPreservedTempoUs);
+        setTempo(ctx, {{kFixtureTick, kPreservedTempoUs}, {288, tempoUsForBpm(64)}});
+        const auto preserved = tempoBpm(kPreservedTempoUs);
         before = snapshot(ctx.rig.document());
-        activatedDrag(ctx, at(ctx, 96, preserved).position, at(ctx, 192, preserved).position);
-        report(ctx, oneEdit(before, snapshot(ctx.rig.document())),
-               QStringLiteral("fractional Tempo drag did not commit one edit"));
+        activatedDrag(ctx, at(ctx, kFixtureTick, preserved).position,
+                      at(ctx, 192, preserved).position);
+        ctx.check.require(isOneEdit(before, snapshot(ctx.rig.document())),
+                          QStringLiteral("fractional Tempo drag did not commit one edit"));
         const auto moved = ctx.rig.document().tempoPoints();
-        report(ctx,
-               moved.size() == 2 && moved.front().tick == 192 &&
-                   moved.front().microsecondsPerQuarterNote == kPreservedTempoUs,
-               QStringLiteral("unchanged-value Tempo drag discarded microseconds"));
+        ctx.check.require(moved.size() == 2 && moved.front().tick == 192 &&
+                              moved.front().microsecondsPerQuarterNote == kPreservedTempoUs,
+                          QStringLiteral("unchanged-value Tempo drag discarded microseconds"));
         return;
     }
     ctx.rig.document().writeLanePoints(ctx.track, ctx.controller, 0,
                                        std::numeric_limits<uint64_t>::max(), {{288, 40}});
     SmfEvent first;
-    first.tick = 96;
+    first.tick = kFixtureTick;
     first.status = uint8_t((0xB << 4) | (ctx.rig.document().channelFor(ctx.track) & 0x0F));
     first.data0 = ctx.controller;
     first.data1 = 10;
@@ -293,27 +244,29 @@ void runNodeDrag(Context &ctx)
     ctx.rig.document().insertRawEvent(ctx.rig.document().smfTrackFor(ctx.track), second);
     ctx.rig.documentChanged();
     before = snapshot(ctx.rig.document());
-    activatedDrag(ctx, at(ctx, 96, 20).position, at(ctx, 192, 20).position);
-    report(ctx,
-           oneEdit(before, snapshot(ctx.rig.document())) && rawValuesAt(ctx, 96).empty() &&
-               rawValuesAt(ctx, 192) == std::vector<int>{10, 20},
-           QStringLiteral("CC same-tick drag did not keep the grouped events ordered"));
+    activatedDrag(ctx, at(ctx, kFixtureTick, 20).position, at(ctx, 192, 20).position);
+    ctx.check.require(
+        isOneEdit(before, snapshot(ctx.rig.document())) &&
+            rawValuesAt(ctx.rig.document(), ctx.track, ctx.controller, kFixtureTick).empty() &&
+            rawValuesAt(ctx.rig.document(), ctx.track, ctx.controller, 192) ==
+                std::vector<int>{10, 20},
+        QStringLiteral("CC same-tick drag did not keep the grouped events ordered"));
 }
 
 void runSelection(Context &ctx)
 {
     seed(ctx, kMulti);
-    selectRange(ctx, 96, 288);
+    selectRange(ctx, kFixtureTick, 288);
     auto before = snapshot(ctx.rig.document());
-    activatedDrag(ctx, at(ctx, 96, 100).position, at(ctx, 144, 100).position);
+    activatedDrag(ctx, at(ctx, kFixtureTick, 100).position, at(ctx, 144, 100).position);
     const auto &moved = ctx.rig.view().selectionModel().timeSelection();
-    report(ctx,
-           oneEdit(before, snapshot(ctx.rig.document())) &&
-               samePoints(pointsOf(ctx), {{0, 80}, {144, 100}, {240, 64}, {384, 110}}) &&
-               moved.startTick == 144 && moved.endTick == 336,
-           QStringLiteral("selection drag did not move every selected node and range"));
+    ctx.check.require(
+        isOneEdit(before, snapshot(ctx.rig.document())) &&
+            sameNodePoints(pointsOf(ctx), {{0, 80}, {144, 100}, {240, 64}, {384, 110}}) &&
+            moved.startTick == 144 && moved.endTick == 336,
+        QStringLiteral("selection drag did not move every selected node and range"));
     seed(ctx, kMulti);
-    selectRange(ctx, 96, 288);
+    selectRange(ctx, kFixtureTick, 288);
     before = snapshot(ctx.rig.document());
     ctx.rig.keyToArea(QEvent::KeyPress, Qt::Key_Delete);
     expectOneEdit(ctx, before, {{0, 80}, {384, 110}});
@@ -329,8 +282,8 @@ void runSweepRamp(Context &ctx)
     const auto sweep = pointsOf(ctx);
     const bool hasTarget =
         containsPoint(sweep, target.mapped.point.tick, target.mapped.point.value);
-    report(ctx, oneEdit(before, snapshot(ctx.rig.document())) && hasTarget,
-           QStringLiteral("sweep did not commit the mapped target in one edit"));
+    ctx.check.require(isOneEdit(before, snapshot(ctx.rig.document())) && hasTarget,
+                      QStringLiteral("sweep did not commit the mapped target in one edit"));
     seed(ctx, kFixture);
     start = at(ctx, 48, 80);
     target = at(ctx, 144, 110);
@@ -341,8 +294,9 @@ void runSweepRamp(Context &ctx)
     const auto ramp = pointsOf(ctx);
     const bool hasEnds = containsPoint(ramp, start.mapped.point.tick, start.mapped.point.value) &&
                          containsPoint(ramp, target.mapped.point.tick, target.mapped.point.value);
-    report(ctx, oneEdit(before, snapshot(ctx.rig.document())) && hasEnds,
-           QStringLiteral("Shift-ramp did not commit both mapped endpoints in one edit"));
+    ctx.check.require(
+        isOneEdit(before, snapshot(ctx.rig.document())) && hasEnds,
+        QStringLiteral("Shift-ramp did not commit both mapped endpoints in one edit"));
 }
 
 void runPencil(Context &ctx)
@@ -357,10 +311,10 @@ void runPencil(Context &ctx)
     ctx.rig.pump();
     expectUnchanged(ctx, before, "Pencil preview");
     ctx.rig.mouseRelease(end.position);
-    ctx.rig.waitForTimers(0);
+    ctx.rig.commitTimers();
     const auto after = snapshot(ctx.rig.document());
-    report(ctx, oneEdit(before, after) && !pointsOf(ctx).empty(),
-           QStringLiteral("Pencil stroke did not commit one edit"));
+    ctx.check.require(isOneEdit(before, after) && !pointsOf(ctx).empty(),
+                      QStringLiteral("Pencil stroke did not commit one edit"));
     ctx.rig.setPersistentPencil(false);
 }
 
@@ -369,7 +323,7 @@ void runBandSelect(Context &ctx)
     seed(ctx, kFixture);
     ctx.rig.view().selectionModel().clearTimeSelection();
     ctx.rig.pump();
-    const auto start = at(ctx, 96, 80);
+    const auto start = at(ctx, kFixtureTick, 80);
     const auto end = at(ctx, 288, 80);
     const uint64_t expectedStart = ctx.rig.projection().snapTickAt(start.position.x(), false);
     const uint64_t expectedEnd = ctx.rig.projection().snapTickAt(end.position.x(), false);
@@ -383,19 +337,18 @@ void runBandSelect(Context &ctx)
                                   : selection.lanes.size() == 1 &&
                                         selection.lanes.front().first == ctx.track &&
                                         selection.lanes.front().second == ctx.controller;
-    report(ctx,
-           selection.active() &&
-               selection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
-               selection.tempo == tempo && lanesMatch && selection.startTick == expectedStart &&
-               selection.endTick == expectedEnd,
-           QStringLiteral("right-drag band did not publish the shared time selection"));
+    ctx.check.require(selection.active() &&
+                          selection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
+                          selection.tempo == tempo && lanesMatch &&
+                          selection.startTick == expectedStart && selection.endTick == expectedEnd,
+                      QStringLiteral("right-drag band did not publish the shared time selection"));
 }
 
 void runEscapeCancel(Context &ctx)
 {
     seed(ctx, kFixture);
     const auto before = snapshot(ctx.rig.document());
-    const auto start = at(ctx, 96, 100).position;
+    const auto start = at(ctx, kFixtureTick, 100).position;
     const auto target = at(ctx, 192, 64).position;
     const QPointF activation =
         start + QPointF(ctx.rig.geometry().nodeDragActivationDistance + 2, 0.0);
@@ -405,13 +358,13 @@ void runEscapeCancel(Context &ctx)
     ctx.rig.keyToArea(QEvent::KeyPress, Qt::Key_Escape);
     ctx.rig.mouseRelease(activation + target - start);
     expectUnchanged(ctx, before, "Escape");
-    report(ctx, idle(ctx), QStringLiteral("Escape left a live gesture"));
+    ctx.check.require(ctx.rig.isIdle(), QStringLiteral("Escape left a live gesture"));
 }
 
 void runRebuildCancel(Context &ctx)
 {
     seed(ctx, kFixture);
-    const auto grab = at(ctx, 96, 100);
+    const auto grab = at(ctx, kFixtureTick, 100);
     const qreal arm = qreal(ctx.rig.geometry().nodeDragActivationDistance + 2);
     const QPointF armed = grab.position + QPointF(arm, 0.0);
     auto before = snapshot(ctx.rig.document());
@@ -421,28 +374,28 @@ void runRebuildCancel(Context &ctx)
     ctx.rig.documentChanged();
     ctx.rig.mouseRelease(armed);
     ctx.rig.pump();
-    report(ctx, unchanged(before, snapshot(ctx.rig.document())) && idle(ctx),
-           QStringLiteral("release after document rebuild committed a stale handle"));
+    ctx.check.require(isUnchanged(before, snapshot(ctx.rig.document())) && ctx.rig.isIdle(),
+                      QStringLiteral("release after document rebuild committed a stale handle"));
     const QSize size = ctx.rig.canvas().size();
     before = snapshot(ctx.rig.document());
-    ctx.rig.mousePress(at(ctx, 96, 100).position);
-    ctx.rig.mouseMove(at(ctx, 96, 100).position + QPointF(arm, 0.0));
+    ctx.rig.mousePress(at(ctx, kFixtureTick, 100).position);
+    ctx.rig.mouseMove(at(ctx, kFixtureTick, 100).position + QPointF(arm, 0.0));
     ctx.rig.pump();
     QResizeEvent resize(QSize(size.width() + 48, size.height()), size);
     QCoreApplication::sendEvent(&ctx.rig.canvas(), &resize);
     ctx.rig.pump();
-    ctx.rig.mouseRelease(at(ctx, 96, 100).position + QPointF(arm, 0.0));
+    ctx.rig.mouseRelease(at(ctx, kFixtureTick, 100).position + QPointF(arm, 0.0));
     ctx.rig.pump();
-    report(ctx,
-           unchanged(before, snapshot(ctx.rig.document())) && idle(ctx) &&
-               !ctx.rig.canvas().bandPreviewContainsLane(ctx.handle),
-           QStringLiteral("release after a geometry stack rebuild committed a stale handle"));
-    const auto followGrab = at(ctx, 96, 100);
+    ctx.check.require(
+        isUnchanged(before, snapshot(ctx.rig.document())) && ctx.rig.isIdle() &&
+            !ctx.rig.canvas().bandPreviewContainsLane(ctx.handle),
+        QStringLiteral("release after a geometry stack rebuild committed a stale handle"));
+    const auto followGrab = at(ctx, kFixtureTick, 100);
     const auto followTarget = at(ctx, 192, 100);
     before = snapshot(ctx.rig.document());
     activatedDrag(ctx, followGrab.position, followTarget.position);
-    report(ctx, oneEdit(before, snapshot(ctx.rig.document())) && idle(ctx),
-           QStringLiteral("input did not recover after stack-rebuild cancellation"));
+    ctx.check.require(isOneEdit(before, snapshot(ctx.rig.document())) && ctx.rig.isIdle(),
+                      QStringLiteral("input did not recover after stack-rebuild cancellation"));
 }
 
 void runSemanticNoOp(Context &ctx)
@@ -457,9 +410,9 @@ void runSemanticNoOp(Context &ctx)
     ctx.rig.mousePress(empty.position);
     ctx.rig.mouseMove(empty.position + QPointF(std::max(0, slop - 1), 0.0));
     ctx.rig.mouseRelease(empty.position + QPointF(std::max(0, slop - 1), 0.0));
-    report(ctx,
-           unchanged(before, snapshot(ctx.rig.document())) && samePoints(pointsOf(ctx), kFixture),
-           QStringLiteral("sub-threshold empty jitter mutated the document"));
+    ctx.check.require(isUnchanged(before, snapshot(ctx.rig.document())) &&
+                          sameNodePoints(pointsOf(ctx), kFixture),
+                      QStringLiteral("sub-threshold empty jitter mutated the document"));
 }
 
 constexpr std::array kScenarios{

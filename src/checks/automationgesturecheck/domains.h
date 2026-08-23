@@ -1,12 +1,10 @@
 #pragma once
 
-#include <functional>
-
-#include <QString>
+// The AutomationGestureCheck callback alias and the Check wrapper live in
+// support.h (private to this suite) to keep one definition for every domain.
+#include "support.h"
 
 class AutomationGestureCheckRig;
-
-using AutomationGestureCheck = std::function<void(bool, const QString &)>;
 
 void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
                                  const AutomationGestureCheck &check);

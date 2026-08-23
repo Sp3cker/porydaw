@@ -5,17 +5,23 @@ condition: "write|edit|ast_edit"
 scope: tool
 ---
 
-Porydaw's agent pain is oversized files and concepts scattered across arbitrary
-fragments. Keep ownership clear; line count is a warning, not a design rule.
+Porydaw's agent pain is both oversized files and concepts scattered across
+arbitrary fragments. Optimize for cohesion and discoverability; line count is
+only a review signal.
 
-- When you add code, check the host file's line count. Above ~600L, review the
-  file's responsibilities before adding more. Split only when the code has a
-  real ownership, change-reason, or test seam. Do not split solely to get below
-  the threshold; a cohesive file may exceed it.
+- Around 600L, file size becomes a review signal. If a change would materially
+  grow the file, consider whether its responsibilities are still cohesive.
+  A cohesive file may exceed 600L. Never move or split code solely to satisfy
+  a line-count target.
+- Split when the resulting code has a real ownership boundary, independent
+  reason to change, meaningful abstraction, or useful test seam.
 - Prefer one feature directory with a small public surface when one concept
   needs several private implementation files.
-- `src/ui/editordrawer/` is the model — keep one cohesive gesture or model per
-  file, and group its private implementation files under the same module.
-- Don't create 80L fragments merely to reduce line counts — 40 tiny files in
-  one feature is also undiscoverable.
-- New `*check.cpp` harnesses go in `src/checks/` — never add one to `src/` root. `src/` top-level should stay 3 files (`main.cpp`, `mainwindow.cpp`, `porydaw_scale.cpp`).
+- `src/ui/editordrawer/` is the model: related concepts stay together in a
+  discoverable module, with file boundaries following meaningful ownership
+  or implementation seams.
+- Don't create tiny fragments merely to reduce line counts. Many small files
+  can be less discoverable than one larger cohesive file.
+- New `*check.cpp` harnesses go in `src/checks/` — never add one to `src/`
+  root. `src/` top-level should stay 3 files (`main.cpp`, `mainwindow.cpp`,
+  `porydaw_scale.cpp`).
