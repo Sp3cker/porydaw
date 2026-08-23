@@ -608,3 +608,13 @@ if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(porydaw_render_cli PRIVATE -static)
 endif()
 
+# ---- Voicegroup load benchmark CLI (development/testing) ----
+add_executable(porydaw_loadbench_cli
+    tools/porydaw_loadbench_cli.cpp
+)
+target_include_directories(porydaw_loadbench_cli PRIVATE src)
+target_link_libraries(porydaw_loadbench_cli PRIVATE poryaaaa_engine)
+if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_options(porydaw_loadbench_cli PRIVATE -static)
+endif()
+

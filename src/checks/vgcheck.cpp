@@ -4,6 +4,12 @@
 #include <cstdio>
 #include <cstring>
 
+#ifndef _WIN32
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#endif
+
 #include "project/decompproject.h"
 #include "project/songregistry.h"
 #include "project/voicegroupsource.h"
@@ -980,6 +986,184 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         QDir(fakeRoot).removeRecursively();
         if (failures == before)
             std::printf("vgcheck: single-colon label scan OK\n");
+    }
+
+    // ---- snapshot cache: a same-stat rewrite must not serve stale maps ----
+    // The loader caches discovery + symbol maps across calls. Content hashes
+    // of the map-feeding files must catch an edit that leaves size and mtime
+    // untouched (2 s FAT granularity), so this rewrites the .incbin target
+    // with a byte-identical-length file and restores the original timestamp.
+    {
+        const int before = failures;
+        const QString fakeRoot = projectRoot + QStringLiteral("/.porydaw/vgstalecheck");
+        QDir(fakeRoot).removeRecursively();
+        QDir().mkpath(fakeRoot + QStringLiteral("/sound/voicegroups"));
+        QDir().mkpath(fakeRoot + QStringLiteral("/sound/direct_sound_samples"));
+        const auto writeFile = [](const QString &path, const QByteArray &bytes) {
+            QFile out(path);
+            return out.open(QIODevice::WriteOnly) && out.write(bytes) == bytes.size();
+        };
+        // Raw WaveData bins: 16-byte header (type, status, freq, size) + PCM.
+        const auto sampleBin = [](uint8_t fill, uint32_t count) {
+            QByteArray bin;
+            bin.append("\x00\x00\x00\x00", 4); // type 0, status 0
+            for (int i = 0; i < 8; i++)
+                bin.append(char(0x58));      // freq word, value irrelevant
+            for (uint32_t i = 0; i < 4; i++) // size field, little-endian
+                bin.append(char((count >> (i * 8)) & 0xFF));
+            for (uint32_t i = 0; i < count; i++)
+                bin.append(char(fill));
+            return bin;
+        };
+
+        // The runner disables cross-call caching via PORYDAW_DISABLE_INDEX_CACHE;
+        // this section exists to test that caching, so force it on and restore
+        // the environment-decides default afterwards.
+        voicegroup_loader_set_snapshot_cache_enabled(1);
+        const QByteArray rootUtf8 = fakeRoot.toLocal8Bit();
+        const QString dataPath = fakeRoot + QStringLiteral("/sound/direct_sound_data.inc");
+        const QString vgPath = fakeRoot + QStringLiteral("/sound/voicegroups/stalecheck.inc");
+        const QByteArray dataWithBass = "DirectSoundWaveData_stale_a::\n"
+                                        "\t.incbin \"sound/direct_sound_samples/bass.bin\"\n";
+        const QByteArray dataWithDrum = "DirectSoundWaveData_stale_a::\n"
+                                        "\t.incbin \"sound/direct_sound_samples/drum.bin\"\n";
+        bool wrote = writeFile(dataPath, dataWithBass) &&
+                     writeFile(vgPath, "voice_group stalecheck\n"
+                                       "\tvoice_directsound 60, 0, DirectSoundWaveData_stale_a, "
+                                       "255, 0, 200, 100\n") &&
+                     writeFile(fakeRoot + QStringLiteral("/sound/direct_sound_samples/bass.bin"),
+                               sampleBin(0x11, 8)) &&
+                     writeFile(fakeRoot + QStringLiteral("/sound/direct_sound_samples/drum.bin"),
+                               sampleBin(0x22, 12));
+        if (!wrote) {
+            std::fprintf(stderr, "vgcheck: cannot write vgstalecheck mini-project\n");
+            failures++;
+        } else {
+            LoadedVoiceGroup *first = voicegroup_load(rootUtf8.constData(), "stalecheck", nullptr);
+            if (!first || !first->voices[0].wav) {
+                std::fprintf(stderr, "vgcheck: FAIL: stalecheck first load\n");
+                failures++;
+            } else {
+                const uint32_t bassBytes = first->voices[0].wav->size;
+                voicegroup_free(first);
+
+                // Rewrite to drum.bin: identical file length, then restore the
+                // original timestamps to the nanosecond so the fingerprint's
+                // stat stream cannot tell the versions apart — only the
+                // content hashes may.
+#ifndef _WIN32
+                struct stat originalStat{};
+                stat(dataPath.toLocal8Bit().constData(), &originalStat);
+#endif
+                wrote = writeFile(dataPath, dataWithDrum);
+#ifndef _WIN32
+#if defined(__APPLE__)
+                struct timespec stamps[2] = {originalStat.st_atimespec, originalStat.st_mtimespec};
+#else
+                struct timespec stamps[2] = {originalStat.st_atim, originalStat.st_mtim};
+#endif
+                utimensat(AT_FDCWD, dataPath.toLocal8Bit().constData(), stamps, 0);
+#endif
+
+                LoadedVoiceGroup *second =
+                    wrote ? voicegroup_load(rootUtf8.constData(), "stalecheck", nullptr) : nullptr;
+                if (!wrote || !second || !second->voices[0].wav ||
+                    second->voices[0].wav->size == bassBytes) {
+                    std::fprintf(stderr, "vgcheck: FAIL: same-stat rewrite served stale maps\n");
+                    failures++;
+                }
+                if (second)
+                    voicegroup_free(second);
+
+                // With the cache force-disabled the fresh parse must agree.
+                voicegroup_loader_set_snapshot_cache_enabled(0);
+                LoadedVoiceGroup *third =
+                    voicegroup_load(rootUtf8.constData(), "stalecheck", nullptr);
+                if (!third || !third->voices[0].wav || third->voices[0].wav->size == bassBytes) {
+                    std::fprintf(stderr, "vgcheck: FAIL: disabled-cache parse disagreed\n");
+                    failures++;
+                }
+                if (third)
+                    voicegroup_free(third);
+                voicegroup_loader_set_snapshot_cache_enabled(-1);
+            }
+        }
+        QDir(fakeRoot).removeRecursively();
+        if (failures == before)
+            std::printf("vgcheck: snapshot staleness kill OK\n");
+    }
+
+    // ---- snapshot cache: deep-scan results must track the tree, and a
+    // project switch must evict cleanly ----
+    {
+        const int before = failures;
+        const QString deepRoot = projectRoot + QStringLiteral("/.porydaw/vgdeepcheck");
+        QDir(deepRoot).removeRecursively();
+        QDir().mkpath(deepRoot + QStringLiteral("/sound/a/b/c"));
+        QDir().mkpath(deepRoot + QStringLiteral("/sound/direct_sound_samples"));
+        const auto writeFile = [](const QString &path, const QByteArray &bytes) {
+            QFile out(path);
+            return out.open(QIODevice::WriteOnly) && out.write(bytes) == bytes.size();
+        };
+        const QString dataPath = deepRoot + QStringLiteral("/sound/direct_sound_data.inc");
+        bool wrote = writeFile(dataPath, "DirectSoundWaveData_deep_a::\n"
+                                         "\t.incbin \"sound/direct_sound_samples/bass.bin\"\n") &&
+                     writeFile(deepRoot + QStringLiteral("/sound/a/b/c/deepone.inc"),
+                               "voice_group deepone\n"
+                               "\tvoice_directsound 60, 0, DirectSoundWaveData_deep_a, "
+                               "255, 0, 200, 100\n");
+        // Raw WaveData bin: 16-byte header + 8 PCM bytes.
+        QByteArray bassBin;
+        bassBin.append("\x00\x00\x00\x00", 4);                 // type, status
+        bassBin.append("\x58\x58\x58\x58\x58\x58\x58\x58", 8); // freq, loopStart
+        bassBin.append("\x08\x00\x00\x00", 4);                 // size = 8
+        bassBin.append(8, char(0x11));
+        wrote =
+            wrote &&
+            writeFile(deepRoot + QStringLiteral("/sound/direct_sound_samples/bass.bin"), bassBin);
+        voicegroup_loader_set_snapshot_cache_enabled(1);
+        const QByteArray deepRootUtf8 = deepRoot.toLocal8Bit();
+        LoadedVoiceGroup *first = voicegroup_load(deepRootUtf8.constData(), "deepone", nullptr);
+        if (!first || !first->voices[0].wav) {
+            std::fprintf(stderr, "vgcheck: FAIL: deepone first load\n");
+            failures++;
+        }
+        if (first)
+            voicegroup_free(first);
+
+        // A brand-new nested directory chain after the scan: only a
+        // tree-sensitive fingerprint can find it without a stale scan.
+        QDir().mkpath(deepRoot + QStringLiteral("/sound/p/q/r"));
+        if (!writeFile(deepRoot + QStringLiteral("/sound/p/q/r/deeptwo.inc"),
+                       "voice_group deeptwo\n"
+                       "\tvoice_directsound 60, 0, DirectSoundWaveData_deep_a, "
+                       "255, 0, 200, 100\n")) {
+            std::fprintf(stderr, "vgcheck: cannot write deeptwo\n");
+            failures++;
+        }
+        LoadedVoiceGroup *second = voicegroup_load(deepRootUtf8.constData(), "deeptwo", nullptr);
+        if (!second || !second->voices[0].wav) {
+            std::fprintf(stderr, "vgcheck: FAIL: post-scan nested voicegroup not found\n");
+            failures++;
+        }
+        if (second)
+            voicegroup_free(second);
+
+        // Switching projects evicts the single slot; switching back must
+        // still load correctly.
+        LoadedVoiceGroup *back =
+            voicegroup_load(rootUtf8.constData(), loadName.constData(), nullptr);
+        if (!back) {
+            std::fprintf(stderr, "vgcheck: FAIL: reload after project switch\n");
+            failures++;
+        }
+        if (back)
+            voicegroup_free(back);
+
+        voicegroup_loader_set_snapshot_cache_enabled(-1);
+        QDir(deepRoot).removeRecursively();
+        if (failures == before)
+            std::printf("vgcheck: snapshot deep-scan/switch OK\n");
     }
 
     // ---- Golden Sun synths: loader roundtrip through the real voicegroup ----
