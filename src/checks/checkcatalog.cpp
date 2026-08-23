@@ -261,6 +261,12 @@ const std::vector<CheckDefinition> &catalog()
                 .argv = strings({"--clipcheck"}),
                 .handler = [](QApplication &, const QStringList &) { return runClipCheck(); },
             },
+            {
+                .name = "laneselectioncheck",
+                .argv = strings({"--laneselectioncheck"}),
+                .handler = [](QApplication &,
+                              const QStringList &) { return runLaneSelectionCheck(); },
+            },
             {.name = "polycheck",
              .argv = strings({"--polycheck"}),
              .handler = [](QApplication &,

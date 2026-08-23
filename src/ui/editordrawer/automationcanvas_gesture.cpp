@@ -20,22 +20,6 @@ struct Visitor : Ts... {
 template <class... Ts>
 Visitor(Ts...) -> Visitor<Ts...>;
 
-bool ccLaneIdentity(const CCLanes &rowData, LaneHandle handle, int *engineTrack,
-                    uint8_t *controller)
-{
-    if (handle.index <= 0)
-        return false;
-    const auto &rows = rowData.rows();
-    const int rowIndex = handle.index - 1;
-    if (rowIndex >= int(rows.size()))
-        return false;
-    const auto identity = rowData.rowIdentity(rows[std::size_t(rowIndex)]);
-    if (engineTrack)
-        *engineTrack = identity.first;
-    if (controller)
-        *controller = identity.second;
-    return true;
-}
 } // namespace
 
 bool AutomationCanvas::nodePointHit(LaneHandle handle, const QPointF &position,
@@ -55,6 +39,65 @@ bool AutomationCanvas::nodePointHit(LaneHandle handle, const QPointF &position,
                         point);
 }
 
+bool AutomationCanvas::commitResolvedNodeLaneChanges(std::optional<uint64_t> expectedRevision,
+                                                     const std::vector<NodeLaneChange> &changes,
+                                                     const QString &undoLabel)
+{
+    if (!m_page || !m_page->document() || changes.empty())
+        return false;
+    auto *document = m_page->document();
+    if (expectedRevision && document->revision() != *expectedRevision)
+        return false;
+    SongDocument::RangeEdit edit;
+    std::vector<uint64_t> tempoDeletes;
+    std::vector<nodelane::CcDeleteRequest> ccDeletes;
+    for (const NodeLaneChange &change : changes) {
+        const NodeLaneSlot *slot = change.slot;
+        if (!slot || !slot->lane)
+            return false;
+        switch (slot->id.kind) {
+        case EditorAutomationRowKind::Tempo: {
+            if (!change.moves.empty()) {
+                const auto resolved = nodelane::resolveTempoMoves(*document, change.moves);
+                if (!resolved)
+                    return false;
+                nodelane::appendResolvedTempoMoves(edit, *resolved);
+            }
+            tempoDeletes.insert(tempoDeletes.end(), change.deleteTicks.cbegin(),
+                                change.deleteTicks.cend());
+            break;
+        }
+        case EditorAutomationRowKind::ControlChange: {
+            if (!change.moves.empty()) {
+                const auto resolved = nodelane::resolveCcMoves(*document, int(slot->id.track),
+                                                               slot->id.controller, change.moves);
+                if (!resolved)
+                    return false;
+                nodelane::appendResolvedCcMoves(edit, *resolved);
+            }
+            if (!change.deleteTicks.empty())
+                ccDeletes.push_back({int(slot->id.track), slot->id.controller, change.deleteTicks});
+            break;
+        }
+        default:
+            return false;
+        }
+    }
+    if (!tempoDeletes.empty() || !ccDeletes.empty()) {
+        const auto resolved = nodelane::resolveBatchDeletes(*document, tempoDeletes, ccDeletes);
+        if (!resolved)
+            return false;
+        edit.removeTempo.insert(edit.removeTempo.end(), resolved->removeTempo.cbegin(),
+                                resolved->removeTempo.cend());
+        edit.removePoints.insert(edit.removePoints.end(), resolved->removePoints.cbegin(),
+                                 resolved->removePoints.cend());
+    }
+    if (edit.empty())
+        return false;
+    document->applyRangeEdit(undoLabel, edit);
+    return true;
+}
+
 bool AutomationCanvas::commitLaneEdit(const NodeLaneEdit::Completion &completion)
 {
     if (completion.unchanged || !m_page || !m_page->document())
@@ -71,124 +114,48 @@ bool AutomationCanvas::commitLaneEdit(const NodeLaneEdit::Completion &completion
 bool AutomationCanvas::commitNodePointMoves(uint64_t expectedRevision,
                                             const std::vector<NodeDrag> &points)
 {
-    if (!m_page || !m_page->document() || points.empty())
-        return false;
-    auto *document = m_page->document();
-    if (document->revision() != expectedRevision)
-        return false;
-    std::vector<std::vector<NodePointMove>> movesByLane(m_nodeStack.size());
+    std::vector<NodeLaneChange> changes;
     for (const NodeDrag &point : points) {
-        if (!point.lane.valid() || point.lane.index >= int(movesByLane.size()) ||
-            !mutableLane(point.lane))
+        const NodeLaneSlot *slot = resolveSlot(point.lane);
+        if (!slot)
             return false;
-        if (point.lane.index > 0) {
-            int track = 0;
-            uint8_t controller = 0;
-            if (!ccLaneIdentity(m_rowData, point.lane, &track, &controller))
-                return false;
+        const auto found =
+            std::find_if(changes.begin(), changes.end(),
+                         [slot](const NodeLaneChange &change) { return change.slot == slot; });
+        if (found == changes.end()) {
+            changes.push_back({slot});
+            changes.back().moves.reserve(1);
+            changes.back().moves.push_back(
+                {point.original.tick, {point.current.tick, point.current.value}});
+        } else {
+            found->moves.push_back(
+                {point.original.tick, {point.current.tick, point.current.value}});
         }
-        movesByLane[std::size_t(point.lane.index)].push_back(
-            {point.original.tick, {point.current.tick, point.current.value}});
     }
-    int occupied = 0;
-    int occupiedIndex = -1;
-    for (int index = 0; index < int(movesByLane.size()); ++index) {
-        if (movesByLane[std::size_t(index)].empty())
-            continue;
-        ++occupied;
-        occupiedIndex = index;
-    }
-    if (occupied == 0)
-        return false;
-    if (occupied == 1) {
-        NodeLane *lane = mutableLane(LaneHandle{occupiedIndex});
-        if (!lane)
-            return false;
-        lane->movePoints(movesByLane[std::size_t(occupiedIndex)]);
-        return true;
-    }
-    SongDocument::RangeEdit edit;
-    if (!movesByLane.empty() && !movesByLane.front().empty()) {
-        const auto tempoEdit = nodelane::resolveTempoMoves(*document, movesByLane.front());
-        if (!tempoEdit)
-            return false;
-        nodelane::appendResolvedTempoMoves(edit, *tempoEdit);
-    }
-    for (int index = 1; index < int(movesByLane.size()); ++index) {
-        if (movesByLane[std::size_t(index)].empty())
-            continue;
-        int track = 0;
-        uint8_t controller = 0;
-        if (!ccLaneIdentity(m_rowData, LaneHandle{index}, &track, &controller))
-            return false;
-        const auto resolved =
-            nodelane::resolveCcMoves(*document, track, controller, movesByLane[std::size_t(index)]);
-        if (!resolved)
-            return false;
-        nodelane::appendResolvedCcMoves(edit, *resolved);
-    }
-    if (edit.empty())
-        return false;
-    document->applyRangeEdit(tr("edit automation points"), edit);
-    return true;
+    return commitResolvedNodeLaneChanges(expectedRevision, changes, tr("edit automation points"));
 }
 
 bool AutomationCanvas::commitNodePointDeletes(std::optional<uint64_t> expectedRevision,
                                               const std::vector<NodeDrag> &points)
 {
-    if (!m_page || !m_page->document() || points.empty())
-        return false;
-    auto *document = m_page->document();
-    if (expectedRevision && document->revision() != *expectedRevision)
-        return false;
-    std::vector<std::vector<uint64_t>> ticksByLane(m_nodeStack.size());
+    std::vector<NodeLaneChange> changes;
     for (const NodeDrag &point : points) {
-        if (!point.lane.valid() || point.lane.index >= int(ticksByLane.size()) ||
-            !mutableLane(point.lane))
+        const NodeLaneSlot *slot = resolveSlot(point.lane);
+        if (!slot)
             return false;
-        if (point.lane.index > 0) {
-            int track = 0;
-            uint8_t controller = 0;
-            if (!ccLaneIdentity(m_rowData, point.lane, &track, &controller))
-                return false;
+        const auto found =
+            std::find_if(changes.begin(), changes.end(),
+                         [slot](const NodeLaneChange &change) { return change.slot == slot; });
+        if (found == changes.end()) {
+            changes.push_back({slot});
+            changes.back().deleteTicks.reserve(1);
+            changes.back().deleteTicks.push_back(point.original.tick);
+        } else {
+            found->deleteTicks.push_back(point.original.tick);
         }
-        ticksByLane[std::size_t(point.lane.index)].push_back(point.original.tick);
     }
-    int occupied = 0;
-    int occupiedIndex = -1;
-    for (int index = 0; index < int(ticksByLane.size()); ++index) {
-        if (ticksByLane[std::size_t(index)].empty())
-            continue;
-        ++occupied;
-        occupiedIndex = index;
-    }
-    if (occupied == 0)
-        return false;
-    if (occupied == 1) {
-        NodeLane *lane = mutableLane(LaneHandle{occupiedIndex});
-        if (!lane)
-            return false;
-        lane->deletePoints(ticksByLane[std::size_t(occupiedIndex)]);
-        return true;
-    }
-    std::vector<uint64_t> tempoTicks;
-    if (!ticksByLane.empty())
-        tempoTicks = ticksByLane.front();
-    std::vector<nodelane::CcDeleteRequest> ccDeletes;
-    for (int index = 1; index < int(ticksByLane.size()); ++index) {
-        if (ticksByLane[std::size_t(index)].empty())
-            continue;
-        int track = 0;
-        uint8_t controller = 0;
-        if (!ccLaneIdentity(m_rowData, LaneHandle{index}, &track, &controller))
-            return false;
-        ccDeletes.push_back({track, controller, ticksByLane[std::size_t(index)]});
-    }
-    const auto edit = nodelane::resolveBatchDeletes(*document, tempoTicks, ccDeletes);
-    if (!edit || edit->empty())
-        return false;
-    document->applyRangeEdit(tr("delete automation point(s)"), *edit);
-    return true;
+    return commitResolvedNodeLaneChanges(expectedRevision, changes,
+                                         tr("delete automation point(s)"));
 }
 
 void AutomationCanvas::updateActiveGesture(const QPointF &position, Qt::KeyboardModifiers modifiers,
@@ -286,9 +253,13 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
                         uint64_t(std::max<int64_t>(0, int64_t(selection.startTick) + finish.dTick));
                     const auto endTick =
                         uint64_t(std::max<int64_t>(0, int64_t(selection.endTick) + finish.dTick));
-                    if (endTick > startTick)
-                        m_page->publishTimeSelection(startTick, endTick, selection.lanes,
-                                                     selection.tempo);
+                    if (endTick > startTick) {
+                        auto movedSelection = selection;
+                        movedSelection.startTick = startTick;
+                        movedSelection.endTick = endTick;
+                        m_page->m_owner.selectionModel().setTimeSelection(
+                            std::move(movedSelection));
+                    }
                 }
             }
         }
@@ -335,13 +306,18 @@ NodeDragGesture AutomationCanvas::collectSelectedNodeDrags() const
     NodeDragGesture result;
     if (!m_page || !m_page->document())
         return result;
-    for (int index = 0; index < int(m_nodeStack.size()); ++index) {
-        const NodeLane *lane = m_nodeStack[std::size_t(index)].lane;
+    const auto activeTickRange =
+        m_laneSelection ? m_laneSelection->activeTickRange() : std::nullopt;
+    for (std::size_t index = 0; index < m_nodeStack.size(); ++index) {
+        const NodeLaneSlot &slot = m_nodeStack[index];
+        const NodeLane *lane = slot.lane;
         if (!lane)
             continue;
-        const LaneHandle handle{index};
+        const LaneHandle handle{int(index)};
+        if (!m_laneSelection || !m_laneSelection->coversNodes(slot.id) || !activeTickRange)
+            continue;
         for (const NodePoint &point : lane->points()) {
-            if (!lane->pointSelected(point.tick))
+            if (point.tick < activeTickRange->first || point.tick >= activeTickRange->second)
                 continue;
             result.points.push_back(
                 {handle, point, point, lane->minimumValue(), lane->maximumValue()});
@@ -354,9 +330,9 @@ std::optional<NodeDragGesture>
 AutomationCanvas::nodeDragGestureAt(LaneHandle handle, const QPointF &position, bool axisLockArmed,
                                     const AutomationProjection &projection, bool pencilMode) const
 {
-    const NodeLane *lane = nullptr;
-    QRect body;
-    if (!resolveLane(handle, &lane, &body) || !lane || !m_page || !m_page->document() ||
+    const NodeLaneSlot *slot = resolveSlot(handle);
+    const NodeLane *lane = slot ? slot->lane : nullptr;
+    if (!slot || !lane || !m_page || !m_page->document() ||
         (pencilMode && !projection.nodeMarkersVisible()))
         return std::nullopt;
     NodePoint hit;
@@ -366,7 +342,12 @@ AutomationCanvas::nodeDragGestureAt(LaneHandle handle, const QPointF &position, 
     state.lane = handle;
     state.expectedRevision = m_page->document()->revision();
     const NodeDrag grabbed{handle, hit, hit, lane->minimumValue(), lane->maximumValue()};
-    if (lane->pointSelected(hit.tick)) {
+    const auto activeTickRange =
+        m_laneSelection ? m_laneSelection->activeTickRange() : std::nullopt;
+    const bool hitSelected = m_laneSelection && m_laneSelection->coversNodes(slot->id) &&
+                             activeTickRange && hit.tick >= activeTickRange->first &&
+                             hit.tick < activeTickRange->second;
+    if (hitSelected) {
         auto selected = collectSelectedNodeDrags();
         const auto grabbedPosition = std::find_if(
             selected.points.cbegin(), selected.points.cend(), [&](const NodeDrag &point) {

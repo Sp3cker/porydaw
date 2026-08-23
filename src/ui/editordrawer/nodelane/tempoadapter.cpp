@@ -1,13 +1,9 @@
 #include "ui/editordrawer/tempolane.h"
 
-#include <set>
-
 #include <QCoreApplication>
 
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/nodelane/batchcommit.h"
-#include "ui/songview/editorselectionmodel.h"
 
 QString TempoLane::title() const
 {
@@ -17,7 +13,7 @@ QString TempoLane::title() const
 std::vector<NodePoint> TempoLane::points() const
 {
     std::vector<NodePoint> points;
-    const SongDocument *document = boundDocument();
+    const SongDocument *document = m_page ? m_page->document() : m_document;
     if (!document)
         return points;
     const auto &tempoPoints = document->tempoPoints();
@@ -43,49 +39,20 @@ QString TempoLane::valueText(int value) const
     return QString::number(value);
 }
 
-bool TempoLane::pointSelected(uint64_t tick) const
+std::optional<NodePoint> TempoLane::leadIn() const
 {
-    const auto *selection = boundSelection();
-    if (!selection || !selection->timeSelectionCoversTempo(boundUsedTrackMask()))
-        return false;
-    const auto &range = selection->timeSelection();
-    return tick >= range.startTick && tick < range.endTick;
-}
-
-void TempoLane::deletePoints(const std::vector<uint64_t> &ticks)
-{
-    SongDocument *document = boundDocument();
-    if (!document || ticks.empty())
-        return;
-    const std::set<uint64_t> tickSet(ticks.begin(), ticks.end());
-    TempoEdit edit;
-    for (const TempoPoint &point : document->tempoPoints()) {
-        if (tickSet.contains(point.tick))
-            edit.remove.push_back(point);
-    }
-    if (edit.empty())
-        return;
-    document->applyTempoEdit(edit);
-    if (m_page)
-        m_page->requestRefresh();
-}
-
-void TempoLane::movePoints(const std::vector<NodePointMove> &moves)
-{
-    SongDocument *document = boundDocument();
-    if (!document || moves.empty())
-        return;
-    const auto resolved = nodelane::resolveTempoMoves(*document, moves);
-    if (!resolved || resolved->empty())
-        return;
-    document->applyTempoEdit(*resolved);
-    if (m_page)
-        m_page->requestRefresh();
+    const SongDocument *document = m_page ? m_page->document() : m_document;
+    if (!document)
+        return std::nullopt;
+    const auto &tempoPoints = document->tempoPoints();
+    if (tempoPoints.empty() || tempoPoints.front().tick == 0)
+        return std::nullopt;
+    return NodePoint{0, CoreTimeDefaults::kTempoBpm};
 }
 
 void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)
 {
-    SongDocument *document = boundDocument();
+    SongDocument *document = m_page ? m_page->document() : m_document;
     if (!document)
         return;
     const auto &tempoPoints = document->tempoPoints();
@@ -99,21 +66,4 @@ void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<Nod
         edit.add.push_back(
             {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
     document->applyTempoEdit(edit);
-    if (m_page)
-        m_page->requestRefresh();
-}
-
-SongDocument *TempoLane::boundDocument() const noexcept
-{
-    return m_page ? m_page->document() : m_document;
-}
-
-const songview::EditorSelectionModel *TempoLane::boundSelection() const noexcept
-{
-    return m_page ? &m_page->m_owner.selectionModel() : m_selection;
-}
-
-uint32_t TempoLane::boundUsedTrackMask() const noexcept
-{
-    return m_page ? m_page->usedTrackMask() : m_usedTrackMask;
 }

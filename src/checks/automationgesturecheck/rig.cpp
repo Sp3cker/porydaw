@@ -151,9 +151,7 @@ class MappingLane final : public NodeLane
     int minimumValue() const override { return m_minimum; }
     int maximumValue() const override { return m_maximum; }
     QString valueText(int) const override { return {}; }
-    bool pointSelected(uint64_t) const override { return false; }
-    void deletePoints(const std::vector<uint64_t> &) override {}
-    void movePoints(const std::vector<NodePointMove> &) override {}
+    bool promptValue(QWidget *, int, int *) const override { return false; }
     void replaceSpan(uint64_t, uint64_t, const std::vector<NodePoint> &) override {}
 
   private:

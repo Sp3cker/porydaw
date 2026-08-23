@@ -5,6 +5,7 @@
 #include <QLineF>
 #include <QPainter>
 #include <QPen>
+#include <QPolygon>
 #include <QRectF>
 
 #include "ui/editordrawer/automationprojection.h"
@@ -63,7 +64,7 @@ void paintPreviewLabel(QPainter &painter, const NodeLaneHoverState &hoverState, 
     painter.drawText(label.rect, Qt::AlignHCenter | Qt::AlignVCenter, label.text);
 }
 
-void paintStepCurve(QPainter &painter, const std::vector<NodePoint> &points, const QRect &plot,
+void paintStepCurve(QPainter &painter, std::span<const NodePoint> points, const QRect &plot,
                     const NodeLanePaint &paint, const QColor &color, qreal dpr,
                     const NodePoint *omitted, const NodePoint *replacement)
 {
@@ -73,12 +74,12 @@ void paintStepCurve(QPainter &painter, const std::vector<NodePoint> &points, con
     const auto yAt = [&](int value) {
         return valueY(paint.lane, paint.body, paint.geometry, value);
     };
-    if (paint.leadIn) {
+    const std::optional<NodePoint> leadIn = paint.lane.leadIn();
+    if (leadIn) {
         const qreal x = paint.projection.displayX(points.front().tick, dpr);
         const qreal y = yAt(points.front().value);
-        const qreal leadY = yAt(paint.leadIn->value);
-        painter.drawLine(
-            QLineF(paint.projection.displayX(paint.leadIn->tick, dpr), leadY, x, leadY));
+        const qreal leadY = yAt(leadIn->value);
+        painter.drawLine(QLineF(paint.projection.displayX(leadIn->tick, dpr), leadY, x, leadY));
         if (y != leadY)
             painter.drawLine(QLineF(x, leadY, x, y));
     }
@@ -103,12 +104,15 @@ void paintStepCurve(QPainter &painter, const std::vector<NodePoint> &points, con
 
 bool pointPaintSelected(const NodeLanePaint &paint, uint64_t tick)
 {
-    if (paint.lane.pointSelected(tick))
-        return true;
+    if (paint.selectedTickRange) {
+        const auto [firstTick, lastTick] = *paint.selectedTickRange;
+        if (tick >= firstTick && tick < lastTick)
+            return true;
+    }
     return paint.bandLane && tick >= paint.bandFirstTick && tick < paint.bandLastTick;
 }
 
-void paintNodes(QPainter &painter, const std::vector<NodePoint> &points, const QRect &plot,
+void paintNodes(QPainter &painter, std::span<const NodePoint> points, const QRect &plot,
                 const NodeLanePaint &paint, qreal dpr, const NodePoint *omitted)
 {
     if (!paint.projection.nodeMarkersVisible())
@@ -138,7 +142,7 @@ void paintNodes(QPainter &painter, const std::vector<NodePoint> &points, const Q
     paintPass(true);
 }
 
-void paintDragPreview(QPainter &painter, const std::vector<NodePoint> &points, const QRect &plot,
+void paintDragPreview(QPainter &painter, std::span<const NodePoint> points, const QRect &plot,
                       const NodeLanePaint &paint, const NodeDragGesture &gesture, qreal dpr)
 {
     if (gesture.points.empty() || gesture.grabbedPoint >= gesture.points.size())
@@ -150,7 +154,10 @@ void paintDragPreview(QPainter &painter, const std::vector<NodePoint> &points, c
     const auto yAt = [&](int value) {
         return valueY(paint.lane, paint.body, paint.geometry, value);
     };
-    if (gesture.points.size() == 1 && !paint.preparedPreviewCurve) {
+    const bool hasPreparedPreview = paint.preparedPreviewCurve && handle.valid() &&
+                                    handle.index < int(gesture.previewPoints.size()) &&
+                                    !gesture.previewPoints[std::size_t(handle.index)].empty();
+    if (gesture.points.size() == 1 && !hasPreparedPreview) {
         if (grabbed.lane != handle)
             return;
         const auto isOriginal = [&](const NodePoint &point) {
@@ -226,7 +233,7 @@ void paintSweepPreview(QPainter &painter, const NodeLanePaint &paint, const Swee
     paintPreviewLabel(painter, paint.hoverState, paint.handle);
 }
 
-void paintPencilPreview(QPainter &painter, const std::vector<NodePoint> &points, const QRect &plot,
+void paintPencilPreview(QPainter &painter, std::span<const NodePoint> points, const QRect &plot,
                         const NodeLanePaint &paint, const PencilGesture &gesture, qreal dpr)
 {
     const NodeLaneEdit::Completion &preview = gesture.stroke.preview();
@@ -328,6 +335,40 @@ QRectF nodeOverflowClip(const QRect &plot, const AutomationGeometry &geometry)
 
 } // namespace
 
+void paintLaneHeader(QPainter &painter, const LaneHeaderPaint &paint)
+{
+    if (paint.separator) {
+        painter.save();
+        painter.setPen(themes::color(themes::Role::song_view_separator));
+        painter.drawLine(paint.band.left(), paint.band.bottom(), paint.band.right(),
+                         paint.band.bottom());
+        painter.restore();
+    }
+    painter.save();
+    painter.setClipRect(paint.textClip, Qt::IntersectClip);
+    if (paint.arrow) {
+        const QRect &arrow = *paint.arrow;
+        const QPolygon triangle = paint.expanded ? QPolygon{{arrow.left(), arrow.top()},
+                                                            {arrow.right(), arrow.top()},
+                                                            {arrow.center().x(), arrow.bottom()}}
+                                                 : QPolygon{{arrow.left(), arrow.top()},
+                                                            {arrow.right(), arrow.center().y()},
+                                                            {arrow.left(), arrow.bottom()}};
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(themes::color(themes::Role::song_view_primary_text));
+        painter.drawPolygon(triangle);
+    }
+    painter.setFont(paint.expanded ? paint.titleFont : paint.captionFont);
+    painter.setPen(themes::color(themes::Role::song_view_primary_text));
+    painter.drawText(paint.primary, Qt::AlignLeft | Qt::AlignVCenter, paint.title);
+    if (!paint.secondaryText.isEmpty()) {
+        painter.setFont(paint.captionFont);
+        painter.setPen(themes::color(themes::Role::song_view_secondary_text));
+        painter.drawText(paint.secondary, Qt::AlignLeft | Qt::AlignVCenter, paint.secondaryText);
+    }
+    painter.restore();
+}
+
 QRect plotRect(const QRect &body, const AutomationGeometry &geometry)
 {
     return {geometry.plotOrigin, body.top(), std::max(0, body.width() - geometry.plotOrigin),
@@ -417,24 +458,23 @@ void paintNodeLane(QPainter &painter, const NodeLanePaint &paint)
     const QRectF overflow = nodeOverflowClip(plot, paint.geometry);
     painter.save();
     const qreal dpr = painter.device()->devicePixelRatioF();
-    const std::vector<NodePoint> points = paint.lane.points();
     const LaneHandle handle = paint.handle;
     if (paint.pencil && paint.pencil->lane == handle) {
         painter.setClipRect(overflow, Qt::IntersectClip);
-        paintPencilPreview(painter, points, plot, paint, *paint.pencil, dpr);
+        paintPencilPreview(painter, paint.points, plot, paint, *paint.pencil, dpr);
     } else {
         const NodePoint *omitted = nullptr;
         const NodePoint *replacement = nullptr;
         NodePoint omittedStore;
         NodePoint replacementStore;
-        const std::vector<NodePoint> *curve = &points;
+        std::span<const NodePoint> curve = paint.points;
         if (const NodeDragGesture *gesture = paint.nodeDrag) {
             const bool usePreview = (gesture->points.size() > 1 || paint.preparedPreviewCurve) &&
                                     handle.valid() &&
                                     handle.index < int(gesture->previewPoints.size()) &&
                                     !gesture->previewPoints[std::size_t(handle.index)].empty();
             if (usePreview) {
-                curve = &gesture->previewPoints[std::size_t(handle.index)];
+                curve = gesture->previewPoints[std::size_t(handle.index)];
             } else if (handle == gesture->lane && gesture->grabbedPoint < gesture->points.size()) {
                 const auto &point = gesture->points[gesture->grabbedPoint];
                 omittedStore = point.original;
@@ -447,12 +487,12 @@ void paintNodeLane(QPainter &painter, const NodeLanePaint &paint)
             paint.multipleSelectedNodes && !paint.selectedLane ? paint.dimmedColor : paint.color;
         painter.save();
         painter.setClipRect(plot, Qt::IntersectClip);
-        paintStepCurve(painter, *curve, plot, paint, curveColor, dpr, omitted, replacement);
+        paintStepCurve(painter, curve, plot, paint, curveColor, dpr, omitted, replacement);
         painter.restore();
         painter.setClipRect(overflow, Qt::IntersectClip);
-        paintNodes(painter, *curve, plot, paint, dpr, omitted);
+        paintNodes(painter, curve, plot, paint, dpr, omitted);
         if (paint.nodeDrag && (paint.nodeDrag->points.size() > 1 || handle == paint.nodeDrag->lane))
-            paintDragPreview(painter, points, plot, paint, *paint.nodeDrag, dpr);
+            paintDragPreview(painter, paint.points, plot, paint, *paint.nodeDrag, dpr);
         else if (paint.sweep && handle == paint.sweep->lane)
             paintSweepPreview(painter, paint, *paint.sweep, dpr);
     }

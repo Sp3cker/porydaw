@@ -3,7 +3,6 @@
 #include <array>
 #include <cstdint>
 #include <optional>
-#include <utility>
 #include <variant>
 #include <vector>
 
@@ -17,6 +16,7 @@
 
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/laneselection.h"
 #include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
@@ -51,7 +51,6 @@ class AutomationCanvas final : public songview::TimelineSurface
     void cancelInteraction();
     void setPencilMode(bool enabled);
     bool isPanning() const noexcept;
-    bool bandPreviewContains(LaneHandle handle, uint64_t tick) const noexcept;
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect labelGutter() const noexcept { return m_labelGutter; }
     int plotOrigin() const noexcept { return m_geometry.plotOrigin; }
@@ -73,7 +72,6 @@ class AutomationCanvas final : public songview::TimelineSurface
 
   private:
     friend class AutomationPage;
-    friend class TempoLane;
     friend class VoiceChangeLane;
     struct TickRange {
         uint64_t firstTick = 0;
@@ -84,6 +82,17 @@ class AutomationCanvas final : public songview::TimelineSurface
     struct PointerLaneHit {
         LaneHandle lane;
         bool tempoHeader = false;
+    };
+    struct NodeLaneSlot {
+        EditorAutomationRowId id;
+        NodeLane *lane = nullptr;
+        QRect body;
+        CCLanes::RowTextCache *text = nullptr;
+    };
+    struct NodeLaneChange {
+        const NodeLaneSlot *slot = nullptr;
+        std::vector<NodePointMove> moves;
+        std::vector<uint64_t> deleteTicks;
     };
     static void paintPlainGridFallback(QPainter &painter, const QRect &plot, AutomationPage &page,
                                        qreal plotOriginX, qreal dpr);
@@ -98,10 +107,8 @@ class AutomationCanvas final : public songview::TimelineSurface
     // Pixel <-> tick mapping over the current geometry and page timeline.
     AutomationProjection projection() const;
     NodeLaneHoverTarget hoverTarget() const;
-
-    bool promptPointValue(const AutomationRow &row, uint8_t controller, int currentValue,
-                          int *storedValue);
     bool showPointMenuNear(LaneHandle handle, const QPoint &position, const QPoint &globalPosition);
+
     bool commitLaneEdit(const NodeLaneEdit::Completion &completion);
     bool nodePointHit(LaneHandle handle, const QPointF &position, NodePoint *point) const;
     bool nodePointHit(LaneHandle handle, const QPointF &position, const AutomationProjection &proj,
@@ -123,9 +130,12 @@ class AutomationCanvas final : public songview::TimelineSurface
     bool commitNodePointMoves(uint64_t expectedRevision, const std::vector<NodeDrag> &points);
     bool commitNodePointDeletes(std::optional<uint64_t> expectedRevision,
                                 const std::vector<NodeDrag> &points);
-    void showTimeSelectionMenu(const QPoint &globalPosition);
+    bool commitResolvedNodeLaneChanges(std::optional<uint64_t> expectedRevision,
+                                       const std::vector<NodeLaneChange> &changes,
+                                       const QString &undoLabel);
+    void showTimeSelectionMenuFor(LaneHandle contextLane, const QPoint &globalPosition);
+    void showLaneMenuFor(LaneHandle handle, const QPoint &globalPosition);
     void showAddLaneMenu(const QPoint &globalPosition);
-    void showLaneMenu(const AutomationRow &row, const QPoint &globalPosition);
     void layoutLaneStack(int voiceTrack);
     int tempoTop() const;
     QRegion syncPinnedTempoLayout();
@@ -133,6 +143,7 @@ class AutomationCanvas final : public songview::TimelineSurface
     void rebuildNodeStack();
     LaneHandle laneAt(int y) const noexcept;
     PointerLaneHit pointerLaneAt(const QPoint &position) const noexcept;
+    const NodeLaneSlot *resolveSlot(LaneHandle handle) const noexcept;
     bool resolveLane(LaneHandle handle, const NodeLane **lane, QRect *body) const noexcept;
     NodeLane *mutableLane(LaneHandle handle) noexcept;
     void syncHoverValueLabel();
@@ -142,7 +153,6 @@ class AutomationCanvas final : public songview::TimelineSurface
     int ccLaneHeight(const AutomationRow &row) const;
     int ccRowBoundaryAt(int y) const;
     int addLaneStripTop() const;
-    int snapNeutralFor(LaneHandle handle) const;
     void publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
                               LaneHandle end) const;
     void setGestureActive(bool active);
@@ -158,10 +168,6 @@ class AutomationCanvas final : public songview::TimelineSurface
     TempoLane m_tempoLane;
     VoiceChangeLane m_voiceLane;
     std::vector<CCLaneAdapter> m_ccAdapters;
-    struct NodeLaneSlot {
-        NodeLane *lane = nullptr;
-        QRect body;
-    };
     std::vector<NodeLaneSlot> m_nodeStack;
     struct ResizeState {
         int row = -1;
@@ -178,8 +184,7 @@ class AutomationCanvas final : public songview::TimelineSurface
         int startVScroll = 0;
     } m_pan;
     BandGesture m_band;
-    LaneHandle m_bandStart;
-    LaneHandle m_bandEnd;
+    std::optional<LaneSelection> m_laneSelection;
     std::vector<NodePoint> m_clipboard;
     bool m_pencilMode = false;
     qreal m_pencilCursorDpr = 0.0;

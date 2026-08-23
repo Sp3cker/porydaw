@@ -310,11 +310,8 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     refresh(page, document, live);
     const auto startSnap = snapshot(document);
     const auto startTempo = document.tempoPoints();
-    auto usedTrackMask = uint32_t{0};
-    for (int track = 0; track < document.engineTrackCount() && track < 16; ++track)
-        usedTrackMask |= uint32_t{1} << track;
-    TempoLane tempoLane(document, view.selectionModel(), usedTrackMask);
-    CCLaneAdapter ccLane(document, view.selectionModel(), usedTrackMask, 0, uint8_t{10});
+    TempoLane tempoLane(document);
+    CCLaneAdapter ccLane(document, 0, uint8_t{10});
     const bool tempoExpanded = toggleTempoExpanded(page, true, failures);
     check(tempoExpanded, QStringLiteral("Tempo header did not expose the expanded body"));
     checkAutomationCanvasFontPaint(view, page, document, live, failures);
