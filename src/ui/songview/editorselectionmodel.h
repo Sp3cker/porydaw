@@ -12,6 +12,9 @@ struct TrackRemap;
 
 namespace songview {
 
+using TrackMask = uint32_t;
+inline constexpr uint32_t kTrackMask = (uint32_t{1} << 16) - 1;
+
 class EditorSelectionModel
 {
   public:
@@ -61,31 +64,33 @@ class EditorSelectionModel
     void setNoteSelection(std::vector<NoteId> ids);
     void clearNoteSelection();
     void setTimeSelection(TimeSelection selection);
+    void setTimeSelectionAndTrackScope(TimeSelection selection, TrackMask trackScope);
     void clearTimeSelection();
+    void setTrackScope(TrackMask trackScope);
     void clearBothSelections();
     void applyPrimaryTrackTransition(int track);
     void applyTrackScopeAdjustment(int clickedTrack, uint32_t usedTrackMask,
                                    TrackScopeAction action);
     void reconcileNoteSelection(std::span<const NoteId> validIds);
     void resetForSongSwap(int firstUsedTrack);
-    void clearNoteSelectionForDocumentAttachment();
     void applyRemap(const TrackRemap &remap);
 
   private:
-    static constexpr uint32_t kTrackMask = (uint32_t{1} << 16) - 1;
+    enum class Phase { Idle, Notifying };
 
     void notify(SelectionChange changes);
-    bool canMutate() const noexcept;
     static bool sameTimeSelection(const TimeSelection &a, const TimeSelection &b) noexcept;
     static TimeSelection sanitizeTimeSelection(TimeSelection selection);
     static int firstTrack(uint32_t mask) noexcept;
+    bool isNotifying() const noexcept { return m_phase == Phase::Notifying; }
+    void commit(TimeSelection time, TrackMask scope, std::vector<NoteId> notes);
 
     int m_primaryTrack = 0;
-    uint32_t m_trackScope = 1u;
+    TrackMask m_trackScope = 1u << 0;
     std::vector<NoteId> m_noteSelection;
     TimeSelection m_timeSelection;
     Observer m_observer;
-    bool m_notifying = false;
+    Phase m_phase = Phase::Idle;
 };
 
 constexpr EditorSelectionModel::SelectionChange

@@ -32,10 +32,11 @@ uint32_t usedTrackMask(const MidiTimeline *timeline) noexcept;
 qreal edgeGripInnerReach(const QRectF &noteRect, qreal minimumMoveWidth, qreal edgeGripReach);
 qreal velocityHandlePointerHitPadding(qreal noteHeight, qreal physicalPixel);
 bool isBlackKey(int key);
-bool resolveFoldDestinations(porydaw_scale::ScaleId scaleId, int scaleRoot,
-                             std::vector<DocNote> &notes, int degreeDelta,
-                             std::vector<uint8_t> &destinations);
 QString keyName(int key);
+// "Label\tCtrl+C" for a context-menu entry: the registry's current binding
+// of the command (native text) when bound, the bare label otherwise. Shared
+// by the note and time-selection menus so a rebinding updates both.
+QString contextActionText(const QString &text, const QString &commandId);
 QString timeSigLabel(int numerator, int denomPow2);
 bool askTimeSignature(QWidget *parent, int *numerator, int *denomPow2);
 QLinearGradient loopGlow(qreal edgeX, qreal transparentX);

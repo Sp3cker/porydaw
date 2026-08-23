@@ -30,19 +30,17 @@ NoteContextMenu::NoteContextMenu(QWidget *parent, std::function<bool(QPointF)> o
 {
     m_velocityAction = addAction(QString());
     addSeparator();
-    // Display-only hints (the real bindings live in keyPressEvent):
-    // mirror the keymap so a rebind doesn't leave the menu lying.
-    const auto &keys = keymap::Registry::instance();
+    // The shortcut is text only: MainWindow's native Edit menu owns Copy.
     m_copyAction = addAction(SongView::tr("Copy"));
-    m_copyAction->setShortcut(keys.bindings(QStringLiteral("roll.copy")).value(0));
     m_cutAction = addAction(SongView::tr("Cut"));
-    m_cutAction->setShortcut(keys.bindings(QStringLiteral("roll.cut")).value(0));
     m_deleteAction = addAction(SongView::tr("Delete"));
 }
 
 void NoteContextMenu::showMenuAt(QPoint globalPos, int velocity)
 {
     m_velocityAction->setText(SongView::tr("Set velocity… (%1)").arg(velocity));
+    m_copyAction->setText(contextActionText(SongView::tr("Copy"), QStringLiteral("roll.copy")));
+    m_cutAction->setText(contextActionText(SongView::tr("Cut"), QStringLiteral("roll.cut")));
     popup(globalPos);
 }
 

@@ -109,16 +109,50 @@ int runSelectionCheck()
         expectEvent(notifications, beforeInactive, kNoteSelection,
                     "clearing note selection reported the wrong category");
         const auto beforeBoth = notifications.changes.size();
-        model.clearBothSelections();
-        expectNoEvent(notifications, beforeBoth, "clearing already-empty selections notified");
+        model.clearTimeSelection();
+        expectNoEvent(notifications, beforeBoth,
+                      "clearing an already-empty time selection notified");
 
         model.setTimeSelection(tracks);
-        const auto beforeClearBoth = notifications.changes.size();
-        model.clearBothSelections();
+        const auto beforeClearTime = notifications.changes.size();
+        model.clearTimeSelection();
         expect(!model.timeSelection().active() && model.noteSelection().empty(),
-               "clearBothSelections did not clear active time selection");
-        expectEvent(notifications, beforeClearBoth, kTimeSelection,
-                    "clearBothSelections reported the wrong category");
+               "clearTimeSelection did not clear active time selection");
+        expectEvent(notifications, beforeClearTime, kTimeSelection,
+                    "clearTimeSelection reported the wrong category");
+    }
+
+    {
+        auto model = EditorSelectionModel{};
+        model.applyPrimaryTrackTransition(3);
+        auto notifications = NotificationLog{};
+        notifications.attach(model);
+
+        auto selection = EditorSelectionModel::TimeSelection{};
+        selection.startTick = 40;
+        selection.endTick = 80;
+        model.setTimeSelectionAndTrackScope(selection, trackBit(1) | trackBit(20));
+        expect(model.timeSelection().startTick == 40 && model.timeSelection().endTick == 80 &&
+                   model.storedTrackScope() == (trackBit(1) | trackBit(3)),
+               "atomic time-and-track assignment did not sanitize or retain the primary track");
+        expectEvent(notifications, 0, kTrackScope | kTimeSelection,
+                    "atomic time-and-track assignment did not report one coherent transition");
+
+        model.setNoteSelection({NoteId{23}});
+        notifications.changes.clear();
+        selection.startTick = 50;
+        selection.endTick = 90;
+        model.setTimeSelectionAndTrackScope(selection, trackBit(2));
+        expect(model.noteSelection().empty() &&
+                   model.storedTrackScope() == (trackBit(2) | trackBit(3)) &&
+                   model.timeSelection().startTick == 50 && model.timeSelection().endTick == 90,
+               "atomic time-and-track reassignment did not clear notes or preserve the range");
+        expectEvent(notifications, 0, kTrackScope | kNoteSelection | kTimeSelection,
+                    "atomic reassignment reported incomplete or intermediate categories");
+
+        const auto beforeNoOp = notifications.changes.size();
+        model.setTimeSelectionAndTrackScope(selection, trackBit(2) | trackBit(3));
+        expectNoEvent(notifications, beforeNoOp, "equivalent atomic assignment notified");
     }
 
     {
@@ -301,21 +335,20 @@ int runSelectionCheck()
         tracks.endTick = 10;
         model.setTimeSelection(tracks);
         notifications.changes.clear();
-        model.clearNoteSelectionForDocumentAttachment();
-        expect(model.timeSelection().active(),
-               "document attachment clear disturbed time selection");
-        expect(notifications.changes.empty(), "document attachment clear notified without notes");
+        model.clearNoteSelection();
+        expect(model.timeSelection().active(), "clearing note selection disturbed time selection");
+        expect(notifications.changes.empty(), "clearing note selection notified without notes");
 
         model.clearTimeSelection();
         model.setNoteSelection({NoteId{81}});
         notifications.changes.clear();
-        model.clearNoteSelectionForDocumentAttachment();
-        expect(model.noteSelection().empty(), "document attachment did not clear note selection");
+        model.clearNoteSelection();
+        expect(model.noteSelection().empty(), "clearNoteSelection did not clear note selection");
         expectEvent(notifications, 0, kNoteSelection,
-                    "document attachment clear reported the wrong category");
+                    "clearing note selection reported the wrong category");
         const auto before = notifications.changes.size();
-        model.clearNoteSelectionForDocumentAttachment();
-        expectNoEvent(notifications, before, "repeated document attachment clear notified");
+        model.clearNoteSelection();
+        expectNoEvent(notifications, before, "repeated note-selection clear notified");
     }
 
     {

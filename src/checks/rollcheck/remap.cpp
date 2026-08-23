@@ -126,22 +126,6 @@ ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song)
                            selection.startTick == 24 && selection.endTick == 48 &&
                            selection.lanes == expected;
                 };
-            const auto hasClipboardOwners =
-                [&](const std::vector<int> &expectedTracks,
-                    const std::vector<std::pair<int, uint8_t>> &expectedLanes) {
-                    const SongView::Clip &clip = remapView.clipboard();
-                    if (clip.tracks.size() != expectedTracks.size() ||
-                        clip.lanes.size() != expectedLanes.size())
-                        return false;
-                    for (size_t i = 0; i < expectedTracks.size(); i++)
-                        if (clip.tracks[i].track != expectedTracks[i])
-                            return false;
-                    for (size_t i = 0; i < expectedLanes.size(); i++)
-                        if (clip.lanes[i].track != expectedLanes[i].first ||
-                            clip.lanes[i].cc != expectedLanes[i].second)
-                            return false;
-                    return true;
-                };
             const auto hasMovedTrackState = [&] {
                 return remapView.selectionModel().primaryTrack() == 0 &&
                        remapView.selectionModel().storedTrackScope() == 0x3 &&
@@ -157,18 +141,15 @@ ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song)
                        hasRemappedCosmetics(remapView.editorViewState(), 0, 1);
             };
             const auto hasMovedOwnerState = [&] {
-                return hasMovedTrackState() && hasTimeSelectionLanes({{1, 7}, {0, 10}}) &&
-                       hasClipboardOwners({1, 0}, {{1, 7}, {0, 10}});
+                return hasMovedTrackState() && hasTimeSelectionLanes({{1, 7}, {0, 10}});
             };
             const auto hasOriginalOwnerState = [&] {
-                return hasOriginalTrackState() && hasTimeSelectionLanes({{0, 7}, {1, 10}}) &&
-                       hasClipboardOwners({0, 1}, {{0, 7}, {1, 10}});
+                return hasOriginalTrackState() && hasTimeSelectionLanes({{0, 7}, {1, 10}});
             };
             // Restore the complete fixture before exercising the main remap matrix.
             remapView.applyEditorViewState(remapCosmetics);
             remapView.selectionModel().clearNoteSelection();
             remapView.selectionModel().clearTimeSelection();
-            remapView.clipboard() = SongView::Clip{};
             remapView.setTrackMute(0, false);
             remapView.setTrackMute(1, false);
             remapView.setTrackSolo(0, false);
@@ -184,10 +165,6 @@ ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song)
             lanes.endTick = 48;
             lanes.lanes = {{0, 7}, {1, 10}};
             remapView.selectionModel().setTimeSelection(lanes);
-            SongView::Clip clip;
-            clip.tracks = {{0, {}}, {1, {}}};
-            clip.lanes = {{0, 7, {}}, {1, 10, {}}};
-            remapView.clipboard() = clip;
 
             remapDoc.moveTrack(0, 1);
             expectRemapBeforeDocument("move did not remap before documentChanged");
@@ -203,10 +180,9 @@ ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song)
                 fail("move redo did not restore remapped owners");
 
             // Later track-structure cases start without the move case's
-            // lane-selection and clipboard payload.
+            // lane-selection payload.
             remapView.selectionModel().clearTimeSelection();
             remapView.selectionModel().clearNoteSelection();
-            remapView.clipboard() = SongView::Clip{};
 
             const int inserted = remapDoc.addTrack(0);
             if (inserted < 0) {
@@ -266,10 +242,6 @@ ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song)
                 deletedLanes.endTick = 48;
                 deletedLanes.lanes = {{duplicate, 74}};
                 remapView.selectionModel().setTimeSelection(deletedLanes);
-                SongView::Clip deletedClip;
-                deletedClip.tracks = {{duplicate, {}}};
-                deletedClip.lanes = {{duplicate, 74, {}}};
-                remapView.clipboard() = deletedClip;
                 const std::vector<DocNote> duplicateNotes = remapDoc.notesForTrack(duplicate);
                 if (!duplicateNotes.empty())
                     remapView.selectionModel().setNoteSelection({duplicateNotes.front().noteId});
@@ -278,7 +250,7 @@ ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song)
                 if (remapView.selectionModel().primaryTrack() == duplicate ||
                     !remapView.selectionModel().noteSelection().empty() ||
                     remapView.selectionModel().timeSelection().active() ||
-                    !remapView.clipboard().empty() || remapView.trackMuted(duplicate) ||
+                    remapView.trackMuted(duplicate) ||
                     remapView.trackSoloed(duplicate) ||
                     hasEmptyLane(remapView.editorViewState(), duplicate, 74)) {
                     fail("deleted track left SongView-owned state behind");
@@ -296,7 +268,7 @@ ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song)
                 expectRemapBeforeDocument("delete undo did not remap before documentChanged");
                 if (!remapView.selectionModel().noteSelection().empty() ||
                     remapView.selectionModel().timeSelection().active() ||
-                    !remapView.clipboard().empty() || remapView.trackMuted(duplicate) ||
+                    remapView.trackMuted(duplicate) ||
                     remapView.trackSoloed(duplicate) ||
                     hasEmptyLane(remapView.editorViewState(), duplicate, 74)) {
                     fail("restored track inherited dropped SongView state");

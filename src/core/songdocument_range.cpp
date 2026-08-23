@@ -10,6 +10,42 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
     if (edit.empty())
         return;
     std::vector<EditOp> ops;
+    const int targetEngineTrackCount =
+        std::clamp(edit.minimumEngineTrackCount, engineTrackCount(), 16);
+    std::vector<int> engineToSmf = m_engineToSmf;
+    std::vector<uint8_t> engineChannels = m_engineChannel;
+    bool usedChannels[16] = {};
+    for (uint8_t channel : engineChannels)
+        usedChannels[channel] = true;
+    int nextSmfTrack = int(m_smf.tracks.size());
+    for (int engineTrack = engineTrackCount(); engineTrack < targetEngineTrackCount;
+         ++engineTrack) {
+        int channel = 0;
+        while (usedChannels[channel])
+            ++channel;
+        usedChannels[channel] = true;
+        EditOp insertTrack;
+        insertTrack.type = EditOp::InsertTrack;
+        insertTrack.smfTrack = nextSmfTrack;
+        ops.push_back(insertTrack);
+        engineToSmf.push_back(nextSmfTrack);
+        engineChannels.push_back(uint8_t(channel));
+        const bool writesInitialVoice = std::any_of(
+            edit.addPoints.begin(), edit.addPoints.end(), [&](const RangeEdit::LaneWrite &write) {
+                return write.engineTrack == engineTrack && write.cc == DOC_CC_VOICE &&
+                       std::any_of(write.points.begin(), write.points.end(),
+                                   [](const LanePointValue &point) { return point.tick == 0; });
+            });
+        if (!writesInitialVoice) {
+            EditOp seed;
+            seed.type = EditOp::InsertEvent;
+            seed.smfTrack = nextSmfTrack;
+            seed.event = makeChannelEvent(0xC, uint8_t(channel), 0, 0, 0);
+            ops.push_back(seed);
+        }
+        ++nextSmfTrack;
+    }
+    std::vector<EditOp> trims;
     if (!m_smf.tracks.empty()) {
         std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
         for (const DocNote &note : edit.removeNotes) {
@@ -86,34 +122,38 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
                 written.push_back({tn.engineTrack, note.key, note.tick,
                                    note.tick + std::max<uint32_t>(1, note.duration)});
         }
-        std::vector<EditOp> trims;
         resolveNoteOverlaps(written, edit.removeNotes, removals, trims);
         // All removals first (per SMF track, descending — appendRemoveOps sorts
         // and dedups), so every recorded index stays valid at apply time.
         for (size_t t = 0; t < m_smf.tracks.size(); t++)
             appendRemoveOps(ops, int(t), std::move(removals[t]));
         ops.insert(ops.end(), xcmdInserts.begin(), xcmdInserts.end());
-        for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
-            const int smfTrack = smfTrackFor(tn.engineTrack);
-            if (smfTrack < 0)
-                continue;
-            const uint8_t channel = channelFor(tn.engineTrack);
-            for (const NewNote &note : tn.notes)
-                appendNoteInsertOps(ops, smfTrack, channel, note.tick, note.key, note.duration,
-                                    note.velocity);
-        }
-        for (const RangeEdit::LaneWrite &lw : edit.addPoints) {
-            const int smfTrack = smfTrackFor(lw.engineTrack);
-            if (smfTrack < 0)
-                continue;
-            if (xcmd::descriptorForLane(lw.cc))
-                continue; // already emitted through the canonical plan above
-            const uint8_t channel = channelFor(lw.engineTrack);
-            for (const LanePointValue &point : lw.points)
-                appendLaneInsertOps(ops, smfTrack, channel, lw.cc, point.tick, point.value);
-        }
-        ops.insert(ops.end(), trims.begin(), trims.end());
     }
+    for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
+        if (tn.engineTrack < 0 || tn.engineTrack >= int(engineToSmf.size()))
+            continue;
+        const int smfTrack = engineToSmf[size_t(tn.engineTrack)];
+        const uint8_t channel = engineChannels[size_t(tn.engineTrack)];
+        for (const NewNote &note : tn.notes)
+            appendNoteInsertOps(ops, smfTrack, channel, note.tick, note.key, note.duration,
+                                note.velocity);
+    }
+    for (const RangeEdit::LaneWrite &lw : edit.addPoints) {
+        if (lw.engineTrack < 0 || lw.engineTrack >= int(engineToSmf.size()))
+            continue;
+        if (xcmd::descriptorForLane(lw.cc))
+            continue; // already emitted through the canonical plan above
+        const int smfTrack = engineToSmf[size_t(lw.engineTrack)];
+        const uint8_t channel = engineChannels[size_t(lw.engineTrack)];
+        for (const LanePointValue &pt : lw.points) {
+            EditOp op;
+            op.type = EditOp::InsertEvent;
+            op.smfTrack = smfTrack;
+            op.event = makeLaneEvent(lw.cc, channel, pt.tick, pt.value);
+            ops.push_back(op);
+        }
+    }
+    ops.insert(ops.end(), trims.begin(), trims.end());
     if (edit.removeTempo.empty() && edit.addTempo.empty()) {
         pushEdit(text, std::move(ops));
         return;

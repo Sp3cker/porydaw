@@ -116,16 +116,72 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                          ruler->height() - 2);
 
         view.selectionModel().clearTimeSelection();
+        view.selectionModel().applyTrackScopeAdjustment(
+            track, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Plain);
+        if (doc.engineTrackCount() > 1) {
+            const int priorSecondary = track == 0 ? 1 : 0;
+            view.selectionModel().applyTrackScopeAdjustment(
+                priorSecondary, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Toggle);
+        }
+        // Modifier changes after the press do not change this plain sweep.
         checks::events::sendMouse(*ruler, QEvent::MouseButtonPress, start, Qt::LeftButton,
                                   Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
+                                  Qt::ControlModifier);
+        checks::events::sendMouse(*ruler, QEvent::MouseButtonRelease, end, Qt::LeftButton,
+                                  Qt::NoButton, Qt::ControlModifier);
+        if (!view.selectionModel().timeSelection().active() ||
+            view.selectionModel().timeSelection().startTick != startTick ||
+            view.selectionModel().timeSelection().endTick != endTick ||
+            view.selectionModel().storedTrackScope() != (uint32_t{1} << track))
+            fail("plain ruler drag did not create a primary-only time selection");
+
+        uint32_t expectedScope = uint32_t{1} << track;
+        const ViewNote *scopedGhost = nullptr;
+        for (const ViewNote &note : view.model().notes) {
+            if (note.startTick >= endTick)
+                break;
+            if (startTick < note.endTick) {
+                expectedScope |= uint32_t{1} << note.track;
+                if (note.track != track && !scopedGhost)
+                    scopedGhost = &note;
+            }
+        }
+        QWidget *secondaryHeader =
+            scopedGhost ? view.findChild<QWidget *>(
+                              QStringLiteral("trackHeaderRow%1").arg(scopedGhost->track))
+                        : nullptr;
+        const QImage plainHeader = secondaryHeader ? secondaryHeader->grab().toImage() : QImage{};
+        // Ctrl is captured at press even though it is absent from move/release.
+        checks::events::sendMouse(*ruler, QEvent::MouseButtonPress, start, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::ControlModifier);
         checks::events::sendMouse(*ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
                                   Qt::NoModifier);
         checks::events::sendMouse(*ruler, QEvent::MouseButtonRelease, end, Qt::LeftButton,
                                   Qt::NoButton, Qt::NoModifier);
-        if (!view.selectionModel().timeSelection().active() ||
-            view.selectionModel().timeSelection().startTick != startTick ||
-            view.selectionModel().timeSelection().endTick != endTick)
-            fail("left-dragging the timeline ruler did not create the time selection");
+        if (view.selectionModel().timeSelection().startTick != startTick ||
+            view.selectionModel().timeSelection().endTick != endTick ||
+            view.selectionModel().storedTrackScope() != expectedScope)
+            fail("modified ruler drag did not derive the overlapping note-track scope");
+        if (!scopedGhost) {
+            fail("modified ruler drag fixture has no overlapping secondary-track note");
+        } else {
+            const QRectF ghostBox = rows.noteBox(rows.noteRect(
+                view.displayX(double(scopedGhost->startTick), pianoKeyboardWidth, rows.dpr()),
+                view.displayX(double(scopedGhost->endTick), pianoKeyboardWidth, rows.dpr()),
+                scopedGhost->key));
+            const QPixmap scopedPixmap = roll->grab();
+            const QImage scopedImage = scopedPixmap.toImage();
+            const qreal scopedDpr = scopedPixmap.devicePixelRatio();
+            const int centerX = qRound(ghostBox.center().x() * scopedDpr);
+            const int bottomY = qRound(ghostBox.bottom() * scopedDpr) - 1;
+            if (!isSelectionRingColor(scopedImage.pixel(centerX, bottomY)))
+                fail("time-scoped ghost note did not render its selection ring");
+            const QImage selectedHeader =
+                secondaryHeader ? secondaryHeader->grab().toImage() : QImage{};
+            if (plainHeader.isNull() || selectedHeader.isNull() || plainHeader == selectedHeader)
+                fail("time-scoped secondary header did not render its selection indicator");
+        }
         const QPoint outsideSelection(
             qRound(view.displayX(double(endTick + snapCell), rulerBand.timelineOrigin, rulerDpr)),
             ruler->height() - 2);
@@ -284,7 +340,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                 songview::EditorSelectionModel::TimeSelection trackSelection;
                 trackSelection.startTick = insertStart;
                 trackSelection.endTick = insertEnd;
-                view.selectionModel().setTimeSelection(trackSelection);
+                view.selectionModel().setTimeSelectionAndTrackScope(trackSelection, 1u << track);
                 const int insertUndoIndex = doc.undoStack()->index();
                 view.insertBlankTime();
                 DocNote otherAfter;

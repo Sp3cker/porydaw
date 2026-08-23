@@ -79,6 +79,43 @@ std::optional<uint8_t> SongView::previewVelocity(NoteId noteId) const
 {
     return m_velocityGesture.previewVelocity(noteId);
 }
+void SongView::setScaleHighlight(bool enabled)
+{
+    if (enabled == m_scaleController.scaleHighlight())
+        return;
+    m_scaleController.setScaleHighlight(enabled);
+    m_roll->invalidateContent();
+    emit scaleHighlightChanged();
+}
+void SongView::setScaleFold(bool enabled)
+{
+    if (enabled == m_scaleController.scaleFold())
+        return;
+    m_scaleController.setScaleFold(enabled);
+    rebuildProjectionWithAnchoring();
+    emit scaleFoldChanged();
+}
+void SongView::setScaleRoot(int root)
+{
+    root = std::clamp(root, 0, 11);
+    if (root == m_scaleController.scaleRoot())
+        return;
+    m_scaleController.setScaleRoot(root);
+    m_scaleController.rebuildClassification(m_projection);
+    if (m_scaleController.scaleHighlight() || m_scaleController.scaleFold())
+        m_roll->invalidateContent();
+    emit scaleRootChanged();
+}
+void SongView::setScaleId(porydaw_scale::ScaleId id)
+{
+    if (id == m_scaleController.scaleId())
+        return;
+    m_scaleController.setScaleId(id);
+    m_scaleController.rebuildClassification(m_projection);
+    if (m_scaleController.scaleHighlight() || m_scaleController.scaleFold())
+        m_roll->invalidateContent();
+    emit scaleIdChanged();
+}
 void SongView::setProjectionLocked(bool locked)
 {
     m_projectionLocked = locked;
@@ -89,6 +126,13 @@ void SongView::flushProjectionIfDirty()
         m_projectionDirty = false;
         rebuildProjectionWithAnchoring();
     }
+}
+void SongView::requestProjectionRebuild()
+{
+    if (m_projectionLocked)
+        m_projectionDirty = true;
+    else
+        rebuildProjectionWithAnchoring();
 }
 void SongView::buildOccupancySet(std::span<bool, 128> out) const
 {
@@ -120,66 +164,13 @@ void SongView::rebuildProjectionWithAnchoring()
     updateScrollbars();
     m_roll->invalidateContent();
 }
-void SongView::setScaleHighlight(bool enabled)
-{
-    if (enabled == m_scaleHighlight)
-        return;
-    m_scaleHighlight = enabled;
-    m_roll->invalidateContent();
-    emit scaleHighlightChanged();
-}
-void SongView::setScaleFold(bool enabled)
-{
-    if (enabled == m_scaleFold)
-        return;
-    m_scaleFold = enabled;
-    rebuildProjectionWithAnchoring();
-    emit scaleFoldChanged();
-}
-void SongView::setScaleRoot(int root)
-{
-    root = std::clamp(root, 0, 11);
-    if (root == m_scaleRoot)
-        return;
-    m_scaleRoot = root;
-    updateScaleMembership();
-    if (m_scaleHighlight || m_scaleFold)
-        m_roll->invalidateContent();
-    emit scaleRootChanged();
-}
-void SongView::setScaleId(porydaw_scale::ScaleId id)
-{
-    if (id == m_scaleId)
-        return;
-    m_scaleId = id;
-    updateScaleMembership();
-    if (m_scaleHighlight || m_scaleFold)
-        m_roll->invalidateContent();
-    emit scaleIdChanged();
-}
 void SongView::updateScaleProjection()
 {
-    if (m_scaleFold) {
-        std::array<bool, 128> occupancy{};
+    std::array<bool, 128> occupancy{};
+    if (m_scaleController.scaleFold())
         buildOccupancySet(std::span<bool, 128>(occupancy));
-        std::array<uint8_t, 128> visiblePitches;
-        int count = 0;
-        for (int pitch = 0; pitch < 128; pitch++) {
-            if (occupancy[pitch])
-                visiblePitches[count++] = static_cast<uint8_t>(pitch);
-        }
-        m_projection.buildFromPitches(std::span(visiblePitches).first(count));
-    } else {
-        m_projection.buildChromatic();
-    }
-    updateScaleMembership();
-}
-void SongView::updateScaleMembership()
-{
-    std::array<bool, 128> isScalePitch{};
-    for (int pitch = 0; pitch < 128; pitch++)
-        isScalePitch[pitch] = porydaw_scale::isScalePitch(m_scaleId, m_scaleRoot, pitch);
-    m_projection.setScalePitchClassification(std::span<const bool, 128>(isScalePitch));
+    m_scaleController.rebuildProjection(m_projection, std::span<const bool, 128>(occupancy));
+    m_scaleController.rebuildClassification(m_projection);
 }
 void SongView::setVelocityColorMode(bool on)
 {

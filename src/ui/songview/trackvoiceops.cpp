@@ -413,30 +413,10 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
     const uint32_t solo = remapMask(m_soloMask);
     auto remappedEditorViewState = m_editorViewState;
     const bool drawerChanged = remappedEditorViewState.remapEngineTracks(remap.engineTrackMap);
-    std::vector<ClipTrack> remappedTracks;
-    remappedTracks.reserve(m_clip.tracks.size());
-    for (ClipTrack &track : m_clip.tracks) {
-        const int destination = remapTrack(track.track);
-        if (destination >= 0) {
-            track.track = destination;
-            remappedTracks.push_back(std::move(track));
-        }
-    }
-    std::vector<ClipLane> remappedClipLanes;
-    remappedClipLanes.reserve(m_clip.lanes.size());
-    for (ClipLane &lane : m_clip.lanes) {
-        const int destination = remapTrack(lane.track);
-        if (destination >= 0) {
-            lane.track = destination;
-            remappedClipLanes.push_back(std::move(lane));
-        }
-    }
 
     // Commit external state without refreshes or application signals. The
     // model notification below must observe this complete batch.
     m_editorViewState = std::move(remappedEditorViewState);
-    m_clip.tracks = std::move(remappedTracks);
-    m_clip.lanes = std::move(remappedClipLanes);
     const bool muteChanged = mute != m_muteMask;
     const bool soloChanged = solo != m_soloMask;
     m_muteMask = mute;

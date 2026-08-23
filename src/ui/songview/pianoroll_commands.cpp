@@ -6,6 +6,7 @@
 #include "ui/layout.h"
 #include "ui/pitchbendeditor.hpp"
 #include "ui/songview.h"
+#include "ui/songview/clipmime.h"
 #include "ui/songview/detail.h"
 
 #include <QCursor>
@@ -32,28 +33,24 @@ void PianoRoll::keyPressEvent(QKeyEvent *event)
 {
     if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key()))
         invalidateContent();
-    // Time-selection range ops (and range-clip paste) win over the
-    // note-selection shortcuts; the two selections are mutually
-    // exclusive, so there is never a real conflict.
-    if (m_sv->handleEditKey(event))
-        return;
     const auto &keys = keymap::Registry::instance();
     SongDocument *doc = m_sv->document();
-    const bool cut = keys.matches(event, QStringLiteral("roll.cut"));
-    if (doc && (cut || keys.matches(event, QStringLiteral("roll.copy")))) {
-        const std::vector<DocNote> notes = resolveSelection();
-        if (!notes.empty()) {
-            copyNotes(notes);
-            if (cut) {
-                doc->deleteNotes(notes);
-                m_sv->selectionModel().clearNoteSelection();
-            }
-        }
+    if (doc && keys.matches(event, QStringLiteral("roll.paste"))) {
+        pasteAtEditCursor();
         event->accept();
         return;
     }
-    if (doc && keys.matches(event, QStringLiteral("roll.paste"))) {
-        pasteAtEditCursor();
+    // Shared Copy dispatch runs first so time and note selections use the
+    // same command from every editor surface.
+    if (m_sv->handleEditKey(event))
+        return;
+    if (doc && keys.matches(event, QStringLiteral("roll.cut"))) {
+        const std::vector<DocNote> notes = resolveSelection();
+        if (!notes.empty()) {
+            copyNotes(notes);
+            doc->deleteNotes(notes);
+            m_sv->selectionModel().clearNoteSelection();
+        }
         event->accept();
         return;
     }
@@ -128,9 +125,7 @@ void PianoRoll::keyReleaseEvent(QKeyEvent *event)
 
 void PianoRoll::beginDraw()
 {
-    if (m_sv->scaleFold() &&
-        (m_pressKey < 0 ||
-         !porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), m_pressKey))) {
+    if (m_sv->scaleFold() && (m_pressKey < 0 || !m_sv->isScalePitch(m_pressKey))) {
         return;
     }
     m_drawAnchor = m_sv->snapTickDown(m_pressTick);
@@ -287,46 +282,35 @@ void PianoRoll::nudgeSelection(bool right)
     invalidateContent();
 }
 
+void PianoRoll::copySelectedNotes()
+{
+    const std::vector<DocNote> notes = resolveSelection();
+    if (!notes.empty())
+        copyNotes(notes);
+}
+
 void PianoRoll::copyNotes(const std::vector<DocNote> &notes)
 {
     uint64_t base = UINT64_MAX;
     for (const DocNote &note : notes)
         base = std::min(base, note.tick);
-    SongView::Clip clip;
-    SongView::ClipTrack ct{m_sv->selectionModel().primaryTrack(), {}};
+    Clip clip;
+    ClipTrack ct{m_sv->selectionModel().primaryTrack(), {}};
     for (const DocNote &note : notes)
         ct.notes.push_back({uint32_t(note.tick - base), note.key,
                             note.duration ? note.duration : uint32_t(m_sv->gridTicksAt(note.tick)),
                             note.velocity});
     clip.tracks.push_back(std::move(ct));
-    m_sv->clipboard() = std::move(clip);
+    writeClipboard(clip, m_sv->timeline()->ticksPerBeat);
     m_sv->announce(SongView::tr("Copied %n note(s)", nullptr, int(notes.size())));
 }
 
 void PianoRoll::pasteAtEditCursor()
 {
-    SongDocument *doc = m_sv->document();
-    const SongView::Clip &clip = m_sv->clipboard();
-    if (!doc || clip.span != 0 || clip.tracks.empty() || clip.tracks.front().notes.empty())
-        return;
-    const uint64_t base = m_sv->snapTick(double(m_sv->editCursorTick()));
-    const int selectedTrack = m_sv->selectionModel().primaryTrack();
-    const std::vector<DocNote> before = doc->notesForTrack(selectedTrack);
-    std::vector<SongDocument::NewNote> notes;
-    uint64_t end = base;
-    for (const SongView::ClipNote &cn : clip.tracks.front().notes) {
-        const uint64_t tick = base + cn.relTick;
-        notes.push_back({tick, cn.key, cn.duration, cn.velocity});
-        end = std::max(end, tick + cn.duration);
-    }
-    doc->addNotes(selectedTrack, notes);
-    m_sv->selectionModel().setNoteSelection(insertedNoteIds(selectedTrack, before));
-    // Like pasteRangeAtEditCursor: advance the edit cursor past the pasted
-    // notes so repeated Ctrl+V lays copies back-to-back, but keep the view
-    // anchored on the content that just landed.
-    m_sv->commitEditCursor(end);
-    m_sv->ensureTickVisible(base);
-    m_sv->announce(SongView::tr("Pasted %n note(s)", nullptr, int(notes.size())));
+    // Every paste path (roll keys, drawer-canvas keys, the time-selection
+    // menu) shares the one entry on SongView, which owns the read, the
+    // span-0 vs span>0 dispatch, and the cursors-and-announce tail.
+    m_sv->pasteFromClipboard();
 }
 
 void PianoRoll::selectAllNotes()
