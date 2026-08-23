@@ -7,6 +7,7 @@
 #include <QPoint>
 #include <QRectF>
 #include <QTimer>
+#include <QtMath>
 #include <QWidget>
 #include <algorithm>
 #include <cmath>
@@ -15,6 +16,7 @@
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
+#include "ui/songview/pianoroll.h"
 
 namespace checks::rollcheck {
 
@@ -177,6 +179,31 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             const int bottomY = qRound(ghostBox.bottom() * scopedDpr) - 1;
             if (!isSelectionRingColor(scopedImage.pixel(centerX, bottomY)))
                 fail("time-scoped ghost note did not render its selection ring");
+            auto *pianoRoll = static_cast<songview::PianoRoll *>(roll);
+            auto movedSelection = view.selectionModel().timeSelection();
+            ++movedSelection.endTick;
+            const auto beforeMovePaint = pianoRoll->diagnostics();
+            view.selectionModel().setTimeSelection(movedSelection);
+            const QImage partialSelectionImage = pianoRoll->grab().toImage();
+            const auto afterMovePaint = pianoRoll->diagnostics();
+            const quint64 movedPaintPixels =
+                afterMovePaint.contentPaintPixelCount - beforeMovePaint.contentPaintPixelCount;
+            const qreal rollDpr = pianoRoll->devicePixelRatioF();
+            const quint64 fullRollPixels = quint64(qCeil(pianoRoll->width() * rollDpr)) *
+                                           quint64(qCeil(pianoRoll->height() * rollDpr));
+            if (afterMovePaint.contentPaintCount <= beforeMovePaint.contentPaintCount)
+                fail("moving a stable-scope time selection painted no roll content");
+            else if (movedPaintPixels == 0)
+                fail("moving a stable-scope time selection reported no painted pixels");
+            else if (movedPaintPixels >= fullRollPixels)
+                fail("moving a stable-scope time selection repainted the full piano roll");
+            pianoRoll->invalidateContent();
+            QCoreApplication::processEvents();
+            if (partialSelectionImage != pianoRoll->grab().toImage())
+                fail("partial time-selection repaint differed from a full repaint");
+            view.selectionModel().setTimeSelection(
+                {startTick, endTick, songview::EditorSelectionModel::TimeSelection::Tracks});
+            QCoreApplication::processEvents();
             const QImage selectedHeader =
                 secondaryHeader ? secondaryHeader->grab().toImage() : QImage{};
             if (plainHeader.isNull() || selectedHeader.isNull() || plainHeader == selectedHeader)

@@ -19,11 +19,14 @@ constexpr auto kTimeSelection = static_cast<uint32_t>(SelectionChange::TimeSelec
 
 struct NotificationLog {
     std::vector<uint32_t> changes;
+    std::vector<EditorSelectionModel::SelectionTransition> transitions;
 
     void attach(EditorSelectionModel &model)
     {
-        model.setObserver(
-            [this](SelectionChange change) { changes.push_back(static_cast<uint32_t>(change)); });
+        model.setObserver([this](const EditorSelectionModel::SelectionTransition &transition) {
+            changes.push_back(static_cast<uint32_t>(transition.changes));
+            transitions.push_back(transition);
+        });
     }
 };
 
@@ -137,6 +140,12 @@ int runSelectionCheck()
                "atomic time-and-track assignment did not sanitize or retain the primary track");
         expectEvent(notifications, 0, kTrackScope | kTimeSelection,
                     "atomic time-and-track assignment did not report one coherent transition");
+        expect(notifications.transitions.back().previousTrackTime.trackScope == 0 &&
+                   notifications.transitions.back().trackTime.startTick == 40 &&
+                   notifications.transitions.back().trackTime.endTick == 80 &&
+                   notifications.transitions.back().trackTime.trackScope ==
+                       (trackBit(1) | trackBit(3)),
+               "atomic assignment did not expose its old and new track-time projection");
 
         model.setNoteSelection({NoteId{23}});
         notifications.changes.clear();
@@ -149,6 +158,12 @@ int runSelectionCheck()
                "atomic time-and-track reassignment did not clear notes or preserve the range");
         expectEvent(notifications, 0, kTrackScope | kNoteSelection | kTimeSelection,
                     "atomic reassignment reported incomplete or intermediate categories");
+        expect(!notifications.transitions.back().previousTrackTime.active() &&
+                   notifications.transitions.back().trackTime.startTick == 50 &&
+                   notifications.transitions.back().trackTime.endTick == 90 &&
+                   notifications.transitions.back().trackTime.trackScope ==
+                       (trackBit(2) | trackBit(3)),
+               "atomic reassignment lost its track-time transition");
 
         const auto beforeNoOp = notifications.changes.size();
         model.setTimeSelectionAndTrackScope(selection, trackBit(2) | trackBit(3));

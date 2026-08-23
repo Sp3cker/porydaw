@@ -275,6 +275,77 @@ void PianoRoll::setHoverKey(int key)
     invalidateContent(oldRegion | newRegion);
 }
 
+void PianoRoll::invalidateTimeSelection(const SongDocument::TimeRange &previousRange,
+                                        uint32_t previousTrackMask,
+                                        const SongDocument::TimeRange &range, uint32_t trackMask)
+{
+    const QRect plotRect(m_geometry.pianoKeyboardWidth, lyt::space(Space::Zero),
+                         width() - m_geometry.pianoKeyboardWidth, height());
+    const auto bandRegion = [this, &plotRect](const SongDocument::TimeRange &timeRange,
+                                              uint32_t tracks) {
+        if (tracks == 0 || timeRange.endTick <= timeRange.startTick)
+            return QRegion();
+        const qreal dpr = devicePixelRatioF();
+        const qreal x0 =
+            m_sv->displayX(double(timeRange.startTick), m_geometry.pianoKeyboardWidth, dpr);
+        const qreal x1 =
+            m_sv->displayX(double(timeRange.endTick), m_geometry.pianoKeyboardWidth, dpr);
+        return QRegion(QRectF(x0, lyt::space(Space::Zero), x1 - x0, height()).toAlignedRect())
+            .intersected(plotRect);
+    };
+    const auto edgeRegion = [this, &plotRect](const SongDocument::TimeRange &timeRange,
+                                              uint32_t tracks) {
+        if (tracks == 0 || timeRange.endTick <= timeRange.startTick)
+            return QRegion();
+        const qreal dpr = devicePixelRatioF();
+        const qreal edgeWidth = std::max<qreal>(physicalPixel(), lyt::singlePixel());
+        QRegion edges;
+        for (const uint64_t tick : {timeRange.startTick, timeRange.endTick}) {
+            const qreal x = m_sv->displayX(double(tick), m_geometry.pianoKeyboardWidth, dpr);
+            edges |= QRegion(QRectF(x - edgeWidth, lyt::space(Space::Zero), 2 * edgeWidth, height())
+                                 .toAlignedRect());
+        }
+        return edges.intersected(plotRect);
+    };
+    const QRegion previousBand = bandRegion(previousRange, previousTrackMask);
+    const QRegion band = bandRegion(range, trackMask);
+    QRegion dirty = previousBand.subtracted(band) | band.subtracted(previousBand) |
+                    edgeRegion(previousRange, previousTrackMask) | edgeRegion(range, trackMask);
+    const auto selected = [](const SongDocument::TimeRange &timeRange, uint32_t tracks,
+                             const ViewNote &note) {
+        return note.track >= 0 && note.track < 16 && (tracks & (uint32_t{1} << note.track)) != 0 &&
+               timeRange.overlaps(note.startTick, note.endTick);
+    };
+    const uint64_t latestEnd = std::max(previousRange.endTick, range.endTick);
+    for (const ViewNote &note : m_sv->model().notes) {
+        if (note.startTick >= latestEnd)
+            break;
+        if (selected(previousRange, previousTrackMask, note) == selected(range, trackMask, note)) {
+            continue;
+        }
+        const QRect outerFrame = noteBox(displayedNoteRect(note)).toAlignedRect();
+        const qreal dpr = devicePixelRatioF();
+        const int frameInset = std::max(
+            lyt::singlePixel(), qCeil((selectionRingPixels(dpr) + noteBorderPixels(dpr)) / dpr));
+        const QRect innerFrame =
+            outerFrame.adjusted(frameInset, frameInset, -frameInset, -frameInset);
+        QRegion frameRegion(outerFrame);
+        if (!innerFrame.isEmpty())
+            frameRegion -= innerFrame;
+        dirty |= frameRegion;
+    }
+    dirty &= plotRect;
+    if (dirty.isEmpty())
+        return;
+    qint64 dirtyArea = 0;
+    for (const QRect &dirtyRect : dirty)
+        dirtyArea += qint64(dirtyRect.width()) * qint64(dirtyRect.height());
+    if (dirtyArea * 2 >= qint64(plotRect.width()) * qint64(plotRect.height()))
+        invalidateContent();
+    else
+        invalidateContent(dirty);
+}
+
 QRectF PianoRoll::noteRect(qreal x0, qreal x1, int key) const
 {
     const int row = m_sv->pitchProjection().rowForPitch(key);
