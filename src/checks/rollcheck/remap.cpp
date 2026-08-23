@@ -250,8 +250,7 @@ ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song)
                 if (remapView.selectionModel().primaryTrack() == duplicate ||
                     !remapView.selectionModel().noteSelection().empty() ||
                     remapView.selectionModel().timeSelection().active() ||
-                    remapView.trackMuted(duplicate) ||
-                    remapView.trackSoloed(duplicate) ||
+                    remapView.trackMuted(duplicate) || remapView.trackSoloed(duplicate) ||
                     hasEmptyLane(remapView.editorViewState(), duplicate, 74)) {
                     fail("deleted track left SongView-owned state behind");
                 }
@@ -268,8 +267,7 @@ ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song)
                 expectRemapBeforeDocument("delete undo did not remap before documentChanged");
                 if (!remapView.selectionModel().noteSelection().empty() ||
                     remapView.selectionModel().timeSelection().active() ||
-                    remapView.trackMuted(duplicate) ||
-                    remapView.trackSoloed(duplicate) ||
+                    remapView.trackMuted(duplicate) || remapView.trackSoloed(duplicate) ||
                     hasEmptyLane(remapView.editorViewState(), duplicate, 74)) {
                     fail("restored track inherited dropped SongView state");
                 }

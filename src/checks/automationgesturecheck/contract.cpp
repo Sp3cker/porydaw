@@ -7,13 +7,17 @@
 #include <vector>
 
 #include <QCoreApplication>
+#include <QPointF>
 #include <QString>
 #include <QUndoStack>
 
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "rig.h"
+#include "ui/editordrawer/automationcanvas.h"
+#include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/laneselection.h"
 #include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
@@ -180,11 +184,15 @@ void checkUndoRestores(const CaseContext &context, const DocSnapshot &before,
         undone.undoIndex == before.undoIndex && undone.smf == before.smf &&
             sameNodePoints(lane.points(), beforePoints),
         QStringLiteral("undo did not restore SMF, undo index, and points %1 (got %2)")
-            .arg(formatPoints(beforePoints), formatPoints(lane.points())));
+            .arg(formatPoints(beforePoints))
+            .arg(formatPoints(lane.points())));
     document.undoStack()->redo();
-    context.check.require(sameNodePoints(lane.points(), afterPoints),
-                          QStringLiteral("redo did not restore points %1 (got %2)")
-                              .arg(formatPoints(afterPoints), formatPoints(lane.points())));
+    const auto redone = snapshot(document);
+    context.check.require(
+        redone.undoIndex == before.undoIndex + 1 && sameNodePoints(lane.points(), afterPoints),
+        QStringLiteral("redo did not restore points %1 or the committed undo index (got %2)")
+            .arg(formatPoints(afterPoints))
+            .arg(redone.undoIndex));
     document.undoStack()->undo();
 }
 
@@ -274,8 +282,7 @@ void checkRangesTextSelection(const CaseContext &context)
             lane.valueText(64) == m4aFormatCcValue(context.session.controller, 64) &&
                 lane.valueText(0) == m4aFormatCcValue(context.session.controller, 0),
             QStringLiteral("CC valueText was %1 / %2").arg(lane.valueText(64), lane.valueText(0)));
-        CCLaneAdapter bend(context.session.document, context.session.selection,
-                           context.session.usedTrackMask, context.session.engineTrack, DOC_CC_BEND);
+        CCLaneAdapter bend(context.session.document, context.session.engineTrack, DOC_CC_BEND);
         context.check.require(bend.minimumValue() == CoreTimeDefaults::kMinBendValue &&
                                   bend.maximumValue() == CoreTimeDefaults::kMaxBendValue &&
                                   bend.valueText(0) == m4aFormatBend(0) &&
@@ -285,19 +292,34 @@ void checkRangesTextSelection(const CaseContext &context)
                                   .arg(bend.maximumValue())
                                   .arg(bend.valueText(0)));
     }
-    seedUnique(context, {{0, 120}, {96, 100}, {288, 110}});
+    uint32_t usedTrackMask = 0;
+    const auto trackCount = context.session.document.engineTrackCount();
+    for (int track = 0; track < trackCount && track < 16; ++track)
+        usedTrackMask |= uint32_t{1} << track;
+    const std::vector<AutomationRow> rows{
+        {EditorAutomationRowId{EditorAutomationRowKind::ControlChange,
+                               uint8_t(context.session.engineTrack), context.session.controller}}};
+    const LaneSelection laneSelection(context.session.selection, rows, usedTrackMask);
+    const auto selectionId = context.adapter.kind == AdapterKind::Tempo
+                                 ? EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}
+                                 : EditorAutomationRowId{EditorAutomationRowKind::ControlChange,
+                                                         uint8_t(context.session.engineTrack),
+                                                         context.session.controller};
     selectTicks(context, 50, 150, true);
+    const auto coveredRange = laneSelection.activeTickRange();
     context.check.require(
-        !lane.pointSelected(0) && lane.pointSelected(50) && lane.pointSelected(96) &&
-            !lane.pointSelected(150) && !lane.pointSelected(288),
-        QStringLiteral("time-selection membership was wrong for the covered lane"));
+        coveredRange && coveredRange->first == 50 && coveredRange->second == 150 &&
+            laneSelection.coversLane(selectionId),
+        QStringLiteral("LaneSelection did not cover the selected lane and tick range"));
     selectTicks(context, 50, 150, false);
-    context.check.require(!lane.pointSelected(50) && !lane.pointSelected(96) &&
-                              !lane.pointSelected(0),
-                          QStringLiteral("uncovered lane reported a selected tick"));
+    const auto uncoveredRange = laneSelection.activeTickRange();
+    context.check.require(uncoveredRange && uncoveredRange->first == 50 &&
+                              uncoveredRange->second == 150 &&
+                              !laneSelection.coversLane(selectionId),
+                          QStringLiteral("LaneSelection covered an unselected lane"));
     selection.clearTimeSelection();
-    context.check.require(!lane.pointSelected(96),
-                          QStringLiteral("cleared time selection still selected a tick"));
+    context.check.require(!laneSelection.active() && !laneSelection.coversLane(selectionId),
+                          QStringLiteral("cleared time selection remained active"));
 }
 
 void checkDelete(const CaseContext &context)
@@ -495,11 +517,9 @@ void checkEngineDefaultNodes(Session &session, const AutomationGestureCheck &fn)
     setLaneValues(document, session.engineTrack, 7, {});
     setLaneValues(document, session.engineTrack, 10, {});
     setLaneValues(document, session.engineTrack, 1, {});
-    CCLaneAdapter volume(document, session.selection, session.usedTrackMask, session.engineTrack,
-                         7);
-    CCLaneAdapter pan(document, session.selection, session.usedTrackMask, session.engineTrack, 10);
-    CCLaneAdapter modulation(document, session.selection, session.usedTrackMask,
-                             session.engineTrack, 1);
+    CCLaneAdapter volume(document, session.engineTrack, 7);
+    CCLaneAdapter pan(document, session.engineTrack, 10);
+    CCLaneAdapter modulation(document, session.engineTrack, 1);
     check.require(sameNodePoints(volume.points(), {{0, 127}}),
                   QStringLiteral("Volume did not expose its engine-default tick-zero node"));
     check.require(sameNodePoints(pan.points(), {{0, 64}}),
@@ -510,7 +530,16 @@ void checkEngineDefaultNodes(Session &session, const AutomationGestureCheck &fn)
     const auto checkPromotion = [&](CCLaneAdapter &lane, uint8_t controller, int value,
                                     const QString &name) {
         const auto before = snapshot(document);
-        lane.movePoints({{uint64_t{0}, NodePoint{96, value}}});
+        const auto resolved = nodelane::resolveCcMoves(document, session.engineTrack, controller,
+                                                       {{uint64_t{0}, NodePoint{96, value}}});
+        SongDocument::RangeEdit edit;
+        if (resolved)
+            nodelane::appendResolvedCcMoves(edit, *resolved);
+        check.require(resolved && !edit.empty(),
+                      QStringLiteral("%1 engine-default move could not be resolved").arg(name));
+        if (!resolved || edit.empty())
+            return;
+        document.applyRangeEdit(QStringLiteral("automation test move"), edit);
         const auto raw = document.lanePoints(session.engineTrack, controller);
         check.require(isOneEdit(before, snapshot(document)) && raw.size() == 1 &&
                           raw.front().tick == 96 && raw.front().value == value,
@@ -816,6 +845,66 @@ void checkLogicalXcmdEdits(Session &session, const AutomationGestureCheck &fn)
                   QStringLiteral("logical echo-lane edits did not undo to the original SMF"));
 }
 
+void checkRowRebuildHandles(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check)
+{
+    const Check rowCheck{check, QStringLiteral("lane-rebuild")};
+    constexpr uint8_t insertedController = 11;
+    const AutomationGestureCheckRig::Lane inserted{
+        {EditorAutomationRowKind::ControlChange, 0, insertedController}, 0, insertedController};
+    if (!rig.expandTempo()) {
+        rowCheck.require(false, QStringLiteral("Tempo body was not available before row rebuild"));
+        return;
+    }
+
+    const auto tempoBefore = AutomationGestureCheckRig::kTempoHandle;
+    const auto panBefore = rig.handleFor(rig.pan);
+    const auto lfoBefore = rig.handleFor(rig.lfo);
+    const auto rowMatches = [&rig](LaneHandle handle, const EditorAutomationRowId &id) {
+        const auto &rows = rig.canvas().rows();
+        const int row = handle.index - 1;
+        return handle.index > 0 && row < int(rows.size()) && rows[std::size_t(row)].id == id;
+    };
+    rowCheck.require(rowMatches(panBefore, rig.pan.row) && rowMatches(lfoBefore, rig.lfo.row) &&
+                         !rig.bodyFor(tempoBefore).isEmpty(),
+                     QStringLiteral("initial lane handles did not resolve their row identities"));
+
+    const auto grabbed = rig.pointAt(rig.lfo, kFixtureTick, 96);
+    const auto activation =
+        grabbed.position + QPointF(rig.geometry().nodeDragActivationDistance + 2, 0.0);
+    const auto before = snapshot(rig.document());
+    rig.mousePress(grabbed.position);
+    rig.mouseMove(activation);
+    rig.pump();
+    rowCheck.require(isUnchanged(before, snapshot(rig.document())),
+                     QStringLiteral("arming a row-rebuild stale-handle gesture mutated data"));
+
+    rig.page().addEmptyLane(inserted.track, inserted.controller);
+    rig.pump();
+    const auto insertedHandle = rig.handleFor(inserted);
+    const auto panAfter = rig.handleFor(rig.pan);
+    const auto lfoAfter = rig.handleFor(rig.lfo);
+    rowCheck.require(rowMatches(panAfter, rig.pan.row) && rowMatches(lfoAfter, rig.lfo.row) &&
+                         rowMatches(insertedHandle, inserted.row) &&
+                         lfoAfter.index == lfoBefore.index + 1 &&
+                         !rig.bodyFor(tempoBefore).isEmpty(),
+                     QStringLiteral("row rebuild lost Tempo/CC handle identity or ordering"));
+    rowCheck.require(rig.bodyFor(LaneHandle{}).isEmpty() && rig.bodyFor(LaneHandle{9999}).isEmpty(),
+                     QStringLiteral("invalid lane handles resolved to a body"));
+
+    rig.mouseRelease(activation);
+    rig.pump();
+    rowCheck.require(isUnchanged(before, snapshot(rig.document())) && rig.isIdle(),
+                     QStringLiteral("release after a row rebuild committed a stale lane handle "
+                                    "or changed the undo count"));
+
+    rig.page().removeEmptyLane(inserted.track, inserted.controller);
+    rig.pump();
+    rowCheck.require(rig.handleFor(rig.pan) == panBefore && rig.handleFor(rig.lfo) == lfoBefore &&
+                         rowMatches(rig.handleFor(rig.pan), rig.pan.row) &&
+                         rowMatches(rig.handleFor(rig.lfo), rig.lfo.row),
+                     QStringLiteral("removing the rebuilt row did not restore CC handle mapping"));
+}
+
 constexpr std::array kCases{
     Case{"points", checkEffectivePoints},
     Case{"ranges", checkRangesTextSelection},
@@ -834,12 +923,13 @@ void checkNodeContract(AutomationGestureCheckRig &rig, const AutomationGestureCh
         check(false, QStringLiteral("fixture has no engine track 0"));
         return;
     }
+    checkRowRebuildHandles(rig, check);
     songview::EditorSelectionModel selection;
     auto usedTrackMask = uint32_t{0};
     for (int track = 0; track < document.engineTrackCount() && track < 16; ++track)
         usedTrackMask |= uint32_t{1} << track;
-    TempoLane tempoLane(document, selection, usedTrackMask);
-    CCLaneAdapter ccLane(document, selection, usedTrackMask, 0, uint8_t{11});
+    TempoLane tempoLane(document);
+    CCLaneAdapter ccLane(document, 0, uint8_t{11});
     Session session{document, selection, usedTrackMask, 0, uint8_t{11}};
     std::array adapters{
         Adapter{AdapterKind::Tempo, "Tempo", &tempoLane},

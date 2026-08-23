@@ -35,7 +35,6 @@ class NodeLane
     virtual QString valueText(int value) const = 0;
     virtual bool promptValue(QWidget *parent, int currentValue, int *storedValue) const = 0;
     virtual int neutralValue() const { return -1; }
-    virtual bool pointSelected(uint64_t tick) const = 0;
     // Implicit pre-roll value at song start; nullopt means none. Tempo draws
     // a 120-BPM lead-in when its first point starts after tick 0.
     virtual std::optional<NodePoint> leadIn() const { return std::nullopt; }

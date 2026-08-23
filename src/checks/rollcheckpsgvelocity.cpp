@@ -1656,8 +1656,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
           "focused velocity keyboard fixture must resolve its selected notes");
     const uint64_t revisionBeforeKeyboard = document.revision();
     area.setFocus(Qt::OtherFocusReason);
-    checks::events::sendKey(area, QEvent::KeyPress, Qt::Key_Up,
-                            Qt::ShiftModifier, QString(), false, 1);
+    checks::events::sendKey(area, QEvent::KeyPress, Qt::Key_Up, Qt::ShiftModifier, QString(), false,
+                            1);
     DocNote firstAfterKeyboard;
     DocNote thirdAfterKeyboard;
     check(document.revision() == revisionBeforeKeyboard &&

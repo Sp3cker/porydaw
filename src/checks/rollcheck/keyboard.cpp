@@ -7,8 +7,8 @@
 #include <QPoint>
 #include <QRectF>
 #include <QTimer>
-#include <QtMath>
 #include <QWidget>
+#include <QtMath>
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -16,6 +16,7 @@
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
+
 #include "ui/songview/pianoroll.h"
 
 namespace checks::rollcheck {

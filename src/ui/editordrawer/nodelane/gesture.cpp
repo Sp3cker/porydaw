@@ -84,16 +84,13 @@ std::optional<std::pair<uint64_t, uint64_t>> BandGesture::release()
     return result;
 }
 
-void BandGesture::extendTo(LaneHandle candidate)
+void BandGesture::extendTo(LaneHandle candidate, bool compatible)
 {
-    if (!laneStart.valid())
+    if (!laneStart.valid() || !candidate.valid())
         return;
-    if (laneStart.index == 0) {
-        laneEnd = LaneHandle{0};
+    if (!compatible)
         return;
-    }
-    if (candidate.index > 0)
-        laneEnd = candidate;
+    laneEnd = candidate;
 }
 
 bool BandGesture::coversLane(LaneHandle handle) const noexcept

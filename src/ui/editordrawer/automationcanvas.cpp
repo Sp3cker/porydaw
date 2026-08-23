@@ -192,8 +192,12 @@ QRegion AutomationCanvas::syncPinnedTempoLayout()
 {
     QRegion dirty(pinnedTempoRect());
     m_tempoLane.updateLayout(width(), tempoTop(), m_geometry);
-    if (!m_nodeStack.empty())
-        m_nodeStack.front().body = m_tempoLane.bodyRect();
+    for (NodeLaneSlot &slot : m_nodeStack) {
+        if (slot.id.kind == EditorAutomationRowKind::Tempo) {
+            slot.body = m_tempoLane.bodyRect();
+            break;
+        }
+    }
     dirty += pinnedTempoRect();
     return dirty;
 }
@@ -216,21 +220,21 @@ void AutomationCanvas::rebuildNodeStack()
     invalidateContent(m_hoverState.clearHover());
     m_nodeStack.clear();
     m_ccAdapters.clear();
-    m_nodeStack.push_back({&m_tempoLane, m_tempoLane.bodyRect()});
+    m_nodeStack.push_back(
+        {{EditorAutomationRowKind::Tempo, 0, 0}, &m_tempoLane, m_tempoLane.bodyRect(), nullptr});
     if (!m_page || !m_page->document())
         return;
     const auto &rows = m_rowData.rows();
+    auto &rowText = m_rowData.rowText();
     m_ccAdapters.reserve(rows.size());
-    const auto &selection = m_page->m_owner.selectionModel();
-    const uint32_t mask = m_page->usedTrackMask();
     for (const auto &row : rows)
-        m_ccAdapters.emplace_back(*m_page->document(), selection, mask, int(row.id.track),
-                                  row.id.controller);
+        m_ccAdapters.emplace_back(*m_page->document(), int(row.id.track), row.id.controller);
     int top = contentTopInset();
     for (int i = 0; i < int(rows.size()); ++i) {
         const int height = ccLaneHeight(rows[std::size_t(i)]);
         const QRect body(layout::space(layout::Space::Zero), top, width(), height);
-        m_nodeStack.push_back({&m_ccAdapters[std::size_t(i)], body});
+        m_nodeStack.push_back({rows[std::size_t(i)].id, &m_ccAdapters[std::size_t(i)], body,
+                               &rowText[std::size_t(i)]});
         top += height;
     }
 }
@@ -247,22 +251,36 @@ LaneHandle AutomationCanvas::laneAt(int y) const noexcept
 AutomationCanvas::PointerLaneHit
 AutomationCanvas::pointerLaneAt(const QPoint &position) const noexcept
 {
+    LaneHandle tempoHandle;
+    for (int index = 0; index < int(m_nodeStack.size()); ++index) {
+        if (m_nodeStack[std::size_t(index)].id.kind == EditorAutomationRowKind::Tempo) {
+            tempoHandle = LaneHandle{index};
+            break;
+        }
+    }
     const bool tempoHeader = m_tempoLane.containsHeader(position);
-    return {tempoHeader ? LaneHandle{0} : laneAt(position.y()), tempoHeader};
+    return {tempoHeader ? tempoHandle : laneAt(position.y()), tempoHeader};
+}
+
+const AutomationCanvas::NodeLaneSlot *
+AutomationCanvas::resolveSlot(LaneHandle handle) const noexcept
+{
+    if (!handle.valid() || handle.index >= int(m_nodeStack.size()))
+        return nullptr;
+    const auto &slot = m_nodeStack[std::size_t(handle.index)];
+    return slot.lane ? &slot : nullptr;
 }
 
 bool AutomationCanvas::resolveLane(LaneHandle handle, const NodeLane **lane,
                                    QRect *body) const noexcept
 {
-    if (!handle.valid() || handle.index >= int(m_nodeStack.size()))
-        return false;
-    const NodeLaneSlot &slot = m_nodeStack[std::size_t(handle.index)];
-    if (!slot.lane)
+    const auto *slot = resolveSlot(handle);
+    if (!slot)
         return false;
     if (lane)
-        *lane = slot.lane;
+        *lane = slot->lane;
     if (body)
-        *body = slot.body;
+        *body = slot->body;
     return true;
 }
 
@@ -281,9 +299,8 @@ QRect AutomationCanvas::pinnedTempoRect() const noexcept
 
 NodeLane *AutomationCanvas::mutableLane(LaneHandle handle) noexcept
 {
-    if (!handle.valid() || handle.index >= int(m_nodeStack.size()))
-        return nullptr;
-    return m_nodeStack[std::size_t(handle.index)].lane;
+    const auto *slot = resolveSlot(handle);
+    return slot ? slot->lane : nullptr;
 }
 
 void AutomationCanvas::syncHoverValueLabel()
@@ -343,10 +360,14 @@ void AutomationCanvas::highlightHoveredPoint(LaneHandle handle, const QPointF &p
 
 int AutomationCanvas::ccRowIndexAt(int y) const noexcept
 {
-    const LaneHandle handle = laneAt(y);
-    if (!handle.valid() || handle.index == 0)
+    const auto *slot = resolveSlot(laneAt(y));
+    if (!slot)
         return -1;
-    return handle.index - 1;
+    const auto &rows = m_rowData.rows();
+    const auto found =
+        std::find_if(rows.cbegin(), rows.cend(),
+                     [id = slot->id](const AutomationRow &row) { return row.id == id; });
+    return found == rows.cend() ? -1 : int(found - rows.cbegin());
 }
 
 int AutomationCanvas::ccLaneHeight(const AutomationRow &row) const
@@ -359,19 +380,26 @@ int AutomationCanvas::ccLaneHeight(const AutomationRow &row) const
 
 int AutomationCanvas::ccRowBoundaryAt(int y) const
 {
-    for (int i = 1; i < int(m_nodeStack.size()); ++i) {
-        const QRect &body = m_nodeStack[std::size_t(i)].body;
-        const int bottom = body.top() + body.height();
-        if (std::abs(y - bottom) <= layout::singlePixel())
-            return i - 1;
+    const auto &rows = m_rowData.rows();
+    for (const NodeLaneSlot &slot : m_nodeStack) {
+        const int bottom = slot.body.top() + slot.body.height();
+        if (std::abs(y - bottom) > layout::singlePixel())
+            continue;
+        const auto found =
+            std::find_if(rows.cbegin(), rows.cend(),
+                         [&slot](const AutomationRow &row) { return row.id == slot.id; });
+        if (found != rows.cend())
+            return int(found - rows.cbegin());
     }
     return -1;
 }
 
 int AutomationCanvas::addLaneStripTop() const
 {
-    if (m_nodeStack.size() > 1)
+    if (!m_nodeStack.empty() &&
+        m_nodeStack.back().id.kind == EditorAutomationRowKind::ControlChange) {
         return m_nodeStack.back().body.top() + m_nodeStack.back().body.height();
+    }
     return contentTopInset();
 }
 
@@ -458,25 +486,6 @@ bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &positi
     return true;
 }
 
-bool AutomationCanvas::isLaneSelected(LaneHandle handle) const noexcept
-{
-    return m_laneSelection && m_laneSelection->covers(handle);
-}
-
-bool AutomationCanvas::laneSelectionHitTest(LaneHandle handle, qreal x,
-                                            const AutomationProjection &projection,
-                                            qreal devicePixelRatio) const noexcept
-{
-    return m_laneSelection && m_laneSelection->hitTest(handle, x, projection, devicePixelRatio);
-}
-
-std::vector<std::pair<int, uint8_t>> AutomationCanvas::selectionVisibleLanes() const noexcept
-{
-    if (!m_laneSelection)
-        return {};
-    return m_laneSelection->visibleLanes();
-}
-
 void AutomationCanvas::setGestureActive(bool active)
 {
     if (m_page) {
@@ -515,7 +524,11 @@ void AutomationCanvas::publishBandSelection(uint64_t first, uint64_t last, LaneH
 {
     if (!m_page || !m_laneSelection || first >= last || !start.valid() || !end.valid())
         return;
-    const auto [tempo, lanes] = m_laneSelection->laneSet(start, end);
+    const auto *startSlot = resolveSlot(start);
+    const auto *endSlot = resolveSlot(end);
+    if (!startSlot || !endSlot)
+        return;
+    const auto [tempo, lanes] = m_laneSelection->laneSet(startSlot->id, endSlot->id);
     m_page->publishTimeSelection(first, last, lanes, tempo);
     if (tempo && lanes.empty())
         m_page->announce(tr("Tempo range [%1, %2)").arg(first).arg(last));

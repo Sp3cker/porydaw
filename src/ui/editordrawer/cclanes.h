@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <utility>
 #include <vector>
 
 #include "ui/editordrawer/nodelane/nodelane.h"
@@ -13,30 +12,22 @@ class SongDocument;
 struct AutomationGeometry;
 struct AutomationRow;
 
-namespace songview {
-class EditorSelectionModel;
-}
-
 class CCLaneAdapter final : public NodeLane
 {
   public:
-    CCLaneAdapter(SongDocument &document, const songview::EditorSelectionModel &selection,
-                  uint32_t usedTrackMask, int engineTrack, uint8_t controller) noexcept;
+    CCLaneAdapter(SongDocument &document, int engineTrack, uint8_t controller) noexcept;
 
     QString title() const override;
     std::vector<NodePoint> points() const override;
     int minimumValue() const override;
     int maximumValue() const override;
     QString valueText(int value) const override;
-    bool pointSelected(uint64_t tick) const override;
     bool promptValue(QWidget *parent, int currentValue, int *storedValue) const override;
     int neutralValue() const override;
     void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
 
   private:
     SongDocument &m_document;
-    const songview::EditorSelectionModel &m_selection;
-    uint32_t m_usedTrackMask = 0;
     int m_engineTrack = -1;
     uint8_t m_controller = 0;
 };
@@ -80,8 +71,6 @@ class CCLanes final
     void rebuildRows();
     int minimumHeight(const AutomationGeometry &geometry, int topInset) const;
     QString titleFor(const AutomationRow &row) const;
-    std::pair<int, uint8_t> rowIdentity(const AutomationRow &row) const;
-    int rowIndexFor(LaneHandle handle) const noexcept;
 
   private:
     AutomationPage *m_page = nullptr;

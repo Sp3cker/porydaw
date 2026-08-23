@@ -9,37 +9,65 @@
 LaneSelection::LaneSelection(const songview::EditorSelectionModel &model,
                              const std::vector<AutomationRow> &rows,
                              uint32_t usedTrackMask) noexcept
-    : m_model(&model)
-    , m_rows(&rows)
+    : m_model(model)
+    , m_rows(rows)
     , m_usedTrackMask(usedTrackMask)
 {}
 
 bool LaneSelection::active() const noexcept
 {
-    return m_model != nullptr && m_model->timeSelection().active();
+    return m_model.timeSelection().active();
 }
 
-bool LaneSelection::covers(LaneHandle handle) const noexcept
+std::optional<std::pair<uint64_t, uint64_t>> LaneSelection::activeTickRange() const noexcept
 {
-    if (!active() || !handle.valid())
-        return false;
-    if (handle.index == 0)
-        return m_model->timeSelectionCoversTempo(m_usedTrackMask);
-    const int rowIndex = handle.index - 1;
-    if (m_rows == nullptr || rowIndex >= int(m_rows->size()))
-        return false;
-    const AutomationRow &row = (*m_rows)[std::size_t(rowIndex)];
-    const auto identity = std::pair{int(row.id.track), row.id.controller};
-    return m_model->timeSelection().scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
-           m_model->timeSelectionCoversLane(identity.first, identity.second, m_usedTrackMask);
+    if (!active())
+        return std::nullopt;
+    const auto &selection = m_model.timeSelection();
+    return std::pair{std::min(selection.startTick, selection.endTick),
+                     std::max(selection.startTick, selection.endTick)};
 }
 
-bool LaneSelection::hitTest(LaneHandle handle, qreal x, const AutomationProjection &projection,
-                            qreal dpr) const noexcept
+bool LaneSelection::coversLane(EditorAutomationRowId id) const noexcept
 {
-    if (!covers(handle) || m_model == nullptr)
+    if (!active())
         return false;
-    const auto &selection = m_model->timeSelection();
+    switch (id.kind) {
+    case EditorAutomationRowKind::Tempo:
+        return m_model.timeSelectionCoversTempo(m_usedTrackMask);
+    case EditorAutomationRowKind::ControlChange:
+        if (m_model.timeSelection().scope != songview::EditorSelectionModel::TimeSelection::Lanes)
+            return false;
+        if (std::find_if(m_rows.cbegin(), m_rows.cend(),
+                         [id](const AutomationRow &row) { return row.id == id; }) == m_rows.cend())
+            return false;
+        return m_model.timeSelectionCoversLane(int(id.track), id.controller, m_usedTrackMask);
+    }
+    return false;
+}
+
+bool LaneSelection::coversNodes(EditorAutomationRowId id) const noexcept
+{
+    if (!active())
+        return false;
+    switch (id.kind) {
+    case EditorAutomationRowKind::Tempo:
+        return m_model.timeSelectionCoversTempo(m_usedTrackMask);
+    case EditorAutomationRowKind::ControlChange:
+        if (std::find_if(m_rows.cbegin(), m_rows.cend(),
+                         [id](const AutomationRow &row) { return row.id == id; }) == m_rows.cend())
+            return false;
+        return m_model.timeSelectionCoversLane(int(id.track), id.controller, m_usedTrackMask);
+    }
+    return false;
+}
+
+bool LaneSelection::hitTest(EditorAutomationRowId id, qreal x,
+                            const AutomationProjection &projection, qreal dpr) const noexcept
+{
+    if (!coversLane(id))
+        return false;
+    const auto &selection = m_model.timeSelection();
     // Sanitize does not reorder ticks, so the endpoint order is an explicit
     // min/max here, not an assumption about selection ordering.
     const qreal startX = projection.displayX(selection.startTick, dpr);
@@ -50,10 +78,10 @@ bool LaneSelection::hitTest(LaneHandle handle, qreal x, const AutomationProjecti
 std::vector<std::pair<int, uint8_t>> LaneSelection::visibleLanes() const noexcept
 {
     std::vector<std::pair<int, uint8_t>> lanes;
-    if (!active() || m_rows == nullptr)
+    if (!active())
         return lanes;
-    const auto &selection = m_model->timeSelection();
-    for (const AutomationRow &row : *m_rows) {
+    const auto &selection = m_model.timeSelection();
+    for (const AutomationRow &row : m_rows) {
         const auto identity = std::pair{int(row.id.track), row.id.controller};
         if (std::find(selection.lanes.cbegin(), selection.lanes.cend(), identity) !=
             selection.lanes.cend())
@@ -63,21 +91,33 @@ std::vector<std::pair<int, uint8_t>> LaneSelection::visibleLanes() const noexcep
 }
 
 std::pair<bool, std::vector<std::pair<int, uint8_t>>>
-LaneSelection::laneSet(LaneHandle first, LaneHandle last) const noexcept
+LaneSelection::laneSet(EditorAutomationRowId first, EditorAutomationRowId last) const noexcept
 {
-    bool tempo = false;
+    const bool firstTempo = first.kind == EditorAutomationRowKind::Tempo;
+    const bool lastTempo = last.kind == EditorAutomationRowKind::Tempo;
+    const bool firstCc = first.kind == EditorAutomationRowKind::ControlChange;
+    const bool lastCc = last.kind == EditorAutomationRowKind::ControlChange;
     std::vector<std::pair<int, uint8_t>> lanes;
-    if (m_rows == nullptr || !first.valid() || !last.valid())
-        return {tempo, lanes};
-    const int firstIndex = std::min(first.index, last.index);
-    const int lastIndex = std::max(first.index, last.index);
-    for (int index = firstIndex; index <= lastIndex && index < int(m_rows->size()) + 1; ++index) {
-        if (index == 0) {
-            tempo = true;
-            continue;
-        }
-        const AutomationRow &row = (*m_rows)[std::size_t(index - 1)];
-        lanes.push_back({int(row.id.track), row.id.controller});
+    if ((!firstTempo && !firstCc) || (!lastTempo && !lastCc))
+        return {false, lanes};
+
+    const auto findRow = [this](EditorAutomationRowId id) {
+        return std::find_if(m_rows.cbegin(), m_rows.cend(),
+                            [id](const AutomationRow &row) { return row.id == id; });
+    };
+    const auto firstRow = firstCc ? findRow(first) : m_rows.cend();
+    const auto lastRow = lastCc ? findRow(last) : m_rows.cend();
+    if ((firstCc && firstRow == m_rows.cend()) || (lastCc && lastRow == m_rows.cend()))
+        return {false, lanes};
+    if (firstTempo && lastTempo)
+        return {true, lanes};
+
+    const auto start = firstTempo || lastTempo ? m_rows.cbegin() : std::min(firstRow, lastRow);
+    const auto end = firstTempo ? lastRow : lastTempo ? firstRow : std::max(firstRow, lastRow);
+    for (auto row = start; row != m_rows.cend(); ++row) {
+        lanes.emplace_back(int(row->id.track), row->id.controller);
+        if (row == end)
+            break;
     }
-    return {tempo, lanes};
+    return {firstTempo || lastTempo, lanes};
 }
