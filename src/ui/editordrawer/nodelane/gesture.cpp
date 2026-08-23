@@ -78,8 +78,8 @@ std::optional<std::pair<uint64_t, uint64_t>> BandGesture::release()
         clear();
         return std::nullopt;
     }
-    const std::pair<uint64_t, uint64_t> result{std::min(startTick, endTick),
-                                               std::max(startTick, endTick)};
+    const std::pair<uint64_t, uint64_t> result{std::min<uint64_t>(startTick, endTick),
+                                               std::max<uint64_t>(startTick, endTick)};
     clear();
     return result;
 }
@@ -97,8 +97,8 @@ bool BandGesture::coversLane(LaneHandle handle) const noexcept
 {
     if (!active || !laneStart.valid() || !laneEnd.valid() || !handle.valid())
         return false;
-    const int first = std::min(laneStart.index, laneEnd.index);
-    const int last = std::max(laneStart.index, laneEnd.index);
+    const int first = std::min<int>(laneStart.index, laneEnd.index);
+    const int last = std::max<int>(laneStart.index, laneEnd.index);
     return handle.index >= first && handle.index <= last;
 }
 
@@ -191,8 +191,8 @@ void NodeDragGesture::applyDrag(const NodePoint &grabCurrent)
     const int64_t requestedTickDelta = int64_t(grabCurrent.tick) - int64_t(grabOriginal.tick);
     uint64_t earliestTick = points.front().original.tick;
     for (const NodeDrag &point : points)
-        earliestTick = std::min(earliestTick, point.original.tick);
-    const int64_t dTick = std::max(requestedTickDelta, -int64_t(earliestTick));
+        earliestTick = std::min<uint64_t>(earliestTick, point.original.tick);
+    const int64_t dTick = std::max<int64_t>(requestedTickDelta, -int64_t(earliestTick));
     const int dValue = grabCurrent.value - grabOriginal.value;
     for (NodeDrag &point : points) {
         point.current.tick = uint64_t(int64_t(point.original.tick) + dTick);
@@ -252,7 +252,7 @@ void updateValuePoint(const AutomationProjection &proj, const NodeLane &lane, co
                    lane.minimumValue(), lane.maximumValue());
     if (snapValue && snapNeutral >= 0) {
         const int span = lane.maximumValue() - lane.minimumValue();
-        const int height = std::max(1, body.height());
+        const int height = std::max<int>(1, body.height());
         if (std::abs(point.value - snapNeutral) <= span * neutralSnapRadius / height)
             point.value = snapNeutral;
     }
