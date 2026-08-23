@@ -107,6 +107,13 @@ if(NOT _vg_actual_library_hash STREQUAL _vg_manifest_library_hash)
         "voicegroup-core archive checksum mismatch: expected '${_vg_manifest_library_hash}', got '${_vg_actual_library_hash}'")
 endif()
 
+set(_vg_system_libraries)
+if(WIN32)
+    # Rust's MSVC staticlib leaves the Windows imports it uses for the final
+    # consumer to link, just like a C/C++ static library.
+    list(APPEND _vg_system_libraries ws2_32 userenv ntdll)
+endif()
+
 set(_vg_probe_dir "${CMAKE_BINARY_DIR}/voicegroup-core-abi-probe")
 file(MAKE_DIRECTORY "${_vg_probe_dir}")
 set(_vg_probe_source "${_vg_probe_dir}/probe.c")
@@ -123,7 +130,7 @@ try_compile(_vg_probe_ok
     CMAKE_FLAGS
         "-DCMAKE_C_STANDARD=11"
         "-DINCLUDE_DIRECTORIES=${PORYDAW_VOICEGROUP_CORE_VENDOR_DIR}/include"
-    LINK_LIBRARIES "${_vg_library}"
+    LINK_LIBRARIES "${_vg_library}" ${_vg_system_libraries}
     OUTPUT_VARIABLE _vg_probe_output)
 if(NOT _vg_probe_ok)
     message(FATAL_ERROR
@@ -133,5 +140,6 @@ endif()
 add_library(voicegroup_core_static STATIC IMPORTED GLOBAL)
 set_target_properties(voicegroup_core_static PROPERTIES
     IMPORTED_LOCATION "${_vg_library}"
-    INTERFACE_INCLUDE_DIRECTORIES "${PORYDAW_VOICEGROUP_CORE_VENDOR_DIR}/include")
+    INTERFACE_INCLUDE_DIRECTORIES "${PORYDAW_VOICEGROUP_CORE_VENDOR_DIR}/include"
+    INTERFACE_LINK_LIBRARIES "${_vg_system_libraries}")
 set(PORYDAW_VOICEGROUP_CORE_TARGET "${_vg_target}")
