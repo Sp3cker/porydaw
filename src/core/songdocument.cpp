@@ -809,7 +809,7 @@ void SongDocument::appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, u
 void SongDocument::appendRemoveOps(std::vector<EditOp> &ops, int smfTrack,
                                    std::vector<size_t> indices) const
 {
-    std::sort(indices.begin(), indices.end(), std::greater<size_t>());
+    std::sort(indices.begin(), indices.end(), [](size_t a, size_t b) { return a > b; });
     indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
     for (size_t index : indices) {
         EditOp op;
@@ -1033,36 +1033,67 @@ bool SongDocument::moveNotesToPitches(const std::vector<DocNote> &notes,
     return true;
 }
 
+namespace {
+
+// Shared move-planning for the two note-move builders: collects each
+// surviving note's removal indices (per SMF track) and its written span
+// (destination key, shifted tick) for resolveNoteOverlaps. destKeyAt
+// computes the destination pitch (index-aware, so moveNotesToPitches can
+// read destPitches[i]); shouldSkip decides per note whether it stays
+// untouched (nothing for moveNotes; unterminated or no-op pitches for
+// moveNotesToPitches). Unterminated notes are removed but never rewritten.
+void collectMovePlans(const std::vector<DocNote> &notes, int64_t dTick, auto destKeyAt,
+                      auto shouldSkip, std::vector<std::vector<size_t>> &outRemovals,
+                      auto &outWritten)
+{
+    for (size_t i = 0; i < notes.size(); i++) {
+        const DocNote &note = notes[i];
+        const uint8_t destKey = destKeyAt(i, note);
+        if (note.smfTrack < 0 || note.smfTrack >= int(outRemovals.size()) ||
+            shouldSkip(note, destKey))
+            continue;
+        outRemovals[size_t(note.smfTrack)].push_back(note.onIndex);
+        if (note.unterminated())
+            continue;
+        outRemovals[size_t(note.smfTrack)].push_back(note.endIndex);
+        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+        outWritten.push_back({note.engineTrack, destKey, newTick, newTick + note.duration});
+    }
+}
+
+} // namespace
+
 std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vector<DocNote> &notes,
                                                                   int64_t dTick, int dKey) const
 {
+    // Every note moves; the note's own on/end events are rewritten with the
+    // new tick and key (note id preserved, velocity intact). Unterminated
+    // notes keep just their patched note-on.
+    const auto destKeyAt = [dKey](size_t, const DocNote &note) {
+        return uint8_t(std::clamp(int(note.key) + dKey, 0, 127));
+    };
+    const auto shouldSkip = [](const DocNote &, uint8_t) { return false; };
     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<PlannedNote> written;
-    for (const DocNote &note : notes) {
-        if (note.smfTrack < 0 || note.smfTrack >= int(removals.size()))
-            continue;
-        removals[size_t(note.smfTrack)].push_back(note.onIndex);
-        if (note.unterminated())
-            continue;
-        removals[size_t(note.smfTrack)].push_back(note.endIndex);
-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
-        const uint8_t newKey = uint8_t(std::clamp(int(note.key) + dKey, 0, 127));
-        written.push_back({note.engineTrack, newKey, newTick, newTick + note.duration});
-    }
+    collectMovePlans(notes, dTick, destKeyAt, shouldSkip, removals, written);
     std::vector<EditOp> trims;
     resolveNoteOverlaps(written, notes, removals, trims);
     std::vector<EditOp> ops;
     for (size_t t = 0; t < m_smf.tracks.size(); t++)
         appendRemoveOps(ops, int(t), std::move(removals[t]));
-    for (const DocNote &note : notes) {
+    for (size_t i = 0; i < notes.size(); i++) {
+        const DocNote &note = notes[i];
+        const uint8_t destKey = destKeyAt(i, note);
+        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
+            shouldSkip(note, destKey))
+            continue;
         const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
-        const uint8_t newKey = uint8_t(std::clamp(int(note.key) + dKey, 0, 127));
         EditOp on;
         on.type = EditOp::InsertEvent;
         on.smfTrack = note.smfTrack;
         on.event = m_smf.tracks[size_t(note.smfTrack)].events[note.onIndex];
         on.event.tick = newTick;
-        on.event.data0 = newKey;
+        on.event.data0 = destKey;
         on.preservesNoteId = true;
         ops.push_back(std::move(on));
         if (!note.unterminated()) {
@@ -1071,7 +1102,7 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
             end.smfTrack = note.smfTrack;
             end.event = m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex];
             end.event.tick = newTick + note.duration;
-            end.event.data0 = newKey;
+            end.event.data0 = destKey;
             ops.push_back(std::move(end));
         }
     }
@@ -1082,19 +1113,14 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
 std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesToPitchesOps(
     const std::vector<DocNote> &notes, const std::vector<uint8_t> &destPitches, int64_t dTick) const
 {
+    // Unterminated notes (no end event to rewrite) and no-op pitches stay.
+    const auto destKeyAt = [&destPitches](size_t i, const DocNote &) { return destPitches[i]; };
+    const auto shouldSkip = [dTick](const DocNote &note, uint8_t destKey) {
+        return note.unterminated() || (destKey == note.key && dTick == 0);
+    };
     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<PlannedNote> written;
-    for (size_t i = 0; i < notes.size(); i++) {
-        const DocNote &note = notes[i];
-        const uint8_t destKey = destPitches[i];
-        if (note.unterminated() || note.smfTrack < 0 || note.smfTrack >= int(removals.size()) ||
-            (destKey == note.key && dTick == 0))
-            continue;
-        removals[size_t(note.smfTrack)].push_back(note.onIndex);
-        removals[size_t(note.smfTrack)].push_back(note.endIndex);
-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
-        written.push_back({note.engineTrack, destKey, newTick, newTick + note.duration});
-    }
+    collectMovePlans(notes, dTick, destKeyAt, shouldSkip, removals, written);
     std::vector<EditOp> trims;
     resolveNoteOverlaps(written, notes, removals, trims);
     std::vector<EditOp> ops;
@@ -1102,9 +1128,9 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesToPitchesOps(
         appendRemoveOps(ops, int(t), std::move(removals[t]));
     for (size_t i = 0; i < notes.size(); i++) {
         const DocNote &note = notes[i];
-        const uint8_t destKey = destPitches[i];
-        if (note.unterminated() || note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
-            (destKey == note.key && dTick == 0))
+        const uint8_t destKey = destKeyAt(i, note);
+        if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
+            shouldSkip(note, destKey))
             continue;
         const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
         appendNoteInsertOps(ops, note.smfTrack, note.channel, newTick, destKey, note.duration,

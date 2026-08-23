@@ -251,6 +251,16 @@ const std::vector<CheckDefinition> &catalog()
                 .argv = strings({"--selectioncheck"}),
                 .handler = [](QApplication &, const QStringList &) { return runSelectionCheck(); },
             },
+            {
+                .name = "clipmimecheck",
+                .argv = strings({"--clipmimecheck"}),
+                .handler = [](QApplication &, const QStringList &) { return runClipMimeCheck(); },
+            },
+            {
+                .name = "clipcheck",
+                .argv = strings({"--clipcheck"}),
+                .handler = [](QApplication &, const QStringList &) { return runClipCheck(); },
+            },
             {.name = "polycheck",
              .argv = strings({"--polycheck"}),
              .handler = [](QApplication &,

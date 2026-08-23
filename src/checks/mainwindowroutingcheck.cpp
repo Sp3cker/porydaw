@@ -6,6 +6,7 @@
 #include "core/miditimeline.h"
 #include <QAction>
 #include <QApplication>
+#include <QClipboard>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QFile>
@@ -14,6 +15,10 @@
 #include <QJsonObject>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <QLineEdit>
+#include <QMenu>
+#include <QMenuBar>
+#include <QMimeData>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QScrollArea>
@@ -26,15 +31,18 @@
 #include <QWidget>
 #include <cstdio>
 
+#include "checks/clipcheck_support.h"
 #include "core/smf.h"
 #include "mainwindow.h"
 #include "project/sidecar.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea.h"
+#include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
+#include "ui/songview/clipmime.h"
 #include "ui/viewsidecar.h"
 
 namespace {
@@ -112,6 +120,106 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     if (!tabA || !tabB || tabA == tabB || m_tabs->count() != 2) {
         std::fprintf(stderr, "mainwindow-routing: songs did not open in two tabs\n");
         return false;
+    }
+    auto &keys = keymap::Registry::instance();
+    QAction *copyAction = findChild<QAction *>(QStringLiteral("copyWindowAction"));
+    QMenu *editMenu = nullptr;
+    for (QAction *menuAction : menuBar()->actions()) {
+        auto *menu = menuAction->menu();
+        if (menu && QString(menu->title()).remove(QLatin1Char('&')) == QStringLiteral("Edit")) {
+            editMenu = menu;
+            break;
+        }
+    }
+    const auto copyCommand = keys.command(QStringLiteral("roll.copy"));
+    const auto standardCopyBindings = QKeySequence::keyBindings(QKeySequence::Copy);
+    const bool hasStandardDefault =
+        std::any_of(copyCommand.defaults.cbegin(), copyCommand.defaults.cend(),
+                    [&standardCopyBindings](const QKeySequence &sequence) {
+                        return standardCopyBindings.contains(sequence);
+                    });
+    check(copyAction && copyAction == m_copyAction && copyAction->parent() == this,
+          "native Copy action is missing or is not owned by MainWindow");
+    check(editMenu && editMenu->actions().contains(copyAction),
+          "native Copy action is not a member of the Edit menu");
+    check(hasStandardDefault && copyAction &&
+              copyAction->shortcuts() == keys.bindings(QStringLiteral("roll.copy")),
+          "native Copy action does not carry the standard/current roll.copy binding");
+    check(copyAction && copyAction->shortcutContext() == Qt::WindowShortcut,
+          "native Copy action is not a WindowShortcut");
+    int liveCopyOwners = 0;
+    const auto currentCopyBindings = keys.bindings(QStringLiteral("roll.copy"));
+    for (QAction *action : findChildren<QAction *>()) {
+        if (!action->isEnabled())
+            continue;
+        const bool ownsCopy = std::any_of(currentCopyBindings.cbegin(), currentCopyBindings.cend(),
+                                          [action](const QKeySequence &sequence) {
+                                              return action->shortcuts().contains(sequence);
+                                          });
+        if (ownsCopy)
+            ++liveCopyOwners;
+    }
+    check(currentCopyBindings.isEmpty() || liveCopyOwners == 1,
+          "more than one live QAction owns the Copy shortcut");
+
+    songview::EditorSelectionModel::TimeSelection tabATimeSelection;
+    tabATimeSelection.startTick = 0;
+    tabATimeSelection.endTick = tabA->timeline->ticksPerBeat;
+    tabA->view->selectionModel().setTimeSelection(tabATimeSelection);
+    auto tabBNote = std::optional<DocNote>{};
+    for (int track = 0; track < tabB->doc.engineTrackCount() && !tabBNote; ++track) {
+        const auto notes = tabB->doc.notesForTrack(track);
+        if (!notes.empty()) {
+            tabB->view->selectTrack(track);
+            tabB->view->selectionModel().setNoteSelection({notes.front().noteId});
+            tabBNote = notes.front();
+        }
+    }
+    check(tabBNote.has_value(), "active-tab Copy check found no note in the second song");
+    if (copyAction && tabBNote) {
+        auto copyTriggerCount = 0;
+        connect(copyAction, &QAction::triggered, this, [&copyTriggerCount] { ++copyTriggerCount; });
+        tabB->view->focusActiveSurface();
+        QCoreApplication::processEvents();
+        if (currentCopyBindings.isEmpty()) {
+            check(false, "native Copy action has no shortcut to exercise");
+        } else {
+            const auto combination = currentCopyBindings.front()[0];
+            auto *target = QApplication::focusWidget();
+            QKeyEvent press(QEvent::KeyPress, combination.key(), combination.keyboardModifiers());
+            QKeyEvent release(QEvent::KeyRelease, combination.key(),
+                              combination.keyboardModifiers());
+            QApplication::sendEvent(target, &press);
+            QApplication::sendEvent(target, &release);
+        }
+        check(copyTriggerCount == 1,
+              "Copy shortcut did not trigger the MainWindow Edit action exactly once");
+        const auto noteCopy = clipcheck_support::checkClipboardClip();
+        const bool copiedSelectedNote =
+            noteCopy && noteCopy->ticksPerBeat == tabB->timeline->ticksPerBeat &&
+            noteCopy->clip.span == 0 && noteCopy->clip.tracks.size() == 1 &&
+            noteCopy->clip.tracks.front().notes.size() == 1 &&
+            noteCopy->clip.tracks.front().notes.front().key == tabBNote->key &&
+            noteCopy->clip.tracks.front().notes.front().velocity == tabBNote->velocity;
+        check(copiedSelectedNote, "Copy action did not route to the active tab's selected note");
+        m_tabs->setCurrentWidget(tabA->view);
+        QCoreApplication::processEvents();
+        copyAction->trigger();
+        const auto timeCopy = clipcheck_support::checkClipboardClip();
+        check(timeCopy && timeCopy->ticksPerBeat == tabA->timeline->ticksPerBeat &&
+                  timeCopy->clip.span == tabATimeSelection.endTick,
+              "Copy action did not route the active tab's time selection");
+        auto textProbe = QLineEdit(this);
+        textProbe.setText(QStringLiteral("native copy text probe"));
+        textProbe.selectAll();
+        textProbe.show();
+        textProbe.setFocus();
+        QCoreApplication::processEvents();
+        copyAction->trigger();
+        check(QApplication::clipboard()->text() == QStringLiteral("native copy text probe"),
+              "Edit Copy action hijacked focused text-widget copy");
+        m_tabs->setCurrentWidget(tabB->view);
+        QCoreApplication::processEvents();
     }
 
     check(m_automationDrawerAction->shortcut() == QKeySequence(Qt::Key_A) &&

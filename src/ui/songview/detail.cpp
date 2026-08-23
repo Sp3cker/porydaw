@@ -1,4 +1,5 @@
 #include "ui/songview/detail.h"
+#include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/theme/color_math.h"
 #include "ui/theme/themeruntime.h"
@@ -9,6 +10,7 @@
 #include <QDialogButtonBox>
 #include <QFontMetrics>
 #include <QHBoxLayout>
+#include <QKeySequence>
 #include <QLabel>
 #include <QLineF>
 #include <QPen>
@@ -104,28 +106,19 @@ bool isBlackKey(int key)
     }
 }
 
-bool resolveFoldDestinations(porydaw_scale::ScaleId scaleId, int scaleRoot,
-                             std::vector<DocNote> &notes, int degreeDelta,
-                             std::vector<uint8_t> &destinations)
-{
-    if (notes.empty() || degreeDelta == 0)
-        return false;
-    std::sort(notes.begin(), notes.end(),
-              [](const DocNote &a, const DocNote &b) { return a.key < b.key; });
-    std::vector<uint8_t> sources(notes.size());
-    std::vector<int> degrees(notes.size(), degreeDelta);
-    for (size_t i = 0; i < notes.size(); i++)
-        sources[i] = notes[i].key;
-    destinations.resize(notes.size());
-    return porydaw_scale::resolveDiatonicDestinations(scaleId, scaleRoot, std::span(sources),
-                                                      std::span(degrees), std::span(destinations));
-}
-
 QString keyName(int key)
 {
     static const char *const names[] = {"C",  "C#", "D",  "D#", "E",  "F",
                                         "F#", "G",  "G#", "A",  "A#", "B"};
     return QStringLiteral("%1%2").arg(QLatin1String(names[key % 12])).arg(key / 12 - 1);
+}
+
+QString contextActionText(const QString &text, const QString &commandId)
+{
+    const auto shortcut = keymap::Registry::instance().bindings(commandId).value(0);
+    if (shortcut.isEmpty())
+        return text;
+    return text + u'\t' + shortcut.toString(QKeySequence::NativeText);
 }
 
 QString timeSigLabel(int numerator, int denomPow2)

@@ -113,6 +113,10 @@ SongView::SongView(QWidget *parent)
     , m_geometry(Geometry::resolve())
     , m_keyHeight(m_geometry.velocityHandleMinimumKeyHeight)
 {
+    // Prime the default C-major classification (the previous controller
+    // constructor did this); touch no widgets.
+    updateScaleProjection();
+
     auto *vbox = new QVBoxLayout(this);
     vbox->setContentsMargins(lyt::space(Space::Zero), lyt::space(Space::Zero),
                              lyt::space(Space::Zero), lyt::space(Space::Zero));
@@ -201,7 +205,6 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_voicegroup = voicegroup;
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
     m_editorViewState = {};
-    m_clip = Clip();
     m_muteMask = 0;
     m_soloMask = 0;
     emit muteMaskChanged(0);
@@ -293,11 +296,8 @@ void SongView::updateSong(const MidiTimeline *timeline)
     m_selectionModel.reconcileNoteSelection(std::span<const NoteId>(validIds));
     m_headers->rebuild();
     notifyDrawerSongChanged();
-    if (m_scaleFold) {
-        if (m_projectionLocked)
-            m_projectionDirty = true;
-        else
-            rebuildProjectionWithAnchoring();
+    if (m_scaleController.scaleFold()) {
+        requestProjectionRebuild();
     } else {
         updateScrollbars();
     }
@@ -328,7 +328,7 @@ void SongView::setDocument(SongDocument *document)
     }
     m_document = document;
     m_events->setDocument(document);
-    m_selectionModel.clearNoteSelectionForDocumentAttachment();
+    m_selectionModel.clearNoteSelection();
     m_headers->rebuild();
     notifyDrawerSongChanged();
 }
@@ -449,7 +449,7 @@ void SongView::coordinateSelectionChange(songview::EditorSelectionModel::Selecti
         m_headers->syncSelection();
         if (m_roll)
             m_roll->setFocus();
-        if (m_scaleFold)
+        if (m_scaleController.scaleFold())
             rebuildProjectionWithAnchoring();
         else
             m_roll->invalidateContent();
@@ -488,6 +488,13 @@ bool SongView::event(QEvent *event)
     if (event->type() == QEvent::FontChange)
         refreshGeometry();
     return handled;
+}
+void SongView::copySelection()
+{
+    if (m_selectionModel.timeSelection().active())
+        copyTimeSelection();
+    else
+        m_roll->copySelectedNotes();
 }
 
 void SongView::setPlayheadSample(uint64_t samplePos, bool playing)

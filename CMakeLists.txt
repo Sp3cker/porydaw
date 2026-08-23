@@ -265,6 +265,9 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/camera.cpp
     src/ui/songview/grid.cpp
     src/ui/songview/rangeedit.cpp
+    src/ui/songview/scalecontroller.cpp
+    src/ui/songview/scalecontroller.h
+    src/ui/songview/clipmime.cpp
     src/ui/songview/trackvoiceops.cpp
     src/ui/songview/viewstate.cpp
     src/ui/songview/drawercoordination.cpp
@@ -393,6 +396,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/fixturecatalog.hpp
         src/checks/fwd.hpp
         src/checks/selectioncheck.cpp
+        src/checks/clipmimecheck.cpp
+        src/checks/clipcheck.cpp
         src/checks/selftest.cpp
         src/checks/tabcheck.cpp
         src/checks/eventviewcheck.cpp

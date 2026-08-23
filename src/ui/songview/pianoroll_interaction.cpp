@@ -90,9 +90,7 @@ void PianoRoll::mousePressEvent(QMouseEvent *event)
     m_dVel = 0;
     m_modifierVelocityDrag = false;
 
-    if (!hit && doc && m_sv->scaleFold() &&
-        (m_pressKey < 0 ||
-         !porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), m_pressKey))) {
+    if (!hit && doc && m_sv->scaleFold() && (m_pressKey < 0 || !m_sv->isScalePitch(m_pressKey))) {
         return;
     }
     if (hit) {
@@ -324,11 +322,9 @@ void PianoRoll::mouseMoveEvent(QMouseEvent *event)
                 // Audition the new pitch while dragging vertically.
                 const std::vector<DocNote> notes = resolveSelection();
                 if (!notes.empty()) {
-                    const int key =
-                        m_sv->scaleFold()
-                            ? porydaw_scale::nextScalePitch(m_sv->scaleId(), m_sv->scaleRoot(),
-                                                            notes.front().key, m_dKey)
-                            : std::clamp(int(notes.front().key) + m_dKey, 0, 127);
+                    const int key = m_sv->scaleFold()
+                                        ? m_sv->nextScalePitch(notes.front().key, m_dKey)
+                                        : std::clamp(int(notes.front().key) + m_dKey, 0, 127);
                     if (key >= 0) {
                         auditionKey(key, notes.front().velocity);
                         m_auditioned = true;
@@ -392,9 +388,7 @@ void PianoRoll::mouseMoveEvent(QMouseEvent *event)
             dur = int64_t(anchor + uint64_t(grid) - start);
         }
         const int key = yToKey(event->position().y());
-        const bool isScaleKey =
-            !m_sv->scaleFold() ||
-            (key >= 0 && porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), key));
+        const bool isScaleKey = !m_sv->scaleFold() || (key >= 0 && m_sv->isScalePitch(key));
         if (start != m_drawTick || dur != m_drawDur || (isScaleKey && key != m_drawKey)) {
             m_drawTick = start;
             m_drawDur = dur;
@@ -540,8 +534,7 @@ void PianoRoll::mouseReleaseEvent(QMouseEvent *event)
             m_sv->selectionModel().clearNoteSelection();
         } else if (m_sv->scaleFold() && m_dKey != 0) {
             std::vector<uint8_t> destinations;
-            if (resolveFoldDestinations(m_sv->scaleId(), m_sv->scaleRoot(), notes, m_dKey,
-                                        destinations) &&
+            if (m_sv->resolveFoldDestinations(notes, m_dKey, destinations) &&
                 doc->moveNotesToPitches(notes, destinations, m_dTick)) {
                 std::vector<NoteId> ids;
                 ids.reserve(notes.size());

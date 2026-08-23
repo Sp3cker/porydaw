@@ -22,7 +22,9 @@
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
 #include "ui/pitchprojection.h"
+#include "ui/songview/clip.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/scalecontroller.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
 #include "ui/velocitygesturemodel.h"
@@ -214,15 +216,30 @@ class SongView : public QWidget
     void selectTrack(int track);
 
     // Scale controls are independent per-tab runtime toggles; neither is
-    // persisted with the song or its view sidecar.
-    bool scaleHighlight() const { return m_scaleHighlight; }
+    // persisted with the song or its view sidecar. State and classification
+    // live in the ScaleController component; SongView is the only surface
+    // that mutates it, and the UI side effects (signals, roll repaint, the
+    // anchored rebuild) are driven directly here.
+    bool scaleHighlight() const { return m_scaleController.scaleHighlight(); }
     void setScaleHighlight(bool enabled);
-    bool scaleFold() const { return m_scaleFold; }
+    bool scaleFold() const { return m_scaleController.scaleFold(); }
     void setScaleFold(bool enabled);
-    int scaleRoot() const { return m_scaleRoot; } // 0-11 (C=0)
+    int scaleRoot() const { return m_scaleController.scaleRoot(); } // 0-11 (C=0)
     void setScaleRoot(int root);
-    porydaw_scale::ScaleId scaleId() const { return m_scaleId; }
+    porydaw_scale::ScaleId scaleId() const { return m_scaleController.scaleId(); }
     void setScaleId(porydaw_scale::ScaleId id);
+    // Fold state, classification, and row math for the roll's commands and
+    // draw checks (the component's fold math routes through the facade).
+    bool isScalePitch(int midiPitch) const { return m_scaleController.isScalePitch(midiPitch); }
+    int nextScalePitch(int midiPitch, int steps) const
+    {
+        return m_scaleController.nextScalePitch(midiPitch, steps);
+    }
+    bool resolveFoldDestinations(std::vector<DocNote> &notes, int degreeDelta,
+                                 std::vector<uint8_t> &destinations) const
+    {
+        return m_scaleController.resolveFoldDestinations(notes, degreeDelta, destinations);
+    }
     void foldTransposeSelection(int degreeDelta);
     // Reveal a polyphony-overflow event's note: select its track, select the
     // last note on (track, key) starting at or before tick — the lost note (a
@@ -398,12 +415,15 @@ class SongView : public QWidget
     // when a selection gesture commits.
     void announceTimeSelection();
 
+    // Canonical Copy command: an active time selection owns the command;
+    // otherwise the selected notes are copied.
+    void copySelection();
     // Range operations on the time selection. Copy captures notes plus every
     // editable lane (including voice changes) of the scoped tracks — or just
     // the scoped lanes — with ticks relative to the range start. Paste
-    // anchors at the edit cursor and REPLACES the covered span: pasted
-    // "silence" clears, and a single-source-track clip retargets to the
-    // selected track. All one undoable command each.
+    // merges at the edit cursor: notes are additive, and only exact-tick
+    // lane/tempo conflicts are replaced. A single-source-track clip retargets
+    // to the selected track. Each non-empty operation is one undoable command.
     void copyTimeSelection();
     void deleteTimeSelection();
     // "Remove contents": the selected span vanishes and everything after it
@@ -415,7 +435,13 @@ class SongView : public QWidget
     // Insert and duplicate operate only on an active half-open time selection.
     void insertBlankTime();
     void duplicateTimeSelection();
-    void pasteRangeAtEditCursor();
+    void pasteRangeAtEditCursor(const songview::Clip &clip);
+    // Single paste entry from every surface (roll keys, drawer-canvas keys,
+    // the time-selection menu): reads the clipboard clip, dispatches a plain
+    // note clip (span 0) to an additive primary-track paste at the edit
+    // cursor and a range clip to pasteRangeAtEditCursor, announcing like the
+    // per-surface paths did.
+    void pasteFromClipboard();
     // Ctrl+Up/Down on the selection: transpose every covered note (all
     // scoped tracks at once). Same all-or-nothing rule as the roll's note
     // selection — if any note would clamp at the key range, nothing moves.
@@ -434,38 +460,6 @@ class SongView : public QWidget
     int transposeStepFor(const QKeyEvent *event) const;
     // Copy/Cut/Delete/Paste/Clear context menu on the active selection.
     void showTimeSelectionMenu(const QPoint &globalPos);
-
-    // App-internal clipboard. A plain note copy (roll selection) has span 0
-    // and pastes additively; a range copy carries span > 0 plus lane
-    // segments and pastes with replace semantics. Ticks are offsets from
-    // the copied block's start so paste can re-anchor at the edit cursor.
-    // Survives track switches and document rebuilds; cleared on song swap
-    // (another song's ticks-per-beat may differ).
-    struct ClipNote {
-        uint32_t relTick;
-        uint8_t key;
-        uint32_t duration;
-        uint8_t velocity;
-    };
-    struct ClipTrack {
-        int track; // source engine track
-        std::vector<ClipNote> notes;
-    };
-    struct ClipLane {
-        int track; // source engine track
-        uint8_t cc;
-        std::vector<std::pair<uint32_t, int>> points; // (relTick, value)
-    };
-    struct Clip {
-        uint64_t span = 0;      // ticks covered; 0 = plain note clip
-        bool wholeLane = false; // gutter "Copy lane" (paste-lane anchor is 0)
-        std::vector<ClipTrack> tracks;
-        std::vector<ClipLane> lanes;
-        std::vector<TempoPoint> tempo; // relative ticks, microseconds
-
-        bool empty() const { return tracks.empty() && lanes.empty() && tempo.empty(); }
-    };
-    Clip &clipboard() { return m_clip; }
 
     // "velocity 93 → plays 96 · length 25 → 24 clocks" for the status bar.
     void announceNote(const ViewNote &note);
@@ -599,9 +593,11 @@ class SongView : public QWidget
     void transitionSelectedTrack(int newTrack);
     void transitionSelectedTrack(int newTrack, bool trackIdentityChanged);
     void updateScaleProjection();
-    void updateScaleMembership();
     void buildOccupancySet(std::span<bool, 128> out) const;
     void rebuildProjectionWithAnchoring();
+    // Fold-relevant model change (song swap, track switch): rebuild now, or
+    // defer while a pointer gesture holds the projection lock.
+    void requestProjectionRebuild();
     void syncPlayheadOverlay();
 
     void notifyDrawerSongChanged();
@@ -629,6 +625,14 @@ class SongView : public QWidget
     // model lanes plus the voice changes).
     std::vector<int> timeSelectionTracks() const;
     std::vector<uint8_t> trackCcs(int track) const;
+    // The TimeScope a range command gathers over: the selection's lane list
+    // for a Lanes selection, or the scoped tracks with their full per-track
+    // lane list (model lanes + voice) for a Tracks selection, with the tempo
+    // row gated exactly as the copy/delete/nudge commands always gated it.
+    // Nullopt when the selection resolves to nothing (no lanes/tempo, or no
+    // document-mapped tracks).
+    std::optional<SongDocument::TimeScope> timeSelectionScope() const;
+    std::optional<songview::Clip> readClipboardClip();
 
     const MidiTimeline *m_timeline = nullptr;
     const LoadedVoiceGroup *m_voicegroup = nullptr;
@@ -637,23 +641,19 @@ class SongView : public QWidget
     songview::EditorSelectionModel m_selectionModel;
     Geometry m_geometry;
     songview::PitchProjection m_projection;
-    bool m_projectionDirty = false;
-    bool m_projectionLocked = false;
+    songview::ScaleController m_scaleController;
+    bool m_projectionLocked = false; // pointer gesture holds fold row geometry stable
+    bool m_projectionDirty = false;  // fold-relevant change deferred by the lock
 
     double m_pxPerTick = 1.0;
     double m_scrollX = 0.0;
     double m_scrollY = 0.0;
     double m_keyHeight = 0.0;
-    bool m_scaleHighlight = false;
-    bool m_scaleFold = false;
-    int m_scaleRoot = 0; // C
-    porydaw_scale::ScaleId m_scaleId = porydaw_scale::ScaleId::major;
     double m_playheadTick = 0.0;
     uint64_t m_editCursorTick = 0;
     bool m_playing = false;
     uint32_t m_muteMask = 0;
     uint32_t m_soloMask = 0;
-    Clip m_clip;
     GridFeel m_gridFeel = GridFeel::Straight;
     int m_gridMinDenom = 0;           // note denominator; 0 = clock-grid floor
     bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)

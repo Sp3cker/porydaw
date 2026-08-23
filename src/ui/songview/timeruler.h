@@ -103,6 +103,7 @@ class TimeRuler : public QWidget
     bool m_leftPress = false;       // plain click vs. time-selection sweep undecided
     bool m_rightPress = false;      // right click held until the ruler menu opens
     bool m_selSweep = false;        // left-drag time-selection sweep is live
+    bool m_multiTrackSweep = false; // modifier intent captured when the sweep is armed
     QPointF m_leftPressPos;
     QPointF m_rightPressPos;
     uint64_t m_selAnchor = 0;         // snapped tick of the pending press

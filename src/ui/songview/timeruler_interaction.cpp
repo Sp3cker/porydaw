@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <utility>
 
 namespace songview {
 using namespace songview::detail;
@@ -63,6 +64,7 @@ void TimeRuler::mousePressEvent(QMouseEvent *event)
     // Elsewhere on the ruler: defer until movement distinguishes a click
     // (place the edit cursor) from a drag (sweep a time selection).
     m_leftPress = true;
+    m_multiTrackSweep = event->modifiers() & Qt::ControlModifier;
     m_leftPressPos = event->position();
     m_selAnchor = clickTick;
 }
@@ -85,7 +87,16 @@ void TimeRuler::mouseMoveEvent(QMouseEvent *event)
             EditorSelectionModel::TimeSelection sel;
             sel.startTick = std::min(m_selAnchor, tick);
             sel.endTick = std::max(m_selAnchor, tick);
-            m_sv->selectionModel().setTimeSelection(sel); // scope: the selected tracks
+            TrackMask trackMask = 1u << m_sv->selectionModel().primaryTrack();
+            if (m_multiTrackSweep) {
+                for (const ViewNote &note : m_sv->model().notes) {
+                    if (note.startTick >= sel.endTick)
+                        break;
+                    if (note.track >= 0 && note.track < 16 && sel.startTick < note.endTick)
+                        trackMask |= 1u << note.track;
+                }
+            }
+            m_sv->selectionModel().setTimeSelectionAndTrackScope(std::move(sel), trackMask);
         }
         return;
     }
@@ -129,6 +140,7 @@ void TimeRuler::mouseReleaseEvent(QMouseEvent *event)
     }
     if (event->button() == Qt::LeftButton && m_leftPress) {
         m_leftPress = false;
+        m_multiTrackSweep = false;
         if (m_selSweep) {
             m_selSweep = false;
             if (m_sv->selectionModel().timeSelection().active())
