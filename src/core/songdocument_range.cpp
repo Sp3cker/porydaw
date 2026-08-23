@@ -45,9 +45,12 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
         }
         ++nextSmfTrack;
     }
+    // SMF track count after the expansion above. Descriptor-lane writes may
+    // target freshly created tracks, which plan as empty streams.
+    const int expandedSmfTracks = nextSmfTrack;
     std::vector<EditOp> trims;
     if (!m_smf.tracks.empty()) {
-        std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
+        std::vector<std::vector<size_t>> removals(expandedSmfTracks);
         for (const DocNote &note : edit.removeNotes) {
             if (note.smfTrack < 0 || note.smfTrack >= int(removals.size()))
                 continue;
@@ -60,38 +63,42 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
         // affected track is then rewritten exactly once; the flat patches
         // merge with the ordinary removals/insertions into one atomic
         // command.
-        std::vector<std::vector<uint64_t>> removeCandidates(m_smf.tracks.size());
-        std::vector<std::vector<xcmd::PointWrite>> writes(m_smf.tracks.size());
+        std::vector<std::vector<uint64_t>> removeCandidates(expandedSmfTracks);
+        std::vector<std::vector<xcmd::PointWrite>> writes(expandedSmfTracks);
         for (const DocLanePoint &pt : edit.removePoints) {
             if (pt.smfTrack < 0 || pt.smfTrack >= int(removeCandidates.size()))
                 continue;
             removeCandidates[size_t(pt.smfTrack)].push_back(uint64_t(pt.index));
         }
         for (const RangeEdit::LaneWrite &lw : edit.addPoints) {
-            const int smfTrack = smfTrackFor(lw.engineTrack);
-            if (smfTrack < 0)
+            if (lw.engineTrack < 0 || lw.engineTrack >= int(engineToSmf.size()))
                 continue;
+            const int smfTrack = engineToSmf[size_t(lw.engineTrack)];
             if (const xcmd::Descriptor *descriptor = xcmd::descriptorForLane(lw.cc)) {
                 std::vector<xcmd::PointWrite> &trackWrites = writes[size_t(smfTrack)];
                 for (const LanePointValue &point : lw.points) {
                     const int clamped = std::clamp(point.value, int(descriptor->minimumValue),
                                                    int(descriptor->maximumValue));
                     trackWrites.push_back({point.tick, lw.cc, uint8_t(clamped),
-                                           uint8_t(lw.engineTrack), channelFor(lw.engineTrack)});
+                                           uint8_t(lw.engineTrack),
+                                           engineChannels[size_t(lw.engineTrack)]});
                 }
             }
         }
+        std::vector<EditOp> xcmdInserts;
         // One rewrite per affected track. Only tracks with remove candidates
         // need the projection — it classifies each candidate (a known
         // descriptor point leaves through the canonical plan, a stale
         // identity as a plain raw removal). A rejection (unknown identity,
         // opaque-span destination) fails the whole command before anything
         // is pushed.
-        std::vector<EditOp> xcmdInserts;
-        for (size_t track = 0; track < m_smf.tracks.size(); track++) {
+        for (size_t track = 0; track < size_t(expandedSmfTracks); track++) {
             if (removeCandidates[track].empty() && writes[track].empty())
                 continue;
-            const std::vector<xcmd::Event> events = xcmdEvents(int(track));
+            // Tracks created by this edit have no stored events yet; their
+            // epochs are built from nothing.
+            const std::vector<xcmd::Event> events =
+                track < m_smf.tracks.size() ? xcmdEvents(int(track)) : std::vector<xcmd::Event>{};
             std::vector<uint64_t> removeIdentities;
             if (!removeCandidates[track].empty()) {
                 const xcmd::Projection projection = xcmd::projectEvents(events);
@@ -145,13 +152,8 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
             continue; // already emitted through the canonical plan above
         const int smfTrack = engineToSmf[size_t(lw.engineTrack)];
         const uint8_t channel = engineChannels[size_t(lw.engineTrack)];
-        for (const LanePointValue &pt : lw.points) {
-            EditOp op;
-            op.type = EditOp::InsertEvent;
-            op.smfTrack = smfTrack;
-            op.event = makeLaneEvent(lw.cc, channel, pt.tick, pt.value);
-            ops.push_back(op);
-        }
+        for (const LanePointValue &pt : lw.points)
+            appendLaneInsertOps(ops, smfTrack, channel, lw.cc, pt.tick, pt.value);
     }
     ops.insert(ops.end(), trims.begin(), trims.end());
     if (edit.removeTempo.empty() && edit.addTempo.empty()) {
@@ -283,7 +285,7 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
         return;
     }
     std::vector<TempoPoint> nextTempo = m_tempoPoints;
-    std::set<uint32_t> moving;
+    std::set<uint64_t> moving;
     for (const TempoPoint &point : tempo)
         moving.insert(point.tick);
     std::erase_if(nextTempo, [&](const TempoPoint &point) { return moving.contains(point.tick); });

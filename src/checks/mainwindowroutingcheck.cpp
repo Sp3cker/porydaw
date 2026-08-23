@@ -18,7 +18,6 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMimeData>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QScrollArea>
@@ -190,7 +189,8 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     check(tabBNote.has_value(), "active-tab Copy check found no note in the second song");
     if (copyAction && tabBNote) {
         auto copyTriggerCount = 0;
-        connect(copyAction, &QAction::triggered, this, [&copyTriggerCount] { ++copyTriggerCount; });
+        const QMetaObject::Connection triggerSpy = connect(
+            copyAction, &QAction::triggered, this, [&copyTriggerCount] { ++copyTriggerCount; });
         tabB->view->focusActiveSurface();
         QCoreApplication::processEvents();
         if (currentCopyBindings.isEmpty()) {
@@ -230,6 +230,7 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         copyAction->trigger();
         check(QApplication::clipboard()->text() == QStringLiteral("native copy text probe"),
               "Edit Copy action hijacked focused text-widget copy");
+        disconnect(triggerSpy); // the lambda captures a block-local by reference
         m_tabs->setCurrentWidget(tabB->view);
         QCoreApplication::processEvents();
     }
