@@ -128,9 +128,9 @@ const VoiceChangeLane::VoicePaintText &VoiceChangeLane::paintTextFor(int program
     auto &cache = m_paintTexts[std::size_t(program)];
     const auto *voicegroup = m_page ? m_page->voicegroup() : nullptr;
     const int type = voicegroup ? int(voicegroup->voices[program].type) : -1;
-    const char *sourceName = voicegroup ? voicegroup->voiceNames[program] : "";
+    const char *sourceName = voicegroup ? voicegroup->voiceSampleNames[program] : "";
     if (cache.group == voicegroup && cache.type == type &&
-        std::strncmp(cache.sourceName.data(), sourceName, VG_VOICE_NAME_LEN) == 0 &&
+        std::strncmp(cache.sourceName.data(), sourceName, VG_MAX_VOICE_SAMPLE_NAME) == 0 &&
         !cache.label.isEmpty())
         return cache;
     cache.group = voicegroup;

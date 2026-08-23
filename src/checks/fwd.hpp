@@ -37,6 +37,8 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot = QStrin
                    const QString &screenshotPath = QString());
 int runIgnoreCheck(const QString &scratchDir);
 int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDir);
+int runContextCheck(const QString &scratchDir);
+int runVoicegroupCoreAbiCheck();
 int runKeymapCheck();
 int runSelectionCheck();
 int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong = QString(),

@@ -8,10 +8,7 @@
 #include "audio/wavexport.h"
 #include "core/songdocument.h"
 #include "project/decompproject.h"
-
-extern "C" {
-#include "voicegroup_loader.h"
-}
+#include "project/voicegroupproject.h"
 
 // --exportcheck <projectRoot> <song>: WAV export check. Renders the song
 // offline through the export path and verifies the RIFF header, the
@@ -69,12 +66,18 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
         return 1;
     }
 
+    auto vgProject = porydaw::VoicegroupProject{};
+    const auto vgSnapshot = vgProject.open(projectRoot);
     LoadedVoiceGroup *vg = nullptr;
-    const QByteArray rootUtf8 = projectRoot.toLocal8Bit();
-    for (const QString &name : DecompProject::voicegroupCandidates(song->cfg)) {
-        vg = voicegroup_load(rootUtf8.constData(), name.toLocal8Bit().constData(), nullptr);
-        if (vg)
-            break;
+    if (vgSnapshot.succeeded) {
+        for (const QString &name : DecompProject::voicegroupCandidates(song->cfg)) {
+            auto load = vgProject.loadSaved(name);
+            if (load.succeeded()) {
+                vg = load.take();
+                if (vg)
+                    break;
+            }
+        }
     }
     if (!vg) {
         std::fprintf(stderr, "exportcheck: voicegroup not found\n");
@@ -113,7 +116,7 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
             },
             &error)) {
         std::fprintf(stderr, "exportcheck: export: %s\n", qUtf8Printable(error));
-        voicegroup_free(vg);
+        porydaw::VoicegroupProject::freeBank(vg);
         return 1;
     }
     if (!monotonic || lastFraction != 1.0)
@@ -183,7 +186,7 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
     if (QFile::exists(wavPath))
         fail("cancelled export left a partial file behind");
 
-    voicegroup_free(vg);
+    porydaw::VoicegroupProject::freeBank(vg);
     std::printf("exportcheck: %s\n", failures == 0 ? "PASS" : "FAIL");
     return failures == 0 ? 0 : 1;
 }

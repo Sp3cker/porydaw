@@ -11,6 +11,7 @@
 #include <QLineEdit>
 #include <QMouseEvent>
 #include <QPointer>
+#include <QPushButton>
 #include <QSettings>
 #include <QSpinBox>
 #include <QTemporaryDir>
@@ -25,10 +26,11 @@
 
 #include "mainwindow.h"
 #include "project/songregistry.h"
+#include "project/voicegroupproject.h"
 #include "ui/voicegroupbrowser.h"
 
 extern "C" {
-#include "voicegroup_loader.h"
+#include "voicegroup/voicegroup_loader.h"
 }
 
 // --vgsavecheck <projectRoot> <song>: unified song+voicegroup undo/save
@@ -64,6 +66,11 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     QString error;
     if (!m_project.open(projectRoot, &error)) {
         std::fprintf(stderr, "vgsavecheck: %s\n", qUtf8Printable(error));
+        return false;
+    }
+    const auto vgSnapshot = m_vgProject.open(projectRoot);
+    if (!vgSnapshot.succeeded) {
+        std::fprintf(stderr, "vgsavecheck: voicegroup project refresh failed\n");
         return false;
     }
     const SongInfo *target = nullptr;
@@ -153,10 +160,15 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     check(readFileBytes(vgPath) != vgBytesOriginal, "save did not write the voicegroup file");
     check(readFileBytes(tab->doc.midPath()) != midBytesOriginal, "save did not write the .mid");
     {
-        VoicegroupSource fresh;
-        check(fresh.open(projectRoot, tab->doc.cfg().voicegroupArg, &error) &&
-                  fresh.voiceAt(dsSlot) && fresh.voiceAt(dsSlot)->release == edited.release,
-              "saved voice edit not present in a fresh parse");
+        const auto freshBytes = readFileBytes(vgPath);
+        auto freshLoad = m_vgProject.loadSource(
+            tab->vgSource->loadName(), tab->vgSource->sourcePath(), QByteArrayView{freshBytes});
+        LoadedVoiceGroup *const freshBank = freshLoad.succeeded() ? freshLoad.take() : nullptr;
+        check(freshLoad.succeeded() && freshBank &&
+                  freshBank->voices[dsSlot].release == edited.release,
+              "stale source: saved voice edit materializes through a fresh project load");
+        if (freshBank)
+            porydaw::VoicegroupProject::freeBank(freshBank);
     }
 
     // 4. Undo both edits and save again: the voicegroup .inc must come back
@@ -172,14 +184,16 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     // 5. A -G voicegroup switch carries unsaved voice edits in the undo
     // history: undoing the switch replays them into the reopened source.
     QString otherArg;
-    for (const QString &arg : SongRegistry::voicegroupArgs(m_project.root())) {
+    const auto catalog = vgCatalog();
+    for (const QString &arg : catalog.groupArgs) {
         if (arg == tab->doc.cfg().voicegroupArg)
             continue;
-        SongCfg probe = tab->doc.cfg();
-        probe.voicegroupArg = arg;
-        QString tried;
-        if (LoadedVoiceGroup *vg = loadVoicegroupFor(probe, &tried)) {
-            voicegroup_free(vg);
+        auto load = m_vgProject.loadSaved(arg);
+        if (load.succeeded()) {
+            auto *vg = load.take();
+            if (!vg)
+                continue;
+            porydaw::VoicegroupProject::freeBank(vg);
             otherArg = arg;
             break;
         }
@@ -327,6 +341,28 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         }
     }
 
+    // An invalid in-memory draft is rejected before an undo command or a
+    // modular source load can mutate source, audio, or row state.
+    {
+        QTreeWidget *tree = m_vgBrowser->findChild<QTreeWidget *>();
+        QTreeWidgetItem *row = tree ? tree->topLevelItem(dsSlot) : nullptr;
+        const auto sourceBefore = tab->vgSource->sourceBytes();
+        const auto undoIndexBefore = tab->doc.undoStack()->index();
+        LoadedVoiceGroup *const bankBefore = tab->voicegroup;
+        const QString previewDir = projectRoot + QStringLiteral("/.porydaw/vgpreview");
+        VgVoice invalid = *tab->vgSource->voiceAt(dsSlot);
+        invalid.symbol.clear();
+        onVoiceEditRequested(dsSlot, invalid, true);
+        check(tab->doc.undoStack()->index() == undoIndexBefore &&
+                  tab->vgSource->sourceBytes() == sourceBefore && !tab->vgSource->dirty(),
+              "invalid draft entered the undo stack or source");
+        check(tab->voicegroup == bankBefore && m_audio.voicegroup() == bankBefore,
+              "invalid draft replaced the last-good audio bank");
+        check(row && (row->flags() & Qt::ItemIsEnabled),
+              "invalid draft disabled the prior valid row");
+        check(!QDir(previewDir).exists(), "invalid draft created a preview directory");
+    }
+
     // 6a. A source-undefined row stays visibly blank, but selecting its
     // DirectSound template and choosing another type creates an undoable
     // structural voice at that exact slot.
@@ -397,6 +433,120 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             }
         }
     }
+    // A broken external source is visible but cannot be selected. Its
+    // last-good bank remains bound; a later fixed disk revision reloads and
+    // re-enables the row.
+    {
+        const auto writeSourceAt = [](const QString &path, const QByteArray &bytes,
+                                      const QDateTime &modified) {
+            QFile file(path);
+            if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
+                file.write(bytes) != bytes.size()) {
+                return false;
+            }
+            file.close();
+            if (!file.open(QIODevice::ReadWrite))
+                return false;
+            const bool stamped = file.setFileTime(modified, QFileDevice::FileModificationTime);
+            file.close();
+            return stamped;
+        };
+        const QByteArray validSource = readFileBytes(vgPath);
+        const QByteArray macro = vgMacroName(original.macro).toUtf8();
+        const int macroOffset = validSource.indexOf(macro);
+        if (check(macroOffset >= 0,
+                  "stale source: cannot locate a voice line for the disk-break check")) {
+            const int lineBegin = validSource.lastIndexOf('\n', macroOffset) + 1;
+            int lineEnd = validSource.indexOf('\n', macroOffset);
+            if (lineEnd < 0)
+                lineEnd = validSource.size();
+            QByteArray brokenSource = validSource;
+            brokenSource.replace(lineBegin, lineEnd - lineBegin,
+                                 QByteArray("\t") + macro + QByteArray(" broken"));
+            LoadedVoiceGroup *const lastGood = tab->voicegroup;
+            const auto brokenTime = tab->vgFileTime.addSecs(2);
+            if (check(writeSourceAt(vgPath, brokenSource, brokenTime),
+                      "stale source: cannot write the broken external source")) {
+                const auto observedBrokenTime = QFileInfo(vgPath).lastModified();
+                m_vgProject.markStale();
+                maybeRefreshVoicegroup(*tab);
+                int brokenSlot = -1;
+                for (int slot = 0; slot < VOICEGROUP_SIZE && brokenSlot < 0; ++slot) {
+                    if (tab->vgSource->kindAt(slot) == VgLineKind::Broken)
+                        brokenSlot = slot;
+                }
+                QTreeWidget *tree = m_vgBrowser->findChild<QTreeWidget *>();
+                QTreeWidgetItem *brokenRow =
+                    tree && brokenSlot >= 0 ? tree->topLevelItem(brokenSlot) : nullptr;
+                check(brokenSlot >= 0 && brokenRow && !(brokenRow->flags() & Qt::ItemIsEnabled) &&
+                          !brokenRow->toolTip(0).isEmpty(),
+                      "stale source: broken external source did not disable its row");
+                const porydaw::VoicegroupProject::Diagnostic *slotDiagnostic = nullptr;
+                if (brokenSlot >= 0) {
+                    for (const auto &diagnostic : tab->diagnostics) {
+                        if (diagnostic.slot && *diagnostic.slot == size_t(brokenSlot)) {
+                            slotDiagnostic = &diagnostic;
+                            break;
+                        }
+                    }
+                }
+                m_vgBrowser->selectSlot(brokenSlot);
+                QCoreApplication::processEvents();
+                QLabel *notice =
+                    m_vgBrowser->findChild<QLabel *>(QStringLiteral("voicegroupEditorNotice"));
+                const QString diagnosticPath =
+                    slotDiagnostic
+                        ? (slotDiagnostic->sourcePath.isEmpty() ? slotDiagnostic->assetPath
+                                                                : slotDiagnostic->sourcePath)
+                        : QString();
+                const bool noticeHasLine = slotDiagnostic && slotDiagnostic->range && notice &&
+                                           notice->text().contains(QString::number(
+                                               qulonglong(slotDiagnostic->range->startLine)));
+                check(slotDiagnostic != nullptr,
+                      "stale source: broken external source has no slot-scoped diagnostic");
+                check(notice != nullptr,
+                      "stale source: broken external source has no editor notice");
+                check(!diagnosticPath.isEmpty(),
+                      "stale source: broken external source diagnostic has no path");
+                check(notice && notice->text().contains(diagnosticPath),
+                      "stale source: broken external source notice omitted its path");
+                check(slotDiagnostic && notice && notice->text().contains(slotDiagnostic->message),
+                      "stale source: broken external source notice omitted its message");
+                check(!slotDiagnostic || !slotDiagnostic->range || noticeHasLine,
+                      "stale source: broken external source notice omitted its line");
+                check(tab->voicegroup == lastGood && m_audio.voicegroup() == lastGood,
+                      "stale source: broken external source replaced the last-good bank");
+                check(
+                    !tab->vgSource->dirty() && tab->vgFileTime == observedBrokenTime,
+                    "stale source: broken external source was not recorded as observed disk state");
+                const auto fixedTime = brokenTime.addSecs(2);
+                if (check(writeSourceAt(vgPath, validSource, fixedTime),
+                          "stale source: cannot restore the fixed external source")) {
+                    m_vgProject.markStale();
+                    maybeRefreshVoicegroup(*tab);
+                    QTreeWidgetItem *fixedRow =
+                        tree && brokenSlot >= 0 ? tree->topLevelItem(brokenSlot) : nullptr;
+                    check(tab->vgSource->kindAt(brokenSlot) != VgLineKind::Broken && fixedRow &&
+                              (fixedRow->flags() & Qt::ItemIsEnabled) &&
+                              fixedRow->toolTip(0).isEmpty() && tab->diagnostics.isEmpty(),
+                          "stale source: fixed external source did not re-enable its row and clear "
+                          "diagnostics");
+                    auto *reloadButton =
+                        m_vgBrowser->findChild<QPushButton *>(QStringLiteral("vgReloadButton"));
+                    check(reloadButton && reloadButton->isEnabled(),
+                          "stale source: Reload Voicegroup action is not available after a source "
+                          "fix");
+                    if (reloadButton) {
+                        reloadButton->click();
+                        check(m_audio.voicegroup() == tab->voicegroup,
+                              "stale source: Reload Voicegroup did not install the recovered bank");
+                    }
+                    check(!QDir(projectRoot + QStringLiteral("/.porydaw/vgpreview")).exists(),
+                          "stale source: voicegroup reload created a preview directory");
+                }
+            }
+        }
+    }
 
     // 6b. Selecting voices of different families must not change the dock's
     // minimum width: the editor adapts to the dock width the user set, never
@@ -454,9 +604,9 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         }
         if (!check(wrote, "cannot write synth support files"))
             return false;
-        invalidateVgCatalog();
+        m_vgProject.markStale();
         updateVoicegroupBrowser(); // hand the browser the new catalog
-        const VgSynthCatalog setupCatalog = VoicegroupSource::synthInstruments(projectRoot);
+        const VgSynthCatalog setupCatalog = vgCatalog().synths;
         const int defsAfterSetup = setupCatalog.defs.size();
         const QByteArray synthBytesSetup = readFileBytes(synthPath);
         const int indexBeforeSynth = tab->doc.undoStack()->index();
@@ -543,8 +693,9 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                       uint8_t(td.wav->data[2]) == 0x21 && uint8_t(td.wav->data[5]) == 0x87,
                   "param edits were not patched into the loaded tone");
             // The scalar path renames the voice too (param-named symbols):
-            // voiceNames feeds track labels and the browser tree.
-            check(QString::fromUtf8(m_audio.voicegroup()->voiceNames[synthSlot]) == wantSymbol,
+            // voiceSampleNames feeds track labels and the browser tree.
+            check(QString::fromUtf8(m_audio.voicegroup()->voiceSampleNames[synthSlot]) ==
+                      wantSymbol,
                   "param edits did not sync the loaded voice name");
 
             // Save: exactly one definition (the referenced one) is written,
@@ -560,7 +711,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                     wired = readFileBytes(wiredIt.next()).contains("direct_sound_synth_data.inc");
             }
             check(wired, "save did not wire the synth data file into the build");
-            check(VoicegroupSource::synthInstruments(projectRoot).defs.size() == defsAfterSetup + 1,
+            check(vgCatalog().synths.defs.size() == defsAfterSetup + 1,
                   "save wrote more than the one referenced definition");
             listed = false;
             for (int i = 0; i < symbolCombo->count(); i++)
@@ -574,7 +725,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             activate(waveCombo, 1);
             const QString sawSymbol = tab->vgSource->voiceAt(synthSlot)->symbol;
             // find() points into the catalog: it must outlive the pointer.
-            const VgSynthCatalog sawCatalog = VoicegroupSource::synthInstruments(projectRoot);
+            const VgSynthCatalog sawCatalog = vgCatalog().synths;
             const VgSynthDesc *sawDef = sawCatalog.find(sawSymbol);
             check(sawDef && sawDef->waveform == 1,
                   "waveform flip to saw did not dedupe onto an on-disk saw");
@@ -582,7 +733,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             // Deduped onto an on-disk 50% pulse when the project has one,
             // minted under the param name otherwise — never the duty-0 name.
             const QString pulseSymbol = tab->vgSource->voiceAt(synthSlot)->symbol;
-            const VgSynthCatalog pulseCatalog = VoicegroupSource::synthInstruments(projectRoot);
+            const VgSynthCatalog pulseCatalog = vgCatalog().synths;
             const VgSynthDesc *pulseDef = pulseCatalog.find(pulseSymbol);
             check((pulseDef && *pulseDef == VgSynthDesc{}) ||
                       pulseSymbol == vgSynthSymbolName(VgSynthDesc{}),
@@ -738,8 +889,8 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
 
     // 10. The sample picker (the Sample field for DirectSound voices):
     // replaces the giant combo, filters by typed text, auditions the
-    // highlighted sample, marks looped samples, commits an undoable symbol
-    // change, and still accepts an unlisted typed symbol.
+    // highlighted catalog sample, marks looped samples, and commits an
+    // undoable symbol change.
     {
         m_vgBrowser->revealSlot(dsSlot);
         QCoreApplication::processEvents();
@@ -792,7 +943,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                     rows++;
                 }
                 check(rows >= 2, "picker lists fewer than two symbols");
-                check(m_sampleSets.empty() && m_sampleWaves.isEmpty() && m_progWaves.isEmpty() &&
+                check(m_pickerAssets.empty() && m_sampleWaves.isEmpty() && m_progWaves.isEmpty() &&
                           m_keysplits.isEmpty(),
                       "opening the picker loaded unselected assets");
 
@@ -807,7 +958,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 }
                 if (ksRow) {
                     const int seen = auditioned.size();
-                    const auto setsBefore = m_sampleSets.size();
+                    const auto assetsBefore = m_pickerAssets.size();
                     const auto samplesBefore = m_sampleWaves.size();
                     const auto wavesBefore = m_progWaves.size();
                     const auto keysplitsBefore = m_keysplits.size();
@@ -817,21 +968,43 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                               auditionKinds.last() == VgAuditionKind::Keysplit,
                           "keysplit row did not audition as a keysplit");
                     const auto loaded = m_keysplits.constFind(symbol);
-                    check(m_sampleSets.size() == setsBefore + 1 &&
+                    check(m_pickerAssets.size() == assetsBefore + 1 &&
                               m_sampleWaves.size() == samplesBefore &&
                               m_progWaves.size() == wavesBefore &&
                               m_keysplits.size() == keysplitsBefore + 1 &&
-                              loaded != m_keysplits.cend() && loaded->subGroup && loaded->table,
+                              loaded != m_keysplits.cend() && loaded.value() &&
+                              loaded.value()->subGroup && loaded.value()->table,
                           "highlighting one keysplit did not load only that keysplit");
                 } else {
                     std::printf("vgsavecheck: note: no keysplit instruments, "
                                 "keysplit audition skipped\n");
                 }
+                QLabel *pickerDetail =
+                    picker->findChild<QLabel *>(QStringLiteral("vgSamplePickerDetail"));
+                QTreeWidgetItem *sampleRow = nullptr;
+                for (QTreeWidgetItemIterator it(list); *it && !sampleRow; ++it) {
+                    if (VgAuditionKind((*it)->data(0, Qt::UserRole + 1).toInt()) !=
+                        VgAuditionKind::Sample) {
+                        continue;
+                    }
+                    list->setCurrentItem(*it);
+                    QCoreApplication::processEvents();
+                    if (pickerDetail && (pickerDetail->text().contains(tr("Loops")) ||
+                                         pickerDetail->text().contains(tr("One-shot")))) {
+                        sampleRow = *it;
+                    }
+                }
+                check(pickerDetail && (pickerDetail->text().contains(tr("Loops")) ||
+                                       pickerDetail->text().contains(tr("One-shot"))),
+                      "picker detail did not show loop or one-shot metadata");
 
+                QWidget *popup =
+                    picker->findChild<QWidget *>(QStringLiteral("vgSamplePickerPopup"));
+                const QPixmap pickerScreenshot = popup ? popup->grab() : QPixmap();
+                check(!pickerScreenshot.isNull(),
+                      "offscreen picker screenshot with detail could not be rendered");
                 if (!screenshotPath.isEmpty()) {
-                    QWidget *popup =
-                        picker->findChild<QWidget *>(QStringLiteral("vgSamplePickerPopup"));
-                    check(popup && popup->grab().save(screenshotPath),
+                    check(pickerScreenshot.save(screenshotPath),
                           "could not save the picker screenshot");
                     // A -dock variant of the browser itself: the editor
                     // panel's Sample row (picker + glyph tool buttons).
@@ -841,6 +1014,18 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                                                    QStringLiteral("-dock.") + info.suffix()),
                           "could not save the dock screenshot");
                 }
+                // The detail probe may have skipped unavailable catalog
+                // entries before finding a materializable sample. Reset the
+                // lazy caches so the commit probe below still measures one
+                // highlighted row in isolation.
+                QTreeWidgetItem *baselineRow = nullptr;
+                for (QTreeWidgetItemIterator it(list); *it && !baselineRow; ++it) {
+                    if ((*it)->data(0, Qt::UserRole).toString() == before.symbol)
+                        baselineRow = *it;
+                }
+                if (baselineRow)
+                    list->setCurrentItem(baselineRow);
+                clearSampleCache();
 
                 // Filtering highlights and auditions a different plain sample.
                 // The first mouse click only selects it; clicking that same
@@ -854,19 +1039,17 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                         target = s;
                 }
                 if (check(!target.isEmpty(), "no alternate sample to pick")) {
-                    const auto setsBefore = m_sampleSets.size();
+                    const auto assetsBefore = m_pickerAssets.size();
                     const auto samplesBefore = m_sampleWaves.size();
                     const auto wavesBefore = m_progWaves.size();
                     const auto keysplitsBefore = m_keysplits.size();
                     search->setText(target);
                     const auto loaded = m_sampleWaves.constFind(target);
-                    check(m_sampleSets.size() == setsBefore + 1 &&
+                    check(m_pickerAssets.size() == assetsBefore + 1 &&
                               m_sampleWaves.size() == samplesBefore + 1 &&
                               m_progWaves.size() == wavesBefore &&
                               m_keysplits.size() == keysplitsBefore &&
-                              loaded != m_sampleWaves.cend() && *loaded &&
-                              m_sampleSets.back()->count == 1 &&
-                              m_sampleSets.back()->waves[0] == *loaded,
+                              loaded != m_sampleWaves.cend() && *loaded,
                           "highlighting one sample did not load only that sample");
                     check(auditioned.contains(target),
                           "filtering onto a sample did not audition it");
@@ -893,20 +1076,25 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                           "undo did not refresh the picker's label");
                 }
 
-                // An unlisted symbol still commits via the typed-text row
-                // (the editable combo's old superpower).
+                // Typed text that does not resolve through the project catalog
+                // is rejected before it can change source or undo state.
                 picker->openPopup();
                 const QString unlisted = QStringLiteral("VgSaveCheckUnlisted");
                 search->setText(unlisted);
+                const QByteArray sourceBeforeReturn = tab->vgSource->sourceBytes();
+                const int undoIndex = tab->doc.undoStack()->index();
+                bool hasTypedFallbackRow = false;
+                for (QTreeWidgetItemIterator it(list); *it; ++it)
+                    hasTypedFallbackRow =
+                        hasTypedFallbackRow || (*it)->text(0).startsWith(QStringLiteral("Use"));
+                check(!hasTypedFallbackRow, "picker created a typed fallback row");
                 QKeyEvent ret(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
                 QCoreApplication::sendEvent(search, &ret);
                 check(tab->vgSource->voiceAt(dsSlot) &&
-                          tab->vgSource->voiceAt(dsSlot)->symbol == unlisted,
-                      "an unlisted typed symbol did not commit");
-                tab->doc.undoStack()->undo();
-                check(tab->vgSource->voiceAt(dsSlot) &&
-                          tab->vgSource->voiceAt(dsSlot)->symbol == before.symbol,
-                      "undo did not restore the unlisted symbol");
+                          tab->vgSource->voiceAt(dsSlot)->symbol == before.symbol &&
+                          tab->vgSource->sourceBytes() == sourceBeforeReturn &&
+                          tab->doc.undoStack()->index() == undoIndex,
+                      "an unlisted Return changed source or undo state");
 
                 // Wave voices share the picker: switching the Type swaps the
                 // list to the project's programmable waves, and highlighting
@@ -958,7 +1146,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                                 popup->hide();
                         } else {
                             const int seen = auditioned.size();
-                            const auto setsBefore = m_sampleSets.size();
+                            const auto assetsBefore = m_pickerAssets.size();
                             const auto samplesBefore = m_sampleWaves.size();
                             const auto wavesBefore = m_progWaves.size();
                             const auto keysplitsBefore = m_keysplits.size();
@@ -968,13 +1156,11 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                                   "filtering onto a wave did not audition "
                                   "it as a wave");
                             const auto loaded = m_progWaves.constFind(otherWave);
-                            check(m_sampleSets.size() == setsBefore + 1 &&
+                            check(m_pickerAssets.size() == assetsBefore + 1 &&
                                       m_sampleWaves.size() == samplesBefore &&
                                       m_progWaves.size() == wavesBefore + 1 &&
                                       m_keysplits.size() == keysplitsBefore &&
-                                      loaded != m_progWaves.cend() && *loaded &&
-                                      m_sampleSets.back()->progWaveCount == 1 &&
-                                      m_sampleSets.back()->progWaves[0] == *loaded,
+                                      loaded != m_progWaves.cend() && *loaded,
                                   "highlighting one wave did not load only that wave");
                             QKeyEvent waveRet(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
                             QCoreApplication::sendEvent(search, &waveRet);

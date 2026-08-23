@@ -36,24 +36,20 @@
 #include "audio/samplewav.h"
 #include "audio/sf2reader.h"
 #include "project/samplereg.h"
-#include "project/voicegroupsource.h"
+#include "project/voicegroupproject.h"
 #include "samplecheck_fixtures.h"
 #include "ui/sampleeditordialog.h"
 #include "ui/sf2zonepicker.h"
 #include "ui/waveformview.h"
 
-extern "C" {
-#include "voicegroup_loader.h"
-}
-
 // --samplecheck <scratchDir> [corpusRoot]: Sample Editor check, phases 1-6.
 // Phase 1: builds fully-fresh fake decomp projects under scratchDir — a
 // wav2agb one, a legacy-aif one, a rule-less one, an .inc-less one, and a
-// CRLF-.inc one — then drives probe → inspect → register → loader-resolve
+// CRLF-.inc one — then drives probe → inspect → register → project-resolve
 // end to end and exact-matches every refusal message. Phase 2: hi-res
 // decoding, the DSP.md resampler/quantizer/normalize acceptance items 1-6,
 // pipeline determinism, the audition==build parity matrix through pory4a's
-// own loader, and metadata round-trips (item 10). Phase 3: YIN pitch
+// own playback path, and metadata round-trips (item 10). Phase 3: YIN pitch
 // detection (item 9), loop suggestion with its level/anti-pump gates
 // (item 7), the crossfade bake, the audition-slot protocol's retirement
 // invariants against a bare M4AEngine, and offscreen driving of the editor
@@ -112,6 +108,19 @@ bool writeFile(const QString &path, const QByteArray &bytes)
     QDir().mkpath(QFileInfo(path).path());
     QFile out(path);
     return out.open(QIODevice::WriteOnly) && out.write(bytes) == bytes.size();
+}
+
+bool writeVoicegroup(const QString &root, const QString &name, const QByteArray &bytes)
+{
+    if (!writeFile(root + QStringLiteral("/sound/voicegroups/") + name + QStringLiteral(".inc"),
+                   bytes)) {
+        return false;
+    }
+    QFile hub(root + QStringLiteral("/sound/voice_groups.inc"));
+    const QByteArray include =
+        QStringLiteral("\t.include \"sound/voicegroups/%1.inc\"\n").arg(name).toUtf8();
+    return hub.open(QIODevice::WriteOnly | QIODevice::Append) &&
+           hub.write(include) == include.size();
 }
 
 QByteArray readFileBytes(const QString &path)
@@ -422,6 +431,17 @@ void pumpEngine(M4AEngine *engine, int blocks)
         m4a_engine_process(engine, l.data(), r.data(), 512);
 }
 
+QStringList snapshotSampleSymbols(const porydaw::VoicegroupProject::Snapshot &snapshot)
+{
+    QStringList symbols;
+    for (const auto &entry : snapshot.catalog) {
+        if (entry.kind == porydaw::VoicegroupProject::CatalogKind::DirectSound &&
+            !entry.symbol.isEmpty() && !symbols.contains(entry.symbol))
+            symbols.append(entry.symbol);
+    }
+    return symbols;
+}
+
 } // namespace
 
 int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
@@ -439,6 +459,13 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         std::fprintf(stderr, "samplecheck: cannot build fake project\n");
         return 1;
     }
+    auto vgProject = porydaw::VoicegroupProject{};
+    auto vgSnapshot = vgProject.open(root);
+    const auto refreshVoicegroupSnapshot = [&]() {
+        vgProject.markStale();
+        vgSnapshot = vgProject.refresh();
+    };
+    const auto sampleSymbols = [&]() { return snapshotSampleSymbols(vgSnapshot); };
 
     // ---- probe: the wav2agb project registers, the broken ones refuse ----
     {
@@ -488,7 +515,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         expect(SampleRegistrar::sanitizeSampleName(QStringLiteral("Bell (C5)")) ==
                    QStringLiteral("bell_c5"),
                "sanitize trims trailing junk");
-        const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+        const QStringList symbols = sampleSymbols();
         QString error;
         expect(SampleRegistrar::validateSampleName(root, QStringLiteral("fresh_tone"), symbols,
                                                    &error),
@@ -575,7 +602,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
                     QStringLiteral("the smpl loop is not a forward loop (type "
                                    "1); wav2agb only supports forward loops."),
                     "loop-type text");
-        // No agbp/agbl: freq falls back to the loader's smpl-derived math and
+        // No agbp/agbl: freq falls back to the sample inspector's smpl-derived math and
         // size to the smpl loop end.
         FixtureSpec bare = spec;
         bare.agbp = 0;
@@ -588,14 +615,16 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             std::printf("samplecheck: wav inspection OK\n");
     }
 
-    // ---- register + .inc bytes + loader resolution ----
+    // ---- register + .inc bytes + project resolution ----
     const QString incPath = root + QStringLiteral("/sound/direct_sound_data.inc");
     {
         const int before = failures;
         QString error;
-        expect(SampleRegistrar::registerSample(root, QStringLiteral("samplecheck_tone"), fixture,
-                                               &error),
-               "registerSample succeeds");
+        const bool registered = SampleRegistrar::registerSample(
+            root, QStringLiteral("samplecheck_tone"), fixture, sampleSymbols(), &error);
+        expect(registered, "registerSample succeeds");
+        if (registered)
+            refreshVoicegroupSnapshot();
         expect(readFileBytes(root + QStringLiteral("/sound/direct_sound_samples/"
                                                    "samplecheck_tone.wav")) == fixture,
                "sample .wav copied verbatim");
@@ -607,22 +636,23 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             "\t.incbin \"sound/direct_sound_samples/samplecheck_tone.bin\"\n";
         expect(readFileBytes(incPath) == expectedInc, ".inc gains exactly the registration block");
 
-        const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+        const QStringList symbols = sampleSymbols();
         expect(symbols.contains(QStringLiteral("DirectSoundWaveData_samplecheck_tone")) &&
                    symbols.contains(QStringLiteral("DirectSoundWaveData_existing")),
-               "directSoundSymbols sees the new symbol");
+               "snapshot sees the new symbol");
 
-        // A voicegroup referencing the symbol resolves through the C loader,
-        // .wav-first, with the WaveData header the inspector predicted.
-        writeFile(root + QStringLiteral("/sound/voicegroups/voicegroup_samplecheck.inc"),
-                  "voicegroup_samplecheck::\n"
-                  "\tvoice_directsound 60, 0, "
-                  "DirectSoundWaveData_samplecheck_tone, 255, 165, 90, 178\n");
-        const QByteArray rootUtf8 = root.toLocal8Bit();
-        LoadedVoiceGroup *vg =
-            voicegroup_load(rootUtf8.constData(), "voicegroup_samplecheck", nullptr);
+        // A voicegroup referencing the symbol resolves through the modular
+        // project, .wav-first, with the WaveData header the inspector predicted.
+        expect(writeVoicegroup(root, QStringLiteral("voicegroup_samplecheck"),
+                               "voicegroup_samplecheck::\n"
+                               "\tvoice_directsound 60, 0, "
+                               "DirectSoundWaveData_samplecheck_tone, 255, 165, 90, 178\n"),
+               "samplecheck voicegroup writes and is included");
+        refreshVoicegroupSnapshot();
+        auto load = vgProject.loadSaved(QStringLiteral("voicegroup_samplecheck"));
+        LoadedVoiceGroup *vg = load.succeeded() ? load.take() : nullptr;
         if (!vg) {
-            std::fprintf(stderr, "samplecheck: FAIL: voicegroup_load failed\n");
+            std::fprintf(stderr, "samplecheck: FAIL: voicegroup project load failed\n");
             failures++;
         } else {
             const ToneData &td = vg->voices[0];
@@ -636,12 +666,12 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             for (int i = 0; dataOk && i < 64; i++)
                 dataOk = td.wav->data[i] == qint8(i * 2 - 128);
             expect(dataOk, "loaded sample bytes are the u8 data minus 128");
-            expect(QByteArray(vg->voiceNames[0]) == "samplecheck_tone",
-                   "loader-derived voice name");
-            voicegroup_free(vg);
+            expect(QByteArray(vg->voiceSampleNames[0]) == "samplecheck_tone.bin",
+                   "project-derived sample filename");
+            porydaw::VoicegroupProject::freeBank(vg);
         }
         if (failures == before)
-            std::printf("samplecheck: register + loader resolution OK\n");
+            std::printf("samplecheck: register + project resolution OK\n");
     }
 
     // ---- re-registration refusal leaves the .inc untouched ----
@@ -650,7 +680,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         const QByteArray incBefore = readFileBytes(incPath);
         QString error;
         expect(!SampleRegistrar::registerSample(root, QStringLiteral("samplecheck_tone"), fixture,
-                                                &error),
+                                                sampleSymbols(), &error),
                "duplicate registration refused");
         expectError(error,
                     QStringLiteral("DirectSoundWaveData_samplecheck_tone "
@@ -672,9 +702,9 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         writeFile(crlfRoot + QStringLiteral("/audio_rules.mk"), kWav2AgbRules);
         writeFile(crlfRoot + QStringLiteral("/sound/direct_sound_data.inc"), crlfSeed);
         QString error;
-        expect(
-            SampleRegistrar::registerSample(crlfRoot, QStringLiteral("crlf_tone"), fixture, &error),
-            "CRLF-project registration succeeds");
+        expect(SampleRegistrar::registerSample(crlfRoot, QStringLiteral("crlf_tone"), fixture,
+                                               QStringList{}, &error),
+               "CRLF-project registration succeeds");
         const QByteArray grown =
             readFileBytes(crlfRoot + QStringLiteral("/sound/direct_sound_data.inc"));
         expect(grown == crlfSeed + QByteArray("\r\n"
@@ -1189,7 +1219,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             std::printf("samplecheck: retune vectors OK\n");
     }
 
-    // ---- parity matrix: in-memory render == loader-decoded project file
+    // ---- parity matrix: in-memory render == decoded project file
     // (the audition == build invariant), plus metadata round-trip ----
     {
         const int before = failures;
@@ -1255,12 +1285,14 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             renders.push_back(doc.processed());
             const QByteArray bytes = writeSampleWav(renders.back());
             QString error;
-            if (!SampleRegistrar::registerSample(root, QLatin1String(c.name), bytes, &error)) {
+            if (!SampleRegistrar::registerSample(root, QLatin1String(c.name), bytes,
+                                                 sampleSymbols(), &error)) {
                 std::fprintf(stderr, "samplecheck: FAIL: register %s: %s\n", c.name,
                              qUtf8Printable(error));
                 failures++;
                 continue;
             }
+            refreshVoicegroupSnapshot();
             vgText += QStringLiteral("\tvoice_directsound 60, 0, DirectSoundWaveData_%1, "
                                      "255, 0, 255, 0\n")
                           .arg(QLatin1String(c.name));
@@ -1311,12 +1343,13 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
                    "writer chunk order and RIFF pad byte");
         }
 
-        writeFile(root + QStringLiteral("/sound/voicegroups/voicegroup_parity.inc"),
-                  vgText.toUtf8());
-        const QByteArray rootUtf8 = root.toLocal8Bit();
-        LoadedVoiceGroup *vg = voicegroup_load(rootUtf8.constData(), "voicegroup_parity", nullptr);
+        expect(writeVoicegroup(root, QStringLiteral("voicegroup_parity"), vgText.toUtf8()),
+               "parity voicegroup writes and is included");
+        refreshVoicegroupSnapshot();
+        auto load = vgProject.loadSaved(QStringLiteral("voicegroup_parity"));
+        LoadedVoiceGroup *vg = load.succeeded() ? load.take() : nullptr;
         if (!vg) {
-            std::fprintf(stderr, "samplecheck: FAIL: parity voicegroup_load failed\n");
+            std::fprintf(stderr, "samplecheck: FAIL: parity voicegroup project load failed\n");
             failures++;
         } else {
             for (size_t i = 0; i < cases.size(); i++) {
@@ -1333,13 +1366,13 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
                     headerOk && std::memcmp(wd->data, p.s8.constData(), p.size) == 0;
                 if (!headerOk || !bytesOk) {
                     std::fprintf(stderr,
-                                 "samplecheck: FAIL: %s loader parity "
+                                 "samplecheck: FAIL: %s project parity "
                                  "(header %d bytes %d)\n",
                                  cases[i].name, int(headerOk), int(bytesOk));
                     failures++;
                 }
             }
-            voicegroup_free(vg);
+            porydaw::VoicegroupProject::freeBank(vg);
         }
         if (failures == before)
             std::printf("samplecheck: parity matrix OK\n");
@@ -1348,13 +1381,13 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
     // ---- the dialog, offscreen: pipeline controls + commit validation ----
     {
         const int before = failures;
-        ImportedSample prepared;
         QString error;
+        ImportedSample prepared;
+        const QStringList symbols = sampleSymbols();
         expect(importAudioFile(root + QStringLiteral("/sound/direct_sound_samples/"
                                                      "samplecheck_tone.wav"),
                                &prepared, &error),
                "prepared sample re-imports from the project");
-        const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
         SampleEditorDialog dialog(prepared, [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         });
@@ -1738,12 +1771,11 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         if (failures == before)
             std::printf("samplecheck: audition slots OK\n");
     }
-
     // ---- the editor, offscreen (phase 3): waveform drags, suggest chips,
     // pitch prefill, dialog-local undo, commit re-runs the §1 assertions ----
     {
         const int before = failures;
-        const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+        const QStringList symbols = sampleSymbols();
         SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
             return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
         });
@@ -1957,25 +1989,28 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             nameEdit->setText(QStringLiteral("phase3_tone"));
             const QByteArray incBefore = readFileBytes(incPath);
             QString error;
-            expect(SampleRegistrar::registerSample(root, dialog.sampleName(), dialog.wavBytes(),
-                                                   &error),
-                   "phase-3 commit registers");
+            const bool registered = SampleRegistrar::registerSample(
+                root, dialog.sampleName(), dialog.wavBytes(), sampleSymbols(), &error);
+            expect(registered, "phase-3 commit registers");
+            if (registered)
+                refreshVoicegroupSnapshot();
             expect(readFileBytes(incPath) ==
                        incBefore + QByteArray("\n\t.align 2\n"
                                               "DirectSoundWaveData_phase3_tone::\n"
                                               "\t.incbin \"sound/direct_sound_samples/"
                                               "phase3_tone.bin\"\n"),
                    "commit appends exactly the registration block");
-            writeFile(root + QStringLiteral("/sound/voicegroups/voicegroup_phase3.inc"),
-                      "voicegroup_phase3::\n"
-                      "\tvoice_directsound 60, 0, "
-                      "DirectSoundWaveData_phase3_tone, 255, 0, 255, 165\n");
-            const QByteArray rootUtf8 = root.toLocal8Bit();
-            LoadedVoiceGroup *vg =
-                voicegroup_load(rootUtf8.constData(), "voicegroup_phase3", nullptr);
+            expect(writeVoicegroup(root, QStringLiteral("voicegroup_phase3"),
+                                   "voicegroup_phase3::\n"
+                                   "\tvoice_directsound 60, 0, "
+                                   "DirectSoundWaveData_phase3_tone, 255, 0, 255, 165\n"),
+                   "phase-3 voicegroup writes and is included");
+            refreshVoicegroupSnapshot();
+            auto load = vgProject.loadSaved(QStringLiteral("voicegroup_phase3"));
+            LoadedVoiceGroup *vg = load.succeeded() ? load.take() : nullptr;
             const ProcessedSample &out = doc->processed();
             if (!vg) {
-                std::fprintf(stderr, "samplecheck: FAIL: phase3 voicegroup_load\n");
+                std::fprintf(stderr, "samplecheck: FAIL: phase3 voicegroup project load\n");
                 failures++;
             } else {
                 const WaveData *wd = vg->voices[0].wav;
@@ -1984,7 +2019,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
                            wd->data && std::memcmp(wd->data, out.s8.constData(), out.size) == 0,
                        "committed sample loads back identical (audition == "
                        "build)");
-                voicegroup_free(vg);
+                porydaw::VoicegroupProject::freeBank(vg);
             }
         }
         if (failures == before)
@@ -2455,18 +2490,21 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         const ProcessedSample &out = doc.processed();
         expect(out.looped && out.size > out.loopStart + 100, "engine-loop fixture renders looped");
         QString error;
-        expect(SampleRegistrar::registerSample(root, QStringLiteral("engineloop_tone"),
-                                               writeSampleWav(out), &error),
-               "engine-loop sample registers");
-        writeFile(root + QStringLiteral("/sound/voicegroups/voicegroup_engineloop.inc"),
-                  "voicegroup_engineloop::\n"
-                  "\tvoice_directsound 60, 0, "
-                  "DirectSoundWaveData_engineloop_tone, 255, 0, 255, 0\n");
-        const QByteArray rootUtf8 = root.toLocal8Bit();
-        LoadedVoiceGroup *vg =
-            voicegroup_load(rootUtf8.constData(), "voicegroup_engineloop", nullptr);
+        const bool registered = SampleRegistrar::registerSample(
+            root, QStringLiteral("engineloop_tone"), writeSampleWav(out), sampleSymbols(), &error);
+        expect(registered, "engine-loop sample registers");
+        if (registered)
+            refreshVoicegroupSnapshot();
+        expect(writeVoicegroup(root, QStringLiteral("voicegroup_engineloop"),
+                               "voicegroup_engineloop::\n"
+                               "\tvoice_directsound 60, 0, "
+                               "DirectSoundWaveData_engineloop_tone, 255, 0, 255, 0\n"),
+               "engine-loop voicegroup writes and is included");
+        refreshVoicegroupSnapshot();
+        auto load = vgProject.loadSaved(QStringLiteral("voicegroup_engineloop"));
+        LoadedVoiceGroup *vg = load.succeeded() ? load.take() : nullptr;
         if (!vg) {
-            std::fprintf(stderr, "samplecheck: FAIL: engineloop voicegroup_load\n");
+            std::fprintf(stderr, "samplecheck: FAIL: engineloop voicegroup project load\n");
             failures++;
         } else {
             // The hardware frontend requires an integral host rate. Use the
@@ -2530,7 +2568,7 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
             }
             m4a_engine_destroy(engine);
             delete engine;
-            voicegroup_free(vg);
+            porydaw::VoicegroupProject::freeBank(vg);
         }
         if (failures == before)
             std::printf("samplecheck: engine loop integration OK\n");
@@ -2555,9 +2593,11 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         doc.setParams(p);
         const QByteArray committed = writeSampleWav(doc.processed());
         QString error;
-        expect(SampleRegistrar::registerSample(root, QStringLiteral("provenance_tone"), committed,
-                                               &error),
-               "provenance sample registers");
+        const bool registered = SampleRegistrar::registerSample(
+            root, QStringLiteral("provenance_tone"), committed, sampleSymbols(), &error);
+        expect(registered, "provenance sample registers");
+        if (registered)
+            refreshVoicegroupSnapshot();
         SampleSidecar sc;
         sc.sourcePath = sourcePath;
         sc.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
@@ -2617,15 +2657,17 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         const QByteArray updated = writeSampleWav(doc.processed());
         expect(updated != committed, "updated render differs");
         const QByteArray incBefore = readFileBytes(incPath);
-        expect(
-            SampleRegistrar::updateSample(root, QStringLiteral("provenance_tone"), updated, &error),
-            "updateSample succeeds");
+        const bool updatedSample = SampleRegistrar::updateSample(
+            root, QStringLiteral("provenance_tone"), updated, sampleSymbols(), &error);
+        expect(updatedSample, "updateSample succeeds");
+        if (updatedSample)
+            refreshVoicegroupSnapshot();
         expect(readFileBytes(incPath) == incBefore, "update leaves the .inc byte-identical");
         expect(readFileBytes(root + QStringLiteral("/sound/direct_sound_samples/"
                                                    "provenance_tone.wav")) == updated,
                "update replaces the .wav bytes");
         expect(!SampleRegistrar::updateSample(root, QStringLiteral("never_registered"), updated,
-                                              &error),
+                                              sampleSymbols(), &error),
                "updating an unregistered sample refuses");
         expectError(error,
                     QStringLiteral("DirectSoundWaveData_never_registered is not "
@@ -2646,7 +2688,9 @@ int runSampleCheck(const QString &scratchDir, const QString &corpusRoot,
         }
         expect(appendedBinOnlyFixture, "append .bin-only sample fixture");
         if (appendedBinOnlyFixture) {
-            expect(!SampleRegistrar::updateSample(root, QStringLiteral("binonly"), updated, &error),
+            refreshVoicegroupSnapshot();
+            expect(!SampleRegistrar::updateSample(root, QStringLiteral("binonly"), updated,
+                                                  sampleSymbols(), &error),
                    "updating a .wav-less symbol refuses");
             expectError(error,
                         QStringLiteral("binonly.wav does not exist in "

@@ -44,8 +44,8 @@ struct SampleWavInfo {
     // custom chunks (0 = absent — both are nonzero in every real file):
     quint32 agbPitch = 0;
     quint32 agbLoopEnd = 0;
-    // The WaveData header the build and porydaw's loader derive from the
-    // above, mirroring load_wav_from_path's math exactly.
+    // The WaveData header the build and modular loader derive from the above,
+    // mirroring vg_load_wav_file's math exactly.
     quint32 waveFreq = 0;
     quint32 waveLoopStart = 0;
     quint32 waveSize = 0;
@@ -81,9 +81,8 @@ class SampleRegistrar
     // basename): lowercased, runs of other characters collapsed to '_'.
     static QString sanitizeSampleName(const QString &raw);
 
-    // Grammar ([a-z0-9_]+) plus collision checks against the project's
-    // declared symbols (pass VoicegroupSource::directSoundSymbols) and
-    // on-disk sample files.
+    // Grammar ([a-z0-9_]+) plus collision checks against the supplied
+    // declared symbols and on-disk sample files.
     static bool validateSampleName(const QString &projectRoot, const QString &name,
                                    const QStringList &existingSymbols, QString *error);
 
@@ -94,16 +93,20 @@ class SampleRegistrar
 
     // Writes sound/direct_sound_samples/<name>.wav verbatim, then appends the
     // registration block to sound/direct_sound_data.inc matching its line
-    // endings and entry style. Re-validates pipeline and name; both writes
-    // are QSaveFile-atomic and the .inc gains exactly one block.
+    // endings and entry style. Follows the caller's snapshot for symbol
+    // collisions; both writes are QSaveFile-atomic and the .inc gains exactly
+    // one block.
     static bool registerSample(const QString &projectRoot, const QString &name,
-                               const QByteArray &wavBytes, QString *error);
+                               const QByteArray &wavBytes, const QStringList &existingSymbols,
+                               QString *error);
 
     // Overwrites an already-registered sample's .wav in place ("Edit
     // sample…" commit). The registration block is untouched — the symbol
-    // must already exist, and only .wav-sourced samples can be updated.
+    // must already exist in existingSymbols, and only .wav-sourced samples
+    // can be updated.
     static bool updateSample(const QString &projectRoot, const QString &name,
-                             const QByteArray &wavBytes, QString *error);
+                             const QByteArray &wavBytes, const QStringList &existingSymbols,
+                             QString *error);
 
     // Provenance sidecar plumbing. Reads validate the version and required
     // fields; writes are QSaveFile-atomic. The sidecar is auxiliary — a

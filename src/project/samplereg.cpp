@@ -1,7 +1,6 @@
 #include "samplereg.h"
 
 #include "sidecar.h"
-#include "voicegroupsource.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -156,7 +155,7 @@ bool SampleRegistrar::validateSampleName(const QString &projectRoot, const QStri
     return true;
 }
 
-// Mirrors load_wav_from_path (external/poryaaaa/plugin/voicegroup_loader.c)
+// Mirrors vg_load_wav_file (external/poryaaaa/plugin/voicegroup/vg_wav.c)
 // chunk-for-chunk, plus the wav2agb-only hard errors (multiple smpl loops,
 // non-forward loop type) and an explicit mono check.
 bool SampleRegistrar::inspectSampleWav(const QByteArray &bytes, SampleWavInfo *info, QString *error)
@@ -264,7 +263,8 @@ bool SampleRegistrar::inspectSampleWav(const QByteArray &bytes, SampleWavInfo *i
 }
 
 bool SampleRegistrar::registerSample(const QString &projectRoot, const QString &name,
-                                     const QByteArray &wavBytes, QString *error)
+                                     const QByteArray &wavBytes, const QStringList &existingSymbols,
+                                     QString *error)
 {
     const SampleFormatProbe probe = probeSampleFormat(projectRoot);
     if (!probe.ok()) {
@@ -272,10 +272,7 @@ bool SampleRegistrar::registerSample(const QString &projectRoot, const QString &
             *error = probe.refusal;
         return false;
     }
-    // Symbols are re-scanned here (not taken from the caller's catalog) so a
-    // stale cache can never let a duplicate through to the .inc.
-    if (!validateSampleName(projectRoot, name, VoicegroupSource::directSoundSymbols(projectRoot),
-                            error))
+    if (!validateSampleName(projectRoot, name, existingSymbols, error))
         return false;
 
     // The .wav first: if the .inc append then fails, an orphan sample file is
@@ -339,7 +336,8 @@ bool SampleRegistrar::registerSample(const QString &projectRoot, const QString &
 }
 
 bool SampleRegistrar::updateSample(const QString &projectRoot, const QString &name,
-                                   const QByteArray &wavBytes, QString *error)
+                                   const QByteArray &wavBytes, const QStringList &existingSymbols,
+                                   QString *error)
 {
     const SampleFormatProbe probe = probeSampleFormat(projectRoot);
     if (!probe.ok()) {
@@ -348,7 +346,7 @@ bool SampleRegistrar::updateSample(const QString &projectRoot, const QString &na
         return false;
     }
     const QString symbol = QStringLiteral("DirectSoundWaveData_") + name;
-    if (!VoicegroupSource::directSoundSymbols(projectRoot).contains(symbol)) {
+    if (!existingSymbols.contains(symbol)) {
         if (error)
             *error = QStringLiteral("%1 is not registered in this project; use Import "
                                     "Sample to add new samples.")

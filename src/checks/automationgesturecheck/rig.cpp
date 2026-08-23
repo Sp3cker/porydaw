@@ -341,8 +341,8 @@ bool AutomationGestureCheckRig::initialize(const SongInfo &song, QString &error)
     m_document->addLanePoint(0, DOC_CC_VOICE, 24, 3);
     m_voicegroup = std::make_unique<LoadedVoiceGroup>();
     m_voicegroup->voices[3].type = VOICE_NOISE;
-    std::strncpy(m_voicegroup->voiceNames[3], "automation-voice",
-                 sizeof(m_voicegroup->voiceNames[3]) - 1);
+    std::strncpy(m_voicegroup->voiceSampleNames[3], "automation-voice",
+                 sizeof(m_voicegroup->voiceSampleNames[3]) - 1);
     m_timeline = m_document->buildTimeline(48000.0);
     m_view = std::make_unique<SongView>();
     m_view->resize(960, 720);

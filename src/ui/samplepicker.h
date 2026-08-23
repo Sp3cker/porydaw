@@ -21,15 +21,14 @@ struct SamplePickInfo {
     double seconds = 0.0; // length at the sample's own rate
 };
 
-// The symbol as shown to the user: the loader's vg_set_voice_name prefix
-// stripping ("DirectSoundWaveData_sc88pro_trumpet" -> "sc88pro_trumpet").
+// The symbol as shown to the user after shared project-catalog prefix stripping
+// ("DirectSoundWaveData_sc88pro_trumpet" -> "sc88pro_trumpet").
 QString vgSampleDisplayName(const QString &symbol);
 
 // The Sample field of the voicegroup editor: a button showing the current
 // sample's display name; clicking opens a searchable popup of the project's
-// samples (sectioned into keysplits/samples/phonemes), audition-on-highlight,
-// and a "use typed symbol" fallback so unknown symbols can still be entered,
-// like the editable combo it replaces.
+// catalog samples (sectioned into keysplits/samples/phonemes), audition-on-
+// highlight, and catalog-only commits.
 class SamplePickerButton : public QPushButton
 {
     Q_OBJECT
@@ -38,7 +37,7 @@ class SamplePickerButton : public QPushButton
     explicit SamplePickerButton(QWidget *parent = nullptr);
 
     // The three sections, each already sorted. The row kind tells the owner
-    // which legacy-loader path resolves the highlighted symbol.
+    // which project-catalog path resolves the highlighted symbol.
     void setChoices(const QStringList &keysplits, const QStringList &samples,
                     const QStringList &phonemes, VgAuditionKind plainKind = VgAuditionKind::Sample);
     // Show symbols verbatim instead of prefix-stripped (rows and button).
@@ -56,8 +55,8 @@ class SamplePickerButton : public QPushButton
     bool popupVisible() const;
 
   signals:
-    // A choice was committed (list row or typed symbol). The owner treats it
-    // like the old combo's activated(): adopt the symbol and commit the edit.
+    // A catalog row was committed. The owner treats it like the old combo's
+    // activated(): adopt the symbol and commit the edit.
     void symbolPicked(const QString &symbol);
     // Highlight moved onto a sample row: play it so browsing is audible.
     void auditionRequested(const QString &symbol, VgAuditionKind kind);
@@ -91,7 +90,6 @@ class SamplePickerButton : public QPushButton
     QLineEdit *m_search = nullptr;
     QTreeWidget *m_list = nullptr;
     QLabel *m_detail = nullptr;
-    QTreeWidgetItem *m_typedRow = nullptr; // "Use typed symbol" fallback
     QTimer *m_auditionOffTimer = nullptr;
     bool m_positioning = false; // suppress audition while (re)building
 };

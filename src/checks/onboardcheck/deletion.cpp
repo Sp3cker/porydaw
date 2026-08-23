@@ -7,7 +7,38 @@
 #include "core/smf.h"
 #include "mainwindow.h"
 #include "pipeline.h"
+#include "project/voicegroupproject.h"
 #include "project/voicegroupsource.h"
+
+namespace {
+
+QList<QPair<QString, QString>>
+snapshotKeysplits(const porydaw::VoicegroupProject::Snapshot &snapshot)
+{
+    QList<QPair<QString, QString>> pairs;
+    for (const auto &entry : snapshot.catalog) {
+        if (entry.kind != porydaw::VoicegroupProject::CatalogKind::Keysplit ||
+            entry.subgroup.isEmpty() || entry.table.isEmpty())
+            continue;
+        const auto pair = qMakePair(entry.subgroup, entry.table);
+        if (!pairs.contains(pair))
+            pairs.append(pair);
+    }
+    return pairs;
+}
+
+QStringList snapshotDrumkits(const porydaw::VoicegroupProject::Snapshot &snapshot)
+{
+    QStringList symbols;
+    for (const auto &entry : snapshot.catalog) {
+        if (entry.kind == porydaw::VoicegroupProject::CatalogKind::Drumkit &&
+            !entry.drumkit.isEmpty() && !symbols.contains(entry.drumkit))
+            symbols.append(entry.drumkit);
+    }
+    return symbols;
+}
+
+} // namespace
 
 namespace OnboardCheck {
 
@@ -217,6 +248,8 @@ void runDeletionChecks(const QString &projectRoot, const QString &midiDir, Decom
     // no keysplit/drumkit reference, no C reference. deleteVoicegroup then
     // inverts createVoicegroup + appendIncludeLine byte-identically.
     {
+        auto vgProject = porydaw::VoicegroupProject{};
+        auto vgSnapshot = vgProject.open(projectRoot);
         const QString hubPath = projectRoot + QStringLiteral("/sound/voice_groups.inc");
         const QByteArray hub0 = readAllBytes(hubPath);
         const QString vgName = QStringLiteral("onboardcheckvg");
@@ -224,42 +257,78 @@ void runDeletionChecks(const QString &projectRoot, const QString &midiDir, Decom
             VoicegroupSource::createVoicegroup(projectRoot, vgName, QString(), QString(), &error) &&
             VoicegroupSource::appendIncludeLine(projectRoot, vgName, &error);
         check(created, "vg delete: createVoicegroup/appendIncludeLine failed");
+        vgProject.markStale();
+        vgSnapshot = vgProject.refresh();
+        auto keysplits = snapshotKeysplits(vgSnapshot);
+        auto drumkits = snapshotDrumkits(vgSnapshot);
         if (created) {
             QVector<SongInfo> songs = project.songs();
             SongInfo user;
             user.label = QStringLiteral("mus_vg_user");
             user.cfg.voicegroupArg = QStringLiteral("_onboardcheckvg");
             songs.append(user);
-            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label) == vgName,
+            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label, keysplits,
+                                                    drumkits) == vgName,
                   "sole-user voicegroup not deletable");
 
             SongInfo second = user;
             second.label = QStringLiteral("mus_vg_user2");
             songs.append(second);
-            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label).isEmpty(),
+            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label, keysplits,
+                                                    drumkits)
+                      .isEmpty(),
                   "shared voicegroup offered for deletion");
             songs.removeLast();
 
             // A keysplit reference from another voicegroup is load-bearing.
             const QString subName = QStringLiteral("onboardchecksub");
             check(VoicegroupSource::createVoicegroup(projectRoot, subName, QString(), QString(),
-                                                     &error),
-                  "vg delete: create sub voicegroup");
+                                                     &error) &&
+                      VoicegroupSource::appendIncludeLine(projectRoot, subName, &error),
+                  "vg delete: create and include sub voicegroup");
             {
-                QFile host(projectRoot + QStringLiteral("/sound/voicegroups/onboardcheckvg.inc"));
-                check(host.open(QIODevice::Append), "vg delete: append keysplit line");
-                host.write("\tvoice_keysplit voicegroup_onboardchecksub, "
-                           "KeySplitTable1\n");
+                QFile tables(projectRoot + QStringLiteral("/sound/keysplit_tables.inc"));
+                check(tables.open(QIODevice::Append), "vg delete: append keysplit table");
+                tables.write("\nkeysplit KeySplitTable1, 0\nsplit 1, 128\n");
+            }
+            VoicegroupSource host;
+            VgVoice reference;
+            reference.macro = VgMacro::Keysplit;
+            reference.symbol = QStringLiteral("voicegroup_onboardchecksub");
+            reference.keysplitTable = QStringLiteral("keysplit_KeySplitTable1");
+            check(host.open(projectRoot, QStringLiteral("sound/voicegroups/onboardcheckvg.inc"),
+                            QStringLiteral("onboardcheckvg"),
+                            QStringLiteral("voicegroup_onboardcheckvg"), &error) &&
+                      host.setVoice(0, reference) && host.save(&error),
+                  "vg delete: write keysplit reference");
+            vgProject.markStale();
+            vgSnapshot = vgProject.refresh();
+            keysplits = snapshotKeysplits(vgSnapshot);
+            drumkits = snapshotDrumkits(vgSnapshot);
+            if (!snapshotKeysplits(vgSnapshot)
+                     .contains(qMakePair(QStringLiteral("voicegroup_onboardchecksub"),
+                                         QStringLiteral("keysplit_KeySplitTable1")))) {
+                for (const auto &diagnostic : vgSnapshot.diagnostics) {
+                    std::fprintf(stderr, "onboardcheck: snapshot %s: %s\n",
+                                 qUtf8Printable(diagnostic.code),
+                                 qUtf8Printable(diagnostic.message));
+                }
             }
             SongInfo subUser = user;
             subUser.label = QStringLiteral("mus_vg_sub_user");
             subUser.cfg.voicegroupArg = QStringLiteral("_onboardchecksub");
             QVector<SongInfo> subSongs = songs;
             subSongs.append(subUser);
-            check(SongRegistry::deletableVoicegroup(projectRoot, subSongs, subUser.label).isEmpty(),
+            check(SongRegistry::deletableVoicegroup(projectRoot, subSongs, subUser.label, keysplits,
+                                                    drumkits)
+                      .isEmpty(),
                   "keysplit sub-voicegroup offered for deletion");
             check(VoicegroupSource::deleteVoicegroup(projectRoot, subName, &error),
                   "vg delete: remove sub voicegroup");
+            vgProject.markStale();
+            vgSnapshot = vgProject.refresh();
+            keysplits = snapshotKeysplits(vgSnapshot);
+            drumkits = snapshotDrumkits(vgSnapshot);
 
             // A C reference would break the link, not merely dangle.
             const QString refPath = projectRoot + QStringLiteral("/src/onboardcheck_ref.c");
@@ -268,10 +337,13 @@ void runDeletionChecks(const QString &projectRoot, const QString &midiDir, Decom
                 check(ref.open(QIODevice::WriteOnly), "vg delete: write C ref");
                 ref.write("extern int voicegroup_onboardcheckvg[];\n");
             }
-            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label).isEmpty(),
+            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label, keysplits,
+                                                    drumkits)
+                      .isEmpty(),
                   "C-referenced voicegroup offered for deletion");
             QFile::remove(refPath);
-            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label) == vgName,
+            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label, keysplits,
+                                                    drumkits) == vgName,
                   "vg delete: dropped C reference not re-detected");
 
             check(VoicegroupSource::deleteVoicegroup(projectRoot, vgName, &error),

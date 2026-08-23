@@ -244,7 +244,13 @@ switch (normalized) {
     await runBuild(["porydaw"], isVerbose(rest));
     break;
   case "build:checks":
-    await runBuild(["porydaw", "porydaw_checks", "mid2agb"], isVerbose(rest));
+    await runBuild([
+      "porydaw",
+      "porydaw_checks",
+      "mid2agb",
+      "porydaw_loadbench_core_cli",
+      "voicegroup_project_harness",
+    ], isVerbose(rest));
     break;
   case "verify":
     await runVerify(rest);

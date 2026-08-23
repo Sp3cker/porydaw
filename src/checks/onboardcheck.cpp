@@ -6,10 +6,12 @@
 #include <QSettings>
 #include <QString>
 #include <QTemporaryDir>
+#include <algorithm>
 #include <cstdio>
 
 #include "checks/onboardcheck/pipeline.h"
 #include "mainwindow.h"
+#include "project/voicegroupproject.h"
 #include "ui/songlistpanel.h"
 
 // --onboardcheck <projectRoot> [mid2agbPath]: M3 onboarding check. Exercises
@@ -78,6 +80,19 @@ bool compilesThroughMid2agb(const QString &mid2agb, const QString &midPath,
     return QFileInfo(outS).size() > 0;
 }
 
+QStringList snapshotVoicegroupArgs(const porydaw::VoicegroupProject::Snapshot &snapshot)
+{
+    QStringList args;
+    for (const auto &entry : snapshot.catalog) {
+        if (entry.kind == porydaw::VoicegroupProject::CatalogKind::VoiceGroup &&
+            entry.symbol.startsWith(QLatin1String("voicegroup")))
+            args.append(entry.symbol.mid(10));
+    }
+    args.removeDuplicates();
+    std::sort(args.begin(), args.end());
+    return args;
+}
+
 } // namespace OnboardCheck
 
 int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
@@ -114,10 +129,12 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
         std::printf("onboardcheck: note: mid2agb not found, compile checks skipped\n");
 
     // ---- Project enumeration ------------------------------------------------
-    const QStringList voicegroupArgs = SongRegistry::voicegroupArgs(projectRoot);
-    check(!voicegroupArgs.isEmpty(), "no voicegroups enumerated");
-    std::printf("onboardcheck: %d voicegroups, e.g. %s\n", int(voicegroupArgs.size()),
-                voicegroupArgs.isEmpty() ? "-" : qUtf8Printable(voicegroupArgs.first()));
+    auto vgProject = porydaw::VoicegroupProject{};
+    const auto vgSnapshot = vgProject.open(projectRoot);
+    const QStringList groupArgs = OnboardCheck::snapshotVoicegroupArgs(vgSnapshot);
+    check(vgSnapshot.succeeded && !groupArgs.isEmpty(), "no voicegroups enumerated");
+    std::printf("onboardcheck: %d voicegroups, e.g. %s\n", int(groupArgs.size()),
+                groupArgs.isEmpty() ? "-" : qUtf8Printable(groupArgs.first()));
     const QVector<MusicPlayer> players = SongRegistry::musicPlayers(projectRoot);
     check(!players.isEmpty(), "no music players parsed from song_table.inc");
 
@@ -181,8 +198,7 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     cfg.exactGate = true;
     cfg.reverb = 50;
     cfg.masterVolume = 100;
-    cfg.voicegroupArg =
-        voicegroupArgs.isEmpty() ? QStringLiteral("_dummy") : voicegroupArgs.first();
+    cfg.voicegroupArg = groupArgs.isEmpty() ? QStringLiteral("_dummy") : groupArgs.first();
     cfg.rawFlags = SongRegistry::mergeCfgFlags(cfg);
 
     const OnboardCheck::RegisteredSongFixture fixture = OnboardCheck::runRegistrationChecks(
@@ -191,8 +207,8 @@ int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath)
     OnboardCheck::runRegionedLayoutChecks(projectRoot, reporter);
     OnboardCheck::runRegisterActionChecks(projectRoot, midiDir, mid2agb, haveMid2agb, cfg, fixture,
                                           reporter);
-    OnboardCheck::runImportChecks(projectRoot, midiDir, mid2agb, haveMid2agb, voicegroupArgs,
-                                  project, cfg, externalImport, duplicateSetters, reporter);
+    OnboardCheck::runImportChecks(projectRoot, midiDir, mid2agb, haveMid2agb, groupArgs, project,
+                                  cfg, externalImport, duplicateSetters, reporter);
     OnboardCheck::runDeletionChecks(projectRoot, midiDir, project, cfg,
                                     fixture.plan.charmapApplicable, reporter);
 

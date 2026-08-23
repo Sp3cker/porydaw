@@ -25,7 +25,7 @@ constexpr int kAuditionOffMs = 2000;
 
 QString vgSampleDisplayName(const QString &symbol)
 {
-    // vg_set_voice_name's prefix list (voicegroup_loader.c), so the picker,
+    // Shared display prefixes used by the project catalog, so the picker,
     // the button, and the voice tree all shorten symbols the same way.
     static const char *const kPrefixes[] = {"DirectSoundWaveData_", "ProgrammableWaveData_",
                                             "voicegroup_"};
@@ -191,7 +191,7 @@ void SamplePickerButton::refreshItemFonts()
     const auto headingFont = typography::bold(font());
     for (int i = 0; i < m_list->topLevelItemCount(); ++i) {
         auto *item = m_list->topLevelItem(i);
-        item->setFont(0, item == m_typedRow ? typography::italic(font()) : headingFont);
+        item->setFont(0, item->parent() ? font() : headingFont);
     }
 }
 
@@ -215,7 +215,6 @@ void SamplePickerButton::rebuildList()
     m_positioning = true;
     m_search->clear();
     m_list->clear();
-    m_typedRow = nullptr;
 
     struct Section {
         QString title;
@@ -259,7 +258,6 @@ void SamplePickerButton::rebuildList()
 void SamplePickerButton::applyFilter()
 {
     const QString filter = m_search->text().trimmed();
-    bool exactMatch = false;
     QTreeWidgetItem *root = m_list->invisibleRootItem();
     const auto rowMatches = [&](QTreeWidgetItem *row) {
         if (filter.isEmpty())
@@ -271,14 +269,10 @@ void SamplePickerButton::applyFilter()
     const auto visitRow = [&](QTreeWidgetItem *row) {
         const bool match = rowMatches(row);
         row->setHidden(!match);
-        if (match && row->data(0, kSymbolRole).toString() == filter)
-            exactMatch = true;
         return match;
     };
     for (int i = 0; i < root->childCount(); i++) {
         QTreeWidgetItem *top = root->child(i);
-        if (top == m_typedRow)
-            continue;
         if (top->childCount() == 0) {
             visitRow(top);
             continue;
@@ -289,25 +283,10 @@ void SamplePickerButton::applyFilter()
         top->setHidden(visible == 0);
     }
 
-    // The editable combo accepted any symbol; keep that power as an explicit
-    // trailing row whenever the typed text isn't already a listed symbol.
-    const bool wantTyped = !filter.isEmpty() && !exactMatch;
-    if (wantTyped && !m_typedRow) {
-        m_typedRow = new QTreeWidgetItem(m_list);
-        m_typedRow->setFont(0, typography::italic(m_typedRow->font(0)));
-    }
-    if (m_typedRow) {
-        m_typedRow->setHidden(!wantTyped);
-        if (wantTyped) {
-            m_typedRow->setText(0, tr("Use \"%1\"").arg(filter));
-            m_typedRow->setData(0, kSymbolRole, filter);
-        }
-    }
-
-    // Keep a live highlight on the top match so Return commits it (and the
-    // audition follows the typing).
+    // Keep a live highlight on the top catalog match so Return commits only
+    // a listed row (and audition follows the typing).
     QTreeWidgetItem *current = m_list->currentItem();
-    if (!current || current->isHidden() || current == m_typedRow) {
+    if (!current || current->isHidden() || current->data(0, kSymbolRole).toString().isEmpty()) {
         if (QTreeWidgetItem *first = firstSelectableRow())
             m_list->setCurrentItem(first);
     }
@@ -345,7 +324,7 @@ void SamplePickerButton::updateDetail()
     }
     const SamplePickInfo info = m_info ? m_info(symbol) : SamplePickInfo{};
     if (!info.known) {
-        m_detail->setText(item == m_typedRow ? tr("Unlisted symbol") : QString());
+        m_detail->clear();
         return;
     }
     m_detail->setText(tr("%1 · %2 Hz · %3 s")
@@ -353,14 +332,13 @@ void SamplePickerButton::updateDetail()
                           .arg(info.rateHz)
                           .arg(info.seconds, 0, 'f', 2));
 }
-
 void SamplePickerButton::previewItem(QTreeWidgetItem *item)
 {
     updateDetail();
     if (!item)
         return;
     const auto symbol = item->data(0, kSymbolRole).toString();
-    if (symbol.isEmpty() || item == m_typedRow)
+    if (symbol.isEmpty())
         return;
     m_previewedSymbol = symbol;
     emit auditionRequested(symbol, VgAuditionKind(item->data(0, kKindRole).toInt()));
@@ -369,8 +347,6 @@ void SamplePickerButton::previewItem(QTreeWidgetItem *item)
 
 void SamplePickerButton::commitItem(QTreeWidgetItem *item)
 {
-    if ((!item || item->isHidden()) && m_typedRow && !m_typedRow->isHidden())
-        item = m_typedRow;
     if (!item || item->isHidden())
         return;
     const QString symbol = item->data(0, kSymbolRole).toString();

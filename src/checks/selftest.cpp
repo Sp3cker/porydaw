@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include <QApplication>
+#include <QDir>
 #include <QEventLoop>
 #include <QFile>
 #include <QTimer>
@@ -26,6 +27,11 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     QString error;
     if (!m_project.open(projectRoot, &error)) {
         qWarning("selftest: %s", qUtf8Printable(error));
+        return false;
+    }
+    const auto vgSnapshot = m_vgProject.open(projectRoot);
+    if (!vgSnapshot.succeeded) {
+        qWarning("selftest: voicegroup project refresh failed");
         return false;
     }
     const SongInfo *target = nullptr;
@@ -87,9 +93,10 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     qInfo("selftest: voice audition through the preview engine OK");
 
     // Voicegroup editing through the unified pipeline: a scalar edit pokes
-    // the live ToneData, a sample swap goes through the .porydaw/vgpreview
-    // shadow reload — both land on the song's undo stack, and undoing them
-    // restores the on-disk state — all without changing project files.
+    // the live ToneData, a structural edit loads the rendered source in
+    // memory through the modular project — both land on the song's undo
+    // stack, and undoing them restores the on-disk state without changing
+    // project files.
     bool vgEditOk = true;
     if (tab->vgSource) {
         int dsSlot = -1, donorSlot = -1;
@@ -120,7 +127,7 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                 fileBefore = in.readAll();
             }
             const VgVoice original = *tab->vgSource->voiceAt(dsSlot);
-            const QByteArray originalName(m_audio.voicegroup()->voiceNames[dsSlot]);
+            const QByteArray originalSampleName(m_audio.voicegroup()->voiceSampleNames[dsSlot]);
             int undosNeeded = 1;
             VgVoice v = original;
             v.release = v.release == 25 ? 26 : 25;
@@ -129,12 +136,13 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                        m_audio.voicegroup()->voices[dsSlot].release == uint8_t(v.release);
             if (donorSlot >= 0) {
                 undosNeeded = 2; // structural edits never merge with scalar ones
-                const QByteArray donorName(m_audio.voicegroup()->voiceNames[donorSlot]);
+                const QByteArray donorSampleName(m_audio.voicegroup()->voiceSampleNames[donorSlot]);
                 v.symbol = tab->vgSource->voiceAt(donorSlot)->symbol;
                 onVoiceEditRequested(dsSlot, v, true);
-                vgEditOk = vgEditOk &&
-                           QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == donorName &&
-                           m_audio.transport() == Transport::Playing;
+                vgEditOk =
+                    vgEditOk &&
+                    QByteArray(m_audio.voicegroup()->voiceSampleNames[dsSlot]) == donorSampleName &&
+                    m_audio.transport() == Transport::Playing;
             }
             // Voice edits ride the song's undo stack; undoing them all must
             // land back on the exact on-disk state (clean, nothing written).
@@ -150,12 +158,16 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                 }
                 fileAfter = in.readAll();
             }
-            vgEditOk = vgEditOk && !tab->vgSource->dirty() && !tab->doc.isDirty() &&
-                       fileAfter == fileBefore && *tab->vgSource->voiceAt(dsSlot) == original &&
-                       m_audio.voicegroup()->voices[dsSlot].release == uint8_t(original.release) &&
-                       QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == originalName;
+            const bool noPreviewDirectory =
+                !QDir(projectRoot + QStringLiteral("/.porydaw/vgpreview")).exists();
+            vgEditOk =
+                vgEditOk && !tab->vgSource->dirty() && !tab->doc.isDirty() &&
+                fileAfter == fileBefore && *tab->vgSource->voiceAt(dsSlot) == original &&
+                m_audio.voicegroup()->voices[dsSlot].release == uint8_t(original.release) &&
+                QByteArray(m_audio.voicegroup()->voiceSampleNames[dsSlot]) == originalSampleName &&
+                noPreviewDirectory;
             if (vgEditOk)
-                qInfo("selftest: voicegroup edit + preview reload + undo OK "
+                qInfo("selftest: voicegroup edit + in-memory reload + undo OK "
                       "(slot %d, donor %d)",
                       dsSlot, donorSlot);
             else

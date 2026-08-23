@@ -8,7 +8,7 @@
 #include "core/miditimeline.h"
 
 extern "C" {
-#include "voicegroup_loader.h"
+#include "voicegroup/voicegroup_loader.h"
 }
 
 // Offline WAV export (SPEC §7): renders a timeline through a private

@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QDial>
+#include <QDir>
 #include <QEventLoop>
 #include <QFile>
 #include <QImage>
@@ -561,6 +562,90 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
               "scale controls remained enabled after closing the final tab");
     }
 
+    // 9b. Switching projects replaces the shared VoicegroupProject context;
+    // the new project's catalog must not retain symbols from the old root.
+    {
+        const auto switchRoot =
+            QDir(projectRoot).filePath(QStringLiteral("tabcheck-project-switch"));
+        QDir(switchRoot).removeRecursively();
+        const auto switchSongTable = QByteArray("\tsong tabcheck_switch, MUSIC_PLAYER_BGM, 0\n");
+        const auto switchVoicegroup =
+            QByteArray("voice_group switch\n"
+                       "\tvoice_directsound 60, 0, DirectSoundWave, 255, 0, 255, 0\n");
+        const auto switchIncludeHub = QByteArray("\t.include \"sound/voicegroups/switch.inc\"\n");
+        const auto switchDirectSound =
+            QByteArray("DirectSoundWave::\n"
+                       "\t.incbin \"sound/direct_sound_samples/switch.bin\"\n");
+        auto switchSample = QByteArray(19, '\0');
+        switchSample[5] = '\x04';
+        switchSample[12] = '\x03';
+        switchSample[16] = '\x11';
+        switchSample[17] = '\x22';
+        switchSample[18] = '\x33';
+        const auto writeSwitchFile = [](const QString &path, const QByteArray &bytes) {
+            QFile file(path);
+            return file.open(QIODevice::WriteOnly | QIODevice::Truncate) &&
+                   file.write(bytes) == bytes.size();
+        };
+        const bool switchFixtureReady =
+            QDir().mkpath(QDir(switchRoot).filePath(QStringLiteral("sound/songs/midi"))) &&
+            QDir().mkpath(
+                QDir(switchRoot).filePath(QStringLiteral("sound/direct_sound_samples"))) &&
+            QDir().mkpath(QDir(switchRoot).filePath(QStringLiteral("sound/voicegroups"))) &&
+            writeSwitchFile(QDir(switchRoot).filePath(QStringLiteral("sound/song_table.inc")),
+                            switchSongTable) &&
+            writeSwitchFile(QDir(switchRoot).filePath(QStringLiteral("sound/voice_groups.inc")),
+                            switchIncludeHub) &&
+            writeSwitchFile(
+                QDir(switchRoot).filePath(QStringLiteral("sound/voicegroups/switch.inc")),
+                switchVoicegroup) &&
+            writeSwitchFile(
+                QDir(switchRoot).filePath(QStringLiteral("sound/direct_sound_data.inc")),
+                switchDirectSound) &&
+            writeSwitchFile(
+                QDir(switchRoot).filePath(QStringLiteral("sound/direct_sound_samples/switch.bin")),
+                switchSample) &&
+            writeSwitchFile(
+                QDir(switchRoot).filePath(QStringLiteral("sound/programmable_wave_data.inc")),
+                {}) &&
+            writeSwitchFile(QDir(switchRoot).filePath(QStringLiteral("sound/keysplit_tables.inc")),
+                            {});
+        const auto hasCatalogSymbol = [](const auto &snapshot, const QString &symbol) {
+            for (const auto &entry : snapshot.catalog) {
+                if (entry.symbol == symbol)
+                    return true;
+            }
+            return false;
+        };
+        if (check(switchFixtureReady, "project switching: write alternate project fixture")) {
+            porydaw::VoicegroupProject alternateContext;
+            const auto alternateSnapshot = alternateContext.open(switchRoot);
+            check(alternateSnapshot.succeeded &&
+                      hasCatalogSymbol(alternateSnapshot, QStringLiteral("voicegroup_switch")),
+                  "project switching: alternate fixture is visible through VoicegroupProject");
+            if (check(openProjectDir(switchRoot, /*interactive=*/false),
+                      "project switching: alternate project did not open")) {
+                const auto switched = m_vgProject.refresh();
+                check(switched.succeeded,
+                      "project switching: alternate VoicegroupProject refresh failed");
+                check(hasCatalogSymbol(switched, QStringLiteral("voicegroup_switch")),
+                      "project switching: alternate VoicegroupProject catalog is fresh");
+                check(m_tabs->count() == 0 && m_vgProject.isOpen(),
+                      "project switching: alternate project did not clear old tabs");
+            }
+            if (check(openProjectDir(projectRoot, /*interactive=*/false),
+                      "project switching: original project did not reopen")) {
+                const auto restored = m_vgProject.refresh();
+                check(restored.succeeded &&
+                          !hasCatalogSymbol(restored, QStringLiteral("voicegroup_switch")),
+                      "project switching: original VoicegroupProject catalog replaced alternate");
+                check(m_tabs->count() == 0 && m_vgProject.isOpen(),
+                      "project switching: original project context is open");
+            }
+        }
+        QDir(switchRoot).removeRecursively();
+    }
+
     // Reopen through the normal lifecycle so the restoration contract below
     // still persists both tabs with song A active.
     loadSongByLabel(songB);
@@ -623,12 +708,13 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
             f.setFileTime(QDateTime::currentDateTime().addSecs(2),
                           QFileDevice::FileModificationTime);
             f.close();
+            m_vgProject.markStale();
             const LoadedVoiceGroup *before = tabB->voicegroup;
             m_tabs->setCurrentWidget(tabB->view);
             check(tabB->voicegroup != nullptr && tabB->voicegroup != before,
-                  "clean tab did not reload its changed voicegroup file");
+                  "stale source: clean tab did not reload its changed voicegroup file");
             check(tabB->vgSource && !tabB->vgSource->dirty(),
-                  "voicegroup auto-refresh left the source dirty");
+                  "stale source: voicegroup modular auto-refresh left the source dirty");
         } else {
             std::printf("tabcheck: note: voicegroup file not writable, "
                         "auto-refresh check skipped\n");

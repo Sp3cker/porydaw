@@ -3,29 +3,25 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
-#include <QFileInfo>
-#include <QMap>
 #include <QRegularExpression>
 #include <QSaveFile>
-#include <QSet>
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
 
-// Line classification and slot accounting mirror parse_voicegroup_file in
-// external/poryaaaa/plugin/voicegroup_loader.c (:1671-2058) exactly:
+// Line classification and slot accounting mirror the modular vg_parser.c
+// contract exactly:
 //  - every recognized voice-macro line advances the slot, even when its
-//    arguments fail to parse (the increment sits outside the sscanf check);
+//    arguments fail to parse;
 //  - "voice_group NAME, n" sets the slot only with the comma form and
-//    0 < n < 128 (:1727); the bare header leaves it at 0;
+//    0 < n < 128; the bare header leaves it at 0;
 //  - prefix order matters (_no_resample before _alt before base, keysplit_all
-//    before keysplit, cry_reverse before cry), and the two programmable_wave
-//    prefixes match without requiring a trailing space (:1877/:1903);
-//  - comments are stripped at the first '@' or "//" (strip_comment, :179);
+//    before keysplit, cry_reverse before cry), and both programmable-wave
+//    prefixes match without requiring a trailing space;
+//  - comments are stripped at the first '@' or "//";
 //  - a monolithic section starts at "<label>::" and, once a voice has been
-//    parsed, ends at the first line with "::" past position 0 or starting
-//    with ".align" (:1706-1724).
+//    parsed, ends at the first later global label or ".align".
 
 namespace {
 
@@ -149,56 +145,9 @@ QList<QByteArray> splitLines(const QByteArray &content, bool *endsWithNewline)
     return lines;
 }
 
-// Collects "Label::" and "Label:" symbols (a single colon is a file-local
-// GAS label — it still assembles and links because sample data shares its
-// assembly unit with the voicegroups referencing it, so it must be listed);
-// a label whose .incbin points into a cries directory is a pokemon cry, not
-// an instrument sample, and is skipped.
-void collectSampleSymbols(const QByteArray &content, QStringList *symbols)
-{
-    static const QRegularExpression labelRe(QStringLiteral(R"(^(\w+)::?)"));
-    static const QRegularExpression incbinRe(QStringLiteral(R"(^\s*\.incbin\s+"([^"]+)\")"));
-    QString pending;
-    bool unusedNewline = false;
-    for (QByteArray raw : splitLines(content, &unusedNewline)) {
-        if (raw.endsWith('\r'))
-            raw.chop(1);
-        const QString line = QString::fromUtf8(raw);
-        const QRegularExpressionMatch label = labelRe.match(line);
-        if (label.hasMatch()) {
-            if (!pending.isEmpty())
-                symbols->append(pending); // no .incbin followed (synth def)
-            pending = label.captured(1);
-            continue;
-        }
-        const QRegularExpressionMatch incbin = incbinRe.match(line);
-        if (incbin.hasMatch() && !pending.isEmpty()) {
-            if (!incbin.captured(1).contains(QStringLiteral("cries/")))
-                symbols->append(pending);
-            pending.clear();
-        }
-    }
-    if (!pending.isEmpty())
-        symbols->append(pending);
-}
-
-QStringList symbolsFromFiles(const QStringList &paths)
-{
-    QStringList symbols;
-    for (const QString &path : paths) {
-        bool ok = false;
-        const QByteArray content = readAllBytes(path, &ok);
-        if (ok)
-            collectSampleSymbols(content, &symbols);
-    }
-    symbols.removeDuplicates();
-    std::sort(symbols.begin(), symbols.end());
-    return symbols;
-}
-
-// Mirrors parse_synth_macro_line (voicegroup_loader.c): the recognized
-// set_synth_* macro words, the waveform byte each assembles, and whether the
-// four pulse parameters follow.
+// Mirrors the indexed synth-macro contract: the recognized set_synth_* macro
+// words, the waveform byte each assembles, and whether the four pulse
+// parameters follow.
 struct SynthMacroDef {
     const char *word;
     int waveform;
@@ -239,14 +188,6 @@ bool parseSynthMacroLine(const QByteArray &trimmed, VgSynthDesc *desc)
     return false;
 }
 
-// The sound data files that can hold synth definitions — the same two the
-// loader feeds into its DirectSound symbol map.
-QStringList synthDefPaths(const QString &projectRoot)
-{
-    return {projectRoot + QStringLiteral("/sound/direct_sound_data.inc"),
-            projectRoot + QStringLiteral("/sound/direct_sound_synth_data.inc")};
-}
-
 // Ensures the game build assembles sound/direct_sound_synth_data.inc.
 // porydaw's loader scans the file unconditionally, so playback here works
 // even when the ROM build would fail with an undefined synth symbol — the
@@ -260,9 +201,6 @@ bool ensureSynthDataIncluded(const QString &projectRoot, QString *error)
     static const QByteArray synthRef("direct_sound_synth_data.inc");
     static const QByteArray anchorRef("sound/direct_sound_data.inc");
 
-    // Known homes of the sound-data includes first, then every assembly
-    // source that could plausibly hold them. The synth data file itself is
-    // checked too: a fork may chain-include it from direct_sound_data.inc.
     QStringList paths = {projectRoot + QStringLiteral("/data/sound_data.s"),
                          projectRoot + QStringLiteral("/sound/sound_data.s"),
                          projectRoot + QStringLiteral("/sound_data.s"),
@@ -284,7 +222,7 @@ bool ensureSynthDataIncluded(const QString &projectRoot, QString *error)
         if (!ok)
             continue;
         if (content.contains(synthRef))
-            return true; // already assembled by the build
+            return true;
         if (!anchorPath.isEmpty() || !content.contains(anchorRef))
             continue;
         bool unusedNewline = false;
@@ -321,7 +259,7 @@ bool ensureSynthDataIncluded(const QString &projectRoot, QString *error)
     QSaveFile out(anchorPath);
     if (!out.open(QIODevice::WriteOnly)) {
         if (error)
-            *error = QStringLiteral("cannot write %1.").arg(anchorPath);
+            *error = QStringLiteral("cannot write %1").arg(anchorPath);
         return false;
     }
     QByteArray joined;
@@ -335,17 +273,14 @@ bool ensureSynthDataIncluded(const QString &projectRoot, QString *error)
     out.write(joined);
     if (!out.commit()) {
         if (error)
-            *error = QStringLiteral("cannot write %1.").arg(anchorPath);
+            *error = QStringLiteral("cannot write %1").arg(anchorPath);
         return false;
     }
     return true;
 }
 
-// Collects "Label::" and "Label:" symbols whose next content line is a
-// set_synth_* macro, in file order (single-colon leniency must match
-// collectSampleSymbols, or a file-local synth def would leak into the sample
-// list). Mirrors parse_direct_sound_data_file's label tracking: an .incbin
-// or synth macro consumes the pending label; a new label replaces it.
+// Collects labels whose next content line is a set_synth_* macro, in file
+// order. Single-colon leniency matches the loader's label handling.
 void collectSynthDefs(const QByteArray &content, QList<QPair<QString, VgSynthDesc>> *defs)
 {
     static const QRegularExpression labelRe(QStringLiteral(R"(^(\w+)::?)"));
@@ -374,21 +309,33 @@ void collectSynthDefs(const QByteArray &content, QList<QPair<QString, VgSynthDes
     }
 }
 
-QList<QPair<QString, VgSynthDesc>> scanSynthDefs(const QStringList &paths)
+VgSynthCatalog synthCatalogForWrite(const QString &projectRoot)
 {
-    QList<QPair<QString, VgSynthDesc>> defs;
-    for (const QString &path : paths) {
+    VgSynthCatalog catalog;
+    for (const QString &path :
+         {projectRoot + QStringLiteral("/sound/direct_sound_data.inc"),
+          projectRoot + QStringLiteral("/sound/direct_sound_synth_data.inc")}) {
         bool ok = false;
         const QByteArray content = readAllBytes(path, &ok);
         if (ok)
-            collectSynthDefs(content, &defs);
+            collectSynthDefs(content, &catalog.defs);
     }
-    return defs;
+    static const QRegularExpression macroRe(QStringLiteral(R"(^\s*\.macro\s+(set_synth_\w+))"));
+    QDirIterator it(projectRoot + QStringLiteral("/asm/macros"), {QStringLiteral("*.inc")},
+                    QDir::Files);
+    while (it.hasNext()) {
+        QFile file(it.next());
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+            continue;
+        while (!file.atEnd()) {
+            const QRegularExpressionMatch match = macroRe.match(QString::fromUtf8(file.readLine()));
+            if (match.hasMatch() && !catalog.macroWords.contains(match.captured(1)))
+                catalog.macroWords.append(match.captured(1));
+        }
+    }
+    return catalog;
 }
 
-// The voicegroup symbols a file declares, in file order, with the line forms.
-// Macro "voice_group X" declares voicegroup_X; a label declares itself
-// (SongRegistry::voicegroupArgs derives its -G args from these symbols).
 struct DeclaredSymbol {
     QString symbol;
     bool labelForm;
@@ -422,88 +369,6 @@ QVector<DeclaredSymbol> declaredVoicegroups(const QByteArray &content)
             symbols.append(symbol);
     }
     return symbols;
-}
-
-QVector<DeclaredSymbol> declaredVoicegroups(const QString &path)
-{
-    return declaredVoicegroups(readAllBytes(path));
-}
-
-QStringList voicegroupFiles(const QString &projectRoot)
-{
-    QStringList files;
-    for (const char *single : {"/sound/voice_groups.inc", "/sound/voicegroups.inc"}) {
-        const QString path = projectRoot + QLatin1String(single);
-        if (QFile::exists(path))
-            files.append(path);
-    }
-    QDirIterator it(projectRoot + QStringLiteral("/sound/voicegroups"), {QStringLiteral("*.inc")},
-                    QDir::Files, QDirIterator::Subdirectories);
-    while (it.hasNext())
-        files.append(it.next());
-    return files;
-}
-
-// The sound data files read once each: sample symbols and synth definitions
-// extracted from the same bytes.
-struct SoundDataScan {
-    QStringList symbols;                          // deduped + sorted, as symbolsFromFiles
-    QList<QPair<QString, VgSynthDesc>> synthDefs; // file order, as scanSynthDefs
-};
-
-SoundDataScan scanSoundData(const QString &projectRoot)
-{
-    SoundDataScan scan;
-    for (const QString &path : synthDefPaths(projectRoot)) {
-        bool ok = false;
-        const QByteArray content = readAllBytes(path, &ok);
-        if (!ok)
-            continue;
-        collectSampleSymbols(content, &scan.symbols);
-        collectSynthDefs(content, &scan.synthDefs);
-    }
-    scan.symbols.removeDuplicates();
-    std::sort(scan.symbols.begin(), scan.symbols.end());
-    return scan;
-}
-
-// Synth definitions get their own UI (the Synth voice type), so they don't
-// belong in the sample list. Phonemes (voice snippets, not instruments) go
-// to the end of the list.
-QStringList filterDirectSound(const SoundDataScan &scan)
-{
-    QSet<QString> synths;
-    for (const auto &def : scan.synthDefs)
-        synths.insert(def.first);
-    QStringList instruments, phonemes;
-    for (const QString &symbol : scan.symbols) {
-        if (synths.contains(symbol))
-            continue;
-        (symbol.contains(QStringLiteral("Phoneme")) ? phonemes : instruments).append(symbol);
-    }
-    return instruments + phonemes;
-}
-
-// The set_synth_* assembler macro words the project defines. They normally
-// live in asm/macros/music_voice.inc, but any macro file counts — only
-// their existence gates writing new definitions.
-QStringList synthMacroWords(const QString &projectRoot)
-{
-    static const QRegularExpression macroRe(QStringLiteral(R"(^\s*\.macro\s+(set_synth_\w+))"));
-    QStringList words;
-    QDirIterator it(projectRoot + QStringLiteral("/asm/macros"), {QStringLiteral("*.inc")},
-                    QDir::Files);
-    while (it.hasNext()) {
-        QFile file(it.next());
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-            continue;
-        while (!file.atEnd()) {
-            const QRegularExpressionMatch m = macroRe.match(QString::fromUtf8(file.readLine()));
-            if (m.hasMatch() && !words.contains(m.captured(1)))
-                words.append(m.captured(1));
-        }
-    }
-    return words;
 }
 
 } // namespace
@@ -582,7 +447,6 @@ uint8_t vgMacroVoiceType(VgMacro macro)
     }
     return VOICE_DIRECTSOUND;
 }
-
 bool vgMacroHasSymbol(VgMacro macro)
 {
     switch (macro) {
@@ -700,97 +564,54 @@ bool vgVoiceStructuralChange(const VgVoice &before, const VgVoice &after)
            before.keysplitTable != after.keysplitTable;
 }
 
-bool VoicegroupSource::open(const QString &projectRoot, const QString &voicegroupArg,
-                            QString *error)
+bool VoicegroupSource::open(const QString &projectRoot, const QString &sourcePath,
+                            const QString &loadName, const QString &canonicalSymbol, QString *error)
 {
     m_projectRoot = projectRoot;
-    // mid2agb's default -G argument is "_dummy".
-    m_arg = voicegroupArg.isEmpty() ? QStringLiteral("_dummy") : voicegroupArg;
-    const QString symbol = QStringLiteral("voicegroup") + m_arg;
-
-    m_filePath.clear();
+    m_sourcePath = sourcePath;
+    m_filePath = QDir(projectRoot).filePath(sourcePath);
     m_sectionLabel.clear();
-    m_loadName.clear();
-
-    // Applies the selection logic to one candidate file's declarations.
-    // Returns true when the search is over: either m_filePath was set or
-    // *fatal reports an uneditable layout (with *error filled in).
-    auto matchDeclaringFile = [&](const QString &path, const QVector<DeclaredSymbol> &declared,
-                                  bool *fatal) -> bool {
-        *fatal = false;
-        for (const DeclaredSymbol &decl : declared) {
-            if (decl.symbol != symbol)
-                continue;
-            if (declared.size() > 1) {
-                // Monolithic file: the loader locates the section by its
-                // "<label>::" line, so only the label form is editable.
-                if (!decl.labelForm) {
-                    if (error)
-                        *error =
-                            QStringLiteral("%1 declares %2 with the voice_group macro inside a "
-                                           "multi-voicegroup file — not an editable layout.")
-                                .arg(path, symbol);
-                    *fatal = true;
-                    return true;
-                }
-                m_sectionLabel = decl.symbol;
-                m_loadName = decl.symbol;
-            } else {
-                m_loadName = QFileInfo(path).completeBaseName();
-            }
-            m_filePath = path;
-            return true;
-        }
+    m_loadName = loadName;
+    m_lines.clear();
+    std::fill(std::begin(m_slotToLine), std::end(m_slotToLine), -1);
+    m_pristineSource.clear();
+    m_dirty = false;
+    if (sourcePath.isEmpty() || loadName.isEmpty() || canonicalSymbol.isEmpty()) {
+        if (error)
+            *error = QStringLiteral("The voicegroup catalog entry is incomplete.");
         return false;
-    };
-
-    // Fast path: the declaring file is almost always named after the
-    // voicegroup. Probe the monolithic index files first — today's scan
-    // reads them first, so they must keep winning — then the
-    // filename-derived candidates. A probe file that exists but does not
-    // declare the symbol falls through to the scan: never trust the
-    // filename alone.
-    QString base = m_arg;
-    while (base.startsWith(QLatin1Char('_')))
-        base.remove(0, 1);
-    QStringList probes = {projectRoot + QStringLiteral("/sound/voice_groups.inc"),
-                          projectRoot + QStringLiteral("/sound/voicegroups.inc")};
-    if (!base.isEmpty()) {
-        probes.append(projectRoot + QStringLiteral("/sound/voicegroups/") + base +
-                      QStringLiteral(".inc"));
-        probes.append(projectRoot + QStringLiteral("/sound/voicegroups/vg_") + base +
-                      QStringLiteral(".inc"));
     }
-    bool fatal = false;
-    for (const QString &probe : probes) {
-        if (!QFile::exists(probe))
-            continue;
-        if (matchDeclaringFile(probe, declaredVoicegroups(probe), &fatal))
-            return fatal ? false : reload(error);
+    bool readOk = false;
+    const QByteArray content = readAllBytes(m_filePath, &readOk);
+    if (!readOk) {
+        if (error)
+            *error = QStringLiteral("Cannot read %1").arg(m_filePath);
+        return false;
     }
-
-    // Fallback: the full scan, but each file is gated by a cheap substring
-    // check before the regex parse. Both declaration forms contain the base
-    // name (label "voicegroup_X::" and macro "voice_group X" ⊇ "X"), so the
-    // gate can only false-positive — the parse sorts those out.
-    const QByteArray needle = base.toUtf8();
-    for (const QString &path : voicegroupFiles(projectRoot)) {
-        bool ok = false;
-        const QByteArray content = readAllBytes(path, &ok);
-        if (!ok)
-            continue;
-        if (!needle.isEmpty() && !content.contains(needle))
-            continue;
-        if (matchDeclaringFile(path, declaredVoicegroups(content), &fatal)) {
-            if (fatal)
-                return false;
+    const QVector<DeclaredSymbol> declarations = declaredVoicegroups(content);
+    const DeclaredSymbol *target = nullptr;
+    for (const DeclaredSymbol &declaration : declarations) {
+        if (declaration.symbol == canonicalSymbol) {
+            target = &declaration;
             break;
         }
     }
-    if (m_filePath.isEmpty()) {
-        if (error)
-            *error = QStringLiteral("No voicegroup file declares %1.").arg(symbol);
+    if (!target) {
+        if (error) {
+            *error = QStringLiteral("%1 does not declare %2.").arg(m_filePath, canonicalSymbol);
+        }
         return false;
+    }
+    if (declarations.size() > 1) {
+        if (!target->labelForm) {
+            if (error) {
+                *error = QStringLiteral("%1 declares %2 with the voice_group macro inside a "
+                                        "multi-voicegroup file — not an editable layout.")
+                             .arg(m_filePath, canonicalSymbol);
+            }
+            return false;
+        }
+        m_sectionLabel = canonicalSymbol;
     }
     return reload(error);
 }
@@ -804,13 +625,13 @@ bool VoicegroupSource::reload(QString *error)
             *error = QStringLiteral("Cannot read %1").arg(m_filePath);
         return false;
     }
-    if (!parse(content, error)) {
-        m_dirty = !matchesPristineSource();
-        return false;
-    }
+    const bool parsed = parse(content, error);
+    // reload() adopts the observed disk bytes even when their structure is
+    // invalid. That keeps an externally broken clean session eligible for a
+    // later fixed-file reload instead of misclassifying disk bytes as edits.
     m_pristineSource = content;
     m_dirty = false;
-    return true;
+    return parsed;
 }
 
 bool VoicegroupSource::parse(const QByteArray &content, QString *error)
@@ -1284,7 +1105,7 @@ bool VoicegroupSource::applyScalarsToToneData(int slot, ToneData *td) const
         return false;
     if (v->macro == VgMacro::Keysplit || v->macro == VgMacro::KeysplitAll)
         return true; // no scalar fields; any change is structural
-    // Field packing per parse_voicegroup_file (voicegroup_loader.c:1738+).
+    // Field packing follows the modular vg_parser.c voice decoding contract.
     td->key = uint8_t(v->key);
     if (!vgMacroIsCgb(v->macro)) {
         td->panSweep = v->pan ? uint8_t(0x80 | v->pan) : 0;
@@ -1319,34 +1140,11 @@ bool VoicegroupSource::applyScalarsToToneData(int slot, ToneData *td) const
     return true;
 }
 
-QStringList VoicegroupSource::directSoundSymbols(const QString &projectRoot)
-{
-    return filterDirectSound(scanSoundData(projectRoot));
-}
-
-VgSynthCatalog VoicegroupSource::synthInstruments(const QString &projectRoot)
-{
-    VgSynthCatalog catalog;
-    catalog.defs = scanSynthDefs(synthDefPaths(projectRoot));
-    catalog.macroWords = synthMacroWords(projectRoot);
-    return catalog;
-}
-
-VgDirectSoundScan VoicegroupSource::directSoundCatalog(const QString &projectRoot)
-{
-    const SoundDataScan data = scanSoundData(projectRoot);
-    VgDirectSoundScan scan;
-    scan.directSound = filterDirectSound(data);
-    scan.synths.defs = data.synthDefs;
-    scan.synths.macroWords = synthMacroWords(projectRoot);
-    return scan;
-}
-
 bool VoicegroupSource::writeSynthDefinitions(const QString &projectRoot,
                                              const QList<QPair<QString, VgSynthDesc>> &defs,
                                              QString *error)
 {
-    const VgSynthCatalog catalog = synthInstruments(projectRoot);
+    const VgSynthCatalog catalog = synthCatalogForWrite(projectRoot);
 
     // Prefer the descriptive macro aliases over the pokeemerald-expansion
     // originals when the project defines both.
@@ -1446,169 +1244,6 @@ bool VoicegroupSource::writeSynthDefinitions(const QString &projectRoot,
     if (QFile::exists(path) && !ensureSynthDataIncluded(projectRoot, error))
         return false;
     return true;
-}
-
-QStringList VoicegroupSource::progWaveSymbols(const QString &projectRoot)
-{
-    return symbolsFromFiles({projectRoot + QStringLiteral("/sound/programmable_wave_data.inc")});
-}
-
-namespace {
-
-// Envelopes are counted encoded (attack<<24 | decay<<16 | sustain<<8 |
-// release); the mode tie-breaks on the smaller code so the result doesn't
-// depend on directory iteration order.
-VgAdsr decodeAdsr(quint32 code)
-{
-    return VgAdsr{int(code >> 24), int((code >> 16) & 0xFF), int((code >> 8) & 0xFF),
-                  int(code & 0xFF)};
-}
-
-quint32 adsrModeCode(const QHash<quint32, int> &counts)
-{
-    quint32 best = 0;
-    int bestCount = 0;
-    for (auto it = counts.constBegin(); it != counts.constEnd(); ++it) {
-        if (it.value() > bestCount || (it.value() == bestCount && it.key() < best)) {
-            best = it.key();
-            bestCount = it.value();
-        }
-    }
-    return best;
-}
-
-// One pass over the voicegroup files: every dataset the browser catalog
-// needs from them, accumulated a raw line at a time. The regex extractors
-// get the decoded line (trailing '\r' stripped); the loader-mirroring ADSR
-// extractor works on the raw bytes as before.
-struct VgScanCounts {
-    QStringList groupSymbols;             // declared symbols, file order
-    QMap<QString, QString> keysplitPairs; // sub-voicegroup -> table, first wins
-    QStringList drumkits;                 // file order; deduped + sorted at finish
-    QHash<int, QHash<quint32, int>> familyCounts;
-    QHash<QString, QHash<quint32, int>> symbolCounts;
-
-    void scanLine(const QByteArray &raw);
-    VgCatalogScan finish() const;
-};
-
-void VgScanCounts::scanLine(const QByteArray &raw)
-{
-    static const QRegularExpression keysplitRe(
-        QStringLiteral(R"(^\s*voice_keysplit\s+(\w+)\s*,\s*(\w+))"));
-    static const QRegularExpression drumkitRe(QStringLiteral(R"(^\s*voice_keysplit_all\s+(\w+))"));
-
-    const QString line = QString::fromUtf8(raw.endsWith('\r') ? raw.chopped(1) : raw);
-    DeclaredSymbol declared;
-    if (declaredVoicegroupLine(line, &declared))
-        groupSymbols.append(declared.symbol);
-    QRegularExpressionMatch m = keysplitRe.match(line);
-    if (m.hasMatch() && !keysplitPairs.contains(m.captured(1)))
-        keysplitPairs.insert(m.captured(1), m.captured(2));
-    m = drumkitRe.match(line);
-    if (m.hasMatch())
-        drumkits.append(m.captured(1));
-
-    int contentStart = 0, contentEnd = 0;
-    contentBounds(raw, &contentStart, &contentEnd);
-    const QByteArray text = raw.mid(contentStart, contentEnd - contentStart);
-    const MacroDef *matched = nullptr;
-    for (const MacroDef &def : kEditableMacros) {
-        const int wordLen = int(qstrlen(def.word));
-        if (def.requireSpace
-                ? (text.startsWith(def.word) && text.size() > wordLen && text[wordLen] == ' ')
-                : text.startsWith(def.word)) {
-            matched = &def;
-            break;
-        }
-    }
-    if (!matched || vgAdsrFamily(matched->macro) < 0)
-        return;
-    const QList<QByteArray> args = text.mid(int(qstrlen(matched->word))).split(',');
-    if (args.size() != macroArgCount(matched->macro))
-        return;
-    int values[4];
-    bool valid = true;
-    for (int i = 0; i < 4 && valid; i++) {
-        const QByteArray piece = args.at(args.size() - 4 + i).trimmed();
-        valid = isIntArg(piece);
-        values[i] = piece.toInt();
-    }
-    if (!valid)
-        return;
-    // Count the values the engine would see (the loader's packing:
-    // CGB fields masked, DirectSound fields truncated to a byte).
-    const bool cgb = vgMacroIsCgb(matched->macro);
-    const int attack = cgb ? values[0] & 0x07 : uint8_t(values[0]);
-    const int decay = cgb ? values[1] & 0x07 : uint8_t(values[1]);
-    const int sustain = cgb ? values[2] & 0x0F : uint8_t(values[2]);
-    const int release = cgb ? values[3] & 0x07 : uint8_t(values[3]);
-    // Only envelopes worth suggesting count: release 0 cuts off with
-    // a click and a DirectSound attack of 0 never sounds at all.
-    // This also drops the release-0 filler squares padding unused
-    // slots, which would otherwise be the runaway Square 1 mode.
-    if (release == 0 || (!cgb && attack == 0))
-        return;
-    const quint32 code =
-        quint32(attack) << 24 | quint32(decay) << 16 | quint32(sustain) << 8 | quint32(release);
-    familyCounts[vgAdsrFamily(matched->macro)][code]++;
-    if (vgMacroHasSymbol(matched->macro)) {
-        const QByteArray symbol = args.at(2).trimmed();
-        if (!symbol.isEmpty())
-            symbolCounts[QString::fromUtf8(symbol)][code]++;
-    }
-}
-
-VgCatalogScan VgScanCounts::finish() const
-{
-    VgCatalogScan scan;
-    // mid2agb forms the symbol as "voicegroup" + <-G arg>.
-    for (const QString &symbol : groupSymbols)
-        scan.groupArgs.append(symbol.mid(10));
-    scan.groupArgs.removeDuplicates();
-    std::sort(scan.groupArgs.begin(), scan.groupArgs.end());
-    for (auto it = keysplitPairs.constBegin(); it != keysplitPairs.constEnd(); ++it)
-        scan.keysplits.append({it.key(), it.value()});
-    scan.drumkits = drumkits;
-    scan.drumkits.removeDuplicates();
-    std::sort(scan.drumkits.begin(), scan.drumkits.end());
-    for (auto it = familyCounts.constBegin(); it != familyCounts.constEnd(); ++it)
-        scan.typicalAdsr.byFamily.insert(it.key(), decodeAdsr(adsrModeCode(it.value())));
-    for (auto it = symbolCounts.constBegin(); it != symbolCounts.constEnd(); ++it)
-        scan.typicalAdsr.bySymbol.insert(it.key(), decodeAdsr(adsrModeCode(it.value())));
-    return scan;
-}
-
-} // namespace
-
-VgCatalogScan VoicegroupSource::catalogScan(const QString &projectRoot)
-{
-    VgScanCounts counts;
-    for (const QString &path : voicegroupFiles(projectRoot)) {
-        bool ok = false;
-        const QByteArray content = readAllBytes(path, &ok);
-        if (!ok)
-            continue;
-        bool endsWithNewline = false;
-        for (const QByteArray &raw : splitLines(content, &endsWithNewline))
-            counts.scanLine(raw);
-    }
-    return counts.finish();
-}
-
-QList<QPair<QString, QString>> VoicegroupSource::keysplitInstruments(const QString &projectRoot)
-{
-    return catalogScan(projectRoot).keysplits;
-}
-
-QStringList VoicegroupSource::drumkitInstruments(const QString &projectRoot)
-{
-    return catalogScan(projectRoot).drumkits;
-}
-
-VgAdsrDefaults VoicegroupSource::typicalAdsr(const QString &projectRoot)
-{
-    return catalogScan(projectRoot).typicalAdsr;
 }
 
 bool VoicegroupSource::createVoicegroup(const QString &projectRoot, const QString &name,

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QHash>
+#include <QList>
+#include <QPair>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -87,12 +89,6 @@ struct RegistrationStatus {
 
 namespace SongRegistry {
 
-// -G arguments for every voicegroup label findable in the project: the
-// "voice_group <name>" macro (modern pokeemerald) and raw "voicegroup*::"
-// labels (pokefirered et al.), scanned from sound/voice_groups.inc,
-// sound/voicegroups.inc, and sound/voicegroups/ recursively. Sorted.
-QStringList voicegroupArgs(const QString &projectRoot);
-
 // Display form of a -G arg: the leading underscore folds into the fixed
 // "voicegroup_" prefix the UI shows, so "_abandoned_ship" reads as
 // "abandoned_ship". Underscore-less args (vanilla "128"-style symbols)
@@ -160,9 +156,12 @@ bool unregisterSong(const QString &projectRoot, const QString &label, const QStr
 // symbol appears nowhere in the project's src/ or include/ sources (a C
 // reference would become a link error, not a harmless dangling line).
 // Returns the voicegroup's file base name, or empty when any condition
-// fails.
+// fails. The caller supplies the current project snapshot's keysplit and
+// drumkit references.
 QString deletableVoicegroup(const QString &projectRoot, const QVector<SongInfo> &songs,
-                            const QString &songLabel);
+                            const QString &songLabel,
+                            const QList<QPair<QString, QString>> &keysplits,
+                            const QStringList &drumkits);
 
 // Re-parses the registration files from disk. The songs.h and charmap.txt
 // items additionally require their value to match one of the label's
