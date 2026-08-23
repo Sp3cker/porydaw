@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <span>
 #include <utility>
 #include <vector>
@@ -38,8 +39,22 @@ class EditorSelectionModel
         TimeSelection = 1u << 3,
     };
 
+    struct TrackTimeSelection {
+        uint64_t startTick = 0;
+        uint64_t endTick = 0;
+        TrackMask trackScope = 0;
+
+        bool active() const noexcept { return trackScope != 0 && endTick > startTick; }
+    };
+
+    struct SelectionTransition {
+        SelectionChange changes = SelectionChange::None;
+        TrackTimeSelection previousTrackTime;
+        TrackTimeSelection trackTime;
+    };
+
     enum class TrackScopeAction { Plain, Toggle, Range };
-    using Observer = std::function<void(SelectionChange)>;
+    using Observer = std::function<void(const SelectionTransition &)>;
 
     EditorSelectionModel() noexcept = default;
 
@@ -78,12 +93,15 @@ class EditorSelectionModel
   private:
     enum class Phase { Idle, Notifying };
 
-    void notify(SelectionChange changes);
+    TrackTimeSelection trackTimeSelection() const noexcept;
+    void notify(SelectionChange changes, TrackTimeSelection previousTrackTime);
     static bool sameTimeSelection(const TimeSelection &a, const TimeSelection &b) noexcept;
     static TimeSelection sanitizeTimeSelection(TimeSelection selection);
     static int firstTrack(uint32_t mask) noexcept;
     bool isNotifying() const noexcept { return m_phase == Phase::Notifying; }
-    void commit(TimeSelection time, TrackMask scope, std::vector<NoteId> notes);
+    // A missing replacement preserves the current note selection; an empty vector clears it.
+    void commit(TimeSelection time, TrackMask scope,
+                std::optional<std::vector<NoteId>> noteReplacement);
 
     int m_primaryTrack = 0;
     TrackMask m_trackScope = 1u << 0;

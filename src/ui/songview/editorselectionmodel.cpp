@@ -21,6 +21,13 @@ uint32_t EditorSelectionModel::resolvedTrackScope(uint32_t usedTrackMask) const 
     return m_trackScope & usedTrackMask & kTrackMask;
 }
 
+EditorSelectionModel::TrackTimeSelection EditorSelectionModel::trackTimeSelection() const noexcept
+{
+    if (!m_timeSelection.active() || m_timeSelection.scope != TimeSelection::Tracks)
+        return {};
+    return {m_timeSelection.startTick, m_timeSelection.endTick, m_trackScope};
+}
+
 bool EditorSelectionModel::isNoteSelected(NoteId noteId) const noexcept
 {
     return noteId.isAssigned() && std::find(m_noteSelection.cbegin(), m_noteSelection.cend(),
@@ -81,17 +88,16 @@ void EditorSelectionModel::setNoteSelection(std::vector<NoteId> ids)
 void EditorSelectionModel::clearNoteSelection()
 {
     Q_ASSERT(!isNotifying());
-    commit(m_timeSelection, m_trackScope, {});
+    commit(m_timeSelection, m_trackScope, std::vector<NoteId>{});
 }
 
 void EditorSelectionModel::setTimeSelection(TimeSelection selection)
 {
     Q_ASSERT(!isNotifying());
     selection = sanitizeTimeSelection(std::move(selection));
-    std::vector<NoteId> notes = m_noteSelection;
-    if (selection.active() && !notes.empty())
-        notes.clear();
-    commit(std::move(selection), m_trackScope, std::move(notes));
+    const bool clearNotes = selection.active() && !m_noteSelection.empty();
+    commit(std::move(selection), m_trackScope,
+           clearNotes ? std::optional<std::vector<NoteId>>(std::in_place) : std::nullopt);
 }
 
 void EditorSelectionModel::setTimeSelectionAndTrackScope(TimeSelection selection,
@@ -102,10 +108,9 @@ void EditorSelectionModel::setTimeSelectionAndTrackScope(TimeSelection selection
     trackScope |= 1u << m_primaryTrack;
     Q_ASSERT((trackScope & (1u << m_primaryTrack)) != 0);
     selection = sanitizeTimeSelection(std::move(selection));
-    std::vector<NoteId> notes = m_noteSelection;
-    if (selection.active() && !notes.empty())
-        notes.clear();
-    commit(std::move(selection), trackScope, std::move(notes));
+    const bool clearNotes = selection.active() && !m_noteSelection.empty();
+    commit(std::move(selection), trackScope,
+           clearNotes ? std::optional<std::vector<NoteId>>(std::in_place) : std::nullopt);
 }
 
 void EditorSelectionModel::setTrackScope(TrackMask trackScope)
@@ -114,19 +119,19 @@ void EditorSelectionModel::setTrackScope(TrackMask trackScope)
     trackScope &= kTrackMask;
     trackScope |= 1u << m_primaryTrack;
     Q_ASSERT((trackScope & (1u << m_primaryTrack)) != 0);
-    commit(m_timeSelection, trackScope, m_noteSelection);
+    commit(m_timeSelection, trackScope, std::nullopt);
 }
 
 void EditorSelectionModel::clearBothSelections()
 {
     Q_ASSERT(!isNotifying());
-    commit(TimeSelection(), m_trackScope, {});
+    commit(TimeSelection(), m_trackScope, std::vector<NoteId>{});
 }
 
 void EditorSelectionModel::clearTimeSelection()
 {
     Q_ASSERT(!isNotifying());
-    commit(TimeSelection(), m_trackScope, m_noteSelection);
+    commit(TimeSelection(), m_trackScope, std::nullopt);
 }
 
 void EditorSelectionModel::applyPrimaryTrackTransition(int track)
@@ -135,6 +140,7 @@ void EditorSelectionModel::applyPrimaryTrackTransition(int track)
     if (track < 0 || track >= 16 || track == m_primaryTrack)
         return;
 
+    const TrackTimeSelection previousTrackTime = trackTimeSelection();
     SelectionChange changes = SelectionChange::PrimaryTrack;
     m_primaryTrack = track;
     const TrackMask scope = 1u << track;
@@ -151,7 +157,7 @@ void EditorSelectionModel::applyPrimaryTrackTransition(int track)
         m_timeSelection = empty;
         changes = changes | SelectionChange::TimeSelection;
     }
-    notify(changes);
+    notify(changes, previousTrackTime);
 }
 
 void EditorSelectionModel::applyTrackScopeAdjustment(int clickedTrack, uint32_t usedTrackMask,
@@ -161,6 +167,7 @@ void EditorSelectionModel::applyTrackScopeAdjustment(int clickedTrack, uint32_t 
     if (clickedTrack < 0 || clickedTrack >= 16)
         return;
 
+    const TrackTimeSelection previousTrackTime = trackTimeSelection();
     const uint32_t used = usedTrackMask & kTrackMask;
     TrackMask scope = m_trackScope;
     int primary = m_primaryTrack;
@@ -218,12 +225,13 @@ void EditorSelectionModel::applyTrackScopeAdjustment(int clickedTrack, uint32_t 
         m_timeSelection = TimeSelection();
         changes = changes | SelectionChange::TimeSelection;
     }
-    notify(changes);
+    notify(changes, previousTrackTime);
 }
 
 void EditorSelectionModel::reconcileNoteSelection(std::span<const NoteId> validIds)
 {
     Q_ASSERT(!isNotifying());
+    const TrackTimeSelection previousTrackTime = trackTimeSelection();
     std::vector<NoteId> surviving;
     surviving.reserve(m_noteSelection.size());
     for (const NoteId id : m_noteSelection) {
@@ -233,13 +241,14 @@ void EditorSelectionModel::reconcileNoteSelection(std::span<const NoteId> validI
     if (surviving == m_noteSelection)
         return;
     m_noteSelection = std::move(surviving);
-    notify(SelectionChange::NoteSelection);
+    notify(SelectionChange::NoteSelection, previousTrackTime);
 }
 
 void EditorSelectionModel::resetForSongSwap(int firstUsedTrack)
 {
     Q_ASSERT(!isNotifying());
     const int primary = std::clamp(firstUsedTrack, 0, 15);
+    const TrackTimeSelection previousTrackTime = trackTimeSelection();
     const TrackMask scope = (1u << primary);
     SelectionChange changes = SelectionChange::None;
     if (primary != m_primaryTrack) {
@@ -259,7 +268,7 @@ void EditorSelectionModel::resetForSongSwap(int firstUsedTrack)
         m_timeSelection = empty;
         changes = changes | SelectionChange::TimeSelection;
     }
-    notify(changes);
+    notify(changes, previousTrackTime);
 }
 
 void EditorSelectionModel::applyRemap(const TrackRemap &remap)
@@ -273,6 +282,7 @@ void EditorSelectionModel::applyRemap(const TrackRemap &remap)
                    ? destination
                    : -1;
     };
+    const TrackTimeSelection previousTrackTime = trackTimeSelection();
     const int oldPrimary = m_primaryTrack;
     const int mappedPrimary = mappedTrack(oldPrimary);
     const bool primaryDeleted = mappedPrimary < 0;
@@ -317,10 +327,10 @@ void EditorSelectionModel::applyRemap(const TrackRemap &remap)
         m_timeSelection = std::move(newTimeSelection);
         changes = changes | SelectionChange::TimeSelection;
     }
-    notify(changes);
+    notify(changes, previousTrackTime);
 }
 
-void EditorSelectionModel::notify(SelectionChange changes)
+void EditorSelectionModel::notify(SelectionChange changes, TrackTimeSelection previousTrackTime)
 {
     if (changes == SelectionChange::None || !m_observer)
         return;
@@ -330,11 +340,13 @@ void EditorSelectionModel::notify(SelectionChange changes)
         explicit NotificationGuard(Phase &p) : phase(p) { phase = Phase::Notifying; }
         ~NotificationGuard() { phase = Phase::Idle; }
     } guard{m_phase};
-    m_observer(changes);
+    m_observer({changes, previousTrackTime, trackTimeSelection()});
 }
 
-void EditorSelectionModel::commit(TimeSelection time, TrackMask scope, std::vector<NoteId> notes)
+void EditorSelectionModel::commit(TimeSelection time, TrackMask scope,
+                                  std::optional<std::vector<NoteId>> noteReplacement)
 {
+    const TrackTimeSelection previousTrackTime = trackTimeSelection();
     SelectionChange changes = SelectionChange::None;
     if (!sameTimeSelection(m_timeSelection, time)) {
         m_timeSelection = std::move(time);
@@ -344,11 +356,11 @@ void EditorSelectionModel::commit(TimeSelection time, TrackMask scope, std::vect
         m_trackScope = scope;
         changes = changes | SelectionChange::TrackScope;
     }
-    if (m_noteSelection != notes) {
-        m_noteSelection = std::move(notes);
+    if (noteReplacement && m_noteSelection != *noteReplacement) {
+        m_noteSelection = std::move(*noteReplacement);
         changes = changes | SelectionChange::NoteSelection;
     }
-    notify(changes);
+    notify(changes, previousTrackTime);
 }
 
 bool EditorSelectionModel::sameTimeSelection(const TimeSelection &a,

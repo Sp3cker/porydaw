@@ -618,7 +618,8 @@ class SongView : public QWidget
         SongDocument::TimeScope scope;
         QString label;
     };
-    void coordinateSelectionChange(songview::EditorSelectionModel::SelectionChange change);
+    void coordinateSelectionChange(
+        const songview::EditorSelectionModel::SelectionTransition &transition);
     std::optional<TimeScopeResolution> resolveTimeSelectionScope() const;
     // Engine tracks a track-scoped time selection resolves to (used and
     // document-mapped), and the copyable lane identities of one track (its

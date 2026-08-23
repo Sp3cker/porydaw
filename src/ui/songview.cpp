@@ -170,9 +170,10 @@ SongView::SongView(QWidget *parent)
     vbox->addLayout(m_hbarRow);
 
     m_editorDrawer = new EditorDrawer(*this, rollPane, m_editorViewState);
-    m_selectionModel.setObserver([this](songview::EditorSelectionModel::SelectionChange change) {
-        coordinateSelectionChange(change);
-    });
+    m_selectionModel.setObserver(
+        [this](const songview::EditorSelectionModel::SelectionTransition &transition) {
+            coordinateSelectionChange(transition);
+        });
 
     auto bands = timelineBands();
     for (const songview::TimelineBand &band : bands)
@@ -435,9 +436,10 @@ void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup)
     refreshTimelineViews();
 }
 
-void SongView::coordinateSelectionChange(songview::EditorSelectionModel::SelectionChange change)
+void SongView::coordinateSelectionChange(
+    const songview::EditorSelectionModel::SelectionTransition &transition)
 {
-    const uint32_t bits = static_cast<uint32_t>(change);
+    const uint32_t bits = static_cast<uint32_t>(transition.changes);
     const auto changed = [bits](songview::EditorSelectionModel::SelectionChange category) {
         return (bits & static_cast<uint32_t>(category)) != 0;
     };
@@ -445,25 +447,52 @@ void SongView::coordinateSelectionChange(songview::EditorSelectionModel::Selecti
         changed(songview::EditorSelectionModel::SelectionChange::PrimaryTrack);
     const bool trackScopeChanged =
         changed(songview::EditorSelectionModel::SelectionChange::TrackScope);
+    const bool noteSelectionChanged =
+        changed(songview::EditorSelectionModel::SelectionChange::NoteSelection);
+    const bool timeSelectionChanged =
+        changed(songview::EditorSelectionModel::SelectionChange::TimeSelection);
+    bool rollFullyInvalidated = false;
+    bool timelineViewsRefreshed = false;
     if (primaryChanged) {
         m_headers->syncSelection();
         if (m_roll)
             m_roll->setFocus();
-        if (m_scaleController.scaleFold())
+        if (m_scaleController.scaleFold()) {
             rebuildProjectionWithAnchoring();
-        else
+        } else {
             m_roll->invalidateContent();
+        }
+        rollFullyInvalidated = true;
         emit selectedTrackChanged(m_selectionModel.primaryTrack());
     } else if (trackScopeChanged) {
         m_headers->syncSelection();
         refreshTimelineViews();
+        rollFullyInvalidated = true;
+        timelineViewsRefreshed = true;
     }
-    if (changed(songview::EditorSelectionModel::SelectionChange::NoteSelection)) {
-        m_roll->invalidateContent();
+    if (noteSelectionChanged) {
+        if (!rollFullyInvalidated) {
+            m_roll->invalidateContent();
+            rollFullyInvalidated = true;
+        }
         refreshVelocityPage();
     }
-    if (changed(songview::EditorSelectionModel::SelectionChange::TimeSelection)) {
-        refreshTimelineViews();
+    if (timeSelectionChanged) {
+        if (!timelineViewsRefreshed) {
+            m_ruler->update();
+            if (!rollFullyInvalidated) {
+                const uint32_t usedTracks = usedTrackMask(m_timeline);
+                const uint32_t previousTracks =
+                    transition.previousTrackTime.trackScope & usedTracks;
+                const uint32_t tracks = transition.trackTime.trackScope & usedTracks;
+                m_roll->invalidateTimeSelection(
+                    {transition.previousTrackTime.startTick, transition.previousTrackTime.endTick},
+                    previousTracks, {transition.trackTime.startTick, transition.trackTime.endTick},
+                    tracks);
+            }
+            m_strip->invalidateContent();
+            syncPlayheadOverlay();
+        }
         refreshAutomationPage();
     }
     if (primaryChanged || trackScopeChanged)

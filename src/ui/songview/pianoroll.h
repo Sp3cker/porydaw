@@ -113,6 +113,9 @@ class PianoRoll : public TimelineSurface
     void cancelVelocityInteraction();
     void refreshTextLayout();
     void copySelectedNotes();
+    void invalidateTimeSelection(const SongDocument::TimeRange &previousRange,
+                                 uint32_t previousTrackMask, const SongDocument::TimeRange &range,
+                                 uint32_t trackMask);
 
   protected:
     void paintContent(QPainter &p) override;
