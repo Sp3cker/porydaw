@@ -245,7 +245,7 @@ MainWindow::~MainWindow()
     // Stop the audio thread before the sessions free the timeline and
     // voicegroup it borrows.
     m_audio.shutdown();
-    voicegroup_free_samples(m_sampleSet);
+    clearSampleCache();
 }
 
 void MainWindow::buildUi()
@@ -511,9 +511,9 @@ void MainWindow::buildUi()
             &MainWindow::importSampleForSlot);
     connect(m_vgBrowser, &VoicegroupBrowser::editSampleRequested, this,
             &MainWindow::editSampleForSlot);
-    // The sample picker: loop badges and browse audition both read the
-    // committed sample data the engine would play, loaded lazily in one
-    // batch per catalog generation.
+    // The sample picker resolves only the current row. The returned set stays
+    // alive until the project catalog changes, so its borrowed WaveData is
+    // valid for detail display and audition.
     m_vgBrowser->setSampleInfoProvider([this](const QString &symbol) {
         SamplePickInfo info;
         const WaveData *wd = sampleWaveFor(symbol);
@@ -528,22 +528,21 @@ void MainWindow::buildUi()
     connect(
         m_vgBrowser, &VoicegroupBrowser::sampleAuditionRequested, this,
         [this](const QString &symbol, VgAuditionKind kind, const AuditionSlots::Adsr &adsr) {
-            if (!m_audioOk)
-                return;
             if (kind == VgAuditionKind::Keysplit) {
-                auditionKeysplit(symbol);
+                const auto *keysplit = keysplitFor(symbol);
+                if (m_audioOk && keysplit)
+                    auditionKeysplit(*keysplit);
                 return;
             }
             if (kind == VgAuditionKind::Wave) {
-                ensureSampleSet();
-                const uint32_t *pw = m_progWaves.value(symbol, nullptr);
-                if (pw)
+                const auto *pw = progWaveFor(symbol);
+                if (m_audioOk && pw)
                     m_audio.auditionWave(
                         QByteArray::fromRawData(reinterpret_cast<const char *>(pw), 16), 60, adsr);
                 return;
             }
-            const WaveData *wd = sampleWaveFor(symbol);
-            if (!wd || !wd->data || wd->size == 0)
+            const auto *wd = sampleWaveFor(symbol);
+            if (!m_audioOk || !wd || !wd->data || wd->size == 0)
                 return;
             m_audio.auditionSample(
                 QByteArray::fromRawData(reinterpret_cast<const char *>(wd->data), int(wd->size)),
@@ -2411,75 +2410,104 @@ const MainWindow::VgCatalog &MainWindow::vgCatalog()
 void MainWindow::invalidateVgCatalog()
 {
     m_vgCatalog.valid = false;
-    // The loaded instrument batch is derived from the catalog's symbol
-    // lists; audition is safe across the free because AuditionSlots copies
-    // the bytes into its own slot at publish time.
+    // AuditionSlots copies bytes into its own slot at publish time, so these
+    // picker-owned sets can be freed when their catalog becomes stale.
+    clearSampleCache();
+}
+
+void MainWindow::clearSampleCache()
+{
     m_sampleWaves.clear();
     m_progWaves.clear();
     m_keysplits.clear();
-    voicegroup_free_samples(m_sampleSet);
-    m_sampleSet = nullptr;
-}
-
-void MainWindow::ensureSampleSet()
-{
-    if (m_sampleSet || !m_project.isOpen())
-        return;
-    const VgCatalog &catalog = vgCatalog();
-    QList<QByteArray> storage;
-    const auto utf8 = [&storage](const QString &s) {
-        storage.append(s.toUtf8());
-        return storage.last().constData();
-    };
-    std::vector<const char *> samples, waves, keysplits, tables;
-    for (const QString &s : catalog.directSound)
-        samples.push_back(utf8(s));
-    for (const QString &s : catalog.progWave)
-        waves.push_back(utf8(s));
-    for (const auto &pair : catalog.keysplits) {
-        keysplits.push_back(utf8(pair.first));
-        tables.push_back(utf8(pair.second));
-    }
-    m_sampleSet =
-        voicegroup_load_samples(m_project.root().toLocal8Bit().constData(), samples.data(),
-                                int(samples.size()), waves.data(), int(waves.size()),
-                                keysplits.data(), tables.data(), int(keysplits.size()), nullptr);
-    if (!m_sampleSet)
-        return;
-    for (int i = 0; i < catalog.directSound.size() && i < m_sampleSet->count; i++) {
-        if (m_sampleSet->waves[i])
-            m_sampleWaves.insert(catalog.directSound.at(i), m_sampleSet->waves[i]);
-    }
-    for (int i = 0; i < catalog.progWave.size() && i < m_sampleSet->progWaveCount; i++) {
-        if (m_sampleSet->progWaves[i])
-            m_progWaves.insert(catalog.progWave.at(i), m_sampleSet->progWaves[i]);
-    }
-    for (int i = 0; i < catalog.keysplits.size() && i < m_sampleSet->keysplitCount; i++) {
-        const LoadedKeysplit &ks = m_sampleSet->keysplits[i];
-        if (ks.subGroup && ks.table)
-            m_keysplits.insert(catalog.keysplits.at(i).first, ks);
-    }
+    m_sampleSets.clear();
 }
 
 const WaveData *MainWindow::sampleWaveFor(const QString &symbol)
 {
-    ensureSampleSet();
-    return m_sampleWaves.value(symbol, nullptr);
+    const auto cached = m_sampleWaves.constFind(symbol);
+    if (cached != m_sampleWaves.constEnd())
+        return cached.value();
+    if (!m_project.isOpen())
+        return nullptr;
+    const auto root = m_project.root().toLocal8Bit();
+    const auto name = symbol.toUtf8();
+    const auto *sample = name.constData();
+    auto set = LoadedSampleSetPtr(voicegroup_load_samples(root.constData(), &sample, 1, nullptr, 0,
+                                                          nullptr, nullptr, 0, nullptr),
+                                  &voicegroup_free_samples);
+    const auto *wave = set && set->count > 0 ? set->waves[0] : nullptr;
+    if (set)
+        m_sampleSets.push_back(std::move(set));
+    m_sampleWaves.insert(symbol, wave);
+    return wave;
+}
+
+const uint32_t *MainWindow::progWaveFor(const QString &symbol)
+{
+    const auto cached = m_progWaves.constFind(symbol);
+    if (cached != m_progWaves.constEnd())
+        return cached.value();
+    if (!m_project.isOpen())
+        return nullptr;
+    const auto root = m_project.root().toLocal8Bit();
+    const auto name = symbol.toUtf8();
+    const auto *waveName = name.constData();
+    auto set = LoadedSampleSetPtr(voicegroup_load_samples(root.constData(), nullptr, 0, &waveName,
+                                                          1, nullptr, nullptr, 0, nullptr),
+                                  &voicegroup_free_samples);
+    const auto *wave = set && set->progWaveCount > 0 ? set->progWaves[0] : nullptr;
+    if (set)
+        m_sampleSets.push_back(std::move(set));
+    m_progWaves.insert(symbol, wave);
+    return wave;
+}
+
+const LoadedKeysplit *MainWindow::keysplitFor(const QString &symbol)
+{
+    auto cached = m_keysplits.constFind(symbol);
+    if (cached != m_keysplits.constEnd())
+        return cached->subGroup && cached->table ? &cached.value() : nullptr;
+    if (!m_project.isOpen())
+        return nullptr;
+    auto tableSymbol = QString{};
+    for (const auto &entry : vgCatalog().keysplits) {
+        if (entry.first == symbol) {
+            tableSymbol = entry.second;
+            break;
+        }
+    }
+    if (tableSymbol.isEmpty()) {
+        m_keysplits.insert(symbol, {});
+        return nullptr;
+    }
+    const auto root = m_project.root().toLocal8Bit();
+    const auto name = symbol.toUtf8();
+    const auto table = tableSymbol.toUtf8();
+    const auto *keysplitName = name.constData();
+    const auto *tableName = table.constData();
+    auto set = LoadedSampleSetPtr(voicegroup_load_samples(root.constData(), nullptr, 0, nullptr, 0,
+                                                          &keysplitName, &tableName, 1, nullptr),
+                                  &voicegroup_free_samples);
+    auto loaded = LoadedKeysplit{};
+    if (set && set->keysplitCount > 0)
+        loaded = set->keysplits[0];
+    if (set)
+        m_sampleSets.push_back(std::move(set));
+    m_keysplits.insert(symbol, loaded);
+    cached = m_keysplits.constFind(symbol);
+    return cached->subGroup && cached->table ? &cached.value() : nullptr;
 }
 
 // Browse-audition a keysplit instrument: play whatever sub-voice the
 // audition key (middle C) resolves to, with that sub-voice's own envelope —
 // the same resolution the engine does per note (resolve_voice).
-void MainWindow::auditionKeysplit(const QString &symbol)
+void MainWindow::auditionKeysplit(const LoadedKeysplit &keysplit)
 {
-    ensureSampleSet();
-    const auto it = m_keysplits.constFind(symbol);
-    if (it == m_keysplits.constEnd())
-        return;
-    const uint8_t idx = it->table[60];
+    const auto idx = uint8_t{keysplit.table[60]};
     if (idx >= VOICEGROUP_SIZE)
         return; // old-style overflow index: nothing loaded to play
-    const ToneData &sub = it->subGroup[idx];
+    const auto &sub = keysplit.subGroup[idx];
     if (sub.type & (VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL))
         return; // nested split: the engine refuses these too
     const AuditionSlots::Adsr adsr{sub.attack, sub.decay, sub.sustain, sub.release};

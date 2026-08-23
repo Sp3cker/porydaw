@@ -15,7 +15,7 @@
 #include "ui/typography.h"
 namespace {
 constexpr int kSymbolRole = Qt::UserRole; // full symbol; absent on sections
-constexpr int kKeysplitRole = Qt::UserRole + 1;
+constexpr int kKindRole = Qt::UserRole + 1;
 constexpr int kPopupMinWidth = 340;
 constexpr int kPopupMaxHeight = 420;
 // Looped samples ring until released; cap the browse audition so moving
@@ -47,11 +47,12 @@ SamplePickerButton::SamplePickerButton(QWidget *parent) : QPushButton(parent)
 }
 
 void SamplePickerButton::setChoices(const QStringList &keysplits, const QStringList &samples,
-                                    const QStringList &phonemes)
+                                    const QStringList &phonemes, VgAuditionKind plainKind)
 {
     m_keysplits = keysplits;
     m_samples = samples;
     m_phonemes = phonemes;
+    m_plainKind = plainKind;
 }
 
 void SamplePickerButton::setCurrentSymbol(const QString &symbol)
@@ -111,14 +112,12 @@ void SamplePickerButton::openPopup()
 
         m_list = new QTreeWidget(frame);
         m_list->setObjectName(QStringLiteral("vgSamplePickerList"));
-        m_list->setColumnCount(2);
+        m_list->setColumnCount(1);
         m_list->setHeaderHidden(true);
         m_list->setRootIsDecorated(false);
         m_list->setUniformRowHeights(true);
         m_list->setIndentation(12);
-        m_list->header()->setStretchLastSection(false);
         m_list->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-        m_list->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
         // Keyboard stays in the search box (arrows are forwarded); a
         // focusable list would swallow the typing.
         m_list->setFocusPolicy(Qt::NoFocus);
@@ -150,18 +149,15 @@ void SamplePickerButton::openPopup()
                 return;
             }
             m_clickedSymbol = symbol;
+            if (symbol != m_previewedSymbol)
+                previewItem(item);
         });
         connect(m_list, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem *item) {
-            updateDetail();
             if (!item || item->data(0, kSymbolRole).toString() != m_clickedSymbol)
                 m_clickedSymbol.clear();
-            if (m_positioning || !item)
+            if (m_positioning)
                 return;
-            const QString symbol = item->data(0, kSymbolRole).toString();
-            if (symbol.isEmpty() || item == m_typedRow)
-                return;
-            emit auditionRequested(symbol);
-            m_auditionOffTimer->start();
+            previewItem(item);
         });
         m_search->installEventFilter(this);
         frame->installEventFilter(this);
@@ -169,6 +165,7 @@ void SamplePickerButton::openPopup()
     }
 
     m_clickedSymbol.clear();
+    m_previewedSymbol.clear();
     rebuildList();
 
     // Below the button, clamped to the screen; above when it won't fit.
@@ -223,12 +220,12 @@ void SamplePickerButton::rebuildList()
     struct Section {
         QString title;
         const QStringList *symbols;
-        bool keysplit;
+        VgAuditionKind kind;
     };
     const Section sections[] = {
-        {tr("Keysplits"), &m_keysplits, true},
-        {tr("Samples"), &m_samples, false},
-        {tr("Phonemes"), &m_phonemes, false},
+        {tr("Keysplits"), &m_keysplits, VgAuditionKind::Keysplit},
+        {tr("Samples"), &m_samples, m_plainKind},
+        {tr("Phonemes"), &m_phonemes, m_plainKind},
     };
     int nonEmpty = 0;
     for (const Section &s : sections)
@@ -244,15 +241,8 @@ void SamplePickerButton::rebuildList()
             auto *row = new QTreeWidgetItem(parent);
             row->setText(0, m_fullNames ? symbol : vgSampleDisplayName(symbol));
             row->setData(0, kSymbolRole, symbol);
-            row->setData(0, kKeysplitRole, s.keysplit);
+            row->setData(0, kKindRole, int(s.kind));
             row->setToolTip(0, symbol);
-            if (!s.keysplit && m_info) {
-                const SamplePickInfo info = m_info(symbol);
-                if (info.known && info.looped) {
-                    row->setText(1, QStringLiteral("∞"));
-                    row->setToolTip(1, tr("Loops"));
-                }
-            }
             if (symbol == m_currentSymbol)
                 currentRow = row;
         }
@@ -263,7 +253,7 @@ void SamplePickerButton::rebuildList()
         m_list->scrollToItem(currentRow, QAbstractItemView::PositionAtCenter);
     }
     m_positioning = false;
-    updateDetail();
+    m_detail->clear();
 }
 
 void SamplePickerButton::applyFilter()
@@ -344,8 +334,13 @@ void SamplePickerButton::updateDetail()
         m_detail->setText(QString());
         return;
     }
-    if (item->data(0, kKeysplitRole).toBool()) {
+    const auto kind = VgAuditionKind(item->data(0, kKindRole).toInt());
+    if (kind == VgAuditionKind::Keysplit) {
         m_detail->setText(tr("Keysplit instrument"));
+        return;
+    }
+    if (kind == VgAuditionKind::Wave) {
+        m_detail->setText(tr("Programmable wave"));
         return;
     }
     const SamplePickInfo info = m_info ? m_info(symbol) : SamplePickInfo{};
@@ -357,6 +352,19 @@ void SamplePickerButton::updateDetail()
                           .arg(info.looped ? tr("Loops") : tr("One-shot"))
                           .arg(info.rateHz)
                           .arg(info.seconds, 0, 'f', 2));
+}
+
+void SamplePickerButton::previewItem(QTreeWidgetItem *item)
+{
+    updateDetail();
+    if (!item)
+        return;
+    const auto symbol = item->data(0, kSymbolRole).toString();
+    if (symbol.isEmpty() || item == m_typedRow)
+        return;
+    m_previewedSymbol = symbol;
+    emit auditionRequested(symbol, VgAuditionKind(item->data(0, kKindRole).toInt()));
+    m_auditionOffTimer->start();
 }
 
 void SamplePickerButton::commitItem(QTreeWidgetItem *item)

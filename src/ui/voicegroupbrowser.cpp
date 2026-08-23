@@ -236,7 +236,7 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
     symbolLayout->addWidget(m_samplePicker, 1);
     connect(m_samplePicker, &SamplePickerButton::symbolPicked, this, [this] { commitEdit(); });
     connect(m_samplePicker, &SamplePickerButton::auditionRequested, this,
-            [this](const QString &symbol) {
+            [this](const QString &symbol, VgAuditionKind kind) {
                 const VgVoice *voice = m_source ? m_source->voiceAt(currentSlot()) : nullptr;
                 // The destination voice's envelope, so the browse audition
                 // sounds like the commit would. A keysplit row's envelope
@@ -244,14 +244,11 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
                 // destination has no envelope of its own — all-zero:
                 // silence), so adsr is left default there.
                 AuditionSlots::Adsr adsr;
-                VgAuditionKind kind = VgAuditionKind::Sample;
-                if (voice && macroIsWave(voice->macro)) {
-                    kind = VgAuditionKind::Wave;
+                if (kind == VgAuditionKind::Wave && voice) {
                     adsr = {uint8_t(voice->attack & 0x07), uint8_t(voice->decay & 0x07),
                             uint8_t(voice->sustain & 0x0F), uint8_t(voice->release & 0x07)};
-                } else if (m_keysplitTables.contains(symbol)) {
-                    kind = VgAuditionKind::Keysplit;
-                } else if (voice && macroIsDsFamily(voice->macro)) {
+                } else if (kind == VgAuditionKind::Sample && voice &&
+                           macroIsDsFamily(voice->macro)) {
                     adsr = {uint8_t(voice->attack), uint8_t(voice->decay), uint8_t(voice->sustain),
                             uint8_t(voice->release)};
                 }
@@ -766,7 +763,8 @@ void VoicegroupBrowser::populateEditor()
             // shared DirectSoundWaveData_ prefix.
             m_samplePicker->setDisplayFullSymbols(wave);
             if (wave)
-                m_samplePicker->setChoices(QStringList(), m_waveSymbols, QStringList());
+                m_samplePicker->setChoices(QStringList(), m_waveSymbols, QStringList(),
+                                           VgAuditionKind::Wave);
             else
                 m_samplePicker->setChoices(m_keysplitChoices, m_plainSamples, m_phonemes);
             m_samplePicker->setCurrentSymbol(voice->symbol);

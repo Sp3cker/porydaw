@@ -269,14 +269,16 @@ class MainWindow : public QMainWindow
     };
     const VgCatalog &vgCatalog();
     void invalidateVgCatalog();
-    // The committed data behind the picker's rows (loop badges and browse
-    // audition): one voicegroup_load_samples batch over the whole catalog —
-    // DirectSound samples, programmable waves, and keysplit instruments —
-    // loaded on first use and freed with the catalog.
-    void ensureSampleSet();
+    // Committed picker assets loaded one symbol at a time on first use. Each
+    // LoadedSampleSet owns the pointers cached in the maps below and is freed
+    // when the project catalog is invalidated.
+    void clearSampleCache();
     const WaveData *sampleWaveFor(const QString &symbol);
-    void auditionKeysplit(const QString &symbol);
-    LoadedSampleSet *m_sampleSet = nullptr;
+    const uint32_t *progWaveFor(const QString &symbol);
+    const LoadedKeysplit *keysplitFor(const QString &symbol);
+    void auditionKeysplit(const LoadedKeysplit &keysplit);
+    using LoadedSampleSetPtr = std::unique_ptr<LoadedSampleSet, decltype(&voicegroup_free_samples)>;
+    std::vector<LoadedSampleSetPtr> m_sampleSets;
     QHash<QString, const WaveData *> m_sampleWaves;
     QHash<QString, const uint32_t *> m_progWaves;
     QHash<QString, LoadedKeysplit> m_keysplits;

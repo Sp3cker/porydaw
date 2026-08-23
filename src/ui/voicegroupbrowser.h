@@ -21,11 +21,6 @@ class QPushButton;
 class QSpinBox;
 class QToolButton;
 
-// What a picker row stands for, so the owner resolves its audition
-// correctly: samples publish PCM, waves publish CGB wave bytes, keysplits
-// resolve to whichever sub-voice the audition key lands on.
-enum class VgAuditionKind { Sample, Wave, Keysplit };
-
 // The voicegroup dock (SPEC §6.1): the current song's 128 voicegroup entries
 // with press-and-hold audition, plus an editor panel for the selected voice.
 // Basic voice types (sample/square/wave/noise) plus keysplit, drumkit, and

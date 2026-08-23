@@ -771,6 +771,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 connect(m_vgBrowser, &VoicegroupBrowser::sampleAuditionStopRequested, this,
                         [&stops] { stops++; });
 
+            clearSampleCache();
             picker->openPopup();
             auto *search = picker->findChild<QLineEdit *>(QStringLiteral("vgSamplePickerSearch"));
             auto *list = picker->findChild<QTreeWidget *>(QStringLiteral("vgSamplePickerList"));
@@ -782,33 +783,46 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 check(popupFrame && popupFrame->grab().toImage().pixelColor(0, 0) ==
                                         themes::color(themes::Role::menu_outline),
                       "the picker popup is missing the menu outline");
-                // Every catalog sample is listed, and the committed sample
-                // data drives at least one loop badge (vanilla projects have
-                // plenty of looped instruments).
-                int rows = 0, badges = 0;
+                // Every catalog symbol is listed without asking the provider
+                // to decode each sample while the popup is built.
+                int rows = 0;
                 for (QTreeWidgetItemIterator it(list); *it; ++it) {
                     if ((*it)->data(0, Qt::UserRole).toString().isEmpty())
                         continue; // section label
                     rows++;
-                    badges += (*it)->text(1).isEmpty() ? 0 : 1;
                 }
                 check(rows >= 2, "picker lists fewer than two symbols");
-                check(badges > 0, "no loop badges on any sample row");
+                check(m_sampleSets.empty() && m_sampleWaves.isEmpty() && m_progWaves.isEmpty() &&
+                          m_keysplits.isEmpty(),
+                      "opening the picker loaded unselected assets");
 
                 // Keysplit rows audition too — the resolved sub-voice plays
                 // (MainWindow::auditionKeysplit), so browsing them is
                 // audible like everything else.
                 QTreeWidgetItem *ksRow = nullptr;
                 for (QTreeWidgetItemIterator it(list); *it && !ksRow; ++it) {
-                    if ((*it)->data(0, Qt::UserRole + 1).toBool())
+                    if (VgAuditionKind((*it)->data(0, Qt::UserRole + 1).toInt()) ==
+                        VgAuditionKind::Keysplit)
                         ksRow = *it;
                 }
                 if (ksRow) {
                     const int seen = auditioned.size();
+                    const auto setsBefore = m_sampleSets.size();
+                    const auto samplesBefore = m_sampleWaves.size();
+                    const auto wavesBefore = m_progWaves.size();
+                    const auto keysplitsBefore = m_keysplits.size();
+                    const auto symbol = ksRow->data(0, Qt::UserRole).toString();
                     list->setCurrentItem(ksRow);
                     check(auditioned.size() == seen + 1 &&
                               auditionKinds.last() == VgAuditionKind::Keysplit,
                           "keysplit row did not audition as a keysplit");
+                    const auto loaded = m_keysplits.constFind(symbol);
+                    check(m_sampleSets.size() == setsBefore + 1 &&
+                              m_sampleWaves.size() == samplesBefore &&
+                              m_progWaves.size() == wavesBefore &&
+                              m_keysplits.size() == keysplitsBefore + 1 &&
+                              loaded != m_keysplits.cend() && loaded->subGroup && loaded->table,
+                          "highlighting one keysplit did not load only that keysplit");
                 } else {
                     std::printf("vgsavecheck: note: no keysplit instruments, "
                                 "keysplit audition skipped\n");
@@ -835,11 +849,25 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 for (QTreeWidgetItemIterator it(list); *it && target.isEmpty(); ++it) {
                     const QString s = (*it)->data(0, Qt::UserRole).toString();
                     if (!s.isEmpty() && s != before.symbol &&
-                        !(*it)->data(0, Qt::UserRole + 1).toBool())
+                        VgAuditionKind((*it)->data(0, Qt::UserRole + 1).toInt()) ==
+                            VgAuditionKind::Sample)
                         target = s;
                 }
                 if (check(!target.isEmpty(), "no alternate sample to pick")) {
+                    const auto setsBefore = m_sampleSets.size();
+                    const auto samplesBefore = m_sampleWaves.size();
+                    const auto wavesBefore = m_progWaves.size();
+                    const auto keysplitsBefore = m_keysplits.size();
                     search->setText(target);
+                    const auto loaded = m_sampleWaves.constFind(target);
+                    check(m_sampleSets.size() == setsBefore + 1 &&
+                              m_sampleWaves.size() == samplesBefore + 1 &&
+                              m_progWaves.size() == wavesBefore &&
+                              m_keysplits.size() == keysplitsBefore &&
+                              loaded != m_sampleWaves.cend() && *loaded &&
+                              m_sampleSets.back()->count == 1 &&
+                              m_sampleSets.back()->waves[0] == *loaded,
+                          "highlighting one sample did not load only that sample");
                     check(auditioned.contains(target),
                           "filtering onto a sample did not audition it");
                     QTreeWidgetItem *targetItem = list->currentItem();
@@ -930,11 +958,24 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                                 popup->hide();
                         } else {
                             const int seen = auditioned.size();
+                            const auto setsBefore = m_sampleSets.size();
+                            const auto samplesBefore = m_sampleWaves.size();
+                            const auto wavesBefore = m_progWaves.size();
+                            const auto keysplitsBefore = m_keysplits.size();
                             search->setText(otherWave);
                             check(auditioned.size() > seen && auditioned.last() == otherWave &&
                                       auditionKinds.last() == VgAuditionKind::Wave,
                                   "filtering onto a wave did not audition "
                                   "it as a wave");
+                            const auto loaded = m_progWaves.constFind(otherWave);
+                            check(m_sampleSets.size() == setsBefore + 1 &&
+                                      m_sampleWaves.size() == samplesBefore &&
+                                      m_progWaves.size() == wavesBefore + 1 &&
+                                      m_keysplits.size() == keysplitsBefore &&
+                                      loaded != m_progWaves.cend() && *loaded &&
+                                      m_sampleSets.back()->progWaveCount == 1 &&
+                                      m_sampleSets.back()->progWaves[0] == *loaded,
+                                  "highlighting one wave did not load only that wave");
                             QKeyEvent waveRet(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
                             QCoreApplication::sendEvent(search, &waveRet);
                             undos++;
