@@ -166,9 +166,11 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
             fail("the press-grown draw did not commit its note");
     }
 
-    // The pencil's pitch readout: while a draw gesture is live, the pending
-    // note names its pitch even where settled labels hide — painting a note
-    // and dragging it to the right pitch depends on the live name.
+    // The pending draw note ignores note-name mode: nothing may cover the
+    // note while it is being placed, so toggling note-name mode mid-gesture
+    // must leave the preview pixel-identical. The probe uses rows too short
+    // for the settled label font, so the comparison is sensitive only to the
+    // draw preview itself.
     {
         const auto readoutPadding = layout::space(layout::Space::Half);
         auto readoutFont = typography::noteName(roll->font());
@@ -177,8 +179,8 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         const auto readoutMetrics = QFontMetrics(readoutFont);
         const SongView::ViewState viewBeforeReadout = view.viewState();
         SongView::ViewState readoutShortRows = viewBeforeReadout;
-        // Short rows where the fixed face cannot fit, so any painted name is
-        // the readout, never a settled label.
+        // Short rows where the fixed face cannot fit, so no settled name
+        // ever paints on the probed rows.
         readoutShortRows.keyHeight =
             double(readoutMetrics.ascent() + readoutMetrics.descent() + 2 * readoutPadding);
         view.applyViewState(readoutShortRows);
@@ -200,8 +202,8 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
             view.setNoteNameMode(true);
             checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, readoutEnd, Qt::LeftButton,
                                       Qt::NoButton, Qt::NoModifier);
-            if (readoutOn == readoutOff)
-                fail("no pitch readout on the pending draw note");
+            if (readoutOn != readoutOff)
+                fail("note-name mode changed the pending draw-note rendering");
             while (doc.undoStack()->index() > undoIndexBeforeReadout && doc.undoStack()->canUndo())
                 doc.undoStack()->undo();
         }

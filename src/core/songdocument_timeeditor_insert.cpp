@@ -35,6 +35,7 @@ bool SongDocument::TimeEditor::insertBlank()
     std::vector<std::vector<size_t>> removals(m_document.m_smf.tracks.size());
     std::vector<SongDocument::EditOp> inserts;
     std::vector<std::vector<bool>> taken = makeTimeEditTaken();
+    std::vector<XcmdEventRecord> xcmdEventRecords;
     for (const DocNote &note : plan.notes) {
         const uint64_t endTick =
             note.unterminated()
@@ -42,10 +43,10 @@ bool SongDocument::TimeEditor::insertBlank()
                 : m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
         if (note.tick >= s) {
             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
-                               note.tick + span, MoveMode::MoveEvenIfUnchanged);
+                               note.tick + span, MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
             if (!note.unterminated())
                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
-                                   endTick + span, MoveMode::MoveEvenIfUnchanged);
+                                   endTick + span, MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
         } else if (!note.unterminated() && endTick == s) {
             consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
         } else if (!note.unterminated() && endTick > s) {
@@ -76,12 +77,15 @@ bool SongDocument::TimeEditor::insertBlank()
             continue;
         if (ref.tick >= s)
             appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, ref.tick + span,
-                               MoveMode::MoveEvenIfUnchanged);
+                               MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
     }
     const std::vector<SongDocument::EditOp> trackEnds =
         timeEditShiftRightTrackEnds(affectedTracks, inserts, s);
-    std::vector<SongDocument::EditOp> ops =
-        assembleTimeEditOps(std::move(removals), std::move(inserts), std::move(trackEnds));
+    auto opsOpt = xcmdAssembleOps(std::move(removals), std::move(inserts), std::move(trackEnds),
+                                  xcmdEventRecords);
+    if (!opsOpt)
+        return false; // XCMD reconciliation unrepresentable: fail without mutating
+    std::vector<SongDocument::EditOp> ops = std::move(*opsOpt);
     std::vector<TempoPoint> nextTempo = m_document.m_tempoPoints;
     if (m_scope.coversTempo())
         nextTempo = time_edit_detail::insertBlankTempoPoints(nextTempo, m_range);
@@ -121,6 +125,7 @@ bool SongDocument::TimeEditor::duplicate()
     std::vector<std::vector<size_t>> removals(m_document.m_smf.tracks.size());
     std::vector<SongDocument::EditOp> inserts;
     std::vector<std::vector<bool>> taken = makeTimeEditTaken();
+    std::vector<XcmdEventRecord> xcmdEventRecords;
     std::vector<std::vector<bool>> paired(m_document.m_smf.tracks.size());
     for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++)
         paired[t].assign(m_document.m_smf.tracks[t].events.size(), false);
@@ -134,10 +139,10 @@ bool SongDocument::TimeEditor::duplicate()
             paired[size_t(note.smfTrack)][note.endIndex] = true;
         if (note.tick >= e) {
             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
-                               note.tick + span, MoveMode::MoveEvenIfUnchanged);
+                               note.tick + span, MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
             if (!note.unterminated())
                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
-                                   endTick + span, MoveMode::MoveEvenIfUnchanged);
+                                   endTick + span, MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
         } else if (!note.unterminated() && endTick >= e) {
             if (endTick == e)
                 consumeTimeEditEvent(taken, note.smfTrack, note.endIndex);
@@ -159,7 +164,7 @@ bool SongDocument::TimeEditor::duplicate()
             continue;
         if (ref.tick >= e)
             appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, ref.tick + span,
-                               MoveMode::MoveEvenIfUnchanged);
+                               MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
     }
     for (const DocNote &note : plan.notes) {
         if (note.tick >= e)
@@ -200,6 +205,8 @@ bool SongDocument::TimeEditor::duplicate()
             const SmfEvent &source =
                 m_document.m_smf.tracks[size_t(atStart->smfTrack)].events[atStart->index];
             appendTimeEditInsert(inserts, atStart->smfTrack, source, e, false);
+            recordXcmdRelocation(atStart->smfTrack, atStart->index, e, inserts.size() - 1, true,
+                                 xcmdEventRecords);
         } else {
             int defaultValue = -1;
             if (prototype->kind == EventKind::TimeSig) {
@@ -242,6 +249,8 @@ bool SongDocument::TimeEditor::duplicate()
             const SmfEvent &source =
                 m_document.m_smf.tracks[size_t(ref->smfTrack)].events[ref->index];
             appendTimeEditInsert(inserts, ref->smfTrack, source, e + (ref->tick - s), false);
+            recordXcmdRelocation(ref->smfTrack, ref->index, e + (ref->tick - s), inserts.size() - 1,
+                                 true, xcmdEventRecords);
         }
     }
     if (m_scope.wholeSong) {
@@ -262,8 +271,11 @@ bool SongDocument::TimeEditor::duplicate()
     }
     const std::vector<SongDocument::EditOp> trackEnds =
         timeEditShiftRightTrackEnds(affectedTracks, inserts, e);
-    std::vector<SongDocument::EditOp> ops =
-        assembleTimeEditOps(std::move(removals), std::move(inserts), std::move(trackEnds));
+    auto opsOpt = xcmdAssembleOps(std::move(removals), std::move(inserts), std::move(trackEnds),
+                                  xcmdEventRecords);
+    if (!opsOpt)
+        return false; // XCMD reconciliation unrepresentable: fail without mutating
+    std::vector<SongDocument::EditOp> ops = std::move(*opsOpt);
     std::vector<TempoPoint> nextTempo = m_document.m_tempoPoints;
     if (m_scope.coversTempo())
         nextTempo = time_edit_detail::duplicateTempoPoints(nextTempo, m_range);

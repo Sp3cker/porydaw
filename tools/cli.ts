@@ -1,8 +1,8 @@
 // Singular CLI for porydaw build/verify/format lanes.
 // Quiet by default: build buffers ninja progress, verify uses quiet reporter with live name line.
 // Usage:
-// deno task build:app -> build porydaw only
-// deno task build:checks -> build porydaw + porydaw_checks + mid2agb
+// deno task build:app [--release] -> build porydaw only
+// deno task build:checks [--release] -> build porydaw + porydaw_checks + mid2agb
 // deno task verify [--verbose] [--filter <name>] [--no-build] [-- <run_checks args>]
 // deno task format [--check] [files...]
 
@@ -15,8 +15,8 @@ type Subcommand = "build:app" | "build:checks" | "verify" | "format";
 
 function usage(): never {
   console.error(`usage:
- deno task build:app            build porydaw app only
- deno task build:checks         build porydaw + checks + mid2agb
+ deno task build:app [--release]    build porydaw app only
+ deno task build:checks [--release] build porydaw + checks + mid2agb
  deno task verify [--verbose] [--filter <name>] [--no-build] [-- <run_checks args>]
  deno task format [--check] [files...]`);
   console.error("");
@@ -25,6 +25,7 @@ function usage(): never {
   );
   console.error(" --verbose  show per-harness ok: lines");
   console.error(" --no-build skip cmake build step");
+  console.error(" --release  configure and build the Release configuration");
   Deno.exit(2);
 }
 
@@ -51,10 +52,15 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-async function ensureConfigured(verbose: boolean): Promise<void> {
+async function ensureConfigured(
+  verbose: boolean,
+  release: boolean,
+): Promise<void> {
   const ninjaFile = join(BUILD_DIR, "build.ninja");
   const makefile = join(BUILD_DIR, "Makefile");
-  if ((await exists(ninjaFile)) || (await exists(makefile))) return;
+  if (!release && ((await exists(ninjaFile)) || (await exists(makefile)))) {
+    return;
+  }
   const started = performance.now();
   if (verbose) console.error(`build: configuring...`);
   const result = await new Deno.Command("cmake", {
@@ -75,11 +81,13 @@ async function ensureConfigured(verbose: boolean): Promise<void> {
 async function runBuild(
   targets: string[],
   verbose: boolean,
+  release = false,
 ): Promise<void> {
-  await ensureConfigured(verbose);
+  await ensureConfigured(verbose, release);
   const started = performance.now();
   const nproc = String(navigator.hardwareConcurrency);
   const args = ["--build", BUILD_DIR, "-j", nproc];
+  if (release) args.push("--config", "Release");
   if (targets.length > 0) {
     args.push("--target", ...targets);
   }
@@ -256,10 +264,14 @@ if (sub === "build-checks" || sub === "build:check") sub = "build:checks";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
-    await runBuild(["porydaw"], isVerbose(rest));
+    await runBuild(["porydaw"], isVerbose(rest), rest.includes("--release"));
     break;
   case "build:checks":
-    await runBuild(["porydaw", "porydaw_checks", "mid2agb"], isVerbose(rest));
+    await runBuild(
+      ["porydaw", "porydaw_checks", "mid2agb"],
+      isVerbose(rest),
+      rest.includes("--release"),
+    );
     break;
   case "verify":
     await runVerify(rest);

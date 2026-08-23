@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <vector>
 
 #include <QAction>
 #include <QMenu>
@@ -10,21 +11,12 @@
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/m4asemantics.h"
 
 namespace {
 
 EditorAutomationRowId laneRow(int track, uint8_t controller)
 {
     return {EditorAutomationRowKind::ControlChange, uint8_t(track), controller};
-}
-
-QString laneLabel(uint8_t controller)
-{
-    if (controller == CCLanes::bendController())
-        return QStringLiteral("Pitch bend (BEND)");
-    const auto info = m4aClassifyCc(controller);
-    return QStringLiteral("%1 (%2)").arg(QLatin1String(info.display), QLatin1String(info.name));
 }
 
 } // namespace
@@ -36,7 +28,12 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
     const int track = m_page->m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
-    const uint8_t candidates[] = {1, 7, 10, 20, 21, CCLanes::bendController()};
+    std::vector<uint8_t> candidates{CoreTimeDefaults::kCcModulation, CoreTimeDefaults::kCcVolume,
+                                    CoreTimeDefaults::kCcPan, CoreTimeDefaults::kCcBendRange,
+                                    CoreTimeDefaults::kCcLfoSpeed};
+    for (const xcmd::Descriptor &descriptor : xcmd::laneDescriptors())
+        candidates.push_back(descriptor.laneController);
+    candidates.push_back(CCLanes::bendController());
     QMenu menu;
     std::vector<EditorAutomationRowId> hidden;
     for (const uint8_t controller : candidates) {
@@ -44,7 +41,7 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
         if (m_page->m_viewState.isLaneHidden(row) || m_page->model().findLane(track, controller) ||
             m_page->m_viewState.emptyLanes.find(row) != m_page->m_viewState.emptyLanes.cend())
             continue;
-        auto *action = menu.addAction(laneLabel(controller));
+        auto *action = menu.addAction(CCLanes::laneLabel(controller));
         action->setData(int(controller));
     }
     for (const auto &row : m_page->m_viewState.hiddenLanes())
@@ -56,7 +53,8 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
         menu.addSeparator();
         menu.addAction(tr("Hidden CC lanes"))->setEnabled(false);
         for (const auto &row : hidden) {
-            auto *action = menu.addAction(tr("Show: %1 (hidden)").arg(laneLabel(row.controller)));
+            auto *action =
+                menu.addAction(tr("Show: %1 (hidden)").arg(CCLanes::laneLabel(row.controller)));
             action->setData(256 + int(row.controller));
         }
     }
@@ -69,11 +67,11 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
         if (m_page->m_viewState.unhideLane(row)) {
             m_page->publishViewState();
             rebuildRows();
-            m_page->announce(tr("Showed the %1 CC lane").arg(laneLabel(row.controller)));
+            m_page->announce(tr("Showed the %1 CC lane").arg(CCLanes::laneLabel(row.controller)));
         }
     } else {
         m_page->addEmptyLane(track, uint8_t(value));
-        m_page->announce(tr("Added %1 CC lane").arg(laneLabel(uint8_t(value))));
+        m_page->announce(tr("Added %1 CC lane").arg(CCLanes::laneLabel(uint8_t(value))));
     }
 }
 

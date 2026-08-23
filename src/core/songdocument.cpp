@@ -4,13 +4,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <algorithm>
-#include <map>
-#include <numeric>
-#include <set>
 
-#include "core/lanemoveplan.h"
 #include "core/miditimeline.h"
-#include "core/timedefaults.h"
 #include "project/songregistry.h"
 
 namespace song_document_tempo {
@@ -684,14 +679,23 @@ int SongDocument::laneValue(const SmfEvent &ev, uint8_t cc) const
 std::vector<DocLanePoint> SongDocument::lanePoints(int engineTrack, uint8_t cc) const
 {
     std::vector<DocLanePoint> points;
-
     const int smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0)
         return points;
-    const auto &evs = m_smf.tracks[smfTrack].events;
-    for (size_t i = 0; i < evs.size(); i++) {
-        if (laneEventMatches(evs[i], cc))
-            points.push_back({smfTrack, i, evs[i].tick, laneValue(evs[i], cc)});
+    const auto &events = m_smf.tracks[size_t(smfTrack)].events;
+    if (const xcmd::Descriptor *descriptor = xcmd::descriptorForLane(cc)) {
+        // Known points surface through the neutral projection; each row's
+        // index is the payload event's raw chunk position (Point identity).
+        const xcmd::Projection projection = xcmd::projectEvents(xcmdEvents(smfTrack));
+        for (const xcmd::Point &point : projection.points) {
+            if (point.lane == descriptor->laneController)
+                points.push_back({smfTrack, size_t(point.index), point.tick, int(point.value)});
+        }
+        return points;
+    }
+    for (size_t index = 0; index < events.size(); ++index) {
+        if (laneEventMatches(events[index], cc))
+            points.push_back({smfTrack, index, events[index].tick, laneValue(events[index], cc)});
     }
     return points;
 }
@@ -1282,200 +1286,6 @@ void SongDocument::nudgeNotesVelocity(const std::vector<DocNote> &notes, int del
         ops.push_back(op);
     }
     pushEdit(tr("adjust velocity"), std::move(ops));
-}
-
-SmfEvent SongDocument::makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick, int value) const
-{
-    value = CoreTimeDefaults::clampLaneValue(cc, value);
-    if (cc == DOC_CC_BEND) {
-        const auto bend14 = value - CoreTimeDefaults::kMinBendValue;
-        return makeChannelEvent(0xE, channel, tick, uint8_t(bend14 & 0x7F),
-                                uint8_t((bend14 >> 7) & 0x7F));
-    }
-    if (cc == DOC_CC_VOICE)
-        return makeChannelEvent(0xC, channel, tick, uint8_t(value), 0);
-    return makeChannelEvent(0xB, channel, tick, cc, uint8_t(value));
-}
-
-void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value)
-{
-    const int smfTrack = smfTrackFor(engineTrack);
-    if (smfTrack < 0 || m_smf.tracks.empty())
-        return;
-    std::vector<EditOp> ops;
-    // A point already on the tick is replaced, not shadowed: only the last of
-    // same-tick duplicates is audible, so keeping the old one would just
-    // leave an inert ghost under the new value.
-    std::vector<size_t> replaced;
-    for (const DocLanePoint &pt : lanePoints(engineTrack, cc)) {
-        if (pt.tick == tick)
-            replaced.push_back(pt.index);
-    }
-    appendRemoveOps(ops, smfTrack, std::move(replaced));
-    EditOp op;
-    op.type = EditOp::InsertEvent;
-    op.smfTrack = smfTrack;
-    op.event = makeLaneEvent(cc, channelFor(engineTrack), tick, value);
-    ops.push_back(op);
-    pushEdit(cc == DOC_CC_VOICE ? tr("add voice change") : tr("add automation point"),
-             std::move(ops));
-}
-
-void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin,
-                                   uint64_t tickEnd, const std::vector<LanePointValue> &points)
-{
-    const int smfTrack = smfTrackFor(engineTrack);
-    if (smfTrack < 0 || m_smf.tracks.empty())
-        return;
-    std::vector<EditOp> ops;
-    // Points already inside the swept range are overwritten by the gesture.
-    std::vector<size_t> overwritten;
-    for (const DocLanePoint &pt : lanePoints(engineTrack, cc)) {
-        if (pt.tick >= tickBegin && pt.tick <= tickEnd)
-            overwritten.push_back(pt.index);
-    }
-    if (overwritten.empty() && points.empty())
-        return;
-    appendRemoveOps(ops, smfTrack, std::move(overwritten));
-    const uint8_t channel = channelFor(engineTrack);
-    for (const LanePointValue &pt : points) {
-        EditOp op;
-        op.type = EditOp::InsertEvent;
-        op.smfTrack = smfTrack;
-        op.event = makeLaneEvent(cc, channel, pt.tick, pt.value);
-        ops.push_back(op);
-    }
-    pushEdit(tr("draw automation points"), std::move(ops));
-}
-
-void SongDocument::moveLanePoints(const std::vector<LanePointMove> &moves)
-{
-    if (moves.empty() || m_smf.tracks.empty())
-        return;
-    struct LaneRequests {
-        int engineTrack = -1;
-        uint8_t cc = 0;
-        std::vector<LaneMoveRequest> requests;
-        std::vector<DocLanePoint> existingPoints;
-        std::vector<LaneMovePoint> existing;
-    };
-    std::vector<LaneRequests> lanes;
-    std::map<std::pair<int, uint8_t>, size_t> laneIndex;
-    std::set<std::pair<int, size_t>> sourceIndices;
-    size_t validCount = 0;
-    uint8_t singularCc = 0;
-    for (const LanePointMove &move : moves) {
-        const int smfTrack = smfTrackFor(move.engineTrack);
-        if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()) ||
-            move.point.smfTrack != smfTrack ||
-            move.point.index >= m_smf.tracks[size_t(smfTrack)].events.size())
-            continue;
-        const SmfEvent &source = m_smf.tracks[size_t(smfTrack)].events[move.point.index];
-        if (!laneEventMatches(source, move.cc))
-            continue;
-        if (source.tick != move.point.tick || laneValue(source, move.cc) != move.point.value ||
-            !sourceIndices.emplace(smfTrack, move.point.index).second)
-            continue;
-        const auto key = std::make_pair(move.engineTrack, move.cc);
-        auto [it, inserted] = laneIndex.emplace(key, lanes.size());
-        if (inserted) {
-            LaneRequests lane;
-            lane.engineTrack = move.engineTrack;
-            lane.cc = move.cc;
-            lane.existingPoints = lanePoints(move.engineTrack, move.cc);
-            lane.existing.reserve(lane.existingPoints.size());
-            for (const DocLanePoint &point : lane.existingPoints)
-                lane.existing.push_back({point.tick, point.value});
-            lanes.push_back(std::move(lane));
-        }
-        LaneRequests &lane = lanes[it->second];
-        size_t sourceId = lane.existingPoints.size();
-        for (size_t id = 0; id < lane.existingPoints.size(); ++id) {
-            if (lane.existingPoints[id].smfTrack == move.point.smfTrack &&
-                lane.existingPoints[id].index == move.point.index) {
-                sourceId = id;
-                break;
-            }
-        }
-        if (sourceId >= lane.existingPoints.size())
-            continue;
-        lane.requests.push_back({sourceId, move.newTick, move.newValue});
-        singularCc = move.cc;
-        ++validCount;
-    }
-    if (lanes.empty())
-        return;
-    std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
-    std::vector<EditOp> modifications;
-    std::vector<EditOp> insertions;
-    for (const LaneRequests &lane : lanes) {
-        const auto plan = planLaneMoves(lane.existing, lane.requests);
-        if (!plan || plan->empty())
-            continue;
-        const uint8_t channel = channelFor(lane.engineTrack);
-        for (size_t id : plan->removeIds)
-            removals[size_t(lane.existingPoints[id].smfTrack)].push_back(
-                lane.existingPoints[id].index);
-        for (const LaneMoveWrite &write : plan->writes) {
-            const DocLanePoint &sourcePoint = lane.existingPoints[write.sourceId];
-            const SmfEvent event = makeLaneEvent(lane.cc, channel, write.tick, write.value);
-            if (write.tick == sourcePoint.tick) {
-                const SmfEvent &source =
-                    m_smf.tracks[size_t(sourcePoint.smfTrack)].events[sourcePoint.index];
-                if (event == source)
-                    continue;
-                EditOp modify;
-                modify.type = EditOp::ModifyEvent;
-                modify.smfTrack = sourcePoint.smfTrack;
-                modify.index = sourcePoint.index;
-                modify.event = event;
-                modifications.push_back(std::move(modify));
-                continue;
-            }
-            EditOp insert;
-            insert.type = EditOp::InsertEvent;
-            insert.smfTrack = sourcePoint.smfTrack;
-            insert.event = event;
-            insertions.push_back(std::move(insert));
-        }
-    }
-    const bool hasRemovals =
-        std::any_of(removals.begin(), removals.end(),
-                    [](const std::vector<size_t> &indices) { return !indices.empty(); });
-    if (modifications.empty() && insertions.empty() && !hasRemovals)
-        return;
-    std::vector<EditOp> ops;
-    ops.reserve(modifications.size() + insertions.size() + moves.size());
-    for (EditOp &modify : modifications)
-        ops.push_back(std::move(modify));
-    for (size_t track = 0; track < m_smf.tracks.size(); track++)
-        appendRemoveOps(ops, int(track), std::move(removals[track]));
-    for (EditOp &insert : insertions)
-        ops.push_back(std::move(insert));
-    const bool singular = validCount == 1;
-    const QString text = singular && singularCc == DOC_CC_VOICE ? tr("change voice")
-                         : singular                             ? tr("edit automation point")
-                                                                : tr("edit automation points");
-    pushEdit(text, std::move(ops));
-}
-
-void SongDocument::deleteLanePoints(int engineTrack, uint8_t cc,
-                                    const std::vector<DocLanePoint> &points)
-{
-    Q_UNUSED(engineTrack);
-    if (points.empty())
-        return;
-    std::vector<EditOp> ops;
-    for (size_t t = 0; t < m_smf.tracks.size(); t++) {
-        std::vector<size_t> indices;
-        for (const DocLanePoint &pt : points) {
-            if (pt.smfTrack == int(t))
-                indices.push_back(pt.index);
-        }
-        appendRemoveOps(ops, int(t), std::move(indices));
-    }
-    pushEdit(cc == DOC_CC_VOICE ? tr("delete voice change(s)") : tr("delete automation point(s)"),
-             std::move(ops));
 }
 
 void SongDocument::insertRawEvent(int smfTrack, const SmfEvent &event)

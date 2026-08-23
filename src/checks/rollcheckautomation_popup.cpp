@@ -14,8 +14,10 @@
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
+#include "core/xcmd.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationprojection.h"
+#include "ui/editordrawer/cclanes.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 
@@ -64,6 +66,13 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
                QStringLiteral("right-click add-lane menu lost hidden-lane label or order"));
     popupCheck(addLaneActions.contains(QStringLiteral("Hidden CC lanes")),
                QStringLiteral("right-click add-lane menu lost Hidden CC lanes heading"));
+    for (const xcmd::Descriptor &descriptor : xcmd::laneDescriptors()) {
+        const QString label = CCLanes::laneLabel(descriptor.laneController);
+        popupCheck(addLaneActions.contains(label),
+                   QStringLiteral("right-click add-lane menu did not offer every xcmd lane "
+                                  "descriptor (missing %1)")
+                       .arg(label));
+    }
     QStringList ccLaneActions;
     QTimer::singleShot(0, [&] {
         auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());

@@ -276,15 +276,6 @@ void PianoRoll::drawDragPreview(QPainter &p, const SongViewModel &model, int sel
                 p.restore();
             }
         }
-    } else if (m_sv->noteNameMode()) {
-        // The pencil's live pitch readout: unlike settled labels it must
-        // stay visible while the gesture chooses a pitch, so it skips the
-        // fit rules — the plate keeps it readable where it overruns the
-        // pending note or a short row.
-        p.setFont(m_fixedNoteNameFont);
-        const QRectF labelRect(box.left() + lyt::space(Space::Half), r.top(), 512.0, r.height());
-        drawPlatedNoteText(p, labelRect, Qt::AlignLeft | Qt::AlignVCenter, keyName(m_drawKey), fill,
-                           contrastingTextColor(fill));
     }
 }
 

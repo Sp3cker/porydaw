@@ -14,6 +14,7 @@
 #include "core/tempo.h"
 #include "core/timedefaults.h"
 #include "core/tracklimits.h"
+#include "core/xcmd.h"
 #include "project/decompproject.h"
 
 class MidiTimeline;
@@ -21,6 +22,8 @@ class MidiTimeline;
 // Pseudo-CC numbers for lanes that aren't controller-backed.
 constexpr uint8_t DOC_CC_BEND = CoreTimeDefaults::kLaneCcBend;
 constexpr uint8_t DOC_CC_VOICE = CoreTimeDefaults::kLaneCcVoice;
+constexpr uint8_t DOC_CC_ECHO_VOLUME = xcmd::kEchoVolumeLane;
+constexpr uint8_t DOC_CC_ECHO_LENGTH = xcmd::kEchoLengthLane;
 
 // Loop markers as mid2agb reads them: a text-type meta (0x01-0x07) whose
 // content, truncated to 32 bytes and whitespace-trimmed, is the single
@@ -208,8 +211,11 @@ class SongDocument : public QObject
         uint64_t newTick = 0;
         int newValue = 0;
     };
+    // Descriptor-lane identities (point.index) are trusted: callers resolve
+    // them fresh, and the canonical plan re-validates every identity — a
+    // stale one rejects the whole command before anything is pushed.
     void moveLanePoints(const std::vector<LanePointMove> &moves);
-
+    // Same identity-trust rule as moveLanePoints for descriptor lanes.
     void deleteLanePoints(int engineTrack, uint8_t cc, const std::vector<DocLanePoint> &points);
     void applyTempoEdit(const TempoEdit &edit);
     // Removes raw events and edits the global tempo stream as one undoable
@@ -505,6 +511,21 @@ class SongDocument : public QObject
     bool laneEventMatches(const SmfEvent &ev, uint8_t cc) const;
     int laneValue(const SmfEvent &ev, uint8_t cc) const;
     SmfEvent makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick, int value) const;
+    void appendLaneInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel, uint8_t cc,
+                             uint64_t tick, int value) const;
+    // The one XCMD adapter for an SMF track: one pass over the chunk's
+    // channel events as a single decoder stream (the same slot playback
+    // uses per engine track), rows carrying each event's chunk index as
+    // identity. Callers project them or rewrite points and translate the
+    // flat Patch via appendXcmdPatchOps; no protocol state is visible here.
+    // TimeEditor and the lane TUs reuse this — no other adapter exists.
+    std::vector<xcmd::Event> xcmdEvents(int smfTrack) const;
+    // Translates one plan's Patch: raw removals land in removals[smfTrack],
+    // and the ordered controller emissions become InsertEvents (canonical CC
+    // events on emission.channel; verbatim re-insertions copy the named
+    // event and only re-stamp its tick).
+    void appendXcmdPatchOps(std::vector<std::vector<size_t>> &removals, std::vector<EditOp> &ops,
+                            int smfTrack, const xcmd::Patch &patch) const;
     // Locates the loop marker event, mirroring MidiTimeline::build's rule
     // (first matching text meta in track/event order). Returns false if absent.
     bool findLoopMarkerEvent(bool endMarker, int *smfTrack, size_t *index) const;

@@ -176,11 +176,15 @@ qt_add_library(porydaw_app STATIC
     src/core/miditimeline.h
     src/core/smf.cpp
     src/core/smf.h
+    src/core/xcmd.cpp
+    src/core/xcmd.h
     src/core/songdocument.cpp
     src/core/songdocument_range.cpp
     src/core/songdocument_timeeditor.cpp
     src/core/songdocument_timeeditor_insert.cpp
+    src/core/songdocument_timeeditor_xcmd.cpp
     src/core/songdocument_tempo.cpp
+    src/core/songdocument_xcmd.cpp
     src/core/songdocument.h
     src/core/lanemoveplan.cpp
     src/core/lanemoveplan.h

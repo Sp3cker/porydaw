@@ -97,6 +97,45 @@ SongDocument::TimeEditor::TimeEditor(SongDocument &document, const TimeRange &ra
         m_trackScope.insert(track);
     for (const auto &lane : m_scope.lanes)
         m_laneScope.insert({lane.first, lane.second});
+    // The per-track XCMD index is built lazily (xcmdTrackIndex) on first
+    // access, one projection pass per track the edit actually touches.
+    m_xcmdLaneByEvent.resize(m_document.m_smf.tracks.size());
+    m_xcmdConsumedOfEvent.resize(m_document.m_smf.tracks.size());
+}
+
+void SongDocument::TimeEditor::xcmdTrackIndex(int smfTrack) const
+{
+    if (smfTrack < 0 || smfTrack >= int(m_xcmdLaneByEvent.size()))
+        return;
+    auto &lanes = m_xcmdLaneByEvent[size_t(smfTrack)];
+    auto &consumed = m_xcmdConsumedOfEvent[size_t(smfTrack)];
+    if (!consumed.empty())
+        return; // already built for this track
+    const auto &events = m_document.m_smf.tracks[size_t(smfTrack)].events;
+    lanes.assign(events.size(), std::nullopt);
+    consumed.assign(events.size(), 0);
+    const std::vector<xcmd::Event> rows = m_document.xcmdEvents(smfTrack);
+    const xcmd::Projection projection = xcmd::projectEvents(rows);
+    for (uint64_t index : projection.consumed)
+        if (index < consumed.size())
+            consumed[size_t(index)] = 1;
+    for (const xcmd::Point &point : projection.points)
+        if (point.index < lanes.size())
+            lanes[size_t(point.index)] = point.lane;
+}
+
+bool SongDocument::TimeEditor::isSeamKeeperEligible(const TimeEventRef &ref) const
+{
+    return ref.smfTrack < 0 || !isXcmdConsumed(ref.smfTrack, ref.index);
+}
+
+bool SongDocument::TimeEditor::isXcmdConsumed(int smfTrack, size_t index) const
+{
+    if (smfTrack < 0 || smfTrack >= int(m_xcmdConsumedOfEvent.size()))
+        return false;
+    xcmdTrackIndex(smfTrack);
+    const auto &consumed = m_xcmdConsumedOfEvent[size_t(smfTrack)];
+    return index < consumed.size() && consumed[index] != 0;
 }
 
 bool SongDocument::TimeEditor::metaIsTimeSig(const SmfEvent &event)
@@ -112,9 +151,32 @@ SongDocument::TimeEditor::channelStream(int smfTrack, const SmfEvent &event)
             (type == 0xA || type == 0xB) ? event.data0 : uint8_t{0}};
 }
 
-std::optional<uint8_t> SongDocument::TimeEditor::laneForEvent(const SmfEvent &event) const
+std::optional<uint8_t> SongDocument::TimeEditor::logicalXcmdLane(int smfTrack, size_t index) const
 {
+    if (smfTrack < 0 || smfTrack >= int(m_xcmdLaneByEvent.size()))
+        return std::nullopt;
+    xcmdTrackIndex(smfTrack);
+    const auto &lanes = m_xcmdLaneByEvent[size_t(smfTrack)];
+    if (index >= lanes.size())
+        return std::nullopt;
+    const std::optional<uint8_t> lane = lanes[index];
+    if (!lane)
+        return std::nullopt;
+    const int engineTrack = m_document.engineTrackForChunk(smfTrack);
+    if (m_scope.wholeSong || m_trackScope.contains(engineTrack) ||
+        !m_laneScope.contains({engineTrack, *lane}))
+        return std::nullopt;
+    return lane;
+}
+
+std::optional<uint8_t> SongDocument::TimeEditor::laneForEvent(int smfTrack, size_t index,
+                                                              const SmfEvent &event) const
+{
+    // Only channel events can be protocol bytes; consulting the XCMD lane
+    // for a meta would be a wasted per-track build.
     if (event.isChannel()) {
+        if (const auto lane = logicalXcmdLane(smfTrack, index))
+            return lane;
         switch (event.typeNibble()) {
         case 0xB:
             return event.data0;
@@ -129,7 +191,7 @@ std::optional<uint8_t> SongDocument::TimeEditor::laneForEvent(const SmfEvent &ev
     return std::nullopt;
 }
 
-bool SongDocument::TimeEditor::eventCovered(int /*smfTrack*/, int engineTrack,
+bool SongDocument::TimeEditor::eventCovered(int smfTrack, size_t index, int engineTrack,
                                             const SmfEvent &event) const
 {
     if (isTempoMeta(event))
@@ -140,7 +202,7 @@ bool SongDocument::TimeEditor::eventCovered(int /*smfTrack*/, int engineTrack,
         engineTrack >= 0 && m_trackScope.find(engineTrack) != m_trackScope.end();
     if (event.isChannel() && trackCovered)
         return true;
-    const auto lane = laneForEvent(event);
+    const auto lane = laneForEvent(smfTrack, index, event);
     if (!lane)
         return false;
     return engineTrack >= 0 &&
@@ -161,7 +223,8 @@ std::vector<bool> SongDocument::TimeEditor::timeEditAffectedSmfTracks() const
     }
     for (const LaneIdentity &lane : m_laneScope) {
         if (lane.engineTrack >= 0 && lane.engineTrack < m_document.engineTrackCount() &&
-            (lane.cc <= 0x7F || lane.cc == DOC_CC_BEND || lane.cc == DOC_CC_VOICE)) {
+            (lane.cc <= 0x7F || lane.cc == DOC_CC_BEND || lane.cc == DOC_CC_VOICE ||
+             xcmd::isLaneController(lane.cc))) {
             const int smfTrack = m_document.smfTrackFor(lane.engineTrack);
             if (smfTrack >= 0)
                 affected[size_t(smfTrack)] = true;
@@ -213,7 +276,8 @@ bool SongDocument::TimeEditor::appendTimeEditMove(std::vector<std::vector<size_t
                                                   std::vector<SongDocument::EditOp> &inserts,
                                                   std::vector<std::vector<bool>> &taken,
                                                   int smfTrack, size_t index, uint64_t tick,
-                                                  MoveMode mode) const
+                                                  MoveMode mode,
+                                                  std::vector<XcmdEventRecord> &records) const
 {
     if (!consumeTimeEditEvent(taken, smfTrack, index))
         return false;
@@ -222,6 +286,15 @@ bool SongDocument::TimeEditor::appendTimeEditMove(std::vector<std::vector<size_t
         return true;
     removals[size_t(smfTrack)].push_back(index);
     appendTimeEditInsert(inserts, smfTrack, event, tick, event.isNoteOn());
+    if (isXcmdConsumed(smfTrack, index)) {
+        // Source-indexed relocation for the deep planner: the moved byte's
+        // epoch is rebuilt canonically and this generic insert is replaced
+        // by the patch (moved at its destination tick, kept bytes re-emitted
+        // in place). Selector glue and opaque members record too — the
+        // planner treats them per its own epoch rules.
+        const size_t opIndex = inserts.size() - 1;
+        recordXcmdRelocation(smfTrack, index, tick, opIndex, false, records);
+    }
     return true;
 }
 
@@ -273,19 +346,6 @@ std::vector<SongDocument::EditOp> SongDocument::TimeEditor::timeEditShiftRightTr
     return trackEnds;
 }
 
-std::vector<SongDocument::EditOp>
-SongDocument::TimeEditor::assembleTimeEditOps(std::vector<std::vector<size_t>> removals,
-                                              std::vector<SongDocument::EditOp> inserts,
-                                              std::vector<SongDocument::EditOp> trackEnds) const
-{
-    std::vector<SongDocument::EditOp> ops;
-    for (size_t t = 0; t < m_document.m_smf.tracks.size(); t++)
-        m_document.appendRemoveOps(ops, int(t), std::move(removals[t]));
-    ops.insert(ops.end(), inserts.begin(), inserts.end());
-    ops.insert(ops.end(), trackEnds.begin(), trackEnds.end());
-    return ops;
-}
-
 SongDocument::TimeEditor::TimeEditPlan SongDocument::TimeEditor::buildTimeEditPlan() const
 {
     TimeEditPlan plan;
@@ -296,7 +356,7 @@ SongDocument::TimeEditor::TimeEditPlan SongDocument::TimeEditor::buildTimeEditPl
         plan.selected[t].assign(events.size(), false);
         for (size_t i = 0; i < events.size(); i++) {
             const SmfEvent &event = events[i];
-            if (!eventCovered(int(t), engineTrack, event))
+            if (!eventCovered(int(t), i, engineTrack, event))
                 continue;
             plan.selected[t][i] = true;
             TimeEventRef ref;
@@ -308,7 +368,10 @@ SongDocument::TimeEditor::TimeEditPlan SongDocument::TimeEditor::buildTimeEditPl
                     ref.kind = EventKind::Note;
                 } else {
                     ref.kind = EventKind::ChannelState;
-                    ref.stream = channelStream(int(t), event);
+                    if (const auto lane = logicalXcmdLane(int(t), i))
+                        ref.stream = {StreamKind::Channel, int(t), event.status, *lane};
+                    else
+                        ref.stream = channelStream(int(t), event);
                 }
             } else if (metaIsTimeSig(event)) {
                 ref.kind = EventKind::TimeSig;
@@ -370,15 +433,16 @@ bool SongDocument::TimeEditor::remove()
     std::vector<std::vector<size_t>> removals(m_document.m_smf.tracks.size());
     std::vector<SongDocument::EditOp> inserts;
     std::vector<std::vector<bool>> taken = makeTimeEditTaken();
+    std::vector<XcmdEventRecord> xcmdEventRecords;
     for (const DocNote &note : plan.notes) {
         if (note.tick >= e) {
             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
-                               note.tick - span, MoveMode::SkipUnchanged);
+                               note.tick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
             if (!note.unterminated()) {
                 const uint64_t endTick =
                     m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
-                                   endTick - span, MoveMode::SkipUnchanged);
+                                   endTick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
             }
         } else if (note.tick >= s) {
             appendTimeEditRemove(removals, taken, note.smfTrack, note.onIndex);
@@ -399,7 +463,7 @@ bool SongDocument::TimeEditor::remove()
             consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
         else if (ref.tick >= e)
             appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, ref.tick - span,
-                               MoveMode::SkipUnchanged);
+                               MoveMode::SkipUnchanged, xcmdEventRecords);
         else
             appendTimeEditRemove(removals, taken, ref.smfTrack, ref.index);
     }
@@ -410,8 +474,14 @@ bool SongDocument::TimeEditor::remove()
         for (size_t i = 0; i < points.size(); i++) {
             if (points[i]->tick == e)
                 seamCovered = true;
-            if (points[i]->tick >= s && points[i]->tick < e)
+            if (points[i]->tick >= s && points[i]->tick < e) {
+                // Value streams keep their last-point winner so the state
+                // the shifted content was authored under survives the seam;
+                // consumed XCMD events are never winners (isSeamKeeperEligible).
+                if (!isSeamKeeperEligible(*points[i]))
+                    continue;
                 winner = int(i);
+            }
         }
         for (size_t i = 0; i < points.size(); i++) {
             const TimeEventRef &ref = *points[i];
@@ -419,10 +489,10 @@ bool SongDocument::TimeEditor::remove()
                 consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
             else if (ref.tick >= e)
                 appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
-                                   ref.tick - span, MoveMode::SkipUnchanged);
+                                   ref.tick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
             else if (int(i) == winner && !seamCovered)
                 appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, s,
-                                   MoveMode::SkipUnchanged);
+                                   MoveMode::SkipUnchanged, xcmdEventRecords);
             else
                 appendTimeEditRemove(removals, taken, ref.smfTrack, ref.index);
         }
@@ -433,16 +503,19 @@ bool SongDocument::TimeEditor::remove()
                 continue;
             if (ref.tick >= e)
                 appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
-                                   ref.tick - span, MoveMode::SkipUnchanged);
+                                   ref.tick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
             else if (ref.tick > s)
                 appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, s,
-                                   MoveMode::SkipUnchanged);
+                                   MoveMode::SkipUnchanged, xcmdEventRecords);
             else
                 consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
         }
     }
-    std::vector<SongDocument::EditOp> ops =
-        assembleTimeEditOps(std::move(removals), std::move(inserts), timeEditCloseGapTrackEnds());
+    auto opsOpt = xcmdAssembleOps(std::move(removals), std::move(inserts),
+                                  timeEditCloseGapTrackEnds(), xcmdEventRecords);
+    if (!opsOpt)
+        return false; // XCMD reconciliation unrepresentable: fail without mutating
+    std::vector<SongDocument::EditOp> ops = std::move(*opsOpt);
     std::vector<TempoPoint> nextTempo = m_document.m_tempoPoints;
     if (m_scope.coversTempo())
         nextTempo = time_edit_detail::removeTempoPoints(nextTempo, m_range);

@@ -62,6 +62,22 @@ M4aCcInfo m4aClassifyCc(uint8_t cc)
     }
 }
 
+M4aLane m4aLaneForXcmdSelector(uint8_t selector)
+{
+    switch (selector) {
+    case 0x08:
+        return M4aLane::EchoVolume;
+    case 0x09:
+        return M4aLane::EchoLength;
+    default:
+        break;
+    }
+    // A descriptor selector outside this table would be a protocol addition
+    // the view layer has not registered yet.
+    Q_ASSERT_X(false, "m4aLaneForXcmdSelector", "unregistered XCMD descriptor selector");
+    return M4aLane::EchoVolume;
+}
+
 QString m4aLaneName(M4aLane lane)
 {
     switch (lane) {
@@ -77,6 +93,10 @@ QString m4aLaneName(M4aLane lane)
         return QStringLiteral("LFO speed");
     case M4aLane::PitchBend:
         return QStringLiteral("Pitch bend");
+    case M4aLane::EchoVolume:
+        return QStringLiteral("Echo volume");
+    case M4aLane::EchoLength:
+        return QStringLiteral("Echo length");
     case M4aLane::Tempo:
         return QStringLiteral("Tempo");
     }

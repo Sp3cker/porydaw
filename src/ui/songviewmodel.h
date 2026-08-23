@@ -33,7 +33,7 @@ constexpr uint8_t LANE_CC_BEND = CoreTimeDefaults::kLaneCcBend;
 
 struct CcLane {
     uint8_t track;
-    uint8_t cc; // MIDI CC number, or LANE_CC_BEND
+    uint8_t cc; // MIDI CC number or registered pseudo-lane controller
     M4aLane lane;
     QString name;
     std::vector<LanePoint> points; // sorted by tick

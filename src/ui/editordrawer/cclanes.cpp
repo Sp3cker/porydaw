@@ -24,15 +24,18 @@ EditorAutomationRowId laneRow(int track, uint8_t controller)
     return {EditorAutomationRowKind::ControlChange, uint8_t(track), controller};
 }
 
-QString laneLabel(uint8_t controller)
+} // namespace
+
+QString CCLanes::laneLabel(uint8_t controller)
 {
-    if (controller == CCLanes::bendController())
+    if (controller == bendController())
         return QStringLiteral("Pitch bend (BEND)");
+    if (const xcmd::Descriptor *descriptor = xcmd::descriptorForLane(controller))
+        return QStringLiteral("%1 (%2)").arg(QLatin1String(descriptor->displayName),
+                                             QLatin1String(descriptor->mnemonic));
     const auto info = m4aClassifyCc(controller);
     return QStringLiteral("%1 (%2)").arg(QLatin1String(info.display), QLatin1String(info.name));
 }
-
-} // namespace
 
 CCLanes::CCLanes(AutomationPage *page) noexcept : m_page(page) {}
 
@@ -189,7 +192,7 @@ CCLaneAdapter::CCLaneAdapter(SongDocument &document,
 
 QString CCLaneAdapter::title() const
 {
-    return laneLabel(m_controller);
+    return CCLanes::laneLabel(m_controller);
 }
 
 std::vector<NodePoint> CCLaneAdapter::points() const
@@ -221,6 +224,8 @@ QString CCLaneAdapter::valueText(int value) const
 {
     if (m_controller == CCLanes::bendController())
         return m4aFormatBend(value);
+    if (xcmd::isLaneController(m_controller))
+        return QString::number(value);
     return m4aFormatCcValue(m_controller, uint8_t(value));
 }
 
