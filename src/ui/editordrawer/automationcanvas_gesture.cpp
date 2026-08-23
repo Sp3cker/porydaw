@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
+#include <unordered_map>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include "core/songdocument.h"
@@ -55,33 +55,33 @@ bool AutomationCanvas::commitResolvedNodeLaneChanges(std::optional<uint64_t> exp
         const NodeLaneSlot *slot = change.slot;
         if (!slot || !slot->lane)
             return false;
-        switch (slot->id.kind) {
-        case EditorAutomationRowKind::Tempo: {
-            if (!change.moves.empty()) {
-                const auto resolved = nodelane::resolveTempoMoves(*document, change.moves);
-                if (!resolved)
-                    return false;
-                nodelane::appendResolvedTempoMoves(edit, *resolved);
-            }
-            tempoDeletes.insert(tempoDeletes.end(), change.deleteTicks.cbegin(),
-                                change.deleteTicks.cend());
-            break;
-        }
-        case EditorAutomationRowKind::ControlChange: {
-            if (!change.moves.empty()) {
-                const auto resolved = nodelane::resolveCcMoves(*document, int(slot->id.track),
-                                                               slot->id.controller, change.moves);
-                if (!resolved)
-                    return false;
-                nodelane::appendResolvedCcMoves(edit, *resolved);
-            }
-            if (!change.deleteTicks.empty())
-                ccDeletes.push_back({int(slot->id.track), slot->id.controller, change.deleteTicks});
-            break;
-        }
-        default:
+        const bool resolved = slot->visit(
+            [&]() -> bool {
+                if (!change.moves.empty()) {
+                    const auto moveResult = nodelane::resolveTempoMoves(*document, change.moves);
+                    if (!moveResult)
+                        return false;
+                    nodelane::appendResolvedTempoMoves(edit, *moveResult);
+                }
+                tempoDeletes.insert(tempoDeletes.end(), change.deleteTicks.cbegin(),
+                                    change.deleteTicks.cend());
+                return true;
+            },
+            [&]() -> bool {
+                if (!change.moves.empty()) {
+                    const auto moveResult = nodelane::resolveCcMoves(
+                        *document, int(slot->id.track), slot->id.controller, change.moves);
+                    if (!moveResult)
+                        return false;
+                    nodelane::appendResolvedCcMoves(edit, *moveResult);
+                }
+                if (!change.deleteTicks.empty())
+                    ccDeletes.push_back(
+                        {int(slot->id.track), slot->id.controller, change.deleteTicks});
+                return true;
+            });
+        if (!resolved)
             return false;
-        }
     }
     if (!tempoDeletes.empty() || !ccDeletes.empty()) {
         const auto resolved = nodelane::resolveBatchDeletes(*document, tempoDeletes, ccDeletes);
@@ -115,22 +115,17 @@ bool AutomationCanvas::commitNodePointMoves(uint64_t expectedRevision,
                                             const std::vector<NodeDrag> &points)
 {
     std::vector<NodeLaneChange> changes;
+    std::unordered_map<const NodeLaneSlot *, std::size_t> changeIndex;
+    changeIndex.reserve(points.size());
     for (const NodeDrag &point : points) {
         const NodeLaneSlot *slot = resolveSlot(point.lane);
         if (!slot)
             return false;
-        const auto found =
-            std::find_if(changes.begin(), changes.end(),
-                         [slot](const NodeLaneChange &change) { return change.slot == slot; });
-        if (found == changes.end()) {
-            changes.push_back({slot});
-            changes.back().moves.reserve(1);
-            changes.back().moves.push_back(
-                {point.original.tick, {point.current.tick, point.current.value}});
-        } else {
-            found->moves.push_back(
-                {point.original.tick, {point.current.tick, point.current.value}});
-        }
+        const auto [entry, inserted] = changeIndex.try_emplace(slot, changes.size());
+        if (inserted)
+            changes.push_back(NodeLaneChange{slot});
+        changes[entry->second].moves.push_back(
+            {point.original.tick, {point.current.tick, point.current.value}});
     }
     return commitResolvedNodeLaneChanges(expectedRevision, changes, tr("edit automation points"));
 }
@@ -139,20 +134,16 @@ bool AutomationCanvas::commitNodePointDeletes(std::optional<uint64_t> expectedRe
                                               const std::vector<NodeDrag> &points)
 {
     std::vector<NodeLaneChange> changes;
+    std::unordered_map<const NodeLaneSlot *, std::size_t> changeIndex;
+    changeIndex.reserve(points.size());
     for (const NodeDrag &point : points) {
         const NodeLaneSlot *slot = resolveSlot(point.lane);
         if (!slot)
             return false;
-        const auto found =
-            std::find_if(changes.begin(), changes.end(),
-                         [slot](const NodeLaneChange &change) { return change.slot == slot; });
-        if (found == changes.end()) {
-            changes.push_back({slot});
-            changes.back().deleteTicks.reserve(1);
-            changes.back().deleteTicks.push_back(point.original.tick);
-        } else {
-            found->deleteTicks.push_back(point.original.tick);
-        }
+        const auto [entry, inserted] = changeIndex.try_emplace(slot, changes.size());
+        if (inserted)
+            changes.push_back(NodeLaneChange{slot});
+        changes[entry->second].deleteTicks.push_back(point.original.tick);
     }
     return commitResolvedNodeLaneChanges(expectedRevision, changes,
                                          tr("delete automation point(s)"));

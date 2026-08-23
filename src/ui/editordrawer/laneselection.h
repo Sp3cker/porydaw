@@ -44,6 +44,11 @@ class LaneSelection
     laneSet(EditorAutomationRowId first, EditorAutomationRowId last) const noexcept;
 
   private:
+    std::vector<AutomationRow>::const_iterator findRowById(EditorAutomationRowId id) const noexcept;
+    // Shared tempo/CC coverage predicate; laneScoped adds the Lanes-scope
+    // requirement coversLane needs and coversNodes skips.
+    bool covers(EditorAutomationRowId id, bool laneScoped) const noexcept;
+
     const songview::EditorSelectionModel &m_model;
     const std::vector<AutomationRow> &m_rows;
     uint32_t m_usedTrackMask = 0;

@@ -3,8 +3,8 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <utility>
 #include <variant>
-#include <vector>
 
 #include <QColor>
 #include <QCursor>
@@ -88,6 +88,20 @@ class AutomationCanvas final : public songview::TimelineSurface
         NodeLane *lane = nullptr;
         QRect body;
         CCLanes::RowTextCache *text = nullptr;
+
+        [[nodiscard]] bool isTempo() const noexcept
+        {
+            return id.kind == EditorAutomationRowKind::Tempo;
+        }
+        // Single dispatch point for the tempo/CC kind split. The node stack
+        // only ever holds these two kinds, so the visit is total.
+        template <class TempoFn, class CcFn>
+        decltype(auto) visit(TempoFn &&tempoFn, CcFn &&ccFn) const
+        {
+            if (isTempo())
+                return std::forward<TempoFn>(tempoFn)();
+            return std::forward<CcFn>(ccFn)();
+        }
     };
     struct NodeLaneChange {
         const NodeLaneSlot *slot = nullptr;

@@ -30,23 +30,15 @@ std::optional<std::pair<uint64_t, uint64_t>> LaneSelection::activeTickRange() co
 
 bool LaneSelection::coversLane(EditorAutomationRowId id) const noexcept
 {
-    if (!active())
-        return false;
-    switch (id.kind) {
-    case EditorAutomationRowKind::Tempo:
-        return m_model.timeSelectionCoversTempo(m_usedTrackMask);
-    case EditorAutomationRowKind::ControlChange:
-        if (m_model.timeSelection().scope != songview::EditorSelectionModel::TimeSelection::Lanes)
-            return false;
-        if (std::find_if(m_rows.cbegin(), m_rows.cend(),
-                         [id](const AutomationRow &row) { return row.id == id; }) == m_rows.cend())
-            return false;
-        return m_model.timeSelectionCoversLane(int(id.track), id.controller, m_usedTrackMask);
-    }
-    return false;
+    return covers(id, true);
 }
 
 bool LaneSelection::coversNodes(EditorAutomationRowId id) const noexcept
+{
+    return covers(id, false);
+}
+
+bool LaneSelection::covers(EditorAutomationRowId id, bool laneScoped) const noexcept
 {
     if (!active())
         return false;
@@ -54,12 +46,21 @@ bool LaneSelection::coversNodes(EditorAutomationRowId id) const noexcept
     case EditorAutomationRowKind::Tempo:
         return m_model.timeSelectionCoversTempo(m_usedTrackMask);
     case EditorAutomationRowKind::ControlChange:
-        if (std::find_if(m_rows.cbegin(), m_rows.cend(),
-                         [id](const AutomationRow &row) { return row.id == id; }) == m_rows.cend())
+        if (laneScoped &&
+            m_model.timeSelection().scope != songview::EditorSelectionModel::TimeSelection::Lanes)
+            return false;
+        if (findRowById(id) == m_rows.cend())
             return false;
         return m_model.timeSelectionCoversLane(int(id.track), id.controller, m_usedTrackMask);
     }
     return false;
+}
+
+std::vector<AutomationRow>::const_iterator
+LaneSelection::findRowById(EditorAutomationRowId id) const noexcept
+{
+    return std::find_if(m_rows.cbegin(), m_rows.cend(),
+                        [id](const AutomationRow &row) { return row.id == id; });
 }
 
 bool LaneSelection::hitTest(EditorAutomationRowId id, qreal x,
@@ -100,13 +101,8 @@ LaneSelection::laneSet(EditorAutomationRowId first, EditorAutomationRowId last) 
     std::vector<std::pair<int, uint8_t>> lanes;
     if ((!firstTempo && !firstCc) || (!lastTempo && !lastCc))
         return {false, lanes};
-
-    const auto findRow = [this](EditorAutomationRowId id) {
-        return std::find_if(m_rows.cbegin(), m_rows.cend(),
-                            [id](const AutomationRow &row) { return row.id == id; });
-    };
-    const auto firstRow = firstCc ? findRow(first) : m_rows.cend();
-    const auto lastRow = lastCc ? findRow(last) : m_rows.cend();
+    const auto firstRow = firstCc ? findRowById(first) : m_rows.cend();
+    const auto lastRow = lastCc ? findRowById(last) : m_rows.cend();
     if ((firstCc && firstRow == m_rows.cend()) || (lastCc && lastRow == m_rows.cend()))
         return {false, lanes};
     if (firstTempo && lastTempo)
