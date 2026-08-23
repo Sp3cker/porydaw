@@ -311,7 +311,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationcanvas_input.cpp
     src/ui/editordrawer/automationcanvas_menu.cpp
     src/ui/editordrawer/automationcanvas_paint.cpp
-    src/ui/editordrawer/automationcanvas.h
+    src/ui/editordrawer/laneselection.cpp
+    src/ui/editordrawer/laneselection.h
     src/ui/editordrawer/nodelane/gesture.cpp
     src/ui/editordrawer/nodelane/gesture.h
     src/ui/editordrawer/nodelane/hover.cpp
@@ -393,6 +394,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/fixturecatalog.hpp
         src/checks/fwd.hpp
         src/checks/selectioncheck.cpp
+        src/checks/laneselectioncheck.cpp
         src/checks/selftest.cpp
         src/checks/tabcheck.cpp
         src/checks/eventviewcheck.cpp

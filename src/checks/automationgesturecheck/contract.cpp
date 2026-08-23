@@ -14,6 +14,7 @@
 #include "core/timedefaults.h"
 #include "rig.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/m4asemantics.h"
@@ -127,6 +128,44 @@ void expectOneEdit(const CaseContext &context, const DocSnapshot &before)
             .arg(before.undoIndex + 1)
             .arg(after.revision)
             .arg(after.undoIndex));
+}
+
+bool applyMoves(const CaseContext &context, const std::vector<NodePointMove> &moves)
+{
+    auto &document = context.session.document;
+    SongDocument::RangeEdit edit;
+    if (context.adapter.kind == AdapterKind::Tempo) {
+        const auto resolved = nodelane::resolveTempoMoves(document, moves);
+        if (!resolved)
+            return false;
+        nodelane::appendResolvedTempoMoves(edit, *resolved);
+    } else {
+        const auto resolved = nodelane::resolveCcMoves(document, context.session.engineTrack,
+                                                       context.session.controller, moves);
+        if (!resolved)
+            return false;
+        nodelane::appendResolvedCcMoves(edit, *resolved);
+    }
+    if (edit.empty())
+        return false;
+    document.applyRangeEdit(QStringLiteral("automation test move"), edit);
+    return true;
+}
+
+bool applyDeletes(const CaseContext &context, const std::vector<uint64_t> &ticks)
+{
+    auto &document = context.session.document;
+    std::vector<uint64_t> tempoTicks;
+    std::vector<nodelane::CcDeleteRequest> ccDeletes;
+    if (context.adapter.kind == AdapterKind::Tempo)
+        tempoTicks = ticks;
+    else if (!ticks.empty())
+        ccDeletes.push_back({context.session.engineTrack, context.session.controller, ticks});
+    const auto edit = nodelane::resolveBatchDeletes(document, tempoTicks, ccDeletes);
+    if (!edit || edit->empty())
+        return false;
+    document.applyRangeEdit(QStringLiteral("automation test delete"), *edit);
+    return true;
 }
 
 void checkUndoRestores(const CaseContext &context, const DocSnapshot &before,
@@ -267,13 +306,13 @@ void checkDelete(const CaseContext &context)
     const std::vector<NodePoint> fixture{{0, 120}, {96, 100}, {288, 110}};
     seedUnique(context, fixture);
     const auto before = snapshot(context.session.document);
-    lane.deletePoints({});
+    applyDeletes(context, {});
     context.check.require(isUnchanged(before, snapshot(context.session.document)),
                           QStringLiteral("empty delete mutated the document"));
-    lane.deletePoints({uint64_t{99999}});
+    applyDeletes(context, {uint64_t{99999}});
     context.check.require(isUnchanged(before, snapshot(context.session.document)),
                           QStringLiteral("unknown-tick delete mutated the document"));
-    lane.deletePoints({uint64_t{96}});
+    applyDeletes(context, {uint64_t{96}});
     expectOneEdit(context, before);
     expectPoints(context, {{0, 120}, {288, 110}});
     if (context.adapter.kind == AdapterKind::Cc) {
@@ -293,7 +332,7 @@ void checkDelete(const CaseContext &context)
                   96, 20);
     const auto grouped = snapshot(context.session.document);
     const auto groupedPoints = lane.points();
-    lane.deletePoints({uint64_t{96}});
+    applyDeletes(context, {uint64_t{96}});
     expectOneEdit(context, grouped);
     expectPoints(context, {{0, 64}});
     context.check.require(rawValuesAt(context.session.document, context.session.engineTrack,
@@ -311,14 +350,14 @@ void checkMove(const CaseContext &context)
         setTempo(document, {{96, kPreservedTempoUs}, tempoAt(288, 110)});
         const auto before = snapshot(document);
         const auto beforePoints = lane.points();
-        lane.movePoints({});
+        applyMoves(context, {});
         context.check.require(isUnchanged(before, snapshot(document)),
                               QStringLiteral("empty move mutated the document"));
-        lane.movePoints({{uint64_t{99999}, NodePoint{192, 120}}});
+        applyMoves(context, {{uint64_t{99999}, NodePoint{192, 120}}});
         context.check.require(isUnchanged(before, snapshot(document)),
                               QStringLiteral("unknown-tick move mutated the document"));
         const auto preservedBpm = tempoBpm(kPreservedTempoUs);
-        lane.movePoints({{uint64_t{96}, NodePoint{192, preservedBpm}}});
+        applyMoves(context, {{uint64_t{96}, NodePoint{192, preservedBpm}}});
         expectOneEdit(context, before);
         expectPoints(context, {{192, preservedBpm}, {288, 110}});
         const auto moved = document.tempoPoints();
@@ -328,7 +367,7 @@ void checkMove(const CaseContext &context)
         checkUndoRestores(context, before, beforePoints, {{192, preservedBpm}, {288, 110}});
         const auto rewriteBefore = snapshot(document);
         const auto rewriteBeforePoints = lane.points();
-        lane.movePoints({{uint64_t{96}, NodePoint{192, 140}}});
+        applyMoves(context, {{uint64_t{96}, NodePoint{192, 140}}});
         expectOneEdit(context, rewriteBefore);
         expectPoints(context, {{192, 140}, {288, 110}});
         const auto rewritten = document.tempoPoints();
@@ -344,13 +383,13 @@ void checkMove(const CaseContext &context)
     insertCcEvent(document, context.session.engineTrack, context.session.controller, 96, 20);
     const auto before = snapshot(document);
     const auto beforePoints = lane.points();
-    lane.movePoints({});
+    applyMoves(context, {});
     context.check.require(isUnchanged(before, snapshot(document)),
                           QStringLiteral("empty move mutated the document"));
-    lane.movePoints({{uint64_t{99999}, NodePoint{192, 20}}});
+    applyMoves(context, {{uint64_t{99999}, NodePoint{192, 20}}});
     context.check.require(isUnchanged(before, snapshot(document)),
                           QStringLiteral("unknown-tick move mutated the document"));
-    lane.movePoints({{uint64_t{96}, NodePoint{192, 20}}});
+    applyMoves(context, {{uint64_t{96}, NodePoint{192, 20}}});
     expectOneEdit(context, before);
     expectPoints(context, {{192, 20}, {288, 40}});
     context.check.require(
@@ -417,7 +456,7 @@ void checkMoveCollision(const CaseContext &context)
         const auto before = snapshot(document);
         const auto beforePoints = lane.points();
         const auto preservedBpm = tempoBpm(kPreservedTempoUs);
-        lane.movePoints({{uint64_t{96}, NodePoint{288, preservedBpm}}});
+        applyMoves(context, {{uint64_t{96}, NodePoint{288, preservedBpm}}});
         expectOneEdit(context, before);
         expectPoints(context, {{288, preservedBpm}});
         const auto moved = document.tempoPoints();
@@ -436,7 +475,7 @@ void checkMoveCollision(const CaseContext &context)
     insertCcEvent(document, context.session.engineTrack, context.session.controller, 192, 80);
     const auto before = snapshot(document);
     const auto beforePoints = lane.points();
-    lane.movePoints({{uint64_t{96}, NodePoint{192, 20}}});
+    applyMoves(context, {{uint64_t{96}, NodePoint{192, 20}}});
     expectOneEdit(context, before);
     expectPoints(context, {{192, 20}, {288, 40}});
     context.check.require(

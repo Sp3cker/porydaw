@@ -37,8 +37,7 @@ class TempoLane final : public NodeLane
     int maximumValue() const override;
     QString valueText(int value) const override;
     bool pointSelected(uint64_t tick) const override;
-    void deletePoints(const std::vector<uint64_t> &ticks) override;
-    void movePoints(const std::vector<NodePointMove> &moves) override;
+    std::optional<NodePoint> leadIn() const override;
     void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
     void updateLayout(int width, int top, const AutomationGeometry &geometry);
     int totalHeight(const AutomationGeometry &geometry) const;
@@ -48,12 +47,9 @@ class TempoLane final : public NodeLane
     bool containsHeader(const QPoint &position) const;
     void toggleExpanded();
     bool hasTimeSelection() const;
-    bool selectionContains(const AutomationProjection &projection, qreal x,
-                           qreal devicePixelRatio) const;
     void cancel();
-    bool promptBpm(AutomationCanvas &area, int currentBpm, int *bpm) const;
+    bool promptValue(QWidget *parent, int currentValue, int *storedValue) const override;
     void showTempoMenu(AutomationCanvas &area, const QPoint &globalPosition);
-    void showTimeSelectionMenu(const QPoint &globalPosition) const;
 
     void paint(QPainter &painter, const AutomationGeometry &geometry, const QRect &labelGutter,
                const QFont &titleFont, const QFont &captionFont);

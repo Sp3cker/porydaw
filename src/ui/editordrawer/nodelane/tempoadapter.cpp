@@ -1,12 +1,9 @@
 #include "ui/editordrawer/tempolane.h"
 
-#include <set>
-
 #include <QCoreApplication>
 
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/songview/editorselectionmodel.h"
 
 QString TempoLane::title() const
@@ -43,6 +40,17 @@ QString TempoLane::valueText(int value) const
     return QString::number(value);
 }
 
+std::optional<NodePoint> TempoLane::leadIn() const
+{
+    const SongDocument *document = boundDocument();
+    if (!document)
+        return std::nullopt;
+    const auto &tempoPoints = document->tempoPoints();
+    if (tempoPoints.empty() || tempoPoints.front().tick == 0)
+        return std::nullopt;
+    return NodePoint{0, CoreTimeDefaults::kTempoBpm};
+}
+
 bool TempoLane::pointSelected(uint64_t tick) const
 {
     const auto *selection = boundSelection();
@@ -50,37 +58,6 @@ bool TempoLane::pointSelected(uint64_t tick) const
         return false;
     const auto &range = selection->timeSelection();
     return tick >= range.startTick && tick < range.endTick;
-}
-
-void TempoLane::deletePoints(const std::vector<uint64_t> &ticks)
-{
-    SongDocument *document = boundDocument();
-    if (!document || ticks.empty())
-        return;
-    const std::set<uint64_t> tickSet(ticks.begin(), ticks.end());
-    TempoEdit edit;
-    for (const TempoPoint &point : document->tempoPoints()) {
-        if (tickSet.contains(point.tick))
-            edit.remove.push_back(point);
-    }
-    if (edit.empty())
-        return;
-    document->applyTempoEdit(edit);
-    if (m_page)
-        m_page->requestRefresh();
-}
-
-void TempoLane::movePoints(const std::vector<NodePointMove> &moves)
-{
-    SongDocument *document = boundDocument();
-    if (!document || moves.empty())
-        return;
-    const auto resolved = nodelane::resolveTempoMoves(*document, moves);
-    if (!resolved || resolved->empty())
-        return;
-    document->applyTempoEdit(*resolved);
-    if (m_page)
-        m_page->requestRefresh();
 }
 
 void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)

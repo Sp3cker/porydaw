@@ -17,6 +17,7 @@
 
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/laneselection.h"
 #include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
@@ -51,7 +52,6 @@ class AutomationCanvas final : public songview::TimelineSurface
     void cancelInteraction();
     void setPencilMode(bool enabled);
     bool isPanning() const noexcept;
-    bool bandPreviewContains(LaneHandle handle, uint64_t tick) const noexcept;
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect labelGutter() const noexcept { return m_labelGutter; }
     int plotOrigin() const noexcept { return m_geometry.plotOrigin; }
@@ -99,8 +99,6 @@ class AutomationCanvas final : public songview::TimelineSurface
     AutomationProjection projection() const;
     NodeLaneHoverTarget hoverTarget() const;
 
-    bool promptPointValue(const AutomationRow &row, uint8_t controller, int currentValue,
-                          int *storedValue);
     bool showPointMenuNear(LaneHandle handle, const QPoint &position, const QPoint &globalPosition);
     bool commitLaneEdit(const NodeLaneEdit::Completion &completion);
     bool nodePointHit(LaneHandle handle, const QPointF &position, NodePoint *point) const;
@@ -121,7 +119,9 @@ class AutomationCanvas final : public songview::TimelineSurface
     bool commitNodePointMoves(uint64_t expectedRevision, const std::vector<NodeDrag> &points);
     bool commitNodePointDeletes(std::optional<uint64_t> expectedRevision,
                                 const std::vector<NodeDrag> &points);
-    void showTimeSelectionMenu(const QPoint &globalPosition);
+    void showTimeSelectionMenuFor(LaneHandle contextLane, const QPoint &globalPosition);
+    void showLaneMenuFor(LaneHandle handle, const QPoint &globalPosition);
+    bool showEmptyBodyMenuFor(LaneHandle handle, const QPoint &globalPosition);
     void showAddLaneMenu(const QPoint &globalPosition);
     void showLaneMenu(const AutomationRow &row, const QPoint &globalPosition);
     void layoutLaneStack(int voiceTrack);
@@ -140,7 +140,6 @@ class AutomationCanvas final : public songview::TimelineSurface
     int ccLaneHeight(const AutomationRow &row) const;
     int ccRowBoundaryAt(int y) const;
     int addLaneStripTop() const;
-    int snapNeutralFor(LaneHandle handle) const;
     void publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
                               LaneHandle end) const;
     void setGestureActive(bool active);
@@ -176,8 +175,7 @@ class AutomationCanvas final : public songview::TimelineSurface
         int startVScroll = 0;
     } m_pan;
     BandGesture m_band;
-    LaneHandle m_bandStart;
-    LaneHandle m_bandEnd;
+    std::optional<LaneSelection> m_laneSelection;
     std::vector<NodePoint> m_clipboard;
     bool m_pencilMode = false;
     qreal m_pencilCursorDpr = 0.0;

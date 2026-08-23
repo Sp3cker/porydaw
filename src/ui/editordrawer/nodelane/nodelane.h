@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include <QString>
@@ -21,6 +22,7 @@ struct LaneHandle {
     constexpr bool operator==(const LaneHandle &) const noexcept = default;
 };
 
+class QWidget;
 class NodeLane
 {
   public:
@@ -31,11 +33,13 @@ class NodeLane
     virtual int minimumValue() const = 0;
     virtual int maximumValue() const = 0;
     virtual QString valueText(int value) const = 0;
+    virtual bool promptValue(QWidget *parent, int currentValue, int *storedValue) const = 0;
+    virtual int neutralValue() const { return -1; }
     virtual bool pointSelected(uint64_t tick) const = 0;
+    // Implicit pre-roll value at song start; nullopt means none. Tempo draws
+    // a 120-BPM lead-in when its first point starts after tick 0.
+    virtual std::optional<NodePoint> leadIn() const { return std::nullopt; }
 
-    // Commit back-end. Each call is one user gesture -> one undo step.
-    virtual void deletePoints(const std::vector<uint64_t> &ticks) = 0;
-    virtual void movePoints(const std::vector<NodePointMove> &moves) = 0;
     virtual void replaceSpan(uint64_t first, uint64_t last,
                              const std::vector<NodePoint> &points) = 0;
 };

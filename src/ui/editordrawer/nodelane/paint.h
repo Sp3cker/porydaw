@@ -4,12 +4,14 @@
 #include <optional>
 
 #include <QColor>
+#include <QFont>
+#include <QPainter>
 #include <QRect>
+#include <QString>
 
 #include "ui/editordrawer/nodelane/nodelane.h"
 
 class AutomationProjection;
-class QPainter;
 struct AutomationGeometry;
 struct NodeDragGesture;
 struct NodeLaneHoverState;
@@ -27,13 +29,27 @@ void paintHover(QPainter &painter, const NodeLane &lane, const QRect &body,
                 const AutomationGeometry &geometry, const AutomationProjection &projection,
                 const NodeLaneHoverState &hoverState, bool pencilMode);
 
+// Chrome only; callers own background fill and clip rects.
+struct LaneHeaderPaint {
+    QRect band;
+    QRect primary;
+    QRect secondary;
+    std::optional<QRect> arrow;
+    bool expanded = true;
+    QFont titleFont;
+    QFont captionFont;
+    QString title;
+    QString secondaryText;
+};
+
+void paintLaneHeader(QPainter &painter, const LaneHeaderPaint &paint);
+
 struct NodeLanePaint {
     const NodeLane &lane;
     QRect body;
     const AutomationGeometry &geometry;
     const AutomationProjection &projection;
     QColor color;
-    std::optional<NodePoint> leadIn;
     LaneHandle handle;
     const NodeLaneHoverState &hoverState;
     const NodeDragGesture *nodeDrag = nullptr;

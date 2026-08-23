@@ -33,11 +33,12 @@ int runAudioCheck();
 int runResonanceCheck();
 int runTrackActivityCheck();
 int runTrackActivityMeterCheck();
+int runIgnoreCheck(const QString &scratchDir);
 int runSampleCheck(const QString &scratchDir, const QString &corpusRoot = QString(),
                    const QString &screenshotPath = QString());
-int runIgnoreCheck(const QString &scratchDir);
 int runKeymapCheck();
 int runSelectionCheck();
+int runLaneSelectionCheck();
 int runEventViewCheck(const QString &projectRoot, const QString &screenshotSong = QString(),
                       const QString &screenshotPath = QString());
 int runNoteIdentityCheck(const QString &scratchProject);

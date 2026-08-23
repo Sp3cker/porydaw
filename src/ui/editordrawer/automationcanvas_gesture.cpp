@@ -23,12 +23,10 @@ Visitor(Ts...) -> Visitor<Ts...>;
 bool ccLaneIdentity(const CCLanes &rowData, LaneHandle handle, int *engineTrack,
                     uint8_t *controller)
 {
-    if (handle.index <= 0)
+    const int rowIndex = rowData.rowIndexFor(handle);
+    if (rowIndex < 0)
         return false;
     const auto &rows = rowData.rows();
-    const int rowIndex = handle.index - 1;
-    if (rowIndex >= int(rows.size()))
-        return false;
     const auto identity = rowData.rowIdentity(rows[std::size_t(rowIndex)]);
     if (engineTrack)
         *engineTrack = identity.first;
@@ -90,23 +88,6 @@ bool AutomationCanvas::commitNodePointMoves(uint64_t expectedRevision,
         movesByLane[std::size_t(point.lane.index)].push_back(
             {point.original.tick, {point.current.tick, point.current.value}});
     }
-    int occupied = 0;
-    int occupiedIndex = -1;
-    for (int index = 0; index < int(movesByLane.size()); ++index) {
-        if (movesByLane[std::size_t(index)].empty())
-            continue;
-        ++occupied;
-        occupiedIndex = index;
-    }
-    if (occupied == 0)
-        return false;
-    if (occupied == 1) {
-        NodeLane *lane = mutableLane(LaneHandle{occupiedIndex});
-        if (!lane)
-            return false;
-        lane->movePoints(movesByLane[std::size_t(occupiedIndex)]);
-        return true;
-    }
     SongDocument::RangeEdit edit;
     if (!movesByLane.empty() && !movesByLane.front().empty()) {
         const auto tempoEdit = nodelane::resolveTempoMoves(*document, movesByLane.front());
@@ -153,23 +134,6 @@ bool AutomationCanvas::commitNodePointDeletes(std::optional<uint64_t> expectedRe
                 return false;
         }
         ticksByLane[std::size_t(point.lane.index)].push_back(point.original.tick);
-    }
-    int occupied = 0;
-    int occupiedIndex = -1;
-    for (int index = 0; index < int(ticksByLane.size()); ++index) {
-        if (ticksByLane[std::size_t(index)].empty())
-            continue;
-        ++occupied;
-        occupiedIndex = index;
-    }
-    if (occupied == 0)
-        return false;
-    if (occupied == 1) {
-        NodeLane *lane = mutableLane(LaneHandle{occupiedIndex});
-        if (!lane)
-            return false;
-        lane->deletePoints(ticksByLane[std::size_t(occupiedIndex)]);
-        return true;
     }
     std::vector<uint64_t> tempoTicks;
     if (!ticksByLane.empty())

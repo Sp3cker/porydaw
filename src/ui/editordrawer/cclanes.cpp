@@ -1,7 +1,9 @@
 #include "ui/editordrawer/cclanes.h"
 
 #include <algorithm>
-#include <set>
+
+#include <QCoreApplication>
+#include <QInputDialog>
 
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
@@ -70,15 +72,11 @@ void CCLanes::rebuildRows()
         m_rowText.emplace_back();
         m_rowText.back().title = titleFor(m_rows.back());
     };
-    if (!m_page || !m_page->ready() || !m_page->timeline()) {
-        syncTimeSelection();
+    if (!m_page || !m_page->ready() || !m_page->timeline())
         return;
-    }
     const int track = m_page->m_owner.selectionModel().primaryTrack();
-    if (track < 0) {
-        syncTimeSelection();
+    if (track < 0)
         return;
-    }
     std::vector<uint8_t> controllers;
     const auto addController = [&controllers](uint8_t controller) {
         if (std::find(controllers.cbegin(), controllers.cend(), controller) == controllers.cend())
@@ -96,31 +94,6 @@ void CCLanes::rebuildRows()
         if (!m_page->m_viewState.isLaneHidden(row))
             appendRow(row);
     }
-    syncTimeSelection();
-}
-
-void CCLanes::syncTimeSelection()
-{
-    m_timeSelection = {};
-    if (!m_page)
-        return;
-    const auto &selection = m_page->m_owner.selectionModel().timeSelection();
-    if (!selection.active() ||
-        selection.scope != songview::EditorSelectionModel::TimeSelection::Lanes)
-        return;
-    m_timeSelection.startTick = selection.startTick;
-    m_timeSelection.endTick = selection.endTick;
-    for (const auto &lane : selection.lanes) {
-        const auto row = std::find_if(m_rows.cbegin(), m_rows.cend(),
-                                      [this, &lane](const AutomationRow &candidate) {
-                                          return rowIdentity(candidate) == lane;
-                                      });
-        if (row == m_rows.cend() ||
-            std::find(m_timeSelection.lanes.cbegin(), m_timeSelection.lanes.cend(), lane) !=
-                m_timeSelection.lanes.cend())
-            continue;
-        m_timeSelection.lanes.push_back(lane);
-    }
 }
 
 int CCLanes::minimumHeight(const AutomationGeometry &geometry, int topInset) const
@@ -135,17 +108,6 @@ int CCLanes::minimumHeight(const AutomationGeometry &geometry, int topInset) con
     return std::max(geometry.rowDefaultHeight, rowsHeight + strip);
 }
 
-bool CCLanes::clearTimeSelection()
-{
-    const bool wasActive = m_timeSelection.active();
-    m_timeSelection = {};
-    if (m_page && m_page->m_owner.selectionModel().timeSelection().active()) {
-        m_page->m_owner.selectionModel().clearTimeSelection();
-        return true;
-    }
-    return wasActive;
-}
-
 QString CCLanes::titleFor(const AutomationRow &row) const
 {
     return laneLabel(row.id.controller);
@@ -156,19 +118,11 @@ std::pair<int, uint8_t> CCLanes::rowIdentity(const AutomationRow &row) const
     return {int(row.id.track), row.id.controller};
 }
 
-bool CCLanes::selectionContains(int rowIndex, qreal x, const AutomationGeometry &geometry,
-                                qreal devicePixelRatio) const
+int CCLanes::rowIndexFor(LaneHandle handle) const noexcept
 {
-    if (!m_timeSelection.active() || rowIndex < 0 || rowIndex >= int(m_rows.size()))
-        return false;
-    const auto lane = rowIdentity(m_rows[std::size_t(rowIndex)]);
-    if (!m_timeSelection.coversLane(lane.first, lane.second))
-        return false;
-    const qreal first =
-        m_page->displayX(m_timeSelection.startTick, geometry.plotOrigin, devicePixelRatio);
-    const qreal last =
-        m_page->displayX(m_timeSelection.endTick, geometry.plotOrigin, devicePixelRatio);
-    return x >= first && x < last;
+    if (!handle.valid() || handle.index <= 0 || handle.index - 1 >= int(m_rows.size()))
+        return -1;
+    return handle.index - 1;
 }
 
 CCLaneAdapter::CCLaneAdapter(SongDocument &document,
@@ -223,42 +177,36 @@ bool CCLaneAdapter::pointSelected(uint64_t tick) const
     return tick >= range.startTick && tick < range.endTick;
 }
 
-void CCLaneAdapter::deletePoints(const std::vector<uint64_t> &ticks)
+bool CCLaneAdapter::promptValue(QWidget *parent, int currentValue, int *storedValue) const
 {
-    if (ticks.empty())
-        return;
-    const std::set<uint64_t> tickSet(ticks.begin(), ticks.end());
-    std::vector<DocLanePoint> doomed;
-    for (const DocLanePoint &point : m_document.lanePoints(m_engineTrack, m_controller)) {
-        if (tickSet.contains(point.tick))
-            doomed.push_back(point);
+    int value = currentValue;
+    int minimum = CoreTimeDefaults::laneValueMinimum(m_controller);
+    int maximum = CoreTimeDefaults::laneValueMaximum(m_controller);
+    QString label = QCoreApplication::translate("AutomationCanvas", "Value:");
+    if (m_controller == CCLanes::bendController()) {
+        label = QCoreApplication::translate("AutomationCanvas", "Bend (0 = none):");
+    } else if (m_controller == 10 || m_controller == 24) {
+        minimum = -64;
+        maximum = 63;
+        value -= 64;
+        label = QCoreApplication::translate("AutomationCanvas", "c_v value (0 = center):");
     }
-    if (doomed.empty())
-        return;
-    m_document.deleteLanePoints(m_engineTrack, m_controller, doomed);
+    bool accepted = false;
+    const int entered =
+        QInputDialog::getInt(parent, title(), label, value, minimum, maximum, 1, &accepted);
+    if (!accepted)
+        return false;
+    *storedValue = (m_controller == 10 || m_controller == 24) ? entered + 64 : entered;
+    return true;
 }
 
-void CCLaneAdapter::movePoints(const std::vector<NodePointMove> &moves)
+int CCLaneAdapter::neutralValue() const
 {
-    if (moves.empty())
-        return;
-    const auto raw = m_document.lanePoints(m_engineTrack, m_controller);
-    std::vector<SongDocument::LanePointMove> laneMoves;
-    for (const NodePointMove &move : moves) {
-        std::vector<DocLanePoint> group;
-        for (const DocLanePoint &point : raw) {
-            if (point.tick == move.fromTick)
-                group.push_back(point);
-        }
-        if (group.empty())
-            return;
-        const int newValue = CoreTimeDefaults::clampLaneValue(m_controller, move.to.value);
-        for (size_t index = 0; index < group.size(); ++index) {
-            const int value = index + 1 == group.size() ? newValue : group[index].value;
-            laneMoves.push_back({m_engineTrack, m_controller, group[index], move.to.tick, value});
-        }
-    }
-    m_document.moveLanePoints(laneMoves);
+    if (m_controller == CCLanes::bendController())
+        return 0;
+    if (m_controller == 10 || m_controller == 24)
+        return 64;
+    return -1;
 }
 
 void CCLaneAdapter::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)
