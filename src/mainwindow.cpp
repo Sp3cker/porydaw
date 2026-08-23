@@ -2610,8 +2610,9 @@ const WaveData *MainWindow::sampleWaveFor(const QString &symbol)
     const auto frameCount = asset->result.frameCount();
     const auto loopStart = asset->result.loopStart();
     const WaveData *wave = nullptr;
-    if (!payload.empty() && frameCount > 0 && frameCount <= std::numeric_limits<uint32_t>::max() &&
-        loopStart <= std::numeric_limits<uint32_t>::max()) {
+    if (!payload.empty() && frameCount > 0 &&
+        frameCount <= (std::numeric_limits<uint32_t>::max)() &&
+        loopStart <= (std::numeric_limits<uint32_t>::max)()) {
         asset->sample = {
             .type = 0,
             .status = uint16_t(asset->result.hasLoop() ? 0x4000 : 0),
