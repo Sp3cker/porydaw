@@ -212,9 +212,6 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         std::fprintf(stderr, "automation-check: FAIL paint: Tempo: %s\n", qUtf8Printable(message));
         ++failures;
     };
-    auto usedTrackMask = uint32_t{0};
-    for (int track = 0; track < document.engineTrackCount() && track < 16; ++track)
-        usedTrackMask |= uint32_t{1} << track;
     AutomationGeometry geometry = AutomationGeometry::resolve();
     geometry.plotOrigin = page.canvas()->plotOrigin();
     const qreal dpr = page.canvas()->devicePixelRatioF();
@@ -245,8 +242,7 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
     report(expandedCc.has_value(),
            QStringLiteral("expanded Tempo body did not overlap a visible CC lane"));
     if (expandedCc) {
-        CCLaneAdapter lane(document, view.selectionModel(), usedTrackMask,
-                           int(expandedCc->id.track), expandedCc->id.controller);
+        CCLaneAdapter lane(document, int(expandedCc->id.track), expandedCc->id.controller);
         std::vector<SongDocument::LanePointValue> points;
         for (const DocLanePoint &point :
              document.lanePoints(int(expandedCc->id.track), expandedCc->id.controller)) {
@@ -302,8 +298,7 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
            QStringLiteral("collapsed Tempo header did not overlap a visible CC lane"));
     if (collapsedCc) {
         const QRect header = page.canvas()->pinnedTempoRect();
-        CCLaneAdapter lane(document, view.selectionModel(), usedTrackMask,
-                           int(collapsedCc->id.track), collapsedCc->id.controller);
+        CCLaneAdapter lane(document, int(collapsedCc->id.track), collapsedCc->id.controller);
         std::vector<SongDocument::LanePointValue> points;
         for (const DocLanePoint &point :
              document.lanePoints(int(collapsedCc->id.track), collapsedCc->id.controller)) {
@@ -434,10 +429,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
                             themes::color(themes::Role::song_view_secondary_text), 24),
            QStringLiteral("CC lane title or caption label did not render"));
 
-    auto usedTrackMask = uint32_t{0};
-    for (int track = 0; track < document.engineTrackCount() && track < 16; ++track)
-        usedTrackMask |= uint32_t{1} << track;
-    TempoLane tempoLane(document, view.selectionModel(), usedTrackMask);
+    TempoLane tempoLane(document);
     const QPointF node(view.displayX(double(kNodeTick), geometry.plotOrigin, dpr),
                        nodelane::valueY(tempoLane, body, geometry, 180));
     const QRect hoverLabel = valueLabel(node, nodelane::plotRect(body, geometry), canvas->font());

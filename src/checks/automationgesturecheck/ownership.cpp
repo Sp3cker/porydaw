@@ -3,7 +3,12 @@
 #include <algorithm>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <vector>
+
+#include <QColor>
+#include <QImage>
+#include <QPalette>
 
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -35,6 +40,103 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
     const auto geometry = rig.geometry();
     const double detailThreshold = double(geometry.pointDetailThreshold);
     resetPan();
+    {
+        // Tracks scope has no CC lane reticle/menu coverage, but every point
+        // in the selected track range is one node-selection set. The endpoint
+        // is half-open: the point at 192 remains outside [24, 192).
+        rig.setAutomationZoom(detailThreshold);
+        rig.document().writeLanePoints(rig.pan.track, rig.pan.controller, 0,
+                                       std::numeric_limits<uint64_t>::max(),
+                                       {{48, 32}, {96, 64}, {144, 96}, {192, 80}});
+        rig.documentChanged();
+
+        const auto ringPaintedAt = [&](const QImage &image, const QPointF &position) {
+            const qreal dpr = rig.canvas().devicePixelRatioF();
+            const int centerX = qRound(position.x() * dpr);
+            const int centerY = qRound(position.y() * dpr);
+            const auto paintGeometry = rig.geometry();
+            const int radius = qRound(paintGeometry.selectedNodeRingRadius * dpr);
+            const int tolerance = std::max(2, qRound(paintGeometry.selectedNodeRingDipWidth * dpr));
+            const int inner = std::max(0, radius - tolerance);
+            const int outer = radius + tolerance;
+            const QColor highlight = rig.canvas().palette().highlight().color();
+            for (int dy = -outer; dy <= outer; ++dy) {
+                for (int dx = -outer; dx <= outer; ++dx) {
+                    const int distance = dx * dx + dy * dy;
+                    if (distance < inner * inner || distance > outer * outer)
+                        continue;
+                    const int x = centerX + dx;
+                    const int y = centerY + dy;
+                    if (image.rect().contains(x, y) && image.pixelColor(x, y) == highlight)
+                        return true;
+                }
+            }
+            return false;
+        };
+
+        const auto selected48 = rig.pointAt(rig.pan, 48, 32);
+        const auto selected96 = rig.pointAt(rig.pan, 96, 64);
+        const auto selected144 = rig.pointAt(rig.pan, 144, 96);
+        const auto endpoint = rig.pointAt(rig.pan, 192, 80);
+        songview::EditorSelectionModel::TimeSelection tracksSelection;
+        tracksSelection.startTick = 24;
+        tracksSelection.endTick = 192;
+        tracksSelection.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
+        rig.view().selectionModel().setTimeSelection(tracksSelection);
+        rig.pump();
+        const QImage selectedImage = rig.renderArea();
+        check(ringPaintedAt(selectedImage, selected48.position) &&
+                  ringPaintedAt(selectedImage, selected96.position) &&
+                  ringPaintedAt(selectedImage, selected144.position) &&
+                  !ringPaintedAt(selectedImage, endpoint.position),
+              QStringLiteral("Tracks-scope CC selection did not paint one half-open node set"));
+
+        const auto before = snapshot(rig.document());
+        const auto grab = rig.pointAt(rig.pan, 96, 64);
+        const auto target = rig.pointAt(rig.pan, 120, 64);
+        const qreal activationDistance = qreal(geometry.nodeDragActivationDistance + 2);
+        const QPointF activation = grab.position + QPointF(activationDistance, 0.0);
+        const QPointF end = activation + target.position - grab.position;
+        rig.mousePress(grab.position);
+        rig.mouseMove(activation);
+        rig.mouseMove(end);
+        rig.mouseRelease(end);
+        rig.pump();
+
+        const auto after = snapshot(rig.document());
+        const auto &selectionAfter = rig.view().selectionModel().timeSelection();
+        const bool movedTogether =
+            rawValuesAt(rig.document(), rig.pan.track, rig.pan.controller, 72) ==
+                std::vector<int>{32} &&
+            rawValuesAt(rig.document(), rig.pan.track, rig.pan.controller, 120) ==
+                std::vector<int>{64} &&
+            rawValuesAt(rig.document(), rig.pan.track, rig.pan.controller, 168) ==
+                std::vector<int>{96} &&
+            rawValuesAt(rig.document(), rig.pan.track, rig.pan.controller, 192) ==
+                std::vector<int>{80} &&
+            rawValuesAt(rig.document(), rig.pan.track, rig.pan.controller, 48).empty() &&
+            rawValuesAt(rig.document(), rig.pan.track, rig.pan.controller, 96).empty() &&
+            rawValuesAt(rig.document(), rig.pan.track, rig.pan.controller, 144).empty();
+        const bool selectionMoved =
+            selectionAfter.startTick == 48 && selectionAfter.endTick == 216 &&
+            selectionAfter.scope == songview::EditorSelectionModel::TimeSelection::Tracks &&
+            selectionAfter.lanes.empty() && !selectionAfter.tempo;
+        check(isOneEdit(before, after),
+              QStringLiteral("Tracks-scope CC selection drag was not one edit"));
+        check(movedTogether,
+              QStringLiteral("Tracks-scope CC selection drag did not move its node set"));
+        check(selectionMoved,
+              QStringLiteral("Tracks-scope CC selection drag did not move its time range"));
+
+        rig.document().undoStack()->undo();
+        rig.documentChanged();
+        const auto undone = snapshot(rig.document());
+        check(undone.smf == before.smf && undone.undoIndex == before.undoIndex,
+              QStringLiteral("Tracks-scope CC selection drag undo did not restore the edit"));
+        rig.document().undoStack()->redo();
+        rig.documentChanged();
+    }
+
     rig.setPersistentPencil(true);
     const auto lfoHandle = rig.handleFor(rig.lfo);
     check(lfoHandle.valid(),

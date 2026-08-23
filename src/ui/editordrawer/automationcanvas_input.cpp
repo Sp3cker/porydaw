@@ -11,7 +11,6 @@
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/layout.h"
 
 void AutomationCanvas::wheelEvent(QWheelEvent *event)
@@ -73,7 +72,8 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     const PointerLaneHit pointer = pointerLaneAt(event->pos());
     const bool inTempoHeader = pointer.tempoHeader;
     const LaneHandle pointerLane = pointer.lane;
-    const bool inTempo = pointerLane.index == 0;
+    const auto *pointerSlot = resolveSlot(pointerLane);
+    const bool inTempo = pointerSlot && pointerSlot->id.kind == EditorAutomationRowKind::Tempo;
     if (inTempo)
         m_voiceLane.clearHover(*this);
     if (!inTempo && m_voiceLane.contains(event->pos())) {
@@ -84,10 +84,20 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     }
     if ((event->button() == Qt::LeftButton || event->button() == Qt::RightButton)) {
         auto &model = m_page->m_owner.selectionModel();
-        const LaneHandle handle = pointerLane;
+        const auto activeTickRange =
+            m_laneSelection ? m_laneSelection->activeTickRange() : std::nullopt;
+        NodePoint selectedPoint;
+        const bool selectedNode =
+            pointerSlot && event->position().x() >= m_geometry.plotOrigin && m_laneSelection &&
+            m_laneSelection->coversNodes(pointerSlot->id) && activeTickRange &&
+            nodePointHit(pointerLane, event->position(), proj, &selectedPoint) &&
+            selectedPoint.tick >= activeTickRange->first &&
+            selectedPoint.tick < activeTickRange->second;
         const bool insideSelection =
-            handle.valid() && event->position().x() >= m_geometry.plotOrigin &&
-            laneSelectionHitTest(handle, event->position().x(), proj, devicePixelRatioF());
+            pointerSlot && event->position().x() >= m_geometry.plotOrigin && m_laneSelection &&
+            (m_laneSelection->hitTest(pointerSlot->id, event->position().x(), proj,
+                                      devicePixelRatioF()) ||
+             selectedNode);
         if (!insideSelection && model.timeSelection().active()) {
             model.clearTimeSelection();
             invalidateContent();
@@ -98,9 +108,9 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
             m_tempoLane.toggleExpanded();
             updateTempoLayout();
         } else if (event->button() == Qt::RightButton) {
-            m_band.press(event->pos(), proj.snapTickAt(event->position().x(),
-                                                       event->modifiers() & Qt::AltModifier));
-            m_band.pressLane(LaneHandle{0});
+            m_band.press(event->pos(), m_page->snapTick(proj.rawTickAt(event->position().x()),
+                                                        event->modifiers() & Qt::AltModifier));
+            m_band.pressLane(pointerLane);
             setGestureActive(true);
         }
         setFocus();
@@ -124,10 +134,11 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
         return;
     }
     const LaneHandle handle = pointerLane;
-    const NodeLane *lane = nullptr;
-    QRect body;
-    if (!resolveLane(handle, &lane, &body) || !lane)
+    const auto *laneSlot = resolveSlot(handle);
+    if (!laneSlot)
         return;
+    const NodeLane *lane = laneSlot->lane;
+    const QRect body = laneSlot->body;
     setFocus();
     if (event->position().x() < m_geometry.plotOrigin) {
         if (event->button() == Qt::RightButton)
@@ -251,7 +262,11 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
                                        addLaneStripTop() - layout::singlePixel());
             const int y = std::clamp(event->pos().y(), layout::space(layout::Space::Zero), lastY);
             const LaneHandle candidate = pointerLaneAt(QPoint(event->pos().x(), y)).lane;
-            m_band.extendTo(candidate);
+            const auto *startSlot = resolveSlot(m_band.laneRange().first);
+            const auto *candidateSlot = resolveSlot(candidate);
+            const bool compatible =
+                startSlot && candidateSlot && startSlot->id.kind == candidateSlot->id.kind;
+            m_band.extendTo(candidate, compatible);
             invalidateContent();
         }
         return;
@@ -265,7 +280,8 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
             return;
         }
         const LaneHandle pointerLane = pointer.lane;
-        const bool inTempo = pointerLane.index == 0;
+        const auto *pointerSlot = resolveSlot(pointerLane);
+        const bool inTempo = pointerSlot && pointerSlot->id.kind == EditorAutomationRowKind::Tempo;
         if (!inTempo && m_voiceLane.contains(event->pos())) {
             invalidateContent(m_hoverState.clearHover());
             m_voiceLane.updateHover(*this, m_geometry, event->position().x(), event->pos().y());
@@ -283,14 +299,14 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
         }
         const qreal x = event->position().x();
         const int y = event->pos().y();
-        const NodeLane *lane = nullptr;
-        QRect body;
         const LaneHandle handle = x >= m_geometry.plotOrigin ? pointerLane : LaneHandle{};
-        if (!m_page || !resolveLane(handle, &lane, &body))
+        const auto *slot = resolveSlot(handle);
+        if (!m_page || !slot)
             invalidateContent(m_hoverState.clearHover());
         else
-            invalidateContent(m_hoverState.updateHover(hoverTarget(), m_geometry, *lane, body,
-                                                       handle, proj, x, y, m_pencilMode));
+            invalidateContent(m_hoverState.updateHover(hoverTarget(), m_geometry, *slot->lane,
+                                                       slot->body, handle, proj, x, y,
+                                                       m_pencilMode));
         if (m_pencilMode)
             setCursor(pencilCursor());
         else
@@ -312,7 +328,11 @@ void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
     }
     if (event->button() == Qt::RightButton && m_band.pending) {
         const LaneHandle pointerLane = pointerLaneAt(event->pos()).lane;
-        m_band.extendTo(pointerLane);
+        const auto *startSlot = resolveSlot(m_band.laneRange().first);
+        const auto *candidateSlot = resolveSlot(pointerLane);
+        const bool compatible =
+            startSlot && candidateSlot && startSlot->id.kind == candidateSlot->id.kind;
+        m_band.extendTo(pointerLane, compatible);
         const auto [laneFirst, laneLast] = m_band.laneRange();
         const LaneHandle contextLane = laneFirst;
         const auto selection = m_band.release();
@@ -326,23 +346,19 @@ void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
                 invalidateContent();
             }
         } else {
-            auto &model = m_page->m_owner.selectionModel();
-            const bool handled =
-                contextLane.valid() &&
-                showPointMenuNear(contextLane, event->pos(), event->globalPosition().toPoint());
             m_hoverState.hover.highlightLocked = false;
             invalidateContent(m_hoverState.clearHover());
-            if (!handled && contextLane.valid() &&
-                laneSelectionHitTest(contextLane, event->position().x(), projection(),
-                                     devicePixelRatioF()))
-                showTimeSelectionMenuFor(contextLane, event->globalPosition().toPoint());
-            else if (!handled && contextLane.valid()) {
-                if (!showEmptyBodyMenuFor(contextLane, event->globalPosition().toPoint())) {
-                    if (model.timeSelection().active()) {
-                        model.clearTimeSelection();
-                        invalidateContent();
-                    }
-                }
+            if (!showPointMenuNear(contextLane, event->pos(), event->globalPosition().toPoint())) {
+                const bool inPlot = event->position().x() >= m_geometry.plotOrigin;
+                const auto *contextSlot = resolveSlot(contextLane);
+                const bool selected =
+                    contextSlot && inPlot && m_laneSelection &&
+                    m_laneSelection->hitTest(contextSlot->id, event->position().x(), projection(),
+                                             devicePixelRatioF());
+                if (selected)
+                    showTimeSelectionMenuFor(contextLane, event->globalPosition().toPoint());
+                else if (contextLane.valid())
+                    showLaneMenuFor(contextLane, event->globalPosition().toPoint());
             }
         }
         setGestureActive(false);
@@ -372,7 +388,8 @@ void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
     const PointerLaneHit pointer = pointerLaneAt(event->pos());
     const bool inTempoHeader = pointer.tempoHeader;
     const LaneHandle handle = pointer.lane;
-    const bool inTempo = handle.index == 0;
+    const auto *slot = resolveSlot(handle);
+    const bool inTempo = slot && slot->id.kind == EditorAutomationRowKind::Tempo;
     if (inTempo)
         m_voiceLane.clearHover(*this);
     if (inTempoHeader) {
@@ -391,10 +408,10 @@ void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
         return;
     if (!inTempo && event->position().x() < m_geometry.plotOrigin)
         return;
-    const NodeLane *lane = nullptr;
-    QRect body;
-    if (!resolveLane(handle, &lane, &body) || !lane)
+    const auto *laneSlot = resolveSlot(handle);
+    if (!laneSlot)
         return;
+    const NodeLane *lane = laneSlot->lane;
     if (m_deletedNodeClick.consume())
         return;
     NodePoint hit;
@@ -417,7 +434,7 @@ void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
     bool accepted = lane->promptValue(this, value, &value);
     if (!accepted)
         return;
-    NodeLane *target = mutableLane(handle);
+    NodeLane *target = laneSlot->lane;
     if (!target)
         return;
     const std::vector<NodePoint> existing = target->points();
@@ -457,7 +474,8 @@ void AutomationCanvas::keyPressEvent(QKeyEvent *event)
         if (m_pencilMode && m_hoverState.hover.lane.valid()) {
             NodePoint point;
             if (nodePointHit(m_hoverState.hover.lane, m_hoverState.hover.pos, &point)) {
-                if (NodeLane *lane = mutableLane(m_hoverState.hover.lane)) {
+                if (const auto *slot = resolveSlot(m_hoverState.hover.lane); slot && slot->lane) {
+                    NodeLane *lane = slot->lane;
                     const NodeDrag drag{m_hoverState.hover.lane, point, point, lane->minimumValue(),
                                         lane->maximumValue()};
                     commitNodePointDeletes(m_page->document()->revision(), {drag});

@@ -4,7 +4,6 @@
 
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/songview/editorselectionmodel.h"
 
 QString TempoLane::title() const
 {
@@ -14,7 +13,7 @@ QString TempoLane::title() const
 std::vector<NodePoint> TempoLane::points() const
 {
     std::vector<NodePoint> points;
-    const SongDocument *document = boundDocument();
+    const SongDocument *document = m_page ? m_page->document() : m_document;
     if (!document)
         return points;
     const auto &tempoPoints = document->tempoPoints();
@@ -42,7 +41,7 @@ QString TempoLane::valueText(int value) const
 
 std::optional<NodePoint> TempoLane::leadIn() const
 {
-    const SongDocument *document = boundDocument();
+    const SongDocument *document = m_page ? m_page->document() : m_document;
     if (!document)
         return std::nullopt;
     const auto &tempoPoints = document->tempoPoints();
@@ -51,18 +50,9 @@ std::optional<NodePoint> TempoLane::leadIn() const
     return NodePoint{0, CoreTimeDefaults::kTempoBpm};
 }
 
-bool TempoLane::pointSelected(uint64_t tick) const
-{
-    const auto *selection = boundSelection();
-    if (!selection || !selection->timeSelectionCoversTempo(boundUsedTrackMask()))
-        return false;
-    const auto &range = selection->timeSelection();
-    return tick >= range.startTick && tick < range.endTick;
-}
-
 void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)
 {
-    SongDocument *document = boundDocument();
+    SongDocument *document = m_page ? m_page->document() : m_document;
     if (!document)
         return;
     const auto &tempoPoints = document->tempoPoints();
@@ -76,21 +66,4 @@ void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<Nod
         edit.add.push_back(
             {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
     document->applyTempoEdit(edit);
-    if (m_page)
-        m_page->requestRefresh();
-}
-
-SongDocument *TempoLane::boundDocument() const noexcept
-{
-    return m_page ? m_page->document() : m_document;
-}
-
-const songview::EditorSelectionModel *TempoLane::boundSelection() const noexcept
-{
-    return m_page ? &m_page->m_owner.selectionModel() : m_selection;
-}
-
-uint32_t TempoLane::boundUsedTrackMask() const noexcept
-{
-    return m_page ? m_page->usedTrackMask() : m_usedTrackMask;
 }

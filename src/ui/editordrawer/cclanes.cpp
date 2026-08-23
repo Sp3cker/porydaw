@@ -13,7 +13,6 @@
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
 #include "ui/m4asemantics.h"
-#include "ui/songview/editorselectionmodel.h"
 #include "ui/songviewmodel.h"
 
 namespace {
@@ -113,24 +112,8 @@ QString CCLanes::titleFor(const AutomationRow &row) const
     return laneLabel(row.id.controller);
 }
 
-std::pair<int, uint8_t> CCLanes::rowIdentity(const AutomationRow &row) const
-{
-    return {int(row.id.track), row.id.controller};
-}
-
-int CCLanes::rowIndexFor(LaneHandle handle) const noexcept
-{
-    if (!handle.valid() || handle.index <= 0 || handle.index - 1 >= int(m_rows.size()))
-        return -1;
-    return handle.index - 1;
-}
-
-CCLaneAdapter::CCLaneAdapter(SongDocument &document,
-                             const songview::EditorSelectionModel &selection,
-                             uint32_t usedTrackMask, int engineTrack, uint8_t controller) noexcept
+CCLaneAdapter::CCLaneAdapter(SongDocument &document, int engineTrack, uint8_t controller) noexcept
     : m_document(document)
-    , m_selection(selection)
-    , m_usedTrackMask(usedTrackMask)
     , m_engineTrack(engineTrack)
     , m_controller(controller)
 {}
@@ -167,14 +150,6 @@ QString CCLaneAdapter::valueText(int value) const
     if (m_controller == CCLanes::bendController())
         return m4aFormatBend(value);
     return m4aFormatCcValue(m_controller, uint8_t(value));
-}
-
-bool CCLaneAdapter::pointSelected(uint64_t tick) const
-{
-    if (!m_selection.timeSelectionCoversLane(m_engineTrack, m_controller, m_usedTrackMask))
-        return false;
-    const auto &range = m_selection.timeSelection();
-    return tick >= range.startTick && tick < range.endTick;
 }
 
 bool CCLaneAdapter::promptValue(QWidget *parent, int currentValue, int *storedValue) const

@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <optional>
+#include <span>
+#include <utility>
 
 #include <QColor>
 #include <QFont>
@@ -51,6 +53,7 @@ void paintLaneHeader(QPainter &painter, const LaneHeaderPaint &paint);
 
 struct NodeLanePaint {
     const NodeLane &lane;
+    std::span<const NodePoint> points;
     QRect body;
     const AutomationGeometry &geometry;
     const AutomationProjection &projection;
@@ -63,6 +66,7 @@ struct NodeLanePaint {
     bool pencilMode = false;
     bool multipleSelectedNodes = false;
     bool selectedLane = false;
+    std::optional<std::pair<uint64_t, uint64_t>> selectedTickRange;
     bool bandLane = false;
     uint64_t bandFirstTick = 0;
     uint64_t bandLastTick = 0;

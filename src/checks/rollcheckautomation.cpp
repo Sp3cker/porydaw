@@ -392,11 +392,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                                              expected.minimumRowHeight, expected.maximumRowHeight);
             const QRect panBody(0, panTop, page.canvas()->width(), panHeight);
             AutomationProjection proj(projectionGeometry, &page);
-            auto usedTrackMask = uint32_t{0};
-            for (int track = 0; track < document.engineTrackCount() && track < 16; ++track)
-                usedTrackMask |= uint32_t{1} << track;
-            CCLaneAdapter panLane(document, view.selectionModel(), usedTrackMask, 0,
-                                  pan.controller);
+            CCLaneAdapter panLane(document, 0, pan.controller);
             const int span = panLane.maximumValue() - panLane.minimumValue();
             const int snapThresh =
                 span * projectionGeometry.neutralSnapRadius / std::max(1, panHeight);
