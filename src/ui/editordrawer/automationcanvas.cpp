@@ -193,7 +193,7 @@ QRegion AutomationCanvas::syncPinnedTempoLayout()
     QRegion dirty(pinnedTempoRect());
     m_tempoLane.updateLayout(width(), tempoTop(), m_geometry);
     for (NodeLaneSlot &slot : m_nodeStack) {
-        if (slot.id.kind == EditorAutomationRowKind::Tempo) {
+        if (slot.isTempo()) {
             slot.body = m_tempoLane.bodyRect();
             break;
         }
@@ -253,7 +253,7 @@ AutomationCanvas::pointerLaneAt(const QPoint &position) const noexcept
 {
     LaneHandle tempoHandle;
     for (int index = 0; index < int(m_nodeStack.size()); ++index) {
-        if (m_nodeStack[std::size_t(index)].id.kind == EditorAutomationRowKind::Tempo) {
+        if (m_nodeStack[std::size_t(index)].isTempo()) {
             tempoHandle = LaneHandle{index};
             break;
         }
@@ -396,8 +396,7 @@ int AutomationCanvas::ccRowBoundaryAt(int y) const
 
 int AutomationCanvas::addLaneStripTop() const
 {
-    if (!m_nodeStack.empty() &&
-        m_nodeStack.back().id.kind == EditorAutomationRowKind::ControlChange) {
+    if (!m_nodeStack.empty() && !m_nodeStack.back().isTempo()) {
         return m_nodeStack.back().body.top() + m_nodeStack.back().body.height();
     }
     return contentTopInset();

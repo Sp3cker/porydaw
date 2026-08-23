@@ -94,7 +94,7 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     const bool inTempoHeader = pointer.tempoHeader;
     const LaneHandle pointerLane = pointer.lane;
     const auto *pointerSlot = resolveSlot(pointerLane);
-    const bool inTempo = pointerSlot && pointerSlot->id.kind == EditorAutomationRowKind::Tempo;
+    const bool inTempo = pointerSlot && pointerSlot->isTempo();
     if (inTempo)
         m_voiceLane.clearHover(*this);
     if (!inTempo && m_voiceLane.contains(event->pos())) {
@@ -302,7 +302,7 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
         }
         const LaneHandle pointerLane = pointer.lane;
         const auto *pointerSlot = resolveSlot(pointerLane);
-        const bool inTempo = pointerSlot && pointerSlot->id.kind == EditorAutomationRowKind::Tempo;
+        const bool inTempo = pointerSlot && pointerSlot->isTempo();
         if (!inTempo && m_voiceLane.contains(event->pos())) {
             invalidateContent(m_hoverState.clearHover());
             m_voiceLane.updateHover(*this, m_geometry, event->position().x(), event->pos().y());
@@ -407,7 +407,7 @@ void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
     const bool inTempoHeader = pointer.tempoHeader;
     const LaneHandle handle = pointer.lane;
     const auto *slot = resolveSlot(handle);
-    const bool inTempo = slot && slot->id.kind == EditorAutomationRowKind::Tempo;
+    const bool inTempo = slot && slot->isTempo();
     if (inTempo)
         m_voiceLane.clearHover(*this);
     if (inTempoHeader) {

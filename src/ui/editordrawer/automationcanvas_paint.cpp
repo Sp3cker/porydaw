@@ -188,6 +188,120 @@ void AutomationCanvas::paintContent(QPainter &painter)
     auto paintLaneReticle = [&](const QRect &bounds) {
         paintSelectionReticle(painter, *selectedRange, proj, bounds, dpr);
     };
+    auto paintTempoSlot = [&](LaneHandle handle, const NodeLaneSlot &slot,
+                              std::span<const NodePoint> points, bool selectedLane,
+                              bool selectedNodesLane, bool bandLane, QRect reticleBounds) {
+        const bool expanded = m_tempoLane.expanded();
+        if (m_page->document()) {
+            const QRect band = expanded ? slot.body : m_tempoLane.headerRect();
+            if (!expanded)
+                reticleBounds = band;
+            painter.save();
+            painter.setClipRect(band, Qt::IntersectClip);
+            painter.fillRect(band, themes::color(themes::Role::song_view_piano_roll_background));
+            painter.setPen(themes::color(themes::Role::song_view_separator));
+            painter.drawLine(band.left(), band.bottom(), band.right(), band.bottom());
+            painter.restore();
+            if (!expanded && selectedRange && selectedLane)
+                paintLaneReticle(band);
+            const QRect strip(band.left(), band.top(), band.width(), m_geometry.addLaneStripHeight);
+            const int arrowSize = std::max(layout::fontPx(0.5), strip.height() / 3);
+            const QRect arrow(m_labelGutter.left(), strip.center().y() - arrowSize / 2, arrowSize,
+                              arrowSize);
+            const QRect textBounds(
+                m_labelGutter.x() + arrowSize + layout::space(layout::Space::One), strip.top(),
+                std::max(0, m_labelGutter.width() - arrowSize - layout::space(layout::Space::One)),
+                strip.height());
+            const QRect summaryBounds(textBounds.x(), strip.top() + strip.height(),
+                                      textBounds.width(), strip.height());
+            nodelane::paintLaneHeader(
+                painter,
+                nodelane::LaneHeaderPaint{
+                    .band = band,
+                    .primary = textBounds,
+                    .secondary = summaryBounds,
+                    .textClip =
+                        QRect(m_labelGutter.x(), band.top(), m_labelGutter.width(), band.height()),
+                    .arrow = arrow,
+                    .expanded = expanded,
+                    .separator = false,
+                    .titleFont = titleFont,
+                    .captionFont = captionFont,
+                    .title = tr("Tempo (BPM)"),
+                    .secondaryText =
+                        expanded ? tr("%n point(s)", nullptr, int(points.size())) : QString(),
+                });
+        } else if (!expanded) {
+            return;
+        }
+        if (!expanded)
+            return;
+        painter.save();
+        painter.setClipRect(slot.body, Qt::IntersectClip);
+        paintLaneBody(handle, *slot.lane, points, slot.body,
+                      themes::color(themes::Role::song_view_automation_tempo_curve), selectedLane,
+                      selectedNodesLane, bandLane, true);
+        painter.restore();
+        if (selectedRange && selectedLane)
+            paintLaneReticle(reticleBounds);
+    };
+    auto paintCcSlot = [&](LaneHandle handle, const NodeLaneSlot &slot,
+                           std::span<const NodePoint> points, bool selectedLane,
+                           bool selectedNodesLane, bool bandLane, const QRect &reticleBounds) {
+        if (!slot.text)
+            return;
+        auto &rowText = *slot.text;
+        const QRect bounds(layout::space(layout::Space::Zero), slot.body.top(), width(),
+                           slot.body.height());
+        const QRect textBounds(m_labelGutter.x(), bounds.top(), m_labelGutter.width(),
+                               bounds.height());
+        const auto textBoxes = textLayout.align(textBounds, layout::VerticalAlignment::Center);
+        const QColor color =
+            themes::trackIdentityColor(slot.id.track % themes::trackIdentityColorCount);
+        painter.save();
+        painter.setClipRect(bounds, Qt::IntersectClip);
+        QString secondaryText;
+        if (!points.empty()) {
+            const std::size_t pointCount = points.size();
+            const int minimum = slot.lane->minimumValue();
+            const int maximum = slot.lane->maximumValue();
+            if (rowText.summaryKind != CCLanes::SummaryKind::Points ||
+                rowText.pointCount != pointCount || rowText.minimum != minimum ||
+                rowText.maximum != maximum) {
+                rowText.secondary =
+                    tr("%1 points · %2..%3").arg(pointCount).arg(minimum).arg(maximum);
+                rowText.summaryKind = CCLanes::SummaryKind::Points;
+                rowText.pointCount = pointCount;
+                rowText.minimum = minimum;
+                rowText.maximum = maximum;
+            }
+            secondaryText = rowText.secondary;
+        } else {
+            if (rowText.summaryKind != CCLanes::SummaryKind::EmptyControl) {
+                rowText.secondary = tr("empty · click to add points");
+                rowText.summaryKind = CCLanes::SummaryKind::EmptyControl;
+            }
+            secondaryText = rowText.secondary;
+        }
+        nodelane::paintLaneHeader(painter,
+                                  nodelane::LaneHeaderPaint{
+                                      .band = bounds,
+                                      .primary = textBoxes.primary,
+                                      .secondary = textBoxes.secondary,
+                                      .textClip = textBoxes.primary.united(textBoxes.secondary),
+                                      .arrow = std::nullopt,
+                                      .expanded = true,
+                                      .titleFont = titleFont,
+                                      .captionFont = captionFont,
+                                      .title = rowText.title,
+                                      .secondaryText = secondaryText,
+                                  });
+        paintLaneBody(handle, *slot.lane, points, slot.body, color, selectedLane, selectedNodesLane,
+                      bandLane, false);
+        painter.restore();
+        if (selectedRange && selectedLane)
+            paintLaneReticle(reticleBounds);
+    };
     if (m_page->document()) {
         const QRect add(layout::space(layout::Space::Zero), addLaneStripTop(), width(),
                         m_geometry.addLaneStripHeight);
@@ -206,124 +320,16 @@ void AutomationCanvas::paintContent(QPainter &painter)
         const bool bandLane = bandPreviewContainsLane(handle);
         const bool selectedLane = laneSelected(slot) || bandLane;
         const bool selectedNodesLane = nodeSelected(slot) || bandLane;
-        bool reticlePainted = false;
-        QRect reticleBounds(m_geometry.plotOrigin, slot.body.top(),
-                            std::max(0, width() - m_geometry.plotOrigin), slot.body.height());
-        if (slot.id.kind == EditorAutomationRowKind::Tempo) {
-            const bool expanded = m_tempoLane.expanded();
-            if (m_page->document()) {
-                const QRect band = expanded ? slot.body : m_tempoLane.headerRect();
-                if (!expanded)
-                    reticleBounds = band;
-                painter.save();
-                painter.setClipRect(band, Qt::IntersectClip);
-                painter.fillRect(band,
-                                 themes::color(themes::Role::song_view_piano_roll_background));
-                painter.setPen(themes::color(themes::Role::song_view_separator));
-                painter.drawLine(band.left(), band.bottom(), band.right(), band.bottom());
-                painter.restore();
-                if (!expanded && selectedRange && selectedLane) {
-                    paintLaneReticle(band);
-                    reticlePainted = true;
-                }
-                const QRect strip(band.left(), band.top(), band.width(),
-                                  m_geometry.addLaneStripHeight);
-                const int arrowSize = std::max(layout::fontPx(0.5), strip.height() / 3);
-                const QRect arrow(m_labelGutter.left(), strip.center().y() - arrowSize / 2,
-                                  arrowSize, arrowSize);
-                const QRect textBounds(
-                    m_labelGutter.x() + arrowSize + layout::space(layout::Space::One), strip.top(),
-                    std::max(0,
-                             m_labelGutter.width() - arrowSize - layout::space(layout::Space::One)),
-                    strip.height());
-                const QRect summaryBounds(textBounds.x(), strip.top() + strip.height(),
-                                          textBounds.width(), strip.height());
-                nodelane::paintLaneHeader(
-                    painter,
-                    nodelane::LaneHeaderPaint{
-                        .band = band,
-                        .primary = textBounds,
-                        .secondary = summaryBounds,
-                        .textClip = QRect(m_labelGutter.x(), band.top(), m_labelGutter.width(),
-                                          band.height()),
-                        .arrow = arrow,
-                        .expanded = expanded,
-                        .separator = false,
-                        .titleFont = titleFont,
-                        .captionFont = captionFont,
-                        .title = tr("Tempo (BPM)"),
-                        .secondaryText =
-                            expanded ? tr("%n point(s)", nullptr, int(points.size())) : QString(),
-                    });
-            } else if (!expanded) {
-                continue;
-            }
-            if (expanded) {
-                painter.save();
-                painter.setClipRect(slot.body, Qt::IntersectClip);
-                paintLaneBody(handle, *slot.lane, points, slot.body,
-                              themes::color(themes::Role::song_view_automation_tempo_curve),
-                              selectedLane, selectedNodesLane, bandLane, true);
-                painter.restore();
-                if (selectedRange && selectedLane) {
-                    paintLaneReticle(reticleBounds);
-                    reticlePainted = true;
-                }
-            }
-        } else if (slot.id.kind == EditorAutomationRowKind::ControlChange) {
-            if (!slot.text)
-                continue;
-            auto &rowText = *slot.text;
-            const QRect bounds(layout::space(layout::Space::Zero), slot.body.top(), width(),
-                               slot.body.height());
-            const QRect textBounds(m_labelGutter.x(), bounds.top(), m_labelGutter.width(),
-                                   bounds.height());
-            const auto textBoxes = textLayout.align(textBounds, layout::VerticalAlignment::Center);
-            const QColor color =
-                themes::trackIdentityColor(slot.id.track % themes::trackIdentityColorCount);
-            painter.save();
-            painter.setClipRect(bounds, Qt::IntersectClip);
-            QString secondaryText;
-            if (!points.empty()) {
-                const std::size_t pointCount = points.size();
-                const int minimum = slot.lane->minimumValue();
-                const int maximum = slot.lane->maximumValue();
-                if (rowText.summaryKind != CCLanes::SummaryKind::Points ||
-                    rowText.pointCount != pointCount || rowText.minimum != minimum ||
-                    rowText.maximum != maximum) {
-                    rowText.secondary =
-                        tr("%1 points · %2..%3").arg(pointCount).arg(minimum).arg(maximum);
-                    rowText.summaryKind = CCLanes::SummaryKind::Points;
-                    rowText.pointCount = pointCount;
-                    rowText.minimum = minimum;
-                    rowText.maximum = maximum;
-                }
-                secondaryText = rowText.secondary;
-            } else {
-                if (rowText.summaryKind != CCLanes::SummaryKind::EmptyControl) {
-                    rowText.secondary = tr("empty · click to add points");
-                    rowText.summaryKind = CCLanes::SummaryKind::EmptyControl;
-                }
-                secondaryText = rowText.secondary;
-            }
-            nodelane::paintLaneHeader(painter,
-                                      nodelane::LaneHeaderPaint{
-                                          .band = bounds,
-                                          .primary = textBoxes.primary,
-                                          .secondary = textBoxes.secondary,
-                                          .textClip = textBoxes.primary.united(textBoxes.secondary),
-                                          .arrow = std::nullopt,
-                                          .expanded = true,
-                                          .titleFont = titleFont,
-                                          .captionFont = captionFont,
-                                          .title = rowText.title,
-                                          .secondaryText = secondaryText,
-                                      });
-            paintLaneBody(handle, *slot.lane, points, slot.body, color, selectedLane,
-                          selectedNodesLane, bandLane, false);
-            painter.restore();
-        }
-        if (selectedRange && selectedLane && !reticlePainted)
-            paintLaneReticle(reticleBounds);
+        const QRect reticleBounds(m_geometry.plotOrigin, slot.body.top(),
+                                  std::max(0, width() - m_geometry.plotOrigin), slot.body.height());
+        slot.visit(
+            [&] {
+                paintTempoSlot(handle, slot, points, selectedLane, selectedNodesLane, bandLane,
+                               reticleBounds);
+            },
+            [&] {
+                paintCcSlot(handle, slot, points, selectedLane, selectedNodesLane, bandLane,
+                            reticleBounds);
+            });
     }
 }

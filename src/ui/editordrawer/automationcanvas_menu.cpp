@@ -1,12 +1,12 @@
 #include "ui/editordrawer/automationcanvas.h"
 
-#include <algorithm>
-#include <limits>
-#include <vector>
-
 #include <QAction>
 #include <QMenu>
 #include <QMessageBox>
+#include <algorithm>
+#include <limits>
+#include <optional>
+#include <vector>
 
 #include "ui/editordrawer/automationpage.h"
 
@@ -16,6 +16,18 @@ EditorAutomationRowId laneRow(int track, uint8_t controller)
 {
     return {EditorAutomationRowKind::ControlChange, uint8_t(track), controller};
 }
+
+// Per-kind presentation for the unified lane menu; built once via the slot
+// visit so the menu body carries no tempo/CC branching.
+struct LaneMenuKind {
+    QString copyLabel;
+    QString pasteLabel;
+    QString clearLabel;
+    QString copiedMessage;
+    QString pastedMessage;
+    std::optional<QString> clearedMessage;
+    bool hasLaneActions = false;
+};
 
 } // namespace
 
@@ -32,8 +44,7 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
     if (selection.active()) {
         DrawerPageTimeSelectionMenuRequest request{.startTick = selection.startTick,
                                                    .endTick = selection.endTick,
-                                                   .tempo = slot->id.kind ==
-                                                            EditorAutomationRowKind::Tempo,
+                                                   .tempo = slot->isTempo(),
                                                    .globalPosition = globalPosition};
         if (!request.tempo && m_laneSelection)
             request.lanes = m_laneSelection->visibleLanes();
@@ -57,19 +68,39 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
     const auto rowId = slot->id;
     const QString laneTitle = lane->title();
     const auto points = lane->points();
-    const bool tempo = rowId.kind == EditorAutomationRowKind::Tempo;
+    const LaneMenuKind kind = slot->visit(
+        [&] {
+            return LaneMenuKind{tr("Copy"),
+                                tr("Paste"),
+                                tr("Clear Tempo"),
+                                tr("Copied Tempo"),
+                                tr("Pasted Tempo"),
+                                tr("Cleared Tempo"),
+                                false};
+        },
+        [&] {
+            return LaneMenuKind{
+                tr("Copy CC lane"),
+                tr("Paste CC lane (replace)"),
+                tr("Clear events"),
+                tr("Copied the %1 CC lane (%n point(s))", nullptr, int(points.size()))
+                    .arg(laneTitle),
+                tr("Replaced the %1 CC lane").arg(laneTitle),
+                std::nullopt,
+                true};
+        });
     QMenu menu;
-    QAction *copy = menu.addAction(tempo ? tr("Copy") : tr("Copy CC lane"));
+    QAction *copy = menu.addAction(kind.copyLabel);
     copy->setEnabled(!points.empty());
-    QAction *paste = menu.addAction(tempo ? tr("Paste") : tr("Paste CC lane (replace)"));
+    QAction *paste = menu.addAction(kind.pasteLabel);
     paste->setEnabled(!m_clipboard.empty());
     menu.addSeparator();
-    QAction *clear = menu.addAction(tempo ? tr("Clear Tempo") : tr("Clear events"));
+    QAction *clear = menu.addAction(kind.clearLabel);
     clear->setEnabled(!points.empty());
     QAction *remove = nullptr;
     QAction *hide = nullptr;
     std::vector<std::pair<QAction *, uint8_t>> ranges;
-    if (!tempo) {
+    if (kind.hasLaneActions) {
         const uint8_t controller = rowId.controller;
         const bool empty = points.empty();
         remove = menu.addAction(empty ? tr("Remove empty CC lane") : tr("Delete CC lane"));
@@ -104,12 +135,7 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
     const auto maxTick = std::numeric_limits<uint64_t>::max();
     if (chosen == copy) {
         m_clipboard = points;
-        if (tempo) {
-            m_page->announce(tr("Copied Tempo"));
-        } else {
-            m_page->announce(tr("Copied the %1 CC lane (%n point(s))", nullptr, int(points.size()))
-                                 .arg(laneTitle));
-        }
+        m_page->announce(kind.copiedMessage);
     } else if (chosen == paste) {
         std::vector<NodePoint> replacement;
         replacement.reserve(m_clipboard.size());
@@ -119,18 +145,15 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
             replacement.push_back({point.tick, std::clamp(point.value, minimum, maximum)});
         lane->replaceSpan(0, maxTick, replacement);
         m_page->requestRefresh();
-        if (tempo)
-            m_page->announce(tr("Pasted Tempo"));
-        else
-            m_page->announce(tr("Replaced the %1 CC lane").arg(laneTitle));
+        m_page->announce(kind.pastedMessage);
     } else if (chosen == clear) {
         lane->replaceSpan(0, maxTick, {});
-        if (!tempo)
+        if (kind.hasLaneActions)
             m_page->addEmptyLane(int(rowId.track), rowId.controller);
         m_page->requestRefresh();
-        if (tempo)
-            m_page->announce(tr("Cleared Tempo"));
-    } else if (!tempo && chosen == remove) {
+        if (kind.clearedMessage)
+            m_page->announce(*kind.clearedMessage);
+    } else if (kind.hasLaneActions && chosen == remove) {
         const int track = int(rowId.track);
         const uint8_t controller = rowId.controller;
         if (!points.empty() &&
@@ -148,7 +171,7 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
             rebuildRows();
         }
         m_page->requestRefresh();
-    } else if (!tempo && chosen == hide) {
+    } else if (kind.hasLaneActions && chosen == hide) {
         if (m_page->m_viewState.hideLane(rowId)) {
             m_page->publishViewState();
             rebuildRows();
