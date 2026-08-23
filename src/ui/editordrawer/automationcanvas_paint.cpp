@@ -186,19 +186,21 @@ void AutomationCanvas::paintContent(QPainter &painter)
             }
             secondaryText = rowText.secondary;
         }
-        nodelane::paintLaneHeader(painter, nodelane::LaneHeaderPaint{
-                                               .band = bounds,
-                                               .primary = textBoxes.primary,
-                                               .secondary = textBoxes.secondary,
-                                               .arrow = std::nullopt,
-                                               .expanded = true,
-                                               .titleFont = m_laneTitleFont,
-                                               .captionFont = m_laneCaptionFont,
-                                               .title = rowText.title,
-                                               .secondaryText = secondaryText,
-                                           });
+        nodelane::paintLaneHeader(painter,
+                                  nodelane::LaneHeaderPaint{
+                                      .band = bounds,
+                                      .primary = textBoxes.primary,
+                                      .secondary = textBoxes.secondary,
+                                      .textClip = textBoxes.primary.united(textBoxes.secondary),
+                                      .arrow = std::nullopt,
+                                      .expanded = true,
+                                      .titleFont = m_laneTitleFont,
+                                      .captionFont = m_laneCaptionFont,
+                                      .title = rowText.title,
+                                      .secondaryText = secondaryText,
+                                  });
         const bool bandLane = bandPreviewContainsLane(handle);
-        const bool selectedLane = (m_laneSelection && m_laneSelection->covers(handle)) || bandLane;
+        const bool selectedLane = isLaneSelected(handle) || bandLane;
         paintLaneBody(handle, *lane, body, color, selectedLane, bandLane, false);
         painter.restore();
     }
@@ -236,7 +238,7 @@ void AutomationCanvas::paintContent(QPainter &painter)
         } else {
             for (int rowIndex = 0; rowIndex < int(rows.size()); ++rowIndex) {
                 const LaneHandle handle{rowIndex + 1};
-                if (!m_laneSelection || !m_laneSelection->covers(handle))
+                if (!isLaneSelected(handle))
                     continue;
                 const NodeLane *ignored = nullptr;
                 QRect body;
@@ -257,8 +259,7 @@ void AutomationCanvas::paintContent(QPainter &painter)
     painter.setClipRect(tempoBody, Qt::IntersectClip);
     paintLaneBody(tempoHandle, *m_nodeStack.front().lane, tempoBody,
                   themes::color(themes::Role::song_view_automation_tempo_curve),
-                  (m_laneSelection && m_laneSelection->covers(tempoHandle)) || tempoBandLane,
-                  tempoBandLane, true);
+                  isLaneSelected(tempoHandle) || tempoBandLane, tempoBandLane, true);
     painter.restore();
 
     if (!selectedRange)
@@ -269,7 +270,7 @@ void AutomationCanvas::paintContent(QPainter &painter)
         const int last = laneLast.index;
         if (first <= 0 && last >= 0)
             paintLaneReticle(tempoBody);
-    } else if (m_laneSelection && m_laneSelection->covers(tempoHandle)) {
+    } else if (isLaneSelected(tempoHandle)) {
         paintLaneReticle(tempoBody);
     }
 }

@@ -53,7 +53,7 @@ class LaneSelection {
 - **NodeLane gains exactly three virtuals:** `leadIn()` (M5), `promptValue(QWidget*, int, int*)`, `neutralValue()` (default −1).
   - `TempoLane::promptValue` = existing `promptBpm` body; `CCLaneAdapter::promptValue` = `promptPointValue` body moved in (its only row-derived input, `titleFor(row)` = `laneLabel(controller)` = `CCLaneAdapter::title()`, verified); `CCLaneAdapter::neutralValue` = bend→0, pan(10/24)→64, else −1 (absorbs `snapNeutralFor`).
   - `tr()` translation context shifts when prompt strings move classes — keep the same user-visible texts, check `.ts` files.
-- **Menu dispatch — canvas kind switch (user decision: simplest/lowest code):** input.cpp call sites become `showLaneMenuFor(handle, globalPosition)`; one `switch` on `handle.index == 0` inside `automationcanvas_menu.cpp` dispatches tempo menu vs CC row menu; the empty-body fallback (tempo menu vs clear-selection) lives in the same helper. The branch disappears from input/paint/publish; ONE kind switch survives in menu.cpp. *Scope note vs the finding's literal "canvas never knows tempo-vs-CC" — see §7.*
+- **Menu dispatch — canvas kind switch (user decision: simplest/lowest code):** input.cpp call sites become `showLaneMenuFor(handle, globalPosition)`; the empty-body fallback uses `showEmptyBodyMenuFor(handle, globalPosition)`. Two `handle.index == 0` dispatch tests survive in `automationcanvas_menu.cpp` (one per helper) plus the selection-request tempo flag; the branch disappears from input/paint/publish. *Scope note vs the finding's literal "canvas never knows tempo-vs-CC" — see §8.*
 - **Hover guards KEPT** (input 77-80, 286-297, 395-398): voice-lane rect and pinned-tempo rect are not provably disjoint (overlap whenever viewport height < voiceHeight + tempoTotal; `setMinimumHeight` applies to scroll content, not the viewport), and no harness exercises degenerate viewports. Removal requires first establishing the invariant (`tempoTop ≥ contentTopInset()` in `syncPinnedTempoLayout` + a viewport-shrink check case) — explicitly out of this branch.
 - `CCLanes::rowIndexFor(LaneHandle)` centralizes `handle.index - 1` arithmetic (input 146/441, canvas 503, gesture 29, menu row→handle loop). `ccRowIndexAt`/`ccRowBoundaryAt` stay (row layout, not tempo semantics).
 
@@ -90,8 +90,8 @@ class LaneSelection {
 1. `rebuildNodeStack` (canvas.cpp:236) — tempo pushed at index 0 (the layout itself).
 2. `LaneSelection::covers/laneSet` — handle→identity mapping.
 3. `BandGesture::extendTo` — the singleton clamp.
-4. `commitNodePointMoves/Deletes` — `movesByLane.front()`/`ticksByLane.front()` = tempo + the 1..N CC loop (gesture.cpp:111-128, 174-186); the resolver assembly encodes it structurally.
-5. One kind switch in `automationcanvas_menu.cpp`.
+4. `commitNodePointMoves/Deletes` — `movesByLane.front()`/`ticksByLane.front()` = tempo + the 1..N CC loop (gesture.cpp:111-128, 174-186); the resolver assembly encodes it structurally. Single-point menu set/delete and keyboard delete route through these same helpers via synthesized `NodeDrag`s, so this is the only commit-side encoding.
+5. `automationcanvas_menu.cpp` — two `handle.index == 0` dispatch tests (`showLaneMenuFor` / `showEmptyBodyMenuFor`) plus the selection-request tempo flag in `showTimeSelectionMenuFor`.
 
 Everything else is `CCLanes::rowIndexFor` + stack bounds checks.
 
@@ -128,7 +128,7 @@ Everything else is `CCLanes::rowIndexFor` + stack bounds checks.
 
 ## 8. Notes and out-of-scope items
 
-- **One kind switch survives** in `automationcanvas_menu.cpp` — input/paint/publish are clean; the canvas file keeps one tempo-vs-CC branch. Swapping it for menu virtuals later is a bounded change if the strict "canvas never knows" bar is enforced.
+- **Two kind-dispatch tests survive** in `automationcanvas_menu.cpp` (plus the selection-request tempo flag) — input/paint/publish are clean; the menu module keeps two mechanical tempo-vs-CC branches. Swapping them for menu virtuals later is a bounded change if the strict "canvas never knows" bar is enforced.
 - Two clipboards (canvas `NodePoint` CC clipboard vs `TempoLane::m_clipboard` `TempoPoint`) remain — acknowledged sixth duality, out of scope.
 - `preparedPreviewCurve` tempo flag remains in `NodeLanePaint` — out of scope, acknowledged.
 - `tr()` context changes on moved prompt strings — verify `.ts` files in W3.

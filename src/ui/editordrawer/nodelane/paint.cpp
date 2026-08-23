@@ -331,10 +331,15 @@ QRectF nodeOverflowClip(const QRect &plot, const AutomationGeometry &geometry)
 
 void paintLaneHeader(QPainter &painter, const LaneHeaderPaint &paint)
 {
+    if (paint.separator) {
+        painter.save();
+        painter.setPen(themes::color(themes::Role::song_view_separator));
+        painter.drawLine(paint.band.left(), paint.band.bottom(), paint.band.right(),
+                         paint.band.bottom());
+        painter.restore();
+    }
     painter.save();
-    painter.setPen(themes::color(themes::Role::song_view_separator));
-    painter.drawLine(paint.band.left(), paint.band.bottom(), paint.band.right(),
-                     paint.band.bottom());
+    painter.setClipRect(paint.textClip, Qt::IntersectClip);
     if (paint.arrow) {
         const QRect &arrow = *paint.arrow;
         const QPolygon triangle = paint.expanded ? QPolygon{{arrow.left(), arrow.top()},

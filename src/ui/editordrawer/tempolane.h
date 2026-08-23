@@ -46,6 +46,8 @@ class TempoLane final : public NodeLane
     bool expanded() const noexcept { return m_expanded; }
     bool containsHeader(const QPoint &position) const;
     void toggleExpanded();
+    // Model-side tempo coverage used by the collapsed reticle in paint();
+    // canvas code answers the same question via LaneSelection::covers.
     bool hasTimeSelection() const;
     void cancel();
     bool promptValue(QWidget *parent, int currentValue, int *storedValue) const override;

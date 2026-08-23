@@ -159,6 +159,8 @@ void TempoLane::paint(QPainter &painter, const AutomationGeometry &geometry,
     painter.save();
     painter.setClipRect(band, Qt::IntersectClip);
     painter.fillRect(band, themes::color(themes::Role::song_view_piano_roll_background));
+    painter.setPen(themes::color(themes::Role::song_view_separator));
+    painter.drawLine(band.left(), band.bottom(), band.right(), band.bottom());
     painter.restore();
     if (!m_expanded && selectedRange)
         AutomationCanvas::paintSelectionReticle(painter, *selectedRange, projection, band, dpr);
@@ -171,22 +173,22 @@ void TempoLane::paint(QPainter &painter, const AutomationGeometry &geometry,
         strip.height());
     const QRect summaryBounds(textBounds.x(), strip.top() + strip.height(), textBounds.width(),
                               strip.height());
-    painter.save();
-    painter.setClipRect(band, Qt::IntersectClip);
     nodelane::paintLaneHeader(
-        painter, nodelane::LaneHeaderPaint{
-                     .band = band,
-                     .primary = textBounds,
-                     .secondary = summaryBounds,
-                     .arrow = arrow,
-                     .expanded = m_expanded,
-                     .titleFont = titleFont,
-                     .captionFont = captionFont,
-                     .title = QCoreApplication::translate("AutomationCanvas", "Tempo (BPM)"),
-                     .secondaryText =
-                         m_expanded ? QCoreApplication::translate("AutomationCanvas", "%n point(s)",
-                                                                  nullptr, int(points.size()))
-                                    : QString(),
-                 });
-    painter.restore();
+        painter,
+        nodelane::LaneHeaderPaint{
+            .band = band,
+            .primary = textBounds,
+            .secondary = summaryBounds,
+            .textClip = QRect(labelGutter.x(), band.top(), labelGutter.width(), band.height()),
+            .arrow = arrow,
+            .expanded = m_expanded,
+            .separator = false,
+            .titleFont = titleFont,
+            .captionFont = captionFont,
+            .title = QCoreApplication::translate("AutomationCanvas", "Tempo (BPM)"),
+            .secondaryText = m_expanded
+                                 ? QCoreApplication::translate("AutomationCanvas", "%n point(s)",
+                                                               nullptr, int(points.size()))
+                                 : QString(),
+        });
 }

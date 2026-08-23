@@ -29,13 +29,18 @@ void paintHover(QPainter &painter, const NodeLane &lane, const QRect &body,
                 const AutomationGeometry &geometry, const AutomationProjection &projection,
                 const NodeLaneHoverState &hoverState, bool pencilMode);
 
-// Chrome only; callers own background fill and clip rects.
+// Chrome only; callers own background fill and outer clip rects. The
+// arrow/title/caption are drawn inside textClip; the separator (when enabled)
+// spans band.bottom() unclipped so collapsed lanes can paint their reticle
+// over it.
 struct LaneHeaderPaint {
     QRect band;
     QRect primary;
     QRect secondary;
+    QRect textClip;
     std::optional<QRect> arrow;
     bool expanded = true;
+    bool separator = true;
     QFont titleFont;
     QFont captionFont;
     QString title;

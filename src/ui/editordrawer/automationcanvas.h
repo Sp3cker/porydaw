@@ -53,6 +53,10 @@ class AutomationCanvas final : public songview::TimelineSurface
     void setPencilMode(bool enabled);
     bool isPanning() const noexcept;
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
+    bool isLaneSelected(LaneHandle handle) const noexcept;
+    bool laneSelectionHitTest(LaneHandle handle, qreal x, const AutomationProjection &projection,
+                              qreal devicePixelRatio) const noexcept;
+    std::vector<std::pair<int, uint8_t>> selectionVisibleLanes() const noexcept;
     QRect labelGutter() const noexcept { return m_labelGutter; }
     int plotOrigin() const noexcept { return m_geometry.plotOrigin; }
     int contentTopInset() const noexcept { return m_voiceLane.height(); }
