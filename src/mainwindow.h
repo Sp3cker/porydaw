@@ -23,6 +23,7 @@ class QToolBar;
 class QTimer;
 class QWidget;
 class QUndoGroup;
+class QDial;
 class PolyphonyPanel;
 class SmfFile;
 class SongListPanel;
@@ -342,6 +343,8 @@ class MainWindow : public QMainWindow
     QAction *m_automationLanesAction = nullptr;
     QLabel *m_masterVolCaption = nullptr;
     QSpinBox *m_masterVolSpin = nullptr;
+    QLabel *m_outputVolumeCaption = nullptr;
+    QDial *m_outputVolumeDial = nullptr;
     QLabel *m_timeLabel = nullptr;
     QLabel *m_songLabel = nullptr;
     QWidget *m_polyMeter = nullptr;

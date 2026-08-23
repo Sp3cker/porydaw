@@ -5,6 +5,7 @@
 #include <QColor>
 #include <QComboBox>
 #include <QDebug>
+#include <QDial>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
@@ -27,6 +28,7 @@
 #include <QPushButton>
 #include <QRegularExpressionValidator>
 #include <QSettings>
+#include <QSizePolicy>
 #include <QSpinBox>
 #include <QStatusBar>
 #include <QStyle>
@@ -63,6 +65,7 @@
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/newsongwizard.h"
+#include "ui/outputvolumedial.h"
 #include "ui/polyphonypanel.h"
 #include "ui/sampleeditordialog.h"
 #include "ui/sf2zonepicker.h"
@@ -91,6 +94,7 @@ const QString kVelocityLaneKey = QStringLiteral("velocityLane");
 const QString kAutomationLanesKey = QStringLiteral("automationLanes");
 const QString kSystemFontKey = QStringLiteral("systemFont");
 const QString kFollowPlayheadKey = QStringLiteral("followPlayhead");
+const QString kOutputVolumeKey = QStringLiteral("outputVolume");
 
 #ifdef Q_OS_WIN
 // These names and values come from the current Windows SDK. The bundled
@@ -533,6 +537,49 @@ void MainWindow::buildUi()
         m_active->doc.setCfg(cfg);
     });
     transport->addWidget(m_masterVolSpin);
+    // The application output control stays at the toolbar's right edge; the
+    // song master-volume input keeps its original position beside the song.
+    auto *volumeSpacer = new QWidget(this);
+    volumeSpacer->setObjectName(QStringLiteral("transportVolumeSpacer"));
+    volumeSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    transport->addWidget(volumeSpacer);
+    transport->addSeparator();
+    const auto outputVolumeTip =
+        tr("Application output volume. Does not change the song volume or saved song settings.");
+    m_outputVolumeCaption = new QLabel(tr("Output"), this);
+    m_outputVolumeCaption->setObjectName(QStringLiteral("transportOutputVolumeCaption"));
+    m_outputVolumeCaption->setContentsMargins(::layout::space(::layout::Space::Two), 0,
+                                              ::layout::space(::layout::Space::One), 0);
+    m_outputVolumeCaption->setToolTip(outputVolumeTip);
+    transport->addWidget(m_outputVolumeCaption);
+    m_outputVolumeDial = createOutputVolumeDial(this);
+    m_outputVolumeDial->setObjectName(QStringLiteral("transportOutputVolume"));
+    m_outputVolumeDial->setRange(0, 100);
+    m_outputVolumeDial->setPageStep(10);
+    const auto dialExtent = ::layout::fontPx(5.0 / 3.0) + 2 * ::layout::space(::layout::Space::One);
+    m_outputVolumeDial->setFixedSize(dialExtent, dialExtent);
+    m_outputVolumeDial->setToolTip(outputVolumeTip);
+    m_outputVolumeDial->setAccessibleName(tr("Application output volume"));
+    m_outputVolumeDial->setAccessibleDescription(outputVolumeTip);
+    {
+        QSettings settings;
+        m_audio.setOutputVolume(
+            settings.value(kOutputVolumeKey, AudioEngine::kDefaultOutputVolume).toInt());
+        m_outputVolumeDial->setValue(m_audio.outputVolume());
+    }
+    auto *outputVolumeSettingsTimer = new QTimer(m_outputVolumeDial);
+    outputVolumeSettingsTimer->setSingleShot(true);
+    outputVolumeSettingsTimer->setInterval(200);
+    connect(m_outputVolumeDial, &QDial::valueChanged, this,
+            [this, outputVolumeSettingsTimer](int value) {
+                m_audio.setOutputVolume(value);
+                outputVolumeSettingsTimer->start();
+            });
+    connect(outputVolumeSettingsTimer, &QTimer::timeout, this, [this] {
+        QSettings settings;
+        settings.setValue(kOutputVolumeKey, m_audio.outputVolume());
+    });
+    transport->addWidget(m_outputVolumeDial);
 
     // Dock titles and the tab strip share this metric-derived outer height so
     // neither clips when the platform font or small-icon metric changes.

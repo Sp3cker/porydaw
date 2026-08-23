@@ -1,15 +1,19 @@
 #include <QAction>
 #include <QApplication>
+#include <QDial>
 #include <QEventLoop>
 #include <QFile>
 #include <QFontInfo>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
+#include <QMouseEvent>
 #include <QSettings>
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QToolBar>
 #include <QUndoGroup>
 #include <algorithm>
 #include <cstdio>
@@ -145,7 +149,65 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     check(!tabA->doc.isDirty() && !tabB->doc.isDirty(),
           "undo through the group did not clean the active tab");
 
-    // 5b. The transport master-volume spinbox mirrors the active tab's cfg,
+    // 5b. Application output volume is app-wide, persisted, aligned to the
+    // transport's right edge, and never enters the song undo history.
+    auto *transport = findChild<QToolBar *>(QStringLiteral("transportToolbar"));
+    auto *transportSpacer = findChild<QWidget *>(QStringLiteral("transportVolumeSpacer"));
+    auto *outputCaption = findChild<QLabel *>(QStringLiteral("transportOutputVolumeCaption"));
+    auto *outputDial = findChild<QDial *>(QStringLiteral("transportOutputVolume"));
+    if (check(transport && transportSpacer && outputCaption && outputDial,
+              "transport output-volume controls not found")) {
+        check(outputDial->minimum() == 0 && outputDial->maximum() == 100 &&
+                  outputDial->value() == m_audio.outputVolume(),
+              "application-output dial range or engine synchronization changed");
+        check(outputDial->toolTip().contains(QStringLiteral("Does not change the song volume")),
+              "application-output dial lost its explanatory tooltip");
+
+        const int songVolumeBefore = tabA->doc.cfg().masterVolume;
+        const int undoCountBefore = tabA->doc.undoStack()->count();
+        QSettings outputSettings;
+        outputSettings.setValue(QStringLiteral("outputVolume"), 68);
+        outputDial->setValue(37);
+        check(m_audio.outputVolume() == 37 &&
+                  outputSettings.value(QStringLiteral("outputVolume")).toInt() == 68,
+              "application-output dial did not update audio before persistence");
+        wait(250);
+        check(outputSettings.value(QStringLiteral("outputVolume")).toInt() == 37,
+              "application-output dial was not persisted after its debounce");
+        check(tabA->doc.cfg().masterVolume == songVolumeBefore &&
+                  tabA->doc.undoStack()->count() == undoCountBefore && !tabA->doc.isDirty(),
+              "application-output dial changed song or undo state");
+
+        const auto sendMouse = [outputDial](QEvent::Type type, const QPointF &position,
+                                            Qt::MouseButton button, Qt::MouseButtons buttons) {
+            QMouseEvent event(type, position, QPointF(outputDial->mapToGlobal(position.toPoint())),
+                              button, buttons, Qt::NoModifier);
+            QApplication::sendEvent(outputDial, &event);
+        };
+        const QPointF center(outputDial->rect().center());
+        const auto dragFromCenter = [&](qreal deltaY) {
+            sendMouse(QEvent::MouseButtonPress, center, Qt::LeftButton, Qt::LeftButton);
+            const QPointF destination = center + QPointF(0.0, deltaY);
+            sendMouse(QEvent::MouseMove, destination, Qt::NoButton, Qt::LeftButton);
+            sendMouse(QEvent::MouseButtonRelease, destination, Qt::LeftButton, Qt::NoButton);
+        };
+        outputDial->setValue(AudioEngine::kDefaultOutputVolume);
+        dragFromCenter(11.0);
+        check(outputDial->value() > AudioEngine::kDefaultOutputVolume,
+              "dragging down did not increase application volume");
+        outputDial->setValue(AudioEngine::kDefaultOutputVolume);
+        dragFromCenter(-11.0);
+        check(outputDial->value() < AudioEngine::kDefaultOutputVolume,
+              "dragging up did not decrease application volume");
+        outputDial->setValue(AudioEngine::kDefaultOutputVolume);
+
+        const QList<QAction *> actions = transport->actions();
+        check(transport->widgetForAction(actions.constLast()) == outputDial &&
+                  transportSpacer->sizePolicy().horizontalPolicy() == QSizePolicy::Expanding,
+              "application-output dial is not aligned to the transport bar's right edge");
+    }
+
+    // 5c. The transport master-volume spinbox mirrors the active tab's cfg,
     // follows tab switches, and drives the same undoable cfg edit as Song
     // Settings (so undo reverts both the cfg and the spinbox).
     auto *volSpin = findChild<QSpinBox *>(QStringLiteral("transportMasterVolume"));
