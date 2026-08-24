@@ -9,6 +9,7 @@
 #include <optional>
 
 class QThread;
+class VoicegroupSource;
 extern "C" {
 #include "voicegroup_loader.h"
 }
@@ -17,10 +18,11 @@ struct VoicegroupLoadRequest {
     QString projectRoot;
     QStringList candidates;
     std::optional<VoicegroupLoaderConfig> config;
+    std::optional<QString> editableSourceArg;
 };
 
-// Copyable result envelope. A loaded voicegroup remains owned by the envelope
-// until the UI thread explicitly adopts it with takeVoicegroup().
+// Copyable result envelope. Loaded data remains owned by the envelope until
+// the UI thread explicitly adopts it with the take methods.
 class VoicegroupLoadResult
 {
   public:
@@ -29,7 +31,9 @@ class VoicegroupLoadResult
     bool succeeded() const;
     QString triedCandidates() const;
     QString errorText() const;
+    QString editableSourceErrorText() const;
     LoadedVoiceGroup *takeVoicegroup();
+    std::unique_ptr<VoicegroupSource> takeEditableSource();
 
   private:
     struct State;

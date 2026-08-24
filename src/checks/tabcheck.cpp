@@ -114,13 +114,15 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     }
     check(m_tabs->count() == 1, "first song did not open exactly one tab");
     check(tabA->voicegroupLoadState == VoicegroupLoadState::Loading &&
-              tabA->view->document() == nullptr,
-          "first tab was editable before its voicegroup loaded");
+              tabA->view->document() == nullptr && tabA->vgSource == nullptr,
+          "first tab exposed editable voicegroup state before its background load completed");
     check(!m_settingsAction->isEnabled(),
           "song settings were enabled before the first voicegroup loaded");
     check(waitForVoicegroupReady(tabA), "first tab voicegroup did not load");
     check(tabA->view->document() == &tabA->doc,
           "first tab did not become editable after its voicegroup loaded");
+    check(tabA->vgSource != nullptr,
+          "first tab did not install its editable voicegroup source after loading");
     check(m_settingsAction->isEnabled(),
           "song settings were not enabled after the first voicegroup loaded");
     check(m_audio.timeline() == tabA->timeline.get() && m_audio.voicegroup() == tabA->voicegroup,

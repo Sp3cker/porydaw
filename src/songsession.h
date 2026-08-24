@@ -61,6 +61,7 @@ struct SongSession {
     VoicegroupLoadState voicegroupLoadState = VoicegroupLoadState::Idle;
     uint64_t voicegroupLoadGeneration = 0;
     QString voicegroupLoadError;
+    QString voicegroupSourceError;
     std::optional<VoicegroupLoadOperation> voicegroupLoadOperation;
     // Keyed by slot; entries outlive any one LoadedVoiceGroup (engine track
     // caches hold ToneData copies pointing here) and are re-installed into a

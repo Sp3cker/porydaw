@@ -1,5 +1,7 @@
 #include "voicegrouploader.h"
 
+#include "voicegroupsource.h"
+
 #include <QCoreApplication>
 #include <QMetaObject>
 #include <QThread>
@@ -14,8 +16,10 @@ struct VoicegroupLoadResult::State {
     }
 
     LoadedVoiceGroup *voicegroup = nullptr;
+    std::unique_ptr<VoicegroupSource> editableSource;
     QString tried;
     QString error;
+    QString editableSourceError;
 };
 
 VoicegroupLoadResult::VoicegroupLoadResult(std::shared_ptr<State> state) : m_state(std::move(state))
@@ -36,9 +40,19 @@ QString VoicegroupLoadResult::errorText() const
     return m_state ? m_state->error : QString();
 }
 
+QString VoicegroupLoadResult::editableSourceErrorText() const
+{
+    return m_state ? m_state->editableSourceError : QString();
+}
+
 LoadedVoiceGroup *VoicegroupLoadResult::takeVoicegroup()
 {
     return m_state ? std::exchange(m_state->voicegroup, nullptr) : nullptr;
+}
+
+std::unique_ptr<VoicegroupSource> VoicegroupLoadResult::takeEditableSource()
+{
+    return m_state ? std::move(m_state->editableSource) : nullptr;
 }
 
 VoicegroupLoader::VoicegroupLoader(QObject *parent) : QObject(parent), m_thread(new QThread(this))
@@ -79,6 +93,13 @@ void VoicegroupLoader::load(VoicegroupLoadRequest request, Completion completion
                         : QCoreApplication::translate("VoicegroupLoader",
                                                       "Could not load the voicegroup (tried: %1).")
                               .arg(state->tried);
+            }
+            if (request.editableSourceArg) {
+                auto source = std::make_unique<VoicegroupSource>();
+                if (source->open(request.projectRoot, *request.editableSourceArg,
+                                 &state->editableSourceError)) {
+                    state->editableSource = std::move(source);
+                }
             }
             auto result = VoicegroupLoadResult(std::move(state));
             QMetaObject::invokeMethod(

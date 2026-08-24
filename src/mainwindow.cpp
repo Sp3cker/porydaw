@@ -974,6 +974,10 @@ void MainWindow::activateSession(SongSession *session, bool force)
         attachEngine(*session);
     synchronizePlayhead();
     updateVoicegroupBrowser();
+    if (!session->voicegroupSourceError.isEmpty()) {
+        statusBar()->showMessage(
+            tr("Voicegroup editing unavailable: %1").arg(session->voicegroupSourceError), 8000);
+    }
     updatePolyPanelContext(session);
     updateTimeLabel();
     updatePolyStatus();
@@ -1047,6 +1051,21 @@ void MainWindow::startVoicegroupLoad(SongSession &session, VoicegroupLoadOperati
                 !session->voicegroupLoadOperation)
                 return;
             const VoicegroupLoadOperation operation = *session->voicegroupLoadOperation;
+            if (operation.kind == VoicegroupLoadKind::Initial) {
+                session->vgSource = result.takeEditableSource();
+                if (session->vgSource) {
+                    session->voicegroupSourceError.clear();
+                    session->vgFileTime = QFileInfo(session->vgSource->filePath()).lastModified();
+                } else {
+                    session->voicegroupSourceError = result.editableSourceErrorText();
+                    session->vgFileTime = QDateTime();
+                    if (session == m_active && !session->voicegroupSourceError.isEmpty()) {
+                        statusBar()->showMessage(tr("Voicegroup editing unavailable: %1")
+                                                     .arg(session->voicegroupSourceError),
+                                                 8000);
+                    }
+                }
+            }
             if (!result.succeeded()) {
                 session->voicegroupLoadState = VoicegroupLoadState::Error;
                 session->voicegroupLoadError = result.errorText();
@@ -1380,9 +1399,23 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
 
     if (!session)
         session = createSession();
+    // The project root and song cfg are already known, so overlap the entire
+    // voicegroup operation with MIDI parsing and timeline construction.
+    VoicegroupLoadOperation operation;
+    operation.request = makeVoicegroupLoadRequest(song.cfg);
+    operation.request.editableSourceArg = song.cfg.voicegroupArg;
+    operation.kind = VoicegroupLoadKind::Initial;
+    operation.targetVoicegroupArg = song.cfg.voicegroupArg;
+    session->voicegroupSourceError.clear();
+    startVoicegroupLoad(*session, std::move(operation));
     session->doc.setTrackBudget(m_project.trackBudgetFor(song));
     QString error;
     if (!session->doc.load(song, &error)) {
+        ++session->voicegroupLoadGeneration;
+        session->voicegroupLoadOperation.reset();
+        session->voicegroupLoadState =
+            session->voicegroup ? VoicegroupLoadState::Ready : VoicegroupLoadState::Idle;
+        session->voicegroupLoadError.clear();
         if (created)
             destroySession(session); // not in the tab bar yet
         QApplication::restoreOverrideCursor();
@@ -1392,13 +1425,8 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
 
     auto timeline = session->doc.buildTimeline(m_audio.sampleRate());
 
-    // The MIDI document and view are ready before poryaaaa begins parsing
-    // samples. Detach the old song, then expose this timeline with no
-    // voicegroup or editable document while the worker loads it.
-    ++session->voicegroupLoadGeneration;
-    session->voicegroupLoadOperation.reset();
-    session->voicegroupLoadState = VoicegroupLoadState::Idle;
-    session->voicegroupLoadError.clear();
+    // Detach the old song, then expose this timeline with no voicegroup or
+    // editable document while the already-running worker finishes.
     session->view->setDocument(nullptr);
     session->view->setSong(nullptr, nullptr);
     if (session == m_active) {
@@ -1409,7 +1437,8 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
         voicegroup_free(session->voicegroup);
     session->voicegroup = nullptr;
     session->timeline = std::move(timeline);
-    openVoicegroupSource(*session, song.cfg);
+    session->vgSource.reset();
+    session->vgFileTime = QDateTime();
     session->songId = song.id;
     session->appliedVolume = song.cfg.masterVolume;
     session->appliedReverb = song.cfg.reverb;
@@ -1438,12 +1467,6 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
         m_tabs->setTabToolTip(index, song.midPath);
         activateSession(session, /*force=*/true);
     }
-
-    VoicegroupLoadOperation operation;
-    operation.request = makeVoicegroupLoadRequest(song.cfg);
-    operation.kind = VoicegroupLoadKind::Initial;
-    operation.targetVoicegroupArg = song.cfg.voicegroupArg;
-    startVoicegroupLoad(*session, std::move(operation));
 
     const MidiTimeline *tl = session->timeline.get();
     QString loopNote = tl->hasLoop() ? tr(", loops") : tr(", no loop markers");
@@ -2569,10 +2592,12 @@ void MainWindow::openVoicegroupSource(SongSession &session, const SongCfg &cfg)
     QString error;
     if (!session.vgSource->open(m_project.root(), cfg.voicegroupArg, &error)) {
         session.vgSource.reset();
+        session.voicegroupSourceError = error;
         session.vgFileTime = QDateTime();
         statusBar()->showMessage(tr("Voicegroup editing unavailable: %1").arg(error), 8000);
         return;
     }
+    session.voicegroupSourceError.clear();
     session.vgFileTime = QFileInfo(session.vgSource->filePath()).lastModified();
 }
 
