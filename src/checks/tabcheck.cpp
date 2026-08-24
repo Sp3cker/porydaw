@@ -113,7 +113,16 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         return false;
     }
     check(m_tabs->count() == 1, "first song did not open exactly one tab");
+    check(tabA->voicegroupLoadState == VoicegroupLoadState::Loading &&
+              tabA->view->document() == nullptr,
+          "first tab was editable before its voicegroup loaded");
+    check(!m_settingsAction->isEnabled(),
+          "song settings were enabled before the first voicegroup loaded");
     check(waitForVoicegroupReady(tabA), "first tab voicegroup did not load");
+    check(tabA->view->document() == &tabA->doc,
+          "first tab did not become editable after its voicegroup loaded");
+    check(m_settingsAction->isEnabled(),
+          "song settings were not enabled after the first voicegroup loaded");
     check(m_audio.timeline() == tabA->timeline.get() && m_audio.voicegroup() == tabA->voicegroup,
           "engine is not borrowing the first tab's data");
     check(m_uiTimer->interval() == 500, "paused UI cadence is not 500 ms");

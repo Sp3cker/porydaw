@@ -814,17 +814,17 @@ SongSession *MainWindow::createSession()
             m_audio.setSoloMask(mask);
     });
     connect(s->view, &SongView::auditionNote, this, [this, s](int track, int key, int velocity) {
-        if (s == m_active && m_audioOk && m_audio.songLoaded())
+        if (s == m_active && s->voicegroup && m_audioOk && m_audio.songLoaded())
             m_audio.previewNote(uint8_t(track), uint8_t(key), uint8_t(velocity));
     });
     connect(s->view, &SongView::auditionNoteTimed, this,
             [this, s](int track, int key, int velocity, quint32 durationSamples) {
-                if (s == m_active && m_audioOk && m_audio.songLoaded())
+                if (s == m_active && s->voicegroup && m_audioOk && m_audio.songLoaded())
                     m_audio.previewNoteTimed(uint8_t(track), uint8_t(key), uint8_t(velocity),
                                              durationSamples);
             });
     connect(s->view, &SongView::auditionVoice, this, [this, s](int voice, int key, int velocity) {
-        if (s == m_active && m_audioOk)
+        if (s == m_active && s->voicegroup && m_audioOk)
             m_audio.previewVoice(uint8_t(voice), uint8_t(key), uint8_t(velocity));
     });
     connect(s->view, &SongView::statusMessage, this, [this, s](const QString &text) {
@@ -935,7 +935,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
     const bool loaded = session != nullptr;
     m_saveAction->setEnabled(loaded);
     m_exportWavAction->setEnabled(loaded && session->voicegroup);
-    m_settingsAction->setEnabled(loaded);
+    m_settingsAction->setEnabled(loaded && session->voicegroup);
     m_closeTabAction->setEnabled(loaded);
     m_eventListAction->setEnabled(loaded);
     {
@@ -1064,6 +1064,7 @@ void MainWindow::startVoicegroupLoad(SongSession &session, VoicegroupLoadOperati
             case VoicegroupLoadKind::Initial:
                 session->appliedVoicegroupArg = operation.targetVoicegroupArg;
                 swapVoicegroup(*session, voicegroup, operation.keepSlot);
+                session->view->setDocument(&session->doc);
                 break;
             case VoicegroupLoadKind::DocumentSwitch:
                 openVoicegroupSource(*session, session->doc.cfg());
@@ -1083,6 +1084,7 @@ void MainWindow::startVoicegroupLoad(SongSession &session, VoicegroupLoadOperati
             }
             if (session == m_active) {
                 m_exportWavAction->setEnabled(session->voicegroup != nullptr);
+                m_settingsAction->setEnabled(session->voicegroup != nullptr);
                 updatePolyPanelContext(session);
                 updateTransportActions();
             }
@@ -1392,7 +1394,7 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
 
     // The MIDI document and view are ready before poryaaaa begins parsing
     // samples. Detach the old song, then expose this timeline with no
-    // voicegroup so editing can begin while the worker loads it.
+    // voicegroup or editable document while the worker loads it.
     ++session->voicegroupLoadGeneration;
     session->voicegroupLoadOperation.reset();
     session->voicegroupLoadState = VoicegroupLoadState::Idle;
@@ -1413,7 +1415,6 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
     session->appliedReverb = song.cfg.reverb;
 
     session->view->setSong(session->timeline.get(), nullptr);
-    session->view->setDocument(&session->doc);
     ViewSidecar::Snapshot viewSnapshot;
     if (ViewSidecar::load(m_project.root(), song.label, &viewSnapshot)) {
         session->view->applyViewState(viewSnapshot.view);
@@ -3043,7 +3044,7 @@ void MainWindow::updateTransportActions()
         }
     }
     m_transportBar->setPlaybackState(state);
-    m_transportBar->setSessionAvailable(m_active != nullptr);
+    m_transportBar->setSessionAvailable(m_active && m_active->voicegroup);
 }
 
 void MainWindow::syncMasterVolumeControl()
