@@ -316,17 +316,15 @@ void PianoRoll::invalidateTimeSelection(const SongDocument::TimeRange &previousR
         return note.track >= 0 && note.track < 16 && (tracks & (uint32_t{1} << note.track)) != 0 &&
                timeRange.overlaps(note.startTick, note.endTick);
     };
-    const uint64_t latestEnd = std::max(previousRange.endTick, range.endTick);
     for (const ViewNote &note : m_sv->model().notes) {
-        if (note.startTick >= latestEnd)
+        if (note.startTick >= previousRange.endTick && note.startTick >= range.endTick)
             break;
         if (selected(previousRange, previousTrackMask, note) == selected(range, trackMask, note)) {
             continue;
         }
         const QRect outerFrame = noteBox(displayedNoteRect(note)).toAlignedRect();
         const qreal dpr = devicePixelRatioF();
-        const int frameInset = std::max(
-            lyt::singlePixel(), qCeil((selectionRingPixels(dpr) + noteBorderPixels(dpr)) / dpr));
+        const int frameInset = qCeil((selectionRingPixels(dpr) + noteBorderPixels(dpr)) / dpr);
         const QRect innerFrame =
             outerFrame.adjusted(frameInset, frameInset, -frameInset, -frameInset);
         QRegion frameRegion(outerFrame);

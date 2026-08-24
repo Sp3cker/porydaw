@@ -121,6 +121,7 @@ class SongDocument : public QObject
     // The song's clock base for snapping: ticks per mid2agb clock. mid2agb
     // rescales everything to 24 (or 48 with -X) clocks/beat; finer positions
     // are quantized away by the build, so the editor snaps to this grid.
+    // Always >= 1.
     uint32_t ticksPerClock() const;
 
     // Engine-track mapping (mirrors MidiTimeline::build).
