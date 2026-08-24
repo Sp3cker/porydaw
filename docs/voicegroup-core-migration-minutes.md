@@ -207,6 +207,21 @@ Known topics to review:
   0.539 ms mean for this cutover; preview and picker pass their numerical gates
   outright.
 
+## Wave 14 final cutover
+
+- Removed Porydaw's standalone legacy benchmark source and target after the
+  Wave 13 ratification. The frozen upstream
+  `plugin/voicegroup_loader.{c,h}` sources remain in the submodule.
+- Scoped legacy searches are empty. Local `deno task verify` passed 56/56 and
+  the vendor gate passed. Final review decision: **APPROVE FINAL CUTOVER**.
+- PR #1 CI run
+  [`32674923532`](https://github.com/Sp3cker/porydaw/actions/runs/32674923532)
+  passed format, Linux, Windows, Apple Silicon macOS, Intel macOS, all four
+  vendor gates, and the 56/56 ASAN harness suite.
+- The ASAN gate exposed and closed two lifetime/undefined-behavior defects:
+  synth descriptors are now copied out of temporary catalogs, and the
+  automation parity helper's signature now matches its no-return contract.
+
 ## Open questions
 
 - None for the frozen integration contract. Wave 4 closed ownership,

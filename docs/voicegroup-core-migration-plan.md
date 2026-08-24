@@ -1465,6 +1465,17 @@ the Rust path only; the submodule's legacy sources remain present and unmodified
 
 **Verification.** `deno task verify` + CI + scoped grep of `src/`.
 
+**Recorded result.** The standalone legacy benchmark source and target were
+removed after the Wave 13 ratification. Scoped searches of `src/`, `tools/`,
+and the root build wiring found no legacy single-file loader, legacy header,
+`voicegroup_load_samples`, or `VoicegroupLoaderConfig` reference. The frozen
+upstream `plugin/voicegroup_loader.{c,h}` sources remain in the submodule.
+Local verification passed 56/56, the vendor gate passed, and the final reviewer
+decision was **APPROVE FINAL CUTOVER**. PR #1 CI run
+[`32674923532`](https://github.com/Sp3cker/porydaw/actions/runs/32674923532)
+passed format, Linux, Windows, Apple Silicon macOS, Intel macOS, all four
+vendor gates, and the 56/56 ASAN harness suite.
+
 ## 16. Source-area table
 
 | Concern | Source area |
@@ -1487,7 +1498,7 @@ the Rust path only; the submodule's legacy sources remain present and unmodified
 | Direct legacy callers migrated by Wave 11 | `src/mainwindow.cpp`, `src/checks/{exportcheck.cpp,samplecheck.cpp,vgcheck.cpp,vgsavecheck.cpp}`, `tools/porydaw_render_cli.cpp` |
 | Diagnostics UI + picker | `src/ui/voicegroupbrowser.{h,cpp}`, `src/ui/samplepicker.*` |
 | Harnesses | `src/checks/{contextcheck.cpp,exportcheck.cpp,samplecheck.cpp,vgsavecheck.cpp,tabcheck.cpp,vgcheck.cpp,projectindexcheck.cpp,checkcatalog.cpp,checkregistry.cpp}` |
-| Benchmarks | `tools/porydaw_loadbench_cli.cpp` (old), new `tools/porydaw_loadbench_core_cli.cpp` |
+| Benchmarks | historical legacy result at `voicegroup-legacy-reference`; current `tools/porydaw_loadbench_core_cli.cpp` |
 
 Explicitly excluded source areas: `src/ui/viewsidecar.*`, persistence codecs,
 `SongCfg`/`midi.cfg`, MIDI playback/device processing, and
