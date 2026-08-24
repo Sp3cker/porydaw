@@ -18,6 +18,7 @@
 #include "ui/songview.h"
 
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/otherstrip.h"
 
 namespace checks::rollcheck {
 
@@ -181,12 +182,21 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             if (!isSelectionRingColor(scopedImage.pixel(centerX, bottomY)))
                 fail("time-scoped ghost note did not render its selection ring");
             auto *pianoRoll = static_cast<songview::PianoRoll *>(roll);
+            auto *otherStrip = static_cast<songview::OtherStrip *>(
+                view.findChild<QWidget *>(QStringLiteral("otherEventsStrip")));
+            if (!otherStrip)
+                fail("could not find the other-events strip for repaint diagnostics");
             auto movedSelection = view.selectionModel().timeSelection();
             ++movedSelection.endTick;
             const auto beforeMovePaint = pianoRoll->diagnostics();
+            const auto beforeStripPaint =
+                otherStrip ? otherStrip->diagnostics() : songview::TimelineSurfaceDiagnostics{};
             view.selectionModel().setTimeSelection(movedSelection);
             const QImage partialSelectionImage = pianoRoll->grab().toImage();
             const auto afterMovePaint = pianoRoll->diagnostics();
+            if (otherStrip && otherStrip->diagnostics().contentInvalidationCount !=
+                                  beforeStripPaint.contentInvalidationCount)
+                fail("moving a time selection invalidated the other-events strip");
             const quint64 movedPaintPixels =
                 afterMovePaint.contentPaintPixelCount - beforeMovePaint.contentPaintPixelCount;
             const qreal rollDpr = pianoRoll->devicePixelRatioF();
