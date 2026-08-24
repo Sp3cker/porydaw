@@ -306,10 +306,12 @@ struct VoicegroupProject::Impl {
         voicegroup_project_free(project);
         project = nullptr;
         root.clear();
+        cachedSnapshot.reset();
     }
 
     void markStale()
     {
+        cachedSnapshot.reset();
         if (!project)
             return;
         voicegroup_project_mark_stale(project);
@@ -340,6 +342,7 @@ struct VoicegroupProject::Impl {
     ::VoicegroupProject *project = nullptr;
     QFileSystemWatcher watcher;
     QString root;
+    std::optional<VoicegroupProject::Snapshot> cachedSnapshot;
     StaleCallback staleCallback;
 };
 
@@ -376,9 +379,22 @@ VoicegroupProject::Snapshot VoicegroupProject::refresh()
     auto result = ProjectResultOwner{};
     voicegroup_project_refresh(m_impl ? m_impl->project : nullptr, &result.value);
     auto snapshot = copySnapshot(result.value);
-    if (m_impl && snapshot.succeeded)
-        m_impl->replaceWatches(snapshot.watchPaths);
+    if (m_impl) {
+        if (snapshot.succeeded)
+            m_impl->replaceWatches(snapshot.watchPaths);
+        m_impl->cachedSnapshot = snapshot;
+    }
     return snapshot;
+}
+
+const VoicegroupProject::Snapshot &VoicegroupProject::snapshot()
+{
+    static const auto empty = Snapshot{};
+    if (!m_impl || !m_impl->project)
+        return empty;
+    if (!m_impl->cachedSnapshot)
+        refresh();
+    return *m_impl->cachedSnapshot;
 }
 
 VoicegroupProject::LoadResult VoicegroupProject::loadSaved(const QString &bankName)

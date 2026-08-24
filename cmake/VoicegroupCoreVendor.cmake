@@ -2,7 +2,7 @@ set(PORYDAW_VOICEGROUP_CORE_VENDOR_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/voicegroup-core"
     CACHE PATH "Path to vendored voicegroup-core artifacts")
 
-set(_vg_expected_source_commit "d22dd7b2ac28025fa803addf8ace0cf996c8ef6b")
+set(_vg_expected_source_commit "f23020d53240f51535865fc2cc1f6005c44dbdf4")
 set(_vg_expected_abi "2")
 string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _vg_processor)
 

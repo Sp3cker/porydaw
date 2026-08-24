@@ -1463,7 +1463,12 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
         session = createSession();
     session->doc.setTrackBudget(m_project.trackBudgetFor(song));
     QString error;
-    if (!session->doc.load(song, &error)) {
+    auto loaded = false;
+    {
+        QSignalBlocker blocker(&session->doc);
+        loaded = session->doc.load(song, &error);
+    }
+    if (!loaded) {
         porydaw::VoicegroupProject::freeBank(vg);
         if (created)
             destroySession(session); // not in the tab bar yet
@@ -1471,6 +1476,9 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
         QMessageBox::warning(this, tr("Load Song"), error);
         return;
     }
+    session->appliedVoicegroupArg = song.cfg.voicegroupArg;
+    session->appliedVolume = song.cfg.masterVolume;
+    session->appliedReverb = song.cfg.reverb;
 
     auto timeline = session->doc.buildTimeline(m_audio.sampleRate());
 
@@ -1488,10 +1496,8 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
     session->diagnostics.clear();
     session->timeline = std::move(timeline);
     openVoicegroupSource(*session, song.cfg);
+    applyPendingSynthTones(*session, vg);
     session->songId = song.id;
-    session->appliedVoicegroupArg = song.cfg.voicegroupArg;
-    session->appliedVolume = song.cfg.masterVolume;
-    session->appliedReverb = song.cfg.reverb;
 
     session->view->setSong(session->timeline.get(), session->voicegroup);
     session->view->setDocument(&session->doc);
@@ -2523,7 +2529,7 @@ void MainWindow::updateVoicegroupBrowser()
 MainWindow::VgCatalog MainWindow::vgCatalog()
 {
     auto catalog = VgCatalog{};
-    const auto snapshot = m_vgProject.refresh();
+    const auto &snapshot = m_vgProject.snapshot();
     const auto appendUnique = [](QStringList &values, const QString &value) {
         if (!value.isEmpty() && !values.contains(value))
             values.append(value);
@@ -2715,7 +2721,7 @@ void MainWindow::openVoicegroupSource(SongSession &session, const SongCfg &cfg)
     const auto effectiveArg =
         cfg.voicegroupArg.isEmpty() ? QStringLiteral("_dummy") : cfg.voicegroupArg;
     const auto canonicalSymbol = QStringLiteral("voicegroup") + effectiveArg;
-    const auto snapshot = m_vgProject.refresh();
+    const auto &snapshot = m_vgProject.snapshot();
     const auto metadata = voicegroupCatalogEntry(snapshot, canonicalSymbol);
     if (!metadata) {
         session.vgSource.reset();

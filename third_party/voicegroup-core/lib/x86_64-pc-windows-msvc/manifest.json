@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "source_commit": "d22dd7b2ac28025fa803addf8ace0cf996c8ef6b",
+  "source_commit": "f23020d53240f51535865fc2cc1f6005c44dbdf4",
   "crate_version": "0.1.0",
   "abi_version": 2,
   "wave_cache": "unbounded-per-load-absolute-path",
@@ -9,12 +9,12 @@
   "runner": "windows-2025",
   "runner_arch": "X64",
   "artifact_name": "voicegroup_core.lib",
-  "artifact_sha256": "b4eb8e9df0f561b739955342dbb3e17d359836401694383acdc6648fd11064c1",
+  "artifact_sha256": "5fa2813a2bf3427e9975d421c19ae3c99b8febecb361544a4d81694e102cea6d",
   "workflow_artifact_name": "voicegroup-core-x86_64-pc-windows-msvc",
   "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)\nbinary: rustc\ncommit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea\ncommit-date: 2026-08-18\nhost: x86_64-pc-windows-msvc\nrelease: 1.98.0\nLLVM version: 22.1.8",
   "profile": "release",
   "library": "lib/x86_64-pc-windows-msvc/voicegroup_core.lib",
-  "lib_sha256": "b4eb8e9df0f561b739955342dbb3e17d359836401694383acdc6648fd11064c1",
+  "lib_sha256": "5fa2813a2bf3427e9975d421c19ae3c99b8febecb361544a4d81694e102cea6d",
   "header": "include/voicegroup_core.h",
   "header_sha256": "3b9f74d9099d09bfc105ef3d6f9f5feca02fe1441b398aa67c6ee1140f4e7134",
   "license_inventory": "licenses.json"

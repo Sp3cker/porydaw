@@ -197,9 +197,11 @@ int runContextCheck(const QString &scratchDir)
     staleNotifications = 0;
     expect(writeFile(bankPath, QByteArrayView(CORRUPT_BANK)),
            "invalidation: write corrupt nested source");
+    expect(context.snapshot().diagnostics.isEmpty(),
+           "snapshot access reuses the current generation until invalidated");
     expect(waitUntil([&] { return staleNotifications > 0; }),
            "invalidation: corrupt mutation marks the project stale");
-    snapshot = context.refresh();
+    snapshot = context.snapshot();
     expect(snapshot.succeeded, "invalidation: corrupt refresh keeps the project index available");
     expect(!snapshot.diagnostics.isEmpty(),
            "invalidation: corrupt refresh copies structured diagnostics");

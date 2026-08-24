@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "source_commit": "d22dd7b2ac28025fa803addf8ace0cf996c8ef6b",
-  "workflow_run": "https://github.com/Sp3cker/poryaaaa-monorepo/actions/runs/32698928023",
+  "source_commit": "f23020d53240f51535865fc2cc1f6005c44dbdf4",
+  "workflow_run": "https://github.com/Sp3cker/poryaaaa-monorepo/actions/runs/32732633850",
   "abi_version": 2,
   "header": "include/voicegroup_core.h",
   "header_sha256": "3b9f74d9099d09bfc105ef3d6f9f5feca02fe1441b398aa67c6ee1140f4e7134",
@@ -12,7 +12,7 @@
       "runner": "macos-15",
       "manifest": "lib/aarch64-apple-darwin/manifest.json",
       "library": "lib/aarch64-apple-darwin/libvoicegroup_core.a",
-      "lib_sha256": "36ad499e42ade3cfd993cde37c663b25a42785b23e7f17b46c0573da40e911b1"
+      "lib_sha256": "ec55dd22d71c5be4f6fc1d0eaa6a91980fada93efa61e14393691e597fdf93d5"
     },
     {
       "target_triple": "x86_64-apple-darwin",
@@ -20,7 +20,7 @@
       "runner": "macos-15-intel",
       "manifest": "lib/x86_64-apple-darwin/manifest.json",
       "library": "lib/x86_64-apple-darwin/libvoicegroup_core.a",
-      "lib_sha256": "60f113defcc349475c7f2f50a5fce39c9f6d2b6280df633b1a548377d91abbea"
+      "lib_sha256": "cc399f093d5a18bbb7501b8bd3cc26de7abfbace9faf47e77bf288d5d6381eaf"
     },
     {
       "target_triple": "x86_64-pc-windows-msvc",
@@ -28,7 +28,7 @@
       "runner": "windows-2025",
       "manifest": "lib/x86_64-pc-windows-msvc/manifest.json",
       "library": "lib/x86_64-pc-windows-msvc/voicegroup_core.lib",
-      "lib_sha256": "b4eb8e9df0f561b739955342dbb3e17d359836401694383acdc6648fd11064c1"
+      "lib_sha256": "5fa2813a2bf3427e9975d421c19ae3c99b8febecb361544a4d81694e102cea6d"
     },
     {
       "target_triple": "x86_64-unknown-linux-gnu",
@@ -36,7 +36,7 @@
       "runner": "ubuntu-20.04-container",
       "manifest": "lib/x86_64-unknown-linux-gnu/manifest.json",
       "library": "lib/x86_64-unknown-linux-gnu/libvoicegroup_core.a",
-      "lib_sha256": "8363197abecb4f5be4cd929d5bbbae1965581aca70309f6d74de1283a5493556"
+      "lib_sha256": "3363e17736375ed1b639ff9228e168318af93713b9e3108a5eb6243729aa0f78"
     }
   ]
 }

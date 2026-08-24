@@ -161,7 +161,10 @@ class VoicegroupProject
     Snapshot open(const QString &root);
     void close();
     void markStale();
+    // Force a project-index rebuild, including retrying a failed refresh.
     Snapshot refresh();
+    // Return the current snapshot, rebuilding only after open or markStale().
+    const Snapshot &snapshot();
     LoadResult loadSaved(const QString &bankName);
     LoadResult loadSource(const QString &bankName, const QString &relativePath,
                           QByteArrayView source, std::span<const SynthOverlay> overlays = {});
