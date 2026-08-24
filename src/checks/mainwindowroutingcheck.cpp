@@ -1,7 +1,9 @@
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QEvent>
+#include <QEventLoop>
 #include <QFile>
 #include <QPixmap>
 #include <QScrollArea>
@@ -51,6 +53,20 @@ T *descendant(QWidget &owner)
             return typed;
     }
     return nullptr;
+}
+
+bool waitForVoicegroup(SongSession *session, int timeoutMs = 30000)
+{
+    if (!session)
+        return false;
+    QElapsedTimer timer;
+    timer.start();
+    while (session->voicegroupLoadState == VoicegroupLoadState::Loading &&
+           !timer.hasExpired(timeoutMs)) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+    }
+    return session->voicegroupLoadState == VoicegroupLoadState::Ready &&
+           session->voicegroup != nullptr;
 }
 
 QPointF velocityNodePosition(const SongView &view, const VelocityArea &area,
@@ -311,6 +327,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
     window.loadSongByLabel(songA);
     window.loadSongByLabel(songB, /*newTab=*/true);
     SongSession *session = window.m_active;
+    check(waitForVoicegroup(session), "active song voicegroup load timed out");
     SongView *view = session ? session->view : nullptr;
     SongDocument *document = view ? view->document() : nullptr;
     check(view && document && session->timeline,
