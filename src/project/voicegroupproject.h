@@ -80,6 +80,8 @@ class VoicegroupProject
     };
 
     struct Snapshot {
+        // Whether the project index is available for loading. Catalog diagnostics do not make it
+        // false.
         bool succeeded = false;
         QVector<Diagnostic> diagnostics;
         QVector<CatalogEntry> catalog;

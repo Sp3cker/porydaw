@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "source_commit": "342159a24c4566b31c7117ba447561150060a720",
-  "workflow_run": "https://github.com/Sp3cker/poryaaaa-monorepo/actions/runs/32667981322",
+  "source_commit": "d22dd7b2ac28025fa803addf8ace0cf996c8ef6b",
+  "workflow_run": "https://github.com/Sp3cker/poryaaaa-monorepo/actions/runs/32698928023",
   "abi_version": 2,
   "header": "include/voicegroup_core.h",
-  "header_sha256": "eae66d353cb1bd97b8e23ce4de0330347cf85e37fb3b49601056f812ca3e7b29",
+  "header_sha256": "3b9f74d9099d09bfc105ef3d6f9f5feca02fe1441b398aa67c6ee1140f4e7134",
   "targets": [
     {
       "target_triple": "aarch64-apple-darwin",
@@ -12,7 +12,7 @@
       "runner": "macos-15",
       "manifest": "lib/aarch64-apple-darwin/manifest.json",
       "library": "lib/aarch64-apple-darwin/libvoicegroup_core.a",
-      "lib_sha256": "19e49e8244c64391cdb09e5cb9b5a2c01e7cee768a8913ac3019db5855691a45"
+      "lib_sha256": "36ad499e42ade3cfd993cde37c663b25a42785b23e7f17b46c0573da40e911b1"
     },
     {
       "target_triple": "x86_64-apple-darwin",
@@ -20,7 +20,7 @@
       "runner": "macos-15-intel",
       "manifest": "lib/x86_64-apple-darwin/manifest.json",
       "library": "lib/x86_64-apple-darwin/libvoicegroup_core.a",
-      "lib_sha256": "a5b2636aa5000dc19cadda7eb7709e3f191b7ee8d369241720d90d0fd3b87799"
+      "lib_sha256": "60f113defcc349475c7f2f50a5fce39c9f6d2b6280df633b1a548377d91abbea"
     },
     {
       "target_triple": "x86_64-pc-windows-msvc",
@@ -28,7 +28,7 @@
       "runner": "windows-2025",
       "manifest": "lib/x86_64-pc-windows-msvc/manifest.json",
       "library": "lib/x86_64-pc-windows-msvc/voicegroup_core.lib",
-      "lib_sha256": "10154202069e24e4bae164a0b075d3682eba6848f2292d8a1fc2eca9e2903319"
+      "lib_sha256": "b4eb8e9df0f561b739955342dbb3e17d359836401694383acdc6648fd11064c1"
     },
     {
       "target_triple": "x86_64-unknown-linux-gnu",
@@ -36,7 +36,7 @@
       "runner": "ubuntu-20.04-container",
       "manifest": "lib/x86_64-unknown-linux-gnu/manifest.json",
       "library": "lib/x86_64-unknown-linux-gnu/libvoicegroup_core.a",
-      "lib_sha256": "73279980b487be2bbaa95064911f9c4565aea9890e53efc0fbb1ac2e2cb40a40"
+      "lib_sha256": "8363197abecb4f5be4cd929d5bbbae1965581aca70309f6d74de1283a5493556"
     }
   ]
 }

@@ -29,9 +29,12 @@ static_assert(!std::is_copy_constructible_v<porydaw::VoicegroupProject::AssetRes
 
 constexpr auto VALID_BANK = "voice_group main\n"
                             "\tvoice_directsound 60, 0, DirectSoundWave, 255, 0, 255, 0\n";
+constexpr auto SECONDARY_BANK = "voice_group secondary\n"
+                                "\tvoice_directsound 60, 0, DirectSoundWave, 255, 0, 255, 0\n";
 constexpr auto CORRUPT_BANK = "voice_group main\n"
                               "\tvoice_directsounnd 60, 0, DirectSoundWave, 255, 0, 255, 0\n";
-constexpr auto VOICEGROUP_INCLUDE_HUB = "\t.include \"sound/voicegroups/nested/hub.inc\"\n";
+constexpr auto VOICEGROUP_INCLUDE_HUB = "\t.include \"sound/voicegroups/nested/hub.inc\"\n"
+                                        "\t.include \"sound/voicegroups/secondary.inc\"\n";
 constexpr auto DIRECT_SOUND_DATA = "DirectSoundWave::\n"
                                    "\t.incbin \"sound/direct_sound_samples/kick.bin\"\n";
 
@@ -117,6 +120,8 @@ int runContextCheck(const QString &scratchDir)
     const auto includeHubPath = QDir(root).filePath(QStringLiteral("sound/voice_groups.inc"));
     const auto nestedRelativePath = QStringLiteral("sound/voicegroups/nested/hub.inc");
     const auto bankPath = QDir(root).filePath(nestedRelativePath);
+    const auto secondaryRelativePath = QStringLiteral("sound/voicegroups/secondary.inc");
+    const auto secondaryPath = QDir(root).filePath(secondaryRelativePath);
     const auto directSoundPath = QDir(root).filePath(QStringLiteral("sound/direct_sound_data.inc"));
     const auto samplePath =
         QDir(root).filePath(QStringLiteral("sound/direct_sound_samples/kick.bin"));
@@ -126,6 +131,8 @@ int runContextCheck(const QString &scratchDir)
            "nested discovery: write include hub");
     expect(writeFile(bankPath, QByteArrayView(VALID_BANK)),
            "nested discovery: write nested voice group source");
+    expect(writeFile(secondaryPath, QByteArrayView(SECONDARY_BANK)),
+           "mixed health: write secondary voice group source");
     expect(writeFile(directSoundPath, QByteArrayView(DIRECT_SOUND_DATA)),
            "nested discovery: write DirectSound catalog");
     expect(writeFile(QDir(root).filePath(QStringLiteral("sound/programmable_wave_data.inc")), {}),
@@ -193,9 +200,25 @@ int runContextCheck(const QString &scratchDir)
     expect(waitUntil([&] { return staleNotifications > 0; }),
            "invalidation: corrupt mutation marks the project stale");
     snapshot = context.refresh();
-    expect(!snapshot.succeeded, "invalidation: corrupt refresh reports failure");
+    expect(snapshot.succeeded, "invalidation: corrupt refresh keeps the project index available");
     expect(!snapshot.diagnostics.isEmpty(),
            "invalidation: corrupt refresh copies structured diagnostics");
+    {
+        auto load = context.loadSaved(QStringLiteral("secondary"));
+        expect(load.succeeded(),
+               "mixed health: valid secondary bank loads from diagnostics-bearing generation");
+        expect(load.diagnostics().isEmpty(),
+               "mixed health: valid secondary bank has no diagnostics");
+        auto *bank = load.take();
+        expect(bank != nullptr, "mixed health: valid secondary bank materializes");
+        porydaw::VoicegroupProject::freeBank(bank);
+    }
+    {
+        auto load = context.loadSaved(QStringLiteral("main"));
+        expect(!load.succeeded(), "mixed health: corrupt primary bank fails its own load");
+        expect(!load.diagnostics().isEmpty(),
+               "mixed health: corrupt primary bank reports structured diagnostics");
+    }
     context.markStale();
     const auto explicitNotificationCount = staleNotifications;
     expect(writeFile(bankPath, QByteArrayView(VALID_BANK)),
