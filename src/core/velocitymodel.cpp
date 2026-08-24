@@ -1,4 +1,5 @@
 #include "core/velocitymodel.h"
+#include "core/mid2agbtables.h"
 
 #include <algorithm>
 #include <array>
@@ -142,7 +143,7 @@ std::optional<std::size_t> VelocityMap::levelOf(int storedVelocity) const
     if (!isPsg())
         return std::nullopt;
     const int stored = clampVelocity(storedVelocity);
-    const int effective = std::min(((stored + 3) / 4) * 4, kMaximumVelocity);
+    const int effective = mid2agbEffectiveVelocity(stored);
     const int hardwareLevel = (effective - 1) / 8;
     if (m_voice != VelocityVoice::Wave)
         return std::size_t(hardwareLevel);

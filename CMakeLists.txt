@@ -335,8 +335,11 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/nodelane/tempoadapter.cpp
     src/ui/editordrawer/tempolane.cpp
     src/ui/editordrawer/tempolane.h
-    src/ui/editordrawer/velocityarea.cpp
-    src/ui/editordrawer/velocityarea.h
+    src/ui/editordrawer/velocityarea/velocityarea.cpp
+    src/ui/editordrawer/velocityarea/velocityarea.h
+    src/ui/editordrawer/velocityarea/velocityarea_interaction.cpp
+    src/ui/editordrawer/velocityarea/velocityarea_paint.cpp
+    src/ui/editordrawer/velocityarea/detail.h
     src/ui/editordrawer/linearramp.h
     src/ui/editordrawer/velocityaxis.cpp
     src/ui/editordrawer/velocityaxis.h

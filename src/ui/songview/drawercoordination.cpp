@@ -1,7 +1,7 @@
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/editordrawer/velocityarea.h"
+#include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"

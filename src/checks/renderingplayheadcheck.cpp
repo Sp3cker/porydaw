@@ -4,7 +4,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawerpage.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/editordrawer/velocityarea.h"
+#include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
 #include "ui/theme/themeruntime.h"

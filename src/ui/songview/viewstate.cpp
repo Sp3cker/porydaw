@@ -1,5 +1,5 @@
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/editordrawer/velocityarea.h"
+#include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/eventlistview.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"

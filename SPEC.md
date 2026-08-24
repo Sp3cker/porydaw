@@ -156,7 +156,7 @@ data through mid2agb's transforms before it reaches the engine:
   compiled `.s` header would (`VOL * mvl / mxv`, `reverb_set + N`); a song with
   no `-R` flag plays at the vanilla `STD_REVERB` default (50).
 - The UI shows both the drawn and the effective (quantized) value — e.g.
-  "velocity 93 → GBA plays 90" — so quantization is visible, not mysterious.
+  "velocity 93 → GBA plays 96" — so quantization is visible, not mysterious.
 - Music-player track budgets honored: the song's player only allocates
   `NUM_TRACKS_*` tracks (`sound/music_player_table.inc`, e.g. BGM = 10 in
   vanilla, engine ceiling 16), and `MPlayStart` silently never starts tracks

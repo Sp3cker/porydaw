@@ -1,6 +1,6 @@
 #include "core/mid2agbtables.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/editordrawer/velocityarea.h"
+#include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"

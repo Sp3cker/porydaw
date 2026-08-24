@@ -10,7 +10,7 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawersections.h"
-#include "ui/editordrawer/velocityarea.h"
+#include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 

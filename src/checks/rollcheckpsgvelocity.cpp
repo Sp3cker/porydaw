@@ -1,6 +1,6 @@
 #include "core/velocitymodel.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/editordrawer/velocityarea.h"
+#include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/velocityaxis.h"
 
 #include <algorithm>
