@@ -11,12 +11,12 @@
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QImage>
-#include <QMouseEvent>
 #include <QRegion>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QUndoStack>
 
+#include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -46,14 +46,6 @@ void pump()
 {
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents();
-}
-
-void sendMouse(QWidget *widget, QEvent::Type type, const QPointF &position, Qt::MouseButton button,
-               Qt::MouseButtons buttons)
-{
-    QMouseEvent event(type, position, QPointF(widget->mapToGlobal(position.toPoint())), button,
-                      buttons, Qt::NoModifier);
-    QCoreApplication::sendEvent(widget, &event);
 }
 
 void leaveCanvas(AutomationPage &page)
@@ -92,10 +84,10 @@ bool toggleTempoExpanded(AutomationPage &page, bool wantExpanded, int &failures)
     if (expanded == wantExpanded)
         return expanded;
     const QImage beforeToggle = page.canvas()->grab().toImage();
-    sendMouse(page.canvas(), QEvent::MouseButtonPress, tempoHeaderPoint(page), Qt::LeftButton,
-              Qt::LeftButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease, tempoHeaderPoint(page), Qt::LeftButton,
-              Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeaderPoint(page),
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeaderPoint(page),
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     pump();
     if (page.canvas()->grab().toImage() == beforeToggle) {
         std::fprintf(stderr, "automation-check: FAIL paint: tempo header toggle did not repaint\n");
@@ -441,7 +433,8 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     const QPointF node(view.displayX(double(kNodeTick), geometry.plotOrigin, dpr),
                        nodelane::valueY(tempoLane, body, geometry, 180));
     const QRect hoverLabel = valueLabel(node, nodelane::plotRect(body, geometry), canvas->font());
-    sendMouse(canvas, QEvent::MouseMove, node, Qt::NoButton, Qt::NoButton);
+    checks::events::sendMouse(*canvas, QEvent::MouseMove, node, Qt::NoButton, Qt::NoButton,
+                              Qt::NoModifier);
     pump();
     const QImage hovered = canvas->grab().toImage();
     report(changedPixels(idle, hovered, QRegion(hoverLabel), dpr) > 0,

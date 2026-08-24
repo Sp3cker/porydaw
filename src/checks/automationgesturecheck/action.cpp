@@ -2,14 +2,13 @@
 
 #include <QAction>
 #include <QApplication>
-#include <QCoreApplication>
 #include <QCursor>
 #include <QEvent>
-#include <QKeyEvent>
 #include <QKeySequence>
 #include <QLineEdit>
 #include <QPixmap>
 
+#include "checks/support/eventsynth.h"
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/songview.h"
@@ -60,8 +59,8 @@ void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
     editor.show();
     editor.setFocus();
     rig.pump();
-    QKeyEvent typedB(QEvent::KeyPress, Qt::Key_B, Qt::NoModifier, QStringLiteral("b"));
-    QCoreApplication::sendEvent(&editor, &typedB);
+    checks::events::sendKey(editor, QEvent::KeyPress, Qt::Key_B, Qt::NoModifier,
+                            QStringLiteral("b"), false, 1);
     check(editor.text() == QStringLiteral("b") && !pencilModeAction->isChecked(),
           QStringLiteral("Pencil shortcut consumed B from a focused text input"));
     editor.hide();
@@ -69,7 +68,7 @@ void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
     rig.pump();
     const ScopedShortcut scopedShortcut(pencilModeAction);
     pencilModeAction->setShortcut(QKeySequence(kPencilShortcutKey));
-    const auto sendPencilKey = [&](Target target, QEvent::Type type, bool autoRepeat = false) {
+    const auto sendPencilKey = [&](Target target, QEvent::Type type, bool autoRepeat) {
         switch (target) {
         case Target::View:
             rig.keyToView(type, kPencilShortcutKey, Qt::NoModifier, autoRepeat);
@@ -81,42 +80,42 @@ void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
         rig.pump();
     };
     rig.setPersistentPencil(false);
-    sendPencilKey(Target::View, QEvent::KeyPress);
+    sendPencilKey(Target::View, QEvent::KeyPress, false);
     const bool tapWasMomentary = !pencilModeAction->isChecked();
-    sendPencilKey(Target::View, QEvent::KeyRelease);
+    sendPencilKey(Target::View, QEvent::KeyRelease, false);
     const bool tapBecamePersistent = pencilModeAction->isChecked();
     check(tapWasMomentary && tapBecamePersistent,
           QStringLiteral("single-key Pencil tap did not become persistent on release"));
     rig.setPersistentPencil(false);
-    sendPencilKey(Target::Window, QEvent::KeyPress);
+    sendPencilKey(Target::Window, QEvent::KeyPress, false);
     const bool nativeWindowPressWasMomentary = !pencilModeAction->isChecked();
-    sendPencilKey(Target::Window, QEvent::KeyRelease);
+    sendPencilKey(Target::Window, QEvent::KeyRelease, false);
     const bool nativeWindowTapBecamePersistent = pencilModeAction->isChecked();
     check(nativeWindowPressWasMomentary && nativeWindowTapBecamePersistent,
           QStringLiteral("native-window Pencil tap did not preserve persistent mode"));
-    sendPencilKey(Target::View, QEvent::KeyPress);
+    sendPencilKey(Target::View, QEvent::KeyPress, false);
     const bool repeatBaseline = pencilModeAction->isChecked();
     sendPencilKey(Target::View, QEvent::KeyPress, true);
     sendPencilKey(Target::View, QEvent::KeyRelease, true);
     const bool repeatWasConsumed = pencilModeAction->isChecked();
-    sendPencilKey(Target::View, QEvent::KeyRelease);
+    sendPencilKey(Target::View, QEvent::KeyRelease, false);
     check(repeatBaseline && repeatWasConsumed && !pencilModeAction->isChecked(),
           QStringLiteral("Pencil shortcut auto-repeat retriggered or escaped consumption"));
     rig.setPersistentPencil(false);
-    sendPencilKey(Target::View, QEvent::KeyPress);
+    sendPencilKey(Target::View, QEvent::KeyPress, false);
     const bool longHoldWasMomentary = !pencilModeAction->isChecked();
     rig.commitTimers(510);
-    sendPencilKey(Target::View, QEvent::KeyRelease);
+    sendPencilKey(Target::View, QEvent::KeyRelease, false);
     check(longHoldWasMomentary && !pencilModeAction->isChecked(),
           QStringLiteral("Pencil shortcut hold past 500 ms did not restore persistent mode"));
     rig.setPersistentPencil(false);
     const auto shortHoldInput = rig.pointAt(rig.pan, 192, 64);
-    sendPencilKey(Target::View, QEvent::KeyPress);
+    sendPencilKey(Target::View, QEvent::KeyPress, false);
     const bool shortHoldWasMomentary = !pencilModeAction->isChecked();
     rig.mousePress(shortHoldInput.position);
     rig.mouseRelease(shortHoldInput.position);
     rig.pump();
-    sendPencilKey(Target::View, QEvent::KeyRelease);
+    sendPencilKey(Target::View, QEvent::KeyRelease, false);
     check(shortHoldWasMomentary && !pencilModeAction->isChecked(),
           QStringLiteral("short Pencil hold used for a gesture became persistent"));
     rig.setPersistentPencil(false);

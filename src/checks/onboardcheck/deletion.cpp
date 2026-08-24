@@ -1,7 +1,5 @@
 #include <QFile>
 #include <QRegularExpression>
-#include <QSettings>
-#include <QTemporaryDir>
 #include <cstdio>
 
 #include "core/smf.h"
@@ -301,10 +299,6 @@ void runDeletionChecks(const QString &projectRoot, const QString &midiDir, Decom
                                          QStringLiteral("MUSIC_PLAYER_BGM"), &regError, &id),
               "action delete: registerSong failed");
 
-        QTemporaryDir settingsDir;
-        check(settingsDir.isValid(), "action delete: no temp dir for settings");
-        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
-        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
         MainWindow window;
         check(window.runDeleteActionCheck(projectRoot, delLabel),
               "delete-action check did not run");

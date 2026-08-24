@@ -4,17 +4,15 @@
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QImage>
-#include <QKeyEvent>
-#include <QMouseEvent>
 #include <QTimer>
 #include <QWindow>
 #include <algorithm>
 #include <cstring>
 #include <utility>
 
+#include "checks/support/eventsynth.h"
 #include "core/miditimeline.h"
 #include "core/timedefaults.h"
-#include "project/decompproject.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
@@ -25,22 +23,12 @@ std::unique_ptr<AutomationGestureCheckRig>
 AutomationGestureCheckRig::create(const QString &project, const QString &song, QString &error)
 {
     error.clear();
-    DecompProject decomp;
-    if (!decomp.open(project, &error))
+    auto loadedSong = checks::LoadedSong::load(project, song, error);
+    if (!loadedSong)
         return nullptr;
-    const SongInfo *songInfo = nullptr;
-    for (const SongInfo &candidate : decomp.songs()) {
-        if (candidate.label == song) {
-            songInfo = &candidate;
-            break;
-        }
-    }
-    if (!songInfo) {
-        error = QStringLiteral("no playable song %1").arg(song);
-        return nullptr;
-    }
     auto rig = std::unique_ptr<AutomationGestureCheckRig>(new AutomationGestureCheckRig);
-    if (!rig->initialize(*songInfo, error))
+    rig->m_song = std::move(loadedSong);
+    if (!rig->initialize(error))
         return nullptr;
     return rig;
 }
@@ -55,12 +43,12 @@ AutomationGestureCheckRig::~AutomationGestureCheckRig()
 
 SongDocument &AutomationGestureCheckRig::document() noexcept
 {
-    return *m_document;
+    return m_song->document();
 }
 
 const SongDocument &AutomationGestureCheckRig::document() const noexcept
 {
-    return *m_document;
+    return m_song->document();
 }
 
 SongView &AutomationGestureCheckRig::view() noexcept
@@ -235,8 +223,9 @@ QImage AutomationGestureCheckRig::renderArea()
 AutomationGestureCheckRig::Snapshot AutomationGestureCheckRig::snapshot(int track,
                                                                         uint8_t controller) const
 {
-    return {m_document->smf().write(), m_document->revision(), m_document->undoStack()->index(),
-            m_document->lanePoints(track, controller)};
+    SongDocument &document = m_song->document();
+    return {document.smf().write(), document.revision(), document.undoStack()->index(),
+            document.lanePoints(track, controller)};
 }
 
 void AutomationGestureCheckRig::documentChanged()
@@ -272,44 +261,49 @@ void AutomationGestureCheckRig::setPersistentPencil(bool enabled)
 void AutomationGestureCheckRig::mousePress(const QPointF &position, Qt::KeyboardModifiers modifiers,
                                            Qt::MouseButton button)
 {
-    sendMouse(QEvent::MouseButtonPress, position, button, button, modifiers);
+    checks::events::sendMouse(canvas(), QEvent::MouseButtonPress, position, button, button,
+                              modifiers);
 }
 
 void AutomationGestureCheckRig::mouseMove(const QPointF &position, Qt::MouseButtons buttons,
                                           Qt::KeyboardModifiers modifiers)
 {
-    sendMouse(QEvent::MouseMove, position, Qt::NoButton, buttons, modifiers);
+    checks::events::sendMouse(canvas(), QEvent::MouseMove, position, Qt::NoButton, buttons,
+                              modifiers);
 }
 
 void AutomationGestureCheckRig::mouseRelease(const QPointF &position,
                                              Qt::KeyboardModifiers modifiers,
                                              Qt::MouseButton button)
 {
-    sendMouse(QEvent::MouseButtonRelease, position, button, Qt::NoButton, modifiers);
+    checks::events::sendMouse(canvas(), QEvent::MouseButtonRelease, position, button, Qt::NoButton,
+                              modifiers);
 }
 
 void AutomationGestureCheckRig::mouseDoubleClick(const QPointF &position,
                                                  Qt::KeyboardModifiers modifiers)
 {
-    sendMouse(QEvent::MouseButtonDblClick, position, Qt::LeftButton, Qt::LeftButton, modifiers);
+    checks::events::sendMouse(canvas(), QEvent::MouseButtonDblClick, position, Qt::LeftButton,
+                              Qt::LeftButton, modifiers);
 }
 
 void AutomationGestureCheckRig::keyToArea(QEvent::Type type, int key,
                                           Qt::KeyboardModifiers modifiers, bool autoRepeat)
 {
-    sendKey(&canvas(), type, key, modifiers, autoRepeat);
+    checks::events::sendKey(canvas(), type, key, modifiers, QString{}, autoRepeat, 1);
 }
 
 void AutomationGestureCheckRig::keyToView(QEvent::Type type, int key,
                                           Qt::KeyboardModifiers modifiers, bool autoRepeat)
 {
-    sendKey(m_view.get(), type, key, modifiers, autoRepeat);
+    checks::events::sendKey(*m_view, type, key, modifiers, QString{}, autoRepeat, 1);
 }
 
 void AutomationGestureCheckRig::keyToWindow(QEvent::Type type, int key,
                                             Qt::KeyboardModifiers modifiers, bool autoRepeat)
 {
-    sendKey(m_view->windowHandle(), type, key, modifiers, autoRepeat);
+    checks::events::sendKey(*m_view->windowHandle(), type, key, modifiers, QString{}, autoRepeat,
+                            1);
 }
 
 void AutomationGestureCheckRig::pump()
@@ -342,26 +336,24 @@ void AutomationGestureCheckRig::commitTimers(int milliseconds)
     waitForTimers(milliseconds);
 }
 
-bool AutomationGestureCheckRig::initialize(const SongInfo &song, QString &error)
+bool AutomationGestureCheckRig::initialize(QString &error)
 {
-    m_document = std::make_unique<SongDocument>();
-    if (!m_document->load(song, &error))
-        return false;
-    if (m_document->engineTrackCount() == 0) {
-        error = QStringLiteral("%1 has no engine tracks").arg(song.label);
+    SongDocument &songDocument = document();
+    if (songDocument.engineTrackCount() == 0) {
+        error = QStringLiteral("%1 has no engine tracks").arg(m_song->songInfo().label);
         return false;
     }
-    m_document->addLanePoint(volume.track, volume.controller, 24, 32);
-    m_document->writeLanePoints(lfo.track, lfo.controller, 96, 96, {{96, 32}, {96, 96}});
-    m_document->addLanePoint(0, DOC_CC_VOICE, 24, 3);
+    songDocument.addLanePoint(volume.track, volume.controller, 24, 32);
+    songDocument.writeLanePoints(lfo.track, lfo.controller, 96, 96, {{96, 32}, {96, 96}});
+    songDocument.addLanePoint(0, DOC_CC_VOICE, 24, 3);
     m_voicegroup = std::make_unique<LoadedVoiceGroup>();
     m_voicegroup->voices[3].type = VOICE_NOISE;
     std::strncpy(m_voicegroup->voiceNames[3], "automation-voice",
                  sizeof(m_voicegroup->voiceNames[3]) - 1);
-    m_timeline = m_document->buildTimeline(48000.0);
+    m_timeline = songDocument.buildTimeline(48000.0);
     m_view = std::make_unique<SongView>();
     m_view->resize(960, 720);
-    m_view->setDocument(m_document.get());
+    m_view->setDocument(&songDocument);
     m_view->setSong(m_timeline.get(), m_voicegroup.get());
     EditorViewState state;
     state.emptyLanes.insert(pan.row);
@@ -379,7 +371,7 @@ bool AutomationGestureCheckRig::initialize(const SongInfo &song, QString &error)
     }
     m_page->resize(960, 360);
     m_page->songChanged();
-    m_live.documentRevision = m_document->revision();
+    m_live.documentRevision = songDocument.revision();
     m_live.timeZoom = 96.0;
     m_live.editCursorTick = 24;
     m_view->setEditorTimeZoom(m_live.timeZoom);
@@ -392,22 +384,6 @@ bool AutomationGestureCheckRig::initialize(const SongInfo &song, QString &error)
 
 void AutomationGestureCheckRig::refreshPage()
 {
-    m_live.documentRevision = m_document->revision();
+    m_live.documentRevision = document().revision();
     m_page->refreshLiveState(m_live);
-}
-
-void AutomationGestureCheckRig::sendMouse(QEvent::Type type, const QPointF &position,
-                                          Qt::MouseButton button, Qt::MouseButtons buttons,
-                                          Qt::KeyboardModifiers modifiers)
-{
-    QMouseEvent event(type, position, QPointF(canvas().mapToGlobal(position.toPoint())), button,
-                      buttons, modifiers);
-    QCoreApplication::sendEvent(&canvas(), &event);
-}
-
-void AutomationGestureCheckRig::sendKey(QObject *target, QEvent::Type type, int key,
-                                        Qt::KeyboardModifiers modifiers, bool autoRepeat)
-{
-    QKeyEvent event(type, key, modifiers, {}, autoRepeat);
-    QCoreApplication::sendEvent(target, &event);
 }

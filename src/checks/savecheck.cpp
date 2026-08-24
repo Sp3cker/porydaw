@@ -5,8 +5,8 @@
 #include <QString>
 #include <cstdio>
 
+#include "checks/support/songfixture.h"
 #include "core/songdocument.h"
-#include "project/decompproject.h"
 
 // --savecheck <projectRoot> <song> [mid2agbPath]: M2 save-path check. Loads a
 // song, makes a real edit (note + loop marker + song settings), saves, then
@@ -28,31 +28,17 @@ QByteArray readFileBytes(const QString &path)
 
 int runSaveCheck(const QString &projectRoot, const QString &songLabel, const QString &mid2agbPath)
 {
-    DecompProject project;
     QString error;
-    if (!project.open(projectRoot, &error)) {
-        std::fprintf(stderr, "savecheck: %s\n", qUtf8Printable(error));
-        return 1;
-    }
-    const SongInfo *song = nullptr;
-    for (const SongInfo &s : project.songs()) {
-        if (s.label == songLabel && s.isPlayable())
-            song = &s;
-    }
-    if (!song) {
-        std::fprintf(stderr, "savecheck: song '%s' not found\n", qUtf8Printable(songLabel));
-        return 1;
-    }
-
-    const QString cfgPath = QFileInfo(song->midPath).dir().filePath(QStringLiteral("midi.cfg"));
-    const QStringList cfgBefore =
-        QString::fromUtf8(readFileBytes(cfgPath)).split(QLatin1Char('\n'));
-
-    SongDocument doc;
-    if (!doc.load(*song, &error)) {
+    const auto loadedSong = checks::LoadedSong::load(projectRoot, songLabel, error);
+    if (!loadedSong) {
         std::fprintf(stderr, "savecheck: load: %s\n", qUtf8Printable(error));
         return 1;
     }
+    SongDocument &doc = loadedSong->document();
+
+    const QString cfgPath = QFileInfo(doc.midPath()).dir().filePath(QStringLiteral("midi.cfg"));
+    const QStringList cfgBefore =
+        QString::fromUtf8(readFileBytes(cfgPath)).split(QLatin1Char('\n'));
 
     // Real edits: a note in empty space, a moved loop start, a volume change.
     int track = -1;
@@ -89,21 +75,12 @@ int runSaveCheck(const QString &projectRoot, const QString &songLabel, const QSt
     int failures = 0;
 
     // The edits must survive a fresh open (new project parse, new document).
-    DecompProject project2;
-    if (!project2.open(projectRoot, &error)) {
-        std::fprintf(stderr, "savecheck: reopen: %s\n", qUtf8Printable(error));
-        return 1;
-    }
-    const SongInfo *song2 = nullptr;
-    for (const SongInfo &s : project2.songs()) {
-        if (s.label == songLabel)
-            song2 = &s;
-    }
-    SongDocument doc2;
-    if (!song2 || !doc2.load(*song2, &error)) {
+    const auto reloadedSong = checks::LoadedSong::load(projectRoot, songLabel, error);
+    if (!reloadedSong) {
         std::fprintf(stderr, "savecheck: FAIL reload: %s\n", qUtf8Printable(error));
         return 1;
     }
+    SongDocument &doc2 = reloadedSong->document();
     DocNote note;
     if (!doc2.findNote(track, base, 72, &note) || note.velocity != 93 || note.duration != 24) {
         std::fprintf(stderr, "savecheck: FAIL: edited note missing after reload\n");
@@ -149,8 +126,8 @@ int runSaveCheck(const QString &projectRoot, const QString &songLabel, const QSt
         mid2agb = projectRoot + QStringLiteral("/tools/mid2agb/mid2agb");
     if (QFileInfo::exists(mid2agb)) {
         QProcess proc;
-        const QString outS = song2->midPath.left(song2->midPath.size() - 4) + ".s";
-        proc.start(mid2agb, QStringList() << doc2.cfg().rawFlags << song2->midPath << outS);
+        const QString outS = doc2.midPath().left(doc2.midPath().size() - 4) + QStringLiteral(".s");
+        proc.start(mid2agb, QStringList() << doc2.cfg().rawFlags << doc2.midPath() << outS);
         proc.waitForFinished(15000);
         if (proc.exitStatus() != QProcess::NormalExit || proc.exitCode() != 0) {
             std::fprintf(stderr, "savecheck: FAIL: mid2agb rejected the saved file: %s\n",

@@ -146,24 +146,28 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = decompProjectFiles + strings({"sound/songs/midi/mus_route102.mid"}) +
                              richVoicegroupFiles},
-            {.name = "sessioncheck",
-             .argv = strings({"--sessioncheck", "{scratch}", "mus_route101"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runSessionCheck(args[1], args[2]); },
-             .scratchKind = ScratchKind::ExistingDirectory,
-             .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = route101RichFiles,
-             .exclusive = true},
-            {.name = "tabcheck",
-             .argv = strings({"--tabcheck", "{scratch}", "mus_route101", "mus_petalburg"}),
-             .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runTabCheck(args[1], args[2], args[3]);
-                 },
-             .scratchKind = ScratchKind::ExistingDirectory,
-             .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = twoSongRichFiles,
-             .exclusive = true},
+            {
+                .name = "sessioncheck",
+                .argv = strings({"--sessioncheck", "{scratch}", "mus_route101"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runSessionCheck(args[1], args[2]);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101RichFiles,
+            },
+            {
+                .name = "tabcheck",
+                .argv = strings({"--tabcheck", "{scratch}", "mus_route101", "mus_petalburg"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runTabCheck(args[1], args[2], args[3]);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles,
+            },
             {.name = "eventviewcheck",
              .argv = strings({"--eventviewcheck", "{scratch}"}),
              .handler =
@@ -219,14 +223,16 @@ const std::vector<CheckDefinition> &catalog()
             {.name = "transportcheck",
              .argv = strings({"--transportcheck"}),
              .handler = [](QApplication &, const QStringList &) { return runTransportCheck(); }},
-            {.name = "audiocheck",
-             .argv = strings({"--audiocheck"}),
-             .handler = [](QApplication &, const QStringList &) { return runAudioCheck(); },
-             .exclusive = true},
-            {.name = "clickcheck",
-             .argv = strings({"--clickcheck"}),
-             .handler = [](QApplication &, const QStringList &) { return runClickCheck(); },
-             .exclusive = true},
+            {
+                .name = "audiocheck",
+                .argv = strings({"--audiocheck"}),
+                .handler = [](QApplication &, const QStringList &) { return runAudioCheck(); },
+            },
+            {
+                .name = "clickcheck",
+                .argv = strings({"--clickcheck"}),
+                .handler = [](QApplication &, const QStringList &) { return runClickCheck(); },
+            },
             {.name = "resonancecheck",
              .argv = strings({"--resonancecheck"}),
              .handler = [](QApplication &, const QStringList &) { return runResonanceCheck(); }},
@@ -251,11 +257,12 @@ const std::vector<CheckDefinition> &catalog()
                 .argv = strings({"--selectioncheck"}),
                 .handler = [](QApplication &, const QStringList &) { return runSelectionCheck(); },
             },
-            {.name = "polycheck",
-             .argv = strings({"--polycheck"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runPolyCheck(optional(args, 1)); },
-             .exclusive = true},
+            {
+                .name = "polycheck",
+                .argv = strings({"--polycheck"}),
+                .handler = [](QApplication &,
+                              const QStringList &args) { return runPolyCheck(optional(args, 1)); },
+            },
             {.name = "samplecheck",
              .argv = strings({"--samplecheck", "{scratch}", "{sample-corpus?}"}),
              .handler =
@@ -364,7 +371,6 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = twoSongRichFiles,
-                .exclusive = true,
             },
             {
                 .name = "rendering-playhead",
@@ -389,7 +395,6 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = twoSongRichFiles,
-                .exclusive = true,
             },
             {.name = "themecheck",
              .argv = strings({"--themecheck"}),

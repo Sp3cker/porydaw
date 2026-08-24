@@ -6,30 +6,18 @@
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
+#include <QEvent>
 #include <QMenu>
-#include <QMouseEvent>
 #include <QString>
 #include <QTimer>
-#include <QWidget>
 
+#include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
-
-namespace {
-
-void sendMouse(QWidget *widget, QEvent::Type type, const QPointF &position, Qt::MouseButton button,
-               Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
-{
-    QMouseEvent event(type, position, QPointF(widget->mapToGlobal(position.toPoint())), button,
-                      buttons, modifiers);
-    QCoreApplication::sendEvent(widget, &event);
-}
-
-} // namespace
 
 void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDocument &document,
                                    const QString &songLabel,
@@ -51,12 +39,12 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
             menu->close();
         }
     });
-    sendMouse(page.canvas(), QEvent::MouseButtonPress,
-              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2), Qt::LeftButton,
-              Qt::LeftButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease,
-              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2), Qt::LeftButton,
-              Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress,
+                              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2),
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease,
+                              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2),
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
     popupCheck(!leftGutterMenuOpened,
                QStringLiteral("left click in a control-row gutter opened its menu"));
@@ -69,9 +57,9 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
             addLaneActions.push_back(action->text());
         menu->close();
     });
-    sendMouse(page.canvas(), QEvent::MouseButtonPress,
-              QPoint(layout::space(layout::Space::One), rowsHeight + 1), Qt::RightButton,
-              Qt::RightButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress,
+                              QPoint(layout::space(layout::Space::One), rowsHeight + 1),
+                              Qt::RightButton, Qt::RightButton, Qt::NoModifier);
     popupCheck(addLaneActions.contains(QStringLiteral("Show: Volume (VOL) (hidden)")),
                QStringLiteral("right-click add-lane menu lost hidden-lane label or order"));
     popupCheck(addLaneActions.contains(QStringLiteral("Hidden CC lanes")),
@@ -85,20 +73,22 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
             ccLaneActions.push_back(action->text());
         menu->close();
     });
-    sendMouse(page.canvas(), QEvent::MouseButtonPress,
-              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2), Qt::RightButton,
-              Qt::RightButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease,
-              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2), Qt::RightButton,
-              Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress,
+                              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2),
+                              Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease,
+                              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2),
+                              Qt::RightButton, Qt::NoButton, Qt::NoModifier);
     popupCheck(ccLaneActions.contains(QStringLiteral("Copy CC lane")) &&
                    ccLaneActions.contains(QStringLiteral("Hide CC lane")) &&
                    ccLaneActions.contains(QStringLiteral("Delete CC lane")),
                QStringLiteral("CC lane header menu lost Copy/Hide/Delete CC lane"));
     const QRect tempoRect = page.canvas()->pinnedTempoRect();
     const QPoint tempoHeader(projectionGeometry.plotOrigin / 2, tempoRect.center().y());
-    sendMouse(page.canvas(), QEvent::MouseButtonPress, tempoHeader, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease, tempoHeader, Qt::LeftButton, Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeader, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeader,
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
     QStringList tempoHeaderActions;
     QTimer::singleShot(0, [&] {
@@ -109,10 +99,10 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
             tempoHeaderActions.push_back(action->text());
         menu->close();
     });
-    sendMouse(page.canvas(), QEvent::MouseButtonPress, tempoHeader, Qt::RightButton,
-              Qt::RightButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease, tempoHeader, Qt::RightButton,
-              Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeader,
+                              Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeader,
+                              Qt::RightButton, Qt::NoButton, Qt::NoModifier);
     popupCheck(tempoHeaderActions.contains(QStringLiteral("Copy")) &&
                    tempoHeaderActions.contains(QStringLiteral("Paste")) &&
                    tempoHeaderActions.contains(QStringLiteral("Clear Tempo")),
@@ -137,8 +127,10 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
             tempoNodeActions.push_back(action->text());
         menu->close();
     });
-    sendMouse(page.canvas(), QEvent::MouseButtonPress, tempoNode, Qt::RightButton, Qt::RightButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease, tempoNode, Qt::RightButton, Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoNode, Qt::RightButton,
+                              Qt::RightButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoNode,
+                              Qt::RightButton, Qt::NoButton, Qt::NoModifier);
     popupCheck(tempoNodeActions ==
                    QStringList({QStringLiteral("Set Value"), QStringLiteral("Delete")}),
                QStringLiteral("Tempo node context menu actions were not exactly Set Value, "

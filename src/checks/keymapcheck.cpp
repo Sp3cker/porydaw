@@ -11,7 +11,6 @@
 #include <QScrollBar>
 #include <QSettings>
 #include <QTabWidget>
-#include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <cstdio>
@@ -55,14 +54,6 @@ QPushButton *findButton(QWidget *root, const QString &text)
 
 int runKeymapCheck()
 {
-    QTemporaryDir settingsDir;
-    if (!settingsDir.isValid()) {
-        std::fprintf(stderr, "keymapcheck: no temp dir for settings\n");
-        return 1;
-    }
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
-
     int failures = 0;
     const auto check = [&failures](bool ok, const char *what) {
         if (!ok) {

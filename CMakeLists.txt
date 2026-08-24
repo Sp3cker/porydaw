@@ -395,6 +395,10 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/fixturecatalog.cpp
         src/checks/fixturecatalog.hpp
         src/checks/fwd.hpp
+        src/checks/support/eventsynth.cpp
+        src/checks/support/eventsynth.h
+        src/checks/support/songfixture.cpp
+        src/checks/support/songfixture.h
         src/checks/selectioncheck.cpp
         src/checks/selftest.cpp
         src/checks/tabcheck.cpp
@@ -402,6 +406,21 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/pitchbendcheck.cpp
         src/checks/pitchbendcheck.hpp
         src/checks/rollcheck.cpp
+        src/checks/rollcheck/rollcheck.h
+        src/checks/rollcheck/harness.cpp
+        src/checks/rollcheck/identity.cpp
+        src/checks/rollcheck/remap.cpp
+        src/checks/rollcheck/camera.cpp
+        src/checks/rollcheck/pencil.cpp
+        src/checks/rollcheck/pencil_velocity.cpp
+        src/checks/rollcheck/selection.cpp
+        src/checks/rollcheck/note_rendering.cpp
+        src/checks/rollcheck/resize.cpp
+        src/checks/rollcheck/keyboard.cpp
+        src/checks/rollcheck/presentation.cpp
+        src/checks/rollcheck/scale_projection.cpp
+        src/checks/rollcheck/scale_fold.cpp
+        src/checks/rollcheck/scale_editing.cpp
         src/checks/rollcheckwindowing.cpp
         src/checks/rollcheckplayhead.cpp
         src/checks/rollcheckplayhead.h
@@ -410,6 +429,23 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/viewcheck.cpp
         src/checks/roundtrip.cpp
         src/checks/editcheck.cpp
+        src/checks/editcheck/support.h
+        src/checks/editcheck/support.cpp
+        src/checks/editcheck/documentcontracts.cpp
+        src/checks/editcheck/documentcontractfixtures.h
+        src/checks/editcheck/documentcontractbase.cpp
+        src/checks/editcheck/documentcontracttracks.cpp
+        src/checks/editcheck/documentcontractmoves.cpp
+        src/checks/editcheck/timerange.cpp
+        src/checks/editcheck/format0.cpp
+        src/checks/editcheck/foreignmetadata.cpp
+        src/checks/editcheck/songroundtrip.cpp
+        src/checks/editcheck/songrawevents.cpp
+        src/checks/editcheck/songnotes.cpp
+        src/checks/editcheck/songranges.cpp
+        src/checks/editcheck/songmoves.cpp
+        src/checks/editcheck/songtimeautomation.cpp
+        src/checks/editcheck/songtracks.cpp
         src/checks/scalecheck.cpp
         src/checks/savecheck.cpp
         src/checks/onboardcheck.cpp
@@ -438,10 +474,21 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/mkcheck.cpp
         src/checks/ignorecheck.cpp
         src/checks/samplecheck.cpp
+        src/checks/samplecheck/samplecheck.h
+        src/checks/samplecheck/fixtures.h
+        src/checks/samplecheck/fixtures.cpp
+        src/checks/samplecheck/project.cpp
+        src/checks/samplecheck/decoder.cpp
+        src/checks/samplecheck/dsp.cpp
+        src/checks/samplecheck/editor.cpp
+        src/checks/samplecheck/analysis.cpp
+        src/checks/samplecheck/soundfont.cpp
+        src/checks/samplecheck/integration.cpp
         src/checks/sessioncheck.cpp
         src/checks/keymapcheck.cpp
         src/checks/hostcheck.cpp
         src/checks/mainwindowroutingcheck.cpp
+        src/checks/sidecarcheck.cpp
         src/checks/noteidcheck.cpp
         src/checks/renderingplayheadcheck.cpp
         src/checks/rollcheckautomation.cpp
@@ -463,6 +510,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automationgesturecheck/lifecycle.cpp
         src/checks/rollcheckdrawer.cpp
         src/checks/rollcheckpsgvelocity.cpp
+        src/checks/velocitymodelcheck.cpp
         src/checks/themechecks.cpp
         src/checks/fontcheck.cpp
         src/ui/theme/themecheck.cpp

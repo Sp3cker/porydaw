@@ -7,12 +7,10 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
-#include <QMouseEvent>
 #include <QSettings>
 #include <QSizePolicy>
 #include <QSpinBox>
 #include <QTabWidget>
-#include <QTemporaryDir>
 #include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
@@ -23,6 +21,7 @@
 #include <cmath>
 #include <cstdio>
 
+#include "checks/support/eventsynth.h"
 #include "mainwindow.h"
 #include "porydaw_scale.h"
 #include "ui/layout.h"
@@ -269,40 +268,36 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
               "application-output dial changed song state or document undo state");
         outputDial->setValue(50);
 
-        const auto sendOutputMouse = [outputDial](QEvent::Type type, const QPointF &position,
-                                                  Qt::MouseButton button, Qt::MouseButtons buttons,
-                                                  Qt::KeyboardModifiers modifiers) {
-            QMouseEvent event(type, position, QPointF(outputDial->mapToGlobal(position.toPoint())),
-                              button, buttons, modifiers);
-            QApplication::sendEvent(outputDial, &event);
-        };
         const QPointF outputCenter(outputDial->rect().center());
         const int documentUndoCount = tabA->doc.undoStack()->count();
-        sendOutputMouse(QEvent::MouseButtonPress, outputCenter, Qt::LeftButton, Qt::LeftButton,
-                        Qt::NoModifier);
-        sendOutputMouse(QEvent::MouseButtonRelease, outputCenter, Qt::LeftButton, Qt::NoButton,
-                        Qt::NoModifier);
+        checks::events::sendMouse(*outputDial, QEvent::MouseButtonPress, outputCenter,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*outputDial, QEvent::MouseButtonRelease, outputCenter,
+                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         check(outputDial->value() == 50 && tabA->doc.undoStack()->count() == documentUndoCount &&
                   m_undoGroup->activeStack() == tabA->doc.undoStack(),
               "application-output dial treated a plain click as an edit");
 
-        sendOutputMouse(QEvent::MouseButtonPress, outputCenter, Qt::LeftButton, Qt::LeftButton,
-                        Qt::NoModifier);
-        sendOutputMouse(QEvent::MouseMove, outputCenter + QPointF(0.0, 11.0), Qt::NoButton,
-                        Qt::LeftButton, Qt::NoModifier);
-        sendOutputMouse(QEvent::MouseButtonRelease, outputCenter + QPointF(0.0, 11.0),
-                        Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        checks::events::sendMouse(*outputDial, QEvent::MouseButtonPress, outputCenter,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*outputDial, QEvent::MouseMove, outputCenter + QPointF(0.0, 11.0),
+                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*outputDial, QEvent::MouseButtonRelease,
+                                  outputCenter + QPointF(0.0, 11.0), Qt::LeftButton, Qt::NoButton,
+                                  Qt::NoModifier);
         check(outputDial->value() > 50 && tabA->doc.undoStack()->count() == documentUndoCount &&
                   m_undoGroup->activeStack() == tabA->doc.undoStack(),
               "dragging down did not increase application output volume");
 
         outputDial->setValue(50);
-        sendOutputMouse(QEvent::MouseButtonPress, outputCenter, Qt::LeftButton, Qt::LeftButton,
-                        Qt::NoModifier);
-        sendOutputMouse(QEvent::MouseMove, outputCenter + QPointF(0.0, -11.0), Qt::NoButton,
-                        Qt::LeftButton, Qt::NoModifier);
-        sendOutputMouse(QEvent::MouseButtonRelease, outputCenter + QPointF(0.0, -11.0),
-                        Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        checks::events::sendMouse(*outputDial, QEvent::MouseButtonPress, outputCenter,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*outputDial, QEvent::MouseMove,
+                                  outputCenter + QPointF(0.0, -11.0), Qt::NoButton, Qt::LeftButton,
+                                  Qt::NoModifier);
+        checks::events::sendMouse(*outputDial, QEvent::MouseButtonRelease,
+                                  outputCenter + QPointF(0.0, -11.0), Qt::LeftButton, Qt::NoButton,
+                                  Qt::NoModifier);
         check(outputDial->value() < 50 && tabA->doc.undoStack()->count() == documentUndoCount &&
                   m_undoGroup->activeStack() == tabA->doc.undoStack(),
               "dragging up did not decrease application output volume");
@@ -346,13 +341,13 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         auto *volEdit = volSpin->findChild<QLineEdit *>();
         if (check(volEdit != nullptr, "volume spinbox has no line edit")) {
             QKeyEvent spaceOverride(QEvent::ShortcutOverride, Qt::Key_Space, Qt::NoModifier,
-                                    QStringLiteral(" "));
+                                    QStringLiteral(" "), false, 1);
             spaceOverride.ignore();
             QApplication::sendEvent(volEdit, &spaceOverride);
             check(!spaceOverride.isAccepted(),
                   "volume spinbox claimed Space from the play/pause shortcut");
             QKeyEvent digitOverride(QEvent::ShortcutOverride, Qt::Key_5, Qt::NoModifier,
-                                    QStringLiteral("5"));
+                                    QStringLiteral("5"), false, 1);
             digitOverride.ignore();
             QApplication::sendEvent(volEdit, &digitOverride);
             check(digitOverride.isAccepted(), "volume spinbox no longer claims plain digit keys");
@@ -632,14 +627,6 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
 
 int runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB)
 {
-    // Redirected settings: the user's real session is never touched.
-    QTemporaryDir settingsDir;
-    if (!settingsDir.isValid()) {
-        std::fprintf(stderr, "tabcheck: no temp dir for settings\n");
-        return 1;
-    }
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
     {
         MainWindow window;
         if (!window.runTabCheck(projectRoot, songA, songB))

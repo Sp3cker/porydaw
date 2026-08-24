@@ -10,11 +10,11 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
-#include <QMouseEvent>
 #include <QString>
 #include <QUndoStack>
 #include <QWidget>
 
+#include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -70,22 +70,16 @@ constexpr int kCcHeld = 24;
 constexpr int kCcNode = 96;
 constexpr int kCcSecond = 72;
 
-void sendMouse(QWidget *widget, QEvent::Type type, const QPointF &position, Qt::MouseButton button,
-               Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
-{
-    QMouseEvent event(type, position, QPointF(widget->mapToGlobal(position.toPoint())), button,
-                      buttons, modifiers);
-    QCoreApplication::sendEvent(widget, &event);
-}
-
 void sendActivatedDrag(QWidget *widget, const QPointF &start, const QPointF &target,
-                       int activationDistance, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+                       int activationDistance, Qt::KeyboardModifiers modifiers)
 {
     const QPointF activation = start + QPointF(activationDistance, 0);
-    sendMouse(widget, QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton, modifiers);
-    sendMouse(widget, QEvent::MouseMove, activation, Qt::NoButton, Qt::LeftButton, modifiers);
-    sendMouse(widget, QEvent::MouseMove, activation + target - start, Qt::NoButton, Qt::LeftButton,
-              modifiers);
+    checks::events::sendMouse(*widget, QEvent::MouseButtonPress, start, Qt::LeftButton,
+                              Qt::LeftButton, modifiers);
+    checks::events::sendMouse(*widget, QEvent::MouseMove, activation, Qt::NoButton, Qt::LeftButton,
+                              modifiers);
+    checks::events::sendMouse(*widget, QEvent::MouseMove, activation + target - start, Qt::NoButton,
+                              Qt::LeftButton, modifiers);
 }
 
 void pump()
@@ -240,10 +234,10 @@ bool toggleTempoExpanded(AutomationPage &page, bool wantExpanded, int &failures)
     if (expanded == wantExpanded)
         return expanded;
     const QImage beforeToggle = page.canvas()->grab().toImage();
-    sendMouse(page.canvas(), QEvent::MouseButtonPress, tempoHeaderPoint(page), Qt::LeftButton,
-              Qt::LeftButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease, tempoHeaderPoint(page), Qt::LeftButton,
-              Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeaderPoint(page),
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeaderPoint(page),
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     pump();
     if (page.canvas()->grab().toImage() == beforeToggle) {
         std::fprintf(stderr, "automation-check: FAIL paint: tempo header toggle did not repaint\n");
@@ -457,7 +451,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         const int drag = geometry.nodeDragActivationDistance + 8;
         const QPointF dragTarget(tickX(kNodeTick + 48),
                                  nodelane::valueY(lane, geom.body, geometry, node - 24));
-        sendActivatedDrag(page.canvas(), nodePos, dragTarget, drag);
+        sendActivatedDrag(page.canvas(), nodePos, dragTarget, drag, Qt::NoModifier);
         pump();
         const auto dragSnap = snapshot(document);
         const QImage dragPreview = page.canvas()->grab().toImage();
@@ -476,7 +470,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         view.selectionModel().setTimeSelection(selection);
         refresh(page, document, live);
         const QPointF multiTarget(nodeX, nodelane::valueY(lane, geom.body, geometry, node - 24));
-        sendActivatedDrag(page.canvas(), nodePos, multiTarget, drag);
+        sendActivatedDrag(page.canvas(), nodePos, multiTarget, drag, Qt::NoModifier);
         pump();
         const auto multiSnap = snapshot(document);
         const QImage multiPreview = page.canvas()->grab().toImage();
@@ -497,7 +491,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                                  nodelane::valueY(lane, geom.body, geometry, (held + node) / 2));
         const QPointF sweepTarget(
             tickX(144), nodelane::valueY(lane, geom.body, geometry, (held + node) / 2 + 40));
-        sendActivatedDrag(page.canvas(), sweepStart, sweepTarget, drag);
+        sendActivatedDrag(page.canvas(), sweepStart, sweepTarget, drag, Qt::NoModifier);
         pump();
         const auto sweepSnap = snapshot(document);
         const QImage sweepPreview = page.canvas()->grab().toImage();
@@ -509,12 +503,12 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         cancel();
         const QPointF rampStart(tickX(48), heldY);
         const QPointF rampEnd(tickX(kSecondTick), nodeY);
-        sendMouse(page.canvas(), QEvent::MouseButtonPress, rampStart, Qt::LeftButton,
-                  Qt::LeftButton, Qt::ShiftModifier);
-        sendMouse(page.canvas(), QEvent::MouseMove, rampStart + QPointF(drag, 0), Qt::NoButton,
-                  Qt::LeftButton, Qt::ShiftModifier);
-        sendMouse(page.canvas(), QEvent::MouseMove, rampEnd, Qt::NoButton, Qt::LeftButton,
-                  Qt::ShiftModifier);
+        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, rampStart,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier);
+        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, rampStart + QPointF(drag, 0),
+                                  Qt::NoButton, Qt::LeftButton, Qt::ShiftModifier);
+        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, rampEnd, Qt::NoButton,
+                                  Qt::LeftButton, Qt::ShiftModifier);
         pump();
         const auto rampSnap = snapshot(document);
         const QImage rampPreview = page.canvas()->grab().toImage();
@@ -537,10 +531,12 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         const QPointF pencilStart(tickX(24), nodelane::valueY(lane, geom.body, geometry, 40));
         const QPointF pencilHold(tickX(72), nodelane::valueY(lane, geom.body, geometry, 40));
         const QPointF pencilEnd(tickX(120), nodelane::valueY(lane, geom.body, geometry, 100));
-        sendMouse(page.canvas(), QEvent::MouseButtonPress, pencilStart, Qt::LeftButton,
-                  Qt::LeftButton);
-        sendMouse(page.canvas(), QEvent::MouseMove, pencilHold, Qt::NoButton, Qt::LeftButton);
-        sendMouse(page.canvas(), QEvent::MouseMove, pencilEnd, Qt::NoButton, Qt::LeftButton);
+        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, pencilStart,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, pencilHold, Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, pencilEnd, Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
         pump();
         const auto pencilSnap = snapshot(document);
         const QImage pencilPreview = page.canvas()->grab().toImage();

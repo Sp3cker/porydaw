@@ -1,5 +1,7 @@
+#include "checks/support/eventsynth.h"
+#include "checks/support/songfixture.h"
+
 #include "core/songdocument.h"
-#include "project/decompproject.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawerpage.h"
@@ -12,7 +14,6 @@
 
 #include <QCoreApplication>
 #include <QImage>
-#include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
 #include <QWidget>
@@ -67,31 +68,14 @@ int runRenderingPlayheadCheck(const QString &scratchProject, const QString &song
         std::fprintf(stderr, "rendering-playhead: song label is empty\n");
         return 1;
     }
-    DecompProject project;
     QString projectError;
-    if (!project.open(scratchProject, &projectError)) {
-        std::fprintf(stderr, "rendering-playhead: cannot open scratch project %s: %s\n",
-                     qUtf8Printable(scratchProject), qUtf8Printable(projectError));
-        return 1;
-    }
-    const SongInfo *song = nullptr;
-    for (const SongInfo &candidate : project.songs()) {
-        if (candidate.label == songLabel && candidate.isPlayable()) {
-            song = &candidate;
-            break;
-        }
-    }
-    if (!song) {
-        std::fprintf(stderr, "rendering-playhead: no playable song %s\n",
-                     qUtf8Printable(songLabel));
-        return 1;
-    }
-    SongDocument fixtureDocument;
-    if (!fixtureDocument.load(*song, &projectError)) {
+    const auto fixtureSong = checks::LoadedSong::load(scratchProject, songLabel, projectError);
+    if (!fixtureSong) {
         std::fprintf(stderr, "rendering-playhead: could not load song %s: %s\n",
                      qUtf8Printable(songLabel), qUtf8Printable(projectError));
         return 1;
     }
+    SongDocument &fixtureDocument = fixtureSong->document();
     auto fixtureTimeline = fixtureDocument.buildTimeline(48000.0);
     if (!fixtureTimeline) {
         std::fprintf(stderr, "rendering-playhead: could not build timeline for song %s\n",
@@ -167,20 +151,16 @@ int runRenderingPlayheadCheck(const QString &scratchProject, const QString &song
     const uint64_t revisionBeforePan = document.revision();
     const int undoBeforePan = document.undoStack()->count();
     const QPointF panPoint(24.0, 48.0);
-    const QPointF globalPanPoint(velocity.mapToGlobal(panPoint.toPoint()));
-    QMouseEvent commitPress(QEvent::MouseButtonPress, panPoint, globalPanPoint, Qt::MiddleButton,
-                            Qt::MiddleButton, Qt::NoModifier);
-    QCoreApplication::sendEvent(&velocity, &commitPress);
-    QMouseEvent commitRelease(QEvent::MouseButtonRelease, panPoint, globalPanPoint,
-                              Qt::MiddleButton, Qt::NoButton, Qt::NoModifier);
-    QCoreApplication::sendEvent(&velocity, &commitRelease);
+    checks::events::sendMouse(velocity, QEvent::MouseButtonPress, panPoint, Qt::MiddleButton,
+                              Qt::MiddleButton, Qt::NoModifier);
+    checks::events::sendMouse(velocity, QEvent::MouseButtonRelease, panPoint, Qt::MiddleButton,
+                              Qt::NoButton, Qt::NoModifier);
     check(document.revision() == revisionBeforePan &&
               document.undoStack()->count() == undoBeforePan,
           "concrete velocity owner should leave the document untouched while panning");
 
-    QMouseEvent cancelPress(QEvent::MouseButtonPress, panPoint, globalPanPoint, Qt::MiddleButton,
-                            Qt::MiddleButton, Qt::NoModifier);
-    QCoreApplication::sendEvent(&velocity, &cancelPress);
+    checks::events::sendMouse(velocity, QEvent::MouseButtonPress, panPoint, Qt::MiddleButton,
+                              Qt::MiddleButton, Qt::NoModifier);
     velocity.cancelInteraction();
     check(document.revision() == revisionBeforePan &&
               document.undoStack()->count() == undoBeforePan,

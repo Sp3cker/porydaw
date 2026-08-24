@@ -1,3 +1,6 @@
+#include "checks/support/eventsynth.h"
+#include "checks/support/songfixture.h"
+
 #include "core/velocitymodel.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
@@ -16,17 +19,12 @@
 #include <QEvent>
 #include <QFontMetricsF>
 #include <QImage>
-#include <QKeyEvent>
-#include <QMouseEvent>
 #include <QPainter>
-#include <QSettings>
 #include <QTemporaryDir>
 #include <QToolButton>
-#include <QWheelEvent>
 
 #include "core/miditimeline.h"
 #include "core/noteid.h"
-#include "project/decompproject.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
@@ -44,22 +42,6 @@ SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
     event.data0 = key;
     event.data1 = velocity;
     return event;
-}
-
-void sendMouse(QWidget &widget, QEvent::Type type, const QPointF &position, Qt::MouseButton button,
-               Qt::MouseButtons buttons = Qt::NoButton,
-               Qt::KeyboardModifiers modifiers = Qt::NoModifier)
-{
-    QMouseEvent event(type, position, QPointF(widget.mapToGlobal(position.toPoint())), button,
-                      buttons, modifiers);
-    QApplication::sendEvent(&widget, &event);
-}
-
-void sendWheel(QWidget &widget, const QPoint &position, int vertical)
-{
-    QWheelEvent event(QPointF(position), QPointF(widget.mapToGlobal(position)), QPoint(),
-                      QPoint(0, vertical), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
-    QApplication::sendEvent(&widget, &event);
 }
 
 uint64_t drawerContextTick(double tick)
@@ -143,14 +125,6 @@ ExpectedVelocityGeometry expectedVelocityGeometry()
 int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel,
                          const QString &screenshotPath)
 {
-    QTemporaryDir settingsDir;
-    if (!settingsDir.isValid()) {
-        std::fprintf(stderr, "velocity-page: FAIL: could not isolate QSettings\n");
-        return 1;
-    }
-    QSettings::setDefaultFormat(QSettings::IniFormat);
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
     int failures = 0;
     const auto check = [&failures](bool condition, const char *message) {
         if (!condition) {
@@ -162,33 +136,14 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         std::fprintf(stderr, "velocity-page: FAIL: scratch project and song label are required\n");
         return 1;
     }
-    DecompProject fixtureProject;
     QString fixtureError;
-    if (!fixtureProject.open(scratchProject, &fixtureError)) {
-        std::fprintf(stderr, "velocity-page: FAIL %s: could not open fixture project: %s\n",
-                     qUtf8Printable(songLabel), qUtf8Printable(fixtureError));
-        return 1;
-    }
-    const SongInfo *fixtureSong = nullptr;
-    for (const SongInfo &candidate : fixtureProject.songs()) {
-        if (candidate.label == songLabel && candidate.isPlayable()) {
-            fixtureSong = &candidate;
-            break;
-        }
-    }
+    auto fixtureSong = checks::LoadedSong::load(scratchProject, songLabel, fixtureError);
     if (!fixtureSong) {
-        std::fprintf(
-            stderr,
-            "velocity-page: FAIL %s: requested fixture song was not found or has no MIDI source\n",
-            qUtf8Printable(songLabel));
-        return 1;
-    }
-    SongDocument fixtureDocument;
-    if (!fixtureDocument.load(*fixtureSong, &fixtureError)) {
         std::fprintf(stderr, "velocity-page: FAIL %s: could not load fixture song: %s\n",
                      qUtf8Printable(songLabel), qUtf8Printable(fixtureError));
         return 1;
     }
+    SongDocument &fixtureDocument = fixtureSong->document();
     auto fixtureTimeline = fixtureDocument.buildTimeline(48000.0);
     if (!fixtureTimeline) {
         std::fprintf(stderr, "velocity-page: FAIL %s: could not build fixture timeline\n",
@@ -233,7 +188,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                             fixtureArea->height() / 2);
     const double tickBeforeZoom = fixtureView.tickAtContentX(zoomAnchorContentX);
     const double zoomBefore = fixtureView.pxPerBeat();
-    sendWheel(*fixtureArea, zoomAnchor, 120);
+    checks::events::sendWheel(*fixtureArea, QPointF(zoomAnchor), QPoint(), QPoint(0, 120),
+                              Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
     QApplication::processEvents();
     check(fixtureView.pxPerBeat() > zoomBefore, "plain wheel must change velocity-lane time zoom");
     check(std::abs(fixtureView.tickAtContentX(zoomAnchorContentX) - tickBeforeZoom) < 0.001,
@@ -434,9 +390,12 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const auto panStart =
         QPointF(area.plotOrigin() + layout::space(layout::Space::Two), area.height() / 2.0);
     const auto panLeftPastZero = panStart + QPointF(layout::space(layout::Space::Eight), 0.0);
-    sendMouse(area, QEvent::MouseButtonPress, panStart, Qt::MiddleButton, Qt::MiddleButton);
-    sendMouse(area, QEvent::MouseMove, panLeftPastZero, Qt::NoButton, Qt::MiddleButton);
-    sendMouse(area, QEvent::MouseButtonRelease, panLeftPastZero, Qt::MiddleButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, panStart, Qt::MiddleButton,
+                              Qt::MiddleButton, Qt::NoModifier);
+    checks::events::sendMouse(area, QEvent::MouseMove, panLeftPastZero, Qt::NoButton,
+                              Qt::MiddleButton, Qt::NoModifier);
+    checks::events::sendMouse(area, QEvent::MouseButtonRelease, panLeftPastZero, Qt::MiddleButton,
+                              Qt::NoButton, Qt::NoModifier);
     QApplication::processEvents();
     const auto afterPanPastZero = area.grab().toImage();
     check(view.viewState().scrollPx == live.horizontalScroll &&
@@ -523,12 +482,13 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const VelocityAxis hoveredNoiseProjection(map, area.axis().geometry());
     check(area.axis().map() == selectedMap && selectedMap != map,
           "hover context fixture must begin on the selected Wave note");
-    sendMouse(area, QEvent::MouseMove,
-              QPointF(double(area.plotOrigin()) +
-                          double(notes[1].tick) * live.timeZoom / double(timeline->ticksPerBeat) -
-                          live.horizontalScroll,
-                      hoveredNoiseProjection.levelToY(int(hoveredPsgLevel))),
-              Qt::NoButton);
+    checks::events::sendMouse(
+        area, QEvent::MouseMove,
+        QPointF(double(area.plotOrigin()) +
+                    double(notes[1].tick) * live.timeZoom / double(timeline->ticksPerBeat) -
+                    live.horizontalScroll,
+                hoveredNoiseProjection.levelToY(int(hoveredPsgLevel))),
+        Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     QApplication::processEvents();
     const auto &contextGraduations = area.axis().graduations();
     check(area.axis().map() == map && area.axis().graduationCount() == map.levelCount() &&
@@ -563,7 +523,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const QRect velocityLabelBounds = pixelRect(
         QRectF(double(layout::space(layout::Space::Two)), 0.0,
                double(area.plotOrigin() - 2 * layout::space(layout::Space::Two)), area.height()));
-    sendMouse(area, QEvent::MouseMove, QPointF(paintNodeX, unselectedY), Qt::NoButton);
+    checks::events::sendMouse(area, QEvent::MouseMove, QPointF(paintNodeX, unselectedY),
+                              Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     QApplication::processEvents();
     const QImage hoveredVelocityImage = area.grab().toImage();
     const auto &hoveredGraduations = area.axis().graduations();
@@ -715,8 +676,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const QPointF stem(stemX, nodeY);
     const QPointF firstDrag = stem + QPointF(0.0, double(area.height()));
     const QPointF drag = stem + QPointF(0.0, -double(area.height()));
-    sendMouse(area, QEvent::MouseButtonPress, stem, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(area, QEvent::MouseMove, firstDrag, Qt::NoButton, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, stem, Qt::LeftButton, Qt::LeftButton,
+                              Qt::NoModifier);
+    checks::events::sendMouse(area, QEvent::MouseMove, firstDrag, Qt::NoButton, Qt::LeftButton,
+                              Qt::NoModifier);
     check(view.selectionModel().noteSelection() ==
               std::vector<NoteId>({notes[0].noteId, notes[1].noteId}),
           "dragging selected velocity nodes must preserve their shared selection");
@@ -742,7 +705,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const QRect activeDragRing = pixelRect(QRectF(nodeX - 6.0, firstDraggedY - 6.0, 4.0, 12.0));
     check(hasColorNear(activeDrag, activeDragRing, area.palette().highlight().color(), 16),
           "dragging a selected velocity node must retain its visible selection ring");
-    sendMouse(area, QEvent::MouseMove, drag, Qt::NoButton, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseMove, drag, Qt::NoButton, Qt::LeftButton,
+                              Qt::NoModifier);
     const auto finalPreviewFirst = view.previewVelocity(notes[0].noteId);
     const auto finalPreviewSecond = view.previewVelocity(notes[1].noteId);
     check(finalPreviewFirst && finalPreviewSecond && firstPreviewFirst &&
@@ -750,7 +714,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
               document.revision() == revisionBeforeGesture &&
               document.undoStack()->count() == undoDepth,
           "successive velocity updates must remain deferred while the drag is held");
-    sendMouse(area, QEvent::MouseButtonRelease, drag, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonRelease, drag, Qt::LeftButton, Qt::NoButton,
+                              Qt::NoModifier);
     QObject::disconnect(rebuildConnection);
     DocNote committedFirst;
     DocNote committedSecond;
@@ -780,8 +745,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const QPointF restoredNode(nodeX, restoredLevel
                                           ? area.axis().levelToY(int(*restoredLevel))
                                           : area.axis().velocityToY(restoredFirst.velocity));
-    sendMouse(area, QEvent::MouseButtonPress, restoredNode, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(area, QEvent::MouseButtonRelease, restoredNode, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, restoredNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(area, QEvent::MouseButtonRelease, restoredNode, Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId},
           "clicking one selected velocity node must collapse the other selected nodes");
 
@@ -792,7 +759,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const QPointF secondNode(nodeX, secondLevel ? area.axis().levelToY(int(*secondLevel))
                                                 : area.axis().velocityToY(notes[1].velocity));
     const int undoDepthBeforeUngrab = document.undoStack()->count();
-    sendMouse(area, QEvent::MouseButtonPress, secondNode, Qt::LeftButton, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, secondNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
     QEvent ungrabMouse(QEvent::UngrabMouse);
     QApplication::sendEvent(&area, &ungrabMouse);
     check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId} &&
@@ -820,8 +788,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                                 image.height() / 4));
     };
     const QImage bandBaseline = grabSelectorProbe();
-    sendMouse(area, QEvent::MouseButtonPress, selectorStart, Qt::RightButton, Qt::RightButton);
-    sendMouse(area, QEvent::MouseMove, selectorEnd, Qt::NoButton, Qt::RightButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, selectorStart, Qt::RightButton,
+                              Qt::RightButton, Qt::NoModifier);
+    checks::events::sendMouse(area, QEvent::MouseMove, selectorEnd, Qt::NoButton, Qt::RightButton,
+                              Qt::NoModifier);
     QApplication::processEvents();
     const QImage activeBand = grabSelectorProbe();
     check(!samePixels(bandBaseline, activeBand),
@@ -854,13 +824,15 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     }
     check(sampledPixels > 0 && translucentPixels * 2 >= sampledPixels,
           "drag-select must composite the translucent selection fill over velocity content");
-    sendMouse(area, QEvent::MouseMove, selectorContractedEnd, Qt::NoButton, Qt::RightButton);
+    checks::events::sendMouse(area, QEvent::MouseMove, selectorContractedEnd, Qt::NoButton,
+                              Qt::RightButton, Qt::NoModifier);
     QApplication::processEvents();
     const QImage contractedBand = grabSelectorProbe();
     check(!samePixels(bandBaseline, contractedBand) &&
               samePixels(abandonedCorner(bandBaseline), abandonedCorner(contractedBand)),
           "contracting drag-select must clear the abandoned selector area");
-    sendMouse(area, QEvent::MouseButtonRelease, selectorContractedEnd, Qt::RightButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonRelease, selectorContractedEnd,
+                              Qt::RightButton, Qt::NoButton, Qt::NoModifier);
     QApplication::processEvents();
     check(samePixels(bandBaseline, grabSelectorProbe()),
           "completed drag-select must clear its selector overlay");
@@ -870,8 +842,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     area.refreshLiveState(live);
     QApplication::processEvents();
     const QImage cancelledBandBaseline = grabSelectorProbe();
-    sendMouse(area, QEvent::MouseButtonPress, selectorStart, Qt::RightButton, Qt::RightButton);
-    sendMouse(area, QEvent::MouseMove, selectorEnd, Qt::NoButton, Qt::RightButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, selectorStart, Qt::RightButton,
+                              Qt::RightButton, Qt::NoModifier);
+    checks::events::sendMouse(area, QEvent::MouseMove, selectorEnd, Qt::NoButton, Qt::RightButton,
+                              Qt::NoModifier);
     QApplication::processEvents();
     QEvent cancelBand(QEvent::UngrabMouse);
     QApplication::sendEvent(&area, &cancelBand);
@@ -899,8 +873,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                                   live.horizontalScroll,
                               currentLevel ? area.axis().levelToY(int(*currentLevel))
                                            : area.axis().velocityToY(currentFirst.velocity));
-    sendMouse(area, QEvent::MouseButtonPress, currentNode, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(area, QEvent::MouseButtonRelease, currentNode, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, currentNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(area, QEvent::MouseButtonRelease, currentNode, Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId},
           "selected velocity node must win a stacked-node click");
     document.addNote(0, currentFirst.tick + 8, currentFirst.key, currentFirst.duration,
@@ -936,10 +912,12 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         area.refreshLiveState(live);
         QApplication::processEvents();
         const QPointF stackedNode = velocityNode(currentFirst);
-        sendMouse(area, QEvent::MouseButtonPress, stackedNode, Qt::LeftButton, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, stackedNode, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
         check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[1].noteId},
               "overlapping circles must resolve to one later-painted target");
-        sendMouse(area, QEvent::MouseButtonRelease, stackedNode, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, stackedNode, Qt::LeftButton,
+                                  Qt::NoButton, Qt::NoModifier);
         check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[1].noteId},
               "overlapping-circle release must retain its frozen target");
         ++live.editCursorTick;
@@ -947,11 +925,12 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         area.refreshLiveState(live);
         QApplication::processEvents();
         const QPointF selectedStackedNode = velocityNode(currentFirst);
-        sendMouse(area, QEvent::MouseButtonPress, selectedStackedNode, Qt::LeftButton,
-                  Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, selectedStackedNode,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
         check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId},
               "selected overlapping velocity nodes must outrank unselected candidates");
-        sendMouse(area, QEvent::MouseButtonRelease, selectedStackedNode, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, selectedStackedNode,
+                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         check(view.selectionModel().noteSelection() == std::vector<NoteId>{notes[0].noteId},
               "selected-layer velocity click must keep its selected target");
         view.selectionModel().setNoteSelection({});
@@ -959,7 +938,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         area.refreshLiveState(live);
         QApplication::processEvents();
         const QPointF circleNode = velocityNode(overlapNote);
-        sendMouse(area, QEvent::MouseButtonPress, circleNode, Qt::LeftButton, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, circleNode, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
         QApplication::processEvents();
         const QImage circleHeld = area.grab().toImage();
         const QRect circleRingBounds =
@@ -969,10 +949,12 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                 hasColorNear(circleHeld, circleRingBounds, area.palette().highlight().color(), 16),
             "a circle hit must outrank stem-only overlap and paint one selected ring");
         const QPointF movedRelease = velocityNode(currentFirst);
-        sendMouse(area, QEvent::MouseMove, movedRelease, Qt::NoButton, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseMove, movedRelease, Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
         check(view.selectionModel().noteSelection() == std::vector<NoteId>{overlapNote.noteId},
               "a velocity gesture must retain its frozen target while the cursor moves");
-        sendMouse(area, QEvent::MouseButtonRelease, movedRelease, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, movedRelease, Qt::LeftButton,
+                                  Qt::NoButton, Qt::NoModifier);
         check(view.selectionModel().noteSelection() == std::vector<NoteId>{overlapNote.noteId},
               "moving release away from a velocity node must not click through to another target");
         const DocNote rightTarget = notes[2];
@@ -981,8 +963,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         area.refreshLiveState(live);
         QApplication::processEvents();
         const QPointF rightTargetNode = velocityNode(rightTarget);
-        sendMouse(area, QEvent::MouseButtonPress, rightTargetNode, Qt::RightButton,
-                  Qt::RightButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, rightTargetNode, Qt::RightButton,
+                                  Qt::RightButton, Qt::NoModifier);
         QApplication::processEvents();
         const QImage rightNodeHeld = area.grab().toImage();
         const QRect rightNodeRingBounds =
@@ -992,7 +974,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                 hasColorNear(rightNodeHeld, rightNodeRingBounds, area.palette().highlight().color(),
                              16),
             "plain right press on an unselected velocity node must select and ring it immediately");
-        sendMouse(area, QEvent::MouseButtonRelease, rightTargetNode, Qt::RightButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, rightTargetNode,
+                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
         QApplication::processEvents();
         const QImage rightNodeReleased = area.grab().toImage();
         check(view.selectionModel().noteSelection() == std::vector<NoteId>{rightTarget.noteId} &&
@@ -1004,8 +987,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         area.refreshLiveState(live);
         QApplication::processEvents();
         const QPointF selectedRightNode = velocityNode(currentFirst);
-        sendMouse(area, QEvent::MouseButtonPress, selectedRightNode, Qt::RightButton,
-                  Qt::RightButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, selectedRightNode,
+                                  Qt::RightButton, Qt::RightButton, Qt::NoModifier);
         QApplication::processEvents();
         const QImage selectedRightHeld = area.grab().toImage();
         const QRect selectedRightRingBounds =
@@ -1015,7 +998,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                   hasColorNear(selectedRightHeld, selectedRightRingBounds,
                                area.palette().highlight().color(), 16),
               "plain right press on a selected velocity node must retain its visual group");
-        sendMouse(area, QEvent::MouseButtonRelease, selectedRightNode, Qt::RightButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, selectedRightNode,
+                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
         QApplication::processEvents();
         const QImage selectedRightReleased = area.grab().toImage();
         check(view.selectionModel().noteSelection() ==
@@ -1042,8 +1026,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     const QPointF paintEnd(paintGestureX(paintThirdBefore), area.axis().levelToY(4));
     const uint64_t revisionBeforePaint = document.revision();
     const int undoIndexBeforePaint = document.undoStack()->index();
-    sendMouse(area, QEvent::MouseButtonPress, paintStart, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(area, QEvent::MouseMove, paintEnd, Qt::NoButton, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, paintStart, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(area, QEvent::MouseMove, paintEnd, Qt::NoButton, Qt::LeftButton,
+                              Qt::NoModifier);
     const auto paintPreviewFirst = view.previewVelocity(notes[0].noteId);
     const auto paintPreviewThird = view.previewVelocity(notes[2].noteId);
     check(view.selectionModel().noteSelection() ==
@@ -1053,7 +1039,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
               paintPreviewThird && *paintPreviewFirst == currentMap.representative(0) &&
               *paintPreviewThird == currentMap.representative(4),
           "holding velocity paint must update preview while deferring document changes");
-    sendMouse(area, QEvent::MouseButtonRelease, paintEnd, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonRelease, paintEnd, Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     DocNote paintedFirst;
     DocNote paintedThird;
     check(document.revision() == revisionBeforePaint + 1 &&
@@ -1081,10 +1068,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         const QPointF rampEnd(paintGestureX(paintThirdBefore), area.axis().levelToY(4));
         const uint64_t revisionBeforeRamp = document.revision();
         const int undoIndexBeforeRamp = document.undoStack()->index();
-        sendMouse(area, QEvent::MouseButtonPress, rampStart, Qt::LeftButton, Qt::LeftButton,
-                  Qt::ShiftModifier);
-        sendMouse(area, QEvent::MouseMove, rampEnd, Qt::NoButton, Qt::LeftButton,
-                  Qt::ShiftModifier);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, rampStart, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::ShiftModifier);
+        checks::events::sendMouse(area, QEvent::MouseMove, rampEnd, Qt::NoButton, Qt::LeftButton,
+                                  Qt::ShiftModifier);
         const auto rampPreviewFirst = view.previewVelocity(notes[0].noteId);
         const auto rampPreviewMiddle = view.previewVelocity(rampMiddleBefore.noteId);
         const auto rampPreviewThird = view.previewVelocity(notes[2].noteId);
@@ -1102,8 +1089,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                          pixelRect(QRectF(rampQuarter.x() - 2.0, rampQuarter.y() - 2.0, 5.0, 5.0)),
                          themes::color(themes::Role::song_view_edit_preview_outline), 24),
             "velocity Shift-drag did not render its ramp line preview");
-        sendMouse(area, QEvent::MouseButtonRelease, rampEnd, Qt::LeftButton, Qt::NoButton,
-                  Qt::ShiftModifier);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, rampEnd, Qt::LeftButton,
+                                  Qt::NoButton, Qt::ShiftModifier);
         DocNote rampedFirst;
         DocNote rampedMiddle;
         DocNote rampedThird;
@@ -1132,11 +1119,13 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                              area.axis().levelToY(2));
     const uint64_t revisionBeforeBlankClick = document.revision();
     const int undoDepthBeforeBlankClick = document.undoStack()->count();
-    sendMouse(area, QEvent::MouseButtonPress, blankPoint, Qt::LeftButton, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, blankPoint, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
     check(view.selectionModel().noteSelection() ==
               std::vector<NoteId>({notes[0].noteId, notes[2].noteId}),
           "blank velocity press must retain selection until mouse-up");
-    sendMouse(area, QEvent::MouseButtonRelease, blankPoint, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonRelease, blankPoint, Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     check(view.selectionModel().noteSelection().empty() &&
               document.revision() == revisionBeforeBlankClick &&
               document.undoStack()->count() == undoDepthBeforeBlankClick,
@@ -1145,8 +1134,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
     const VelocityAxisGraduation graduation = area.axis().graduations()[2];
     const QPointF graduationPoint(graduation.x + graduation.width / 2.0, graduation.y);
-    sendMouse(area, QEvent::MouseButtonPress, graduationPoint, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(area, QEvent::MouseButtonRelease, graduationPoint, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, graduationPoint, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(area, QEvent::MouseButtonRelease, graduationPoint, Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     DocNote graduatedFirst;
     DocNote graduatedSecond;
     check(view.selectionModel().noteSelection() ==
@@ -1171,10 +1162,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
             (127.5 - double(graduatedFirst.key)) * view.keyHeight() - view.scrollY());
         const QPointF rollDragPosition = rollNoteCenter - QPointF(0.0, double(dragDelta));
         const auto stageRollVelocityPreview = [&]() {
-            sendMouse(*roll, QEvent::MouseButtonPress, rollNoteCenter, Qt::LeftButton,
-                      Qt::LeftButton, velocityDragModifiers);
-            sendMouse(*roll, QEvent::MouseMove, rollDragPosition, Qt::NoButton, Qt::LeftButton,
-                      velocityDragModifiers);
+            checks::events::sendMouse(*roll, QEvent::MouseButtonPress, rollNoteCenter,
+                                      Qt::LeftButton, Qt::LeftButton, velocityDragModifiers);
+            checks::events::sendMouse(*roll, QEvent::MouseMove, rollDragPosition, Qt::NoButton,
+                                      Qt::LeftButton, velocityDragModifiers);
             QApplication::processEvents();
         };
 
@@ -1197,10 +1188,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                   document.undoStack()->count() == undoCountBeforeRollCancel,
               "piano-roll cancellation must stage a changed deferred velocity preview");
         view.cancelActiveInteractions();
-        sendMouse(*roll, QEvent::MouseMove, rollDragPosition, Qt::NoButton, Qt::LeftButton,
-                  velocityDragModifiers);
-        sendMouse(*roll, QEvent::MouseButtonRelease, rollDragPosition, Qt::LeftButton, Qt::NoButton,
-                  velocityDragModifiers);
+        checks::events::sendMouse(*roll, QEvent::MouseMove, rollDragPosition, Qt::NoButton,
+                                  Qt::LeftButton, velocityDragModifiers);
+        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, rollDragPosition,
+                                  Qt::LeftButton, Qt::NoButton, velocityDragModifiers);
         QApplication::processEvents();
         DocNote cancelledAfter;
         DocNote cancelledAfterSecond;
@@ -1243,8 +1234,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                                   std::max(0.0, outlineRadius - outlineWidth),
                                   outlineRadius + outlineWidth),
               "piano-roll velocity drag must move the velocity drawer node before release");
-        sendMouse(*roll, QEvent::MouseButtonRelease, rollDragPosition, Qt::LeftButton, Qt::NoButton,
-                  velocityDragModifiers);
+        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, rollDragPosition,
+                                  Qt::LeftButton, Qt::NoButton, velocityDragModifiers);
         DocNote committedFirst;
         DocNote committedSecond;
         check(document.revision() == revisionBeforeRollDrag + 1 &&
@@ -1283,8 +1274,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                             area.axis().velocityToY(axisVelocity));
     const uint64_t axisRevision = document.revision();
     const int axisUndoDepth = document.undoStack()->count();
-    sendMouse(area, QEvent::MouseButtonPress, axisPoint, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(area, QEvent::MouseButtonRelease, axisPoint, Qt::LeftButton);
+    checks::events::sendMouse(area, QEvent::MouseButtonPress, axisPoint, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(area, QEvent::MouseButtonRelease, axisPoint, Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     DocNote axisFirstAfter;
     DocNote axisSecondAfter;
     check(area.axis().mode() == VelocityAxis::Mode::Continuous &&
@@ -1388,9 +1381,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
             const int toggleUnlockedVelocity = 73;
             const QPointF toggleUnlockedRuler(double(area.plotOrigin()) - 1.0,
                                               area.axis().velocityToY(toggleUnlockedVelocity));
-            sendMouse(area, QEvent::MouseButtonPress, toggleUnlockedRuler, Qt::LeftButton,
-                      Qt::LeftButton);
-            sendMouse(area, QEvent::MouseButtonRelease, toggleUnlockedRuler, Qt::LeftButton);
+            checks::events::sendMouse(area, QEvent::MouseButtonPress, toggleUnlockedRuler,
+                                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(area, QEvent::MouseButtonRelease, toggleUnlockedRuler,
+                                      Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
             DocNote toggleUnlockedFirst;
             DocNote toggleUnlockedThird;
             check(!detentToggle->isChecked() &&
@@ -1427,9 +1421,12 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         const QPointF lockedPaintEnd(paintGestureX(notes[2]),
                                      area.axis().velocityToY(lockedPaintVelocity));
         const uint64_t revisionBeforeLockedPaint = document.revision();
-        sendMouse(area, QEvent::MouseButtonPress, lockedPaintStart, Qt::LeftButton, Qt::LeftButton);
-        sendMouse(area, QEvent::MouseMove, lockedPaintEnd, Qt::NoButton, Qt::LeftButton);
-        sendMouse(area, QEvent::MouseButtonRelease, lockedPaintEnd, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, lockedPaintStart, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(area, QEvent::MouseMove, lockedPaintEnd, Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, lockedPaintEnd, Qt::LeftButton,
+                                  Qt::NoButton, Qt::NoModifier);
         DocNote lockedPaintFirst;
         DocNote lockedPaintThird;
         check(document.findNote(notes[0].noteId, &lockedPaintFirst) &&
@@ -1447,9 +1444,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         const int unlockedRulerVelocity = 73;
         const QPointF unlockedRuler(double(area.plotOrigin()) - 1.0,
                                     area.axis().velocityToY(unlockedRulerVelocity));
-        sendMouse(area, QEvent::MouseButtonPress, unlockedRuler, Qt::LeftButton, Qt::LeftButton,
-                  detentUnlockModifiers);
-        sendMouse(area, QEvent::MouseButtonRelease, unlockedRuler, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, unlockedRuler, Qt::LeftButton,
+                                  Qt::LeftButton, detentUnlockModifiers);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, unlockedRuler, Qt::LeftButton,
+                                  Qt::NoButton, Qt::NoModifier);
         DocNote rulerUnlockedFirst;
         DocNote rulerUnlockedThird;
         check(document.findNote(notes[0].noteId, &rulerUnlockedFirst) &&
@@ -1475,9 +1473,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         const QPointF unlockedPaintEnd(paintGestureX(paintUnlockedThird),
                                        area.axis().velocityToY(unlockedPaintThirdVelocity));
         const uint64_t revisionBeforeUnlockedPaint = document.revision();
-        sendMouse(area, QEvent::MouseButtonPress, unlockedPaintStart, Qt::LeftButton,
-                  Qt::LeftButton, detentUnlockModifiers);
-        sendMouse(area, QEvent::MouseMove, unlockedPaintEnd, Qt::NoButton, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, unlockedPaintStart,
+                                  Qt::LeftButton, Qt::LeftButton, detentUnlockModifiers);
+        checks::events::sendMouse(area, QEvent::MouseMove, unlockedPaintEnd, Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
         const QImage unlockedPaintPreview = area.grab().toImage();
         const qreal unlockedPaintScale = unlockedPaintPreview.devicePixelRatio();
         const QPointF unlockedPaintCenter(paintGestureX(paintUnlockedFirst) * unlockedPaintScale,
@@ -1490,7 +1489,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                                         expected.nodeOutlineDipWidth * unlockedPaintScale),
                       expected.nodePaintRadius * unlockedPaintScale),
               "unlocked paint preview must remain at its continuous y position");
-        sendMouse(area, QEvent::MouseButtonRelease, unlockedPaintEnd, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, unlockedPaintEnd,
+                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         DocNote paintedUnlockedFirst;
         DocNote paintedUnlockedThird;
         check(document.findNote(notes[0].noteId, &paintedUnlockedFirst) &&
@@ -1524,11 +1524,12 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         const uint8_t lockedExpectedThird =
             unlockedMap.moveLevels(uint8_t(lockedRelativeOriginThird), lockedRelativeLevelDelta);
         const uint64_t revisionBeforeLockedStart = document.revision();
-        sendMouse(area, QEvent::MouseButtonPress, lockedRelativeStart, Qt::LeftButton,
-                  Qt::LeftButton);
-        sendMouse(area, QEvent::MouseMove, lockedRelativeEnd, Qt::NoButton, Qt::LeftButton,
-                  detentUnlockModifiers);
-        sendMouse(area, QEvent::MouseButtonRelease, lockedRelativeEnd, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, lockedRelativeStart,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(area, QEvent::MouseMove, lockedRelativeEnd, Qt::NoButton,
+                                  Qt::LeftButton, detentUnlockModifiers);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, lockedRelativeEnd,
+                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         DocNote lockedRelativeFirst;
         DocNote lockedRelativeThird;
         check(document.findNote(notes[0].noteId, &lockedRelativeFirst) &&
@@ -1556,10 +1557,12 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         const QPointF unlockedRelativeEnd(
             unlockedRelativeStart.x(),
             area.axis().velocityToY(relativeUnlockedFirst.velocity + unlockedRelativeDelta));
-        sendMouse(area, QEvent::MouseButtonPress, unlockedRelativeStart, Qt::LeftButton,
-                  Qt::LeftButton, detentUnlockModifiers);
-        sendMouse(area, QEvent::MouseMove, unlockedRelativeEnd, Qt::NoButton, Qt::LeftButton);
-        sendMouse(area, QEvent::MouseButtonRelease, unlockedRelativeEnd, Qt::LeftButton);
+        checks::events::sendMouse(area, QEvent::MouseButtonPress, unlockedRelativeStart,
+                                  Qt::LeftButton, Qt::LeftButton, detentUnlockModifiers);
+        checks::events::sendMouse(area, QEvent::MouseMove, unlockedRelativeEnd, Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(area, QEvent::MouseButtonRelease, unlockedRelativeEnd,
+                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         DocNote relativeUnlockedFirstAfter;
         DocNote relativeUnlockedThirdAfter;
         check(document.findNote(notes[0].noteId, &relativeUnlockedFirstAfter) &&
@@ -1602,12 +1605,14 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
             const uint64_t revisionBeforeUnlockedRamp = document.revision();
             const Qt::KeyboardModifiers unlockedRampModifiers =
                 detentUnlockModifiers | Qt::ShiftModifier;
-            sendMouse(area, QEvent::MouseButtonPress, unlockedRampStart, Qt::LeftButton,
-                      Qt::LeftButton, unlockedRampModifiers);
-            sendMouse(area, QEvent::MouseMove, unlockedRampEnd, Qt::NoButton, Qt::LeftButton);
+            checks::events::sendMouse(area, QEvent::MouseButtonPress, unlockedRampStart,
+                                      Qt::LeftButton, Qt::LeftButton, unlockedRampModifiers);
+            checks::events::sendMouse(area, QEvent::MouseMove, unlockedRampEnd, Qt::NoButton,
+                                      Qt::LeftButton, Qt::NoModifier);
             check(document.revision() == revisionBeforeUnlockedRamp,
                   "unlocked Shift-ramp must defer document changes");
-            sendMouse(area, QEvent::MouseButtonRelease, unlockedRampEnd, Qt::LeftButton);
+            checks::events::sendMouse(area, QEvent::MouseButtonRelease, unlockedRampEnd,
+                                      Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
             DocNote rampedUnlockedFirst;
             DocNote rampedUnlockedMiddle;
             DocNote rampedUnlockedThird;
@@ -1651,8 +1656,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
           "focused velocity keyboard fixture must resolve its selected notes");
     const uint64_t revisionBeforeKeyboard = document.revision();
     area.setFocus(Qt::OtherFocusReason);
-    QKeyEvent transposeUp(QEvent::KeyPress, Qt::Key_Up, Qt::ControlModifier | Qt::ShiftModifier);
-    QApplication::sendEvent(&area, &transposeUp);
+    checks::events::sendKey(area, QEvent::KeyPress, Qt::Key_Up,
+                            Qt::ControlModifier | Qt::ShiftModifier, QString(), false, 1);
     DocNote firstAfterKeyboard;
     DocNote thirdAfterKeyboard;
     check(document.revision() == revisionBeforeKeyboard &&
@@ -1665,348 +1670,5 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     if (!screenshotPath.isEmpty())
         check(area.grab().save(screenshotPath), "optional velocity screenshot should save");
     area.hide();
-    return failures == 0 ? 0 : 1;
-}
-
-namespace {
-
-bool equals(const std::optional<std::size_t> &value, std::size_t expected)
-{
-    return value && *value == expected;
-}
-
-bool hasLabel(const VelocityAxis &axis, uint8_t velocity)
-{
-    for (std::size_t index = 0; index < axis.labelCount(); ++index) {
-        if (axis.labels()[index].velocity == velocity)
-            return true;
-    }
-    return false;
-}
-
-bool labelsMatch(const VelocityAxis &axis, const uint8_t *expected, std::size_t count)
-{
-    if (axis.labelCount() != count)
-        return false;
-    for (std::size_t index = 0; index < count; ++index) {
-        if (axis.labels()[index].velocity != expected[index])
-            return false;
-    }
-    return true;
-}
-
-bool intrinsicLevelsRoundTrip(const VelocityAxis &axis)
-{
-    for (std::size_t level = 0; level < axis.graduationCount(); ++level) {
-        if (axis.yToLevel(axis.levelToY(int(level))) != int(level))
-            return false;
-    }
-    return true;
-}
-
-VelocityAxisGeometry axisGeometry(double height, double labelWidth = 200.0)
-{
-    return {height, 6.0, labelWidth, 2.0, 1.0, 12.0, 84.0, 112.0, 156.0, 300.0};
-}
-
-} // namespace
-
-int runVelocityModelCheck()
-{
-    int failures = 0;
-    const auto check = [&failures](bool condition, const char *message) {
-        if (!condition) {
-            std::fprintf(stderr, "velocity-model: FAIL: %s\n", message);
-            ++failures;
-        }
-    };
-
-    const NoteVelocity firstGestureTarget{NoteId(1), 40};
-    const NoteVelocity secondGestureTarget{NoteId(2), 120};
-    const std::vector<NoteVelocity> sortedGestureTargets = {
-        firstGestureTarget,
-        secondGestureTarget,
-    };
-    VelocityGestureModel gesture;
-    check(!gesture.active() && !gesture.update({firstGestureTarget}) &&
-              !gesture.previewVelocity(firstGestureTarget.noteId) && !gesture.takeCompletion() &&
-              !gesture.cancel(),
-          "inactive gesture model must reject updates, previews, completion, and cancellation");
-    check(!gesture.begin(42, {}) && !gesture.begin(42, {{NoteId(), 40}}) &&
-              !gesture.begin(42, {{NoteId(3), 0}}) && !gesture.begin(42, {{NoteId(3), 128}}) &&
-              !gesture.begin(42, {firstGestureTarget, firstGestureTarget}) &&
-              !gesture.begin(42, {firstGestureTarget, secondGestureTarget, secondGestureTarget}) &&
-              !gesture.active(),
-          "empty, invalid, or duplicate targets must fail without activating a gesture");
-    check(gesture.begin(42, {secondGestureTarget, firstGestureTarget}) && gesture.active() &&
-              gesture.previewVelocity(firstGestureTarget.noteId) == firstGestureTarget.velocity &&
-              gesture.previewVelocity(secondGestureTarget.noteId) == secondGestureTarget.velocity,
-          "gesture model must capture a sorted unique target set and original velocities");
-    check(!gesture.begin(43, {secondGestureTarget}) && gesture.active() &&
-              gesture.previewVelocity(firstGestureTarget.noteId) == firstGestureTarget.velocity &&
-              gesture.previewVelocity(secondGestureTarget.noteId) == secondGestureTarget.velocity,
-          "an active gesture must not be replaced by another interaction");
-    check(!gesture.update({{firstGestureTarget.noteId, 100}, {NoteId(3), 64}}) &&
-              gesture.previewVelocity(firstGestureTarget.noteId) == firstGestureTarget.velocity &&
-              gesture.previewVelocity(secondGestureTarget.noteId) == secondGestureTarget.velocity,
-          "unknown updates must fail atomically");
-    check(
-        !gesture.update({}) &&
-            !gesture.update({{firstGestureTarget.noteId, 100}, {firstGestureTarget.noteId, 110}}) &&
-            gesture.previewVelocity(firstGestureTarget.noteId) == firstGestureTarget.velocity,
-        "empty or duplicate updates must fail atomically");
-    check(gesture.update({{firstGestureTarget.noteId, 0}}) &&
-              gesture.previewVelocity(firstGestureTarget.noteId) == 1 &&
-              gesture.update({{firstGestureTarget.noteId, 128}}) &&
-              gesture.previewVelocity(firstGestureTarget.noteId) == 127,
-          "out-of-range updates must clamp without disturbing the session");
-    check(gesture.update({{firstGestureTarget.noteId, 100}}) &&
-              gesture.previewVelocity(firstGestureTarget.noteId) == 100 &&
-              gesture.previewVelocity(secondGestureTarget.noteId) == secondGestureTarget.velocity,
-          "valid per-note preview updates must apply");
-    check(gesture.updateByDelta(-50) && gesture.previewVelocity(firstGestureTarget.noteId) == 1 &&
-              gesture.previewVelocity(secondGestureTarget.noteId) == 70,
-          "relative updates must resolve from each captured original");
-    const auto completion = gesture.takeCompletion();
-    check(completion && completion->expectedRevision == 42 &&
-              completion->targets.size() == sortedGestureTargets.size() &&
-              completion->targets[0].noteId == sortedGestureTargets[0].noteId &&
-              completion->targets[0].velocity == 1 &&
-              completion->targets[1].noteId == sortedGestureTargets[1].noteId &&
-              completion->targets[1].velocity == 70,
-          "taking a completion must move its revision and sorted target contents");
-    check(!gesture.active() && !gesture.previewVelocity(firstGestureTarget.noteId) &&
-              !gesture.previewVelocity(secondGestureTarget.noteId) && !gesture.takeCompletion(),
-          "taking a completion must reset the inactive model state");
-    check(gesture.begin(99, sortedGestureTargets) && gesture.cancel() && !gesture.active() &&
-              !gesture.previewVelocity(firstGestureTarget.noteId) &&
-              !gesture.previewVelocity(secondGestureTarget.noteId) && !gesture.takeCompletion() &&
-              !gesture.cancel(),
-          "cancellation must discard a session and leave inactive reset state");
-
-    ToneData squareTone{};
-    squareTone.type = VOICE_SQUARE_1;
-    ToneData squareTwoTone{};
-    squareTwoTone.type = VOICE_SQUARE_2;
-    ToneData noiseTone{};
-    noiseTone.type = VOICE_NOISE;
-    ToneData waveTone{};
-    waveTone.type = VOICE_PROGRAMMABLE_WAVE;
-    ToneData directSoundTone{};
-    directSoundTone.type = VOICE_DIRECTSOUND;
-    const VelocityMap square = VelocityMap::resolve(&squareTone, 60);
-    const VelocityMap squareTwo = VelocityMap::resolve(&squareTwoTone, 60);
-    const VelocityMap noise = VelocityMap::resolve(&noiseTone, 60);
-    const VelocityMap wave = VelocityMap::resolve(&waveTone, 60);
-    const VelocityMap directSound = VelocityMap::resolve(&directSoundTone, 60);
-    const VelocityMap unresolved = VelocityMap::resolve(nullptr, std::nullopt);
-
-    check(square.isPsg() && std::strcmp(square.voiceName(), "Square 1") == 0,
-          "Square 1 should resolve intrinsically");
-    check(squareTwo.isPsg() && std::strcmp(squareTwo.voiceName(), "Square 2") == 0,
-          "Square 2 should resolve intrinsically");
-    check(noise.isPsg() && std::strcmp(noise.voiceName(), "Noise") == 0,
-          "Noise should resolve intrinsically");
-    check(wave.isPsg() && std::strcmp(wave.voiceName(), "Programmable Wave") == 0,
-          "Wave should resolve intrinsically");
-    check(!directSound.isPsg(), "DirectSound should remain continuous");
-    check(!unresolved.isPsg(), "missing voice should remain unresolved");
-
-    ToneData invalidTone{};
-    invalidTone.type = VOICE_CRY;
-    const VelocityMap invalid = VelocityMap::resolve(&invalidTone, 60);
-    check(!invalid.isPsg(), "invalid voice should remain continuous");
-    std::array<ToneData, 128> nestedChildren{};
-    nestedChildren[60].type = VOICE_KEYSPLIT;
-    ToneData nestedSplit{};
-    nestedSplit.type = VOICE_KEYSPLIT_ALL;
-    nestedSplit.subGroup = nestedChildren.data();
-    check(!VelocityMap::resolve(&nestedSplit, 60).isPsg(), "nested keysplit should be invalid");
-    ToneData keylessSplit{};
-    keylessSplit.type = VOICE_KEYSPLIT_ALL;
-    keylessSplit.subGroup = nestedChildren.data();
-    check(!VelocityMap::resolve(&keylessSplit, std::nullopt).isPsg(),
-          "keyless keysplit should remain continuous");
-    std::array<ToneData, 128> splitChildren{};
-    std::array<uint8_t, 128> splitTable{};
-    splitChildren[7].type = VOICE_PROGRAMMABLE_WAVE;
-    splitTable[60] = 7;
-    ToneData splitTone{};
-    splitTone.type = VOICE_KEYSPLIT;
-    splitTone.subGroup = splitChildren.data();
-    splitTone.keySplitTable = splitTable.data();
-    const VelocityMap keyedSplit = VelocityMap::resolve(&splitTone, 60);
-    check(keyedSplit.isPsg() && std::strcmp(keyedSplit.voiceName(), "Programmable Wave") == 0,
-          "keyed keysplit should resolve its selected voice");
-
-    const std::array<uint8_t, 16> squareNoiseRepresentatives = {
-        1, 12, 20, 28, 36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 127,
-    };
-    const std::array<uint8_t, 5> waveRepresentatives = {1, 32, 64, 96, 127};
-    const auto representativesMatch = [](const VelocityMap &map, const auto &expected) {
-        if (map.levelCount() != expected.size())
-            return false;
-        for (std::size_t level = 0; level < expected.size(); ++level) {
-            if (map.representative(int(level)) != expected[level])
-                return false;
-        }
-        return true;
-    };
-    check(representativesMatch(square, squareNoiseRepresentatives),
-          "Square representatives should be exact");
-    check(representativesMatch(wave, waveRepresentatives), "Wave representatives should be exact");
-    check(representativesMatch(noise, squareNoiseRepresentatives),
-          "Noise representatives should describe every hardware level");
-    check(equals(square.levelOf(1), 0) && equals(square.levelOf(127), 15) &&
-              equals(wave.levelOf(1), 0) && equals(wave.levelOf(127), 4),
-          "intrinsic levels should include velocity boundaries");
-    check(!directSound.levelOf(1), "DirectSound should not gain an intrinsic level");
-    check(square.compatibleWith(square), "matching maps should be compatible");
-    check(!square.compatibleWith(squareTwo) && !square.compatibleWith(noise),
-          "different PSG voice identities should be incompatible");
-
-    check(square.canonicalize(1) == 1 && square.canonicalize(127) == 127,
-          "Square canonicalization should retain endpoints");
-    check(square.canonicalize(64) == 60 && wave.canonicalize(80) == 64,
-          "canonicalization should select the representative for its hardware class");
-    check(square.canonicalize(8) == 1 && square.canonicalize(9) == 12 &&
-              noise.canonicalize(8) == 1 && noise.canonicalize(9) == 12 &&
-              wave.canonicalize(112) == 96,
-          "canonicalization should preserve hardware classes at their boundaries");
-    check(wave.canonicalize(65) == 64 && square.canonicalize(65) == 68 &&
-              noise.canonicalize(65) == 68 && directSound.canonicalize(65) == 65 &&
-              invalid.canonicalize(65) == 65,
-          "canonicalization should respect every voice type and fallback");
-    const std::optional<std::size_t> originLevel = wave.levelOf(95);
-    check(equals(originLevel, 3) && wave.moveLevels(95, 0) == 95 && wave.moveLevels(95, -1) == 64,
-          "returning to an origin level should restore its exact value");
-    const std::array<uint8_t, 3> moved = {
-        wave.moveLevels(95, 1),
-        square.moveLevels(60, 1),
-        directSound.moveLevels(65, 1),
-    };
-    check(moved == std::array<uint8_t, moved.size()>{127, 68, 66},
-          "level movement should preserve heterogeneous exact origins");
-    check(wave.moveLevels(1, -1) == 1 && square.moveLevels(127, 1) == 127 &&
-              directSound.moveLevels(1, -1) == 1 && directSound.moveLevels(127, 1) == 127,
-          "level movement should clamp at both velocity endpoints");
-
-    const VelocityAxis continuous(VelocityMap::resolve(nullptr, std::nullopt), axisGeometry(200.0),
-                                  std::array<uint8_t, 3>{12, 64, 100});
-    check(continuous.mode() == VelocityAxis::Mode::Continuous && continuous.top() == 6.0 &&
-              continuous.bottom() == 194.0 && continuous.velocityToY(127) == 6.0 &&
-              continuous.velocityToY(1) == 194.0 && continuous.velocityToY(64) == 100.0,
-          "continuous placement should use inset endpoints");
-    check(VelocityAxis(directSound, axisGeometry(200.0)).mode() == VelocityAxis::Mode::Continuous &&
-              VelocityAxis(invalid, axisGeometry(200.0)).mode() == VelocityAxis::Mode::Continuous,
-          "DirectSound and invalid contexts should select the continuous axis");
-    check(continuous.yToVelocity(6.0) == 127 && continuous.yToVelocity(194.0) == 1 &&
-              continuous.markerCount() == 2 && continuous.markers()[0].velocity == 12 &&
-              continuous.markers()[1].velocity == 100,
-          "continuous inverse placement and extrema should be exact");
-    check(continuous.tickCount() == 17 && hasLabel(continuous, 127) && hasLabel(continuous, 112) &&
-              hasLabel(continuous, 1),
-          "continuous density should select the D3 band");
-    check(continuous.inRuler(QPointF(0.0, 0.0), 200.0) &&
-              !continuous.inRuler(QPointF(200.0, 0.0), 200.0) &&
-              continuous.rulerVelocityAt(QPointF(0.0, continuous.labels()[0].y), 12.0) ==
-                  continuous.labels()[0].velocity &&
-              continuous.rulerVelocityAt(QPointF(0.0, continuous.labels()[0].y + 6.01), 12.0) == -1,
-          "continuous ruler hit mapping should use label tolerance and bounds");
-    QImage rulerImage(220, 200, QImage::Format_ARGB32);
-    rulerImage.fill(Qt::white);
-    VelocityAxisPaintStyle rulerStyle;
-    rulerStyle.labelColor = QColor(Qt::red);
-    rulerStyle.accentColor = QColor(Qt::blue);
-    rulerStyle.labelFont = QFont{};
-    rulerStyle.emphasizedFont = rulerStyle.labelFont;
-    rulerStyle.separatorX = 198.0;
-    rulerStyle.labelLeft = 2.0;
-    rulerStyle.labelWidth = 190.0;
-    rulerStyle.labelHeight = 12.0;
-    rulerStyle.minorTickLength = 2.0;
-    rulerStyle.majorTickLength = 6.0;
-    rulerStyle.markerTickLength = 4.0;
-    rulerStyle.graduationTickLength = 3.0;
-    rulerStyle.contentClip = QRectF(198.0, 0.0, 22.0, 200.0);
-    QPainter rulerPainter(&rulerImage);
-    continuous.paintRuler(rulerPainter, rulerStyle);
-    rulerPainter.end();
-    bool paintedTick = false;
-    for (int y = 5; y <= 7 && !paintedTick; ++y) {
-        for (int x = 192; x <= 198; ++x) {
-            if (rulerImage.pixelColor(x, y) == QColor(Qt::red)) {
-                paintedTick = true;
-                break;
-            }
-        }
-    }
-    check(paintedTick, "continuous ruler painter should render its major tick");
-    const VelocityAxis intrinsicAxis(square, axisGeometry(200.0));
-    QImage intrinsicRulerImage(220, 200, QImage::Format_ARGB32);
-    intrinsicRulerImage.fill(Qt::white);
-    QPainter intrinsicRulerPainter(&intrinsicRulerImage);
-    intrinsicAxis.paintRuler(intrinsicRulerPainter, rulerStyle);
-    intrinsicRulerPainter.end();
-    bool paintedIntrinsicTick = false;
-    const int intrinsicTickY = qRound(intrinsicAxis.graduations()[0].y);
-    for (int y = intrinsicTickY - 1; y <= intrinsicTickY + 1 && !paintedIntrinsicTick; ++y) {
-        for (int x = 192; x <= 198; ++x) {
-            if (intrinsicRulerImage.pixelColor(x, y) == QColor(Qt::red)) {
-                paintedIntrinsicTick = true;
-                break;
-            }
-        }
-    }
-    check(paintedIntrinsicTick, "intrinsic ruler painter should render detent tick marks");
-    check(VelocityAxis(unresolved, axisGeometry(83.0)).tickCount() == 5 &&
-              VelocityAxis(unresolved, axisGeometry(84.0)).tickCount() == 9 &&
-              VelocityAxis(unresolved, axisGeometry(112.0)).tickCount() == 9 &&
-              VelocityAxis(unresolved, axisGeometry(156.0)).tickCount() == 17 &&
-              VelocityAxis(unresolved, axisGeometry(300.0)).tickCount() == 32,
-          "continuous density boundaries should be inclusive at each upper band");
-    const std::array<uint8_t, 3> belowD2Labels = {127, 64, 1};
-    const std::array<uint8_t, 5> atD2Labels = {127, 96, 64, 32, 1};
-    const VelocityAxis belowD2(unresolved, axisGeometry(111.999));
-    const VelocityAxis atD2(unresolved, axisGeometry(112.0));
-    check(labelsMatch(belowD2, belowD2Labels.data(), belowD2Labels.size()) &&
-              labelsMatch(atD2, atD2Labels.data(), atD2Labels.size()),
-          "continuous labels should change at the D2 boundary");
-    const std::array<uint8_t, 17> denseLabels = {
-        127, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 1,
-    };
-    const VelocityAxis denseAxis(unresolved, axisGeometry(300.0));
-    check(labelsMatch(denseAxis, denseLabels.data(), denseLabels.size()) &&
-              denseAxis.tickCount() == 32 && denseAxis.ticks()[1].velocity == 123 &&
-              denseAxis.ticks()[30].velocity == 7,
-          "dense labels should be explicit and ordered apart from minor ticks");
-    check(continuous.accessibleDescription() == "Velocity" && !VelocityAxis::nodesFocusable() &&
-              !VelocityAxis::graduationLabelsFocusable(),
-          "continuous accessibility should not create focus targets");
-
-    const VelocityAxis narrowAxis(square, axisGeometry(200.0, 2.0));
-    check(narrowAxis.intrinsicColumnWidth() == 0.0 && narrowAxis.graduations()[0].width == 0.0 &&
-              narrowAxis.graduations()[0].x >= 0.0 && narrowAxis.graduations()[1].x >= 0.0,
-          "narrow label geometry should remain non-negative");
-    const std::array<uint8_t, 1> selectedValue = {73};
-    const VelocityAxis selectedAxis(unresolved, axisGeometry(300.0), selectedValue);
-    VelocityAxisPaintStyle selectedLabelStyle;
-    selectedLabelStyle.labelColor = Qt::black;
-    selectedLabelStyle.accentColor = Qt::blue;
-    selectedLabelStyle.labelFont = QFont();
-    selectedLabelStyle.emphasizedFont = QFont();
-    selectedLabelStyle.separatorX = 100.0;
-    selectedLabelStyle.labelWidth = 80.0;
-    selectedLabelStyle.labelHeight = 16.0;
-    const auto paintLabelColumn = [&selectedLabelStyle](const VelocityAxis &axis) {
-        QImage image(QSize(120, 300), QImage::Format_ARGB32);
-        image.fill(Qt::white);
-        QPainter painter(&image);
-        axis.paintRuler(painter, selectedLabelStyle);
-        return image.copy(QRect(0, 0, 80, 300));
-    };
-    check(samePixels(paintLabelColumn(denseAxis), paintLabelColumn(selectedAxis)),
-          "a single selected velocity must not add its value to the graduation labels");
-
     return failures == 0 ? 0 : 1;
 }

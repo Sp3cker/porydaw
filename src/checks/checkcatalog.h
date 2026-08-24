@@ -26,7 +26,6 @@ struct CheckDefinition {
     QStringList fixtureFiles;
     QMap<QString, QString> environment;
     QMap<QString, QString> optionalArgumentEnvironment;
-    bool exclusive = false;
     BinaryKind binary = BinaryKind::Checks;
     StartupKind startup = StartupKind::Porydaw;
     Windowing windowing = Windowing::Offscreen;

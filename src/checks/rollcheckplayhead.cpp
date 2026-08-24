@@ -1,9 +1,9 @@
 #include "rollcheckplayhead.h"
+#include "checks/support/eventsynth.h"
 #include "rollcheckrendering.h"
 
 #include <QCoreApplication>
 #include <QEvent>
-#include <QMouseEvent>
 #include <QObject>
 #include <QPaintEvent>
 #include <QPainter>
@@ -142,10 +142,8 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
     const QPoint firstPosition(1, pianoRoll.height() / 2);
     const songview::TimelineSurfaceDiagnostics beforeFirst = pianoRoll.diagnostics();
     paintProbe.clear();
-    QMouseEvent firstEvent(QEvent::MouseMove, QPointF(firstPosition),
-                           QPointF(pianoRoll.mapToGlobal(firstPosition)), Qt::NoButton,
-                           Qt::NoButton, Qt::NoModifier);
-    QCoreApplication::sendEvent(&pianoRoll, &firstEvent);
+    checks::events::sendMouse(pianoRoll, QEvent::MouseMove, QPointF(firstPosition), Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
     processPaints();
     const bool firstRepainted = paintProbe.repainted(&pianoRoll);
     const int firstRepaintWidth = paintProbe.maxPaintWidth(&pianoRoll);
@@ -188,10 +186,8 @@ void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
         1, std::clamp(firstPosition.y() + moveDistance, 0, pianoRoll.height() - 1));
     const songview::TimelineSurfaceDiagnostics beforeMove = pianoRoll.diagnostics();
     paintProbe.clear();
-    QMouseEvent secondEvent(QEvent::MouseMove, QPointF(secondPosition),
-                            QPointF(pianoRoll.mapToGlobal(secondPosition)), Qt::NoButton,
-                            Qt::NoButton, Qt::NoModifier);
-    QCoreApplication::sendEvent(&pianoRoll, &secondEvent);
+    checks::events::sendMouse(pianoRoll, QEvent::MouseMove, QPointF(secondPosition), Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
     processPaints();
     const bool moveRepainted = paintProbe.repainted(&pianoRoll);
     const int moveRepaintWidth = paintProbe.maxPaintWidth(&pianoRoll);
@@ -246,9 +242,8 @@ void checkHoverSweepRestores(songview::TimelineSurface &surface, const QString &
         for (int i = 0; i <= 20; ++i) {
             const int x = leftToRight ? x0 + (x1 - x0) * i / 20 : x1 - (x1 - x0) * i / 20;
             const QPoint pos(x, y);
-            QMouseEvent move(QEvent::MouseMove, QPointF(pos), QPointF(surface.mapToGlobal(pos)),
-                             Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-            QCoreApplication::sendEvent(&surface, &move);
+            checks::events::sendMouse(surface, QEvent::MouseMove, QPointF(pos), Qt::NoButton,
+                                      Qt::NoButton, Qt::NoModifier);
             processPaints();
         }
         leftToRight = !leftToRight;
@@ -309,10 +304,8 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes, PaintRegi
             hover.position = position;
             hover.before = lanes.diagnostics();
             paintProbe.clear();
-            QMouseEvent hoverEvent(QEvent::MouseMove, QPointF(position),
-                                   QPointF(lanes.mapToGlobal(position)), Qt::NoButton, Qt::NoButton,
-                                   Qt::NoModifier);
-            QCoreApplication::sendEvent(&lanes, &hoverEvent);
+            checks::events::sendMouse(lanes, QEvent::MouseMove, QPointF(position), Qt::NoButton,
+                                      Qt::NoButton, Qt::NoModifier);
             processPaints();
             hover.repainted = paintProbe.repainted(&lanes);
             hover.repaintWidth = paintProbe.maxPaintWidth(&lanes);
@@ -366,10 +359,8 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes, PaintRegi
     const QPoint secondPosition(secondX, hover.position.y());
     const songview::TimelineSurfaceDiagnostics beforeMove = lanes.diagnostics();
     paintProbe.clear();
-    QMouseEvent moveEvent(QEvent::MouseMove, QPointF(secondPosition),
-                          QPointF(lanes.mapToGlobal(secondPosition)), Qt::NoButton, Qt::NoButton,
-                          Qt::NoModifier);
-    QCoreApplication::sendEvent(&lanes, &moveEvent);
+    checks::events::sendMouse(lanes, QEvent::MouseMove, QPointF(secondPosition), Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
     processPaints();
     const bool moveRepainted = paintProbe.repainted(&lanes);
     const int moveRepaintWidth = paintProbe.maxPaintWidth(&lanes);
@@ -445,10 +436,8 @@ void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes, PaintRegi
         }
     }
 
-    QMouseEvent rehoverEvent(QEvent::MouseMove, QPointF(secondPosition),
-                             QPointF(lanes.mapToGlobal(secondPosition)), Qt::NoButton, Qt::NoButton,
-                             Qt::NoModifier);
-    QCoreApplication::sendEvent(&lanes, &rehoverEvent);
+    checks::events::sendMouse(lanes, QEvent::MouseMove, QPointF(secondPosition), Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
     processPaints();
     QWidget *window = lanes.window();
     const QSize initialWindowSize = window ? window->size() : QSize();

@@ -3,8 +3,6 @@
 #include <QList>
 #include <QListWidget>
 #include <QRegularExpression>
-#include <QSettings>
-#include <QTemporaryDir>
 #include <cstdio>
 
 #include "core/songdocument.h"
@@ -385,11 +383,6 @@ void runRegisterActionChecks(const QString &projectRoot, const QString &midiDir,
               "action check: rewrite charmap.txt");
         out.close();
 
-        // Redirected settings: the user's real session is never touched.
-        QTemporaryDir settingsDir;
-        check(settingsDir.isValid(), "action check: no temp dir for settings");
-        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
-        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
         MainWindow window;
         check(window.runRegisterActionCheck(projectRoot, label),
               "register-action check did not run");

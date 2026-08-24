@@ -1,3 +1,5 @@
+#include "checks/support/eventsynth.h"
+
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "project/decompproject.h"
@@ -14,9 +16,7 @@
 #include <QEvent>
 #include <QFileInfo>
 #include <QImage>
-#include <QKeyEvent>
 #include <QMenu>
-#include <QMouseEvent>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QTemporaryDir>
@@ -40,20 +40,6 @@ SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
     event.data0 = key;
     event.data1 = velocity;
     return event;
-}
-
-void sendMouse(QWidget &widget, QEvent::Type type, const QPointF &position, Qt::MouseButton button,
-               Qt::MouseButtons buttons = Qt::NoButton)
-{
-    QMouseEvent event(type, position, QPointF(widget.mapToGlobal(position.toPoint())), button,
-                      buttons, Qt::NoModifier);
-    QApplication::sendEvent(&widget, &event);
-}
-
-void sendKey(QWidget &widget, Qt::Key key)
-{
-    QKeyEvent event(QEvent::KeyPress, key, Qt::NoModifier);
-    QApplication::sendEvent(&widget, &event);
 }
 
 uint64_t drawerContextTick(double tick)
@@ -329,7 +315,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     if (automation && automationScroll) {
         const int selectedTrack = view.selectionModel().primaryTrack();
         view.setTrackSolo(selectedTrack, false);
-        sendKey(*area, Qt::Key_S);
+        checks::events::sendKey(*area, QEvent::KeyPress, Qt::Key_S, Qt::NoModifier, QString{},
+                                false, ushort{1});
         check(view.trackSoloed(selectedTrack),
               "S from the velocity drawer did not solo the selected track");
         view.setTrackSolo(selectedTrack, false);
@@ -408,10 +395,12 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                 .y();
         const QPointF menuStart(layout::fontPx(17.5 + 13.0 / 3.0) + 4.0, pinnedTempoHeaderY);
         const QPointF menuEnd = menuStart + QPointF(48.0, 0.0);
-        sendMouse(*automation, QEvent::MouseButtonPress, menuStart, Qt::RightButton,
-                  Qt::RightButton);
-        sendMouse(*automation, QEvent::MouseMove, menuEnd, Qt::NoButton, Qt::RightButton);
-        sendMouse(*automation, QEvent::MouseButtonRelease, menuEnd, Qt::RightButton);
+        checks::events::sendMouse(*automation, QEvent::MouseButtonPress, menuStart, Qt::RightButton,
+                                  Qt::RightButton, Qt::NoModifier);
+        checks::events::sendMouse(*automation, QEvent::MouseMove, menuEnd, Qt::NoButton,
+                                  Qt::RightButton, Qt::NoModifier);
+        checks::events::sendMouse(*automation, QEvent::MouseButtonRelease, menuEnd, Qt::RightButton,
+                                  Qt::NoButton, Qt::NoModifier);
         const auto &dragSelection = view.selectionModel().timeSelection();
         const qreal menuFirst =
             view.displayX(double(dragSelection.startTick), automation->plotOrigin(),
@@ -420,13 +409,14 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
             view.displayX(double(dragSelection.endTick), automation->plotOrigin(),
                           automation->devicePixelRatioF());
         const QPointF menuPoint((menuFirst + menuLast) / 2.0, menuStart.y());
-        sendMouse(*automation, QEvent::MouseButtonPress, menuPoint, Qt::RightButton,
-                  Qt::RightButton);
+        checks::events::sendMouse(*automation, QEvent::MouseButtonPress, menuPoint, Qt::RightButton,
+                                  Qt::RightButton, Qt::NoModifier);
         QTimer::singleShot(0, [] {
             if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget()))
                 menu->close();
         });
-        sendMouse(*automation, QEvent::MouseButtonRelease, menuPoint, Qt::RightButton);
+        checks::events::sendMouse(*automation, QEvent::MouseButtonRelease, menuPoint,
+                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
         const songview::EditorSelectionModel::TimeSelection &menuSelection =
             view.selectionModel().timeSelection();
         check(menuSelection.active() &&
@@ -481,9 +471,11 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
           "host no-op gesture should preserve preview, revision, MIDI, Undo, and selection");
     const int undoBeforeChange = document.undoStack()->count();
     const uint64_t revisionBeforeChange = document.revision();
-    sendMouse(*area, QEvent::MouseButtonPress, firstNode, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(*area, QEvent::MouseMove, firstNode + QPointF(0.0, -double(area->height())),
-              Qt::NoButton, Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonPress, firstNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*area, QEvent::MouseMove,
+                              firstNode + QPointF(0.0, -double(area->height())), Qt::NoButton,
+                              Qt::LeftButton, Qt::NoModifier);
     const auto heldFirstPreview = view.previewVelocity(notes[0].noteId);
     const auto heldSecondPreview = view.previewVelocity(notes[1].noteId);
     DocNote heldFirst;
@@ -496,8 +488,9 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               document.revision() == revisionBeforeChange &&
               document.undoStack()->count() == undoBeforeChange,
           "velocity host moves must update preview without changing document history");
-    sendMouse(*area, QEvent::MouseButtonRelease, firstNode + QPointF(0.0, -double(area->height())),
-              Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonRelease,
+                              firstNode + QPointF(0.0, -double(area->height())), Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     DocNote committedFirst;
     DocNote committedSecond;
     check(document.revision() == revisionBeforeChange + 1 &&
@@ -524,8 +517,10 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const QPointF unchangedNode = nodePosition(view, *area, *timeline, notes[0]);
     const uint64_t revisionBeforeNoOp = document.revision();
     const int undoBeforeNoOp = document.undoStack()->count();
-    sendMouse(*area, QEvent::MouseButtonPress, unchangedNode, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(*area, QEvent::MouseButtonRelease, unchangedNode, Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonPress, unchangedNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, unchangedNode, Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     check(document.revision() == revisionBeforeNoOp &&
               document.undoStack()->count() == undoBeforeNoOp &&
               view.selectionModel().noteSelection().size() == 1 &&
@@ -538,16 +533,19 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     view.setEditCursorTick(3);
     QCoreApplication::processEvents();
     const QPointF staleNode = nodePosition(view, *area, *timeline, notes[0]);
-    sendMouse(*area, QEvent::MouseButtonPress, staleNode, Qt::LeftButton, Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonPress, staleNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
     const uint64_t revisionBeforeExternalChange = document.revision();
     const int secondVelocity = notes[1].velocity == 127 ? 1 : 127;
     document.blockSignals(true);
     document.setNotesVelocity({notes[1]}, uint8_t(secondVelocity));
     document.blockSignals(false);
-    sendMouse(*area, QEvent::MouseMove, staleNode + QPointF(0.0, -double(area->height())),
-              Qt::NoButton, Qt::LeftButton);
-    sendMouse(*area, QEvent::MouseButtonRelease, staleNode + QPointF(0.0, -double(area->height())),
-              Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseMove,
+                              staleNode + QPointF(0.0, -double(area->height())), Qt::NoButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*area, QEvent::MouseButtonRelease,
+                              staleNode + QPointF(0.0, -double(area->height())), Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     const std::vector<DocNote> staleNotes =
         document.notesForTrack(view.selectionModel().primaryTrack());
     check(document.revision() == revisionBeforeExternalChange + 1 && staleNotes.size() == 2 &&
@@ -576,8 +574,10 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
             document.findNote(selectionBeforeGesture.front(), &pressedNote);
         const QPointF dragPosition =
             node + QPointF(0.0, pressedNoteResolved && pressedNote.velocity == 127 ? 40.0 : -40.0);
-        sendMouse(*area, QEvent::MouseButtonPress, node, Qt::LeftButton, Qt::LeftButton);
-        sendMouse(*area, QEvent::MouseMove, dragPosition, Qt::NoButton, Qt::LeftButton);
+        checks::events::sendMouse(*area, QEvent::MouseButtonPress, node, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*area, QEvent::MouseMove, dragPosition, Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
         const std::vector<NoteId> gestureSelection = view.selectionModel().noteSelection();
         const std::vector<NoteId> expectedSelection =
             clearsSelection ? std::vector<NoteId>{} : gestureSelection;
@@ -596,7 +596,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "velocity cancellation should begin with changed staged previews and unchanged "
               "history");
         cancel();
-        sendMouse(*area, QEvent::MouseButtonRelease, dragPosition, Qt::LeftButton);
+        checks::events::sendMouse(*area, QEvent::MouseButtonRelease, dragPosition, Qt::LeftButton,
+                                  Qt::NoButton, Qt::NoModifier);
         bool previewCleared = true;
         for (const NoteId id : gestureSelection)
             previewCleared = previewCleared && !view.previewVelocity(id);
@@ -613,8 +614,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     cancelGesture(
         lifecycleNode,
         [&] {
-            QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
-            QApplication::sendEvent(&view, &escape);
+            checks::events::sendKey(view, QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier,
+                                    QString{}, false, ushort{1});
         },
         false, "Escape should terminate the visible page gesture through the host lifecycle");
     cancelGesture(
@@ -659,17 +660,18 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const int undoBeforeDocumentReplacement = document.undoStack()->count();
     const std::vector<NoteId> selectionBeforeDocumentReplacement =
         view.selectionModel().noteSelection();
-    sendMouse(*area, QEvent::MouseButtonPress, documentNode, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(*area, QEvent::MouseMove, documentNode + QPointF(0.0, -40.0), Qt::NoButton,
-              Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonPress, documentNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*area, QEvent::MouseMove, documentNode + QPointF(0.0, -40.0),
+                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
     const auto documentReplacementPreview = view.previewVelocity(notes[0].noteId);
     check(selectionBeforeDocumentReplacement.size() == 1 && documentReplacementPreview &&
               document.revision() == revisionBeforeDocumentReplacement &&
               document.undoStack()->count() == undoBeforeDocumentReplacement,
           "document replacement should begin with a staged preview and unchanged history");
     view.setDocument(nullptr);
-    sendMouse(*area, QEvent::MouseButtonRelease, documentNode + QPointF(0.0, -40.0),
-              Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, documentNode + QPointF(0.0, -40.0),
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     check(document.revision() == revisionBeforeDocumentReplacement,
           "document replacement should not change document revision");
     check(document.undoStack()->count() == undoBeforeDocumentReplacement,
@@ -687,16 +689,17 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const int undoBeforeMutation = document.undoStack()->count();
     const uint64_t revisionBeforeMutation = document.revision();
     const std::vector<NoteId> selectionBeforeMutation = view.selectionModel().noteSelection();
-    sendMouse(*area, QEvent::MouseButtonPress, documentNode, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(*area, QEvent::MouseMove, documentNode + QPointF(0.0, -40.0), Qt::NoButton,
-              Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonPress, documentNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*area, QEvent::MouseMove, documentNode + QPointF(0.0, -40.0),
+                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
     const auto mutationPreview = view.previewVelocity(notes[0].noteId);
     check(mutationPreview && document.revision() == revisionBeforeMutation &&
               document.undoStack()->count() == undoBeforeMutation,
           "document mutation should begin with a staged preview and unchanged history");
     document.setNotesVelocity({notes[0]}, uint8_t(replacementVelocity));
-    sendMouse(*area, QEvent::MouseButtonRelease, documentNode + QPointF(0.0, -40.0),
-              Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, documentNode + QPointF(0.0, -40.0),
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     check(document.revision() == revisionBeforeMutation + 1 &&
               document.undoStack()->count() == undoBeforeMutation + 1 &&
               !view.previewVelocity(notes[0].noteId) &&
@@ -710,15 +713,17 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const uint64_t revisionBeforeUndo = document.revision();
     const int undoBeforeUndo = document.undoStack()->count();
     const std::vector<NoteId> selectionBeforeUndo = view.selectionModel().noteSelection();
-    sendMouse(*area, QEvent::MouseButtonPress, undoNode, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(*area, QEvent::MouseMove, undoNode + QPointF(0.0, -40.0), Qt::NoButton,
-              Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonPress, undoNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*area, QEvent::MouseMove, undoNode + QPointF(0.0, -40.0),
+                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
     const auto undoPreview = view.previewVelocity(notes[0].noteId);
     check(undoPreview && document.revision() == revisionBeforeUndo &&
               document.undoStack()->count() == undoBeforeUndo,
           "Undo cancellation should begin with a staged preview and unchanged history");
     document.undoStack()->undo();
-    sendMouse(*area, QEvent::MouseButtonRelease, undoNode + QPointF(0.0, -40.0), Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, undoNode + QPointF(0.0, -40.0),
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     check(document.revision() == revisionBeforeUndo + 1 &&
               document.undoStack()->count() == undoBeforeUndo &&
               !view.previewVelocity(notes[0].noteId) &&
@@ -732,15 +737,17 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const uint64_t revisionBeforeRedo = document.revision();
     const int undoBeforeRedo = document.undoStack()->count();
     const std::vector<NoteId> selectionBeforeRedo = view.selectionModel().noteSelection();
-    sendMouse(*area, QEvent::MouseButtonPress, redoNode, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(*area, QEvent::MouseMove, redoNode + QPointF(0.0, -40.0), Qt::NoButton,
-              Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonPress, redoNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*area, QEvent::MouseMove, redoNode + QPointF(0.0, -40.0),
+                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
     const auto redoPreview = view.previewVelocity(notes[0].noteId);
     check(redoPreview && document.revision() == revisionBeforeRedo &&
               document.undoStack()->count() == undoBeforeRedo,
           "Redo cancellation should begin with a staged preview and unchanged history");
     document.undoStack()->redo();
-    sendMouse(*area, QEvent::MouseButtonRelease, redoNode + QPointF(0.0, -40.0), Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, redoNode + QPointF(0.0, -40.0),
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     check(document.revision() == revisionBeforeRedo + 1 &&
               document.undoStack()->count() == undoBeforeRedo &&
               !view.previewVelocity(notes[0].noteId) &&
@@ -753,15 +760,17 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const QPointF reloadNode = nodePosition(view, *area, *timeline, reloadNote);
     const uint64_t revisionBeforeReload = document.revision();
     const int undoBeforeReload = document.undoStack()->count();
-    sendMouse(*area, QEvent::MouseButtonPress, reloadNode, Qt::LeftButton, Qt::LeftButton);
-    sendMouse(*area, QEvent::MouseMove, reloadNode + QPointF(0.0, -40.0), Qt::NoButton,
-              Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonPress, reloadNode, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*area, QEvent::MouseMove, reloadNode + QPointF(0.0, -40.0),
+                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
     const auto reloadPreview = view.previewVelocity(notes[0].noteId);
     check(reloadPreview && document.revision() == revisionBeforeReload &&
               document.undoStack()->count() == undoBeforeReload,
           "reload cancellation should begin with a staged preview and unchanged history");
     const bool reloaded = document.load(song, &error);
-    sendMouse(*area, QEvent::MouseButtonRelease, reloadNode + QPointF(0.0, -40.0), Qt::LeftButton);
+    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, reloadNode + QPointF(0.0, -40.0),
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     check(reloaded && !view.previewVelocity(notes[0].noteId),
           "reload should terminate the visible page gesture");
     std::unique_ptr<MidiTimeline> reloadedTimeline = document.buildTimeline(44100.0);
@@ -935,16 +944,17 @@ int runHostSeamsCheck()
         const uint64_t beforePageSwitch = document.revision();
         const int undoBeforePageSwitch = document.undoStack()->count();
         const std::vector<NoteId> selectionBeforePageSwitch = view.selectionModel().noteSelection();
-        sendMouse(*velocity, QEvent::MouseButtonPress, node, Qt::LeftButton, Qt::LeftButton);
-        sendMouse(*velocity, QEvent::MouseMove, node + QPointF(0.0, -40.0), Qt::NoButton,
-                  Qt::LeftButton);
+        checks::events::sendMouse(*velocity, QEvent::MouseButtonPress, node, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*velocity, QEvent::MouseMove, node + QPointF(0.0, -40.0),
+                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
         const auto pageSwitchPreview = view.previewVelocity(notes.front().noteId);
         check(pageSwitchPreview && document.revision() == beforePageSwitch &&
                   document.undoStack()->count() == undoBeforePageSwitch,
               "drawer page replacement should begin with a staged preview and unchanged history");
         view.setDrawerActivePage(EditorDrawerPage::Automations);
-        sendMouse(*velocity, QEvent::MouseButtonRelease, node + QPointF(0.0, -40.0),
-                  Qt::LeftButton);
+        checks::events::sendMouse(*velocity, QEvent::MouseButtonRelease, node + QPointF(0.0, -40.0),
+                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         check(document.revision() == beforePageSwitch &&
                   document.undoStack()->count() == undoBeforePageSwitch &&
                   !view.previewVelocity(notes.front().noteId) &&
@@ -957,17 +967,18 @@ int runHostSeamsCheck()
         const int undoBeforeDocumentSwap = document.undoStack()->count();
         const std::vector<NoteId> selectionBeforeDocumentSwap =
             view.selectionModel().noteSelection();
-        sendMouse(*velocity, QEvent::MouseButtonPress, node, Qt::LeftButton, Qt::LeftButton);
-        sendMouse(*velocity, QEvent::MouseMove, node + QPointF(0.0, -40.0), Qt::NoButton,
-                  Qt::LeftButton);
+        checks::events::sendMouse(*velocity, QEvent::MouseButtonPress, node, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*velocity, QEvent::MouseMove, node + QPointF(0.0, -40.0),
+                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
         const auto documentSwapPreview = view.previewVelocity(notes.front().noteId);
         check(!selectionBeforeDocumentSwap.empty() && documentSwapPreview &&
                   document.revision() == beforeDocumentSwap &&
                   document.undoStack()->count() == undoBeforeDocumentSwap,
               "document replacement should begin with a staged preview and unchanged history");
         view.setDocument(nullptr);
-        sendMouse(*velocity, QEvent::MouseButtonRelease, node + QPointF(0.0, -40.0),
-                  Qt::LeftButton);
+        checks::events::sendMouse(*velocity, QEvent::MouseButtonRelease, node + QPointF(0.0, -40.0),
+                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         check(document.revision() == beforeDocumentSwap &&
                   document.undoStack()->count() == undoBeforeDocumentSwap &&
                   !view.previewVelocity(notes.front().noteId) &&

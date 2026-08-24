@@ -2,10 +2,8 @@
 #include <QDockWidget>
 #include <QFileInfo>
 #include <QImage>
-#include <QSettings>
 #include <QString>
 #include <QStringList>
-#include <QTemporaryDir>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -591,19 +589,9 @@ int runPolyCheck(const QString &screenshotPath)
     int failures = runEngineStage();
     failures += runWidgetStage(screenshotPath);
 
-    // Stage C: redirected settings so the MainWindow neither reads nor
-    // overwrites the user's real window state.
-    QTemporaryDir settingsDir;
-    if (!settingsDir.isValid()) {
-        std::fprintf(stderr, "polycheck: no temp dir for settings\n");
+    MainWindow window;
+    if (!window.runPolyGateCheck())
         failures++;
-    } else {
-        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
-        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
-        MainWindow window;
-        if (!window.runPolyGateCheck())
-            failures++;
-    }
 
     std::printf("polycheck: %s\n", failures == 0 ? "PASS" : "FAIL");
     return failures == 0 ? 0 : 1;

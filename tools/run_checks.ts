@@ -23,7 +23,6 @@ interface CheckManifestEntry {
 
   readonly environment?: Readonly<Record<string, string>>;
   readonly optionalArgumentEnvironment?: Readonly<Record<string, string>>;
-  readonly exclusive?: boolean;
   readonly scratchKind: ScratchKind;
   readonly fixtureRootKind: FixtureRootKind;
   readonly fixtureFiles: readonly string[];
@@ -467,23 +466,6 @@ async function runParallel(
   );
 }
 
-async function runScheduled(
-  checks: readonly CheckManifestEntry[],
-): Promise<void> {
-  // Exclusive harnesses share global state (host audio device, QSettings) and
-  // must run alone. Running them from manifest position drains every in-flight
-  // batch once per exclusive; one serial tail drains at most once.
-  const exclusiveChecks = checks.filter((check) => check.exclusive);
-  // LPT: heaviest walls first minimizes makespan.
-  const batched = checks
-    .filter((check) => !check.exclusive)
-    .sort((a, b) => wallEstimate(b.name) - wallEstimate(a.name));
-  await runParallel(batched, unifiedPoolSize);
-  for (const check of exclusiveChecks) {
-    await runCheck(check);
-  }
-}
-
 const skipWindowSystem = selection === "--no-windowing-checks";
 let runnableChecks = checkManifest.filter(
   (check) => !skipWindowSystem || check.windowing !== "window-system",
@@ -501,10 +483,12 @@ if (filters.length > 0) {
 }
 reporter = createReporter(reporterMode, runnableChecks.length);
 try {
-  // Window-system checks schedule like any other: the unified pool already
-  // overlaps them with offscreen work, and a separate lane would push peak
-  // concurrency to pool+1.
-  await runScheduled(runnableChecks);
+  // Every row is an isolated process with per-process settings. Audio backends
+  // are multi-client, and selftest already fails if concurrent device opens
+  // are unsupported. Use --pool=1 for pathological local environments.
+  // LPT: heaviest walls first minimizes makespan.
+  runnableChecks.sort((a, b) => wallEstimate(b.name) - wallEstimate(a.name));
+  await runParallel(runnableChecks, unifiedPoolSize);
 } finally {
   await Deno.remove(tempRoot, { recursive: true });
 }

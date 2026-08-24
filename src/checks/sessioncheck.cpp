@@ -5,7 +5,6 @@
 #include <QListWidget>
 #include <QSettings>
 #include <QStatusBar>
-#include <QTemporaryDir>
 #include <cstdio>
 
 #include "mainwindow.h"
@@ -23,15 +22,6 @@
 
 int runSessionCheck(const QString &projectRoot, const QString &songLabel)
 {
-    QTemporaryDir settingsDir;
-    if (!settingsDir.isValid()) {
-        std::fprintf(stderr, "sessioncheck: no temp dir for settings\n");
-        return 1;
-    }
-    QSettings::setDefaultFormat(QSettings::IniFormat);
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
-
     int failures = 0;
     const auto check = [&failures](bool ok, const char *what) {
         if (!ok) {
@@ -52,8 +42,7 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
     // 2. The remembered project directory vanished: still a no-op.
     {
         QSettings settings;
-        settings.setValue(QStringLiteral("lastProjectDir"),
-                          settingsDir.path() + QStringLiteral("/gone"));
+        settings.setValue(QStringLiteral("lastProjectDir"), projectRoot + QStringLiteral("/gone"));
         settings.setValue(QStringLiteral("lastSongLabel"), songLabel);
         settings.sync();
         MainWindow window;

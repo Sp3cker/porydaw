@@ -6,25 +6,21 @@
 #include <QDockWidget>
 #include <QFile>
 #include <QFileInfo>
-#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
-#include <QMouseEvent>
 #include <QPointer>
-#include <QSettings>
 #include <QSpinBox>
-#include <QTemporaryDir>
 #include <QTimer>
 #include <QToolButton>
 #include <QTreeWidgetItemIterator>
 #include <cstdio>
 
+#include "checks/support/eventsynth.h"
+#include "mainwindow.h"
+#include "project/songregistry.h"
 #include "ui/dragspinbox.h"
 #include "ui/songview.h"
 #include "ui/theme/themeruntime.h"
-
-#include "mainwindow.h"
-#include "project/songregistry.h"
 #include "ui/voicegroupbrowser.h"
 
 extern "C" {
@@ -38,8 +34,7 @@ extern "C" {
 // voicegroup .inc together, and an undone edit saved again round-trips the
 // .inc byte-identically. Also proves a -G voicegroup switch keeps unsaved
 // voice edits in the undo history (undoing the switch replays them).
-// QSettings is redirected into a temp dir. Writes into the project: run
-// against a scratch copy.
+// Writes into the project: run against a scratch copy.
 
 namespace {
 
@@ -252,7 +247,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             QLineEdit *releaseEdit = releaseSpin->findChild<QLineEdit *>();
             check(releaseEdit != nullptr, "Release input has no line edit");
             const auto dragVertically = [&](QWidget *field, int pixelsUp,
-                                            Qt::KeyboardModifiers modifiers = Qt::NoModifier) {
+                                            Qt::KeyboardModifiers modifiers) {
                 const QPoint start = field->rect().center();
                 const int direction = pixelsUp > 0 ? 1 : -1;
                 const QPoint activated = start - QPoint(0, direction * 3);
@@ -261,27 +256,19 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 const QRect fieldGeometry = field->geometry();
                 const QRect rowGeometry = field->parentWidget()->geometry();
                 const QSize browserMinimumSize = m_vgBrowser->minimumSizeHint();
-                QMouseEvent press(QEvent::MouseButtonPress, QPointF(start),
-                                  QPointF(field->mapToGlobal(start)), Qt::LeftButton,
-                                  Qt::LeftButton, modifiers);
-                QCoreApplication::sendEvent(field, &press);
+                checks::events::sendMouse(*field, QEvent::MouseButtonPress, QPointF(start),
+                                          Qt::LeftButton, Qt::LeftButton, modifiers);
                 check(!field->hasFocus(), "pressing an ADSR input moved focus before dragging");
-                QMouseEvent activateMove(QEvent::MouseMove, QPointF(activated),
-                                         QPointF(field->mapToGlobal(activated)), Qt::NoButton,
-                                         Qt::LeftButton, modifiers);
-                QCoreApplication::sendEvent(field, &activateMove);
-                QMouseEvent move(QEvent::MouseMove, QPointF(finish),
-                                 QPointF(field->mapToGlobal(finish)), Qt::NoButton, Qt::LeftButton,
-                                 modifiers);
-                QCoreApplication::sendEvent(field, &move);
+                checks::events::sendMouse(*field, QEvent::MouseMove, QPointF(activated),
+                                          Qt::NoButton, Qt::LeftButton, modifiers);
+                checks::events::sendMouse(*field, QEvent::MouseMove, QPointF(finish), Qt::NoButton,
+                                          Qt::LeftButton, modifiers);
                 check(field->geometry() == fieldGeometry &&
                           field->parentWidget()->geometry() == rowGeometry &&
                           m_vgBrowser->minimumSizeHint() == browserMinimumSize,
                       "ADSR input geometry shifted when dragging began");
-                QMouseEvent release(QEvent::MouseButtonRelease, QPointF(finish),
-                                    QPointF(field->mapToGlobal(finish)), Qt::LeftButton,
-                                    Qt::NoButton, modifiers);
-                QCoreApplication::sendEvent(field, &release);
+                checks::events::sendMouse(*field, QEvent::MouseButtonRelease, QPointF(finish),
+                                          Qt::LeftButton, Qt::NoButton, modifiers);
             };
             const int uiValue = original.release == 25 ? 26 : 25;
             releaseSpin->setValue(uiValue);
@@ -294,7 +281,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                   "undo did not refresh the Release spin box");
             if (releaseSpin && releaseEdit) {
                 releaseSpin->setValue(100);
-                dragVertically(releaseEdit, 12);
+                dragVertically(releaseEdit, 12, Qt::NoModifier);
                 check(releaseSpin->value() == 106 && tab->vgSource->voiceAt(dsSlot) &&
                           tab->vgSource->voiceAt(dsSlot)->release == 106,
                       "dragging the Release input up did not increase its value");
@@ -304,7 +291,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                       "undo did not restore the upward ADSR drag");
 
                 releaseSpin->setValue(100);
-                dragVertically(releaseEdit, -12);
+                dragVertically(releaseEdit, -12, Qt::NoModifier);
                 check(releaseSpin->value() == 94 && tab->vgSource->voiceAt(dsSlot) &&
                           tab->vgSource->voiceAt(dsSlot)->release == 94,
                       "dragging the Release input down did not decrease its value");
@@ -695,20 +682,16 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                     QStringLiteral("trackHeaderRow%1").arg(otherTrack));
                 if (check(row != nullptr, "no header row for the other track")) {
                     const QPoint pos(5, 5);
-                    QMouseEvent press(QEvent::MouseButtonPress, QPointF(pos),
-                                      QPointF(row->mapToGlobal(pos)), Qt::LeftButton,
-                                      Qt::LeftButton, Qt::NoModifier);
-                    QCoreApplication::sendEvent(row, &press);
+                    checks::events::sendMouse(*row, QEvent::MouseButtonPress, QPointF(pos),
+                                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
                     check(!row.isNull(), "header rebuild freed the row inside its own press");
                     check(tab->view->selectionModel().primaryTrack() == otherTrack,
                           "the header click did not select its track");
                     check(tab->doc.cfg().voicegroupArg == otherArg,
                           "the mid-press -G edit did not commit");
                     if (!row.isNull()) {
-                        QMouseEvent release(QEvent::MouseButtonRelease, QPointF(pos),
-                                            QPointF(row->mapToGlobal(pos)), Qt::LeftButton,
-                                            Qt::NoButton, Qt::NoModifier);
-                        QCoreApplication::sendEvent(row, &release);
+                        checks::events::sendMouse(*row, QEvent::MouseButtonRelease, QPointF(pos),
+                                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
                     }
                 }
                 QCoreApplication::processEvents(); // deferred row deletion
@@ -716,14 +699,12 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 QWidget *fresh =
                     tab->view->findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));
                 if (check(fresh != nullptr, "no rebuilt header row") && track != otherTrack) {
-                    QMouseEvent press(QEvent::MouseButtonPress, QPointF(QPoint(5, 5)),
-                                      QPointF(fresh->mapToGlobal(QPoint(5, 5))), Qt::LeftButton,
-                                      Qt::LeftButton, Qt::NoModifier);
-                    QCoreApplication::sendEvent(fresh, &press);
-                    QMouseEvent release(QEvent::MouseButtonRelease, QPointF(QPoint(5, 5)),
-                                        QPointF(fresh->mapToGlobal(QPoint(5, 5))), Qt::LeftButton,
-                                        Qt::NoButton, Qt::NoModifier);
-                    QCoreApplication::sendEvent(fresh, &release);
+                    checks::events::sendMouse(*fresh, QEvent::MouseButtonPress,
+                                              QPointF(QPoint(5, 5)), Qt::LeftButton, Qt::LeftButton,
+                                              Qt::NoModifier);
+                    checks::events::sendMouse(*fresh, QEvent::MouseButtonRelease,
+                                              QPointF(QPoint(5, 5)), Qt::LeftButton, Qt::NoButton,
+                                              Qt::NoModifier);
                     QCoreApplication::processEvents();
                     check(tab->view->selectionModel().primaryTrack() == track,
                           "a rebuilt header row did not select its track");
@@ -870,8 +851,8 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 picker->openPopup();
                 const QString unlisted = QStringLiteral("VgSaveCheckUnlisted");
                 search->setText(unlisted);
-                QKeyEvent ret(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-                QCoreApplication::sendEvent(search, &ret);
+                checks::events::sendKey(*search, QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier,
+                                        QString(), false, 1);
                 check(tab->vgSource->voiceAt(dsSlot) &&
                           tab->vgSource->voiceAt(dsSlot)->symbol == unlisted,
                       "an unlisted typed symbol did not commit");
@@ -935,8 +916,8 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                                       auditionKinds.last() == VgAuditionKind::Wave,
                                   "filtering onto a wave did not audition "
                                   "it as a wave");
-                            QKeyEvent waveRet(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-                            QCoreApplication::sendEvent(search, &waveRet);
+                            checks::events::sendKey(*search, QEvent::KeyPress, Qt::Key_Return,
+                                                    Qt::NoModifier, QString(), false, 1);
                             undos++;
                             check(tab->vgSource->voiceAt(dsSlot) &&
                                       tab->vgSource->voiceAt(dsSlot)->symbol == otherWave,
@@ -998,15 +979,6 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
 int runVgSaveCheck(const QString &projectRoot, const QString &songLabel,
                    const QString &screenshotPath)
 {
-    // Redirected settings: the user's real session is never touched.
-    QTemporaryDir settingsDir;
-    if (!settingsDir.isValid()) {
-        std::fprintf(stderr, "vgsavecheck: no temp dir for settings\n");
-        return 1;
-    }
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
-
     MainWindow window;
     return window.runVgSaveCheck(projectRoot, songLabel, screenshotPath) ? 0 : 1;
 }

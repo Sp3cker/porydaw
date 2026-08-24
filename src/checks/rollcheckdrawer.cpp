@@ -10,7 +10,6 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QImage>
-#include <QMouseEvent>
 #include <QStackedWidget>
 #include <QTabBar>
 #include <QToolButton>
@@ -19,19 +18,8 @@
 #include <cstdio>
 #include <vector>
 
+#include "checks/support/eventsynth.h"
 #include "ui/layout.h"
-
-namespace {
-
-void sendMouse(QWidget *widget, QEvent::Type type, const QPoint &position, Qt::MouseButton button,
-               Qt::MouseButtons buttons)
-{
-    QMouseEvent event(type, QPointF(position), QPointF(widget->mapToGlobal(position)), button,
-                      buttons, Qt::NoModifier);
-    QCoreApplication::sendEvent(widget, &event);
-}
-
-} // namespace
 
 int runEditorDrawerCheck(const QString &screenshotPath)
 {
@@ -165,28 +153,34 @@ int runEditorDrawerCheck(const QString &screenshotPath)
 
     const int velocityHeightBefore = view.drawerSectionHeight(EditorDrawerPage::Velocity);
     const QPoint velocityHandleCenter = velocityHandle->rect().center();
-    sendMouse(velocityHandle, QEvent::MouseButtonPress, velocityHandleCenter, Qt::RightButton,
-              Qt::RightButton);
-    sendMouse(velocityHandle, QEvent::MouseMove, velocityHandleCenter - QPoint(0, 40), Qt::NoButton,
-              Qt::RightButton);
-    sendMouse(velocityHandle, QEvent::MouseButtonRelease, velocityHandleCenter - QPoint(0, 40),
-              Qt::RightButton, Qt::NoButton);
+    checks::events::sendMouse(*velocityHandle, QEvent::MouseButtonPress,
+                              QPointF(velocityHandleCenter), Qt::RightButton, Qt::RightButton,
+                              Qt::NoModifier);
+    checks::events::sendMouse(*velocityHandle, QEvent::MouseMove,
+                              QPointF(velocityHandleCenter - QPoint(0, 40)), Qt::NoButton,
+                              Qt::RightButton, Qt::NoModifier);
+    checks::events::sendMouse(*velocityHandle, QEvent::MouseButtonRelease,
+                              QPointF(velocityHandleCenter - QPoint(0, 40)), Qt::RightButton,
+                              Qt::NoButton, Qt::NoModifier);
     check(view.drawerSectionHeight(EditorDrawerPage::Velocity) == velocityHeightBefore,
           "right drag resized the velocity section");
 
     const QRect drawerBeforeVelocityResize = drawer->geometry();
     const QPoint velocityResizeGlobal =
         velocityHandle->mapToGlobal(velocityHandleCenter - QPoint(0, 40));
-    sendMouse(velocityHandle, QEvent::MouseButtonPress, velocityHandleCenter, Qt::LeftButton,
-              Qt::LeftButton);
-    sendMouse(velocityHandle, QEvent::MouseMove, velocityHandleCenter - QPoint(0, 40), Qt::NoButton,
-              Qt::LeftButton);
+    checks::events::sendMouse(*velocityHandle, QEvent::MouseButtonPress,
+                              QPointF(velocityHandleCenter), Qt::LeftButton, Qt::LeftButton,
+                              Qt::NoModifier);
+    checks::events::sendMouse(*velocityHandle, QEvent::MouseMove,
+                              QPointF(velocityHandleCenter - QPoint(0, 40)), Qt::NoButton,
+                              Qt::LeftButton, Qt::NoModifier);
     QCoreApplication::processEvents();
     check(drawer->geometry().bottom() == drawerBeforeVelocityResize.bottom() &&
               drawer->geometry().top() < drawerBeforeVelocityResize.top(),
           "velocity drawer resized downward instead of moving its top edge");
-    sendMouse(velocityHandle, QEvent::MouseButtonRelease,
-              velocityHandle->mapFromGlobal(velocityResizeGlobal), Qt::LeftButton, Qt::NoButton);
+    checks::events::sendMouse(*velocityHandle, QEvent::MouseButtonRelease,
+                              QPointF(velocityHandle->mapFromGlobal(velocityResizeGlobal)),
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
     const int velocityHeightAfter = view.drawerSectionHeight(EditorDrawerPage::Velocity);
     check(velocityHeightAfter > 0 && velocityHeightAfter <= drawer->maximumSectionHeight() &&
@@ -195,12 +189,15 @@ int runEditorDrawerCheck(const QString &screenshotPath)
 
     const int automationHeightBefore = view.drawerSectionHeight(EditorDrawerPage::Automations);
     const QPoint automationHandleCenter = automationHandle->rect().center();
-    sendMouse(automationHandle, QEvent::MouseButtonPress, automationHandleCenter, Qt::LeftButton,
-              Qt::LeftButton);
-    sendMouse(automationHandle, QEvent::MouseMove, automationHandleCenter - QPoint(0, 30),
-              Qt::NoButton, Qt::LeftButton);
-    sendMouse(automationHandle, QEvent::MouseButtonRelease, automationHandleCenter - QPoint(0, 30),
-              Qt::LeftButton, Qt::NoButton);
+    checks::events::sendMouse(*automationHandle, QEvent::MouseButtonPress,
+                              QPointF(automationHandleCenter), Qt::LeftButton, Qt::LeftButton,
+                              Qt::NoModifier);
+    checks::events::sendMouse(*automationHandle, QEvent::MouseMove,
+                              QPointF(automationHandleCenter - QPoint(0, 30)), Qt::NoButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*automationHandle, QEvent::MouseButtonRelease,
+                              QPointF(automationHandleCenter - QPoint(0, 30)), Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
     check(view.drawerSectionHeight(EditorDrawerPage::Automations) > automationHeightBefore &&
               view.drawerSectionHeight(EditorDrawerPage::Velocity) == velocityHeightAfter,
@@ -310,8 +307,10 @@ int runEditorDrawerCheck(const QString &screenshotPath)
                     break;
                 alignedHeaderTargeted = true;
                 const QPoint hitPoint = hit->mapFromGlobal(globalPoint);
-                sendMouse(hit, QEvent::MouseButtonPress, hitPoint, Qt::LeftButton, Qt::LeftButton);
-                sendMouse(hit, QEvent::MouseButtonRelease, hitPoint, Qt::LeftButton, Qt::NoButton);
+                checks::events::sendMouse(*hit, QEvent::MouseButtonPress, QPointF(hitPoint),
+                                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                checks::events::sendMouse(*hit, QEvent::MouseButtonRelease, QPointF(hitPoint),
+                                          Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
                 QCoreApplication::processEvents();
                 alignedHeaderClicked = view.selectionModel().primaryTrack() == track;
                 break;

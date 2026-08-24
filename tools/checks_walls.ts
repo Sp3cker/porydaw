@@ -1,10 +1,10 @@
-// Measured per-check walls, verbose suite run 2026-08-21 (M4, 10 cores).
+// Measured per-check walls, verbose suite run 2026-08-24 (M4, 10 cores).
 // Used only for LPT ordering — heaviest first minimizes makespan — so coarse
 // values are fine; they churn between machines and runs.
 export const WALL_ESTIMATE: Record<string, number> = {
   selftest: 6.18,
-  samplecheck: 6.04,
-  resonancecheck: 5.59,
+  samplecheck: 9.66,
+  resonancecheck: 9.23,
   transportcheck: 3.77,
   vgsavecheck: 2.4,
   tabcheck: 2.35,

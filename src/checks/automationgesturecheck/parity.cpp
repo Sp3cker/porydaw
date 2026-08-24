@@ -151,7 +151,7 @@ void selectRange(Context &ctx, uint64_t first, uint64_t last)
     ctx.rig.pump();
 }
 
-bool expectOneEdit(const Context &ctx, const DocSnapshot &before,
+void expectOneEdit(const Context &ctx, const DocSnapshot &before,
                    const std::vector<NodePoint> &expected)
 {
     const auto after = snapshot(ctx.rig.document());

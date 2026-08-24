@@ -1,11 +1,3 @@
-#include "core/miditimeline.h"
-#include "core/songdocument.h"
-#include "project/decompproject.h"
-#include "rollcheckrendering.h"
-#include "ui/eventlistview.h"
-#include "ui/playheadoverlay.h"
-#include "ui/songview.h"
-
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -13,12 +5,9 @@
 #include <QImage>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QMouseEvent>
 #include <QPixmap>
 #include <QPushButton>
 #include <QRegion>
-#include <QSettings>
-#include <QTemporaryDir>
 #include <QThread>
 #include <QTimer>
 #include <QWidget>
@@ -26,16 +15,18 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <utility>
+
+#include "checks/support/eventsynth.h"
+#include "checks/support/songfixture.h"
+#include "core/miditimeline.h"
+#include "core/songdocument.h"
+#include "rollcheckrendering.h"
+#include "ui/eventlistview.h"
+#include "ui/playheadoverlay.h"
+#include "ui/songview.h"
 
 namespace {
-
-void sendMouse(QWidget *widget, QEvent::Type type, const QPoint &position, Qt::MouseButton button,
-               Qt::MouseButtons buttons)
-{
-    QMouseEvent event(type, QPointF(position), QPointF(widget->mapToGlobal(position)), button,
-                      buttons, Qt::NoModifier);
-    QCoreApplication::sendEvent(widget, &event);
-}
 
 // Window visibility and modal transitions need every queued event processed.
 void processWindowEvents()
@@ -74,14 +65,6 @@ QRect visibleTimelineBandRect(const songview::TimelineBand &band, QWidget &owner
     return visible;
 }
 
-const SongInfo *playableSong(const DecompProject &project, const QString &songLabel)
-{
-    for (const SongInfo &song : project.songs()) {
-        if (song.label == songLabel && song.isPlayable())
-            return &song;
-    }
-    return nullptr;
-}
 QStringList eventListPlayheadCheckFailures(SongView &view, const MidiTimeline &timeline)
 {
     auto failures = QStringList{};
@@ -193,39 +176,21 @@ QStringList eventListPlayheadCheckFailures(SongView &view, const MidiTimeline &t
 
 int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
 {
-    QTemporaryDir settingsDirectory;
-    if (!settingsDirectory.isValid()) {
-        std::fprintf(stderr, "rollwindowingcheck: could not create settings directory\n");
-        return 1;
-    }
-    QSettings::setDefaultFormat(QSettings::IniFormat);
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDirectory.path());
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDirectory.path());
-
-    DecompProject project;
     QString error;
-    if (!project.open(projectRoot, &error)) {
+    auto loadedSong = checks::LoadedSong::load(projectRoot, songLabel, error);
+    if (!loadedSong) {
         std::fprintf(stderr, "rollwindowingcheck: %s\n", qUtf8Printable(error));
         return 1;
     }
-    const SongInfo *info = playableSong(project, songLabel);
-    if (!info) {
-        std::fprintf(stderr, "rollwindowingcheck: no playable song %s\n",
-                     qUtf8Printable(songLabel));
-        return 1;
-    }
-
-    SongDocument document;
-    if (!document.load(*info, &error)) {
+    auto rig = checks::SongViewRig::create(std::move(loadedSong), 48000.0, error);
+    if (!rig) {
         std::fprintf(stderr, "rollwindowingcheck: %s\n", qUtf8Printable(error));
         return 1;
     }
-    auto timeline = document.buildTimeline(48000.0);
-
-    SongView view;
+    SongDocument &document = rig->document();
+    const MidiTimeline *timeline = &rig->timeline();
+    SongView &view = rig->view();
     view.resize(1280, 800);
-    view.setSong(timeline.get(), nullptr);
-    view.setDocument(&document);
     view.show();
     processWindowEvents();
 
@@ -279,8 +244,10 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
             dialog->reject();
         });
         dialogPoll.start();
-        sendMouse(row, QEvent::MouseButtonDblClick, voicePosition, Qt::LeftButton, Qt::LeftButton);
-        sendMouse(row, QEvent::MouseButtonRelease, voicePosition, Qt::LeftButton, Qt::NoButton);
+        checks::events::sendMouse(*row, QEvent::MouseButtonDblClick, QPointF(voicePosition),
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*row, QEvent::MouseButtonRelease, QPointF(voicePosition),
+                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         processWindowEvents();
         dialogPoll.stop();
 

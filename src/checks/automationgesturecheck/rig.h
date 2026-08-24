@@ -9,6 +9,7 @@
 #include <QPointF>
 #include <QRect>
 
+#include "checks/support/songfixture.h"
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/drawerpage.h"
@@ -123,18 +124,14 @@ class AutomationGestureCheckRig final
 
   private:
     AutomationGestureCheckRig() = default;
-    bool initialize(const SongInfo &song, QString &error);
+    bool initialize(QString &error);
     void refreshPage();
 
-    static void sendKey(QObject *target, QEvent::Type type, int key,
-                        Qt::KeyboardModifiers modifiers, bool autoRepeat);
-    void sendMouse(QEvent::Type type, const QPointF &position, Qt::MouseButton button,
-                   Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers);
     // Event-loop spin used by commitTimers(); not part of the public seam.
     void waitForTimers(int milliseconds);
 
     DrawerPageLiveState m_live;
-    std::unique_ptr<SongDocument> m_document;
+    std::unique_ptr<checks::LoadedSong> m_song;
     std::unique_ptr<LoadedVoiceGroup> m_voicegroup;
     std::unique_ptr<MidiTimeline> m_timeline;
     std::unique_ptr<SongView> m_view;

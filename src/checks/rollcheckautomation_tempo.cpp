@@ -3,10 +3,11 @@
 #include <vector>
 
 #include <QCoreApplication>
-#include <QMouseEvent>
+#include <QEvent>
 #include <QScrollArea>
 #include <QScrollBar>
 
+#include "checks/support/eventsynth.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/songview.h"
@@ -17,14 +18,6 @@ void pump()
 {
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents();
-}
-
-void sendMouse(QWidget *target, QEvent::Type type, const QPointF &position, Qt::MouseButton button,
-               Qt::MouseButtons buttons)
-{
-    QMouseEvent event(type, position, target->mapToGlobal(position.toPoint()), button, buttons,
-                      Qt::NoModifier);
-    QCoreApplication::sendEvent(target, &event);
 }
 
 bool tempoPinnedToViewport(const AutomationPage &page, const QScrollArea &scroll)
@@ -84,10 +77,10 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
           QStringLiteral("collapsed Tempo must leave LaneHandle{0} without a body"));
 
     const QPoint collapsedHeader = tempoHeaderPoint(page);
-    sendMouse(page.canvas(), QEvent::MouseButtonPress, collapsedHeader, Qt::LeftButton,
-              Qt::LeftButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease, collapsedHeader, Qt::LeftButton,
-              Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, collapsedHeader,
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, collapsedHeader,
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     pump();
 
     const QRect expandedBody = page.canvas()->laneBody(LaneHandle{0});
@@ -160,10 +153,10 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
     vertical->setValue(vertical->minimum());
     pump();
     const QPoint expandedHeader = tempoHeaderPoint(page);
-    sendMouse(page.canvas(), QEvent::MouseButtonPress, expandedHeader, Qt::LeftButton,
-              Qt::LeftButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease, expandedHeader, Qt::LeftButton,
-              Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, expandedHeader,
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, expandedHeader,
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     pump();
     const QRect recollapsedBody = page.canvas()->laneBody(LaneHandle{0});
     const int recollapsedMinimumHeight = page.canvas()->minimumHeight();
@@ -172,10 +165,10 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
           QStringLiteral("collapsing Tempo must remove its body and recover canvas space"));
 
     const QPoint recollapsedHeader = tempoHeaderPoint(page);
-    sendMouse(page.canvas(), QEvent::MouseButtonPress, recollapsedHeader, Qt::LeftButton,
-              Qt::LeftButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease, recollapsedHeader, Qt::LeftButton,
-              Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, recollapsedHeader,
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, recollapsedHeader,
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     pump();
     const QRect reexpandedBody = page.canvas()->laneBody(LaneHandle{0});
     const int reexpandedMinimumHeight = page.canvas()->minimumHeight();
@@ -187,10 +180,10 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
               "re-expanding Tempo must restore its configured height and pinned position"));
 
     const QPoint reexpandedHeader = tempoHeaderPoint(page);
-    sendMouse(page.canvas(), QEvent::MouseButtonPress, reexpandedHeader, Qt::LeftButton,
-              Qt::LeftButton);
-    sendMouse(page.canvas(), QEvent::MouseButtonRelease, reexpandedHeader, Qt::LeftButton,
-              Qt::NoButton);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, reexpandedHeader,
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, reexpandedHeader,
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     pump();
     check(page.canvas()->laneBody(LaneHandle{0}).isEmpty() &&
               page.canvas()->minimumHeight() == collapsedMinimumHeight,

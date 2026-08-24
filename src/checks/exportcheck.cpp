@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "audio/wavexport.h"
+#include "checks/support/songfixture.h"
 #include "core/songdocument.h"
 #include "project/decompproject.h"
 
@@ -47,31 +48,18 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
         failures++;
     };
 
-    DecompProject project;
     QString error;
-    if (!project.open(projectRoot, &error)) {
-        std::fprintf(stderr, "exportcheck: %s\n", qUtf8Printable(error));
-        return 1;
-    }
-    const SongInfo *song = nullptr;
-    for (const SongInfo &s : project.songs()) {
-        if (s.label == songLabel && s.isPlayable())
-            song = &s;
-    }
-    if (!song) {
-        std::fprintf(stderr, "exportcheck: song '%s' not found\n", qUtf8Printable(songLabel));
-        return 1;
-    }
-
-    SongDocument doc;
-    if (!doc.load(*song, &error)) {
+    const auto loadedSong = checks::LoadedSong::load(projectRoot, songLabel, error);
+    if (!loadedSong) {
         std::fprintf(stderr, "exportcheck: load: %s\n", qUtf8Printable(error));
         return 1;
     }
+    SongDocument &doc = loadedSong->document();
+    const SongInfo song = loadedSong->songInfo();
 
     LoadedVoiceGroup *vg = nullptr;
     const QByteArray rootUtf8 = projectRoot.toLocal8Bit();
-    for (const QString &name : DecompProject::voicegroupCandidates(song->cfg)) {
+    for (const QString &name : DecompProject::voicegroupCandidates(song)) {
         vg = voicegroup_load(rootUtf8.constData(), name.toLocal8Bit().constData(), nullptr);
         if (vg)
             break;
@@ -82,8 +70,8 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
     }
 
     SongSettings settings;
-    settings.songVolume = uint8_t(song->cfg.masterVolume);
-    settings.reverb = uint8_t(song->cfg.reverb > 0 ? song->cfg.reverb : 0);
+    settings.songVolume = uint8_t(doc.cfg().masterVolume);
+    settings.reverb = uint8_t(doc.cfg().reverb > 0 ? doc.cfg().reverb : 0);
 
     WavExportOptions opts;
     opts.sampleRate = 44100; // deliberately not the device rate

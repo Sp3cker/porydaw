@@ -96,8 +96,6 @@ QJsonObject manifestEntry(const CheckDefinition &definition)
     if (!definition.optionalArgumentEnvironment.isEmpty())
         entry.insert(QStringLiteral("optionalArgumentEnvironment"),
                      jsonObject(definition.optionalArgumentEnvironment));
-    if (definition.exclusive)
-        entry.insert(QStringLiteral("exclusive"), true);
     return entry;
 }
 
