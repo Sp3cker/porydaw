@@ -566,7 +566,7 @@ void AudioEngine::beginOutputCut(int transport)
     m_cutFadeRising = false;
     m_cutFadeTargetTransport = transport;
     m_cutFadeGain = std::clamp(m_cutFadeGain, 0.0f, 1.0f);
-    m_cutFadeRemaining = std::max<uint32_t>(1, m_outputGainRampSamples);
+    m_cutFadeRemaining = m_outputGainRampSamples;
     m_cutFadeStep = m_cutFadeGain / float(m_cutFadeRemaining);
     m_cutFadeHold = 0;
 }

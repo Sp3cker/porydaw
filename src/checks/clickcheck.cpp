@@ -187,7 +187,7 @@ struct CutFader {
                 gain = 0.0f;
                 rising = true;
                 remaining = kRampSamples;
-                step = 1.0f / float(std::max<uint32_t>(1, remaining));
+                step = 1.0f / float(remaining);
                 hold = holdSamples; // cut fires here, at gain == 0
                 return true;
             }

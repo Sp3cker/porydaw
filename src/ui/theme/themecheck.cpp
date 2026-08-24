@@ -124,7 +124,7 @@ bool isCompleteTrackIdentityPalette()
     for (std::size_t index = 0; index < themes::trackIdentityColorCount; ++index) {
         const auto &fill = themes::trackIdentityColor(index);
         if (!fill.isValid() || fill.alpha() != 255 ||
-            std::max(themes::contrastRatio(fill, light), themes::contrastRatio(fill, dark)) < 3.0)
+            (themes::contrastRatio(fill, light) < 3.0 && themes::contrastRatio(fill, dark) < 3.0))
             return false;
     }
     return true;

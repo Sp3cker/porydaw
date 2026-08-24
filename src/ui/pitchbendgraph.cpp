@@ -603,7 +603,7 @@ uint64_t PitchBendGraph::normalCellTicksAt(uint64_t tick) const
         return 1;
     const uint64_t span = std::max<uint64_t>(1, m_endTick - m_startTick);
     const double pixelsPerTick = double(canvasRect().width() - 1) / double(span);
-    return std::max<uint64_t>(1, m_songView->gridTicksAtScale(tick, pixelsPerTick));
+    return m_songView->gridTicksAtScale(tick, pixelsPerTick);
 }
 
 uint64_t PitchBendGraph::samplingCellTicksAt(uint64_t tick, Sampling sampling) const
@@ -616,7 +616,7 @@ uint64_t PitchBendGraph::nextSampleTick(uint64_t tick, Sampling sampling) const
 {
     if (tick >= m_endTick)
         return m_endTick;
-    const uint64_t cell = std::max<uint64_t>(1, samplingCellTicksAt(tick, sampling));
+    const uint64_t cell = samplingCellTicksAt(tick, sampling);
     uint64_t segmentEnd = m_endTick;
     const uint64_t anchor =
         sampling == Sampling::Fine ? 0 : (m_songView ? m_songView->gridSegAt(tick).start : 0);
@@ -639,7 +639,7 @@ uint64_t PitchBendGraph::lastEditableTick(Sampling sampling) const
     if (m_endTick <= m_startTick + 1)
         return m_startTick;
     const uint64_t lastRaw = m_endTick - 1;
-    const uint64_t cell = std::max<uint64_t>(1, samplingCellTicksAt(lastRaw, sampling));
+    const uint64_t cell = samplingCellTicksAt(lastRaw, sampling);
     const uint64_t anchor =
         sampling == Sampling::Fine ? 0 : (m_songView ? m_songView->gridSegAt(lastRaw).start : 0);
     const uint64_t tick =
@@ -655,7 +655,7 @@ uint64_t PitchBendGraph::tickAtFraction(double fraction, Sampling sampling) cons
     const double raw = double(m_startTick) + fraction * double(m_endTick - m_startTick);
     const uint64_t rawTick =
         std::clamp<uint64_t>(uint64_t(std::max(0.0, std::round(raw))), m_startTick, m_endTick);
-    const uint64_t cell = std::max<uint64_t>(1, samplingCellTicksAt(rawTick, sampling));
+    const uint64_t cell = samplingCellTicksAt(rawTick, sampling);
     const uint64_t anchor =
         sampling == Sampling::Fine ? 0 : (m_songView ? m_songView->gridSegAt(rawTick).start : 0);
     const double snapped =

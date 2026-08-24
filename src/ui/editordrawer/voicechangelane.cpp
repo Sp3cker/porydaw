@@ -393,8 +393,8 @@ void VoiceChangeLane::paint(QPainter &painter, AutomationCanvas &area,
                     painter.drawLine(QPointF(x, plot.top()), QPointF(x, plot.bottom()));
                 if (tick >= length)
                     break;
-                const uint64_t next = m_page->snapTick(
-                    double(tick) + double(std::max<uint64_t>(1, state.snapTicks)) * 0.75, false);
+                const uint64_t next =
+                    m_page->snapTick(double(tick) + double(state.snapTicks) * 0.75, false);
                 if (next <= tick)
                     break;
                 tick = std::min(next, length);

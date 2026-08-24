@@ -367,7 +367,7 @@ PitchResult detectPitchYin(std::span<const float> x, double rate)
                         bt += 0.05 * 0.5 * (va - vc) / denom;
                 }
                 const double c = cmndAt(bt, bv);
-                if (c < std::max(kThreshold, bestCmnd * 1.5)) {
+                if (c < kThreshold || c < bestCmnd * 1.5) {
                     bestTau = bt;
                     bestVal = bv;
                     bestCmnd = c;

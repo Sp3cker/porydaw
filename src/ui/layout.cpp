@@ -368,7 +368,7 @@ void paintComboBox(QComboBox &combo)
         combo.style()->drawControl(QStyle::CE_ComboBoxLabel, &option, &painter, &combo);
     const auto center = arrowRect.center() + QPoint(1, 0);
     const auto halfWidth = qMax(2, arrowRect.width() / 4);
-    const auto halfHeight = qMax(1, halfWidth / 2);
+    const auto halfHeight = halfWidth / 2;
     const QPoint points[] = {
         {center.x() - halfWidth, center.y() - halfHeight},
         {center.x() + halfWidth, center.y() - halfHeight},

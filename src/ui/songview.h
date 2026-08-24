@@ -374,6 +374,9 @@ class SongView : public QWidget
     uint64_t visibleGridTickUp(uint64_t tick) const;
     GridCell visibleGridCellContaining(uint64_t tick) const;
 
+    // Every tick-spacing accessor below returns a value >= 1 (floored at
+    // ticksPerClock()), so callers may divide by them or use them as loop
+    // strides without clamping.
     // Zoom-adaptive subdivision selected for the grid before drawGrid
     // suppresses sub-beat or beat lines at low detail.
     // It is not the painted-cell spacing; use visibleGridCellContaining().
@@ -584,6 +587,8 @@ class SongView : public QWidget
     };
 
     void refreshGeometry();
+    // Both exits floor at the clock base: the result is >= 1 for any
+    // segment, so snap math may divide by it unchecked.
     uint64_t gridTicksIn(const GridSeg &seg, double pixelsPerTick, bool snap = false) const;
     // Document remap handler: re-addresses all SongView-owned track state
     // before the following documentChanged rebuild.

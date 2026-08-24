@@ -46,9 +46,9 @@ const MidiTimeline *AutomationProjection::timeline() const
 uint64_t AutomationProjection::gridSnapTicks(uint64_t tick, bool fine) const
 {
     if (m_page)
-        return std::max<uint64_t>(1, m_page->gridState(tick, fine).snapTicks);
+        return m_page->gridState(tick, fine).snapTicks;
     if (m_songView)
-        return std::max<uint64_t>(1, m_songView->gridState(tick, fine).snapTicks);
+        return m_songView->gridState(tick, fine).snapTicks;
     return 1;
 }
 

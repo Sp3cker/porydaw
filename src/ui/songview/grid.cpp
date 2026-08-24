@@ -143,7 +143,7 @@ uint64_t SongView::gridTicksIn(const GridSeg &seg, double pixelsPerTick, bool sn
     // floor only — snapping steps past it too. gcd keeps the snap grid a
     // divisor of the drawn grid when a beat's ticks don't split evenly, so
     // every drawn line stays snappable.
-    const uint64_t vis = std::max(std::max<uint64_t>(1, seg.beatTicks / ladder[step]), clock);
+    const uint64_t vis = std::max(seg.beatTicks / ladder[step], clock);
     if (!snap || step == 0)
         return vis;
     const uint64_t fine = std::max<uint64_t>(1, seg.beatTicks / ladder[step - 1]);
@@ -163,7 +163,7 @@ uint64_t SongView::snapTick(double tick, bool fine) const
         return uint64_t(std::round(tick / g) * g);
     }
     const GridSeg seg = gridSegAt(uint64_t(tick));
-    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, m_pxPerTick, /*snap=*/true));
+    const uint64_t g = gridTicksIn(seg, m_pxPerTick, /*snap=*/true);
     const uint64_t k = uint64_t((tick - double(seg.start)) / double(g));
     const uint64_t lo = seg.start + k * g;
     // The next signature's tick is itself a grid position (the grid
@@ -175,14 +175,14 @@ uint64_t SongView::snapTickDown(double tick) const
 {
     tick = std::max(0.0, tick);
     const GridSeg seg = gridSegAt(uint64_t(tick));
-    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, m_pxPerTick, /*snap=*/true));
+    const uint64_t g = gridTicksIn(seg, m_pxPerTick, /*snap=*/true);
     return seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
 }
 uint64_t SongView::snapTickUp(double tick) const
 {
     tick = std::max(0.0, tick);
     const GridSeg seg = gridSegAt(uint64_t(tick));
-    const uint64_t g = std::max<uint64_t>(1, gridTicksIn(seg, m_pxPerTick, /*snap=*/true));
+    const uint64_t g = gridTicksIn(seg, m_pxPerTick, /*snap=*/true);
     const uint64_t lo = seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
     if (double(lo) >= tick)
         return lo;

@@ -572,8 +572,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     view.setEditorTimeZoom(live.timeZoom);
     page.refreshLiveState(live);
     const uint64_t hoverSnapTick = view.snapTick(30.0, false);
-    const uint64_t hoverSnapSpacing =
-        std::max<uint64_t>(1, view.gridState(hoverSnapTick, false).snapTicks);
+    const uint64_t hoverSnapSpacing = view.gridState(hoverSnapTick, false).snapTicks;
     const double firstHoverTick = double(hoverSnapTick) + 0.1 * double(hoverSnapSpacing);
     const double secondHoverTick = double(hoverSnapTick) + 0.4 * double(hoverSnapSpacing);
     const double thirdHoverTick = double(hoverSnapTick) + 1.1 * double(hoverSnapSpacing);
