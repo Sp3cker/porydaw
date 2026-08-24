@@ -20,14 +20,56 @@ bool DecompProject::open(const QString &rootDir, QString *error)
             *error = QStringLiteral("Directory does not exist: %1").arg(rootDir);
         return false;
     }
-    m_root = dir.absolutePath();
+    const QString canonical = dir.canonicalPath();
+    m_root = canonical.isEmpty() ? dir.absolutePath() : canonical;
+    const QString cacheStoreDir =
+        m_cacheStoreDir.isEmpty() ? ProjectIndex::defaultStoreDir(m_root) : m_cacheStoreDir;
 
-    if (!parseSongTable(error)) {
+    // Persistent-index fast path: a store whose fingerprint still matches
+    // every input replaces the scan entirely; anything else falls through
+    // to the full rescan and is rewritten below.
+    QByteArray indexFinger;
+    QStringList midiFiles;
+    if (!cacheStoreDir.isEmpty()) {
+        // Listing feeds the fingerprint, and the scan below reuses it —
+        // sound/songs/midi is never walked twice.
+        midiFiles = ProjectIndex::listFileNames(m_root + QStringLiteral("/sound/songs/midi"),
+                                                QStringLiteral(".mid"));
+        const QStringList sidecarFiles = ProjectIndex::listFileNames(
+            m_root + QStringLiteral("/.porydaw"), QStringLiteral(".json"));
+        indexFinger = ProjectIndex::fingerprint(m_root, midiFiles, sidecarFiles);
+        if (ProjectIndex::load(cacheStoreDir, m_root, indexFinger, &m_songs, &m_players)) {
+            for (SongInfo &song : m_songs) {
+                if (!song.registered) {
+                    QString constant, player;
+                    if (SongRegistry::loadRegistrationMeta(m_root, song.label, &constant,
+                                                           &player)) {
+                        if (!constant.isEmpty())
+                            song.constant = constant;
+                        if (!player.isEmpty())
+                            song.player = player;
+                    }
+                }
+            }
+            return true;
+        }
+    }
+    const QDir midiDir(m_root + QStringLiteral("/sound/songs/midi"));
+    // Bare names-only walk: QDir::entryList's per-entry metadata stat
+    // dominates the scan on large FAT32 checkouts (see ProjectIndex::
+    // listFileNames). Listed only when the cache fast path above did not.
+    if (midiFiles.isEmpty())
+        midiFiles = ProjectIndex::listFileNames(m_root + QStringLiteral("/sound/songs/midi"),
+                                                QStringLiteral(".mid"));
+    QSet<QString> midiFileNames;
+    for (const QString &fileName : midiFiles)
+        midiFileNames.insert(fileName);
+    if (!parseSongTable(midiDir, midiFileNames, error)) {
         m_root.clear();
         return false;
     }
     parseSongConstants();
-    discoverUnregisteredSongs();
+    discoverUnregisteredSongs(midiDir, midiFiles);
     // Which registration files still miss each song's entry — one pass over
     // the registration files for the whole project (checkRegistration per
     // song would reopen them hundreds of times).
@@ -50,6 +92,8 @@ bool DecompProject::open(const QString &rootDir, QString *error)
     if (!parseMidiCfg())
         parseSongsMk();
     m_players = SongRegistry::musicPlayers(m_root);
+    if (!cacheStoreDir.isEmpty())
+        ProjectIndex::save(cacheStoreDir, m_root, indexFinger, m_songs, m_players);
     return true;
 }
 
@@ -75,7 +119,13 @@ void DecompProject::close()
     m_players.clear();
 }
 
-bool DecompProject::parseSongTable(QString *error)
+void DecompProject::setIndexCache(const QString &storeDir)
+{
+    m_cacheStoreDir = storeDir;
+}
+
+bool DecompProject::parseSongTable(const QDir &midiDir, const QSet<QString> &midiFiles,
+                                   QString *error)
 {
     const QString path = m_root + QStringLiteral("/sound/song_table.inc");
     QFile file(path);
@@ -91,7 +141,6 @@ bool DecompProject::parseSongTable(QString *error)
     static const QRegularExpression songRe(
         QStringLiteral(R"(^\s*song\s+(\w+)\s*,\s*(\w+)\s*,\s*(\w+))"));
 
-    const QString midiDir = m_root + QStringLiteral("/sound/songs/midi/");
     QTextStream in(&file);
     while (!in.atEnd()) {
         const QString line = in.readLine();
@@ -104,9 +153,9 @@ bool DecompProject::parseSongTable(QString *error)
         song.label = m.captured(1);
         song.player = m.captured(2);
 
-        const QString midPath = midiDir + song.label + QStringLiteral(".mid");
-        if (QFile::exists(midPath)) {
-            song.midPath = midPath;
+        const QString midiFileName = song.label + QStringLiteral(".mid");
+        if (midiFiles.contains(midiFileName)) {
+            song.midPath = midiDir.filePath(midiFileName);
             song.hasMid = true;
         }
         m_songs.append(song);
@@ -149,7 +198,7 @@ void DecompProject::parseSongConstants()
     }
 }
 
-void DecompProject::discoverUnregisteredSongs()
+void DecompProject::discoverUnregisteredSongs(const QDir &midiDir, const QStringList &midiFiles)
 {
     // .mid files with no song_table.inc entry: songs whose registration
     // never ran (dropped-in files) or failed. Listing them keeps the badge
@@ -160,9 +209,7 @@ void DecompProject::discoverUnregisteredSongs()
     for (const SongInfo &song : m_songs)
         known.insert(song.label);
 
-    const QDir midiDir(m_root + QStringLiteral("/sound/songs/midi"));
-    const QStringList mids = midiDir.entryList({QStringLiteral("*.mid")}, QDir::Files, QDir::Name);
-    for (const QString &fileName : mids) {
+    for (const QString &fileName : midiFiles) {
         const QString label = fileName.chopped(4);
         if (known.contains(label))
             continue;
@@ -185,8 +232,7 @@ void DecompProject::discoverUnregisteredSongs()
     }
 }
 
-// mid2agb parses option letters case-insensitively (-v080 == -V080).
-static SongCfg cfgFromFlags(const QStringList &flags)
+SongCfg SongCfg::fromFlags(const QStringList &flags)
 {
     SongCfg cfg;
     cfg.rawFlags = flags;
@@ -246,8 +292,8 @@ bool DecompProject::parseMidiCfg()
         if (name.endsWith(QStringLiteral(".mid"), Qt::CaseInsensitive))
             name.chop(4);
 
-        byLabel.insert(
-            name, cfgFromFlags(line.mid(colon + 1).split(QLatin1Char(' '), Qt::SkipEmptyParts)));
+        byLabel.insert(name, SongCfg::fromFlags(
+                                 line.mid(colon + 1).split(QLatin1Char(' '), Qt::SkipEmptyParts)));
     }
 
     for (SongInfo &song : m_songs) {
@@ -268,7 +314,7 @@ void DecompProject::parseSongsMk()
         const auto it = byLabel.constFind(song.label);
         if (it != byLabel.constEnd()) {
             song.hasCfg = true;
-            song.cfg = cfgFromFlags(it.value());
+            song.cfg = SongCfg::fromFlags(it.value());
         }
     }
 }
