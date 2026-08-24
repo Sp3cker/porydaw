@@ -188,6 +188,9 @@ class MainWindow : public QMainWindow
     // catch the change, and its stale parse would revert the save on its
     // own next voicegroup write.
     void refreshSessionsAfterVgSave(const QString &filePath, SongSession *except);
+    VoicegroupLoadRequest makeVoicegroupLoadRequest(const SongCfg &cfg) const;
+    void startVoicegroupLoad(SongSession &session, VoicegroupLoadOperation operation);
+    void retryVoicegroupLoad();
     // Records the open tabs + active song in QSettings for restoreSession.
     void persistOpenTabs();
     // Re-resolves each session's songId by label after a project reload.
@@ -232,7 +235,8 @@ class MainWindow : public QMainWindow
     // Sidecar view state (SPEC §4.4): written whenever a session is let go
     // (tab close, project switch, app close). Cosmetic; silent on failure.
     void saveViewState(SongSession &session);
-    LoadedVoiceGroup *loadVoicegroupFor(const SongCfg &cfg, QString *tried);
+    // Voicegroup parsing is serialized by m_voicegroupLoader; no synchronous
+    // poryaaaa voicegroup_load call belongs on the UI thread.
     // Starts (or resumes) playback; from Stopped, seeks to the edit cursor
     // first so playback begins there. fromEditCursor forces that seek even
     // out of Paused — the Space binding (Reaper-style restart), while the
@@ -295,6 +299,7 @@ class MainWindow : public QMainWindow
     EditorDrawerState m_editorDrawerState;
     std::vector<std::unique_ptr<SongSession>> m_sessions;
     SongSession *m_active = nullptr;
+    VoicegroupLoader m_voicegroupLoader;
     // Suppress currentChanged handling (and tab persistence) while tabs are
     // being torn down or bulk-restored; the caller activates once at the end.
     bool m_tearingDown = false;

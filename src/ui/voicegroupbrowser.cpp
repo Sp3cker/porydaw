@@ -190,6 +190,34 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
     // voice, releasing the mouse anywhere releases the note.
     connect(m_tree, &QTreeWidget::itemPressed, this, &VoicegroupBrowser::pressedVoice);
     m_tree->viewport()->installEventFilter(this);
+    // One overlay, parented to the viewport so it never joins the root
+    // layout or size hints. Fitted on viewport resize in eventFilter.
+    m_loadOverlay = new QWidget(m_tree->viewport());
+    m_loadOverlay->setObjectName(QStringLiteral("voicegroupLoadOverlay"));
+    m_loadOverlay->setAutoFillBackground(true);
+    m_loadOverlay->setBackgroundRole(QPalette::Base);
+    m_loadOverlay->setFocusPolicy(Qt::NoFocus);
+    m_loadOverlay->hide();
+    auto *overlayLayout = new QVBoxLayout(m_loadOverlay);
+    overlayLayout->setContentsMargins(
+        ::layout::space(::layout::Space::One), ::layout::space(::layout::Space::One),
+        ::layout::space(::layout::Space::One), ::layout::space(::layout::Space::One));
+    overlayLayout->setSpacing(::layout::space(::layout::Space::Half));
+    m_loadStatus = new QLabel(m_loadOverlay);
+    m_loadStatus->setObjectName(QStringLiteral("voicegroupLoadStatus"));
+    m_loadStatus->setWordWrap(true);
+    m_loadStatus->setAlignment(Qt::AlignCenter);
+    m_loadRefresh = new QPushButton(tr("Refresh"), m_loadOverlay);
+    m_loadRefresh->setObjectName(QStringLiteral("voicegroupLoadRefresh"));
+    m_loadRefresh->setFocusPolicy(Qt::NoFocus);
+    m_loadRefresh->hide();
+    overlayLayout->addStretch(1);
+    overlayLayout->addWidget(m_loadStatus, 0, Qt::AlignHCenter);
+    overlayLayout->addWidget(m_loadRefresh, 0, Qt::AlignHCenter);
+    overlayLayout->addStretch(1);
+    connect(m_loadRefresh, &QPushButton::clicked, this,
+            &VoicegroupBrowser::refreshVoicegroupRequested);
+    fitVoicegroupLoadOverlay();
     connect(m_tree, &QTreeWidget::currentItemChanged, this, [this] { populateEditor(); });
 
     // ---- editor panel for the selected voice ----
@@ -425,7 +453,7 @@ void VoicegroupBrowser::setVoicegroup(const LoadedVoiceGroup *vg)
     if (!vg)
         m_source = nullptr; // a cleared voicegroup invalidates the source too
     m_tree->clear();
-    m_vgCombo->setEnabled(vg != nullptr);
+    applyVoicegroupComboEnabled();
     m_vgCombo->lineEdit()->setPlaceholderText(vg ? QStringLiteral("dummy") : tr("No song loaded"));
     if (!vg) {
         m_updating = true;
@@ -456,6 +484,36 @@ void VoicegroupBrowser::setVoicegroup(const LoadedVoiceGroup *vg)
         markUsedRow(item, m_usedVoices.contains(i));
     }
     populateEditor();
+}
+
+void VoicegroupBrowser::setVoicegroupLoading()
+{
+    releaseVoice();
+    m_loadStatus->setText(tr("Loading voicegroup…"));
+    m_loadRefresh->setVisible(false);
+    fitVoicegroupLoadOverlay();
+    m_loadOverlay->raise();
+    m_loadOverlay->setVisible(true);
+    applyVoicegroupComboEnabled();
+}
+
+void VoicegroupBrowser::setVoicegroupLoadError(const QString &message)
+{
+    releaseVoice();
+    m_loadStatus->setText(message);
+    m_loadRefresh->setVisible(true);
+    fitVoicegroupLoadOverlay();
+    m_loadOverlay->raise();
+    m_loadOverlay->setVisible(true);
+    applyVoicegroupComboEnabled();
+}
+
+void VoicegroupBrowser::clearVoicegroupLoadState()
+{
+    m_loadOverlay->setVisible(false);
+    m_loadRefresh->setVisible(false);
+    m_loadStatus->clear();
+    applyVoicegroupComboEnabled();
 }
 
 void VoicegroupBrowser::markUsedRow(QTreeWidgetItem *item, bool used)
@@ -599,7 +657,7 @@ void VoicegroupBrowser::revealSlot(int slot)
 void VoicegroupBrowser::pressedVoice(QTreeWidgetItem *item)
 {
     releaseVoice();
-    if (!item)
+    if (!item || m_loadOverlay->isVisible())
         return;
     const int voice = item->data(0, Qt::UserRole).toInt();
     m_soundingVoice = voice;
@@ -616,8 +674,24 @@ void VoicegroupBrowser::releaseVoice()
 
 bool VoicegroupBrowser::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched == m_tree->viewport() && event->type() == QEvent::MouseButtonRelease)
-        releaseVoice();
+    if (watched == m_tree->viewport()) {
+        if (event->type() == QEvent::Resize)
+            fitVoicegroupLoadOverlay();
+        if (event->type() == QEvent::MouseButtonRelease)
+            releaseVoice();
+    }
+    if (m_loadOverlay && m_loadOverlay->isVisible() && watched == m_tree) {
+        switch (event->type()) {
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonDblClick:
+        case QEvent::MouseButtonRelease:
+        case QEvent::KeyPress:
+        case QEvent::KeyRelease:
+            return true;
+        default:
+            break;
+        }
+    }
     // Leave plain Space unaccepted so the window-level play/pause shortcut
     // fires instead of the input inserting a space / toggling.
     if (event->type() == QEvent::ShortcutOverride) {
@@ -628,6 +702,20 @@ bool VoicegroupBrowser::eventFilter(QObject *watched, QEvent *event)
         }
     }
     return QWidget::eventFilter(watched, event);
+}
+
+void VoicegroupBrowser::fitVoicegroupLoadOverlay()
+{
+    if (!m_loadOverlay)
+        return;
+    const auto rect = m_tree->viewport()->rect();
+    if (m_loadOverlay->geometry() != rect)
+        m_loadOverlay->setGeometry(rect);
+}
+
+void VoicegroupBrowser::applyVoicegroupComboEnabled()
+{
+    m_vgCombo->setEnabled(m_vg != nullptr && !m_loadOverlay->isVisible());
 }
 
 void VoicegroupBrowser::setEditorRowsVisible(VgMacro macro, bool synth, bool visible)

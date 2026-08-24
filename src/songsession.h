@@ -6,15 +6,13 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
+#include "project/voicegrouploader.h"
 #include "project/voicegroupsource.h"
 #include "ui/songview.h"
-
-extern "C" {
-#include "voicegroup_loader.h"
-}
 
 // One open song tab. Each tab is a complete, independent editing session:
 // its own document (with its own undo stack — voicegroup edits ride it too),
@@ -34,11 +32,36 @@ struct SynthToneBuf {
     uint8_t bytes[17];
 };
 
+enum class VoicegroupLoadState {
+    Idle,
+    Loading,
+    Ready,
+    Error,
+};
+
+enum class VoicegroupLoadKind {
+    Initial,
+    DocumentSwitch,
+    SourceRefresh,
+    Preview,
+};
+
+struct VoicegroupLoadOperation {
+    VoicegroupLoadRequest request;
+    VoicegroupLoadKind kind = VoicegroupLoadKind::Initial;
+    QString targetVoicegroupArg;
+    int keepSlot = 0;
+};
+
 struct SongSession {
     SongDocument doc;
     std::unique_ptr<VoicegroupSource> vgSource;
     std::shared_ptr<MidiTimeline> timeline;
     LoadedVoiceGroup *voicegroup = nullptr;
+    VoicegroupLoadState voicegroupLoadState = VoicegroupLoadState::Idle;
+    uint64_t voicegroupLoadGeneration = 0;
+    QString voicegroupLoadError;
+    std::optional<VoicegroupLoadOperation> voicegroupLoadOperation;
     // Keyed by slot; entries outlive any one LoadedVoiceGroup (engine track
     // caches hold ToneData copies pointing here) and are re-installed into a
     // freshly loaded voicegroup by MainWindow::applyPendingSynthTones.

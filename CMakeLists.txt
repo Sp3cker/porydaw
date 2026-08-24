@@ -204,6 +204,8 @@ qt_add_library(porydaw_app STATIC
     src/project/voicegroupsource.h
     src/project/voicegroupeditcommand.cpp
     src/project/voicegroupeditcommand.h
+    src/project/voicegrouploader.cpp
+    src/project/voicegrouploader.h
     src/ui/dragspinbox.cpp
     src/ui/dragspinbox.h
     src/ui/m4asemantics.cpp

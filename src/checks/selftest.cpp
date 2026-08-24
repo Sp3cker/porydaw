@@ -5,8 +5,11 @@
 #include <cstdint>
 
 #include <QApplication>
+#include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
+#include <QThread>
 #include <QTimer>
 
 #include "project/songregistry.h"
@@ -15,6 +18,39 @@
 #include "ui/songview.h"
 #include "ui/viewsidecar.h"
 #include "ui/voicegroupbrowser.h"
+
+namespace {
+
+bool waitForVoicegroupLoad(SongSession *session, int timeoutMs = 30000)
+{
+    if (!session) {
+        qWarning("selftest: null session while waiting for voicegroup load");
+        return false;
+    }
+    QElapsedTimer timer;
+    timer.start();
+    while (session->voicegroupLoadState == VoicegroupLoadState::Loading) {
+        if (timer.hasExpired(timeoutMs)) {
+            qWarning("selftest: voicegroup load timed out after %d ms", timeoutMs);
+            return false;
+        }
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        QThread::msleep(5);
+    }
+    if (session->voicegroupLoadState == VoicegroupLoadState::Error) {
+        qWarning("selftest: voicegroup load failed: %s",
+                 qUtf8Printable(session->voicegroupLoadError));
+        return false;
+    }
+    if (session->voicegroupLoadState != VoicegroupLoadState::Ready || !session->voicegroup) {
+        qWarning("selftest: voicegroup not ready after load (state %d)",
+                 static_cast<int>(session->voicegroupLoadState));
+        return false;
+    }
+    return true;
+}
+
+} // namespace
 
 bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabel)
 {
@@ -47,6 +83,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         qWarning("selftest: song failed to load");
         return false;
     }
+    if (!waitForVoicegroupLoad(tab))
+        return false;
     qInfo("selftest: loaded %s (%zu events, %d tracks)", qUtf8Printable(target->label),
           m_audio.timeline()->events.size(), m_audio.timeline()->usedTrackCount);
     // Realize the shown window before timed playback, especially under
@@ -132,14 +170,20 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                 const QByteArray donorName(m_audio.voicegroup()->voiceNames[donorSlot]);
                 v.symbol = tab->vgSource->voiceAt(donorSlot)->symbol;
                 onVoiceEditRequested(dsSlot, v, true);
-                vgEditOk = vgEditOk &&
-                           QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == donorName &&
-                           m_audio.transport() == Transport::Playing;
+                if (!waitForVoicegroupLoad(tab)) {
+                    vgEditOk = false;
+                } else {
+                    vgEditOk = vgEditOk && m_audio.voicegroup() &&
+                               QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == donorName &&
+                               m_audio.transport() == Transport::Playing;
+                }
             }
             // Voice edits ride the song's undo stack; undoing them all must
             // land back on the exact on-disk state (clean, nothing written).
             for (int i = 0; i < undosNeeded; i++)
                 tab->doc.undoStack()->undo();
+            if (!waitForVoicegroupLoad(tab))
+                vgEditOk = false;
             QByteArray fileAfter;
             {
                 QFile in(tab->vgSource->filePath());
