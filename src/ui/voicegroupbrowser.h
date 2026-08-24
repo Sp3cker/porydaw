@@ -41,6 +41,12 @@ class VoicegroupBrowser : public QWidget
     // vg may be nullptr (no song loaded). Not owned; the caller must clear it
     // (setVoicegroup(nullptr)) before the voicegroup is freed.
     void setVoicegroup(const LoadedVoiceGroup *vg);
+    // Transient overlay over the voice list while a voicegroup load is in
+    // flight or failed. Allocated once on the tree viewport; never joins
+    // the root layout or size hints.
+    void setVoicegroupLoading();
+    void setVoicegroupLoadError(const QString &message);
+    void clearVoicegroupLoadState();
 
     // The selector at the top of the dock: the project's -G args (editable,
     // so unknown/new symbols still work) and the song's current one. Choices
@@ -116,6 +122,9 @@ class VoicegroupBrowser : public QWidget
     // browser does not switch anything itself: the owner commits it as an
     // undoable cfg edit and reflects it back via setCurrentVoicegroupArg.
     void voicegroupChangeRequested(const QString &arg);
+    // The overlay's Refresh control. The browser does not reload anything
+    // itself: the owner starts another serialized load.
+    void refreshVoicegroupRequested();
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -134,10 +143,15 @@ class VoicegroupBrowser : public QWidget
     // no set_synth entry) classify from the loaded ToneData.
     bool synthDescFor(const VgVoice &voice, int slot, VgSynthDesc *desc) const;
 
+    void fitVoicegroupLoadOverlay();
+    void applyVoicegroupComboEnabled();
     QComboBox *m_vgCombo = nullptr;
     QString m_vgArg;         // the arg the selector currently stands at
     QStringList m_vgChoices; // last list handed to setVoicegroupChoices
     QTreeWidget *m_tree = nullptr;
+    QWidget *m_loadOverlay = nullptr;
+    QLabel *m_loadStatus = nullptr;
+    QPushButton *m_loadRefresh = nullptr;
     int m_soundingVoice = -1;
     QSet<int> m_usedVoices;
 

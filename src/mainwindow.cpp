@@ -567,6 +567,8 @@ void MainWindow::buildUi()
                 cfg.voicegroupArg = arg;
                 m_active->doc.setCfg(cfg);
             });
+    connect(m_vgBrowser, &VoicegroupBrowser::refreshVoicegroupRequested, this,
+            &MainWindow::retryVoicegroupLoad);
     m_vgDock->setWidget(m_vgBrowser);
     addDockWidget(Qt::LeftDockWidgetArea, m_vgDock);
 
@@ -932,7 +934,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
 
     const bool loaded = session != nullptr;
     m_saveAction->setEnabled(loaded);
-    m_exportWavAction->setEnabled(loaded);
+    m_exportWavAction->setEnabled(loaded && session->voicegroup);
     m_settingsAction->setEnabled(loaded);
     m_closeTabAction->setEnabled(loaded);
     m_eventListAction->setEnabled(loaded);
@@ -949,6 +951,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
             m_audio.unloadSong();
         m_polyPanel->clearSession();
         m_vgBrowser->setVoicegroup(nullptr);
+        m_vgBrowser->clearVoicegroupLoadState();
         updateVgDockTitle();
         m_registerAction->setEnabled(false);
         m_transportBar->setSongName(QString());
@@ -1020,6 +1023,79 @@ void MainWindow::updatePolyPanelContext(SongSession *session)
     m_polyPanel->setVoiceNames(voiceNames);
 }
 
+VoicegroupLoadRequest MainWindow::makeVoicegroupLoadRequest(const SongCfg &cfg) const
+{
+    return {m_project.root(), DecompProject::voicegroupCandidates(cfg), std::nullopt};
+}
+
+void MainWindow::startVoicegroupLoad(SongSession &session, VoicegroupLoadOperation operation)
+{
+    session.voicegroupLoadOperation = std::move(operation);
+    session.voicegroupLoadState = VoicegroupLoadState::Loading;
+    session.voicegroupLoadError.clear();
+    const uint64_t generation = ++session.voicegroupLoadGeneration;
+    QPointer<SongView> view = session.view;
+    if (&session == m_active)
+        updateVoicegroupBrowser();
+    m_voicegroupLoader.load(
+        session.voicegroupLoadOperation->request,
+        [this, view, generation](VoicegroupLoadResult result) mutable {
+            if (!view)
+                return;
+            SongSession *session = sessionForWidget(view.data());
+            if (!session || session->voicegroupLoadGeneration != generation ||
+                !session->voicegroupLoadOperation)
+                return;
+            const VoicegroupLoadOperation operation = *session->voicegroupLoadOperation;
+            if (!result.succeeded()) {
+                session->voicegroupLoadState = VoicegroupLoadState::Error;
+                session->voicegroupLoadError = result.errorText();
+                if (session == m_active) {
+                    updateVoicegroupBrowser();
+                    statusBar()->showMessage(session->voicegroupLoadError, 8000);
+                    updateTransportActions();
+                }
+                return;
+            }
+            LoadedVoiceGroup *voicegroup = result.takeVoicegroup();
+            session->voicegroupLoadState = VoicegroupLoadState::Ready;
+            session->voicegroupLoadError.clear();
+            switch (operation.kind) {
+            case VoicegroupLoadKind::Initial:
+                session->appliedVoicegroupArg = operation.targetVoicegroupArg;
+                swapVoicegroup(*session, voicegroup, operation.keepSlot);
+                break;
+            case VoicegroupLoadKind::DocumentSwitch:
+                openVoicegroupSource(*session, session->doc.cfg());
+                reapplyVoicegroupEditsToReopenedSource(*session);
+                session->appliedVoicegroupArg = operation.targetVoicegroupArg;
+                swapVoicegroup(*session, voicegroup, operation.keepSlot);
+                if (session->vgSource && session->vgSource->dirty())
+                    reloadVoicegroupPreview(*session, operation.keepSlot);
+                break;
+            case VoicegroupLoadKind::SourceRefresh:
+                openVoicegroupSource(*session, session->doc.cfg());
+                swapVoicegroup(*session, voicegroup, operation.keepSlot);
+                break;
+            case VoicegroupLoadKind::Preview:
+                swapVoicegroup(*session, voicegroup, operation.keepSlot);
+                break;
+            }
+            if (session == m_active) {
+                m_exportWavAction->setEnabled(session->voicegroup != nullptr);
+                updatePolyPanelContext(session);
+                updateTransportActions();
+            }
+        });
+}
+
+void MainWindow::retryVoicegroupLoad()
+{
+    if (!m_active || !m_active->voicegroupLoadOperation)
+        return;
+    startVoicegroupLoad(*m_active, *m_active->voicegroupLoadOperation);
+}
+
 void MainWindow::maybeRefreshVoicegroup(SongSession &session)
 {
     // Another tab may have saved this session's voicegroup since it was
@@ -1030,17 +1106,12 @@ void MainWindow::maybeRefreshVoicegroup(SongSession &session)
     const QDateTime onDisk = QFileInfo(session.vgSource->filePath()).lastModified();
     if (!onDisk.isValid() || onDisk == session.vgFileTime)
         return;
-    QString tried;
-    LoadedVoiceGroup *vg = loadVoicegroupFor(session.doc.cfg(), &tried);
-    if (!vg)
-        return; // keep the previous sound
-    session.view->setVoicegroup(nullptr);
-    if (session.voicegroup)
-        voicegroup_free(session.voicegroup);
-    session.voicegroup = vg;
-    session.view->setVoicegroup(vg);
-    // Fresh parse of the saved file (also re-records its mtime).
-    openVoicegroupSource(session, session.doc.cfg());
+    VoicegroupLoadOperation operation;
+    operation.request = makeVoicegroupLoadRequest(session.doc.cfg());
+    operation.kind = VoicegroupLoadKind::SourceRefresh;
+    operation.targetVoicegroupArg = session.doc.cfg().voicegroupArg;
+    operation.keepSlot = &session == m_active ? m_vgBrowser->currentSlot() : 0;
+    startVoicegroupLoad(session, std::move(operation));
 }
 
 void MainWindow::refreshSessionsAfterVgSave(const QString &filePath, SongSession *except)
@@ -1051,17 +1122,12 @@ void MainWindow::refreshSessionsAfterVgSave(const QString &filePath, SongSession
             continue;
         if (session->vgSource->dirty())
             continue; // unsaved edits stay; last save wins, as documented
-        QString tried;
-        LoadedVoiceGroup *vg = loadVoicegroupFor(session->doc.cfg(), &tried);
-        if (!vg)
-            continue; // keep the previous sound
-        const int keepSlot = session == m_active ? m_vgBrowser->currentSlot() : 0;
-        swapVoicegroup(*session, vg, keepSlot);
-        // Fresh parse of the saved file (also re-records its mtime), then
-        // re-point the browser at it — swapVoicegroup bound the old one.
-        openVoicegroupSource(*session, session->doc.cfg());
-        if (session == m_active)
-            updateVoicegroupBrowser();
+        VoicegroupLoadOperation operation;
+        operation.request = makeVoicegroupLoadRequest(session->doc.cfg());
+        operation.kind = VoicegroupLoadKind::SourceRefresh;
+        operation.targetVoicegroupArg = session->doc.cfg().voicegroupArg;
+        operation.keepSlot = session == m_active ? m_vgBrowser->currentSlot() : 0;
+        startVoicegroupLoad(*session, std::move(operation));
     }
 }
 
@@ -1281,21 +1347,6 @@ void MainWindow::songOpenInNewTab(int songId)
     loadSong(m_project.songs().at(songId), /*newTab=*/true);
 }
 
-LoadedVoiceGroup *MainWindow::loadVoicegroupFor(const SongCfg &cfg, QString *tried)
-{
-    const QStringList candidates = DecompProject::voicegroupCandidates(cfg);
-    if (tried)
-        *tried = candidates.join(QStringLiteral(", "));
-    const QByteArray rootUtf8 = m_project.root().toLocal8Bit();
-    for (const QString &name : candidates) {
-        LoadedVoiceGroup *vg =
-            voicegroup_load(rootUtf8.constData(), name.toLocal8Bit().constData(), nullptr);
-        if (vg)
-            return vg;
-    }
-    return nullptr;
-}
-
 void MainWindow::loadSong(const SongInfo &song, bool newTab)
 {
     if (!m_audioOk)
@@ -1325,22 +1376,11 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
     QElapsedTimer timer;
     timer.start();
 
-    QString tried;
-    LoadedVoiceGroup *vg = loadVoicegroupFor(song.cfg, &tried);
-    if (!vg) {
-        QApplication::restoreOverrideCursor();
-        QMessageBox::warning(
-            this, tr("Load Song"),
-            tr("Could not load the voicegroup for %1 (tried: %2).").arg(song.label, tried));
-        return;
-    }
-
     if (!session)
         session = createSession();
     session->doc.setTrackBudget(m_project.trackBudgetFor(song));
     QString error;
     if (!session->doc.load(song, &error)) {
-        voicegroup_free(vg);
         if (created)
             destroySession(session); // not in the tab bar yet
         QApplication::restoreOverrideCursor();
@@ -1350,8 +1390,13 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
 
     auto timeline = session->doc.buildTimeline(m_audio.sampleRate());
 
-    // The view (and, when replacing the active tab in place, the engine)
-    // must let go of the old timeline/voicegroup before they are freed.
+    // The MIDI document and view are ready before poryaaaa begins parsing
+    // samples. Detach the old song, then expose this timeline with no
+    // voicegroup so editing can begin while the worker loads it.
+    ++session->voicegroupLoadGeneration;
+    session->voicegroupLoadOperation.reset();
+    session->voicegroupLoadState = VoicegroupLoadState::Idle;
+    session->voicegroupLoadError.clear();
     session->view->setDocument(nullptr);
     session->view->setSong(nullptr, nullptr);
     if (session == m_active) {
@@ -1360,15 +1405,14 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
     }
     if (session->voicegroup)
         voicegroup_free(session->voicegroup);
-    session->voicegroup = vg;
+    session->voicegroup = nullptr;
     session->timeline = std::move(timeline);
     openVoicegroupSource(*session, song.cfg);
     session->songId = song.id;
-    session->appliedVoicegroupArg = song.cfg.voicegroupArg;
     session->appliedVolume = song.cfg.masterVolume;
     session->appliedReverb = song.cfg.reverb;
 
-    session->view->setSong(session->timeline.get(), session->voicegroup);
+    session->view->setSong(session->timeline.get(), nullptr);
     session->view->setDocument(&session->doc);
     ViewSidecar::Snapshot viewSnapshot;
     if (ViewSidecar::load(m_project.root(), song.label, &viewSnapshot)) {
@@ -1394,12 +1438,18 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
         activateSession(session, /*force=*/true);
     }
 
+    VoicegroupLoadOperation operation;
+    operation.request = makeVoicegroupLoadRequest(song.cfg);
+    operation.kind = VoicegroupLoadKind::Initial;
+    operation.targetVoicegroupArg = song.cfg.voicegroupArg;
+    startVoicegroupLoad(*session, std::move(operation));
+
     const MidiTimeline *tl = session->timeline.get();
     QString loopNote = tl->hasLoop() ? tr(", loops") : tr(", no loop markers");
     QString dropNote;
     if (tl->droppedTracks > 0)
         dropNote = tr(", %1 tracks beyond 16 ignored").arg(tl->droppedTracks);
-    statusBar()->showMessage(tr("Loaded %1 in %2 ms — %3 events%4%5")
+    statusBar()->showMessage(tr("Opened %1 in %2 ms — %3 events%4%5; loading voicegroup")
                                  .arg(song.label)
                                  .arg(timer.elapsed())
                                  .arg(tl->events.size())
@@ -1417,36 +1467,32 @@ void MainWindow::onDocumentChanged(SongSession &session)
 
     const SongCfg &cfg = session.doc.cfg();
     if (cfg.voicegroupArg != session.appliedVoicegroupArg) {
-        // The -G switch (or its undo/redo) swaps the voicegroup. Unsaved
-        // voice edits need no prompt: they live in the undo history and are
-        // reapplied whenever their voicegroup source is reopened.
-        cleanupVgPreview();
-        QString tried;
-        if (LoadedVoiceGroup *vg = loadVoicegroupFor(cfg, &tried)) {
-            session.view->setVoicegroup(nullptr);
-            if (active) {
-                m_vgBrowser->setVoicegroup(nullptr);
-                m_audio.updateVoicegroup(vg);
-            }
-            if (session.voicegroup)
-                voicegroup_free(session.voicegroup);
-            session.voicegroup = vg;
-            openVoicegroupSource(session, cfg);
-            reapplyVoicegroupEditsToReopenedSource(session);
-            session.view->setVoicegroup(session.voicegroup);
-            if (active)
-                updateVoicegroupBrowser();
-            session.appliedVoicegroupArg = cfg.voicegroupArg;
-            // Replayed edits aren't in the disk file just loaded; audition
-            // them through the preview shadow like any unsaved edit.
-            if (session.vgSource && session.vgSource->dirty())
-                reloadVoicegroupPreview(session, active ? m_vgBrowser->currentSlot() : 0);
-        } else {
-            statusBar()->showMessage(
-                tr("Voicegroup not found (tried: %1) — keeping the previous one until save.")
-                    .arg(tried),
-                8000);
+        const bool alreadyRequested =
+            session.voicegroupLoadOperation &&
+            session.voicegroupLoadOperation->targetVoicegroupArg == cfg.voicegroupArg;
+        if (!alreadyRequested) {
+            // The -G switch (or its undo/redo) swaps the voicegroup. Unsaved
+            // voice edits stay in the undo history and are replayed after the
+            // new source and loaded data arrive together.
+            cleanupVgPreview();
+            VoicegroupLoadOperation operation;
+            operation.request = makeVoicegroupLoadRequest(cfg);
+            operation.kind = VoicegroupLoadKind::DocumentSwitch;
+            operation.targetVoicegroupArg = cfg.voicegroupArg;
+            operation.keepSlot = active ? m_vgBrowser->currentSlot() : 0;
+            startVoicegroupLoad(session, std::move(operation));
         }
+    } else if (session.voicegroupLoadOperation &&
+               session.voicegroupLoadOperation->kind == VoicegroupLoadKind::DocumentSwitch) {
+        // Undo returned to the voicegroup that is still attached. Invalidate
+        // the queued switch; its result envelope will free any stale load.
+        ++session.voicegroupLoadGeneration;
+        session.voicegroupLoadOperation.reset();
+        session.voicegroupLoadState =
+            session.voicegroup ? VoicegroupLoadState::Ready : VoicegroupLoadState::Idle;
+        session.voicegroupLoadError.clear();
+        if (active)
+            updateVoicegroupBrowser();
     }
     if (cfg.masterVolume != session.appliedVolume || cfg.reverb != session.appliedReverb) {
         if (active && m_audio.songLoaded())
@@ -1539,9 +1585,12 @@ bool MainWindow::saveSession(SongSession &session)
         // Reload from the project: verifies the saved file parses and
         // replaces any preview-loaded state.
         const int slot = &session == m_active ? m_vgBrowser->currentSlot() : 0;
-        QString tried;
-        if (LoadedVoiceGroup *vg = loadVoicegroupFor(session.doc.cfg(), &tried))
-            swapVoicegroup(session, vg, slot);
+        VoicegroupLoadOperation operation;
+        operation.request = makeVoicegroupLoadRequest(session.doc.cfg());
+        operation.kind = VoicegroupLoadKind::SourceRefresh;
+        operation.targetVoicegroupArg = session.doc.cfg().voicegroupArg;
+        operation.keepSlot = slot;
+        startVoicegroupLoad(session, std::move(operation));
         updateVgDockTitle();
         // Only a real write may refresh the stamp: recording the mtime on a
         // doc-only save would silently absorb another tab's voicegroup save
@@ -1573,7 +1622,7 @@ bool MainWindow::saveSession(SongSession &session)
 void MainWindow::exportWav()
 {
     SongSession *session = m_active;
-    if (!session || !m_audio.songLoaded())
+    if (!session || !session->voicegroup || !m_audio.songLoaded())
         return;
     const bool hasLoop = m_audio.timeline()->hasLoop();
 
@@ -2340,8 +2389,9 @@ void MainWindow::loadSongByLabel(const QString &label, bool newTab)
 void MainWindow::updateVoicegroupBrowser()
 {
     SongSession *session = m_active;
-    if (!session || !session->voicegroup) {
+    if (!session) {
         m_vgBrowser->setVoicegroup(nullptr);
+        m_vgBrowser->clearVoicegroupLoadState();
         updateVgDockTitle();
         return;
     }
@@ -2349,41 +2399,57 @@ void MainWindow::updateVoicegroupBrowser()
                             ? QStringLiteral("_dummy")
                             : session->doc.cfg().voicegroupArg;
     m_vgBrowser->setVoicegroup(session->voicegroup);
-    m_vgBrowser->setUsedVoices(session->view->usedVoices());
-    const VgCatalog &catalog = vgCatalog();
-    m_vgBrowser->setVoicegroupChoices(catalog.groupArgs);
     m_vgBrowser->setCurrentVoicegroupArg(arg);
-    m_vgBrowser->setSource(
-        session->vgSource.get(), catalog.directSound, catalog.progWave, catalog.keysplits,
-        catalog.drumkits, catalog.typicalAdsr, catalog.synths, m_pendingSynths,
-        [this](const VgSynthDesc &desc) -> QString {
-            // Mint a pending symbol for the descriptor — nothing is written;
-            // the definition reaches disk when a voicegroup referencing it
-            // saves. Value-equal definitions (on disk or pending) are reused.
-            const VgSynthCatalog &synths = vgCatalog().synths;
-            QString symbol = synths.symbolFor(desc);
-            if (!symbol.isEmpty())
+    if (session->voicegroup) {
+        m_vgBrowser->setUsedVoices(session->view->usedVoices());
+        const VgCatalog &catalog = vgCatalog();
+        m_vgBrowser->setVoicegroupChoices(catalog.groupArgs);
+        m_vgBrowser->setSource(
+            session->vgSource.get(), catalog.directSound, catalog.progWave, catalog.keysplits,
+            catalog.drumkits, catalog.typicalAdsr, catalog.synths, m_pendingSynths,
+            [this](const VgSynthDesc &desc) -> QString {
+                // Mint a pending symbol for the descriptor — nothing is written;
+                // the definition reaches disk when a voicegroup referencing it
+                // saves. Value-equal definitions (on disk or pending) are reused.
+                const VgSynthCatalog &synths = vgCatalog().synths;
+                QString symbol = synths.symbolFor(desc);
+                if (!symbol.isEmpty())
+                    return symbol;
+                for (auto it = m_pendingSynths.constBegin(); it != m_pendingSynths.constEnd();
+                     ++it) {
+                    if (it.value() == desc)
+                        return it.key();
+                }
+                if (!synths.creatable()) {
+                    statusBar()->showMessage(
+                        tr("Cannot create synth instrument: this project doesn't define the "
+                           "set_synth_* macros (Golden Sun synths need ipatix's improved mixer)."),
+                        8000);
+                    return QString();
+                }
+                // Param-named; a hand-written symbol with the same name but
+                // different bytes (or a plain sample) forces a suffix.
+                symbol = vgSynthSymbolName(desc);
+                const QString base = symbol;
+                for (int i = 2; synths.find(symbol) || vgCatalog().directSound.contains(symbol);
+                     i++)
+                    symbol = base + QStringLiteral("_%1").arg(i);
+                m_pendingSynths.insert(symbol, desc);
                 return symbol;
-            for (auto it = m_pendingSynths.constBegin(); it != m_pendingSynths.constEnd(); ++it) {
-                if (it.value() == desc)
-                    return it.key();
-            }
-            if (!synths.creatable()) {
-                statusBar()->showMessage(tr("Cannot create synth instrument: this project doesn't "
-                                            "define the set_synth_* macros (Golden Sun synths need "
-                                            "ipatix's improved mixer)."),
-                                         8000);
-                return QString();
-            }
-            // Param-named; a hand-written symbol with the same name but
-            // different bytes (or a plain sample) forces a suffix.
-            symbol = vgSynthSymbolName(desc);
-            const QString base = symbol;
-            for (int i = 2; synths.find(symbol) || vgCatalog().directSound.contains(symbol); i++)
-                symbol = base + QStringLiteral("_%1").arg(i);
-            m_pendingSynths.insert(symbol, desc);
-            return symbol;
-        });
+            });
+    }
+    switch (session->voicegroupLoadState) {
+    case VoicegroupLoadState::Loading:
+        m_vgBrowser->setVoicegroupLoading();
+        break;
+    case VoicegroupLoadState::Error:
+        m_vgBrowser->setVoicegroupLoadError(session->voicegroupLoadError);
+        break;
+    case VoicegroupLoadState::Idle:
+    case VoicegroupLoadState::Ready:
+        m_vgBrowser->clearVoicegroupLoadState();
+        break;
+    }
     updateVgDockTitle();
 }
 
@@ -2549,6 +2615,13 @@ void MainWindow::onVoiceEdited(SongSession &session, int slot, bool structural)
         // edit is heard from the next note without a pause/play cycle.
         if (&session == m_active && m_audioOk)
             m_audio.refreshVoices();
+        // A scalar edit can arrive while a structural preview reload is in
+        // flight (for example, rapid undo). Re-render and supersede that
+        // request so its eventual swap cannot restore stale scalar values.
+        if (session.voicegroupLoadState == VoicegroupLoadState::Loading &&
+            session.voicegroupLoadOperation &&
+            session.voicegroupLoadOperation->kind == VoicegroupLoadKind::Preview)
+            reloadVoicegroupPreview(session, session.voicegroupLoadOperation->keepSlot);
     }
     updateVgDockTitle();
     updateTabTitle(session);
@@ -2574,15 +2647,14 @@ void MainWindow::reloadVoicegroupPreview(SongSession &session, int keepSlot)
     std::memset(&config, 0, sizeof(config));
     std::strncpy(config.voicegroupPaths[0], ".porydaw/vgpreview", VG_MAX_PATH_LEN - 1);
     config.voicegroupPathCount = 1;
-    LoadedVoiceGroup *vg =
-        voicegroup_load(m_project.root().toLocal8Bit().constData(),
-                        session.vgSource->loadName().toLocal8Bit().constData(), &config);
-    if (!vg) {
-        statusBar()->showMessage(
-            tr("Edited voicegroup failed to load — keeping the previous sound."), 8000);
-        return;
-    }
-    swapVoicegroup(session, vg, keepSlot);
+    VoicegroupLoadOperation operation;
+    operation.request.projectRoot = m_project.root();
+    operation.request.candidates = {session.vgSource->loadName()};
+    operation.request.config = config;
+    operation.kind = VoicegroupLoadKind::Preview;
+    operation.targetVoicegroupArg = session.doc.cfg().voicegroupArg;
+    operation.keepSlot = keepSlot;
+    startVoicegroupLoad(session, std::move(operation));
 }
 
 const VgSynthDesc *MainWindow::synthDescForSymbol(const QString &symbol)
@@ -2923,7 +2995,7 @@ void MainWindow::synchronizePlayhead()
 
 void MainWindow::startPlayback(bool fromEditCursor)
 {
-    if (!m_audioOk || !m_active || !m_audio.songLoaded())
+    if (!m_audioOk || !m_active || !m_active->voicegroup || !m_audio.songLoaded())
         return;
     const bool seekToCursor = fromEditCursor || m_audio.transport() == Transport::Stopped;
     uint64_t target = 0;
@@ -2946,7 +3018,6 @@ void MainWindow::pausePlayback()
     updateTransportActions();
     synchronizePlayhead();
 }
-
 void MainWindow::stopPlayback()
 {
     m_audio.stop();
@@ -2956,7 +3027,7 @@ void MainWindow::stopPlayback()
 
 void MainWindow::updateTransportActions()
 {
-    const bool loaded = m_audioOk && m_audio.songLoaded();
+    const bool loaded = m_audioOk && m_active && m_active->voicegroup && m_audio.songLoaded();
     auto state = TransportBar::PlaybackState::Unavailable;
     if (loaded) {
         switch (m_audio.transport()) {

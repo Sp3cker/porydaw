@@ -1,6 +1,8 @@
 #include <QApplication>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDial>
+#include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
 #include <QImage>
@@ -66,6 +68,27 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         QTimer::singleShot(ms, &loop, &QEventLoop::quit);
         loop.exec();
     };
+    const auto waitForVoicegroupReady = [&](SongSession *session, int timeoutMs = 30000) -> bool {
+        if (!session)
+            return false;
+        QElapsedTimer timer;
+        timer.start();
+        while (session->voicegroupLoadState == VoicegroupLoadState::Loading &&
+               timer.elapsed() < timeoutMs) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        if (session->voicegroupLoadState == VoicegroupLoadState::Loading) {
+            std::fprintf(stderr, "tabcheck: timed out waiting for voicegroup to load\n");
+            return false;
+        }
+        if (session->voicegroupLoadState == VoicegroupLoadState::Error) {
+            std::fprintf(stderr, "tabcheck: voicegroup load failed: %s\n",
+                         qUtf8Printable(session->voicegroupLoadError));
+            return false;
+        }
+        return session->voicegroupLoadState == VoicegroupLoadState::Ready &&
+               session->voicegroup != nullptr;
+    };
 
     auto *rootCombo = findChild<QComboBox *>(QStringLiteral("transportScaleRoot"));
     auto *scaleCombo = findChild<QComboBox *>(QStringLiteral("transportScaleType"));
@@ -91,6 +114,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         return false;
     }
     check(m_tabs->count() == 1, "first song did not open exactly one tab");
+    check(waitForVoicegroupReady(tabA), "first tab voicegroup did not load");
     check(m_audio.timeline() == tabA->timeline.get() && m_audio.voicegroup() == tabA->voicegroup,
           "engine is not borrowing the first tab's data");
     check(m_uiTimer->interval() == 500, "paused UI cadence is not 500 ms");
@@ -104,6 +128,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         return false;
     }
     check(m_tabs->count() == 2, "second song did not open a second tab");
+    check(waitForVoicegroupReady(tabB), "second tab voicegroup did not load");
     check(m_audio.timeline() == tabB->timeline.get(), "engine did not rebind to the new tab");
     check(m_undoGroup->activeStack() == tabB->doc.undoStack(),
           "undo group is not on the new tab's stack");
@@ -516,6 +541,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     check(m_tabs->count() == 1 && tabB && tabB->doc.label() == songB &&
               sessionForLabel(songA) == nullptr,
           "activating a song did not replace the current tab's");
+    check(waitForVoicegroupReady(tabB), "replaced tab voicegroup did not load");
     check(m_audio.timeline() == tabB->timeline.get(),
           "engine did not rebind after the in-place replace");
 
@@ -532,6 +558,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     loadSongByLabel(songB);
     check(m_tabs->count() == 1 && m_active == tabB && tabB->doc.undoStack()->count() == 0,
           "re-activating the open song did not reload it in place");
+    check(waitForVoicegroupReady(tabB), "reloaded tab voicegroup did not load");
 
     // 9. Closing the final playing tab restores the no-tab UI cadence.
     m_audio.play();
@@ -551,10 +578,12 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     // still persists both tabs with song A active.
     loadSongByLabel(songB);
     tabB = m_active;
+    check(waitForVoicegroupReady(tabB), "reopened tab B voicegroup did not load");
 
     // 10. The open-tab set is recorded for restoreSession.
     loadSongByLabel(songA, /*newTab=*/true);
     tabA = m_active;
+    check(waitForVoicegroupReady(tabA), "reopened tab A voicegroup did not load");
     {
         QSettings settings;
         const QStringList open = settings.value(QStringLiteral("lastOpenSongs")).toStringList();
@@ -583,6 +612,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
             onVoiceEditRequested(dsSlot, edited, false); // active tab = A
             const LoadedVoiceGroup *bVgBefore = tabB->voicegroup;
             check(saveSession(*tabA), "shared-voicegroup save failed");
+            check(waitForVoicegroupReady(tabB), "sibling tab voicegroup reload did not settle");
             check(tabB->voicegroup && tabB->voicegroup != bVgBefore,
                   "voicegroup save did not refresh the sibling tab's voicegroup");
             check(tabB->vgSource && tabB->vgSource->voiceAt(dsSlot) &&
@@ -611,6 +641,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
             f.close();
             const LoadedVoiceGroup *before = tabB->voicegroup;
             m_tabs->setCurrentWidget(tabB->view);
+            check(waitForVoicegroupReady(tabB), "activated tab voicegroup reload did not settle");
             check(tabB->voicegroup != nullptr && tabB->voicegroup != before,
                   "clean tab did not reload its changed voicegroup file");
             check(tabB->vgSource && !tabB->vgSource->dirty(),
