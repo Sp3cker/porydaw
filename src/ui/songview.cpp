@@ -490,7 +490,6 @@ void SongView::coordinateSelectionChange(
                     previousTracks, {transition.trackTime.startTick, transition.trackTime.endTick},
                     tracks);
             }
-            m_strip->invalidateContent();
             syncPlayheadOverlay();
         }
         refreshAutomationPage();
