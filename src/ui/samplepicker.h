@@ -10,6 +10,8 @@ class QTimer;
 class QTreeWidget;
 class QTreeWidgetItem;
 
+enum class VgAuditionKind { Sample, Wave, Keysplit };
+
 // Row metadata the picker displays, resolved by the owner from the project's
 // committed sample files (the same WaveData the engine would play).
 struct SamplePickInfo {
@@ -19,15 +21,14 @@ struct SamplePickInfo {
     double seconds = 0.0; // length at the sample's own rate
 };
 
-// The symbol as shown to the user: the loader's vg_set_voice_name prefix
-// stripping ("DirectSoundWaveData_sc88pro_trumpet" -> "sc88pro_trumpet").
+// The symbol as shown to the user after shared project-catalog prefix stripping
+// ("DirectSoundWaveData_sc88pro_trumpet" -> "sc88pro_trumpet").
 QString vgSampleDisplayName(const QString &symbol);
 
 // The Sample field of the voicegroup editor: a button showing the current
 // sample's display name; clicking opens a searchable popup of the project's
-// samples (sectioned into keysplits/samples/phonemes) with loop badges,
-// audition-on-highlight, and a "use typed symbol" fallback so unknown
-// symbols can still be entered, like the editable combo it replaces.
+// catalog samples (sectioned into keysplits/samples/phonemes), audition-on-
+// highlight, and catalog-only commits.
 class SamplePickerButton : public QPushButton
 {
     Q_OBJECT
@@ -35,10 +36,10 @@ class SamplePickerButton : public QPushButton
   public:
     explicit SamplePickerButton(QWidget *parent = nullptr);
 
-    // The three sections, each already sorted. Keysplit instruments audition
-    // as nothing (no single sample to play) but commit like any symbol.
+    // The three sections, each already sorted. The row kind tells the owner
+    // which project-catalog path resolves the highlighted symbol.
     void setChoices(const QStringList &keysplits, const QStringList &samples,
-                    const QStringList &phonemes);
+                    const QStringList &phonemes, VgAuditionKind plainKind = VgAuditionKind::Sample);
     // Show symbols verbatim instead of prefix-stripped (rows and button).
     // Wave lists want this: unlike the samples' uniform DirectSoundWaveData_
     // wall, the full ProgrammableWaveData_* symbol is the recognizable name.
@@ -46,7 +47,7 @@ class SamplePickerButton : public QPushButton
     void setCurrentSymbol(const QString &symbol);
     QString currentSymbol() const { return m_currentSymbol; }
 
-    // Loop badge / detail line lookup. May be empty (no badges, no details).
+    // Detail-line lookup for the current row. May be empty.
     void setInfoProvider(std::function<SamplePickInfo(const QString &)> provider);
 
     // Opens the popup (also the click handler; public for the harnesses).
@@ -54,11 +55,11 @@ class SamplePickerButton : public QPushButton
     bool popupVisible() const;
 
   signals:
-    // A choice was committed (list row or typed symbol). The owner treats it
-    // like the old combo's activated(): adopt the symbol and commit the edit.
+    // A catalog row was committed. The owner treats it like the old combo's
+    // activated(): adopt the symbol and commit the edit.
     void symbolPicked(const QString &symbol);
     // Highlight moved onto a sample row: play it so browsing is audible.
-    void auditionRequested(const QString &symbol);
+    void auditionRequested(const QString &symbol, VgAuditionKind kind);
     void auditionStopRequested();
 
   protected:
@@ -70,6 +71,7 @@ class SamplePickerButton : public QPushButton
     void rebuildList();
     void refreshItemFonts();
     void applyFilter();
+    void previewItem(QTreeWidgetItem *item);
     void updateDetail();
     void commitItem(QTreeWidgetItem *item);
     void updateButtonText();
@@ -79,14 +81,15 @@ class SamplePickerButton : public QPushButton
     QStringList m_keysplits, m_samples, m_phonemes;
     QString m_currentSymbol;
     bool m_fullNames = false;
+    VgAuditionKind m_plainKind = VgAuditionKind::Sample;
     QString m_clickedSymbol; // first click selects; clicking it again commits
+    QString m_previewedSymbol;
     std::function<SamplePickInfo(const QString &)> m_info;
 
     QWidget *m_popup = nullptr; // created on first open
     QLineEdit *m_search = nullptr;
     QTreeWidget *m_list = nullptr;
     QLabel *m_detail = nullptr;
-    QTreeWidgetItem *m_typedRow = nullptr; // "Use typed symbol" fallback
     QTimer *m_auditionOffTimer = nullptr;
     bool m_positioning = false; // suppress audition while (re)building
 };

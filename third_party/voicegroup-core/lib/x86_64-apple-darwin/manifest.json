@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "source_commit": "f23020d53240f51535865fc2cc1f6005c44dbdf4",
+  "crate_version": "0.1.0",
+  "abi_version": 2,
+  "wave_cache": "unbounded-per-load-absolute-path",
+  "target_triple": "x86_64-apple-darwin",
+  "architecture": "x86_64",
+  "runner": "macos-15-intel",
+  "runner_arch": "X64",
+  "artifact_name": "libvoicegroup_core.a",
+  "artifact_sha256": "cc399f093d5a18bbb7501b8bd3cc26de7abfbace9faf47e77bf288d5d6381eaf",
+  "workflow_artifact_name": "voicegroup-core-x86_64-apple-darwin",
+  "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)\nbinary: rustc\ncommit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea\ncommit-date: 2026-08-18\nhost: x86_64-apple-darwin\nrelease: 1.98.0\nLLVM version: 22.1.8",
+  "profile": "release",
+  "library": "lib/x86_64-apple-darwin/libvoicegroup_core.a",
+  "lib_sha256": "cc399f093d5a18bbb7501b8bd3cc26de7abfbace9faf47e77bf288d5d6381eaf",
+  "header": "include/voicegroup_core.h",
+  "header_sha256": "3b9f74d9099d09bfc105ef3d6f9f5feca02fe1441b398aa67c6ee1140f4e7134",
+  "license_inventory": "licenses.json"
+}

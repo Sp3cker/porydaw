@@ -59,6 +59,8 @@ endif()
 option(PORYDAW_ASAN "Build with AddressSanitizer" OFF)
 option(PORYDAW_COVERAGE "Build with Clang source-based code coverage" OFF)
 option(PORYDAW_BUILD_CHECKS "Build the porydaw check executable" ON)
+option(PORYDAW_VERIFY_VOICEGROUP_VENDOR_ONLY
+       "Configure only the vendored voicegroup-core compatibility gate" OFF)
 if(PORYDAW_ASAN AND PORYDAW_COVERAGE)
     message(FATAL_ERROR "PORYDAW_ASAN and PORYDAW_COVERAGE are mutually exclusive")
 endif()
@@ -74,7 +76,7 @@ if(PORYDAW_COVERAGE)
     add_link_options(-fprofile-instr-generate)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Svg Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Sql Svg Widgets)
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
@@ -87,6 +89,19 @@ endif()
 if(NOT EXISTS "${PORYAAAA_DIR}/plugin/porydaw/CMakeLists.txt")
     message(FATAL_ERROR "PORYAAAA_DIR must point to the poryaaaa package source tree")
 endif()
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/VoicegroupCoreVendor.cmake")
+if(PORYDAW_VERIFY_VOICEGROUP_VENDOR_ONLY)
+    return()
+endif()
+set(PORYAAAA_VOICEGROUP_CORE_DIR
+    "${PORYDAW_VOICEGROUP_CORE_VENDOR_DIR}"
+    CACHE PATH "Path to voicegroup-core headers and native archive" FORCE)
+set(PORYAAAA_BUILD_VOICEGROUP_PROJECT_HARNESS ON
+    CACHE BOOL "Build the focused VoicegroupProject C harness" FORCE)
+add_subdirectory(
+    "${PORYAAAA_DIR}/plugin/voicegroup"
+    "${CMAKE_CURRENT_BINARY_DIR}/poryaaaa-voicegroup")
 add_subdirectory(
     "${PORYAAAA_DIR}/plugin/porydaw"
     "${CMAKE_CURRENT_BINARY_DIR}/poryaaaa-engine")
@@ -200,6 +215,10 @@ qt_add_library(porydaw_app STATIC
     src/project/samplereg.h
     src/project/sidecar.cpp
     src/project/sidecar.h
+    src/project/projectindex.cpp
+    src/project/projectindex.h
+    src/project/voicegroupproject.cpp
+    src/project/voicegroupproject.h
     src/project/voicegroupsource.cpp
     src/project/voicegroupsource.h
     src/project/voicegroupeditcommand.cpp
@@ -355,6 +374,7 @@ if(APPLE)
 endif()
 target_include_directories(porydaw_app PUBLIC
     src
+    ${PORYAAAA_DIR}/plugin
     ${PORYAAAA_DIR}/third_party
     external/dr_libs
     external/stb
@@ -364,6 +384,7 @@ target_include_directories(porydaw_app PUBLIC
 target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
+target_link_libraries(porydaw_app PRIVATE Qt6::Sql voicegroup_loader)
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 if(WIN32)
@@ -434,6 +455,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/resonancecheck.cpp
         src/checks/mkcheck.cpp
         src/checks/ignorecheck.cpp
+        src/checks/projectindexcheck.cpp
+        src/checks/contextcheck.cpp
         src/checks/samplecheck.cpp
         src/checks/sessioncheck.cpp
         src/checks/keymapcheck.cpp
@@ -599,7 +622,19 @@ add_executable(porydaw_render_cli
     src/core/timelineplayer.cpp
 )
 target_include_directories(porydaw_render_cli PRIVATE src)
-target_link_libraries(porydaw_render_cli PRIVATE Qt6::Core poryaaaa_engine)
+target_link_libraries(porydaw_render_cli PRIVATE Qt6::Core poryaaaa_engine voicegroup_loader)
 if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(porydaw_render_cli PRIVATE -static)
 endif()
+
+# ---- Modular voicegroup load benchmark CLI (development/testing) ----
+add_executable(porydaw_loadbench_core_cli
+    tools/porydaw_loadbench_core_cli.cpp
+)
+target_include_directories(porydaw_loadbench_core_cli PRIVATE
+    "${PORYAAAA_VOICEGROUP_CORE_DIR}/include")
+target_link_libraries(porydaw_loadbench_core_cli PRIVATE voicegroup_loader)
+if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_options(porydaw_loadbench_core_cli PRIVATE -static)
+endif()
+

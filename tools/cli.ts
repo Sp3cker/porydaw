@@ -11,7 +11,11 @@ import { join } from "node:path";
 const decoder = new TextDecoder();
 const BUILD_DIR = "build";
 
-type Subcommand = "build:app" | "build:checks" | "verify" | "format";
+type Subcommand =
+  | "build:app"
+  | "build:checks"
+  | "verify"
+  | "format";
 
 function usage(): never {
   console.error(`usage:
@@ -240,7 +244,13 @@ switch (normalized) {
     await runBuild(["porydaw"], isVerbose(rest));
     break;
   case "build:checks":
-    await runBuild(["porydaw", "porydaw_checks", "mid2agb"], isVerbose(rest));
+    await runBuild([
+      "porydaw",
+      "porydaw_checks",
+      "mid2agb",
+      "porydaw_loadbench_core_cli",
+      "voicegroup_project_harness",
+    ], isVerbose(rest));
     break;
   case "verify":
     await runVerify(rest);

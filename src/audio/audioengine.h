@@ -17,7 +17,7 @@
 
 extern "C" {
 #include "m4a_engine.h"
-#include "voicegroup_loader.h"
+#include "voicegroup/voicegroup_loader.h"
 }
 
 static_assert(kMaxTracks == MAX_TRACKS, "track count mismatch");

@@ -265,6 +265,27 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::MustNotExistPath,
              .optionalArgumentEnvironment = {{QStringLiteral("{sample-corpus?}"),
                                               QStringLiteral("PORYDAW_SAMPLE_CORPUS")}}},
+            {.name = "projectindexcheck",
+             .argv = strings({"--projectindexcheck", "{scratch}", "{scratch}"}),
+             .handler =
+                 [](QApplication &, const QStringList &args) {
+                     return runProjectIndexCheck(args[1], args[2]);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = decompProjectFiles + decompMidiFiles +
+                             strings({"sound/music_player_table.inc", "include/constants/songs.h",
+                                      "charmap.txt", "ld_script.ld", "src/debug.c"})},
+            {.name = "contextcheck",
+             .argv = strings({"--contextcheck", "{scratch}"}),
+             .handler = [](QApplication &,
+                           const QStringList &args) { return runContextCheck(args[1]); },
+             .scratchKind = ScratchKind::ExistingDirectory},
+            {.name = "voicegroup-core-abi",
+             .argv = strings({"--check-voicegroup-core-abi"}),
+             .handler = [](QApplication &,
+                           const QStringList &) { return runVoicegroupCoreAbiCheck(); },
+             .startup = StartupKind::HandlerOwned},
             {.name = "noteidcheck",
              .argv = strings({"--check-note-identity", "{scratch}"}),
              .handler = [](QApplication &,

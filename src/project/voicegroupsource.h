@@ -9,7 +9,7 @@
 #include <optional>
 
 extern "C" {
-#include "voicegroup_loader.h"
+#include "voicegroup/voicegroup_loader.h"
 }
 
 // The editable voice macros: the five basic families and their variants,
@@ -127,27 +127,10 @@ struct VgSynthCatalog {
 
 // The most common envelopes observed across a project's voicegroups, keyed
 // by instrument symbol and by envelope family. Silent or clicking envelopes
-// never qualify (see typicalAdsr), so a hit is always audible.
+// never qualify, so a hit is always audible.
 struct VgAdsrDefaults {
     QHash<QString, VgAdsr> bySymbol; // DirectSound sample / prog-wave symbol
     QHash<int, VgAdsr> byFamily;     // vgAdsrFamily() key
-};
-
-// One pass over the voicegroup files: all four project-wide datasets
-// extracted from a single read of each file. Each member is value-identical
-// to its single-dataset accessor (named in the comments).
-struct VgCatalogScan {
-    QStringList groupArgs;                    // SongRegistry::voicegroupArgs
-    QList<QPair<QString, QString>> keysplits; // keysplitInstruments
-    QStringList drumkits;                     // drumkitInstruments
-    VgAdsrDefaults typicalAdsr;               // typicalAdsr
-};
-
-// One read of the sound data files: the sample symbol list and the synth
-// catalog together (both parse the same files).
-struct VgDirectSoundScan {
-    QStringList directSound; // directSoundSymbols
-    VgSynthCatalog synths;   // synthInstruments
 };
 
 // The envelope a voice should adopt when it switches into a new envelope
@@ -174,21 +157,22 @@ enum class VgLineKind {
 // Source-of-truth model for one voicegroup: the .inc file's lines with the
 // loader's slot accounting, byte-conservative editing of the editable voice
 // lines, and re-rendering for save or for pre-save audition.
-//
-// The C loader (external/poryaaaa/plugin/voicegroup_loader.c) is read-only
-// and lossy, so saving works from this text model, never from ToneData.
+// Saving remains rooted in this text model: ToneData is a runtime materialization
+// and does not preserve source formatting.
 class VoicegroupSource
 {
   public:
-    // Locates the file (or monolithic section) declaring "voicegroup<arg>"
-    // and parses it. arg is the song's mid2agb -G value ("" means "_dummy").
-    bool open(const QString &projectRoot, const QString &voicegroupArg, QString *error);
+    // Opens the snapshot-provided source file and verifies that it declares
+    // canonicalSymbol. Files with multiple declarations are edited as the
+    // matching labelled section; no other project files are probed.
+    bool open(const QString &projectRoot, const QString &sourcePath, const QString &loadName,
+              const QString &canonicalSymbol, QString *error);
     // Re-reads the located file from disk, dropping all unsaved edits.
     bool reload(QString *error);
 
     QString filePath() const { return m_filePath; }
-    // The name voicegroup_load() resolves this voicegroup with — also the
-    // basename the pre-save preview file must use to shadow the real one.
+    QString sourcePath() const { return m_sourcePath; }
+    // The name used to resolve this voicegroup in the project snapshot.
     QString loadName() const { return m_loadName; }
     bool monolithic() const { return !m_sectionLabel.isEmpty(); }
     QString sectionLabel() const { return m_sectionLabel; }
@@ -222,39 +206,13 @@ class VoicegroupSource
     // when the voice needs a structural reload instead (type mismatch).
     bool applyScalarsToToneData(int slot, ToneData *td) const;
 
-    // Sample/wave symbols declared in the project's sound data files.
-    // DirectSound symbols exclude pokemon cries and synth definitions (which
-    // get their own UI) and sort phonemes last.
-    static QStringList directSoundSymbols(const QString &projectRoot);
-    static QStringList progWaveSymbols(const QString &projectRoot);
-    // Golden Sun synth instruments across the project's sound data files.
-    static VgSynthCatalog synthInstruments(const QString &projectRoot);
-    // Appends the given definitions to sound/direct_sound_synth_data.inc
-    // (created if missing), using set_synth_* macros the project defines —
-    // fails when it defines none. A symbol already on disk with an equal
-    // descriptor is skipped; one with a different descriptor is an error.
-    // Called at save time only: unsaved (pending) definitions live in memory.
+    // Appends pending Golden Sun synth definitions to
+    // sound/direct_sound_synth_data.inc. Existing equal definitions are
+    // reused; conflicting symbols or projects without set_synth_* macros
+    // refuse the write.
     static bool writeSynthDefinitions(const QString &projectRoot,
                                       const QList<QPair<QString, VgSynthDesc>> &defs,
                                       QString *error);
-    // Keysplit instruments observed across the project's voicegroups:
-    // sub-voicegroup symbol -> its paired keysplit table symbol.
-    static QList<QPair<QString, QString>> keysplitInstruments(const QString &projectRoot);
-    // Drumkit sub-voicegroups observed across the project's voicegroups
-    // (voice_keysplit_all targets), sorted.
-    static QStringList drumkitInstruments(const QString &projectRoot);
-    // Scans every voicegroup for the most common ADSR per symbol and per
-    // family, skipping envelopes that click (release 0) or never sound
-    // (DirectSound attack 0) — which also excludes the release-0 filler
-    // squares that pad unused slots and would otherwise dominate the counts.
-    static VgAdsrDefaults typicalAdsr(const QString &projectRoot);
-    // Everything the voicegroup files feed the browser catalog, in one read
-    // of each file (the single-dataset functions above re-run this scan).
-    static VgCatalogScan catalogScan(const QString &projectRoot);
-    // directSoundSymbols + synthInstruments from one read of the sound data
-    // files instead of one each.
-    static VgDirectSoundScan directSoundCatalog(const QString &projectRoot);
-
     // Writes sound/voicegroups/<name>.inc matching the siblings' header style
     // and line endings. copyFromFile/copySectionLabel name an existing
     // voicegroup to copy the voice lines from; empty means the 128-slot dummy
@@ -313,7 +271,7 @@ class VoicegroupSource
     bool matchesPristineSource() const;
 
     QString m_projectRoot;
-    QString m_arg;
+    QString m_sourcePath;
     QString m_filePath;
     QString m_sectionLabel; // empty = per-file layout
     QString m_loadName;

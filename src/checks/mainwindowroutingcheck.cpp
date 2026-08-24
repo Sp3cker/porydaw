@@ -284,6 +284,42 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
               reopened->view->editorViewState().drawerState() == m_editorDrawerState &&
               sameLaneState(reopened->view->editorViewState(), expectedCosmetics),
           "reopened song did not combine global drawer chrome with its lane state");
+    if (reopened) {
+        int documentChangedCount = 0;
+        QObject::connect(&reopened->doc, &SongDocument::documentChanged,
+                         [&documentChangedCount] { ++documentChangedCount; });
+        const SongCfg expectedCfg = reopened->doc.cfg();
+        const auto expectedEventCount =
+            reopened->timeline ? reopened->timeline->events.size() : size_t{0};
+        const auto expectedLengthSamples =
+            reopened->timeline ? reopened->timeline->lengthSamples : uint64_t{0};
+        const int beforeLoad = documentChangedCount;
+        loadSongByLabel(songB);
+        check(documentChangedCount == beforeLoad && m_active == reopened &&
+                  reopened->doc.label() == songB &&
+                  reopened->doc.cfg().voicegroupArg == expectedCfg.voicegroupArg &&
+                  reopened->doc.cfg().masterVolume == expectedCfg.masterVolume &&
+                  reopened->doc.cfg().reverb == expectedCfg.reverb &&
+                  reopened->appliedVoicegroupArg == expectedCfg.voicegroupArg &&
+                  reopened->appliedVolume == expectedCfg.masterVolume &&
+                  reopened->appliedReverb == expectedCfg.reverb && reopened->timeline &&
+                  reopened->timeline->events.size() == expectedEventCount &&
+                  reopened->timeline->lengthSamples == expectedLengthSamples &&
+                  reopened->voicegroup && m_audio.songLoaded() &&
+                  m_audio.timeline() == reopened->timeline.get() &&
+                  m_audio.voicegroup() == reopened->voicegroup,
+              "in-place song load published a document edit or lost its final session/audio state");
+        const int beforeEdit = documentChangedCount;
+        SongCfg editedCfg = reopened->doc.cfg();
+        editedCfg.priority++;
+        reopened->doc.setCfg(editedCfg);
+        check(documentChangedCount == beforeEdit + 1,
+              "genuine document edit did not emit documentChanged");
+        reopened->doc.undoStack()->undo();
+        check(documentChangedCount == beforeEdit + 2 &&
+                  reopened->doc.cfg().priority == expectedCfg.priority,
+              "undo after genuine document edit did not emit documentChanged or restore config");
+    }
 
     hide();
     std::printf("mainwindow-routing: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);

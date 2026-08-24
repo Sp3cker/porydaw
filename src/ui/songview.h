@@ -28,7 +28,7 @@
 #include "ui/velocitygesturemodel.h"
 
 extern "C" {
-#include "voicegroup_loader.h"
+#include "voicegroup/voicegroup_loader.h"
 }
 
 class EventListView;

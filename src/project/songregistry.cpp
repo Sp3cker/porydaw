@@ -16,7 +16,6 @@
 #include "core/smf.h"
 #include "project/sidecar.h"
 #include "project/songsmk.h"
-#include "project/voicegroupsource.h"
 
 namespace {
 
@@ -487,13 +486,6 @@ bool writeRawLines(const QString &path, const RawLines &f, QString *error)
 } // namespace
 
 namespace SongRegistry {
-
-QStringList voicegroupArgs(const QString &projectRoot)
-{
-    // The declaration regexes and file listing live with the voicegroup
-    // catalog scan, which extracts all its datasets in the same read.
-    return VoicegroupSource::catalogScan(projectRoot).groupArgs;
-}
 
 QString voicegroupDisplayName(const QString &arg)
 {
@@ -1272,7 +1264,9 @@ bool unregisterSong(const QString &projectRoot, const QString &label, const QStr
 }
 
 QString deletableVoicegroup(const QString &projectRoot, const QVector<SongInfo> &songs,
-                            const QString &songLabel)
+                            const QString &songLabel,
+                            const QList<QPair<QString, QString>> &keysplits,
+                            const QStringList &drumkits)
 {
     const SongInfo *song = nullptr;
     for (const SongInfo &s : songs) {
@@ -1304,12 +1298,11 @@ QString deletableVoicegroup(const QString &projectRoot, const QVector<SongInfo> 
 
     // Not a keysplit/drumkit sub-group of another voicegroup.
     const QString symbol = QStringLiteral("voicegroup") + arg;
-    const VgCatalogScan catalog = VoicegroupSource::catalogScan(projectRoot);
-    for (const auto &keysplit : catalog.keysplits) {
+    for (const auto &keysplit : keysplits) {
         if (keysplit.first == symbol)
             return {};
     }
-    if (catalog.drumkits.contains(symbol))
+    if (drumkits.contains(symbol))
         return {};
 
     // Not referenced from the project's C sources — such a reference would

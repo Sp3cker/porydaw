@@ -1,8 +1,12 @@
 #pragma once
 
+#include <QDir>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVector>
+
+#include "project/projectindex.h"
 
 // Per-song mid2agb options from the song's line in sound/songs/midi/midi.cfg
 // (or, in projects predating midi.cfg, its songs.mk rule).
@@ -20,8 +24,8 @@ struct SongCfg {
     bool exactGate = false;      // -E
     bool extendedClocks = false; // -X (48 clocks/beat)
     bool noCompression = false;  // -N
+    static SongCfg fromFlags(const QStringList &flags);
 };
-
 struct MusicPlayer {
     QString name;   // e.g. "MUSIC_PLAYER_BGM"
     int number = 0; // the .equiv value; also the song macro's third argument
@@ -90,14 +94,22 @@ class DecompProject
     // registers a song). Song ids are reassigned.
     bool reload(QString *error);
 
+    // Persistent-index hook: open() uses storeDir when provided, otherwise
+    // ProjectIndex::defaultStoreDir(root). A matching store replaces the scan;
+    // a missing or stale store is rebuilt. PORYDAW_DISABLE_INDEX_CACHE makes
+    // the default directory empty and disables automatic persistence.
+    void setIndexCache(const QString &storeDir = QString());
+
   private:
-    bool parseSongTable(QString *error);
+    bool parseSongTable(const QDir &midiDir, const QSet<QString> &midiFiles, QString *error);
     void parseSongConstants();
     bool parseMidiCfg(); // false if midi.cfg does not exist (or can't open)
     void parseSongsMk();
-    void discoverUnregisteredSongs();
+    void discoverUnregisteredSongs(const QDir &midiDir, const QStringList &midiFiles);
 
     QString m_root;
     QVector<SongInfo> m_songs;
     QVector<MusicPlayer> m_players; // cached at open (one file read)
+
+    QString m_cacheStoreDir; // empty: use ProjectIndex::defaultStoreDir()
 };

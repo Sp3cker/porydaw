@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "source_commit": "f23020d53240f51535865fc2cc1f6005c44dbdf4",
+  "crate_version": "0.1.0",
+  "abi_version": 2,
+  "wave_cache": "unbounded-per-load-absolute-path",
+  "target_triple": "x86_64-unknown-linux-gnu",
+  "architecture": "x86_64",
+  "runner": "ubuntu-20.04-container",
+  "runner_arch": "X64",
+  "artifact_name": "libvoicegroup_core.a",
+  "artifact_sha256": "3363e17736375ed1b639ff9228e168318af93713b9e3108a5eb6243729aa0f78",
+  "workflow_artifact_name": "voicegroup-core-x86_64-unknown-linux-gnu",
+  "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)\nbinary: rustc\ncommit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea\ncommit-date: 2026-08-18\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.0\nLLVM version: 22.1.8",
+  "profile": "release",
+  "library": "lib/x86_64-unknown-linux-gnu/libvoicegroup_core.a",
+  "lib_sha256": "3363e17736375ed1b639ff9228e168318af93713b9e3108a5eb6243729aa0f78",
+  "header": "include/voicegroup_core.h",
+  "header_sha256": "3b9f74d9099d09bfc105ef3d6f9f5feca02fe1441b398aa67c6ee1140f4e7134",
+  "license_inventory": "licenses.json"
+}

@@ -47,16 +47,15 @@ QStringList richVoicegroupFiles()
         QStringLiteral("sound/voicegroups/fixture_bass.inc"),
         QStringLiteral("sound/voicegroups/fixture_drums_a.inc"),
         QStringLiteral("sound/voicegroups/fixture_drums_b.inc"),
+        QStringLiteral("sound/voice_groups.inc"),
+        QStringLiteral("sound/voicegroups/dummy.inc"),
+        QStringLiteral("sound/voicegroups/fixture_alt.inc"),
     };
 }
 
 QStringList voicegroupEditorFiles()
 {
-    return richVoicegroupFiles() + QStringList{
-                                       QStringLiteral("sound/voice_groups.inc"),
-                                       QStringLiteral("sound/voicegroups/dummy.inc"),
-                                       QStringLiteral("sound/voicegroups/fixture_alt.inc"),
-                                   };
+    return richVoicegroupFiles();
 }
 
 } // namespace checks::fixtures

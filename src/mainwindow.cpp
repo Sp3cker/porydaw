@@ -49,8 +49,10 @@
 #endif
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
+#include <limits>
 #include <utility>
 
 #include "audio/sampleimport.h"
@@ -58,6 +60,7 @@
 #include "audio/wavexport.h"
 #include "core/miditimeline.h"
 #include "porydaw_scale.h"
+#include "project/projectindex.h"
 #include "project/samplereg.h"
 #include "project/sidecar.h"
 #include "project/songregistry.h"
@@ -96,6 +99,83 @@ const QString kDrawerVelocityHeightKey = QStringLiteral("editorDrawer/velocityHe
 const QString kDrawerAutomationVisibleKey = QStringLiteral("editorDrawer/automationVisible");
 const QString kDrawerAutomationHeightKey = QStringLiteral("editorDrawer/automationHeight");
 const QString kDrawerActivePageKey = QStringLiteral("editorDrawer/activePage");
+
+std::optional<porydaw::VoicegroupProject::CatalogEntry>
+voicegroupCatalogEntry(const porydaw::VoicegroupProject::Snapshot &snapshot,
+                       const QString &canonicalSymbol)
+{
+    for (const auto &entry : snapshot.catalog) {
+        if (entry.kind == porydaw::VoicegroupProject::CatalogKind::VoiceGroup &&
+            entry.symbol == canonicalSymbol) {
+            return entry;
+        }
+    }
+    return std::nullopt;
+}
+
+QString formatVoicegroupDiagnostic(const porydaw::VoicegroupProject::Diagnostic &diagnostic)
+{
+    auto location = diagnostic.sourcePath.isEmpty() ? diagnostic.assetPath : diagnostic.sourcePath;
+    if (diagnostic.range) {
+        const auto &range = *diagnostic.range;
+        const auto rangeText = QStringLiteral("%1:%2-%3:%4")
+                                   .arg(qulonglong(range.startLine))
+                                   .arg(qulonglong(range.startColumn))
+                                   .arg(qulonglong(range.endLine))
+                                   .arg(qulonglong(range.endColumn));
+        location = location.isEmpty() ? rangeText : location + QLatin1Char(':') + rangeText;
+    }
+    return location.isEmpty() ? diagnostic.message
+                              : QStringLiteral("%1 (%2)").arg(diagnostic.message, location);
+}
+QVector<porydaw::VoicegroupProject::Diagnostic>
+diagnosticsForBrokenRows(const VoicegroupSource &source,
+                         QVector<porydaw::VoicegroupProject::Diagnostic> diagnostics,
+                         const QString &fallbackMessage)
+{
+    int nextDiagnostic = 0;
+    for (int slot = 0; slot < VOICEGROUP_SIZE; ++slot) {
+        if (source.kindAt(slot) != VgLineKind::Broken)
+            continue;
+        while (nextDiagnostic < diagnostics.size() && diagnostics[nextDiagnostic].slot)
+            ++nextDiagnostic;
+        if (nextDiagnostic == diagnostics.size()) {
+            diagnostics.append({
+                .code = QStringLiteral("voicegroup-source-parse"),
+                .message = fallbackMessage.isEmpty()
+                               ? QObject::tr("This voice line could not be parsed.")
+                               : fallbackMessage,
+                .scope = porydaw::VoicegroupProject::DiagnosticScope::Slot,
+                .sourcePath = source.sourcePath(),
+                .slot = size_t(slot),
+            });
+            ++nextDiagnostic;
+            continue;
+        }
+        auto &diagnostic = diagnostics[nextDiagnostic++];
+        diagnostic.scope = porydaw::VoicegroupProject::DiagnosticScope::Slot;
+        diagnostic.slot = size_t(slot);
+        if (diagnostic.sourcePath.isEmpty())
+            diagnostic.sourcePath = source.sourcePath();
+    }
+    return diagnostics;
+}
+
+QVector<porydaw::VoicegroupProject::SynthOverlay>
+synthOverlays(const QHash<QString, VgSynthDesc> &pendingSynths)
+{
+    auto overlays = QVector<porydaw::VoicegroupProject::SynthOverlay>{};
+    overlays.reserve(pendingSynths.size());
+    for (auto it = pendingSynths.constBegin(); it != pendingSynths.constEnd(); ++it) {
+        const auto &desc = it.value();
+        overlays.append({
+            .name = it.key(),
+            .descriptor = {0x80, uint8_t(desc.waveform), uint8_t(desc.baseDuty),
+                           uint8_t(desc.dutyStep), uint8_t(desc.modDepth), uint8_t(desc.phase)},
+        });
+    }
+    return overlays;
+}
 
 void resetInheritedWidgetFonts()
 {
@@ -164,8 +244,20 @@ enum class DwmWindowAttribute : DWORD {
 
 } // namespace
 
+struct MainWindow::PickerAsset {
+    explicit PickerAsset(porydaw::VoicegroupProject::AssetResult loadedResult)
+        : result(std::move(loadedResult))
+    {}
+
+    porydaw::VoicegroupProject::AssetResult result;
+    WaveData sample{};
+    alignas(uint32_t) std::array<uint32_t, 4> progWave{};
+    PickerKeysplit keysplit{};
+};
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
+    m_vgProject.setStaleCallback([this] { clearSampleCache(); });
     setWindowTitle(QStringLiteral("porydaw"));
     resize(::layout::fontPx(92), ::layout::fontPx(57));
     m_engineSettings = EngineSettings::load();
@@ -244,7 +336,8 @@ MainWindow::~MainWindow()
     // Stop the audio thread before the sessions free the timeline and
     // voicegroup it borrows.
     m_audio.shutdown();
-    voicegroup_free_samples(m_sampleSet);
+    clearSampleCache();
+    m_vgProject.close();
 }
 
 void MainWindow::buildUi()
@@ -504,15 +597,17 @@ void MainWindow::buildUi()
             });
     connect(m_vgBrowser, &VoicegroupBrowser::voiceEditRequested, this,
             &MainWindow::onVoiceEditRequested);
+    connect(m_vgBrowser, &VoicegroupBrowser::reloadVoicegroupRequested, this,
+            &MainWindow::reloadVoicegroup);
     connect(m_vgBrowser, &VoicegroupBrowser::newVoicegroupRequested, this,
             &MainWindow::newVoicegroup);
     connect(m_vgBrowser, &VoicegroupBrowser::newSampleRequested, this,
             &MainWindow::importSampleForSlot);
     connect(m_vgBrowser, &VoicegroupBrowser::editSampleRequested, this,
             &MainWindow::editSampleForSlot);
-    // The sample picker: loop badges and browse audition both read the
-    // committed sample data the engine would play, loaded lazily in one
-    // batch per catalog generation.
+    // The sample picker resolves only the current row. The returned set stays
+    // alive until the project catalog changes, so its borrowed WaveData is
+    // valid for detail display and audition.
     m_vgBrowser->setSampleInfoProvider([this](const QString &symbol) {
         SamplePickInfo info;
         const WaveData *wd = sampleWaveFor(symbol);
@@ -527,22 +622,21 @@ void MainWindow::buildUi()
     connect(
         m_vgBrowser, &VoicegroupBrowser::sampleAuditionRequested, this,
         [this](const QString &symbol, VgAuditionKind kind, const AuditionSlots::Adsr &adsr) {
-            if (!m_audioOk)
-                return;
             if (kind == VgAuditionKind::Keysplit) {
-                auditionKeysplit(symbol);
+                const auto *keysplit = keysplitFor(symbol);
+                if (m_audioOk && keysplit)
+                    auditionKeysplit(*keysplit);
                 return;
             }
             if (kind == VgAuditionKind::Wave) {
-                ensureSampleSet();
-                const uint32_t *pw = m_progWaves.value(symbol, nullptr);
-                if (pw)
+                const auto *pw = progWaveFor(symbol);
+                if (m_audioOk && pw)
                     m_audio.auditionWave(
                         QByteArray::fromRawData(reinterpret_cast<const char *>(pw), 16), 60, adsr);
                 return;
             }
-            const WaveData *wd = sampleWaveFor(symbol);
-            if (!wd || !wd->data || wd->size == 0)
+            const auto *wd = sampleWaveFor(symbol);
+            if (!m_audioOk || !wd || !wd->data || wd->size == 0)
                 return;
             m_audio.auditionSample(
                 QByteArray::fromRawData(reinterpret_cast<const char *>(wd->data), int(wd->size)),
@@ -1012,12 +1106,12 @@ void MainWindow::updatePolyPanelContext(SongSession *session)
     m_polyPanel->setTrackNames(trackNames);
     // Copied out so a voicegroup swap can't leave the panel with a dangling
     // pointer.
-    QStringList voiceNames;
+    QStringList voiceSampleNames;
     if (session->voicegroup) {
         for (int v = 0; v < VOICEGROUP_SIZE; v++)
-            voiceNames.append(QString::fromLatin1(session->voicegroup->voiceNames[v]));
+            voiceSampleNames.append(QString::fromLatin1(session->voicegroup->voiceSampleNames[v]));
     }
-    m_polyPanel->setVoiceNames(voiceNames);
+    m_polyPanel->setVoiceNames(voiceSampleNames);
 }
 
 void MainWindow::maybeRefreshVoicegroup(SongSession &session)
@@ -1030,17 +1124,35 @@ void MainWindow::maybeRefreshVoicegroup(SongSession &session)
     const QDateTime onDisk = QFileInfo(session.vgSource->filePath()).lastModified();
     if (!onDisk.isValid() || onDisk == session.vgFileTime)
         return;
-    QString tried;
-    LoadedVoiceGroup *vg = loadVoicegroupFor(session.doc.cfg(), &tried);
+    QString sourceError;
+    const bool parsed = session.vgSource->reload(&sourceError);
+    session.vgFileTime = onDisk;
+    bool hasBrokenRow = false;
+    for (int slot = 0; slot < VOICEGROUP_SIZE && !hasBrokenRow; ++slot)
+        hasBrokenRow = session.vgSource->kindAt(slot) == VgLineKind::Broken;
+    const auto overlays = synthOverlays(m_pendingSynths);
+    const auto sourceBytes = session.vgSource->renderPreview();
+    auto result = m_vgProject.loadSource(
+        session.vgSource->loadName(), session.vgSource->sourcePath(), QByteArrayView{sourceBytes},
+        std::span<const porydaw::VoicegroupProject::SynthOverlay>{overlays.constData(),
+                                                                  size_t(overlays.size())});
+    if (!parsed || hasBrokenRow || !result.succeeded()) {
+        session.diagnostics =
+            diagnosticsForBrokenRows(*session.vgSource, result.diagnostics(), sourceError);
+        if (&session == m_active)
+            updateVoicegroupBrowser();
+        statusBar()->showMessage(
+            sourceError.isEmpty()
+                ? tr("The changed voicegroup source is invalid — keeping the previous sound.")
+                : tr("The changed voicegroup source is invalid: %1").arg(sourceError),
+            8000);
+        return;
+    }
+    LoadedVoiceGroup *vg = result.take();
     if (!vg)
         return; // keep the previous sound
-    session.view->setVoicegroup(nullptr);
-    if (session.voicegroup)
-        voicegroup_free(session.voicegroup);
-    session.voicegroup = vg;
-    session.view->setVoicegroup(vg);
-    // Fresh parse of the saved file (also re-records its mtime).
-    openVoicegroupSource(session, session.doc.cfg());
+    const int keepSlot = &session == m_active ? m_vgBrowser->currentSlot() : 0;
+    swapVoicegroup(session, vg, keepSlot);
 }
 
 void MainWindow::refreshSessionsAfterVgSave(const QString &filePath, SongSession *except)
@@ -1052,9 +1164,15 @@ void MainWindow::refreshSessionsAfterVgSave(const QString &filePath, SongSession
         if (session->vgSource->dirty())
             continue; // unsaved edits stay; last save wins, as documented
         QString tried;
-        LoadedVoiceGroup *vg = loadVoicegroupFor(session->doc.cfg(), &tried);
-        if (!vg)
+        QVector<porydaw::VoicegroupProject::Diagnostic> loadDiagnostics;
+        LoadedVoiceGroup *vg = loadVoicegroupFor(session->doc.cfg(), &tried, &loadDiagnostics);
+        if (!vg) {
+            if (!loadDiagnostics.isEmpty())
+                session->diagnostics = loadDiagnostics;
+            if (session == m_active)
+                updateVoicegroupBrowser();
             continue; // keep the previous sound
+        }
         const int keepSlot = session == m_active ? m_vgBrowser->currentSlot() : 0;
         swapVoicegroup(*session, vg, keepSlot);
         // Fresh parse of the saved file (also re-records its mtime), then
@@ -1220,7 +1338,6 @@ bool MainWindow::openProjectDir(const QString &dir, bool interactive)
         return false;
     for (const auto &session : m_sessions)
         saveViewState(*session); // against the old project root
-    cleanupVgPreview();
 
     QString error;
     if (!m_project.open(dir, &error)) {
@@ -1230,6 +1347,7 @@ bool MainWindow::openProjectDir(const QString &dir, bool interactive)
             statusBar()->showMessage(tr("Couldn't reopen last project %1: %2").arg(dir, error));
         return false;
     }
+    m_vgProject.open(dir);
     QSettings settings;
     settings.setValue(QStringLiteral("lastProjectDir"), dir);
     // The new project starts with no tabs; loadSong re-records them.
@@ -1238,7 +1356,6 @@ bool MainWindow::openProjectDir(const QString &dir, bool interactive)
 
     // Sessions were prompted above; closing them now needs no questions.
     teardownSessions();
-    invalidateVgCatalog();
     m_pendingSynths.clear(); // unsaved synth definitions die with the project
 
     m_newSongAction->setEnabled(true);
@@ -1281,16 +1398,23 @@ void MainWindow::songOpenInNewTab(int songId)
     loadSong(m_project.songs().at(songId), /*newTab=*/true);
 }
 
-LoadedVoiceGroup *MainWindow::loadVoicegroupFor(const SongCfg &cfg, QString *tried)
+LoadedVoiceGroup *
+MainWindow::loadVoicegroupFor(const SongCfg &cfg, QString *tried,
+                              QVector<porydaw::VoicegroupProject::Diagnostic> *diagnostics)
 {
     const QStringList candidates = DecompProject::voicegroupCandidates(cfg);
     if (tried)
         *tried = candidates.join(QStringLiteral(", "));
-    const QByteArray rootUtf8 = m_project.root().toLocal8Bit();
+    if (diagnostics)
+        diagnostics->clear();
     for (const QString &name : candidates) {
-        LoadedVoiceGroup *vg =
-            voicegroup_load(rootUtf8.constData(), name.toLocal8Bit().constData(), nullptr);
-        if (vg)
+        auto result = m_vgProject.loadSaved(name);
+        if (!result.succeeded()) {
+            if (diagnostics)
+                *diagnostics += result.diagnostics();
+            continue;
+        }
+        if (LoadedVoiceGroup *vg = result.take())
             return vg;
     }
     return nullptr;
@@ -1319,14 +1443,14 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
             return;
         saveViewState(*session); // the outgoing song's, while its view is up
     }
-    cleanupVgPreview();
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
     QElapsedTimer timer;
     timer.start();
 
     QString tried;
-    LoadedVoiceGroup *vg = loadVoicegroupFor(song.cfg, &tried);
+    QVector<porydaw::VoicegroupProject::Diagnostic> loadDiagnostics;
+    LoadedVoiceGroup *vg = loadVoicegroupFor(song.cfg, &tried, &loadDiagnostics);
     if (!vg) {
         QApplication::restoreOverrideCursor();
         QMessageBox::warning(
@@ -1339,14 +1463,22 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
         session = createSession();
     session->doc.setTrackBudget(m_project.trackBudgetFor(song));
     QString error;
-    if (!session->doc.load(song, &error)) {
-        voicegroup_free(vg);
+    auto loaded = false;
+    {
+        QSignalBlocker blocker(&session->doc);
+        loaded = session->doc.load(song, &error);
+    }
+    if (!loaded) {
+        porydaw::VoicegroupProject::freeBank(vg);
         if (created)
             destroySession(session); // not in the tab bar yet
         QApplication::restoreOverrideCursor();
         QMessageBox::warning(this, tr("Load Song"), error);
         return;
     }
+    session->appliedVoicegroupArg = song.cfg.voicegroupArg;
+    session->appliedVolume = song.cfg.masterVolume;
+    session->appliedReverb = song.cfg.reverb;
 
     auto timeline = session->doc.buildTimeline(m_audio.sampleRate());
 
@@ -1359,14 +1491,13 @@ void MainWindow::loadSong(const SongInfo &song, bool newTab)
         m_audio.unloadSong();
     }
     if (session->voicegroup)
-        voicegroup_free(session->voicegroup);
+        porydaw::VoicegroupProject::freeBank(session->voicegroup);
     session->voicegroup = vg;
+    session->diagnostics.clear();
     session->timeline = std::move(timeline);
     openVoicegroupSource(*session, song.cfg);
+    applyPendingSynthTones(*session, vg);
     session->songId = song.id;
-    session->appliedVoicegroupArg = song.cfg.voicegroupArg;
-    session->appliedVolume = song.cfg.masterVolume;
-    session->appliedReverb = song.cfg.reverb;
 
     session->view->setSong(session->timeline.get(), session->voicegroup);
     session->view->setDocument(&session->doc);
@@ -1420,28 +1551,24 @@ void MainWindow::onDocumentChanged(SongSession &session)
         // The -G switch (or its undo/redo) swaps the voicegroup. Unsaved
         // voice edits need no prompt: they live in the undo history and are
         // reapplied whenever their voicegroup source is reopened.
-        cleanupVgPreview();
         QString tried;
-        if (LoadedVoiceGroup *vg = loadVoicegroupFor(cfg, &tried)) {
-            session.view->setVoicegroup(nullptr);
-            if (active) {
-                m_vgBrowser->setVoicegroup(nullptr);
-                m_audio.updateVoicegroup(vg);
-            }
-            if (session.voicegroup)
-                voicegroup_free(session.voicegroup);
-            session.voicegroup = vg;
+        QVector<porydaw::VoicegroupProject::Diagnostic> loadDiagnostics;
+        if (LoadedVoiceGroup *vg = loadVoicegroupFor(cfg, &tried, &loadDiagnostics)) {
             openVoicegroupSource(session, cfg);
             reapplyVoicegroupEditsToReopenedSource(session);
-            session.view->setVoicegroup(session.voicegroup);
-            if (active)
-                updateVoicegroupBrowser();
+            const int keepSlot = active ? m_vgBrowser->currentSlot() : 0;
+            swapVoicegroup(session, vg, keepSlot);
             session.appliedVoicegroupArg = cfg.voicegroupArg;
             // Replayed edits aren't in the disk file just loaded; audition
-            // them through the preview shadow like any unsaved edit.
+            // them through the in-memory source load like any unsaved edit.
             if (session.vgSource && session.vgSource->dirty())
-                reloadVoicegroupPreview(session, active ? m_vgBrowser->currentSlot() : 0);
+                reloadVoicegroupPreview(session, keepSlot);
         } else {
+            if (!loadDiagnostics.isEmpty()) {
+                session.diagnostics = loadDiagnostics;
+                if (active)
+                    updateVoicegroupBrowser();
+            }
             statusBar()->showMessage(
                 tr("Voicegroup not found (tried: %1) — keeping the previous one until save.")
                     .arg(tried),
@@ -1520,28 +1647,33 @@ bool MainWindow::saveSession(SongSession &session)
             // The definitions are on disk now whatever the voicegroup save
             // below does; the catalog must rescan or a failed save would
             // leave them invisible to lookups, dedupe, and the dropdown.
-            invalidateVgCatalog();
+            m_vgProject.markStale();
         }
         if (!session.vgSource->save(&error)) {
             QMessageBox::warning(this, tr("Save Voicegroup"), error);
             return false;
         }
-        // Written definitions graduate from pending to on-disk only once the
-        // voicegroup save landed: a failed save keeps them pending so synth
-        // lookups still resolve them (the writer skips value-equal defs, so
-        // the retry save stays a no-op for them).
-        for (const auto &def : newDefs)
-            m_pendingSynths.remove(def.first);
-        cleanupVgPreview();
         // Invalidate before the reload below repopulates the browser: the
         // rebuilt catalog must include any synth definitions written above.
-        invalidateVgCatalog();
-        // Reload from the project: verifies the saved file parses and
-        // replaces any preview-loaded state.
+        m_vgProject.markStale();
+        // Reload from the project: verify the saved file materializes before
+        // graduating pending synths or replacing the last-good bank.
         const int slot = &session == m_active ? m_vgBrowser->currentSlot() : 0;
         QString tried;
-        if (LoadedVoiceGroup *vg = loadVoicegroupFor(session.doc.cfg(), &tried))
+        QVector<porydaw::VoicegroupProject::Diagnostic> loadDiagnostics;
+        if (LoadedVoiceGroup *vg = loadVoicegroupFor(session.doc.cfg(), &tried, &loadDiagnostics)) {
+            for (const auto &def : newDefs)
+                m_pendingSynths.remove(def.first);
             swapVoicegroup(session, vg, slot);
+        } else {
+            if (!loadDiagnostics.isEmpty()) {
+                session.diagnostics = loadDiagnostics;
+                if (&session == m_active)
+                    updateVoicegroupBrowser();
+            }
+            statusBar()->showMessage(
+                tr("Saved the voicegroup, but reload failed — keeping the previous sound."), 8000);
+        }
         updateVgDockTitle();
         // Only a real write may refresh the stamp: recording the mtime on a
         // doc-only save would silently absorb another tab's voicegroup save
@@ -1888,7 +2020,8 @@ void MainWindow::importSampleForSlot(int slot)
     }
 
     const QString root = m_project.root();
-    const QStringList symbols = vgCatalog().directSound;
+    const VgCatalog catalog = vgCatalog();
+    const QStringList symbols = catalog.directSound;
     // Browser-initiated: audition with the destination voice's envelope
     // when that slot already holds a DirectSound-family voice.
     AuditionSlots::Adsr destAdsr;
@@ -1912,7 +2045,8 @@ void MainWindow::importSampleForSlot(int slot)
 
     // Write-through commit (not undoable, like song registration): the
     // rendered .wav (FORMATS.md §1) plus its direct_sound_data.inc block.
-    if (!SampleRegistrar::registerSample(root, dialog.sampleName(), dialog.wavBytes(), &error)) {
+    if (!SampleRegistrar::registerSample(root, dialog.sampleName(), dialog.wavBytes(), symbols,
+                                         &error)) {
         QMessageBox::warning(this, tr("Import Sample"), error);
         return;
     }
@@ -1929,7 +2063,7 @@ void MainWindow::importSampleForSlot(int slot)
     if (!SampleRegistrar::writeSampleSidecar(root, dialog.sampleName(), sidecar, &sidecarError))
         statusBar()->showMessage(
             tr("Sample imported, but saving its edit history failed: %1").arg(sidecarError), 8000);
-    invalidateVgCatalog();
+    m_vgProject.markStale();
     updateVoicegroupBrowser();
 
     // Browser-initiated: point the requesting slot's voice at the new sample
@@ -1952,7 +2086,7 @@ void MainWindow::importSampleForSlot(int slot)
             voice.key = 60;
             voice.pan = 0;
             const VgAdsr adsr =
-                vgDefaultAdsr(vgCatalog().typicalAdsr, voice.macro,
+                vgDefaultAdsr(catalog.typicalAdsr, voice.macro,
                               QStringLiteral("DirectSoundWaveData_") + dialog.sampleName());
             voice.attack = adsr.attack;
             voice.decay = adsr.decay;
@@ -1982,6 +2116,7 @@ void MainWindow::editSampleForSlot(int slot)
     }
     const QString name = voice->symbol.mid(prefix.size());
     const QString root = m_project.root();
+    const VgCatalog catalog = vgCatalog();
     const SampleFormatProbe probe = SampleRegistrar::probeSampleFormat(root);
     if (!probe.ok()) {
         QMessageBox::warning(this, tr("Edit Sample"), probe.refusal);
@@ -2085,8 +2220,8 @@ void MainWindow::editSampleForSlot(int slot)
         return;
 
     // Write-through commit: overwrite the .wav in place; the registration
-    // block already exists and stays untouched.
-    if (!SampleRegistrar::updateSample(root, name, dialog.wavBytes(), &error)) {
+    if (!SampleRegistrar::updateSample(root, name, dialog.wavBytes(), catalog.directSound,
+                                       &error)) {
         QMessageBox::warning(this, tr("Edit Sample"), error);
         return;
     }
@@ -2102,7 +2237,7 @@ void MainWindow::editSampleForSlot(int slot)
         // reopen (the committed .wav is its own provenance now).
         SampleRegistrar::removeSampleSidecar(root, name);
     }
-    invalidateVgCatalog();
+    m_vgProject.markStale();
     updateVoicegroupBrowser();
     // The loaded voicegroup decoded the old .wav at load time; reload so the
     // edit is audible without reopening the song.
@@ -2206,8 +2341,9 @@ void MainWindow::deleteSongById(int songId)
                                  .arg(song.label));
         return;
     }
-    const QString vgName =
-        SongRegistry::deletableVoicegroup(m_project.root(), m_project.songs(), song.label);
+    const VgCatalog catalog = vgCatalog();
+    const QString vgName = SongRegistry::deletableVoicegroup(
+        m_project.root(), m_project.songs(), song.label, catalog.keysplits, catalog.drumkits);
 
     QMessageBox box(this);
     box.setWindowTitle(tr("Delete Song"));
@@ -2324,7 +2460,8 @@ void MainWindow::reloadProject()
     }
     populateSongList();
     refreshSessionSongIds();
-    invalidateVgCatalog();
+    m_vgProject.markStale();
+    m_vgProject.refresh();
 }
 
 void MainWindow::loadSongByLabel(const QString &label, bool newTab)
@@ -2350,7 +2487,7 @@ void MainWindow::updateVoicegroupBrowser()
                             : session->doc.cfg().voicegroupArg;
     m_vgBrowser->setVoicegroup(session->voicegroup);
     m_vgBrowser->setUsedVoices(session->view->usedVoices());
-    const VgCatalog &catalog = vgCatalog();
+    const VgCatalog catalog = vgCatalog();
     m_vgBrowser->setVoicegroupChoices(catalog.groupArgs);
     m_vgBrowser->setCurrentVoicegroupArg(arg);
     m_vgBrowser->setSource(
@@ -2360,7 +2497,8 @@ void MainWindow::updateVoicegroupBrowser()
             // Mint a pending symbol for the descriptor — nothing is written;
             // the definition reaches disk when a voicegroup referencing it
             // saves. Value-equal definitions (on disk or pending) are reused.
-            const VgSynthCatalog &synths = vgCatalog().synths;
+            const VgCatalog catalog = vgCatalog();
+            const VgSynthCatalog &synths = catalog.synths;
             QString symbol = synths.symbolFor(desc);
             if (!symbol.isEmpty())
                 return symbol;
@@ -2379,106 +2517,188 @@ void MainWindow::updateVoicegroupBrowser()
             // different bytes (or a plain sample) forces a suffix.
             symbol = vgSynthSymbolName(desc);
             const QString base = symbol;
-            for (int i = 2; synths.find(symbol) || vgCatalog().directSound.contains(symbol); i++)
+            for (int i = 2; synths.find(symbol) || catalog.directSound.contains(symbol); i++)
                 symbol = base + QStringLiteral("_%1").arg(i);
             m_pendingSynths.insert(symbol, desc);
             return symbol;
         });
+    m_vgBrowser->setDiagnostics(session->diagnostics);
     updateVgDockTitle();
 }
 
-const MainWindow::VgCatalog &MainWindow::vgCatalog()
+MainWindow::VgCatalog MainWindow::vgCatalog()
 {
-    if (!m_vgCatalog.valid) {
-        const QString root = m_project.root();
-        // One read of each voicegroup file and of the sound data files; the
-        // per-dataset accessors would redo the same full scan per call.
-        const VgCatalogScan scan = VoicegroupSource::catalogScan(root);
-        m_vgCatalog.groupArgs = scan.groupArgs;
-        m_vgCatalog.keysplits = scan.keysplits;
-        m_vgCatalog.drumkits = scan.drumkits;
-        m_vgCatalog.typicalAdsr = scan.typicalAdsr;
-        const VgDirectSoundScan sound = VoicegroupSource::directSoundCatalog(root);
-        m_vgCatalog.directSound = sound.directSound;
-        m_vgCatalog.synths = sound.synths;
-        m_vgCatalog.progWave = VoicegroupSource::progWaveSymbols(root);
-        m_vgCatalog.valid = true;
+    auto catalog = VgCatalog{};
+    const auto &snapshot = m_vgProject.snapshot();
+    const auto appendUnique = [](QStringList &values, const QString &value) {
+        if (!value.isEmpty() && !values.contains(value))
+            values.append(value);
+    };
+    for (const auto &word : snapshot.synthMacroWords)
+        appendUnique(catalog.synths.macroWords, word);
+    for (const auto &entry : snapshot.catalog) {
+        if (entry.adsr && !entry.symbol.isEmpty() &&
+            !catalog.typicalAdsr.bySymbol.contains(entry.symbol)) {
+            const auto &adsr = *entry.adsr;
+            catalog.typicalAdsr.bySymbol.insert(entry.symbol,
+                                                VgAdsr{adsr[0], adsr[1], adsr[2], adsr[3]});
+        }
+        switch (entry.kind) {
+        case porydaw::VoicegroupProject::CatalogKind::VoiceGroup:
+            if (entry.symbol.startsWith(QLatin1String("voicegroup")))
+                appendUnique(catalog.groupArgs, entry.symbol.mid(10));
+            break;
+        case porydaw::VoicegroupProject::CatalogKind::DirectSound:
+            appendUnique(catalog.directSound, entry.symbol);
+            break;
+        case porydaw::VoicegroupProject::CatalogKind::ProgrammableWave:
+            appendUnique(catalog.progWave, entry.symbol);
+            break;
+        case porydaw::VoicegroupProject::CatalogKind::Keysplit: {
+            const auto keysplit = qMakePair(entry.subgroup, entry.table);
+            if (!entry.subgroup.isEmpty() && !entry.table.isEmpty() &&
+                !catalog.keysplits.contains(keysplit)) {
+                catalog.keysplits.append(keysplit);
+            }
+            break;
+        }
+        case porydaw::VoicegroupProject::CatalogKind::Drumkit:
+            appendUnique(catalog.drumkits, entry.drumkit);
+            break;
+        case porydaw::VoicegroupProject::CatalogKind::Synth:
+            if (entry.synthDescriptor && !entry.symbol.isEmpty() &&
+                !catalog.synths.find(entry.symbol)) {
+                const auto &bytes = *entry.synthDescriptor;
+                catalog.synths.defs.append(
+                    {entry.symbol, VgSynthDesc{bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]}});
+            }
+            break;
+        }
     }
-    return m_vgCatalog;
+    for (const auto &family : snapshot.familyAdsr) {
+        auto key = -1;
+        if (family.family == QLatin1String("directsound"))
+            key = vgAdsrFamily(VgMacro::DirectSound);
+        else if (family.family == QLatin1String("programmable_wave"))
+            key = vgAdsrFamily(VgMacro::ProgWave);
+        else if (family.family == QLatin1String("square_1"))
+            key = vgAdsrFamily(VgMacro::Square1);
+        else if (family.family == QLatin1String("square_2"))
+            key = vgAdsrFamily(VgMacro::Square2);
+        else if (family.family == QLatin1String("noise"))
+            key = vgAdsrFamily(VgMacro::Noise);
+        if (key >= 0 && !catalog.typicalAdsr.byFamily.contains(key)) {
+            const auto &adsr = family.adsr;
+            catalog.typicalAdsr.byFamily.insert(key, VgAdsr{adsr[0], adsr[1], adsr[2], adsr[3]});
+        }
+    }
+    return catalog;
 }
 
-void MainWindow::invalidateVgCatalog()
+void MainWindow::clearSampleCache()
 {
-    m_vgCatalog.valid = false;
-    // The loaded instrument batch is derived from the catalog's symbol
-    // lists; audition is safe across the free because AuditionSlots copies
-    // the bytes into its own slot at publish time.
     m_sampleWaves.clear();
     m_progWaves.clear();
     m_keysplits.clear();
-    voicegroup_free_samples(m_sampleSet);
-    m_sampleSet = nullptr;
-}
-
-void MainWindow::ensureSampleSet()
-{
-    if (m_sampleSet || !m_project.isOpen())
-        return;
-    const VgCatalog &catalog = vgCatalog();
-    QList<QByteArray> storage;
-    const auto utf8 = [&storage](const QString &s) {
-        storage.append(s.toUtf8());
-        return storage.last().constData();
-    };
-    std::vector<const char *> samples, waves, keysplits, tables;
-    for (const QString &s : catalog.directSound)
-        samples.push_back(utf8(s));
-    for (const QString &s : catalog.progWave)
-        waves.push_back(utf8(s));
-    for (const auto &pair : catalog.keysplits) {
-        keysplits.push_back(utf8(pair.first));
-        tables.push_back(utf8(pair.second));
-    }
-    m_sampleSet =
-        voicegroup_load_samples(m_project.root().toLocal8Bit().constData(), samples.data(),
-                                int(samples.size()), waves.data(), int(waves.size()),
-                                keysplits.data(), tables.data(), int(keysplits.size()), nullptr);
-    if (!m_sampleSet)
-        return;
-    for (int i = 0; i < catalog.directSound.size() && i < m_sampleSet->count; i++) {
-        if (m_sampleSet->waves[i])
-            m_sampleWaves.insert(catalog.directSound.at(i), m_sampleSet->waves[i]);
-    }
-    for (int i = 0; i < catalog.progWave.size() && i < m_sampleSet->progWaveCount; i++) {
-        if (m_sampleSet->progWaves[i])
-            m_progWaves.insert(catalog.progWave.at(i), m_sampleSet->progWaves[i]);
-    }
-    for (int i = 0; i < catalog.keysplits.size() && i < m_sampleSet->keysplitCount; i++) {
-        const LoadedKeysplit &ks = m_sampleSet->keysplits[i];
-        if (ks.subGroup && ks.table)
-            m_keysplits.insert(catalog.keysplits.at(i).first, ks);
-    }
+    m_pickerAssets.clear();
 }
 
 const WaveData *MainWindow::sampleWaveFor(const QString &symbol)
 {
-    ensureSampleSet();
-    return m_sampleWaves.value(symbol, nullptr);
+    const auto cached = m_sampleWaves.constFind(symbol);
+    if (cached != m_sampleWaves.constEnd())
+        return cached.value();
+    if (!m_vgProject.isOpen())
+        return nullptr;
+    auto asset = std::make_unique<PickerAsset>(
+        m_vgProject.loadAsset(porydaw::VoicegroupProject::AssetKind::DirectSound, symbol));
+    const auto payload = asset->result.payload();
+    const auto frameCount = asset->result.frameCount();
+    const auto loopStart = asset->result.loopStart();
+    const WaveData *wave = nullptr;
+    if (!payload.empty() && frameCount > 0 &&
+        frameCount <= (std::numeric_limits<uint32_t>::max)() &&
+        loopStart <= (std::numeric_limits<uint32_t>::max)()) {
+        asset->sample = {
+            .type = 0,
+            .status = uint16_t(asset->result.hasLoop() ? 0x4000 : 0),
+            .freq = asset->result.sampleRate(),
+            .loopStart = uint32_t(loopStart),
+            .size = uint32_t(frameCount),
+            .data = reinterpret_cast<int8_t *>(const_cast<std::byte *>(payload.data())),
+        };
+        wave = &asset->sample;
+        m_pickerAssets.push_back(std::move(asset));
+    }
+    m_sampleWaves.insert(symbol, wave);
+    return wave;
+}
+
+const uint32_t *MainWindow::progWaveFor(const QString &symbol)
+{
+    const auto cached = m_progWaves.constFind(symbol);
+    if (cached != m_progWaves.constEnd())
+        return cached.value();
+    if (!m_vgProject.isOpen())
+        return nullptr;
+    auto asset = std::make_unique<PickerAsset>(
+        m_vgProject.loadAsset(porydaw::VoicegroupProject::AssetKind::ProgrammableWave, symbol));
+    const auto payload = asset->result.payload();
+    const uint32_t *wave = nullptr;
+    if (payload.size() >= 16) {
+        std::memcpy(asset->progWave.data(), payload.data(), 16);
+        wave = asset->progWave.data();
+        m_pickerAssets.push_back(std::move(asset));
+    }
+    m_progWaves.insert(symbol, wave);
+    return wave;
+}
+
+const MainWindow::PickerKeysplit *MainWindow::keysplitFor(const QString &symbol)
+{
+    const auto cached = m_keysplits.constFind(symbol);
+    if (cached != m_keysplits.constEnd())
+        return cached.value();
+    if (!m_vgProject.isOpen())
+        return nullptr;
+    const auto catalog = vgCatalog();
+    auto tableSymbol = QString{};
+    for (const auto &entry : catalog.keysplits) {
+        if (entry.first == symbol) {
+            tableSymbol = entry.second;
+            break;
+        }
+    }
+    if (tableSymbol.isEmpty()) {
+        m_keysplits.insert(symbol, nullptr);
+        return nullptr;
+    }
+    auto asset = std::make_unique<PickerAsset>(
+        m_vgProject.loadAsset(porydaw::VoicegroupProject::AssetKind::Keysplit, tableSymbol));
+    const auto subgroup = asset->result.keysplitSubgroup();
+    const auto table = asset->result.keysplitTable();
+    const PickerKeysplit *keysplit = nullptr;
+    if (subgroup.size() >= VOICEGROUP_SIZE && table.size() >= VOICEGROUP_SIZE) {
+        asset->keysplit = {
+            .subGroup = subgroup.data(),
+            .table = table.data(),
+        };
+        keysplit = &asset->keysplit;
+        m_pickerAssets.push_back(std::move(asset));
+    }
+    m_keysplits.insert(symbol, keysplit);
+    return keysplit;
 }
 
 // Browse-audition a keysplit instrument: play whatever sub-voice the
 // audition key (middle C) resolves to, with that sub-voice's own envelope —
 // the same resolution the engine does per note (resolve_voice).
-void MainWindow::auditionKeysplit(const QString &symbol)
+void MainWindow::auditionKeysplit(const PickerKeysplit &keysplit)
 {
-    ensureSampleSet();
-    const auto it = m_keysplits.constFind(symbol);
-    if (it == m_keysplits.constEnd())
-        return;
-    const uint8_t idx = it->table[60];
+    const auto idx = uint8_t{keysplit.table[60]};
     if (idx >= VOICEGROUP_SIZE)
         return; // old-style overflow index: nothing loaded to play
-    const ToneData &sub = it->subGroup[idx];
+    const auto &sub = keysplit.subGroup[idx];
     if (sub.type & (VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL))
         return; // nested split: the engine refuses these too
     const AuditionSlots::Adsr adsr{sub.attack, sub.decay, sub.sustain, sub.release};
@@ -2498,22 +2718,57 @@ void MainWindow::auditionKeysplit(const QString &symbol)
 
 void MainWindow::openVoicegroupSource(SongSession &session, const SongCfg &cfg)
 {
-    session.vgSource = std::make_unique<VoicegroupSource>();
+    const auto effectiveArg =
+        cfg.voicegroupArg.isEmpty() ? QStringLiteral("_dummy") : cfg.voicegroupArg;
+    const auto canonicalSymbol = QStringLiteral("voicegroup") + effectiveArg;
+    const auto &snapshot = m_vgProject.snapshot();
+    const auto metadata = voicegroupCatalogEntry(snapshot, canonicalSymbol);
+    if (!metadata) {
+        session.vgSource.reset();
+        session.vgFileTime = QDateTime();
+        if (!snapshot.diagnostics.isEmpty())
+            session.diagnostics = snapshot.diagnostics;
+        const auto detail =
+            snapshot.diagnostics.isEmpty()
+                ? tr("The voicegroup catalog has no entry for %1.").arg(canonicalSymbol)
+                : formatVoicegroupDiagnostic(snapshot.diagnostics.first());
+        statusBar()->showMessage(tr("Voicegroup editing unavailable: %1").arg(detail), 8000);
+        return;
+    }
+    auto source = std::make_unique<VoicegroupSource>();
     QString error;
-    if (!session.vgSource->open(m_project.root(), cfg.voicegroupArg, &error)) {
+    if (!source->open(m_project.root(), metadata->sourcePath, metadata->displayName,
+                      metadata->symbol, &error)) {
         session.vgSource.reset();
         session.vgFileTime = QDateTime();
         statusBar()->showMessage(tr("Voicegroup editing unavailable: %1").arg(error), 8000);
         return;
     }
-    session.vgFileTime = QFileInfo(session.vgSource->filePath()).lastModified();
+    session.vgFileTime = QFileInfo(source->filePath()).lastModified();
+    session.vgSource = std::move(source);
 }
 
 void MainWindow::onVoiceEditRequested(int slot, const VgVoice &voice, bool structural)
 {
     SongSession *session = m_active;
-    if (!session)
+    if (!session || !session->vgSource)
         return;
+    auto candidate = *session->vgSource;
+    if (!candidate.setVoice(slot, voice))
+        return;
+    const auto overlays = synthOverlays(m_pendingSynths);
+    const auto preview = candidate.renderPreview();
+    auto validation = m_vgProject.loadSource(
+        candidate.loadName(), candidate.sourcePath(), QByteArrayView{preview},
+        std::span<const porydaw::VoicegroupProject::SynthOverlay>{overlays.constData(),
+                                                                  size_t(overlays.size())});
+    if (!validation.succeeded()) {
+        const auto detail = validation.diagnostics().isEmpty()
+                                ? tr("The edited voicegroup could not be loaded.")
+                                : formatVoicegroupDiagnostic(validation.diagnostics().first());
+        statusBar()->showMessage(tr("Invalid voice edit: %1").arg(detail), 8000);
+        return;
+    }
     auto applied = [this](SongSession &session, int slot, bool structural) {
         onVoiceEdited(session, slot, structural);
         if (!structural && &session == m_active)
@@ -2553,44 +2808,120 @@ void MainWindow::onVoiceEdited(SongSession &session, int slot, bool structural)
     updateVgDockTitle();
     updateTabTitle(session);
 }
+void MainWindow::reloadVoicegroup()
+{
+    if (!m_active || !m_active->voicegroup || !m_active->vgSource || !m_vgProject.isOpen())
+        return;
+    SongSession &session = *m_active;
+    m_vgProject.markStale();
+    const auto snapshot = m_vgProject.refresh();
+    if (!snapshot.succeeded) {
+        if (!snapshot.diagnostics.isEmpty())
+            session.diagnostics = snapshot.diagnostics;
+        const auto detail = snapshot.diagnostics.isEmpty()
+                                ? tr("The voicegroup project could not be refreshed.")
+                                : formatVoicegroupDiagnostic(snapshot.diagnostics.first());
+        statusBar()->showMessage(tr("Voicegroup reload failed: %1").arg(detail), 8000);
+        updateVoicegroupBrowser();
+        return;
+    }
+    auto source = std::make_unique<VoicegroupSource>(*session.vgSource);
+    QString sourceError;
+    const bool parsed = source->reload(&sourceError);
+    bool hasBrokenRow = false;
+    for (int slot = 0; slot < VOICEGROUP_SIZE && !hasBrokenRow; ++slot)
+        hasBrokenRow = source->kindAt(slot) == VgLineKind::Broken;
+    const QDateTime fileTime = QFileInfo(source->filePath()).lastModified();
+    if (!parsed || hasBrokenRow) {
+        const auto overlays = synthOverlays(m_pendingSynths);
+        const auto sourceBytes = source->renderPreview();
+        auto result = m_vgProject.loadSource(
+            source->loadName(), source->sourcePath(), QByteArrayView{sourceBytes},
+            std::span<const porydaw::VoicegroupProject::SynthOverlay>{overlays.constData(),
+                                                                      size_t(overlays.size())});
+        const auto diagnostics =
+            diagnosticsForBrokenRows(*source, result.diagnostics(), sourceError);
+        session.vgSource = std::move(source);
+        session.vgFileTime = fileTime;
+        session.diagnostics = diagnostics;
+        updateVoicegroupBrowser();
+        statusBar()->showMessage(
+            sourceError.isEmpty()
+                ? tr("The voicegroup source is invalid — keeping the previous sound.")
+                : tr("The voicegroup source is invalid: %1").arg(sourceError),
+            8000);
+        return;
+    }
+    const auto overlays = synthOverlays(m_pendingSynths);
+    const auto sourceBytes = source->renderPreview();
+    auto result = m_vgProject.loadSource(source->loadName(), source->sourcePath(),
+                                         QByteArrayView{sourceBytes},
+                                         std::span<const porydaw::VoicegroupProject::SynthOverlay>{
+                                             overlays.constData(), size_t(overlays.size())});
+    if (!result.succeeded()) {
+        session.vgSource = std::move(source);
+        session.vgFileTime = fileTime;
+        if (!result.diagnostics().isEmpty())
+            session.diagnostics = result.diagnostics();
+        updateVoicegroupBrowser();
+        const auto detail = result.diagnostics().isEmpty()
+                                ? tr("The voicegroup could not be materialized.")
+                                : formatVoicegroupDiagnostic(result.diagnostics().first());
+        statusBar()->showMessage(tr("Voicegroup reload failed: %1").arg(detail), 8000);
+        return;
+    }
+    LoadedVoiceGroup *vg = result.take();
+    if (!vg) {
+        session.vgSource = std::move(source);
+        session.vgFileTime = fileTime;
+        updateVoicegroupBrowser();
+        statusBar()->showMessage(
+            tr("Voicegroup reload produced no bank — keeping the previous sound."), 8000);
+        return;
+    }
+    const int keepSlot = m_vgBrowser->currentSlot();
+    session.vgSource = std::move(source);
+    session.vgFileTime = fileTime;
+    swapVoicegroup(session, vg, keepSlot);
+    statusBar()->showMessage(tr("Reloaded voicegroup %1.").arg(session.vgSource->loadName()), 5000);
+}
 
 void MainWindow::reloadVoicegroupPreview(SongSession &session, int keepSlot)
 {
-    const QString previewDir = m_project.root() + QStringLiteral("/.porydaw/vgpreview");
-    QDir().mkpath(previewDir);
-    {
-        QFile out(previewDir + QLatin1Char('/') + session.vgSource->loadName() +
-                  QStringLiteral(".inc"));
-        if (!out.open(QIODevice::WriteOnly)) {
-            statusBar()->showMessage(tr("Cannot write voicegroup preview file."), 8000);
-            return;
-        }
-        out.write(session.vgSource->renderPreview());
+    if (!session.vgSource)
+        return;
+    const auto overlays = synthOverlays(m_pendingSynths);
+    const auto source = session.vgSource->renderPreview();
+    auto result = m_vgProject.loadSource(session.vgSource->loadName(),
+                                         session.vgSource->sourcePath(), QByteArrayView{source},
+                                         std::span<const porydaw::VoicegroupProject::SynthOverlay>{
+                                             overlays.constData(), size_t(overlays.size())});
+    if (!result.succeeded()) {
+        const auto detail = result.diagnostics().isEmpty()
+                                ? tr("The edited voicegroup could not be loaded.")
+                                : formatVoicegroupDiagnostic(result.diagnostics().first());
+        statusBar()->showMessage(
+            tr("Edited voicegroup failed to load — keeping the previous sound: %1").arg(detail),
+            8000);
+        return;
     }
-    // The config's voicegroup paths are searched before the project's own
-    // (voicegroup_loader.c discovery), so the preview file shadows the real
-    // one while samples and keysplits still resolve from the project.
-    VoicegroupLoaderConfig config;
-    std::memset(&config, 0, sizeof(config));
-    std::strncpy(config.voicegroupPaths[0], ".porydaw/vgpreview", VG_MAX_PATH_LEN - 1);
-    config.voicegroupPathCount = 1;
-    LoadedVoiceGroup *vg =
-        voicegroup_load(m_project.root().toLocal8Bit().constData(),
-                        session.vgSource->loadName().toLocal8Bit().constData(), &config);
+    LoadedVoiceGroup *vg = result.take();
     if (!vg) {
         statusBar()->showMessage(
-            tr("Edited voicegroup failed to load — keeping the previous sound."), 8000);
+            tr("Edited voicegroup produced no bank — keeping the previous sound."), 8000);
         return;
     }
     swapVoicegroup(session, vg, keepSlot);
 }
 
-const VgSynthDesc *MainWindow::synthDescForSymbol(const QString &symbol)
+std::optional<VgSynthDesc> MainWindow::synthDescForSymbol(const QString &symbol)
 {
     const auto pending = m_pendingSynths.constFind(symbol);
     if (pending != m_pendingSynths.constEnd())
-        return &pending.value();
-    return vgCatalog().synths.find(symbol);
+        return pending.value();
+    const VgCatalog catalog = vgCatalog();
+    const VgSynthDesc *onDisk = catalog.synths.find(symbol);
+    return onDisk ? std::optional<VgSynthDesc>(*onDisk) : std::nullopt;
 }
 
 bool MainWindow::applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *vg)
@@ -2603,16 +2934,18 @@ bool MainWindow::applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *
         if (!v || (v->macro != VgMacro::DirectSound && v->macro != VgMacro::DirectSoundNoResample &&
                    v->macro != VgMacro::DirectSoundAlt))
             continue;
-        const VgSynthDesc *desc = synthDescForSymbol(v->symbol);
+        const auto desc = synthDescForSymbol(v->symbol);
         if (!desc)
             continue;
         // A synth param edit rides the scalar path, so the reload that would
-        // rebuild voiceNames never runs — sync the slot's name here or track
-        // labels and the browser tree keep showing the pre-edit symbol.
+        // rebuild voiceSampleNames never runs — sync the slot's name here or
+        // track labels and the browser tree keep showing the pre-edit symbol.
         const QByteArray name = v->symbol.toUtf8();
-        if (qstrncmp(vg->voiceNames[slot], name.constData(), VG_VOICE_NAME_LEN - 1) != 0) {
-            std::strncpy(vg->voiceNames[slot], name.constData(), VG_VOICE_NAME_LEN - 1);
-            vg->voiceNames[slot][VG_VOICE_NAME_LEN - 1] = '\0';
+        if (qstrncmp(vg->voiceSampleNames[slot], name.constData(), VG_MAX_VOICE_SAMPLE_NAME - 1) !=
+            0) {
+            std::strncpy(vg->voiceSampleNames[slot], name.constData(),
+                         VG_MAX_VOICE_SAMPLE_NAME - 1);
+            vg->voiceSampleNames[slot][VG_MAX_VOICE_SAMPLE_NAME - 1] = '\0';
             changed = true;
         }
         ToneData &td = vg->voices[slot];
@@ -2661,20 +2994,14 @@ void MainWindow::swapVoicegroup(SongSession &session, LoadedVoiceGroup *vg, int 
             m_audio.updateVoicegroup(vg);
     }
     if (session.voicegroup)
-        voicegroup_free(session.voicegroup);
+        porydaw::VoicegroupProject::freeBank(session.voicegroup);
     session.voicegroup = vg;
+    session.diagnostics.clear();
     session.view->setVoicegroup(vg);
     if (&session == m_active) {
         updateVoicegroupBrowser();
         m_vgBrowser->selectSlot(keepSlot);
     }
-}
-
-void MainWindow::cleanupVgPreview()
-{
-    if (!m_project.isOpen())
-        return;
-    QDir(m_project.root() + QStringLiteral("/.porydaw/vgpreview")).removeRecursively();
 }
 
 void MainWindow::updateVgDockTitle()
@@ -2736,7 +3063,7 @@ void MainWindow::newVoicegroup()
         QMessageBox::warning(this, tr("New Voicegroup"), error);
         return;
     }
-    invalidateVgCatalog();
+    m_vgProject.markStale();
     updateVoicegroupBrowser(); // the selector's choices now include it
     if (m_active) {
         // Assign it to the current song right away — the same undoable cfg
@@ -2814,7 +3141,6 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
     for (const auto &session : m_sessions)
         saveViewState(*session);
-    cleanupVgPreview();
     if (m_persistSession) {
         QSettings settings;
         settings.setValue(QStringLiteral("windowGeometry"), saveGeometry());

@@ -19,10 +19,29 @@
 extern "C" {
 #include "m4a_engine.h"
 #include "m4a_reverb.h"
-#include "voicegroup_loader.h"
+#include "voicegroup/voicegroup_loader.h"
+#include "voicegroup/voicegroup_project.h"
 }
 
 namespace {
+
+void printDiagnostics(const char *prefix, const VoicegroupDiagnostic *diagnostics, size_t count)
+{
+    if (count == 0) {
+        fprintf(stderr, "%s\n", prefix);
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        const VoicegroupDiagnostic &diagnostic = diagnostics[i];
+        fprintf(stderr, "%s: [%s] %s", prefix, diagnostic.code ? diagnostic.code : "unknown",
+                diagnostic.message ? diagnostic.message : "unknown diagnostic");
+        if (diagnostic.source_path && diagnostic.source_path[0] != '\0')
+            fprintf(stderr, " (%s)", diagnostic.source_path);
+        if (diagnostic.has_slot)
+            fprintf(stderr, " [slot %zu]", diagnostic.slot);
+        fputc('\n', stderr);
+    }
+}
 
 void writeU16(FILE *f, uint16_t v)
 {
@@ -122,14 +141,50 @@ int main(int argc, char *argv[])
     printf("Timeline: %zu events, length %.2f s, loop %s\n", timeline->events.size(),
            double(timeline->lengthSamples) / sampleRate, timeline->hasLoop() ? "yes" : "no");
 
-    LoadedVoiceGroup *vg = voicegroup_load(projectRoot, vgName, nullptr);
-    if (!vg) {
+    VoicegroupProject *voicegroupProject =
+        voicegroup_project_open(projectRoot, std::strlen(projectRoot));
+    if (!voicegroupProject) {
+        fprintf(stderr, "Failed to open voicegroup project '%s'\n", projectRoot);
+        return 1;
+    }
+    VoicegroupProjectResult snapshot = {};
+    voicegroup_project_refresh(voicegroupProject, &snapshot);
+    if (!snapshot.succeeded) {
+        printDiagnostics("Failed to refresh voicegroup project", snapshot.diagnostics,
+                         snapshot.diagnostic_count);
+        voicegroup_project_result_free(&snapshot);
+        voicegroup_project_free(voicegroupProject);
+        return 1;
+    }
+    voicegroup_project_result_free(&snapshot);
+    const VoicegroupLoadRequest request = {
+        .mode = VG_LOAD_SAVED,
+        .bank_name = vgName,
+        .bank_name_len = std::strlen(vgName),
+    };
+    VoicegroupLoadResult load = voicegroup_project_load(voicegroupProject, &request);
+    if (!load.succeeded) {
         fprintf(stderr, "Failed to load voicegroup '%s'\n", vgName);
+        printDiagnostics("Voicegroup load diagnostic", load.diagnostics, load.diagnostic_count);
+        voicegroup_load_result_free(&load);
+        voicegroup_project_free(voicegroupProject);
+        return 1;
+    }
+    LoadedVoiceGroup *vg = voicegroup_load_result_take(&load);
+    voicegroup_load_result_free(&load);
+    if (!vg) {
+        fprintf(stderr, "Failed to take voicegroup '%s'\n", vgName);
+        voicegroup_project_free(voicegroupProject);
         return 1;
     }
 
     M4AEngine engine;
-    m4a_engine_init(&engine, float(sampleRate));
+    if (!m4a_engine_init(&engine, float(sampleRate))) {
+        fprintf(stderr, "Failed to initialize audio engine\n");
+        voicegroup_free(vg);
+        voicegroup_project_free(voicegroupProject);
+        return 1;
+    }
     m4a_engine_set_voicegroup(&engine, vg->voices);
     m4a_engine_set_song_volume(&engine, uint8_t(songVolume));
     m4a_reverb_set_amount(&engine.reverb, uint8_t(reverb));
@@ -153,6 +208,7 @@ int main(int argc, char *argv[])
     const int rc = writeWav(outPath, outL, outR, sampleRate);
     m4a_engine_destroy(&engine);
     voicegroup_free(vg);
+    voicegroup_project_free(voicegroupProject);
     if (rc == 0)
         printf("Wrote %s (%.2f s @ %d Hz)\n", outPath, seconds, sampleRate);
     return rc;

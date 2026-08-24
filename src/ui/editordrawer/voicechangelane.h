@@ -10,7 +10,7 @@
 #include <QString>
 
 extern "C" {
-#include "voicegroup_loader.h"
+#include "voicegroup/voicegroup_loader.h"
 }
 
 class AutomationCanvas;
@@ -54,7 +54,7 @@ class VoiceChangeLane final
     struct VoicePaintText {
         const LoadedVoiceGroup *group = nullptr;
         int type = -1;
-        std::array<char, VG_VOICE_NAME_LEN> sourceName{};
+        std::array<char, VG_MAX_VOICE_SAMPLE_NAME> sourceName{};
         QString label;
         QString hoverLabel;
     };

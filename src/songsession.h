@@ -2,6 +2,7 @@
 
 #include <QDateTime>
 #include <QString>
+#include <QVector>
 
 #include <cstdint>
 #include <map>
@@ -9,11 +10,12 @@
 
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
+#include "project/voicegroupproject.h"
 #include "project/voicegroupsource.h"
 #include "ui/songview.h"
 
 extern "C" {
-#include "voicegroup_loader.h"
+#include "voicegroup/voicegroup_loader.h"
 }
 
 // One open song tab. Each tab is a complete, independent editing session:
@@ -53,6 +55,11 @@ struct SongSession {
     // On-disk mtime of the voicegroup source at open/save time; a clean tab
     // whose file changed underneath (saved from another tab) reloads it when
     // the tab is activated.
+
+    // Structured diagnostics from the last failed saved/source materialization.
+    // They stay visible while the last-good audio bank remains installed and
+    // clear only after a successful bank swap.
+    QVector<porydaw::VoicegroupProject::Diagnostic> diagnostics;
     QDateTime vgFileTime;
 
     // The tab's unsaved-changes state: song and voicegroup edits are one
@@ -69,6 +76,6 @@ struct SongSession {
             delete view;
         }
         if (voicegroup)
-            voicegroup_free(voicegroup);
+            porydaw::VoicegroupProject::freeBank(voicegroup);
     }
 };

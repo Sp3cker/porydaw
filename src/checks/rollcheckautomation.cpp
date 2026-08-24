@@ -224,8 +224,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     auto timeline = document.buildTimeline(48000.0);
     LoadedVoiceGroup voicegroup{};
     voicegroup.voices[3].type = VOICE_NOISE;
-    std::strncpy(voicegroup.voiceNames[3], "automation-voice",
-                 sizeof(voicegroup.voiceNames[3]) - 1);
+    std::strncpy(voicegroup.voiceSampleNames[3], "automation-voice",
+                 sizeof(voicegroup.voiceSampleNames[3]) - 1);
     SongView view;
     auto expected = expectedAutomationGeometry();
     view.resize(960, 720);

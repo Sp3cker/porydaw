@@ -8,6 +8,7 @@
 
 #include "audio/audioengine.h"
 #include "project/decompproject.h"
+#include "project/voicegroupproject.h"
 #include "project/voicegroupsource.h"
 #include "songsession.h"
 #include "ui/editorviewstate.h"
@@ -124,6 +125,7 @@ class MainWindow : public QMainWindow
     void deleteSongById(int songId);
     void uiTick();
     void onVoiceEditRequested(int slot, const VgVoice &voice, bool structural);
+    void reloadVoicegroup();
     void tabChanged(int index);
     void closeTab(int index);
 
@@ -210,9 +212,8 @@ class MainWindow : public QMainWindow
     // on exotic layouts — the editor degrades to read-only).
     void openVoicegroupSource(SongSession &session, const SongCfg &cfg);
     void onVoiceEdited(SongSession &session, int slot, bool structural);
-    // Auditions unsaved structural edits: renders the edited source into
-    // .porydaw/vgpreview/ and reloads through the loader's config override,
-    // which shadows the real file without touching it.
+    // Auditions unsaved structural edits by loading the rendered source in
+    // memory, without touching the project files.
     void reloadVoicegroupPreview(SongSession &session, int keepSlot);
     // Swaps in a freshly loaded voicegroup (owned by the session from here),
     // reattaching the views — and, when active, the engine — around it.
@@ -220,19 +221,20 @@ class MainWindow : public QMainWindow
     // Installs/refreshes session-owned synth descriptors for every Golden Sun
     // synth voice whose loaded tone is missing (pending definition — not on
     // disk until save) or stale (a param edit patched a different desc), and
-    // syncs voiceNames for symbol moves the scalar path never reloads.
+    // syncs voiceSampleNames for symbol moves the scalar path never reloads.
     // Bytes are poked in place, so live tweaks are audible immediately.
     // Returns whether any tone or name actually changed.
     bool applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *vg);
     // The descriptor a synth symbol stands for: pending first, then on-disk.
-    const VgSynthDesc *synthDescForSymbol(const QString &symbol);
-    void cleanupVgPreview();
+    std::optional<VgSynthDesc> synthDescForSymbol(const QString &symbol);
     void updateVgDockTitle();
     void newVoicegroup();
     // Sidecar view state (SPEC §4.4): written whenever a session is let go
     // (tab close, project switch, app close). Cosmetic; silent on failure.
     void saveViewState(SongSession &session);
-    LoadedVoiceGroup *loadVoicegroupFor(const SongCfg &cfg, QString *tried);
+    LoadedVoiceGroup *
+    loadVoicegroupFor(const SongCfg &cfg, QString *tried,
+                      QVector<porydaw::VoicegroupProject::Diagnostic> *diagnostics = nullptr);
     // Starts (or resumes) playback; from Stopped, seeks to the edit cursor
     // first so playback begins there. fromEditCursor forces that seek even
     // out of Paused — the Space binding (Reaper-style restart), while the
@@ -253,13 +255,11 @@ class MainWindow : public QMainWindow
     void updateWindowTitle();
     QString formatTime(uint64_t samples) const;
 
-    // The Voicegroup dock's project-wide symbol/instrument lists: full
-    // project .inc scans (catalogScan + directSoundCatalog + progWave),
-    // far too slow to re-run on every tab switch. Cached per project root;
-    // invalidated on project open/reload and on any voicegroup write.
+    // The voicegroup dock's project-wide catalog. MainWindow owns the sole
+    // porydaw::VoicegroupProject context; each call adapts one bulk snapshot
+    // into UI-shaped lists for its operation.
     struct VgCatalog {
-        bool valid = false;
-        QStringList groupArgs; // the -G choices (SongRegistry::voicegroupArgs)
+        QStringList groupArgs; // -G choices from the snapshot
         QStringList directSound;
         QStringList progWave;
         QList<QPair<QString, QString>> keysplits;
@@ -267,19 +267,23 @@ class MainWindow : public QMainWindow
         VgSynthCatalog synths;
         VgAdsrDefaults typicalAdsr;
     };
-    const VgCatalog &vgCatalog();
-    void invalidateVgCatalog();
-    // The committed data behind the picker's rows (loop badges and browse
-    // audition): one voicegroup_load_samples batch over the whole catalog —
-    // DirectSound samples, programmable waves, and keysplit instruments —
-    // loaded on first use and freed with the catalog.
-    void ensureSampleSet();
+    VgCatalog vgCatalog();
+    // Committed picker assets load one symbol at a time on first use. The
+    // owner arena retains every adapter and all storage it borrows.
+    struct PickerKeysplit {
+        const ToneData *subGroup = nullptr;
+        const uint8_t *table = nullptr;
+    };
+    struct PickerAsset;
+    void clearSampleCache();
     const WaveData *sampleWaveFor(const QString &symbol);
-    void auditionKeysplit(const QString &symbol);
-    LoadedSampleSet *m_sampleSet = nullptr;
+    const uint32_t *progWaveFor(const QString &symbol);
+    const PickerKeysplit *keysplitFor(const QString &symbol);
+    void auditionKeysplit(const PickerKeysplit &keysplit);
+    std::vector<std::unique_ptr<PickerAsset>> m_pickerAssets;
     QHash<QString, const WaveData *> m_sampleWaves;
     QHash<QString, const uint32_t *> m_progWaves;
-    QHash<QString, LoadedKeysplit> m_keysplits;
+    QHash<QString, const PickerKeysplit *> m_keysplits;
     // Minted-but-unsaved Golden Sun synth definitions (symbol -> descriptor),
     // project-wide. Param edits point voice lines at these; they reach disk
     // (and the browser's dropdown) only when a voicegroup referencing them
@@ -292,6 +296,7 @@ class MainWindow : public QMainWindow
     bool m_persistSession = true;
     EngineSettings m_engineSettings;
     DecompProject m_project;
+    porydaw::VoicegroupProject m_vgProject;
     EditorDrawerState m_editorDrawerState;
     std::vector<std::unique_ptr<SongSession>> m_sessions;
     SongSession *m_active = nullptr;
@@ -299,7 +304,6 @@ class MainWindow : public QMainWindow
     // being torn down or bulk-restored; the caller activates once at the end.
     bool m_tearingDown = false;
     bool m_restoringSession = false;
-    VgCatalog m_vgCatalog;
 
     SongListPanel *m_songList = nullptr;
     QTabWidget *m_tabs = nullptr;

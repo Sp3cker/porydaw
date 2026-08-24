@@ -11,7 +11,7 @@
 #include "core/noteid.h"
 
 extern "C" {
-#include "voicegroup_loader.h"
+#include "voicegroup/voicegroup_loader.h"
 }
 
 struct DrawerPageGridState {

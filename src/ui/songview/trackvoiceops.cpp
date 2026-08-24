@@ -214,7 +214,7 @@ QString SongView::voiceShortName(uint8_t program) const
     QString name;
     QString type;
     if (m_voicegroup && program < VOICEGROUP_SIZE) {
-        name = QString::fromUtf8(m_voicegroup->voiceNames[program]).trimmed();
+        name = QString::fromUtf8(m_voicegroup->voiceSampleNames[program]).trimmed();
         type = m4aVoiceTypeName(m_voicegroup->voices[program].type);
     }
     if (name.isEmpty())

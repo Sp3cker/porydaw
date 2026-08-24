@@ -7,10 +7,11 @@
 #include <functional>
 
 extern "C" {
-#include "voicegroup_loader.h"
+#include "voicegroup/voicegroup_loader.h"
 }
 
 #include "audio/auditionslots.h"
+#include "project/voicegroupproject.h"
 #include "project/voicegroupsource.h"
 #include "ui/samplepicker.h"
 
@@ -20,11 +21,6 @@ class QLabel;
 class QPushButton;
 class QSpinBox;
 class QToolButton;
-
-// What a picker row stands for, so the owner resolves its audition
-// correctly: samples publish PCM, waves publish CGB wave bytes, keysplits
-// resolve to whichever sub-voice the audition key lands on.
-enum class VgAuditionKind { Sample, Wave, Keysplit };
 
 // The voicegroup dock (SPEC §6.1): the current song's 128 voicegroup entries
 // with press-and-hold audition, plus an editor panel for the selected voice.
@@ -53,7 +49,7 @@ class VoicegroupBrowser : public QWidget
     // the source is destroyed. The symbol lists feed the sample/wave/drumkit
     // combos; keysplit instruments appear at the top of the sample list.
     // adsrDefaults seeds the envelope a voice adopts on a family-crossing
-    // type change (project-typical values; see VoicegroupSource::typicalAdsr).
+    // type change from the project snapshot's typical values.
     // synths lists the project's on-disk Golden Sun synth instruments (the
     // definition dropdown); pendingSynths are minted-but-unsaved definitions
     // (looked up, never listed — they persist only when their voicegroup
@@ -67,6 +63,11 @@ class VoicegroupBrowser : public QWidget
                    const VgSynthCatalog &synths = VgSynthCatalog(),
                    const QHash<QString, VgSynthDesc> &pendingSynths = {},
                    std::function<QString(const VgSynthDesc &)> mintSynth = {});
+
+    // Structured diagnostics from the last failed materialization. A
+    // diagnostic with a slot disables that row and its editor; diagnostics
+    // without a slot remain visible in the selected-row notice when relevant.
+    void setDiagnostics(const QVector<porydaw::VoicegroupProject::Diagnostic> &diagnostics);
 
     // Loop badge / detail metadata for the sample picker's rows, resolved by
     // the owner from the project's committed sample files.
@@ -102,6 +103,9 @@ class VoicegroupBrowser : public QWidget
     // means scalar ToneData pokes aren't enough (type or symbol changed) and
     // the voicegroup needs a reload from rendered source to audition.
     void voiceEditRequested(int slot, const VgVoice &voice, bool structural);
+    // Reloads the active voicegroup source from disk and retries the modular
+    // project generation before replacing the installed bank.
+    void reloadVoicegroupRequested();
     void newVoicegroupRequested();
     // "New sample…" beside the DirectSound sample combo: create a sample via
     // Sample Editor and point this slot's voice at it. The browser stays a
@@ -118,8 +122,8 @@ class VoicegroupBrowser : public QWidget
     void voicegroupChangeRequested(const QString &arg);
 
   protected:
-    bool eventFilter(QObject *watched, QEvent *event) override;
     void changeEvent(QEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
     void pressedVoice(QTreeWidgetItem *item);
@@ -129,9 +133,8 @@ class VoicegroupBrowser : public QWidget
     void commitEdit();
     void updateRow(int slot);
     void setEditorRowsVisible(VgMacro macro, bool synth, bool visible);
-    // Whether the voice at slot is a Golden Sun synth, filling desc. Known
-    // synth symbols answer directly; zero-size samples (.bin descriptors with
-    // no set_synth entry) classify from the loaded ToneData.
+    void setEditorEnabled(bool enabled);
+    const porydaw::VoicegroupProject::Diagnostic *diagnosticForSlot(int slot) const;
     bool synthDescFor(const VgVoice &voice, int slot, VgSynthDesc *desc) const;
 
     QComboBox *m_vgCombo = nullptr;
@@ -149,7 +152,8 @@ class VoicegroupBrowser : public QWidget
     QStringList m_waveSymbols;
     QStringList m_drumkitChoices;             // sub-voicegroups used as drumkits
     QHash<QString, QString> m_keysplitTables; // sub-voicegroup -> table
-    VgSynthCatalog m_synths;                  // on-disk definitions only (the dropdown)
+    QVector<porydaw::VoicegroupProject::Diagnostic> m_diagnostics;
+    VgSynthCatalog m_synths; // on-disk definitions only (the dropdown)
     // Symbol lookup: on-disk definitions plus pending (unsaved) ones.
     QHash<QString, VgSynthDesc> m_synthBySymbol;
     std::function<QString(const VgSynthDesc &)> m_mintSynth;
@@ -194,5 +198,6 @@ class VoicegroupBrowser : public QWidget
     QLabel *m_synthParamsLabel = nullptr;
     QLabel *m_adsrLabel = nullptr;
     QWidget *m_adsrRow = nullptr;
+    QPushButton *m_reloadButton = nullptr;
     QPushButton *m_newButton = nullptr;
 };
