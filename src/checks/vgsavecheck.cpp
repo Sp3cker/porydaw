@@ -1,9 +1,12 @@
+#include <algorithm>
+
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDir>
 #include <QDirIterator>
 #include <QDockWidget>
+#include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
 #include <QLabel>
@@ -14,6 +17,7 @@
 #include <QToolButton>
 #include <QTreeWidgetItemIterator>
 #include <cstdio>
+#include <memory>
 
 #include "checks/support/eventsynth.h"
 #include "mainwindow.h"
@@ -46,6 +50,112 @@ QByteArray readFileBytes(const QString &path)
     return f.readAll();
 }
 
+enum class AsyncSongWaitResult {
+    Ready,
+    Destroyed,
+    TimedOut,
+};
+
+template <typename IsLive, typename IsReady>
+AsyncSongWaitResult waitForAsyncSong(IsLive isLive, IsReady isReady)
+{
+    QEventLoop loop;
+    QTimer poll;
+    QTimer timeout;
+    AsyncSongWaitResult result = AsyncSongWaitResult::TimedOut;
+    const auto check = [&] {
+        if (!isLive())
+            result = AsyncSongWaitResult::Destroyed;
+        else if (isReady())
+            result = AsyncSongWaitResult::Ready;
+        else
+            return;
+        loop.quit();
+    };
+    QObject::connect(&poll, &QTimer::timeout, &loop, check);
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timeout.setSingleShot(true);
+    poll.start(10);
+    timeout.start(30000);
+    check();
+    if (result == AsyncSongWaitResult::TimedOut)
+        loop.exec();
+    poll.stop();
+    timeout.stop();
+    return result;
+}
+
+template <typename Start>
+bool waitForProjectOpen(Start start)
+{
+    struct OpenState {
+        bool completed = false;
+        bool succeeded = false;
+    };
+    const auto state = std::make_shared<OpenState>();
+    QEventLoop loop;
+    QTimer poll;
+    QTimer timeout;
+    QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
+        if (state->completed)
+            loop.quit();
+    });
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timeout.setSingleShot(true);
+    start([state](bool succeeded) {
+        state->succeeded = succeeded;
+        state->completed = true;
+    });
+    if (!state->completed) {
+        poll.start(1);
+        timeout.start(30000);
+        loop.exec();
+        poll.stop();
+        timeout.stop();
+    }
+    return state->completed && state->succeeded;
+}
+
+enum class VoicegroupLoadWaitResult {
+    Ready,
+    Failed,
+    TimedOut,
+};
+
+template <typename Start>
+VoicegroupLoadWaitResult waitForVoicegroupLoad(Start start)
+{
+    struct LoadState {
+        bool completed = false;
+        bool succeeded = false;
+    };
+    const auto state = std::make_shared<LoadState>();
+    QEventLoop loop;
+    QPointer<QEventLoop> loopGuard = &loop;
+    QTimer timeout;
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timeout.setSingleShot(true);
+    start([state, loopGuard](VoicegroupLoadResult result) {
+        // ProjectIo transfers ownership of the C result to this completion.
+        state->succeeded = result.succeeded();
+        if (result.voicegroup) {
+            voicegroup_free(result.voicegroup);
+            result.voicegroup = nullptr;
+        }
+        state->completed = true;
+        if (loopGuard)
+            loopGuard->quit();
+    });
+    if (!state->completed) {
+        timeout.start(30000);
+        loop.exec();
+        timeout.stop();
+    }
+    if (!state->completed)
+        return VoicegroupLoadWaitResult::TimedOut;
+    return state->succeeded ? VoicegroupLoadWaitResult::Ready : VoicegroupLoadWaitResult::Failed;
+}
+
 } // namespace
 
 bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songLabel,
@@ -54,11 +164,14 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     m_persistSession = false;
     if (!m_audioOk) {
         std::fprintf(stderr, "vgsavecheck: no audio device available\n");
+        std::fprintf(stderr, "vgsavecheck: FAIL (early exit)\n");
         return false;
     }
-    QString error;
-    if (!m_project.open(projectRoot, &error)) {
-        std::fprintf(stderr, "vgsavecheck: %s\n", qUtf8Printable(error));
+    if (!waitForProjectOpen([this, &projectRoot](auto completion) {
+            openProjectDir(projectRoot, /*interactive=*/false, completion);
+        })) {
+        std::fprintf(stderr, "vgsavecheck: project failed to open\n");
+        std::fprintf(stderr, "vgsavecheck: FAIL (early exit)\n");
         return false;
     }
     const SongInfo *target = nullptr;
@@ -69,16 +182,33 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     if (!target) {
         std::fprintf(stderr, "vgsavecheck: song '%s' not found or has no MIDI source\n",
                      qUtf8Printable(songLabel));
+        std::fprintf(stderr, "vgsavecheck: FAIL (early exit)\n");
         return false;
     }
     loadSong(*target);
     SongSession *tab = activeSession();
+    const auto loadWait = waitForAsyncSong(
+        [this, tab] {
+            return tab && std::any_of(m_sessions.cbegin(), m_sessions.cend(),
+                                      [tab](const auto &session) { return session.get() == tab; });
+        },
+        [tab] { return tab->isInteractive(); });
+    if (loadWait != AsyncSongWaitResult::Ready) {
+        const char *reason = loadWait == AsyncSongWaitResult::Destroyed
+                                 ? "session destroyed before async load completed"
+                                 : "timed out waiting for midiBound && vgBound && sidecarBound";
+        std::fprintf(stderr, "vgsavecheck: %s for '%s'\n", reason, qUtf8Printable(target->label));
+        std::fprintf(stderr, "vgsavecheck: FAIL (early exit)\n");
+        return false;
+    }
     if (!m_audio.songLoaded() || !tab || tab->songId < 0) {
         std::fprintf(stderr, "vgsavecheck: song failed to load\n");
+        std::fprintf(stderr, "vgsavecheck: FAIL (early exit)\n");
         return false;
     }
     if (!tab->vgSource) {
         std::fprintf(stderr, "vgsavecheck: no editable voicegroup source\n");
+        std::fprintf(stderr, "vgsavecheck: FAIL (early exit)\n");
         return false;
     }
 
@@ -89,6 +219,50 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             failures++;
         }
         return ok;
+    };
+    const auto waitForSave = [this](SongSession *session, const char *what) {
+        const auto isLive = [this, session] {
+            return session &&
+                   std::any_of(m_sessions.cbegin(), m_sessions.cend(),
+                               [session](const auto &owned) { return owned.get() == session; });
+        };
+        if (!isLive())
+            return false;
+        struct SaveState {
+            bool completed = false;
+            bool succeeded = false;
+        };
+        const auto state = std::make_shared<SaveState>();
+        QEventLoop saveLoop;
+        QPointer<QEventLoop> loopGuard = &saveLoop;
+        QTimer timeout;
+        timeout.setSingleShot(true);
+        QObject::connect(&timeout, &QTimer::timeout, &saveLoop, &QEventLoop::quit);
+        saveSession(*session, [state, loopGuard](bool succeeded) mutable {
+            state->completed = true;
+            state->succeeded = succeeded;
+            if (loopGuard)
+                loopGuard->quit();
+        });
+        if (!state->completed) {
+            timeout.start(30000);
+            saveLoop.exec();
+            timeout.stop();
+        }
+        if (!state->completed || !state->succeeded) {
+            std::fprintf(stderr, "vgsavecheck: FAIL: %s did not complete successfully\n", what);
+            return false;
+        }
+        return true;
+    };
+    const auto waitForSessionVoicegroup = [this, tab](auto isReady) {
+        const auto isLive = [this, tab] {
+            return tab && std::any_of(m_sessions.cbegin(), m_sessions.cend(),
+                                      [tab](const auto &session) { return session.get() == tab; });
+        };
+        return waitForAsyncSong(isLive, [tab, isReady] {
+            return tab->pendingVgRequest == 0 && tab->pendingPreviewRequest == 0 && isReady();
+        });
     };
 
     // A DirectSound-family voice to edit (scalar fields + a sample symbol).
@@ -101,6 +275,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     }
     if (dsSlot < 0) {
         std::fprintf(stderr, "vgsavecheck: voicegroup has no sample voices\n");
+        std::fprintf(stderr, "vgsavecheck: FAIL (early exit)\n");
         return false;
     }
 
@@ -117,7 +292,8 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     check(tab->doc.isDirty(), "voice edit did not dirty the song's undo stack");
     check(tab->vgSource->dirty(), "voice edit did not dirty the source");
     check(isWindowModified(), "voice edit did not mark the window modified");
-    check(m_audio.voicegroup()->voices[dsSlot].release == uint8_t(edited.release),
+    check(m_audio.voicegroup() &&
+              m_audio.voicegroup()->voices[dsSlot].release == uint8_t(edited.release),
           "voice edit did not reach the audio engine");
 
     // 2. Undo restores the byte-exact on-disk state, nothing written.
@@ -136,6 +312,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     }
     if (track < 0) {
         std::fprintf(stderr, "vgsavecheck: song has no notes\n");
+        std::fprintf(stderr, "vgsavecheck: FAIL (early exit)\n");
         return false;
     }
     uint64_t base = 0;
@@ -143,11 +320,72 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         base = std::max(base, tr.endTick);
     base += 96;
     tab->doc.addNote(track, base, 72, 24, 93);
-    check(saveSession(*tab), "unified save failed");
+    check(waitForSave(tab, "unified save"), "unified save failed");
     check(!tab->doc.isDirty() && !tab->vgSource->dirty(), "still dirty after save");
     check(readFileBytes(vgPath) != vgBytesOriginal, "save did not write the voicegroup file");
     check(readFileBytes(tab->doc.midPath()) != midBytesOriginal, "save did not write the .mid");
+
+    // 3a. A dirty save is queued without blocking the GUI turn. Edit the
+    // document again before the completion arrives: the stale snapshot must
+    // not clear the newer edit, and a retry must persist that newer state.
+    const uint64_t staleTick = base + 192;
+    const uint64_t newerTick = base + 288;
+    tab->doc.addNote(track, staleTick, 74, 24, 91);
+    check(tab->doc.isDirty(), "precondition edit did not dirty the document");
+    struct SaveTurnState {
+        bool heartbeat = false;
+        bool completed = false;
+        bool completedInline = false;
+        bool saveReturned = false;
+        bool reportedClean = false;
+    };
+    const auto saveTurn = std::make_shared<SaveTurnState>();
+    QEventLoop saveLoop;
+    QPointer<QEventLoop> saveLoopGuard = &saveLoop;
+    QTimer saveTimeout;
+    saveTimeout.setSingleShot(true);
+    QObject::connect(&saveTimeout, &QTimer::timeout, &saveLoop, &QEventLoop::quit);
+    QMetaObject::invokeMethod(
+        this,
+        [saveTurn, saveLoopGuard] {
+            saveTurn->heartbeat = true;
+            if (saveTurn->completed && saveLoopGuard)
+                saveLoopGuard->quit();
+        },
+        Qt::QueuedConnection);
+    const QByteArray staleMidi = tab->doc.captureSaveSnapshot().smf.write();
+    saveSession(*tab, [saveTurn, saveLoopGuard](bool clean) {
+        saveTurn->completedInline = !saveTurn->saveReturned;
+        saveTurn->completed = true;
+        saveTurn->reportedClean = clean;
+        if (saveTurn->heartbeat && saveLoopGuard)
+            saveLoopGuard->quit();
+    });
+    saveTurn->saveReturned = true;
+    tab->doc.addNote(track, newerTick, 76, 24, 89);
+    const QByteArray newerMidi = tab->doc.captureSaveSnapshot().smf.write();
+    if (!saveTurn->completed || !saveTurn->heartbeat) {
+        saveTimeout.start(30000);
+        saveLoop.exec();
+        saveTimeout.stop();
+    }
+    check(saveTurn->completed && saveTurn->heartbeat && !saveTurn->completedInline,
+          "saveSession completed inline or missed the queued GUI turn");
+    check(saveTurn->completed && readFileBytes(tab->doc.midPath()) == staleMidi,
+          "queued save did not write its captured snapshot");
+    check(saveTurn->completed && !saveTurn->reportedClean && tab->doc.isDirty(),
+          "a stale save completion falsely cleaned a newer document edit");
+    check(waitForSave(tab, "newer-state retry save"), "retry save with newer state failed");
+    check(!tab->doc.isDirty(), "retry save did not clean the newer document state");
+    check(readFileBytes(tab->doc.midPath()) == newerMidi,
+          "retry save did not persist the newer document state");
+    // Leave the two probe edits behind the existing undo/save round trip.
+    tab->doc.undoStack()->undo(); // newer-state probe edit
+    tab->doc.undoStack()->undo(); // stale-state probe edit
+    check(tab->doc.isDirty() && !tab->vgSource->dirty(),
+          "undoing the probe edits did not leave only the document dirty");
     {
+        QString error;
         VoicegroupSource fresh;
         check(fresh.open(projectRoot, tab->doc.cfg().voicegroupArg, &error) &&
                   fresh.voiceAt(dsSlot) && fresh.voiceAt(dsSlot)->release == edited.release,
@@ -160,7 +398,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     tab->doc.undoStack()->undo(); // the voice edit
     check(tab->doc.isDirty() && tab->vgSource->dirty(),
           "undo past the save point did not re-dirty the session");
-    check(saveSession(*tab), "second unified save failed");
+    check(waitForSave(tab, "second unified save"), "second unified save failed");
     check(readFileBytes(vgPath) == vgBytesOriginal,
           "undone voice edit did not round-trip the .inc byte-identically");
 
@@ -172,9 +410,14 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             continue;
         SongCfg probe = tab->doc.cfg();
         probe.voicegroupArg = arg;
-        QString tried;
-        if (LoadedVoiceGroup *vg = loadVoicegroupFor(probe, &tried)) {
-            voicegroup_free(vg);
+        const auto loadResult = waitForVoicegroupLoad([this, projectRoot, probe](auto completion) {
+            m_projectIo->loadVoicegroup(projectRoot, probe, completion);
+        });
+        if (loadResult == VoicegroupLoadWaitResult::TimedOut) {
+            check(false, "voicegroup probe timed out");
+            break;
+        }
+        if (loadResult == VoicegroupLoadWaitResult::Ready) {
             otherArg = arg;
             break;
         }
@@ -189,9 +432,22 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         SongCfg cfg = tab->doc.cfg();
         cfg.voicegroupArg = otherArg;
         tab->doc.setCfg(cfg);
+        const auto switchWait = waitForSessionVoicegroup([tab, otherArg, vgLoadName] {
+            return tab->doc.cfg().voicegroupArg == otherArg && tab->vgSource &&
+                   tab->vgSource->loadName() != vgLoadName;
+        });
+        check(switchWait == AsyncSongWaitResult::Ready,
+              "-G switch voicegroup load did not complete");
         check(tab->vgSource && tab->vgSource->loadName() != vgLoadName,
               "-G switch did not swap the voicegroup source");
         tab->doc.undoStack()->undo(); // the -G switch
+        const auto undoSwitchWait = waitForSessionVoicegroup([tab, edited2, vgLoadName, dsSlot] {
+            const VgVoice *voice = tab->vgSource ? tab->vgSource->voiceAt(dsSlot) : nullptr;
+            return tab->vgSource && tab->vgSource->loadName() == vgLoadName && voice &&
+                   voice->release == edited2.release && tab->vgSource->dirty();
+        });
+        check(undoSwitchWait == AsyncSongWaitResult::Ready,
+              "undoing the -G switch voicegroup load did not complete");
         check(tab->vgSource && tab->vgSource->loadName() == vgLoadName,
               "undoing the -G switch did not reopen the old voicegroup");
         check(tab->vgSource && tab->vgSource->voiceAt(dsSlot) &&
@@ -219,11 +475,23 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                   "dock selector is missing a known voicegroup arg");
             vgCombo->setCurrentText(SongRegistry::voicegroupDisplayName(otherArg));
             QMetaObject::invokeMethod(vgCombo, "activated", Qt::DirectConnection, Q_ARG(int, 0));
+            const auto selectorSwitchWait = waitForSessionVoicegroup([tab, otherArg, vgLoadName] {
+                return tab->doc.cfg().voicegroupArg == otherArg && tab->vgSource &&
+                       tab->vgSource->loadName() != vgLoadName;
+            });
+            check(selectorSwitchWait == AsyncSongWaitResult::Ready,
+                  "dock selector voicegroup load did not complete");
             check(tab->doc.cfg().voicegroupArg == otherArg && tab->doc.isDirty(),
                   "dock selector did not commit an undoable -G switch");
             check(tab->vgSource && tab->vgSource->loadName() != vgLoadName,
                   "dock selector switch did not swap the voicegroup source");
             tab->doc.undoStack()->undo(); // the selector's -G switch
+            const auto selectorUndoWait = waitForSessionVoicegroup([tab, vgLoadName, originalArg] {
+                return tab->doc.cfg().voicegroupArg == originalArg && tab->vgSource &&
+                       tab->vgSource->loadName() == vgLoadName;
+            });
+            check(selectorUndoWait == AsyncSongWaitResult::Ready,
+                  "undoing the dock selector voicegroup load did not complete");
             check(tab->doc.cfg().voicegroupArg == originalArg && !tab->doc.isDirty(),
                   "undoing the dock selector switch did not restore the cfg");
             check(vgCombo->currentText() == shown, "undo did not refresh the dock selector's text");
@@ -361,12 +629,23 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                 typeCombo->setCurrentIndex(square);
                 QMetaObject::invokeMethod(typeCombo, "activated", Qt::DirectConnection,
                                           Q_ARG(int, square));
+                // Structural voicegroup edits reload through ProjectIo; wait
+                // for the preview swap before checking the engine copy.
+                waitForSessionVoicegroup([this, tab, blankSlot] {
+                    const VgVoice *voice =
+                        tab->vgSource ? tab->vgSource->voiceAt(blankSlot) : nullptr;
+                    return voice && voice->macro == VgMacro::Square1 && m_audio.voicegroup() &&
+                           m_audio.voicegroup()->voices[blankSlot].type == VOICE_SQUARE_1;
+                });
                 const VgVoice *created = tab->vgSource->voiceAt(blankSlot);
                 check(created && created->macro == VgMacro::Square1 && tab->doc.isDirty() &&
-                          tab->vgSource->dirty() &&
+                          tab->vgSource->dirty() && m_audio.voicegroup() &&
                           m_audio.voicegroup()->voices[blankSlot].type == VOICE_SQUARE_1,
                       "type choice did not create and reload the blank slot");
                 tab->doc.undoStack()->undo();
+                waitForSessionVoicegroup([tab, blankSlot] {
+                    return tab->vgSource && tab->vgSource->kindAt(blankSlot) == VgLineKind::None;
+                });
                 item = tree->topLevelItem(blankSlot);
                 check(tab->vgSource->kindAt(blankSlot) == VgLineKind::None && !tab->doc.isDirty() &&
                           !tab->vgSource->dirty() && item &&
@@ -376,11 +655,20 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                           item->text(1).isEmpty() && item->text(2).isEmpty(),
                       "undo did not restore the blank slot cleanly");
                 tab->doc.undoStack()->redo();
+                waitForSessionVoicegroup([this, tab, blankSlot] {
+                    const VgVoice *voice =
+                        tab->vgSource ? tab->vgSource->voiceAt(blankSlot) : nullptr;
+                    return voice && voice->macro == VgMacro::Square1 && m_audio.voicegroup() &&
+                           m_audio.voicegroup()->voices[blankSlot].type == VOICE_SQUARE_1;
+                });
                 created = tab->vgSource->voiceAt(blankSlot);
-                check(created && created->macro == VgMacro::Square1 &&
+                check(created && created->macro == VgMacro::Square1 && m_audio.voicegroup() &&
                           m_audio.voicegroup()->voices[blankSlot].type == VOICE_SQUARE_1,
                       "redo did not restore the created slot");
                 tab->doc.undoStack()->undo();
+                waitForSessionVoicegroup([tab, blankSlot] {
+                    return tab->vgSource && tab->vgSource->kindAt(blankSlot) == VgLineKind::None;
+                });
             }
         }
     }
@@ -443,6 +731,10 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             return false;
         invalidateVgCatalog();
         updateVoicegroupBrowser(); // hand the browser the new catalog
+        // Catalog refresh is asynchronous; do not inspect the retained editor
+        // until the new synth definitions have been installed in the browser.
+        waitForAsyncSong([] { return true; },
+                         [this] { return m_vgCatalog.valid && m_pendingCatalogRequest == 0; });
         const VgSynthCatalog setupCatalog = VoicegroupSource::synthInstruments(projectRoot);
         const int defsAfterSetup = setupCatalog.defs.size();
         const QByteArray synthBytesSetup = readFileBytes(synthPath);
@@ -469,6 +761,18 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         const VgVoice synthOriginal = *tab->vgSource->voiceAt(synthSlot);
 
         m_vgBrowser->selectSlot(synthSlot);
+        waitForAsyncSong([] { return true; },
+                         [this] {
+                             for (QComboBox *combo : m_vgBrowser->findChildren<QComboBox *>()) {
+                                 if (combo->isHidden() || !combo->isEnabled())
+                                     continue;
+                                 for (int i = 0; i < combo->count(); i++) {
+                                     if (combo->itemText(i) == tr("Synth (Golden Sun)"))
+                                         return true;
+                                 }
+                             }
+                             return false;
+                         });
         QComboBox *typeCombo = nullptr, *symbolCombo = nullptr, *waveCombo = nullptr;
         for (QComboBox *combo : m_vgBrowser->findChildren<QComboBox *>()) {
             for (int i = 0; i < combo->count(); i++) {
@@ -508,6 +812,13 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                     synthIndex = i;
             }
             activate(typeCombo, synthIndex);
+            waitForSessionVoicegroup([this, tab, synthSlot, synthOriginal] {
+                const VgVoice *voice = tab->vgSource ? tab->vgSource->voiceAt(synthSlot) : nullptr;
+                const LoadedVoiceGroup *engine = m_audio.voicegroup();
+                const ToneData *tone = engine ? &engine->voices[synthSlot] : nullptr;
+                return voice && voice->symbol != synthOriginal.symbol && tone && tone->wav &&
+                       tone->wav->size == 0;
+            });
             check(tab->vgSource->voiceAt(synthSlot)->symbol != synthOriginal.symbol,
                   "switching the voice to Synth did not take");
             // Dial a known pulse through several commits (each one mints).
@@ -525,19 +836,23 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             for (int i = 0; i < symbolCombo->count(); i++)
                 listed = listed || symbolCombo->itemText(i) == wantSymbol;
             check(!listed, "an unsaved definition appeared in the dropdown");
-            const ToneData &td = m_audio.voicegroup()->voices[synthSlot];
-            check(td.wav && td.wav->size == 0 && uint8_t(td.wav->data[1]) == 0 &&
-                      uint8_t(td.wav->data[2]) == 0x21 && uint8_t(td.wav->data[5]) == 0x87,
+            const auto *engineVoicegroup = m_audio.voicegroup();
+            check(engineVoicegroup && engineVoicegroup->voices[synthSlot].wav &&
+                      engineVoicegroup->voices[synthSlot].wav->size == 0 &&
+                      uint8_t(engineVoicegroup->voices[synthSlot].wav->data[1]) == 0 &&
+                      uint8_t(engineVoicegroup->voices[synthSlot].wav->data[2]) == 0x21 &&
+                      uint8_t(engineVoicegroup->voices[synthSlot].wav->data[5]) == 0x87,
                   "param edits were not patched into the loaded tone");
             // The scalar path renames the voice too (param-named symbols):
             // voiceNames feeds track labels and the browser tree.
-            check(QString::fromUtf8(m_audio.voicegroup()->voiceNames[synthSlot]) == wantSymbol,
+            check(engineVoicegroup &&
+                      QString::fromUtf8(engineVoicegroup->voiceNames[synthSlot]) == wantSymbol,
                   "param edits did not sync the loaded voice name");
 
             // Save: exactly one definition (the referenced one) is written,
             // it now shows up in the dropdown, and the synth data file is
             // wired into the build (sound_data.s .include).
-            check(saveSession(*tab), "synth save failed");
+            check(waitForSave(tab, "synth save"), "synth save failed");
             check(readFileBytes(synthPath).contains(wantSymbol.toUtf8() + "::"),
                   "save did not write the referenced synth definition");
             bool wired = false;
@@ -584,7 +899,7 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             const QByteArray synthBytesSaved = readFileBytes(synthPath);
             while (tab->doc.undoStack()->index() > indexBeforeSynth)
                 tab->doc.undoStack()->undo();
-            check(saveSession(*tab), "post-undo save failed");
+            check(waitForSave(tab, "post-undo save"), "post-undo save failed");
             check(readFileBytes(vgPath) == vgBytesOriginal,
                   "undone synth edits did not round-trip the .inc");
             check(readFileBytes(synthPath) == synthBytesSaved,
@@ -695,6 +1010,13 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                     }
                 }
                 QCoreApplication::processEvents(); // deferred row deletion
+                const auto midPressSwitchWait =
+                    waitForSessionVoicegroup([tab, otherArg, vgLoadName] {
+                        return tab->doc.cfg().voicegroupArg == otherArg && tab->vgSource &&
+                               tab->vgSource->loadName() != vgLoadName;
+                    });
+                check(midPressSwitchWait == AsyncSongWaitResult::Ready,
+                      "mid-press voicegroup load did not complete");
                 // The rebuilt panel is functional: its fresh rows select.
                 QWidget *fresh =
                     tab->view->findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));
@@ -710,6 +1032,13 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                           "a rebuilt header row did not select its track");
                 }
                 tab->doc.undoStack()->undo(); // the mid-press -G switch
+                const auto midPressUndoWait =
+                    waitForSessionVoicegroup([tab, argBefore, vgLoadName] {
+                        return tab->doc.cfg().voicegroupArg == argBefore && tab->vgSource &&
+                               tab->vgSource->loadName() == vgLoadName;
+                    });
+                check(midPressUndoWait == AsyncSongWaitResult::Ready,
+                      "undoing the mid-press voicegroup load did not complete");
                 check(tab->doc.cfg().voicegroupArg == argBefore && tab->vgSource &&
                           tab->vgSource->loadName() == vgLoadName,
                       "undo did not restore the mid-press -G switch");
@@ -722,6 +1051,21 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     // highlighted sample, marks looped samples, commits an undoable symbol
     // change, and still accepts an unlisted typed symbol.
     {
+        // Catalog and sample metadata now arrive through ProjectIo. Prime
+        // both queues before opening the popup so its synchronous info
+        // provider can render loop badges on the first build.
+        vgCatalog();
+        const auto catalogWait =
+            waitForAsyncSong([] { return true; },
+                             [this] { return m_vgCatalog.valid && m_pendingCatalogRequest == 0; });
+        check(catalogWait == AsyncSongWaitResult::Ready,
+              "voicegroup catalog did not finish before opening the picker");
+        ensureSampleSet();
+        const auto sampleSetWait = waitForAsyncSong(
+            [] { return true; },
+            [this] { return m_sampleSet != nullptr && m_pendingSampleSetRequest == 0; });
+        check(sampleSetWait == AsyncSongWaitResult::Ready,
+              "project sample set did not finish before opening the picker");
         m_vgBrowser->revealSlot(dsSlot);
         QCoreApplication::processEvents();
         auto *picker =
@@ -839,6 +1183,13 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                           "the picked symbol did not commit");
                     check(tab->doc.isDirty(), "the picked symbol did not push an undo command");
                     tab->doc.undoStack()->undo();
+                    const auto sampleUndoWait = waitForSessionVoicegroup([tab, before, dsSlot] {
+                        const VgVoice *voice =
+                            tab->vgSource ? tab->vgSource->voiceAt(dsSlot) : nullptr;
+                        return voice && voice->symbol == before.symbol;
+                    });
+                    check(sampleUndoWait == AsyncSongWaitResult::Ready,
+                          "undoing the picked sample preview did not complete");
                     check(tab->vgSource->voiceAt(dsSlot) &&
                               tab->vgSource->voiceAt(dsSlot)->symbol == before.symbol,
                           "undo did not restore the picked symbol");
@@ -857,6 +1208,12 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                           tab->vgSource->voiceAt(dsSlot)->symbol == unlisted,
                       "an unlisted typed symbol did not commit");
                 tab->doc.undoStack()->undo();
+                const auto unlistedUndoWait = waitForSessionVoicegroup([tab, before, dsSlot] {
+                    const VgVoice *voice = tab->vgSource ? tab->vgSource->voiceAt(dsSlot) : nullptr;
+                    return voice && voice->symbol == before.symbol;
+                });
+                check(unlistedUndoWait == AsyncSongWaitResult::Ready,
+                      "undoing the typed sample preview did not complete");
                 check(tab->vgSource->voiceAt(dsSlot) &&
                           tab->vgSource->voiceAt(dsSlot)->symbol == before.symbol,
                       "undo did not restore the unlisted symbol");
@@ -880,10 +1237,18 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                         QMetaObject::invokeMethod(typeCombo, "activated", Qt::DirectConnection,
                                                   Q_ARG(int, waveIndex));
                         undos++;
+                        const auto waveSwitchWait = waitForSessionVoicegroup([tab, dsSlot] {
+                            const VgVoice *voice =
+                                tab->vgSource ? tab->vgSource->voiceAt(dsSlot) : nullptr;
+                            return voice && voice->macro == VgMacro::ProgWave;
+                        });
+                        check(waveSwitchWait == AsyncSongWaitResult::Ready,
+                              "switching to a wave voice did not finish its preview");
                         const VgVoice *waveVoice = tab->vgSource->voiceAt(dsSlot);
                         check(waveVoice && waveVoice->macro == VgMacro::ProgWave,
                               "type switch to Prog Wave did not take");
-                        check(picker->isVisible() && picker->currentSymbol() == waveVoice->symbol,
+                        check(waveVoice && picker->isVisible() &&
+                                  picker->currentSymbol() == waveVoice->symbol,
                               "wave voice does not show the picker");
 
                         picker->openPopup();
@@ -925,6 +1290,14 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
                         }
                         while (undos-- > 0)
                             tab->doc.undoStack()->undo();
+                        const auto waveUndoWait = waitForSessionVoicegroup([tab, before, dsSlot] {
+                            const VgVoice *voice =
+                                tab->vgSource ? tab->vgSource->voiceAt(dsSlot) : nullptr;
+                            return voice && voice->macro == before.macro &&
+                                   voice->symbol == before.symbol;
+                        });
+                        check(waveUndoWait == AsyncSongWaitResult::Ready,
+                              "undoing the wave round trip did not finish its preview");
                         const VgVoice *restored = tab->vgSource->voiceAt(dsSlot);
                         check(restored && restored->macro == before.macro &&
                                   restored->symbol == before.symbol,
@@ -959,6 +1332,15 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
             }
         });
         newVoicegroup();
+        const auto createWait = waitForSessionVoicegroup([this, tab, projectRoot, newName] {
+            return tab->doc.cfg().voicegroupArg == QStringLiteral("_") + newName &&
+                   QFile::exists(projectRoot + QStringLiteral("/sound/voicegroups/") + newName +
+                                 QStringLiteral(".inc")) &&
+                   tab->vgSource &&
+                   tab->vgSource->filePath().endsWith(newName + QStringLiteral(".inc"));
+        });
+        check(createWait == AsyncSongWaitResult::Ready,
+              "New… voicegroup creation/load did not complete");
         check(QFile::exists(projectRoot + QStringLiteral("/sound/voicegroups/") + newName +
                             QStringLiteral(".inc")),
               "New… did not create the voicegroup file");
@@ -967,12 +1349,18 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         check(tab->vgSource && tab->vgSource->filePath().endsWith(newName + QStringLiteral(".inc")),
               "New… auto-assign did not swap the voicegroup source");
         tab->doc.undoStack()->undo();
+        const auto undoCreateWait = waitForSessionVoicegroup([tab, argBefore, vgLoadName] {
+            return tab->doc.cfg().voicegroupArg == argBefore && tab->vgSource &&
+                   tab->vgSource->loadName() == vgLoadName;
+        });
+        check(undoCreateWait == AsyncSongWaitResult::Ready,
+              "undoing the New… voicegroup load did not complete");
         check(tab->doc.cfg().voicegroupArg == argBefore && tab->vgSource &&
                   tab->vgSource->loadName() == vgLoadName,
               "undoing the New… auto-assign did not restore the voicegroup");
     }
 
-    std::printf("vgsavecheck: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);
+    std::fprintf(stderr, "vgsavecheck: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);
     return failures == 0;
 }
 

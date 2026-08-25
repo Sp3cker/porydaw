@@ -1,14 +1,46 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QDir>
+#include <QEventLoop>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QSettings>
 #include <QStatusBar>
+#include <QTimer>
 #include <cstdio>
 
 #include "mainwindow.h"
 #include "ui/songlistpanel.h"
+
+namespace {
+
+template <typename Predicate>
+bool waitFor(Predicate predicate)
+{
+    if (predicate())
+        return true;
+    QEventLoop loop;
+    QTimer poll;
+    QTimer timeout;
+    bool timedOut = false;
+    QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
+        if (predicate())
+            loop.quit();
+    });
+    QObject::connect(&timeout, &QTimer::timeout, &loop, [&] {
+        timedOut = true;
+        loop.quit();
+    });
+    timeout.setSingleShot(true);
+    poll.start(1);
+    timeout.start(30000);
+    loop.exec();
+    poll.stop();
+    timeout.stop();
+    return !timedOut && predicate();
+}
+
+} // namespace
 
 // --sessioncheck <projectRoot> <song>: session-persistence check. Verifies
 // that restoreSession() reopens the remembered project (and song), is a
@@ -61,10 +93,13 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         settings.sync();
         MainWindow window;
         window.restoreSession();
+        const QString expectedTitle =
+            QStringLiteral("%1 — porydaw").arg(QDir(projectRoot).dirName());
+        check(waitFor([&] { return window.windowTitle() == expectedTitle; }),
+              "remembered project open timed out");
         check(window.statusBar()->currentMessage().startsWith(QStringLiteral("Opened")),
               "remembered project did not open");
-        check(window.windowTitle() ==
-                  QStringLiteral("%1 — porydaw").arg(QDir(projectRoot).dirName()),
+        check(window.windowTitle() == expectedTitle,
               "title is not the project name (or a song loaded unasked)");
     }
 
@@ -79,6 +114,8 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         QSettings().setValue(QStringLiteral("lastSongLabel"), songLabel);
         MainWindow window;
         window.restoreSession();
+        check(waitFor([&] { return window.windowTitle().startsWith(songLabel); }),
+              "remembered song project open timed out");
         check(window.windowTitle().startsWith(songLabel), "remembered song did not load");
         // Resolve the Songs dock's list rather than any drawer-owned list.
         auto *panel = window.findChild<SongListPanel *>();
@@ -101,7 +138,12 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         // clamps restoreGeometry() to the available screen, so an oversized
         // window would come back shrunk and block 5 would fail.
         window.resize(777, 505);
-        check(window.close(), "close was refused");
+        window.close();
+        check(
+            waitFor([&] {
+                return !QSettings().value(QStringLiteral("windowGeometry")).toByteArray().isEmpty();
+            }),
+            "close was refused");
         QSettings settings;
         check(!settings.value(QStringLiteral("windowGeometry")).toByteArray().isEmpty(),
               "close did not save window geometry");
@@ -124,6 +166,8 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         MainWindow window;
         check(window.size() == QSize(777, 505), "new window did not restore the saved geometry");
         window.restoreSession();
+        check(waitFor([&] { return window.windowTitle().startsWith(songLabel); }),
+              "relaunch project open timed out");
         check(window.windowTitle().startsWith(songLabel),
               "relaunch did not restore project and song");
         auto *search = window.findChild<QLineEdit *>(QStringLiteral("songListSearch"));

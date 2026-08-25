@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <memory>
 
 #include <QApplication>
 #include <QEventLoop>
@@ -16,6 +17,74 @@
 #include "ui/viewsidecar.h"
 #include "ui/voicegroupbrowser.h"
 
+namespace {
+enum class AsyncSongWaitResult {
+    Ready,
+    Destroyed,
+    TimedOut,
+};
+
+template <typename IsLive, typename IsReady>
+AsyncSongWaitResult waitForAsyncSong(IsLive isLive, IsReady isReady)
+{
+    QEventLoop loop;
+    QTimer poll;
+    QTimer timeout;
+    AsyncSongWaitResult result = AsyncSongWaitResult::TimedOut;
+    const auto check = [&] {
+        if (!isLive())
+            result = AsyncSongWaitResult::Destroyed;
+        else if (isReady())
+            result = AsyncSongWaitResult::Ready;
+        else
+            return;
+        loop.quit();
+    };
+    QObject::connect(&poll, &QTimer::timeout, &loop, check);
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timeout.setSingleShot(true);
+    poll.start(10);
+    timeout.start(30000);
+    check();
+    if (result == AsyncSongWaitResult::TimedOut)
+        loop.exec();
+    poll.stop();
+    timeout.stop();
+    return result;
+}
+
+template <typename Start>
+bool waitForProjectOpen(Start start)
+{
+    struct OpenState {
+        bool completed = false;
+        bool succeeded = false;
+    };
+    const auto state = std::make_shared<OpenState>();
+    QEventLoop loop;
+    QTimer poll;
+    QTimer timeout;
+    QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
+        if (state->completed)
+            loop.quit();
+    });
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timeout.setSingleShot(true);
+    start([state](bool succeeded) {
+        state->succeeded = succeeded;
+        state->completed = true;
+    });
+    if (!state->completed) {
+        poll.start(1);
+        timeout.start(30000);
+        loop.exec();
+        poll.stop();
+        timeout.stop();
+    }
+    return state->completed && state->succeeded;
+}
+} // namespace
+
 bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabel)
 {
     m_persistSession = false;
@@ -23,9 +92,10 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         qWarning("selftest: no audio device available");
         return false;
     }
-    QString error;
-    if (!m_project.open(projectRoot, &error)) {
-        qWarning("selftest: %s", qUtf8Printable(error));
+    if (!waitForProjectOpen([this, &projectRoot](auto completion) {
+            openProjectDir(projectRoot, /*interactive=*/false, completion);
+        })) {
+        qWarning("selftest: project failed to open");
         return false;
     }
     const SongInfo *target = nullptr;
@@ -43,6 +113,19 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
 
     loadSong(*target);
     SongSession *tab = m_active;
+    const auto loadWait = waitForAsyncSong(
+        [this, tab] {
+            return tab && std::any_of(m_sessions.cbegin(), m_sessions.cend(),
+                                      [tab](const auto &session) { return session.get() == tab; });
+        },
+        [tab] { return tab->isInteractive(); });
+    if (loadWait != AsyncSongWaitResult::Ready) {
+        const char *reason = loadWait == AsyncSongWaitResult::Destroyed
+                                 ? "session destroyed before async load completed"
+                                 : "timed out waiting for midiBound && vgBound && sidecarBound";
+        qWarning("selftest: %s for '%s'", reason, qUtf8Printable(target->label));
+        return false;
+    }
     if (!tab || !m_audio.songLoaded()) {
         qWarning("selftest: song failed to load");
         return false;
@@ -86,6 +169,14 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     m_audio.previewVoice(0, 60, 0);
     qInfo("selftest: voice audition through the preview engine OK");
 
+    const auto waitForVoicegroupPreview = [this](SongSession *session) {
+        const auto isLive = [this, session] {
+            return session &&
+                   std::any_of(m_sessions.cbegin(), m_sessions.cend(),
+                               [session](const auto &owned) { return owned.get() == session; });
+        };
+        return waitForAsyncSong(isLive, [session] { return session->pendingPreviewRequest == 0; });
+    };
     // Voicegroup editing through the unified pipeline: a scalar edit pokes
     // the live ToneData, a sample swap goes through the .porydaw/vgpreview
     // shadow reload — both land on the song's undo stack, and undoing them
@@ -132,7 +223,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                 const QByteArray donorName(m_audio.voicegroup()->voiceNames[donorSlot]);
                 v.symbol = tab->vgSource->voiceAt(donorSlot)->symbol;
                 onVoiceEditRequested(dsSlot, v, true);
-                vgEditOk = vgEditOk &&
+                const auto previewWait = waitForVoicegroupPreview(tab);
+                vgEditOk = vgEditOk && previewWait == AsyncSongWaitResult::Ready &&
                            QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == donorName &&
                            m_audio.transport() == Transport::Playing;
             }
@@ -140,6 +232,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             // land back on the exact on-disk state (clean, nothing written).
             for (int i = 0; i < undosNeeded; i++)
                 tab->doc.undoStack()->undo();
+            if (undosNeeded > 1)
+                vgEditOk = vgEditOk && waitForVoicegroupPreview(tab) == AsyncSongWaitResult::Ready;
             QByteArray fileAfter;
             {
                 QFile in(tab->vgSource->filePath());

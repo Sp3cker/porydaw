@@ -32,6 +32,17 @@ void PianoRoll::paintContent(QPainter &p)
     p.fillRect(rect(), themes::color(themes::Role::song_view_piano_roll_background));
     if (!m_sv->timeline()) {
         drawKeyboard(p);
+        // The empty roll — a song whose content is still loading. Keep the
+        // background and keyboard, and center a muted caption where the notes
+        // will land. Painted text only: no widget, so nothing moves.
+        const QRectF grid(m_geometry.pianoKeyboardWidth, lyt::space(Space::Zero),
+                          width() - m_geometry.pianoKeyboardWidth, height());
+        p.save();
+        p.setClipRect(grid, Qt::IntersectClip);
+        p.setFont(typography::caption(font()));
+        p.setPen(themes::color(themes::Role::song_view_secondary_text));
+        p.drawText(grid, Qt::AlignCenter, SongView::tr("Loading..."));
+        p.restore();
         return;
     }
 
