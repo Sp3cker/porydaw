@@ -48,6 +48,19 @@ struct TrackRemap {
     TrackRemap inverse() const;
 };
 
+// A detached MIDI/config image and the monotonic state tokens that identify
+// the document state from which it was captured. The tokens are checked only
+// on the GUI thread after the worker has completed both disk stages.
+struct SongSaveSnapshot {
+    SmfFile smf;
+    QString midPath;
+    QString label;
+    SongCfg cfg;
+    bool flagsNeeded = false;
+    uint64_t revision = 0;
+    uint64_t saveStateToken = 0;
+};
+
 // A note located in the SMF model: the note-on event plus the event that ends
 // it, paired exactly as mid2agb pairs them (first same-channel same-key
 // note-off or velocity-0 note-on after the note-on).
@@ -107,7 +120,10 @@ class SongDocument : public QObject
     explicit SongDocument(QObject *parent = nullptr);
 
     bool load(const SongInfo &song, QString *error);
+    bool adoptSmf(SmfFile smf, const SongInfo &song, QString *error);
     bool save(QString *error);
+    SongSaveSnapshot captureSaveSnapshot() const;
+    void didSave(const SongSaveSnapshot &snapshot, bool flagsWritten);
 
     const QString &midPath() const { return m_midPath; }
     const QString &label() const { return m_label; }
@@ -542,6 +558,7 @@ class SongDocument : public QObject
     bool m_hadCfgLine = false;
     QUndoStack m_undoStack;
     uint64_t m_revision = 0;
+    uint64_t m_saveStateToken = 0;
     uint64_t m_nextNoteId = 1;
     std::vector<TempoPoint> m_tempoPoints;
 

@@ -153,7 +153,7 @@ const std::vector<CheckDefinition> &catalog()
                               const QStringList &args) { return runProjectIoCheck(args[1]); },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
-                .fixtureFiles = decompProjectFiles + strings({"sound/music_player_table.inc"}),
+                .fixtureFiles = route101RichFiles + strings({"sound/music_player_table.inc"}),
             },
             {
                 .name = "sessioncheck",

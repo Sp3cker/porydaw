@@ -346,7 +346,12 @@ class MoveNotesToPitchesCommand : public QUndoCommand
     std::vector<SongDocument::EditOp> m_ops;
 };
 
-SongDocument::SongDocument(QObject *parent) : QObject(parent) {}
+SongDocument::SongDocument(QObject *parent) : QObject(parent)
+{
+    connect(&m_undoStack, &QUndoStack::indexChanged, this, [this](int) { ++m_saveStateToken; });
+    connect(&m_undoStack, &QUndoStack::cleanChanged, this, [this](bool) { ++m_saveStateToken; });
+    connect(this, &SongDocument::documentChanged, this, [this] { ++m_saveStateToken; });
+}
 
 bool SongDocument::load(const SongInfo &song, QString *error)
 {
@@ -358,6 +363,12 @@ bool SongDocument::load(const SongInfo &song, QString *error)
     if (!SmfFile::readFile(song.midPath, &smf, error))
         return false;
 
+    return adoptSmf(std::move(smf), song, error);
+}
+
+bool SongDocument::adoptSmf(SmfFile smf, const SongInfo &song, QString *error)
+{
+    Q_UNUSED(error);
     const auto before = trackMapState();
     m_smf = std::move(smf);
     replaceTempoPoints(normalizeTempoPoints(tempoPointsFromSmf(m_smf)));
@@ -379,23 +390,50 @@ bool SongDocument::load(const SongInfo &song, QString *error)
     return true;
 }
 
-bool SongDocument::save(QString *error)
+SongSaveSnapshot SongDocument::captureSaveSnapshot() const
 {
-    auto smf = m_smf;
-    song_document_tempo::writeTempoMetas(smf, m_tempoPoints);
-    if (!smf.writeFile(m_midPath, error))
-        return false;
+    SongSaveSnapshot snapshot;
+    snapshot.smf = m_smf;
+    song_document_tempo::writeTempoMetas(snapshot.smf, m_tempoPoints);
+    snapshot.midPath = m_midPath;
+    snapshot.label = m_label;
+    snapshot.cfg = m_cfg;
+    snapshot.flagsNeeded = !cfgSemanticEqual(m_cfg, m_savedCfg) || !m_hadCfgLine;
+    snapshot.revision = m_revision;
+    snapshot.saveStateToken = m_saveStateToken;
+    return snapshot;
+}
 
-    if (!cfgSemanticEqual(m_cfg, m_savedCfg) || !m_hadCfgLine) {
-        const QStringList flags = SongRegistry::mergeCfgFlags(m_cfg);
-        m_cfg.rawFlags = flags;
-        if (!SongRegistry::writeSongFlags(QFileInfo(m_midPath).path(), m_label, flags, error))
-            return false;
-        m_savedCfg = m_cfg;
+void SongDocument::didSave(const SongSaveSnapshot &snapshot, bool flagsWritten)
+{
+    if (snapshot.flagsNeeded && !flagsWritten)
+        return;
+    m_savedCfg = snapshot.cfg;
+    if (snapshot.flagsNeeded) {
+        m_savedCfg.rawFlags = SongRegistry::mergeCfgFlags(snapshot.cfg);
         m_hadCfgLine = true;
     }
-
+    if (snapshot.revision != m_revision || snapshot.saveStateToken != m_saveStateToken)
+        return;
+    if (snapshot.flagsNeeded)
+        m_cfg.rawFlags = m_savedCfg.rawFlags;
     m_undoStack.setClean();
+}
+
+bool SongDocument::save(QString *error)
+{
+    auto snapshot = captureSaveSnapshot();
+    if (!snapshot.smf.writeFile(snapshot.midPath, error))
+        return false;
+    auto flagsWritten = false;
+    if (snapshot.flagsNeeded) {
+        const QStringList flags = SongRegistry::mergeCfgFlags(snapshot.cfg);
+        if (!SongRegistry::writeSongFlags(QFileInfo(snapshot.midPath).path(), snapshot.label, flags,
+                                          error))
+            return false;
+        flagsWritten = true;
+    }
+    didSave(snapshot, flagsWritten);
     return true;
 }
 

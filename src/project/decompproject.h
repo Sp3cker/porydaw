@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -55,6 +56,26 @@ struct SongInfo {
     bool isPlayable() const { return hasMid; }
 };
 
+class ProjectSnapshot
+{
+  public:
+    ProjectSnapshot() = default;
+    ProjectSnapshot(QString root, QVector<SongInfo> songs, QVector<MusicPlayer> players,
+                    QHash<QString, int> trackBudgets);
+
+    bool isOpen() const;
+    const QString &root() const;
+    const QVector<SongInfo> &songs() const;
+    const QVector<MusicPlayer> &players() const;
+    int trackBudgetFor(const SongInfo &song) const;
+
+  private:
+    QString m_root;
+    QVector<SongInfo> m_songs;
+    QVector<MusicPlayer> m_players;
+    QHash<QString, int> m_trackBudgets;
+};
+
 // Read-only view of a Gen 3 decomp project's music data: the song list
 // assembled from sound/song_table.inc, include/constants/songs.h, and
 // sound/songs/midi/midi.cfg (falling back to songs.mk rules when midi.cfg
@@ -64,6 +85,8 @@ class DecompProject
 {
   public:
     bool open(const QString &rootDir, QString *error);
+    // Installs detached project state on the GUI thread without disk I/O.
+    void replaceWith(const ProjectSnapshot &snapshot);
     void close();
 
     bool isOpen() const { return !m_root.isEmpty(); }
@@ -76,6 +99,7 @@ class DecompProject
     // 16 when the player is unknown or the table couldn't be parsed — the
     // engine ceiling, i.e. no porydaw-invented limit.
     int trackBudgetFor(const SongInfo &song) const;
+    const QVector<MusicPlayer> &players() const { return m_players; }
 
     // Loader-compatible voicegroup names to try, in order, for a song.
     // mid2agb emits "voicegroup" + <-G arg> as the symbol; poryaaaa's loader
@@ -100,4 +124,5 @@ class DecompProject
     QString m_root;
     QVector<SongInfo> m_songs;
     QVector<MusicPlayer> m_players; // cached at open (one file read)
+    QHash<QString, int> m_trackBudgets;
 };

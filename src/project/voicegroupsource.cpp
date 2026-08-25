@@ -1264,6 +1264,14 @@ bool VoicegroupSource::save(QString *error)
     m_dirty = false;
     return true;
 }
+bool VoicegroupSource::didSave(const QByteArray &savedBytes)
+{
+    if (sourceBytes() != savedBytes)
+        return false;
+    m_pristineSource = savedBytes;
+    m_dirty = false;
+    return true;
+}
 
 QByteArray VoicegroupSource::renderPreview() const
 {
