@@ -91,13 +91,11 @@ bool installBundledFonts(QApplication &application)
     }
     const auto regular = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-Regular.ttf"));
-    const auto light = QFontDatabase::addApplicationFont(
-        QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-Light.ttf"));
     const auto semibold = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf"));
     const auto mono = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleMono-Regular.ttf"));
-    if (regular < 0 || light < 0 || semibold < 0 || mono < 0)
+    if (regular < 0 || semibold < 0 || mono < 0)
         return false;
     if (!capturedBaseFontPx)
         capturedBaseFontPx = baseFontPx;
