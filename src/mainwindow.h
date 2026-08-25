@@ -149,8 +149,9 @@ class MainWindow : public QMainWindow
     // wizard asked for one, writes the .mid + midi.cfg line, registers the
     // song in the three registration files, reloads the project, and opens
     // the song in a new tab.
-    void finishCreateSong(const SmfFile &smf, const QString &label, const QString &constant,
-                          const QString &player, const SongCfg &cfg, const QString &newVoicegroup);
+    void finishCreateSong(SmfFile smf, const QString &label, const QString &constant,
+                          const QString &player, const SongCfg &cfg, const QString &newVoicegroup,
+                          const QString &projectRoot);
     // The dialog-less half of deleteSongById (also the harness entry): closes
     // the song's tab discarding its edits, moves the .mid to .porydaw/trash/,
     // removes the flag line, unregisters, drops the sidecar, deletes the
@@ -158,7 +159,7 @@ class MainWindow : public QMainWindow
     // every step runs; false collects what failed into *error.
     bool performSongDeletion(const SongInfo &song, const QString &deleteVoicegroupName,
                              QString *error);
-    void reloadProject();
+    void reloadProject(ProjectOpenContinuation continuation = {});
     void queueVoicegroupLoad(SongSession &session, const SongCfg &cfg, int keepSlot,
                              std::function<void(bool)> completion = {});
     void queueVoicegroupProbe(SongSession &session);
@@ -218,10 +219,10 @@ class MainWindow : public QMainWindow
     // Prompts to save the session's unsaved changes (song edits and
     // voicegroup edits alike); false = user cancelled the action.
     void maybeSaveSession(SongSession &session, SessionContinuation continuation);
-    // Locates + parses the source behind the session's voicegroup (nullptr
-    // on exotic layouts — the editor degrades to read-only).
-    void openVoicegroupSource(SongSession &session, const SongCfg &cfg);
     void onVoiceEdited(SongSession &session, int slot, bool structural);
+    void continueImportSampleForSlot(int slot, QString projectRoot, const SampleFormatProbe &probe);
+    void continueEditSampleForSlot(int slot, QString name, QString projectRoot,
+                                   SampleProjectResult result);
     // Auditions unsaved structural edits: renders the edited source into
     // .porydaw/vgpreview/ and reloads through the loader's config override,
     // which shadows the real file without touching it.
@@ -245,7 +246,6 @@ class MainWindow : public QMainWindow
     // Sidecar view state (SPEC §4.4): written whenever a session is let go
     // (tab close, project switch, app close). Cosmetic; silent on failure.
     void saveViewState(SongSession &session);
-    LoadedVoiceGroup *loadVoicegroupFor(const SongCfg &cfg, QString *tried);
     // Starts (or resumes) playback; from Stopped, seeks to the edit cursor
     // first so playback begins there. fromEditCursor forces that seek even
     // out of Paused — the Space binding (Reaper-style restart), while the

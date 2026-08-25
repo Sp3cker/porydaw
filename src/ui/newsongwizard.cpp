@@ -2,7 +2,6 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QDir>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHeaderView>
@@ -17,6 +16,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <utility>
 
 #include "project/songregistry.h"
 #include "ui/layout.h"
@@ -27,6 +27,32 @@ static QString trackRangeText(int first, int last)
 {
     return first == last ? QObject::tr("track %1").arg(first)
                          : QObject::tr("tracks %1 through %2").arg(first).arg(last);
+}
+
+static NewSongWizard::ProjectData projectDataFrom(DecompProject *project,
+                                                  const QStringList &voicegroupArgs)
+{
+    NewSongWizard::ProjectData data;
+    data.songs = project->songs();
+    data.voicegroupArgs = voicegroupArgs;
+    // The catalog was already scanned by the caller. Existing voicegroups are
+    // the cached evidence that the project has the per-file layout needed by
+    // the create entry; the final writer still owns any fresh validation.
+    data.canCreateVoicegroup = !voicegroupArgs.isEmpty();
+    QHash<QString, int> playerIndices;
+    for (const SongInfo &song : data.songs) {
+        if (song.player.isEmpty() || playerIndices.contains(song.player))
+            continue;
+        MusicPlayer player;
+        player.name = song.player;
+        player.number = data.players.size();
+        player.trackCount = project->trackBudgetFor(song);
+        playerIndices.insert(player.name, player.number);
+        data.players.append(player);
+    }
+    if (data.players.isEmpty())
+        data.players.append({QStringLiteral("MUSIC_PLAYER_BGM"), 0, -1});
+    return data;
 }
 
 // ---- Identity: label, constant, music player ------------------------------
@@ -48,7 +74,9 @@ class LowercaseNameValidator : public QRegularExpressionValidator
 class IdentityPage : public QWizardPage
 {
   public:
-    IdentityPage(DecompProject *project, const QString &suggestedLabel) : m_project(project)
+    IdentityPage(const QVector<SongInfo> &songs, const QVector<MusicPlayer> &players,
+                 const QString &suggestedLabel)
+        : m_songs(songs)
     {
         setTitle(tr("Song identity"));
         setSubTitle(tr("Names the .mid file, the song_table.inc entry, and the "
@@ -69,7 +97,7 @@ class IdentityPage : public QWizardPage
         form->addRow(tr("&Constant:"), m_constant);
 
         m_player = new QComboBox(this);
-        for (const MusicPlayer &p : SongRegistry::musicPlayers(project->root()))
+        for (const MusicPlayer &p : players)
             m_player->addItem(playerRoleName(p.name, true), p.name);
         m_player->setToolTip(tr("Select Background music for a song. Select Sound effect for a "
                                 "sound. Also select it for a fanfare."));
@@ -94,16 +122,11 @@ class IdentityPage : public QWizardPage
         const QString name = m_name->text();
         if (name.isEmpty() || m_constant->text().isEmpty())
             return false;
-        for (const SongInfo &song : m_project->songs()) {
+        for (const SongInfo &song : m_songs) {
             if (song.label == name) {
                 m_nameHint->setText(tr("A song named %1 already exists.").arg(name));
                 return false;
             }
-        }
-        if (QFileInfo::exists(m_project->root() +
-                              QStringLiteral("/sound/songs/midi/%1.mid").arg(name))) {
-            m_nameHint->setText(tr("%1.mid already exists.").arg(name));
-            return false;
         }
         return true;
     }
@@ -132,7 +155,7 @@ class IdentityPage : public QWizardPage
     }
 
   private:
-    DecompProject *m_project;
+    QVector<SongInfo> m_songs;
     QLineEdit *m_name;
     QLineEdit *m_constant;
     QComboBox *m_player;
@@ -145,9 +168,10 @@ class IdentityPage : public QWizardPage
 class SoundPage : public QWizardPage
 {
   public:
-    SoundPage(DecompProject *project, const IdentityPage *identity,
-              const QStringList &voicegroupArgs)
+    SoundPage(const IdentityPage *identity, const QStringList &voicegroupArgs,
+              bool canCreateVoicegroup)
         : m_identity(identity)
+        , m_canCreateVoicegroup(canCreateVoicegroup)
         , m_vgArgs(voicegroupArgs)
     {
         setTitle(tr("Sound settings"));
@@ -158,10 +182,6 @@ class SoundPage : public QWizardPage
         auto *form = new QFormLayout(this);
         m_voicegroup = new QComboBox(this);
         m_voicegroup->setEditable(true);
-        // Creating per-file voicegroups needs the sound/voicegroups/ layout
-        // (same constraint as the Voicegroup dock's New button).
-        m_canCreateVoicegroup =
-            QDir(project->root() + QStringLiteral("/sound/voicegroups")).exists();
         if (m_canCreateVoicegroup)
             m_voicegroup->addItem(newVoicegroupText());
         for (const QString &arg : m_vgArgs)
@@ -487,30 +507,43 @@ class AnalysisPage : public QWizardPage
 
 // ---- The wizard -------------------------------------------------------------
 
-NewSongWizard::NewSongWizard(DecompProject *project, const QStringList &voicegroupArgs,
-                             QWidget *parent)
+NewSongWizard::NewSongWizard(ProjectData projectData, QWidget *parent)
     : QWizard(parent)
-    , m_project(project)
+    , m_projectData(std::move(projectData))
 {
+    if (m_projectData.players.isEmpty())
+        m_projectData.players.append({QStringLiteral("MUSIC_PLAYER_BGM"), 0, -1});
     setWindowTitle(tr("New Song"));
-    buildPages(QString(), voicegroupArgs);
+    buildPages(QString());
 }
 
-NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported, const QString &sourcePath,
-                             const QStringList &voicegroupArgs, QWidget *parent)
+NewSongWizard::NewSongWizard(ProjectData projectData, SmfFile imported, const QString &sourcePath,
+                             QWidget *parent)
     : QWizard(parent)
-    , m_project(project)
+    , m_projectData(std::move(projectData))
     , m_importMode(true)
     , m_imported(std::move(imported))
 {
+    if (m_projectData.players.isEmpty())
+        m_projectData.players.append({QStringLiteral("MUSIC_PLAYER_BGM"), 0, -1});
     setWindowTitle(tr("Import MIDI — %1").arg(QFileInfo(sourcePath).fileName()));
-    const QVector<MusicPlayer> players = SongRegistry::musicPlayers(project->root());
-    const MusicPlayer &defaultPlayer = players.first();
+    const MusicPlayer &defaultPlayer = m_projectData.players.first();
     m_analysis = analyzeForImport(m_imported, defaultPlayer.trackCount, defaultPlayer.name);
-    buildPages(sourcePath, voicegroupArgs);
+    buildPages(sourcePath);
 }
 
-void NewSongWizard::buildPages(const QString &sourcePath, const QStringList &voicegroupArgs)
+NewSongWizard::NewSongWizard(DecompProject *project, const QStringList &voicegroupArgs,
+                             QWidget *parent)
+    : NewSongWizard(projectDataFrom(project, voicegroupArgs), parent)
+{}
+
+NewSongWizard::NewSongWizard(DecompProject *project, SmfFile imported, const QString &sourcePath,
+                             const QStringList &voicegroupArgs, QWidget *parent)
+    : NewSongWizard(projectDataFrom(project, voicegroupArgs), std::move(imported), sourcePath,
+                    parent)
+{}
+
+void NewSongWizard::buildPages(const QString &sourcePath)
 {
     setOption(QWizard::NoBackButtonOnStartPage);
     setMinimumSize(::layout::fontPx(m_importMode ? 60 : 52),
@@ -527,14 +560,15 @@ void NewSongWizard::buildPages(const QString &sourcePath, const QStringList &voi
             suggested.prepend(QStringLiteral("mus_"));
     }
 
-    m_identity = new IdentityPage(m_project, suggested);
+    m_identity = new IdentityPage(m_projectData.songs, m_projectData.players, suggested);
     if (m_importMode) {
-        const QVector<MusicPlayer> players = SongRegistry::musicPlayers(m_project->root());
-        m_analysisPage = new AnalysisPage(m_imported, m_analysis, players, sourcePath, m_identity);
+        m_analysisPage =
+            new AnalysisPage(m_imported, m_analysis, m_projectData.players, sourcePath, m_identity);
         addPage(m_analysisPage);
     }
     addPage(m_identity);
-    m_sound = new SoundPage(m_project, m_identity, voicegroupArgs);
+    m_sound =
+        new SoundPage(m_identity, m_projectData.voicegroupArgs, m_projectData.canCreateVoicegroup);
     addPage(m_sound);
 }
 

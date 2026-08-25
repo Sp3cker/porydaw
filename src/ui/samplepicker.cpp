@@ -52,12 +52,18 @@ void SamplePickerButton::setChoices(const QStringList &keysplits, const QStringL
     m_keysplits = keysplits;
     m_samples = samples;
     m_phonemes = phonemes;
+    // Catalog/sample loading is asynchronous. Keep an already-open popup in
+    // sync when the owner refreshes the choices or loop-info provider.
+    if (m_popup && m_popup->isVisible())
+        rebuildList();
 }
 
 void SamplePickerButton::setCurrentSymbol(const QString &symbol)
 {
     m_currentSymbol = symbol;
     updateButtonText();
+    if (m_popup && m_popup->isVisible())
+        rebuildList();
 }
 
 void SamplePickerButton::setDisplayFullSymbols(bool on)

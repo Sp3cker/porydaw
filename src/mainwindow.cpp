@@ -2290,7 +2290,7 @@ void MainWindow::openSettings(SettingsDialog::Tab initialTab)
             if (m_audioOk && m_active && m_audio.songLoaded())
                 m_audio.updateSettings(songSettingsFor(*m_active));
         }
-        if (m_active) {
+        if (m_active && m_active->isInteractive()) {
             const auto songCfg = dialog.songCfg();
             if (songCfg)
                 m_active->doc.setCfg(*songCfg);
@@ -2331,19 +2331,30 @@ SongSettings MainWindow::songSettingsFor(const SongSession &session) const
 
 void MainWindow::newSong()
 {
-    if (!m_project.isOpen())
+    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
+        projectMutationInProgress())
         return;
-    NewSongWizard wizard(&m_project, vgCatalog().groupArgs, this);
+    const QString projectRoot = m_project.root();
+    const auto &catalog = vgCatalog();
+    if (!catalog.valid) {
+        statusBar()->showMessage(tr("Loading voicegroup catalog…"), 5000);
+        return;
+    }
+    NewSongWizard::ProjectData data{m_project.songs(), m_project.players(), catalog.groupArgs,
+                                    catalog.perFileVoicegroups};
+    NewSongWizard wizard(std::move(data), this);
     if (wizard.exec() != QDialog::Accepted)
         return;
     finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(), wizard.player(),
-                     wizard.cfg(), wizard.newVoicegroupName());
+                     wizard.cfg(), wizard.newVoicegroupName(), projectRoot);
 }
 
 void MainWindow::importMidi()
 {
-    if (!m_project.isOpen())
+    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
+        projectMutationInProgress())
         return;
+    const QString projectRoot = m_project.root();
     QSettings settings;
     const QString startDir =
         settings.value(QStringLiteral("lastImportDir"), QDir::homePath()).toString();
@@ -2359,11 +2370,18 @@ void MainWindow::importMidi()
         QMessageBox::warning(this, tr("Import MIDI"), error);
         return;
     }
-    NewSongWizard wizard(&m_project, std::move(smf), path, vgCatalog().groupArgs, this);
+    const auto &catalog = vgCatalog();
+    if (!catalog.valid) {
+        statusBar()->showMessage(tr("Loading voicegroup catalog…"), 5000);
+        return;
+    }
+    NewSongWizard::ProjectData data{m_project.songs(), m_project.players(), catalog.groupArgs,
+                                    catalog.perFileVoicegroups};
+    NewSongWizard wizard(std::move(data), std::move(smf), path, this);
     if (wizard.exec() != QDialog::Accepted)
         return;
     finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(), wizard.player(),
-                     wizard.cfg(), wizard.newVoicegroupName());
+                     wizard.cfg(), wizard.newVoicegroupName(), projectRoot);
 }
 
 void MainWindow::importSample()
@@ -2373,15 +2391,33 @@ void MainWindow::importSample()
 
 void MainWindow::importSampleForSlot(int slot)
 {
-    if (!m_project.isOpen())
+    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
+        m_pendingSampleProbeRequest != 0)
         return;
-    // Refuse before the file dialog: a legacy-aif or unwired project can't
-    // take samples no matter which file is picked.
-    const SampleFormatProbe probe = SampleRegistrar::probeSampleFormat(m_project.root());
-    if (!probe.ok()) {
-        QMessageBox::warning(this, tr("Import Sample"), probe.refusal);
+    const QString root = m_project.root();
+    m_pendingSampleProbeRequest =
+        m_projectIo->probeSamples(root, [this, root, slot](SampleProbeResult result) mutable {
+            if (result.requestId != m_pendingSampleProbeRequest)
+                return;
+            m_pendingSampleProbeRequest = 0;
+            if (m_project.root() != root)
+                return;
+            if (!result.succeeded()) {
+                QMessageBox::warning(this, tr("Import Sample"), result.error);
+                return;
+            }
+            continueImportSampleForSlot(slot, root, result.probe);
+        });
+}
+
+void MainWindow::continueImportSampleForSlot(int slot, QString projectRoot,
+                                             const SampleFormatProbe &probe)
+{
+    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
+        m_project.root() != projectRoot)
         return;
-    }
+    const QString root = std::move(projectRoot);
+    Q_UNUSED(probe);
     QSettings settings;
     const QString startDir =
         settings.value(QStringLiteral("lastSampleDir"), QDir::homePath()).toString();
@@ -2446,10 +2482,12 @@ void MainWindow::importSampleForSlot(int slot)
         }
     }
 
-    const QString root = m_project.root();
-    const QStringList symbols = vgCatalog().directSound;
-    // Browser-initiated: audition with the destination voice's envelope
-    // when that slot already holds a DirectSound-family voice.
+    const auto &catalog = vgCatalog();
+    if (!catalog.valid) {
+        statusBar()->showMessage(tr("Loading voicegroup catalog…"), 5000);
+        return;
+    }
+    const QStringList symbols = catalog.directSound;
     AuditionSlots::Adsr destAdsr;
     bool hasDestAdsr = false;
     if (slot >= 0 && m_active && m_active->vgSource) {
@@ -2462,75 +2500,97 @@ void MainWindow::importSampleForSlot(int slot)
     }
     SampleEditorDialog dialog(
         std::move(sample),
-        [root, symbols](const QString &name, QString *validationError) {
-            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        [symbols](const QString &name, QString *validationError) {
+            const auto valid = QRegularExpression(QStringLiteral("^[a-z0-9_]+$")).match(name);
+            if (name.isEmpty() || !valid.hasMatch()) {
+                if (validationError)
+                    *validationError = QStringLiteral("use lowercase letters, digits, and '_'.");
+                return false;
+            }
+            if (symbols.contains(QStringLiteral("DirectSoundWaveData_") + name)) {
+                if (validationError)
+                    *validationError = QStringLiteral("a sample with that name already exists.");
+                return false;
+            }
+            return true;
         },
         m_audioOk ? &m_audio : nullptr, hasDestAdsr ? &destAdsr : nullptr, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
-
-    // Write-through commit (not undoable, like song registration): the
-    // rendered .wav (FORMATS.md §1) plus its direct_sound_data.inc block.
-    if (!SampleRegistrar::registerSample(root, dialog.sampleName(), dialog.wavBytes(), &error)) {
-        QMessageBox::warning(this, tr("Import Sample"), error);
-        return;
-    }
-    // Provenance sidecar (PLAN.md §3): source identity + the edit params, so
-    // "Edit sample…" reopens from the hi-res source. Auxiliary — a failed
-    // write never fails the commit that just landed.
+    const QString committedName = dialog.sampleName();
+    const QByteArray committedWav = dialog.wavBytes();
     SampleSidecar sidecar;
     sidecar.sourcePath = QFileInfo(path).absoluteFilePath();
     sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
     sidecar.leftOnly = leftOnly;
     sidecar.sf2Zone = sf2Zone;
     sidecar.params = dialog.document()->params();
-    QString sidecarError;
-    if (!SampleRegistrar::writeSampleSidecar(root, dialog.sampleName(), sidecar, &sidecarError))
-        statusBar()->showMessage(
-            tr("Sample imported, but saving its edit history failed: %1").arg(sidecarError), 8000);
-    invalidateVgCatalog();
-    updateVoicegroupBrowser();
-
-    // Browser-initiated: point the requesting slot's voice at the new sample
-    // via the session undo stack — the file creation above is write-through,
-    // but the voice assignment stays undoable (PLAN.md §3).
-    if (slot >= 0 && m_active && m_active->vgSource) {
-        // A DirectSound-family slot keeps its voice and only swaps the
-        // sample: the dialog auditioned with that voice's envelope, so
-        // replacing its ADSR (or key/pan/macro variant) would commit
-        // something other than what was heard.
-        const VgVoice *dest = m_active->vgSource->voiceAt(slot);
-        const bool keepDest = dest && (dest->macro == VgMacro::DirectSound ||
-                                       dest->macro == VgMacro::DirectSoundNoResample ||
-                                       dest->macro == VgMacro::DirectSoundAlt);
-        VgVoice voice;
-        if (keepDest) {
-            voice = *dest;
-        } else {
-            voice.macro = VgMacro::DirectSound;
-            voice.key = 60;
-            voice.pan = 0;
-            const VgAdsr adsr =
-                vgDefaultAdsr(vgCatalog().typicalAdsr, voice.macro,
-                              QStringLiteral("DirectSoundWaveData_") + dialog.sampleName());
-            voice.attack = adsr.attack;
-            voice.decay = adsr.decay;
-            voice.sustain = adsr.sustain;
-            voice.release = adsr.release;
-        }
-        voice.symbol = QStringLiteral("DirectSoundWaveData_") + dialog.sampleName();
-        onVoiceEditRequested(slot, voice, true);
-        m_vgBrowser->revealSlot(slot);
-    }
-    statusBar()->showMessage(tr("Imported %1 — DirectSoundWaveData_%1 is now available to "
-                                "voicegroups")
-                                 .arg(dialog.sampleName()),
-                             8000);
+    const VgAdsrDefaults defaults = catalog.typicalAdsr;
+    SongSession *const requestedSession = m_active;
+    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted ||
+        m_project.root() != root || projectMutationInProgress())
+        return;
+    SampleCommitRequest request;
+    request.projectRoot = root;
+    request.name = committedName;
+    request.wavBytes = committedWav;
+    request.sidecar = sidecar;
+    m_pendingSampleCommitRequest = m_projectIo->commitSample(
+        std::move(request),
+        [this, root, slot, committedName, defaults, requestedSession](SampleCommitResult result) {
+            if (result.requestId != m_pendingSampleCommitRequest)
+                return;
+            m_pendingSampleCommitRequest = 0;
+            if (m_project.root() != root || m_projectSwitchInProgress || m_closeInProgress ||
+                m_closeAccepted)
+                return;
+            if (!result.succeeded()) {
+                QMessageBox::warning(this, tr("Import Sample"), result.error);
+                return;
+            }
+            if (!result.sidecarSaved && !result.sidecarError.isEmpty())
+                statusBar()->showMessage(
+                    tr("Sample imported, but saving its edit history failed: %1")
+                        .arg(result.sidecarError),
+                    8000);
+            invalidateVgCatalog();
+            updateVoicegroupBrowser();
+            if (slot >= 0 && requestedSession && requestedSession == m_active &&
+                requestedSession->vgSource) {
+                const VgVoice *dest = requestedSession->vgSource->voiceAt(slot);
+                const bool keepDest = dest && (dest->macro == VgMacro::DirectSound ||
+                                               dest->macro == VgMacro::DirectSoundNoResample ||
+                                               dest->macro == VgMacro::DirectSoundAlt);
+                VgVoice voice;
+                if (keepDest) {
+                    voice = *dest;
+                } else {
+                    voice.macro = VgMacro::DirectSound;
+                    voice.key = 60;
+                    voice.pan = 0;
+                    const VgAdsr adsr =
+                        vgDefaultAdsr(defaults, voice.macro,
+                                      QStringLiteral("DirectSoundWaveData_") + committedName);
+                    voice.attack = adsr.attack;
+                    voice.decay = adsr.decay;
+                    voice.sustain = adsr.sustain;
+                    voice.release = adsr.release;
+                }
+                voice.symbol = QStringLiteral("DirectSoundWaveData_") + committedName;
+                onVoiceEditRequested(slot, voice, true);
+                m_vgBrowser->revealSlot(slot);
+            }
+            statusBar()->showMessage(
+                tr("Imported %1 — DirectSoundWaveData_%1 is now available to voicegroups")
+                    .arg(committedName),
+                8000);
+        });
 }
 
 void MainWindow::editSampleForSlot(int slot)
 {
-    if (!m_project.isOpen() || !m_active || !m_active->vgSource)
+    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
+        !m_active || !m_active->vgSource || m_pendingSampleProjectRequest != 0)
         return;
     const QString prefix = QStringLiteral("DirectSoundWaveData_");
     const VgVoice *voice = m_active->vgSource->voiceAt(slot);
@@ -2541,29 +2601,44 @@ void MainWindow::editSampleForSlot(int slot)
     }
     const QString name = voice->symbol.mid(prefix.size());
     const QString root = m_project.root();
-    const SampleFormatProbe probe = SampleRegistrar::probeSampleFormat(root);
-    if (!probe.ok()) {
-        QMessageBox::warning(this, tr("Edit Sample"), probe.refusal);
+    m_pendingSampleProjectRequest = m_projectIo->readProjectSample(
+        root, name, [this, root, name, slot](SampleProjectResult result) mutable {
+            if (result.requestId != m_pendingSampleProjectRequest)
+                return;
+            m_pendingSampleProjectRequest = 0;
+            if (m_project.root() != root)
+                return;
+            if (!result.succeeded()) {
+                QMessageBox::warning(this, tr("Edit Sample"), result.error);
+                return;
+            }
+            continueEditSampleForSlot(slot, name, root, std::move(result));
+        });
+}
+
+void MainWindow::continueEditSampleForSlot(int slot, QString name, QString projectRoot,
+                                           SampleProjectResult result)
+{
+    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
+        m_project.root() != projectRoot)
         return;
-    }
-    const QString wavPath = probe.samplesDir + QStringLiteral("/%1.wav").arg(name);
-    if (!QFile::exists(wavPath)) {
-        QMessageBox::warning(this, tr("Edit Sample"),
-                             tr("%1.wav does not exist in sound/direct_sound_samples — only "
-                                "samples with a .wav source can be edited here.")
-                                 .arg(name));
+    const QString root = std::move(projectRoot);
+    const VgVoice *voice =
+        m_active && m_active->vgSource ? m_active->vgSource->voiceAt(slot) : nullptr;
+    if (!voice)
         return;
-    }
+    const QString wavPath = result.wavPath;
+    const SampleSidecar loadedSidecar = result.sidecar;
+    SampleSidecar sidecar = loadedSidecar;
 
     // Provenance: reopen from the sidecar's hi-res source while it still
     // checks out; otherwise the committed 8-bit .wav (the project is
     // canonical without the sidecar — still crop/loop-editable).
     ImportedSample sample;
-    SampleSidecar sidecar;
     bool fromSource = false; // decoding the original hi-res source
     bool haveParams = false; // sidecar params apply to that source
     QString error;
-    if (SampleRegistrar::readSampleSidecar(root, name, &sidecar)) {
+    if (result.sidecarLoaded) {
         const auto decodeSource = [&](const QByteArray &bytes, ImportedSample *out, QString *err) {
             if (sidecar.sf2Zone >= 0) {
                 Sf2File font;
@@ -2611,13 +2686,9 @@ void MainWindow::editSampleForSlot(int slot)
                                          .arg(sidecar.sourcePath, error));
         }
     }
-    if (!fromSource) {
-        QFile wavFile(wavPath);
-        if (!wavFile.open(QIODevice::ReadOnly) ||
-            !importAudioBytes(wavFile.readAll(), wavPath, &sample, &error)) {
-            QMessageBox::warning(this, tr("Edit Sample"), tr("%1: %2").arg(wavPath, error));
-            return;
-        }
+    if (!fromSource && !importAudioBytes(result.wavBytes, wavPath, &sample, &error)) {
+        QMessageBox::warning(this, tr("Edit Sample"), tr("%1: %2").arg(wavPath, error));
+        return;
     }
 
     AuditionSlots::Adsr destAdsr;
@@ -2643,79 +2714,96 @@ void MainWindow::editSampleForSlot(int slot)
     if (dialog.exec() != QDialog::Accepted)
         return;
 
-    // Write-through commit: overwrite the .wav in place; the registration
-    // block already exists and stays untouched.
-    if (!SampleRegistrar::updateSample(root, name, dialog.wavBytes(), &error)) {
-        QMessageBox::warning(this, tr("Edit Sample"), error);
-        return;
-    }
-    if (fromSource) {
+    const QByteArray committedWav = dialog.wavBytes();
+    if (fromSource)
         sidecar.params = dialog.document()->params();
-        QString sidecarError;
-        if (!SampleRegistrar::writeSampleSidecar(root, name, sidecar, &sidecarError))
+    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted ||
+        m_project.root() != root || projectMutationInProgress())
+        return;
+    SampleCommitRequest request;
+    request.projectRoot = root;
+    request.name = name;
+    request.wavBytes = committedWav;
+    if (fromSource)
+        request.sidecar = sidecar;
+    else
+        request.removeSidecar = true;
+    SongSession *const requestedSession = m_active;
+    m_pendingSampleCommitRequest = m_projectIo->commitSample(
+        std::move(request),
+        [this, root, name, slot, requestedSession](SampleCommitResult result) mutable {
+            if (result.requestId != m_pendingSampleCommitRequest)
+                return;
+            m_pendingSampleCommitRequest = 0;
+            if (m_project.root() != root || m_projectSwitchInProgress || m_closeInProgress ||
+                m_closeAccepted)
+                return;
+            if (!result.succeeded()) {
+                QMessageBox::warning(this, tr("Edit Sample"), result.error);
+                return;
+            }
+            if (!result.sidecarSaved && !result.sidecarError.isEmpty())
+                statusBar()->showMessage(tr("Sample saved, but saving its edit history failed: %1")
+                                             .arg(result.sidecarError),
+                                         8000);
+            invalidateVgCatalog();
+            updateVoicegroupBrowser();
+            if (requestedSession && requestedSession == m_active && requestedSession->vgSource)
+                reloadVoicegroupPreview(*requestedSession, slot);
             statusBar()->showMessage(
-                tr("Sample saved, but saving its edit history failed: %1").arg(sidecarError), 8000);
-    } else {
-        // The session came from the committed bytes, which were just
-        // replaced — a stale sidecar would misdescribe them on the next
-        // reopen (the committed .wav is its own provenance now).
-        SampleRegistrar::removeSampleSidecar(root, name);
-    }
-    invalidateVgCatalog();
-    updateVoicegroupBrowser();
-    // The loaded voicegroup decoded the old .wav at load time; reload so the
-    // edit is audible without reopening the song.
-    if (m_active && m_active->vgSource)
-        reloadVoicegroupPreview(*m_active, slot);
-    statusBar()->showMessage(tr("Saved %1 — the ROM's .bin recompiles on the next build").arg(name),
-                             8000);
+                tr("Saved %1 — the ROM's .bin recompiles on the next build").arg(name), 8000);
+        });
 }
 
-void MainWindow::finishCreateSong(const SmfFile &smf, const QString &label, const QString &constant,
+void MainWindow::finishCreateSong(SmfFile smf, const QString &label, const QString &constant,
                                   const QString &player, const SongCfg &cfg,
-                                  const QString &newVoicegroup)
+                                  const QString &newVoicegroup, const QString &projectRoot)
 {
-    QString error;
-    // The voicegroup first: the song's -G already points at it, so nothing
-    // else may be written if it can't exist. Starts as the dummy template —
-    // the user configures it in the Voicegroup dock.
-    if (!newVoicegroup.isEmpty()) {
-        if (!VoicegroupSource::createVoicegroup(m_project.root(), newVoicegroup, QString(),
-                                                QString(), &error) ||
-            !VoicegroupSource::appendIncludeLine(m_project.root(), newVoicegroup, &error)) {
-            QMessageBox::warning(this, tr("New Song"), error);
-            return;
-        }
-    }
-
-    const QString midiDir = m_project.root() + QStringLiteral("/sound/songs/midi");
-    if (!smf.writeFile(midiDir + QStringLiteral("/%1.mid").arg(label), &error) ||
-        !SongRegistry::writeSongFlags(midiDir, label, SongRegistry::mergeCfgFlags(cfg), &error)) {
-        QMessageBox::warning(this, tr("New Song"), error);
+    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
+        m_project.root() != projectRoot || projectMutationInProgress())
         return;
-    }
-    int songId = -1;
-    if (!SongRegistry::registerSong(m_project.root(), label, constant, player, &error, &songId)) {
-        // Keep the chosen constant/player so Register Song can retry later;
-        // the song shows a badge in the browser until then.
-        SongRegistry::saveRegistrationMeta(m_project.root(), label, constant, player);
-        QMessageBox::warning(this, tr("New Song"),
-                             tr("Wrote %1/%2.mid, but registering it failed: %3\n"
-                                "Use File → Register Song to retry.")
-                                 .arg(midiDir, label, error));
-    } else {
-        SongRegistry::clearRegistrationMeta(m_project.root(), label);
-        QString message =
-            tr("Created and registered %1 as %2 (song ID %3)").arg(label, constant).arg(songId);
-        if (!newVoicegroup.isEmpty())
-            message += tr(" — configure its new voicegroup in the Voicegroup dock");
-        statusBar()->showMessage(message, 8000);
-    }
-
-    reloadProject();
-    // The fresh song opens in its own tab, next to whatever is being worked
-    // on.
-    loadSongByLabel(label, /*newTab=*/true);
+    CreateSongRequest request;
+    const QString root = m_project.root();
+    request.projectRoot = root;
+    request.label = label;
+    request.constant = constant;
+    request.player = player;
+    request.cfg = cfg;
+    request.newVoicegroup = newVoicegroup;
+    request.smf = std::move(smf);
+    m_pendingCreateSongRequest = m_projectIo->createSong(
+        std::move(request), [this, root, label, newVoicegroup](CreateSongResult result) mutable {
+            if (result.requestId != m_pendingCreateSongRequest)
+                return;
+            m_pendingCreateSongRequest = 0;
+            if (m_project.root() != root || m_projectSwitchInProgress || m_closeInProgress ||
+                m_closeAccepted)
+                return;
+            if (!result.succeeded()) {
+                const QString midiDir = root + QStringLiteral("/sound/songs/midi");
+                if (!result.voicegroupOk) {
+                    QMessageBox::warning(this, tr("New Song"), result.error);
+                } else if (!result.midiOk || !result.flagsOk) {
+                    QMessageBox::warning(this, tr("New Song"), result.error);
+                } else {
+                    QMessageBox::warning(this, tr("New Song"),
+                                         tr("Wrote %1/%2.mid, but registering it failed: %3\n"
+                                            "Use File → Register Song to retry.")
+                                             .arg(midiDir, label, result.error));
+                }
+            } else {
+                QString message = tr("Created and registered %1 as %2 (song ID %3)")
+                                      .arg(label)
+                                      .arg(result.songId);
+                if (!newVoicegroup.isEmpty())
+                    message += tr(" — configure its new voicegroup in the Voicegroup dock");
+                statusBar()->showMessage(message, 8000);
+            }
+            reloadProject([this, label](bool refreshed) {
+                if (refreshed)
+                    loadSongByLabel(label, /*newTab=*/true);
+            });
+        });
 }
 
 void MainWindow::registerLoadedSong()
@@ -2874,16 +2962,39 @@ bool MainWindow::performSongDeletion(const SongInfo &song, const QString &delete
     return true;
 }
 
-void MainWindow::reloadProject()
+void MainWindow::reloadProject(ProjectOpenContinuation continuation)
 {
-    QString error;
-    if (!m_project.reload(&error)) {
-        QMessageBox::warning(this, tr("Reload Project"), error);
+    if (!m_project.isOpen() || m_projectSwitchInProgress) {
+        if (continuation)
+            continuation(false);
         return;
     }
-    populateSongList();
-    refreshSessionSongIds();
-    invalidateVgCatalog();
+    if (m_pendingProjectRefreshRequest != 0) {
+        m_projectIo->cancel(m_pendingProjectRefreshRequest);
+        m_pendingProjectRefreshRequest = 0;
+    }
+    const QString root = m_project.root();
+    m_pendingProjectRefreshRequest = m_projectIo->openProject(
+        root,
+        [this, root, continuation = std::move(continuation)](ProjectOpenResult result) mutable {
+            if (m_pendingProjectRefreshRequest == 0)
+                return;
+            m_pendingProjectRefreshRequest = 0;
+            if (m_project.root() != root)
+                return;
+            if (!result.succeeded()) {
+                QMessageBox::warning(this, tr("Reload Project"), result.error);
+                if (continuation)
+                    continuation(false);
+                return;
+            }
+            m_project.replaceWith(result.snapshot);
+            populateSongList();
+            refreshSessionSongIds();
+            invalidateVgCatalog();
+            if (continuation)
+                continuation(true);
+        });
 }
 
 void MainWindow::loadSongByLabel(const QString &label, bool newTab)
@@ -3085,27 +3196,17 @@ void MainWindow::auditionKeysplit(const QString &symbol)
     // square plumbing — silently skipped.
 }
 
-void MainWindow::openVoicegroupSource(SongSession &session, const SongCfg &cfg)
-{
-    session.vgSource = std::make_unique<VoicegroupSource>();
-    QString error;
-    if (!session.vgSource->open(m_project.root(), cfg.voicegroupArg, &error)) {
-        session.vgSource.reset();
-        session.vgFileTime = QDateTime();
-        statusBar()->showMessage(tr("Voicegroup editing unavailable: %1").arg(error), 8000);
-        return;
-    }
-    session.vgFileTime = QFileInfo(session.vgSource->filePath()).lastModified();
-}
-
 void MainWindow::onVoiceEditRequested(int slot, const VgVoice &voice, bool structural)
 {
     SongSession *session = m_active;
-    if (!session)
+    if (!session || !session->isInteractive())
         return;
     auto applied = [this](SongSession &session, int slot, bool structural) {
         onVoiceEdited(session, slot, structural);
-        if (!structural && &session == m_active)
+        // The source edit is synchronous; preview/audio replacement is not.
+        // Reflect both scalar and structural edits immediately while retaining
+        // the existing disabled editor during an async load.
+        if (&session == m_active)
             m_vgBrowser->voiceChanged(slot);
         updateTabTitle(session);
         if (&session == m_active)
