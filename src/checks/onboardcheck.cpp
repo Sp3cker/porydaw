@@ -464,11 +464,18 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
     }
     const SongInfo song = *info; // survives the reload inside the deletion
 
-    auto deletionError = QString{};
-    const bool deleted = performSongDeletion(song, QString(), &deletionError);
+    const auto deletionError = std::make_shared<QString>();
+    const bool deleted =
+        OnboardCheck::waitForProjectOpen([this, &song, deletionError](auto completion) {
+            performSongDeletion(song, QString(),
+                                [deletionError, completion](bool succeeded, QString error) {
+                                    *deletionError = error;
+                                    completion(succeeded);
+                                });
+        });
     check(deleted, "performSongDeletion failed");
-    if (!deletionError.isEmpty())
-        std::fprintf(stderr, "onboardcheck: delete: %s\n", qUtf8Printable(deletionError));
+    if (!deletionError->isEmpty())
+        std::fprintf(stderr, "onboardcheck: delete: %s\n", qUtf8Printable(*deletionError));
     check(!sessionForLabel(label), "deleted song's tab still open");
     bool inModel = false;
     for (const SongInfo &s : m_project.songs())
@@ -496,9 +503,16 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
         const QString fallbackMid =
             projectRoot + QStringLiteral("/sound/songs/midi/%1.mid").arg(fallback->label);
         const bool hadMid = QFile::exists(fallbackMid);
-        auto refusalError = QString{};
-        const bool fallbackDeleted = performSongDeletion(*fallback, QString(), &refusalError);
-        check(!fallbackDeleted && !refusalError.isEmpty(),
+        const auto refusalError = std::make_shared<QString>();
+        const bool fallbackDeleted =
+            OnboardCheck::waitForProjectOpen([this, fallback, refusalError](auto completion) {
+                performSongDeletion(*fallback, QString(),
+                                    [refusalError, completion](bool succeeded, QString error) {
+                                        *refusalError = error;
+                                        completion(succeeded);
+                                    });
+            });
+        check(!fallbackDeleted && !refusalError->isEmpty(),
               "performSongDeletion deleted the fallback song");
         check(OnboardCheck::readAllBytes(projectRoot + QStringLiteral("/sound/song_table.inc")) ==
                   tableBefore,
