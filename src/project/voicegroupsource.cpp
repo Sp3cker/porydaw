@@ -1021,6 +1021,64 @@ bool VoicegroupSource::setVoice(int slot, const VgVoice &voice)
     return true;
 }
 
+std::optional<VoicegroupSource::BlankSlotMaterialization>
+VoicegroupSource::materializeBlankSlot(int slot, const VgVoice &voice)
+{
+    if (slot < 0 || slot >= VOICEGROUP_SIZE || kindAt(slot) != VgLineKind::None)
+        return std::nullopt;
+
+    BlankSlotInsertion insertion;
+    if (!buildBlankSlotInsertion(slot, voice, &insertion))
+        return std::nullopt;
+
+    BlankSlotMaterialization materialization;
+    materialization.firstAddedSlot = insertion.additions.constFirst().slot;
+    for (const Line &line : insertion.additions)
+        materialization.addedLines.append(line.raw);
+    if (insertion.headerIndex >= 0) {
+        materialization.rewroteHeader = true;
+        materialization.headerBefore = m_lines.at(insertion.headerIndex).raw;
+    }
+
+    applyBlankSlotInsertion(insertion);
+    if (materialization.rewroteHeader)
+        materialization.headerAfter = m_lines.at(insertion.headerIndex).raw;
+    m_dirty = !matchesPristineSource();
+    return materialization;
+}
+
+bool VoicegroupSource::revertBlankSlotMaterialization(
+    const BlankSlotMaterialization &materialization)
+{
+    if (materialization.firstAddedSlot < 0 || materialization.addedLines.isEmpty() ||
+        materialization.firstAddedSlot + materialization.addedLines.size() > VOICEGROUP_SIZE)
+        return false;
+
+    const int headerIndex = materialization.rewroteHeader ? discoverHeaderIndex() : -1;
+    if (materialization.rewroteHeader &&
+        (headerIndex < 0 || m_lines.at(headerIndex).raw != materialization.headerAfter))
+        return false;
+
+    for (int offset = 0; offset < materialization.addedLines.size(); offset++) {
+        const int slot = materialization.firstAddedSlot + offset;
+        const int lineIndex = m_slotToLine[slot];
+        if (lineIndex < 0 || m_lines.at(lineIndex).kind != VgLineKind::Editable ||
+            m_lines.at(lineIndex).raw != materialization.addedLines.at(offset))
+            return false;
+    }
+
+    if (materialization.rewroteHeader)
+        m_lines[headerIndex].raw = materialization.headerBefore;
+    for (int offset = materialization.addedLines.size() - 1; offset >= 0; offset--) {
+        const int slot = materialization.firstAddedSlot + offset;
+        m_lines.removeAt(m_slotToLine[slot]);
+    }
+    m_sectionEnd -= materialization.addedLines.size();
+    rebuildSlotToLine();
+    m_dirty = !matchesPristineSource();
+    return true;
+}
+
 VoicegroupSource::SlotSpan VoicegroupSource::discoverSlotSpan() const
 {
     SlotSpan span;

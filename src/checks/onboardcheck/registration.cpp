@@ -1,7 +1,6 @@
 #include <QAction>
 #include <QFile>
 #include <QList>
-#include <QListWidget>
 #include <QRegularExpression>
 #include <cstdio>
 

@@ -248,6 +248,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/selectionreticle.h
     src/ui/transportbar.cpp
     src/ui/transportbar.h
+    src/ui/workspaceui.cpp
+    src/ui/workspaceui.h
     src/ui/timelinesurface.cpp
     src/ui/timelinesurface.h
     src/ui/contextmenu.cpp
@@ -409,6 +411,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/support/eventsynth.h
         src/checks/support/songfixture.cpp
         src/checks/support/songfixture.h
+        src/checks/support/voicegroupbrowserdriver.cpp
+        src/checks/support/voicegroupbrowserdriver.h
         src/checks/selectioncheck.cpp
         src/checks/clipmimecheck.cpp
         src/checks/clipcheck.cpp

@@ -15,6 +15,7 @@
 #include "ui/songview.h"
 #include "ui/viewsidecar.h"
 #include "ui/voicegroupbrowser.h"
+#include "ui/workspaceui.h"
 
 bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabel)
 {
@@ -47,6 +48,7 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         qWarning("selftest: song failed to load");
         return false;
     }
+    SongView &view = m_workspace->viewFor(*tab);
     qInfo("selftest: loaded %s (%zu events, %d tracks)", qUtf8Printable(target->label),
           m_audio.timeline()->events.size(), m_audio.timeline()->usedTrackCount);
     // Realize the shown window before timed playback, especially under
@@ -61,8 +63,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     // M2: edit during playback — exercises the documentChanged plumbing
     // (timeline rebuild, playhead-preserving audio swap, view refresh).
     const uint64_t posBeforeEdit = m_audio.playheadSamples();
-    tab->doc.addNote(tab->view->selectionModel().primaryTrack(), 0, 60, 24, 100);
-    tab->doc.addLanePoint(tab->view->selectionModel().primaryTrack(), 7, 0, 100);
+    tab->doc.addNote(view.selectionModel().primaryTrack(), 0, 60, 24, 100);
+    tab->doc.addLanePoint(view.selectionModel().primaryTrack(), 7, 0, 100);
     if (!tab->doc.isDirty()) {
         qWarning("selftest: document not dirty after edits");
         return false;
@@ -108,7 +110,7 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                 donorSlot = i;
         }
         if (dsSlot >= 0) {
-            m_vgBrowser->selectSlot(dsSlot); // exercises the editor panel too
+            m_workspace->selectVoicegroupSlot(dsSlot); // exercises the editor panel too
             QByteArray fileBefore;
             {
                 QFile in(tab->vgSource->filePath());
@@ -219,7 +221,7 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         QTimer::singleShot(150, &loop, &QEventLoop::quit);
         loop.exec();
         const uint64_t pausedSample = m_audio.playheadSamples();
-        const double pausedViewTick = tab->view->playheadTick();
+        const double pausedViewTick = view.playheadTick();
         const double pausedEngineTick = m_audio.timeline()->tickForSample(pausedSample);
         constexpr double kPausedPlayheadToleranceTicks = 0.25;
         ok = std::abs(pausedViewTick - pausedEngineTick) <= kPausedPlayheadToleranceTicks;
@@ -238,8 +240,8 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                     ? static_cast<uint64_t>(pausedViewTick - 480.0)
                     : std::min<uint64_t>(static_cast<uint64_t>(pausedViewTick + 960.0), maxTick);
 
-            tab->view->commitEditCursor(pausedTargetTick);
-            const double immediateViewTick = tab->view->playheadTick();
+            view.commitEditCursor(pausedTargetTick);
+            const double immediateViewTick = view.playheadTick();
             const bool pausedViewOk = std::abs(immediateViewTick - double(pausedTargetTick)) <=
                                       kPausedPlayheadToleranceTicks;
             if (!pausedViewOk) {
@@ -286,7 +288,7 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         const uint64_t seekTick =
             std::min<uint64_t>(tl->lengthTicks / 2, uint64_t(tl->ticksPerBeat) * 16);
         const uint64_t seekSample = tl->sampleForTick(seekTick);
-        tab->view->commitEditCursor(seekTick); // transport is Playing: seeks
+        view.commitEditCursor(seekTick); // transport is Playing: seeks
         QTimer::singleShot(300, &loop, &QEventLoop::quit);
         loop.exec();
         const uint64_t afterSeek = m_audio.playheadSamples();
@@ -345,23 +347,22 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         SongRegistry::saveRegistrationMeta(m_project.root(), target->label,
                                            QStringLiteral("MUS_SELFTEST"),
                                            QStringLiteral("MUSIC_PLAYER_BGM"));
-        tab->view->setGridMinDenom(8); // non-default grid must round-trip too
-        tab->view->setGridFeel(SongView::GridFeel::Triplet);
-        tab->view->setLaneDisplayRange(0, 0x01, 16); // MOD axis zoom, ditto
-        const ViewSidecar::Snapshot saved{tab->view->viewState(), tab->view->editorViewState()};
+        view.setGridMinDenom(8); // non-default grid must round-trip too
+        view.setGridFeel(SongView::GridFeel::Triplet);
+        view.setLaneDisplayRange(0, 0x01, 16); // MOD axis zoom, ditto
+        const ViewSidecar::Snapshot saved{view.viewState(), view.editorViewState()};
         ok = ViewSidecar::save(m_project.root(), target->label, saved);
-        tab->view->zoomAroundContentX(2.0, 0); // knock the view off the state
-        tab->view->setGridMinDenom(0);
-        tab->view->setGridFeel(SongView::GridFeel::Straight);
-        tab->view->setLaneDisplayRange(0, 0x01, 0); // back to the MOD default
+        view.zoomAroundContentX(2.0, 0); // knock the view off the state
+        view.setGridMinDenom(0);
+        view.setGridFeel(SongView::GridFeel::Straight);
+        view.setLaneDisplayRange(0, 0x01, 0); // back to the MOD default
         ViewSidecar::Snapshot loaded;
         ok = ok && ViewSidecar::load(m_project.root(), target->label, &loaded);
         if (ok) {
-            tab->view->applyViewState(loaded.view);
+            view.applyViewState(loaded.view);
             loaded.editor.setDrawerState(m_editorDrawerState);
-            tab->view->applyEditorViewState(loaded.editor);
-            const ViewSidecar::Snapshot restored{tab->view->viewState(),
-                                                 tab->view->editorViewState()};
+            view.applyEditorViewState(loaded.editor);
+            const ViewSidecar::Snapshot restored{view.viewState(), view.editorViewState()};
             QString constant, player;
             ok = std::abs(restored.view.pxPerBeat - saved.view.pxPerBeat) < 0.001 &&
                  std::abs(restored.view.keyHeight - saved.view.keyHeight) < 0.001 &&
@@ -376,9 +377,9 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
                  constant == QLatin1String("MUS_SELFTEST");
         }
         QFile::remove(ViewSidecar::pathFor(m_project.root(), target->label));
-        tab->view->setGridMinDenom(0);                        // don't leak the test grid into a
-        tab->view->setGridFeel(SongView::GridFeel::Straight); // shutdown save
-        tab->view->setLaneDisplayRange(0, 0x01, 0);           // nor the MOD axis zoom
+        view.setGridMinDenom(0);                        // don't leak the test grid into a
+        view.setGridFeel(SongView::GridFeel::Straight); // shutdown save
+        view.setLaneDisplayRange(0, 0x01, 0);           // nor the MOD axis zoom
         if (ok)
             qInfo("selftest: sidecar view-state round trip OK");
         else

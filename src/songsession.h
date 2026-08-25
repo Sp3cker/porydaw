@@ -10,7 +10,6 @@
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "project/voicegroupsource.h"
-#include "ui/songview.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -18,8 +17,8 @@ extern "C" {
 
 // One open song tab. Each tab is a complete, independent editing session:
 // its own document (with its own undo stack — voicegroup edits ride it too),
-// built timeline, loaded voicegroup, and view. AudioEngine shares ownership
-// of the active timeline so callback handoff remains internal to audio.
+// built timeline, and loaded voicegroup. AudioEngine shares ownership of the
+// active timeline so callback handoff remains internal to audio.
 //
 // Two tabs sharing a -G voicegroup are deliberately independent copies:
 // unsaved voice edits stay inside their tab, and a clean tab whose .inc was
@@ -35,8 +34,10 @@ struct SynthToneBuf {
 };
 
 struct SongSession {
+    // Must precede doc: reverse destruction then destroys the undo stack and
+    // its commands before this stable voicegroup-edit target.
+    VoicegroupSourceHolder vgSource;
     SongDocument doc;
-    std::unique_ptr<VoicegroupSource> vgSource;
     std::shared_ptr<MidiTimeline> timeline;
     LoadedVoiceGroup *voicegroup = nullptr;
     // Keyed by slot; entries outlive any one LoadedVoiceGroup (engine track
@@ -44,7 +45,6 @@ struct SongSession {
     // freshly loaded voicegroup by MainWindow::applyPendingSynthTones.
     // std::map: Qt 6.2's QHash can't hold move-only values.
     std::map<int, std::unique_ptr<SynthToneBuf>> synthTones;
-    SongView *view = nullptr; // tab page; deleted here, before the tab widget
     int songId = -1;
     // Engine-applied cfg values, to react only to real changes on edits.
     QString appliedVoicegroupArg;
@@ -62,12 +62,6 @@ struct SongSession {
 
     ~SongSession()
     {
-        if (view) {
-            // The view draws from timeline/voicegroup; detach before they go.
-            view->setDocument(nullptr);
-            view->setSong(nullptr, nullptr);
-            delete view;
-        }
         if (voicegroup)
             voicegroup_free(voicegroup);
     }

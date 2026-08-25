@@ -7,16 +7,21 @@
 
 #include "project/voicegroupsource.h"
 
-struct SongSession;
-using VoicegroupEditApplied = std::function<void(SongSession &, int, bool)>;
+class QUndoStack;
 
-// Creates the voicegroup-owned undo operation for the source currently open
-// in session. Existing voices use mergeable value edits; materializing a blank
-// slot uses exact source snapshots. Null means the request is invalid or a no-op.
-std::unique_ptr<QUndoCommand> makeUndoableVoicegroupEdit(SongSession &session, int slot,
+using VoicegroupEditApplied = std::function<void(VoicegroupSource &, int, bool)>;
+
+// Creates the voicegroup-owned undo operation for the holder's current open
+// source. Commands retain the holder and source load name, resolving the
+// current source for every transition. Null means the request is invalid or
+// a no-op.
+std::unique_ptr<QUndoCommand> makeUndoableVoicegroupEdit(VoicegroupSourceHolder &target, int slot,
                                                          const VgVoice &voice, bool structural,
                                                          VoicegroupEditApplied applied);
 
-// Reapplies this session's executed voicegroup operations after its source was
-// reopened from disk.
-void reapplyVoicegroupEditsToReopenedSource(SongSession &session);
+// Reapplies only the executed prefix of this holder's voicegroup operations
+// after its current source was reopened. Structural replay refreshes the
+// command's materialization token for that source so a later undo reverts the
+// exact insertion. Replay never invokes callbacks.
+void reapplyVoicegroupEditsToReopenedSource(const QUndoStack &undoStack,
+                                            VoicegroupSourceHolder &target);

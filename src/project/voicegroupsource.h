@@ -6,6 +6,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include <memory>
 #include <optional>
 
 extern "C" {
@@ -203,10 +204,26 @@ class VoicegroupSource
     // slot. New sparse entries use the voice_group starting-note convention
     // and silent square-wave padding so existing voice slots stay fixed.
     bool setVoice(int slot, const VgVoice &voice);
-    // Full in-memory source state for structural undo. Restoring bytes leaves
-    // the current save baseline unchanged, so dirty() still reflects disk.
+    // Full in-memory source state for byte-conservative checks and direct
+    // source restoration. Undo uses BlankSlotMaterialization instead.
     QByteArray sourceBytes() const;
     bool restoreSourceBytes(const QByteArray &bytes);
+    // Atomically applies a blank-slot materialization only while the slot is
+    // still undefined. The returned narrow delta identifies exactly the
+    // generated lines and header rewrite, so its inverse never restores a
+    // whole stale source buffer.
+    struct BlankSlotMaterialization {
+        int firstAddedSlot = -1;
+        QVector<QByteArray> addedLines;
+        bool rewroteHeader = false;
+        QByteArray headerBefore;
+        QByteArray headerAfter;
+    };
+    std::optional<BlankSlotMaterialization> materializeBlankSlot(int slot, const VgVoice &voice);
+    // Removes only a previously materialized blank slot when all generated
+    // bytes (and any rewritten header) still match. A conflict leaves source
+    // bytes untouched.
+    bool revertBlankSlotMaterialization(const BlankSlotMaterialization &materialization);
     bool dirty() const { return m_dirty; }
 
     // Writes the whole file back; only edited voice lines differ from the
@@ -326,4 +343,39 @@ class VoicegroupSource
     // add/remove lines, so per-line pristine state is not sufficient.
     QByteArray m_pristineSource;
     bool m_dirty = false;
+};
+
+// Stable session-owned target for voicegroup undo commands. Replacing its
+// current source is a GUI-thread logical atomic transition: observers see
+// either the old source or the fully opened replacement, never a moved holder.
+class VoicegroupSourceHolder final
+{
+  public:
+    VoicegroupSourceHolder() = default;
+    ~VoicegroupSourceHolder() = default;
+    VoicegroupSourceHolder(const VoicegroupSourceHolder &) = delete;
+    VoicegroupSourceHolder &operator=(const VoicegroupSourceHolder &) = delete;
+    VoicegroupSourceHolder(VoicegroupSourceHolder &&) = delete;
+    VoicegroupSourceHolder &operator=(VoicegroupSourceHolder &&) = delete;
+
+    VoicegroupSource *get() { return m_source.get(); }
+    const VoicegroupSource *get() const { return m_source.get(); }
+    VoicegroupSource *operator->() { return m_source.get(); }
+    const VoicegroupSource *operator->() const { return m_source.get(); }
+    explicit operator bool() const { return bool(m_source); }
+
+    void replace(std::unique_ptr<VoicegroupSource> replacement) { m_source.swap(replacement); }
+    void clear() { m_source.reset(); }
+
+    VoicegroupSource *resolve(const QString &expectedLoadName)
+    {
+        return m_source && m_source->loadName() == expectedLoadName ? m_source.get() : nullptr;
+    }
+    const VoicegroupSource *resolve(const QString &expectedLoadName) const
+    {
+        return m_source && m_source->loadName() == expectedLoadName ? m_source.get() : nullptr;
+    }
+
+  private:
+    std::unique_ptr<VoicegroupSource> m_source;
 };

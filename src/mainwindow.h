@@ -12,21 +12,17 @@
 #include "songsession.h"
 #include "ui/editorviewstate.h"
 #include "ui/settingsdialog.h"
+#include "ui/workspaceui.h"
 class QAction;
 class QChildEvent;
 class QDockWidget;
 class QLabel;
-class QTabWidget;
 class QSettings;
 class QTimer;
 class QWidget;
 class QUndoGroup;
 class PolyphonyPanel;
 class SmfFile;
-class SongListPanel;
-class SongView;
-class VoicegroupBrowser;
-class TransportBar;
 
 namespace themes {
 class ThemeController;
@@ -60,6 +56,10 @@ class MainWindow : public QMainWindow
     // stacks, playback stopping on tab switches, tab close/replace, and
     // multi-tab session persistence. QSettings must be redirected.
     bool runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB);
+
+    // Assert restored tab persistence through the WorkspaceUi session seam
+    // (--tabcheck; tabcheck.cpp).
+    bool checkTabRestore(const QString &songA, const QString &songB);
 
     // Focused MainWindow-to-SongView drawer routing check
     // (--check-mainwindow-routing; mainwindowroutingcheck.cpp).
@@ -124,8 +124,6 @@ class MainWindow : public QMainWindow
     void deleteSongById(int songId);
     void uiTick();
     void onVoiceEditRequested(int slot, const VgVoice &voice, bool structural);
-    void tabChanged(int index);
-    void closeTab(int index);
 
   private:
     void buildUi();
@@ -155,20 +153,20 @@ class MainWindow : public QMainWindow
 
     // --- tab/session plumbing ---
     SongSession *activeSession() const { return m_active; }
-    SongSession *sessionForWidget(QWidget *widget) const;
     SongSession *sessionForLabel(const QString &label) const;
-    // Creates an empty session with a wired-up view; not yet in the tab bar.
+    // Creates and model-wires an unattached session. A page is published only
+    // after the document and all borrowed presentation data are ready.
     SongSession *createSession();
-    // Removes the session's tab (re-activating a neighbor via currentChanged)
-    // and destroys it. The engine is rebound before the data is freed.
+    void wireSongView(SongSession &session, SongView &view);
+    void closeSession(SongSession &session);
+    // Detaches the session page before freeing model state.
     void destroySession(SongSession *session);
     // Prompts to save every dirty session (focusing each tab as it's asked
     // about); false = user cancelled. Saves answered before a Cancel have
     // already written, as with any save-all.
     bool promptToSaveAllSessions();
-    // Destroys every session with no prompting and the engine/docks
-    // detached once up front — currentChanged is suppressed so the doomed
-    // neighbors aren't each rebound and persisted in turn.
+    // Destroys every session with no prompting and detaches the engine and
+    // docks once up front.
     void teardownSessions();
     // Makes a session the engine-attached, dock-bound one (nullptr = none).
     // Always stops playback first. force re-binds even the already-active
@@ -295,20 +293,16 @@ class MainWindow : public QMainWindow
     EditorDrawerState m_editorDrawerState;
     std::vector<std::unique_ptr<SongSession>> m_sessions;
     SongSession *m_active = nullptr;
-    // Suppress currentChanged handling (and tab persistence) while tabs are
-    // being torn down or bulk-restored; the caller activates once at the end.
+    // Suppress semantic activation during teardown or bulk restore; the
+    // caller activates one ready session after the batch.
     bool m_tearingDown = false;
     bool m_restoringSession = false;
     VgCatalog m_vgCatalog;
 
-    SongListPanel *m_songList = nullptr;
-    QTabWidget *m_tabs = nullptr;
+    std::unique_ptr<WorkspaceUi> m_workspace;
     QUndoGroup *m_undoGroup = nullptr;
-    VoicegroupBrowser *m_vgBrowser = nullptr;
-    QDockWidget *m_vgDock = nullptr;
     PolyphonyPanel *m_polyPanel = nullptr;
     QDockWidget *m_polyDock = nullptr;
-    TransportBar *m_transportBar = nullptr;
     std::unique_ptr<QSettings> m_themeSettings;
     std::unique_ptr<themes::ThemeController> m_themeController;
     std::unique_ptr<themes::ThemeDialog> m_themeDialog;

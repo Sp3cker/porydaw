@@ -1,7 +1,6 @@
 #include <QAction>
 #include <QFile>
 #include <QFileInfo>
-#include <QListWidget>
 #include <QProcess>
 #include <QSettings>
 #include <QString>
@@ -10,7 +9,7 @@
 
 #include "checks/onboardcheck/pipeline.h"
 #include "mainwindow.h"
-#include "ui/songlistpanel.h"
+#include "ui/workspaceui.h"
 
 // --onboardcheck <projectRoot> [mid2agbPath]: M3 onboarding check. Exercises
 // the New Song and Import backends headlessly against a scratch copy of a
@@ -214,8 +213,8 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
 
     // Native-format QSettings use the registry on Windows, so setPath() in
     // the harness cannot isolate a persisted song filter. Clear it explicitly
-    // before asserting on the fixture's list item.
-    m_songList->restoreFilters(QString(), 0, QString());
+    // before asserting on the fixture's playable-song presentation.
+    m_workspace->restoreSongFilters({});
     if (!openProjectDir(projectRoot, /*interactive=*/false)) {
         std::fprintf(stderr, "onboardcheck: project failed to open in MainWindow\n");
         return false;
@@ -229,7 +228,8 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
     check(m_registerAction->isEnabled(),
           "Register Song disabled for a song missing its charmap entry");
 
-    // The model carries the gap and the song browser badges it.
+    // The model carries the gap while the workspace continues to present the
+    // playable song through its semantic list boundary.
     const auto findSong = [this](const QString &wanted) -> const SongInfo * {
         for (const SongInfo &s : m_project.songs()) {
             if (s.label == wanted)
@@ -242,27 +242,20 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
           "partially registered song no longer counts as table-registered");
     check(info && info->registrationGaps == QStringList{QStringLiteral("charmap.txt")},
           "registrationGaps does not name the stripped charmap entry");
-    auto *list = m_songList->findChild<QListWidget *>();
-    const auto itemFor = [list](int id) -> QListWidgetItem * {
-        for (int i = 0; list && i < list->count(); i++) {
-            if (list->item(i)->data(Qt::UserRole).toInt() == id)
-                return list->item(i);
-        }
-        return nullptr;
-    };
-    QListWidgetItem *item = info ? itemFor(info->id) : nullptr;
-    check(item && item->text().contains(QStringLiteral("not fully registered")),
-          "song list shows no badge for a partial registration");
+    check(info && m_workspace->isSongListed(label),
+          "partially registered song is absent from the browser");
 
-    // The context menu's Register Song path heals the registration.
-    if (info)
+    // Select it by the production seam before taking the context-menu action.
+    if (info) {
+        m_workspace->setCurrentSong(info->id);
         registerSongById(info->id);
+    }
+
     check(!m_registerAction->isEnabled(), "Register Song still enabled after backfill");
     info = findSong(label);
     check(info && info->registrationGaps.isEmpty(),
           "registration gaps not cleared by the backfill");
-    item = info ? itemFor(info->id) : nullptr;
-    check(item && item->text() == label, "badge not cleared after the backfill");
+    check(info && m_workspace->isSongListed(label), "registered song disappeared from the browser");
     // A fresh activation recomputes the enable state from the reloaded songs.
     activateSession(m_active, /*force=*/true);
     check(!m_registerAction->isEnabled(),
@@ -281,6 +274,7 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
         }
     };
 
+    m_workspace->restoreSongFilters({});
     if (!openProjectDir(projectRoot, /*interactive=*/false)) {
         std::fprintf(stderr, "onboardcheck: project failed to open in MainWindow\n");
         return false;
@@ -302,6 +296,8 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
         return false;
     }
     const SongInfo song = *info; // survives the reload inside the deletion
+    const qsizetype listedSongCount = m_workspace->listedSongCount();
+    check(m_workspace->isSongListed(label), "song is absent from the browser before deletion");
 
     QString error;
     check(performSongDeletion(song, QString(), &error), "performSongDeletion failed");
@@ -312,11 +308,9 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
     for (const SongInfo &s : m_project.songs())
         inModel = inModel || s.label == label;
     check(!inModel, "deleted song still in the project model");
-    auto *list = m_songList->findChild<QListWidget *>();
-    bool listed = false;
-    for (int i = 0; list && i < list->count(); i++)
-        listed = listed || list->item(i)->text().startsWith(label);
-    check(!listed, "deleted song still listed in the browser");
+    check(!m_workspace->isSongListed(label), "deleted song still listed in the browser");
+    check(m_workspace->listedSongCount() == listedSongCount - 1,
+          "deleting the song did not update the browser count");
     check(!QFile::exists(projectRoot + QStringLiteral("/sound/songs/midi/%1.mid").arg(label)),
           "deleted song's .mid still in sound/songs/midi");
     check(QFile::exists(projectRoot + QStringLiteral("/.porydaw/trash/%1.mid").arg(label)),
