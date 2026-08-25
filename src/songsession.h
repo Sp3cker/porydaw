@@ -46,7 +46,19 @@ struct SongSession {
     // std::map: Qt 6.2's QHash can't hold move-only values.
     std::map<int, std::unique_ptr<SynthToneBuf>> synthTones;
     int songId = -1;
-    // Engine-applied cfg values, to react only to real changes on edits.
+    uint64_t pendingMidiRequest = 0;
+    uint64_t pendingVgRequest = 0;
+    uint64_t pendingVgProbeRequest = 0;
+    uint64_t pendingVgSaveRequest = 0;
+    uint64_t pendingPreviewRequest = 0;
+    // A save owns an immutable SongDocument snapshot; the callback must
+    // confirm this request before touching the live session.
+    uint64_t pendingSaveRequest = 0;
+    // Sidecar load is cosmetic but gates interaction until it resolves.
+    uint64_t pendingSidecarRequest = 0;
+    bool midiBound = false;
+    bool vgBound = false;
+    bool sidecarBound = false;
     QString appliedVoicegroupArg;
     int appliedVolume = 127;
     int appliedReverb = -1;
@@ -54,6 +66,11 @@ struct SongSession {
     // whose file changed underneath (saved from another tab) reloads it when
     // the tab is activated.
     QDateTime vgFileTime;
+
+    // SongView interaction is available only after every asynchronous
+    // binding has landed. The individual flags remain public because
+    // loading can still be observed in its three independent states.
+    bool isInteractive() const { return midiBound && vgBound && sidecarBound; }
 
     // The tab's unsaved-changes state: song and voicegroup edits are one
     // document to the user, so every dirty check (tab title, window title,

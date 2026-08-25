@@ -1,13 +1,16 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QPointer>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
 
 #include "audio/audioengine.h"
 #include "project/decompproject.h"
+#include "project/projectio.h"
 #include "project/voicegroupsource.h"
 #include "songsession.h"
 #include "ui/editorviewstate.h"
@@ -18,6 +21,7 @@ class QChildEvent;
 class QDockWidget;
 class QLabel;
 class QSettings;
+class QMessageBox;
 class QTimer;
 class QWidget;
 class QUndoGroup;
@@ -130,7 +134,10 @@ class MainWindow : public QMainWindow
     void updateWindowFrameTheme();
     // The dialog-less half of openProject; also the session-restore entry.
     // On failure warns via dialog (interactive) or status bar (restore).
-    bool openProjectDir(const QString &dir, bool interactive = true);
+    using ProjectOpenContinuation = std::function<void(bool)>;
+    void openProjectDir(const QString &dir, bool interactive = true,
+                        ProjectOpenContinuation continuation = {});
+    bool projectMutationInProgress() const;
     void populateSongList();
     // Opens a song: focuses its tab when already open, otherwise loads it
     // into the current tab (prompting for unsaved changes) or a new one.
@@ -140,16 +147,19 @@ class MainWindow : public QMainWindow
     // wizard asked for one, writes the .mid + midi.cfg line, registers the
     // song in the three registration files, reloads the project, and opens
     // the song in a new tab.
-    void finishCreateSong(const SmfFile &smf, const QString &label, const QString &constant,
-                          const QString &player, const SongCfg &cfg, const QString &newVoicegroup);
-    // The dialog-less half of deleteSongById (also the harness entry): closes
-    // the song's tab discarding its edits, moves the .mid to .porydaw/trash/,
-    // removes the flag line, unregisters, drops the sidecar, deletes the
-    // named voicegroup (empty = keep), and reloads the project. Best-effort:
-    // every step runs; false collects what failed into *error.
-    bool performSongDeletion(const SongInfo &song, const QString &deleteVoicegroupName,
-                             QString *error);
-    void reloadProject();
+    void finishCreateSong(SmfFile smf, const QString &label, const QString &constant,
+                          const QString &player, const SongCfg &cfg, const QString &newVoicegroup,
+                          const QString &projectRoot);
+    // The dialog-less half of deleteSongById. The GUI detaches the session
+    // before the worker re-derives and applies the removal.
+    using DeletionContinuation = std::function<void(bool, QString)>;
+    void performSongDeletion(const SongInfo &song, const QString &deleteVoicegroupName,
+                             DeletionContinuation continuation = {});
+    void reloadProject(ProjectOpenContinuation continuation = {});
+    void queueVoicegroupLoad(SongSession &session, const SongCfg &cfg, int keepSlot,
+                             std::function<void(bool)> completion = {});
+    void queueVoicegroupProbe(SongSession &session);
+    void queueCatalogRefresh();
 
     // --- tab/session plumbing ---
     SongSession *activeSession() const { return m_active; }
@@ -162,11 +172,13 @@ class MainWindow : public QMainWindow
     // Detaches the session page before freeing model state.
     void destroySession(SongSession *session);
     // Prompts to save every dirty session (focusing each tab as it's asked
-    // about); false = user cancelled. Saves answered before a Cancel have
-    // already written, as with any save-all.
-    bool promptToSaveAllSessions();
-    // Destroys every session with no prompting and detaches the engine and
-    // docks once up front.
+    // about); completion(false) means the user cancelled or a save failed.
+    // Saves answered before a Cancel have already been queued or written.
+    using SessionContinuation = std::function<void(bool)>;
+    void promptToSaveAllSessions(SessionContinuation continuation);
+    // Destroys every session with no prompting and the engine/docks
+    // detached once up front — currentChanged is suppressed so the doomed
+    // neighbors aren't each rebound and persisted in turn.
     void teardownSessions();
     // Makes a session the engine-attached, dock-bound one (nullptr = none).
     // Always stops playback first. force re-binds even the already-active
@@ -198,16 +210,18 @@ class MainWindow : public QMainWindow
     void updateVoicegroupBrowser();
     void onDocumentChanged(SongSession &session);
     // Saves the session's song AND its dirty voicegroup — the two are one
-    // document to the user. The voicegroup goes first, so a failed write
-    // leaves the session dirty. false = nothing was marked clean.
-    bool saveSession(SongSession &session);
-    // Prompts to save the session's unsaved changes (song edits and
-    // voicegroup edits alike); false = user cancelled the action.
-    bool maybeSaveSession(SongSession &session);
-    // Locates + parses the source behind the session's voicegroup (nullptr
-    // on exotic layouts — the editor degrades to read-only).
-    void openVoicegroupSource(SongSession &session, const SongCfg &cfg);
+    // document to the user. The voicegroup goes first; completion is called
+    // after the queued MIDI/flags operation finishes. A failed operation or
+    // a newer edit that landed during the save leaves the session dirty.
+    void saveSession(SongSession &session, SessionContinuation continuation = {});
+    // Prompts to save the session's unsaved changes (song and voicegroup
+    // edits alike). completion(false) means the user cancelled, the
+    // asynchronous save failed, or newer edits remain dirty.
+    void maybeSaveSession(SongSession &session, SessionContinuation continuation);
     void onVoiceEdited(SongSession &session, int slot, bool structural);
+    void continueImportSampleForSlot(int slot, QString projectRoot, const SampleFormatProbe &probe);
+    void continueEditSampleForSlot(int slot, QString name, QString projectRoot,
+                                   SampleProjectResult result);
     // Auditions unsaved structural edits: renders the edited source into
     // .porydaw/vgpreview/ and reloads through the loader's config override,
     // which shadows the real file without touching it.
@@ -222,15 +236,17 @@ class MainWindow : public QMainWindow
     // Bytes are poked in place, so live tweaks are audible immediately.
     // Returns whether any tone or name actually changed.
     bool applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *vg);
-    // The descriptor a synth symbol stands for: pending first, then on-disk.
     const VgSynthDesc *synthDescForSymbol(const QString &symbol);
-    void cleanupVgPreview();
+    // Cancels only project-global disposable reads/probes. Session-scoped
+    // requests and project mutations stay FIFO so a failed switch leaves the
+    // old sessions and their pending work intact.
+    void cancelDisposableProjectRequests();
+    void cleanupVgPreview(std::function<void()> completion = {});
     void updateVgDockTitle();
     void newVoicegroup();
     // Sidecar view state (SPEC §4.4): written whenever a session is let go
     // (tab close, project switch, app close). Cosmetic; silent on failure.
     void saveViewState(SongSession &session);
-    LoadedVoiceGroup *loadVoicegroupFor(const SongCfg &cfg, QString *tried);
     // Starts (or resumes) playback; from Stopped, seeks to the edit cursor
     // first so playback begins there. fromEditCursor forces that seek even
     // out of Paused — the Space binding (Reaper-style restart), while the
@@ -253,10 +269,10 @@ class MainWindow : public QMainWindow
 
     // The Voicegroup dock's project-wide symbol/instrument lists: full
     // project .inc scans (catalogScan + directSoundCatalog + progWave),
-    // far too slow to re-run on every tab switch. Cached per project root;
-    // invalidated on project open/reload and on any voicegroup write.
     struct VgCatalog {
         bool valid = false;
+        bool loading = false;
+        bool perFileVoicegroups = false;
         QStringList groupArgs; // the -G choices (SongRegistry::voicegroupArgs)
         QStringList directSound;
         QStringList progWave;
@@ -290,6 +306,7 @@ class MainWindow : public QMainWindow
     bool m_persistSession = true;
     EngineSettings m_engineSettings;
     DecompProject m_project;
+    std::unique_ptr<ProjectIo> m_projectIo;
     EditorDrawerState m_editorDrawerState;
     std::vector<std::unique_ptr<SongSession>> m_sessions;
     SongSession *m_active = nullptr;
@@ -297,7 +314,24 @@ class MainWindow : public QMainWindow
     // caller activates one ready session after the batch.
     bool m_tearingDown = false;
     bool m_restoringSession = false;
+    bool m_projectSwitchInProgress = false;
+    bool m_closeInProgress = false;
+    bool m_closeAccepted = false;
     VgCatalog m_vgCatalog;
+    uint64_t m_pendingCatalogRequest = 0;
+    uint64_t m_pendingSampleSetRequest = 0;
+    uint64_t m_pendingSampleProbeRequest = 0;
+    uint64_t m_pendingSampleProjectRequest = 0;
+    uint64_t m_pendingSampleCommitRequest = 0;
+    uint64_t m_pendingRegistrationPlanRequest = 0;
+    QPointer<QMessageBox> m_registerSongConfirmation;
+    uint64_t m_pendingRegistrationRequest = 0;
+    uint64_t m_pendingDeletionPlanRequest = 0;
+    uint64_t m_pendingDeletionRequest = 0;
+    QPointer<QMessageBox> m_deleteSongConfirmation;
+    uint64_t m_pendingProjectRefreshRequest = 0;
+    uint64_t m_pendingCreateSongRequest = 0;
+    uint64_t m_pendingCreateVoicegroupRequest = 0;
 
     std::unique_ptr<WorkspaceUi> m_workspace;
     QUndoGroup *m_undoGroup = nullptr;

@@ -6,9 +6,43 @@
 #include <QRegularExpression>
 #include <QSet>
 #include <QTextStream>
+#include <utility>
 
 #include "project/songregistry.h"
 #include "project/songsmk.h"
+
+ProjectSnapshot::ProjectSnapshot(QString root, QVector<SongInfo> songs,
+                                 QVector<MusicPlayer> players, QHash<QString, int> trackBudgets)
+    : m_root(std::move(root))
+    , m_songs(std::move(songs))
+    , m_players(std::move(players))
+    , m_trackBudgets(std::move(trackBudgets))
+{}
+
+bool ProjectSnapshot::isOpen() const
+{
+    return !m_root.isEmpty();
+}
+
+const QString &ProjectSnapshot::root() const
+{
+    return m_root;
+}
+
+const QVector<SongInfo> &ProjectSnapshot::songs() const
+{
+    return m_songs;
+}
+
+const QVector<MusicPlayer> &ProjectSnapshot::players() const
+{
+    return m_players;
+}
+
+int ProjectSnapshot::trackBudgetFor(const SongInfo &song) const
+{
+    return m_trackBudgets.value(song.label, 16);
+}
 
 bool DecompProject::open(const QString &rootDir, QString *error)
 {
@@ -53,8 +87,24 @@ bool DecompProject::open(const QString &rootDir, QString *error)
     return true;
 }
 
+void DecompProject::replaceWith(const ProjectSnapshot &snapshot)
+{
+    m_root = snapshot.root();
+    m_songs = snapshot.songs();
+    m_players = snapshot.players();
+    m_trackBudgets.clear();
+    m_trackBudgets.reserve(m_songs.size());
+    for (const SongInfo &song : m_songs)
+        m_trackBudgets.insert(song.label, snapshot.trackBudgetFor(song));
+}
+
 int DecompProject::trackBudgetFor(const SongInfo &song) const
 {
+    if (m_players.isEmpty()) {
+        const auto it = m_trackBudgets.constFind(song.label);
+        if (it != m_trackBudgets.constEnd())
+            return it.value();
+    }
     for (const MusicPlayer &p : m_players) {
         if (p.name == song.player)
             return p.trackCount >= 0 ? p.trackCount : 16;
@@ -73,6 +123,7 @@ void DecompProject::close()
     m_root.clear();
     m_songs.clear();
     m_players.clear();
+    m_trackBudgets.clear();
 }
 
 bool DecompProject::parseSongTable(QString *error)

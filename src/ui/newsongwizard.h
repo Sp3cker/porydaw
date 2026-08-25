@@ -19,19 +19,31 @@ class AnalysisPage;
 // The wizard only collects choices; MainWindow writes the .mid + midi.cfg
 // line and registers the song in the three registration files.
 //
-// `voicegroupArgs` is the project's -G choices (SongRegistry::voicegroupArgs);
-// the caller passes it in because scanning every voicegroup file is too slow
-// to redo per dialog — MainWindow hands over its cached catalog.
+// ProjectData is a detached copy of the project values needed to populate
+// hints and choices. In particular, the wizard never scans the project root
+// while the user types.
 class NewSongWizard : public QWizard
 {
     Q_OBJECT
 
   public:
-    // Blank new song.
+    struct ProjectData {
+        QVector<SongInfo> songs;
+        QVector<MusicPlayer> players;
+        QStringList voicegroupArgs;
+        bool canCreateVoicegroup = false;
+    };
+
+    // Constructors taking ProjectData are the no-I/O interface for callers
+    // that already own a project snapshot or catalog.
+    NewSongWizard(ProjectData projectData, QWidget *parent = nullptr);
+    NewSongWizard(ProjectData projectData, SmfFile imported, const QString &sourcePath,
+                  QWidget *parent = nullptr);
+
+    // Compatibility constructors build ProjectData from the project's
+    // already-cached values. They do not read the project root.
     NewSongWizard(DecompProject *project, const QStringList &voicegroupArgs,
                   QWidget *parent = nullptr);
-    // Import: `imported` is the parsed external file (kept as-is apart from
-    // the analysis page's optional division rescale).
     NewSongWizard(DecompProject *project, SmfFile imported, const QString &sourcePath,
                   const QStringList &voicegroupArgs, QWidget *parent = nullptr);
 
@@ -48,9 +60,9 @@ class NewSongWizard : public QWizard
     QString newVoicegroupName() const;
 
   private:
-    void buildPages(const QString &sourcePath, const QStringList &voicegroupArgs);
+    void buildPages(const QString &sourcePath);
 
-    DecompProject *m_project;
+    ProjectData m_projectData;
     bool m_importMode = false;
     SmfFile m_imported;
     ImportAnalysis m_analysis;

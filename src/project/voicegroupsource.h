@@ -229,6 +229,9 @@ class VoicegroupSource
     // Writes the whole file back; only edited voice lines differ from the
     // bytes read at open/reload time.
     bool save(QString *error);
+    // Adopts a detached worker save only when no newer GUI edit replaced the
+    // captured bytes. Returns false when the source became stale meanwhile.
+    bool didSave(const QByteArray &savedBytes);
 
     // The edited source as a standalone parseable file: the whole buffer for
     // a per-file voicegroup, the section slice for a monolithic one.

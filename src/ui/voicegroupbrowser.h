@@ -41,6 +41,14 @@ class VoicegroupBrowser : public QWidget
     // vg may be nullptr (no song loaded). Not owned; the caller must clear it
     // (setVoicegroup(nullptr)) before the voicegroup is freed.
     void setVoicegroup(const LoadedVoiceGroup *vg);
+    // Async-load placeholder (Wave 2): the owner calls setLoading(true) when the
+    // song's voicegroup load begins and setLoading(false) once the browser holds
+    // the bound voicegroup (or the session is gone). Loading fills the stable 128
+    // rows with "000 Loading..." placeholders and disables the selector and
+    // editor in place — nothing is hidden, resized, or rebuilt, so the dock's
+    // geometry never shifts when the real voicegroup lands. The tree is never
+    // cleared. setVoicegroup(nullptr) also exits loading.
+    void setLoading(bool loading);
 
     // The selector at the top of the dock: the project's -G args (editable,
     // so unknown/new symbols still work) and the song's current one. Choices
@@ -160,6 +168,7 @@ class VoicegroupBrowser : public QWidget
     // source object changes (a different voicegroup/song was loaded).
     QHash<int, QHash<int, VgAdsr>> m_adsrHistory;
     bool m_updating = false;
+    bool m_loading = false; // setLoading: placeholder rows shown, controls inert
 
     QWidget *m_editor = nullptr;
     QLabel *m_notice = nullptr;

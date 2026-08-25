@@ -7,6 +7,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPointer>
 #include <QSettings>
 #include <QSizePolicy>
 #include <QSpinBox>
@@ -19,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <memory>
 
 #include "checks/support/eventsynth.h"
 #include "mainwindow.h"
@@ -47,7 +49,35 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         std::fprintf(stderr, "tabcheck: no audio device available\n");
         return false;
     }
-    if (!openProjectDir(projectRoot, /*interactive=*/false)) {
+    const auto openProject = [this](const QString &root) {
+        struct OpenState {
+            bool completed = false;
+            bool succeeded = false;
+        };
+        const auto state = std::make_shared<OpenState>();
+        QEventLoop openLoop;
+        QTimer poll;
+        QTimer timeout;
+        QObject::connect(&poll, &QTimer::timeout, &openLoop, [&] {
+            if (state->completed)
+                openLoop.quit();
+        });
+        QObject::connect(&timeout, &QTimer::timeout, &openLoop, &QEventLoop::quit);
+        timeout.setSingleShot(true);
+        openProjectDir(root, /*interactive=*/false, [state](bool succeeded) {
+            state->succeeded = succeeded;
+            state->completed = true;
+        });
+        if (!state->completed) {
+            poll.start(1);
+            timeout.start(30000);
+            openLoop.exec();
+            poll.stop();
+            timeout.stop();
+        }
+        return state->completed && state->succeeded;
+    };
+    if (!openProject(projectRoot)) {
         std::fprintf(stderr, "tabcheck: project failed to open\n");
         return false;
     }
@@ -64,6 +94,158 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     const auto wait = [&loop](int ms) {
         QTimer::singleShot(ms, &loop, &QEventLoop::quit);
         loop.exec();
+    };
+    const auto waitForLoaded = [this, &failures](SongSession *session, const char *what) {
+        const auto isLive = [this](SongSession *candidate) {
+            return candidate &&
+                   std::any_of(m_sessions.cbegin(), m_sessions.cend(),
+                               [candidate](const auto &owned) { return owned.get() == candidate; });
+        };
+        if (!isLive(session)) {
+            std::fprintf(stderr, "tabcheck: FAIL: %s session disappeared before loading\n", what);
+            failures++;
+            return false;
+        }
+
+        constexpr int loadTimeoutMs = 15000;
+        QEventLoop loadLoop;
+        QTimer poll;
+        QTimer deadline;
+        bool timedOut = false;
+        const auto observe = [&] {
+            if (!isLive(session) || session->isInteractive())
+                loadLoop.quit();
+        };
+        poll.setInterval(1);
+        deadline.setSingleShot(true);
+        QObject::connect(&poll, &QTimer::timeout, &loadLoop, observe);
+        QObject::connect(&deadline, &QTimer::timeout, &loadLoop, [&] {
+            timedOut = true;
+            loadLoop.quit();
+        });
+        observe();
+        if (isLive(session) && !session->isInteractive()) {
+            poll.start();
+            deadline.start(loadTimeoutMs);
+            loadLoop.exec();
+        }
+        poll.stop();
+        deadline.stop();
+
+        if (!isLive(session)) {
+            std::fprintf(stderr, "tabcheck: FAIL: %s session was destroyed while loading\n", what);
+            failures++;
+            return false;
+        }
+        if (!session->isInteractive()) {
+            if (timedOut)
+                std::fprintf(stderr, "tabcheck: FAIL: timed out waiting for %s (%d ms)\n", what,
+                             loadTimeoutMs);
+            else
+                std::fprintf(stderr, "tabcheck: FAIL: %s did not become ready\n", what);
+            failures++;
+            return false;
+        }
+        return true;
+    };
+    const auto waitForVoicegroupRefresh = [this, &failures](
+                                              SongSession *session, const LoadedVoiceGroup *before,
+                                              const QDateTime &beforeTime, const char *what) {
+        const auto isLive = [this, session] {
+            return session &&
+                   std::any_of(m_sessions.cbegin(), m_sessions.cend(),
+                               [session](const auto &owned) { return owned.get() == session; });
+        };
+        if (!isLive()) {
+            std::fprintf(stderr, "tabcheck: FAIL: %s session disappeared before refresh\n", what);
+            failures++;
+            return false;
+        }
+        constexpr int refreshTimeoutMs = 15000;
+        QEventLoop refreshLoop;
+        QTimer poll;
+        QTimer deadline;
+        bool timedOut = false;
+        const auto observe = [&] {
+            const bool changed = session->voicegroup != before || session->vgFileTime != beforeTime;
+            if (!isLive() ||
+                (session->pendingVgProbeRequest == 0 && session->pendingVgRequest == 0 && changed))
+                refreshLoop.quit();
+        };
+        poll.setInterval(1);
+        deadline.setSingleShot(true);
+        QObject::connect(&poll, &QTimer::timeout, &refreshLoop, observe);
+        QObject::connect(&deadline, &QTimer::timeout, &refreshLoop, [&] {
+            timedOut = true;
+            refreshLoop.quit();
+        });
+        observe();
+        const bool changedBefore =
+            session->voicegroup != before || session->vgFileTime != beforeTime;
+        if (isLive() && !(session->pendingVgProbeRequest == 0 && session->pendingVgRequest == 0 &&
+                          changedBefore)) {
+            poll.start();
+            deadline.start(refreshTimeoutMs);
+            refreshLoop.exec();
+        }
+        poll.stop();
+        deadline.stop();
+        if (!isLive()) {
+            std::fprintf(stderr, "tabcheck: FAIL: %s session was destroyed while refreshing\n",
+                         what);
+            failures++;
+            return false;
+        }
+        const bool changed = session->voicegroup != before || session->vgFileTime != beforeTime;
+        if (!changed || session->pendingVgProbeRequest != 0 || session->pendingVgRequest != 0) {
+            if (timedOut)
+                std::fprintf(stderr, "tabcheck: FAIL: timed out waiting for %s (%d ms)\n", what,
+                             refreshTimeoutMs);
+            else
+                std::fprintf(stderr, "tabcheck: FAIL: %s did not complete\n", what);
+            failures++;
+            return false;
+        }
+        return true;
+    };
+    const auto waitForSave = [this, &failures](SongSession *session, const char *what) {
+        const auto isLive = [this, session] {
+            return session &&
+                   std::any_of(m_sessions.cbegin(), m_sessions.cend(),
+                               [session](const auto &owned) { return owned.get() == session; });
+        };
+        if (!isLive()) {
+            std::fprintf(stderr, "tabcheck: FAIL: %s session disappeared before save\n", what);
+            failures++;
+            return false;
+        }
+        struct SaveState {
+            bool completed = false;
+            bool succeeded = false;
+        };
+        const auto state = std::make_shared<SaveState>();
+        QEventLoop saveLoop;
+        QPointer<QEventLoop> loopGuard = &saveLoop;
+        QTimer timeout;
+        timeout.setSingleShot(true);
+        QObject::connect(&timeout, &QTimer::timeout, &saveLoop, &QEventLoop::quit);
+        saveSession(*session, [state, loopGuard](bool succeeded) mutable {
+            state->completed = true;
+            state->succeeded = succeeded;
+            if (loopGuard)
+                loopGuard->quit();
+        });
+        if (!state->completed) {
+            timeout.start(30000);
+            saveLoop.exec();
+            timeout.stop();
+        }
+        if (!state->completed || !state->succeeded) {
+            std::fprintf(stderr, "tabcheck: FAIL: %s did not complete successfully\n", what);
+            failures++;
+            return false;
+        }
+        return true;
     };
 
     auto *rootCombo = findChild<QComboBox *>(QStringLiteral("transportScaleRoot"));
@@ -82,14 +264,23 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
               "transport scale controls accept keyboard focus");
     }
 
-    // 1. First song loads into the first tab; the engine borrows its data.
+    // 1. First song presents an empty, active tab before either async result.
     loadSongByLabel(songA);
     SongSession *tabA = m_active;
-    if (!tabA || tabA->doc.label() != songA) {
-        std::fprintf(stderr, "tabcheck: song '%s' did not load\n", qUtf8Printable(songA));
+    if (!tabA) {
+        std::fprintf(stderr, "tabcheck: song '%s' did not create a session\n",
+                     qUtf8Printable(songA));
         return false;
     }
     check(m_workspace->openSessionCount() == 1, "first song did not open exactly one tab");
+    check(m_active == tabA && m_workspace->isSessionAttached(*tabA) &&
+              !m_workspace->viewFor(*tabA).isHidden(),
+          "first song did not present an active visible tab immediately");
+    check(!tabA->midiBound && !tabA->vgBound && !tabA->sidecarBound,
+          "first song bound data before loadSongByLabel returned");
+    if (!waitForLoaded(tabA, "first song"))
+        return false;
+    check(tabA->doc.label() == songA, "first song did not finish loading");
     check(m_audio.timeline() == tabA->timeline.get() && m_audio.voicegroup() == tabA->voicegroup,
           "engine is not borrowing the first tab's data");
     check(m_uiTimer->interval() == 500, "paused UI cadence is not 500 ms");
@@ -97,12 +288,20 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     // 2. Second song in a new tab becomes the active one.
     loadSongByLabel(songB, /*newTab=*/true);
     SongSession *tabB = m_active;
-    if (!tabB || tabB == tabA || tabB->doc.label() != songB) {
+    if (!tabB || tabB == tabA) {
         std::fprintf(stderr, "tabcheck: song '%s' did not open in a new tab\n",
                      qUtf8Printable(songB));
         return false;
     }
     check(m_workspace->openSessionCount() == 2, "second song did not open a second tab");
+    check(m_active == tabB && m_workspace->isSessionAttached(*tabB) &&
+              !m_workspace->viewFor(*tabB).isHidden(),
+          "second song did not present its active tab immediately");
+    check(!tabB->midiBound && !tabB->vgBound && !tabB->sidecarBound,
+          "second song bound data before loadSongByLabel returned");
+    if (!waitForLoaded(tabB, "second song"))
+        return false;
+    check(tabB->doc.label() == songB, "second song did not finish loading");
     check(m_audio.timeline() == tabB->timeline.get(), "engine did not rebind to the new tab");
     check(m_undoGroup->activeStack() == tabB->doc.undoStack(),
           "undo group is not on the new tab's stack");
@@ -514,10 +713,10 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
           "closing the active tab did not fall back to the other tab");
     check(sessionForLabel(songB) == nullptr, "closed tab's session lingered");
 
-    // 8. Plain activation replaces the current tab's song (tab count
-    // unchanged) — the pre-tabs behavior.
     loadSongByLabel(songB);
     tabB = m_active;
+    if (!waitForLoaded(tabB, "in-place replacement"))
+        return false;
     check(m_workspace->openSessionCount() == 1 && tabB && tabB->doc.label() == songB &&
               sessionForLabel(songA) == nullptr,
           "activating a song did not replace the current tab's");
@@ -535,6 +734,8 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     check(!tabB->doc.isDirty() && tabB->doc.undoStack()->count() == 1,
           "reload precondition: clean doc with undo history");
     loadSongByLabel(songB);
+    if (!waitForLoaded(tabB, "in-place reload"))
+        return false;
     check(m_workspace->openSessionCount() == 1 && m_active == tabB &&
               tabB->doc.undoStack()->count() == 0,
           "re-activating the open song did not reload it in place");
@@ -554,14 +755,16 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
               "scale controls remained enabled after closing the final tab");
     }
 
-    // Reopen through the normal lifecycle so the restoration contract below
-    // still persists both tabs with song A active.
     loadSongByLabel(songB);
     tabB = m_active;
+    if (!waitForLoaded(tabB, "post-close song reopen"))
+        return false;
 
     // 10. The open-tab set is recorded for restoreSession.
     loadSongByLabel(songA, /*newTab=*/true);
     tabA = m_active;
+    if (!waitForLoaded(tabA, "persistence song reopen"))
+        return false;
     {
         QSettings settings;
         const QStringList open = settings.value(QStringLiteral("lastOpenSongs")).toStringList();
@@ -589,7 +792,11 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
             edited.release = edited.release == 25 ? 26 : 25;
             onVoiceEditRequested(dsSlot, edited, false); // active tab = A
             const LoadedVoiceGroup *bVgBefore = tabB->voicegroup;
-            check(saveSession(*tabA), "shared-voicegroup save failed");
+            const QDateTime bVgTimeBefore = tabB->vgFileTime;
+            check(waitForSave(tabA, "shared-voicegroup save"), "shared-voicegroup save failed");
+            check(waitForVoicegroupRefresh(tabB, bVgBefore, bVgTimeBefore,
+                                           "sibling voicegroup refresh"),
+                  "sibling voicegroup refresh did not complete");
             check(tabB->voicegroup && tabB->voicegroup != bVgBefore,
                   "voicegroup save did not refresh the sibling tab's voicegroup");
             check(tabB->vgSource && tabB->vgSource->voiceAt(dsSlot) &&
@@ -613,11 +820,14 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         QFile f(vgPath);
         if (f.open(QIODevice::ReadWrite)) {
             // Same bytes, definitely-new mtime.
+            const QDateTime beforeTime = tabB->vgFileTime;
             f.setFileTime(QDateTime::currentDateTime().addSecs(2),
                           QFileDevice::FileModificationTime);
             f.close();
             const LoadedVoiceGroup *before = tabB->voicegroup;
             m_workspace->activateSession(tabB);
+            check(waitForVoicegroupRefresh(tabB, before, beforeTime, "clean voicegroup refresh"),
+                  "clean tab voicegroup refresh did not complete");
             check(tabB->voicegroup != nullptr && tabB->voicegroup != before,
                   "clean tab did not reload its changed voicegroup file");
             check(tabB->vgSource && !tabB->vgSource->dirty(),
@@ -647,6 +857,41 @@ bool MainWindow::checkTabRestore(const QString &songA, const QString &songB)
         }
         return ok;
     };
+
+    const auto restoredReady = [this] {
+        const auto sessions = m_workspace->sessionsInDisplayOrder();
+        return sessions.size() == 2 &&
+               std::all_of(sessions.cbegin(), sessions.cend(), [this](SongSession *session) {
+                   return session && session->isInteractive() &&
+                          m_workspace->isSessionAttached(*session);
+               });
+    };
+    QEventLoop restoreLoop;
+    QTimer poll;
+    QTimer deadline;
+    bool timedOut = false;
+    poll.setInterval(1);
+    deadline.setSingleShot(true);
+    QObject::connect(&poll, &QTimer::timeout, &restoreLoop, [&] {
+        if (restoredReady())
+            restoreLoop.quit();
+    });
+    QObject::connect(&deadline, &QTimer::timeout, &restoreLoop, [&] {
+        timedOut = true;
+        restoreLoop.quit();
+    });
+    if (!restoredReady()) {
+        poll.start();
+        deadline.start(30000);
+        restoreLoop.exec();
+    }
+    poll.stop();
+    deadline.stop();
+    if (!restoredReady()) {
+        check(false, timedOut ? "restoreSession timed out waiting for interactive tabs"
+                              : "restoreSession did not leave interactive tabs");
+        return false;
+    }
 
     const auto sessions = m_workspace->sessionsInDisplayOrder();
     const bool restoredBoth = m_workspace->openSessionCount() == 2 && sessions.size() == 2;
@@ -684,8 +929,8 @@ int runTabCheck(const QString &projectRoot, const QString &songA, const QString 
     {
         MainWindow window;
         window.restoreSession();
-        if (!window.checkTabRestore(songA, songB))
-            failures++;
+        check(window.checkTabRestore(songA, songB),
+              "restoreSession did not preserve tab order and active session");
         auto *outputDial = window.findChild<QDial *>(QStringLiteral("transportOutputVolume"));
         check(outputDial && outputDial->value() == 37,
               "relaunch did not restore application-output volume");

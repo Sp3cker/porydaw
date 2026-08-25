@@ -186,11 +186,26 @@ VoicegroupBrowser::VoicegroupBrowser(QWidget *parent) : QWidget(parent)
     m_tree->setToolTip(tr("Click and hold to audition (middle C)."));
     layout->addWidget(m_tree, 1);
 
+    // The 128 stable rows exist for the widget's lifetime — setVoicegroup and
+    // setLoading only rewrite their text in place; the tree is never cleared
+    // or rebuilt, so row identities, column modes, scroll, and selection all
+    // survive loading. They start as blank slot rows (see updateRow).
+    for (int slot = 0; slot < VOICEGROUP_SIZE; slot++) {
+        auto *item = new QTreeWidgetItem(m_tree);
+        item->setData(0, Qt::UserRole, slot);
+        updateRow(slot);
+    }
+
     // Press-and-hold audition, matching the piano keys: press sounds the
     // voice, releasing the mouse anywhere releases the note.
     connect(m_tree, &QTreeWidget::itemPressed, this, &VoicegroupBrowser::pressedVoice);
     m_tree->viewport()->installEventFilter(this);
-    connect(m_tree, &QTreeWidget::currentItemChanged, this, [this] { populateEditor(); });
+    // Selection changes repopulate the editor; while loading, the editor
+    // stays in its retained disabled state until setLoading(false).
+    connect(m_tree, &QTreeWidget::currentItemChanged, this, [this] {
+        if (!m_loading)
+            populateEditor();
+    });
 
     // ---- editor panel for the selected voice ----
     m_editor = new QWidget(this);
@@ -422,39 +437,68 @@ void VoicegroupBrowser::setVoicegroup(const LoadedVoiceGroup *vg)
 {
     releaseVoice();
     m_vg = vg;
-    if (!vg)
+    if (!vg) {
+        // A cleared voicegroup is terminal (teardown, or a failed load): it
+        // also exits the loading state, so the dock returns to the no-song
+        // presentation instead of staying inert.
         m_source = nullptr; // a cleared voicegroup invalidates the source too
-    m_tree->clear();
-    m_vgCombo->setEnabled(vg != nullptr);
-    m_vgCombo->lineEdit()->setPlaceholderText(vg ? QStringLiteral("dummy") : tr("No song loaded"));
+        m_loading = false;
+        m_usedVoices.clear();
+        m_editor->setEnabled(true);
+    }
+    m_vgCombo->setEnabled(vg != nullptr && !m_loading);
+    m_vgCombo->lineEdit()->setPlaceholderText(
+        m_loading ? tr("Loading...") : (vg ? QStringLiteral("dummy") : tr("No song loaded")));
     if (!vg) {
         m_updating = true;
         m_vgArg.clear();
         m_vgCombo->setCurrentText(QString());
         m_updating = false;
+    }
+    // The 128 stable rows are updated in place — never cleared or rebuilt —
+    // so the dock's geometry, column modes, scroll, and selection survive.
+    for (int slot = 0; slot < VOICEGROUP_SIZE; slot++) {
+        if (!vg)
+            markUsedRow(m_tree->topLevelItem(slot), false);
+        updateRow(slot);
+    }
+    if (!m_loading)
         populateEditor();
+}
+
+void VoicegroupBrowser::setLoading(bool loading)
+{
+    if (loading == m_loading)
+        return;
+    m_loading = loading;
+    if (loading) {
+        releaseVoice();
+        for (int slot = 0; slot < VOICEGROUP_SIZE; slot++) {
+            QTreeWidgetItem *item = m_tree->topLevelItem(slot);
+            item->setText(
+                0,
+                QStringLiteral("%1  %2").arg(slot, 3, 10, QLatin1Char('0')).arg(tr("Loading...")));
+            item->setText(1, QString());
+            item->setText(2, QString());
+        }
+        m_updating = true;
+        m_vgCombo->setCurrentText(tr("Loading..."));
+        m_updating = false;
+        m_vgCombo->setEnabled(false);
+        m_vgCombo->lineEdit()->setPlaceholderText(tr("Loading..."));
+        // Disabling the editor panel inactivates every editor control at
+        // once, without hiding, collapsing, or relayouting anything.
+        m_editor->setEnabled(false);
         return;
     }
-
-    for (int i = 0; i < VOICEGROUP_SIZE; i++) {
-        const ToneData &voice = vg->voices[i];
-        QString name = QString::fromUtf8(vg->voiceNames[i]).trimmed();
-        const QString type =
-            toneIsSynth(voice) ? tr("Synth (Golden Sun)") : m4aVoiceTypeName(voice.type);
-        auto *item = new QTreeWidgetItem(m_tree);
-        item->setText(0, QStringLiteral("%1  %2")
-                             .arg(i, 3, 10, QLatin1Char('0'))
-                             .arg(name.isEmpty() ? type : name));
-        item->setText(1, type);
-        if (voice.type != VOICE_KEYSPLIT && voice.type != VOICE_KEYSPLIT_ALL)
-            item->setText(2, QStringLiteral("%1 %2 %3 %4")
-                                 .arg(voice.attack)
-                                 .arg(voice.decay)
-                                 .arg(voice.sustain)
-                                 .arg(voice.release));
-        item->setData(0, Qt::UserRole, i);
-        markUsedRow(item, m_usedVoices.contains(i));
-    }
+    // The bound state is already in place (the owner sets the voicegroup and
+    // source before clearing loading); reflect it and restore interactivity.
+    for (int slot = 0; slot < VOICEGROUP_SIZE; slot++)
+        updateRow(slot);
+    m_vgCombo->setEnabled(m_vg != nullptr);
+    m_vgCombo->lineEdit()->setPlaceholderText(m_vg ? QStringLiteral("dummy")
+                                                   : tr("No song loaded"));
+    m_editor->setEnabled(true);
     populateEditor();
 }
 
@@ -567,8 +611,11 @@ void VoicegroupBrowser::setSource(VoicegroupSource *source, const QStringList &s
     for (int slot = 0; slot < m_tree->topLevelItemCount(); slot++)
         updateRow(slot);
     // populateEditor hands the picker the list its voice browses (the sample
-    // partition, or the wave list for programmable-wave voices).
-    populateEditor();
+    // partition, or the wave list for programmable-wave voices). Skipped
+    // while loading — the editor keeps its retained disabled state until
+    // setLoading(false) settles it.
+    if (!m_loading)
+        populateEditor();
 }
 
 void VoicegroupBrowser::setSampleInfoProvider(std::function<SamplePickInfo(const QString &)> fn)
@@ -599,7 +646,7 @@ void VoicegroupBrowser::revealSlot(int slot)
 void VoicegroupBrowser::pressedVoice(QTreeWidgetItem *item)
 {
     releaseVoice();
-    if (!item)
+    if (!item || m_loading)
         return;
     const int voice = item->data(0, Qt::UserRole).toInt();
     m_soundingVoice = voice;
@@ -808,7 +855,7 @@ void VoicegroupBrowser::populateEditor()
 
 void VoicegroupBrowser::commitEdit()
 {
-    if (m_updating || !m_source)
+    if (m_updating || m_loading || !m_source)
         return;
     const int slot = currentSlot();
     const auto draft = m_source->voiceDraft(
@@ -1022,6 +1069,8 @@ void VoicegroupBrowser::commitEdit()
 
 void VoicegroupBrowser::voiceChanged(int slot)
 {
+    if (m_loading)
+        return;
     updateRow(slot);
     if (slot == currentSlot())
         populateEditor();
@@ -1039,17 +1088,44 @@ void VoicegroupBrowser::updateRow(int slot)
         item->setText(2, QString());
         return;
     }
+    // The editable source is authoritative when it has a voice for the slot;
+    // otherwise the row falls back to the loaded tone, and to a bare slot
+    // number when nothing is bound at all (the fresh/teardown state).
     const VgVoice *voice = m_source ? m_source->voiceAt(slot) : nullptr;
-    if (!voice)
+    if (voice) {
+        VgSynthDesc desc;
+        const QString type = synthDescFor(*voice, slot, &desc)
+                                 ? tr("Synth (Golden Sun)")
+                                 : m4aVoiceTypeName(vgMacroVoiceType(voice->macro));
+        const QString name = vgMacroHasSymbol(voice->macro) ? voice->symbol : QString();
+        item->setText(0, QStringLiteral("%1  %2")
+                             .arg(slot, 3, 10, QLatin1Char('0'))
+                             .arg(name.isEmpty() ? type : name));
+        item->setText(1, type);
+        item->setText(2, adsrText(*voice));
         return;
-    VgSynthDesc desc;
-    const QString type = synthDescFor(*voice, slot, &desc)
-                             ? tr("Synth (Golden Sun)")
-                             : m4aVoiceTypeName(vgMacroVoiceType(voice->macro));
-    const QString name = vgMacroHasSymbol(voice->macro) ? voice->symbol : QString();
-    item->setText(0, QStringLiteral("%1  %2")
-                         .arg(slot, 3, 10, QLatin1Char('0'))
-                         .arg(name.isEmpty() ? type : name));
-    item->setText(1, type);
-    item->setText(2, adsrText(*voice));
+    }
+    if (m_vg) {
+        const ToneData &tone = m_vg->voices[slot];
+        const QString name = QString::fromUtf8(m_vg->voiceNames[slot]).trimmed();
+        const QString type =
+            toneIsSynth(tone) ? tr("Synth (Golden Sun)") : m4aVoiceTypeName(tone.type);
+        item->setText(0, QStringLiteral("%1  %2")
+                             .arg(slot, 3, 10, QLatin1Char('0'))
+                             .arg(name.isEmpty() ? type : name));
+        item->setText(1, type);
+        // Rows survive voicegroup swaps, so keysplit/drumkit slots must clear
+        // the ADSR cell a previous voice may have left behind.
+        item->setText(2, tone.type != VOICE_KEYSPLIT && tone.type != VOICE_KEYSPLIT_ALL
+                             ? QStringLiteral("%1 %2 %3 %4")
+                                   .arg(tone.attack)
+                                   .arg(tone.decay)
+                                   .arg(tone.sustain)
+                                   .arg(tone.release)
+                             : QString());
+        return;
+    }
+    item->setText(0, QStringLiteral("%1").arg(slot, 3, 10, QLatin1Char('0')));
+    item->setText(1, QString());
+    item->setText(2, QString());
 }
