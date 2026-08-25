@@ -17,6 +17,7 @@ int runVgSaveCheck(const QString &projectRoot, const QString &songLabel,
                    const QString &screenshotPath = QString());
 int runExportCheck(const QString &projectRoot, const QString &songLabel);
 int runMkCheck(const QString &projectRoot, const QString &songLabel);
+int runProjectIoCheck(const QString &projectRoot);
 int runSessionCheck(const QString &projectRoot, const QString &songLabel);
 int runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB);
 int runRollCheck(const QString &projectRoot, const QString &songLabel,
