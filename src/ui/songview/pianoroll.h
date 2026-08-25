@@ -169,7 +169,6 @@ class PianoRoll : public TimelineSurface
 
     void openPitchBendEditor();
     std::vector<DocNote> resolveSelection() const;
-    std::vector<NoteId> insertedNoteIds(int track, const std::vector<DocNote> &before) const;
     void transposeSelection(int dKey);
     void nudgeSelection(bool right);
     void copyNotes(const std::vector<DocNote> &notes);

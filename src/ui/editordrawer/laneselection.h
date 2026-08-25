@@ -17,13 +17,16 @@ class EditorSelectionModel;
 }
 
 // One selection view over the song EditorSelectionModel and the current CC
-// row table. Rebuilt on every row rebuild; holds borrowed references only, so
-// a rebuild simply replaces the view.
+// row table. Holds borrowed references to stable collaborators; the row table
+// is repopulated in place, so only the used-track mask needs a refresh on a
+// row rebuild.
 class LaneSelection
 {
   public:
     LaneSelection(const songview::EditorSelectionModel &model,
                   const std::vector<AutomationRow> &rows, uint32_t usedTrackMask) noexcept;
+    // Refreshes the only captured value that can change between row rebuilds.
+    void setUsedTrackMask(uint32_t usedTrackMask) noexcept;
 
     bool active() const noexcept;
     std::optional<std::pair<uint64_t, uint64_t>> activeTickRange() const noexcept;

@@ -17,8 +17,8 @@
 #include "core/songdocument.h"
 #include "ui/songview.h"
 
-#include "ui/songview/pianoroll.h"
 #include "ui/songview/otherstrip.h"
+#include "ui/songview/pianoroll.h"
 
 namespace checks::rollcheck {
 

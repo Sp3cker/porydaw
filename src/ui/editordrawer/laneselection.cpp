@@ -13,6 +13,10 @@ LaneSelection::LaneSelection(const songview::EditorSelectionModel &model,
     , m_rows(rows)
     , m_usedTrackMask(usedTrackMask)
 {}
+void LaneSelection::setUsedTrackMask(uint32_t usedTrackMask) noexcept
+{
+    m_usedTrackMask = usedTrackMask;
+}
 
 bool LaneSelection::active() const noexcept
 {

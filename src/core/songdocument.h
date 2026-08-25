@@ -143,6 +143,9 @@ class SongDocument : public QObject
     // Lookups. NoteId is the stable identity for note selection and velocity
     // mutation; physical event locations remain document-owned details.
     std::vector<DocNote> notesForTrack(int engineTrack) const;
+    // The ids of the track's current notes that were not in the before
+    // snapshot — what an insert (draw commit or paste) added.
+    std::vector<NoteId> insertedNoteIds(int engineTrack, const std::vector<DocNote> &before) const;
     bool findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const;
     bool findNote(NoteId id, DocNote *out) const;
     uint64_t noteEndTick(const DocNote &note) const;

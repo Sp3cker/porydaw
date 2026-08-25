@@ -27,8 +27,7 @@ struct ClipLane {
 };
 
 struct Clip {
-    uint64_t span = 0;      // ticks covered; 0 = plain note clip
-    bool wholeLane = false; // legacy format-1 field: encode always writes false, decode ignores it
+    uint64_t span = 0; // ticks covered; 0 = plain note clip
     std::vector<ClipTrack> tracks;
     std::vector<ClipLane> lanes;
     std::vector<TempoPoint> tempo; // relative ticks, microseconds per quarter note

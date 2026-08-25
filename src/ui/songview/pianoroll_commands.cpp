@@ -214,23 +214,6 @@ std::vector<DocNote> PianoRoll::resolveSelection() const
     return notes;
 }
 
-std::vector<NoteId> PianoRoll::insertedNoteIds(int track, const std::vector<DocNote> &before) const
-{
-    std::vector<NoteId> ids;
-    SongDocument *doc = m_sv->document();
-    if (!doc)
-        return ids;
-    for (const DocNote &candidate : doc->notesForTrack(track)) {
-        const bool existed =
-            std::any_of(before.begin(), before.end(), [&](const DocNote &previous) {
-                return previous.noteId == candidate.noteId;
-            });
-        if (!existed)
-            ids.push_back(candidate.noteId);
-    }
-    return ids;
-}
-
 void PianoRoll::transposeSelection(int dKey)
 {
     SongDocument *doc = m_sv->document();

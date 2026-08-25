@@ -46,8 +46,8 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
                                                    .endTick = selection.endTick,
                                                    .tempo = slot->isTempo(),
                                                    .globalPosition = globalPosition};
-        if (!request.tempo && m_laneSelection)
-            request.lanes = m_laneSelection->visibleLanes();
+        if (!request.tempo)
+            request.lanes = m_laneSelection.visibleLanes();
         m_page->showTimeSelectionMenu(request);
         return;
     }

@@ -105,19 +105,18 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     }
     if ((event->button() == Qt::LeftButton || event->button() == Qt::RightButton)) {
         auto &model = m_page->m_owner.selectionModel();
-        const auto activeTickRange =
-            m_laneSelection ? m_laneSelection->activeTickRange() : std::nullopt;
+        const auto activeTickRange = m_laneSelection.activeTickRange();
         NodePoint selectedPoint;
         const bool selectedNode =
-            pointerSlot && event->position().x() >= m_geometry.plotOrigin && m_laneSelection &&
-            m_laneSelection->coversNodes(pointerSlot->id) && activeTickRange &&
+            pointerSlot && event->position().x() >= m_geometry.plotOrigin &&
+            m_laneSelection.coversNodes(pointerSlot->id) && activeTickRange &&
             nodePointHit(pointerLane, event->position(), proj, &selectedPoint) &&
             selectedPoint.tick >= activeTickRange->first &&
             selectedPoint.tick < activeTickRange->second;
         const bool insideSelection =
-            pointerSlot && event->position().x() >= m_geometry.plotOrigin && m_laneSelection &&
-            (m_laneSelection->hitTest(pointerSlot->id, event->position().x(), proj,
-                                      devicePixelRatioF()) ||
+            pointerSlot && event->position().x() >= m_geometry.plotOrigin &&
+            (m_laneSelection.hitTest(pointerSlot->id, event->position().x(), proj,
+                                     devicePixelRatioF()) ||
              selectedNode);
         if (!insideSelection && model.timeSelection().active()) {
             model.clearTimeSelection();
@@ -370,9 +369,9 @@ void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
                 const bool inPlot = event->position().x() >= m_geometry.plotOrigin;
                 const auto *contextSlot = resolveSlot(contextLane);
                 const bool selected =
-                    contextSlot && inPlot && m_laneSelection &&
-                    m_laneSelection->hitTest(contextSlot->id, event->position().x(), projection(),
-                                             devicePixelRatioF());
+                    contextSlot && inPlot &&
+                    m_laneSelection.hitTest(contextSlot->id, event->position().x(), projection(),
+                                            devicePixelRatioF());
                 if (selected)
                     showTimeSelectionMenuFor(contextLane, event->globalPosition().toPoint());
                 else if (contextLane.valid())

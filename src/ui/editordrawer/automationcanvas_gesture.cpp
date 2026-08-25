@@ -297,15 +297,14 @@ NodeDragGesture AutomationCanvas::collectSelectedNodeDrags() const
     NodeDragGesture result;
     if (!m_page || !m_page->document())
         return result;
-    const auto activeTickRange =
-        m_laneSelection ? m_laneSelection->activeTickRange() : std::nullopt;
+    const auto activeTickRange = m_laneSelection.activeTickRange();
     for (std::size_t index = 0; index < m_nodeStack.size(); ++index) {
         const NodeLaneSlot &slot = m_nodeStack[index];
         const NodeLane *lane = slot.lane;
         if (!lane)
             continue;
         const LaneHandle handle{int(index)};
-        if (!m_laneSelection || !m_laneSelection->coversNodes(slot.id) || !activeTickRange)
+        if (!m_laneSelection.coversNodes(slot.id) || !activeTickRange)
             continue;
         for (const NodePoint &point : lane->points()) {
             if (point.tick < activeTickRange->first || point.tick >= activeTickRange->second)
@@ -333,10 +332,9 @@ AutomationCanvas::nodeDragGestureAt(LaneHandle handle, const QPointF &position, 
     state.lane = handle;
     state.expectedRevision = m_page->document()->revision();
     const NodeDrag grabbed{handle, hit, hit, lane->minimumValue(), lane->maximumValue()};
-    const auto activeTickRange =
-        m_laneSelection ? m_laneSelection->activeTickRange() : std::nullopt;
-    const bool hitSelected = m_laneSelection && m_laneSelection->coversNodes(slot->id) &&
-                             activeTickRange && hit.tick >= activeTickRange->first &&
+    const auto activeTickRange = m_laneSelection.activeTickRange();
+    const bool hitSelected = m_laneSelection.coversNodes(slot->id) && activeTickRange &&
+                             hit.tick >= activeTickRange->first &&
                              hit.tick < activeTickRange->second;
     if (hitSelected) {
         auto selected = collectSelectedNodeDrags();

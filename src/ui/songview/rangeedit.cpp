@@ -574,19 +574,7 @@ void SongView::pasteFromClipboard()
         end = std::max(end, tick + cn.duration);
     }
     m_document->addNotes(selectedTrack, notes);
-    // Select the inserted notes: post-state members of the track whose ids
-    // were not in the pre-paste list (the same scan the roll uses after a
-    // draw commit).
-    std::vector<NoteId> inserted;
-    for (const DocNote &candidate : m_document->notesForTrack(selectedTrack)) {
-        const bool existed =
-            std::any_of(before.begin(), before.end(), [&](const DocNote &previous) {
-                return previous.noteId == candidate.noteId;
-            });
-        if (!existed)
-            inserted.push_back(candidate.noteId);
-    }
-    m_selectionModel.setNoteSelection(std::move(inserted));
+    m_selectionModel.setNoteSelection(m_document->insertedNoteIds(selectedTrack, before));
     // Like pasteRangeAtEditCursor: advance the edit cursor past the pasted
     // notes so repeated Ctrl+V lays copies back-to-back, but keep the view
     // anchored on the content that just landed.

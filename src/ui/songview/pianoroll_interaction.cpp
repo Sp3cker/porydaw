@@ -527,7 +527,7 @@ void PianoRoll::mouseReleaseEvent(QMouseEvent *event)
         const std::vector<DocNote> before = doc->notesForTrack(selectedTrack);
         doc->addNote(selectedTrack, m_drawTick, uint8_t(m_drawKey), uint32_t(m_drawDur),
                      m_lastVelocity);
-        m_sv->selectionModel().setNoteSelection(insertedNoteIds(selectedTrack, before));
+        m_sv->selectionModel().setNoteSelection(doc->insertedNoteIds(selectedTrack, before));
     } else if (doc && drag == Drag::Move && (m_dTick != 0 || m_dKey != 0)) {
         std::vector<DocNote> notes = resolveSelection();
         if (notes.empty()) {

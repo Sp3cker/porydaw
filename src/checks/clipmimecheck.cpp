@@ -58,7 +58,7 @@ bool sameLane(const ClipLane &a, const ClipLane &b)
 
 bool sameClip(const Clip &a, const Clip &b)
 {
-    if (a.span != b.span || a.wholeLane != b.wholeLane || a.tracks.size() != b.tracks.size() ||
+    if (a.span != b.span || a.tracks.size() != b.tracks.size() ||
         a.lanes.size() != b.lanes.size() || a.tempo.size() != b.tempo.size())
         return false;
     for (size_t i = 0; i < a.tracks.size(); i++)
@@ -130,8 +130,6 @@ int runClipMimeCheck()
     {
         Clip clip;
         clip.span = 96;
-        // wholeLane stays false: format 1 always carries it as false and
-        // paste ignores it, so the codec round trip must preserve that.
         clip.tracks = {{0, {{0, 60, 24, 100}, {72, 67, 12, 90}}}};
         clip.lanes = {{0, 0x01, {{24, 80}, {72, 32}}}, // MOD
                       {0, 0xFF, {{48, 4096}}},         // pitch bend
@@ -150,13 +148,11 @@ int runClipMimeCheck()
     {
         Clip clip;
         clip.span = 12;
-        clip.wholeLane = true;
         clip.tracks = {{3, {{6, 64, 3, 91}}}};
         clip.lanes = {{4, 0x01, {{6, -12}}}};
         clip.tempo = {{6, 400000}};
         Clip expected;
         expected.span = 24;
-        expected.wholeLane = true;
         expected.tracks = {{3, {{12, 64, 6, 91}}}};
         expected.lanes = {{4, 0x01, {{12, -12}}}};
         expected.tempo = {{12, 400000}};
@@ -206,7 +202,6 @@ int runClipMimeCheck()
     {
         Clip clip;
         clip.span = 0;
-        clip.wholeLane = true;
         clip.tracks = {{7, {{9, 72, 5, 44}}}};
         clip.lanes = {{7, 0x01, {{4, 1}, {4, 2}, {2, 3}}}};
         clip.tempo = {{4, 500000}, {4, 600000}, {2, 700000}};

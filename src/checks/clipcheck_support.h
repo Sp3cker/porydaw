@@ -26,7 +26,7 @@ inline std::optional<songview::DecodedClip> checkClipboardClip()
 
 inline bool sameClip(const songview::Clip &a, const songview::Clip &b)
 {
-    if (a.span != b.span || a.wholeLane != b.wholeLane || a.tracks.size() != b.tracks.size() ||
+    if (a.span != b.span || a.tracks.size() != b.tracks.size() ||
         a.lanes.size() != b.lanes.size() || a.tempo.size() != b.tempo.size())
         return false;
     for (std::size_t i = 0; i < a.tracks.size(); ++i) {

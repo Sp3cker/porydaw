@@ -56,6 +56,7 @@ AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
     , m_rowData(page)
     , m_tempoLane(page)
     , m_voiceLane(page)
+    , m_laneSelection(page->m_owner.selectionModel(), m_rowData.rows(), page->usedTrackMask())
 {
     setObjectName(QStringLiteral("automationCanvas"));
     setMouseTracking(true);
@@ -170,8 +171,7 @@ void AutomationCanvas::rebuildRows()
     }
     m_rowData.rebuildRows();
     if (m_page)
-        m_laneSelection.emplace(m_page->m_owner.selectionModel(), m_rowData.rows(),
-                                m_page->usedTrackMask());
+        m_laneSelection.setUsedTrackMask(m_page->usedTrackMask());
     layoutLaneStack(showVoice ? voiceTrack : -1);
     invalidateContent();
 }
@@ -520,13 +520,13 @@ NodePoint AutomationCanvas::mappedForLane(LaneHandle handle, QPointF pos, bool f
 void AutomationCanvas::publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
                                             LaneHandle end) const
 {
-    if (!m_page || !m_laneSelection || first >= last || !start.valid() || !end.valid())
+    if (!m_page || first >= last || !start.valid() || !end.valid())
         return;
     const auto *startSlot = resolveSlot(start);
     const auto *endSlot = resolveSlot(end);
     if (!startSlot || !endSlot)
         return;
-    const auto [tempo, lanes] = m_laneSelection->laneSet(startSlot->id, endSlot->id);
+    const auto [tempo, lanes] = m_laneSelection.laneSet(startSlot->id, endSlot->id);
     m_page->publishTimeSelection(first, last, lanes, tempo);
     if (tempo && lanes.empty())
         m_page->announce(tr("Tempo range [%1, %2)").arg(first).arg(last));

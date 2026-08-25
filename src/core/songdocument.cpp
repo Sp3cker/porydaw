@@ -608,6 +608,20 @@ std::vector<DocNote> SongDocument::notesForTrack(int engineTrack) const
     std::reverse(notes.begin(), notes.end()); // restore note-on order
     return notes;
 }
+std::vector<NoteId> SongDocument::insertedNoteIds(int engineTrack,
+                                                  const std::vector<DocNote> &before) const
+{
+    std::vector<NoteId> ids;
+    for (const DocNote &candidate : notesForTrack(engineTrack)) {
+        const bool existed =
+            std::any_of(before.begin(), before.end(), [&](const DocNote &previous) {
+                return previous.noteId == candidate.noteId;
+            });
+        if (!existed)
+            ids.push_back(candidate.noteId);
+    }
+    return ids;
+}
 uint64_t SongDocument::noteEndTick(const DocNote &note) const
 {
     if (!note.unterminated())

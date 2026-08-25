@@ -198,7 +198,7 @@ class AutomationCanvas final : public songview::TimelineSurface
         int startVScroll = 0;
     } m_pan;
     BandGesture m_band;
-    std::optional<LaneSelection> m_laneSelection;
+    LaneSelection m_laneSelection;
     std::vector<NodePoint> m_clipboard;
     bool m_pencilMode = false;
     qreal m_pencilCursorDpr = 0.0;

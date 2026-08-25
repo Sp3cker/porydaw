@@ -84,8 +84,7 @@ void AutomationCanvas::paintContent(QPainter &painter)
                 return std::nullopt;
             return std::pair{range->firstTick, range->lastTick};
         }
-        return m_laneSelection ? m_laneSelection->activeTickRange()
-                               : std::optional<std::pair<uint64_t, uint64_t>>{};
+        return m_laneSelection.activeTickRange();
     }();
     const auto selectedRange = [&]() -> std::optional<TickRange> {
         if (!selectedTickRange)
@@ -93,10 +92,10 @@ void AutomationCanvas::paintContent(QPainter &painter)
         return TickRange::orderedNonEmpty(selectedTickRange->first, selectedTickRange->second);
     }();
     const auto laneSelected = [this](const NodeLaneSlot &slot) {
-        return m_laneSelection && m_laneSelection->coversLane(slot.id);
+        return m_laneSelection.coversLane(slot.id);
     };
     const auto nodeSelected = [this](const NodeLaneSlot &slot) {
-        return m_laneSelection && m_laneSelection->coversNodes(slot.id);
+        return m_laneSelection.coversNodes(slot.id);
     };
     std::vector<std::vector<NodePoint>> pointsBySlot(m_nodeStack.size());
     for (std::size_t index = 0; index < m_nodeStack.size(); ++index) {
