@@ -43,12 +43,49 @@ void paintNode(QPainter &painter, const AutomationGeometry &geometry, const QCol
     painter.setRenderHint(QPainter::Antialiasing, antialiasing);
 }
 
-bool omittedPoint(const NodePoint &point, const NodePoint *omitted, const NodePoint *replacement)
+void paintPhantom(QPainter &painter, const AutomationGeometry &geometry, const QRect &body,
+                  const QColor &color, const OriginPhantom &phantom)
 {
-    if (omitted && point.tick == omitted->tick && point.value == omitted->value)
+    const QPointF center(qreal(geometry.plotOrigin),
+                         AutomationProjection::valueY(body, geometry, phantom.minimumValue,
+                                                      phantom.maximumValue, phantom.point.value));
+    paintNode(painter, geometry, color, center);
+}
+
+void paintPhantomCurvePreview(QPainter &painter, const AutomationGeometry &geometry,
+                              const QRect &body, const AutomationProjection &projection,
+                              std::span<const NodePoint> points, const QRect &plot,
+                              const OriginPhantom &phantom, qreal dpr)
+{
+    const auto next =
+        std::upper_bound(points.begin(), points.end(), phantom.point.tick,
+                         [](uint64_t tick, const NodePoint &point) { return tick < point.tick; });
+    const qreal y = AutomationProjection::valueY(body, geometry, phantom.minimumValue,
+                                                 phantom.maximumValue, phantom.point.value);
+    const qreal nextX =
+        next == points.end() ? qreal(plot.right()) : projection.displayX(next->tick, dpr);
+    const QColor previewColor = themes::color(themes::Role::song_view_edit_preview_outline);
+    painter.setPen(QPen(previewColor, layout::singlePixel()));
+    painter.drawLine(QLineF(qreal(plot.left()), y, nextX, y));
+    if (next != points.end()) {
+        const qreal nextY = AutomationProjection::valueY(body, geometry, phantom.minimumValue,
+                                                         phantom.maximumValue, next->value);
+        painter.drawLine(QLineF(nextX, y, nextX, nextY));
+    }
+}
+struct PointReplacement {
+    NodePoint original;
+    NodePoint current;
+};
+
+bool omittedPoint(const NodePoint &point, const std::optional<PointReplacement> &replacement)
+{
+    if (!replacement)
+        return false;
+    if (point.tick == replacement->original.tick && point.value == replacement->original.value)
         return true;
-    return omitted && replacement && replacement->tick != omitted->tick &&
-           point.tick == replacement->tick;
+    return replacement->current.tick != replacement->original.tick &&
+           point.tick == replacement->current.tick;
 }
 
 void paintPreviewLabel(QPainter &painter, const NodeLaneHoverState &hoverState, LaneHandle handle)
@@ -66,7 +103,7 @@ void paintPreviewLabel(QPainter &painter, const NodeLaneHoverState &hoverState, 
 
 void paintStepCurve(QPainter &painter, std::span<const NodePoint> points, const QRect &plot,
                     const NodeLanePaint &paint, const QColor &color, qreal dpr,
-                    const NodePoint *omitted, const NodePoint *replacement)
+                    const std::optional<PointReplacement> &replacement)
 {
     if (points.empty())
         return;
@@ -84,9 +121,9 @@ void paintStepCurve(QPainter &painter, std::span<const NodePoint> points, const 
             painter.drawLine(QLineF(x, leadY, x, y));
     }
     for (size_t index = 0; index < points.size(); ++index) {
-        const bool currentOmitted = omittedPoint(points[index], omitted, replacement);
+        const bool currentOmitted = omittedPoint(points[index], replacement);
         const bool nextOmitted =
-            index + 1 < points.size() && omittedPoint(points[index + 1], omitted, replacement);
+            index + 1 < points.size() && omittedPoint(points[index + 1], replacement);
         if (currentOmitted || nextOmitted)
             continue;
         const qreal x0 = paint.projection.displayX(points[index].tick, dpr);
@@ -113,7 +150,8 @@ bool pointPaintSelected(const NodeLanePaint &paint, uint64_t tick)
 }
 
 void paintNodes(QPainter &painter, std::span<const NodePoint> points, const QRect &plot,
-                const NodeLanePaint &paint, qreal dpr, const NodePoint *omitted)
+                const NodeLanePaint &paint, qreal dpr,
+                const std::optional<PointReplacement> &replacement)
 {
     if (!paint.projection.nodeMarkersVisible())
         return;
@@ -124,7 +162,7 @@ void paintNodes(QPainter &painter, std::span<const NodePoint> points, const QRec
     const bool dimLane = paint.multipleSelectedNodes && !paint.selectedLane;
     const auto paintPass = [&](bool selectedPass) {
         for (const auto &point : points) {
-            if (omitted && point.tick == omitted->tick && point.value == omitted->value)
+            if (omittedPoint(point, replacement))
                 continue;
             const bool selected = pointPaintSelected(paint, point.tick);
             if (selected != selectedPass)
@@ -406,8 +444,10 @@ void paintHover(QPainter &painter, const NodeLane &lane, const QRect &body,
     const qreal padding = layout::singlePixel();
     if (hoverState.hover.hasPoint) {
         const qreal nodeRadius = hoverRingRadius(geometry);
-        const QPointF center(projection.displayX(hoverState.hover.point.tick, dpr),
-                             valueY(lane, body, geometry, hoverState.hover.point.value));
+        const qreal displayX = hoverState.hover.originPhantom
+                                   ? qreal(geometry.plotOrigin)
+                                   : projection.displayX(hoverState.hover.point.tick, dpr);
+        const QPointF center(displayX, valueY(lane, body, geometry, hoverState.hover.point.value));
         const bool antialiasing = painter.testRenderHint(QPainter::Antialiasing);
         painter.setRenderHint(QPainter::Antialiasing, true);
         painter.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline),
@@ -465,10 +505,7 @@ void paintNodeLane(QPainter &painter, const NodeLanePaint &paint)
         painter.setClipRect(overflow, Qt::IntersectClip);
         paintPencilPreview(painter, paint.points, plot, paint, *paint.pencil, dpr);
     } else {
-        const NodePoint *omitted = nullptr;
-        const NodePoint *replacement = nullptr;
-        NodePoint omittedStore;
-        NodePoint replacementStore;
+        std::optional<PointReplacement> replacement;
         std::span<const NodePoint> curve = paint.points;
         if (const NodeDragGesture *gesture = paint.nodeDrag) {
             const bool usePreview = (gesture->points.size() > 1 || paint.preparedPreviewCurve) &&
@@ -479,24 +516,31 @@ void paintNodeLane(QPainter &painter, const NodeLanePaint &paint)
                 curve = gesture->previewPoints[std::size_t(handle.index)];
             } else if (handle == gesture->lane && gesture->grabbedPoint < gesture->points.size()) {
                 const auto &point = gesture->points[gesture->grabbedPoint];
-                omittedStore = point.original;
-                replacementStore = point.current;
-                omitted = &omittedStore;
-                replacement = &replacementStore;
+                replacement = PointReplacement{point.original, point.current};
             }
+        } else if (paint.phantom && paint.phantom->original) {
+            replacement = PointReplacement{*paint.phantom->original, paint.phantom->current.point};
         }
         const QColor curveColor =
             paint.multipleSelectedNodes && !paint.selectedLane ? paint.dimmedColor : paint.color;
         painter.save();
         painter.setClipRect(plot, Qt::IntersectClip);
-        paintStepCurve(painter, curve, plot, paint, curveColor, dpr, omitted, replacement);
+        paintStepCurve(painter, curve, plot, paint, curveColor, dpr, replacement);
+        if (paint.phantom && paint.phantom->original)
+            paintPhantomCurvePreview(painter, paint.geometry, paint.body, paint.projection, curve,
+                                     plot, paint.phantom->current, dpr);
         painter.restore();
         painter.setClipRect(overflow, Qt::IntersectClip);
-        paintNodes(painter, curve, plot, paint, dpr, omitted);
+        paintNodes(painter, curve, plot, paint, dpr, replacement);
         if (paint.nodeDrag && (paint.nodeDrag->points.size() > 1 || handle == paint.nodeDrag->lane))
             paintDragPreview(painter, paint.points, plot, paint, *paint.nodeDrag, dpr);
         else if (paint.sweep && handle == paint.sweep->lane)
             paintSweepPreview(painter, paint, *paint.sweep, dpr);
+    }
+    if (paint.phantom) {
+        paintPhantom(painter, paint.geometry, paint.body, paint.color, paint.phantom->current);
+        if (paint.phantom->original)
+            paintPreviewLabel(painter, paint.hoverState, paint.handle);
     }
     if (paint.hoverState.hover.lane == paint.handle)
         paintHover(painter, paint.lane, paint.body, paint.geometry, paint.projection,

@@ -1,7 +1,10 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
+#include <iterator>
 #include <optional>
+#include <span>
 #include <vector>
 
 #include <QString>
@@ -21,6 +24,29 @@ struct LaneHandle {
     constexpr bool valid() const noexcept { return index >= 0; }
     constexpr bool operator==(const LaneHandle &) const noexcept = default;
 };
+
+// The automation node nearest the plot origin while still covered by the lane
+// labels. The point keeps its source tick; callers present it at the origin.
+struct OriginPhantom {
+    LaneHandle lane;
+    NodePoint point;
+    int minimumValue = 0;
+    int maximumValue = 127;
+};
+
+// Returns the rightmost node strictly left of `plotOriginX` in display space.
+template <class DisplayX>
+std::optional<OriginPhantom> originPhantomAt(std::span<const NodePoint> points, LaneHandle handle,
+                                             int minimumValue, int maximumValue, double plotOriginX,
+                                             DisplayX &&displayX)
+{
+    const auto firstVisible = std::lower_bound(
+        points.begin(), points.end(), plotOriginX,
+        [&displayX](const NodePoint &point, double x) { return displayX(point.tick) < x; });
+    if (firstVisible == points.begin())
+        return std::nullopt;
+    return OriginPhantom{handle, *std::prev(firstVisible), minimumValue, maximumValue};
+}
 
 class QWidget;
 class NodeLane

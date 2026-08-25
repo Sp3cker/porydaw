@@ -415,10 +415,62 @@ void runSemanticNoOp(Context &ctx)
                       QStringLiteral("sub-threshold empty jitter mutated the document"));
 }
 
+void runOriginPhantom(Context &ctx)
+{
+    seed(ctx, kFixture);
+    ctx.rig.setAutomationZoom(96.0);
+    ctx.rig.setAutomationScroll(0.0);
+    ctx.rig.pump();
+    const qreal originX = qreal(ctx.rig.geometry().plotOrigin);
+    const qreal coveredX = at(ctx, kFixtureTick, 100).position.x();
+    ctx.rig.setAutomationScroll(coveredX - originX + 2.0 * ctx.rig.geometry().pointHitRadius);
+    ctx.rig.pump();
+    const QPointF start(originX, at(ctx, kFixtureTick, 100).position.y());
+    const QPointF target(originX, at(ctx, kFixtureTick, 110).position.y());
+    const QPointF hover = ctx.adapter.kind == AdapterKind::Cc
+                              ? start - QPointF(ctx.rig.geometry().pointHitRadius / 2.0, 0.0)
+                              : start;
+    ctx.rig.mouseMove(hover, Qt::NoButton);
+    ctx.rig.pump();
+    ctx.check.require(ctx.rig.canvas().cursor().shape() == Qt::ArrowCursor,
+                      QStringLiteral("origin phantom hover did not keep the arrow cursor"));
+    const auto before = snapshot(ctx.rig.document());
+    const qreal arm = qreal(ctx.rig.geometry().nodeDragActivationDistance + 2);
+    const QPointF activation = start + QPointF(0.0, target.y() < start.y() ? -arm : arm);
+    const QPointF end = activation + target - start;
+    const qreal radius = ctx.rig.geometry().pointHitRadius;
+    const qreal nextX = at(ctx, 288, 64).position.x();
+    const QRect body = ctx.rig.bodyFor(ctx.handle);
+    const qreal probeWidth = nextX - originX - 4.0 * radius;
+    const qreal dpr = ctx.rig.canvas().devicePixelRatioF();
+    const QRect probe(qRound((originX + 2.0 * radius) * dpr), qRound(body.top() * dpr),
+                      qRound(probeWidth * dpr), qRound(body.height() * dpr));
+    const auto curveCrop = [&] { return ctx.rig.renderArea().copy(probe); };
+    ctx.rig.mousePress(start);
+    ctx.rig.mouseMove(activation);
+    ctx.rig.pump();
+    const auto originalCurve = curveCrop();
+    ctx.rig.mouseMove(end);
+    ctx.rig.pump();
+    const auto movedCurve = curveCrop();
+    ctx.check.require(probeWidth > 0.0 && !originalCurve.isNull() && movedCurve != originalCurve,
+                      QStringLiteral("origin phantom drag did not repaint its held-value curve"));
+    ctx.check.require(isUnchanged(before, snapshot(ctx.rig.document())),
+                      QStringLiteral("origin phantom preview mutated the document before release"));
+    ctx.rig.mouseRelease(end);
+    ctx.rig.pump();
+    const auto actual = pointsOf(ctx);
+    ctx.check.require(isOneEdit(before, snapshot(ctx.rig.document())) &&
+                          sameNodePoints(actual, {{0, 80}, {kFixtureTick, 110}, {288, 64}}),
+                      QStringLiteral("origin phantom drag produced %1").arg(formatPoints(actual)));
+    ctx.rig.setAutomationScroll(0.0);
+}
+
 constexpr std::array kScenarios{
     Scenario{"hover-insertion", runHoverInsertion},
     Scenario{"click-delete", runClickDelete},
     Scenario{"node-drag", runNodeDrag},
+    Scenario{"origin-phantom", runOriginPhantom},
     Scenario{"selection", runSelection},
     Scenario{"sweep-ramp", runSweepRamp},
     Scenario{"pencil", runPencil},

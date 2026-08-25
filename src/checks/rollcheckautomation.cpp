@@ -462,6 +462,21 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                       gesture.points[1].current.tick == 54,
                   QStringLiteral("multi-node drag outcome lost shared movement state"));
         }
+        {
+            const DocLanePoint original{0, 7, 24, 60};
+            PhantomGesture gesture;
+            gesture.point = laneNode(original, {24, 60});
+            gesture.drag.press({100.0, 100.0}, false);
+            gesture.update({PointDragUpdate::Phase::Reset, {}, AxisLock::None}, 127);
+            check(gesture.point.current.tick == 24 && gesture.point.current.value == 60,
+                  QStringLiteral("phantom reset did not restore its source point"));
+            gesture.drag.dragSlop.markExceeded({100.0, 110.0});
+            gesture.update({PointDragUpdate::Phase::Dragging, {}, AxisLock::None}, 200);
+            const auto moved = gesture.finish();
+            check(moved && moved->original.tick == moved->current.tick &&
+                      moved->current.value == 127,
+                  QStringLiteral("phantom drag did not stay value-only and clamp to its range"));
+        }
     }
     {
         using LaneEdit = NodeLaneEdit;

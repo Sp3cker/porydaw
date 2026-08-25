@@ -26,7 +26,6 @@ QRect plotRect(const QRect &body, const AutomationGeometry &geometry);
 qreal valueY(const NodeLane &lane, const QRect &body, const AutomationGeometry &geometry,
              int value);
 qreal hoverRingRadius(const AutomationGeometry &geometry);
-
 void paintHover(QPainter &painter, const NodeLane &lane, const QRect &body,
                 const AutomationGeometry &geometry, const AutomationProjection &projection,
                 const NodeLaneHoverState &hoverState, bool pencilMode);
@@ -51,6 +50,11 @@ struct LaneHeaderPaint {
 
 void paintLaneHeader(QPainter &painter, const LaneHeaderPaint &paint);
 
+struct OriginPhantomPaint {
+    OriginPhantom current;
+    std::optional<NodePoint> original;
+};
+
 struct NodeLanePaint {
     const NodeLane &lane;
     std::span<const NodePoint> points;
@@ -73,6 +77,7 @@ struct NodeLanePaint {
     bool preparedPreviewCurve = false;
     QColor selectedColor;
     QColor dimmedColor;
+    std::optional<OriginPhantomPaint> phantom;
 };
 
 void paintNodeLane(QPainter &painter, const NodeLanePaint &paint);

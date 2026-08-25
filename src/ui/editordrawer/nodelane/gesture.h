@@ -19,8 +19,8 @@
 #include "ui/editordrawer/nodelane/pencilgesture.h"
 
 // Node-lane gestures. Each gesture is a small stateful object (cf.
-// AutomationPencilGesture) that consumes pointer mappings and produces a
-// GestureCommit; the canvas keeps Qt policy and performs effects.
+// AutomationPencilGesture) that consumes pointer mappings; the canvas keeps Qt
+// policy and performs effects.
 
 namespace automation {
 enum class AxisLock : uint8_t { None, Time, Value };
@@ -66,7 +66,6 @@ struct PointDragGesture {
                            int activationDistance) noexcept;
     PointDragRelease release() const noexcept;
 };
-
 struct NodeDrag {
     LaneHandle lane;
     NodePoint original;
@@ -90,8 +89,6 @@ struct NodeDoubleClickGuard {
     bool consume() noexcept { return std::exchange(pending, false); }
 };
 
-using GestureCommit = std::variant<std::monostate, NodeLaneEdit::Completion>;
-
 struct NodeDragGesture {
     LaneHandle lane;
     uint64_t expectedRevision = 0;
@@ -102,13 +99,22 @@ struct NodeDragGesture {
     std::vector<std::vector<std::size_t>> pointIndexesByLane;
     std::vector<std::vector<NodePoint>> basePointsByLane;
     std::vector<std::vector<NodePoint>> previewPoints;
-
     AxisLock update(const PointDragUpdate &dragUpdate, const NodePoint &mappedGrabBeforeLock);
     NodeDragFinish finish() const;
     void applyDrag(const NodePoint &grabCurrent);
     void preparePreview(std::size_t laneCount,
                         const std::vector<std::vector<NodePoint>> &lanePointsByLane);
     void updatePreview();
+};
+
+struct PhantomGesture {
+    LaneHandle lane;
+    uint64_t expectedRevision = 0;
+    NodeDrag point;
+    PointDragGesture drag;
+
+    AxisLock update(const PointDragUpdate &dragUpdate, int mappedValue) noexcept;
+    std::optional<NodeDrag> finish() const noexcept;
 };
 
 struct SweepGesture {
@@ -185,12 +191,18 @@ struct BandGesture {
     }
 };
 
-using ActiveGesture = std::variant<NodeDragGesture, SweepGesture, PencilGesture>;
+using ActiveGesture = std::variant<NodeDragGesture, PhantomGesture, SweepGesture, PencilGesture>;
 
 // Shared helpers — moved from AutomationCanvas (Feature Envy).
 AxisLock resolveAxisLock(AxisLock current, bool shiftHeld, const QPointF &origin,
                          const QPointF &position, int activationDistance) noexcept;
 void applyAxisLock(AxisLock lock, const NodePoint &original, NodePoint &current) noexcept;
+inline qreal pointDistanceSquared(QPointF lhs, QPointF rhs) noexcept
+{
+    const qreal dx = lhs.x() - rhs.x();
+    const qreal dy = lhs.y() - rhs.y();
+    return dx * dx + dy * dy;
+}
 
 // Insert or replace the point at its tick. Precondition: points sorted by tick.
 template <class Points, class Point>
@@ -257,9 +269,7 @@ std::optional<std::size_t> nearestPointInRadius(const Points &points, double cen
     std::optional<std::size_t> nearest;
     qreal nearestDistance = radiusSquared;
     for (auto candidate = first; candidate != last; ++candidate) {
-        const qreal dx = xOf(*candidate) - pos.x();
-        const qreal dy = yOf(*candidate) - pos.y();
-        const qreal distance = dx * dx + dy * dy;
+        const qreal distance = pointDistanceSquared(QPointF(xOf(*candidate), yOf(*candidate)), pos);
         if (distance <= radiusSquared && distance <= nearestDistance) {
             nearestDistance = distance;
             nearest = std::size_t(candidate - points.cbegin());

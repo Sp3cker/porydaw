@@ -29,6 +29,7 @@ struct NodeLaneHoverState {
         QPointF pos;
         bool hasPoint = false;
         NodePoint point;
+        bool originPhantom = false;
         bool highlightLocked = false;
     };
     HoverState hover;

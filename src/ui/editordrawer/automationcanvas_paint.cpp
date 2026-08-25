@@ -133,10 +133,12 @@ void AutomationCanvas::paintContent(QPainter &painter)
     const QColor selectedColor = palette().highlight().color();
     const QColor dimmedColor = palette().mid().color();
     const NodeDragGesture *nodeDrag = nullptr;
+    const PhantomGesture *phantomGesture = nullptr;
     const SweepGesture *sweep = nullptr;
     const PencilGesture *pencil = nullptr;
     if (m_activeGesture) {
         nodeDrag = std::get_if<NodeDragGesture>(&*m_activeGesture);
+        phantomGesture = std::get_if<PhantomGesture>(&*m_activeGesture);
         sweep = std::get_if<SweepGesture>(&*m_activeGesture);
         pencil = std::get_if<PencilGesture>(&*m_activeGesture);
     }
@@ -153,6 +155,16 @@ void AutomationCanvas::paintContent(QPainter &painter)
         if (!m_page->paintGrid(painter, plot, m_geometry.plotOrigin))
             paintPlainGridFallback(painter, plot, *m_page, m_geometry.plotOrigin, dpr);
         painter.restore();
+        std::optional<nodelane::OriginPhantomPaint> phantom;
+        if (phantomGesture && phantomGesture->lane == handle) {
+            phantom =
+                nodelane::OriginPhantomPaint{OriginPhantom{handle, phantomGesture->point.current,
+                                                           phantomGesture->point.minimumValue,
+                                                           phantomGesture->point.maximumValue},
+                                             phantomGesture->point.original};
+        } else if (const auto current = originPhantom(handle, proj, points)) {
+            phantom = nodelane::OriginPhantomPaint{*current, std::nullopt};
+        }
         nodelane::paintNodeLane(
             painter, nodelane::NodeLanePaint{
                          .lane = lane,
@@ -178,6 +190,7 @@ void AutomationCanvas::paintContent(QPainter &painter)
                          .preparedPreviewCurve = preparedPreview,
                          .selectedColor = selectedColor,
                          .dimmedColor = preparedPreview ? color : dimmedColor,
+                         .phantom = phantom,
                      });
         painter.save();
         painter.setClipRect(plot, Qt::IntersectClip);

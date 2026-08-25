@@ -124,9 +124,18 @@ class AutomationCanvas final : public songview::TimelineSurface
     bool showPointMenuNear(LaneHandle handle, const QPoint &position, const QPoint &globalPosition);
 
     bool commitLaneEdit(const NodeLaneEdit::Completion &completion);
+    // Point-level actions treat an origin phantom as its covered source node.
+    // Drag construction distinguishes concrete nodes from value-only phantoms.
     bool nodePointHit(LaneHandle handle, const QPointF &position, NodePoint *point) const;
     bool nodePointHit(LaneHandle handle, const QPointF &position, const AutomationProjection &proj,
                       NodePoint *point) const;
+    std::optional<OriginPhantom> originPhantomAt(LaneHandle handle, const QPointF &position,
+                                                 const AutomationProjection &projection) const;
+    std::optional<OriginPhantom> originPhantom(LaneHandle handle,
+                                               const AutomationProjection &projection,
+                                               std::span<const NodePoint> points) const;
+    std::optional<PhantomGesture> phantomDragGestureAt(LaneHandle handle,
+                                                       const QPointF &position) const;
     NodeDragGesture collectSelectedNodeDrags() const;
     std::optional<NodeDragGesture> nodeDragGestureAt(LaneHandle handle, const QPointF &position,
                                                      bool axisLockArmed,

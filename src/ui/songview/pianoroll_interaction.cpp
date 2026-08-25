@@ -262,11 +262,11 @@ void PianoRoll::mouseMoveEvent(QMouseEvent *event)
     }
     if (m_velModPress && m_drag == Drag::None) {
         // The deferred modifier press becomes a velocity drag once it
-        // travels vertically past the click threshold (so a jittery
-        // Ctrl+click stays a selection toggle). The same event falls
-        // through to the Velocity branch, which measures from the press.
-        if (std::abs(event->pos().y() - m_pressPos.toPoint().y()) <
-            QApplication::startDragDistance())
+        // travels vertically past a small font-scaled threshold. This is
+        // the same kind of jitter guard the empty-space draw uses, not the
+        // platform drag distance: a velocity nudge is a few pixels, so
+        // waiting for startDragDistance() made the gesture feel sluggish.
+        if (std::abs(event->pos().y() - m_pressPos.toPoint().y()) < lyt::space(Space::One))
             return;
         m_velModPress = false;
         const NoteId id = m_velAnchor.noteId;

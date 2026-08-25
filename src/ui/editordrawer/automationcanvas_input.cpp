@@ -223,6 +223,8 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
             nodeDragGestureAt(handle, event->position(), event->modifiers() & Qt::ShiftModifier,
                               proj, m_pencilMode)) {
         m_activeGesture.emplace(std::move(*nodeGesture));
+    } else if (auto phantomGesture = phantomDragGestureAt(handle, event->position())) {
+        m_activeGesture.emplace(std::move(*phantomGesture));
     } else {
         SweepGesture sweep;
         sweep.lane = handle;
@@ -316,7 +318,8 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
         }
         const qreal x = event->position().x();
         const int y = event->pos().y();
-        const LaneHandle handle = x >= m_geometry.plotOrigin ? pointerLane : LaneHandle{};
+        const LaneHandle handle =
+            x >= m_geometry.plotOrigin - m_geometry.pointHitRadius ? pointerLane : LaneHandle{};
         const auto *slot = resolveSlot(handle);
         if (!m_page || !slot)
             invalidateContent(m_hoverState.clearHover());
@@ -324,7 +327,9 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
             invalidateContent(m_hoverState.updateHover(hoverTarget(), m_geometry, *slot->lane,
                                                        slot->body, handle, proj, x, y,
                                                        m_pencilMode));
-        if (m_pencilMode && isEditablePencilHit(event->position()))
+        if (m_hoverState.hover.originPhantom)
+            setCursor(Qt::ArrowCursor);
+        else if (m_pencilMode && isEditablePencilHit(event->position()))
             setCursor(pencilCursor());
         else
             setCursor(Qt::ArrowCursor);

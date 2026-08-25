@@ -217,6 +217,23 @@ AxisLock NodeDragGesture::update(const PointDragUpdate &dragUpdate,
     updatePreview();
     return dragUpdate.axisLock;
 }
+
+AxisLock PhantomGesture::update(const PointDragUpdate &dragUpdate, int mappedValue) noexcept
+{
+    if (dragUpdate.phase == PointDragUpdate::Phase::Pending)
+        return AxisLock::None;
+    point.current = point.original;
+    if (dragUpdate.phase == PointDragUpdate::Phase::Dragging)
+        point.current.value = std::clamp(mappedValue, point.minimumValue, point.maximumValue);
+    return AxisLock::Value;
+}
+
+std::optional<NodeDrag> PhantomGesture::finish() const noexcept
+{
+    if (drag.release() != PointDragRelease::Move || point.current.value == point.original.value)
+        return std::nullopt;
+    return point;
+}
 std::optional<QPointF> SweepGesture::dragPosition(QPointF position, bool activate,
                                                   int activationDistance)
 {

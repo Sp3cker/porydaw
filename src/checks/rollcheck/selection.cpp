@@ -325,12 +325,13 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
                       view.selectionModel().noteSelection().end(),
                       bId) != view.selectionModel().noteSelection().end())
             fail("Ctrl+click did not toggle the note out of the selection");
-
+        // A vertical jitter under the drag threshold is still that click:
+        // it toggles, changes no velocity, and pushes no undo command.
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseMove, b.center + QPoint(0, 3), Qt::NoButton,
+        checks::events::sendMouse(*roll, QEvent::MouseMove, b.center + QPoint(0, 2), Qt::NoButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 3),
+        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 2),
                                   Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
         if (view.selectionModel().noteSelection().size() != 1 ||
             !(view.selectionModel().noteSelection().front() == bId))
@@ -339,6 +340,19 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
             fail("a sub-threshold Ctrl-jitter changed the velocity");
         if (doc.undoStack()->count() != postCarryCount)
             fail("a Ctrl-click or jitter pushed an undo command");
+
+        // Just past the threshold the deferred press becomes a velocity drag.
+        const int gestureCount = doc.undoStack()->count();
+        checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::ControlModifier);
+        checks::events::sendMouse(*roll, QEvent::MouseMove, b.center + QPoint(0, 4), Qt::NoButton,
+                                  Qt::LeftButton, Qt::ControlModifier);
+        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 4),
+                                  Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) || bMod.velocity != 74)
+            fail("a super-threshold Ctrl-drag did not start the velocity gesture");
+        if (doc.undoStack()->count() != gestureCount + 1)
+            fail("the super-threshold velocity drag did not push exactly one command");
 
         // Bulk-selection preservation, mirroring the Ctrl+edge grab: with
         // note A selected, a Ctrl+velocity drag on unselected note B joins

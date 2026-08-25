@@ -35,8 +35,49 @@ bool AutomationCanvas::nodePointHit(LaneHandle handle, const QPointF &position,
     QRect body;
     if (!resolveLane(handle, &lane, &body) || !lane || !m_page)
         return false;
-    return hitNodePoint(*lane, body, proj, m_geometry, position, devicePixelRatioF(), m_pencilMode,
-                        point);
+    if (hitNodePoint(*lane, body, proj, m_geometry, position, devicePixelRatioF(), m_pencilMode,
+                     point))
+        return true;
+    const auto phantom = originPhantomAt(handle, position, proj);
+    if (!phantom)
+        return false;
+    if (point)
+        *point = phantom->point;
+    return true;
+}
+
+std::optional<OriginPhantom>
+AutomationCanvas::originPhantomAt(LaneHandle handle, const QPointF &position,
+                                  const AutomationProjection &proj) const
+{
+    const NodeLane *lane = nullptr;
+    QRect body;
+    if (!resolveLane(handle, &lane, &body) || !lane || !m_page)
+        return std::nullopt;
+    const auto points = lane->points();
+    const auto phantom = originPhantom(handle, proj, points);
+    if (!phantom)
+        return std::nullopt;
+    const QPointF center(qreal(m_geometry.plotOrigin),
+                         AutomationProjection::valueY(body, m_geometry, phantom->minimumValue,
+                                                      phantom->maximumValue, phantom->point.value));
+    if (pointDistanceSquared(position, center) >
+        m_geometry.pointHitRadius * m_geometry.pointHitRadius)
+        return std::nullopt;
+    return phantom;
+}
+
+std::optional<OriginPhantom>
+AutomationCanvas::originPhantom(LaneHandle handle, const AutomationProjection &proj,
+                                std::span<const NodePoint> points) const
+{
+    const NodeLane *lane = nullptr;
+    QRect body;
+    if (!resolveLane(handle, &lane, &body) || !lane || !m_page)
+        return std::nullopt;
+    return ::originPhantomAt(
+        points, handle, lane->minimumValue(), lane->maximumValue(), double(m_geometry.plotOrigin),
+        [this, &proj](uint64_t tick) { return proj.displayX(tick, devicePixelRatioF()); });
 }
 
 bool AutomationCanvas::commitResolvedNodeLaneChanges(std::optional<uint64_t> expectedRevision,
@@ -166,49 +207,66 @@ void AutomationCanvas::updateActiveGesture(const QPointF &position, Qt::Keyboard
         return m_page->nextGridTick(tick, useFineGrid, limit);
     };
     std::visit(
-        Visitor{[this, position, fineGrid, snapValue, &proj, &axisCursor,
-                 modifiers](NodeDragGesture &gesture) {
-                    const PointDragUpdate dragUpdate = gesture.drag.update(
-                        position, modifiers, m_geometry.nodeDragActivationDistance);
-                    if (dragUpdate.phase == PointDragUpdate::Phase::Pending)
-                        return;
-                    NodePoint mappedGrab;
-                    if (dragUpdate.phase == PointDragUpdate::Phase::Dragging)
-                        mappedGrab = this->mappedForLane(gesture.lane, dragUpdate.effectivePosition,
-                                                         fineGrid, snapValue, proj);
-                    axisCursor = gesture.update(dragUpdate, mappedGrab);
-                },
-                [this, position, fineGrid, snapValue, activateSweep, &proj, &snappedRange,
-                 &nextGridTick](SweepGesture &gesture) {
-                    if (gesture.mode == SweepGesture::Mode::Ramp) {
-                        const NodePoint mapped =
-                            this->mappedForLane(gesture.lane, position, fineGrid, snapValue, proj);
-                        gesture.update(mapped);
-                        return;
-                    }
-                    const auto effective = gesture.dragPosition(
-                        position, activateSweep, m_geometry.nodeDragActivationDistance);
-                    if (!effective)
-                        return;
+        Visitor{
+            [this, position, fineGrid, snapValue, &proj, &axisCursor,
+             modifiers](NodeDragGesture &gesture) {
+                const PointDragUpdate dragUpdate =
+                    gesture.drag.update(position, modifiers, m_geometry.nodeDragActivationDistance);
+                NodePoint mappedGrab;
+                if (dragUpdate.phase == PointDragUpdate::Phase::Dragging)
+                    mappedGrab = this->mappedForLane(gesture.lane, dragUpdate.effectivePosition,
+                                                     fineGrid, snapValue, proj);
+                axisCursor = gesture.update(dragUpdate, mappedGrab);
+            },
+            [this, position, modifiers, snapValue, &proj, &axisCursor](PhantomGesture &gesture) {
+                const PointDragUpdate dragUpdate =
+                    gesture.drag.update(position, modifiers, m_geometry.nodeDragActivationDistance);
+                const NodeLane *lane = nullptr;
+                QRect body;
+                if (!resolveLane(gesture.lane, &lane, &body) || !lane)
+                    return;
+                auto mappedValue = gesture.point.original.value;
+                if (dragUpdate.phase == PointDragUpdate::Phase::Dragging) {
+                    NodePoint mapped;
+                    updateValuePoint(proj, *lane, body, mapped, dragUpdate.effectivePosition.y(),
+                                     gesture.point.original.tick, snapValue,
+                                     m_geometry.neutralSnapRadius, lane->neutralValue());
+                    mappedValue = mapped.value;
+                }
+                axisCursor = gesture.update(dragUpdate, mappedValue);
+            },
+            [this, position, fineGrid, snapValue, activateSweep, &proj, &snappedRange,
+             &nextGridTick](SweepGesture &gesture) {
+                if (gesture.mode == SweepGesture::Mode::Ramp) {
                     const NodePoint mapped =
-                        this->mappedForLane(gesture.lane, *effective, fineGrid, snapValue, proj);
-                    const double rawTick = proj.rawTickAt(effective->x());
-                    const auto [first, last] = snappedRange(gesture.previousRawTick, rawTick);
-                    gesture.update(mapped, first, last, rawTick, fineGrid, nextGridTick);
-                },
-                [this, position, modifiers, &proj](PencilGesture &gesture) {
-                    const NodeLane *lane = nullptr;
-                    QRect body;
-                    if (!resolveLane(gesture.lane, &lane, &body) || !lane)
-                        return;
-                    const bool freehand = modifiers & Qt::ControlModifier;
-                    const AxisLock lock =
-                        modifiers & Qt::ShiftModifier ? AxisLock::Value : AxisLock::None;
-                    gesture.update(position, freehand, lock, proj, *lane, body,
-                                   m_geometry.nodeDragActivationDistance);
-                }},
+                        this->mappedForLane(gesture.lane, position, fineGrid, snapValue, proj);
+                    gesture.update(mapped);
+                    return;
+                }
+                const auto effective = gesture.dragPosition(position, activateSweep,
+                                                            m_geometry.nodeDragActivationDistance);
+                if (!effective)
+                    return;
+                const NodePoint mapped =
+                    this->mappedForLane(gesture.lane, *effective, fineGrid, snapValue, proj);
+                const double rawTick = proj.rawTickAt(effective->x());
+                const auto [first, last] = snappedRange(gesture.previousRawTick, rawTick);
+                gesture.update(mapped, first, last, rawTick, fineGrid, nextGridTick);
+            },
+            [this, position, modifiers, &proj](PencilGesture &gesture) {
+                const NodeLane *lane = nullptr;
+                QRect body;
+                if (!resolveLane(gesture.lane, &lane, &body) || !lane)
+                    return;
+                const bool freehand = modifiers & Qt::ControlModifier;
+                const AxisLock lock =
+                    modifiers & Qt::ShiftModifier ? AxisLock::Value : AxisLock::None;
+                gesture.update(position, freehand, lock, proj, *lane, body,
+                               m_geometry.nodeDragActivationDistance);
+            }},
         *m_activeGesture);
-    if (std::holds_alternative<NodeDragGesture>(*m_activeGesture))
+    if (std::holds_alternative<NodeDragGesture>(*m_activeGesture) ||
+        std::holds_alternative<PhantomGesture>(*m_activeGesture))
         updateAxisLockCursor(axisCursor);
     syncPreviewValueLabel();
 }
@@ -254,39 +312,28 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
                 }
             }
         }
-    } else {
-        GestureCommit commit = std::visit(
-            Visitor{[](const NodeDragGesture &) -> GestureCommit { return std::monostate{}; },
-                    [this, &proj, document, lane, handle,
-                     fineMode](const SweepGesture &gesture) -> GestureCommit {
-                        if (gesture.mode == SweepGesture::Mode::Drag && !gesture.slop.exceeded) {
-                            m_page->commitEditCursor(
-                                m_page->snapTick(proj.rawTickAt(gesture.pressPosition.x()), false));
-                            return std::monostate{};
-                        }
-                        if (!lane)
-                            return std::monostate{};
-                        auto completion =
-                            gesture.finish(handle, document->revision(), lane->points(), fineMode,
-                                           [this](uint64_t tick, bool fineGrid, uint64_t last) {
-                                               return m_page->nextGridTick(tick, fineGrid, last);
-                                           });
-                        if (completion.unchanged)
-                            return std::monostate{};
-                        return GestureCommit{std::move(completion)};
-                    },
-                    [](PencilGesture &gesture) -> GestureCommit {
-                        auto completion = std::move(gesture).finish();
-                        if (completion.unchanged)
-                            return std::monostate{};
-                        return GestureCommit{std::move(completion)};
-                    }},
-            *m_activeGesture);
-        changed = std::visit(Visitor{[](std::monostate) { return false; },
-                                     [this](const NodeLaneEdit::Completion &completion) {
-                                         return commitLaneEdit(completion);
-                                     }},
-                             commit);
+    } else if (const auto *gesture = std::get_if<PhantomGesture>(&*m_activeGesture)) {
+        if (document->revision() != gesture->expectedRevision)
+            return;
+        if (const auto point = gesture->finish())
+            changed = commitNodePointMoves(gesture->expectedRevision, {*point});
+    } else if (const auto *gesture = std::get_if<SweepGesture>(&*m_activeGesture)) {
+        if (gesture->mode == SweepGesture::Mode::Drag && !gesture->slop.exceeded) {
+            m_page->commitEditCursor(
+                m_page->snapTick(proj.rawTickAt(gesture->pressPosition.x()), false));
+        } else if (lane) {
+            auto completion =
+                gesture->finish(handle, document->revision(), lane->points(), fineMode,
+                                [this](uint64_t tick, bool fineGrid, uint64_t last) {
+                                    return m_page->nextGridTick(tick, fineGrid, last);
+                                });
+            if (!completion.unchanged)
+                changed = commitLaneEdit(completion);
+        }
+    } else if (auto *gesture = std::get_if<PencilGesture>(&*m_activeGesture)) {
+        auto completion = std::move(*gesture).finish();
+        if (!completion.unchanged)
+            changed = commitLaneEdit(completion);
     }
     if (changed)
         m_page->requestRefresh();
@@ -326,7 +373,8 @@ AutomationCanvas::nodeDragGestureAt(LaneHandle handle, const QPointF &position, 
         (pencilMode && !projection.nodeMarkersVisible()))
         return std::nullopt;
     NodePoint hit;
-    if (!nodePointHit(handle, position, projection, &hit))
+    if (!hitNodePoint(*lane, slot->body, projection, m_geometry, position, devicePixelRatioF(),
+                      pencilMode, &hit))
         return std::nullopt;
     NodeDragGesture state;
     state.lane = handle;
@@ -361,5 +409,22 @@ AutomationCanvas::nodeDragGestureAt(LaneHandle handle, const QPointF &position, 
         lanePoints[std::size_t(index)] = stackLane->points();
     }
     state.preparePreview(m_nodeStack.size(), lanePoints);
+    return state;
+}
+
+std::optional<PhantomGesture> AutomationCanvas::phantomDragGestureAt(LaneHandle handle,
+                                                                     const QPointF &position) const
+{
+    if (!m_page || !m_page->document())
+        return std::nullopt;
+    const auto phantom = originPhantomAt(handle, position, projection());
+    if (!phantom)
+        return std::nullopt;
+    PhantomGesture state;
+    state.lane = handle;
+    state.expectedRevision = m_page->document()->revision();
+    state.point = {handle, phantom->point, phantom->point, phantom->minimumValue,
+                   phantom->maximumValue};
+    state.drag.press(position, false);
     return state;
 }

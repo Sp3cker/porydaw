@@ -330,6 +330,9 @@ void AutomationCanvas::syncPreviewValueLabel()
                 } else {
                     lane = nullptr;
                 }
+            } else if (const auto *gesture = std::get_if<PhantomGesture>(&*m_activeGesture)) {
+                x = qreal(m_geometry.plotOrigin);
+                value = gesture->point.current.value;
             } else if (const auto *gesture = std::get_if<SweepGesture>(&*m_activeGesture)) {
                 x = m_page->displayX(gesture->current.tick, m_geometry.plotOrigin,
                                      devicePixelRatioF());

@@ -130,7 +130,9 @@ QRect NodeLaneHoverState::hoverValueRect(const NodeLaneHoverTarget &target, cons
                        pencilMode, target.documentRevision, &mappedValue))
         return {};
     if (hover.hasPoint)
-        anchorX = projection.displayX(hover.point.tick, target.devicePixelRatio);
+        anchorX = hover.originPhantom
+                      ? qreal(plot.left())
+                      : projection.displayX(hover.point.tick, target.devicePixelRatio);
     const int anchorY = qRound(nodelane::valueY(lane, body, geometry, mappedValue));
     const auto &fontCache = valueLabelFontCache(target.font);
     const int textWidth = fontCache.width;
@@ -164,8 +166,10 @@ QRect NodeLaneHoverState::hoverPaintBounds(const NodeLaneHoverTarget &target, co
     if (hover.hasPoint) {
         const qreal nodeRadius = nodelane::hoverRingRadius(geometry);
         const qreal outerRadius = nodeRadius + paintPadding;
-        const QPointF center(projection.displayX(hover.point.tick, target.devicePixelRatio),
-                             nodelane::valueY(*lane, body, geometry, hover.point.value));
+        const qreal centerX = hover.originPhantom
+                                  ? qreal(plot.left())
+                                  : projection.displayX(hover.point.tick, target.devicePixelRatio);
+        const QPointF center(centerX, nodelane::valueY(*lane, body, geometry, hover.point.value));
         bounds = bounds.united(QRectF(center.x() - outerRadius, center.y() - outerRadius,
                                       2 * outerRadius, 2 * outerRadius)
                                    .toAlignedRect());
@@ -323,6 +327,7 @@ QRegion NodeLaneHoverState::updateHover(const NodeLaneHoverTarget &target,
     hover.lane = handle;
     hover.pos = QPointF(x, y);
     hover.hasPoint = false;
+    hover.originPhantom = false;
     const auto &points = cachedPoints(lane, handle, target.documentRevision);
     if (!pencilMode || projection.nodeMarkersVisible()) {
         if (const auto hit = nearestPointInRadius(
@@ -334,7 +339,20 @@ QRegion NodeLaneHoverState::updateHover(const NodeLaneHoverTarget &target,
                     return nodelane::valueY(lane, body, geometry, point.value);
                 })) {
             hover.hasPoint = true;
-            hover.point = {points[*hit].tick, points[*hit].value};
+            hover.point = points[*hit];
+        } else if (const auto phantom = originPhantomAt(
+                       points, handle, lane.minimumValue(), lane.maximumValue(),
+                       double(geometry.plotOrigin), [&projection, &target](uint64_t tick) {
+                           return projection.displayX(tick, target.devicePixelRatio);
+                       })) {
+            const QPointF center(qreal(geometry.plotOrigin),
+                                 nodelane::valueY(lane, body, geometry, phantom->point.value));
+            if (pointDistanceSquared(hover.pos, center) <=
+                geometry.pointHitRadius * geometry.pointHitRadius) {
+                hover.hasPoint = true;
+                hover.originPhantom = true;
+                hover.point = phantom->point;
+            }
         }
     }
     hoverTextCache = {};
@@ -356,6 +374,7 @@ QRegion NodeLaneHoverState::setContextPointHighlight(
     hover.pos = position;
     hover.hasPoint = true;
     hover.point = point;
+    hover.originPhantom = false;
     hover.highlightLocked = true;
     const QRegion currentDirty =
         updateHoverValueLabel(target, geometry, &lane, body, projection, pencilMode);
@@ -376,6 +395,7 @@ QRegion NodeLaneHoverState::clearHover()
         return QRegion(previousBounds);
     hover.lane = {};
     hover.hasPoint = false;
+    hover.originPhantom = false;
     hover.pos = {};
     return QRegion(previousBounds);
 }
