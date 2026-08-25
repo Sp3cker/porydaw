@@ -198,6 +198,8 @@ qt_add_library(porydaw_app STATIC
     src/core/midiimport.h
     src/project/decompproject.cpp
     src/project/decompproject.h
+    src/project/projectio.cpp
+    src/project/projectio.h
     src/project/songregistry.cpp
     src/project/songregistry.h
     src/project/songsmk.cpp
@@ -501,6 +503,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/samplecheck/analysis.cpp
         src/checks/samplecheck/soundfont.cpp
         src/checks/samplecheck/integration.cpp
+        src/checks/projectiocheck.cpp
         src/checks/sessioncheck.cpp
         src/checks/keymapcheck.cpp
         src/checks/hostcheck.cpp

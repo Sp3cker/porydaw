@@ -147,6 +147,15 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureFiles = decompProjectFiles + strings({"sound/songs/midi/mus_route102.mid"}) +
                              richVoicegroupFiles},
             {
+                .name = "projectiocheck",
+                .argv = strings({"--projectiocheck", "{scratch}"}),
+                .handler = [](QApplication &,
+                              const QStringList &args) { return runProjectIoCheck(args[1]); },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = decompProjectFiles + strings({"sound/music_player_table.inc"}),
+            },
+            {
                 .name = "sessioncheck",
                 .argv = strings({"--sessioncheck", "{scratch}", "mus_route101"}),
                 .handler =
