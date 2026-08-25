@@ -16,7 +16,6 @@
 #include "core/songdocument.h"
 #include "ui/contextmenu.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/layout.h"
 #include "ui/songview/editorselectionmodel.h"
 
