@@ -468,7 +468,9 @@ void VoicegroupBrowser::setVoicegroup(const LoadedVoiceGroup *vg)
 
 void VoicegroupBrowser::setLoading(bool loading)
 {
-    if (loading == m_loading)
+    // Reapply true after the owner updates retained data underneath the
+    // overlay; those setters can rewrite rows and selector text in place.
+    if (loading == m_loading && !loading)
         return;
     m_loading = loading;
     if (loading) {

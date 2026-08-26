@@ -1478,8 +1478,6 @@ void MainWindow::queueVoicegroupLoad(SongSession &session, const SongCfg &cfg, i
     const QString root = m_project.root();
     const QString label = session.doc.label();
     const QString tried = DecompProject::voicegroupCandidates(cfg).join(QStringLiteral(", "));
-    if (&session == m_active)
-        m_workspace->clearVoicegroupPresentation();
     session.pendingVgRequest = m_projectIo->loadVoicegroup(
         root, cfg,
         [this, sessionPtr, cfg, keepSlot, root, label, tried, sourceWasClean, restoreBrowser,
@@ -1540,6 +1538,7 @@ void MainWindow::queueVoicegroupLoad(SongSession &session, const SongCfg &cfg, i
             if (completion)
                 completion(true);
         });
+    syncVoicegroupLoading();
 }
 
 void MainWindow::queueVoicegroupProbe(SongSession &session)
@@ -3028,6 +3027,7 @@ void MainWindow::updateVoicegroupBrowser()
     SongSession *session = m_active;
     if (!session || !session->voicegroup) {
         m_workspace->clearVoicegroupPresentation();
+        syncVoicegroupLoading();
         updateVgDockTitle();
         return;
     }
@@ -3077,7 +3077,15 @@ void MainWindow::updateVoicegroupBrowser()
         return symbol;
     };
     m_workspace->setVoicegroupPresentation(std::move(presentation));
+    syncVoicegroupLoading();
     updateVgDockTitle();
+}
+
+void MainWindow::syncVoicegroupLoading()
+{
+    const bool loading = m_active && (m_active->pendingVgRequest != 0 ||
+                                      (m_active->voicegroup != nullptr && m_vgCatalog.loading));
+    m_workspace->setVoicegroupLoading(loading);
 }
 
 const MainWindow::VgCatalog &MainWindow::vgCatalog()
@@ -3093,6 +3101,7 @@ void MainWindow::queueCatalogRefresh()
         return;
     const QString root = m_project.root();
     m_vgCatalog.loading = true;
+    syncVoicegroupLoading();
     m_pendingCatalogRequest =
         m_projectIo->refreshVgCatalog(root, [this, root](CatalogResult result) mutable {
             if (result.requestId != m_pendingCatalogRequest)
@@ -3100,12 +3109,14 @@ void MainWindow::queueCatalogRefresh()
             m_pendingCatalogRequest = 0;
             if (m_project.root() != root) {
                 m_vgCatalog.loading = false;
+                syncVoicegroupLoading();
                 return;
             }
             m_vgCatalog.loading = false;
             if (!result.succeeded()) {
                 statusBar()->showMessage(
                     tr("Voicegroup catalog is unavailable: %1").arg(result.error), 8000);
+                syncVoicegroupLoading();
                 return;
             }
             m_vgCatalog.groupArgs = result.catalog.groupArgs;
@@ -3134,6 +3145,7 @@ void MainWindow::invalidateVgCatalog()
     m_vgCatalog.valid = false;
     m_vgCatalog.loading = false;
     m_vgCatalog.perFileVoicegroups = false;
+    syncVoicegroupLoading();
     m_sampleWaves.clear();
     m_progWaves.clear();
     m_keysplits.clear();

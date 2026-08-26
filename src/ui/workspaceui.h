@@ -135,6 +135,7 @@ class WorkspaceUi final : public QObject
 
     void setVoicegroupPresentation(VoicegroupPresentation &&presentation);
     void clearVoicegroupPresentation();
+    void setVoicegroupLoading(bool loading);
     void clearVoicegroupSource();
     void setVoicegroup(const LoadedVoiceGroup *voicegroup);
     void setVoicegroupUsedVoices(const QSet<int> &usedVoices);

@@ -1,6 +1,7 @@
 #include "checks/support/voicegroupbrowserdriver.h"
 
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDockWidget>
 #include <QImage>
 #include <QLabel>
@@ -40,6 +41,17 @@ VoicegroupBrowserDriver::VoicegroupBrowserDriver(WorkspaceUi &workspace) noexcep
 bool VoicegroupBrowserDriver::isAvailable() const noexcept
 {
     return browser() && dock();
+}
+
+bool VoicegroupBrowserDriver::isLoading() const noexcept
+{
+    QComboBox *const selector = voicegroupSelector();
+    DragSpinBox *const release = releaseSpinBox();
+    const QString loading = QCoreApplication::translate("VoicegroupBrowser", "Loading...");
+    const QStringList firstRow = slotRowText(0);
+    return selector && !selector->isEnabled() && selector->currentText() == loading &&
+           firstRow.size() == 3 && firstRow.constFirst().contains(loading) &&
+           (!release || !release->isEnabled());
 }
 
 QComboBox *VoicegroupBrowserDriver::voicegroupSelector() const
@@ -187,6 +199,12 @@ QSize VoicegroupBrowserDriver::browserMinimumSizeHint() const
 {
     VoicegroupBrowser *const root = browser();
     return root ? root->minimumSizeHint() : QSize();
+}
+
+QRect VoicegroupBrowserDriver::dockGeometry() const
+{
+    QDockWidget *const voicegroupDock = dock();
+    return voicegroupDock ? voicegroupDock->geometry() : QRect();
 }
 
 void VoicegroupBrowserDriver::hideDock() const

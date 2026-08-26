@@ -350,6 +350,11 @@ void WorkspaceUi::clearVoicegroupPresentation()
     m_hasVoicegroup = false;
 }
 
+void WorkspaceUi::setVoicegroupLoading(bool loading)
+{
+    m_voicegroupBrowser->setLoading(loading);
+}
+
 void WorkspaceUi::clearVoicegroupSource()
 {
     m_voicegroupBrowser->setSource(nullptr, {}, {}, {}, {});

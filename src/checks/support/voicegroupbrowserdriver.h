@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QRect>
 #include <QSize>
 #include <QString>
 #include <QStringList>
@@ -28,6 +29,7 @@ class VoicegroupBrowserDriver final
     explicit VoicegroupBrowserDriver(WorkspaceUi &workspace) noexcept;
 
     bool isAvailable() const noexcept;
+    bool isLoading() const noexcept;
 
     QComboBox *voicegroupSelector() const;
     DragSpinBox *releaseSpinBox() const;
@@ -48,6 +50,7 @@ class VoicegroupBrowserDriver final
     bool setSynthParameterValues(int duty, int step, int depth, int phase) const;
 
     QSize browserMinimumSizeHint() const;
+    QRect dockGeometry() const;
     void hideDock() const;
     bool dockIsHidden() const;
 

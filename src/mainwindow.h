@@ -208,6 +208,7 @@ class MainWindow : public QMainWindow
     void setEditorDrawerState(const EditorDrawerState &state);
 
     void updateVoicegroupBrowser();
+    void syncVoicegroupLoading();
     void onDocumentChanged(SongSession &session);
     // Saves the session's song AND its dirty voicegroup — the two are one
     // document to the user. The voicegroup goes first; completion is called
