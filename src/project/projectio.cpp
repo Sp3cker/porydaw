@@ -384,6 +384,12 @@ class ProjectIo::Worker final : public QObject
                 QStringLiteral("Voicegroup catalog scan did not run on the project thread.");
             return result;
         }
+        const QDir projectRoot(root);
+        if (!projectRoot.exists() ||
+            !QDir(projectRoot.filePath(QStringLiteral("sound"))).exists()) {
+            result.error = QStringLiteral("Project sound directory is unavailable.");
+            return result;
+        }
         result.catalog = VoicegroupSource::catalogScan(root);
         result.directSound = VoicegroupSource::directSoundCatalog(root);
         result.progWave = VoicegroupSource::progWaveSymbols(root);

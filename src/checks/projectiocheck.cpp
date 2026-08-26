@@ -447,6 +447,38 @@ int runProjectIoCheck(const QString &projectRoot)
               "voicegroup completion was not delivered on the caller thread");
         check(voicegroupSucceeded, "voicegroup load did not succeed");
         check(voicegroupSourceReturned, "voicegroup load did not return its source");
+        auto missingVoicegroupCfg = song.cfg;
+        missingVoicegroupCfg.voicegroupArg = QStringLiteral("_porydaw_missing_voicegroup");
+        auto failedVoicegroupCompleted = false;
+        auto failedVoicegroupOnCaller = false;
+        auto failedVoicegroupReportedError = false;
+        auto failedVoicegroupRequestId = uint64_t{0};
+        failedVoicegroupRequestId = projectIo.loadVoicegroup(
+            snapshot.root(), std::move(missingVoicegroupCfg), [&](VoicegroupLoadResult result) {
+                failedVoicegroupOnCaller = QThread::currentThread() == callerThread;
+                check(failedVoicegroupOnCaller,
+                      "failed voicegroup completion did not return to the caller thread");
+                check(result.requestId == failedVoicegroupRequestId,
+                      "failed voicegroup completion returned the wrong ID");
+                check(!result.succeeded(), "missing voicegroup unexpectedly loaded");
+                check(result.voicegroup == nullptr,
+                      "failed voicegroup load returned a non-null voicegroup");
+                check(result.source == nullptr, "failed voicegroup load returned a source");
+                failedVoicegroupReportedError = !result.error.isEmpty();
+                check(failedVoicegroupReportedError,
+                      "failed voicegroup load did not report an error");
+                if (result.voicegroup != nullptr)
+                    voicegroup_free(result.voicegroup);
+                failedVoicegroupCompleted = true;
+                loop.quit();
+            });
+        check(!failedVoicegroupCompleted,
+              "failed voicegroup load completed inline instead of being queued");
+        waitForCompletion("failed voicegroup load timed out");
+        check(failedVoicegroupCompleted, "failed voicegroup load did not complete");
+        check(failedVoicegroupOnCaller,
+              "failed voicegroup completion was not delivered on the caller thread");
+        check(failedVoicegroupReportedError, "failed voicegroup load returned no error");
         check(!cancelledSongCompletionCalled, "cancelled song-file load delivered a completion");
         auto cancelledVoicegroupCompletionCalled = false;
         const auto cancelledVoicegroupRequest =
