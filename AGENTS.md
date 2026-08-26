@@ -79,6 +79,9 @@ deno task format [--check] [files...]
 There is no `deno task build`. Pick `build:app` or `build:checks`.
 `deno task checks` is the raw harness runner; prefer `verify`.
 
+Any failing assertion or check MUST be brought to the user's attention and resolved before
+handoff. Never hand off work with failing assertions or checks.
+
 Project-backed harnesses use checked-in fixtures. The Deno runner gives each
 harness a private scratch path and stages only the files declared in
 the test-only C++ registry exposed by `porydaw_checks --manifest`.
