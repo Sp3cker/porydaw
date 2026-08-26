@@ -2,7 +2,6 @@
 
 #include <QAbstractButton>
 #include <QAction>
-#include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -10,11 +9,11 @@
 #include <QSettings>
 #include <QString>
 #include <QTemporaryDir>
-#include <QTimer>
 #include <cstdio>
 #include <memory>
 
 #include "checks/onboardcheck/pipeline.h"
+#include "checks/support/asyncwait.h"
 #include "mainwindow.h"
 #include "ui/workspaceui.h"
 
@@ -82,71 +81,6 @@ bool compilesThroughMid2agb(const QString &mid2agb, const QString &midPath,
         return false;
     }
     return QFileInfo(outS).size() > 0;
-}
-
-enum class AsyncSongWaitResult {
-    Ready,
-    Destroyed,
-    TimedOut,
-};
-template <typename IsLive, typename IsReady>
-AsyncSongWaitResult waitForAsyncSong(IsLive isLive, IsReady isReady)
-{
-    QEventLoop loop;
-    QTimer poll;
-    QTimer timeout;
-    AsyncSongWaitResult result = AsyncSongWaitResult::TimedOut;
-    const auto check = [&] {
-        if (!isLive())
-            result = AsyncSongWaitResult::Destroyed;
-        else if (isReady())
-            result = AsyncSongWaitResult::Ready;
-        else
-            return;
-        loop.quit();
-    };
-    QObject::connect(&poll, &QTimer::timeout, &loop, check);
-    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
-    timeout.setSingleShot(true);
-    poll.start(10);
-    timeout.start(30000);
-    check();
-    if (result == AsyncSongWaitResult::TimedOut)
-        loop.exec();
-    poll.stop();
-    timeout.stop();
-    return result;
-}
-
-template <typename Start>
-bool waitForProjectOpen(Start start)
-{
-    struct OpenState {
-        bool completed = false;
-        bool succeeded = false;
-    };
-    const auto state = std::make_shared<OpenState>();
-    QEventLoop loop;
-    QTimer poll;
-    QTimer timeout;
-    QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
-        if (state->completed)
-            loop.quit();
-    });
-    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
-    timeout.setSingleShot(true);
-    start([state](bool succeeded) {
-        state->succeeded = succeeded;
-        state->completed = true;
-    });
-    if (!state->completed) {
-        poll.start(1);
-        timeout.start(30000);
-        loop.exec();
-        poll.stop();
-        timeout.stop();
-    }
-    return state->completed && state->succeeded;
 }
 
 } // namespace OnboardCheck
@@ -287,7 +221,7 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
     // the harness cannot isolate a persisted song filter. Clear it explicitly
     // before asserting on the fixture's playable-song presentation.
     m_workspace->restoreSongFilters({});
-    if (!OnboardCheck::waitForProjectOpen([this, &projectRoot](auto completion) {
+    if (!checks::async_wait::waitForBoolCompletion([this, &projectRoot](auto completion) {
             openProjectDir(projectRoot, /*interactive=*/false, completion);
         })) {
         std::fprintf(stderr, "onboardcheck: project failed to open in MainWindow\n");
@@ -295,14 +229,14 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
     }
     loadSongByLabel(label);
     SongSession *tab = m_active;
-    const auto loadWait = OnboardCheck::waitForAsyncSong(
+    const auto loadWait = checks::async_wait::waitUntil(
         [this, tab] {
             return tab && std::any_of(m_sessions.cbegin(), m_sessions.cend(),
                                       [tab](const auto &session) { return session.get() == tab; });
         },
         [tab] { return tab->isInteractive(); });
-    if (loadWait != OnboardCheck::AsyncSongWaitResult::Ready) {
-        const char *reason = loadWait == OnboardCheck::AsyncSongWaitResult::Destroyed
+    if (loadWait != checks::async_wait::Result::Ready) {
+        const char *reason = loadWait == checks::async_wait::Result::Destroyed
                                  ? "session destroyed before async load completed"
                                  : "timed out waiting for midiBound && vgBound && sidecarBound";
         std::fprintf(stderr, "onboardcheck: %s for '%s'\n", reason, qUtf8Printable(label));
@@ -349,7 +283,7 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
     check(m_pendingRegistrationPlanRequest != 0, "Register Song plan request was not queued");
     if (m_pendingRegistrationPlanRequest == 0)
         return pass;
-    const auto dialogWait = OnboardCheck::waitForAsyncSong(
+    const auto dialogWait = checks::async_wait::waitUntil(
         [] { return true; },
         [this, label, constant, &check] {
             QMessageBox *box = m_registerSongConfirmation.data();
@@ -376,10 +310,10 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
             registerButton->click();
             return true;
         });
-    check(dialogWait == OnboardCheck::AsyncSongWaitResult::Ready,
+    check(dialogWait == checks::async_wait::Result::Ready,
           "Register Song confirmation dialog did not appear");
 
-    const auto refreshWait = OnboardCheck::waitForAsyncSong(
+    const auto refreshWait = checks::async_wait::waitUntil(
         [] { return true; },
         [this, &findSong, &label] {
             const SongInfo *current = findSong(label);
@@ -389,9 +323,9 @@ bool MainWindow::runRegisterActionCheck(const QString &projectRoot, const QStrin
                 return false;
             return m_workspace->isSongListed(label) && !m_registerAction->isEnabled();
         });
-    check(refreshWait == OnboardCheck::AsyncSongWaitResult::Ready,
+    check(refreshWait == checks::async_wait::Result::Ready,
           "registration snapshot refresh did not complete");
-    if (refreshWait != OnboardCheck::AsyncSongWaitResult::Ready)
+    if (refreshWait != checks::async_wait::Result::Ready)
         return pass;
 
     check(!m_registerAction->isEnabled(), "Register Song still enabled after backfill");
@@ -418,7 +352,7 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
     };
 
     m_workspace->restoreSongFilters({});
-    if (!OnboardCheck::waitForProjectOpen([this, &projectRoot](auto completion) {
+    if (!checks::async_wait::waitForBoolCompletion([this, &projectRoot](auto completion) {
             openProjectDir(projectRoot, /*interactive=*/false, completion);
         })) {
         std::fprintf(stderr, "onboardcheck: project failed to open in MainWindow\n");
@@ -426,14 +360,14 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
     }
     loadSongByLabel(label);
     SongSession *tab = m_active;
-    const auto loadWait = OnboardCheck::waitForAsyncSong(
+    const auto loadWait = checks::async_wait::waitUntil(
         [this, tab] {
             return tab && std::any_of(m_sessions.cbegin(), m_sessions.cend(),
                                       [tab](const auto &session) { return session.get() == tab; });
         },
         [tab] { return tab->isInteractive(); });
-    if (loadWait != OnboardCheck::AsyncSongWaitResult::Ready) {
-        const char *reason = loadWait == OnboardCheck::AsyncSongWaitResult::Destroyed
+    if (loadWait != checks::async_wait::Result::Ready) {
+        const char *reason = loadWait == checks::async_wait::Result::Destroyed
                                  ? "session destroyed before async load completed"
                                  : "timed out waiting for midiBound && vgBound && sidecarBound";
         std::fprintf(stderr, "onboardcheck: %s for '%s'\n", reason, qUtf8Printable(label));
@@ -460,7 +394,7 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
 
     const auto deletionError = std::make_shared<QString>();
     const bool deleted =
-        OnboardCheck::waitForProjectOpen([this, &song, deletionError](auto completion) {
+        checks::async_wait::waitForBoolCompletion([this, &song, deletionError](auto completion) {
             performSongDeletion(song, QString(),
                                 [deletionError, completion](bool succeeded, QString error) {
                                     *deletionError = error;
@@ -496,8 +430,8 @@ bool MainWindow::runDeleteActionCheck(const QString &projectRoot, const QString 
             projectRoot + QStringLiteral("/sound/songs/midi/%1.mid").arg(fallback->label);
         const bool hadMid = QFile::exists(fallbackMid);
         const auto refusalError = std::make_shared<QString>();
-        const bool fallbackDeleted =
-            OnboardCheck::waitForProjectOpen([this, fallback, refusalError](auto completion) {
+        const bool fallbackDeleted = checks::async_wait::waitForBoolCompletion(
+            [this, fallback, refusalError](auto completion) {
                 performSongDeletion(*fallback, QString(),
                                     [refusalError, completion](bool succeeded, QString error) {
                                         *refusalError = error;

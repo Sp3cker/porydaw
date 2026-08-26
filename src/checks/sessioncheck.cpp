@@ -1,14 +1,13 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QDir>
-#include <QEventLoop>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QSettings>
 #include <QStatusBar>
-#include <QTimer>
 #include <cstdio>
 
+#include "checks/support/asyncwait.h"
 #include "mainwindow.h"
 #include "ui/songlistpanel.h"
 
@@ -17,27 +16,8 @@ namespace {
 template <typename Predicate>
 bool waitFor(Predicate predicate)
 {
-    if (predicate())
-        return true;
-    QEventLoop loop;
-    QTimer poll;
-    QTimer timeout;
-    bool timedOut = false;
-    QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
-        if (predicate())
-            loop.quit();
-    });
-    QObject::connect(&timeout, &QTimer::timeout, &loop, [&] {
-        timedOut = true;
-        loop.quit();
-    });
-    timeout.setSingleShot(true);
-    poll.start(1);
-    timeout.start(30000);
-    loop.exec();
-    poll.stop();
-    timeout.stop();
-    return !timedOut && predicate();
+    return checks::async_wait::waitUntil([] { return true; }, predicate, 30000, 1) ==
+           checks::async_wait::Result::Ready;
 }
 
 } // namespace
@@ -141,7 +121,11 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         window.close();
         check(
             waitFor([&] {
-                return !QSettings().value(QStringLiteral("windowGeometry")).toByteArray().isEmpty();
+                QSettings settings;
+                return !settings.value(QStringLiteral("windowGeometry")).toByteArray().isEmpty() &&
+                       settings.value(QStringLiteral("lastSongLabel")).toString() == songLabel &&
+                       settings.value(QStringLiteral("lastOpenSongs")).toStringList() ==
+                           QStringList(songLabel);
             }),
             "close was refused");
         QSettings settings;

@@ -32,6 +32,7 @@
 #include <vector>
 
 #include "checks/clipcheck_support.h"
+#include "checks/support/asyncwait.h"
 #include "checks/support/eventsynth.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
@@ -111,30 +112,16 @@ bool waitForSessionBindings(const std::vector<std::unique_ptr<SongSession>> &ses
     }
     if (session->isInteractive())
         return true;
-    QEventLoop loop;
-    QTimer poll;
-    QTimer timeout;
-    QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
-        if (!isLive() || session->isInteractive())
-            loop.quit();
-    });
-    QObject::connect(&timeout, &QTimer::timeout, &loop, [&] { loop.quit(); });
-    poll.setInterval(10);
-    poll.start();
-    timeout.setSingleShot(true);
-    timeout.setInterval(30000);
-    timeout.start();
-    loop.exec();
-    poll.stop();
-    timeout.stop();
-    if (!isLive()) {
+    const auto result =
+        checks::async_wait::waitUntil(isLive, [session] { return session->isInteractive(); });
+    if (result == checks::async_wait::Result::Destroyed || !isLive()) {
         std::fprintf(stderr,
                      "song-load wait failed: %s session was destroyed before midiBound, vgBound, "
                      "and sidecarBound\n",
                      what);
         return false;
     }
-    if (!session->isInteractive()) {
+    if (result == checks::async_wait::Result::TimedOut) {
         std::fprintf(stderr,
                      "song-load wait failed: %s timed out before midiBound, vgBound, and "
                      "sidecarBound\n",
@@ -144,36 +131,6 @@ bool waitForSessionBindings(const std::vector<std::unique_ptr<SongSession>> &ses
     return true;
 }
 
-template <typename Start>
-bool waitForProjectOpen(Start start)
-{
-    struct OpenState {
-        bool completed = false;
-        bool succeeded = false;
-    };
-    const auto state = std::make_shared<OpenState>();
-    QEventLoop loop;
-    QTimer poll;
-    QTimer timeout;
-    QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
-        if (state->completed)
-            loop.quit();
-    });
-    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
-    timeout.setSingleShot(true);
-    start([state](bool succeeded) {
-        state->succeeded = succeeded;
-        state->completed = true;
-    });
-    if (!state->completed) {
-        poll.start(1);
-        timeout.start(30000);
-        loop.exec();
-        poll.stop();
-        timeout.stop();
-    }
-    return state->completed && state->succeeded;
-}
 } // namespace
 
 bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QString &songA,
@@ -183,7 +140,7 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         std::fprintf(stderr, "mainwindow-routing: no audio device available\n");
         return false;
     }
-    if (!waitForProjectOpen([this, &projectRoot](auto completion) {
+    if (!checks::async_wait::waitForBoolCompletion([this, &projectRoot](auto completion) {
             openProjectDir(projectRoot, /*interactive=*/false, completion);
         })) {
         std::fprintf(stderr, "mainwindow-routing: project failed to open\n");
@@ -614,7 +571,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
     };
     MainWindow window;
     check(window.m_audioOk, "no audio device available");
-    check(waitForProjectOpen([&window, &scratchProject](auto completion) {
+    check(checks::async_wait::waitForBoolCompletion([&window, &scratchProject](auto completion) {
               window.openProjectDir(scratchProject, /*interactive=*/false, completion);
           }),
           "project failed to open");
@@ -1087,9 +1044,10 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
             const EditorViewState projectSwitchState = replacementView.editorViewState();
             const QString projectSwitchMidiPath = replacement->doc.midPath();
             const QByteArray projectSwitchMidi = fileContents(projectSwitchMidiPath);
-            check(waitForProjectOpen([&window, &scratchProject](auto completion) {
-                      window.openProjectDir(scratchProject, false, completion);
-                  }),
+            check(checks::async_wait::waitForBoolCompletion(
+                      [&window, &scratchProject](auto completion) {
+                          window.openProjectDir(scratchProject, false, completion);
+                      }),
                   "project switch failed");
             ViewSidecar::Snapshot projectSwitchSnapshot;
             check(window.m_workspace->openSessionCount() == 0 &&

@@ -7,7 +7,6 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
-#include <QPointer>
 #include <QSettings>
 #include <QSizePolicy>
 #include <QSpinBox>
@@ -20,8 +19,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <memory>
 
+#include "checks/support/asyncwait.h"
 #include "checks/support/eventsynth.h"
 #include "mainwindow.h"
 #include "porydaw_scale.h"
@@ -50,32 +49,11 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         return false;
     }
     const auto openProject = [this](const QString &root) {
-        struct OpenState {
-            bool completed = false;
-            bool succeeded = false;
-        };
-        const auto state = std::make_shared<OpenState>();
-        QEventLoop openLoop;
-        QTimer poll;
-        QTimer timeout;
-        QObject::connect(&poll, &QTimer::timeout, &openLoop, [&] {
-            if (state->completed)
-                openLoop.quit();
-        });
-        QObject::connect(&timeout, &QTimer::timeout, &openLoop, &QEventLoop::quit);
-        timeout.setSingleShot(true);
-        openProjectDir(root, /*interactive=*/false, [state](bool succeeded) {
-            state->succeeded = succeeded;
-            state->completed = true;
-        });
-        if (!state->completed) {
-            poll.start(1);
-            timeout.start(30000);
-            openLoop.exec();
-            poll.stop();
-            timeout.stop();
-        }
-        return state->completed && state->succeeded;
+        return checks::async_wait::waitForBoolCompletion(
+            [this, root](auto completion) {
+                openProjectDir(root, /*interactive=*/false, completion);
+            },
+            30000, 1);
     };
     if (!openProject(projectRoot)) {
         std::fprintf(stderr, "tabcheck: project failed to open\n");
@@ -96,49 +74,27 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         loop.exec();
     };
     const auto waitForLoaded = [this, &failures](SongSession *session, const char *what) {
-        const auto isLive = [this](SongSession *candidate) {
-            return candidate &&
+        const auto isLive = [this, session] {
+            return session &&
                    std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                               [candidate](const auto &owned) { return owned.get() == candidate; });
+                               [session](const auto &owned) { return owned.get() == session; });
         };
-        if (!isLive(session)) {
+        if (!isLive()) {
             std::fprintf(stderr, "tabcheck: FAIL: %s session disappeared before loading\n", what);
             failures++;
             return false;
         }
 
         constexpr int loadTimeoutMs = 15000;
-        QEventLoop loadLoop;
-        QTimer poll;
-        QTimer deadline;
-        bool timedOut = false;
-        const auto observe = [&] {
-            if (!isLive(session) || session->isInteractive())
-                loadLoop.quit();
-        };
-        poll.setInterval(1);
-        deadline.setSingleShot(true);
-        QObject::connect(&poll, &QTimer::timeout, &loadLoop, observe);
-        QObject::connect(&deadline, &QTimer::timeout, &loadLoop, [&] {
-            timedOut = true;
-            loadLoop.quit();
-        });
-        observe();
-        if (isLive(session) && !session->isInteractive()) {
-            poll.start();
-            deadline.start(loadTimeoutMs);
-            loadLoop.exec();
-        }
-        poll.stop();
-        deadline.stop();
-
-        if (!isLive(session)) {
+        const auto result = checks::async_wait::waitUntil(
+            isLive, [session] { return session->isInteractive(); }, loadTimeoutMs, 1);
+        if (result == checks::async_wait::Result::Destroyed || !isLive()) {
             std::fprintf(stderr, "tabcheck: FAIL: %s session was destroyed while loading\n", what);
             failures++;
             return false;
         }
         if (!session->isInteractive()) {
-            if (timedOut)
+            if (result == checks::async_wait::Result::TimedOut)
                 std::fprintf(stderr, "tabcheck: FAIL: timed out waiting for %s (%d ms)\n", what,
                              loadTimeoutMs);
             else
@@ -162,35 +118,16 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
             return false;
         }
         constexpr int refreshTimeoutMs = 15000;
-        QEventLoop refreshLoop;
-        QTimer poll;
-        QTimer deadline;
-        bool timedOut = false;
-        const auto observe = [&] {
-            const bool changed = session->voicegroup != before || session->vgFileTime != beforeTime;
-            if (!isLive() ||
-                (session->pendingVgProbeRequest == 0 && session->pendingVgRequest == 0 && changed))
-                refreshLoop.quit();
-        };
-        poll.setInterval(1);
-        deadline.setSingleShot(true);
-        QObject::connect(&poll, &QTimer::timeout, &refreshLoop, observe);
-        QObject::connect(&deadline, &QTimer::timeout, &refreshLoop, [&] {
-            timedOut = true;
-            refreshLoop.quit();
-        });
-        observe();
-        const bool changedBefore =
-            session->voicegroup != before || session->vgFileTime != beforeTime;
-        if (isLive() && !(session->pendingVgProbeRequest == 0 && session->pendingVgRequest == 0 &&
-                          changedBefore)) {
-            poll.start();
-            deadline.start(refreshTimeoutMs);
-            refreshLoop.exec();
-        }
-        poll.stop();
-        deadline.stop();
-        if (!isLive()) {
+        const auto result = checks::async_wait::waitUntil(
+            isLive,
+            [&] {
+                const bool changed =
+                    session->voicegroup != before || session->vgFileTime != beforeTime;
+                return session->pendingVgProbeRequest == 0 && session->pendingVgRequest == 0 &&
+                       changed;
+            },
+            refreshTimeoutMs, 1);
+        if (result == checks::async_wait::Result::Destroyed || !isLive()) {
             std::fprintf(stderr, "tabcheck: FAIL: %s session was destroyed while refreshing\n",
                          what);
             failures++;
@@ -198,7 +135,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         }
         const bool changed = session->voicegroup != before || session->vgFileTime != beforeTime;
         if (!changed || session->pendingVgProbeRequest != 0 || session->pendingVgRequest != 0) {
-            if (timedOut)
+            if (result == checks::async_wait::Result::TimedOut)
                 std::fprintf(stderr, "tabcheck: FAIL: timed out waiting for %s (%d ms)\n", what,
                              refreshTimeoutMs);
             else
@@ -219,28 +156,9 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
             failures++;
             return false;
         }
-        struct SaveState {
-            bool completed = false;
-            bool succeeded = false;
-        };
-        const auto state = std::make_shared<SaveState>();
-        QEventLoop saveLoop;
-        QPointer<QEventLoop> loopGuard = &saveLoop;
-        QTimer timeout;
-        timeout.setSingleShot(true);
-        QObject::connect(&timeout, &QTimer::timeout, &saveLoop, &QEventLoop::quit);
-        saveSession(*session, [state, loopGuard](bool succeeded) mutable {
-            state->completed = true;
-            state->succeeded = succeeded;
-            if (loopGuard)
-                loopGuard->quit();
-        });
-        if (!state->completed) {
-            timeout.start(30000);
-            saveLoop.exec();
-            timeout.stop();
-        }
-        if (!state->completed || !state->succeeded) {
+        if (!checks::async_wait::waitForBoolCompletion(
+                [this, session](auto completion) { saveSession(*session, completion); }, 30000,
+                1)) {
             std::fprintf(stderr, "tabcheck: FAIL: %s did not complete successfully\n", what);
             failures++;
             return false;
@@ -866,30 +784,11 @@ bool MainWindow::checkTabRestore(const QString &songA, const QString &songB)
                           m_workspace->isSessionAttached(*session);
                });
     };
-    QEventLoop restoreLoop;
-    QTimer poll;
-    QTimer deadline;
-    bool timedOut = false;
-    poll.setInterval(1);
-    deadline.setSingleShot(true);
-    QObject::connect(&poll, &QTimer::timeout, &restoreLoop, [&] {
-        if (restoredReady())
-            restoreLoop.quit();
-    });
-    QObject::connect(&deadline, &QTimer::timeout, &restoreLoop, [&] {
-        timedOut = true;
-        restoreLoop.quit();
-    });
+    const auto result = checks::async_wait::waitUntil([] { return true; }, restoredReady, 30000, 1);
     if (!restoredReady()) {
-        poll.start();
-        deadline.start(30000);
-        restoreLoop.exec();
-    }
-    poll.stop();
-    deadline.stop();
-    if (!restoredReady()) {
-        check(false, timedOut ? "restoreSession timed out waiting for interactive tabs"
-                              : "restoreSession did not leave interactive tabs");
+        check(false, result == checks::async_wait::Result::TimedOut
+                         ? "restoreSession timed out waiting for interactive tabs"
+                         : "restoreSession did not leave interactive tabs");
         return false;
     }
 
