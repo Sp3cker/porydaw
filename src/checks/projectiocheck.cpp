@@ -88,6 +88,15 @@ int runProjectIoCheck(const QString &projectRoot)
     hydratedProject.replaceWith(snapshot);
     check(hydratedProject.players().size() == snapshot.players().size(),
           "project hydration dropped the music players");
+    if (oneTrackSong != snapshot.songs().cend()) {
+        auto arbitrarySong = SongInfo{};
+        arbitrarySong.player = oneTrackSong->player;
+        check(hydratedProject.trackBudgetFor(arbitrarySong) == 1,
+              "hydrated project did not retain the one-track player budget");
+        arbitrarySong.player = QStringLiteral("MUSIC_PLAYER_UNKNOWN");
+        check(hydratedProject.trackBudgetFor(arbitrarySong) == 16,
+              "hydrated project did not default an unknown player budget");
+    }
     auto playableSong = snapshot.songs().cend();
     for (auto it = snapshot.songs().cbegin(); it != snapshot.songs().cend(); ++it) {
         if (it->isPlayable() && QFileInfo::exists(it->midPath)) {

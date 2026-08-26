@@ -124,5 +124,5 @@ class DecompProject
     QString m_root;
     QVector<SongInfo> m_songs;
     QVector<MusicPlayer> m_players; // cached at open (one file read)
-    QHash<QString, int> m_trackBudgets;
+    QHash<QString, int> m_playerTrackBudgets;
 };

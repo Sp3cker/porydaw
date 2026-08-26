@@ -11,6 +11,21 @@
 #include "project/songregistry.h"
 #include "project/songsmk.h"
 
+namespace {
+
+QHash<QString, int> playerTrackBudgets(const QVector<MusicPlayer> &players)
+{
+    QHash<QString, int> budgets;
+    budgets.reserve(players.size());
+    for (const MusicPlayer &player : players) {
+        if (!budgets.contains(player.name))
+            budgets.insert(player.name, player.trackCount >= 0 ? player.trackCount : 16);
+    }
+    return budgets;
+}
+
+} // namespace
+
 ProjectSnapshot::ProjectSnapshot(QString root, QVector<SongInfo> songs,
                                  QVector<MusicPlayer> players, QHash<QString, int> trackBudgets)
     : m_root(std::move(root))
@@ -84,6 +99,7 @@ bool DecompProject::open(const QString &rootDir, QString *error)
     if (!parseMidiCfg())
         parseSongsMk();
     m_players = SongRegistry::musicPlayers(m_root);
+    m_playerTrackBudgets = playerTrackBudgets(m_players);
     return true;
 }
 
@@ -92,24 +108,12 @@ void DecompProject::replaceWith(const ProjectSnapshot &snapshot)
     m_root = snapshot.root();
     m_songs = snapshot.songs();
     m_players = snapshot.players();
-    m_trackBudgets.clear();
-    m_trackBudgets.reserve(m_songs.size());
-    for (const SongInfo &song : m_songs)
-        m_trackBudgets.insert(song.label, snapshot.trackBudgetFor(song));
+    m_playerTrackBudgets = playerTrackBudgets(m_players);
 }
 
 int DecompProject::trackBudgetFor(const SongInfo &song) const
 {
-    if (m_players.isEmpty()) {
-        const auto it = m_trackBudgets.constFind(song.label);
-        if (it != m_trackBudgets.constEnd())
-            return it.value();
-    }
-    for (const MusicPlayer &p : m_players) {
-        if (p.name == song.player)
-            return p.trackCount >= 0 ? p.trackCount : 16;
-    }
-    return 16;
+    return m_playerTrackBudgets.value(song.player, 16);
 }
 
 bool DecompProject::reload(QString *error)
@@ -123,7 +127,7 @@ void DecompProject::close()
     m_root.clear();
     m_songs.clear();
     m_players.clear();
-    m_trackBudgets.clear();
+    m_playerTrackBudgets.clear();
 }
 
 bool DecompProject::parseSongTable(QString *error)
