@@ -7,7 +7,6 @@
 #include "ui/selectionreticle.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
-#include "ui/theme/color_math.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
@@ -106,11 +105,8 @@ void PianoRoll::drawNotes(QPainter &painter, const SongViewModel &model, int sel
                           const SongDocument::TimeRange &timeRange, uint32_t timeSelectedTracks,
                           bool drawingGhostNotes)
 {
-    const double keyHeight = m_sv->keyHeight();
     const bool velocityShortcut = keymap::Registry::instance().matchesModifier(
         QApplication::queryKeyboardModifiers(), QStringLiteral("roll.velocity_drag"));
-    const bool showVelocityHandles = keyHeight >= m_geometry.velocityHandleMinimumKeyHeight ||
-                                     velocityShortcut || m_drag == Drag::Velocity;
     const bool showVelocityValues =
         !drawingGhostNotes && (m_drag == Drag::Velocity || velocityShortcut);
     // Velocity values are optional at tight zoom levels; never force a
@@ -179,16 +175,6 @@ void PianoRoll::drawNotes(QPainter &painter, const SongViewModel &model, int sel
         const QColor fill = m_sv->noteFillColor(note.track, renderedVelocity);
         painter.fillRect(noteBox, fill);
 
-        // Mixing one-third toward black in OKLab keeps the bar distinct
-        // without rotating the identity hue. The fixed identity shades are
-        // cached; velocity-color mode still follows the rendered fill.
-        if (showVelocityHandles) {
-            const QColor stem = m_sv->velocityColorMode()
-                                    ? mixTowardOklab(fill, Qt::black, 1.0 / 3.0)
-                                    : trackStemColor(note.track);
-            painter.fillRect(
-                velocityBarRect(noteRect, renderedVelocity, devicePixelRatioF(), m_geometry), stem);
-        }
         if (nameFontVisible)
             drawNoteName(painter, noteRect, noteBox, displayedNoteKey(note), fill);
 
@@ -200,8 +186,8 @@ void PianoRoll::drawNotes(QPainter &painter, const SongViewModel &model, int sel
                                         m_geometry.velocityLabelFitAllowance) {
                 painter.save();
                 painter.setClipRect(noteBox, Qt::IntersectClip);
-                drawPlatedNoteText(painter, noteBox, Qt::AlignCenter, velocityText, fill,
-                                   contrastingTextColor(fill));
+                painter.setPen(contrastingTextColor(fill));
+                painter.drawText(noteBox, Qt::AlignCenter, velocityText);
                 painter.restore();
             }
         }
@@ -218,7 +204,7 @@ void PianoRoll::drawNotes(QPainter &painter, const SongViewModel &model, int sel
             drawSelectionRing(noteBox, note);
         } else {
             drawNoteBoxBorder(painter, noteBox, note.unterminated, m_geometry.noteBorderDashLength,
-                              m_geometry.noteBorderDashGap);
+                              m_geometry.noteBorderDashGap, 0);
         }
     }
 }
@@ -241,8 +227,8 @@ void PianoRoll::drawNoteName(QPainter &painter, const QRectF &noteRect, const QR
                            noteBox.height() - 2.0 * textInset);
     painter.save();
     painter.setClipRect(noteBox, Qt::IntersectClip);
-    drawPlatedNoteText(painter, labelRect, Qt::AlignLeft | Qt::AlignVCenter, name, fill,
-                       contrastingTextColor(fill));
+    painter.setPen(contrastingTextColor(fill));
+    painter.drawText(labelRect, Qt::AlignLeft | Qt::AlignVCenter, name);
     painter.restore();
 }
 
@@ -259,7 +245,8 @@ void PianoRoll::drawDragPreview(QPainter &p, const SongViewModel &model, int sel
     const QRectF box = noteBox(r);
     const QColor fill = m_sv->noteFillColor(selected, m_lastVelocity);
     p.fillRect(box, fill);
-    drawNoteBoxBorder(p, box, false, m_geometry.noteBorderDashLength, m_geometry.noteBorderDashGap);
+    drawNoteBoxBorder(p, box, false, m_geometry.noteBorderDashLength, m_geometry.noteBorderDashGap,
+                      0);
     // While the velocity shortcut is held, the pending note follows the
     // same value-instead-of-pitch policy as existing notes.
     const auto &keys = keymap::Registry::instance();
@@ -271,8 +258,8 @@ void PianoRoll::drawDragPreview(QPainter &p, const SongViewModel &model, int sel
             if (r.width() >= p.fontMetrics().horizontalAdvance(velocityText) + 4) {
                 p.save();
                 p.setClipRect(box, Qt::IntersectClip);
-                drawPlatedNoteText(p, box, Qt::AlignCenter, velocityText, fill,
-                                   contrastingTextColor(fill));
+                p.setPen(contrastingTextColor(fill));
+                p.drawText(box, Qt::AlignCenter, velocityText);
                 p.restore();
             }
         }

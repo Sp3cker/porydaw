@@ -46,16 +46,13 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     const uint32_t offDur = uint32_t(d.dur + d.dur / 4);
     doc.addNote(track, d.tick, uint8_t(d.key), offDur, 100);
     const int rowY = rows.centerY(d.key);
-    // Probe 2.8 DIPs inward at both ends on the velocity bar itself. The
-    // resize zones must win over the overlapping velocity hover.
     const qreal resizeNoteLeftX =
         view.displayX(double(d.tick), pianoKeyboardWidth, roll->devicePixelRatioF());
     const qreal resizeNoteRightX =
         view.displayX(double(d.tick + offDur), pianoKeyboardWidth, roll->devicePixelRatioF());
-    const int resizeHandleY =
-        qRound(songview::velBarRect(rows.noteRect(0, 1, d.key), 100, rows.dpr()).center().y());
-    const QPointF leftHandle(resizeNoteLeftX + 2.8, resizeHandleY);
-    const QPointF rightHandle(resizeNoteRightX - 2.8, resizeHandleY);
+    // Probe 2.8 DIPs inward at both ends on the note row.
+    const QPointF leftHandle(resizeNoteLeftX + 2.8, rowY);
+    const QPointF rightHandle(resizeNoteRightX - 2.8, rowY);
     checks::events::sendMouse(*roll, QEvent::MouseMove, leftHandle, Qt::NoButton, Qt::NoButton,
                               Qt::ControlModifier);
     const QPixmap expectedLeftCursor = QIcon(QStringLiteral(":/cursors/left-drag.png"))
@@ -151,8 +148,8 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
 
     // The collapsed note is one snap cell (16 DIPs here) wide. Inside a
     // note that narrow the edge zones shrink to leave a grabbable middle,
-    // so 6 DIPs in from the right edge (below the velocity bar) is part of
-    // that middle: the hover shows the plain arrow, not a resize cursor.
+    // so 6 DIPs in from the right edge is part of that middle: the hover
+    // shows the plain arrow, not a resize cursor.
     const QPointF narrowMiddle(pianoKeyboardWidth +
                                    view.contentX(double(d.tick) + double(snapCell)) - 6,
                                rows.bottom(d.key) - 2);
@@ -161,9 +158,9 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     if (roll->cursor().shape() != Qt::ArrowCursor)
         fail("narrow-note middle lost its move target to the edge resize zones");
 
-    // Frame weight is fitted by row height only, so squeezing this
-    // one-snap-cell note to ~2px wide at minimum horizontal zoom keeps the
-    // same border its wide neighbors have instead of shedding it.
+    // Relative outline: small notes keep a coverage-thinned hairline so
+    // packed neighbors do not merge into a black bar, but the face still
+    // shows and the outline is not dropped.
     {
         const SongView::ViewState originalView = view.viewState();
         view.selectionModel().clearNoteSelection(); // the resize press selected note d
@@ -182,12 +179,19 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
         QImage narrowImage(roll->size(), QImage::Format_ARGB32_Premultiplied);
         narrowImage.fill(Qt::transparent);
         roll->render(&narrowImage);
-        const auto isNarrowBorder = [&](QRgb pixel) {
-            return qRed(pixel) <= 16 && qGreen(pixel) <= 16 && qBlue(pixel) <= 16;
-        };
-        if (!isNarrowBorder(
-                narrowImage.pixel(qRound(narrowBox.center().x()), qRound(narrowBox.top()))))
-            fail("narrow note shed the border its wide neighbors keep");
+        const int sampleX = qRound(narrowBox.center().x());
+        const QRgb topPixel = narrowImage.pixel(sampleX, qRound(narrowBox.top()));
+        const QRgb centerPixel = narrowImage.pixel(sampleX, qRound(narrowBox.center().y()));
+        const QColor top(topPixel);
+        const QColor face = SongView::noteColor(track, 100);
+        if (qAlpha(topPixel) == 0)
+            fail("narrow note missing at minimum zoom");
+        if (top == face)
+            fail("narrow note shed its outline at minimum zoom");
+        const bool centerSwallowed = qAlpha(centerPixel) > 240 && qRed(centerPixel) < 16 &&
+                                     qGreen(centerPixel) < 16 && qBlue(centerPixel) < 16;
+        if (centerSwallowed)
+            fail("narrow note outline clouded the face into a black bar");
         view.applyViewState(originalView);
     }
 

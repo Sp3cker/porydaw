@@ -1,7 +1,6 @@
 #include "ui/editordrawer/automationcanvas.h"
 
 #include <algorithm>
-#include <cmath>
 
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -46,18 +45,9 @@ void AutomationCanvas::wheelEvent(QWheelEvent *event)
         const int steps = m_resize.wheelRemainder / 120;
         if (steps != 0) {
             m_resize.wheelRemainder -= steps * 120;
-            const int shared = m_page->m_viewState.laneHeight > 0 ? m_page->m_viewState.laneHeight
-                                                                  : m_geometry.rowDefaultHeight;
-            const int height = std::clamp(shared + steps * m_geometry.rowWheelIncrement,
-                                          m_geometry.rowMinimumHeight, m_geometry.rowMaximumHeight);
-            if (height != shared) {
-                const double factor = double(height) / double(shared);
-                for (auto &[row, rowHeight] : m_page->m_viewState.laneHeights)
-                    rowHeight =
-                        std::clamp(int(std::lround(rowHeight * factor)),
-                                   m_geometry.rowMinimumHeight, m_geometry.rowMaximumHeight);
-                m_page->m_viewState.laneHeight = height;
+            if (m_page->scaleSharedHeight(steps, m_geometry)) {
                 layoutLaneStack(m_voiceLane.engineTrack());
+                invalidateContent();
             }
         }
     } else if (event->modifiers() & Qt::ShiftModifier) {

@@ -70,11 +70,6 @@ QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t);
 // the row; this floor is only a cheap pre-gate that no padded face ever
 // fits under.
 constexpr int kNoteNameMinKeyH = 12;
-// The velocity bar's rect inside a note rect; painted by the roll and,
-// from the resolved velocity-handle threshold up, the grab target for velocity drags. Exposed
-// for roll interaction checks. The default DPR keeps integer-DIP callers
-// compatible while the roll supplies its actual display scale.
-QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr = layout::singlePixel());
 // Frame weights for note borders and the selection ring, in physical
 // pixels for the given display ratio. The resolver scales their DIP widths
 // with the editor font; painting still lands on whole physical pixels so
@@ -575,7 +570,7 @@ class SongView : public QWidget
         int timelineMaximumPixelsPerBeat;
         int pianoRollMinimumKeyHeight;
         int pianoRollMaximumKeyHeight;
-        int velocityHandleMinimumKeyHeight;
+        int pianoRollDefaultKeyHeight;
         int timelineDetailMinimumPixelsPerBeat;
         int gridLineStrokeWidth;
         int automationGridMinimumCellWidth;

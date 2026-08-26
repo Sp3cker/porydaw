@@ -77,6 +77,8 @@ void SongView::trackHeaderClicked(int track, Qt::KeyboardModifiers modifiers)
         : modifiers & Qt::ShiftModifier ? EditorSelectionModel::TrackScopeAction::Range
                                         : EditorSelectionModel::TrackScopeAction::Plain;
     m_selectionModel.applyTrackScopeAdjustment(track, used, action);
+    if (m_roll)
+        m_roll->setFocus();
 }
 void SongView::setTrackMute(int track, bool on)
 {

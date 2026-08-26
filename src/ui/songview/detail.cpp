@@ -85,12 +85,6 @@ qreal edgeGripInnerReach(const QRectF &noteRect, qreal minimumMoveWidth, qreal e
 {
     return std::clamp((noteRect.width() - minimumMoveWidth) / 2.0, 0.0, edgeGripReach);
 }
-qreal velocityHandlePointerHitPadding(qreal noteHeight, qreal physicalPixel)
-{
-    const auto physicalNoteHeight = qRound(noteHeight / physicalPixel);
-    const auto paddingPixels = std::clamp(physicalNoteHeight / 6, 2, 4);
-    return paddingPixels * physicalPixel;
-}
 
 bool isBlackKey(int key)
 {
@@ -205,18 +199,6 @@ std::size_t trackIdentityIndex(int track)
 {
     const auto count = static_cast<int>(themes::trackIdentityColorCount);
     return static_cast<std::size_t>(((track % count) + count) % count);
-}
-
-// Velocity-bar / stem shade: fixed mix of each identity toward black (once).
-QColor trackStemColor(int track)
-{
-    static const auto stems = [] {
-        std::array<QColor, themes::trackIdentityColorCount> result{};
-        for (std::size_t i = 0; i < result.size(); ++i)
-            result[i] = mixTowardOklabImpl(themes::trackIdentityColor(i), Qt::black, 1.0 / 3.0);
-        return result;
-    }();
-    return stems[trackIdentityIndex(track)];
 }
 
 // The higher-contrast piano-key color over a note fill.
@@ -399,20 +381,6 @@ void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
         p.setPen(QPen(colors[i], gridLineStrokeWidth * physicalPixel));
         p.drawLines(batches[i]);
     }
-}
-
-// Note text sits on a plate of the note's own fill: the velocity bar can
-// cross the text rows, and both the bar and a dark picked ink derive from
-// the fill, so glyphs painted straight over the bar lose their contrast.
-// The plate is a no-op wherever the backdrop is already the plain fill.
-void drawPlatedNoteText(QPainter &painter, const QRectF &rect, int flags, const QString &text,
-                        const QColor &fill, const QColor &ink)
-{
-    const QRectF plate = painter.boundingRect(rect, flags, text);
-    const qreal pad = lyt::singlePixel();
-    painter.fillRect(plate.adjusted(-pad, 0.0, pad, 0.0), fill);
-    painter.setPen(ink);
-    painter.drawText(rect, flags, text);
 }
 
 } // namespace songview::detail

@@ -490,8 +490,6 @@ bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &positi
 void AutomationCanvas::setGestureActive(bool active)
 {
     if (m_page) {
-        if (active)
-            m_page->automationGestureStarted();
         m_page->setFollowScrollPaused(active);
     }
 }

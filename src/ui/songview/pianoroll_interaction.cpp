@@ -149,12 +149,6 @@ void PianoRoll::mousePressEvent(QMouseEvent *event)
             m_drag = Drag::ResizeLeft;
             m_gripTick = hit->startTick;
             m_gripOpposite = hit->endTick;
-        } else if (nearVelocityHandle(*hit, event->position())) {
-            m_drag = Drag::Velocity;
-            m_velAnchor = *hit;
-            m_velAudEff = mid2agbEffectiveVelocity(hit->velocity);
-            if (!m_sv->beginVelocityGesture(resolveSelection()))
-                cancelVelocityInteraction();
         } else {
             m_drag = Drag::Move;
         }

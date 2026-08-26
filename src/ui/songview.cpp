@@ -70,7 +70,7 @@ SongView::ViewState::ViewState()
 {
     const Geometry geometry = Geometry::resolve();
     pxPerBeat = geometry.editorDefaultPixelsPerBeat;
-    keyHeight = geometry.velocityHandleMinimumKeyHeight;
+    keyHeight = geometry.pianoRollDefaultKeyHeight;
 }
 
 void SongView::refreshGeometry()
@@ -111,7 +111,7 @@ std::vector<songview::TimelineBand> SongView::timelineBands() noexcept
 SongView::SongView(QWidget *parent)
     : QWidget(parent)
     , m_geometry(Geometry::resolve())
-    , m_keyHeight(m_geometry.velocityHandleMinimumKeyHeight)
+    , m_keyHeight(m_geometry.pianoRollDefaultKeyHeight)
 {
     // Prime the default C-major classification (the previous controller
     // constructor did this); touch no widgets.
@@ -455,8 +455,6 @@ void SongView::coordinateSelectionChange(
     bool timelineViewsRefreshed = false;
     if (primaryChanged) {
         m_headers->syncSelection();
-        if (m_roll)
-            m_roll->setFocus();
         if (m_scaleController.scaleFold()) {
             rebuildProjectionWithAnchoring();
         } else {

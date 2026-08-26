@@ -22,7 +22,7 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
     SongView &view = check.view();
     QWidget *roll = &check.roll();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
-    const int velocityHandleMinimumKeyHeight = check.velocityHandleMinimumKeyHeight();
+    const int pianoRollDefaultKeyHeight = check.pianoRollDefaultKeyHeight();
     const SnappedRows rows{view, *roll};
     const int undoBaseline = doc.undoStack()->index();
     auto fail = [&](const char *what) { check.fail(what); };
@@ -221,7 +221,7 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
         if (rootKey < 0) {
             fail("no empty octave for the Highlight pixel probe");
         } else {
-            const double kh = velocityHandleMinimumKeyHeight;
+            const double kh = pianoRollDefaultKeyHeight;
             const double scrollY =
                 (127 - nonScaleKey) * kh + kh / 2.0 - double(roll->height()) / 2.0;
             SongView::ViewState st = view.viewState();

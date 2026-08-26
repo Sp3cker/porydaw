@@ -64,10 +64,6 @@ struct PianoRollGeometry {
     int pianoRollNoteMinimumHeight;
     qreal pianoRollNoteEdgeGripReach;
     qreal pianoRollNoteMoveZoneMinimumWidth;
-    int velocityHandleMinimumKeyHeight;
-    int velocityHandleTallNoteThreshold;
-    int velocityHandleBarThickness;
-    int velocityHandleInset;
     qreal selectionRingDipWidth;
     int noteBorderDashLength;
     int noteBorderDashGap;
@@ -87,8 +83,6 @@ struct MidiCursors {
     QCursor rightEdge;
 };
 
-QRectF velocityBarRect(const QRectF &noteRect, int velocity, qreal dpr,
-                       const PianoRollGeometry &geometry);
 QCursor centeredCursor(const QPixmap &pm);
 MidiCursors loadMidiCursors(qreal devicePixelRatio, int cursorExtent);
 QRectF noteFrame(const QPainter &painter, const QRectF &noteRect, int insetPixels);
@@ -97,7 +91,7 @@ int fittedFrameThickness(const QPainter &painter, const QRectF &rect, int reques
 int drawRectFrame(QPainter &painter, const QRectF &rect, const QColor &color, int thicknessPixels,
                   int insetPixels = layout::space(layout::Space::Zero));
 void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox, bool unterminated, int dashLength,
-                       int dashGap, int insetPixels = layout::space(layout::Space::Zero));
+                       int dashGap, int insetPixels);
 
 } // namespace songview::pianoroll_detail
 
@@ -163,7 +157,6 @@ class PianoRoll : public TimelineSurface
     const ViewNote *hitNote(QPointF pos) const;
     bool nearRightEdge(const ViewNote &note, QPointF pos) const;
     bool nearLeftEdge(const ViewNote &note, QPointF pos) const;
-    bool nearVelocityHandle(const ViewNote &note, QPointF pos) const;
     void refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers);
     void refreshHoverAtCursor();
 

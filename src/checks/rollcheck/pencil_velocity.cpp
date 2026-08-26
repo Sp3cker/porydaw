@@ -4,9 +4,7 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QMenu>
-#include <QObject>
 #include <QPoint>
-#include <QRectF>
 #include <QWidget>
 #include <utility>
 #include <vector>
@@ -96,18 +94,14 @@ std::optional<PencilVelocityFixture> runPencilVelocityScenarios(Harness &check,
         }
     }
 
-    // Drag latch: grab note B's velocity bar and pull 20px up (1px = 1
-    // step), 73 -> 93. The latch must follow the dragged value, not the
-    // press value.
+    // Drag latch: Control-drag note B upward 20px (1px = 1 step), 73 -> 93.
+    // The latch must follow the dragged value, not the press value.
     const uint64_t revisionBeforeVelocityDrag = doc.revision();
     const int undoBeforeVelocityDrag = doc.undoStack()->count();
-    const QRectF bRect = rows.noteRect(0, 1, b.key);
-    const QPoint bHandle(b.center.x(),
-                         qRound(songview::velBarRect(bRect, 73, rows.dpr()).center().y()));
-    checks::events::sendMouse(*roll, QEvent::MouseButtonPress, bHandle, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*roll, QEvent::MouseMove, bHandle - QPoint(0, 20), Qt::NoButton,
-                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                              Qt::LeftButton, Qt::ControlModifier);
+    checks::events::sendMouse(*roll, QEvent::MouseMove, b.center - QPoint(0, 20), Qt::NoButton,
+                              Qt::LeftButton, Qt::ControlModifier);
     // The cursor sits rows above the note now, but the hover mark pins to
     // the note's own pitch for the whole velocity drag.
     if (roll->property("hoverKey").toInt() != b.key)
@@ -118,17 +112,15 @@ std::optional<PencilVelocityFixture> runPencilVelocityScenarios(Harness &check,
     if (!heldDragResolved || heldDrag.velocity != 73 || !draggedPreview || *draggedPreview != 93 ||
         doc.revision() != revisionBeforeVelocityDrag ||
         doc.undoStack()->count() != undoBeforeVelocityDrag)
-        fail("velocity-handle moves must update preview without changing document history");
-    checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, bHandle - QPoint(0, 20),
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        fail("velocity drag moves must update preview without changing document history");
+    checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center - QPoint(0, 20),
+                              Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
     DocNote dragged;
     if (!doc.findNote(track, b.tick, uint8_t(b.key), &dragged) || dragged.velocity != 93 ||
         doc.revision() != revisionBeforeVelocityDrag + 1 ||
         doc.undoStack()->count() != undoBeforeVelocityDrag + 1 ||
         view.previewVelocity(noteB.noteId))
-        fail("velocity-handle release must commit one batch and clear its preview");
-    const QPoint cancelHandle(b.center.x(),
-                              qRound(songview::velBarRect(bRect, 93, rows.dpr()).center().y()));
+        fail("velocity drag release must commit one batch and clear its preview");
     const auto checkVelocityCancellation = [&](const char *fixtureFailure, const char *stageFailure,
                                                const char *cancelFailure, const auto &cancel) {
         const uint64_t revisionBeforeCancel = doc.revision();
@@ -137,11 +129,11 @@ std::optional<PencilVelocityFixture> runPencilVelocityScenarios(Harness &check,
         DocNote before;
         if (!doc.findNote(track, b.tick, uint8_t(b.key), &before))
             fail(fixtureFailure);
-        const uint8_t expectedVelocity = uint8_t(std::clamp(int(before.velocity) + 8, 1, 127));
-        checks::events::sendMouse(*roll, QEvent::MouseButtonPress, cancelHandle, Qt::LeftButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseMove, cancelHandle - QPoint(0, 8),
-                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        const uint8_t expectedVelocity = uint8_t(std::clamp(int(before.velocity) + 15, 1, 127));
+        checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::ControlModifier);
+        checks::events::sendMouse(*roll, QEvent::MouseMove, b.center - QPoint(0, 15), Qt::NoButton,
+                                  Qt::LeftButton, Qt::ControlModifier);
         QCoreApplication::processEvents();
         const auto preview = view.previewVelocity(noteB.noteId);
         if (!preview || *preview != expectedVelocity || doc.revision() != revisionBeforeCancel ||
@@ -163,11 +155,10 @@ std::optional<PencilVelocityFixture> runPencilVelocityScenarios(Harness &check,
         "cancelled velocity drag must stage its changed preview without document history",
         "SongView cancellation must reset piano-roll local drag state without mutation", [&] {
             view.cancelActiveInteractions();
-            checks::events::sendMouse(*roll, QEvent::MouseMove, cancelHandle - QPoint(0, 8),
-                                      Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
-                                      cancelHandle - QPoint(0, 8), Qt::LeftButton, Qt::NoButton,
-                                      Qt::NoModifier);
+            checks::events::sendMouse(*roll, QEvent::MouseMove, b.center - QPoint(0, 15),
+                                      Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+            checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center - QPoint(0, 15),
+                                      Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
             QCoreApplication::processEvents();
         });
     checkVelocityCancellation("mouse-ungrab cancellation fixture lost note B",
@@ -191,41 +182,6 @@ std::optional<PencilVelocityFixture> runPencilVelocityScenarios(Harness &check,
     }
     if (noteC.velocity != 93)
         fail("dragged velocity did not latch into the next draw");
-
-    // The handle rides the velocity bar, not the note's top strip: with
-    // note B's bar parked low (velocity 20), a drag from the note's top
-    // row must Move the note off its key, not change its velocity.
-    // (Skipped when the drag above already displaced note B.)
-    DocNote bNow;
-    if (doc.findNote(track, b.tick, uint8_t(b.key), &bNow)) {
-        doc.setNotesVelocity({bNow}, 20);
-        const QPoint bTop(b.center.x(), rows.noteTopProbeY(b.key));
-        std::vector<int> releaseOrder;
-        const auto documentConn = QObject::connect(&doc, &SongDocument::documentChanged, &view,
-                                                   [&] { releaseOrder.push_back(1); });
-        const auto auditionConn =
-            QObject::connect(&view, &SongView::auditionNote, &view, [&](int, int, int velocity) {
-                releaseOrder.push_back(velocity == 0 ? 2 : 3);
-            });
-        checks::events::sendMouse(*roll, QEvent::MouseButtonPress, bTop, Qt::LeftButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        const QPoint movedTop(bTop.x(), rows.noteTopProbeY(b.key + 2));
-        checks::events::sendMouse(*roll, QEvent::MouseMove, movedTop, Qt::NoButton, Qt::LeftButton,
-                                  Qt::NoModifier);
-        releaseOrder.clear();
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, movedTop, Qt::LeftButton,
-                                  Qt::NoButton, Qt::NoModifier);
-        QObject::disconnect(documentConn);
-        QObject::disconnect(auditionConn);
-        if (releaseOrder != std::vector<int>{1, 2})
-            fail("move release did not commit before ending its audition");
-        if (doc.findNote(track, b.tick, uint8_t(b.key), &bNow))
-            fail("top-of-note drag on a low-velocity note did not move the "
-                 "note (velocity handle still on the top strip?)");
-        doc.undoStack()->undo(); // the move
-        doc.undoStack()->undo(); // the velocity-20 set
-        click(*roll, b.center);  // re-latch 93 for the sections below
-    }
 
     // Double-click on a note deletes it (the pencil sections above prove
     // the same event still draws over empty space). Note C goes.

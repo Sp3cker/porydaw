@@ -30,7 +30,7 @@ bool Harness::prepare()
 
     m_pianoKeyboardWidth = layout::fontPx(13.0 / 3.0);
     m_plotOrigin = layout::fontPx(17.5 + 13.0 / 3.0);
-    m_velocityHandleMinimumKeyHeight = layout::fontPx(1.0);
+    m_pianoRollDefaultKeyHeight = layout::fontPx(1.0);
     m_roll = songView.findChild<QWidget *>(QStringLiteral("pianoRoll"));
     if (!m_roll || m_roll->width() <= m_pianoKeyboardWidth || m_roll->height() <= 0) {
         fail("piano roll not found or not laid out");
@@ -87,9 +87,9 @@ int Harness::plotOrigin() const noexcept
     return m_plotOrigin;
 }
 
-int Harness::velocityHandleMinimumKeyHeight() const noexcept
+int Harness::pianoRollDefaultKeyHeight() const noexcept
 {
-    return m_velocityHandleMinimumKeyHeight;
+    return m_pianoRollDefaultKeyHeight;
 }
 
 void Harness::fail(const char *what)
@@ -212,11 +212,6 @@ QRectF SnappedRows::noteRect(qreal x0, qreal x1, int key) const
 QRectF SnappedRows::noteBox(const QRectF &rect) const
 {
     return rect.adjusted(0, 0, 0, -pixel());
-}
-
-int SnappedRows::noteTopProbeY(int key) const
-{
-    return int(std::floor(noteRect(0, 1, key).top() + pixel()));
 }
 
 bool isSelectionRingColor(QRgb pixel)
