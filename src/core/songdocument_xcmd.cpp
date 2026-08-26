@@ -126,9 +126,12 @@ void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int 
             return; // semantics unsatisfiable: fail without mutation
         std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
         std::vector<EditOp> ops;
-        appendXcmdPatchOps(removals, ops, smfTrack, *patch);
+        std::vector<EditOp> insertions;
+        appendXcmdPatchOps(removals, insertions, smfTrack, *patch);
         for (size_t track = 0; track < m_smf.tracks.size(); track++)
             appendRemoveOps(ops, int(track), std::move(removals[track]));
+        for (EditOp &insertion : insertions)
+            ops.push_back(std::move(insertion));
         pushEdit(tr("add automation point"), std::move(ops));
         return;
     }
@@ -176,9 +179,12 @@ void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBeg
             return; // semantics unsatisfiable: fail without mutation
         std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
         std::vector<EditOp> ops;
-        appendXcmdPatchOps(removals, ops, smfTrack, *patch);
+        std::vector<EditOp> insertions;
+        appendXcmdPatchOps(removals, insertions, smfTrack, *patch);
         for (size_t track = 0; track < m_smf.tracks.size(); track++)
             appendRemoveOps(ops, int(track), std::move(removals[track]));
+        for (EditOp &insertion : insertions)
+            ops.push_back(std::move(insertion));
         pushEdit(tr("draw automation points"), std::move(ops));
         return;
     }

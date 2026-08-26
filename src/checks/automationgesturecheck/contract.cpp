@@ -554,6 +554,19 @@ void checkEngineDefaultNodes(Session &session, const AutomationGestureCheck &fn)
     checkPromotion(pan, 10, 32, QStringLiteral("Pan"));
 }
 
+std::vector<SmfEvent> noteEvents(const SongDocument &document, int engineTrack)
+{
+    const int smfTrack = document.smfTrackFor(engineTrack);
+    std::vector<SmfEvent> notes;
+    if (smfTrack < 0 || smfTrack >= int(document.smf().tracks.size()))
+        return notes;
+    for (const SmfEvent &event : document.smf().tracks[size_t(smfTrack)].events) {
+        if (event.isNoteOn() || event.isNoteEnd())
+            notes.push_back(event);
+    }
+    return notes;
+}
+
 std::vector<std::pair<uint8_t, uint8_t>> xcmdBytes(const SongDocument &document, int engineTrack)
 {
     const int smfTrack = document.smfTrackFor(engineTrack);
@@ -845,6 +858,49 @@ void checkLogicalXcmdEdits(Session &session, const AutomationGestureCheck &fn)
                   QStringLiteral("logical echo-lane edits did not undo to the original SMF"));
 }
 
+void checkXcmdSweepPreservesNotes(Session &session, const AutomationGestureCheck &fn)
+{
+    Check check{fn, QStringLiteral("xcmd-note-preservation")};
+    auto &document = session.document;
+    const int track = document.engineTrackCount() > 3 ? 3 : session.engineTrack;
+    const auto before = snapshot(document);
+    document.writeLanePoints(track, DOC_CC_ECHO_VOLUME, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+    document.writeLanePoints(track, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
+                             {});
+
+    constexpr uint64_t dragBegin = 8736;
+    constexpr uint64_t noteBegin = 8772;
+    constexpr uint64_t noteEnd = 8808;
+    constexpr uint64_t existingPoint = 8844;
+    SmfEvent noteOn;
+    noteOn.tick = noteBegin;
+    noteOn.status = uint8_t((0x9 << 4) | (document.channelFor(track) & 0x0F));
+    noteOn.data0 = 60;
+    noteOn.data1 = 100;
+    SmfEvent noteOff = noteOn;
+    noteOff.tick = noteEnd;
+    noteOff.status = uint8_t((0x8 << 4) | (document.channelFor(track) & 0x0F));
+    noteOff.data1 = 0;
+    document.insertRawEvent(document.smfTrackFor(track), noteOn);
+    document.insertRawEvent(document.smfTrackFor(track), noteOff);
+    document.addLanePoint(track, DOC_CC_ECHO_VOLUME, existingPoint, 48);
+    const auto notesBeforeSweep = noteEvents(document, track);
+
+    CCLaneAdapter xIecvLane(document, track, DOC_CC_ECHO_VOLUME);
+    xIecvLane.replaceSpan(dragBegin, existingPoint, {{dragBegin, 32}, {existingPoint, 48}});
+    check.require(
+        noteEvents(document, track) == notesBeforeSweep &&
+            sameRawPoints(document.lanePoints(track, DOC_CC_ECHO_VOLUME),
+                          {{dragBegin, 32}, {existingPoint, 48}}),
+        QStringLiteral("cross-measure xIECV sweep deleted or changed intervening note events"));
+
+    while (document.undoStack()->index() > before.undoIndex)
+        document.undoStack()->undo();
+    check.require(snapshot(document).smf == before.smf,
+                  QStringLiteral("xIECV note-preservation setup did not undo cleanly"));
+}
+
 void checkRowRebuildHandles(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check)
 {
     const Check rowCheck{check, QStringLiteral("lane-rebuild")};
@@ -943,5 +999,6 @@ void checkNodeContract(AutomationGestureCheckRig &rig, const AutomationGestureCh
     }
     checkEngineDefaultNodes(session, check);
     checkLogicalXcmdEdits(session, check);
+    checkXcmdSweepPreservesNotes(session, check);
     checkLogicalXcmdOccurrences(session, check);
 }
