@@ -99,8 +99,8 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
         const QPointF end = activation + target.position - grab.position;
         rig.mousePress(grab.position);
         rig.mouseMove(activation);
-        rig.mouseMove(end);
-        rig.mouseRelease(end);
+        rig.mouseMove(end, Qt::LeftButton, Qt::AltModifier);
+        rig.mouseRelease(end, Qt::AltModifier);
         rig.pump();
 
         const auto after = snapshot(rig.document());
