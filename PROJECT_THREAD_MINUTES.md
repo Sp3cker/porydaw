@@ -1,6 +1,6 @@
 # Project File-I/O Thread Design Minutes
 
-Status: living design record. This file records settled decisions, verified facts, and unresolved questions. It does not define an implementation plan yet.
+Status: living design record. This file records settled decisions, verified facts, and unresolved questions. Implementation plan is defined in [`docs/project-io-thread-plan.md`](docs/project-io-thread-plan.md).
 
 ## Goal
 
@@ -31,6 +31,14 @@ This boundary is intentionally about project filesystem work. Moving only a `QFi
 - All 19 current UI-owned project-filesystem initiation sites must be absorbed behind the one injected GUI-facing project-I/O object. No `MainWindow`, wizard page, or `ViewSidecar` path should keep initiating project filesystem work directly.
 - `DecompProject` lives on or inside the worker-side implementation. The GUI-facing object may own the `QThread` and route queued operations to `DecompProject` and existing internal project modules on that thread. This does not require view-sidecar JSON, preview files, or every other operation to become a public `DecompProject` method.
 - All later decisions and every unresolved question from this design discussion must remain in this file.
+- Song open shows an empty `SongView` immediately. MIDI SMF parse and voicegroup load both run on `ProjectIo`. The document/timeline bind when `loadSongFile` completes; the voicegroup binds when `loadVoicegroup` completes. Either result may arrive first. Tab close cancels that session's in-flight requests.
+- Empty `SongView` is a normal `createSession()` widget: full chrome stays in the constructor layout; `PianoRoll` paints `Loading...` only while the timeline is null; no overlay widget and no hide/show. The tab is display-only until both MIDI and voicegroup have bound. Tab close and tab switch stay enabled. Camera/zoom jump on first `setSong` is allowed. Sidecar view state applies only after MIDI bind.
+- Load failure after the empty tab exists tears the tab down (`destroySession` + existing warning). The sibling in-flight request is cancelled. A late `LoadedVoiceGroup*` is `voicegroup_free`'d on the GUI thread and not applied.
+- `ProjectIo` uses a FIFO request queue on the facade thread. Each call returns a `uint64_t` id. `cancel(id)` is cooperative (running work finishes; result is dropped; a dropped `LoadedVoiceGroup*` is `voicegroup_free`'d on the facade thread). `openProject` latest-wins among opens only. `loadSongFile` / `loadVoicegroup` never cancel each other. `loadSongFile` is `SmfFile::readFile` only; GUI adopts via `SongDocument::adoptSmf`. `loadVoicegroup` is one op: `voicegroup_load` then `VoicegroupSource::open`, both-or-neither.
+
+
+
+
 
 ### Not settled
 
@@ -261,3 +269,9 @@ See the C++20 atomic smart-pointer specification in the [C++ working draft](http
 - Did not merge `integrate/async-voicegroup-loading`. Reused only its proven thread lifecycle, queued handoff, stale-result, and completion-delivery patterns.
 - Added `projectiocheck`, first observed failing compilation without the new public header, then verified queued completion, caller-thread delivery, copied snapshot lifetime, track-budget data, failure reporting, and stale-result suppression.
 - Review fixes keep callbacks on the facade thread, stage a candidate `DecompProject` until the current request is accepted, preserve the prior live project after failed or stale opens, and key track budgets by song label rather than a reload-sensitive vector index.
+- Settled song-open sequence: empty `SongView` tab first; MIDI parse and voicegroup load both on `ProjectIo`; independent GUI binds; tab close cancels that session's requests.
+- Settled empty `SongView` contract: display-only until both binds; paint-only `Loading...`; no overlay widget; sidecar after MIDI.
+- Settled load-failure policy: tear the speculative tab down; cancel the sibling request; free late `LoadedVoiceGroup*` on the GUI thread.
+
+
+
