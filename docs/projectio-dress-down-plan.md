@@ -29,13 +29,19 @@ contract:
   `WorkspaceUi`, `AudioEngine`, and `ProjectWorkspace`.
 - `MainWindow` makes the UI shell available immediately, wires high-level
   signals, and does not become the project-state module.
-- `ProjectWorkspace` owns project-wide state and a private `ProjectIo`.
+- `ProjectWorkspace` owns project-wide state and a private `ProjectIo`. Its
+  small semantic seam is `openProject(OpenProjectInput)` plus
+  `submit(ProjectOperation)`.
 - `ProjectIo` hides the worker thread, queue, transport, and private command and
   result variants.
+- `SaveSongInput`, `SongSaved`, and `SongFailed` define the semantic song-save
+  contract under **Implementation-ready target interfaces**; `ProjectIo` owns
+  it and `WorkspaceUi` applies its public outcomes.
 - Worker-side `DecompProject` contains the canonical `LoadedBankEntry` for each
   `VoicegroupId` and performs project file I/O.
-- `WorkspaceUi` owns the widgets, reusable voice picker, and all `SongTab`
-  instances. It holds the published `VoicegroupId → LoadedBankView` cache.
+- `WorkspaceUi` owns the widgets, reusable voice picker, all `SongTab`
+  instances, and its private `VoicegroupViewCache`; transient `QSet<SongName>`
+  tombstones remain direct `WorkspaceUi` state.
 - Each `SongTab` owns its `SongDocument`, `MidiTimeline`, permanently paired
   `SongView`, and local document edit, dirty, readiness, and presentation state.
   It receives staged values and safe handles but never requests project I/O.
@@ -60,7 +66,7 @@ MainWindow                              [application composition root]
 │   │   ├── reads ordered song labels and selected label
 │   │   └── writes ordered song labels and selected label
 │   ├── reusable voice picker
-│   ├── VoicegroupId → LoadedBankView   [published immutable view cache]
+│   ├── VoicegroupViewCache              [private shared-bank coordinator]
 │   └── SongTabs, including startup placeholders
 │       └── SongTab
 │           ├── SongDocument
@@ -98,8 +104,8 @@ or relay routine project data by hand.
 `WorkspaceUi` owns tab selection and lifetime and reports its selected
 `SongTab`. `MainWindow` reacts by applying that tab's timeline, settings, and
 lease to `AudioEngine`. `WorkspaceUi` does not control the engine directly.
-The GUI view cache is a published immutable copy; the worker record remains the
-canonical source.
+`VoicegroupViewCache` owns the published immutable bank views and shared-bank
+transition state; the worker record remains the canonical source.
 
 Neither `ProjectWorkspace` nor `DecompProject` owns `AudioEngine`.
 
@@ -151,12 +157,14 @@ constraints 15, 17, and 20 are summarized here and declared in full under
     `WorkspaceUi` matches them to live tabs and calls narrow receive/apply
     methods; an absent match is ignored. Identity-scoped bank replacement is a
     keyed `LoadedBankView` project event, not a per-tab song result.
-21. Before adding a race guard, disable the conflicting user action while the
-    current operation runs when that matches normal product behavior. Retain
-    backend overlap handling only for user actions that must remain available
-    together or unavoidable lifecycle work such as shutdown. Do not add
-    counters, cancellation paths, identities, or tests for GUI-impossible
-    sequences.
+21. `WorkspaceUi` disables conflicting actions while a submitted operation is in
+    flight. A closed loading tab gets a transient `SongName` tombstone and the
+    same name cannot be reopened until that semantic load reaches its terminal
+    success or failure; this is UI policy, not `ProjectWorkspace` state. Do not
+    add cancellation, request or incarnation IDs, speculative external-file
+    race guards, retries, rollback, or a second history stack. Independent
+    operations remain available, and shutdown may finish or discard its active
+    worker result.
 
 ## Current problems to remove
 
@@ -173,13 +181,22 @@ belong to `ProjectWorkspace`. Queue mechanics and worker dispatch belong to
 private Project I/O machinery. Filesystem work belongs to worker-side project
 operations and `DecompProject`.
 
+### Workspace operations are shallow
+
+An operation-per-slot workspace surface makes callers learn worker mechanics.
+The target gives `ProjectWorkspace` a small semantic seam: open is separate,
+and `submit(ProjectOperation)` carries user intent. In particular,
+`WorkspaceUi` submits `SaveSongInput` and applies the keyed `LoadedBankView`
+and terminal `SongSaved`/`SongFailed` outcomes defined under
+**Implementation-ready target interfaces**; it does not own save sequencing.
+
 ### Tab policy has leaked into project-wide state
 
 Live-tab registries, active GUI-tab state, tab liveness, tab-close policy, and
 voicegroup assignment by tab-specific identity do not belong to a project-wide
 workspace.
-`WorkspaceUi` owns those live collection concerns, while `SongTab` owns only
-local edit and readiness state. Command completion stays inside the one-active
+`WorkspaceUi` owns those live collection concerns, while `SongTab` owns local
+document, history, readiness, and presentation state. Command completion stays
 private `ProjectIo`; tabs never own it. Copied stable labels used for project
 work are semantic keys, not a registry of live tabs.
 
@@ -188,6 +205,14 @@ work are semantic keys, not a registry of live tabs.
 The current `DecompProject` describes the project, but loaded voicegroups and
 their playable banks are managed elsewhere. The target puts the canonical
 per-identity loaded-bank state beside the project catalog on the worker.
+
+### Shared-bank undo crosses an asynchronous seam
+
+`QUndoStack` normally advances synchronously, while a shared-bank request can
+conflict after worker validation. The target keeps one `SongHistory` over that
+stack: document requests cross immediately, but bank requests prepare the exact
+worker draft while holding the index fixed through confirmation. Document dirty
+state remains separate from `LoadedBankView.dirty`.
 
 ### Voicegroup bank ownership is unclear
 
@@ -246,7 +271,7 @@ write startup-restoration `QSettings`, or own tab-specific load/save policy.
 
 ### ProjectWorkspace
 
-`ProjectWorkspace` is the project-wide application service. It owns:
+`ProjectWorkspace` is the project-wide module. It owns:
 
 - the private `ProjectIo` instance;
 - the selected project identity and `ProjectState`;
@@ -254,7 +279,10 @@ write startup-restoration `QSettings`, or own tab-specific load/save policy.
   saved recipe;
 - write ownership of the last project path after successful project open;
 - semantic project operations such as open, refresh, create, register, delete,
-  voicegroup mutation, and sample/catalog work.
+  voicegroup mutation, and sample/catalog work;
+- semantic song operations through `SaveSongInput`, with `SongSaved` and
+  `SongFailed` outcomes under the semantic-save contract declared in
+  **Implementation-ready target interfaces**.
 
 `ProjectWorkspace` does not own:
 
@@ -272,6 +300,14 @@ with the new snapshot; startup song loads are ordinary keyed `SongUpdate`s
 after that publication. `ProjectWorkspace` has no operation field or busy
 flag.
 
+Callers submit `OpenProjectInput` through `openProject()` and all other
+user-domain work through `submit(ProjectOperation)`. A save uses
+`SaveSongInput`; its `SongSaved`/`SongFailed` outcome and any keyed
+`LoadedBankView` publication follow the semantic-save contract under
+**Implementation-ready target interfaces**. `SaveSidecarInput` remains an
+independent fire-and-forget cosmetic operation for close or switch
+persistence.
+
 `ProjectWorkspace::openProject()` refuses only while `Loading`. The
 Open Project action's longer disablement while placeholders or UI-submitted
 work remain incomplete is enforced by `WorkspaceUi`.
@@ -282,7 +318,7 @@ work remain incomplete is enforced by `WorkspaceUi`.
 
 - owns the worker thread and worker event loop;
 - schedules typed worker commands;
-- matches its one active FIFO command to one typed result;
+- matches its one active FIFO command to typed results and one terminal result;
 - dispatches commands to cohesive operation helpers;
 - transports typed results back to `ProjectWorkspace`;
 - shuts down deterministically.
@@ -328,10 +364,12 @@ own inputs, outputs, and dedicated check surface.
 - all `SongTab` instances;
 - tab selection and tab lifetime;
 - the reusable voice picker;
-- the `VoicegroupId → LoadedBankView` published view cache.
+- the private `VoicegroupViewCache` shared-bank coordinator;
+- transient `QSet<SongName>` load tombstones for closed in-flight tabs.
 
-The picker reads the view cache. The cache is not the canonical worker record
-and is not a mutable `DecompProject`.
+`VoicegroupViewCache` is the private shared-bank coordinator. It is not the
+canonical worker record, a mutable `DecompProject`, or a project-wide tab
+registry.
 
 During shell construction, `WorkspaceUi` reads the saved project path, labels,
 and selection from the shared `QSettings` source and calls
@@ -341,10 +379,16 @@ completes. This small synchronous settings read is not project file I/O.
 
 `WorkspaceUi` applies project state, keyed project events, and keyed song
 updates directly. It writes tab-order and selection keys, prompts for local
-document or shared-bank work, and disables conflicting actions. It does not
-control `AudioEngine` directly.
+document or shared-bank work, and disables conflicting actions. For a song
+save it captures `SaveSongInput` and applies any keyed `LoadedBankView` event
+plus the terminal `SongSaved` or `SongFailed` outcome under the semantic-save
+contract in **Implementation-ready target interfaces**. It never sequences
+filesystem stages or correlates stage callbacks. It owns transient load
+tombstones for closed loading tabs and clears them when the accepted project
+is replaced. It does not control `AudioEngine` directly.
 
 ### Project-to-UI publication handoff
+
 The keyed event and lease rules here are fixed by the alignment contract; their
 declarations appear once in **Implementation-ready target interfaces**.
 
@@ -355,17 +399,10 @@ The public boundary has exactly three streams:
    `ProjectState`;
 3. keyed `SongUpdate` publication.
 
-```cpp
-signals:
-    void ProjectWorkspace::projectStatePublished(ProjectState state);
-    void ProjectWorkspace::projectEventPublished(ProjectEvent event);
-    void ProjectWorkspace::songUpdatePublished(SongUpdate update);
-
-public slots:
-    void WorkspaceUi::applyProjectState(ProjectState state);
-    void WorkspaceUi::applyProjectEvent(ProjectEvent event);
-    void WorkspaceUi::applySongUpdate(SongUpdate update);
-```
+`WorkspaceUi` receives those streams through its
+`applyProjectState()`, `applyProjectEvent()`, and `applySongUpdate()` methods.
+The stream names and apply-method signatures are declared only in the
+implementation-ready contract.
 
 `applyProjectState()` fills project-wide browser and catalog presentation.
 It uses the published state as an input to the local Open Project policy; it
@@ -373,40 +410,39 @@ does not enable the action solely because `state != Loading`, and it does not
 create placeholders or trigger startup song loads.
 
 `applyProjectEvent()` visits `ProjectEvent` without storing it in
-`ProjectState`. A `LoadedBankView` event replaces the
-`VoicegroupId → LoadedBankView` entry; tabs holding that identity refresh their
-lease from the view cache. Other event alternatives are delivered by their
-declared domain key. Catalog events are the unkeyed catalog-dialog cases. A
-successful register/delete/create-voicegroup operation updates
-standing `ProjectState` rather than inventing another event.
+`ProjectState`. A `LoadedBankView` event is handed to `VoicegroupViewCache`;
+tabs holding that identity refresh their lease through the helper. This
+includes the independent keyed event prescribed by the semantic-save contract
+in **Implementation-ready target interfaces**. For `VoicegroupEditApplied` and
+`VoicegroupEditConflict`, `WorkspaceUi` asks the cache for its pending origin,
+looks up that unique live tab by `SongName`, and passes its `SongHistory` to the
+cache resolver; the cache's pending `Kind` selects the direction-specific
+history method. `VoicegroupMutationFailed` goes to the hard-error resolver; no
+pending transition fields are stored in `WorkspaceUi`. Other event
+alternatives, including keyed mutation-failure alternatives, are delivered by
+their declared domain key. `CatalogMutationFailed` and the successful
+catalog-dialog events are the only unkeyed publications. A successful
+register/delete/create-voicegroup operation updates standing `ProjectState`
+rather than inventing another event.
 
 `applySongUpdate()` finds the live tab by `SongName` and ignores an update when
 no match exists. It dispatches the payload's staged value or its single
-`SongFailed` value:
+`SongFailed` value through the narrow `SongTab` apply methods declared below.
+For a successful load, `MidiStage`, `SidecarStage`, and terminal
+`VoicegroupBound` arrive in that order. Semantic-save handling follows the
+`SaveSongInput`, `SongSaved`, and `SongFailed` contract under
+**Implementation-ready target interfaces**; any bank event is already applied
+through `VoicegroupViewCache`.
 
-```cpp
-void SongTab::applyMidi(MidiStage value);
-void SongTab::applySidecar(SidecarStage value);
-void SongTab::applyVoicegroup(VoicegroupId id, VoicegroupLease lease);
-void SongTab::applySongSaved(SongSaved value);
-void SongTab::applyFailed(SongFailed value);
-```
-
-`VoicegroupBound` obtains the lease from the view cache, which was already
-replaced by the preceding `LoadedBankView` event. The direct connections are:
-
-```cpp
-connect(projectWorkspace, &ProjectWorkspace::projectStatePublished,
-        workspaceUi, &WorkspaceUi::applyProjectState);
-connect(projectWorkspace, &ProjectWorkspace::projectEventPublished,
-        workspaceUi, &WorkspaceUi::applyProjectEvent);
-connect(projectWorkspace, &ProjectWorkspace::songUpdatePublished,
-        workspaceUi, &WorkspaceUi::applySongUpdate);
-```
-
-No forwarding signal, controller, or payload relay in `MainWindow` is part of
-the target. Closing a tab removes its `SongName` match; a later publication
-has no recipient and is ignored.
+`VoicegroupBound` obtains the lease from `VoicegroupViewCache`, which was
+already updated by the preceding `LoadedBankView` event. `MainWindow` connects
+each of the three streams directly to the corresponding `WorkspaceUi` apply
+method; there is no forwarding signal, controller, or payload relay in
+`MainWindow`.
+Closing a tab removes its live `SongName` recipient. If a closed loading tab
+has in-flight work, `WorkspaceUi` records its transient tombstone, drops
+remaining staged publications, refuses an immediate reopen of that name, and
+erases the tombstone only at terminal success or `SongFailed`.
 
 ### SongTab
 
@@ -415,13 +451,16 @@ Each `SongTab` owns:
 - one `SongDocument`;
 - one `MidiTimeline`;
 - one permanently paired `SongView`;
+- one `SongHistory` interface over exactly its existing `QUndoStack`;
 - its editor/view state;
 - its `VoicegroupId` and `VoicegroupLease`;
 - local document edit, dirty, readiness, and presentation-error state.
 
 `SongView` consumes the tab's live document and timeline directly. Local
 document dirty is distinct from shared-bank dirty, which is the `dirty` field
-of the published `LoadedBankView`.
+of the published `LoadedBankView`. Document dirty follows the tab's opaque
+document-state identity and saved identity, not the undo stack clean index;
+shared-bank transitions do not dirty the document.
 
 `SongTab` never calls `ProjectWorkspace` or `ProjectIo`, starts a project
 load/save/reload, awaits a project future, or stores a project-operation
@@ -436,13 +475,25 @@ result boundary:
 1. A song-browser open, reload, save, or voicegroup edit originates in
    `WorkspaceUi`. A `SongTab` may emit local intent to its owner.
 2. `WorkspaceUi` sends one semantic operation to `ProjectWorkspace` through
-   the high-level connection established by `MainWindow`.
-3. `ProjectWorkspace` publishes a keyed `SongUpdate` or `ProjectEvent`.
-4. `WorkspaceUi` matches the result, creates or finds a tab when policy allows,
-   and calls its passive apply method. Placement and focus remain UI policy.
+   `submit(ProjectOperation)`. It supplies copied snapshots and never sends a
+   worker stage tag.
+3. `ProjectWorkspace` publishes keyed `SongUpdate` and `ProjectEvent` values.
+   A semantic save follows the `SaveSongInput`, `SongSaved`, and `SongFailed`
+   contract under **Implementation-ready target interfaces**; `WorkspaceUi`
+   applies any independent keyed `LoadedBankView` and one terminal outcome,
+   while the worker owns filesystem sequencing.
 
-Shared-bank edits publish a new `LoadedBankView` event. They do not become
-per-tab song results, and `ProjectWorkspace` never needs live-tab knowledge.
+4. `WorkspaceUi` matches each result, applies a bank event independently of
+   the terminal song update, creates or finds a tab when policy allows, and
+   calls its passive apply method. Placement and focus remain UI policy.
+
+`SaveSidecarInput` may be submitted independently for cosmetic close or switch
+persistence. It is not a caller-managed step in the semantic song-save graph.
+Shared-bank edit confirmation and history behavior follow the canonical
+`SongHistory`/`VoicegroupViewCache` contract under **Implementation-ready target
+interfaces**. Such edits publish keyed bank views and, when required, keyed
+receipts or conflicts; they do not become per-tab song results, and
+`ProjectWorkspace` never needs live-tab knowledge.
 
 ### Startup session restoration
 
@@ -465,12 +516,13 @@ The saved selected label is enqueued first, followed by the other normalized
 labels in persisted order. Each result is an ordinary `SongUpdate` keyed by
 `SongName`; there is no internal startup-name tracking collection.
 
-On open failure, `ProjectWorkspace` publishes `Failed` with `ProjectState.error`
-and leaves the previous snapshot intact. `Loading` ends at that success or
-failure; it does not cover startup song work. A missing or unplayable saved
-label receives a keyed `SongFailed` at `SongStage::Reconcile`. The product
-choice of retaining or removing that named placeholder remains in
-**Remaining decisions**. Valid labels continue independently.
+On open failure, `ProjectWorkspace` publishes `Failed` with a present
+`ProjectState.error` and leaves the previous snapshot intact. `Loading` ends
+at that success or failure; it does not cover startup song work. A missing or
+unplayable saved label receives a keyed `SongFailed` at
+`SongStage::Reconcile`. The product choice of retaining or removing that named
+placeholder remains in **Remaining decisions**. Valid labels continue
+independently.
 
 `WorkspaceUi` keeps Open Project disabled while any placeholder lacks a
 terminal song payload or any work it submitted is in flight. It re-enables the
@@ -478,15 +530,24 @@ action only when its policy says those conditions are clear, even though the
 project state has already reached `Ready`. `openProject()` itself refuses only
 while `Loading`.
 
-If a placeholder closes before its update arrives, `WorkspaceUi` has no
-matching label and ignores the publication. Later tab-order and selection
-changes write only the symbolic label keys. Neither owner writes the other
-owner's keys.
+For every semantic song load, successful publications are ordered as
+`MidiStage`, then `SidecarStage`, then terminal `VoicegroupBound`; a failure
+publishes one terminal `SongFailed` instead. If a loading placeholder closes
+before that terminal publication, `WorkspaceUi` adds its `SongName` tombstone,
+drops staged publications for that name, and refuses reopen until the terminal
+payload arrives. It consumes the terminal only to erase the tombstone; it
+does not recreate a tab. Accepted project replacement clears all such
+tombstones. Other unmatched updates remain ignored; no cancellation or
+incarnation counter is needed.
+
+Later tab-order and selection changes write only the symbolic label keys.
+Neither owner writes the other owner's keys.
 
 Transport is unrelated to restoration and remains on the settled route:
 `TransportBar` belongs to `WorkspaceUi`, actions travel up through
 `WorkspaceUi` to `MainWindow`, and copied transport state travels back down
 through `WorkspaceUi`.
+
 ### AudioEngine wiring
 
 `MainWindow` owns `AudioEngine` and all application-level engine wiring.
@@ -502,26 +563,12 @@ releasing the selected `VoicegroupLease` or destroying tabs. Project I/O never
 participates in device lifetime.
 
 `WorkspaceUi` reports its selected `SongTab`; it does not call the engine or
-choose another tab. One focused private `MainWindow` helper applies the
-reported tab:
-
-```cpp
-void MainWindow::applySelectedAudio(const SongTab *tab)
-{
-    m_audio.stop();
-    if (!tab || !tab->isAudioReady()) {
-        m_audio.unloadSong();
-        m_selectedBankLease.reset();
-        return;
-    }
-
-    VoicegroupLease next = tab->voicegroupLease();
-    m_audio.loadSong(tab->timeline(), next.get(), tab->songSettings());
-    m_audio.setMuteMask(tab->muteMask());
-    m_audio.setSoloMask(tab->soloMask());
-    m_selectedBankLease = std::move(next);
-}
-```
+choose another tab. A focused private `MainWindow` helper reads that selected
+tab directly, stops the old transport, and either unloads before releasing the
+old lease when the tab is null or not ready, or obtains the tab lease and
+loads its timeline with the borrowed bank and copied settings before applying
+mute and solo. The local tab lease stays alive through the engine call, then
+becomes the retained selected lease.
 
 `AudioEngine::loadSong`, `AudioEngine::updateVoicegroup`, and every other
 borrowed-bank entry point accept `const LoadedVoiceGroup *`. The engine borrows
@@ -562,67 +609,68 @@ then retain the new lease. A replacement for an inactive tab updates only its
 tab lease. Shutdown stops timers and audio, releases the selected lease,
 destroys tabs and GUI leases, then stops `ProjectIo`, finishes or discards its
 active result, destroys worker state, and joins.
+
 ## Voicegroup identity and shared banks
 
 This section cites the identity and ownership contract declared under
 **Implementation-ready target interfaces**.
 
 A stable `VoicegroupId` identifies the project voicegroup independently of a
-tab, request, or bank allocation. Worker state is conceptually:
-
-```text
-VoicegroupId -> LoadedBankEntry
-                 source metadata
-                 current VoicegroupLease
-                 source-file freshness
-                 existing VoicegroupSource dirty/pristine state
-```
-
-`WorkspaceUi` holds the published:
-
-```text
-VoicegroupId -> LoadedBankView
-```
-
-Each view is an immutable publication copy. The map is a GUI view cache, not a
-second mutable project or the canonical worker record. The picker reads it.
+tab, request, or bank allocation. `DecompProject` keeps the canonical
+`VoicegroupId → LoadedBankEntry` records, including source metadata, current
+lease, file freshness, and source dirty state. `WorkspaceUi` delegates
+published bank views to its `VoicegroupViewCache`. A `LoadedBankEntry` never
+crosses the worker seam; a `LoadedBankView` is an immutable GUI publication
+copy.
 
 ### Sharing and replacement
 
-- Tabs with the same `VoicegroupId` obtain the same current lease and dirty
-  publication.
-- Tabs with different identities remain isolated.
-- The worker builds a complete replacement before publishing a
-  `LoadedBankView`.
-- A replacement swaps the view-map entry and lets existing leases finish.
-- The last lease may release on the Project I/O or GUI thread, never on the
-  audio callback.
+`LoadedBankView` replacement is atomic at the publication seam: tabs with the
+same `VoicegroupId` refresh from the new view and tabs with different
+identities remain isolated. Existing `VoicegroupLease` values remain valid
+until their last non-audio owner releases them. The last lease may release on
+the Project I/O or GUI thread, never on the audio callback.
 
 ### Edit and save flow
 
-1. The picker gathers an edit for the selected tab's `VoicegroupId`.
-2. `WorkspaceUi` sends `VoicegroupEditInput` to `ProjectWorkspace`; the tab
-   contributes copied values only.
-3. The worker validates the identity, applies the source edit, builds a
-   complete candidate, and publishes a new `LoadedBankView` on success.
-4. `WorkspaceUi::applyProjectEvent()` replaces the view-map entry. Every live
-   tab bound to that identity refreshes its lease from the map. If the
-   identity is selected, `MainWindow` updates `AudioEngine`.
-5. Save writes the canonical source bytes, adopts them through
-   `VoicegroupSource::didSave(savedBytes)`, and publishes the post-save
-   `LoadedBankView`. A later edit makes the view dirty again.
+1. The picker gathers a `SetVoicegroupSlot` or `RevertBlankSlot` operation for
+   the selected tab's `VoicegroupId`.
+2. `WorkspaceUi` starts the cache-owned initial transition and submits the
+   copied `VoicegroupEditInput` as a `ProjectOperation`; undo/redo preparation
+   and cache begin-before-submit ordering follow the canonical
+   `SongHistory`/`VoicegroupViewCache` contract under **Implementation-ready
+   target interfaces**.
+3. The worker validates the identity and expected value, applies the set or
+   blank materialization, or validates and reverts the supplied blank
+   materialization token. It returns a typed applied outcome with a complete
+   candidate and optional fresh token, or the typed confirmed-conflict/not-applied
+   outcome for an expected mismatch or every validation no-op. A hard error is
+   returned as absence plus an error message.
 
-The editing tab's document stack owns voicegroup undo. Prompting for a dirty
-shared bank is once per `VoicegroupId`; other tabs do not grow undo stacks.
-The precise inverse command and its worker validation are fixed in the
-implementation-ready contract.
+4. `ProjectWorkspace` publishes the keyed `LoadedBankView` and, when the
+   pending history transition needs it, the keyed `VoicegroupEditApplied`,
+   `VoicegroupEditConflict`, or `VoicegroupMutationFailed` outcome.
+   `WorkspaceUi` routes those outcomes through the canonical
+   `VoicegroupViewCache` contract below; if the identity is selected,
+   `MainWindow` updates `AudioEngine`.
+5. A semantic song save may carry `SaveVoicegroupInput`; its
+   `SaveSongInput`, `SongSaved`, and `SongFailed` behavior, including any
+   keyed `LoadedBankView`, follows the semantic-save contract under
+   **Implementation-ready target interfaces**.
+
+All async confirmation, branch, dirty, blank-slot, and merge behavior follows
+the canonical `Tab history and dirty state` and `VoicegroupViewCache` contract
+under **Implementation-ready target interfaces**. `WorkspaceUi` only starts
+the owned transition and routes its keyed terminal outcome through the unique
+live origin tab; it stores no pending origin, kind, draft, or blank token.
 
 ## Single project/startup load and result routing
+
 The settled split is that `Loading` covers only open, while startup song work
 uses ordinary keyed updates after `Ready`.
 
 `ProjectWorkspace` publishes `Loading` before submitting project open and
-publishes either `Ready` with the new snapshot or `Failed` with
+publishes either `Ready` with the new snapshot or `Failed` with a present
 `ProjectState.error` when that open completes. The prior snapshot may remain
 visible while `Loading`; a failed open does not replace it. Startup song loads
 are ordinary keyed `SongUpdate`s after `Ready`.
@@ -636,8 +684,11 @@ only while `Loading`.
 The same prevention rule applies to other real conflicts: focus an already
 open `SongName` instead of opening it twice, and disable one song's
 reload/save trigger until its keyed terminal result. Independent operations
-remain available. Closing a tab removes its keyed recipient; it does not
-require worker cancellation.
+remain available. Closing a loading tab records a transient `SongName`
+tombstone, refuses an immediate reopen of that name, and drops staged
+publications until its terminal `VoicegroupBound` or `SongFailed`. Accepted
+project replacement clears tombstones; it does not require worker
+cancellation.
 
 `WorkspaceUi` routes `SongUpdate` by `SongName` and shared-bank events by
 `VoicegroupId`. `ProjectWorkspace` does not store tab identity or internal
@@ -651,9 +702,11 @@ the worker.
 
 ## Request and result model
 
-Replace broad request bags with typed commands and typed results. A command
-contains only data valid for that operation. Private scheduling metadata may
-contain tracing or timing data, but no project, song, tab, bank, or request
+Replace broad request bags with typed commands and typed results. The public
+`ProjectWorkspace` seam is `openProject(OpenProjectInput)` plus
+`submit(ProjectOperation)`; `ProjectOperation` contains user-domain inputs
+only and never exports private worker stage tags. Private scheduling metadata
+may contain tracing or timing data, but no project, song, tab, bank, or request
 incarnation counter.
 
 Do not add tab identity to project-wide workspace state. GUI-facing song
@@ -676,23 +729,41 @@ mechanics.
 ### Stable identities
 
 ```cpp
-struct SongName {
-    QString value;
+class SongName {
+public:
+    static std::optional<SongName> create(QString value);
+    const QString &value() const;
     friend bool operator==(const SongName &, const SongName &) = default;
+
+private:
+    explicit SongName(QString value);
+    QString m_value;
 };
 size_t qHash(const SongName &name, size_t seed = 0);
 
-struct VoicegroupId {
-    QString sourceRelativePath;
-    QString sectionLabel; // empty for a per-file voicegroup
+class VoicegroupId {
+public:
+    static std::optional<VoicegroupId> create(QString sourceRelativePath,
+                                              QString sectionLabel);
+    const QString &sourceRelativePath() const;
+    const QString &sectionLabel() const;
     friend bool operator==(const VoicegroupId &, const VoicegroupId &) = default;
+
+private:
+    VoicegroupId(QString normalizedSourceRelativePath, QString sectionLabel);
+    QString m_sourceRelativePath;
+    QString m_sectionLabel;
 };
 size_t qHash(const VoicegroupId &id, size_t seed = 0);
 ```
-`SongName` is the project-relative `SongInfo::label` and is constructed only
-when non-empty; `SongInfo::id` is snapshot-local. `VoicegroupId` is the
-project-relative normalized source relative path plus `sectionLabel`; loader
-names are aliases, not identity.
+
+`SongName::create()` rejects an empty value, and no public constructor permits
+an invalid name. `SongName` is the project-relative `SongInfo::label`;
+`SongInfo::id` is snapshot-local. `VoicegroupId::create()` normalizes and
+validates a non-empty project-relative source path, rejecting absolute or
+escaping paths, then retains the optional `sectionLabel` (empty for a
+per-file voicegroup). Loader names are aliases, not identity. Equality and
+`qHash` remain value-based.
 
 ### Saved startup recipe
 
@@ -706,6 +777,7 @@ struct SavedWorkspaceRecipe {
 SavedWorkspaceRecipe normalizeSavedRecipe(QString projectPath,
                                            QStringList labels,
                                            QString selectedLabel);
+```
 
 `normalizeSavedRecipe()` is one pure function used by both readers. It
 discards empty labels, keeps the first duplicate, preserves order, and falls
@@ -728,12 +800,33 @@ struct LoadedBankView {
     QVector<std::optional<VgVoice>> voices;
 };
 
-struct VoicegroupEditInput {
-    VoicegroupId id;
+struct SetVoicegroupSlot {
     int slot = -1;
     VgVoice value;
-    std::optional<VgVoice> expected; // current voice for scalar/existing-voice undo
+    std::optional<VgVoice> expected; // nullopt means the slot must still be blank
 };
+struct RevertBlankSlot {
+    VoicegroupSource::BlankSlotMaterialization materialization;
+};
+using VoicegroupEditOperation =
+    std::variant<SetVoicegroupSlot, RevertBlankSlot>;
+struct VoicegroupEditInput {
+    VoicegroupId id;
+    VoicegroupEditOperation operation;
+};
+
+// Private ProjectIo outcomes; neither type is a public event. Expected
+// mismatches and validation no-ops use VoicegroupEditConflictResult as the
+// confirmed not-applied outcome.
+struct VoicegroupEditAppliedResult {
+    LoadedBankView view;
+    std::optional<VoicegroupSource::BlankSlotMaterialization> materialization;
+};
+struct VoicegroupEditConflictResult {
+    VoicegroupId voicegroup;
+};
+using VoicegroupEditResult =
+    std::variant<VoicegroupEditAppliedResult, VoicegroupEditConflictResult>;
 
 struct SaveVoicegroupInput {
     VoicegroupId voicegroup;
@@ -756,10 +849,10 @@ struct LoadedBankEntry {
 ```
 
 `LoadedBankView` is the immutable publication copy
-`{ id, bank, loadName, dirty, voices }`. `WorkspaceUi` holds a
-`VoicegroupId → LoadedBankView` map. Tabs hold the id and a `VoicegroupLease`
-copy of the same shared pointer. The picker reads the map; it does not mutate
-the worker entry.
+`{ id, bank, loadName, dirty, voices }`. `VoicegroupViewCache` is the private
+`WorkspaceUi` owner for published views and shared-bank transition state.
+Tabs hold the id and a `VoicegroupLease` copy of the same shared pointer. The
+picker reads through the helper; it does not mutate the worker entry.
 
 The worker wraps each successful owning `LoadedVoiceGroup *` exactly once.
 The lease may release on the Project I/O or GUI thread, never on the audio
@@ -772,17 +865,149 @@ active result, destroys worker state, and joins.
 `didSave(savedBytes)` only for the bytes written; a newer edit remains dirty.
 This uses existing source state, not a new token.
 
-Voicegroup undo lives on the editing tab's document stack. For scalar or
-existing-voice undo, the inverse `VoicegroupEditInput` carries `expected`; the
-worker no-ops when the current voice does not match and the command becomes
-obsolete. For blank-slot undo, the stack stores
-`VoicegroupSource::BlankSlotMaterialization` and the worker calls
-`revertBlankSlotMaterialization`. Undo never uses a second identity stack, and
-other tabs on the identity do not grow stacks. The worker is the only
-validator.
+### Tab history and dirty state
 
-Sample-set results use `SampleSetLease` with the matching C deleter. No raw
-owning sample-set pointer enters UI state.
+```cpp
+class DocumentStateIdentity {
+public:
+    DocumentStateIdentity() = default;
+    DocumentStateIdentity(const DocumentStateIdentity &) = default;
+    DocumentStateIdentity &operator=(const DocumentStateIdentity &) = default;
+    friend bool operator==(const DocumentStateIdentity &,
+                           const DocumentStateIdentity &) = default;
+
+private:
+    friend class SongHistory;
+    friend class SongDocument;
+    // Opaque strong value: callers may copy or compare, never inspect or order it.
+    explicit DocumentStateIdentity(uint64_t value) : m_value(value) {}
+    uint64_t m_value = 0;
+};
+
+// A detached MIDI/config image, document identity, and save-guard metadata.
+struct SongSaveSnapshot {
+    SmfFile smf;
+    QString midPath;
+    QString label;
+    SongCfg cfg;
+    bool flagsNeeded = false;
+    uint64_t revision = 0;
+    uint64_t saveStateToken = 0;
+    DocumentStateIdentity documentState;
+};
+
+enum class HistoryKind { Document, SharedBank };
+
+struct DocumentHistoryApplied {};
+using HistoryRequest =
+    std::variant<DocumentHistoryApplied, VoicegroupEditInput>;
+
+class SongHistory {
+public:
+    bool canUndo() const;
+    bool canRedo() const;
+    DocumentStateIdentity currentDocumentIdentity() const;
+    DocumentStateIdentity savedDocumentIdentity() const;
+    void markDocumentSaved(DocumentStateIdentity identity);
+    HistoryRequest requestUndo();
+    HistoryRequest requestRedo();
+    void pushConfirmedBank(
+        VoicegroupEditInput draft,
+        std::optional<VoicegroupSource::BlankSlotMaterialization> materialization);
+    void crossConfirmedBankUndo(
+        std::optional<VoicegroupSource::BlankSlotMaterialization> materialization);
+    void crossConfirmedBankRedo(
+        std::optional<VoicegroupSource::BlankSlotMaterialization> materialization);
+    void resolveBankUndoConflict();
+    void resolveBankRedoConflict();
+};
+```
+
+`SongHistory` is the only tab history interface and wraps exactly that tab's
+existing `QUndoStack`. Each entry is tagged `Document` or `SharedBank` and
+carries document-state identities before and after the entry. A document entry
+mints a new after identity; a bank entry preserves the current document
+identity. `currentDocumentIdentity()`, `savedDocumentIdentity()`, and
+`markDocumentSaved()` are the history operations used for dirty and save
+adoption. The precondition for `requestUndo()` is `canUndo()`, and the
+precondition for `requestRedo()` is `canRedo()`. Each request either crosses a
+document entry synchronously and returns `DocumentHistoryApplied`, or prepares
+the targeted shared-bank entry's exact `VoicegroupEditInput` for worker
+submission and returns it without invoking its callback or moving the
+`QUndoStack` index. `pushConfirmedBank()` builds an initial confirmed entry
+whose first redo is inert, while `crossConfirmedBankUndo()` and
+`crossConfirmedBankRedo()` cross an applied transition through the armed inert
+callback. `resolveBankUndoConflict()` and `resolveBankRedoConflict()` handle
+confirmed stale undo and redo transitions respectively; an initial conflict
+does not call either method. These operations keep entry-transition mechanics
+in this one history interface; pending asynchronous ownership remains solely in
+`VoicegroupViewCache`.
+
+`SongDocument` dirty compares its current identity with the saved identity.
+`SongSaveSnapshot::documentState` stores the captured identity by value.
+`SongDocument::didSave()` retains the existing `flagsNeeded`, `revision`, and
+`saveStateToken` guards, and calls `markDocumentSaved(snapshot.documentState)`
+only after those guards and the captured identity still match. Bank-only
+transitions change neither the document identity nor `revision` or
+`saveStateToken`, so they do not dirty the song or invalidate an in-flight
+song snapshot. `SongHistory` treats shared-bank entries as non-document
+transitions when it crosses the inert callback; that crossing emits no
+document mutation and does not advance `revision` or `saveStateToken`.
+Document dirty truth is never a whole-document hash or a monotonic revision
+equality.
+Document history merges preserve the oldest before identity and newest after
+identity, cannot cross the saved document identity, and retain normal branch
+and undo-to-saved behavior.
+
+`VoicegroupViewCache` owns the one optional `PendingBankTransition` with the
+GUI bank views. The transition stores its `VoicegroupId`, origin `SongName`,
+`Kind::Initial`, `Kind::Undo`, or `Kind::Redo`, and the submitted
+`VoicegroupEditInput` draft. It is the only normal user-reachable pending
+transition: there is no per-identity pending map, request or incarnation ID,
+tab pointer registry, worker state, or second history stack. For an initial
+edit, `WorkspaceUi` supplies the draft directly; for an undo or redo, it uses
+the bank alternative returned by `HistoryRequest` with the origin `SongName`
+and matching `Kind` to construct this transition, calls
+`VoicegroupViewCache::begin()` before submission, and retains no parallel
+origin, kind, draft, or blank-token fields.
+
+`WorkspaceUi` uses the cache's pending origin only to find the unique live
+origin tab by `SongName`, then passes that tab's `SongHistory` to the resolver.
+The global `bankActionsEnabled()` gate is false while any transition is pending
+and gates picker edits, history mutation, undo, and redo. `closeEnabledFor()`
+is the origin-aware close gate: it is false only for the pending origin, so
+other tabs remain closable.
+
+Initial bank edits submit without pushing. When a typed applied outcome arrives,
+the cache installs the `LoadedBankView` before resolving the origin history and
+selects from its owned `Kind`: `pushConfirmedBank(m_pending->draft, ...)` for
+`Initial`, `crossConfirmedBankUndo(...)` for `Undo`, or
+`crossConfirmedBankRedo(...)` for `Redo`. The returned bank draft is therefore
+the same input that was submitted to the worker. `SongHistory` receives the
+fresh blank materialization through the selected operation before the cache
+clears the pending transition.
+
+`resolveConflict()` also switches on the owned `Kind`. `Initial` clears the
+pending transition and leaves history unchanged without a history call; `Undo`
+invokes `resolveBankUndoConflict()` and `Redo` invokes
+`resolveBankRedoConflict()`. A confirmed conflict leaves the current view
+unchanged. Only a typed applied or confirmed-conflict outcome may obsolete or
+cross a stale bank entry. Raw `QUndoStack` actions cannot bypass this gate, and
+other tabs sharing the identity never gain history. A hard worker error maps to
+`VoicegroupMutationFailed`, clears the pending transition without crossing it,
+and leaves the history index fixed. `applyView()` precedes applied resolution,
+and `resolveConflict()` leaves the current view unchanged.
+
+`VoicegroupEditApplied` carries the `VoicegroupId` and an optional fresh
+blank-slot materialization. Scalar applications carry no token. A blank
+initial set/materialize operation and every blank redo return a fresh
+`VoicegroupSource::BlankSlotMaterialization` in the applied outcome and
+receipt; blank undo sends that token in `RevertBlankSlot` to
+`revertBlankSlotMaterialization`. The history command stores the returned
+token, replaces it with each fresh blank-redo token, and clears it after a
+confirmed blank undo. It never uses `setVoice`. The worker is the only
+validator. Structural blank edits do not merge, while confirmed scalar bank
+entries may merge only with the existing scalar merge rules.
 
 ```cpp
 class DecompProject {
@@ -790,14 +1015,23 @@ public:
     ProjectSnapshot openProject(QString root, QString *error);
     std::optional<SongInfo> playableSong(SongName name) const;
     LoadedBankView loadBank(const SongInfo &song, QString *error);
-    LoadedBankView applyVoicegroupEdit(VoicegroupEditInput input, QString *error);
+    std::optional<VoicegroupEditResult> applyVoicegroupEdit(VoicegroupEditInput input, QString *error);
     LoadedBankView saveVoicegroup(SaveVoicegroupInput input, QString *error);
 };
 ```
 
 `loadBank()` reuses an unchanged entry when identity and source timestamp
-permit. Edit and reload build a complete candidate, then replace `current`;
-an error leaves the old entry. The worker derives structural versus scalar
+permit. `applyVoicegroupEdit()` returns a
+`std::optional<VoicegroupEditResult>`. A present value is either an applied
+result, whose complete candidate replaces `current`, or a confirmed conflict,
+the typed not-applied outcome for an expected mismatch or every validation
+no-op, which leaves `current` untouched. A hard error returns `std::nullopt`,
+writes its message through `error`, and leaves the old entry untouched;
+`ProjectIo` maps that absence to private `CommandFailure`, and
+`ProjectWorkspace` maps it to keyed `VoicegroupMutationFailed`. A
+`SetVoicegroupSlot` with blank expected state uses `materializeBlankSlot`, and
+a `RevertBlankSlot` uses its supplied token with
+`revertBlankSlotMaterialization`. The worker derives structural versus scalar
 behavior from the source; the GUI does not send a mode flag.
 
 ### Project publications
@@ -820,17 +1054,41 @@ struct ProjectState {
     ProjectOpenState state = ProjectOpenState::Closed;
     ProjectSnapshot snapshot;
     VoicegroupCatalog catalog;
-    QString error;
+    std::optional<QString> error;
 };
 ```
 
 `ProjectState` has exactly `{ state, snapshot, catalog, error }`. During
-`Loading`, the prior snapshot may remain. A failed open sets `state` and
-`error` without replacing that snapshot. There is no operation field or busy
-flag. Startup song work begins after successful open has published `Ready`.
+`Loading`, the prior snapshot may remain. A failed open sets `state` and a
+present `error` without replacing that snapshot; every other state has an
+absent error. There is no operation field or busy flag. Startup song work
+begins after successful open has published `Ready`.
 
-Every fan-out `ProjectEvent` alternative has its domain key except the catalog
-dialog publications. The key contract is:
+Every fan-out `ProjectEvent` alternative has its domain key except catalog
+dialog publications. The exhaustive mutation-failure sum is:
+
+```cpp
+struct SongMutationFailed {
+    SongName song;
+    QString message;
+};
+struct VoicegroupMutationFailed {
+    VoicegroupId voicegroup;
+    QString message;
+};
+struct SampleMutationFailed {
+    QString name;
+    QString message;
+};
+struct CatalogMutationFailed {
+    QString message; // the only unkeyed mutation failure
+};
+using ProjectMutationFailure = std::variant<
+    SongMutationFailed, VoicegroupMutationFailed, SampleMutationFailed,
+    CatalogMutationFailed>;
+```
+
+The remaining keyed event contract is:
 
 ```cpp
 struct RegistrationPlanResult {
@@ -876,24 +1134,91 @@ struct SongCreated {
     bool registered = false;
     int songId = -1;
 };
-struct ProjectMutationFailed {
-    std::optional<SongName> song;
-    std::optional<VoicegroupId> voicegroup;
-    QString message;
+struct VoicegroupEditApplied {
+    VoicegroupId voicegroup;
+    std::optional<VoicegroupSource::BlankSlotMaterialization> materialization;
+};
+struct VoicegroupEditConflict {
+    VoicegroupId voicegroup;
 };
 
 using ProjectEvent = std::variant<
     LoadedBankView, RegistrationPlanResult, DeletionPlanResult,
     PreviewPlan, PreviewReady, SampleSetReady, SamplesProbed, SampleRead,
-    SampleCommitted, SongCreated, ProjectMutationFailed>;
+    SampleCommitted, SongCreated, VoicegroupEditApplied,
+    VoicegroupEditConflict, ProjectMutationFailure>;
 ```
 
-`ProjectMutationFailed` carries at least one applicable `SongName` and/or
-`VoicegroupId` key. `SampleSetReady` and `SamplesProbed` are intentionally
-unkeyed because there is one catalog dialog. `LoadedBankView` is keyed by its
-`id`, previews by `voicegroup`, sample events by `name`, and song events by
-`song`. A bank load publishes the view before the song's `VoicegroupBound`
-update. Edit and save of an already-bound identity publish the view event only.
+### WorkspaceUi shared-bank view coordinator
+
+`VoicegroupViewCache` is a private deep module owned by `WorkspaceUi`. It is
+not part of `ProjectWorkspace`, a project-wide tab registry, or a second
+history stack. Its view map is keyed by `VoicegroupId`; its pending state is
+one optional transition, never a per-identity pending map.
+
+```cpp
+struct PendingBankTransition {
+    enum class Kind { Initial, Undo, Redo };
+    VoicegroupId voicegroup;
+    SongName origin;
+    Kind kind = Kind::Initial;
+    VoicegroupEditInput draft; // copied submitted input; draft.id == voicegroup
+};
+
+class VoicegroupViewCache {
+public:
+    const LoadedBankView *find(VoicegroupId voicegroup) const;
+    bool begin(PendingBankTransition transition);
+    std::optional<SongName> pendingOrigin() const;
+    void applyView(LoadedBankView view);
+    void resolveApplied(VoicegroupEditApplied outcome, SongHistory &originHistory);
+    void resolveConflict(VoicegroupEditConflict outcome, SongHistory &originHistory);
+    void resolveHardError(VoicegroupMutationFailed failure);
+    void clear();
+    bool bankActionsEnabled() const;
+    bool closeEnabledFor(SongName origin) const;
+
+private:
+    QHash<VoicegroupId, LoadedBankView> m_views;
+    std::optional<PendingBankTransition> m_pending;
+};
+```
+
+`begin()` starts the one FIFO transition and refuses another while one is
+active; a history request must not be submitted unless `begin()` succeeds.
+`pendingOrigin()` exposes only the stored origin key so `WorkspaceUi` can find
+the unique live tab and pass its `SongHistory`; it does not expose a tab pointer
+or parallel pending fields. `applyView()` must precede `resolveApplied()`; the
+history-taking resolver selects the canonical initial/undo/redo confirmation
+operation from the owned `Kind` and ends the pending transition.
+`resolveConflict()` selects the direction-specific stale-transition method
+from `Kind`, while an initial conflict calls no history method.
+`resolveHardError()` ends it without crossing history. `clear()` resets both
+owned stores on accepted project replacement. `bankActionsEnabled()` is the
+single global picker/history/undo/redo gate, while `closeEnabledFor()` is the
+origin-aware close gate. The helper does not own the transient
+`QSet<SongName>` tombstones.
+
+`ProjectMutationFailure` is exhaustive: song failures key by `SongName`,
+voicegroup failures by `VoicegroupId`, sample failures by `name`, and only
+catalog-dialog failures are unkeyed. `SampleSetReady` and `SamplesProbed`
+remain intentionally unkeyed because there is one catalog dialog.
+`LoadedBankView` is keyed by its `id`, previews by `voicegroup`, sample events
+by `name`, and song events by `song`. A bank load publishes the view before the
+song's `VoicegroupBound` update. An applied edit maps its private
+`VoicegroupEditAppliedResult` to a keyed `LoadedBankView` event and, when the
+pending history transition needs the token, a keyed `VoicegroupEditApplied`
+receipt. A confirmed worker conflict maps to keyed
+`VoicegroupEditConflict`; a hard worker error maps to the keyed
+`VoicegroupMutationFailed` alternative. The view remains the canonical bank
+replacement event.
+
+Semantic-save publication is specified once by `SaveSongInput` below.
+`VoicegroupEditApplied` is a public receipt derived from its typed worker
+outcome only when the pending history transition needs it; it is not a
+second worker result.
+`SongMutationFailed` is only the keyed failure alternative for project
+mutations; song load and save failures use the single `SongFailed` payload.
 
 ### Song publications
 
@@ -917,6 +1242,8 @@ struct SongSaved {
     SongName song;
     SongSaveSnapshot savedSnapshot;
     bool flagsWritten = false;
+    bool sidecarSaved = false;
+    std::optional<QString> sidecarError;
 };
 
 enum class SongStage { Midi, Voicegroup, Sidecar, Reconcile, Save };
@@ -934,21 +1261,21 @@ struct SongUpdate {
 };
 ```
 
-Each worker stage that is wrapped as a `SongUpdate` carries its `SongName`.
-`ProjectWorkspace` uses that field to publish directly; it does not retain a
-remainder set to reconstruct the key. `SongUpdate::song` remains the public
-routing key.
+Each worker stage wrapped as a `SongUpdate` carries its `SongName`;
+`ProjectWorkspace` publishes that key directly and never reconstructs it from
+a secondary collection. `SongUpdate::song` remains the public routing key.
 
-`SongPayload` contains successful stages and one `SongFailed` type. A MIDI,
-voicegroup, sidecar, reconcile, or save error publishes that type with its
-stage. Sidecar missing is successful `SidecarStage{ loaded: false }`, not a
-failure. Project-open failure remains only `ProjectState.error`.
+`SongPayload` contains successful load stages and one `SongFailed` type. A
+fatal load or save error publishes that type with its stage. Sidecar missing is
+successful `SidecarStage{ loaded: false }`, not a failure. Project-open failure
+remains only in the optional `ProjectState.error`.
 
-`ProjectWorkspace` publishes `MidiStage` before later sidecar or voicegroup
-stages for a song. `SongSaved` lets the tab adopt a matching document save
-snapshot without owning the operation. Missing or unplayable saved names use
-`SongFailed{ SongStage::Reconcile, ... }`; the remaining presentation choice
-is the single product decision below.
+For a successful song load, `ProjectWorkspace` publishes `MidiStage`, then
+`SidecarStage`, then terminal `VoicegroupBound`; a failure publishes one
+terminal `SongFailed` instead. Semantic-save behavior is specified by
+`SaveSongInput`, `SongSaved`, and `SongFailed` below. Missing or unplayable
+saved names use `SongFailed{ SongStage::Reconcile, ... }`; the remaining
+presentation choice is the single product decision below.
 
 ### ProjectWorkspace semantic operations
 
@@ -959,11 +1286,17 @@ struct OpenProjectInput { QString root; };
 struct SaveSongInput {
     SongName song;
     SongSaveSnapshot snapshot;
+    ViewSidecar::Snapshot sidecarSnapshot;
+    std::optional<SaveVoicegroupInput> voicegroup;
 };
 struct SaveSidecarInput {
     SongName song;
     ViewSidecar::Snapshot snapshot;
 };
+struct RefreshProjectInput {};
+struct CleanupPreviewInput {};
+struct RefreshCatalogInput {};
+struct ProbeSamplesInput {};
 struct CreateSongInput {
     QString label;
     QString constant;
@@ -978,7 +1311,7 @@ struct CreateVoicegroupInput {
     QString copySectionLabel;
 };
 struct RegistrationPlanInput { QString label; QString constant; QString player; };
-using RegisterSongInput = RegistrationPlanInput;
+struct RegisterSongInput { QString label; QString constant; QString player; };
 struct DeletionPlanInput { SongName song; QString constant; };
 struct DeleteSongInput {
     SongName song;
@@ -1001,30 +1334,18 @@ struct CommitSampleInput {
     bool update = false;
 };
 
+using ProjectOperation = std::variant<
+    RefreshProjectInput, OpenSongInput, ReloadSongInput, SaveSongInput,
+    SaveSidecarInput, VoicegroupEditInput, CreateSongInput,
+    CreateVoicegroupInput, RegistrationPlanInput, RegisterSongInput,
+    DeletionPlanInput, DeleteSongInput, PreviewPlanInput, PreviewInput,
+    CleanupPreviewInput, RefreshCatalogInput, LoadSampleSetInput,
+    ProbeSamplesInput, ReadSampleInput, CommitSampleInput>;
+
 class ProjectWorkspace {
 public slots:
     void openProject(OpenProjectInput input);
-    void refreshProject();
-    void openSong(OpenSongInput input);
-    void reloadSong(ReloadSongInput input);
-    void saveSong(SaveSongInput input);
-    void saveVoicegroup(SaveVoicegroupInput input);
-    void saveSidecar(SaveSidecarInput input);
-    void applyVoicegroupEdit(VoicegroupEditInput input);
-    void createSong(CreateSongInput input);
-    void createVoicegroup(CreateVoicegroupInput input);
-    void planRegistration(RegistrationPlanInput input);
-    void registerSong(RegisterSongInput input);
-    void planDeletion(DeletionPlanInput input);
-    void deleteSong(DeleteSongInput input);
-    void planPreview(PreviewPlanInput input);
-    void preview(PreviewInput input);
-    void cleanupPreview();
-    void refreshCatalog();
-    void loadSampleSet(LoadSampleSetInput input);
-    void probeSamples();
-    void readSample(ReadSampleInput input);
-    void commitSample(CommitSampleInput input);
+    void submit(ProjectOperation operation);
 
 signals:
     void projectStatePublished(ProjectState state);
@@ -1033,92 +1354,132 @@ signals:
 };
 ```
 
-`WorkspaceUi` is the caller. It enforces one live tab per `SongName`, supplies
-copied save snapshots, and sequences voicegroup, MIDI, and sidecar save where
-current user-visible behavior requires it. Placement (focus, replace, or new
-tab) stays in `WorkspaceUi`; it is not a project input. `MainWindow` owns only
-the three direct publication connections.
+`ProjectOperation` contains user-domain inputs only; private worker stage tags
+are not exported through this seam. `WorkspaceUi` is the caller. It enforces
+one live tab per `SongName`, captures copied snapshots, and submits one
+semantic song-save operation. Worker filesystem ordering remains behind the
+semantic seam. Placement (focus, replace, or new tab) stays in `WorkspaceUi`;
+it is not a project input. `MainWindow` owns only the three direct publication
+connections.
+
+`WorkspaceUi` owns a transient `QSet<SongName>` for closed loading tabs.
+It contains a name only while that name's semantic load remains in flight;
+terminal `VoicegroupBound` or `SongFailed` erases it, and accepted project
+replacement clears it. It is not project state or a tab registry.
+
+A standalone `SaveSidecarInput` in `ProjectOperation` remains a fire-and-forget
+cosmetic persistence operation for close or switch; it is not a
+caller-managed song-save stage. Its private `SidecarWriteResult` records either
+write success or an error, is consumed without a public event, and merely
+advances the FIFO.
+
+`SaveSongInput` is one copied recipe: the `SongName`, detached
+`SongSaveSnapshot`, `ViewSidecar::Snapshot`, and optional `SaveVoicegroupInput`
+cross the seam. `SaveVoicegroupInput` contains only the `VoicegroupId` and
+minted synth definitions; the worker derives source bytes and source path from
+the canonical `LoadedBankEntry` and its `VoicegroupSource`.
+
+The worker performs optional voicegroup source and synth writes plus the
+required bank refresh first when a voicegroup recipe is present, then writes
+MIDI and flags, and finally performs the cosmetic sidecar write. As soon as
+the optional voicegroup save and bank refresh land, `ProjectIo` delivers the
+resulting `LoadedBankView` while the semantic command remains active, and
+`ProjectWorkspace` publishes it as a normal keyed `ProjectEvent` before later
+MIDI or flags work. A fatal voicegroup, refresh, MIDI, or flags failure stops
+later stages while earlier writes remain; there is no transaction, rollback,
+retry, or external-file race guard. The final cosmetic sidecar write is
+nonfatal; its status and error are carried by `SongSaved`.
+
+The semantic save publishes exactly one terminal public song outcome:
+`SongSaved` on completion or `SongFailed` for a fatal voicegroup, refresh,
+MIDI, or flags failure. `SongSaved` carries the copied snapshot,
+`flagsWritten`, sidecar success, and an optional sidecar error, but no bank
+field. If a later fatal stage publishes `SongFailed`, `WorkspaceUi` has
+already applied the independent bank event and does not leave its cache or
+lease stale. This event publication is not filesystem-stage correlation in
+`WorkspaceUi`.
 
 ### Private ProjectIo command/result interface
 
 ```cpp
-struct OpenProjectCommand { QString root; };
-struct LoadSongCommand {
-    SongName song;
-    SongInfo resolvedSong;
-};
+// These are the real private stage tags for the ordered song-load flow.
+struct LoadSongCommand { SongName song; };
 struct LoadVoicegroupCommand {
     SongName song;
-    SongCfg cfg;
+    VoicegroupId voicegroup;
 };
-struct SaveSongCommand { SaveSongInput input; };
-struct SaveVoicegroupCommand { SaveVoicegroupInput input; };
-struct ApplyVoicegroupEditCommand { VoicegroupEditInput input; };
 struct ReadSidecarCommand { SongName song; };
-struct WriteSidecarCommand { SaveSidecarInput input; };
-struct CreateSongCommand { CreateSongInput input; };
-struct CreateVoicegroupCommand { CreateVoicegroupInput input; };
-struct RegistrationPlanCommand { RegistrationPlanInput input; };
-struct RegisterSongCommand { RegisterSongInput input; };
-struct DeletionPlanCommand { DeletionPlanInput input; };
-struct DeleteSongCommand { DeleteSongInput input; };
-struct PreviewPlanCommand { PreviewPlanInput input; };
-struct PreviewCommand { PreviewInput input; };
-struct CleanupPreviewCommand {};
-struct RefreshCatalogCommand {};
-struct LoadSampleSetCommand { LoadSampleSetInput input; };
-struct ProbeSamplesCommand {};
-struct ReadSampleCommand { ReadSampleInput input; };
-struct CommitSampleCommand { CommitSampleInput input; };
+
+struct SidecarWriteResult {
+    bool success = false;
+    std::optional<QString> error; // present iff success is false
+}; // private SaveSidecarInput completion
+struct PreviewCleanupCompleted {}; // private CleanupPreviewInput success
 
 using ProjectCommand = std::variant<
-    OpenProjectCommand, LoadSongCommand, LoadVoicegroupCommand,
-    SaveSongCommand, SaveVoicegroupCommand, ApplyVoicegroupEditCommand,
-    ReadSidecarCommand, WriteSidecarCommand, CreateSongCommand,
-    CreateVoicegroupCommand, RegistrationPlanCommand, RegisterSongCommand,
-    DeletionPlanCommand, DeleteSongCommand, PreviewPlanCommand, PreviewCommand,
-    CleanupPreviewCommand, RefreshCatalogCommand, LoadSampleSetCommand,
-    ProbeSamplesCommand, ReadSampleCommand, CommitSampleCommand>;
+    OpenProjectInput, RefreshProjectInput, OpenSongInput, ReloadSongInput,
+    LoadSongCommand, LoadVoicegroupCommand, ReadSidecarCommand,
+    SaveSongInput, SaveSidecarInput, VoicegroupEditInput,
+    CreateSongInput, CreateVoicegroupInput, RegistrationPlanInput,
+    RegisterSongInput, DeletionPlanInput, DeleteSongInput, PreviewPlanInput,
+    PreviewInput, CleanupPreviewInput, RefreshCatalogInput,
+    LoadSampleSetInput, ProbeSamplesInput, ReadSampleInput, CommitSampleInput>;
 
 struct CommandFailure { QString message; }; // private and unkeyed
 
 using ProjectResult = std::variant<
     ProjectSnapshot, MidiStage, LoadedBankView, VoicegroupBound,
-    SidecarStage, SongSaved, RegistrationPlanResult, DeletionPlanResult,
-    PreviewPlan, PreviewReady, SampleSetReady, SamplesProbed, SampleRead,
-    SampleCommitted, SongCreated, VoicegroupCatalog, CommandFailure>;
+    SidecarStage, VoicegroupEditResult, SidecarWriteResult,
+    PreviewCleanupCompleted, SongSaved,
+    RegistrationPlanResult, DeletionPlanResult, PreviewPlan, PreviewReady,
+    SampleSetReady, SamplesProbed, SampleRead, SampleCommitted, SongCreated,
+    VoicegroupCatalog, CommandFailure>;
 ```
 
-Commands use the public inputs or empty tags. Only `OpenProjectCommand` has a
-root. Startup names are resolved against the accepted snapshot and enqueued
-after successful open. Do not wrap the old broad request bag.
+The private variant holds public input types directly whenever no worker
+enrichment is added. The only private command alternatives beyond those inputs
+are the listed load/read stage tags; they do not cross the
+`ProjectWorkspace` seam and carry no cached catalog rows.
 
-The FIFO adapter matches the one active command to its result. Worker
-exceptions become private `CommandFailure`; `ProjectWorkspace` maps that
-failure onto the appropriate keyed `SongFailed` or keyed
-`ProjectMutationFailed`, or onto `ProjectState.error` for project open.
-`CommandFailure` never crosses as a public unkeyed event.
+`ProjectResult` is total over `ProjectCommand`: every command alternative has a
+terminal private result in this variant, and every hard worker error becomes
+`CommandFailure`. Load commands may emit staged values before terminal
+`VoicegroupBound`. A semantic `SaveSongInput` follows the semantic-save
+contract under **Implementation-ready target interfaces** and has one private
+terminal `SongSaved` or `CommandFailure`, with the public mapping handled by
+`ProjectWorkspace`.
+
+The visitor dispatches `VoicegroupEditInput` directly to
+`DecompProject::applyVoicegroupEdit`, whose `std::optional<VoicegroupEditResult>`
+is present for an applied or confirmed-not-applied outcome. A hard edit error
+is the helper's `std::nullopt` plus error, which `ProjectIo` turns into
+`CommandFailure`; `ProjectWorkspace` maps it to `VoicegroupMutationFailed`.
+The applied value maps to the bank view and, when needed, keyed
+`VoicegroupEditApplied`; the confirmed conflict maps to keyed
+`VoicegroupEditConflict`. `SidecarWriteResult` completes standalone cosmetic
+sidecar writes without becoming a public event. Successful
+`CleanupPreviewInput` delivers `PreviewCleanupCompleted`; `ProjectWorkspace`
+consumes it without a public event and advances the FIFO, while its hard error
+is `CommandFailure`.
+
+Startup names are resolved against the accepted snapshot and enqueued after
+successful open. Other worker exceptions become private `CommandFailure`;
+`ProjectWorkspace` maps those onto the appropriate keyed `SongFailed` or keyed
+`ProjectMutationFailure` alternative, or onto `ProjectState.error` for project
+open. `CommandFailure` never crosses as a public unkeyed event.
 
 `ProjectIo` has one private `submit(ProjectCommand)` seam, one active FIFO
-command, and one private result callback. There is no per-command
-cancellation or old-result filter. A closed tab has no keyed recipient.
+command, and one private result callback. Semantic-save delivery follows the
+contract under **Implementation-ready target interfaces**; no
+filesystem-stage callback is exposed for `WorkspaceUi` to correlate. There is
+no per-command cancellation or old-result filter. A closed loading tab is
+handled by the `WorkspaceUi` tombstone policy rather than by a worker identity.
 Shutdown stops accepting commands, finishes or discards the active result,
 releases undelivered owning resources, and joins the worker.
 
 ### Audio binding values
 
 ```cpp
-struct SelectedAudioState {
-    SongName song;
-    std::shared_ptr<const MidiTimeline> timeline;
-    VoicegroupId voicegroupId;
-    VoicegroupLease voicegroup;
-    SongSettings settings;
-    uint32_t muteMask = 0;
-    uint32_t soloMask = 0;
-    bool ready = false;
-};
-
 struct NoteAuditionIntent {
     uint8_t track = 0;
     uint8_t key = 0;
@@ -1157,13 +1518,13 @@ struct AudioPresentationState {
 };
 ```
 
-Only the `SongTab` reported as selected by `WorkspaceUi` produces selected
-audio values. `MainWindow` private helpers call `AudioEngine` and own all
-engine calls. A null or not-ready selection unloads before releasing the old
-lease. Audition payloads are copied values or safe leases. Transport and
-global settings use direct focused helpers rather than thin value-intent
-types. Whether the declared values travel as one signal or a few focused
-signals is an implementation freedom; ownership and ordering are fixed.
+`MainWindow` reads the selected `SongTab` directly when applying audio; no
+selected-audio aggregate crosses the seam. It owns all `AudioEngine` calls. A
+null or not-ready selection unloads before releasing the old lease. Audition
+payloads are copied values or safe leases. Transport and global settings use
+direct focused helpers rather than thin value-intent types. Whether the
+declared values travel as one signal or a few focused signals is an
+implementation freedom; ownership and ordering are fixed.
 
 ## Refactoring sequence
 
@@ -1182,22 +1543,31 @@ At the same boundary, wrap each successful worker-owned bank exactly once and
 remove raw GUI/session destruction. Keep old/new leases alive around a cold
 engine swap and release only after audio unload or rebind returns.
 
-### 2. Add stable identities, saved-recipe normalization, and existing dirty adoption
+### 2. Add validating identities, saved-recipe normalization, and dirty adoption
 
-Introduce only `SongName` and `VoicegroupId`, with equality and `qHash`.
-At application startup, centralize both settings readers on
-`normalizeSavedRecipe(projectPath, labels, selectedLabel)`. Keep existing
-`SongSaveSnapshot::{revision,saveStateToken}` and
-`VoicegroupSource::{sourceBytes,didSave,dirty}` adoption. Do not add
-project-wide tab identities, transport revisions, or incarnation counters.
+Introduce `SongName` and `VoicegroupId` through their validating factories,
+with equality and `qHash`. At application startup, centralize both settings
+readers on `normalizeSavedRecipe(projectPath, labels, selectedLabel)`.
+Keep the detached document image and save metadata in `SongSaveSnapshot`;
+`SongDocument::didSave()` retains its flags and asynchronous guards before
+calling `SongHistory::markDocumentSaved()` for a matching
+`DocumentStateIdentity`. `SongDocument` dirty compares current and saved
+identities rather than a `QUndoStack` clean index, a monotonic revision
+equality, or a whole-document hash. Bank-only transitions preserve the
+identity and save guards. Do not add project-wide tab identities, transport
+revisions, incarnation counters, a worker history stack, or a second identity
+stack.
 
 ### 3. Extend DecompProject on the worker
 
 Keep current discovery behavior, then place the canonical
 `VoicegroupId → LoadedBankEntry` records beside the project catalog. Build
 complete candidates, replace the current lease only on success, and publish
-`LoadedBankView` copies. Remove GUI discovery state and per-tab bank loading
-once the worker path covers load, edit, save, reload, and replacement.
+`LoadedBankView` copies. Route semantic song saves through the
+`SaveSongInput`, `SongSaved`, and `SongFailed` contract under
+**Implementation-ready target interfaces**. Remove GUI discovery state and
+per-tab bank loading once the worker path covers load, edit, save, reload, and
+replacement.
 
 ### 4. Keep MainWindow as a thin composition root
 
@@ -1210,7 +1580,9 @@ shutdown ordering.
 ### 5. Make ProjectWorkspace project-wide only
 
 Move project selection, copied project state, and project-open state into
-`ProjectWorkspace`. At application startup it independently reads
+`ProjectWorkspace`. Expose only `openProject(OpenProjectInput)` and
+`submit(ProjectOperation)`; keep worker stage tags and filesystem sequencing
+behind that semantic seam. At application startup it independently reads
 `SavedWorkspaceRecipe`; it publishes `Loading`, submits exactly one open, and
 on success writes the path and publishes `Ready` with the accepted snapshot.
 After that successful startup open, it queues the normalized selected song
@@ -1220,44 +1592,70 @@ first, then the other saved labels in persisted order as ordinary keyed
 `WorkspaceUi` owns the Open Project disablement policy: it remains disabled
 while placeholders lack terminal song payloads or UI-submitted work is in
 flight. `ProjectWorkspace::openProject()` refuses only while `Loading`.
-Project-open failure publishes `Failed` and leaves the prior snapshot intact.
-Loading ends at open success or failure, before startup song updates complete.
+Project-open failure publishes `Failed` with a present `ProjectState.error` and
+leaves the prior snapshot intact. Loading ends at open success or failure,
+before startup song updates complete.
 
 ### 6. Move tab policy to WorkspaceUi and SongTab
-
-Make `WorkspaceUi` own tab selection and lifetime. Make `SongTab` own its
-document, timeline, paired view, local document dirty state, readiness, and
-presentation state. Keep keyed result matching, picker policy, placement, and
-shared-bank view-cache updates in `WorkspaceUi`. `SongTab` emits local intent
+Make `WorkspaceUi` own tab selection and lifetime, its private
+`VoicegroupViewCache`, and transient load tombstones. Make `SongTab` own its
+document, timeline, paired view, local document dirty state, readiness,
+presentation state, and its one `SongHistory` interface over the existing
+`QUndoStack`. Keep keyed result matching, picker policy, placement, and
+`VoicegroupViewCache` updates in `WorkspaceUi`. `SongTab` emits local intent
 only and has no project-service or project-operation identity dependency.
+Route bank history through `VoicegroupViewCache`; its pending transition,
+origin lookup, global action gate, origin-close gate, confirmation, dirty,
+branch, blank-slot, merge, and inert-crossing behavior is defined once by the
+`Tab history and dirty state` and `WorkspaceUi shared-bank view coordinator`
+contract under **Implementation-ready target interfaces**. Do not add a
+worker-owned or per-identity history stack.
 
 For an interactive project switch, use this exact sequence:
 
 1. `WorkspaceUi` prompts dirty songs and prompts once per dirty
    `VoicegroupId`.
-2. After confirmation it calls `openProject`; Open Project becomes disabled.
+2. After confirmation it calls `openProject(OpenProjectInput)`; Open Project
+   becomes disabled.
 3. While `Loading`, the prior snapshot may remain and the existing tabs and
-   `VoicegroupId → LoadedBankView` map stay in place.
-4. On failure, publish `Failed` and its error; snapshot, tabs, view map, and
-   persisted project and song settings in `QSettings` are unchanged.
+   `VoicegroupViewCache` state stay in place.
+4. On failure, publish `Failed` and its present error; snapshot, tabs,
+   `VoicegroupViewCache` state, and persisted project and song settings in
+   `QSettings` are unchanged.
 5. On `Ready`, `MainWindow` performs null-selection unload, then
-   `WorkspaceUi` destroys the tabs, clears the view map, and clears the old
-   `lastOpenSongs` and `lastSongLabel` settings (or otherwise starts with zero
-   tabs / a clean default). It does not call `normalizeSavedRecipe()` or
-   recreate placeholders from the previous project's recipe; it reconciles the
-   new snapshot directly.
+   `WorkspaceUi` destroys the tabs, clears `VoicegroupViewCache`, and clears the
+   old `lastOpenSongs` and `lastSongLabel` settings (or otherwise starts with
+   zero tabs / a clean default). It clears transient load tombstones. It does
+   not call `normalizeSavedRecipe()` or recreate placeholders from the previous
+   project's recipe; it reconciles the new snapshot directly.
 
 For application startup only, normalized saved songs then arrive as ordinary
-keyed updates. No switch step uses a worker tab registry or a second undo
-stack.
+keyed updates. No switch step uses a worker tab registry or a second undo or
+identity stack.
+
+If any loading tab closes outside an accepted project replacement,
+`WorkspaceUi` records a transient tombstone for its `SongName`, refuses an
+immediate reopen of that name, and drops staged publications until terminal
+`VoicegroupBound` or `SongFailed`; the terminal publication erases the
+tombstone. No request or incarnation counter is introduced.
 
 ### 7. Replace generic worker requests with typed operations
 
-Replace the broad request bag and kind switches with the private
-`ProjectCommand` and `ProjectResult` variants. An exhaustive visitor dispatches
-one operation at a time through `ProjectIo`; `ProjectWorkspace` maps private
-failures to the keyed public streams. Remove cancellation and overlap machinery
-for actions disabled by `WorkspaceUi`.
+Replace the broad request bag and kind switches with the public
+`ProjectOperation` variant and the private `ProjectCommand` and
+`ProjectResult` variants. Keep public input types directly in
+`ProjectCommand` whenever no worker enrichment is needed; retain only the
+real load/read stage tags. An exhaustive visitor dispatches one command
+at a time through `ProjectIo`, resolves catalog rows on the worker, and maps
+private failures to keyed `SongFailed` or `ProjectMutationFailure` results.
+`VoicegroupEditResult` provides total typed applied or confirmed-not-applied
+edit completion (expected mismatches and validation no-ops use the latter);
+`SidecarWriteResult` completes standalone cosmetic writes without a public
+event, and `PreviewCleanupCompleted` completes successful preview cleanup the
+same way. `SaveSongInput`, `SongSaved`, and `SongFailed` follow the
+semantic-save contract under **Implementation-ready target interfaces**.
+Remove cancellation and overlap machinery for actions disabled by
+`WorkspaceUi`.
 
 ### 8. Cut GUI callers over by behavior
 
@@ -1265,20 +1663,29 @@ Move complete workflows in this order:
 
 1. saved placeholders, project open, snapshot publication, and startup song
    updates;
-2. song load/reload, keyed application, and sidecars;
-3. voicegroup load, edit, save, undo, and shared-view replacement;
-4. create, register, delete, previews, catalog, and samples.
+2. song load/reload, ordered keyed application, and independent cosmetic
+   sidecar persistence;
+3. semantic song save through `SaveSongInput`, `SongSaved`, and `SongFailed`
+   under the semantic-save contract in **Implementation-ready target
+   interfaces**;
+4. voicegroup load, edit, confirmed undo/redo, and shared-view replacement;
+5. create, register, delete, previews, catalog, and samples.
 
 For each workflow, migrate input, result, failure, and placement behavior
-together. Delete old `MainWindow` entry points when their behavior has moved;
-do not preserve forwarding aliases.
+together. `WorkspaceUi` captures `SaveSongInput`, applies any independent
+keyed `LoadedBankView`, and applies terminal `SongSaved` or `SongFailed` under
+the semantic-save contract in **Implementation-ready target interfaces**; it
+does not sequence filesystem stages or correlate stage callbacks. Delete old
+`MainWindow` entry points when their behavior has moved; do not preserve
+forwarding aliases.
 
 ### 9. Finish audio handoff and shutdown order
 
-The selected `SongTab` takes its `VoicegroupLease` from the
-`WorkspaceUi` `VoicegroupId → LoadedBankView` map. `MainWindow` applies
-`SelectedAudioState` with stop, unload/load or update, mute/solo, and lease
-ordering. Inactive tab timeline and bank updates do not touch `AudioEngine`.
+The selected `SongTab` takes its `VoicegroupLease` from
+`VoicegroupViewCache`. `MainWindow` reads that selected tab directly, stops and
+unloads or loads the engine as required,
+applies mute/solo, and retains the lease in the declared order. Inactive tab
+timeline and bank updates do not touch `AudioEngine`.
 
 Move timeline rebuild and paired-view updates into `SongTab`; keep transport,
 audition, telemetry, diagnostics, and export in focused `MainWindow` private
@@ -1318,17 +1725,26 @@ thread or queue types.
 
 - `MainWindow` owns the three composition objects and all `AudioEngine` calls.
 - The shell and named placeholders render before project work completes.
-- Worker `DecompProject` contains canonical `LoadedBankEntry` records; the GUI
-  contains only the published `LoadedBankView` map.
-- `ProjectWorkspace` has `ProjectState` exactly `{ state, snapshot, catalog,
-  error }`, no live-tab state, operation field, busy flag, or internal
-  startup-name tracking collection.
-- `WorkspaceUi` owns tabs, selection, placement, picker, the view cache, and
-  Open Project disablement policy. `SongTab` owns local document state and
-  remains passive toward project operations.
-- `SongName` and `VoicegroupId` are the only semantic identities; every
-  fan-out event uses its declared domain key, with only catalog-dialog events
-  intentionally unkeyed.
+- Worker `DecompProject` contains canonical `LoadedBankEntry` records;
+  `WorkspaceUi`'s private `VoicegroupViewCache` contains the published views.
+- `ProjectWorkspace` exposes only `openProject(OpenProjectInput)` and
+  `submit(ProjectOperation)`, owns `ProjectState` as declared under
+  **Implementation-ready target interfaces** and its error invariant, and has
+  no live-tab state, operation field, busy flag, or internal startup-name
+  tracking collection.
+- `WorkspaceUi` owns tabs, selection, placement, picker, its private
+  `VoicegroupViewCache`, transient load tombstones, and Open Project
+  disablement policy. The cache owns one optional pending transition and its
+  origin-aware gates; `SongTab` owns local document state and one
+  `SongHistory`; it remains passive toward project operations.
+- `SongName` and `VoicegroupId` use validating factories, remain value-keyed,
+  and are the only semantic identities. Every fan-out event uses its declared
+  domain key, with only catalog-dialog events intentionally unkeyed.
+- Worker execution resolves catalog rows from `DecompProject`; callers do not
+  send cached `SongInfo` or `SongCfg` for load stages.
+- `SaveSongInput`, `SongSaved`, and `SongFailed` follow the semantic-save
+  contract under **Implementation-ready target interfaces**; `WorkspaceUi`
+  applies its independent keyed `LoadedBankView` and terminal outcome.
 - Bank replacement retains old leases through cold audio swaps, and worker
   mutable state never crosses the GUI boundary.
 
@@ -1336,15 +1752,22 @@ thread or queue types.
 
 | Contract item | Observable acceptance |
 | --- | --- |
-| Canonical bank ownership | The worker record is `LoadedBankEntry`; the GUI map is `LoadedBankView` and no other object is the canonical bank. |
+| Canonical bank ownership | The worker record is `LoadedBankEntry`; `WorkspaceUi`'s private `VoicegroupViewCache` owns the published `LoadedBankView` views, and no other object is the canonical bank. |
+| Pending bank transition ownership | `SongHistory::requestUndo()`/`requestRedo()` return `HistoryRequest` under their `canUndo()`/`canRedo()` preconditions (document requests return `DocumentHistoryApplied` after crossing; bank requests return the exact `VoicegroupEditInput` with the stack index fixed); `WorkspaceUi` requires `VoicegroupViewCache::begin()` to succeed before submission, and its `Kind` selects applied handling or `resolveBankUndoConflict()`/`resolveBankRedoConflict()` for conflicts, with initial conflicts and hard errors leaving history fixed and no parallel pending state. |
+| Semantic save | `SaveSongInput` produces any independent keyed `LoadedBankView` and exactly one terminal `SongSaved` or `SongFailed` under the semantic-save contract in **Implementation-ready target interfaces**; verify its ordering, partial-write, sidecar, and no-rollback/retry outcomes there. |
+| Independent sidecar | A standalone `SaveSidecarInput` persists cosmetic state on close/switch without becoming a caller-managed song-save stage; private `SidecarWriteResult` records success or error, produces no public event, and advances FIFO, while successful `CleanupPreviewInput` returns private `PreviewCleanupCompleted`, is consumed without public publication, and advances FIFO; semantic-save sidecar handling follows the contract above. |
+| Private command/result totality | Every `ProjectCommand` alternative has a terminal private `ProjectResult`; `VoicegroupEditInput` dispatches directly to `DecompProject::applyVoicegroupEdit`, returning `std::optional<VoicegroupEditResult>`, expected mismatches and every validation no-op use `VoicegroupEditConflictResult`, and an edit hard error maps through private `CommandFailure` to keyed `VoicegroupMutationFailed`. |
 | Loading and Open Project | Open state reaches `Ready` at snapshot publication, startup loads use keyed updates, and UI policy alone keeps Open Project disabled while placeholders or submitted work remain. |
-| Event keys | Keyed `LoadedBankView`, preview, sample, song-created, and mutation-failure publications route to their domain; catalog-dialog publications are the only unkeyed public events. |
-| Song failures | `SongPayload` has one `SongFailed` with `SongStage`; sidecar absence is a nonfailure stage and project-open errors stay in `ProjectState.error`. |
-| Voicegroup undo | Existing-voice inverses use `expected`; blank-slot inverses store `BlankSlotMaterialization` and call its revert operation; validation remains worker-side. |
-| Interactive switching | Dirty prompts, failure preservation, Ready teardown, null-selection unload, view-cache clearing, and clean-default start without previous-project placeholder recreation follow Phase 6. |
-| Audio and file layout | Only the meaningful audio values remain, and `src/project/projectio.h/.cpp` retains private machinery until a justified split. |
-| Single declaration site | Full types occur only in **Implementation-ready target interfaces**; other sections refer to them by name and do not redeclare fields or rules. |
-| Forbidden alternatives | No availability enum, documentation split, mutable const-removal cast, request identity, or worker-owned undo stack is introduced. |
+| Event keys and failure sum | `LoadedBankView`, preview, sample, song-created, `VoicegroupEditApplied`, `VoicegroupEditConflict`, and each `ProjectMutationFailure` alternative route by domain key; only catalog-dialog events and `CatalogMutationFailed` are unkeyed. |
+| Song failures | `SongPayload` has one simple `SongFailed` with `SongStage`; sidecar absence is a nonfailure stage and project-open errors stay in optional `ProjectState.error`. |
+| Shared-bank confirmation and blank slots | `VoicegroupViewCache` routes initial, undo, and redo through the unique origin `SongHistory`; applied/conflict/hard-error and blank-token behavior is verified against the canonical contract in **Implementation-ready target interfaces**, with hard errors leaving history fixed. |
+| Worker catalog resolution | Load stage commands carry only `SongName`/`VoicegroupId` and user inputs; worker execution resolves `SongInfo`, `SongCfg`, constants, players, and track budget from `DecompProject`. |
+| Close/reopen tombstone | `WorkspaceUi` keeps a transient `QSet<SongName>` only for a closed loading tab with in-flight work, refuses reopen of the same name, drops staged publications, erases the tombstone only at terminal `VoicegroupBound` or `SongFailed`, and accepted project replacement clears tombstones. |
+| Direct audio seam | `MainWindow` reads the selected `SongTab` directly, retains the lease across borrowed-bank calls, and `AudioPresentationState` plus audition payloads remain without a selected-audio aggregate. |
+| Validating identities and error | `SongName` rejects empty construction; `VoicegroupId` normalizes and validates project-relative paths; equality and `qHash` remain value-based; `ProjectState.error` is absent except in `Failed`. |
+| Interactive switching | Dirty prompts, failure preservation, Ready teardown, null-selection unload, `VoicegroupViewCache` clearing, settings clearing, and clean-default start without previous-project placeholder recreation follow Phase 6. |
+| Sole declaration site | Full types occur only in **Implementation-ready target interfaces**; other sections refer to them by name and do not redeclare fields or rules, including `DocumentStateIdentity` and `SongSaveSnapshot`. |
+| Forbidden scans | Structural scans confirm the removed selected-audio aggregate, availability result, cached catalog rows in load commands, broad slot surface, one-to-one command wrappers, optional-key failure bag, duplicate saved-bank field, GUI filesystem-stage sequence, request/incarnation identity, documentation split, mutable const-removal cast, and worker-owned undo stack do not appear. |
 
 ## Remaining decisions and allowed implementation freedom
 
@@ -1373,9 +1796,9 @@ presentation policy during implementation.
 - `DecompProject` may choose its private bank-map container and helper split.
   Identity, replacement atomicity, existing source dirty state, and copied
   publication are fixed.
-- Private helper names and whether the declared audio values travel in one or
-  several focused signals may vary. Ownership, fields, selection routing, and
-  call order are fixed.
+- `VoicegroupViewCache` may choose private implementation details, and the
+  declared audio values may travel in one or several focused signals.
+  Ownership, fields, selection routing, and call order are fixed.
 - `SampleEditorDialog` may keep a bounded application-level engine borrow or
   emit copied audition values. It must not own the engine or project state.
 
@@ -1384,9 +1807,6 @@ The plan must not answer these by adding a tab registry to
 ownership, or making `MainWindow` a project-data relay.
 
 ## Design test
-
-The target is sound if each owner can change without forcing unrelated owners
-to change:
 
 - worker scheduling can change behind private `ProjectIo`;
 - project discovery and canonical bank coordination can change inside worker
@@ -1397,6 +1817,12 @@ to change:
 - audio binding can change inside `MainWindow` and `AudioEngine` wiring;
 - GUI callers continue to use semantic operations, copied state, and safe
   handles.
+- `SaveSongInput`, `SongSaved`, and `SongFailed` behavior can change inside
+  `ProjectIo` under the semantic-save contract in **Implementation-ready target
+  interfaces**, while `WorkspaceUi` continues to apply the independent keyed
+  bank-view event and one terminal outcome;
+- history confirmation can change inside `SongHistory` and its view-cache
+  helper without adding a worker or per-identity stack.
 
 If a change requires GUI code to know the worker queue, the worker to know a
 tab, the workspace to own audio, or audio to hold a raw owning pointer, the
