@@ -148,6 +148,8 @@ class VelocityArea final : public songview::TimelineSurface
     void appendFrozenNotes(const std::vector<DocNote> &notes);
     void beginVelocityPaint(const QPointF &position, bool detentUnlock);
     void paintSelectedNodesBetween(const QPointF &first, const QPointF &last);
+    void paintPsgLevelBands(QPainter &painter, int origin, int width, uint64_t firstTick,
+                            uint64_t lastTick) const;
     void beginFrozenGesture(const std::vector<DocNote> &notes, Interaction interaction,
                             const QPointF &position, bool detentUnlock);
     void updateRelativePreview(const QPointF &position);

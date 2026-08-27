@@ -15,6 +15,32 @@
 
 using velocityarea::detail::contains;
 
+void VelocityArea::paintPsgLevelBands(QPainter &painter, const int origin, const int width,
+                                      const uint64_t firstTick, const uint64_t lastTick) const
+{
+    uint64_t sectionTick = firstTick;
+    painter.setPen(
+        QPen(themes::color(themes::Role::song_view_psg_velocity_levels), layout::singlePixel()));
+    while (sectionTick < lastTick) {
+        const DrawerPageVoiceContext context = m_owner.voiceContext(sectionTick);
+        const uint64_t sectionEnd = std::min(lastTick, context.endTick);
+        if (sectionEnd <= sectionTick)
+            break;
+        const VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt);
+        if (map.isPsg()) {
+            const double left =
+                std::clamp(xForTick(sectionTick), double(origin), double(origin + width));
+            const double right =
+                std::clamp(xForTick(sectionEnd), double(origin), double(origin + width));
+            for (std::size_t level = 0; level + 1 < map.levelCount(); ++level) {
+                const double y = levelBoundaryY(map, int(level));
+                painter.drawLine(QPointF(left, y), QPointF(right, y));
+            }
+        }
+        sectionTick = sectionEnd;
+    }
+}
+
 void VelocityArea::paintContent(QPainter &painter)
 {
     painter.setRenderHint(QPainter::Antialiasing, false);
@@ -78,27 +104,7 @@ void VelocityArea::paintContent(QPainter &painter)
         const uint64_t lastTick = std::max(
             firstTick + 1,
             uint64_t(std::ceil((m_live.horizontalScroll + double(width)) * ticksPerPixel)));
-        uint64_t sectionTick = firstTick;
-        painter.setPen(QPen(themes::color(themes::Role::song_view_psg_velocity_levels),
-                            layout::singlePixel()));
-        while (sectionTick < lastTick) {
-            const DrawerPageVoiceContext context = m_owner.voiceContext(sectionTick);
-            const uint64_t sectionEnd = std::min(lastTick, context.endTick);
-            if (sectionEnd <= sectionTick)
-                break;
-            const VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt);
-            if (map.isPsg()) {
-                const double left =
-                    std::clamp(xForTick(sectionTick), double(origin), double(origin + width));
-                const double right =
-                    std::clamp(xForTick(sectionEnd), double(origin), double(origin + width));
-                for (std::size_t level = 0; level + 1 < map.levelCount(); ++level) {
-                    const double y = levelBoundaryY(map, int(level));
-                    painter.drawLine(QPointF(left, y), QPointF(right, y));
-                }
-            }
-            sectionTick = sectionEnd;
-        }
+        paintPsgLevelBands(painter, origin, width, firstTick, lastTick);
     }
     const std::vector<NoteId> &selection = m_owner.selectionModel().noteSelection();
     const std::vector<DocNote> notes = primaryTrackNotes();
@@ -109,21 +115,12 @@ void VelocityArea::paintContent(QPainter &painter)
     const bool dimUnselectedNodes = selectedCount > 1;
     const QColor unselectedNodeColor = dimUnselectedNodes ? palette().mid().color() : trackColor;
     const double stemWidth = m_geometry.stemDipWidth / devicePixelRatioF();
-    painter.setPen(QPen(stemColor, stemWidth, Qt::SolidLine, Qt::FlatCap));
     for (const DocNote &note : notes) {
-        if (selected(note))
-            continue;
-        const uint8_t velocity = displayedVelocity(note);
-        const double start = xForTick(note.tick);
-        const double end = std::max(start + 1.0, xForTick(note.tick + note.duration));
-        painter.drawLine(QPointF(start, yForNote(note, velocity)),
-                         QPointF(end, yForNote(note, velocity)));
-    }
-    painter.setPen(QPen(selectedColor, m_geometry.selectedStemDipWidth / devicePixelRatioF(),
-                        Qt::SolidLine, Qt::FlatCap));
-    for (const DocNote &note : notes) {
-        if (!selected(note))
-            continue;
+        const bool isSelected = selected(note);
+        painter.setPen(
+            QPen(isSelected ? selectedColor : stemColor,
+                 isSelected ? m_geometry.selectedStemDipWidth / devicePixelRatioF() : stemWidth,
+                 Qt::SolidLine, Qt::FlatCap));
         const uint8_t velocity = displayedVelocity(note);
         const double start = xForTick(note.tick);
         const double end = std::max(start + 1.0, xForTick(note.tick + note.duration));
@@ -131,27 +128,21 @@ void VelocityArea::paintContent(QPainter &painter)
                          QPointF(end, yForNote(note, velocity)));
     }
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(dimUnselectedNodes ? QPen(Qt::NoPen)
-                                      : QPen(Qt::black, m_geometry.nodeOutlineDipWidth));
-    painter.setBrush(unselectedNodeColor);
     for (const DocNote &note : notes) {
-        if (selected(note))
-            continue;
-        const uint8_t velocity = displayedVelocity(note);
-        painter.drawEllipse(QPointF(xForTick(note.tick), yForNote(note, velocity)),
-                            m_geometry.nodePaintRadius, m_geometry.nodePaintRadius);
-    }
-    for (const DocNote &note : notes) {
-        if (!selected(note))
-            continue;
         const uint8_t velocity = displayedVelocity(note);
         const QPointF center(xForTick(note.tick), yForNote(note, velocity));
-        painter.setPen(QPen(selectedColor, m_geometry.selectedNodeRingDipWidth));
-        painter.setBrush(Qt::NoBrush);
-        painter.drawEllipse(center, m_geometry.selectedNodeRingRadius,
-                            m_geometry.selectedNodeRingRadius);
-        painter.setPen(QPen(Qt::black, m_geometry.nodeOutlineDipWidth));
-        painter.setBrush(trackColor);
+        if (selected(note)) {
+            painter.setPen(QPen(selectedColor, m_geometry.selectedNodeRingDipWidth));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawEllipse(center, m_geometry.selectedNodeRingRadius,
+                                m_geometry.selectedNodeRingRadius);
+            painter.setPen(QPen(Qt::black, m_geometry.nodeOutlineDipWidth));
+            painter.setBrush(trackColor);
+        } else {
+            painter.setPen(dimUnselectedNodes ? QPen(Qt::NoPen)
+                                              : QPen(Qt::black, m_geometry.nodeOutlineDipWidth));
+            painter.setBrush(unselectedNodeColor);
+        }
         painter.drawEllipse(center, m_geometry.nodePaintRadius, m_geometry.nodePaintRadius);
     }
     if (m_interaction == Interaction::Ramp) {
