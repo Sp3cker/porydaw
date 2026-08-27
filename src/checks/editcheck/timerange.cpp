@@ -263,6 +263,31 @@ int timeRangeContractFailures()
                "split did not canonicalize same-tick note-end before note-on");
 
     if (!doc.load(info, &error)) {
+        fail("could not reload for the time-signature seam fixture");
+        return failures;
+    }
+    const uint64_t signatureSeam = 960;
+    const uint64_t threeFourBar = 3 * uint64_t(doc.smf().division);
+    doc.setTimeSig(0, 4, 2);
+    doc.setTimeSig(signatureSeam, 3, 2);
+    SongDocument::TimeScope wholeSongScope;
+    wholeSongScope.wholeSong = true;
+    if (checkRoundTrip({signatureSeam, signatureSeam + threeFourBar}, wholeSongScope,
+                       &SongDocument::insertBlankTime,
+                       "time-signature seam insertion did not commit")) {
+        bool signatureAtStart = false;
+        bool signatureAtEnd = false;
+        for (const DocTimeSig &signature : doc.timeSigs()) {
+            if (signature.numerator != 3 || signature.denomPow2 != 2)
+                continue;
+            signatureAtStart |= signature.tick == signatureSeam;
+            signatureAtEnd |= signature.tick == signatureSeam + threeFourBar;
+        }
+        expect(signatureAtStart && signatureAtEnd,
+               "blank bars did not retain the seam time signature");
+    }
+
+    if (!doc.load(info, &error)) {
         fail("could not reload the clean time-range fixture");
         return failures;
     }

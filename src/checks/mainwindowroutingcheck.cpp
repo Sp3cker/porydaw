@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QCoreApplication>
+#include <QDialog>
 #include <QEvent>
 #include <QFile>
 #include <QJsonArray>
@@ -18,6 +19,7 @@
 #include <QScrollBar>
 #include <QSettings>
 #include <QStatusBar>
+#include <QTimer>
 #include <QUndoStack>
 #include <QWidget>
 #include <algorithm>
@@ -31,6 +33,7 @@
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "mainwindow.h"
+#include "ui/dragspinbox.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
@@ -124,6 +127,7 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     stopPlayback();
     auto &keys = keymap::Registry::instance();
     QAction *copyAction = findChild<QAction *>(QStringLiteral("copyWindowAction"));
+    QAction *insertTimeAction = findChild<QAction *>(QStringLiteral("insertTimeWindowAction"));
     QMenu *editMenu = nullptr;
     for (QAction *menuAction : menuBar()->actions()) {
         auto *menu = menuAction->menu();
@@ -148,6 +152,15 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
           "native Copy action does not carry the standard/current roll.copy binding");
     check(copyAction && copyAction->shortcutContext() == Qt::WindowShortcut,
           "native Copy action is not a WindowShortcut");
+    check(insertTimeAction && insertTimeAction == m_insertTimeAction &&
+              insertTimeAction->parent() == this,
+          "Insert Time action is missing or is not owned by MainWindow");
+    check(editMenu && editMenu->actions().contains(insertTimeAction),
+          "Insert Time action is not a member of the Edit menu");
+    check(insertTimeAction &&
+              insertTimeAction->shortcuts() == keys.bindings(QStringLiteral("edit.insert_time")) &&
+              insertTimeAction->shortcutContext() == Qt::WindowShortcut,
+          "Insert Time action does not carry its global window shortcut");
     int liveCopyOwners = 0;
     const auto currentCopyBindings = keys.bindings(QStringLiteral("roll.copy"));
     for (QAction *action : findChildren<QAction *>()) {
@@ -248,6 +261,7 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
           "drawer visibility did not propagate to the other open tab");
 
     tabBView.focusContent();
+    QCoreApplication::processEvents();
     sendKeyStroke(*this, Qt::Key_A, Qt::NoModifier, false);
     check(tabBView.drawerSectionVisible(EditorDrawerPage::Automations) &&
               tabBView.drawerActivePage() == EditorDrawerPage::Automations &&
@@ -379,6 +393,56 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
                   QStringLiteral("velocity"),
           "drawer chrome was not written to application settings");
 
+    if (insertTimeAction && tabBNote) {
+        const DocNote source = *tabBNote;
+        const SongView::GridSeg segment = tabBView.gridSegAt(source.tick);
+        const QByteArray before = tabB->doc.smf().write();
+        const int undoIndex = tabB->doc.undoStack()->index();
+        const auto insertAndCheck = [&](bool playing, int bars, int beats, int fractions,
+                                        uint64_t expectedSpan, const char *failure) {
+            tabBView.setPlayheadSample(
+                tabB->timeline->sampleForTick(playing ? source.tick : uint64_t{0}), playing);
+            if (!playing)
+                tabBView.commitEditCursor(source.tick);
+            QTimer::singleShot(0, [bars, beats, fractions] {
+                auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+                auto *barsSpin =
+                    dialog ? dialog->findChild<DragSpinBox *>(QStringLiteral("insertTimeBars"))
+                           : nullptr;
+                auto *beatsSpin =
+                    dialog ? dialog->findChild<DragSpinBox *>(QStringLiteral("insertTimeBeats"))
+                           : nullptr;
+                auto *fractionsSpin = dialog ? dialog->findChild<DragSpinBox *>(
+                                                   QStringLiteral("insertTimeBeatFractions"))
+                                             : nullptr;
+                if (!dialog || !barsSpin || !beatsSpin || !fractionsSpin) {
+                    if (dialog)
+                        dialog->reject();
+                    return;
+                }
+                barsSpin->setValue(bars);
+                beatsSpin->setValue(beats);
+                fractionsSpin->setValue(fractions);
+                dialog->accept();
+            });
+            insertTimeAction->trigger();
+            DocNote shifted;
+            check(tabB->doc.undoStack()->index() == undoIndex + 1 &&
+                      tabB->doc.findNote(source.noteId, &shifted) &&
+                      shifted.tick == source.tick + expectedSpan,
+                  failure);
+            tabB->doc.undoStack()->undo();
+            check(tabB->doc.smf().write() == before,
+                  "Insert Time undo did not restore the active song exactly");
+        };
+        insertAndCheck(false, 0, 2, 0, 2 * segment.beatTicks,
+                       "Insert Time did not insert beats at the stopped edit cursor");
+        insertAndCheck(true, 1, 0, 0, segment.beatTicks * segment.beatsPerBar,
+                       "Insert Time did not insert a bar at the playback cursor");
+        insertAndCheck(true, 0, 0, 2, (2 * segment.beatTicks + 3) / 4,
+                       "Insert Time did not insert beat fractions at the playback cursor");
+        tabBView.setPlayheadSample(0, false);
+    }
     closeSession(*tabB);
     ViewSidecar::Snapshot savedSnapshot;
     check(ViewSidecar::load(projectRoot, songB, &savedSnapshot) && savedSnapshot.view.valid &&

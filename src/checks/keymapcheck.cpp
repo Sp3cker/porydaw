@@ -116,6 +116,22 @@ int runKeymapCheck()
         check(
             !keyMatches(QStringLiteral("transport.play_pause"), Qt::Key_Space, Qt::ControlModifier),
             "Ctrl+Space must not match play/pause");
+        const QString insertTimeId = QStringLiteral("edit.insert_time");
+        const keymap::CommandInfo insertTime = registry.command(insertTimeId);
+        check(insertTime.context == keymap::Context::Global &&
+                  insertTime.category == QStringLiteral("Edit") &&
+                  insertTime.name == QStringLiteral("Insert Time"),
+              "insert time command metadata is wrong");
+        check(insertTime.defaults ==
+                  QList<QKeySequence>{QKeySequence(QStringLiteral("Ctrl+Shift+I"))},
+              "insert time does not register Ctrl+Shift+I as its default");
+        check(keyMatches(insertTimeId, Qt::Key_I, Qt::ControlModifier | Qt::ShiftModifier),
+              "Ctrl+Shift+I should match insert time");
+        check(registry
+                  .conflicts(insertTimeId, insertTime.context,
+                             QKeySequence(QStringLiteral("Ctrl+Shift+I")))
+                  .isEmpty(),
+              "Ctrl+Shift+I conflicts with another command");
         const QString duplicateId = QStringLiteral("roll.duplicate_time");
         const keymap::CommandInfo duplicate = registry.command(duplicateId);
         check(duplicate.context == keymap::Context::PianoRoll &&

@@ -41,6 +41,7 @@ On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 
 | Command | Default Shortcut | Description |
 | --- | --- | --- |
+| Insert Time | `Ctrl+Shift+I` | Inserts a bars/beats/fractions duration at the current cursor |
 | Undo | `Ctrl+Z` | Undoes the last action |
 | Redo | `Ctrl+Y` / `Ctrl+Shift+Z` | Redoes the previously undone action |
 

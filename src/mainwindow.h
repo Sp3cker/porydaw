@@ -314,6 +314,7 @@ class MainWindow : public QMainWindow
     QAction *m_saveAction = nullptr;
     QAction *m_exportWavAction = nullptr;
     QAction *m_copyAction = nullptr;
+    QAction *m_insertTimeAction = nullptr;
     QAction *m_settingsAction = nullptr;
     QAction *m_eventListAction = nullptr;
     QAction *m_automationDrawerAction = nullptr;

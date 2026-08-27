@@ -430,6 +430,10 @@ class SongView : public QWidget
     // partial scope shifts only its own tracks or lanes so the rest of the
     // song keeps its alignment.
     void removeTimeSelectionContents();
+    // Global Insert Time command: asks for bars, beats, and quarter-beat
+    // fractions, then inserts that much whole-song time at the live playhead
+    // or the edit cursor while stopped.
+    void insertTimeAtPlaybackCursor();
     // Insert and duplicate operate only on an active half-open time selection.
     void insertBlankTime();
     void duplicateTimeSelection();

@@ -1,18 +1,23 @@
 #include "core/mid2agbtables.h"
 #include "core/songdocument.h"
 #include "mainwindow.h"
+#include "ui/dragspinbox.h"
 #include "ui/keymap.h"
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/detail.h"
 
 #include <QAction>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFormLayout>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QPoint>
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <span>
 #include <utility>
@@ -161,6 +166,38 @@ class DestinationMapper
     const EditorSelectionModel &m_selection;
     std::optional<int> m_singleSource;
 };
+
+std::optional<uint64_t> askInsertTimeSpan(QWidget *parent, const SongView::GridSeg &segment)
+{
+    QDialog dialog(parent);
+    dialog.setObjectName(QStringLiteral("insertTimeDialog"));
+    dialog.setWindowTitle(SongView::tr("Insert Time"));
+    auto *form = new QFormLayout(&dialog);
+    auto *bars = new DragSpinBox(&dialog);
+    bars->setObjectName(QStringLiteral("insertTimeBars"));
+    bars->setRange(0, 9999);
+    bars->setValue(1);
+    auto *beats = new DragSpinBox(&dialog);
+    beats->setObjectName(QStringLiteral("insertTimeBeats"));
+    beats->setRange(0, (std::max)(0, int(segment.beatsPerBar) - 1));
+    auto *fractions = new DragSpinBox(&dialog);
+    fractions->setObjectName(QStringLiteral("insertTimeBeatFractions"));
+    fractions->setRange(0, 3);
+    form->addRow(SongView::tr("Bars:"), bars);
+    form->addRow(SongView::tr("Beats:"), beats);
+    form->addRow(SongView::tr("Beat fractions (¼ beat):"), fractions);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    form->addRow(buttons);
+    if (dialog.exec() != QDialog::Accepted)
+        return std::nullopt;
+    const uint64_t measureTicks = segment.beatTicks * segment.beatsPerBar;
+    const uint64_t wholeTicks =
+        uint64_t(bars->value()) * measureTicks + uint64_t(beats->value()) * segment.beatTicks;
+    const uint64_t fractionTicks = (uint64_t(fractions->value()) * segment.beatTicks + 3) / 4;
+    return wholeTicks + fractionTicks;
+}
 
 } // namespace
 void SongView::announceTimeSelection()
@@ -449,6 +486,28 @@ void SongView::removeTimeSelectionContents()
     announce(tr("Removed %1 beats on %2 — later events shifted left")
                  .arg(beats, 0, 'g', 4)
                  .arg(resolved->label));
+}
+void SongView::insertTimeAtPlaybackCursor()
+{
+    if (!m_document || !m_timeline)
+        return;
+    const uint64_t cursorTick =
+        m_playing ? uint64_t(std::clamp(m_playheadTick, 0.0, double(m_timeline->lengthTicks)) + 0.5)
+                  : m_editCursorTick;
+    const std::optional<uint64_t> span = askInsertTimeSpan(this, gridSegAt(cursorTick));
+    if (!span)
+        return;
+    if (*span > (std::numeric_limits<uint64_t>::max)() - cursorTick) {
+        announce(tr("Cannot insert time at the cursor"));
+        return;
+    }
+    SongDocument::TimeScope scope;
+    scope.wholeSong = true;
+    if (!m_document->insertBlankTime({cursorTick, cursorTick + *span}, scope)) {
+        announce(tr("Nothing to insert at the cursor"));
+        return;
+    }
+    announce(tr("Inserted time at the cursor"));
 }
 void SongView::insertBlankTime()
 {

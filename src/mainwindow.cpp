@@ -316,6 +316,16 @@ void MainWindow::buildUi()
     });
     editMenu->addAction(m_copyAction);
     m_copyAction->setEnabled(false);
+    m_insertTimeAction = new QAction(tr("Insert &Time..."), this);
+    connect(m_insertTimeAction, &QAction::triggered, this, [this] {
+        if (m_active)
+            m_workspace->viewFor(*m_active).insertTimeAtPlaybackCursor();
+    });
+    m_insertTimeAction->setObjectName(QStringLiteral("insertTimeWindowAction"));
+    m_insertTimeAction->setShortcutContext(Qt::WindowShortcut);
+    keys.attach(QStringLiteral("edit.insert_time"), m_insertTimeAction);
+    editMenu->addAction(m_insertTimeAction);
+    m_insertTimeAction->setEnabled(false);
     editMenu->addSeparator();
     QAction *preferencesAction = editMenu->addAction(tr("Prefere&nces..."), this, [this] {
         openSettings(m_active ? SettingsDialog::Tab::Song : SettingsDialog::Tab::Engine);
@@ -916,6 +926,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
     m_closeTabAction->setEnabled(loaded);
     m_eventListAction->setEnabled(loaded);
     m_copyAction->setEnabled(loaded);
+    m_insertTimeAction->setEnabled(loaded);
     {
         // Reflect the incoming tab's roll/event-list state without the
         // checkbox driving a redundant toggle.
