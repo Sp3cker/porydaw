@@ -288,6 +288,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/pianoroll_geometry.cpp
     src/ui/songview/pianoroll_paint.cpp
     src/ui/songview/pianoroll_interaction.cpp
+    src/ui/songview/pianoroll_gestures.cpp
+    src/ui/songview/pianoroll_gestures_active.cpp
     src/ui/songview/pianoroll_commands.cpp
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
@@ -430,6 +432,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/camera.cpp
         src/checks/rollcheck/pencil.cpp
         src/checks/rollcheck/pencil_velocity.cpp
+        src/checks/rollcheck/interlock.cpp
         src/checks/rollcheck/selection.cpp
         src/checks/rollcheck/note_rendering.cpp
         src/checks/rollcheck/resize.cpp

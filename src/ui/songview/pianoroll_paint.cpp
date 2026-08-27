@@ -90,7 +90,7 @@ void PianoRoll::paintContent(QPainter &p)
     drawNotes(p, model, selected, timeRange, timeSelectedTracks, true);
     drawNotes(p, model, selected, timeRange, timeSelectedTracks, false);
     drawDragPreview(p, model, selected);
-    if (m_drag == Drag::Band) {
+    if (m_rightDrag == RightDrag::Band) {
         paintSelectionReticle(p, QRectF(m_pressPos, m_curPos).normalized());
     }
 
@@ -108,7 +108,7 @@ void PianoRoll::drawNotes(QPainter &painter, const SongViewModel &model, int sel
     const bool velocityShortcut = keymap::Registry::instance().matchesModifier(
         QApplication::queryKeyboardModifiers(), QStringLiteral("roll.velocity_drag"));
     const bool showVelocityValues =
-        !drawingGhostNotes && (m_drag == Drag::Velocity || velocityShortcut);
+        !drawingGhostNotes && (m_leftDrag == LeftDrag::Velocity || velocityShortcut);
     // Velocity values are optional at tight zoom levels; never force a
     // minimum face that can clip vertically. The face fits the note box,
     // not the row pitch: the row includes the hairline gap under the box,
@@ -196,7 +196,7 @@ void PianoRoll::drawNotes(QPainter &painter, const SongViewModel &model, int sel
             timeSelected ||
             (note.track == selectedTrack && note.noteId.isAssigned() &&
              m_sv->selectionModel().isNoteSelected(note.noteId)) ||
-            (m_drag == Drag::Band &&
+            (m_rightDrag == RightDrag::Band &&
              std::any_of(m_bandAud.begin(), m_bandAud.end(), [&note](const ViewNote &covered) {
                  return covered.noteId == note.noteId;
              }));
@@ -235,7 +235,7 @@ void PianoRoll::drawNoteName(QPainter &painter, const QRectF &noteRect, const QR
 void PianoRoll::drawDragPreview(QPainter &p, const SongViewModel &model, int selected)
 {
     Q_UNUSED(model);
-    if (m_drag != Drag::Draw)
+    if (m_leftDrag != LeftDrag::Draw)
         return;
     const qreal dpr = p.device()->devicePixelRatioF();
     const qreal x0 = m_sv->displayX(double(m_drawTick), m_geometry.pianoKeyboardWidth, dpr);

@@ -68,6 +68,9 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         checks::rollcheck::runPencilVelocityScenarios(check, std::move(*paintingFixture));
     if (!velocityFixture)
         return earlyFailureStatus();
+    if (checks::rollcheck::runGestureInterlockScenarios(check, *velocityFixture) ==
+        ScenarioContinuation::Stop)
+        return earlyFailureStatus();
     if (checks::rollcheck::runSelectionGestureScenarios(check, *velocityFixture) ==
             ScenarioContinuation::Stop ||
         checks::rollcheck::runSelectionRasterScenarios(check, *velocityFixture) ==

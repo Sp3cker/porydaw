@@ -120,6 +120,8 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
                                                      const PencilPaintingFixture &fixture);
 std::optional<PencilVelocityFixture> runPencilVelocityScenarios(Harness &check,
                                                                 PencilPaintingFixture fixture);
+ScenarioContinuation runGestureInterlockScenarios(Harness &check,
+                                                  const PencilVelocityFixture &fixture);
 ScenarioContinuation runSelectionGestureScenarios(Harness &check,
                                                   const PencilVelocityFixture &fixture);
 ScenarioContinuation runSelectionRasterScenarios(Harness &check,

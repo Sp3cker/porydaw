@@ -17,6 +17,7 @@
 #include "ui/contextmenu.h"
 #include "ui/layout.h"
 #include "ui/pitchprojection.h"
+#include "ui/songview.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
 
@@ -27,7 +28,7 @@ class QKeyEvent;
 class QPainter;
 class QPixmap;
 class QWheelEvent;
-class SongView;
+
 namespace songview {
 class PitchBendEditor;
 }
@@ -124,7 +125,17 @@ class PianoRoll : public TimelineSurface
     void keyReleaseEvent(QKeyEvent *event) override;
 
   private:
-    enum class Drag { None, Band, TimeSel, Move, Resize, ResizeLeft, Velocity, Draw };
+    enum class LeftDrag {
+        None,
+        PendingDraw,
+        PendingVelocity,
+        Draw,
+        Move,
+        Resize,
+        ResizeLeft,
+        Velocity
+    };
+    enum class RightDrag { None, PendingMenu, Band, TimeSel };
 
     bool insideTimeSelection(qreal x) const;
     const std::array<qreal, PitchProjection::cMaxRows + 1> &rowEdges() const;
@@ -146,10 +157,65 @@ class PianoRoll : public TimelineSurface
 
     std::optional<KeyboardHoverGeometry> keyboardHoverGeometry(int key) const;
     void setHoverKey(int key);
+    void updateHoverKey(const QMouseEvent *event);
+    void panMove(const QMouseEvent *event);
+    void kbdGlissandoMove(const QMouseEvent *event);
+    void endPanGesture();
+    void endKbdAudition();
     void stopNoteAudition();
     void auditionKey(int key, int velocity);
 
+    bool dragLive() const;
+    static bool isLiveDrag(LeftDrag drag);
+    static bool isLiveDrag(RightDrag drag);
+    void activateLeftDrag(LeftDrag state);
+    void clearLiveDragToken();
+    void abortLiveLeftDrag();
+    bool resolvePendingPresses(const QMouseEvent *event);
+    void beginPanGesture(const QMouseEvent *event);
+    void beginKbdAudition(const QMouseEvent *event);
+    std::vector<NoteId> notesOnKey(int key) const;
+    void beginPendingMenu(const QMouseEvent *event, const ViewNote *hit);
+    void beginLeftPress(const QMouseEvent *event);
+    void pressContent(QMouseEvent *event);
+    bool contentPressRejectedByScaleFold(const SongDocument *doc, const ViewNote *hit) const;
+    void beginNotePress(const ViewNote &note, const QMouseEvent *event);
+    void applyNotePressSelection(const ViewNote &note, bool onEdge,
+                                 Qt::KeyboardModifiers modifiers);
+    bool noteRequiresSelectionUpdate(const ViewNote &note) const;
+    void armNoteDrag(const ViewNote &note, QPointF position);
+    void beginVelocityPress(const ViewNote &note);
+    void beginPendingDraw(const QMouseEvent *);
     void beginDraw();
+    void resolveRightPress(const QMouseEvent *event);
+    void resolveDrawPress(const QMouseEvent *event);
+    bool resolveVelocityPress(const QMouseEvent *event);
+    void applyModifierVelocitySelection();
+    void updateMoveDrag(const QMouseEvent *event);
+    void auditionMovedSelection();
+    void updateResizeDrag(const QMouseEvent *event);
+    void updateVelocityDrag(const QMouseEvent *event);
+    void updateDrawDrag(const QMouseEvent *event);
+    bool isDrawableKey(int key) const;
+    void drawSpanAt(double tick, uint64_t grid, uint64_t &start, int64_t &dur) const;
+    void updateTimeSelDrag(const QMouseEvent *event);
+    void updateBandDrag();
+    void updateLeftDragMove(const QMouseEvent *event);
+    void dispatchLiveDragMove(const QMouseEvent *event);
+    void releaseRightPress(QMouseEvent *event);
+    void releasePendingMenu(QMouseEvent *event, SongDocument *doc);
+    bool releasePendingLeftPress(QMouseEvent *event);
+    void releasePendingDrawClick(QMouseEvent *event);
+    void releasePendingVelocityClick(QMouseEvent *);
+    bool finishReleaseWithoutCommit(const QMouseEvent *event);
+    void commitDrag(QMouseEvent *event);
+    void commitDrawDrag();
+    void commitMoveDrag();
+    void commitResolvedMove(SongDocument &doc, std::vector<DocNote> &notes);
+    void commitResizeDrag(LeftDrag drag, SongDocument *doc);
+    void commitVelocityDrag(SongView::VelocityCommitResult);
+    void armVelocityOneShot(const QMouseEvent *, SongView::VelocityCommitResult);
+    void completeProjectionGesture();
     QRectF noteRect(qreal x0, qreal x1, int key) const;
     QRectF noteRect(const ViewNote &note) const;
     QRectF noteBox(const QRectF &rect) const;
@@ -207,7 +273,8 @@ class PianoRoll : public TimelineSurface
     mutable qreal m_rowEdgesScrollY = 0.0;
     mutable uint64_t m_rowEdgesProjectionRevision = 0;
     mutable bool m_rowEdgesValid = false;
-    Drag m_drag = Drag::None;
+    LeftDrag m_leftDrag = LeftDrag::None;
+    RightDrag m_rightDrag = RightDrag::None;
     QPointF m_pressPos;
     QPointF m_curPos;
     double m_pressTick = 0.0;
@@ -222,9 +289,6 @@ class PianoRoll : public TimelineSurface
     int64_t m_drawDur = 0;
     int m_drawKey = 0;               // follows the cursor vertically mid-draw
     uint64_t m_drawAnchor = 0;       // grid cell pressed; drags pivot around it
-    bool m_leftPress = false;        // left button held on empty space; cursor
-                                     // move vs. draw undecided
-    bool m_rightPress = false;       // right button held; band vs. menu undecided
     bool m_rightShift = false;       // …with Shift: drag sweeps a time selection
     uint64_t m_rightAnchorTick = 0;  // snapped tick of the right press
     bool m_rightHit = false;         // that press landed on a note…
@@ -232,8 +296,6 @@ class PianoRoll : public TimelineSurface
     std::vector<ViewNote> m_bandAud; // notes the band currently covers; entrants audition
     ViewNote m_velAnchor{};          // pressed note of a velocity drag (a copy)
     int m_velAudEff = -1;            // last effective velocity auditioned mid-drag
-    bool m_velModPress = false;      // velocity-modifier press on a note; click
-                                     // vs. vertical velocity drag undecided
     Qt::KeyboardModifiers m_velModMods = Qt::NoModifier; // that press's chord
     bool m_modifierVelocityDrag = false;             // active drag began with the modifier chord
     bool m_suppressNextVelocitySelectionAdd = false; // one-shot after a committed drag

@@ -487,13 +487,13 @@ void PianoRoll::refreshHoverAtCursor()
 
 QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
 {
-    const bool dragging =
-        m_drag == Drag::Move || m_drag == Drag::Resize || m_drag == Drag::ResizeLeft;
+    const bool dragging = m_leftDrag == LeftDrag::Move || m_leftDrag == LeftDrag::Resize ||
+                          m_leftDrag == LeftDrag::ResizeLeft;
     if (!dragging || note.track != m_sv->selectionModel().primaryTrack() ||
         !note.noteId.isAssigned() || !m_sv->selectionModel().isNoteSelected(note.noteId))
         return noteRect(note);
     int64_t tick, endTick;
-    if (m_drag == Drag::ResizeLeft) {
+    if (m_leftDrag == LeftDrag::ResizeLeft) {
         // The note-off pins the gesture; only the start moves.
         endTick = int64_t(note.endTick);
         tick = std::clamp<int64_t>(int64_t(note.startTick) + m_dTick, 0, endTick - 1);
@@ -510,8 +510,8 @@ QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
 
 int PianoRoll::displayedNoteKey(const ViewNote &note) const
 {
-    const bool dragging =
-        m_drag == Drag::Move || m_drag == Drag::Resize || m_drag == Drag::ResizeLeft;
+    const bool dragging = m_leftDrag == LeftDrag::Move || m_leftDrag == LeftDrag::Resize ||
+                          m_leftDrag == LeftDrag::ResizeLeft;
     if (!dragging || note.track != m_sv->selectionModel().primaryTrack() ||
         !note.noteId.isAssigned() || !m_sv->selectionModel().isNoteSelected(note.noteId))
         return note.key;
