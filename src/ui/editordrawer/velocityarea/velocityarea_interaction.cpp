@@ -21,6 +21,18 @@ uint8_t exactVelocity(int proposed)
 {
     return uint8_t(std::clamp(proposed, 1, 127));
 }
+// One absolute pointer position -> one velocity for `note`. The unlock
+// modifier and the axis context decide between exact MIDI, canonicalized
+// continuous, and categorical PSG level resolution.
+uint8_t resolvedVelocity(const VelocityAxis &axis, const VelocityMap &noteMap, bool detentUnlock,
+                         double y)
+{
+    if (detentUnlock)
+        return exactVelocity(axis.yToVelocity(y));
+    if (axis.mode() == VelocityAxis::Mode::Continuous)
+        return noteMap.canonicalize(axis.yToVelocity(y));
+    return noteMap.representative(axis.yToLevel(y));
+}
 
 } // namespace
 void VelocityArea::beginFrozenGesture(const std::vector<DocNote> &notes, Interaction interaction,
@@ -112,13 +124,7 @@ void VelocityArea::paintSelectedNodesBetween(const QPointF &first, const QPointF
                                      });
         if (it == m_frozen.end())
             continue;
-        uint8_t velocity = 1;
-        if (m_detentUnlock)
-            velocity = exactVelocity(m_axis.yToVelocity(ys[index]));
-        else if (m_axis.mode() == VelocityAxis::Mode::Continuous)
-            velocity = it->map.canonicalize(m_axis.yToVelocity(ys[index]));
-        else
-            velocity = it->map.representative(m_axis.yToLevel(ys[index]));
+        const uint8_t velocity = resolvedVelocity(m_axis, it->map, m_detentUnlock, ys[index]);
         updates.push_back({it->noteId, int(velocity)});
     }
     if (!updates.empty())
@@ -142,12 +148,7 @@ void VelocityArea::updateRampPreview(const QPointF &position)
         if (x >= firstX && x <= lastX) {
             const double y = ui::linearRampValue(x, m_pressPosition.x(), m_pressPosition.y(),
                                                  position.x(), position.y());
-            if (m_detentUnlock)
-                velocity = exactVelocity(m_axis.yToVelocity(y));
-            else if (m_axis.mode() == VelocityAxis::Mode::Continuous)
-                velocity = note.map.canonicalize(m_axis.yToVelocity(y));
-            else
-                velocity = note.map.representative(m_axis.yToLevel(y));
+            velocity = resolvedVelocity(m_axis, note.map, m_detentUnlock, y);
             m_announcedNote = note.noteId;
         }
         updates.push_back({note.noteId, int(velocity)});

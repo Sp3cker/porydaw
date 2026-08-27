@@ -104,6 +104,11 @@ class VelocityArea final : public songview::TimelineSurface
         void resolve();
     };
 
+    // Snapshot of one note taken when a gesture begins. Mouse movement must never
+    // read the document, so every field the gesture needs is frozen here. `map`
+    // in particular is the gesture-time voice resolution: contextForNote can
+    // return a different map mid-gesture (hover changes, voicegroup swaps), and
+    // the gesture must stay on the axis it started on.
     struct FrozenNote {
         NoteId noteId;
         uint64_t tick = 0;
@@ -179,5 +184,10 @@ class VelocityArea final : public songview::TimelineSurface
     bool m_suppressContextMenu = false;
     VelocityAreaDiagnostics m_diagnostics;
     std::optional<double> m_lastPresentedPlayheadTick;
+    // One-note announcement invariant: regardless of how many notes a gesture
+    // touches, only this note is spoken through the drawer status line, so a
+    // multi-note drag does not flood announcements. Defaults to the pressed
+    // note (or the first frozen note) and sticks for the gesture's lifetime;
+    // clearPreview() resets it.
     NoteId m_announcedNote;
 };
