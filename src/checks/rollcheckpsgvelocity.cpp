@@ -197,15 +197,23 @@ int checkDrawerToggleGeometry(VelocityAreaEnv &env)
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    const QRect toggleGroup =
-        env.automationToggle && env.velToggle
-            ? env.automationToggle->geometry().united(env.velToggle->geometry())
-            : QRect{};
+    auto *voiceToggle = env.drawerSections ? env.drawerSections->findChild<QToolButton *>(
+                                                 QStringLiteral("voiceChangesDrawerToggle"))
+                                           : nullptr;
+    const QRect toggleGroup = voiceToggle && env.automationToggle && env.velToggle
+                                  ? voiceToggle->geometry()
+                                        .united(env.automationToggle->geometry())
+                                        .united(env.velToggle->geometry())
+                                  : QRect{};
     const int pianoKeysCenter = env.area.geometry().x() + env.area.plotOrigin() / 2;
-    check(env.velToggle && env.automationBar && env.automationToggle &&
+    check(voiceToggle && env.velToggle && env.automationBar && env.automationToggle &&
+              env.automationBar->geometry().contains(voiceToggle->geometry()) &&
               env.automationBar->geometry().contains(env.velToggle->geometry()) &&
+              env.automationToggle->x() ==
+                  voiceToggle->x() + voiceToggle->width() + layout::space(layout::Space::One) &&
               env.velToggle->x() == env.automationToggle->x() + env.automationToggle->width() +
                                         layout::space(layout::Space::One) &&
+              voiceToggle->y() == env.automationToggle->y() &&
               env.velToggle->y() == env.automationToggle->y() &&
               std::abs(toggleGroup.center().x() - pianoKeysCenter) <= 1,
           "drawer toggles must sit together beneath the piano keys");

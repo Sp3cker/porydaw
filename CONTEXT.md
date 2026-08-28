@@ -33,7 +33,7 @@ Gesture-local selection feedback that has not become canonical selection, such a
 _Avoid_: Selection, temporary selection model, local selection
 
 **Automation**:
-The editor drawer's umbrella page and editing family across Tempo, Voice Change, and CC, rendered by `AutomationCanvas`. The family name — never a synonym for one kind.
+The editor drawer's umbrella page and editing family across Tempo and CC, rendered by `AutomationCanvas`. The family name — never a synonym for one kind, and Voice Change is not part of it.
 _Avoid_: Automation lane (as a kind name), auto lane
 
 **Node Lane**:
@@ -48,6 +48,6 @@ _Avoid_: Automation lane, controller lane, parameter lane
 The single global tempo node lane owned by `TempoLane`. It belongs to the song, not to any track.
 _Avoid_: Tempo track, tempo row
 
-**Voice Change Lane**:
-The per-track, non-node lane of voice changes owned by `VoiceChangeLane`. Its value is a voice slot in the track's voicegroup.
-_Avoid_: Voice row, program lane, voice node lane
+**Voice Change**:
+The per-track, non-node timeline event that switches the track's voice; it holds until the next change. Its value is a voice slot in the track's voicegroup, stored as `DOC_CC_VOICE`. Edited by `VoiceChangeArea` on the independent Voice Changes drawer page — never as an automation lane. The plural Voice Changes names the page and state (`VoiceChanges`, `voiceChanges`); the singular names the surface and event.
+_Avoid_: Voice Change lane, Voice row, program lane, voice node lane

@@ -1,6 +1,7 @@
 #include "core/mid2agbtables.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
+#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
@@ -430,6 +431,7 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
     if (hadLaneSelection)
         Q_ASSERT(m_selectionModel.timeSelection().lanes == remappedLanes);
     m_editorDrawer->velocityArea()->tracksRemapped(remap);
+    m_editorDrawer->voiceChangeArea()->tracksRemapped(remap);
     if (drawerChanged)
         emit editorDrawerStateChanged(m_editorViewState.drawerState());
     if (muteChanged)

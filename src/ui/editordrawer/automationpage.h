@@ -19,7 +19,6 @@ class QRect;
 class AutomationCanvas;
 class TempoLane;
 class CCLanes;
-class VoiceChangeLane;
 struct NodeLaneHoverState;
 class MidiTimeline;
 class SongDocument;
@@ -52,7 +51,6 @@ class AutomationPage final : public QWidget
   private:
     friend class AutomationCanvas;
     friend class CCLanes;
-    friend class VoiceChangeLane;
     friend class TempoLane;
     friend struct NodeLaneHoverState;
     // Read-only access to the timeline mapping queries (tickAtContentX,

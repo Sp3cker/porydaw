@@ -263,7 +263,7 @@ LaneGeom laneGeom(AutomationPage &page, const LaneCase &row)
         const auto &state = page.automationViewState();
         const int shared = state.laneHeight > 0 ? state.laneHeight : geometry.rowDefaultHeight;
         const auto &rows = page.canvas()->rows();
-        int top = page.canvas()->contentTopInset();
+        int top = 0;
         for (int index = 0; index < panRow; ++index) {
             const auto it = state.laneHeights.find(rows[std::size_t(index)].id);
             top += std::clamp(it == state.laneHeights.cend() ? shared : it->second,
@@ -563,9 +563,8 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     paintUnchanged("edit cursor move", cursorSnap);
     const qreal cursorX = tickX(96);
     check(cursorA != cursorB, QStringLiteral("moving the edit cursor did not repaint the canvas"));
-    check(hasColorNear(cursorB,
-                       QRectF(cursorX - 2.0, page.canvas()->contentTopInset() + 4.0, 4.0, 12.0),
-                       dpr, themes::color(themes::Role::song_view_edit_cursor), 16),
+    check(hasColorNear(cursorB, QRectF(cursorX - 2.0, 4.0, 4.0, 12.0), dpr,
+                       themes::color(themes::Role::song_view_edit_cursor), 16),
           QStringLiteral("canvas did not paint the edit cursor"));
     checkAutomationTempoOcclusion(view, page, document, live, failures);
     cancel();

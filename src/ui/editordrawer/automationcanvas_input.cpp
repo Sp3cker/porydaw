@@ -46,7 +46,7 @@ void AutomationCanvas::wheelEvent(QWheelEvent *event)
         if (steps != 0) {
             m_resize.wheelRemainder -= steps * 120;
             if (m_page->scaleSharedHeight(steps, m_geometry)) {
-                layoutLaneStack(m_voiceLane.engineTrack());
+                layoutLaneStack();
                 invalidateContent();
             }
         }
@@ -85,14 +85,6 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     const LaneHandle pointerLane = pointer.lane;
     const auto *pointerSlot = resolveSlot(pointerLane);
     const bool inTempo = pointerSlot && pointerSlot->isTempo();
-    if (inTempo)
-        m_voiceLane.clearHover(*this);
-    if (!inTempo && m_voiceLane.contains(event->pos())) {
-        setFocus();
-        m_voiceLane.mousePress(*this, event, m_geometry);
-        event->accept();
-        return;
-    }
     if ((event->button() == Qt::LeftButton || event->button() == Qt::RightButton)) {
         auto &model = m_page->m_owner.selectionModel();
         const auto activeTickRange = m_laneSelection.activeTickRange();
@@ -258,7 +250,7 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
             m_page->m_viewState.laneHeights[m_rowData.rows()[std::size_t(m_resize.row)].id] =
                 height;
             m_page->publishViewState();
-            layoutLaneStack(m_voiceLane.engineTrack());
+            layoutLaneStack();
             invalidateContent();
         }
         return;
@@ -286,7 +278,6 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
     if (!m_activeGesture) {
         const PointerLaneHit pointer = pointerLaneAt(event->pos());
         if (pointer.tempoHeader) {
-            m_voiceLane.clearHover(*this);
             invalidateContent(m_hoverState.clearHover());
             setCursor(Qt::ArrowCursor);
             return;
@@ -294,13 +285,6 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
         const LaneHandle pointerLane = pointer.lane;
         const auto *pointerSlot = resolveSlot(pointerLane);
         const bool inTempo = pointerSlot && pointerSlot->isTempo();
-        if (!inTempo && m_voiceLane.contains(event->pos())) {
-            invalidateContent(m_hoverState.clearHover());
-            m_voiceLane.updateHover(*this, m_geometry, event->position().x(), event->pos().y());
-            setCursor(Qt::ArrowCursor);
-            return;
-        }
-        m_voiceLane.clearHover(*this);
         if (!inTempo && ccRowBoundaryAt(event->pos().y()) >= 0) {
             invalidateContent(m_hoverState.clearHover());
             setCursor(Qt::SplitVCursor);
@@ -402,18 +386,12 @@ void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
     const LaneHandle handle = pointer.lane;
     const auto *slot = resolveSlot(handle);
     const bool inTempo = slot && slot->isTempo();
-    if (inTempo)
-        m_voiceLane.clearHover(*this);
     if (inTempoHeader) {
         invalidateContent(m_hoverState.clearHover());
         if (event->button() == Qt::LeftButton) {
             m_tempoLane.toggleExpanded();
             updateTempoLayout();
         }
-        return;
-    }
-    if (!inTempo && m_voiceLane.contains(event->pos())) {
-        m_voiceLane.mouseDoubleClick(*this, event, m_geometry);
         return;
     }
     if (event->button() != Qt::LeftButton)
@@ -504,6 +482,5 @@ void AutomationCanvas::keyPressEvent(QKeyEvent *event)
 
 void AutomationCanvas::leaveEvent(QEvent *)
 {
-    m_voiceLane.clearHover(*this);
     invalidateContent(m_hoverState.clearHover());
 }

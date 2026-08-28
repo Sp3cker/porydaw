@@ -2,6 +2,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
+#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
@@ -10,12 +11,43 @@
 
 using namespace songview;
 using namespace songview::detail;
+namespace {
+
+// Page-keyed projection onto the drawer state. Every section exists in the
+// state, so the mapping is total over EditorDrawerPage; the switch guards
+// against future enumerators growing without a section.
+DrawerSectionState &sectionFor(EditorViewState &state, EditorDrawerPage page) noexcept
+{
+    switch (page) {
+    case EditorDrawerPage::Automations:
+        return state.automation;
+    case EditorDrawerPage::Velocity:
+        return state.velocity;
+    case EditorDrawerPage::VoiceChanges:
+        return state.voiceChanges;
+    }
+    Q_UNREACHABLE();
+}
+
+const DrawerSectionState &sectionFor(const EditorViewState &state, EditorDrawerPage page) noexcept
+{
+    switch (page) {
+    case EditorDrawerPage::Automations:
+        return state.automation;
+    case EditorDrawerPage::Velocity:
+        return state.velocity;
+    case EditorDrawerPage::VoiceChanges:
+        return state.voiceChanges;
+    }
+    Q_UNREACHABLE();
+}
+
+} // namespace
 
 void SongView::toggleDrawerSection(EditorDrawerPage page)
 {
     EditorViewState state = m_editorViewState;
-    DrawerSectionState &section =
-        page == EditorDrawerPage::Velocity ? state.velocity : state.automation;
+    DrawerSectionState &section = sectionFor(state, page);
     section.visible = !section.visible;
     state.activePage = page;
     applyEditorViewState(state);
@@ -24,8 +56,7 @@ void SongView::toggleDrawerSection(EditorDrawerPage page)
 void SongView::setDrawerSectionVisible(EditorDrawerPage page, bool visible)
 {
     EditorViewState state = m_editorViewState;
-    DrawerSectionState &section =
-        page == EditorDrawerPage::Velocity ? state.velocity : state.automation;
+    DrawerSectionState &section = sectionFor(state, page);
     if (section.visible == visible)
         return;
     section.visible = visible;
@@ -34,8 +65,7 @@ void SongView::setDrawerSectionVisible(EditorDrawerPage page, bool visible)
 
 bool SongView::drawerSectionVisible(EditorDrawerPage page) const
 {
-    return page == EditorDrawerPage::Velocity ? m_editorViewState.velocity.visible
-                                              : m_editorViewState.automation.visible;
+    return sectionFor(m_editorViewState, page).visible;
 }
 
 void SongView::setDrawerSectionHeight(EditorDrawerPage page, std::optional<int> height)
@@ -43,8 +73,7 @@ void SongView::setDrawerSectionHeight(EditorDrawerPage page, std::optional<int> 
     if (height && *height < 1)
         height = std::nullopt;
     EditorViewState state = m_editorViewState;
-    DrawerSectionState &section =
-        page == EditorDrawerPage::Velocity ? state.velocity : state.automation;
+    DrawerSectionState &section = sectionFor(state, page);
     if (section.height == height)
         return;
     section.height = height;
@@ -53,9 +82,7 @@ void SongView::setDrawerSectionHeight(EditorDrawerPage page, std::optional<int> 
 
 int SongView::drawerSectionHeight(EditorDrawerPage page) const
 {
-    const DrawerSectionState &section = page == EditorDrawerPage::Velocity
-                                            ? m_editorViewState.velocity
-                                            : m_editorViewState.automation;
+    const DrawerSectionState &section = sectionFor(m_editorViewState, page);
     return section.effectiveHeight(0);
 }
 
@@ -75,7 +102,8 @@ EditorDrawerPage SongView::drawerActivePage() const
 
 bool SongView::hasVisibleDrawerSection() const
 {
-    return m_editorViewState.velocity.visible || m_editorViewState.automation.visible;
+    return m_editorViewState.velocity.visible || m_editorViewState.automation.visible ||
+           m_editorViewState.voiceChanges.visible;
 }
 
 void SongView::showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request)
@@ -142,6 +170,7 @@ void SongView::notifyDrawerSongChanged()
         return;
     m_editorDrawer->automationPage()->songChanged();
     m_editorDrawer->velocityArea()->songChanged();
+    m_editorDrawer->voiceChangeArea()->songChanged();
     refreshDrawerPages();
 }
 
@@ -153,6 +182,8 @@ void SongView::refreshDrawerPages()
         refreshAutomationPage();
     if (m_editorDrawer->pageVisible(EditorDrawerPage::Velocity))
         refreshVelocityPage();
+    if (m_editorDrawer->pageVisible(EditorDrawerPage::VoiceChanges))
+        refreshVoiceChangePage();
 }
 
 void SongView::refreshAutomationPage()
@@ -169,6 +200,13 @@ void SongView::refreshVelocityPage()
     m_editorDrawer->velocityArea()->refreshLiveState(drawerPageLiveState());
 }
 
+void SongView::refreshVoiceChangePage()
+{
+    if (!m_editorDrawer)
+        return;
+    m_editorDrawer->voiceChangeArea()->refreshLiveState(drawerPageLiveState());
+}
+
 void SongView::refreshAllDrawerPages()
 {
     if (!m_editorDrawer)
@@ -176,4 +214,5 @@ void SongView::refreshAllDrawerPages()
     const DrawerPageLiveState liveState = drawerPageLiveState();
     m_editorDrawer->automationPage()->refreshLiveState(liveState);
     m_editorDrawer->velocityArea()->refreshLiveState(liveState);
+    m_editorDrawer->voiceChangeArea()->refreshLiveState(liveState);
 }

@@ -50,6 +50,7 @@ On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 | Command | Default Shortcut | Description |
 | --- | --- | --- |
 | MIDI Event List | `Ctrl+Shift+E` | Toggles the MIDI event list view |
+| Voice Changes | `P` | Toggles the Voice Changes page |
 
 ### File
 

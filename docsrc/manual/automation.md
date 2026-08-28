@@ -4,7 +4,9 @@
 
 <!-- TODO: Values that change over time instead of staying fixed — fade-outs,
 panning sweeps, tempo changes, vibrato depth. Drawn as line/step lanes under
-the piano roll. -->
+the piano roll. The Automation page holds only the tempo and CC lanes; voice
+changes have their own Voice Changes page (see
+[The Main Window](main-window.md)). -->
 
 ## Adding a lane
 
@@ -16,7 +18,6 @@ always available at the top level. -->
 <!-- TODO: Friendly table of the m4a-meaningful controls with plain-language
 descriptions and typical ranges:
 - Volume, Pan
-- Instrument (program change)
 - MOD (vibrato depth) / MODT (vibrato type)
 - BEND (pitch bend) / BENDR (bend range)
 - LFOS / LFODL (vibrato speed / delay)

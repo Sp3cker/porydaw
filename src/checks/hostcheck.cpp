@@ -7,6 +7,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
+#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
@@ -264,16 +265,20 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         drawer ? drawer->findChild<QWidget *>(QStringLiteral("velocityDrawerToggle")) : nullptr;
     auto *automationToggle =
         drawer ? drawer->findChild<QWidget *>(QStringLiteral("automationDrawerToggle")) : nullptr;
+    auto *voiceChangesToggle =
+        drawer ? drawer->findChild<QWidget *>(QStringLiteral("voiceChangesDrawerToggle")) : nullptr;
     auto *automationBar =
         drawer ? drawer->findChild<QWidget *>(QStringLiteral("automationDrawerBar")) : nullptr;
     check(otherStrip && otherStrip->isVisible(), "other events strip should remain visible");
     check(sections && velocityHandle && automationHandle && velocityToggle && automationToggle &&
-              automationBar,
+              voiceChangesToggle && automationBar,
           "drawer should create independent section chrome");
     if (drawer && otherStrip && sections && velocityHandle && automationHandle && velocityToggle &&
-        automationToggle && automationBar) {
+        automationToggle && voiceChangesToggle && automationBar) {
         const QRect drawerBounds(drawer->mapTo(&view, QPoint()), drawer->size());
-        const QRect toggleGroup = automationToggle->geometry().united(velocityToggle->geometry());
+        const QRect toggleGroup = voiceChangesToggle->geometry()
+                                      .united(automationToggle->geometry())
+                                      .united(velocityToggle->geometry());
         const int pianoKeysCenter = area->geometry().x() + area->plotOrigin() / 2;
         check(drawerBounds.bottom() < otherStrip->geometry().top(),
               "drawer should stack above the other events strip");
@@ -282,8 +287,11 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                   drawer->automationPage()->isHidden() && !automationBar->isHidden() &&
                   velocityHandle->geometry().bottom() + 1 == area->geometry().top() &&
                   area->geometry().bottom() + 1 == automationBar->geometry().top() &&
+                  automationBar->geometry().contains(voiceChangesToggle->geometry()) &&
                   automationBar->geometry().contains(automationToggle->geometry()) &&
                   automationBar->geometry().contains(velocityToggle->geometry()) &&
+                  automationToggle->x() == voiceChangesToggle->x() + voiceChangesToggle->width() +
+                                               layout::space(layout::Space::One) &&
                   velocityToggle->x() == automationToggle->x() + automationToggle->width() +
                                              layout::space(layout::Space::One) &&
                   std::abs(toggleGroup.center().x() - pianoKeysCenter) <= 1,
@@ -310,9 +318,10 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     auto *automation = automationCanvas(view);
     auto *automationScroll = view.findChild<QScrollArea *>(QStringLiteral("automationScroll"));
-    check(automation != nullptr && automationScroll != nullptr,
-          "host should construct the automation page and scroll area");
-    if (automation && automationScroll) {
+    auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
+    check(automation != nullptr && automationScroll != nullptr && voiceChanges != nullptr,
+          "host should construct the Automation and Voice Changes timeline surfaces");
+    if (automation && automationScroll && voiceChanges) {
         const int selectedTrack = view.selectionModel().primaryTrack();
         view.setTrackSolo(selectedTrack, false);
         checks::events::sendKey(*area, QEvent::KeyPress, Qt::Key_S, Qt::NoModifier, QString{},
@@ -357,35 +366,44 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "visible velocity map should refresh and present once across a voice change");
 
         view.setPlayheadSample(timeline->sampleForTick(24), false);
-        view.setDrawerActivePage(EditorDrawerPage::Automations);
+        view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+        view.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
         QCoreApplication::processEvents();
-        const QImage editCursorContext = automation->grab().toImage();
+        check(voiceChanges->isVisible(),
+              "Voice Changes should be visible for voice-context checks");
+        const QImage editCursorVoiceContext = voiceChanges->grab().toImage();
+        const QImage editCursorAutomation = automation->grab().toImage();
+        const auto automationBeforePlayback = automation->diagnostics();
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
-        const QImage playbackContext = automation->grab().toImage();
-        check(playbackContext != editCursorContext,
-              "visible automation page should immediately resolve the playback voice");
+        const QImage playbackVoiceContext = voiceChanges->grab().toImage();
+        check(playbackVoiceContext != editCursorVoiceContext &&
+                  automation->grab().toImage() == editCursorAutomation &&
+                  automation->diagnostics() == automationBeforePlayback,
+              "visible Voice Changes should resolve playback voice without refreshing Automation");
         const auto warmAutomation = automation->diagnostics();
+        const QImage warmVoiceContext = voiceChanges->grab().toImage();
         for (int tick = 25; tick < 27; ++tick)
             view.setPlayheadSample(timeline->sampleForTick(uint64_t(tick)), true);
         QCoreApplication::processEvents();
-        check(automation->diagnostics() == warmAutomation,
-              "steady same-context playback should not rebuild visible automation content");
+        check(voiceChanges->grab().toImage() == warmVoiceContext &&
+                  automation->diagnostics() == warmAutomation,
+              "steady same-voice playback should keep Voice Changes and Automation stable");
 
         view.setPlayheadSample(timeline->sampleForTick(26), false);
         QCoreApplication::processEvents();
-        check(automation->grab().toImage() == editCursorContext,
-              "stopping should return visible automation context to the edit cursor");
+        check(voiceChanges->grab().toImage() == editCursorVoiceContext &&
+                  automation->grab().toImage() == editCursorAutomation,
+              "stopping should return Voice Changes to the edit-cursor voice only");
         view.setPlayheadSample(timeline->sampleForTick(12), true);
         QCoreApplication::processEvents();
-        const QImage squarePlaybackContext = automation->grab().toImage();
+        const QImage squarePlaybackVoiceContext = voiceChanges->grab().toImage();
         const auto automationBeforeCrossing = automation->diagnostics();
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
-        check(automation->grab().toImage() != squarePlaybackContext &&
-                  automation->diagnostics().contentInvalidationCount >
-                      automationBeforeCrossing.contentInvalidationCount,
-              "visible automation context should refresh when playback crosses a voice change");
+        check(voiceChanges->grab().toImage() != squarePlaybackVoiceContext &&
+                  automation->diagnostics() == automationBeforeCrossing,
+              "Voice Changes should refresh across a program change without refreshing Automation");
         view.setPlayheadSample(timeline->sampleForTick(24), false);
         QCoreApplication::processEvents();
         const int pinnedTempoHeaderY =
@@ -793,10 +811,11 @@ int runHostSeamsCheck()
 
     auto state = EditorViewState{};
     check(!state.velocity.visible && !state.velocity.height && state.automation.visible &&
-              !state.automation.height && state.activePage == EditorDrawerPage::Automations &&
+              !state.automation.height && !state.voiceChanges.visible &&
+              !state.voiceChanges.height && state.activePage == EditorDrawerPage::Automations &&
               state.laneHeight == 0 && state.laneHeights.empty() && state.laneRanges.empty() &&
               state.emptyLanes.empty() && state.hiddenLanes().empty(),
-          "new songs default to an open Automations drawer with cosmetic lane state");
+          "new songs default to open Automations and hidden Velocity and Voice Changes");
     const auto controllerRow = EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 2, 1};
     auto changedState = state;
     changedState.velocity = {false, 144};
@@ -844,8 +863,10 @@ int runHostSeamsCheck()
     auto *drawer = view.editorDrawer();
     auto *automation = drawer ? drawer->automationPage() : nullptr;
     auto *velocity = drawer ? drawer->velocityArea() : nullptr;
-    check(drawer && automation && velocity, "SongView must own both concrete drawer pages");
-    if (!drawer || !automation || !velocity)
+    auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
+    check(drawer && automation && velocity && voiceChanges,
+          "SongView must own all three concrete drawer pages");
+    if (!drawer || !automation || !velocity || !voiceChanges)
         return 1;
 
     view.applyEditorViewState(changedState);
@@ -888,6 +909,7 @@ int runHostSeamsCheck()
     live.playback = {12.0, true};
     automation->refreshLiveState(live);
     velocity->refreshLiveState(live);
+    voiceChanges->refreshLiveState(live);
     check(!automation->canvas()->rows().empty() &&
               velocity->axis().mode() == VelocityAxis::Mode::Intrinsic,
           "concrete pages should refresh live state through their SongView owner");
@@ -991,6 +1013,7 @@ int runHostSeamsCheck()
     const auto cosmeticsBeforeChange = view.editorViewState();
     automation->documentChanged();
     velocity->documentChanged();
+    voiceChanges->documentChanged();
     check(view.editorViewState() == cosmeticsBeforeChange,
           "document refresh must preserve concrete drawer cosmetics");
     view.cancelActiveInteractions();

@@ -81,7 +81,6 @@ class AutomationGestureCheckRig final
                                                    const QPointF &position) const;
     bool expandTempo();
     InputPoint pointAt(const Lane &lane, double tick, int value) const;
-    QRect voiceBounds() const;
     QPointF tempoHeaderPoint() const;
     QPointF tempoBodyPoint(double tick, int bpm) const;
     QImage renderArea();

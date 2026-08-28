@@ -197,11 +197,6 @@ bool AutomationGestureCheckRig::expandTempo()
     return !canvas().laneBody(kTempoHandle).isEmpty();
 }
 
-QRect AutomationGestureCheckRig::voiceBounds() const
-{
-    return {0, 0, canvas().width(), canvas().contentTopInset()};
-}
-
 QPointF AutomationGestureCheckRig::tempoHeaderPoint() const
 {
     const QRect tempo = canvas().pinnedTempoRect();
@@ -343,7 +338,6 @@ bool AutomationGestureCheckRig::initialize(QString &error)
     }
     songDocument.addLanePoint(volume.track, volume.controller, 24, 32);
     songDocument.writeLanePoints(lfo.track, lfo.controller, 96, 96, {{96, 32}, {96, 96}});
-    songDocument.addLanePoint(0, DOC_CC_VOICE, 24, 3);
     m_voicegroup = std::make_unique<LoadedVoiceGroup>();
     m_voicegroup->voices[3].type = VOICE_NOISE;
     std::strncpy(m_voicegroup->voiceNames[3], "automation-voice",

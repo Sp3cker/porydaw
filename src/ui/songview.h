@@ -174,7 +174,7 @@ class SongView : public QWidget
     const MidiTimeline *timeline() const { return m_timeline; }
     const SongViewModel &model() const { return m_model; }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
-    std::vector<songview::TimelineBand> timelineBands() noexcept;
+    std::vector<songview::TimelineBand> timelineBands();
 
     qreal contentX(double tick) const { return qreal(tick * m_pxPerTick - m_scrollX); }
     double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / m_pxPerTick; }
@@ -519,8 +519,9 @@ class SongView : public QWidget
     // row to be fully visible.
     void ensureKeyVisible(int key);
     void refreshTimelineViews();
-    // Refresh both concrete drawer pages from the current live SongView state.
-    // This endpoint does not proactively cancel interaction.
+    // Refresh every concrete drawer page from the current live SongView state.
+    // Public refresh seam for the standalone drawer pages after they commit a
+    // document edit. This endpoint does not proactively cancel interaction.
     void refreshAllDrawerPages();
 
   signals:
@@ -609,6 +610,7 @@ class SongView : public QWidget
     void refreshDrawerPages();
     void refreshAutomationPage();
     void refreshVelocityPage();
+    void refreshVoiceChangePage();
     int viewportWidth() const;
     int rollViewportHeight() const;
     void setHScroll(double px);

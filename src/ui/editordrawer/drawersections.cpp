@@ -15,6 +15,7 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
+#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
 
@@ -74,16 +75,19 @@ using DrawerToggle = QToolButton;
 
 } // namespace
 
-DrawerSections::DrawerSections(QWidget *parent, AutomationPage *automation, VelocityArea *velocity)
+DrawerSections::DrawerSections(QWidget *parent, AutomationPage *automation, VelocityArea *velocity,
+                               VoiceChangeArea *voiceChanges)
     : QWidget(parent)
     , m_automation(automation)
     , m_velocity(velocity)
+    , m_voiceChanges(voiceChanges)
 {
     setObjectName(QStringLiteral("drawerSections"));
     setFocusPolicy(Qt::NoFocus);
 
     m_automation->setParent(this);
     m_velocity->setParent(this);
+    m_voiceChanges->setParent(this);
     m_automation->show();
     const auto makeToggle = [this](const QString &text, EditorDrawerPage page) {
         auto *button = new DrawerToggle(this);
@@ -108,6 +112,16 @@ DrawerSections::DrawerSections(QWidget *parent, AutomationPage *automation, Velo
         m_velocityToggle->setIcon(icon);
     }
     m_velocityToggle->setToolTip(tr("Show or hide velocity (V)"));
+    m_voiceChangesToggle = makeToggle(QString(), EditorDrawerPage::VoiceChanges);
+    m_voiceChangesToggle->setObjectName(QStringLiteral("voiceChangesDrawerToggle"));
+    m_voiceChangesToggle->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    m_voiceChangesToggle->setAccessibleName(tr("Show or hide voice changes (P)"));
+    {
+        QIcon icon(QStringLiteral(":/icons/flat-music.svg"));
+        icon.setIsMask(true);
+        m_voiceChangesToggle->setIcon(icon);
+    }
+    m_voiceChangesToggle->setToolTip(tr("Show or hide voice changes (P)"));
     m_automationToggle = makeToggle(QString(), EditorDrawerPage::Automations);
     m_automationToggle->setObjectName(QStringLiteral("automationDrawerToggle"));
     m_automationToggle->setToolButtonStyle(Qt::ToolButtonIconOnly);
@@ -144,6 +158,7 @@ DrawerSections::DrawerSections(QWidget *parent, AutomationPage *automation, Velo
                  themes::color(themes::Role::combo_outline).name());
     m_velocityToggle->setStyleSheet(toggleStyle);
     m_automationToggle->setStyleSheet(toggleStyle);
+    m_voiceChangesToggle->setStyleSheet(toggleStyle);
     m_automationBar = new QFrame(this);
     m_automationBar->setObjectName(QStringLiteral("automationDrawerBar"));
     m_automationBar->setFocusPolicy(Qt::NoFocus);
@@ -162,16 +177,21 @@ DrawerSections::DrawerSections(QWidget *parent, AutomationPage *automation, Velo
         makeResizeHandle(QStringLiteral("velocityResizeHandle"), tr("Resize velocity pane"));
     m_automationHandle =
         makeResizeHandle(QStringLiteral("automationResizeHandle"), tr("Resize automation pane"));
+    m_voiceChangesHandle = makeResizeHandle(QStringLiteral("voiceChangesResizeHandle"),
+                                            tr("Resize voice changes pane"));
     setStyleSheet(QStringLiteral(
         "QFrame#automationDrawerBar { border: 1px solid palette(mid); "
         "background: palette(window); }"
-        "QFrame#velocityResizeHandle, QFrame#automationResizeHandle { background: palette(mid); }"
-        "QFrame#velocityResizeHandle:hover, QFrame#automationResizeHandle:hover { "
-        "background: palette(highlight); }"));
+        "QFrame#velocityResizeHandle, QFrame#automationResizeHandle, "
+        "QFrame#voiceChangesResizeHandle { background: palette(mid); }"
+        "QFrame#velocityResizeHandle:hover, QFrame#automationResizeHandle:hover, "
+        "QFrame#voiceChangesResizeHandle:hover { background: palette(highlight); }"));
     m_automationBar->stackUnder(m_automationToggle);
     m_automationBar->stackUnder(m_velocityToggle);
+    m_automationBar->stackUnder(m_voiceChangesToggle);
     m_automationToggle->raise();
     m_velocityToggle->raise();
+    m_voiceChangesToggle->raise();
     m_detentToggle->raise();
     m_velocity->setContextChangedCallback([this] { syncDetentToggle(); });
     syncDetentToggle();
@@ -183,7 +203,7 @@ void DrawerSections::ensureChrome() const
         return;
     m_chrome.header = layout::chromeRowHeight(font(), layout::space(layout::Space::Zero));
     m_chrome.handle = layout::fontPx(1.0 / 3.0);
-    m_chrome.minBody = layout::fontPx(17.0 / 3.0);
+    m_chrome.minBody = layout::fontPx(17.0 / 5.0);
     m_chrome.pianoRollReserve = layout::fontPx(10.0);
     m_chrome.plotOrigin = layout::fontPx(17.5 + 13.0 / 3.0);
     m_chromeDirty = false;
@@ -238,6 +258,11 @@ int DrawerSections::effectiveAutomationBodyHeight() const
         m_preferredAutomationBodyHeight.value_or(m_chrome.minBody));
 }
 
+int DrawerSections::effectiveVoiceChangesBodyHeight() const
+{
+    return m_voiceChangesBodyHeight.value_or(m_chrome.minBody);
+}
+
 const DrawerMetrics &DrawerSections::metrics() const
 {
     ensureChrome();
@@ -257,10 +282,12 @@ int DrawerSections::preferredHeight() const
 
     const bool showVelocity = velocityVisible();
     const bool showAutomation = automationVisible();
-    const int automationHeight = effectiveAutomationBodyHeight();
-    const int handles = m_chrome.handle * (int(showVelocity) + int(showAutomation));
-    const int bodies = (showVelocity ? velocityBodyHeight(m_lastHostHeight) : 0) +
-                       (showAutomation ? automationHeight : 0);
+    const bool showVoiceChanges = voiceChangesVisible();
+    const int handles =
+        m_chrome.handle * (int(showVelocity) + int(showAutomation) + int(showVoiceChanges));
+    const int bodies = (showVoiceChanges ? effectiveVoiceChangesBodyHeight() : 0) +
+                       (showVelocity ? velocityBodyHeight(m_lastHostHeight) : 0) +
+                       (showAutomation ? effectiveAutomationBodyHeight() : 0);
     return std::min(m_lastHostHeight, m_chrome.header + handles + bodies);
 }
 
@@ -274,14 +301,24 @@ std::optional<int> DrawerSections::automationHeight() const noexcept
     return m_automationBodyHeight;
 }
 
+std::optional<int> DrawerSections::voiceChangesHeight() const noexcept
+{
+    return m_voiceChangesBodyHeight;
+}
+
 bool DrawerSections::velocityVisible() const noexcept
 {
-    return m_velocityToggle->isChecked();
+    return pageVisible(EditorDrawerPage::Velocity);
 }
 
 bool DrawerSections::automationVisible() const noexcept
 {
-    return m_automationToggle->isChecked();
+    return pageVisible(EditorDrawerPage::Automations);
+}
+
+bool DrawerSections::voiceChangesVisible() const noexcept
+{
+    return pageVisible(EditorDrawerPage::VoiceChanges);
 }
 
 EditorDrawerPage DrawerSections::activePage() const noexcept
@@ -290,38 +327,128 @@ EditorDrawerPage DrawerSections::activePage() const noexcept
 }
 
 void DrawerSections::applyState(DrawerSectionState velocity, DrawerSectionState automation,
-                                EditorDrawerPage activePage)
+                                DrawerSectionState voiceChanges, EditorDrawerPage activePage)
 {
     const QSignalBlocker velocityBlocked(m_velocityToggle);
     const QSignalBlocker automationBlocked(m_automationToggle);
+    const QSignalBlocker voiceChangesBlocked(m_voiceChangesToggle);
     m_velocityBodyHeight = velocity.height;
     m_automationBodyHeight = automation.height;
+    m_voiceChangesBodyHeight = voiceChanges.height;
     setPageVisible(EditorDrawerPage::Velocity, velocity.visible);
     setPageVisible(EditorDrawerPage::Automations, automation.visible);
+    setPageVisible(EditorDrawerPage::VoiceChanges, voiceChanges.visible);
     m_activePage = activePage;
     syncDetentToggle();
 }
 
 void DrawerSections::setPageVisible(EditorDrawerPage page, bool visible)
 {
-    QToolButton *toggle =
-        page == EditorDrawerPage::Velocity ? m_velocityToggle : m_automationToggle;
+    QToolButton *toggle = pageToggle(page);
     if (toggle->isChecked() != visible)
         toggle->setChecked(visible);
 }
 
+QToolButton *DrawerSections::pageToggle(EditorDrawerPage page) const noexcept
+{
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        return m_voiceChangesToggle;
+    case EditorDrawerPage::Velocity:
+        return m_velocityToggle;
+    case EditorDrawerPage::Automations:
+        return m_automationToggle;
+    }
+    Q_UNREACHABLE();
+}
+
+bool DrawerSections::pageVisible(EditorDrawerPage page) const noexcept
+{
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        return m_voiceChangesToggle->isChecked();
+    case EditorDrawerPage::Velocity:
+        return m_velocityToggle->isChecked();
+    case EditorDrawerPage::Automations:
+        return m_automationToggle->isChecked();
+    }
+    Q_UNREACHABLE();
+}
+
+int DrawerSections::pageBodyHeight(EditorDrawerPage page) const
+{
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        return effectiveVoiceChangesBodyHeight();
+    case EditorDrawerPage::Velocity:
+        return velocityBodyHeight(m_lastHostHeight);
+    case EditorDrawerPage::Automations:
+        return effectiveAutomationBodyHeight();
+    }
+    Q_UNREACHABLE();
+}
+
+std::optional<int> &DrawerSections::pageStoredHeight(EditorDrawerPage page) noexcept
+{
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        return m_voiceChangesBodyHeight;
+    case EditorDrawerPage::Velocity:
+        return m_velocityBodyHeight;
+    case EditorDrawerPage::Automations:
+        return m_automationBodyHeight;
+    }
+    Q_UNREACHABLE();
+}
+
+QWidget *DrawerSections::pageResizeHandle(EditorDrawerPage page) const noexcept
+{
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        return m_voiceChangesHandle;
+    case EditorDrawerPage::Velocity:
+        return m_velocityHandle;
+    case EditorDrawerPage::Automations:
+        return m_automationHandle;
+    }
+    Q_UNREACHABLE();
+}
+
+EditorDrawerPage DrawerSections::resizePageForHandle(const QWidget *handle) const noexcept
+{
+    if (handle == m_voiceChangesHandle)
+        return EditorDrawerPage::VoiceChanges;
+    if (handle == m_velocityHandle)
+        return EditorDrawerPage::Velocity;
+    Q_ASSERT(handle == m_automationHandle);
+    return EditorDrawerPage::Automations;
+}
+
 void DrawerSections::focusActivePage()
 {
-    const auto canvasFor = [this](EditorDrawerPage page) {
-        return page == EditorDrawerPage::Velocity ? static_cast<QWidget *>(m_velocity)
-                                                  : static_cast<QWidget *>(m_automation->canvas());
+    const auto canvasFor = [this](EditorDrawerPage page) -> QWidget * {
+        switch (page) {
+        case EditorDrawerPage::VoiceChanges:
+            return m_voiceChanges;
+        case EditorDrawerPage::Velocity:
+            return m_velocity;
+        case EditorDrawerPage::Automations:
+            return m_automation->canvas();
+        }
+        Q_UNREACHABLE();
     };
     QWidget *target = canvasFor(m_activePage);
     if (!target || !target->isVisible()) {
-        const EditorDrawerPage fallback = m_activePage == EditorDrawerPage::Velocity
-                                              ? EditorDrawerPage::Automations
-                                              : EditorDrawerPage::Velocity;
-        target = canvasFor(fallback);
+        // Visual order: VoiceChanges above Velocity above Automations.
+        for (const EditorDrawerPage page :
+             {EditorDrawerPage::VoiceChanges, EditorDrawerPage::Velocity,
+              EditorDrawerPage::Automations}) {
+            QWidget *candidate = canvasFor(page);
+            if (candidate && candidate->isVisible()) {
+                target = candidate;
+                break;
+            }
+        }
     }
     if (target && target->isVisible())
         target->setFocus(Qt::OtherFocusReason);
@@ -329,49 +456,58 @@ void DrawerSections::focusActivePage()
 
 void DrawerSections::cancelVisibleInteractions()
 {
-    if (m_velocityToggle->isChecked())
+    if (voiceChangesVisible())
+        m_voiceChanges->cancelInteraction();
+    if (velocityVisible())
         m_velocity->cancelInteraction();
-    if (m_automationToggle->isChecked())
+    if (automationVisible())
         m_automation->cancelInteraction();
 }
 
 bool DrawerSections::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched != m_velocityHandle && watched != m_automationHandle)
+    if (watched != pageResizeHandle(EditorDrawerPage::VoiceChanges) &&
+        watched != pageResizeHandle(EditorDrawerPage::Velocity) &&
+        watched != pageResizeHandle(EditorDrawerPage::Automations))
         return QWidget::eventFilter(watched, event);
 
     ensureChrome();
     auto *handle = static_cast<QWidget *>(watched);
+    const EditorDrawerPage page = resizePageForHandle(handle);
     if (event->type() == QEvent::MouseButtonPress) {
         auto *mouse = static_cast<QMouseEvent *>(event);
         if (mouse->button() != Qt::LeftButton)
             return false;
         m_resizeTarget = handle;
         m_resizeStartGlobalY = mouse->globalPosition().y();
-        const bool velocity = handle == m_velocityHandle;
-        const int automationHeight = effectiveAutomationBodyHeight();
-        m_resizeOriginalBodyHeight = velocity ? m_velocityBodyHeight : m_automationBodyHeight;
-        const int bodyHeight = velocity ? velocityBodyHeight(m_lastHostHeight) : automationHeight;
-        m_resizeStartBodyHeight = std::max(m_chrome.minBody, bodyHeight);
+        m_resizeOriginalBodyHeight = pageStoredHeight(page);
+        m_resizeStartBodyHeight = std::max(m_chrome.minBody, pageBodyHeight(page));
         handle->grabMouse();
         return true;
     }
     if (event->type() == QEvent::MouseMove && m_resizeTarget == handle) {
         const auto *mouse = static_cast<QMouseEvent *>(event);
-        const bool velocity = handle == m_velocityHandle;
-        const int automationHeight = effectiveAutomationBodyHeight();
-        const int otherBody =
-            velocity ? (m_automationToggle->isChecked() ? automationHeight : 0)
-                     : (m_velocityToggle->isChecked() ? velocityBodyHeight(m_lastHostHeight) : 0);
-        const int visibleHandles = m_chrome.handle * (int(m_velocityToggle->isChecked()) +
-                                                      int(m_automationToggle->isChecked()));
-        const int maximum = std::max(m_chrome.minBody, m_lastHostHeight - m_chrome.header -
-                                                           visibleHandles - otherBody);
+        int otherBodies = 0;
+        int visibleHandleCount = 0;
+        for (const EditorDrawerPage candidate :
+             {EditorDrawerPage::VoiceChanges, EditorDrawerPage::Velocity,
+              EditorDrawerPage::Automations}) {
+            if (!pageVisible(candidate))
+                continue;
+            ++visibleHandleCount;
+            if (candidate != page)
+                otherBodies += pageBodyHeight(candidate);
+        }
+        // The drawer is currently sized to the existing requests, so using its current height
+        // here would make every page saturate at its drag-start height.
+        const int maximum =
+            std::max(m_chrome.minBody, m_lastHostHeight - m_chrome.header -
+                                           m_chrome.handle * visibleHandleCount - otherBodies);
         const int requested =
             std::clamp(m_resizeStartBodyHeight +
                            int(std::lround(m_resizeStartGlobalY - mouse->globalPosition().y())),
                        m_chrome.minBody, maximum);
-        std::optional<int> &bodyHeight = velocity ? m_velocityBodyHeight : m_automationBodyHeight;
+        std::optional<int> &bodyHeight = pageStoredHeight(page);
         const std::optional<int> originalHeight = m_resizeOriginalBodyHeight;
         const std::optional<int> target =
             requested == m_resizeStartBodyHeight ? originalHeight : std::optional<int>{requested};
@@ -405,17 +541,25 @@ void DrawerSections::arrangeLocal()
     const int handleHeight = m_chrome.handle;
     const bool showVelocity = m_velocityToggle->isChecked();
     const bool showAutomation = m_automationToggle->isChecked();
-    const int fixedHeight = chrome + handleHeight * (int(showVelocity) + int(showAutomation));
+    const bool showVoiceChanges = m_voiceChangesToggle->isChecked();
+    const int fixedHeight =
+        chrome + handleHeight * (int(showVelocity) + int(showAutomation) + int(showVoiceChanges));
     const int availableBodyHeight = std::max(0, height() - fixedHeight);
     const int requestedAutomationHeight = effectiveAutomationBodyHeight();
 
-    // Preserve the existing Automation drawer's height when Velocity opens.
+    // Under the host clamp, allocate VoiceChanges first, preserve the
+    // Automation drawer's height second, and give Velocity the remainder.
+    const int voiceChangesHeight =
+        showVoiceChanges ? std::min(effectiveVoiceChangesBodyHeight(), availableBodyHeight) : 0;
     const int automationHeight =
-        showAutomation ? std::min(requestedAutomationHeight, availableBodyHeight) : 0;
-    const int velocityHeight = showVelocity
-                                   ? std::min(velocityBodyHeight(m_lastHostHeight),
-                                              std::max(0, availableBodyHeight - automationHeight))
-                                   : 0;
+        showAutomation ? std::min(requestedAutomationHeight,
+                                  std::max(0, availableBodyHeight - voiceChangesHeight))
+                       : 0;
+    const int velocityHeight =
+        showVelocity
+            ? std::min(velocityBodyHeight(m_lastHostHeight),
+                       std::max(0, availableBodyHeight - voiceChangesHeight - automationHeight))
+            : 0;
 
     const auto setVisibleIf = [](QWidget *widget, bool visible) {
         if (widget->isHidden() == visible)
@@ -429,6 +573,9 @@ void DrawerSections::arrangeLocal()
     const int velocityLeftInset = std::max(0, m_chrome.plotOrigin - m_velocity->plotOrigin());
     const int velocityLeft = std::min(velocityLeftInset, width);
     const int velocityWidth = width - velocityLeft;
+    setVisibleIf(m_voiceChanges, showVoiceChanges);
+    setVisibleIf(m_voiceChangesHandle, showVoiceChanges);
+    setVisibleIf(m_voiceChangesToggle, true);
     setVisibleIf(m_velocity, showVelocity);
     setVisibleIf(m_velocityHandle, showVelocity);
     setVisibleIf(m_velocityToggle, true);
@@ -437,7 +584,14 @@ void DrawerSections::arrangeLocal()
     setVisibleIf(m_automationHandle, showAutomation);
     setVisibleIf(m_automationBar, true);
 
+    // Visual stack order, top to bottom: VoiceChanges, Velocity, Automations, bar.
     int y = 0;
+    if (showVoiceChanges) {
+        setGeometryIf(m_voiceChangesHandle, QRect(0, y, width, handleHeight));
+        y += handleHeight;
+        setGeometryIf(m_voiceChanges, QRect(0, y, width, voiceChangesHeight));
+        y += voiceChangesHeight;
+    }
     int velocityBottom = 0;
     if (showVelocity) {
         setGeometryIf(m_velocityHandle, QRect(velocityLeft, y, velocityWidth, handleHeight));
@@ -455,20 +609,24 @@ void DrawerSections::arrangeLocal()
     const int buttonInset = layout::space(layout::Space::One);
     const int buttonSize = std::max(layout::singlePixel(), chrome - 2 * buttonInset);
     const int iconSize = std::max(1, buttonSize - 2 * buttonInset);
-    const int toggleGroupWidth = 2 * buttonSize + buttonInset;
+    const int toggleGroupWidth = 3 * buttonSize + 2 * buttonInset;
     const int pianoKeysWidth =
         std::min(m_velocity->plotOrigin(), std::max(0, width - velocityLeft));
-    const int automationButtonX = std::clamp(velocityLeft + (pianoKeysWidth - toggleGroupWidth) / 2,
-                                             0, std::max(0, width - toggleGroupWidth));
+    const int voiceChangesButtonX =
+        std::clamp(velocityLeft + (pianoKeysWidth - toggleGroupWidth) / 2, 0,
+                   std::max(0, width - toggleGroupWidth));
+    const int automationButtonX = voiceChangesButtonX + buttonSize + buttonInset;
     const int velocityButtonX = automationButtonX + buttonSize + buttonInset;
     setGeometryIf(m_automationBar, QRect(0, y, width, chrome));
     const QSize toggleIconSize(iconSize, iconSize);
-    if (m_automationToggle->iconSize() != toggleIconSize)
-        m_automationToggle->setIconSize(toggleIconSize);
+    for (QToolButton *toggle : {m_voiceChangesToggle, m_automationToggle, m_velocityToggle}) {
+        if (toggle->iconSize() != toggleIconSize)
+            toggle->setIconSize(toggleIconSize);
+    }
+    setGeometryIf(m_voiceChangesToggle,
+                  QRect(voiceChangesButtonX, y + buttonInset, buttonSize, buttonSize));
     setGeometryIf(m_automationToggle,
                   QRect(automationButtonX, y + buttonInset, buttonSize, buttonSize));
-    if (m_velocityToggle->iconSize() != toggleIconSize)
-        m_velocityToggle->setIconSize(toggleIconSize);
     setGeometryIf(m_velocityToggle,
                   QRect(velocityButtonX, y + buttonInset, buttonSize, buttonSize));
     const int velocityGutterWidth = std::min(m_velocity->plotOrigin(), velocityWidth);
@@ -490,6 +648,9 @@ QRegion DrawerSections::occupiedRegion() const
     };
     addVisible(m_velocity);
     addVisible(m_velocityHandle);
+    addVisible(m_voiceChanges);
+    addVisible(m_voiceChangesHandle);
+    addVisible(m_voiceChangesToggle);
     addVisible(m_detentToggle);
     addVisible(m_automation);
     addVisible(m_automationHandle);

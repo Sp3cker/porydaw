@@ -31,8 +31,7 @@
 void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDocument &document,
                                    const QString &songLabel,
                                    const AutomationGeometry &projectionGeometry, int lfoTop,
-                                   int lfoHeight, int /*voiceTop*/, int /*voiceHeight*/,
-                                   int rowsHeight, int &failures)
+                                   int lfoHeight, int rowsHeight, int &failures)
 {
     const auto popupCheck = [&](bool condition, const QString &message) {
         if (condition)

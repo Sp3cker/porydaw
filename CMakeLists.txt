@@ -332,8 +332,9 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/nodelane/hover.h
     src/ui/editordrawer/cclanes.cpp
     src/ui/editordrawer/cclanes.h
-    src/ui/editordrawer/voicechangelane.cpp
-    src/ui/editordrawer/voicechangelane.h
+    src/ui/editordrawer/voicechangearea/voicechangearea.cpp
+    src/ui/editordrawer/voicechangearea/voicechangearea.h
+    src/ui/editordrawer/voicechangearea/voicechangearea_paint.cpp
     src/ui/editordrawer/nodelane/pencilgesture.cpp
     src/ui/editordrawer/nodelane/pencilgesture.h
     src/ui/editordrawer/automationprojection.cpp
@@ -530,6 +531,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automationgesturecheck/hover.cpp
         src/checks/automationgesturecheck/lifecycle.cpp
         src/checks/rollcheckdrawer.cpp
+        src/checks/rollcheckvoicechange.cpp
+        src/checks/rollcheckvoicechange.h
         src/checks/rollcheckpsgvelocity.cpp
         src/checks/velocitymodelcheck.cpp
         src/checks/themechecks.cpp

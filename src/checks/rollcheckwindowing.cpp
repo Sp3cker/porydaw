@@ -22,6 +22,8 @@
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "rollcheckrendering.h"
+#include "ui/editordrawer/editordrawer.h"
+#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/eventlistview.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
@@ -70,6 +72,8 @@ QStringList eventListPlayheadCheckFailures(SongView &view, const MidiTimeline &t
     auto failures = QStringList{};
     auto *marker = rollcheck::rendering::findPlayheadOverlay(view);
     auto *events = view.findChild<EventListView *>();
+    auto *drawer = view.editorDrawer();
+    auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
     const auto bands = view.timelineBands();
     if (!marker) {
         failures.append("playhead overlay child not found");
@@ -77,6 +81,10 @@ QStringList eventListPlayheadCheckFailures(SongView &view, const MidiTimeline &t
     }
     if (!events) {
         failures.append("EventListView child not found");
+        return failures;
+    }
+    if (!voiceChanges) {
+        failures.append("Voice Changes timeline band not found");
         return failures;
     }
     if (bands.empty()) {
@@ -168,7 +176,32 @@ QStringList eventListPlayheadCheckFailures(SongView &view, const MidiTimeline &t
     }
 
     view.setEventListVisible(false);
+    view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    view.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
     rollcheck::rendering::processPaints();
+
+    const auto visibleBands = view.timelineBands();
+    const auto voiceBand = std::find_if(visibleBands.cbegin(), visibleBands.cend(),
+                                        [voiceChanges](const songview::TimelineBand &band) {
+                                            return &band.widget == voiceChanges;
+                                        });
+    if (voiceBand == visibleBands.cend()) {
+        failures.append("Voice Changes surface was omitted from the playhead overlay bands");
+    } else {
+        const QRect voiceArea = visibleTimelineBandRect(*voiceBand, view);
+        const QPixmap voiceOverlay =
+            rollcheck::rendering::grabPlayheadOverlay(view, *marker, failures);
+        const qreal voicePlayheadCenter =
+            rollcheck::rendering::playheadCenter(voiceOverlay, playheadColor);
+        if (!voiceChanges->isVisible() || voiceArea.isEmpty()) {
+            failures.append("Voice Changes timeline band did not become visible");
+        } else if (voicePlayheadCenter < 0.0 ||
+                   !rollcheck::rendering::hasPlayheadRedLine(
+                       voiceOverlay.toImage(), voiceOverlay.devicePixelRatio(), voicePlayheadCenter,
+                       voiceArea.translated(-marker->mapTo(&view, QPoint())), playheadColor)) {
+            failures.append("playhead overlay did not render on the visible Voice Changes band");
+        }
+    }
     return failures;
 }
 

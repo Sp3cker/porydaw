@@ -37,6 +37,7 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
+#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
@@ -237,7 +238,6 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         m_workspace->activateSession(tabB);
         QCoreApplication::processEvents();
     }
-
     check(m_automationDrawerAction->shortcut() == QKeySequence(Qt::Key_A) &&
               m_automationDrawerAction->shortcutContext() == Qt::WindowShortcut &&
               m_automationDrawerAction->toolTip() ==
@@ -248,15 +248,30 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
               m_velocityDrawerAction->toolTip() ==
                   QStringLiteral("Show or hide note velocities (V)"),
           "velocity route is not the required WindowShortcut action");
-    check(tabAView.drawerSectionVisible(EditorDrawerPage::Velocity) &&
-              !tabAView.drawerSectionVisible(EditorDrawerPage::Automations) &&
-              tabAView.drawerActivePage() == EditorDrawerPage::Velocity &&
-              tabAView.drawerSectionHeight(EditorDrawerPage::Velocity) == 173 &&
-              tabBView.editorViewState().drawerState() == tabAView.editorViewState().drawerState(),
-          "new tabs did not restore application-wide drawer settings");
+    check(m_voiceChangesDrawerAction->objectName() ==
+                  QStringLiteral("voiceChangesDrawerWindowAction") &&
+              m_voiceChangesDrawerAction->shortcut() == QKeySequence(Qt::Key_P) &&
+              m_voiceChangesDrawerAction->shortcutContext() == Qt::WindowShortcut &&
+              m_voiceChangesDrawerAction->text() == QStringLiteral("Voice &Changes") &&
+              m_voiceChangesDrawerAction->toolTip() ==
+                  QStringLiteral("Show or hide voice changes (P)"),
+          "voice changes route is not the required WindowShortcut P action");
+    check(tabAView.drawerSectionVisible(EditorDrawerPage::Velocity),
+          "new tab did not restore velocity visibility");
+    check(!tabAView.drawerSectionVisible(EditorDrawerPage::Automations),
+          "new tab did not restore automation visibility");
+    check(!tabAView.drawerSectionVisible(EditorDrawerPage::VoiceChanges),
+          "new tab did not restore voice-changes visibility");
+    check(tabAView.drawerActivePage() == EditorDrawerPage::Velocity,
+          "new tab did not restore the active drawer page");
+    check(tabAView.drawerSectionHeight(EditorDrawerPage::Velocity) == 173,
+          "new tab did not restore the velocity drawer height");
+    check(tabBView.editorViewState().drawerState() == tabAView.editorViewState().drawerState(),
+          "new tabs did not share application-wide drawer settings");
 
     tabAView.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
     tabAView.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
+    tabAView.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
     check(!tabBView.hasVisibleDrawerSection(),
           "drawer visibility did not propagate to the other open tab");
 
@@ -288,19 +303,46 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     check(focusAfterClose &&
               (focusAfterClose == &tabBView || tabBView.isAncestorOf(focusAfterClose)),
           "closing a focus-owned drawer did not return focus to active content");
+    // The P route toggles the voice changes page as application-wide chrome
+    // with its own announcement, like the A and V routes.
+    sendKeyStroke(*this, Qt::Key_P, Qt::NoModifier, false);
+    QCoreApplication::processEvents();
+    check(tabBView.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
+              tabBView.drawerActivePage() == EditorDrawerPage::VoiceChanges &&
+              tabAView.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
+              tabAView.drawerActivePage() == EditorDrawerPage::VoiceChanges &&
+              statusBar()->currentMessage() == QStringLiteral("Voice changes shown"),
+          "voice changes route did not update application-wide drawer chrome");
+    sendKeyStroke(*this, Qt::Key_P, Qt::NoModifier, false);
+    QCoreApplication::processEvents();
+    check(!tabBView.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
+              !tabAView.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
+              statusBar()->currentMessage() == QStringLiteral("Voice changes hidden"),
+          "voice changes route did not globally close its page");
 
     auto *automationSurface = descendant<AutomationCanvas>(tabBView);
     auto *velocitySurface = descendant<VelocityArea>(tabBView);
-    check(automationSurface && velocitySurface,
-          "drawer shortcut focus check could not find both editor surfaces");
-    if (automationSurface && velocitySurface) {
+    auto *voiceSurface = descendant<VoiceChangeArea>(tabBView);
+    check(automationSurface && velocitySurface && voiceSurface,
+          "drawer shortcut focus check could not find all three editor surfaces");
+    if (automationSurface && velocitySurface && voiceSurface) {
         tabBView.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
         tabBView.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
+        tabBView.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
         tabBView.setDrawerActivePage(EditorDrawerPage::Velocity);
+        voiceSurface->setFocus(Qt::MouseFocusReason);
+        QCoreApplication::processEvents();
+        check(QApplication::focusWidget() == voiceSurface,
+              "voice surface did not accept focus for the drawer shortcut check");
+        // Hiding the focused first page walks the visual order to velocity.
+        sendKeyStroke(*voiceSurface, Qt::Key_P, Qt::NoModifier, false);
+        QCoreApplication::processEvents();
+        check(!tabBView.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
+                  tabBView.drawerSectionVisible(EditorDrawerPage::Velocity) &&
+                  QApplication::focusWidget() == velocitySurface,
+              "closing focused voice changes did not focus the velocity drawer");
         velocitySurface->setFocus(Qt::MouseFocusReason);
         QCoreApplication::processEvents();
-        check(QApplication::focusWidget() == velocitySurface,
-              "velocity surface did not accept focus for the drawer shortcut check");
         sendKeyStroke(*velocitySurface, Qt::Key_V, Qt::NoModifier, false);
         QCoreApplication::processEvents();
         check(!tabBView.drawerSectionVisible(EditorDrawerPage::Velocity) &&
@@ -320,12 +362,17 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
 
     tabBView.setDrawerActivePage(EditorDrawerPage::Velocity);
     tabBView.setDrawerSectionHeight(EditorDrawerPage::Velocity, 180);
+    tabBView.setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 97);
     const int retainedHeight = tabBView.drawerSectionHeight(EditorDrawerPage::Velocity);
+    const int retainedVoiceHeight = tabBView.drawerSectionHeight(EditorDrawerPage::VoiceChanges);
     tabBView.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
+    tabBView.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
     check(tabBView.drawerActivePage() == EditorDrawerPage::Velocity &&
               tabBView.drawerSectionHeight(EditorDrawerPage::Velocity) == retainedHeight &&
+              tabBView.drawerSectionHeight(EditorDrawerPage::VoiceChanges) == retainedVoiceHeight &&
               tabAView.drawerActivePage() == EditorDrawerPage::Velocity &&
-              tabAView.drawerSectionHeight(EditorDrawerPage::Velocity) == retainedHeight,
+              tabAView.drawerSectionHeight(EditorDrawerPage::Velocity) == retainedHeight &&
+              tabAView.drawerSectionHeight(EditorDrawerPage::VoiceChanges) == retainedVoiceHeight,
           "drawer hide did not retain globally shared page and height");
     m_workspace->activateSession(tabA);
     m_workspace->activateSession(tabB);
@@ -343,18 +390,24 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     tabBView.setEventListVisible(true);
     QCoreApplication::processEvents();
     const bool blockedVelocityVisible = tabBView.drawerSectionVisible(EditorDrawerPage::Velocity);
+    const bool blockedVoiceVisible = tabBView.drawerSectionVisible(EditorDrawerPage::VoiceChanges);
     const EditorDrawerPage blockedPage = tabBView.drawerActivePage();
     const QString blockedStatus = statusBar()->currentMessage();
-    check(!m_automationDrawerAction->isEnabled() && !m_velocityDrawerAction->isEnabled(),
+    check(!m_automationDrawerAction->isEnabled() && !m_velocityDrawerAction->isEnabled() &&
+              !m_voiceChangesDrawerAction->isEnabled(),
           "event-list mode did not disable drawer routes");
     sendKeyStroke(*this, Qt::Key_V, Qt::NoModifier, false);
+    sendKeyStroke(*this, Qt::Key_P, Qt::NoModifier, false);
     check(tabBView.drawerSectionVisible(EditorDrawerPage::Velocity) == blockedVelocityVisible &&
+              tabBView.drawerSectionVisible(EditorDrawerPage::VoiceChanges) ==
+                  blockedVoiceVisible &&
               tabBView.drawerActivePage() == blockedPage &&
               statusBar()->currentMessage() == blockedStatus,
           "event-list mode let a drawer route change or announce");
     tabBView.setEventListVisible(false);
     QCoreApplication::processEvents();
-    check(m_automationDrawerAction->isEnabled() && m_velocityDrawerAction->isEnabled(),
+    check(m_automationDrawerAction->isEnabled() && m_velocityDrawerAction->isEnabled() &&
+              m_voiceChangesDrawerAction->isEnabled(),
           "leaving event-list mode did not re-enable drawer routes");
 
     const EditorAutomationRowId persistedLane{EditorAutomationRowKind::ControlChange, 0, 74};

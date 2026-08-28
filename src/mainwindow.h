@@ -191,7 +191,7 @@ class MainWindow : public QMainWindow
     // Re-resolves each session's songId by label after a project reload.
     void refreshSessionSongIds();
     void updateTabTitle(SongSession &session);
-    void toggleDrawerPage(bool automation);
+    void toggleDrawerPage(EditorDrawerPage page);
     void updateDrawerActions();
     void setEditorDrawerState(const EditorDrawerState &state);
 
@@ -319,6 +319,7 @@ class MainWindow : public QMainWindow
     QAction *m_eventListAction = nullptr;
     QAction *m_automationDrawerAction = nullptr;
     QAction *m_velocityDrawerAction = nullptr;
+    QAction *m_voiceChangesDrawerAction = nullptr;
     QAction *m_velocityColorsAction = nullptr;
     QAction *m_noteNamesAction = nullptr;
     QWidget *m_polyMeter = nullptr;

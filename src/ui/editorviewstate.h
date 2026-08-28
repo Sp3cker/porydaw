@@ -12,6 +12,7 @@
 enum class EditorDrawerPage : uint8_t {
     Automations,
     Velocity,
+    VoiceChanges,
 };
 
 enum class EditorAutomationRowKind : uint8_t {
@@ -47,6 +48,7 @@ struct DrawerSectionState {
 struct EditorDrawerState {
     DrawerSectionState velocity{false, std::nullopt};
     DrawerSectionState automation{true, std::nullopt};
+    DrawerSectionState voiceChanges{false, std::nullopt};
     EditorDrawerPage activePage = EditorDrawerPage::Automations;
 
     bool operator==(const EditorDrawerState &) const noexcept = default;
@@ -55,6 +57,7 @@ struct EditorDrawerState {
 struct EditorViewState {
     DrawerSectionState velocity{false, std::nullopt};
     DrawerSectionState automation{true, std::nullopt};
+    DrawerSectionState voiceChanges{false, std::nullopt};
     EditorDrawerPage activePage = EditorDrawerPage::Automations;
     int laneHeight = 0; // A value of 0 uses the default lane height.
     std::map<EditorAutomationRowId, int> laneHeights;

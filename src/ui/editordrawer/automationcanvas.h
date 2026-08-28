@@ -21,7 +21,6 @@
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
-#include "ui/editordrawer/voicechangelane.h"
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
 #include "ui/songviewmodel.h"
@@ -54,7 +53,6 @@ class AutomationCanvas final : public songview::TimelineSurface
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect labelGutter() const noexcept { return m_labelGutter; }
     int plotOrigin() const noexcept { return m_geometry.plotOrigin; }
-    int contentTopInset() const noexcept { return m_voiceLane.height(); }
     QRect laneBody(LaneHandle handle) const;
     QRect pinnedTempoRect() const noexcept;
 
@@ -72,7 +70,6 @@ class AutomationCanvas final : public songview::TimelineSurface
 
   private:
     friend class AutomationPage;
-    friend class VoiceChangeLane;
     struct TickRange {
         uint64_t firstTick = 0;
         uint64_t lastTick = 0;
@@ -159,7 +156,7 @@ class AutomationCanvas final : public songview::TimelineSurface
     void showTimeSelectionMenuFor(LaneHandle contextLane, const QPoint &globalPosition);
     void showLaneMenuFor(LaneHandle handle, const QPoint &globalPosition);
     void showAddLaneMenu(const QPoint &globalPosition);
-    void layoutLaneStack(int voiceTrack);
+    void layoutLaneStack();
     int tempoTop() const;
     QRegion syncPinnedTempoLayout();
     void cancelNodeGestures();
@@ -183,13 +180,11 @@ class AutomationCanvas final : public songview::TimelineSurface
     QFont m_laneTitleFont;
     QFont m_laneCaptionFont;
     std::optional<layout::TwoLineTextLayout> m_laneTextLayout;
-    qreal m_laneCaptionHeight = 0.0;
     QRect m_labelGutter;
     AutomationPage *m_page = nullptr;
     QScrollArea *m_scroll = nullptr;
     CCLanes m_rowData;
     TempoLane m_tempoLane;
-    VoiceChangeLane m_voiceLane;
     std::vector<CCLaneAdapter> m_ccAdapters;
     std::vector<NodeLaneSlot> m_nodeStack;
     struct ResizeState {

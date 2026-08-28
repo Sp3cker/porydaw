@@ -93,6 +93,8 @@ const QString kDrawerVelocityVisibleKey = QStringLiteral("editorDrawer/velocityV
 const QString kDrawerVelocityHeightKey = QStringLiteral("editorDrawer/velocityHeight");
 const QString kDrawerAutomationVisibleKey = QStringLiteral("editorDrawer/automationVisible");
 const QString kDrawerAutomationHeightKey = QStringLiteral("editorDrawer/automationHeight");
+const QString kDrawerVoiceChangesVisibleKey = QStringLiteral("editorDrawer/voiceChangesVisible");
+const QString kDrawerVoiceChangesHeightKey = QStringLiteral("editorDrawer/voiceChangesHeight");
 const QString kDrawerActivePageKey = QStringLiteral("editorDrawer/activePage");
 
 void resetInheritedWidgetFonts()
@@ -126,8 +128,14 @@ EditorDrawerState loadEditorDrawerState(const QSettings &settings)
     state.automation.visible =
         settings.value(kDrawerAutomationVisibleKey, state.automation.visible).toBool();
     state.automation.height = loadDrawerHeight(settings, kDrawerAutomationHeightKey);
-    if (settings.value(kDrawerActivePageKey).toString() == QLatin1String("velocity"))
+    state.voiceChanges.visible =
+        settings.value(kDrawerVoiceChangesVisibleKey, state.voiceChanges.visible).toBool();
+    state.voiceChanges.height = loadDrawerHeight(settings, kDrawerVoiceChangesHeightKey);
+    const QString activePage = settings.value(kDrawerActivePageKey).toString();
+    if (activePage == QLatin1String("velocity"))
         state.activePage = EditorDrawerPage::Velocity;
+    else if (activePage == QLatin1String("voiceChanges"))
+        state.activePage = EditorDrawerPage::VoiceChanges;
     return state;
 }
 
@@ -135,6 +143,7 @@ void saveEditorDrawerState(QSettings &settings, const EditorDrawerState &state)
 {
     settings.setValue(kDrawerVelocityVisibleKey, state.velocity.visible);
     settings.setValue(kDrawerAutomationVisibleKey, state.automation.visible);
+    settings.setValue(kDrawerVoiceChangesVisibleKey, state.voiceChanges.visible);
     if (state.velocity.height)
         settings.setValue(kDrawerVelocityHeightKey, *state.velocity.height);
     else
@@ -143,9 +152,21 @@ void saveEditorDrawerState(QSettings &settings, const EditorDrawerState &state)
         settings.setValue(kDrawerAutomationHeightKey, *state.automation.height);
     else
         settings.remove(kDrawerAutomationHeightKey);
-    settings.setValue(kDrawerActivePageKey, state.activePage == EditorDrawerPage::Velocity
-                                                ? QLatin1String("velocity")
-                                                : QLatin1String("automations"));
+    if (state.voiceChanges.height)
+        settings.setValue(kDrawerVoiceChangesHeightKey, *state.voiceChanges.height);
+    else
+        settings.remove(kDrawerVoiceChangesHeightKey);
+    switch (state.activePage) {
+    case EditorDrawerPage::Velocity:
+        settings.setValue(kDrawerActivePageKey, QLatin1String("velocity"));
+        break;
+    case EditorDrawerPage::VoiceChanges:
+        settings.setValue(kDrawerActivePageKey, QLatin1String("voiceChanges"));
+        break;
+    case EditorDrawerPage::Automations:
+        settings.setValue(kDrawerActivePageKey, QLatin1String("automations"));
+        break;
+    }
 }
 
 #ifdef Q_OS_WIN
@@ -355,7 +376,6 @@ void MainWindow::buildUi()
             m_workspace->viewFor(*m_active).setEventListVisible(on);
     });
 
-    viewMenu->addSeparator();
     m_automationDrawerAction = viewMenu->addAction(tr("Automation Lanes"));
     m_automationDrawerAction->setObjectName(QStringLiteral("automationDrawerWindowAction"));
     m_automationDrawerAction->setShortcut(QKeySequence(Qt::Key_A));
@@ -363,7 +383,7 @@ void MainWindow::buildUi()
     m_automationDrawerAction->setToolTip(tr("Show or hide automation lanes (A)"));
     m_automationDrawerAction->setEnabled(false);
     connect(m_automationDrawerAction, &QAction::triggered, this,
-            [this] { toggleDrawerPage(/*automation=*/true); });
+            [this] { toggleDrawerPage(EditorDrawerPage::Automations); });
     m_velocityDrawerAction = viewMenu->addAction(tr("Velocity Lane"));
     m_velocityDrawerAction->setObjectName(QStringLiteral("velocityDrawerWindowAction"));
     m_velocityDrawerAction->setShortcut(QKeySequence(Qt::Key_V));
@@ -371,7 +391,15 @@ void MainWindow::buildUi()
     m_velocityDrawerAction->setToolTip(tr("Show or hide note velocities (V)"));
     m_velocityDrawerAction->setEnabled(false);
     connect(m_velocityDrawerAction, &QAction::triggered, this,
-            [this] { toggleDrawerPage(/*automation=*/false); });
+            [this] { toggleDrawerPage(EditorDrawerPage::Velocity); });
+    m_voiceChangesDrawerAction = viewMenu->addAction(tr("Voice &Changes"));
+    m_voiceChangesDrawerAction->setObjectName(QStringLiteral("voiceChangesDrawerWindowAction"));
+    m_voiceChangesDrawerAction->setShortcut(QKeySequence(Qt::Key_P));
+    m_voiceChangesDrawerAction->setShortcutContext(Qt::WindowShortcut);
+    m_voiceChangesDrawerAction->setToolTip(tr("Show or hide voice changes (P)"));
+    m_voiceChangesDrawerAction->setEnabled(false);
+    connect(m_voiceChangesDrawerAction, &QAction::triggered, this,
+            [this] { toggleDrawerPage(EditorDrawerPage::VoiceChanges); });
 
     // Tools menu: project-level utilities that aren't song-scoped.
     QMenu *toolsMenu = menuBar()->addMenu(tr("&Tools"));
@@ -1100,22 +1128,31 @@ void MainWindow::updateTabTitle(SongSession &session)
                                  session.doc.midPath());
 }
 
-void MainWindow::toggleDrawerPage(bool automation)
+void MainWindow::toggleDrawerPage(EditorDrawerPage page)
 {
     if (!m_active)
         return;
     SongView &view = m_workspace->viewFor(*m_active);
     if (view.eventListVisible())
         return;
-    const EditorDrawerPage page =
-        automation ? EditorDrawerPage::Automations : EditorDrawerPage::Velocity;
     const bool hiding = view.drawerSectionVisible(page);
     view.toggleDrawerSection(page);
-    statusBar()->showMessage(automation ? (hiding ? QStringLiteral("Automation lanes hidden")
-                                                  : QStringLiteral("Automation lanes shown"))
-                                        : (hiding ? QStringLiteral("Velocity lane hidden")
-                                                  : QStringLiteral("Velocity lane shown")),
-                             6000);
+    QString status;
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        status =
+            hiding ? QStringLiteral("Voice changes hidden") : QStringLiteral("Voice changes shown");
+        break;
+    case EditorDrawerPage::Velocity:
+        status =
+            hiding ? QStringLiteral("Velocity lane hidden") : QStringLiteral("Velocity lane shown");
+        break;
+    case EditorDrawerPage::Automations:
+        status = hiding ? QStringLiteral("Automation lanes hidden")
+                        : QStringLiteral("Automation lanes shown");
+        break;
+    }
+    statusBar()->showMessage(status, 6000);
 }
 
 void MainWindow::setEditorDrawerState(const EditorDrawerState &state)
@@ -1132,6 +1169,7 @@ void MainWindow::updateDrawerActions()
     const bool enabled = m_active && !m_workspace->viewFor(*m_active).eventListVisible();
     m_automationDrawerAction->setEnabled(enabled);
     m_velocityDrawerAction->setEnabled(enabled);
+    m_voiceChangesDrawerAction->setEnabled(enabled);
 }
 
 void MainWindow::openProject()
