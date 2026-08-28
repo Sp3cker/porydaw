@@ -4,6 +4,8 @@
 // Usage: deno task coverage [-- html|report]  (default: both)
 // Env: none. Always writes to build-cov/ (gitignored via build-*/).
 
+import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
+
 const BUILD_DIR = "build-cov";
 const PROFILES_DIR = `${BUILD_DIR}/profiles`;
 const PROF_DATA = `${BUILD_DIR}/cov.profdata`;
@@ -49,10 +51,16 @@ const mode = Deno.args.includes("html")
 const llvmProfdata = which("llvm-profdata");
 const llvmCov = which("llvm-cov");
 
-// 1. Configure if needed.
+// 1. Validate the dependency and configure if needed.
+const poryaaaa = await poryaaaaConfiguration(BUILD_DIR);
+let configured = true;
 try {
   await Deno.stat(`${BUILD_DIR}/build.ninja`);
-} catch {
+} catch (error) {
+  if (!(error instanceof Deno.errors.NotFound)) throw error;
+  configured = false;
+}
+if (!configured || !poryaaaa.cacheMatches) {
   console.log(`coverage: configuring ${BUILD_DIR} with -DPORYDAW_COVERAGE=ON`);
   run([
     "cmake",
@@ -64,6 +72,7 @@ try {
     "Ninja",
     "-DPORYDAW_COVERAGE=ON",
     "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+    poryaaaa.cmakeArgument,
   ]);
 }
 

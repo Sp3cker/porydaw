@@ -7,7 +7,8 @@
     "verify": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify",
     "format": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format",
     "format:check": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format --check",
-    "coverage": "deno run --allow-read --allow-write --allow-run --allow-env=CI,PORYDAW_COVERAGE_IN_CI tools/coverage.ts"
+    "coverage": "deno run --allow-read --allow-write --allow-run --allow-env=CI,PORYDAW_COVERAGE_IN_CI tools/coverage.ts",
+    "worktree:create": "deno run --allow-read --allow-write --allow-run tools/worktree.ts create"
   },
   "fmt": {
     "include": ["tools/**/*.ts"]

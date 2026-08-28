@@ -95,8 +95,11 @@ add_subdirectory(
 
 # ---- In-tree m4a converter required by the harness sweep ----
 if(PORYDAW_BUILD_CHECKS)
-    set(MID2AGB_SOURCE_DIR
-        "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/ccomidi/mid2agb")
+    get_filename_component(PORYAAAA_PACKAGES_DIR "${PORYAAAA_DIR}" DIRECTORY)
+    set(MID2AGB_SOURCE_DIR "${PORYAAAA_PACKAGES_DIR}/ccomidi/mid2agb")
+    if(NOT EXISTS "${MID2AGB_SOURCE_DIR}/main.cpp")
+        message(FATAL_ERROR "PORYAAAA_DIR must belong to the poryaaaa monorepo")
+    endif()
     # The preserved upstream source includes these otherwise-unused expansion
     # configuration headers. Keep their empty declarations in the build tree rather
     # than adding a stale expansion dependency to this repository.

@@ -63,6 +63,23 @@ Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_
 - Don't create 80L fragments — 40 tiny files in one feature is also undiscoverable.
 - See `rule://keep-files-small` for enforcement.
 
+## Worktrees
+
+When the user requests a separate worktree, agents MUST run:
+
+```bash
+deno task worktree:create -- <name> [--base fork-main]
+```
+
+Do not invoke `git worktree add` or `git submodule update` directly for setup.
+Names are lowercase kebab-case. Creation uses `.worktrees/<name>` and
+`feature/<name>`, initializes and verifies the main checkout's shared
+`poryaaaa`, and leaves the linked worktree without a nested submodule checkout.
+
+Agents MUST work only in the path printed by `worktree:create`. Committing,
+merging, removing the worktree, deleting the branch, and pushing remain
+separate operations that require the corresponding explicit user request.
+
 ## Build & verify
 
 Agents MUST use `deno task`. Do not invoke `cmake` / `cmake --build` directly;
