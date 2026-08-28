@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QImage>
+#include <QMouseEvent>
 #include <QTimer>
 #include <QWindow>
 #include <algorithm>
@@ -17,7 +18,12 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
+#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
+
+namespace {
+constexpr double kCheckSampleRate = 48000.0;
+} // namespace
 
 std::unique_ptr<AutomationGestureCheckRig>
 AutomationGestureCheckRig::create(const QString &project, const QString &song, QString &error)
@@ -79,6 +85,16 @@ AutomationCanvas &AutomationGestureCheckRig::canvas() noexcept
 const AutomationCanvas &AutomationGestureCheckRig::canvas() const noexcept
 {
     return *m_page->canvas();
+}
+
+VoiceChangeArea &AutomationGestureCheckRig::voiceArea() noexcept
+{
+    return *m_voiceArea;
+}
+
+const VoiceChangeArea &AutomationGestureCheckRig::voiceArea() const noexcept
+{
+    return *m_voiceArea;
 }
 
 QAction *AutomationGestureCheckRig::pencilModeAction() const noexcept
@@ -224,6 +240,12 @@ AutomationGestureCheckRig::Snapshot AutomationGestureCheckRig::snapshot(int trac
 void AutomationGestureCheckRig::documentChanged()
 {
     m_page->documentChanged();
+    // Mirror MainWindow's document-change path: the drawer paints Voice
+    // changes from SongViewModel, so refreshing only the page leaves its
+    // presentation model on the fixture's original timeline.
+    m_timeline = document().buildTimeline(kCheckSampleRate);
+    m_view->updateSong(m_timeline.get());
+    m_voiceArea->documentChanged();
     refreshPage();
     pump();
 }
@@ -258,6 +280,19 @@ void AutomationGestureCheckRig::mousePress(const QPointF &position, Qt::Keyboard
                               modifiers);
 }
 
+bool AutomationGestureCheckRig::dispatchMousePress(const QPointF &position,
+                                                   Qt::KeyboardModifiers modifiers,
+                                                   Qt::MouseButton button)
+{
+    // checks::events::sendMouse owns its event and cannot expose acceptance.
+    // Match its construction here so this check can set and inspect that state.
+    QMouseEvent event(QEvent::MouseButtonPress, position,
+                      QPointF(canvas().mapToGlobal(position.toPoint())), button, button, modifiers);
+    event.setAccepted(false);
+    QCoreApplication::sendEvent(&canvas(), &event);
+    return event.isAccepted();
+}
+
 void AutomationGestureCheckRig::mouseMove(const QPointF &position, Qt::MouseButtons buttons,
                                           Qt::KeyboardModifiers modifiers)
 {
@@ -278,6 +313,44 @@ void AutomationGestureCheckRig::mouseDoubleClick(const QPointF &position,
 {
     checks::events::sendMouse(canvas(), QEvent::MouseButtonDblClick, position, Qt::LeftButton,
                               Qt::LeftButton, modifiers);
+}
+
+void AutomationGestureCheckRig::voiceMousePress(const QPointF &position,
+                                                Qt::KeyboardModifiers modifiers)
+{
+    checks::events::sendMouse(voiceArea(), QEvent::MouseButtonPress, position, Qt::LeftButton,
+                              Qt::LeftButton, modifiers);
+}
+
+bool AutomationGestureCheckRig::dispatchVoiceMousePress(const QPointF &position,
+                                                        Qt::KeyboardModifiers modifiers)
+{
+    QMouseEvent event(QEvent::MouseButtonPress, position,
+                      QPointF(voiceArea().mapToGlobal(position.toPoint())), Qt::LeftButton,
+                      Qt::LeftButton, modifiers);
+    event.setAccepted(false);
+    QCoreApplication::sendEvent(&voiceArea(), &event);
+    return event.isAccepted();
+}
+
+void AutomationGestureCheckRig::voiceMouseMove(const QPointF &position,
+                                               Qt::KeyboardModifiers modifiers)
+{
+    checks::events::sendMouse(voiceArea(), QEvent::MouseMove, position, Qt::NoButton,
+                              Qt::LeftButton, modifiers);
+}
+
+void AutomationGestureCheckRig::voiceMouseRelease(const QPointF &position,
+                                                  Qt::KeyboardModifiers modifiers)
+{
+    checks::events::sendMouse(voiceArea(), QEvent::MouseButtonRelease, position, Qt::LeftButton,
+                              Qt::NoButton, modifiers);
+}
+
+void AutomationGestureCheckRig::keyToVoiceArea(QEvent::Type type, int key,
+                                               Qt::KeyboardModifiers modifiers)
+{
+    checks::events::sendKey(voiceArea(), type, key, modifiers, QString{}, false, 1);
 }
 
 void AutomationGestureCheckRig::keyToArea(QEvent::Type type, int key,
@@ -342,7 +415,7 @@ bool AutomationGestureCheckRig::initialize(QString &error)
     m_voicegroup->voices[3].type = VOICE_NOISE;
     std::strncpy(m_voicegroup->voiceNames[3], "automation-voice",
                  sizeof(m_voicegroup->voiceNames[3]) - 1);
-    m_timeline = songDocument.buildTimeline(48000.0);
+    m_timeline = songDocument.buildTimeline(kCheckSampleRate);
     m_view = std::make_unique<SongView>();
     m_view->resize(960, 720);
     m_view->setDocument(&songDocument);
@@ -350,6 +423,8 @@ bool AutomationGestureCheckRig::initialize(QString &error)
     EditorViewState state;
     state.emptyLanes.insert(pan.row);
     m_view->applyEditorViewState(state);
+    m_view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    m_view->setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 180);
     m_view->setDrawerActivePage(EditorDrawerPage::Automations);
     m_view->setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     m_view->setDrawerSectionHeight(EditorDrawerPage::Automations, 360);
@@ -357,18 +432,22 @@ bool AutomationGestureCheckRig::initialize(QString &error)
     pump();
     auto *drawer = m_view->editorDrawer();
     m_page = drawer ? drawer->automationPage() : nullptr;
-    if (!m_page) {
-        error = QStringLiteral("concrete SongView did not expose AutomationPage");
+    m_voiceArea = drawer ? drawer->voiceChangeArea() : nullptr;
+    if (!m_page || !m_voiceArea) {
+        error = QStringLiteral("concrete SongView did not expose drawer pages");
         return false;
     }
     m_page->resize(960, 360);
     m_page->songChanged();
+    m_voiceArea->resize(960, 180);
+    m_voiceArea->songChanged();
     m_live.documentRevision = songDocument.revision();
     m_live.timeZoom = 96.0;
     m_live.editCursorTick = 24;
     m_view->setEditorTimeZoom(m_live.timeZoom);
     m_live.horizontalScroll = m_view->viewState().scrollPx;
     m_page->refreshLiveState(m_live);
+    m_voiceArea->refreshLiveState(m_live);
     m_page->show();
     pump();
     return true;
@@ -378,4 +457,5 @@ void AutomationGestureCheckRig::refreshPage()
 {
     m_live.documentRevision = document().revision();
     m_page->refreshLiveState(m_live);
+    m_voiceArea->refreshLiveState(m_live);
 }

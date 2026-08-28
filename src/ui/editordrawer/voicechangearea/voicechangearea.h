@@ -65,6 +65,23 @@ class VoiceChangeArea final : public songview::TimelineSurface
 
   private:
     enum class Interaction { None, Pan };
+    struct VoiceDragState {
+        enum class Phase : uint8_t {
+            Pending,
+            Active,
+        };
+
+        Phase phase = Phase::Pending;
+        QPointF pressPosition;
+        int engineTrack = -1;
+        DocLanePoint point;
+        uint64_t revision = 0;
+        uint64_t previewTick = 0;
+    };
+    struct VoicePaintEntry {
+        uint64_t tick = 0;
+        int program = 0;
+    };
     struct Geometry {
         int plotOrigin = 0;
         int markerHitRadius = 0;
@@ -100,6 +117,8 @@ class VoiceChangeArea final : public songview::TimelineSurface
     int voiceSlotAt(uint64_t tick) const;
     QRect plotRect() const;
     bool voiceMarkerAt(qreal x, DocLanePoint *out) const;
+    bool voiceDragActive() const noexcept;
+    void resetVoiceDrag();
     void showPicker(const QPoint &globalPosition);
     void showContextMenu(const QPoint &globalPosition);
     SongView &m_owner;
@@ -112,6 +131,8 @@ class VoiceChangeArea final : public songview::TimelineSurface
     uint64_t m_voicePointsRevision = 0;
     int m_voicePointsTrack = -1;
     Interaction m_interaction = Interaction::None;
+    std::optional<VoiceDragState> m_voiceDrag;
+    std::vector<VoicePaintEntry> m_previewEntries;
     QPointF m_previousPosition;
     bool m_suppressContextMenu = false;
     bool m_hoverActive = false;

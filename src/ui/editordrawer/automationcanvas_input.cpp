@@ -63,6 +63,109 @@ void AutomationCanvas::wheelEvent(QWheelEvent *event)
     event->accept();
 }
 
+void AutomationCanvas::clearTimeSelectionIfOutsidePress(const QMouseEvent &event,
+                                                        const AutomationProjection &projection,
+                                                        LaneHandle lane, const NodeLaneSlot *slot)
+{
+    auto &model = m_page->m_owner.selectionModel();
+    // mousePressEvent enters this leaf only while the shared time selection is
+    // active. Keep that private precondition explicit before dereferencing its
+    // equivalent ordered range.
+    const auto activeTickRange = m_laneSelection.activeTickRange();
+    Q_ASSERT(activeTickRange);
+    const auto [firstTick, lastTick] = *activeTickRange;
+    auto laneSelectionHit = false;
+    auto selectedNode = false;
+    if (slot) {
+        laneSelectionHit = m_laneSelection.hitTest(slot->id, event.position().x(), projection,
+                                                   devicePixelRatioF());
+        if (m_laneSelection.coversNodes(slot->id)) {
+            NodePoint selectedPoint;
+            if (nodePointHit(lane, event.position(), projection, &selectedPoint)) {
+                selectedNode =
+                    std::clamp(selectedPoint.tick, firstTick, lastTick - 1) == selectedPoint.tick;
+            }
+        }
+    }
+    if (laneSelectionHit || selectedNode)
+        return;
+    model.clearTimeSelection();
+    invalidateContent();
+}
+
+void AutomationCanvas::beginPencilPress(const QMouseEvent &event, LaneHandle handle,
+                                        const NodeLane &lane, const QRect &body,
+                                        const AutomationProjection &projection)
+{
+    const auto *timeline = m_page->timeline();
+    if (!timeline)
+        return;
+    const AutomationProjection::PointerMapping mapped =
+        projection.pointerMapping(lane, body, event.position().x(), event.position().y());
+    if (auto nodeGesture =
+            nodeDragGestureAt(handle, event.position(), event.modifiers() & Qt::ShiftModifier,
+                              projection, m_pencilMode)) {
+        const auto grabbedPoint = nodeGesture->grabbedPoint;
+        if (grabbedPoint < nodeGesture->points.size()) {
+            const uint64_t hitTick = nodeGesture->points[grabbedPoint].original.tick;
+            if (std::clamp(hitTick, mapped.cell.tickBegin, mapped.cell.tickEnd - 1) == hitTick) {
+                m_activeGesture.emplace(std::move(*nodeGesture));
+                setGestureActive(true);
+                syncPreviewValueLabel();
+                invalidateContent();
+                return;
+            }
+        }
+    }
+    const AutomationPencilGesture::Target target{handle, m_page->document()->revision()};
+    const AutomationPencilGesture::Sample sample{mapped.rawTick, event.position().x(), mapped.point,
+                                                 double(mapped.point.value)};
+    auto stroke = AutomationPencilGesture::start(
+        target, lane.minimumValue(), lane.maximumValue(), timeline->lengthTicks,
+        m_page->document()->ticksPerClock(), lane.points(), sample, mapped.cell);
+    if (!stroke)
+        return;
+    PencilGesture pencil{handle, std::move(*stroke)};
+    pencil.verticalSlop.origin = event.position();
+    pencil.previousY = event.position().y();
+    m_activeGesture.emplace(std::move(pencil));
+    setGestureActive(true);
+    syncPreviewValueLabel();
+    invalidateContent();
+}
+
+void AutomationCanvas::beginDragOrSweep(const QMouseEvent &event, LaneHandle handle,
+                                        const AutomationProjection &projection)
+{
+    const bool fine = event.modifiers() & Qt::AltModifier;
+    const NodePoint mapped = mappedForLane(handle, event.position(), fine,
+                                           event.modifiers() & Qt::ControlModifier, projection);
+    setGestureActive(true);
+    if (auto nodeGesture =
+            nodeDragGestureAt(handle, event.position(), event.modifiers() & Qt::ShiftModifier,
+                              projection, m_pencilMode)) {
+        m_activeGesture.emplace(std::move(*nodeGesture));
+    } else if (auto phantomGesture = phantomDragGestureAt(handle, event.position())) {
+        m_activeGesture.emplace(std::move(*phantomGesture));
+    } else {
+        SweepGesture sweep;
+        sweep.lane = handle;
+        sweep.mode = event.modifiers() & Qt::ShiftModifier ? SweepGesture::Mode::Ramp
+                                                           : SweepGesture::Mode::Drag;
+        sweep.anchor = mapped;
+        sweep.current = mapped;
+        sweep.previousRawTick = projection.rawTickAt(event.position().x());
+        sweep.previousValue = mapped.value;
+        sweep.pressPosition = event.position();
+        sweep.slop.origin = event.position();
+        if (sweep.mode == SweepGesture::Mode::Ramp)
+            sweep.slop.markExceeded(event.position());
+        m_activeGesture.emplace(std::move(sweep));
+    }
+    syncPreviewValueLabel();
+    invalidateContent();
+}
+
 void AutomationCanvas::mousePressEvent(QMouseEvent *event)
 {
     invalidateContent(m_hoverState.clearHover());
@@ -85,24 +188,12 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     const LaneHandle pointerLane = pointer.lane;
     const auto *pointerSlot = resolveSlot(pointerLane);
     const bool inTempo = pointerSlot && pointerSlot->isTempo();
-    if ((event->button() == Qt::LeftButton || event->button() == Qt::RightButton)) {
-        auto &model = m_page->m_owner.selectionModel();
-        const auto activeTickRange = m_laneSelection.activeTickRange();
-        NodePoint selectedPoint;
-        const bool selectedNode =
-            pointerSlot && event->position().x() >= m_geometry.plotOrigin &&
-            m_laneSelection.coversNodes(pointerSlot->id) && activeTickRange &&
-            nodePointHit(pointerLane, event->position(), proj, &selectedPoint) &&
-            selectedPoint.tick >= activeTickRange->first &&
-            selectedPoint.tick < activeTickRange->second;
-        const bool insideSelection =
-            pointerSlot && event->position().x() >= m_geometry.plotOrigin &&
-            (m_laneSelection.hitTest(pointerSlot->id, event->position().x(), proj,
-                                     devicePixelRatioF()) ||
-             selectedNode);
-        if (!insideSelection && model.timeSelection().active()) {
-            model.clearTimeSelection();
-            invalidateContent();
+    if (event->button() == Qt::LeftButton || event->button() == Qt::RightButton) {
+        if (m_laneSelection.active()) {
+            const NodeLaneSlot *selectionSlot = pointerSlot;
+            if (event->position().x() < m_geometry.plotOrigin)
+                selectionSlot = nullptr;
+            clearTimeSelectionIfOutsidePress(*event, proj, pointerLane, selectionSlot);
         }
     }
     if (inTempoHeader) {
@@ -159,71 +250,12 @@ void AutomationCanvas::mousePressEvent(QMouseEvent *event)
     }
     if (event->button() != Qt::LeftButton)
         return;
-    const bool fine = event->modifiers() & Qt::AltModifier;
     if (m_pencilMode) {
-        const auto *timeline = m_page->timeline();
-        if (!timeline)
-            return;
-        const AutomationProjection::PointerMapping mapped =
-            proj.pointerMapping(*lane, body, event->position().x(), event->position().y());
-        if (auto nodeGesture =
-                nodeDragGestureAt(handle, event->position(), event->modifiers() & Qt::ShiftModifier,
-                                  proj, m_pencilMode)) {
-            const auto grabbedPoint = nodeGesture->grabbedPoint;
-            if (grabbedPoint < nodeGesture->points.size()) {
-                const uint64_t hitTick = nodeGesture->points[grabbedPoint].original.tick;
-                if (hitTick >= mapped.cell.tickBegin && hitTick < mapped.cell.tickEnd) {
-                    m_activeGesture.emplace(std::move(*nodeGesture));
-                    setGestureActive(true);
-                    syncPreviewValueLabel();
-                    invalidateContent();
-                    return;
-                }
-            }
-        }
-        const AutomationPencilGesture::Target target{handle, m_page->document()->revision()};
-        const AutomationPencilGesture::Sample sample{mapped.rawTick, event->position().x(),
-                                                     mapped.point, double(mapped.point.value)};
-        auto stroke = AutomationPencilGesture::start(
-            target, lane->minimumValue(), lane->maximumValue(), timeline->lengthTicks,
-            m_page->document()->ticksPerClock(), lane->points(), sample, mapped.cell);
-        if (!stroke)
-            return;
-        PencilGesture pencil{handle, std::move(*stroke)};
-        pencil.verticalSlop.origin = event->position();
-        pencil.previousY = event->position().y();
-        m_activeGesture.emplace(std::move(pencil));
-        setGestureActive(true);
-        syncPreviewValueLabel();
-        invalidateContent();
+        beginPencilPress(*event, handle, *lane, body, proj);
         return;
     }
-    const NodePoint mapped = mappedForLane(handle, event->position(), fine,
-                                           event->modifiers() & Qt::ControlModifier, proj);
-    setGestureActive(true);
-    if (auto nodeGesture =
-            nodeDragGestureAt(handle, event->position(), event->modifiers() & Qt::ShiftModifier,
-                              proj, m_pencilMode)) {
-        m_activeGesture.emplace(std::move(*nodeGesture));
-    } else if (auto phantomGesture = phantomDragGestureAt(handle, event->position())) {
-        m_activeGesture.emplace(std::move(*phantomGesture));
-    } else {
-        SweepGesture sweep;
-        sweep.lane = handle;
-        sweep.mode = event->modifiers() & Qt::ShiftModifier ? SweepGesture::Mode::Ramp
-                                                            : SweepGesture::Mode::Drag;
-        sweep.anchor = mapped;
-        sweep.current = mapped;
-        sweep.previousRawTick = proj.rawTickAt(event->position().x());
-        sweep.previousValue = mapped.value;
-        sweep.pressPosition = event->position();
-        sweep.slop.origin = event->position();
-        if (sweep.mode == SweepGesture::Mode::Ramp)
-            sweep.slop.markExceeded(event->position());
-        m_activeGesture.emplace(std::move(sweep));
-    }
-    syncPreviewValueLabel();
-    invalidateContent();
+    beginDragOrSweep(*event, handle, proj);
+    return;
 }
 
 void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)

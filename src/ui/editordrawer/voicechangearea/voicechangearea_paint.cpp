@@ -87,6 +87,28 @@ void VoiceChangeArea::paintContent(QPainter &painter)
     const int track = m_engineTrack;
     const qreal dpr =
         painter.device() ? painter.device()->devicePixelRatioF() : devicePixelRatioF();
+    const bool previewing = voiceDragActive();
+    if (previewing) {
+        m_previewEntries.clear();
+        m_previewEntries.reserve(m_voicePoints.size());
+        for (const DocLanePoint &point : m_voicePoints) {
+            const bool dragged = point.smfTrack == m_voiceDrag->point.smfTrack &&
+                                 point.index == m_voiceDrag->point.index;
+            m_previewEntries.push_back(
+                {dragged ? m_voiceDrag->previewTick : point.tick, point.value});
+        }
+        std::stable_sort(m_previewEntries.begin(), m_previewEntries.end(),
+                         [](const VoicePaintEntry &left, const VoicePaintEntry &right) {
+                             return left.tick < right.tick;
+                         });
+    }
+    const std::size_t paintEntryCount = previewing ? m_previewEntries.size() : m_voicePoints.size();
+    const auto paintEntryAt = [&](std::size_t index) {
+        if (previewing)
+            return m_previewEntries[index];
+        const DocLanePoint &point = m_voicePoints[index];
+        return VoicePaintEntry{point.tick, point.value};
+    };
     // SongView's grid always paints; there is no plain fallback here.
     m_owner.paintGrid(painter, plot, qreal(origin));
 
@@ -100,11 +122,12 @@ void VoiceChangeArea::paintContent(QPainter &painter)
     {
         int program = timeline->tracks[track].firstProgram;
         uint64_t spanStart = 0;
-        for (const DocLanePoint &point : m_voicePoints) {
-            if (program >= 0 && point.tick > spanStart)
-                painter.fillRect(heldSpanRect(spanStart, point.tick, m_owner, plot), heldColor);
-            program = point.value;
-            spanStart = point.tick;
+        for (std::size_t index = 0; index < paintEntryCount; ++index) {
+            const VoicePaintEntry entry = paintEntryAt(index);
+            if (program >= 0 && entry.tick > spanStart)
+                painter.fillRect(heldSpanRect(spanStart, entry.tick, m_owner, plot), heldColor);
+            program = entry.program;
+            spanStart = entry.tick;
         }
         if (program >= 0 && timeline->lengthTicks > spanStart)
             painter.fillRect(heldSpanRect(spanStart, timeline->lengthTicks, m_owner, plot),
@@ -136,16 +159,16 @@ void VoiceChangeArea::paintContent(QPainter &painter)
     const qreal stairStep = std::min<qreal>(layout::space(layout::Space::Four),
                                             (plot.height() - labelH - 2 * pad) / 2.0);
     const bool canStair = stairStep > 1.0;
-    m_labelLayouts.resize(m_voicePoints.size());
+    m_labelLayouts.resize(paintEntryCount);
     qreal lastXEnd = -std::numeric_limits<qreal>::infinity();
     bool stairUp = true;
-    for (std::size_t index = 0; index < m_voicePoints.size(); ++index) {
-        const DocLanePoint &point = m_voicePoints[index];
+    for (std::size_t index = 0; index < paintEntryCount; ++index) {
+        const VoicePaintEntry entry = paintEntryAt(index);
         VoiceLabelLayout &labelLayout = m_labelLayouts[index];
         labelLayout.elidedText.clear();
-        const QString &sourceText = paintTextFor(point.value).label;
+        const QString &sourceText = paintTextFor(entry.program).label;
         labelLayout.text = sourceText.isEmpty() ? &noVoiceText : &sourceText;
-        const qreal labelX = m_owner.displayX(double(point.tick), origin, dpr) + pad;
+        const qreal labelX = m_owner.displayX(double(entry.tick), origin, dpr) + pad;
         const qreal maxW = std::max<qreal>(0, plot.right() - labelX);
         if (fm.horizontalAdvance(*labelLayout.text) > maxW && maxW > 0) {
             labelLayout.elidedText =

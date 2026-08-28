@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <utility>
 #include <variant>
 
@@ -105,12 +106,26 @@ class AutomationCanvas final : public songview::TimelineSurface
         std::vector<NodePointMove> moves;
         std::vector<uint64_t> deleteTicks;
     };
+    struct PaintFrame;
+    struct LanePaintItem;
+    using LanePointSnapshots = std::vector<std::vector<NodePoint>>;
     static void paintPlainGridFallback(QPainter &painter, const QRect &plot, AutomationPage &page,
                                        qreal plotOriginX, qreal dpr);
     static void paintEditCursor(QPainter &painter, const QRect &plot, qreal cursorX);
     static void paintSelectionReticle(QPainter &painter, const TickRange &range,
                                       const AutomationProjection &projection, const QRect &bounds,
                                       qreal devicePixelRatio);
+    LanePointSnapshots snapshotLanePoints() const;
+    PaintFrame preparePaintFrame(qreal devicePixelRatio,
+                                 std::span<const std::vector<NodePoint>> pointsBySlot) const;
+    void paintLaneStack(QPainter &painter, const PaintFrame &frame,
+                        const LanePointSnapshots &pointsBySlot);
+    void paintTempoSlot(QPainter &painter, const PaintFrame &frame, const LanePaintItem &item);
+    void paintCcSlot(QPainter &painter, const PaintFrame &frame, const LanePaintItem &item);
+    void paintLaneBody(QPainter &painter, const PaintFrame &frame, const LanePaintItem &item,
+                       const QColor &color, bool preparedPreviewCurve);
+    const QString &refreshCcSummaryText(CCLanes::RowTextCache &cache,
+                                        std::span<const NodePoint> points, const NodeLane &lane);
 
     void refreshGeometry();
     void rebuildFontCache();
@@ -142,6 +157,13 @@ class AutomationCanvas final : public songview::TimelineSurface
     bool isEditablePencilHit(const QPointF &position) const noexcept;
     void updatePencilCursor();
     void updateAxisLockCursor(AxisLock lock);
+    void clearTimeSelectionIfOutsidePress(const QMouseEvent &event,
+                                          const AutomationProjection &projection, LaneHandle lane,
+                                          const NodeLaneSlot *slot);
+    void beginPencilPress(const QMouseEvent &event, LaneHandle handle, const NodeLane &lane,
+                          const QRect &body, const AutomationProjection &projection);
+    void beginDragOrSweep(const QMouseEvent &event, LaneHandle handle,
+                          const AutomationProjection &projection);
     NodePoint mappedForLane(LaneHandle handle, QPointF pos, bool fine, bool snapValue,
                             const AutomationProjection &proj) const;
     void updateActiveGesture(const QPointF &position, Qt::KeyboardModifiers modifiers,

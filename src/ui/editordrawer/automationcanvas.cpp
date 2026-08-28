@@ -17,7 +17,6 @@
 #include "ui/contextmenu.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
-#include "ui/songview/editorselectionmodel.h"
 
 void AutomationCanvas::refreshGeometry()
 {

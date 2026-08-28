@@ -523,9 +523,9 @@ QString vgMacroDisplayName(VgMacro macro)
     case VgMacro::DirectSound:
         return QStringLiteral("Sample");
     case VgMacro::DirectSoundNoResample:
-        return QStringLiteral("Sample (no resample)");
-    case VgMacro::DirectSoundAlt:
         return QStringLiteral("Sample (fixed pitch)");
+    case VgMacro::DirectSoundAlt:
+        return QStringLiteral("Sample (reverse)");
     case VgMacro::Square1:
         return QStringLiteral("Square 1");
     case VgMacro::Square1Alt:

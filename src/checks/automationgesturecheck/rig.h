@@ -26,6 +26,7 @@ class QImage;
 class MidiTimeline;
 class QObject;
 class SongView;
+class VoiceChangeArea;
 
 class AutomationGestureCheckRig final
 {
@@ -68,6 +69,8 @@ class AutomationGestureCheckRig final
     const AutomationPage &page() const noexcept;
     AutomationCanvas &canvas() noexcept;
     const AutomationCanvas &canvas() const noexcept;
+    VoiceChangeArea &voiceArea() noexcept;
+    const VoiceChangeArea &voiceArea() const noexcept;
     QAction *pencilModeAction() const noexcept;
 
     AutomationGeometry geometry() const;
@@ -108,12 +111,23 @@ class AutomationGestureCheckRig final
                      bool autoRepeat = false);
     void mousePress(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
                     Qt::MouseButton button = Qt::LeftButton);
+    [[nodiscard]] bool dispatchMousePress(const QPointF &position,
+                                          Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+                                          Qt::MouseButton button = Qt::LeftButton);
     void mouseMove(const QPointF &position, Qt::MouseButtons buttons = Qt::LeftButton,
                    Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void mouseRelease(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
                       Qt::MouseButton button = Qt::LeftButton);
     void mouseDoubleClick(const QPointF &position,
                           Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void voiceMousePress(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    [[nodiscard]] bool dispatchVoiceMousePress(const QPointF &position,
+                                               Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void voiceMouseMove(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void voiceMouseRelease(const QPointF &position,
+                           Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void keyToVoiceArea(QEvent::Type type, int key,
+                        Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void pump();
 
     const Lane pan{{EditorAutomationRowKind::ControlChange, 0, 10}, 0, 10};
@@ -135,4 +149,5 @@ class AutomationGestureCheckRig final
     std::unique_ptr<MidiTimeline> m_timeline;
     std::unique_ptr<SongView> m_view;
     AutomationPage *m_page = nullptr;
+    VoiceChangeArea *m_voiceArea = nullptr;
 };

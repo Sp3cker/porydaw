@@ -1,4 +1,5 @@
 #include "pitchbendeditor.hpp"
+#include "dragspinbox.h"
 
 #include "theme/themeruntime.h"
 #include "typography.h"
@@ -154,13 +155,13 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
         for (QObject *child : spin->findChildren<QObject *>())
             child->installEventFilter(this);
     };
-    m_bendRangeSpin = new QSpinBox(this);
+    m_bendRangeSpin = new DragSpinBox(this);
     configureController(m_bendRangeSpin, QStringLiteral("bendRangeSpin"), 60);
     m_bendRangeSpin->setAccessibleName(SongView::tr("Pitch-bend range"));
     m_bendRangeSpin->setToolTip(SongView::tr("Pitch-bend range in semitones for this note"));
     connect(m_bendRangeSpin, &QSpinBox::valueChanged, this,
             [this](int value) { setBendRange(value); });
-    m_lfoSpeedSpin = new QSpinBox(this);
+    m_lfoSpeedSpin = new DragSpinBox(this);
     configureController(m_lfoSpeedSpin, QStringLiteral("lfoSpeedSpin"), 226);
     m_lfoSpeedSpin->setAccessibleName(SongView::tr("LFO speed"));
     m_lfoSpeedSpin->setToolTip(SongView::tr("M4A LFO speed for this note"));

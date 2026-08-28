@@ -9,6 +9,7 @@
 #include <QImage>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <QLineEdit>
 #include <QMetaObject>
 #include <QObject>
 #include <QPixmap>
@@ -91,6 +92,7 @@ class PitchBendCheckContext final
         runDuplicateAnchor();
         runSnapshotDuringGesture();
         runLifecycleCancellation();
+        runControllerButtons();
         runRangeFreehandAndUndo();
         runVertexEditing();
         runModWheelEditing();
@@ -820,16 +822,22 @@ class PitchBendCheckContext final
 
     void runControllerButtons()
     {
-        QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
-        auto *popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
-        auto *bendSpin =
-            popup ? popup->findChild<QSpinBox *>(QStringLiteral("bendRangeSpin")) : nullptr;
-        auto *lfoSpin =
-            popup ? popup->findChild<QSpinBox *>(QStringLiteral("lfoSpeedSpin")) : nullptr;
-        if (!popup || !popup->isVisible() || !bendSpin || !lfoSpin) {
-            fail("pitch-bend popup did not expose BENDR and LFOS spin boxes");
+        const RangePopupState range = openRangePopup();
+        if (!range.popup)
+            return;
+        auto *bendSpin = range.popup->findChild<QSpinBox *>(QStringLiteral("bendRangeSpin"));
+        auto *lfoSpin = range.popup->findChild<QSpinBox *>(QStringLiteral("lfoSpeedSpin"));
+        auto *bendEdit = bendSpin ? bendSpin->findChild<QLineEdit *>() : nullptr;
+        auto *lfoEdit = lfoSpin ? lfoSpin->findChild<QLineEdit *>() : nullptr;
+        if (!bendSpin || !lfoSpin || !bendEdit || !lfoEdit) {
+            fail("pitch-bend popup did not expose BENDR and LFOS line edits");
+            sendKeyStroke(*range.popup, Qt::Key_Escape, Qt::NoModifier, false);
+            drainPopupDeletes();
             return;
         }
+        if (bendEdit->cursor().shape() != Qt::SizeVerCursor ||
+            lfoEdit->cursor().shape() != Qt::SizeVerCursor)
+            fail("controller line edits did not advertise vertical dragging");
 
         const int undoIndex = m_document.undoStack()->index();
         const QByteArray before = m_document.smf().write();
@@ -853,40 +861,74 @@ class PitchBendCheckContext final
             }
             return false;
         };
+        const auto dragLineEdit = [](QLineEdit *edit, int step, Qt::KeyboardModifiers modifiers) {
+            const QPoint start = edit->rect().center();
+            // 5px clears DragSpinBox's 3px threshold then yields 2 * 0.5 = 1 normal step;
+            // 8px leaves 5 * 0.2 = 1 Shift step.
+            const int pixels = modifiers & Qt::ShiftModifier ? 8 : 5;
+            const QPoint finish = start + QPoint(0, step > 0 ? -pixels : pixels);
+            checks::events::sendMouse(*edit, QEvent::MouseButtonPress, start, Qt::LeftButton,
+                                      Qt::LeftButton, modifiers);
+            checks::events::sendMouse(*edit, QEvent::MouseMove, finish, Qt::NoButton,
+                                      Qt::LeftButton, modifiers);
+            checks::events::sendMouse(*edit, QEvent::MouseButtonRelease, finish, Qt::LeftButton,
+                                      Qt::NoButton, modifiers);
+        };
 
         const int bendStep = oldBend < 127 ? 1 : -1;
-        bendStep > 0 ? bendSpin->stepUp() : bendSpin->stepDown();
+        dragLineEdit(bendEdit, bendStep, Qt::NoModifier);
         const int changedBend = oldBend + bendStep;
         if (m_document.undoStack()->index() != undoIndex + 1 || bendSpin->value() != changedBend ||
             !hasPoint(0x14, m_note.tick, changedBend) || !hasPoint(0x14, m_endTick, endBend))
-            fail("BENDR spin button did not write and restore note-scoped CC 20");
+            fail("normal BENDR line-edit drag did not write note-scoped controller 0x14");
         const QByteArray afterBend = m_document.smf().write();
 
         const int lfoStep = oldLfo < 127 ? 1 : -1;
-        lfoStep > 0 ? lfoSpin->stepUp() : lfoSpin->stepDown();
+        dragLineEdit(lfoEdit, lfoStep, Qt::ShiftModifier);
         const int changedLfo = oldLfo + lfoStep;
         if (m_document.undoStack()->index() != undoIndex + 2 || lfoSpin->value() != changedLfo ||
             !hasPoint(0x15, m_note.tick, changedLfo) || !hasPoint(0x15, m_endTick, endLfo))
-            fail("LFOS spin button did not write and restore note-scoped CC 21");
+            fail("Shift LFOS line-edit drag did not write note-scoped controller 0x15");
+        if (!range.popup->isVisible())
+            fail("controller line-edit drags dismissed the pitch-bend popup");
 
-        lfoSpin->setFocus(Qt::OtherFocusReason);
+        const int clickUndoIndex = m_document.undoStack()->index();
+        const QByteArray beforeClick = m_document.smf().write();
+        const QPoint clickPoint = lfoEdit->rect().center();
+        checks::events::sendMouse(*lfoEdit, QEvent::MouseButtonPress, clickPoint, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*lfoEdit, QEvent::MouseButtonRelease, clickPoint, Qt::LeftButton,
+                                  Qt::NoButton, Qt::NoModifier);
         QCoreApplication::processEvents();
-        QWidget *undoTarget = QApplication::focusWidget();
-        if (!undoTarget || !sendStandardUndo(undoTarget))
-            fail("controller spin box did not claim the standard Undo shortcut");
+        if (m_document.undoStack()->index() != clickUndoIndex ||
+            m_document.smf().write() != beforeClick || bendSpin->value() != changedBend ||
+            lfoSpin->value() != changedLfo)
+            fail("stationary controller click changed the value or document");
+        if (!lfoEdit->hasFocus() && !lfoSpin->hasFocus())
+            fail("stationary controller click did not focus the input");
+        if (lfoEdit->selectedText().isEmpty())
+            fail("stationary controller click did not select the input text");
+
+        if (!sendStandardUndo(lfoEdit))
+            fail("controller line edit did not claim the standard Undo shortcut");
         if (m_document.undoStack()->index() != undoIndex + 1 ||
             m_document.smf().write() != afterBend || lfoSpin->value() != oldLfo ||
             bendSpin->value() != changedBend)
-            fail("Undo did not refresh the popup after the LFOS edit");
-        undoTarget = QApplication::focusWidget();
-        if (!undoTarget || !sendStandardUndo(undoTarget))
-            fail("controller spin box did not route a second Undo");
+            fail("first controller Undo did not restore the post-BENDR state");
+        if (!range.popup->isVisible())
+            fail("first controller Undo dismissed the pitch-bend popup");
+        if (!sendStandardUndo(lfoEdit))
+            fail("controller line edit did not route a second Undo");
         if (m_document.undoStack()->index() != undoIndex || m_document.smf().write() != before ||
             bendSpin->value() != oldBend || lfoSpin->value() != oldLfo)
-            fail("Undo did not refresh the popup after the BENDR edit");
+            fail("second controller Undo did not restore the byte-identical baseline");
+        if (!range.popup->isVisible())
+            fail("second controller Undo dismissed the pitch-bend popup");
 
         while (m_document.undoStack()->index() > undoIndex && m_document.undoStack()->canUndo())
             m_document.undoStack()->undo();
+        sendKeyStroke(*range.popup, Qt::Key_Escape, Qt::NoModifier, false);
+        drainPopupDeletes();
     }
 
     struct PersistedAltPopupState {

@@ -27,6 +27,7 @@ constexpr std::array kDomains{
     Domain{"node-contract", checkNodeContract},
     Domain{"hover", checkNodeLaneHoverParity},
     Domain{"lifecycle", checkAutomationLifecycle},
+    Domain{"routing", checkAutomationRouting},
 };
 
 } // namespace

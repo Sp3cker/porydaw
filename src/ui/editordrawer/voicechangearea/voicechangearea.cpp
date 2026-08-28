@@ -6,6 +6,7 @@
 #include <utility>
 
 #include <QAction>
+#include <QApplication>
 #include <QContextMenuEvent>
 #include <QEvent>
 #include <QFocusEvent>
@@ -121,11 +122,17 @@ void VoiceChangeArea::refreshLiveState(const DrawerPageLiveState &liveState)
 void VoiceChangeArea::cancelInteraction()
 {
     const bool wasPanning = m_interaction == Interaction::Pan;
+    const bool wasDragging = voiceDragActive();
     m_interaction = Interaction::None;
     m_previousPosition = QPointF();
     m_suppressContextMenu = false;
-    if (wasPanning)
+    resetVoiceDrag();
+    if (wasPanning || wasDragging)
         m_owner.setFollowScrollPaused(false);
+    if (wasDragging) {
+        unsetCursor();
+        invalidateContent(plotRect());
+    }
     clearHover();
 }
 
@@ -360,9 +367,20 @@ bool VoiceChangeArea::voiceMarkerAt(qreal x, DocLanePoint *out) const
     return true;
 }
 
+bool VoiceChangeArea::voiceDragActive() const noexcept
+{
+    return m_voiceDrag && m_voiceDrag->phase == VoiceDragState::Phase::Active;
+}
+
+void VoiceChangeArea::resetVoiceDrag()
+{
+    m_voiceDrag.reset();
+}
+
 void VoiceChangeArea::mousePressEvent(QMouseEvent *event)
 {
-    if (!m_owner.document()) {
+    SongDocument *document = m_owner.document();
+    if (!document) {
         event->ignore();
         return;
     }
@@ -378,8 +396,6 @@ void VoiceChangeArea::mousePressEvent(QMouseEvent *event)
         return;
     }
     if (event->button() == Qt::RightButton) {
-        // The menu opens from the press like the old lane; the synthesized
-        // context event after release must not open a second one.
         m_suppressContextMenu = true;
         if (inPlot) {
             setFocus(Qt::MouseFocusReason);
@@ -389,8 +405,20 @@ void VoiceChangeArea::mousePressEvent(QMouseEvent *event)
         return;
     }
     if (event->button() == Qt::LeftButton) {
-        if (inPlot)
+        if (inPlot) {
             setFocus(Qt::MouseFocusReason);
+            DocLanePoint point;
+            if (voiceMarkerAt(position.x(), &point)) {
+                m_voiceDrag = VoiceDragState{
+                    .phase = VoiceDragState::Phase::Pending,
+                    .pressPosition = position,
+                    .engineTrack = m_engineTrack,
+                    .point = point,
+                    .revision = document->revision(),
+                    .previewTick = point.tick,
+                };
+            }
+        }
         event->accept();
         return;
     }
@@ -407,6 +435,32 @@ void VoiceChangeArea::mouseDoubleClickEvent(QMouseEvent *event)
 void VoiceChangeArea::mouseMoveEvent(QMouseEvent *event)
 {
     const QPointF position = event->position();
+    if (m_voiceDrag) {
+        if (m_voiceDrag->phase == VoiceDragState::Phase::Pending) {
+            const qreal horizontalDistance =
+                std::abs(position.x() - m_voiceDrag->pressPosition.x());
+            if (horizontalDistance < QApplication::startDragDistance()) {
+                event->accept();
+                return;
+            }
+            m_voiceDrag->phase = VoiceDragState::Phase::Active;
+            clearHover();
+            m_owner.setFollowScrollPaused(true);
+            setCursor(Qt::SizeHorCursor);
+            invalidateContent(plotRect());
+        }
+        const double rawTick =
+            std::max(0.0, m_owner.tickAtContentX(std::max<qreal>(plotOrigin(), position.x()) -
+                                                 qreal(plotOrigin())));
+        const uint64_t tick = m_owner.snapTick(rawTick, event->modifiers() & Qt::AltModifier);
+        if (tick != m_voiceDrag->previewTick) {
+            m_voiceDrag->previewTick = tick;
+            invalidateContent(plotRect());
+        }
+        m_previousPosition = position;
+        event->accept();
+        return;
+    }
     if (m_interaction == Interaction::Pan) {
         const auto requestedScroll =
             m_live.horizontalScroll - (position.x() - m_previousPosition.x());
@@ -425,6 +479,25 @@ void VoiceChangeArea::mouseReleaseEvent(QMouseEvent *event)
     if (event->button() == Qt::MiddleButton && m_interaction == Interaction::Pan) {
         m_owner.setFollowScrollPaused(false);
         m_interaction = Interaction::None;
+        event->accept();
+        return;
+    }
+    if (event->button() == Qt::LeftButton && m_voiceDrag) {
+        const VoiceDragState completed = *m_voiceDrag;
+        const bool active = voiceDragActive();
+        resetVoiceDrag();
+        if (active) {
+            m_owner.setFollowScrollPaused(false);
+            unsetCursor();
+            invalidateContent(plotRect());
+        }
+        SongDocument *document = m_owner.document();
+        if (active && completed.previewTick != completed.point.tick && document &&
+            document->revision() == completed.revision) {
+            document->moveLanePoints({{completed.engineTrack, DOC_CC_VOICE, completed.point,
+                                       completed.previewTick, completed.point.value}});
+            m_owner.refreshAllDrawerPages();
+        }
         event->accept();
         return;
     }
