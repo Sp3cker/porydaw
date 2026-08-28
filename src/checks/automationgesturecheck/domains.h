@@ -22,3 +22,4 @@ void checkNodeLaneParity(AutomationGestureCheckRig &rig, const AutomationGesture
 void checkNodeContract(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check);
 void checkNodeLaneHoverParity(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check);
 void checkAutomationLifecycle(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check);
+void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check);

@@ -529,6 +529,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automationgesturecheck/contract.cpp
         src/checks/automationgesturecheck/hover.cpp
         src/checks/automationgesturecheck/lifecycle.cpp
+        src/checks/automationgesturecheck/routing.cpp
         src/checks/rollcheckdrawer.cpp
         src/checks/rollcheckpsgvelocity.cpp
         src/checks/velocitymodelcheck.cpp

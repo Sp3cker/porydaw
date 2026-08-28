@@ -109,6 +109,9 @@ class AutomationGestureCheckRig final
                      bool autoRepeat = false);
     void mousePress(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
                     Qt::MouseButton button = Qt::LeftButton);
+    [[nodiscard]] bool dispatchMousePress(const QPointF &position,
+                                          Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+                                          Qt::MouseButton button = Qt::LeftButton);
     void mouseMove(const QPointF &position, Qt::MouseButtons buttons = Qt::LeftButton,
                    Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void mouseRelease(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier,

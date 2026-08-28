@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QImage>
+#include <QMouseEvent>
 #include <QTimer>
 #include <QWindow>
 #include <algorithm>
@@ -261,6 +262,19 @@ void AutomationGestureCheckRig::mousePress(const QPointF &position, Qt::Keyboard
 {
     checks::events::sendMouse(canvas(), QEvent::MouseButtonPress, position, button, button,
                               modifiers);
+}
+
+bool AutomationGestureCheckRig::dispatchMousePress(const QPointF &position,
+                                                   Qt::KeyboardModifiers modifiers,
+                                                   Qt::MouseButton button)
+{
+    // checks::events::sendMouse owns its event and cannot expose acceptance.
+    // Match its construction here so this check can set and inspect that state.
+    QMouseEvent event(QEvent::MouseButtonPress, position,
+                      QPointF(canvas().mapToGlobal(position.toPoint())), button, button, modifiers);
+    event.setAccepted(false);
+    QCoreApplication::sendEvent(&canvas(), &event);
+    return event.isAccepted();
 }
 
 void AutomationGestureCheckRig::mouseMove(const QPointF &position, Qt::MouseButtons buttons,
