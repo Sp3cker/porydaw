@@ -67,6 +67,56 @@ void TrackHeaderPanel::cancelTransientState()
         entry.second->cancelRename();
 }
 
+TrackHeaderRow *TrackHeaderPanel::reconcileRow(int track, std::map<int, TrackHeaderRow *> &previous)
+{
+    const auto it = previous.find(track);
+    if (it == previous.end()) {
+        auto *row = new TrackHeaderRow(m_sv, track, this);
+        row->setObjectName(QStringLiteral("trackHeaderRow%1").arg(track));
+        row->updateToolTip();
+        return row;
+    }
+
+    TrackHeaderRow *row = it->second;
+    previous.erase(it);
+    row->resyncSong();
+    return row;
+}
+
+void TrackHeaderPanel::retireRows(const std::map<int, TrackHeaderRow *> &rows)
+{
+    // Retired rows drop their identity and leave the layout now but stay
+    // parented until the event loop frees them: a rebuild can arrive from
+    // inside a row's own mouse press, whose handler must finish first.
+    for (const auto &entry : rows) {
+        TrackHeaderRow *row = entry.second;
+        row->cancelRename();
+        row->hide();
+        // Name lookups (including rename-editor and harness hooks) must
+        // only ever see the live rows.
+        row->setObjectName(QString());
+        for (QWidget *child : row->findChildren<QWidget *>())
+            child->setObjectName(QString());
+        m_layout->removeWidget(row);
+        row->deleteLater();
+    }
+}
+
+void TrackHeaderPanel::synchronizeLayout()
+{
+    for (size_t i = 0; i < m_trackRows.size(); i++) {
+        const auto item = m_layout->itemAt(int(i));
+        if (item && item->widget() == m_trackRows[i])
+            continue;
+        m_layout->insertWidget(int(i), m_trackRows[i]);
+    }
+
+    const int addButtonIndex = int(m_trackRows.size());
+    const auto addButtonItem = m_layout->itemAt(addButtonIndex);
+    if (!addButtonItem || addButtonItem->widget() != m_addButton)
+        m_layout->insertWidget(addButtonIndex, m_addButton);
+}
+
 void TrackHeaderPanel::rebuild()
 {
     cancelTransientState();
@@ -78,49 +128,16 @@ void TrackHeaderPanel::rebuild()
     std::map<int, TrackHeaderRow *> previous = std::move(m_rowByTrack);
     m_rowByTrack.clear();
     m_trackRows.clear();
-    for (int t = 0; t < 16; t++) {
-        if (!tl || !tl->tracks[t].used)
+    for (int track = 0; track < 16; track++) {
+        if (!tl || !tl->tracks[track].used)
             continue;
-        TrackHeaderRow *row = nullptr;
-        if (const auto it = previous.find(t); it != previous.end()) {
-            row = it->second;
-            previous.erase(it);
-            row->resyncSong();
-        } else {
-            row = new TrackHeaderRow(m_sv, t, this);
-            row->setObjectName(QStringLiteral("trackHeaderRow%1").arg(t));
-            row->updateToolTip();
-        }
-        m_rowByTrack[t] = row;
+        TrackHeaderRow *row = reconcileRow(track, previous);
+        m_rowByTrack[track] = row;
         m_trackRows.push_back(row);
     }
-    // Retired rows drop their identity and leave the layout now but stay
-    // parented until the event loop frees them: a rebuild can arrive from
-    // inside a row's own mouse press (clicking a header focuses the roll,
-    // whose editingFinished commit queues an edit that rebuilds this
-    // panel), and the row's handlers keep running until then.
-    for (const auto &entry : previous) {
-        TrackHeaderRow *row = entry.second;
-        row->cancelRename();
-        row->hide();
-        // Anonymous, children included: name lookups (the rename editor,
-        // harness hooks) must only ever see the live rows.
-        row->setObjectName(QString());
-        for (QWidget *child : row->findChildren<QWidget *>())
-            child->setObjectName(QString());
-        m_layout->removeWidget(row);
-        row->deleteLater();
-    }
-    for (size_t i = 0; i < m_trackRows.size(); i++) {
-        const auto item = m_layout->itemAt(int(i));
-        if (item && item->widget() == m_trackRows[i])
-            continue;
-        m_layout->insertWidget(int(i), m_trackRows[i]);
-    }
-    const int addButtonIndex = int(m_trackRows.size());
-    const auto addButtonItem = m_layout->itemAt(addButtonIndex);
-    if (!addButtonItem || addButtonItem->widget() != m_addButton)
-        m_layout->insertWidget(addButtonIndex, m_addButton);
+
+    retireRows(previous);
+    synchronizeLayout();
     m_addButton->setVisible(canAdd);
 }
 
@@ -185,6 +202,27 @@ void TrackHeaderPanel::dragRowTo(QPoint pos)
     m_indicator->show();
 }
 
+std::optional<int> TrackHeaderPanel::reorderTarget(int fromTrack, int dropSlot) const
+{
+    if (dropSlot < 0 || dropSlot > int(m_trackRows.size()))
+        return std::nullopt;
+
+    int fromIndex = -1;
+    for (size_t i = 0; i < m_trackRows.size(); i++) {
+        if (m_trackRows[i]->track() == fromTrack) {
+            fromIndex = int(i);
+            break;
+        }
+    }
+
+    // The slots immediately before and after the source preserve its position.
+    if (fromIndex < 0 || dropSlot == fromIndex || dropSlot == fromIndex + 1)
+        return std::nullopt;
+
+    const int targetIndex = dropSlot > fromIndex ? dropSlot - 1 : dropSlot;
+    return m_trackRows[size_t(targetIndex)]->track();
+}
+
 void TrackHeaderPanel::endRowDrag(bool commit)
 {
     if (m_dragFrom < 0)
@@ -197,15 +235,11 @@ void TrackHeaderPanel::endRowDrag(bool commit)
     QApplication::restoreOverrideCursor();
     if (!commit || slot < 0)
         return;
-    int fromIdx = -1;
-    for (size_t i = 0; i < m_trackRows.size(); i++) {
-        if (m_trackRows[i]->track() == from)
-            fromIdx = int(i);
-    }
-    // The slots adjacent to the dragged row leave it where it was.
-    if (fromIdx < 0 || slot == fromIdx || slot == fromIdx + 1)
+
+    const std::optional<int> target = reorderTarget(from, slot);
+    if (!target)
         return;
-    const int target = m_trackRows[size_t(slot > fromIdx ? slot - 1 : slot)]->track();
+
     // The move's rebuild cancels open rename editors, silently dropping
     // what was typed: commit them Reaper-style first. Its queued commit
     // runs before the queued move below, and renameTrack renumbers
@@ -215,7 +249,8 @@ void TrackHeaderPanel::endRowDrag(bool commit)
     // Queued: the move rebuilds this panel from inside the release
     // handler.
     QMetaObject::invokeMethod(
-        m_sv, [sv = m_sv, from, target] { sv->moveTrack(from, target); }, Qt::QueuedConnection);
+        m_sv, [sv = m_sv, from, target = *target] { sv->moveTrack(from, target); },
+        Qt::QueuedConnection);
 }
 
 bool TrackHeaderPanel::event(QEvent *event)

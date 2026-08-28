@@ -2,544 +2,564 @@
 
 ## Status
 
-Normative implementation spec for this wave. It **supersedes every conflicting clause** in
-`docs/projectio-dress-down-contract.md`, `docs/projectio-dress-down-plan.md`,
-`docs/projectio-implementation-steps.md`, and `docs/time-ruler-loading-plan.md` (clause list in
-§10; those docs are edited during Phase 3e, not before). It also supersedes the conflicting
-parts of the GlobalEditorSeam design: grid `minDenom`/`gridTriplet` and a separate
-`automationRowHeight` are **not** promoted; the promoted preference is exactly today's
-`EditorViewState` value. Grounded in the current worktree sources; line anchors are
-pre-change locations. No code is implemented by this document.
+Normative implementation spec for this wave. It supersedes every conflicting sidecar clause in
+`docs/projectio-dress-down-contract.md`, `docs/projectio-dress-down-plan.md`, and
+`docs/projectio-implementation-steps.md`; those three documents are mechanically reconciled in
+P3e. `docs/time-ruler-loading-plan.md` is **reconciled now**, outside P3e: it no longer depends on
+`SidecarStage`, persisted camera state, or a global camera. This plan neither changes nor accepts
+static/pre-bind ruler behavior. Grounded line anchors below are pre-change locations; symbol names
+remain authoritative after line drift.
 
-## 1. Problem and fixed decisions
+This plan also supersedes the conflicting GlobalEditorSeam alternatives: there is no
+`EditorPreferences` subset, no `editorGrid/*` keys, no `editorDrawer/laneRowHeight` key, and no
+codec in `mainwindow.cpp`. The promoted preference is exactly the existing, complete
+`EditorViewState`, including its row maps and ordered hidden lanes. No compatibility path remains.
 
-Per-song UI state is persisted as a "view sidecar": `ViewSidecar::Snapshot{SongView::ViewState,
-EditorViewState}` written to `<root>/.porydaw/<song>.json`, transported as `SidecarStage`
-(loads) and `SaveSidecarInput`/`SaveSongInput::sidecarSnapshot` (saves), and flushed at close,
-switch, and app exit. This couples cosmetic UI state to the project I/O worker, adds two
-transport stages, and scatters ownership across `MainWindow` (mirror + codec), `WorkspaceUi`
-(push-through), `SongTab` (two-phase apply), and per-song JSON.
+## 1. Fixed decisions
 
-Fixed product decisions (no implementation freedom):
+1. The complete `EditorViewState` is one application-global persisted preference: flat drawer
+   fields (`velocity`, `automation`, `activePage`), `laneHeight`, `laneHeights`, `laneRanges`,
+   `emptyLanes`, and ordered `hiddenLanes()`.
+2. Every `SongView::ViewState` field remains transient and per tab: `pxPerBeat`, `keyHeight`,
+   `scrollPx`, `scrollY`, `selectedTrack`, `editCursorTick`, `gridMinDenom`, `gridTriplet`, and
+   `eventList`. No one persists or fans out any of them.
+3. A ready-tab reload captures and reapplies the complete live `ViewState`. A fresh open or reopen
+   after close starts the canonical defaults specified in §5.6.
+4. `ViewSidecar` is deleted. There is no reader, writer, migration, replacement sidecar, shim,
+   alias, or deprecated path. Legacy per-song `view`/`editor` JSON is ignored by the view path and
+   never rewritten by it.
+5. Existing `.porydaw` owners remain: `Sidecar::ensureDir`, registration metadata, sample
+   provenance sidecars, previews, trash, and whole-file deletion on song deletion.
+6. `WorkspaceUi::m_editorViewState` is the sole mutable in-memory global. `MainWindow` loads from
+   and writes through exactly `*m_themeSettings`, with no mirror. Each `SongView` is a projection.
+7. The five existing `editorDrawer/*` entries keep their spelling and semantics. Former sidecar
+   lane fields occupy one additional `QByteArray` entry, `editorDrawer/automationLanes`.
 
-1. The **complete `EditorViewState`** — drawer chrome (`velocity`, `automation`, `activePage`)
-   plus `laneHeight`, `laneHeights`, `laneRanges`, `emptyLanes`, and the ordered
-   `hiddenLanes()` sequence — is **one application-global persisted preference**.
-2. **No `SongView::ViewState` field becomes global or persisted.** Camera, scroll, selected
-   track, edit cursor, grid `minDenom`/feel, and event-list mode are transient per-tab state.
-   `ViewState` survives only as the in-memory reload-continuation snapshot; it is never
-   serialized anywhere.
-3. **Ready-tab reload** (re-open of a loaded tab's song) captures and reapplies the complete
-   live `SongView::ViewState`. **Fresh open / reopen after close** starts canonical defaults
-   (`resetScrollPosition()` home, default zoom/key height, clock-grid floor, straight feel,
-   event list off).
-4. **`ViewSidecar` is deleted outright**: no reader, writer, migration, replacement
-   editor-only sidecar, compatibility shim, or deprecated alias. Legacy `view`/`editor` JSON
-   already on disk is ignored on load and never rewritten by the view path.
-5. `.porydaw` ownership retained: `Sidecar::ensureDir` (+ `.gitignore` append), song
-   registration meta, sample provenance sidecars, `.porydaw/vgpreview/`, `.porydaw/trash/`.
-6. **Ownership split**: `WorkspaceUi` is the sole mutable in-memory owner of the global
-   `EditorViewState` and fans out to tabs; `MainWindow` owns only QSettings load-once and
-   write-through, and keeps **no mirror member**. Each `SongView` is an applied projection.
-7. **QSettings schema**: the five existing `editorDrawer/*` keys keep their exact spelling and
-   semantics; the former sidecar `editor` lane fields move to one canonical JSON key
-   `editorDrawer/automationLanes` (QByteArray). The codec is two deep functions in the
-   existing `src/ui/editorviewstate.{h,cpp}`.
+## 2. Ownership and invariants
 
-## 2. State ownership
+| State | Mutable owner | Persistence |
+|---|---|---|
+| Complete `EditorViewState` | `WorkspaceUi::m_editorViewState` | global `QSettings`, exactly `*MainWindow::m_themeSettings` |
+| Complete `SongView::ViewState` | its `SongView` | none; `SongTab` borrows one value snapshot only during ready reload |
+| Drawer/page runtime caches | `EditorDrawer` and pages | none; silent projection caches |
+| Selection, gesture state, mute/solo, event-list mirror | existing per-tab/UI owners | none |
+| Registration/sample/preview/trash data | existing project owners | unchanged `.porydaw` paths |
 
-| State | Owner (in memory) | Persisted? | Store |
-|---|---|---|---|
-| `EditorViewState` (chrome + all lane fields, ordered `hiddenLanes`) | `WorkspaceUi::m_editorViewState` (sole mutable) | Yes, global | `QSettings` (see §3) |
-| `SongView::ViewState` (camera, scroll, selected track, edit cursor, grid, event list) | each `SongView` member state | No | — (reload: `SongTab` in-memory capture) |
-| Drawer/page runtime caches (`EditorDrawer::m_viewState`, page caches) | `EditorDrawer`/pages, adopted via silent `setViewState` | No | — |
-| Selection, mute/solo, page gesture caches, per-tab event-list mirror | `SongView` / `MainWindow` checkbox | No | — |
-| Geometry, session recipe, filters, theme, DSP, volumes, follow-playhead | unchanged (MainWindow / WorkspaceUi) | Yes | existing `QSettings` keys |
-| `.porydaw/<song>.json` registration, sample sidecars, previews, trash | `SongRegistry` / `SampleRegistrar` / `ProjectIo` | Yes | unchanged |
+- **I1 — single owner:** no second mutable `EditorViewState`, `EditorPreferences`, or MainWindow
+  mirror exists.
+- **I2 — synchronous projection:** after one semantic editor mutation, all open tabs and all later
+  tabs equal the hub in one synchronous pass. No `ViewState` crosses tabs.
+- **I3 — one store:** startup performs zero writes. Each later semantic editor change calls
+  `saveEditorViewState(*m_themeSettings, state)` exactly once.
+- **I4 — no project UI I/O:** open/save/close/reload/switch/quit do not read or write view/editor
+  project JSON.
+- **I5 — acyclic signals:** only an origin commit emits from `SongView`; projection is silent; the
+  hub emits once after fan-out. Equality guards terminate no-ops.
+- **I6 — GUI thread:** the hub, projections, and QSettings sink run synchronously on the GUI
+  thread and never cross into the audio engine thread.
 
-Invariants:
+## 3. Global QSettings codec
 
-- I1 Exactly one mutable global `EditorViewState` (`WorkspaceUi::m_editorViewState`).
-- I2 After any mutation, every open tab and every tab created later holds an identical
-  `EditorViewState` within one synchronous pass; per-tab state never crosses tabs.
-- I3 `QSettings` is the only persisted home; a change writes all six keys exactly once
-  through one codec; no second observable store, no shadow struct.
-- I4 No per-song view/editor state reaches disk; legacy per-song JSON is never read or
-  written by the view path.
-- I5 The preference flow is acyclic and terminates: every echo passes an equality guard
-  (hub §5.3, view §5.4, drawer diff) and converges in one pass.
-- I6 Row identities (`EditorAutomationRowId`) are serialized only inside the global codec,
-  never per song.
+### 3.1 Public seam and store
 
-## 3. Global settings codec (exact)
-
-`src/ui/editorviewstate.{h,cpp}` gains (public, declared in the header):
+`src/ui/editorviewstate.h` adds only a forward declaration and two free functions; it does not
+include `<QSettings>`:
 
 ```cpp
-#include <QSettings>
+class QSettings;
+
 EditorViewState loadEditorViewState(const QSettings &settings);
 void saveEditorViewState(QSettings &settings, const EditorViewState &state);
 ```
 
-Implementation moves today's `MainWindow` anonymous-namespace helpers
-(`mainwindow.cpp:81-119`: `loadDrawerHeight`, `loadEditorDrawerState`,
-`saveEditorDrawerState`) and the five key constants (`mainwindow.cpp:62-66`) into
-`editorviewstate.cpp`'s anonymous namespace, plus the row codec transplanted verbatim from
-`viewsidecar.cpp:42-173,232-269` (`decodeInteger`, `decodeRowNumber`, `isControllerNumber`,
-`decodeRowId`, `isValidRowId`, `encodeRowId`, `decodeLane`, `encodeLane`, `encodeRows`,
-`encodeLanes`, `encodeHiddenLanes`, `Geometry::resolve` → `layout::fontPx(7/3)` min,
-`layout::fontPx(32/3)` max, `clampAutomationRowHeight`). The `view`-object helpers
-(`decodeNumber`, `decodeTick`, `finiteOrDefault`, `existingRoot`) die with the sidecar.
+`src/ui/editorviewstate.cpp` includes `<QSettings>` and owns every key literal and private codec
+helper. `MainWindow` passes `*m_themeSettings`; no new QSettings instance, subgroup, prefix,
+preferences object, or shadow value is allowed.
 
-Keys (all under the default `QSettings` scope; `MainWindow` passes `*m_themeSettings`):
+The codec moves the five key constants and drawer helpers from `mainwindow.cpp:62-66,81-119`.
+It reuses the row grammar and validation from `viewsidecar.cpp:42-173,232-269`, replacing
+`Geometry::resolve` bounds with `layout::fontPx(7.0 / 3.0)` and
+`layout::fontPx(32.0 / 3.0)`. View/camera JSON helpers die with `ViewSidecar`.
 
-| Key | Type | Load rule | Save rule |
-|---|---|---|---|
-| `editorDrawer/velocityVisible` | bool | `value(key, true).toBool()` | always `setValue` |
-| `editorDrawer/velocityHeight` | int | `contains` && `toInt` ok && > 0, else `nullopt` | set if present, else `remove` |
-| `editorDrawer/automationVisible` | bool | `value(key, true).toBool()` | always `setValue` |
-| `editorDrawer/automationHeight` | int | same as velocityHeight | same |
-| `editorDrawer/activePage` | string | `"velocity"` → `Velocity`, else `Automations` | `"velocity"` / `"automations"` |
-| `editorDrawer/automationLanes` | QByteArray | canonical JSON below; malformed ⇒ lane defaults | always `setValue` of compact JSON |
+### 3.2 Exact six-entry schema
 
-`editorDrawer/automationLanes` canonical value
-(`QJsonDocument::toJson(QJsonDocument::Compact)` of exactly):
+| Entry | Load | One save call |
+|---|---|---|
+| `editorDrawer/velocityVisible` | `value(key, false).toBool()` | one `setValue` |
+| `editorDrawer/velocityHeight` | present, integer-convertible, and `> 0` → value; otherwise `nullopt` | exactly one `setValue` when present, otherwise one `remove` |
+| `editorDrawer/automationVisible` | `value(key, true).toBool()` | one `setValue` |
+| `editorDrawer/automationHeight` | same optional rule | exactly one `setValue` when present, otherwise one `remove` |
+| `editorDrawer/activePage` | exact `"velocity"` → `Velocity`; all other/missing values → `Automations` | one `setValue` of `"velocity"` or `"automations"` |
+| `editorDrawer/automationLanes` | must be a `QByteArray` containing a JSON object; otherwise all lane fields default | one `setValue` of compact canonical JSON |
+
+Thus each semantic change invokes `saveEditorViewState` once. That call touches only these six
+entries: four mandatory `setValue` operations and one `setValue`-or-`remove` operation for each
+optional height. Optional height entries exist iff their state values exist. “All six keys are
+present” is not an acceptance condition.
+
+### 3.3 Exact compact lane blob
+
+The `automationLanes` value is `QJsonDocument(object).toJson(QJsonDocument::Compact)`, stored as a
+`QByteArray`, with exactly these members and no `view`, zoom, grid, drawer, or registration data:
 
 ```json
-{"laneHeight":0,
- "laneHeights":{"cc:0:74":37},
- "laneRanges":{"tempo":90},
- "emptyLanes":[{"track":0,"cc":1}],
- "hiddenLanes":[{"track":1,"cc":7}]}
+{"laneHeight":0,"laneHeights":{"cc:0:74":37},"laneRanges":{"tempo":90},"emptyLanes":[{"track":0,"cc":1}],"hiddenLanes":[{"track":1,"cc":7}]}
 ```
 
-- `laneHeight`: `decodeInteger(_, 0, INT_MAX)`; `0` keeps the layout default; otherwise
-  `clampAutomationRowHeight` (values below min clamp **up**, above max clamp **down**).
-- `laneHeights`: object keyed by row key; each valid entry clamped like `laneHeight`;
-  invalid entries dropped silently.
-- `laneRanges`: object keyed by row key; `decodeInteger(_, 0, 127)`; invalid dropped.
-- `emptyLanes` / `hiddenLanes`: arrays of `{"track":0..15,"cc":<controller number>}`;
-  invalid entries dropped; `hiddenLanes` preserves array order via `hideLane()` appends
-  (duplicates rejected by `hideLane`).
-- Row key grammar (verbatim from `viewsidecar.cpp:90-119`): `"tempo"`, or
-  `"cc:<track>:<cc>"` with decimal integers, no leading zeros, `track` ≤ 15, `cc` ≤ 255 and
-  a controller number (`0..127`, `CoreTimeDefaults::kLaneCcBend`, or `xcmd::isLaneController`);
-  `"voice:*"` and every other prefix are rejected.
+- `laneHeight`: integer `0..INT_MAX`; `0` means layout default, otherwise clamp to
+  `layout::fontPx(7.0 / 3.0)..layout::fontPx(32.0 / 3.0)`.
+- `laneHeights`: object keyed by row ID; valid integers use the same clamp; invalid entries drop.
+- `laneRanges`: object keyed by row ID; valid integer range is `0..127`; invalid entries drop.
+- `emptyLanes` and `hiddenLanes`: arrays of `{track,cc}` with track `0..15` and a valid lane
+  controller. Invalid elements drop. `hiddenLanes` preserves insertion order and drops later
+  duplicates through `hideLane`.
+- Row keys are exactly `tempo` or `cc:<track>:<cc>` with decimal integers, no leading zeroes,
+  track `0..15`, cc `0..255`, and cc accepted by the existing controller predicate. Tempo rows
+  remain valid in keyed maps and identity-fixed during remap; `voice:*` and other prefixes reject.
+- Unknown JSON members are ignored. Duplicate object members use `QJsonObject` last-wins behavior.
+- Missing blob, wrong QVariant type, empty bytes, invalid JSON, or a non-object defaults all lane
+  fields while the five drawer fields still load. A later semantic mutation saves the defaulted
+  in-memory state and overwrites the malformed blob with canonical compact JSON: QSettings
+  self-heals without a startup write. This never touches per-song JSON.
 
-Malformed-value behavior (normative):
+The compact blob is intentional: it preserves the already-tested row grammar and ordered array in
+one atomic QSettings entry. `EditorViewState` nevertheless keeps its existing **flat fields**;
+`drawerState()`/`setDrawerState()` remain value adapters, not a second authority. A nested storage
+object or JSON string wrapper would duplicate state and is forbidden. Expected growth is private
+codec code in the cohesive `editorviewstate.cpp`; only the two free functions enlarge its public
+surface.
 
-| Input | Result |
+## 4. Transport cutover
+
+### 4.1 Exact type changes
+
+In `src/project/projectworkspace.h`:
+
+| Before | After |
 |---|---|
-| Key missing | that field keeps its `EditorViewState{}` default |
-| `automationLanes` not parseable JSON / not an object / wrong QVariant type | all lane fields default; the five drawer keys still load |
-| Unrecognized object key inside the JSON | ignored |
-| Invalid row key, out-of-range integer, non-integer | that entry dropped (objects) / dropped (array element) |
-| Duplicate row key in a JSON object | `QJsonObject` semantics: last wins |
-| Duplicate lane in `hiddenLanes` | second occurrence dropped (`hideLane` returns false) |
+| `SidecarStage` | deleted |
+| `SongSaved{song,savedSnapshot,flagsWritten,sidecarSaved,sidecarError}` | `SongSaved{song,savedSnapshot,flagsWritten}` |
+| `SongStage::{Midi,Voicegroup,Sidecar,Reconcile,Save}` | `SongStage::{Midi,Voicegroup,Reconcile,Save}` |
+| payload includes `SidecarStage` | payload excludes it |
+| `SaveSongInput{song,snapshot,sidecarSnapshot,voicegroup}` | `SaveSongInput{song,snapshot,voicegroup}` |
+| `SaveSidecarInput` | deleted |
+| sample `sidecarLoaded/sidecarSaved/sidecarError` fields | retained |
 
-`saveEditorViewState` always writes all six keys (an empty lane state serializes as
-`"laneHeight":0` + empty objects/arrays; the key is never removed).
+`src/project/projectworkspace.cpp` deletes both corresponding visitor/publication paths: publishing
+`SidecarStage` around line 112 and mapping/enqueuing `SaveSidecarInput` around line 296. This file
+is an explicit production owner; deleting only the header is incomplete.
 
-## 4. Transport sums and structs (exact before → after)
+`src/project/projectio.h` removes `SidecarWriteResult`, `ReadSidecarCommand`, `SaveSidecarInput`,
+and their variant alternatives. `src/project/projectio.cpp` removes their visitors, song-sidecar
+read/write helpers and calls, and returns bare `SongSaved`. It retains registration, sample,
+preview, trash, `.gitignore`, and song-deletion behavior.
 
-`src/project/projectworkspace.h`:
+A successful load publishes `MidiStage`, then any keyed `LoadedBankView`, then terminal
+`VoicegroupBound`. A failure publishes exactly one terminal `SongFailed`. A semantic save performs
+optional bank, MIDI, and flags work, then publishes one terminal bare `SongSaved` or `SongFailed`.
+There is no cosmetic tail operation.
 
-| Symbol (today) | After |
+## 5. UI state transitions
+
+### 5.1 Constructor-injected initial state
+
+Startup is construction, not a signal transaction:
+
+```text
+MainWindow constructor:
+  initial = loadEditorViewState(*m_themeSettings)
+  buildUi(initial)
+    WorkspaceUi(..., const EditorViewState &initial) initializes
+      m_editorViewState(initial) before creating recipe/session placeholder tabs
+    each created tab silently applies m_editorViewState
+  connect WorkspaceUi::editorViewStateChanged to MainWindow::persistEditorViewState
+```
+
+There is no startup call to the mutating hub setter, no blocker flag, and no reliance on a
+connection being temporarily absent to suppress a write. `WorkspaceUi` receives its initial state
+through its constructor and emits nothing. `MainWindow` retains no copy after construction.
+
+### 5.2 New tab projection
+
+`WorkspaceUi::createTab` (`workspaceui_tabs.cpp:37`) calls
+`tab->view().applyEditorViewState(m_editorViewState)`. Projection is silent. A new tab cannot retain
+per-tab defaults for global fields.
+
+### 5.3 Origin, projection, and all-tab hub
+
+```text
+SongView::setEditorViewState(next)                 // origin commit only
+  if m_editorViewState == next: return
+  m_editorViewState = next
+  update drawer/pages/widgets once
+  emit editorViewStateChanged(next)                // only SongView emission point
+
+WorkspaceUi::wireTab connection (workspaceui.cpp:231-232)
+  accepts editorViewStateChanged from every tab, selected or not
+  calls WorkspaceUi::setEditorViewState(next)
+
+WorkspaceUi::setEditorViewState(next)              // sole hub
+  if m_editorViewState == next: return
+  m_editorViewState = next                         // assign before fan-out
+  for every open tab: tab->view().applyEditorViewState(next)
+  emit editorViewStateChanged(next)                // exactly once, after fan-out
+
+SongView::applyEditorViewState(next)               // projection only
+  if m_editorViewState == next: return
+  m_editorViewState = next
+  silently update drawer/pages/widgets once
+  never emit editorViewStateChanged
+
+MainWindow::persistEditorViewState(next)
+  saveEditorViewState(*m_themeSettings, next)
+```
+
+`EditorDrawer::setViewState` and page sync remain silent. Origin-tab equality prevents projection
+churn and `cancelActiveInteractions`; other tabs receive one silent refresh. Selecting a tab is
+irrelevant to propagation. One origin change yields one hub emission and one codec call.
+
+### 5.4 Candidate mutations and remap
+
+No mutator may edit `m_editorViewState` and then call an equality-guarded commit with the same
+object. `addEmptyLane`, `removeEmptyLane`, and `setLaneDisplayRange` each:
+
+1. copies `m_editorViewState` to `next`;
+2. validates and mutates `next` only;
+3. returns if the requested semantic value is unchanged;
+4. performs its existing origin-side cache/widget update once through `setEditorViewState(next)`.
+
+Drawer toggles, page cache edits, lane height/range, empty/hide/unhide operations follow the same
+candidate rule. Projection never invokes an origin mutator.
+
+`SongView::onTracksRemapped` (`songview/trackvoiceops.cpp:414-421`) copies the complete state to
+`next` and calls `next.remapEngineTracks(map)`. If it returns false, reject the whole operation and
+publish nothing. If true, commit the other remapped SongView members, then call
+`setEditorViewState(next)` **without first assigning `m_editorViewState`**. Tempo identities stay
+fixed and duplicate destinations reject atomically. A valid remap that does not change editor state
+is suppressed by the origin equality guard. A changed remap from a non-selected ready tab reaches
+the hub, every tab, and QSettings once.
+
+### 5.5 Borrow-safe MIDI adoption and complete EditorViewState preservation
+
+`SongTab::applyMidiStage` captures `std::optional<SongView::ViewState> restored` only when the tab
+was ready, and does so **before** `prepareForSongReplacement`. After successful SMF adoption:
+
+```text
+newTimeline = buildTimeline(...)                   // local shared_ptr owns new timeline
+m_view->setDocument(&m_document)                   // old m_timeline still owns old borrow
+m_view->setSong(newTimeline.get(), nullptr)         // local owns new; drops old voicegroup borrow
+m_timeline = std::move(newTimeline)                 // member now owns new borrow
+m_voicegroup.reset()                                // only after setSong(..., nullptr)
+apply restored or canonical ViewState              // only after m_timeline owns new timeline
+updateReadiness()
+```
+
+Do not assign `m_timeline` before `setDocument`/`setSong`; that would leave `SongView` borrowing a
+destroyed old timeline during intermediate drawer/header work. Adoption failure leaves the tab
+unready without a partial bind. Tombstone, unmatched-result, and rebind-skip behavior remains.
+Readiness is exactly `m_midiBound && m_voicegroupBound`; `m_sidecarBound`, `PendingLoad`,
+`ScrollPosition`, `m_pendingLoad`, and `applySidecarStage` are deleted.
+
+`SongView::setSong` (`songview.cpp:196-241`) removes the default-construction plus drawer-only
+restore at lines 208-210. It preserves the **complete** already-applied `m_editorViewState` and
+rebuilds the drawer/pages from that value. Its comments say song attachment preserves the global
+editor projection. No fresh bind or ready reload can erase lane maps.
+
+### 5.6 Exact fresh and ready-reload ViewState
+
+A ready reload reapplies, once, all captured fields after the ownership sequence in §5.5:
+`pxPerBeat`, `keyHeight`, both scroll axes, selected track, edit cursor, denominator, feel, and
+event-list mode. Existing `SongView::applyViewState` clamps at `songview.cpp:418-449`: zoom and key
+height to geometry, denominator to `0/4/8/16/32`, cursor to timeline length, selection to a used
+track, and both scroll axes to their legal ranges.
+
+A fresh open/reopen applies these exact final defaults before readiness:
+
+- `pxPerBeat = Geometry::resolve().editorDefaultPixelsPerBeat`;
+- `keyHeight = Geometry::resolve().velocityHandleMinimumKeyHeight`;
+- horizontal scroll = `minHScroll()` (pre-roll home) and vertical scroll =
+  `defaultVerticalScroll()` via `resetScrollPosition()` after the default state apply;
+- selected track = the first used track selected by `setSong` (0 only when no used track exists);
+- `editCursorTick = 0`;
+- `gridMinDenom = 0`, `gridTriplet = false` (straight);
+- `eventList = false`.
+
+Do not establish an intermediate fresh/default `ViewState` on a ready reload. State is finalized
+while the view remains disabled for binding. Applying event-list visibility in that disabled path
+must not call `focusContent`; if final visibility changes, update the MainWindow checkbox through
+exactly one final `eventListVisibilityChanged` emission, with no intermediate false/true traffic.
+Then `updateReadiness` enables interaction at the existing readiness point.
+
+### 5.7 Save, close, switch, and quit
+
+- `submitSaveForTab` creates `SaveSongInput{name, captureSaveSnapshot(), std::nullopt}`; there is
+  no view snapshot.
+- `SongSaved` handling removes only the sidecar-error status branch at
+  `workspaceui_tabs.cpp:286-291`; it retains the close-after-save flow.
+- `closeTabNow` removes the `persistViewSidecar` else arm at
+  `workspaceui_tabs.cpp:515-516`; the in-flight tombstone path remains.
+- `beginProjectSwitch` removes `persistSessionViews`; preview cleanup remains.
+- `MainWindow::closeEvent` removes `persistSessionViews`; normal session/theme persistence remains.
+
+These boundaries perform zero view/editor project I/O.
+
+## 6. File/action map
+
+| File | Required action |
 |---|---|
-| `#include "ui/viewsidecar.h"` (:19) | deleted |
-| `struct SidecarStage { song; loaded; snapshot; }` (:161-165) | deleted |
-| `struct SongSaved { song; savedSnapshot; flagsWritten; sidecarSaved; sidecarError; }` (:170-176) | `{ SongName song; SongSaveSnapshot savedSnapshot; bool flagsWritten = false; }` |
-| `enum class SongStage { Midi, Voicegroup, Sidecar, Reconcile, Save }` (:178) | `{ Midi, Voicegroup, Reconcile, Save }` — `Sidecar` enumerator deleted |
-| `SongPayload = variant<MidiStage, SidecarStage, VoicegroupBound, SongSaved, SongFailed>` (:185) | `variant<MidiStage, VoicegroupBound, SongSaved, SongFailed>` |
-| `SaveSongInput { song; snapshot; sidecarSnapshot; voicegroup; }` (:205-210) | `{ SongName song; SongSaveSnapshot snapshot; std::optional<SaveVoicegroupInput> voicegroup; }` |
-| `SaveSidecarInput` (:211-216) | deleted |
-| `SampleRead::sidecarLoaded/sidecar`, `SampleCommitted::sidecarSaved/sidecarError` (:115-126) | retained (sample sidecar) |
+| `src/ui/viewsidecar.{h,cpp}` | delete |
+| `src/project/projectworkspace.h` | exact §4 sums/structs |
+| `src/project/projectworkspace.cpp` | delete SidecarStage publication and SaveSidecarInput visitor/enqueue paths |
+| `src/project/projectio.{h,cpp}` | exact §4 command/result and I/O deletion |
+| `src/ui/songtab.{h,cpp}` | §5.5/5.6 one-stage, borrow-safe adoption; remove pending sidecar state |
+| `src/ui/editorviewstate.{h,cpp}` | exact two-function codec; header forward declaration |
+| `src/ui/songview.h` | rename sole signal; remove drawer-only apply API; mark all `ViewState` fields transient |
+| `src/ui/songview.cpp` | preserve complete EditorViewState in `setSong`; exact fresh/reload ViewState application behavior |
+| `src/ui/songview/viewstate.cpp` | origin/silent projection split and candidate lane mutations |
+| `src/ui/songview/trackvoiceops.cpp` | candidate remap publication |
+| `src/ui/workspaceui.{h,cpp}` | constructor injection, sole hub, all-tab wire at `workspaceui.cpp:231-232`; delete persistence APIs |
+| `src/ui/workspaceui_tabs.cpp` | creation projection, no SidecarStage, bare save at §5.7 anchors |
+| `src/ui/workspaceui_project.cpp` | no switch persistence |
+| `src/mainwindow.{h,cpp}` | codec removal, constructor load/injection, exact store sink, no mirror, no close flush |
+| `src/checks/sidecarcheck.cpp` | delete |
+| `src/checks/checkcatalog.cpp`, `src/checks/fwd.hpp` | delete sidecar registration/declaration |
+| `CMakeLists.txt:319-320,526` | INT removes viewsidecar source entries after P2d at INT-PROD and the sidecarcheck entry after P3d at INT-CHECKS |
 
-`src/project/projectio.h`: `SidecarWriteResult` (:40-45) deleted; `ProjectCommand`
-(:52-58) drops `ReadSidecarCommand` and `SaveSidecarInput`; `ProjectResult` (:73-78) drops
-`SidecarStage` and `SidecarWriteResult`. `src/project/projectio.cpp`: visitor arms
-`ReadSidecarCommand` (:101-103) and `SaveSidecarInput` (:108-110) deleted; `loadSong` drops
-the sidecar load/stage (:205-207) and its comment (:185-188) is rewritten; `readSidecar`
-(:266-271), `writeSidecar` (:322-331) deleted; `saveSong` ends
-`return SongSaved{input.song, std::move(input.snapshot), flagsWritten};` (sidecar write and
-comment :277-280, :312-319 removed); `Sidecar::ensureDir` trash path (:511-520) and
-`SongRegistry::removeSongSidecar` (:527) retained; sample sidecar paths (:648-680) retained.
+Retained registration read/merge behavior is unchanged and may pass through unrelated legacy bytes
+when registration itself changes; the removed **view path** never triggers such a rewrite.
 
-Publication order after cutover — successful load: `MidiStage` → (keyed `LoadedBankView`
-when a bank binds) → terminal `VoicegroupBound`; a failure publishes exactly one terminal
-`SongFailed`. Semantic save: optional bank view, then MIDI, then flags, then one terminal
-`SongSaved`/`SongFailed` — no trailing cosmetic write, no sidecar fields on `SongSaved`.
+## 7. Workflowz execution graph, roles, and integration ownership
 
-## 5. State transitions (normative pseudocode)
+Execution uses workflowz. Every editing slice has one explicit implementation owner. Shared-file
+integration, every `deno task` command, end-state tooling, and native smoke belong only to INT.
+Slice agents do not build, format, lint, run checks, or edit `CMakeLists.txt`.
 
-### 5.1 Startup load
-
-```
-MainWindow ctor:  (no member, no mirror)
-  buildUi() → constructs WorkspaceUi (recipe placeholder tabs get EditorViewState{} defaults)
-            → immediately after m_workspace construction:
-                m_workspace->setEditorViewState(loadEditorViewState(*m_themeSettings));
-  later connect(m_workspace, &WorkspaceUi::editorViewStateChanged,
-                this, &MainWindow::persistEditorViewState);
-```
-The initial push happens before the connect exists, so startup never writes `QSettings`
-(guard I3; the push also cannot differ from the store it read).
-
-### 5.2 Tab creation (`WorkspaceUi::createTab`, today `workspaceui_tabs.cpp:37`)
-
-```
-tab->view().applyEditorViewState(m_editorViewState);   // was applyEditorDrawerState
-```
-A new tab is born as an applied projection; no per-tab defaults survive for global fields.
-
-### 5.3 Editor mutation (any source: drawer toggles, page cache edits, lane menus)
-
-```
-SongView mutator / drawer cache → SongView::setEditorViewState(state)      (the one-way sink)
-  guard: m_editorViewState == state → return
-  assign; emit editorViewStateChanged(state)
-WorkspaceUi::wireTab lambda (selected tab only):
-  WorkspaceUi::setEditorViewState(state)                                   (the hub seam)
-    guard: m_editorViewState == state → return            // echo + no-op terminator
-    m_editorViewState = state                             // assign BEFORE fan-out
-    for each open tab: tab->view().applyEditorViewState(state)
-    emit editorViewStateChanged(state)                    // exactly once, after fan-out
-MainWindow::persistEditorViewState(state):
-    saveEditorViewState(*m_themeSettings, state);         // QSettings write-through, nothing else
-```
-`SongView::applyEditorViewState(state)` early-returns when `m_editorViewState == state`
-(preserves today's origin-tab behavior: no `cancelActiveInteractions` churn). Emission
-points are exactly `SongView::setEditorViewState` and `SongView::applyEditorViewState` (on
-change); `EditorDrawer::setViewState`/`syncViewState` remain silent adopters.
-
-### 5.4 Track remap (`SongView::onTracksRemapped`, `trackvoiceops.cpp:414-421`)
-
-After the deliberate silent batch commits `remapEngineTracks`, call
-`setEditorViewState(m_editorViewState)` so remapped lane maps reach the hub and the store;
-`remapEngineTracks() == false` (rejected remap) leaves the state unchanged and the guards
-suppress everything.
-
-### 5.5 Fresh song load (new tab, or open of a song with no ready tab)
-
-```
-WorkspaceUi::applyStagedUpdate(MidiStage):           // tombstone / unmatched / rebindSkip rules unchanged
-  tab->applyMidiStage(info, smf, trackBudget):
-    restored = nullopt                                // m_ready was false → nothing to keep
-    reset stage flags; m_voicegroupId.reset()
-    m_view->prepareForSongReplacement(); m_view->setEnabled(false)
-    adoptSmf failure → m_presentationError = error; return   // tab stays unready, no partial bind
-    setTrackBudget; m_midiBound = true
-    m_timeline = buildTimeline; m_view->setDocument(&m_document); m_view->setSong(timeline, nullptr)
-    m_voicegroup = {}
-    m_view->resetScrollPosition()                     // canonical home (decision 3)
-    updateReadiness()
-```
-Global `EditorViewState` is untouched at bind: the view's projection already matches the hub
-(§5.2), and `setSong` rebuilds drawer pages from it. `PendingLoad`, `ScrollPosition`,
-`m_pendingLoad`, and `applySidecarStage` are deleted; readiness is
-`m_midiBound && m_voicegroupBound` (`m_sidecarBound` deleted, `songtab.h:66-67,137-139`,
-`songtab.cpp:142-148`).
-
-### 5.6 Ready-tab reload (re-open of the selected/any ready tab's song)
-
-Same as §5.5 except the head:
-```
-restored = m_view->viewState()      // captured BEFORE prepareForSongReplacement; complete
-                                    // live ViewState, not only scroll (decision 3)
-...
-if (restored) m_view->applyViewState(*restored)       // full camera/grid/cursor restore
-```
-`applyViewState` keeps its existing clamping (`viewstate.cpp`/`songview.cpp:418-449`):
-zoom clamp, key-height clamp, denominator whitelist, cursor ≤ length, used-track check,
-scroll clamp, event-list apply. A rebind-skip reload (`m_rebindSkip`, cfg change) still
-drops `MidiStage` in `WorkspaceUi` and keeps the live tab untouched.
-
-### 5.7 Semantic save
-
-`WorkspaceUi::submitSaveForTab` (`workspaceui_tabs.cpp:440`):
-`SaveSongInput input{name, tab->captureSaveSnapshot(), std::nullopt};` — no
-`captureViewSnapshot()`. `SongSaved` handling (`workspaceui_tabs.cpp:285-304`) drops the
-`sidecarError` branch; the status message is plain `tr("Saved %1")`. Save ends at flags;
-`.porydaw/<song>.json` is not touched by the save path.
-
-### 5.8 Tab close and project switch
-
-`closeTabNow` (`workspaceui_tabs.cpp:503-521`): the in-flight-load tombstone branch stays;
-the `else persistViewSidecar(tab)` arm is deleted. `beginProjectSwitch`
-(`workspaceui_project.cpp:283-286`): the sidecar comment and `persistSessionViews()` are
-deleted; `cleanupPreview()` stays. Closing or switching performs **zero** view/editor I/O.
-
-### 5.9 Application close
-
-`MainWindow::closeEvent` (`mainwindow.cpp:1441-1474`): `m_workspace->persistSessionViews()`
-(:1461) deleted; `cleanupPreview()` and the `m_persistSession` geometry/filters block stay.
-Tab switch (selection change) remains a no-op for the preference (no traffic, no writes).
-
-## 6. Deletion map
-
-| File | Action |
-|---|---|
-| `src/ui/viewsidecar.h`, `src/ui/viewsidecar.cpp` | delete files |
-| `CMakeLists.txt:319-320` | drop both entries |
-| `src/checks/sidecarcheck.cpp` | delete file |
-| `src/checks/checkcatalog.cpp:393-401` | delete the `sidecar` catalog entry |
-| `src/checks/fwd.hpp:61` | delete `runViewSidecarCheck` declaration |
-| `CMakeLists.txt:526` | drop `src/checks/sidecarcheck.cpp` |
-| `src/ui/songtab.{h,cpp}` | `#include "ui/viewsidecar.h"`; class comment staged-load story; `applySidecarStage`; `captureViewSnapshot`; `PendingLoad`/`ScrollPosition`/`m_pendingLoad`; `m_sidecarBound` (header + `updateReadiness`) |
-| `src/ui/workspaceui.h` | `#include "ui/viewsidecar.h"` (:22); `persistSessionViews` (:149-150); `persistViewSidecar` (:334); `setEditorDrawerState` → `setEditorViewState(const EditorViewState&)` (:192); `editorDrawerStateEdited` → `editorViewStateChanged(const EditorViewState&)` (:242); `applyStagedUpdate(SidecarStage&)` overload (:278); `EditorDrawerState m_editorDrawerState` → `EditorViewState m_editorViewState` (:386) |
-| `src/ui/workspaceui.cpp` | `setEditorDrawerState` body → guarded `setEditorViewState` (:382-388, §5.3); `persistViewSidecar` (:422-432); `persistSessionViews` (:475-479); `wireTab` connection retarget (:328-329) |
-| `src/ui/workspaceui_tabs.cpp` | `createTab` push (:37); `applyStagedUpdate(SidecarStage&)` (:246-256); `SongSaved` sidecar branch (:293-298); `submitSaveForTab` snapshot arg (:440); `closeTabNow` else-arm (:508-511) |
-| `src/ui/workspaceui_project.cpp` | switch comment + `persistSessionViews()` (:283-285) |
-| `src/mainwindow.h` | `setEditorDrawerState` (:155) → `void persistEditorViewState(const EditorViewState &);` `EditorDrawerState m_editorDrawerState` (:201) deleted |
-| `src/mainwindow.cpp` | key constants + codec (:62-66, :81-119); ctor load (:163); push (:438-439 → §5.1); connect (:531-532); `setEditorDrawerState` (:1000-1007); `closeEvent` call (:1461) |
-| `src/ui/songview.h` | `ViewState` comment (:119-120) → "per-tab reload-continuation snapshot; never persisted" (fields unchanged); `applyEditorDrawerState` (:144-145) deleted; `editorDrawerStateChanged` → `editorViewStateChanged(const EditorViewState&)` (:560); sink comment (:146-147) |
-| `src/ui/songview/viewstate.cpp` | `applyEditorDrawerState` (:233-240) deleted; `setEditorViewState` emits on any change (:226-232); `applyEditorViewState` equality early-return + new signal (:241-252); `addEmptyLane`/`removeEmptyLane`/`setLaneDisplayRange` unchanged callers |
-| `src/project/projectworkspace.h`, `src/project/projectio.{h,cpp}` | §4 table |
-| `src/ui/songview/trackvoiceops.cpp` | §5.4 sink call |
-
-## 7. Retained sidecar responsibilities (unchanged, verified anchors)
-
-| Responsibility | Owner | Evidence |
-|---|---|---|
-| `.porydaw/` creation + `.gitignore` append | `src/project/sidecar.{h,cpp}` `Sidecar::ensureDir` | `projectio.cpp:512`, `mainwindowroutingcheck.cpp:550` |
-| Registration meta in `.porydaw/<song>.json` | `SongRegistry::saveRegistrationMeta/loadRegistrationMeta/clearRegistrationMeta` | `songregistry.cpp` (registration functions) |
-| Whole-file removal on song delete | `SongRegistry::removeSongSidecar` | `projectio.cpp:527` |
-| Sample provenance `.porydaw/samples/` | `SampleRegistrar::read/write/removeSampleSidecar`; `SampleRead::sidecarLoaded`; `SampleCommitted::sidecarSaved/sidecarError` | `projectio.cpp:648-680` |
-| Voicegroup previews `.porydaw/vgpreview/` | `ProjectIo` preview flow | unchanged |
-| Trash `.porydaw/trash/` | `ProjectIo` delete | `projectio.cpp:511-520` |
-
-Legacy `.porydaw/<song>.json` files with stale `view`/`editor` objects: never read, never
-rewritten by the view path; the registration codec inside `SongRegistry` keeps its existing
-read/merge behavior and is out of scope.
-
-## 8. Phases, roles, and file ownership
-
-Rules for every step: contract-pinned (transcribe §3-§7; no design decisions at
-implementation time); compile-gated (exhaustive visitors turn any missed arm into an error);
-verification ownership — slice agents run no formatters, linters, or suites; the integration
-owner runs the named gates once per integration point.
-
-```
-P1 (transport) ─┐
-                ├─► [G1 qt-cpp-reviewer] ─► P3a ─┐
-P2 (UI seam)  ──┘                               ├─► integrate ─► [G2 qt-cpp-reviewer]
-                                                ├─► P3b ─┤       ─► [G3 thermo-nuclear-reviewer]
-                                                ├─► P3c ─┤       ─► final verify + smoke
-                                                ├─► P3d ─┘
-                                                └─► P3e (docs)
-```
-
-| Step | Role | Exclusive files | Change |
+| Slice | Role | Exclusive files (count) | Change |
 |---|---|---|---|
-| P1 | `task` | `src/project/projectworkspace.h`, `src/project/projectio.h`, `src/project/projectio.cpp`, `src/ui/songtab.h`, `src/ui/songtab.cpp` | §4 struct/sum cutover + §5.5/5.6 single-stage `applyMidiStage`; update staged-load comments (`songtab.h:29-40`, `projectio.cpp:185-188,277-280,322-323`) |
-| P2 | `task` | `src/ui/editorviewstate.{h,cpp}`, `src/ui/workspaceui.h`, `src/ui/workspaceui.cpp`, `src/ui/workspaceui_tabs.cpp`, `src/ui/workspaceui_project.cpp`, `src/mainwindow.h`, `src/mainwindow.cpp`, `src/ui/songview.h` (comment + signal + `applyEditorDrawerState` removal), `src/ui/songview/viewstate.cpp`, `src/ui/songview/trackvoiceops.cpp`, `src/ui/viewsidecar.{h,cpp}` (delete), `CMakeLists.txt` (sources block :319-320 only) | §3 codec; §5.1-5.4, 5.7-5.9; §6 UI rows; `QSettings` write-through (I1-I6) |
-| P3a | `sonic` | `src/checks/projectiocheck.cpp`, `src/checks/projectworkspacecheck.cpp`, `src/checks/tabcheck.cpp`, `src/checks/sessioncheck.cpp`, `src/checks/hostcheck.cpp` (compile repairs only) | §9 matrix rows B/E/H + in-code comments (`sessioncheck.cpp:31-33`, `tabcheck.cpp:47-49`) |
-| P3b | `task` | `src/checks/mainwindowroutingcheck.cpp` | §9 rows A/C/D/F/G scenario rewrites |
-| P3c | `task` | `src/checks/selftest.cpp` | §9 row G selftest block |
-| P3d | `sonic` | `src/checks/sidecarcheck.cpp` (delete), `src/checks/checkcatalog.cpp`, `src/checks/fwd.hpp`, `CMakeLists.txt:526` | §6 check rows |
-| P3e | `task` | `docs/projectio-dress-down-contract.md`, `docs/projectio-dress-down-plan.md`, `docs/projectio-implementation-steps.md`, `docs/time-ruler-loading-plan.md` | §10 supersession edits, each citing this plan |
-| INT | integration owner | serialization only | merges P1+P2, then P3a-P3e; runs gates; owns `CMakeLists.txt` sequencing (:319-320 in P2, :526 in P3d — never concurrent) |
+| P1a transport | `task` implementation agent | `src/project/projectworkspace.h`, `src/project/projectworkspace.cpp`, `src/project/projectio.h`, `src/project/projectio.cpp` (4) | §4 transport deletion |
+| P1b adoption | `task` implementation agent | `src/ui/songtab.h`, `src/ui/songtab.cpp` (2) | §5.5/5.6 |
+| P2a codec/store | `task` implementation agent | `src/ui/editorviewstate.h`, `src/ui/editorviewstate.cpp`, `src/mainwindow.h`, `src/mainwindow.cpp` (4) | §3, §5.1, MainWindow sink |
+| P2b hub | `task` implementation agent | `src/ui/workspaceui.h`, `src/ui/workspaceui.cpp`, `src/ui/workspaceui_tabs.cpp`, `src/ui/workspaceui_project.cpp` (4) | §5.1-5.3, §5.7 |
+| P2c view | `task` implementation agent | `src/ui/songview.h`, `src/ui/songview.cpp`, `src/ui/songview/viewstate.cpp`, `src/ui/songview/trackvoiceops.cpp` (4) | §5.3-5.6 |
+| P2d obsolete UI | `task` implementation agent | `src/ui/viewsidecar.h`, `src/ui/viewsidecar.cpp` (2) | delete files |
+| P3a transport checks | `task` implementation agent | `src/checks/projectiocheck.cpp`, `src/checks/projectworkspacecheck.cpp`, `src/checks/tabcheck.cpp`, `src/checks/hostcheck.cpp` (4) | transport/order checks and compile repairs |
+| P3b UI checks | `task` implementation agent | `src/checks/mainwindowroutingcheck.cpp`, `src/checks/sessioncheck.cpp` (2) | §8 rows A/C/D-F |
+| P3c codec checks | `task` implementation agent | `src/checks/selftest.cpp` (1) | codec round trip/malformed/default coverage |
+| P3d obsolete check | `task` implementation agent | `src/checks/sidecarcheck.cpp`, `src/checks/checkcatalog.cpp`, `src/checks/fwd.hpp` (3) | delete harness and registration |
+| P3e docs | `task` implementation agent | `docs/projectio-dress-down-contract.md`, `docs/projectio-dress-down-plan.md`, `docs/projectio-implementation-steps.md` (3) | mechanical supersession only; no time-ruler edit |
+| INT integration | `task` integration owner | `CMakeLists.txt` only (1) | merge every slice, own all gates, remove source entries after P2d and the check entry after P3d |
 
-File ownership is disjoint across P1/P2 and across P3a-P3e; `workspaceui.*` +
-`mainwindow.cpp` stay in the single P2 owner (no internal split). P1 and P2 compile
-independently against the app target only after both land (`workspaceui_tabs.cpp` calls
-`applySidecarStage` until P2); INT builds the app target at the G1 point.
+All slices are contract-pinned and file-disjoint. Every production slice owns at most five files.
+P1a/P1b/P2a-P2d are parallel editing slices but deliberately are not independently buildable.
+P3a-P3e start only after G1 approves the combined production result. `CMakeLists.txt` belongs only
+to INT; no other slice edits it.
 
-Review gates:
+The named graph is:
 
-- **G1 [qt-cpp-reviewer]** after P1+P2: single-stage adoption (no dangling timeline borrow,
-  viewState captured before `prepareForSongReplacement`), echo termination per I5, one
-  `QSettings` write per change with no mirror member, readiness = Midi+VoicegroupBound,
-  tombstone/rebindSkip behavior unchanged. Blocking: any reachable per-song view writer.
-- **G2 [qt-cpp-reviewer]** after P3 integration: `QSettings` is the single store; fan-out
-  covers every open tab, future tabs, and relaunch; boundary I/O absence scenarios real
-  (byte-identity, not weakened barriers); `waitForTabReady`/`waitForProjectReady` drains kept.
-- **G3 [thermo-nuclear-reviewer]** after G2: deletion-test depth — removal forces default
-  application at exactly one seam (the codec load); reject compat readers, migration,
-  shims, second stores, extra guards, source-text-coupled tests, new harness files, or net
-  growth of `mainwindowroutingcheck.cpp` (deleted persistence assertions must pay for the
-  new ones).
+```text
+(P1a || P1b || P2a || P2b || P2c || P2d)
+  -> INT-PROD
+  -> G1
+  -> (P3a || P3b || P3c || P3d || P3e)
+  -> INT-CHECKS
+  -> G2
+  -> G3
+  -> INT-FINAL
+```
 
-## 9. Check rewrite matrix
+### INT-PROD — combined production merge and first build
 
-| # | Harness / anchor (today) | Action | Step |
-|---|---|---|---|
-| A | `mainwindowroutingcheck.cpp:141-254` `checkStagedLoadCoalescing` (include :52; probe calls :160,:170,:220,:232; staged snapshot :193-218; assertions :235-254) | Rewrite: drop `applySidecarStage` and the staged snapshot. After `applyMidiStage` alone assert: timeline binding swapped, `view().document() == &tab->document()`, camera equals canonical fresh-open defaults (zoom home, clock-grid floor, straight feel, event list off), drawer/lane state equals the seeded global state, `!isReady()` until `applyVoicegroupBound`. Re-delivering the same `MidiStage` rebinds cleanly (no residue). Probe seeding `applyEditorDrawerState` (:160) becomes `applyEditorViewState` | P3b |
-| B | `projectiocheck.cpp` ordered-result expectation (:326-330); sidecar-read scenario (:377-384); save block (:442-443, :451-500, :560-561, :578-581) | Drop `SidecarStage` from the ordered result; delete the standalone sidecar-read scenario; rewrite :451-500 as: seed `.porydaw/<song>.json` with `registration` + stale `view`/`editor`, run the semantic save, assert `SongSaved` with no sidecar fields and the file byte-identical afterwards | P3a |
-| C | `mainwindowroutingcheck.cpp` reload coverage (host-integration block, today :1090-1152) | Set distinctive scroll + zoom + grid + cursor on the ready tab, `requestSongOpen`, await ready, assert the **complete** `ViewState` returned and the binding swapped; fresh tab open after close asserts `resetScrollPosition()` home (no cross-tab/cross-reopen leakage) | P3b |
-| D | `mainwindowroutingcheck.cpp` drawer fan-out (:341-470 pattern; seeding :658-663) | Generalize to the full global state: drawer chrome **and** lane state (`laneHeight`, a row height, a range, an empty lane, an ordered hidden lane). Mutate on tab B → visible on tab A without reload → survives `selectSongTab` round-trip → adopted by a newly opened tab; assert `QSettings` holds the exact six keys | P3b |
-| E | `sessioncheck.cpp` relaunch block (today ends ~:171); header comment :31-33 | New block after relaunch: seed distinctive global state (incl. lanes), close, construct fresh `MainWindow`, assert every value restored; delete the "closing writes view sidecars" comment | P3a |
-| F | `mainwindowroutingcheck.cpp` boundary blocks (:548-608 close; :1105-1237 replacement/switch/app-close) | Invert every `ViewSidecar::load`/`sameLaneState` persistence assertion (:543-546, :586-608, :1115-1119, :1144-1152, :1164-1169, :1223-1237) into: `.porydaw/` listing + file bytes identical across tab close, song replacement, project switch, and app close; no `<song>.json` created for a song that never had one; MIDI bytes, revision, undo count unchanged. Keep a seeded `registration`-only `<songB>.json` byte-identical | P3b |
-| G | `mainwindowroutingcheck.cpp:549-556` seeding; `selftest.cpp:454-497` | Legacy-ignore scenario: seed well-formed `registration` + stale/malformed `view`/`editor` (incl. `"view": "not-an-object"`, `"editor": 7`); open → ready with global/default editor state, no `96`/`999` leakage, close leaves bytes identical. `selftest`: replace the `ViewSidecar` round trip with `saveRegistrationMeta`/`loadRegistrationMeta` round trip + a `QSettings` codec round trip (`saveEditorViewState` → mutate → `loadEditorViewState` → equality, incl. clamping and malformed-JSON defaults) | P3b / P3c |
-| H | `projectworkspacecheck.cpp`: include :16; silent-completion chain :334-337 (`SaveSidecarInput` at :335); reload order :355-362; visitor arms | Replace the `SaveSidecarInput` FIFO probe with a second `CleanupPreviewInput` (still proves silent FIFO advance); drop the `SidecarStage`-second expectation (MidiStage then terminal); delete sidecar arms from exhaustive visitors | P3a |
-| I | `tabcheck.cpp:47-49` | Delete the "view sidecars are written into the project on tab close" comment | P3a |
-| J | `hostcheck.cpp` | Compile repairs only (renamed signal/sink, `SaveSongInput` arity); behavior assertions unchanged | P3a |
-| K | Deletion surface | `sidecarcheck.cpp`, catalog entry, `fwd.hpp` decl, `CMakeLists.txt:526` | P3d |
+**Role:** `task` integration owner
 
-`rollcheck/` (camera, identity), `pitchbendcheck`, and every other `ViewState` consumer are
-**unchanged**: `ViewState` keeps all fields (decision 3 reverses any slimming).
+INT merges P1a/P1b/P2a-P2d as one observable behavior cutover. It removes only the two
+`viewsidecar` source entries from `CMakeLists.txt`, then runs:
 
-## 10. Documentation supersession (P3e edits, each citing this plan)
+```sh
+deno task build:app
+```
 
-Each doc is edited in place; every edited clause gains a pointer to this plan. Locate
-clauses by content (today's line anchors in parentheses).
+No green intermediate may delete `ViewSidecar` while `setSong` still erases lanes.
 
-### `projectio-dress-down-contract.md`
+### G1 — production Qt/C++ review
 
-- `SidecarStage` struct (:569-573); `SongSaved::sidecarSaved`/`sidecarError` +
-  `SongStage::Sidecar` (:581-586); `SongPayload` listing (:592-593) — types/stages deleted;
-  payload is `MidiStage | VoicegroupBound | SongSaved | SongFailed`.
-- "Missing sidecar is `SidecarStage{loaded:false}`… corrupt entry rewritten fresh"
-  (:605-609) — no view sidecar is read; legacy `view`/`editor` JSON is ignored, never
-  rewritten; registration-sidecar tolerance stays `SongRegistry` behavior.
-- "Publishes MidiStage, then SidecarStage, then terminal VoicegroupBound" (:612-613) —
-  load publishes `MidiStage` → (keyed bank view) → terminal `VoicegroupBound`.
-- `SaveSongInput::sidecarSnapshot` and the snapshot-recipe sentence (:630-637, :723-727) —
-  the recipe is snapshot + optional voicegroup only.
-- `SaveSidecarInput` struct and the standalone fire-and-forget paragraph
-  (:634-637, :717-721); its `ProjectOperation` slot and fixed `CommandFailure` mapping —
-  deleted.
-- Cosmetic-sidecar-write stage and its nonfatal status (:729-738) — save ends after MIDI
-  and flags; `SongSaved` carries no sidecar fields.
-- `SidecarWriteResult` completion (:817-821) and the keyless-operation listing including
-  `SaveSidecarInput` (:832-840) — deleted.
+**Role:** `qt-cpp-reviewer`
 
-### `projectio-dress-down-plan.md`
+Review the combined production result after `build:app`: signal origin/projection acyclicity,
+all-tab propagation, QSettings GUI-thread affinity and single-store semantics, focus behavior,
+complete `EditorViewState` preservation, ready/fresh `ViewState` ordering, and timeline/voicegroup
+borrow lifetime. Any blocker returns to its named P1/P2 owner. INT re-merges, reruns
+`deno task build:app`, and reruns G1. P3 does not start until G1 reports PASS.
 
-- `SaveSidecarInput` independent operation (:308-311) and independent submission
-  (:495-497) — deleted.
-- Worker duty "sidecar load and save" (:356) — duties reduce to registration, sample,
-  preview, and trash I/O.
-- Staged order (:436-438) and ordered-publication restatement (:547-549) —
-  `MidiStage` then terminal `VoicegroupBound`.
-- `SidecarWriteResult` completion (:871-875) and workflow-2 sidecar capture (:889-896) —
-  deleted; a save captures `SongSaveSnapshot` (+ optional voicegroup) only.
-- Acceptance rows *Semantic save*, *Independent sidecar*, *Song failures* (:1021-1026) —
-  rewritten: save ends at flags; no independent cosmetic operation; no view stage exists.
+### INT-CHECKS — check/doc merge and focused verification
 
-### `projectio-implementation-steps.md`
+**Role:** `task` integration owner
 
-- "Cosmetic sidecar last / nonfatal" contract citations (:153-159) — semantic save ends at
-  flags.
-- Keyless-operation list including `SaveSidecarInput` and its acceptance ref (:248-252) —
-  removed from the list.
-- Step 8.2 in full (:283-292) — loses the `SaveSidecarInput` target, the
-  `MidiStage → SidecarStage → VoicegroupBound` contract, and the corrupt-sidecar clause;
-  the load contract becomes single-stage adoption per §5.5.
-
-### `time-ruler-loading-plan.md`
-
-- Invariant "until the replacement timeline and sidecar are applied" — "until the
-  replacement timeline is applied".
-- Invariant "loading state is not persisted as a song sidecar snapshot" — superseded by
-  the stronger global rule: no per-song view/editor state persists anywhere; loading and
-  camera state never reach disk.
-- Fresh-load section (:158-163) — "while MIDI and voicegroup stages arrive"; the MIDI bind
-  applies application-global preferences and the canonical camera home atomically.
-- Reload section (:165-170) — bind the replacement timeline and restore the retained
-  in-memory `ViewState` at the existing staged-load seam.
-- Close-and-reopen (:172-175) — always the normal pre-roll home with current
-  application-global preferences.
-- Step 3 acceptance "sidecar zoom semantics" (:243-248) — the per-tab zoom preference
-  remains pixels per beat and is never persisted.
-- Non-goals naming sidecar schema / persisting placeholder camera (:381-389) — there is no
-  sidecar schema; preferences persist once, globally, via `QSettings`; placeholder camera
-  state still never persists.
-- Verification-matrix row "reload retains current ruler and camera" is retained verbatim;
-  its backing scenario is §9 row C.
-
-In-code comment supersessions ride with P3a (`sessioncheck.cpp:31-33`, `tabcheck.cpp:47-49`).
-
-## 11. Required negative-scan outcomes
-
-Stated as required end-state properties (any search method may demonstrate them); all must
-hold over `src/` and `CMakeLists.txt` after P3 integration:
-
-1. The token `ViewSidecar` appears nowhere; `src/ui/viewsidecar.h`, `src/ui/viewsidecar.cpp`,
-   `src/checks/sidecarcheck.cpp` do not exist; `viewsidecar`/`sidecarcheck` appear nowhere in
-   `CMakeLists.txt`.
-2. `SidecarStage`, `SaveSidecarInput`, `SidecarWriteResult`, `SongStage::Sidecar`,
-   `ReadSidecarCommand` appear nowhere.
-3. `persistViewSidecar`, `persistSessionViews`, `captureViewSnapshot`, `applySidecarStage`,
-   `applyEditorDrawerState`, `editorDrawerStateChanged`, `editorDrawerStateEdited`,
-   `setEditorDrawerState`, `m_editorDrawerState`, `loadEditorDrawerState`,
-   `saveEditorDrawerState`, `check-sidecar`, `runViewSidecarCheck` appear nowhere.
-4. `sidecarSnapshot`, `sidecarSaved`, `sidecarError` appear only inside the retained sample
-   sidecar surface (`SampleRead`, `SampleCommitted`, `SampleRegistrar`).
-5. Retained tokens survive and are untouched: `Sidecar::ensureDir`, `SampleSidecar`,
-   `saveRegistrationMeta`, `loadRegistrationMeta`, `clearRegistrationMeta`,
-   `removeSongSidecar`.
-6. The only `editorDrawer/` QSettings key strings in `src/` are the six keys inside
-   `editorviewstate.cpp`; `deno task checks --filter sidecar` reports an unknown filter
-   rather than a passing harness.
-7. No new `*check.cpp` file exists; `src/` top-level still holds exactly `main.cpp`,
-   `mainwindow.cpp`, `porydaw_scale.cpp`.
-
-## 12. Forbidden alternatives
-
-- Any reader/writer/migration for legacy `view`/`editor` JSON, a replacement editor-only
-  sidecar, an `EditorSidecar` type, a compat shim, or a deprecated alias.
-- A second mutable global store, a `MainWindow` mirror member, an `EditorPreferencesStore`
-  abstraction, or renaming existing `editorDrawer/*` keys.
-- Persisting any `SongView::ViewState` field (grid, zoom, event list included) or
-  globalizing per-row state beyond `EditorViewState`.
-- Keeping `SaveSidecarInput`, `SidecarStage`, `SongStage::Sidecar`, or a no-op
-  `applySidecarStage` stub "temporarily".
-- Moving sidecarcheck scenarios into `ignorecheck`/`samplecheck`, creating a new harness
-  file, or tests asserting private members (`m_pxPerBeat`, …) instead of the `QSettings`
-  store and public accessors.
-- Weakening `waitForTabReady`/`waitForProjectReady` drains, or keeping scroll-exclusion
-  persistence tests (scroll retention is now a positive in-memory reload assertion, §9 row C).
-
-## 13. Acceptance matrix
-
-| Contract item | Observable acceptance |
-|---|---|
-| Global persistence | Mutating any global field writes all six keys exactly once; relaunch restores them without a project (§9 E) |
-| Fan-out | Every open tab, a tab switched away and back, and a newly created tab show identical state within one pass (§9 D) |
-| Reload continuity | In-place reload preserves the complete live `ViewState`; fresh open/reopen starts canonical home (§9 C) |
-| Boundary absence | `.porydaw/` listing + bytes identical across close, replacement, switch, app close; saves leave `<song>.json` untouched (§9 B/F) |
-| Legacy ignore | Stale or malformed `view`/`editor` JSON neither loads nor breaks open; registration behavior intact; bytes never rewritten (§9 G) |
-| Ordering | Load publishes `MidiStage` → (bank view) → terminal `VoicegroupBound`; failure = one `SongFailed`; save ends at flags with bare `SongSaved` (§9 B/H) |
-| Readiness | `isReady()` exactly after Midi+VoicegroupBound; interaction gate unchanged (§9 A) |
-| Retained sidecars | `ignorecheck`, `samplecheck`, `onboardcheck`, `vgcheck`, `vgbankcheck`, `rollcheck` pass unmodified |
-| Codec | Round trip, clamping (row heights to `fontPx(7/3)..fontPx(32/3)`), ordered `hiddenLanes`, malformed defaults (§9 G, §3) |
-| Deletion | §11 scans hold; no new harness; `mainwindowroutingcheck.cpp` does not net-grow |
-
-## 14. Final verification (integration owner only)
+After G1, INT merges P3a-P3e, removes the `sidecarcheck` entry from `CMakeLists.txt`, and runs these
+commands in order:
 
 ```sh
 deno task build:checks
+deno task format --check src/project/projectworkspace.h src/project/projectworkspace.cpp src/project/projectio.h src/project/projectio.cpp src/ui/songtab.h src/ui/songtab.cpp src/ui/editorviewstate.h src/ui/editorviewstate.cpp src/mainwindow.h src/mainwindow.cpp src/ui/workspaceui.h src/ui/workspaceui.cpp src/ui/workspaceui_tabs.cpp src/ui/workspaceui_project.cpp src/ui/songview.h src/ui/songview.cpp src/ui/songview/viewstate.cpp src/ui/songview/trackvoiceops.cpp src/checks/projectiocheck.cpp src/checks/projectworkspacecheck.cpp src/checks/tabcheck.cpp src/checks/hostcheck.cpp src/checks/mainwindowroutingcheck.cpp src/checks/sessioncheck.cpp src/checks/selftest.cpp src/checks/checkcatalog.cpp src/checks/fwd.hpp
 deno task verify --filter projectiocheck --verbose
-deno task verify --filter projectworkspacecheck
-deno task verify --filter tabcheck
-deno task verify --filter mainwindow-routing
-deno task verify --filter host-integration
-deno task verify --filter sessioncheck
-deno task verify --filter selftest
-deno task verify --filter ignorecheck
-deno task verify --filter samplecheck
-deno task verify --filter onboardcheck
-deno task verify --filter vgcheck
-deno task verify --filter vgbankcheck
-deno task verify --filter rollcheck
-deno task verify
-deno task format --check <changed files>
+deno task verify --filter projectworkspacecheck --verbose
+deno task verify --filter tabcheck --verbose
+deno task verify --filter mainwindow-routing --verbose
+deno task verify --filter sessioncheck --verbose
+deno task verify --filter selftest --verbose
+deno task verify --filter ignorecheck --verbose
+deno task verify --filter onboardcheck --verbose
+deno task verify --filter samplecheck --verbose
 ```
 
-Native smoke (built app, scratch decomp project): open two songs as tabs — both render the
-ordinary ruler immediately; `.porydaw/` gains no files. Change drawer page/height, lane
-height, a hidden lane on tab B → tab A reflects it live; a third tab adopts it; `QSettings`
-shows the six keys. In-place reload keeps camera and scroll; closing and reopening the song
-starts at the pre-roll home. Quit and relaunch → every editor preference returns. Delete a
-song → `.mid` lands in `.porydaw/trash/`; register a song → `registration` appears in its
-`.porydaw/<song>.json`.
+If P3a changes `src/checks/hostcheck.cpp`, INT also runs both registered filters:
 
-## 15. Completion criteria
+```sh
+deno task verify --filter host-seams --verbose
+deno task verify --filter host-adapter --verbose
+```
 
-1. §11 negative scans all hold; §6 deletions are complete with no forwarding remnants.
-2. §13 acceptance rows are observably satisfied by the named checks, and the full
-   `deno task verify` suite is green with the sidecar harness absent.
-3. G1-G3 reviewer gates closed with no blocking findings.
-4. §10 doc edits landed; no clause in the four authoritative documents contradicts this plan.
-5. No TBDs, no temporarily-stubbed symbols, no compatibility code anywhere in the diff.
+`projectiocheck`, `projectworkspacecheck`, and `tabcheck` cover rows B/H;
+`mainwindow-routing`, `sessioncheck`, and `tabcheck` cover rows A/C/D/F; `selftest` covers rows
+E/G. `ignorecheck`, `onboardcheck`, and `samplecheck` protect retained `.porydaw` directory,
+registration/trash, and sample-sidecar behavior. A failure returns to the exclusive owning slice;
+INT re-merges and reruns `build:checks`, the format check, and every affected focused filter.
+
+### G2 — focused-evidence and Qt lifecycle review
+
+**Role:** `qt-cpp-reviewer`
+
+Review the integrated diff together with the focused results and §8 row coverage. Recheck QObject
+ownership, signal counts/order, GUI-thread QSettings access, focus suppression, staged adoption,
+and borrow release order against the actual checks. Any blocker returns to its exclusive owner.
+INT repeats the INT-CHECKS commands affected by the fix, then G2 reruns. G3 does not start until G2
+reports PASS.
+
+### G3 — final architecture and complexity review
+
+**Role:** `thermo-nuclear-reviewer`
+
+Review the complete change for contract alignment, deletion-test depth, duplicate stores/codecs,
+compatibility residue, conditional growth, cross-file cohesion, and test coupling to observable
+behavior. Any blocker returns to its exclusive owner. INT reruns the affected INT-CHECKS commands
+and G2 whenever the fix touches Qt lifecycle or behavior, then reruns G3. INT-FINAL does not start
+until G3 reports PASS.
+
+### INT-FINAL — full verification and native smoke
+
+**Role:** `task` integration owner
+
+Run:
+
+```sh
+deno task verify
+```
+
+Then perform the native smoke in §12. The native observations cover rows A/C/D/E/F; rows B/G/H
+remain covered by their focused filters. Any failure returns to its exclusive owner; INT reruns
+the affected focused commands, G2 or G3 when their reviewed surface changed, the full verify, and
+the native smoke until all are green.
+
+## 8. Observable check contract
+
+| Row | Scenario and required observation |
+|---|---|
+| A fresh bind | Seed the complete global EditorViewState. After MidiStage, binding is swapped and every editor field remains equal. Assert every canonical fresh ViewState default from §5.6, not scroll alone; readiness waits for VoicegroupBound. |
+| B transport/save | Ordered load has no SidecarStage; semantic save yields bare SongSaved and leaves seeded registration + stale view/editor file byte-identical. |
+| C ready reload/reopen | Seed all nine ViewState fields with distinctive values on a ready tab. Reload preserves all nine and swaps binding. Close/reopen asserts every §5.6 default and no leakage. |
+| D all-tab origin | Seed all EditorViewState fields. Mutate tab B while non-selected, including lane identity remap. Assert one SongView origin emission, one hub emission after fan-out, zero projection-origin emissions, every existing/new tab equal, and one QSettings codec invocation. Rejected and editor-unchanged remaps publish nothing. |
+| E relaunch/store | Save chrome, optional heights, active page, lane height/maps/sets/ordered hidden lanes; construct a fresh MainWindow and restore all fields. Optional keys exist iff optional values do. No startup write. |
+| F boundary absence | `.porydaw` listing and file bytes are identical across close, reload, switch, and quit; a song with no JSON gains none. Existing registration-only JSON stays byte-identical. |
+| G legacy/malformed | Per-song malformed view/editor never loads or rewrites. QSettings wrong-type/invalid lane blob defaults only lanes; the next semantic editor save writes canonical compact JSON. Codec checks use the public functions, not duplicate key literals. |
+| H readiness/FIFO | Readiness is MIDI plus terminal voicegroup. Replace the old keyless sidecar FIFO probe with another existing keyless command; exhaustive visitors contain no deleted alternative. |
+
+`rollcheck` and all other per-tab `ViewState` consumers remain unchanged. Tests must use public
+accessors and observable stores, not source text or private-member access.
+
+## 9. Documentation reconciliation
+
+P3e edits only the three project-I/O documents. Each replacement cites this plan and states:
+
+- no SidecarStage, SaveSidecarInput, SidecarWriteResult, SongStage::Sidecar, or sidecar fields on
+  SongSaved/SaveSongInput;
+- load is MidiStage → optional keyed bank view → terminal VoicegroupBound;
+- save ends after MIDI/flags with bare SongSaved/SongFailed;
+- missing/corrupt legacy view/editor JSON is not a load stage and is never rewritten by view code;
+- no independent close/switch/quit cosmetic operation exists.
+
+`docs/time-ruler-loading-plan.md` is already reconciled now: ready reload captures `viewState()`
+**before** `prepareForSongReplacement` and reapplies it after `setSong`; fresh MidiStage uses
+canonical defaults rather than camera continuity. It contains no sidecar dependency or global
+camera claim. P3e must not edit it. Its fallback axis, paint layers, `setInteractionEnabled`, and
+pre-setSong ruler work are a separate deliverable and are absent from this plan's checks,
+acceptance, and smoke.
+
+## 10. Exact end-state harness queries
+
+INT runs these repository-scoped harness tools after integration. Shell `grep` and `rg` are
+forbidden.
+
+| Query | Harness invocation | Expected result |
+|---|---|---|
+| 1 deleted transport/UI types | Grep with pattern `\b(ViewSidecar|SidecarStage|SaveSidecarInput|SidecarWriteResult|ReadSidecarCommand)\b` and path `src;CMakeLists.txt` | empty |
+| 2 deleted paths | Grep with pattern `SongStage::Sidecar|persistViewSidecar|persistSessionViews|captureViewSnapshot|applySidecarStage` and path `src` | empty |
+| 3 deleted drawer API/check names | Grep with pattern `applyEditorDrawerState|editorDrawerStateChanged|editorDrawerStateEdited|setEditorDrawerState|m_editorDrawerState|loadEditorDrawerState|saveEditorDrawerState|runViewSidecarCheck` and path `src` | empty |
+| 4 ambiguous sidecar result fields | Grep with pattern `\b(sidecarSnapshot|sidecarSaved|sidecarError)\b` and path `src` | only retained sample-sidecar declarations/implementation under `projectworkspace.h` and `sampleregistrar*`; no workspace, tab, SongView, MainWindow, or project song transport match |
+| 5 deleted build entries | Grep with pattern `viewsidecar|sidecarcheck` and path `CMakeLists.txt` | empty |
+| 6 exact settings literals | Grep with pattern `editorDrawer/` and path `src` | exactly the six literals in `src/ui/editorviewstate.cpp`; checks contain none |
+| 7 retained owners | Grep with pattern `Sidecar::ensureDir|SampleSidecar|saveRegistrationMeta|loadRegistrationMeta|clearRegistrationMeta|removeSongSidecar` and path `src` | every named retained identifier has at least one production match |
+| 8 deleted files | Glob the exact paths `src/ui/viewsidecar.h;src/ui/viewsidecar.cpp;src/checks/sidecarcheck.cpp` | empty |
+| 9 harness placement | Glob `src/**/*check.cpp`, then Read the `src/` directory | no new check outside `src/checks/`; `src/` top level remains exactly `main.cpp`, `mainwindow.cpp`, and `porydaw_scale.cpp` |
+| 10 CMake ownership | Read `CMakeLists.txt` around the application source and check registration lists | only INT's removal of the two viewsidecar source entries and one sidecarcheck entry |
+
+Each Grep call is case-sensitive, respects gitignore, and names the path shown in the table. INT
+also runs the non-search ownership fact command `git status --porcelain -- src/checks/`; it must
+show deletion of `src/checks/sidecarcheck.cpp` and modifications only to the named existing check
+files, with no added `*check.cpp`.
+
+## 11. Forbidden alternatives
+
+- Any legacy view/editor reader, writer, migration, compatibility alias, replacement sidecar, or
+  no-op transport stub.
+- Any second global store, MainWindow mirror, `EditorPreferencesStore`, renamed key, extra key, or
+  persisted/global `SongView::ViewState` field.
+- Any in-place lane mutation followed by an equality-guarded self-commit; any selected-tab filter;
+  any projection emission.
+- Any early destruction of the old timeline/voicegroup owner; any `setSong` reset of complete
+  EditorViewState; any scroll-only reload snapshot.
+- Any new harness, moved sidecar scenario, source-text-coupled behavior test, weakened readiness
+  drain, or CMake edit outside INT.
+- Any static/pre-bind ruler, TimeAxis, fallback-axis, paint-layer, or global-camera acceptance in
+  this sidecar-removal wave.
+
+## 12. Acceptance
+
+- Every EditorViewState origin, including a non-selected tab lane/remap origin, fans out once and
+  persists once through the exact six-entry codec; future tabs and relaunch restore it.
+- Ready reload preserves all nine transient ViewState fields. Fresh/reopen establishes all exact
+  canonical defaults without focus theft or intermediate event-list traffic.
+- `setSong` preserves complete global lane state. Timeline and voicegroup borrows remain valid
+  throughout MIDI adoption.
+- Project open/save/close/reload/switch/quit performs no view/editor project I/O; legacy bytes remain
+  untouched by those paths.
+- Transport order, readiness, bare save completion, retained registration/sample/preview/trash
+  behavior, deletions, and exact harness queries match §§4, 8, and 10.
+- The three project-I/O docs cite this plan; the time-ruler doc remains marked reconciled now.
+- No unresolved implementation choice, temporary symbol, compatibility code, or cross-slice file
+  overlap remains.
+
+Native smoke is limited to delivered sidecar-removal behavior and records these row-mapped
+observations:
+
+- **A:** open two bound songs and verify complete global editor state plus every canonical fresh
+  `ViewState` default;
+- **D:** mutate drawer and lane state in the non-selected tab, observe synchronous propagation and
+  one QSettings update, then open a third tab and verify its projection;
+- **C:** reload one ready tab and verify all nine transient fields, then close/reopen it and verify
+  canonical defaults with no leakage;
+- **E:** quit and relaunch, then verify the complete global state restored from QSettings with no
+  startup write;
+- **F:** byte-snapshot `.porydaw` before the reload, close, project switch, and quit boundaries,
+  then verify the listing and bytes remain identical after each boundary and after relaunch.
+
+Focused filters cover rows B/G/H and retained registration, sample, preview, trash, and song
+deletion behavior. Ruler behavior is not a predicate of this smoke.

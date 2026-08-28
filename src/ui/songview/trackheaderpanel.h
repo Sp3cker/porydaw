@@ -3,6 +3,7 @@
 #include <QPoint>
 #include <QWidget>
 #include <map>
+#include <optional>
 #include <vector>
 
 #include "ui/activity/trackactivity.h"
@@ -44,6 +45,11 @@ class TrackHeaderPanel : public QWidget
     bool event(QEvent *event) override;
 
   private:
+    TrackHeaderRow *reconcileRow(int track, std::map<int, TrackHeaderRow *> &previous);
+    void retireRows(const std::map<int, TrackHeaderRow *> &rows);
+    void synchronizeLayout();
+    std::optional<int> reorderTarget(int fromTrack, int dropSlot) const;
+
     SongView *m_sv;
     Geometry m_geometry;
     QVBoxLayout *m_layout;

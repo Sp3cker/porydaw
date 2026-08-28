@@ -274,6 +274,132 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
             view.setTrackMute(1, false);
         }
     }
+    // Three-row insertion-slot arithmetic: grow this two-track fixture with a
+    // real duplicated track, then exercise both directions across two rows
+    // plus the adjacent slot that must leave the row in place. Every probe
+    // returns to the duplicate baseline; the final undo restores the original
+    // two-track document and header state for the presentation checks below.
+    const int twoTrackIndex = doc.undoStack()->index();
+    const bool firstMute = view.trackMuted(0);
+    const bool secondMute = view.trackMuted(1);
+    const uint8_t firstChannel = doc.channelFor(0);
+    const uint8_t secondChannel = doc.channelFor(1);
+    const int duplicatedTrack = doc.duplicateTrack(1);
+    if (duplicatedTrack < 0) {
+        fail("could not create the third track for header reorder arithmetic");
+    } else if (duplicatedTrack != 2 || doc.engineTrackCount() != 3 ||
+               doc.undoStack()->index() != twoTrackIndex + 1) {
+        fail("duplicating the header reorder fixture did not create one three-track edit");
+    } else {
+        QCoreApplication::processEvents();
+        (void)view.grab(); // rebuild and lay out the added header row
+
+        const int fixtureIndex = doc.undoStack()->index();
+        const int fixtureTracks[] = {0, 1, duplicatedTrack};
+        const uint8_t duplicateChannel = doc.channelFor(duplicatedTrack);
+        const uint8_t trackIdentities[] = {firstChannel, secondChannel, duplicateChannel};
+        const bool distinctIdentities = firstChannel != secondChannel &&
+                                        firstChannel != duplicateChannel &&
+                                        secondChannel != duplicateChannel;
+        if (!distinctIdentities)
+            fail("three-track header fixture channels are not distinct");
+        const auto hasTrackOrder = [&](int first, int second, int third) {
+            return distinctIdentities &&
+                   doc.channelFor(fixtureTracks[0]) == trackIdentities[first] &&
+                   doc.channelFor(fixtureTracks[1]) == trackIdentities[second] &&
+                   doc.channelFor(fixtureTracks[2]) == trackIdentities[third];
+        };
+        auto dragToSlot = [&](int fromTrack, int slot) {
+            (void)view.grab();
+            auto *source =
+                view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(fromTrack));
+            const int targetRow = slot < 3 ? slot : 2;
+            auto *target = view.findChild<QWidget *>(
+                QStringLiteral("trackHeaderRow%1").arg(fixtureTracks[targetRow]));
+            if (!source || !target) {
+                fail("three-track header rows not found");
+                return false;
+            }
+            const QPoint start(source->width() / 2, source->height() * 3 / 4);
+            const QPoint targetPoint(target->width() / 2,
+                                     target->height() * (slot < 3 ? 1 : 3) / 4);
+            const QPoint drop = source->mapFromGlobal(target->mapToGlobal(targetPoint));
+            checks::events::sendMouse(*source, QEvent::MouseButtonPress, start, Qt::LeftButton,
+                                      Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*source, QEvent::MouseMove, drop, Qt::NoButton,
+                                      Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*source, QEvent::MouseButtonRelease, drop, Qt::LeftButton,
+                                      Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::processEvents();
+            return true;
+        };
+
+        view.setTrackMute(fixtureTracks[0], false);
+        view.setTrackMute(fixtureTracks[1], false);
+        view.setTrackMute(duplicatedTrack, true);
+        const int upwardIndex = doc.undoStack()->index();
+        if (dragToSlot(duplicatedTrack, 0)) {
+            const bool committed = doc.undoStack()->index() == upwardIndex + 1;
+            if (!committed || !hasTrackOrder(2, 0, 1) || !view.trackMuted(fixtureTracks[0]) ||
+                view.trackMuted(fixtureTracks[1]) || view.trackMuted(fixtureTracks[2])) {
+                fail("upward header drag resolved to the wrong engine track");
+            }
+            if (doc.undoStack()->index() != upwardIndex)
+                doc.undoStack()->setIndex(upwardIndex);
+            if (doc.undoStack()->index() != upwardIndex || !hasTrackOrder(0, 1, 2) ||
+                view.trackMuted(fixtureTracks[0]) || view.trackMuted(fixtureTracks[1]) ||
+                !view.trackMuted(fixtureTracks[2])) {
+                fail("undoing the upward header drag did not restore track identity");
+            }
+        }
+        view.setTrackMute(duplicatedTrack, false);
+
+        view.setTrackMute(fixtureTracks[0], true);
+        const int downwardIndex = doc.undoStack()->index();
+        if (dragToSlot(fixtureTracks[0], 3)) {
+            const bool committed = doc.undoStack()->index() == downwardIndex + 1;
+            if (!committed || !hasTrackOrder(1, 2, 0) || view.trackMuted(fixtureTracks[0]) ||
+                view.trackMuted(fixtureTracks[1]) || !view.trackMuted(fixtureTracks[2])) {
+                fail("downward header drag resolved to the wrong engine track");
+            }
+            if (doc.undoStack()->index() != downwardIndex)
+                doc.undoStack()->setIndex(downwardIndex);
+            if (doc.undoStack()->index() != downwardIndex || !hasTrackOrder(0, 1, 2) ||
+                !view.trackMuted(fixtureTracks[0]) || view.trackMuted(fixtureTracks[1]) ||
+                view.trackMuted(fixtureTracks[2])) {
+                fail("undoing the downward header drag did not restore track identity");
+            }
+        }
+        view.setTrackMute(fixtureTracks[0], false);
+
+        view.setTrackMute(fixtureTracks[1], true);
+        const int adjacentIndex = doc.undoStack()->index();
+        if (dragToSlot(fixtureTracks[1], 2)) {
+            const bool moved = doc.undoStack()->index() != adjacentIndex;
+            if (moved || !hasTrackOrder(0, 1, 2) || view.trackMuted(fixtureTracks[0]) ||
+                !view.trackMuted(fixtureTracks[1]) || view.trackMuted(fixtureTracks[2])) {
+                fail("adjacent header insertion slot moved the track");
+            }
+            if (doc.undoStack()->index() != adjacentIndex)
+                doc.undoStack()->setIndex(adjacentIndex);
+        }
+        view.setTrackMute(fixtureTracks[1], false);
+
+        if (doc.undoStack()->index() != fixtureIndex)
+            doc.undoStack()->setIndex(fixtureIndex);
+    }
+    if (doc.undoStack()->index() != twoTrackIndex)
+        doc.undoStack()->setIndex(twoTrackIndex);
+    QCoreApplication::processEvents();
+    view.setTrackMute(0, firstMute);
+    view.setTrackMute(1, secondMute);
+    (void)view.grab(); // consume the two-track restoration rebuild
+    if (doc.undoStack()->index() != twoTrackIndex || doc.engineTrackCount() != 2 ||
+        doc.channelFor(0) != firstChannel || doc.channelFor(1) != secondChannel ||
+        view.trackMuted(0) != firstMute || view.trackMuted(1) != secondMute ||
+        view.document() != &doc) {
+        fail("header reorder arithmetic did not restore the two-track fixture");
+    }
 
     const auto screenshotTick =
         uint64_t(std::ceil(std::max(0.0, view.tickAtContentX(view.width() / 2))));

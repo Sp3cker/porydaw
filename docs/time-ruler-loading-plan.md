@@ -39,11 +39,13 @@ Callers consume the same non-null `TimeAxis` interface in both states. Only note
 
 This module passes the deletion test: removing it would force fallback rules, signature segmentation, and timing calculations back into multiple painters and camera callers.
 
+Project-I/O staging follows `docs/view-sidecar-removal-plan.md` as the prerequisite authority: the view sidecar is deleted, `EditorViewState` is an application-global preference (not a camera or time-ruler preference), `pxPerBeat` and other `SongView::ViewState` fields remain transient per-tab, and `MidiStage` applies directly without waiting for a sidecar.
+
 ## Invariants
 
 1. `SongView` always has a valid musical axis, including before its first `setSong()` call.
 2. Fallback timing is defined once: 24 ticks per beat and implicit 4/4.
-3. `m_pxPerBeat` is the canonical horizontal scale.
+3. `m_pxPerBeat` is the transient per-tab canonical horizontal scale (`EditorViewState` is application-global via `QSettings` but is not a camera or time-ruler preference).
 4. Pixels per tick is always derived:
 
    ```cpp
@@ -54,10 +56,10 @@ This module passes the deletion test: removing it would force fallback rules, si
 6. The time ruler paints its structural layers without a bound timeline.
 7. Song-specific overlays are painted only when their source state exists.
 8. Loading disables interaction without disabling the whole `SongView` presentation.
-9. A reload retains the current axis and camera until the replacement timeline and sidecar are applied.
-10. A newly opened tab starts at the ordinary pre-roll camera home.
-11. Loading state is not persisted as a song sidecar snapshot.
-12. No dummy `MidiTimeline`, ruler pixmap cache, loading ruler widget, or project-I/O change is introduced.
+9. A reload retains the current axis, camera, and in-memory `ViewState` until the replacement timeline is applied at `MidiStage`.
+10. A fresh open or reopened tab starts at canonical transient `ViewState` defaults (including the ordinary pre-roll camera home).
+11. No per-song view or editor state persists anywhere; loading, camera, and ruler state are transient and never written to disk.
+12. No dummy `MidiTimeline`, ruler pixmap cache, loading ruler widget, or project-I/O change is introduced (project-I/O staging follows `docs/view-sidecar-removal-plan.md`).
 
 ## Target interface
 
@@ -147,32 +149,34 @@ Interaction entry points must use the explicit interaction state or require a bo
 
 ## State transitions
 
+Project-I/O staging follows `docs/view-sidecar-removal-plan.md` as the prerequisite authority. MIDI applies directly at `MidiStage` without waiting for a sidecar stage.
+
 ### New tab
 
 - Construct `SongView` with fallback `TimeAxis`.
-- Initialize `m_pxPerBeat` from the normal editor default.
-- Initialize horizontal scroll to `-leadPadPx()`.
+- Initialize canonical transient `ViewState` defaults (`m_pxPerBeat` from the normal editor default, horizontal scroll to `-leadPadPx()`, clock-grid floor, straight feel, event list off).
 - Paint the implicit 4/4 ruler immediately.
 - Keep interaction disabled.
 
 ### Fresh song load
 
-- Retain the fallback ruler while MIDI, sidecar, and voicegroup stages arrive.
-- MIDI resolution does not alter visual beat spacing because `m_pxPerBeat` remains canonical.
-- When the coalesced MIDI and sidecar state is applied, bind the new timeline and apply saved view state atomically.
+- Retain the fallback ruler while `MidiStage` and voicegroup stages arrive.
+- MIDI resolution does not alter visual beat spacing because `m_pxPerBeat` remains transient per-tab and canonical for horizontal geometry.
+- When `MidiStage` arrives, bind the new timeline and apply canonical camera home and transient `ViewState` defaults atomically (alongside applied global `EditorViewState`).
 - Enable interaction only after the existing readiness requirements are satisfied.
 
 ### Reload or replacement
 
+- On ready reload, `SongTab` captures the complete in-memory `ViewState` before `prepareForSongReplacement()`.
 - `prepareForSongReplacement()` cancels transient interactions and disconnects the document.
 - Retain the old axis and camera while replacement stages are in flight.
 - Do not clear or replace the ruler with fallback state.
-- Bind the replacement timeline and apply its sidecar together at the existing staged-load seam.
+- When `MidiStage` arrives, bind the replacement timeline via `setSong()` and reapply the complete retained in-memory `ViewState` atomically (`applyViewState()`).
 
 ### Close and reopen
 
-- Closing destroys the tab-local axis and camera.
-- Reopening the same song creates a fresh tab at the normal pre-roll home unless its persisted sidecar supplies song view state.
+- Closing destroys the tab-local axis, camera, and transient `ViewState`.
+- Reopening a song creates a fresh tab at canonical transient `ViewState` defaults (including the normal pre-roll camera home) with current application-global `EditorViewState`; no per-song view state is loaded or persisted.
 
 ## Implementation plan
 
@@ -242,16 +246,17 @@ For a timeline-less fresh view:
 
 Acceptance:
 
+- `pxPerBeat` remains transient per-tab and canonical for horizontal geometry (never persisted);
 - ticks-per-beat changes cannot alter beat spacing by construction;
 - no second mutable scale remains;
-- existing sidecar zoom semantics remain pixels per beat;
+- in-memory view-state capture and reload restore zoom semantics in pixels per beat without reading or writing any view sidecar;
 - loaded-song camera limits and zoom bounds remain unchanged.
 
 ### Step 4 — Review the coordinate-system cutover
 
 **Role:** `thermo-nuclear-reviewer`
 
-Review Steps 2–3 against this plan and the project-I/O ownership contract. Treat these as blockers:
+Review Steps 2–3 against this plan and the project-I/O staging contract in `docs/view-sidecar-removal-plan.md`. Treat these as blockers:
 
 - fallback constants or time-signature formulas remain scattered;
 - `TimeAxis` is a shallow pass-through;
@@ -380,21 +385,22 @@ deno task verify
 
 ## Non-goals
 
-- Project-I/O transport or ownership redesign.
+- Project-I/O transport or ownership redesign (project-I/O staging and sidecar removal are governed by `docs/view-sidecar-removal-plan.md`).
 - A separate loading presentation module.
 - Dummy MIDI data.
 - Ruler image caching.
 - Piano-roll note, velocity, automation, or playback behavior changes.
-- Sidecar schema changes beyond preserving existing pixels-per-beat semantics.
-- Persisting fresh loading-placeholder camera state.
+- Reading, writing, migrating, or introducing any view or editor sidecar (`ViewState` is transient per-tab; `EditorViewState` is application-global via `QSettings`).
+- Persisting loading-placeholder or camera state.
 
 ## Completion criteria
 
 The work is complete only when:
 
 1. all geometry and paint consumers use the always-valid axis seam;
-2. pixels per beat is the sole mutable horizontal scale;
+2. `m_pxPerBeat` is the transient per-tab canonical horizontal scale with no secondary mutable scale;
 3. the loading caption and null-timeline ruler exit are deleted;
 4. loading affects input readiness without replacing or disabling ruler presentation;
-5. focused checks, native application verification, periodic specialist reviews, and the full verification suite pass;
-6. no blocking reviewer finding remains.
+5. a fresh `MidiStage` applies canonical transient `ViewState` defaults (pre-roll home) and only ready reload preserves camera/ruler continuity per `docs/view-sidecar-removal-plan.md`;
+6. focused checks, native application verification, periodic specialist reviews, and the full verification suite pass;
+7. no blocking reviewer finding remains.

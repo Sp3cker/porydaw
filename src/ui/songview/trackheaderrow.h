@@ -77,10 +77,12 @@ class TrackHeaderRow : public QWidget
   private:
     friend class TrackHeaderPanel;
     void cancelRename();
+    QString fallbackTrackName() const;
     void resyncSong();
     QRect activityMeterRect() const;
     QRect editorRect() const;
     void finishRename(bool commit, bool restoreFocus);
+    void updateVisibleTitleCenteringCache(const QString &visibleTitle);
 
     QFont m_normalTitleFont;
     QFont m_boldTitleFont;

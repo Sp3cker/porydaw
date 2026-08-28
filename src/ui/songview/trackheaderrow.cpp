@@ -37,6 +37,81 @@ using Space = lyt::Space;
 namespace songview {
 using namespace songview::detail;
 
+namespace {
+
+enum class SelectionState {
+    None,
+    InScope,
+    Primary,
+};
+
+SelectionState resolveSelectionState(const EditorSelectionModel &selectionModel,
+                                     uint32_t usedTracks, int track)
+{
+    if (selectionModel.primaryTrack() == track)
+        return SelectionState::Primary;
+    if (selectionModel.resolvedTrackScope(usedTracks) & (1u << track))
+        return SelectionState::InScope;
+    return SelectionState::None;
+}
+
+struct RowPaintStyle {
+    QColor fill;
+    QColor backdrop;
+    const QFont *titleFont;
+    const QFontMetrics *titleMetrics;
+    QColor titleColor;
+    QColor subtitleColor;
+    qreal overBudgetMix;
+    bool useSelectedTitleOffset;
+};
+
+RowPaintStyle resolvePaintStyle(SelectionState selection, bool overBudget, const QPalette &palette,
+                                const QFont &normalTitleFont, const QFont &boldTitleFont,
+                                const QFontMetrics &normalTitleMetrics,
+                                const QFontMetrics &boldTitleMetrics)
+{
+    const QColor defaultBackdrop = palette.color(QPalette::Window);
+    RowPaintStyle style{
+        .fill = defaultBackdrop,
+        .backdrop = defaultBackdrop,
+        .titleFont = &normalTitleFont,
+        .titleMetrics = &normalTitleMetrics,
+        .titleColor = themes::color(themes::Role::song_view_primary_text),
+        .subtitleColor = themes::color(themes::Role::song_view_secondary_text),
+        .overBudgetMix = 0.6,
+        .useSelectedTitleOffset = false,
+    };
+
+    switch (selection) {
+    case SelectionState::None:
+        break;
+    case SelectionState::InScope:
+        style.fill = trackHeaderAlsoSelectedColor();
+        style.backdrop = style.fill;
+        break;
+    case SelectionState::Primary:
+        style.fill = themes::color(themes::Role::song_view_track_header_selection);
+        style.backdrop = style.fill;
+        style.titleFont = &boldTitleFont;
+        style.titleMetrics = &boldTitleMetrics;
+        style.titleColor = themes::color(themes::Role::song_view_track_header_selection_text);
+        style.subtitleColor = style.titleColor;
+        style.overBudgetMix = 0.35;
+        style.useSelectedTitleOffset = true;
+        break;
+    }
+
+    if (overBudget) {
+        style.titleColor = mixTowardOklab(style.titleColor, style.backdrop, style.overBudgetMix);
+        style.subtitleColor =
+            mixTowardOklab(style.subtitleColor, style.backdrop, style.overBudgetMix);
+    }
+    return style;
+}
+
+} // namespace
+
 TrackHeaderRow::Geometry TrackHeaderRow::Geometry::resolve()
 {
     return {lyt::fontPx(1.5),       lyt::fontPx(4.0),        lyt::fontPx(2.0),
@@ -167,73 +242,58 @@ bool TrackHeaderRow::exceedsProjectTrackBudget() const
     return doc && m_track >= doc->trackBudget();
 }
 
+QString TrackHeaderRow::fallbackTrackName() const
+{
+    return SongView::tr("Track %1").arg(m_track + 1);
+}
+
+void TrackHeaderRow::updateVisibleTitleCenteringCache(const QString &visibleTitle)
+{
+    if (visibleTitle == m_centeredTitle)
+        return;
+    m_centeredTitle = visibleTitle;
+    m_selectedTitleOffset =
+        typography::glyphCenteringOffset(m_normalTitleFont, m_boldTitleFont, visibleTitle);
+}
+
 void TrackHeaderRow::paintEvent(QPaintEvent *)
 {
-    QPainter p(this);
     const auto &selectionModel = m_sv->selectionModel();
-    const uint32_t usedTracks = usedTrackMask(m_sv->timeline());
-    const bool selected = selectionModel.primaryTrack() == m_track;
-    if (selected) {
-        // The derived selection fill has the required lightness gap. Keep
-        // it opaque so the visible header reaches that target.
-        p.fillRect(rect(), themes::color(themes::Role::song_view_track_header_selection));
-    } else if (selectionModel.resolvedTrackScope(usedTracks) & (1u << m_track)) {
-        // Part of the multi-track scope (Ctrl/Shift+click), lighter than
-        // the primary selection.
-        p.fillRect(rect(), trackHeaderAlsoSelectedColor());
-    }
-    const bool overBudget = exceedsProjectTrackBudget();
-    p.setPen(QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
-    p.drawLine(lyt::space(Space::Zero), height() - lyt::singlePixel(), width(),
-               height() - lyt::singlePixel());
+    const MidiTimeline *timeline = m_sv->timeline();
+    const uint32_t usedTracks = usedTrackMask(timeline);
+    const SelectionState selection = resolveSelectionState(selectionModel, usedTracks, m_track);
 
-    const MidiTimeline *tl = m_sv->timeline();
-    QString name = tl ? tl->tracks[m_track].name : QString();
+    const RowPaintStyle style =
+        resolvePaintStyle(selection, exceedsProjectTrackBudget(), palette(), m_normalTitleFont,
+                          m_boldTitleFont, m_normalTitleMetrics, m_boldTitleMetrics);
+    QString name = timeline ? timeline->tracks[m_track].name : QString();
     if (name.isEmpty())
-        name = SongView::tr("Track %1").arg(m_track + 1);
+        name = fallbackTrackName();
     const auto textW = width() - m_geometry.trackHeaderButtonColumnWidth -
                        m_geometry.trackHeaderTextLeft - lyt::space(Space::One);
     const auto title = QStringLiteral("%1 · %2").arg(m_track + 1).arg(name);
-    const QFont &titleFont = selected ? m_boldTitleFont : m_normalTitleFont;
-    const QFontMetrics &titleMetrics = selected ? m_boldTitleMetrics : m_normalTitleMetrics;
-    const auto visibleTitle = titleMetrics.elidedText(title, Qt::ElideRight, textW);
-    const QColor backdrop = selected ? themes::color(themes::Role::song_view_track_header_selection)
-                            : (selectionModel.resolvedTrackScope(usedTracks) & (1u << m_track))
-                                ? trackHeaderAlsoSelectedColor()
-                                : palette().color(QPalette::Window);
-    // Tracks beyond the project budget recede to a gray warning but stay active.
-    QColor titleColor = selected
-                            ? themes::color(themes::Role::song_view_track_header_selection_text)
-                            : themes::color(themes::Role::song_view_primary_text);
-    QColor subtitleColor = selected
-                               ? themes::color(themes::Role::song_view_track_header_selection_text)
-                               : themes::color(themes::Role::song_view_secondary_text);
-    if (overBudget) {
-        titleColor = mixTowardOklab(titleColor, backdrop, selected ? 0.35 : 0.6);
-        subtitleColor = mixTowardOklab(subtitleColor, backdrop, selected ? 0.35 : 0.6);
-    }
-    p.setFont(titleFont);
-    p.setPen(titleColor);
-    const auto &subtitleFont = m_subtitleFont;
+    const auto visibleTitle = style.titleMetrics->elidedText(title, Qt::ElideRight, textW);
     // The bottom pixel belongs to the separator, not the row's content.
     const auto textBounds = QRect(m_geometry.trackHeaderTextLeft, lyt::space(Space::Zero), textW,
                                   height() - lyt::singlePixel());
     const auto textBoxes = m_textLayout->align(textBounds, ::layout::VerticalAlignment::Center);
-    // Bold and regular glyph bounds differ. Cache the selected-face offset
-    // until the visible title or font changes.
-    if (visibleTitle != m_centeredTitle) {
-        m_centeredTitle = visibleTitle;
-        m_selectedTitleOffset =
-            typography::glyphCenteringOffset(m_normalTitleFont, m_boldTitleFont, visibleTitle);
-    }
-    const auto titleBox =
-        QRectF(textBoxes.primary).translated(selected ? m_selectedTitleOffset : QPointF{});
-    p.drawText(titleBox, Qt::AlignLeft | Qt::AlignVCenter, visibleTitle);
-
-    p.setFont(subtitleFont);
-    p.setPen(subtitleColor);
-    m_shownProgram = m_sv->currentProgram(m_track);
+    updateVisibleTitleCenteringCache(visibleTitle);
+    const QPointF titleOffset = style.useSelectedTitleOffset ? m_selectedTitleOffset : QPointF{};
+    const auto titleBox = QRectF(textBoxes.primary).translated(titleOffset);
+    const int shownProgram = m_sv->currentProgram(m_track);
     const QString subtitle = m_sv->instrumentLabel(m_track);
+
+    QPainter p(this);
+    p.fillRect(rect(), style.fill);
+    p.setPen(QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
+    p.drawLine(lyt::space(Space::Zero), height() - lyt::singlePixel(), width(),
+               height() - lyt::singlePixel());
+    p.setFont(*style.titleFont);
+    p.setPen(style.titleColor);
+    p.drawText(titleBox, Qt::AlignLeft | Qt::AlignVCenter, visibleTitle);
+    p.setFont(m_subtitleFont);
+    p.setPen(style.subtitleColor);
+    m_shownProgram = shownProgram;
     p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
                m_subtitleMetrics.elidedText(subtitle, Qt::ElideRight, textW));
 }
@@ -314,7 +374,7 @@ void TrackHeaderRow::beginRename()
     }
     m_editor->setText(doc->trackName(m_track));
     // What an empty name falls back to (mirrors the painted default).
-    m_editor->setPlaceholderText(SongView::tr("Track %1").arg(m_track + 1));
+    m_editor->setPlaceholderText(fallbackTrackName());
     m_editor->setGeometry(editorRect());
     m_editor->show();
     m_editor->setFocus();
@@ -391,24 +451,25 @@ void TrackHeaderRow::contextMenuEvent(QContextMenuEvent *event)
     QAction *duplicateAction = menu.addAction(SongView::tr("Duplicate track"));
     duplicateAction->setEnabled(m_sv->document()->canAddTrack());
     QAction *deleteAction = menu.addAction(SongView::tr("Delete track"));
-    QAction *chosen = menu.exec(event->globalPos());
-    // Queued: these edits rebuild the header panel. (Rename just opens
-    // the inline editor — no edit until it commits — so it's direct.)
-    if (chosen == renameAction) {
-        beginRename();
-    } else if (chosen == showVoiceAction) {
-        // No document edit — nothing rebuilds, so no queue needed.
-        m_sv->revealTrackVoice(m_track);
-    } else if (chosen == voiceAction) {
+
+    connect(renameAction, &QAction::triggered, this, &TrackHeaderRow::beginRename);
+    connect(showVoiceAction, &QAction::triggered, this,
+            [this] { m_sv->revealTrackVoice(m_track); });
+    // Queued: these edits rebuild the header panel.
+    connect(voiceAction, &QAction::triggered, this, [this] {
         QMetaObject::invokeMethod(
             m_sv, [sv = m_sv, t = m_track] { sv->editTrackVoice(t); }, Qt::QueuedConnection);
-    } else if (chosen == duplicateAction) {
+    });
+    connect(duplicateAction, &QAction::triggered, this, [this] {
         QMetaObject::invokeMethod(
             m_sv, [sv = m_sv, t = m_track] { sv->duplicateTrack(t); }, Qt::QueuedConnection);
-    } else if (chosen == deleteAction) {
+    });
+    connect(deleteAction, &QAction::triggered, this, [this] {
         QMetaObject::invokeMethod(
             m_sv, [sv = m_sv, t = m_track] { sv->deleteTrack(t); }, Qt::QueuedConnection);
-    }
+    });
+
+    menu.exec(event->globalPos());
 }
 
 bool TrackHeaderRow::eventFilter(QObject *watched, QEvent *event)
