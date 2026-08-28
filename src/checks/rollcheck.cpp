@@ -55,6 +55,8 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
     if (checks::rollcheck::runIdentityScenarios(check, song) == ScenarioContinuation::Stop ||
         checks::rollcheck::runRemapScenarios(check, song) == ScenarioContinuation::Stop ||
+        checks::rollcheck::runHeaderReconciliationScenarios(check, song) ==
+            ScenarioContinuation::Stop ||
         checks::rollcheck::runCameraScenarios(check) == ScenarioContinuation::Stop)
         return earlyFailureStatus();
 

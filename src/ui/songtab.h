@@ -28,7 +28,11 @@ class SongView;
 //
 // Load lifecycle: WorkspaceUi delivers MidiStage, SidecarStage, then terminal
 // VoicegroupBound, whose lease was adopted from the preceding LoadedBankView;
-// later LoadedBankView events replace that lease atomically. The view is
+// later LoadedBankView events replace that lease atomically. MidiStage only
+// buffers the song content; SidecarStage adopts it and rebinds the paired
+// view in one swap, so the first visible frame carries the sidecar camera
+// while the previous song's projection and voicegroup lease stay live until
+// that swap. The view is
 // interactive only once every stage has landed (isReady()). SongSaved adopts
 // the save guards on the document; SongFailed records the presentation error
 // without unbinding a loaded tab. Document edits rebuild the timeline at the
@@ -76,9 +80,10 @@ class SongTab final : public QWidget
 
     // ---- Applied stage values (copied; WorkspaceUi unpacks SongUpdate) ----
 
-    // MidiStage: adopts the detached SMF model as this tab's document.
+    // MidiStage: buffers the detached SMF content for the next SidecarStage.
     void applyMidiStage(SongInfo info, SmfFile smf, int trackBudget);
-    // SidecarStage: a missing or corrupt sidecar arrives as loaded == false.
+    // SidecarStage: adopts the buffered SMF and rebinds the paired view in
+    // one swap; a missing or corrupt sidecar arrives as loaded == false.
     void applySidecarStage(bool loaded, ViewSidecar::Snapshot snapshot);
     // VoicegroupBound: identity only; the lease came with the preceding
     // LoadedBankView.
@@ -105,6 +110,18 @@ class SongTab final : public QWidget
     void rebuildTimeline();
     void updateReadiness();
 
+    struct ScrollPosition {
+        double horizontal;
+        double vertical;
+    };
+
+    struct PendingLoad {
+        SongInfo info;
+        SmfFile smf;
+        int trackBudget;
+        std::optional<ScrollPosition> scroll;
+    };
+
     // Member order is destruction order's reverse: the paired view's raw
     // borrows (timeline, document) must not outlive what they point at.
     SongName m_name;
@@ -113,6 +130,7 @@ class SongTab final : public QWidget
     SongView *const m_view;
     std::optional<VoicegroupId> m_voicegroupId;
     VoicegroupLease m_voicegroup;
+    std::optional<PendingLoad> m_pendingLoad;
     double m_sampleRate = 0.0;
     QString m_presentationError;
     bool m_midiBound = false;

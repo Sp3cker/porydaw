@@ -8,7 +8,7 @@
 #include "ui/activity/trackactivity.h"
 
 class QEvent;
-class QPoint;
+class QPushButton;
 class QVBoxLayout;
 class SongView;
 
@@ -31,6 +31,7 @@ class TrackHeaderPanel : public QWidget
     explicit TrackHeaderPanel(SongView *sv);
 
     void rebuild();
+    void cancelTransientState();
     void syncSelection();
     void beginRename(int track);
     void syncVoices();
@@ -46,9 +47,9 @@ class TrackHeaderPanel : public QWidget
     SongView *m_sv;
     Geometry m_geometry;
     QVBoxLayout *m_layout;
-    std::vector<QWidget *> m_rows;
     std::map<int, TrackHeaderRow *> m_rowByTrack;
     std::vector<TrackHeaderRow *> m_trackRows;
+    QPushButton *m_addButton;
     QWidget *m_indicator = nullptr;
     int m_dragFrom = -1; // dragged engine track; -1 = no drag live
     int m_dropSlot = -1; // insertion slot the indicator marks

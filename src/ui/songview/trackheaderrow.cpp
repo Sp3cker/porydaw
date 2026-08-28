@@ -103,8 +103,8 @@ TrackHeaderRow::TrackHeaderRow(SongView *sv, int track, QWidget *parent)
     m_mute->setCheckable(true);
     m_mute->setFixedSize(buttonExtent, buttonExtent);
     m_mute->setObjectName(QStringLiteral("trackMuteButton"));
-    // Headers are rebuilt on every document edit; keep the persistent
-    // mute/solo state (checked before connect, so nothing re-emits).
+    // Checked before connect, so construction re-emits nothing; rows
+    // retained across a rebuild re-check via resyncSong.
     m_mute->setChecked(sv->trackMuted(track));
     connect(m_mute, &QToolButton::toggled, this,
             [this](bool on) { m_sv->setTrackMute(m_track, on); });
@@ -264,8 +264,8 @@ void TrackHeaderRow::mousePressEvent(QMouseEvent *event)
 // Inline rename: a line edit overlaid on the row's name line. Return
 // commits, Escape cancels (both restore the roll's focus), focus-out
 // commits Reaper-style. The document edit itself is queued by
-// commitTrackRename — it rebuilds the header panel, which would delete
-// this row and the editor mid-signal.
+// commitTrackRename — it rebuilds the header panel, which would cancel
+// this editor mid-signal.
 // The voice line follows the song's program changes as the playhead (or
 // edit cursor) moves; repaint only when the shown program flips.
 void TrackHeaderRow::syncVoice()
@@ -323,11 +323,42 @@ void TrackHeaderRow::beginRename()
 
 // Reaper-style commit for gestures that will rebuild the panel: header
 // rows take no focus, so pressing one never gives the editor a
-// focus-out — without this, the rebuild would destroy the editor and
-// silently drop the typed name.
+// focus-out — without this, the rebuild's cancel would silently drop
+// the typed name.
 void TrackHeaderRow::commitOpenRename()
 {
     finishRename(true, false);
+}
+
+// Rebuild-time cancel: the typed name is dropped, never committed;
+// m_finishing blocks the editingFinished the focus-out emits.
+void TrackHeaderRow::cancelRename()
+{
+    if (!m_editor)
+        return;
+    const bool restoreFocus = m_editor->hasFocus();
+    m_finishing = true;
+    m_editor->hide();
+    m_editor->setObjectName(QString());
+    m_editor->deleteLater();
+    m_editor = nullptr;
+    m_finishing = false;
+    if (restoreFocus)
+        m_sv->focusContent();
+}
+
+void TrackHeaderRow::resyncSong()
+{
+    cancelRename();
+    m_dragArmed = false;
+    m_dragging = false;
+    m_voiceClickArmed = false;
+    m_shownProgram = -2;
+    m_mute->setChecked(m_sv->trackMuted(m_track));
+    m_solo->setChecked(m_sv->trackSoloed(m_track));
+    setActivity(m_sv->m_trackActivity.intensity(m_track), m_sv->m_playing);
+    updateToolTip();
+    update();
 }
 
 void TrackHeaderRow::mouseDoubleClickEvent(QMouseEvent *event)
@@ -335,8 +366,7 @@ void TrackHeaderRow::mouseDoubleClickEvent(QMouseEvent *event)
     m_sv->selectTrack(m_track);
     // The voice line opens the voice picker (its single click already
     // revealed the voice in the dock); anywhere else renames. Queued:
-    // the picked voice's edit rebuilds the header panel, deleting this
-    // row out from under its own event handler.
+    // the picked voice's edit rebuilds the header panel.
     if (voiceLineRect().contains(event->pos())) {
         QMetaObject::invokeMethod(
             m_sv, [sv = m_sv, t = m_track] { sv->editTrackVoice(t); }, Qt::QueuedConnection);
@@ -362,9 +392,8 @@ void TrackHeaderRow::contextMenuEvent(QContextMenuEvent *event)
     duplicateAction->setEnabled(m_sv->document()->canAddTrack());
     QAction *deleteAction = menu.addAction(SongView::tr("Delete track"));
     QAction *chosen = menu.exec(event->globalPos());
-    // Queued: these edits rebuild the header panel, which deletes this
-    // row out from under its own event handler. (Rename just opens the
-    // inline editor — no edit until it commits — so it's direct.)
+    // Queued: these edits rebuild the header panel. (Rename just opens
+    // the inline editor — no edit until it commits — so it's direct.)
     if (chosen == renameAction) {
         beginRename();
     } else if (chosen == showVoiceAction) {

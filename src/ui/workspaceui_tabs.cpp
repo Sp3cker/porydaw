@@ -241,8 +241,6 @@ void WorkspaceUi::applyStagedUpdate(const SongName &name, MidiStage &stage)
     if (m_rebindSkip.contains(name))
         return; // bank rebind: the document keeps its live state
     tab->applyMidiStage(std::move(stage.info), std::move(stage.smf), stage.trackBudget);
-    tab->view().applyEditorDrawerState(m_editorDrawerState);
-    refreshTabTitle(tab);
 }
 
 void WorkspaceUi::applyStagedUpdate(const SongName &name, SidecarStage &stage)

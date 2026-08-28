@@ -43,6 +43,14 @@ TrackHeaderPanel::TrackHeaderPanel(SongView *sv)
     m_layout->setContentsMargins(lyt::space(Space::Zero), lyt::space(Space::Zero),
                                  lyt::space(Space::Zero), lyt::space(Space::Zero));
     m_layout->setSpacing(lyt::space(Space::Zero));
+    m_addButton = new QPushButton(SongView::tr("+ Add track"), this);
+    m_addButton->setFocusPolicy(Qt::NoFocus);
+    m_addButton->setToolTip(SongView::tr("Add a track (picks its voice first)"));
+    connect(
+        m_addButton, &QPushButton::clicked, m_sv, [sv = m_sv] { sv->addTrack(); },
+        Qt::QueuedConnection);
+    m_addButton->hide();
+    m_layout->addWidget(m_addButton);
     m_layout->addStretch();
     // Reorder-drag drop indicator: a thin line floating over the rows at
     // the insertion point.
@@ -52,64 +60,74 @@ TrackHeaderPanel::TrackHeaderPanel(SongView *sv)
     m_indicator->hide();
 }
 
+void TrackHeaderPanel::cancelTransientState()
+{
+    endRowDrag(false);
+    for (const auto &entry : m_rowByTrack)
+        entry.second->cancelRename();
+}
+
 void TrackHeaderPanel::rebuild()
 {
-    // A document edit mid-drag rebuilds the rows, deleting the dragged
-    // one out from under its own gesture; abandon the drag first.
-    endRowDrag(false);
-    // Deferred deletion: a rebuild can arrive from inside a row's own
-    // mouse press (clicking a header focuses the roll, which fires an
-    // editor field's editingFinished; a structural voice commit then
-    // swaps the voicegroup into every view). Freeing the rows here
-    // would leave that row's event handler running on freed memory.
-    // Keep them parented (their mouse handlers cast parentWidget())
-    // but hidden and anonymous until the event loop collects them.
-    for (QWidget *row : m_rows) {
+    cancelTransientState();
+
+    const MidiTimeline *tl = m_sv->timeline();
+    SongDocument *doc = m_sv->document();
+    const bool canAdd = tl && doc && doc->canAddTrack();
+
+    std::map<int, TrackHeaderRow *> previous = std::move(m_rowByTrack);
+    m_rowByTrack.clear();
+    m_trackRows.clear();
+    for (int t = 0; t < 16; t++) {
+        if (!tl || !tl->tracks[t].used)
+            continue;
+        TrackHeaderRow *row = nullptr;
+        if (const auto it = previous.find(t); it != previous.end()) {
+            row = it->second;
+            previous.erase(it);
+            row->resyncSong();
+        } else {
+            row = new TrackHeaderRow(m_sv, t, this);
+            row->setObjectName(QStringLiteral("trackHeaderRow%1").arg(t));
+            row->updateToolTip();
+        }
+        m_rowByTrack[t] = row;
+        m_trackRows.push_back(row);
+    }
+    // Retired rows drop their identity and leave the layout now but stay
+    // parented until the event loop frees them: a rebuild can arrive from
+    // inside a row's own mouse press (clicking a header focuses the roll,
+    // whose editingFinished commit queues an edit that rebuilds this
+    // panel), and the row's handlers keep running until then.
+    for (const auto &entry : previous) {
+        TrackHeaderRow *row = entry.second;
+        row->cancelRename();
         row->hide();
-        // Anonymous, children included: name lookups (the rename
-        // editor, harness hooks) must only ever see the live rows.
+        // Anonymous, children included: name lookups (the rename editor,
+        // harness hooks) must only ever see the live rows.
         row->setObjectName(QString());
         for (QWidget *child : row->findChildren<QWidget *>())
             child->setObjectName(QString());
         m_layout->removeWidget(row);
         row->deleteLater();
     }
-    m_rows.clear();
-    m_rowByTrack.clear();
-    m_trackRows.clear();
-    const MidiTimeline *tl = m_sv->timeline();
-    if (tl) {
-        for (int t = 0; t < 16; t++) {
-            if (!tl->tracks[t].used)
-                continue;
-            auto *row = new TrackHeaderRow(m_sv, t, this);
-            row->setObjectName(QStringLiteral("trackHeaderRow%1").arg(t));
-            m_rowByTrack[t] = row;
-            row->updateToolTip();
-            m_layout->insertWidget(m_layout->count() - 1, row);
-            m_rows.push_back(row);
-            m_trackRows.push_back(row);
-        }
-        SongDocument *doc = m_sv->document();
-        if (doc && doc->canAddTrack()) {
-            auto *add = new QPushButton(SongView::tr("+ Add track"), this);
-            add->setFocusPolicy(Qt::NoFocus);
-            add->setToolTip(SongView::tr("Add a track (picks its voice first)"));
-            // Queued: the edit rebuilds this panel, deleting the button
-            // out from under its own clicked handler.
-            connect(
-                add, &QPushButton::clicked, m_sv, [sv = m_sv] { sv->addTrack(); },
-                Qt::QueuedConnection);
-            m_layout->insertWidget(m_layout->count() - 1, add);
-            m_rows.push_back(add);
-        }
+    for (size_t i = 0; i < m_trackRows.size(); i++) {
+        const auto item = m_layout->itemAt(int(i));
+        if (item && item->widget() == m_trackRows[i])
+            continue;
+        m_layout->insertWidget(int(i), m_trackRows[i]);
     }
+    const int addButtonIndex = int(m_trackRows.size());
+    const auto addButtonItem = m_layout->itemAt(addButtonIndex);
+    if (!addButtonItem || addButtonItem->widget() != m_addButton)
+        m_layout->insertWidget(addButtonIndex, m_addButton);
+    m_addButton->setVisible(canAdd);
 }
 
 void TrackHeaderPanel::syncSelection()
 {
-    for (QWidget *row : m_rows)
-        row->update();
+    for (const auto &entry : m_rowByTrack)
+        entry.second->update();
 }
 
 void TrackHeaderPanel::beginRename(int track)
@@ -188,14 +206,14 @@ void TrackHeaderPanel::endRowDrag(bool commit)
     if (fromIdx < 0 || slot == fromIdx || slot == fromIdx + 1)
         return;
     const int target = m_trackRows[size_t(slot > fromIdx ? slot - 1 : slot)]->track();
-    // The move's rebuild would destroy an open rename editor without a
-    // focus-out (rows take no focus): commit it Reaper-style first. Its
-    // queued commit runs before the queued move below, and renameTrack
-    // renumbers nothing, so both captured track numbers stay valid.
+    // The move's rebuild cancels open rename editors, silently dropping
+    // what was typed: commit them Reaper-style first. Its queued commit
+    // runs before the queued move below, and renameTrack renumbers
+    // nothing, so both captured track numbers stay valid.
     for (const auto &entry : m_rowByTrack)
         entry.second->commitOpenRename();
-    // Queued: the edit rebuilds this panel, deleting the dragged row out
-    // from under its own mouse-release handler.
+    // Queued: the move rebuilds this panel from inside the release
+    // handler.
     QMetaObject::invokeMethod(
         m_sv, [sv = m_sv, from, target] { sv->moveTrack(from, target); }, Qt::QueuedConnection);
 }

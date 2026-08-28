@@ -115,15 +115,13 @@ int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel)
     loaded.editor.hideLane(controllerRow(9, 1));
     check(ViewSidecar::load(scratchProject, label, &loaded), "loaded detached snapshot");
     check(loaded.view.valid && loaded.view.pxPerBeat == saved.view.pxPerBeat &&
-              loaded.view.keyHeight == saved.view.keyHeight &&
-              loaded.view.scrollPx == saved.view.scrollPx &&
-              loaded.view.scrollY == saved.view.scrollY &&
-              loaded.view.selectedTrack == saved.view.selectedTrack &&
+              loaded.view.keyHeight == saved.view.keyHeight && loaded.view.scrollPx == 0.0 &&
+              loaded.view.scrollY == 0.0 && loaded.view.selectedTrack == saved.view.selectedTrack &&
               loaded.view.editCursorTick == saved.view.editCursorTick &&
               loaded.view.gridMinDenom == saved.view.gridMinDenom &&
               loaded.view.gridTriplet == saved.view.gridTriplet &&
               loaded.view.eventList == saved.view.eventList,
-          "round trip restores the detached camera/grid snapshot");
+          "round trip restores view state without closed-session scroll position");
     const EditorViewState defaultEditor;
     check(hasSavedLaneState(loaded.editor) && loaded.editor.velocity == defaultEditor.velocity &&
               loaded.editor.automation == defaultEditor.automation &&
@@ -136,8 +134,10 @@ int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel)
     const QJsonObject canonicalEditor = canonicalRoot.value(QStringLiteral("editor")).toObject();
     check(canonicalRoot.value(QStringLiteral("registration")).toObject() ==
                   originalRoot.value(QStringLiteral("registration")).toObject() &&
-              !canonicalView.contains(QStringLiteral("futureState")),
-          "save preserves unrelated root fields and replaces the view schema");
+              !canonicalView.contains(QStringLiteral("futureState")) &&
+              !canonicalView.contains(QStringLiteral("scrollPx")) &&
+              !canonicalView.contains(QStringLiteral("scrollY")),
+          "save preserves unrelated root fields and omits scroll position");
     const auto hasDrawerChrome = [](const QJsonObject &object) {
         return object.contains(QStringLiteral("velocity")) ||
                object.contains(QStringLiteral("automation")) ||
@@ -164,6 +164,8 @@ int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel)
 
     QJsonObject viewOnly;
     viewOnly.insert(QStringLiteral("pxPerBeat"), 48.0);
+    viewOnly.insert(QStringLiteral("scrollPx"), 31.5);
+    viewOnly.insert(QStringLiteral("scrollY"), 17.25);
     const EditorAutomationRowId legacyHeightLane = controllerRow(3, 7);
     const EditorAutomationRowId legacyEmptyLane = controllerRow(3, 8);
     const EditorAutomationRowId legacyHiddenFirst = controllerRow(3, 9);
@@ -178,7 +180,8 @@ int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel)
           "seeded legacy view lane state");
     ViewSidecar::Snapshot migrated;
     check(
-        ViewSidecar::load(scratchProject, label, &migrated) && migrated.editor.laneHeight == 64 &&
+        ViewSidecar::load(scratchProject, label, &migrated) && migrated.view.scrollPx == 0.0 &&
+            migrated.view.scrollY == 0.0 && migrated.editor.laneHeight == 64 &&
             migrated.editor.laneHeights.size() == 1 &&
             migrated.editor.laneHeights.find(legacyHeightLane) !=
                 migrated.editor.laneHeights.end() &&
@@ -190,7 +193,7 @@ int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel)
             migrated.editor.emptyLanes.find(legacyEmptyLane) != migrated.editor.emptyLanes.end() &&
             migrated.editor.hiddenLanes() ==
                 std::vector<EditorAutomationRowId>{legacyHiddenFirst, legacyHiddenSecond},
-        "legacy view lane state migrates in order");
+        "legacy view loads lane state without scroll position");
     check(ViewSidecar::save(scratchProject, label, migrated), "saved migrated lane state");
     const QJsonObject migratedRoot = readJson(path);
     const QJsonObject migratedView = migratedRoot.value(QStringLiteral("view")).toObject();

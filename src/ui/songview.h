@@ -109,6 +109,7 @@ class SongView : public QWidget
 
     // Editing is enabled while a document is attached (may be null).
     void setDocument(SongDocument *document);
+    void prepareForSongReplacement();
     SongDocument *document() const { return m_document; }
 
     // Voicegroup swap after a -G settings change (labels only; may be null
@@ -212,6 +213,7 @@ class SongView : public QWidget
     void commitEditCursor(uint64_t tick);
     // Transport "go to start": edit cursor to tick 0 and scroll home.
     void goToStart();
+    void resetScrollPosition();
 
     void selectTrack(int track);
 
@@ -605,6 +607,7 @@ class SongView : public QWidget
     void requestProjectionRebuild();
     void syncPlayheadOverlay();
 
+    void disconnectDocument();
     void notifyDrawerSongChanged();
     void notifyVelocityGestureChanged();
     void refreshDrawerPages();
@@ -617,6 +620,7 @@ class SongView : public QWidget
     double maxHScroll() const;
     void setVScroll(double y);
     double maxRollScroll() const;
+    double defaultVerticalScroll() const;
     void updateScrollbars();
     void rebuildAfterSongChange();
     struct TimeScopeResolution {

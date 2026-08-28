@@ -1,6 +1,5 @@
 #include "checks/rollcheck/rollcheck.h"
 
-#include <QByteArray>
 #include <QObject>
 #include <QTemporaryDir>
 #include <QWidget>

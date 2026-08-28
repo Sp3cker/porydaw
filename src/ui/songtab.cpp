@@ -50,38 +50,54 @@ void SongTab::setSampleRate(double sampleRate)
 
 void SongTab::applyMidiStage(SongInfo info, SmfFile smf, int trackBudget)
 {
-    // A staged load replaces everything the tab showed before. Clear the
-    // bound state first so adoptSmf's documentChanged does not rebuild the
-    // outgoing timeline.
+    std::optional<ScrollPosition> scroll;
+    if (m_ready) {
+        const SongView::ViewState state = m_view->viewState();
+        scroll = ScrollPosition{state.scrollPx, state.scrollY};
+    }
+    m_pendingLoad = PendingLoad{std::move(info), std::move(smf), trackBudget, std::move(scroll)};
     m_midiBound = false;
     m_sidecarBound = false;
     m_voicegroupBound = false;
     m_ready = false;
     m_voicegroupId.reset();
-    m_voicegroup = {};
-    m_view->setVoicegroup(nullptr);
+    m_view->prepareForSongReplacement();
     m_view->setEnabled(false);
     m_presentationError.clear();
-
-    QString error;
-    if (!m_document.adoptSmf(std::move(smf), info, &error)) {
-        m_presentationError = error;
-        return;
-    }
-    m_document.setTrackBudget(trackBudget);
-    m_midiBound = true;
-
-    rebuildTimeline();
-    m_view->setSong(m_timeline.get(), nullptr);
-    m_view->setDocument(&m_document);
 }
 
 void SongTab::applySidecarStage(bool loaded, ViewSidecar::Snapshot snapshot)
 {
+    Q_ASSERT(m_pendingLoad.has_value());
+    PendingLoad pending = std::move(*m_pendingLoad);
+    m_pendingLoad.reset();
+
+    QString error;
+    if (!m_document.adoptSmf(std::move(pending.smf), pending.info, &error)) {
+        m_presentationError = std::move(error);
+        return;
+    }
+    m_document.setTrackBudget(pending.trackBudget);
+    m_midiBound = true;
+
+    std::shared_ptr<const MidiTimeline> timeline(m_document.buildTimeline(m_sampleRate));
+    m_view->setDocument(&m_document);
+    m_view->setSong(timeline.get(), nullptr);
+    m_timeline = std::move(timeline);
+    m_voicegroup = {};
+
     if (loaded) {
         snapshot.editor.setDrawerState(m_view->editorViewState().drawerState());
-        m_view->applyViewState(snapshot.view);
         m_view->applyEditorViewState(snapshot.editor);
+        m_view->applyViewState(snapshot.view);
+    }
+    if (pending.scroll) {
+        SongView::ViewState state = m_view->viewState();
+        state.scrollPx = pending.scroll->horizontal;
+        state.scrollY = pending.scroll->vertical;
+        m_view->applyViewState(state);
+    } else if (loaded) {
+        m_view->resetScrollPosition();
     }
     m_sidecarBound = true;
     updateReadiness();

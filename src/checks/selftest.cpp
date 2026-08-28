@@ -476,10 +476,9 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             const ViewSidecar::Snapshot restored{view.viewState(), view.editorViewState()};
             QString constant, player;
             ok =
+                loaded.view.scrollPx == 0.0 && loaded.view.scrollY == 0.0 &&
                 std::abs(restored.view.pxPerBeat - saved.view.pxPerBeat) < 0.001 &&
                 std::abs(restored.view.keyHeight - saved.view.keyHeight) < 0.001 &&
-                std::abs(restored.view.scrollPx - saved.view.scrollPx) < 0.001 &&
-                std::abs(restored.view.scrollY - saved.view.scrollY) < 0.001 &&
                 restored.view.selectedTrack == saved.view.selectedTrack &&
                 restored.view.editCursorTick == saved.view.editCursorTick &&
                 restored.view.gridMinDenom == 8 && restored.view.gridTriplet &&

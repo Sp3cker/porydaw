@@ -75,6 +75,9 @@ class TrackHeaderRow : public QWidget
     void resizeEvent(QResizeEvent *) override;
 
   private:
+    friend class TrackHeaderPanel;
+    void cancelRename();
+    void resyncSong();
     QRect activityMeterRect() const;
     QRect editorRect() const;
     void finishRename(bool commit, bool restoreFocus);

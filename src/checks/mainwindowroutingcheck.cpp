@@ -138,6 +138,121 @@ bool waitForProjectReady(const WorkspaceUi &workspace)
                30000, 1) == checks::async_wait::Result::Ready;
 }
 
+template <class Check>
+void checkStagedLoadCoalescing(const WorkspaceUi &workspace, const SongName &name,
+                               const VoicegroupId *probeIdentity,
+                               const EditorDrawerState &drawerState, Check &&check)
+{
+    // Staged-load coalescing: MidiStage alone leaves the view unbound;
+    // SidecarStage lands the final camera and editor geometry in one swap.
+    const auto &stagedSongs = workspace.projectState().snapshot.songs();
+    const auto stagedSong =
+        std::find_if(stagedSongs.cbegin(), stagedSongs.cend(),
+                     [&name](const SongInfo &info) { return info.label == name.value(); });
+    auto probeSmf = SmfFile{};
+    QString probeSmfError;
+    const bool probeSongReady = stagedSong != stagedSongs.cend() &&
+                                SmfFile::readFile(stagedSong->midPath, &probeSmf, &probeSmfError);
+    check(probeSongReady, "staged-load probe could not read the song's MIDI");
+    if (probeSongReady) {
+        const int probeBudget = workspace.projectState().snapshot.trackBudgetFor(*stagedSong);
+        SongTab probe(name);
+        probe.view().applyEditorDrawerState(drawerState);
+        const EditorDrawerState probeChrome = probe.view().editorViewState().drawerState();
+        const auto findAddButton = [&probe]() -> QPushButton * {
+            for (QPushButton *button : probe.view().findChildren<QPushButton *>())
+                if (button->text() == SongView::tr("+ Add track"))
+                    return button;
+            return nullptr;
+        };
+
+        probe.applyMidiStage(*stagedSong, probeSmf, probeBudget);
+        probe.applySidecarStage(false, ViewSidecar::Snapshot{});
+        if (probeIdentity)
+            probe.applyVoicegroupBound(*probeIdentity);
+        const MidiTimeline *const initialBinding = probe.view().timeline();
+        const SongView::ViewState initialCamera = probe.view().viewState();
+        const QPointer<QPushButton> initialAddButton = findAddButton();
+        check(initialBinding && probe.view().document() == &probe.document() &&
+                  (!probeIdentity || probe.view().isEnabled()),
+              "direct staged load did not bind the probe view");
+
+        probe.applyMidiStage(*stagedSong, probeSmf, probeBudget);
+        check(!probe.isReady() && !probe.view().isEnabled() &&
+                  probe.view().timeline() == initialBinding && probe.view().document() == nullptr &&
+                  probe.view().viewState().pxPerBeat == initialCamera.pxPerBeat &&
+                  probe.view().viewState().scrollPx == initialCamera.scrollPx &&
+                  probe.view().viewState().scrollY == initialCamera.scrollY &&
+                  probe.view().editorViewState().drawerState() == probeChrome &&
+                  probe.document().label() == stagedSong->label,
+              "MidiStage alone mutated the live document or view");
+
+        int stagedTrack = 0;
+        while (stagedTrack < 16 && !initialBinding->tracks[stagedTrack].used)
+            ++stagedTrack;
+        ViewSidecar::Snapshot staged;
+        staged.view.valid = true;
+        const double stagedPxPerBeat =
+            std::clamp(double(probeSmf.division) * 2.0, double(layout::fontPx(1.0 / 3.0)),
+                       double(layout::fontPx(160.0 / 3.0)));
+        staged.view.pxPerBeat = stagedPxPerBeat;
+        staged.view.keyHeight = layout::fontPx(2.0);
+        staged.view.scrollPx = 12345.0;
+        staged.view.scrollY = 5432.0;
+        staged.view.selectedTrack = std::min(stagedTrack, 15);
+        staged.view.editCursorTick = initialBinding->lengthTicks;
+        staged.view.gridMinDenom = 16;
+        staged.view.gridTriplet = true;
+        const EditorAutomationRowId stagedLane{EditorAutomationRowKind::ControlChange, 0, 74};
+        const EditorAutomationRowId stagedHidden{EditorAutomationRowKind::Tempo, 0, 0};
+        staged.editor.laneHeight = 71;
+        staged.editor.laneHeights[stagedLane] = 37;
+        staged.editor.laneRanges[stagedLane] = 90;
+        staged.editor.emptyLanes.insert(stagedLane);
+        staged.editor.hideLane(stagedHidden);
+        staged.editor.velocity = {true, 42};
+        staged.editor.automation = {true, 43};
+        staged.editor.activePage = EditorDrawerPage::Automations;
+
+        SongTab freshProbe(name);
+        freshProbe.view().applyEditorDrawerState(probeChrome);
+        freshProbe.applyMidiStage(*stagedSong, probeSmf, probeBudget);
+        freshProbe.applySidecarStage(true, staged);
+        const SongView::ViewState freshLanded = freshProbe.view().viewState();
+        freshProbe.view().resetScrollPosition();
+        const SongView::ViewState freshReset = freshProbe.view().viewState();
+        check(qFuzzyCompare(freshLanded.pxPerBeat, stagedPxPerBeat),
+              "fresh staged load did not restore horizontal zoom");
+        check(freshLanded.keyHeight == staged.view.keyHeight,
+              "fresh staged load did not restore vertical zoom");
+        check(freshLanded.scrollPx == freshReset.scrollPx &&
+                  freshLanded.scrollY == freshReset.scrollY,
+              "fresh staged load did not forget persisted scroll");
+
+        probe.applySidecarStage(true, staged);
+        const SongView::ViewState landed = probe.view().viewState();
+        const EditorViewState landedEditor = probe.view().editorViewState();
+        check(probe.view().timeline() != initialBinding &&
+                  probe.view().document() == &probe.document() && !probe.isReady(),
+              "SidecarStage did not swap the probe binding in one step");
+        check(initialAddButton && findAddButton() == initialAddButton,
+              "staged load replaced an eligible Add Track button");
+        check(landed.valid && qFuzzyCompare(landed.pxPerBeat, stagedPxPerBeat) &&
+                  landed.scrollPx == initialCamera.scrollPx &&
+                  landed.scrollY == initialCamera.scrollY &&
+                  landed.selectedTrack == staged.view.selectedTrack &&
+                  landed.editCursorTick == staged.view.editCursorTick &&
+                  landed.gridMinDenom == 16 && landed.gridTriplet && !landed.eventList,
+              "SidecarStage did not land the staged camera");
+        check(landedEditor.laneHeight == 71 && landedEditor.laneHeights.at(stagedLane) == 37 &&
+                  landedEditor.laneRanges.at(stagedLane) == 90 &&
+                  landedEditor.emptyLanes.count(stagedLane) == 1 &&
+                  landedEditor.isLaneHidden(stagedHidden) &&
+                  landedEditor.drawerState() == probeChrome,
+              "SidecarStage did not land the staged editor geometry or keep drawer chrome");
+    }
+}
+
 } // namespace
 
 bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QString &songA,
@@ -528,6 +643,9 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
                   "old tab did not remain interactive after failed project open");
         }
     }
+    const VoicegroupId *const stagedProbeVoicegroup = reopened ? reopened->voicegroupId() : nullptr;
+    checkStagedLoadCoalescing(*m_workspace, *nameB, stagedProbeVoicegroup,
+                              tabA->view().editorViewState().drawerState(), check);
 
     hide();
     std::printf("mainwindow-routing: %s (%d failures)\n", failures ? "FAIL" : "PASS", failures);

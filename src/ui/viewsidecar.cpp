@@ -26,8 +26,6 @@ constexpr auto kViewKey = "view";
 constexpr auto kEditorKey = "editor";
 constexpr auto kPxPerBeatKey = "pxPerBeat";
 constexpr auto kKeyHeightKey = "keyHeight";
-constexpr auto kScrollPxKey = "scrollPx";
-constexpr auto kScrollYKey = "scrollY";
 constexpr auto kSelectedTrackKey = "selectedTrack";
 constexpr auto kEditCursorTickKey = "editCursorTick";
 constexpr auto kLaneHeightKey = "laneHeight";
@@ -311,10 +309,6 @@ bool load(const QString &projectRoot, const QString &songLabel, Snapshot *snapsh
         loaded.view.pxPerBeat = *value;
     if (const auto value = decodeNumber(view.value(QLatin1String(kKeyHeightKey))))
         loaded.view.keyHeight = *value;
-    if (const auto value = decodeNumber(view.value(QLatin1String(kScrollPxKey))))
-        loaded.view.scrollPx = *value;
-    if (const auto value = decodeNumber(view.value(QLatin1String(kScrollYKey))))
-        loaded.view.scrollY = *value;
     if (const auto value = decodeInteger(view.value(QLatin1String(kSelectedTrackKey)), 0, 15))
         loaded.view.selectedTrack = *value;
     if (const auto value = decodeTick(view.value(QLatin1String(kEditCursorTickKey))))
@@ -353,8 +347,6 @@ bool save(const QString &projectRoot, const QString &songLabel, const Snapshot &
     QJsonObject view;
     view.insert(QLatin1String(kPxPerBeatKey), finiteOrDefault(snapshot.view.pxPerBeat, 32.0));
     view.insert(QLatin1String(kKeyHeightKey), finiteOrDefault(snapshot.view.keyHeight, 8.0));
-    view.insert(QLatin1String(kScrollPxKey), finiteOrDefault(snapshot.view.scrollPx, 0.0));
-    view.insert(QLatin1String(kScrollYKey), finiteOrDefault(snapshot.view.scrollY, 0.0));
     view.insert(QLatin1String(kSelectedTrackKey), snapshot.view.selectedTrack);
     view.insert(QLatin1String(kEditCursorTickKey), double(snapshot.view.editCursorTick));
     view.insert(QLatin1String(kGridMinDenomKey), std::max(0, snapshot.view.gridMinDenom));

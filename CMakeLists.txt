@@ -440,6 +440,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/harness.cpp
         src/checks/rollcheck/identity.cpp
         src/checks/rollcheck/remap.cpp
+        src/checks/rollcheck/header_reconciliation.cpp
         src/checks/rollcheck/camera.cpp
         src/checks/rollcheck/pencil.cpp
         src/checks/rollcheck/pencil_velocity.cpp

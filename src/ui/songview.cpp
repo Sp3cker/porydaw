@@ -205,7 +205,9 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_timeline = timeline;
     m_voicegroup = voicegroup;
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
+    const EditorDrawerState drawerState = m_editorViewState.drawerState();
     m_editorViewState = {};
+    m_editorViewState.setDrawerState(drawerState);
     m_muteMask = 0;
     m_soloMask = 0;
     emit muteMaskChanged(0);
@@ -214,10 +216,8 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_editCursorTick = 0;
     m_playing = false;
     // Fresh songs open at the camera's home position, pre-roll pad showing.
-    m_scrollX = minHScroll();
     m_events->setPlayheadTick(-1.0, false); // another song's ticks are stale
-    // Song attachment resets lane cosmetics. MainWindow reapplies the
-    // application-wide drawer chrome after loading any sidecar.
+    // Song attachment resets lane cosmetics and preserves drawer chrome.
     m_gridFeel = GridFeel::Straight;
     m_gridMinDenom = 0;
     m_ruler->syncGridControls();
@@ -240,31 +240,38 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_headers->syncActivity(m_trackActivity, false);
 }
 
+double SongView::defaultVerticalScroll() const
+{
+    if (!m_timeline)
+        return 0.0;
+    const int midKey = m_model.minNoteKey <= m_model.maxNoteKey
+                           ? (m_model.minNoteKey + m_model.maxNoteKey) / 2
+                           : 60;
+    const int centerPitch = m_projection.nearestVisiblePitch(midKey);
+    const int centerRow = m_projection.rowForPitch(centerPitch);
+    if (centerRow == songview::PitchProjection::cHiddenRow)
+        return 0.0;
+    return std::max(
+        0.0, centerRow * m_keyHeight -
+                 std::max(m_geometry.pianoRollInitialViewportHeight, rollViewportHeight()) / 2.0);
+}
+
+void SongView::resetScrollPosition()
+{
+    setHScroll(minHScroll());
+    setVScroll(defaultVerticalScroll());
+}
+
 void SongView::rebuildAfterSongChange()
 {
-    double initialScrollY = 0.0;
-    if (m_timeline) {
-        // Default zoom uses the resolved editor scale, scrolled so the notes'
-        // pitch range is centered in the roll.
+    if (m_timeline)
         m_pxPerTick = m_geometry.editorDefaultPixelsPerBeat / double(m_timeline->ticksPerBeat);
-        const int midKey = m_model.minNoteKey <= m_model.maxNoteKey
-                               ? (m_model.minNoteKey + m_model.maxNoteKey) / 2
-                               : 60;
-        const int centerPitch = m_projection.nearestVisiblePitch(midKey);
-        const int centerRow = m_projection.rowForPitch(centerPitch);
-        if (centerRow != songview::PitchProjection::cHiddenRow) {
-            initialScrollY = std::max(
-                0.0, centerRow * m_keyHeight -
-                         std::max(m_geometry.pianoRollInitialViewportHeight, rollViewportHeight()) /
-                             2.0);
-        }
-    } else {
+    else
         m_pxPerTick = 1.0;
-    }
     m_headers->rebuild();
     notifyDrawerSongChanged();
     updateScrollbars();
-    setVScroll(initialScrollY);
+    resetScrollPosition();
     refreshTimelineViews();
 }
 
@@ -305,16 +312,32 @@ void SongView::updateSong(const MidiTimeline *timeline)
     refreshTimelineViews();
 }
 
+void SongView::disconnectDocument()
+{
+    if (m_document) {
+        disconnect(m_document, &SongDocument::tracksRemapped, this, nullptr);
+        disconnect(m_document, &SongDocument::documentChanged, this, nullptr);
+    }
+    m_document = nullptr;
+    m_events->setDocument(nullptr);
+}
+
+void SongView::prepareForSongReplacement()
+{
+    if (m_roll)
+        m_roll->cancelPitchBendPopup();
+    cancelActiveInteractions();
+    m_headers->cancelTransientState();
+    disconnectDocument();
+}
+
 void SongView::setDocument(SongDocument *document)
 {
     if (m_document != document) {
         if (m_roll)
             m_roll->cancelPitchBendPopup();
         cancelActiveInteractions();
-        if (m_document) {
-            disconnect(m_document, &SongDocument::tracksRemapped, this, nullptr);
-            disconnect(m_document, &SongDocument::documentChanged, this, nullptr);
-        }
+        disconnectDocument();
         if (document) {
             connect(document, &SongDocument::tracksRemapped, this, &SongView::onTracksRemapped);
             connect(document, &SongDocument::documentChanged, this, [this] {

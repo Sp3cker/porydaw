@@ -115,6 +115,7 @@ struct ResizeFixture {
 
 ScenarioContinuation runIdentityScenarios(Harness &check, const SongInfo &song);
 ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song);
+ScenarioContinuation runHeaderReconciliationScenarios(Harness &check, const SongInfo &song);
 ScenarioContinuation runCameraScenarios(Harness &check);
 std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check);
 ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
