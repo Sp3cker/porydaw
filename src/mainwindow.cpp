@@ -846,7 +846,6 @@ void MainWindow::onSelectedTabChanged(SongTab *tab)
         m_appliedTimeline = nullptr;
         m_appliedSettings.reset();
         m_polyPanel->clearSession();
-        m_workspace->setTransportSongName(tab ? tab->name().value() : QString());
         updateTimeLabel();
         updatePolyStatus();
         syncScaleControls();
@@ -869,7 +868,6 @@ void MainWindow::onSelectedTabReady(SongTab *tab)
     // selection moved to an already-ready tab): bind the engine, then
     // refresh the chrome that reads loaded state.
     applySelectedAudio();
-    m_workspace->setTransportSongName(tab->document().label());
     updatePolyPanelContext(tab);
     syncMasterVolumeControl();
     syncScaleControls();

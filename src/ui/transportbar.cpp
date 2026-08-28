@@ -304,8 +304,6 @@ TransportBar::TransportBar(QWidget *parent) : QToolBar(tr("Transport"), parent)
     m_timeLabel->setContentsMargins(::layout::space(::layout::Space::Three), 0,
                                     ::layout::space(::layout::Space::Three), 0);
     addWidget(m_timeLabel);
-    m_songLabel = new QLabel(this);
-    addWidget(m_songLabel);
 
     m_rootCombo = new QComboBox(this);
     m_rootCombo->setObjectName(QStringLiteral("transportScaleRoot"));
@@ -450,11 +448,6 @@ void TransportBar::setTimeText(const QString &text)
         return;
     m_lastTimeText = text;
     m_timeLabel->setText(text);
-}
-
-void TransportBar::setSongName(const QString &name)
-{
-    m_songLabel->setText(name.isEmpty() ? QString() : QStringLiteral("  %1").arg(name));
 }
 
 void TransportBar::setMasterVolume(int value, bool enabled)

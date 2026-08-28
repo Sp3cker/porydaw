@@ -176,7 +176,6 @@ class WorkspaceUi final : public QObject
 
     void setTransportPlaybackState(PlaybackState state);
     void setTransportSongAvailable(bool available);
-    void setTransportSongName(const QString &name);
     void setTransportTimeText(const QString &text);
     void setTransportMasterVolume(int volume, bool enabled);
     void setTransportOutputVolume(int volume);

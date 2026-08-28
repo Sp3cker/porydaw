@@ -31,7 +31,6 @@ class TransportBar final : public QToolBar
     void setSessionAvailable(bool available);
     void setFollowPlayhead(bool enabled);
     void setTimeText(const QString &text);
-    void setSongName(const QString &name);
     void setMasterVolume(int value, bool enabled);
     void setOutputVolume(int value);
     void setScaleState(int root, porydaw_scale::ScaleId scale, bool highlight, bool fold);
@@ -68,7 +67,6 @@ class TransportBar final : public QToolBar
     QAction *m_followPlayheadAction = nullptr;
     QAction *m_resonanceAction = nullptr;
     QLabel *m_timeLabel = nullptr;
-    QLabel *m_songLabel = nullptr;
     QComboBox *m_rootCombo = nullptr;
     QComboBox *m_scaleCombo = nullptr;
     QToolButton *m_highlightButton = nullptr;

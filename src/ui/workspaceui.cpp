@@ -308,11 +308,6 @@ void WorkspaceUi::setTransportSongAvailable(bool available)
     m_transport->setSessionAvailable(available);
 }
 
-void WorkspaceUi::setTransportSongName(const QString &name)
-{
-    m_transport->setSongName(name);
-}
-
 void WorkspaceUi::setTransportTimeText(const QString &text)
 {
     m_transport->setTimeText(text);
