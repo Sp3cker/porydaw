@@ -315,6 +315,10 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
         }
         return;
     }
+    if (m_voiceLane.dragInProgress()) {
+        m_voiceLane.mouseMove(*this, event, m_geometry);
+        return;
+    }
     if (!m_activeGesture) {
         const PointerLaneHit pointer = pointerLaneAt(event->pos());
         if (pointer.tempoHeader) {
@@ -368,6 +372,10 @@ void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
         unsetCursor();
         setGestureActive(false);
         event->accept();
+        return;
+    }
+    if (event->button() == Qt::LeftButton && m_voiceLane.dragInProgress()) {
+        m_voiceLane.mouseRelease(*this, event, m_geometry);
         return;
     }
     if (event->button() == Qt::RightButton && m_band.pending) {
@@ -493,7 +501,7 @@ void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
 void AutomationCanvas::keyPressEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) {
-        if (m_band.pending || m_activeGesture) {
+        if (m_band.pending || m_activeGesture || m_voiceLane.dragInProgress()) {
             cancelInteraction();
         } else {
             auto &model = m_page->m_owner.selectionModel();

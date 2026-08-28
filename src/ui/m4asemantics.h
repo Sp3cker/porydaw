@@ -62,8 +62,9 @@ QString m4aFormatBend(int bend14);
 // e.g. "MEMACC op 17 = 3" or "XCMD xIECV = 4".
 QString m4aAdvancedCcLabel(uint8_t cc, uint8_t value);
 
-// Voice-type label for a ToneData.type byte ("Sample", "Square 1",
-// "Drumkit", ...). Keysplit voices read as "Sample".
+// Voice-type label for a ToneData.type byte. DirectSound variants read "Sample",
+// "Sample (fixed pitch)", and "Sample (reverse)". Keysplit voices read as
+// "Sample".
 QString m4aVoiceTypeName(uint8_t type);
 
 // Plain MIDI display helpers shared by the piano roll and the event list.

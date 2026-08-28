@@ -185,6 +185,7 @@ class AutomationCanvas final : public songview::TimelineSurface
     int tempoTop() const;
     QRegion syncPinnedTempoLayout();
     void cancelNodeGestures();
+    bool cancelVoiceInteraction();
     void rebuildNodeStack();
     LaneHandle laneAt(int y) const noexcept;
     PointerLaneHit pointerLaneAt(const QPoint &position) const noexcept;

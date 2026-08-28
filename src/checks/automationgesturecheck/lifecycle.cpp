@@ -117,8 +117,6 @@ void checkAutomationLifecycle(AutomationGestureCheckRig &rig, const AutomationGe
         rig.setAutomationZoom(96.0);
         rig.setAutomationScroll(0.0);
         const auto voiceBeforePrimary = rig.document().lanePoints(0, DOC_CC_VOICE);
-        const auto voiceBeforeCaptured = rig.document().lanePoints(capturedTrack, DOC_CC_VOICE);
-        const auto beforePicker = rig.snapshot(capturedTrack, DOC_CC_VOICE);
         rig.view().selectTrack(capturedTrack);
         rig.canvas().rebuildRows();
         rig.pump();
@@ -147,6 +145,19 @@ void checkAutomationLifecycle(AutomationGestureCheckRig &rig, const AutomationGe
         check(foundPickerTick,
               QStringLiteral("lifecycle fixture had no on-screen Voice picker tick"));
         if (foundPickerTick && !capturedVoice.isEmpty()) {
+            rig.document().writeLanePoints(capturedTrack, DOC_CC_VOICE, 0,
+                                           std::numeric_limits<uint64_t>::max(), {});
+            const uint64_t insertTick = rig.projection().snapTickAt(pickerPos.x(), false);
+            rig.document().addLanePoint(capturedTrack, DOC_CC_VOICE, insertTick, 3);
+            rig.documentChanged();
+            rig.pump();
+            const auto voiceBeforeCaptured = rig.document().lanePoints(capturedTrack, DOC_CC_VOICE);
+            const auto beforePicker = rig.snapshot(capturedTrack, DOC_CC_VOICE);
+            rig.mousePress(pickerPos);
+            rig.mouseRelease(pickerPos);
+            rig.pump();
+            check(beforePicker.smf == rig.snapshot(capturedTrack, DOC_CC_VOICE).smf,
+                  QStringLiteral("stationary Voice marker click mutated the picker fixture"));
             QTimer::singleShot(0, [] {
                 if (auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget())) {
                     if (auto *list = dialog->findChild<QListWidget *>())
@@ -159,8 +170,6 @@ void checkAutomationLifecycle(AutomationGestureCheckRig &rig, const AutomationGe
             rig.pump();
             const auto afterPicker = rig.snapshot(capturedTrack, DOC_CC_VOICE);
             DocLanePoint inserted{};
-            const uint64_t insertTick =
-                rig.view().snapTick(rig.projection().rawTickAt(pickerPos.x()), false);
             const bool insertedOnCaptured =
                 rig.document().findLanePoint(capturedTrack, DOC_CC_VOICE, insertTick, &inserted) &&
                 inserted.value == 4;
@@ -169,6 +178,11 @@ void checkAutomationLifecycle(AutomationGestureCheckRig &rig, const AutomationGe
                       !sameLanePoints(voiceBeforeCaptured, afterPicker.lanePoints),
                   QStringLiteral("Voice picker did not commit DOC_CC_VOICE to the rebuilt captured "
                                  "track in one undo step"));
+            rig.document().undoStack()->undo();
+            rig.documentChanged();
+            rig.pump();
+            check(rig.document().smf().write() == beforePicker.smf,
+                  QStringLiteral("Voice picker undo did not restore byte-identical SMF"));
         }
     }
 }

@@ -20,6 +20,10 @@
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/songview.h"
 
+namespace {
+constexpr double kCheckSampleRate = 48000.0;
+} // namespace
+
 std::unique_ptr<AutomationGestureCheckRig>
 AutomationGestureCheckRig::create(const QString &project, const QString &song, QString &error)
 {
@@ -230,6 +234,11 @@ AutomationGestureCheckRig::Snapshot AutomationGestureCheckRig::snapshot(int trac
 void AutomationGestureCheckRig::documentChanged()
 {
     m_page->documentChanged();
+    // Mirror MainWindow's document-change path: the drawer paints Voice
+    // changes from SongViewModel, so refreshing only the page leaves its
+    // presentation model on the fixture's original timeline.
+    m_timeline = document().buildTimeline(kCheckSampleRate);
+    m_view->updateSong(m_timeline.get());
     refreshPage();
     pump();
 }
@@ -362,7 +371,7 @@ bool AutomationGestureCheckRig::initialize(QString &error)
     m_voicegroup->voices[3].type = VOICE_NOISE;
     std::strncpy(m_voicegroup->voiceNames[3], "automation-voice",
                  sizeof(m_voicegroup->voiceNames[3]) - 1);
-    m_timeline = songDocument.buildTimeline(48000.0);
+    m_timeline = songDocument.buildTimeline(kCheckSampleRate);
     m_view = std::make_unique<SongView>();
     m_view->resize(960, 720);
     m_view->setDocument(&songDocument);

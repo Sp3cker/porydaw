@@ -204,6 +204,7 @@ QRegion AutomationCanvas::syncPinnedTempoLayout()
 void AutomationCanvas::layoutLaneStack(int voiceTrack)
 {
     cancelNodeGestures();
+    cancelVoiceInteraction();
     m_voiceLane.rebuild(voiceTrack, width(), 0, m_geometry);
     const int scrollableHeight = m_rowData.minimumHeight(m_geometry, contentTopInset());
     setMinimumHeight(scrollableHeight + m_tempoLane.totalHeight(m_geometry));
@@ -404,23 +405,34 @@ int AutomationCanvas::addLaneStripTop() const
     return contentTopInset();
 }
 
+bool AutomationCanvas::cancelVoiceInteraction()
+{
+    const bool wasActive = m_voiceLane.cancel();
+    if (wasActive) {
+        setGestureActive(false);
+        updateAxisLockCursor(AxisLock::None);
+    }
+    return wasActive;
+}
+
 void AutomationCanvas::cancelInteraction()
 {
-    const bool wasActive =
+    const bool otherWasActive =
         m_pan.active || m_resize.row >= 0 || m_band.pending || m_activeGesture.has_value();
     m_pan.active = false;
     m_resize.row = -1;
     m_activeGesture.reset();
     m_band.clear();
     m_tempoLane.cancel();
-    m_voiceLane.cancel();
+    const bool voiceWasActive = cancelVoiceInteraction();
     m_hoverState.previewValueLabel = {};
     m_hoverState.hover.highlightLocked = false;
     invalidateContent(m_hoverState.clearHover());
-    updateAxisLockCursor(AxisLock::None);
+    if (!voiceWasActive)
+        updateAxisLockCursor(AxisLock::None);
     if (mouseGrabber() == this)
         releaseMouse();
-    if (wasActive)
+    if (!voiceWasActive && otherWasActive)
         setGestureActive(false);
     invalidateContent();
 }

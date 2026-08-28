@@ -1,10 +1,15 @@
 #include "domains.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <vector>
 
+#include <QApplication>
+#include <QCoreApplication>
+#include <QEvent>
+#include <QImage>
 #include <QPointF>
 #include <QString>
 
@@ -55,6 +60,50 @@ bool routeIdle(const AutomationGestureCheckRig &rig, LaneHandle lane)
     return rig.isIdle() && !rig.canvas().isPanning() && !rig.canvas().bandPreviewContainsLane(lane);
 }
 
+QPointF voicePoint(const AutomationGestureCheckRig &rig, uint64_t tick)
+{
+    return {rig.projection().displayX(tick, rig.canvas().devicePixelRatioF()),
+            qreal(rig.voiceBounds().center().y())};
+}
+
+QImage markerColumnCrop(const QImage &image, const QRect &capturedBounds, qreal canvasX)
+{
+    if (image.isNull() || capturedBounds.width() <= 0)
+        return {};
+    const qreal dpr = image.devicePixelRatio();
+    if (dpr <= 0.0)
+        return {};
+    // The marker is 2 logical pixels wide; retain one device pixel of paint fringe, not its label.
+    const qreal localX = canvasX - capturedBounds.x();
+    const qreal halfWidth = 1.0 + 1.0 / dpr;
+    const int left = std::clamp(int(std::floor((localX - halfWidth) * dpr)), 0, image.width());
+    const int right = std::clamp(int(std::ceil((localX + halfWidth) * dpr)), 0, image.width());
+    return right > left ? image.copy(left, 0, right - left, image.height()) : QImage{};
+}
+
+void seedVoice(AutomationGestureCheckRig &rig,
+               const std::vector<SongDocument::LanePointValue> &points)
+{
+    rig.document().writeLanePoints(0, DOC_CC_VOICE, 0, std::numeric_limits<uint64_t>::max(),
+                                   points);
+    rig.documentChanged();
+    rig.pump();
+}
+
+bool hasVoice(const AutomationGestureCheckRig &rig, uint64_t tick, int value)
+{
+    DocLanePoint point;
+    return rig.document().findLanePoint(0, DOC_CC_VOICE, tick, &point) && point.value == value;
+}
+
+void activateVoiceDrag(AutomationGestureCheckRig &rig, const QPointF &source,
+                       const QPointF &destination, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+{
+    rig.mousePress(source);
+    rig.mouseMove(destination, Qt::LeftButton, modifiers);
+    rig.pump();
+}
+
 } // namespace
 
 void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check)
@@ -69,6 +118,209 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
           QStringLiteral("routing fixture did not expose the pan lane"));
     if (!panHandle.valid() || panRow < 0)
         return;
+
+    // Voice Change owns one phaseful horizontal drag from preview through commit.
+    {
+        seedVoice(rig, {{24, 5}, {48, 6}});
+        const QPointF source = voicePoint(rig, 24);
+        const QPointF target = voicePoint(rig, 72);
+        const uint64_t destination = rig.projection().snapTickAt(target.x(), false);
+        const auto before = snapshot(rig.document());
+        const QImage idleVoice = rig.canvas().grab(rig.voiceBounds()).toImage();
+        activateVoiceDrag(rig, source, target);
+        const QImage previewVoice = rig.canvas().grab(rig.voiceBounds()).toImage();
+        check(isUnchanged(before, snapshot(rig.document())) && rig.view().userGestureActive() &&
+                  rig.canvas().cursor().shape() == Qt::SizeHorCursor && !idleVoice.isNull() &&
+                  idleVoice.size() == previewVoice.size() && idleVoice != previewVoice,
+              QStringLiteral("Voice crossing preview was not local-only and visibly active"));
+        rig.mouseRelease(target);
+        rig.pump();
+        const auto after = snapshot(rig.document());
+        const auto points = rig.document().lanePoints(0, DOC_CC_VOICE);
+        check(destination != 24 && isOneEdit(before, after) && !hasVoice(rig, 24, 5) &&
+                  hasVoice(rig, 48, 6) && hasVoice(rig, destination, 5) && points.size() == 2 &&
+                  rig.document().undoStack()->undoText() == QStringLiteral("change voice") &&
+                  routeIdle(rig, panHandle) && rig.canvas().cursor().shape() == Qt::ArrowCursor,
+              QStringLiteral("Voice crossing drag did not commit one change voice edit"));
+        rig.document().undoStack()->undo();
+        rig.documentChanged();
+        rig.pump();
+        check(rig.document().smf().write() == before.smf,
+              QStringLiteral("Voice crossing drag undo was not byte-identical"));
+    }
+    {
+        seedVoice(rig, {{48, 7}});
+        const QPointF source = voicePoint(rig, 48);
+        const auto before = snapshot(rig.document());
+        rig.mousePress(source);
+        rig.mouseRelease(source);
+        rig.pump();
+        check(isUnchanged(before, snapshot(rig.document())) && routeIdle(rig, panHandle),
+              QStringLiteral("stationary Voice marker click committed a drag"));
+
+        const int verticalSlop = QApplication::startDragDistance() + 2;
+        rig.mousePress(source);
+        rig.mouseMove(source + QPointF(0, verticalSlop));
+        check(!rig.view().userGestureActive() && rig.canvas().cursor().shape() == Qt::ArrowCursor,
+              QStringLiteral("vertical Voice jitter activated a horizontal gesture"));
+        rig.mouseRelease(source + QPointF(0, verticalSlop));
+        rig.pump();
+        check(isUnchanged(before, snapshot(rig.document())) && routeIdle(rig, panHandle),
+              QStringLiteral("vertical-only Voice movement committed a retime"));
+
+        const QPointF empty = voicePoint(rig, 144);
+        rig.mousePress(empty);
+        rig.mouseMove(empty + QPointF(QApplication::startDragDistance() + 2, 0));
+        rig.mouseRelease(empty + QPointF(QApplication::startDragDistance() + 2, 0));
+        rig.pump();
+        check(isUnchanged(before, snapshot(rig.document())) && routeIdle(rig, panHandle),
+              QStringLiteral("empty Voice space armed or committed a drag"));
+    }
+    {
+        seedVoice(rig, {{48, 8}});
+        const QPointF source = voicePoint(rig, 48);
+        QPointF target;
+        uint64_t fineTick = 0;
+        uint64_t normalTick = 0;
+        const int slop = QApplication::startDragDistance();
+        for (int x = rig.geometry().plotOrigin; x < rig.canvas().width(); ++x) {
+            const uint64_t fine = rig.projection().snapTickAt(x, true);
+            const uint64_t normal = rig.projection().snapTickAt(x, false);
+            if (fine != normal && fine != 48 && std::abs(qreal(x) - source.x()) >= slop) {
+                target = QPointF(x, rig.voiceBounds().center().y());
+                fineTick = fine;
+                normalTick = normal;
+                break;
+            }
+        }
+        check(fineTick != normalTick,
+              QStringLiteral("Voice fixture exposed no visible normal/fine snap difference"));
+        if (fineTick != normalTick) {
+            const auto before = snapshot(rig.document());
+            activateVoiceDrag(rig, source, target, Qt::AltModifier);
+            rig.mouseRelease(target, Qt::AltModifier);
+            rig.pump();
+            check(isOneEdit(before, snapshot(rig.document())) && hasVoice(rig, fineTick, 8) &&
+                      !hasVoice(rig, normalTick, 8) && routeIdle(rig, panHandle),
+                  QStringLiteral("Alt Voice drag did not use fine projection snapping"));
+        }
+    }
+    {
+        seedVoice(rig, {{48, 9}, {192, 10}});
+        const QPointF source = voicePoint(rig, 48);
+        const QPointF target = voicePoint(rig, 192);
+        const uint64_t destination = rig.projection().snapTickAt(target.x(), false);
+        const auto before = snapshot(rig.document());
+        activateVoiceDrag(rig, source, target);
+        rig.mouseRelease(target);
+        rig.pump();
+        const auto points = rig.document().lanePoints(0, DOC_CC_VOICE);
+        check(isOneEdit(before, snapshot(rig.document())) && points.size() == 1 &&
+                  hasVoice(rig, destination, 9) && routeIdle(rig, panHandle),
+              QStringLiteral("Voice destination collision did not keep the dragged marker"));
+    }
+    {
+        rig.document().writeLanePoints(rig.pan.track, rig.pan.controller, 0,
+                                       std::numeric_limits<uint64_t>::max(), {});
+        seedVoice(rig, {{48, 11}});
+        const QPointF source = voicePoint(rig, 48);
+        const QPointF target = voicePoint(rig, 192);
+        const auto before = snapshot(rig.document());
+        activateVoiceDrag(rig, source, target);
+        rig.document().addLanePoint(rig.pan.track, rig.pan.controller, 333, 42);
+        const auto external = snapshot(rig.document());
+        rig.mouseRelease(target);
+        rig.pump();
+        check(isOneEdit(before, external) && isUnchanged(external, snapshot(rig.document())) &&
+                  hasVoice(rig, 48, 11) && routeIdle(rig, panHandle),
+              QStringLiteral("Voice release did not reject a stale document revision"));
+    }
+    {
+        seedVoice(rig, {{48, 12}});
+        const QPointF source = voicePoint(rig, 48);
+        const QPointF target = voicePoint(rig, 192);
+        const auto beforeEscape = snapshot(rig.document());
+        activateVoiceDrag(rig, source, target);
+        rig.keyToArea(QEvent::KeyPress, Qt::Key_Escape);
+        rig.pump();
+        check(isUnchanged(beforeEscape, snapshot(rig.document())) && routeIdle(rig, panHandle) &&
+                  !rig.view().userGestureActive() &&
+                  rig.canvas().cursor().shape() == Qt::ArrowCursor,
+              QStringLiteral("Escape did not fully cancel the Voice gesture"));
+
+        const auto beforeUngrab = snapshot(rig.document());
+        activateVoiceDrag(rig, source, target);
+        QEvent ungrab(QEvent::UngrabMouse);
+        QCoreApplication::sendEvent(&rig.canvas(), &ungrab);
+        rig.pump();
+        check(isUnchanged(beforeUngrab, snapshot(rig.document())) && routeIdle(rig, panHandle) &&
+                  !rig.view().userGestureActive() &&
+                  rig.canvas().cursor().shape() == Qt::ArrowCursor,
+              QStringLiteral("UngrabMouse did not fully cancel the Voice gesture"));
+    }
+    {
+        seedVoice(rig, {});
+        SmfEvent program;
+        program.tick = 48;
+        program.status = uint8_t(0xC0 | (rig.document().channelFor(0) & 0x0F));
+        program.data0 = 13;
+        rig.document().insertRawEvent(rig.document().smfTrackFor(0), program);
+        rig.document().insertRawEvent(rig.document().smfTrackFor(0), program);
+        rig.documentChanged();
+        rig.pump();
+        const auto modelCount =
+            std::count_if(rig.view().model().voices.cbegin(), rig.view().model().voices.cend(),
+                          [](const VoiceChange &change) {
+                              return change.track == 0 && change.tick == 48 && change.program == 13;
+                          });
+        check(modelCount == 2,
+              QStringLiteral("duplicate Voice fixture projected %1 model entries").arg(modelCount));
+        const auto before = snapshot(rig.document());
+        const QPointF source = voicePoint(rig, 48);
+        const QPointF target = voicePoint(rig, 72);
+        const uint64_t destination = rig.projection().snapTickAt(target.x(), false);
+        const QRect voiceBounds = rig.voiceBounds();
+        const QImage idleVoice = rig.canvas().grab(voiceBounds).toImage();
+        activateVoiceDrag(rig, source, target);
+        const QImage previewVoice = rig.canvas().grab(voiceBounds).toImage();
+        const qreal destinationX =
+            rig.projection().displayX(destination, rig.canvas().devicePixelRatioF());
+        const QImage idleSourceColumn = markerColumnCrop(idleVoice, voiceBounds, source.x());
+        const QImage previewSourceColumn = markerColumnCrop(previewVoice, voiceBounds, source.x());
+        const QImage idleDestinationColumn = markerColumnCrop(idleVoice, voiceBounds, destinationX);
+        const QImage previewDestinationColumn =
+            markerColumnCrop(previewVoice, voiceBounds, destinationX);
+        check(isUnchanged(before, snapshot(rig.document())) && rig.view().userGestureActive(),
+              QStringLiteral("duplicate Voice occurrence preview changed the document"));
+        check(!idleSourceColumn.isNull() && !previewSourceColumn.isNull() &&
+                  idleSourceColumn.size() == previewSourceColumn.size() &&
+                  idleSourceColumn == previewSourceColumn,
+              QStringLiteral("duplicate Voice occurrence preview removed the source marker"));
+        check(
+            !idleDestinationColumn.isNull() && !previewDestinationColumn.isNull() &&
+                idleDestinationColumn.size() == previewDestinationColumn.size() &&
+                idleDestinationColumn != previewDestinationColumn,
+            QStringLiteral("duplicate Voice occurrence preview did not add a destination marker"));
+        rig.mouseRelease(target);
+        rig.pump();
+        const auto points = rig.document().lanePoints(0, DOC_CC_VOICE);
+        const auto sourceCount =
+            std::count_if(points.cbegin(), points.cend(), [](const DocLanePoint &point) {
+                return point.tick == 48 && point.value == 13;
+            });
+        const auto destinationCount =
+            std::count_if(points.cbegin(), points.cend(), [destination](const DocLanePoint &point) {
+                return point.tick == destination && point.value == 13;
+            });
+        check(isOneEdit(before, snapshot(rig.document())) && sourceCount == 1 &&
+                  destinationCount == 1 && points.size() == 2 && routeIdle(rig, panHandle),
+              QStringLiteral("duplicate raw Voice identity did not move exactly one occurrence"));
+        rig.document().undoStack()->undo();
+        rig.documentChanged();
+        rig.pump();
+        check(rig.document().smf().write() == before.smf,
+              QStringLiteral("duplicate raw Voice drag undo was not byte-identical"));
+    }
 
     // Accepted routes: middle pan, Voice Change, and the Tempo header.
     {

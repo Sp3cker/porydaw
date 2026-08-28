@@ -133,6 +133,10 @@ QString m4aVoiceTypeName(uint8_t type)
 {
     if (type == VOICE_KEYSPLIT_ALL)
         return QObject::tr("Drumkit");
+    if (type == VOICE_DIRECTSOUND_NO_RESAMPLE)
+        return QObject::tr("Sample (fixed pitch)");
+    if (type == VOICE_DIRECTSOUND_ALT)
+        return QObject::tr("Sample (reverse)");
     // VOICE_KEYSPLIT deliberately falls through to "Sample": keysplit
     // instruments live in the Sample dropdown, so the UI never distinguishes
     // them by type.

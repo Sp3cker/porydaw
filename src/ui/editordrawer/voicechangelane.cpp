@@ -6,6 +6,7 @@
 #include <limits>
 
 #include <QAction>
+#include <QApplication>
 #include <QFontMetrics>
 #include <QMouseEvent>
 #include <QPainter>
@@ -30,12 +31,12 @@ bool VoiceChangeLane::voiceMarkerAt(const AutomationCanvas &area, qreal x,
     if (!m_page || !m_page->document() || m_engineTrack < 0 || !out)
         return false;
     const auto points = m_page->document()->lanePoints(m_engineTrack, DOC_CC_VOICE);
+    const AutomationProjection projection = area.projection();
     const qreal dpr = area.devicePixelRatioF();
     const DocLanePoint *marker = nullptr;
     qreal distance = geometry.deleteTimeRadius + 1;
     for (const auto &point : points) {
-        const qreal candidate =
-            std::abs(m_page->displayX(point.tick, geometry.plotOrigin, dpr) - x);
+        const qreal candidate = std::abs(projection.displayX(point.tick, dpr) - x);
         if (candidate <= geometry.deleteTimeRadius && (!marker || candidate <= distance)) {
             marker = &point;
             distance = candidate;
@@ -66,6 +67,7 @@ void VoiceChangeLane::ensureHoverLabelFontCache(const QFont &font)
 void VoiceChangeLane::rebuild(int engineTrack, int width, int top,
                               const AutomationGeometry &geometry)
 {
+    resetDrag();
     m_engineTrack = engineTrack;
     m_changeCount = -1;
     m_secondary.clear();
@@ -88,8 +90,10 @@ void VoiceChangeLane::rebuild(int engineTrack, int width, int top,
               std::clamp(requestedHeight, geometry.rowMinimumHeight, geometry.rowMaximumHeight));
 }
 
-void VoiceChangeLane::cancel()
+bool VoiceChangeLane::cancel()
 {
+    const bool active = dragActive();
+    resetDrag();
     m_hoverActive = false;
     m_hoverX = 0;
     m_hoverTick = 0;
@@ -97,6 +101,7 @@ void VoiceChangeLane::cancel()
     m_hoverLabelRect = {};
     m_hoverLabelBounds = {};
     m_hoverDirtyBounds = {};
+    return active;
 }
 
 void VoiceChangeLane::clearHover(AutomationCanvas &area)
@@ -179,15 +184,31 @@ QRect VoiceChangeLane::plotRect(const AutomationGeometry &geometry) const
 bool VoiceChangeLane::mousePress(AutomationCanvas &area, QMouseEvent *event,
                                  const AutomationGeometry &geometry)
 {
+    if (dragActive())
+        return true;
+    resetDrag();
     if (event->button() == Qt::RightButton) {
         if (event->position().x() >= geometry.plotOrigin)
             showContextMenu(area, event->globalPosition().toPoint(), geometry);
         return true;
     }
-    if (event->button() != Qt::LeftButton)
+    if (event->button() != Qt::LeftButton || event->position().x() < geometry.plotOrigin)
         return true;
-    if (event->position().x() < geometry.plotOrigin)
+    DocLanePoint point;
+    if (!voiceMarkerAt(area, event->position().x(), geometry, &point))
         return true;
+    const auto rank = occurrenceRank(point);
+    if (!rank || !m_page || !m_page->document())
+        return true;
+    m_drag = DragState{
+        .phase = DragState::Phase::Pending,
+        .pressPosition = event->position(),
+        .engineTrack = m_engineTrack,
+        .point = point,
+        .revision = m_page->document()->revision(),
+        .previewTick = point.tick,
+        .occurrenceRank = *rank,
+    };
     return true;
 }
 
@@ -196,8 +217,88 @@ bool VoiceChangeLane::mouseDoubleClick(AutomationCanvas &area, QMouseEvent *even
 {
     if (event->button() != Qt::LeftButton || event->position().x() < geometry.plotOrigin)
         return true;
+    if (dragActive())
+        return true;
+    resetDrag();
     showPicker(area, event->globalPosition().toPoint(), geometry);
     return true;
+}
+
+bool VoiceChangeLane::dragActive() const noexcept
+{
+    return m_drag && m_drag->phase == DragState::Phase::Active;
+}
+
+void VoiceChangeLane::resetDrag()
+{
+    m_drag.reset();
+}
+
+std::optional<std::size_t> VoiceChangeLane::occurrenceRank(const DocLanePoint &point) const
+{
+    if (!m_page || !m_page->document() || m_engineTrack < 0)
+        return std::nullopt;
+    std::size_t rank = 0;
+    for (const DocLanePoint &candidate :
+         m_page->document()->lanePoints(m_engineTrack, DOC_CC_VOICE)) {
+        if (candidate.smfTrack == point.smfTrack && candidate.index == point.index)
+            return rank;
+        if (candidate.tick == point.tick && candidate.value == point.value)
+            ++rank;
+    }
+    return std::nullopt;
+}
+
+void VoiceChangeLane::invalidatePreview(AutomationCanvas &area, const AutomationGeometry &geometry)
+{
+    area.invalidateContent(plotRect(geometry));
+}
+
+void VoiceChangeLane::mouseMove(AutomationCanvas &area, QMouseEvent *event,
+                                const AutomationGeometry &geometry)
+{
+    if (!m_drag)
+        return;
+    if (m_drag->phase == DragState::Phase::Pending) {
+        const qreal horizontalDistance =
+            std::abs(event->position().x() - m_drag->pressPosition.x());
+        if (horizontalDistance < QApplication::startDragDistance())
+            return;
+        m_drag->phase = DragState::Phase::Active;
+        clearHover(area);
+        area.setGestureActive(true);
+        area.setCursor(Qt::SizeHorCursor);
+        invalidatePreview(area, geometry);
+    }
+    const uint64_t tick =
+        area.projection().snapTickAt(event->position().x(), event->modifiers() & Qt::AltModifier);
+    if (tick == m_drag->previewTick)
+        return;
+    m_drag->previewTick = tick;
+    invalidatePreview(area, geometry);
+}
+
+void VoiceChangeLane::mouseRelease(AutomationCanvas &area, QMouseEvent *event,
+                                   const AutomationGeometry &geometry)
+{
+    if (!m_drag)
+        return;
+    const DragState completed = *m_drag;
+    const bool active = completed.phase == DragState::Phase::Active;
+    resetDrag();
+    if (active) {
+        invalidatePreview(area, geometry);
+        area.setGestureActive(false);
+        area.updatePencilCursor();
+    }
+    SongDocument *document = m_page ? m_page->document() : nullptr;
+    if (!active || completed.previewTick == completed.point.tick || !document ||
+        document->revision() != completed.revision)
+        return;
+    document->moveLanePoints({{completed.engineTrack, DOC_CC_VOICE, completed.point,
+                               completed.previewTick, completed.point.value}});
+    m_page->requestRefresh();
+    event->accept();
 }
 
 void VoiceChangeLane::showPicker(AutomationCanvas &area, const QPoint &globalPosition,
@@ -211,9 +312,7 @@ void VoiceChangeLane::showPicker(AutomationCanvas &area, const QPoint &globalPos
     DocLanePoint markerPoint;
     const DocLanePoint *marker =
         voiceMarkerAt(area, x, geometry, &markerPoint) ? &markerPoint : nullptr;
-    const double rawTick = std::max(
-        0.0, m_page->tickAtContentX(std::max(qreal(geometry.plotOrigin), x) - geometry.plotOrigin));
-    const uint64_t tick = marker ? marker->tick : m_page->snapTick(rawTick, false);
+    const uint64_t tick = marker ? marker->tick : area.projection().snapTickAt(x, false);
     int current = marker ? marker->value : 0;
     if (!marker)
         current = voiceSlotAt(tick);
@@ -286,13 +385,12 @@ void VoiceChangeLane::updateHover(AutomationCanvas &area, const AutomationGeomet
         return;
     }
     const qreal dpr = area.devicePixelRatioF();
-    const double tick = std::max(
-        0.0, m_page->tickAtContentX(std::max(qreal(geometry.plotOrigin), x) - geometry.plotOrigin));
-    const uint64_t snapped = m_page->snapTick(tick, true);
+    const AutomationProjection projection = area.projection();
+    const uint64_t snapped = projection.snapTickAt(x, true);
     DocLanePoint markerPoint;
     const bool atMarker = voiceMarkerAt(area, x, geometry, &markerPoint);
     const uint64_t hoverTick = atMarker ? markerPoint.tick : snapped;
-    const qreal lineX = m_page->displayX(hoverTick, geometry.plotOrigin, dpr);
+    const qreal lineX = projection.displayX(hoverTick, dpr);
     QString hoverLabel;
     if (!voiceMarkerAt(area, lineX, geometry, &markerPoint)) {
         const int slot = voiceSlotAt(hoverTick);
@@ -426,7 +524,8 @@ void VoiceChangeLane::paint(QPainter &painter, AutomationCanvas &area,
     const qreal stairStep = std::min<qreal>(layout::space(layout::Space::Four),
                                             (plot.height() - labelH - 2 * pad) / 2.0);
     const bool canStair = stairStep > 1.0;
-    auto displayX = [&](uint32_t tick) { return m_page->displayX(tick, geometry.plotOrigin, dpr); };
+    const AutomationProjection projection = area.projection();
+    auto displayX = [&projection, dpr](uint64_t tick) { return projection.displayX(tick, dpr); };
     struct VoiceLabelLayout {
         QString text;
         QRectF rect;
@@ -436,11 +535,9 @@ void VoiceChangeLane::paint(QPainter &painter, AutomationCanvas &area,
     layouts.reserve(m_page->model().voices.size());
     qreal lastXEnd = -std::numeric_limits<qreal>::infinity();
     bool stairUp = true;
-    for (const auto &change : m_page->model().voices) {
-        if (change.track != track)
-            continue;
-        const qreal labelX = displayX(change.tick) + pad;
-        QString text = paintTextFor(change.program).label;
+    const auto appendLayout = [&](uint64_t tick, int program) {
+        const qreal labelX = displayX(tick) + pad;
+        QString text = paintTextFor(program).label;
         if (text.isEmpty())
             text = AutomationCanvas::tr("No voice");
         const qreal maxW = std::max<qreal>(0, plot.right() - labelX);
@@ -462,6 +559,32 @@ void VoiceChangeLane::paint(QPainter &painter, AutomationCanvas &area,
             lastXEnd = labelX + w + gap;
         }
         layouts.push_back({std::move(text), QRectF(labelX, labelY, w, labelH), offscreen});
+    };
+    if (dragActive() && m_drag->engineTrack == track) {
+        m_previewEntries.clear();
+        std::size_t sourceOccurrenceRank = 0;
+        for (const VoiceChange &change : m_page->model().voices) {
+            if (change.track != track)
+                continue;
+            uint64_t effectiveTick = change.tick;
+            if (change.tick == m_drag->point.tick && change.program == m_drag->point.value) {
+                if (sourceOccurrenceRank == m_drag->occurrenceRank)
+                    effectiveTick = m_drag->previewTick;
+                ++sourceOccurrenceRank;
+            }
+            m_previewEntries.push_back({effectiveTick, change.program});
+        }
+        std::stable_sort(m_previewEntries.begin(), m_previewEntries.end(),
+                         [](const VoicePaintEntry &left, const VoicePaintEntry &right) {
+                             return left.effectiveTick < right.effectiveTick;
+                         });
+        for (const VoicePaintEntry &entry : m_previewEntries)
+            appendLayout(entry.effectiveTick, entry.program);
+    } else {
+        for (const VoiceChange &change : m_page->model().voices) {
+            if (change.track == track)
+                appendLayout(change.tick, change.program);
+        }
     }
     const QColor trackColor = themes::trackIdentityColor(track % themes::trackIdentityColorCount);
     const qreal markerW = layout::singlePixel() + layout::singlePixel();

@@ -7,6 +7,7 @@
 #include "project/decompproject.h"
 #include "project/songregistry.h"
 #include "project/voicegroupsource.h"
+#include "ui/m4asemantics.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -410,6 +411,31 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         return 1;
     }
     int failures = 0;
+
+    // ---- voice-type display labels ----
+    {
+        const auto expectVoiceTypeLabel = [&failures](const char *what, const QString &actual,
+                                                      const QString &expected) {
+            if (actual != expected) {
+                std::fprintf(stderr, "vgcheck: FAIL: %s label '%s', expected '%s'\n", what,
+                             qUtf8Printable(actual), qUtf8Printable(expected));
+                failures++;
+            }
+        };
+        expectVoiceTypeLabel("DirectSound macro", vgMacroDisplayName(VgMacro::DirectSound),
+                             QStringLiteral("Sample"));
+        expectVoiceTypeLabel("fixed-pitch macro",
+                             vgMacroDisplayName(VgMacro::DirectSoundNoResample),
+                             QStringLiteral("Sample (fixed pitch)"));
+        expectVoiceTypeLabel("reverse macro", vgMacroDisplayName(VgMacro::DirectSoundAlt),
+                             QStringLiteral("Sample (reverse)"));
+        expectVoiceTypeLabel("fixed-pitch voice", m4aVoiceTypeName(VOICE_DIRECTSOUND_NO_RESAMPLE),
+                             QStringLiteral("Sample (fixed pitch)"));
+        expectVoiceTypeLabel("reverse voice", m4aVoiceTypeName(VOICE_DIRECTSOUND_ALT),
+                             QStringLiteral("Sample (reverse)"));
+        expectVoiceTypeLabel("keysplit fallback", m4aVoiceTypeName(VOICE_KEYSPLIT),
+                             QStringLiteral("Sample"));
+    }
 
     // ---- pre-save preview: temp file shadows the real one via config ----
     const QString previewDir = projectRoot + QStringLiteral("/.porydaw/vgpreview");
