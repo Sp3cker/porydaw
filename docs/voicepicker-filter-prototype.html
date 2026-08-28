@@ -1,0 +1,833 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway UI exploration; do not ship.
+  Question: which non-text browse pattern best narrows VoicePickerDialog's 128
+  voicegroup entries when the reliable data is slot, name, m4a family, and
+  whether the song uses the slot?
+  Three variants switch with ?variant=facets|families|map. Run:
+  open src/ui/songview/voicepicker-filter-prototype.html
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voice picker filter prototype</title>
+  <style>
+    :root {
+      /* Porydaw Vanilla palette: presetcolors.h */
+      --window: #c9c1bb;
+      --chrome: #bdb5af;
+      --panel: #d2d0ca;
+      --panel-alt: #d1cbc5;
+      --control: #e1dbd6;
+      --control-hover: #ece7e1;
+      --input: #f3f0ed;
+      --ink: #302c29;
+      --muted: #57514c;
+      --disabled: #8b847e;
+      --outline: #8c857f;
+      --separator: #5b5652;
+      --selection: #b9e8ee;
+      --accent: #00cadb;
+      --active: #f5b61c;
+      --sample: #638aa6;
+      --square-1: #956bb7;
+      --square-2: #b56d91;
+      --wave: #368f8d;
+      --noise: #ae7d2b;
+      --drumkit: #9f5d4e;
+      --synth: #64744d;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      align-items: center;
+      background:
+        linear-gradient(0deg, rgb(48 44 41 / 5%) 1px, transparent 1px) 0 0 / 18px 18px,
+        var(--window);
+      display: flex;
+      margin: 0;
+      min-height: 100vh;
+      padding: 30px 20px 88px;
+    }
+
+    button {
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .dialog {
+      background: var(--panel);
+      border: 1px solid var(--separator);
+      box-shadow: 0 22px 50px rgb(48 44 41 / 28%), 0 2px 0 rgb(255 255 255 / 36%) inset;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      height: min(742px, calc(100vh - 118px));
+      max-width: 1100px;
+      min-width: 760px;
+      overflow: hidden;
+      width: min(1100px, calc(100vw - 40px));
+    }
+
+    .dialog-header {
+      align-items: baseline;
+      background: var(--chrome);
+      border-bottom: 1px solid var(--separator);
+      display: flex;
+      gap: 14px;
+      justify-content: space-between;
+      padding: 14px 18px 13px;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 19px; font-weight: 700; }
+    h2 { font-size: 14px; }
+    h3 { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+
+    .voicegroup {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .state-bar {
+      align-items: center;
+      background: var(--control);
+      border-bottom: 1px solid var(--outline);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 45px;
+      padding: 7px 14px;
+    }
+
+    .state-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-right: 2px;
+    }
+
+    .state-pill, .count, .voice-tag, .used-tag, .filter-count {
+      align-items: center;
+      border: 1px solid var(--outline);
+      border-radius: 999px;
+      display: inline-flex;
+      font-size: 11px;
+      line-height: 1;
+      min-height: 25px;
+      padding: 0 9px;
+    }
+
+    .state-pill { background: var(--input); }
+    .state-pill strong { font-weight: 750; margin-left: 4px; }
+    .state-pill.auditioning { background: var(--active); border-color: #8a6000; }
+
+    .dialog-body { min-height: 0; overflow: hidden; }
+
+    .dialog-footer {
+      align-items: center;
+      background: var(--chrome);
+      border-top: 1px solid var(--separator);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      padding: 11px 14px;
+    }
+
+    .button, .text-button, .chip, .family-card, .slot-cell, .voice-row, .song-voice {
+      background: var(--control);
+      border: 1px solid var(--outline);
+    }
+
+    .button {
+      min-width: 88px;
+      padding: 7px 12px;
+    }
+
+    .button:hover, .text-button:hover, .chip:hover, .family-card:hover, .slot-cell:hover, .voice-row:hover, .song-voice:hover {
+      background: var(--control-hover);
+    }
+
+    .button.primary { background: var(--selection); border-color: #50868d; font-weight: 700; }
+    .button.primary:hover { background: #cdeff2; }
+    .button[disabled] { color: var(--disabled); cursor: not-allowed; }
+
+    .quiet { color: var(--muted); font-size: 12px; margin-right: auto; }
+    .quiet strong { color: var(--ink); }
+
+    /* Shared voice row. It deliberately follows VoicePickerDialog: slot + short name. */
+    .list-frame {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .voice-list {
+      display: grid;
+      gap: 2px;
+      height: 100%;
+      list-style: none;
+      margin: 0;
+      min-height: 0;
+      overflow: auto;
+      padding: 7px;
+      scrollbar-color: var(--outline) var(--panel-alt);
+      scrollbar-gutter: stable;
+    }
+
+    .voice-list::-webkit-scrollbar { width: 12px; }
+    .voice-list::-webkit-scrollbar-track { background: var(--panel-alt); }
+    .voice-list::-webkit-scrollbar-thumb { background: var(--outline); border: 3px solid var(--panel-alt); }
+    .list-scroll-cue {
+      align-items: center;
+      background: var(--chrome);
+      border-top: 1px solid var(--outline);
+      color: var(--muted);
+      display: flex;
+      font-size: 10px;
+      justify-content: center;
+      min-height: 22px;
+    }
+
+    .voice-row {
+      align-items: center;
+      display: grid;
+      gap: 9px;
+      grid-template-columns: 43px minmax(0, 1fr) auto auto;
+      min-height: 39px;
+      padding: 4px 7px 4px 8px;
+      text-align: left;
+      width: 100%;
+    }
+
+    .voice-row.selected {
+      background: var(--selection);
+      border-color: #50868d;
+      box-shadow: 3px 0 0 var(--accent) inset;
+    }
+
+    .slot {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .voice-name { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .voice-name .unnamed { color: var(--muted); font-style: italic; }
+
+    .voice-tag { border-color: color-mix(in srgb, var(--family) 58%, var(--outline)); color: var(--family); white-space: nowrap; }
+    .used-tag { background: #e8f5de; border-color: #6f8951; color: #3b5627; font-weight: 700; white-space: nowrap; }
+
+    .audition {
+      align-items: center;
+      background: transparent;
+      border: 0;
+      border-radius: 50%;
+      color: var(--muted);
+      display: inline-flex;
+      font-size: 15px;
+      height: 28px;
+      justify-content: center;
+      padding: 0;
+      width: 28px;
+    }
+
+    .audition:hover, .audition.playing { background: var(--active); color: var(--ink); }
+    .audition.playing { box-shadow: 0 0 0 2px rgb(138 96 0 / 28%); }
+
+    /* Variant A — persistent filters at the decision point. */
+    .facet-layout {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      height: 100%;
+    }
+
+    .facet-panel {
+      background: var(--panel-alt);
+      border-right: 1px solid var(--separator);
+      min-height: 0;
+      overflow: auto;
+      padding: 15px;
+    }
+
+    .filter-block { border-top: 1px solid var(--outline); margin-top: 15px; padding-top: 14px; }
+    .filter-block:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+    .filter-block h3 { margin-bottom: 8px; }
+
+    .filter-button {
+      align-items: center;
+      background: transparent;
+      border: 0;
+      border-radius: 3px;
+      display: flex;
+      gap: 8px;
+      justify-content: space-between;
+      min-height: 31px;
+      padding: 4px 6px;
+      text-align: left;
+      width: 100%;
+    }
+
+    .filter-button:hover { background: var(--control); }
+    .filter-button.active { background: var(--selection); font-weight: 700; }
+    .filter-name { align-items: center; display: inline-flex; gap: 8px; }
+    .swatch { background: var(--family); border-radius: 2px; height: 11px; width: 11px; }
+    .filter-count, .count { background: var(--input); color: var(--muted); min-height: 20px; padding: 0 6px; }
+
+    .toggle-row {
+      align-items: center;
+      cursor: pointer;
+      display: flex;
+      font-size: 13px;
+      gap: 9px;
+      min-height: 31px;
+    }
+
+    .toggle-row input { accent-color: #56868a; height: 16px; margin: 0; width: 16px; }
+
+    .facet-results { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+    .results-header { align-items: center; border-bottom: 1px solid var(--outline); display: flex; justify-content: space-between; padding: 11px 14px; }
+    .results-header h2 { font-size: 13px; }
+
+    /* Variant B — family selection is the primary surface, not a filter rail. */
+    .family-layout { display: grid; grid-template-columns: 214px minmax(0, 1fr); height: 100%; }
+    .now-playing {
+      background: var(--panel-alt);
+      border-right: 1px solid var(--separator);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-height: 0;
+      overflow: hidden;
+      padding: 14px;
+    }
+
+    .now-playing h2 { margin-bottom: 10px; }
+    .now-playing-list {
+      min-height: 0;
+      overflow: auto;
+      scrollbar-color: var(--outline) var(--panel-alt);
+      scrollbar-gutter: stable;
+    }
+    .now-playing-list::-webkit-scrollbar { width: 12px; }
+    .now-playing-list::-webkit-scrollbar-track { background: var(--panel-alt); }
+    .now-playing-list::-webkit-scrollbar-thumb { background: var(--outline); border: 3px solid var(--panel-alt); }
+    .song-voice {
+      align-items: center;
+      border-left: 4px solid var(--family);
+      display: grid;
+      gap: 6px;
+      grid-template-columns: 31px minmax(0, 1fr);
+      margin: 3px 0;
+      padding: 6px;
+      text-align: left;
+      width: 100%;
+    }
+    .song-voice.selected { background: var(--selection); border-color: #50868d; }
+    .song-voice .slot { font-size: 10px; }
+    .song-voice .quick-name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .family-browser { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+    .family-heading { border-bottom: 1px solid var(--outline); padding: 9px 14px; }
+    .family-cards { display: grid; gap: 7px; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-top: 0; }
+    .family-card { --family: var(--sample); min-height: 78px; padding: 8px 7px; text-align: left; }
+    .family-card.active { background: color-mix(in srgb, var(--family) 20%, var(--input)); border: 2px solid var(--family); padding: 7px 6px; }
+    .family-card .family-card-label { color: var(--family); display: block; font-size: 12px; font-weight: 750; line-height: 1.15; }
+    .family-card .family-card-count { color: var(--muted); display: block; font-size: 11px; margin-top: 7px; }
+    .family-voices { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+    .family-voices-header { align-items: center; display: flex; justify-content: space-between; padding: 10px 14px 6px; }
+    .family-voices-header h2 { color: var(--family); }
+
+    /* Variant C — slot topology exposes where families and song use live. */
+    .map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 295px; height: 100%; }
+    .slot-map-panel { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; padding: 14px; }
+    .map-tools { border-bottom: 1px solid var(--outline); padding-bottom: 12px; }
+    .map-tools h2 { margin-bottom: 3px; }
+    .map-tools p { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .map-tool-row { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .chip { border-radius: 999px; font-size: 11px; min-height: 28px; padding: 0 10px; }
+    .chip.active { background: var(--selection); border-color: #50868d; font-weight: 700; }
+    .chip.family { --family: var(--sample); border-color: color-mix(in srgb, var(--family) 65%, var(--outline)); color: var(--family); }
+    .chip.family.active { background: color-mix(in srgb, var(--family) 21%, var(--input)); border-color: var(--family); }
+
+    .slot-grid-wrap { min-height: 0; overflow: auto; padding-top: 13px; }
+    .slot-grid-labels { color: var(--muted); display: grid; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; grid-template-columns: repeat(16, 1fr); margin: 0 0 3px 31px; text-align: center; }
+    .slot-map { display: grid; gap: 4px; grid-template-columns: repeat(16, minmax(27px, 1fr)); }
+    .slot-cell { --family: var(--sample); aspect-ratio: 1; min-height: 30px; padding: 0; position: relative; }
+    .slot-cell::before { background: var(--family); content: ""; inset: 3px; opacity: .84; position: absolute; }
+    .slot-cell span { align-items: center; color: #fff; display: flex; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; height: 100%; justify-content: center; position: relative; text-shadow: 0 1px 2px rgb(0 0 0 / 50%); }
+    .slot-cell.used::after { background: #f5b61c; border: 1px solid #725000; border-radius: 50%; content: ""; height: 7px; position: absolute; right: 6px; top: 6px; width: 7px; }
+    .slot-cell.selected { box-shadow: 0 0 0 3px var(--accent); z-index: 1; }
+    .slot-cell.dim { opacity: .25; }
+    .slot-cell:hover { background: var(--input); }
+
+    .map-inspector { background: var(--panel-alt); border-left: 1px solid var(--separator); display: grid; grid-template-rows: auto auto minmax(0, 1fr); min-height: 0; }
+    .inspector-selection { border-bottom: 1px solid var(--outline); padding: 14px; }
+    .inspector-selection h2 { margin-bottom: 7px; }
+    .selected-number { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    .selected-name { font-size: 17px; font-weight: 750; margin: 2px 0 8px; }
+    .inspector-filter { border-bottom: 1px solid var(--outline); padding: 12px 14px; }
+    .inspector-filter p { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .compact-list .voice-row { grid-template-columns: 36px minmax(0, 1fr) auto; }
+    .compact-list .used-tag { display: none; }
+
+    .empty-state { align-items: center; color: var(--muted); display: flex; font-size: 13px; justify-content: center; min-height: 100%; padding: 28px; text-align: center; }
+
+    .prototype-switcher {
+      align-items: center;
+      background: #302c29;
+      border: 1px solid #131211;
+      border-radius: 999px;
+      bottom: 20px;
+      box-shadow: 0 8px 24px rgb(48 44 41 / 38%);
+      color: #f3f0ed;
+      display: flex;
+      gap: 5px;
+      left: 50%;
+      padding: 5px;
+      position: fixed;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+
+    .prototype-switcher button {
+      background: transparent;
+      border: 0;
+      border-radius: 999px;
+      color: inherit;
+      height: 32px;
+      min-width: 32px;
+      padding: 0 10px;
+    }
+
+    .prototype-switcher button:hover { background: #57514c; }
+    .prototype-switcher .variant-name { font-size: 12px; font-weight: 700; min-width: 185px; }
+
+    @media (max-width: 800px) {
+      body { align-items: flex-start; padding: 12px 10px 80px; }
+      .dialog { height: calc(100vh - 92px); min-width: 0; width: 100%; }
+      .facet-layout, .family-layout, .map-layout { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+      .facet-panel, .now-playing, .map-inspector { border-bottom: 1px solid var(--separator); border-right: 0; border-left: 0; max-height: 190px; }
+      .facet-panel { display: grid; gap: 9px; grid-template-columns: 1fr 1fr; }
+      .facet-panel > :first-child { grid-column: 1 / -1; }
+      .filter-block { margin-top: 0; }
+      .family-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .now-playing { display: none; }
+      .map-inspector { display: none; }
+      .voice-row { grid-template-columns: 39px minmax(0, 1fr) auto; }
+      .voice-row .used-tag { display: none; }
+      .dialog-header { align-items: flex-start; flex-direction: column; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="dialog" aria-labelledby="dialog-title">
+    <header class="dialog-header">
+      <div>
+        <div class="eyebrow">Prototype · no text search</div>
+        <h1 id="dialog-title">Track 3 voice</h1>
+      </div>
+    </header>
+    <div id="state" class="state-bar" aria-live="polite"></div>
+    <section id="mount" class="dialog-body"></section>
+    <footer class="dialog-footer">
+      <p id="feedback" class="quiet">Choose a voice; preview uses the existing press-and-hold affordance.</p>
+      <button class="button" type="button" data-action="cancel">Cancel</button>
+      <button id="choose-button" class="button primary" type="button" data-action="choose">Choose voice</button>
+    </footer>
+  </main>
+
+  <nav class="prototype-switcher" aria-label="Prototype variants">
+    <button id="previous-variant" type="button" aria-label="Previous prototype variant">←</button>
+    <button id="variant-name" class="variant-name" type="button" aria-label="Choose prototype variant"></button>
+    <button id="next-variant" type="button" aria-label="Next prototype variant">→</button>
+  </nav>
+
+  <script>
+    // Fixture only. Shape mirrors VoicePickerDialog: slot + voiceShortName(),
+    // plus type and song-use information already available in SongView.
+    const families = [
+      { id: "sample", label: "Sample", color: "var(--sample)" },
+      { id: "square1", label: "Square 1", color: "var(--square-1)" },
+      { id: "square2", label: "Square 2", color: "var(--square-2)" },
+      { id: "wave", label: "Wave", color: "var(--wave)" },
+      { id: "noise", label: "Noise", color: "var(--noise)" },
+      { id: "drumkit", label: "Drumkit", color: "var(--drumkit)" },
+      { id: "synth", label: "Synth (Golden Sun)", color: "var(--synth)" },
+    ];
+    const familyById = Object.fromEntries(families.map((family) => [family.id, family]));
+    const familyPlan = [
+      ...Array(48).fill("sample"), ...Array(18).fill("square1"),
+      ...Array(15).fill("square2"), ...Array(15).fill("wave"),
+      ...Array(12).fill("noise"), ...Array(10).fill("drumkit"),
+      ...Array(10).fill("synth"),
+    ];
+    const voiceNames = new Map([
+      [0, "Concert Piano"], [1, "Bright Piano"], [2, "Muted Piano"], [3, "Electric Piano"],
+      [4, "Drawbar Organ"], [5, "Nylon Guitar"], [6, "Steel Guitar"], [7, "Finger Bass"],
+      [8, "Slap Bass"], [9, "Strings"], [10, "Choir"], [11, "Trumpet"], [12, "Saxophone"],
+      [13, "Flute"], [14, "Marimba"], [15, "Timpani"], [16, "Kick"], [17, "Snare"],
+      [18, "Closed Hat"], [19, "Percussion"], [42, "Picked Bass"], [44, "Orchestra Hit"],
+      [48, "Square Lead"], [51, "Pulse Organ"], [58, "Sweep Lead"], [61, "Pulse Lead"],
+      [66, "Chip Bass"], [72, "Arpeggio"], [80, "Bell Arp"], [81, "Warm Pad"],
+      [82, "Glass Pad"], [87, "Wave Pluck"], [90, "Dream Pad"], [96, "Noise Snare"],
+      [103, "Noise Hat"], [104, "Wind Noise"], [108, "Rock Kit"], [112, "Brush Kit"],
+      [116, "Marimba Kit"], [118, "Synth Brass"], [120, "Resonant Lead"],
+      [123, "String Synth"], [126, "Soft Synth"],
+    ]);
+    const usedSlots = new Set([0, 7, 16, 42, 48, 66, 81, 96, 108, 118]);
+    const voices = familyPlan.map((family, slot) => ({
+      slot,
+      family,
+      name: voiceNames.get(slot) ?? "",
+      used: usedSlots.has(slot),
+    }));
+
+    const variants = [
+      { key: "facets", label: "A — Facet rail" },
+      { key: "families", label: "B — Family browser" },
+      { key: "map", label: "C — Slot map" },
+    ];
+    const defaults = {
+      facets: { family: "all", usedOnly: false, namedOnly: false },
+      families: { family: "wave" },
+      map: { family: "all", usedOnly: false, namedOnly: false },
+    };
+    const state = {
+      variant: validVariant(new URLSearchParams(location.search).get("variant")),
+      selected: 81,
+      auditioning: null,
+      feedback: "Choose a voice; preview uses the existing press-and-hold affordance.",
+      filters: structuredClone(defaults),
+    };
+
+    function validVariant(value) {
+      return variants.some((variant) => variant.key === value) ? value : "facets";
+    }
+
+    function voice(slot) { return voices[slot]; }
+    function familyOf(item) { return familyById[item.family]; }
+    function visibleName(item) { return item.name || familyOf(item).label; }
+    function shortName(item) { return item.name ? `${item.name} (${familyOf(item).label})` : familyOf(item).label; }
+    function slotText(slot) { return String(slot).padStart(3, "0"); }
+    function familyStyle(item) { return `--family:${familyOf(item).color}`; }
+    function familyCount(id) { return voices.filter((item) => item.family === id).length; }
+
+    function filterVoices({ family = "all", usedOnly = false, namedOnly = false }) {
+      return voices.filter((item) =>
+        (family === "all" || item.family === family) &&
+        (!usedOnly || item.used) &&
+        (!namedOnly || item.name));
+    }
+
+    function filtersLabel(filter) {
+      const terms = [];
+      terms.push(filter.family === "all" ? "all families" : familyById[filter.family].label);
+      if (filter.usedOnly) terms.push("This Voicegroup");
+      if (filter.namedOnly) terms.push("named only");
+      return terms.join(" · ");
+    }
+
+    function stateBar() {
+      const filter = state.filters[state.variant];
+      const shown = state.variant === "families"
+        ? filterVoices({ family: filter.family }).length
+        : filterVoices(filter).length;
+      const current = voice(state.selected);
+      const audition = state.auditioning === null
+        ? "not auditioning"
+        : `auditioning ${slotText(state.auditioning)}`;
+      return `
+        <span class="state-label">Inspectable prototype state</span>
+        <span class="state-pill">Showing<strong>${shown} / 128</strong></span>
+        <span class="state-pill">View<strong>${state.variant === "families" ? familyById[filter.family].label : filtersLabel(filter)}</strong></span>
+        <span class="state-pill">Selected<strong>${slotText(current.slot)} ${shortName(current)}</strong></span>
+        <span class="state-pill ${state.auditioning === null ? "" : "auditioning"}">Preview<strong>${audition}</strong></span>`;
+    }
+
+    function voiceRow(item, compact = false) {
+      const selected = item.slot === state.selected ? " selected" : "";
+      const playing = item.slot === state.auditioning ? " playing" : "";
+      return `
+        <button class="voice-row${selected}" style="${familyStyle(item)}" type="button" data-action="select" data-slot="${item.slot}">
+          <span class="slot">${slotText(item.slot)}</span>
+          <span class="voice-name">${item.name || `<span class="unnamed">${familyOf(item).label}</span>`}</span>
+          ${compact ? "" : `<span class="voice-tag">${familyOf(item).label}</span>`}
+          ${compact ? "" : item.used ? `<span class="used-tag">This Voicegroup</span>` : `<span aria-hidden="true"></span>`}
+          <span class="audition${playing}" data-action="audition" data-slot="${item.slot}" title="Press and hold to audition">▶</span>
+        </button>`;
+    }
+
+    function voiceList(items, compact = false) {
+      if (!items.length)
+        return `<div class="empty-state">No voices match this view.<br>Clear a filter to return to the 128-slot voicegroup.</div>`;
+      const cue = items.length > 8 ? `<span class="list-scroll-cue">Scroll ↓</span>` : "";
+      return `<div class="list-frame"><div class="voice-list ${compact ? "compact-list" : ""}" aria-label="Filtered voices">${items.map((item) => voiceRow(item, compact)).join("")}</div>${cue}</div>`;
+    }
+
+    function familyFilterButton(id) {
+      const active = state.filters.facets.family === id ? " active" : "";
+      const item = id === "all" ? null : familyById[id];
+      return `
+        <button class="filter-button${active}" type="button" data-action="facet-family" data-family="${id}">
+          <span class="filter-name">${item ? `<span class="swatch" style="--family:${item.color}"></span>${item.label}` : "All families"}</span>
+          <span class="filter-count">${id === "all" ? 128 : familyCount(id)}</span>
+        </button>`;
+    }
+
+    function renderFacets() {
+      const filter = state.filters.facets;
+      const results = filterVoices(filter);
+      return `
+        <div class="facet-layout">
+          <aside class="facet-panel" aria-label="Voice filters">
+            <section class="filter-block">
+              <h3>Instrument family</h3>
+              ${familyFilterButton("all")}
+              ${families.map((family) => familyFilterButton(family.id)).join("")}
+            </section>
+            <section class="filter-block">
+              <h3>Availability</h3>
+              <label class="toggle-row"><input type="checkbox" data-action="facet-used" ${filter.usedOnly ? "checked" : ""}> This Voicegroup <span class="count">${voices.filter((item) => item.used).length}</span></label>
+              <label class="toggle-row"><input type="checkbox" data-action="facet-named" ${filter.namedOnly ? "checked" : ""}> Named voices only <span class="count">${voices.filter((item) => item.name).length}</span></label>
+            </section>
+          </aside>
+          <section class="facet-results">
+            <header class="results-header">
+              <h2>${results.length} matching voices</h2>
+              <button class="text-button button" type="button" data-action="facet-reset">Clear filters</button>
+            </header>
+            ${voiceList(results)}
+          </section>
+        </div>`;
+    }
+
+    function familyCard(family) {
+      const active = state.filters.families.family === family.id ? " active" : "";
+      return `
+        <button class="family-card${active}" style="--family:${family.color}" type="button" data-action="family-select" data-family="${family.id}">
+          <span class="family-card-label">${family.label}</span>
+          <span class="family-card-count">${familyCount(family.id)} slots</span>
+        </button>`;
+    }
+
+    function renderFamilies() {
+      const filter = state.filters.families;
+      const currentFamily = familyById[filter.family];
+      const songVoices = voices.filter((item) => item.used);
+      const results = filterVoices({ family: filter.family });
+      return `
+        <div class="family-layout">
+          <aside class="now-playing" aria-label="Voices in this Voicegroup">
+            <h2>This Voicegroup</h2>
+            <div class="now-playing-list">
+              ${songVoices.map((item) => `
+                <button class="song-voice${item.slot === state.selected ? " selected" : ""}" style="${familyStyle(item)}" type="button" data-action="select" data-slot="${item.slot}" aria-label="${slotText(item.slot)} ${familyOf(item).label}: ${visibleName(item)}">
+                  <span class="slot">${slotText(item.slot)}</span>
+                  <span class="quick-name">${visibleName(item)}</span>
+                </button>`).join("")}
+            </div>
+          </aside>
+          <section class="family-browser">
+            <header class="family-heading">
+              <div class="family-cards">${families.map(familyCard).join("")}</div>
+            </header>
+            <section class="family-voices" style="--family:${currentFamily.color}">
+              <header class="family-voices-header">
+                <h2>${currentFamily.label} · ${results.length} slots</h2>
+                <button class="text-button button" type="button" data-action="family-current">Show selected family</button>
+              </header>
+              ${voiceList(results)}
+            </section>
+          </section>
+        </div>`;
+    }
+
+    function mapChip(id) {
+      const active = state.filters.map.family === id ? " active" : "";
+      if (id === "all")
+        return `<button class="chip${active}" type="button" data-action="map-family" data-family="all">All families</button>`;
+      const family = familyById[id];
+      return `<button class="chip family${active}" style="--family:${family.color}" type="button" data-action="map-family" data-family="${id}">${family.label}</button>`;
+    }
+
+    function slotCell(item, filter) {
+      const visible = filterVoices(filter).some((candidate) => candidate.slot === item.slot);
+      return `
+        <button class="slot-cell${item.slot === state.selected ? " selected" : ""}${item.used ? " used" : ""}${visible ? "" : " dim"}" style="${familyStyle(item)}" type="button" data-action="select" data-slot="${item.slot}" title="${slotText(item.slot)} ${shortName(item)}">
+          <span>${slotText(item.slot)}</span>
+        </button>`;
+    }
+
+    function renderMap() {
+      const filter = state.filters.map;
+      const results = filterVoices(filter);
+      const selected = voice(state.selected);
+      return `
+        <div class="map-layout">
+          <section class="slot-map-panel">
+            <header class="map-tools">
+              <h2>See the whole voicegroup before narrowing it</h2>
+              <p>Family colour makes the 128 slots legible; amber dots mark slots in this Voicegroup. Chips dim non-matches without losing slot context.</p>
+              <div class="map-tool-row">
+                ${mapChip("all")}${families.map((family) => mapChip(family.id)).join("")}
+                <label class="toggle-row"><input type="checkbox" data-action="map-used" ${filter.usedOnly ? "checked" : ""}> This Voicegroup</label>
+                <label class="toggle-row"><input type="checkbox" data-action="map-named" ${filter.namedOnly ? "checked" : ""}> Named</label>
+              </div>
+            </header>
+            <div class="slot-grid-wrap">
+              <div class="slot-grid-labels">${Array.from({ length: 16 }, (_, index) => `<span>${index.toString(16).toUpperCase()}</span>`).join("")}</div>
+              <div class="slot-map" aria-label="Voicegroup slots">${voices.map((item) => slotCell(item, filter)).join("")}</div>
+            </div>
+          </section>
+          <aside class="map-inspector" aria-label="Selected voice and filtered results">
+            <section class="inspector-selection" style="${familyStyle(selected)}">
+              <h2>Selected voice</h2>
+              <p class="selected-number">${slotText(selected.slot)} · ${familyOf(selected).label}</p>
+              <p class="selected-name">${visibleName(selected)}</p>
+              ${selected.used ? `<span class="used-tag">This Voicegroup</span>` : `<span class="voice-tag" style="--family:${familyOf(selected).color}">${familyOf(selected).label}</span>`}
+            </section>
+            <section class="inspector-filter"><h3>${results.length} highlighted</h3><p>The grid preserves slot position. The list below is the narrowed, keyboard-friendly result set.</p></section>
+            ${voiceList(results, true)}
+          </aside>
+        </div>`;
+    }
+
+    function render() {
+      document.getElementById("state").innerHTML = stateBar();
+      document.getElementById("feedback").innerHTML = state.feedback;
+      document.getElementById("choose-button").textContent = `Choose ${slotText(state.selected)}`;
+      const mount = document.getElementById("mount");
+      mount.innerHTML = state.variant === "facets" ? renderFacets()
+        : state.variant === "families" ? renderFamilies()
+        : renderMap();
+      renderSwitcher();
+      requestAnimationFrame(() => {
+        mount.querySelector(`.voice-row[data-slot="${state.selected}"]`)
+          ?.scrollIntoView({ block: "center", inline: "nearest" });
+      });
+    }
+
+    function setVariant(key) {
+      state.variant = validVariant(key);
+      const url = new URL(location.href);
+      url.searchParams.set("variant", state.variant);
+      history.replaceState({}, "", url);
+      state.feedback = `Viewing ${variants.find((variant) => variant.key === state.variant).label}.`;
+      render();
+    }
+
+    function renderSwitcher() {
+      const index = variants.findIndex((variant) => variant.key === state.variant);
+      const button = document.getElementById("variant-name");
+      button.textContent = variants[index].label;
+      button.title = "Use ← and → to compare variants";
+    }
+
+    function selectVoice(slot) {
+      state.selected = Number(slot);
+      state.feedback = `Selected ${slotText(state.selected)} ${shortName(voice(state.selected))}. Hold ▶ to audition middle C.`;
+      render();
+    }
+
+    function keepSelectionIn(filter) {
+      const matches = filterVoices(filter);
+      if (matches.length && !matches.some((item) => item.slot === state.selected))
+        state.selected = matches[0].slot;
+    }
+
+    document.getElementById("mount").addEventListener("click", (event) => {
+      const actionTarget = event.target.closest("[data-action]");
+      if (!actionTarget) return;
+      const { action, slot, family } = actionTarget.dataset;
+      if (action === "audition") return;
+      if (action === "select") return selectVoice(slot);
+      if (action === "facet-family") state.filters.facets.family = family;
+      if (action === "facet-used") state.filters.facets.usedOnly = actionTarget.checked;
+      if (action === "facet-named") state.filters.facets.namedOnly = actionTarget.checked;
+      if (action === "facet-reset") state.filters.facets = structuredClone(defaults.facets);
+      if (action === "family-select") state.filters.families.family = family;
+      if (action === "family-current") state.filters.families.family = voice(state.selected).family;
+      if (action === "map-family") state.filters.map.family = family;
+      if (action === "map-used") state.filters.map.usedOnly = actionTarget.checked;
+      if (action === "map-named") state.filters.map.namedOnly = actionTarget.checked;
+      if (action.startsWith("facet-"))
+        keepSelectionIn(state.filters.facets);
+      if (action === "family-select" || action === "family-current")
+        keepSelectionIn({ family: state.filters.families.family });
+      state.feedback = action === "cancel"
+        ? "Cancel would close the production dialog. This prototype stays open for comparison."
+        : action === "choose"
+          ? `Choose would return ${slotText(state.selected)} ${shortName(voice(state.selected))}.`
+          : "Filter updated; the state strip shows the exact result.";
+      render();
+    });
+
+    document.getElementById("mount").addEventListener("pointerdown", (event) => {
+      const audition = event.target.closest('[data-action="audition"]');
+      if (!audition) return;
+      event.preventDefault();
+      event.stopPropagation();
+      state.auditioning = Number(audition.dataset.slot);
+      state.feedback = `Auditioning ${slotText(state.auditioning)} ${shortName(voice(state.auditioning))} at middle C.`;
+      render();
+    });
+
+    window.addEventListener("pointerup", () => {
+      if (state.auditioning === null) return;
+      state.auditioning = null;
+      state.feedback = "Preview released.";
+      render();
+    });
+
+    document.querySelector(".dialog-footer").addEventListener("click", (event) => {
+      const actionTarget = event.target.closest("[data-action]");
+      if (!actionTarget) return;
+      state.feedback = actionTarget.dataset.action === "cancel"
+        ? "Cancel would close the production dialog. This prototype stays open for comparison."
+        : `Choose would return ${slotText(state.selected)} ${shortName(voice(state.selected))}.`;
+      render();
+    });
+
+    function cycleVariant(direction) {
+      const index = variants.findIndex((variant) => variant.key === state.variant);
+      setVariant(variants[(index + direction + variants.length) % variants.length].key);
+    }
+
+    document.getElementById("previous-variant").addEventListener("click", () => cycleVariant(-1));
+    document.getElementById("next-variant").addEventListener("click", () => cycleVariant(1));
+    document.getElementById("variant-name").addEventListener("click", () => cycleVariant(1));
+    window.addEventListener("keydown", (event) => {
+      const tag = document.activeElement?.tagName;
+      if (["INPUT", "TEXTAREA"].includes(tag) || document.activeElement?.isContentEditable) return;
+      if (event.key === "ArrowLeft") { event.preventDefault(); cycleVariant(-1); }
+      if (event.key === "ArrowRight") { event.preventDefault(); cycleVariant(1); }
+    });
+    window.addEventListener("popstate", () => {
+      state.variant = validVariant(new URLSearchParams(location.search).get("variant"));
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
