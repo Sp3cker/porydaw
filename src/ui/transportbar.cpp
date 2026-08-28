@@ -303,6 +303,7 @@ TransportBar::TransportBar(QWidget *parent) : QToolBar(tr("Transport"), parent)
     m_timeLabel->setObjectName(QStringLiteral("transportTimeLabel"));
     m_timeLabel->setContentsMargins(::layout::space(::layout::Space::Three), 0,
                                     ::layout::space(::layout::Space::Three), 0);
+    m_timeLabel->setFixedWidth(m_timeLabel->sizeHint().width());
     addWidget(m_timeLabel);
 
     m_rootCombo = new QComboBox(this);

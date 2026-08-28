@@ -250,6 +250,18 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     auto *outputCaption = findChild<QLabel *>(QStringLiteral("transportOutputVolumeCaption"));
     auto *outputDial = findChild<QDial *>(QStringLiteral("transportOutputVolume"));
     TransportBar defaultTransport;
+    auto *defaultTimeLabel =
+        defaultTransport.findChild<QLabel *>(QStringLiteral("transportTimeLabel"));
+    check(defaultTimeLabel && defaultTimeLabel->minimumWidth() > 0 &&
+              defaultTimeLabel->minimumWidth() == defaultTimeLabel->maximumWidth(),
+          "transport time label does not reserve a fixed width");
+    if (defaultTimeLabel) {
+        const auto reservedWidth = defaultTimeLabel->minimumWidth();
+        defaultTransport.setTimeText(QStringLiteral("99:59.9 / 99:59.9"));
+        check(defaultTimeLabel->minimumWidth() == reservedWidth &&
+                  defaultTimeLabel->maximumWidth() == reservedWidth,
+              "loaded transport time changed the reserved width");
+    }
     auto *defaultOutputDial =
         defaultTransport.findChild<QDial *>(QStringLiteral("transportOutputVolume"));
     check(defaultOutputDial && defaultOutputDial->value() == 100,
