@@ -1,11 +1,11 @@
 # Handoff: ProjectIo dress-down plan findings
 
-Next session: the remaining dual-audit findings are **already folded into** `docs/projectio-dress-down-plan.md` (working tree / this commit). Verify that contract, optionally re-audit, and **do not start C++** until asked.
+Next session: the remaining dual-audit findings are **already folded into** `docs/old/projectio-dress-down-plan.md` (working tree / this commit). Verify that contract, optionally re-audit, and **do not start C++** until asked.
 
 ## Repo
 
 - Branch: `feature/project-io-thread`
-- Canonical plan: `docs/projectio-dress-down-plan.md`
+- Canonical plan: `docs/old/projectio-dress-down-plan.md`
 - Types are declared once under **Implementation-ready target interfaces**
 
 ## Suggested skills
@@ -38,7 +38,7 @@ Stale in the old audit freeze (already in `362676a`): `ApplyVoicegroupEditComman
 
 ## Next agent work
 
-1. Read Implementation-ready + acceptance matrix in `docs/projectio-dress-down-plan.md`.
+1. Read Implementation-ready + acceptance matrix in `docs/old/projectio-dress-down-plan.md`.
 2. Grep forbidden leftovers: `SelectedAudioState`, `resolvedSong`, `SongAvailability`, `const_cast`, remainder set, five `*Failed` payload structs.
 3. If anything above is incomplete, patch **only** the plan.
 4. Optional dual-audit of that diff.

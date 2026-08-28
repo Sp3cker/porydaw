@@ -1,6 +1,6 @@
 # Project File-I/O Thread Design Minutes
 
-Status: living design record. This file records settled decisions, verified facts, and unresolved questions. Implementation plan is defined in [`docs/project-io-thread-plan.md`](docs/project-io-thread-plan.md).
+Status: living design record. This file records settled decisions, verified facts, and unresolved questions. The implemented plan is archived at [`docs/old/project-io-thread-plan.md`](docs/old/project-io-thread-plan.md).
 
 ## Goal
 

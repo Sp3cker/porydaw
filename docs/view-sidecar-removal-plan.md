@@ -3,8 +3,8 @@
 ## Status
 
 Normative implementation spec for this wave. It supersedes every conflicting sidecar clause in
-`docs/projectio-dress-down-contract.md`, `docs/projectio-dress-down-plan.md`, and
-`docs/projectio-implementation-steps.md`; those three documents are mechanically reconciled in
+`docs/old/projectio-dress-down-contract.md`, `docs/old/projectio-dress-down-plan.md`, and
+`docs/old/projectio-implementation-steps.md`; those three documents are mechanically reconciled in
 P3e. `docs/time-ruler-loading-plan.md` is **reconciled now**, outside P3e: it no longer depends on
 `SidecarStage`, persisted camera state, or a global camera. This plan neither changes nor accepts
 static/pre-bind ruler behavior. Grounded line anchors below are pre-change locations; symbol names
@@ -346,7 +346,7 @@ Slice agents do not build, format, lint, run checks, or edit `CMakeLists.txt`.
 | P3b UI checks | `task` implementation agent | `src/checks/mainwindowroutingcheck.cpp`, `src/checks/sessioncheck.cpp` (2) | §8 rows A/C/D-F |
 | P3c codec checks | `task` implementation agent | `src/checks/selftest.cpp` (1) | codec round trip/malformed/default coverage |
 | P3d obsolete check | `task` implementation agent | `src/checks/sidecarcheck.cpp`, `src/checks/checkcatalog.cpp`, `src/checks/fwd.hpp` (3) | delete harness and registration |
-| P3e docs | `task` implementation agent | `docs/projectio-dress-down-contract.md`, `docs/projectio-dress-down-plan.md`, `docs/projectio-implementation-steps.md` (3) | mechanical supersession only; no time-ruler edit |
+| P3e docs | `task` implementation agent | `docs/old/projectio-dress-down-contract.md`, `docs/old/projectio-dress-down-plan.md`, `docs/old/projectio-implementation-steps.md` (3) | mechanical supersession only; no time-ruler edit |
 | INT integration | `task` integration owner | `CMakeLists.txt` only (1) | merge every slice, own all gates, remove source entries after P2d and the check entry after P3d |
 
 All slices are contract-pinned and file-disjoint. Every production slice owns at most five files.

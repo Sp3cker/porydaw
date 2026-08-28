@@ -1,7 +1,7 @@
 # Single Unified Project-I/O Thread Implementation Plan (Option A)
 
 **Status:** Authoritative implementation and subagent execution plan.
-**Living Decision Context:** [`PROJECT_THREAD_MINUTES.md`](../PROJECT_THREAD_MINUTES.md)
+**Living Decision Context:** [`PROJECT_THREAD_MINUTES.md`](../../PROJECT_THREAD_MINUTES.md)
 
 ---
 
