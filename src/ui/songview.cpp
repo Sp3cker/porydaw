@@ -136,6 +136,9 @@ SongView::SongView(QWidget *parent)
     m_headerScroll->setFixedWidth(m_geometry.trackHeaderWidth);
     m_headerScroll->setFrameShape(QFrame::NoFrame);
     m_headerScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    // Keep retained row widths stable with the thin list scrollbar.
+    m_headerScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    ::layout::configureListPositionIndicator(*m_headerScroll->verticalScrollBar());
     m_headerScroll->setWidgetResizable(true);
     m_headerScroll->setFocusPolicy(Qt::NoFocus);
     m_headers = new TrackHeaderPanel(this);
