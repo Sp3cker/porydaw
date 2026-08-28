@@ -31,6 +31,12 @@ class TrackHeaderPanel;
 class TrackHeaderRow : public QWidget
 {
   private:
+    enum class SelectionState {
+        None,
+        InScope,
+        Primary,
+    };
+
     struct Geometry {
         int trackHeaderButtonExtent;
         int trackHeaderRowHeight;
@@ -79,8 +85,10 @@ class TrackHeaderRow : public QWidget
     void cancelRename();
     QString fallbackTrackName() const;
     void resyncSong();
+    SelectionState selectionState() const;
     QRect activityMeterRect() const;
     QRect editorRect() const;
+    QRect textColumnRect() const;
     void finishRename(bool commit, bool restoreFocus);
     void updateVisibleTitleCenteringCache(const QString &visibleTitle);
 
@@ -104,6 +112,7 @@ class TrackHeaderRow : public QWidget
     // Program painted on the voice line, for syncVoice's changed check
     // (-2 = never painted; distinct from -1, "no voice set").
     int m_shownProgram = -2;
+    std::optional<SelectionState> m_paintedSelection;
     QPoint m_pressPos;
     bool m_dragArmed = false;
     bool m_dragging = false;

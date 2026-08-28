@@ -39,24 +39,9 @@ using namespace songview::detail;
 
 namespace {
 
-enum class SelectionState {
-    None,
-    InScope,
-    Primary,
-};
-
-SelectionState resolveSelectionState(const EditorSelectionModel &selectionModel,
-                                     uint32_t usedTracks, int track)
-{
-    if (selectionModel.primaryTrack() == track)
-        return SelectionState::Primary;
-    if (selectionModel.resolvedTrackScope(usedTracks) & (1u << track))
-        return SelectionState::InScope;
-    return SelectionState::None;
-}
-
 struct RowPaintStyle {
-    QColor fill;
+    QColor base;
+    QColor overlay;
     QColor backdrop;
     const QFont *titleFont;
     const QFontMetrics *titleMetrics;
@@ -66,14 +51,17 @@ struct RowPaintStyle {
     bool useSelectedTitleOffset;
 };
 
-RowPaintStyle resolvePaintStyle(SelectionState selection, bool overBudget, const QPalette &palette,
-                                const QFont &normalTitleFont, const QFont &boldTitleFont,
-                                const QFontMetrics &normalTitleMetrics,
+RowPaintStyle resolvePaintStyle(bool primary, bool inScope, bool overBudget,
+                                const QPalette &palette, const QFont &normalTitleFont,
+                                const QFont &boldTitleFont, const QFontMetrics &normalTitleMetrics,
                                 const QFontMetrics &boldTitleMetrics)
 {
     const QColor defaultBackdrop = palette.color(QPalette::Window);
+    QColor opaqueDefaultBase = defaultBackdrop;
+    opaqueDefaultBase.setAlpha(255);
     RowPaintStyle style{
-        .fill = defaultBackdrop,
+        .base = opaqueDefaultBase,
+        .overlay = {},
         .backdrop = defaultBackdrop,
         .titleFont = &normalTitleFont,
         .titleMetrics = &normalTitleMetrics,
@@ -83,23 +71,19 @@ RowPaintStyle resolvePaintStyle(SelectionState selection, bool overBudget, const
         .useSelectedTitleOffset = false,
     };
 
-    switch (selection) {
-    case SelectionState::None:
-        break;
-    case SelectionState::InScope:
-        style.fill = trackHeaderAlsoSelectedColor();
-        style.backdrop = style.fill;
-        break;
-    case SelectionState::Primary:
-        style.fill = themes::color(themes::Role::song_view_track_header_selection);
-        style.backdrop = style.fill;
+    if (primary) {
+        style.backdrop = themes::color(themes::Role::song_view_track_header_selection);
+        style.base = style.backdrop;
+        style.base.setAlpha(255);
         style.titleFont = &boldTitleFont;
         style.titleMetrics = &boldTitleMetrics;
         style.titleColor = themes::color(themes::Role::song_view_track_header_selection_text);
         style.subtitleColor = style.titleColor;
         style.overBudgetMix = 0.35;
         style.useSelectedTitleOffset = true;
-        break;
+    } else if (inScope) {
+        style.overlay = trackHeaderAlsoSelectedColor();
+        style.backdrop = style.overlay;
     }
 
     if (overBudget) {
@@ -158,6 +142,7 @@ TrackHeaderRow::TrackHeaderRow(SongView *sv, int track, QWidget *parent)
     , m_track(track)
     , m_geometry(Geometry::resolve())
 {
+    setAttribute(Qt::WA_OpaquePaintEvent);
     rebuildFontCache();
     const auto buttonExtent = m_geometry.trackHeaderButtonExtent;
     setFixedHeight(m_geometry.trackHeaderRowHeight);
@@ -246,6 +231,25 @@ QString TrackHeaderRow::fallbackTrackName() const
 {
     return SongView::tr("Track %1").arg(m_track + 1);
 }
+TrackHeaderRow::SelectionState TrackHeaderRow::selectionState() const
+{
+    const auto &selectionModel = m_sv->selectionModel();
+    if (selectionModel.primaryTrack() == m_track)
+        return SelectionState::Primary;
+    if (selectionModel.resolvedTrackScope(usedTrackMask(m_sv->timeline())) & (1u << m_track))
+        return SelectionState::InScope;
+    return SelectionState::None;
+}
+
+QRect TrackHeaderRow::textColumnRect() const
+{
+    const int left = lyt::space(Space::One);
+    const int right = width() - m_geometry.trackHeaderButtonExtent - lyt::space(Space::One);
+    // The full parent-painted gutter covers title centering offsets and
+    // antialiasing without reaching the activity meter, button column,
+    // or bottom separator.
+    return QRect(left, lyt::space(Space::Zero), right - left, height() - lyt::singlePixel());
+}
 
 void TrackHeaderRow::updateVisibleTitleCenteringCache(const QString &visibleTitle)
 {
@@ -256,26 +260,25 @@ void TrackHeaderRow::updateVisibleTitleCenteringCache(const QString &visibleTitl
         typography::glyphCenteringOffset(m_normalTitleFont, m_boldTitleFont, visibleTitle);
 }
 
-void TrackHeaderRow::paintEvent(QPaintEvent *)
+void TrackHeaderRow::paintEvent(QPaintEvent *event)
 {
-    const auto &selectionModel = m_sv->selectionModel();
     const MidiTimeline *timeline = m_sv->timeline();
-    const uint32_t usedTracks = usedTrackMask(timeline);
-    const SelectionState selection = resolveSelectionState(selectionModel, usedTracks, m_track);
+    const SelectionState selection = selectionState();
 
-    const RowPaintStyle style =
-        resolvePaintStyle(selection, exceedsProjectTrackBudget(), palette(), m_normalTitleFont,
-                          m_boldTitleFont, m_normalTitleMetrics, m_boldTitleMetrics);
+    const RowPaintStyle style = resolvePaintStyle(
+        selection == SelectionState::Primary, selection == SelectionState::InScope,
+        exceedsProjectTrackBudget(), palette(), m_normalTitleFont, m_boldTitleFont,
+        m_normalTitleMetrics, m_boldTitleMetrics);
     QString name = timeline ? timeline->tracks[m_track].name : QString();
     if (name.isEmpty())
         name = fallbackTrackName();
-    const auto textW = width() - m_geometry.trackHeaderButtonColumnWidth -
-                       m_geometry.trackHeaderTextLeft - lyt::space(Space::One);
+    const QRect textPaintRect = textColumnRect();
+    const int textW = width() - m_geometry.trackHeaderButtonColumnWidth -
+                      m_geometry.trackHeaderTextLeft - lyt::space(Space::One);
+    const QRect textBounds(m_geometry.trackHeaderTextLeft, lyt::space(Space::Zero), textW,
+                           height() - lyt::singlePixel());
     const auto title = QStringLiteral("%1 · %2").arg(m_track + 1).arg(name);
     const auto visibleTitle = style.titleMetrics->elidedText(title, Qt::ElideRight, textW);
-    // The bottom pixel belongs to the separator, not the row's content.
-    const auto textBounds = QRect(m_geometry.trackHeaderTextLeft, lyt::space(Space::Zero), textW,
-                                  height() - lyt::singlePixel());
     const auto textBoxes = m_textLayout->align(textBounds, ::layout::VerticalAlignment::Center);
     updateVisibleTitleCenteringCache(visibleTitle);
     const QPointF titleOffset = style.useSelectedTitleOffset ? m_selectedTitleOffset : QPointF{};
@@ -284,7 +287,11 @@ void TrackHeaderRow::paintEvent(QPaintEvent *)
     const QString subtitle = m_sv->instrumentLabel(m_track);
 
     QPainter p(this);
-    p.fillRect(rect(), style.fill);
+    p.fillRect(rect(), style.base);
+    if (style.overlay.isValid())
+        p.fillRect(rect(), style.overlay);
+    if (event->region().contains(rect()))
+        m_paintedSelection = selection;
     p.setPen(QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
     p.drawLine(lyt::space(Space::Zero), height() - lyt::singlePixel(), width(),
                height() - lyt::singlePixel());
@@ -293,9 +300,10 @@ void TrackHeaderRow::paintEvent(QPaintEvent *)
     p.drawText(titleBox, Qt::AlignLeft | Qt::AlignVCenter, visibleTitle);
     p.setFont(m_subtitleFont);
     p.setPen(style.subtitleColor);
-    m_shownProgram = shownProgram;
     p.drawText(textBoxes.secondary, Qt::AlignLeft | Qt::AlignVCenter,
                m_subtitleMetrics.elidedText(subtitle, Qt::ElideRight, textW));
+    if (event->region().contains(textPaintRect))
+        m_shownProgram = shownProgram;
 }
 
 // The painted voice line (paintEvent's instrument-label rect): a plain
@@ -332,7 +340,7 @@ void TrackHeaderRow::syncVoice()
 {
     if (m_shownProgram == m_sv->currentProgram(m_track))
         return;
-    update();
+    update(textColumnRect());
     updateToolTip();
 }
 
@@ -409,6 +417,7 @@ void TrackHeaderRow::cancelRename()
 
 void TrackHeaderRow::resyncSong()
 {
+    const SelectionState selection = selectionState();
     cancelRename();
     m_dragArmed = false;
     m_dragging = false;
@@ -418,7 +427,10 @@ void TrackHeaderRow::resyncSong()
     m_solo->setChecked(m_sv->trackSoloed(m_track));
     setActivity(m_sv->m_trackActivity.intensity(m_track), m_sv->m_playing);
     updateToolTip();
-    update();
+    if (!m_paintedSelection || *m_paintedSelection != selection)
+        update();
+    else
+        update(textColumnRect());
 }
 
 void TrackHeaderRow::mouseDoubleClickEvent(QMouseEvent *event)

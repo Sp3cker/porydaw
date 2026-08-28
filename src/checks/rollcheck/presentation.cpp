@@ -6,7 +6,9 @@
 #include <QLineEdit>
 #include <QMetaObject>
 #include <QObject>
+#include <QPaintEvent>
 #include <QPoint>
+#include <QRegion>
 #include <QToolButton>
 #include <QWidget>
 #include <algorithm>
@@ -17,9 +19,32 @@
 #include "checks/rollcheckplayhead.h"
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
+#include "ui/layout.h"
 #include "ui/songview.h"
 
 namespace checks::rollcheck {
+
+namespace {
+
+class PaintRegionProbe final : public QObject
+{
+  public:
+    void clear() { m_region = {}; }
+    const QRegion &region() const { return m_region; }
+
+  protected:
+    bool eventFilter(QObject *, QEvent *event) override
+    {
+        if (event->type() == QEvent::Paint)
+            m_region |= static_cast<QPaintEvent *>(event)->region();
+        return false;
+    }
+
+  private:
+    QRegion m_region;
+};
+
+} // namespace
 
 ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
                                                        const PencilVelocityFixture &fixture,
@@ -106,6 +131,7 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
                 fail("loop-marker name was not refused");
         }
     }
+    bool seededHeaderProgram = false;
 
     // The header voice line is live: currentProgram is the last program
     // change at or before the display position — the playhead while playing,
@@ -114,12 +140,16 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
     {
         view.setEditCursorTick(0);
         const int base = view.currentProgram(track);
-        const int changed = base == 5 ? 6 : 5;
+        const int atStart = base < 0 ? 4 : base;
+        const int changed = atStart == 5 ? 6 : 5;
         const uint64_t vcTick = a.tick + 4 * a.dur;
+        // Seed an empty voice lane so crossing vcTick is always a real
+        // program transition, not the first-program fallback everywhere.
+        if (base < 0) {
+            doc.addLanePoint(track, DOC_CC_VOICE, 0, atStart);
+            seededHeaderProgram = true;
+        }
         doc.addLanePoint(track, DOC_CC_VOICE, vcTick, changed);
-        // A track with no program at all adopts the added one everywhere
-        // (it becomes the priming first program).
-        const int atStart = base < 0 ? changed : base;
         if (view.currentProgram(track) != atStart)
             fail("voice label at the start did not show the priming program");
         view.setEditCursorTick(vcTick);
@@ -132,6 +162,80 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
         view.setPlayheadSample(0, false); // stopped: back to the edit cursor
         if (view.currentProgram(track) != atStart)
             fail("voice label did not return to the edit cursor after stop");
+
+        // Retained rows paint an opaque base. Program-only changes invalidate
+        // both text lines as one region, but leave the meter, buttons, and
+        // separator untouched; selection styling still invalidates the row.
+        (void)view.grab();
+        auto *row = view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));
+        if (!row) {
+            fail("track header row for repaint coverage not found");
+        } else {
+            if (!row->testAttribute(Qt::WA_OpaquePaintEvent))
+                fail("track header row did not report opaque painting");
+
+            const int gutter = layout::space(layout::Space::One);
+            const int singlePixel = layout::singlePixel();
+            const int textWidth = row->width() - layout::fontPx(1.5) - 2 * gutter;
+            const QRect textColumn(gutter, 0, textWidth, row->height() - singlePixel);
+            PaintRegionProbe paintProbe;
+            row->installEventFilter(&paintProbe);
+
+            view.show();
+            QCoreApplication::sendPostedEvents();
+            QCoreApplication::processEvents();
+            const QImage beforeProgram = row->grab().toImage();
+            QCoreApplication::sendPostedEvents();
+            QCoreApplication::processEvents();
+            paintProbe.clear();
+
+            view.setEditCursorTick(vcTick);
+            QCoreApplication::sendPostedEvents();
+            QCoreApplication::processEvents();
+            const QRegion programPaint = paintProbe.region();
+            if (programPaint.isEmpty())
+                fail("program change did not repaint the track header row");
+            else if (!programPaint.subtracted(QRegion(textColumn)).isEmpty())
+                fail("program change repainted outside the combined text column");
+            const QImage afterProgram = row->grab().toImage();
+
+            if (beforeProgram.isNull() || afterProgram.isNull()) {
+                fail("program change did not produce track header rasters");
+            } else if (beforeProgram.size() != afterProgram.size()) {
+                fail("program change altered the track header raster size");
+            } else {
+                const qreal dpr = beforeProgram.devicePixelRatio();
+                bool changedOutsideText = false;
+                for (int y = 0; y < beforeProgram.height() && !changedOutsideText; ++y) {
+                    for (int x = 0; x < beforeProgram.width(); ++x) {
+                        const QPoint logical(int(x / dpr), int(y / dpr));
+                        if (!textColumn.contains(logical) &&
+                            beforeProgram.pixel(x, y) != afterProgram.pixel(x, y)) {
+                            changedOutsideText = true;
+                            break;
+                        }
+                    }
+                }
+                if (changedOutsideText)
+                    fail("program change altered pixels outside the combined text column");
+            }
+
+            view.setEditCursorTick(0);
+            const int previousPrimary = view.selectionModel().primaryTrack();
+            view.selectTrack(track == 15 ? 14 : track + 1);
+            QCoreApplication::sendPostedEvents();
+            QCoreApplication::processEvents();
+            paintProbe.clear();
+            click(*row, QPoint(textColumn.center().x(), singlePixel));
+            QCoreApplication::sendPostedEvents();
+            QCoreApplication::processEvents();
+            if (paintProbe.region().boundingRect() != row->rect())
+                fail("track selection change did not repaint the full header row");
+            view.selectTrack(previousPrimary);
+            QCoreApplication::sendPostedEvents();
+            QCoreApplication::processEvents();
+            view.hide();
+        }
     }
 
     // Jump-from-context: a completed plain click on a header row's voice
@@ -503,7 +607,8 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
             fail("keyboard mute/solo touched the undo stack");
     }
 
-    if (doc.undoStack()->index() != undoBaseline + 2 + (reordered ? (dragRenamed ? 2 : 1) : 0))
+    if (doc.undoStack()->index() !=
+        undoBaseline + 2 + (seededHeaderProgram ? 1 : 0) + (reordered ? (dragRenamed ? 2 : 1) : 0))
         fail("gesture pass pushed an unexpected number of undo commands");
     return ScenarioContinuation::Continue;
 }
