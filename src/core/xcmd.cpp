@@ -142,7 +142,6 @@ Projection toProjection(const ParsedEvents &parsed) noexcept
     return projection;
 }
 
-// Ascending, deduplicated removal set for membership tests.
 struct RemoveSet {
     std::vector<uint64_t> indices;
 
@@ -158,356 +157,438 @@ struct RemoveSet {
     }
 };
 
-} // namespace
+struct NormalizedPointWrites {
+    // Points into the caller's writes span. Entries stay in first-key order;
+    // a duplicate key replaces the pointer at its original position.
+    std::vector<const PointWrite *> active;
+};
 
-// ---------------------------------------------------------------------------
-// Public projection: completed known points plus consumed raw indices.
-// ---------------------------------------------------------------------------
+struct PointRewritePlan {
+    // One entry per ParsedEvents::blocks element; 0 means untouched.
+    std::vector<char> touchedBlocks;
+    // Sorted and deduplicated before this plan is returned.
+    RemoveSet removedPointIdentities;
+    // Stores only pointers into rewritePoints' still-live writes span.
+    NormalizedPointWrites writes;
+};
+
+enum class RawOperationKind : uint8_t {
+    Remove,
+    Move,
+    Copy,
+};
+
+struct RawOperation {
+    RawOperationKind kind = RawOperationKind::Remove;
+    // Null only for Remove. Otherwise points into reconcileRaw's still-live
+    // moves or copies span.
+    const Relocation *relocation = nullptr;
+};
+
+struct RawOperations {
+    // Key is a ParsedEvents::events ordinal, not Event::index.
+    std::unordered_map<size_t, RawOperation> byEvent;
+};
+
+struct BlockOperation {
+    // Meaningful only when affectedMemberCount is nonzero. Zero means the
+    // block is untouched despite the default Remove value.
+    RawOperationKind kind = RawOperationKind::Remove;
+    size_t affectedMemberCount = 0;
+    size_t memberCount = 0;
+    bool mixed = false;
+};
+
+void appendCanonicalPoint(std::vector<Emission> &inserts, uint64_t tick, uint8_t selector,
+                          uint8_t value, uint8_t channel) noexcept
+{
+    inserts.push_back({tick, kSelectorController, selector, SIZE_MAX, channel});
+    inserts.push_back({tick, kPayloadController, value, SIZE_MAX, channel});
+}
+
+void appendVerbatimEvent(std::vector<Emission> &inserts, const ProtocolEvent &event,
+                         const Relocation &relocation) noexcept
+{
+    inserts.push_back({relocation.tick, 0, 0, event.source->index, relocation.channel});
+}
+
+Patch finishPatch(RemoveSet removed, std::vector<Emission> inserts) noexcept
+{
+    removed.seal();
+    Patch patch;
+    patch.removeEvents = std::move(removed.indices);
+    std::stable_sort(inserts.begin(), inserts.end(),
+                     [](const Emission &a, const Emission &b) { return a.tick < b.tick; });
+    patch.inserts = std::move(inserts);
+    return patch;
+}
+
+bool samePointWriteSlot(const PointWrite &first, const PointWrite &second) noexcept
+{
+    return first.stream == second.stream && first.tick == second.tick && first.lane == second.lane;
+}
+
+bool isKnownPointPayload(const ParsedEvents &parsed, const ProtocolEvent &event) noexcept
+{
+    return !event.isSelector && isKnownLaneBlock(parsed.blocks[event.block]);
+}
+
+enum class PointWriteBlockRelation : char { Outside, Known, Opaque };
+
+PointWriteBlockRelation pointWriteBlockRelation(const PointWrite &write,
+                                                const SelectorBlock &block) noexcept
+{
+    if (write.stream != block.stream || write.tick < block.firstTick || write.tick > block.lastTick)
+        return PointWriteBlockRelation::Outside;
+    return isKnownLaneBlock(block) ? PointWriteBlockRelation::Known
+                                   : PointWriteBlockRelation::Opaque;
+}
+
+std::optional<NormalizedPointWrites>
+normalizePointWrites(std::span<const PointWrite> writes) noexcept
+{
+    NormalizedPointWrites normalized;
+    normalized.active.reserve(writes.size());
+    for (const PointWrite &write : writes) {
+        if (!descriptorForLane(write.lane))
+            return std::nullopt;
+        bool duplicate = false;
+        for (const PointWrite *&active : normalized.active) {
+            if (!samePointWriteSlot(*active, write))
+                continue;
+            active = &write;
+            duplicate = true;
+            break;
+        }
+        if (!duplicate)
+            normalized.active.push_back(&write);
+    }
+    return normalized;
+}
+std::optional<PointRewritePlan> planPointRewrite(const ParsedEvents &parsed,
+                                                 std::span<const uint64_t> removeIdentities,
+                                                 NormalizedPointWrites writes) noexcept
+{
+    PointRewritePlan plan;
+    plan.touchedBlocks.assign(parsed.blocks.size(), 0);
+    plan.writes = std::move(writes);
+    for (const uint64_t identity : removeIdentities) {
+        const auto found = parsed.indexOf.find(identity);
+        if (found == parsed.indexOf.end())
+            return std::nullopt;
+        const ProtocolEvent &event = parsed.events[found->second];
+        if (!isKnownPointPayload(parsed, event))
+            return std::nullopt;
+        plan.touchedBlocks[event.block] = 1;
+        plan.removedPointIdentities.add(identity);
+    }
+    plan.removedPointIdentities.seal();
+    for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex) {
+        const SelectorBlock &block = parsed.blocks[blockIndex];
+        for (const PointWrite *write : plan.writes.active) {
+            const auto relation = pointWriteBlockRelation(*write, block);
+            if (relation == PointWriteBlockRelation::Opaque)
+                return std::nullopt;
+            plan.touchedBlocks[blockIndex] |= relation == PointWriteBlockRelation::Known;
+        }
+    }
+    return plan;
+}
+
+void appendPointRewriteBlockRemoval(const ParsedEvents &parsed, const SelectorBlock &block,
+                                    RemoveSet &removed) noexcept
+{
+    if (block.selectorEvent != SIZE_MAX)
+        removed.add(parsed.events[block.selectorEvent].source->index);
+    for (const size_t eventIndex : block.payloadEvents)
+        removed.add(parsed.events[eventIndex].source->index);
+}
+
+bool writeReplacesPoint(const PointWrite &write, const ProtocolEvent &event,
+                        uint8_t selector) noexcept
+{
+    return write.stream == event.stream && write.tick == event.tick &&
+           descriptorForLane(write.lane)->selector == selector;
+}
+
+bool pointIsReplaced(const NormalizedPointWrites &writes, const ProtocolEvent &event,
+                     uint8_t selector) noexcept
+{
+    for (const PointWrite *write : writes.active)
+        if (writeReplacesPoint(*write, event, selector))
+            return true;
+    return false;
+}
+
+void emitPointRewritePoint(std::vector<Emission> &inserts, const ProtocolEvent &event,
+                           const SelectorBlock &block, const PointRewritePlan &plan) noexcept
+{
+    if (plan.removedPointIdentities.contains(event.source->index) ||
+        pointIsReplaced(plan.writes, event, block.selector))
+        return;
+    appendCanonicalPoint(inserts, event.tick, block.selector, event.value, event.channel);
+}
+
+Patch emitPointRewrite(const ParsedEvents &parsed, const PointRewritePlan &plan) noexcept
+{
+    RemoveSet removed;
+    std::vector<Emission> inserts;
+    for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex) {
+        const SelectorBlock &block = parsed.blocks[blockIndex];
+        if (!plan.touchedBlocks[blockIndex])
+            continue;
+        appendPointRewriteBlockRemoval(parsed, block, removed);
+        if (!isKnownLaneBlock(block))
+            continue;
+        for (const size_t eventIndex : block.payloadEvents)
+            emitPointRewritePoint(inserts, parsed.events[eventIndex], block, plan);
+    }
+    for (const PointWrite *write : plan.writes.active) {
+        const Descriptor *descriptor = descriptorForLane(write->lane);
+        const uint8_t value = uint8_t(std::clamp(int(write->value), int(descriptor->minimumValue),
+                                                 int(descriptor->maximumValue)));
+        appendCanonicalPoint(inserts, write->tick, descriptor->selector, value, write->channel);
+    }
+    return finishPatch(std::move(removed), std::move(inserts));
+}
+
+bool recordRawOperation(const ParsedEvents &parsed, RawOperations &operations, uint64_t identity,
+                        RawOperationKind kind, const Relocation *relocation) noexcept
+{
+    const auto found = parsed.indexOf.find(identity);
+    if (found == parsed.indexOf.end())
+        return false;
+    const auto [existing, inserted] =
+        operations.byEvent.try_emplace(found->second, RawOperation{kind, relocation});
+    if (inserted)
+        return true;
+    const RawOperation &current = existing->second;
+    if (current.kind != kind)
+        return false;
+    if (relocation == nullptr)
+        return current.relocation == nullptr;
+    if (current.relocation == nullptr)
+        return false;
+    return current.relocation->tick == relocation->tick &&
+           current.relocation->channel == relocation->channel;
+}
+
+std::optional<RawOperations> collectRawOperations(const ParsedEvents &parsed,
+                                                  std::span<const uint64_t> removals,
+                                                  std::span<const Relocation> moves,
+                                                  std::span<const Relocation> copies) noexcept
+{
+    RawOperations operations;
+    for (const uint64_t identity : removals)
+        if (!recordRawOperation(parsed, operations, identity, RawOperationKind::Remove, nullptr))
+            return std::nullopt;
+    for (const Relocation &move : moves)
+        if (!recordRawOperation(parsed, operations, move.index, RawOperationKind::Move, &move))
+            return std::nullopt;
+    for (const Relocation &copy : copies)
+        if (!recordRawOperation(parsed, operations, copy.index, RawOperationKind::Copy, &copy))
+            return std::nullopt;
+    return operations;
+}
+
+bool isKnownSelectorGlue(const ParsedEvents &parsed, const ProtocolEvent &event) noexcept
+{
+    return event.isSelector && isKnownLaneBlock(parsed.blocks[event.block]);
+}
+
+bool isInvalidOpaqueBlockOperation(const SelectorBlock &block,
+                                   const BlockOperation &blockOperation) noexcept
+{
+    return blockOperation.affectedMemberCount != 0 && !isKnownLaneBlock(block) &&
+           (blockOperation.mixed ||
+            blockOperation.affectedMemberCount != blockOperation.memberCount);
+}
+
+std::optional<std::vector<BlockOperation>>
+classifyBlockOperations(const ParsedEvents &parsed, const RawOperations &operations) noexcept
+{
+    std::vector<BlockOperation> blockOperations(parsed.blocks.size());
+    for (const auto &[eventIndex, operation] : operations.byEvent) {
+        const ProtocolEvent &event = parsed.events[eventIndex];
+        if (isKnownSelectorGlue(parsed, event))
+            continue;
+        BlockOperation &blockOperation = blockOperations[event.block];
+        ++blockOperation.affectedMemberCount;
+        if (blockOperation.affectedMemberCount == 1)
+            blockOperation.kind = operation.kind;
+        else if (blockOperation.kind != operation.kind)
+            blockOperation.mixed = true;
+    }
+    for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex) {
+        const SelectorBlock &block = parsed.blocks[blockIndex];
+        BlockOperation &blockOperation = blockOperations[blockIndex];
+        blockOperation.memberCount = block.payloadEvents.size() + (block.selectorEvent != SIZE_MAX);
+        if (isInvalidOpaqueBlockOperation(block, blockOperation))
+            return std::nullopt;
+    }
+    return blockOperations;
+}
+
+bool rawPointStaysInPlace(const RawOperations &operations, size_t eventIndex) noexcept
+{
+    const auto found = operations.byEvent.find(eventIndex);
+    return found == operations.byEvent.end() || found->second.kind == RawOperationKind::Copy;
+}
+
+bool blockSurvivesInPlace(const ParsedEvents &parsed, const RawOperations &operations,
+                          std::span<const BlockOperation> blockOperations,
+                          size_t blockIndex) noexcept
+{
+    const SelectorBlock &block = parsed.blocks[blockIndex];
+    const BlockOperation &blockOperation = blockOperations[blockIndex];
+    if (blockOperation.affectedMemberCount == 0)
+        return true;
+    if (!isKnownLaneBlock(block))
+        return blockOperation.kind == RawOperationKind::Copy;
+    for (const size_t eventIndex : block.payloadEvents)
+        if (rawPointStaysInPlace(operations, eventIndex))
+            return true;
+    return false;
+}
+
+bool relocationConflictsWithBlock(const ParsedEvents &parsed, const RawOperations &operations,
+                                  std::span<const BlockOperation> blockOperations,
+                                  const ProtocolEvent &source, size_t blockIndex,
+                                  const Relocation &relocation) noexcept
+{
+    if (blockIndex == source.block)
+        return false;
+    const SelectorBlock &block = parsed.blocks[blockIndex];
+    if (block.stream != source.stream)
+        return false;
+    if (!blockSurvivesInPlace(parsed, operations, blockOperations, blockIndex))
+        return false;
+    return block.firstTick <= relocation.tick && relocation.tick <= block.lastTick;
+}
+
+bool validateDestinations(const ParsedEvents &parsed, const RawOperations &operations,
+                          std::span<const BlockOperation> blockOperations) noexcept
+{
+    for (const auto &[eventIndex, operation] : operations.byEvent) {
+        if (operation.kind == RawOperationKind::Remove)
+            continue;
+        const ProtocolEvent &event = parsed.events[eventIndex];
+        for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex)
+            if (relocationConflictsWithBlock(parsed, operations, blockOperations, event, blockIndex,
+                                             *operation.relocation))
+                return false;
+    }
+    return true;
+}
+
+void emitKnownPoint(std::vector<Emission> &inserts, const ProtocolEvent &event,
+                    const SelectorBlock &block, const RawOperation *operation) noexcept
+{
+    if (operation == nullptr) {
+        appendCanonicalPoint(inserts, event.tick, block.selector, event.value, event.channel);
+        return;
+    }
+    if (operation->kind == RawOperationKind::Remove)
+        return;
+    if (operation->kind == RawOperationKind::Copy)
+        appendCanonicalPoint(inserts, event.tick, block.selector, event.value, event.channel);
+    const Relocation &relocation = *operation->relocation;
+    appendCanonicalPoint(inserts, relocation.tick, block.selector, event.value, relocation.channel);
+}
+
+void appendVerbatimBlockEvents(std::vector<Emission> &inserts, const ParsedEvents &parsed,
+                               const RawOperations &operations, const SelectorBlock &block) noexcept
+{
+    if (block.selectorEvent != SIZE_MAX)
+        appendVerbatimEvent(inserts, parsed.events[block.selectorEvent],
+                            *operations.byEvent.at(block.selectorEvent).relocation);
+    for (const size_t eventIndex : block.payloadEvents)
+        appendVerbatimEvent(inserts, parsed.events[eventIndex],
+                            *operations.byEvent.at(eventIndex).relocation);
+}
+
+void emitKnownBlock(std::vector<Emission> &inserts, RemoveSet &removed, const ParsedEvents &parsed,
+                    const RawOperations &operations, const SelectorBlock &block) noexcept
+{
+    if (block.selectorEvent != SIZE_MAX)
+        removed.add(parsed.events[block.selectorEvent].source->index);
+    for (const size_t eventIndex : block.payloadEvents)
+        removed.add(parsed.events[eventIndex].source->index);
+    for (const size_t eventIndex : block.payloadEvents) {
+        const auto found = operations.byEvent.find(eventIndex);
+        emitKnownPoint(inserts, parsed.events[eventIndex], block,
+                       found == operations.byEvent.end() ? nullptr : &found->second);
+    }
+}
+
+void emitOpaqueBlock(std::vector<Emission> &inserts, RemoveSet &removed, const ParsedEvents &parsed,
+                     const RawOperations &operations, const SelectorBlock &block,
+                     const BlockOperation &blockOperation) noexcept
+{
+    if (blockOperation.kind != RawOperationKind::Copy) {
+        if (block.selectorEvent != SIZE_MAX)
+            removed.add(parsed.events[block.selectorEvent].source->index);
+        for (const size_t eventIndex : block.payloadEvents)
+            removed.add(parsed.events[eventIndex].source->index);
+        if (blockOperation.kind == RawOperationKind::Remove)
+            return;
+    }
+    appendVerbatimBlockEvents(inserts, parsed, operations, block);
+}
+
+Patch emitRawReconciliation(const ParsedEvents &parsed, const RawOperations &operations,
+                            std::span<const BlockOperation> blockOperations) noexcept
+{
+    RemoveSet removed;
+    std::vector<Emission> inserts;
+    for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex) {
+        const BlockOperation &blockOperation = blockOperations[blockIndex];
+        if (blockOperation.affectedMemberCount == 0)
+            continue;
+        const SelectorBlock &block = parsed.blocks[blockIndex];
+        if (isKnownLaneBlock(block))
+            emitKnownBlock(inserts, removed, parsed, operations, block);
+        else
+            emitOpaqueBlock(inserts, removed, parsed, operations, block, blockOperation);
+    }
+    return finishPatch(std::move(removed), std::move(inserts));
+}
+
+} // namespace
 
 Projection projectEvents(std::span<const Event> events) noexcept
 {
     return toProjection(parseEvents(events));
 }
 
-// ---------------------------------------------------------------------------
-// Logical lane rewrite.
-//
-// Removes are Point::index identities; writes land canonically as
-// selector+payload at their ticks. Any epoch that owns a removed point or
-// that a write lands inside is rebuilt: its selector byte and payload bytes
-// are removed and its surviving points are re-emitted as explicit
-// selector+payload pairs at their own ticks, so no selector sharing or
-// restoration survives an edit. The rewrite is rejected (nullopt) without
-// mutation when a write would fall inside an opaque epoch's occupied tick
-// span (its bytes would be re-rolled) or when any identity or lane is
-// unknown.
-// ---------------------------------------------------------------------------
-
 std::optional<Patch> rewritePoints(std::span<const Event> events,
                                    std::span<const uint64_t> removeIdentities,
                                    std::span<const PointWrite> writes) noexcept
 {
     const ParsedEvents parsed = parseEvents(events);
-
-    // Removes must name payload bytes of known epochs; unknown or opaque
-    // identities reject rather than silently no-op.
-    std::vector<char> touched(parsed.blocks.size(), 0);
-    for (const uint64_t identity : removeIdentities) {
-        const auto found = parsed.indexOf.find(identity);
-        if (found == parsed.indexOf.end())
-            return std::nullopt;
-        const ProtocolEvent &protocolEvent = parsed.events[found->second];
-        if (protocolEvent.isSelector || !isKnownLaneBlock(parsed.blocks[protocolEvent.block]))
-            return std::nullopt;
-        touched[protocolEvent.block] = 1;
-    }
-
-    // Writes must name known lanes; a write repeating the same (stream,
-    // tick, lane) replaces the earlier one (later write wins).
-    std::vector<const PointWrite *> activeWrites;
-    activeWrites.reserve(writes.size());
-    for (const PointWrite &write : writes) {
-        if (!descriptorForLane(write.lane))
-            return std::nullopt;
-        bool duplicate = false;
-        for (size_t i = 0; i < activeWrites.size(); ++i) {
-            const PointWrite *existing = activeWrites[i];
-            if (existing->stream == write.stream && existing->tick == write.tick &&
-                existing->lane == write.lane) {
-                activeWrites[i] = &write; // later write wins
-                duplicate = true;
-                break;
-            }
-        }
-        if (!duplicate)
-            activeWrites.push_back(&write);
-    }
-
-    // A write inside an unknown epoch's occupied tick span would re-roll
-    // its surviving bytes; a write inside a known epoch's span makes that
-    // epoch the affected span (rebuilt below).
-    for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex) {
-        const SelectorBlock &block = parsed.blocks[blockIndex];
-        for (const PointWrite *write : activeWrites) {
-            if (write->stream != block.stream || write->tick < block.firstTick ||
-                write->tick > block.lastTick)
-                continue;
-            if (isKnownLaneBlock(block))
-                touched[blockIndex] = 1;
-            else
-                return std::nullopt;
-        }
-    }
-
-    Patch patch;
-    // The whole affected epoch leaves: selector byte plus every payload.
-    RemoveSet removed;
-    for (const SelectorBlock &block : parsed.blocks) {
-        if (!touched[&block - parsed.blocks.data()])
-            continue;
-        if (block.selectorEvent != SIZE_MAX)
-            removed.add(parsed.events[block.selectorEvent].source->index);
-        for (const size_t eventIndex : block.payloadEvents)
-            removed.add(parsed.events[eventIndex].source->index);
-    }
-    removed.seal();
-    patch.removeEvents.assign(removed.indices.begin(), removed.indices.end());
-
-    // Removed point identities, for the rebuild pass below.
-    RemoveSet removedIds;
-    for (const uint64_t identity : removeIdentities)
-        removedIds.add(identity);
-    removedIds.seal();
-
-    std::vector<Emission> inserts;
-    for (const SelectorBlock &block : parsed.blocks) {
-        const size_t blockIndex = size_t(&block - parsed.blocks.data());
-        if (!touched[blockIndex] || !isKnownLaneBlock(block))
-            continue;
-        for (const size_t eventIndex : block.payloadEvents) {
-            const ProtocolEvent &protocolEvent = parsed.events[eventIndex];
-            if (removedIds.contains(protocolEvent.source->index))
-                continue; // the rewrite removed this point: no re-emission
-            bool replaced = false;
-            for (const PointWrite *write : activeWrites) {
-                if (write->stream == protocolEvent.stream && write->tick == protocolEvent.tick &&
-                    descriptorForLane(write->lane)->selector == block.selector) {
-                    replaced = true;
-                    break;
-                }
-            }
-            if (replaced)
-                continue;
-            // Explicit pair: selector support plus its payload byte.
-            inserts.push_back({protocolEvent.tick, kSelectorController, block.selector, SIZE_MAX,
-                               protocolEvent.channel});
-            inserts.push_back({protocolEvent.tick, kPayloadController, uint8_t(protocolEvent.value),
-                               SIZE_MAX, protocolEvent.channel});
-        }
-    }
-    for (const PointWrite *write : activeWrites) {
-        const Descriptor *descriptor = descriptorForLane(write->lane);
-        const uint8_t clamped = uint8_t(std::clamp(int(write->value), int(descriptor->minimumValue),
-                                                   int(descriptor->maximumValue)));
-        inserts.push_back(
-            {write->tick, kSelectorController, descriptor->selector, SIZE_MAX, write->channel});
-        inserts.push_back({write->tick, kPayloadController, clamped, SIZE_MAX, write->channel});
-    }
-    std::stable_sort(inserts.begin(), inserts.end(),
-                     [](const Emission &a, const Emission &b) { return a.tick < b.tick; });
-    patch.inserts = std::move(inserts);
-    return patch;
+    auto normalized = normalizePointWrites(writes);
+    if (!normalized)
+        return std::nullopt;
+    auto plan = planPointRewrite(parsed, removeIdentities, std::move(*normalized));
+    if (!plan)
+        return std::nullopt;
+    return emitPointRewrite(parsed, *plan);
 }
-
-// ---------------------------------------------------------------------------
-// Raw reconciliation.
-//
-// Plain removals plus source-indexed relocations and copies. A known
-// point's move/copy is rebuilt canonically (an explicit selector+payload
-// pair at the destination); an opaque epoch can only be removed, moved, or
-// copied as a whole block with one operation, byte-exact through
-// Emission::sourceIndex. A destination inside the occupied span of an epoch
-// whose bytes survive the rewrite is rejected (spans this edit vacates are
-// fair game), as is any unknown identity, partial block operation, or
-// mixed operation within one opaque epoch.
-// ---------------------------------------------------------------------------
 
 std::optional<Patch> reconcileRaw(std::span<const Event> events, std::span<const uint64_t> removals,
                                   std::span<const Relocation> moves,
                                   std::span<const Relocation> copies) noexcept
 {
     const ParsedEvents parsed = parseEvents(events);
-
-    enum class OpKind : uint8_t { Remove, Move, Copy };
-    struct Op {
-        OpKind kind = OpKind::Remove;
-        const Relocation *relocation = nullptr;
-    };
-    std::unordered_map<size_t, Op> opByEvent;
-    const auto record = [&](uint64_t index, OpKind kind, const Relocation *relocation) -> bool {
-        const auto found = parsed.indexOf.find(index);
-        if (found == parsed.indexOf.end())
-            return false; // unknown/stale identity
-        const size_t eventIndex = found->second;
-        const auto existing = opByEvent.find(eventIndex);
-        if (existing != opByEvent.end()) {
-            if (existing->second.kind != kind)
-                return false; // mixed operations on one byte
-            if (relocation && existing->second.relocation) {
-                // A repeat of the same relocation is tolerated; a different
-                // destination for the same source is a conflict.
-                return existing->second.relocation->tick == relocation->tick &&
-                       existing->second.relocation->channel == relocation->channel;
-            }
-            return relocation == nullptr && existing->second.relocation == nullptr;
-        }
-        opByEvent.emplace(eventIndex, Op{kind, relocation});
-        return true;
-    };
-    for (const uint64_t index : removals)
-        if (!record(index, OpKind::Remove, nullptr))
-            return std::nullopt;
-    for (const Relocation &move : moves)
-        if (!record(move.index, OpKind::Move, &move))
-            return std::nullopt;
-    for (const Relocation &copy : copies)
-        if (!record(copy.index, OpKind::Copy, &copy))
-            return std::nullopt;
-
-    // Block-level coherence: one operation type per epoch. A known epoch's
-    // selector byte is protocol glue; raw time edits may address it, but the
-    // logical payload operations determine the rebuilt epoch.
-    struct BlockOp {
-        OpKind kind = OpKind::Remove;
-        size_t count = 0;
-        size_t memberCount = 0;
-        bool mixed = false;
-    };
-    std::vector<BlockOp> blockOps(parsed.blocks.size());
-    for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex) {
-        const SelectorBlock &block = parsed.blocks[blockIndex];
-        blockOps[blockIndex].memberCount =
-            block.payloadEvents.size() + (block.selectorEvent != SIZE_MAX);
-    }
-    for (const auto &[eventIndex, op] : opByEvent) {
-        const ProtocolEvent &protocolEvent = parsed.events[eventIndex];
-        const SelectorBlock &block = parsed.blocks[protocolEvent.block];
-        if (isKnownLaneBlock(block) && protocolEvent.isSelector)
-            continue;
-        BlockOp &blockOp = blockOps[protocolEvent.block];
-        ++blockOp.count;
-        if (blockOp.count == 1)
-            blockOp.kind = op.kind;
-        else if (blockOp.kind != op.kind)
-            blockOp.mixed = true;
-    }
-    for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex) {
-        const BlockOp &blockOp = blockOps[blockIndex];
-        if (blockOp.count == 0)
-            continue;
-        // Whole-block coherence applies to opaque epochs: a raw edit may
-        // remove, move, or copy one only when every member shares the same
-        // operation. Known epochs are rebuilt point-by-point, so each point
-        // independently removes/moves/copies.
-        if (isKnownLaneBlock(parsed.blocks[blockIndex]))
-            continue;
-        if (blockOp.mixed)
-            return std::nullopt; // mixed remove/move/copy in one opaque epoch
-        if (blockOp.count != blockOp.memberCount)
-            return std::nullopt; // partial opaque block is a split
-    }
-
-    // A re-insertion landing inside another epoch's occupied span on the
-    // same stream would change what that epoch's surviving bytes decode as.
-    // Blocks this edit fully removes or fully relocates vacate their spans,
-    // so they are not hazards; only blocks with bytes still in place after
-    // the edit reject destinations inside their span.
-    const auto survivesInPlace = [&](size_t blockIndex) -> bool {
-        const SelectorBlock &block = parsed.blocks[blockIndex];
-        const BlockOp &blockOp = blockOps[blockIndex];
-        if (blockOp.count == 0)
-            return true; // untouched: original bytes remain
-        if (!isKnownLaneBlock(block))
-            return blockOp.kind == OpKind::Copy; // copy keeps the source;
-                                                 // remove/move take it away
-        // Known epoch: every original byte leaves and the epoch is rebuilt.
-        // Only points that stay in place (untouched survivors and copy
-        // sources) leave bytes at the span.
-        for (const size_t eventIndex : block.payloadEvents) {
-            const auto found = opByEvent.find(eventIndex);
-            const bool stays = found == opByEvent.end() || found->second.kind == OpKind::Copy;
-            if (stays)
-                return true;
-        }
-        return false;
-    };
-    for (const auto &[eventIndex, op] : opByEvent) {
-        if (op.kind == OpKind::Remove)
-            continue;
-        const ProtocolEvent &protocolEvent = parsed.events[eventIndex];
-        for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex) {
-            if (blockIndex == protocolEvent.block)
-                continue; // the event's own epoch is rebuilt, not re-rolled
-            const SelectorBlock &block = parsed.blocks[blockIndex];
-            if (block.stream != protocolEvent.stream || !survivesInPlace(blockIndex) ||
-                block.firstTick > op.relocation->tick || op.relocation->tick > block.lastTick)
-                continue;
-            return std::nullopt;
-        }
-    }
-
-    Patch patch;
-    RemoveSet removed;
-    std::vector<Emission> inserts;
-    for (size_t blockIndex = 0; blockIndex < parsed.blocks.size(); ++blockIndex) {
-        const SelectorBlock &block = parsed.blocks[blockIndex];
-        const BlockOp &blockOp = blockOps[blockIndex];
-        if (blockOp.count == 0)
-            continue;
-        if (isKnownLaneBlock(block)) {
-            // The epoch's own bytes all leave; every point is rebuilt as an
-            // explicit pair (survivors in place, moved/copied at their
-            // destinations).
-            if (block.selectorEvent != SIZE_MAX)
-                removed.add(parsed.events[block.selectorEvent].source->index);
-            for (const size_t eventIndex : block.payloadEvents)
-                removed.add(parsed.events[eventIndex].source->index);
-            for (const size_t eventIndex : block.payloadEvents) {
-                const ProtocolEvent &protocolEvent = parsed.events[eventIndex];
-                const auto foundOp = opByEvent.find(eventIndex);
-                const bool isRemove =
-                    foundOp != opByEvent.end() && foundOp->second.kind == OpKind::Remove;
-                const bool isMove =
-                    foundOp != opByEvent.end() && foundOp->second.kind == OpKind::Move;
-                const bool isCopy =
-                    foundOp != opByEvent.end() && foundOp->second.kind == OpKind::Copy;
-                if (isRemove)
-                    continue;
-                if (!isMove) { // survivor or copy source stays in place
-                    inserts.push_back({protocolEvent.tick, kSelectorController, block.selector,
-                                       SIZE_MAX, protocolEvent.channel});
-                    inserts.push_back({protocolEvent.tick, kPayloadController,
-                                       uint8_t(protocolEvent.value), SIZE_MAX,
-                                       protocolEvent.channel});
-                }
-                if (isMove || isCopy) { // explicit pair at the destination
-                    inserts.push_back({foundOp->second.relocation->tick, kSelectorController,
-                                       block.selector, SIZE_MAX,
-                                       foundOp->second.relocation->channel});
-                    inserts.push_back({foundOp->second.relocation->tick, kPayloadController,
-                                       uint8_t(protocolEvent.value), SIZE_MAX,
-                                       foundOp->second.relocation->channel});
-                }
-            }
-        } else {
-            // Opaque epoch: whole-block byte-exact removal or re-insertion
-            // of every member through sourceIndex. Copy keeps the source;
-            // Remove and Move take it.
-            if (blockOp.kind != OpKind::Copy) {
-                if (block.selectorEvent != SIZE_MAX)
-                    removed.add(parsed.events[block.selectorEvent].source->index);
-                for (const size_t eventIndex : block.payloadEvents)
-                    removed.add(parsed.events[eventIndex].source->index);
-                if (blockOp.kind == OpKind::Remove)
-                    continue;
-            }
-            const auto emitMember = [&](size_t eventIndex) {
-                const Relocation &relocation = *opByEvent.at(eventIndex).relocation;
-                inserts.push_back({relocation.tick, 0, 0, parsed.events[eventIndex].source->index,
-                                   relocation.channel});
-            };
-            if (block.selectorEvent != SIZE_MAX)
-                emitMember(block.selectorEvent);
-            for (const size_t eventIndex : block.payloadEvents)
-                emitMember(eventIndex);
-        }
-    }
-    removed.seal();
-    patch.removeEvents.assign(removed.indices.begin(), removed.indices.end());
-    std::stable_sort(inserts.begin(), inserts.end(),
-                     [](const Emission &a, const Emission &b) { return a.tick < b.tick; });
-    patch.inserts = std::move(inserts);
-    return patch;
+    const auto operations = collectRawOperations(parsed, removals, moves, copies);
+    if (!operations)
+        return std::nullopt;
+    const auto blockOperations = classifyBlockOperations(parsed, *operations);
+    if (!blockOperations)
+        return std::nullopt;
+    if (!validateDestinations(parsed, *operations, *blockOperations))
+        return std::nullopt;
+    return emitRawReconciliation(parsed, *operations, *blockOperations);
 }
 
 } // namespace xcmd

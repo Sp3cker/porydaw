@@ -108,6 +108,16 @@ int checkProjection()
             result.points[1].lane != xcmd::kEchoLengthLane || result.points[1].value != 17)
             fail("streams did not project independently");
     }
+    // Consumed identities are a sorted, de-duplicated protocol index set,
+    // independent of the caller's raw-index order.
+    {
+        const auto events = makeEvents(ev(9, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(2, 2, 0, xcmd::kPayloadController, 34),
+                                       ev(7, 3, 0, xcmd::kAlternatePayloadController, 35));
+        const Projection result = project(events);
+        if (result.consumed != std::vector<uint64_t>({2, 7, 9}))
+            fail("protocol consumption was not a sorted raw-index set");
+    }
 
     return failures;
 }
@@ -234,6 +244,21 @@ int checkRewrites()
         if (!patch || patch->inserts.size() != 2 || patch->inserts[1].value != 55)
             fail("duplicate same-slot write did not collapse to the later value");
     }
+    // Same-tick canonical pairs retain active-write order after the stable
+    // tick sort, rather than interleaving selectors and payloads by lane.
+    {
+        const std::vector<PointWrite> writes = {
+            {5, xcmd::kEchoVolumeLane, 40, 0, 4},
+            {5, xcmd::kEchoLengthLane, 55, 0, 5},
+        };
+        const auto patch = xcmd::rewritePoints({}, {}, writes);
+        if (!patch || patch->inserts.size() != 4 || patch->inserts[0].value != 0x08 ||
+            patch->inserts[0].channel != 4 || patch->inserts[1].value != 40 ||
+            patch->inserts[1].channel != 4 || patch->inserts[2].value != 0x09 ||
+            patch->inserts[2].channel != 5 || patch->inserts[3].value != 55 ||
+            patch->inserts[3].channel != 5)
+            fail("same-tick writes did not retain canonical pair order");
+    }
 
     return failures;
 }
@@ -320,23 +345,30 @@ int checkRawReconciliation()
         ++failures;
     };
 
-    // Byte-exact relocation of a whole unknown selector epoch: every member
-    // leaves and every member re-inserts through sourceIndex.
+    // Byte-exact relocation of a whole unknown selector epoch keeps each
+    // member's own tick and channel. Repeating an identical operation is
+    // accepted; removals sort/deduplicate and equal-tick emissions stay in
+    // source order.
     {
         const auto events = makeEvents(
-            ev(0, 1, 0, xcmd::kSelectorController, 0x01), ev(1, 2, 0, xcmd::kPayloadController, 1),
-            ev(2, 3, 0, xcmd::kPayloadController, 2), ev(3, 4, 0, xcmd::kPayloadController, 3),
+            ev(9, 1, 0, xcmd::kSelectorController, 0x01), ev(2, 2, 0, xcmd::kPayloadController, 1),
+            ev(7, 3, 0, xcmd::kPayloadController, 2), ev(3, 4, 0, xcmd::kPayloadController, 3),
             ev(4, 5, 0, xcmd::kPayloadController, 4));
-        const std::vector<Relocation> moves = {Relocation{0, 20, 0}, Relocation{1, 21, 0},
-                                               Relocation{2, 22, 0}, Relocation{3, 23, 0},
-                                               Relocation{4, 24, 0}};
+        const std::vector<Relocation> moves = {
+            Relocation{9, 30, 4}, Relocation{2, 10, 5}, Relocation{2, 10, 5},
+            Relocation{7, 10, 6}, Relocation{3, 20, 7}, Relocation{4, 20, 8},
+        };
         const auto patch = xcmd::reconcileRaw(events, {}, moves, {});
-        if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1, 2, 3, 4}) ||
-            patch->inserts.size() != 5 || patch->inserts[0].sourceIndex != 0 ||
-            patch->inserts[0].tick != 20 || patch->inserts[1].sourceIndex != 1 ||
-            patch->inserts[1].tick != 21 || patch->inserts[4].sourceIndex != 4 ||
-            patch->inserts[4].tick != 24)
-            fail("whole opaque relocation did not re-insert every byte");
+        if (!patch || patch->removeEvents != std::vector<uint64_t>({2, 3, 4, 7, 9}) ||
+            patch->inserts.size() != 5 || patch->inserts[0].sourceIndex != 2 ||
+            patch->inserts[0].tick != 10 || patch->inserts[0].channel != 5 ||
+            patch->inserts[1].sourceIndex != 7 || patch->inserts[1].tick != 10 ||
+            patch->inserts[1].channel != 6 || patch->inserts[2].sourceIndex != 3 ||
+            patch->inserts[2].tick != 20 || patch->inserts[2].channel != 7 ||
+            patch->inserts[3].sourceIndex != 4 || patch->inserts[3].tick != 20 ||
+            patch->inserts[3].channel != 8 || patch->inserts[4].sourceIndex != 9 ||
+            patch->inserts[4].tick != 30 || patch->inserts[4].channel != 4)
+            fail("whole opaque relocation did not preserve sorted byte-exact emissions");
     }
 
     // Moving only part of an unknown epoch is a split: rejected. Mixing
@@ -348,10 +380,25 @@ int checkRawReconciliation()
         const std::vector<Relocation> partialMoves = {Relocation{1, 20, 0}};
         if (xcmd::reconcileRaw(events, {}, partialMoves, {}))
             fail("partial opaque relocation was not rejected");
+        const std::vector<Relocation> partialCopies = {Relocation{1, 20, 0}};
+        if (xcmd::reconcileRaw(events, {}, {}, partialCopies))
+            fail("partial opaque copy was not rejected");
         const std::vector<uint64_t> mixedRemovals = {0};
         const std::vector<Relocation> mixedMoves = {Relocation{1, 20, 0}, Relocation{2, 21, 0}};
         if (xcmd::reconcileRaw(events, mixedRemovals, mixedMoves, {}))
             fail("mixed remove/move within one opaque epoch was not rejected");
+    }
+    // A duplicate byte operation must retain its exact kind and destination.
+    {
+        const auto events = makeEvents(ev(0, 1, 0, xcmd::kSelectorController, 0x08),
+                                       ev(1, 2, 0, xcmd::kPayloadController, 34));
+        const std::vector<Relocation> conflicting = {Relocation{1, 20, 0}, Relocation{1, 21, 0}};
+        if (xcmd::reconcileRaw(events, {}, conflicting, {}))
+            fail("conflicting duplicate raw destinations were accepted");
+        const std::vector<uint64_t> removals = {1};
+        const std::vector<Relocation> moves = {Relocation{1, 20, 0}};
+        if (xcmd::reconcileRaw(events, removals, moves, {}))
+            fail("mixed raw operations on one byte were accepted");
     }
 
     // Whole-epoch copy duplicates every byte and keeps the source.
@@ -363,7 +410,9 @@ int checkRawReconciliation()
                                                 Relocation{2, 22, 0}};
         const auto patch = xcmd::reconcileRaw(events, {}, {}, copies);
         if (!patch || !patch->removeEvents.empty() || patch->inserts.size() != 3 ||
-            patch->inserts[0].sourceIndex != 0 || patch->inserts[0].tick != 20)
+            patch->inserts[0].sourceIndex != 0 || patch->inserts[0].tick != 20 ||
+            patch->inserts[1].sourceIndex != 1 || patch->inserts[1].tick != 21 ||
+            patch->inserts[2].sourceIndex != 2 || patch->inserts[2].tick != 22)
             fail("whole opaque copy did not duplicate every byte");
         const std::vector<Relocation> mixedMoves = {Relocation{0, 20, 0}, Relocation{1, 21, 0}};
         const std::vector<Relocation> mixedCopies = {Relocation{2, 22, 0}};
@@ -427,7 +476,14 @@ int checkRawReconciliation()
         const std::vector<Relocation> copies = {Relocation{1, 20, 0}};
         const auto patch = xcmd::reconcileRaw(events, {}, {}, copies);
         if (!patch || patch->removeEvents != std::vector<uint64_t>({0, 1, 2}) ||
-            patch->inserts.size() != 6)
+            patch->inserts.size() != 6 || patch->inserts[0].value != 0x08 ||
+            patch->inserts[1].value != 34 || patch->inserts[2].value != 0x08 ||
+            patch->inserts[3].value != 35 || patch->inserts[4].value != 0x08 ||
+            patch->inserts[5].value != 34 || patch->inserts[0].sourceIndex != SIZE_MAX ||
+            patch->inserts[1].sourceIndex != SIZE_MAX ||
+            patch->inserts[2].sourceIndex != SIZE_MAX ||
+            patch->inserts[3].sourceIndex != SIZE_MAX ||
+            patch->inserts[4].sourceIndex != SIZE_MAX || patch->inserts[5].sourceIndex != SIZE_MAX)
             fail("known-point copy did not rebuild both copies canonically");
     }
 
@@ -474,6 +530,9 @@ int checkRawReconciliation()
         if (!selectorPatch || !selectorPatch->removeEvents.empty() ||
             !selectorPatch->inserts.empty())
             fail("raw move of known-epoch selector glue was not ignored");
+        const std::vector<Relocation> selectorIntoOtherMoves = {Relocation{0, 3, 0}};
+        if (xcmd::reconcileRaw(events, {}, selectorIntoOtherMoves, {}))
+            fail("selector glue move inside another epoch's span was not rejected");
         const std::vector<Relocation> intoOtherMoves = {
             Relocation{1, 3, 0}}; // lands in the opaque epoch's span
         if (xcmd::reconcileRaw(events, {}, intoOtherMoves, {}))
