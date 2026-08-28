@@ -6,6 +6,7 @@
 #include "audio/trackactivitylevel.h"
 #include "core/miditimeline.h"
 #include "core/timelineplayer.h"
+#include "project/voicegroupsource.h"
 #include <QString>
 #include <algorithm>
 #include <array>
@@ -79,9 +80,8 @@ class AudioEngine
     int periodCount() const { return m_periodCount; }
 
     // Cold: swaps song data with the device stopped. Takes shared ownership
-    // of the timeline; the voicegroup remains borrowed from the active song
-    // session.
-    void loadSong(std::shared_ptr<const MidiTimeline> timeline, LoadedVoiceGroup *voicegroup,
+    // of the timeline; the bank stays leased by the active song session.
+    void loadSong(std::shared_ptr<const MidiTimeline> timeline, const VoicegroupLease &voicegroup,
                   const SongSettings &settings);
     void unloadSong();
 
@@ -99,8 +99,14 @@ class AudioEngine
     // Cold: re-applies song settings (master volume, reverb) to the engine.
     void updateSettings(const SongSettings &settings);
     // Cold: swaps the voicegroup (borrowed, like loadSong's); cuts all
-    // sound. The old voicegroup may be freed once this returns.
-    void updateVoicegroup(LoadedVoiceGroup *voicegroup);
+    // sound. The old bank may be released once this returns.
+    void updateVoicegroup(const VoicegroupLease &voicegroup);
+
+    // The poryaaaa compatibility seam (see VoicegroupLease): feeds the
+    // lease's legacy mutable borrow to a poryaaaa engine, which only reads
+    // it. Used by the load/update paths here and by the offline WAV
+    // exporter, which runs its own engine instance.
+    static void bindEngineVoicegroup(M4AEngine *engine, const VoicegroupLease &bank);
 
     // Hot: audition a single note outside the timeline (piano-key click,
     // note-draw preview). velocity 0 releases. A new preview releases the
@@ -137,27 +143,12 @@ class AudioEngine
     }
     void auditionSampleOff() { m_audition.publishOff(); }
 
-    // Hot: re-copy every track's cached instrument from the voicegroup, so a
-    // voice edit made through voiceForEdit is heard by already-playing tracks
-    // from the next note on (applied at the next callback boundary).
-    void refreshVoices() { m_refreshVoicesCmd.fetch_add(1); }
-
     bool songLoaded() const { return m_timelineHandoff.active() != nullptr; }
-    // Borrowed snapshot for immediate GUI-thread reads. The engine retains
+
+    // Borrowed snapshots for immediate GUI-thread reads. The engine retains
     // replaced timelines until the audio callback finishes with them.
     const MidiTimeline *timeline() const { return m_timelineHandoff.active(); }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
-
-    // Hot-safe for scalar field pokes only (byte-sized stores the audio
-    // thread re-reads per event; both engine instances share this array).
-    // Pointer fields must never be swapped through this — structural voice
-    // changes go through updateVoicegroup.
-    ToneData *voiceForEdit(int voice)
-    {
-        if (!m_voicegroup || voice < 0 || voice >= VOICEGROUP_SIZE)
-            return nullptr;
-        return &m_voicegroup->voices[voice];
-    }
 
     // Hot transport controls.
     void play();
@@ -244,7 +235,6 @@ class AudioEngine
     void applyPreviewVoice();
     void applyPolyDebug();
     void resetPreviewEngine();
-    ToneData *previewVoices() const;
     uint32_t effectiveMuteMask() const;
     void clearTrackActivityLevels();
 
@@ -260,7 +250,7 @@ class AudioEngine
     int m_periodCount = 0;
     std::unique_ptr<M4AEngine> m_engine;
     TimelineHandoff m_timelineHandoff;
-    LoadedVoiceGroup *m_voicegroup = nullptr; // not owned (the active song tab's)
+    LoadedVoiceGroup *m_voicegroup = nullptr; // borrowed from the session's lease; not owned
     SongSettings m_settings;
     // Audition instance: voice previews and sample auditions, mixed on top
     // of the main engine.
@@ -302,8 +292,6 @@ class AudioEngine
     // Voice-preview command: generation<<32 | voice<<16 | key<<8 | velocity.
     std::atomic<uint64_t> m_previewVoiceCmd{0};
     uint8_t m_previewVoiceGen = 0; // UI thread only
-    // Refresh-voices command: bumped by the UI, applied at callback boundary.
-    std::atomic<uint32_t> m_refreshVoicesCmd{0};
     // Polyphony-overflow debug: desired invert state + reset command.
     std::atomic<bool> m_polyInvert{false};
     std::atomic<uint32_t> m_polyResetCmd{0};
@@ -356,7 +344,6 @@ class AudioEngine
     int m_timedActiveCount = 0;
     uint64_t m_appliedPreviewVoice = 0;
     int m_previewVoiceKey = -1; // sounding voice-preview note, -1 when none
-    uint32_t m_appliedRefreshVoices = 0;
     uint32_t m_appliedPolyReset = 0;
     TimelinePlayer m_player;
 

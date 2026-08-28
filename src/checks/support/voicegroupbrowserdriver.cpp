@@ -15,8 +15,10 @@
 #include <QTreeWidgetItemIterator>
 #include <QWidget>
 
+#include "project/voicegroupsource.h"
 #include "ui/dragspinbox.h"
 #include "ui/samplepicker.h"
+#include "ui/songtab.h"
 #include "ui/voicegroupbrowser.h"
 #include "ui/workspaceui.h"
 
@@ -170,29 +172,49 @@ bool VoicegroupBrowserDriver::hasSynthEditorControls() const
            synthStepField() && synthDepthField() && synthPhaseField();
 }
 
-bool VoicegroupBrowserDriver::setSynthParameterValues(int duty, int step, int depth,
-                                                      int phase) const
+QSpinBox *VoicegroupBrowserDriver::synthParameterField(int index) const
 {
-    QSpinBox *field = synthDutyField();
-    if (!field)
-        return false;
-    field->setValue(duty);
+    switch (index) {
+    case 0:
+        return synthDutyField();
+    case 1:
+        return synthStepField();
+    case 2:
+        return synthDepthField();
+    case 3:
+        return synthPhaseField();
+    }
+    return nullptr;
+}
 
-    field = synthStepField();
-    if (!field)
-        return false;
-    field->setValue(step);
+const LoadedBankView *VoicegroupBrowserDriver::selectedBankView() const
+{
+    SongTab *const tab = m_workspace.m_selectedTab;
+    if (!tab || !tab->voicegroupId())
+        return nullptr;
+    return m_workspace.m_cache.find(*tab->voicegroupId());
+}
 
-    field = synthDepthField();
-    if (!field)
-        return false;
-    field->setValue(depth);
+void VoicegroupBrowserDriver::submitPickerEdit(int slot, const VgVoice &voice) const
+{
+    m_workspace.submitPickerEdit(slot, voice);
+}
 
-    field = synthPhaseField();
-    if (!field)
-        return false;
-    field->setValue(phase);
-    return true;
+int VoicegroupBrowserDriver::currentSlot() const
+{
+    return browser() ? browser()->currentSlot() : -1;
+}
+
+void VoicegroupBrowserDriver::selectSlot(int slot) const
+{
+    if (browser())
+        browser()->selectSlot(slot);
+}
+
+void VoicegroupBrowserDriver::revealSlot(int slot) const
+{
+    if (browser())
+        browser()->revealSlot(slot);
 }
 
 QSize VoicegroupBrowserDriver::browserMinimumSizeHint() const

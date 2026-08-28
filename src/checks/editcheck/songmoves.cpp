@@ -74,7 +74,7 @@ bool checkSongNoteMoveContracts(SongEditScenario &scenario)
     // mergeable moveNotes of the same notes collapse into ONE undo
     // command that re-lands from the gesture's start — a neighbor
     // trimmed by a merely-passed-through overlap comes back — and
-    // the merge stops at the stack's clean index (a save between
+    // the merge stops at the saved document state (a save between
     // presses keeps its own command).
     if (ok) {
         doc.addNote(track, base + step * 100, 70, step * 4, 100); // S
@@ -116,10 +116,10 @@ bool checkSongNoteMoveContracts(SongEditScenario &scenario)
         }
         if (ok) {
             doc.findNote(track, base + step * 100, 71, &m);
-            doc.undoStack()->setClean();
+            doc.didSave(doc.captureSaveSnapshot(), true);
             doc.moveNotes({m}, 0, 1, true);
             if (doc.undoStack()->count() != countBefore + 2) {
-                fail("mergeable move merged across the clean index");
+                fail("mergeable move merged across the saved document state");
                 ok = false;
             }
         }

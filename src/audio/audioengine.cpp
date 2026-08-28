@@ -200,8 +200,16 @@ void AudioEngine::shutdown()
     }
 }
 
+// The compatibility seam in one place: only this class converts a lease into
+// the mutable ToneData* poryaaaa's entry points still expect, and only for
+// engines that merely read the bank.
+void AudioEngine::bindEngineVoicegroup(M4AEngine *engine, const VoicegroupLease &bank)
+{
+    m4a_engine_set_voicegroup(engine, bank ? bank.borrow()->voices : nullptr);
+}
+
 void AudioEngine::loadSong(std::shared_ptr<const MidiTimeline> timeline,
-                           LoadedVoiceGroup *voicegroup, const SongSettings &settings)
+                           const VoicegroupLease &voicegroup, const SongSettings &settings)
 {
     // Cold swap: the audio thread must not be running while pointers change.
     if (m_deviceStarted)
@@ -210,7 +218,7 @@ void AudioEngine::loadSong(std::shared_ptr<const MidiTimeline> timeline,
     m_resonance.reset();
     m_pendingSeek.store(kNoPendingSeek, std::memory_order_release);
     m_timelineHandoff.reset(std::move(timeline));
-    m_voicegroup = voicegroup;
+    m_voicegroup = voicegroup.borrow();
     m_settings = settings;
 
     // Fresh engine state for the new song (safe here: device is stopped, and
@@ -317,14 +325,14 @@ void AudioEngine::updateSettings(const SongSettings &settings)
         ma_device_start(m_device);
 }
 
-void AudioEngine::updateVoicegroup(LoadedVoiceGroup *voicegroup)
+void AudioEngine::updateVoicegroup(const VoicegroupLease &voicegroup)
 {
     if (m_deviceStarted)
         ma_device_stop(m_device);
     resetOutputCut();
     m4a_engine_all_sound_off(m_engine.get());
     clearTimedPreviews();
-    m_voicegroup = voicegroup;
+    m_voicegroup = voicegroup.borrow();
     m4a_engine_set_voicegroup(m_engine.get(), m_voicegroup ? m_voicegroup->voices : nullptr);
     // Re-latch program changes: the tracks' instrument state still points
     // into the old voices array until the chase reapplies it.
@@ -338,11 +346,6 @@ void AudioEngine::updateVoicegroup(LoadedVoiceGroup *voicegroup)
         ma_device_start(m_device);
 }
 
-ToneData *AudioEngine::previewVoices() const
-{
-    return m_voicegroup ? m_voicegroup->voices : nullptr;
-}
-
 // Rebuilds the audition instance to match the main engine's settings and
 // voicegroup. Cold: callers have stopped the device.
 void AudioEngine::resetPreviewEngine()
@@ -351,7 +354,7 @@ void AudioEngine::resetPreviewEngine()
         return;
     m4a_engine_destroy(m_previewEngine.get());
     m4a_engine_init(m_previewEngine.get(), float(m_sampleRate));
-    m4a_engine_set_voicegroup(m_previewEngine.get(), previewVoices());
+    m4a_engine_set_voicegroup(m_previewEngine.get(), m_voicegroup ? m_voicegroup->voices : nullptr);
     applyEngineSettings(m_previewEngine.get(), m_settings);
     m4a_engine_set_pcm_mix_rate(m_previewEngine.get(), m_settings.pcmMixRate);
     m_previewVoiceKey = -1;
@@ -746,7 +749,7 @@ void AudioEngine::applyPreviewVoice()
     const uint8_t voice = (cmd >> 16) & 0x7F;
     const uint8_t key = (cmd >> 8) & 0x7F;
     const uint8_t velocity = cmd & 0xFF;
-    if (velocity > 0 && previewVoices() != nullptr) {
+    if (velocity > 0 && m_voicegroup) {
         m4a_engine_program_change(engine, 0, voice);
         m4a_engine_note_on(engine, 0, key, velocity);
         m_previewVoiceKey = key;
@@ -784,14 +787,6 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
     applyPreviewVoice();
     m_audition.apply(m_previewEngine.get(), kAuditionTrack);
     applyPolyDebug();
-
-    // Voice edits: tracks hold a ToneData copy taken at program change, so a
-    // scalar edit isn't heard until the copies are refreshed.
-    const uint32_t refreshGen = m_refreshVoicesCmd.load();
-    if (refreshGen != m_appliedRefreshVoices) {
-        m_appliedRefreshVoices = refreshGen;
-        m4a_engine_refresh_voices(m_engine.get());
-    }
 
     M4AEngine *engine = m_engine.get();
     uint32_t done = 0;

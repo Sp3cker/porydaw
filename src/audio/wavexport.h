@@ -38,8 +38,8 @@ WavExportTotals wavExportTotals(const MidiTimeline &timeline, const WavExportOpt
 // Renders and writes the file, streaming in chunks so memory use is flat.
 // progress (optional) receives a 0..1 fraction; returning false cancels the
 // export, which removes the partial file and fails with an empty *error.
-// Real failures set a non-empty *error.
-bool exportWav(const QString &path, const MidiTimeline &timeline,
-               const LoadedVoiceGroup *voicegroup, const SongSettings &settings,
-               const WavExportOptions &opts, const std::function<bool(double)> &progress,
-               QString *error);
+// Real failures set a non-empty *error. The caller's lease retains the
+// bank for the whole render.
+bool exportWav(const QString &path, const MidiTimeline &timeline, const VoicegroupLease &voicegroup,
+               const SongSettings &settings, const WavExportOptions &opts,
+               const std::function<bool(double)> &progress, QString *error);

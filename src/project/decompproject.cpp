@@ -2,10 +2,14 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QHash>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QSet>
 #include <QTextStream>
+#include <array>
+#include <cstring>
 #include <utility>
 
 #include "project/songregistry.h"
@@ -33,6 +37,144 @@ ProjectSnapshot::ProjectSnapshot(QString root, QVector<SongInfo> songs,
     , m_players(std::move(players))
     , m_trackBudgets(std::move(trackBudgets))
 {}
+
+namespace {
+
+bool writeBytes(const QString &path, const QByteArray &bytes, QString *error)
+{
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        if (error)
+            *error = QStringLiteral("Cannot write %1: %2").arg(path, file.errorString());
+        return false;
+    }
+    if (file.write(bytes) != bytes.size()) {
+        if (error)
+            *error = QStringLiteral("Short write to %1: %2").arg(path, file.errorString());
+        file.cancelWriting();
+        return false;
+    }
+    return file.commit();
+}
+
+QString previewDirFor(const QString &root)
+{
+    return QDir(root).filePath(QStringLiteral(".porydaw/vgpreview"));
+}
+
+// Shadow-loads an edited source without touching the project's real files:
+// the rendered bytes are staged under the preview directory and the C loader
+// resolves the voicegroup through the path override. Returns null on
+// failure, with the loader's error (or a fallback message) through error.
+LoadedVoiceGroup *loadPreviewedSource(const QString &root, const QString &loadName,
+                                      const QByteArray &sourceBytes, QString *error)
+{
+    const QString previewDir = previewDirFor(root);
+    QDir(previewDir).removeRecursively();
+    if (!QDir().mkpath(previewDir)) {
+        if (error)
+            *error = QStringLiteral("Cannot create voicegroup preview directory.");
+        return nullptr;
+    }
+    const QString path = QDir(previewDir).filePath(loadName + QStringLiteral(".inc"));
+    if (!writeBytes(path, sourceBytes, error)) {
+        QDir(previewDir).removeRecursively();
+        return nullptr;
+    }
+    VoicegroupLoaderConfig config;
+    std::memset(&config, 0, sizeof(config));
+    std::strncpy(config.voicegroupPaths[0], ".porydaw/vgpreview", VG_MAX_PATH_LEN - 1);
+    config.voicegroupPathCount = 1;
+    const auto rootUtf8 = root.toLocal8Bit();
+    const auto nameUtf8 = loadName.toLocal8Bit();
+    auto *bank = voicegroup_load(rootUtf8.constData(), nameUtf8.constData(), &config);
+    QDir(previewDir).removeRecursively();
+    if (!bank && error && error->isEmpty())
+        *error = QStringLiteral("Edited voicegroup failed to load.");
+    return bank;
+}
+
+struct SynthToneBuffer {
+    WaveData wave;
+    uint8_t bytes[17];
+};
+
+struct SynthToneStorage {
+    std::array<std::optional<SynthToneBuffer>, VOICEGROUP_SIZE> tones;
+};
+
+std::optional<VgSynthDesc> mintedSynthDesc(const QString &symbol)
+{
+    static const QRegularExpression pulse(
+        QStringLiteral("^DirectSoundSynth_GoldenSun_([0-9A-F]{8})(?:_[0-9]+)?$"));
+    static const QRegularExpression saw(
+        QStringLiteral("^DirectSoundSynth_GoldenSun_Saw(?:_[0-9]+)?$"));
+    static const QRegularExpression triangle(
+        QStringLiteral("^DirectSoundSynth_GoldenSun_Triangle(?:_[0-9]+)?$"));
+    const auto pulseMatch = pulse.match(symbol);
+    if (pulseMatch.hasMatch()) {
+        bool ok = false;
+        const uint32_t packed = pulseMatch.capturedView(1).toUInt(&ok, 16);
+        if (!ok)
+            return std::nullopt;
+        return VgSynthDesc{0, int((packed >> 24) & 0xff), int((packed >> 16) & 0xff),
+                           int((packed >> 8) & 0xff), int(packed & 0xff)};
+    }
+    if (saw.match(symbol).hasMatch())
+        return VgSynthDesc{1};
+    if (triangle.match(symbol).hasMatch())
+        return VgSynthDesc{2};
+    return std::nullopt;
+}
+
+VoicegroupLease leaseWithMintedSynths(LoadedVoiceGroup *raw, const VoicegroupSource &source)
+{
+    std::shared_ptr<SynthToneStorage> storage;
+    for (int slot = 0; slot < VOICEGROUP_SIZE; ++slot) {
+        const VgVoice *const voice = source.voiceAt(slot);
+        if (!voice || raw->voices[slot].wav ||
+            (voice->macro != VgMacro::DirectSound &&
+             voice->macro != VgMacro::DirectSoundNoResample &&
+             voice->macro != VgMacro::DirectSoundAlt))
+            continue;
+        const auto desc = mintedSynthDesc(voice->symbol);
+        if (!desc)
+            continue;
+        if (!storage)
+            storage = std::make_shared<SynthToneStorage>();
+        SynthToneBuffer &tone = storage->tones[slot].emplace();
+        std::memset(&tone, 0, sizeof(tone));
+        tone.wave.status = 0x4000;
+        tone.wave.freq = 0x01058920;
+        tone.wave.data = reinterpret_cast<int8_t *>(tone.bytes);
+        tone.bytes[0] = 0x80;
+        tone.bytes[1] = uint8_t(desc->waveform);
+        tone.bytes[2] = uint8_t(desc->baseDuty);
+        tone.bytes[3] = uint8_t(desc->dutyStep);
+        tone.bytes[4] = uint8_t(desc->modDepth);
+        tone.bytes[5] = uint8_t(desc->phase);
+        raw->voices[slot].wav = &tone.wave;
+    }
+    if (!storage)
+        return wrapVoicegroupLease(raw);
+    return wrapVoicegroupLease(raw, std::move(storage));
+}
+
+// The published slot views: each slot's exact source-line kind plus the
+// parsed voice when the line is editable.
+QVector<VoicegroupSlotView> sourceSlotViews(const VoicegroupSource &source)
+{
+    QVector<VoicegroupSlotView> slotViews(VOICEGROUP_SIZE);
+    for (int slot = 0; slot < VOICEGROUP_SIZE; slot++) {
+        VoicegroupSlotView &slotView = slotViews[slot];
+        slotView.kind = source.kindAt(slot);
+        if (const VgVoice *voice = source.voiceAt(slot))
+            slotView.voice = *voice;
+    }
+    return slotViews;
+}
+
+} // namespace
 
 bool ProjectSnapshot::isOpen() const
 {
@@ -128,6 +270,7 @@ void DecompProject::close()
     m_songs.clear();
     m_players.clear();
     m_playerTrackBudgets.clear();
+    m_banks.clear();
 }
 
 bool DecompProject::parseSongTable(QString *error)
@@ -354,4 +497,183 @@ QStringList DecompProject::voicegroupCandidates(const SongCfg &cfg)
     if (!arg.isEmpty() && !candidates.contains(arg))
         candidates << arg;
     return candidates;
+}
+
+// ---- Worker-side voicegroup bank ownership ----
+
+std::optional<SongInfo> DecompProject::playableSong(SongName name) const
+{
+    for (const SongInfo &song : m_songs) {
+        if (song.isPlayable() && song.label == name.value())
+            return song;
+    }
+    return std::nullopt;
+}
+
+LoadedBankView DecompProject::publishView(const LoadedBankEntry &entry) const
+{
+    return LoadedBankView{entry.id, entry.current, entry.loadName, entry.source->dirty(),
+                          sourceSlotViews(*entry.source)};
+}
+
+std::optional<LoadedBankView> DecompProject::loadBank(const SongInfo &song, QString *error)
+{
+    const auto fail = [error](QString message) {
+        if (error)
+            *error = std::move(message);
+        return std::optional<LoadedBankView>{};
+    };
+    if (m_root.isEmpty())
+        return fail(QStringLiteral("Project is not open."));
+
+    // Identity comes from the resolved source location, never from the song
+    // or the loader alias: songs sharing a voicegroup share one record.
+    auto source = std::make_unique<VoicegroupSource>();
+    QString openError;
+    if (!source->open(m_root, song.cfg.voicegroupArg, &openError))
+        return fail(openError.isEmpty() ? QStringLiteral("Could not open the voicegroup source.")
+                                        : std::move(openError));
+    auto id = VoicegroupId::create(QDir(m_root).relativeFilePath(source->filePath()),
+                                   source->sectionLabel());
+    if (!id)
+        return fail(QStringLiteral("Could not identify the voicegroup source."));
+    const QDateTime fileTime = QFileInfo(source->filePath()).lastModified();
+
+    // Unchanged record: publish the current lease without re-running the
+    // C loader (and without disturbing the record's own source model).
+    const auto existing = m_banks.find(*id);
+    if (existing != m_banks.end() && existing->second.sourceFileTime == fileTime)
+        return publishView(existing->second);
+
+    // Cache miss or modified file: load the complete candidate before the
+    // record changes, so a failure leaves the previous record untouched.
+    const QStringList candidates = voicegroupCandidates(song.cfg);
+    LoadedVoiceGroup *raw = nullptr;
+    for (const QString &candidate : candidates) {
+        const auto rootUtf8 = m_root.toLocal8Bit();
+        const auto nameUtf8 = candidate.toLocal8Bit();
+        raw = voicegroup_load(rootUtf8.constData(), nameUtf8.constData(), nullptr);
+        if (raw)
+            break;
+    }
+    if (!raw) {
+        return fail(QStringLiteral("Could not load voicegroup (tried: %1).")
+                        .arg(candidates.join(QStringLiteral(", "))));
+    }
+
+    // Replace the record (or insert the first one) with the fresh candidate
+    // only now that the complete bank has loaded.
+    LoadedBankEntry fresh{*id, source->loadName(), std::move(source), wrapVoicegroupLease(raw),
+                          fileTime};
+    auto [entryIt, inserted] = m_banks.try_emplace(*id, std::move(fresh));
+    if (!inserted)
+        entryIt->second = std::move(fresh);
+    return publishView(entryIt->second);
+}
+
+std::optional<VoicegroupEditResult> DecompProject::applyVoicegroupEdit(VoicegroupEditInput input,
+                                                                       QString *error)
+{
+    const auto fail = [error](QString message) {
+        if (error)
+            *error = std::move(message);
+        return std::optional<VoicegroupEditResult>{};
+    };
+    const auto notApplied = [id = input.id]() {
+        return std::optional<VoicegroupEditResult>{VoicegroupEditConflictResult{id}};
+    };
+    if (m_root.isEmpty())
+        return fail(QStringLiteral("Project is not open."));
+    const auto existing = m_banks.find(input.id);
+    if (existing == m_banks.end()) {
+        return fail(
+            QStringLiteral("Voicegroup is not loaded: %1").arg(input.id.sourceRelativePath()));
+    }
+    LoadedBankEntry &entry = existing->second;
+    VoicegroupSource &source = *entry.source;
+
+    // Captured before any mutation: a hard error after the loader rejects
+    // the candidate restores exactly these bytes.
+    const QByteArray before = source.sourceBytes();
+
+    VoicegroupSource::BlankSlotMaterialization materialization;
+    if (const auto *slotEdit = std::get_if<SetVoicegroupSlot>(&input.operation)) {
+        if (slotEdit->slot < 0 || slotEdit->slot >= VOICEGROUP_SIZE)
+            return notApplied(); // validation no-op
+        const VgVoice *current = source.voiceAt(slotEdit->slot);
+        if (!slotEdit->expected) {
+            // Blank expected state: the slot must still be undefined, and the
+            // edit materializes it under a revertable token.
+            if (current)
+                return notApplied();
+            auto token = source.materializeBlankSlot(slotEdit->slot, slotEdit->value);
+            if (!token)
+                return notApplied();
+            materialization = std::move(*token);
+        } else {
+            if (!current || !(*current == *slotEdit->expected))
+                return notApplied();
+            if (!source.setVoice(slotEdit->slot, slotEdit->value))
+                return notApplied();
+        }
+    } else if (const auto *revert = std::get_if<RevertBlankSlot>(&input.operation)) {
+        if (!source.revertBlankSlotMaterialization(revert->materialization))
+            return notApplied();
+    } else {
+        return fail(QStringLiteral("Unknown voicegroup edit operation."));
+    }
+
+    // The mutation stays provisional until the loader validates a complete
+    // candidate built from the rendered source; a hard error restores the
+    // source bytes so the old record survives untouched.
+    QString loadError;
+    LoadedVoiceGroup *raw =
+        loadPreviewedSource(m_root, entry.loadName, source.renderPreview(), &loadError);
+    if (!raw) {
+        source.restoreSourceBytes(before);
+        return fail(loadError.isEmpty() ? QStringLiteral("Edited voicegroup failed to load.")
+                                        : std::move(loadError));
+    }
+    entry.current = leaseWithMintedSynths(raw, source);
+    VoicegroupEditAppliedResult applied{publishView(entry), std::nullopt};
+    if (materialization.firstAddedSlot >= 0)
+        applied.materialization = std::move(materialization);
+    return std::optional<VoicegroupEditResult>{std::move(applied)};
+}
+
+std::optional<LoadedBankView> DecompProject::saveVoicegroup(SaveVoicegroupInput input,
+                                                            QString *error)
+{
+    const auto fail = [error](QString message) {
+        if (error)
+            *error = std::move(message);
+        return std::optional<LoadedBankView>{};
+    };
+    if (m_root.isEmpty())
+        return fail(QStringLiteral("Project is not open."));
+    const auto existing = m_banks.find(input.voicegroup);
+    if (existing == m_banks.end()) {
+        return fail(QStringLiteral("Voicegroup is not loaded: %1")
+                        .arg(input.voicegroup.sourceRelativePath()));
+    }
+    LoadedBankEntry &entry = existing->second;
+
+    // Save ordering: optional synth definitions, then the source's own
+    // byte-conservative write (which clears its dirty bit), then the bank
+    // refresh from the saved bytes. No rollback: earlier writes remain when
+    // a later stage fails.
+    if (!input.synthDefinitions.isEmpty() &&
+        !VoicegroupSource::writeSynthDefinitions(m_root, input.synthDefinitions, error))
+        return std::nullopt;
+    if (!entry.source->save(error))
+        return std::nullopt;
+    entry.sourceFileTime = QFileInfo(entry.source->filePath()).lastModified();
+
+    const auto rootUtf8 = m_root.toLocal8Bit();
+    const auto nameUtf8 = entry.loadName.toLocal8Bit();
+    LoadedVoiceGroup *raw = voicegroup_load(rootUtf8.constData(), nameUtf8.constData(), nullptr);
+    if (!raw)
+        return fail(QStringLiteral("Saved voicegroup failed to reload."));
+    entry.current = wrapVoicegroupLease(raw);
+    return publishView(entry);
 }

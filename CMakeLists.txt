@@ -122,7 +122,6 @@ endif()
 qt_add_library(porydaw_app STATIC
     src/mainwindow.cpp
     src/mainwindow.h
-    src/songsession.h
     src/ui/layout.cpp
     src/ui/layout.h
     src/ui/typography.cpp
@@ -188,6 +187,8 @@ qt_add_library(porydaw_app STATIC
     src/core/songdocument_tempo.cpp
     src/core/songdocument_xcmd.cpp
     src/core/songdocument.h
+    src/core/songhistory.cpp
+    src/core/songhistory.h
     src/core/lanemoveplan.cpp
     src/core/lanemoveplan.h
     src/porydaw_scale.cpp
@@ -198,6 +199,10 @@ qt_add_library(porydaw_app STATIC
     src/core/midiimport.h
     src/project/decompproject.cpp
     src/project/decompproject.h
+    src/project/projectidentity.cpp
+    src/project/projectidentity.h
+    src/project/projectworkspace.cpp
+    src/project/projectworkspace.h
     src/project/projectio.cpp
     src/project/projectio.h
     src/project/songregistry.cpp
@@ -210,8 +215,6 @@ qt_add_library(porydaw_app STATIC
     src/project/sidecar.h
     src/project/voicegroupsource.cpp
     src/project/voicegroupsource.h
-    src/project/voicegroupeditcommand.cpp
-    src/project/voicegroupeditcommand.h
     src/ui/dragspinbox.cpp
     src/ui/dragspinbox.h
     src/ui/m4asemantics.cpp
@@ -251,7 +254,15 @@ qt_add_library(porydaw_app STATIC
     src/ui/transportbar.cpp
     src/ui/transportbar.h
     src/ui/workspaceui.cpp
+    src/ui/workspaceui_tabs.cpp
+    src/ui/workspaceui_project.cpp
+    src/ui/workspaceui_voicegroup.cpp
+    src/ui/workspaceui_samples.cpp
     src/ui/workspaceui.h
+    src/ui/songtab.cpp
+    src/ui/songtab.h
+    src/ui/voicegroupviewcache.cpp
+    src/ui/voicegroupviewcache.h
     src/ui/timelinesurface.cpp
     src/ui/timelinesurface.h
     src/ui/contextmenu.cpp
@@ -475,6 +486,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/onboardcheck/import.cpp
         src/checks/onboardcheck/deletion.cpp
         src/checks/vgcheck.cpp
+        src/checks/vgbankcheck.cpp
+        src/checks/voicegroupviewcachecheck.cpp
         src/checks/vgsavecheck.cpp
         src/checks/exportcheck.cpp
         src/checks/loopcheck.cpp
@@ -504,6 +517,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/samplecheck/soundfont.cpp
         src/checks/samplecheck/integration.cpp
         src/checks/projectiocheck.cpp
+        src/checks/projectworkspacecheck.cpp
         src/checks/sessioncheck.cpp
         src/checks/keymapcheck.cpp
         src/checks/hostcheck.cpp

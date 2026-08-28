@@ -1,9 +1,17 @@
 #pragma once
 
+#include <QDateTime>
 #include <QHash>
 #include <QString>
 #include <QStringList>
 #include <QVector>
+
+#include <memory>
+#include <optional>
+#include <unordered_map>
+
+#include "projectidentity.h"
+#include "voicegroupsource.h"
 
 // Per-song mid2agb options from the song's line in sound/songs/midi/midi.cfg
 // (or, in projects predating midi.cfg, its songs.mk rule).
@@ -114,6 +122,37 @@ class DecompProject
     // registers a song). Song ids are reassigned.
     bool reload(QString *error);
 
+    // ---- Worker-side voicegroup bank ownership (Project I/O worker) ----
+    // The worker keeps the one canonical bank per VoicegroupId. Every
+    // publication is an immutable LoadedBankView copy; a LoadedBankEntry
+    // never crosses a thread or layer seam, and every hard error leaves the
+    // previous record (source, lease, and file time) untouched.
+
+    // The playable song carrying the given project-relative label, if any.
+    std::optional<SongInfo> playableSong(SongName name) const;
+
+    // Publishes the song's voicegroup bank, reusing the unchanged canonical
+    // record when identity and source timestamp permit and otherwise loading
+    // a complete candidate from disk before the record changes. A hard error
+    // returns nullopt and writes its message through error, leaving the
+    // previous record (source, lease, and file time) untouched; no invalid
+    // empty-identity view is ever manufactured.
+    std::optional<LoadedBankView> loadBank(const SongInfo &song, QString *error);
+
+    // Applies one typed slot edit and returns the applied outcome (the
+    // complete candidate replaces the current lease) or the confirmed
+    // not-applied outcome for an expected mismatch or validation no-op,
+    // which leaves the record untouched. A hard error returns nullopt with
+    // a message; the old source and lease survive.
+    std::optional<VoicegroupEditResult> applyVoicegroupEdit(VoicegroupEditInput input,
+                                                            QString *error);
+
+    // Writes the record's source (plus any synth definitions) to disk,
+    // refreshes the canonical bank from the saved bytes, and publishes the
+    // clean view. A failed stage leaves the earlier writes in place and
+    // returns nullopt with a message, like loadBank.
+    std::optional<LoadedBankView> saveVoicegroup(SaveVoicegroupInput input, QString *error);
+
   private:
     bool parseSongTable(QString *error);
     void parseSongConstants();
@@ -121,8 +160,22 @@ class DecompProject
     void parseSongsMk();
     void discoverUnregisteredSongs();
 
+    // The canonical, worker-owned bank record. Never published.
+    struct LoadedBankEntry {
+        VoicegroupId id;
+        QString loadName;
+        std::unique_ptr<VoicegroupSource> source;
+        VoicegroupLease current;
+        QDateTime sourceFileTime;
+    };
+
+    // One immutable publication copy of the record: the shared lease and the
+    // 128 slot voices extracted from the source model.
+    LoadedBankView publishView(const LoadedBankEntry &entry) const;
+
     QString m_root;
     QVector<SongInfo> m_songs;
     QVector<MusicPlayer> m_players; // cached at open (one file read)
     QHash<QString, int> m_playerTrackBudgets;
+    std::unordered_map<VoicegroupId, LoadedBankEntry, VoicegroupIdHash> m_banks;
 };

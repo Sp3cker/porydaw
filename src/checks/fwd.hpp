@@ -13,11 +13,13 @@ int runSaveCheck(const QString &projectRoot, const QString &songLabel,
                  const QString &mid2agbPath = QString());
 int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath = QString());
 int runVgCheck(const QString &projectRoot, const QString &songLabel);
+int runVgBankCheck(const QString &projectRoot, const QString &songLabel);
 int runVgSaveCheck(const QString &projectRoot, const QString &songLabel,
                    const QString &screenshotPath = QString());
 int runExportCheck(const QString &projectRoot, const QString &songLabel);
 int runMkCheck(const QString &projectRoot, const QString &songLabel);
 int runProjectIoCheck(const QString &projectRoot);
+int runProjectWorkspaceCheck(const QString &projectRoot);
 int runSessionCheck(const QString &projectRoot, const QString &songLabel);
 int runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB);
 int runRollCheck(const QString &projectRoot, const QString &songLabel,
@@ -29,6 +31,7 @@ int runPolyCheck(const QString &screenshotPath = QString());
 int runPrimeCheck();
 int runXcmdCheck();
 int runSmfCheck();
+int runVoicegroupViewCacheCheck();
 int runTransportCheck();
 int runAudioCheck();
 int runResonanceCheck();

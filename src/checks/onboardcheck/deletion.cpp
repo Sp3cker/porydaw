@@ -289,6 +289,10 @@ void runDeletionChecks(const QString &projectRoot, const QString &midiDir, Decom
     {
         const QString delLabel = QStringLiteral("mus_onboardcheck_del_ui");
         const SmfFile smf = SongRegistry::blankSong();
+        const QString fallbackMid = midiDir + QStringLiteral("/%1.mid").arg(firstLabel);
+        const bool removeFallbackMid = !firstLabel.isEmpty() && !QFile::exists(fallbackMid);
+        if (removeFallbackMid)
+            check(smf.writeFile(fallbackMid, &error), "action delete: write fallback .mid");
         check(smf.writeFile(midiDir + QStringLiteral("/%1.mid").arg(delLabel), &error),
               "action delete: write .mid");
         check(SongRegistry::writeSongFlags(midiDir, delLabel, cfg.rawFlags, &error),
@@ -302,6 +306,8 @@ void runDeletionChecks(const QString &projectRoot, const QString &midiDir, Decom
         MainWindow window;
         check(window.runDeleteActionCheck(projectRoot, delLabel),
               "delete-action check did not run");
+        if (removeFallbackMid)
+            check(QFile::remove(fallbackMid), "action delete: remove fallback .mid");
     }
 }
 

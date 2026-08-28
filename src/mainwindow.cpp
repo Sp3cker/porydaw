@@ -1,44 +1,30 @@
 #include "mainwindow.h"
 
 #include <QApplication>
-#include <QCheckBox>
 #include <QComboBox>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QDockWidget>
-#include <QElapsedTimer>
-#include <QEventLoop>
-#include <QFile>
+#include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QFontMetrics>
 #include <QFormLayout>
 #include <QHBoxLayout>
+#include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
-#include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QPainter>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QProgressDialog>
-#include <QPushButton>
-#include <QRegularExpressionValidator>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStatusBar>
-#include <QStyle>
 #include <QTextEdit>
 #include <QTimer>
-#include <QUndoGroup>
-
-#include <QChildEvent>
-#include <QCloseEvent>
-#include <QKeyEvent>
-#include <QKeySequence>
 
 #ifdef Q_OS_WIN
 #ifndef WIN32_LEAN_AND_MEAN
@@ -48,40 +34,25 @@
 #include <windows.h>
 #endif
 
-#include <algorithm>
-#include <cmath>
-#include <cstring>
 #include <utility>
 
-#include "audio/sampleimport.h"
-#include "audio/sf2reader.h"
 #include "audio/wavexport.h"
 #include "core/miditimeline.h"
 #include "porydaw_scale.h"
-#include "project/samplereg.h"
-#include "project/sidecar.h"
-#include "project/songregistry.h"
-#include "project/voicegroupeditcommand.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
-#include "ui/newsongwizard.h"
 #include "ui/polyphonypanel.h"
-#include "ui/sampleeditordialog.h"
-#include "ui/settingsdialog.h"
-#include "ui/sf2zonepicker.h"
+#include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/theme/themecontroller.h"
 #include "ui/theme/themedialog.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
-#include "ui/viewsidecar.h"
 
 namespace {
 constexpr int kIdleUiIntervalMs = 500;
 constexpr int kPlaybackUiIntervalMs = 100;
 
-const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
-const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
 const QString kNoteNamesKey = QStringLiteral("noteNames");
 const QString kSystemFontKey = QStringLiteral("systemFont");
@@ -147,6 +118,23 @@ void saveEditorDrawerState(QSettings &settings, const EditorDrawerState &state)
                                                 : QLatin1String("automations"));
 }
 
+// SongSettings carries no equality; exact equality of applied inputs is the
+// intent (every field is re-derived from the same sources).
+bool sameSongSettings(const SongSettings &a, const SongSettings &b)
+{
+    return a.pcmMixer == b.pcmMixer && a.songVolume == b.songVolume && a.reverb == b.reverb &&
+           a.maxPcmChannels == b.maxPcmChannels && a.pcmMixRate == b.pcmMixRate &&
+           a.analogFilter == b.analogFilter;
+}
+
+// Symbol -> index into the sample set's parallel arrays (the set was loaded
+// from the catalog lists in this order), or -1.
+int sampleSetIndex(const QStringList &symbols, int limit, const QString &symbol)
+{
+    const int index = symbols.indexOf(symbol);
+    return index >= 0 && index < limit ? index : -1;
+}
+
 #ifdef Q_OS_WIN
 // These names and values come from the current Windows SDK. The bundled
 // MinGW header stops at DWMWA_PASSIVE_UPDATE_MODE, so keep the compatibility
@@ -161,9 +149,7 @@ enum class DwmWindowAttribute : DWORD {
 
 } // namespace
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , m_projectIo(std::make_unique<ProjectIo>(this))
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle(QStringLiteral("porydaw"));
     resize(::layout::fontPx(92), ::layout::fontPx(57));
@@ -187,6 +173,10 @@ MainWindow::MainWindow(QWidget *parent)
          settings.value(QStringLiteral("songFilterSort")).toInt(),
          settings.value(QStringLiteral("songFilterCategory")).toString()});
 
+    // Composition order: WorkspaceUi first (the shell and its startup
+    // placeholder tabs), then the engine, then the worker seam — whose
+    // constructor queues the saved recipe's open for the next event-loop
+    // turn, after everything below is wired.
     QString audioError;
     m_audioOk = m_audio.init(&audioError);
     if (!m_audioOk) {
@@ -212,6 +202,29 @@ MainWindow::MainWindow(QWidget *parent)
             : tr("Audio ready (%1 Hz, %2). Open a decomp project to get started.")
                   .arg(int(m_audio.sampleRate()))
                   .arg(m_audio.backendName()));
+    // Tabs build their timeline projections at the engine's resolved rate.
+    m_workspace->setAudioSampleRate(m_audio.sampleRate());
+
+    m_projectWorkspace = std::make_unique<ProjectWorkspace>();
+    // Direct publication wiring — no relays. WorkspaceUi's apply slots are
+    // connected before MainWindow's own publication reactions so chrome
+    // updates observe the applied state, not the pre-apply one.
+    connect(m_projectWorkspace.get(), &ProjectWorkspace::projectStatePublished, m_workspace.get(),
+            &WorkspaceUi::applyProjectState);
+    connect(m_projectWorkspace.get(), &ProjectWorkspace::projectEventPublished, m_workspace.get(),
+            &WorkspaceUi::applyProjectEvent);
+    connect(m_projectWorkspace.get(), &ProjectWorkspace::songUpdatePublished, m_workspace.get(),
+            &WorkspaceUi::applySongUpdate);
+    connect(m_projectWorkspace.get(), &ProjectWorkspace::projectStatePublished, this,
+            [this](const ProjectState &) {
+                updateWindowTitle();
+                updateChrome();
+            });
+    // Semantic requests: straight into ProjectWorkspace's slots.
+    connect(m_workspace.get(), &WorkspaceUi::projectOpenRequested, m_projectWorkspace.get(),
+            &ProjectWorkspace::openProject);
+    connect(m_workspace.get(), &WorkspaceUi::projectOperationRequested, m_projectWorkspace.get(),
+            &ProjectWorkspace::submit);
 
     m_uiTimer = new QTimer(this);
     m_playheadTimer = new QTimer(this);
@@ -224,55 +237,47 @@ MainWindow::MainWindow(QWidget *parent)
     // faster than 60hz and wasting time.
     m_playheadTimer->setInterval(17);
     connect(m_playheadTimer, &QTimer::timeout, this, &MainWindow::synchronizePlayhead);
+    // The workspace published its construction-time selection (the startup
+    // placeholder tab) before these connections existed; adopt it now so
+    // the later songTabReady publication binds the engine for it.
+    onSelectedTabChanged(m_workspace->selectedSongTab());
     updateTimeLabel();
     updatePolyStatus();
 
+    updateChrome();
     updateTransportActions();
+    syncMasterVolumeControl();
+    syncScaleControls();
+    updateWindowTitle();
 }
 
 MainWindow::~MainWindow()
 {
-    // WorkspaceUi owns pages; disconnect its activation signals before
-    // cancelling session requests and detaching those pages below.
-    if (m_workspace)
-        disconnect(m_workspace.get(), nullptr, this, nullptr);
     if (m_uiTimer)
         m_uiTimer->stop();
     if (m_playheadTimer)
         m_playheadTimer->stop();
-    // Invalidate every session callback before the GUI-owned sessions are
-    // destroyed; ProjectIo drops cancelled completions during shutdown.
-    for (const auto &session : m_sessions) {
-        if (session->pendingMidiRequest != 0)
-            m_projectIo->cancel(session->pendingMidiRequest);
-        if (session->pendingVgRequest != 0)
-            m_projectIo->cancel(session->pendingVgRequest);
-        if (session->pendingVgProbeRequest != 0)
-            m_projectIo->cancel(session->pendingVgProbeRequest);
-        if (session->pendingVgSaveRequest != 0)
-            m_projectIo->cancel(session->pendingVgSaveRequest);
-        if (session->pendingPreviewRequest != 0)
-            m_projectIo->cancel(session->pendingPreviewRequest);
-        if (session->pendingSaveRequest != 0)
-            m_projectIo->cancel(session->pendingSaveRequest);
-        if (session->pendingSidecarRequest != 0)
-            m_projectIo->cancel(session->pendingSidecarRequest);
-    }
-    for (const auto requestId :
-         {m_pendingCatalogRequest, m_pendingSampleSetRequest, m_pendingSampleProbeRequest,
-          m_pendingSampleProjectRequest, m_pendingSampleCommitRequest,
-          m_pendingRegistrationPlanRequest, m_pendingRegistrationRequest,
-          m_pendingDeletionPlanRequest, m_pendingDeletionRequest, m_pendingProjectRefreshRequest,
-          m_pendingCreateSongRequest, m_pendingCreateVoicegroupRequest}) {
-        if (requestId != 0)
-            m_projectIo->cancel(requestId);
-    }
-    if (m_workspace)
-        m_workspace->detachAllSessions();
-    // Stop the audio thread before the sessions free the timeline and
-    // voicegroup it borrows.
+    // Stop the audio thread first: the engine borrows the retained bank
+    // until shutdown() returns.
     m_audio.shutdown();
-    voicegroup_free_samples(m_sampleSet);
+    // Then release the retained lease, before the tabs and the shared-bank
+    // view cache release theirs.
+    m_selectedVoicegroup = {};
+    // Tab leases and the view cache die with the workspace...
+    m_workspace.reset();
+    // ...and the worker joins last: no GUI lease outlives Project I/O.
+    m_projectWorkspace.reset();
+}
+
+void MainWindow::restoreSession()
+{
+    // Startup restoration is ProjectWorkspace's one-shot now: its
+    // constructor queues the saved recipe's open (and, once it publishes
+    // Ready, the saved songs) for the next event-loop turn — right after
+    // this post-show hook runs, so the cover in showCoveredWhileRestoring
+    // hides only the first painted frame. Harnesses redirect QSettings
+    // before constructing MainWindow, so their recipe reads empty and no
+    // user session is inherited.
 }
 
 void MainWindow::buildUi()
@@ -283,26 +288,26 @@ void MainWindow::buildUi()
 
     // Menu
     QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
-    QAction *openAction =
-        fileMenu->addAction(tr("&Open Project..."), this, &MainWindow::openProject);
-    keys.attach(QStringLiteral("file.open_project"), openAction);
-    m_newSongAction = fileMenu->addAction(tr("&New Song..."), this, &MainWindow::newSong);
+    m_openProjectAction = fileMenu->addAction(tr("&Open Project..."), this,
+                                              [this] { m_workspace->requestProjectOpen(); });
+    keys.attach(QStringLiteral("file.open_project"), m_openProjectAction);
+    m_newSongAction =
+        fileMenu->addAction(tr("&New Song..."), this, [this] { m_workspace->runNewSongWizard(); });
     keys.attach(QStringLiteral("file.new_song"), m_newSongAction);
     m_newSongAction->setEnabled(false);
-    m_importAction = fileMenu->addAction(tr("&Import MIDI..."), this, &MainWindow::importMidi);
+    m_importAction =
+        fileMenu->addAction(tr("&Import MIDI..."), this, [this] { m_workspace->runMidiImport(); });
     keys.attach(QStringLiteral("file.import_midi"), m_importAction);
     m_importAction->setEnabled(false);
     m_saveAction = fileMenu->addAction(tr("&Save Song"), this, &MainWindow::saveSong);
     keys.attach(QStringLiteral("file.save_song"), m_saveAction);
     m_saveAction->setEnabled(false);
-    m_registerAction =
-        fileMenu->addAction(tr("Re&gister Song"), this, &MainWindow::registerLoadedSong);
+    m_registerAction = fileMenu->addAction(tr("Re&gister Song"), this,
+                                           [this] { m_workspace->registerSelectedSong(); });
     keys.attach(QStringLiteral("file.register_song"), m_registerAction);
     m_registerAction->setEnabled(false);
-    m_closeTabAction = fileMenu->addAction(tr("&Close Tab"), this, [this] {
-        if (m_active)
-            closeSession(*m_active);
-    });
+    m_closeTabAction = fileMenu->addAction(tr("&Close Tab"), this,
+                                           [this] { m_workspace->requestCloseSelectedTab(); });
     keys.attach(QStringLiteral("file.close_tab"), m_closeTabAction);
     m_closeTabAction->setEnabled(false);
     fileMenu->addSeparator();
@@ -314,13 +319,12 @@ void MainWindow::buildUi()
     keys.attach(QStringLiteral("file.quit"), quitAction);
 
     QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
-    m_undoGroup = new QUndoGroup(this);
-    QAction *undoAction = m_undoGroup->createUndoAction(this, tr("&Undo"));
-    keys.attach(QStringLiteral("edit.undo"), undoAction);
-    editMenu->addAction(undoAction);
-    QAction *redoAction = m_undoGroup->createRedoAction(this, tr("&Redo"));
-    keys.attach(QStringLiteral("edit.redo"), redoAction);
-    editMenu->addAction(redoAction);
+    m_undoAction = editMenu->addAction(tr("&Undo"), this, [this] { m_workspace->requestUndo(); });
+    keys.attach(QStringLiteral("edit.undo"), m_undoAction);
+    m_undoAction->setEnabled(false);
+    m_redoAction = editMenu->addAction(tr("&Redo"), this, [this] { m_workspace->requestRedo(); });
+    keys.attach(QStringLiteral("edit.redo"), m_redoAction);
+    m_redoAction->setEnabled(false);
     editMenu->addSeparator();
     m_copyAction = new QAction(tr("&Copy"), this);
     m_copyAction->setObjectName(QStringLiteral("copyWindowAction"));
@@ -339,14 +343,14 @@ void MainWindow::buildUi()
             textEdit->copy();
             return;
         }
-        if (m_active)
-            m_workspace->viewFor(*m_active).copySelection();
+        if (m_selectedTab)
+            m_selectedTab->view().copySelection();
     });
     editMenu->addAction(m_copyAction);
     m_copyAction->setEnabled(false);
     editMenu->addSeparator();
     QAction *preferencesAction = editMenu->addAction(tr("Prefere&nces..."), this, [this] {
-        openSettings(m_active ? SettingsDialog::Tab::Song : SettingsDialog::Tab::Engine);
+        openSettings(m_selectedTab ? SettingsDialog::Tab::Song : SettingsDialog::Tab::Engine);
     });
     preferencesAction->setMenuRole(QAction::PreferencesRole);
     keys.attach(QStringLiteral("edit.preferences"), preferencesAction);
@@ -368,10 +372,8 @@ void MainWindow::buildUi()
     m_eventListAction->setCheckable(true);
     keys.attach(QStringLiteral("view.event_list"), m_eventListAction);
     m_eventListAction->setEnabled(false);
-    connect(m_eventListAction, &QAction::toggled, this, [this](bool on) {
-        if (m_active)
-            m_workspace->viewFor(*m_active).setEventListVisible(on);
-    });
+    connect(m_eventListAction, &QAction::toggled, this,
+            [this](bool on) { m_workspace->setSelectedTabEventListVisible(on); });
 
     viewMenu->addSeparator();
     m_automationDrawerAction = viewMenu->addAction(tr("Automation Lanes"));
@@ -381,7 +383,7 @@ void MainWindow::buildUi()
     m_automationDrawerAction->setToolTip(tr("Show or hide automation lanes (A)"));
     m_automationDrawerAction->setEnabled(false);
     connect(m_automationDrawerAction, &QAction::triggered, this,
-            [this] { toggleDrawerPage(/*automation=*/true); });
+            [this] { m_workspace->toggleDrawerPage(/*automation=*/true); });
     m_velocityDrawerAction = viewMenu->addAction(tr("Velocity Lane"));
     m_velocityDrawerAction->setObjectName(QStringLiteral("velocityDrawerWindowAction"));
     m_velocityDrawerAction->setShortcut(QKeySequence(Qt::Key_V));
@@ -389,12 +391,12 @@ void MainWindow::buildUi()
     m_velocityDrawerAction->setToolTip(tr("Show or hide note velocities (V)"));
     m_velocityDrawerAction->setEnabled(false);
     connect(m_velocityDrawerAction, &QAction::triggered, this,
-            [this] { toggleDrawerPage(/*automation=*/false); });
+            [this] { m_workspace->toggleDrawerPage(/*automation=*/false); });
 
     // Tools menu: project-level utilities that aren't song-scoped.
     QMenu *toolsMenu = menuBar()->addMenu(tr("&Tools"));
-    m_importSampleAction =
-        toolsMenu->addAction(tr("Import &Sample..."), this, &MainWindow::importSample);
+    m_importSampleAction = toolsMenu->addAction(tr("Import &Sample..."), this,
+                                                [this] { m_workspace->importSample(); });
     keys.attach(QStringLiteral("tools.import_sample"), m_importSampleAction);
     m_importSampleAction->setEnabled(false);
 
@@ -445,9 +447,26 @@ void MainWindow::buildUi()
         m_audio.setResonanceSuppression(resonanceSuppression);
         m_workspace->setTransportResonanceSuppression(resonanceSuppression);
     }
+    m_workspace->bindFindSongShortcut(keys);
+
+    // WorkspaceUi → MainWindow: transport intents, chrome state, and the
+    // selected-tab stream that drives the audio handoff.
+    connect(m_workspace.get(), &WorkspaceUi::selectedSongTabChanged, this,
+            &MainWindow::onSelectedTabChanged);
+    connect(m_workspace.get(), &WorkspaceUi::songTabReady, this, &MainWindow::onSelectedTabReady);
+    connect(m_workspace.get(), &WorkspaceUi::selectedSongStateChanged, this,
+            &MainWindow::onSelectedSongStateChanged);
+    connect(m_workspace.get(), &WorkspaceUi::bankActionsChanged, this,
+            [this](bool) { updateChrome(); });
+    connect(m_workspace.get(), &WorkspaceUi::openProjectEnabledChanged, this,
+            [this](bool enabled) { m_openProjectAction->setEnabled(enabled); });
+    connect(m_workspace.get(), &WorkspaceUi::statusMessageRequested, this,
+            [this](const QString &message, int timeout) {
+                statusBar()->showMessage(message, timeout);
+            });
     connect(m_workspace.get(), &WorkspaceUi::goToStartRequested, this, [this] {
-        if (m_active)
-            m_workspace->viewFor(*m_active).goToStart();
+        if (m_selectedTab)
+            m_selectedTab->view().goToStart();
     });
     connect(m_workspace.get(), &WorkspaceUi::playRequested, this, [this] { startPlayback(); });
     connect(m_workspace.get(), &WorkspaceUi::playPauseRequested, this, [this] {
@@ -460,6 +479,10 @@ void MainWindow::buildUi()
     connect(m_workspace.get(), &WorkspaceUi::stopRequested, this, [this] { stopPlayback(); });
     connect(m_workspace.get(), &WorkspaceUi::loopEnabledChanged, this,
             [this](bool enabled) { m_audio.setLoopEnabled(enabled); });
+    connect(m_workspace.get(), &WorkspaceUi::followPlayheadChanged, this, [this](bool enabled) {
+        QSettings settings;
+        settings.setValue(kFollowPlayheadKey, enabled);
+    });
     connect(m_workspace.get(), &WorkspaceUi::resonanceSuppressionChanged, this,
             [this](bool enabled) {
                 QSettings settings;
@@ -472,63 +495,78 @@ void MainWindow::buildUi()
         settings.setValue(kOutputVolumeKey, m_audio.outputVolume());
     });
     connect(m_workspace.get(), &WorkspaceUi::masterVolumeChanged, this, [this](int value) {
-        if (!m_active || m_active->doc.cfg().masterVolume == value)
+        if (!m_selectedTab || !m_selectedTab->isReady() ||
+            m_selectedTab->document().cfg().masterVolume == value)
             return;
-        SongCfg cfg = m_active->doc.cfg();
+        SongCfg cfg = m_selectedTab->document().cfg();
         cfg.masterVolume = value;
-        m_active->doc.setCfg(cfg);
+        m_selectedTab->document().setCfg(cfg);
     });
     connect(m_workspace.get(), &WorkspaceUi::scaleRootChanged, this, [this](int root) {
-        if (m_active)
-            m_workspace->viewFor(*m_active).setScaleRoot(root);
+        if (m_selectedTab)
+            m_selectedTab->view().setScaleRoot(root);
     });
     connect(m_workspace.get(), &WorkspaceUi::scaleIdChanged, this,
             [this](porydaw_scale::ScaleId scale) {
-                if (m_active)
-                    m_workspace->viewFor(*m_active).setScaleId(scale);
+                if (m_selectedTab)
+                    m_selectedTab->view().setScaleId(scale);
             });
     connect(m_workspace.get(), &WorkspaceUi::scaleHighlightChanged, this, [this](bool enabled) {
-        if (m_active)
-            m_workspace->viewFor(*m_active).setScaleHighlight(enabled);
+        if (m_selectedTab)
+            m_selectedTab->view().setScaleHighlight(enabled);
     });
     connect(m_workspace.get(), &WorkspaceUi::scaleFoldChanged, this, [this](bool enabled) {
-        if (m_active)
-            m_workspace->viewFor(*m_active).setScaleFold(enabled);
+        if (m_selectedTab)
+            m_selectedTab->view().setScaleFold(enabled);
+    });
+    connect(m_workspace.get(), &WorkspaceUi::selectedTabMuteMaskChanged, this,
+            [this](uint32_t mask) { m_audio.setMuteMask(mask); });
+    connect(m_workspace.get(), &WorkspaceUi::selectedTabSoloMaskChanged, this,
+            [this](uint32_t mask) { m_audio.setSoloMask(mask); });
+    connect(m_workspace.get(), &WorkspaceUi::selectedTabEventListChanged, this, [this](bool) {
+        const QSignalBlocker blocker(m_eventListAction);
+        m_eventListAction->setChecked(m_selectedTab && m_selectedTab->view().eventListVisible());
+        updateChrome();
+    });
+    connect(m_workspace.get(), &WorkspaceUi::editorDrawerStateEdited, this,
+            &MainWindow::setEditorDrawerState);
+    connect(m_workspace.get(), &WorkspaceUi::editCursorSeekRequested, this, [this](uint64_t tick) {
+        if (!m_audioOk || !m_audio.songLoaded() || m_audio.transport() == Transport::Stopped)
+            return;
+        const uint64_t target = m_audio.timeline()->sampleForTick(tick);
+        m_audio.seek(target);
+        if (m_selectedTab)
+            m_selectedTab->view().setPlayheadSample(target,
+                                                    m_audio.transport() == Transport::Playing);
+    });
+    connect(m_workspace.get(), &WorkspaceUi::playPauseFromRequested, this, [this](uint64_t tick) {
+        if (!m_selectedTab)
+            return;
+        if (m_audioOk && m_audio.transport() == Transport::Playing) {
+            m_workspace->triggerPlayPause();
+            m_selectedTab->view().commitEditCursor(tick);
+            return;
+        }
+        m_selectedTab->view().commitEditCursor(tick);
+        m_workspace->triggerPlayPause();
     });
 
-    connect(m_workspace.get(), &WorkspaceUi::songActivated, this, &MainWindow::songActivated);
-    connect(m_workspace.get(), &WorkspaceUi::songOpenInNewTabRequested, this,
-            &MainWindow::songOpenInNewTab);
-    connect(m_workspace.get(), &WorkspaceUi::songRegisterRequested, this,
-            &MainWindow::registerSongById);
-    connect(m_workspace.get(), &WorkspaceUi::songDeleteRequested, this,
-            &MainWindow::deleteSongById);
-    m_workspace->bindFindSongShortcut(keys);
-
-    connect(m_workspace.get(), &WorkspaceUi::auditionVoiceRequested, this,
-            [this](int voice, int key, int velocity) {
-                if (m_audioOk)
-                    m_audio.previewVoice(uint8_t(voice), uint8_t(key), uint8_t(velocity));
+    // Audition intents are copied values; every engine call stays here.
+    connect(m_workspace.get(), &WorkspaceUi::auditionNoteRequested, this,
+            [this](uint8_t track, uint8_t key, uint8_t velocity) {
+                if (m_audioOk && m_audio.songLoaded())
+                    m_audio.previewNote(track, key, velocity);
             });
-    connect(m_workspace.get(), &WorkspaceUi::voiceEditRequested, this,
-            &MainWindow::onVoiceEditRequested);
-    connect(m_workspace.get(), &WorkspaceUi::newVoicegroupRequested, this,
-            &MainWindow::newVoicegroup);
-    connect(m_workspace.get(), &WorkspaceUi::newSampleRequested, this,
-            &MainWindow::importSampleForSlot);
-    connect(m_workspace.get(), &WorkspaceUi::editSampleRequested, this,
-            &MainWindow::editSampleForSlot);
-    m_workspace->setVoicegroupSampleInfoProvider([this](const QString &symbol) {
-        SamplePickInfo info;
-        const WaveData *wd = sampleWaveFor(symbol);
-        if (!wd || !wd->data || wd->size == 0)
-            return info;
-        info.known = true;
-        info.looped = (wd->status & 0x4000) != 0;
-        info.rateHz = int(wd->freq / 1024);
-        info.seconds = info.rateHz > 0 ? double(wd->size) / info.rateHz : 0.0;
-        return info;
-    });
+    connect(m_workspace.get(), &WorkspaceUi::auditionNoteTimedRequested, this,
+            [this](uint8_t track, uint8_t key, uint8_t velocity, uint32_t durationSamples) {
+                if (m_audioOk && m_audio.songLoaded())
+                    m_audio.previewNoteTimed(track, key, velocity, durationSamples);
+            });
+    connect(m_workspace.get(), &WorkspaceUi::auditionVoiceRequested, this,
+            [this](uint8_t voice, uint8_t key, uint8_t velocity) {
+                if (m_audioOk)
+                    m_audio.previewVoice(voice, key, velocity);
+            });
     connect(
         m_workspace.get(), &WorkspaceUi::sampleAuditionRequested, this,
         [this](const QString &symbol, VgAuditionKind kind, const AuditionSlots::Adsr &adsr) {
@@ -539,9 +577,7 @@ void MainWindow::buildUi()
                 return;
             }
             if (kind == VgAuditionKind::Wave) {
-                ensureSampleSet();
-                const uint32_t *pw = m_progWaves.value(symbol, nullptr);
-                if (pw)
+                if (const uint32_t *pw = progWaveFor(symbol))
                     m_audio.auditionWave(
                         QByteArray::fromRawData(reinterpret_cast<const char *>(pw), 16), 60, adsr);
                 return;
@@ -557,39 +593,7 @@ void MainWindow::buildUi()
         if (m_audioOk)
             m_audio.auditionSampleOff();
     });
-    connect(m_workspace.get(), &WorkspaceUi::voicegroupChangeRequested, this,
-            [this](const QString &arg) {
-                if (!m_active)
-                    return;
-                SongCfg cfg = m_active->doc.cfg();
-                if (arg == cfg.voicegroupArg ||
-                    (cfg.voicegroupArg.isEmpty() && arg == QLatin1String("_dummy"))) {
-                    return;
-                }
-                cfg.voicegroupArg = arg;
-                m_active->doc.setCfg(cfg);
-            });
 
-    connect(m_workspace.get(), &WorkspaceUi::activeSessionChanged, this,
-            [this](SongSession *session) {
-                if (m_tearingDown || m_restoringSession)
-                    return;
-                activateSession(session);
-                syncScaleControls(session);
-            });
-    connect(m_workspace.get(), &WorkspaceUi::closeSessionRequested, this,
-            [this](SongSession *session) {
-                Q_ASSERT(session);
-                if (!session)
-                    qFatal("MainWindow: workspace requested a null session close");
-                closeSession(*session);
-            });
-    connect(m_workspace.get(), &WorkspaceUi::sessionsReordered, this,
-            [this] { persistOpenTabs(); });
-    connect(m_workspace.get(), &WorkspaceUi::followPlayheadChanged, this, [this](bool enabled) {
-        QSettings settings;
-        settings.setValue(kFollowPlayheadKey, enabled);
-    });
     // Polyphony overflow debugger dock (SPEC §6.1): hidden by default (it's
     // a diagnostic tool); closable, with a View-menu toggle. The saved
     // window state restores visibility/placement on later runs.
@@ -613,13 +617,13 @@ void MainWindow::buildUi()
     });
     connect(m_polyPanel, &PolyphonyPanel::jumpToEvent, this,
             [this](uint64_t tick, int track, int midiKey) {
-                // commitEditCursor's editCursorMoved connect already seeks
-                // the engine while playing/paused; when stopped, playback
-                // starts from the edit cursor. revealNote selects the losing
-                // track and the lost note itself.
-                if (!m_active)
+                // editCursorMoved's seek (above) already follows the cursor
+                // while playing/paused; when stopped, playback starts from
+                // the edit cursor. revealNote selects the losing track and
+                // the lost note itself.
+                if (!m_selectedTab)
                     return;
-                SongView &view = m_workspace->viewFor(*m_active);
+                SongView &view = m_selectedTab->view();
                 view.revealNote(track, uint8_t(midiKey), tick);
                 view.commitEditCursor(tick);
                 view.ensureTickVisible(tick);
@@ -632,7 +636,7 @@ void MainWindow::buildUi()
     polyDockAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+P")));
     viewMenu->addAction(polyDockAction);
 
-    // App-wide appearance preferences, set off by a separator from the
+    // App-wide appearance preferences, set off a separator from the
     // per-song view state above: the theme, the typeface, and the
     // velocity-hue note fills all persist in QSettings and apply to every
     // open tab at once.
@@ -777,458 +781,221 @@ void MainWindow::changeEvent(QEvent *event)
     }
 }
 
-SongSession *MainWindow::sessionForLabel(const QString &label) const
-{
-    for (const auto &session : m_sessions) {
-        QString sessionLabel = session->midiBound ? session->doc.label() : QString();
-        if (sessionLabel.isEmpty() && m_workspace->isSessionAttached(*session))
-            sessionLabel = m_workspace->sessionTitle(*session);
-        if (sessionLabel.endsWith(QLatin1Char('*')))
-            sessionLabel.chop(1);
-        if (sessionLabel == label)
-            return session.get();
-    }
-    return nullptr;
-}
-SongSession *MainWindow::createSession()
-{
-    auto owned = std::make_unique<SongSession>();
-    SongSession *s = owned.get();
+// ---- Selected-tab audio handoff ---------------------------------------------
 
-    connect(&s->doc, &SongDocument::documentChanged, this, [this, s] { onDocumentChanged(*s); });
-    connect(s->doc.undoStack(), &QUndoStack::cleanChanged, this, [this, s](bool) {
-        if (!m_workspace->isSessionAttached(*s))
-            return;
-        updateTabTitle(*s);
-        if (s == m_active)
-            updateWindowTitle();
-    });
-    m_undoGroup->addStack(s->doc.undoStack());
-    m_sessions.push_back(std::move(owned));
-    return s;
-}
-
-void MainWindow::wireSongView(SongSession &session, SongView &view)
+void MainWindow::onSelectedTabChanged(SongTab *tab)
 {
-    SongSession *const sourceSession = &session;
-    connect(&view, &SongView::auditionNote, this,
-            [this, sourceSession](int track, int key, int velocity) {
-                if (sourceSession == m_active && m_audioOk && m_audio.songLoaded())
-                    m_audio.previewNote(uint8_t(track), uint8_t(key), uint8_t(velocity));
-            });
-    connect(&view, &SongView::auditionNoteTimed, this,
-            [this, sourceSession](int track, int key, int velocity, quint32 durationSamples) {
-                if (sourceSession == m_active && m_audioOk && m_audio.songLoaded()) {
-                    m_audio.previewNoteTimed(uint8_t(track), uint8_t(key), uint8_t(velocity),
-                                             durationSamples);
-                }
-            });
-    connect(&view, &SongView::auditionVoice, this,
-            [this, sourceSession](int voice, int key, int velocity) {
-                if (sourceSession == m_active && m_audioOk)
-                    m_audio.previewVoice(uint8_t(voice), uint8_t(key), uint8_t(velocity));
-            });
-    connect(&view, &SongView::statusMessage, this, [this, sourceSession](const QString &message) {
-        if (sourceSession == m_active)
-            statusBar()->showMessage(message, 6000);
-    });
-    connect(&view, &SongView::editCursorMoved, this, [this, sourceSession](uint64_t tick) {
-        if (sourceSession != m_active || !m_audioOk || !m_audio.songLoaded() ||
-            m_audio.transport() == Transport::Stopped) {
-            return;
-        }
-        const uint64_t targetSample = m_audio.timeline()->sampleForTick(tick);
-        m_audio.seek(targetSample);
-        m_workspace->viewFor(*sourceSession)
-            .setPlayheadSample(targetSample, m_audio.transport() == Transport::Playing);
-    });
-    connect(&view, &SongView::playPauseFromRequested, this, [this, sourceSession](uint64_t tick) {
-        if (sourceSession != m_active)
-            return;
-        if (m_audio.transport() == Transport::Playing) {
-            m_workspace->triggerPlayPause();
-            m_workspace->viewFor(*sourceSession).commitEditCursor(tick);
-            return;
-        }
-        m_workspace->viewFor(*sourceSession).commitEditCursor(tick);
-        m_workspace->triggerPlayPause();
-    });
-    connect(&view, &SongView::revealVoiceRequested, this, [this, sourceSession](int program) {
-        if (sourceSession != m_active)
-            return;
-        m_workspace->showVoicegroupPanel();
-        m_workspace->revealVoicegroupSlot(program);
-    });
-    connect(&view, &SongView::eventListVisibilityChanged, this,
-            [this, sourceSession](bool visible) {
-                if (sourceSession != m_active)
-                    return;
-                const QSignalBlocker blocker(m_eventListAction);
-                m_eventListAction->setChecked(visible);
-                updateDrawerActions();
-            });
-    connect(&view, &SongView::editorDrawerStateChanged, this,
-            [this](const EditorDrawerState &state) { setEditorDrawerState(state); });
-    connect(&view, &SongView::muteMaskChanged, this, [this, sourceSession](uint32_t mask) {
-        if (sourceSession == m_active)
-            m_audio.setMuteMask(mask);
-    });
-    connect(&view, &SongView::soloMaskChanged, this, [this, sourceSession](uint32_t mask) {
-        if (sourceSession == m_active)
-            m_audio.setSoloMask(mask);
-    });
-    const auto syncScaleState = [this, sourceSession] {
-        if (sourceSession == m_active)
-            syncScaleControls(sourceSession);
-    };
-    connect(&view, &SongView::scaleHighlightChanged, this, syncScaleState);
-    connect(&view, &SongView::scaleFoldChanged, this, syncScaleState);
-    connect(&view, &SongView::scaleRootChanged, this, syncScaleState);
-    connect(&view, &SongView::scaleIdChanged, this, syncScaleState);
-}
-
-void MainWindow::closeSession(SongSession &session)
-{
-    SongSession *const sessionPtr = &session;
-    maybeSaveSession(session, [this, sessionPtr](bool succeeded) {
-        if (!succeeded)
-            return;
-        const bool live = std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                                      [sessionPtr](const std::unique_ptr<SongSession> &candidate) {
-                                          return candidate.get() == sessionPtr;
-                                      });
-        if (!live)
-            return;
-        saveViewState(*sessionPtr);
-        destroySession(sessionPtr);
-        persistOpenTabs();
-    });
-}
-
-void MainWindow::destroySession(SongSession *session)
-{
-    if (!session)
-        return;
-    if (session->pendingMidiRequest != 0) {
-        m_projectIo->cancel(session->pendingMidiRequest);
-        session->pendingMidiRequest = 0;
-    }
-    if (session->pendingVgRequest != 0) {
-        m_projectIo->cancel(session->pendingVgRequest);
-        session->pendingVgRequest = 0;
-    }
-    if (session->pendingVgProbeRequest != 0) {
-        m_projectIo->cancel(session->pendingVgProbeRequest);
-        session->pendingVgProbeRequest = 0;
-    }
-    if (session->pendingVgSaveRequest != 0) {
-        m_projectIo->cancel(session->pendingVgSaveRequest);
-        session->pendingVgSaveRequest = 0;
-    }
-    if (session->pendingPreviewRequest != 0) {
-        m_projectIo->cancel(session->pendingPreviewRequest);
-        session->pendingPreviewRequest = 0;
-    }
-    if (session->pendingSaveRequest != 0) {
-        m_projectIo->cancel(session->pendingSaveRequest);
-        session->pendingSaveRequest = 0;
-    }
-    if (session->pendingSidecarRequest != 0) {
-        m_projectIo->cancel(session->pendingSidecarRequest);
-        session->pendingSidecarRequest = 0;
-    }
-    m_workspace->detachSession(*session);
-    // Detaching the current tab may activate a neighbor through WorkspaceUi;
-    // clear the engine only when no such activation occurred.
-    if (m_active == session)
-        activateSession(nullptr);
-    std::erase_if(m_sessions, [session](const std::unique_ptr<SongSession> &candidate) {
-        return candidate.get() == session;
-    });
-}
-void MainWindow::promptToSaveAllSessions(SessionContinuation continuation)
-{
-    auto sessions = std::make_shared<std::vector<SongSession *>>();
-    sessions->reserve(m_sessions.size());
-    for (const auto &session : m_sessions)
-        sessions->push_back(session.get());
-    auto completion = std::make_shared<SessionContinuation>(std::move(continuation));
-    auto next = std::make_shared<std::function<void(size_t)>>();
-    const std::weak_ptr<std::function<void(size_t)>> weakNext = next;
-    *next = [this, sessions, completion, weakNext](size_t index) {
-        const auto isLive = [this](SongSession *candidate) {
-            return candidate && std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                                            [candidate](const std::unique_ptr<SongSession> &owned) {
-                                                return owned.get() == candidate;
-                                            });
-        };
-        if (index >= sessions->size()) {
-            if (*completion)
-                (*completion)(true);
-            return;
-        }
-        SongSession *session = sessions->at(index);
-        if (!isLive(session)) {
-            if (*completion)
-                (*completion)(false);
-            return;
-        }
-        maybeSaveSession(*session, [this, sessions, completion, weakNext, session, index,
-                                    isLive](bool succeeded) {
-            if (!succeeded || !isLive(session)) {
-                if (*completion)
-                    (*completion)(false);
-                return;
-            }
-            if (const auto next = weakNext.lock())
-                (*next)(index + 1);
-        });
-    };
-    (*next)(0);
-}
-
-void MainWindow::teardownSessions()
-{
-    m_tearingDown = true;
-    const auto cancel = [this](uint64_t &requestId) {
-        if (requestId == 0)
-            return;
-        m_projectIo->cancel(requestId);
-        requestId = 0;
-    };
-    for (const auto &session : m_sessions) {
-        cancel(session->pendingMidiRequest);
-        cancel(session->pendingVgRequest);
-        cancel(session->pendingVgProbeRequest);
-        cancel(session->pendingVgSaveRequest);
-        cancel(session->pendingPreviewRequest);
-        cancel(session->pendingSaveRequest);
-        cancel(session->pendingSidecarRequest);
-    }
-    // One engine/dock detach up front; WorkspaceUi then deletes every page
-    // without rebinding the doomed sessions.
-    activateSession(nullptr, /*force=*/true);
-    m_workspace->detachAllSessions();
-    m_sessions.clear();
-    m_tearingDown = false;
-}
-
-void MainWindow::activateSession(SongSession *session, bool force)
-{
-    if (session == m_active && !force)
-        return;
-    const SongSession *previous = m_active;
     // Switching tabs stops playback in the tab being left.
     if (m_audioOk)
         m_audio.stop();
-    m_active = session;
-    m_workspace->activateSession(session);
-    const bool ready = session && session->isInteractive();
-    m_undoGroup->setActiveStack(ready ? session->doc.undoStack() : nullptr);
-    syncMasterVolumeControl();
-    syncScaleControls(session);
+    m_selectedTab = tab;
 
-    m_saveAction->setEnabled(ready);
-    m_exportWavAction->setEnabled(ready);
-    m_settingsAction->setEnabled(ready);
-    m_closeTabAction->setEnabled(session != nullptr);
-    m_eventListAction->setEnabled(ready);
-    m_copyAction->setEnabled(ready);
     {
         // Reflect the incoming tab's roll/event-list state without the
         // checkbox driving a redundant toggle.
-        QSignalBlocker blocker(m_eventListAction);
-        const bool eventListVisible = ready && m_workspace->viewFor(*session).eventListVisible();
-        m_eventListAction->setChecked(eventListVisible);
+        const QSignalBlocker blocker(m_eventListAction);
+        m_eventListAction->setChecked(tab && tab->isReady() && tab->view().eventListVisible());
     }
-    updateDrawerActions();
 
-    if (!session) {
+    if (!tab || !tab->isReady() || !tab->voicegroupLease()) {
+        // Null or still-loading selection: unload the engine before the
+        // retained lease is released — the engine borrows that bank until
+        // unloadSong returns, and a tab awaiting VoicegroupBound has no
+        // bank to bind yet.
         if (m_audioOk)
             m_audio.unloadSong();
+        m_selectedVoicegroup = {};
+        m_appliedTimeline = nullptr;
+        m_appliedSettings.reset();
         m_polyPanel->clearSession();
-        m_workspace->clearVoicegroupPresentation();
-        updateVgDockTitle();
-        m_registerAction->setEnabled(false);
-        m_workspace->setTransportSongName(QString());
+        m_workspace->setTransportSongName(tab ? tab->name().value() : QString());
         updateTimeLabel();
         updatePolyStatus();
-        m_workspace->setCurrentSong(-1);
+        syncScaleControls();
         updateWindowTitle();
+        updateChrome();
         updateTransportActions();
-        persistOpenTabs();
         synchronizePlayhead();
         return;
     }
 
-    if (!ready) {
-        if (m_audioOk)
-            m_audio.unloadSong();
-        m_polyPanel->clearSession();
-        if (session->vgBound && session->voicegroup)
-            updateVoicegroupBrowser();
-        else
-            m_workspace->clearVoicegroupPresentation();
-        updateVgDockTitle();
-        m_registerAction->setEnabled(false);
-        m_workspace->setTransportSongName(m_workspace->sessionTitle(*session));
-        m_workspace->setCurrentSong(session->songId);
-        updateWindowTitle();
-        updateTransportActions();
-        persistOpenTabs();
-        synchronizePlayhead();
-        return;
-    }
+    onSelectedTabReady(tab);
+    m_selectedTab->view().focusActiveSurface();
+}
 
-    // Only on a genuine switch: while re-binding the same session (force),
-    // the engine may still borrow this session's voicegroup, which the
-    // refresh would free.
-    if (session != previous)
-        maybeRefreshVoicegroup(*session);
-    if (m_audioOk && session->timeline && session->voicegroup)
-        attachEngine(*session);
-    m_workspace->viewFor(*session).setEnabled(true);
-    synchronizePlayhead();
-    updateVoicegroupBrowser();
-    updatePolyPanelContext(session);
+void MainWindow::onSelectedTabReady(SongTab *tab)
+{
+    if (tab != m_selectedTab)
+        return;
+    // The selected tab's terminal VoicegroupBound just landed (or the
+    // selection moved to an already-ready tab): bind the engine, then
+    // refresh the chrome that reads loaded state.
+    applySelectedAudio();
+    m_workspace->setTransportSongName(tab->document().label());
+    updatePolyPanelContext(tab);
+    syncMasterVolumeControl();
+    syncScaleControls();
     updateTimeLabel();
     updatePolyStatus();
-
-    // Register Song stays available while ANY registration file lacks (or
-    // mis-states) the song's line — not only for unregistered strays. A song
-    // registered before porydaw wrote charmap.txt entries reads as registered
-    // from the song table, but still needs a re-register to backfill.
-    bool complete = true;
-    if (session->songId >= 0 && session->songId < m_project.songs().size())
-        complete = m_project.songs().at(session->songId).registrationGaps.isEmpty();
-    m_registerAction->setEnabled(!complete);
-    m_workspace->setTransportSongName(session->doc.label());
-    m_workspace->setCurrentSong(session->songId);
+    synchronizePlayhead();
     updateWindowTitle();
+    updateChrome();
     updateTransportActions();
-    m_workspace->viewFor(*session).focusActiveSurface();
-    persistOpenTabs();
 }
 
-void MainWindow::attachEngine(SongSession &session)
+void MainWindow::onSelectedSongStateChanged()
 {
-    m_audio.loadSong(session.timeline, session.voicegroup, songSettingsFor(session));
-    // loadSong resets the engine's masks; the view remembers the tab's.
-    SongView &view = m_workspace->viewFor(session);
-    m_audio.setMuteMask(view.muteMask());
-    m_audio.setSoloMask(view.soloMask());
+    refreshSelectedAudio();
+    updateWindowTitle();
+    updateChrome();
+    syncMasterVolumeControl();
+    updateTransportActions();
 }
 
-void MainWindow::updatePolyPanelContext(SongSession *session)
+void MainWindow::applySelectedAudio()
 {
-    if (!session || !session->isInteractive()) {
+    SongTab *const tab = m_selectedTab;
+    Q_ASSERT(tab && tab->isReady() && tab->voicegroupLease());
+    if (!tab || !tab->isReady() || !tab->voicegroupLease())
+        return;
+    // Cold bind: the engine shares the tab's timeline and borrows the bank
+    // for exactly as long as the retained lease below keeps it alive.
+    const VoicegroupLease lease = tab->voicegroupLease();
+    const SongSettings settings = songSettingsFor(*tab);
+    m_audio.loadSong(tab->timeline(), lease, settings);
+    m_selectedVoicegroup = lease;
+    m_appliedTimeline = tab->timeline().get();
+    m_appliedSettings = settings;
+    // loadSong resets the engine's masks; the tab's view remembers them.
+    m_audio.setMuteMask(tab->view().muteMask());
+    m_audio.setSoloMask(tab->view().soloMask());
+}
+
+void MainWindow::refreshSelectedAudio()
+{
+    SongTab *const tab = m_selectedTab;
+    if (!m_audioOk || !tab || !tab->isReady() || !tab->voicegroupLease())
+        return;
+
+    const VoicegroupLease lease = tab->voicegroupLease();
+    const bool bankChanged = lease.get() != m_selectedVoicegroup.get();
+    if (bankChanged) {
+        // Cold swap: cuts all sound. The engine drops the old borrow before
+        // the assignment releases the retained lease.
+        m_audio.updateVoicegroup(lease);
+        m_selectedVoicegroup = lease;
+    }
+    const bool timelineChanged = tab->timeline().get() != m_appliedTimeline;
+    if (timelineChanged) {
+        // Hot: publishes the rebuilt timeline for the next audio callback.
+        m_audio.updateTimeline(tab->timeline());
+        m_appliedTimeline = tab->timeline().get();
+    }
+    const SongSettings settings = songSettingsFor(*tab);
+    if (!m_appliedSettings || !sameSongSettings(*m_appliedSettings, settings)) {
+        m_audio.updateSettings(settings);
+        m_appliedSettings = settings;
+    }
+    if (bankChanged || timelineChanged)
+        updatePolyPanelContext(tab); // track and voice names follow the bank
+}
+
+void MainWindow::updatePolyPanelContext(SongTab *tab)
+{
+    if (!tab || !tab->isReady()) {
         m_polyPanel->clearSession();
         return;
     }
-    m_polyPanel->setTimeline(session->timeline.get());
+    m_polyPanel->setTimeline(tab->timeline().get());
     QStringList trackNames;
     for (int t = 0; t < MAX_TRACKS; t++)
-        trackNames.append(session->doc.trackName(t));
+        trackNames.append(tab->document().trackName(t));
     m_polyPanel->setTrackNames(trackNames);
-    // Copied out so a voicegroup swap can't leave the panel with a dangling
-    // pointer.
+    // Copied out so a bank swap can't leave the panel reading a bank that is
+    // being replaced.
     QStringList voiceNames;
-    if (session->voicegroup) {
+    if (const VoicegroupLease lease = tab->voicegroupLease()) {
         for (int v = 0; v < VOICEGROUP_SIZE; v++)
-            voiceNames.append(QString::fromLatin1(session->voicegroup->voiceNames[v]));
+            voiceNames.append(QString::fromLatin1(lease->voiceNames[v]));
     }
     m_polyPanel->setVoiceNames(voiceNames);
 }
 
-void MainWindow::maybeRefreshVoicegroup(SongSession &session)
+SongSettings MainWindow::songSettingsFor(const SongTab &tab) const
 {
-    if (!session.midiBound || !session.vgBound || !session.vgSource || session.vgSource->dirty())
-        return;
-    // Metadata and the possible reload are both worker operations. The
-    // cached stamp remains authoritative until the probe completes.
-    queueVoicegroupProbe(session);
+    const SongCfg &cfg = tab.document().cfg();
+    SongSettings settings;
+    settings.songVolume = uint8_t(cfg.masterVolume);
+    settings.reverb = uint8_t(cfg.reverb >= 0 ? cfg.reverb : SongCfg::kDefaultReverb);
+    settings.pcmMixer = m_engineSettings.pcmMixer;
+    settings.maxPcmChannels = uint8_t(m_engineSettings.maxPcmChannels);
+    settings.pcmMixRate = m_engineSettings.pcmMixRate;
+    settings.analogFilter = m_engineSettings.analogFilter;
+    return settings;
 }
 
-void MainWindow::refreshSessionsAfterVgSave(const QString &filePath, SongSession *except)
+// ---- Browse auditions ---------------------------------------------------------
+
+const WaveData *MainWindow::sampleWaveFor(const QString &symbol) const
 {
-    for (const auto &owned : m_sessions) {
-        SongSession *session = owned.get();
-        if (session == except || !session->midiBound || !session->vgBound || !session->vgSource ||
-            session->vgSource->filePath() != filePath || session->vgSource->dirty())
-            continue;
-        const int keepSlot = session == m_active ? m_workspace->currentVoicegroupSlot() : 0;
-        queueVoicegroupLoad(*session, session->doc.cfg(), keepSlot);
+    const SampleSetLease &set = m_workspace->sampleSet();
+    if (!set)
+        return nullptr;
+    const int index =
+        sampleSetIndex(m_workspace->projectState().catalog.directSound, set->count, symbol);
+    return index < 0 ? nullptr : set->waves[index];
+}
+
+const uint32_t *MainWindow::progWaveFor(const QString &symbol) const
+{
+    const SampleSetLease &set = m_workspace->sampleSet();
+    if (!set)
+        return nullptr;
+    const int index =
+        sampleSetIndex(m_workspace->projectState().catalog.progWave, set->progWaveCount, symbol);
+    return index < 0 ? nullptr : set->progWaves[index];
+}
+
+const LoadedKeysplit *MainWindow::keysplitFor(const QString &symbol) const
+{
+    const SampleSetLease &set = m_workspace->sampleSet();
+    if (!set)
+        return nullptr;
+    const auto &pairs = m_workspace->projectState().catalog.keysplits;
+    for (int i = 0; i < pairs.size() && i < set->keysplitCount; i++) {
+        if (pairs.at(i).first == symbol && set->keysplits[i].subGroup && set->keysplits[i].table)
+            return &set->keysplits[i];
     }
+    return nullptr;
 }
 
-void MainWindow::persistOpenTabs()
+void MainWindow::auditionKeysplit(const QString &symbol)
 {
-    // Never persist mid-teardown: during a project switch the settings
-    // already point at the NEW project, and the dying tabs' labels would
-    // be recorded against it if a crash landed in this window.
-    if (m_tearingDown || !m_persistSession || !m_project.isOpen())
+    const LoadedKeysplit *const keysplit = keysplitFor(symbol);
+    if (!keysplit)
         return;
-    QSettings settings;
-    QStringList labels;
-    for (SongSession *session : m_workspace->sessionsInDisplayOrder())
-        labels << session->doc.label();
-    if (labels.isEmpty()) {
-        settings.remove(kLastOpenSongsKey);
-        settings.remove(kLastSongLabelKey);
-        return;
+    const uint8_t idx = keysplit->table[60];
+    if (idx >= VOICEGROUP_SIZE)
+        return; // old-style overflow index: nothing loaded to play
+    const ToneData &sub = keysplit->subGroup[idx];
+    if (sub.type & (VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL))
+        return; // nested split: the engine refuses these too
+    const AuditionSlots::Adsr adsr{sub.attack, sub.decay, sub.sustain, sub.release};
+    const int cgbType = sub.type & 0x07;
+    if (cgbType == 0 && sub.wav && sub.wav->data && sub.wav->size > 0) {
+        m_audio.auditionSample(
+            QByteArray::fromRawData(reinterpret_cast<const char *>(sub.wav->data),
+                                    int(sub.wav->size)),
+            sub.wav->freq, sub.wav->loopStart, (sub.wav->status & 0x4000) != 0, 60, adsr, sub.key);
+    } else if (cgbType == VOICE_PROGRAMMABLE_WAVE && sub.wavePointer) {
+        m_audio.auditionWave(
+            QByteArray::fromRawData(reinterpret_cast<const char *>(sub.wavePointer), 16), 60, adsr);
     }
-    QString activeLabel = labels.first();
-    if (m_active && !m_active->doc.label().isEmpty())
-        activeLabel = m_active->doc.label();
-    settings.setValue(kLastOpenSongsKey, labels);
-    settings.setValue(kLastSongLabelKey, activeLabel);
+    // Square/noise sub-voices: rare, and their audition would need CGB
+    // square plumbing — silently skipped.
 }
 
-void MainWindow::refreshSessionSongIds()
-{
-    for (const auto &session : m_sessions) {
-        QString label = session->doc.label();
-        if (label.isEmpty() && m_workspace->isSessionAttached(*session))
-            label = m_workspace->sessionTitle(*session);
-        if (label.endsWith(QLatin1Char('*')))
-            label.chop(1);
-        session->songId = -1;
-        for (const SongInfo &song : m_project.songs()) {
-            if (song.label == label) {
-                session->songId = song.id;
-                break;
-            }
-        }
-    }
-    if (m_active)
-        m_workspace->setCurrentSong(m_active->songId);
-}
-
-void MainWindow::updateTabTitle(SongSession &session)
-{
-    if (!session.midiBound || !m_workspace->isSessionAttached(session))
-        return;
-    m_workspace->setSessionTitle(session, session.doc.label(), session.isDirty(),
-                                 session.doc.midPath());
-}
-
-void MainWindow::toggleDrawerPage(bool automation)
-{
-    if (!m_active || !m_active->isInteractive())
-        return;
-    SongView &view = m_workspace->viewFor(*m_active);
-    if (view.eventListVisible())
-        return;
-    const EditorDrawerPage page =
-        automation ? EditorDrawerPage::Automations : EditorDrawerPage::Velocity;
-    const bool hiding = view.drawerSectionVisible(page);
-    view.toggleDrawerSection(page);
-    statusBar()->showMessage(automation ? (hiding ? QStringLiteral("Automation lanes hidden")
-                                                  : QStringLiteral("Automation lanes shown"))
-                                        : (hiding ? QStringLiteral("Velocity lane hidden")
-                                                  : QStringLiteral("Velocity lane shown")),
-                             6000);
-}
+// ---- Chrome -----------------------------------------------------------------
 
 void MainWindow::setEditorDrawerState(const EditorDrawerState &state)
 {
@@ -1239,820 +1006,254 @@ void MainWindow::setEditorDrawerState(const EditorDrawerState &state)
     m_workspace->setEditorDrawerState(state);
 }
 
-void MainWindow::updateDrawerActions()
+void MainWindow::updateChrome()
 {
-    const bool enabled = m_active && m_active->isInteractive() &&
-                         !m_workspace->viewFor(*m_active).eventListVisible();
-    m_automationDrawerAction->setEnabled(enabled);
-    m_velocityDrawerAction->setEnabled(enabled);
+    const bool projectOpen = m_workspace->projectState().snapshot.isOpen();
+    SongTab *const tab = m_selectedTab;
+    const bool ready = tab && tab->isReady();
+
+    m_openProjectAction->setEnabled(m_workspace->openProjectEnabled());
+    m_newSongAction->setEnabled(projectOpen);
+    m_importAction->setEnabled(projectOpen);
+    m_importSampleAction->setEnabled(projectOpen);
+    m_saveAction->setEnabled(ready);
+    m_exportWavAction->setEnabled(ready && m_audioOk && m_audio.songLoaded());
+    m_settingsAction->setEnabled(ready);
+    m_copyAction->setEnabled(ready);
+    m_registerAction->setEnabled(ready && selectedSongRegistrationPending());
+    m_closeTabAction->setEnabled(m_workspace->openTabCount() > 0);
+    m_eventListAction->setEnabled(ready);
+    m_undoAction->setEnabled(ready && m_workspace->bankActionsEnabled() &&
+                             tab->history().canUndo());
+    m_redoAction->setEnabled(ready && m_workspace->bankActionsEnabled() &&
+                             tab->history().canRedo());
+    const bool drawerAvailable = ready && !tab->view().eventListVisible();
+    m_automationDrawerAction->setEnabled(drawerAvailable);
+    m_velocityDrawerAction->setEnabled(drawerAvailable);
 }
 
-void MainWindow::openProject()
+bool MainWindow::selectedSongRegistrationPending() const
 {
-    QSettings settings;
-    const QString startDir =
-        settings.value(QStringLiteral("lastProjectDir"), QDir::homePath()).toString();
-    const QString dir =
-        QFileDialog::getExistingDirectory(this, tr("Open Decomp Project"), startDir);
-    if (dir.isEmpty())
-        return;
-    openProjectDir(dir);
-}
-
-void MainWindow::restoreSession()
-{
-    QSettings settings;
-    const QString dir = settings.value(QStringLiteral("lastProjectDir")).toString();
-    if (dir.isEmpty())
-        return;
-    // Read before openProjectDir clears them for the fresh project.
-    QStringList labels = settings.value(kLastOpenSongsKey).toStringList();
-    const QString activeLabel = settings.value(kLastSongLabelKey).toString();
-    if (labels.isEmpty() && !activeLabel.isEmpty())
-        labels << activeLabel; // session recorded before tabs existed
-    openProjectDir(dir, /*interactive=*/false,
-                   [this, labels = std::move(labels), activeLabel](bool succeeded) {
-                       if (!succeeded)
-                           return;
-                       // Load the tabs without activating each in turn — the
-                       // per-activation work (engine rebind, voicegroup-dock
-                       // rebuild, tab persistence) would run N times with all
-                       // but the last discarded. One activation at the end,
-                       // for the remembered active tab.
-                       m_restoringSession = true;
-                       for (const QString &label : labels)
-                           loadSongByLabel(label, /*newTab=*/true);
-                       m_restoringSession = false;
-                       SongSession *toActivate = sessionForLabel(activeLabel);
-                       if (!toActivate) {
-                           const auto sessions = m_workspace->sessionsInDisplayOrder();
-                           if (!sessions.empty())
-                               toActivate = sessions.front();
-                       }
-                       if (toActivate)
-                           activateSession(toActivate);
-                   });
-}
-
-void MainWindow::cancelDisposableProjectRequests()
-{
-    const auto cancel = [this](uint64_t &requestId) {
-        if (requestId == 0)
-            return;
-        m_projectIo->cancel(requestId);
-        requestId = 0;
-    };
-    cancel(m_pendingCatalogRequest);
-    m_vgCatalog.loading = false;
-    cancel(m_pendingSampleSetRequest);
-    cancel(m_pendingSampleProbeRequest);
-    cancel(m_pendingSampleProjectRequest);
-    cancel(m_pendingRegistrationPlanRequest);
-    cancel(m_pendingDeletionPlanRequest);
-    cancel(m_pendingProjectRefreshRequest);
-}
-
-bool MainWindow::projectMutationInProgress() const
-{
-    return m_pendingSampleCommitRequest != 0 || m_pendingRegistrationRequest != 0 ||
-           m_pendingDeletionRequest != 0 || m_pendingCreateSongRequest != 0 ||
-           m_pendingCreateVoicegroupRequest != 0;
-}
-
-void MainWindow::openProjectDir(const QString &dir, bool interactive,
-                                ProjectOpenContinuation continuation)
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted) {
-        if (continuation)
-            continuation(false);
-        return;
+    if (!m_selectedTab || !m_selectedTab->isReady())
+        return false;
+    const QString &label = m_selectedTab->name().value();
+    for (const SongInfo &song : m_workspace->projectState().snapshot.songs()) {
+        if (song.label == label)
+            return !song.registrationGaps.isEmpty();
     }
-    if (projectMutationInProgress()) {
-        statusBar()->showMessage(
-            tr("A project change is still in progress; finish it before switching projects."),
-            5000);
-        if (continuation)
-            continuation(false);
-        return;
-    }
-    m_projectSwitchInProgress = true;
-    if (m_registerSongConfirmation) {
-        QMessageBox *box = m_registerSongConfirmation.data();
-        m_registerSongConfirmation = nullptr;
-        box->close();
-    }
-    if (m_deleteSongConfirmation) {
-        QMessageBox *box = m_deleteSongConfirmation.data();
-        m_deleteSongConfirmation = nullptr;
-        box->close();
-    }
-    QElapsedTimer timer;
-    timer.start();
+    return false;
+}
 
-    // Every prompt before the project (or any tab) changes: a Cancel
-    // aborts the switch, though Saves answered before it have already
-    // queued or written — standard save-all behavior, not a transaction.
-    promptToSaveAllSessions([this, dir, interactive, continuation = std::move(continuation),
-                             timer](bool saved) mutable {
-        if (!saved) {
-            m_projectSwitchInProgress = false;
-            if (continuation)
-                continuation(false);
-            return;
+void MainWindow::updateWindowTitle()
+{
+    const auto &snapshot = m_workspace->projectState().snapshot;
+    const QString project = snapshot.isOpen() ? QDir(snapshot.root()).dirName() : QString();
+
+    if (m_selectedTab) {
+        setWindowTitle(
+            QStringLiteral("%1[*] — %2 — porydaw").arg(m_selectedTab->name().value(), project));
+        setWindowModified(m_selectedTab->isReady() && m_selectedTab->document().isDirty());
+    } else {
+        setWindowTitle(project.isEmpty() ? QStringLiteral("porydaw")
+                                         : QStringLiteral("%1 — porydaw").arg(project));
+        setWindowModified(false);
+    }
+}
+
+void MainWindow::updateTransportActions()
+{
+    const bool loaded =
+        m_audioOk && m_selectedTab && m_selectedTab->isReady() && m_audio.songLoaded();
+    auto state = WorkspaceUi::PlaybackState::Unavailable;
+    if (loaded) {
+        switch (m_audio.transport()) {
+        case Transport::Stopped:
+            state = WorkspaceUi::PlaybackState::Stopped;
+            break;
+        case Transport::Paused:
+            state = WorkspaceUi::PlaybackState::Paused;
+            break;
+        case Transport::Playing:
+            state = WorkspaceUi::PlaybackState::Playing;
+            break;
         }
-        if (m_closeInProgress || m_closeAccepted || projectMutationInProgress()) {
-            m_projectSwitchInProgress = false;
-            if (projectMutationInProgress())
-                statusBar()->showMessage(
-                    tr("A project change is still in progress; finish it before switching "
-                       "projects."),
-                    5000);
-            if (continuation)
-                continuation(false);
-            return;
-        }
-        cancelDisposableProjectRequests();
-        for (const auto &session : m_sessions)
-            saveViewState(*session); // against the old project root
-        cleanupVgPreview();
+    }
+    m_workspace->setTransportPlaybackState(state);
+    m_workspace->setTransportSongAvailable(loaded);
+}
 
-        m_projectIo->openProject(dir, [this, dir, interactive,
-                                       continuation = std::move(continuation),
-                                       timer](ProjectOpenResult result) mutable {
-            m_projectSwitchInProgress = false;
-            if (!result.succeeded()) {
-                if (interactive)
-                    QMessageBox::warning(this, tr("Open Project"), result.error);
-                else
-                    statusBar()->showMessage(
-                        tr("Couldn't reopen last project %1: %2").arg(dir, result.error));
-                if (continuation)
-                    continuation(false);
-                return;
-            }
-            m_project.replaceWith(result.snapshot);
-            QSettings settings;
-            settings.setValue(QStringLiteral("lastProjectDir"), dir);
-            // The new project starts with no tabs; loadSong re-records them.
-            settings.remove(kLastSongLabelKey);
-            settings.remove(kLastOpenSongsKey);
+void MainWindow::syncMasterVolumeControl()
+{
+    const bool loaded = m_selectedTab && m_selectedTab->isReady();
+    m_workspace->setTransportMasterVolume(
+        loaded ? m_selectedTab->document().cfg().masterVolume : SongCfg().masterVolume, loaded);
+}
 
-            // Sessions were prompted above; closing them now needs no questions.
-            teardownSessions();
-            invalidateVgCatalog();
-            m_pendingSynths.clear(); // unsaved synth definitions die with the project
+void MainWindow::syncScaleControls()
+{
+    if (m_selectedTab && m_selectedTab->isReady()) {
+        const SongView &view = m_selectedTab->view();
+        m_workspace->setTransportScaleState(view.scaleRoot(), view.scaleId(), view.scaleHighlight(),
+                                            view.scaleFold());
+    } else {
+        m_workspace->setTransportScaleState(0, porydaw_scale::displayOrder()[0], false, false);
+    }
+}
 
-            m_newSongAction->setEnabled(true);
-            m_importAction->setEnabled(true);
-            m_importSampleAction->setEnabled(true);
-            updateWindowTitle();
-            populateSongList();
-            m_workspace->setCurrentSong(-1);
+void MainWindow::synchronizePlayhead()
+{
+    const bool songLoaded =
+        m_audioOk && m_selectedTab && m_selectedTab->isReady() && m_audio.songLoaded();
+    const bool playing = songLoaded && m_audio.transport() == Transport::Playing;
+    const int uiInterval = playing ? kPlaybackUiIntervalMs : kIdleUiIntervalMs;
+    if (m_uiTimer->interval() != uiInterval)
+        m_uiTimer->setInterval(uiInterval);
 
-            int playable = 0;
-            for (const SongInfo &song : m_project.songs()) {
-                if (song.isPlayable())
-                    playable++;
-            }
-            statusBar()->showMessage(tr("Opened %1 — %2 songs, %3 with MIDI sources (%4 ms)")
-                                         .arg(QDir(dir).dirName())
-                                         .arg(m_project.songs().size())
-                                         .arg(playable)
-                                         .arg(timer.elapsed()));
+    if (!songLoaded) {
+        // This also runs synchronously from a null-selection handoff.
+        m_playheadTimer->stop();
+        return;
+    }
+
+    const bool playheadTimerWasActive = m_playheadTimer->isActive();
+    const float activityElapsed = float(m_playheadTimer->interval()) / 1000.0f;
+    const auto trackActivityLevels = m_audio.consumeTrackActivityLevels();
+    SongView &view = m_selectedTab->view();
+    const bool activityAnimating =
+        view.advanceTrackActivity(trackActivityLevels, activityElapsed, playing);
+    view.setPlayheadSample(m_audio.playheadSamples(), playing);
+    if (activityAnimating) {
+        if (!m_playheadTimer->isActive())
+            m_playheadTimer->start();
+    } else {
+        m_playheadTimer->stop();
+        if (playheadTimerWasActive)
             updateTransportActions();
-            if (continuation)
-                continuation(true);
-        });
-    });
-}
-
-void MainWindow::populateSongList()
-{
-    m_workspace->setSongs(m_project.songs());
-}
-
-void MainWindow::songActivated(int songId)
-{
-    if (songId < 0 || songId >= m_project.songs().size())
-        return;
-    loadSong(m_project.songs().at(songId));
-}
-
-void MainWindow::songOpenInNewTab(int songId)
-{
-    if (songId < 0 || songId >= m_project.songs().size())
-        return;
-    loadSong(m_project.songs().at(songId), /*newTab=*/true);
-}
-
-void MainWindow::queueVoicegroupLoad(SongSession &session, const SongCfg &cfg, int keepSlot,
-                                     std::function<void(bool)> completion)
-{
-    if (session.pendingVgRequest != 0) {
-        m_projectIo->cancel(session.pendingVgRequest);
-        session.pendingVgRequest = 0;
     }
-    if (session.pendingVgProbeRequest != 0) {
-        m_projectIo->cancel(session.pendingVgProbeRequest);
-        session.pendingVgProbeRequest = 0;
-    }
-    // A fresh on-disk load supersedes any preview of the old source. Without
-    // this cancellation, a late preview result can replace the newly loaded
-    // voicegroup after a cfg switch or a sibling-save refresh.
-    if (session.pendingPreviewRequest != 0) {
-        m_projectIo->cancel(session.pendingPreviewRequest);
-        session.pendingPreviewRequest = 0;
-    }
-    SongSession *const sessionPtr = &session;
-    const auto isLive = [this, sessionPtr] {
-        return std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                           [sessionPtr](const std::unique_ptr<SongSession> &candidate) {
-                               return candidate.get() == sessionPtr;
-                           });
-    };
-    const auto restoreBrowser = [this, sessionPtr] {
-        if (sessionPtr == m_active)
-            updateVoicegroupBrowser();
-    };
-    const bool sourceWasClean = !session.vgSource || !session.vgSource->dirty();
-    const QString root = m_project.root();
-    const QString label = session.doc.label();
-    const QString tried = DecompProject::voicegroupCandidates(cfg).join(QStringLiteral(", "));
-    session.pendingVgRequest = m_projectIo->loadVoicegroup(
-        root, cfg,
-        [this, sessionPtr, cfg, keepSlot, root, label, tried, sourceWasClean, restoreBrowser,
-         completion = std::move(completion), isLive](VoicegroupLoadResult result) mutable {
-            if (!isLive()) {
-                if (result.voicegroup)
-                    voicegroup_free(result.voicegroup);
-                return;
-            }
-            if (result.requestId != sessionPtr->pendingVgRequest) {
-                if (result.voicegroup)
-                    voicegroup_free(result.voicegroup);
-                return;
-            }
-            sessionPtr->pendingVgRequest = 0;
-            if (m_project.root() != root) {
-                if (result.voicegroup)
-                    voicegroup_free(result.voicegroup);
-                restoreBrowser();
-                if (completion)
-                    completion(false);
-                return;
-            }
-            if (!result.succeeded() || !result.source) {
-                if (result.voicegroup)
-                    voicegroup_free(result.voicegroup);
-                statusBar()->showMessage(
-                    tr("Could not load the voicegroup for %1 (tried: %2).").arg(label, tried),
-                    8000);
-                restoreBrowser();
-                if (completion)
-                    completion(false);
-                return;
-            }
-            if (sessionPtr->midiBound && sessionPtr->doc.cfg().voicegroupArg != cfg.voicegroupArg) {
-                voicegroup_free(result.voicegroup);
-                restoreBrowser();
-                if (completion)
-                    completion(false);
-                return;
-            }
-            if (sourceWasClean && sessionPtr->vgSource && sessionPtr->vgSource->dirty()) {
-                voicegroup_free(result.voicegroup);
-                restoreBrowser();
-                if (completion)
-                    completion(false);
-                return;
-            }
-            if (sessionPtr == m_active)
-                m_workspace->clearVoicegroupSource();
-            sessionPtr->vgSource.replace(std::move(result.source));
-            sessionPtr->vgFileTime = result.fileTime;
-            sessionPtr->vgBound = true;
-            sessionPtr->appliedVoicegroupArg = cfg.voicegroupArg;
-            swapVoicegroup(*sessionPtr, result.voicegroup, keepSlot);
-            result.voicegroup = nullptr;
-            restoreBrowser();
-            if (completion)
-                completion(true);
-        });
-    syncVoicegroupLoading();
 }
 
-void MainWindow::queueVoicegroupProbe(SongSession &session)
+// QLabel::setText repaints even for identical text, so both status
+// updaters compare against the last applied value and only touch the
+// widgets on change. Nothing else writes these labels, so the caches
+// cannot go stale.
+void MainWindow::updateTimeLabel()
 {
-    if (session.pendingVgProbeRequest != 0 || session.pendingVgRequest != 0)
-        return;
-    SongSession *const sessionPtr = &session;
-    const auto isLive = [this, sessionPtr] {
-        return std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                           [sessionPtr](const std::unique_ptr<SongSession> &candidate) {
-                               return candidate.get() == sessionPtr;
-                           });
-    };
-    const QString root = m_project.root();
-    const SongCfg cfg = session.doc.cfg();
-    session.pendingVgProbeRequest = m_projectIo->probeVoicegroup(
-        root, cfg, [this, sessionPtr, cfg, root, isLive](VoicegroupProbeResult result) mutable {
-            if (!isLive())
-                return;
-            if (result.requestId != sessionPtr->pendingVgProbeRequest)
-                return;
-            sessionPtr->pendingVgProbeRequest = 0;
-            // A probe is only a hint for a clean session. If the project,
-            // cfg, or source changed while it was queued, do not let its
-            // stale answer overwrite a newer GUI edit.
-            if (m_project.root() != root || !result.succeeded() || !sessionPtr->vgSource ||
-                sessionPtr->vgSource->dirty() ||
-                (sessionPtr->midiBound && sessionPtr->doc.cfg().voicegroupArg != cfg.voicegroupArg))
-                return;
-            if (result.filePath == sessionPtr->vgSource->filePath() &&
-                result.fileTime == sessionPtr->vgFileTime)
-                return;
-            const int keepSlot = sessionPtr == m_active ? m_workspace->currentVoicegroupSlot() : 0;
-            queueVoicegroupLoad(*sessionPtr, cfg, keepSlot);
-        });
+    const bool loaded = m_audioOk && m_selectedTab && m_audio.songLoaded();
+    const QString text =
+        loaded ? QStringLiteral("%1 / %2").arg(formatTime(m_audio.playheadSamples()),
+                                               formatTime(m_audio.timeline()->lengthSamples))
+               : QStringLiteral("--:--.- / --:--.-");
+    m_workspace->setTransportTimeText(text);
 }
 
-void MainWindow::loadSong(const SongInfo &song, bool newTab)
+void MainWindow::updatePolyStatus()
 {
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted)
-        return;
-    if (!m_audioOk)
-        return;
-    // Already open somewhere? Focus that tab: two documents over one .mid
-    // would fight over the file on save. Except the song already in the
-    // CURRENT tab — re-activating it falls through to an in-place reload
-    // from disk (the pre-tabs behavior, and the only reload path for an
-    // externally changed .mid).
-    if (SongSession *open = sessionForLabel(song.label)) {
-        if (newTab || open != m_active) {
-            activateSession(open);
-            return;
-        }
+    PolyStatusSnapshot status;
+    status.loaded = m_audioOk && m_selectedTab && m_audio.songLoaded();
+    if (status.loaded) {
+        status.activePcm = m_audio.activePcmChannels();
+        status.maxPcm = m_audio.maxPcmChannels();
+        status.activeCgb = m_audio.activeCgbChannels();
+        status.lostTotal = m_audio.polyLostTotal();
     }
+    if (m_lastPolyStatus && *m_lastPolyStatus == status)
+        return;
+    m_lastPolyStatus = status;
 
-    const bool created = newTab || !m_active;
-    auto sessionState = std::make_shared<SongSession *>(created ? nullptr : m_active);
-    const auto beginLoad = [this, song, created, sessionState]() {
-        cleanupVgPreview();
-        SongSession *session = *sessionState;
-        if (!session) {
-            session = createSession();
-            *sessionState = session;
-        }
-        session->songId = song.id;
-        session->doc.setTrackBudget(m_project.trackBudgetFor(song));
-        if (m_workspace->isSessionAttached(*session)) {
-            SongView &view = m_workspace->viewFor(*session);
-            view.setDocument(nullptr);
-            view.setSong(nullptr, nullptr);
-            view.setEnabled(false);
-        }
-        if (session == m_active) {
-            m_workspace->clearVoicegroupPresentation();
-            if (m_audioOk)
-                m_audio.unloadSong();
-        }
-        if (session->pendingMidiRequest != 0) {
-            m_projectIo->cancel(session->pendingMidiRequest);
-            session->pendingMidiRequest = 0;
-        }
-        if (session->pendingVgRequest != 0) {
-            m_projectIo->cancel(session->pendingVgRequest);
-            session->pendingVgRequest = 0;
-        }
-        if (session->pendingVgProbeRequest != 0) {
-            m_projectIo->cancel(session->pendingVgProbeRequest);
-            session->pendingVgProbeRequest = 0;
-        }
-        if (session->pendingSidecarRequest != 0) {
-            m_projectIo->cancel(session->pendingSidecarRequest);
-            session->pendingSidecarRequest = 0;
-        }
-        if (session->voicegroup)
-            voicegroup_free(session->voicegroup);
-        session->voicegroup = nullptr;
-        session->vgSource.clear();
-        session->timeline.reset();
-        session->midiBound = false;
-        session->vgBound = false;
-        session->sidecarBound = false;
-        session->vgFileTime = QDateTime();
-        session->appliedVoicegroupArg = song.cfg.voicegroupArg;
-        session->appliedVolume = song.cfg.masterVolume;
-        session->appliedReverb = song.cfg.reverb;
-
-        if (created) {
-            SongView &view = m_workspace->attachSession(
-                *session, song.label, song.midPath, ViewSidecar::Snapshot{},
-                m_restoringSession ? WorkspaceUi::ActivationPolicy::PreserveCurrent
-                                   : WorkspaceUi::ActivationPolicy::Activate);
-            view.setEnabled(false);
-            wireSongView(*session, view);
-        } else {
-            m_workspace->setSessionTitle(*session, song.label, false, song.midPath);
-            activateSession(session, /*force=*/true);
-        }
-
-        const auto isLive = [this, session] {
-            return std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                               [session](const std::unique_ptr<SongSession> &candidate) {
-                                   return candidate.get() == session;
-                               });
-        };
-        const auto fail = [this, session](const QString &error) {
-            const bool live = std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                                          [session](const std::unique_ptr<SongSession> &candidate) {
-                                              return candidate.get() == session;
-                                          });
-            if (!live)
-                return;
-            if (session->pendingMidiRequest != 0) {
-                m_projectIo->cancel(session->pendingMidiRequest);
-                session->pendingMidiRequest = 0;
-            }
-            if (session->pendingVgRequest != 0) {
-                m_projectIo->cancel(session->pendingVgRequest);
-                session->pendingVgRequest = 0;
-            }
-            if (session->pendingSidecarRequest != 0) {
-                m_projectIo->cancel(session->pendingSidecarRequest);
-                session->pendingSidecarRequest = 0;
-            }
-            destroySession(session);
-            QMessageBox::warning(this, tr("Load Song"), error);
-        };
-        const auto finish = [this, session, isLive] {
-            if (!isLive())
-                return;
-            if (!session->isInteractive()) {
-                if (session == m_active) {
-                    if (session->voicegroup)
-                        updateVoicegroupBrowser();
-                    else
-                        m_workspace->clearVoicegroupPresentation();
-                    updateTransportActions();
-                    updateDrawerActions();
-                    updateWindowTitle();
-                }
-                return;
-            }
-            m_workspace->viewFor(*session).setEnabled(true);
-            if (session == m_active)
-                activateSession(session, /*force=*/true);
-            else
-                updateTabTitle(*session);
-        };
-        const QString root = m_project.root();
-        const QString tried =
-            DecompProject::voicegroupCandidates(song.cfg).join(QStringLiteral(", "));
-        session->pendingMidiRequest = m_projectIo->loadSongFile(
-            song, [this, session, song, root, isLive, fail, finish](SongFileResult result) mutable {
-                if (!isLive())
-                    return;
-                if (result.requestId != session->pendingMidiRequest)
-                    return;
-                session->pendingMidiRequest = 0;
-                if (!result.succeeded()) {
-                    fail(result.error);
-                    return;
-                }
-                QString error;
-                if (!session->doc.adoptSmf(std::move(result.smf), song, &error)) {
-                    fail(error);
-                    return;
-                }
-                session->timeline = session->doc.buildTimeline(m_audio.sampleRate());
-                SongView &view = m_workspace->viewFor(*session);
-                view.setSong(session->timeline.get(), session->voicegroup);
-                view.setDocument(&session->doc);
-                session->appliedVoicegroupArg = song.cfg.voicegroupArg;
-                session->appliedVolume = song.cfg.masterVolume;
-                session->appliedReverb = song.cfg.reverb;
-                session->midiBound = true;
-                session->sidecarBound = false;
-                session->pendingSidecarRequest = m_projectIo->readSidecar(
-                    SidecarLoadRequest{root, song.label},
-                    [this, session, isLive, finish](SidecarLoadResult sidecar) mutable {
-                        if (!isLive())
-                            return;
-                        if (sidecar.requestId != session->pendingSidecarRequest)
-                            return;
-                        session->pendingSidecarRequest = 0;
-                        if (sidecar.loaded) {
-                            sidecar.snapshot.editor.setDrawerState(m_editorDrawerState);
-                            m_workspace->applySessionViewState(*session, sidecar.snapshot);
-                        } else {
-                            m_workspace->viewFor(*session).applyEditorDrawerState(
-                                m_editorDrawerState);
-                        }
-                        session->sidecarBound = true;
-                        finish();
-                    });
-                updateTabTitle(*session);
-                finish();
-            });
-        session->pendingVgRequest = m_projectIo->loadVoicegroup(
-            root, song.cfg,
-            [this, session, song, tried, isLive, fail,
-             finish](VoicegroupLoadResult result) mutable {
-                if (!isLive()) {
-                    if (result.voicegroup)
-                        voicegroup_free(result.voicegroup);
-                    return;
-                }
-                if (result.requestId != session->pendingVgRequest) {
-                    if (result.voicegroup)
-                        voicegroup_free(result.voicegroup);
-                    return;
-                }
-                session->pendingVgRequest = 0;
-                if (!result.succeeded()) {
-                    if (result.voicegroup)
-                        voicegroup_free(result.voicegroup);
-                    fail(tr("Could not load the voicegroup for %1 (tried: %2).")
-                             .arg(song.label, tried));
-                    return;
-                }
-                SongView &view = m_workspace->viewFor(*session);
-                view.setVoicegroup(nullptr);
-                if (session == m_active)
-                    m_workspace->clearVoicegroupSource();
-                if (session->voicegroup)
-                    voicegroup_free(session->voicegroup);
-                session->voicegroup = result.voicegroup;
-                result.voicegroup = nullptr;
-                session->vgSource.replace(std::move(result.source));
-                session->vgFileTime = result.fileTime;
-                session->vgBound = true;
-                view.setVoicegroup(session->voicegroup);
-                if (session == m_active)
-                    updateVoicegroupBrowser();
-                finish();
-            });
-        statusBar()->showMessage(tr("Loading %1...").arg(song.label));
-        updateWindowTitle();
-        updateTransportActions();
-    };
-
-    SongSession *session = *sessionState;
-    if (!session) {
-        beginLoad();
+    if (!status.loaded) {
+        m_pcmValueLabel->clear();
+        m_cgbValueLabel->clear();
+        m_polyLostLabel->clear();
+        m_polyLostSeparator->hide();
+        m_polyLostLabel->hide();
+        m_polyLostCaption->hide();
+        m_polyMeter->hide();
         return;
     }
-    maybeSaveSession(*session, [this, sessionState, beginLoad](bool succeeded) {
-        if (!succeeded)
-            return;
-        SongSession *session = *sessionState;
-        const bool live =
-            session && std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                                   [session](const std::unique_ptr<SongSession> &candidate) {
-                                       return candidate.get() == session;
-                                   });
-        if (!live)
-            return;
-        saveViewState(*session);
-        beginLoad();
-    });
+
+    m_pcmValueLabel->setText(QStringLiteral("%1/%2").arg(status.activePcm).arg(status.maxPcm));
+    m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(status.activeCgb));
+    const bool hasLost = status.lostTotal > 0;
+    m_polyLostLabel->setText(hasLost ? QString::number(status.lostTotal) : QString());
+    m_polyLostSeparator->setVisible(hasLost);
+    m_polyLostLabel->setVisible(hasLost);
+    m_polyLostCaption->setVisible(hasLost);
+    m_polyMeter->show();
 }
 
-void MainWindow::onDocumentChanged(SongSession &session)
+QString MainWindow::formatTime(uint64_t samples) const
 {
-    if (!m_workspace->isSessionAttached(session) || !m_audioOk || !session.isInteractive())
-        return;
-    const bool active = &session == m_active;
-
-    const SongCfg &cfg = session.doc.cfg();
-    if (cfg.voicegroupArg != session.appliedVoicegroupArg) {
-        // The -G switch (or its undo/redo) reloads through the project
-        // worker. Existing undo commands are replayed only after its detached
-        // source lands on the GUI thread.
-        cleanupVgPreview();
-        if (session.pendingPreviewRequest != 0) {
-            m_projectIo->cancel(session.pendingPreviewRequest);
-            session.pendingPreviewRequest = 0;
-        }
-        if (session.pendingVgProbeRequest != 0) {
-            m_projectIo->cancel(session.pendingVgProbeRequest);
-            session.pendingVgProbeRequest = 0;
-        }
-        SongSession *const sessionPtr = &session;
-        const int keepSlot = active ? m_workspace->currentVoicegroupSlot() : 0;
-        queueVoicegroupLoad(session, cfg, keepSlot, [this, sessionPtr, active](bool succeeded) {
-            if (!succeeded)
-                return;
-            reapplyVoicegroupEditsToReopenedSource(*sessionPtr->doc.undoStack(),
-                                                   sessionPtr->vgSource);
-            if (sessionPtr->vgSource && sessionPtr->vgSource->dirty()) {
-                const int previewSlot = active ? m_workspace->currentVoicegroupSlot() : 0;
-                reloadVoicegroupPreview(*sessionPtr, previewSlot);
-            }
-            if (active)
-                updateVoicegroupBrowser();
-        });
-    }
-    if (cfg.masterVolume != session.appliedVolume || cfg.reverb != session.appliedReverb) {
-        if (active && m_audio.songLoaded())
-            m_audio.updateSettings(songSettingsFor(session));
-        session.appliedVolume = cfg.masterVolume;
-        session.appliedReverb = cfg.reverb;
-    }
-
-    auto timeline = std::shared_ptr<MidiTimeline>(session.doc.buildTimeline(m_audio.sampleRate()));
-    if (active && m_audio.songLoaded())
-        m_audio.updateTimeline(timeline);
-    m_workspace->viewFor(session).updateSong(timeline.get());
-    session.timeline = std::move(timeline);
-    updateTabTitle(session);
-    if (active) {
-        // The timeline was rebuilt, track names may have changed, and the
-        // voicegroup may have been swapped above.
-        updatePolyPanelContext(&session);
-        updateWindowTitle();
-        // Keep the dock's voicegroup selector on the cfg even when no swap
-        // ran (the arg's voicegroup wasn't found, or its change was undone).
-        m_workspace->setCurrentVoicegroupArg(cfg.voicegroupArg.isEmpty() ? QStringLiteral("_dummy")
-                                                                         : cfg.voicegroupArg);
-        // Program changes may have been added/removed; refresh the dock's
-        // used-voice marks (no-op when the set is unchanged).
-        m_workspace->setVoicegroupUsedVoices(m_workspace->viewFor(session).usedVoices());
-        // the toolbar spinbox mirrors it.
-        syncMasterVolumeControl();
-    }
+    const double seconds = double(samples) / m_audio.sampleRate();
+    const int mins = int(seconds) / 60;
+    const int secs = int(seconds) % 60;
+    const int tenths = int(seconds * 10) % 10;
+    return QStringLiteral("%1:%2.%3").arg(mins).arg(secs, 2, 10, QLatin1Char('0')).arg(tenths);
 }
+
+// ---- Slots ------------------------------------------------------------------
 
 void MainWindow::saveSong()
 {
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted)
-        return;
-    if (m_active && m_active->isInteractive())
-        saveSession(*m_active);
+    m_workspace->saveSelectedSong();
 }
 
-void MainWindow::saveSession(SongSession &session, SessionContinuation continuation)
+void MainWindow::uiTick()
 {
-    const auto complete = [&continuation](bool succeeded) {
-        if (continuation)
-            continuation(succeeded);
-    };
-    if (!session.isInteractive() || session.doc.midPath().isEmpty()) {
-        complete(false);
-        return;
-    }
-    if (session.pendingSaveRequest != 0 || session.pendingVgSaveRequest != 0) {
-        complete(false);
-        return;
-    }
-    if (!session.isDirty()) {
-        complete(true);
-        return;
-    }
+    updateTimeLabel();
+    updatePolyStatus();
 
-    const bool vgWasDirty = session.vgSource && session.vgSource->dirty();
-    const auto sessionPtr = &session;
-    const auto completionPtr = std::make_shared<SessionContinuation>(std::move(continuation));
-    auto startMidiSave = std::make_shared<std::function<void()>>();
-    *startMidiSave = [this, sessionPtr, completionPtr, vgWasDirty]() mutable {
-        const QString savedVgPath =
-            vgWasDirty && sessionPtr->vgSource ? sessionPtr->vgSource->filePath() : QString();
-        auto completion = std::move(*completionPtr);
-        SongSaveSnapshot snapshot = sessionPtr->doc.captureSaveSnapshot();
-        SongSaveSnapshot landed;
-        landed.midPath = snapshot.midPath;
-        landed.label = snapshot.label;
-        landed.cfg = snapshot.cfg;
-        landed.flagsNeeded = snapshot.flagsNeeded;
-        landed.revision = snapshot.revision;
-        landed.saveStateToken = snapshot.saveStateToken;
-        const auto isLive = [this, sessionPtr] {
-            return std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                               [sessionPtr](const std::unique_ptr<SongSession> &candidate) {
-                                   return candidate.get() == sessionPtr;
-                               });
-        };
-        if (sessionPtr == m_active)
-            m_saveAction->setEnabled(false);
-        sessionPtr->pendingSaveRequest = m_projectIo->saveSong(
-            std::move(snapshot),
-            [this, sessionPtr, completion = std::move(completion), isLive,
-             landed = std::move(landed), vgWasDirty, savedVgPath](SaveSongResult result) mutable {
-                if (!isLive()) {
-                    if (completion)
-                        completion(false);
-                    return;
-                }
-                if (result.requestId != sessionPtr->pendingSaveRequest)
-                    return;
-                sessionPtr->pendingSaveRequest = 0;
-                if (sessionPtr == m_active)
-                    m_saveAction->setEnabled(true);
-                if (!result.succeeded()) {
-                    QMessageBox::warning(this, tr("Save Song"), result.error);
-                    if (completion)
-                        completion(false);
-                    return;
-                }
-                sessionPtr->doc.didSave(landed, result.flagsWritten);
-                if (sessionPtr->songId >= 0)
-                    m_project.setSongCfg(sessionPtr->songId, landed.cfg);
-                statusBar()->showMessage(
-                    vgWasDirty ? tr("Saved %1 and %2").arg(landed.midPath, savedVgPath)
-                               : tr("Saved %1").arg(landed.midPath),
-                    5000);
-                updateTabTitle(*sessionPtr);
-                if (sessionPtr == m_active)
-                    updateWindowTitle();
-                if (completion)
-                    completion(!sessionPtr->isDirty());
-            });
-    };
+    if (m_audioOk && m_selectedTab && m_audio.songLoaded() && m_polyDock->isVisible()) {
+        AudioEngine::PolySnapshot snap;
+        m_audio.polySnapshot(&snap);
+        m_polyPanel->updateSnapshot(snap);
+    }
+    // Safety net for transport transitions no handler observed (the engine
+    // stopping on its own while the playhead timer is idle): cheap no-op
+    // setEnabled calls at the status cadence.
+    updateTransportActions();
+}
 
-    if (!vgWasDirty) {
-        (*startMidiSave)();
+// Starts (or resumes) playback; from Stopped, seeks to the edit cursor
+// first so playback begins there. fromEditCursor forces that seek even
+// out of Paused — the Space binding (Reaper-style restart), while the
+// Play button resumes from the pause point.
+void MainWindow::startPlayback(bool fromEditCursor)
+{
+    if (!m_audioOk || !m_selectedTab || !m_selectedTab->isReady() || !m_audio.songLoaded())
         return;
+    const bool seekToCursor = fromEditCursor || m_audio.transport() == Transport::Stopped;
+    uint64_t target = 0;
+    if (seekToCursor) {
+        target = m_audio.timeline()->sampleForTick(m_selectedTab->view().editCursorTick());
+        m_audio.seek(target);
     }
+    m_audio.play();
+    updateTransportActions();
+    synchronizePlayhead();
+    // The seek lands within one audio period; show its target now rather
+    // than the stale engine playhead synchronizePlayhead just read.
+    if (seekToCursor)
+        m_selectedTab->view().setPlayheadSample(target, true);
+}
 
-    QList<QPair<QString, VgSynthDesc>> newDefs;
-    for (int slot = 0; slot < VOICEGROUP_SIZE; slot++) {
-        const VgVoice *voice = session.vgSource->voiceAt(slot);
-        if (!voice)
-            continue;
-        const auto it = m_pendingSynths.constFind(voice->symbol);
-        if (it == m_pendingSynths.constEnd())
-            continue;
-        const QPair<QString, VgSynthDesc> definition{it.key(), it.value()};
-        if (!newDefs.contains(definition))
-            newDefs.append(definition);
-    }
-    const QByteArray sourceBytes = session.vgSource->sourceBytes();
-    const auto sourcePath = session.vgSource->filePath();
-    const SongCfg cfg = session.doc.cfg();
-    const int keepSlot = &session == m_active ? m_workspace->currentVoicegroupSlot() : 0;
-    cleanupVgPreview();
-    VoicegroupSaveRequest request;
-    request.projectRoot = m_project.root();
-    request.filePath = sourcePath;
-    request.sourceBytes = sourceBytes;
-    request.synthDefinitions = newDefs;
-    session.pendingVgSaveRequest = m_projectIo->saveVoicegroup(
-        std::move(request),
-        [this, sessionPtr, completionPtr, sourceBytes, sourcePath, cfg, keepSlot, newDefs,
-         startMidiSave](VoicegroupSaveResult result) mutable {
-            if (!std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                             [sessionPtr](const std::unique_ptr<SongSession> &candidate) {
-                                 return candidate.get() == sessionPtr;
-                             })) {
-                if (*completionPtr)
-                    (*completionPtr)(false);
-                *completionPtr = {};
-                return;
-            }
-            if (result.requestId != sessionPtr->pendingVgSaveRequest)
-                return;
-            sessionPtr->pendingVgSaveRequest = 0;
-            if (!result.succeeded()) {
-                if (result.synthOk)
-                    invalidateVgCatalog();
-                QMessageBox::warning(this, tr("Save Voicegroup"), result.error);
-                if (*completionPtr)
-                    (*completionPtr)(false);
-                *completionPtr = {};
-                return;
-            }
-            const bool current = sessionPtr->vgSource && sessionPtr->vgSource->didSave(sourceBytes);
-            if (current) {
-                for (const auto &definition : newDefs)
-                    m_pendingSynths.remove(definition.first);
-            }
-            invalidateVgCatalog();
-            cleanupVgPreview();
-            sessionPtr->vgFileTime = result.fileTime;
-            refreshSessionsAfterVgSave(sourcePath, sessionPtr);
-            if (!current) {
-                (*startMidiSave)();
-                return;
-            }
-            queueVoicegroupLoad(*sessionPtr, cfg, keepSlot,
-                                [startMidiSave, completionPtr](bool succeeded) {
-                                    if (succeeded) {
-                                        if (*startMidiSave)
-                                            (*startMidiSave)();
-                                    } else if (*completionPtr) {
-                                        auto completion = std::move(*completionPtr);
-                                        *completionPtr = {};
-                                        completion(false);
-                                    }
-                                });
-        });
+void MainWindow::pausePlayback()
+{
+    m_audio.pause();
+    updateTransportActions();
+    synchronizePlayhead();
+}
+
+void MainWindow::stopPlayback()
+{
+    m_audio.stop();
+    updateTransportActions();
+    synchronizePlayhead();
 }
 
 void MainWindow::exportWav()
 {
-    SongSession *session = m_active;
-    if (!session || !session->isInteractive() || !m_audio.songLoaded())
+    SongTab *const tab = m_selectedTab;
+    if (!tab || !tab->isReady() || !m_audioOk || !m_audio.songLoaded())
         return;
     const bool hasLoop = m_audio.timeline()->hasLoop();
 
@@ -2145,10 +1346,10 @@ void MainWindow::exportWav()
     QSettings appSettings;
     const QString startDir =
         appSettings
-            .value(QStringLiteral("lastWavExportDir"), QFileInfo(session->doc.midPath()).path())
+            .value(QStringLiteral("lastWavExportDir"), QFileInfo(tab->document().midPath()).path())
             .toString();
     const QString path = QFileDialog::getSaveFileName(
-        this, tr("Export WAV"), startDir + QLatin1Char('/') + session->doc.label() + ".wav",
+        this, tr("Export WAV"), startDir + QLatin1Char('/') + tab->document().label() + ".wav",
         tr("WAV files (*.wav)"));
     if (path.isEmpty())
         return;
@@ -2156,18 +1357,18 @@ void MainWindow::exportWav()
 
     stopPlayback();
 
-    QProgressDialog progress(tr("Rendering %1...").arg(session->doc.label()), tr("Cancel"), 0, 1000,
-                             this);
+    QProgressDialog progress(tr("Rendering %1...").arg(tab->document().label()), tr("Cancel"), 0,
+                             1000, this);
     progress.setWindowModality(Qt::WindowModal);
     progress.setMinimumDuration(0);
 
-    // The render reads the same voicegroup the audio engine borrows (the
-    // engine only reads it too), against a fresh timeline at the export
-    // rate — so unsaved document and voice edits export as heard.
-    auto timeline = session->doc.buildTimeline(double(opts.sampleRate));
+    // The render reads the same bank the audio engine borrows — the
+    // retained selected lease — against a fresh timeline at the export
+    // rate, so unsaved document and voice edits export as heard.
+    auto timeline = tab->document().buildTimeline(double(opts.sampleRate));
     QString error;
     const bool ok = ::exportWav(
-        path, *timeline, session->voicegroup, songSettingsFor(*session), opts,
+        path, *timeline, m_selectedVoicegroup, songSettingsFor(*tab), opts,
         [&](double fraction) {
             progress.setValue(int(fraction * 1000));
             return !progress.wasCanceled();
@@ -2194,14 +1395,9 @@ void MainWindow::exportWav()
 void MainWindow::openSettings(SettingsDialog::Tab initialTab)
 {
     auto song = std::optional<SongTarget>();
-    if (m_active && m_active->isInteractive())
-        song = SongTarget{m_active->doc.cfg(), m_active->doc.label()};
-    const auto &catalog = vgCatalog();
-    if (!catalog.valid) {
-        statusBar()->showMessage(tr("Loading voicegroup catalog…"), 5000);
-        return;
-    }
-    const QStringList vgArgs = catalog.groupArgs;
+    if (m_selectedTab && m_selectedTab->isReady())
+        song = SongTarget{m_selectedTab->document().cfg(), m_selectedTab->document().label()};
+    const QStringList vgArgs = m_workspace->projectState().catalog.groupArgs;
     SettingsDialog dialog(m_engineSettings, song, vgArgs, initialTab, this);
     const auto apply = [this, &dialog] {
         const EngineSettings newEngine = dialog.engineSettings();
@@ -2211,13 +1407,15 @@ void MainWindow::openSettings(SettingsDialog::Tab initialTab)
             newEngine.analogFilter != m_engineSettings.analogFilter) {
             m_engineSettings = newEngine;
             m_engineSettings.save();
-            if (m_audioOk && m_active && m_audio.songLoaded())
-                m_audio.updateSettings(songSettingsFor(*m_active));
+            if (m_audioOk && m_selectedTab && m_audio.songLoaded()) {
+                const SongSettings settings = songSettingsFor(*m_selectedTab);
+                m_audio.updateSettings(settings);
+                m_appliedSettings = settings;
+            }
         }
-        if (m_active && m_active->isInteractive()) {
-            const auto songCfg = dialog.songCfg();
-            if (songCfg)
-                m_active->doc.setCfg(*songCfg);
+        if (m_selectedTab && m_selectedTab->isReady()) {
+            if (const auto songCfg = dialog.songCfg())
+                m_selectedTab->document().setCfg(*songCfg);
         }
     };
     connect(&dialog, &SettingsDialog::applyRequested, this, apply);
@@ -2240,1420 +1438,8 @@ void MainWindow::openEngineSettings()
     openSettings(SettingsDialog::Tab::Engine);
 }
 
-SongSettings MainWindow::songSettingsFor(const SongSession &session) const
-{
-    const SongCfg &cfg = session.doc.cfg();
-    SongSettings settings;
-    settings.songVolume = uint8_t(cfg.masterVolume);
-    settings.reverb = uint8_t(cfg.reverb >= 0 ? cfg.reverb : SongCfg::kDefaultReverb);
-    settings.pcmMixer = m_engineSettings.pcmMixer;
-    settings.maxPcmChannels = uint8_t(m_engineSettings.maxPcmChannels);
-    settings.pcmMixRate = m_engineSettings.pcmMixRate;
-    settings.analogFilter = m_engineSettings.analogFilter;
-    return settings;
-}
-
-void MainWindow::newSong()
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
-        projectMutationInProgress())
-        return;
-    const QString projectRoot = m_project.root();
-    const auto &catalog = vgCatalog();
-    if (!catalog.valid) {
-        statusBar()->showMessage(tr("Loading voicegroup catalog…"), 5000);
-        return;
-    }
-    NewSongWizard::ProjectData data{m_project.songs(), m_project.players(), catalog.groupArgs,
-                                    catalog.perFileVoicegroups};
-    NewSongWizard wizard(std::move(data), this);
-    if (wizard.exec() != QDialog::Accepted)
-        return;
-    finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(), wizard.player(),
-                     wizard.cfg(), wizard.newVoicegroupName(), projectRoot);
-}
-
-void MainWindow::importMidi()
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
-        projectMutationInProgress())
-        return;
-    const QString projectRoot = m_project.root();
-    QSettings settings;
-    const QString startDir =
-        settings.value(QStringLiteral("lastImportDir"), QDir::homePath()).toString();
-    const QString path = QFileDialog::getOpenFileName(this, tr("Import MIDI"), startDir,
-                                                      tr("MIDI files (*.mid *.midi)"));
-    if (path.isEmpty())
-        return;
-    settings.setValue(QStringLiteral("lastImportDir"), QFileInfo(path).path());
-
-    SmfFile smf;
-    QString error;
-    if (!SmfFile::readFile(path, &smf, &error)) {
-        QMessageBox::warning(this, tr("Import MIDI"), error);
-        return;
-    }
-    const auto &catalog = vgCatalog();
-    if (!catalog.valid) {
-        statusBar()->showMessage(tr("Loading voicegroup catalog…"), 5000);
-        return;
-    }
-    NewSongWizard::ProjectData data{m_project.songs(), m_project.players(), catalog.groupArgs,
-                                    catalog.perFileVoicegroups};
-    NewSongWizard wizard(std::move(data), std::move(smf), path, this);
-    if (wizard.exec() != QDialog::Accepted)
-        return;
-    finishCreateSong(wizard.songFile(), wizard.label(), wizard.constant(), wizard.player(),
-                     wizard.cfg(), wizard.newVoicegroupName(), projectRoot);
-}
-
-void MainWindow::importSample()
-{
-    importSampleForSlot(-1);
-}
-
-void MainWindow::importSampleForSlot(int slot)
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
-        m_pendingSampleProbeRequest != 0)
-        return;
-    const QString root = m_project.root();
-    m_pendingSampleProbeRequest =
-        m_projectIo->probeSamples(root, [this, root, slot](SampleProbeResult result) mutable {
-            if (result.requestId != m_pendingSampleProbeRequest)
-                return;
-            m_pendingSampleProbeRequest = 0;
-            if (m_project.root() != root)
-                return;
-            if (!result.succeeded()) {
-                QMessageBox::warning(this, tr("Import Sample"), result.error);
-                return;
-            }
-            continueImportSampleForSlot(slot, root, result.probe);
-        });
-}
-
-void MainWindow::continueImportSampleForSlot(int slot, QString projectRoot,
-                                             const SampleFormatProbe &probe)
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
-        m_project.root() != projectRoot)
-        return;
-    const QString root = std::move(projectRoot);
-    Q_UNUSED(probe);
-    QSettings settings;
-    const QString startDir =
-        settings.value(QStringLiteral("lastSampleDir"), QDir::homePath()).toString();
-    const QString path = QFileDialog::getOpenFileName(
-        this, tr("Import Sample"), startDir,
-        tr("Audio files (*.wav *.aif *.aiff *.mp3 *.flac *.ogg *.sf2);;"
-           "All files (*)"));
-    if (path.isEmpty())
-        return;
-    settings.setValue(QStringLiteral("lastSampleDir"), QFileInfo(path).path());
-
-    QFile sourceFile(path);
-    if (!sourceFile.open(QIODevice::ReadOnly)) {
-        QMessageBox::warning(this, tr("Import Sample"), tr("Cannot read %1.").arg(path));
-        return;
-    }
-    const QByteArray sourceBytes = sourceFile.readAll();
-    sourceFile.close();
-
-    ImportedSample sample;
-    QString error;
-    // Decode choices beyond the source bytes, recorded in the provenance
-    // sidecar so "Edit sample…" can re-decode identically.
-    bool leftOnly = false;
-    int sf2Zone = -1;
-    if (sf2Magic(sourceBytes)) {
-        // SoundFonts hold many samples: pick a zone first (FORMATS.md §5);
-        // the chosen zone then rides the ordinary editor pipeline.
-        Sf2File font;
-        if (!readSf2Bytes(sourceBytes, path, &font, &error)) {
-            QMessageBox::warning(this, tr("Import Sample"),
-                                 tr("%1: %2").arg(QFileInfo(path).fileName(), error));
-            return;
-        }
-        Sf2ZonePicker picker(font, this);
-        if (picker.exec() != QDialog::Accepted)
-            return;
-        if (!extractSf2Zone(font, picker.selectedZone(), &sample, &error)) {
-            QMessageBox::warning(this, tr("Import Sample"),
-                                 tr("%1: %2").arg(QFileInfo(path).fileName(), error));
-            return;
-        }
-        sf2Zone = picker.selectedZone();
-    } else {
-        if (!importAudioBytes(sourceBytes, path, &sample, &error)) {
-            QMessageBox::warning(this, tr("Import Sample"),
-                                 tr("%1: %2").arg(QFileInfo(path).fileName(), error));
-            return;
-        }
-        if (sample.phaseCancelStereo &&
-            QMessageBox::question(this, tr("Import Sample"),
-                                  tr("The left and right channels of %1 are "
-                                     "phase-cancelling — the mono mix may sound hollow.\n\n"
-                                     "Import the left channel only instead?")
-                                      .arg(QFileInfo(path).fileName())) == QMessageBox::Yes) {
-            if (!importAudioBytes(sourceBytes, path, &sample, &error, true)) {
-                QMessageBox::warning(this, tr("Import Sample"),
-                                     tr("%1: %2").arg(QFileInfo(path).fileName(), error));
-                return;
-            }
-            leftOnly = true;
-        }
-    }
-
-    const auto &catalog = vgCatalog();
-    if (!catalog.valid) {
-        statusBar()->showMessage(tr("Loading voicegroup catalog…"), 5000);
-        return;
-    }
-    const QStringList symbols = catalog.directSound;
-    AuditionSlots::Adsr destAdsr;
-    bool hasDestAdsr = false;
-    if (slot >= 0 && m_active && m_active->vgSource) {
-        const VgVoice *dest = m_active->vgSource->voiceAt(slot);
-        if (dest && !vgMacroIsCgb(dest->macro)) {
-            destAdsr = {uint8_t(dest->attack), uint8_t(dest->decay), uint8_t(dest->sustain),
-                        uint8_t(dest->release)};
-            hasDestAdsr = true;
-        }
-    }
-    SampleEditorDialog dialog(
-        std::move(sample),
-        [symbols](const QString &name, QString *validationError) {
-            const auto valid = QRegularExpression(QStringLiteral("^[a-z0-9_]+$")).match(name);
-            if (name.isEmpty() || !valid.hasMatch()) {
-                if (validationError)
-                    *validationError = QStringLiteral("use lowercase letters, digits, and '_'.");
-                return false;
-            }
-            if (symbols.contains(QStringLiteral("DirectSoundWaveData_") + name)) {
-                if (validationError)
-                    *validationError = QStringLiteral("a sample with that name already exists.");
-                return false;
-            }
-            return true;
-        },
-        m_audioOk ? &m_audio : nullptr, hasDestAdsr ? &destAdsr : nullptr, this);
-    if (dialog.exec() != QDialog::Accepted)
-        return;
-    const QString committedName = dialog.sampleName();
-    const QByteArray committedWav = dialog.wavBytes();
-    SampleSidecar sidecar;
-    sidecar.sourcePath = QFileInfo(path).absoluteFilePath();
-    sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
-    sidecar.leftOnly = leftOnly;
-    sidecar.sf2Zone = sf2Zone;
-    sidecar.params = dialog.document()->params();
-    const VgAdsrDefaults defaults = catalog.typicalAdsr;
-    SongSession *const requestedSession = m_active;
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted ||
-        m_project.root() != root || projectMutationInProgress())
-        return;
-    SampleCommitRequest request;
-    request.projectRoot = root;
-    request.name = committedName;
-    request.wavBytes = committedWav;
-    request.sidecar = sidecar;
-    m_pendingSampleCommitRequest = m_projectIo->commitSample(
-        std::move(request),
-        [this, root, slot, committedName, defaults, requestedSession](SampleCommitResult result) {
-            if (result.requestId != m_pendingSampleCommitRequest)
-                return;
-            m_pendingSampleCommitRequest = 0;
-            if (m_project.root() != root || m_projectSwitchInProgress || m_closeInProgress ||
-                m_closeAccepted)
-                return;
-            if (!result.succeeded()) {
-                QMessageBox::warning(this, tr("Import Sample"), result.error);
-                return;
-            }
-            if (!result.sidecarSaved && !result.sidecarError.isEmpty())
-                statusBar()->showMessage(
-                    tr("Sample imported, but saving its edit history failed: %1")
-                        .arg(result.sidecarError),
-                    8000);
-            invalidateVgCatalog();
-            updateVoicegroupBrowser();
-            if (slot >= 0 && requestedSession && requestedSession == m_active &&
-                requestedSession->vgSource) {
-                const VgVoice *dest = requestedSession->vgSource->voiceAt(slot);
-                const bool keepDest = dest && (dest->macro == VgMacro::DirectSound ||
-                                               dest->macro == VgMacro::DirectSoundNoResample ||
-                                               dest->macro == VgMacro::DirectSoundAlt);
-                VgVoice voice;
-                if (keepDest) {
-                    voice = *dest;
-                } else {
-                    voice.macro = VgMacro::DirectSound;
-                    voice.key = 60;
-                    voice.pan = 0;
-                    const VgAdsr adsr =
-                        vgDefaultAdsr(defaults, voice.macro,
-                                      QStringLiteral("DirectSoundWaveData_") + committedName);
-                    voice.attack = adsr.attack;
-                    voice.decay = adsr.decay;
-                    voice.sustain = adsr.sustain;
-                    voice.release = adsr.release;
-                }
-                voice.symbol = QStringLiteral("DirectSoundWaveData_") + committedName;
-                onVoiceEditRequested(slot, voice, true);
-                m_workspace->revealVoicegroupSlot(slot);
-            }
-            statusBar()->showMessage(
-                tr("Imported %1 — DirectSoundWaveData_%1 is now available to voicegroups")
-                    .arg(committedName),
-                8000);
-        });
-}
-
-void MainWindow::editSampleForSlot(int slot)
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
-        !m_active || !m_active->vgSource || m_pendingSampleProjectRequest != 0)
-        return;
-    const QString prefix = QStringLiteral("DirectSoundWaveData_");
-    const VgVoice *voice = m_active->vgSource->voiceAt(slot);
-    if (!voice || !voice->symbol.startsWith(prefix)) {
-        QMessageBox::warning(this, tr("Edit Sample"),
-                             tr("This voice does not reference a DirectSound sample."));
-        return;
-    }
-    const QString name = voice->symbol.mid(prefix.size());
-    const QString root = m_project.root();
-    m_pendingSampleProjectRequest = m_projectIo->readProjectSample(
-        root, name, [this, root, name, slot](SampleProjectResult result) mutable {
-            if (result.requestId != m_pendingSampleProjectRequest)
-                return;
-            m_pendingSampleProjectRequest = 0;
-            if (m_project.root() != root)
-                return;
-            if (!result.succeeded()) {
-                QMessageBox::warning(this, tr("Edit Sample"), result.error);
-                return;
-            }
-            continueEditSampleForSlot(slot, name, root, std::move(result));
-        });
-}
-
-void MainWindow::continueEditSampleForSlot(int slot, QString name, QString projectRoot,
-                                           SampleProjectResult result)
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
-        m_project.root() != projectRoot)
-        return;
-    const QString root = std::move(projectRoot);
-    const VgVoice *voice =
-        m_active && m_active->vgSource ? m_active->vgSource->voiceAt(slot) : nullptr;
-    if (!voice)
-        return;
-    const QString wavPath = result.wavPath;
-    const SampleSidecar loadedSidecar = result.sidecar;
-    SampleSidecar sidecar = loadedSidecar;
-
-    // Provenance: reopen from the sidecar's hi-res source while it still
-    // checks out; otherwise the committed 8-bit .wav (the project is
-    // canonical without the sidecar — still crop/loop-editable).
-    ImportedSample sample;
-    bool fromSource = false; // decoding the original hi-res source
-    bool haveParams = false; // sidecar params apply to that source
-    QString error;
-    if (result.sidecarLoaded) {
-        const auto decodeSource = [&](const QByteArray &bytes, ImportedSample *out, QString *err) {
-            if (sidecar.sf2Zone >= 0) {
-                Sf2File font;
-                return readSf2Bytes(bytes, sidecar.sourcePath, &font, err) &&
-                       extractSf2Zone(font, sidecar.sf2Zone, out, err);
-            }
-            return importAudioBytes(bytes, sidecar.sourcePath, out, err, sidecar.leftOnly);
-        };
-        QFile sourceFile(sidecar.sourcePath);
-        QByteArray sourceBytes;
-        if (sourceFile.open(QIODevice::ReadOnly))
-            sourceBytes = sourceFile.readAll();
-        if (sourceBytes.isEmpty()) {
-            QMessageBox::information(this, tr("Edit Sample"),
-                                     tr("The original source (%1) is no longer readable; editing "
-                                        "the committed 8-bit sample instead.")
-                                         .arg(sidecar.sourcePath));
-        } else if (SampleRegistrar::sourceHashHex(sourceBytes) != sidecar.sourceSha256) {
-            const QMessageBox::StandardButton pick =
-                QMessageBox::question(this, tr("Edit Sample"),
-                                      tr("%1 has changed since this sample was created, so the "
-                                         "saved edit settings no longer apply to it.\n\n"
-                                         "Re-import the changed file with fresh settings? "
-                                         "(\"No\" edits the committed 8-bit sample instead.)")
-                                          .arg(sidecar.sourcePath),
-                                      QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
-            if (pick == QMessageBox::Cancel)
-                return;
-            if (pick == QMessageBox::Yes) {
-                if (!decodeSource(sourceBytes, &sample, &error)) {
-                    QMessageBox::warning(this, tr("Edit Sample"),
-                                         tr("%1: %2").arg(sidecar.sourcePath, error));
-                    return;
-                }
-                sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
-                fromSource = true;
-            }
-        } else if (decodeSource(sourceBytes, &sample, &error)) {
-            fromSource = true;
-            haveParams = true;
-        } else {
-            QMessageBox::information(this, tr("Edit Sample"),
-                                     tr("The original source (%1) no longer decodes (%2); editing "
-                                        "the committed 8-bit sample instead.")
-                                         .arg(sidecar.sourcePath, error));
-        }
-    }
-    if (!fromSource && !importAudioBytes(result.wavBytes, wavPath, &sample, &error)) {
-        QMessageBox::warning(this, tr("Edit Sample"), tr("%1: %2").arg(wavPath, error));
-        return;
-    }
-
-    AuditionSlots::Adsr destAdsr;
-    bool hasDestAdsr = false;
-    if (!vgMacroIsCgb(voice->macro)) {
-        destAdsr = {uint8_t(voice->attack), uint8_t(voice->decay), uint8_t(voice->sustain),
-                    uint8_t(voice->release)};
-        hasDestAdsr = true;
-    }
-    SampleEditorDialog dialog(
-        std::move(sample),
-        [name](const QString &candidate, QString *validationError) {
-            if (candidate == name)
-                return true;
-            if (validationError)
-                *validationError = tr("the sample keeps its registered name (%1).").arg(name);
-            return false;
-        },
-        m_audioOk ? &m_audio : nullptr, hasDestAdsr ? &destAdsr : nullptr, this);
-    dialog.setEditTarget(name);
-    if (haveParams)
-        dialog.applyParamsExternal(sidecar.params);
-    if (dialog.exec() != QDialog::Accepted)
-        return;
-
-    const QByteArray committedWav = dialog.wavBytes();
-    if (fromSource)
-        sidecar.params = dialog.document()->params();
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted ||
-        m_project.root() != root || projectMutationInProgress())
-        return;
-    SampleCommitRequest request;
-    request.projectRoot = root;
-    request.name = name;
-    request.wavBytes = committedWav;
-    if (fromSource)
-        request.sidecar = sidecar;
-    else
-        request.removeSidecar = true;
-    SongSession *const requestedSession = m_active;
-    m_pendingSampleCommitRequest = m_projectIo->commitSample(
-        std::move(request),
-        [this, root, name, slot, requestedSession](SampleCommitResult result) mutable {
-            if (result.requestId != m_pendingSampleCommitRequest)
-                return;
-            m_pendingSampleCommitRequest = 0;
-            if (m_project.root() != root || m_projectSwitchInProgress || m_closeInProgress ||
-                m_closeAccepted)
-                return;
-            if (!result.succeeded()) {
-                QMessageBox::warning(this, tr("Edit Sample"), result.error);
-                return;
-            }
-            if (!result.sidecarSaved && !result.sidecarError.isEmpty())
-                statusBar()->showMessage(tr("Sample saved, but saving its edit history failed: %1")
-                                             .arg(result.sidecarError),
-                                         8000);
-            invalidateVgCatalog();
-            updateVoicegroupBrowser();
-            if (requestedSession && requestedSession == m_active && requestedSession->vgSource)
-                reloadVoicegroupPreview(*requestedSession, slot);
-            statusBar()->showMessage(
-                tr("Saved %1 — the ROM's .bin recompiles on the next build").arg(name), 8000);
-        });
-}
-
-void MainWindow::finishCreateSong(SmfFile smf, const QString &label, const QString &constant,
-                                  const QString &player, const SongCfg &cfg,
-                                  const QString &newVoicegroup, const QString &projectRoot)
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
-        m_project.root() != projectRoot || projectMutationInProgress())
-        return;
-    CreateSongRequest request;
-    const QString root = m_project.root();
-    request.projectRoot = root;
-    request.label = label;
-    request.constant = constant;
-    request.player = player;
-    request.cfg = cfg;
-    request.newVoicegroup = newVoicegroup;
-    request.smf = std::move(smf);
-    m_pendingCreateSongRequest = m_projectIo->createSong(
-        std::move(request), [this, root, label, newVoicegroup](CreateSongResult result) mutable {
-            if (result.requestId != m_pendingCreateSongRequest)
-                return;
-            m_pendingCreateSongRequest = 0;
-            if (m_project.root() != root || m_projectSwitchInProgress || m_closeInProgress ||
-                m_closeAccepted)
-                return;
-            if (!result.succeeded()) {
-                const QString midiDir = root + QStringLiteral("/sound/songs/midi");
-                if (!result.voicegroupOk) {
-                    QMessageBox::warning(this, tr("New Song"), result.error);
-                } else if (!result.midiOk || !result.flagsOk) {
-                    QMessageBox::warning(this, tr("New Song"), result.error);
-                } else {
-                    QMessageBox::warning(this, tr("New Song"),
-                                         tr("Wrote %1/%2.mid, but registering it failed: %3\n"
-                                            "Use File → Register Song to retry.")
-                                             .arg(midiDir, label, result.error));
-                }
-            } else {
-                QString message = tr("Created and registered %1 as %2 (song ID %3)")
-                                      .arg(label)
-                                      .arg(result.songId);
-                if (!newVoicegroup.isEmpty())
-                    message += tr(" — configure its new voicegroup in the Voicegroup dock");
-                statusBar()->showMessage(message, 8000);
-            }
-            reloadProject([this, label](bool refreshed) {
-                if (refreshed)
-                    loadSongByLabel(label, /*newTab=*/true);
-            });
-        });
-}
-
-void MainWindow::registerLoadedSong()
-{
-    if (m_active && m_active->songId >= 0 && m_active->songId < m_project.songs().size())
-        registerSongById(m_active->songId);
-}
-
-void MainWindow::registerSongById(int songId)
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted ||
-        projectMutationInProgress() || songId < 0 || songId >= m_project.songs().size() ||
-        m_registerSongConfirmation || m_pendingRegistrationPlanRequest != 0 ||
-        m_pendingRegistrationRequest != 0)
-        return;
-    const SongInfo song = m_project.songs().at(songId);
-    const QString constant =
-        song.constant.isEmpty() ? SongRegistry::constantForLabel(song.label) : song.constant;
-    const QString player = song.player.isEmpty() ? QStringLiteral("MUSIC_PLAYER_BGM") : song.player;
-    const QString root = m_project.root();
-    RegistrationPlanRequest request{root, song.label, constant, player};
-    m_pendingRegistrationPlanRequest = m_projectIo->registrationPlan(
-        std::move(request),
-        [this, root, song, constant, player](RegistrationPlanResult result) mutable {
-            if (result.requestId != m_pendingRegistrationPlanRequest)
-                return;
-            m_pendingRegistrationPlanRequest = 0;
-            if (m_project.root() != root || m_projectSwitchInProgress || m_closeInProgress ||
-                m_closeAccepted || projectMutationInProgress())
-                return;
-            if (!result.succeeded()) {
-                QMessageBox::warning(this, tr("Register Song"), result.error);
-                return;
-            }
-            auto *box = new QMessageBox(QMessageBox::Question, tr("Register Song"),
-                                        tr("Register %1 as %2?").arg(song.label, constant),
-                                        QMessageBox::NoButton, this);
-            box->setAttribute(Qt::WA_DeleteOnClose);
-            QStringList files;
-            if (!result.status.inSongTable)
-                files << QStringLiteral("song_table.inc");
-            if (!result.status.inSongsH)
-                files << QStringLiteral("songs.h");
-            if (result.status.ldApplicable && !result.status.inLdScript)
-                files << QStringLiteral("ld_script.ld");
-            if (result.status.charmapApplicable && !result.status.inCharmap)
-                files << QStringLiteral("charmap.txt");
-            if (result.status.debugApplicable && !result.status.inDebugMenu)
-                files << QStringLiteral("src/debug.c");
-            if (!files.isEmpty())
-                box->setInformativeText(tr("The following registration files need updates: %1")
-                                            .arg(files.join(QStringLiteral(", "))));
-            box->addButton(tr("Register"), QMessageBox::AcceptRole);
-            box->addButton(QMessageBox::Cancel);
-            m_registerSongConfirmation = box;
-            connect(box, &QMessageBox::finished, this,
-                    [this, box, root, song, constant, player](int) mutable {
-                        if (m_registerSongConfirmation != box)
-                            return;
-                        auto *clicked = box->clickedButton();
-                        const bool accepted =
-                            clicked && box->buttonRole(clicked) == QMessageBox::AcceptRole;
-                        m_registerSongConfirmation = nullptr;
-                        if (!accepted || m_project.root() != root || m_projectSwitchInProgress ||
-                            m_closeInProgress || m_closeAccepted || projectMutationInProgress())
-                            return;
-                        RegisterSongRequest request{root, song.label, constant, player};
-                        m_pendingRegistrationRequest = m_projectIo->registerSong(
-                            std::move(request),
-                            [this, root, song, constant](RegisterSongResult result) mutable {
-                                if (result.requestId != m_pendingRegistrationRequest)
-                                    return;
-                                m_pendingRegistrationRequest = 0;
-                                if (m_project.root() != root || m_projectSwitchInProgress ||
-                                    m_closeInProgress || m_closeAccepted)
-                                    return;
-                                if (!result.succeeded()) {
-                                    QMessageBox::warning(this, tr("Register Song"), result.error);
-                                    return;
-                                }
-                                statusBar()->showMessage(tr("Registered %1 as %2 (song ID %3)")
-                                                             .arg(song.label, constant)
-                                                             .arg(result.songId),
-                                                         8000);
-                                reloadProject([this, label = song.label](bool refreshed) {
-                                    if (refreshed && m_active && m_active->doc.label() == label)
-                                        activateSession(m_active, /*force=*/true);
-                                });
-                            });
-                    });
-            connect(box, &QObject::destroyed, this, [this, box] {
-                if (m_registerSongConfirmation == box)
-                    m_registerSongConfirmation = nullptr;
-            });
-            box->setWindowModality(Qt::WindowModal);
-            box->show();
-        });
-}
-
-void MainWindow::deleteSongById(int songId)
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted ||
-        projectMutationInProgress() || songId < 0 || songId >= m_project.songs().size() ||
-        m_deleteSongConfirmation || m_pendingDeletionPlanRequest != 0 ||
-        m_pendingDeletionRequest != 0)
-        return;
-    const SongInfo song = m_project.songs().at(songId);
-    const QString constant =
-        song.constant.isEmpty() ? SongRegistry::constantForLabel(song.label) : song.constant;
-    const QString root = m_project.root();
-    DeletionPlanRequest request{root, song.label, constant, m_project.songs()};
-    m_pendingDeletionPlanRequest = m_projectIo->deletionPlan(
-        std::move(request), [this, root, song, constant](DeletionPlanResult result) mutable {
-            if (result.requestId != m_pendingDeletionPlanRequest)
-                return;
-            m_pendingDeletionPlanRequest = 0;
-            if (m_project.root() != root || m_projectSwitchInProgress || m_closeInProgress ||
-                m_closeAccepted || projectMutationInProgress())
-                return;
-            if (result.plan.tableIndex == 0) {
-                QMessageBox::warning(
-                    this, tr("Delete Song"),
-                    tr("%1 is the first song_table.inc entry (song ID 0), the engine's fallback "
-                       "song — it cannot be deleted.")
-                        .arg(song.label));
-                return;
-            }
-            auto *box =
-                new QMessageBox(QMessageBox::Warning, tr("Delete Song"),
-                                tr("Delete %1?").arg(song.label), QMessageBox::NoButton, this);
-            box->setAttribute(Qt::WA_DeleteOnClose);
-            m_deleteSongConfirmation = box;
-            QStringList details;
-            details << tr("• Its .mid moves to .porydaw/trash/ (recoverable)");
-            QStringList files;
-            if (result.plan.tableIndex >= 0)
-                files << QStringLiteral("song_table.inc");
-            if (result.plan.inSongsH)
-                files << QStringLiteral("songs.h");
-            if (result.plan.inLdScript)
-                files << QStringLiteral("ld_script.ld");
-            if (result.plan.inCharmap)
-                files << QStringLiteral("charmap.txt");
-            if (result.plan.inDebugMenu)
-                files << QStringLiteral("src/debug.c");
-            if (song.hasCfg)
-                files << QStringLiteral("midi.cfg / songs.mk");
-            if (!files.isEmpty())
-                details
-                    << tr("• Its lines are removed from %1").arg(files.join(QStringLiteral(", ")));
-            if (result.plan.tableIndex > 0 && !result.plan.lastEntry)
-                details << tr("• Its song_table.inc entry becomes a reusable free slot, so no "
-                              "other song's ID changes");
-            box->setInformativeText(details.join(QLatin1Char('\n')));
-            QCheckBox *vgBox = nullptr;
-            if (!result.deletableVoicegroupName.isEmpty()) {
-                vgBox = new QCheckBox(
-                    tr("Also delete voicegroup %1 (used only by this song)")
-                        .arg(SongRegistry::voicegroupDisplayName(song.cfg.voicegroupArg)),
-                    box);
-                vgBox->setChecked(true);
-                box->setCheckBox(vgBox);
-            }
-            auto *deleteButton = box->addButton(tr("Delete"), QMessageBox::DestructiveRole);
-            connect(
-                box, &QDialog::finished, this,
-                [this, box, root, song, result, deleteButton, vgBox](int) mutable {
-                    if (m_deleteSongConfirmation != box)
-                        return;
-                    const bool accepted = box->clickedButton() == deleteButton;
-                    m_deleteSongConfirmation = nullptr;
-                    if (!accepted || m_project.root() != root || m_projectSwitchInProgress ||
-                        m_closeInProgress || m_closeAccepted || projectMutationInProgress())
-                        return;
-                    const QString deleteName =
-                        vgBox && vgBox->isChecked() ? result.deletableVoicegroupName : QString();
-                    performSongDeletion(
-                        song, deleteName,
-                        [this, label = song.label](bool succeeded, QString error) {
-                            if (!succeeded && !error.isEmpty())
-                                QMessageBox::warning(this, tr("Delete Song"), error);
-                            else if (succeeded)
-                                statusBar()->showMessage(tr("Deleted %1 — its .mid is recoverable "
-                                                            "from .porydaw/trash/")
-                                                             .arg(label),
-                                                         8000);
-                        });
-                });
-            connect(box, &QObject::destroyed, this, [this, box] {
-                if (m_deleteSongConfirmation == box)
-                    m_deleteSongConfirmation = nullptr;
-            });
-            box->open();
-        });
-}
-
-void MainWindow::performSongDeletion(const SongInfo &song, const QString &deleteVoicegroupName,
-                                     DeletionContinuation continuation)
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted) {
-        if (continuation)
-            continuation(false, {});
-        return;
-    }
-    const QString root = m_project.root();
-    const QString constant =
-        song.constant.isEmpty() ? SongRegistry::constantForLabel(song.label) : song.constant;
-    if (m_pendingDeletionRequest != 0) {
-        if (continuation)
-            continuation(false, tr("A song deletion is already in progress."));
-        return;
-    }
-    if (projectMutationInProgress()) {
-        if (continuation)
-            continuation(false, {});
-        return;
-    }
-    if (SongSession *session = sessionForLabel(song.label)) {
-        destroySession(session);
-        persistOpenTabs();
-    }
-    DeleteSongRequest request{root, song.label, constant, deleteVoicegroupName};
-    m_pendingDeletionRequest = m_projectIo->deleteSong(
-        std::move(request),
-        [this, root, continuation = std::move(continuation)](DeleteSongResult result) mutable {
-            if (result.requestId != m_pendingDeletionRequest)
-                return;
-            m_pendingDeletionRequest = 0;
-            if (m_project.root() != root || m_projectSwitchInProgress || m_closeInProgress ||
-                m_closeAccepted) {
-                if (continuation)
-                    continuation(false, {});
-                return;
-            }
-            const QString workerError = result.error;
-            reloadProject(
-                [continuation = std::move(continuation), workerError](bool refreshed) mutable {
-                    if (!continuation)
-                        return;
-                    if (!refreshed)
-                        continuation(false, workerError.isEmpty()
-                                                ? QStringLiteral("Project refresh failed.")
-                                                : workerError);
-                    else
-                        continuation(workerError.isEmpty(), workerError);
-                });
-        });
-}
-
-void MainWindow::reloadProject(ProjectOpenContinuation continuation)
-{
-    if (!m_project.isOpen() || m_projectSwitchInProgress) {
-        if (continuation)
-            continuation(false);
-        return;
-    }
-    if (m_pendingProjectRefreshRequest != 0) {
-        m_projectIo->cancel(m_pendingProjectRefreshRequest);
-        m_pendingProjectRefreshRequest = 0;
-    }
-    const QString root = m_project.root();
-    m_pendingProjectRefreshRequest = m_projectIo->openProject(
-        root,
-        [this, root, continuation = std::move(continuation)](ProjectOpenResult result) mutable {
-            if (m_pendingProjectRefreshRequest == 0)
-                return;
-            m_pendingProjectRefreshRequest = 0;
-            if (m_project.root() != root)
-                return;
-            if (!result.succeeded()) {
-                QMessageBox::warning(this, tr("Reload Project"), result.error);
-                if (continuation)
-                    continuation(false);
-                return;
-            }
-            m_project.replaceWith(result.snapshot);
-            populateSongList();
-            refreshSessionSongIds();
-            invalidateVgCatalog();
-            if (continuation)
-                continuation(true);
-        });
-}
-
-void MainWindow::loadSongByLabel(const QString &label, bool newTab)
-{
-    for (const SongInfo &song : m_project.songs()) {
-        if (song.label == label && song.isPlayable()) {
-            loadSong(song, newTab);
-            return;
-        }
-    }
-}
-
-void MainWindow::updateVoicegroupBrowser()
-{
-    SongSession *session = m_active;
-    if (!session || !session->voicegroup) {
-        m_workspace->clearVoicegroupPresentation();
-        syncVoicegroupLoading();
-        updateVgDockTitle();
-        return;
-    }
-
-    const VgCatalog &catalog = vgCatalog();
-    WorkspaceUi::VoicegroupPresentation presentation;
-    presentation.voicegroup = session->voicegroup;
-    presentation.source = session->vgSource.get();
-    presentation.currentArg = session->doc.cfg().voicegroupArg.isEmpty()
-                                  ? QStringLiteral("_dummy")
-                                  : session->doc.cfg().voicegroupArg;
-    presentation.choices = catalog.groupArgs;
-    presentation.sampleSymbols = catalog.directSound;
-    presentation.waveSymbols = catalog.progWave;
-    presentation.keysplits = catalog.keysplits;
-    presentation.drumkits = catalog.drumkits;
-    presentation.adsrDefaults = catalog.typicalAdsr;
-    presentation.synths = catalog.synths;
-    presentation.pendingSynths = m_pendingSynths;
-    presentation.usedVoices = m_workspace->viewFor(*session).usedVoices();
-    presentation.mintSynth = [this](const VgSynthDesc &desc) -> QString {
-        // Mint a pending symbol for the descriptor — nothing is written;
-        // the definition reaches disk when a voicegroup referencing it
-        // saves. Value-equal definitions (on disk or pending) are reused.
-        const VgSynthCatalog &synths = vgCatalog().synths;
-        QString symbol = synths.symbolFor(desc);
-        if (!symbol.isEmpty())
-            return symbol;
-        for (auto it = m_pendingSynths.constBegin(); it != m_pendingSynths.constEnd(); ++it) {
-            if (it.value() == desc)
-                return it.key();
-        }
-        if (!synths.creatable()) {
-            statusBar()->showMessage(tr("Cannot create synth instrument: this project doesn't "
-                                        "define the set_synth_* macros (Golden Sun synths need "
-                                        "ipatix's improved mixer)."),
-                                     8000);
-            return QString();
-        }
-        // Param-named; a hand-written symbol with the same name but
-        // different bytes (or a plain sample) forces a suffix.
-        symbol = vgSynthSymbolName(desc);
-        const QString base = symbol;
-        for (int i = 2; synths.find(symbol) || vgCatalog().directSound.contains(symbol); i++)
-            symbol = base + QStringLiteral("_%1").arg(i);
-        m_pendingSynths.insert(symbol, desc);
-        return symbol;
-    };
-    m_workspace->setVoicegroupPresentation(std::move(presentation));
-    syncVoicegroupLoading();
-    updateVgDockTitle();
-}
-
-void MainWindow::syncVoicegroupLoading()
-{
-    const bool loading = m_active && (m_active->pendingVgRequest != 0 ||
-                                      (m_active->voicegroup != nullptr && m_vgCatalog.loading));
-    m_workspace->setVoicegroupLoading(loading);
-}
-
-const MainWindow::VgCatalog &MainWindow::vgCatalog()
-{
-    if (!m_vgCatalog.valid && !m_vgCatalog.loading && m_project.isOpen())
-        queueCatalogRefresh();
-    return m_vgCatalog;
-}
-
-void MainWindow::queueCatalogRefresh()
-{
-    if (m_pendingCatalogRequest != 0 || !m_project.isOpen())
-        return;
-    const QString root = m_project.root();
-    m_vgCatalog.loading = true;
-    syncVoicegroupLoading();
-    m_pendingCatalogRequest =
-        m_projectIo->refreshVgCatalog(root, [this, root](CatalogResult result) mutable {
-            if (result.requestId != m_pendingCatalogRequest)
-                return;
-            m_pendingCatalogRequest = 0;
-            if (m_project.root() != root) {
-                m_vgCatalog.loading = false;
-                syncVoicegroupLoading();
-                return;
-            }
-            m_vgCatalog.loading = false;
-            if (!result.succeeded()) {
-                statusBar()->showMessage(
-                    tr("Voicegroup catalog is unavailable: %1").arg(result.error), 8000);
-                syncVoicegroupLoading();
-                return;
-            }
-            m_vgCatalog.groupArgs = result.catalog.groupArgs;
-            m_vgCatalog.keysplits = result.catalog.keysplits;
-            m_vgCatalog.drumkits = result.catalog.drumkits;
-            m_vgCatalog.typicalAdsr = result.catalog.typicalAdsr;
-            m_vgCatalog.directSound = result.directSound.directSound;
-            m_vgCatalog.synths = result.directSound.synths;
-            m_vgCatalog.progWave = result.progWave;
-            m_vgCatalog.perFileVoicegroups = result.perFileVoicegroups;
-            m_vgCatalog.valid = true;
-            updateVoicegroupBrowser();
-        });
-}
-
-void MainWindow::invalidateVgCatalog()
-{
-    if (m_pendingCatalogRequest != 0) {
-        m_projectIo->cancel(m_pendingCatalogRequest);
-        m_pendingCatalogRequest = 0;
-    }
-    if (m_pendingSampleSetRequest != 0) {
-        m_projectIo->cancel(m_pendingSampleSetRequest);
-        m_pendingSampleSetRequest = 0;
-    }
-    m_vgCatalog.valid = false;
-    m_vgCatalog.loading = false;
-    m_vgCatalog.perFileVoicegroups = false;
-    syncVoicegroupLoading();
-    m_sampleWaves.clear();
-    m_progWaves.clear();
-    m_keysplits.clear();
-    voicegroup_free_samples(m_sampleSet);
-    m_sampleSet = nullptr;
-}
-
-void MainWindow::ensureSampleSet()
-{
-    if (m_sampleSet || m_pendingSampleSetRequest != 0 || !m_project.isOpen())
-        return;
-    const VgCatalog &catalog = vgCatalog();
-    if (!catalog.valid)
-        return;
-    const QStringList sampleSymbols = catalog.directSound;
-    const QStringList waveSymbols = catalog.progWave;
-    const QList<QPair<QString, QString>> keysplitSymbols = catalog.keysplits;
-    SampleSetRequest request;
-    request.projectRoot = m_project.root();
-    request.samples = sampleSymbols;
-    request.waves = waveSymbols;
-    request.keysplits = keysplitSymbols;
-    const QString root = request.projectRoot;
-    m_pendingSampleSetRequest = m_projectIo->loadSampleSet(
-        std::move(request),
-        [this, root, sampleSymbols, waveSymbols, keysplitSymbols](SampleSetResult result) mutable {
-            if (result.requestId != m_pendingSampleSetRequest) {
-                if (result.sampleSet)
-                    voicegroup_free_samples(result.sampleSet);
-                return;
-            }
-            m_pendingSampleSetRequest = 0;
-            if (m_project.root() != root || !m_vgCatalog.valid ||
-                m_vgCatalog.directSound != sampleSymbols || m_vgCatalog.progWave != waveSymbols ||
-                m_vgCatalog.keysplits != keysplitSymbols) {
-                if (result.sampleSet)
-                    voicegroup_free_samples(result.sampleSet);
-                return;
-            }
-            if (!result.succeeded()) {
-                if (result.sampleSet)
-                    voicegroup_free_samples(result.sampleSet);
-                return;
-            }
-            m_sampleSet = result.sampleSet;
-            result.sampleSet = nullptr;
-            m_sampleWaves.clear();
-            m_progWaves.clear();
-            m_keysplits.clear();
-            for (int i = 0; i < sampleSymbols.size() && i < m_sampleSet->count; i++) {
-                if (m_sampleSet->waves[i])
-                    m_sampleWaves.insert(sampleSymbols.at(i), m_sampleSet->waves[i]);
-            }
-            for (int i = 0; i < waveSymbols.size() && i < m_sampleSet->progWaveCount; i++) {
-                if (m_sampleSet->progWaves[i])
-                    m_progWaves.insert(waveSymbols.at(i), m_sampleSet->progWaves[i]);
-            }
-            for (int i = 0; i < keysplitSymbols.size() && i < m_sampleSet->keysplitCount; i++) {
-                const LoadedKeysplit &keysplits = m_sampleSet->keysplits[i];
-                if (keysplits.subGroup && keysplits.table)
-                    m_keysplits.insert(keysplitSymbols.at(i).first, keysplits);
-            }
-            if (m_active)
-                updateVoicegroupBrowser();
-        });
-}
-
-const WaveData *MainWindow::sampleWaveFor(const QString &symbol)
-{
-    ensureSampleSet();
-    return m_sampleWaves.value(symbol, nullptr);
-}
-
-// Browse-audition a keysplit instrument: play whatever sub-voice the
-// audition key (middle C) resolves to, with that sub-voice's own envelope —
-// the same resolution the engine does per note (resolve_voice).
-void MainWindow::auditionKeysplit(const QString &symbol)
-{
-    ensureSampleSet();
-    const auto it = m_keysplits.constFind(symbol);
-    if (it == m_keysplits.constEnd())
-        return;
-    const uint8_t idx = it->table[60];
-    if (idx >= VOICEGROUP_SIZE)
-        return; // old-style overflow index: nothing loaded to play
-    const ToneData &sub = it->subGroup[idx];
-    if (sub.type & (VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL))
-        return; // nested split: the engine refuses these too
-    const AuditionSlots::Adsr adsr{sub.attack, sub.decay, sub.sustain, sub.release};
-    const int cgbType = sub.type & 0x07;
-    if (cgbType == 0 && sub.wav && sub.wav->data && sub.wav->size > 0) {
-        m_audio.auditionSample(
-            QByteArray::fromRawData(reinterpret_cast<const char *>(sub.wav->data),
-                                    int(sub.wav->size)),
-            sub.wav->freq, sub.wav->loopStart, (sub.wav->status & 0x4000) != 0, 60, adsr, sub.key);
-    } else if (cgbType == VOICE_PROGRAMMABLE_WAVE && sub.wavePointer) {
-        m_audio.auditionWave(
-            QByteArray::fromRawData(reinterpret_cast<const char *>(sub.wavePointer), 16), 60, adsr);
-    }
-    // Square/noise sub-voices: rare, and their audition would need CGB
-    // square plumbing — silently skipped.
-}
-
-void MainWindow::onVoiceEditRequested(int slot, const VgVoice &voice, bool structural)
-{
-    SongSession *session = m_active;
-    if (!session || !session->isInteractive() || !session->vgSource)
-        return;
-    auto applied = [this, session](VoicegroupSource &, int slot, bool structural) {
-        onVoiceEdited(*session, slot, structural);
-        // The source edit is synchronous; preview/audio replacement is not.
-        // Reflect both scalar and structural edits immediately while retaining
-        // the existing disabled editor during an async load.
-        if (session == m_active)
-            m_workspace->refreshVoicegroupSlot(slot);
-        updateTabTitle(*session);
-        if (session == m_active)
-            updateWindowTitle();
-    };
-    auto command =
-        makeUndoableVoicegroupEdit(session->vgSource, slot, voice, structural, std::move(applied));
-    if (command)
-        session->doc.undoStack()->push(command.release());
-}
-
-void MainWindow::onVoiceEdited(SongSession &session, int slot, bool structural)
-{
-    if (!session.vgSource)
-        return;
-    if (structural) {
-        reloadVoicegroupPreview(session, slot);
-    } else {
-        // A scalar undo can land while a structural preview is still being
-        // decoded. Cancel that preview and render the current source again;
-        // otherwise its older bytes can replace the scalar edit on arrival.
-        const bool previewPending = session.pendingPreviewRequest != 0;
-        if (previewPending) {
-            m_projectIo->cancel(session.pendingPreviewRequest);
-            session.pendingPreviewRequest = 0;
-        }
-        ToneData *tone = nullptr;
-        if (session.voicegroup && slot >= 0 && slot < VOICEGROUP_SIZE)
-            tone = &session.voicegroup->voices[slot];
-        session.vgSource->applyScalarsToToneData(slot, tone);
-        // Synth param edits are scalar pokes too: the descriptor bytes are
-        // patched straight into the loaded tone (pending definitions have
-        // nothing on disk to reload from). The poke can rename the voice
-        // (param-named symbols), which track headers display — repaint.
-        if (applyPendingSynthTones(session, session.voicegroup))
-            m_workspace->viewFor(session).update();
-        // Playing tracks hold a copy of their instrument; refresh so the
-        // edit is heard from the next note without a pause/play cycle.
-        if (&session == m_active && m_audioOk)
-            m_audio.refreshVoices();
-        if (previewPending) {
-            const int keepSlot = &session == m_active ? m_workspace->currentVoicegroupSlot() : 0;
-            reloadVoicegroupPreview(session, keepSlot);
-        }
-    }
-    updateVgDockTitle();
-    updateTabTitle(session);
-}
-
-void MainWindow::reloadVoicegroupPreview(SongSession &session, int keepSlot)
-{
-    if (!session.vgSource)
-        return;
-    if (session.pendingPreviewRequest != 0) {
-        m_projectIo->cancel(session.pendingPreviewRequest);
-        session.pendingPreviewRequest = 0;
-    }
-    SongSession *const sessionPtr = &session;
-    const QString root = m_project.root();
-    const QString loadName = session.vgSource->loadName();
-    const QByteArray sourceBytes = session.vgSource->renderPreview();
-    const auto isLive = [this, sessionPtr] {
-        return std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                           [sessionPtr](const std::unique_ptr<SongSession> &candidate) {
-                               return candidate.get() == sessionPtr;
-                           });
-    };
-    PreviewRequest request;
-    request.projectRoot = root;
-    request.loadName = loadName;
-    request.sourceBytes = sourceBytes;
-    session.pendingPreviewRequest = m_projectIo->preview(
-        std::move(request), [this, sessionPtr, keepSlot, root, loadName, sourceBytes,
-                             isLive](PreviewResult result) mutable {
-            if (!isLive()) {
-                if (result.voicegroup)
-                    voicegroup_free(result.voicegroup);
-                return;
-            }
-            if (result.requestId != sessionPtr->pendingPreviewRequest) {
-                if (result.voicegroup)
-                    voicegroup_free(result.voicegroup);
-                return;
-            }
-            sessionPtr->pendingPreviewRequest = 0;
-            // A matching request id is not enough: scalar edits and
-            // undo/redo can change the source while the worker decodes.
-            if (m_project.root() != root || !sessionPtr->vgSource ||
-                sessionPtr->vgSource->loadName() != loadName ||
-                sessionPtr->vgSource->renderPreview() != sourceBytes) {
-                if (result.voicegroup)
-                    voicegroup_free(result.voicegroup);
-                return;
-            }
-            if (!result.succeeded()) {
-                if (result.voicegroup)
-                    voicegroup_free(result.voicegroup);
-                statusBar()->showMessage(
-                    tr("Edited voicegroup failed to load — keeping the previous sound."), 8000);
-                return;
-            }
-            swapVoicegroup(*sessionPtr, result.voicegroup, keepSlot);
-            result.voicegroup = nullptr;
-        });
-}
-
-const VgSynthDesc *MainWindow::synthDescForSymbol(const QString &symbol)
-{
-    const auto pending = m_pendingSynths.constFind(symbol);
-    if (pending != m_pendingSynths.constEnd())
-        return &pending.value();
-    return vgCatalog().synths.find(symbol);
-}
-
-bool MainWindow::applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *vg)
-{
-    if (!session.vgSource || !vg)
-        return false;
-    bool changed = false;
-    for (int slot = 0; slot < VOICEGROUP_SIZE; slot++) {
-        const VgVoice *v = session.vgSource->voiceAt(slot);
-        if (!v || (v->macro != VgMacro::DirectSound && v->macro != VgMacro::DirectSoundNoResample &&
-                   v->macro != VgMacro::DirectSoundAlt))
-            continue;
-        const VgSynthDesc *desc = synthDescForSymbol(v->symbol);
-        if (!desc)
-            continue;
-        // A synth param edit rides the scalar path, so the reload that would
-        // rebuild voiceNames never runs — sync the slot's name here or track
-        // labels and the browser tree keep showing the pre-edit symbol.
-        const QByteArray name = v->symbol.toUtf8();
-        if (qstrncmp(vg->voiceNames[slot], name.constData(), VG_VOICE_NAME_LEN - 1) != 0) {
-            std::strncpy(vg->voiceNames[slot], name.constData(), VG_VOICE_NAME_LEN - 1);
-            vg->voiceNames[slot][VG_VOICE_NAME_LEN - 1] = '\0';
-            changed = true;
-        }
-        ToneData &td = vg->voices[slot];
-        // Already sounding these bytes (the loader resolved an on-disk
-        // definition, or an earlier patch)? Leave the tone alone.
-        if (td.wav && td.wav->size == 0 && td.wav->data) {
-            const auto *d = reinterpret_cast<const uint8_t *>(td.wav->data);
-            const VgSynthDesc current{d[1] > 2 ? 2 : d[1], d[2], d[3], d[4], d[5]};
-            if (current == *desc)
-                continue;
-        }
-        // Never mutate a loader-owned WaveData (shared across voices via its
-        // cache): point the tone at a session-owned descriptor instead.
-        // Re-patching an installed buffer pokes its bytes in place, which the
-        // engine reads every tick — live tweaks sound without a reload.
-        std::unique_ptr<SynthToneBuf> &tone = session.synthTones[slot];
-        if (!tone) {
-            tone = std::make_unique<SynthToneBuf>();
-            std::memset(tone.get(), 0, sizeof(SynthToneBuf));
-            tone->wd.status = 0x4000;   // loop flag, as the synth header sets
-            tone->wd.freq = 0x01058920; // 64-sample period lands on middle C
-            tone->wd.size = 0;          // size 0 = synth descriptor
-            tone->wd.data = reinterpret_cast<int8_t *>(tone->bytes);
-        }
-        tone->bytes[0] = 0x80;
-        tone->bytes[1] = uint8_t(desc->waveform);
-        tone->bytes[2] = uint8_t(desc->baseDuty);
-        tone->bytes[3] = uint8_t(desc->dutyStep);
-        tone->bytes[4] = uint8_t(desc->modDepth);
-        tone->bytes[5] = uint8_t(desc->phase);
-        td.wav = &tone->wd;
-        changed = true;
-    }
-    return changed;
-}
-
-void MainWindow::swapVoicegroup(SongSession &session, LoadedVoiceGroup *vg, int keepSlot)
-{
-    // Pending synth definitions aren't on disk, so a fresh load can't have
-    // resolved them; patch before anything (views, engine) sees the group.
-    applyPendingSynthTones(session, vg);
-    SongView &view = m_workspace->viewFor(session);
-    view.setVoicegroup(nullptr);
-    if (&session == m_active) {
-        m_workspace->setVoicegroup(nullptr);
-        if (m_audioOk)
-            m_audio.updateVoicegroup(vg);
-    }
-    if (session.voicegroup)
-        voicegroup_free(session.voicegroup);
-    session.voicegroup = vg;
-    view.setVoicegroup(vg);
-    if (&session == m_active) {
-        updateVoicegroupBrowser();
-        m_workspace->selectVoicegroupSlot(keepSlot);
-    }
-}
-
-void MainWindow::cleanupVgPreview(std::function<void()> completion)
-{
-    if (!m_project.isOpen()) {
-        if (completion)
-            completion();
-        return;
-    }
-    // ProjectIo is FIFO: this request runs after all sidecar writes queued
-    // before it, so its completion is the teardown barrier.
-    m_projectIo->cleanupPreview(m_project.root(),
-                                [completion = std::move(completion)](PreviewCleanupResult) mutable {
-                                    if (completion)
-                                        completion();
-                                });
-}
-
-void MainWindow::updateVgDockTitle()
-{
-    const bool dirty = m_active && m_active->vgSource && m_active->vgSource->dirty();
-    m_workspace->setVoicegroupDirty(dirty);
-}
-
-void MainWindow::newVoicegroup()
-{
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
-        projectMutationInProgress())
-        return;
-    const QString root = m_project.root();
-    const VgCatalog &catalog = vgCatalog();
-    if (!catalog.valid) {
-        statusBar()->showMessage(tr("Loading voicegroup catalog…"), 5000);
-        return;
-    }
-    if (!catalog.perFileVoicegroups) {
-        QMessageBox::information(this, tr("New Voicegroup"),
-                                 tr("This project keeps all voicegroups in one file; creating new "
-                                    "per-file voicegroups isn't supported for that layout."));
-        return;
-    }
-    VoicegroupSource *activeSource = m_active ? m_active->vgSource.get() : nullptr;
-    QDialog dialog(this);
-    dialog.setWindowTitle(tr("New Voicegroup"));
-    auto *form = new QFormLayout(&dialog);
-    auto *nameEdit = new QLineEdit(&dialog);
-    nameEdit->setValidator(new QRegularExpressionValidator(
-        QRegularExpression(QStringLiteral("[A-Za-z][A-Za-z0-9_]*")), nameEdit));
-    form->addRow(tr("Name"), nameEdit);
-    auto *sourceCombo = new QComboBox(&dialog);
-    if (activeSource)
-        sourceCombo->addItem(tr("Copy of %1").arg(QFileInfo(activeSource->filePath()).fileName()),
-                             activeSource->filePath());
-    sourceCombo->addItem(tr("Empty (dummy template)"), QString());
-    form->addRow(tr("Start from"), sourceCombo);
-    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-    if (dialog.exec() != QDialog::Accepted)
-        return;
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted || !m_project.isOpen() ||
-        m_project.root() != root || projectMutationInProgress())
-        return;
-    const QString name = nameEdit->text().trimmed();
-    if (name.isEmpty())
-        return;
-    if (catalog.groupArgs.contains(QStringLiteral("_") + name)) {
-        QMessageBox::warning(this, tr("New Voicegroup"),
-                             tr("A voicegroup named %1 already exists.").arg(name));
-        return;
-    }
-    const QString copyFrom = sourceCombo->currentData().toString();
-    const QString sectionLabel =
-        (!copyFrom.isEmpty() && activeSource && copyFrom == activeSource->filePath())
-            ? activeSource->sectionLabel()
-            : QString();
-    if (m_projectSwitchInProgress || m_closeInProgress || m_closeAccepted ||
-        m_project.root() != root || projectMutationInProgress())
-        return;
-    CreateVoicegroupRequest request{root, name, copyFrom, sectionLabel};
-    m_pendingCreateVoicegroupRequest = m_projectIo->createVoicegroup(
-        std::move(request), [this, root, name](CreateVoicegroupResult result) mutable {
-            if (result.requestId != m_pendingCreateVoicegroupRequest)
-                return;
-            m_pendingCreateVoicegroupRequest = 0;
-            if (m_project.root() != root || m_projectSwitchInProgress || m_closeInProgress ||
-                m_closeAccepted)
-                return;
-            if (!result.succeeded()) {
-                QMessageBox::warning(this, tr("New Voicegroup"), result.error);
-                return;
-            }
-            invalidateVgCatalog();
-            updateVoicegroupBrowser();
-            if (m_active) {
-                SongCfg cfg = m_active->doc.cfg();
-                cfg.voicegroupArg = QStringLiteral("_") + name;
-                m_active->doc.setCfg(cfg);
-                statusBar()->showMessage(
-                    tr("Created sound/voicegroups/%1.inc and assigned it to %2 "
-                       "(voicegroup_%1).")
-                        .arg(name, m_active->doc.label()),
-                    10000);
-            } else {
-                statusBar()->showMessage(
-                    tr("Created sound/voicegroups/%1.inc — assign it with the voicegroup "
-                       "selector above the instrument list (voicegroup_%1).")
-                        .arg(name),
-                    10000);
-            }
-        });
-}
-
-void MainWindow::maybeSaveSession(SongSession &session, SessionContinuation continuation)
-{
-    const auto complete = [&continuation](bool succeeded) {
-        if (continuation)
-            continuation(succeeded);
-    };
-    if (!session.midiBound || !session.vgBound) {
-        complete(true);
-        return;
-    }
-    if (session.pendingSaveRequest != 0 || session.pendingVgSaveRequest != 0) {
-        complete(false);
-        return;
-    }
-    // song and its voicegroup are one document (a normally-clean undo stack
-    // can still leave the voicegroup dirty when a save was refused mid-way).
-    if (!session.isDirty()) {
-        complete(true);
-        return;
-    }
-    const bool vgDirty = session.vgSource && session.vgSource->dirty();
-    // Show the tab being asked about: Save/Discard for edits the user
-    // can't see is a data-loss trap.
-    if (&session != m_active)
-        activateSession(&session);
-    const auto choice = QMessageBox::question(
-        this, tr("Unsaved Changes"),
-        vgDirty ? tr("%1 has unsaved changes (including voicegroup edits). Save them?")
-                      .arg(session.doc.label())
-                : tr("%1 has unsaved changes. Save them?").arg(session.doc.label()),
-        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
-    if (choice == QMessageBox::Cancel) {
-        complete(false);
-        return;
-    }
-    if (choice == QMessageBox::Save) {
-        SongSession *sessionPtr = &session;
-        saveSession(session, [this, sessionPtr,
-                              continuation = std::move(continuation)](bool succeeded) mutable {
-            const bool live =
-                std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                            [sessionPtr](const std::unique_ptr<SongSession> &candidate) {
-                                return candidate.get() == sessionPtr;
-                            });
-            if (continuation)
-                continuation(live && succeeded && !sessionPtr->isDirty());
-        });
-        return;
-    }
-    complete(true);
-}
-
-void MainWindow::saveViewState(SongSession &session)
-{
-    if (!session.midiBound || session.doc.label().isEmpty() ||
-        !m_workspace->isSessionAttached(session))
-        return;
-    SidecarSaveRequest request;
-    request.projectRoot = m_project.root();
-    request.songLabel = session.doc.label();
-    request.snapshot = m_workspace->sessionViewState(session);
-    // Cosmetic and best-effort: the captured value is queued before the
-    // session or project can be torn down, and no live view crosses threads.
-    m_projectIo->writeSidecar(std::move(request), {});
-}
-
-void MainWindow::updateWindowTitle()
-{
-    const QString project = m_project.isOpen() ? QDir(m_project.root()).dirName() : QString();
-
-    if (m_active) {
-        QString label = m_active->doc.label();
-        if (label.isEmpty() && m_workspace->isSessionAttached(*m_active))
-            label = m_workspace->sessionTitle(*m_active);
-        if (label.endsWith(QLatin1Char('*')))
-            label.chop(1);
-        setWindowTitle(QStringLiteral("%1[*] — %2 — porydaw").arg(label, project));
-        setWindowModified(m_active->isInteractive() && m_active->isDirty());
-    } else {
-        setWindowTitle(project.isEmpty() ? QStringLiteral("porydaw")
-                                         : QStringLiteral("%1 — porydaw").arg(project));
-        setWindowModified(false);
-    }
-}
-
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (m_projectSwitchInProgress) {
-        event->ignore();
-        return;
-    }
     if (m_closeAccepted) {
         event->accept();
         return;
@@ -3663,15 +1449,17 @@ void MainWindow::closeEvent(QCloseEvent *event)
         return;
     m_closeInProgress = true;
     // Every dirty tab gets its prompt; a Cancel keeps the window open.
-    // Saves answered before it have already queued or written, as with any
-    // save-all.
-    promptToSaveAllSessions([this](bool succeeded) {
+    // Saves answered before it have already queued — standard save-all
+    // behavior, not a transaction.
+    m_workspace->promptSaveAll([this](bool succeeded) {
         if (!succeeded) {
             m_closeInProgress = false;
             return;
         }
-        for (const auto &session : m_sessions)
-            saveViewState(*session);
+        // Cosmetic sidecar writes and the preview cleanup ride the worker's
+        // FIFO; the destructor's shutdown order joins the worker after them.
+        m_workspace->persistSessionViews();
+        m_workspace->cleanupPreview();
         if (m_persistSession) {
             QSettings settings;
             settings.setValue(QStringLiteral("windowGeometry"), saveGeometry());
@@ -3681,191 +1469,8 @@ void MainWindow::closeEvent(QCloseEvent *event)
             settings.setValue(QStringLiteral("songFilterSort"), filters.sortIndex);
             settings.setValue(QStringLiteral("songFilterCategory"), filters.categoryPrefix);
         }
-        cleanupVgPreview([this] {
-            m_closeAccepted = true;
-            m_closeInProgress = false;
-            close();
-        });
+        m_closeAccepted = true;
+        m_closeInProgress = false;
+        close();
     });
-}
-
-// QLabel::setText repaints even for identical text, so both status
-// updaters compare against the last applied value and only touch the
-// widgets on change. Nothing else writes these labels, so the caches
-// cannot go stale.
-void MainWindow::updateTimeLabel()
-{
-    const bool loaded = m_audioOk && m_active && m_audio.songLoaded();
-    const QString text =
-        loaded ? QStringLiteral("%1 / %2").arg(formatTime(m_audio.playheadSamples()),
-                                               formatTime(m_audio.timeline()->lengthSamples))
-               : QStringLiteral("--:--.- / --:--.-");
-    m_workspace->setTransportTimeText(text);
-}
-
-void MainWindow::updatePolyStatus()
-{
-    PolyStatusSnapshot status;
-    status.loaded = m_audioOk && m_active && m_audio.songLoaded();
-    if (status.loaded) {
-        status.activePcm = m_audio.activePcmChannels();
-        status.maxPcm = m_audio.maxPcmChannels();
-        status.activeCgb = m_audio.activeCgbChannels();
-        status.lostTotal = m_audio.polyLostTotal();
-    }
-    if (m_lastPolyStatus && *m_lastPolyStatus == status)
-        return;
-    m_lastPolyStatus = status;
-
-    if (!status.loaded) {
-        m_pcmValueLabel->clear();
-        m_cgbValueLabel->clear();
-        m_polyLostLabel->clear();
-        m_polyLostSeparator->hide();
-        m_polyLostLabel->hide();
-        m_polyLostCaption->hide();
-        m_polyMeter->hide();
-        return;
-    }
-
-    m_pcmValueLabel->setText(QStringLiteral("%1/%2").arg(status.activePcm).arg(status.maxPcm));
-    m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(status.activeCgb));
-    const bool hasLost = status.lostTotal > 0;
-    m_polyLostLabel->setText(hasLost ? QString::number(status.lostTotal) : QString());
-    m_polyLostSeparator->setVisible(hasLost);
-    m_polyLostLabel->setVisible(hasLost);
-    m_polyLostCaption->setVisible(hasLost);
-    m_polyMeter->show();
-}
-
-void MainWindow::uiTick()
-{
-    updateTimeLabel();
-    updatePolyStatus();
-
-    if (m_audioOk && m_active && m_audio.songLoaded() && m_polyDock->isVisible()) {
-        AudioEngine::PolySnapshot snap;
-        m_audio.polySnapshot(&snap);
-        m_polyPanel->updateSnapshot(snap);
-    }
-    // Safety net for transport transitions no handler observed (the engine
-    // stopping on its own while the playhead timer is idle): cheap no-op
-    // setEnabled calls at the status cadence.
-    updateTransportActions();
-}
-
-void MainWindow::synchronizePlayhead()
-{
-    const bool songLoaded =
-        m_audioOk && m_active && m_active->isInteractive() && m_audio.songLoaded();
-    const bool playing = songLoaded && m_audio.transport() == Transport::Playing;
-    const int uiInterval = playing ? kPlaybackUiIntervalMs : kIdleUiIntervalMs;
-    if (m_uiTimer->interval() != uiInterval)
-        m_uiTimer->setInterval(uiInterval);
-
-    if (!songLoaded) {
-        // This also runs synchronously from activateSession(nullptr).
-        m_playheadTimer->stop();
-        return;
-    }
-
-    const bool playheadTimerWasActive = m_playheadTimer->isActive();
-    const float activityElapsed = float(m_playheadTimer->interval()) / 1000.0f;
-    const auto trackActivityLevels = m_audio.consumeTrackActivityLevels();
-    SongView &view = m_workspace->viewFor(*m_active);
-    const bool activityAnimating =
-        view.advanceTrackActivity(trackActivityLevels, activityElapsed, playing);
-    view.setPlayheadSample(m_audio.playheadSamples(), playing);
-    if (activityAnimating) {
-        if (!m_playheadTimer->isActive())
-            m_playheadTimer->start();
-    } else {
-        m_playheadTimer->stop();
-        if (playheadTimerWasActive)
-            updateTransportActions();
-    }
-}
-
-void MainWindow::startPlayback(bool fromEditCursor)
-{
-    if (!m_audioOk || !m_active || !m_active->isInteractive() || !m_audio.songLoaded())
-        return;
-    const bool seekToCursor = fromEditCursor || m_audio.transport() == Transport::Stopped;
-    uint64_t target = 0;
-    if (seekToCursor) {
-        const SongView &view = m_workspace->viewFor(*m_active);
-        target = m_audio.timeline()->sampleForTick(view.editCursorTick());
-        m_audio.seek(target);
-    }
-    m_audio.play();
-    updateTransportActions();
-    synchronizePlayhead();
-    // The seek lands within one audio period; show its target now rather
-    // than the stale engine playhead synchronizePlayhead just read.
-    if (seekToCursor)
-        m_workspace->viewFor(*m_active).setPlayheadSample(target, true);
-}
-
-void MainWindow::pausePlayback()
-{
-    m_audio.pause();
-    updateTransportActions();
-    synchronizePlayhead();
-}
-
-void MainWindow::stopPlayback()
-{
-    m_audio.stop();
-    updateTransportActions();
-    synchronizePlayhead();
-}
-
-void MainWindow::updateTransportActions()
-{
-    const bool loaded = m_audioOk && m_active && m_active->isInteractive() && m_audio.songLoaded();
-    auto state = WorkspaceUi::PlaybackState::Unavailable;
-    if (loaded) {
-        switch (m_audio.transport()) {
-        case Transport::Stopped:
-            state = WorkspaceUi::PlaybackState::Stopped;
-            break;
-        case Transport::Paused:
-            state = WorkspaceUi::PlaybackState::Paused;
-            break;
-        case Transport::Playing:
-            state = WorkspaceUi::PlaybackState::Playing;
-            break;
-        }
-    }
-    m_workspace->setTransportPlaybackState(state);
-    m_workspace->setTransportSessionAvailable(loaded);
-}
-
-void MainWindow::syncMasterVolumeControl()
-{
-    const bool loaded = m_active && m_active->isInteractive();
-    m_workspace->setTransportMasterVolume(
-        loaded ? m_active->doc.cfg().masterVolume : SongCfg().masterVolume, loaded);
-}
-
-void MainWindow::syncScaleControls(SongSession *session)
-{
-    if (session != m_active)
-        return;
-    if (session) {
-        const SongView &view = m_workspace->viewFor(*session);
-        m_workspace->setTransportScaleState(view.scaleRoot(), view.scaleId(), view.scaleHighlight(),
-                                            view.scaleFold());
-    } else {
-        m_workspace->setTransportScaleState(0, porydaw_scale::displayOrder()[0], false, false);
-    }
-}
-
-QString MainWindow::formatTime(uint64_t samples) const
-{
-    const double seconds = double(samples) / m_audio.sampleRate();
-    const int mins = int(seconds) / 60;
-    const int secs = int(seconds) % 60;
-    const int tenths = int(seconds * 10) % 10;
-    return QStringLiteral("%1:%2.%3").arg(mins).arg(secs, 2, 10, QLatin1Char('0')).arg(tenths);
 }

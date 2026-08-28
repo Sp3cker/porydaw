@@ -348,8 +348,8 @@ class MoveNotesToPitchesCommand : public QUndoCommand
 
 SongDocument::SongDocument(QObject *parent) : QObject(parent)
 {
-    connect(&m_undoStack, &QUndoStack::indexChanged, this, [this](int) { ++m_saveStateToken; });
-    connect(&m_undoStack, &QUndoStack::cleanChanged, this, [this](bool) { ++m_saveStateToken; });
+    // Only a published document mutation moves the save-state token; raw
+    // stack index or clean-flag churn never fakes one.
     connect(this, &SongDocument::documentChanged, this, [this] { ++m_saveStateToken; });
 }
 
@@ -378,7 +378,7 @@ bool SongDocument::adoptSmf(SmfFile smf, const SongInfo &song, QString *error)
     m_midPath = song.midPath;
     m_label = song.label;
     m_hadCfgLine = song.hasCfg;
-    m_undoStack.clear();
+    m_history.clear();
     mintUnassignedNoteIds();
     rebuildTrackMap();
     TrackRemap remap;
@@ -401,6 +401,7 @@ SongSaveSnapshot SongDocument::captureSaveSnapshot() const
     snapshot.flagsNeeded = !cfgSemanticEqual(m_cfg, m_savedCfg) || !m_hadCfgLine;
     snapshot.revision = m_revision;
     snapshot.saveStateToken = m_saveStateToken;
+    snapshot.documentState = m_history.currentDocumentIdentity();
     return snapshot;
 }
 
@@ -415,9 +416,11 @@ void SongDocument::didSave(const SongSaveSnapshot &snapshot, bool flagsWritten)
     }
     if (snapshot.revision != m_revision || snapshot.saveStateToken != m_saveStateToken)
         return;
+    if (m_history.currentDocumentIdentity() != snapshot.documentState)
+        return;
     if (snapshot.flagsNeeded)
         m_cfg.rawFlags = m_savedCfg.rawFlags;
-    m_undoStack.setClean();
+    m_history.markDocumentSaved(snapshot.documentState);
 }
 
 bool SongDocument::save(QString *error)
@@ -1058,7 +1061,7 @@ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, i
         });
     if (!changes)
         return;
-    m_undoStack.push(new MoveNotesCommand(this, notes, dTick, dKey, mergeable));
+    m_history.pushDocument(std::make_unique<MoveNotesCommand>(this, notes, dTick, dKey, mergeable));
     // The command suppresses publication from its initial redo because a
     // merge can replace that provisional state. Publish the public move call
     // after the stack settles: an inverse merge may remove the command but
@@ -1085,7 +1088,8 @@ bool SongDocument::moveNotesToPitches(const std::vector<DocNote> &notes,
     }
     if (!anyMove)
         return true;
-    m_undoStack.push(new MoveNotesToPitchesCommand(this, notes, destPitches, dTick, mergeable));
+    m_history.pushDocument(
+        std::make_unique<MoveNotesToPitchesCommand>(this, notes, destPitches, dTick, mergeable));
     return true;
 }
 
@@ -1905,7 +1909,7 @@ void SongDocument::setCfg(const SongCfg &cfg)
 {
     if (cfgSemanticEqual(cfg, m_cfg))
         return;
-    m_undoStack.push(new SongCfgCommand(this, cfg));
+    m_history.pushDocument(std::make_unique<SongCfgCommand>(this, cfg));
 }
 
 std::unique_ptr<MidiTimeline> SongDocument::buildTimeline(double sampleRate) const
@@ -2060,5 +2064,5 @@ void SongDocument::pushEdit(const QString &text, std::vector<EditOp> ops)
 {
     if (ops.empty())
         return;
-    m_undoStack.push(new SongEditCommand(this, text, std::move(ops)));
+    m_history.pushDocument(std::make_unique<SongEditCommand>(this, text, std::move(ops)));
 }

@@ -5,6 +5,7 @@
 #include <QTreeWidget>
 #include <QWidget>
 #include <functional>
+#include <optional>
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -38,16 +39,13 @@ class VoicegroupBrowser : public QWidget
   public:
     explicit VoicegroupBrowser(QWidget *parent = nullptr);
 
-    // vg may be nullptr (no song loaded). Not owned; the caller must clear it
-    // (setVoicegroup(nullptr)) before the voicegroup is freed.
-    void setVoicegroup(const LoadedVoiceGroup *vg);
     // Async-load placeholder (Wave 2): the owner calls setLoading(true) when the
     // song's voicegroup load begins and setLoading(false) once the browser holds
     // the bound voicegroup (or the session is gone). Loading fills the stable 128
     // rows with "000 Loading..." placeholders and disables the selector and
     // editor in place — nothing is hidden, resized, or rebuilt, so the dock's
     // geometry never shifts when the real voicegroup lands. The tree is never
-    // cleared. setVoicegroup(nullptr) also exits loading.
+    // cleared. setSource(nullptr, ...) also exits loading.
     void setLoading(bool loading);
 
     // The selector at the top of the dock: the project's -G args (editable,
@@ -56,9 +54,13 @@ class VoicegroupBrowser : public QWidget
     void setVoicegroupChoices(const QStringList &args);
     void setCurrentVoicegroupArg(const QString &arg);
 
-    // The editable source model behind the displayed voicegroup, or nullptr
-    // when none could be located (editor shows why). Not owned; clear before
-    // the source is destroyed. The symbol lists feed the sample/wave/drumkit
+    // The published read model for the displayed voicegroup: the full
+    // LoadedBankView, or nullptr when no bank view is bound. Not owned; the
+    // caller keeps the view alive and clears this (nullptr) before it dies.
+    // Each slot's kind gates editability: None alone materializes a blank
+    // voice, Editable edits in place, and ReadOnlyVoice / Broken render
+    // read-only with a notice. The view's immutable loaded bank renders the
+    // non-editable rows. The symbol lists feed the sample/wave/drumkit
     // combos; keysplit instruments appear at the top of the sample list.
     // adsrDefaults seeds the envelope a voice adopts on a family-crossing
     // type change (project-typical values; see VoicegroupSource::typicalAdsr).
@@ -68,7 +70,7 @@ class VoicegroupBrowser : public QWidget
     // saves). mintSynth resolves an edited descriptor to a symbol without
     // touching disk, returning "" on failure after reporting the error
     // itself.
-    void setSource(VoicegroupSource *source, const QStringList &sampleSymbols,
+    void setSource(const LoadedBankView *view, const QStringList &sampleSymbols,
                    const QStringList &waveSymbols, const QList<QPair<QString, QString>> &keysplits,
                    const QStringList &drumkits,
                    const VgAdsrDefaults &adsrDefaults = VgAdsrDefaults(),
@@ -106,7 +108,7 @@ class VoicegroupBrowser : public QWidget
     void sampleAuditionStopRequested();
     // The user edited the selected voice. The browser does not touch the
     // source itself: the owner applies the edit (as a song undo command) and
-    // reflects it back via voiceChanged / a full setVoicegroup. structural
+    // reflects it back via voiceChanged / a full setSource. structural
     // means scalar ToneData pokes aren't enough (type or symbol changed) and
     // the voicegroup needs a reload from rendered source to audition.
     void voiceEditRequested(int slot, const VgVoice &voice, bool structural);
@@ -136,10 +138,20 @@ class VoicegroupBrowser : public QWidget
     void populateEditor();
     void commitEdit();
     void updateRow(int slot);
+    // Read-model accessors over the published bank view. slotIsBlank is a
+    // None-kind slot: no source line covers it, and the editor materializes
+    // a template there. ReadOnlyVoice and Broken slots never yield a draft.
+    VgLineKind slotKind(int slot) const;
+    const VgVoice *voiceAt(int slot) const;
+    bool slotIsBlank(int slot) const;
+    std::optional<VgVoiceDraft> voiceDraft(int slot) const;
+    const LoadedVoiceGroup *loadedBank() const
+    {
+        return m_view && m_view->bank ? m_view->bank.get() : nullptr;
+    }
     void setEditorRowsVisible(VgMacro macro, bool synth, bool visible);
-    // Whether the voice at slot is a Golden Sun synth, filling desc. Known
-    // synth symbols answer directly; zero-size samples (.bin descriptors with
-    // no set_synth entry) classify from the loaded ToneData.
+    // Whether the voice's symbol resolves to a Golden Sun synth definition
+    // (an on-disk or pending one), filling desc from it.
     bool synthDescFor(const VgVoice &voice, int slot, VgSynthDesc *desc) const;
 
     QComboBox *m_vgCombo = nullptr;
@@ -147,11 +159,8 @@ class VoicegroupBrowser : public QWidget
     QStringList m_vgChoices; // last list handed to setVoicegroupChoices
     QTreeWidget *m_tree = nullptr;
     int m_soundingVoice = -1;
-    QSet<int> m_usedVoices;
+    const LoadedBankView *m_view = nullptr;
 
-    const LoadedVoiceGroup *m_vg = nullptr;
-    VoicegroupSource *m_source = nullptr;
-    QStringList m_sampleChoices; // keysplits, then samples, then phonemes
     // The same choices partitioned for the picker's sections.
     QStringList m_keysplitChoices, m_plainSamples, m_phonemes;
     QStringList m_waveSymbols;
@@ -165,7 +174,8 @@ class VoicegroupBrowser : public QWidget
     // The envelope each slot last had in each family, so switching a voice's
     // type away and back restores it. Keyed slot -> vgAdsrFamily(); survives
     // the setSource() that follows every structural edit and resets when the
-    // source object changes (a different voicegroup/song was loaded).
+    // selector's arg changes (a different voicegroup was bound; projects tear
+    // down to a null view first, so the arg identifies the voicegroup).
     QHash<int, QHash<int, VgAdsr>> m_adsrHistory;
     bool m_updating = false;
     bool m_loading = false; // setLoading: placeholder rows shown, controls inert

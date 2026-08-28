@@ -359,6 +359,28 @@ int documentPublicationTempoVelocityRemapFailures()
         expectRemap("engine-to-metadata redo remap was incomplete", {0, 1, 2, 3}, {-1, 0, 1, 2}, 4,
                     3);
     }
+
+    // Document-state identity: saved state is an adopted identity, so an
+    // edit dirties, undoing onto the saved state cleans, and undoing past
+    // an adopted saved state dirties again until redo returns to it.
+    if (ok) {
+        doc.didSave(doc.captureSaveSnapshot(), true);
+        expect(!doc.isDirty(), "matching save adoption did not clean the document");
+        const auto saved = doc.captureSaveSnapshot();
+        doc.applyTempoEdit({{}, {tempoPoint(96, 140)}});
+        expect(doc.isDirty(), "an edit after adoption did not dirty the document");
+        expect(!(doc.captureSaveSnapshot().documentState == saved.documentState),
+               "an edit did not move the captured document state");
+        doc.undoStack()->undo();
+        expect(!doc.isDirty(), "undoing to the saved state left the document dirty");
+        doc.undoStack()->redo();
+        expect(doc.isDirty(), "redoing off the saved state left the document clean");
+        doc.didSave(doc.captureSaveSnapshot(), true);
+        doc.undoStack()->undo();
+        expect(doc.isDirty(), "undoing past the adopted saved state stayed clean");
+        doc.undoStack()->redo();
+        expect(!doc.isDirty(), "redoing to the adopted saved state stayed dirty");
+    }
     return failures;
 }
 

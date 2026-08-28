@@ -9,6 +9,7 @@
 #include "checks/support/songfixture.h"
 #include "core/songdocument.h"
 #include "project/decompproject.h"
+#include "project/voicegroupsource.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -68,6 +69,7 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
         std::fprintf(stderr, "exportcheck: voicegroup not found\n");
         return 1;
     }
+    const VoicegroupLease bank = wrapVoicegroupLease(vg);
 
     SongSettings settings;
     settings.songVolume = uint8_t(doc.cfg().masterVolume);
@@ -93,7 +95,7 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
     double lastFraction = -1.0;
     bool monotonic = true;
     if (!exportWav(
-            wavPath, *timeline, vg, settings, opts,
+            wavPath, *timeline, bank, settings, opts,
             [&](double fraction) {
                 monotonic = monotonic && fraction > lastFraction;
                 lastFraction = fraction;
@@ -101,7 +103,6 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
             },
             &error)) {
         std::fprintf(stderr, "exportcheck: export: %s\n", qUtf8Printable(error));
-        voicegroup_free(vg);
         return 1;
     }
     if (!monotonic || lastFraction != 1.0)
@@ -149,7 +150,7 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
     // changing the rendered duration.
     opts.resonanceSuppression = true;
     const QString suppressedPath = projectRoot + QStringLiteral("/exportcheck-suppressed.wav");
-    if (!exportWav(suppressedPath, *timeline, vg, settings, opts, {}, &error)) {
+    if (!exportWav(suppressedPath, *timeline, bank, settings, opts, {}, &error)) {
         fail("resonance-suppressed export failed");
     } else {
         QFile suppressedFile(suppressedPath);
@@ -164,14 +165,13 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel)
     QFile::remove(suppressedPath);
 
     // Cancelled exports must clean up after themselves.
-    if (exportWav(wavPath, *timeline, vg, settings, opts, [](double) { return false; }, &error))
+    if (exportWav(wavPath, *timeline, bank, settings, opts, [](double) { return false; }, &error))
         fail("cancelled export reported success");
     else if (!error.isEmpty())
         fail("cancel produced an error instead of a clean abort");
     if (QFile::exists(wavPath))
         fail("cancelled export left a partial file behind");
 
-    voicegroup_free(vg);
     std::printf("exportcheck: %s\n", failures == 0 ? "PASS" : "FAIL");
     return failures == 0 ? 0 : 1;
 }

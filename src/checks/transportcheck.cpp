@@ -259,7 +259,7 @@ int runTransportCheck()
         std::fprintf(stderr, "transportcheck: synthesized song built wrong\n");
         return 1;
     }
-    engine.loadSong(timeline, &tvg.vg, SongSettings{});
+    engine.loadSong(timeline, borrowVoicegroupLease(&tvg.vg), SongSettings{});
     // Hot seek must only publish a request; restarting the Core Audio device
     // here used to block the UI thread for tens of milliseconds.
     auto slowestSeekNs = qint64{0};
@@ -354,7 +354,7 @@ int runTransportCheck()
     if (!cgbTimeline || cgbTimeline->usedTrackCount != 1) {
         fail("CGB note song built wrong");
     } else {
-        engine.loadSong(cgbTimeline, &tvg.vg, SongSettings{});
+        engine.loadSong(cgbTimeline, borrowVoicegroupLease(&tvg.vg), SongSettings{});
         engine.play();
         if (!waitFor([&] { return activeCgb() >= 1; }, 2000)) {
             fail("CGB song note never sounded before timeline replacement");
@@ -404,7 +404,7 @@ int runTransportCheck()
             }
         }
     }
-    engine.loadSong(timeline, &tvg.vg, SongSettings{});
+    engine.loadSong(timeline, borrowVoicegroupLease(&tvg.vg), SongSettings{});
     // A short audition whose note-off has already gone out, leaving a
     // ringing slow-release tail — the reported symptom. Fails the whole
     // check if the preview never sounds or the tail dies early (the
@@ -476,7 +476,7 @@ int runTransportCheck()
     if (!noteTimeline || noteTimeline->usedTrackCount != 1) {
         fail("note song built wrong");
     } else {
-        engine.loadSong(noteTimeline, hvg.vg, SongSettings{});
+        engine.loadSong(noteTimeline, borrowVoicegroupLease(hvg.vg), SongSettings{});
         engine.play();
         if (!waitFor([&] { return active() >= 1; }, 2000)) {
             fail("song note never sounded before unload");
@@ -499,7 +499,7 @@ int runTransportCheck()
         fail("could not stop the audio device for deterministic suppressor checks");
     } else {
         engine.m_deviceStarted = false;
-        engine.loadSong(noteTimeline, &tvg.vg, SongSettings{});
+        engine.loadSong(noteTimeline, borrowVoicegroupLease(&tvg.vg), SongSettings{});
         engine.setResonanceSuppression(true);
         const auto renderFrames = [&](uint32_t frames) {
             auto output = std::vector<float>(static_cast<std::size_t>(frames) * 2);
@@ -635,7 +635,7 @@ int runTransportCheck()
         // A cold song replacement is another playback boundary. Starting a
         // silent song must not reveal delayed samples from the outgoing song.
         renderFrames(uint32_t(0.5 * engine.sampleRate()));
-        engine.loadSong(timeline, &tvg.vg, SongSettings{});
+        engine.loadSong(timeline, borrowVoicegroupLease(&tvg.vg), SongSettings{});
         engine.play();
         const auto silentStart =
             renderFrames(engine.m_cutFadeSettleSamples + 2 * engine.m_outputGainRampSamples +

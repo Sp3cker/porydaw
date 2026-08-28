@@ -5,454 +5,64 @@
 #include <QLabel>
 #include <QMainWindow>
 #include <QMenu>
+#include <QSettings>
 #include <QSignalBlocker>
 #include <QStyle>
 #include <QTabBar>
 #include <QTabWidget>
 
 #include <algorithm>
-#include <utility>
 
-#include "songsession.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songlistpanel.h"
+#include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/transportbar.h"
+
+namespace {
+
+const QString kLastProjectDirKey = QStringLiteral("lastProjectDir");
+const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
+const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
+
+} // namespace
 
 WorkspaceUi::WorkspaceUi(QMainWindow &host) : QObject(&host), m_host(host)
 {
     buildUi();
-}
 
-SongView &WorkspaceUi::attachSession(SongSession &session, const QString &title,
-                                     const QString &toolTip, const ViewSidecar::Snapshot &viewState,
-                                     ActivationPolicy activationPolicy)
-{
-    if (findView(session))
-        qFatal("WorkspaceUi::attachSession: session is already attached");
-
-    QSignalBlocker blocker(m_tabs);
-    SongView *const previousView =
-        m_tabs->currentWidget() ? qobject_cast<SongView *>(m_tabs->currentWidget()) : nullptr;
-
-    auto *view = new SongView(m_tabs);
-    view->setVelocityColorMode(m_velocityColorMode);
-    view->setNoteNameMode(m_noteNameMode);
-    view->setFollowPlayhead(m_followPlayhead);
-    view->setSong(session.timeline.get(), session.voicegroup);
-    view->setDocument(&session.doc);
-    view->applyViewState(viewState.view);
-    view->applyEditorViewState(viewState.editor);
-    view->applyEditorDrawerState(m_editorDrawerState);
-    m_pages.push_back(Page{&session, view});
-
-    const int index = m_tabs->addTab(view, title);
-    m_tabs->setTabToolTip(index, toolTip);
-    if (activationPolicy == ActivationPolicy::Activate)
-        m_tabs->setCurrentWidget(view);
-    else if (previousView)
-        m_tabs->setCurrentWidget(previousView);
-    else
-        m_tabs->setCurrentIndex(-1);
-
-    blocker.unblock();
-    publishActiveSessionIfChanged();
-    return *view;
-}
-
-void WorkspaceUi::detachSession(SongSession &session)
-{
-    const auto page =
-        std::find_if(m_pages.begin(), m_pages.end(),
-                     [&session](const Page &candidate) { return candidate.session == &session; });
-    if (page == m_pages.end())
-        return;
-
-    QSignalBlocker blocker(m_tabs);
-    SongView *const view = page->view;
-    view->setDocument(nullptr);
-    view->setSong(nullptr, nullptr);
-    m_pages.erase(page);
-
-    const int index = m_tabs->indexOf(view);
-    Q_ASSERT(index >= 0);
-    if (index < 0)
-        qFatal("WorkspaceUi::detachSession: attached view is not in tabs");
-    m_tabs->removeTab(index);
-    delete view;
-
-    blocker.unblock();
-    publishActiveSessionIfChanged();
-}
-
-void WorkspaceUi::detachAllSessions()
-{
-    QSignalBlocker blocker(m_tabs);
-    std::vector<Page> pages = std::move(m_pages);
-    m_pages.clear();
-    for (const Page &page : pages) {
-        page.view->setDocument(nullptr);
-        page.view->setSong(nullptr, nullptr);
+    // The one QSettings read this class performs: the saved workspace recipe
+    // for the startup placeholder tabs. ProjectWorkspace reads the same keys
+    // independently and queues the startup open.
+    QSettings settings;
+    m_startRecipe = normalizeSavedRecipe(settings.value(kLastProjectDirKey).toString(),
+                                         settings.value(kLastOpenSongsKey).toStringList(),
+                                         settings.value(kLastSongLabelKey).toString());
+    if (!m_startRecipe.projectPath.isEmpty()) {
+        for (const SongName &name : m_startRecipe.orderedSongs) {
+            SongTab *tab = createTab(name, name.value(), /*activate=*/false);
+            m_startupPlaceholders.insert(tab->name());
+        }
+        SongTab *toSelect = m_startRecipe.selected ? songTabFor(*m_startRecipe.selected) : nullptr;
+        if (!toSelect && !m_tabPages.empty())
+            toSelect = m_tabPages.front().get();
+        if (toSelect)
+            selectTab(toSelect);
+    } else {
+        m_awaitingStartupOpen = false;
     }
-    while (m_tabs->count() > 0) {
-        QWidget *const page = m_tabs->widget(0);
-        m_tabs->removeTab(0);
-        delete page;
-    }
-
-    blocker.unblock();
-    publishActiveSessionIfChanged();
+    updateOpenGate();
 }
 
-void WorkspaceUi::activateSession(SongSession *session)
+WorkspaceUi::~WorkspaceUi()
 {
-    SongView *view = nullptr;
-    if (session) {
-        view = findView(*session);
-        if (!view)
-            qFatal("WorkspaceUi::activateSession: session is not attached");
-    }
-
-    QSignalBlocker blocker(m_tabs);
-    if (view)
-        m_tabs->setCurrentWidget(view);
-    else
-        m_tabs->setCurrentIndex(-1);
-    blocker.unblock();
-    publishActiveSessionIfChanged();
-}
-
-void WorkspaceUi::requestCloseSession(SongSession &session)
-{
-    if (!isSessionAttached(session))
-        qFatal("WorkspaceUi::requestCloseSession: session is not attached");
-    emit closeSessionRequested(&session);
-}
-
-SongSession *WorkspaceUi::activeSession() const noexcept
-{
-    return findSessionForWidget(m_tabs->currentWidget());
-}
-
-bool WorkspaceUi::isSessionAttached(const SongSession &session) const noexcept
-{
-    return findView(session) != nullptr;
-}
-
-SongView &WorkspaceUi::viewFor(const SongSession &session)
-{
-    SongView *const view = findView(session);
-    Q_ASSERT_X(view, "WorkspaceUi::viewFor", "session is not attached");
-    if (!view)
-        qFatal("WorkspaceUi::viewFor: session is not attached");
-    return *view;
-}
-
-const SongView &WorkspaceUi::viewFor(const SongSession &session) const
-{
-    const SongView *const view = findView(session);
-    Q_ASSERT_X(view, "WorkspaceUi::viewFor", "session is not attached");
-    if (!view)
-        qFatal("WorkspaceUi::viewFor: session is not attached");
-    return *view;
-}
-
-qsizetype WorkspaceUi::openSessionCount() const noexcept
-{
-    return qsizetype(m_pages.size());
-}
-
-std::vector<SongSession *> WorkspaceUi::sessionsInDisplayOrder() const
-{
-    std::vector<SongSession *> sessions;
-    sessions.reserve(size_t(m_tabs->count()));
-    for (int index = 0; index < m_tabs->count(); ++index) {
-        SongSession *const session = findSessionForWidget(m_tabs->widget(index));
-        Q_ASSERT(session);
-        if (!session)
-            qFatal("WorkspaceUi: tab does not map to a session");
-        sessions.push_back(session);
-    }
-    return sessions;
-}
-
-QString WorkspaceUi::sessionTitle(const SongSession &session) const
-{
-    const SongView &view = viewFor(session);
-    const int index = m_tabs->indexOf(&view);
-    Q_ASSERT(index >= 0);
-    if (index < 0)
-        qFatal("WorkspaceUi::sessionTitle: attached view is not in tabs");
-    return m_tabs->tabText(index);
-}
-
-void WorkspaceUi::setSessionTitle(const SongSession &session, const QString &title, bool dirty,
-                                  const QString &toolTip)
-{
-    SongView &view = viewFor(session);
-    const int index = m_tabs->indexOf(&view);
-    Q_ASSERT(index >= 0);
-    if (index < 0)
-        qFatal("WorkspaceUi::setSessionTitle: attached view is not in tabs");
-    m_tabs->setTabText(index, dirty ? title + QLatin1Char('*') : title);
-    m_tabs->setTabToolTip(index, toolTip);
-}
-
-ViewSidecar::Snapshot WorkspaceUi::sessionViewState(const SongSession &session) const
-{
-    const SongView &view = viewFor(session);
-    return {view.viewState(), view.editorViewState()};
-}
-
-void WorkspaceUi::applySessionViewState(SongSession &session,
-                                        const ViewSidecar::Snapshot &viewState)
-{
-    SongView &view = viewFor(session);
-    view.applyViewState(viewState.view);
-    view.applyEditorViewState(viewState.editor);
-    view.applyEditorDrawerState(m_editorDrawerState);
-}
-
-void WorkspaceUi::setSongs(const QVector<SongInfo> &songs)
-{
-    m_songs = songs;
-    m_songList->setSongs(songs);
-}
-
-void WorkspaceUi::setCurrentSong(int songId)
-{
-    m_songList->setCurrentSong(songId);
-}
-
-void WorkspaceUi::restoreSongFilters(const SongFilters &filters)
-{
-    m_songList->restoreFilters(filters.search, filters.sortIndex, filters.categoryPrefix);
-}
-
-WorkspaceUi::SongFilters WorkspaceUi::songFilters() const
-{
-    return {m_songList->searchText(), m_songList->sortIndex(), m_songList->categoryPrefix()};
-}
-
-void WorkspaceUi::focusSongSearch()
-{
-    m_songList->focusSearch();
-}
-
-void WorkspaceUi::focusSongList()
-{
-    m_songList->setFocus();
-}
-
-bool WorkspaceUi::isSongListed(const QString &label) const
-{
-    return std::any_of(m_songs.cbegin(), m_songs.cend(), [&label](const SongInfo &song) {
-        return song.label == label && song.isPlayable();
-    });
-}
-
-qsizetype WorkspaceUi::listedSongCount() const noexcept
-{
-    return std::count_if(m_songs.cbegin(), m_songs.cend(),
-                         [](const SongInfo &song) { return song.isPlayable(); });
-}
-
-void WorkspaceUi::bindFindSongShortcut(keymap::Registry &registry)
-{
-    registry.attach(QStringLiteral("songs.find"), m_findSongAction);
-}
-
-void WorkspaceUi::setTransportPlaybackState(PlaybackState state)
-{
-    TransportBar::PlaybackState transportState = TransportBar::PlaybackState::Unavailable;
-    switch (state) {
-    case PlaybackState::Unavailable:
-        transportState = TransportBar::PlaybackState::Unavailable;
-        break;
-    case PlaybackState::Stopped:
-        transportState = TransportBar::PlaybackState::Stopped;
-        break;
-    case PlaybackState::Paused:
-        transportState = TransportBar::PlaybackState::Paused;
-        break;
-    case PlaybackState::Playing:
-        transportState = TransportBar::PlaybackState::Playing;
-        break;
-    }
-    m_transport->setPlaybackState(transportState);
-}
-
-void WorkspaceUi::setTransportSessionAvailable(bool available)
-{
-    m_transport->setSessionAvailable(available);
-}
-
-void WorkspaceUi::setTransportSongName(const QString &name)
-{
-    m_transport->setSongName(name);
-}
-
-void WorkspaceUi::setTransportTimeText(const QString &text)
-{
-    m_transport->setTimeText(text);
-}
-
-void WorkspaceUi::setTransportMasterVolume(int volume, bool enabled)
-{
-    m_transport->setMasterVolume(volume, enabled);
-}
-
-void WorkspaceUi::setTransportOutputVolume(int volume)
-{
-    m_transport->setOutputVolume(volume);
-}
-
-void WorkspaceUi::setTransportScaleState(int root, porydaw_scale::ScaleId scale, bool highlight,
-                                         bool fold)
-{
-    m_transport->setScaleState(root, scale, highlight, fold);
-}
-
-void WorkspaceUi::setTransportResonanceSuppression(bool enabled)
-{
-    m_transport->resonanceAction()->setChecked(enabled);
-}
-
-void WorkspaceUi::triggerPlayPause()
-{
-    m_transport->playPauseAction()->trigger();
-}
-
-void WorkspaceUi::addFollowPlayheadActionTo(QMenu &menu)
-{
-    menu.addAction(m_transport->followPlayheadAction());
-}
-
-void WorkspaceUi::setVoicegroupPresentation(VoicegroupPresentation &&presentation)
-{
-    m_voicegroupBrowser->setVoicegroup(presentation.voicegroup);
-    m_voicegroupBrowser->setUsedVoices(presentation.usedVoices);
-    m_voicegroupBrowser->setVoicegroupChoices(presentation.choices);
-    m_voicegroupBrowser->setCurrentVoicegroupArg(presentation.currentArg);
-    m_voicegroupBrowser->setSource(
-        presentation.source, presentation.sampleSymbols, presentation.waveSymbols,
-        presentation.keysplits, presentation.drumkits, presentation.adsrDefaults,
-        presentation.synths, presentation.pendingSynths, std::move(presentation.mintSynth));
-    m_hasVoicegroup = presentation.voicegroup != nullptr;
-}
-
-void WorkspaceUi::clearVoicegroupPresentation()
-{
+    // The browser borrows the presentation copy; detach it before the
+    // member dies.
     m_voicegroupBrowser->setSource(nullptr, {}, {}, {}, {});
-    m_voicegroupBrowser->setVoicegroup(nullptr);
-    m_voicegroupBrowser->setUsedVoices({});
-    m_hasVoicegroup = false;
-}
-
-void WorkspaceUi::setVoicegroupLoading(bool loading)
-{
-    m_voicegroupBrowser->setLoading(loading);
-}
-
-void WorkspaceUi::clearVoicegroupSource()
-{
-    m_voicegroupBrowser->setSource(nullptr, {}, {}, {}, {});
-}
-
-void WorkspaceUi::setVoicegroup(const LoadedVoiceGroup *voicegroup)
-{
-    m_voicegroupBrowser->setVoicegroup(voicegroup);
-    m_hasVoicegroup = voicegroup != nullptr;
-}
-void WorkspaceUi::setVoicegroupDirty(bool dirty)
-{
-    m_voicegroupDock->setWindowTitle(dirty ? tr("Voicegroup*") : tr("Voicegroup"));
-}
-
-void WorkspaceUi::setVoicegroupUsedVoices(const QSet<int> &usedVoices)
-{
-    m_voicegroupBrowser->setUsedVoices(usedVoices);
-}
-
-void WorkspaceUi::setCurrentVoicegroupArg(const QString &arg)
-{
-    m_voicegroupBrowser->setCurrentVoicegroupArg(arg);
-}
-
-void WorkspaceUi::setVoicegroupSampleInfoProvider(
-    std::function<SamplePickInfo(const QString &)> provider)
-{
-    m_voicegroupBrowser->setSampleInfoProvider(std::move(provider));
-}
-
-int WorkspaceUi::currentVoicegroupSlot() const
-{
-    return m_voicegroupBrowser->currentSlot();
-}
-
-void WorkspaceUi::selectVoicegroupSlot(int slot)
-{
-    m_voicegroupBrowser->selectSlot(slot);
-}
-
-void WorkspaceUi::revealVoicegroupSlot(int slot)
-{
-    m_voicegroupBrowser->revealSlot(slot);
-}
-
-void WorkspaceUi::refreshVoicegroupSlot(int slot)
-{
-    m_voicegroupBrowser->voiceChanged(slot);
-}
-
-void WorkspaceUi::showVoicegroupPanel()
-{
-    m_voicegroupDock->show();
-    m_voicegroupDock->raise();
-}
-
-void WorkspaceUi::setVelocityColorMode(bool enabled)
-{
-    m_velocityColorMode = enabled;
-    for (const Page &page : m_pages)
-        page.view->setVelocityColorMode(enabled);
-}
-
-void WorkspaceUi::setNoteNameMode(bool enabled)
-{
-    m_noteNameMode = enabled;
-    for (const Page &page : m_pages)
-        page.view->setNoteNameMode(enabled);
-}
-
-void WorkspaceUi::setFollowPlayhead(bool enabled)
-{
-    m_followPlayhead = enabled;
-    {
-        const QSignalBlocker blocker(m_transport->followPlayheadAction());
-        m_transport->setFollowPlayhead(enabled);
-    }
-    for (const Page &page : m_pages)
-        page.view->setFollowPlayhead(enabled);
-}
-
-void WorkspaceUi::setEditorDrawerState(const EditorDrawerState &state)
-{
-    m_editorDrawerState = state;
-    for (const Page &page : m_pages)
-        page.view->applyEditorDrawerState(state);
-}
-
-WorkspaceUi::ChromeObservation WorkspaceUi::observeChrome() const
-{
-    return {
-        .transportVisible = m_transport->isVisible(),
-        .songsVisible = m_songsDock->isVisible(),
-        .voicegroupsVisible = m_voicegroupDock->isVisible(),
-        .listedSongCount = listedSongCount(),
-        .listedVoiceCount = m_hasVoicegroup ? VOICEGROUP_SIZE : 0,
-    };
+    m_tabs->blockSignals(true);
+    m_tabPages.clear();
+    m_selectedTab = nullptr;
 }
 
 void WorkspaceUi::buildUi()
@@ -504,13 +114,18 @@ void WorkspaceUi::buildUi()
     m_songsDock->setWidget(m_songList);
     m_host.addDockWidget(Qt::LeftDockWidgetArea, m_songsDock);
 
-    connect(m_songList, &SongListPanel::songActivated, this, &WorkspaceUi::songActivated);
+    connect(m_songList, &SongListPanel::songActivated, this,
+            [this](int songId) { openSongFromList(songId, /*newTab=*/false); });
     connect(m_songList, &SongListPanel::songOpenInNewTabRequested, this,
-            &WorkspaceUi::songOpenInNewTabRequested);
-    connect(m_songList, &SongListPanel::songRegisterRequested, this,
-            &WorkspaceUi::songRegisterRequested);
-    connect(m_songList, &SongListPanel::songDeleteRequested, this,
-            &WorkspaceUi::songDeleteRequested);
+            [this](int songId) { openSongFromList(songId, /*newTab=*/true); });
+    connect(m_songList, &SongListPanel::songRegisterRequested, this, [this](int songId) {
+        if (const SongInfo *song = listedSongAt(songId))
+            runRegisterFlow(*song);
+    });
+    connect(m_songList, &SongListPanel::songDeleteRequested, this, [this](int songId) {
+        if (const SongInfo *song = listedSongAt(songId))
+            runDeleteFlow(*song);
+    });
 
     m_findSongAction = new QAction(tr("Find Song"), &m_host);
     connect(m_findSongAction, &QAction::triggered, this, &WorkspaceUi::focusSongSearch);
@@ -523,23 +138,7 @@ void WorkspaceUi::buildUi()
     m_voicegroupBrowser = new VoicegroupBrowser(m_voicegroupDock);
     m_voicegroupDock->setWidget(m_voicegroupBrowser);
     m_host.addDockWidget(Qt::LeftDockWidgetArea, m_voicegroupDock);
-
-    connect(m_voicegroupBrowser, &VoicegroupBrowser::auditionVoice, this,
-            &WorkspaceUi::auditionVoiceRequested);
-    connect(m_voicegroupBrowser, &VoicegroupBrowser::sampleAuditionRequested, this,
-            &WorkspaceUi::sampleAuditionRequested);
-    connect(m_voicegroupBrowser, &VoicegroupBrowser::sampleAuditionStopRequested, this,
-            &WorkspaceUi::sampleAuditionStopRequested);
-    connect(m_voicegroupBrowser, &VoicegroupBrowser::voiceEditRequested, this,
-            &WorkspaceUi::voiceEditRequested);
-    connect(m_voicegroupBrowser, &VoicegroupBrowser::newVoicegroupRequested, this,
-            &WorkspaceUi::newVoicegroupRequested);
-    connect(m_voicegroupBrowser, &VoicegroupBrowser::newSampleRequested, this,
-            &WorkspaceUi::newSampleRequested);
-    connect(m_voicegroupBrowser, &VoicegroupBrowser::editSampleRequested, this,
-            &WorkspaceUi::editSampleRequested);
-    connect(m_voicegroupBrowser, &VoicegroupBrowser::voicegroupChangeRequested, this,
-            &WorkspaceUi::voicegroupChangeRequested);
+    wireBrowser();
 
     m_tabs = new QTabWidget(&m_host);
     m_tabs->setFocusPolicy(Qt::NoFocus);
@@ -548,41 +147,333 @@ void WorkspaceUi::buildUi()
     m_tabs->setDocumentMode(true);
     m_tabs->tabBar()->setFixedHeight(chromeHeight);
     m_tabs->tabBar()->setFocusPolicy(Qt::NoFocus);
-    connect(m_tabs, &QTabWidget::currentChanged, this,
-            [this](int) { publishActiveSessionIfChanged(); });
-    connect(m_tabs, &QTabWidget::tabCloseRequested, this, [this](int index) {
-        SongSession *const session = findSessionForWidget(m_tabs->widget(index));
-        Q_ASSERT(session);
-        if (!session)
-            qFatal("WorkspaceUi: close request does not map to a session");
-        requestCloseSession(*session);
+    connect(m_tabs, &QTabWidget::currentChanged, this, [this](int) { publishSelectedIfChanged(); });
+    connect(m_tabs, &QTabWidget::tabCloseRequested, this,
+            [this](int index) { requestCloseTab(tabForWidget(m_tabs->widget(index))); });
+    connect(m_tabs->tabBar(), &QTabBar::tabMoved, this, [this](int, int) {
+        emit sessionsReordered();
+        persistTabs();
     });
-    connect(m_tabs->tabBar(), &QTabBar::tabMoved, this,
-            [this](int, int) { emit sessionsReordered(); });
     m_host.setCentralWidget(m_tabs);
 }
 
-SongView *WorkspaceUi::findView(const SongSession &session) const noexcept
+void WorkspaceUi::wireBrowser()
 {
-    const auto page =
-        std::find_if(m_pages.cbegin(), m_pages.cend(),
-                     [&session](const Page &candidate) { return candidate.session == &session; });
-    return page == m_pages.cend() ? nullptr : page->view;
+    connect(m_voicegroupBrowser, &VoicegroupBrowser::auditionVoice, this,
+            &WorkspaceUi::auditionVoiceRequested);
+    connect(m_voicegroupBrowser, &VoicegroupBrowser::sampleAuditionRequested, this,
+            [this](const QString &symbol, VgAuditionKind kind, const AuditionSlots::Adsr &adsr) {
+                // Browse auditions lazily load the shared sample set (loop
+                // badges, waves, and keysplit tables) before the engine call.
+                ensureSampleSet();
+                emit sampleAuditionRequested(symbol, kind, adsr);
+            });
+    connect(m_voicegroupBrowser, &VoicegroupBrowser::sampleAuditionStopRequested, this,
+            &WorkspaceUi::sampleAuditionStopRequested);
+    connect(m_voicegroupBrowser, &VoicegroupBrowser::voiceEditRequested, this,
+            [this](int slot, const VgVoice &voice, bool) { submitPickerEdit(slot, voice); });
+    connect(m_voicegroupBrowser, &VoicegroupBrowser::newVoicegroupRequested, this,
+            &WorkspaceUi::runCreateVoicegroupFlow);
+    connect(m_voicegroupBrowser, &VoicegroupBrowser::newSampleRequested, this,
+            [this](int slot) { runImportFlow(slot); });
+    connect(m_voicegroupBrowser, &VoicegroupBrowser::editSampleRequested, this,
+            [this](int slot) { runEditSampleFlow(slot); });
+    connect(m_voicegroupBrowser, &VoicegroupBrowser::voicegroupChangeRequested, this,
+            [this](const QString &arg) {
+                SongTab *const tab = m_selectedTab;
+                if (!tab || !tab->isReady())
+                    return;
+                const SongCfg cfg = tab->document().cfg();
+                if (arg == cfg.voicegroupArg ||
+                    (cfg.voicegroupArg.isEmpty() && arg == QLatin1String("_dummy")))
+                    return;
+                SongCfg changed = cfg;
+                changed.voicegroupArg = arg;
+                tab->document().setCfg(changed);
+            });
 }
 
-SongSession *WorkspaceUi::findSessionForWidget(const QWidget *widget) const noexcept
+void WorkspaceUi::wireTab(SongTab *tab)
 {
-    const auto page =
-        std::find_if(m_pages.cbegin(), m_pages.cend(),
-                     [widget](const Page &candidate) { return candidate.view == widget; });
-    return page == m_pages.cend() ? nullptr : page->session;
+    connect(tab, &SongTab::edited, this, [this, tab] { onTabEdited(tab); });
+
+    SongView &view = tab->view();
+    connect(&view, &SongView::auditionNote, this, [this, tab](int track, int key, int velocity) {
+        if (tab == m_selectedTab)
+            emit auditionNoteRequested(uint8_t(track), uint8_t(key), uint8_t(velocity));
+    });
+    connect(&view, &SongView::auditionNoteTimed, this,
+            [this, tab](int track, int key, int velocity, quint32 durationSamples) {
+                if (tab == m_selectedTab)
+                    emit auditionNoteTimedRequested(uint8_t(track), uint8_t(key), uint8_t(velocity),
+                                                    durationSamples);
+            });
+    connect(&view, &SongView::auditionVoice, this, [this, tab](int voice, int key, int velocity) {
+        if (tab == m_selectedTab)
+            emit auditionVoiceRequested(uint8_t(voice), uint8_t(key), uint8_t(velocity));
+    });
+    connect(&view, &SongView::editCursorMoved, this, [this, tab](uint64_t tick) {
+        if (tab == m_selectedTab)
+            emit editCursorSeekRequested(tick);
+    });
+    connect(&view, &SongView::playPauseFromRequested, this, [this, tab](uint64_t tick) {
+        if (tab == m_selectedTab)
+            emit playPauseFromRequested(tick);
+    });
+    connect(&view, &SongView::revealVoiceRequested, this, [this](int program) {
+        showVoicegroupPanel();
+        m_voicegroupBrowser->revealSlot(program);
+    });
+    connect(&view, &SongView::eventListVisibilityChanged, this, [this, tab](bool visible) {
+        if (tab == m_selectedTab)
+            emit selectedTabEventListChanged(visible);
+    });
+    connect(&view, &SongView::editorDrawerStateChanged, this,
+            [this](const EditorDrawerState &state) { setEditorDrawerState(state); });
+    connect(&view, &SongView::muteMaskChanged, this, [this, tab](uint32_t mask) {
+        if (tab == m_selectedTab)
+            emit selectedTabMuteMaskChanged(mask);
+    });
+    connect(&view, &SongView::soloMaskChanged, this, [this, tab](uint32_t mask) {
+        if (tab == m_selectedTab)
+            emit selectedTabSoloMaskChanged(mask);
+    });
+    connect(&view, &SongView::scaleHighlightChanged, this,
+            [this] { emit selectedSongStateChanged(); });
+    connect(&view, &SongView::scaleFoldChanged, this, [this] { emit selectedSongStateChanged(); });
+    connect(&view, &SongView::scaleRootChanged, this, [this] { emit selectedSongStateChanged(); });
+    connect(&view, &SongView::scaleIdChanged, this, [this] { emit selectedSongStateChanged(); });
 }
 
-void WorkspaceUi::publishActiveSessionIfChanged()
+// ---- Chrome surface ---------------------------------------------------------
+
+void WorkspaceUi::restoreSongFilters(const SongFilters &filters)
 {
-    SongSession *const session = activeSession();
-    if (session == m_publishedActiveSession)
+    m_songList->restoreFilters(filters.search, filters.sortIndex, filters.categoryPrefix);
+}
+
+WorkspaceUi::SongFilters WorkspaceUi::songFilters() const
+{
+    return {m_songList->searchText(), m_songList->sortIndex(), m_songList->categoryPrefix()};
+}
+
+void WorkspaceUi::focusSongSearch()
+{
+    m_songList->focusSearch();
+}
+
+void WorkspaceUi::focusSongList()
+{
+    m_songList->setFocus();
+}
+
+bool WorkspaceUi::isSongListed(const QString &label) const
+{
+    return std::any_of(
+        m_state.snapshot.songs().cbegin(), m_state.snapshot.songs().cend(),
+        [&label](const SongInfo &song) { return song.label == label && song.isPlayable(); });
+}
+
+qsizetype WorkspaceUi::listedSongCount() const noexcept
+{
+    return std::count_if(m_state.snapshot.songs().cbegin(), m_state.snapshot.songs().cend(),
+                         [](const SongInfo &song) { return song.isPlayable(); });
+}
+
+void WorkspaceUi::bindFindSongShortcut(keymap::Registry &registry)
+{
+    registry.attach(QStringLiteral("songs.find"), m_findSongAction);
+}
+
+void WorkspaceUi::setTransportPlaybackState(PlaybackState state)
+{
+    const TransportBar::PlaybackState transportState = [state] {
+        switch (state) {
+        case PlaybackState::Unavailable:
+            return TransportBar::PlaybackState::Unavailable;
+        case PlaybackState::Stopped:
+            return TransportBar::PlaybackState::Stopped;
+        case PlaybackState::Paused:
+            return TransportBar::PlaybackState::Paused;
+        case PlaybackState::Playing:
+            return TransportBar::PlaybackState::Playing;
+        }
+        return TransportBar::PlaybackState::Unavailable;
+    }();
+    m_transport->setPlaybackState(transportState);
+}
+
+void WorkspaceUi::setTransportSongAvailable(bool available)
+{
+    m_transport->setSessionAvailable(available);
+}
+
+void WorkspaceUi::setTransportSongName(const QString &name)
+{
+    m_transport->setSongName(name);
+}
+
+void WorkspaceUi::setTransportTimeText(const QString &text)
+{
+    m_transport->setTimeText(text);
+}
+
+void WorkspaceUi::setTransportMasterVolume(int volume, bool enabled)
+{
+    m_transport->setMasterVolume(volume, enabled);
+}
+
+void WorkspaceUi::setTransportOutputVolume(int volume)
+{
+    m_transport->setOutputVolume(volume);
+}
+
+void WorkspaceUi::setTransportScaleState(int root, porydaw_scale::ScaleId scale, bool highlight,
+                                         bool fold)
+{
+    m_transport->setScaleState(root, scale, highlight, fold);
+}
+
+void WorkspaceUi::setTransportResonanceSuppression(bool enabled)
+{
+    m_transport->resonanceAction()->setChecked(enabled);
+}
+
+void WorkspaceUi::triggerPlayPause()
+{
+    m_transport->playPauseAction()->trigger();
+}
+
+void WorkspaceUi::addFollowPlayheadActionTo(QMenu &menu)
+{
+    menu.addAction(m_transport->followPlayheadAction());
+}
+
+void WorkspaceUi::showVoicegroupPanel()
+{
+    m_voicegroupBrowser->show();
+    m_voicegroupDock->show();
+    m_voicegroupDock->raise();
+}
+
+void WorkspaceUi::setVelocityColorMode(bool enabled)
+{
+    m_velocityColorMode = enabled;
+    for (const auto &tab : m_tabPages)
+        tab->view().setVelocityColorMode(enabled);
+}
+
+void WorkspaceUi::setNoteNameMode(bool enabled)
+{
+    m_noteNameMode = enabled;
+    for (const auto &tab : m_tabPages)
+        tab->view().setNoteNameMode(enabled);
+}
+
+void WorkspaceUi::setFollowPlayhead(bool enabled)
+{
+    m_followPlayhead = enabled;
+    const QSignalBlocker blocker(m_transport);
+    m_transport->setFollowPlayhead(enabled);
+    for (const auto &tab : m_tabPages)
+        tab->view().setFollowPlayhead(enabled);
+}
+
+void WorkspaceUi::setEditorDrawerState(const EditorDrawerState &state)
+{
+    m_editorDrawerState = state;
+    for (const auto &tab : m_tabPages)
+        tab->view().applyEditorDrawerState(state);
+    emit editorDrawerStateEdited(state);
+}
+
+WorkspaceUi::ChromeObservation WorkspaceUi::observeChrome() const
+{
+    ChromeObservation observation;
+    observation.transportVisible = m_transport->isVisible();
+    observation.songsVisible = m_songsDock->isVisible();
+    observation.voicegroupsVisible = m_voicegroupDock->isVisible();
+    observation.listedSongCount = listedSongCount();
+    observation.listedVoiceCount = m_selectedTab && m_selectedTab->voicegroupLease() ? 128 : 0;
+    return observation;
+}
+
+// ---- Shared helpers ---------------------------------------------------------
+
+void WorkspaceUi::showStatus(const QString &message, int timeout)
+{
+    emit statusMessageRequested(message, timeout);
+}
+
+bool WorkspaceUi::projectBusy() const noexcept
+{
+    return m_state.state == ProjectOpenState::Loading || m_openRequested;
+}
+
+const SongInfo *WorkspaceUi::songInfoFor(const SongName &name) const
+{
+    for (const SongInfo &song : m_state.snapshot.songs()) {
+        if (song.label == name.value())
+            return &song;
+    }
+    return nullptr;
+}
+
+void WorkspaceUi::persistViewSidecar(SongTab *tab)
+{
+    if (!tab || !tab->isReady())
         return;
-    m_publishedActiveSession = session;
-    emit activeSessionChanged(session);
+    // Cosmetic and best-effort: the snapshot is captured before the tab or
+    // project can be torn down; no live view crosses threads. The worker
+    // writes it against the project root current when the command runs, so
+    // a project switch submits these before its open (FIFO keeps order).
+    emit projectOperationRequested(
+        ProjectOperation{SaveSidecarInput{tab->name(), tab->captureViewSnapshot()}});
+}
+
+void WorkspaceUi::setAudioSampleRate(double sampleRate)
+{
+    if (m_audioSampleRate == sampleRate)
+        return;
+    m_audioSampleRate = sampleRate;
+    applySampleRateToTabs();
+}
+
+void WorkspaceUi::toggleDrawerPage(bool automation)
+{
+    SongTab *const tab = m_selectedTab;
+    if (!tab || !tab->isReady())
+        return;
+    SongView &view = tab->view();
+    if (view.eventListVisible())
+        return;
+    const EditorDrawerPage page =
+        automation ? EditorDrawerPage::Automations : EditorDrawerPage::Velocity;
+    const bool hiding = view.drawerSectionVisible(page);
+    view.toggleDrawerSection(page);
+    showStatus(automation ? (hiding ? QStringLiteral("Automation lanes hidden")
+                                    : QStringLiteral("Automation lanes shown"))
+                          : (hiding ? QStringLiteral("Velocity lane hidden")
+                                    : QStringLiteral("Velocity lane shown")),
+               6000);
+}
+
+void WorkspaceUi::setSelectedTabEventListVisible(bool visible)
+{
+    SongTab *const tab = m_selectedTab;
+    if (!tab || !tab->isReady())
+        return;
+    tab->view().setEventListVisible(visible);
+}
+
+void WorkspaceUi::cleanupPreview()
+{
+    if (m_state.snapshot.isOpen())
+        emit projectOperationRequested(ProjectOperation{CleanupPreviewInput{}});
+}
+
+void WorkspaceUi::persistSessionViews()
+{
+    for (const auto &tab : m_tabPages)
+        persistViewSidecar(tab.get());
 }

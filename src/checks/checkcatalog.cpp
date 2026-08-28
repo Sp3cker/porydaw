@@ -121,6 +121,16 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = decompProjectFiles + strings({"sound/songs/midi/mus_gym.mid"}) +
                              voicegroupEditorFiles},
+            {.name = "vgbankcheck",
+             .argv = strings({"--vgbankcheck", "{scratch}", "mus_gym"}),
+             .handler = [](QApplication &,
+                           const QStringList &args) { return runVgBankCheck(args[1], args[2]); },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles =
+                 decompProjectFiles +
+                 strings({"sound/songs/midi/mus_gym.mid", "sound/songs/midi/mus_oldale.mid"}) +
+                 voicegroupEditorFiles},
             {.name = "vgsavecheck",
              .argv = strings({"--vgsavecheck", "{scratch}", "mus_route101"}),
              .handler =
@@ -154,6 +164,17 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101RichFiles + strings({"sound/music_player_table.inc"}),
+            },
+            {
+                .name = "projectworkspacecheck",
+                .argv = strings({"--projectworkspacecheck", "{scratch}"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runProjectWorkspaceCheck(args[1]);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles + strings({"sound/music_player_table.inc"}),
             },
             {
                 .name = "sessioncheck",
@@ -232,6 +253,10 @@ const std::vector<CheckDefinition> &catalog()
             {.name = "transportcheck",
              .argv = strings({"--transportcheck"}),
              .handler = [](QApplication &, const QStringList &) { return runTransportCheck(); }},
+            {.name = "voicegroupviewcachecheck",
+             .argv = strings({"--voicegroupviewcachecheck"}),
+             .handler = [](QApplication &,
+                           const QStringList &) { return runVoicegroupViewCacheCheck(); }},
             {
                 .name = "audiocheck",
                 .argv = strings({"--audiocheck"}),

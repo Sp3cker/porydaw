@@ -53,10 +53,9 @@ WavExportTotals wavExportTotals(const MidiTimeline &timeline, const WavExportOpt
     return totals;
 }
 
-bool exportWav(const QString &path, const MidiTimeline &timeline,
-               const LoadedVoiceGroup *voicegroup, const SongSettings &settings,
-               const WavExportOptions &opts, const std::function<bool(double)> &progress,
-               QString *error)
+bool exportWav(const QString &path, const MidiTimeline &timeline, const VoicegroupLease &voicegroup,
+               const SongSettings &settings, const WavExportOptions &opts,
+               const std::function<bool(double)> &progress, QString *error)
 {
     const WavExportTotals totals = wavExportTotals(timeline, opts);
     const uint64_t dataSize = totals.totalSamples * 4; // 16-bit stereo
@@ -93,11 +92,11 @@ bool exportWav(const QString &path, const MidiTimeline &timeline,
     header.append("data");
     putU32(header, uint32_t(dataSize));
 
-    // The engine only reads the voicegroup, so sharing it with a running
-    // AudioEngine is safe; set_voicegroup just takes a non-const pointer.
+    // The caller's lease keeps the bank alive for the whole render, and the
+    // engine only reads it, so sharing it with a running AudioEngine is safe.
     M4AEngine engine;
     m4a_engine_init(&engine, float(opts.sampleRate));
-    m4a_engine_set_voicegroup(&engine, const_cast<ToneData *>(voicegroup->voices));
+    AudioEngine::bindEngineVoicegroup(&engine, voicegroup);
     m4a_engine_set_song_volume(&engine, settings.songVolume);
     m4a_engine_set_reverb_amount(&engine, settings.reverb);
     m4a_engine_set_max_pcm_channels(&engine, settings.maxPcmChannels);

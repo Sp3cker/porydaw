@@ -11,6 +11,7 @@
 
 #include "core/noteid.h"
 #include "core/smf.h"
+#include "core/songhistory.h"
 #include "core/tempo.h"
 #include "core/timedefaults.h"
 #include "core/tracklimits.h"
@@ -59,6 +60,7 @@ struct SongSaveSnapshot {
     bool flagsNeeded = false;
     uint64_t revision = 0;
     uint64_t saveStateToken = 0;
+    DocumentStateIdentity documentState;
 };
 
 // A note located in the SMF model: the note-on event plus the event that ends
@@ -131,7 +133,14 @@ class SongDocument : public QObject
     const std::vector<TempoPoint> &tempoPoints() const { return m_tempoPoints; }
     const SongCfg &cfg() const { return m_cfg; }
     QUndoStack *undoStack() { return &m_undoStack; }
-    bool isDirty() const { return !m_undoStack.isClean(); }
+    // The one SongHistory interface over this document's undo stack; tabs
+    // re-export it unchanged and no second stack or identity space exists.
+    SongHistory &history() { return m_history; }
+    const SongHistory &history() const { return m_history; }
+    bool isDirty() const
+    {
+        return m_history.currentDocumentIdentity() != m_history.savedDocumentIdentity();
+    }
     uint64_t revision() const { return m_revision; }
 
     // The song's clock base for snapping: ticks per mid2agb clock. mid2agb
@@ -560,6 +569,7 @@ class SongDocument : public QObject
     QString m_projectRoot;
     bool m_hadCfgLine = false;
     QUndoStack m_undoStack;
+    SongHistory m_history{m_undoStack};
     uint64_t m_revision = 0;
     uint64_t m_saveStateToken = 0;
     uint64_t m_nextNoteId = 1;

@@ -59,8 +59,8 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         settings.sync();
         MainWindow window;
         window.restoreSession();
-        check(window.windowTitle() == QStringLiteral("porydaw"),
-              "restore with a vanished project dir opened something");
+        check(waitFor([&] { return window.windowTitle() == QStringLiteral("porydaw"); }),
+              "failed startup open did not tear down its placeholder");
     }
 
     // 3. Project remembered but no song: the project opens (titled after its
@@ -94,12 +94,15 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         QSettings().setValue(QStringLiteral("lastSongLabel"), songLabel);
         MainWindow window;
         window.restoreSession();
-        check(waitFor([&] { return window.windowTitle().startsWith(songLabel); }),
-              "remembered song project open timed out");
-        check(window.windowTitle().startsWith(songLabel), "remembered song did not load");
         // Resolve the Songs dock's list rather than any drawer-owned list.
         auto *panel = window.findChild<SongListPanel *>();
         auto *list = panel ? panel->findChild<QListWidget *>() : nullptr;
+        check(waitFor([&] {
+                  return window.windowTitle().startsWith(songLabel) && list &&
+                         list->currentItem() && list->currentItem()->text().startsWith(songLabel);
+              }),
+              "remembered song project open timed out");
+        check(window.windowTitle().startsWith(songLabel), "remembered song did not load");
         check(list && list->currentItem() && list->currentItem()->text().startsWith(songLabel),
               "restored song is not selected in the song list");
         // Distinctive filter state — search text, A–Z sort, a real
@@ -150,16 +153,19 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         MainWindow window;
         check(window.size() == QSize(777, 505), "new window did not restore the saved geometry");
         window.restoreSession();
-        check(waitFor([&] { return window.windowTitle().startsWith(songLabel); }),
+        auto *search = window.findChild<QLineEdit *>(QStringLiteral("songListSearch"));
+        auto *sort = window.findChild<QComboBox *>(QStringLiteral("songListSort"));
+        auto *category = window.findChild<QComboBox *>(QStringLiteral("songListCategory"));
+        check(waitFor([&] {
+                  return window.windowTitle().startsWith(songLabel) && category &&
+                         category->currentData().toString() == filterCategory;
+              }),
               "relaunch project open timed out");
         check(window.windowTitle().startsWith(songLabel),
               "relaunch did not restore project and song");
-        auto *search = window.findChild<QLineEdit *>(QStringLiteral("songListSearch"));
         check(search && search->text() == QStringLiteral("filterme"),
               "relaunch did not restore the song filter text");
-        auto *sort = window.findChild<QComboBox *>(QStringLiteral("songListSort"));
         check(sort && sort->currentIndex() == 1, "relaunch did not restore the song sort order");
-        auto *category = window.findChild<QComboBox *>(QStringLiteral("songListCategory"));
         check(category && category->currentData().toString() == filterCategory,
               "relaunch did not restore the song category filter");
     }

@@ -1,38 +1,46 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QPointer>
 
-#include <functional>
+#include <cstdint>
 #include <memory>
 #include <optional>
-#include <vector>
 
 #include "audio/audioengine.h"
-#include "project/decompproject.h"
-#include "project/projectio.h"
+#include "project/projectworkspace.h"
 #include "project/voicegroupsource.h"
-#include "songsession.h"
 #include "ui/editorviewstate.h"
 #include "ui/settingsdialog.h"
 #include "ui/workspaceui.h"
+
 class QAction;
-class QChildEvent;
+class QCloseEvent;
 class QDockWidget;
+class QEvent;
 class QLabel;
 class QSettings;
-class QMessageBox;
 class QTimer;
 class QWidget;
-class QUndoGroup;
+class MidiTimeline;
 class PolyphonyPanel;
-class SmfFile;
+class SongTab;
 
 namespace themes {
 class ThemeController;
 class ThemeDialog;
 } // namespace themes
 
+// The application shell and audio root. MainWindow is the composition root
+// that owns WorkspaceUi, ProjectWorkspace, and the AudioEngine, plus the
+// menus and window chrome around them. ProjectWorkspace's three publication
+// streams connect straight to WorkspaceUi's three apply slots, and
+// WorkspaceUi's semantic requests connect straight to ProjectWorkspace's
+// slots — MainWindow adds no relay. Its own audio duty is the selected
+// SongTab: it reads that tab directly, binds the engine from the tab's
+// timeline/settings/lease, and retains the selected VoicegroupLease the
+// engine borrows. Project policy — tabs, dialogs, placement, persistence —
+// lives in WorkspaceUi; the worker and its scheduling live behind
+// ProjectWorkspace.
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -99,155 +107,63 @@ class MainWindow : public QMainWindow
     void changeEvent(QEvent *event) override;
 
   private slots:
-    void openProject();
-    void songActivated(int songId);
-    void songOpenInNewTab(int songId);
     void saveSong();
     void exportWav();
     void openSettings(SettingsDialog::Tab initialTab = SettingsDialog::Tab::Engine);
     void openSongSettings();
     void openEngineSettings();
     void openKeyboardShortcuts();
-    void newSong();
-    void importMidi();
-    void importSample();
-    // Sample Editor entry (slot >= 0: browser-initiated — after the commit
-    // the new sample is auto-assigned to that voice slot as an undo command).
-    void importSampleForSlot(int slot);
-    // "Edit sample…" reopen (PLAN.md §6 phase 6): the slot's committed
-    // sample, from its provenance sidecar (hi-res source + saved params) when
-    // it checks out, else from the committed 8-bit .wav.
-    void editSampleForSlot(int slot);
-    void registerLoadedSong();
-    // Shared by File → Register Song (the loaded song) and the song list's
-    // right-click Register Song (any song, open or not).
-    void registerSongById(int songId);
-    // The song list's right-click Delete Song: confirms what will be removed
-    // (offering the song's voicegroup when nothing else uses it), then
-    // performs the deletion.
-    void deleteSongById(int songId);
     void uiTick();
-    void onVoiceEditRequested(int slot, const VgVoice &voice, bool structural);
 
   private:
     void buildUi();
     void updateWindowFrameTheme();
-    // The dialog-less half of openProject; also the session-restore entry.
-    // On failure warns via dialog (interactive) or status bar (restore).
-    using ProjectOpenContinuation = std::function<void(bool)>;
-    void openProjectDir(const QString &dir, bool interactive = true,
-                        ProjectOpenContinuation continuation = {});
-    bool projectMutationInProgress() const;
-    void populateSongList();
-    // Opens a song: focuses its tab when already open, otherwise loads it
-    // into the current tab (prompting for unsaved changes) or a new one.
-    void loadSong(const SongInfo &song, bool newTab = false);
-    void loadSongByLabel(const QString &label, bool newTab = false);
-    // Shared New Song / Import finish: creates the new voicegroup when the
-    // wizard asked for one, writes the .mid + midi.cfg line, registers the
-    // song in the three registration files, reloads the project, and opens
-    // the song in a new tab.
-    void finishCreateSong(SmfFile smf, const QString &label, const QString &constant,
-                          const QString &player, const SongCfg &cfg, const QString &newVoicegroup,
-                          const QString &projectRoot);
-    // The dialog-less half of deleteSongById. The GUI detaches the session
-    // before the worker re-derives and applies the removal.
-    using DeletionContinuation = std::function<void(bool, QString)>;
-    void performSongDeletion(const SongInfo &song, const QString &deleteVoicegroupName,
-                             DeletionContinuation continuation = {});
-    void reloadProject(ProjectOpenContinuation continuation = {});
-    void queueVoicegroupLoad(SongSession &session, const SongCfg &cfg, int keepSlot,
-                             std::function<void(bool)> completion = {});
-    void queueVoicegroupProbe(SongSession &session);
-    void queueCatalogRefresh();
 
-    // --- tab/session plumbing ---
-    SongSession *activeSession() const { return m_active; }
-    SongSession *sessionForLabel(const QString &label) const;
-    // Creates and model-wires an unattached session. A page is published only
-    // after the document and all borrowed presentation data are ready.
-    SongSession *createSession();
-    void wireSongView(SongSession &session, SongView &view);
-    void closeSession(SongSession &session);
-    // Detaches the session page before freeing model state.
-    void destroySession(SongSession *session);
-    // Prompts to save every dirty session (focusing each tab as it's asked
-    // about); completion(false) means the user cancelled or a save failed.
-    // Saves answered before a Cancel have already been queued or written.
-    using SessionContinuation = std::function<void(bool)>;
-    void promptToSaveAllSessions(SessionContinuation continuation);
-    // Destroys every session with no prompting and the engine/docks
-    // detached once up front — currentChanged is suppressed so the doomed
-    // neighbors aren't each rebound and persisted in turn.
-    void teardownSessions();
-    // Makes a session the engine-attached, dock-bound one (nullptr = none).
-    // Always stops playback first. force re-binds even the already-active
-    // session (used after replacing its song in place).
-    void activateSession(SongSession *session, bool force = false);
-    // Points the audio engine at the session's timeline/voicegroup and
-    // re-applies its settings and the view's mute/solo masks.
-    void attachEngine(SongSession &session);
-    // Pushes the session's timeline/track-name/voice-name context into the
+    // ---- Selected-tab audio handoff ----
+    // A new selection stops the outgoing tab's playback, unloads the engine
+    // for a null/not-ready selection before the retained lease is released,
+    // and otherwise binds the engine from the tab and retains its lease.
+    void onSelectedTabChanged(SongTab *tab);
+    // The selected tab reached its terminal VoicegroupBound: bind.
+    void onSelectedTabReady(SongTab *tab);
+    // The selected tab's document, bank, or registration state changed:
+    // refresh the chrome that reads the loaded state.
+    void onSelectedSongStateChanged();
+    // Full (re)bind of a ready selected tab.
+    void applySelectedAudio();
+    // Diff-based engine refresh: publishes a rebuilt timeline (hot), swaps a
+    // replaced bank (cold), and re-applies song settings only when each
+    // actually changed.
+    void refreshSelectedAudio();
+    // Pushes the tab's timeline/track-name/voice-name context into the
     // Polyphony dock (null clears it).
-    void updatePolyPanelContext(SongSession *session);
-    // A clean session whose voicegroup file changed on disk (saved from
-    // another tab) silently follows the disk on activation.
-    void maybeRefreshVoicegroup(SongSession &session);
-    // After a voicegroup save, every OTHER clean session on the same file
-    // reloads immediately — the active tab has no upcoming activation to
-    // catch the change, and its stale parse would revert the save on its
-    // own next voicegroup write.
-    void refreshSessionsAfterVgSave(const QString &filePath, SongSession *except);
-    // Records the open tabs + active song in QSettings for restoreSession.
-    void persistOpenTabs();
-    // Re-resolves each session's songId by label after a project reload.
-    void refreshSessionSongIds();
-    void updateTabTitle(SongSession &session);
-    void toggleDrawerPage(bool automation);
-    void updateDrawerActions();
-    void setEditorDrawerState(const EditorDrawerState &state);
+    void updatePolyPanelContext(SongTab *tab);
+    // The tab's cfg (volume/reverb) merged with the global engine knobs —
+    // everything AudioEngine::updateSettings applies.
+    SongSettings songSettingsFor(const SongTab &tab) const;
 
-    void updateVoicegroupBrowser();
-    void syncVoicegroupLoading();
-    void onDocumentChanged(SongSession &session);
-    // Saves the session's song AND its dirty voicegroup — the two are one
-    // document to the user. The voicegroup goes first; completion is called
-    // after the queued MIDI/flags operation finishes. A failed operation or
-    // a newer edit that landed during the save leaves the session dirty.
-    void saveSession(SongSession &session, SessionContinuation continuation = {});
-    // Prompts to save the session's unsaved changes (song and voicegroup
-    // edits alike). completion(false) means the user cancelled, the
-    // asynchronous save failed, or newer edits remain dirty.
-    void maybeSaveSession(SongSession &session, SessionContinuation continuation);
-    void onVoiceEdited(SongSession &session, int slot, bool structural);
-    void continueImportSampleForSlot(int slot, QString projectRoot, const SampleFormatProbe &probe);
-    void continueEditSampleForSlot(int slot, QString name, QString projectRoot,
-                                   SampleProjectResult result);
-    // Auditions unsaved structural edits: renders the edited source into
-    // .porydaw/vgpreview/ and reloads through the loader's config override,
-    // which shadows the real file without touching it.
-    void reloadVoicegroupPreview(SongSession &session, int keepSlot);
-    // Swaps in a freshly loaded voicegroup (owned by the session from here),
-    // reattaching the views — and, when active, the engine — around it.
-    void swapVoicegroup(SongSession &session, LoadedVoiceGroup *vg, int keepSlot);
-    // Installs/refreshes session-owned synth descriptors for every Golden Sun
-    // synth voice whose loaded tone is missing (pending definition — not on
-    // disk until save) or stale (a param edit patched a different desc), and
-    // syncs voiceNames for symbol moves the scalar path never reloads.
-    // Bytes are poked in place, so live tweaks are audible immediately.
-    // Returns whether any tone or name actually changed.
-    bool applyPendingSynthTones(SongSession &session, LoadedVoiceGroup *vg);
-    const VgSynthDesc *synthDescForSymbol(const QString &symbol);
-    // Cancels only project-global disposable reads/probes. Session-scoped
-    // requests and project mutations stay FIFO so a failed switch leaves the
-    // old sessions and their pending work intact.
-    void cancelDisposableProjectRequests();
-    void cleanupVgPreview(std::function<void()> completion = {});
-    void updateVgDockTitle();
-    void newVoicegroup();
-    // Sidecar view state (SPEC §4.4): written whenever a session is let go
-    // (tab close, project switch, app close). Cosmetic; silent on failure.
-    void saveViewState(SongSession &session);
+    // ---- Browse auditions (engine-owned; values resolved per call) ----
+    const WaveData *sampleWaveFor(const QString &symbol) const;
+    const uint32_t *progWaveFor(const QString &symbol) const;
+    const LoadedKeysplit *keysplitFor(const QString &symbol) const;
+    // Browse-audition a keysplit instrument: play whatever sub-voice the
+    // audition key (middle C) resolves to, with that sub-voice's own envelope
+    // — the same resolution the engine does per note (resolve_voice).
+    void auditionKeysplit(const QString &symbol);
+
+    // ---- Chrome ----
+    void setEditorDrawerState(const EditorDrawerState &state);
+    // One recomputation of every menu action's enablement from the workspace,
+    // project state, and the selected tab.
+    void updateChrome();
+    void updateWindowTitle();
+    void updateTransportActions();
+    void syncMasterVolumeControl();
+    void syncScaleControls();
+    void synchronizePlayhead();
+    void updateTimeLabel();
+    void updatePolyStatus();
+    // ---- Transport ----
     // Starts (or resumes) playback; from Stopped, seeks to the edit cursor
     // first so playback begins there. fromEditCursor forces that seek even
     // out of Paused — the Space binding (Reaper-style restart), while the
@@ -255,98 +171,47 @@ class MainWindow : public QMainWindow
     void startPlayback(bool fromEditCursor = false);
     void pausePlayback();
     void stopPlayback();
-    // The session's cfg (volume/reverb) merged with the global engine knobs
-    // — everything AudioEngine::updateSettings applies.
-    SongSettings songSettingsFor(const SongSession &session) const;
-    void updateTransportActions();
-    // Synchronizes active-session state into the transport presentation.
-    void syncMasterVolumeControl();
-    void syncScaleControls(SongSession *session);
-    void synchronizePlayhead();
-    void updateTimeLabel();
-    void updatePolyStatus();
-    void updateWindowTitle();
     QString formatTime(uint64_t samples) const;
+    bool selectedSongRegistrationPending() const;
 
-    // The Voicegroup dock's project-wide symbol/instrument lists: full
-    // project .inc scans (catalogScan + directSoundCatalog + progWave),
-    struct VgCatalog {
-        bool valid = false;
-        bool loading = false;
-        bool perFileVoicegroups = false;
-        QStringList groupArgs; // the -G choices (SongRegistry::voicegroupArgs)
-        QStringList directSound;
-        QStringList progWave;
-        QList<QPair<QString, QString>> keysplits;
-        QStringList drumkits;
-        VgSynthCatalog synths;
-        VgAdsrDefaults typicalAdsr;
-    };
-    const VgCatalog &vgCatalog();
-    void invalidateVgCatalog();
-    // The committed data behind the picker's rows (loop badges and browse
-    // audition): one voicegroup_load_samples batch over the whole catalog —
-    // DirectSound samples, programmable waves, and keysplit instruments —
-    // loaded on first use and freed with the catalog.
-    void ensureSampleSet();
-    const WaveData *sampleWaveFor(const QString &symbol);
-    void auditionKeysplit(const QString &symbol);
-    LoadedSampleSet *m_sampleSet = nullptr;
-    QHash<QString, const WaveData *> m_sampleWaves;
-    QHash<QString, const uint32_t *> m_progWaves;
-    QHash<QString, LoadedKeysplit> m_keysplits;
-    // Minted-but-unsaved Golden Sun synth definitions (symbol -> descriptor),
-    // project-wide. Param edits point voice lines at these; they reach disk
-    // (and the browser's dropdown) only when a voicegroup referencing them
-    // saves. Cleared on project switch.
-    QHash<QString, VgSynthDesc> m_pendingSynths;
-
+    // The fixed composition root (see the check contracts). WorkspaceUi and
+    // the engine outlive ProjectWorkspace, whose worker borrows nothing from
+    // them; the selected binding pins the engine's borrowed bank.
+    std::unique_ptr<WorkspaceUi> m_workspace;
+    std::unique_ptr<ProjectWorkspace> m_projectWorkspace;
     AudioEngine m_audio;
+    SongTab *m_selectedTab = nullptr;
+    VoicegroupLease m_selectedVoicegroup;
+
+    // The selected-tab audio as last handed to the engine — the diff input
+    // for the focused update paths. The engine's own getters lag hot
+    // publishes (TimelineHandoff flips active() only at the callback), so
+    // MainWindow keeps this one record.
+    const MidiTimeline *m_appliedTimeline = nullptr;
+    std::optional<SongSettings> m_appliedSettings;
+
     bool m_audioOk = false;
-    // False during harness runs so they don't overwrite the session.
+    // False during harness runs so they don't overwrite the window-chrome
+    // QSettings (geometry, state, song filters). Tab/session persistence is
+    // WorkspaceUi's and always runs; harnesses redirect QSettings instead.
     bool m_persistSession = true;
-    EngineSettings m_engineSettings;
-    DecompProject m_project;
-    std::unique_ptr<ProjectIo> m_projectIo;
-    EditorDrawerState m_editorDrawerState;
-    std::vector<std::unique_ptr<SongSession>> m_sessions;
-    SongSession *m_active = nullptr;
-    // Suppress semantic activation during teardown or bulk restore; the
-    // caller activates one ready session after the batch.
-    bool m_tearingDown = false;
-    bool m_restoringSession = false;
-    bool m_projectSwitchInProgress = false;
     bool m_closeInProgress = false;
     bool m_closeAccepted = false;
-    VgCatalog m_vgCatalog;
-    uint64_t m_pendingCatalogRequest = 0;
-    uint64_t m_pendingSampleSetRequest = 0;
-    uint64_t m_pendingSampleProbeRequest = 0;
-    uint64_t m_pendingSampleProjectRequest = 0;
-    uint64_t m_pendingSampleCommitRequest = 0;
-    uint64_t m_pendingRegistrationPlanRequest = 0;
-    QPointer<QMessageBox> m_registerSongConfirmation;
-    uint64_t m_pendingRegistrationRequest = 0;
-    uint64_t m_pendingDeletionPlanRequest = 0;
-    uint64_t m_pendingDeletionRequest = 0;
-    QPointer<QMessageBox> m_deleteSongConfirmation;
-    uint64_t m_pendingProjectRefreshRequest = 0;
-    uint64_t m_pendingCreateSongRequest = 0;
-    uint64_t m_pendingCreateVoicegroupRequest = 0;
+    EngineSettings m_engineSettings;
+    EditorDrawerState m_editorDrawerState;
 
-    std::unique_ptr<WorkspaceUi> m_workspace;
-    QUndoGroup *m_undoGroup = nullptr;
-    PolyphonyPanel *m_polyPanel = nullptr;
-    QDockWidget *m_polyDock = nullptr;
     std::unique_ptr<QSettings> m_themeSettings;
     std::unique_ptr<themes::ThemeController> m_themeController;
     std::unique_ptr<themes::ThemeDialog> m_themeDialog;
+    QAction *m_openProjectAction = nullptr;
     QAction *m_newSongAction = nullptr;
     QAction *m_importAction = nullptr;
     QAction *m_importSampleAction = nullptr;
     QAction *m_registerAction = nullptr;
     QAction *m_closeTabAction = nullptr;
     QAction *m_saveAction = nullptr;
+    QAction *m_undoAction = nullptr;
+    QAction *m_redoAction = nullptr;
     QAction *m_exportWavAction = nullptr;
     QAction *m_copyAction = nullptr;
     QAction *m_settingsAction = nullptr;
@@ -355,6 +220,8 @@ class MainWindow : public QMainWindow
     QAction *m_velocityDrawerAction = nullptr;
     QAction *m_velocityColorsAction = nullptr;
     QAction *m_noteNamesAction = nullptr;
+    QDockWidget *m_polyDock = nullptr;
+    PolyphonyPanel *m_polyPanel = nullptr;
     QWidget *m_polyMeter = nullptr;
     QLabel *m_pcmValueLabel = nullptr;
     QLabel *m_cgbValueLabel = nullptr;

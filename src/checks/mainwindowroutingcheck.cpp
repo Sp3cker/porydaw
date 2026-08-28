@@ -14,6 +14,7 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QPointer>
@@ -37,6 +38,7 @@
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "mainwindow.h"
+#include "project/projectidentity.h"
 #include "project/sidecar.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/editordrawer.h"
@@ -44,6 +46,7 @@
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
+#include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/viewsidecar.h"
@@ -95,40 +98,44 @@ QPointF velocityNodePosition(const SongView &view, const VelocityArea &area,
     return {x, area.axis().velocityToY(note.velocity)};
 }
 
-bool waitForSessionBindings(const std::vector<std::unique_ptr<SongSession>> &sessions,
-                            SongSession *session, const char *what)
+// Awaits a tab's terminal payload while it stays open; readiness is the one
+// observable that MidiStage, SidecarStage, and VoicegroupBound all landed.
+bool waitForTabReady(const WorkspaceUi &workspace, SongTab *tab, const char *what)
 {
-    const auto isLive = [&sessions, session] {
-        return session &&
-               std::any_of(sessions.cbegin(), sessions.cend(),
-                           [session](const auto &candidate) { return candidate.get() == session; });
+    const auto isLive = [&workspace, tab] {
+        return tab && workspace.songTabFor(tab->name()) == tab;
     };
     if (!isLive()) {
         std::fprintf(stderr,
-                     "song-load wait failed: %s session was destroyed before midiBound, vgBound, "
-                     "and sidecarBound\n",
+                     "song-load wait failed: %s tab was destroyed before its terminal payload\n",
                      what);
         return false;
     }
-    if (session->isInteractive())
+    if (tab->isReady())
         return true;
-    const auto result =
-        checks::async_wait::waitUntil(isLive, [session] { return session->isInteractive(); });
+    const auto result = checks::async_wait::waitUntil(isLive, [tab] { return tab->isReady(); });
     if (result == checks::async_wait::Result::Destroyed || !isLive()) {
         std::fprintf(stderr,
-                     "song-load wait failed: %s session was destroyed before midiBound, vgBound, "
-                     "and sidecarBound\n",
+                     "song-load wait failed: %s tab was destroyed before its terminal payload\n",
                      what);
         return false;
     }
     if (result == checks::async_wait::Result::TimedOut) {
-        std::fprintf(stderr,
-                     "song-load wait failed: %s timed out before midiBound, vgBound, and "
-                     "sidecarBound\n",
+        std::fprintf(stderr, "song-load wait failed: %s timed out before its terminal payload\n",
                      what);
         return false;
     }
     return true;
+}
+
+// Awaits the workspace's Ready publication (the request itself returns while
+// the open is still in flight).
+bool waitForProjectReady(const WorkspaceUi &workspace)
+{
+    return checks::async_wait::waitUntil(
+               [] { return true; },
+               [&workspace] { return workspace.projectState().state == ProjectOpenState::Ready; },
+               30000, 1) == checks::async_wait::Result::Ready;
 }
 
 } // namespace
@@ -140,9 +147,14 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         std::fprintf(stderr, "mainwindow-routing: no audio device available\n");
         return false;
     }
-    if (!checks::async_wait::waitForBoolCompletion([this, &projectRoot](auto completion) {
-            openProjectDir(projectRoot, /*interactive=*/false, completion);
-        })) {
+    const std::optional<SongName> nameA = SongName::create(songA);
+    const std::optional<SongName> nameB = SongName::create(songB);
+    if (!nameA || !nameB) {
+        std::fprintf(stderr, "mainwindow-routing: song labels were rejected as identities\n");
+        return false;
+    }
+    m_workspace->requestProjectOpenAt(projectRoot);
+    if (!waitForProjectReady(*m_workspace)) {
         std::fprintf(stderr, "mainwindow-routing: project failed to open\n");
         return false;
     }
@@ -158,24 +170,21 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     resize(960, 640);
     show();
     QCoreApplication::processEvents();
-    loadSongByLabel(songA);
-    SongSession *tabA = m_active;
-    loadSongByLabel(songB, /*newTab=*/true);
-    SongSession *tabB = m_active;
-    if (!tabA || !tabB || tabA == tabB || m_workspace->openSessionCount() != 2) {
+    m_workspace->requestSongOpen(*nameA);
+    SongTab *const tabA = m_workspace->songTabFor(*nameA);
+    m_workspace->requestSongOpen(*nameB, /*newTab=*/true);
+    SongTab *const tabB = m_workspace->selectedSongTab();
+    if (!tabA || !tabB || tabA == tabB || m_workspace->openTabCount() != 2) {
         std::fprintf(stderr, "mainwindow-routing: songs did not open in two tabs\n");
         return false;
     }
-    if (!waitForSessionBindings(m_sessions, tabA, "mainwindow-routing song A")) {
+    if (!waitForTabReady(*m_workspace, tabA, "mainwindow-routing song A") ||
+        !waitForTabReady(*m_workspace, tabB, "mainwindow-routing song B")) {
         hide();
         return false;
     }
-    if (!waitForSessionBindings(m_sessions, tabB, "mainwindow-routing song B")) {
-        hide();
-        return false;
-    }
-    SongView &tabAView = m_workspace->viewFor(*tabA);
-    SongView &tabBView = m_workspace->viewFor(*tabB);
+    SongView &tabAView = tabA->view();
+    SongView &tabBView = tabB->view();
     constexpr uint64_t auditionTick = 24;
     stopPlayback();
     tabBView.commitEditCursor(0);
@@ -230,11 +239,11 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
 
     songview::EditorSelectionModel::TimeSelection tabATimeSelection;
     tabATimeSelection.startTick = 0;
-    tabATimeSelection.endTick = tabA->timeline->ticksPerBeat;
+    tabATimeSelection.endTick = tabA->timeline()->ticksPerBeat;
     tabAView.selectionModel().setTimeSelection(tabATimeSelection);
     auto tabBNote = std::optional<DocNote>{};
-    for (int track = 0; track < tabB->doc.engineTrackCount() && !tabBNote; ++track) {
-        const auto notes = tabB->doc.notesForTrack(track);
+    for (int track = 0; track < tabB->document().engineTrackCount() && !tabBNote; ++track) {
+        const auto notes = tabB->document().notesForTrack(track);
         if (!notes.empty()) {
             tabBView.selectTrack(track);
             tabBView.selectionModel().setNoteSelection({notes.front().noteId});
@@ -263,17 +272,17 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
               "Copy shortcut did not trigger the MainWindow Edit action exactly once");
         const auto noteCopy = clipcheck_support::checkClipboardClip();
         const bool copiedSelectedNote =
-            noteCopy && noteCopy->ticksPerBeat == tabB->timeline->ticksPerBeat &&
+            noteCopy && noteCopy->ticksPerBeat == tabB->timeline()->ticksPerBeat &&
             noteCopy->clip.span == 0 && noteCopy->clip.tracks.size() == 1 &&
             noteCopy->clip.tracks.front().notes.size() == 1 &&
             noteCopy->clip.tracks.front().notes.front().key == tabBNote->key &&
             noteCopy->clip.tracks.front().notes.front().velocity == tabBNote->velocity;
         check(copiedSelectedNote, "Copy action did not route to the active tab's selected note");
-        m_workspace->activateSession(tabA);
+        m_workspace->selectSongTab(tabA);
         QCoreApplication::processEvents();
         copyAction->trigger();
         const auto timeCopy = clipcheck_support::checkClipboardClip();
-        check(timeCopy && timeCopy->ticksPerBeat == tabA->timeline->ticksPerBeat &&
+        check(timeCopy && timeCopy->ticksPerBeat == tabA->timeline()->ticksPerBeat &&
                   timeCopy->clip.span == tabATimeSelection.endTick,
               "Copy action did not route the active tab's time selection");
         auto textProbe = QLineEdit(this);
@@ -286,7 +295,7 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         check(QApplication::clipboard()->text() == QStringLiteral("native copy text probe"),
               "Edit Copy action hijacked focused text-widget copy");
         disconnect(triggerSpy); // the lambda captures a block-local by reference
-        m_workspace->activateSession(tabB);
+        m_workspace->selectSongTab(tabB);
         QCoreApplication::processEvents();
     }
 
@@ -378,15 +387,16 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
               tabAView.drawerActivePage() == EditorDrawerPage::Velocity &&
               tabAView.drawerSectionHeight(EditorDrawerPage::Velocity) == retainedHeight,
           "drawer hide did not retain globally shared page and height");
-    m_workspace->activateSession(tabA);
-    m_workspace->activateSession(tabB);
+    m_workspace->selectSongTab(tabA);
+    m_workspace->selectSongTab(tabB);
     QCoreApplication::processEvents();
     QWidget *focusAfterTabSwitch = QApplication::focusWidget();
     check(focusAfterTabSwitch &&
               (focusAfterTabSwitch == &tabBView || tabBView.isAncestorOf(focusAfterTabSwitch)) &&
               focusAfterTabSwitch->focusPolicy() != Qt::NoFocus,
           "tab switch did not request active content focus");
-    check(m_active == tabB && tabBView.drawerActivePage() == EditorDrawerPage::Velocity &&
+    check(m_workspace->selectedSongTab() == tabB &&
+              tabBView.drawerActivePage() == EditorDrawerPage::Velocity &&
               tabBView.drawerSectionHeight(EditorDrawerPage::Velocity) == retainedHeight &&
               tabAView.drawerSectionHeight(EditorDrawerPage::Velocity) == retainedHeight,
           "application-wide drawer state did not survive a tab switch");
@@ -430,16 +440,17 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     check(writeJsonObject(sidecarPath, seededSidecar),
           "could not seed an unrelated sidecar key for persistence test");
     const QByteArray sidecarBefore = fileContents(sidecarPath);
-    const QByteArray midiBefore = tabB->doc.smf().write();
-    const uint64_t revisionBefore = tabB->doc.revision();
-    const int undoBefore = tabB->doc.undoStack()->count();
+    const QByteArray midiBefore = tabB->document().smf().write();
+    const uint64_t revisionBefore = tabB->document().revision();
+    const int undoBefore = tabB->view().document()->undoStack()->count();
     tabBView.setDrawerActivePage(EditorDrawerPage::Velocity);
     tabBView.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     tabBView.setDrawerSectionHeight(EditorDrawerPage::Velocity, retainedHeight);
     QCoreApplication::processEvents();
     const EditorViewState expectedCosmetics = tabBView.editorViewState();
-    check(tabB->doc.smf().write() == midiBefore && tabB->doc.revision() == revisionBefore &&
-              tabB->doc.undoStack()->count() == undoBefore &&
+    check(tabB->document().smf().write() == midiBefore &&
+              tabB->document().revision() == revisionBefore &&
+              tabB->view().document()->undoStack()->count() == undoBefore &&
               fileContents(ViewSidecar::pathFor(projectRoot, songB)) == sidecarBefore,
           "view-only drawer state changed MIDI, Undo, or persisted outside a boundary");
 
@@ -451,91 +462,70 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
               drawerSettings.value(QStringLiteral("editorDrawer/activePage")).toString() ==
                   QStringLiteral("velocity"),
           "drawer chrome was not written to application settings");
-    closeSession(*tabB);
-    check(m_workspace->openSessionCount() == 1,
+    m_workspace->requestCloseSelectedTab(); // tabB is selected and clean
+    check(m_workspace->openTabCount() == 1 && m_workspace->songTabFor(*nameB) == nullptr,
           "tab close did not synchronously detach the clean session");
-    // The replacement's sidecar read is queued after closeSession's sidecar write
-    // on ProjectIo, so waiting for all bindings is the write barrier.
-    loadSongByLabel(songB, true);
-    SongSession *reopened = sessionForLabel(songB);
-    const bool reopenedAttached = reopened && m_workspace->isSessionAttached(*reopened);
-    check(reopenedAttached,
-          "reopened song did not create an attached SongView session immediately");
+    // The replacement's sidecar read is queued after the close's sidecar write
+    // on ProjectIo, so waiting for readiness is the write barrier.
+    m_workspace->requestSongOpen(*nameB, /*newTab=*/true);
+    SongTab *reopened = m_workspace->songTabFor(*nameB);
+    check(reopened != nullptr, "reopened song did not create its tab immediately");
     const bool reopenedReady =
-        reopenedAttached &&
-        waitForSessionBindings(m_sessions, reopened, "mainwindow-routing reopened song B");
-    SongView *reopenedView = reopenedAttached ? &m_workspace->viewFor(*reopened) : nullptr;
+        reopened && waitForTabReady(*m_workspace, reopened, "mainwindow-routing reopened song B");
+    SongView *reopenedView = reopened ? &reopened->view() : nullptr;
     ViewSidecar::Snapshot savedSnapshot;
+    const bool savedSnapshotLoaded = ViewSidecar::load(projectRoot, songB, &savedSnapshot);
     const QJsonObject savedSidecar = readJsonObject(sidecarPath);
-    check(reopenedReady && reopened && sessionForLabel(songB) == reopened && reopenedView &&
-              ViewSidecar::load(projectRoot, songB, &savedSnapshot) && savedSnapshot.view.valid &&
+    check(reopenedReady && savedSnapshotLoaded && savedSnapshot.view.valid &&
               savedSnapshot.editor.drawerState() == EditorDrawerState{} &&
               sameLaneState(savedSnapshot.editor, expectedCosmetics) &&
               savedSidecar.value(QStringLiteral("registration"))
                   .toObject()
                   .value(QStringLiteral("pending"))
-                  .toBool() &&
-              reopenedView->drawerSectionVisible(EditorDrawerPage::Velocity) &&
+                  .toBool(),
+          "tab close did not flush song-specific state or preserve unrelated sidecar keys");
+    check(reopenedReady && reopened && m_workspace->songTabFor(*nameB) == reopened &&
+              reopenedView && reopenedView->drawerSectionVisible(EditorDrawerPage::Velocity) &&
               reopenedView->drawerActivePage() == EditorDrawerPage::Velocity &&
               reopenedView->drawerSectionHeight(EditorDrawerPage::Velocity) == retainedHeight &&
               reopenedView->editorViewState().drawerState() == m_editorDrawerState &&
               sameLaneState(reopenedView->editorViewState(), expectedCosmetics),
-          "tab close did not flush song-specific state or preserve unrelated sidecar keys");
-    // 12. A failed project open must not tear down an old session whose
-    // asynchronous load is already queued. FIFO ordering also leaves the
-    // sidecar completion to finish after the failed open.
-    SongSession *oldSession = m_active;
-    const int oldTabCount = m_workspace->openSessionCount();
-    const QString oldLabel = oldSession ? oldSession->doc.label() : QString();
-    const bool oldSessionOk = oldSession && !oldSession->isDirty();
-    check(oldSessionOk, "failed-open precondition did not leave a clean old session");
-    if (oldSessionOk) {
-        loadSongByLabel(oldLabel);
-        const bool loadQueued =
-            sessionForLabel(oldLabel) == oldSession &&
-            (oldSession->pendingMidiRequest != 0 || oldSession->pendingVgRequest != 0);
-        check(loadQueued, "failed-open precondition did not queue an old-session load");
-        struct OpenAttempt {
-            bool completed = false;
-            bool succeeded = false;
-        };
-        const auto attempt = std::make_shared<OpenAttempt>();
-        QEventLoop openLoop;
-        QPointer<QEventLoop> openLoopGuard = &openLoop;
-        QTimer openTimeout;
-        QObject::connect(&openTimeout, &QTimer::timeout, &openLoop, &QEventLoop::quit);
-        openTimeout.setSingleShot(true);
+          "reopened tab did not restore sidecar lanes with application drawer chrome");
+    // 12. A failed project open must not tear down an old tab whose
+    // asynchronous reload is already queued. FIFO ordering also leaves the
+    // reload to finish after the failed open.
+    SongTab *const oldTab = m_workspace->selectedSongTab();
+    const qsizetype oldTabCount = m_workspace->openTabCount();
+    const QString oldLabel = oldTab ? oldTab->document().label() : QString();
+    const bool oldTabOk = oldTab && !oldTab->document().isDirty();
+    check(oldTabOk, "failed-open precondition did not leave a clean old tab");
+    if (oldTabOk) {
+        // Re-activating the selected tab's own song queues the in-place
+        // reload whose staged updates must survive the failed open.
+        m_workspace->requestSongOpen(*nameB);
         const QString invalidRoot =
             projectRoot + QStringLiteral("/mainwindow-routing-invalid-project");
-        openProjectDir(invalidRoot, /*interactive=*/false,
-                       [attempt, openLoopGuard](bool succeeded) {
-                           attempt->completed = true;
-                           attempt->succeeded = succeeded;
-                           if (openLoopGuard)
-                               openLoopGuard->quit();
-                       });
-        if (!attempt->completed) {
-            openTimeout.start(30000);
-            openLoop.exec();
-            openTimeout.stop();
-        }
-        check(attempt->completed && !attempt->succeeded,
-              "invalid project open unexpectedly succeeded or did not complete");
-        const bool oldLive = oldSession && sessionForLabel(oldLabel) == oldSession &&
-                             m_active == oldSession && m_workspace->activeSession() == oldSession &&
-                             m_workspace->openSessionCount() == oldTabCount &&
-                             m_workspace->isSessionAttached(*oldSession) &&
-                             m_project.root() == projectRoot;
-        check(oldLive, "failed project open destroyed or switched away from the old session");
+        m_workspace->requestProjectOpenAt(invalidRoot);
+        // The interactive open policy reports the failure with a modal
+        // warning; dismiss it while awaiting the Failed publication.
+        const auto failed = [&] {
+            if (auto *box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget()))
+                box->close();
+            return m_workspace->projectState().state == ProjectOpenState::Failed;
+        };
+        const auto openResult =
+            checks::async_wait::waitUntil([] { return true; }, failed, 30000, 1);
+        check(openResult == checks::async_wait::Result::Ready &&
+                  m_workspace->projectState().state == ProjectOpenState::Failed,
+              "invalid project open unexpectedly succeeded or did not fail");
+        const bool oldLive = oldTab && m_workspace->selectedSongTab() == oldTab &&
+                             m_workspace->openTabCount() == oldTabCount &&
+                             m_workspace->projectState().snapshot.root() == projectRoot;
+        check(oldLive, "failed project open destroyed or switched away from the old tab");
         if (oldLive) {
-            const bool oldReady =
-                waitForSessionBindings(m_sessions, oldSession, "failed-open old session");
-            const bool oldStillAttached = oldReady && m_workspace->isSessionAttached(*oldSession);
-            const SongView *oldView =
-                oldStillAttached ? &m_workspace->viewFor(*oldSession) : nullptr;
-            check(oldReady && oldSession->doc.label() == oldLabel && oldSession->sidecarBound &&
-                      oldView && oldView->isEnabled(),
-                  "old session did not remain interactive after failed project open");
+            const bool oldReady = waitForTabReady(*m_workspace, oldTab, "failed-open old tab");
+            check(oldReady && oldTab->document().label() == oldLabel && oldTab->view().isEnabled(),
+                  "old tab did not remain interactive after failed project open");
         }
     }
 
@@ -571,10 +561,13 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
     };
     MainWindow window;
     check(window.m_audioOk, "no audio device available");
-    check(checks::async_wait::waitForBoolCompletion([&window, &scratchProject](auto completion) {
-              window.openProjectDir(scratchProject, /*interactive=*/false, completion);
-          }),
-          "project failed to open");
+    const std::optional<SongName> nameA = SongName::create(songA);
+    const std::optional<SongName> nameB = SongName::create(songB);
+    check(nameA && nameB, "fixture song labels were rejected as identities");
+    if (nameA && nameB) {
+        window.m_workspace->requestProjectOpenAt(scratchProject);
+        check(waitForProjectReady(*window.m_workspace), "project failed to open");
+    }
     if (failures) {
         window.hide();
         return 1;
@@ -582,25 +575,24 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
     window.resize(960, 680);
     window.show();
     QCoreApplication::processEvents();
-    window.loadSongByLabel(songA);
-    SongSession *initialA = window.m_active;
-    window.loadSongByLabel(songB, /*newTab=*/true);
-    SongSession *session = window.m_active;
-    check(initialA && session && window.m_workspace->isSessionAttached(*initialA) &&
-              window.m_workspace->isSessionAttached(*session),
-          "MainWindow flow did not create attached SongView tabs immediately");
+    window.m_workspace->requestSongOpen(*nameA);
+    SongTab *initialA = window.m_workspace->songTabFor(*nameA);
+    window.m_workspace->requestSongOpen(*nameB, /*newTab=*/true);
+    SongTab *session = window.m_workspace->selectedSongTab();
+    check(initialA && session && session != initialA,
+          "MainWindow flow did not create two distinct song tabs immediately");
     const bool initialAReady =
-        initialA && waitForSessionBindings(window.m_sessions, initialA, "host-integration song A");
+        initialA && waitForTabReady(*window.m_workspace, initialA, "host-integration song A");
     check(initialAReady,
-          "song A timed out or its session was destroyed before MIDI and voicegroup binding");
+          "song A timed out or its tab was destroyed before MIDI and voicegroup binding");
     const bool sessionReady =
-        session && waitForSessionBindings(window.m_sessions, session, "host-integration song B") &&
-        session->timeline;
-    check(sessionReady, "MainWindow flow did not leave an attached SongView and timeline");
+        session && session != initialA &&
+        waitForTabReady(*window.m_workspace, session, "host-integration song B");
+    check(sessionReady, "MainWindow flow did not leave an attached ready tab and timeline");
     if (sessionReady) {
-        SongView &view = window.m_workspace->viewFor(*session);
+        SongView &view = session->view();
         SongDocument *document = view.document();
-        check(document, "MainWindow flow did not leave an attached SongView and timeline");
+        check(document, "MainWindow flow did not leave an attached ready tab and timeline");
         if (document) {
             auto noteTrack = -1;
             auto notes = std::vector<DocNote>{};
@@ -645,7 +637,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                     for (uint64_t offset = 0; offset <= 120; ++offset) {
                         const DrawerPageVoiceContext next = view.voiceContext(candidate + offset);
                         const uint64_t sample =
-                            session->timeline->sampleForTick(candidate + offset);
+                            session->timeline()->sampleForTick(candidate + offset);
                         if (next.voice != context.voice || next.voiceSlot != context.voiceSlot ||
                             (offset > 0 && sample <= previousSample)) {
                             steady = false;
@@ -661,12 +653,12 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                 }
                 check(foundSteadySamples, "timeline has no steady 120-sample playhead span");
                 if (foundSteadySamples) {
-                    view.setPlayheadSample(session->timeline->sampleForTick(firstTick), true);
+                    view.setPlayheadSample(session->timeline()->sampleForTick(firstTick), true);
                     QCoreApplication::processEvents();
                     const auto automationBefore = automation->diagnostics();
                     const auto velocityBefore = velocity->diagnostics();
                     for (uint64_t tick = firstTick + 1; tick <= finalTick; ++tick)
-                        view.setPlayheadSample(session->timeline->sampleForTick(tick), true);
+                        view.setPlayheadSample(session->timeline()->sampleForTick(tick), true);
                     QCoreApplication::processEvents();
                     check(uint64_t(view.playheadTick() + 0.5) == finalTick,
                           "SongView playhead did not reach the final tick");
@@ -828,9 +820,10 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                           QWidget::mouseGrabber() != &surface &&
                                           surface.cursor().shape() != Qt::ClosedHandCursor,
                                       route);
-                                view.setSong(session->timeline.get(), session->voicegroup);
+                                view.setSong(session->timeline().get(),
+                                             session->voicegroupLease().get());
                                 view.setDocument(document);
-                                view.setVoicegroup(session->voicegroup);
+                                view.setVoicegroup(session->voicegroupLease().get());
                                 view.applyEditorViewState(lifecycleViewState);
                                 view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
                                 view.selectTrack(noteTrack);
@@ -901,7 +894,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
 
                         const auto live = document->notesForTrack(noteTrack);
                         const QPointF velocityPoint =
-                            velocityNodePosition(view, *velocity, *session->timeline, live[0]);
+                            velocityNodePosition(view, *velocity, *session->timeline(), live[0]);
                         verifyTermination(*velocity, Qt::LeftButton,
                                           velocityPoint + QPointF(32, -24),
                                           [&] { beginVelocity(Qt::LeftButton, velocityPoint); });
@@ -961,31 +954,32 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                   view.selectionModel().noteSelection() == selectionBeforeMutation,
                               "Redo did not terminate and clear the staged velocity preview");
 
-                        const SongInfo *reloadSong = nullptr;
-                        for (const SongInfo &song : window.m_project.songs()) {
-                            if (song.label == document->label()) {
-                                reloadSong = &song;
-                                break;
-                            }
-                        }
-                        QString reloadError;
+                        // Re-activating the selected tab's own song is the
+                        // production in-place reload: its staged Midi
+                        // replacement must terminate the live gesture and
+                        // clear the staged preview.
+                        document->undoStack()->undo(); // the reload needs a clean tab
                         startVelocityRelative();
-                        view.setDocument(nullptr);
+                        const SongName reloadName = session->name();
+                        window.m_workspace->requestSongOpen(reloadName);
+                        const auto reloadLanded = [&] {
+                            const SongTab *const liveTab =
+                                window.m_workspace->songTabFor(reloadName);
+                            return liveTab == session && session->isReady() &&
+                                   document->undoStack()->count() == 0;
+                        };
                         const bool reloaded =
-                            reloadSong && document->load(*reloadSong, &reloadError);
-                        releaseVelocityRelative();
-                        if (reloaded) {
-                            session->timeline =
-                                document->buildTimeline(window.m_audio.sampleRate());
-                            window.attachEngine(*session);
-                            view.setSong(session->timeline.get(), session->voicegroup);
-                            view.setDocument(document);
-                        }
-                        check(reloaded && !view.previewVelocity(mutationNote.noteId) &&
-                                  view.selectionModel().noteSelection().empty(),
+                            checks::async_wait::waitUntil([] { return true; }, reloadLanded, 15000,
+                                                          1) == checks::async_wait::Result::Ready;
+                        const bool tabLive = window.m_workspace->songTabFor(reloadName) == session;
+                        if (tabLive)
+                            releaseVelocityRelative();
+                        const bool gestureCleared = tabLive &&
+                                                    !view.previewVelocity(mutationNote.noteId) &&
+                                                    view.selectionModel().noteSelection().empty();
+                        check(reloaded && gestureCleared,
                               "reload did not terminate and clear the staged velocity preview");
                     }
-                    document->undoStack()->undo();
                 }
             }
             if (!screenshotPath.isEmpty())
@@ -994,11 +988,11 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
         }
     }
 
-    SongSession *songASession = window.sessionForLabel(songA);
-    SongSession *songBSession = window.m_active;
-    check(songASession && songBSession && songASession != songBSession,
-          "host integration did not retain distinct sessions for persistence boundaries");
-    if (songASession && songBSession && songASession != songBSession) {
+    SongTab *const songATab = window.m_workspace->songTabFor(*nameA);
+    SongTab *const songBTab = window.m_workspace->selectedSongTab();
+    check(songATab && songBTab && songATab != songBTab,
+          "host integration did not retain distinct tabs for persistence boundaries");
+    if (songATab && songBTab && songATab != songBTab) {
         const EditorAutomationRowId replacementLane{EditorAutomationRowKind::ControlChange, 0, 74};
         const auto sameLaneState = [](const EditorViewState &first, const EditorViewState &second) {
             return first.laneHeight == second.laneHeight &&
@@ -1006,7 +1000,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                    first.laneRanges == second.laneRanges && first.emptyLanes == second.emptyLanes &&
                    first.hiddenLanes() == second.hiddenLanes();
         };
-        SongView &songBView = window.m_workspace->viewFor(*songBSession);
+        SongView &songBView = songBTab->view();
         EditorViewState replacementFixture = songBView.editorViewState();
         replacementFixture.laneHeight = 53;
         replacementFixture.laneHeights.emplace(replacementLane, 61);
@@ -1015,74 +1009,75 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
         songBView.applyEditorViewState(replacementFixture);
         QCoreApplication::processEvents();
         const EditorViewState replacementState = songBView.editorViewState();
-        const QString replacementMidiPath = songBSession->doc.midPath();
+        const QString replacementMidiPath = songBTab->document().midPath();
         const QByteArray replacementMidi = fileContents(replacementMidiPath);
-        window.closeSession(*songASession);
-        window.loadSongByLabel(songA);
-        SongSession *replacement = window.m_active;
-        check(replacement && window.m_workspace->isSessionAttached(*replacement),
-              "song replacement did not create a SongView session immediately");
+        window.m_workspace->selectSongTab(songATab);
+        window.m_workspace->requestCloseSelectedTab(); // songATab is selected and clean
+        window.m_workspace->requestSongOpen(*nameA);
+        SongTab *replacement = window.m_workspace->selectedSongTab();
+        check(replacement != nullptr, "song replacement did not create its tab immediately");
         const bool replacementReady =
-            waitForSessionBindings(window.m_sessions, replacement, "host-integration replacement");
+            replacement &&
+            waitForTabReady(*window.m_workspace, replacement, "host-integration replacement");
         check(replacementReady,
-              "song replacement timed out or its session was destroyed before MIDI and voicegroup "
+              "song replacement timed out or its tab was destroyed before MIDI and voicegroup "
               "binding");
         if (!replacementReady)
             replacement = nullptr;
         ViewSidecar::Snapshot replacedSnapshot;
-        check(replacementReady && replacement && window.m_active == replacement &&
-                  replacement->doc.label() == songA &&
+        check(replacementReady && replacement &&
+                  window.m_workspace->selectedSongTab() == replacement &&
+                  replacement->document().label() == songA &&
                   ViewSidecar::load(scratchProject, songB, &replacedSnapshot) &&
                   sameLaneState(replacedSnapshot.editor, replacementState) &&
                   fileContents(replacementMidiPath) == replacementMidi,
               "song replacement did not save the outgoing lane view state");
         if (replacement) {
-            SongView &replacementView = window.m_workspace->viewFor(*replacement);
+            SongView &replacementView = replacement->view();
             replacementView.setDrawerActivePage(EditorDrawerPage::Velocity);
             replacementView.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
             replacementView.setDrawerSectionHeight(EditorDrawerPage::Velocity, 180);
             const EditorViewState projectSwitchState = replacementView.editorViewState();
-            const QString projectSwitchMidiPath = replacement->doc.midPath();
+            const QString projectSwitchMidiPath = replacement->document().midPath();
             const QByteArray projectSwitchMidi = fileContents(projectSwitchMidiPath);
-            check(checks::async_wait::waitForBoolCompletion(
-                      [&window, &scratchProject](auto completion) {
-                          window.openProjectDir(scratchProject, false, completion);
-                      }),
+            window.m_workspace->requestProjectOpenAt(scratchProject);
+            check(waitForProjectReady(*window.m_workspace) &&
+                      window.m_workspace->openTabCount() == 0,
                   "project switch failed");
             ViewSidecar::Snapshot projectSwitchSnapshot;
-            check(window.m_workspace->openSessionCount() == 0 &&
-                      ViewSidecar::load(scratchProject, songA, &projectSwitchSnapshot) &&
+            check(ViewSidecar::load(scratchProject, songA, &projectSwitchSnapshot) &&
                       sameLaneState(projectSwitchSnapshot.editor, projectSwitchState) &&
                       fileContents(projectSwitchMidiPath) == projectSwitchMidi,
                   "project switch did not save song-specific lane view state");
 
-            window.loadSongByLabel(songA);
-            SongSession *closing = window.m_active;
-            check(closing, "project switch did not permit a fresh attached session");
-            const bool closingReady = waitForSessionBindings(window.m_sessions, closing,
-                                                             "host-integration project switch");
+            window.m_workspace->requestSongOpen(*nameA);
+            SongTab *closing = window.m_workspace->selectedSongTab();
+            check(closing, "project switch did not permit a fresh attached tab");
+            const bool closingReady = closing && waitForTabReady(*window.m_workspace, closing,
+                                                                 "host-integration project switch");
             check(closingReady,
-                  "project switch song timed out or its session was destroyed before MIDI and "
+                  "project switch song timed out or its tab was destroyed before MIDI and "
                   "voicegroup binding");
             if (!closingReady)
                 closing = nullptr;
             if (closing) {
-                SongView &closingView = window.m_workspace->viewFor(*closing);
+                SongView &closingView = closing->view();
                 closingView.setDrawerActivePage(EditorDrawerPage::Velocity);
                 closingView.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
                 closingView.setDrawerSectionHeight(EditorDrawerPage::Velocity, 180);
                 const EditorViewState closeState = closingView.editorViewState();
-                const QByteArray midiBeforeClose = closing->doc.smf().write();
-                const QString closeMidiPath = closing->doc.midPath();
+                const QByteArray midiBeforeClose = closing->document().smf().write();
+                const QString closeMidiPath = closing->document().midPath();
                 const QByteArray closeMidi = fileContents(closeMidiPath);
-                const int undoBeforeClose = closing->doc.undoStack()->count();
+                const int undoBeforeClose = closingView.document()->undoStack()->count();
 
-                window.loadSongByLabel(songB, /*newTab=*/true);
-                SongSession *closingB = window.m_active;
+                window.m_workspace->requestSongOpen(*nameB, /*newTab=*/true);
+                SongTab *closingB = window.m_workspace->selectedSongTab();
                 check(closingB && closingB != closing,
-                      "multi-tab shutdown did not create a second session");
-                const bool closingBReady = waitForSessionBindings(
-                    window.m_sessions, closingB, "host-integration multi-tab shutdown");
+                      "multi-tab shutdown did not create a second tab");
+                const bool closingBReady = closingB && closingB != closing &&
+                                           waitForTabReady(*window.m_workspace, closingB,
+                                                           "host-integration multi-tab shutdown");
                 check(closingBReady,
                       "multi-tab shutdown song timed out before MIDI and voicegroup binding");
                 EditorViewState closeBState;
@@ -1091,15 +1086,15 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                 QByteArray closeMidiB;
                 int undoBeforeCloseB = -1;
                 if (closingBReady && closingB) {
-                    SongView &closingBView = window.m_workspace->viewFor(*closingB);
+                    SongView &closingBView = closingB->view();
                     closingBView.setDrawerActivePage(EditorDrawerPage::Velocity);
                     closingBView.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
                     closingBView.setDrawerSectionHeight(EditorDrawerPage::Velocity, 191);
                     closeBState = closingBView.editorViewState();
-                    midiBeforeCloseB = closingB->doc.smf().write();
-                    closeMidiPathB = closingB->doc.midPath();
+                    midiBeforeCloseB = closingB->document().smf().write();
+                    closeMidiPathB = closingB->document().midPath();
                     closeMidiB = fileContents(closeMidiPathB);
-                    undoBeforeCloseB = closingB->doc.undoStack()->count();
+                    undoBeforeCloseB = closingBView.document()->undoStack()->count();
                 }
 
                 window.close();
@@ -1110,15 +1105,15 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                 check(window.m_closeAccepted, "application close boundary was rejected");
                 ViewSidecar::Snapshot closeSnapshot;
                 ViewSidecar::Snapshot closeSnapshotB;
-                check(closing->doc.smf().write() == midiBeforeClose &&
+                check(closing->document().smf().write() == midiBeforeClose &&
                           fileContents(closeMidiPath) == closeMidi &&
-                          closing->doc.undoStack()->count() == undoBeforeClose &&
+                          closingView.document()->undoStack()->count() == undoBeforeClose &&
                           ViewSidecar::load(scratchProject, songA, &closeSnapshot) &&
                           sameLaneState(closeSnapshot.editor, closeState) &&
                           (!closingBReady ||
-                           (closingB && closingB->doc.smf().write() == midiBeforeCloseB &&
+                           (closingB && closingB->document().smf().write() == midiBeforeCloseB &&
                             fileContents(closeMidiPathB) == closeMidiB &&
-                            closingB->doc.undoStack()->count() == undoBeforeCloseB &&
+                            closingB->view().document()->undoStack()->count() == undoBeforeCloseB &&
                             ViewSidecar::load(scratchProject, songB, &closeSnapshotB) &&
                             sameLaneState(closeSnapshotB.editor, closeBState))),
                       "multi-tab application close did not flush all song view states");

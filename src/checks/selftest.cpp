@@ -1,4 +1,5 @@
 #include "checks/support/asyncwait.h"
+#include "checks/support/voicegroupbrowserdriver.h"
 #include "mainwindow.h"
 
 #include <algorithm>
@@ -6,13 +7,17 @@
 #include <cstdint>
 
 #include <QApplication>
+#include <QDir>
 #include <QEventLoop>
 #include <QFile>
+#include <QLineEdit>
 #include <QTimer>
 
 #include "project/songregistry.h"
+#include "ui/dragspinbox.h"
 #include "ui/newsongwizard.h"
 #include "ui/settingsdialog.h"
+#include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/viewsidecar.h"
 #include "ui/voicegroupbrowser.h"
@@ -25,14 +30,24 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         qWarning("selftest: no audio device available");
         return false;
     }
-    if (!checks::async_wait::waitForBoolCompletion([this, &projectRoot](auto completion) {
-            openProjectDir(projectRoot, /*interactive=*/false, completion);
-        })) {
+    // Open through the production seam and settle on the published
+    // ProjectState instead of request bookkeeping.
+    m_workspace->requestProjectOpenAt(projectRoot);
+    if (checks::async_wait::waitUntil([] { return true; },
+                                      [this] {
+                                          const ProjectOpenState state =
+                                              m_workspace->projectState().state;
+                                          return state == ProjectOpenState::Ready ||
+                                                 state == ProjectOpenState::Failed;
+                                      }) != checks::async_wait::Result::Ready ||
+        m_workspace->projectState().state != ProjectOpenState::Ready) {
         qWarning("selftest: project failed to open");
         return false;
     }
+    const QString rootDir = m_workspace->projectState().snapshot.root();
+    const QVector<SongInfo> &songs = m_workspace->projectState().snapshot.songs();
     const SongInfo *target = nullptr;
-    for (const SongInfo &song : m_project.songs()) {
+    for (const SongInfo &song : songs) {
         if (song.label == songLabel) {
             target = &song;
             break;
@@ -42,29 +57,32 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
         qWarning("selftest: song '%s' not found or has no MIDI source", qUtf8Printable(songLabel));
         return false;
     }
-    qInfo("selftest: project opened, %lld songs", (long long)m_project.songs().size());
+    const SongInfo targetSong = *target;
+    qInfo("selftest: project opened, %lld songs", (long long)songs.size());
 
-    loadSong(*target);
-    SongSession *tab = m_active;
+    const auto songName = SongName::create(targetSong.label);
+    if (!songName) {
+        qWarning("selftest: invalid song label '%s'", qUtf8Printable(targetSong.label));
+        return false;
+    }
+    m_workspace->requestSongOpen(*songName);
+    SongTab *tab = m_workspace->songTabFor(*songName);
     const auto loadWait = checks::async_wait::waitUntil(
-        [this, tab] {
-            return tab && std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                                      [tab](const auto &session) { return session.get() == tab; });
-        },
-        [tab] { return tab->isInteractive(); });
+        [this, tab] { return tab && m_workspace->songTabFor(tab->name()) == tab; },
+        [tab] { return tab->isReady(); });
     if (loadWait != checks::async_wait::Result::Ready) {
         const char *reason = loadWait == checks::async_wait::Result::Destroyed
-                                 ? "session destroyed before async load completed"
-                                 : "timed out waiting for midiBound && vgBound && sidecarBound";
-        qWarning("selftest: %s for '%s'", reason, qUtf8Printable(target->label));
+                                 ? "tab destroyed before async load completed"
+                                 : "timed out waiting for SongTab::isReady()";
+        qWarning("selftest: %s for '%s'", reason, qUtf8Printable(targetSong.label));
         return false;
     }
     if (!tab || !m_audio.songLoaded()) {
         qWarning("selftest: song failed to load");
         return false;
     }
-    SongView &view = m_workspace->viewFor(*tab);
-    qInfo("selftest: loaded %s (%zu events, %d tracks)", qUtf8Printable(target->label),
+    SongView &view = tab->view();
+    qInfo("selftest: loaded %s (%zu events, %d tracks)", qUtf8Printable(targetSong.label),
           m_audio.timeline()->events.size(), m_audio.timeline()->usedTrackCount);
     // Realize the shown window before timed playback, especially under
     // profilers where deferred widget setup may otherwise consume the run.
@@ -78,17 +96,17 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     // M2: edit during playback — exercises the documentChanged plumbing
     // (timeline rebuild, playhead-preserving audio swap, view refresh).
     const uint64_t posBeforeEdit = m_audio.playheadSamples();
-    tab->doc.addNote(view.selectionModel().primaryTrack(), 0, 60, 24, 100);
-    tab->doc.addLanePoint(view.selectionModel().primaryTrack(), 7, 0, 100);
-    if (!tab->doc.isDirty()) {
+    view.document()->addNote(view.selectionModel().primaryTrack(), 0, 60, 24, 100);
+    view.document()->addLanePoint(view.selectionModel().primaryTrack(), 7, 0, 100);
+    if (!tab->document().isDirty()) {
         qWarning("selftest: document not dirty after edits");
         return false;
     }
     QTimer::singleShot(1500, &loop, &QEventLoop::quit);
     loop.exec();
-    tab->doc.undoStack()->undo();
-    tab->doc.undoStack()->undo();
-    if (tab->doc.isDirty()) {
+    m_workspace->requestUndo();
+    m_workspace->requestUndo();
+    if (tab->document().isDirty()) {
         qWarning("selftest: document still dirty after undoing all edits");
         return false;
     }
@@ -103,90 +121,149 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     m_audio.previewVoice(0, 60, 0);
     qInfo("selftest: voice audition through the preview engine OK");
 
-    const auto waitForVoicegroupPreview = [this](SongSession *session) {
-        const auto isLive = [this, session] {
-            return session &&
-                   std::any_of(m_sessions.cbegin(), m_sessions.cend(),
-                               [session](const auto &owned) { return owned.get() == session; });
-        };
-        return checks::async_wait::waitUntil(
-            isLive, [session] { return session->pendingPreviewRequest == 0; });
-    };
-    // Voicegroup editing through the unified pipeline: a scalar edit pokes
-    // the live ToneData, a sample swap goes through the .porydaw/vgpreview
-    // shadow reload — both land on the song's undo stack, and undoing them
-    // restores the on-disk state — all without changing project files.
+    VoicegroupBrowser *const browser = findChild<VoicegroupBrowser *>();
+    if (!browser) {
+        qWarning("selftest: voicegroup browser not found");
+        return false;
+    }
+    // Voicegroup editing through the production picker pipeline: the browser
+    // editor submits the edited voice, ProjectWorkspace re-renders and
+    // reloads the shared bank, and each applied edit lands on the song's
+    // undo stack — undoing them restores the on-disk state — all without
+    // changing project files.
     bool vgEditOk = true;
-    if (tab->vgSource) {
+    const LoadedVoiceGroup *const bank = m_audio.voicegroup();
+    if (tab->voicegroupId() && bank) {
+        checks::VoicegroupBrowserDriver voicegroupDriver(*m_workspace);
+        // The slot tree's first column renders "%03d  symbol-or-name".
+        const auto rowSymbol = [&voicegroupDriver](int slot) {
+            return voicegroupDriver.slotRowText(slot).value(0).mid(5);
+        };
         int dsSlot = -1, donorSlot = -1;
         for (int i = 0; i < VOICEGROUP_SIZE; i++) {
-            const VgVoice *v = tab->vgSource->voiceAt(i);
+            const ToneData &tone = bank->voices[i];
             // DirectSound family only: keysplit/drumkit voices are non-CGB
             // too, but have no scalar fields and take sub-voicegroup symbols,
-            // not samples.
-            if (!v ||
-                (v->macro != VgMacro::DirectSound && v->macro != VgMacro::DirectSoundNoResample &&
-                 v->macro != VgMacro::DirectSoundAlt))
+            // not samples. The loader pads undefined slots with zeroed
+            // DirectSound tones whose names are empty.
+            const bool directSound = tone.type == VOICE_DIRECTSOUND ||
+                                     tone.type == VOICE_DIRECTSOUND_NO_RESAMPLE ||
+                                     tone.type == VOICE_DIRECTSOUND_ALT;
+            if (!directSound || QByteArray(bank->voiceNames[i]).isEmpty())
                 continue;
             if (dsSlot < 0)
                 dsSlot = i;
-            else if (donorSlot < 0 && v->symbol != tab->vgSource->voiceAt(dsSlot)->symbol)
+            else if (donorSlot < 0 && rowSymbol(i) != rowSymbol(dsSlot))
                 donorSlot = i;
         }
         if (dsSlot >= 0) {
-            m_workspace->selectVoicegroupSlot(dsSlot); // exercises the editor panel too
+            const auto tabLive = [this, tab] {
+                return tab && m_workspace->songTabFor(tab->name()) == tab;
+            };
+            // A bank transition settles when the shared-bank gate reopens
+            // and the engine carries the reloaded bank.
+            const auto waitForBank = [this, &tabLive](const auto &applied) {
+                return checks::async_wait::waitUntil(tabLive, [this, &applied] {
+                    return m_workspace->bankActionsEnabled() && applied();
+                });
+            };
+            browser->selectSlot(dsSlot); // exercises the editor panel too
+            DragSpinBox *const releaseSpin = voicegroupDriver.releaseSpinBox();
+            if (!releaseSpin || releaseSpin->value() != int(bank->voices[dsSlot].release)) {
+                qWarning("selftest: voicegroup editor did not show slot %d", dsSlot);
+                return false;
+            }
+            const int originalRelease = bank->voices[dsSlot].release;
+            const ToneData originalTone = bank->voices[dsSlot];
+            const QByteArray originalName(bank->voiceNames[dsSlot]);
+            const QString sourcePath =
+                QDir(rootDir).filePath(tab->voicegroupId()->sourceRelativePath());
             QByteArray fileBefore;
             {
-                QFile in(tab->vgSource->filePath());
+                QFile in(sourcePath);
                 if (!in.open(QIODevice::ReadOnly)) {
                     qWarning("selftest: cannot read voicegroup source %s",
-                             qUtf8Printable(tab->vgSource->filePath()));
+                             qUtf8Printable(sourcePath));
                     return false;
                 }
                 fileBefore = in.readAll();
             }
-            const VgVoice original = *tab->vgSource->voiceAt(dsSlot);
-            const QByteArray originalName(m_audio.voicegroup()->voiceNames[dsSlot]);
             int undosNeeded = 1;
-            VgVoice v = original;
-            v.release = v.release == 25 ? 26 : 25;
-            onVoiceEditRequested(dsSlot, v, false);
-            vgEditOk = tab->vgSource->dirty() && tab->doc.isDirty() &&
-                       m_audio.voicegroup()->voices[dsSlot].release == uint8_t(v.release);
+            const int flippedRelease = originalRelease == 25 ? 26 : 25;
+            releaseSpin->setValue(flippedRelease);
+            const auto scalarWait = waitForBank(
+                [&] { return m_audio.voicegroup()->voices[dsSlot].release == flippedRelease; });
+            vgEditOk = m_workspace->selectedSongDirty() && !tab->document().isDirty() &&
+                       scalarWait == checks::async_wait::Result::Ready &&
+                       m_audio.voicegroup()->voices[dsSlot].release == flippedRelease;
             if (donorSlot >= 0) {
-                undosNeeded = 2; // structural edits never merge with scalar ones
-                const QByteArray donorName(m_audio.voicegroup()->voiceNames[donorSlot]);
-                v.symbol = tab->vgSource->voiceAt(donorSlot)->symbol;
-                onVoiceEditRequested(dsSlot, v, true);
-                const auto previewWait = waitForVoicegroupPreview(tab);
-                vgEditOk = vgEditOk && previewWait == checks::async_wait::Result::Ready &&
-                           QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == donorName &&
-                           m_audio.transport() == Transport::Playing;
+                const QByteArray donorName(bank->voiceNames[donorSlot]);
+                const QString donorSymbol = rowSymbol(donorSlot);
+                voicegroupDriver.openSamplePickerPopup();
+                QLineEdit *const search = voicegroupDriver.samplePickerFilterField();
+                if (search && voicegroupDriver.samplePickerPopupIsVisible()) {
+                    search->setText(donorSymbol);
+                    if (voicegroupDriver.currentPickerRowSymbol() == donorSymbol) {
+                        undosNeeded = 2; // structural edits never merge with scalar ones
+                        voicegroupDriver.clickCurrentPickerRow(); // first click selects
+                        voicegroupDriver.clickCurrentPickerRow(); // second click commits
+                        const auto structuralWait = waitForBank([&] {
+                            return QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) ==
+                                   donorName;
+                        });
+                        vgEditOk =
+                            vgEditOk && structuralWait == checks::async_wait::Result::Ready &&
+                            QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == donorName &&
+                            m_audio.transport() == Transport::Playing;
+                    } else {
+                        voicegroupDriver.hideSamplePickerPopup();
+                        qInfo("selftest: structural voicegroup edit skipped "
+                              "(donor row not selectable)");
+                    }
+                } else {
+                    voicegroupDriver.hideSamplePickerPopup();
+                    qInfo("selftest: structural voicegroup edit skipped (picker unavailable)");
+                }
             }
             // Voice edits ride the song's undo stack; undoing them all must
             // land back on the exact on-disk state (clean, nothing written).
-            for (int i = 0; i < undosNeeded; i++)
-                tab->doc.undoStack()->undo();
-            if (undosNeeded > 1)
+            if (undosNeeded == 2) {
+                m_workspace->requestUndo(); // revert the symbol swap first
                 vgEditOk =
-                    vgEditOk && waitForVoicegroupPreview(tab) == checks::async_wait::Result::Ready;
+                    vgEditOk &&
+                    waitForBank([&] {
+                        return QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == originalName;
+                    }) == checks::async_wait::Result::Ready;
+            }
+            m_workspace->requestUndo(); // then the release poke
+            vgEditOk =
+                vgEditOk &&
+                waitForBank([&] {
+                    return m_audio.voicegroup()->voices[dsSlot].release == originalRelease &&
+                           QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == originalName;
+                }) == checks::async_wait::Result::Ready;
             QByteArray fileAfter;
             {
-                QFile in(tab->vgSource->filePath());
+                QFile in(sourcePath);
                 if (!in.open(QIODevice::ReadOnly)) {
                     qWarning("selftest: cannot read voicegroup source %s",
-                             qUtf8Printable(tab->vgSource->filePath()));
+                             qUtf8Printable(sourcePath));
                     return false;
                 }
                 fileAfter = in.readAll();
             }
-            vgEditOk = vgEditOk && !tab->vgSource->dirty() && !tab->doc.isDirty() &&
-                       fileAfter == fileBefore && *tab->vgSource->voiceAt(dsSlot) == original &&
-                       m_audio.voicegroup()->voices[dsSlot].release == uint8_t(original.release) &&
-                       QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == originalName;
+            const ToneData &restored = m_audio.voicegroup()->voices[dsSlot];
+            vgEditOk =
+                vgEditOk && !m_workspace->selectedSongDirty() && !tab->document().isDirty() &&
+                fileAfter == fileBefore && restored.type == originalTone.type &&
+                restored.key == originalTone.key && restored.length == originalTone.length &&
+                restored.panSweep == originalTone.panSweep &&
+                restored.attack == originalTone.attack && restored.decay == originalTone.decay &&
+                restored.sustain == originalTone.sustain &&
+                restored.release == originalTone.release &&
+                QByteArray(m_audio.voicegroup()->voiceNames[dsSlot]) == originalName;
             if (vgEditOk)
-                qInfo("selftest: voicegroup edit + preview reload + undo OK "
-                      "(slot %d, donor %d)",
+                qInfo("selftest: voicegroup edit + bank reload + undo OK (slot %d, donor %d)",
                       dsSlot, donorSlot);
             else
                 qWarning("selftest: voicegroup edit FAILED (slot %d, donor %d)", dsSlot, donorSlot);
@@ -230,9 +307,15 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     // (wizard pages enumerate voicegroups/players). Registration itself is
     // write-through now, exercised by --onboardcheck against a scratch copy.
     {
-        NewSongWizard wizard(&m_project, vgCatalog().groupArgs, this);
-        const auto songTarget = SongTarget{tab->doc.cfg(), tab->doc.label()};
-        SettingsDialog settingsDialog(m_engineSettings, songTarget, vgCatalog().groupArgs,
+        const ProjectState &project = m_workspace->projectState();
+        NewSongWizard::ProjectData projectData;
+        projectData.songs = project.snapshot.songs();
+        projectData.players = project.snapshot.players();
+        projectData.voicegroupArgs = project.catalog.groupArgs;
+        projectData.canCreateVoicegroup = project.catalog.perFileVoicegroups;
+        NewSongWizard wizard(projectData, this);
+        const SongTarget songTarget{tab->document().cfg(), tab->document().label()};
+        SettingsDialog settingsDialog(m_engineSettings, songTarget, project.catalog.groupArgs,
                                       SettingsDialog::Tab::Engine, this);
         qInfo("selftest: New Song wizard + unified settings dialog constructed");
     }
@@ -372,39 +455,39 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     // view, mutate it, then confirm applying the loaded state restores it —
     // and that SongRegistry's registration key coexists in the same file.
     if (ok) {
-        SongRegistry::saveRegistrationMeta(m_project.root(), target->label,
+        SongRegistry::saveRegistrationMeta(rootDir, targetSong.label,
                                            QStringLiteral("MUS_SELFTEST"),
                                            QStringLiteral("MUSIC_PLAYER_BGM"));
         view.setGridMinDenom(8); // non-default grid must round-trip too
         view.setGridFeel(SongView::GridFeel::Triplet);
         view.setLaneDisplayRange(0, 0x01, 16); // MOD axis zoom, ditto
         const ViewSidecar::Snapshot saved{view.viewState(), view.editorViewState()};
-        ok = ViewSidecar::save(m_project.root(), target->label, saved);
+        ok = ViewSidecar::save(rootDir, targetSong.label, saved);
         view.zoomAroundContentX(2.0, 0); // knock the view off the state
         view.setGridMinDenom(0);
         view.setGridFeel(SongView::GridFeel::Straight);
         view.setLaneDisplayRange(0, 0x01, 0); // back to the MOD default
         ViewSidecar::Snapshot loaded;
-        ok = ok && ViewSidecar::load(m_project.root(), target->label, &loaded);
+        ok = ok && ViewSidecar::load(rootDir, targetSong.label, &loaded);
         if (ok) {
             view.applyViewState(loaded.view);
             loaded.editor.setDrawerState(m_editorDrawerState);
             view.applyEditorViewState(loaded.editor);
             const ViewSidecar::Snapshot restored{view.viewState(), view.editorViewState()};
             QString constant, player;
-            ok = std::abs(restored.view.pxPerBeat - saved.view.pxPerBeat) < 0.001 &&
-                 std::abs(restored.view.keyHeight - saved.view.keyHeight) < 0.001 &&
-                 std::abs(restored.view.scrollPx - saved.view.scrollPx) < 0.001 &&
-                 std::abs(restored.view.scrollY - saved.view.scrollY) < 0.001 &&
-                 restored.view.selectedTrack == saved.view.selectedTrack &&
-                 restored.view.editCursorTick == saved.view.editCursorTick &&
-                 restored.view.gridMinDenom == 8 && restored.view.gridTriplet &&
-                 restored.editor == saved.editor &&
-                 SongRegistry::loadRegistrationMeta(m_project.root(), target->label, &constant,
-                                                    &player) &&
-                 constant == QLatin1String("MUS_SELFTEST");
+            ok =
+                std::abs(restored.view.pxPerBeat - saved.view.pxPerBeat) < 0.001 &&
+                std::abs(restored.view.keyHeight - saved.view.keyHeight) < 0.001 &&
+                std::abs(restored.view.scrollPx - saved.view.scrollPx) < 0.001 &&
+                std::abs(restored.view.scrollY - saved.view.scrollY) < 0.001 &&
+                restored.view.selectedTrack == saved.view.selectedTrack &&
+                restored.view.editCursorTick == saved.view.editCursorTick &&
+                restored.view.gridMinDenom == 8 && restored.view.gridTriplet &&
+                restored.editor == saved.editor &&
+                SongRegistry::loadRegistrationMeta(rootDir, targetSong.label, &constant, &player) &&
+                constant == QLatin1String("MUS_SELFTEST");
         }
-        QFile::remove(ViewSidecar::pathFor(m_project.root(), target->label));
+        QFile::remove(ViewSidecar::pathFor(rootDir, targetSong.label));
         view.setGridMinDenom(0);                        // don't leak the test grid into a
         view.setGridFeel(SongView::GridFeel::Straight); // shutdown save
         view.setLaneDisplayRange(0, 0x01, 0);           // nor the MOD axis zoom
@@ -414,7 +497,15 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
             qWarning("selftest: sidecar view-state round trip FAILED");
     }
     if (ok) {
-        destroySession(tab);
+        // The production close gate prompts when anything is unsaved — which
+        // would block a headless run — so prove the unified dirty state
+        // (document and shared bank) settled clean before requesting it.
+        ok = !m_workspace->selectedSongDirty();
+        if (!ok)
+            qWarning("selftest: song still dirty before closing its tab");
+    }
+    if (ok) {
+        m_workspace->requestCloseSelectedTab();
         ok = !m_playheadTimer->isActive();
         if (ok)
             qInfo("selftest: closing final tab stopped playhead timer");

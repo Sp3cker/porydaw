@@ -171,7 +171,8 @@ void SongDocument::pushEdit(const QString &text, std::vector<EditOp> ops,
     auto normalized = normalizeTempoPoints(std::move(nextTempo));
     if (ops.empty() && normalized == m_tempoPoints)
         return;
-    m_undoStack.push(new MixedEditCommand(this, text, std::move(ops), std::move(normalized)));
+    m_history.pushDocument(
+        std::make_unique<MixedEditCommand>(this, text, std::move(ops), std::move(normalized)));
 }
 
 void SongDocument::replaceTempoPoints(std::vector<TempoPoint> normalized)
@@ -238,5 +239,5 @@ void SongDocument::applyTempoEdit(const TempoEdit &edit)
     auto next = normalizeTempoPoints(editedTempoPointCandidates(m_tempoPoints, edit));
     if (next == m_tempoPoints)
         return;
-    m_undoStack.push(new TempoEditCommand(this, std::move(next)));
+    m_history.pushDocument(std::make_unique<TempoEditCommand>(this, std::move(next)));
 }

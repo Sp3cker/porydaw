@@ -9,7 +9,9 @@
 class DragSpinBox;
 class QComboBox;
 class QDockWidget;
+struct LoadedBankView;
 class SamplePickerButton;
+struct VgVoice;
 class QLineEdit;
 class QSpinBox;
 class QTreeWidget;
@@ -31,23 +33,38 @@ class VoicegroupBrowserDriver final
     bool isAvailable() const noexcept;
     bool isLoading() const noexcept;
 
+    // The selected tab's published bank view (128 slot voices, dirty flag,
+    // load name), or nullptr when no tab is bound. The pointer borrows the
+    // workspace's cache entry: re-fetch it after every bank event.
+    const LoadedBankView *selectedBankView() const;
+
+    // Submits one picker edit for the selected slot through WorkspaceUi's
+    // production edit entry (the browser's own voiceEditRequested path).
+    void submitPickerEdit(int slot, const VgVoice &voice) const;
+
+    // The browser tree's rows and its two selection seams (the editor panel
+    // and jump-from-context reveal drive the same rows).
+    QStringList slotRowText(int slot) const;
+    int currentSlot() const;
+    void selectSlot(int slot) const;
+    void revealSlot(int slot) const;
+    bool slotIsMarkedUsed(int slot) const;
+
     QComboBox *voicegroupSelector() const;
     DragSpinBox *releaseSpinBox() const;
     QLineEdit *releaseField() const;
-
-    QStringList slotRowText(int slot) const;
-    bool slotIsMarkedUsed(int slot) const;
+    // The synth parameter spin boxes, in voice order: base duty, duty LFO
+    // step, modulation depth, phase.
+    QSpinBox *synthParameterField(int index) const;
     QString editorNoticeText() const;
     bool editorNoticeIsHidden() const;
     bool sampleActionButtonsHaveMatchingFixedSize() const;
-
     int visibleVoiceTypeData() const;
     bool activateVoiceType(VgMacro macro) const;
     bool activateSynthType() const;
     bool visibleSymbolComboContains(const QString &symbol) const;
     bool activateSynthWave(int index) const;
     bool hasSynthEditorControls() const;
-    bool setSynthParameterValues(int duty, int step, int depth, int phase) const;
 
     QSize browserMinimumSizeHint() const;
     QRect dockGeometry() const;

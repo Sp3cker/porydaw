@@ -71,6 +71,47 @@ int runSaveCheck(const QString &projectRoot, const QString &songLabel, const QSt
         std::fprintf(stderr, "savecheck: still dirty after save\n");
         return 1;
     }
+    // Document-state identity: undoing back to the saved state cleans the
+    // document, redoing past it dirties again, and a snapshot captured
+    // before further edits is rejected instead of adopted.
+    const int savedUndoCount = doc.undoStack()->count();
+    doc.addNote(track, base + 480, 74, 24, 90);
+    if (!doc.isDirty()) {
+        std::fprintf(stderr, "savecheck: an edit after save did not dirty the document\n");
+        return 1;
+    }
+    doc.undoStack()->undo();
+    if (doc.isDirty()) {
+        std::fprintf(stderr, "savecheck: undoing to the saved state left the document dirty\n");
+        return 1;
+    }
+    doc.undoStack()->redo();
+    if (!doc.isDirty()) {
+        std::fprintf(stderr, "savecheck: redoing off the saved state left the document clean\n");
+        return 1;
+    }
+
+    const auto stale = doc.captureSaveSnapshot();
+    doc.addNote(track, base + 504, 76, 24, 90);
+    doc.didSave(stale, true);
+    if (!doc.isDirty()) {
+        std::fprintf(stderr, "savecheck: a stale snapshot was adopted as saved\n");
+        return 1;
+    }
+    doc.undoStack()->undo();
+    if (!doc.isDirty()) {
+        std::fprintf(stderr, "savecheck: the stale snapshot's identity was adopted\n");
+        return 1;
+    }
+    doc.undoStack()->undo();
+    if (doc.isDirty()) {
+        std::fprintf(stderr, "savecheck: undoing to the saved state after rejection failed\n");
+        return 1;
+    }
+    if (doc.undoStack()->count() != savedUndoCount + 2) {
+        std::fprintf(stderr, "savecheck: identity scenario did not push exactly two edits\n");
+        return 1;
+    }
 
     int failures = 0;
 
