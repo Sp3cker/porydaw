@@ -21,7 +21,7 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
     SongView &view = check.view();
     QWidget *roll = &check.roll();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
-    const int velocityHandleMinimumKeyHeight = check.velocityHandleMinimumKeyHeight();
+    const int pianoRollDefaultKeyHeight = check.pianoRollDefaultKeyHeight();
     const auto scaleMajor = porydaw_scale::ScaleId::major;
     const auto projHidden = songview::PitchProjection::cHiddenRow;
     const int scaleTrack = view.selectionModel().primaryTrack();
@@ -167,9 +167,9 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
             const int r61 = proj.rowForPitch(61);
             SongView::ViewState d7 = view.viewState();
             d7.valid = true;
-            d7.keyHeight = velocityHandleMinimumKeyHeight;
-            d7.scrollY = double(std::max(0, r61 * velocityHandleMinimumKeyHeight -
-                                                4 * velocityHandleMinimumKeyHeight));
+            d7.keyHeight = pianoRollDefaultKeyHeight;
+            d7.scrollY = double(
+                std::max(0, r61 * pianoRollDefaultKeyHeight - 4 * pianoRollDefaultKeyHeight));
             view.applyViewState(d7);
             (void)view.grab();
             QCoreApplication::processEvents();
@@ -192,9 +192,9 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
             const int r61 = proj.rowForPitch(61);
             SongView::ViewState d8 = view.viewState();
             d8.valid = true;
-            d8.keyHeight = velocityHandleMinimumKeyHeight;
-            d8.scrollY = double(std::max(0, r61 * velocityHandleMinimumKeyHeight -
-                                                4 * velocityHandleMinimumKeyHeight));
+            d8.keyHeight = pianoRollDefaultKeyHeight;
+            d8.scrollY = double(
+                std::max(0, r61 * pianoRollDefaultKeyHeight - 4 * pianoRollDefaultKeyHeight));
             view.applyViewState(d8);
             (void)view.grab();
             QCoreApplication::processEvents();
@@ -261,24 +261,19 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
             const int rSrc = proj.rowForPitch(src);
             SongView::ViewState d9 = view.viewState();
             d9.valid = true;
-            d9.keyHeight = velocityHandleMinimumKeyHeight;
-            d9.scrollY = double(std::max(0, rSrc * velocityHandleMinimumKeyHeight -
-                                                4 * velocityHandleMinimumKeyHeight));
+            d9.keyHeight = pianoRollDefaultKeyHeight;
+            d9.scrollY = double(
+                std::max(0, rSrc * pianoRollDefaultKeyHeight - 4 * pianoRollDefaultKeyHeight));
             view.applyViewState(d9);
             (void)view.grab();
             QCoreApplication::processEvents();
-            // The press must land in the note's Move zone: horizontally the
-            // center (a 5px 4-tick note's inner reach is 0, so 1px inside the
-            // left edge is still the 3px edge-grip zone and starts a resize),
-            // and vertically 3px below the row center. The minimum handle
-            // height activates the velocity-handle grab on the velocity-100
-            // bar near the row top, so the gesture must stay
-            // below it — but still inside the 12px note) — a Move drag.
+            // Press the note center for a Move drag: horizontally the center
+            // avoids the 3px edge-grip zones on this 5px-wide, 4-tick note.
             const int x = int((view.contentX(double(tBase)) +
                                view.contentX(double(tBase) + doc.ticksPerClock() * 4)) /
                                   2.0 +
                               pianoKeyboardWidth);
-            const QPoint press(x, foldCenterY(src) + 3);
+            const QPoint press(x, foldCenterY(src));
             int dragAud = -1;
             auto dconn = QObject::connect(&view, &SongView::auditionNote, &view,
                                           [&](int, int key, int velocity) {

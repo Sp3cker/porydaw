@@ -40,17 +40,6 @@ void checkAutomationPencilCursor(AutomationGestureCheckRig &rig,
     check(shapeIs(Qt::ArrowCursor),
           QStringLiteral("Pencil mode over the left gutter did not keep the arrow cursor"));
 
-    const QRect voiceBounds = rig.voiceBounds();
-    if (voiceBounds.height() > 0) {
-        rig.mouseMove(QPointF(geometry.plotOrigin + 20.0,
-                              qreal(voiceBounds.top() + voiceBounds.height() / 2)),
-                      Qt::NoButton);
-        rig.pump();
-        check(shapeIs(Qt::ArrowCursor),
-              QStringLiteral("Pencil mode over the voice-change lane did not keep the arrow "
-                             "cursor"));
-    }
-
     rig.mouseMove(QPointF(panBody.center().x(), qreal(panBody.bottom())), Qt::NoButton);
     rig.pump();
     check(shapeIs(Qt::SplitVCursor),

@@ -52,6 +52,11 @@ Covered notes and automation nodes use the normal selection highlight without be
 - **Lane-only scope**: When a time selection is made directly within an automation lane in the drawer, time operations apply only to the selected automation lanes, leaving notes and other tracks untouched.
 
 ### Time editing commands
+**Insert Time** (`Ctrl+Shift+I`, or `Cmd+Shift+I` on macOS) is available from
+the Edit menu without a time selection. It opens three draggable number fields
+for bars, beats, and quarter-beat fractions, then inserts that duration across
+the whole song at the live playhead (or at the edit cursor while stopped).
+
 When a time selection is active, the following range commands are available via the right-click context menu (by right-clicking the timeline ruler, inside an active time selection on the piano roll canvas, or inside an automation lane time selection):
 
 - **Insert blank time**: Inserts a silent gap matching the duration of the active time selection. Notes crossing the start seam are split cleanly so the inserted interval remains completely silent. Scoped notes and automation at or after the insertion point are shifted right. The time selection remains over the newly created blank space, and the edit cursor is placed at the start seam. Requires an active time selection.

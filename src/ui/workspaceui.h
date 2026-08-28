@@ -144,7 +144,7 @@ class WorkspaceUi final : public QObject
     void runMidiImport();
     void importSample();
     void runCreateVoicegroupFlow();
-    void toggleDrawerPage(bool automation);
+    void toggleDrawerPage(EditorDrawerPage page);
     void setSelectedTabEventListVisible(bool visible);
     // Queues a cosmetic SaveSidecarInput for every open tab (shutdown).
     void persistSessionViews();

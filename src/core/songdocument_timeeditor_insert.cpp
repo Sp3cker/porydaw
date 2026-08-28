@@ -75,9 +75,15 @@ bool SongDocument::TimeEditor::insertBlank()
     for (const TimeEventRef &ref : plan.events) {
         if (taken[size_t(ref.smfTrack)][ref.index])
             continue;
-        if (ref.tick >= s)
-            appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, ref.tick + span,
-                               MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
+        if (ref.tick < s)
+            continue;
+        const SmfEvent &event = m_document.m_smf.tracks[size_t(ref.smfTrack)].events[ref.index];
+        appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, ref.tick + span,
+                           MoveMode::MoveEvenIfUnchanged, xcmdEventRecords);
+        // A time signature at the insertion seam governs the blank bars as
+        // well as the shifted content, so retain it at both ends of the gap.
+        if (ref.kind == EventKind::TimeSig && ref.tick == s)
+            appendTimeEditInsert(inserts, ref.smfTrack, event, s, false);
     }
     const std::vector<SongDocument::EditOp> trackEnds =
         timeEditShiftRightTrackEnds(affectedTracks, inserts, s);

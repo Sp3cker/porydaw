@@ -4,7 +4,6 @@
 #include <optional>
 #include <span>
 
-#include <QFontMetricsF>
 #include <QPainter>
 #include <QPen>
 
@@ -67,7 +66,6 @@ void AutomationCanvas::rebuildFontCache()
     m_laneCaptionFont = typography::regular(typography::caption(font()));
     m_laneTextLayout = layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,
                                            layout::Space::Zero);
-    m_laneCaptionHeight = QFontMetricsF(m_laneCaptionFont).height();
 }
 
 void AutomationCanvas::paintContent(QPainter &painter)
@@ -127,8 +125,6 @@ void AutomationCanvas::paintContent(QPainter &painter)
     }
     const QFont &titleFont = m_laneTitleFont;
     const QFont &captionFont = m_laneCaptionFont;
-    m_voiceLane.paint(painter, *this, m_geometry, m_labelGutter, titleFont, captionFont,
-                      *m_laneTextLayout, m_laneCaptionHeight);
     const auto &textLayout = *m_laneTextLayout;
     const QColor selectedColor = palette().highlight().color();
     const QColor dimmedColor = palette().mid().color();

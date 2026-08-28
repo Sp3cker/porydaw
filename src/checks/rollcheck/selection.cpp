@@ -341,18 +341,22 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         if (doc.undoStack()->count() != postCarryCount)
             fail("a Ctrl-click or jitter pushed an undo command");
 
-        // Just past the threshold the deferred press becomes a velocity drag.
+        // At the platform threshold the deferred press becomes a velocity drag.
+        const int velocityDragDistance = QApplication::startDragDistance();
         const int gestureCount = doc.undoStack()->count();
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseMove, b.center + QPoint(0, 4), Qt::NoButton,
+        checks::events::sendMouse(*roll, QEvent::MouseMove,
+                                  b.center + QPoint(0, velocityDragDistance), Qt::NoButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 4),
-                                  Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
-        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) || bMod.velocity != 74)
-            fail("a super-threshold Ctrl-drag did not start the velocity gesture");
+        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
+                                  b.center + QPoint(0, velocityDragDistance), Qt::LeftButton,
+                                  Qt::NoButton, Qt::ControlModifier);
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) ||
+            bMod.velocity != 78 - velocityDragDistance)
+            fail("a threshold Ctrl-drag did not start the velocity gesture");
         if (doc.undoStack()->count() != gestureCount + 1)
-            fail("the super-threshold velocity drag did not push exactly one command");
+            fail("the threshold velocity drag did not push exactly one command");
 
         // Bulk-selection preservation, mirroring the Ctrl+edge grab: with
         // note A selected, a Ctrl+velocity drag on unselected note B joins

@@ -7,6 +7,7 @@
 // deno task format [--check] [files...]
 
 import { join } from "node:path";
+import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
 
 const decoder = new TextDecoder();
 const BUILD_DIR = "build";
@@ -56,15 +57,22 @@ async function ensureConfigured(
   verbose: boolean,
   release: boolean,
 ): Promise<void> {
+  const poryaaaa = await poryaaaaConfiguration(BUILD_DIR);
   const ninjaFile = join(BUILD_DIR, "build.ninja");
   const makefile = join(BUILD_DIR, "Makefile");
-  if (!release && ((await exists(ninjaFile)) || (await exists(makefile)))) {
-    return;
-  }
+  const hasBuildSystem = (await exists(ninjaFile)) || (await exists(makefile));
+  if (!release && hasBuildSystem && poryaaaa.cacheMatches) return;
   const started = performance.now();
   if (verbose) console.error(`build: configuring...`);
   const result = await new Deno.Command("cmake", {
-    args: ["-S", ".", "-B", BUILD_DIR, "-DCMAKE_BUILD_TYPE=Release"],
+    args: [
+      "-S",
+      ".",
+      "-B",
+      BUILD_DIR,
+      "-DCMAKE_BUILD_TYPE=Release",
+      poryaaaa.cmakeArgument,
+    ],
     stdout: verbose ? "inherit" : "piped",
     stderr: verbose ? "inherit" : "piped",
   }).output();

@@ -10,6 +10,7 @@ class AutomationPage;
 class QEvent;
 class SongView;
 class VelocityArea;
+class VoiceChangeArea;
 class DrawerSections;
 
 class EditorDrawer final : public QWidget
@@ -36,10 +37,13 @@ class EditorDrawer final : public QWidget
     bool pageVisible(EditorDrawerPage page) const noexcept;
     QAction *automationAction() const noexcept { return m_automationAction; }
     QAction *velocityAction() const noexcept { return m_velocityAction; }
+    QAction *voiceChangesAction() const noexcept { return m_voiceChangesAction; }
     AutomationPage *automationPage() noexcept { return m_automationPage; }
     const AutomationPage *automationPage() const noexcept { return m_automationPage; }
     VelocityArea *velocityArea() noexcept { return m_velocityArea; }
     const VelocityArea *velocityArea() const noexcept { return m_velocityArea; }
+    VoiceChangeArea *voiceChangeArea() noexcept { return m_voiceChangeArea; }
+    const VoiceChangeArea *voiceChangeArea() const noexcept { return m_voiceChangeArea; }
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -56,6 +60,7 @@ class EditorDrawer final : public QWidget
     EditorViewState drawerViewState() const;
     static DrawerDiff drawerDiff(const EditorViewState &previous,
                                  const EditorViewState &next) noexcept;
+    static bool statePageVisible(const EditorViewState &state, EditorDrawerPage page) noexcept;
     DrawerDiff prepareViewStateTransition(const EditorViewState &previous,
                                           const EditorViewState &next);
     void finishViewStateTransition(const DrawerDiff &diff, bool drawerOwnedFocus);
@@ -73,7 +78,9 @@ class EditorDrawer final : public QWidget
     bool m_drawerCanvasOwnsFocus = false;
     AutomationPage *m_automationPage = nullptr;
     VelocityArea *m_velocityArea = nullptr;
+    VoiceChangeArea *m_voiceChangeArea = nullptr;
     DrawerSections *m_sections = nullptr;
     QAction *m_automationAction = nullptr;
     QAction *m_velocityAction = nullptr;
+    QAction *m_voiceChangesAction = nullptr;
 };

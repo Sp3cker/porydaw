@@ -30,7 +30,6 @@ double wheelAngleUnits(const QWheelEvent *event);
 double cursorAnchoredScroll(double anchor, double oldScale, double oldScroll, double newScale);
 uint32_t usedTrackMask(const MidiTimeline *timeline) noexcept;
 qreal edgeGripInnerReach(const QRectF &noteRect, qreal minimumMoveWidth, qreal edgeGripReach);
-qreal velocityHandlePointerHitPadding(qreal noteHeight, qreal physicalPixel);
 bool isBlackKey(int key);
 QString keyName(int key);
 // "Label\tCtrl+C" for a context-menu entry: the registry's current binding
@@ -46,7 +45,6 @@ QColor pianoRollScaleHighlightColor();
 QColor trackHeaderAlsoSelectedColor();
 QColor mixTowardOklabImpl(const QColor &color, const QColor &backdrop, double t);
 std::size_t trackIdentityIndex(int track);
-QColor trackStemColor(int track);
 QColor contrastingTextColor(const QColor &backdrop);
 QColor ghostNoteColor(int track, bool accidentalRow);
 void drawOverlays(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
@@ -91,7 +89,5 @@ void drawPreRoll(QPainter &p, const SongView *sv, const QRect &rect, qreal origi
                  const QColor &background);
 void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
               int timelineDetailMinimumPixelsPerBeat, int gridLineStrokeWidth);
-void drawPlatedNoteText(QPainter &painter, const QRectF &rect, int flags, const QString &text,
-                        const QColor &fill, const QColor &ink);
 
 } // namespace songview::detail

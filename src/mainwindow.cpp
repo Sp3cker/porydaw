@@ -63,6 +63,8 @@ const QString kDrawerVelocityVisibleKey = QStringLiteral("editorDrawer/velocityV
 const QString kDrawerVelocityHeightKey = QStringLiteral("editorDrawer/velocityHeight");
 const QString kDrawerAutomationVisibleKey = QStringLiteral("editorDrawer/automationVisible");
 const QString kDrawerAutomationHeightKey = QStringLiteral("editorDrawer/automationHeight");
+const QString kDrawerVoiceChangesVisibleKey = QStringLiteral("editorDrawer/voiceChangesVisible");
+const QString kDrawerVoiceChangesHeightKey = QStringLiteral("editorDrawer/voiceChangesHeight");
 const QString kDrawerActivePageKey = QStringLiteral("editorDrawer/activePage");
 
 void resetInheritedWidgetFonts()
@@ -96,8 +98,14 @@ EditorDrawerState loadEditorDrawerState(const QSettings &settings)
     state.automation.visible =
         settings.value(kDrawerAutomationVisibleKey, state.automation.visible).toBool();
     state.automation.height = loadDrawerHeight(settings, kDrawerAutomationHeightKey);
-    if (settings.value(kDrawerActivePageKey).toString() == QLatin1String("velocity"))
+    state.voiceChanges.visible =
+        settings.value(kDrawerVoiceChangesVisibleKey, state.voiceChanges.visible).toBool();
+    state.voiceChanges.height = loadDrawerHeight(settings, kDrawerVoiceChangesHeightKey);
+    const QString activePage = settings.value(kDrawerActivePageKey).toString();
+    if (activePage == QLatin1String("velocity"))
         state.activePage = EditorDrawerPage::Velocity;
+    else if (activePage == QLatin1String("voiceChanges"))
+        state.activePage = EditorDrawerPage::VoiceChanges;
     return state;
 }
 
@@ -105,6 +113,7 @@ void saveEditorDrawerState(QSettings &settings, const EditorDrawerState &state)
 {
     settings.setValue(kDrawerVelocityVisibleKey, state.velocity.visible);
     settings.setValue(kDrawerAutomationVisibleKey, state.automation.visible);
+    settings.setValue(kDrawerVoiceChangesVisibleKey, state.voiceChanges.visible);
     if (state.velocity.height)
         settings.setValue(kDrawerVelocityHeightKey, *state.velocity.height);
     else
@@ -113,9 +122,21 @@ void saveEditorDrawerState(QSettings &settings, const EditorDrawerState &state)
         settings.setValue(kDrawerAutomationHeightKey, *state.automation.height);
     else
         settings.remove(kDrawerAutomationHeightKey);
-    settings.setValue(kDrawerActivePageKey, state.activePage == EditorDrawerPage::Velocity
-                                                ? QLatin1String("velocity")
-                                                : QLatin1String("automations"));
+    if (state.voiceChanges.height)
+        settings.setValue(kDrawerVoiceChangesHeightKey, *state.voiceChanges.height);
+    else
+        settings.remove(kDrawerVoiceChangesHeightKey);
+    switch (state.activePage) {
+    case EditorDrawerPage::Velocity:
+        settings.setValue(kDrawerActivePageKey, QLatin1String("velocity"));
+        break;
+    case EditorDrawerPage::VoiceChanges:
+        settings.setValue(kDrawerActivePageKey, QLatin1String("voiceChanges"));
+        break;
+    case EditorDrawerPage::Automations:
+        settings.setValue(kDrawerActivePageKey, QLatin1String("automations"));
+        break;
+    }
 }
 
 // SongSettings carries no equality; exact equality of applied inputs is the
@@ -348,6 +369,16 @@ void MainWindow::buildUi()
     });
     editMenu->addAction(m_copyAction);
     m_copyAction->setEnabled(false);
+    m_insertTimeAction = new QAction(tr("Insert &Time..."), this);
+    connect(m_insertTimeAction, &QAction::triggered, this, [this] {
+        if (m_selectedTab)
+            m_selectedTab->view().insertTimeAtPlaybackCursor();
+    });
+    m_insertTimeAction->setObjectName(QStringLiteral("insertTimeWindowAction"));
+    m_insertTimeAction->setShortcutContext(Qt::WindowShortcut);
+    keys.attach(QStringLiteral("edit.insert_time"), m_insertTimeAction);
+    editMenu->addAction(m_insertTimeAction);
+    m_insertTimeAction->setEnabled(false);
     editMenu->addSeparator();
     QAction *preferencesAction = editMenu->addAction(tr("Prefere&nces..."), this, [this] {
         openSettings(m_selectedTab ? SettingsDialog::Tab::Song : SettingsDialog::Tab::Engine);
@@ -375,7 +406,6 @@ void MainWindow::buildUi()
     connect(m_eventListAction, &QAction::toggled, this,
             [this](bool on) { m_workspace->setSelectedTabEventListVisible(on); });
 
-    viewMenu->addSeparator();
     m_automationDrawerAction = viewMenu->addAction(tr("Automation Lanes"));
     m_automationDrawerAction->setObjectName(QStringLiteral("automationDrawerWindowAction"));
     m_automationDrawerAction->setShortcut(QKeySequence(Qt::Key_A));
@@ -383,7 +413,7 @@ void MainWindow::buildUi()
     m_automationDrawerAction->setToolTip(tr("Show or hide automation lanes (A)"));
     m_automationDrawerAction->setEnabled(false);
     connect(m_automationDrawerAction, &QAction::triggered, this,
-            [this] { m_workspace->toggleDrawerPage(/*automation=*/true); });
+            [this] { m_workspace->toggleDrawerPage(EditorDrawerPage::Automations); });
     m_velocityDrawerAction = viewMenu->addAction(tr("Velocity Lane"));
     m_velocityDrawerAction->setObjectName(QStringLiteral("velocityDrawerWindowAction"));
     m_velocityDrawerAction->setShortcut(QKeySequence(Qt::Key_V));
@@ -391,7 +421,15 @@ void MainWindow::buildUi()
     m_velocityDrawerAction->setToolTip(tr("Show or hide note velocities (V)"));
     m_velocityDrawerAction->setEnabled(false);
     connect(m_velocityDrawerAction, &QAction::triggered, this,
-            [this] { m_workspace->toggleDrawerPage(/*automation=*/false); });
+            [this] { m_workspace->toggleDrawerPage(EditorDrawerPage::Velocity); });
+    m_voiceChangesDrawerAction = viewMenu->addAction(tr("Voice &Changes"));
+    m_voiceChangesDrawerAction->setObjectName(QStringLiteral("voiceChangesDrawerWindowAction"));
+    m_voiceChangesDrawerAction->setShortcut(QKeySequence(Qt::Key_P));
+    m_voiceChangesDrawerAction->setShortcutContext(Qt::WindowShortcut);
+    m_voiceChangesDrawerAction->setToolTip(tr("Show or hide voice changes (P)"));
+    m_voiceChangesDrawerAction->setEnabled(false);
+    connect(m_voiceChangesDrawerAction, &QAction::triggered, this,
+            [this] { m_workspace->toggleDrawerPage(EditorDrawerPage::VoiceChanges); });
 
     // Tools menu: project-level utilities that aren't song-scoped.
     QMenu *toolsMenu = menuBar()->addMenu(tr("&Tools"));
@@ -1020,6 +1058,7 @@ void MainWindow::updateChrome()
     m_exportWavAction->setEnabled(ready && m_audioOk && m_audio.songLoaded());
     m_settingsAction->setEnabled(ready);
     m_copyAction->setEnabled(ready);
+    m_insertTimeAction->setEnabled(ready);
     m_registerAction->setEnabled(ready && selectedSongRegistrationPending());
     m_closeTabAction->setEnabled(m_workspace->openTabCount() > 0);
     m_eventListAction->setEnabled(ready);
@@ -1030,6 +1069,7 @@ void MainWindow::updateChrome()
     const bool drawerAvailable = ready && !tab->view().eventListVisible();
     m_automationDrawerAction->setEnabled(drawerAvailable);
     m_velocityDrawerAction->setEnabled(drawerAvailable);
+    m_voiceChangesDrawerAction->setEnabled(drawerAvailable);
 }
 
 bool MainWindow::selectedSongRegistrationPending() const

@@ -1,0 +1,131 @@
+#pragma once
+
+#include <array>
+#include <cstdint>
+#include <optional>
+#include <vector>
+
+#include <QFont>
+#include <QFontMetrics>
+#include <QPoint>
+#include <QPointF>
+#include <QRect>
+#include <QRectF>
+#include <QString>
+#include <QWidget>
+
+#include "core/songdocument.h"
+#include "ui/editordrawer/drawerpage.h"
+#include "ui/timelinesurface.h"
+
+extern "C" {
+#include "voicegroup_loader.h"
+}
+
+class QContextMenuEvent;
+class QEvent;
+class QFocusEvent;
+class QKeyEvent;
+class QMouseEvent;
+class QWheelEvent;
+class QPainter;
+class SongView;
+
+// The Voice Changes drawer page: a standalone timeline surface owning held
+// program spans, change markers, hover, the voice picker, and DOC_CC_VOICE
+// commits for the current primary track. SongView owns the shared camera and
+// document; this surface captures the primary track and live camera state on
+// every refresh, so it never holds a persistent track identity.
+class VoiceChangeArea final : public songview::TimelineSurface
+{
+  public:
+    explicit VoiceChangeArea(SongView &owner, QWidget *parent = nullptr);
+    void songChanged();
+    void refreshLiveState(const DrawerPageLiveState &liveState);
+    void cancelInteraction();
+    void documentChanged();
+    void tracksRemapped(const TrackRemap &remap);
+    int plotOrigin() const;
+    int plotWidth() const;
+    void presentPlayhead(double tick);
+
+  protected:
+    bool event(QEvent *event) override;
+    void paintContent(QPainter &painter) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void leaveEvent(QEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void focusOutEvent(QFocusEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
+    void contentGeometryChanged() override;
+
+  private:
+    enum class Interaction { None, Pan };
+    struct Geometry {
+        int plotOrigin = 0;
+        int markerHitRadius = 0;
+        int hoverPaintPadding = 0;
+        int gridMinimumCellWidth = 0;
+        void resolve();
+    };
+    // Resolved label text for one program slot. Cached until the voicegroup
+    // pointer, the slot's type, or its source name changes; songChanged drops
+    // the whole table because loader pointers do not survive a song swap.
+    struct VoicePaintText {
+        const LoadedVoiceGroup *group = nullptr;
+        int type = -1;
+        std::array<char, VG_VOICE_NAME_LEN> sourceName{};
+        QString label;
+        QString hoverLabel;
+    };
+    struct VoiceLabelLayout {
+        const QString *text = nullptr;
+        QString elidedText;
+        QRectF rect;
+        bool offscreen = true;
+    };
+    void invalidateContent(const QRect &rect = {});
+    void rebuildVisualState();
+    void rebuildFonts();
+    void clearHover();
+    void updateHover(qreal x);
+    void ensureHoverLabelFontCache();
+    bool ready() const noexcept;
+    int primaryTrack() const noexcept;
+    const VoicePaintText &paintTextFor(int program) const;
+    int voiceSlotAt(uint64_t tick) const;
+    QRect plotRect() const;
+    bool voiceMarkerAt(qreal x, DocLanePoint *out) const;
+    void showPicker(const QPoint &globalPosition);
+    void showContextMenu(const QPoint &globalPosition);
+    SongView &m_owner;
+    DrawerPageLiveState m_live;
+    Geometry m_geometry;
+    int m_engineTrack = -1;
+    std::vector<DocLanePoint> m_voicePoints;
+    std::vector<VoiceLabelLayout> m_labelLayouts;
+    const SongDocument *m_voicePointsDocument = nullptr;
+    uint64_t m_voicePointsRevision = 0;
+    int m_voicePointsTrack = -1;
+    Interaction m_interaction = Interaction::None;
+    QPointF m_previousPosition;
+    bool m_suppressContextMenu = false;
+    bool m_hoverActive = false;
+    qreal m_hoverX = 0.0;
+    uint64_t m_hoverTick = 0;
+    QString m_hoverLabel;
+    QRectF m_hoverLabelRect;
+    QRect m_hoverLabelBounds;
+    QFont m_titleFont;
+    QFont m_captionFont;
+    QFont m_hoverLabelFont;
+    QFontMetrics m_hoverLabelMetrics{QFont{}};
+    mutable std::array<VoicePaintText, VOICEGROUP_SIZE> m_paintTexts;
+    mutable QString m_secondary;
+    mutable int m_changeCount = -1;
+    std::optional<double> m_lastPresentedPlayheadTick;
+};

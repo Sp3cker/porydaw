@@ -45,11 +45,9 @@ jobs:
   build-native:
     strategy:
       fail-fast: false
-      matrix:
-        os: [windows-latest, macos-latest]
+    matrix:
+      os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      SCCACHE_GHA_ENABLED: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,21 +63,13 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Set up sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
-
       - name: Configure
         run: >-
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_C_COMPILER_LAUNCHER=sccache
-          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         run: cmake --build build
-
-      - name: Report sccache statistics
-        run: sccache --show-stats
 
       - name: Verify Windows SVG deployment
         if: runner.os == 'Windows'

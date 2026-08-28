@@ -7,6 +7,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
+#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/eventlistview.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
@@ -70,7 +71,7 @@ SongView::ViewState::ViewState()
 {
     const Geometry geometry = Geometry::resolve();
     pxPerBeat = geometry.editorDefaultPixelsPerBeat;
-    keyHeight = geometry.velocityHandleMinimumKeyHeight;
+    keyHeight = geometry.pianoRollDefaultKeyHeight;
 }
 
 void SongView::refreshGeometry()
@@ -97,13 +98,14 @@ void SongView::refreshGeometry()
     refreshDrawerPages();
 }
 
-std::vector<songview::TimelineBand> SongView::timelineBands() noexcept
+std::vector<songview::TimelineBand> SongView::timelineBands()
 {
     return {
         {*m_ruler, m_geometry.plotOrigin},
         {*m_roll, m_geometry.pianoKeyboardWidth},
         {*m_editorDrawer->automationPage()->canvas(), m_geometry.plotOrigin},
         {*m_editorDrawer->velocityArea(), m_editorDrawer->velocityArea()->plotOrigin()},
+        {*m_editorDrawer->voiceChangeArea(), m_editorDrawer->voiceChangeArea()->plotOrigin()},
         {*m_strip, m_geometry.plotOrigin},
     };
 }
@@ -111,7 +113,7 @@ std::vector<songview::TimelineBand> SongView::timelineBands() noexcept
 SongView::SongView(QWidget *parent)
     : QWidget(parent)
     , m_geometry(Geometry::resolve())
-    , m_keyHeight(m_geometry.velocityHandleMinimumKeyHeight)
+    , m_keyHeight(m_geometry.pianoRollDefaultKeyHeight)
 {
     // Prime the default C-major classification (the previous controller
     // constructor did this); touch no widgets.
@@ -346,6 +348,7 @@ void SongView::setDocument(SongDocument *document)
                 cancelActiveInteractions();
                 m_editorDrawer->automationPage()->documentChanged();
                 m_editorDrawer->velocityArea()->documentChanged();
+                m_editorDrawer->voiceChangeArea()->documentChanged();
                 refreshDrawerPages();
             });
         }
@@ -478,8 +481,6 @@ void SongView::coordinateSelectionChange(
     bool timelineViewsRefreshed = false;
     if (primaryChanged) {
         m_headers->syncSelection();
-        if (m_roll)
-            m_roll->setFocus();
         if (m_scaleController.scaleFold()) {
             rebuildProjectionWithAnchoring();
         } else {
@@ -552,18 +553,21 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
 {
     if (!m_timeline)
         return;
-    const bool drawerVisible = hasVisibleDrawerSection();
+    const bool velocityPageVisible = m_editorDrawer->pageVisible(EditorDrawerPage::Velocity);
+    const bool voiceChangesPageVisible =
+        m_editorDrawer->pageVisible(EditorDrawerPage::VoiceChanges);
+    const bool voiceContextVisible = velocityPageVisible || voiceChangesPageVisible;
     const auto visibleDrawerContext = [this] {
         const uint64_t tick = m_playing ? static_cast<uint64_t>(std::max(0.0, m_playheadTick) + 0.5)
                                         : m_editCursorTick;
         return voiceContext(tick);
     };
     const DrawerPageVoiceContext contextBefore =
-        drawerVisible ? visibleDrawerContext() : DrawerPageVoiceContext{};
+        voiceContextVisible ? visibleDrawerContext() : DrawerPageVoiceContext{};
     m_playheadTick = m_timeline->tickForSample(samplePos);
     m_playing = playing;
     const DrawerPageVoiceContext contextAfter =
-        drawerVisible ? visibleDrawerContext() : DrawerPageVoiceContext{};
+        voiceContextVisible ? visibleDrawerContext() : DrawerPageVoiceContext{};
     // Follow the playhead — unless following is switched off (transport
     // bar), and never while the user is mid-gesture (panning, dragging notes
     // or selections, sweeping automation): yanking the view out from under a
@@ -576,12 +580,17 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
     }
     m_events->setPlayheadTick(m_playheadTick, playing);
     m_headers->syncVoices();
-    if (drawerVisible && (contextBefore.voice != contextAfter.voice ||
-                          contextBefore.voiceSlot != contextAfter.voiceSlot)) {
-        refreshDrawerPages();
+    if (voiceContextVisible && (contextBefore.voice != contextAfter.voice ||
+                                contextBefore.voiceSlot != contextAfter.voiceSlot)) {
+        if (velocityPageVisible)
+            refreshVelocityPage();
+        if (voiceChangesPageVisible)
+            refreshVoiceChangePage();
     }
-    if (m_editorDrawer->pageVisible(EditorDrawerPage::Velocity))
+    if (velocityPageVisible)
         m_editorDrawer->velocityArea()->presentPlayhead(m_playheadTick);
+    if (voiceChangesPageVisible)
+        m_editorDrawer->voiceChangeArea()->presentPlayhead(m_playheadTick);
     syncPlayheadOverlay();
 }
 

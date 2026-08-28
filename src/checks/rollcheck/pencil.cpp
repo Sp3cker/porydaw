@@ -198,17 +198,6 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     if (paintEscapedInteractionRect)
         fail("note color escaped past its black box");
 
-    const QRectF twoPixelBarNoteRect(noteFrame.left(), noteFrame.top(), noteFrame.width(),
-                                     20 * rows.pixel());
-    const QRectF twoPixelBarNoteBox = rows.noteBox(twoPixelBarNoteRect);
-    const QRectF velocityZeroBar = songview::velBarRect(twoPixelBarNoteRect, 0, rows.dpr());
-    if (qRound(velocityZeroBar.height() / rows.pixel()) != 2 ||
-        velocityZeroBar.left() < twoPixelBarNoteBox.left() ||
-        velocityZeroBar.right() > twoPixelBarNoteBox.right() ||
-        velocityZeroBar.top() < twoPixelBarNoteBox.top() ||
-        velocityZeroBar.bottom() > twoPixelBarNoteBox.bottom())
-        fail("two-pixel velocity-zero bar escaped painted note box");
-
     const QColor velocityZeroColor = SongView::noteColor(track, 0);
     const QColor velocityMaximumColor = SongView::noteColor(track, 127);
     const QColor velocityMidpointColor = SongView::noteColor(track, 64);

@@ -43,7 +43,7 @@ class Harness final
     int track() const noexcept;
     int pianoKeyboardWidth() const noexcept;
     int plotOrigin() const noexcept;
-    int velocityHandleMinimumKeyHeight() const noexcept;
+    int pianoRollDefaultKeyHeight() const noexcept;
 
     void fail(const char *what);
     const QString &songLabel() const noexcept;
@@ -59,7 +59,7 @@ class Harness final
     int m_track = -1;
     int m_pianoKeyboardWidth = 0;
     int m_plotOrigin = 0;
-    int m_velocityHandleMinimumKeyHeight = 0;
+    int m_pianoRollDefaultKeyHeight = 0;
     int m_failures = 0;
     QMetaObject::Connection m_documentChanged;
 };
@@ -79,7 +79,6 @@ struct SnappedRows {
     int centerY(int key) const;
     QRectF noteRect(qreal x0, qreal x1, int key) const;
     QRectF noteBox(const QRectF &rect) const;
-    int noteTopProbeY(int key) const;
 };
 
 bool isSelectionRingColor(QRgb pixel);
@@ -122,6 +121,8 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
                                                      const PencilPaintingFixture &fixture);
 std::optional<PencilVelocityFixture> runPencilVelocityScenarios(Harness &check,
                                                                 PencilPaintingFixture fixture);
+ScenarioContinuation runGestureInterlockScenarios(Harness &check,
+                                                  const PencilVelocityFixture &fixture);
 ScenarioContinuation runSelectionGestureScenarios(Harness &check,
                                                   const PencilVelocityFixture &fixture);
 ScenarioContinuation runSelectionRasterScenarios(Harness &check,

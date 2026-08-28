@@ -24,28 +24,26 @@ using namespace songview::detail;
 
 PianoRollGeometry PianoRollGeometry::resolve()
 {
-    return {lyt::fontPx(10.0),      lyt::fontPx(13.0 / 3.0), lyt::fontPx(2.0),
-            lyt::fontPx(1.0 / 6.0), lyt::fontPx(1.0 / 6.0),  lyt::fontPxF(0.25),
-            lyt::fontPxF(0.5),      lyt::fontPx(1.0),        lyt::fontPx(5.0 / 3.0),
-            lyt::fontPx(1.0 / 6.0), lyt::fontPx(1.0 / 6.0),  lyt::fontPxF(1.0 / 8.0),
-            lyt::fontPx(1.0 / 3.0), lyt::fontPx(1.0 / 6.0),  lyt::fontPx(2.0 / 3.0),
-            lyt::fontPx(1.0 / 6.0), lyt::fontPx(1.0 / 6.0),  lyt::fontPx(1.0 / 2.0),
-            lyt::fontPx(0.25),      lyt::fontPx(0.25)};
+    return {
+        .minimumVisiblePianoRollHeight = lyt::fontPx(10.0),
+        .pianoKeyboardWidth = lyt::fontPx(13.0 / 3.0),
+        .midiCursorExtent = lyt::fontPx(2.0),
+        .pianoRollNoteMinimumWidth = lyt::fontPx(1.0 / 6.0),
+        .pianoRollNoteMinimumHeight = lyt::fontPx(1.0 / 6.0),
+        .pianoRollNoteEdgeGripReach = lyt::fontPxF(0.25),
+        .pianoRollNoteMoveZoneMinimumWidth = lyt::fontPxF(0.5),
+        .selectionRingDipWidth = lyt::fontPxF(1.0 / 8.0),
+        .noteBorderDashLength = lyt::fontPx(1.0 / 3.0),
+        .noteBorderDashGap = lyt::fontPx(1.0 / 6.0),
+        .keyboardHoverChipHorizontalPadding = lyt::fontPx(2.0 / 3.0),
+        .keyboardHoverChipVerticalPadding = lyt::fontPx(1.0 / 6.0),
+        .keyboardHoverChipRightInset = lyt::fontPx(1.0 / 6.0),
+        .velocityLabelFitAllowance = lyt::fontPx(1.0 / 2.0),
+        .keyboardHoverChipCornerRadius = lyt::fontPx(0.25),
+        .pianoKeyboardLabelRightInset = lyt::fontPx(0.25),
+    };
 }
 
-QRectF velocityBarRect(const QRectF &noteRect, int velocity, qreal dpr,
-                       const PianoRollGeometry &geometry)
-{
-    const qreal pixel = qreal(lyt::singlePixel()) / dpr;
-    const qreal inset = geometry.velocityHandleInset * pixel;
-    const qreal barH = qRound(noteRect.height() / pixel) >= geometry.velocityHandleTallNoteThreshold
-                           ? geometry.velocityHandleBarThickness * pixel
-                           : pixel;
-    const qreal innerH = noteRect.height() - inset;
-    const qreal y = std::min(noteRect.top() + pixel + (127 - velocity) * (innerH - pixel) / 127.0,
-                             noteRect.bottom() - pixel - barH);
-    return QRectF(noteRect.left() + pixel, y, std::max(pixel, noteRect.width() - inset), barH);
-}
 QCursor centeredCursor(const QPixmap &pm)
 {
     const qreal dpr =
@@ -60,6 +58,30 @@ MidiCursors loadMidiCursors(qreal devicePixelRatio, int cursorExtent)
     return {devicePixelRatio, centeredCursor(leftEdge.pixmap(cursorSize, devicePixelRatio)),
             centeredCursor(rightEdge.pixmap(cursorSize, devicePixelRatio))};
 }
+namespace {
+
+void drawHairlineFrame(QPainter &painter, const QRectF &rect, const QColor &color, int insetPixels)
+{
+    const qreal physicalPixel = logicalPhysicalPixel(painter.device()->devicePixelRatioF());
+    const qreal insetDips = insetPixels * physicalPixel;
+    const QRectF frame = rect.adjusted(insetDips, insetDips, -insetDips, -insetDips);
+    if (frame.width() <= 0.0 || frame.height() <= 0.0)
+        return;
+    painter.fillRect(QRectF(frame.left(), frame.top(), frame.width(), physicalPixel), color);
+    painter.fillRect(
+        QRectF(frame.left(), frame.bottom() - physicalPixel, frame.width(), physicalPixel), color);
+    const qreal sideHeight = std::max(0.0, frame.height() - 2.0 * physicalPixel);
+    if (sideHeight <= 0.0)
+        return;
+    painter.fillRect(QRectF(frame.left(), frame.top() + physicalPixel, physicalPixel, sideHeight),
+                     color);
+    painter.fillRect(QRectF(frame.right() - physicalPixel, frame.top() + physicalPixel,
+                            physicalPixel, sideHeight),
+                     color);
+}
+
+} // namespace
+
 QRectF noteFrame(const QPainter &painter, const QRectF &noteRect, int insetPixels)
 {
     const qreal physicalPixel = logicalPhysicalPixel(painter.device()->devicePixelRatioF());
@@ -68,14 +90,16 @@ QRectF noteFrame(const QPainter &painter, const QRectF &noteRect, int insetPixel
         .adjusted(lyt::space(Space::Zero), lyt::space(Space::Zero), -physicalPixel, -physicalPixel)
         .adjusted(insetDips, insetDips, -insetDips, -insetDips);
 }
+
 int fittedFrameThickness(const QPainter &painter, const QRectF &rect, int requestedPixels,
                          int insetPixels)
 {
     const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
-    const int heightPixels = qRound(rect.height() * devicePixelRatio);
-    return std::clamp((heightPixels - lyt::singlePixel()) / 2 - insetPixels,
+    const int minDimPixels = qRound(std::min(rect.width(), rect.height()) * devicePixelRatio);
+    return std::clamp((minDimPixels - lyt::singlePixel()) / 2 - insetPixels,
                       lyt::space(Space::Zero), requestedPixels);
 }
+
 int drawRectFrame(QPainter &painter, const QRectF &rect, const QColor &color, int thicknessPixels,
                   int insetPixels)
 {
@@ -102,27 +126,50 @@ int drawRectFrame(QPainter &painter, const QRectF &rect, const QColor &color, in
                      color);
     return thicknessPixels;
 }
+
 void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox, bool unterminated, int dashLength,
                        int dashGap, int insetPixels)
 {
-    const int borderPixels = songview::noteBorderPixels(painter.device()->devicePixelRatioF());
-    if (!unterminated) {
-        drawRectFrame(painter, noteBox, Qt::black, borderPixels, insetPixels);
+    const qreal dpr = painter.device()->devicePixelRatioF();
+    const int requested = noteBorderPixels(dpr);
+    const int fitted = fittedFrameThickness(painter, noteBox, requested, insetPixels);
+    if (fitted > 0) {
+        if (!unterminated) {
+            drawRectFrame(painter, noteBox, Qt::black, requested, insetPixels);
+            return;
+        }
+        painter.save();
+        QPen borderPen(Qt::black, lyt::space(Space::Zero));
+        borderPen.setCapStyle(Qt::FlatCap);
+        borderPen.setJoinStyle(Qt::MiterJoin);
+        borderPen.setDashPattern({qreal(dashLength), qreal(dashGap)});
+        painter.setPen(borderPen);
+        painter.setBrush(Qt::NoBrush);
+        for (int pixel = 0; pixel < fitted; ++pixel)
+            painter.drawRect(noteFrame(painter, noteBox, insetPixels + pixel));
+        painter.restore();
         return;
     }
-    const int thickness = fittedFrameThickness(painter, noteBox, borderPixels, insetPixels);
-    if (thickness <= 0)
-        return;
 
+    // Smaller than an opaque hairline plus a face: keep a translucent
+    // outline so zoomed-out notes stay framed without turning into a
+    // black bar.
+    const qreal physicalPixel = logicalPhysicalPixel(dpr);
+    const qreal minDim = std::min(noteBox.width(), noteBox.height());
+    QColor color(Qt::black);
+    color.setAlphaF(std::clamp(minDim / (3.0 * physicalPixel), 0.25, 0.85));
+    if (!unterminated) {
+        drawHairlineFrame(painter, noteBox, color, insetPixels);
+        return;
+    }
     painter.save();
-    QPen borderPen(Qt::black, lyt::space(Space::Zero));
+    QPen borderPen(color, lyt::space(Space::Zero));
     borderPen.setCapStyle(Qt::FlatCap);
     borderPen.setJoinStyle(Qt::MiterJoin);
     borderPen.setDashPattern({qreal(dashLength), qreal(dashGap)});
     painter.setPen(borderPen);
     painter.setBrush(Qt::NoBrush);
-    for (int pixel = 0; pixel < thickness; ++pixel)
-        painter.drawRect(noteFrame(painter, noteBox, insetPixels + pixel));
+    painter.drawRect(noteFrame(painter, noteBox, insetPixels));
     painter.restore();
 }
 
@@ -131,11 +178,6 @@ void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox, bool unterminat
 namespace songview {
 using namespace songview::detail;
 using namespace songview::pianoroll_detail;
-
-QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr)
-{
-    return velocityBarRect(noteRect, velocity, dpr, PianoRollGeometry::resolve());
-}
 
 int noteBorderPixels(qreal dpr)
 {
@@ -418,36 +460,19 @@ bool PianoRoll::nearLeftEdge(const ViewNote &note, QPointF pos) const
                                                     m_geometry.pianoRollNoteEdgeGripReach);
 }
 
-bool PianoRoll::nearVelocityHandle(const ViewNote &note, QPointF pos) const
-{
-    if (m_sv->keyHeight() < m_geometry.velocityHandleMinimumKeyHeight)
-        return false;
-    const QRectF r = noteRect(note);
-    // The bar itself is 1-2px; grab within a few pixels of it, more
-    // generously on taller notes.
-    const QRectF bar = velocityBarRect(r, note.velocity, devicePixelRatioF(), m_geometry);
-    const qreal pad = velocityHandlePointerHitPadding(r.height(), physicalPixel());
-    const qreal inner = edgeGripInnerReach(r, m_geometry.pianoRollNoteMoveZoneMinimumWidth,
-                                           m_geometry.pianoRollNoteEdgeGripReach);
-    return pos.x() > r.left() + inner && pos.x() < r.right() - inner &&
-           pos.y() >= bar.top() - pad && pos.y() < bar.bottom() + pad;
-}
-
 void PianoRoll::refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers)
 {
     if (m_cursors.dpr != devicePixelRatioF())
         m_cursors = loadMidiCursors(devicePixelRatioF(), m_geometry.midiCursorExtent);
     const ViewNote *hit =
         m_sv->document() && pos.x() >= m_geometry.pianoKeyboardWidth ? hitNote(pos) : nullptr;
-    // Resize edges win over both velocity-hover paths.
+    // Resize edges win over the modifier velocity hover.
     const auto &keys = keymap::Registry::instance();
     if (hit && nearRightEdge(*hit, pos))
         setCursor(m_cursors.rightEdge);
     else if (hit && nearLeftEdge(*hit, pos))
         setCursor(m_cursors.leftEdge);
     else if (hit && keys.matchesModifier(modifiers, QStringLiteral("roll.velocity_drag")))
-        setCursor(Qt::SizeVerCursor);
-    else if (hit && nearVelocityHandle(*hit, pos))
         setCursor(Qt::SizeVerCursor);
     else
         setCursor(Qt::ArrowCursor);
@@ -462,13 +487,13 @@ void PianoRoll::refreshHoverAtCursor()
 
 QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
 {
-    const bool dragging =
-        m_drag == Drag::Move || m_drag == Drag::Resize || m_drag == Drag::ResizeLeft;
+    const bool dragging = m_leftDrag == LeftDrag::Move || m_leftDrag == LeftDrag::Resize ||
+                          m_leftDrag == LeftDrag::ResizeLeft;
     if (!dragging || note.track != m_sv->selectionModel().primaryTrack() ||
         !note.noteId.isAssigned() || !m_sv->selectionModel().isNoteSelected(note.noteId))
         return noteRect(note);
     int64_t tick, endTick;
-    if (m_drag == Drag::ResizeLeft) {
+    if (m_leftDrag == LeftDrag::ResizeLeft) {
         // The note-off pins the gesture; only the start moves.
         endTick = int64_t(note.endTick);
         tick = std::clamp<int64_t>(int64_t(note.startTick) + m_dTick, 0, endTick - 1);
@@ -485,8 +510,8 @@ QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
 
 int PianoRoll::displayedNoteKey(const ViewNote &note) const
 {
-    const bool dragging =
-        m_drag == Drag::Move || m_drag == Drag::Resize || m_drag == Drag::ResizeLeft;
+    const bool dragging = m_leftDrag == LeftDrag::Move || m_leftDrag == LeftDrag::Resize ||
+                          m_leftDrag == LeftDrag::ResizeLeft;
     if (!dragging || note.track != m_sv->selectionModel().primaryTrack() ||
         !note.noteId.isAssigned() || !m_sv->selectionModel().isNoteSelected(note.noteId))
         return note.key;

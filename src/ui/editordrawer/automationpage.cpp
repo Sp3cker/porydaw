@@ -15,13 +15,12 @@
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationcanvas.h"
+#include "ui/editordrawer/automationprojection.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/theme/themeruntime.h"
 namespace {
-
-constexpr std::chrono::milliseconds kPencilMomentaryHold{500};
 
 Qt::KeyboardModifiers shortcutModifiers(Qt::KeyboardModifiers modifiers)
 {
@@ -124,7 +123,10 @@ AutomationPage::AutomationPage(SongView &owner, QWidget *parent)
     qApp->installEventFilter(this);
 }
 
-AutomationPage::~AutomationPage() = default;
+AutomationPage::~AutomationPage()
+{
+    qApp->removeEventFilter(this);
+}
 
 bool AutomationPage::event(QEvent *event)
 {
@@ -140,7 +142,6 @@ bool AutomationPage::event(QEvent *event)
             m_scroll->syncBackground();
     }
     if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate) {
-        finishPencilShortcut(true);
         cancelInteraction();
     }
     return QWidget::event(event);
@@ -149,61 +150,31 @@ bool AutomationPage::event(QEvent *event)
 bool AutomationPage::eventFilter(QObject *watched, QEvent *event)
 {
     const QEvent::Type type = event->type();
-    if (type != QEvent::ShortcutOverride && type != QEvent::KeyPress && type != QEvent::KeyRelease)
+    if (type != QEvent::ShortcutOverride && type != QEvent::KeyPress)
         return QWidget::eventFilter(watched, event);
     const auto *targetWidget = qobject_cast<QWidget *>(watched);
     const auto *targetWindow = qobject_cast<QWindow *>(watched);
-    // Native shortcuts reach the top-level QWindow before its focused widget.
     const bool inPageWindow = (targetWidget && targetWidget->window() == window()) ||
                               (targetWindow && targetWindow == window()->windowHandle());
     if (!inPageWindow || !isVisible() || !m_pencilModeAction || !m_pencilModeAction->isEnabled())
         return QWidget::eventFilter(watched, event);
-
     const auto *keyEvent = static_cast<QKeyEvent *>(event);
+    if (!matchesPencilShortcut(keyEvent))
+        return QWidget::eventFilter(watched, event);
     const QWidget *focus = QApplication::focusWidget();
-    // Native window events reach this application filter before the focused
-    // editor can claim printable keys through ShortcutOverride.
-    if (!m_pencilShortcutHeld && focus && focus->testAttribute(Qt::WA_InputMethodEnabled))
+    if (focus && focus->testAttribute(Qt::WA_InputMethodEnabled))
         return QWidget::eventFilter(watched, event);
     if (type == QEvent::ShortcutOverride) {
-        if (!handlesPencilShortcut(keyEvent))
-            return QWidget::eventFilter(watched, event);
         event->accept();
         return true;
     }
-    if (type == QEvent::KeyPress) {
-        if (m_pencilShortcutHeld && keyEvent->key() == m_pencilShortcutKey)
-            return true;
-        if (!handlesPencilShortcut(keyEvent))
-            return QWidget::eventFilter(watched, event);
-        if (keyEvent->isAutoRepeat())
-            return true;
-        m_pencilShortcutHeld = true;
-        m_pencilShortcutKey = keyEvent->key();
-        m_pencilShortcutPriorState = m_pencilModeAction->isChecked();
-        m_pencilShortcutGestureStarted = false;
-        m_pencilShortcutPressedAt = std::chrono::steady_clock::now();
-        m_canvas->setPencilMode(!m_pencilShortcutPriorState);
+    if (keyEvent->isAutoRepeat())
         return true;
-    }
-
-    if (m_pencilShortcutHeld && keyEvent->key() == m_pencilShortcutKey) {
-        if (!keyEvent->isAutoRepeat())
-            finishPencilShortcut(false);
-        return true;
-    }
-    if (keyEvent->isAutoRepeat() && handlesPencilShortcut(keyEvent))
-        return true;
-    return QWidget::eventFilter(watched, event);
+    m_pencilModeAction->trigger();
+    return true;
 }
 
-void AutomationPage::automationGestureStarted() noexcept
-{
-    if (m_pencilShortcutHeld)
-        m_pencilShortcutGestureStarted = true;
-}
-
-bool AutomationPage::handlesPencilShortcut(const QKeyEvent *event) const noexcept
+bool AutomationPage::matchesPencilShortcut(const QKeyEvent *event) const noexcept
 {
     const QKeySequence shortcut = m_pencilModeAction->shortcut();
     if (shortcut.count() != 1)
@@ -213,23 +184,6 @@ bool AutomationPage::handlesPencilShortcut(const QKeyEvent *event) const noexcep
     return combination.keyboardModifiers() == Qt::NoModifier && key != 0 &&
            key != Qt::Key_unknown && !keymap::Registry::isModifierKey(key) && event->key() == key &&
            shortcutModifiers(event->modifiers()) == Qt::NoModifier;
-}
-
-void AutomationPage::finishPencilShortcut(bool forceMomentary)
-{
-    if (!m_pencilShortcutHeld)
-        return;
-    const bool momentary =
-        forceMomentary || m_pencilShortcutGestureStarted ||
-        std::chrono::steady_clock::now() - m_pencilShortcutPressedAt >= kPencilMomentaryHold;
-    const bool priorState = m_pencilShortcutPriorState;
-    m_pencilShortcutHeld = false;
-    m_pencilShortcutKey = 0;
-    m_pencilShortcutGestureStarted = false;
-    if (momentary)
-        m_canvas->setPencilMode(priorState);
-    else
-        m_pencilModeAction->setChecked(!priorState);
 }
 
 bool AutomationPage::ready() const noexcept
@@ -422,6 +376,24 @@ void AutomationPage::setLaneRange(const EditorAutomationRowId &row, uint8_t rang
     m_viewState.laneRanges[row] = range;
     publishViewState();
     m_canvas->invalidateContent();
+}
+
+bool AutomationPage::scaleSharedHeight(int wheelSteps, const AutomationGeometry &geometry)
+{
+    const int shared =
+        m_viewState.laneHeight > 0 ? m_viewState.laneHeight : geometry.rowDefaultHeight;
+    const int height = std::clamp(shared + wheelSteps * geometry.rowWheelIncrement,
+                                  geometry.rowMinimumHeight, geometry.rowMaximumHeight);
+    if (height == shared)
+        return false;
+    const double factor = double(height) / double(shared);
+    for (auto &[row, rowHeight] : m_viewState.laneHeights) {
+        rowHeight = std::clamp(int(std::lround(rowHeight * factor)), geometry.rowMinimumHeight,
+                               geometry.rowMaximumHeight);
+    }
+    m_viewState.laneHeight = height;
+    publishViewState();
+    return true;
 }
 
 void AutomationPage::publishTimeSelection(uint64_t startTick, uint64_t endTick,

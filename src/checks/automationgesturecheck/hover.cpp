@@ -314,13 +314,7 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     probe.require(topology.noInsertionGhost,
                   QStringLiteral("existing-node hover painted an insertion ghost"));
 
-    const QRect voice = rig.voiceBounds();
-    if (!voice.isEmpty()) {
-        rig.mouseMove(QPointF(lane.insertionPos.x(), voice.center().y()), Qt::NoButton);
-        rig.pump();
-    } else {
-        leaveCanvas(rig);
-    }
+    leaveCanvas(rig);
     const QImage transitioned = rig.renderArea();
     previewUnchanged("lane transition");
     const bool transitionCleared = cropUnchanged(idle, transitioned, lane.plot, dpr);

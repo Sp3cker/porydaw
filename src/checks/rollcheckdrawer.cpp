@@ -3,6 +3,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
+#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
 
 #include <QApplication>
@@ -16,8 +17,10 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <vector>
 
+#include "checks/rollcheckvoicechange.h"
 #include "checks/support/eventsynth.h"
 #include "ui/layout.h"
 
@@ -48,10 +51,13 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     auto *automationPage = drawer ? drawer->automationPage() : nullptr;
     auto *automationCanvas = automationPage ? automationPage->canvas() : nullptr;
     auto *velocityCanvas = drawer ? drawer->velocityArea() : nullptr;
-    check(drawer && roll && automationPage && automationCanvas && velocityCanvas,
+    auto *voiceCanvas = drawer ? drawer->voiceChangeArea() : nullptr;
+    check(drawer && roll && automationPage && automationCanvas && velocityCanvas && voiceCanvas,
           "concrete SongView did not expose its drawer pages");
-    if (!drawer || !roll || !automationPage || !automationCanvas || !velocityCanvas)
+    if (!drawer || !roll || !automationPage || !automationCanvas || !velocityCanvas || !voiceCanvas)
         return 1;
+    check(drawer->minimumSectionHeight() == layout::fontPx(17.0 / 5.0),
+          "drawer minimum body height did not use the compact sizing contract");
 
     std::vector<QString> statuses;
     std::vector<EditorViewState> publishedStates;
@@ -66,15 +72,22 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     auto *drawerSections = drawer->findChild<QWidget *>(QStringLiteral("drawerSections"));
     auto *velocityHandle = drawer->findChild<QWidget *>(QStringLiteral("velocityResizeHandle"));
     auto *automationHandle = drawer->findChild<QWidget *>(QStringLiteral("automationResizeHandle"));
+    auto *voiceHandle = drawer->findChild<QWidget *>(QStringLiteral("voiceChangesResizeHandle"));
     auto *velocityToggle = drawer->findChild<QToolButton *>(QStringLiteral("velocityDrawerToggle"));
+    auto *voiceToggle =
+        drawer->findChild<QToolButton *>(QStringLiteral("voiceChangesDrawerToggle"));
+    auto *automationToggle =
+        drawer->findChild<QToolButton *>(QStringLiteral("automationDrawerToggle"));
     auto *detentToggle = drawer->findChild<QToolButton *>(QStringLiteral("velocityDetentToggle"));
     check(sections.size() == 1 && drawerSections == sections.front() && drawerSections->isVisible(),
           "drawer did not create exactly one velocity section");
     check(!drawer->findChild<QTabBar *>() && !drawer->findChild<QStackedWidget *>(),
           "drawer retained legacy tab or stacked-page chrome");
-    check(velocityHandle && automationHandle && velocityToggle && detentToggle,
+    check(velocityHandle && automationHandle && voiceHandle && velocityToggle && voiceToggle &&
+              automationToggle && detentToggle,
           "drawer did not expose section handles and velocity controls");
-    if (!velocityHandle || !automationHandle || !velocityToggle || !detentToggle)
+    if (!velocityHandle || !automationHandle || !voiceHandle || !velocityToggle || !voiceToggle ||
+        !automationToggle || !detentToggle)
         return 1;
     const QImage activeDetentIcon =
         detentToggle->icon().pixmap(QSize(64, 64), QIcon::Normal, QIcon::On).toImage();
@@ -102,9 +115,10 @@ int runEditorDrawerCheck(const QString &screenshotPath)
 #endif
     check(view.drawerSectionVisible(EditorDrawerPage::Automations) &&
               !view.drawerSectionVisible(EditorDrawerPage::Velocity) &&
+              !view.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
               view.drawerActivePage() == EditorDrawerPage::Automations,
           "drawer default did not retain independent automation and velocity state");
-    check(velocityToggle->isVisible(),
+    check(velocityToggle->isVisible() && voiceToggle->isVisible() && automationToggle->isVisible(),
           "velocity toggle disappeared while the velocity pane was hidden");
     check(drawer->parentWidget() &&
               drawer->geometry().bottom() == drawer->parentWidget()->rect().bottom() &&
@@ -112,7 +126,8 @@ int runEditorDrawerCheck(const QString &screenshotPath)
               drawer->plotWidth() > 0,
           "drawer overlay changed the roll geometry or plot origin");
     check(drawer->automationAction()->shortcuts().isEmpty() &&
-              drawer->velocityAction()->shortcuts().isEmpty(),
+              drawer->velocityAction()->shortcuts().isEmpty() &&
+              drawer->voiceChangesAction()->shortcuts().isEmpty(),
           "drawer actions compete with the window A/V shortcuts");
 
     view.setDrawerSectionHeight(EditorDrawerPage::Velocity, 0);
@@ -150,6 +165,113 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     QCoreApplication::processEvents();
     check(view.drawerSectionVisible(EditorDrawerPage::Velocity) && velocityToggle->isVisible(),
           "visible velocity toggle did not reopen the velocity pane");
+    // The third page: the Voice Changes action toggles only its own section,
+    // keeps the other two open, and announces through the same status surface.
+    drawer->voiceChangesAction()->trigger();
+    QCoreApplication::processEvents();
+    observeState();
+    check(view.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
+              view.drawerSectionVisible(EditorDrawerPage::Velocity) &&
+              view.drawerSectionVisible(EditorDrawerPage::Automations) &&
+              view.drawerActivePage() == EditorDrawerPage::VoiceChanges &&
+              voiceCanvas->height() > 0 && voiceCanvas->isVisible() && !publishedStates.empty() &&
+              publishedStates.back().voiceChanges.visible &&
+              publishedStates.back().activePage == EditorDrawerPage::VoiceChanges &&
+              !statuses.empty() && statuses.back() == QStringLiteral("Voice changes shown"),
+          "voice changes action did not preserve the open automation and velocity sections");
+    check(voiceHandle->isVisible() && velocityHandle->isVisible() && automationHandle->isVisible(),
+          "all three section handles were not visible while voice changes was shown");
+    check(!detentToggle->isVisible(), "showing voice changes exposed the velocity detent toggle");
+
+    // Stack order: voice handle/body above velocity above automation; the
+    // full toggle row reads VoiceChanges, Automations, Velocity left to right
+    // and remains centered in the Velocity piano-key region.
+    const QRect voiceToggleBounds(voiceToggle->mapTo(drawer, QPoint()), voiceToggle->size());
+    const QRect automationToggleBounds(automationToggle->mapTo(drawer, QPoint()),
+                                       automationToggle->size());
+    const QRect velocityToggleBounds(velocityToggle->mapTo(drawer, QPoint()),
+                                     velocityToggle->size());
+    const QRect toggleGroup =
+        voiceToggleBounds.united(automationToggleBounds).united(velocityToggleBounds);
+    const int pianoKeysCenter =
+        velocityCanvas->mapTo(drawer, QPoint()).x() + velocityCanvas->plotOrigin() / 2;
+    check(voiceCanvas->mapTo(drawer, QPoint()).y() < velocityCanvas->mapTo(drawer, QPoint()).y() &&
+              velocityCanvas->mapTo(drawer, QPoint()).y() <
+                  automationCanvas->mapTo(drawer, QPoint()).y(),
+          "drawer stack did not order voice changes above velocity above automation");
+    check(voiceHandle->mapTo(drawer, QPoint()).y() < velocityHandle->mapTo(drawer, QPoint()).y() &&
+              velocityHandle->mapTo(drawer, QPoint()).y() <
+                  automationHandle->mapTo(drawer, QPoint()).y(),
+          "resize handles did not follow the voice/velocity/automation stack order");
+    check(voiceToggleBounds.x() + voiceToggleBounds.width() + layout::space(layout::Space::One) ==
+                  automationToggleBounds.x() &&
+              automationToggleBounds.x() + automationToggleBounds.width() +
+                      layout::space(layout::Space::One) ==
+                  velocityToggleBounds.x() &&
+              voiceToggleBounds.y() == automationToggleBounds.y() &&
+              automationToggleBounds.y() == velocityToggleBounds.y() &&
+              std::abs(toggleGroup.center().x() - pianoKeysCenter) <= 1,
+          "drawer toggle row was not centered voice changes, automations, velocity");
+
+    const int voiceHeightBefore = view.drawerSectionHeight(EditorDrawerPage::VoiceChanges);
+    const int voiceCanvasHeightBefore = voiceCanvas->height();
+    const int velocityHeightAtVoice = view.drawerSectionHeight(EditorDrawerPage::Velocity);
+    const int automationHeightAtVoice = view.drawerSectionHeight(EditorDrawerPage::Automations);
+    const QPoint voiceHandleCenter = voiceHandle->rect().center();
+    checks::events::sendMouse(*voiceHandle, QEvent::MouseButtonPress, QPointF(voiceHandleCenter),
+                              Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+    checks::events::sendMouse(*voiceHandle, QEvent::MouseMove,
+                              QPointF(voiceHandleCenter - QPoint(0, 40)), Qt::NoButton,
+                              Qt::RightButton, Qt::NoModifier);
+    checks::events::sendMouse(*voiceHandle, QEvent::MouseButtonRelease,
+                              QPointF(voiceHandleCenter - QPoint(0, 40)), Qt::RightButton,
+                              Qt::NoButton, Qt::NoModifier);
+    check(view.drawerSectionHeight(EditorDrawerPage::VoiceChanges) == voiceHeightBefore,
+          "right drag resized the voice changes section");
+    checks::events::sendMouse(*voiceHandle, QEvent::MouseButtonPress, QPointF(voiceHandleCenter),
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*voiceHandle, QEvent::MouseMove,
+                              QPointF(voiceHandleCenter - QPoint(0, 40)), Qt::NoButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    QCoreApplication::processEvents();
+    const int voiceCanvasHeightAfterMove = voiceCanvas->height();
+    check(voiceCanvasHeightAfterMove > voiceCanvasHeightBefore,
+          "voice changes drag did not grow the live section");
+    checks::events::sendMouse(*voiceHandle, QEvent::MouseButtonRelease,
+                              QPointF(voiceHandleCenter - QPoint(0, 40)), Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
+    QCoreApplication::processEvents();
+    const int voiceHeightAfter = view.drawerSectionHeight(EditorDrawerPage::VoiceChanges);
+    check(voiceHeightAfter == voiceCanvasHeightAfterMove &&
+              voiceHeightAfter <= drawer->maximumSectionHeight() &&
+              view.drawerSectionHeight(EditorDrawerPage::Velocity) == velocityHeightAtVoice &&
+              view.drawerSectionHeight(EditorDrawerPage::Automations) == automationHeightAtVoice,
+          "voice changes drag did not persist only its own section height");
+    check(voiceCanvas->mapTo(drawer, QPoint()).y() < velocityCanvas->mapTo(drawer, QPoint()).y() &&
+              voiceCanvas->height() > 0,
+          "voice changes resize broke the drawer stack geometry");
+    check(!detentToggle->isVisible(), "resizing voice changes exposed the velocity detent toggle");
+
+    drawer->voiceChangesAction()->trigger();
+    QCoreApplication::processEvents();
+    observeState();
+    check(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
+              view.drawerSectionVisible(EditorDrawerPage::Velocity) &&
+              view.drawerSectionVisible(EditorDrawerPage::Automations) &&
+              view.drawerActivePage() == EditorDrawerPage::VoiceChanges &&
+              voiceToggle->isVisible() &&
+              view.editorViewState().voiceChanges.height == voiceHeightAfter && !statuses.empty() &&
+              statuses.back() == QStringLiteral("Voice changes hidden"),
+          "hiding voice changes changed the other sections or lost its retained height");
+    voiceToggle->click();
+    QCoreApplication::processEvents();
+    check(view.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
+              view.drawerSectionHeight(EditorDrawerPage::VoiceChanges) == voiceHeightAfter,
+          "voice changes toggle did not reopen with its retained height");
+    drawer->voiceChangesAction()->trigger();
+    QCoreApplication::processEvents();
+    check(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges),
+          "voice changes action did not close its own section");
 
     const int velocityHeightBefore = view.drawerSectionHeight(EditorDrawerPage::Velocity);
     const QPoint velocityHandleCenter = velocityHandle->rect().center();
@@ -254,6 +376,38 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     QCoreApplication::processEvents();
     check(QApplication::focusWidget() == contentFocus,
           "opening velocity moved focus away from the editor hotkey surface");
+    // Focus fallback walks the visual order VoiceChanges, Velocity,
+    // Automations when the focused page hides, and returns to content when
+    // the last page goes.
+    view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
+    view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    QCoreApplication::processEvents();
+    voiceCanvas->setFocus(Qt::MouseFocusReason);
+    QCoreApplication::processEvents();
+    drawer->voiceChangesAction()->trigger();
+    QCoreApplication::processEvents();
+    QWidget *voiceFallback = QApplication::focusWidget();
+    check(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges) && voiceFallback &&
+              (voiceFallback == velocityCanvas || velocityCanvas->isAncestorOf(voiceFallback)),
+          "hiding the focused voice page did not focus the velocity page");
+    velocityCanvas->setFocus(Qt::MouseFocusReason);
+    QCoreApplication::processEvents();
+    drawer->velocityAction()->trigger();
+    QCoreApplication::processEvents();
+    QWidget *velocityFallback = QApplication::focusWidget();
+    check(!view.drawerSectionVisible(EditorDrawerPage::Velocity) && velocityFallback &&
+              (velocityFallback == automationCanvas ||
+               automationCanvas->isAncestorOf(velocityFallback)),
+          "hiding the focused velocity page did not focus the automation page");
+    drawer->automationAction()->trigger();
+    QCoreApplication::processEvents();
+    QWidget *contentFallback = QApplication::focusWidget();
+    check(!view.hasVisibleDrawerSection() &&
+              (!contentFallback || !(voiceCanvas->isAncestorOf(contentFallback) ||
+                                     velocityCanvas->isAncestorOf(contentFallback) ||
+                                     automationCanvas->isAncestorOf(contentFallback))),
+          "hiding the last drawer page did not return focus to content");
 
     const QRect parentBounds = drawer->parentWidget()->rect();
     const int narrowWidth = std::max(0, drawer->plotOrigin() - layout::singlePixel());
@@ -264,6 +418,23 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     check(drawer->plotWidth() == 0 && roll->geometry().top() == rollBeforeNarrow.top() &&
               roll->geometry().height() == rollBeforeNarrow.height(),
           "narrow drawer changed the roll geometry");
+    // Vertical host clamp: with all three pages open, a too-short host must
+    // never produce negative geometry and must keep the stack order.
+    view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
+    view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    QCoreApplication::processEvents();
+    const QRect shortBounds(parentBounds.left(), parentBounds.top(), parentBounds.width(),
+                            drawer->minimumSectionHeight());
+    drawer->setHostBounds(shortBounds);
+    QCoreApplication::processEvents();
+    check(voiceCanvas->height() >= 0 && velocityCanvas->height() >= 0 &&
+              automationCanvas->height() >= 0 &&
+              voiceCanvas->mapTo(drawer, QPoint()).y() <=
+                  velocityCanvas->mapTo(drawer, QPoint()).y() &&
+              velocityCanvas->mapTo(drawer, QPoint()).y() <=
+                  automationCanvas->mapTo(drawer, QPoint()).y(),
+          "short host clamp produced negative or unordered drawer geometry");
     drawer->useParentBounds();
     QCoreApplication::processEvents();
     std::vector<QWidget *> headerRows;
@@ -323,6 +494,10 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     check(alignedHeaderClicked, "track header click was blocked beside an aligned velocity lane");
 
     check(alignedGapUnmasked, "drawer mask still covered the aligned track-header point");
+    // Standalone VoiceChangeArea behavior on its own synthesized document:
+    // paint/lifecycle, refresh, picker commits, hover, camera, undo labels.
+    checkVoiceChangeAreaPage(failures);
+
     if (!screenshotPath.isEmpty()) {
         view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
         view.setDrawerActivePage(EditorDrawerPage::Automations);

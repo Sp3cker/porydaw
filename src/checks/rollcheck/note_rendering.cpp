@@ -340,26 +340,6 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
                 fail("no label at the exact padded label fit");
             view.setNoteNameMode(true);
 
-            // At this height the wide note's velocity bar crosses the label
-            // rows. The label sits on a plate of the plain fill, so inside
-            // the label strip the bar must give way to fill pixels — ink is
-            // never read against the bar.
-            const SnappedRows fitRowsGrid{view, *roll};
-            const QRectF wideRect = fitRowsGrid.noteRect(
-                view.displayX(double(runTick3), pianoKeyboardWidth, fitRowsGrid.dpr()),
-                view.displayX(double(runTick3 + labelTicks), pianoKeyboardWidth, fitRowsGrid.dpr()),
-                runKey);
-            const QRectF barRect = songview::velBarRect(wideRect, 100, fitRowsGrid.dpr());
-            const QRect stripX = labelStrip(runTick3, stripW);
-            bool plateUnderText = false;
-            for (int y = toRasterPixel(barRect.top());
-                 y < toRasterPixel(barRect.bottom()) && !plateUnderText; ++y)
-                for (int x = stripX.left(); x <= stripX.right() && !plateUnderText; ++x)
-                    plateUnderText = QColor(fitRowsNamed.pixel(x, y)) == expectedNoteColor &&
-                                     QColor(fitRowsUnnamed.pixel(x, y)) != expectedNoteColor;
-            if (!plateUnderText)
-                fail("no fill plate under the label across the velocity bar");
-
             // ...and one layout pixel shorter it hides rather than shrinks.
             view.applyViewState(centeredOnRun(double(fixedLabelHeight + 2 * labelPadding)));
             const QImage shortRowsNamed = roll->grab().toImage();
@@ -417,13 +397,6 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
     const Cell &a = fixture.a;
     const int undoBaseline = doc.undoStack()->index();
     auto fail = [&](const char *what) { check.fail(what); };
-    // A velocity value on a vertically short note stays inside the note box:
-    // the face fits the box rather than the row pitch (which includes the
-    // hairline gap and can round up past it), and the plated text clips to
-    // the box. Probe pitches where a pitch-fitted face pushed digit ink into
-    // the gap row on 1x displays: an integer pitch whose fitted face
-    // occupied the whole rounded height, and a fractional pitch that rounds
-    // up past the row.
     {
         const uint64_t overlayTick = a.tick + 3 * a.dur;
         const qreal rasterDpr = roll->devicePixelRatioF();
@@ -450,13 +423,6 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
             }
             doc.addNote(track, dragCell.tick, uint8_t(dragCell.key), uint32_t(dragCell.dur), 100);
 
-            // An isolated two-cell span: wide enough for a two-digit value,
-            // with the rows above and below empty on every track so the
-            // strips beyond the box compare against static background. The
-            // parked playhead/edit-cursor column and the loop markers paint
-            // identically over background and note, so they must stay a cell
-            // clear of the span (findFreeCell dodges too few of these and
-            // only one cell, hence the dedicated scan).
             Cell cell;
             const SnappedRows shortRows{view, *roll};
             for (int key = 115; key >= 24 && cell.key < 0; --key) {
@@ -496,8 +462,6 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
                 continue;
             }
 
-            // Velocity 10 parks the probed note's bar at the box bottom,
-            // keeping the upper interior clear for the glyph-ink assertion.
             doc.addNote(track, cell.tick, uint8_t(cell.key), uint32_t(2 * cell.dur), 10);
             QCoreApplication::processEvents();
             const QImage shortIdleImage = roll->grab().toImage();
@@ -517,53 +481,44 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
             const QRectF shortRect = shortRows.noteRect(shortLeftX, shortRightX, cell.key);
             const QRectF shortBox = shortRows.noteBox(shortRect);
 
-            // The drag must render a value, or the no-bleed comparison below
-            // passes vacuously. Glyph ink is any non-fill pixel in the box
-            // interior above the vertical midline: the velocity bar sits at
-            // the box bottom at 10, and the unselected note's black border is
-            // excluded by margin.
-            const QRgb draggedFill = SongView::noteColor(track, 10).rgb();
             const int frameMargin = songview::noteBorderPixels(rasterDpr);
+            const int boxLeftPixel = toRasterPixel(shortBox.left());
+            const int boxRightPixel = toRasterPixel(shortBox.right());
             const int boxTopPixel = toRasterPixel(shortBox.top());
             const int boxBottomPixel = toRasterPixel(shortBox.bottom());
             const int inkTop = boxTopPixel + frameMargin;
-            const int inkBottom = (boxTopPixel + boxBottomPixel) / 2;
+            const int inkBottom = boxBottomPixel - frameMargin;
             if (inkTop >= inkBottom)
                 fail("short-note velocity probe has no frame-free interior row");
             bool valueInkFound = false;
             for (int y = inkTop; y < inkBottom; ++y) {
-                for (int x = toRasterPixel(shortBox.left()) + frameMargin;
-                     x < toRasterPixel(shortBox.right()) - frameMargin; ++x) {
-                    valueInkFound |= shortDragImage.pixel(x, y) != draggedFill;
-                }
+                for (int x = boxLeftPixel + frameMargin; x < boxRightPixel - frameMargin; ++x)
+                    valueInkFound |= shortDragImage.pixel(x, y) != shortIdleImage.pixel(x, y);
             }
             if (!valueInkFound)
-                fail("short-note velocity drag rendered no value ink");
+                fail("short-note velocity drag rendered no value ink inside the note box");
 
-            // No ink outside the box: the gap row under the box and the rows
-            // beyond the note rect (below and above) must match the pre-drag
-            // image, on the note's span padded past the plate's side bleed.
             const QRect imageBounds = shortDragImage.rect();
-            const auto stripsMatch = [&](int firstY, int lastY) {
-                // The left clamp also keeps the strip out of the keyboard,
-                // whose hover mark legitimately repaints during the drag.
-                const int stripLeft = std::max(toRasterPixel(shortBox.left()) - 2,
-                                               toRasterPixel(qreal(pianoKeyboardWidth)));
-                for (int y = std::max(firstY, 0); y <= std::min(lastY, imageBounds.bottom()); ++y) {
-                    for (int x = stripLeft;
-                         x <= std::min(toRasterPixel(shortBox.right()) + 2, imageBounds.right());
-                         ++x) {
-                        if (shortDragImage.pixel(x, y) != shortIdleImage.pixel(x, y))
-                            return false;
+            const QRect noteBoxPixels(QPoint(boxLeftPixel, boxTopPixel),
+                                      QPoint(boxRightPixel - 1, boxBottomPixel - 1));
+            const int escapeMargin = noteBoxPixels.height();
+            const QRect clipProbe =
+                noteBoxPixels.adjusted(-escapeMargin, -escapeMargin, escapeMargin, escapeMargin)
+                    .intersected(imageBounds);
+            bool pixelsEscapedClip = false;
+            for (int y = clipProbe.top(); y <= clipProbe.bottom(); ++y) {
+                for (int x = clipProbe.left(); x <= clipProbe.right(); ++x) {
+                    if (!noteBoxPixels.contains(x, y) &&
+                        shortDragImage.pixel(x, y) != shortIdleImage.pixel(x, y)) {
+                        pixelsEscapedClip = true;
+                        break;
                     }
                 }
-                return true;
-            };
-            if (!stripsMatch(boxBottomPixel, toRasterPixel(shortRect.bottom()) + 2))
-                fail("short-note velocity value bled below the note box");
-            if (!stripsMatch(toRasterPixel(shortRect.top()) - 3,
-                             toRasterPixel(shortRect.top()) - 1))
-                fail("short-note velocity value bled above the note rect");
+                if (pixelsEscapedClip)
+                    break;
+            }
+            if (pixelsEscapedClip)
+                fail("short-note velocity drag changed pixels outside the note box clip");
 
             while (doc.undoStack()->index() > undoIndexBefore && doc.undoStack()->canUndo())
                 doc.undoStack()->undo();

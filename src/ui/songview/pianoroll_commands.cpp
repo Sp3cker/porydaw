@@ -94,9 +94,8 @@ void PianoRoll::keyPressEvent(QKeyEvent *event)
     }
     if (event->key() == Qt::Key_Escape) {
         cancelVelocityInteraction();
-        m_drag = Drag::None;
-        m_leftPress = false;
-        m_rightPress = false;
+        m_leftDrag = LeftDrag::None;
+        m_rightDrag = RightDrag::None;
         stopBandAuditions();
         m_sv->selectionModel().clearNoteSelection();
         m_sv->selectionModel().clearTimeSelection();
@@ -116,36 +115,11 @@ void PianoRoll::keyReleaseEvent(QKeyEvent *event)
     }
     // End the transpose audition when the shortcut's keys come up.
     // Autorepeat releases are skipped so a held transpose key keeps sounding
-    // the moving pitch; the Drag::None guard keeps a stray key release
+    // the moving pitch; the idle-state guard keeps a stray key release
     // from cutting a mouse gesture's preview short.
-    if (!event->isAutoRepeat() && m_drag == Drag::None)
+    if (!event->isAutoRepeat() && !dragLive())
         stopNoteAudition();
     QWidget::keyReleaseEvent(event);
-}
-
-void PianoRoll::beginDraw()
-{
-    if (m_sv->scaleFold() && (m_pressKey < 0 || !m_sv->isScalePitch(m_pressKey))) {
-        return;
-    }
-    m_drawAnchor = m_sv->snapTickDown(m_pressTick);
-    m_drawTick = m_drawAnchor;
-    m_drawDur = int64_t(m_sv->gridTicksAt(m_drawAnchor));
-    m_drawKey = m_pressKey;
-    m_drag = Drag::Draw;
-    m_sv->selectionModel().clearNoteSelection();
-    ViewNote pending{};
-    pending.startTick = uint32_t(m_drawTick);
-    pending.endTick = uint32_t(m_drawTick + uint64_t(m_drawDur));
-    pending.key = uint8_t(m_drawKey);
-    pending.velocity = m_lastVelocity;
-    pending.track = uint8_t(m_sv->selectionModel().primaryTrack());
-    m_sv->announceNote(pending);
-    // The empty-space press already sounds this row; don't re-attack it.
-    if (m_soundingKey != m_drawKey)
-        auditionKey(m_drawKey, m_lastVelocity);
-    m_auditioned = true;
-    invalidateContent();
 }
 
 void PianoRoll::openPitchBendEditor()

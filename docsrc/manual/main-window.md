@@ -7,7 +7,8 @@ Porydaw has several main panels. They are all resizable and can even be repositi
 1. **Song list**: All the songs are listed here. You can filter and order it.
 2. **Voicegroup editor**: Displays all of the instruments used in the current song's voicegroup. Also allows editing!
 3. **Piano roll**: View and edit the MIDI notes.
-4. **Automation lanes**: View and edit the "effects" (MIDI CC events).
+4. **Voice changes**: View and edit the voice changes (program changes) of the focused track.
+5. **Automation lanes**: View and edit the tempo lane and the "effects" (MIDI CC) lanes.
 
 ![Porydaw Panels](../img/quick-start-littleroot-panels.png)
 
@@ -45,9 +46,19 @@ Editing details in [Editing Notes](piano-roll.md). -->
 and tempo display, master volume, polyphony meter (link to
 [Polyphony](polyphony.md) for what the meter means). -->
 
+## Voice changes
+
+<!-- TODO: The top drawer page, above the Velocity and Automations pages.
+Each voice change holds the chosen program until the next change, drawn as
+a labeled span on the focused track's timeline. Double-click a position to
+pick a voice; right-click to insert, change, or delete a voice change.
+Toggle the page with `P` or View > Voice Changes; it shows, hides, and
+resizes independently of the Velocity and Automations pages. -->
+
 ## Automation lanes
 
-<!-- TODO: The bottom strip; per-track lanes + the tempo lane. Details in
+<!-- TODO: The bottom drawer page: the tempo lane plus the per-track CC
+lanes. Voice changes have their own page above. Details in
 [Automation](automation.md). -->
 
 ## The voicegroup dock

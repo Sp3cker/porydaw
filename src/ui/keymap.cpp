@@ -44,6 +44,8 @@ const Def kDefs[] = {
     // Edit
     {"edit.undo", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Undo"), QKeySequence::Undo, ""},
     {"edit.redo", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Redo"), QKeySequence::Redo, ""},
+    {"edit.insert_time", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Insert Time"),
+     QKeySequence::UnknownKey, "Ctrl+Shift+I"},
     {"edit.preferences", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Preferences"),
      QKeySequence::Preferences, "Ctrl+,"},
     {"edit.song_settings", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Song Settings"),

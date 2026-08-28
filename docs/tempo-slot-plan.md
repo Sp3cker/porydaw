@@ -1,8 +1,13 @@
 # Node lanes and Voice Change lane plan
 
-**Status:** Authoritative implementation and behavior record. Historical
-decision context remains in [`tempo-slot-minutes.md`](tempo-slot-minutes.md);
-the abandoned standalone-strip plan is tombstoned in
+**Status:** Authoritative implementation and behavior record for the Tempo
+and CC node lanes. The Voice Change material below is superseded by
+[`voice-change-drawer-page-plan.md`](old/voice-change-drawer-page-plan.md):
+Voice Change is now an independent editor-drawer page owned by
+`VoiceChangeArea`, not an `AutomationCanvas` strip, and `AutomationCanvas`
+keeps only the Tempo and CC lanes. Historical decision context remains in
+[`tempo-slot-minutes.md`](tempo-slot-minutes.md); the abandoned
+standalone-strip plan is tombstoned in
 [`tempo-strip-plan.md`](tempo-strip-plan.md).
 
 ## Goal

@@ -5,13 +5,14 @@
 
 EditorDrawerState EditorViewState::drawerState() const noexcept
 {
-    return {velocity, automation, activePage};
+    return {velocity, automation, voiceChanges, activePage};
 }
 
 void EditorViewState::setDrawerState(const EditorDrawerState &state) noexcept
 {
     velocity = state.velocity;
     automation = state.automation;
+    voiceChanges = state.voiceChanges;
     activePage = state.activePage;
 }
 

@@ -120,7 +120,8 @@ void PianoRoll::refreshTextLayout()
 
 bool PianoRoll::gestureActive() const
 {
-    return m_panning || m_drag != Drag::None || m_leftPress || m_rightPress || m_kbdKey >= 0 ||
+    return m_panning || dragLive() || m_leftDrag == LeftDrag::PendingDraw ||
+           m_rightDrag != RightDrag::None || m_kbdKey >= 0 ||
            (m_bendPopup && m_bendPopup->isVisible());
 }
 
@@ -132,11 +133,11 @@ void PianoRoll::cancelPitchBendPopup()
 
 void PianoRoll::cancelVelocityInteraction()
 {
-    if (m_drag != Drag::Velocity && !m_velModPress)
+    if (m_leftDrag != LeftDrag::Velocity && m_leftDrag != LeftDrag::PendingVelocity)
         return;
-    m_drag = Drag::None;
+    clearLiveDragToken();
+    m_leftDrag = LeftDrag::None;
     m_dVel = 0;
-    m_velModPress = false;
     m_modifierVelocityDrag = false;
     m_velModMods = Qt::NoModifier;
     m_velAnchor = {};
@@ -158,7 +159,8 @@ bool PianoRoll::event(QEvent *event)
         m_suppressNextVelocitySelectionAdd = false;
         m_lastModifierVelocityDragNote = {};
     }
-    if ((losesFocus || type == QEvent::UngrabMouse) && (m_drag == Drag::Velocity || m_velModPress))
+    if ((losesFocus || type == QEvent::UngrabMouse) &&
+        (m_leftDrag == LeftDrag::Velocity || m_leftDrag == LeftDrag::PendingVelocity))
         cancelVelocityInteraction();
     const bool handled = TimelineSurface::event(event);
     if (type == QEvent::FontChange || type == QEvent::DevicePixelRatioChange) {

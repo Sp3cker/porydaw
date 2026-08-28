@@ -11,6 +11,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawersections.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
+#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 
@@ -25,11 +26,13 @@ EditorDrawer::EditorDrawer(SongView &owner, QWidget *parent, EditorViewState vie
 
     m_automationPage = new AutomationPage(owner, this);
     m_velocityArea = new VelocityArea(owner, this);
+    m_voiceChangeArea = new VoiceChangeArea(owner, this);
     m_automationPage->setFocusPolicy(Qt::NoFocus);
     m_velocityArea->installEventFilter(this);
+    m_voiceChangeArea->installEventFilter(this);
     if (m_automationPage->canvas())
         m_automationPage->canvas()->installEventFilter(this);
-    m_sections = new DrawerSections(this, m_automationPage, m_velocityArea);
+    m_sections = new DrawerSections(this, m_automationPage, m_velocityArea, m_voiceChangeArea);
     connect(m_sections, &DrawerSections::geometryChanged, this, &EditorDrawer::arrange);
     connect(m_sections, &DrawerSections::statePublished, this, &EditorDrawer::publishViewState);
     m_automationAction = new QAction(tr("Automations"), this);
@@ -42,6 +45,11 @@ EditorDrawer::EditorDrawer(SongView &owner, QWidget *parent, EditorViewState vie
     addAction(m_velocityAction);
     connect(m_velocityAction, &QAction::triggered, this,
             [this] { activatePage(EditorDrawerPage::Velocity); });
+    m_voiceChangesAction = new QAction(tr("Voice Changes"), this);
+    m_voiceChangesAction->setObjectName(QStringLiteral("voiceChangesDrawerAction"));
+    addAction(m_voiceChangesAction);
+    connect(m_voiceChangesAction, &QAction::triggered, this,
+            [this] { activatePage(EditorDrawerPage::VoiceChanges); });
     syncViewState(viewState);
 
     arrange();
@@ -73,7 +81,8 @@ void EditorDrawer::setViewState(const EditorViewState &viewState)
 
 void EditorDrawer::syncViewState(const EditorViewState &viewState)
 {
-    m_sections->applyState(viewState.velocity, viewState.automation, viewState.activePage);
+    m_sections->applyState(viewState.velocity, viewState.automation, viewState.voiceChanges,
+                           viewState.activePage);
 }
 
 EditorViewState EditorDrawer::drawerViewState() const
@@ -81,6 +90,7 @@ EditorViewState EditorDrawer::drawerViewState() const
     EditorViewState state;
     state.velocity = {m_sections->velocityVisible(), m_sections->velocityHeight()};
     state.automation = {m_sections->automationVisible(), m_sections->automationHeight()};
+    state.voiceChanges = {m_sections->voiceChangesVisible(), m_sections->voiceChangesHeight()};
     state.activePage = m_sections->activePage();
     return state;
 }
@@ -90,26 +100,40 @@ EditorDrawer::DrawerDiff EditorDrawer::drawerDiff(const EditorViewState &previou
 {
     DrawerDiff diff;
     diff.visibilityChanged = previous.velocity.visible != next.velocity.visible ||
-                             previous.automation.visible != next.automation.visible;
+                             previous.automation.visible != next.automation.visible ||
+                             previous.voiceChanges.visible != next.voiceChanges.visible;
     diff.activePageChanged = previous.activePage != next.activePage;
-    diff.becameFullyHidden = (previous.velocity.visible || previous.automation.visible) &&
-                             !next.velocity.visible && !next.automation.visible;
+    diff.becameFullyHidden = (previous.velocity.visible || previous.automation.visible ||
+                              previous.voiceChanges.visible) &&
+                             !next.velocity.visible && !next.automation.visible &&
+                             !next.voiceChanges.visible;
     return diff;
+}
+
+bool EditorDrawer::statePageVisible(const EditorViewState &state, EditorDrawerPage page) noexcept
+{
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        return state.voiceChanges.visible;
+    case EditorDrawerPage::Velocity:
+        return state.velocity.visible;
+    case EditorDrawerPage::Automations:
+        return state.automation.visible;
+    }
+    Q_UNREACHABLE();
 }
 
 EditorDrawer::DrawerDiff EditorDrawer::prepareViewStateTransition(const EditorViewState &previous,
                                                                   const EditorViewState &next)
 {
     const DrawerDiff diff = drawerDiff(previous, next);
-    if (previous.velocity.visible && !next.velocity.visible)
-        cancelPageInteraction(EditorDrawerPage::Velocity);
-    if (previous.automation.visible && !next.automation.visible)
-        cancelPageInteraction(EditorDrawerPage::Automations);
-    if (diff.activePageChanged &&
-        (previous.activePage == EditorDrawerPage::Velocity ? previous.velocity.visible
-                                                           : previous.automation.visible)) {
-        cancelPageInteraction(previous.activePage);
+    for (const EditorDrawerPage page : {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
+                                        EditorDrawerPage::VoiceChanges}) {
+        if (statePageVisible(previous, page) && !statePageVisible(next, page))
+            cancelPageInteraction(page);
     }
+    if (diff.activePageChanged && statePageVisible(previous, previous.activePage))
+        cancelPageInteraction(previous.activePage);
     return diff;
 }
 
@@ -133,6 +157,7 @@ void EditorDrawer::publishViewState(bool geometryAlreadyArranged)
     const DrawerDiff diff = prepareViewStateTransition(state, next);
     state.velocity = next.velocity;
     state.automation = next.automation;
+    state.voiceChanges = next.voiceChanges;
     state.activePage = next.activePage;
     m_owner.setEditorViewState(state);
     if (!geometryAlreadyArranged)
@@ -154,7 +179,8 @@ void EditorDrawer::focusVisiblePage()
 
 bool EditorDrawer::hasVisibleSection() const noexcept
 {
-    return pageVisible(EditorDrawerPage::Automations) || pageVisible(EditorDrawerPage::Velocity);
+    return pageVisible(EditorDrawerPage::Automations) || pageVisible(EditorDrawerPage::Velocity) ||
+           pageVisible(EditorDrawerPage::VoiceChanges);
 }
 
 EditorDrawerPage EditorDrawer::activePage() const noexcept
@@ -164,16 +190,31 @@ EditorDrawerPage EditorDrawer::activePage() const noexcept
 
 int EditorDrawer::sectionHeight(EditorDrawerPage page) const noexcept
 {
-    const std::optional<int> height = page == EditorDrawerPage::Velocity
-                                          ? m_sections->velocityHeight()
-                                          : m_sections->automationHeight();
+    const std::optional<int> height = [this, page] {
+        switch (page) {
+        case EditorDrawerPage::VoiceChanges:
+            return m_sections->voiceChangesHeight();
+        case EditorDrawerPage::Velocity:
+            return m_sections->velocityHeight();
+        case EditorDrawerPage::Automations:
+            return m_sections->automationHeight();
+        }
+        Q_UNREACHABLE();
+    }();
     return height.value_or(0);
 }
 
 bool EditorDrawer::pageVisible(EditorDrawerPage page) const noexcept
 {
-    return page == EditorDrawerPage::Velocity ? m_sections->velocityVisible()
-                                              : m_sections->automationVisible();
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        return m_sections->voiceChangesVisible();
+    case EditorDrawerPage::Velocity:
+        return m_sections->velocityVisible();
+    case EditorDrawerPage::Automations:
+        return m_sections->automationVisible();
+    }
+    Q_UNREACHABLE();
 }
 
 int EditorDrawer::minimumSectionHeight() const noexcept
@@ -210,7 +251,8 @@ int EditorDrawer::plotWidth() const noexcept
 bool EditorDrawer::eventFilter(QObject *watched, QEvent *event)
 {
     if (watched == canvasFor(EditorDrawerPage::Automations) ||
-        watched == canvasFor(EditorDrawerPage::Velocity)) {
+        watched == canvasFor(EditorDrawerPage::Velocity) ||
+        watched == canvasFor(EditorDrawerPage::VoiceChanges)) {
         if (event->type() == QEvent::FocusIn)
             m_drawerCanvasOwnsFocus = true;
         else if (event->type() == QEvent::FocusOut)
@@ -227,11 +269,22 @@ void EditorDrawer::activatePage(EditorDrawerPage page)
 {
     const bool hiding = m_owner.drawerSectionVisible(page);
     m_owner.toggleDrawerSection(page);
-    m_owner.announce(page == EditorDrawerPage::Automations
-                         ? (hiding ? QStringLiteral("Automation lanes hidden")
-                                   : QStringLiteral("Automation lanes shown"))
-                         : (hiding ? QStringLiteral("Velocity lane hidden")
-                                   : QStringLiteral("Velocity lane shown")));
+    QString announcement;
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        announcement =
+            hiding ? QStringLiteral("Voice changes hidden") : QStringLiteral("Voice changes shown");
+        break;
+    case EditorDrawerPage::Velocity:
+        announcement =
+            hiding ? QStringLiteral("Velocity lane hidden") : QStringLiteral("Velocity lane shown");
+        break;
+    case EditorDrawerPage::Automations:
+        announcement = hiding ? QStringLiteral("Automation lanes hidden")
+                              : QStringLiteral("Automation lanes shown");
+        break;
+    }
+    m_owner.announce(announcement);
 }
 
 void EditorDrawer::arrange()
@@ -264,28 +317,45 @@ void EditorDrawer::arrangeChildren()
 
 void EditorDrawer::cancelPageInteraction(EditorDrawerPage page)
 {
-    if (page == EditorDrawerPage::Automations)
-        m_automationPage->cancelInteraction();
-    else
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        m_voiceChangeArea->cancelInteraction();
+        return;
+    case EditorDrawerPage::Velocity:
         m_velocityArea->cancelInteraction();
+        return;
+    case EditorDrawerPage::Automations:
+        m_automationPage->cancelInteraction();
+        return;
+    }
+    Q_UNREACHABLE();
 }
 
 bool EditorDrawer::ownsFocus() const
 {
     QWidget *focus = QApplication::focusWidget();
-    const QWidget *automationCanvas = canvasFor(EditorDrawerPage::Automations);
-    const QWidget *velocityCanvas = canvasFor(EditorDrawerPage::Velocity);
-    return m_drawerCanvasOwnsFocus ||
-           (focus && (focus == automationCanvas || focus == velocityCanvas ||
-                      (automationCanvas && automationCanvas->isAncestorOf(focus)) ||
-                      (velocityCanvas && velocityCanvas->isAncestorOf(focus))));
+    if (m_drawerCanvasOwnsFocus || !focus)
+        return m_drawerCanvasOwnsFocus;
+    for (const EditorDrawerPage page : {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
+                                        EditorDrawerPage::VoiceChanges}) {
+        if (const QWidget *canvas = canvasFor(page);
+            canvas && (focus == canvas || canvas->isAncestorOf(focus)))
+            return true;
+    }
+    return false;
 }
 
 QWidget *EditorDrawer::canvasFor(EditorDrawerPage page) const
 {
-    return page == EditorDrawerPage::Automations
-               ? static_cast<QWidget *>(m_automationPage->canvas())
-               : static_cast<QWidget *>(m_velocityArea);
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        return m_voiceChangeArea;
+    case EditorDrawerPage::Velocity:
+        return m_velocityArea;
+    case EditorDrawerPage::Automations:
+        return m_automationPage->canvas();
+    }
+    Q_UNREACHABLE();
 }
 
 QRect EditorDrawer::resolvedHostBounds() const noexcept

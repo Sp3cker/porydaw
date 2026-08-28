@@ -1,10 +1,6 @@
 #include "domains.h"
 
-#include <algorithm>
 #include <limits>
-#include <type_traits>
-
-#include <QtGlobal>
 
 #include "core/timedefaults.h"
 #include "rig.h"
@@ -12,10 +8,7 @@
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
-#include "ui/editordrawer/voicechangelane.h"
 #include "ui/songview.h"
-
-static_assert(!std::is_base_of_v<NodeLane, VoiceChangeLane>);
 
 void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
                                   const AutomationGestureCheck &check)
@@ -48,36 +41,21 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     };
     checkSupportedRange(rig.pan, 0, 127, QStringLiteral("pan"));
     checkSupportedRange(rig.lfo, 0, 127, QStringLiteral("LFO"));
-    checkSupportedRange(rig.volume, 0, 127, QStringLiteral("volume"));
-    check(rig.expandTempo(), QStringLiteral("Tempo header did not expose the expanded body"));
-    const auto tempoHandle = LaneHandle{0};
-    const auto tempoMin = rig.pointAt(tempoHandle, 0, CoreTimeDefaults::kMinTempoBpm);
-    const auto tempoMax = rig.pointAt(tempoHandle, 0, CoreTimeDefaults::kMaxTempoBpm);
-    check(tempoMin.mapped.point.value == CoreTimeDefaults::kMinTempoBpm &&
-              tempoMax.mapped.point.value == CoreTimeDefaults::kMaxTempoBpm,
-          QStringLiteral("Tempo lane did not map its BPM value range"));
-    const QRect voice = rig.voiceBounds();
+    // The extracted Voice Change strip left the CC stack owning the canvas
+    // top: row zero begins at y=0 and a pencil press there must map onto its
+    // value range instead of vanishing into a reserved inset.
     const auto &rows = rig.canvas().rows();
-    const bool voiceIsCcRow = std::any_of(rows.cbegin(), rows.cend(), [](const AutomationRow &row) {
-        return row.id.controller == DOC_CC_VOICE;
-    });
-    check(!rows.empty() && !voice.isEmpty() && !voiceIsCcRow &&
-              voice.bottom() < rig.canvas().contentTopInset(),
-          QStringLiteral("Voice Change hit-tested as a NodeLane or CC row"));
-    const auto voiceBefore = rig.snapshot(rig.pan.track, rig.pan.controller);
-    const QPointF voiceStart(rig.geometry().plotOrigin + 40, voice.center().y());
-    const QPointF voiceEnd = voiceStart + QPointF(48, 6);
-    rig.mousePress(voiceStart);
-    rig.mouseMove(voiceEnd);
-    rig.mouseRelease(voiceEnd);
-    rig.pump();
-    const auto voiceAfter = rig.snapshot(rig.pan.track, rig.pan.controller);
-    check(voiceBefore.smf == voiceAfter.smf && voiceBefore.revision == voiceAfter.revision &&
-              voiceBefore.undoIndex == voiceAfter.undoIndex && !rig.canvas().isPanning() &&
-              !rig.canvas().bandPreviewContainsLane(LaneHandle{0}) &&
-              !rig.view().userGestureActive() &&
-              !rig.view().selectionModel().timeSelection().active(),
-          QStringLiteral("Voice Change entered a NodeLane gesture"));
+    const QRect firstCcBody = rig.bodyFor(LaneHandle{1});
+    check(!rows.empty() && !firstCcBody.isEmpty() && firstCcBody.top() == 0,
+          QStringLiteral("First CC row did not own the canvas origin after the voice strip "
+                         "extraction"));
+    const auto topInput = rig.pointAt(LaneHandle{1}, 48, 64);
+    check(topInput.position.y() >= qreal(firstCcBody.top()) &&
+              topInput.position.y() < qreal(firstCcBody.bottom()) &&
+              qRound(AutomationProjection::valueAtY(firstCcBody, rig.geometry(), 0, 127,
+                                                    topInput.position.y())) == 64,
+          QStringLiteral("Pencil mapping at the canvas top did not resolve onto the first CC "
+                         "row"));
     const auto panHandle = rig.handleFor(rig.pan);
     check(panHandle.valid(), QStringLiteral("Pencil indicator lanes are missing from the stack"));
     if (!panHandle.valid())

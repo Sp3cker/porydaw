@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <cstdint>
 
 #include <QWidget>
@@ -20,11 +19,11 @@ class QRect;
 class AutomationCanvas;
 class TempoLane;
 class CCLanes;
-class VoiceChangeLane;
 struct NodeLaneHoverState;
 class MidiTimeline;
 class SongDocument;
 class SongView;
+struct AutomationGeometry;
 
 // The concrete automation page owns its scroll surface and keeps a stable
 // SongView owner for shared song data and editor routing.
@@ -52,7 +51,6 @@ class AutomationPage final : public QWidget
   private:
     friend class AutomationCanvas;
     friend class CCLanes;
-    friend class VoiceChangeLane;
     friend class TempoLane;
     friend struct NodeLaneHoverState;
     // Read-only access to the timeline mapping queries (tickAtContentX,
@@ -70,6 +68,7 @@ class AutomationPage final : public QWidget
     void refreshGeometry();
     int scrollGutter() const noexcept;
     int laneHeightFor(const EditorAutomationRowId &row) const noexcept;
+    bool scaleSharedHeight(int wheelSteps, const AutomationGeometry &geometry);
     class ScrollArea;
     bool ready() const noexcept;
     const DrawerPageLiveState &liveState() const noexcept { return m_liveState; }
@@ -99,9 +98,8 @@ class AutomationPage final : public QWidget
     void commitEditCursor(uint64_t tick) const;
     void announce(const QString &message) const;
     bool paintGrid(QPainter &painter, const QRect &bounds, qreal origin) const;
-    void automationGestureStarted() noexcept;
-    bool handlesPencilShortcut(const QKeyEvent *event) const noexcept;
-    void finishPencilShortcut(bool forceMomentary);
+
+    bool matchesPencilShortcut(const QKeyEvent *event) const noexcept;
 
     Geometry m_geometry;
     SongView &m_owner;
@@ -110,9 +108,4 @@ class AutomationPage final : public QWidget
     EditorViewState m_viewState;
     ScrollArea *m_scroll = nullptr;
     AutomationCanvas *m_canvas = nullptr;
-    std::chrono::steady_clock::time_point m_pencilShortcutPressedAt{};
-    int m_pencilShortcutKey = 0;
-    bool m_pencilShortcutHeld = false;
-    bool m_pencilShortcutPriorState = false;
-    bool m_pencilShortcutGestureStarted = false;
 };

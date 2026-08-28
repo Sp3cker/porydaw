@@ -95,8 +95,11 @@ add_subdirectory(
 
 # ---- In-tree m4a converter required by the harness sweep ----
 if(PORYDAW_BUILD_CHECKS)
-    set(MID2AGB_SOURCE_DIR
-        "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/ccomidi/mid2agb")
+    get_filename_component(PORYAAAA_PACKAGES_DIR "${PORYAAAA_DIR}" DIRECTORY)
+    set(MID2AGB_SOURCE_DIR "${PORYAAAA_PACKAGES_DIR}/ccomidi/mid2agb")
+    if(NOT EXISTS "${MID2AGB_SOURCE_DIR}/main.cpp")
+        message(FATAL_ERROR "PORYAAAA_DIR must belong to the poryaaaa monorepo")
+    endif()
     # The preserved upstream source includes these otherwise-unused expansion
     # configuration headers. Keep their empty declarations in the build tree rather
     # than adding a stale expansion dependency to this repository.
@@ -301,6 +304,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/pianoroll_geometry.cpp
     src/ui/songview/pianoroll_paint.cpp
     src/ui/songview/pianoroll_interaction.cpp
+    src/ui/songview/pianoroll_gestures.cpp
+    src/ui/songview/pianoroll_gestures_active.cpp
     src/ui/songview/pianoroll_commands.cpp
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
@@ -343,8 +348,9 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/nodelane/hover.h
     src/ui/editordrawer/cclanes.cpp
     src/ui/editordrawer/cclanes.h
-    src/ui/editordrawer/voicechangelane.cpp
-    src/ui/editordrawer/voicechangelane.h
+    src/ui/editordrawer/voicechangearea/voicechangearea.cpp
+    src/ui/editordrawer/voicechangearea/voicechangearea.h
+    src/ui/editordrawer/voicechangearea/voicechangearea_paint.cpp
     src/ui/editordrawer/nodelane/pencilgesture.cpp
     src/ui/editordrawer/nodelane/pencilgesture.h
     src/ui/editordrawer/automationprojection.cpp
@@ -444,6 +450,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/camera.cpp
         src/checks/rollcheck/pencil.cpp
         src/checks/rollcheck/pencil_velocity.cpp
+        src/checks/rollcheck/interlock.cpp
         src/checks/rollcheck/selection.cpp
         src/checks/rollcheck/note_rendering.cpp
         src/checks/rollcheck/resize.cpp
@@ -545,6 +552,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automationgesturecheck/hover.cpp
         src/checks/automationgesturecheck/lifecycle.cpp
         src/checks/rollcheckdrawer.cpp
+        src/checks/rollcheckvoicechange.cpp
+        src/checks/rollcheckvoicechange.h
         src/checks/rollcheckpsgvelocity.cpp
         src/checks/velocitymodelcheck.cpp
         src/checks/themechecks.cpp

@@ -439,7 +439,7 @@ void WorkspaceUi::setAudioSampleRate(double sampleRate)
     applySampleRateToTabs();
 }
 
-void WorkspaceUi::toggleDrawerPage(bool automation)
+void WorkspaceUi::toggleDrawerPage(EditorDrawerPage page)
 {
     SongTab *const tab = m_selectedTab;
     if (!tab || !tab->isReady())
@@ -447,15 +447,24 @@ void WorkspaceUi::toggleDrawerPage(bool automation)
     SongView &view = tab->view();
     if (view.eventListVisible())
         return;
-    const EditorDrawerPage page =
-        automation ? EditorDrawerPage::Automations : EditorDrawerPage::Velocity;
     const bool hiding = view.drawerSectionVisible(page);
     view.toggleDrawerSection(page);
-    showStatus(automation ? (hiding ? QStringLiteral("Automation lanes hidden")
-                                    : QStringLiteral("Automation lanes shown"))
-                          : (hiding ? QStringLiteral("Velocity lane hidden")
-                                    : QStringLiteral("Velocity lane shown")),
-               6000);
+    QString status;
+    switch (page) {
+    case EditorDrawerPage::VoiceChanges:
+        status =
+            hiding ? QStringLiteral("Voice changes hidden") : QStringLiteral("Voice changes shown");
+        break;
+    case EditorDrawerPage::Velocity:
+        status =
+            hiding ? QStringLiteral("Velocity lane hidden") : QStringLiteral("Velocity lane shown");
+        break;
+    case EditorDrawerPage::Automations:
+        status = hiding ? QStringLiteral("Automation lanes hidden")
+                        : QStringLiteral("Automation lanes shown");
+        break;
+    }
+    showStatus(status, 6000);
 }
 
 void WorkspaceUi::setSelectedTabEventListVisible(bool visible)

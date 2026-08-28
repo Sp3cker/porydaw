@@ -214,10 +214,12 @@ class MainWindow : public QMainWindow
     QAction *m_redoAction = nullptr;
     QAction *m_exportWavAction = nullptr;
     QAction *m_copyAction = nullptr;
+    QAction *m_insertTimeAction = nullptr;
     QAction *m_settingsAction = nullptr;
     QAction *m_eventListAction = nullptr;
     QAction *m_automationDrawerAction = nullptr;
     QAction *m_velocityDrawerAction = nullptr;
+    QAction *m_voiceChangesDrawerAction = nullptr;
     QAction *m_velocityColorsAction = nullptr;
     QAction *m_noteNamesAction = nullptr;
     QDockWidget *m_polyDock = nullptr;

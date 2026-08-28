@@ -79,43 +79,52 @@ void checkAutomationPencilAction(AutomationGestureCheckRig &rig,
     };
     rig.setPersistentPencil(false);
     sendPencilKey(Target::View, QEvent::KeyPress, false);
-    const bool tapWasMomentary = !pencilModeAction->isChecked();
+    check(pencilModeAction->isChecked(),
+          QStringLiteral("Pencil toggle did not activate on B press"));
     sendPencilKey(Target::View, QEvent::KeyRelease, false);
-    const bool tapBecamePersistent = pencilModeAction->isChecked();
-    check(tapWasMomentary && tapBecamePersistent,
-          QStringLiteral("single-key Pencil tap did not become persistent on release"));
+    check(pencilModeAction->isChecked(), QStringLiteral("Pencil toggle reverted on release"));
+    sendPencilKey(Target::View, QEvent::KeyPress, false);
+    check(!pencilModeAction->isChecked(),
+          QStringLiteral("Second B press did not toggle Pencil off"));
+    sendPencilKey(Target::View, QEvent::KeyRelease, false);
     rig.setPersistentPencil(false);
     sendPencilKey(Target::Window, QEvent::KeyPress, false);
-    const bool nativeWindowPressWasMomentary = !pencilModeAction->isChecked();
+    check(pencilModeAction->isChecked(),
+          QStringLiteral("native-window Pencil press did not toggle"));
     sendPencilKey(Target::Window, QEvent::KeyRelease, false);
-    const bool nativeWindowTapBecamePersistent = pencilModeAction->isChecked();
-    check(nativeWindowPressWasMomentary && nativeWindowTapBecamePersistent,
-          QStringLiteral("native-window Pencil tap did not preserve persistent mode"));
+    check(pencilModeAction->isChecked(), QStringLiteral("native-window Pencil release reverted"));
+    sendPencilKey(Target::Window, QEvent::KeyPress, false);
+    check(!pencilModeAction->isChecked(),
+          QStringLiteral("native-window second press did not toggle off"));
+    sendPencilKey(Target::Window, QEvent::KeyRelease, false);
+    rig.setPersistentPencil(false);
     sendPencilKey(Target::View, QEvent::KeyPress, false);
     const bool repeatBaseline = pencilModeAction->isChecked();
     sendPencilKey(Target::View, QEvent::KeyPress, true);
     sendPencilKey(Target::View, QEvent::KeyRelease, true);
-    const bool repeatWasConsumed = pencilModeAction->isChecked();
+    check(pencilModeAction->isChecked() == repeatBaseline,
+          QStringLiteral("Pencil shortcut auto-repeat retriggered"));
     sendPencilKey(Target::View, QEvent::KeyRelease, false);
-    check(repeatBaseline && repeatWasConsumed && !pencilModeAction->isChecked(),
-          QStringLiteral("Pencil shortcut auto-repeat retriggered or escaped consumption"));
+    check(pencilModeAction->isChecked() == repeatBaseline,
+          QStringLiteral("Pencil shortcut release after auto-repeat toggled"));
+    // Toggle is immediate on press; holding past the old 500ms threshold or
+    // dragging during hold must not revert — those hold semantics are deleted.
     rig.setPersistentPencil(false);
     sendPencilKey(Target::View, QEvent::KeyPress, false);
-    const bool longHoldWasMomentary = !pencilModeAction->isChecked();
+    check(pencilModeAction->isChecked(), QStringLiteral("Pencil hold press did not toggle"));
     rig.commitTimers(510);
     sendPencilKey(Target::View, QEvent::KeyRelease, false);
-    check(longHoldWasMomentary && !pencilModeAction->isChecked(),
-          QStringLiteral("Pencil shortcut hold past 500 ms did not restore persistent mode"));
+    check(pencilModeAction->isChecked(), QStringLiteral("Pencil hold past 500 ms reverted"));
     rig.setPersistentPencil(false);
     const auto shortHoldInput = rig.pointAt(rig.pan, 192, 64);
     sendPencilKey(Target::View, QEvent::KeyPress, false);
-    const bool shortHoldWasMomentary = !pencilModeAction->isChecked();
+    check(pencilModeAction->isChecked(),
+          QStringLiteral("Pencil press before gesture did not toggle"));
     rig.mousePress(shortHoldInput.position);
     rig.mouseRelease(shortHoldInput.position);
     rig.pump();
     sendPencilKey(Target::View, QEvent::KeyRelease, false);
-    check(shortHoldWasMomentary && !pencilModeAction->isChecked(),
-          QStringLiteral("short Pencil hold used for a gesture became persistent"));
+    check(pencilModeAction->isChecked(), QStringLiteral("Pencil gesture during hold reverted"));
     rig.setPersistentPencil(false);
     pencilModeAction->trigger();
     const bool programmaticTriggerEnabled = pencilModeAction->isChecked();

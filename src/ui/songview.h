@@ -70,11 +70,6 @@ QColor mixTowardOklab(const QColor &color, const QColor &backdrop, double t);
 // the row; this floor is only a cheap pre-gate that no padded face ever
 // fits under.
 constexpr int kNoteNameMinKeyH = 12;
-// The velocity bar's rect inside a note rect; painted by the roll and,
-// from the resolved velocity-handle threshold up, the grab target for velocity drags. Exposed
-// for roll interaction checks. The default DPR keeps integer-DIP callers
-// compatible while the roll supplies its actual display scale.
-QRectF velBarRect(const QRectF &noteRect, int velocity, qreal dpr = layout::singlePixel());
 // Frame weights for note borders and the selection ring, in physical
 // pixels for the given display ratio. The resolver scales their DIP widths
 // with the editor font; painting still lands on whole physical pixels so
@@ -180,7 +175,7 @@ class SongView : public QWidget
     const MidiTimeline *timeline() const { return m_timeline; }
     const SongViewModel &model() const { return m_model; }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
-    std::vector<songview::TimelineBand> timelineBands() noexcept;
+    std::vector<songview::TimelineBand> timelineBands();
 
     qreal contentX(double tick) const { return qreal(tick * m_pxPerTick - m_scrollX); }
     double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / m_pxPerTick; }
@@ -437,6 +432,10 @@ class SongView : public QWidget
     // partial scope shifts only its own tracks or lanes so the rest of the
     // song keeps its alignment.
     void removeTimeSelectionContents();
+    // Global Insert Time command: asks for bars, beats, and quarter-beat
+    // fractions, then inserts that much whole-song time at the live playhead
+    // or the edit cursor while stopped.
+    void insertTimeAtPlaybackCursor();
     // Insert and duplicate operate only on an active half-open time selection.
     void insertBlankTime();
     void duplicateTimeSelection();
@@ -522,8 +521,9 @@ class SongView : public QWidget
     // row to be fully visible.
     void ensureKeyVisible(int key);
     void refreshTimelineViews();
-    // Refresh both concrete drawer pages from the current live SongView state.
-    // This endpoint does not proactively cancel interaction.
+    // Refresh every concrete drawer page from the current live SongView state.
+    // Public refresh seam for the standalone drawer pages after they commit a
+    // document edit. This endpoint does not proactively cancel interaction.
     void refreshAllDrawerPages();
 
   signals:
@@ -577,7 +577,7 @@ class SongView : public QWidget
         int timelineMaximumPixelsPerBeat;
         int pianoRollMinimumKeyHeight;
         int pianoRollMaximumKeyHeight;
-        int velocityHandleMinimumKeyHeight;
+        int pianoRollDefaultKeyHeight;
         int timelineDetailMinimumPixelsPerBeat;
         int gridLineStrokeWidth;
         int automationGridMinimumCellWidth;
@@ -613,6 +613,7 @@ class SongView : public QWidget
     void refreshDrawerPages();
     void refreshAutomationPage();
     void refreshVelocityPage();
+    void refreshVoiceChangePage();
     int viewportWidth() const;
     int rollViewportHeight() const;
     void setHScroll(double px);

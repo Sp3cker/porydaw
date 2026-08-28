@@ -33,7 +33,7 @@ void AutomationCanvas::refreshGeometry()
         gutterMargin, layout::space(layout::Space::Zero),
         std::max(layout::space(layout::Space::Zero), m_geometry.plotOrigin - 2 * gutterMargin),
         layout::space(layout::Space::Zero));
-    layoutLaneStack(m_voiceLane.engineTrack());
+    layoutLaneStack();
     // Lane layout is content: the surface cache must re-rasterize, a plain
     // update() would keep blitting the stale pre-layout pixels.
     invalidateContent();
@@ -55,7 +55,6 @@ AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
     , m_scroll(scroll)
     , m_rowData(page)
     , m_tempoLane(page)
-    , m_voiceLane(page)
     , m_laneSelection(page->m_owner.selectionModel(), m_rowData.rows(), page->usedTrackMask())
 {
     setObjectName(QStringLiteral("automationCanvas"));
@@ -135,7 +134,6 @@ bool AutomationCanvas::event(QEvent *event)
     if (event->type() == QEvent::FontChange) {
         rebuildFontCache();
         m_hoverState.invalidateFontCache();
-        m_voiceLane.invalidateFontCache();
         m_hoverState.hoverValueLabel = {};
         m_hoverState.previewValueLabel = {};
         invalidateContent();
@@ -153,26 +151,10 @@ void AutomationCanvas::rebuildRows()
     m_hoverState.invalidateCaches();
     m_hoverState.hoverValueLabel = {};
     m_hoverState.previewValueLabel = {};
-    int voiceTrack = -1;
-    bool showVoice = false;
-    if (m_page && m_page->ready() && m_page->timeline()) {
-        voiceTrack = m_page->m_owner.selectionModel().primaryTrack();
-        if (voiceTrack >= 0) {
-            showVoice = m_page->document() != nullptr;
-            if (!showVoice) {
-                for (const auto &change : m_page->model().voices) {
-                    if (change.track == voiceTrack) {
-                        showVoice = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
     m_rowData.rebuildRows();
     if (m_page)
         m_laneSelection.setUsedTrackMask(m_page->usedTrackMask());
-    layoutLaneStack(showVoice ? voiceTrack : -1);
+    layoutLaneStack();
     invalidateContent();
 }
 
@@ -201,11 +183,11 @@ QRegion AutomationCanvas::syncPinnedTempoLayout()
     return dirty;
 }
 
-void AutomationCanvas::layoutLaneStack(int voiceTrack)
+void AutomationCanvas::layoutLaneStack()
 {
     cancelNodeGestures();
-    m_voiceLane.rebuild(voiceTrack, width(), 0, m_geometry);
-    const int scrollableHeight = m_rowData.minimumHeight(m_geometry, contentTopInset());
+    const int scrollableHeight =
+        m_rowData.minimumHeight(m_geometry, layout::space(layout::Space::Zero));
     setMinimumHeight(scrollableHeight + m_tempoLane.totalHeight(m_geometry));
     syncPinnedTempoLayout();
     rebuildNodeStack();
@@ -228,7 +210,7 @@ void AutomationCanvas::rebuildNodeStack()
     m_ccAdapters.reserve(rows.size());
     for (const auto &row : rows)
         m_ccAdapters.emplace_back(*m_page->document(), int(row.id.track), row.id.controller);
-    int top = contentTopInset();
+    int top = layout::space(layout::Space::Zero);
     for (int i = 0; i < int(rows.size()); ++i) {
         const int height = ccLaneHeight(rows[std::size_t(i)]);
         const QRect body(layout::space(layout::Space::Zero), top, width(), height);
@@ -401,7 +383,7 @@ int AutomationCanvas::addLaneStripTop() const
     if (!m_nodeStack.empty() && !m_nodeStack.back().isTempo()) {
         return m_nodeStack.back().body.top() + m_nodeStack.back().body.height();
     }
-    return contentTopInset();
+    return layout::space(layout::Space::Zero);
 }
 
 void AutomationCanvas::cancelInteraction()
@@ -413,7 +395,6 @@ void AutomationCanvas::cancelInteraction()
     m_activeGesture.reset();
     m_band.clear();
     m_tempoLane.cancel();
-    m_voiceLane.cancel();
     m_hoverState.previewValueLabel = {};
     m_hoverState.hover.highlightLocked = false;
     invalidateContent(m_hoverState.clearHover());
@@ -490,8 +471,6 @@ bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &positi
 void AutomationCanvas::setGestureActive(bool active)
 {
     if (m_page) {
-        if (active)
-            m_page->automationGestureStarted();
         m_page->setFollowScrollPaused(active);
     }
 }
