@@ -93,24 +93,53 @@ bool MainWindow::runSelfTest(const QString &projectRoot, const QString &songLabe
     QTimer::singleShot(1500, &loop, &QEventLoop::quit);
     loop.exec();
 
-    // M2: edit during playback — exercises the documentChanged plumbing
-    // (timeline rebuild, playhead-preserving audio swap, view refresh).
+    // M2: edit during playback — exercise the complete live path from a
+    // SongDocument mutation through SongTab's rebuilt projection to the
+    // AudioEngine timeline handoff.
     const uint64_t posBeforeEdit = m_audio.playheadSamples();
-    view.document()->addNote(view.selectionModel().primaryTrack(), 0, 60, 24, 100);
-    view.document()->addLanePoint(view.selectionModel().primaryTrack(), 7, 0, 100);
+    const int editedTrack = view.selectionModel().primaryTrack();
+    view.document()->addNote(editedTrack, 0, 60, 24, 100);
+    view.document()->addLanePoint(editedTrack, 7, 0, 100);
     if (!tab->document().isDirty()) {
         qWarning("selftest: document not dirty after edits");
+        return false;
+    }
+    const auto audioUsesTabTimeline = [this, tab] {
+        return m_audio.timeline() == tab->timeline().get();
+    };
+    if (checks::async_wait::waitUntil([] { return true; }, audioUsesTabTimeline, 2000) !=
+        checks::async_wait::Result::Ready) {
+        qWarning("selftest: audio did not adopt the edited timeline");
+        return false;
+    }
+    DocNote moved;
+    if (!tab->document().findNote(editedTrack, 0, 60, &moved)) {
+        qWarning("selftest: added note was not available for the live-move check");
+        return false;
+    }
+    const MidiTimeline *const beforeMove = tab->timeline().get();
+    tab->document().moveNotes({moved}, 24, 1);
+    if (tab->timeline().get() == beforeMove ||
+        checks::async_wait::waitUntil([] { return true; }, audioUsesTabTimeline, 2000) !=
+            checks::async_wait::Result::Ready) {
+        qWarning("selftest: audio did not adopt the moved-note timeline");
         return false;
     }
     QTimer::singleShot(1500, &loop, &QEventLoop::quit);
     loop.exec();
     m_workspace->requestUndo();
     m_workspace->requestUndo();
+    m_workspace->requestUndo();
     if (tab->document().isDirty()) {
         qWarning("selftest: document still dirty after undoing all edits");
         return false;
     }
-    qInfo("selftest: edit + undo during playback OK (playhead %.2fs at edit)",
+    if (checks::async_wait::waitUntil([] { return true; }, audioUsesTabTimeline, 2000) !=
+        checks::async_wait::Result::Ready) {
+        qWarning("selftest: audio did not adopt the undone timeline");
+        return false;
+    }
+    qInfo("selftest: edit + move + undo during playback OK (playhead %.2fs at edit)",
           double(posBeforeEdit) / m_audio.sampleRate());
 
     // M3: audition a voicegroup entry mid-playback — exercises the preview

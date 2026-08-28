@@ -212,6 +212,9 @@ class WorkspaceUi final : public QObject
     // A tab reached its terminal VoicegroupBound; MainWindow rebinds the
     // engine when it is the selected one.
     void songTabReady(SongTab *tab);
+    // The selected tab rebuilt its timeline after a document edit or sample
+    // rate change; MainWindow publishes it to AudioEngine.
+    void selectedSongTimelineChanged();
     // The selected tab's document, bank, or registration state changed.
     void selectedSongStateChanged();
     // The global bank gate flipped (a shared-bank transition began/ended).

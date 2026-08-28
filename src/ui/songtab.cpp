@@ -16,13 +16,15 @@ SongTab::SongTab(SongName name, QWidget *parent)
     pageLayout->setContentsMargins(0, 0, 0, 0);
     pageLayout->addWidget(m_view);
 
-    // The paired view consumes the document directly; the tab's remaining
-    // document reaction is the timeline projection below.
+    // Keep the timeline projection and its audio publication ordered after
+    // every real document mutation. Dirty-state publication stays on the
+    // undo stack, whose index settles after command redo and merge handling.
     connect(&m_document, &SongDocument::documentChanged, this, [this] {
         if (!m_midiBound)
             return;
         rebuildTimeline();
         m_view->updateSong(m_timeline.get());
+        emit timelineChanged();
     });
     connect(m_document.undoStack(), &QUndoStack::indexChanged, this, [this] {
         if (m_midiBound)
@@ -46,6 +48,7 @@ void SongTab::setSampleRate(double sampleRate)
         return;
     rebuildTimeline();
     m_view->updateSong(m_timeline.get());
+    emit timelineChanged();
 }
 
 void SongTab::applyMidiStage(SongInfo info, SmfFile smf, int trackBudget)

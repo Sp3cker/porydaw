@@ -196,6 +196,10 @@ void WorkspaceUi::wireBrowser()
 void WorkspaceUi::wireTab(SongTab *tab)
 {
     connect(tab, &SongTab::edited, this, [this, tab] { onTabEdited(tab); });
+    connect(tab, &SongTab::timelineChanged, this, [this, tab] {
+        if (tab == m_selectedTab)
+            emit selectedSongTimelineChanged();
+    });
 
     SongView &view = tab->view();
     connect(&view, &SongView::auditionNote, this, [this, tab](int track, int key, int velocity) {

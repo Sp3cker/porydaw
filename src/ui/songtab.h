@@ -102,8 +102,10 @@ class SongTab final : public QWidget
     ViewSidecar::Snapshot captureViewSnapshot() const;
 
   signals:
-    // Emitted after a document edit (including undo/redo) rebuilt the
-    // timeline; the owner refreshes titles and dirty chrome.
+    // The timeline projection changed and is ready for the audio handoff.
+    void timelineChanged();
+    // The undo index settled after an edit (including undo/redo); the owner
+    // refreshes titles, dirty chrome, and document-dependent project state.
     void edited();
 
   private:

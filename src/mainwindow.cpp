@@ -492,6 +492,8 @@ void MainWindow::buildUi()
     connect(m_workspace.get(), &WorkspaceUi::selectedSongTabChanged, this,
             &MainWindow::onSelectedTabChanged);
     connect(m_workspace.get(), &WorkspaceUi::songTabReady, this, &MainWindow::onSelectedTabReady);
+    connect(m_workspace.get(), &WorkspaceUi::selectedSongTimelineChanged, this,
+            [this] { refreshSelectedAudio(); });
     connect(m_workspace.get(), &WorkspaceUi::selectedSongStateChanged, this,
             &MainWindow::onSelectedSongStateChanged);
     connect(m_workspace.get(), &WorkspaceUi::bankActionsChanged, this,
