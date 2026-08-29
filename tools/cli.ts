@@ -49,20 +49,6 @@ function printCapturedOutput(output: string): void {
   if (output.trim()) console.error(output.trimEnd());
 }
 
-function containsWarning(output: string): boolean {
-  return /\bwarning(?:\s+[A-Z]+\d+)?:/i.test(output);
-}
-
-function getAppPath(): string {
-  if (Deno.build.os === "darwin") {
-    return `${BUILD_DIR}/porydaw.app`;
-  }
-  if (Deno.build.os === "windows") {
-    return `${BUILD_DIR}/porydaw.exe`;
-  }
-  return `${BUILD_DIR}/porydaw`;
-}
-
 async function exists(path: string): Promise<boolean> {
   try {
     await Deno.stat(path);
@@ -79,7 +65,6 @@ async function ensureConfigured(release: boolean): Promise<void> {
   const makefile = join(BUILD_DIR, "Makefile");
   const hasBuildSystem = (await exists(ninjaFile)) || (await exists(makefile));
   if (!release && hasBuildSystem && poryaaaa.cacheMatches) return;
-  const started = performance.now();
   const result = await new Deno.Command("cmake", {
     args: [
       "-S",
@@ -100,16 +85,14 @@ async function ensureConfigured(release: boolean): Promise<void> {
     Deno.exit(result.code || 1);
   }
   printCapturedOutput(err);
-  const ms = performance.now() - started;
-  console.log(`build: configured (${(ms / 1000).toFixed(2)}s)`);
 }
 
 async function runBuild(
   targets: string[],
   release = false,
 ): Promise<void> {
-  await ensureConfigured(release);
   const started = performance.now();
+  await ensureConfigured(release);
   const nproc = String(navigator.hardwareConcurrency);
   const args = ["--build", BUILD_DIR, "-j", nproc];
   if (release) args.push("--config", "Release");
@@ -130,38 +113,13 @@ async function runBuild(
     console.error(`build: failed (${targets.join(", ") || "all"})`);
     Deno.exit(result.code || 1);
   }
-  if (containsWarning(combined)) printCapturedOutput(combined);
+  if (/\b(?:warning(?:\s+[A-Z]+\d+)?:|CMake Warning\b)/i.test(combined)) {
+    printCapturedOutput(combined);
+  }
   const ms = performance.now() - started;
   const sec = (ms / 1000).toFixed(2);
   // Filter progress noise: only show summary, not per-target [%] lines
   console.log(`build: ok (${sec}s)`);
-  const artifacts: string[] = [];
-  if (targets.includes("porydaw")) {
-    if (Deno.build.os === "darwin") {
-      artifacts.push(`${BUILD_DIR}/porydaw.app/Contents/MacOS/porydaw`);
-    } else if (Deno.build.os === "windows") {
-      artifacts.push(`${BUILD_DIR}/porydaw.exe`);
-    } else {
-      artifacts.push(`${BUILD_DIR}/porydaw`);
-    }
-  }
-  if (targets.includes("porydaw_checks")) {
-    artifacts.push(`${BUILD_DIR}/porydaw_checks`);
-  }
-  if (targets.includes("mid2agb")) {
-    artifacts.push(`${BUILD_DIR}/mid2agb`);
-  }
-  if (artifacts.length === 0 && targets.length === 0) {
-    artifacts.push(BUILD_DIR);
-  }
-  if (artifacts.length > 0) {
-    console.log(`  → ${artifacts.join("\n  → ")}`);
-  }
-  if (targets.length === 1 && targets[0] === "porydaw") {
-    console.log(`Built to ${getAppPath()}`);
-  } else {
-    console.log(`Built to ${BUILD_DIR}/`);
-  }
 }
 
 async function runVerify(rawArgs: string[]): Promise<void> {
