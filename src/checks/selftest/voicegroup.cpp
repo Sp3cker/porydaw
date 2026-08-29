@@ -97,37 +97,29 @@ bool SelfTestHarness::runVoicegroupScenario()
     }
     auto structuralEditApplied = false;
     if (donorSlot >= 0) {
+        if (!beginObservedPlayback())
+            return false;
+        const uint64_t beforeStructuralEdit = m_window.m_audio.playheadSamples();
         voicegroupDriver.openSamplePickerPopup();
         QLineEdit *const search = voicegroupDriver.samplePickerFilterField();
         if (search && voicegroupDriver.samplePickerPopupIsVisible()) {
             search->setText(donorSymbol);
             if (voicegroupDriver.currentPickerRowSymbol() == donorSymbol) {
-                if (!beginObservedPlayback())
+                voicegroupDriver.clickCurrentPickerRow();
+                voicegroupDriver.clickCurrentPickerRow();
+                const auto structuralWait = waitForBankOperation(
+                    [this, directSoundSlot, &donorName] {
+                        return QByteArray(
+                                   m_window.m_audio.voicegroup()->voiceNames[directSoundSlot]) ==
+                               donorName;
+                    },
+                    beforeStructuralEdit);
+                if (structuralWait != async_wait::Result::Ready) {
+                    qWarning("selftest-voicegroup: structural edit did not reload the bank while "
+                             "playing");
                     return false;
-                search->clear();
-                search->setText(donorSymbol);
-                if (voicegroupDriver.currentPickerRowSymbol() != donorSymbol) {
-                    voicegroupDriver.hideSamplePickerPopup();
-                    qInfo("selftest-voicegroup: structural edit skipped "
-                          "(donor row not selectable after playback setup)");
-                } else {
-                    const uint64_t beforeStructuralEdit = m_window.m_audio.playheadSamples();
-                    voicegroupDriver.clickCurrentPickerRow();
-                    voicegroupDriver.clickCurrentPickerRow();
-                    const auto structuralWait = waitForBankOperation(
-                        [this, directSoundSlot, &donorName] {
-                            return QByteArray(m_window.m_audio.voicegroup()
-                                                  ->voiceNames[directSoundSlot]) == donorName;
-                        },
-                        beforeStructuralEdit);
-                    if (structuralWait != async_wait::Result::Ready) {
-                        qWarning(
-                            "selftest-voicegroup: structural edit did not reload the bank while "
-                            "playing");
-                        return false;
-                    }
-                    structuralEditApplied = true;
                 }
+                structuralEditApplied = true;
             } else {
                 voicegroupDriver.hideSamplePickerPopup();
                 qInfo("selftest-voicegroup: structural edit skipped (donor row not selectable)");

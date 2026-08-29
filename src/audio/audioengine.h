@@ -185,6 +185,8 @@ class AudioEngine
 
     M4APcmMixerMode pcmMixerMode() const { return m_settings.pcmMixer; }
     int maxPcmChannels() const { return m_settings.maxPcmChannels; }
+    float pcmMixRate() const { return m_settings.pcmMixRate; }
+    bool analogFilter() const { return m_settings.analogFilter; }
     uint64_t polyLostTotal() const; // dropped + stolen, all tracks (no tail cuts)
 
     // GUI-thread copy of the engine's polyphony-overflow state (the engine

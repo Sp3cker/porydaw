@@ -47,20 +47,25 @@ bool SelfTestHarness::runTransportScenario()
         [this, &tweaked, beforeSettings] {
             return m_window.m_audio.pcmMixerMode() == tweaked.pcmMixer &&
                    m_window.m_audio.maxPcmChannels() == tweaked.maxPcmChannels &&
+                   m_window.m_audio.pcmMixRate() == tweaked.pcmMixRate &&
+                   m_window.m_audio.analogFilter() == tweaked.analogFilter &&
                    m_window.m_audio.transport() == Transport::Playing &&
                    m_window.m_audio.playheadSamples() > beforeSettings;
         },
         2000);
     const auto observedMixer = m_window.m_audio.pcmMixerMode();
     const int observedMaxPcm = m_window.m_audio.maxPcmChannels();
+    const float observedMixRate = m_window.m_audio.pcmMixRate();
+    const bool observedAnalogFilter = m_window.m_audio.analogFilter();
     const auto observedTransport = m_window.m_audio.transport();
     const uint64_t observedPlayhead = m_window.m_audio.playheadSamples();
     m_window.m_audio.updateSettings(originalSettings);
     if (settingsWait != async_wait::Result::Ready) {
         qWarning("selftest-transport: settings replacement FAILED "
-                 "(mixer %d, maxPcm %d, transport %d, playhead %llu -> %llu)",
-                 int(observedMixer), observedMaxPcm, int(observedTransport),
-                 static_cast<unsigned long long>(beforeSettings),
+                 "(mixer %d, maxPcm %d, mixRate %.0f, analogFilter %d, transport %d, "
+                 "playhead %llu -> %llu)",
+                 int(observedMixer), observedMaxPcm, double(observedMixRate), observedAnalogFilter,
+                 int(observedTransport), static_cast<unsigned long long>(beforeSettings),
                  static_cast<unsigned long long>(observedPlayhead));
         return false;
     }

@@ -3,6 +3,7 @@
 #include "checks/support/asyncwait.h"
 #include "mainwindow.h"
 
+#include <array>
 #include <cmath>
 
 #include <QApplication>
@@ -12,24 +13,6 @@
 #include "ui/workspaceui.h"
 
 namespace checks {
-namespace {
-
-const char *scenarioName(SelfTestScenario scenario)
-{
-    switch (scenario) {
-    case SelfTestScenario::Timeline:
-        return "selftest-timeline";
-    case SelfTestScenario::Voicegroup:
-        return "selftest-voicegroup";
-    case SelfTestScenario::Transport:
-        return "selftest-transport";
-    case SelfTestScenario::Workspace:
-        return "selftest-workspace";
-    }
-    return "selftest";
-}
-
-} // namespace
 
 SelfTestHarness::SelfTestHarness(MainWindow &window) : m_window(window)
 {
@@ -39,30 +22,27 @@ SelfTestHarness::SelfTestHarness(MainWindow &window) : m_window(window)
 int SelfTestHarness::run(MainWindow &window, SelfTestScenario scenario, const QString &projectRoot,
                          const QString &songLabel)
 {
+    struct ScenarioDescriptor {
+        const char *name;
+        bool (SelfTestHarness::*run)();
+    };
+    static constexpr auto scenarios = std::array{
+        ScenarioDescriptor{"selftest-timeline", &SelfTestHarness::runTimelineScenario},
+        ScenarioDescriptor{"selftest-voicegroup", &SelfTestHarness::runVoicegroupScenario},
+        ScenarioDescriptor{"selftest-transport", &SelfTestHarness::runTransportScenario},
+        ScenarioDescriptor{"selftest-workspace", &SelfTestHarness::runWorkspaceScenario},
+    };
+    const ScenarioDescriptor &descriptor = scenarios[static_cast<std::size_t>(scenario)];
     auto harness = SelfTestHarness{window};
     if (!harness.openSong(projectRoot, songLabel)) {
-        qWarning("%s: FAIL", scenarioName(scenario));
+        qWarning("%s: FAIL", descriptor.name);
         return 1;
     }
-    auto succeeded = false;
-    switch (scenario) {
-    case SelfTestScenario::Timeline:
-        succeeded = harness.runTimelineScenario();
-        break;
-    case SelfTestScenario::Voicegroup:
-        succeeded = harness.runVoicegroupScenario();
-        break;
-    case SelfTestScenario::Transport:
-        succeeded = harness.runTransportScenario();
-        break;
-    case SelfTestScenario::Workspace:
-        succeeded = harness.runWorkspaceScenario();
-        break;
-    }
+    const bool succeeded = (harness.*descriptor.run)();
     if (succeeded)
-        qInfo("%s: PASS", scenarioName(scenario));
+        qInfo("%s: PASS", descriptor.name);
     else
-        qWarning("%s: FAIL", scenarioName(scenario));
+        qWarning("%s: FAIL", descriptor.name);
     return succeeded ? 0 : 1;
 }
 

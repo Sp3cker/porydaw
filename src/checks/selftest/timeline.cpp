@@ -17,6 +17,7 @@ bool SelfTestHarness::runTimelineScenario()
     if (!beginObservedPlayback())
         return false;
     const int editedTrack = m_view->selectionModel().primaryTrack();
+    const MidiTimeline *const beforeEditTimeline = m_tab->timeline().get();
     const uint64_t beforeEdit = m_window.m_audio.playheadSamples();
     m_view->document()->addNote(editedTrack, 0, 60, 24, 100);
     m_view->document()->addLanePoint(editedTrack, 7, 0, 100);
@@ -28,8 +29,9 @@ bool SelfTestHarness::runTimelineScenario()
         return m_window.m_audio.timeline() == m_tab->timeline().get();
     };
     if (async_wait::waitUntil([this] { return tabIsLive(); },
-                              [this, beforeEdit, &audioUsesTabTimeline] {
-                                  return audioUsesTabTimeline() &&
+                              [this, beforeEditTimeline, beforeEdit, &audioUsesTabTimeline] {
+                                  return m_tab->timeline().get() != beforeEditTimeline &&
+                                         audioUsesTabTimeline() &&
                                          m_window.m_audio.transport() == Transport::Playing &&
                                          m_window.m_audio.playheadSamples() > beforeEdit;
                               },
