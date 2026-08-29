@@ -78,16 +78,32 @@ AudioEngine::~AudioEngine()
 
 bool AudioEngine::init(QString *error)
 {
+    const bool forceNullBackend =
+        qEnvironmentVariable("PORYDAW_AUDIO_BACKEND") == QStringLiteral("null");
+    if (forceNullBackend) {
+        ma_backend nullBackend[] = {ma_backend_null};
+        m_context = new ma_context;
+        m_hasContext = (ma_context_init(nullBackend, 1, nullptr, m_context) == MA_SUCCESS);
+        if (!m_hasContext) {
+            delete m_context;
+            m_context = nullptr;
+            if (error)
+                *error = QStringLiteral("Failed to initialize the null audio backend.");
+            return false;
+        }
+    }
 #ifdef __linux__
-    suppressAlsaErrors();
-    // Try PulseAudio before ALSA so WSLg's PulseAudio server is found
-    // without probing (nonexistent) ALSA hardware.
-    ma_backend linuxBackends[] = {ma_backend_pulseaudio, ma_backend_alsa};
-    m_context = new ma_context;
-    m_hasContext = (ma_context_init(linuxBackends, 2, nullptr, m_context) == MA_SUCCESS);
-    if (!m_hasContext) {
-        delete m_context;
-        m_context = nullptr;
+    if (!forceNullBackend) {
+        suppressAlsaErrors();
+        // Try PulseAudio before ALSA so WSLg's PulseAudio server is found
+        // without probing (nonexistent) ALSA hardware.
+        ma_backend linuxBackends[] = {ma_backend_pulseaudio, ma_backend_alsa};
+        m_context = new ma_context;
+        m_hasContext = (ma_context_init(linuxBackends, 2, nullptr, m_context) == MA_SUCCESS);
+        if (!m_hasContext) {
+            delete m_context;
+            m_context = nullptr;
+        }
     }
 #endif
 

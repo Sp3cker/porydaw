@@ -68,8 +68,8 @@ class AudioEngine
     double sampleRate() const { return m_sampleRate; }
     // Which miniaudio backend the device landed on ("PulseAudio", "ALSA",
     // "Null", ...). The null device keeps the sequencer running with no
-    // sound — deliberate for headless harnesses, a trap for real users, so
-    // the UI must surface it.
+    // sound — either forced for integration checks or selected as a fallback,
+    // and a trap for real users, so the UI must surface it.
     QString backendName() const { return m_backendName; }
     bool usingNullBackend() const { return m_isNullBackend; }
     // The device's resolved buffering (per-period frames × period count),

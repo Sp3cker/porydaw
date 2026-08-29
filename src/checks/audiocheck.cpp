@@ -18,6 +18,8 @@ bool sameLevel(TrackActivityLevel actual, TrackActivityLevel expected)
 int runAudioCheck()
 {
     int failures = 0;
+    const bool nullRequested =
+        qEnvironmentVariable("PORYDAW_AUDIO_BACKEND") == QStringLiteral("null");
     const auto check = [&failures](bool condition, const char *message) {
         if (!condition) {
             std::fprintf(stderr, "audiocheck: FAIL: %s\n", message);
@@ -63,6 +65,11 @@ int runAudioCheck()
 
     QString error;
     if (!engine.init(&error)) {
+        if (nullRequested) {
+            std::fprintf(stderr, "audiocheck: FAIL: forced null backend failed: %s\n",
+                         qUtf8Printable(error));
+            return 1;
+        }
         std::printf("audiocheck: SKIP (no audio device: %s)\n", qUtf8Printable(error));
         if (failures == 0)
             std::printf("audiocheck: PASS (deterministic telemetry)\n");
@@ -84,6 +91,11 @@ int runAudioCheck()
     if (engine.usingNullBackend() != (backend == QStringLiteral("Null"))) {
         std::fprintf(stderr, "audiocheck: FAIL: null-backend flag disagrees with "
                              "the backend name\n");
+        failures++;
+    }
+    if (nullRequested && (!engine.usingNullBackend() || backend != QStringLiteral("Null"))) {
+        std::fprintf(stderr, "audiocheck: FAIL: forced null backend selected %s\n",
+                     qUtf8Printable(backend));
         failures++;
     }
 
