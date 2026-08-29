@@ -3,6 +3,7 @@
 #include "fixturecatalog.hpp"
 #include "fwd.hpp"
 #include "mainwindow.h"
+#include "selftest/harness.h"
 
 #include <initializer_list>
 
@@ -72,19 +73,66 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = decompProjectFiles + decompMidiFiles},
-            {.name = "selftest",
-             .argv = strings({"--selftest", "{scratch}", "mus_littleroot_test"}),
+            {.name = "selftest-timeline",
+             .argv = strings({"--selftest-timeline", "{scratch}", "mus_littleroot_test"}),
              .handler =
                  [](QApplication &, const QStringList &args) {
                      auto window = MainWindow{};
                      window.show();
-                     return window.runSelfTest(args[1], args[2]) ? 0 : 1;
+                     return checks::SelfTestHarness::run(window, checks::SelfTestScenario::Timeline,
+                                                         args[1], args[2]);
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = decompProjectFiles +
                              strings({"sound/songs/midi/mus_littleroot_test.mid"}) +
-                             richVoicegroupFiles},
+                             richVoicegroupFiles,
+             .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}},
+            {.name = "selftest-voicegroup",
+             .argv = strings({"--selftest-voicegroup", "{scratch}", "mus_littleroot_test"}),
+             .handler =
+                 [](QApplication &, const QStringList &args) {
+                     auto window = MainWindow{};
+                     window.show();
+                     return checks::SelfTestHarness::run(
+                         window, checks::SelfTestScenario::Voicegroup, args[1], args[2]);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = decompProjectFiles +
+                             strings({"sound/songs/midi/mus_littleroot_test.mid"}) +
+                             richVoicegroupFiles,
+             .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}},
+            {.name = "selftest-transport",
+             .argv = strings({"--selftest-transport", "{scratch}", "mus_littleroot_test"}),
+             .handler =
+                 [](QApplication &, const QStringList &args) {
+                     auto window = MainWindow{};
+                     window.show();
+                     return checks::SelfTestHarness::run(
+                         window, checks::SelfTestScenario::Transport, args[1], args[2]);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = decompProjectFiles +
+                             strings({"sound/songs/midi/mus_littleroot_test.mid"}) +
+                             richVoicegroupFiles,
+             .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}},
+            {.name = "selftest-workspace",
+             .argv = strings({"--selftest-workspace", "{scratch}", "mus_littleroot_test"}),
+             .handler =
+                 [](QApplication &, const QStringList &args) {
+                     auto window = MainWindow{};
+                     window.show();
+                     return checks::SelfTestHarness::run(
+                         window, checks::SelfTestScenario::Workspace, args[1], args[2]);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = decompProjectFiles +
+                             strings({"sound/songs/midi/mus_littleroot_test.mid"}) +
+                             richVoicegroupFiles,
+             .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}},
             {.name = "savecheck",
              .argv = strings({"--savecheck", "{scratch}", "mus_route101", "{mid2agb}"}),
              .handler =

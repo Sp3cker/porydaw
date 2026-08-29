@@ -30,6 +30,10 @@ class ThemeController;
 class ThemeDialog;
 } // namespace themes
 
+namespace checks {
+class SelfTestHarness;
+} // namespace checks
+
 // The application shell and audio root. MainWindow is the composition root
 // that owns WorkspaceUi, ProjectWorkspace, and the AudioEngine, plus the
 // menus and window chrome around them. ProjectWorkspace's three publication
@@ -47,15 +51,11 @@ class MainWindow : public QMainWindow
 
     friend int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                        const QString &songB, const QString &screenshotPath);
+    friend class checks::SelfTestHarness;
 
   public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
-
-    // Headless smoke test (--selftest <projectRoot> <songLabel>): opens the
-    // project, loads the song, plays ~3 seconds through the real audio path,
-    // and reports whether the playhead advanced.
-    bool runSelfTest(const QString &projectRoot, const QString &songLabel);
 
     // Unified song+voicegroup undo/save check (--vgsavecheck; vgsavecheck.cpp).
     // Writes into the project: run against a scratch copy, with QSettings

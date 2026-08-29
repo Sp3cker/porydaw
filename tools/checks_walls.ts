@@ -2,7 +2,10 @@
 // Used only for LPT ordering — heaviest first minimizes makespan — so coarse
 // values are fine; they churn between machines and runs.
 export const WALL_ESTIMATE: Record<string, number> = {
-  selftest: 6.18,
+  "selftest-transport": 1.45,
+  "selftest-timeline": 1.27,
+  "selftest-voicegroup": 0.99,
+  "selftest-workspace": 0.3,
   samplecheck: 9.66,
   resonancecheck: 9.23,
   transportcheck: 3.77,
@@ -29,6 +32,7 @@ export const WALL_ESTIMATE: Record<string, number> = {
   vgcheck: 0.28,
   keymapcheck: 0.27,
   audiocheck: 0.25,
+  "audiocheck-null": 0.08,
   smfcheck: 0.23,
   savecheck: 0.23,
   "host-seams": 0.23,

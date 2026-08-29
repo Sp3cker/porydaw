@@ -436,7 +436,12 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/clipmimecheck.cpp
         src/checks/clipcheck.cpp
         src/checks/laneselectioncheck.cpp
-        src/checks/selftest.cpp
+        src/checks/selftest/harness.h
+        src/checks/selftest/harness.cpp
+        src/checks/selftest/timeline.cpp
+        src/checks/selftest/voicegroup.cpp
+        src/checks/selftest/transport.cpp
+        src/checks/selftest/workspace.cpp
         src/checks/tabcheck.cpp
         src/checks/eventviewcheck.cpp
         src/checks/pitchbendcheck.cpp
