@@ -80,6 +80,7 @@ bool AudioEngine::init(QString *error)
 {
     const bool forceNullBackend =
         qEnvironmentVariable("PORYDAW_AUDIO_BACKEND") == QStringLiteral("null");
+    m_forcedNullBackend = forceNullBackend;
     if (forceNullBackend) {
         ma_backend nullBackend[] = {ma_backend_null};
         m_context = new ma_context;

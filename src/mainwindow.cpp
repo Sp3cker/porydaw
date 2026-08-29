@@ -203,7 +203,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     if (!m_audioOk) {
         QMessageBox::warning(this, tr("Audio Error"),
                              tr("%1\n\nPlayback will be unavailable.").arg(audioError));
-    } else if (m_audio.usingNullBackend()) {
+    } else if (m_audio.usingNullBackend() && !m_audio.nullBackendForced()) {
         // Non-modal: harnesses construct MainWindow offscreen and must not
         // block on a dialog (CI runs without a real audio server).
         auto *box = new QMessageBox(QMessageBox::Warning, tr("No Audio Output"),

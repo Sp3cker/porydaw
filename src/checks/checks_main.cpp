@@ -7,6 +7,8 @@
 
 int main(int argc, char *argv[])
 {
+    if (!qEnvironmentVariableIsSet("PORYDAW_AUDIO_BACKEND"))
+        qputenv("PORYDAW_AUDIO_BACKEND", "null");
     auto application = QApplication{argc, argv};
     ui::installOffscreenSystemFont(application);
 

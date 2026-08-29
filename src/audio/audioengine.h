@@ -72,6 +72,7 @@ class AudioEngine
     // and a trap for real users, so the UI must surface it.
     QString backendName() const { return m_backendName; }
     bool usingNullBackend() const { return m_isNullBackend; }
+    bool nullBackendForced() const { return m_forcedNullBackend; }
     // The device's resolved buffering (per-period frames × period count),
     // for diagnostics: underruns on slow transports (WSLg's RDP audio)
     // show up as crackling, and the first support question is "how big are
@@ -248,6 +249,7 @@ class AudioEngine
     double m_sampleRate = 0.0;
     QString m_backendName;
     bool m_isNullBackend = false;
+    bool m_forcedNullBackend = false;
     int m_periodFrames = 0;
     int m_periodCount = 0;
     std::unique_ptr<M4AEngine> m_engine;

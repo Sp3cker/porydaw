@@ -282,12 +282,6 @@ const std::vector<CheckDefinition> &catalog()
                 .handler = [](QApplication &, const QStringList &) { return runAudioCheck(); },
             },
             {
-                .name = "audiocheck-null",
-                .argv = strings({"--audiocheck"}),
-                .handler = [](QApplication &, const QStringList &) { return runAudioCheck(); },
-                .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}},
-            },
-            {
                 .name = "clickcheck",
                 .argv = strings({"--clickcheck"}),
                 .handler = [](QApplication &, const QStringList &) { return runClickCheck(); },

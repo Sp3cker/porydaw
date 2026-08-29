@@ -269,7 +269,11 @@ function executionEnvironment(
       `${check.name} sets QT_QPA_PLATFORM; declare its windowing mode instead`,
     );
   }
-  return { ...environment, QT_QPA_PLATFORM: platformFor(check) };
+  return {
+    PORYDAW_AUDIO_BACKEND: "null",
+    ...environment,
+    QT_QPA_PLATFORM: platformFor(check),
+  };
 }
 
 interface CheckResult {

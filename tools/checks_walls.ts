@@ -32,7 +32,6 @@ export const WALL_ESTIMATE: Record<string, number> = {
   vgcheck: 0.28,
   keymapcheck: 0.27,
   audiocheck: 0.25,
-  "audiocheck-null": 0.08,
   smfcheck: 0.23,
   savecheck: 0.23,
   "host-seams": 0.23,

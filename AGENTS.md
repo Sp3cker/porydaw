@@ -6,14 +6,15 @@ This file is for AI agents working in this repo. Humans can ignore it.
 
 ```
 src/
-  main.cpp + mainwindow.{h,cpp}   # app shell, tab/session lifecycle, engine wiring
-  songsession.h                   # per-tab SongDocument + undo + view state
-  core/       — SongDocument, MidiTimeline, Smf, midiimport, scale, mid2agb LUTs
-  project/    — DecompProject, SongRegistry, VoicegroupSource, SampleReg, sidecars
+  main.cpp + mainwindow.{h,cpp}   # app shell, engine wiring
+  core/       — SongDocument, MidiTimeline, Smf, midiimport, scale, mid2agb LUTs, song history
+  project/    — DecompProject, SongRegistry, VoicegroupSource, SampleReg, ProjectIo, ProjectWorkspace
   audio/      — AudioEngine, resonance_suppressor, sample DSP/import, poryaaaa compat
   ui/         — all Qt widgets
-    ui/songview.{h,cpp}
-    ui/editordrawer/              # well-factored example: one concept per file
+    ui/songtab.{h,cpp}            # per-tab session container + document/view lifecycle
+    ui/workspaceui*.cpp           # project workspace UI orchestrator
+    ui/songview/                  # piano roll, time ruler, track headers, selection
+    ui/editordrawer/              # automation canvas, velocity, voice changes, node lanes
     ui/theme/                     # color roles, resolver, runtime, picker
     ui/activity/                  # track activity meters
     ui/*.cpp                      # other widgets (transportbar, voicegroupbrowser, etc.)
@@ -27,14 +28,14 @@ Harness root is `src/checks/` — never add a new `*check.cpp` to `src/` top-lev
 
 ## Search discipline — REQUIRED
 
-**Never `grep` without `path`.** Root scans hit 34 harnesses + `external/` + `build-*/` and time out.
+**Never `grep` without `path`.** Root scans hit 56+ harnesses + `external/` + `build-*/` and time out.
 
 ```
 # BAD
 grep pattern="velocity"
 
 # GOOD
-grep pattern="velocity" path="src/ui/songview.cpp"
+grep pattern="velocity" path="src/ui/songview; src/ui/editordrawer"
 grep pattern="SongDocument" path="src/core"
 grep pattern="voicegroup" path="src/project"
 ast_grep pat="SongDocument::$FUNC" path="src/core"
@@ -48,7 +49,7 @@ Workflow:
 4. range reads, never whole 3000L+ files hoping.
 
 Scopes by concern:
-- Piano roll / notes / velocity: `src/ui/songview.cpp; src/ui/editordrawer; src/core`
+- Piano roll / notes / velocity: `src/ui/songview; src/ui/editordrawer; src/core`
 - Voicegroup / samples: `src/project; src/ui/voicegroupbrowser.cpp; src/ui/samplepicker.cpp`
 - Playback / engine: `src/audio; src/core/timelineplayer.cpp; src/core/miditimeline.cpp`
 - Theme / layout: `src/ui/theme; src/ui/layout.cpp; src/ui/typography.cpp`
@@ -59,7 +60,7 @@ Also: prefer `lsp` over `grep` for renames/references. Don't do cross-file `ast_
 ## File-size discipline
 
 - Target 200–400L per file, review cohesion above 600L
-- One concept per file. `ui/editordrawer/` is the model.
+- One concept per file. `ui/editordrawer/` and `ui/songview/` are the models.
 - Don't create 80L fragments — 40 tiny files in one feature is also undiscoverable.
 - See `rule://keep-files-small` for enforcement.
 
