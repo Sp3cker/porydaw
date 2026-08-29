@@ -1,5 +1,5 @@
 // Singular CLI for porydaw build/verify/format lanes.
-// Quiet by default: build buffers ninja progress, verify uses quiet reporter with live name line.
+// Builds print only summaries and diagnostics; verify uses a quiet reporter with a live name line.
 // Usage:
 // deno task build:app [--release] -> build porydaw only
 // deno task build:checks [--release] -> build porydaw + porydaw_checks + mid2agb
@@ -33,6 +33,26 @@ function usage(): never {
 function isVerbose(args: string[]): boolean {
   return args.includes("--verbose") || args.includes("-v");
 }
+
+function buildRelease(args: string[]): boolean {
+  // Old agent prompts may still pass build verbosity. Keep them working, but
+  // never let those flags expand successful build output.
+  if (
+    args.some((arg) =>
+      arg !== "--release" && arg !== "--verbose" && arg !== "-v"
+    )
+  ) usage();
+  return args.includes("--release");
+}
+
+function printCapturedOutput(output: string): void {
+  if (output.trim()) console.error(output.trimEnd());
+}
+
+function containsWarning(output: string): boolean {
+  return /\bwarning(?:\s+[A-Z]+\d+)?:/i.test(output);
+}
+
 function getAppPath(): string {
   if (Deno.build.os === "darwin") {
     return `${BUILD_DIR}/porydaw.app`;
@@ -53,17 +73,13 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-async function ensureConfigured(
-  verbose: boolean,
-  release: boolean,
-): Promise<void> {
+async function ensureConfigured(release: boolean): Promise<void> {
   const poryaaaa = await poryaaaaConfiguration(BUILD_DIR);
   const ninjaFile = join(BUILD_DIR, "build.ninja");
   const makefile = join(BUILD_DIR, "Makefile");
   const hasBuildSystem = (await exists(ninjaFile)) || (await exists(makefile));
   if (!release && hasBuildSystem && poryaaaa.cacheMatches) return;
   const started = performance.now();
-  if (verbose) console.error(`build: configuring...`);
   const result = await new Deno.Command("cmake", {
     args: [
       "-S",
@@ -73,25 +89,26 @@ async function ensureConfigured(
       "-DCMAKE_BUILD_TYPE=Release",
       poryaaaa.cmakeArgument,
     ],
-    stdout: verbose ? "inherit" : "piped",
-    stderr: verbose ? "inherit" : "piped",
+    stdout: "piped",
+    stderr: "piped",
   }).output();
+  const out = decoder.decode(result.stdout);
+  const err = decoder.decode(result.stderr);
   if (!result.success) {
-    const out = decoder.decode(result.stderr) + decoder.decode(result.stdout);
-    if (out.trim()) console.error(out.trimEnd());
+    printCapturedOutput(out + err);
     console.error("build: configure failed");
     Deno.exit(result.code || 1);
   }
+  printCapturedOutput(err);
   const ms = performance.now() - started;
-  if (!verbose) console.log(`build: configured (${(ms / 1000).toFixed(2)}s)`);
+  console.log(`build: configured (${(ms / 1000).toFixed(2)}s)`);
 }
 
 async function runBuild(
   targets: string[],
-  verbose: boolean,
   release = false,
 ): Promise<void> {
-  await ensureConfigured(verbose, release);
+  await ensureConfigured(release);
   const started = performance.now();
   const nproc = String(navigator.hardwareConcurrency);
   const args = ["--build", BUILD_DIR, "-j", nproc];
@@ -109,17 +126,11 @@ async function runBuild(
   const err = decoder.decode(result.stderr);
   const combined = out + err;
   if (!result.success) {
-    // Quiet buffering: spill only on failure
-    if (combined.trim()) {
-      const lines = combined.trimEnd().split("\n");
-      // Keep last 80 lines for context, filter obvious progress noise on failure too
-      const tail = lines.slice(-80).join("\n");
-      console.error(tail);
-    }
+    printCapturedOutput(combined);
     console.error(`build: failed (${targets.join(", ") || "all"})`);
-    // Also hint log location
     Deno.exit(result.code || 1);
   }
+  if (containsWarning(combined)) printCapturedOutput(combined);
   const ms = performance.now() - started;
   const sec = (ms / 1000).toFixed(2);
   // Filter progress noise: only show summary, not per-target [%] lines
@@ -181,7 +192,7 @@ async function runVerify(rawArgs: string[]): Promise<void> {
   }
 
   if (!noBuild) {
-    await runBuild(["porydaw_checks", "mid2agb"], verbose);
+    await runBuild(["porydaw_checks", "mid2agb"]);
   }
 
   const binary = join(BUILD_DIR, "porydaw_checks");
@@ -272,13 +283,12 @@ if (sub === "build-checks" || sub === "build:check") sub = "build:checks";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
-    await runBuild(["porydaw"], isVerbose(rest), rest.includes("--release"));
+    await runBuild(["porydaw"], buildRelease(rest));
     break;
   case "build:checks":
     await runBuild(
       ["porydaw", "porydaw_checks", "mid2agb"],
-      isVerbose(rest),
-      rest.includes("--release"),
+      buildRelease(rest),
     );
     break;
   case "verify":
