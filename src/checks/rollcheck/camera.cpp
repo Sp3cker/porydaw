@@ -3,7 +3,6 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
-#include <QPixmap>
 #include <QPoint>
 #include <QWidget>
 #include <algorithm>
@@ -370,9 +369,8 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         if (naturalKey < 0 || accidentalKey < 0) {
             fail("no visible natural/accidental row pair for the pre-roll probe");
         } else {
-            const QPixmap padPixmap = roll->grab();
-            const QImage padImage = padPixmap.toImage();
-            const qreal padDpr = padPixmap.devicePixelRatio();
+            const QImage padImage = check.captureQuickFramebuffer();
+            const qreal padDpr = padImage.devicePixelRatio();
             const auto raster = [padDpr](qreal position) { return qRound(position * padDpr); };
             const qreal inPadX = pianoKeyboardWidth + pad / 2.0;
             // Mid snap-cell right of tick 0, clear of the 2px grid lines.

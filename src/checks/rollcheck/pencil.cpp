@@ -1,10 +1,10 @@
 #include "checks/rollcheck/rollcheck.h"
 
+#include <QApplication>
 #include <QColor>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
-#include <QPixmap>
 #include <QPointF>
 #include <QRectF>
 #include <QSize>
@@ -154,9 +154,8 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     const uint64_t overlayTick = a.tick + 3 * a.dur;
     view.setPlayheadSample(check.timeline().sampleForTick(overlayTick), false);
     view.setEditCursorTick(overlayTick);
-    const QPixmap rollBeforePixmap = roll->grab();
-    const QImage rollBeforeDrawing = rollBeforePixmap.toImage();
-    const qreal rasterDpr = rollBeforePixmap.devicePixelRatio();
+    const QImage rollBeforeDrawing = check.captureQuickFramebuffer();
+    const qreal rasterDpr = rollBeforeDrawing.devicePixelRatio();
     const auto toRasterPixel = [rasterDpr](qreal position) { return qRound(position * rasterDpr); };
     drawNote(*roll, a.center);
     DocNote noteA;
@@ -166,6 +165,16 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     }
     if (noteA.velocity != 100)
         fail("fresh document does not draw at velocity 100");
+    view.raise();
+    view.activateWindow();
+    // macOS may deny foreground activation to a check launched from the runner.
+    // Force Qt's test-visible active window so popup focus routing is deterministic.
+    QT_WARNING_PUSH
+    QT_WARNING_DISABLE_DEPRECATED
+    QApplication::setActiveWindow(&view);
+    QT_WARNING_POP
+    roll->setFocus(Qt::OtherFocusReason);
+    QCoreApplication::processEvents();
 
     check.addFailures(runPitchBendCheck(doc, view, roll, track, noteA, a.center, songLabel));
 
@@ -174,8 +183,7 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     // pixel above the bottom edge, whose reserved row must retain the
     // underlying roll. Nothing may paint past the end tick's column.
     view.setEditCursorTick(overlayTick);
-    const QPixmap rollAfterPixmap = roll->grab();
-    const QImage rollAfterDrawing = rollAfterPixmap.toImage();
+    const QImage rollAfterDrawing = check.captureQuickFramebuffer();
     const qreal noteLeftX = view.displayX(double(noteA.tick), pianoKeyboardWidth, rasterDpr);
     const qreal noteRightX =
         view.displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, rasterDpr);
@@ -229,7 +237,7 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     doc.addNote(track, noteA.tick + noteA.duration, noteA.key, noteA.duration, 100);
     const qreal abuttingRightX =
         view.displayX(double(noteA.tick + 2 * noteA.duration), pianoKeyboardWidth, rasterDpr);
-    const QImage abuttingImage = roll->grab().toImage();
+    const QImage abuttingImage = check.captureQuickFramebuffer();
     const int abuttingMidY = toRasterPixel(rows.centerY(noteA.key));
     const int abuttingRightPixel = toRasterPixel(abuttingRightX);
     bool restGapFound = false;

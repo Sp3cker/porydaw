@@ -5,6 +5,7 @@
 #include "core/mid2agbtables.h"
 #include "porydaw_scale.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 #include <QMouseEvent>
 
@@ -28,7 +29,7 @@ void PianoRoll::updateMoveDrag(const QMouseEvent *event)
             m_dKey = dKey;
             auditionMovedSelection();
         }
-        invalidateContent();
+        requestQuickUpdate(cNoteMutationDirty);
     }
 }
 
@@ -62,7 +63,7 @@ void PianoRoll::updateResizeDrag(const QMouseEvent *event)
     int64_t &target = m_leftDrag == LeftDrag::Resize ? m_dDur : m_dTick;
     if (delta != target) {
         target = delta;
-        invalidateContent();
+        requestQuickUpdate(cNoteMutationDirty);
     }
 }
 
@@ -81,7 +82,7 @@ void PianoRoll::updateVelocityDrag(const QMouseEvent *event)
             auditionKey(m_velAnchor.key, vel);
             m_auditioned = true;
         }
-        invalidateContent();
+        requestQuickUpdate(cVelocityMutationDirty);
         m_sv->updateVelocityGestureByDelta(m_dVel);
     }
 }
@@ -103,7 +104,8 @@ void PianoRoll::updateDrawDrag(const QMouseEvent *event)
             auditionKey(m_drawKey, m_lastVelocity);
             m_auditioned = true;
         }
-        invalidateContent();
+        requestQuickUpdate(PianoRollQuickDirty::DrawPreviewFill | PianoRollQuickDirty::Overlay |
+                           PianoRollQuickDirty::NoteText);
     }
 }
 
@@ -139,7 +141,7 @@ void PianoRoll::updateTimeSelDrag(const QMouseEvent *event)
 void PianoRoll::updateBandDrag()
 {
     auditionBandEntrants(QRectF(m_pressPos, m_curPos).normalized());
-    invalidateContent();
+    requestQuickUpdate(PianoRollQuickDirty::Overlay | PianoRollQuickDirty::NoteBordersAndSelection);
 }
 
 void PianoRoll::completeProjectionGesture()
@@ -175,7 +177,7 @@ void PianoRoll::releaseRightPress(QMouseEvent *event)
     } else {
         releasePendingMenu(event, doc);
     }
-    invalidateContent();
+    requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
     completeProjectionGesture(); // NO stopNoteAudition on this path
 }
 
@@ -199,7 +201,7 @@ void PianoRoll::releasePendingDrawClick(QMouseEvent *event)
     if (insideTimeSelection(event->position().x()))
         m_sv->selectionModel().clearTimeSelection();
     m_sv->commitEditCursor(m_sv->snapTick(m_pressTick));
-    invalidateContent();
+    requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
     completeProjectionGesture();
     stopNoteAudition(); // unique tail order: invalidate -> complete -> stop
 }
@@ -216,7 +218,7 @@ void PianoRoll::releasePendingVelocityClick(QMouseEvent *)
     } else if (noteRequiresSelectionUpdate(m_velAnchor)) {
         m_sv->selectionModel().setNoteSelection({id});
     }
-    invalidateContent();
+    requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection);
     completeProjectionGesture();
     stopNoteAudition();
 }
@@ -228,6 +230,7 @@ void PianoRoll::commitDrawDrag()
         return;
     const int selectedTrack = m_sv->selectionModel().primaryTrack();
     const std::vector<DocNote> before = doc->notesForTrack(selectedTrack);
+    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
     doc->addNote(selectedTrack, m_drawTick, uint8_t(m_drawKey), uint32_t(m_drawDur),
                  m_lastVelocity);
     m_sv->selectionModel().setNoteSelection(doc->insertedNoteIds(selectedTrack, before));
@@ -249,10 +252,14 @@ void PianoRoll::commitResolvedMove(SongDocument &doc, std::vector<DocNote> &note
 {
     if (m_sv->scaleFold() && m_dKey != 0) {
         std::vector<uint8_t> destinations;
-        if (!m_sv->resolveFoldDestinations(notes, m_dKey, destinations) ||
-            !doc.moveNotesToPitches(notes, destinations, m_dTick))
+        if (!m_sv->resolveFoldDestinations(notes, m_dKey, destinations))
+            return;
+        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+        const bool moved = doc.moveNotesToPitches(notes, destinations, m_dTick);
+        if (!moved)
             return;
     } else {
+        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
         doc.moveNotes(notes, m_dTick, m_dKey);
     }
     std::vector<NoteId> ids;
@@ -265,9 +272,11 @@ void PianoRoll::commitResolvedMove(SongDocument &doc, std::vector<DocNote> &note
 void PianoRoll::commitResizeDrag(LeftDrag drag, SongDocument *doc)
 {
     if (doc && drag == LeftDrag::Resize && m_dDur != 0) {
+        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
         doc->resizeNotes(resolveSelection(), m_dDur);
     } else if (doc && drag == LeftDrag::ResizeLeft && m_dTick != 0) {
         const std::vector<DocNote> notes = resolveSelection();
+        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
         doc->resizeNotesLeft(notes, m_dTick);
     }
 }
@@ -302,7 +311,18 @@ void PianoRoll::commitDrag(QMouseEvent *)
     m_dKey = 0;
     m_dDur = 0;
     m_dVel = 0;
-    invalidateContent();
+    // The committed drag kind selects exactly the domains the commit touched;
+    // camera and projection helpers queue their own requests, which coalesce.
+    PianoRollQuickDirtySet dirty = PianoRollQuickDirty::None;
+    if (drag == LeftDrag::Draw) // committed note replaces the draw preview
+        dirty = cDrawCommitDirty;
+    else if (drag == LeftDrag::Move || drag == LeftDrag::Resize || drag == LeftDrag::ResizeLeft)
+        dirty = cNoteMutationDirty;
+    else if (drag == LeftDrag::Velocity)
+        dirty = cVelocityMutationDirty;
+    else // no commit: a fall-through release killed a live right-drag token
+        dirty = PianoRollQuickDirty::Overlay | PianoRollQuickDirty::NoteBordersAndSelection;
+    requestQuickUpdate(dirty);
     completeProjectionGesture();
 }
 

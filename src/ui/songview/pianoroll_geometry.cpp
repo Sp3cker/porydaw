@@ -6,11 +6,11 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 #include <QApplication>
 #include <QFontMetrics>
 #include <QIcon>
-#include <QPainter>
 #include <QPixmap>
 
 #include <algorithm>
@@ -57,120 +57,6 @@ MidiCursors loadMidiCursors(qreal devicePixelRatio, int cursorExtent)
     const QIcon rightEdge(QStringLiteral(":/cursors/right-drag.png"));
     return {devicePixelRatio, centeredCursor(leftEdge.pixmap(cursorSize, devicePixelRatio)),
             centeredCursor(rightEdge.pixmap(cursorSize, devicePixelRatio))};
-}
-namespace {
-
-void drawHairlineFrame(QPainter &painter, const QRectF &rect, const QColor &color, int insetPixels)
-{
-    const qreal physicalPixel = logicalPhysicalPixel(painter.device()->devicePixelRatioF());
-    const qreal insetDips = insetPixels * physicalPixel;
-    const QRectF frame = rect.adjusted(insetDips, insetDips, -insetDips, -insetDips);
-    if (frame.width() <= 0.0 || frame.height() <= 0.0)
-        return;
-    painter.fillRect(QRectF(frame.left(), frame.top(), frame.width(), physicalPixel), color);
-    painter.fillRect(
-        QRectF(frame.left(), frame.bottom() - physicalPixel, frame.width(), physicalPixel), color);
-    const qreal sideHeight = std::max(0.0, frame.height() - 2.0 * physicalPixel);
-    if (sideHeight <= 0.0)
-        return;
-    painter.fillRect(QRectF(frame.left(), frame.top() + physicalPixel, physicalPixel, sideHeight),
-                     color);
-    painter.fillRect(QRectF(frame.right() - physicalPixel, frame.top() + physicalPixel,
-                            physicalPixel, sideHeight),
-                     color);
-}
-
-} // namespace
-
-QRectF noteFrame(const QPainter &painter, const QRectF &noteRect, int insetPixels)
-{
-    const qreal physicalPixel = logicalPhysicalPixel(painter.device()->devicePixelRatioF());
-    const qreal insetDips = insetPixels * physicalPixel;
-    return noteRect
-        .adjusted(lyt::space(Space::Zero), lyt::space(Space::Zero), -physicalPixel, -physicalPixel)
-        .adjusted(insetDips, insetDips, -insetDips, -insetDips);
-}
-
-int fittedFrameThickness(const QPainter &painter, const QRectF &rect, int requestedPixels,
-                         int insetPixels)
-{
-    const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
-    const int minDimPixels = qRound(std::min(rect.width(), rect.height()) * devicePixelRatio);
-    return std::clamp((minDimPixels - lyt::singlePixel()) / 2 - insetPixels,
-                      lyt::space(Space::Zero), requestedPixels);
-}
-
-int drawRectFrame(QPainter &painter, const QRectF &rect, const QColor &color, int thicknessPixels,
-                  int insetPixels)
-{
-    thicknessPixels = fittedFrameThickness(painter, rect, thicknessPixels, insetPixels);
-    if (thicknessPixels <= lyt::space(Space::Zero))
-        return lyt::space(Space::Zero);
-
-    // Paint one solid ring around the note box. Separate cosmetic outlines
-    // can quantize onto non-adjacent device rows at fractional scale
-    // factors, exposing the note face between them.
-    const qreal devicePixelRatio = painter.device()->devicePixelRatioF();
-    const qreal physicalPixel = logicalPhysicalPixel(devicePixelRatio);
-    const qreal insetDips = insetPixels * physicalPixel;
-    const qreal thicknessDips = thicknessPixels * physicalPixel;
-    const QRectF frame = rect.adjusted(insetDips, insetDips, -insetDips, -insetDips);
-    painter.fillRect(QRectF(frame.left(), frame.top(), frame.width(), thicknessDips), color);
-    painter.fillRect(
-        QRectF(frame.left(), frame.bottom() - thicknessDips, frame.width(), thicknessDips), color);
-    const qreal sideHeight = std::max(0.0, frame.height() - 2 * thicknessDips);
-    painter.fillRect(QRectF(frame.left(), frame.top() + thicknessDips, thicknessDips, sideHeight),
-                     color);
-    painter.fillRect(QRectF(frame.right() - thicknessDips, frame.top() + thicknessDips,
-                            thicknessDips, sideHeight),
-                     color);
-    return thicknessPixels;
-}
-
-void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox, bool unterminated, int dashLength,
-                       int dashGap, int insetPixels)
-{
-    const qreal dpr = painter.device()->devicePixelRatioF();
-    const int requested = noteBorderPixels(dpr);
-    const int fitted = fittedFrameThickness(painter, noteBox, requested, insetPixels);
-    if (fitted > 0) {
-        if (!unterminated) {
-            drawRectFrame(painter, noteBox, Qt::black, requested, insetPixels);
-            return;
-        }
-        painter.save();
-        QPen borderPen(Qt::black, lyt::space(Space::Zero));
-        borderPen.setCapStyle(Qt::FlatCap);
-        borderPen.setJoinStyle(Qt::MiterJoin);
-        borderPen.setDashPattern({qreal(dashLength), qreal(dashGap)});
-        painter.setPen(borderPen);
-        painter.setBrush(Qt::NoBrush);
-        for (int pixel = 0; pixel < fitted; ++pixel)
-            painter.drawRect(noteFrame(painter, noteBox, insetPixels + pixel));
-        painter.restore();
-        return;
-    }
-
-    // Smaller than an opaque hairline plus a face: keep a translucent
-    // outline so zoomed-out notes stay framed without turning into a
-    // black bar.
-    const qreal physicalPixel = logicalPhysicalPixel(dpr);
-    const qreal minDim = std::min(noteBox.width(), noteBox.height());
-    QColor color(Qt::black);
-    color.setAlphaF(std::clamp(minDim / (3.0 * physicalPixel), 0.25, 0.85));
-    if (!unterminated) {
-        drawHairlineFrame(painter, noteBox, color, insetPixels);
-        return;
-    }
-    painter.save();
-    QPen borderPen(color, lyt::space(Space::Zero));
-    borderPen.setCapStyle(Qt::FlatCap);
-    borderPen.setJoinStyle(Qt::MiterJoin);
-    borderPen.setDashPattern({qreal(dashLength), qreal(dashGap)});
-    painter.setPen(borderPen);
-    painter.setBrush(Qt::NoBrush);
-    painter.drawRect(noteFrame(painter, noteBox, insetPixels));
-    painter.restore();
 }
 
 } // namespace songview::pianoroll_detail
@@ -296,94 +182,16 @@ std::optional<PianoRoll::KeyboardHoverGeometry> PianoRoll::keyboardHoverGeometry
     const QRectF chip(m_geometry.pianoKeyboardWidth - m_geometry.keyboardHoverChipRightInset -
                           chipWidth,
                       chipY, chipWidth, chipHeight);
-    QRegion paintRegion(chip.toAlignedRect());
-    if (key != m_soundingKey)
-        paintRegion |= QRegion(highlight.toAlignedRect());
-    paintRegion &= QRegion(lyt::space(Space::Zero), lyt::space(Space::Zero),
-                           m_geometry.pianoKeyboardWidth, height());
-    return KeyboardHoverGeometry{highlight, name, m_keyboardHoverChipFont, chip, paintRegion};
+    return KeyboardHoverGeometry{highlight, name, m_keyboardHoverChipFont, chip};
 }
 
 void PianoRoll::setHoverKey(int key)
 {
     if (key == m_hoverKey)
         return;
-    const auto oldGeometry = keyboardHoverGeometry(m_hoverKey);
-    const QRegion oldRegion = oldGeometry ? oldGeometry->paintRegion : QRegion();
     m_hoverKey = key;
     setProperty("hoverKey", m_hoverKey);
-    const auto newGeometry = keyboardHoverGeometry(m_hoverKey);
-    const QRegion newRegion = newGeometry ? newGeometry->paintRegion : QRegion();
-    invalidateContent(oldRegion | newRegion);
-}
-
-void PianoRoll::invalidateTimeSelection(const SongDocument::TimeRange &previousRange,
-                                        uint32_t previousTrackMask,
-                                        const SongDocument::TimeRange &range, uint32_t trackMask)
-{
-    const QRect plotRect(m_geometry.pianoKeyboardWidth, lyt::space(Space::Zero),
-                         width() - m_geometry.pianoKeyboardWidth, height());
-    const auto bandRegion = [this, &plotRect](const SongDocument::TimeRange &timeRange,
-                                              uint32_t tracks) {
-        if (tracks == 0 || timeRange.endTick <= timeRange.startTick)
-            return QRegion();
-        const qreal dpr = devicePixelRatioF();
-        const qreal x0 =
-            m_sv->displayX(double(timeRange.startTick), m_geometry.pianoKeyboardWidth, dpr);
-        const qreal x1 =
-            m_sv->displayX(double(timeRange.endTick), m_geometry.pianoKeyboardWidth, dpr);
-        return QRegion(QRectF(x0, lyt::space(Space::Zero), x1 - x0, height()).toAlignedRect())
-            .intersected(plotRect);
-    };
-    const auto edgeRegion = [this, &plotRect](const SongDocument::TimeRange &timeRange,
-                                              uint32_t tracks) {
-        if (tracks == 0 || timeRange.endTick <= timeRange.startTick)
-            return QRegion();
-        const qreal dpr = devicePixelRatioF();
-        const qreal edgeWidth = std::max<qreal>(physicalPixel(), lyt::singlePixel());
-        QRegion edges;
-        for (const uint64_t tick : {timeRange.startTick, timeRange.endTick}) {
-            const qreal x = m_sv->displayX(double(tick), m_geometry.pianoKeyboardWidth, dpr);
-            edges |= QRegion(QRectF(x - edgeWidth, lyt::space(Space::Zero), 2 * edgeWidth, height())
-                                 .toAlignedRect());
-        }
-        return edges.intersected(plotRect);
-    };
-    const QRegion previousBand = bandRegion(previousRange, previousTrackMask);
-    const QRegion band = bandRegion(range, trackMask);
-    QRegion dirty = previousBand.subtracted(band) | band.subtracted(previousBand) |
-                    edgeRegion(previousRange, previousTrackMask) | edgeRegion(range, trackMask);
-    const auto selected = [](const SongDocument::TimeRange &timeRange, uint32_t tracks,
-                             const ViewNote &note) {
-        return note.track >= 0 && note.track < 16 && (tracks & (uint32_t{1} << note.track)) != 0 &&
-               timeRange.overlaps(note.startTick, note.endTick);
-    };
-    for (const ViewNote &note : m_sv->model().notes) {
-        if (note.startTick >= previousRange.endTick && note.startTick >= range.endTick)
-            break;
-        if (selected(previousRange, previousTrackMask, note) == selected(range, trackMask, note)) {
-            continue;
-        }
-        const QRect outerFrame = noteBox(displayedNoteRect(note)).toAlignedRect();
-        const qreal dpr = devicePixelRatioF();
-        const int frameInset = qCeil((selectionRingPixels(dpr) + noteBorderPixels(dpr)) / dpr);
-        const QRect innerFrame =
-            outerFrame.adjusted(frameInset, frameInset, -frameInset, -frameInset);
-        QRegion frameRegion(outerFrame);
-        if (!innerFrame.isEmpty())
-            frameRegion -= innerFrame;
-        dirty |= frameRegion;
-    }
-    dirty &= plotRect;
-    if (dirty.isEmpty())
-        return;
-    qint64 dirtyArea = 0;
-    for (const QRect &dirtyRect : dirty)
-        dirtyArea += qint64(dirtyRect.width()) * qint64(dirtyRect.height());
-    if (dirtyArea * 2 >= qint64(plotRect.width()) * qint64(plotRect.height()))
-        invalidateContent();
-    else
-        invalidateContent(dirty);
+    requestQuickUpdate(PianoRollQuickDirty::KeyboardHighlights | PianoRollQuickDirty::HoverChip);
 }
 
 QRectF PianoRoll::noteRect(qreal x0, qreal x1, int key) const
@@ -417,6 +225,13 @@ QRectF PianoRoll::noteBox(const QRectF &rect) const
 int PianoRoll::velocityLabelHeight() const
 {
     return int(std::floor(m_sv->keyHeight() - physicalPixel()));
+}
+
+bool PianoRoll::noteNameFits(const QRectF &noteRect, int key, const QFontMetricsF &metrics) const
+{
+    const auto textInset = lyt::space(Space::Half);
+    const QString name = keyName(key);
+    return noteRect.width() >= textInset + metrics.horizontalAdvance(name) + lyt::space(Space::Two);
 }
 
 const ViewNote *PianoRoll::hitNote(QPointF pos) const

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QFlags>
 #include <QHash>
 #include <QList>
 #include <QRectF>
@@ -59,6 +60,8 @@ class OtherStrip;
 class PlayheadOverlay;
 class TrackHeaderPanel;
 class TrackHeaderRow;
+enum class PianoRollQuickDirty : quint32;
+using PianoRollQuickDirtySet = QFlags<PianoRollQuickDirty>;
 
 // Perceptually mixes a color toward its backdrop. Timeline surfaces use this
 // shared shade for receding track-colored details.
@@ -519,7 +522,10 @@ class SongView : public QWidget
     // Vertical counterpart: scrolls the roll just enough for the key's
     // row to be fully visible.
     void ensureKeyVisible(int key);
-    void refreshTimelineViews();
+    // Ruler, strip, playhead, and roll refresh; the roll repaint is limited
+    // to the caller's semantic dirty set (see PianoRollQuickDirty). Every
+    // caller names the narrowest set its change justifies.
+    void refreshTimelineViews(songview::PianoRollQuickDirtySet dirty);
     // Refresh every concrete drawer page from the current live SongView state.
     // Public refresh seam for the standalone drawer pages after they commit a
     // document edit. This endpoint does not proactively cancel interaction.
@@ -624,6 +630,25 @@ class SongView : public QWidget
     double defaultVerticalScroll() const;
     void updateScrollbars();
     void rebuildAfterSongChange();
+    // RAII bracket for one committed roll mutation: construction installs
+    // the dirty classification for the mutation's synchronous
+    // documentChanged -> updateSong handoff, asserting no bracket is open;
+    // destruction clears any hint the mutation did not consume, so an
+    // early return or a no-emission document call cannot leak a stale hint
+    // into a later updateSong. Not an update request — undo/redo and
+    // non-roll edits open no bracket and get the generic replacement union.
+    class DocumentSwapHintScope
+    {
+      public:
+        DocumentSwapHintScope(SongView &owner, songview::PianoRollQuickDirtySet dirty);
+        ~DocumentSwapHintScope();
+        Q_DISABLE_COPY_MOVE(DocumentSwapHintScope)
+
+      private:
+        SongView &m_owner;
+    };
+    // Taken exactly once by updateSong; installed by DocumentSwapHintScope.
+    songview::PianoRollQuickDirtySet takeDocumentSwapHint();
     struct TimeScopeResolution {
         SongDocument::TimeScope scope;
         QString label;
@@ -655,6 +680,8 @@ class SongView : public QWidget
     songview::ScaleController m_scaleController;
     bool m_projectionLocked = false; // pointer gesture holds fold row geometry stable
     bool m_projectionDirty = false;  // fold-relevant change deferred by the lock
+    // Consumed by the next updateSong; installed by DocumentSwapHintScope.
+    std::optional<songview::PianoRollQuickDirtySet> m_documentSwapHint;
 
     double m_pxPerTick = 1.0;
     double m_scrollX = 0.0;

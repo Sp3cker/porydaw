@@ -8,6 +8,7 @@
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 #include <QCursor>
 #include <QInputDialog>
@@ -32,7 +33,7 @@ using namespace songview::pianoroll_detail;
 void PianoRoll::keyPressEvent(QKeyEvent *event)
 {
     if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key()))
-        invalidateContent();
+        requestQuickUpdate(PianoRollQuickDirty::NoteText);
     const auto &keys = keymap::Registry::instance();
     SongDocument *doc = m_sv->document();
     if (doc && keys.matches(event, QStringLiteral("roll.paste"))) {
@@ -48,6 +49,7 @@ void PianoRoll::keyPressEvent(QKeyEvent *event)
         const std::vector<DocNote> notes = resolveSelection();
         if (!notes.empty()) {
             copyNotes(notes);
+            const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
             doc->deleteNotes(notes);
             m_sv->selectionModel().clearNoteSelection();
         }
@@ -62,6 +64,7 @@ void PianoRoll::keyPressEvent(QKeyEvent *event)
     if (doc && keys.matches(event, QStringLiteral("roll.delete"))) {
         const std::vector<DocNote> notes = resolveSelection();
         if (!notes.empty()) {
+            const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
             doc->deleteNotes(notes);
             m_sv->selectionModel().clearNoteSelection();
         }
@@ -99,7 +102,7 @@ void PianoRoll::keyPressEvent(QKeyEvent *event)
         stopBandAuditions();
         m_sv->selectionModel().clearNoteSelection();
         m_sv->selectionModel().clearTimeSelection();
-        invalidateContent();
+        requestQuickUpdate(cDrawCommitDirty);
         event->accept();
         return;
     }
@@ -108,8 +111,9 @@ void PianoRoll::keyPressEvent(QKeyEvent *event)
 
 void PianoRoll::keyReleaseEvent(QKeyEvent *event)
 {
-    if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key()))
-        invalidateContent();
+    if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key())) {
+        requestQuickUpdate(PianoRollQuickDirty::NoteText);
+    }
     // End the transpose audition when the shortcut's keys come up.
     // Autorepeat releases are skipped so a held transpose key keeps sounding
     // the moving pitch; the idle-state guard keeps a stray key release
@@ -196,6 +200,7 @@ void PianoRoll::transposeSelection(int dKey)
         if (key < 0 || key > 127)
             return;
     }
+    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
     doc->moveNotes(notes, 0, dKey, /*mergeable=*/true);
     // Keep the moved notes in sight: the row the move headed toward
     // scrolls into view just enough (no re-centering).
@@ -207,7 +212,9 @@ void PianoRoll::transposeSelection(int dKey)
     m_sv->ensureKeyVisible(edge);
     auditionKey(int(notes.front().key) + dKey, notes.front().velocity);
     m_auditioned = true;
-    invalidateContent();
+    // Only note pixels changed here; the ensureKeyVisible reveal and any
+    // fold-projection rebuild queue their own requests, which coalesce.
+    requestQuickUpdate(cNoteMutationDirty);
 }
 
 void PianoRoll::nudgeSelection(bool right)
@@ -224,6 +231,7 @@ void PianoRoll::nudgeSelection(bool right)
     const int64_t dTick = int64_t(snapped) - int64_t(anchor);
     if (dTick == 0)
         return;
+    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
     doc->moveNotes(notes, dTick, 0, /*mergeable=*/true);
     // Keep the moved notes in sight, scrolling just enough.
     uint64_t lo = UINT64_MAX, hi = 0;
@@ -233,7 +241,9 @@ void PianoRoll::nudgeSelection(bool right)
         hi = std::max(hi, tick + note.duration);
     }
     m_sv->ensureRangeVisible(lo, hi, right);
-    invalidateContent();
+    // Only note pixels changed here; the ensureRangeVisible reveal above
+    // queues its own camera request when it actually scrolls.
+    requestQuickUpdate(cNoteMutationDirty);
 }
 
 void PianoRoll::copySelectedNotes()
@@ -317,7 +327,7 @@ bool PianoRoll::focusNoteUnderCursor(QPointF globalPos)
         !m_sv->selectionModel().isNoteSelected(hit->noteId))
         m_sv->selectionModel().setNoteSelection({hit->noteId});
     setFocus(Qt::MouseFocusReason);
-    invalidateContent();
+    requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection);
     return true;
 }
 
@@ -342,26 +352,31 @@ void PianoRoll::handleNoteMenuChoice(NoteMenuChoice choice)
     case NoteMenuChoice::Copy:
         copyNotes(notes);
         break;
-    case NoteMenuChoice::Cut:
+    case NoteMenuChoice::Cut: {
         copyNotes(notes);
+        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
         doc->deleteNotes(notes);
         m_sv->selectionModel().clearNoteSelection();
         break;
+    }
     case NoteMenuChoice::Velocity: {
         bool ok = false;
         const int velocity = QInputDialog::getInt(this, SongView::tr("Note velocity"),
                                                   SongView::tr("Velocity (1-127):"),
                                                   notes.front().velocity, 1, 127, 1, &ok);
         if (ok) {
+            const SongView::DocumentSwapHintScope swapHint{*m_sv, cVelocityMutationDirty};
             doc->setNotesVelocity(notes, uint8_t(velocity));
             m_lastVelocity = uint8_t(velocity);
         }
         break;
     }
-    case NoteMenuChoice::Delete:
+    case NoteMenuChoice::Delete: {
+        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
         doc->deleteNotes(notes);
         m_sv->selectionModel().clearNoteSelection();
         break;
+    }
     case NoteMenuChoice::None:
         break;
     }

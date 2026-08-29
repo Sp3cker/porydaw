@@ -234,7 +234,8 @@ const std::vector<CheckDefinition> &catalog()
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = route101Files},
+             .fixtureFiles = route101Files,
+             .windowing = Windowing::WindowSystem},
             {.name = "rollwindowingcheck",
              .argv = strings({"--rollwindowingcheck", "{scratch}", "mus_route101"}),
              .handler =

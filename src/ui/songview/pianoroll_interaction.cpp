@@ -2,14 +2,11 @@
 
 #include "ui/songview/pianoroll.h"
 
-#include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 #include <QEvent>
 #include <QMouseEvent>
-
-namespace lyt = ::layout;
-using Space = lyt::Space;
 
 namespace songview {
 
@@ -52,6 +49,7 @@ void PianoRoll::mouseDoubleClickEvent(QMouseEvent *event)
         if (const ViewNote *hit = hitNote(event->position())) {
             DocNote note;
             if (doc->findNote(hit->noteId, &note)) {
+                const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
                 doc->deleteNotes({note});
                 m_sv->selectionModel().clearNoteSelection();
             }
@@ -226,8 +224,7 @@ void PianoRoll::auditionKey(int key, int velocity)
     const int sounding = velocity > 0 ? key : -1;
     if (sounding != m_soundingKey) {
         m_soundingKey = sounding;
-        invalidateContent(QRegion(lyt::space(Space::Zero), lyt::space(Space::Zero),
-                                  m_geometry.pianoKeyboardWidth, height()));
+        requestQuickUpdate(PianoRollQuickDirty::KeyboardHighlights);
     }
 }
 } // namespace songview

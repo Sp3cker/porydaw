@@ -1,8 +1,13 @@
 #include "checks/rollcheck/rollcheck.h"
 
 #include <QColor>
+#include <QCoreApplication>
+#include <QElapsedTimer>
+#include <QEventLoop>
 #include <QObject>
+#include <QQuickWidget>
 #include <QWidget>
+#include <QWindow>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -26,8 +31,13 @@ bool Harness::prepare()
     SongView &songView = view();
     songView.resize(1280, 800);
     songView.setGridMinDenom(4);
+    songView.show();
+    songView.raise();
+    songView.activateWindow();
+    songView.ensurePolished();
+    QCoreApplication::processEvents();
     (void)songView.grab(); // force layout so child geometry is real
-
+    QCoreApplication::processEvents();
     m_pianoKeyboardWidth = layout::fontPx(13.0 / 3.0);
     m_plotOrigin = layout::fontPx(17.5 + 13.0 / 3.0);
     m_pianoRollDefaultKeyHeight = layout::fontPx(1.0);
@@ -42,6 +52,9 @@ bool Harness::prepare()
         fail("no engine track to draw on");
         return false;
     }
+
+    if (captureQuickFramebuffer().isNull())
+        return false;
 
     m_documentChanged =
         QObject::connect(&document(), &SongDocument::documentChanged, &songView, [this] {
@@ -70,6 +83,45 @@ const MidiTimeline &Harness::timeline() const noexcept
 QWidget &Harness::roll() noexcept
 {
     return *m_roll;
+}
+
+QImage Harness::captureQuickFramebuffer()
+{
+    SongView &songView = view();
+    auto *quickCanvas = songView.findChild<QQuickWidget *>(QStringLiteral("pianoRollQuickCanvas"));
+    if (!quickCanvas) {
+        fail("Qt Quick piano-roll canvas not found");
+        return {};
+    }
+
+    songView.show();
+    quickCanvas->show();
+    songView.ensurePolished();
+    quickCanvas->ensurePolished();
+    quickCanvas->update();
+
+    QElapsedTimer timeout;
+    timeout.start();
+    while (timeout.elapsed() < 1000) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        QWindow *const window = songView.windowHandle();
+        if (!quickCanvas->isVisible() || !window || !window->isExposed())
+            continue;
+        const QImage initialFramebuffer = quickCanvas->grabFramebuffer();
+        if (initialFramebuffer.isNull() || initialFramebuffer.size().isEmpty())
+            continue;
+        quickCanvas->update();
+        QCoreApplication::sendPostedEvents();
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        auto framebuffer = quickCanvas->grabFramebuffer();
+        if (framebuffer.isNull() || framebuffer.size().isEmpty())
+            continue;
+        framebuffer.setDevicePixelRatio(quickCanvas->devicePixelRatioF());
+        return framebuffer;
+    }
+
+    fail("Qt Quick piano-roll framebuffer could not be captured");
+    return {};
 }
 
 int Harness::track() const noexcept

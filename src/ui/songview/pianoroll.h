@@ -1,12 +1,11 @@
 #pragma once
 
-#include <QColor>
 #include <QCursor>
 #include <QFont>
 #include <QMouseEvent>
 #include <QRectF>
-#include <QRegion>
 #include <QString>
+#include <QWidget>
 #include <array>
 #include <cstdint>
 #include <functional>
@@ -15,23 +14,21 @@
 
 #include "core/songdocument.h"
 #include "ui/contextmenu.h"
-#include "ui/layout.h"
 #include "ui/pitchprojection.h"
 #include "ui/songview.h"
 #include "ui/songviewmodel.h"
-#include "ui/timelinesurface.h"
 
 class QAction;
 class QEvent;
 class QFontMetricsF;
 class QKeyEvent;
-class QPainter;
 class QPixmap;
 class QWheelEvent;
 
 namespace songview {
+class PianoRollQuickView;
 class PitchBendEditor;
-}
+} // namespace songview
 
 namespace songview::pianoroll_detail {
 
@@ -86,20 +83,15 @@ struct MidiCursors {
 
 QCursor centeredCursor(const QPixmap &pm);
 MidiCursors loadMidiCursors(qreal devicePixelRatio, int cursorExtent);
-QRectF noteFrame(const QPainter &painter, const QRectF &noteRect, int insetPixels);
-int fittedFrameThickness(const QPainter &painter, const QRectF &rect, int requestedPixels,
-                         int insetPixels);
-int drawRectFrame(QPainter &painter, const QRectF &rect, const QColor &color, int thicknessPixels,
-                  int insetPixels = layout::space(layout::Space::Zero));
-void drawNoteBoxBorder(QPainter &painter, const QRectF &noteBox, bool unterminated, int dashLength,
-                       int dashGap, int insetPixels);
 
 } // namespace songview::pianoroll_detail
 
 namespace songview {
 
-class PianoRoll : public TimelineSurface
+class PianoRoll : public QWidget
 {
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(PianoRoll)
   public:
     explicit PianoRoll(SongView *sv);
 
@@ -108,12 +100,10 @@ class PianoRoll : public TimelineSurface
     void cancelVelocityInteraction();
     void refreshTextLayout();
     void copySelectedNotes();
-    void invalidateTimeSelection(const SongDocument::TimeRange &previousRange,
-                                 uint32_t previousTrackMask, const SongDocument::TimeRange &range,
-                                 uint32_t trackMask);
+    // Routes a semantic dirty union to the retained Quick scene.
+    void requestQuickUpdate(PianoRollQuickDirtySet dirty);
 
   protected:
-    void paintContent(QPainter &p) override;
     bool event(QEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
@@ -125,6 +115,7 @@ class PianoRoll : public TimelineSurface
     void keyReleaseEvent(QKeyEvent *event) override;
 
   private:
+    friend class PianoRollQuickView;
     enum class LeftDrag {
         None,
         PendingDraw,
@@ -152,7 +143,6 @@ class PianoRoll : public TimelineSurface
         QString name;
         QFont chipFont;
         QRectF chipRect;
-        QRegion paintRegion;
     };
 
     std::optional<KeyboardHoverGeometry> keyboardHoverGeometry(int key) const;
@@ -233,13 +223,7 @@ class PianoRoll : public TimelineSurface
     void pasteAtEditCursor();
     void selectAllNotes();
 
-    void drawNotes(QPainter &painter, const SongViewModel &model, int selectedTrack,
-                   const SongDocument::TimeRange &timeRange, uint32_t timeSelectedTracks,
-                   bool drawingGhostNotes);
     bool noteNameFits(const QRectF &noteRect, int key, const QFontMetricsF &metrics) const;
-    void drawNoteName(QPainter &painter, const QRectF &noteRect, const QRectF &noteBox, int key,
-                      const QColor &fill);
-    void drawDragPreview(QPainter &p, const SongViewModel &model, int selected);
     QRectF displayedNoteRect(const ViewNote &note) const;
     int displayedNoteKey(const ViewNote &note) const;
 
@@ -249,7 +233,6 @@ class PianoRoll : public TimelineSurface
     void handleNoteMenuChoice(pianoroll_detail::NoteMenuChoice choice);
 
     void rebuildFontCache();
-    void drawKeyboard(QPainter &p);
     void auditionBandEntrants(const QRectF &band);
     void stopBandAuditions();
     void selectBand(const QRectF &band, bool additive);
@@ -305,6 +288,7 @@ class PianoRoll : public TimelineSurface
     QPointF m_panPos;             // last pan sample, global coords
     PitchBendEditor *m_bendPopup = nullptr;
     pianoroll_detail::NoteContextMenu *m_noteMenu = nullptr;
+    PianoRollQuickView *m_quickView = nullptr;
 };
 
 } // namespace songview

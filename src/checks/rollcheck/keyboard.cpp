@@ -8,7 +8,6 @@
 #include <QRectF>
 #include <QTimer>
 #include <QWidget>
-#include <QtMath>
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -19,6 +18,7 @@
 
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 namespace checks::rollcheck {
 
@@ -170,17 +170,31 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
         if (!scopedGhost) {
             fail("modified ruler drag fixture has no overlapping secondary-track note");
         } else {
-            const QRectF ghostBox = rows.noteBox(rows.noteRect(
-                view.displayX(double(scopedGhost->startTick), pianoKeyboardWidth, rows.dpr()),
-                view.displayX(double(scopedGhost->endTick), pianoKeyboardWidth, rows.dpr()),
+            const SongView::ViewState priorViewState = view.viewState();
+            SongView::ViewState ghostViewState = priorViewState;
+            ghostViewState.scrollY =
+                std::max(0.0, (127.5 - double(scopedGhost->key)) * ghostViewState.keyHeight -
+                                  roll->height() / 2.0);
+            view.applyViewState(ghostViewState);
+            const SnappedRows ghostRows{view, *roll};
+            const QRectF ghostBox = ghostRows.noteBox(ghostRows.noteRect(
+                view.displayX(double(scopedGhost->startTick), pianoKeyboardWidth, ghostRows.dpr()),
+                view.displayX(double(scopedGhost->endTick), pianoKeyboardWidth, ghostRows.dpr()),
                 scopedGhost->key));
-            const QPixmap scopedPixmap = roll->grab();
-            const QImage scopedImage = scopedPixmap.toImage();
-            const qreal scopedDpr = scopedPixmap.devicePixelRatio();
-            const int centerX = qRound(ghostBox.center().x() * scopedDpr);
-            const int bottomY = qRound(ghostBox.bottom() * scopedDpr) - 1;
-            if (!isSelectionRingColor(scopedImage.pixel(centerX, bottomY)))
-                fail("time-scoped ghost note did not render its selection ring");
+            const QRectF visibleGhostBox = ghostBox.intersected(
+                QRectF(pianoKeyboardWidth, 0.0, qreal(roll->width() - pianoKeyboardWidth),
+                       qreal(roll->height())));
+            const QImage scopedImage = check.captureQuickFramebuffer();
+            if (visibleGhostBox.isEmpty()) {
+                fail("time-scoped ghost note is outside the horizontal viewport");
+            } else {
+                const qreal scopedDpr = scopedImage.devicePixelRatio();
+                const int centerX = qRound(visibleGhostBox.center().x() * scopedDpr);
+                const int bottomY = qRound(visibleGhostBox.bottom() * scopedDpr) - 1;
+                if (!isSelectionRingColor(scopedImage.pixel(centerX, bottomY)))
+                    fail("time-scoped ghost note did not render its selection ring");
+            }
+            view.applyViewState(priorViewState);
             auto *pianoRoll = static_cast<songview::PianoRoll *>(roll);
             auto *otherStrip = static_cast<songview::OtherStrip *>(
                 view.findChild<QWidget *>(QStringLiteral("otherEventsStrip")));
@@ -188,29 +202,16 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                 fail("could not find the other-events strip for repaint diagnostics");
             auto movedSelection = view.selectionModel().timeSelection();
             ++movedSelection.endTick;
-            const auto beforeMovePaint = pianoRoll->diagnostics();
             const auto beforeStripPaint =
                 otherStrip ? otherStrip->diagnostics() : songview::TimelineSurfaceDiagnostics{};
             view.selectionModel().setTimeSelection(movedSelection);
-            const QImage partialSelectionImage = pianoRoll->grab().toImage();
-            const auto afterMovePaint = pianoRoll->diagnostics();
+            const QImage partialSelectionImage = check.captureQuickFramebuffer();
             if (otherStrip && otherStrip->diagnostics().contentInvalidationCount !=
                                   beforeStripPaint.contentInvalidationCount)
                 fail("moving a time selection invalidated the other-events strip");
-            const quint64 movedPaintPixels =
-                afterMovePaint.contentPaintPixelCount - beforeMovePaint.contentPaintPixelCount;
-            const qreal rollDpr = pianoRoll->devicePixelRatioF();
-            const quint64 fullRollPixels = quint64(qCeil(pianoRoll->width() * rollDpr)) *
-                                           quint64(qCeil(pianoRoll->height() * rollDpr));
-            if (afterMovePaint.contentPaintCount <= beforeMovePaint.contentPaintCount)
-                fail("moving a stable-scope time selection painted no roll content");
-            else if (movedPaintPixels == 0)
-                fail("moving a stable-scope time selection reported no painted pixels");
-            else if (movedPaintPixels >= fullRollPixels)
-                fail("moving a stable-scope time selection repainted the full piano roll");
-            pianoRoll->invalidateContent();
+            pianoRoll->requestQuickUpdate(songview::PianoRollQuickDirty::All);
             QCoreApplication::processEvents();
-            if (partialSelectionImage != pianoRoll->grab().toImage())
+            if (partialSelectionImage != check.captureQuickFramebuffer())
                 fail("partial time-selection repaint differed from a full repaint");
             view.selectionModel().setTimeSelection(
                 {startTick, endTick, songview::EditorSelectionModel::TimeSelection::Tracks});
@@ -261,9 +262,8 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                           view.displayX(double(transposed.tick + transposed.duration),
                                         pianoKeyboardWidth, rows.dpr()),
                           transposed.key));
-        const QPixmap selectedByTimePixmap = roll->grab();
-        const QImage selectedByTimeImage = selectedByTimePixmap.toImage();
-        const qreal selectedByTimeDpr = selectedByTimePixmap.devicePixelRatio();
+        const QImage selectedByTimeImage = check.captureQuickFramebuffer();
+        const qreal selectedByTimeDpr = selectedByTimeImage.devicePixelRatio();
         const int centerX = qRound(selectedByTimeBox.center().x() * selectedByTimeDpr);
         const int bottomY = qRound(selectedByTimeBox.bottom() * selectedByTimeDpr) - 1;
         if (!isSelectionRingColor(selectedByTimeImage.pixel(centerX, bottomY)))

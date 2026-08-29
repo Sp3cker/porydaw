@@ -5,7 +5,6 @@
 #include <QFontMetrics>
 #include <QImage>
 #include <QObject>
-#include <QPixmap>
 #include <QPoint>
 #include <QRectF>
 #include <QWidget>
@@ -58,20 +57,19 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         view.selectionModel().clearNoteSelection();
         // The band is provisional until release, but covered notes should
         // use the same selection ring as the velocity drawer's live preview.
+        const qreal previewDpr = roll->devicePixelRatioF();
         const QRectF previewNoteBox = rows.noteBox(rows.noteRect(
-            pianoKeyboardWidth + qRound(view.contentX(double(noteA.tick))),
-            pianoKeyboardWidth + qRound(view.contentX(double(noteA.tick + noteA.duration))),
+            view.displayX(double(noteA.tick), pianoKeyboardWidth, previewDpr),
+            view.displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, previewDpr),
             noteA.key));
-
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, sweepStart, Qt::RightButton,
                                   Qt::RightButton, Qt::NoModifier);
         checks::events::sendMouse(*roll, QEvent::MouseMove, a.center + QPoint(4, 4), Qt::NoButton,
                                   Qt::RightButton, Qt::NoModifier);
-        const QPixmap previewPixmap = roll->grab();
-        const QImage previewImage = previewPixmap.toImage();
-        const qreal previewDpr = previewPixmap.devicePixelRatio();
-        const int previewCenterX = qRound(previewNoteBox.center().x() * previewDpr);
-        const int previewBottomY = qRound(previewNoteBox.bottom() * previewDpr) - 1;
+        const QImage previewImage = check.captureQuickFramebuffer();
+        const qreal previewRasterDpr = previewImage.devicePixelRatio();
+        const int previewCenterX = qRound(previewNoteBox.center().x() * previewRasterDpr);
+        const int previewBottomY = qRound(previewNoteBox.bottom() * previewRasterDpr) - 1;
         if (!isSelectionRingColor(previewImage.pixel(previewCenterX, previewBottomY)))
             fail("band-dragged note did not show a provisional selection ring");
         if (!view.selectionModel().noteSelection().empty())
@@ -196,9 +194,9 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
                                       Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
             checks::events::sendMouse(*roll, QEvent::MouseMove, readoutEnd, Qt::NoButton,
                                       Qt::LeftButton, Qt::NoModifier);
-            const QImage readoutOn = roll->grab().toImage();
+            const QImage readoutOn = check.captureQuickFramebuffer();
             view.setNoteNameMode(false);
-            const QImage readoutOff = roll->grab().toImage();
+            const QImage readoutOff = check.captureQuickFramebuffer();
             view.setNoteNameMode(true);
             checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, readoutEnd, Qt::LeftButton,
                                       Qt::NoButton, Qt::NoModifier);

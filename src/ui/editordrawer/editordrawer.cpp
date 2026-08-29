@@ -14,6 +14,7 @@
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 EditorDrawer::EditorDrawer(SongView &owner, QWidget *parent, EditorViewState viewState)
     : QWidget(parent)
@@ -163,7 +164,8 @@ void EditorDrawer::publishViewState(bool geometryAlreadyArranged)
     if (!geometryAlreadyArranged)
         arrange();
     finishViewStateTransition(diff, drawerOwnedFocus);
-    m_owner.refreshTimelineViews();
+    // Drawer view-state publish can affect any roll domain.
+    m_owner.refreshTimelineViews(songview::PianoRollQuickDirty::All);
     m_owner.refreshDrawerPages();
 }
 

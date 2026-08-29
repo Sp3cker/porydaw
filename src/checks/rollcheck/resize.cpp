@@ -53,20 +53,29 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     // Probe 2.8 DIPs inward at both ends on the note row.
     const QPointF leftHandle(resizeNoteLeftX + 2.8, rowY);
     const QPointF rightHandle(resizeNoteRightX - 2.8, rowY);
+    // A real window system may normalize cursor DPR metadata while preserving
+    // the installed pixels. Assert the public custom-cursor shape and the
+    // exact left/right resource image, not platform-adjusted metadata.
+    const qreal cursorDpr = roll->devicePixelRatioF();
+    const QImage leftEdgeImage =
+        QIcon(QStringLiteral(":/cursors/left-drag.png")).pixmap(QSize(24, 24), cursorDpr).toImage();
+    const QImage rightEdgeImage = QIcon(QStringLiteral(":/cursors/right-drag.png"))
+                                      .pixmap(QSize(24, 24), cursorDpr)
+                                      .toImage();
+    if (leftEdgeImage == rightEdgeImage)
+        fail("the left and right edge cursor images are indistinguishable");
+    const auto failUnlessHoverShows = [&](const QImage &expectedImage, const char *what) {
+        const QCursor hover = roll->cursor();
+        if (hover.shape() != Qt::BitmapCursor || hover.pixmap().toImage() != expectedImage)
+            fail(what);
+    };
     checks::events::sendMouse(*roll, QEvent::MouseMove, leftHandle, Qt::NoButton, Qt::NoButton,
                               Qt::ControlModifier);
-    const QPixmap expectedLeftCursor = QIcon(QStringLiteral(":/cursors/left-drag.png"))
-                                           .pixmap(QSize(24, 24), roll->devicePixelRatioF());
-    if (roll->cursor().pixmap().devicePixelRatio() != expectedLeftCursor.devicePixelRatio() ||
-        roll->cursor().pixmap().toImage() != expectedLeftCursor.toImage())
-        fail("left note edge did not show its DPI-matched custom cursor");
+    failUnlessHoverShows(leftEdgeImage,
+                         "left note edge did not show its DPI-matched custom cursor");
     checks::events::sendMouse(*roll, QEvent::MouseMove, rightHandle, Qt::NoButton, Qt::NoButton,
                               Qt::ControlModifier);
-    const QPixmap expectedRightCursor = QIcon(QStringLiteral(":/cursors/right-drag.png"))
-                                            .pixmap(QSize(24, 24), roll->devicePixelRatioF());
-    if (roll->cursor().pixmap().devicePixelRatio() != expectedRightCursor.devicePixelRatio() ||
-        roll->cursor().pixmap().toImage() != expectedRightCursor.toImage())
-        fail("right note edge did not show its custom cursor");
+    failUnlessHoverShows(rightEdgeImage, "right note edge did not show its custom cursor");
     const QPoint pull(pianoKeyboardWidth + view.contentX(double(d.tick) + 1.9 * double(d.dur)),
                       rowY);
     checks::events::sendMouse(*roll, QEvent::MouseButtonPress, rightHandle, Qt::LeftButton,
@@ -176,12 +185,14 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
             fail("narrow-zoom fixture note is unexpectedly wide");
         const QRectF narrowBox =
             narrowRows.noteBox(narrowRows.noteRect(narrowLeftX, narrowRightX, d.key));
-        QImage narrowImage(roll->size(), QImage::Format_ARGB32_Premultiplied);
-        narrowImage.fill(Qt::transparent);
-        roll->render(&narrowImage);
-        const int sampleX = qRound(narrowBox.center().x());
-        const QRgb topPixel = narrowImage.pixel(sampleX, qRound(narrowBox.top()));
-        const QRgb centerPixel = narrowImage.pixel(sampleX, qRound(narrowBox.center().y()));
+        const QImage narrowImage = check.captureQuickFramebuffer();
+        const qreal narrowDpr = narrowImage.devicePixelRatio();
+        const auto toNarrowPixel = [narrowDpr](qreal position) {
+            return qRound(position * narrowDpr);
+        };
+        const int sampleX = toNarrowPixel(narrowBox.center().x());
+        const QRgb topPixel = narrowImage.pixel(sampleX, toNarrowPixel(narrowBox.top()));
+        const QRgb centerPixel = narrowImage.pixel(sampleX, toNarrowPixel(narrowBox.center().y()));
         const QColor top(topPixel);
         const QColor face = SongView::noteColor(track, 100);
         if (qAlpha(topPixel) == 0)

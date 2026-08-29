@@ -3,6 +3,7 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 #include <QScrollBar>
 #include <QSizePolicy>
@@ -33,7 +34,7 @@ void SongView::setEditorTimeZoom(double pxPerBeatValue)
         m_editorDrawer->cancelVisiblePageInteraction();
     m_pxPerTick = pxPerTick;
     updateScrollbars();
-    refreshTimelineViews();
+    refreshTimelineViews(cPlotDirty);
     refreshDrawerPages();
 }
 qreal SongView::displayX(double tick, qreal origin, qreal dpr) const
@@ -67,7 +68,7 @@ void SongView::zoomAroundContentX(double factor, qreal anchorContentX)
         cursorAnchoredScroll(double(anchorContentX), oldPxPerTick, m_scrollX, m_pxPerTick),
         minHScroll(), maxHScroll());
     updateScrollbars();
-    refreshTimelineViews();
+    refreshTimelineViews(cPlotDirty);
     refreshDrawerPages();
 }
 void SongView::zoomKeyHeight(const QWheelEvent *event)
@@ -92,7 +93,7 @@ void SongView::zoomKeyHeight(const QWheelEvent *event)
     setVScroll(std::clamp(anchoredScroll, 0.0, maxRollScroll()));
     // The camera scale changed even when the cursor anchor keeps its scroll
     // offset numerically unchanged.
-    m_roll->invalidateContent();
+    m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
     refreshDrawerPages();
 }
 void SongView::scrollByPx(double dx)
@@ -115,7 +116,7 @@ void SongView::setHScroll(double px)
         m_hbar->blockSignals(false);
     }
     if (cameraChanged) {
-        refreshTimelineViews();
+        refreshTimelineViews(cPlotDirty);
         refreshDrawerPages();
     }
 }
@@ -139,7 +140,7 @@ void SongView::setVScroll(double y)
         m_vbar->blockSignals(false);
     }
     if (cameraChanged)
-        m_roll->invalidateContent();
+        m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
 }
 double SongView::maxRollScroll() const
 {

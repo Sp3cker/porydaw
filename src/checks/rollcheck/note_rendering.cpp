@@ -5,7 +5,6 @@
 #include <QEvent>
 #include <QFontMetrics>
 #include <QImage>
-#include <QPixmap>
 #include <QPoint>
 #include <QRect>
 #include <QRectF>
@@ -36,18 +35,15 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
     const Cell &a = fixture.a;
     const DocNote &noteA = fixture.noteA;
     const int undoBaseline = doc.undoStack()->index();
-    const qreal rasterDpr = roll->devicePixelRatioF();
-    const auto toRasterPixel = [rasterDpr](qreal position) { return qRound(position * rasterDpr); };
-    const qreal noteLeftX = view.displayX(double(noteA.tick), pianoKeyboardWidth, rasterDpr);
+    const qreal displayDpr = roll->devicePixelRatioF();
+    const qreal noteLeftX = view.displayX(double(noteA.tick), pianoKeyboardWidth, displayDpr);
     const qreal noteRightX =
-        view.displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, rasterDpr);
+        view.displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, displayDpr);
     const QRectF noteFrame = rows.noteRect(noteLeftX, noteRightX, noteA.key);
     const QRectF paintedNoteBox = rows.noteBox(noteFrame);
     const QColor expectedNoteColor = SongView::noteColor(track, 100);
-    const QPoint noteInteriorSample(toRasterPixel(paintedNoteBox.center().x()),
-                                    toRasterPixel(paintedNoteBox.center().y()));
     const qreal abuttingRightX =
-        view.displayX(double(noteA.tick + 2 * noteA.duration), pianoKeyboardWidth, rasterDpr);
+        view.displayX(double(noteA.tick + 2 * noteA.duration), pianoKeyboardWidth, displayDpr);
     auto fail = [&](const char *what) { check.fail(what); };
     // Timeline overlays are composited above notes and can tint frame colors
     // by a few channel values.
@@ -69,14 +65,29 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         const SnappedRows tinyRows{view, *roll};
         const QRectF tinyBox =
             tinyRows.noteBox(tinyRows.noteRect(noteRightX, abuttingRightX, noteA.key));
-        QImage tinyImage(roll->size(), QImage::Format_ARGB32_Premultiplied);
-        tinyImage.fill(Qt::transparent);
-        roll->render(&tinyImage);
-        const int tinyCenterX = qRound(tinyBox.center().x());
-        if (!isBlackBorder(tinyImage.pixel(tinyCenterX, qRound(tinyBox.top()))))
-            fail("tiny note lost its border instead of thinning it");
-        if (isBlackBorder(tinyImage.pixel(tinyCenterX, qRound(tinyBox.top()) + 1)))
-            fail("tiny note border swallowed the note face");
+        const QImage tinyImage = check.captureQuickFramebuffer();
+        const qreal tinyDpr = tinyImage.devicePixelRatio();
+        const auto toTinyPixel = [tinyDpr](qreal position) { return qRound(position * tinyDpr); };
+        const int tinyCenterX = toTinyPixel(tinyBox.center().x());
+        const int tinyTopPixel = toTinyPixel(tinyBox.top());
+        // Quick thins the border to the widest frame that leaves a face
+        // (fittedFrameThickness), not the painter's fixed single pixel.
+        const int fittedBorder =
+            std::clamp((qRound(std::min(tinyBox.width(), tinyBox.height()) * tinyDpr) -
+                        layout::singlePixel()) /
+                           2,
+                       layout::space(layout::Space::Zero), songview::noteBorderPixels(tinyDpr));
+        if (fittedBorder <= 0) {
+            fail("tiny note probe has no fitted border");
+        } else {
+            for (int borderPixel = 0; borderPixel < fittedBorder; ++borderPixel) {
+                if (!isBlackBorder(tinyImage.pixel(tinyCenterX, tinyTopPixel + borderPixel)))
+                    fail("tiny note lost its border instead of thinning it");
+            }
+            if (tinyImage.pixel(tinyCenterX, tinyTopPixel + fittedBorder) !=
+                expectedNoteColor.rgba())
+                fail("tiny note border swallowed the note face");
+        }
         view.selectionModel().setNoteSelection(selectedNotes);
         view.applyViewState(originalView);
     }
@@ -94,9 +105,8 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         const SnappedRows fractionalRows{view, *roll};
         const QRectF fractionalNoteBox =
             fractionalRows.noteBox(fractionalRows.noteRect(noteLeftX, noteRightX, noteA.key));
-        const QPixmap selectedNotePixmap = roll->grab();
-        const QImage selectedNoteImage = selectedNotePixmap.toImage();
-        const qreal devicePixelRatio = selectedNotePixmap.devicePixelRatio();
+        const QImage selectedNoteImage = check.captureQuickFramebuffer();
+        const qreal devicePixelRatio = selectedNoteImage.devicePixelRatio();
         const auto toPhysicalPixel = [devicePixelRatio](qreal position) {
             return qRound(position * devicePixelRatio);
         };
@@ -107,7 +117,7 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         const int centerPixelX = toPhysicalPixel(fractionalNoteBox.center().x());
         const int centerPixelY = toPhysicalPixel(fractionalNoteBox.center().y());
         // Frame weights scale with the display ratio (1-DIP border, 1.5-DIP
-        // ring) — assert exactly the pixel counts the paint code derives.
+        // ring) — assert the display-scaled pixel counts.
         const int ringPixels = songview::selectionRingPixels(devicePixelRatio);
         const int borderPixels = songview::noteBorderPixels(devicePixelRatio);
         for (int ringPixel = 0; ringPixel < ringPixels; ++ringPixel) {
@@ -137,7 +147,7 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
             fail("selection ring is thicker than its display-scaled weight");
 
         view.selectionModel().clearNoteSelection();
-        const QImage unselectedNoteImage = roll->grab().toImage();
+        const QImage unselectedNoteImage = check.captureQuickFramebuffer();
         for (int borderPixel = 0; borderPixel < borderPixels; ++borderPixel) {
             if (!isBlackBorder(
                     unselectedNoteImage.pixel(centerPixelX, bottomPixel - 1 - borderPixel)))
@@ -154,10 +164,14 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
     const int selectedTrackBeforeGhostProbe = view.selectionModel().primaryTrack();
     const int ghostTrack = (selectedTrackBeforeGhostProbe + 1) % doc.engineTrackCount();
     view.selectTrack(ghostTrack);
-    const QImage ghostNoteRender = roll->grab().toImage();
-    const int ghostCenterX = toRasterPixel(paintedNoteBox.center().x());
-    const int ghostTopPixel = toRasterPixel(paintedNoteBox.top());
-    const int ghostBottomPixel = toRasterPixel(paintedNoteBox.bottom()) - 1;
+    const QImage ghostNoteRender = check.captureQuickFramebuffer();
+    const qreal ghostDpr = ghostNoteRender.devicePixelRatio();
+    const auto toGhostPixel = [ghostDpr](qreal position) { return qRound(position * ghostDpr); };
+    const QPoint noteInteriorSample(toGhostPixel(paintedNoteBox.center().x()),
+                                    toGhostPixel(paintedNoteBox.center().y()));
+    const int ghostCenterX = toGhostPixel(paintedNoteBox.center().x());
+    const int ghostTopPixel = toGhostPixel(paintedNoteBox.top());
+    const int ghostBottomPixel = toGhostPixel(paintedNoteBox.bottom()) - 1;
     const QRgb ghostTopEdge = ghostNoteRender.pixel(ghostCenterX, ghostTopPixel);
     const QRgb ghostTopInterior = ghostNoteRender.pixel(ghostCenterX, ghostTopPixel + 2);
     const QRgb ghostBottomEdge = ghostNoteRender.pixel(ghostCenterX, ghostBottomPixel);
@@ -192,7 +206,7 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
     // noteA is a ghost while ghostTrack is selected: flipping the mode must
     // not move a single sampled ghost pixel.
     view.setVelocityColorMode(true);
-    const QImage ghostVelocityRender = roll->grab().toImage();
+    const QImage ghostVelocityRender = check.captureQuickFramebuffer();
     if (ghostVelocityRender.pixel(ghostCenterX, ghostTopPixel) != ghostTopEdge ||
         ghostVelocityRender.pixel(ghostCenterX, ghostTopPixel + 2) != ghostTopInterior ||
         ghostVelocityRender.pixel(ghostCenterX, ghostBottomPixel) != ghostBottomEdge ||
@@ -200,12 +214,12 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         fail("velocity-color mode changed a ghost note's rendering");
 
     view.selectTrack(selectedTrackBeforeGhostProbe);
-    const QImage velocityModeRender = roll->grab().toImage();
+    const QImage velocityModeRender = check.captureQuickFramebuffer();
     if (QColor(velocityModeRender.pixel(noteInteriorSample)) != SongView::velocityNoteColor(100))
         fail("velocity-mode note interior does not match velocityNoteColor(100)");
 
     view.setVelocityColorMode(false);
-    const QImage identityRestoredRender = roll->grab().toImage();
+    const QImage identityRestoredRender = check.captureQuickFramebuffer();
     if (QColor(identityRestoredRender.pixel(noteInteriorSample)) != expectedNoteColor)
         fail("disabling velocity-color mode did not restore identity fills");
 
@@ -232,19 +246,23 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         const SnappedRows namedRows{view, *roll};
         const QRectF namedNoteBox =
             namedRows.noteBox(namedRows.noteRect(noteLeftX, noteRightX, noteA.key));
-        const QRect noteARegion(
-            QPoint(toRasterPixel(namedNoteBox.left()), toRasterPixel(namedNoteBox.top())),
-            QPoint(toRasterPixel(namedNoteBox.right()) - 1,
-                   toRasterPixel(namedNoteBox.bottom()) - 1));
         view.setNoteNameMode(true);
-        const QImage namesOnRender = roll->grab().toImage();
+        const QImage namesOnRender = check.captureQuickFramebuffer();
+        const qreal namesDpr = namesOnRender.devicePixelRatio();
+        const auto toNamesPixel = [namesDpr](qreal position) {
+            return qRound(position * namesDpr);
+        };
+        const QRect noteARegion(
+            QPoint(toNamesPixel(namedNoteBox.left()), toNamesPixel(namedNoteBox.top())),
+            QPoint(toNamesPixel(namedNoteBox.right()) - 1,
+                   toNamesPixel(namedNoteBox.bottom()) - 1));
 
         // With the other track selected note A is a ghost, and its face must
         // render identically with the mode on or off.
         view.selectTrack(ghostTrack);
-        const QImage ghostNamedRender = roll->grab().toImage();
+        const QImage ghostNamedRender = check.captureQuickFramebuffer();
         view.setNoteNameMode(false);
-        if (differingPixels(roll->grab().toImage(), ghostNamedRender, noteARegion) != 0)
+        if (differingPixels(check.captureQuickFramebuffer(), ghostNamedRender, noteARegion) != 0)
             fail("note-name mode changed a ghost note's rendering");
         view.setNoteNameMode(true);
         view.selectTrack(selectedTrackBeforeGhostProbe);
@@ -277,14 +295,14 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
             if (!check.isOccupied(a.tick, 3 * closeTicks + farTicks + 2 * labelTicks, key))
                 runKey = key;
         }
-        const int stripW = qRound(12.0 * rasterDpr);
+        const int stripW = qRound(12.0 * namesDpr);
         const QRectF runRowBox =
             namedRows.noteBox(namedRows.noteRect(0.0, 1.0, runKey < 0 ? 60 : runKey));
-        const int runRowTop = toRasterPixel(runRowBox.top());
-        const int runRowBottom = toRasterPixel(runRowBox.bottom()) - 1;
+        const int runRowTop = toNamesPixel(runRowBox.top());
+        const int runRowBottom = toNamesPixel(runRowBox.bottom()) - 1;
         const auto labelStrip = [&](uint64_t tick, int width) {
             const int left =
-                toRasterPixel(view.displayX(double(tick), pianoKeyboardWidth, namedRows.dpr()));
+                toNamesPixel(view.displayX(double(tick), pianoKeyboardWidth, namedRows.dpr()));
             return QRect(QPoint(left, runRowTop), QPoint(left + width - 1, runRowBottom));
         };
         if (runKey < 0 || closeTicks * pxPerTick > 12.0 ||
@@ -296,9 +314,9 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
                                  {runTick2, uint8_t(runKey), uint32_t(closeTicks), 100},
                                  {runTick3, uint8_t(runKey), uint32_t(labelTicks), 100},
                                  {runTick4, uint8_t(runKey), uint32_t(labelTicks), 1}});
-            const QImage runNamed = roll->grab().toImage();
+            const QImage runNamed = check.captureQuickFramebuffer();
             view.setNoteNameMode(false);
-            const QImage runUnnamed = roll->grab().toImage();
+            const QImage runUnnamed = check.captureQuickFramebuffer();
             const QRect firstStrip(QPoint(labelStrip(a.tick, 1).left(), runRowTop),
                                    QPoint(labelStrip(runTick2, 1).left() - 1, runRowBottom));
             if (differingPixels(runUnnamed, runNamed, firstStrip) != 0)
@@ -333,18 +351,18 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
                 return state;
             };
             view.applyViewState(centeredOnRun(double(fixedLabelHeight + 2 * labelPadding + 1)));
-            const QImage fitRowsNamed = roll->grab().toImage();
+            const QImage fitRowsNamed = check.captureQuickFramebuffer();
             view.setNoteNameMode(false);
-            const QImage fitRowsUnnamed = roll->grab().toImage();
+            const QImage fitRowsUnnamed = check.captureQuickFramebuffer();
             if (fitRowsUnnamed == fitRowsNamed)
                 fail("no label at the exact padded label fit");
             view.setNoteNameMode(true);
 
             // ...and one layout pixel shorter it hides rather than shrinks.
             view.applyViewState(centeredOnRun(double(fixedLabelHeight + 2 * labelPadding)));
-            const QImage shortRowsNamed = roll->grab().toImage();
+            const QImage shortRowsNamed = check.captureQuickFramebuffer();
             view.setNoteNameMode(false);
-            if (roll->grab().toImage() != shortRowsNamed)
+            if (check.captureQuickFramebuffer() != shortRowsNamed)
                 fail("note names shrank to fit a short row");
             view.setNoteNameMode(true);
             view.applyViewState(namedState);
@@ -356,9 +374,9 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
             // whole ramp is ~3.8:1, in the deep reds near velocity 121);
             // either fixed ink drops below 4:1 on one of the two fills.
             view.setVelocityColorMode(true);
-            const QImage velNamed = roll->grab().toImage();
+            const QImage velNamed = check.captureQuickFramebuffer();
             view.setNoteNameMode(false);
-            const QImage velUnnamed = roll->grab().toImage();
+            const QImage velUnnamed = check.captureQuickFramebuffer();
             view.setNoteNameMode(true);
             view.setVelocityColorMode(false);
             const auto bestInkContrast = [&](const QRect &region, const QColor &fill) {
@@ -399,10 +417,6 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
     auto fail = [&](const char *what) { check.fail(what); };
     {
         const uint64_t overlayTick = a.tick + 3 * a.dur;
-        const qreal rasterDpr = roll->devicePixelRatioF();
-        const auto toRasterPixel = [rasterDpr](qreal position) {
-            return qRound(position * rasterDpr);
-        };
         const SongView::ViewState originalView = view.viewState();
         for (const double shortKeyHeight : {8.6, 9.0}) {
             SongView::ViewState shortView = originalView;
@@ -464,13 +478,17 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
 
             doc.addNote(track, cell.tick, uint8_t(cell.key), uint32_t(2 * cell.dur), 10);
             QCoreApplication::processEvents();
-            const QImage shortIdleImage = roll->grab().toImage();
+            const QImage shortIdleImage = check.captureQuickFramebuffer();
 
             checks::events::sendMouse(*roll, QEvent::MouseButtonPress, dragCell.center,
                                       Qt::LeftButton, Qt::LeftButton, Qt::ControlModifier);
             checks::events::sendMouse(*roll, QEvent::MouseMove, dragCell.center + QPoint(0, 12),
                                       Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
-            const QImage shortDragImage = roll->grab().toImage();
+            const QImage shortDragImage = check.captureQuickFramebuffer();
+            const qreal rasterDpr = shortDragImage.devicePixelRatio();
+            const auto toRasterPixel = [rasterDpr](qreal position) {
+                return qRound(position * rasterDpr);
+            };
             checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
                                       dragCell.center + QPoint(0, 12), Qt::LeftButton, Qt::NoButton,
                                       Qt::ControlModifier);

@@ -20,7 +20,6 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
     // fallback whose paint geometry it can inspect.
     qputenv("PORYDAW_FORCE_WIDGET_PLAYHEAD", "1");
 #endif
-
     QString error;
     QElapsedTimer timer;
     timer.start();

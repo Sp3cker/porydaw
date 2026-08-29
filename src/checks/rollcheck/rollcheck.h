@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QImage>
 #include <QMetaObject>
 #include <QPoint>
 #include <QRectF>
@@ -40,6 +41,7 @@ class Harness final
     SongView &view() noexcept;
     const MidiTimeline &timeline() const noexcept;
     QWidget &roll() noexcept;
+    QImage captureQuickFramebuffer();
     int track() const noexcept;
     int pianoKeyboardWidth() const noexcept;
     int plotOrigin() const noexcept;

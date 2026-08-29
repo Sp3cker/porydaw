@@ -7,11 +7,13 @@
 #include "ui/pitchbendeditor.hpp"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/typography.h"
 
 #include <QAction>
 #include <QEvent>
 #include <QMenu>
+#include <QVBoxLayout>
 #include <QWheelEvent>
 
 #include <QFontMetrics>
@@ -64,7 +66,7 @@ using namespace songview::detail;
 using namespace songview::pianoroll_detail;
 
 PianoRoll::PianoRoll(SongView *sv)
-    : TimelineSurface(sv)
+    : QWidget(sv)
     , m_sv(sv)
     , m_geometry(PianoRollGeometry::resolve())
     , m_cursors(loadMidiCursors(devicePixelRatioF(), m_geometry.midiCursorExtent))
@@ -75,10 +77,25 @@ PianoRoll::PianoRoll(SongView *sv)
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
     rebuildFontCache();
+    auto *quickView = new PianoRollQuickView(*this);
+    auto *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(lyt::space(Space::Zero), lyt::space(Space::Zero),
+                               lyt::space(Space::Zero), lyt::space(Space::Zero));
+    layout->setSpacing(lyt::space(Space::Zero));
+    layout->addWidget(quickView);
+    m_quickView = quickView;
     m_noteMenu =
         new NoteContextMenu(this, [this](QPointF globalPos) { return moveNoteMenu(globalPos); });
     connect(m_noteMenu, &QMenu::triggered, this,
             [this](QAction *action) { handleNoteMenuChoice(m_noteMenu->handleAction(action)); });
+}
+
+void PianoRoll::requestQuickUpdate(PianoRollQuickDirtySet dirty)
+{
+    if (dirty == PianoRollQuickDirty::None)
+        return;
+    Q_ASSERT(m_quickView);
+    m_quickView->requestUpdate(dirty);
 }
 
 void PianoRoll::rebuildFontCache()
@@ -146,7 +163,7 @@ void PianoRoll::cancelVelocityInteraction()
         m_auditioned = false;
     }
     m_sv->cancelVelocityGesture();
-    invalidateContent();
+    requestQuickUpdate(PianoRollQuickDirty::NoteFills | PianoRollQuickDirty::NoteText);
 }
 
 bool PianoRoll::event(QEvent *event)
@@ -157,8 +174,14 @@ bool PianoRoll::event(QEvent *event)
     if ((losesFocus || type == QEvent::UngrabMouse) &&
         (m_leftDrag == LeftDrag::Velocity || m_leftDrag == LeftDrag::PendingVelocity))
         cancelVelocityInteraction();
-    const bool handled = TimelineSurface::event(event);
-    if (type == QEvent::FontChange || type == QEvent::DevicePixelRatioChange) {
+    const bool handled = QWidget::event(event);
+    switch (type) {
+    case QEvent::PaletteChange:
+    case QEvent::ApplicationPaletteChange:
+    case QEvent::StyleChange:
+    case QEvent::ThemeChange:
+    case QEvent::FontChange:
+    case QEvent::DevicePixelRatioChange:
         m_geometry = PianoRollGeometry::resolve();
         setMinimumHeight(m_geometry.minimumVisiblePianoRollHeight);
         m_cursors = loadMidiCursors(devicePixelRatioF(), m_geometry.midiCursorExtent);
@@ -167,7 +190,12 @@ bool PianoRoll::event(QEvent *event)
             rebuildFontCache();
         else
             refreshTextLayout();
-        invalidateContent();
+        // m_quickView is only null for events delivered during construction.
+        if (m_quickView)
+            m_quickView->syncAppearance();
+        break;
+    default:
+        break;
     }
     return handled;
 }

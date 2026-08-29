@@ -7,6 +7,7 @@
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -124,7 +125,7 @@ void PianoRoll::pressContent(QMouseEvent *event)
     } else {
         m_sv->commitEditCursor(m_sv->snapTick(m_pressTick));
     }
-    invalidateContent();
+    requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
 }
 
 void PianoRoll::beginNotePress(const ViewNote &note, const QMouseEvent *event)
@@ -198,7 +199,7 @@ void PianoRoll::beginVelocityPress(const ViewNote &note)
     m_lastVelocity = note.velocity;
     auditionKey(note.key, note.velocity);
     m_auditioned = true;
-    invalidateContent();
+    requestQuickUpdate(PianoRollQuickDirty::KeyboardHighlights);
 }
 
 void PianoRoll::beginPendingDraw(const QMouseEvent *)
@@ -272,7 +273,46 @@ void PianoRoll::beginDraw()
     if (m_soundingKey != m_drawKey)
         auditionKey(m_drawKey, m_lastVelocity);
     m_auditioned = true;
-    invalidateContent();
+    requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection |
+                       PianoRollQuickDirty::DrawPreviewFill | PianoRollQuickDirty::Overlay |
+                       PianoRollQuickDirty::NoteText);
+}
+
+void PianoRoll::auditionBandEntrants(const QRectF &band)
+{
+    std::vector<ViewNote> inBand;
+    for (const ViewNote &note : m_sv->model().notes) {
+        if (note.track != m_sv->selectionModel().primaryTrack() || !noteRect(note).intersects(band))
+            continue;
+        const auto found =
+            std::find_if(m_bandAud.begin(), m_bandAud.end(),
+                         [&](const ViewNote &old) { return old.noteId == note.noteId; });
+        if (found == m_bandAud.end())
+            m_sv->auditionTimed(note.track, note.key, note.velocity, note.startTick, note.endTick);
+        inBand.push_back(note);
+    }
+    for (const ViewNote &old : m_bandAud) {
+        const auto found = std::find_if(inBand.begin(), inBand.end(), [&](const ViewNote &note) {
+            return note.noteId == old.noteId;
+        });
+        if (found != inBand.end())
+            continue;
+        // Previews are one-per-key: keep the key sounding while the band
+        // still covers another note of the same pitch.
+        const bool keyCovered =
+            std::any_of(inBand.begin(), inBand.end(),
+                        [&](const ViewNote &note) { return note.key == old.key; });
+        if (!keyCovered)
+            m_sv->auditionTimedOff(m_sv->selectionModel().primaryTrack(), old.key);
+    }
+    m_bandAud = std::move(inBand);
+}
+
+void PianoRoll::stopBandAuditions()
+{
+    for (const ViewNote &note : m_bandAud)
+        m_sv->auditionTimedOff(m_sv->selectionModel().primaryTrack(), note.key);
+    m_bandAud.clear();
 }
 
 } // namespace songview

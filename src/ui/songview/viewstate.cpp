@@ -4,6 +4,7 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 #include <algorithm>
 #include <array>
@@ -20,7 +21,7 @@ using namespace songview::detail;
 void SongView::notifyVelocityGestureChanged()
 {
     if (m_roll)
-        m_roll->invalidateContent();
+        m_roll->requestQuickUpdate(cVelocityMutationDirty);
     if (m_editorDrawer)
         m_editorDrawer->velocityArea()->velocityGestureChanged();
 }
@@ -65,6 +66,7 @@ SongView::VelocityCommitResult SongView::commitVelocityGesture()
     notifyVelocityGestureChanged();
     if (!m_document)
         return VelocityCommitResult::Rejected;
+    const DocumentSwapHintScope swapHint{*this, cVelocityMutationDirty};
     const std::optional<uint64_t> revision =
         m_document->setNotesVelocities(expectedRevision, completion->targets);
     if (!revision)
@@ -84,7 +86,7 @@ void SongView::setScaleHighlight(bool enabled)
     if (enabled == m_scaleController.scaleHighlight())
         return;
     m_scaleController.setScaleHighlight(enabled);
-    m_roll->invalidateContent();
+    m_roll->requestQuickUpdate(PianoRollQuickDirty::Grid);
     emit scaleHighlightChanged();
 }
 void SongView::setScaleFold(bool enabled)
@@ -102,8 +104,12 @@ void SongView::setScaleRoot(int root)
         return;
     m_scaleController.setScaleRoot(root);
     m_scaleController.rebuildClassification(m_projection);
-    if (m_scaleController.scaleHighlight() || m_scaleController.scaleFold())
-        m_roll->invalidateContent();
+    // Folding rebuilds the projection, so only a fold repaints everything;
+    // a highlight-only change just re-tints the grid.
+    if (m_scaleController.scaleFold())
+        m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
+    else if (m_scaleController.scaleHighlight())
+        m_roll->requestQuickUpdate(PianoRollQuickDirty::Grid);
     emit scaleRootChanged();
 }
 void SongView::setScaleId(porydaw_scale::ScaleId id)
@@ -112,8 +118,12 @@ void SongView::setScaleId(porydaw_scale::ScaleId id)
         return;
     m_scaleController.setScaleId(id);
     m_scaleController.rebuildClassification(m_projection);
-    if (m_scaleController.scaleHighlight() || m_scaleController.scaleFold())
-        m_roll->invalidateContent();
+    // Folding rebuilds the projection, so only a fold repaints everything;
+    // a highlight-only change just re-tints the grid.
+    if (m_scaleController.scaleFold())
+        m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
+    else if (m_scaleController.scaleHighlight())
+        m_roll->requestQuickUpdate(PianoRollQuickDirty::Grid);
     emit scaleIdChanged();
 }
 void SongView::setProjectionLocked(bool locked)
@@ -134,6 +144,7 @@ void SongView::requestProjectionRebuild()
     else
         rebuildProjectionWithAnchoring();
 }
+
 void SongView::buildOccupancySet(std::span<bool, 128> out) const
 {
     std::ranges::fill(out, false);
@@ -162,7 +173,7 @@ void SongView::rebuildProjectionWithAnchoring()
     }
     m_scrollY = std::clamp(newScrollY, 0.0, maxRollScroll());
     updateScrollbars();
-    m_roll->invalidateContent();
+    m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
 }
 void SongView::updateScaleProjection()
 {
@@ -177,14 +188,16 @@ void SongView::setVelocityColorMode(bool on)
     if (m_velocityColorMode == on)
         return;
     m_velocityColorMode = on;
-    m_roll->invalidateContent();
+    m_roll->requestQuickUpdate(PianoRollQuickDirty::NoteFills |
+                               PianoRollQuickDirty::DrawPreviewFill |
+                               PianoRollQuickDirty::NoteText);
 }
 void SongView::setNoteNameMode(bool on)
 {
     if (m_noteNameMode == on)
         return;
     m_noteNameMode = on;
-    m_roll->invalidateContent();
+    m_roll->requestQuickUpdate(PianoRollQuickDirty::NoteText);
 }
 void SongView::setFollowPlayhead(bool on)
 {
@@ -241,7 +254,8 @@ void SongView::applyEditorViewStateToWidgets(bool drawerChanged)
     if (drawerChanged && m_editorDrawer)
         m_editorDrawer->setViewState(m_editorViewState);
     refreshAllDrawerPages();
-    refreshTimelineViews();
+    // Drawer/view-state replacement can affect any roll domain.
+    refreshTimelineViews(PianoRollQuickDirty::All);
 }
 void SongView::setEditorViewState(const EditorViewState &state)
 {

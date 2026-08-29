@@ -23,14 +23,12 @@
 namespace {
 using namespace rollcheck::rendering;
 struct ExpectedTimelineGeometry {
-    int pianoKeyboardWidth;
     int plotOrigin;
 };
 
 ExpectedTimelineGeometry expectedTimelineGeometry()
 {
-    const int pianoKeyboardWidth = layout::fontPx(13.0 / 3.0);
-    return {pianoKeyboardWidth, layout::fontPx(17.5 + 13.0 / 3.0)};
+    return {layout::fontPx(17.5 + 13.0 / 3.0)};
 }
 
 QPixmap grabSongViewWithPlayhead(SongView &view, songview::PlayheadOverlay &marker,
@@ -104,121 +102,6 @@ class PaintRegionProbe : public QObject
 
     std::vector<DirtyRegion> m_regions;
 };
-
-void checkPianoRollKeyboardCacheUpdate(songview::TimelineSurface &pianoRoll,
-                                       PaintRegionProbe &paintProbe, QStringList &failures)
-{
-    const auto geometry = expectedTimelineGeometry();
-    QEvent leaveEvent(QEvent::Leave);
-    QCoreApplication::sendEvent(&pianoRoll, &leaveEvent);
-    processPaints();
-    const QImage beforeHover = pianoRoll.grab().toImage();
-    processPaints();
-
-    const qreal dpr = pianoRoll.devicePixelRatioF();
-    const int cacheKeyboardPixelWidth =
-        std::min(qCeil(pianoRoll.width() * dpr), qCeil(geometry.pianoKeyboardWidth * dpr));
-    const int maxReadoutPixelHeight = std::min(qCeil(pianoRoll.height() * dpr), qCeil(72 * dpr));
-    const quint64 maxKeyboardReadoutPaintPixels =
-        quint64(cacheKeyboardPixelWidth) * quint64(maxReadoutPixelHeight);
-    const auto checkPaintScope = [&](const songview::TimelineSurfaceDiagnostics &before,
-                                     const songview::TimelineSurfaceDiagnostics &after,
-                                     const QString &action) {
-        if (after.contentPaintCount <= before.contentPaintCount ||
-            after.contentPaintPixelCount <= before.contentPaintPixelCount) {
-            failures.append(QStringLiteral("piano-roll hover %1 painted no content").arg(action));
-            return;
-        }
-        const quint64 painted = after.contentPaintPixelCount - before.contentPaintPixelCount;
-        if (painted > maxKeyboardReadoutPaintPixels) {
-            failures.append(QStringLiteral("piano-roll hover %1 painted %2 device pixels "
-                                           "(readout budget %3)")
-                                .arg(action)
-                                .arg(painted)
-                                .arg(maxKeyboardReadoutPaintPixels));
-        }
-    };
-
-    const QPoint firstPosition(1, pianoRoll.height() / 2);
-    const songview::TimelineSurfaceDiagnostics beforeFirst = pianoRoll.diagnostics();
-    paintProbe.clear();
-    checks::events::sendMouse(pianoRoll, QEvent::MouseMove, QPointF(firstPosition), Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
-    processPaints();
-    const bool firstRepainted = paintProbe.repainted(&pianoRoll);
-    const int firstRepaintWidth = paintProbe.maxPaintWidth(&pianoRoll);
-    const songview::TimelineSurfaceDiagnostics afterFirst = pianoRoll.diagnostics();
-    const QImage afterFirstHover = pianoRoll.grab().toImage();
-    if (!firstRepainted || firstRepaintWidth > geometry.pianoKeyboardWidth) {
-        failures.append(QStringLiteral("piano-roll hover repainted %1 px (budget %2)")
-                            .arg(firstRepaintWidth)
-                            .arg(geometry.pianoKeyboardWidth));
-    }
-    checkPaintScope(beforeFirst, afterFirst, QStringLiteral("entry"));
-
-    if (beforeHover.size() != afterFirstHover.size() ||
-        beforeHover.devicePixelRatio() != afterFirstHover.devicePixelRatio()) {
-        failures.append("piano-roll hover changed image geometry");
-        return;
-    }
-    const int keyboardPixelWidth =
-        std::min(afterFirstHover.width(),
-                 qCeil(geometry.pianoKeyboardWidth * afterFirstHover.devicePixelRatio()));
-    bool keyboardChanged = false;
-    bool timelineChanged = false;
-    for (int y = 0; y < afterFirstHover.height(); ++y) {
-        for (int x = 0; x < afterFirstHover.width(); ++x) {
-            if (beforeHover.pixel(x, y) == afterFirstHover.pixel(x, y))
-                continue;
-            if (x < keyboardPixelWidth)
-                keyboardChanged = true;
-            else
-                timelineChanged = true;
-        }
-    }
-    if (!keyboardChanged)
-        failures.append("piano-roll hover did not change the keyboard");
-    if (timelineChanged)
-        failures.append("piano-roll hover changed pixels outside the keyboard");
-
-    const int moveDistance = std::max(12, pianoRoll.height() / 6);
-    const QPoint secondPosition(
-        1, std::clamp(firstPosition.y() + moveDistance, 0, pianoRoll.height() - 1));
-    const songview::TimelineSurfaceDiagnostics beforeMove = pianoRoll.diagnostics();
-    paintProbe.clear();
-    checks::events::sendMouse(pianoRoll, QEvent::MouseMove, QPointF(secondPosition), Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
-    processPaints();
-    const bool moveRepainted = paintProbe.repainted(&pianoRoll);
-    const int moveRepaintWidth = paintProbe.maxPaintWidth(&pianoRoll);
-    const songview::TimelineSurfaceDiagnostics afterMove = pianoRoll.diagnostics();
-    const QImage afterMoveHover = pianoRoll.grab().toImage();
-    if (afterMoveHover == afterFirstHover)
-        failures.append("piano-roll hover move did not move its key readout");
-    if (!moveRepainted || moveRepaintWidth > geometry.pianoKeyboardWidth) {
-        failures.append(QStringLiteral("piano-roll hover move repainted %1 px (budget %2)")
-                            .arg(moveRepaintWidth)
-                            .arg(geometry.pianoKeyboardWidth));
-    }
-    checkPaintScope(beforeMove, afterMove, QStringLiteral("move"));
-
-    const songview::TimelineSurfaceDiagnostics beforeClear = pianoRoll.diagnostics();
-    paintProbe.clear();
-    QCoreApplication::sendEvent(&pianoRoll, &leaveEvent);
-    processPaints();
-    const bool clearRepainted = paintProbe.repainted(&pianoRoll);
-    const int clearRepaintWidth = paintProbe.maxPaintWidth(&pianoRoll);
-    const songview::TimelineSurfaceDiagnostics afterClear = pianoRoll.diagnostics();
-    const QImage afterClearImage = pianoRoll.grab().toImage();
-    if (afterClearImage != beforeHover)
-        failures.append("piano-roll hover pixels did not restore after leave");
-    if (!clearRepainted || clearRepaintWidth > geometry.pianoKeyboardWidth) {
-        failures.append(QStringLiteral("piano-roll hover clear repainted %1 px (budget %2)")
-                            .arg(clearRepaintWidth)
-                            .arg(geometry.pianoKeyboardWidth));
-    }
-    checkPaintScope(beforeClear, afterClear, QStringLiteral("clear"));
-}
 
 // A dense serpentine cursor sweep across the whole surface, then leave: the
 // hover ink must restore every pixel it touched. Guards the partial-repaint
@@ -637,11 +520,9 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
         failures.append("SongView did not expose the expected timeline band order");
         return;
     }
-    songview::TimelineSurface *pianoRoll =
-        dynamic_cast<songview::TimelineSurface *>(&bands[1].widget);
-    songview::TimelineSurface *lanes = dynamic_cast<songview::TimelineSurface *>(&bands[2].widget);
-    if (!pianoRoll || !lanes) {
-        failures.append("SongView timeline band order did not expose roll and automation caches");
+    auto *lanes = dynamic_cast<songview::TimelineSurface *>(&bands[2].widget);
+    if (!lanes) {
+        failures.append("SongView timeline band order did not expose the automation cache");
         return;
     }
 
@@ -695,10 +576,8 @@ void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
         }
     }
 
-    checkPianoRollKeyboardCacheUpdate(*pianoRoll, probe, failures);
     checkAutomationHoverCacheUpdate(*lanes, probe, failures);
     checkHoverSweepRestores(*lanes, QStringLiteral("automation lanes"), failures);
-    checkHoverSweepRestores(*pianoRoll, QStringLiteral("piano roll"), failures);
     probe.clear();
     const auto diagnosticsBefore = [&cachedSurfaces] {
         std::vector<songview::TimelineSurfaceDiagnostics> diagnostics;

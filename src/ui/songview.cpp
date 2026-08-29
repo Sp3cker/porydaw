@@ -13,6 +13,7 @@
 #include "ui/playheadoverlay.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheaderpanel.h"
 
@@ -94,7 +95,8 @@ void SongView::refreshGeometry()
         m_playheadOverlay = new PlayheadOverlay(this, std::move(bands));
     }
     updateScrollbars();
-    refreshTimelineViews();
+    // Global geometry replacement: every roll domain may change.
+    refreshTimelineViews(PianoRollQuickDirty::All);
     refreshDrawerPages();
 }
 
@@ -277,11 +279,46 @@ void SongView::rebuildAfterSongChange()
     notifyDrawerSongChanged();
     updateScrollbars();
     resetScrollPosition();
-    refreshTimelineViews();
+    // Full song rebuild: every roll domain may differ.
+    refreshTimelineViews(PianoRollQuickDirty::All);
+}
+
+SongView::DocumentSwapHintScope::DocumentSwapHintScope(SongView &owner,
+                                                       PianoRollQuickDirtySet dirty)
+    : m_owner(owner)
+{
+    // The scope brackets exactly one document call; an open bracket is a
+    // caller bug, caught in debug builds. The destructor keeps release
+    // builds correct: any hint dies with its scope.
+    Q_ASSERT(!owner.m_documentSwapHint.has_value());
+    owner.m_documentSwapHint = dirty;
+}
+
+SongView::DocumentSwapHintScope::~DocumentSwapHintScope()
+{
+    // Consumed hints are already empty; a no-emission document call (or an
+    // early return before one) clears here, so no stale hint reaches a
+    // later updateSong.
+    m_owner.m_documentSwapHint.reset();
+}
+
+// Generic document/model replacement union for an unclassified updateSong
+// handoff (undo/redo, non-roll edits): every roll plot domain plus the
+// text models. Keyboard domains differ only when the scale-fold projection
+// rebuilds, and that path requests All itself.
+PianoRollQuickDirtySet SongView::takeDocumentSwapHint()
+{
+    const PianoRollQuickDirtySet dirty = m_documentSwapHint.value_or(cPlotAndLoadingDirty);
+    m_documentSwapHint.reset();
+    return dirty;
 }
 
 void SongView::updateSong(const MidiTimeline *timeline)
 {
+    // Classify this handoff before rebuilding state: a committed roll
+    // mutation names its exact domains; anything else is the generic
+    // document/model replacement.
+    const PianoRollQuickDirtySet swapDirty = takeDocumentSwapHint();
     cancelActiveInteractions();
     m_timeline = timeline;
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
@@ -314,7 +351,9 @@ void SongView::updateSong(const MidiTimeline *timeline)
     } else {
         updateScrollbars();
     }
-    refreshTimelineViews();
+    // A fold rebuild above queued All; otherwise only the swap's domains
+    // may differ.
+    refreshTimelineViews(swapDirty);
 }
 
 void SongView::disconnectDocument()
@@ -452,7 +491,8 @@ void SongView::applyViewState(const ViewState &state)
     setHScroll(state.scrollPx); // setHScroll clamps to the camera's range
     setVScroll(state.scrollY);
     setEventListVisible(state.eventList);
-    refreshTimelineViews();
+    // Whole view-state applied: every roll domain may differ.
+    refreshTimelineViews(PianoRollQuickDirty::All);
 }
 
 void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup)
@@ -463,7 +503,8 @@ void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup)
     m_voicegroup = voicegroup;
     m_headers->rebuild();
     notifyDrawerSongChanged();
-    refreshTimelineViews();
+    // Voicegroup replacement can change any roll domain.
+    refreshTimelineViews(PianoRollQuickDirty::All);
 }
 
 void SongView::coordinateSelectionChange(
@@ -481,43 +522,45 @@ void SongView::coordinateSelectionChange(
         changed(songview::EditorSelectionModel::SelectionChange::NoteSelection);
     const bool timeSelectionChanged =
         changed(songview::EditorSelectionModel::SelectionChange::TimeSelection);
-    bool rollFullyInvalidated = false;
+    // Roll layers already requested in this transition; later branches only
+    // request the missing union members (a projection rebuild covers All).
+    PianoRollQuickDirtySet rollDirty = PianoRollQuickDirty::None;
+    const auto requestRoll = [this, &rollDirty](PianoRollQuickDirtySet dirty) {
+        if (const PianoRollQuickDirtySet missing = dirty & ~rollDirty;
+            missing != PianoRollQuickDirty::None) {
+            m_roll->requestQuickUpdate(missing);
+            rollDirty |= missing;
+        }
+    };
     bool timelineViewsRefreshed = false;
     if (primaryChanged) {
         m_headers->syncSelection();
         if (m_scaleController.scaleFold()) {
             rebuildProjectionWithAnchoring();
+            rollDirty = PianoRollQuickDirty::All;
         } else {
-            m_roll->invalidateContent();
+            requestRoll(PianoRollQuickDirty::NoteFills | PianoRollQuickDirty::DrawPreviewFill |
+                        PianoRollQuickDirty::NoteBordersAndSelection |
+                        PianoRollQuickDirty::NoteText);
         }
-        rollFullyInvalidated = true;
         emit selectedTrackChanged(m_selectionModel.primaryTrack());
     } else if (trackScopeChanged) {
         m_headers->syncSelection();
-        refreshTimelineViews();
-        rollFullyInvalidated = true;
+        m_ruler->update();
+        requestRoll(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
+        m_strip->invalidateContent();
+        syncPlayheadOverlay();
         timelineViewsRefreshed = true;
     }
     if (noteSelectionChanged) {
-        if (!rollFullyInvalidated) {
-            m_roll->invalidateContent();
-            rollFullyInvalidated = true;
-        }
+        requestRoll(PianoRollQuickDirty::NoteBordersAndSelection);
         refreshVelocityPage();
     }
     if (timeSelectionChanged) {
         if (!timelineViewsRefreshed) {
             m_ruler->update();
-            if (!rollFullyInvalidated) {
-                const uint32_t usedTracks = usedTrackMask(m_timeline);
-                const uint32_t previousTracks =
-                    transition.previousTrackTime.trackScope & usedTracks;
-                const uint32_t tracks = transition.trackTime.trackScope & usedTracks;
-                m_roll->invalidateTimeSelection(
-                    {transition.previousTrackTime.startTick, transition.previousTrackTime.endTick},
-                    previousTracks, {transition.trackTime.startTick, transition.trackTime.endTick},
-                    tracks);
-            }
+            requestRoll(PianoRollQuickDirty::NoteBordersAndSelection |
+                        PianoRollQuickDirty::Overlay);
             syncPlayheadOverlay();
         }
         refreshAutomationPage();
@@ -617,7 +660,8 @@ void SongView::setEditCursorTick(uint64_t tick)
         return;
     m_editCursorTick = tick;
     m_headers->syncVoices();
-    refreshTimelineViews();
+    // Only the overlay layer paints the edit cursor.
+    refreshTimelineViews(PianoRollQuickDirty::Overlay);
     refreshDrawerPages();
 }
 
@@ -635,10 +679,10 @@ void SongView::goToStart()
     commitEditCursor(0);
 }
 
-void SongView::refreshTimelineViews()
+void SongView::refreshTimelineViews(PianoRollQuickDirtySet dirty)
 {
     m_ruler->update();
-    m_roll->invalidateContent();
+    m_roll->requestQuickUpdate(dirty);
     m_strip->invalidateContent();
     syncPlayheadOverlay();
 }

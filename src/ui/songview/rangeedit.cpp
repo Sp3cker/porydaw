@@ -6,6 +6,7 @@
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 #include <QAction>
 #include <QDialog>
@@ -391,6 +392,7 @@ void SongView::transposeTimeSelection(int dKey)
             return;
         }
     }
+    const SongView::DocumentSwapHintScope swapHint{*this, cNoteMutationDirty};
     m_document->moveNotes(notes, 0, dKey, /*mergeable=*/true);
     // Keep the moved notes in sight: the row the move headed toward
     // scrolls into view just enough (no re-centering).
@@ -415,10 +417,11 @@ void SongView::foldTransposeSelection(int degreeDelta)
             notes.push_back(note);
     }
     std::vector<uint8_t> destinations;
-    if (!m_scaleController.resolveFoldDestinations(notes, degreeDelta, destinations) ||
-        !m_document->moveNotesToPitches(notes, destinations, 0, /*mergeable=*/true)) {
+    if (!m_scaleController.resolveFoldDestinations(notes, degreeDelta, destinations))
         return;
-    }
+    const SongView::DocumentSwapHintScope swapHint{*this, cNoteMutationDirty};
+    if (!m_document->moveNotesToPitches(notes, destinations, 0, /*mergeable=*/true))
+        return;
     std::vector<NoteId> ids;
     ids.reserve(notes.size());
     for (const DocNote &note : notes)
@@ -632,6 +635,7 @@ void SongView::pasteFromClipboard()
         notes.push_back({tick, cn.key, cn.duration, cn.velocity});
         end = std::max(end, tick + cn.duration);
     }
+    const SongView::DocumentSwapHintScope swapHint{*this, cNoteMutationDirty};
     m_document->addNotes(selectedTrack, notes);
     m_selectionModel.setNoteSelection(m_document->insertedNoteIds(selectedTrack, before));
     // Like pasteRangeAtEditCursor: advance the edit cursor past the pasted

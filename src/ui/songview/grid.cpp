@@ -2,6 +2,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/timeruler.h"
 
 #include <QPainter>
@@ -27,7 +28,7 @@ void SongView::setGridFeel(GridFeel feel)
         m_editorDrawer->cancelVisiblePageInteraction();
     m_gridFeel = feel;
     m_ruler->syncGridControls();
-    refreshTimelineViews();
+    refreshTimelineViews(PianoRollQuickDirty::Grid);
     refreshDrawerPages();
 }
 void SongView::setGridMinDenom(int denom)
@@ -40,7 +41,7 @@ void SongView::setGridMinDenom(int denom)
         m_editorDrawer->cancelVisiblePageInteraction();
     m_gridMinDenom = denom;
     m_ruler->syncGridControls();
-    refreshTimelineViews();
+    refreshTimelineViews(PianoRollQuickDirty::Grid);
     refreshDrawerPages();
 }
 SongView::GridSeg SongView::gridSegAt(uint64_t tick) const

@@ -76,7 +76,7 @@ if(PORYDAW_COVERAGE)
     add_link_options(-fprofile-instr-generate)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Svg Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Qml Quick QuickWidgets Svg Widgets)
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
@@ -302,11 +302,13 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/pianoroll.cpp
     src/ui/songview/pianoroll.h
     src/ui/songview/pianoroll_geometry.cpp
-    src/ui/songview/pianoroll_paint.cpp
     src/ui/songview/pianoroll_interaction.cpp
     src/ui/songview/pianoroll_gestures.cpp
     src/ui/songview/pianoroll_gestures_active.cpp
     src/ui/songview/pianoroll_commands.cpp
+    src/ui/songview/quick/pianorollquick.cpp
+    src/ui/songview/quick/pianorollquick.h
+    src/ui/songview/quick/pianorollquickscene.cpp
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
     src/ui/pitchbendgraph.cpp
@@ -396,6 +398,21 @@ target_include_directories(porydaw_app PUBLIC
 target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
+target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickWidgets)
+if(APPLE)
+    set_target_properties(porydaw_app PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
+endif()
+set_source_files_properties(
+    src/ui/songview/quick/PianoRollCanvas.qml
+    PROPERTIES QT_RESOURCE_ALIAS PianoRollCanvas.qml
+)
+qt_add_qml_module(porydaw_app
+    URI Porydaw.PianoRoll
+    VERSION 1.0
+    NO_PLUGIN
+    QML_FILES
+        src/ui/songview/quick/PianoRollCanvas.qml
+)
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 if(WIN32)
@@ -571,7 +588,10 @@ if(PORYDAW_BUILD_CHECKS)
             src/checks/rollcheckplayhead_macos.mm
         )
     endif()
-    target_link_libraries(porydaw_checks PRIVATE porydaw_app)
+    if(APPLE)
+        set_target_properties(porydaw_checks PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
+    endif()
+    target_link_libraries(porydaw_checks PRIVATE porydaw_app Qt6::QuickWidgets)
     target_precompile_headers(porydaw_checks PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
     add_dependencies(porydaw_checks mid2agb)
